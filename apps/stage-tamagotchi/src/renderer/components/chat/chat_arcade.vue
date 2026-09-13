@@ -4,9 +4,14 @@ import type { CatalogGame } from './ArcadeCatalogModal.vue'
 import JSZip from 'jszip'
 import localforage from 'localforage'
 
+import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
+import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
+import { useChatStreamStore } from '@proj-airi/stage-ui/stores/chat/stream-store'
+import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/consciousness'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { storeToRefs } from 'pinia'
-import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import ArcadeCatalogModal from './ArcadeCatalogModal.vue'
 
@@ -15,6 +20,11 @@ const emit = defineEmits<{
 }>()
 
 const airiCardStore = useAiriCardStore()
+const chatOrchestrator = useChatOrchestratorStore()
+const chatSession = useChatSessionStore()
+const chatStream = useChatStreamStore()
+const consciousnessStore = useConsciousnessStore()
+const providersStore = useProvidersStore()
 const { activeCard } = storeToRefs(airiCardStore)
 
 // --- Engine State ---
@@ -854,6 +864,7 @@ interface BackseatMessage {
   timestamp: string
   emotion?: 'neutral' | 'smug' | 'panicked' | 'cheering' | 'thinking'
   isAdvice?: boolean
+  imageAttachment?: string
 }
 
 const chatTranscript = ref<BackseatMessage[]>([
@@ -869,6 +880,29 @@ const chatTranscript = ref<BackseatMessage[]>([
 
 const userInputText = ref('')
 const transcriptContainerRef = ref<HTMLDivElement | null>(null)
+
+// --- Frame Capture & Backseat Interaction ---
+const isCapturing = ref(false)
+const attachedFrame = ref<{ dataUrl: string, base64: string, mimeType: string } | null>(null)
+const activeLlmReplyId = ref<string | null>(null)
+
+// Live-sync AI streaming response into transcript
+watch(() => chatStream.streamingMessage.content, (newContent) => {
+  if (activeLlmReplyId.value && newContent) {
+    const target = chatTranscript.value.find(m => m.id === activeLlmReplyId.value)
+    if (target) {
+      target.text = newContent
+      target.emotion = 'smug'
+      scrollToBottom()
+    }
+  }
+})
+
+watch(() => chatOrchestrator.sending, (isSending, wasSending) => {
+  if (wasSending && !isSending && activeLlmReplyId.value) {
+    activeLlmReplyId.value = null
+  }
+})
 
 function scrollToBottom() {
   void nextTick(() => {
@@ -911,32 +945,193 @@ function getGameGreeting(title: string): { text: string, emotion: BackseatMessag
   return { text: `Booting up ${title}! Show me what you've got!`, emotion: 'smug' }
 }
 
-function handleSendAdvice(presetText?: string) {
-  const content = presetText || userInputText.value.trim()
-  if (!content)
+async function captureCurrentGameFrame(): Promise<{ dataUrl: string, base64: string, mimeType: string } | null> {
+  try {
+    let dataUrl = ''
+    if (activeEngine.value === 'jsdos') {
+      if (currentCommandInterface && typeof currentCommandInterface.screenshot === 'function') {
+        try {
+          const shot = await currentCommandInterface.screenshot()
+          if (typeof shot === 'string') {
+            dataUrl = shot
+          }
+          else if (shot && typeof (shot as HTMLCanvasElement).toDataURL === 'function') {
+            dataUrl = (shot as HTMLCanvasElement).toDataURL('image/jpeg', 0.85)
+          }
+        }
+        catch (e) {
+          console.warn('[Arcade] CommandInterface screenshot failed, falling back to canvas query:', e)
+        }
+      }
+      if (!dataUrl && dosContainerRef.value) {
+        const canvas = dosContainerRef.value.querySelector('canvas')
+        if (canvas) {
+          try {
+            dataUrl = canvas.toDataURL('image/jpeg', 0.85)
+          }
+          catch (e) {
+            console.warn('[Arcade] Canvas toDataURL failed:', e)
+          }
+        }
+      }
+    }
+    else if (activeEngine.value === 'canvas-2048') {
+      if (canvasRef.value) {
+        dataUrl = canvasRef.value.toDataURL('image/jpeg', 0.85)
+      }
+    }
+
+    if (!dataUrl)
+      return null
+
+    const mimeType = dataUrl.startsWith('data:image/png') ? 'image/png' : 'image/jpeg'
+    const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
+
+    return { dataUrl, base64, mimeType }
+  }
+  catch (err) {
+    console.error('[Arcade] Failed to capture game frame:', err)
+    return null
+  }
+}
+
+async function handleAttachFrame() {
+  if (isCapturing.value)
+    return
+  isCapturing.value = true
+  try {
+    const frame = await captureCurrentGameFrame()
+    if (!frame) {
+      triggerReactiveReaction('Couldn\'t snap a screenshot right now—is the game still rendering?', 'thinking')
+      return
+    }
+    attachedFrame.value = frame
+    triggerReactiveReaction('📸 Game screen captured! What do you want to ask about it?', 'smug')
+  }
+  finally {
+    isCapturing.value = false
+  }
+}
+
+async function handleQuickAsk() {
+  if (isCapturing.value)
+    return
+  isCapturing.value = true
+  try {
+    const frame = await captureCurrentGameFrame()
+    if (!frame) {
+      triggerReactiveReaction('Couldn\'t capture the screen right now—is the game ready?', 'thinking')
+      return
+    }
+    const promptText = 'Look at my game screen right now! What should I do next?'
+    await dispatchUserMessage(promptText, frame)
+  }
+  finally {
+    isCapturing.value = false
+  }
+}
+
+async function dispatchUserMessage(text: string, frame?: { dataUrl: string, base64: string, mimeType: string }) {
+  const content = text.trim()
+  if (!content && !frame)
     return
 
+  const userMsgId = `user-${Date.now()}`
   chatTranscript.value.push({
-    id: `user-${Date.now()}`,
+    id: userMsgId,
     sender: 'user',
     authorName: 'You',
     text: content,
     timestamp: 'Just now',
     isAdvice: true,
+    imageAttachment: frame?.dataUrl,
   })
-  userInputText.value = ''
   scrollToBottom()
 
-  setTimeout(() => {
-    const replies = [
-      { text: 'Got it! Following your lead!', emotion: 'cheering' },
-      { text: 'Wait, are you sure about that move?!', emotion: 'panicked' },
-      { text: 'Hmph, I had that completely under control anyway.', emotion: 'smug' },
-      { text: 'Good eye! That opened up a whole new path.', emotion: 'cheering' },
-    ] as const
-    const pick = replies[Math.floor(Math.random() * replies.length)]
-    triggerReactiveReaction(pick.text, pick.emotion)
-  }, 750)
+  let sentToLlm = false
+  try {
+    const providerId = consciousnessStore.activeProvider
+    const modelId = consciousnessStore.activeModel
+
+    if (providerId && modelId && chatSession.activeSessionId) {
+      const providerConfig = providersStore.getProviderConfig(providerId)
+      sentToLlm = true
+
+      const replyMsgId = `react-${Date.now()}`
+      activeLlmReplyId.value = replyMsgId
+      chatTranscript.value.push({
+        id: replyMsgId,
+        sender: 'character',
+        authorName: activeCard.value?.name || 'AIRI',
+        text: 'Analyzing the game screen...',
+        timestamp: 'Just now',
+        emotion: 'thinking',
+      })
+      scrollToBottom()
+
+      const attachmentsToSend = frame
+        ? [{
+            type: 'image' as const,
+            data: frame.base64,
+            mimeType: frame.mimeType,
+            fileName: `${currentGameIdentifier.value}_snap.jpg`,
+            size: 0,
+          }]
+        : []
+
+      const systemPrefix = `[Arcade Spectator Mode: You are live-spectating the user playing "${currentGameTitle.value}". Give a quick, energetic, in-character reaction or gaming advice (1-2 sentences) on what you see.] `
+
+      await chatOrchestrator.ingest(`${systemPrefix}${content}`, {
+        model: modelId,
+        chatProvider: providerId,
+        providerConfig,
+        attachments: attachmentsToSend,
+      }, chatSession.activeSessionId)
+    }
+  }
+  catch (err) {
+    console.warn('[Arcade] LLM dispatch failed or unconfigured, falling back to simulated banter:', err)
+    sentToLlm = false
+    activeLlmReplyId.value = null
+  }
+
+  if (!sentToLlm) {
+    setTimeout(() => {
+      if (frame) {
+        const visionReplies = [
+          { text: `Analyzing your screen for ${currentGameTitle.value}... Keep your momentum going and watch that flank!`, emotion: 'cheering' as const },
+          { text: 'I see what you\'re aiming for! Clear out that middle section before moving ahead!', emotion: 'smug' as const },
+          { text: 'Looking at that screen... Don\'t get trapped in the corner!', emotion: 'panicked' as const },
+          { text: 'Nice position! Focus on resource management and keep your defense tight.', emotion: 'thinking' as const },
+        ]
+        const pick = visionReplies[Math.floor(Math.random() * visionReplies.length)]
+        triggerReactiveReaction(pick.text, pick.emotion)
+      }
+      else {
+        const replies = [
+          { text: 'Got it! Following your lead!', emotion: 'cheering' as const },
+          { text: 'Wait, are you sure about that move?!', emotion: 'panicked' as const },
+          { text: 'Hmph, I had that completely under control anyway.', emotion: 'smug' as const },
+          { text: 'Good eye! That opened up a whole new path.', emotion: 'cheering' as const },
+        ]
+        const pick = replies[Math.floor(Math.random() * replies.length)]
+        triggerReactiveReaction(pick.text, pick.emotion)
+      }
+    }, 750)
+  }
+}
+
+async function handleSendAdvice(presetText?: string) {
+  const content = presetText || userInputText.value.trim()
+  const frame = attachedFrame.value
+  if (!content && !frame)
+    return
+
+  const promptText = content || (frame ? 'What should I do here?' : '')
+  attachedFrame.value = null
+  userInputText.value = ''
+
+  await dispatchUserMessage(promptText, frame || undefined)
 }
 
 function toggleMute() {
@@ -1023,6 +1218,28 @@ onUnmounted(() => {
 
         <!-- Actions: Savestate & Controls -->
         <div class="flex items-center gap-1.5">
+          <!-- Quick Ask Airi -->
+          <button
+            class="shadow-2xs flex items-center gap-1.5 border border-primary-500/40 rounded-lg bg-primary-500 px-3 py-1.5 text-xs text-white font-bold transition-all active:scale-95 hover:bg-primary-600 disabled:opacity-50"
+            :disabled="isCapturing"
+            title="Instantly snap game screen and ask Airi what to do next"
+            @click="handleQuickAsk"
+          >
+            <div :class="isCapturing ? 'i-solar:restart-bold animate-spin' : 'i-solar:plain-bold'" class="text-xs" />
+            <span>Quick Ask Airi</span>
+          </button>
+
+          <!-- Attach Frame -->
+          <button
+            class="shadow-2xs dark:hover:bg-neutral-750 flex items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-white px-2.5 py-1.5 text-xs text-neutral-700 font-medium transition-all active:scale-95 dark:border-neutral-700/80 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200 disabled:opacity-50"
+            :disabled="isCapturing"
+            title="Capture current game frame and attach to chat message"
+            @click="handleAttachFrame"
+          >
+            <div class="i-solar:camera-bold text-xs text-primary-500" />
+            <span>Attach Frame</span>
+          </button>
+
           <!-- QuickSave / QuickLoad (JS-DOS only) -->
           <template v-if="activeEngine === 'jsdos'">
             <button
@@ -1257,7 +1474,17 @@ onUnmounted(() => {
           <div v-else class="flex flex-col items-end gap-1">
             <span class="text-[10px] text-neutral-400 font-bold">You (Backseat Tip)</span>
             <div class="shadow-xs max-w-[90%] rounded-2xl rounded-tr-none bg-primary-500 p-3 text-xs text-white leading-relaxed">
-              {{ msg.text }}
+              <div
+                v-if="msg.imageAttachment"
+                class="mb-2 overflow-hidden border border-white/25 rounded-lg bg-black/40 shadow-inner"
+              >
+                <img
+                  :src="msg.imageAttachment"
+                  alt="Captured game screen"
+                  class="max-h-44 w-full object-contain"
+                >
+              </div>
+              <div>{{ msg.text }}</div>
             </div>
           </div>
         </template>
@@ -1282,20 +1509,55 @@ onUnmounted(() => {
 
       <!-- Minimal Backseat Composer -->
       <div class="border-t border-neutral-200/40 p-3 dark:border-neutral-800/40">
+        <!-- Attached Frame Preview Chip -->
+        <div
+          v-if="attachedFrame"
+          class="mb-2 flex items-center justify-between gap-2 border border-primary-500/30 rounded-lg bg-primary-500/10 p-1.5 px-2 backdrop-blur-sm"
+        >
+          <div class="flex items-center gap-2 overflow-hidden">
+            <img
+              :src="attachedFrame.dataUrl"
+              class="shadow-xs h-10 w-14 border border-primary-500/20 rounded object-cover"
+              alt="Snapshot Preview"
+            >
+            <div class="flex flex-col overflow-hidden">
+              <span class="text-[10px] text-primary-600 font-bold dark:text-primary-400">📸 Frame Snapshot Attached</span>
+              <span class="truncate text-[9px] text-neutral-500 dark:text-neutral-400">{{ currentGameTitle }}</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            class="rounded p-1 text-neutral-400 transition-colors hover:text-rose-500 dark:hover:text-rose-400"
+            title="Remove attachment"
+            @click="attachedFrame = null"
+          >
+            <div class="i-solar:close-circle-bold text-base" />
+          </button>
+        </div>
+
         <form
-          class="shadow-xs flex items-center gap-2 rounded-xl bg-white/80 p-1.5 ring-1 ring-neutral-200/60 dark:bg-neutral-900/80 dark:ring-neutral-800/60"
+          class="shadow-xs flex items-center gap-1.5 rounded-xl bg-white/80 p-1.5 ring-1 ring-neutral-200/60 dark:bg-neutral-900/80 dark:ring-neutral-800/60"
           @submit.prevent="handleSendAdvice()"
         >
+          <button
+            type="button"
+            class="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-primary-500 dark:hover:bg-neutral-800"
+            :title="attachedFrame ? 'Frame snapshot attached' : 'Snap and attach game screen'"
+            @click="handleAttachFrame"
+          >
+            <div class="i-solar:camera-bold text-sm" />
+          </button>
+
           <input
             v-model="userInputText"
             type="text"
             placeholder="Give backseat advice..."
-            class="flex-1 bg-transparent px-2 text-xs text-neutral-800 outline-none dark:text-neutral-200 placeholder:text-neutral-400"
+            class="flex-1 bg-transparent px-1.5 text-xs text-neutral-800 outline-none dark:text-neutral-200 placeholder:text-neutral-400"
             @keydown.stop
           >
           <button
             type="submit"
-            :disabled="!userInputText.trim()"
+            :disabled="!userInputText.trim() && !attachedFrame"
             class="h-7 w-7 flex items-center justify-center rounded-lg bg-primary-500 text-white transition-opacity disabled:opacity-40"
           >
             <div class="i-solar:plain-bold text-xs" />
