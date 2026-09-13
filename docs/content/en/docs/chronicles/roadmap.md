@@ -48,6 +48,11 @@ This document tracks all active pending items, architectural roadmaps, and featu
 *   **State Cartridge Loading & Ingestion**: Integrate verified cleanroom state loading (`scripts/tests/rwkv-harness/`) into the active WebGPU Web Worker (`packages/stage-ui/src/workers/web-rwkv/`). Enables loading modular `.state` files (e.g. bilingual roleplay, character personality cartridges, `p5-watercolor-1.5b.state`).
 *   **Prompt Template & Model Selector**: Add a prompt template configuration selector and custom model URL input to allow power users to load arbitrary Hugging Face safetensors.
 
+### Next-Gen Local Inference: Edge0 Dynamic MoE Streaming & MiniCPM-5 Starter Runtime
+*Reference: [proposal-local-inference-edge0-minicpm.md](../../../../../proposal-local-inference-edge0-minicpm.md)*
+*   **Tier 1: MiniCPM-5 2B (In-Browser Web Worker / WebLLM & ONNX Web)**: 100% in-browser WebGPU worker runtime (~1.2–1.5 GB VRAM in 4-bit, zero sidecar, zero native build requirements) serving as an instant offline starter brain with state-of-the-art reasoning and strict JSON tool compliance across web and desktop.
+*   **Tier 2: Edge0 Dynamic MoE Expert Streaming (Electron Native Runtime — Zero Python Sidecar)**: Enables running 35B MoE models (e.g. Qwen 2.5 32B MoE) in sub-3 GB RAM by streaming only active expert tensors dynamically via kernel `mmap` with INT4 quantization and Recover-LoRA. Implemented strictly as an Electron-only native C++/Node N-API addon, explicitly rejecting any Python sidecar processes.
+
 ### iOS Native Multimodal Neural Inference Suite (Apple Core AI & Capacitor)
 *Reference: [design-ios-core-ai-native-inference.md](../../../../../design-ios-core-ai-native-inference.md)*
 *   **Gemma 4 Baseline & Multimodal Expansion**: Building on the working Gemma 4 on-device LLM implementation, expand native Apple Neural Engine (ANE) and Metal GPU acceleration via `@proj-airi/cap-native-ai` for other modalities:
@@ -131,6 +136,14 @@ This document tracks all active pending items, architectural roadmaps, and featu
 *   **STT Pre-Transcription Chooser**: Choice dialog upon attaching audio to run local Whisper pre-transcription before sending.
 *   **Smart Video Frame Sampling & Tiled Contact Sheets**: Frontend Canvas/WebCodecs frame extraction and contact sheet tile generation.
 
+### Tri-Model Generative DJ & Music Engine (YuE2, Suno v6, MiniMax)
+*Reference: [proposal-comfyui-generative-music-dj-engine.md](../../../../../proposal-comfyui-generative-music-dj-engine.md)*
+*   **Tri-Model Generative Matrix**: Equip the character with two local generation options and one remote option:
+    *   **Local Option 1 — MiniMax Music 3.0 (via ComfyUI)**: High-fidelity neural audio workflow for dedicated GPU rigs.
+    *   **Local Option 2 — YuE 2 (Score-First Local)**: On-device generation (<8 GB VRAM) utilizing symbolic score planning (composing melody, chords, rhythm, and song structure before audio diffusion, enabling structural editing and minor-key covers).
+    *   **Remote Option 1 — Suno v6 (Cloud API)**: Fast, zero-local-VRAM cloud fallback with stem isolation, microediting single lyrics, and tiered creativity (V6, V6 Wild, V6 Mini).
+*   **Dynamic Voice Ducking & DJ Banter**: Automated 20% volume attenuation during character TTS speech with automatic recovery, supporting radio-style spoken intros/outros and status-anchored proactivity.
+
 ---
 
 ## Visual Manifestation & Stage Presentation
@@ -161,10 +174,16 @@ This document tracks all active pending items, architectural roadmaps, and featu
     *   **Spine 2D**: Filter mechanical bone IK tracks and base skins while surfacing expressive facial attachments and pose states.
 *   **Sparkle AI 3-Step Curation Wizard for 2D Models**: Enable the `"✨ Auto-Curate (AI)"` wizard in `ModelCustomizer.vue` for Live2D and Spine models, translating foreign parameter names (Japanese/Chinese/cryptic DCC tags) into clean `<|ACT:emotion="..."|>` tokens and compiling acting system prompt directives into `displayModel.emotionMappings` and `AiriExtension.acting.modelExpressionPrompt`.
 
-### Dynamic Item Manifestation & Prompt-to-Character (TRELLIS)
+### Dynamic Item & Scene Manifestation (TRELLIS & Fire3D)
 *Reference: [proposal-trellis-dynamic-item-manifestation.md](../../../../../proposal-trellis-dynamic-item-manifestation.md)*
-*   **Actor Item Tool Calling & Prompt-to-Character Pipeline**: Implement LLM tool calls (`create_stage_item`, `list_stage_items`, `equip_stage_item`), ComfyUI TRELLIS 3D websocket pipeline (.glb mesh output), and skeletal bone socket mounting.
+*   **Tier 1: Actor Item Manifestation (TRELLIS)**: Implement LLM tool calls (`create_stage_item`, `list_stage_items`, `equip_stage_item`), ComfyUI TRELLIS 3D websocket pipeline (.glb mesh output), and skeletal bone socket mounting for personal accessories.
+*   **Tier 2: Environment Scene Decomposition (Fire3D)**: Implement `decompose_stage_scene` tool, converting photos, video clips, or background art into simulation-ready 3D scenes with up to 16 separate, editable mesh objects with physics colliders in under 1 minute on a single GPU.
 *   **Prompt-to-Character Expansion**: Use TRELLIS/3D pipeline as the foundational base for generating fully rigged, auto-injected 3D characters directly from natural language prompts.
+
+### Universal Multi-Skeleton Animation & Text-to-Motion (Unimate & FlowMDM)
+*Reference: [design-text-to-motion.md](../../../../../design-text-to-motion.md)*
+*   **Unimate Multi-Skeleton Upgrade**: Evolve beyond FlowMDM's bipedal humanoid constraint (HumanML3D 21 joints) to a unified foundational model capable of animating arbitrary 3D rigged skeletons (quadrupeds, non-human pets, dragons, satellites, mechanical props) from natural language prompts without per-skeleton retraining.
+*   **Stage-Mate & Three.js Integration**: Drive kinematically valid joint rotations for companion sidecars and dynamic animated stage props.
 
 ### Director-Led Regional Orchestration (Spatial Vision)
 *Reference: [proposal-director-led-regional-orchestration.md](../../../../../proposal-director-led-regional-orchestration.md)*
@@ -179,7 +198,8 @@ This document tracks all active pending items, architectural roadmaps, and featu
 *   **Anchored Pseudo-Stickers**: Render pseudo-stickers as absolute-positioned DOM elements within existing app containers (ActorStage Window, ControlStrip/Island, Chat bubbles) with rotation jitter, spring scale, and holographic sheen.
 
 ### Pluggable Integration Architecture
-*References: [proposal-twitch-plugin.md](../../../../../proposal-twitch-plugin.md) | [proposal-destiny2-plugin.md](../../../../../proposal-destiny2-plugin.md) | [feat-discord-revamp.md](../../../../../feat-discord-revamp.md)*
+*References: [proposal-twitch-plugin.md](../../../../../proposal-twitch-plugin.md) | [proposal-destiny2-plugin.md](../../../../../proposal-destiny2-plugin.md) | [proposal-gaming-show-harness-copilot.md](../../../../../proposal-gaming-show-harness-copilot.md) | [feat-discord-revamp.md](../../../../../feat-discord-revamp.md)*
+*   **Show Harness Vision-to-Action Gaming Co-Pilot & Autonomous Companion**: Moves beyond passive REST API polling and OCR by using Vision-Language Models to watch the live game stream, evaluate HUD/game state, and execute discrete semantic action primitives via a bounded Action Interpreter with up to 100% execution accuracy (real-time game callouts, automated farming/minigames, visual novel decision-making, and secondary constrained desktop UI navigation).
 *   **Twitch Chat Plugin (`airi-plugin-twitch-chat`)**: Inbound live stream chat context ingest reacting to chats, subs, raids, and channel points.
 *   **WIP Plugin Stubs**: Complete stubs for Bilibili Live Stream Ingest (`airi-plugin-bilibili-laplace`) and Home Assistant Event Ingest (`airi-plugin-homeassistant`).
 *   **Destiny 2 Proactive Speech Plugin**: Real-time Bungie API game event polling and a local ONNX/WebGPU screen-capture OCR pipeline (`PP-OCRv6_tiny_rec_onnx`) for live PVP/PVE HUD analysis (cleanroom OCR verified).
