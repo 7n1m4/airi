@@ -184,6 +184,45 @@ Interpretation:
 - that number is historical, not a full measure of functional drift
 - future selective sync passes should compare against the last reviewed upstream head first, not just the raw behind count
 
+## Reconnaissance Tracking vs. Selective Porting Filters
+
+It is critical to distinguish between **Radar Reconnaissance** and **Selective Porting**:
+
+1. **Radar Reconnaissance (Full Ecosystem Awareness)**:
+   - The upstream tracker and radar reports in `docs/UPSTREAM_RADAR.md` MUST observe, track, and log everything upstream is doing across all domains—including hosted cloud sync, billing, Stripe, Apple IAP, authentication flows, and community discussion velocity.
+   - Even if the fork has zero intention of adopting cloud billing or hosted databases, maintaining a radar of upstream's macro direction provides vital situational awareness of their architectural trajectory and community needs.
+   - Do NOT scrub or exclude upstream cloud/commercial initiatives from the high-level radar report or community buzz metrics.
+
+2. **Selective Porting Filters (Cherry-Pick & Integration Boundaries)**:
+   - When transitioning from observation to action—evaluating **Cherry-Pick Candidates** or proposing PR ports—strict architectural filters apply.
+   - Changes that touch dead, superseded, or incompatible architectures must be filtered out so the fork does not waste time reviewing or porting changes that make no sense in this codebase.
+
+## Permanent Architectural Divergence & Upstream Filter Catalog
+
+The following areas represent permanent or intentional architectural divergences between `dasilva333/airi` and `moeru-ai/airi`. Changes in these categories must NOT be recommended as cherry-pick candidates:
+
+### 1. Control Island vs. Control Strip (Decoupled Stage Architecture)
+- **Fork Reality**: In commit `e10223f2e`, this fork completely eliminated the legacy monolithic `controls-island` (`apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/`). The architecture underwent a deep structural decoupling:
+  - **Actor Stage Window (`windows/stage`)**: Dedicated strictly to avatar rendering (`RendererStage.vue` / `WidgetStage.vue` for VRM, Live2D, Spine, MMD).
+  - **Main Window / Control Strip (`windows/main`)**: Hosts the independent, floating, draggable glassmorphic ribbon (`ControlStrip.vue`, `ControlStripHost.vue`).
+- **Upstream Reality**: Upstream never decoupled this. They continue to maintain and patch the monolithic `controls-island` inside their stage window (e.g. PR #2522 Wayland hover fixes, drawer menus).
+- **Filter Rule**: Any upstream commits, PRs, or diffs touching `controls-island` are **permanent auto-rejects** for porting. Never propose or cherry-pick them.
+
+### 2. Local-First Desktop vs. Hosted Cloud & Monetization
+- **Fork Reality**: `dasilva333/airi` is strictly a private, local-first desktop application with Bring Your Own Storage (BYOS: S3/R2/Google Drive backup), local unstorage/localforage persistence, and zero online account requirements.
+- **Upstream Reality**: Upstream actively develops hosted cloud services, remote database provider syncing (e.g. PR #2471), Stripe product restoration (PR #2533), Apple App Store IAP (PR #2339), and remote email verification flows (PR #2473).
+- **Filter Rule**: Report these in the radar for macro awareness, but classify them as `⚪ ignore / rejected in fork` for integration. Never recommend them for local porting.
+
+### 3. Speech & Audio Engines
+- **Fork Reality**: Primary zero-config STT is `browser-web-speech-api` (Chromium Web Speech API), alongside `whisper-local` (on-device WebGPU/WASM Whisper) and cloud STT providers.
+- **Upstream Reality**: Upstream introduced a native macOS/iOS Apple Speech provider (`apple-speech` via `SFSpeechRecognizer`).
+- **Filter Rule**: Web Speech API routes audio data over the network to browser vendor servers (e.g. Google), whereas native Apple Speech supports on-device offline recognition on Apple Silicon. While Apple Speech has legitimate on-device privacy value, it is not currently wired in this fork. Do not confuse Web Speech with Apple Speech, and do not propose Apple Speech fixes (such as PR #2540) unless a deliberate port of the native Apple Speech provider is authorized.
+
+### 4. Multi-Actor & Expanded Avatar Runtimes
+- **Fork Reality**: This fork supports `<|ACTOR|>` tokens for mid-conversation dynamic character switching, LRU display model caching, and multi-actor character cards. It also provides first-class support for 4 model formats (VRM, Live2D, MMD with PMX physics, Spine 2D) and a high-fidelity Unity companion (`apps/stage-mate`).
+- **Upstream Reality**: Upstream focuses predominantly on 1:1 character cards, VRM/Live2D, and experimental Godot 4 sidecar skeletons.
+- **Filter Rule**: Upstream patches assuming single-actor cards or Godot sidecars must not be blindly imported over the fork's multi-actor or Unity sidecar runtimes.
+
 ## Relevant Skills
 
 - [[airi-roadmap-upstream-research]]

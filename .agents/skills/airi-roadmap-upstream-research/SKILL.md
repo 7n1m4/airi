@@ -26,8 +26,43 @@ Research first, port deliberately. This fork is highly divergent; the `upstream`
 - **Touching `upstream` without authorization.** Upstream is reference-only. No `push`/`rebase`/`fetch`/`inspect` of `upstream` (or any remote mutation) unless the user explicitly authorizes it — and a greenlight is one-time, for that checkpoint only.
 - **Treating the roadmap as all-unbuilt.** Read each roadmap entry; several are already marked `[COMPLETED]` or carry priority tags. Verify current source before assuming a feature is missing.
 - **Assuming a proposal doc reflects shipped code.** Proposal documents are design intent. If a proposal conflicts with current source, source wins — verify against the actual files before planning.
+- **Recommending Obsolete or Superseded Surfaces.** Upstream still actively develops on surfaces that this fork deprecated and removed months ago (e.g. `controls-island`). Never recommend upstream commits or PRs modifying `controls-island` as cherry-pick candidates.
 - **Scope creep on a port.** Port narrowly and deliberately; do not bundle a broad refactor into a research/port task. Root-cause and state the proposed approach and tradeoffs, and wait for approval before changing application code (pair-programming rule).
 - **Momentum toward commit/push.** Never proactively commit or push. The user decides when a tested checkpoint becomes a commit and when it is published; validate before any push.
+
+## Architectural Divergences: What Sets This Fork Apart
+
+This fork (`dasilva333/airi`) has undergone deep, structural architectural shifts that separate it from upstream (`moeru-ai/airi`). When conducting research or triaging PRs, evaluate changes against these core distinctions:
+
+1. **Decoupled Desktop Surfaces (Control Strip vs. Control Island)**:
+   - In commit `e10223f2e`, this fork deleted the legacy monolithic `controls-island/` inside the stage window.
+   - The desktop was cleanly split into the **Actor Stage** (`windows/stage`, `RendererStage.vue` dedicated solely to avatar rendering) and the **Main Window / Control Strip** (`windows/main`, `ControlStrip.vue`, `ControlStripHost.vue` floating ribbon).
+   - Upstream never decoupled this and still patches `controls-island` (e.g. Wayland hover fixes, menus). **Upstream `controls-island` changes are permanent auto-rejects for porting.**
+2. **Local-First & Privacy Invariant vs. Hosted Cloud / Commercial Services**:
+   - This fork is strictly local-first desktop with Bring Your Own Storage (BYOS: S3/R2/Google Drive backup), local unstorage/localforage persistence, and zero online accounts.
+   - Upstream actively develops hosted cloud services, remote database provider syncing (e.g. PR #2471), Stripe billing for Flux (PR #2533), Apple App Store IAP (PR #2339), and remote email verification (PR #2473).
+3. **Multi-Actor & `<|ACTOR|>` Dynamic Staging**:
+   - This fork supports `<|ACTOR|>` tokens for mid-conversation dynamic character switching, LRU display model caching, and multi-actor character cards. Upstream is strictly 1:1 character cards.
+4. **Expanded Avatar Runtimes (4 Engines + Unity Companion)**:
+   - This fork natively supports 4 avatar engines (VRM, Live2D, MMD with PMX physics, Spine 2D) and a high-fidelity Unity C# sidecar (`apps/stage-mate`). Upstream focuses on VRM/Live2D and Godot 4 experiments.
+5. **Two-Layer Memory & Dreaming Subsystems**:
+   - This fork features STMM daily summaries, LTMM immutable text journal with `text_journal` tool, Sacred Journal Rule, Dreaming Worker reflections, Echo chips, and Universe/storyline isolation.
+6. **Autonomous Artistry & BYOW**:
+   - Native ComfyUI API direct integration with Bring-Your-Own-Workflow `workflow_api.json` node mapping and autonomous Director decision loops.
+7. **Speech & Audio Pipeline Awareness**:
+   - **Web Speech API** (`browser-web-speech-api`): Browser-native STT; routes audio data over the network to browser vendor servers (e.g. Google).
+   - **Apple Speech** (`SFSpeechRecognizer`): Native Apple framework supporting genuine on-device offline recognition on Apple Silicon.
+   - While Apple Speech has legitimate on-device privacy value, it is currently an upstream-focused provider not wired in this fork. Distinguish these architectures carefully rather than conflating them or recommending unported provider patches.
+
+## Upstream Radar vs. Cherry-Pick Triage SOP
+
+- **Reconnaissance Tracking (Observe Everything)**:
+  - The upstream radar in `docs/UPSTREAM_RADAR.md` MUST capture the full macro picture: commits, PRs, comments, cloud features, Stripe, billing, auth, and community velocity.
+  - The user wants visibility into upstream's total trajectory, even for features this fork will never adopt.
+- **Cherry-Pick Triage (Filter Deliberately)**:
+  - When recommending **Cherry-Pick Candidates**, strictly filter against the architectural shifts above.
+  - Never recommend `controls-island` fixes, hosted cloud auth/billing, or single-actor assumptions.
+  - Only recommend high-value bugfixes, UI primitives, or features that cleanly fit the fork's decoupled architecture.
 
 
 ### Authoritative Design & Architecture Documents

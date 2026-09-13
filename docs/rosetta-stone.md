@@ -600,6 +600,8 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 ## 17. Deprecated & Removed Surfaces
 
 > **Do not resurrect these paths.** They were removed deliberately. Cite them as deprecated; if you find a reference, retarget it to the current replacement.
+>
+> ⚠️ **Upstream Divergence Warning (`controls-island`)**: Upstream (`moeru-ai/airi`) still actively maintains and patches `controls-island` (e.g. Wayland hover fixes, menus). In this fork, the entire monolithic island was deleted in `e10223f2e` when the desktop architecture was decoupled into the standalone **Actor Stage** (`windows/stage`, `RendererStage.vue`) and **Control Strip** (`windows/main`, `ControlStrip.vue`). All upstream PRs or commits modifying `controls-island` are obsolete for this fork and must be ignored during upstream review.
 
 | Removed path | Removed in | Replaced by | Why removed |
 | :--- | :--- | :--- | :--- |

@@ -119,6 +119,20 @@ const SUBSYSTEM_RULES = [
     ],
   },
   {
+    name: 'Deprecated Surfaces (Control Island)',
+    risk: '⚪ ignore / rejected in fork (decoupled into Control Strip)',
+    patterns: [
+      /stage-islands\/controls-island/,
+    ],
+  },
+  {
+    name: 'Cloud Services, Billing & Auth',
+    risk: '⚪ ignore / rejected in fork (offline-first architecture)',
+    patterns: [
+      /^server\//,
+    ],
+  },
+  {
     name: 'Electron Desktop Shell',
     risk: '⚠️ hand-merge',
     patterns: [
