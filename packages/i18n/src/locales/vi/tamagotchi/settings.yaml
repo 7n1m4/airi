@@ -6,6 +6,49 @@ pages:
     mcp-server:
       description: Kết nối và quản lý máy chủ MCP và các công cụ
       title: Máy chủ MCP
+      config-path: Đường dẫn cấu hình
+      runtime-title: Máy chủ đang chạy
+      tabs:
+        manage: Quản lý
+        store: Cửa hàng
+        config: Cấu hình
+      actions:
+        open-config: Mở cấu hình
+        apply-restart: Áp dụng & Khởi động lại
+        refresh: Làm mới trạng thái
+        install: Cài đặt
+      messages:
+        opened: Đã mở tệp cấu hình tại {path}
+        restarted: 'Khởi động lại hoàn tất: {started} đã chạy, {failed} thất bại,
+          {skipped} đã bỏ qua.'
+      guidance:
+        title: Cách sử dụng các công cụ này
+        note: 'Để thực thi một hành động MCP, chỉ cần yêu cầu AI: "Vui lòng sử dụng
+          tính năng mcp_tool_call để chạy công cụ {tool}..."'
+      dashboard:
+        server-list: Danh mục máy chủ
+        no-servers: Chưa có máy chủ nào được cấu hình.
+        tool-count: Có {count} công cụ khả dụng
+        details:
+          command: Lệnh
+          args: Tham số
+          env: Môi trường
+      store:
+        title: Cửa hàng MCP
+        description: Khám phá và cài đặt các máy chủ MCP tuyển chọn
+        items:
+          google-search:
+            name: Google Tìm kiếm
+            description: Máy chủ MCP Google Search chính thức phục vụ tra cứu thông tin web.
+          filesystem:
+            name: Hệ thống tệp
+            description: Truy cập an toàn vào các tệp và thư mục cục bộ.
+          memory:
+            name: Bộ nhớ
+            description: Bộ nhớ dài hạn dựa trên đồ thị để lưu trữ ngữ cảnh liên tục.
+          postgres:
+            name: PostgreSQL
+            description: Quyền đọc và ghi vào cơ sở dữ liệu PostgreSQL.
   system:
     sections:
       section:
@@ -27,6 +70,9 @@ pages:
           use-window-mouse:
             title: Công cụ useWindowMouse
             description: Kiểm tra vị trí con trỏ chuột trong cửa sổ Electron
+    dock-mode:
+      title: Chế độ gắn cửa sổ (Dock)
+      description: Gắn cửa sổ này vào một cửa sổ ứng dụng khác.
 devtools:
   title: Nhà phát triển
   pages:
@@ -45,10 +91,32 @@ devtools:
 screen-capture:
   permissions-prompt:
     title: Chụp ảnh màn hình
-    description: Để chụp màn hình hoặc cửa sổ, bạn cần cấp quyền ghi âm hệ thống và ghi màn hình.
+    description: Để chụp màn hình hoặc cửa sổ, bạn cần cấp quyền ghi âm hệ thống và
+      ghi màn hình.
     open-preferences: Mở Tùy chọn hệ thống
     dismiss: Bỏ qua
     instructions:
       step-1: Mở "Tùy chọn hệ thống", chọn "Quyền riêng tư & Bảo mật" từ thanh bên.
-      step-2: Trong phần "Ghi màn hình & Âm thanh hệ thống" và "Chỉ ghi âm thanh hệ thống", hãy bật công tắc cho AIRI.
-      step-2-note: Nếu không thấy AIRI trong danh sách, vui lòng thêm thủ công bằng cách nhấn nút "+" và chọn AIRI từ thư mục Ứng dụng (Applications).
+      step-2: Trong phần "Ghi màn hình & Âm thanh hệ thống" và "Chỉ ghi âm thanh hệ
+        thống", hãy bật công tắc cho AIRI.
+      step-2-note: Nếu không thấy AIRI trong danh sách, vui lòng thêm thủ công bằng
+        cách nhấn nút "+" và chọn AIRI từ thư mục Ứng dụng (Applications).
+dock-mode:
+  select-window: Chọn cửa sổ mục tiêu
+  refresh-windows: Làm mới
+  no-windows: Không tìm thấy cửa sổ nào
+  loading-windows: Đang tải danh sách cửa sổ...
+  dock-position: Vị trí gắn
+  position:
+    left: Trái
+    right: Phải
+    top: Trên
+    bottom: Dưới
+  offset-x: Độ lệch ngang
+  offset-y: Độ lệch dọc
+  start: Bắt đầu gắn
+  stop: Dừng gắn
+  status:
+    active: 'Đã gắn vào: {name}'
+    inactive: Chưa gắn
+    unsupported: Tính năng gắn cửa sổ không được hỗ trợ trên nền tảng này

@@ -1,11 +1,56 @@
 allow-visible-on-all-workspaces:
   title: Visibilidad Entre Espacios
-  description: Permitir que la ventana sea visible en todos los espacios de trabajo, solo macOS.
+  description: Permitir que la ventana sea visible en todos los espacios de
+    trabajo, solo macOS.
 pages:
   modules:
     mcp-server:
       description: Conectar y gestionar servidor MCP y herramientas
       title: Servidor MCP
+      config-path: Ruta de configuración
+      runtime-title: Servidores en ejecución
+      tabs:
+        manage: Administrar
+        store: Tienda
+        config: Configuración
+      actions:
+        open-config: Abrir configuración
+        apply-restart: Aplicar y reiniciar
+        refresh: Actualizar estado
+        install: Instalar
+      messages:
+        opened: Archivo de configuración abierto en {path}
+        restarted: 'Reinicio completado: {started} iniciados, {failed} fallidos,
+          {skipped} omitidos.'
+      guidance:
+        title: Cómo usar estas herramientas
+        note: 'Para ejecutar una acción MCP, simplemente pídele a la IA: "Por favor,
+          usa la capacidad mcp_tool_call para ejecutar la herramienta
+          {tool}..."'
+      dashboard:
+        server-list: Registro de servidores
+        no-servers: No hay servidores configurados.
+        tool-count: '{count} herramientas disponibles'
+        details:
+          command: Comando
+          args: Argumentos
+          env: Entorno
+      store:
+        title: Tienda MCP
+        description: Descubre e instala servidores MCP seleccionados
+        items:
+          google-search:
+            name: Búsqueda de Google
+            description: Servidor MCP oficial de Google Search para grounding web.
+          filesystem:
+            name: Sistema de archivos
+            description: Acceso seguro a archivos y directorios locales.
+          memory:
+            name: Memoria
+            description: Memoria a largo plazo basada en grafos para persistencia.
+          postgres:
+            name: PostgreSQL
+            description: Acceso de lectura y escritura a bases de datos PostgreSQL.
   system:
     sections:
       section:
@@ -27,6 +72,9 @@ pages:
           use-window-mouse:
             title: Herramienta useWindowMouse
             description: Evalúa la posición del cursor de la ventana de Electron
+    dock-mode:
+      title: Modo de acoplamiento de ventana
+      description: Acopla la ventana a otra ventana de aplicación.
 devtools:
   title: Desarrollador
   pages:
@@ -45,10 +93,33 @@ devtools:
 screen-capture:
   permissions-prompt:
     title: Captura de pantalla
-    description: Para capturar las pantallas o ventanas, se requieren permisos de grabación de pantalla y audio del sistema.
+    description: Para capturar las pantallas o ventanas, se requieren permisos de
+      grabación de pantalla y audio del sistema.
     open-preferences: Abrir Preferencias del Sistema
     dismiss: Descartar
     instructions:
-      step-1: Abre "Preferencias del sistema", selecciona "Privacidad y Seguridad" en la barra lateral.
-      step-2: En la sección "Grabación de audio de pantalla y sistema" y "Solo grabación de audio del sistema", encienda los interruptores para AIRI.
-      step-2-note: Si AIRI no aparece en la lista, añádelo manualmente haciendo clic en el botón "+" y seleccionando AIRI de la carpeta Aplicaciones.
+      step-1: Abre "Preferencias del sistema", selecciona "Privacidad y Seguridad" en
+        la barra lateral.
+      step-2: En la sección "Grabación de audio de pantalla y sistema" y "Solo
+        grabación de audio del sistema", encienda los interruptores para AIRI.
+      step-2-note: Si AIRI no aparece en la lista, añádelo manualmente haciendo clic
+        en el botón "+" y seleccionando AIRI de la carpeta Aplicaciones.
+dock-mode:
+  select-window: Seleccionar ventana de destino
+  refresh-windows: Actualizar
+  no-windows: No se encontraron ventanas
+  loading-windows: Cargando ventanas...
+  dock-position: Posición de acoplamiento
+  position:
+    left: Izquierda
+    right: Derecha
+    top: Arriba
+    bottom: Abajo
+  offset-x: Desplazamiento horizontal
+  offset-y: Desplazamiento vertical
+  start: Iniciar acoplamiento
+  stop: Detener acoplamiento
+  status:
+    active: 'Acoplado a: {name}'
+    inactive: No acoplado
+    unsupported: El acoplamiento de ventanas no es compatible con esta plataforma

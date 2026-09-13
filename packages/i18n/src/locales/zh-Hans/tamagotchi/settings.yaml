@@ -6,6 +6,47 @@ pages:
     mcp-server:
       description: 连接与管理 MCP 服务器和工具
       title: MCP 服务器
+      config-path: 配置路径
+      runtime-title: 运行中的服务器
+      tabs:
+        manage: 管理
+        store: 商店
+        config: 配置
+      actions:
+        open-config: 打开配置
+        apply-restart: 应用并重启
+        refresh: 刷新状态
+        install: 安装
+      messages:
+        opened: 已打开位于 {path} 的配置文件
+        restarted: 重启完成：{started} 个已启动，{failed} 个失败，{skipped} 个跳过。
+      guidance:
+        title: 如何使用这些工具
+        note: 如需执行 MCP 操作，只需向 AI 发送指令：“请使用 mcp_tool_call 能力运行 {tool} 工具……”
+      dashboard:
+        server-list: 服务器注册表
+        no-servers: 未配置任何服务器。
+        tool-count: '{count} 个可用工具'
+        details:
+          command: 命令
+          args: 参数
+          env: 环境变量
+      store:
+        title: MCP 商店
+        description: 发现并安装精选的 MCP 服务器
+        items:
+          google-search:
+            name: Google 搜索
+            description: 用于网页检索与事实依据的官方 Google 搜索 MCP 服务器。
+          filesystem:
+            name: 文件系统
+            description: 安全访问本地文件与目录。
+          memory:
+            name: 记忆
+            description: 基于图谱的持久化长期记忆存储。
+          postgres:
+            name: PostgreSQL
+            description: 对 PostgreSQL 数据库的读写访问权限。
   system:
     sections:
       section:
@@ -27,6 +68,9 @@ pages:
           use-window-mouse:
             title: 使用窗口鼠标工具
             description: 测试 Electron 窗口鼠标位置
+    dock-mode:
+      title: 窗口吸附模式
+      description: 将窗口吸附到另一个应用程序窗口旁边。
 devtools:
   title: 开发者选项
   pages:
@@ -52,3 +96,22 @@ screen-capture:
       step-1: 打开「系统首选项」，从侧边栏选择「隐私与安全」。
       step-2: 在「屏幕和系统音频录制」和「系统音频录制」部分中，开启 AIRI 的开关。
       step-2-note: 如果没有列出 AIRI，请通过单击「+」按钮和从应用程序文件夹中选择 AIRI 来手动添加。
+dock-mode:
+  select-window: 选择目标窗口
+  refresh-windows: 刷新
+  no-windows: 未找到窗口
+  loading-windows: 正在加载窗口列表...
+  dock-position: 吸附位置
+  position:
+    left: 左侧
+    right: 右侧
+    top: 上方
+    bottom: 下方
+  offset-x: 水平偏移
+  offset-y: 垂直偏移
+  start: 开启吸附
+  stop: 停止吸附
+  status:
+    active: 已吸附至：{name}
+    inactive: 未吸附
+    unsupported: 当前平台不支持窗口吸附

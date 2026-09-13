@@ -6,6 +6,48 @@ pages:
     mcp-server:
       description: MCP 서버 및 도구 연결 및 관리
       title: MCP 서버
+      config-path: 설정 경로
+      runtime-title: 실행 중인 서버
+      tabs:
+        manage: 관리
+        store: 스토어
+        config: 설정
+      actions:
+        open-config: 설정 열기
+        apply-restart: 적용 및 재시작
+        refresh: 상태 새로고침
+        install: 설치
+      messages:
+        opened: '{path} 에서 설정 파일을 열었습니다'
+        restarted: '재시작 완료: {started}개 시작됨, {failed}개 실패, {skipped}개 건너뜀.'
+      guidance:
+        title: 도구 사용 방법
+        note: 'MCP 동작을 실행하려면 AI에게 다음과 같이 요청하세요: "mcp_tool_call 기능을 사용하여 {tool} 도구를
+          실행해줘..."'
+      dashboard:
+        server-list: 서버 레지스트리
+        no-servers: 구성된 서버가 없습니다.
+        tool-count: '{count}개 도구 사용 가능'
+        details:
+          command: 명령어
+          args: 인자
+          env: 환경 변수
+      store:
+        title: MCP 스토어
+        description: 엄선된 MCP 서버를 탐색하고 설치하세요
+        items:
+          google-search:
+            name: Google 검색
+            description: 웹 정보 연동(그라운딩)을 위한 공식 Google 검색 MCP 서버입니다.
+          filesystem:
+            name: 파일 시스템
+            description: 로컬 파일 및 디렉터리에 대한 안전한 접근을 제공합니다.
+          memory:
+            name: 메모리
+            description: 지속성을 위한 그래프 기반 장기 기억 저장소입니다.
+          postgres:
+            name: PostgreSQL
+            description: PostgreSQL 데이터베이스 읽기 및 쓰기 접근을 제공합니다.
   system:
     sections:
       section:
@@ -27,6 +69,9 @@ pages:
           use-window-mouse:
             title: useWindowMouse 도구
             description: Electron 창 커서 위치 테스트
+    dock-mode:
+      title: 창 도킹 모드
+      description: 창을 다른 애플리케이션 창에 고정하여 함께 이동합니다.
 devtools:
   title: 개발자 옵션
   pages:
@@ -52,3 +97,22 @@ screen-capture:
       step-1: '"시스템 환경설정"을 열고 사이드 바에서 "프라이버시 및 보안"을 선택합니다.'
       step-2: '"화면 및 시스템 오디오 녹음" 및 "시스템 오디오 녹음 전용" 섹션에서 AIRI에 대한 스위치를 켭니다.'
       step-2-note: AIRI가 목록에 없는 경우, "+" 버튼을 클릭하고 애플리케이션 폴더에서 AIRI를 선택하여 수동으로 추가해 주세요.
+dock-mode:
+  select-window: 대상 창 선택
+  refresh-windows: 새로고침
+  no-windows: 창을 찾을 수 없음
+  loading-windows: 창 목록 불러오는 중...
+  dock-position: 도킹 위치
+  position:
+    left: 왼쪽
+    right: 오른쪽
+    top: 위쪽
+    bottom: 아래쪽
+  offset-x: 수평 오프셋
+  offset-y: 수직 오프셋
+  start: 도킹 시작
+  stop: 도킹 중지
+  status:
+    active: '도킹됨: {name}'
+    inactive: 도킹되지 않음
+    unsupported: 이 플랫폼에서는 창 도킹을 지원하지 않습니다
