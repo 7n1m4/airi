@@ -1,0 +1,385 @@
+stepper:
+  ariaLabel: Progreso de configuración inicial
+  prevStep: Paso anterior
+  nextStep: Siguiente paso
+  jumpToStep: Ir a cualquier paso
+  allSteps: Todos los pasos ({count})
+
+shell:
+  close: Cerrar
+  finish: Iniciar Escenario
+  previous: Atrás
+  next: Continuar
+  skip: Configurar más tarde
+
+steps:
+  welcome:
+    label: Bienvenida
+    subtitle: Estudio privado de compañía
+    heroTitle: Bienvenido a AIRI
+    heroSubtitle: El escenario para tu compañía virtual — listo en minutos, 100% privado en tu ordenador.
+    companionQuote: '¡Hola! Soy tu compañía digital autónoma. Ya sea que busques conversación por voz, expresivas presentaciones en el escenario o una tranquila presencia en el escritorio, estoy lista para adaptarme a tu mundo.'
+    pills:
+      webgpu: Núcleo local WebGPU
+      offline: 100% sin conexión y privado
+      souls: Combina almas y avatares a tu gusto
+    actions:
+      quickStart: Inicio rápido (60s)
+      guidedSetup: Configuración guiada
+      setupLater: Configurar más tarde
+    dialog:
+      savedTitle: Configuración guardada para después
+      savedDescription: 'Puedes reanudar la configuración en cualquier momento haciendo clic en el icono de AIRI en la barra de menú o bandeja del sistema:'
+      trayItem: Configuración de acompañante e inicio de sesión (V3)
+      continue: Continuar configuración
+      closeToTray: Minimizar a la bandeja
+
+  triage:
+    label: Cuenta
+    subtitle: Inicio de sesión y arquitectura
+    title: Inicio de sesión y arquitectura
+    description: Elige entre ejecutar la aplicación de forma 100% aislada y sin conexión en este equipo, o conectar una cuenta para sincronización y copias de seguridad en la nube.
+    zeroTrustBadge: Zero-Trust
+    localOption:
+      title: Compañía local (Aislada / Offline)
+      description: 100% privado y sin conexión. Todas las tarjetas de personaje, recuerdos y estados se guardan localmente en la base de datos de tu equipo, sin telemetría externa.
+      badge: Primero local
+      action: Continuar localmente
+    cloudOption:
+      title: Inicio de sesión (Cloudflare)
+      description: Conecta tu cuenta para sincronizar acompañantes, preferencias y cámaras de memoria entre dispositivos con cifrado de extremo a extremo.
+      badge: Sincronización multidispositivo
+      connect: Iniciar sesión con Cloudflare
+      connected: Conectado a Cloudflare
+      accountPrefix: 'ID de cuenta:'
+    restore:
+      foundCompanions: Se encontraron {count} acompañantes en Cloudflare R2
+      restoreAndLaunch: Restaurar e iniciar escenario (~30s)
+      restoreAndBuild: Restaurar y crear otro personaje
+      syncing: Restaurando acompañantes remotos...
+
+  appearance:
+    label: Apariencia
+    subtitle: Idioma, tema y acento
+    title: Idioma y apariencia visual
+    description: Configura el idioma de la interfaz, el tema visual y tu color de acento característico.
+    languageSection:
+      title: Idioma de la interfaz
+      description: Selecciona el idioma principal para AIRI. Puedes cambiarlo cuando desees.
+    themeSection:
+      title: Modo de tema
+      description: Elige tu modo de color preferido.
+      dark: Oscuro
+      light: Claro
+      system: Sincronizado con el sistema
+    colorSection:
+      title: Paleta de acentos característica
+      description: Elige un tono distintivo para personalizar botones, resaltados y efectos de resplandor.
+      defaultColor: Cian por defecto
+      custom: Hexadecimal personalizado
+      groups:
+        warm: Calidez y Fuego
+        flora: Tierra y Flora
+        ocean: Océano y Cielo
+        royal: Realeza y Flores
+    perDeviceToggle: Mantener esta apariencia solo en este dispositivo (excluir de la sincronización)
+
+  experience:
+    label: Experiencia
+    subtitle: Arquetipo de interacción
+    title: Arquetipos de interacción
+    description: Selecciona un estilo preconfigurado de interacción. Esto ajustará los módulos activos y eliminará los pasos innecesarios.
+    archetypes:
+      quietObserver:
+        title: Observador Silencioso
+        tag: El más rápido · Minimalista
+        description: Compañero de texto ultraligero. El avatar reacciona en el escenario, tiene pensamientos y memoria a largo plazo, con cero consumo de audio o visión.
+      casualCompanion:
+        title: Compañero Cotidiano
+        tag: Opción más popular
+        description: El compañero ideal de voz y presencia visual. Diálogo natural (STT/TTS), análisis de fotos del chat (VLM), pausas realistas y memoria a largo plazo.
+      creativeMuse:
+        title: Musa Creativa
+        tag: Enfoque visual y artístico
+        description: Tu estudio de inspiración visual. Voz hablada, generación autónoma de imágenes (Pollinations/ComfyUI), comprensión de fotos y ricas expresiones.
+      executiveCopilot:
+        title: Copiloto Ejecutivo
+        tag: Máxima productividad
+        description: Diseñado para el trabajo productivo. Diálogo por voz, percepción de ventanas en el escritorio, herramientas MCP locales y búsqueda web en vivo.
+      ambientRoommate:
+        title: Compañero de Cuarto
+        tag: Presencia proactiva
+        description: Rutina viva y presencia constante. Voz hablada, comentarios espontáneos por latidos ambientales, horario de sueño y observación de pantalla.
+      swissArmy:
+        title: Navaja Suiza (Todo en Uno)
+        tag: Todos los pasos · Completo
+        description: 'La experiencia insignia integral: audio bidireccional, análisis visual, observación de pantalla, proactividad, arte, herramientas externas y memoria en 4 cuadrantes.'
+    advanced:
+      toggle: 'Avanzado: Personalizar módulos individuales'
+      description: Activa o desactiva manualmente módulos sensoriales y cognitivos específicos.
+      modules:
+        hearing: Audición (Transcripción por micrófono)
+        speech: Habla (Síntesis de voz neuronal)
+        thinking: Pensamiento (Ritmo y comentarios espontáneos)
+        emotions: Emociones (Puente de expresiones ACT en 2 fases)
+        vision: Visión (Análisis de imágenes en el chat)
+        screen: Pantalla (Observación del escritorio y OCR)
+        proactivity: Proactividad (Horarios y latidos ambientales)
+        artistry: Arte (Generación visual y director autónomo)
+        memory: Memoria (Jerarquía cognitiva de 4 cuadrantes)
+        tools: Herramientas (Búsqueda web y MCP de escritorio)
+
+  profile:
+    label: Perfil
+    subtitle: ¿Quién eres?
+    title: Tu identidad y dinámica de relación
+    description: Cuéntale a tu acompañante cómo debe llamarte y qué tipo de vínculo deseas forjar.
+    userName:
+      label: ¿Cómo debe llamarte tu acompañante?
+      placeholder: 'Ej.: Maestro, Alex, Senpai, Productor'
+    pronouns:
+      label: Pronombres preferidos
+      placeholder: 'Ej.: él, ella, elle'
+    relationship:
+      label: Dinámica de relación
+      options:
+        companion: Amigo cercano y acompañante
+        assistant: Asistente profesional y copiloto
+        romantic: Afectuoso y romántico
+        mentor: Mentor y consejero
+        student: Aprendiz curioso
+    userBio:
+      label: Sobre ti (Contexto opcional)
+      placeholder: Comparte tus pasatiempos, intereses o rutina diaria para que tu acompañante te conozca mejor.
+
+  vessel:
+    label: Recipiente físico
+    subtitle: Cuerpo de avatar Live2D / VRM
+    title: Elige un recipiente físico
+    description: Selecciona un avatar 3D VRM o un modelo 2D Live2D para darle presencia a tu acompañante.
+    filters:
+      all: Todos los avatares
+      installed: Instalados
+      downloadable: Descarga gratuita
+      vrm: 3D (VRM)
+      live2d: 2D (Live2D)
+    searchPlaceholder: Buscar avatares...
+    download: Descargar avatar
+    downloading: Descargando... {progress}%
+    installedBadge: Instalado
+    license: 'Licencia:'
+    author: 'Creador:'
+
+  consciousness:
+    label: Consciencia
+    subtitle: Motor de razonamiento (LLM)
+    title: Consciencia y cerebro de razonamiento
+    description: Conecta el modelo de lenguaje que impulsa los pensamientos, la personalidad y las respuestas de tu personaje.
+    tabs:
+      cloud: Proveedores en la nube (Recomendado)
+      local: Motores locales (Sin conexión y privado)
+    providerCards:
+      gemini: Google Gemini (Nivel gratuito disponible)
+      openrouter: OpenRouter (Plataforma universal)
+      openai: OpenAI
+      anthropic: Anthropic Claude
+      ollama: Ollama (Ejecución local)
+      webllm: WebLLM (WebGPU en navegador)
+    apiKey: Clave de API
+    model: Selección de modelo
+    baseUrl: URL de endpoint personalizada
+    verify: Probar conexión
+    verified: Conexión verificada
+    verifyFailed: 'Error de conexión: {reason}'
+
+  persona:
+    label: Alma y Persona
+    subtitle: Núcleo de personalidad
+    title: Alma del personaje y personalidad
+    description: Elige o personaliza la identidad fundamental, giros lingüísticos e historia de tu acompañante.
+    presetCards:
+      airi: AIRI (Espíritu autónomo por defecto)
+      custom: Tarjeta de personaje personalizada
+      import: Importar tarjeta (PNG / JSON)
+    characterName: Nombre del acompañante
+    personalitySummary: Resumen de personalidad
+    firstMessage: Saludo inicial (Turno 0)
+    firstMessagePlaceholder: ¿Qué dirá tu acompañante la primera vez que se abra el escenario?
+    speechQuirks: Modismos y tono al hablar
+
+  hearing:
+    label: Audición
+    subtitle: Transcripción de voz (STT)
+    title: Audición y reconocimiento de voz
+    description: Configura el micrófono de entrada, la detección de actividad vocal (VAD) y el motor de transcripción.
+    micSelect: Dispositivo de micrófono
+    testMic: Probar micrófono
+    vadThreshold: Sensibilidad de detección de voz
+    engines:
+      deepgram: Deepgram Nova (Transcripción ultrarrápida en la nube)
+      whisper: Whisper local (100% en el dispositivo)
+      browser: Web Speech API (Nativo del navegador sin configuración)
+
+  speech:
+    label: Habla
+    subtitle: Síntesis de voz neuronal (TTS)
+    title: Habla y síntesis de voz
+    description: Dale voz a tu personaje. Elige voces neuronales en la nube o síntesis completamente local y privada.
+    voiceCards:
+      kokoro: Kokoro TTS (Local WebGPU / WASM)
+      elevenlabs: ElevenLabs (Voces hiperrealistas en la nube)
+      azure: Azure Cognitive Speech
+      edge: Edge TTS (Voz gratuita en la nube)
+    voiceSelect: Timbre de voz
+    previewVoice: Escuchar muestra de voz
+    pitch: Tono de voz
+    speed: Velocidad de habla
+
+  thinking:
+    label: Pensamiento
+    subtitle: Ritmo y comentarios espontáneos
+    title: Pensamiento y ritmo conversacional
+    description: Configura pausas para reflexionar, muletillas dinámicas y comentarios espontáneos durante el razonamiento.
+    presets:
+      snappy:
+        title: Rápido (Snappy)
+        description: Respuestas ultrarrápidas de 200 ms. Mínima espera antes de contestar.
+      balanced:
+        title: Equilibrado (Balanced)
+        description: Ritmo conversacional humano natural con pausas y muletillas adaptativas para preguntas complejas.
+      deepCot:
+        title: Reflexión profunda (Deep CoT)
+        description: Razonamiento lógico extendido con ricos murmullos espontáneos mientras elabora la respuesta.
+    subconsciousAsides: Murmullos espontáneos hablados (Needle 2 WASM)
+    asidesDescription: Permite al personaje verbalizar pequeños pensamientos en voz baja mientras genera respuestas complejas.
+
+  emotions:
+    label: Emociones
+    subtitle: Puente de expresiones ACT en 2 fases
+    title: Emociones y el puente ACT
+    description: Vincula las emociones del diálogo con las expresiones faciales y movimientos del avatar en el escenario.
+    pass1Title: 'Fase 1: Extracción de expresiones'
+    pass1Desc: Normaliza las expresiones del modelo en tokens de acción <|ACT:*|>.
+    pass2Title: 'Fase 2: Directivas de actuación'
+    pass2Desc: Instrucciones en el prompt del sistema que enseñan al personaje cuándo y cómo expresar sus emociones.
+    liveExpressionTest: Prueba de expresiones en vivo
+    testExpressions:
+      happy: Alegría / Sonrisa
+      flustered: Sonrojo / Timidez
+      thinking: Pensativo / Dudoso
+      surprised: Sorpresa
+      wink: Guiño pícaro
+
+  vision:
+    label: Visión
+    subtitle: Análisis de fotos en el chat (VLM)
+    title: Percepción visual (VLM)
+    description: Permite a tu acompañante observar, interpretar y reaccionar a las imágenes que envías al chat.
+    engineTitle: Modelo de análisis visual
+    testImage: Probar percepción visual
+    testPrompt: Sube una imagen para comprobar la capacidad de comprensión visual del personaje.
+    perceptionAccuracy: Latencia y precisión de percepción
+
+  screen:
+    label: Pantalla
+    subtitle: Observación del escritorio
+    title: Observación de pantalla del escritorio
+    description: Permite al personaje echar un vistazo discreto a tu pantalla en segundo plano para ofrecer comentarios oportunos.
+    deliveryMode:
+      title: Modo de notificación
+      voiceAndBubble: Voz y bocadillo (Presencia completa)
+      bubbleOnly: Solo bocadillo (Aviso silencioso)
+      voiceOnly: Solo voz
+      muted: Silenciado (Solo contexto de pantalla)
+    salienceGate:
+      title: Filtro de relevancia visual
+      ocr: OCR ligero (Consumo mínimo de CPU)
+      vlm: Análisis profundo con modelo VLM
+    privacyExclusions: Lista de exclusión de privacidad (Excluye banca, contraseñas y ventanas privadas)
+
+  proactivity:
+    label: Proactividad
+    subtitle: Horarios y latidos ambientales
+    title: Rutina diaria y proactividad
+    description: Configura saludos automáticos, horas de silencio nocturno y la rutina del personaje.
+    heartbeats: Latidos ambientales autónomos
+    heartbeatsDesc: Si pasa un tiempo sin hablar, tu acompañante puede iniciar una conversación según el momento.
+    quietHours: Horas de silencio / Rutina de descanso
+    quietHoursDesc: Tu acompañante entra en reposo durante el horario elegido (sin alertas de voz inesperadas).
+    scheduleFrom: Hora de dormir
+    scheduleTo: Hora de despertar
+
+  artistry:
+    label: Arte
+    subtitle: Generación visual y director autónomo
+    title: Creatividad y generación de arte
+    description: Dale a tu personaje la capacidad de pintar retratos, crear autorretratos e ilustrar el escenario.
+    engines:
+      pollinations: Pollinations AI (100% gratuito y sin configuración)
+      comfyui: ComfyUI (Nodo local http://127.0.0.1:8188)
+      disabled: Desactivar generación de arte
+    styleChips: Estilos artísticos
+    previewButton: Generar ilustración de prueba
+    autonomousDirector: Director autónomo (Permite al personaje pintar espontáneamente durante la conversación)
+
+  memory:
+    label: Memoria
+    subtitle: Jerarquía cognitiva en 4 cuadrantes
+    title: Los 4 cuadrantes de memoria temporal
+    description: Descubre cómo tu acompañante forja recuerdos, conserva datos esenciales y consolida su mente al descansar.
+    quadrants:
+      stmm:
+        title: Memoria de trabajo a corto plazo (STMM)
+        desc: Resúmenes diarios y búfer de contexto de los mensajes recientes.
+      ltmm:
+        title: Diario sagrado inmutable (LTMM)
+        desc: Hitos permanentes y hechos clave almacenados en la base de datos vectorial local.
+      eternalThread:
+        title: Hilo eterno (Grafo de relación vitalicia)
+        desc: Destilación continua de la confianza, el vínculo afectivo y las vivencias compartidas.
+      dreaming:
+        title: Consolidación onírica (DRMM y ecos emocionales)
+        desc: Proceso nocturno que sintetiza anclas emocionales y resuelve contradicciones en segundo plano.
+
+  tools:
+    label: Herramientas
+    subtitle: Automatización y MCP de escritorio
+    title: Automatización y herramientas externas
+    description: Otorga a tu acompañante búsqueda web en tiempo real y capacidades sobre el sistema.
+    webSearch:
+      title: Búsqueda web en vivo (DuckDuckGo / Brave)
+      desc: Permite consultar noticias recientes, documentación técnica y el clima sin necesidad de claves API.
+    desktopMcp:
+      title: Model Context Protocol (Archivos del escritorio)
+      desc: Lectura y edición de archivos en el espacio de trabajo con permiso previo, y ejecución de scripts.
+    motionGen:
+      title: Movimiento 3D generativo (FlowMDM)
+      desc: Crea animaciones 3D a medida y clips VRMA al vuelo según el tono de la conversación.
+
+  finale:
+    label: Despegue
+    subtitle: Revisión final y lanzamiento
+    title: Matriz de verificación final
+    description: Revisa el estado operativo de los 4 pilares fundamentales antes de saltar al escenario.
+    pillars:
+      audio: Entrada de audio y audición
+      reasoning: Consciencia y cerebro de razonamiento
+      speech: Motor de síntesis de voz
+      avatar: Recipiente y controlador del escenario
+    status:
+      ready: Listo
+      configured: Configurado
+      optional: Opcional / Omitido
+      actionRequired: Acción requerida
+    greetingCard: Vista previa del diálogo inicial (Turno 0)
+    launchButton: Iniciar escenario AIRI
+    launching: Iniciando escenario...
+
+quickStart:
+  title: Inicio rápido en 60 segundos
+  subtitle: Configuración exprés utilizando valores recomendados sin complicaciones.
+  companionName: Nombre del acompañante
+  vessel: Cuerpo del avatar
+  brain: Cerebro de pensamiento
+  voice: Perfil de voz
+  launch: Completar y lanzar

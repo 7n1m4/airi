@@ -34,7 +34,8 @@
 | [`packages/cap-vite`](../packages/cap-vite) | 4 | 22 | Capacitor Vite Plugin, CLI Integration & Native Wrappers |
 | [`packages/plugin-sdk`](../packages/plugin-sdk) | 1 | 22 | Plugin SDK Host Core Lifecycle |
 | [`packages/server-runtime`](../packages/server-runtime) | 1 | 9 | Server Route Middleware |
-| **Monorepo Vitest Baseline** | **108 Suites** | **1,208 Tests** | **Automated Zero-Failure Headless Test Baseline** |
+| [`packages/i18n`](../packages/i18n) | 1 | 3 | Canonical Locales Discovery, Base YAML Syntax/Duplicates, Onboarding V3 100% Parity Assertion |
+| **Monorepo Vitest Baseline** | **109 Suites** | **1,211 Tests** | **Automated Zero-Failure Headless Test Baseline** |
 
 *(Note: 4 additional test files across `@proj-airi/stage-ui` and `@proj-airi/live2d-runtime` contain 8 tests conditional on external models or live API keys, yielding 114 total test files cataloged and audited).*
 
@@ -208,6 +209,11 @@
 | **Server Provider Service** | [`apps/server/src/services/__test__/providers.test.ts`](../apps/server/src/services/__test__/providers.test.ts) | 6 | Node / DB Mocks | Blocking in CI | Provider management service and connection checking. | Mocks provider backend calls. |
 | **Cap-Vite Plugin Core** | [`packages/cap-vite/src/index.test.ts`](../packages/cap-vite/src/index.test.ts) | 4 | Node / Pure TS | Blocking in CI | Cap-vite plugin initialization and configuration hooks. | Vite plugin hooks unit tests. |
 | **Vite Config Wrapper** | [`packages/cap-vite/src/vite-wrapper-config.test.ts`](../packages/cap-vite/src/vite-wrapper-config.test.ts) | 1 | Node / Pure TS | Blocking in CI | Vite config wrapper resolution for Capacitor mobile packaging. | Config builder test. |
+
+#### Internationalization & Localization Architecture
+| Invariant / Subsystem | Test Path | Tests | Runner / Env | CI Inclusion | What Assertions Directly Establish | Coverage Boundary & Known Limits |
+|---|---|:---:|:---:|:---:|---|---|
+| **Locale Integrity & Parity** | [`packages/i18n/src/locales.test.ts`](../packages/i18n/src/locales.test.ts) | 3 | Node / Pure TS | Blocking in CI | Discovery of all 9 canonical locales, syntax and zero duplicate keys in YAML files, 100% key parity across all languages for onboarding.yaml. | Asserts file existence, YAML validity, duplicate key absence, and key parity; does not translate or evaluate semantic grammatical correctness of prose. |
 
 ---
 

@@ -4,7 +4,13 @@ chat:
       airi: AIRI
       core-system: Sistema Central
       you: Tu
+    reasoning_only: El modelo solo generó una respuesta de razonamiento (mensaje de cadena de
+      pensamiento). Comprueba el límite máximo de tokens para asegurarte de que
+      el LLM tenga suficiente espacio para generar una respuesta visible.
   reasoning: Razonamiento
+  reasoning_only: El modelo solo generó una respuesta de razonamiento (mensaje de cadena de
+    pensamiento). Comprueba el límite máximo de tokens para asegurarte de que el
+    LLM tenga suficiente espacio para generar una respuesta visible.
 message: Dile algo...
 operations:
   load-models: Cargar Modelos

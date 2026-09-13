@@ -43,6 +43,43 @@ dialogs:
       stateRequesting: Requesting...
       stateGranted: Granted
       stateNotGranted: Not granted
+    modeSelection:
+      title: 您希望如何开始？
+      description: 选择最适合您偏好的配置体验。
+      easy:
+        title: 简易设置
+        description: 通过推荐的云端提供商立即开始。
+      custom:
+        title: 高级设置
+        description: 我想配置自己的本地或自定义提供商。
+    senseSetup:
+      title: 感官门户
+      description: 配置伴侣的核心感官以开启体验。
+      consciousness: 意识核心 (LLM)
+      speech: 语音与听觉
+      getOpenRouterKey: 获取 OpenRouter 密钥
+      openRouterSubtext: 快速、高品质且包含免费模型。无需复杂的身份验证。
+      deepgramSubtext: 新用户注册获赠 $200 额度。大约包含 50 小时的语音转写与合成服务。
+      senseKey: 感官密钥 (Sense Key)
+      senseKeyHelp: 输入您的 Deepgram API 密钥以启用语音感官。
+      getDeepgramKey: 获取 Deepgram 密钥
+    validationPartial: 配置已部分验证
+    testGeneration: 测试生成
+    testGenerationRunning: 测试中...
+    testGenerationFailed: 生成测试失败
+    skipPermanently: 永久跳过
+    starter:
+      title: 选择您的初始伴侣
+      description: 挑选一位伴侣以开始您的旅程。
+      relu: ReLU
+      relu_desc: 一段随着您的数据与心灵共同演进的心灵羁绊。
+      aria: 艾莉亚博士 (Dr. Aria)
+      aria_desc: 一位才华横溢、反应机敏的向导，管理着 AIRI 研究层。
+      lupin: 鲁平 (Lupin)
+      lupin_desc: 一位忠诚的狼耳少女，拥有敏锐的直觉和强烈的守护之心。
+      import: 自定义
+      import_desc: 从 .json 或 .png 角色卡片中导入属于您自己的灵魂伴侣。
+      footer: 探索更多精彩的社区创作，或稍后导入属于您自己的伴侣：
 language:
   title: 语言
   description: >
@@ -158,6 +195,8 @@ pages:
           卡片版本，如果您从之前的卡片做了更改，应当增加此版本号。
         consciousness_model: 为这个角色选择 AI 模型。
         speech_model: 为此角色指定语音合成模型与音色。
+        identity_prompting: 这些字段均有助于定义角色，但在当前架构中并非独立的运行时层。系统提示词直接用于 AIRI
+          的活跃提示词组装。历史后置指令目前主要用于卡片格式兼容性和未来提示词流水线，因此您现在即可填写，无需期待即刻的独立在线行为差异。
       errors:
         name: 错误：你必须提供一个有效的名称！
         version: '错误：版本号无效！'
@@ -166,6 +205,7 @@ pages:
         scenario: '错误：必须提供一个情境。'
         systemprompt: '错误：请提供系统提示。'
         posthistoryinstructions: '错误：必须提供消息历史后的提示。'
+      none: 无（无背景）
     modules: 模块
     name_asc: 名称 (A-Z)
     name_desc: 名称 (Z-A)
@@ -198,6 +238,7 @@ pages:
       manual: 手册
       advanced: 高级 / 开发
       chronicles: 编年史
+      showcase: 橱窗展示
   data:
     title: Data
     description: 管理存储 AIRI 数据、导出和重置
@@ -231,6 +272,21 @@ pages:
         title: 重置桌面设置和状态
         description: 清除 AIRI 桌面设置和运行状态。
         reset: 重置桌面数据
+      characters:
+        title: 角色卡片
+        description: 批量导出或导入您的角色卡片收藏。
+        export: 导出角色
+        import: 导入角色
+      memory:
+        title: 记忆与日记
+        description: 备份短期记忆摘要与长期日记条目。
+        export: 导出记忆
+        import: 导入记忆
+      backgrounds:
+        title: 场景背景
+        description: 导出或导入您的场景画廊（包含背景图像）。
+        export: 导出背景
+        import: 导入背景
     confirmations:
       tooltip: 您确定吗？
       'yes': '是'
@@ -244,6 +300,12 @@ pages:
       providers_reset: 服务端设置重置。
       all_deleted: 已删除所有本地数据。
       desktop_reset: 桌面数据重置。
+      characters_exported: 角色卡片收藏已成功导出。
+      characters_imported: 角色卡片收藏已成功导入。
+      memory_exported: 记忆与日记数据已成功导出。
+      memory_imported: 记忆与日记数据已成功导入。
+      backgrounds_exported: 场景画廊已成功导出。
+      backgrounds_imported: 场景画廊已成功导入。
   models:
     description: 切换角色的 Live2D，VRM 模型
     title: 角色模型
@@ -256,6 +318,13 @@ pages:
           title: VRM
           description: 配置 3D VRM 模型
         scene: 场景
+    explore:
+      title: 探索虚拟形象
+      description: 探索社区档案、外部模型仓库以及适用于 VRM、Live2D、Spine 和 MMD 的免费模型库。
+    tip:
+      title: 寻找更多形象模型？
+      description: 厌倦了现有的模型？想要免费下载一些炫酷的新形象？快来查看我们精选的模型目录与模型市场吧。
+      action: 探索虚拟形象
   scene:
     title: 场景
     description: 为您的角色自定义虚拟环境。
@@ -392,6 +461,13 @@ pages:
         section:
           provider-selection:
             description: 选择合适的语音转文本的服务来源
+          hotkey:
+            title: 麦克风开关快捷键
+            description: 使用键盘锁定键（Scroll、Caps 或 Num Lock）切换麦克风。键盘指示灯将与 AIRI 的麦克风状态保持同步。
+            options:
+              scroll: Scroll Lock
+              caps: Caps Lock
+              num: Num Lock
     memory-long-term:
       description: 长期记忆
       title: 长期记忆
@@ -407,6 +483,41 @@ pages:
       token-description: 您的Discord机器人令牌
       token-placeholder: 输入您的Discord机器人令牌
       configured: Discord已正确配置！
+      connectivity:
+        title: 连接状态
+        status: 状态
+        ping: 延迟
+        connected: 已连接
+        disconnected: 已断开
+        connecting: 正在连接...
+        error: 错误
+        no-guilds: 未连接到任何服务器。
+      actions:
+        start: 启动服务
+        stop: 停止服务
+        restart: 重启服务
+        force-sync: 强制同步卡片
+        simulate: 模拟消息
+        test-auth: 测试认证
+        clear-log: 清空日志
+      presence:
+        title: 活动状态
+        guild: 服务器
+        channel: 频道
+        no-active: 暂无活动状态。
+      dev-console:
+        title: 开发者控制台
+        empty: 暂无记录的事件。启动服务以开始捕获。
+      simulate-dialog:
+        username: 用户名
+        username-placeholder: 输入用户名...
+        content: 消息内容
+        content-placeholder: 输入测试消息...
+        send: 发送
+      controls:
+        title: 控制与模态
+        vision: 启用 VLM（视觉）图像摄取
+        vision-description: 允许 AIRI 读取并处理来自 Discord 的图片附件
     speech:
       description: 语音合成
       sections:
@@ -439,6 +550,7 @@ pages:
             show_less: 显示更少
             show_more: 显示更多
             title: 选择语音合成服务来源
+            search_results: 找到 {count} / {total} 个模型
           voice-settings:
             input-ssml:
               placeholder: 请输入 SSML 文本
@@ -476,10 +588,46 @@ pages:
       actions:
         open-config: 打开 mcp.json
         apply-and-restart: 保存并重启 stdio MCP
+        edit-json: 编辑 mcp.json
+        apply-restart: 保存并重启 stdio MCP
+        refresh: 刷新状态
+        install: 安装
+        installed: 已安装
       messages:
         opened: 配置文件已于{path}打开
         restarted: >-
           MCP 服务已重新启动，启动了{started}，未启动{failed}，跳过{skipped}
+        install-success: '{name} 安装成功'
+      tabs:
+        manage: 管理
+        discover: 发现
+      search-placeholder: 搜索 MCP 服务器（例如 Google Search、Filesystem）...
+      dashboard:
+        tool-count: '{count} 个工具可用'
+      registry:
+        loading: 正在加载注册表...
+        stars: '{count} 颗星'
+        no-results: 未找到匹配 "{query}" 的服务器
+    artistry:
+      description: 自主图像生成、ComfyUI 工作室与记忆插图
+      title: 艺术创作与图像工作室
+      widget-instructions:
+        label: 小部件生成指令
+        description: 提供给 AI 模型的提示词指令，教会其如何使用艺术小部件系统。留空将使用系统默认设置。
+      spawn_mode:
+        label: 图像展示路径
+        description: 决定生成的图像如何呈现在系统中。
+        options:
+          bg: 舞台背景
+          inline: 聊天记录（内嵌）
+          widget: 独立小部件
+          bg_widget: 背景与小部件（默认）
+    cloud-sync:
+      title: 云端同步 (BYOS)
+      description: 实时状态云同步、S3/R2 存储支持与多设备发件箱持久化
+    text-to-motion:
+      title: 文本转动作 (Text to Motion)
+      description: 程序化 LLM 关键帧、FlowMDM 3D 扩散生成与 VRMA 动作编译
   providers:
     explained:
       chat: 文本生成模型服务来源，例如 OpenRouter, OpenAI, Ollama
@@ -589,6 +737,24 @@ pages:
           title: 基础配置
         voice:
           title: 声音配置
+        dangerZone:
+          confirmDelete: 确认删除
+          deleteCredentials: 删除凭据
+          description: 删除此提供商实例的凭据。将清除 API 密钥和端点设置。
+          title: 危险区域
+        instances:
+          addInstance: 添加实例
+          defaultHint: 默认
+          makePrimary: 设为主实例
+          primary: 主实例
+          remove: 移除
+          title: 实例列表
+        modelBrowser:
+          description: 选择用于此提供商实例的模型。
+          label: 模型
+          placeholder: 选择一个模型...
+          title: 模型选择
+      getApiKey: 获取 API 密钥
     description: LLM，语音合成，语音识别服务来源等
     provider:
       app-local-audio-transcription:
@@ -612,6 +778,19 @@ pages:
       amazon-bedrock:
         title: Amazon Bedrock
         description: AWS Ecosystem - Access Titan, Claude, and Llama on AWS
+        config:
+          access-key-id:
+            description: 您的 AWS IAM Access Key ID
+            label: AWS Access Key ID
+          region:
+            description: 启用 Bedrock 的 AWS 区域（例如 us-east-1, us-west-2）
+            label: AWS 区域
+          secret-access-key:
+            description: 您的 AWS IAM Secret Access Key
+            label: AWS Secret Access Key
+          session-token:
+            description: AWS 临时会话令牌（用于 STS 或角色代入）
+            label: 会话令牌 (可选)
       qwen-portal:
         title: Qwen Portal
         description: 适度的免费额度，无需 API 密钥，优秀的角色扮演模型
@@ -727,6 +906,12 @@ pages:
             description: 4-bit 量化
           q4f16:
             description: 4-bit 量化 (FP16)
+          fp16-webgpu:
+            description: 使用 WebGPU 的半精度模型
+          q4-webgpu:
+            description: 使用 WebGPU 的 4-bit 量化模型
+          q8-webgpu:
+            description: 使用 WebGPU 的 8-bit 量化模型
         playground:
           default-text: 您好！这是 Kokoro 文本转语音（TTS）系统的测试。
           title: 实验平台
@@ -889,7 +1074,221 @@ pages:
         description: 语音库 - 使用自定义音效和对话过滤构建虚拟声音配置文件
       moss-nano-local:
         title: Moss TTS (Nano)
+        description: 使用 Moss TTS 的本地设备端文本转语音引擎。
+      airi-audio-server:
+        description: 高性能神经音频服务器 - 本地 C++ 推理，支持零样本声音克隆与副语言表达标签
+        title: AIRI Audio Server
+      alibaba-cloud:
+        description: 百炼大模型服务平台 - 阿里云大模型服务
+        title: 阿里云 (Alibaba Cloud)
+      aliyun-nls-transcription:
+        description: 多语言语音实力派 - 强劲的实时语音识别，深度支持中文多种方言
+      apple-core-ai:
+        alert:
+          content: Apple Core AI 通过原生 Swift 插件在本地运行模型，将矩阵运算卸载至 Apple 神经网络引擎 (ANE) 与 Metal
+            GPU，实现几乎为零的 WebKit 内存开销。
+          title: Apple Silicon 原生神经网络推理
+        description: 通过 Apple 神经网络引擎 (ANE) 与 Metal GPU 实现硬件加速的端侧神经智能。
+        title: Apple Core AI（设备端）
+      atlascloud:
+        description: api.atlascloud.ai
+        title: Atlas Cloud
+      aws-polly-tts:
+        description: AWS 生态系统 - 来自 Amazon Polly 的高品质原声神经语音
+        title: Amazon AWS Polly
+      blip-local:
+        description: 实用的图像打标工具，使用 Danbooru 标签分类和描述图像，特别适用于动漫与二次元艺术作品。
+        title: Waifu Diffusion Tagger (WD)
+      byteplus-coding-plan:
+        description: BytePlus 编程计划
+        title: BytePlus Coding Plan
+      byteplus:
+        description: byteplus.com
+        title: BytePlus
+      comet-api-transcription:
+        description: 企业级云端语音转文字
+      comfyui:
+        settings:
+          title: ComfyUI 用户配置
+        title: ComfyUI
+      deepgram-transcription:
+        description: 新用户赠送 50 小时免费额度 - 超高速、高精度的实时语音转写
+        title: Deepgram STT (Nova)
+      local-fs:
+        settings:
+          title: 本地文件系统 / Samba 配置
+      mimo:
+        description: 小米 MiMo Code - 零门槛免费 AI 编程助手
+        title: MiMo
+      moondream-local:
+        description: 通过 WebGPU 在浏览器中运行的 1.6B 端侧视觉语言模型，用于自然图像理解和视觉问答。
+        title: Moondream2 VLM (本地 WebGPU)
+      nanobanana:
+        settings:
+          title: Nano Banana 用户配置
+        title: Nano Banana
+      openai-audio-transcription:
+        description: 行业标准 - 可靠且兼容广泛的 Whisper API
+      openai-compatible-audio-transcription:
+        description: 自带端点 - 自定义兼容 OpenAI 的 STT 端点
+      opencode-go:
+        description: 开发者 API 平台 - 每月 10 美元起
+        title: OpenCode Go
+      openpaths:
+        description: openpaths.io
+        title: OpenPaths
+      pocket-tts-local:
+        description: 使用 Kyutai Pocket TTS 的本地低延迟多语言 CPU 文本转语音引擎。
+        title: Pocket TTS (Kyutai 本地)
+      pollinations:
+        description: 零门槛免费 - 开源且无需 API 密钥的聊天补全服务
+        title: Pollinations AI
+      replicate:
+        settings:
+          title: Replicate.ai 用户配置
+        title: Replicate
+      s3:
+        settings:
+          title: 兼容 S3 的云存储配置
+      volcengine-coding-plan:
+        description: 火山引擎编程计划
+        title: 火山引擎 Coding Plan
+      web-llm:
+        activation:
+          activate: 启用
+          active:
+            description: 该提供商已处于激活状态，可在模块中选用。
+            title: 提供商已激活
+          deactivate: 停用
+          inactive:
+            description: 启用此提供商以便为角色卡片进行选择。
+            title: 激活提供商
+        alert:
+          content: WebLLM 通过 WebGPU 完全在您的浏览器中运行前沿 Transformer 模型 — 无需 API
+            密钥，无需服务器。权重在首次使用时下载并缓存在浏览器 Cache Storage (webllm/*) 中。需要支持 WebGPU
+            的浏览器或 Electron（无 CPU/WASM 降级方案）。
+          title: 纯 WebGPU 浏览器内 LLM
+        cache:
+          clear: 清除 WebLLM 缓存
+          description: 存储在浏览器 Cache Storage (webllm/*) 中的已下载权重和 WASM 库。
+          title: 模型权重缓存
+        description: 浏览器内置离线 WebGPU Transformer LLM（无需 API 密钥）
+        fields:
+          customRepo:
+            description: 包含 MLC 量化权重的 Hugging Face 仓库（例如
+              my-org/custom-llama3-MLC）。将覆盖精选列表中的选择。
+            label: 自定义 HF 模型仓库 (可选)
+            placeholder: https://huggingface.co/my-org/custom-model-MLC
+          customWasm:
+            description: 与模型架构家族相匹配的 WASM 执行库。若自定义仓库未发布匹配的 WASM 二进制文件，运行时将返回 404。
+            label: 自定义 model_lib WASM URL (自定义仓库必填)
+            placeholder: https://.../custom-model_q4f16_1_cs1k-webgpu.wasm
+          model:
+            description: 来自预置目录的已验证 WebLLM 模型（已包含配套 WASM 运行库）。
+            label: 精选模型
+          temperature:
+            description: 采样温度（数值越高越具创造力）。
+            label: 温度 (Temperature)
+          topP:
+            description: 核采样截止值（概率质量累积范围）。
+            label: Top P
+        sections:
+          cache:
+            clear: 清除 WebLLM 缓存
+            clearing: 正在清除...
+            description: 存储在浏览器 Cache Storage (webllm/*) 中的已下载权重和 WASM 库。
+            notCached: 未缓存任何 WebLLM 模型权重
+            refresh: 刷新
+            title: 模型权重缓存
+          model:
+            description: 选择一个精选模型，或在下方添加自定义 Hugging Face MLC 仓库。
+            title: 模型
+        title: WebLLM (本地 WebGPU)
+      web-rwkv:
+        alert:
+          content: RWKV 通过 WebGPU 完全在您的浏览器中运行 — 无需 API 密钥，无需服务器。模型在首次使用时下载并缓存；加载时 bf16/f32
+            权重会自动转为 f16。需要支持 WebGPU 的浏览器或 Electron（无 CPU/WASM 降级方案）。
+          title: 纯 WebGPU 浏览器内 LLM
+        defaultsSection:
+          annotation: '若要为特定角色自定义这些设置，请转至角色的“生成”标签页：• 使用输入框修改温度、Top P 和最大 Token 数。• 通过在高级
+            JSON 文本框中输入惩罚参数（例如 {"presence_penalty": 0.5}）。'
+          description: 这些是 web-rwkv 使用的默认兜底参数。
+          field:
+            count_penalty: '词频惩罚 Count Penalty (默认: 0.4)'
+            max_tokens: '最大 Token 数 (默认: 512)'
+            penalty_decay: '惩罚衰减 Penalty Decay (默认: 0.996)'
+            presence_penalty: '存在惩罚 Presence Penalty (默认: 0.4)'
+            temperature: '温度 Temperature (默认: 1.0)'
+            top_p: 'Top P (默认: 0.5)'
+          title: 默认生成参数 (只读)
+        description: 通过 WebGPU 在浏览器中运行的本地 RWKV-7 LLM（无需 API 密钥）
+        fields:
+          enableG1Prefill:
+            description: 在助手回复前预填充 <think></think> 以保持 G1 推理模型的训练模式，并在输出时剥离前导闭合标签。如果使用非
+              G1（例如 RWKV-6/5）模型，请禁用此项。
+            label: 启用 G1 推理预填充与标签剥离
+          model:
+            description: 包含 RWKV 原生张量名称的 .safetensors URL — 可以是 web-rwkv 转换的格式或原始
+              HuggingFace 格式（会自动识别结构）。加载时 bf16/f32 将被转为 f16。不支持 PyTorch .pth
+              格式，请先将其转换为 safetensors (convert_safetensors.py)。
+            label: 模型 URL
+          vocab:
+            description: 覆盖内置的 RWKV World 分词器词表。如果您正在使用针对其他语言微调或拥有自定义 Token 映射的模型，在此提供其词表
+              JSON URL 可确保正确的文本编码与生成行为。
+            label: 词表 URL (可选)
+            placeholder: (内置 rwkv_vocab_v20230424.json)
+        title: RWKV (本地 WebGPU)
+      whisper-local:
+        description: 使用 Whisper 的本地语音识别（在浏览器中运行，无需 API 密钥）
+        title: Whisper (本地)
     title: 服务来源
+    filters:
+      all: 全部
+      cloud: 云端
+      deployment: 部署方式
+      free: 免费
+      local: 本地
+      paid: 付费
+      pricing: 费用
+      suggested: 推荐
+    onboarding:
+      artistry:
+        description: 本地 AI 绘画的行业标杆是 <b>ComfyUI</b>。若偏好云端生成，<b>Replicate</b>
+          提供了极其丰富的模型库，采用按量付费模式。
+        title: 生成艺术画作？
+      chat:
+        description: 若想快速上手，推荐 <b>Google Gemini</b>（免费云端）或
+          <b>OpenRouter</b>（聚合云端）。如果你注重隐私且拥有独立显卡，可以使用 <b>Ollama</b> 或 <b>LM
+          Studio</b> 进行本地部署。
+        title: 初次使用聊天？
+      speech:
+        description: 推荐尝试 <b>Deepgram</b> 或 <b>Azure Speech</b>
+          获取高质量云端语音（包含免费额度）。若需完全本地且免费的方案，请使用 <b>Web Speech API</b> 或 <b>Kokoro
+          TTS</b>。
+        title: 需要语音合成？
+      start_here: 从这里开始
+      transcription:
+        description: 极速云端转录推荐使用 <b>Deepgram STT</b>。本地离线使用推荐 <b>Web Speech
+          API</b>（浏览器内置）或 <b>Local Whisper</b>。
+        title: 语音转文字？
+      vision:
+        description: 推荐使用 <b>Google Gemini</b> 获取强大且免费的云端视觉理解能力。本地的 <b>Ollama</b> 和
+          <b>LM Studio</b> 也支持多模态视觉模型（VLM）。
+        title: 感知现实世界？
+    speech:
+      app_local_audio:
+        description: 配置语音合成的本地音频输出设置。
+        device_id: 输出设备 ID
+        device_id_placeholder: 输入输出设备 ID（例如 "default"）...
+        sample_rate: 采样率
+        sample_rate_placeholder: 输入采样率（例如 16000）...
+        title: 应用内（本地）音频设置
+    transcription:
+      app_local_audio:
+        description: 配置语音识别的本地音频输入设置。
+        device_id: 输入设备 ID
+        device_id_placeholder: 输入输入设备 ID（例如 "default"）...
+        title: 应用内（本地）音频设置
   connection:
     description: 配置 WebSocket 服务器连接
     title: 连接
@@ -915,6 +1314,10 @@ pages:
       label: Application Gateway Key
       description: Security key to authenticate clients connecting to your node over
         the network. If empty, the gateway will not require authentication.
+    hf-token:
+      label: Hugging Face 令牌 (可选)
+      description: 您的 Hugging Face 访问令牌。用于下载模型并避免速率限制与限流错误。
+      placeholder: hf_...
   system:
     color-scheme:
       description: 更改舞台的配色方案
@@ -935,6 +1338,14 @@ pages:
                 label: 强调色
                 rgb-on:
                   title: RGB ON!
+              vibrancy:
+                label: 鲜艳度 / 饱和度
+                muted: 柔和 (粉彩)
+                balanced: 均衡
+                vivid: 鲜艳 (霓虹)
+                monochrome: 单色 (黑白)
+              reset:
+                title: 重置为 AIRI 青色
           title: 配色
         developer:
           title: 开发者
@@ -1054,13 +1465,71 @@ pages:
               description: >-
                 中国传统色彩，源自古代纺织品、瓷器和绘画
               title: 中国传统颜色
+            warm:
+              title: 暖火 (Warm & Fire)
+              description: 充满活力的红、珊瑚、橙与金琥珀色调
+              colors:
+                crimson: 绯红 (Crimson)
+                coral: 珊瑚 (Coral)
+                tangerine: 橘红 (Tangerine)
+                marigold: 万寿菊 (Marigold)
+                amber: 琥珀 (Amber)
+                lemon: 柠檬 (Lemon)
+            flora:
+              title: 大地植物 (Earth & Flora)
+              description: 郁郁葱葱的植物绿、黄绿、翡翠绿、薄荷与海洋青绿
+              colors:
+                lime: 青柠 (Lime)
+                emerald: 祖母绿 (Emerald)
+                mint: 薄荷 (Mint)
+                jade: 翡翠 (Jade)
+                viridian: 翠绿 (Viridian)
+                teal: 鸭翅青 (Teal)
+            ocean:
+              title: 海洋晴空 (Ocean & Sky)
+              description: 热带海蓝、标志性青色、天蓝与皇家蔚蓝
+              colors:
+                turquoise: 绿松石 (Turquoise)
+                cyan: 标志青 (Signature Cyan)
+                cerulean: 天蓝 (Cerulean)
+                cobalt: 钴蓝 (Cobalt)
+                sapphire: 蓝宝石 (Sapphire)
+                denim: 丹宁蓝 (Denim)
+            bloom:
+              title: 贵族花卉 (Royal & Bloom)
+              description: 深靛蓝、紫晶、明艳紫、紫红与玫瑰色调
+              colors:
+                indigo: 靛蓝 (Indigo)
+                amethyst: 紫晶 (Amethyst)
+                violet: 紫罗兰 (Violet)
+                fuchsia: 品红 (Fuchsia)
+                magenta: 洋红 (Magenta)
+                rose: 玫瑰 (Rose)
           title: 预设
+          description: 从精选的 24 色光谱网格中挑选，或在上方自定义色调与鲜艳度。
+          reset: 重置为标志性青色
     title: 外观
   page:
     developers:
       open-devtools:
         title: 打开开发者工具
         button: 打开
+  chat:
+    title: 聊天设置与输入
+    description: 发送快捷键组合、流式响应超时以及消息气泡行为
+    send-mode:
+      title: 发送模式
+      description: 选择发送消息的快捷键组合。
+      options:
+        enter: Enter 发送
+        ctrl-enter: Ctrl + Enter 发送
+        double-enter: 双击 Enter 发送
+  dating-sim:
+    title: 恋爱模拟模式 (Dating Sim)
+    description: 调整互动游戏模式、好感度进阶门槛与视觉行为规则
+  stage:
+    title: 浮动控制台
+    description: 自定义浮动动作条插槽、停靠边缘与快捷触发器
 sections:
   section:
     general:
@@ -1102,6 +1571,14 @@ vrm:
           camera: 相机
           mouse: 鼠标
           disabled: 禁用
+    mouse-tracking: 鼠标追踪
+    mouse-tracking-desc: 虚拟形象头部与眼神跟随鼠标移动
+    follow-speed: 跟随速度
+    options:
+      option:
+        camera: 摄像头
+        mouse: 鼠标
+        disabled: 已禁用
   switch-to-vrm:
     title: 想切换至Live2D虚拟形象？
     change-to-vrm: 切换至Live2D虚拟形象设定页面
@@ -1111,6 +1588,8 @@ vrm:
   skybox:
     skybox-intensity: 天空盒光照强度
     skybox-specular-mix: 漫反射/镜面反射混合系数
+  idle-animation:
+    title: 默认待机动画
 wip:
   title: 正在开发中
   description: "此功能正在开发中，尚未公开发布。请在未来的更新中再次查看此功能。
@@ -1141,3 +1620,70 @@ wip:
     \    title: CometAPI 语音识别
 
     \    description: Enterprise-grade cloud transcription"
+providers:
+  speech:
+    app_local_audio:
+      description: 内置的本地语音合成，使用 Kokoro / ONNX。
+      device_id: 设备 ID
+      device_id_placeholder: 自动
+      sample_rate: 采样率
+      sample_rate_placeholder: 例如 24000
+      title: 应用内（本地）
+    browser_local_audio:
+      description: 在浏览器中运行的语音合成，使用 Web Speech API 或本地引擎。
+      device_id: 设备 ID
+      device_id_placeholder: 自动
+      sample_rate: 采样率
+      sample_rate_placeholder: 例如 24000
+      title: 浏览器（本地）
+  transcription:
+    app_local_audio:
+      description: 内置的本地语音识别，使用 Whisper / ONNX。
+      device_id: 设备 ID
+      device_id_placeholder: 自动
+      title: 应用内（本地）
+    browser_local_audio:
+      description: 在浏览器中运行的语音识别，通过 Web Speech API 或本地引擎。
+      device_id: 设备 ID
+      device_id_placeholder: 自动
+      title: 浏览器（本地）
+privacy:
+  remote-sync:
+    title: 启用云端同步
+    description: 默认关闭。禁用时，AIRI 保持完全本地运行，不会获取远程会话或向 airi-api.moeru.ai 同步聊天记录。
+groups:
+  character:
+    title: 角色与场景
+  intelligence:
+    title: 智能中枢
+chat:
+  send-mode:
+    title: 发送按键
+    description: 选择聊天输入框发送消息的按键方式。
+    options:
+      enter: Enter 发送
+      ctrl-enter: Ctrl+Enter 发送
+      double-enter: 双击 Enter 发送
+  stream-idle-timeout:
+    title: 流式响应超时
+    description: 如果模型流式传输长时间未输出任何内容，则自动取消响应。
+    options:
+      10s: 10 秒
+      15s: 15 秒
+      30s: 30 秒
+      45s: 45 秒
+      60s: 60 秒
+      120s: 2 分钟
+spine:
+  animation:
+    idle-animation: 待机动画
+    mix-duration: 过渡融合时长 (Mix Duration)
+    speed: 播放速度
+  variant:
+    current-variant: 当前变体
+  skin:
+    current-skin: 当前皮肤
+  scale-and-position:
+    scale: 缩放比例
+    x: 水平位置 X
+    y: 垂直位置 Y

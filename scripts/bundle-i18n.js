@@ -46,6 +46,10 @@ for (const locale of locales) {
 
   // Custom logic for AIRI's nested structure
   const base = yaml.parse(fs.readFileSync(path.join(localeDir, 'base.yaml'), 'utf8'))
+  const onboardingPath = path.join(localeDir, 'onboarding.yaml')
+  const onboarding = fs.existsSync(onboardingPath)
+    ? yaml.parse(fs.readFileSync(onboardingPath, 'utf8'))
+    : {}
   const settings = yaml.parse(fs.readFileSync(path.join(localeDir, 'settings.yaml'), 'utf8'))
   const stage = yaml.parse(fs.readFileSync(path.join(localeDir, 'stage.yaml'), 'utf8'))
 
@@ -56,6 +60,7 @@ for (const locale of locales) {
 
   allMessages[locale] = {
     base,
+    onboarding,
     settings,
     stage,
     tamagotchi: {

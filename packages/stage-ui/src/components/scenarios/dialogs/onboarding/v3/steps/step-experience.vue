@@ -3,6 +3,7 @@ import type { ExperienceArchetypeId, ModuleBundleConfig } from '../stores/useOnb
 
 import { Button } from '@proj-airi/ui'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import {
   ARCHETYPE_MODULE_PRESETS,
@@ -14,6 +15,7 @@ const props = defineProps<{
   onPrevious: () => void
 }>()
 
+const { t, te } = useI18n()
 const draftStore = useOnboardingV3Draft()
 const showAdvancedModules = ref(false)
 
@@ -33,6 +35,26 @@ interface ArchetypeCard {
     iconBg: string
     iconColor: string
   }
+}
+
+function getArchetypeTitle(arch: ArchetypeCard): string {
+  const key = `onboarding.steps.experience.archetypes.${arch.id}.title`
+  return te(key) ? t(key) : arch.title
+}
+
+function getArchetypeBadge(arch: ArchetypeCard): string | undefined {
+  const key = `onboarding.steps.experience.archetypes.${arch.id}.badge`
+  return te(key) ? t(key) : arch.badgeLabel
+}
+
+function getArchetypeSubtitle(arch: ArchetypeCard): string {
+  const key = `onboarding.steps.experience.archetypes.${arch.id}.subtitle`
+  return te(key) ? t(key) : arch.subtitle
+}
+
+function getArchetypeDescription(arch: ArchetypeCard): string {
+  const key = `onboarding.steps.experience.archetypes.${arch.id}.description`
+  return te(key) ? t(key) : arch.description
 }
 
 const archetypes: ArchetypeCard[] = [
@@ -271,10 +293,10 @@ function resetToPresetDefaults() {
           <span>Step 4 of 16 · Interaction Archetype</span>
         </div>
         <h1 :class="['text-2xl font-bold tracking-tight text-neutral-900 dark:text-white']">
-          Choose How You Want to Interact
+          {{ t('onboarding.steps.experience.title') }}
         </h1>
         <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5']">
-          Select a curated archetype preset, or customize your own bundle of capabilities.
+          {{ t('onboarding.steps.experience.description') }}
         </p>
       </div>
 
@@ -360,27 +382,27 @@ function resetToPresetDefaults() {
               <span>Selected Preset</span>
             </span>
             <span
-              v-else-if="archetype.badgeLabel"
+              v-else-if="getArchetypeBadge(archetype)"
               :class="[
                 'px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide flex items-center gap-1',
                 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200/60 dark:border-neutral-700/60',
               ]"
             >
-              {{ archetype.badgeLabel }}
+              {{ getArchetypeBadge(archetype) }}
             </span>
           </div>
 
           <!-- Title & Subtitle -->
           <h2 :class="['text-sm font-bold text-neutral-900 dark:text-white leading-snug']">
-            {{ archetype.title }}
+            {{ getArchetypeTitle(archetype) }}
           </h2>
           <p :class="['text-[11px] font-semibold mt-0.5', archetype.colorTheme.badgeText]">
-            {{ archetype.subtitle }}
+            {{ getArchetypeSubtitle(archetype) }}
           </p>
 
           <!-- Description -->
           <p :class="['text-[11px] text-neutral-600 dark:text-neutral-400 mt-1.5 leading-snug']">
-            {{ archetype.description }}
+            {{ getArchetypeDescription(archetype) }}
           </p>
         </div>
 
@@ -424,7 +446,7 @@ function resetToPresetDefaults() {
             :class="['flex items-center gap-1.5 text-xs font-semibold text-neutral-800 dark:text-neutral-200 hover:text-primary-500 transition-colors cursor-pointer']"
           >
             <div :class="['i-solar:settings-minimalistic-bold text-sm text-primary-500']" />
-            <span>Advanced: Customize Modules</span>
+            <span>{{ showAdvancedModules ? t('onboarding.steps.experience.hideModules') : t('onboarding.steps.experience.customizeModules') }}</span>
             <span :class="['text-[11px] text-neutral-400 font-normal']">
               ({{ activeModules.length }} Enabled)
             </span>
@@ -525,11 +547,11 @@ function resetToPresetDefaults() {
         @click="props.onPrevious"
       >
         <div :class="['i-solar:alt-arrow-left-line-duotone h-4 w-4']" />
-        <span>Back to Triage</span>
+        <span>{{ t('onboarding.shell.previous') }}</span>
       </button>
 
       <div :class="['text-[11px] text-neutral-400 font-medium']">
-        Selected: <span :class="['text-neutral-700 dark:text-neutral-200 font-semibold']">{{ selectedArchetype.title }}</span>
+        Selected: <span :class="['text-neutral-700 dark:text-neutral-200 font-semibold']">{{ getArchetypeTitle(selectedArchetype) }}</span>
       </div>
 
       <Button
@@ -541,7 +563,7 @@ function resetToPresetDefaults() {
         ]"
         @click="props.onNext"
       >
-        <span>Continue with {{ selectedArchetype.title }}</span>
+        <span>{{ t('onboarding.shell.next') }}</span>
         <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
       </Button>
     </div>

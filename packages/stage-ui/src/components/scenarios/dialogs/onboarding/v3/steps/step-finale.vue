@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from 'reka-ui'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import RendererStage from '../../../../../scenes/RendererStage.vue'
@@ -30,6 +31,8 @@ const emit = defineEmits<{
   (e: 'previous'): void
   (e: 'finish'): void
 }>()
+
+const { t } = useI18n()
 
 // --- Stores ---
 const draft = useOnboardingV3Draft()
@@ -307,8 +310,8 @@ const honestyMatrix = computed<HonestyItem[]>(() => {
   if (d.modules.hearing) {
     items.push({
       id: 'hearing',
-      title: 'Audio Input (Hearing)',
-      status: 'Calibrated',
+      title: t('onboarding.steps.finale.pillars.audio'),
+      status: t('onboarding.steps.finale.status.ready'),
       subtitle: `${d.sttProvider || 'whisper-local'} · Mic Active`,
       icon: 'i-solar:microphone-3-bold-duotone',
       theme: 'green',
@@ -317,8 +320,8 @@ const honestyMatrix = computed<HonestyItem[]>(() => {
   else {
     items.push({
       id: 'hearing',
-      title: 'Audio Input (Hearing)',
-      status: 'Muted / Skipped',
+      title: t('onboarding.steps.finale.pillars.audio'),
+      status: t('onboarding.steps.finale.status.optional'),
       subtitle: 'Microphone input disabled',
       icon: 'i-solar:muted-bold-duotone',
       theme: 'gray',
@@ -328,8 +331,8 @@ const honestyMatrix = computed<HonestyItem[]>(() => {
   // 2. Reasoning Core (Consciousness)
   items.push({
     id: 'consciousness',
-    title: 'Reasoning Core (Mind)',
-    status: 'Verified Active',
+    title: t('onboarding.steps.finale.pillars.reasoning'),
+    status: t('onboarding.steps.finale.status.ready'),
     subtitle: `${d.llmModel || 'gpt-4o'} (${d.llmProvider || 'openai'})`,
     icon: 'i-solar:cpu-bolt-bold-duotone',
     theme: 'green',
@@ -339,8 +342,8 @@ const honestyMatrix = computed<HonestyItem[]>(() => {
   if (d.modules.speech) {
     items.push({
       id: 'speech',
-      title: 'Voice Synthesis (Speech)',
-      status: 'Voice Active',
+      title: t('onboarding.steps.finale.pillars.speech'),
+      status: t('onboarding.steps.finale.status.ready'),
       subtitle: `${d.ttsVoiceId || 'af_bella'} (${d.ttsProvider || 'kokoro-local'})`,
       icon: 'i-solar:soundwave-bold-duotone',
       theme: 'green',
@@ -349,8 +352,8 @@ const honestyMatrix = computed<HonestyItem[]>(() => {
   else {
     items.push({
       id: 'speech',
-      title: 'Voice Synthesis (Speech)',
-      status: 'Silent Mode',
+      title: t('onboarding.steps.finale.pillars.speech'),
+      status: t('onboarding.steps.finale.status.optional'),
       subtitle: 'Zero audio output · Subtitles only',
       icon: 'i-solar:volume-cross-bold-duotone',
       theme: 'gray',
@@ -360,8 +363,8 @@ const honestyMatrix = computed<HonestyItem[]>(() => {
   // 4. Avatar Stage (Vessel)
   items.push({
     id: 'vessel',
-    title: 'Avatar Stage (Vessel)',
-    status: 'Vessel Bound',
+    title: t('onboarding.steps.finale.pillars.avatar'),
+    status: t('onboarding.steps.finale.status.ready'),
     subtitle: modelFormatLabel.value,
     icon: 'i-solar:people-nearby-bold-duotone',
     theme: 'green',
@@ -566,7 +569,7 @@ async function handleLaunch() {
               <div :class="['w-2 h-2 rounded-full bg-primary-500']" />
               <span>{{ resolvedPersona.name }}</span>
               <span :class="['text-[10px] font-normal px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-mono']">
-                Turn 0 Spoken Greeting
+                {{ t('onboarding.steps.finale.greetingCard') }}
               </span>
             </div>
 
@@ -609,10 +612,10 @@ async function handleLaunch() {
           <!-- Header Area -->
           <div :class="['flex flex-col gap-1']">
             <h2 :class="['text-xl font-bold text-neutral-900 dark:text-white tracking-tight']">
-              Stage Calibration & Victory Launch
+              {{ t('onboarding.steps.finale.title') }}
             </h2>
             <p :class="['text-xs text-neutral-500 dark:text-neutral-400']">
-              Truthful runtime verification across all active companion faculties.
+              {{ t('onboarding.steps.finale.description') }}
             </p>
           </div>
 
@@ -724,7 +727,7 @@ async function handleLaunch() {
               @click="props.onPrevious ? props.onPrevious() : emit('previous')"
             >
               <div :class="['i-solar:arrow-left-linear w-4 h-4']" />
-              <span>Previous Step</span>
+              <span>{{ t('onboarding.shell.previous') }}</span>
             </button>
 
             <div :class="['flex items-center gap-2.5']">
@@ -753,7 +756,7 @@ async function handleLaunch() {
               >
                 <div v-if="isSubmitting" :class="['i-solar:restart-bold w-4 h-4 animate-spin']" />
                 <div v-else :class="['i-solar:rocket-bold w-4 h-4']" />
-                <span>{{ isSubmitting ? 'Entering Stage...' : 'Enter AIRI Stage' }}</span>
+                <span>{{ isSubmitting ? t('onboarding.steps.finale.launching') : t('onboarding.steps.finale.launchButton') }}</span>
               </button>
             </div>
           </div>

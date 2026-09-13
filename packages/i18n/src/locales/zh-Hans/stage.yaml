@@ -4,7 +4,9 @@ chat:
       airi: AIRI
       core-system: 核心系统
       you: 你
+    reasoning_only: 模型仅生成了推理回复（思维链消息）。请检查您的最大 Token 预算，以确保 LLM 有足够空间生成显示的回复。
   reasoning: 思考
+  reasoning_only: 模型仅生成了推理回复（思维链消息）。请检查您的最大 Token 预算，以确保 LLM 有足够空间生成显示的回复。
 message: 说点什么...
 operations:
   load-models: 加载模型

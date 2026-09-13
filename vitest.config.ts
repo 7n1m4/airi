@@ -16,6 +16,7 @@ export default defineConfig({
       'packages/pipelines-audio',
       'packages/server-runtime',
       'packages/live2d-runtime',
+      'packages/i18n',
     ],
   },
 })

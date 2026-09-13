@@ -1,5 +1,8 @@
 # Proposal: Generic Gaming Agent Runtime
 
+> **Status**: Consolidated Proposal · **Companion RFC**: [`docs/proposal-gaming-show-harness-copilot.md`](./proposal-gaming-show-harness-copilot.md) (Show Harness Action Protocol & Interpreter)
+> **Key References**: [`docs/proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md) (Stage 0 pHash Salience Gate), [`apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue`](../apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue) (Arcade Room Surface), `packages/stage-ui/src/stores/providers/moondream` (Local WebGPU VLM)
+
 A generic, cross-game agent harness and execution engine for AIRI that enables characters to autonomously play games, react in real time, and banter with the user through **interactive backseat gaming** — with zero Python sidecar dependencies.
 
 ---
@@ -200,8 +203,11 @@ The Arcade Room supports two interactive modes selectable via a toggle:
   * Instant rewind / restart on game-over without replaying intro screens.
   * Fast state inspection (reading memory addresses for health, score, or ammo if mapped).
 
-### 6.2 The Unified Action Space Interface
-Games must not require custom tool signatures. The harness standardizes all games into two canonical input spaces:
+### 6.2 The Unified Action Space & Show Harness Protocol
+Games must not require bespoke per-title bot clients. The harness standardizes all games into two canonical input spaces (`GamepadAction` and `PointerAction`).
+
+> [!TIP]
+> **Deterministic Token Protocol**: The concrete token grammar, bounded semantic dictionaries, and execution engine are defined in companion RFC [`docs/proposal-gaming-show-harness-copilot.md`](./proposal-gaming-show-harness-copilot.md) ("Show Harness"). The VLM outputs discrete tokens such as `<|ACTION:UP duration="250"|>`, which the Action Interpreter maps directly to JS-DOS `currentCommandInterface.simulateKeyPress()` or canvas events without unconstrained mouse risks.
 
 ```typescript
 export type DiscreteGamepadButton
@@ -242,6 +248,69 @@ Real-time games (like *Doom*) run at 35–60 FPS, while VLM inference takes 500m
 ### 6.4 Audio Ducking & Avatar LookAt
 * **Audio Ducking**: When the agent speaks, the game's WebAudio gain node is automatically reduced by 70% (`gain.linearRampToValueAtTime(0.3, ...)`), then smoothly restored when TTS finishes.
 * **Stage LookAt**: The Live2D / VRM avatar's gaze can be dynamically routed to point toward the game widget location on the desktop screen, giving the visual appearance that she is actively looking at the monitor while playing.
+
+### 6.5 The Game Salience & Settle Gate (Adapting Attention Ecology pHash)
+In continuous background screen perception ([`docs/proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md)), **Stage 0** utilizes low-cost perceptual hashing (`pHash`) to reject ~90% of identical ticks at microsecond cost before waking heavier models.
+
+Gaming observation adapts this exact technology to the game canvas / viewport (`chat_arcade.vue`), but with a vital architectural distinction:
+* **Desktop watching has a static baseline**: In desktop mode, a user reading code or browsing stays still for seconds at a time; simple binary change detection (changed vs unchanged) suffices.
+* **Gaming has continuous motion, animations, and genre-dependent pacing**: Games feature camera bobbing, ambient sprite animations, particle effects, and post-move transition animations. A naive change detector would trigger on every single tick, whereas waiting for zero changes would never trigger during real-time gameplay.
+
+To solve this, the gaming runtime introduces a **Dual-Mode Settle & Burst Filter with User-Tuneable Sensitivity**:
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    GAME SALIENCE & SETTLE GATE PIPELINE                      │
+│                                                                              │
+│    Game Canvas / Viewport ────► Fast pHash Extractor (30 FPS, Offscreen)     │
+│                                           │                                  │
+│                                           ▼                                  │
+│                   ┌───────────────────────────────────────┐                  │
+│                   │      Mode-Dependent Settle Logic      │                  │
+│                   └───────────────────┬───────────────────┘                  │
+│                                       │                                      │
+│        ┌──────────────────────────────┴──────────────────────────────┐       │
+│        ▼                                                             ▼       │
+│  [Turn-Based / Action Burst]                                 [Real-Time Fast Action]  │
+│  • Monitors post-action animation                             • Tracks cumulative Hamming delta│
+│  • Settle Gate: Waits until Hamming                          • Burst Gate: delta > threshold  │
+│    delta <= epsilon for settleWindowMs (e.g. 250ms)             (e.g. enemy ambush, new room) │
+│  • Captures clean resting state                              • OR maxHeartbeatMs watchdog     │
+│        │                                                             │       │
+│        └──────────────────────────────┬──────────────────────────────┘       │
+│                                       │ Trigger Validated Frame              │
+│                                       ▼                                      │
+│               [ WebGPU On-Device Moondream / Cloud VLM Reasoner ]            │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### 1. Settle Detection (Turn-Based & Post-Burst Execution)
+When Airi executes a move (e.g. swiping in *2048*, ending a turn in *Civilization*, moving a piece in *Chess*, or finishing a 500ms walk macro in *Doom*), the game engine plays transition animations.
+- Sampling immediately produces motion-blurred artifacts or half-computed board states.
+- The **Settle Gate** samples canvas frames via pHash and computes the Hamming distance between consecutive frames:
+  $$\Delta_{\text{pHash}} = \text{HammingDistance}(\text{pHash}_t, \text{pHash}_{t-1})$$
+- When $\Delta_{\text{pHash}} \le \text{settleEpsilon}$ continuously for `settleWindowMs` (typically 200–350ms), the scene is confirmed to be at rest.
+- The clean settled frame is immediately captured and dispatched to the VLM loop.
+
+#### 2. Burst Change Detection (Spectator Mode & Real-Time Observation)
+In **Co-Pilot / Spectator Mode** (where the user plays and Airi backseats):
+- A blind fixed interval (e.g. polling every 2 seconds) frequently misses crucial events (e.g. an enemy jumping around a corner and disappearing 500ms later) or wastes API tokens on empty hallway walking.
+- The **Burst Gate** tracks the Hamming distance from the last evaluated checkpoint frame. When a visual shock occurs ($\Delta_{\text{pHash}} > \text{burstThreshold}$), such as:
+  - Low health flash (screen tinting red)
+  - Opening inventory / dialogue / map screen
+  - Entering a new visual zone or door
+  - Boss or enemy entering field of view
+- The gate fires an immediate prioritized reasoning turn so Airi can react spontaneously ("Look out!", "Nice shot!").
+
+#### 3. User-Tuneable Sensitivity Profiles
+Because game pacing varies drastically across titles, the Arcade Room settings drawer exposes tuneable profiles:
+
+| Profile Preset | Target Games | Settle Window | pHash Delta Threshold | Min Cadence | Max Heartbeat |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Turn-Based / Puzzle** | *2048*, *Civilization*, *Sokoban*, *Oregon Trail* | 300 ms | 6 (High sensitivity to subtle UI changes) | 1,500 ms | 10,000 ms |
+| **Real-Time / Fast Action** | *Doom*, *Wolfenstein 3D*, *Prince of Persia* | 150 ms | 22 (Filters camera bobbing, triggers on major visual shifts) | 800 ms | 3,500 ms |
+| **Narrative / Visual Novel** | Dating Sims, Interactive Fiction, RPG dialogue | 200 ms | 12 (Triggers on text advance or portrait sprite swap) | 1,000 ms | 8,000 ms |
+| **Custom Sliders** | Any custom or user-imported ROM | Slider (50–1000ms) | Slider (1–64 bits) | Slider (500–5000ms) | Slider (1–30s) |
 
 ---
 

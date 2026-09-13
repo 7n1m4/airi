@@ -1,0 +1,385 @@
+stepper:
+  ariaLabel: Tiến trình thiết lập ban đầu
+  prevStep: Bước trước
+  nextStep: Bước tiếp
+  jumpToStep: Chuyển tới bước bất kỳ
+  allSteps: Tất cả các bước ({count})
+
+shell:
+  close: Đóng
+  finish: Khởi chạy Sân khấu
+  previous: Quay lại
+  next: Tiếp tục
+  skip: Thiết lập sau
+
+steps:
+  welcome:
+    label: Chào mừng
+    subtitle: Studio người bạn đồng hành riêng tư
+    heroTitle: Chào mừng đến với AIRI
+    heroSubtitle: Sân khấu dành riêng cho bạn đồng hành của bạn — hoàn tất trong vài phút, 100% riêng tư trên máy của bạn.
+    companionQuote: 'Xin chào! Mình là người bạn đồng hành số tự quản của bạn. Cho dù bạn muốn trò chuyện bằng giọng nói, thưởng thức các màn trình diễn biểu cảm hay chỉ cần một sự hiện diện tĩnh lặng trên màn hình, mình luôn sẵn sàng đồng hành cùng bạn.'
+    pills:
+      webgpu: Lõi WebGPU nội bộ
+      offline: 100% Ngoại tuyến & Riêng tư
+      souls: Tự do kết hợp linh hồn và hiện thân
+    actions:
+      quickStart: Bắt đầu nhanh (60 giây)
+      guidedSetup: Thiết lập có hướng dẫn
+      setupLater: Thiết lập sau
+    dialog:
+      savedTitle: Đã lưu thiết lập
+      savedDescription: 'Bạn có thể mở lại thiết lập bạn đồng hành bất kỳ lúc nào qua biểu tượng AIRI trên thanh menu macOS hoặc khay hệ thống:'
+      trayItem: Thiết lập & Đăng nhập bạn đồng hành (V3)
+      continue: Tiếp tục thiết lập
+      closeToTray: Thu nhỏ vào khay
+
+  triage:
+    label: Tài khoản
+    subtitle: Đăng nhập & Cấu trúc hệ thống
+    title: Đăng nhập tài khoản & Cấu trúc hệ thống
+    description: Chọn chạy hoàn toàn cách ly ngoại tuyến trên máy tính này, hoặc liên kết tài khoản để đồng bộ và sao lưu đám mây liền mạch.
+    zeroTrustBadge: Zero-Trust
+    localOption:
+      title: Bạn đồng hành nội bộ (Cách ly / Ngoại tuyến)
+      description: 100% ngoại tuyến và riêng tư. Mọi thẻ nhân vật, ký ức và trạng thái chỉ lưu trong cơ sở dữ liệu trên máy bạn mà không gửi dữ liệu ra ngoài.
+      badge: Ưu tiên nội bộ
+      action: Tiếp tục trên máy
+    cloudOption:
+      title: Đăng nhập tài khoản (Cloudflare)
+      description: Kết nối tài khoản để đồng bộ bạn đồng hành, cài đặt và kho lưu trữ ký ức giữa các thiết bị với mã hóa đầu cuối.
+      badge: Đồng bộ đa thiết bị
+      connect: Đăng nhập với Cloudflare
+      connected: Đã kết nối Cloudflare
+      accountPrefix: 'ID tài khoản:'
+    restore:
+      foundCompanions: 'Tìm thấy {count} bạn đồng hành trên Cloudflare R2'
+      restoreAndLaunch: Khôi phục & Khởi chạy sân khấu (~30 giây)
+      restoreAndBuild: Khôi phục & Tạo bạn đồng hành mới
+      syncing: Đang khôi phục dữ liệu từ xa...
+
+  appearance:
+    label: Giao diện
+    subtitle: Ngôn ngữ, chủ đề & màu sắc
+    title: Ngôn ngữ & Diện mạo trực quan
+    description: Tùy chỉnh ngôn ngữ hiển thị giao diện, chủ đề sáng tối và màu sắc điểm nhấn đặc trưng của bạn.
+    languageSection:
+      title: Ngôn ngữ hiển thị
+      description: Chọn ngôn ngữ chính cho AIRI. Bạn có thể thay đổi bất cứ lúc nào.
+    themeSection:
+      title: Chế độ chủ đề
+      description: Chọn chế độ hiển thị bạn yêu thích.
+      dark: Tối
+      light: Sáng
+      system: Theo hệ thống
+    colorSection:
+      title: Bảng màu điểm nhấn đặc trưng
+      description: Chọn tông màu cá tính để làm nổi bật các nút bấm, viền và hiệu ứng hào quang của bạn đồng hành.
+      defaultColor: Xanh lơ mặc định
+      custom: Mã màu HEX tùy chọn
+      groups:
+        warm: Ấm áp & Ngọn lửa
+        flora: Đất mẹ & Cỏ cây
+        ocean: Đại dương & Bầu trời
+        royal: Quý phái & Nở rộ
+    perDeviceToggle: Chỉ lưu diện mạo này trên thiết bị hiện tại (không bị đồng bộ đám mây ghi đè)
+
+  experience:
+    label: Trải nghiệm
+    subtitle: Nguyên mẫu tương tác
+    title: Các nguyên mẫu tương tác
+    description: Chọn phong cách tương tác định sẵn. Hệ thống sẽ tự động bật các tính năng phù hợp và ẩn đi các bước không cần thiết.
+    archetypes:
+      quietObserver:
+        title: Người quan sát thầm lặng (Quiet Observer)
+        tag: Nhanh nhất · Tối giản
+        description: Bạn đồng hành dạng văn bản siêu nhẹ. Hiện thân vẫn biểu cảm trên sân khấu, có suy nghĩ nội tâm và ký ức dài hạn, không tốn tài nguyên âm thanh hay hình ảnh.
+      casualCompanion:
+        title: Bạn đồng hành gần gũi (Casual Companion)
+        tag: Phổ biến nhất
+        description: Bạn đồng hành giọng nói và hình ảnh chuẩn mực. Giọng nói tự nhiên (STT/TTS), nhận diện ảnh trò chuyện (VLM), nhịp điệu chân thực và ký ức dài hạn.
+      creativeMuse:
+        title: Nàng thơ sáng tạo (Creative Muse)
+        tag: Tập trung nghệ thuật thị giác
+        description: Studio cảm hứng nghệ thuật. Giao tiếp giọng nói, tự vẽ tranh minh họa (Pollinations/ComfyUI), thấu hiểu hình ảnh và biểu cảm phong phú.
+      executiveCopilot:
+        title: Trợ lý điều hành (Executive Copilot)
+        tag: Tối ưu năng suất
+        description: Dành cho công việc hiệu quả. Đối thoại giọng nói, nhận biết cửa sổ màn hình làm việc, công cụ MCP hệ thống tệp nội bộ và tìm kiếm web trực tiếp.
+      ambientRoommate:
+        title: Người bạn chung phòng (Ambient Roommate)
+        tag: Hiện diện chủ động
+        description: Nhịp sống sinh hoạt thường nhật. Giọng nói ấm áp, nhịp tim môi trường chủ động bắt chuyện, giờ ngủ yên tĩnh và quan sát màn hình.
+      swissArmy:
+        title: Đa năng toàn diện (Swiss Army)
+        tag: Đầy đủ tính năng · Trọn gói
+        description: 'Trải nghiệm đỉnh cao toàn diện: Giọng nói hai chiều, thị giác AI, quan sát màn hình, chủ động tương tác, sáng tạo tranh ảnh, công cụ ngoài và ký ức 4 góc phần tư.'
+    advanced:
+      toggle: 'Nâng cao: Tùy chỉnh từng mô-đun riêng lẻ'
+      description: Bật hoặc tắt thủ công các mô-đun giác quan và nhận thức theo ý bạn.
+      modules:
+        hearing: Thính giác (Chuyển giọng nói micro thành văn bản)
+        speech: Phát âm (Tổng hợp giọng nói nơ-ron)
+        thinking: Suy nghĩ (Điều tiết nhịp điệu và lời thì thầm nội tâm)
+        emotions: Cảm xúc (Cầu nối biểu cảm và cử chỉ ACT 2 bước)
+        vision: Thị giác (Nhận diện và phân tích ảnh chat)
+        screen: Màn hình (Theo dõi màn hình và nhận dạng chữ OCR)
+        proactivity: Chủ động (Lịch sinh hoạt và nhịp tim môi trường)
+        artistry: Nghệ thuật (Tạo ảnh AI và đạo diễn tự quản)
+        memory: Ký ức (Hệ thống ghi nhớ 4 góc phần tư)
+        tools: Công cụ (Tìm kiếm web và MCP máy tính)
+
+  profile:
+    label: Hồ sơ
+    subtitle: Bạn là ai?
+    title: Danh tính & Mối quan hệ của bạn
+    description: Cho bạn đồng hành biết cách xưng hô với bạn và mối quan hệ bạn mong muốn xây dựng.
+    userName:
+      label: Bạn muốn bạn đồng hành gọi mình là gì?
+      placeholder: 'Ví dụ: Chủ nhân, Alex, Tiền bối, Producer'
+    pronouns:
+      label: Đại từ xưng hô mong muốn
+      placeholder: 'Ví dụ: anh, chị, bạn, mình'
+    relationship:
+      label: Phong cách mối quan hệ
+      options:
+        companion: Bạn thân thiết & Người đồng hành
+        assistant: Trợ lý chuyên nghiệp & Đồng nghiệp
+        romantic: Tình cảm & Lãng mạn
+        mentor: Người cố vấn & Dẫn đường
+        student: Người học trò tò mò
+    userBio:
+      label: Đôi nét về bạn (Bối cảnh tùy chọn)
+      placeholder: Chia sẻ sở thích hoặc thói quen hàng ngày để bạn đồng hành thấu hiểu bạn sâu sắc hơn.
+
+  vessel:
+    label: Hiện thân
+    subtitle: Thể xác Live2D / VRM
+    title: Chọn một hiện thân vật lý
+    description: Chọn hình mẫu 3D VRM hoặc mô hình 2D Live2D để làm hiện thân cho bạn đồng hành của bạn.
+    filters:
+      all: Tất cả hiện thân
+      installed: Đã cài đặt
+      downloadable: Tải miễn phí
+      vrm: 3D (VRM)
+      live2d: 2D (Live2D)
+    searchPlaceholder: Tìm kiếm hiện thân...
+    download: Tải hiện thân
+    downloading: Đang tải... {progress}%
+    installedBadge: Đã cài đặt
+    license: 'Giấy phép:'
+    author: 'Tác giả:'
+
+  consciousness:
+    label: Nhận thức
+    subtitle: Lõi tư duy (LLM)
+    title: Nhận thức & Khối óc tư duy
+    description: Kết nối mô hình ngôn ngữ lớn định hình suy nghĩ, tính cách và câu trả lời của bạn đồng hành.
+    tabs:
+      cloud: Nhà cung cấp đám mây (Khuyên dùng)
+      local: Lõi chạy nội bộ (Riêng tư & Ngoại tuyến)
+    providerCards:
+      gemini: Google Gemini (Có gói miễn phí)
+      openrouter: OpenRouter (Cổng kết nối toàn cầu)
+      openai: OpenAI
+      anthropic: Anthropic Claude
+      ollama: Ollama (Chạy trên máy)
+      webllm: WebLLM (Chạy trực tiếp trên trình duyệt WebGPU)
+    apiKey: Khóa API
+    model: Lựa chọn mô hình
+    baseUrl: Địa chỉ Endpoint tùy chỉnh
+    verify: Kiểm tra kết nối
+    verified: Kết nối thành công
+    verifyFailed: 'Kết nối thất bại: {reason}'
+
+  persona:
+    label: Linh hồn
+    subtitle: Tính cách cốt lõi
+    title: Linh hồn & Nhân cách nhân vật
+    description: Lựa chọn hoặc tùy chỉnh danh tính nền tảng, thói quen ăn nói và câu chuyện của bạn đồng hành.
+    presetCards:
+      airi: AIRI (Linh hồn tự quản mặc định)
+      custom: Thẻ nhân vật tùy chỉnh
+      import: Nhập thẻ nhân vật (PNG / JSON)
+    characterName: Tên bạn đồng hành
+    personalitySummary: Tổng quan tính cách
+    firstMessage: Lời chào đầu tiên (Lượt 0)
+    firstMessagePlaceholder: Bạn đồng hành sẽ nói gì khi sân khấu lần đầu tiên được mở ra?
+    speechQuirks: Giọng điệu & Đặc trưng khẩu ngữ
+
+  hearing:
+    label: Thính giác
+    subtitle: Nhận diện giọng nói (STT)
+    title: Thính giác & Nhận dạng giọng nói
+    description: Cấu hình thiết bị micro thu âm, tính năng phát hiện giọng nói (VAD) và bộ giải mã văn bản.
+    micSelect: Thiết bị micro
+    testMic: Thử micro
+    vadThreshold: Độ nhạy nhận diện giọng nói
+    engines:
+      deepgram: Deepgram Nova (Nhận diện đám mây siêu tốc)
+      whisper: Whisper nội bộ (100% trên thiết bị)
+      browser: Web Speech API (Tích hợp sẵn trên trình duyệt)
+
+  speech:
+    label: Phát âm
+    subtitle: Tổng hợp giọng nói nơ-ron (TTS)
+    title: Phát âm & Tổng hợp giọng nói
+    description: Trao giọng nói cho bạn đồng hành của bạn. Lựa chọn giọng nơ-ron đám mây truyền cảm hoặc giọng tổng hợp nội bộ.
+    voiceCards:
+      kokoro: Kokoro TTS (WebGPU / WASM trên máy)
+      elevenlabs: ElevenLabs (Giọng đám mây siêu chân thực)
+      azure: Azure Cognitive Speech
+      edge: Edge TTS (Giọng đám mây miễn phí)
+    voiceSelect: Âm sắc giọng
+    previewVoice: Nghe thử giọng nói
+    pitch: Cao độ giọng
+    speed: Tốc độ nói
+
+  thinking:
+    label: Suy nghĩ
+    subtitle: Nhịp điệu và lời thì thầm nội tâm
+    title: Tư duy & Nhịp điệu đối thoại
+    description: Tùy chỉnh độ ngắt nghỉ khi suy nghĩ, từ đệm tự nhiên và những lời thì thầm nội tâm khi tính toán câu trả lời phức tạp.
+    presets:
+      snappy:
+        title: Nhanh nhạy (Snappy)
+        description: Phản hồi siêu tốc trong 200 mili giây. Độ trễ suy nghĩ gần như không đáng kể.
+      balanced:
+        title: Cân bằng (Balanced)
+        description: Nhịp điệu trò chuyện tự nhiên của con người với các khoảng nghỉ và từ đệm hợp lý cho các câu hỏi phức tạp.
+      deepCot:
+        title: Suy ngẫm sâu (Deep CoT)
+        description: Chuỗi suy luận logic nhiều bước kèm theo những lời độc thoại thì thầm phong phú trong khi suy nghĩ.
+    subconsciousAsides: Lời độc thoại thì thầm (Needle 2 WASM)
+    asidesDescription: Cho phép bạn đồng hành phát ra những lời lẩm bẩm suy nghĩ nội tâm trong khi soạn câu trả lời dài.
+
+  emotions:
+    label: Cảm xúc
+    subtitle: Cầu nối biểu cảm ACT 2 bước
+    title: Cảm xúc & Cầu nối ACT
+    description: Liên kết các cung bậc cảm xúc từ văn bản đối thoại thành biểu cảm gương mặt và cử chỉ chân thực của hiện thân.
+    pass1Title: 'Bước 1: Trích xuất biểu cảm'
+    pass1Desc: Chuẩn hóa các biến đổi biểu cảm thành các thẻ lệnh hành động chuẩn <|ACT:*|>.
+    pass2Title: 'Bước 2: Chỉ dẫn diễn xuất'
+    pass2Desc: Các hướng dẫn trong prompt hệ thống chỉ cho nhân vật biết khi nào và cách biểu lộ cảm xúc phù hợp.
+    liveExpressionTest: Thử biểu cảm trực tiếp
+    testExpressions:
+      happy: Vui vẻ / Mỉm cười
+      flustered: Ngại ngùng / Đỏ mặt
+      thinking: Trầm ngâm / Suy nghĩ
+      surprised: Bất ngờ / Ngạc nhiên
+      wink: Nháy mắt tinh nghịch
+
+  vision:
+    label: Thị giác
+    subtitle: Nhận diện ảnh chat (VLM)
+    title: Nhận thức thị giác (VLM)
+    description: Giúp bạn đồng hành có thể nhìn, thấu hiểu và phản hồi lại những bức ảnh bạn gửi trong khung chat.
+    engineTitle: Mô hình phân tích thị giác
+    testImage: Thử nhận diện hình ảnh
+    testPrompt: Tải lên một hình ảnh để kiểm tra khả năng thấu hiểu hình ảnh của bạn đồng hành.
+    perceptionAccuracy: Độ trễ và độ chuẩn xác của thị giác
+
+  screen:
+    label: Màn hình
+    subtitle: Quan sát màn hình máy tính
+    title: Quan sát màn hình máy tính
+    description: Cho phép bạn đồng hành kín đáo quan sát màn hình của bạn trong nền để đưa ra những lời nhắc nhở và chia sẻ hữu ích.
+    deliveryMode:
+      title: Cách thức thông báo
+      voiceAndBubble: Cả giọng nói & Bong bóng (Hiện diện trọn vẹn)
+      bubbleOnly: Chỉ hiện bong bóng (Thông báo im lặng)
+      voiceOnly: Chỉ bằng giọng nói
+      muted: Tắt tiếng (Chỉ nắm bắt bối cảnh màn hình)
+    salienceGate:
+      title: Bộ lọc mức độ quan trọng
+      ocr: OCR nhẹ nhàng (Chiếm dụng CPU cực thấp)
+      vlm: Phân tích thị giác sâu bằng mô hình VLM
+    privacyExclusions: Danh sách loại trừ riêng tư (Tự động bỏ qua ngân hàng, mật khẩu và cửa sổ riêng tư)
+
+  proactivity:
+    label: Chủ động
+    subtitle: Nhịp sống & Nhịp tim môi trường
+    title: Nhịp sống sinh hoạt & Tương tác chủ động
+    description: Thiết lập tần suất chủ động hỏi thăm, giờ nghỉ ngơi yên lặng và nhịp sống của bạn đồng hành.
+    heartbeats: Nhịp tim môi trường tự quản
+    heartbeatsDesc: Khi một khoảng thời gian trôi qua trong im lặng, bạn đồng hành có thể chủ động mở lời tùy theo ngữ cảnh.
+    quietHours: Giờ yên tĩnh / Chế độ nghỉ ngơi
+    quietHoursDesc: Bạn đồng hành sẽ vào chế độ ngủ trong các khung giờ đã chọn (không phát ra âm thanh đột ngột).
+    scheduleFrom: Giờ đi ngủ
+    scheduleTo: Giờ thức dậy
+
+  artistry:
+    label: Nghệ thuật
+    subtitle: Vẽ tranh & Đạo diễn tự quản
+    title: Sáng tạo nghệ thuật & Vẽ tranh AI
+    description: Trang bị cho bạn đồng hành khả năng vẽ tranh chân dung, chụp ảnh tự sướng và vẽ bối cảnh sân khấu.
+    engines:
+      pollinations: Pollinations AI (100% miễn phí & không cần cấu hình)
+      comfyui: ComfyUI (Cụm máy chủ nội bộ http://127.0.0.1:8188)
+      disabled: Tắt chức năng vẽ tranh
+    styleChips: Phong cách mỹ thuật
+    previewButton: Tạo tranh vẽ thử
+    autonomousDirector: Đạo diễn tự quản (Cho phép bạn đồng hành tự ý vẽ tranh khi có cảm hứng trong lúc trò chuyện)
+
+  memory:
+    label: Ký ức
+    subtitle: Hệ thống ghi nhớ 4 góc phần tư
+    title: 4 góc phần tư ký ức theo thời gian
+    description: Tìm hiểu cách bạn đồng hành ghi dấu những kỷ niệm, lưu trữ điều cốt lõi và củng cố nhận thức trong giấc ngủ.
+    quadrants:
+      stmm:
+        title: Ký ức làm việc ngắn hạn (STMM)
+        desc: Tóm tắt đối thoại hàng ngày và bộ đệm trượt của những tin nhắn gần nhất.
+      ltmm:
+        title: Nhật ký văn bản bất khả xâm phạm (LTMM)
+        desc: Những cột mốc vĩnh viễn và sự thật cốt lõi được khắc ghi trong cơ sở dữ liệu vector trên máy.
+      eternalThread:
+        title: Sợi chỉ vĩnh cửu (Đồ thị quan hệ trọn đời)
+        desc: Sự gắn kết tin cậy không ngừng sâu sắc hơn qua từng lần trò chuyện và những kỷ niệm chung.
+      dreaming:
+        title: Cố kết giấc mơ (DRMM & Tiếng vọng cảm xúc)
+        desc: Quy trình chạy ngầm hàng đêm nhằm tổng hợp các mỏ neo cảm xúc và giải quyết những mâu thuẫn nhận thức.
+
+  tools:
+    label: Công cụ
+    subtitle: Tự động hóa & MCP máy tính
+    title: Tự động hóa, MCP & Công cụ mở rộng
+    description: Tiếp thêm sức mạnh cho bạn đồng hành với khả năng tìm kiếm web trực tiếp và tương tác với máy tính.
+    webSearch:
+      title: Tìm kiếm web trực tiếp (DuckDuckGo / Brave)
+      desc: Giúp bạn đồng hành tra cứu tin tức thời sự, thời tiết và tài liệu kỹ thuật mà không cần khóa API.
+    desktopMcp:
+      title: Model Context Protocol (Hệ thống tệp máy tính)
+      desc: Đọc và chỉnh sửa các tệp trong vùng làm việc được cấp phép, chạy các tập lệnh hỗ trợ lập trình.
+    motionGen:
+      title: Tạo cử động 3D (FlowMDM)
+      desc: Tự động tạo chuyển động nhân vật 3D và các đoạn hoạt cảnh VRMA tùy biến theo lời thoại.
+
+  finale:
+    label: Sẵn sàng
+    subtitle: Kiểm tra cuối cùng & Lên sân khấu
+    title: Bảng kiểm định mức độ sẵn sàng
+    description: Rà soát tình trạng hoạt động của 4 trụ cột cơ bản trước khi chính thức bước lên sân khấu.
+    pillars:
+      audio: Đầu vào âm thanh & Thính giác
+      reasoning: Nhận thức & Khối óc tư duy
+      speech: Động cơ tổng hợp giọng nói
+      avatar: Hiện thân nhân vật & Điều khiển sân khấu
+    status:
+      ready: Đã sẵn sàng
+      configured: Đã thiết lập
+      optional: Tùy chọn / Đã bỏ qua
+      actionRequired: Cần thiết lập
+    greetingCard: Xem trước lời chào mở màn (Lượt 0)
+    launchButton: Khởi chạy Sân khấu AIRI
+    launching: Đang khởi động sân khấu...
+
+quickStart:
+  title: Bắt đầu nhanh trong 60 giây
+  subtitle: Thiết lập cấp tốc bằng các tùy chọn khuyến nghị chuẩn mực.
+  companionName: Tên bạn đồng hành
+  vessel: Hiện thân vật lý
+  brain: Lõi tư duy
+  voice: Giọng nói
+  launch: Hoàn tất & Khởi chạy

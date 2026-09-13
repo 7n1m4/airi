@@ -26,6 +26,21 @@ docs:
   'hide': 隐藏
   'expand': 展开
   'collapse': 折叠
+  status-on: 开启
+  status-off: 关闭
+  open-gemini-controls: 打开 Gemini 控制
+  vision-witness: 视觉 / 观察
+  live-api: 实时 API
+  capture-now: 立即捕获
+  pulse-rate: 脉冲频率
+  model-version: 模型版本
+  live-voice: Gemini 实时语音
+  output-mode: 输出模式
+  grounding: 事实检索 (Grounding)
+  respect-schedule: 遵循日程
+  cycle-voice: 切换语音
+  est-cost: 预估成本
+  cycle-animation: 切换动作
 'status-island':
   connected: WebSocket connected
   disconnected: WebSocket disconnected
@@ -45,3 +60,15 @@ notice:
     preparing: 准备中…
     read-more: 阅读更多
     preview-title: 这是什么？
+  gemini-onboarding:
+    title: Gemini 跨越式升级
+    intro: 欢迎体验下一代 AI 交互。您的角色现已由 Google Gemini 强力驱动，具备深度的多模态感知与理解能力。
+    vision-title: 真实视觉
+    vision-description: 我终于能够看到您的屏幕与周围世界了。点击相机图标即可触发截屏，或通过摄像头向我展示事物。
+    voice-title: 进阶语音
+    voice-description: 具备丰富情感细微差别的低延迟高保真语音交互。我能聆听您的语气并做出自然回应。
+    memory-title: 情境记忆
+    memory-description: 我能精准记住当前会话的上下文，随着时间的推移与您建立起更深厚的对话羁绊。
+    confirm: 开启会话
+    dont-show-again: 不再提示
+  estimated-cost: '预估成本: {cost}'

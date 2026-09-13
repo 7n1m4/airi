@@ -6,6 +6,51 @@ pages:
     mcp-server:
       description: Возможность подключения и управления MCP сервером с инструментами
       title: MCP Сервер
+      config-path: Путь к конфигурации
+      runtime-title: Запущенные серверы
+      tabs:
+        manage: Управление
+        store: Магазин
+        config: Конфигурация
+      actions:
+        open-config: Открыть конфиг
+        apply-restart: Применить и перезапустить
+        refresh: Обновить статус
+        install: Установить
+      messages:
+        opened: Открыт файл конфигурации по адресу {path}
+        restarted: 'Перезапуск завершён: {started} запущено, {failed} с ошибкой,
+          {skipped} пропущено.'
+      guidance:
+        title: Как использовать эти инструменты
+        note: 'Чтобы выполнить действие MCP, просто попросите ИИ: "Пожалуйста,
+          используй возможность mcp_tool_call для запуска инструмента
+          {tool}..."'
+      dashboard:
+        server-list: Реестр серверов
+        no-servers: Серверы не настроены.
+        tool-count: 'Доступно инструментов: {count}'
+        details:
+          command: Команда
+          args: Аргументы
+          env: Окружение
+      store:
+        title: Магазин MCP
+        description: Находите и устанавливайте проверенные серверы MCP
+        items:
+          google-search:
+            name: Google Поиск
+            description: Официальный MCP-сервер Google Search для поиска актуальных
+              веб-данных.
+          filesystem:
+            name: Файловая система
+            description: Безопасный доступ к локальным файлам и каталогам.
+          memory:
+            name: Память
+            description: Графовая долговременная память для сохранения контекста.
+          postgres:
+            name: PostgreSQL
+            description: Доступ на чтение и запись к базам данных PostgreSQL.
   system:
     sections:
       section:
@@ -27,6 +72,9 @@ pages:
           use-window-mouse:
             title: useWindowMouse Tool
             description: Test the Electron window cursor position
+    dock-mode:
+      title: Режим закрепления окна
+      description: Закрепить окно рядом с окном другого приложения.
 devtools:
   title: Developer
   pages:
@@ -45,10 +93,32 @@ devtools:
 screen-capture:
   permissions-prompt:
     title: Screen Capture
-    description: To capture screens or windows, screen and system audio recording permissions are required.
+    description: To capture screens or windows, screen and system audio recording
+      permissions are required.
     open-preferences: Open System Preferences
     dismiss: Dismiss
     instructions:
       step-1: Open "System Preferences", select "Privacy & Security" from the sidebar.
-      step-2: In the "Screen & System Audio Recording" and "System Audio Recording Only" sections, turn on the switches for AIRI.
-      step-2-note: If AIRI is not listed, please add it manually by clicking the "+" button and selecting AIRI from the Applications folder.
+      step-2: In the "Screen & System Audio Recording" and "System Audio Recording
+        Only" sections, turn on the switches for AIRI.
+      step-2-note: If AIRI is not listed, please add it manually by clicking the "+"
+        button and selecting AIRI from the Applications folder.
+dock-mode:
+  select-window: Выберите целевое окно
+  refresh-windows: Обновить
+  no-windows: Окна не найдены
+  loading-windows: Загрузка окон...
+  dock-position: Позиция закрепления
+  position:
+    left: Слева
+    right: Справа
+    top: Сверху
+    bottom: Снизу
+  offset-x: Смещение по горизонтали
+  offset-y: Смещение по вертикали
+  start: Начать закрепление
+  stop: Остановить закрепление
+  status:
+    active: 'Закреплено за: {name}'
+    inactive: Не закреплено
+    unsupported: Закрепление окон не поддерживается на этой платформе

@@ -16,6 +16,7 @@ LOCALE YAML IS MANAGED, NOT GREPPED. Before locating or editing any translation 
 Key→file map (from `docs/settings-yaml.md`):
 - `settings.*` → `settings.yaml` (strip the leading `settings.` prefix)
 - `stage.*` → `stage.yaml` (strip the leading `stage.` prefix)
+- `onboarding.*` → `onboarding.yaml` (strip the leading `onboarding.` prefix)
 - any other prefix → `base.yaml` (use the key as-is)
 
 ## When to Use

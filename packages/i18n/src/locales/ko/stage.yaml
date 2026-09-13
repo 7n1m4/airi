@@ -4,7 +4,11 @@ chat:
       airi: AIRI
       core-system: 코어
       you: 당신
+    reasoning_only: 모델이 추론 응답(사고 과정 메시지)만 생성했습니다. 표시할 응답을 생성할 충분한 여유 공간이 LLM에 있는지 최대 토큰 예산을
+      확인하세요.
   reasoning: 추론
+  reasoning_only: 모델이 추론 응답(사고 과정 메시지)만 생성했습니다. 표시할 응답을 생성할 충분한 여유 공간이 LLM에 있는지 최대 토큰 예산을
+    확인하세요.
 message: 듣고 있어요...
 operations:
   load-models: 모델 불러오기

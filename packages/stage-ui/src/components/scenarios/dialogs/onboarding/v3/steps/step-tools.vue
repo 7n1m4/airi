@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
@@ -7,6 +8,8 @@ const props = defineProps<{
   onNext: () => void
   onPrevious: () => void
 }>()
+
+const { t } = useI18n()
 
 const draftStore = useOnboardingV3Draft()
 
@@ -46,13 +49,13 @@ const activeToolCount = computed(() => {
     <div :class="['flex flex-col items-center text-center gap-2']">
       <div :class="['inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary-500/20 bg-primary-500/10 text-primary-400 text-xs font-semibold']">
         <div :class="['i-solar:widget-add-bold-duotone h-3.5 w-3.5']" />
-        <span>Desktop Actions & Tool Protocol</span>
+        <span>{{ t('onboarding.steps.tools.subtitle') }}</span>
       </div>
       <h1 :class="['text-2xl font-bold tracking-tight text-neutral-900 dark:text-white']">
-        Automation & MCP Tools
+        {{ t('onboarding.steps.tools.title') }}
       </h1>
       <p :class="['text-xs text-neutral-500 dark:text-neutral-400 max-w-xl text-center leading-relaxed']">
-        Give your companion real-world capabilities. Enable zero-key web search, safe local workspace exploration, and 3D kinetic motion generation.
+        {{ t('onboarding.steps.tools.description') }}
       </p>
     </div>
 
@@ -281,14 +284,14 @@ const activeToolCount = computed(() => {
         :class="['px-4 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300 text-xs font-medium border border-neutral-200 dark:border-white/10 transition-colors cursor-pointer']"
         @click="props.onPrevious"
       >
-        ← Previous Step
+        {{ t('onboarding.shell.previous') }}
       </button>
       <button
         type="button"
         :class="['px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md shadow-primary-600/30 transition-colors cursor-pointer flex items-center gap-1.5']"
         @click="props.onNext"
       >
-        <span>Confirm & Continue</span>
+        <span>{{ t('onboarding.shell.next') }}</span>
         <div :class="['i-solar:arrow-right-linear w-4 h-4']" />
       </button>
     </div>

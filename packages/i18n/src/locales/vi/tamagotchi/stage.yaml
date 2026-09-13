@@ -26,6 +26,21 @@ docs:
   'hide': Ẩn
   'expand': Mở rộng
   'collapse': Sụp đổ
+  status-on: BẬT
+  status-off: TẮT
+  open-gemini-controls: Mở bảng điều khiển Gemini
+  vision-witness: Thị giác / Quan sát
+  live-api: Live API
+  capture-now: Chụp ngay
+  pulse-rate: Tần số quét
+  model-version: Phiên bản mô hình
+  live-voice: Giọng nói Gemini Live
+  output-mode: Chế độ đầu ra
+  grounding: Tìm kiếm thực tế (Grounding)
+  respect-schedule: Tuân thủ lịch trình
+  cycle-voice: Đổi giọng nói
+  est-cost: Chi phí ước tính
+  cycle-animation: Đổi hoạt ảnh
 'status-island':
   connected: WebSocket connected
   disconnected: WebSocket disconnected
@@ -33,7 +48,8 @@ docs:
 notice:
   'fade-on-hover':
     title: Mờ dần khi rê chuột
-    intro: Tự làm mờ nhân vật khi con trỏ ở gần. Giảm xao nhãng nhưng vẫn nhìn thấy nhân vật.
+    intro: Tự làm mờ nhân vật khi con trỏ ở gần. Giảm xao nhãng nhưng vẫn nhìn thấy
+      nhân vật.
     opacity: Bật lên thì độ mờ giảm xuống {value} cho {targets} khi con trỏ ở gần.
     toggle: Tắt đi bằng cách rê chuột qua {controls} rồi bấm lại {icon}.
     controls-label: Đảo Điều Khiển
@@ -45,3 +61,20 @@ notice:
     preparing: Đang chuẩn bị…
     read-more: Xem thêm
     preview-title: Đây là gì?
+  gemini-onboarding:
+    title: Bước nhảy vọt Gemini
+    intro: Chào mừng bạn đến với thế hệ tương tác AI tiếp theo. Nhân vật của bạn hiện
+      được hỗ trợ bởi Google Gemini, mang đến khả năng hiểu đa phương thức sâu
+      sắc.
+    vision-title: Thị giác chân thực
+    vision-description: Tôi đã có thể nhìn thấy màn hình và thế giới của bạn. Sử dụng biểu tượng
+      Máy ảnh để chụp ảnh hoặc cho tôi thấy cảnh vật qua ống kính.
+    voice-title: Giọng nói nâng cao
+    voice-description: Tương tác giọng nói độ trễ cực thấp với sắc thái cảm xúc chân thực. Tôi có
+      thể lắng nghe ngữ điệu của bạn để phản hồi phù hợp.
+    memory-title: Bộ nhớ ngữ cảnh
+    memory-description: Tôi ghi nhớ phiên trò chuyện hiện tại với độ chính xác cao, giúp chúng ta
+      xây dựng những cuộc hội thoại ngày càng sâu sắc.
+    confirm: Bắt đầu phiên
+    dont-show-again: Không hiển thị lại
+  estimated-cost: 'Chi phí ước tính: {cost}'

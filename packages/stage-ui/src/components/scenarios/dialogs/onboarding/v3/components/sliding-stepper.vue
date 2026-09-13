@@ -3,6 +3,7 @@ import type { OnboardingV3StepDef } from '../types'
 
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = withDefaults(
   defineProps<{
@@ -18,6 +19,18 @@ const props = withDefaults(
 const emit = defineEmits<{
   (e: 'select', index: number): void
 }>()
+
+const { t, te } = useI18n()
+
+function getStepLabel(step: OnboardingV3StepDef): string {
+  const key = `onboarding.stepper.steps.${step.id}.label`
+  return te(key) ? t(key) : step.label
+}
+
+function getStepSubtitle(step: OnboardingV3StepDef): string | undefined {
+  const key = `onboarding.stepper.steps.${step.id}.subtitle`
+  return te(key) ? t(key) : step.subtitle
+}
 
 const isMenuOpen = ref(false)
 
@@ -62,7 +75,7 @@ function handleNextBatch() {
 
 <template>
   <nav
-    aria-label="Onboarding Progress"
+    :aria-label="t('onboarding.stepper.ariaProgress')"
     style="-webkit-app-region: no-drag;"
     :class="['flex items-center space-x-1.5 bg-black/5 dark:bg-neutral-900/60 border border-neutral-200/80 dark:border-white/5 rounded-full px-2 py-1 text-xs select-none']"
   >
@@ -71,7 +84,7 @@ function handleNextBatch() {
       v-if="windowRange.hasLeftOverflow"
       type="button"
       :class="['p-0.5 rounded-full text-neutral-400 hover:text-primary-500 dark:text-neutral-500 dark:hover:text-primary-400 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer transition-colors flex items-center justify-center']"
-      title="Previous step"
+      :title="t('onboarding.stepper.prevStep')"
       @click="handlePrevBatch"
     >
       <div :class="['i-solar:alt-arrow-left-linear w-3.5 h-3.5']" />
@@ -91,7 +104,7 @@ function handleNextBatch() {
         ]"
         @click="handleStepClick(step.index)"
       >
-        {{ step.label }}
+        {{ getStepLabel(step) }}
       </button>
     </div>
 
@@ -100,7 +113,7 @@ function handleNextBatch() {
       v-if="windowRange.hasRightOverflow"
       type="button"
       :class="['p-0.5 rounded-full text-neutral-400 hover:text-primary-500 dark:text-neutral-500 dark:hover:text-primary-400 hover:bg-black/5 dark:hover:bg-white/10 cursor-pointer transition-colors flex items-center justify-center']"
-      title="Next step"
+      :title="t('onboarding.stepper.nextStep')"
       @click="handleNextBatch"
     >
       <div :class="['i-solar:alt-arrow-right-linear w-3.5 h-3.5']" />
@@ -114,7 +127,7 @@ function handleNextBatch() {
           :class="[
             'ml-0.5 p-1 rounded-full text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer flex items-center justify-center',
           ]"
-          title="Jump to any step"
+          :title="t('onboarding.stepper.jumpToStep')"
         >
           <div :class="['i-solar:list-linear w-3.5 h-3.5']" />
         </button>
@@ -128,7 +141,7 @@ function handleNextBatch() {
           ]"
         >
           <div :class="['px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-neutral-400 mb-1']">
-            All Onboarding Steps ({{ steps.length }})
+            {{ t('onboarding.stepper.allSteps', { count: steps.length }) }}
           </div>
           <div :class="['space-y-0.5']">
             <button
@@ -149,10 +162,10 @@ function handleNextBatch() {
                 </span>
                 <div :class="['min-w-0']">
                   <div :class="['truncate']">
-                    {{ step.label }}
+                    {{ getStepLabel(step) }}
                   </div>
                   <div :class="['text-[9px] text-neutral-400 truncate']">
-                    {{ step.subtitle }}
+                    {{ getStepSubtitle(step) }}
                   </div>
                 </div>
               </div>

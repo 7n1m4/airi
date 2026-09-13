@@ -26,6 +26,21 @@ docs:
   'hide': 숨기기
   'expand': 확장
   'collapse': 접기
+  status-on: 켜짐
+  status-off: 꺼짐
+  open-gemini-controls: Gemini 제어판 열기
+  vision-witness: 시각 / 관측
+  live-api: 라이브 API
+  capture-now: 지금 캡처
+  pulse-rate: 펄스 주기
+  model-version: 모델 버전
+  live-voice: Gemini 라이브 음성
+  output-mode: 출력 모드
+  grounding: 그라운딩
+  respect-schedule: 일정 준수
+  cycle-voice: 음성 순환
+  est-cost: 예상 비용
+  cycle-animation: 애니메이션 순환
 'status-island':
   connected: WebSocket connected
   disconnected: WebSocket disconnected
@@ -45,3 +60,15 @@ notice:
     preparing: 준비 중…
     read-more: 더 보기
     preview-title: 이게 뭐죠?
+  gemini-onboarding:
+    title: Gemini 퀀텀 리프
+    intro: 차세대 AI 인터랙션에 오신 것을 환영합니다. 이제 Google Gemini의 강력한 멀티모달 이해 능력으로 캐릭터가 구동됩니다.
+    vision-title: 진정한 시각 인지
+    vision-description: 이제 화면과 사용자 주변을 직접 볼 수 있습니다. 카메라 아이콘을 눌러 캡처하거나 렌즈를 통해 사물을 보여주세요.
+    voice-title: 첨단 음성 인터랙션
+    voice-description: 감정 뉘앙스를 담은 고품질 저지연 음성 대화입니다. 사용자의 말투와 톤을 듣고 그에 맞추어 응답합니다.
+    memory-title: 맥락 기억
+    memory-description: 현재 세션을 정밀하게 기억하여 시간이 지날수록 더욱 깊이 있는 대화를 나눌 수 있습니다.
+    confirm: 세션 시작하기
+    dont-show-again: 다시 보지 않기
+  estimated-cost: '예상 비용: {cost}'

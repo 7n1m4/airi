@@ -29,3 +29,6 @@ menu:
       devtools: Outils de développement
       troubleshoot_beatsync: Dépannage BeatSync...
       quit: Quitter
+      mini_size: Mini (220x315)
+      dock_bottom: Ancrer en bas
+      dock_top: Ancrer en haut

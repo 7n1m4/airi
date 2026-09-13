@@ -2,6 +2,7 @@
 import { Button } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import SelectiveSyncPanel from '../../../../providers/selective-sync-panel.vue'
@@ -23,6 +24,8 @@ const emit = defineEmits<{
   (e: 'next'): void
   (e: 'finish'): void
 }>()
+
+const { t } = useI18n()
 
 const draftStore = useOnboardingV3Draft()
 const cloudflareStore = useCloudflareStore()
@@ -256,13 +259,13 @@ async function handleRestoreAndBuildAnother() {
       >
         <div :class="['inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary-500/20 bg-primary-500/10 text-primary-400 text-xs font-semibold mb-1']">
           <div :class="['i-solar:server-square-bold-duotone h-3.5 w-3.5']" />
-          <span>Step 2 of 17 · Account & Architecture</span>
+          <span>{{ t('onboarding.steps.triage.stepBadge', { current: 2, total: 17 }) }}</span>
         </div>
         <h1 :class="['text-2xl font-bold tracking-tight text-neutral-900 dark:text-white']">
-          Choose Your Setup Path
+          {{ t('onboarding.steps.triage.title') }}
         </h1>
         <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5']">
-          Select how AIRI runs and synchronizes companions, memories, and state.
+          {{ t('onboarding.steps.triage.description') }}
         </p>
       </div>
 
@@ -290,7 +293,7 @@ async function handleRestoreAndBuildAnother() {
             'bg-primary-500/5 dark:bg-primary-950/20 shadow-sm',
           ]"
         >
-          "Whether you keep everything 100% offline on your device or sign in with Cloudflare for encrypted multi-device backups, you remain in complete control."
+          "{{ t('onboarding.steps.triage.companionGreeting') }}"
         </div>
       </div>
     </div>
@@ -329,7 +332,7 @@ async function handleRestoreAndBuildAnother() {
                 <div :class="['i-solar:home-smile-bold-duotone text-xl']" />
               </div>
               <span :class="['rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase bg-primary-500/15 text-primary-600 dark:text-primary-400']">
-                100% Offline
+                {{ t('onboarding.steps.triage.local.badge') }}
               </span>
             </div>
 
@@ -347,10 +350,10 @@ async function handleRestoreAndBuildAnother() {
           <!-- Title & Description -->
           <div>
             <h2 :class="['text-base font-bold text-neutral-900 dark:text-white']">
-              Local Companion (Air-Gapped)
+              {{ t('onboarding.steps.triage.local.title') }}
             </h2>
             <p :class="['text-xs text-neutral-600 dark:text-neutral-400 mt-1.5 leading-relaxed']">
-              Run local WebGPU neural models and store conversations and long-term memory exclusively in IndexedDB. Zero telemetry, zero external servers.
+              {{ t('onboarding.steps.triage.local.description') }}
             </p>
           </div>
 
@@ -358,15 +361,15 @@ async function handleRestoreAndBuildAnother() {
           <div :class="['space-y-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/80 text-xs']">
             <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
               <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>IndexedDB Local Vault (zero cloud accounts)</span>
+              <span>{{ t('onboarding.steps.triage.local.features.f1') }}</span>
             </div>
             <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
               <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>100% Private, on-device neural execution</span>
+              <span>{{ t('onboarding.steps.triage.local.features.f2') }}</span>
             </div>
             <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
               <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>Zero telemetry, trackers, or data collection</span>
+              <span>{{ t('onboarding.steps.triage.local.features.f3') }}</span>
             </div>
           </div>
         </div>
@@ -381,374 +384,375 @@ async function handleRestoreAndBuildAnother() {
                 : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700',
             ]"
           >
-            <span>{{ selectedPath === 'local' ? '✓ Selected Local Architecture' : 'Select Local Setup →' }}</span>
+            <span>{{ selectedPath === 'local' ? t('onboarding.steps.triage.local.selectedCta') : t('onboarding.steps.triage.local.selectCta') }}</span>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Option 2: Account Sign-In (Cloudflare) -->
-      <div
-        :class="[
-          'relative flex flex-col justify-between overflow-hidden rounded-2xl p-5 border-2 transition-all duration-200 cursor-pointer min-h-[340px]',
-          selectedPath === 'cloud'
-            ? isAuthenticated
-              ? 'border-emerald-500 bg-gradient-to-b from-emerald-500/10 to-teal-500/5 dark:from-emerald-950/40 dark:to-teal-950/20 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/30'
-              : 'border-primary-500 bg-gradient-to-b from-primary-500/10 to-indigo-500/5 dark:from-primary-950/40 dark:to-indigo-950/20 shadow-lg shadow-primary-500/10 ring-1 ring-primary-500/30'
-            : 'border-neutral-200/80 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/60 hover:border-neutral-300 dark:hover:border-neutral-700 backdrop-blur-md',
-        ]"
-        @click="chooseCloud"
-      >
-        <div :class="['space-y-4']">
-          <!-- Top Row: Icon + Badge + Radio Indicator -->
-          <div :class="['flex items-center justify-between']">
-            <div :class="['flex items-center gap-2.5']">
-              <div
-                :class="[
-                  'h-10 w-10 rounded-xl flex items-center justify-center transition-colors',
-                  isAuthenticated
-                    ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
-                    : selectedPath === 'cloud'
-                      ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25'
-                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400',
-                ]"
-              >
-                <div :class="['i-solar:cloud-storage-line-duotone text-xl']" />
-              </div>
-              <span
-                :class="[
-                  'rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase',
-                  isAuthenticated
-                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
-                    : 'bg-primary-500/15 text-primary-600 dark:text-primary-400',
-                ]"
-              >
-                {{ isAuthenticated ? 'Connected' : 'Zero-Trust' }}
-              </span>
-            </div>
-
-            <!-- Radio Indicator -->
+    <!-- Option 2: Account Sign-In (Cloudflare) -->
+    <div
+      :class="[
+        'relative flex flex-col justify-between overflow-hidden rounded-2xl p-5 border-2 transition-all duration-200 cursor-pointer min-h-[340px]',
+        selectedPath === 'cloud'
+          ? isAuthenticated
+            ? 'border-emerald-500 bg-gradient-to-b from-emerald-500/10 to-teal-500/5 dark:from-emerald-950/40 dark:to-teal-950/20 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/30'
+            : 'border-primary-500 bg-gradient-to-b from-primary-500/10 to-indigo-500/5 dark:from-primary-950/40 dark:to-indigo-950/20 shadow-lg shadow-primary-500/10 ring-1 ring-primary-500/30'
+          : 'border-neutral-200/80 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/60 hover:border-neutral-300 dark:hover:border-neutral-700 backdrop-blur-md',
+      ]"
+      @click="chooseCloud"
+    >
+      <div :class="['space-y-4']">
+        <!-- Top Row: Icon + Badge + Radio Indicator -->
+        <div :class="['flex items-center justify-between']">
+          <div :class="['flex items-center gap-2.5']">
             <div
               :class="[
-                'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors',
-                selectedPath === 'cloud'
-                  ? isAuthenticated ? 'border-emerald-500' : 'border-primary-500'
-                  : 'border-neutral-300 dark:border-neutral-600',
+                'h-10 w-10 rounded-xl flex items-center justify-center transition-colors',
+                isAuthenticated
+                  ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/25'
+                  : selectedPath === 'cloud'
+                    ? 'bg-primary-500 text-white shadow-md shadow-primary-500/25'
+                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400',
               ]"
             >
-              <div
-                v-if="selectedPath === 'cloud'"
-                :class="[
-                  'h-2.5 w-2.5 rounded-full shadow-xs',
-                  isAuthenticated ? 'bg-emerald-500' : 'bg-primary-500',
-                ]"
-              />
+              <div :class="['i-solar:cloud-storage-line-duotone text-xl']" />
             </div>
+            <span
+              :class="[
+                'rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase',
+                isAuthenticated
+                  ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                  : 'bg-primary-500/15 text-primary-600 dark:text-primary-400',
+              ]"
+            >
+              {{ isAuthenticated ? t('onboarding.steps.triage.auth.connected', { account: '' }) : t('onboarding.steps.triage.cloud.badge') }}
+            </span>
           </div>
 
-          <!-- Title & Description -->
-          <div>
-            <h2 :class="['text-base font-bold text-neutral-900 dark:text-white']">
-              Account Sign-In (Cloudflare)
-            </h2>
-            <p :class="['text-xs text-neutral-600 dark:text-neutral-400 mt-1.5 leading-relaxed']">
-              Private Cloudflare sync and multi-device companion restore. Encrypts and backs up companions, memories, and cards across devices.
-            </p>
-          </div>
-
-          <!-- Authenticated State Banner -->
+          <!-- Radio Indicator -->
           <div
-            v-if="isAuthenticated"
-            :class="['border border-emerald-500/30 rounded-xl bg-emerald-500/10 p-3 text-xs dark:bg-emerald-950/20 space-y-1.5']"
+            :class="[
+              'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors',
+              selectedPath === 'cloud'
+                ? isAuthenticated ? 'border-emerald-500' : 'border-primary-500'
+                : 'border-neutral-300 dark:border-neutral-600',
+            ]"
           >
-            <div :class="['flex items-center justify-between text-emerald-700 dark:text-emerald-300 font-semibold']">
-              <span :class="['flex items-center gap-1.5']">
-                <div :class="['i-solar:check-circle-bold-duotone text-sm']" />
-                <span>{{ cfOAuthTokens?.accessToken ? 'Authenticated via OAuth PKCE' : 'Authenticated via API Token' }}</span>
-              </span>
-              <button
-                type="button"
-                :class="['text-[10px] text-neutral-500 underline dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white cursor-pointer']"
-                @click="handleDisconnect"
-              >
-                Disconnect
-              </button>
-            </div>
-            <div :class="['truncate text-[10px] text-neutral-600 dark:text-neutral-300 font-mono']">
-              <span :class="['text-neutral-400']">Account:</span> {{ cfAccountId || cfOAuthTokens?.accountId || 'Default Account' }}
-            </div>
-            <div :class="['truncate text-[10px] text-neutral-500 dark:text-neutral-400 font-mono']">
-              <span :class="['text-neutral-400']">Edge Vault:</span> Ready & encrypted
-            </div>
-          </div>
-
-          <!-- Unauthenticated Sign-in Module -->
-          <div
-            v-else-if="selectedPath === 'cloud'"
-            :class="['pt-2 border-t border-neutral-100 dark:border-neutral-800/80 space-y-2.5']"
-            @click.stop
-          >
-            <!-- Tabs: 1-Click vs API Token -->
-            <div :class="['flex rounded-lg bg-neutral-100 dark:bg-neutral-800 p-0.5 text-xs']">
-              <button
-                type="button"
-                :class="[
-                  'flex-1 py-1 rounded-md text-center text-[11px] font-medium transition-all cursor-pointer',
-                  authMethod === 'auto'
-                    ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-xs'
-                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white',
-                ]"
-                @click="authMethod = 'auto'"
-              >
-                1-Click Sign-In
-              </button>
-              <button
-                type="button"
-                :class="[
-                  'flex-1 py-1 rounded-md text-center text-[11px] font-medium transition-all cursor-pointer',
-                  authMethod === 'token'
-                    ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-xs'
-                    : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white',
-                ]"
-                @click="authMethod = 'token'"
-              >
-                API Token
-              </button>
-            </div>
-
-            <!-- 1-Click Auto OAuth -->
-            <div v-if="authMethod === 'auto'" :class="['space-y-1.5']">
-              <button
-                type="button"
-                :disabled="isAuthenticating"
-                :class="[
-                  'w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer',
-                ]"
-                @click="handleStartOAuth"
-              >
-                <div v-if="isAuthenticating" :class="['i-solar:refresh-line-duotone h-4 w-4 animate-spin']" />
-                <div v-else :class="['i-solar:login-2-linear h-4 w-4']" />
-                <span>{{ isAuthenticating ? 'Waiting for Browser Authorization...' : 'Sign In with Cloudflare' }}</span>
-              </button>
-              <p :class="['text-[10px] text-neutral-400 text-center leading-tight']">
-                Opens your default browser for PKCE authorization & Edge Vault pairing.
-              </p>
-            </div>
-
-            <!-- API Token Direct Input -->
-            <div v-else :class="['space-y-2']">
-              <div :class="['flex items-center gap-2']">
-                <input
-                  v-model="tokenInput"
-                  type="password"
-                  placeholder="Paste Cloudflare API Token..."
-                  :class="[
-                    'flex-1 px-3 py-1.5 rounded-xl border text-xs bg-neutral-50 dark:bg-neutral-950 border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white outline-none focus:border-primary-500',
-                  ]"
-                  @keydown.enter="handleConnectApiToken"
-                >
-                <button
-                  type="button"
-                  :disabled="isValidatingToken || !tokenInput.trim()"
-                  :class="[
-                    'px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer',
-                  ]"
-                  @click="handleConnectApiToken"
-                >
-                  Connect
-                </button>
-              </div>
-              <p :class="['text-[10px] text-neutral-400 leading-tight']">
-                Requires Workers KV and R2 read/write permissions.
-              </p>
-            </div>
-          </div>
-
-          <!-- Feature Bullets (When not showing auth form or unselected) -->
-          <div v-else :class="['space-y-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/80 text-xs']">
-            <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
-              <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>Encrypted Edge Key Vault sync across devices</span>
-            </div>
-            <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
-              <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>Multi-device companion backup & restore</span>
-            </div>
-            <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
-              <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>Private Cloudflare edge infrastructure</span>
-            </div>
+            <div
+              v-if="selectedPath === 'cloud'"
+              :class="[
+                'h-2.5 w-2.5 rounded-full shadow-xs',
+                isAuthenticated ? 'bg-emerald-500' : 'bg-primary-500',
+              ]"
+            />
           </div>
         </div>
 
-        <!-- Bottom Action CTA -->
-        <div :class="['pt-4 mt-4 border-t border-neutral-100 dark:border-neutral-800/80']">
-          <div
-            :class="[
-              'w-full py-2.5 rounded-xl text-xs font-semibold text-center transition-all flex items-center justify-center gap-2',
-              selectedPath === 'cloud'
-                ? isAuthenticated
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
-                  : 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
-                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700',
-            ]"
-          >
-            <span>{{ selectedPath === 'cloud' ? (isAuthenticated ? '✓ Cloudflare Connected' : '✓ Selected Cloudflare') : 'Sign In with Cloudflare →' }}</span>
+        <!-- Title & Description -->
+        <div>
+          <h2 :class="['text-base font-bold text-neutral-900 dark:text-white']">
+            {{ t('onboarding.steps.triage.cloud.title') }}
+          </h2>
+          <p :class="['text-xs text-neutral-600 dark:text-neutral-400 mt-1.5 leading-relaxed']">
+            {{ t('onboarding.steps.triage.cloud.description') }}
+          </p>
+        </div>
+
+        <!-- Authenticated State Banner -->
+        <div
+          v-if="isAuthenticated"
+          :class="['border border-emerald-500/30 rounded-xl bg-emerald-500/10 p-3 text-xs dark:bg-emerald-950/20 space-y-1.5']"
+        >
+          <div :class="['flex items-center justify-between text-emerald-700 dark:text-emerald-300 font-semibold']">
+            <span :class="['flex items-center gap-1.5']">
+              <div :class="['i-solar:check-circle-bold-duotone text-sm']" />
+              <span>{{ cfOAuthTokens?.accessToken ? 'Authenticated via OAuth PKCE' : 'Authenticated via API Token' }}</span>
+            </span>
+            <button
+              type="button"
+              :class="['text-[10px] text-neutral-500 underline dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white cursor-pointer']"
+              @click="handleDisconnect"
+            >
+              {{ t('onboarding.steps.triage.auth.disconnect') }}
+            </button>
+          </div>
+          <div :class="['truncate text-[10px] text-neutral-600 dark:text-neutral-300 font-mono']">
+            <span :class="['text-neutral-400']">Account:</span> {{ cfAccountId || cfOAuthTokens?.accountId || 'Default Account' }}
+          </div>
+          <div :class="['truncate text-[10px] text-neutral-500 dark:text-neutral-400 font-mono']">
+            <span :class="['text-neutral-400']">Edge Vault:</span> Ready & encrypted
+          </div>
+        </div>
+
+        <!-- Unauthenticated Sign-in Module -->
+        <div
+          v-else-if="selectedPath === 'cloud'"
+          :class="['pt-2 border-t border-neutral-100 dark:border-neutral-800/80 space-y-2.5']"
+          @click.stop
+        >
+          <!-- Tabs: 1-Click vs API Token -->
+          <div :class="['flex rounded-lg bg-neutral-100 dark:bg-neutral-800 p-0.5 text-xs']">
+            <button
+              type="button"
+              :class="[
+                'flex-1 py-1 rounded-md text-center text-[11px] font-medium transition-all cursor-pointer',
+                authMethod === 'auto'
+                  ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-xs'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white',
+              ]"
+              @click="authMethod = 'auto'"
+            >
+              {{ t('onboarding.steps.triage.auth.autoTab') }}
+            </button>
+            <button
+              type="button"
+              :class="[
+                'flex-1 py-1 rounded-md text-center text-[11px] font-medium transition-all cursor-pointer',
+                authMethod === 'token'
+                  ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-xs'
+                  : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white',
+              ]"
+              @click="authMethod = 'token'"
+            >
+              {{ t('onboarding.steps.triage.auth.tokenTab') }}
+            </button>
+          </div>
+
+          <!-- 1-Click Auto OAuth -->
+          <div v-if="authMethod === 'auto'" :class="['space-y-1.5']">
+            <button
+              type="button"
+              :disabled="isAuthenticating"
+              :class="[
+                'w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer',
+              ]"
+              @click="handleStartOAuth"
+            >
+              <div v-if="isAuthenticating" :class="['i-solar:refresh-line-duotone h-4 w-4 animate-spin']" />
+              <div v-else :class="['i-solar:login-2-linear h-4 w-4']" />
+              <span>{{ isAuthenticating ? t('onboarding.steps.triage.auth.verifying') : t('onboarding.steps.triage.auth.oauthButton') }}</span>
+            </button>
+            <p :class="['text-[10px] text-neutral-400 text-center leading-tight']">
+              Opens your default browser for PKCE authorization & Edge Vault pairing.
+            </p>
+          </div>
+
+          <!-- API Token Direct Input -->
+          <div v-else :class="['space-y-2']">
+            <div :class="['flex items-center gap-2']">
+              <input
+                v-model="tokenInput"
+                type="password"
+                :placeholder="t('onboarding.steps.triage.auth.tokenPlaceholder')"
+                :class="[
+                  'flex-1 px-3 py-1.5 rounded-xl border text-xs bg-neutral-50 dark:bg-neutral-950 border-neutral-200 dark:border-neutral-700 text-neutral-900 dark:text-white outline-none focus:border-primary-500',
+                ]"
+                @keydown.enter="handleConnectApiToken"
+              >
+              <button
+                type="button"
+                :disabled="isValidatingToken || !tokenInput.trim()"
+                :class="[
+                  'px-3 py-1.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold disabled:opacity-50 transition-colors cursor-pointer',
+                ]"
+                @click="handleConnectApiToken"
+              >
+                {{ isValidatingToken ? t('onboarding.steps.triage.auth.verifying') : t('onboarding.steps.triage.auth.verifyToken') }}
+              </button>
+            </div>
+            <p :class="['text-[10px] text-neutral-400 leading-tight']">
+              Requires Workers KV and R2 read/write permissions.
+            </p>
+          </div>
+        </div>
+
+        <!-- Feature Bullets (When not showing auth form or unselected) -->
+        <div v-else :class="['space-y-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/80 text-xs']">
+          <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
+            <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
+            <span>{{ t('onboarding.steps.triage.cloud.features.f1') }}</span>
+          </div>
+          <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
+            <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
+            <span>{{ t('onboarding.steps.triage.cloud.features.f2') }}</span>
+          </div>
+          <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
+            <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
+            <span>{{ t('onboarding.steps.triage.cloud.features.f3') }}</span>
           </div>
         </div>
       </div>
+
+      <!-- Bottom Action CTA -->
+      <div :class="['pt-4 mt-4 border-t border-neutral-100 dark:border-neutral-800/80']">
+        <div
+          :class="[
+            'w-full py-2.5 rounded-xl text-xs font-semibold text-center transition-all flex items-center justify-center gap-2',
+            selectedPath === 'cloud'
+              ? isAuthenticated
+                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
+                : 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
+              : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700',
+          ]"
+        >
+          <span>{{ selectedPath === 'cloud' ? (isAuthenticated ? t('onboarding.steps.triage.cloud.selectedCta') : t('onboarding.steps.triage.cloud.selectedCta')) : t('onboarding.steps.triage.cloud.selectCta') }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Remote Companions Found / Selective Restore View (Routes 4 & 5) -->
+  <div
+    v-if="selectedPath === 'cloud' && isAuthenticated && remoteCardsCount > 0"
+    v-motion
+    :initial="{ opacity: 0, y: 10 }"
+    :enter="{ opacity: 1, y: 0 }"
+    :duration="400"
+    :class="['flex flex-col gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 p-4 shadow-sm']"
+  >
+    <div :class="['flex items-center justify-between pb-2 border-b border-emerald-500/20']">
+      <div :class="['flex items-center gap-2.5']">
+        <div :class="['h-8 w-8 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0']">
+          <div :class="['i-solar:cloud-check-bold-duotone text-lg']" />
+        </div>
+        <div>
+          <h3 :class="['text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2']">
+            <span>{{ t('onboarding.steps.triage.restore.bannerTitle') }}</span>
+            <span :class="['px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400']">
+              Ready to Restore
+            </span>
+          </h3>
+          <p :class="['text-[11px] text-neutral-500 dark:text-neutral-400']">
+            {{ t('onboarding.steps.triage.restore.bannerDesc', { count: remoteCardsCount }) }}
+          </p>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        :class="['text-[11px] text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white flex items-center gap-1 cursor-pointer transition-colors']"
+        @click="probeRemoteCatalog"
+      >
+        <div :class="['i-solar:refresh-linear text-xs', isLoadingCatalog ? 'animate-spin' : '']" />
+        <span>Refresh</span>
+      </button>
     </div>
 
-    <!-- Remote Companions Found / Selective Restore View (Routes 4 & 5) -->
-    <div
-      v-if="selectedPath === 'cloud' && isAuthenticated && remoteCardsCount > 0"
-      v-motion
-      :initial="{ opacity: 0, y: 10 }"
-      :enter="{ opacity: 1, y: 0 }"
-      :duration="400"
-      :class="['flex flex-col gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 p-4 shadow-sm']"
-    >
-      <div :class="['flex items-center justify-between pb-2 border-b border-emerald-500/20']">
-        <div :class="['flex items-center gap-2.5']">
-          <div :class="['h-8 w-8 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0']">
-            <div :class="['i-solar:cloud-check-bold-duotone text-lg']" />
-          </div>
-          <div>
-            <h3 :class="['text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-2']">
-              <span>Found {{ remoteCardsCount }} Companion{{ remoteCardsCount === 1 ? '' : 's' }} in Cloudflare R2</span>
-              <span :class="['px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-600 dark:text-emerald-400']">
-                Ready to Restore
-              </span>
-            </h3>
-            <p :class="['text-[11px] text-neutral-500 dark:text-neutral-400']">
-              Select which companions and asset libraries to sync down to this device.
-            </p>
-          </div>
-        </div>
+    <!-- Embedded Full Selective Sync Tree -->
+    <div :class="['max-h-[300px] overflow-y-auto rounded-xl border border-neutral-200/80 dark:border-white/5 bg-white/60 dark:bg-neutral-900/60 p-2']">
+      <SelectiveSyncPanel
+        ref="selectiveSyncPanelRef"
+        :show-actions="false"
+      />
+    </div>
 
+    <!-- Route 4 & 5 Action Bar -->
+    <div :class="['flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-emerald-500/20']">
+      <div :class="['text-[11px] text-neutral-500 dark:text-neutral-400']">
+        Restoring pulls active state into your local vault.
+      </div>
+
+      <div :class="['flex items-center gap-2.5']">
+        <!-- Route 5: Multi-Companion Power User -->
         <button
           type="button"
-          :class="['text-[11px] text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white flex items-center gap-1 cursor-pointer transition-colors']"
-          @click="probeRemoteCatalog"
+          :disabled="isRestoring"
+          :class="[
+            'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold',
+            'border border-primary-500/30 bg-primary-500/10 hover:bg-primary-500/20 text-primary-600 dark:text-primary-300 transition-all active:scale-95 disabled:opacity-50 cursor-pointer',
+          ]"
+          @click="handleRestoreAndBuildAnother"
         >
-          <div :class="['i-solar:refresh-linear text-xs', isLoadingCatalog ? 'animate-spin' : '']" />
-          <span>Refresh</span>
+          <div v-if="isRestoring" :class="['i-solar:refresh-line-duotone text-xs animate-spin']" />
+          <div v-else :class="['i-solar:add-circle-bold text-xs text-primary-500']" />
+          <span>+ Restore & Build Another Companion</span>
         </button>
-      </div>
 
-      <!-- Embedded Full Selective Sync Tree -->
-      <div :class="['max-h-[300px] overflow-y-auto rounded-xl border border-neutral-200/80 dark:border-white/5 bg-white/60 dark:bg-neutral-900/60 p-2']">
-        <SelectiveSyncPanel
-          ref="selectiveSyncPanelRef"
-          :show-actions="false"
-        />
-      </div>
-
-      <!-- Route 4 & 5 Action Bar -->
-      <div :class="['flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-emerald-500/20']">
-        <div :class="['text-[11px] text-neutral-500 dark:text-neutral-400']">
-          Restoring pulls active state into your local vault.
-        </div>
-
-        <div :class="['flex items-center gap-2.5']">
-          <!-- Route 5: Multi-Companion Power User -->
-          <button
-            type="button"
-            :disabled="isRestoring"
-            :class="[
-              'flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold',
-              'border border-primary-500/30 bg-primary-500/10 hover:bg-primary-500/20 text-primary-600 dark:text-primary-300 transition-all active:scale-95 disabled:opacity-50 cursor-pointer',
-            ]"
-            @click="handleRestoreAndBuildAnother"
-          >
-            <div v-if="isRestoring" :class="['i-solar:refresh-line-duotone text-xs animate-spin']" />
-            <div v-else :class="['i-solar:add-circle-bold text-xs text-primary-500']" />
-            <span>+ Restore & Build Another Companion</span>
-          </button>
-
-          <!-- Route 4: Returning Restorer -->
-          <Button
-            variant="primary"
-            size="md"
-            :disabled="isRestoring"
-            :class="[
-              'flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-2',
-              'text-xs font-semibold text-white shadow-md shadow-emerald-600/25 transition-all active:scale-95 disabled:opacity-50 cursor-pointer',
-            ]"
-            @click="handleRestoreAndLaunch"
-          >
-            <div v-if="isRestoring" :class="['i-solar:refresh-line-duotone text-xs animate-spin']" />
-            <div v-else :class="['i-solar:rocket-bold-duotone text-xs']" />
-            <span>🚀 Restore & Launch Stage (~30s)</span>
-          </Button>
-        </div>
+        <!-- Route 4: Returning Restorer -->
+        <Button
+          variant="primary"
+          size="md"
+          :disabled="isRestoring"
+          :class="[
+            'flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 px-5 py-2',
+            'text-xs font-semibold text-white shadow-md shadow-emerald-600/25 transition-all active:scale-95 disabled:opacity-50 cursor-pointer',
+          ]"
+          @click="handleRestoreAndLaunch"
+        >
+          <div v-if="isRestoring" :class="['i-solar:refresh-line-duotone text-xs animate-spin']" />
+          <div v-else :class="['i-solar:rocket-bold-duotone text-xs']" />
+          <span>{{ isRestoring ? t('onboarding.steps.triage.restore.restoring') : t('onboarding.steps.triage.restore.restoreAll') }}</span>
+        </Button>
       </div>
     </div>
+  </div>
 
-    <!-- Connected Cloud Account (Fresh / Zero Backups) -->
-    <div
-      v-else-if="selectedPath === 'cloud' && isAuthenticated && !isLoadingCatalog"
-      v-motion
-      :initial="{ opacity: 0, y: 10 }"
-      :enter="{ opacity: 1, y: 0 }"
-      :duration="350"
-      :class="['p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between']"
+  <!-- Connected Cloud Account (Fresh / Zero Backups) -->
+  <div
+    v-else-if="selectedPath === 'cloud' && isAuthenticated && !isLoadingCatalog"
+    v-motion
+    :initial="{ opacity: 0, y: 10 }"
+    :enter="{ opacity: 1, y: 0 }"
+    :duration="350"
+    :class="['p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs text-emerald-800 dark:text-emerald-300 flex items-center justify-between']"
+  >
+    <div :class="['flex items-center gap-2']">
+      <div :class="['i-solar:check-circle-bold-duotone text-base text-emerald-500 shrink-0']" />
+      <span>Connected to Cloudflare! No existing companion backups found in Cloudflare R2. Your new companion will automatically sync to your cloud vault.</span>
+    </div>
+    <button
+      type="button"
+      :class="['px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-xs cursor-pointer transition-colors shrink-0 ml-2']"
+      @click="props.onNext"
     >
-      <div :class="['flex items-center gap-2']">
-        <div :class="['i-solar:check-circle-bold-duotone text-base text-emerald-500 shrink-0']" />
-        <span>Connected to Cloudflare! No existing companion backups found in Cloudflare R2. Your new companion will automatically sync to your cloud vault.</span>
-      </div>
-      <button
-        type="button"
-        :class="['px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-xs cursor-pointer transition-colors shrink-0 ml-2']"
-        @click="props.onNext"
-      >
-        Continue Setup (Cloud-Backed) →
-      </button>
-    </div>
+      Continue Setup (Cloud-Backed) →
+    </button>
+  </div>
 
-    <!-- Catalog Scanning Indicator -->
-    <div
-      v-else-if="selectedPath === 'cloud' && isAuthenticated && isLoadingCatalog"
-      :class="['p-3 rounded-xl border border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-white/5 text-xs text-neutral-500 flex items-center justify-center gap-2 animate-pulse']"
+  <!-- Catalog Scanning Indicator -->
+  <div
+    v-else-if="selectedPath === 'cloud' && isAuthenticated && isLoadingCatalog"
+    :class="['p-3 rounded-xl border border-neutral-200 dark:border-white/5 bg-neutral-50 dark:bg-white/5 text-xs text-neutral-500 flex items-center justify-center gap-2 animate-pulse']"
+  >
+    <div :class="['i-solar:refresh-line-duotone animate-spin text-sm']" />
+    <span>Checking Cloudflare R2 for companion backups...</span>
+  </div>
+
+  <!-- Navigation Action Bar -->
+  <div
+    v-motion
+    :initial="{ opacity: 0, y: 10 }"
+    :enter="{ opacity: 1, y: 0 }"
+    :duration="350"
+    :delay="250"
+    :class="['flex items-center justify-between pt-3 border-t border-neutral-200/80 dark:border-white/5']"
+  >
+    <button
+      type="button"
+      :class="['flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer']"
+      @click="props.onPrevious"
     >
-      <div :class="['i-solar:refresh-line-duotone animate-spin text-sm']" />
-      <span>Checking Cloudflare R2 for companion backups...</span>
+      <div :class="['i-solar:alt-arrow-left-line-duotone h-4 w-4']" />
+      <span>{{ t('onboarding.shell.previous') }}</span>
+    </button>
+
+    <div :class="['text-[11px] text-neutral-400 font-medium']">
+      Path: <span :class="['text-neutral-700 dark:text-neutral-200 font-semibold']">{{ selectedPath === 'local' ? t('onboarding.steps.triage.local.title') : t('onboarding.steps.triage.cloud.title') }}</span>
     </div>
 
-    <!-- Navigation Action Bar -->
-    <div
-      v-motion
-      :initial="{ opacity: 0, y: 10 }"
-      :enter="{ opacity: 1, y: 0 }"
-      :duration="350"
-      :delay="250"
-      :class="['flex items-center justify-between pt-3 border-t border-neutral-200/80 dark:border-white/5']"
+    <Button
+      variant="primary"
+      size="md"
+      :class="[
+        'flex items-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-500 px-5 py-2',
+        'text-xs font-semibold text-white shadow-md shadow-primary-600/25 transition-all active:scale-95 cursor-pointer',
+      ]"
+      @click="props.onNext"
     >
-      <button
-        type="button"
-        :class="['flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer']"
-        @click="props.onPrevious"
-      >
-        <div :class="['i-solar:alt-arrow-left-line-duotone h-4 w-4']" />
-        <span>Back to Welcome</span>
-      </button>
-
-      <div :class="['text-[11px] text-neutral-400 font-medium']">
-        Path: <span :class="['text-neutral-700 dark:text-neutral-200 font-semibold']">{{ selectedPath === 'local' ? 'Local Companion (Air-Gapped)' : 'Account Sign-In (Cloudflare)' }}</span>
-      </div>
-
-      <Button
-        variant="primary"
-        size="md"
-        :class="[
-          'flex items-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-500 px-5 py-2',
-          'text-xs font-semibold text-white shadow-md shadow-primary-600/25 transition-all active:scale-95 cursor-pointer',
-        ]"
-        @click="props.onNext"
-      >
-        <span>Continue to Appearance</span>
-        <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
-      </Button>
-    </div>
+      <span>{{ t('onboarding.shell.next') }}</span>
+      <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
+    </Button>
+  </div>
   </div>
 </template>

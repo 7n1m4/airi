@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import { isThinkingAudioCached, prewarmThinkingFillers } from '../../../../../../libs/pacing/pacing-prewarm'
@@ -12,6 +13,8 @@ const props = defineProps<{
   onNext: () => void
   onPrevious: () => void
 }>()
+
+const { t } = useI18n()
 
 const draftStore = useOnboardingV3Draft()
 const providersStore = useProvidersStore()
@@ -292,14 +295,14 @@ function handleSkipPrewarmAndContinue() {
         <div>
           <div :class="['flex items-center gap-2']">
             <h2 :class="['text-lg font-bold text-neutral-900 dark:text-white tracking-tight']">
-              Conversational Pacing & Thinking
+              {{ t('onboarding.steps.thinking.title') }}
             </h2>
             <span :class="['text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400']">
-              Step 10
+              {{ t('onboarding.steps.thinking.label') }}
             </span>
           </div>
           <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed']">
-            Calibrate spoken thinking fillers, natural reasoning asides, and response length. Presets match your model's thinking speed so AIRI can fill the silence with speech while waiting — AIRI never cuts off or imposes timeouts on model reasoning.
+            {{ t('onboarding.steps.thinking.description') }}
           </p>
         </div>
       </div>
@@ -846,7 +849,7 @@ function handleSkipPrewarmAndContinue() {
         :class="['px-5 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer']"
         @click="props.onPrevious"
       >
-        ← Previous Step
+        {{ t('onboarding.shell.previous') }}
       </button>
 
       <button
@@ -854,7 +857,7 @@ function handleSkipPrewarmAndContinue() {
         :class="['px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer flex items-center gap-2']"
         @click="onContinueClick"
       >
-        <span>Confirm & Continue</span>
+        <span>{{ t('onboarding.shell.next') }}</span>
         <div :class="['i-solar:arrow-right-linear w-4 h-4']" />
       </button>
     </div>

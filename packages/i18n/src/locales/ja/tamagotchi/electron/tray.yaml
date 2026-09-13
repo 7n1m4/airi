@@ -29,3 +29,6 @@ menu:
       devtools: 開発ツール
       troubleshoot_beatsync: Troubleshoot BeatSync...
       quit: Quit
+      mini_size: ミニ (220x315)
+      dock_bottom: 下部にドッキング
+      dock_top: 上部にドッキング

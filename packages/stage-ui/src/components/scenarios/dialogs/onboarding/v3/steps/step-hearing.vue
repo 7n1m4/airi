@@ -11,6 +11,7 @@ import { useAudioAnalyzer, useAudioRecorder } from '@proj-airi/stage-ui/composab
 import { Button, FieldSelect } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import LevelMeter from '../../../../../gadgets/level-meter.vue'
@@ -31,6 +32,8 @@ const props = defineProps<{
   onNext: () => void
   onPrevious: () => void
 }>()
+
+const { t } = useI18n()
 
 // --- Stores & Draft ---
 const draft = useOnboardingV3Draft()
@@ -530,16 +533,16 @@ watch(selectedAudioInput, async () => {
     <div :class="['flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-4']">
       <!-- Step Subtitle & Header -->
       <div :class="['flex items-center justify-between text-xs text-neutral-400 font-medium']">
-        <span>Hearing</span>
-        <span>Step 8 of 16 • Voice Transcription (STT)</span>
+        <span>{{ t('onboarding.steps.hearing.label') }}</span>
+        <span>{{ t('onboarding.steps.hearing.subtitle') }}</span>
       </div>
 
       <div class="flex-shrink-0">
         <h2 class="text-xl text-neutral-800 font-bold md:text-2xl dark:text-neutral-100">
-          Hearing & Mic Playground
+          {{ t('onboarding.steps.hearing.title') }}
         </h2>
         <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          Zero dependencies on character or persona — verify your ear works before anything else.
+          {{ t('onboarding.steps.hearing.description') }}
         </p>
       </div>
 
@@ -979,7 +982,7 @@ watch(selectedAudioInput, async () => {
         @click="props.onPrevious"
       >
         <div :class="['i-solar:alt-arrow-left-line-duotone h-4 w-4']" />
-        <span>Back to Persona</span>
+        <span>{{ t('onboarding.shell.previous') }}</span>
       </button>
 
       <!-- Center Status Hint -->
@@ -1002,7 +1005,7 @@ watch(selectedAudioInput, async () => {
           ]"
           @click="props.onNext"
         >
-          Skip Step
+          {{ t('onboarding.shell.skip') }}
         </button>
 
         <Button
@@ -1016,7 +1019,7 @@ watch(selectedAudioInput, async () => {
           ]"
           @click="props.onNext"
         >
-          <span>Next: Speech (TTS)</span>
+          <span>{{ t('onboarding.shell.next') }}</span>
           <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
         </Button>
       </div>

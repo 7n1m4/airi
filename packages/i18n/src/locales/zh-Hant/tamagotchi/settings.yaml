@@ -6,6 +6,47 @@ pages:
     mcp-server:
       description: 連線與管理 MCP 伺服器和工具
       title: MCP 伺服器
+      config-path: 設定路徑
+      runtime-title: 執行中的伺服器
+      tabs:
+        manage: 管理
+        store: 商店
+        config: 設定
+      actions:
+        open-config: 開啟設定
+        apply-restart: 套用並重啟
+        refresh: 重新整理狀態
+        install: 安裝
+      messages:
+        opened: 已開啟位於 {path} 的設定檔
+        restarted: 重啟完成：{started} 個已啟動，{failed} 個失敗，{skipped} 個略過。
+      guidance:
+        title: 如何使用這些工具
+        note: 如需執行 MCP 操作，只需向 AI 傳送指令：「請使用 mcp_tool_call 能力執行 {tool} 工具……」
+      dashboard:
+        server-list: 伺服器註冊表
+        no-servers: 未設定任何伺服器。
+        tool-count: '{count} 個可用工具'
+        details:
+          command: 指令
+          args: 參數
+          env: 環境變數
+      store:
+        title: MCP 商店
+        description: 探索並安裝精選的 MCP 伺服器
+        items:
+          google-search:
+            name: Google 搜尋
+            description: 用於網頁檢索與事實依據的官方 Google 搜尋 MCP 伺服器。
+          filesystem:
+            name: 檔案系統
+            description: 安全存取本機檔案與目錄。
+          memory:
+            name: 記憶
+            description: 基於圖譜的持久化長期記憶儲存。
+          postgres:
+            name: PostgreSQL
+            description: 對 PostgreSQL 資料庫的讀寫存取權限。
   system:
     sections:
       section:
@@ -27,6 +68,9 @@ pages:
           use-window-mouse:
             title: 使用視窗滑鼠工具
             description: 測試 Electron 視窗滑鼠游標位置
+    dock-mode:
+      title: 視窗吸附模式
+      description: 將視窗吸附至另一個應用程式視窗旁。
 devtools:
   title: 開發者
   pages:
@@ -52,3 +96,22 @@ screen-capture:
       step-1: 打開「系統偏好設定」，從側邊欄中選擇「隱私與安全」。
       step-2: 在「螢幕與系統聲音錄製」以及「系統聲音錄製」區域，開啟 AIRI 的開關。
       step-2-note: 如果 AIRI 沒有被列出，則請手動按下「+」按鈕並從應用資料夾選擇 AIRI。
+dock-mode:
+  select-window: 選取目標視窗
+  refresh-windows: 重新整理
+  no-windows: 未找到視窗
+  loading-windows: 正在載入視窗清單...
+  dock-position: 吸附位置
+  position:
+    left: 左側
+    right: 右側
+    top: 上方
+    bottom: 下方
+  offset-x: 水平偏移
+  offset-y: 垂直偏移
+  start: 開始吸附
+  stop: 停止吸附
+  status:
+    active: 已吸附至：{name}
+    inactive: 未吸附
+    unsupported: 目前平台不支援視窗吸附

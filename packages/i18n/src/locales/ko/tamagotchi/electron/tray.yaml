@@ -29,3 +29,6 @@ menu:
       devtools: 개발자 도구
       troubleshoot_beatsync: BeatSync 문제 해결...
       quit: 종료
+      mini_size: 미니 (220x315)
+      dock_bottom: 하단 고정
+      dock_top: 상단 고정

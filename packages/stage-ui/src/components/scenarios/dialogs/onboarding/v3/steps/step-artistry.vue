@@ -8,6 +8,7 @@ import {
 import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import ArtPreviewModal from '../components/art-preview-modal.vue'
 import ComfyuiWorkflowModal from '../components/comfyui-workflow-modal.vue'
@@ -18,6 +19,8 @@ const props = defineProps<{
   onNext: () => void
   onPrevious: () => void
 }>()
+
+const { t } = useI18n()
 
 const draft = useOnboardingV3Draft()
 const artistryStore = useArtistryStore()
@@ -301,14 +304,14 @@ function handleNext() {
     <!-- Top Header -->
     <div>
       <div :class="['flex items-center gap-2 text-xs text-neutral-400 mb-0.5']">
-        <span :class="['text-primary-500 dark:text-primary-400 font-medium']">Visual Creative Studio</span>
-        <span>• Engine & Appearance Blueprint</span>
+        <span :class="['text-primary-500 dark:text-primary-400 font-medium']">{{ t('onboarding.steps.artistry.label') }}</span>
+        <span>• {{ t('onboarding.steps.artistry.subtitle') }}</span>
       </div>
       <h2 :class="['text-2xl font-bold tracking-tight text-neutral-900 dark:text-white']">
-        Artistry & Visual Synthesis
+        {{ t('onboarding.steps.artistry.title') }}
       </h2>
       <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5']">
-        Configure your image generation engine, character appearance prefix, and autonomous scene director.
+        {{ t('onboarding.steps.artistry.description') }}
       </p>
     </div>
 
@@ -693,7 +696,7 @@ function handleNext() {
         :class="['px-4 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300 text-xs font-medium border border-neutral-200 dark:border-white/10 transition-colors cursor-pointer']"
         @click="props.onPrevious"
       >
-        ← Previous
+        {{ t('onboarding.shell.previous') }}
       </button>
 
       <button
@@ -701,7 +704,7 @@ function handleNext() {
         :class="['px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md shadow-primary-600/30 transition-colors cursor-pointer']"
         @click="handleNext"
       >
-        Next Step →
+        {{ t('onboarding.shell.next') }}
       </button>
     </div>
   </div>

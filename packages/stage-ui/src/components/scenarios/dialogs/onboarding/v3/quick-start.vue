@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { isApplePlatform } from '@proj-airi/stage-shared'
 import { computed, onBeforeUnmount, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import { getStarterCharacter } from '../../../../../constants/prompts/character-defaults'
@@ -23,6 +24,7 @@ const props = defineProps<{
   onComplete: () => void
 }>()
 
+const { t } = useI18n()
 const draftStore = useOnboardingV3Draft()
 const providersStore = useProvidersStore()
 const speechStore = useSpeechStore()
@@ -883,20 +885,20 @@ async function handleStartChatting() {
     <div :class="['flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-1 border-b border-neutral-200/80 dark:border-white/5']">
       <div>
         <h1 :class="['text-2xl font-bold tracking-tight text-neutral-900 dark:text-white flex items-center gap-2']">
-          <span>Quick Start</span>
+          <span>{{ t('onboarding.quickStart.title') }}</span>
           <span :class="['text-[10px] font-semibold px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-500 border border-cyan-500/20']">
             Fast Track · 60s
           </span>
         </h1>
         <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5']">
-          Your companion, ready in one place.
+          {{ t('onboarding.quickStart.subtitle') }}
         </p>
       </div>
 
       <!-- Identity Strip (Your name & Companion name) -->
       <div :class="['flex items-center gap-3 self-stretch sm:self-auto']">
         <div :class="['flex flex-col gap-1']">
-          <label :class="['text-[11px] font-medium text-neutral-500 dark:text-neutral-400']">Your name</label>
+          <label :class="['text-[11px] font-medium text-neutral-500 dark:text-neutral-400']">{{ t('onboarding.steps.profile.nameLabel') }}</label>
           <input
             v-model="userName"
             type="text"
@@ -905,7 +907,7 @@ async function handleStartChatting() {
           >
         </div>
         <div :class="['flex flex-col gap-1']">
-          <label :class="['text-[11px] font-medium text-neutral-500 dark:text-neutral-400']">Companion name</label>
+          <label :class="['text-[11px] font-medium text-neutral-500 dark:text-neutral-400']">{{ t('onboarding.quickStart.companionName') }}</label>
           <input
             :value="companionName"
             type="text"
@@ -1441,7 +1443,7 @@ async function handleStartChatting() {
           :class="['px-3.5 py-2 rounded-xl text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white text-xs font-medium transition-colors cursor-pointer hover:bg-black/5 dark:hover:bg-white/5']"
           @click="props.onContinueFullSetup"
         >
-          Continue with full setup
+          {{ t('onboarding.steps.welcome.actions.guidedSetup') }}
         </button>
         <button
           type="button"
@@ -1451,7 +1453,7 @@ async function handleStartChatting() {
           ]"
           @click="handleStartChatting"
         >
-          <span>Start chatting</span>
+          <span>{{ t('onboarding.quickStart.launch') }}</span>
           <div :class="['i-solar:arrow-right-linear w-4 h-4']" />
         </button>
       </div>

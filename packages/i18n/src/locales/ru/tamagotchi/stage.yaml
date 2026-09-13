@@ -26,6 +26,21 @@ docs:
   'hide': Скрыть
   'expand': Expand
   'collapse': Collapse
+  status-on: ВКЛ
+  status-off: ВЫКЛ
+  open-gemini-controls: Открыть управление Gemini
+  vision-witness: Зрение / Наблюдение
+  live-api: Live API
+  capture-now: Сделать снимок
+  pulse-rate: Частота опроса
+  model-version: Версия модели
+  live-voice: Живой голос Gemini
+  output-mode: Режим вывода
+  grounding: Заземление (Grounding)
+  respect-schedule: Соблюдать расписание
+  cycle-voice: Сменить голос
+  est-cost: Примерная стоимость
+  cycle-animation: Сменить анимацию
 'status-island':
   connected: WebSocket connected
   disconnected: WebSocket disconnected
@@ -33,8 +48,10 @@ docs:
 notice:
   'fade-on-hover':
     title: Исчезать при наведении
-    intro: Автоматически делает персонажа прозрачнее, когда курсор рядом. Меньше отвлекает, но остаётся видимым.
-    opacity: После включения непрозрачность падает до {value} для {targets}, когда курсор рядом.
+    intro: Автоматически делает персонажа прозрачнее, когда курсор рядом. Меньше
+      отвлекает, но остаётся видимым.
+    opacity: После включения непрозрачность падает до {value} для {targets}, когда
+      курсор рядом.
     toggle: Можно выключить, наведя на {controls} и снова нажав на {icon}.
     controls-label: Остров управления
     icon-label: значок перечёркнутого глаза
@@ -45,3 +62,20 @@ notice:
     preparing: Подготавливаем…
     read-more: Подробнее
     preview-title: Что это?
+  gemini-onboarding:
+    title: Квантовый скачок Gemini
+    intro: Добро пожаловать в новое поколение взаимодействия с ИИ. Ваш персонаж
+      теперь работает на базе Google Gemini, обеспечивая глубокое
+      мультимодальное понимание.
+    vision-title: Настоящее зрение
+    vision-description: Теперь я могу видеть ваш экран и окружающий мир. Используйте значок
+      камеры, чтобы сделать снимок или показать мне что-либо через объектив.
+    voice-title: Продвинутый голос
+    voice-description: Высокоточное голосовое общение с низкой задержкой и эмоциональными
+      оттенками. Я улавливаю вашу интонацию и отвечаю взаимностью.
+    memory-title: Контекстная память
+    memory-description: Я точно запоминаю нашу текущую сессию, что позволяет нам со временем вести
+      всё более глубокие беседы.
+    confirm: Начать сессию
+    dont-show-again: Больше не показывать
+  estimated-cost: 'Примерная стоимость: {cost}'

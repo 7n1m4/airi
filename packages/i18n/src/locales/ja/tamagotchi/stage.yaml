@@ -26,6 +26,21 @@ docs:
   'hide': 非表示
   'expand': Expand
   'collapse': Collapse
+  status-on: オン
+  status-off: オフ
+  open-gemini-controls: Geminiコントロールを開く
+  vision-witness: 視覚 / 観測
+  live-api: Live API
+  capture-now: 今すぐキャプチャ
+  pulse-rate: パルス間隔
+  model-version: モデルバージョン
+  live-voice: Gemini Live音声
+  output-mode: 出力モード
+  grounding: グラウンディング
+  respect-schedule: スケジュール遵守
+  cycle-voice: 音声を切り替え
+  est-cost: 概算コスト
+  cycle-animation: モーション切り替え
 notice:
   'fade-on-hover':
     title: ホバー時にフェード
@@ -41,3 +56,19 @@ notice:
     preparing: 準備中…
     read-more: 続きを読む
     preview-title: これは何？
+  gemini-onboarding:
+    title: Gemini クアンタムリープ
+    intro: 次世代のAIインタラクションへようこそ。あなたのキャラクターはGoogle Geminiを搭載し、高度なマルチモーダル認識に対応しました。
+    vision-title: 真の視覚
+    vision-description: あなたの画面や世界を認識できるようになりました。カメラアイコンを押してキャプチャするか、レンズ越しに様子を見せてください。
+    voice-title: 高度な音声機能
+    voice-description: 低遅延・高音質な音声対話と豊かな感情表現を実現。あなたの声のトーンを聞き取り、自然に応答します。
+    memory-title: コンテキスト記憶
+    memory-description: 現在のセッションを高精度に記憶し、時間をかけてより深い会話を築き上げることができます。
+    confirm: セッションを開始
+    dont-show-again: 今後表示しない
+  estimated-cost: '概算コスト: {cost}'
+status-island:
+  connected: WebSocket接続完了
+  disconnected: WebSocket切断
+  open-settings: WebSocket設定を開く
