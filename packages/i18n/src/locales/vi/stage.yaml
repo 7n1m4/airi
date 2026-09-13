@@ -4,7 +4,11 @@ chat:
       airi: AIRI
       core-system: Hệ thống lõi
       you: Bạn
+    reasoning_only: Mô hình chỉ tạo phản hồi suy luận (chuỗi suy nghĩ). Vui lòng kiểm tra giới
+      hạn token tối đa để đảm bảo LLM có đủ dung lượng tạo phản hồi hiển thị.
   reasoning: Suy nghĩ
+  reasoning_only: Mô hình chỉ tạo phản hồi suy luận (chuỗi suy nghĩ). Vui lòng kiểm tra giới
+    hạn token tối đa để đảm bảo LLM có đủ dung lượng tạo phản hồi hiển thị.
 message: Nói gì đó...
 operations:
   load-models: Tải mô hình

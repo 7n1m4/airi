@@ -29,3 +29,6 @@ menu:
       devtools: DevTools
       troubleshoot_beatsync: Troubleshoot BeatSync...
       quit: Salir
+      mini_size: Mini (220x315)
+      dock_bottom: Acoplar abajo
+      dock_top: Acoplar arriba

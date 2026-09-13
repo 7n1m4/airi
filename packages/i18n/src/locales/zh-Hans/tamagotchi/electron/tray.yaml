@@ -29,3 +29,6 @@ menu:
       devtools: 开发者工具
       troubleshoot_beatsync: 排查「同步音律」问题...
       quit: 退出
+      mini_size: 迷你 (220x315)
+      dock_bottom: 停靠到底部
+      dock_top: 停靠到顶部

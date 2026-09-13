@@ -26,6 +26,21 @@ docs:
   'hide': Masquer
   'expand': Développer
   'collapse': Réduire
+  status-on: ACTIVÉ
+  status-off: DÉSACTIVÉ
+  open-gemini-controls: Ouvrir les contrôles Gemini
+  vision-witness: Vision / Témoin
+  live-api: API en direct
+  capture-now: Capturer maintenant
+  pulse-rate: Fréquence de pulsation
+  model-version: Version du modèle
+  live-voice: Voix en direct Gemini
+  output-mode: Mode de sortie
+  grounding: Ancrage (Grounding)
+  respect-schedule: Respecter le calendrier
+  cycle-voice: Changer de voix
+  est-cost: Coût estimé
+  cycle-animation: Changer d'animation
 'status-island':
   connected: WebSocket connected
   disconnected: WebSocket disconnected
@@ -33,9 +48,12 @@ docs:
 notice:
   'fade-on-hover':
     title: Disparaître au survol
-    intro: Fait disparaître légèrement le personnage quand le curseur s’approche. Moins de distractions tout en restant visible.
-    opacity: Une fois activé, l’opacité descend à {value} pour {targets} quand le curseur est à proximité.
-    toggle: Vous pouvez le désactiver en survolant l’{controls}, puis en cliquant à nouveau sur l’{icon}.
+    intro: Fait disparaître légèrement le personnage quand le curseur s’approche.
+      Moins de distractions tout en restant visible.
+    opacity: Une fois activé, l’opacité descend à {value} pour {targets} quand le
+      curseur est à proximité.
+    toggle: Vous pouvez le désactiver en survolant l’{controls}, puis en cliquant à
+      nouveau sur l’{icon}.
     controls-label: Îlot de commandes
     icon-label: icône œil barré
     value: '0'
@@ -45,3 +63,20 @@ notice:
     preparing: Préparation…
     read-more: En savoir plus
     preview-title: C’est quoi ?
+  gemini-onboarding:
+    title: Saut quantique Gemini
+    intro: Bienvenue dans la nouvelle génération d'interaction IA. Votre personnage
+      est désormais propulsé par Google Gemini, permettant une compréhension
+      multimodale approfondie.
+    vision-title: Vision réelle
+    vision-description: Je peux enfin voir votre écran et votre environnement. Utilisez l'icône de
+      la caméra pour déclencher une capture ou me montrer votre univers.
+    voice-title: Voix avancée
+    voice-description: Interactions vocales haute fidélité à faible latence avec nuances
+      émotionnelles. Je perçois votre intonation et m'adapte en conséquence.
+    memory-title: Mémoire contextuelle
+    memory-description: Je me souviens de notre session actuelle avec une extrême précision, nous
+      permettant de tisser des liens plus profonds au fil du temps.
+    confirm: Démarrer la session
+    dont-show-again: Ne plus afficher
+  estimated-cost: 'Coût estimé : {cost}'

@@ -4,7 +4,14 @@ chat:
       airi: AIRI
       core-system: Système central
       you: Vous
+    reasoning_only: Le modèle n'a généré qu'une réponse de raisonnement (message de chaîne de
+      pensée). Veuillez vérifier votre budget maximal de jetons pour vous
+      assurer que le LLM a suffisamment d'espace pour générer une réponse
+      affichée.
   reasoning: Raisonnement
+  reasoning_only: Le modèle n'a généré qu'une réponse de raisonnement (message de chaîne de
+    pensée). Veuillez vérifier votre budget maximal de jetons pour vous assurer
+    que le LLM a suffisamment d'espace pour générer une réponse affichée.
 message: Dites quelque chose...
 operations:
   load-models: Charger les modèles

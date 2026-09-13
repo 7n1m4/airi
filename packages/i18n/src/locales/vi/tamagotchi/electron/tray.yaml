@@ -29,3 +29,6 @@ menu:
       devtools: Công cụ phát triển
       troubleshoot_beatsync: Sửa lỗi BeatSync...
       quit: Thoát ra
+      mini_size: Thu nhỏ (220x315)
+      dock_bottom: Ghim xuống dưới
+      dock_top: Ghim lên trên
