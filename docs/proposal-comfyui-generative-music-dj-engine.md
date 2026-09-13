@@ -1,19 +1,28 @@
-# Proposal: Unified DJ & Music Engine (ComfyUI Generative + Spotify Catalog)
+# Proposal: Unified DJ & Music Engine (Tri-Model Generative + Spotify Catalog)
 
-This document outlines the architectural design for enabling AI characters to act as dynamic, real-time DJs—interweaving AI-generated tracks (via ComfyUI / MiniMax Music 3.0) with real-world streaming catalogs (via Spotify) while interactively adjusting the setlist and hosting radio-style voiceover transitions in response to ongoing conversation.
+> **Status**: Proposed RFC
+> **Document**: `docs/proposal-comfyui-generative-music-dj-engine.md`
+> **Target Audience**: Core Developers, Audio/Music Engineers, UI Integrators
+> **Key References**: `packages/stage-ui/src/stores/dj-deck.ts`, `apps/stage-tamagotchi/src/main/services/airi/widgets/providers/comfyui.ts`
+
+This document outlines the architectural design for enabling AI characters to act as dynamic, real-time DJs—interweaving AI-generated tracks (via a Tri-Model Generative Engine: Local MiniMax Music 3.0, Local YuE 2, and Remote Suno v6) with real-world streaming catalogs (via Spotify) while interactively adjusting the setlist and hosting radio-style voiceover transitions in response to ongoing conversation.
 
 ---
 
 ## 🧭 1. Vision & Goals
 
-Currently, AIRI supports visual generative artistry (via ComfyUI/Replicate) and 3D item manifestation (via TRELLIS). This proposal introduces a **Unified Music Provider and AI DJ Engine** that gives the character both an infinite record crate (Spotify streaming catalog) and a private music production studio (ComfyUI / MiniMax):
+Currently, AIRI supports visual generative artistry (via ComfyUI/Replicate) and 3D item manifestation (via TRELLIS). This proposal introduces a **Unified Music Provider and AI DJ Engine** that gives the character both an infinite record crate (Spotify streaming catalog) and a private music production studio supporting **two local options and one remote option**:
 
+*   **The Tri-Model Generative Engine**:
+    1.  **Local Option 1 — MiniMax Music 3.0 (via ComfyUI Node)**: High-fidelity neural generation for heavy GPU rigs.
+    2.  **Local Option 2 — YuE 2 (Score-First Local)**: On-device generation (<8 GB VRAM) using symbolic score planning (composing melody, chords, rhythm, and song structure before audio diffusion, enabling structural editing and minor-key covers).
+    3.  **Remote Option 1 — Suno v6 (Cloud API)**: Fast, zero-local-VRAM cloud fallback with stem isolation, microediting single lyrics, and tiered creativity (V6, V6 Wild, V6 Mini).
 *   **Three Operational DJ Modes**:
     1.  **Generative Mode**: Synthesizes 100% original music on the fly based on chat context, themes, or user mood (e.g., *"Make a cozy lo-fi song about drinking matcha while coding"*).
     2.  **Catalog Mode (Spotify)**: Searches and streams real licensed music from Spotify's global library (e.g., *"Play some late 90s French house"*).
     3.  **Hybrid DJ Mode (The Radio Experience)**: Blends real tracks with custom-generated tracks, beats, and interludes, acting as an autonomous radio host.
 *   **"Always on Deck" Continuous Playback**: Zero-latency transitions between tracks. While Track A is playing, Track B is pre-queued or pre-generated on deck.
-*   **Zero-Downtime Fail-Safe (Comfy / GPU Fallback)**: If local GPU generation encounters an OOM error, latency spike, or ComfyUI is offline, the DJ loop gracefully falls back to Spotify catalog search without interrupting playback.
+*   **Zero-Downtime Fail-Safe (GPU / Fallback)**: If local GPU generation encounters an OOM error, latency spike, or ComfyUI is offline, the DJ loop gracefully falls back to Suno v6 cloud generation or Spotify catalog search without interrupting playback.
 *   **Radio DJ Banter & Audio Ducking**: The character can speak over track intros/outros (e.g., *"Coming up next, one of my favorite tracks from Daft Punk..."*). Music automatically ducks to 20–25% volume during speech and swells back up seamlessly.
 *   **Character Musical Identity**: Character cards (`extensions.airi.music`) define distinct musical tastes, favorite genres, BPM preferences, and DJ banter style.
 
@@ -21,28 +30,37 @@ Currently, AIRI supports visual generative artistry (via ComfyUI/Replicate) and 
 
 ## 🎛️ 2. Unified Track Model & Abstraction
 
-To AIRI's DJ brain, all tracks share a normalized data structure regardless of whether they originate from Spotify, local ComfyUI generation, or local files:
+To AIRI's DJ brain, all tracks share a normalized data structure regardless of whether they originate from Spotify, local ComfyUI/YuE2 generation, Suno cloud API, or local files:
 
 ```typescript
 export interface DJTrack {
   id: string
   title: string
-  artist: string // e.g., "Daft Punk" or "AIRI x MiniMax"
+  artist: string // e.g., "Daft Punk", "AIRI x YuE2", or "AIRI x Suno"
   genre?: string
   mood?: string
   bpm?: number
   durationMs: number
-  source: 'spotify' | 'comfyui' | 'local'
+  source: 'spotify' | 'comfyui' | 'yue2' | 'suno' | 'local'
 
   // Playback Handles
   spotifyUri?: string // spotify:track:...
   audioBlobKey?: string // IndexedDB/localforage key for local audio
-  audioStreamUrl?: string // ComfyUI output URL or local file URL
+  audioStreamUrl?: string // ComfyUI/YuE2 output URL or local file URL
   artworkUrl?: string // Album cover or generated stage background thumbnail
 
-  // Generation Metadata (for ComfyUI tracks)
+  // Generation & Composition Metadata
   caption?: string
   lyrics?: string
+  scorePlan?: {
+    tempo: number
+    keySignature: string
+    chordProgression?: string[]
+  }
+  stems?: {
+    vocalsUrl?: string
+    instrumentalUrl?: string
+  }
 }
 ```
 
@@ -57,7 +75,7 @@ Queues a track into the DJ deck from either a generative prompt or a catalog que
 *   **Arguments**:
     ```json
     {
-      "source": "auto" | "spotify" | "comfyui",
+      "source": "auto" | "spotify" | "comfyui" | "yue2" | "suno",
       "query": "Daft Punk - Digital Love",
       "caption": "french filter house, punchy vintage drums, groovy slap bass, 124 bpm",
       "lyrics": "[Intro]\n[Verse]\nLast night I had a dream about you...",
@@ -65,7 +83,7 @@ Queues a track into the DJ deck from either a generative prompt or a catalog que
       "priority": "next" | "tail" | "immediate_fade"
     }
     ```
-*   `source`: `"auto"` (DJ decides based on mode/preference), `"spotify"`, or `"comfyui"`.
+*   `source`: `"auto"` (DJ decides based on mode/preference), `"spotify"`, `"comfyui"`, `"yue2"`, or `"suno"`.
 *   `priority`:
     *   `"tail"`: Appends to the end of the setlist.
     *   `"next"`: Pre-loads directly into the "On Deck" slot (Track B).
@@ -100,8 +118,8 @@ Queries real-time playback telemetry, current deck state, and upcoming queue.
       "onDeckTrack": {
         "id": "gen_88f21",
         "title": "Matcha Code Beat",
-        "artist": "AIRI x MiniMax",
-        "source": "comfyui",
+        "artist": "AIRI x YuE2",
+        "source": "yue2",
         "status": "ready"
       },
       "mode": "hybrid",
@@ -135,31 +153,41 @@ Audio sources are implemented under `packages/stage-ui/src/libs/providers/` as p
            ┌────────────────────────────┼────────────────────────────┐
            ▼                            ▼                            ▼
 ┌──────────────────────┐    ┌──────────────────────┐    ┌──────────────────────┐
-│  ComfyUI (MiniMax)   │    │  Spotify Web Provider│    │ Local File Provider  │
-│  - Generative audio  │    │  - Streaming catalog │    │ - IndexedDB cache    │
-│  - Raw PCM / WAV     │    │  - Connect / Web SDK │    │ - localforage assets │
-│  - Full DSP control  │    │  - Search & Playback │    │ - Stored playlists   │
+│  Generative Providers│    │  Spotify Web Provider│    │ Local File Provider  │
+│  - ComfyUI (MiniMax) │    │  - Streaming catalog │    │ - IndexedDB cache    │
+│  - Local YuE 2       │    │  - Connect / Web SDK │    │ - localforage assets │
+│  - Remote Suno v6    │    │  - Search & Playback │    │ - Stored playlists   │
 └──────────────────────┘    └──────────────────────┘    └──────────────────────┘
 ```
 
-### A. ComfyUI Generative Adapter
+### A. Local Generative: ComfyUI (MiniMax Music 3.0)
 * Reuses `apps/stage-tamagotchi/src/main/services/airi/widgets/providers/comfyui.ts`.
 * Injects `{{CAPTION}}`, `{{LYRICS}}`, `{{BPM}}`, and `{{DURATION}}` into MiniMax Music 3.0 workflow templates.
 * Fetches generated `.wav`/`.mp3` files, persists them in IndexedDB (`localforage`), and provides raw audio streams.
 
-### B. Spotify Streaming Adapter
+### B. Local Generative: YuE 2 (Score-First Architecture)
+* Operates locally on consumer hardware (<8 GB VRAM).
+* Generates a symbolic musical score plan (melody, rhythm, chords, structure) before audio diffusion.
+* Allows character proactivity to edit the score plan (e.g. transposing a happy song into a melancholy minor key or adjusting song tempo).
+
+### C. Remote Generative: Suno v6 (Cloud API)
+* Zero local VRAM requirement for low-spec hosts.
+* Precision stem isolation and lyric microediting without re-rendering entire tracks.
+* Three model tiers: V6 (stable production), V6 Wild (creative ideas), V6 Mini (rapid drafting).
+
+### D. Spotify Streaming Adapter
 * **Authentication**: OAuth 2.0 PKCE flow stored securely in Electron safeStorage.
 * **Search & Metadata**: Uses Spotify Web API (`/v1/search`, `/v1/me/player`).
 * **Audio Transport**: Uses **Spotify Web Playback SDK** in the renderer (or Spotify Connect API for remote playback on external speakers).
 * *Note: Requires Spotify Premium per Spotify API terms.*
 
-### C. Fail-Safe & Latency Controller
-* When `dj_queue_track` targets ComfyUI, a generation timeout watcher (e.g., 45 seconds) is established.
+### E. Fail-Safe & Latency Controller
+* When `dj_queue_track` targets local generation, a generation timeout watcher (e.g., 45 seconds) is established.
 * If generation fails, throws OOM, or times out while Track A has `< 20s` remaining:
-  1. The controller automatically executes a fallback search on Spotify matching the target genre/mood.
-  2. The Spotify track is cued immediately to the "On Deck" slot.
+  1. The controller automatically falls back to Suno v6 cloud generation or executes a fallback search on Spotify matching the target genre/mood.
+  2. The replacement track is cued immediately to the "On Deck" slot.
   3. The agent is notified via status telemetry to provide in-character commentary:
-     > *"My synth module overheated for a second, so I'm spinning this Tycho track while it cools down!"*
+     > *"My local synth module hit an overload, so I'm pulling this track from the cloud while it cools down!"*
 
 ---
 
@@ -168,13 +196,13 @@ Audio sources are implemented under `packages/stage-ui/src/libs/providers/` as p
 The playback engine in `packages/stage-ui/src/stores/dj-deck.ts` coordinates both native Web Audio and Spotify streaming:
 
 ```
-[ Local / ComfyUI Audio ] ──► [ Web Audio GainNode A/B ] ──┐
-                                                           ├──► [ Master Audio Output ]
-[ Spotify Web Playback ]  ──► [ Spotify Player Volume ]  ──┘           ▲
-                                                                       │
-                                                            (Ducking Controller)
-                                                                       ▲
-                                                             [ Character TTS Speech ]
+[ Local / Generative Audio ] ──► [ Web Audio GainNode A/B ] ──┐
+                                                              ├──► [ Master Audio Output ]
+[ Spotify Web Playback ]     ──► [ Spotify Player Volume ]  ──┘           ▲
+                                                                          │
+                                                               (Ducking Controller)
+                                                                          ▲
+                                                                [ Character TTS Speech ]
 ```
 
 ### A. Seamless Crossfading
@@ -208,7 +236,7 @@ Instead of arbitrary clock-interval polling, the DJ engine hooks directly into t
 ## 🖥️ 7. UI Surfaces & State Sync
 
 *   **DJ Deck Overlay / Control Strip Widget**:
-    *   Displays current track title, artist, source badge (`[Spotify]` / `[MiniMax]`), waveform/progress bar, and "On Deck" track preview chip.
+    *   Displays current track title, artist, source badge (`[Spotify]` / `[YuE2]` / `[Suno]`), waveform/progress bar, and "On Deck" track preview chip.
     *   Play/pause, skip, mode selector (`Generative` | `Spotify` | `Hybrid`), and crossfade button.
 *   **Chat Stream Moments**:
     *   Subtle inline track chips when a new song starts playing.
@@ -220,22 +248,19 @@ Instead of arbitrary clock-interval polling, the DJ engine hooks directly into t
 
 ## ⚠️ 8. Technical Realities & Spotify Nuances
 
-*   **Spotify Premium Requirement**: The Spotify Web Playback SDK strictly requires an active Spotify Premium subscription. For non-Premium users, the engine defaults to **Generative Mode** (ComfyUI) and **Local File Mode**.
+*   **Spotify Premium Requirement**: The Spotify Web Playback SDK strictly requires an active Spotify Premium subscription. For non-Premium users, the engine defaults to **Generative Mode** (YuE2 / ComfyUI / Suno) and **Local File Mode**.
 *   **DRM Audio Boundary**: Spotify streams are DRM-encrypted and cannot be directly routed through Web Audio API `AudioNode` chains (e.g., custom visualizer FFTs or audio filters). Volume ducking for Spotify is handled directly via SDK player volume controls (`player.setVolume()`).
-*   **Full Raw Audio for Generative Tracks**: MiniMax/ComfyUI generated tracks provide 100% raw PCM/WAV access, enabling custom EQ filtering, spatial audio, and visualizer waveform rendering.
+*   **Full Raw Audio for Generative Tracks**: YuE 2 and ComfyUI generated tracks provide 100% raw PCM/WAV access, enabling custom EQ filtering, spatial audio, and visualizer waveform rendering.
 
 ---
 
 ## 📅 9. Roadmap & Implementation Checklist
 
 - [ ] **Music Provider Interface**: Define `MusicProvider`, `DJTrack`, and provider registry entries in `packages/stage-ui/src/libs/providers/`.
-- [ ] **ComfyUI Audio Bridge**: Extend `apps/stage-tamagotchi/src/main/services/airi/widgets/providers/comfyui.ts` to support audio output nodes and metadata extraction.
+- [ ] **ComfyUI & YuE2 Audio Bridges**: Extend audio output nodes and metadata extraction for local generation.
+- [ ] **Suno v6 API Provider**: Implement Suno cloud API wrapper for fast remote fallback.
 - [ ] **Spotify Provider Integration**: Implement Spotify OAuth PKCE flow and Web Playback SDK / Connect API wrapper in `packages/stage-ui/src/libs/providers/providers/spotify/`.
 - [ ] **DJ Deck Store**: Build `packages/stage-ui/src/stores/dj-deck.ts` with dual-deck buffer management, crossfading, and TTS audio ducking.
 - [ ] **Unified DJ Tools**: Implement `dj_queue_track`, `dj_search_catalog`, `dj_get_status`, and `dj_control` in `apps/stage-tamagotchi/src/renderer/stores/tools/builtin/`.
 - [ ] **Playback-Anchored Proactivity**: Connect DJ deck remaining-time threshold to the proactivity dispatcher.
 - [ ] **DJ Widget & UI**: Create the "Now Playing / On Deck" media strip component on Stage and Control Strip.
-
-## Relevant Skills
-
-- [[airi-artistry-comfyui-widgets]]

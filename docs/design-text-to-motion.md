@@ -251,10 +251,11 @@ To balance immediate on-device speed, zero external dependencies, and future cin
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                 AIRI MOTION TIERS                                      │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
-│ Tier 1: On-Device Core (Current)  │ FlowMDM + CLIP (~427MB, WebGPU, ~2-3s)            │
+│ Tier 1: On-Device Core (Current)  │ FlowMDM + CLIP (~427MB, WebGPU, ~2-3s, Humanoid)   │
 │ Tier 2: Semantic Retrieval Cache   │ TMR-SOMA Embeddings (<50ms, Pre-baked .vrma library)│
 │ Tier 3A: Kimodo-Lite (WebGPU)     │ Distilled 282M + CLIP/T5 (~280MB INT8, ~3s)        │
 │ Tier 3B: Kimodo-Pro (CUDA Daemon) │ Full 282M + LLaMA-3-8B (Waypoints, 2D Paths)       │
+│ Tier 4: Unimate (Multi-Skeleton)  │ Universal Arbitrary Rigs (Quadrupeds, Familiars)   │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -264,6 +265,15 @@ To balance immediate on-device speed, zero external dependencies, and future cin
 * **Status**: Primary production baseline.
 * **Mechanism**: CLIP Text Encoder (`Xenova/clip-vit-base-patch32`) + FlowMDM ONNX Denoiser running via `onnxruntime-web` WebGPU.
 * **Pros**: Complete offline autonomy, zero backend server requirement, lightweight browser footprint (~427 MB total), fast ~2–3s generation.
+* **Boundary**: Restricted to standard 21-joint bipedal humanoid skeletons (HumanML3D feature space).
+
+#### Tier 4: Universal Arbitrary-Skeleton Synthesis (Unimate)
+* **Status**: Multi-Skeleton Evolution.
+* **Mechanism**: A unified foundation model trained to animate completely different 3D skeleton hierarchies directly from natural language instructions without per-skeleton retraining.
+* **Capabilities**:
+  * Extends motion synthesis from humanoid VRMs to arbitrary 3D rigs: companion pets (dogs, cats), mythical creatures (dragons), mechanical sidecars (satellites, drones), and dynamic stage props (animated flowers, weapons).
+  * Ingests any rigged 3D mesh + text prompt (*"cat arches back and hisses"*, *"satellite unfolds solar panels"*) and outputs kinematically valid joint animation tracks.
+  * Direct bridge to Stage-Mate Unity sidecars and Three.js stage companions.
 
 #### Tier 2: Sub-50ms Semantic Retrieval Cache (TMR-SOMA)
 * **Mechanism**: Leverages Text-to-Motion Retrieval ([`nvidia/TMR-SOMA-RP-v1`](https://huggingface.co/nvidia/TMR-SOMA-RP-v1), based on *TMR: Text-to-Motion Retrieval Using Contrastive 3D Human Motion Synthesis*, ICCV 2023).
