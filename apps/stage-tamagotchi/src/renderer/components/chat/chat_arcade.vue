@@ -7,8 +7,8 @@ import localforage from 'localforage'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
 import { useChatStreamStore } from '@proj-airi/stage-ui/stores/chat/stream-store'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/consciousness'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { storeToRefs } from 'pinia'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -945,6 +945,33 @@ function getGameGreeting(title: string): { text: string, emotion: BackseatMessag
   return { text: `Booting up ${title}! Show me what you've got!`, emotion: 'smug' }
 }
 
+function convertImageDataToDataUrl(shot: { width: number, height: number, data: ArrayLike<number> }): string {
+  try {
+    const offscreen = document.createElement('canvas')
+    offscreen.width = shot.width
+    offscreen.height = shot.height
+    const ctx = offscreen.getContext('2d')
+    if (!ctx)
+      return ''
+
+    let imgData: ImageData
+    if (typeof ImageData !== 'undefined' && shot instanceof ImageData) {
+      imgData = shot
+    }
+    else {
+      imgData = ctx.createImageData(shot.width, shot.height)
+      imgData.data.set(shot.data)
+    }
+
+    ctx.putImageData(imgData, 0, 0)
+    return offscreen.toDataURL('image/jpeg', 0.85)
+  }
+  catch (e) {
+    console.error('[Arcade] Failed converting ImageData to DataURL:', e)
+    return ''
+  }
+}
+
 async function captureCurrentGameFrame(): Promise<{ dataUrl: string, base64: string, mimeType: string } | null> {
   try {
     let dataUrl = ''
@@ -957,6 +984,9 @@ async function captureCurrentGameFrame(): Promise<{ dataUrl: string, base64: str
           }
           else if (shot && typeof (shot as HTMLCanvasElement).toDataURL === 'function') {
             dataUrl = (shot as HTMLCanvasElement).toDataURL('image/jpeg', 0.85)
+          }
+          else if (shot && typeof shot.width === 'number' && typeof shot.height === 'number' && shot.data) {
+            dataUrl = convertImageDataToDataUrl(shot)
           }
         }
         catch (e) {
