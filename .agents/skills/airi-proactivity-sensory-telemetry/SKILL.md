@@ -34,7 +34,7 @@ the user is appropriate before any TTS/LLM output is produced.
 
 ## When to Use
 
-- Touching OS sensor capture, local clock/time awareness, idle/AFK detection, active-window or volume telemetry.
+- Touching OS sensor capture, local clock/time awareness, cognitive idle/AFK detection, active-window or volume telemetry (hardware sleep/lock stage pausing belongs in `airi-desktop-lifecycle-power-throttling`).
 - Adjusting the environmental telemetry injected into proactive prompts or standard chat turn grounding (`[ENVIRONMENTAL AWARENESS]`).
 - Working on the heartbeat timer, schedule window, or idle-stretch dedup logic.
 - Debugging why a heartbeat aborted, fired late, or stayed silent.

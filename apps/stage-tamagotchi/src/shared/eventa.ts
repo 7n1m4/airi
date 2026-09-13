@@ -267,10 +267,21 @@ export const electronWindowHide = defineInvokeEventa<void>('eventa:invoke:electr
 export const electronWindowSetAlwaysOnTop = defineInvokeEventa<void, boolean>('eventa:invoke:electron:window:set-always-on-top')
 export const electronAppQuit = defineInvokeEventa<void>('eventa:invoke:electron:app:quit')
 
+export type ElectronWindowLifecycleReason
+  = | 'initial'
+    | 'snapshot'
+    | 'show'
+    | 'hide'
+    | 'minimize'
+    | 'restore'
+    | 'focus'
+    | 'blur'
+    | 'suspend'
+
 export interface ElectronWindowLifecycleState {
   focused: boolean
   minimized: boolean
-  reason: string
+  reason: ElectronWindowLifecycleReason
   updatedAt: number
   visible: boolean
 }

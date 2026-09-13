@@ -10,7 +10,7 @@ import {
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { Button } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 
@@ -39,6 +39,7 @@ const isModelLoaded = ref(false)
 const loadingModel = ref(false)
 const processingImage = ref(false)
 const modelLoadProgress = ref(0)
+const downloadStatusText = ref('Model not resident in VRAM')
 const errorMessage = ref('')
 const customPrompt = ref('Describe what is happening in this image in detail.')
 
@@ -51,10 +52,22 @@ const runDevice = computed(() => {
   return providerRuntimeState.value[providerId]?.device ?? 'WebGPU'
 })
 
+onMounted(async () => {
+  try {
+    const providerInstance = await providersStore.getProviderInstance<any>(providerId)
+    if (providerInstance?.isModelLoaded || providerInstance?.state === 'ready') {
+      isModelLoaded.value = true
+      downloadStatusText.value = 'Model is loaded & ready in VRAM'
+    }
+  }
+  catch {}
+})
+
 function handleResetSettings() {
   providers.value[providerId] = { model: 'Xenova/moondream2' }
   isModelLoaded.value = false
   modelLoadProgress.value = 0
+  downloadStatusText.value = 'Model not resident in VRAM'
   errorMessage.value = ''
   customPrompt.value = 'Describe what is happening in this image in detail.'
 }
@@ -102,6 +115,74 @@ function setImageFile(file: File) {
   latencyMs.value = null
 }
 
+async function handleLoadModel() {
+  if (loadingModel.value)
+    return
+
+  loadingModel.value = true
+  errorMessage.value = ''
+  modelLoadProgress.value = 0
+  downloadStatusText.value = 'Initializing Moondream2 model weights...'
+
+  const shardMap = new Map<string, { loaded: number, total: number }>()
+  const EXPECTED_TOTAL_BYTES = 720 * 1024 * 1024
+
+  try {
+    const providerInstance = await providersStore.getProviderInstance<any>(providerId)
+    await providerInstance.loadModel({
+      onProgress: (progress: any) => {
+        if (progress?.file) {
+          const rawFile = String(progress.file)
+          const fileName = rawFile.split('/').pop() || rawFile
+          shardMap.set(rawFile, {
+            loaded: progress.loaded || 0,
+            total: progress.total || 0,
+          })
+
+          let sumLoaded = 0
+          for (const shard of shardMap.values()) {
+            sumLoaded += shard.loaded
+          }
+
+          if (sumLoaded > 0) {
+            const calculatedPct = Math.min(99, Math.round((sumLoaded / EXPECTED_TOTAL_BYTES) * 100))
+            modelLoadProgress.value = Math.max(modelLoadProgress.value, calculatedPct)
+            const loadedMb = (sumLoaded / (1024 * 1024)).toFixed(1)
+            downloadStatusText.value = `Downloading ${fileName} (${loadedMb} MB / ~720 MB)...`
+          }
+          else if (typeof progress.percent === 'number' && progress.percent >= 0) {
+            modelLoadProgress.value = Math.min(100, Math.round(progress.percent))
+            downloadStatusText.value = `Downloading ${fileName}...`
+          }
+        }
+        else if (progress?.phase === 'compile' || (progress?.message && progress.message.includes('shader'))) {
+          modelLoadProgress.value = 100
+          downloadStatusText.value = progress.message || 'Compiling WebGPU shaders and preparing model sessions...'
+        }
+        else if (typeof progress?.percent === 'number' && progress.percent >= 0) {
+          modelLoadProgress.value = Math.min(100, Math.round(progress.percent))
+          if (progress.message) {
+            downloadStatusText.value = progress.message
+          }
+        }
+        else if (typeof progress?.progress === 'number' && progress.progress >= 0) {
+          modelLoadProgress.value = Math.min(100, Math.round(progress.progress))
+        }
+      },
+    })
+    isModelLoaded.value = true
+    modelLoadProgress.value = 100
+    downloadStatusText.value = 'Model is loaded & ready in VRAM'
+  }
+  catch (err: any) {
+    console.error('[Moondream Local Settings] Failed to load model:', err)
+    errorMessage.value = err.message || 'Failed to load model.'
+  }
+  finally {
+    loadingModel.value = false
+  }
+}
+
 // Run Vision Inference Pipeline
 async function runPlaygroundInference() {
   if (!testImageUrl.value) {
@@ -117,18 +198,12 @@ async function runPlaygroundInference() {
     // 1. Get or create provider instance
     const providerInstance = await providersStore.getProviderInstance<any>(providerId)
 
-    // 2. Ensure model is loaded
-    if (!isModelLoaded.value) {
-      loadingModel.value = true
-      await providerInstance.loadModel({
-        onProgress: (progress: any) => {
-          if (progress?.percent) {
-            modelLoadProgress.value = Math.round(progress.percent * 100)
-          }
-        },
-      })
-      isModelLoaded.value = true
-      loadingModel.value = false
+    // 2. Ensure model is loaded into VRAM
+    if (!isModelLoaded.value && providerInstance?.state !== 'ready') {
+      await handleLoadModel()
+      if (!isModelLoaded.value) {
+        throw new Error(errorMessage.value || 'Failed to initialize Moondream2 weights.')
+      }
     }
 
     // 3. Run VLM image captioning with prompt
@@ -144,7 +219,6 @@ async function runPlaygroundInference() {
   }
   finally {
     processingImage.value = false
-    loadingModel.value = false
   }
 }
 </script>
@@ -152,8 +226,12 @@ async function runPlaygroundInference() {
 <template>
   <ProviderSettingsLayout
     :provider-name="providerMetadata?.localizedName || 'Moondream2 VLM (Local, WebGPU)'"
-    :provider-icon="providerMetadata?.icon"
-    :provider-icon-color="providerMetadata?.iconColor"
+    :provider-description="providerMetadata?.localizedDescription || 'Local on-device visual language model via WebGPU'"
+    :provider-icon="providerMetadata?.icon || 'i-solar:eye-scan-bold-duotone'"
+    :provider-icon-color="providerMetadata?.iconColor || 'text-cyan-500'"
+    :deployment="providerMetadata?.deployment || 'local'"
+    :pricing="providerMetadata?.pricing || 'free'"
+    :beginner-recommended="providerMetadata?.beginnerRecommended"
     :on-back="() => router.back()"
   >
     <div class="w-full flex flex-col gap-6 lg:flex-row">
@@ -205,6 +283,56 @@ async function runPlaygroundInference() {
               <div class="flex items-center justify-between text-xs text-neutral-500">
                 <span>Hardware Backend</span>
                 <span class="text-neutral-700 font-semibold dark:text-neutral-300">{{ runDevice }}</span>
+              </div>
+
+              <!-- VRAM / Resident Status & Actions -->
+              <div class="mt-4 border-t border-neutral-100 pt-4 space-y-3 dark:border-neutral-800">
+                <div v-if="loadingModel" class="border border-primary-500/20 rounded-xl bg-primary-500/5 p-3 space-y-2">
+                  <div class="flex items-center justify-between text-xs opacity-80">
+                    <span class="max-w-[75%] truncate font-medium" :title="downloadStatusText">{{ downloadStatusText }}</span>
+                    <span class="font-semibold font-mono">{{ modelLoadProgress }}%</span>
+                  </div>
+                  <div class="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+                    <div
+                      class="h-full bg-primary-500 transition-all duration-200"
+                      :style="{ width: `${modelLoadProgress}%` }"
+                    />
+                  </div>
+                </div>
+
+                <div v-else-if="!isModelLoaded" class="flex items-center justify-between border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-900/50">
+                  <div class="flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300">
+                    <div class="i-solar:info-circle-bold-duotone shrink-0 text-base text-primary-500" />
+                    <span>Not loaded in VRAM (~700MB cached)</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    :disabled="loadingModel"
+                    class="flex shrink-0 items-center gap-1 text-xs"
+                    @click="handleLoadModel"
+                  >
+                    <div class="i-solar:cloud-download-bold-duotone text-sm" />
+                    <span>Load to VRAM</span>
+                  </Button>
+                </div>
+
+                <div v-else class="flex items-center justify-between border border-emerald-500/20 rounded-xl bg-emerald-500/10 p-3 text-xs text-emerald-700 dark:text-emerald-300">
+                  <div class="flex items-center gap-2 font-medium">
+                    <div class="i-solar:check-circle-bold-duotone shrink-0 text-base text-emerald-500" />
+                    <span>Model ready in VRAM</span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    :disabled="loadingModel || processingImage"
+                    class="flex shrink-0 items-center gap-1 text-xs"
+                    @click="handleLoadModel"
+                  >
+                    <div class="i-solar:refresh-circle-bold-duotone text-sm" />
+                    <span>Reload</span>
+                  </Button>
+                </div>
               </div>
             </div>
           </ProviderBasicSettings>
@@ -283,9 +411,9 @@ async function runPlaygroundInference() {
 
               <!-- Loading Progress -->
               <div v-if="loadingModel" class="space-y-2">
-                <div class="flex justify-between text-xs text-neutral-500">
-                  <span>Downloading weights...</span>
-                  <span>{{ modelLoadProgress }}%</span>
+                <div class="flex items-center justify-between text-xs text-neutral-500">
+                  <span class="max-w-[75%] truncate" :title="downloadStatusText">{{ downloadStatusText }}</span>
+                  <span class="font-medium font-mono">{{ modelLoadProgress }}%</span>
                 </div>
                 <div class="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
                   <div
@@ -307,7 +435,7 @@ async function runPlaygroundInference() {
                 <span class="block text-[11px] text-neutral-400 font-medium tracking-wider uppercase">Moondream2 Output</span>
                 <div v-if="processingImage && !loadingModel" class="flex items-center gap-2 py-4 text-xs text-neutral-500">
                   <div class="i-solar:spinner-line-duotone animate-spin text-lg text-primary-500" />
-                  <span>Running visual language inference...</span>
+                  <span>Running visual language inference on WebGPU...</span>
                 </div>
                 <div v-else-if="captionResult" class="mt-2 select-text text-sm text-neutral-800 leading-relaxed dark:text-neutral-200">
                   {{ captionResult }}
@@ -320,12 +448,12 @@ async function runPlaygroundInference() {
               <Button
                 variant="primary"
                 class="w-full"
-                :disabled="!testImageUrl || processingImage"
+                :disabled="!testImageUrl || processingImage || loadingModel"
                 @click="runPlaygroundInference"
               >
-                <div v-if="processingImage" class="i-solar:spinner-line-duotone mr-2 animate-spin" />
+                <div v-if="processingImage || loadingModel" class="i-solar:spinner-line-duotone mr-2 animate-spin" />
                 <div v-else class="i-solar:stars-minimalistic-bold-duotone mr-2" />
-                <span>Analyze with Moondream2</span>
+                <span>{{ loadingModel ? 'Loading Model...' : (processingImage ? 'Analyzing...' : 'Analyze with Moondream2') }}</span>
               </Button>
             </div>
           </div>
@@ -345,3 +473,11 @@ async function runPlaygroundInference() {
     </div>
   </ProviderSettingsLayout>
 </template>
+
+<route lang="yaml">
+meta:
+  layout: settings
+  subtitleKey: settings.pages.providers.title
+  stageTransition:
+    name: slide
+</route>

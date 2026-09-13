@@ -13,6 +13,10 @@ export const DEFAULT_CORS_BYPASS_URLS: string[] = [
   'https://image.pollinations.ai/*',
   'https://gen.pollinations.ai/*',
   'https://api.xiaomimimo.com/*',
+  'https://archive.org/*',
+  'https://*.archive.org/*',
+  'http://archive.org/*',
+  'http://*.archive.org/*',
   'http://localhost:11434/*',
   'http://127.0.0.1:11434/*',
   'http://localhost:1234/*',
@@ -34,6 +38,7 @@ export const DEFAULT_SKIP_CORS_HOSTS: string[] = [
   'image.pollinations.ai',
   'gen.pollinations.ai',
   'api.xiaomimimo.com',
+  'archive.org',
   'localhost:11434',
   '127.0.0.1:11434',
   'localhost:1234',
@@ -60,7 +65,7 @@ export function isCorsBypassTarget(url: string, customPatterns?: string[]): bool
 
     // Check host list
     const hostWithPort = parsed.port ? `${parsed.hostname}:${parsed.port}` : parsed.hostname
-    if (DEFAULT_SKIP_CORS_HOSTS.includes(parsed.hostname) || DEFAULT_SKIP_CORS_HOSTS.includes(hostWithPort))
+    if (DEFAULT_SKIP_CORS_HOSTS.some(h => parsed.hostname === h || parsed.hostname.endsWith(`.${h}`)) || DEFAULT_SKIP_CORS_HOSTS.includes(hostWithPort))
       return true
 
     // Check URL patterns

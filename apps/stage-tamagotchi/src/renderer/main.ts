@@ -47,6 +47,8 @@ const router = createRouter({
 // ('/') when backing out of its root. Declared via route meta so individual
 // layouts don't string-match `route.path === '/settings'`.
 router.beforeEach((to, from) => {
+  if (to.path === '/modules/artistry')
+    return '/settings/modules/artistry'
   if (from.meta?.rootOfSettings && to.path === '/')
     return false
 })

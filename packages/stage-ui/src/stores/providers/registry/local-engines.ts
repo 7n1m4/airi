@@ -1,6 +1,6 @@
 import type { ProviderMetadata } from '../types'
 
-import { isApplePlatform, isStageCapacitor, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
+import { isApplePlatform, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
 import { isWebGPUSupported } from '@proj-airi/stage-shared/webgpu'
 import { computed } from 'vue'
 
@@ -267,7 +267,7 @@ export const localEngineMetadata: Record<string, ProviderMetadata> = {
     deployment: 'local',
     beginnerRecommended: true,
     requiresCredentials: false,
-    isAvailableBy: () => isApplePlatform() || isStageCapacitor() || NativeAI.isNative(),
+    isAvailableBy: () => NativeAI.isNative(),
     defaultOptions: () => ({
       model: DEFAULT_APPLE_CORE_AI_MODEL,
     }),
@@ -289,10 +289,17 @@ export const localEngineMetadata: Record<string, ProviderMetadata> = {
     },
     validators: {
       chatPingCheckAvailable: false,
-      validateProviderConfig: (config) => {
+      validateProviderConfig: async (config) => {
         const model = (config.model as string) || DEFAULT_APPLE_CORE_AI_MODEL
         if (!model) {
           return { errors: [new Error('No model configured')], reason: 'A Core AI model is required.', valid: false }
+        }
+        if (!NativeAI.isNative()) {
+          return { errors: [new Error('Native Apple Silicon engine unavailable')], reason: 'Apple Core AI requires native Apple Silicon hardware (iOS/iPadOS native app).', valid: false }
+        }
+        const isCached = await NativeAI.isModelCached(model)
+        if (!isCached) {
+          return { errors: [new Error('Model weights not downloaded')], reason: 'Gemma 4 model weights must be downloaded before activating Apple Core AI.', valid: false }
         }
         return { errors: [], reason: '', valid: true }
       },

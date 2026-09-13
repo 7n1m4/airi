@@ -170,7 +170,7 @@ export const NativeAI = {
 
   async isModelCached(modelId: string): Promise<boolean> {
     if (!this.isNative()) {
-      return true
+      return false
     }
     try {
       const res = await this.listCachedModels()
@@ -329,16 +329,8 @@ export const NativeAI = {
   async listCachedModels(): Promise<ListCachedModelsResult> {
     if (!this.isNative()) {
       return {
-        models: [
-          {
-            modelId: 'okayuji/Gemma-4-E2B-it-coreml-speculative',
-            filePath: '/simulated/documents/CoreAI/models/gemma-4-e2b.mlmodelc',
-            sizeBytes: 1.3 * 1024 * 1024 * 1024,
-            isCompiled: true,
-            createdAt: new Date().toISOString(),
-          },
-        ],
-        totalSizeBytes: 1.3 * 1024 * 1024 * 1024,
+        models: [],
+        totalSizeBytes: 0,
       }
     }
     return await Plugin.listCachedModels()

@@ -1137,9 +1137,9 @@ async function runAutoLinkCatalog() {
       </DialogRoot>
     </div>
 
-    <div class="flex items-center justify-between">
-      <div class="flex items-center gap-4">
-        <div class="text-xl font-bold">
+    <div class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5">
+      <div class="flex items-center gap-2.5 sm:gap-4">
+        <div class="shrink-0 text-xl font-bold">
           Models
         </div>
         <!-- Tab Navigation -->
@@ -1169,7 +1169,7 @@ async function runAutoLinkCatalog() {
 
       <div class="flex items-center gap-2">
         <!-- View Mode Toggle (Only for Library and Cloud) -->
-        <div v-if="currentTab === 'library' || currentTab === 'cloud'" class="mr-2 flex items-center rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
+        <div v-if="currentTab === 'library' || currentTab === 'cloud'" class="flex shrink-0 items-center rounded-lg bg-neutral-100 p-1 dark:bg-neutral-800">
           <PopoverRoot v-model:open="isCarouselTooltipOpen">
             <PopoverAnchor as-child>
               <button
@@ -1248,11 +1248,11 @@ async function runAutoLinkCatalog() {
 
         <DropdownMenuRoot v-if="currentTab === 'library'">
           <DropdownMenuTrigger
-            class="flex items-center justify-center gap-2 rounded-lg bg-neutral-400/20 px-3 py-1.5 backdrop-blur-sm transition-colors duration-200 ease-in-out active:bg-neutral-400/60 dark:bg-neutral-700/50 hover:bg-neutral-400/45 active:dark:bg-neutral-700/90 hover:dark:bg-neutral-700/65"
+            class="flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-lg bg-neutral-400/20 px-3 py-1.5 backdrop-blur-sm transition-colors duration-200 ease-in-out active:bg-neutral-400/60 dark:bg-neutral-700/50 hover:bg-neutral-400/45 active:dark:bg-neutral-700/90 hover:dark:bg-neutral-700/65"
             aria-label="Options for Display Models"
           >
-            <div class="i-solar:add-circle-bold" />
-            <div class="font-bold">
+            <div class="i-solar:add-circle-bold shrink-0 text-base" />
+            <div class="whitespace-nowrap font-bold">
               Add Local
             </div>
           </DropdownMenuTrigger>

@@ -1,6 +1,7 @@
 export { default as Alert } from './alert.vue'
 export { default as CharacterAvatar } from './CharacterAvatar.vue'
 export { default as ErrorContainer } from './error-container.vue'
+export { default as ProcessLifecycleCard } from './ProcessLifecycleCard.vue'
 export { default as ProfileSwitcherPopover } from './profile-switcher-popover.vue'
 export * from './steppers'
 export { default as WIP } from './wip.vue'

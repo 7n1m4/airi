@@ -8,15 +8,33 @@ import {
 } from '@proj-airi/stage-ui/components'
 import { useProviderValidation } from '@proj-airi/stage-ui/composables/use-provider-validation'
 import { formatBytes, NativeAI } from '@proj-airi/stage-ui/libs/native-ai'
+import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { computed, onMounted, ref } from 'vue'
 
 const providerId = 'apple-core-ai'
+const providersStore = useProvidersStore()
 
 const {
   t,
   providerMetadata,
   handleResetSettings,
 } = useProviderValidation(providerId)
+
+const isEnabled = computed(() => {
+  return providersStore.providerRuntimeState[providerId]?.isConfigured && !!providersStore.addedProviders[providerId]
+})
+
+async function toggleProvider() {
+  if (isEnabled.value) {
+    providersStore.unmarkProviderAdded(providerId)
+    if (providersStore.providerRuntimeState[providerId]) {
+      providersStore.providerRuntimeState[providerId].isConfigured = false
+    }
+  }
+  else {
+    await providersStore.validateProvider(providerId, { force: true })
+  }
+}
 
 // --- Telemetry State ---
 const isTelemetryLoading = ref(true)
@@ -131,6 +149,12 @@ async function handleDeleteCache() {
   try {
     await NativeAI.deleteCachedModel({ modelId: targetModelId })
     isModelResident.value = false
+    if (isEnabled.value) {
+      providersStore.unmarkProviderAdded(providerId)
+      if (providersStore.providerRuntimeState[providerId]) {
+        providersStore.providerRuntimeState[providerId].isConfigured = false
+      }
+    }
     await refreshCachedModels()
   }
   catch (err) {
@@ -312,6 +336,26 @@ onMounted(async () => {
             <span>Delete Cache</span>
           </button>
         </div>
+      </div>
+
+      <!-- Activation Status -->
+      <div class="mt-4 flex items-center justify-between border border-neutral-200/80 rounded-2xl bg-white p-4 dark:border-neutral-800 dark:bg-neutral-900">
+        <div class="space-y-1">
+          <h4 class="text-sm text-neutral-900 font-semibold dark:text-neutral-100">
+            {{ isEnabled ? 'Provider Active' : 'Activate Provider' }}
+          </h4>
+          <p class="text-xs text-neutral-500 dark:text-neutral-400">
+            {{ isEnabled ? 'This provider is active and available in Consciousness & Modules.' : 'Enable this provider to select it for character dialogue.' }}
+          </p>
+        </div>
+        <button
+          class="rounded-xl px-4 py-2 text-sm font-semibold transition-all duration-200"
+          :class="isEnabled ? 'bg-red-500/10 text-red-600 hover:bg-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30' : 'bg-primary-500 text-white hover:bg-primary-600 disabled:opacity-50 disabled:cursor-not-allowed'"
+          :disabled="!isCached"
+          @click="toggleProvider"
+        >
+          {{ isEnabled ? 'Deactivate' : 'Activate' }}
+        </button>
       </div>
     </ProviderSettingsContainer>
   </ProviderSettingsLayout>

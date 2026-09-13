@@ -57,6 +57,7 @@ import {
   pluginProtocolListProvidersEventName,
 } from '../shared/eventa'
 import { useServerChannelSettingsStore } from './stores/settings/server-channel'
+import { useStageWindowLifecycleStore } from './stores/stage-window-lifecycle'
 import { builtinTools } from './stores/tools/builtin'
 
 const { isDark: dark } = useTheme()
@@ -84,6 +85,8 @@ usePerfTracerBridgeStore()
 
 const proactivityStore = useProactivityStore()
 const screenWatcherStore = useScreenWatcherStore()
+const stageWindowLifecycleStore = useStageWindowLifecycleStore()
+void stageWindowLifecycleStore.initializeWindowLifecycleBridge()
 
 async function seedTextJournalEntryFromWindow() {
   await textJournalStore.load()

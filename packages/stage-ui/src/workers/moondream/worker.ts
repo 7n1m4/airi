@@ -46,13 +46,17 @@ function disposeTensors(...objs: any[]) {
     if (!obj)
       continue
     if (typeof obj.dispose === 'function') {
-      try { obj.dispose() }
+      try {
+        obj.dispose()
+      }
       catch {}
     }
     else if (typeof obj === 'object') {
       for (const key of Object.keys(obj)) {
         if (obj[key] && typeof obj[key].dispose === 'function') {
-          try { obj[key].dispose() }
+          try {
+            obj[key].dispose()
+          }
           catch {}
         }
       }
@@ -89,13 +93,16 @@ defineStreamInvokeHandler(context, moondreamLoadEvent, toStreamHandler<any, any>
       kind: 'progress',
       payload: {
         phase: 'download',
-        percent: progress?.progress ?? -1,
-        message: progress?.status || 'Downloading Moondream2 model weights...',
+        percent: typeof progress?.progress === 'number' ? Math.round(progress.progress) : -1,
+        message: progress?.file ? `Downloading ${progress.file}` : (progress?.status || 'Downloading Moondream2 model weights...'),
+        file: progress?.file || progress?.name,
+        loaded: progress?.loaded,
+        total: progress?.total,
       },
     })
   }
 
-  console.log(`[Moondream Worker] Loading Moondream2 on ${resolvedDevice}...`)
+  console.info(`[Moondream Worker] Loading Moondream2 on ${resolvedDevice}...`)
 
   model = await Moondream1ForConditionalGeneration.from_pretrained(VLM_MODEL_ID, {
     device: resolvedDevice,
@@ -112,7 +119,15 @@ defineStreamInvokeHandler(context, moondreamLoadEvent, toStreamHandler<any, any>
   })
 
   numImageTokens = null
-  console.log(`[Moondream Worker] Successfully initialized Moondream2 on ${resolvedDevice}`)
+  console.info(`[Moondream Worker] Successfully initialized Moondream2 on ${resolvedDevice}`)
+  emit({
+    kind: 'progress',
+    payload: {
+      phase: 'compile',
+      percent: 100,
+      message: 'Compiling WebGPU shaders and preparing model sessions...',
+    },
+  })
   emit({ kind: 'ready', info: { device: resolvedDevice } })
 }))
 
@@ -148,7 +163,7 @@ defineInvokeHandler(context, moondreamProcessEvent, async ({ imageUrl, prompt })
     output = await model.generate({
       ...visionInputs,
       ...textInputs,
-      max_new_tokens: 96,
+      max_new_tokens: 128,
       do_sample: false,
     })
 
@@ -177,5 +192,5 @@ defineInvokeHandler(context, moondreamUnloadEvent, async () => {
   processor = null
   tokenizer = null
   numImageTokens = null
-  console.log('[Moondream Worker] Unloaded Moondream2 model.')
+  console.info('[Moondream Worker] Unloaded Moondream2 model.')
 })

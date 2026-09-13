@@ -49,9 +49,10 @@ function extractImageAndPrompt(messages: Array<{ role: string, content: unknown 
  */
 export function createMoondreamChatProvider(config: MoondreamProviderConfig = {}): ChatProvider & {
   captionImage: (url: string, opts?: any) => Promise<string>
-  loadModel: (opts?: any) => Promise<void>
-  state: any
-  deviceLossCount: any
+  loadModel: (onProgressOrOpts?: any, maybeOpts?: any) => Promise<void>
+  state: string
+  isModelLoaded: boolean
+  deviceLossCount: number
   terminate: () => void
 } {
   const defaultModelId = config.model || 'Xenova/moondream2'
@@ -116,9 +117,32 @@ export function createMoondreamChatProvider(config: MoondreamProviderConfig = {}
 
   return Object.assign(chatProvider, {
     captionImage: (url: string, opts?: any) => adapter.generateText(url, opts?.prompt, opts),
-    loadModel: (opts?: any) => adapter.load(undefined, opts),
-    state: adapter.state,
-    deviceLossCount: adapter.deviceLossCount,
+    loadModel: (onProgressOrOpts?: any, maybeOpts?: any) => {
+      let onProgress: ((p: any) => void) | undefined
+      let options: { signal?: AbortSignal } | undefined
+
+      if (typeof onProgressOrOpts === 'function') {
+        onProgress = onProgressOrOpts
+        options = maybeOpts
+      }
+      else if (onProgressOrOpts && typeof onProgressOrOpts === 'object') {
+        if (typeof onProgressOrOpts.onProgress === 'function') {
+          onProgress = onProgressOrOpts.onProgress
+        }
+        options = onProgressOrOpts
+      }
+
+      return adapter.load(onProgress, options)
+    },
+    get state() {
+      return adapter.state
+    },
+    get isModelLoaded() {
+      return adapter.state === 'ready'
+    },
+    get deviceLossCount() {
+      return adapter.deviceLossCount
+    },
     terminate: () => adapter.terminate(),
   })
 }
