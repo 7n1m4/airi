@@ -2,6 +2,7 @@
 import type { OnboardingV3Step, OnboardingV3StepDef } from './types'
 
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import SlidingStepper from './components/sliding-stepper.vue'
 import QuickStart from './quick-start.vue'
@@ -33,6 +34,22 @@ const emit = defineEmits<{
   (e: 'close'): void
   (e: 'finish'): void
 }>()
+
+const { t, te } = useI18n()
+
+function getStepLabel(step?: OnboardingV3StepDef): string {
+  if (!step)
+    return ''
+  const key = `onboarding.stepper.steps.${step.id}.label`
+  return te(key) ? t(key) : step.label
+}
+
+function getStepSubtitle(step?: OnboardingV3StepDef): string {
+  if (!step?.subtitle)
+    return ''
+  const key = `onboarding.stepper.steps.${step.id}.subtitle`
+  return te(key) ? t(key) : step.subtitle
+}
 
 const draftStore = useOnboardingV3Draft()
 const isQuickStartMode = ref(false)
@@ -108,7 +125,7 @@ function handleSkip() {
       <!-- Left: Brand Title -->
       <div :class="['flex items-center space-x-2 text-xs font-semibold tracking-wider text-primary-500 select-none pointer-events-none whitespace-nowrap shrink-0']">
         <div :class="['i-solar:shield-star-bold-duotone w-4 h-4 shrink-0']" />
-        <span>AIRI</span>
+        <span>{{ t('onboarding.shell.brand') }}</span>
       </div>
 
       <!-- Center: 5-Item Dynamic Sliding Window Stepper (Visible in Guided Wizard) -->
@@ -124,12 +141,12 @@ function handleSkip() {
       <div :class="['flex items-center gap-3 text-xs text-neutral-400']" style="-webkit-app-region: no-drag;">
         <span :class="['hidden sm:flex items-center gap-1.5 text-[11px] text-emerald-500 dark:text-emerald-400 font-mono']">
           <span :class="['w-2 h-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse']" />
-          <span>Stage Ready</span>
+          <span>{{ t('onboarding.shell.stageReady') }}</span>
         </span>
         <button
           type="button"
           :class="['p-1 rounded-lg text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer']"
-          title="Close Setup"
+          :title="t('onboarding.shell.closeSetup')"
           @click="emit('close')"
         >
           <div :class="['i-solar:close-circle-bold w-5 h-5']" />
@@ -299,14 +316,14 @@ function handleSkip() {
         </div>
         <div>
           <h2 :class="['text-xl font-bold text-neutral-900 dark:text-white']">
-            {{ activeSteps[activeIndex]?.label }} (Step {{ activeIndex + 1 }}/{{ activeSteps.length }})
+            {{ getStepLabel(activeSteps[activeIndex]) }} ({{ t('onboarding.stepper.stepCount', { current: activeIndex + 1, total: activeSteps.length }) }})
           </h2>
           <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-1']">
-            {{ activeSteps[activeIndex]?.subtitle }}
+            {{ getStepSubtitle(activeSteps[activeIndex]) }}
           </p>
         </div>
         <p :class="['text-xs text-neutral-600 dark:text-neutral-400 bg-neutral-100 dark:bg-white/5 p-3 rounded-xl border border-neutral-200 dark:border-white/10 max-w-md']">
-          This step is being wired into the modular V3 pipeline. You can use the breadcrumbs above to jump between steps or return to Welcome.
+          {{ t('onboarding.shell.placeholderNotice') }}
         </p>
         <div :class="['flex items-center gap-3 pt-2']">
           <button
@@ -314,14 +331,14 @@ function handleSkip() {
             :class="['px-4 py-2 rounded-xl bg-neutral-100 dark:bg-white/5 hover:bg-neutral-200 dark:hover:bg-white/10 text-neutral-700 dark:text-neutral-300 text-xs font-medium border border-neutral-200 dark:border-white/10 transition-colors cursor-pointer']"
             @click="handlePrevious"
           >
-            ← Previous
+            {{ t('onboarding.shell.previous') }}
           </button>
           <button
             type="button"
             :class="['px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md shadow-primary-600/30 transition-colors cursor-pointer']"
             @click="handleNext"
           >
-            Next Step →
+            {{ t('onboarding.shell.next') }}
           </button>
         </div>
       </div>

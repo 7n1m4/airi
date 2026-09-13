@@ -2,6 +2,7 @@
 import { Button } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { useLLM } from '../../../../../../stores/llm'
 import { useAiriCardStore } from '../../../../../../stores/modules/airi-card'
@@ -14,6 +15,8 @@ const props = defineProps<{
   onNext: () => void
   onPrevious: () => void
 }>()
+
+const { t } = useI18n()
 
 const draftStore = useOnboardingV3Draft()
 const providersStore = useProvidersStore()
@@ -334,14 +337,14 @@ async function runSimulation() {
         <div>
           <div :class="['flex items-center gap-2']">
             <h2 :class="['text-lg font-bold text-neutral-900 dark:text-white tracking-tight']">
-              Photo & Visual Understanding
+              {{ t('onboarding.steps.vision.title') }}
             </h2>
             <span :class="['text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-primary-500/10 text-primary-600 dark:text-primary-400']">
-              Step 13 · Vision
+              {{ t('onboarding.steps.vision.subtitle') }}
             </span>
           </div>
           <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed']">
-            Enable your companion to view and interpret pictures sent in chat. Configure visual models, routing strategy, and test live perception.
+            {{ t('onboarding.steps.vision.description') }}
           </p>
         </div>
       </div>
@@ -639,7 +642,7 @@ async function runSimulation() {
         @click="props.onPrevious"
       >
         <div :class="['i-solar:alt-arrow-left-line-duotone h-4 w-4']" />
-        <span>Back</span>
+        <span>{{ t('onboarding.shell.previous') }}</span>
       </button>
 
       <div :class="['text-[11px] text-neutral-400 font-medium']">
@@ -656,7 +659,7 @@ async function runSimulation() {
         ]"
         @click="props.onNext"
       >
-        <span>Continue</span>
+        <span>{{ t('onboarding.shell.next') }}</span>
         <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
       </Button>
     </div>

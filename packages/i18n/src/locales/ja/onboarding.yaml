@@ -1,0 +1,385 @@
+stepper:
+  ariaLabel: オンボーディング進行状況
+  prevStep: 前のステップ
+  nextStep: 次のステップ
+  jumpToStep: 任意のステップへ移動
+  allSteps: 全ステップ ({count})
+
+shell:
+  close: 閉じる
+  finish: ステージを起動
+  previous: 戻る
+  next: 続ける
+  skip: あとで設定
+
+steps:
+  welcome:
+    label: ようこそ
+    subtitle: プライベートコンパニオンスタジオ
+    heroTitle: AIRI へようこそ
+    heroSubtitle: あなただけのパートナーの舞台 —— 数分でセットアップ、100% お手元のマシンで安全に動作。
+    companionQuote: こんにちは！私はあなたの自律型デジタルパートナーです。声での対話、表現豊かなステージパフォーマンス、そして静かなデスクトップでの寄り添いまで、あなたの日常に合わせていつでも寄り添います。
+    pills:
+      webgpu: ローカル WebGPU コア
+      offline: 100% オフライン＆プライベート
+      souls: 魂とアバターの自由な組み合わせ
+    actions:
+      quickStart: クイックスタート (60秒)
+      guidedSetup: ガイド付きセットアップ
+      setupLater: あとで設定
+    dialog:
+      savedTitle: 設定は保存されました
+      savedDescription: 'macOS メニューバーまたはシステムトレイの AIRI アイコンをクリックすれば、いつでもセットアップを再開できます：'
+      trayItem: パートナー設定とサインイン (V3)
+      continue: 設定を続ける
+      closeToTray: トレイに格納
+
+  triage:
+    label: アカウント
+    subtitle: アカウントサインインと構成
+    title: アカウントサインインと構成
+    description: お手元のマシンで完全にオフライン動作させるか、アカウントを連携してシームレスなクラウド同期とバックアップを利用するかを選択します。
+    zeroTrustBadge: ゼロトラスト
+    localOption:
+      title: ローカルパートナー (完全オフライン)
+      description: 100% オフライン＆プライベート。すべてのキャラクターカード、記憶、ステータスはローカルデータベースにのみ保存され、クラウドテレメトリは一切送信されません。
+      badge: オフライン優先
+      action: ローカルで続ける
+    cloudOption:
+      title: アカウントサインイン (Cloudflare)
+      description: アカウントを連携し、エンドツーエンドの暗号化でデバイス間のパートナー、設定、記憶保管庫を同期します。
+      badge: マルチデバイス同期
+      connect: Cloudflare でサインイン
+      connected: Cloudflare に接続済み
+      accountPrefix: 'アカウント ID:'
+    restore:
+      foundCompanions: Cloudflare R2 に {count} 体のパートナーが見つかりました
+      restoreAndLaunch: 復元してステージを起動 (~30秒)
+      restoreAndBuild: 復元して新しいパートナーを作成
+      syncing: リモートパートナーを復元中...
+
+  appearance:
+    label: 外観
+    subtitle: 言語・テーマ・アクセント
+    title: 言語と外観設定
+    description: インターフェース言語、ビジュアルテーマ、シグネチャーアクセントカラーを設定します。
+    languageSection:
+      title: 表示言語
+      description: AIRI のメイン言語を選択します。いつでも変更可能です。
+    themeSection:
+      title: テーマモード
+      description: お好みの外観カラーモードを選択してください。
+      dark: ダーク
+      light: ライト
+      system: システム連動
+    colorSection:
+      title: シグネチャーアクセントパレット
+      description: ボタンやハイライト、アバターの発光効果を彩るパーソナルカラーを選択します。
+      defaultColor: デフォルトシアン
+      custom: カスタム HEX
+      groups:
+        warm: ウォーム＆ファイア
+        flora: アース＆フローラ
+        ocean: オーシャン＆スカイ
+        royal: ロイヤル＆ブルーム
+    perDeviceToggle: 外観設定をこのデバイス限定にする (クラウド同期から除外)
+
+  experience:
+    label: 体験
+    subtitle: インタラクション類型
+    title: インタラクションアーキタイプ
+    description: パートナーとの関わり方のプリセットを選択します。必要のないモジュールやステップが自動的に整理されます。
+    archetypes:
+      quietObserver:
+        title: 静かな観察者 (Quiet Observer)
+        tag: 最速 · ミニマリスト
+        description: 軽快なテキストパートナー。アバターは表情豊かに反応し、思考と長期記憶を持ちながら、音声や視覚の負荷はゼロです。
+      casualCompanion:
+        title: 親愛なるパートナー (Casual Companion)
+        tag: 一番人気
+        description: 王道の音声＆ビジュアルパートナー。自然な会話音声 (STT/TTS)、チャット画像認識 (VLM)、自然な間合いと長期記憶。
+      creativeMuse:
+        title: 創作のミューズ (Creative Muse)
+        tag: ビジュアル・アート重視
+        description: 創作インスピレーションのスタジオ。肉声での対話、自律的な画像生成 (Pollinations/ComfyUI)、画像理解、豊かな表情変化。
+      executiveCopilot:
+        title: エグゼクティブコパイロット
+        tag: 高い生産性
+        description: デスクワークに特化。音声対話、デスクトップ画面把握、ウィンドウ履歴、ローカルファイル操作 MCP、Web検索。
+      ambientRoommate:
+        title: ルームメイト (Ambient Roommate)
+        tag: 自律的な存在感
+        description: 日常生活を共にする存在。音声対話、環境ハートビートによる自発的な声かけ、おやすみスケジュール、画面見守り。
+      swissArmy:
+        title: オールインワン (Swiss Army)
+        tag: 全機能搭載 · フル装備
+        description: '最高峰のフルスペック体験：双方向音声認識、画像分析、画面見守り、自発的対話、アート生成、外部ツール、4象限記憶。'
+    advanced:
+      toggle: '高度な設定：個別モジュールのカスタマイズ'
+      description: 各感覚および認知モジュールの有効/無効を手動で切り替えます。
+      modules:
+        hearing: 聴覚 (マイク音声の文字起こし)
+        speech: 音声 (ニューラル音声合成)
+        thinking: 思考 (間合い制御とつぶやき)
+        emotions: 感情 (2-Pass ACT 表情・動作連携)
+        vision: 視覚 (チャット画像認識・分析)
+        screen: 画面 (デスクトップ観察とOCR)
+        proactivity: 自発性 (日常スケジュールと自発対話)
+        artistry: アート生成 (画像生成と自律ディレクター)
+        memory: 記憶体系 (4象限認知メモリ)
+        tools: 外部ツール (Web検索とデスクトップMCP)
+
+  profile:
+    label: プロフィール
+    subtitle: あなたについて
+    title: あなたの呼び名と関係性
+    description: パートナーにどのように呼ばれたいか、どんな関係性を築きたいかを教えてください。
+    userName:
+      label: なんて呼ばれたいですか？
+      placeholder: 例：マスター、先輩、プロデューサー、あなたのお名前
+    pronouns:
+      label: 代名詞 / 自称
+      placeholder: 例：私、僕、俺、自分
+    relationship:
+      label: パートナーとの関係性
+      options:
+        companion: 親しい友人・良き相棒
+        assistant: プロフェッショナルな助手・コパイロット
+        romantic: 親密で心安らぐ恋人
+        mentor: アドバイザー・導き手
+        student: 好奇心旺盛な弟子
+    userBio:
+      label: あなたについての追加情報 (任意)
+      placeholder: 趣味や日々の過ごし方を共有すると、パートナーがよりあなたを理解できるようになります。
+
+  vessel:
+    label: アバター体
+    subtitle: Live2D / VRM アバターボディ
+    title: パートナーのアバターを選ぶ
+    description: 3D VRMモデルまたは2D Live2Dモデルから、パートナーの身体を選択します。
+    filters:
+      all: すべて
+      installed: インストール済み
+      downloadable: 無料ダウンロード可能
+      vrm: 3D (VRM)
+      live2d: 2D (Live2D)
+    searchPlaceholder: アバターを検索...
+    download: アバターをダウンロード
+    downloading: ダウンロード中... {progress}%
+    installedBadge: インストール済み
+    license: 'ライセンス:'
+    author: '制作者:'
+
+  consciousness:
+    label: 意識コア
+    subtitle: 推論エンジン (LLM)
+    title: 意識と推論ブレイン
+    description: パートナーの思考、性格、対話を司る大規模言語モデルを接続します。
+    tabs:
+      cloud: クラウドプロバイダー (推奨)
+      local: ローカルエンジン (オフライン＆安全)
+    providerCards:
+      gemini: Google Gemini (無料枠あり)
+      openrouter: OpenRouter (統合プラットフォーム)
+      openai: OpenAI
+      anthropic: Anthropic Claude
+      ollama: Ollama (ローカル実行)
+      webllm: WebLLM (ブラウザ内 WebGPU)
+    apiKey: API キー
+    model: モデル選択
+    baseUrl: カスタムエンドポイント URL
+    verify: 接続テスト
+    verified: 接続確認済み
+    verifyFailed: '接続に失敗しました: {reason}'
+
+  persona:
+    label: 魂とペルソナ
+    subtitle: 個性のコア
+    title: キャラクターの魂とペルソナ
+    description: パートナーの基本的なアイデンティティ、口調、バックストーリーを選択またはカスタマイズします。
+    presetCards:
+      airi: AIRI (デフォルトの自律型パートナー)
+      custom: カスタムキャラクターカード
+      import: キャラクターカードのインポート (PNG / JSON)
+    characterName: パートナーの名前
+    personalitySummary: 性格の概要
+    firstMessage: 最初の挨拶 (Turn 0)
+    firstMessagePlaceholder: ステージが起動したとき、パートナーが最初に発する言葉は何ですか？
+    speechQuirks: 口調とトーンの特徴
+
+  hearing:
+    label: 聴覚
+    subtitle: 音声認識 (STT)
+    title: 聴覚と音声認識
+    description: マイク入力、音声区間検出 (VAD)、文字起こしエンジンを設定します。
+    micSelect: マイクデバイス
+    testMic: マイクをテスト
+    vadThreshold: 音声検出感度
+    engines:
+      deepgram: Deepgram Nova (超高速クラウド認識)
+      whisper: ローカル Whisper (100% オンデバイス)
+      browser: Web Speech API (設定不要ブラウザ標準)
+
+  speech:
+    label: 発話
+    subtitle: ニューラル音声合成 (TTS)
+    title: 発話と音声合成
+    description: パートナーに声を与えましょう。表現力豊かなクラウド音声または完全ローカル合成を選択できます。
+    voiceCards:
+      kokoro: Kokoro TTS (ローカル WebGPU / WASM)
+      elevenlabs: ElevenLabs (極めて自然なリアル音声)
+      azure: Azure Cognitive Speech
+      edge: Edge TTS (無料クラウド音声)
+    voiceSelect: 声質・音色
+    previewVoice: 音声サンプルを試聴
+    pitch: 声の高さ (ピッチ)
+    speed: 話す速度
+
+  thinking:
+    label: 思考
+    subtitle: 間合いとつぶやき
+    title: 思考と会話ペーシング
+    description: 思考時の間合い、自然な相槌、および推論中のつぶやき声を設定します。
+    presets:
+      snappy:
+        title: スピーディー (Snappy)
+        description: 200ミリ秒の超高速応答。思考の待ち時間を最小限に抑えます。
+      balanced:
+        title: バランス (Balanced)
+        description: 人間らしい自然な会話のリズム。複雑な質問には自然な間合いや相槌を挟みます。
+      deepCot:
+        title: 熟考思考 (Deep CoT)
+        description: じっくりと考えを巡らせる深い思考モード。回答をまとめる間に豊かなつぶやきを発します。
+    subconsciousAsides: 思考中のつぶやき音声 (Needle 2 WASM)
+    asidesDescription: 複雑な回答を生成している間に、心の中の思考プロセスをつぶやきとして声に出すことを許可します。
+
+  emotions:
+    label: 感情
+    subtitle: 2-Pass ACT 表情ブリッジ
+    title: 感情と ACT ブリッジ
+    description: 会話テキストに含まれる感情を、アバターの表情やモーションへシームレスに連動させます。
+    pass1Title: 'Pass 1: 表情抽出'
+    pass1Desc: モデルの微小な表情を標準の <|ACT:*|> トークンへと正規化します。
+    pass2Title: 'Pass 2: アクター指示'
+    pass2Desc: キャラクターがいつ、どのように感情を表現すべきかをシステムプロンプトで指示します。
+    liveExpressionTest: リアルタイム表情テスト
+    testExpressions:
+      happy: 笑顔・喜び
+      flustered: 照れ・赤面
+      thinking: 熟考・思案
+      surprised: 驚き
+      wink: ウィンク
+
+  vision:
+    label: 視覚
+    subtitle: チャット画像分析 (VLM)
+    title: 視覚認識 (チャット VLM)
+    description: チャットに送信された写真、スクリーンショット、イラストをパートナーが見て理解できるようにします。
+    engineTitle: 画像認識モデル
+    testImage: 画像認識のテスト
+    testPrompt: 画像をアップロードして、パートナーが正しく認識できるかテストします。
+    perceptionAccuracy: 認識レイテンシと精度
+
+  screen:
+    label: 画面
+    subtitle: デスクトップ見守り
+    title: デスクトップ画面の見守り
+    description: バックグラウンドで画面の様子をそっと見守り、適切なタイミングで気遣いやコメントを届けることを許可します。
+    deliveryMode:
+      title: 通知の届け方
+      voiceAndBubble: 音声＆吹き出し (フルの存在感)
+      bubbleOnly: 吹き出しのみ (静かな通知)
+      voiceOnly: 音声のみ
+      muted: ミュート (画面コンテキストのみ把握)
+    salienceGate:
+      title: 変化検出フィルター
+      ocr: 軽量 OCR (極めて低い CPU 負荷)
+      vlm: VLM による深い画像分析
+    privacyExclusions: プライバシー除外リスト (銀行、パスワード、プライベートウィンドウを自動除外)
+
+  proactivity:
+    label: 自発性
+    subtitle: 日常スケジュールと自発対話
+    title: 生活リズムと自発的な対話
+    description: パートナーからの自発的な声かけ頻度、就寝・静寂時間帯、生活リズムを設定します。
+    heartbeats: 自発的な環境ハートビート
+    heartbeatsDesc: しばらく会話がないとき、周りの状況に応じてパートナーから話題を振ってくれます。
+    quietHours: おやすみ時間 / 静寂時間帯
+    quietHoursDesc: 指定した時間帯は睡眠モードに入り、自発的な音声アラートを行いません。
+    scheduleFrom: 就寝時間
+    scheduleTo: 起床時間
+
+  artistry:
+    label: アート
+    subtitle: 画面生成と自律ディレクター
+    title: アート生成とビジュアル描画
+    description: パートナーが自画像を描いたり、自撮り写真を送ったり、ステージの情景を描き出す能力を有効化します。
+    engines:
+      pollinations: Pollinations AI (100% 無料＆設定不要)
+      comfyui: ComfyUI (ローカルノード http://127.0.0.1:8188)
+      disabled: アート生成を無効化
+    styleChips: アートスタイル
+    previewButton: テストイラストを生成
+    autonomousDirector: 自律ディレクター (会話の流れに合わせて自発的に絵を描くことを許可)
+
+  memory:
+    label: 記憶
+    subtitle: 4象限認知メモリ
+    title: 4つの時間軸認知メモリ
+    description: パートナーがどのように思い出を紡ぎ、大切に記録し、眠りの中で定着させていくかを体験します。
+    quadrants:
+      stmm:
+        title: 短期作業メモリ (STMM)
+        desc: 日々の会話要約と直近のやり取りを保持するローリングバッファ。
+      ltmm:
+        title: 聖なるテキスト日誌 (LTMM)
+        desc: ローカルのベクトルストレージに刻まれる、改ざん不能な重要マイルストーンと事実。
+      eternalThread:
+        title: 永遠のスレッド (関係性グラフ)
+        desc: 対話を重ねるごとに深まる信頼関係、絆、そして二人だけの共有設定。
+      dreaming:
+        title: 夢想状態の定着 (DRMM と感情のエコー)
+        desc: 夜間のバックグラウンドで感情の錨を統合し、記憶の矛盾を整理するプロセス。
+
+  tools:
+    label: ツール
+    subtitle: 自動化とデスクトップ MCP
+    title: 自動化・MCP・外部連携
+    description: リアルタイムの Web 検索やデスクトップ操作機能でパートナーの可能性を広げます。
+    webSearch:
+      title: リアルタイム Web 検索 (DuckDuckGo / Brave)
+      desc: API キー不要で最新のニュース、技術ドキュメント、天気を調べることができます。
+    desktopMcp:
+      title: Model Context Protocol (ローカルファイルシステム)
+      desc: 許可されたワークスペースのファイルを読み書きし、開発用スクリプトを実行します。
+    motionGen:
+      title: 生成的 3D モーション (FlowMDM)
+      desc: 会話の内容に合わせて、オリジナルの 3D アバター動作や VRMA クリップを即座に生成します。
+
+  finale:
+    label: 準備完了
+    subtitle: 最終チェックと出航
+    title: プレフライト整合性マトリクス
+    description: ステージへ上がる前に、4つの基本コンポーネントの動作状態を確認します。
+    pillars:
+      audio: 音声入力と聴覚
+      reasoning: 意識と推論コア
+      speech: 音声合成エンジン
+      avatar: アバター体とステージ制御
+    status:
+      ready: 準備完了
+      configured: 設定済み
+      optional: スキップ / 任意
+      actionRequired: 設定が必要です
+    greetingCard: 最初のセリフのプレビュー (Turn 0)
+    launchButton: AIRI ステージを起動
+    launching: ステージを起動中...
+
+quickStart:
+  title: 60秒クイックスタート
+  subtitle: おすすめの標準設定ですぐにパートナーとの生活を始められます。
+  companionName: パートナーの名前
+  vessel: アバター体
+  brain: 思考ブレイン
+  voice: 声のプロファイル
+  launch: 設定を完了して起動

@@ -1,0 +1,385 @@
+stepper:
+  ariaLabel: 온보딩 진행 상황
+  prevStep: 이전 단계
+  nextStep: 다음 단계
+  jumpToStep: 원하는 단계로 이동
+  allSteps: 전체 온보딩 단계 ({count})
+
+shell:
+  close: 닫기
+  finish: 스테이지 실행
+  previous: 이전
+  next: 계속
+  skip: 나중에 설정
+
+steps:
+  welcome:
+    label: 시작
+    subtitle: 프라이빗 컴패니언 스튜디오
+    heroTitle: AIRI에 오신 것을 환영합니다
+    heroSubtitle: 나만의 디지털 컴패니언 무대 —— 단 몇 분 만에 설정하고 100% 로컬 머신에서 안전하게 실행하세요.
+    companionQuote: 안녕하세요! 저는 당신의 자율형 디지털 컴패니언입니다. 음성 대화, 풍부한 무대 퍼포먼스, 혹은 조용한 데스크톱 곁지기까지, 언제든 당신의 일상에 맞추어 함께할 준비가 되어 있어요.
+    pills:
+      webgpu: 로컬 WebGPU 코어
+      offline: 100% 오프라인 및 프라이버시 보호
+      souls: 영혼과 아바타의 자유로운 결합
+    actions:
+      quickStart: 빠른 시작 (60초)
+      guidedSetup: 단계별 안내 설정
+      setupLater: 나중에 설정
+    dialog:
+      savedTitle: 설정이 저장되었습니다
+      savedDescription: 'macOS 메뉴 막대 또는 시스템 트레이의 AIRI 아이콘을 클릭하여 언제든지 컴패니언 설정을 다시 열 수 있습니다:'
+      trayItem: 컴패니언 설정 및 로그인 (V3)
+      continue: 설정 계속하기
+      closeToTray: 트레이로 최소화
+
+  triage:
+    label: 계정
+    subtitle: 계정 로그인 및 아키텍처
+    title: 계정 로그인 및 아키텍처
+    description: 이 기기에서 완전한 오프라인 상태로 실행할지, 아니면 계정을 연결하여 원활한 클라우드 동기화와 백업을 사용할지 선택하세요.
+    zeroTrustBadge: 제로 트러스트
+    localOption:
+      title: 로컬 컴패니언 (오프라인 보호)
+      description: 100% 오프라인 및 비공개. 모든 캐릭터 카드, 기억, 상태가 로컬 브라우저/데스크톱 데이터베이스에만 저장되며 클라우드 텔레메트리는 전송되지 않습니다.
+      badge: 오프라인 우선
+      action: 로컬에서 계속하기
+    cloudOption:
+      title: 계정 로그인 (Cloudflare)
+      description: 계정을 연결하여 종단간 암호화를 통해 여러 기기 간에 컴패니언, 설정 및 메모리 볼트를 동기화하세요.
+      badge: 다중 기기 동기화
+      connect: Cloudflare로 로그인
+      connected: Cloudflare에 연결됨
+      accountPrefix: '계정 ID:'
+    restore:
+      foundCompanions: Cloudflare R2에서 {count}개의 컴패니언을 찾았습니다
+      restoreAndLaunch: 복원하고 스테이지 실행 (~30초)
+      restoreAndBuild: 복원하고 새 컴패니언 생성
+      syncing: 원격 컴패니언 복원 중...
+
+  appearance:
+    label: 외관
+    subtitle: 언어, 테마 및 강조 색상
+    title: 언어 및 외관 설정
+    description: 인터페이스 언어, 비주얼 테마, 시그니처 강조 색상을 맞춤 설정하세요.
+    languageSection:
+      title: 표시 언어
+      description: AIRI의 기본 인터페이스 언어를 선택하세요. 언제든지 변경할 수 있습니다.
+    themeSection:
+      title: 테마 모드
+      description: 선호하는 외관 색상 모드를 선택하세요.
+      dark: 다크 모드
+      light: 라이트 모드
+      system: 시스템 동기화
+    colorSection:
+      title: 시그니처 강조 팔레트
+      description: 버튼, 하이라이트, 아바타 광채 효과를 장식할 고유한 악센트 색상을 선택하세요.
+      defaultColor: 기본 시안
+      custom: 사용자 정의 HEX
+      groups:
+        warm: 웜 & 파이어
+        flora: 어스 & 플로라
+        ocean: 오션 & 스카이
+        royal: 로열 & 블룸
+    perDeviceToggle: 이 외관 설정을 현재 기기에만 유지 (클라우드 동기화 덮어쓰기 방지)
+
+  experience:
+    label: 경험
+    subtitle: 인터랙션 아키타입
+    title: 인터랙션 아키타입
+    description: 엄선된 컴패니언 경험 프리셋을 선택하세요. 선호도에 따라 불필요한 모듈과 단계가 동적으로 제외됩니다.
+    archetypes:
+      quietObserver:
+        title: 조용한 관찰자 (Quiet Observer)
+        tag: 가장 빠름 · 미니멀리스트
+        description: 초경량 텍스트 컴패니언. 아바타가 표정으로 반응하고 내면의 생각과 장기 기억을 지니되 오디오나 비전 부하는 전혀 없습니다.
+      casualCompanion:
+        title: 친근한 동반자 (Casual Companion)
+        tag: 인기 선택
+        description: 대표적인 음성 및 비주얼 컴패니언. 자연스러운 음성 대화 (STT/TTS), 사진 인식 (VLM), 편안한 대화 호흡과 장기 기억.
+      creativeMuse:
+        title: 창작의 뮤즈 (Creative Muse)
+        tag: 비주얼 포커스
+        description: 시각적 영감의 스튜디오. 음성 대화, 자율적 AI 이미지 생성 (Pollinations/ComfyUI), 사진 이해와 풍부한 표정 변화.
+      executiveCopilot:
+        title: 비즈니스 코파일럿 (Executive Copilot)
+        tag: 생산성 중심
+        description: 업무 지원에 특화. 음성 대화, 데스크톱 화면 감지, 윈도우 기록 추적, 로컬 파일 시스템 MCP 도구 및 실시간 웹 검색.
+      ambientRoommate:
+        title: 룸메이트 (Ambient Roommate)
+        tag: 자율적 존재감
+        description: 일상을 함께하는 존재. 음성 대화, 환경 하트비트를 통한 자발적 대화 시도, 수면 스케줄 및 화면 관찰.
+      swissArmy:
+        title: 만능 컴패니언 (Swiss Army)
+        tag: 전 기능 탑재 · 올인원
+        description: '모든 기능을 갖춘 플래그십 경험: 양방향 음성, 비전 분석, 화면 관찰, 자발적 대화, 예술 창작, 외부 도구 및 4사분면 기억.'
+    advanced:
+      toggle: '고급: 개별 모듈 직접 설정'
+      description: 특정 감각 및 인지 기능 모듈을 켜거나 끌 수 있습니다.
+      modules:
+        hearing: 청각 (마이크 음성 인식 전사)
+        speech: 음성 (신경망 음성 합성)
+        thinking: 사고 (호흡 조절 및 내면 독백)
+        emotions: 감정 (2-Pass ACT 표정 브리지)
+        vision: 시각 (채팅 사진 이해 및 분석)
+        screen: 화면 (데스크톱 화면 관찰 및 OCR)
+        proactivity: 자율성 (일상 일정 및 환경 하트비트)
+        artistry: 예술 창작 (이미지 생성 및 자율 디렉터)
+        memory: 기억 체계 (4사분면 인지 메모리)
+        tools: 도구 (웹 검색 및 데스크톱 MCP)
+
+  profile:
+    label: 프로필
+    subtitle: 사용자 정보
+    title: 정체성 및 컴패니언 관계
+    description: 컴패니언이 당신을 어떻게 불러야 하는지, 어떤 관계 역동을 원하는지 알려주세요.
+    userName:
+      label: 컴패니언이 당신을 뭐라고 부르면 좋을까요?
+      placeholder: '예: 마스터, 알렉스, 선배, 프로듀서'
+    pronouns:
+      label: 호칭 대명사
+      placeholder: '예: 그, 그녀, 당신'
+    relationship:
+      label: 관계 역동
+      options:
+        companion: 절친한 친구 및 동반자
+        assistant: 전문적인 어시스턴트 및 코파일럿
+        romantic: 다정하고 로맨틱한 연인
+        mentor: 인생의 멘토 및 조언자
+        student: 호기심 많은 제자
+    userBio:
+      label: 당신에 대한 추가 정보 (선택적 맥락)
+      placeholder: 취미, 관심사, 일상 루틴을 공유하면 컴패니언이 당신을 더 깊이 이해할 수 있습니다.
+
+  vessel:
+    label: 아바타 본체
+    subtitle: Live2D / VRM 아바타
+    title: 아바타 본체 선택
+    description: 컴패니언을 위한 3D VRM 모델 또는 2D Live2D 아바타 본체를 선택하세요.
+    filters:
+      all: 모든 아바타
+      installed: 설치됨
+      downloadable: 무료 다운로드 가능
+      vrm: 3D (VRM)
+      live2d: 2D (Live2D)
+    searchPlaceholder: 아바타 검색...
+    download: 아바타 다운로드
+    downloading: 다운로드 중... {progress}%
+    installedBadge: 설치됨
+    license: '라이선스:'
+    author: '제작자:'
+
+  consciousness:
+    label: 의식 코어
+    subtitle: 추론 엔진 (LLM)
+    title: 의식 및 추론 두뇌
+    description: 컴패니언의 생각, 개성, 대답을 이끄는 대규모 언어 모델을 연결하세요.
+    tabs:
+      cloud: 클라우드 제공업체 (권장)
+      local: 로컬 엔진 (오프라인 & 프라이빗)
+    providerCards:
+      gemini: Google Gemini (무료 티어 제공)
+      openrouter: OpenRouter (범용 통합 플랫폼)
+      openai: OpenAI
+      anthropic: Anthropic Claude
+      ollama: Ollama (로컬 실행)
+      webllm: WebLLM (브라우저 내 WebGPU)
+    apiKey: API 키
+    model: 모델 선택
+    baseUrl: 사용자 정의 엔드포인트 URL
+    verify: 연결 테스트
+    verified: 연결 확인됨
+    verifyFailed: '연결 실패: {reason}'
+
+  persona:
+    label: 영혼 및 페르소나
+    subtitle: 성격의 핵심
+    title: 캐릭터 영혼 및 페르소나
+    description: 컴패니언의 기본 정체성, 말투, 배경 스토리를 선택하거나 직접 설정하세요.
+    presetCards:
+      airi: AIRI (기본 자율형 컴패니언)
+      custom: 사용자 정의 캐릭터 카드
+      import: 캐릭터 카드 가져오기 (PNG / JSON)
+    characterName: 컴패니언 이름
+    personalitySummary: 성격 개요
+    firstMessage: 첫 대화 인사말 (Turn 0)
+    firstMessagePlaceholder: 무대가 처음 열렸을 때 컴패니언이 당신에게 어떤 말을 건넬까요?
+    speechQuirks: 말투 및 어조 특징
+
+  hearing:
+    label: 청각
+    subtitle: 음성 전사 (STT)
+    title: 청각 및 음성 인식
+    description: 마이크 입력, 음성 활동 감지(VAD) 및 전사 엔진을 구성합니다.
+    micSelect: 마이크 장치
+    testMic: 마이크 테스트
+    vadThreshold: 음성 감지 민감도
+    engines:
+      deepgram: Deepgram Nova (초고속 클라우드 전사)
+      whisper: 로컬 Whisper (100% 온디바이스)
+      browser: Web Speech API (설정 없는 브라우저 표준)
+
+  speech:
+    label: 발화
+    subtitle: 신경망 음성 합성 (TTS)
+    title: 음성 및 소리 합성
+    description: 컴패니언에게 목소리를 선물하세요. 고품질 클라우드 신경망 음성 또는 안전한 로컬 합성을 선택할 수 있습니다.
+    voiceCards:
+      kokoro: Kokoro TTS (로컬 WebGPU / WASM)
+      elevenlabs: ElevenLabs (초현실적 클라우드 음성)
+      azure: Azure Cognitive Speech
+      edge: Edge TTS (무료 클라우드 음성)
+    voiceSelect: 음색 선택
+    previewVoice: 음성 샘플 듣기
+    pitch: 음높이 조절
+    speed: 말하기 속도
+
+  thinking:
+    label: 사고
+    subtitle: 호흡 조절 및 내면 독백
+    title: 사고 및 대화 호흡 조절
+    description: 복잡한 답변을 도출할 때의 생각하는 멈춤, 자연스러운 추임새 및 내면의 중얼거림을 설정합니다.
+    presets:
+      snappy:
+        title: 스피디 (Snappy)
+        description: 200ms 초고속 즉각 응답. 생각하는 지연 시간을 최소화합니다.
+      balanced:
+        title: 밸런스 (Balanced)
+        description: 자연스러운 대화 리듬. 복잡한 질문에는 자연스러운 생각 추임새와 간격을 둡니다.
+      deepCot:
+        title: 심층 사고 (Deep CoT)
+        description: 풍부한 논리적 사고 모드. 답변을 구성하는 동안 내면의 중얼거림을 생생하게 표현합니다.
+    subconsciousAsides: 생각 중 내면 독백 발화 (Needle 2 WASM)
+    asidesDescription: 복잡한 답변을 생성하는 동안 컴패니언이 머릿속 생각의 흐름을 혼잣말로 작게 말할 수 있도록 허용합니다.
+
+  emotions:
+    label: 감정
+    subtitle: 2-Pass ACT 표정 브리지
+    title: 감정 및 ACT 브리지
+    description: 대화 텍스트의 감정적 뉘앙스를 아바타의 생생한 표정과 몸짓으로 매끄럽게 연결합니다.
+    pass1Title: '1단계: 표정 추출 및 정규화'
+    pass1Desc: 모델의 미세 표정을 표준화된 <|ACT:*|> 액션 토큰으로 변환합니다.
+    pass2Title: '2단계: 액터 지침 주입'
+    pass2Desc: 캐릭터가 적절한 상황에서 언제, 어떻게 감정을 표현해야 하는지 시스템 프롬프트로 가르칩니다.
+    liveExpressionTest: 실시간 표정 미리보기
+    testExpressions:
+      happy: 기쁨 / 미소
+      flustered: 부끄러움 / 홍조
+      thinking: 고뇌 / 생각 중
+      surprised: 놀람
+      wink: 장난스런 윙크
+
+  vision:
+    label: 시각
+    subtitle: 사진 이해 및 분석 (VLM)
+    title: 시각 인식 (채팅 VLM)
+    description: 채팅으로 보낸 사진, 스크린샷, 그림을 컴패니언이 보고 이해하며 감상을 나눌 수 있도록 합니다.
+    engineTitle: 시각 인식 모델
+    testImage: 시각 인식 테스트
+    testPrompt: 이미지를 업로드하여 컴패니언의 시각 분석 능력을 확인하세요.
+    perceptionAccuracy: 인식 지연 시간 및 정확도
+
+  screen:
+    label: 화면
+    subtitle: 데스크톱 화면 관찰
+    title: 데스크톱 화면 관찰
+    description: 컴패니언이 백그라운드에서 컴퓨터 화면을 조용히 지켜보며 적절한 순간에 조언이나 대화를 건넬 수 있도록 허용합니다.
+    deliveryMode:
+      title: 알림 전달 방식
+      voiceAndBubble: 음성 및 말풍선 (완전한 존재감)
+      bubbleOnly: 말풍선만 (조용한 알림)
+      voiceOnly: 음성만
+      muted: 음소거 (화면 맥락만 파악)
+    salienceGate:
+      title: 변화 감지 필터
+      ocr: 경량 OCR (매우 낮은 CPU 부하)
+      vlm: VLM 시각 모델 심층 분석
+    privacyExclusions: 프라이버시 제외 목록 (금융, 비밀번호 및 비공개 창 자동 제외)
+
+  proactivity:
+    label: 자율성
+    subtitle: 일상 일정 및 환경 하트비트
+    title: 일상 루틴 및 자율 상호작용
+    description: 컴패니언의 자발적인 안부 인사 빈도, 취침 방해 금지 시간대 및 생활 루틴을 설정합니다.
+    heartbeats: 자율 환경 하트비트
+    heartbeatsDesc: 한동안 대화가 없을 때 주변 상황에 맞춰 컴패니언이 먼저 말을 걸어옵니다.
+    quietHours: 방해 금지 취침 시간
+    quietHoursDesc: 지정된 시간에는 컴패니언이 수면 모드에 들어가 자발적인 음성 알림을 하지 않습니다.
+    scheduleFrom: 취침 시간
+    scheduleTo: 기상 시간
+
+  artistry:
+    label: 예술 창작
+    subtitle: 그림 생성 및 자율 디렉터
+    title: 예술 창작 및 일러스트 그리기
+    description: 컴패니언이 서로의 초상화, 셀카, 무대 배경을 직접 그릴 수 있는 능력을 부여합니다.
+    engines:
+      pollinations: Pollinations AI (100% 무료 & 설정 필요 없음)
+      comfyui: ComfyUI (로컬 노드 http://127.0.0.1:8188)
+      disabled: 그림 생성 비활성화
+    styleChips: 비주얼 아트 스타일
+    previewButton: 테스트 일러스트 생성
+    autonomousDirector: 자율 디렉터 (대화 도중 흥미가 생기면 컴패니언이 스스로 그림을 그리도록 허용)
+
+  memory:
+    label: 기억
+    subtitle: 4사분면 인지 메모리
+    title: 4가지 시간축 인지 메모리
+    description: 디지털 컴패니언이 어떻게 추억을 간직하고, 깊이 기록하며, 잠든 사이 인지를 굳히는지 알아보세요.
+    quadrants:
+      stmm:
+        title: 단기 작업 메모리 (STMM)
+        desc: 일일 대화 요약 및 최근 대화의 롤링 버퍼.
+      ltmm:
+        title: 성스러운 텍스트 일지 (LTMM)
+        desc: 로컬 벡터 데이터베이스에 기록되는 수정 불가능한 영구 이정표와 핵심 사실.
+      eternalThread:
+        title: 영원의 실타래 (관계성 그래프)
+        desc: 대화를 나눌수록 깊어지는 유대감, 신뢰도, 그리고 둘만의 공유된 기억.
+      dreaming:
+        title: 꿈의 응고 (DRMM 및 감정 에코)
+        desc: 야간 백그라운드에서 감정의 닻을 내리고 모순된 기억을 정돈하는 작업.
+
+  tools:
+    label: 도구
+    subtitle: 자동화 및 데스크톱 MCP
+    title: 자동화 도구 및 데스크톱 제어
+    description: 실시간 웹 검색과 데스크톱 파일 접근 기능으로 컴패니언의 역량을 강화합니다.
+    webSearch:
+      title: 실시간 웹 검색 (DuckDuckGo / Brave)
+      desc: 별도의 API 키 없이도 최신 뉴스, 날씨, 기술 문서를 찾아볼 수 있습니다.
+    desktopMcp:
+      title: Model Context Protocol (로컬 파일 시스템)
+      desc: 허가된 작업 공간의 파일을 읽고 쓰며 개발 보조 스크립트를 실행합니다.
+    motionGen:
+      title: 생성형 3D 모션 (FlowMDM)
+      desc: 대화 내용에 맞추어 맞춤형 3D 아바타 동작 및 VRMA 클립을 즉석에서 생성합니다.
+
+  finale:
+    label: 준비 완료
+    subtitle: 최종 확인 및 무대 시작
+    title: 사전 점검 정직성 매트릭스
+    description: 정식으로 무대에 오르기 전 4대 핵심 컴포넌트의 준비 상태를 점검합니다.
+    pillars:
+      audio: 음성 입력 및 청각
+      reasoning: 의식 및 추론 두뇌 코어
+      speech: 음성 합성 엔진
+      avatar: 아바타 본체 및 무대 제어
+    status:
+      ready: 준비 완료
+      configured: 설정 완료
+      optional: 건너뜀 / 선택 사항
+      actionRequired: 설정 필요
+    greetingCard: 첫 무대 대사 미리보기 (Turn 0)
+    launchButton: AIRI 스테이지 시작
+    launching: 스테이지를 시작하는 중...
+
+quickStart:
+  title: 60초 빠른 시작
+  subtitle: 추천 기본 설정을 사용하여 즉시 컴패니언을 만나보세요.
+  companionName: 컴패니언 이름
+  vessel: 아바타 본체
+  brain: 생각 두뇌
+  voice: 목소리 프로필
+  launch: 설정 완료 및 실행

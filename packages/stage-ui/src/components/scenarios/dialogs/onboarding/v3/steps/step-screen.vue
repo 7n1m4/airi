@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Button } from '@proj-airi/ui'
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
@@ -8,6 +9,8 @@ const props = defineProps<{
   onNext: () => void
   onPrevious: () => void
 }>()
+
+const { t } = useI18n()
 
 const draft = useOnboardingV3Draft()
 
@@ -106,14 +109,14 @@ function syncDraft() {
         <div>
           <div :class="['flex items-center gap-2']">
             <h2 :class="['text-lg font-bold text-neutral-900 dark:text-white tracking-tight']">
-              Desktop Screen Watching
+              {{ t('onboarding.steps.screen.title') }}
             </h2>
             <span :class="['text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400']">
-              Step 14 · Screen
+              {{ t('onboarding.steps.screen.subtitle') }}
             </span>
           </div>
           <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5 leading-relaxed']">
-            Autonomous perception ticker analyzing your active desktop display. Reacts in real-time when gameplay moments, windows, or screen contents change.
+            {{ t('onboarding.steps.screen.description') }}
           </p>
         </div>
       </div>
@@ -282,7 +285,7 @@ function syncDraft() {
         @click="props.onPrevious"
       >
         <div :class="['i-solar:alt-arrow-left-line-duotone h-4 w-4']" />
-        <span>Back</span>
+        <span>{{ t('onboarding.shell.previous') }}</span>
       </button>
 
       <div :class="['text-[11px] text-neutral-400 font-medium']">
@@ -299,7 +302,7 @@ function syncDraft() {
         ]"
         @click="props.onNext"
       >
-        <span>Continue</span>
+        <span>{{ t('onboarding.shell.next') }}</span>
         <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
       </Button>
     </div>

@@ -1,0 +1,385 @@
+stepper:
+  ariaLabel: Onboarding Progress
+  prevStep: Previous step
+  nextStep: Next step
+  jumpToStep: Jump to any step
+  allSteps: All Onboarding Steps ({count})
+
+shell:
+  close: Close
+  finish: Launch Stage
+  previous: Back
+  next: Continue
+  skip: Setup Later
+
+steps:
+  welcome:
+    label: Welcome
+    subtitle: Private Companion Studio
+    heroTitle: Welcome to AIRI
+    heroSubtitle: Your companion's stage — set up in minutes, 100% on your machine.
+    companionQuote: Hello! I’m your autonomous digital companion. Whether you want voice conversation, creative stage performances, or a quiet desktop presence, I’m ready to adapt to your world.
+    pills:
+      webgpu: Local WebGPU Core
+      offline: 100% Offline & Private
+      souls: Mix & Match Souls + Bodies
+    actions:
+      quickStart: Quick Start (60s)
+      guidedSetup: Guided Setup
+      setupLater: Setup Later
+    dialog:
+      savedTitle: Setup Saved for Later
+      savedDescription: 'You can reopen your companion setup anytime by clicking the AIRI icon in your macOS menu bar / system tray:'
+      trayItem: Companion Setup & Sign-In (V3)
+      continue: Continue Setup
+      closeToTray: Close to Tray
+
+  triage:
+    label: Account
+    subtitle: Account Sign-In & Architecture
+    title: Account Sign-In & Architecture
+    description: Choose whether to run completely air-gapped on this machine, or connect an account for seamless cloud synchronization and backups.
+    zeroTrustBadge: Zero-Trust
+    localOption:
+      title: Local Companion (Air-Gapped)
+      description: 100% offline and private. All companion cards, memories, and state are stored locally in your browser/desktop database with zero cloud telemetry.
+      badge: Offline First
+      action: Continue Locally
+    cloudOption:
+      title: Account Sign-In (Cloudflare)
+      description: Connect your account to sync companions, settings, and memory vaults across devices with end-to-end encryption.
+      badge: Multi-Device Sync
+      connect: Sign In with Cloudflare
+      connected: Connected to Cloudflare
+      accountPrefix: 'Account ID:'
+    restore:
+      foundCompanions: Found {count} companion(s) in Cloudflare R2
+      restoreAndLaunch: Restore & Launch Stage (~30s)
+      restoreAndBuild: Restore & Build Another Companion
+      syncing: Restoring remote companions...
+
+  appearance:
+    label: Appearance
+    subtitle: Language, Theme & Accent
+    title: Language & Appearance
+    description: Set your interface language, visual theme, and signature accent color.
+    languageSection:
+      title: Display Language
+      description: Select your primary language for AIRI. You can change this anytime.
+    themeSection:
+      title: Theme Mode
+      description: Choose your preferred appearance mode.
+      dark: Dark
+      light: Light
+      system: System Synchronized
+    colorSection:
+      title: Signature Accent Palette
+      description: Choose an accent tone to personalize buttons, highlights, and avatar glow effects.
+      defaultColor: Default Cyan
+      custom: Custom Hex
+      groups:
+        warm: Warm & Fire
+        flora: Earth & Flora
+        ocean: Ocean & Sky
+        royal: Royal & Bloom
+    perDeviceToggle: Keep appearance local to this device (exclude from cloud sync)
+
+  experience:
+    label: Experience
+    subtitle: Interaction Archetype
+    title: Interaction Archetypes
+    description: Select a curated companion experience archetype. This dynamically customizes active modules and prunes unneeded steps.
+    archetypes:
+      quietObserver:
+        title: The Quiet Observer
+        tag: Fastest · Minimalist
+        description: Ultra-fast, lightweight text companion. Avatar emotes on stage, has inner thoughts and deep memory, with zero audio, vision, or system overhead.
+      casualCompanion:
+        title: The Casual Companion
+        tag: Popular Choice
+        description: The quintessential voice and visual companion. Natural speech (STT/TTS), chat photo perception (VLM), natural pacing, and long-term memory.
+      creativeMuse:
+        title: The Creative Muse
+        tag: Visual Focus
+        description: Visual inspiration studio. Spoken voice, visual generation (Pollinations/ComfyUI), chat photo understanding, and expressive avatar morphs.
+      executiveCopilot:
+        title: The Executive Copilot
+        tag: Productivity
+        description: Focused productivity. Voice dialogue, desktop display perception, active window history, local filesystem MCP tools, and live web search.
+      ambientRoommate:
+        title: The Ambient Roommate
+        tag: Proactive Presence
+        description: Living routine & presence. Spoken voice, ambient heartbeats, sleep schedule, quiet hours, and desktop screen awareness.
+      swissArmy:
+        title: The Swiss Army Companion
+        tag: Most Steps · All-In-One
+        description: 'The flagship do-it-all: Voice STT/TTS, vision, screen watching, proactivity, artistry, tools & memory hierarchy.'
+    advanced:
+      toggle: 'Advanced: Customize Individual Modules'
+      description: Toggle individual sensory and cognitive capabilities on or off.
+      modules:
+        hearing: Hearing (Microphone Transcription)
+        speech: Speech (Neural Voice Synthesis)
+        thinking: Thinking (Pacing & Subconscious Asides)
+        emotions: Emotions (2-Pass ACT Expression Bridge)
+        vision: Vision (Chat Photo Understanding)
+        screen: Screen (Desktop Perception & OCR)
+        proactivity: Proactivity (Daily Schedule & Heartbeats)
+        artistry: Artistry (Image Generation & Director)
+        memory: Memory (Cognitive Memory Hierarchy)
+        tools: Tools (Web Search & Desktop MCP)
+
+  profile:
+    label: User Profile
+    subtitle: Who Are You?
+    title: Your Identity & Relationship
+    description: Tell your companion how to address you and what relationship dynamic you prefer.
+    userName:
+      label: What should your companion call you?
+      placeholder: e.g., Master, Alex, Senpai, Producer
+    pronouns:
+      label: Preferred Pronouns
+      placeholder: e.g., they/them, she/her, he/him
+    relationship:
+      label: Relationship Dynamic
+      options:
+        companion: Close Friend & Companion
+        assistant: Professional Assistant & Copilot
+        romantic: Affectionate & Romantic
+        mentor: Mentor & Advisor
+        student: Curious Apprentice
+    userBio:
+      label: About You (Optional Context)
+      placeholder: Share your interests, hobbies, or daily routine so your companion can connect deeper.
+
+  vessel:
+    label: Physical Vessel
+    subtitle: Live2D / VRM Avatar Body
+    title: Choose a Physical Vessel
+    description: Select a 3D VRM avatar or Live2D model body for your companion.
+    filters:
+      all: All Avatars
+      installed: Installed Only
+      downloadable: Free Downloadable
+      vrm: 3D (VRM)
+      live2d: 2D (Live2D)
+    searchPlaceholder: Search avatar vessels...
+    download: Download Vessel
+    downloading: Downloading... {progress}%
+    installedBadge: Installed
+    license: 'License:'
+    author: 'Creator:'
+
+  consciousness:
+    label: Consciousness
+    subtitle: Reasoning Engine (LLM)
+    title: Consciousness & Reasoning Brain
+    description: Connect the language model that powers your companion's thoughts, personality, and replies.
+    tabs:
+      cloud: Cloud Providers (Recommended)
+      local: Local Engines (Offline & Private)
+    providerCards:
+      gemini: Google Gemini (Free Tier)
+      openrouter: OpenRouter (Universal)
+      openai: OpenAI
+      anthropic: Anthropic Claude
+      ollama: Ollama (Local)
+      webllm: WebLLM (In-Browser WebGPU)
+    apiKey: API Key
+    model: Model Selection
+    baseUrl: Custom Endpoint URL
+    verify: Test Connection
+    verified: Connection Verified
+    verifyFailed: 'Connection Failed: {reason}'
+
+  persona:
+    label: Soul & Persona
+    subtitle: Personality Core
+    title: Character Soul & Persona
+    description: Select or customize the foundational identity, speech quirks, and backstory of your companion.
+    presetCards:
+      airi: AIRI (Default Autonomous Spirit)
+      custom: Custom Character Card
+      import: Import Character Card (PNG / JSON)
+    characterName: Companion Name
+    personalitySummary: Personality Overview
+    firstMessage: Opening Greeting (Turn 0)
+    firstMessagePlaceholder: What will your companion say when the stage boots up?
+    speechQuirks: Speech Quirks & Tone
+
+  hearing:
+    label: Hearing
+    subtitle: Voice Transcription (STT)
+    title: Hearing & Voice Recognition
+    description: Configure your microphone input, voice activity detection (VAD), and transcription engine.
+    micSelect: Microphone Device
+    testMic: Test Microphone
+    vadThreshold: Voice Detection Sensitivity
+    engines:
+      deepgram: Deepgram Nova (Blazing Fast Cloud)
+      whisper: Local Whisper (100% On-Device)
+      browser: Web Speech API (Zero-Config)
+
+  speech:
+    label: Speech
+    subtitle: Neural Voice Studio (TTS)
+    title: Speech & Voice Synthesis
+    description: Give your companion a voice. Choose neural cloud voices or private on-device synthesis.
+    voiceCards:
+      kokoro: Kokoro TTS (Local WebGPU / WASM)
+      elevenlabs: ElevenLabs (Ultra-Realistic Cloud)
+      azure: Azure Cognitive Speech
+      edge: Edge TTS (Free Cloud)
+    voiceSelect: Voice Timbre
+    previewVoice: Listen to Voice Sample
+    pitch: Voice Pitch
+    speed: Speaking Rate
+
+  thinking:
+    label: Thinking
+    subtitle: Pacing & Subconscious Asides
+    title: Thinking & Conversational Pacing
+    description: Configure thinking pauses, dynamic fillers, and subconscious spoken asides during reasoning.
+    presets:
+      snappy:
+        title: Snappy
+        description: Ultra-fast 200ms responses with instant direct replies. Minimum thinking latency.
+      balanced:
+        title: Balanced
+        description: Natural human conversational rhythm with adaptive conversational fillers for complex answers.
+      deepCot:
+        title: Deep CoT
+        description: Extended chain-of-thought contemplation with rich dynamic spoken asides while thinking.
+    subconsciousAsides: Subconscious Spoken Asides (Needle 2 WASM)
+    asidesDescription: Permit companion to vocalize inner train-of-thought mutterings while generating complex answers.
+
+  emotions:
+    label: Emotions
+    subtitle: 2-Pass ACT Expression Bridge
+    title: Emotions & The ACT Bridge
+    description: Connect emotional cues from dialogue to avatar facial morphs and body motions.
+    pass1Title: 'Pass 1: Expression Extraction'
+    pass1Desc: Normalize model expressions into canonical <|ACT:*|> tokens.
+    pass2Title: 'Pass 2: Actor Directives'
+    pass2Desc: System prompt instructions that teach the character when and how to emote.
+    liveExpressionTest: Live Expression Test
+    testExpressions:
+      happy: Joy / Happy
+      flustered: Flustered / Blush
+      thinking: Contemplating
+      surprised: Surprised
+      wink: Playful Wink
+
+  vision:
+    label: Vision
+    subtitle: Chat Photo & Image Analysis
+    title: Visual Perception (Chat VLM)
+    description: Enable your companion to inspect, understand, and react to images you send in chat.
+    engineTitle: Vision Analysis Model
+    testImage: Test Visual Perception
+    testPrompt: Upload an image to verify companion visual understanding.
+    perceptionAccuracy: Perception Latency & Accuracy
+
+  screen:
+    label: Screen
+    subtitle: Desktop Screen Watching
+    title: Desktop Screen Watching
+    description: Allow your companion to see your screen in the background and offer timely observations.
+    deliveryMode:
+      title: Notification Delivery Mode
+      voiceAndBubble: Voice & Bubble (Full Presence)
+      bubbleOnly: Bubble Only (Quiet Notification)
+      voiceOnly: Voice Only
+      muted: Muted (Context-Only Observation)
+    salienceGate:
+      title: Salience Filter
+      ocr: Lightweight OCR (Ultra-low CPU)
+      vlm: Visual VLM Analysis
+    privacyExclusions: Privacy Blacklist (Exclude Banking, Passwords & Private Windows)
+
+  proactivity:
+    label: Proactivity
+    subtitle: Daily Schedule & Heartbeats
+    title: Ambient Routine & Proactivity
+    description: Set up autonomous check-ins, bedtime quiet hours, and daily greetings.
+    heartbeats: Autonomous Ambient Heartbeats
+    heartbeatsDesc: Companion can proactively start conversations after periods of silence.
+    quietHours: Quiet Hours / Bedtime Routine
+    quietHoursDesc: Companion enters sleep mode during selected hours (no unsolicited voice alerts).
+    scheduleFrom: Sleep From
+    scheduleTo: Wake Up At
+
+  artistry:
+    label: Artistry
+    subtitle: Visuals & Autonomous Director
+    title: Artistry & Image Generation
+    description: Equip your companion to paint portraits, generate selfies, and visualize stage scenes.
+    engines:
+      pollinations: Pollinations AI (100% Free & Zero-Config)
+      comfyui: ComfyUI (Local Node http://127.0.0.1:8188)
+      disabled: Disable Art Generation
+    styleChips: Visual Aesthetic Styles
+    previewButton: Generate Test Artwork
+    autonomousDirector: Autonomous Director (Allows companion to paint during dialogue)
+
+  memory:
+    label: Memory
+    subtitle: Cognitive Memory Hierarchy
+    title: The 4 Temporal Memory Quadrants
+    description: Explore how your companion builds, preserves, and consolidates memories over time.
+    quadrants:
+      stmm:
+        title: Short-Term Working Memory (STMM)
+        desc: Daily summaries and rolling conversational context buffers.
+      ltmm:
+        title: Sacred Text Journal (LTMM)
+        desc: Permanent, immutable milestones and key facts recorded in local vector storage.
+      eternalThread:
+        title: Eternal Thread (Lifetime Relational Graph)
+        desc: Evolving distillation of relationship dynamics, trust levels, and shared lore.
+      dreaming:
+        title: Dream State Consolidation (DRMM & Echo Chips)
+        desc: Nightly consolidation worker synthesizing emotional anchors and resolving contradictions.
+
+  tools:
+    label: Tools
+    subtitle: Automation & Desktop MCP
+    title: Automation, MCP & External Tools
+    description: Supercharge your companion with real-time web search and desktop system capabilities.
+    webSearch:
+      title: Live Web Search (DuckDuckGo / Brave)
+      desc: Allows your companion to look up real-time news, documentation, and weather without API keys.
+    desktopMcp:
+      title: Model Context Protocol (Desktop Filesystem)
+      desc: Read/write workspace files and execute permitted developer scripts locally.
+    motionGen:
+      title: Generative 3D Motion (FlowMDM)
+      desc: Generate custom 3D avatar animations and VRMA clips on the fly.
+
+  finale:
+    label: Stage Finale
+    subtitle: Pre-Flight Readiness & Launch
+    title: Pre-Flight Honesty Matrix
+    description: Review your companion's operational status across the 4 foundational stage pillars.
+    pillars:
+      audio: Audio Input & Hearing
+      reasoning: Consciousness & Reasoning Core
+      speech: Voice Synthesis Engine
+      avatar: Avatar Vessel & Stage Driver
+    status:
+      ready: Ready
+      configured: Configured
+      optional: Optional / Skipped
+      actionRequired: Action Required
+    greetingCard: Opening Dialogue Preview (Turn 0)
+    launchButton: Launch AIRI Stage
+    launching: Launching Stage...
+
+quickStart:
+  title: 60-Second Quick Start
+  subtitle: Express companion setup using zero-config defaults.
+  companionName: Companion Name
+  vessel: Vessel Body
+  brain: Consciousness Brain
+  voice: Voice Profile
+  launch: Complete Setup & Launch

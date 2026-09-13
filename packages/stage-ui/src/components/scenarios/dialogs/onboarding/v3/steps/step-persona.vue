@@ -7,6 +7,7 @@ import { STARTER_CHARACTERS } from '@proj-airi/stage-ui/constants/prompts/charac
 import { Button } from '@proj-airi/ui'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import CardImportWizard from '../../../../../../../../stage-pages/src/pages/settings/airi-card/components/CardImportWizard.vue'
@@ -27,6 +28,8 @@ const props = defineProps<{
   onNext: () => void
   onPrevious: () => void
 }>()
+
+const { t } = useI18n()
 
 const draft = useOnboardingV3Draft()
 const displayModelsStore = useDisplayModelsStore()
@@ -997,16 +1000,16 @@ onBeforeUnmount(() => {
       :class="['flex-shrink-0']"
     >
       <div :class="['flex items-center justify-between text-xs text-neutral-400 mb-0.5']">
-        <span :class="['text-primary-500 font-semibold']">Step 7 of 16</span>
-        <span :class="['font-medium tracking-wide uppercase']">Personality Core</span>
+        <span :class="['text-primary-500 font-semibold']">{{ t('onboarding.steps.persona.label') }}</span>
+        <span :class="['font-medium tracking-wide uppercase']">{{ t('onboarding.steps.persona.subtitle') }}</span>
       </div>
       <div :class="['flex items-center justify-between']">
         <div>
           <h2 :class="['text-2xl font-bold tracking-tight text-neutral-900 dark:text-white']">
-            Soul & Persona
+            {{ t('onboarding.steps.persona.title') }}
           </h2>
           <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5']">
-            Pure personality — bodies come first, and any soul pairs with any form.
+            {{ t('onboarding.steps.persona.description') }}
           </p>
         </div>
         <div :class="['flex items-center gap-2']">
@@ -1686,7 +1689,7 @@ onBeforeUnmount(() => {
         @click="props.onPrevious"
       >
         <div :class="['i-solar:alt-arrow-left-line-duotone h-4 w-4']" />
-        <span>Back to Consciousness</span>
+        <span>{{ t('onboarding.shell.previous') }}</span>
       </button>
 
       <!-- Synergy Preview Pill -->

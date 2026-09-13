@@ -10,6 +10,7 @@ Translation files live in `packages/i18n/src/locales/<locale>/`.
 | :--- | :--- | :--- |
 | `settings.` | `settings.yaml` | Remove the leading `settings.` prefix |
 | `stage.` | `stage.yaml` | Remove the leading `stage.` prefix |
+| `onboarding.` | `onboarding.yaml` | Remove the leading `onboarding.` prefix |
 | Any other prefix | `base.yaml` | Use the key as-is |
 
 For example, `settings.pages.providers.provider.blip-local.title` belongs at `pages.providers.provider.blip-local.title` in `settings.yaml`.

@@ -9,6 +9,7 @@ import { isWebGPUSupported } from '@proj-airi/stage-shared/webgpu'
 import { Button } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import ProviderPickerGrid from '../../v2/components/provider-picker-grid.vue'
@@ -28,6 +29,8 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'verified'): void
 }>()
+
+const { t } = useI18n()
 
 // --- Stores & Draft ---
 const providersStore = useProvidersStore()
@@ -489,16 +492,16 @@ onBeforeUnmount(() => {
     <div :class="['flex-1 min-h-0 overflow-y-auto pr-1 flex flex-col gap-4']">
       <!-- Step Subtitle & Header -->
       <div :class="['flex items-center justify-between text-xs text-neutral-400 font-medium']">
-        <span>Consciousness</span>
-        <span>Step 6 of 16 • Reasoning Engine (LLM)</span>
+        <span>{{ t('onboarding.steps.consciousness.label') }}</span>
+        <span>{{ t('onboarding.steps.consciousness.subtitle') }}</span>
       </div>
 
       <div class="flex-shrink-0">
         <h2 class="text-xl text-neutral-800 font-bold md:text-2xl dark:text-neutral-100">
-          Consciousness
+          {{ t('onboarding.steps.consciousness.title') }}
         </h2>
         <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-          Give AIRI a brain first — character creation borrows it to reason and respond.
+          {{ t('onboarding.steps.consciousness.description') }}
         </p>
       </div>
 
@@ -1070,7 +1073,7 @@ onBeforeUnmount(() => {
         @click="props.onPrevious"
       >
         <div :class="['i-solar:alt-arrow-left-line-duotone h-4 w-4']" />
-        <span>Back to Physical Vessel</span>
+        <span>{{ t('onboarding.shell.previous') }}</span>
       </button>
 
       <!-- Center Status Hint -->
@@ -1093,7 +1096,7 @@ onBeforeUnmount(() => {
           ]"
           @click="handleSkipClick"
         >
-          Skip Step
+          {{ t('onboarding.shell.skip') }}
         </button>
 
         <Button
@@ -1107,7 +1110,7 @@ onBeforeUnmount(() => {
           ]"
           @click="handleNextClick"
         >
-          <span>Next: Soul & Persona</span>
+          <span>{{ t('onboarding.shell.next') }}</span>
           <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
         </Button>
       </div>

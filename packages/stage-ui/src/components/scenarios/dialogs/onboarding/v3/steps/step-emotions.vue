@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from 'reka-ui'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import RendererStage from '../../../../../scenes/RendererStage.vue'
@@ -29,6 +30,8 @@ const props = defineProps<{
   onNext: () => void
   onPrevious: () => void
 }>()
+
+const { t } = useI18n()
 
 const draft = useOnboardingV3Draft()
 const settingsStore = useSettings()
@@ -424,14 +427,14 @@ function handleContinue() {
     <!-- Top Header -->
     <div>
       <div :class="['flex items-center gap-2 text-xs text-neutral-400 mb-0.5']">
-        <span :class="['text-primary-500 dark:text-primary-400 font-medium']">Stage Calibration</span>
-        <span>• 2-Pass ACT Expression Bridge</span>
+        <span :class="['text-primary-500 dark:text-primary-400 font-medium']">{{ t('onboarding.steps.emotions.label') }}</span>
+        <span>• {{ t('onboarding.steps.emotions.subtitle') }}</span>
       </div>
       <h2 :class="['text-2xl font-bold tracking-tight text-neutral-900 dark:text-white']">
-        Emotions & Expressions
+        {{ t('onboarding.steps.emotions.title') }}
       </h2>
       <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5']">
-        Map physical blendshapes to dialogue emotion cues and configure character acting guidance.
+        {{ t('onboarding.steps.emotions.description') }}
       </p>
     </div>
 
@@ -767,7 +770,7 @@ function handleContinue() {
         :class="['px-5 py-2 rounded-xl text-xs font-semibold text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer']"
         @click="props.onPrevious"
       >
-        ← Previous Step
+        {{ t('onboarding.shell.previous') }}
       </button>
 
       <div :class="['text-[11px] text-neutral-400 hidden sm:block']">
@@ -780,7 +783,7 @@ function handleContinue() {
           :class="['px-4 py-2 rounded-xl text-xs font-semibold text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer']"
           @click="props.onNext"
         >
-          Set up later
+          {{ t('onboarding.shell.skip') }}
         </button>
 
         <button
@@ -788,7 +791,7 @@ function handleContinue() {
           :class="['px-6 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer flex items-center gap-2']"
           @click="handleContinue"
         >
-          <span>Continue to Artistry</span>
+          <span>{{ t('onboarding.shell.next') }}</span>
           <div :class="['i-solar:arrow-right-linear w-4 h-4']" />
         </button>
       </div>

@@ -1,0 +1,386 @@
+stepper:
+  ariaLabel: 新手引导进度
+  prevStep: 上一步
+  nextStep: 下一步
+  jumpToStep: 跳转至任意步骤
+  allSteps: 全部引导步骤 ({count})
+
+shell:
+  close: 关闭
+  finish: 启动舞台
+  previous: 返回
+  next: 继续
+  skip: 稍后设置
+
+steps:
+  welcome:
+    label: 欢迎
+    subtitle: 私人伴侣工作室
+    heroTitle: 欢迎使用 AIRI
+    heroSubtitle: 专属于你的虚拟伴侣舞台 —— 几分钟内快速配置，100% 本地私密运行。
+    companionQuote: 你好！我是你的自主数字伴侣。无论你需要语音对话、富有表现力的舞台演出，还是安静的桌面陪伴，我都时刻准备融入你的世界。
+    pills:
+      webgpu: 本地 WebGPU 核心
+      offline: 100% 离线与私密
+      souls: 自由混搭灵魂与外表
+    actions:
+      quickStart: 极速启动 (60秒)
+      guidedSetup: 引导式配置
+      setupLater: 稍后设置
+    dialog:
+      savedTitle: 设置已保存
+      savedDescription: '你可以随时通过 macOS 菜单栏或系统托盘中的 AIRI 图标重新打开伴侣配置：'
+      trayItem: 伴侣设置与登录 (V3)
+      continue: 继续设置
+      closeToTray: 最小化到托盘
+
+  triage:
+    label: 账户
+    subtitle: 账户登录与架构
+    title: 账户登录与架构
+    description: 选择是在本机完全离线隔绝运行，还是连接账户实现无缝的多设备云端同步与备份。
+    zeroTrustBadge: 零信任
+    localOption:
+      title: 本地伴侣 (离线安全)
+      description: 100% 离线私密。所有角色卡、记忆和状态均存储于本地数据库，绝不产生任何云端遥测数据。
+      badge: 本地优先
+      action: 本地继续
+    cloudOption:
+      title: 账户登录 (Cloudflare)
+      description: 连接你的账户，通过端到端加密在各设备间无缝同步伴侣、设置与记忆金库。
+      badge: 多端同步
+      connect: 使用 Cloudflare 登录
+      connected: 已连接 Cloudflare
+      accountPrefix: '账户 ID:'
+    restore:
+      foundCompanions: 在 Cloudflare R2 中发现 {count} 个伴侣备份
+      restoreAndLaunch: 恢复并启动舞台 (~30秒)
+      restoreAndBuild: 恢复并创建新伴侣
+      syncing: 正在恢复云端伴侣...
+
+  appearance:
+    label: 外观
+    subtitle: 语言、主题与强调色
+    title: 语言与界面外观
+    description: 自定义你的界面显示语言、深浅主题以及专属的个性强调色。
+    languageSection:
+      title: 显示语言
+      description: 选择 AIRI 的界面首选语言，之后可随时更改。
+    themeSection:
+      title: 主题模式
+      description: 选择你喜欢的外观色彩模式。
+      dark: 暗色模式
+      light: 亮色模式
+      system: 跟随系统
+    colorSection:
+      title: 专属强调色盘
+      description: 选择能够展现个性的强调色彩，应用于按钮、高亮以及伴侣光晕特效。
+      defaultColor: 默认青蓝
+      custom: 自定义 HEX
+      groups:
+        warm: 暖阳与炽火
+        flora: 大地与生机
+        ocean: 蔚蓝与晴空
+        royal: 尊贵与繁花
+    perDeviceToggle: 仅在本设备保留此外观（不参与云端同步覆盖）
+
+  experience:
+    label: 体验
+    subtitle: 交互原型
+    title: 交互原型定制
+    description: 选择预设的伴侣体验原型。系统将根据你的偏好动态裁剪不需要的模块与配置步骤。
+    archetypes:
+      quietObserver:
+        title: 静默观察者
+        tag: 极速 · 极简主义
+        description: 超低开销的文字伴侣。舞台形象生动反应、拥有深邃内心想法与长期记忆，无任何音频或视觉系统负担。
+      casualCompanion:
+        title: 日常伙伴
+        tag: 热门推荐
+        description: 经典的全能语音与视觉伴侣。自然流畅的声音对话 (STT/TTS)、聊天识图 (VLM)、真实停顿节奏与长期记忆。
+      creativeMuse:
+        title: 创作缪斯
+        tag: 视觉艺术聚焦
+        description: 伴侣灵感画室。支持语音交流、自主视觉生图 (Pollinations/ComfyUI)、图片理解与细腻的动作表情映射。
+      executiveCopilot:
+        title: 智能副驾
+        tag: 高效生产力
+        description: 专注办公协作。全语音对话、桌面窗口感知、历史应用追踪、本地文件系统 MCP 工具及实时联网搜索。
+      ambientRoommate:
+        title: 氛围室友
+        tag: 主动陪伴日常
+        description: 拥有生活起居习惯的伴侣。自然语音、环境心跳主动搭话、作息静音时段与屏幕观察能力。
+      swissArmy:
+        title: 全能旗舰
+        tag: 步骤完整 · 应有尽有
+        description: 旗舰级顶配体验：语音双向识别、视觉分析、桌面监控、主动感知、艺术创作、外部工具与四象限记忆。
+    advanced:
+      toggle: '高级：自定义各个模块开关'
+      description: 手动启用或禁用特定的感官与认知能力模块。
+      modules:
+        hearing: 听觉 (麦克风语音转文字)
+        speech: 语音 (神经拟真语音合成)
+        thinking: 思考 (节奏把控与潜意识旁白)
+        emotions: 情绪 (2-Pass ACT 表情动作桥接)
+        vision: 视觉 (聊天图片理解分析)
+        screen: 屏幕 (桌面监视与 OCR 文字识别)
+        proactivity: 主动性 (日常作息与环境心跳)
+        artistry: 艺术创作 (AI 绘画与自主导演)
+        memory: 记忆体系 (四象限认知记忆)
+        tools: 外部工具 (联网搜索与桌面 MCP)
+
+  profile:
+    label: 用户画像
+    subtitle: 你是谁？
+    title: 你的身份与伴侣关系
+    description: 告诉伴侣该如何称呼你，以及你期待与伴侣建立怎样的相处动态。
+    userName:
+      label: 伴侣应该如何称呼你？
+      placeholder: 例如：主人、阿泽、前辈、制作人
+    pronouns:
+      label: 称谓人称代词
+      placeholder: 例如：他、她、TA
+    relationship:
+      label: 相处关系动态
+      options:
+        companion: 挚友与陪伴者
+        assistant: 专业助手与副驾
+        romantic: 温馨恋人
+        mentor: 人生导师与顾问
+        student: 好奇的求知学徒
+    userBio:
+      label: 关于你的补充信息（可选上下文）
+      placeholder: 分享你的兴趣爱好或作息习惯，让伴侣能够更加懂你。
+
+  vessel:
+    label: 物理躯体
+    subtitle: Live2D / VRM 虚拟形象
+    title: 选择伴侣的物理形象
+    description: 为你的伴侣挑选 3D VRM 形象或 2D Live2D 动态模型。
+    filters:
+      all: 全部形象
+      installed: 已安装
+      downloadable: 免费下载
+      vrm: 3D (VRM)
+      live2d: 2D (Live2D)
+    searchPlaceholder: 搜索虚拟形象...
+    download: 下载形象
+    downloading: 正在下载... {progress}%
+    installedBadge: 已安装
+    license: '授权协议:'
+    author: '创作者:'
+
+  consciousness:
+    label: 意识核心
+    subtitle: 推理大脑 (LLM)
+    title: 意识核心与推理大脑
+    description: 连接赋予伴侣思维、独特个性与生动应答能力的大语言模型。
+    tabs:
+      cloud: 云端服务商 (推荐)
+      local: 本地离线引擎 (私密无网络)
+    providerCards:
+      gemini: Google Gemini (提供免费额度)
+      openrouter: OpenRouter (万能聚合平台)
+      openai: OpenAI
+      anthropic: Anthropic Claude
+      ollama: Ollama (本地部署)
+      webllm: WebLLM (浏览器内 WebGPU)
+    apiKey: API 密钥
+    model: 选择模型
+    baseUrl: 自定义端点 URL
+    verify: 测试连接
+    verified: 连接验证成功
+    verifyFailed: '连接失败: {reason}'
+
+  persona:
+    label: 灵魂人格
+    subtitle: 个性核心
+    title: 角色灵魂与人格特征
+    description: 挑选或定制伴侣的根本身份、口癖习惯以及故事背景设定。
+    presetCards:
+      airi: AIRI (默认自主伴侣灵魂)
+      custom: 自定义伴侣角色卡
+      import: 导入角色卡 (PNG / JSON)
+    characterName: 伴侣名称
+    personalitySummary: 人格概述
+    firstMessage: 开场问候语 (Turn 0)
+    firstMessagePlaceholder: 当舞台首次启动时，伴侣会开口对你说什么？
+    speechQuirks: 口癖习惯与语调
+
+  hearing:
+    label: 听觉能力
+    subtitle: 语音识别 (STT)
+    title: 听觉与语音识别配置
+    description: 配置麦克风输入、人声活动检测 (VAD) 以及语音听写转录引擎。
+    micSelect: 麦克风输入设备
+    testMic: 麦克风测试
+    vadThreshold: 拾音灵敏度阈值
+    engines:
+      deepgram: Deepgram Nova (超高速云端识别)
+      whisper: 本地 Whisper (100% 离线运行)
+      browser: Web Speech API (免配置浏览器原生)
+
+  speech:
+    label: 发音能力
+    subtitle: 神经拟真语音 (TTS)
+    title: 发音与拟真语音合成
+    description: 为伴侣赋予动听的声线。可选择高品质云端神经语音或纯本地私密合成。
+    voiceCards:
+      kokoro: Kokoro TTS (本地 WebGPU / WASM)
+      elevenlabs: ElevenLabs (极度逼真拟真声线)
+      azure: Azure Cognitive Speech
+      edge: Edge TTS (免费云端语音)
+    voiceSelect: 音色选择
+    previewVoice: 试听声音样本
+    pitch: 音调调节
+    speed: 语速调节
+
+  thinking:
+    label: 思考节奏
+    subtitle: 节奏把控与潜意识旁白
+    title: 思考延迟与对话节奏把控
+    description: 配置复杂推理过程中的思考停顿、自然过渡拟声词以及潜意识自言自语。
+    presets:
+      snappy:
+        title: 迅捷
+        description: 200毫秒极速响应，即问即答，思考等待几乎无感。
+      balanced:
+        title: 均衡
+        description: 贴合真人的日常交谈节奏，遇到复杂问题时会自然使用垫话与停顿。
+      deepCot:
+        title: 深度思考
+        tag: 深度链式推导
+        description: 深入的逻辑链条推理，在酝酿答案时会伴随丰富的潜意识喃喃自语。
+    subconsciousAsides: 潜意识旁白发音 (Needle 2 WASM)
+    asidesDescription: 允许伴侣在生成长篇复杂回答时，将内心的思考碎碎念真实念出。
+
+  emotions:
+    label: 丰富情感
+    subtitle: 2-Pass ACT 动作表情桥接
+    title: 情感共鸣与 ACT 桥梁
+    description: 将文字对话中的情绪线索无缝转化为形象的生动面部表情与肢体动作。
+    pass1Title: '第 1 阶段：表情提取与归一化'
+    pass1Desc: '将模型的微表情提炼为标准的 <|ACT:*|> 动作指令标记。'
+    pass2Title: '第 2 阶段：演职提示词注入'
+    pass2Desc: 系统提示词指令，教会角色在合适的语境下自主流露恰当的神情。
+    liveExpressionTest: 实时表情预览测试
+    testExpressions:
+      happy: 开心微笑
+      flustered: 脸红害羞
+      thinking: 若有所思
+      surprised: 惊奇惊讶
+      wink: 调皮眨眼
+
+  vision:
+    label: 图像感知
+    subtitle: 聊天识图与分析 (VLM)
+    title: 视觉感知 (多模态识图)
+    description: 让伴侣能够看懂你在聊天中发送的照片、截图与艺术画作并给出真实反馈。
+    engineTitle: 视觉理解模型
+    testImage: 测试图像感知
+    testPrompt: 上传一张照片以验证伴侣的视觉图像分析能力。
+    perceptionAccuracy: 感知响应延迟与准确度
+
+  screen:
+    label: 桌面观察
+    subtitle: 屏幕动态捕捉
+    title: 桌面屏幕动态感知
+    description: 允许伴侣在后台轻量观察你的电脑屏幕，适时提供贴心的建议与对话。
+    deliveryMode:
+      title: 提醒推送模式
+      voiceAndBubble: 语音播报与气泡 (沉浸全开)
+      bubbleOnly: 仅提示气泡 (静默提醒)
+      voiceOnly: 仅语音播报
+      muted: 完全静音 (仅记录屏幕上下文)
+    salienceGate:
+      title: 视觉显著性过滤门
+      ocr: 轻量 OCR 文字识别 (极低 CPU 开销)
+      vlm: VLM 视觉大模型深度剖析
+    privacyExclusions: 隐私屏蔽名单 (自动避开网银、密码器及私密应用窗口)
+
+  proactivity:
+    label: 主动交互
+    subtitle: 生活起居与环境心跳
+    title: 生活规律与主动互动
+    description: 设定伴侣的主动问候频率、就寝免打扰时段以及生活规律。
+    heartbeats: 自主环境心跳
+    heartbeatsDesc: 当一段时间没有交谈时，伴侣可根据当前情境主动挑起话题。
+    quietHours: 免打扰作息时段
+    quietHoursDesc: 伴侣在设定时间段进入深度睡眠状态，绝不主动发出声音打扰。
+    scheduleFrom: 入睡时间
+    scheduleTo: 醒来时间
+
+  artistry:
+    label: 艺术创作
+    subtitle: 画面生成与自主导演
+    title: 艺术创作与图像绘制
+    description: 赋予伴侣为彼此绘制自拍、肖像插画以及舞台演现场景的能力。
+    engines:
+      pollinations: Pollinations AI (100% 免费免配置)
+      comfyui: ComfyUI (本地节点 http://127.0.0.1:8188)
+      disabled: 关闭画画功能
+    styleChips: 视觉艺术画风
+    previewButton: 生成测试画作
+    autonomousDirector: 自主导演循环 (允许伴侣在聊到兴起时主动挥毫作画)
+
+  memory:
+    label: 记忆体系
+    subtitle: 认知记忆四象限
+    title: 4大时序认知记忆象限
+    description: 了解你的数字伴侣如何长久铭记点滴、沉淀回忆并在睡梦中巩固认知。
+    quadrants:
+      stmm:
+        title: 短期工作记忆 (STMM)
+        desc: 每日对话摘要与最近对话的滚动滑动窗口。
+      ltmm:
+        title: 圣典文本日志 (LTMM)
+        desc: 记录于本地向量数据库中的神圣不可篡改里程碑与核心事实。
+      eternalThread:
+        title: 永恒之线 (关系纽带图谱)
+        desc: 伴随着每一次交互不断深化的情感羁绊、信任等级与共有回忆。
+      dreaming:
+        title: 梦境固化 (DRMM 与情绪回声)
+        desc: 伴侣在夜间后台进行的情绪沉淀与认知冲突解决工序。
+
+  tools:
+    label: 工具扩展
+    subtitle: 系统自动化与桌面 MCP
+    title: 自动化工具与桌面能力
+    description: 为伴侣接上实时网络搜索与本地计算机控制的强大羽翼。
+    webSearch:
+      title: 实时网络搜索 (DuckDuckGo / Brave)
+      desc: 让伴侣无需额外 API 密钥即可检索当下新闻、实时天气与技术文档。
+    desktopMcp:
+      title: Model Context Protocol (本地桌面文件系统)
+      desc: 在授权前提下读写指定工作区文件，运行开发辅助脚本。
+    motionGen:
+      title: 生成式 3D 动作 (FlowMDM)
+      desc: 根据对白含义实时生成量身定制的 3D 角色动作与 VRMA 动画切片。
+
+  finale:
+    label: 启航就绪
+    subtitle: 最终检查与舞台发射
+    title: 启航真实性检查矩阵
+    description: 在正式踏上舞台前，对四大核心支柱组件的健康状态进行确认。
+    pillars:
+      audio: 听觉麦克风输入
+      reasoning: 意识认知推理大脑
+      speech: 语音发音合成引擎
+      avatar: 虚拟形象与舞台驱动
+    status:
+      ready: 准备就绪
+      configured: 已配置
+      optional: 已跳过/可选
+      actionRequired: 待配置处理
+    greetingCard: 首次登台对白预览 (Turn 0)
+    launchButton: 启动 AIRI 舞台
+    launching: 正在唤醒舞台...
+
+quickStart:
+  title: 60秒极速启动
+  subtitle: 使用精心调配的免配置默认方案快速体验伴侣。
+  companionName: 伴侣名字
+  vessel: 形象躯体
+  brain: 思考大脑
+  voice: 声音音色
+  launch: 完成配置并启动

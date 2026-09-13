@@ -43,9 +43,21 @@
       "types": "./dist/locales/fr/index.d.mts",
       "default": "./dist/locales/fr/index.mjs"
     },
+    "./locales/ja": {
+      "types": "./dist/locales/ja/index.d.mts",
+      "default": "./dist/locales/ja/index.mjs"
+    },
+    "./locales/ko": {
+      "types": "./dist/locales/ko/index.d.mts",
+      "default": "./dist/locales/ko/index.mjs"
+    },
     "./locales/vi": {
       "types": "./dist/locales/vi/index.d.mts",
       "default": "./dist/locales/vi/index.mjs"
+    },
+    "./locales/zh-Hant": {
+      "types": "./dist/locales/zh-Hant/index.d.mts",
+      "default": "./dist/locales/zh-Hant/index.mjs"
     },
     "./locales/*.yaml": {
       "default": "./dist/locales/*.yaml"
@@ -62,10 +74,12 @@
     "dev": "pnpm run build",
     "build": "tsdown && node ../../scripts/bundle-i18n.js",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "prepare": "pnpm run build"
   },
   "devDependencies": {
     "unplugin-yaml": "^4.0.0",
+    "vitest": "catalog:vitest",
     "yaml": "catalog:"
   }
 }

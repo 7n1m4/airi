@@ -1,0 +1,385 @@
+stepper:
+  ariaLabel: 新手引導進度
+  prevStep: 上一步
+  nextStep: 下一步
+  jumpToStep: 跳轉至任意步驟
+  allSteps: 全部引導步驟 ({count})
+
+shell:
+  close: 關閉
+  finish: 啟動舞台
+  previous: 返回
+  next: 繼續
+  skip: 稍後設定
+
+steps:
+  welcome:
+    label: 歡迎
+    subtitle: 私人伴侶工作室
+    heroTitle: 歡迎使用 AIRI
+    heroSubtitle: 專屬於你的虛擬伴侶舞台 —— 幾分鐘內快速配置，100% 本地私密運行。
+    companionQuote: 你好！我是你的自主數位伴侶。無論你需要語音對話、富有表現力的舞台演出，還是安靜的桌面陪伴，我都時刻準備融入你的世界。
+    pills:
+      webgpu: 本地 WebGPU 核心
+      offline: 100% 離線與私密
+      souls: 自由混搭靈魂與外表
+    actions:
+      quickStart: 極速啟動 (60秒)
+      guidedSetup: 引導式配置
+      setupLater: 稍後設定
+    dialog:
+      savedTitle: 設定已儲存
+      savedDescription: '你可以隨時透過 macOS 選單列或系統匣中的 AIRI 圖示重新開啟伴侶設定：'
+      trayItem: 伴侶設定與登入 (V3)
+      continue: 繼續設定
+      closeToTray: 最小化至系統匣
+
+  triage:
+    label: 帳戶
+    subtitle: 帳戶登入與架構
+    title: 帳戶登入與架構
+    description: 選擇是在本機完全離線隔絕運行，還是連接帳戶實現無縫的多裝置雲端同步與備份。
+    zeroTrustBadge: 零信任
+    localOption:
+      title: 本地伴侶 (離線安全)
+      description: 100% 離線私密。所有角色卡、記憶與狀態均儲存於本機資料庫，絕不產生任何雲端遙測數據。
+      badge: 本地優先
+      action: 本地繼續
+    cloudOption:
+      title: 帳戶登入 (Cloudflare)
+      description: 連接你的帳戶，透過端到端加密在各裝置間無縫同步伴侶、設定與記憶金庫。
+      badge: 多端同步
+      connect: 使用 Cloudflare 登入
+      connected: 已連接 Cloudflare
+      accountPrefix: '帳戶 ID:'
+    restore:
+      foundCompanions: 在 Cloudflare R2 中發現 {count} 個伴侶備份
+      restoreAndLaunch: 復原並啟動舞台 (~30秒)
+      restoreAndBuild: 復原並建立新伴侶
+      syncing: 正在復原雲端伴侶...
+
+  appearance:
+    label: 外觀
+    subtitle: 語言、主題與強調色
+    title: 語言與介面外觀
+    description: 自訂你的介面顯示語言、深淺主題以及專屬的個性強調色。
+    languageSection:
+      title: 顯示語言
+      description: 選擇 AIRI 的介面首選語言，之後可隨時更改。
+    themeSection:
+      title: 主題模式
+      description: 選擇你喜歡的外觀色彩模式。
+      dark: 暗色模式
+      light: 亮色模式
+      system: 跟隨系統
+    colorSection:
+      title: 專屬強調色盤
+      description: 選擇能夠展現個性的強調色彩，應用於按鈕、醒目提示以及伴侶光暈特效。
+      defaultColor: 預設青藍
+      custom: 自訂 HEX
+      groups:
+        warm: 暖陽與熾火
+        flora: 大地與生機
+        ocean: 蔚藍與晴空
+        royal: 尊貴與繁花
+    perDeviceToggle: 僅在本裝置保留此外觀（不參與雲端同步覆蓋）
+
+  experience:
+    label: 體驗
+    subtitle: 互動原型
+    title: 互動原型定製
+    description: 選擇預設的伴侶體驗原型。系統將根據你的偏好動態裁剪不需要的模組與配置步驟。
+    archetypes:
+      quietObserver:
+        title: 靜默觀察者
+        tag: 極速 · 極簡主義
+        description: 超低開銷的文字伴侶。舞台形象生動反應、擁有深邃內心想法與長期記憶，無任何音訊或視覺系統負擔。
+      casualCompanion:
+        title: 日常夥伴
+        tag: 熱門推薦
+        description: 經典的全能語音與視覺伴侶。自然流暢的聲音對話 (STT/TTS)、聊天識圖 (VLM)、真實停頓節奏與長期記憶。
+      creativeMuse:
+        title: 創作繆斯
+        tag: 視覺藝術聚焦
+        description: 伴侶靈感畫室。支援語音交流、自主視覺生圖 (Pollinations/ComfyUI)、圖片理解與細膩的動作表情對應。
+      executiveCopilot:
+        title: 智慧副駕
+        tag: 高效生產力
+        description: 專注辦公協作。全語音對話、桌面視窗感知、歷史應用追蹤、本地檔案系統 MCP 工具及即時聯網搜尋。
+      ambientRoommate:
+        title: 氛圍室友
+        tag: 主動陪伴日常
+        description: 擁有生活起居習慣的伴侶。自然語音、環境心跳主動搭話、作息靜音時段與螢幕觀察能力。
+      swissArmy:
+        title: 全能旗艦
+        tag: 步驟完整 · 應有盡有
+        description: '旗艦級頂配體驗：語音雙向識別、視覺分析、桌面監控、主動感知、藝術創作、外部工具與四象限記憶。'
+    advanced:
+      toggle: '高級：自訂各個模組開關'
+      description: 手動啟用或停用特定的感官與認知能力模組。
+      modules:
+        hearing: 聽覺 (麥克風語音轉文字)
+        speech: 語音 (神經擬真語音合成)
+        thinking: 思考 (節奏把控與潛意識旁白)
+        emotions: 情緒 (2-Pass ACT 表情動作橋接)
+        vision: 視覺 (聊天圖片理解分析)
+        screen: 螢幕 (桌面監視與 OCR 文字辨識)
+        proactivity: 主動性 (日常作息與環境心跳)
+        artistry: 藝術創作 (AI 繪圖與自主導演)
+        memory: 記憶體系 (四象限認知記憶)
+        tools: 外部工具 (聯網搜尋與桌面 MCP)
+
+  profile:
+    label: 使用者畫像
+    subtitle: 你是誰？
+    title: 你的身份與伴侶關係
+    description: 告訴伴侶該如何稱呼你，以及你期待與伴侶建立怎樣的相處動態。
+    userName:
+      label: 伴侶應該如何稱呼你？
+      placeholder: 例如：主人、阿澤、前輩、製作人
+    pronouns:
+      label: 稱謂人稱代名詞
+      placeholder: 例如：他、她、TA
+    relationship:
+      label: 相處關係動態
+      options:
+        companion: 摯友與陪伴者
+        assistant: 專業助手與副駕
+        romantic: 溫馨戀人
+        mentor: 人生導師與顧問
+        student: 好奇的求知學徒
+    userBio:
+      label: 關於你的補充資訊（選填上下文）
+      placeholder: 分享你的興趣愛好或作息習慣，讓伴侶能夠更加懂你。
+
+  vessel:
+    label: 物理軀體
+    subtitle: Live2D / VRM 虛擬形象
+    title: 選擇伴侶的物理形象
+    description: 為你的伴侶挑選 3D VRM 形象或 2D Live2D 動態模型。
+    filters:
+      all: 全部形象
+      installed: 已安裝
+      downloadable: 免費下載
+      vrm: 3D (VRM)
+      live2d: 2D (Live2D)
+    searchPlaceholder: 搜尋虛擬形象...
+    download: 下載形象
+    downloading: 正在下載... {progress}%
+    installedBadge: 已安裝
+    license: '授權協議:'
+    author: '創作者:'
+
+  consciousness:
+    label: 意識核心
+    subtitle: 推理大腦 (LLM)
+    title: 意識核心與推理大腦
+    description: 連接賦予伴侶思維、獨特個性與生動應答能力的大語言模型。
+    tabs:
+      cloud: 雲端服務商 (推薦)
+      local: 本地離線引擎 (私密無網路)
+    providerCards:
+      gemini: Google Gemini (提供免費額度)
+      openrouter: OpenRouter (萬能聚合平台)
+      openai: OpenAI
+      anthropic: Anthropic Claude
+      ollama: Ollama (本地部署)
+      webllm: WebLLM (瀏覽器內 WebGPU)
+    apiKey: API 金鑰
+    model: 選擇模型
+    baseUrl: 自訂端點 URL
+    verify: 測試連線
+    verified: 連線驗證成功
+    verifyFailed: '連線失敗: {reason}'
+
+  persona:
+    label: 靈魂人格
+    subtitle: 個性核心
+    title: 角色靈魂與人格特徵
+    description: 挑選或客製化伴侶的根本身份、口癖習慣以及故事背景設定。
+    presetCards:
+      airi: AIRI (預設自主伴侶靈魂)
+      custom: 自訂伴侶角色卡
+      import: 匯入角色卡 (PNG / JSON)
+    characterName: 伴侶名稱
+    personalitySummary: 人格概述
+    firstMessage: 開場問候語 (Turn 0)
+    firstMessagePlaceholder: 當舞台首次啟動時，伴侶會開口對你說什麼？
+    speechQuirks: 口癖習慣與語調
+
+  hearing:
+    label: 聽覺能力
+    subtitle: 語音識別 (STT)
+    title: 聽覺與語音辨識配置
+    description: 配置麥克風輸入、人聲活動檢測 (VAD) 以及語音聽寫轉錄引擎。
+    micSelect: 麥克風輸入裝置
+    testMic: 麥克風測試
+    vadThreshold: 收音靈敏度閾值
+    engines:
+      deepgram: Deepgram Nova (超高速雲端識別)
+      whisper: 本地 Whisper (100% 離線運行)
+      browser: Web Speech API (免配置瀏覽器原生)
+
+  speech:
+    label: 發音能力
+    subtitle: 神經擬真語音 (TTS)
+    title: 發音與擬真語音合成
+    description: 為伴侶賦予動聽的聲線。可選擇高品質雲端神經語音或純本地私密合成。
+    voiceCards:
+      kokoro: Kokoro TTS (本地 WebGPU / WASM)
+      elevenlabs: ElevenLabs (極度逼真擬真聲線)
+      azure: Azure Cognitive Speech
+      edge: Edge TTS (免費雲端語音)
+    voiceSelect: 音色選擇
+    previewVoice: 試聽聲音樣本
+    pitch: 音調調節
+    speed: 語速調節
+
+  thinking:
+    label: 思考節奏
+    subtitle: 節奏把控與潛意識旁白
+    title: 思考延遲與對話節奏把控
+    description: 配置複雜推理過程中的思考停頓、自然過渡擬聲詞以及潛意識自言自語。
+    presets:
+      snappy:
+        title: 迅捷
+        description: 200毫秒極速響應，即問即答，思考等待幾乎無感。
+      balanced:
+        title: 均衡
+        description: 貼合真人的日常交談節奏，遇到複雜問題時會自然使用墊話與停頓。
+      deepCot:
+        title: 深度思考
+        description: 深入的邏輯鏈條推理，在醞釀答案時會伴隨豐富的潛意識喃喃自語。
+    subconsciousAsides: 潛意識旁白發音 (Needle 2 WASM)
+    asidesDescription: 允許伴侶在生成長篇複雜回答時，將內心的思考碎碎念真實念出。
+
+  emotions:
+    label: 豐富情感
+    subtitle: 2-Pass ACT 動作表情橋接
+    title: 情感共鳴與 ACT 橋樑
+    description: 將文字對話中的情緒線索無縫轉化為形象的生動面部表情與肢體動作。
+    pass1Title: '第 1 階段：表情提取與歸一化'
+    pass1Desc: 將模型的微表情提煉為標準的 <|ACT:*|> 動作指令標記。
+    pass2Title: '第 2 階段：演職提示詞注入'
+    pass2Desc: 系統提示詞指令，教會角色在合適的語境下自主流露恰當的神情。
+    liveExpressionTest: 即時表情預覽測試
+    testExpressions:
+      happy: 開心微笑
+      flustered: 臉紅害羞
+      thinking: 若有所思
+      surprised: 驚奇驚訝
+      wink: 調皮眨眼
+
+  vision:
+    label: 圖像感知
+    subtitle: 聊天識圖與分析 (VLM)
+    title: 視覺感知 (多模態識圖)
+    description: 讓伴侶能夠看懂你在聊天中發送的照片、螢幕截圖與藝術畫作並給出真實反饋。
+    engineTitle: 視覺理解模型
+    testImage: 測試圖像感知
+    testPrompt: 上傳一張照片以驗證伴侶的視覺圖像分析能力。
+    perceptionAccuracy: 感知響應延遲與準確度
+
+  screen:
+    label: 桌面觀察
+    subtitle: 螢幕動態捕捉
+    title: 桌面螢幕動態感知
+    description: 允許伴侶在後台輕量觀察你的電腦螢幕，適時提供貼心的建議與對話。
+    deliveryMode:
+      title: 提醒推送模式
+      voiceAndBubble: 語音播報與氣泡 (沉浸全開)
+      bubbleOnly: 僅提示氣泡 (靜默提醒)
+      voiceOnly: 僅語音播報
+      muted: 完全靜音 (僅記錄螢幕上下文)
+    salienceGate:
+      title: 視覺顯著性過濾門
+      ocr: 輕量 OCR 文字辨識 (極低 CPU 開銷)
+      vlm: VLM 視覺大模型深度剖析
+    privacyExclusions: 隱私屏蔽名單 (自動避開網銀、密碼器及私密應用視窗)
+
+  proactivity:
+    label: 主動互動
+    subtitle: 生活起居與環境心跳
+    title: 生活規律與主動互動
+    description: 設定伴侶的主動問候頻率、就寢免打擾時段以及生活規律。
+    heartbeats: 自主環境心跳
+    heartbeatsDesc: 當一段時間沒有交談時，伴侶可根據當前情境主動挑起話題。
+    quietHours: 免打擾作息時段
+    quietHoursDesc: 伴侶在設定時間段進入深度睡眠狀態，絕不主動發出聲音打擾。
+    scheduleFrom: 入睡時間
+    scheduleTo: 醒來時間
+
+  artistry:
+    label: 藝術創作
+    subtitle: 畫面生成與自主導演
+    title: 藝術創作與圖像繪製
+    description: 賦予伴侶為彼此繪製自拍、肖像插畫以及舞台演現場景的能力。
+    engines:
+      pollinations: Pollinations AI (100% 免費免配置)
+      comfyui: ComfyUI (本地節點 http://127.0.0.1:8188)
+      disabled: 關閉畫畫功能
+    styleChips: 視覺藝術畫風
+    previewButton: 生成測試畫作
+    autonomousDirector: 自主導演循環 (允許伴侶在聊到興起時主動揮毫作畫)
+
+  memory:
+    label: 記憶體系
+    subtitle: 認知記憶四象限
+    title: 4大時序認知記憶象限
+    description: 了解你的數位伴侶如何長久銘記點滴、沉澱回憶並在睡夢中鞏固認知。
+    quadrants:
+      stmm:
+        title: 短期工作記憶 (STMM)
+        desc: 每日對話摘要與最近對話的滾動滑動視窗。
+      ltmm:
+        title: 聖典文字日誌 (LTMM)
+        desc: 記錄於本地向量資料庫中的神聖不可篡改里程碑與核心事實。
+      eternalThread:
+        title: 永恆之線 (關係紐帶圖譜)
+        desc: 伴隨著每一次互動不斷深化的情感羈絆、信任等級與共有回憶。
+      dreaming:
+        title: 夢境固化 (DRMM 與情緒回聲)
+        desc: 伴侶在夜間後台進行的情緒沉澱與認知衝突解決工序。
+
+  tools:
+    label: 工具擴充
+    subtitle: 系統自動化與桌面 MCP
+    title: 自動化工具與桌面能力
+    description: 為伴侶接上即時網路搜尋與本地電腦控制的強大羽翼。
+    webSearch:
+      title: 即時網路搜尋 (DuckDuckGo / Brave)
+      desc: 讓伴侶無需額外 API 金鑰即可檢索當下新聞、即時天氣與技術文件。
+    desktopMcp:
+      title: Model Context Protocol (本地桌面檔案系統)
+      desc: 在授權前提下讀寫指定工作區檔案，運行開發輔助指令碼。
+    motionGen:
+      title: 生成式 3D 動作 (FlowMDM)
+      desc: 根據對白含義即時生成量身定製的 3D 角色動作與 VRMA 動畫切片。
+
+  finale:
+    label: 啟航就緒
+    subtitle: 最終檢查與舞台發射
+    title: 啟航真實性檢查矩陣
+    description: 在正式踏上舞台前，對四大核心支柱組件的健康狀態進行確認。
+    pillars:
+      audio: 聽覺麥克風輸入
+      reasoning: 意識認知推理大腦
+      speech: 語音發音合成引擎
+      avatar: 虛擬形象與舞台驅動
+    status:
+      ready: 準備就緒
+      configured: 已配置
+      optional: 已跳過/可選
+      actionRequired: 待配置處理
+    greetingCard: 首次登台對白預覽 (Turn 0)
+    launchButton: 啟動 AIRI 舞台
+    launching: 正在喚醒舞台...
+
+quickStart:
+  title: 60秒極速啟動
+  subtitle: 使用精心調配的免配置預設方案快速體驗伴侶。
+  companionName: 伴侶名字
+  vessel: 形象軀體
+  brain: 思考大腦
+  voice: 聲音音色
+  launch: 完成配置並啟動

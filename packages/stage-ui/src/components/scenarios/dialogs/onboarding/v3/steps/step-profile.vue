@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Button } from '@proj-airi/ui'
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import CompanionBubble from '../components/companion-bubble.vue'
 
@@ -11,6 +12,8 @@ const props = defineProps<{
   onNext: () => void
   onPrevious: () => void
 }>()
+
+const { t } = useI18n()
 
 // V3 onboarding step 4 — User Profile & Identity.
 // Fields bind directly to the real `useSettingsUserProfile` store and sync to draft.
@@ -145,10 +148,10 @@ watch(
         <span :class="['font-medium tracking-wide uppercase']">User Profile & Identity</span>
       </div>
       <h2 :class="['text-2xl font-bold tracking-tight text-neutral-900 dark:text-white']">
-        Who Are You?
+        {{ t('onboarding.steps.profile.title') }}
       </h2>
       <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-1']">
-        Before choosing her soul, tell her who she's talking to — the AI card creators and image generators use this.
+        {{ t('onboarding.steps.profile.description') }}
       </p>
     </div>
 
@@ -240,11 +243,11 @@ watch(
         ]"
       >
         <div :class="['flex flex-col gap-1.5']">
-          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">User Display Name</label>
+          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">{{ t('onboarding.steps.profile.nameLabel') }}</label>
           <input
             v-model="userProfileStore.name"
             type="text"
-            placeholder="e.g. Manager"
+            :placeholder="t('onboarding.steps.profile.namePlaceholder')"
             :class="[
               'w-full border border-neutral-200 rounded-xl bg-white px-3.5 py-2 text-sm text-neutral-800 outline-none',
               'dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-900 dark:text-neutral-200 transition-colors',
@@ -256,13 +259,13 @@ watch(
         </div>
 
         <div :class="['flex flex-col gap-1.5']">
-          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">User Gender & Pronouns</label>
+          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">{{ t('onboarding.steps.profile.pronounsLabel') }}</label>
           <div :class="['grid grid-cols-3 gap-2']">
             <button
               v-for="opt in [
-                { id: 'male', label: 'Male', sub: 'he/him', icon: 'i-solar:user-bold-duotone' },
-                { id: 'female', label: 'Female', sub: 'she/her', icon: 'i-solar:user-heart-rounded-bold-duotone' },
-                { id: 'non-binary', label: 'Non-Binary', sub: 'they/them', icon: 'i-solar:users-group-two-rounded-bold-duotone' },
+                { id: 'male', label: t('onboarding.steps.profile.pronouns.he'), sub: 'he/him', icon: 'i-solar:user-bold-duotone' },
+                { id: 'female', label: t('onboarding.steps.profile.pronouns.she'), sub: 'she/her', icon: 'i-solar:user-heart-rounded-bold-duotone' },
+                { id: 'non-binary', label: t('onboarding.steps.profile.pronouns.they'), sub: 'they/them', icon: 'i-solar:users-group-two-rounded-bold-duotone' },
               ] as const"
               :key="opt.id"
               type="button"
@@ -287,11 +290,11 @@ watch(
         </div>
 
         <div :class="['flex flex-col gap-1.5']">
-          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">Narrative Description</label>
+          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">{{ t('onboarding.steps.profile.bioLabel') }}</label>
           <textarea
             v-model="userProfileStore.description"
             rows="3"
-            placeholder="A quiet manager who coordinates the cast..."
+            :placeholder="t('onboarding.steps.profile.bioPlaceholder')"
             :class="[
               'w-full border border-neutral-200 rounded-xl bg-white px-3.5 py-2 text-sm text-neutral-800 outline-none resize-none',
               'dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-900 dark:text-neutral-200 transition-colors',
@@ -337,7 +340,7 @@ watch(
         @click="props.onPrevious"
       >
         <div :class="['i-solar:alt-arrow-left-line-duotone h-4 w-4']" />
-        <span>Back to Experience</span>
+        <span>{{ t('onboarding.shell.previous') }}</span>
       </button>
 
       <div :class="['text-[11px] text-neutral-400 font-medium']">
@@ -353,7 +356,7 @@ watch(
         ]"
         @click="props.onNext"
       >
-        <span>Next: Physical Vessel</span>
+        <span>{{ t('onboarding.shell.next') }}</span>
         <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
       </Button>
     </div>

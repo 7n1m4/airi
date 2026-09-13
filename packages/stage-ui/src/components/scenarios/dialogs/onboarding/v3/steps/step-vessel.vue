@@ -5,6 +5,7 @@ import { SPOTLIGHT_MODELS } from '@proj-airi/stage-ui/constants'
 import { Button } from '@proj-airi/ui'
 import { useFileDialog } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import VesselCoverflow from '../components/vessel-coverflow.vue'
@@ -17,6 +18,7 @@ const props = defineProps<{
   onPrevious: () => void
 }>()
 
+const { t } = useI18n()
 const draft = useOnboardingV3Draft()
 const displayModelsStore = useDisplayModelsStore()
 
@@ -276,10 +278,10 @@ function handleDrop(e: DragEvent) {
       <div :class="['flex items-center justify-between']">
         <div>
           <h2 :class="['text-2xl font-bold tracking-tight text-neutral-900 dark:text-white']">
-            Physical Vessel
+            {{ t('onboarding.steps.vessel.title') }}
           </h2>
           <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5']">
-            Mount your companion's soul onto a physical body — or drop your own custom model.
+            {{ t('onboarding.steps.vessel.description') }}
           </p>
         </div>
         <div :class="['flex items-center gap-2']">
@@ -363,7 +365,7 @@ function handleDrop(e: DragEvent) {
           ]"
           @click="activeFormatFilter = 'all'"
         >
-          All Formats
+          {{ t('onboarding.steps.vessel.filters.all') }}
         </button>
         <button
           type="button"
@@ -375,7 +377,7 @@ function handleDrop(e: DragEvent) {
           ]"
           @click="activeFormatFilter = 'vrm'"
         >
-          VRM (3D)
+          {{ t('onboarding.steps.vessel.filters.vrm') }}
         </button>
         <button
           type="button"
@@ -387,7 +389,7 @@ function handleDrop(e: DragEvent) {
           ]"
           @click="activeFormatFilter = 'live2d'"
         >
-          Live2D (2D)
+          {{ t('onboarding.steps.vessel.filters.live2d') }}
         </button>
         <button
           type="button"
@@ -576,7 +578,7 @@ function handleDrop(e: DragEvent) {
         @click="props.onPrevious"
       >
         <div :class="['i-solar:alt-arrow-left-line-duotone h-4 w-4']" />
-        <span>Back to Profile</span>
+        <span>{{ t('onboarding.shell.previous') }}</span>
       </button>
 
       <div :class="['text-[11px] text-neutral-400 font-medium']">
@@ -592,7 +594,7 @@ function handleDrop(e: DragEvent) {
         ]"
         @click="props.onNext"
       >
-        <span>Next: Consciousness (LLM)</span>
+        <span>{{ t('onboarding.shell.next') }}</span>
         <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
       </Button>
     </div>

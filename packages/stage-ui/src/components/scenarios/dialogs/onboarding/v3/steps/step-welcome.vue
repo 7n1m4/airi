@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Button } from '@proj-airi/ui'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   onNext: () => void
@@ -8,13 +9,15 @@ const props = defineProps<{
   onSkip?: () => void
 }>()
 
+const { t } = useI18n()
+
 const showSkipConfirmation = ref(false)
 
-const featurePills = [
-  { icon: 'i-solar:cpu-bolt-bold-duotone', label: 'Local WebGPU Core', color: 'text-cyan-400' },
-  { icon: 'i-solar:shield-check-bold-duotone', label: '100% Offline & Private', color: 'text-emerald-400' },
-  { icon: 'i-solar:magic-stick-3-bold-duotone', label: 'Mix & Match Souls + Bodies', color: 'text-purple-400' },
-]
+const featurePills = computed(() => [
+  { icon: 'i-solar:cpu-bolt-bold-duotone', label: t('onboarding.steps.welcome.pills.localGpu'), color: 'text-cyan-400' },
+  { icon: 'i-solar:shield-check-bold-duotone', label: t('onboarding.steps.welcome.pills.privacy'), color: 'text-emerald-400' },
+  { icon: 'i-solar:magic-stick-3-bold-duotone', label: t('onboarding.steps.welcome.pills.mixMatch'), color: 'text-purple-400' },
+])
 
 function confirmCloseToTray() {
   showSkipConfirmation.value = false
@@ -56,10 +59,10 @@ function confirmCloseToTray() {
       :class="['text-center']"
     >
       <h1 :class="['text-3xl text-neutral-900 dark:text-white font-bold tracking-tight']">
-        Welcome to AIRI
+        {{ t('onboarding.steps.welcome.title') }}
       </h1>
       <p :class="['mt-2 text-sm text-neutral-600 dark:text-neutral-400']">
-        Your companion's stage — set up in minutes, 100% on your machine.
+        {{ t('onboarding.steps.welcome.description') }}
       </p>
     </div>
 
@@ -89,7 +92,7 @@ function confirmCloseToTray() {
           'text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed backdrop-blur-md bg-primary-500/5 dark:bg-primary-950/20 shadow-lg shadow-primary-950/10',
         ]"
       >
-        "Hello! I’m your autonomous digital companion. Whether you want voice conversation, creative stage performances, or a quiet desktop presence, I’m ready to adapt to your world."
+        "{{ t('onboarding.steps.welcome.companionGreeting') }}"
       </div>
     </div>
 
@@ -131,7 +134,7 @@ function confirmCloseToTray() {
         @click="props.onQuickStart"
       >
         <div :class="['i-solar:bolt-bold text-cyan-400 h-4 w-4']" />
-        <span>Quick Start (60s)</span>
+        <span>{{ t('onboarding.steps.welcome.actions.quickStart') }}</span>
       </button>
 
       <Button
@@ -143,7 +146,7 @@ function confirmCloseToTray() {
         ]"
         @click="props.onNext"
       >
-        <span>Guided Setup</span>
+        <span>{{ t('onboarding.steps.welcome.actions.guidedSetup') }}</span>
         <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
       </Button>
 
@@ -152,7 +155,7 @@ function confirmCloseToTray() {
         :class="['rounded-xl px-4 py-2.5 text-sm text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer']"
         @click="showSkipConfirmation = true"
       >
-        Setup Later
+        {{ t('onboarding.steps.welcome.actions.setupLater') }}
       </button>
     </div>
 
@@ -168,14 +171,14 @@ function confirmCloseToTray() {
 
         <div>
           <h3 :class="['text-base font-bold text-neutral-900 dark:text-white']">
-            Setup Saved for Later
+            {{ t('onboarding.steps.welcome.skipDialog.title') }}
           </h3>
           <p :class="['mt-2 text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed']">
-            You can reopen your companion setup anytime by clicking the AIRI icon in your macOS menu bar / system tray:
+            {{ t('onboarding.steps.welcome.skipDialog.description') }}
           </p>
           <div :class="['mt-3 rounded-xl border border-primary-500/30 bg-primary-500/10 dark:bg-primary-950/30 px-3.5 py-2 text-xs font-semibold text-primary-600 dark:text-primary-300 flex items-center justify-center gap-2']">
             <div :class="['i-solar:cursor-square-bold-duotone h-4 w-4']" />
-            <span>Companion Setup & Sign-In (V3)</span>
+            <span>{{ t('onboarding.steps.welcome.skipDialog.trayMenuLabel') }}</span>
           </div>
         </div>
 
@@ -185,14 +188,14 @@ function confirmCloseToTray() {
             :class="['flex-1 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 px-4 py-2 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors cursor-pointer']"
             @click="showSkipConfirmation = false"
           >
-            Continue Setup
+            {{ t('onboarding.steps.welcome.skipDialog.continueButton') }}
           </button>
           <button
             type="button"
             :class="['flex-1 rounded-xl bg-primary-600 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-500 transition-colors shadow-md shadow-primary-600/30 cursor-pointer']"
             @click="confirmCloseToTray"
           >
-            Close to Tray
+            {{ t('onboarding.steps.welcome.skipDialog.closeButton') }}
           </button>
         </div>
       </div>

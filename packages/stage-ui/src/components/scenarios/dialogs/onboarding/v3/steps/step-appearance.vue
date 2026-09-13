@@ -17,7 +17,7 @@ const { isDark } = useTheme()
 const settingsGeneral = useSettingsGeneral()
 const settingsTheme = useSettingsTheme()
 const syncStore = useSyncEngineStore()
-const { locale } = useI18n()
+const { locale, t } = useI18n()
 
 interface LanguageItem {
   code: string
@@ -32,6 +32,7 @@ const languages: LanguageItem[] = [
   { code: 'ja', name: 'Japanese', native: '日本語', badge: 'JA', region: 'Japan' },
   { code: 'zh-Hans', name: 'Simplified Chinese', native: '简体中文', badge: '简', region: 'China / SG' },
   { code: 'zh-Hant', name: 'Traditional Chinese', native: '繁體中文', badge: '繁', region: 'Taiwan / HK' },
+  { code: 'ko', name: 'Korean', native: '한국어', badge: 'KO', region: 'Korea' },
   { code: 'es', name: 'Spanish', native: 'Español', badge: 'ES', region: 'Spain / LatAm' },
   { code: 'fr', name: 'French', native: 'Français', badge: 'FR', region: 'France / CA' },
   { code: 'ru', name: 'Russian', native: 'Русский', badge: 'RU', region: 'Eurasia' },
@@ -130,10 +131,10 @@ const activeColorName = computed(() => {
           <span>Step 3 of 17 · Environment Setup</span>
         </div>
         <h1 :class="['text-2xl font-bold tracking-tight text-neutral-900 dark:text-white']">
-          Language & Appearance
+          {{ t('onboarding.steps.appearance.title') }}
         </h1>
         <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5']">
-          Personalize your studio display language, visual mode, and primary accent palette.
+          {{ t('onboarding.steps.appearance.description') }}
         </p>
       </div>
 
@@ -188,7 +189,7 @@ const activeColorName = computed(() => {
             <div :class="['i-solar:global-bold-duotone text-lg text-primary-500']" />
             <div>
               <h2 :class="['text-xs font-bold text-neutral-800 dark:text-neutral-200']">
-                Display Language
+                {{ t('onboarding.steps.appearance.languageSection') }}
               </h2>
               <p :class="['text-[11px] text-neutral-400']">
                 Current: <span :class="['text-primary-500 font-semibold uppercase']">{{ currentLanguage }}</span>
@@ -196,7 +197,7 @@ const activeColorName = computed(() => {
             </div>
           </div>
           <span :class="['text-[10px] font-mono px-2 py-0.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-800/50']">
-            8 Locales
+            {{ languages.length }} Locales
           </span>
         </div>
 
@@ -252,7 +253,7 @@ const activeColorName = computed(() => {
 
         <div :class="['text-[11px] text-neutral-400 flex items-center gap-1.5 pt-2 border-t border-neutral-100 dark:border-neutral-800/80']">
           <div :class="['i-solar:info-circle-linear text-xs text-neutral-400']" />
-          <span>Applies to dialogue, settings, and stage controls.</span>
+          <span>{{ t('onboarding.steps.appearance.languageNote') }}</span>
         </div>
       </div>
 
@@ -271,15 +272,15 @@ const activeColorName = computed(() => {
               <div :class="[isDark ? 'i-solar:moon-bold-duotone text-indigo-400' : 'i-solar:sun-2-bold-duotone text-amber-500', 'text-lg']" />
               <div>
                 <h2 :class="['text-xs font-bold text-neutral-800 dark:text-neutral-200']">
-                  Theme Mode
+                  {{ t('onboarding.steps.appearance.themeSection') }}
                 </h2>
                 <p :class="['text-[11px] text-neutral-400']">
-                  Select daylight clarity or nighttime contrast
+                  {{ t('onboarding.steps.appearance.themeDesc') }}
                 </p>
               </div>
             </div>
             <span :class="['text-[10px] font-mono px-2 py-0.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-800/50']">
-              {{ isDark ? 'Dark Mode' : 'Light Mode' }}
+              {{ isDark ? t('onboarding.steps.appearance.darkMode') : t('onboarding.steps.appearance.lightMode') }}
             </span>
           </div>
 
@@ -301,10 +302,10 @@ const activeColorName = computed(() => {
               </div>
               <div :class="['min-w-0']">
                 <div :class="['text-xs font-bold', isDark ? 'text-indigo-400' : 'text-neutral-800 dark:text-neutral-200']">
-                  Dark Mode
+                  {{ t('onboarding.steps.appearance.darkMode') }}
                 </div>
                 <div :class="['text-[10px] text-neutral-400 truncate']">
-                  Deep slate & OLED blacks
+                  {{ t('onboarding.steps.appearance.darkDesc') }}
                 </div>
               </div>
             </button>
@@ -325,10 +326,10 @@ const activeColorName = computed(() => {
               </div>
               <div :class="['min-w-0']">
                 <div :class="['text-xs font-bold', !isDark ? 'text-amber-500' : 'text-neutral-800 dark:text-neutral-200']">
-                  Light Mode
+                  {{ t('onboarding.steps.appearance.lightMode') }}
                 </div>
                 <div :class="['text-[10px] text-neutral-400 truncate']">
-                  Crisp & bright daylight
+                  {{ t('onboarding.steps.appearance.lightDesc') }}
                 </div>
               </div>
             </button>
@@ -348,10 +349,10 @@ const activeColorName = computed(() => {
               <div :class="['i-solar:palette-bold-duotone text-lg text-primary-500']" />
               <div>
                 <h2 :class="['text-xs font-bold text-neutral-800 dark:text-neutral-200']">
-                  Signature Accent Color
+                  {{ t('onboarding.steps.appearance.accentSection') }}
                 </h2>
                 <p :class="['text-[11px] text-neutral-400']">
-                  Active: <span :class="['text-primary-500 font-semibold']">{{ activeColorName }}</span>
+                  <span :class="['text-primary-500 font-semibold']">{{ t('onboarding.steps.appearance.activeLabel', { color: activeColorName }) }}</span>
                 </p>
               </div>
             </div>
@@ -365,7 +366,7 @@ const activeColorName = computed(() => {
                 @click="resetColorToDefault"
               >
                 <div :class="['i-solar:restart-linear text-xs']" />
-                <span>Reset</span>
+                <span>{{ t('onboarding.steps.appearance.resetDefault') }}</span>
               </button>
               <SettingsThemeHeaderWidget shrink-0 />
             </div>
@@ -425,7 +426,7 @@ const activeColorName = computed(() => {
         <div :class="['i-solar:laptop-minimalistic-bold-duotone text-base text-primary-500 shrink-0']" />
         <div :class="['min-w-0']">
           <div :class="['font-semibold text-neutral-800 dark:text-neutral-200']">
-            Keep appearance local to this device
+            {{ t('onboarding.steps.appearance.syncPerDevice') }}
           </div>
           <div :class="['text-[11px] text-neutral-400 truncate']">
             Prevents remote cloud sync from overwriting this machine's language and theme preferences.
@@ -464,7 +465,7 @@ const activeColorName = computed(() => {
         @click="props.onPrevious"
       >
         <div :class="['i-solar:alt-arrow-left-line-duotone h-4 w-4']" />
-        <span>Back to Account</span>
+        <span>{{ t('onboarding.shell.previous') }}</span>
       </button>
 
       <div :class="['text-[11px] text-neutral-400 font-medium']">
@@ -480,7 +481,7 @@ const activeColorName = computed(() => {
         ]"
         @click="props.onNext"
       >
-        <span>Continue to Experience Archetypes</span>
+        <span>{{ t('onboarding.shell.next') }}</span>
         <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
       </Button>
     </div>
