@@ -11,7 +11,7 @@ import { isMacOS } from 'std-env'
 
 import { electronWindowSetTitle } from '../../../shared/eventa'
 import { createI18nService } from '../../services/airi/i18n'
-import { createAppService, createScreenService, createWindowService } from '../../services/electron'
+import { createAppService, createProcessSpawnerService, createScreenService, createWindowService } from '../../services/electron'
 import { createSensorsService } from '../../services/sensors'
 
 export function toggleWindowShow(window?: BrowserWindow | null): void {
@@ -138,6 +138,7 @@ export async function setupBaseWindowElectronInvokes(params: {
   createScreenService({ context: params.context, window: params.window })
   createWindowService({ context: params.context, window: params.window })
   createAppService({ context: params.context, window: params.window })
+  createProcessSpawnerService({ context: params.context, window: params.window })
   await createI18nService({ context: params.context, window: params.window, i18n: params.i18n })
   createSensorsService({ context: params.context })
 
