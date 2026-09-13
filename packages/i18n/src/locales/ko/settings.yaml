@@ -43,6 +43,43 @@ dialogs:
       stateRequesting: Requesting...
       stateGranted: Granted
       stateNotGranted: Not granted
+    modeSelection:
+      title: 어떻게 시작하시겠습니까?
+      description: 원하시는 설정 경험을 선택하세요.
+      easy:
+        title: 간편 설정
+        description: 추천 클라우드 공급자로 즉시 시작하세요.
+      custom:
+        title: 고급 설정
+        description: 자체 로컬 또는 커스텀 공급자를 직접 구성합니다.
+    senseSetup:
+      title: 감각 포털
+      description: 시작하려면 동반자의 핵심 감각을 구성하세요.
+      consciousness: 의식 코어 (LLM)
+      speech: 음성 및 청각
+      getOpenRouterKey: OpenRouter 키 받기
+      openRouterSubtext: 빠르고 고품질이며 무료 모델 지원. 복잡한 인증이 필요하지 않습니다.
+      deepgramSubtext: 신규 가입 시 $200 크레딧 증정. 약 50시간의 전사 및 음성 합성 서비스 포함.
+      senseKey: 감각 키 (Sense Key)
+      senseKeyHelp: 음성 기능을 활성화하려면 Deepgram API 키를 입력하세요.
+      getDeepgramKey: Deepgram 키 받기
+    validationPartial: 구성이 부분적으로 검증됨
+    testGeneration: 생성 테스트
+    testGenerationRunning: 테스트 중...
+    testGenerationFailed: 생성 테스트 실패
+    skipPermanently: 영구 건너뛰기
+    starter:
+      title: 첫 동반자를 선택하세요
+      description: 여정을 함께할 동반자를 선택하세요.
+      relu: ReLU
+      relu_desc: 당신의 데이터와 마음과 함께 진화하는 영혼의 유대.
+      aria: Dr. Aria
+      aria_desc: AIRI 연구 계층을 관리하는 총명하고 기민한 안내자.
+      lupin: 루핀 (Lupin)
+      lupin_desc: 날카로운 본능과 보호심을 지닌 충직한 늑대 소녀.
+      import: 커스텀
+      import_desc: .json 또는 .png 캐릭터 카드에서 나만의 영혼을 가져옵니다.
+      footer: '더 놀라운 커뮤니티 작품을 둘러보거나 나중에 직접 가져오세요:'
 language:
   title: 언어
   description: >
@@ -158,6 +195,9 @@ pages:
           카드 버전, 이전 카드에서 변경하는 경우 이를 늘려야 합니다.
         consciousness_model: 이 캐릭터에 대한 의식 모델(AI 모델)을 선택합니다.
         speech_model: 이 캐릭터의 음성 합성 모델과 음성을 선택합니다.
+        identity_prompting: 이 필드들은 캐릭터 정의에 도움이 되지만, 현재 별도의 런타임 레이어로 분리되어 있지는 않습니다. 시스템 프롬프트는 AIRI의
+          활성 프롬프트 조합에 직접 사용됩니다. 히스토리 후속 지침은 주로 카드 호환성과 향후 프롬프트 파이프라인을 위해 유지되므로,
+          실시간 동작 차이를 기대하지 않고 지금 작성해 두셔도 좋습니다.
       errors:
         name: 이름은 유효하거나 비어 있지 않아야 합니다.
         version: '오류: 잘못된 버전 번호입니다!'
@@ -166,6 +206,8 @@ pages:
         scenario: '오류: 시나리오가 필요합니다.'
         systemprompt: '오류: 시스템 프롬프트를 제공해 주세요.'
         posthistoryinstructions: '오류: 기록 게시 후 프롬프트가 필요합니다.'
+      none: 없음 (배경 없음)
+      preferred_background: 선호하는 장면 / 배경
     modules: 모듈
     name_asc: 이름 (A-Z)
     name_desc: 이름 (Z-A)
@@ -223,6 +265,21 @@ pages:
         title: 데스크탑 설정 및 상태 초기화
         description: AIRI 데스크탑 설정 및 런타임 상태를 전부 지웁니다.
         reset: 데스크탑 데이터 지우기
+      characters:
+        title: 캐릭터
+        description: 캐릭터 컬렉션을 대량으로 내보내거나 가져옵니다.
+        export: 캐릭터 내보내기
+        import: 캐릭터 가져오기
+      memory:
+        title: 기억 및 저널
+        description: 단기 기억 요약과 장기 저널 항목을 백업합니다.
+        export: 기억 내보내기
+        import: 기억 가져오기
+      backgrounds:
+        title: 배경 갤러리
+        description: 장면 갤러리(이미지 포함)를 내보내거나 가져옵니다.
+        export: 배경 내보내기
+        import: 배경 가져오기
     confirmations:
       tooltip: 정말 진행하실 건가요?
       'yes': '네'
@@ -236,6 +293,12 @@ pages:
       providers_reset: 제공자 설정이 초기화되었습니다.
       all_deleted: 로컬 데이터가 초기화되었습니다.
       desktop_reset: 데스크탑 데이터가 초기화되었습니다.
+      characters_exported: 캐릭터 컬렉션을 내보냈습니다.
+      characters_imported: 캐릭터 컬렉션을 가져왔습니다.
+      memory_exported: 기억 및 저널 데이터를 내보냈습니다.
+      memory_imported: 기억 및 저널 데이터를 가져왔습니다.
+      backgrounds_exported: 배경 갤러리를 내보냈습니다.
+      backgrounds_imported: 배경 갤러리를 가져왔습니다.
   models:
     description: Live2D, VRM, 기타 등등.
     title: 모델
@@ -248,6 +311,13 @@ pages:
           title: VRM
           description: 3D VRM 모델 및 설정 구성
         scene: 장면
+    explore:
+      title: 아바타 탐색
+      description: VRM, Live2D, Spine, MMD용 커뮤니티 아카이브, 외부 저장소 및 무료 모델 라이브러리를 탐색하세요.
+    tip:
+      title: 더 많은 아바타를 찾고 계신가요?
+      description: 기존 모델이 지루하신가요? 멋진 새 무료 모델을 다운로드하고 싶으신가요? 엄선된 아바타 카탈로그와 마켓플레이스를 확인해 보세요.
+      action: 아바타 탐색
   modules:
     beat_sync:
       description: 오디오 소스의 비트가 있는 바이브
@@ -362,6 +432,14 @@ pages:
         section:
           provider-selection:
             description: 적절한 음성 인식 제공자 선택
+          hotkey:
+            title: 마이크 토글 단축키
+            description: 키보드 잠금 키(Scroll, Caps 또는 Num Lock)로 마이크를 전환합니다. 키보드 LED가 AIRI의 마이크
+              상태와 동기화됩니다.
+            options:
+              scroll: Scroll Lock
+              caps: Caps Lock
+              num: Num Lock
     memory-long-term:
       description: 장기 메모리 관련 설정 및 관리
       title: 장기 메모리
@@ -377,6 +455,41 @@ pages:
       token-description: 당신의 Discord 봇 토큰
       token-placeholder: Discord 봇 토큰을 입력해주세요
       configured: Discord 구성 완료!
+      connectivity:
+        title: 연결 상태
+        status: 상태
+        ping: 지연 시간
+        connected: 연결됨
+        disconnected: 연결 끊김
+        connecting: 연결 중...
+        error: 오류
+        no-guilds: 서버에 연결되지 않았습니다.
+      actions:
+        start: 서비스 시작
+        stop: 서비스 중지
+        restart: 서비스 재시작
+        force-sync: 카드 강제 동기화
+        simulate: 메시지 시뮬레이션
+        test-auth: 인증 테스트
+        clear-log: 로그 지우기
+      presence:
+        title: 활성 프레즌스
+        guild: 서버
+        channel: 채널
+        no-active: 활성 프레즌스가 없습니다.
+      dev-console:
+        title: 개발자 콘솔
+        empty: 기록된 이벤트가 없습니다. 캡처를 시작하려면 서비스를 시작하세요.
+      simulate-dialog:
+        username: 사용자 이름
+        username-placeholder: 사용자 이름 입력...
+        content: 메시지
+        content-placeholder: 테스트 메시지 입력...
+        send: 전송
+      controls:
+        title: 제어 및 모달리티
+        vision: VLM (비전) 이미지 수신 활성화
+        vision-description: AIRI가 Discord의 이미지 첨부 파일을 읽고 처리할 수 있도록 허용합니다
     speech:
       description: 음성 합성
       sections:
@@ -410,6 +523,7 @@ pages:
             show_less: 간략히 보기
             show_more: 더 보기
             title: 제공자
+            search_results: 총 {total}개 모델 중 {count}개 발견됨
           voice-settings:
             input-ssml:
               placeholder: SSML 텍스트 입력
@@ -447,9 +561,45 @@ pages:
       actions:
         open-config: mcp.json 열기
         apply-and-restart: 표준 입출력 MCP 저장 후 재시작
+        edit-json: mcp.json 편집
+        apply-restart: 저장하고 stdio MCP 재시작
+        refresh: 상태 새로고침
+        install: 설치
+        installed: 설치됨
       messages:
         opened: '{path}에서 설정 파일 열림'
         restarted: 'MCP 서버 재시작 완료. 시작: {started}, 실패: {failed}, 건너뜀: {skipped}'
+        install-success: '{name} 설치 성공'
+      tabs:
+        manage: 관리
+        discover: 탐색
+      search-placeholder: 'MCP 서버 검색 (예: Google Search, Filesystem)...'
+      dashboard:
+        tool-count: '{count}개 도구 사용 가능'
+      registry:
+        loading: 레지스트리 로드 중...
+        stars: '{count}개 스타'
+        no-results: '"{query}"에 일치하는 서버를 찾을 수 없습니다'
+    artistry:
+      description: 자율 이미지 생성, ComfyUI 스튜디오 및 기억 일러스트레이션
+      title: 아트 & 이미지 스튜디오
+      widget-instructions:
+        label: 위젯 생성 지침
+        description: AI 모델에게 아티스트리 위젯 시스템 사용법을 안내하는 지침. 비워두면 시스템 기본값이 적용됩니다.
+      spawn_mode:
+        label: 이미지 표시 경로
+        description: 생성된 이미지를 시스템에 어떻게 전달할지 결정합니다.
+        options:
+          bg: 스테이지 배경
+          inline: 채팅 내역 (인라인)
+          widget: 독립형 위젯
+          bg_widget: 배경 및 위젯 (기본값)
+    cloud-sync:
+      title: 클라우드 동기화 (BYOS)
+      description: 활성 상태 클라우드 동기화, S3/R2 스토리지 및 다중 장치 영속 보관함
+    text-to-motion:
+      title: 텍스트 투 모션 (Text to Motion)
+      description: 절차적 LLM 키프레임, FlowMDM 3D 확산 생성 및 VRMA 컴파일
   providers:
     explained:
       chat: '텍스트 생성 모델 제공자를 구성합니다. (예시: OpenRouter, OpenAI, Ollama)'
@@ -560,6 +710,24 @@ pages:
           title: 기본
         voice:
           title: 음성 설정
+        dangerZone:
+          confirmDelete: 삭제 확인
+          deleteCredentials: 자격 증명 삭제
+          description: 이 공급자 인스턴스의 자격 증명을 삭제합니다. API 키와 엔드포인트 설정이 지워집니다.
+          title: 위험 구역
+        instances:
+          addInstance: 인스턴스 추가
+          defaultHint: 기본값
+          makePrimary: 기본으로 설정
+          primary: 기본 인스턴스
+          remove: 제거
+          title: 인스턴스 목록
+        modelBrowser:
+          description: 이 공급자 인스턴스에 사용할 모델을 선택하세요.
+          label: 모델
+          placeholder: 모델 선택...
+          title: 모델 선택
+      getApiKey: API 키 받기
     description: LLM, 음성 합성 제공자 등.
     provider:
       app-local-audio-transcription:
@@ -583,6 +751,19 @@ pages:
       amazon-bedrock:
         title: Amazon Bedrock
         description: AWS Ecosystem - Access Titan, Claude, and Llama on AWS
+        config:
+          access-key-id:
+            description: AWS IAM 액세스 키 ID
+            label: AWS 액세스 키 ID
+          region:
+            description: 'Bedrock이 활성화된 AWS 리전 (예: us-east-1, us-west-2)'
+            label: AWS 리전
+          secret-access-key:
+            description: AWS IAM 보안 비밀 액세스 키
+            label: AWS 보안 비밀 액세스 키
+          session-token:
+            description: AWS 임시 세션 토큰 (STS / AssumeRole용)
+            label: 세션 토큰 (선택 사항)
       qwen-portal:
         title: Qwen Portal
         description: Alibaba Cloud Native - Best-in-class Chinese and coding models
@@ -698,6 +879,12 @@ pages:
             description: 4비트 양자화
           q4f16:
             description: FP16이 포함된 4비트 양자화
+          fp16-webgpu:
+            description: WebGPU를 사용하는 반정밀도 모델
+          q4-webgpu:
+            description: WebGPU를 사용하는 4-bit 양자화 모델
+          q8-webgpu:
+            description: WebGPU를 사용하는 8-bit 양자화 모델
         playground:
           default-text: 안녕하세요! 이것은 Kokoro 문자 음성 변환 시스템의 테스트입니다.
           title: 음성 플레이그라운드
@@ -860,7 +1047,225 @@ pages:
         description: 음성 라이브러리 - 사용자 정의 효과 및 대화 필터를 사용하여 가상 음성 프로필 구축
       moss-nano-local:
         title: Moss TTS (Nano)
+        description: Moss TTS를 사용하는 로컬 온디바이스 텍스트 음성 변환 엔진.
+      airi-audio-server:
+        description: 고성능 신경망 오디오 서버 - 제로샷 음성 복제 및 준언어 표현 태그를 지원하는 로컬 C++ 추론
+        title: AIRI Audio Server
+      alibaba-cloud:
+        description: Model Studio - Alibaba Cloud의 대규모 모델 서비스 플랫폼
+        title: 알리바바 클라우드 (Alibaba Cloud)
+      aliyun-nls-transcription:
+        description: 다국어 음성 인식 강자 - 다양한 중국어 방언을 심층 지원하는 강력한 실시간 STT
+      apple-core-ai:
+        alert:
+          content: Apple Core AI는 네이티브 Swift 플러그인을 통해 모델을 로컬에서 실행하며, 행렬 연산을 Apple Neural
+            Engine (ANE)과 Metal GPU로 오프로드하여 WebKit 메모리 오버헤드가 거의 없습니다.
+          title: Apple Silicon 네이티브 신경망 추론
+        description: Apple Neural Engine (ANE) 및 Metal GPU를 통한 하드웨어 가속 온디바이스 신경망 지능.
+        title: Apple Core AI (온디바이스)
+      atlascloud:
+        description: api.atlascloud.ai
+        title: Atlas Cloud
+      aws-polly-tts:
+        description: AWS 생태계 - Amazon Polly의 고품질 원본 신경망 음성
+        title: Amazon AWS Polly
+      blip-local:
+        description: Danbooru 태그를 사용하여 이미지를 분류하거나 설명하는 유용한 이미지 태깅 도구로, 애니메이션 및 스타일화된
+          일러스트에 특히 효과적입니다.
+        title: Waifu Diffusion Tagger (WD)
+      byteplus-coding-plan:
+        description: BytePlus 코딩 플랜
+        title: BytePlus Coding Plan
+      byteplus:
+        description: byteplus.com
+        title: BytePlus
+      comet-api-transcription:
+        description: 엔터프라이즈급 클라우드 음성 전사
+      comfyui:
+        settings:
+          title: ComfyUI 사용자 설정
+        title: ComfyUI
+      deepgram-transcription:
+        description: 신규 가입 시 50시간 무료 제공 - 초고속, 고정밀 실시간 음성 전사
+        title: Deepgram STT (Nova)
+      local-fs:
+        settings:
+          title: 로컬 파일 시스템 / Samba 설정
+      mimo:
+        description: Xiaomi MiMo Code - 무진입장벽 무료 AI 코딩 어시스턴트
+        title: MiMo
+      moondream-local:
+        description: 자연스러운 이미지 이해 및 시각적 질의응답을 위해 WebGPU를 통해 브라우저에서 실행되는 1.6B 온디바이스 비전 언어 모델.
+        title: Moondream2 VLM (로컬 WebGPU)
+      nanobanana:
+        settings:
+          title: Nano Banana 사용자 설정
+        title: Nano Banana
+      openai-audio-transcription:
+        description: 업계 표준 - 신뢰할 수 있고 폭넓게 호환되는 Whisper API
+      openai-compatible-audio-transcription:
+        description: 자체 엔드포인트 지원 - 커스텀 OpenAI 호환 STT 엔드포인트
+      opencode-go:
+        description: 개발자 API 플랫폼 - 월 $10부터 시작
+        title: OpenCode Go
+      openpaths:
+        description: openpaths.io
+        title: OpenPaths
+      pocket-tts-local:
+        description: Kyutai Pocket TTS를 사용하는 로컬 저지연 다국어 CPU 텍스트 음성 변환 엔진.
+        title: Pocket TTS (Kyutai 로컬)
+      pollinations:
+        description: 완전 무료 - 오픈 소스 및 API 키가 필요 없는 채팅 완성 서비스
+        title: Pollinations AI
+      replicate:
+        settings:
+          title: Replicate.ai 사용자 설정
+        title: Replicate
+      s3:
+        settings:
+          title: S3 호환 클라우드 스토리지 설정
+      volcengine-coding-plan:
+        description: Volcengine 코딩 플랜
+        title: Volcengine Coding Plan
+      web-llm:
+        activation:
+          activate: 활성화
+          active:
+            description: 이 공급자는 활성화되어 모듈에서 사용할 수 있습니다.
+            title: 공급자 활성 상태
+          deactivate: 비활성화
+          inactive:
+            description: 캐릭터 카드에서 선택할 수 있도록 이 공급자를 활성화하세요.
+            title: 공급자 활성화
+        alert:
+          content: WebLLM은 WebGPU를 통해 브라우저에서 최첨단 트랜스포머 모델을 완전히 실행합니다 — API 키나 서버가 필요하지
+            않습니다. 첫 사용 시 가중치가 다운로드되어 브라우저 Cache Storage(webllm/*)에 캐시됩니다. WebGPU
+            지원 브라우저 또는 Electron이 필요합니다(CPU/WASM 폴백 없음).
+          title: WebGPU 전용 브라우저 내 LLM
+        cache:
+          clear: WebLLM 캐시 지우기
+          description: 브라우저 Cache Storage(webllm/*)에 저장된 다운로드된 가중치 및 WASM 라이브러리.
+          title: 가중치 캐시
+        description: 브라우저 내장 오프라인 WebGPU 트랜스포머 LLM (API 키 불필요)
+        fields:
+          customRepo:
+            description: 'MLC 양자화 가중치가 있는 Hugging Face 저장소(예: my-org/custom-llama3-MLC).
+              큐레이트된 선택을 덮어씁니다.'
+            label: 사용자 정의 HF 모델 저장소 (선택 사항)
+            placeholder: https://huggingface.co/my-org/custom-model-MLC
+          customWasm:
+            description: 모델의 아키텍처 계열과 일치하는 WASM 실행 라이브러리. 게시된 WASM 바이너리가 없는 사용자 지정 저장소는 런타임에
+              404를 반환합니다.
+            label: 사용자 정의 model_lib WASM URL (사용자 정의 저장소 시 필수)
+            placeholder: https://.../custom-model_q4f16_1_cs1k-webgpu.wasm
+          model:
+            description: 사전 빌드 카탈로그에서 검증된 WebLLM 모델 (일치하는 WASM 라이브러리 포함).
+            label: 선별된 모델
+          temperature:
+            description: 샘플링 온도 (높을수록 더 창의적임).
+            label: 온도 (Temperature)
+          topP:
+            description: 핵 샘플링 차단값 (누적 확률 질량).
+            label: Top P
+        sections:
+          cache:
+            clear: WebLLM 캐시 지우기
+            clearing: 지우는 중...
+            description: 브라우저 Cache Storage(webllm/*)에 저장된 다운로드된 가중치 및 WASM 라이브러리.
+            notCached: 캐시된 WebLLM 가중치가 없습니다
+            refresh: 새로고침
+            title: 가중치 캐시
+          model:
+            description: 선별된 모델을 선택하거나 아래에 사용자 정의 Hugging Face MLC 저장소를 추가하세요.
+            title: 모델
+        title: WebLLM (로컬 WebGPU)
+      web-rwkv:
+        alert:
+          content: RWKV는 WebGPU를 통해 브라우저에서 완전히 실행됩니다 — API 키나 서버가 필요하지 않습니다. 첫 사용 시 모델이
+            다운로드되어 캐시되며, bf16/f32 가중치는 로드 시 자동으로 f16으로 변환됩니다. WebGPU 지원 브라우저 또는
+            Electron이 필요합니다(CPU/WASM 폴백 없음).
+          title: WebGPU 전용 브라우저 내 LLM
+        defaultsSection:
+          annotation: "캐릭터에 대해 이러한 설정을 사용자 지정하려면 캐릭터의 '생성' 탭으로 이동하세요: • 입력 필드를 사용하여 온도,
+            Top P 및 최대 토큰을 수정합니다. • 고급 JSON 텍스트 영역에 페널티(예:
+            {\"presence_penalty\": 0.5})를 입력하여 수정합니다."
+          description: 이것들은 web-rwkv에서 사용하는 기본 폴백 매개변수입니다.
+          field:
+            count_penalty: '빈도 페널티 Count Penalty (기본값: 0.4)'
+            max_tokens: '최대 토큰 수 (기본값: 512)'
+            penalty_decay: '페널티 감쇠 Penalty Decay (기본값: 0.996)'
+            presence_penalty: '존재 페널티 Presence Penalty (기본값: 0.4)'
+            temperature: '온도 Temperature (기본값: 1.0)'
+            top_p: 'Top P (기본값: 0.5)'
+          title: 기본 생성 매개변수 (읽기 전용)
+        description: WebGPU를 통해 브라우저에서 실행되는 로컬 RWKV-7 LLM (API 키 불필요)
+        fields:
+          enableG1Prefill:
+            description: 'G1 추론 모델을 학습된 모드로 유지하기 위해 어시스턴트 턴에 <think></think>를 미리 채우고 출력 시 선행
+              닫는 태그를 제거합니다. 비 G1(예: RWKV-6/5) 모델을 사용하는 경우 비활성화하세요.'
+            label: G1 추론 사전 채우기 및 태그 제거 활성화
+          model:
+            description: RWKV 네이티브 텐서 이름을 가진 .safetensors URL — web-rwkv 변환 또는 원시
+              HuggingFace(레이아웃 자동 감지). bf16/f32는 로드 시 f16으로 캐스팅됩니다. PyTorch
+              .pth는 지원되지 않으므로 먼저 safetensors로 변환하세요(convert_safetensors.py).
+            label: 모델 URL
+          vocab:
+            description: 번들된 RWKV World 토크나이저 어휘를 재정의합니다. 다른 언어에 최적화된 미세 조정 또는 사용자 지정 토큰 매핑을
+              사용하는 경우 여기에 어휘 JSON URL을 제공하면 적절한 텍스트 인코딩 및 생성 동작이 보장됩니다.
+            label: 어휘집(Vocab) URL (선택 사항)
+            placeholder: (내장 rwkv_vocab_v20230424.json)
+        title: RWKV (로컬 WebGPU)
+      whisper-local:
+        description: Whisper를 사용하는 로컬 음성 인식 (브라우저에서 실행, API 키 불필요)
+        title: Whisper (로컬)
     title: 제공자
+    filters:
+      all: 전체
+      cloud: 클라우드
+      deployment: 배포 방식
+      free: 무료
+      local: 로컬
+      paid: 유료
+      pricing: 가격
+      suggested: 추천
+    onboarding:
+      artistry:
+        description: 로컬 AI 아트 생성의 표준은 <b>ComfyUI</b>입니다. 클라우드 생성을 선호하는 경우
+          <b>Replicate</b>가 종량제 요금으로 다양한 모델을 제공합니다.
+        title: 그림을 생성하고 싶으신가요?
+      chat:
+        description: 빠른 시작을 위해 <b>Google Gemini</b>(무료 클라우드) 또는 <b>OpenRouter</b>(통합
+          클라우드)를 추천합니다. 개인정보 보호를 선호하고 GPU가 있다면 <b>Ollama</b> 또는 <b>LM
+          Studio</b>를 로컬에서 사용해 보세요.
+        title: 채팅이 처음이신가요?
+      speech:
+        description: 무료 등급이 제공되는 고품질 클라우드 음성을 원하시면 <b>Deepgram</b> 또는 <b>Azure
+          Speech</b>를 사용해 보세요. 완전한 로컬 무료 솔루션은 <b>Web Speech API</b> 또는 <b>Kokoro
+          TTS</b>를 권장합니다.
+        title: 음성이 필요하신가요?
+      start_here: 여기서 시작하세요
+      transcription:
+        description: 매우 빠른 클라우드 전사를 위해 <b>Deepgram STT</b>를 추천합니다. 로컬 사용의 경우 <b>Web
+          Speech API</b>(브라우저) 또는 <b>Local Whisper</b>가 훌륭한 무료 옵션입니다.
+        title: 음성 인식(STT)이 필요하신가요?
+      vision:
+        description: 강력하고 무료인 클라우드 비전을 원하시면 <b>Google Gemini</b>를 사용해 보세요. <b>Ollama</b>
+          및 <b>LM Studio</b> 같은 로컬 도구도 비전 지원 모델(VLM)을 지원합니다.
+        title: 세상을 인식하고 싶으신가요?
+    speech:
+      app_local_audio:
+        description: 음성 합성을 위한 로컬 오디오 출력 설정을 구성합니다.
+        device_id: 출력 장치 ID
+        device_id_placeholder: '출력 장치 ID 입력 (예: "default")...'
+        sample_rate: 샘플 레이트
+        sample_rate_placeholder: '샘플 레이트 입력 (예: 16000)...'
+        title: 앱 (로컬) 오디오 설정
+    transcription:
+      app_local_audio:
+        description: 전사를 위한 로컬 오디오 입력 설정을 구성합니다.
+        device_id: 입력 장치 ID
+        device_id_placeholder: '입력 장치 ID 입력 (예: "default")...'
+        title: 앱 (로컬) 오디오 설정
   connection:
     description: WebSocket 서버 연결 구성
     title: 연결
@@ -887,9 +1292,31 @@ pages:
       label: Application Gateway Key
       description: Security key to authenticate clients connecting to your node over
         the network. If empty, the gateway will not require authentication.
+    hf-token:
+      label: Hugging Face 토큰 (선택 사항)
+      description: Hugging Face 사용자 액세스 토큰입니다. 모델을 다운로드하고 요청 제한/스로틀링 오류를 방지하는 데 사용됩니다.
+      placeholder: hf_...
   scene:
     description: 캐릭터가 사는 환경 구성하기
     title: 장면
+    beta_label: 장면 시스템
+    beta_description: 각 캐릭터 카드는 이 갤러리에서 선호하는 배경을 지정할 수 있습니다. 여기서 설정하면 현재 활성화된 캐릭터의 기본값으로 지정됩니다.
+    background_image:
+      title: 활성 캐릭터 배경
+      no_background: 이 캐릭터에 활성화된 배경이 없습니다. 최상의 결과를 위해 정사각형 또는 가로 이미지를 업로드하세요.
+      upload: 갤러리에 업로드
+      change: 배경 변경
+      clear: 기본값 지우기
+    gallery:
+      title: 장면 갤러리
+      empty: 갤러리에 아직 이미지가 없습니다. 위에서 업로드해 보세요!
+      set_as_global: 캐릭터 기본값으로 설정
+      delete: 갤러리에서 삭제
+      global_badge: 캐릭터 기본값
+      active_badge: 현재 장면
+    tip:
+      label: 팁!
+      description: 정사각형 이미지를 사용하면 세로 모드에서 <b>cover</b> 크롭이 적용되어 장면 중앙에 초점이 맞춰집니다.
   system:
     color-scheme:
       description: 장면의 색상 구성표를 변경합니다.
@@ -910,6 +1337,14 @@ pages:
                 label: 주 색상
                 rgb-on:
                   title: 역동적이고 싶어요!
+              vibrancy:
+                label: 선명도 / 채도
+                muted: 은은함 (파스텔)
+                balanced: 균형
+                vivid: 선명함 (네온)
+                monochrome: 모노크롬 (흑백)
+              reset:
+                title: AIRI 시안으로 초기화
           title: 색상 구성표
         developer:
           title: 개발자 옵션
@@ -1029,13 +1464,80 @@ pages:
               description: >-
                 고대 직물, 도자기 및 회화에서 유래한 중국 전통 색채
               title: 중국 전통 색채
+            warm:
+              title: 따뜻한 불꽃 (Warm & Fire)
+              description: 활기찬 레드, 코랄, 오렌지, 황금빛 호박색
+              colors:
+                crimson: 크림슨 (Crimson)
+                coral: 코랄 (Coral)
+                tangerine: 탠저린 (Tangerine)
+                marigold: 메리골드 (Marigold)
+                amber: 앰버 (Amber)
+                lemon: 레몬 (Lemon)
+            flora:
+              title: 대지와 식물 (Earth & Flora)
+              description: 싱그러운 보태니컬, 샤르트뢰즈, 에메랄드, 민트, 오션 틸
+              colors:
+                lime: 라임 (Lime)
+                emerald: 에메랄드 (Emerald)
+                mint: 민트 (Mint)
+                jade: 제이드 (Jade)
+                viridian: 비리디언 (Viridian)
+                teal: 틸 (Teal)
+            ocean:
+              title: 바다와 하늘 (Ocean & Sky)
+              description: 트로피컬 아쿠아, 시그니처 시안, 세룰리안, 로열 블루
+              colors:
+                turquoise: 터콰이즈 (Turquoise)
+                cyan: 시그니처 시안 (Signature Cyan)
+                cerulean: 세룰리안 (Cerulean)
+                cobalt: 코발트 (Cobalt)
+                sapphire: 사파이어 (Sapphire)
+                denim: 데님 (Denim)
+            bloom:
+              title: 화려한 개화 (Royal & Bloom)
+              description: 딥 인디고, 자수정, 선명한 퍼플, 푸크시아, 로즈
+              colors:
+                indigo: 인디고 (Indigo)
+                amethyst: 애머시스트 (Amethyst)
+                violet: 바이올렛 (Violet)
+                fuchsia: 푸크시아 (Fuchsia)
+                magenta: 마젠타 (Magenta)
+                rose: 로즈 (Rose)
           title: 색상 구성표 사전 설정
+          description: 엄선된 24색 스펙트럼 그리드에서 선택하거나 위에서 색조와 채도를 사용자 지정하세요.
+          reset: 시그니처 시안으로 초기화
     title: 시스템
   page:
     developers:
       open-devtools:
         title: 개발자 도구 열기
         button: 열기
+  chat:
+    title: 채팅 설정 및 입력
+    description: 전송 단축키 조합, 스트리밍 응답 시간 초과 및 메시지 말풍선 동작
+    send-mode:
+      title: 전송 모드
+      description: 메시지를 보낼 키 조합을 선택하세요.
+      options:
+        enter: Enter
+        ctrl-enter: Ctrl + Enter
+        double-enter: Double Enter
+  docs:
+    title: 문서
+    description: AIRI 사용법과 다양한 기능을 알아보세요
+    sections:
+      overview: 개요
+      manual: 매뉴얼
+      advanced: 고급 가이드
+      chronicles: 연대기
+      showcase: 쇼케이스
+  dating-sim:
+    title: 연애 시뮬레이션 모드 (Dating Sim)
+    description: 인터랙티브 게임 모드, 친밀도 게이팅 임계값 및 시각적 행동 규칙 조정
+  stage:
+    title: 플로팅 컨트롤
+    description: 플로팅 액션 스트립 슬롯, 도킹 가장자리 및 빠른 트리거 사용자 지정
 sections:
   section:
     general:
@@ -1077,6 +1579,14 @@ vrm:
           camera: 카메라
           mouse: 마우스
           disabled: 사용 안 함
+    mouse-tracking: 마우스 추적
+    mouse-tracking-desc: 아바타가 머리와 시선으로 마우스 움직임을 추적합니다
+    follow-speed: 추종 속도
+    options:
+      option:
+        camera: 카메라
+        mouse: 마우스
+        disabled: 비활성화됨
   switch-to-vrm:
     title: Live2D 아바타로 전환하시겠습니까?
     change-to-vrm: Live2D 아바타 설정으로 전환하려면 여기를 클릭하세요
@@ -1086,7 +1596,77 @@ vrm:
   skybox:
     skybox-intensity: 스카이박스 강도
     skybox-specular-mix: 스페큘러 믹스
+  idle-animation:
+    title: 기본 대기 애니메이션
 wip:
   title: 개발 중
   description: >-
     이 기능은 현재 개발 중이며 아직 공개되지 않았습니다. 이 기능은 향후 업데이트에서 다시 확인해 보세요.
+providers:
+  speech:
+    app_local_audio:
+      description: Kokoro / ONNX를 사용하는 내장 로컬 음성 합성.
+      device_id: 장치 ID
+      device_id_placeholder: 자동
+      sample_rate: 샘플 레이트
+      sample_rate_placeholder: '예: 24000'
+      title: 앱 (로컬)
+    browser_local_audio:
+      description: Web Speech API 또는 로컬 엔진을 사용하여 브라우저에서 실행되는 음성 합성.
+      device_id: 장치 ID
+      device_id_placeholder: 자동
+      sample_rate: 샘플 레이트
+      sample_rate_placeholder: '예: 24000'
+      title: 브라우저 (로컬)
+  transcription:
+    app_local_audio:
+      description: Whisper / ONNX를 사용하는 내장 로컬 전사.
+      device_id: 장치 ID
+      device_id_placeholder: 자동
+      title: 앱 (로컬)
+    browser_local_audio:
+      description: Web Speech API 또는 로컬 엔진을 통해 브라우저에서 실행되는 전사.
+      device_id: 장치 ID
+      device_id_placeholder: 자동
+      title: 브라우저 (로컬)
+privacy:
+  remote-sync:
+    title: 클라우드 동기화 활성화
+    description: 기본적으로 꺼져 있습니다. 비활성화 시 AIRI는 로컬에서만 작동하며 원격 세션을 가져오거나 airi-api.moeru.ai로 채팅
+      기록을 동기화하지 않습니다.
+groups:
+  character:
+    title: 캐릭터 및 장면
+  intelligence:
+    title: 인텔리전스
+chat:
+  send-mode:
+    title: 전송 키
+    description: 채팅 입력창에서 메시지를 전송할 방법을 선택하세요.
+    options:
+      enter: Enter로 전송
+      ctrl-enter: Ctrl+Enter로 전송
+      double-enter: Double Enter로 전송
+  stream-idle-timeout:
+    title: 스트림 유휴 시간 초과
+    description: 모델 스트림이 너무 오랫동안 출력을 멈추면 응답을 취소합니다.
+    options:
+      10s: 10초
+      15s: 15초
+      30s: 30초
+      45s: 45초
+      60s: 60초
+      120s: 2분
+spine:
+  animation:
+    idle-animation: 대기 애니메이션
+    mix-duration: 믹스 지속 시간 (Mix Duration)
+    speed: 재생 속도
+  variant:
+    current-variant: 현재 변형
+  skin:
+    current-skin: 현재 스킨
+  scale-and-position:
+    scale: 크기 (Scale)
+    x: 위치 X
+    y: 위치 Y

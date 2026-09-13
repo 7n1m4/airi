@@ -45,6 +45,45 @@ dialogs:
       stateRequesting: Requesting...
       stateGranted: Granted
       stateNotGranted: Not granted
+    modeSelection:
+      title: Bạn muốn bắt đầu như thế nào?
+      description: Chọn trải nghiệm thiết lập phù hợp nhất với bạn.
+      easy:
+        title: Thiết lập nhanh
+        description: Bắt đầu ngay lập tức với các nhà cung cấp đám mây được đề xuất.
+      custom:
+        title: Thiết lập nâng cao
+        description: Tôi muốn tự cấu hình các nhà cung cấp cục bộ hoặc tùy chỉnh.
+    senseSetup:
+      title: Cổng giác quan
+      description: Cấu hình các giác quan cốt lõi của bạn đồng hành để bắt đầu.
+      consciousness: Ý thức (LLM)
+      speech: Lời nói & thính giác
+      getOpenRouterKey: Lấy khóa OpenRouter
+      openRouterSubtext: Mô hình nhanh, chất lượng cao và miễn phí. Không yêu cầu xác
+        minh phức tạp.
+      deepgramSubtext: Tặng 200 $ tín dụng cho lần đăng ký đầu tiên. Bao gồm khoảng 50
+        giờ phiên âm và giọng nói.
+      senseKey: Khóa giác quan (Sense Key)
+      senseKeyHelp: Nhập khóa API Deepgram của bạn để kích hoạt các giác quan giọng nói.
+      getDeepgramKey: Lấy khóa Deepgram
+    validationPartial: Cấu hình đã được xác thực một phần
+    testGeneration: Thử nghiệm tạo
+    testGenerationRunning: Đang thử nghiệm...
+    testGenerationFailed: Thử nghiệm tạo thất bại
+    skipPermanently: Bỏ qua vĩnh viễn
+    starter:
+      title: Chọn bạn đồng hành khởi đầu
+      description: Chọn một người bạn đồng hành để bắt đầu hành trình của bạn.
+      relu: ReLU
+      relu_desc: Một kết nối tâm hồn phát triển song hành cùng dữ liệu và trái tim bạn.
+      aria: Tiến sĩ Aria (Dr. Aria)
+      aria_desc: Người hướng dẫn tài ba, sắc sảo quản lý lớp nghiên cứu AIRI.
+      lupin: Lupin
+      lupin_desc: Cô gái sói trung thành với bản năng sắc bén và trái tim luôn bảo vệ bạn.
+      import: Tùy chỉnh
+      import_desc: Nhập tâm hồn của riêng bạn từ các thẻ nhân vật .json hoặc .png.
+      footer: 'Khám phá thêm các sáng tạo tuyệt vời từ cộng đồng hoặc tự nhập sau:'
 language:
   title: Ngôn ngữ
   description: >
@@ -162,6 +201,12 @@ pages:
           Phiên bản thẻ, hãy tăng giá trị này nếu bạn đã chỉnh sửa thẻ từ trước.
         consciousness_model: Chọn mô hình ý thức (mô hình AI) cho nhân vật này.
         speech_model: Chọn mô hình tổng hợp tiếng nói và giọng đọc cho nhân vật này.
+        identity_prompting: Các trường này đều giúp định hình nhân vật, nhưng hiện tại chúng không
+          phải là các lớp thời gian chạy riêng biệt. Lời nhắc hệ thống được sử
+          dụng trực tiếp trong quá trình lắp ráp lời nhắc hoạt động của AIRI.
+          Hướng dẫn sau lịch sử hiện được giữ lại chủ yếu để tương thích thẻ và
+          quy trình lời nhắc trong tương lai, vì vậy bạn có thể điền ngay bây
+          giờ mà chưa cần mong đợi sự khác biệt về hành vi trực tiếp riêng biệt.
       errors:
         name: Tên không hợp lệ hoặc rỗng.
         version: 'Lỗi: Số phiên bản không hợp lệ!'
@@ -170,6 +215,8 @@ pages:
         scenario: 'Lỗi: Phải có kịch bản.'
         systemprompt: 'Lỗi: Hãy cung cấp lời nhắc hệ thống'
         posthistoryinstructions: 'Lỗi: Cần có lịch sử đăng lời nhắc'
+      none: Không (Không có hình nền)
+      preferred_background: Cảnh / Hình nền ưa thích
     modules: Mô-đun
     name_asc: Tên (A-Z)
     name_desc: Tên (Z-A)
@@ -228,6 +275,21 @@ pages:
         title: Đặt lại thiết lập máy tính
         description: Xóa các cài đặt và trạng thái thực thi của AIRI trên máy tính.
         reset: Đặt lại dữ liệu desktop
+      characters:
+        title: Nhân vật
+        description: Xuất hoặc nhập hàng loạt bộ sưu tập nhân vật của bạn.
+        export: Xuất nhân vật
+        import: Nhập nhân vật
+      memory:
+        title: Bộ nhớ & nhật ký
+        description: Sao lưu các tóm tắt ngắn hạn và các mục nhật ký dài hạn.
+        export: Xuất bộ nhớ
+        import: Nhập bộ nhớ
+      backgrounds:
+        title: Thư viện hình nền
+        description: Xuất hoặc nhập thư viện cảnh của bạn (bao gồm cả hình ảnh).
+        export: Xuất hình nền
+        import: Nhập hình nền
     confirmations:
       tooltip: Bạn chắc chứ?
       'yes': 'Đồng ý'
@@ -241,6 +303,12 @@ pages:
       providers_reset: Đã đặt lại cài đặt nhà cung cấp.
       all_deleted: Tất cả dữ liệu cục bộ đã bị xóa.
       desktop_reset: Đã đặt lại dữ liệu ứng dụng máy tính.
+      characters_exported: Đã xuất bộ sưu tập nhân vật thành công.
+      characters_imported: Đã nhập bộ sưu tập nhân vật thành công.
+      memory_exported: Đã xuất dữ liệu bộ nhớ và nhật ký.
+      memory_imported: Đã nhập dữ liệu bộ nhớ và nhật ký.
+      backgrounds_exported: Đã xuất thư viện hình nền.
+      backgrounds_imported: Đã nhập thư viện hình nền.
   models:
     description: Live2D, VRM, v.v.
     title: Mô hình
@@ -253,6 +321,16 @@ pages:
           title: VRM
           description: Cấu hình mô hình 3D VRM
         scene: Bối cảnh
+    explore:
+      title: Khám phá hình đại diện
+      description: Khám phá kho lưu trữ cộng đồng, kho lưu trữ bên ngoài và thư viện mô
+        hình miễn phí cho VRM, Live2D, Spine và MMD.
+    tip:
+      title: Tìm kiếm thêm hình đại diện?
+      description: Bạn đã chán các mô hình hiện có? Muốn tải xuống một số mô hình mới miễn
+        phí? Hãy xem danh mục hình đại diện và thị trường được tuyển chọn của
+        chúng tôi.
+      action: Khám phá hình đại diện
   modules:
     beat_sync:
       description: Rung cảm với nhịp điệu từ nguồn âm thanh
@@ -371,6 +449,14 @@ pages:
         section:
           provider-selection:
             description: Chọn nhà cung cấp nhận diện giọng nói phù hợp
+          hotkey:
+            title: Phím tắt chuyển đổi micrô
+            description: Bật/tắt micrô bằng phím khóa bàn phím (Scroll, Caps hoặc Num Lock).
+              Đèn LED của bàn phím sẽ đồng bộ với trạng thái mic của AIRI.
+            options:
+              scroll: Scroll Lock
+              caps: Caps Lock
+              num: Num Lock
     memory-long-term:
       description: Cài đặt và quản lý trí nhớ dài hạn
       title: Trí nhớ dài hạn
@@ -386,6 +472,41 @@ pages:
       token-description: Mã token bot Discord của bạn
       token-placeholder: Nhập mã token bot Discord của bạn
       configured: Đã cấu hình Discord thành công!
+      connectivity:
+        title: Kết nối
+        status: Trạng thái
+        ping: Độ trễ (Ping)
+        connected: Đã kết nối
+        disconnected: Đã ngắt kết nối
+        connecting: Đang kết nối...
+        error: Lỗi
+        no-guilds: Chưa kết nối với máy chủ nào.
+      actions:
+        start: Bắt đầu dịch vụ
+        stop: Dừng dịch vụ
+        restart: Khởi động lại dịch vụ
+        force-sync: Buộc đồng bộ thẻ
+        simulate: Mô phỏng tin nhắn
+        test-auth: Kiểm tra xác thực
+        clear-log: Xóa nhật ký
+      presence:
+        title: Hiện diện hoạt động
+        guild: Máy chủ
+        channel: Kênh
+        no-active: Không có hiện diện nào đang hoạt động.
+      dev-console:
+        title: Bảng điều khiển nhà phát triển
+        empty: Chưa ghi nhận sự kiện nào. Hãy khởi động dịch vụ để bắt đầu ghi lại.
+      simulate-dialog:
+        username: Tên người dùng
+        username-placeholder: Nhập tên người dùng...
+        content: Nội dung tin nhắn
+        content-placeholder: Nhập tin nhắn thử nghiệm...
+        send: Gửi
+      controls:
+        title: Điều khiển & phương thức
+        vision: Bật tiếp nhận hình ảnh VLM (Thị giác)
+        vision-description: Cho phép AIRI đọc và xử lý các tệp hình ảnh đính kèm từ Discord
     speech:
       description: Tổng hợp giọng nói
       sections:
@@ -420,6 +541,7 @@ pages:
             show_less: Ẩn bớt
             show_more: Hiện thêm
             title: Nhà cung cấp
+            search_results: Tìm thấy {count} trên {total} mô hình
           voice-settings:
             input-ssml:
               placeholder: Nhập văn bản SSML...
@@ -457,10 +579,50 @@ pages:
       actions:
         open-config: Mở mcp.json
         apply-and-restart: Lưu và khởi động lại MCP
+        edit-json: Chỉnh sửa mcp.json
+        apply-restart: Lưu và khởi động lại stdio MCP
+        refresh: Làm mới trạng thái
+        install: Cài đặt
+        installed: Đã cài đặt
       messages:
         opened: Tệp cấu hình đã mở tại {path}
         restarted: 'Đã khởi động lại MCP. Thành công: {started}, Thất bại: {failed}, Bỏ
           qua: {skipped}'
+        install-success: Đã cài đặt thành công {name}
+      tabs:
+        manage: Quản lý
+        discover: Khám phá
+      search-placeholder: 'Tìm kiếm máy chủ MCP (ví dụ: Google Search, Filesystem)...'
+      dashboard:
+        tool-count: '{count} công cụ khả dụng'
+      registry:
+        loading: Đang tải sổ đăng ký...
+        stars: '{count} sao'
+        no-results: Không tìm thấy máy chủ nào cho "{query}"
+    artistry:
+      description: Tạo hình ảnh tự động, studio ComfyUI và minh họa kỷ niệm
+      title: Nghệ thuật & Studio hình ảnh
+      widget-instructions:
+        label: Hướng dẫn tạo tiện ích
+        description: Hướng dẫn cung cấp cho mô hình AI để dạy cách sử dụng hệ thống tiện
+          ích nghệ thuật. Nếu để trống, hệ thống sẽ sử dụng mặc định.
+      spawn_mode:
+        label: Tuyến hiển thị hình ảnh
+        description: Quyết định cách các hình ảnh đã tạo được gửi và hiển thị trong hệ
+          thống.
+        options:
+          bg: Hình nền sân khấu
+          inline: Lịch sử trò chuyện (nội dòng)
+          widget: Tiện ích độc lập
+          bg_widget: Hình nền & Tiện ích (mặc định)
+    cloud-sync:
+      title: Đồng bộ đám mây (BYOS)
+      description: Đồng bộ trạng thái hoạt động trên đám mây, lưu trữ S3/R2 và hộp thư
+        đi bền vững trên nhiều thiết bị
+    text-to-motion:
+      title: Văn bản thành chuyển động (Text to Motion)
+      description: Khung hình chính LLM theo thủ tục, khuếch tán 3D FlowMDM và biên
+        dịch VRMA
   providers:
     explained:
       chat: 'Nhà cung cấp mô hình tạo văn bản. Ví dụ: OpenRouter, OpenAI, Ollama.'
@@ -570,6 +732,25 @@ pages:
           title: Cơ bản
         voice:
           title: Cài đặt giọng nói
+        dangerZone:
+          confirmDelete: Xác nhận xóa
+          deleteCredentials: Xóa thông tin xác thực
+          description: Xóa thông tin xác thực cho phiên bản nhà cung cấp này. Xóa khóa API
+            và cài đặt điểm cuối.
+          title: Vùng nguy hiểm
+        instances:
+          addInstance: Thêm phiên bản
+          defaultHint: Mặc định
+          makePrimary: Đặt làm chính
+          primary: Chính
+          remove: Xóa
+          title: Các phiên bản
+        modelBrowser:
+          description: Chọn mô hình sẽ sử dụng cho phiên bản nhà cung cấp này.
+          label: Mô hình
+          placeholder: Chọn một mô hình...
+          title: Chọn mô hình
+      getApiKey: Lấy khóa API
     description: LLMs, nhà cung cấp giọng nói, v.v.
     provider:
       app-local-audio-transcription:
@@ -593,6 +774,19 @@ pages:
       amazon-bedrock:
         title: Amazon Bedrock
         description: AWS Ecosystem - Access Titan, Claude, and Llama on AWS
+        config:
+          access-key-id:
+            description: ID khóa truy cập AWS IAM của bạn
+            label: ID khóa truy cập AWS
+          region:
+            description: 'Khu vực AWS nơi Bedrock được bật (ví dụ: us-east-1, us-west-2)'
+            label: Khu vực AWS
+          secret-access-key:
+            description: Khóa truy cập bí mật AWS IAM của bạn
+            label: Khóa bí mật AWS
+          session-token:
+            description: Mã thông báo phiên tạm thời của AWS (cho vai trò STS/assumed)
+            label: Mã phiên (tùy chọn)
       qwen-portal:
         title: Qwen Portal
         description: Alibaba Cloud Native - Best-in-class Chinese and coding models
@@ -711,6 +905,12 @@ pages:
             description: Lượng tử hóa 4-bit
           q4f16:
             description: 4-bit với FP16
+          fp16-webgpu:
+            description: Mô hình độ chính xác bán phần sử dụng WebGPU
+          q4-webgpu:
+            description: Mô hình lượng tử hóa 4-bit sử dụng WebGPU
+          q8-webgpu:
+            description: Mô hình lượng tử hóa 8-bit sử dụng WebGPU
         playground:
           default-text: Xin chào! Đây là bản thử nghiệm hệ thống giọng nói Kokoro.
           title: Thử nghiệm giọng nói
@@ -876,7 +1076,260 @@ pages:
           tùy chỉnh và bộ lọc hội thoại
       moss-nano-local:
         title: Moss TTS (Nano)
+        description: Công cụ chuyển văn bản thành giọng nói cục bộ trên thiết bị sử dụng
+          Moss TTS.
+      airi-audio-server:
+        description: Máy chủ âm thanh nơ-ron hiệu năng cao - Suy luận C++ cục bộ với sao
+          chép giọng nói zero-shot và thẻ biểu cảm cận ngôn ngữ
+        title: AIRI Audio Server
+      alibaba-cloud:
+        description: Model Studio - Nền tảng dịch vụ mô hình quy mô lớn của Alibaba Cloud
+        title: Alibaba Cloud
+      aliyun-nls-transcription:
+        description: Thế mạnh đa ngôn ngữ - STT thời gian thực mạnh mẽ hỗ trợ sâu các
+          phương ngữ tiếng Trung
+      apple-core-ai:
+        alert:
+          content: Apple Core AI chạy các mô hình cục bộ qua plugin Swift gốc, giảm tải
+            tính toán ma trận sang Apple Neural Engine (ANE) và Metal GPU với
+            mức tiêu hao bộ nhớ WebKit gần như bằng 0.
+          title: Suy luận nơ-ron gốc Apple Silicon
+        description: Trí tuệ nơ-ron trên thiết bị được tăng tốc phần cứng thông qua
+          Apple Neural Engine (ANE) và Metal GPU.
+        title: Apple Core AI (Trên thiết bị)
+      atlascloud:
+        description: api.atlascloud.ai
+        title: Atlas Cloud
+      aws-polly-tts:
+        description: Hệ sinh thái AWS - Giọng đọc nơ-ron chất lượng cao từ Amazon Polly
+        title: Amazon AWS Polly
+      blip-local:
+        description: Công cụ gắn thẻ hình ảnh tiện ích dùng thẻ Danbooru để phân loại
+          hoặc mô tả hình ảnh, đặc biệt hiệu quả cho tranh phong cách anime.
+        title: Waifu Diffusion Tagger (WD)
+      byteplus-coding-plan:
+        description: Kế hoạch lập trình BytePlus
+        title: BytePlus Coding Plan
+      byteplus:
+        description: byteplus.com
+        title: BytePlus
+      comet-api-transcription:
+        description: Chuyển lời nói thành văn bản đám mây cấp doanh nghiệp
+      comfyui:
+        settings:
+          title: Cấu hình người dùng ComfyUI
+        title: ComfyUI
+      deepgram-transcription:
+        description: Tặng 50 giờ miễn phí cho người dùng mới - Chuyển lời thoại thành
+          văn bản thời gian thực siêu nhanh và chính xác
+        title: Deepgram STT (Nova)
+      local-fs:
+        settings:
+          title: Cấu hình hệ thống tệp cục bộ / Samba
+      mimo:
+        description: Xiaomi MiMo Code - Trợ lý lập trình AI miễn phí và nhanh chóng
+        title: MiMo
+      moondream-local:
+        description: Mô hình ngôn ngữ - thị giác 1.6B trên thiết bị chạy trong trình
+          duyệt qua WebGPU để hiểu hình ảnh tự nhiên và hỏi đáp trực quan.
+        title: Moondream2 VLM (Cục bộ, WebGPU)
+      nanobanana:
+        settings:
+          title: Cấu hình người dùng Nano Banana
+        title: Nano Banana
+      openai-audio-transcription:
+        description: Tiêu chuẩn ngành - Whisper API đáng tin cậy và tương thích rộng rãi
+      openai-compatible-audio-transcription:
+        description: Tự cấp điểm cuối - Điểm cuối STT tùy chỉnh tương thích với OpenAI
+      opencode-go:
+        description: Nền tảng API cho nhà phát triển - Các gói bắt đầu từ 10 USD/tháng
+        title: OpenCode Go
+      openpaths:
+        description: openpaths.io
+        title: OpenPaths
+      pocket-tts-local:
+        description: Công cụ chuyển văn bản thành giọng nói đa ngôn ngữ cục bộ trên CPU
+          với độ trễ thấp bằng Kyutai Pocket TTS.
+        title: Pocket TTS (Kyutai Cục bộ)
+      pollinations:
+        description: Hoàn toàn miễn phí - Hoàn thành đoạn chat mã nguồn mở không cần
+          khóa API
+        title: Pollinations AI
+      replicate:
+        settings:
+          title: Cấu hình người dùng Replicate.ai
+        title: Replicate
+      s3:
+        settings:
+          title: Cấu hình bộ lưu trữ đám mây tương thích S3
+      volcengine-coding-plan:
+        description: Kế hoạch lập trình Volcengine
+        title: Volcengine Coding Plan
+      web-llm:
+        activation:
+          activate: Kích hoạt
+          active:
+            description: Nhà cung cấp này đang hoạt động và có sẵn trong Mô-đun.
+            title: Nhà cung cấp đang hoạt động
+          deactivate: Hủy kích hoạt
+          inactive:
+            description: Bật nhà cung cấp này để chọn cho thẻ nhân vật.
+            title: Kích hoạt nhà cung cấp
+        alert:
+          content: WebLLM chạy các mô hình Transformer tiên tiến hoàn toàn trong trình
+            duyệt của bạn qua WebGPU — không cần khóa API, không cần máy chủ.
+            Trọng số được tải xuống trong lần sử dụng đầu tiên và được lưu trữ
+            trong Cache Storage của trình duyệt (webllm/*). Yêu cầu trình duyệt
+            hoặc Electron hỗ trợ WebGPU (không có dự phòng CPU/WASM).
+          title: LLM trong trình duyệt chỉ dùng WebGPU
+        cache:
+          clear: Xóa bộ nhớ đệm WebLLM
+          description: Trọng số đã tải xuống và thư viện WASM được lưu trong Bộ nhớ đệm
+            trình duyệt (webllm/*).
+          title: Bộ nhớ đệm trọng số
+        description: LLM Transformer ngoại tuyến tích hợp trong trình duyệt qua WebGPU
+          (không cần khóa API)
+        fields:
+          customRepo:
+            description: 'Kho lưu trữ Hugging Face với trọng số được lượng tử hóa MLC (ví
+              dụ: my-org/custom-llama3-MLC). Ghi đè lên lựa chọn mặc định.'
+            label: Kho lưu trữ mô hình HF tùy chỉnh (tùy chọn)
+            placeholder: https://huggingface.co/my-org/custom-model-MLC
+          customWasm:
+            description: Thư viện thực thi WASM tương ứng cho họ kiến trúc mô hình. Kho lưu
+              trữ tùy chỉnh không có tệp nhị phân WASM sẽ trả về lỗi 404 khi
+              chạy.
+            label: URL WASM model_lib tùy chỉnh (bắt buộc đối với kho lưu trữ tùy chỉnh)
+            placeholder: https://.../custom-model_q4f16_1_cs1k-webgpu.wasm
+          model:
+            description: Mô hình WebLLM đã được kiểm chứng từ danh mục tích hợp sẵn (bao gồm
+              thư viện WASM phù hợp).
+            label: Mô hình tuyển chọn
+          temperature:
+            description: Nhiệt độ lấy mẫu (càng cao = càng sáng tạo).
+            label: Nhiệt độ
+          topP:
+            description: Ngưỡng lấy mẫu hạt nhân (khối lượng xác suất).
+            label: Top P
+        sections:
+          cache:
+            clear: Xóa bộ nhớ đệm WebLLM
+            clearing: Đang xóa...
+            description: Trọng số đã tải xuống và thư viện WASM được lưu trong Bộ nhớ đệm
+              trình duyệt (webllm/*).
+            notCached: Không có trọng số WebLLM nào được lưu trong bộ nhớ đệm
+            refresh: Làm mới
+            title: Bộ nhớ đệm trọng số
+          model:
+            description: Chọn một mô hình được tuyển chọn hoặc thêm kho lưu trữ Hugging Face
+              MLC tùy chỉnh bên dưới.
+            title: Mô hình
+        title: WebLLM (Cục bộ, WebGPU)
+      web-rwkv:
+        alert:
+          content: RWKV chạy hoàn toàn trong trình duyệt của bạn qua WebGPU — không cần
+            khóa API, không cần máy chủ. Mô hình sẽ tải xuống trong lần sử dụng
+            đầu tiên và được lưu vào bộ nhớ đệm; trọng số bf16/f32 tự động
+            chuyển thành f16 khi tải. Yêu cầu trình duyệt hoặc Electron hỗ trợ
+            WebGPU (không có dự phòng CPU/WASM).
+          title: LLM trong trình duyệt chỉ dùng WebGPU
+        defaultsSection:
+          annotation: 'Để tùy chỉnh các cài đặt này cho nhân vật, hãy chuyển đến tab Tạo
+            của nhân vật: • Sửa đổi Nhiệt độ, Top P và Số lượng token tối đa
+            bằng các trường nhập liệu. • Điều chỉnh hình phạt
+            (Presence/Count/Decay) bằng cách nhập vào vùng văn bản JSON nâng cao
+            (ví dụ: {"presence_penalty": 0.5}).'
+          description: Đây là các thông số dự phòng mặc định được sử dụng bởi web-rwkv.
+          field:
+            count_penalty: 'Hình phạt tần suất Count Penalty (Mặc định: 0.4)'
+            max_tokens: 'Số token tối đa Max Tokens (Mặc định: 512)'
+            penalty_decay: 'Mức giảm hình phạt Penalty Decay (Mặc định: 0.996)'
+            presence_penalty: 'Hình phạt hiện diện Presence Penalty (Mặc định: 0.4)'
+            temperature: 'Nhiệt độ Temperature (Mặc định: 1.0)'
+            top_p: 'Top P (Mặc định: 0.5)'
+          title: Thông số tạo mặc định (Chỉ đọc)
+        description: LLM RWKV-7 cục bộ trong trình duyệt của bạn qua WebGPU (không cần
+          khóa API)
+        fields:
+          enableG1Prefill:
+            description: 'Điền sẵn <think></think> vào lượt của trợ lý để giữ các mô hình
+              suy luận G1 ở chế độ đã huấn luyện và loại bỏ thẻ đóng mở đầu khi
+              xuất dữ liệu. Tắt tính năng này nếu sử dụng các mô hình không phải
+              G1 (ví dụ: RWKV-6/5).'
+            label: Bật tính năng điền trước và loại bỏ thẻ suy luận G1
+          model:
+            description: URL .safetensors có tên tensor gốc của RWKV — có thể là bản chuyển
+              đổi cho web-rwkv hoặc định dạng thô từ HuggingFace (bố cục được tự
+              động phát hiện). bf16/f32 sẽ chuyển thành f16 khi tải. Định dạng
+              .pth của PyTorch không được hỗ trợ; vui lòng chuyển đổi sang
+              safetensors trước (convert_safetensors.py).
+            label: URL mô hình
+          vocab:
+            description: Ghi đè từ vựng của bộ mã hóa RWKV World đi kèm. Nếu bạn đang dùng
+              mô hình tinh chỉnh cho ngôn ngữ khác hoặc ánh xạ token tùy chỉnh,
+              cung cấp URL JSON từ vựng ở đây sẽ đảm bảo mã hóa và hành vi tạo
+              văn bản chính xác.
+            label: URL từ vựng (tùy chọn)
+            placeholder: (tích hợp sẵn rwkv_vocab_v20230424.json)
+        title: RWKV (Cục bộ, WebGPU)
+      whisper-local:
+        description: Chuyển lời nói thành văn bản cục bộ dùng Whisper (chạy trong trình
+          duyệt của bạn, không cần khóa API)
+        title: Whisper (Cục bộ)
     title: Nhà cung cấp
+    filters:
+      all: Tất cả
+      cloud: Đám mây
+      deployment: Triển khai
+      free: Miễn phí
+      local: Cục bộ
+      paid: Trả phí
+      pricing: Giá cả
+      suggested: Gợi ý
+    onboarding:
+      artistry:
+        description: Tiêu chuẩn cho nghệ thuật AI cục bộ là <b>ComfyUI</b>. Nếu bạn
+          thích tạo trên đám mây, <b>Replicate</b> cung cấp rất nhiều mô hình
+          với giá trả theo mức sử dụng.
+        title: Tạo hình ảnh nghệ thuật?
+      chat:
+        description: Để bắt đầu nhanh chóng, chúng tôi đề xuất <b>Google Gemini</b> (Đám
+          mây miễn phí) hoặc <b>OpenRouter</b> (Đám mây hợp nhất). Nếu bạn ưu
+          tiên sự riêng tư và có GPU, hãy dùng <b>Ollama</b> hoặc <b>LM
+          Studio</b> cục bộ.
+        title: Mới dùng Chat?
+      speech:
+        description: Hãy thử <b>Deepgram</b> hoặc <b>Azure Speech</b> để có giọng đọc
+          đám mây chất lượng cao với gói miễn phí. Để có giải pháp hoàn toàn cục
+          bộ và miễn phí, hãy dùng <b>Web Speech API</b> hoặc <b>Kokoro TTS</b>.
+        title: Cần giọng nói?
+      start_here: Bắt đầu tại đây
+      transcription:
+        description: Chúng tôi đề xuất <b>Deepgram STT</b> để chuyển lời thoại thành văn
+          bản siêu nhanh trên đám mây. Để dùng cục bộ, <b>Web Speech API</b>
+          (Trình duyệt) hoặc <b>Local Whisper</b> là những lựa chọn miễn phí
+          tuyệt vời.
+        title: Chuyển giọng nói thành văn bản?
+      vision:
+        description: Dùng <b>Google Gemini</b> để xử lý thị giác đám mây mạnh mẽ và miễn
+          phí. Các tùy chọn cục bộ như <b>Ollama</b> và <b>LM Studio</b> cũng hỗ
+          trợ các mô hình thị giác (VLM).
+        title: Nhìn thế giới xung quanh?
+    speech:
+      app_local_audio:
+        description: Cấu hình cài đặt đầu ra âm thanh cục bộ để tổng hợp giọng nói.
+        device_id: ID thiết bị đầu ra
+        device_id_placeholder: "Nhập ID thiết bị đầu ra (ví dụ: 'default')..."
+        sample_rate: Tần số lấy mẫu
+        sample_rate_placeholder: 'Nhập tần số lấy mẫu (ví dụ: 16000)...'
+        title: Cài đặt âm thanh ứng dụng (cục bộ)
+    transcription:
+      app_local_audio:
+        description: Cấu hình cài đặt đầu vào âm thanh cục bộ để chuyển lời nói thành
+          văn bản.
+        device_id: ID thiết bị đầu vào
+        device_id_placeholder: "Nhập ID thiết bị đầu vào (ví dụ: 'default')..."
+        title: Cài đặt âm thanh ứng dụng (cục bộ)
   connection:
     description: Cấu hình kết nối máy chủ WebSocket
     title: Kết nối
@@ -904,9 +1357,35 @@ pages:
       label: Application Gateway Key
       description: Security key to authenticate clients connecting to your node over
         the network. If empty, the gateway will not require authentication.
+    hf-token:
+      label: Mã thông báo Hugging Face (Tùy chọn)
+      description: Mã thông báo truy cập người dùng Hugging Face của bạn. Được sử dụng để
+        tải xuống mô hình và tránh lỗi giới hạn tốc độ/bị bóp băng thông.
+      placeholder: hf_...
   scene:
     description: Cấu hình môi trường nhân vật sinh sống
     title: Bối cảnh
+    beta_label: Hệ thống cảnh
+    beta_description: Mỗi thẻ nhân vật chỉ định hình nền ưa thích riêng từ thư viện này. Đặt ở
+      đây sẽ đặt làm mặc định cho nhân vật đang hoạt động.
+    background_image:
+      title: Hình nền nhân vật đang hoạt động
+      no_background: Không có hình nền nào đang hoạt động cho nhân vật này. Hãy tải lên hình
+        ảnh vuông hoặc ngang để có kết quả tốt nhất.
+      upload: Tải lên thư viện
+      change: Đổi hình nền
+      clear: Xóa mặc định
+    gallery:
+      title: Thư viện cảnh
+      empty: Chưa có hình ảnh nào trong thư viện. Hãy tải lên một ảnh ở trên!
+      set_as_global: Đặt làm mặc định cho nhân vật
+      delete: Xóa khỏi thư viện
+      global_badge: Mặc định cho nhân vật
+      active_badge: Cảnh hiện tại
+    tip:
+      label: Mẹo!
+      description: Sử dụng hình ảnh vuông sẽ tận dụng tính năng cắt <b>cover</b> ở chế độ
+        dọc, tập trung vào trung tâm của cảnh.
   system:
     color-scheme:
       description: Đổi bảng màu sân khấu.
@@ -927,6 +1406,14 @@ pages:
                 label: Màu chính
                 rgb-on:
                   title: Tôi muốn nó động!
+              vibrancy:
+                label: Độ rực rỡ / Độ bão hòa
+                muted: Dịu nhẹ (Pastel)
+                balanced: Cân bằng
+                vivid: Sống động (Neon)
+                monochrome: Đơn sắc
+              reset:
+                title: Đặt lại về màu lục lam AIRI
           title: Bảng màu
         developer:
           title: Nhà phát triển
@@ -1048,13 +1535,84 @@ pages:
                 Màu sắc truyền thống Trung Hoa, lấy cảm hứng từ dệt may, gốm sứ
                 và hội họa cổ
               title: Màu truyền thống Trung Hoa
+            warm:
+              title: Ấm áp & Lửa (Warm & Fire)
+              description: Đỏ năng động, san hô, cam và hổ phách vàng rực
+              colors:
+                crimson: Đỏ thẫm (Crimson)
+                coral: San hô (Coral)
+                tangerine: Quýt (Tangerine)
+                marigold: Cúc vạn thọ (Marigold)
+                amber: Hổ phách (Amber)
+                lemon: Chanh vàng (Lemon)
+            flora:
+              title: Đất & Thực vật (Earth & Flora)
+              description: Thảo mộc xanh tươi, lục tươi, ngọc lục bảo, bạc hà và xanh mòng két
+              colors:
+                lime: Chanh cốm (Lime)
+                emerald: Ngọc lục bảo (Emerald)
+                mint: Bạc hà (Mint)
+                jade: Ngọc bích (Jade)
+                viridian: Xanh viridian (Viridian)
+                teal: Xanh mòng két (Teal)
+            ocean:
+              title: Đại dương & Bầu trời (Ocean & Sky)
+              description: Xanh nước biển nhiệt đới, lục lam đặc trưng, thiên thanh và xanh
+                hoàng gia
+              colors:
+                turquoise: Ngọc lam (Turquoise)
+                cyan: Lục lam đặc trưng (Signature Cyan)
+                cerulean: Xanh thiên thanh (Cerulean)
+                cobalt: Xanh coban (Cobalt)
+                sapphire: Xanh sapphire (Sapphire)
+                denim: Xanh denim (Denim)
+            bloom:
+              title: Hoàng gia & Nở rộ (Royal & Bloom)
+              description: Chàm sâu thẳm, thạch anh tím, tím rực rỡ, vân anh và hoa hồng
+              colors:
+                indigo: Chàm (Indigo)
+                amethyst: Thạch anh tím (Amethyst)
+                violet: Tím violet (Violet)
+                fuchsia: Hồng vân anh (Fuchsia)
+                magenta: Đỏ tươi magenta (Magenta)
+                rose: Hoa hồng (Rose)
           title: Bộ Màu Có Sẵn
+          description: Chọn từ lưới quang phổ 24 màu được tuyển chọn hoặc tùy chỉnh sắc độ
+            và độ rực rỡ ở trên.
+          reset: Đặt lại về màu lục lam đặc trưng
     title: Giao Diện
   page:
     developers:
       open-devtools:
         title: Mở Công cụ nhà phát triển
         button: Mở
+  chat:
+    title: Cài đặt trò chuyện & Nhập liệu
+    description: Tổ hợp phím gửi, thời gian chờ phản hồi luồng và hành vi của bong bóng tin
+      nhắn
+    send-mode:
+      title: Chế độ gửi
+      description: Chọn tổ hợp phím để gửi tin nhắn.
+      options:
+        enter: Enter
+        ctrl-enter: Ctrl + Enter
+        double-enter: Nhấp đúp Enter
+  docs:
+    title: Tài liệu
+    description: Tìm hiểu cách sử dụng AIRI và các tính năng phong phú của nó
+    sections:
+      overview: Tổng quan
+      manual: Hướng dẫn sử dụng
+      advanced: Nâng cao
+      chronicles: Biên niên sử
+      showcase: Trưng bày
+  dating-sim:
+    title: Chế độ Dating Sim
+    description: Điều chỉnh các chế độ trò chơi tương tác, ngưỡng tiến độ thân mật và quy
+      tắc hành vi hình ảnh
+  stage:
+    title: Điều khiển nổi
+    description: Tùy chỉnh các khe thanh tác vụ nổi, cạnh neo và trình kích hoạt nhanh
 sections:
   section:
     general:
@@ -1096,6 +1654,14 @@ vrm:
           camera: Camera
           mouse: Chuột
           disabled: Tắt
+    mouse-tracking: Theo dõi chuột
+    mouse-tracking-desc: Hình đại diện theo dõi chuyển động của chuột bằng đầu và mắt
+    follow-speed: Tốc độ theo dõi
+    options:
+      option:
+        camera: Máy ảnh
+        mouse: Chuột
+        disabled: Đã tắt
   switch-to-vrm:
     title: Chuyển sang mô hình Live2D?
     change-to-vrm: Nhấn vào đây để chuyển sang cài đặt Live2D avatar
@@ -1105,6 +1671,8 @@ vrm:
   skybox:
     skybox-intensity: Cường Độ SkyBox
     skybox-specular-mix: Độ Trộn Phản Chiếu
+  idle-animation:
+    title: Hoạt ảnh chờ mặc định
 wip:
   title: Đang phát triển
   description: "Tính năng này hiện đang được hoàn thiện và chưa sẵn sàng công
@@ -1136,3 +1704,73 @@ wip:
     \    title: Nhận diện giọng nói CometAPI
 
     \    description: Enterprise-grade cloud transcription"
+providers:
+  speech:
+    app_local_audio:
+      description: Tổng hợp giọng nói cục bộ tích hợp sẵn sử dụng Kokoro / ONNX.
+      device_id: ID thiết bị
+      device_id_placeholder: Tự động
+      sample_rate: Tần số lấy mẫu
+      sample_rate_placeholder: 'ví dụ: 24000'
+      title: Ứng dụng (Cục bộ)
+    browser_local_audio:
+      description: Tổng hợp giọng nói chạy trong trình duyệt sử dụng Web Speech API
+        hoặc công cụ cục bộ.
+      device_id: ID thiết bị
+      device_id_placeholder: Tự động
+      sample_rate: Tần số lấy mẫu
+      sample_rate_placeholder: 'ví dụ: 24000'
+      title: Trình duyệt (Cục bộ)
+  transcription:
+    app_local_audio:
+      description: Chuyển lời nói thành văn bản cục bộ tích hợp sẵn sử dụng Whisper / ONNX.
+      device_id: ID thiết bị
+      device_id_placeholder: Tự động
+      title: Ứng dụng (Cục bộ)
+    browser_local_audio:
+      description: Chuyển lời nói thành văn bản chạy trong trình duyệt thông qua Web
+        Speech API hoặc công cụ cục bộ.
+      device_id: ID thiết bị
+      device_id_placeholder: Tự động
+      title: Trình duyệt (Cục bộ)
+privacy:
+  remote-sync:
+    title: Bật đồng bộ đám mây
+    description: Mặc định tắt. Khi tắt, AIRI chỉ hoạt động cục bộ và sẽ không tìm nạp phiên
+      từ xa hoặc đồng bộ lịch sử trò chuyện với airi-api.moeru.ai.
+groups:
+  character:
+    title: Nhân vật & Cảnh
+  intelligence:
+    title: Trí tuệ
+chat:
+  send-mode:
+    title: Phím gửi
+    description: Chọn cách nhập liệu trò chuyện để gửi tin nhắn.
+    options:
+      enter: Enter để gửi
+      ctrl-enter: Ctrl+Enter để gửi
+      double-enter: Double Enter để gửi
+  stream-idle-timeout:
+    title: Thời gian chờ luồng không hoạt động
+    description: Hủy phản hồi nếu luồng mô hình ngừng tạo sự kiện quá lâu.
+    options:
+      10s: 10 giây
+      15s: 15 giây
+      30s: 30 giây
+      45s: 45 giây
+      60s: 60 giây
+      120s: 2 phút
+spine:
+  animation:
+    idle-animation: Hoạt ảnh chờ
+    mix-duration: Thời lượng hòa trộn (Mix Duration)
+    speed: Tốc độ phát
+  variant:
+    current-variant: Biến thể hiện tại
+  skin:
+    current-skin: Giao diện (Skin) hiện tại
+  scale-and-position:
+    scale: Tỷ lệ
+    x: Vị trí X
+    y: Vị trí Y

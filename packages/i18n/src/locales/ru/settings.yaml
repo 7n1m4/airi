@@ -44,6 +44,46 @@ dialogs:
       stateRequesting: Requesting...
       stateGranted: Granted
       stateNotGranted: Not granted
+    modeSelection:
+      title: С чего вы хотите начать?
+      description: Выберите подходящий вам вариант настройки.
+      easy:
+        title: Быстрая настройка
+        description: Начните мгновенно с нашими рекомендуемыми облачными провайдерами.
+      custom:
+        title: Расширенная настройка
+        description: Я хочу настроить свои локальные или пользовательские платформы.
+    senseSetup:
+      title: Портал чувств
+      description: Настройте базовые чувства вашего спутника для начала работы.
+      consciousness: Сознание (LLM)
+      speech: Речь и слух
+      getOpenRouterKey: Получить ключ OpenRouter
+      openRouterSubtext: Быстрые, качественные и бесплатные модели. Сложная
+        верификация не требуется.
+      deepgramSubtext: 200 $ бонуса при регистрации. Включает около 50 часов
+        транскрипции и синтеза речи.
+      senseKey: Сенсорный ключ (Sense Key)
+      senseKeyHelp: Введите ключ Deepgram API для активации голосовых чувств.
+      getDeepgramKey: Получить ключ Deepgram
+    validationPartial: Конфигурация частично проверена
+    testGeneration: Тест генерации
+    testGenerationRunning: Тестирование...
+    testGenerationFailed: Ошибка теста генерации
+    skipPermanently: Пропустить навсегда
+    starter:
+      title: Выберите первого спутника
+      description: Выберите спутника, чтобы начать свое путешествие.
+      relu: ReLU
+      relu_desc: Одухотворенная связь, развивающаяся вместе с вашими данными и сердцем.
+      aria: Д-р Ария (Dr. Aria)
+      aria_desc: Блестящий и остроумный наставник, управляющий исследовательским
+        уровнем AIRI.
+      lupin: Люпин (Lupin)
+      lupin_desc: Преданная девочка-волчица с чуткими инстинктами и защитным сердцем.
+      import: Свой вариант
+      import_desc: Импортируйте собственную душу из карточек персонажей .json или .png.
+      footer: 'Ознакомьтесь с творениями сообщества или импортируйте свои позже:'
 language:
   title: Language
   description: >
@@ -161,6 +201,12 @@ pages:
           Версия карты. Увеличьте число, если изменяете предыдущую карту.
         consciousness_model: Select the consciousness model (AI model) for this character.
         speech_model: Select the speech synthesis model and voice for this character.
+        identity_prompting: Все эти поля помогают определить персонажа, но в текущей архитектуре
+          они не являются отдельными слоями времени выполнения. Системный промпт
+          напрямую используется в сборке активного промпта AIRI. Инструкции
+          после истории пока сохраняются для совместимости формата карточек и
+          будущих обновлений конвейера промптов, поэтому вы можете заполнить их
+          сейчас, не ожидая мгновенных отличий в поведении.
       errors:
         name: Имя должно быть корректным и непустым.
         version: 'Ошибка: неверная версия!'
@@ -169,6 +215,8 @@ pages:
         scenario: 'Ошибка: требуется сценарий.'
         systemprompt: 'Ошибка: укажите системный промпт.'
         posthistoryinstructions: 'Ошибка: требуется post-history промпт.'
+      none: Нет (Без фона)
+      preferred_background: Предпочтительная сцена / фон
     modules: Модули
     name_asc: Имя (А-Я)
     name_desc: Имя (Я-А)
@@ -226,6 +274,22 @@ pages:
         title: Reset desktop settings & states
         description: Clear AIRI desktop settings and runtime state.
         reset: Reset desktop data
+      characters:
+        title: Персонажи
+        description: Массовый экспорт или импорт вашей коллекции персонажей.
+        export: Экспортировать персонажей
+        import: Импортировать персонажей
+      memory:
+        title: Память и дневник
+        description: Резервное копирование краткосрочных итогов и долгосрочных записей
+          дневника.
+        export: Экспортировать память
+        import: Импортировать память
+      backgrounds:
+        title: Галерея фонов
+        description: Экспорт или импорт вашей галереи сцен (включая изображения).
+        export: Экспортировать фоны
+        import: Импортировать фоны
     confirmations:
       tooltip: Are you sure?
       'yes': 'Yes'
@@ -239,6 +303,12 @@ pages:
       providers_reset: Provider settings reset.
       all_deleted: All local data deleted.
       desktop_reset: Desktop data reset.
+      characters_exported: Коллекция персонажей успешно экспортирована.
+      characters_imported: Коллекция персонажей успешно импортирована.
+      memory_exported: Данные памяти и дневника экспортированы.
+      memory_imported: Данные памяти и дневника импортированы.
+      backgrounds_exported: Галерея фонов экспортирована.
+      backgrounds_imported: Галерея фонов импортирована.
   models:
     description: Live2D, VRM и др.
     title: Модели
@@ -251,6 +321,15 @@ pages:
           title: VRM
           description: Настройка 3D-моделей VRM
         scene: Сцена
+    explore:
+      title: Обзор аватаров
+      description: Исследуйте архивы сообщества, внешние репозитории и бесплатные
+        библиотеки моделей для VRM, Live2D, Spine и MMD.
+    tip:
+      title: Ищете больше аватаров?
+      description: Устали от имеющихся моделей? Хотите бесплатно скачать крутые новинки?
+        Ознакомьтесь с нашим каталогом аватаров и торговыми площадками.
+      action: Обзор аватаров
   modules:
     beat_sync:
       description: Vibe with beats from the audio source
@@ -369,6 +448,15 @@ pages:
         section:
           provider-selection:
             description: Select the suitable speech recognition provider
+          hotkey:
+            title: Горячая клавиша переключения микрофона
+            description: Переключайте микрофон клавишей блокировки (Scroll, Caps или Num
+              Lock). Светодиод клавиатуры будет синхронизирован со статусом
+              микрофона AIRI.
+            options:
+              scroll: Scroll Lock
+              caps: Caps Lock
+              num: Num Lock
     memory-long-term:
       description: Настройки долговременной памяти
       title: Долговременная память
@@ -384,6 +472,42 @@ pages:
       token-description: Ваш токен бота Discord
       token-placeholder: Введите токен бота Discord
       configured: Discord настроен правильно!
+      connectivity:
+        title: Подключение
+        status: Статус
+        ping: Пинг
+        connected: Подключено
+        disconnected: Отключено
+        connecting: Подключение...
+        error: Ошибка
+        no-guilds: Нет подключения ни к одному серверу.
+      actions:
+        start: Запустить службу
+        stop: Остановить службу
+        restart: Перезапустить службу
+        force-sync: Принудительная синхронизация
+        simulate: Симулировать сообщение
+        test-auth: Проверить авторизацию
+        clear-log: Очистить журнал
+      presence:
+        title: Активное присутствие
+        guild: Сервер
+        channel: Канал
+        no-active: Нет активного присутствия.
+      dev-console:
+        title: Консоль разработчика
+        empty: Событий пока нет. Запустите службу для начала захвата.
+      simulate-dialog:
+        username: Имя пользователя
+        username-placeholder: Введите имя пользователя...
+        content: Сообщение
+        content-placeholder: Введите тестовое сообщение...
+        send: Отправить
+      controls:
+        title: Управление и модальности
+        vision: Включить обработку изображений VLM (Зрение)
+        vision-description: Разрешить AIRI считывать и обрабатывать прикрепленные
+          изображения из Discord
     speech:
       description: Синтез речи
       sections:
@@ -418,6 +542,7 @@ pages:
             show_less: Показать меньше
             show_more: Показать больше
             title: Провайдер
+            search_results: Найдено {count} из {total} моделей
           voice-settings:
             input-ssml:
               placeholder: Введите SSML-текст...
@@ -475,6 +600,31 @@ pages:
         loading: Загрузка реестра...
         stars: '{count} звезд'
         no-results: Серверы для "{query}" не найдены
+    artistry:
+      description: Автономная генерация изображений, студия ComfyUI и иллюстрации
+        воспоминаний
+      title: Арт и студия изображений
+      widget-instructions:
+        label: Инструкции создания виджета
+        description: Инструкции для языковой модели по использованию системы
+          художественных виджетов. Если пусто, используются системные по
+          умолчанию.
+      spawn_mode:
+        label: Маршрут вывода изображений
+        description: Определяет, как сгенерированные изображения отображаются в системе.
+        options:
+          bg: Фон сцены
+          inline: История чата (внутри)
+          widget: Отдельный виджет
+          bg_widget: Фон и виджет (по умолчанию)
+    cloud-sync:
+      title: Облачная синхронизация (BYOS)
+      description: Синхронизация активного состояния, хранилища S3/R2 и постоянная
+        исходящая очередь между устройствами
+    text-to-motion:
+      title: Текст в анимацию (Text to Motion)
+      description: Процедурные ключевые кадры через LLM, 3D диффузия FlowMDM и
+        компиляция VRMA
   providers:
     explained:
       chat: Провайдеры текстогенерации, напр. OpenRouter, OpenAI, Ollama.
@@ -589,6 +739,25 @@ pages:
           title: Базовые
         voice:
           title: Настройки голоса
+        dangerZone:
+          confirmDelete: Подтвердить удаление
+          deleteCredentials: Удалить учетные данные
+          description: Удалить учетные данные для этого экземпляра поставщика. Очищает
+            ключ API и настройки конечной точки.
+          title: Опасная зона
+        instances:
+          addInstance: Добавить экземпляр
+          defaultHint: По умолчанию
+          makePrimary: Сделать основным
+          primary: Основной
+          remove: Удалить
+          title: Экземпляры
+        modelBrowser:
+          description: Выберите модель для использования в этом экземпляре поставщика.
+          label: Модель
+          placeholder: Выберите модель...
+          title: Выбор модели
+      getApiKey: Получить ключ API
     description: LLM-модели, провайдеры речи и др.
     provider:
       app-local-audio-transcription:
@@ -612,6 +781,19 @@ pages:
       amazon-bedrock:
         title: Amazon Bedrock
         description: AWS Ecosystem - Access Titan, Claude, and Llama on AWS
+        config:
+          access-key-id:
+            description: Ваш идентификатор ключа доступа AWS IAM
+            label: Ключ доступа AWS IAM
+          region:
+            description: Регион AWS с поддержкой Bedrock (например, us-east-1, us-west-2)
+            label: Регион AWS
+          secret-access-key:
+            description: Ваш секретный ключ доступа AWS IAM
+            label: Секретный ключ AWS
+          session-token:
+            description: Временный токен сессии AWS (для STS/ролей)
+            label: Токен сессии (необязательно)
       qwen-portal:
         title: Qwen Portal
         description: Alibaba Cloud Native - Best-in-class Chinese and coding models
@@ -731,6 +913,12 @@ pages:
             description: 4-bit quantized
           q4f16:
             description: 4-bit with FP16
+          fp16-webgpu:
+            description: Модель половинной точности с использованием WebGPU
+          q4-webgpu:
+            description: 4-битная квантованная модель с использованием WebGPU
+          q8-webgpu:
+            description: 8-битная квантованная модель с использованием WebGPU
         playground:
           default-text: Hello! This is a test of the Kokoro text-to-speech system.
           title: Voice Playground
@@ -896,7 +1084,257 @@ pages:
           пользовательскими эффектами и фильтрами диалога
       moss-nano-local:
         title: Moss TTS (Nano)
+        description: Локальный движок синтеза речи на устройстве с использованием Moss TTS.
+      airi-audio-server:
+        description: Высокопроизводительный нейроаудиосервер — локальный C++ вывод с
+          zero-shot клонированием голоса и тегами паралингвистической
+          выразительности
+        title: AIRI Audio Server
+      alibaba-cloud:
+        description: Model Studio — платформа крупномасштабных моделей от Alibaba Cloud
+        title: Alibaba Cloud
+      aliyun-nls-transcription:
+        description: Многоязычный флагман — надежное распознавание речи в реальном
+          времени с глубокой поддержкой китайских диалектов
+      apple-core-ai:
+        alert:
+          content: Apple Core AI запускает модели локально через нативный плагин Swift,
+            перенося матричные вычисления на Apple Neural Engine (ANE) и Metal
+            GPU с почти нулевыми накладными расходами памяти WebKit.
+          title: Нативный нейровывод Apple Silicon
+        description: Аппаратно-ускоренный искусственный интеллект на устройстве через
+          Apple Neural Engine (ANE) и Metal GPU.
+        title: Apple Core AI (на устройстве)
+      atlascloud:
+        description: api.atlascloud.ai
+        title: Atlas Cloud
+      aws-polly-tts:
+        description: Экосистема AWS — высококачественные нейронные голоса от Amazon Polly
+        title: Amazon AWS Polly
+      blip-local:
+        description: Полезный инструмент разметки изображений с тегами Danbooru для
+          классификации и описания артов, особенно эффективен для аниме.
+        title: Waifu Diffusion Tagger (WD)
+      byteplus-coding-plan:
+        description: План программирования BytePlus
+        title: BytePlus Coding Plan
+      byteplus:
+        description: byteplus.com
+        title: BytePlus
+      comet-api-transcription:
+        description: Облачная транскрипция корпоративного уровня
+      comfyui:
+        settings:
+          title: Пользовательская конфигурация ComfyUI
+        title: ComfyUI
+      deepgram-transcription:
+        description: 50 часов бесплатно при регистрации — сверхбыстрая и точная
+          транскрипция в реальном времени
+        title: Deepgram STT (Nova)
+      local-fs:
+        settings:
+          title: Конфигурация локальной файловой системы / Samba
+      mimo:
+        description: Xiaomi MiMo Code — бесплатный помощник по написанию кода на базе ИИ
+        title: MiMo
+      moondream-local:
+        description: Визуально-языковая модель 1.6B на устройстве, работающая в браузере
+          через WebGPU для анализа изображений и визуальных ответов на вопросы.
+        title: Moondream2 VLM (локально, WebGPU)
+      nanobanana:
+        settings:
+          title: Пользовательская конфигурация Nano Banana
+        title: Nano Banana
+      openai-audio-transcription:
+        description: Отраслевой стандарт — надежный и широко совместимый Whisper API
+      openai-compatible-audio-transcription:
+        description: Своя конечная точка — настраиваемый OpenAI-совместимый STT эндпоинт
+      opencode-go:
+        description: Платформа API для разработчиков — тарифы от 10 $ в месяц
+        title: OpenCode Go
+      openpaths:
+        description: openpaths.io
+        title: OpenPaths
+      pocket-tts-local:
+        description: Локальный многоязычный CPU синтез речи с низкой задержкой на базе
+          Kyutai Pocket TTS.
+        title: Pocket TTS (Kyutai локально)
+      pollinations:
+        description: Бесплатно и без преград — генерация текста с открытым исходным
+          кодом без API ключа
+        title: Pollinations AI
+      replicate:
+        settings:
+          title: Пользовательская конфигурация Replicate.ai
+        title: Replicate
+      s3:
+        settings:
+          title: Конфигурация S3-совместимого облачного хранилища
+      volcengine-coding-plan:
+        description: План программирования Volcengine
+        title: Volcengine Coding Plan
+      web-llm:
+        activation:
+          activate: Активировать
+          active:
+            description: Этот поставщик активен и доступен в модулях.
+            title: Поставщик активен
+          deactivate: Деактивировать
+          inactive:
+            description: Включите этого поставщика, чтобы выбрать его в карточках
+              персонажей.
+            title: Активировать поставщика
+        alert:
+          content: WebLLM запускает передовые трансформерные модели полностью в вашем
+            браузере через WebGPU — без ключа API и без сервера. Веса
+            загружаются при первом использовании и кэшируются в хранилище
+            браузера (webllm/*). Требуется браузер с поддержкой WebGPU или
+            Electron (CPU/WASM фолбэк отсутствует).
+          title: LLM в браузере только через WebGPU
+        cache:
+          clear: Очистить кэш WebLLM
+          description: Загруженные веса и библиотеки WASM, хранящиеся в кэше браузера
+            (webllm/*).
+          title: Кэш весов
+        description: Встроенная офлайн-модель трансформера через WebGPU в вашем браузере
+          (без ключа API)
+        fields:
+          customRepo:
+            description: Репозиторий Hugging Face с квантованными весами MLC (например,
+              my-org/custom-llama3-MLC). Переопределяет выбранную модель.
+            label: Пользовательский репозиторий моделей HF (необязательно)
+            placeholder: https://huggingface.co/my-org/custom-model-MLC
+          customWasm:
+            description: Соответствующая библиотека выполнения WASM для архитектуры модели.
+              Пользовательский репозиторий без опубликованного WASM вернет
+              ошибку 404 во время выполнения.
+            label: URL-адрес WASM библиотеки model_lib (обязательно для пользовательского
+              репозитория)
+            placeholder: https://.../custom-model_q4f16_1_cs1k-webgpu.wasm
+          model:
+            description: Проверенная модель WebLLM из готового каталога (соответствующая
+              библиотека WASM включена).
+            label: Выбранная модель
+          temperature:
+            description: Температура выборки (выше = креативнее).
+            label: Температура
+          topP:
+            description: Порог ядерной выборки (вероятностная масса).
+            label: Top P
+        sections:
+          cache:
+            clear: Очистить кэш WebLLM
+            clearing: Очистка...
+            description: Загруженные веса и библиотеки WASM, сохраненные в кэше браузера
+              (webllm/*).
+            notCached: В кэше нет весов WebLLM
+            refresh: Обновить
+            title: Кэш весов
+          model:
+            description: Выберите проверенную модель или добавьте собственный репозиторий
+              Hugging Face MLC ниже.
+            title: Модель
+        title: WebLLM (локально, WebGPU)
+      web-rwkv:
+        alert:
+          content: RWKV полностью работает в вашем браузере через WebGPU — без ключа API и
+            без сервера. Модель загружается при первом использовании и
+            кэшируется; веса bf16/f32 автоматически конвертируются в f16 при
+            загрузке. Требуется браузер с поддержкой WebGPU или Electron
+            (CPU/WASM фолбэк отсутствует).
+          title: LLM в браузере только через WebGPU
+        defaultsSection:
+          annotation: 'Чтобы настроить эти параметры для персонажа, перейдите на вкладку
+            «Генерация»: • Измените температуру, Top P и макс. количество
+            токенов. • Настройте штрафы (Присутствие/Частота/Затухание), введя
+            их в расширенное поле JSON (напр. {"presence_penalty": 0.5}).'
+          description: Это резервные параметры по умолчанию, используемые web-rwkv.
+          field:
+            count_penalty: 'Штраф за частоту Count Penalty (По умолчанию: 0.4)'
+            max_tokens: 'Макс. токенов Max Tokens (По умолчанию: 512)'
+            penalty_decay: 'Затухание штрафа Penalty Decay (По умолчанию: 0.996)'
+            presence_penalty: 'Штраф за присутствие Presence Penalty (По умолчанию: 0.4)'
+            temperature: 'Температура Temperature (По умолчанию: 1.0)'
+            top_p: 'Top P (По умолчанию: 0.5)'
+          title: Параметры генерации по умолчанию (только для чтения)
+        description: Локальная модель RWKV-7 в браузере через WebGPU (без ключа API)
+        fields:
+          enableG1Prefill:
+            description: Предварительно заполняет ответы ассистента тегами <think></think>
+              для поддержания режима рассуждения моделей G1 и удаляет начальный
+              закрывающий тег в выводе. Отключите для моделей, отличных от G1
+              (напр. RWKV-6/5).
+            label: Включить префилл рассуждений G1 и удаление тегов
+          model:
+            description: URL .safetensors с нативными именами тензоров RWKV —
+              конвертированный для web-rwkv или оригинальный HuggingFace
+              (структура определяется автоматически). bf16/f32 приводятся к f16
+              при загрузке. PyTorch .pth не поддерживается, сначала
+              конвертируйте в safetensors (convert_safetensors.py).
+            label: URL модели
+          vocab:
+            description: Переопределить встроенный словарь токенизатора RWKV World. Если вы
+              используете дообученную модель для другого языка, указание URL
+              словаря гарантирует правильную кодировку.
+            label: URL словаря (необязательно)
+            placeholder: (встроенный rwkv_vocab_v20230424.json)
+        title: RWKV (локально, WebGPU)
+      whisper-local:
+        description: Локальный STT с использованием Whisper (работает в браузере, без
+          ключа API)
+        title: Whisper (локально)
     title: Провайдеры
+    filters:
+      all: Все
+      cloud: Облако
+      deployment: Развертывание
+      free: Бесплатно
+      local: Локально
+      paid: Платно
+      pricing: Тариф
+      suggested: Рекомендуемые
+    onboarding:
+      artistry:
+        description: Золотой стандарт локальной генерации изображений — <b>ComfyUI</b>.
+          Если вам ближе облако, <b>Replicate</b> предлагает огромный выбор
+          моделей с оплатой по факту.
+        title: Генерировать изображения?
+      chat:
+        description: Для быстрого старта рекомендуем <b>Google Gemini</b> (бесплатное
+          облако) или <b>OpenRouter</b> (единое облако). Для приватности и при
+          наличии GPU используйте <b>Ollama</b> или <b>LM Studio</b> локально.
+        title: Новичок в чате?
+      speech:
+        description: Попробуйте <b>Deepgram</b> или <b>Azure Speech</b> для
+          высококачественного облачного озвучивания с бесплатным тарифом. Для
+          полностью локального и бесплатного решения используйте <b>Web Speech
+          API</b> или <b>Kokoro TTS</b>.
+        title: Нужен голос?
+      start_here: Начните здесь
+      transcription:
+        description: Рекомендуем <b>Deepgram STT</b> для молниеносной облачной
+          транскрипции. Для локального использования отлично подойдут <b>Web
+          Speech API</b> (браузер) или <b>Local Whisper</b>.
+        title: Голос в текст?
+      vision:
+        description: Используйте <b>Google Gemini</b> для мощного и бесплатного
+          облачного распознавания изображений. Локальные платформы <b>Ollama</b>
+          и <b>LM Studio</b> также поддерживают визуальные модели (VLM).
+        title: Зрение для ИИ?
+    speech:
+      app_local_audio:
+        description: Настройка параметров локального вывода звука для синтеза речи.
+        device_id: ID устройства вывода
+        device_id_placeholder: Введите ID устройства вывода (напр. 'default')...
+        sample_rate: Частота дискретизации
+        sample_rate_placeholder: Введите частоту дискретизации (напр. 16000)...
+        title: Настройки звука приложения (локально)
+    transcription:
+      app_local_audio:
+        description: Настройка параметров локального ввода звука для транскрипции.
+        device_id: ID устройства ввода
+        device_id_placeholder: Введите ID устройства ввода (напр. 'default')...
+        title: Настройки звука приложения (локально)
   connection:
     description: Настройка подключения к WebSocket-серверу
     title: Подключение
@@ -924,9 +1362,36 @@ pages:
       label: Application Gateway Key
       description: Security key to authenticate clients connecting to your node over
         the network. If empty, the gateway will not require authentication.
+    hf-token:
+      label: Токен Hugging Face (необязательно)
+      description: Ваш токен доступа пользователя Hugging Face. Используется для загрузки
+        моделей и предотвращения ошибок ограничения частоты запросов.
+      placeholder: hf_...
   scene:
     description: Настройте окружение, в котором живёт персонаж
     title: Сцена
+    beta_label: Система сцен
+    beta_description: Каждая карточка персонажа задает свой предпочтительный фон из этой
+      галереи. Настройка здесь сделает его фоном по умолчанию для активного
+      персонажа.
+    background_image:
+      title: Фон активного персонажа
+      no_background: Для этого персонажа нет активного фона. Загрузите квадратное или
+        альбомное изображение для лучшего результата.
+      upload: Загрузить в галерею
+      change: Сменить фон
+      clear: Сбросить по умолчанию
+    gallery:
+      title: Галерея сцен
+      empty: В галерее пока нет изображений. Загрузите изображение выше!
+      set_as_global: Сделать фоном персонажа по умолчанию
+      delete: Удалить из галереи
+      global_badge: По умолчанию для персонажа
+      active_badge: Текущая сцена
+    tip:
+      label: Совет!
+      description: Использование квадратного изображения активирует кадрирование
+        <b>cover</b> в портретном режиме, фокусируясь на центре сцены.
   system:
     color-scheme:
       description: Изменить цветовую схему сцены
@@ -974,6 +1439,15 @@ pages:
               performance-playground:
                 title: Performance Playground
                 description: 'VRM expressions + TTS lip sync playground'
+              vibrancy:
+                label: Насыщенность / Яркость
+                muted: Мягкий (Пастель)
+                balanced: Сбалансированный
+                vivid: Яркий (Неон)
+                monochrome: Монохром
+              reset:
+                title: Сбросить на циан AIRI
+          title: Цветовая схема
         theme-presets:
           presets:
             default:
@@ -1043,13 +1517,136 @@ pages:
                 Traditional Chinese colors, derived from ancient textiles,
                 porcelain and paintings
               title: Chinese Traditional Colors
+            warm:
+              title: Тепло и огонь (Warm & Fire)
+              description: Энергичные красные, коралловые, оранжевые и золотисто-янтарные
+                оттенки
+              colors:
+                crimson: Малиновый (Crimson)
+                coral: Коралловый (Coral)
+                tangerine: Мандариновый (Tangerine)
+                marigold: Бархатцы (Marigold)
+                amber: Янтарный (Amber)
+                lemon: Лимонный (Lemon)
+            flora:
+              title: Земля и флора (Earth & Flora)
+              description: Пышная растительность, шартрез, изумруд, мята и морской бирюзовый
+              colors:
+                lime: Лайм (Lime)
+                emerald: Изумруд (Emerald)
+                mint: Мята (Mint)
+                jade: Нефрит (Jade)
+                viridian: Виридиан (Viridian)
+                teal: Морской бирюзовый (Teal)
+            ocean:
+              title: Океан и небо (Ocean & Sky)
+              description: Тропическая аква, фирменный циан, лазурь и королевский синий
+              colors:
+                turquoise: Бирюза (Turquoise)
+                cyan: Фирменный циан (Signature Cyan)
+                cerulean: Лазурный (Cerulean)
+                cobalt: Кобальт (Cobalt)
+                sapphire: Сапфир (Sapphire)
+                denim: Деним (Denim)
+            bloom:
+              title: Роскошь и цветение (Royal & Bloom)
+              description: Глубокий индиго, аметист, яркий фиолетовый, фуксия и розовые тона
+              colors:
+                indigo: Индиго (Indigo)
+                amethyst: Аметист (Amethyst)
+                violet: Фиолетовый (Violet)
+                fuchsia: Фуксия (Fuchsia)
+                magenta: Пурпурный (Magenta)
+                rose: Роза (Rose)
           title: Наборы цветовых схем
+          description: Выберите оттенок из 24 цветов спектральной сетки или настройте цвет
+            вручную выше.
+          reset: Сбросить на фирменный циан
+        developer:
+          title: Разработчик
+          sections:
+            section:
+              performance-visualizer:
+                title: Визуализатор производительности
+                description: Переключение оверлея FPS / длительных задач / памяти
+              markdown-stress:
+                title: Стресс-тест Markdown
+                description: Стресс-тестирование парсинга и рендеринга Markdown с тяжелыми
+                  данными чата
+              use-magic-keys:
+                title: Инструмент useMagicKeys
+                description: Тестирование горячих клавиш
+              audio-record:
+                title: Запись звука
+                description: Тестирование аудио-композаблов
+              background-gradient-blending:
+                title: Смешивание цвета темы фона
+                description: Тестирование смешивания и темы
+              background-removal:
+                title: Удаление фона (требуется WebGPU)
+                description: Утилита для вырезания фона изображений
+              chat:
+                title: Чат
+                description: Отладка чата
+              gesture-circle:
+                title: Круг жестов (только ПК)
+                description: Тестирование распознавания жестов
+              image:
+                title: Изображение
+                description: Отладка изображений
+              polaroid:
+                title: Полароид
+                description: Утилита для создания снимков моделей
+              context-flow:
+                description: Инспекция входящих обновлений контекста и исходящих событий потока
+                  чата
+              websocket-inspector:
+                title: Инспектор WebSocket
+                description: Инспекция необработанного сетевого трафика WebSocket
+              vibrant:
+                title: Извлечение цветов (Vibrant)
+                description: Тестирование извлечения палитры цветов
+              providers-transcription-realtime-aliyun-nls:
+                title: Распознавание речи Aliyun в реальном времени
+                description: Потоковая передача аудио с микрофона в Aliyun NLS и анализ
+                  расшифровки
+              performance-playground:
+                title: Полигон производительности
+                description: Песочница для тестирования мимики VRM и синхронизации губ TTS
     title: Внешний вид
   page:
     developers:
       open-devtools:
         title: Open Developer Tools
         button: Open
+  chat:
+    title: Настройки чата и ввод
+    description: Комбинации клавиш отправки, таймауты потокового ответа и поведение пузырей
+      сообщений
+    send-mode:
+      title: Режим отправки
+      description: Выберите комбинацию клавиш для отправки сообщений.
+      options:
+        enter: Enter
+        ctrl-enter: Ctrl + Enter
+        double-enter: Двойной Enter
+  docs:
+    title: Документация
+    description: Узнайте, как использовать AIRI и его возможности
+    sections:
+      overview: Обзор
+      manual: Руководство
+      advanced: Дополнительно
+      chronicles: Хроники
+      showcase: Витрина
+  dating-sim:
+    title: Режим симулятора свиданий (Dating Sim)
+    description: Настройка интерактивных игровых режимов, порогов близости и правил
+      визуального поведения
+  stage:
+    title: Плавающие элементы управления
+    description: Настройка слотов плавающей панели действий, края закрепления и быстрых
+      триггеров
 sections:
   section:
     general:
@@ -1091,6 +1688,14 @@ vrm:
           camera: Камеру
           mouse: Мышь
           disabled: Отключено
+    mouse-tracking: Отслеживание мыши
+    mouse-tracking-desc: Аватар следит за движением мыши головой и глазами
+    follow-speed: Скорость слежения
+    options:
+      option:
+        camera: Камера
+        mouse: Мышь
+        disabled: Отключено
   switch-to-vrm:
     title: Переключиться на аватар Live2D?
     change-to-vrm: Нажмите здесь, чтобы переключиться на настройки Live2D
@@ -1100,6 +1705,8 @@ vrm:
   skybox:
     skybox-intensity: SkyBox Intensity
     skybox-specular-mix: Specular Mix
+  idle-animation:
+    title: Анимация ожидания по умолчанию
 websocket-secure-enabled:
   title: Включить безопасный WebSocket (WSS)
   description: >-
@@ -1111,3 +1718,74 @@ wip:
   description: >-
     This feature is currently under development and not yet publicly available.
     Check back in future updates for this functionality.
+providers:
+  speech:
+    app_local_audio:
+      description: Встроенный локальный синтез речи с использованием Kokoro / ONNX.
+      device_id: ID устройства
+      device_id_placeholder: Авто
+      sample_rate: Частота дискретизации
+      sample_rate_placeholder: напр. 24000
+      title: Приложение (локально)
+    browser_local_audio:
+      description: Синтез речи в браузере с использованием Web Speech API или
+        локального движка.
+      device_id: ID устройства
+      device_id_placeholder: Авто
+      sample_rate: Частота дискретизации
+      sample_rate_placeholder: напр. 24000
+      title: Браузер (локально)
+  transcription:
+    app_local_audio:
+      description: Встроенная локальная транскрипция с использованием Whisper / ONNX.
+      device_id: ID устройства
+      device_id_placeholder: Авто
+      title: Приложение (локально)
+    browser_local_audio:
+      description: Транскрипция в браузере с помощью Web Speech API или локального движка.
+      device_id: ID устройства
+      device_id_placeholder: Авто
+      title: Браузер (локально)
+privacy:
+  remote-sync:
+    title: Включить синхронизацию в облаке
+    description: По умолчанию выключено. Если отключено, AIRI работает исключительно
+      локально и не будет запрашивать удаленные сессии или синхронизировать
+      историю чата с airi-api.moeru.ai.
+groups:
+  character:
+    title: Персонаж и сцена
+  intelligence:
+    title: Интеллект
+chat:
+  send-mode:
+    title: Клавиша отправки
+    description: Выберите, как поле ввода чата отправляет сообщение.
+    options:
+      enter: Enter для отправки
+      ctrl-enter: Ctrl+Enter для отправки
+      double-enter: Двойной Enter для отправки
+  stream-idle-timeout:
+    title: Таймаут простоя потока
+    description: Отменять ответ, если поток модели прекращает выдавать события слишком
+      долго.
+    options:
+      10s: 10 секунд
+      15s: 15 секунд
+      30s: 30 секунд
+      45s: 45 секунд
+      60s: 60 секунд
+      120s: 2 минуты
+spine:
+  animation:
+    idle-animation: Анимация ожидания
+    mix-duration: Длительность смешивания (Mix Duration)
+    speed: Скорость воспроизведения
+  variant:
+    current-variant: Текущий вариант
+  skin:
+    current-skin: Текущий скин
+  scale-and-position:
+    scale: Масштаб
+    x: Позиция X
+    y: Позиция Y

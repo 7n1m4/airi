@@ -46,6 +46,48 @@ dialogs:
       stateRequesting: Requesting...
       stateGranted: Granted
       stateNotGranted: Not granted
+    modeSelection:
+      title: Comment souhaitez-vous commencer ?
+      description: Choisissez l'expérience qui correspond le mieux à vos préférences.
+      easy:
+        title: Configuration rapide
+        description: Démarrez instantanément avec nos fournisseurs cloud recommandés.
+      custom:
+        title: Configuration avancée
+        description: Je souhaite configurer mes propres fournisseurs locaux ou
+          personnalisés.
+    senseSetup:
+      title: Portail des sens
+      description: Configurez les sens fondamentaux de votre compagnon pour commencer.
+      consciousness: Conscience (LLM)
+      speech: Parole et audition
+      getOpenRouterKey: Obtenir une clé OpenRouter
+      openRouterSubtext: Modèles rapides, de haute qualité et gratuits. Aucune
+        vérification complexe requise.
+      deepgramSubtext: 200 $ de crédits pour les nouvelles inscriptions. Environ 50
+        heures de services de transcription et de parole incluses.
+      senseKey: Clé sensorielle (Sense Key)
+      senseKeyHelp: Entrez votre clé API Deepgram pour activer les sens vocaux.
+      getDeepgramKey: Obtenir une clé Deepgram
+    validationPartial: Configuration partiellement validée
+    testGeneration: Tester la génération
+    testGenerationRunning: Test en cours...
+    testGenerationFailed: Échec du test de génération
+    skipPermanently: Ignorer définitivement
+    starter:
+      title: Choisissez votre compagnon de départ
+      description: Sélectionnez un compagnon pour commencer votre aventure.
+      relu: ReLU
+      relu_desc: Une connexion avec une âme qui évolue aux côtés de vos données et de
+        votre cœur.
+      aria: Dr. Aria
+      aria_desc: Un guide brillant et spirituel gérant la couche de recherche AIRI.
+      lupin: Lupin
+      lupin_desc: Une fille-louve loyale aux instincts aiguisés et au cœur protecteur.
+      import: Personnalisé
+      import_desc: Importez votre propre âme depuis des cartes de personnage .json ou .png.
+      footer: "Découvrez d'autres créations incroyables de la communauté ou importez
+        la vôtre plus tard :"
 language:
   title: Langage
   description: >
@@ -168,6 +210,13 @@ pages:
         consciousness_model: Sélectionnez le modèle de conscience (modèle AB) pour ce caractère.
         speech_model: Sélectionnez le modèle de synthèse vocale et la voix pour ce
           personnage.
+        identity_prompting: Tous ces champs aident à définir le personnage, mais ne constituent
+          pas aujourd'hui des couches d'exécution distinctes. Le prompt système
+          est utilisé dans l'assemblage du prompt actif d'AIRI. Les instructions
+          post-historique sont principalement conservées pour la compatibilité
+          des fiches et les futurs travaux de pipeline de prompts, vous pouvez
+          donc les remplir sans attendre de comportement distinct pour le
+          moment.
       errors:
         name: Le nom doit être valide ou non vide.
         version: 'Erreur : numéro de version invalide !'
@@ -176,6 +225,8 @@ pages:
         scenario: 'Erreur : un scénario est requis.'
         systemprompt: 'Erreur : veuillez fournir un prompt système.'
         posthistoryinstructions: 'Erreur : le prompt post-historique est requis.'
+      none: Aucun (Sans arrière-plan)
+      preferred_background: Scène / Arrière-plan préféré
     modules: Modules
     name_asc: Nom (A-Z)
     name_desc: Nom (Z-A)
@@ -236,6 +287,22 @@ pages:
         title: Réinitialiser les paramètres et états du bureau
         description: Effacer les paramètres du bureau AIRI et l'état d'exécution.
         reset: Réinitialiser les données du bureau
+      characters:
+        title: Personnages
+        description: Exportez ou importez en masse votre collection de personnages.
+        export: Exporter les personnages
+        import: Importer des personnages
+      memory:
+        title: Mémoire et journal
+        description: Sauvegardez les résumés à court terme et les entrées de journal à
+          long terme.
+        export: Exporter la mémoire
+        import: Importer la mémoire
+      backgrounds:
+        title: Galerie d'arrière-plans
+        description: Exportez ou importez votre galerie de scènes (y compris les images).
+        export: Exporter les arrière-plans
+        import: Importer des arrière-plans
     confirmations:
       tooltip: Êtes-vous sûr(e) ?
       'yes': 'Oui'
@@ -250,6 +317,12 @@ pages:
       providers_reset: Paramètres du fournisseur réinitialisés.
       all_deleted: Toutes les données locales ont été supprimées.
       desktop_reset: Données du bureau réinitialisées.
+      characters_exported: Collection de personnages exportée avec succès.
+      characters_imported: Collection de personnages importée avec succès.
+      memory_exported: Données de mémoire et de journal exportées.
+      memory_imported: Données de mémoire et de journal importées.
+      backgrounds_exported: Galerie d'arrière-plans exportée.
+      backgrounds_imported: Galerie d'arrière-plans importée.
   models:
     description: Live2D, VRM, etc.
     title: Modèles
@@ -262,6 +335,16 @@ pages:
           title: VRM
           description: Configurer les modèles et paramètres 3D VRM
         scene: Scène
+    explore:
+      title: Découvrir des avatars
+      description: Explorez les archives de la communauté, les dépôts externes et les
+        bibliothèques de modèles gratuits pour VRM, Live2D, Spine et MMD.
+    tip:
+      title: Vous cherchez plus d'avatars ?
+      description: Fatigué de vos modèles actuels ? Envie d'en télécharger de nouveaux
+        gratuitement ? Consultez notre catalogue sélectionné d'avatars et de
+        marchés.
+      action: Découvrir des avatars
   modules:
     beat_sync:
       description: Vibrez au rythme de la source audio
@@ -383,6 +466,15 @@ pages:
         section:
           provider-selection:
             description: Sélectionnez le fournisseur de reconnaissance vocale approprié
+          hotkey:
+            title: Raccourci de bascule du microphone
+            description: Basculez le microphone à l'aide d'une touche de verrouillage (Arrêt
+              défil, Verr Maj ou Verr Num). Le voyant du clavier restera
+              synchronisé avec l'état du micro d'AIRI.
+            options:
+              scroll: Arrêt défil (Scroll Lock)
+              caps: Verr Maj (Caps Lock)
+              num: Verr Num (Num Lock)
     memory-long-term:
       description: Paramètres et gestion de la mémoire à long terme
       title: Mémoire à long terme
@@ -398,6 +490,43 @@ pages:
       token-description: Votre jeton de bot Discord
       token-placeholder: Entrez votre jeton de bot Discord
       configured: Discord est correctement configuré !
+      connectivity:
+        title: Connectivité
+        status: Statut
+        ping: Latence
+        connected: Connecté
+        disconnected: Déconnecté
+        connecting: Connexion en cours...
+        error: Erreur
+        no-guilds: Connecté à aucun serveur.
+      actions:
+        start: Démarrer le service
+        stop: Arrêter le service
+        restart: Redémarrer le service
+        force-sync: Forcer la synchronisation des fiches
+        simulate: Simuler un message
+        test-auth: Tester l'authentification
+        clear-log: Effacer le journal
+      presence:
+        title: Présence active
+        guild: Serveur
+        channel: Salon
+        no-active: Aucune présence active.
+      dev-console:
+        title: Console développeur
+        empty: Aucun événement enregistré. Démarrez le service pour commencer la
+          capture.
+      simulate-dialog:
+        username: Nom d'utilisateur
+        username-placeholder: Entrez un nom d'utilisateur...
+        content: Message
+        content-placeholder: Entrez un message de test...
+        send: Envoyer
+      controls:
+        title: Contrôles et modalités
+        vision: Activer la saisie d'images VLM (Vision)
+        vision-description: Autoriser AIRI à lire et traiter les pièces jointes d'images
+          depuis Discord
     speech:
       description: Synthèse vocale
       sections:
@@ -432,6 +561,7 @@ pages:
             show_less: Afficher moins
             show_more: Afficher plus
             title: Fournisseur
+            search_results: '{count} modèles trouvés sur {total}'
           voice-settings:
             input-ssml:
               placeholder: Entrez le texte SSML...
@@ -469,10 +599,52 @@ pages:
       actions:
         open-config: Ouvrir mcp.json
         apply-and-restart: Enregistrer et redémarrer stdio MCP
+        edit-json: Modifier mcp.json
+        apply-restart: Enregistrer et redémarrer stdio MCP
+        refresh: Actualiser le statut
+        install: Installer
+        installed: Installé
       messages:
         opened: 'Fichier de configuration ouvert à : {path}'
         restarted: 'Serveurs MCP redémarrés. Lancés : {started}, en échec : {failed},
           ignorés : {skipped}'
+        install-success: '{name} installé avec succès'
+      tabs:
+        manage: Gérer
+        discover: Découvrir
+      search-placeholder: 'Rechercher des serveurs MCP (ex: Google Search, Filesystem)...'
+      dashboard:
+        tool-count: '{count} outils disponibles'
+      registry:
+        loading: Chargement du registre...
+        stars: '{count} étoiles'
+        no-results: Aucun serveur trouvé pour "{query}"
+    artistry:
+      description: Génération d'images autonome, studio ComfyUI et illustrations de
+        souvenirs
+      title: Studio d'art et d'images
+      widget-instructions:
+        label: Instructions de génération de widget
+        description: Instructions fournies au modèle IA pour lui apprendre à utiliser le
+          système de widgets artistiques. Si vide, la valeur par défaut sera
+          utilisée.
+      spawn_mode:
+        label: Mode d'affichage des images
+        description: Décide comment les images générées sont transmises et affichées
+          dans le système.
+        options:
+          bg: Arrière-plan de la scène
+          inline: Historique de discussion (en ligne)
+          widget: Widget autonome
+          bg_widget: Arrière-plan et widget (par défaut)
+    cloud-sync:
+      title: Synchronisation cloud (BYOS)
+      description: Synchronisation cloud de l'état actif, stockage S3/R2 et boîte
+        d'envoi persistante multi-appareils
+    text-to-motion:
+      title: Texte vers mouvement (Text to Motion)
+      description: Images clés procédurales par LLM, diffusion 3D FlowMDM et
+        compilation VRMA
   providers:
     explained:
       chat: Fournisseurs de modèles de génération de texte, par ex. OpenRouter,
@@ -595,6 +767,25 @@ pages:
           title: Basique
         voice:
           title: Paramètres de la voix
+        dangerZone:
+          confirmDelete: Confirmer la suppression
+          deleteCredentials: Supprimer les identifiants
+          description: Supprime les identifiants de cette instance de fournisseur. Efface
+            la clé API et les paramètres de point de terminaison.
+          title: Zone dangereuse
+        instances:
+          addInstance: Ajouter une instance
+          defaultHint: Par défaut
+          makePrimary: Définir comme principal
+          primary: Principal
+          remove: Supprimer
+          title: Instances
+        modelBrowser:
+          description: Sélectionnez le modèle à utiliser pour cette instance de fournisseur.
+          label: Modèle
+          placeholder: Sélectionner un modèle...
+          title: Sélection du modèle
+      getApiKey: Obtenir une clé API
     description: LLMs, fournisseurs vocaux, etc.
     provider:
       app-local-audio-transcription:
@@ -618,6 +809,19 @@ pages:
       amazon-bedrock:
         title: Amazon Bedrock
         description: AWS Ecosystem - Access Titan, Claude, and Llama on AWS
+        config:
+          access-key-id:
+            description: Votre identifiant de clé d'accès AWS IAM
+            label: ID de clé d'accès AWS
+          region:
+            description: 'Région AWS où Bedrock est activé (ex: us-east-1, us-west-2)'
+            label: Région AWS
+          secret-access-key:
+            description: Votre clé d'accès secrète AWS IAM
+            label: Clé d'accès secrète AWS
+          session-token:
+            description: Jeton de session temporaire AWS (pour rôles STS/assumés)
+            label: Jeton de session (facultatif)
       qwen-portal:
         title: Qwen Portal
         description: Alibaba Cloud Native - Best-in-class Chinese and coding models
@@ -740,6 +944,12 @@ pages:
             description: Quantifié en 4-bit
           q4f16:
             description: 4-bit avec FP16
+          fp16-webgpu:
+            description: Modèle demi-précision utilisant WebGPU
+          q4-webgpu:
+            description: Modèle quantifié 4 bits utilisant WebGPU
+          q8-webgpu:
+            description: Modèle quantifié 8 bits utilisant WebGPU
         playground:
           default-text: Bonjour ! Ceci est un test du système de synthèse vocale Kokoro.
           title: Zone d'essai vocale
@@ -907,7 +1117,266 @@ pages:
           effets personnalisés et des filtres de dialogue
       moss-nano-local:
         title: Moss TTS (Nano)
+        description: Moteur de synthèse vocale local sur l'appareil utilisant Moss TTS.
+      airi-audio-server:
+        description: Serveur audio neuronal haute performance - Inférence locale en C++
+          avec clonage vocal zero-shot et balises d'expression paralinguistique
+        title: AIRI Audio Server
+      alibaba-cloud:
+        description: Model Studio - Plateforme de services de modèles à grande échelle
+          par Alibaba Cloud
+        title: Alibaba Cloud
+      aliyun-nls-transcription:
+        description: Puissance multilingue - STT robuste en temps réel avec prise en
+          charge approfondie des dialectes chinois
+      apple-core-ai:
+        alert:
+          content: Apple Core AI exécute des modèles localement via le plugin Swift natif,
+            déchargeant les calculs matriciels sur l'Apple Neural Engine (ANE)
+            et le GPU Metal avec une surcharge mémoire WebKit quasi nulle.
+          title: Inférence neuronale native Apple Silicon
+        description: Intelligence neuronale sur l'appareil avec accélération matérielle
+          via Apple Neural Engine (ANE) et GPU Metal.
+        title: Apple Core AI (Sur l'appareil)
+      atlascloud:
+        description: api.atlascloud.ai
+        title: Atlas Cloud
+      aws-polly-tts:
+        description: Écosystème AWS - Voix neuronales natives de haute qualité d'Amazon
+          Polly
+        title: Amazon AWS Polly
+      blip-local:
+        description: Outil pratique d'étiquetage d'images utilisant des tags Danbooru
+          pour classifier ou décrire des images, particulièrement efficace pour
+          les œuvres de style anime.
+        title: Waifu Diffusion Tagger (WD)
+      byteplus-coding-plan:
+        description: Plan de programmation BytePlus
+        title: BytePlus Coding Plan
+      byteplus:
+        description: byteplus.com
+        title: BytePlus
+      comet-api-transcription:
+        description: Transcription cloud de niveau entreprise
+      comfyui:
+        settings:
+          title: Configuration utilisateur ComfyUI
+        title: ComfyUI
+      deepgram-transcription:
+        description: 50 heures gratuites pour les nouveaux inscrits - Transcription en
+          temps réel ultra-rapide et très précise
+        title: Deepgram STT (Nova)
+      local-fs:
+        settings:
+          title: Configuration du système de fichiers local / Samba
+      mimo:
+        description: Xiaomi MiMo Code - Assistant de code IA gratuit et sans friction
+        title: MiMo
+      moondream-local:
+        description: Modèle de vision-langage de 1,6 milliard de paramètres sur
+          l'appareil s'exécutant dans le navigateur via WebGPU pour la
+          compréhension d'images et les questions/réponses visuelles.
+        title: Moondream2 VLM (Local, WebGPU)
+      nanobanana:
+        settings:
+          title: Configuration utilisateur Nano Banana
+        title: Nano Banana
+      openai-audio-transcription:
+        description: Standard de l'industrie - API Whisper fiable et largement compatible
+      openai-compatible-audio-transcription:
+        description: Fournissez votre point de terminaison - Point de terminaison STT
+          personnalisé compatible OpenAI
+      opencode-go:
+        description: Plateforme d'API pour développeurs - Forfaits à partir de 10 $ par mois
+        title: OpenCode Go
+      openpaths:
+        description: openpaths.io
+        title: OpenPaths
+      pocket-tts-local:
+        description: Moteur de synthèse vocale CPU local multilingue à faible latence
+          utilisant Kyutai Pocket TTS.
+        title: Pocket TTS (Kyutai Local)
+      pollinations:
+        description: Gratuit et sans friction - Complétion de chat open source sans clé
+          requise
+        title: Pollinations AI
+      replicate:
+        settings:
+          title: Configuration utilisateur Replicate.ai
+        title: Replicate
+      s3:
+        settings:
+          title: Configuration du stockage cloud compatible S3
+      volcengine-coding-plan:
+        description: Plan de programmation Volcengine
+        title: Volcengine Coding Plan
+      web-llm:
+        activation:
+          activate: Activer
+          active:
+            description: Ce fournisseur est actif et disponible dans Modules.
+            title: Fournisseur actif
+          deactivate: Désactiver
+          inactive:
+            description: Activez ce fournisseur pour le sélectionner sur les fiches de
+              personnages.
+            title: Activer le fournisseur
+        alert:
+          content: WebLLM exécute des modèles de transformateurs de pointe entièrement
+            dans votre navigateur via WebGPU — sans clé API ni serveur. Les
+            poids se téléchargent à la première utilisation et sont mis en cache
+            dans le Cache Storage du navigateur (webllm/*). Nécessite un
+            navigateur compatible WebGPU ou Electron (aucun repli CPU/WASM).
+          title: LLM dans le navigateur WebGPU uniquement
+        cache:
+          clear: Effacer le cache WebLLM
+          description: Poids téléchargés et bibliothèques WASM stockés dans le Cache
+            Storage du navigateur (webllm/*).
+          title: Cache des poids
+        description: LLM transformateur hors ligne intégré dans votre navigateur via
+          WebGPU (sans clé API)
+        fields:
+          customRepo:
+            description: 'Un dépôt Hugging Face avec des poids quantifiés MLC (ex :
+              mon-org/custom-llama3-MLC). Remplace la sélection prédéfinie.'
+            label: Dépôt de modèles HF personnalisé (facultatif)
+            placeholder: https://huggingface.co/mon-org/modele-perso-MLC
+          customWasm:
+            description: La bibliothèque d'exécution WASM correspondant à la famille
+              d'architecture du modèle. Un dépôt personnalisé sans binaire WASM
+              publié renvoie 404 à l'exécution.
+            label: URL WASM model_lib personnalisée (requise pour dépôt personnalisé)
+            placeholder: https://.../custom-model_q4f16_1_cs1k-webgpu.wasm
+          model:
+            description: Un modèle WebLLM vérifié du catalogue prédéfini (bibliothèque WASM
+              correspondante incluse).
+            label: Modèle sélectionné
+          temperature:
+            description: Température d'échantillonnage (plus élevée = plus créatif).
+            label: Température
+          topP:
+            description: Seuil d'échantillonnage de noyau (masse de probabilité).
+            label: Top P
+        sections:
+          cache:
+            clear: Effacer le cache WebLLM
+            clearing: Effacement en cours...
+            description: Poids téléchargés et bibliothèques WASM stockés dans le Cache
+              Storage du navigateur (webllm/*).
+            notCached: Aucun poids WebLLM mis en cache
+            refresh: Actualiser
+            title: Cache des poids
+          model:
+            description: Choisissez un modèle sélectionné ou ajoutez un dépôt Hugging Face
+              MLC personnalisé ci-dessous.
+            title: Modèle
+        title: WebLLM (Local, WebGPU)
+      web-rwkv:
+        alert:
+          content: RWKV s'exécute entièrement dans votre navigateur via WebGPU — sans clé
+            API ni serveur. Le modèle se télécharge à la première utilisation et
+            est mis en cache ; les poids bf16/f32 sont convertis automatiquement
+            en f16 lors du chargement. Nécessite un navigateur compatible WebGPU
+            ou Electron (aucun repli CPU/WASM).
+          title: LLM dans le navigateur WebGPU uniquement
+        defaultsSection:
+          annotation: 'Pour personnaliser ces paramètres pour un personnage, accédez à son
+            onglet Génération : • Modifiez la température, le Top P et le nombre
+            maximal de jetons avec les champs de saisie. • Modifiez les
+            pénalités (Présence/Nombre/Décroissance) en les saisissant dans la
+            zone de texte JSON avancé (ex : {"presence_penalty": 0.5}).'
+          description: Ce sont les paramètres de repli utilisés par web-rwkv.
+          field:
+            count_penalty: "Pénalité d'occurrence Count Penalty (Par défaut : 0.4)"
+            max_tokens: 'Jetons max Max Tokens (Par défaut : 512)'
+            penalty_decay: 'Décroissance de pénalité Penalty Decay (Par défaut : 0.996)'
+            presence_penalty: 'Pénalité de présence Presence Penalty (Par défaut : 0.4)'
+            temperature: 'Température Temperature (Par défaut : 1.0)'
+            top_p: 'Top P (Par défaut : 0.5)'
+          title: Paramètres de génération par défaut (Lecture seule)
+        description: LLM RWKV-7 local dans votre navigateur via WebGPU (sans clé API)
+        fields:
+          enableG1Prefill:
+            description: "Préremplit les tours de l'assistant avec <think></think> pour
+              maintenir les modèles de raisonnement G1 dans leur mode
+              d'entraînement et supprime la balise de fermeture initiale sur la
+              sortie. Désactivez cette option si vous utilisez des modèles
+              non-G1 (ex : RWKV-6/5)."
+            label: Activer le préremplissage et la suppression des balises de raisonnement
+              G1
+          model:
+            description: Une URL .safetensors avec des noms de tenseurs natifs RWKV — soit
+              converti pour web-rwkv, soit HuggingFace brut (la disposition est
+              détectée automatiquement). bf16/f32 sont convertis en f16 au
+              chargement. PyTorch .pth n'est pas pris en charge ;
+              convertissez-le d'abord en safetensors (convert_safetensors.py).
+            label: URL du modèle
+          vocab:
+            description: Remplacer le vocabulaire du tokenizer RWKV World intégré. Si vous
+              utilisez un modèle affiné pour une autre langue ou un mappage de
+              jetons personnalisé, fournir son URL JSON de vocabulaire garantit
+              un encodage et une génération corrects.
+            label: URL du vocabulaire (facultatif)
+            placeholder: (intégré rwkv_vocab_v20230424.json)
+        title: RWKV (Local, WebGPU)
+      whisper-local:
+        description: STT local utilisant Whisper (s'exécute dans votre navigateur, sans
+          clé API)
+        title: Whisper (Local)
     title: Fournisseurs
+    filters:
+      all: Tous
+      cloud: Cloud
+      deployment: Déploiement
+      free: Gratuit
+      local: Local
+      paid: Payant
+      pricing: Tarification
+      suggested: Suggérés
+    onboarding:
+      artistry:
+        description: La référence pour l'art IA local est <b>ComfyUI</b>. Si vous
+          préférez la génération dans le cloud, <b>Replicate</b> propose une
+          grande variété de modèles avec une tarification à l'utilisation.
+        title: Générer des images ?
+      chat:
+        description: Pour démarrer rapidement, nous recommandons <b>Google Gemini</b>
+          (Cloud gratuit) ou <b>OpenRouter</b> (Cloud unifié). Si vous préférez
+          la confidentialité et disposez d'un GPU, utilisez <b>Ollama</b> ou
+          <b>LM Studio</b> pour une expérience locale.
+        title: Nouveau dans le chat ?
+      speech:
+        description: Essayez <b>Deepgram</b> ou <b>Azure Speech</b> pour des voix cloud
+          de haute qualité avec des offres gratuites. Pour une solution
+          entièrement locale et gratuite, utilisez l'<b>API Web Speech</b> ou
+          <b>Kokoro TTS</b>.
+        title: Besoin d'une voix ?
+      start_here: Commencer ici
+      transcription:
+        description: Nous recommandons <b>Deepgram STT</b> pour une transcription cloud
+          ultra-rapide. Pour un usage local, l'<b>API Web Speech</b>
+          (navigateur) ou <b>Local Whisper</b> sont d'excellents choix gratuits.
+        title: Transcription vocale ?
+      vision:
+        description: Utilisez <b>Google Gemini</b> pour une vision cloud puissante et
+          gratuite. Les options locales comme <b>Ollama</b> et <b>LM Studio</b>
+          prennent également en charge les modèles avec vision (VLM).
+        title: Voir le monde ?
+    speech:
+      app_local_audio:
+        description: Configurer les paramètres de sortie audio locale pour la synthèse
+          vocale.
+        device_id: ID du périphérique de sortie
+        device_id_placeholder: "Entrez l'ID du périphérique de sortie (ex : 'default')..."
+        sample_rate: Taux d'échantillonnage
+        sample_rate_placeholder: "Entrez le taux d'échantillonnage (ex : 16000)..."
+        title: Paramètres audio de l'application (local)
+    transcription:
+      app_local_audio:
+        description: Configurer les paramètres d'entrée audio locale pour la transcription.
+        device_id: ID du périphérique d'entrée
+        device_id_placeholder: "Entrez l'ID du périphérique d'entrée (ex : 'default')..."
+        title: Paramètres audio de l'application (local)
   connection:
     description: Configuration de la connexion au serveur WebSocket
     title: Connexion
@@ -936,9 +1405,37 @@ pages:
       label: Application Gateway Key
       description: Security key to authenticate clients connecting to your node over
         the network. If empty, the gateway will not require authentication.
+    hf-token:
+      label: Jeton Hugging Face (Facultatif)
+      description: Votre jeton d'accès utilisateur Hugging Face. Utilisé pour télécharger
+        des modèles et éviter les erreurs de limitation de débit.
+      placeholder: hf_...
   scene:
     description: Configurer l’environnement où vit le personnage
     title: Scène
+    beta_label: Système de scènes
+    beta_description: Chaque fiche de personnage spécifie son propre arrière-plan préféré à
+      partir de cette galerie. Le définir ici le configurera par défaut pour le
+      personnage actuellement actif.
+    background_image:
+      title: Arrière-plan du personnage actif
+      no_background: Aucun arrière-plan actif pour ce personnage. Téléversez une image carrée
+        ou paysage pour de meilleurs résultats.
+      upload: Téléverser dans la galerie
+      change: Changer d'arrière-plan
+      clear: Effacer la valeur par défaut
+    gallery:
+      title: Galerie de scènes
+      empty: Aucune image dans la galerie pour le moment. Téléversez-en une ci-dessus
+        !
+      set_as_global: Définir comme arrière-plan par défaut du personnage
+      delete: Supprimer de la galerie
+      global_badge: Par défaut pour le personnage
+      active_badge: Scène actuelle
+    tip:
+      label: Astuce !
+      description: L'utilisation d'une image carrée tirera parti du recadrage <b>cover</b>
+        en mode portrait, en se concentrant sur le centre de la scène.
   system:
     color-scheme:
       description: Modifier le schéma de couleurs de la scène.
@@ -959,6 +1456,14 @@ pages:
                 label: Couleur principale
                 rgb-on:
                   title: Je veux que ce soit dynamique !
+              vibrancy:
+                label: Vibrance / Saturation
+                muted: Doux (Pastel)
+                balanced: Équilibré
+                vivid: Vif (Néon)
+                monochrome: Monochrome
+              reset:
+                title: Réinitialiser au cyan AIRI
           title: Schéma de couleurs
         developer:
           title: Développeur
@@ -1082,13 +1587,85 @@ pages:
                 Couleurs traditionnelles chinoises, issues des textiles anciens,
                 de la porcelaine et des peintures
               title: Couleurs traditionnelles chinoises
+            warm:
+              title: Chaleur et feu (Warm & Fire)
+              description: Rouges énergiques, coraux, oranges et ambres dorés
+              colors:
+                crimson: Cramoisi (Crimson)
+                coral: Corail
+                tangerine: Mandarine (Tangerine)
+                marigold: Souci (Marigold)
+                amber: Ambre (Amber)
+                lemon: Citron (Lemon)
+            flora:
+              title: Terre et flore (Earth & Flora)
+              description: Végétation luxuriante, chartreuse, émeraude, menthe et sarcelles
+                océanes
+              colors:
+                lime: Citron vert (Lime)
+                emerald: Émeraude (Emerald)
+                mint: Menthe (Mint)
+                jade: Jade
+                viridian: Viridien (Viridian)
+                teal: Sarcelle (Teal)
+            ocean:
+              title: Océan et ciel (Ocean & Sky)
+              description: Bleus tropicaux, cyan signature, céruléen et bleu royal
+              colors:
+                turquoise: Turquoise
+                cyan: Cyan signature (Signature Cyan)
+                cerulean: Céruléen (Cerulean)
+                cobalt: Cobalt
+                sapphire: Saphir (Sapphire)
+                denim: Denim
+            bloom:
+              title: Royauté et floraison (Royal & Bloom)
+              description: Indigos profonds, améthyste, pourpres vibrants, fuchsias et roses
+              colors:
+                indigo: Indigo
+                amethyst: Améthyste (Amethyst)
+                violet: Violet
+                fuchsia: Fuchsia
+                magenta: Magenta
+                rose: Rose
           title: Préréglages de couleurs
+          description: Choisissez parmi une grille de 24 couleurs sélectionnées ou
+            personnalisez la teinte et la saturation ci-dessus.
+          reset: Réinitialiser au cyan signature
     title: Apparence
   page:
     developers:
       open-devtools:
         title: Ouvrir les Outils de Développement
         button: Ouvrir
+  chat:
+    title: Paramètres de chat et saisie
+    description: Combinaisons de touches d'envoi, délais d'attente de réponse en flux et
+      comportement des bulles de messages
+    send-mode:
+      title: Mode d'envoi
+      description: Choisissez la combinaison de touches pour envoyer des messages.
+      options:
+        enter: Entrée
+        ctrl-enter: Ctrl + Entrée
+        double-enter: Double Entrée
+  docs:
+    title: Documentation
+    description: Apprenez à utiliser AIRI et ses fonctionnalités
+    sections:
+      overview: Vue d'ensemble
+      manual: Manuel
+      advanced: Avancé
+      chronicles: Chroniques
+      showcase: Vitrine
+  dating-sim:
+    title: Mode Dating Sim
+    description: Ajuster les modes de jeu interactifs, les seuils de progression d'intimité
+      et les règles de comportement visuel
+  stage:
+    title: Contrôles flottants
+    description: Personnaliser les emplacements de la bande d'actions flottante, le bord
+      d'ancrage et les déclencheurs rapides
 sections:
   section:
     general:
@@ -1130,6 +1707,14 @@ vrm:
           camera: Caméra
           mouse: Souris
           disabled: Désactivé
+    mouse-tracking: Suivi de la souris
+    mouse-tracking-desc: L'avatar suit les mouvements de la souris avec la tête et les yeux
+    follow-speed: Vitesse de suivi
+    options:
+      option:
+        camera: Caméra
+        mouse: Souris
+        disabled: Désactivé
   switch-to-vrm:
     title: Passer à l’avatar Live2D ?
     change-to-vrm: Cliquez ici pour passer aux paramètres de l’avatar Live2D
@@ -1139,9 +1724,83 @@ vrm:
   skybox:
     skybox-intensity: Intensité de la SkyBox
     skybox-specular-mix: Mélange spéculaire
+  idle-animation:
+    title: Animation d'inactivité par défaut
 wip:
   title: Travail en cours
   description: >-
     Cette fonctionnalité est actuellement en cours de développement et n'est pas
     disponible publiquement. Revenez ultérieurement pour les mises-à-jour
     futures.
+providers:
+  speech:
+    app_local_audio:
+      description: Synthèse vocale locale intégrée utilisant Kokoro / ONNX.
+      device_id: ID du périphérique
+      device_id_placeholder: Auto
+      sample_rate: Taux d'échantillonnage
+      sample_rate_placeholder: 'ex : 24000'
+      title: Application (Locale)
+    browser_local_audio:
+      description: Synthèse vocale s'exécutant dans le navigateur via l'API Web Speech
+        ou un moteur local.
+      device_id: ID du périphérique
+      device_id_placeholder: Auto
+      sample_rate: Taux d'échantillonnage
+      sample_rate_placeholder: 'ex : 24000'
+      title: Navigateur (Local)
+  transcription:
+    app_local_audio:
+      description: Transcription locale intégrée utilisant Whisper / ONNX.
+      device_id: ID du périphérique
+      device_id_placeholder: Auto
+      title: Application (Locale)
+    browser_local_audio:
+      description: Transcription s'exécutant dans le navigateur via l'API Web Speech
+        ou un moteur local.
+      device_id: ID du périphérique
+      device_id_placeholder: Auto
+      title: Navigateur (Local)
+privacy:
+  remote-sync:
+    title: Activer la synchronisation cloud
+    description: Désactivé par défaut. Si désactivé, AIRI reste exclusivement local et ne
+      récupérera aucune session distante ni ne synchronisera l'historique de
+      discussion avec airi-api.moeru.ai.
+groups:
+  character:
+    title: Personnage et scène
+  intelligence:
+    title: Intelligence
+chat:
+  send-mode:
+    title: Touche d'envoi
+    description: Choisissez comment vous souhaitez que la saisie de chat envoie un message.
+    options:
+      enter: Entrée pour envoyer
+      ctrl-enter: Ctrl+Entrée pour envoyer
+      double-enter: Double Entrée pour envoyer
+  stream-idle-timeout:
+    title: Délai d'inactivité du flux
+    description: Annule une réponse si le flux du modèle cesse de produire des événements
+      pendant trop longtemps.
+    options:
+      10s: 10 secondes
+      15s: 15 secondes
+      30s: 30 secondes
+      45s: 45 secondes
+      60s: 60 secondes
+      120s: 2 minutes
+spine:
+  animation:
+    idle-animation: Animation d'inactivité
+    mix-duration: Durée de mixage (Mix Duration)
+    speed: Vitesse
+  variant:
+    current-variant: Variante actuelle
+  skin:
+    current-skin: Skin actuel
+  scale-and-position:
+    scale: Échelle
+    x: Position X
+    y: Position Y

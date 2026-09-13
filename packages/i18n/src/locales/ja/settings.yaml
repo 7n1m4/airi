@@ -43,6 +43,43 @@ dialogs:
       stateRequesting: Requesting...
       stateGranted: Granted
       stateNotGranted: Not granted
+    modeSelection:
+      title: どのように開始しますか？
+      description: お好みに合わせたセットアップ方法を選択してください。
+      easy:
+        title: かんたん設定
+        description: おすすめのクラウドプロバイダーを使ってすぐに始められます。
+      custom:
+        title: 高度な設定
+        description: 独自のローカル環境やカスタムプロバイダーを構成します。
+    senseSetup:
+      title: 感覚ポータル
+      description: パートナーのコア感覚を設定して開始します。
+      consciousness: 意識コア (LLM)
+      speech: 音声と聴覚
+      getOpenRouterKey: OpenRouter キーを取得
+      openRouterSubtext: 高速・高品質で無料モデルも豊富。複雑な認証は不要です。
+      deepgramSubtext: 新規登録で $200 の無料クレジット。約50時間分の文字起こし・音声合成サービスが含まれます。
+      senseKey: 感覚キー (Sense Key)
+      senseKeyHelp: 音声機能を有効にするには、Deepgram API キーを入力してください。
+      getDeepgramKey: Deepgram キーを取得
+    validationPartial: 設定が一部検証されました
+    testGeneration: 生成テスト
+    testGenerationRunning: テスト中...
+    testGenerationFailed: 生成テストに失敗しました
+    skipPermanently: 恒久的にスキップ
+    starter:
+      title: 最初のパートナーを選択
+      description: 旅を共にするパートナーを選んでください。
+      relu: ReLU
+      relu_desc: あなたのデータと心に寄り添い、共に進化していく魂の絆。
+      aria: Dr. Aria
+      aria_desc: AIRI 研究レイヤーを統括する、聡明で機知に富んだガイド。
+      lupin: Lupin
+      lupin_desc: 鋭い直感と強い守護の心を持つ、忠実な狼少女。
+      import: カスタム
+      import_desc: .json または .png のキャラクターカードから独自の魂をインポートします。
+      footer: コミュニティの素晴らしい作品をさらに探索するか、後で独自にインポートしてください：
 language:
   title: 言語
   description: >
@@ -157,6 +194,9 @@ pages:
           カードのバージョン。以前のカードから変更を加える場合は、これを増やす必要があります。
         consciousness_model: このキャラクターの意識モデル(AIモデル)を選択してください。
         speech_model: このキャラクターの音声合成モデルと音声を選択してください。
+        identity_prompting: これらのフィールドはキャラクターの定義に役立ちますが、現在のところ個別のランタイムレイヤーとしては分離されていません。システムプロンプトは
+          AIRI のアクティブプロンプト組み立てに使用されます。履歴後指示（Post-History
+          Instructions）は主にカードの互換性と将来のプロンプトパイプラインのために保持されているため、現時点では挙動の変化を期待せずに入力して問題ありません。
       errors:
         name: 名前は有効であるか、空でない必要があります。
         version: 'エラー: 無効なバージョン番号です！'
@@ -165,6 +205,8 @@ pages:
         scenario: 'エラー: シナリオは必須です。'
         systemprompt: 'エラー: システムプロンプトを入力してください。'
         posthistoryinstructions: 'エラー: 履歴の後のプロンプトは必須です。'
+      none: なし (背景なし)
+      preferred_background: 優先するシーン / 背景
     modules: モジュール
     name_asc: 名前(A-Z)
     name_desc: 名前(Z-A)
@@ -197,6 +239,7 @@ pages:
       manual: マニュアル
       advanced: 高度な設定 / 開発
       chronicles: 年表
+      showcase: ショーケース
   data:
     title: データ
     description: AIRIデータの保存、エクスポート、およびリセットの管理
@@ -230,6 +273,21 @@ pages:
         title: デスクトップの設定と状態をリセット
         description: AIRIデスクトップの設定と実行時の状態を消去します。
         reset: デスクトップのデータをリセット
+      characters:
+        title: キャラクター
+        description: キャラクターコレクションを一括でエクスポートまたはインポートします。
+        export: キャラクターをエクスポート
+        import: キャラクターをインポート
+      memory:
+        title: 記憶とジャーナル
+        description: 短期記憶の要約と長期ジャーナルエントリをバックアップします。
+        export: 記憶をエクスポート
+        import: 記憶をインポート
+      backgrounds:
+        title: 背景ギャラリー
+        description: シーンギャラリー（画像を含む）をエクスポートまたはインポートします。
+        export: 背景をエクスポート
+        import: 背景をインポート
     confirmations:
       tooltip: 本当によろしいですか？
       'yes': 'はい'
@@ -243,6 +301,12 @@ pages:
       providers_reset: プロバイダーの設定をリセットしました。
       all_deleted: すべてのローカルデータを削除しました。
       desktop_reset: デスクトップのデータをリセットしました。
+      characters_exported: キャラクターコレクションをエクスポートしました。
+      characters_imported: キャラクターコレクションをインポートしました。
+      memory_exported: 記憶とジャーナルデータをエクスポートしました。
+      memory_imported: 記憶とジャーナルデータをインポートしました。
+      backgrounds_exported: 背景ギャラリーをエクスポートしました。
+      backgrounds_imported: 背景ギャラリーをインポートしました。
   models:
     description: Live2D、VRMなど。
     title: モデル
@@ -255,6 +319,13 @@ pages:
           title: VRM
           description: 3D VRMモデルと設定を構成
         scene: シーン
+    explore:
+      title: アバターを見つける
+      description: VRM、Live2D、Spine、MMD のコミュニティアーカイブ、外部リポジトリ、無料モデルライブラリを探索します。
+    tip:
+      title: もっとアバターをお探しですか？
+      description: 今のモデルに飽きましたか？クールな新しい無料モデルをダウンロードしてみませんか？厳選されたアバターカタログとマーケットプレイスをチェックしてみてください。
+      action: アバターを見つける
   modules:
     beat_sync:
       description: オーディオソースのビートに合わせて雰囲気を出す
@@ -369,6 +440,14 @@ pages:
         section:
           provider-selection:
             description: 適切な音声認識プロバイダーを選択
+          hotkey:
+            title: マイク切り替えホットキー
+            description: キーボードのロックキー (Scroll, Caps, または Num Lock)
+              でマイクを切り替えます。キーボードのLEDがAIRIのマイク状態と同期します。
+            options:
+              scroll: Scroll Lock
+              caps: Caps Lock
+              num: Num Lock
     memory-long-term:
       description: 長期記憶固有の設定と管理
       title: 長期記憶
@@ -384,6 +463,41 @@ pages:
       token-description: あなたのDiscordボットトークン
       token-placeholder: Discordボットトークンを入力
       configured: Discordは適切に設定されています！
+      connectivity:
+        title: 接続状態
+        status: ステータス
+        ping: レイテンシ
+        connected: 接続済み
+        disconnected: 切断
+        connecting: 接続中...
+        error: エラー
+        no-guilds: サーバーに接続されていません。
+      actions:
+        start: サービス開始
+        stop: サービス停止
+        restart: サービス再起動
+        force-sync: カード強制同期
+        simulate: メッセージを模擬
+        test-auth: 認証テスト
+        clear-log: ログを消去
+      presence:
+        title: アクティブプレゼンス
+        guild: サーバー
+        channel: チャンネル
+        no-active: アクティブなプレゼンスはありません。
+      dev-console:
+        title: 開発者コンソール
+        empty: 記録されたイベントはありません。サービスを開始してキャプチャを開始してください。
+      simulate-dialog:
+        username: ユーザー名
+        username-placeholder: ユーザー名を入力...
+        content: メッセージ
+        content-placeholder: テストメッセージを入力...
+        send: 送信
+      controls:
+        title: コントロールとモダリティ
+        vision: VLM (視覚) 画像入力を有効化
+        vision-description: AIRI が Discord からの添付画像を読み取って処理できるようにします
     speech:
       description: 音声合成
       sections:
@@ -417,6 +531,7 @@ pages:
             show_less: 表示を減らす
             show_more: もっと表示
             title: プロバイダー
+            search_results: 全 {total} 件中 {count} 件のモデルが見つかりました
           voice-settings:
             input-ssml:
               placeholder: SSMLテキストを入力…
@@ -473,6 +588,26 @@ pages:
         loading: レジストリを読み込み中...
         stars: '{count} スター'
         no-results: '"{query}" に一致するサーバーは見つかりませんでした'
+    artistry:
+      description: 自律的画像生成、ComfyUI スタジオ、記憶イラストレーション
+      title: アート＆画像スタジオ
+      widget-instructions:
+        label: ウィジェット生成指示
+        description: アートウィジェットシステムの使い方を指示するプロンプト。空の場合はシステムのデフォルトが使用されます。
+      spawn_mode:
+        label: 画像表示ルート
+        description: 生成された画像をシステム内でどのように配信・表示するかを決定します。
+        options:
+          bg: ステージ背景
+          inline: チャット履歴 (インライン)
+          widget: スタンドアロンウィジェット
+          bg_widget: 背景＆ウィジェット (デフォルト)
+    cloud-sync:
+      title: クラウド同期 (BYOS)
+      description: アクティブ状態のクラウド同期、S3/R2 ストレージ、マルチデバイス永続送信トレイ
+    text-to-motion:
+      title: テキスト・トゥ・モーション
+      description: プロシージャル LLM キーフレーム、FlowMDM 3D 拡散生成、VRMA コンパイル
   providers:
     explained:
       chat: テキスト生成モデルプロバイダー。例： OpenRouter, OpenAI, Ollama。
@@ -584,6 +719,24 @@ pages:
           title: 基本
         voice:
           title: 音声設定
+        dangerZone:
+          confirmDelete: 削除を確認
+          deleteCredentials: 認証情報を削除
+          description: このプロバイダーインスタンスの認証情報を削除します。APIキーとエンドポイント設定がクリアされます。
+          title: 危険ゾーン
+        instances:
+          addInstance: インスタンスを追加
+          defaultHint: デフォルト
+          makePrimary: プライマリに設定
+          primary: プライマリ
+          remove: 削除
+          title: インスタンス一覧
+        modelBrowser:
+          description: このプロバイダーインスタンスで使用するモデルを選択してください。
+          label: モデル
+          placeholder: モデルを選択...
+          title: モデル選択
+      getApiKey: APIキーを取得
     description: LLM、音声プロバイダーなど。
     provider:
       app-local-audio-transcription:
@@ -607,6 +760,19 @@ pages:
       amazon-bedrock:
         title: Amazon Bedrock
         description: AWS Ecosystem - Access Titan, Claude, and Llama on AWS
+        config:
+          access-key-id:
+            description: AWS IAM アクセスキー ID
+            label: AWS アクセスキー ID
+          region:
+            description: 'Bedrock が有効な AWS リージョン（例: us-east-1, us-west-2）'
+            label: AWS リージョン
+          secret-access-key:
+            description: AWS IAM シークレットアクセスキー
+            label: AWS シークレットアクセスキー
+          session-token:
+            description: AWS 一時セッショントークン (STS / AssumeRole用)
+            label: セッショントークン (オプション)
       qwen-portal:
         title: Qwen Portal
         description: Alibaba Cloud Native - Best-in-class Chinese and coding models
@@ -722,6 +888,12 @@ pages:
             description: 4ビット量子化
           q4f16:
             description: 4ビット量子化（FP16）
+          fp16-webgpu:
+            description: WebGPU を使用した半精度モデル
+          q4-webgpu:
+            description: WebGPU を使用した 4-bit 量子化モデル
+          q8-webgpu:
+            description: WebGPU を使用した 8-bit 量子化モデル
         playground:
           default-text: こんにちは！これは音声合成システム Kokoro のテストです。
           title: 音声合成実験場
@@ -884,7 +1056,229 @@ pages:
         description: ボイスライブラリ - カスタムエフェクト and 対話フィルターを使用してバーチャルボイスプロファイルを作成します
       moss-nano-local:
         title: Moss TTS (Nano)
+        description: Moss TTS を使用したローカル・オンデバイス音声合成エンジン。
+      airi-audio-server:
+        description: 高性能ニューラルオーディオサーバー - ゼロショット音声クローニングとパラ言語表現タグをサポートするローカル C++ 推論
+        title: AIRI Audio Server
+      alibaba-cloud:
+        description: Model Studio - Alibaba Cloud の大規模モデルサービスプラットフォーム
+        title: Alibaba Cloud (阿里雲)
+      aliyun-nls-transcription:
+        description: 多言語対応の実力派 - 中国語の複数方言を深くサポートする堅牢なリアルタイムSTT
+      apple-core-ai:
+        alert:
+          content: Apple Core AI はネイティブ Swift プラグインを通じてローカルでモデルを実行し、行列演算を Apple Neural
+            Engine (ANE) と Metal GPU にオフロードして、WebKit のメモリオーバーヘッドをほぼゼロに抑えます。
+          title: Apple Silicon ネイティブ・ニューラル推論
+        description: Apple Neural Engine (ANE) と Metal GPU
+          によるハードウェアアクセラレーション対応のオンデバイス・ニューラル推論。
+        title: Apple Core AI (デバイス上)
+      atlascloud:
+        description: api.atlascloud.ai
+        title: Atlas Cloud
+      aws-polly-tts:
+        description: AWS エコシステム - Amazon Polly によるネイティブで高品質なニューラル音声
+        title: Amazon AWS Polly
+      blip-local:
+        description: Danbooru タグを使用して画像を分類・記述する便利な画像タギングツール。アニメやイラスト作品に特に効果的です。
+        title: Waifu Diffusion Tagger (WD)
+      byteplus-coding-plan:
+        description: BytePlus コーディングプラン
+        title: BytePlus Coding Plan
+      byteplus:
+        description: byteplus.com
+        title: BytePlus
+      comet-api-transcription:
+        description: エンタープライズグレードのクラウド音声文字起こし
+      comfyui:
+        settings:
+          title: ComfyUI ユーザー設定
+        title: ComfyUI
+      deepgram-transcription:
+        description: 新規登録で50時間無料 - 超高速・高精度のリアルタイム文字起こし
+        title: Deepgram STT (Nova)
+      local-fs:
+        settings:
+          title: ローカルファイルシステム / Samba 設定
+      mimo:
+        description: Xiaomi MiMo Code - 完全無料の AI コーディングアシスタント
+        title: MiMo
+      moondream-local:
+        description: WebGPU を介してブラウザ内で実行される 1.6B オンデバイス視覚言語モデル。自然な画像理解と視覚的 Q&A を提供します。
+        title: Moondream2 VLM (ローカル WebGPU)
+      nanobanana:
+        settings:
+          title: Nano Banana ユーザー設定
+        title: Nano Banana
+      openai-audio-transcription:
+        description: 業界標準 - 信頼性が高く幅広い互換性を持つ Whisper API
+      openai-compatible-audio-transcription:
+        description: 独自エンドポイント - カスタム OpenAI 互換 STT エンドポイント
+      opencode-go:
+        description: 開発者向け API プラットフォーム - 月額 $10 から
+        title: OpenCode Go
+      openpaths:
+        description: openpaths.io
+        title: OpenPaths
+      pocket-tts-local:
+        description: Kyutai Pocket TTS を使用したローカル低遅延・多言語 CPU 音声合成エンジン。
+        title: Pocket TTS (Kyutai ローカル)
+      pollinations:
+        description: 完全無料 - オープンソースで API キー不要のチャット補完サービス
+        title: Pollinations AI
+      replicate:
+        settings:
+          title: Replicate.ai ユーザー設定
+        title: Replicate
+      s3:
+        settings:
+          title: S3 互換クラウドストレージ設定
+      volcengine-coding-plan:
+        description: Volcengine コーディングプラン
+        title: Volcengine Coding Plan
+      web-llm:
+        activation:
+          activate: 有効化
+          active:
+            description: このプロバイダーはアクティブで、モジュールで使用可能です。
+            title: プロバイダー有効
+          deactivate: 無効化
+          inactive:
+            description: キャラクターカードで選択できるように、このプロバイダーを有効化してください。
+            title: プロバイダーを有効化
+        alert:
+          content: WebLLM は WebGPU を介してブラウザ内で最先端の Transformer モデルを完全実行します — API
+            キー不要、サーバー不要。初回使用時に重みがダウンロードされ、ブラウザの Cache Storage (webllm/*)
+            にキャッシュされます。WebGPU 対応のブラウザまたは Electron が必要です（CPU/WASM
+            へのフォールバックはありません）。
+          title: WebGPU 専用・ブラウザ内 LLM
+        cache:
+          clear: WebLLM キャッシュをクリア
+          description: ブラウザの Cache Storage (webllm/*) に保存されたダウンロード済みの重みと WASM ライブラリ。
+          title: 重みキャッシュ
+        description: ブラウザ内で動くオフライン WebGPU Transformer LLM (APIキー不要)
+        fields:
+          customRepo:
+            description: 'MLC 量子化された重みを持つ Hugging Face リポジトリ (例:
+              my-org/custom-llama3-MLC)。事前定義の選択肢を上書きします。'
+            label: カスタム HF モデルリポジトリ (オプション)
+            placeholder: https://huggingface.co/my-org/custom-model-MLC
+          customWasm:
+            description: モデルのアーキテクチャファミリーに対応する WASM 実行ライブラリ。公開された WASM バイナリがないカスタムリポジトリは実行時に
+              404 を返します。
+            label: カスタム model_lib WASM URL (カスタムリポジトリで必須)
+            placeholder: https://.../custom-model_q4f16_1_cs1k-webgpu.wasm
+          model:
+            description: ビルド済みカタログの検証済み WebLLM モデル (対応する WASM ライブラリが含まれています)。
+            label: 検証済みモデル
+          temperature:
+            description: サンプリング温度 (高いほど創造的な出力になります)。
+            label: 温度 (Temperature)
+          topP:
+            description: Nucleus サンプリング閾値 (累積確率質量)。
+            label: Top P
+        sections:
+          cache:
+            clear: WebLLM キャッシュをクリア
+            clearing: クリア中...
+            description: ブラウザの Cache Storage (webllm/*) に保存されたダウンロード済みの重みと WASM ライブラリ。
+            notCached: キャッシュされた WebLLM の重みはありません
+            refresh: 更新
+            title: 重みキャッシュ
+          model:
+            description: 検証済みモデルを選択するか、以下でカスタム Hugging Face MLC リポジトリを追加してください。
+            title: モデル
+        title: WebLLM (ローカル WebGPU)
+      web-rwkv:
+        alert:
+          content: RWKV は WebGPU を介してブラウザ内で完全実行されます — API
+            キー不要、サーバー不要。初回使用時にモデルがダウンロードされキャッシュされます。bf16/f32 の重みはロード時に自動的に f16
+            に変換されます。WebGPU 対応のブラウザまたは Electron が必要です（CPU/WASM へのフォールバックはありません）。
+          title: WebGPU 専用・ブラウザ内 LLM
+        defaultsSection:
+          annotation: 'キャラクターごとにこれらの設定をカスタマイズするには、キャラクターの「生成」タブに移動してください: •
+            入力フィールドを使用して温度、Top P、最大トークン数を変更します。 • 高度な JSON
+            テキストエリアにペナルティパラメータを入力します（例: {"presence_penalty": 0.5}）。'
+          description: これらは web-rwkv で使用されるデフォルトのフォールバックパラメータです。
+          field:
+            count_penalty: 'カウントペナルティ Count Penalty (デフォルト: 0.4)'
+            max_tokens: '最大トークン数 (デフォルト: 512)'
+            penalty_decay: 'ペナルティ減衰 Penalty Decay (デフォルト: 0.996)'
+            presence_penalty: '存在ペナルティ Presence Penalty (デフォルト: 0.4)'
+            temperature: '温度 Temperature (デフォルト: 1.0)'
+            top_p: 'Top P (デフォルト: 0.5)'
+          title: デフォルト生成パラメータ (読み取り専用)
+        description: WebGPU を介してブラウザ内で実行されるローカル RWKV-7 LLM (APIキー不要)
+        fields:
+          enableG1Prefill:
+            description: 'アシスタントのターンに <think></think> を事前入力して G1
+              推論モデルをトレーニング済みモードに保ち、出力時の先頭終了タグを取り除きます。非 G1 モデル（例:
+              RWKV-6/5）を使用する場合は無効にしてください。'
+            label: G1 推論プレフィルとタグ除去を有効化
+          model:
+            description: RWKV ネイティブのテンソル名を含む .safetensors URL — web-rwkv 変換済みまたは生の
+              HuggingFace (レイアウトは自動検出されます)。bf16/f32 はロード時に f16 にキャストされます。PyTorch
+              .pth はサポートされていません。事前に safetensors に変換してください
+              (convert_safetensors.py)。
+            label: モデル URL
+          vocab:
+            description: バンドルされた RWKV World
+              トークナイザーボキャブラリを上書きします。別の言語用に微調整されたモデルやカスタムトークンマッピングを使用している場合、ここでそのボキャブラリ
+              JSON URL を指定することで適切なテキストエンコーディングと生成動作が保証されます。
+            label: ボキャブラリ URL (オプション)
+            placeholder: (同梱の rwkv_vocab_v20230424.json)
+        title: RWKV (ローカル WebGPU)
+      whisper-local:
+        description: Whisper を使用したローカル音声認識（ブラウザで動作、API キー不要）
+        title: Whisper (ローカル)
     title: プロバイダー
+    filters:
+      all: すべて
+      cloud: クラウド
+      deployment: デプロイ
+      free: 無料
+      local: ローカル
+      paid: 有料
+      pricing: 料金
+      suggested: おすすめ
+    onboarding:
+      artistry:
+        description: ローカルAIイラスト生成の標準は <b>ComfyUI</b> です。クラウド生成を好む場合は、従量課金制で多彩なモデルが使える
+          <b>Replicate</b> がおすすめです。
+        title: イラスト・画像を生成？
+      chat:
+        description: 手軽に始めるなら <b>Google Gemini</b>（無料クラウド）または
+          <b>OpenRouter</b>（統合クラウド）がおすすめです。プライバシー重視でGPUがある場合は、<b>Ollama</b> または
+          <b>LM Studio</b> によるローカル実行が最適です。
+        title: チャットが初めてですか？
+      speech:
+        description: 高品質なクラウド音声（無料枠あり）なら <b>Deepgram</b> や <b>Azure Speech</b>
+          をお試しください。完全ローカル・無料で使うなら <b>Web Speech API</b> または <b>Kokoro TTS</b>
+          が最適です。
+        title: 音声が必要ですか？
+      start_here: ここから始める
+      transcription:
+        description: 超高速クラウド文字起こしなら <b>Deepgram STT</b> がおすすめです。ローカルで使うなら、<b>Web Speech
+          API</b>（ブラウザ）または <b>Local Whisper</b> が優れた無料の選択肢です。
+        title: 音声の文字起こし？
+      vision:
+        description: 強力で無料のクラウド画像認識には <b>Google Gemini</b> をご利用ください。ローカルの <b>Ollama</b>
+          や <b>LM Studio</b> も視覚対応モデル（VLM）をサポートしています。
+        title: 世界を見る（視覚認識）？
+    speech:
+      app_local_audio:
+        description: 音声合成用のローカル音声出力設定を構成します。
+        device_id: 出力デバイス ID
+        device_id_placeholder: '出力デバイス ID を入力 (例: "default")...'
+        sample_rate: サンプルレート
+        sample_rate_placeholder: 'サンプルレートを入力 (例: 16000)...'
+        title: アプリ (ローカル) 音声設定
+    transcription:
+      app_local_audio:
+        description: 文字起こし用のローカル音声入力設定を構成します。
+        device_id: 入力デバイス ID
+        device_id_placeholder: '入力デバイス ID を入力 (例: "default")...'
+        title: アプリ (ローカル) 音声設定
   connection:
     description: WebSocketサーバー接続の設定
     title: 接続
@@ -911,9 +1305,31 @@ pages:
       label: Application Gateway Key
       description: Security key to authenticate clients connecting to your node over
         the network. If empty, the gateway will not require authentication.
+    hf-token:
+      label: Hugging Face トークン (オプション)
+      description: Hugging Face のユーザーアクセストークン。モデルのダウンロードおよびレート制限エラーの防止に使用されます。
+      placeholder: hf_...
   scene:
     description: キャラクターが過ごす環境を設定する
     title: シーン
+    beta_label: シーンシステム
+    beta_description: 各キャラクターカードはこのギャラリーから優先背景を指定できます。ここで設定すると、現在アクティブなキャラクターのデフォルトとして設定されます。
+    background_image:
+      title: アクティブキャラクターの背景
+      no_background: このキャラクターには背景が設定されていません。最適な表示のためには、正方形または横長の画像をアップロードしてください。
+      upload: ギャラリーにアップロード
+      change: 背景を変更
+      clear: デフォルトをクリア
+    gallery:
+      title: シーンギャラリー
+      empty: ギャラリーにはまだ画像がありません。上でアップロードしてください！
+      set_as_global: キャラクターのデフォルトに設定
+      delete: ギャラリーから削除
+      global_badge: キャラクターデフォルト
+      active_badge: 現在のシーン
+    tip:
+      label: ヒント！
+      description: 正方形の画像を使用すると、ポートレート（縦画面）モードで <b>cover</b> クロップが適用され、シーンの中央に焦点が合います。
   system:
     color-scheme:
       description: ステージの配色を変更します。
@@ -934,6 +1350,14 @@ pages:
                 label: プライマリカラー
                 rgb-on:
                   title: ダイナミックにやりたい！
+              vibrancy:
+                label: 鮮やかさ / 彩度
+                muted: 控えめ (パステル)
+                balanced: 標準 (バランス)
+                vivid: 鮮やか (ネオン)
+                monochrome: モノクロ
+              reset:
+                title: AIRI シアンにリセット
           title: 配色
         developer:
           title: 開発者
@@ -1053,13 +1477,71 @@ pages:
               description: >-
                 古代の染織品や陶磁器、絵画に由来する中国の伝統色
               title: 中国の伝統色
+            warm:
+              title: 暖火 (Warm & Fire)
+              description: 情熱的なレッド、コーラル、オレンジ、そして黄金のアンバー
+              colors:
+                crimson: クリムゾン (Crimson)
+                coral: コーラル (Coral)
+                tangerine: タンジェリン (Tangerine)
+                marigold: マリーゴールド (Marigold)
+                amber: アンバー (Amber)
+                lemon: レモン (Lemon)
+            flora:
+              title: 大地と植物 (Earth & Flora)
+              description: 青々としたボタニカル、シャルトルーズ、エメラルド、ミント、オーシャンティール
+              colors:
+                lime: ライム (Lime)
+                emerald: エメラルド (Emerald)
+                mint: ミント (Mint)
+                jade: 翡翠 (Jade)
+                viridian: ビリジアン (Viridian)
+                teal: ティール (Teal)
+            ocean:
+              title: 海洋と空 (Ocean & Sky)
+              description: トロピカルアクア、シグネチャーシアン、セルリアン、ロイヤルブルー
+              colors:
+                turquoise: ターコイズ (Turquoise)
+                cyan: シグネチャーシアン (Signature Cyan)
+                cerulean: セルリアン (Cerulean)
+                cobalt: コバルト (Cobalt)
+                sapphire: サファイア (Sapphire)
+                denim: デニム (Denim)
+            bloom:
+              title: 高貴な花々 (Royal & Bloom)
+              description: ディープインディゴ、アメジスト、鮮やかなパープル、フューシャ、ローズ
+              colors:
+                indigo: インディゴ (Indigo)
+                amethyst: アメジスト (Amethyst)
+                violet: バイオレット (Violet)
+                fuchsia: フューシャ (Fuchsia)
+                magenta: マゼンタ (Magenta)
+                rose: ローズ (Rose)
           title: 配色プリセット
+          description: 厳選された24色のスペクトルグリッドから選択するか、上で色相と鮮やかさをカスタマイズしてください。
+          reset: シグネチャーシアンにリセット
     title: システム
   page:
     developers:
       open-devtools:
         title: 開発者ツールを開く
         button: 開く
+  chat:
+    title: チャット設定と入力
+    description: 送信キーの組み合わせ、ストリーミング応答のタイムアウト、メッセージバブルの動作
+    send-mode:
+      title: 送信モード
+      description: メッセージを送信するキーの組み合わせを選択します。
+      options:
+        enter: Enter
+        ctrl-enter: Ctrl + Enter
+        double-enter: ダブル Enter
+  dating-sim:
+    title: 恋愛シミュレーションモード
+    description: インタラクティブなゲームモード、親密度の進行しきい値、視覚的挙動ルールの調整
+  stage:
+    title: フローティングコントロール
+    description: フローティングアクションストリップのスロット、ドッキング端、クイックトリガーのカスタマイズ
 sections:
   section:
     general:
@@ -1101,6 +1583,14 @@ vrm:
           camera: カメラ
           mouse: マウス
           disabled: 無効
+    mouse-tracking: マウストラッキング
+    mouse-tracking-desc: アバターが頭と目でマウスの動きを追従します
+    follow-speed: 追従速度
+    options:
+      option:
+        camera: カメラ
+        mouse: マウス
+        disabled: 無効
   switch-to-vrm:
     title: Live2Dアバターに切り替えますか？
     change-to-vrm: Live2Dアバター設定に切り替えるにはここをクリック
@@ -1110,7 +1600,77 @@ vrm:
   skybox:
     skybox-intensity: スカイボックスの強度
     skybox-specular-mix: 鏡面反射の混合
+  idle-animation:
+    title: デフォルト待機アニメーション
 wip:
   title: 開発中
   description: >-
     この機能は現在開発中で、まだ一般には公開されていません。今後のアップデートで利用可能になる予定ですので、しばらくお待ちください。
+providers:
+  speech:
+    app_local_audio:
+      description: Kokoro / ONNX を使用した組み込みローカル音声合成。
+      device_id: デバイス ID
+      device_id_placeholder: 自動
+      sample_rate: サンプルレート
+      sample_rate_placeholder: '例: 24000'
+      title: アプリ (ローカル)
+    browser_local_audio:
+      description: Web Speech API またはローカルエンジンを使用してブラウザで実行される音声合成。
+      device_id: デバイス ID
+      device_id_placeholder: 自動
+      sample_rate: サンプルレート
+      sample_rate_placeholder: '例: 24000'
+      title: ブラウザ (ローカル)
+  transcription:
+    app_local_audio:
+      description: Whisper / ONNX を使用した組み込みローカル文字起こし。
+      device_id: デバイス ID
+      device_id_placeholder: 自動
+      title: アプリ (ローカル)
+    browser_local_audio:
+      description: Web Speech API またはローカルエンジンを介してブラウザで実行される文字起こし。
+      device_id: デバイス ID
+      device_id_placeholder: 自動
+      title: ブラウザ (ローカル)
+privacy:
+  remote-sync:
+    title: クラウド同期を有効化
+    description: デフォルトで無効です。無効の場合、AIRI は完全にローカルのみで動作し、リモートセッションの取得や airi-api.moeru.ai
+      へのチャット履歴の同期は行いません。
+groups:
+  character:
+    title: キャラクター＆シーン
+  intelligence:
+    title: インテリジェンス
+chat:
+  send-mode:
+    title: 送信キー
+    description: チャット入力でメッセージを送信する方法を選択します。
+    options:
+      enter: Enter で送信
+      ctrl-enter: Ctrl+Enter で送信
+      double-enter: ダブル Enter で送信
+  stream-idle-timeout:
+    title: ストリームアイドルタイムアウト
+    description: モデルストリームが一定時間イベントの生成を停止した場合、応答をキャンセルします。
+    options:
+      10s: 10 秒
+      15s: 15 秒
+      30s: 30 秒
+      45s: 45 秒
+      60s: 60 秒
+      120s: 2 分
+spine:
+  animation:
+    idle-animation: 待機アニメーション
+    mix-duration: ミックス時間 (Mix Duration)
+    speed: 再生速度
+  variant:
+    current-variant: 現在のバリアント
+  skin:
+    current-skin: 現在のスキン
+  scale-and-position:
+    scale: スケール
+    x: 位置 X
+    y: 位置 Y
