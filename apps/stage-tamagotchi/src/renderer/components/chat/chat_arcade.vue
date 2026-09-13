@@ -1,7 +1,14 @@
 <script setup lang="ts">
+import type { CatalogGame } from './ArcadeCatalogModal.vue'
+
+import JSZip from 'jszip'
+import localforage from 'localforage'
+
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { storeToRefs } from 'pinia'
 import { nextTick, onMounted, onUnmounted, ref } from 'vue'
+
+import ArcadeCatalogModal from './ArcadeCatalogModal.vue'
 
 const emit = defineEmits<{
   (e: 'ready'): void
@@ -9,6 +16,515 @@ const emit = defineEmits<{
 
 const airiCardStore = useAiriCardStore()
 const { activeCard } = storeToRefs(airiCardStore)
+
+// --- Engine State ---
+const activeEngine = ref<'canvas-2048' | 'jsdos'>('canvas-2048')
+const currentGameTitle = ref('2048 Retro Canvas')
+const currentGameIdentifier = ref('2048')
+const currentSplashUrl = ref<string | null>(null)
+const isGameReady = ref(false)
+const isDosEngineLoading = ref(false)
+const dosLoadingProgress = ref('')
+const isCatalogOpen = ref(false)
+const fileInputRef = ref<HTMLInputElement | null>(null)
+
+// --- IndexedDB Stores ---
+const arcadeCacheStore = localforage.createInstance({
+  name: 'airi-arcade-cache',
+  storeName: 'games',
+})
+
+const arcadeSavestatesStore = localforage.createInstance({
+  name: 'airi-arcade-savestates',
+  storeName: 'states',
+})
+
+// --- Game Presets ---
+interface GamePreset {
+  id: string
+  title: string
+  engine: 'canvas-2048' | 'jsdos'
+  bundleUrl?: string
+}
+
+const GAME_PRESETS: GamePreset[] = [
+  { id: '2048', title: '2048 Retro Canvas', engine: 'canvas-2048' },
+  { id: 'msdos_Doom_1993', title: 'Doom (Shareware 1993)', engine: 'jsdos', bundleUrl: 'https://v8.js-dos.com/bundles/doom.jsdos' },
+  { id: 'digger_1983', title: 'Digger (1983)', engine: 'jsdos', bundleUrl: 'https://v8.js-dos.com/bundles/digger.jsdos' },
+  { id: 'msdos_Prince_of_Persia_1990', title: 'Prince of Persia (1990)', engine: 'jsdos' },
+  { id: 'msdos_Oregon_Trail_The_1990', title: 'The Oregon Trail (1990)', engine: 'jsdos' },
+  { id: 'msdos_Wolfenstein_3D_1992', title: 'Wolfenstein 3D (1992)', engine: 'jsdos' },
+  { id: 'CIVILIZATION_201902', title: 'Civilization (1991)', engine: 'jsdos' },
+  { id: 'msdos_SimCity_1989', title: 'SimCity (1989)', engine: 'jsdos' },
+]
+
+// --- JS-DOS WebAssembly Engine State ---
+const dosContainerRef = ref<HTMLDivElement | null>(null)
+let dosPlayerInstance: any = null
+let currentCommandInterface: any = null
+let isJsDosLoaded = false
+
+async function ensureJsDosLoaded(): Promise<any> {
+  if (typeof (window as any).Dos === 'function') {
+    return (window as any).Dos
+  }
+  if (isJsDosLoaded) {
+    return (window as any).Dos
+  }
+
+  // Inject CSS
+  if (!document.querySelector('link[href*="js-dos.css"]')) {
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = 'https://cdn.jsdelivr.net/npm/js-dos@8.4.1/dist/js-dos.css'
+    link.crossOrigin = 'anonymous'
+    document.head.appendChild(link)
+  }
+
+  // Inject JS
+  if (!document.querySelector('script[src*="js-dos.js"]')) {
+    await new Promise<void>((resolve, reject) => {
+      const script = document.createElement('script')
+      script.src = 'https://cdn.jsdelivr.net/npm/js-dos@8.4.1/dist/js-dos.js'
+      script.crossOrigin = 'anonymous'
+      script.onload = () => {
+        isJsDosLoaded = true
+        resolve()
+      }
+      script.onerror = () => reject(new Error('Failed to load JS-DOS runtime from CDN'))
+      document.head.appendChild(script)
+    })
+  }
+
+  return (window as any).Dos
+}
+
+// Download stream with percentage reporting
+async function fetchWithProgress(url: string, onProgress?: (pct: number) => void): Promise<ArrayBuffer> {
+  const response = await fetch(url)
+  if (!response.ok)
+    throw new Error(`HTTP ${response.status} fetching ${url}`)
+
+  const contentLength = response.headers.get('content-length')
+  const total = contentLength ? Number.parseInt(contentLength, 10) : 0
+
+  if (!response.body || total === 0) {
+    return await response.arrayBuffer()
+  }
+
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let received = 0
+
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done)
+      break
+    if (value) {
+      chunks.push(value)
+      received += value.length
+      if (total > 0 && onProgress) {
+        onProgress(Math.min(99, Math.round((received / total) * 100)))
+      }
+    }
+  }
+
+  const result = new Uint8Array(received)
+  let offset = 0
+  for (const chunk of chunks) {
+    result.set(chunk, offset)
+    offset += chunk.length
+  }
+  return result.buffer
+}
+
+// Resolve Archive.org ZIP bundle URL & splash screenshot
+interface ArchiveOrgResolvedGame {
+  bundleUrl: string
+  splashUrl?: string
+  zipName: string
+  emulatorStart?: string
+}
+
+async function resolveArchiveOrgBundle(identifier: string): Promise<ArchiveOrgResolvedGame> {
+  const metaUrl = `https://archive.org/metadata/${encodeURIComponent(identifier)}`
+  console.info(`[Arcade] Fetching metadata from ${metaUrl}`)
+  const res = await fetch(metaUrl)
+  if (!res.ok)
+    throw new Error(`Failed to fetch metadata for ${identifier} (HTTP ${res.status})`)
+  const data = await res.json()
+  const manifest: any[] = data?.files || data?.result || []
+  const emulatorStart: string | undefined = data?.metadata?.emulator_start
+
+  console.info(`[Arcade] Archive manifest has ${manifest.length} files. emulator_start:`, emulatorStart)
+
+  if (!manifest.length) {
+    throw new Error(`Item ${identifier} not found or empty manifest`)
+  }
+
+  // 1. Locate the game archive (format === 'ZIP' or .zip extension)
+  const zipFile = manifest.find(f => f.format === 'ZIP')
+    || manifest.find(f => f.name?.toLowerCase().endsWith('.zip') && f.format !== 'Metadata')
+    || manifest.find(f => f.name?.toLowerCase().endsWith('.zip'))
+
+  if (!zipFile)
+    throw new Error(`No ZIP archive found in item ${identifier}`)
+
+  // 2. Locate the best splash / screenshot preview
+  const splashFile = manifest.find(f => f.name === '00_coverscreenshot.jpg')
+    || manifest.find(f => f.format === 'Emulator Screenshot')
+    || manifest.find(f => f.name?.startsWith('screenshot_') && !f.name.includes('_thumb') && f.format === 'JPEG')
+    || manifest.find(f => f.name === '__ia_thumb.jpg')
+
+  const bundleUrl = `https://archive.org/download/${identifier}/${encodeURIComponent(zipFile.name)}`
+  const splashUrl = splashFile
+    ? `https://archive.org/download/${identifier}/${encodeURIComponent(splashFile.name)}`
+    : `https://archive.org/services/img/${identifier}`
+
+  return {
+    bundleUrl,
+    splashUrl,
+    zipName: zipFile.name,
+    emulatorStart,
+  }
+}
+
+async function mountDosGame(buffer: ArrayBuffer | ArrayBufferLike, gameTitle: string, emulatorStart?: string): Promise<ArrayBuffer | ArrayBufferLike> {
+  const Dos = await ensureJsDosLoaded()
+
+  if (dosPlayerInstance) {
+    try {
+      dosPlayerInstance.stop()
+    }
+    catch {}
+    dosPlayerInstance = null
+    currentCommandInterface = null
+  }
+
+  await nextTick()
+  if (!dosContainerRef.value)
+    return buffer
+
+  dosContainerRef.value.innerHTML = ''
+
+  console.info(`[Arcade] Preparing bundle for "${gameTitle}". Input buffer size: ${buffer.byteLength} bytes`)
+
+  let effectiveBuffer = buffer
+  try {
+    const zip = await JSZip.loadAsync(buffer)
+    const fileList = Object.keys(zip.files)
+    console.info(`[Arcade] Bundle contains ${fileList.length} files:`, fileList.slice(0, 15))
+
+    if (!zip.file('.jsdos/dosbox.conf')) {
+      console.warn('[Arcade] .jsdos/dosbox.conf missing in bundle. Synthesizing config...')
+
+      // Determine startup executable
+      let execCmd = emulatorStart?.trim()
+      if (!execCmd) {
+        // Scan for .exe / .com / .bat in zip
+        const executables = fileList.filter(f => !f.endsWith('/') && /\.(?:exe|com|bat)$/i.test(f))
+        console.info('[Arcade] Candidate executables found:', executables)
+
+        // Exclude DOS utility & configuration binaries
+        const IGNORED_BINS = ['setup', 'install', 'config', 'settings', 'sound', 'setsound', 'choice', 'readme', 'help', 'terrain']
+        const validCandidates = executables.filter((e) => {
+          const base = e.split('/').pop()?.toLowerCase().replace(/\.(?:exe|com|bat)$/, '') || ''
+          return !IGNORED_BINS.includes(base)
+        })
+
+        // Best match: contains game title tokens, or primary launchers (main, game, play, start, run, go)
+        const titleTokens = (gameTitle || '').toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(t => t.length > 2)
+        const titleMatch = validCandidates.find((e) => {
+          const base = e.split('/').pop()?.toLowerCase() || ''
+          return titleTokens.some(tok => base.includes(tok))
+        })
+
+        const commonLauncher = validCandidates.find((e) => {
+          const base = e.split('/').pop()?.toLowerCase() || ''
+          return /^(?:main|game|play|start|run|go)\.(?:exe|com|bat)$/i.test(base)
+        })
+
+        execCmd = titleMatch || commonLauncher || validCandidates[0] || executables[0] || 'dir /w'
+      }
+
+      console.info(`[Arcade] Using startup target: "${execCmd}"`)
+
+      // Format DOS autoexec commands
+      const cleanTarget = execCmd.replace(/\//g, '\\')
+      const lastSlashIdx = cleanTarget.lastIndexOf('\\')
+      let autoexecLines = ''
+      if (lastSlashIdx !== -1) {
+        const dir = cleanTarget.slice(0, lastSlashIdx)
+        const exe = cleanTarget.slice(lastSlashIdx + 1)
+        autoexecLines = `cd ${dir}\r\n${exe}`
+      }
+      else {
+        autoexecLines = cleanTarget
+      }
+
+      const dosboxConf = `[sdl]
+autolock=false
+fullscreen=false
+fulldouble=false
+output=surface
+sensitivity=100
+waitonerror=true
+priority=higher,normal
+vsync=false
+
+[dosbox]
+machine=svga_s3
+memsize=32
+
+[cpu]
+core=auto
+cputype=auto
+cycles=max
+
+[mixer]
+nosound=false
+rate=44100
+blocksize=1024
+prebuffer=20
+
+[sblaster]
+sbtype=sb16
+sbbase=220
+irq=7
+dma=1
+hdma=5
+sbmixer=true
+oplmode=auto
+oplrate=44100
+
+[autoexec]
+mount c .
+c:
+${autoexecLines}
+`
+      zip.file('.jsdos/dosbox.conf', dosboxConf)
+      effectiveBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
+      console.info(`[Arcade] Synthesized .jsdos/dosbox.conf successfully! Ready bundle size: ${effectiveBuffer.byteLength} bytes`)
+    }
+    else {
+      console.info('[Arcade] Bundle already contains .jsdos/dosbox.conf.')
+    }
+  }
+  catch (err) {
+    console.error('[Arcade] Error checking/synthesizing bundle:', err)
+  }
+
+  const blob = new Blob([effectiveBuffer as BlobPart], { type: 'application/zip' })
+  const bundleUrl = URL.createObjectURL(blob)
+
+  dosPlayerInstance = Dos(dosContainerRef.value, {
+    url: bundleUrl,
+    pathPrefix: 'https://cdn.jsdelivr.net/npm/js-dos@8.4.1/dist/emulators/',
+    theme: 'dark',
+    autoStart: true,
+    kiosk: true,
+    renderAspect: '4/3',
+    onEvent: (event: string, ci: any) => {
+      if (event === 'ci-ready') {
+        currentCommandInterface = ci
+        isGameReady.value = true
+        isDosEngineLoading.value = false
+        triggerReactiveReaction(`DOSBox loaded ${gameTitle}! Ready when you are!`, 'cheering')
+      }
+    },
+  })
+
+  return effectiveBuffer
+}
+
+async function launchDosGame(game: { identifier: string, title: string, bundleUrl?: string, thumbnailUrl?: string }) {
+  isDosEngineLoading.value = true
+  isGameReady.value = false
+  dosLoadingProgress.value = 'Preparing emulator...'
+
+  // Pre-seed splash with thumbnail if available
+  currentSplashUrl.value = game.thumbnailUrl || `https://archive.org/services/img/${game.identifier}`
+
+  try {
+    currentGameTitle.value = game.title
+    currentGameIdentifier.value = game.identifier
+    activeEngine.value = 'jsdos'
+
+    // Greet dynamically
+    const greeting = getGameGreeting(game.title)
+    triggerReactiveReaction(greeting.text, greeting.emotion)
+
+    // 1. Check local IndexedDB cache first
+    let gameBuffer = await arcadeCacheStore.getItem<ArrayBuffer>(game.identifier)
+    let emulatorStart: string | undefined
+
+    if (gameBuffer) {
+      dosLoadingProgress.value = 'Loading from local cache...'
+    }
+    else {
+      // 2. Resolve URL & splash from manifest
+      let targetUrl = game.bundleUrl
+      if (!targetUrl) {
+        dosLoadingProgress.value = 'Resolving game bundle...'
+        const resolved = await resolveArchiveOrgBundle(game.identifier)
+        targetUrl = resolved.bundleUrl
+        emulatorStart = resolved.emulatorStart
+        if (resolved.splashUrl) {
+          currentSplashUrl.value = resolved.splashUrl
+        }
+      }
+
+      dosLoadingProgress.value = 'Downloading game 0%...'
+      gameBuffer = await fetchWithProgress(targetUrl, (pct) => {
+        dosLoadingProgress.value = `Downloading game ${pct}%...`
+      })
+    }
+
+    dosLoadingProgress.value = 'Booting DOSBox WASM...'
+    const readyBuffer = await mountDosGame(gameBuffer, game.title, emulatorStart)
+
+    // Store ready-to-run bundle in IndexedDB for 100% offline instant replay
+    await arcadeCacheStore.setItem(game.identifier, readyBuffer)
+  }
+  catch (err: any) {
+    console.error('[Arcade] Failed to launch game:', err)
+    triggerReactiveReaction(`Oops, failed to boot ${game.title}: ${err.message || err}`, 'panicked')
+    isDosEngineLoading.value = false
+    dosLoadingProgress.value = ''
+  }
+}
+
+async function launchCustomFile(file: File) {
+  isDosEngineLoading.value = true
+  isGameReady.value = false
+  currentSplashUrl.value = null
+  dosLoadingProgress.value = `Reading ${file.name}...`
+
+  try {
+    const buffer = await file.arrayBuffer()
+    const customId = `custom_${file.name.replace(/\W/g, '_')}`
+    currentGameTitle.value = file.name.replace(/\.(zip|jsdos)$/i, '')
+    currentGameIdentifier.value = customId
+    activeEngine.value = 'jsdos'
+
+    const greeting = getGameGreeting(currentGameTitle.value)
+    triggerReactiveReaction(greeting.text, greeting.emotion)
+
+    dosLoadingProgress.value = 'Mounting custom bundle...'
+    const readyBuffer = await mountDosGame(buffer, currentGameTitle.value)
+
+    // Cache ready custom upload
+    await arcadeCacheStore.setItem(customId, readyBuffer)
+  }
+  catch (err: any) {
+    console.error('[Arcade] Failed to launch custom file:', err)
+    triggerReactiveReaction(`Could not launch ${file.name}: ${err.message || err}`, 'panicked')
+    isDosEngineLoading.value = false
+    dosLoadingProgress.value = ''
+  }
+}
+
+function handleFileDrop(e: DragEvent) {
+  e.preventDefault()
+  const files = e.dataTransfer?.files
+  if (!files || files.length === 0)
+    return
+  const file = files[0]
+  if (!file.name.toLowerCase().endsWith('.zip') && !file.name.toLowerCase().endsWith('.jsdos')) {
+    triggerReactiveReaction('Please drop a valid DOS .zip or .jsdos game bundle!', 'thinking')
+    return
+  }
+  void launchCustomFile(file)
+}
+
+function handleFileInputChange(e: Event) {
+  const target = e.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (file) {
+    void launchCustomFile(file)
+  }
+  target.value = ''
+}
+
+function handleSelectPreset(presetId: string) {
+  if (presetId === '2048') {
+    if (dosPlayerInstance) {
+      try {
+        dosPlayerInstance.stop()
+      }
+      catch {}
+      dosPlayerInstance = null
+      currentCommandInterface = null
+    }
+    activeEngine.value = 'canvas-2048'
+    currentGameTitle.value = '2048 Retro Canvas'
+    currentGameIdentifier.value = '2048'
+    currentSplashUrl.value = null
+    isGameReady.value = false
+    initGame()
+    triggerReactiveReaction('Switched back to 2048! Let\'s get that high score!', 'smug')
+    return
+  }
+
+  const preset = GAME_PRESETS.find(p => p.id === presetId)
+  if (preset) {
+    void launchDosGame({
+      identifier: preset.id,
+      title: preset.title,
+      bundleUrl: preset.bundleUrl,
+    })
+  }
+}
+
+function handleCatalogLaunch(game: CatalogGame) {
+  isCatalogOpen.value = false
+  void launchDosGame({
+    identifier: game.identifier,
+    title: game.title,
+    bundleUrl: game.bundleUrl,
+    thumbnailUrl: game.thumbnailUrl,
+  })
+}
+
+// Savestates
+async function handleQuickSave() {
+  if (activeEngine.value !== 'jsdos' || !currentCommandInterface) {
+    triggerReactiveReaction('Savestates are currently supported for active DOS games!', 'thinking')
+    return
+  }
+
+  try {
+    const state = await currentCommandInterface.persist()
+    if (state) {
+      await arcadeSavestatesStore.setItem(currentGameIdentifier.value, state)
+      triggerReactiveReaction(`💾 QuickSave snapshot stored for ${currentGameTitle.value}!`, 'smug')
+    }
+  }
+  catch (err: any) {
+    console.error('[Arcade] QuickSave error:', err)
+    triggerReactiveReaction(`Failed to create savestate: ${err.message || err}`, 'panicked')
+  }
+}
+
+async function handleQuickLoad() {
+  if (activeEngine.value !== 'jsdos')
+    return
+
+  try {
+    const state = await arcadeSavestatesStore.getItem<Uint8Array>(currentGameIdentifier.value)
+    if (!state) {
+      triggerReactiveReaction(`No saved snapshot found for ${currentGameTitle.value}!`, 'panicked')
+      return
+    }
+
+    triggerReactiveReaction(`📂 Restoring savestate for ${currentGameTitle.value}...`, 'cheering')
+    await mountDosGame(state.buffer, currentGameTitle.value)
+  }
+  catch (err: any) {
+    console.error('[Arcade] QuickLoad error:', err)
+    triggerReactiveReaction(`Failed to load savestate: ${err.message || err}`, 'panicked')
+  }
+}
 
 // --- Game Engine State (2048 Retro Canvas) ---
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -28,7 +544,7 @@ let board: number[][] = [
   [0, 0, 0, 0],
 ]
 
-// WebAudio Sound Synthesis (Zero external audio assets)
+// WebAudio Sound Synthesis
 let audioCtx: AudioContext | null = null
 
 function getAudioContext(): AudioContext {
@@ -107,244 +623,226 @@ function initGame() {
   spawnRandomTile()
   spawnRandomTile()
   drawBoard()
-  playBeep(520, 100, 'triangle')
-}
-
-function checkGameOver(): boolean {
-  for (let r = 0; r < 4; r++) {
-    for (let c = 0; c < 4; c++) {
-      if (board[r][c] === 0)
-        return false
-      if (r < 3 && board[r][c] === board[r + 1][c])
-        return false
-      if (c < 3 && board[r][c] === board[r][c + 1])
-        return false
-    }
-  }
-  return true
-}
-
-function slide(row: number[]): { newRow: number[], gainedScore: number, merged: boolean } {
-  const filtered = row.filter(val => val !== 0)
-  let gainedScore = 0
-  let merged = false
-
-  for (let i = 0; i < filtered.length - 1; i++) {
-    if (filtered[i] === filtered[i + 1]) {
-      filtered[i] *= 2
-      gainedScore += filtered[i]
-      filtered.splice(i + 1, 1)
-      merged = true
-    }
-  }
-  while (filtered.length < 4) {
-    filtered.push(0)
-  }
-  return { newRow: filtered, gainedScore, merged }
-}
-
-function move(direction: 'left' | 'right' | 'up' | 'down') {
-  if (isGameOver.value || isPaused.value)
-    return
-
-  let moved = false
-  let turnScore = 0
-  let hadMerge = false
-
-  if (direction === 'left') {
-    for (let r = 0; r < 4; r++) {
-      const { newRow, gainedScore, merged } = slide(board[r])
-      if (board[r].join(',') !== newRow.join(','))
-        moved = true
-      board[r] = newRow
-      turnScore += gainedScore
-      if (merged)
-        hadMerge = true
-    }
-  }
-  else if (direction === 'right') {
-    for (let r = 0; r < 4; r++) {
-      const reversed = [...board[r]].reverse()
-      const { newRow, gainedScore, merged } = slide(reversed)
-      newRow.reverse()
-      if (board[r].join(',') !== newRow.join(','))
-        moved = true
-      board[r] = newRow
-      turnScore += gainedScore
-      if (merged)
-        hadMerge = true
-    }
-  }
-  else if (direction === 'up') {
-    for (let c = 0; c < 4; c++) {
-      const col = [board[0][c], board[1][c], board[2][c], board[3][c]]
-      const { newRow, gainedScore, merged } = slide(col)
-      for (let r = 0; r < 4; r++) {
-        if (board[r][c] !== newRow[r])
-          moved = true
-        board[r][c] = newRow[r]
-      }
-      turnScore += gainedScore
-      if (merged)
-        hadMerge = true
-    }
-  }
-  else if (direction === 'down') {
-    for (let c = 0; c < 4; c++) {
-      const col = [board[3][c], board[2][c], board[1][c], board[0][c]]
-      const { newRow, gainedScore, merged } = slide(col)
-      for (let r = 0; r < 4; r++) {
-        if (board[3 - r][c] !== newRow[r])
-          moved = true
-        board[3 - r][c] = newRow[r]
-      }
-      turnScore += gainedScore
-      if (merged)
-        hadMerge = true
-    }
-  }
-
-  if (moved) {
-    score.value += turnScore
-    if (score.value > bestScore.value)
-      bestScore.value = score.value
-
-    if (hadMerge)
-      playBeep(660, 100, 'square')
-    else
-      playBeep(320, 60, 'sine')
-
-    spawnRandomTile()
-    drawBoard()
-
-    // Trigger proactive avatar reaction on high-score or merge
-    if (turnScore >= 64) {
-      triggerReactiveReaction(`Nice combo! +${turnScore} points!`, 'smug')
-    }
-
-    if (checkGameOver()) {
-      isGameOver.value = true
-      playBeep(180, 400, 'sawtooth')
-      triggerReactiveReaction('Oh no, no more valid moves! Game Over!', 'panicked')
-      drawBoard()
-    }
-  }
 }
 
 function drawBoard() {
-  const canvas = canvasRef.value
-  if (!canvas)
+  if (!canvasRef.value)
     return
-  const ctx = canvas.getContext('2d')
+  const ctx = canvasRef.value.getContext('2d')
   if (!ctx)
     return
 
-  const size = canvas.width
-  const padding = 12
-  const tileSize = (size - padding * 5) / 4
+  const w = canvasRef.value.width
+  const h = canvasRef.value.height
+  const pad = 12
+  const tileSize = (w - pad * 5) / 4
 
   // Background
   ctx.fillStyle = '#121218'
-  ctx.fillRect(0, 0, size, size)
+  ctx.fillRect(0, 0, w, h)
 
-  // Draw Tiles
+  // Border & Grid
+  ctx.strokeStyle = '#282836'
+  ctx.lineWidth = 2
+  ctx.strokeRect(1, 1, w - 2, h - 2)
+
   for (let r = 0; r < 4; r++) {
     for (let c = 0; c < 4; c++) {
       const val = board[r][c]
-      const x = padding + c * (tileSize + padding)
-      const y = padding + r * (tileSize + padding)
-      const color = TILE_COLORS[val] || { bg: '#ff007f', text: '#ffffff' }
+      const x = pad + c * (tileSize + pad)
+      const y = pad + r * (tileSize + pad)
 
-      // Round rectangle tile
-      ctx.fillStyle = color.bg
-      drawRoundedRect(ctx, x, y, tileSize, tileSize, 8)
+      const tileStyle = TILE_COLORS[val] || { bg: '#3a0ca3', text: '#ffffff' }
+
+      // Tile background
+      ctx.fillStyle = tileStyle.bg
+      ctx.beginPath()
+      ctx.roundRect(x, y, tileSize, tileSize, 8)
       ctx.fill()
 
       // Value text
       if (val > 0) {
-        ctx.fillStyle = color.text
-        ctx.font = `bold ${val >= 1024 ? tileSize * 0.32 : tileSize * 0.42}px monospace`
+        ctx.fillStyle = tileStyle.text
+        ctx.font = `bold ${val >= 1024 ? 22 : val >= 128 ? 26 : 30}px monospace`
         ctx.textAlign = 'center'
         ctx.textBaseline = 'middle'
-        ctx.fillText(val.toString(), x + tileSize / 2, y + tileSize / 2 + 2)
+        ctx.fillText(val.toString(), x + tileSize / 2, y + tileSize / 2)
       }
     }
   }
 
-  // CRT Scanlines overlay
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.08)'
-  for (let y = 0; y < size; y += 4) {
-    ctx.fillRect(0, y, size, 2)
-  }
+  // Overlay states
+  if (isGameOver.value || isGameWon.value || isPaused.value) {
+    ctx.fillStyle = 'rgba(10, 10, 15, 0.82)'
+    ctx.fillRect(0, 0, w, h)
 
-  // Game over overlay
-  if (isGameOver.value) {
-    ctx.fillStyle = 'rgba(10, 10, 15, 0.85)'
-    ctx.fillRect(0, 0, size, size)
-    ctx.fillStyle = '#ff4d6d'
-    ctx.font = 'bold 36px monospace'
+    ctx.fillStyle = isGameWon.value ? '#00f5d4' : isGameOver.value ? '#ff0054' : '#edf2f4'
+    ctx.font = 'bold 32px monospace'
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
-    ctx.fillText('GAME OVER', size / 2, size / 2 - 20)
+
+    const title = isGameWon.value ? 'VICTORY 2048!' : isGameOver.value ? 'GAME OVER' : 'PAUSED'
+    ctx.fillText(title, w / 2, h / 2 - 18)
+
+    ctx.fillStyle = '#a0a0b0'
     ctx.font = '14px monospace'
-    ctx.fillStyle = '#edf2f4'
-    ctx.fillText('Press [R] or click Reset to play again', size / 2, size / 2 + 24)
+    const subtitle = isPaused.value ? 'Press P to Resume' : 'Press R to Play Again'
+    ctx.fillText(subtitle, w / 2, h / 2 + 20)
   }
 }
 
-function drawRoundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
-  ctx.beginPath()
-  ctx.moveTo(x + r, y)
-  ctx.lineTo(x + w - r, y)
-  ctx.quadraticCurveTo(x + w, y, x + w, y + r)
-  ctx.lineTo(x + w, y + h - r)
-  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h)
-  ctx.lineTo(x + r, y + h)
-  ctx.quadraticCurveTo(x, y + h, x, y + h - r)
-  ctx.lineTo(x, y + r)
-  ctx.quadraticCurveTo(x, y, x + r, y)
-  ctx.closePath()
+function slide(row: number[]): { newRow: number[], points: number } {
+  const filtered = row.filter(x => x !== 0)
+  let points = 0
+  const result: number[] = []
+
+  for (let i = 0; i < filtered.length; i++) {
+    if (i + 1 < filtered.length && filtered[i] === filtered[i + 1]) {
+      const merged = filtered[i] * 2
+      result.push(merged)
+      points += merged
+      if (merged === 2048 && !isGameWon.value) {
+        isGameWon.value = true
+        playBeep(880, 200, 'triangle')
+      }
+      i++
+    }
+    else {
+      result.push(filtered[i])
+    }
+  }
+  while (result.length < 4) {
+    result.push(0)
+  }
+  return { newRow: result, points }
 }
 
-// Keyboard Input Trapping
+function rotateBoardClockwise() {
+  const newBoard: number[][] = [
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+    [0, 0, 0, 0],
+  ]
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      newBoard[c][3 - r] = board[r][c]
+    }
+  }
+  board = newBoard
+}
+
+function move(direction: 'left' | 'right' | 'up' | 'down'): boolean {
+  if (isGameOver.value || isPaused.value)
+    return false
+
+  let rotations = 0
+  if (direction === 'up')
+    rotations = 3
+  else if (direction === 'right')
+    rotations = 2
+  else if (direction === 'down')
+    rotations = 1
+
+  for (let i = 0; i < rotations; i++) {
+    rotateBoardClockwise()
+  }
+
+  let moved = false
+  let turnPoints = 0
+
+  for (let r = 0; r < 4; r++) {
+    const { newRow, points } = slide(board[r])
+    turnPoints += points
+    for (let c = 0; c < 4; c++) {
+      if (board[r][c] !== newRow[c]) {
+        moved = true
+      }
+      board[r][c] = newRow[c]
+    }
+  }
+
+  for (let i = 0; i < (4 - rotations) % 4; i++) {
+    rotateBoardClockwise()
+  }
+
+  if (moved) {
+    score.value += turnPoints
+    if (score.value > bestScore.value) {
+      bestScore.value = score.value
+    }
+    playBeep(turnPoints > 0 ? 580 : 340, turnPoints > 0 ? 100 : 50)
+    spawnRandomTile()
+    checkGameState()
+    drawBoard()
+  }
+
+  return moved
+}
+
+function checkGameState() {
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      if (board[r][c] === 0)
+        return
+      if (c + 1 < 4 && board[r][c] === board[r][c + 1])
+        return
+      if (r + 1 < 4 && board[r][c] === board[r + 1][c])
+        return
+    }
+  }
+  isGameOver.value = true
+  playBeep(180, 400, 'sawtooth')
+  triggerReactiveReaction('Oh no, we ran out of moves! That was a valiant effort though!', 'panicked')
+}
+
 function handleCanvasKeyDown(e: KeyboardEvent) {
-  if (!isCanvasFocused.value)
+  if (activeEngine.value !== 'canvas-2048')
     return
 
-  const keys = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyR', 'KeyP']
-  if (keys.includes(e.code)) {
-    e.preventDefault()
-  }
-
-  switch (e.code) {
+  let handled = false
+  switch (e.key) {
     case 'ArrowLeft':
-    case 'KeyA':
-      move('left')
+    case 'a':
+    case 'A':
+      handled = move('left')
       break
     case 'ArrowRight':
-    case 'KeyD':
-      move('right')
+    case 'd':
+    case 'D':
+      handled = move('right')
       break
     case 'ArrowUp':
-    case 'KeyW':
-      move('up')
+    case 'w':
+    case 'W':
+      handled = move('up')
       break
     case 'ArrowDown':
-    case 'KeyS':
-      move('down')
+    case 's':
+    case 'S':
+      handled = move('down')
       break
-    case 'KeyR':
+    case 'r':
+    case 'R':
       initGame()
+      handled = true
       break
-    case 'KeyP':
+    case 'p':
+    case 'P':
       isPaused.value = !isPaused.value
+      drawBoard()
+      handled = true
       break
+  }
+  if (handled) {
+    e.preventDefault()
+    e.stopPropagation()
   }
 }
 
 function focusCanvas() {
-  isCanvasFocused.value = true
   canvasRef.value?.focus()
+  isCanvasFocused.value = true
 }
 
 // --- Backseat Chat & Banter Stream ---
@@ -363,7 +861,7 @@ const chatTranscript = ref<BackseatMessage[]>([
     id: 'msg-1',
     sender: 'character',
     authorName: activeCard.value?.name || 'AIRI',
-    text: 'Welcome to the Arcade Room! Pick your moves carefully, or let me know if you want my strategic input!',
+    text: 'Welcome to the Arcade Room! Pick your game from the presets or browse 8,000+ preservation classics!',
     timestamp: 'Just now',
     emotion: 'smug',
   },
@@ -392,12 +890,32 @@ function triggerReactiveReaction(text: string, emotion: BackseatMessage['emotion
   scrollToBottom()
 }
 
+function getGameGreeting(title: string): { text: string, emotion: BackseatMessage['emotion'] } {
+  const t = title.toLowerCase()
+  if (t.includes('doom'))
+    return { text: 'Doom?! Grab the shotgun! Let\'s rip and tear, but watch your six!', emotion: 'smug' }
+  if (t.includes('prince of persia'))
+    return { text: 'Prince of Persia! One wrong jump and we\'re skewered on spikes... careful on the ledges!', emotion: 'panicked' }
+  if (t.includes('oregon'))
+    return { text: 'The Oregon Trail! Please tell me we won\'t starve or drown crossing the river...', emotion: 'thinking' }
+  if (t.includes('wolfenstein'))
+    return { text: 'Wolfenstein 3D! Check the walls for hidden passages and don\'t run out of ammo!', emotion: 'cheering' }
+  if (t.includes('civilization'))
+    return { text: 'Civilization! Let\'s build the greatest empire history has ever witnessed!', emotion: 'smug' }
+  if (t.includes('simcity'))
+    return { text: 'SimCity! Mayor on deck. Watch out for earthquakes and keep taxes reasonable!', emotion: 'cheering' }
+  if (t.includes('pac-man'))
+    return { text: 'Pac-Man! Eat the power pellets before the ghosts corner us!', emotion: 'panicked' }
+  if (t.includes('digger'))
+    return { text: 'Digger! Drop the bags of gold on those Nobbins!', emotion: 'cheering' }
+  return { text: `Booting up ${title}! Show me what you've got!`, emotion: 'smug' }
+}
+
 function handleSendAdvice(presetText?: string) {
   const content = presetText || userInputText.value.trim()
   if (!content)
     return
 
-  // Add User Backseat Advice
   chatTranscript.value.push({
     id: `user-${Date.now()}`,
     sender: 'user',
@@ -409,17 +927,26 @@ function handleSendAdvice(presetText?: string) {
   userInputText.value = ''
   scrollToBottom()
 
-  // Simulate Character Reacting to Backseat Advice
   setTimeout(() => {
     const replies = [
-      { text: 'Got it! Sliding into that corner!', emotion: 'cheering' },
+      { text: 'Got it! Following your lead!', emotion: 'cheering' },
       { text: 'Wait, are you sure about that move?!', emotion: 'panicked' },
       { text: 'Hmph, I had that completely under control anyway.', emotion: 'smug' },
-      { text: 'Good eye! That opened up a whole new space.', emotion: 'cheering' },
+      { text: 'Good eye! That opened up a whole new path.', emotion: 'cheering' },
     ] as const
     const pick = replies[Math.floor(Math.random() * replies.length)]
     triggerReactiveReaction(pick.text, pick.emotion)
   }, 750)
+}
+
+function toggleMute() {
+  isMuted.value = !isMuted.value
+  if (currentCommandInterface) {
+    if (isMuted.value)
+      currentCommandInterface.mute?.()
+    else
+      currentCommandInterface.unmute?.()
+  }
 }
 
 onMounted(() => {
@@ -428,6 +955,14 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  if (dosPlayerInstance) {
+    try {
+      dosPlayerInstance.stop()
+    }
+    catch {}
+    dosPlayerInstance = null
+    currentCommandInterface = null
+  }
   if (audioCtx) {
     void audioCtx.close()
   }
@@ -438,57 +973,107 @@ onUnmounted(() => {
   <div class="h-full w-full flex overflow-hidden bg-neutral-100/60 dark:bg-neutral-950/40">
     <!-- 1. LEFT PANE: Retro Game Viewport (65% width) -->
     <div class="relative h-full flex flex-1 flex-col overflow-hidden border-r border-neutral-200/50 p-4 dark:border-neutral-800/50">
+      <!-- Hidden file input for custom ROM / ZIP -->
+      <input
+        ref="fileInputRef"
+        type="file"
+        accept=".zip,.jsdos"
+        class="hidden"
+        @change="handleFileInputChange"
+      >
+
       <!-- Game Top Toolbar -->
       <div class="mb-3 flex items-center justify-between border border-neutral-200/40 rounded-xl bg-white/70 px-4 py-2.5 shadow-sm backdrop-blur-md dark:border-neutral-800/40 dark:bg-neutral-900/60">
-        <!-- Title & Preset -->
+        <!-- Title & Preset Selector -->
         <div class="flex items-center gap-3">
           <div class="i-solar:gamepad-bold-duotone text-xl text-primary-500" />
-          <div>
-            <h3 class="text-xs text-neutral-800 font-bold dark:text-neutral-200">
-              2048 Retro Canvas
-            </h3>
-            <span class="text-[10px] text-neutral-500 font-medium">Zero-Dependency Web Engine</span>
+          <div class="flex items-center gap-2">
+            <!-- Preset Selector Dropdown -->
+            <select
+              :value="currentGameIdentifier"
+              class="border border-neutral-200/80 rounded-lg bg-neutral-50 px-2.5 py-1 text-xs text-neutral-800 font-bold outline-none transition-colors dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
+              @change="(e: any) => handleSelectPreset(e.target.value)"
+            >
+              <option v-for="preset in GAME_PRESETS" :key="preset.id" :value="preset.id">
+                {{ preset.title }}
+              </option>
+            </select>
           </div>
         </div>
 
-        <!-- Score & Best -->
-        <div class="flex items-center gap-3">
-          <div class="flex flex-col items-center rounded-lg bg-neutral-100 px-3 py-1 dark:bg-neutral-800">
-            <span class="text-[9px] text-neutral-400 font-bold tracking-wider uppercase">Score</span>
-            <span class="text-xs text-neutral-900 font-bold dark:text-neutral-100">{{ score }}</span>
-          </div>
-          <div class="flex flex-col items-center rounded-lg bg-neutral-100 px-3 py-1 dark:bg-neutral-800">
-            <span class="text-[9px] text-neutral-400 font-bold tracking-wider uppercase">Best</span>
-            <span class="text-xs text-amber-500 font-bold">{{ bestScore }}</span>
-          </div>
+        <!-- Middle Tools: Browse Catalog & Load File -->
+        <div class="flex items-center gap-2">
+          <button
+            class="shadow-2xs flex items-center gap-1.5 border border-primary-500/30 rounded-lg bg-primary-500/10 px-3 py-1.5 text-xs text-primary-600 font-bold transition-all active:scale-95 hover:bg-primary-500/20 dark:text-primary-400"
+            @click="isCatalogOpen = true"
+          >
+            <div class="i-solar:magnifer-linear text-xs" />
+            <span>Browse 8,000+ Games</span>
+          </button>
+
+          <button
+            class="shadow-2xs dark:hover:bg-neutral-750 flex items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-white px-2.5 py-1.5 text-xs text-neutral-700 font-medium transition-all dark:border-neutral-700/80 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200"
+            title="Load custom .zip or .jsdos file"
+            @click="fileInputRef?.click()"
+          >
+            <div class="i-solar:folder-open-linear text-xs" />
+            <span>Load .zip</span>
+          </button>
         </div>
 
-        <!-- Actions -->
+        <!-- Actions: Savestate & Controls -->
         <div class="flex items-center gap-1.5">
+          <!-- QuickSave / QuickLoad (JS-DOS only) -->
+          <template v-if="activeEngine === 'jsdos'">
+            <button
+              class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              title="QuickSave (F5 snapshot)"
+              @click="handleQuickSave"
+            >
+              <div class="i-solar:diskette-bold text-base" />
+            </button>
+            <button
+              class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              title="QuickLoad (Restore F9 snapshot)"
+              @click="handleQuickLoad"
+            >
+              <div class="i-solar:upload-track-2-bold text-base" />
+            </button>
+          </template>
+
           <button
             class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-            title="Mute / Unmute"
-            @click="isMuted = !isMuted"
+            :title="isMuted ? 'Unmute Audio' : 'Mute Audio'"
+            @click="toggleMute"
           >
             <div :class="isMuted ? 'i-solar:volume-cross-bold' : 'i-solar:volume-loud-bold'" class="text-base" />
           </button>
+
           <button
+            v-if="activeEngine === 'canvas-2048'"
             class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-            title="Restart Game"
+            title="Restart 2048"
             @click="initGame"
           >
             <div class="i-solar:restart-bold text-base" />
           </button>
+
           <div class="ml-2 flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] text-emerald-500 font-bold">
             <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-            <span>Interactive Spectator</span>
+            <span>{{ activeEngine === 'jsdos' ? 'DOSBox Active' : 'Spectator' }}</span>
           </div>
         </div>
       </div>
 
-      <!-- Main Canvas Container with Aspect-Ratio Lock & Retro Bezel -->
-      <div class="relative flex flex-1 items-center justify-center overflow-hidden">
+      <!-- Main Game Viewport with Drag-and-Drop & Aspect-Ratio Lock -->
+      <div
+        class="relative flex flex-1 items-center justify-center overflow-hidden"
+        @dragover.prevent
+        @drop.prevent="handleFileDrop"
+      >
+        <!-- 2048 RETRO CANVAS VIEWPORT -->
         <div
+          v-if="activeEngine === 'canvas-2048'"
           class="relative cursor-pointer border-4 rounded-2xl p-2 shadow-2xl transition-all duration-300"
           :class="isCanvasFocused
             ? 'border-primary-500/80 shadow-primary-500/20 ring-4 ring-primary-500/10'
@@ -496,11 +1081,10 @@ onUnmounted(() => {
           @click="focusCanvas"
         >
           <!-- Retro Bezel Badge -->
-          <div class="absolute left-4 top-4 z-10 flex items-center gap-1 rounded bg-black/60 px-2 py-0.5 text-[9px] text-neutral-400 tracking-widest font-mono uppercase backdrop-blur-sm">
+          <div class="backdrop-blur-xs absolute left-4 top-4 z-10 flex items-center gap-1 rounded bg-black/60 px-2 py-0.5 text-[9px] text-neutral-400 tracking-widest font-mono uppercase">
             <span>CRT 60FPS</span>
           </div>
 
-          <!-- HTML5 Canvas -->
           <canvas
             ref="canvasRef"
             tabindex="0"
@@ -524,26 +1108,103 @@ onUnmounted(() => {
             <span class="mt-1 text-[10px] text-white/60 font-medium">Use Arrow Keys or WASD</span>
           </div>
         </div>
+
+        <!-- JSDOS WEB PLAYER CONTAINER -->
+        <div
+          v-show="activeEngine === 'jsdos'"
+          class="relative h-full max-h-[580px] max-w-[780px] w-full flex items-center justify-center overflow-hidden border-4 border-neutral-800/80 rounded-2xl bg-black p-1 shadow-2xl"
+        >
+          <!-- DOS Bezel Badge -->
+          <div class="backdrop-blur-xs pointer-events-none absolute left-3 top-3 z-30 flex items-center gap-1.5 rounded bg-black/70 px-2 py-0.5 text-[9px] text-neutral-400 tracking-widest font-mono uppercase">
+            <span
+              class="h-1.5 w-1.5 rounded-full"
+              :class="isGameReady ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'"
+            />
+            <span>{{ isGameReady ? 'DOSBox WASM &bull; 4:3' : 'DOSBox Initializing...' }}</span>
+          </div>
+
+          <!-- Splash Screen Overlay (Shown while loading or before ci-ready) -->
+          <div
+            v-if="!isGameReady"
+            class="absolute inset-0 z-20 flex flex-col items-center justify-center overflow-hidden rounded-xl bg-neutral-950"
+          >
+            <!-- Ambient blurred backdrop -->
+            <img
+              v-if="currentSplashUrl"
+              :src="currentSplashUrl"
+              :alt="currentGameTitle"
+              class="absolute inset-0 h-full w-full scale-110 object-cover opacity-25 blur-lg filter"
+            >
+            <div class="absolute inset-0 from-black/90 via-black/50 to-black/80 bg-gradient-to-t" />
+
+            <!-- Clean Foreground Screenshot / Cover -->
+            <div
+              v-if="currentSplashUrl"
+              class="relative z-10 max-h-[60%] max-w-[70%] overflow-hidden border border-white/15 rounded-xl shadow-2xl"
+            >
+              <img
+                :src="currentSplashUrl"
+                :alt="currentGameTitle"
+                class="max-h-[260px] w-auto object-contain"
+                @error="(e: any) => { e.target.style.display = 'none' }"
+              >
+            </div>
+            <div v-else class="relative z-10 text-neutral-600">
+              <div class="i-solar:gamepad-bold text-6xl" />
+            </div>
+
+            <!-- Title & Progress Bar / Spinner -->
+            <div class="relative z-10 mt-3 flex flex-col items-center px-4 text-center">
+              <div class="text-sm text-white font-bold tracking-wide drop-shadow-md">
+                {{ currentGameTitle }}
+              </div>
+              <div
+                v-if="isDosEngineLoading"
+                class="mt-2 flex items-center gap-2 border border-white/10 rounded-full bg-black/70 px-3.5 py-1 text-xs text-neutral-200 shadow-lg backdrop-blur-md"
+              >
+                <div class="i-solar:restart-bold animate-spin text-sm text-primary-400" />
+                <span>{{ dosLoadingProgress }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div
+            ref="dosContainerRef"
+            class="h-full w-full overflow-hidden rounded-xl"
+          />
+        </div>
       </div>
 
       <!-- Bottom Status & Controls Guide -->
       <div class="mt-3 flex items-center justify-between px-2 text-[11px] text-neutral-500 dark:text-neutral-400">
         <div class="flex items-center gap-3">
-          <span class="flex items-center gap-1">
-            <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Arrows / WASD</kbd>
-            Move
-          </span>
-          <span class="flex items-center gap-1">
-            <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">R</kbd>
-            Restart
-          </span>
-          <span class="flex items-center gap-1">
-            <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">P</kbd>
-            Pause
-          </span>
+          <template v-if="activeEngine === 'canvas-2048'">
+            <span class="flex items-center gap-1">
+              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Arrows / WASD</kbd>
+              Move
+            </span>
+            <span class="flex items-center gap-1">
+              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">R</kbd>
+              Restart
+            </span>
+            <span class="flex items-center gap-1">
+              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">P</kbd>
+              Pause
+            </span>
+          </template>
+          <template v-else>
+            <span class="flex items-center gap-1">
+              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Drag &amp; Drop</kbd>
+              Load Custom .zip/.jsdos
+            </span>
+            <span class="flex items-center gap-1">
+              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">IndexedDB</kbd>
+              Offline Cached
+            </span>
+          </template>
         </div>
         <div class="text-[10px] text-neutral-400">
-          Phase 1 Prototype &bull; Phase 2: JS-DOS Doom &amp; Civ
+          Generic Gaming Runtime &bull; Phase 2 JS-DOS &amp; 8,000+ Catalog
         </div>
       </div>
     </div>
@@ -560,7 +1221,7 @@ onUnmounted(() => {
             <h4 class="text-xs text-neutral-800 font-bold dark:text-neutral-200">
               {{ activeCard?.name || 'Airi' }}'s Live Reactions
             </h4>
-            <span class="text-[10px] text-emerald-500 font-semibold">● Spectating Game</span>
+            <span class="text-[10px] text-emerald-500 font-semibold">● Spectating {{ currentGameTitle }}</span>
           </div>
         </div>
       </div>
@@ -587,7 +1248,7 @@ onUnmounted(() => {
                 {{ msg.emotion }}
               </span>
             </div>
-            <div class="max-w-[90%] rounded-2xl rounded-tl-none bg-white p-3 text-xs text-neutral-800 leading-relaxed shadow-sm dark:bg-neutral-800/80 dark:text-neutral-200">
+            <div class="shadow-xs max-w-[90%] rounded-2xl rounded-tl-none bg-white p-3 text-xs text-neutral-800 leading-relaxed dark:bg-neutral-800/80 dark:text-neutral-200">
               {{ msg.text }}
             </div>
           </div>
@@ -595,7 +1256,7 @@ onUnmounted(() => {
           <!-- User Backseat Tip Bubble -->
           <div v-else class="flex flex-col items-end gap-1">
             <span class="text-[10px] text-neutral-400 font-bold">You (Backseat Tip)</span>
-            <div class="max-w-[90%] rounded-2xl rounded-tr-none bg-primary-500 p-3 text-xs text-white leading-relaxed shadow-sm">
+            <div class="shadow-xs max-w-[90%] rounded-2xl rounded-tr-none bg-primary-500 p-3 text-xs text-white leading-relaxed">
               {{ msg.text }}
             </div>
           </div>
@@ -609,7 +1270,7 @@ onUnmounted(() => {
         </div>
         <div class="flex flex-wrap gap-1.5">
           <button
-            v-for="tip in ['Watch the corner!', 'Swipe Left!', 'Merge down!', 'Nice move!']"
+            v-for="tip in ['Watch your health!', 'Check that corner!', 'Save your ammo!', 'Awesome move!']"
             :key="tip"
             class="rounded-lg bg-neutral-100 px-2 py-1 text-[10px] text-neutral-600 font-medium transition-colors dark:bg-neutral-800 hover:bg-primary-50 dark:text-neutral-300 hover:text-primary-600 dark:hover:bg-primary-950/30 dark:hover:text-primary-400"
             @click="handleSendAdvice(tip)"
@@ -622,7 +1283,7 @@ onUnmounted(() => {
       <!-- Minimal Backseat Composer -->
       <div class="border-t border-neutral-200/40 p-3 dark:border-neutral-800/40">
         <form
-          class="flex items-center gap-2 rounded-xl bg-white/80 p-1.5 shadow-sm ring-1 ring-neutral-200/60 dark:bg-neutral-900/80 dark:ring-neutral-800/60"
+          class="shadow-xs flex items-center gap-2 rounded-xl bg-white/80 p-1.5 ring-1 ring-neutral-200/60 dark:bg-neutral-900/80 dark:ring-neutral-800/60"
           @submit.prevent="handleSendAdvice()"
         >
           <input
@@ -642,5 +1303,12 @@ onUnmounted(() => {
         </form>
       </div>
     </div>
+
+    <!-- Retro Arcade Catalog Modal -->
+    <ArcadeCatalogModal
+      :open="isCatalogOpen"
+      @close="isCatalogOpen = false"
+      @launch="handleCatalogLaunch"
+    />
   </div>
 </template>
