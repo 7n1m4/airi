@@ -152,8 +152,12 @@ async function runPlaygroundInference() {
 <template>
   <ProviderSettingsLayout
     :provider-name="providerMetadata?.localizedName || 'Moondream2 VLM (Local, WebGPU)'"
-    :provider-icon="providerMetadata?.icon"
-    :provider-icon-color="providerMetadata?.iconColor"
+    :provider-description="providerMetadata?.localizedDescription || 'Local on-device visual language model via WebGPU'"
+    :provider-icon="providerMetadata?.icon || 'i-solar:eye-scan-bold-duotone'"
+    :provider-icon-color="providerMetadata?.iconColor || 'text-cyan-500'"
+    :deployment="providerMetadata?.deployment || 'local'"
+    :pricing="providerMetadata?.pricing || 'free'"
+    :beginner-recommended="providerMetadata?.beginnerRecommended"
     :on-back="() => router.back()"
   >
     <div class="w-full flex flex-col gap-6 lg:flex-row">
@@ -345,3 +349,11 @@ async function runPlaygroundInference() {
     </div>
   </ProviderSettingsLayout>
 </template>
+
+<route lang="yaml">
+meta:
+  layout: settings
+  subtitleKey: settings.pages.providers.title
+  stageTransition:
+    name: slide
+</route>

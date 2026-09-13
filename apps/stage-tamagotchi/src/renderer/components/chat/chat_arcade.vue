@@ -221,7 +221,7 @@ async function mountDosGame(buffer: ArrayBuffer | ArrayBufferLike, gameTitle: st
 
   let effectiveBuffer = buffer
   try {
-    const zip = await JSZip.loadAsync(buffer)
+    const zip = await JSZip.loadAsync(buffer as ArrayBuffer)
     const fileList = Object.keys(zip.files)
     console.info(`[Arcade] Bundle contains ${fileList.length} files:`, fileList.slice(0, 15))
 
@@ -891,7 +891,11 @@ watch(() => chatStream.streamingMessage.content, (newContent) => {
   if (activeLlmReplyId.value && newContent) {
     const target = chatTranscript.value.find(m => m.id === activeLlmReplyId.value)
     if (target) {
-      target.text = newContent
+      target.text = typeof newContent === 'string'
+        ? newContent
+        : Array.isArray(newContent)
+          ? newContent.map(part => 'text' in part ? part.text : '').join('')
+          : String(newContent || '')
       target.emotion = 'smug'
       scrollToBottom()
     }
