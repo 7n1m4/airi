@@ -54,7 +54,7 @@ The five groups below organize navigation. Historical “Phase” labels do not 
 
 ## 3. Domain skill catalog
 
-The catalog contains 65 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
+The catalog contains 66 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
 
 ### 🟢 Phase 1: Core Plumbing & Infrastructure
 
@@ -97,6 +97,11 @@ The catalog contains 65 discoverable skills. Desktop chatbox and interaction pip
 - **Target Domain**: Bring Your Own Storage (BYOS) active-state cloud backup, S3/R2/Google Drive adapters, unstorage outbox queues, IndexedDB sync reconciliations, multi-device state sync.
 - **Key Paths**: `packages/stage-ui/src/database/storage.ts`, `packages/stage-ui/src/stores/sync-engine.ts`, `packages/stage-ui/src/components/scenarios/providers/selective-sync-panel.vue`, `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v2/steps/step-cloud-infrastructure.vue` / `step-cloud-restore.vue`, `packages/stage-ui/src/stores/modules/cloudflare.ts`, `docs/project-byos-cloud-sync.md`, `docs/project-audit-cloudsync.md`.
 - **Content**: The unstorage interceptor + outbox queue architecture, LWW vs mergeable-key vs manifest reconciliation rules, voice-profile reconciliation with quota gates, Google Drive AppData bootstrap + Edge Vault credential recovery, loop prevention (`isImportingRemoteData`), anti-contraction safeguard, and selective restore (metadata required, heavy blobs opt-in). Peer skill: `airi-cloud-relay-infrastructure` (edge relay side).
+
+#### 1.9 `airi-desktop-lifecycle-power-throttling`
+- **Target Domain**: Electron Window Lifecycle & OS Power Throttling (`powerMonitor`, `stagePaused`, Render Loop Freezing).
+- **Key Paths**: `apps/stage-tamagotchi/src/main/services/electron/window.ts`, `apps/stage-tamagotchi/src/shared/eventa.ts`, `apps/stage-tamagotchi/src/renderer/stores/stage-window-lifecycle.ts`, `apps/stage-tamagotchi/src/renderer/pages/index.vue`, `packages/stage-ui/src/components/scenes/ControlStripHost.vue`.
+- **Content**: Native Electron window state changes (`show`/`hide`/`minimize`/`restore`/`focus`/`blur`) and `powerMonitor` hooks (`suspend`/`resume`/`lock-screen`/`unlock-screen`), `ElectronWindowLifecycleState` eventa bridge, `stagePaused` state calculation, and automatic freezing of 3D/2D avatar render loops to eliminate CPU/battery drain during screen lock and OS sleep.
 
 ---
 

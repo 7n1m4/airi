@@ -6,6 +6,110 @@
 
 ---
 
+## [2026-09-13] Upstream Delta: `553d8a0d..42e3e9e8` (3 commits, 37 files, 19 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 3 commits (`553d8a0d..42e3e9e8`) adding native Wayland hover stability for Electron desktop controls island (#2522), introducing bidirectional swipe actions (pin/delete) with new `@proj-airi/ui` swipe primitives (#2536), and finalizing the Stripe product catalog restore for Flux packs (#2533). In active PRs, upstream is expanding desktop system power awareness (#2539), decoupling Live2D asset downloads (#2538), implementing bilingual subtitle translation tracks (#2537), and fixing Apple Speech locale switching in Hearing settings (#2540).
+* **Discussion & Community Buzz**:
+  - 🔥 **#2471: `feat(stage-ui): sync user providers to a cloud replica` (+17 new comments, 52 total)**: Surging community discussion debating provider credential replication to cloud backends versus local privacy.
+  - 💬 **#2537: `add bilingual subtitles` (17 comments)**: Active interest around UST bracket-syntax `[translation]` sentence splitting and synchronized dual-caption overlay rendering.
+  - 💬 **#2533: `refactor(api): restore Stripe product catalog as Flux pack source` (+13 new comments, 20 total, merged)**: Discussion wrapping up payment catalog restoration.
+  - 💬 **#2339: `feat(api): add Apple IAP payment channel backend` (+8 new comments, 38 total)**: Ongoing architectural review for Apple App Store in-app purchase verification.
+  - 💬 **#2473: `feat(auth): add native email change flow` (+6 new comments, 9 total)**: Security discussion on email re-verification tokens.
+  - 💬 **#2286: `fix(stage-ui): cancel animation frames and remove drag listeners on unmount` (+5 new comments, 9 total)**: Cleanup and lifecycle leak verification.
+  - 💬 **#2477: `feat(client): support Responses API with user-provided API keys` (+5 new comments, 28 total)**: Expanding provider proxy capabilities.
+  - 💬 **#2525: `fix(stage-pages): load speech provider voices after configuration updates` (+4 new comments, 23 total)**: Validation across reactive speech providers.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2522 / `42e3e9e857`: `fix(stage-tamagotchi): keep controls island open on native Wayland`**: Essential Linux bugfix in `controls-island/index.vue`. ORs `useElectronMouseInElement` with DOM-based `useMouseInElement` so Chromium Wayland cursor drops cannot trigger false auto-collapses.
+  - ⭐ **PR #2539: `feat(tamagotchi): pause stage if screen is locked or system is suspending`**: High-value desktop lifecycle optimization hooking Electron's `powerMonitor` (`suspend`, `lock-screen`) to pause avatar rendering and animations, saving battery and CPU.
+  - 🔍 **PR #2540: `fix(stage-ui): apply Apple Speech locale in hearing settings`**: Resolves locale switching failure in Electron Settings by disposing stale instances locally instead of routing disposal to leader, and fixes combobox language label refresh.
+  - 🔍 **PR #2536 / `a75b031ccc`: `feat(ui,stage-ui): add bidirectional swipe actions for conversations`**: Clean Radix-style UI swipe primitives for conversation cards (pin/delete via swipe gestures).
+  - 🔍 **PR #2537: `add bilingual subtitles`**: Dual-track bilingual subtitle feature using structural alignment for synchronous foreign language and native subtitles.
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/stage-ui/src/components/scenarios/chat/components/sessions-list.vue`**: Heavily refactored by PR #2536 to integrate swipe actions. Avoid direct file overwrite; port swipe gestures cleanly if adopted.
+  - ⚠️ **`packages/stage-ui-live2d` (PR #2538)**: Upstream is moving Live2D assets download to a package-level postinstall/Vite script. Our fork uses custom asset packaging; do not blindly adopt upstream's asset distribution script.
+  - ⚪ **`server/apps/api` (PR #2533, #2339, #2473)**: Upstream cloud payment and auth endpoints. Irrelevant to our local-first offline desktop architecture; ignore.
+
+### 📋 Upstream Commits
+- `42e3e9e857` fix(stage-tamagotchi): keep controls island open on native Wayland (#2522) [#2522](https://github.com/moeru-ai/airi/pull/2522) _(이윤진(Lee Yunjin), 2026-09-14)_
+- `a75b031ccc` feat(ui,stage-ui): add bidirectional swipe actions for conversations (#2536) [#2536](https://github.com/moeru-ai/airi/pull/2536) _(Neko, 2026-09-14)_
+- `00c6867b7f` refactor(api): restore Stripe product catalog as Flux pack source (#2533) [#2533](https://github.com/moeru-ai/airi/pull/2533) _(Lulu, 2026-09-12)_
+
+### 🔬 Subsystem Breakdown
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 5 file(s) (+94/-23)
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/control-button-tooltip.vue` *(+4/-1)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/controls-island-overflow.browser.test.ts` *(+61/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/controls-island-stop-speaking.test.ts` *(+12/-19)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/controls-island-stop-speaking.vue` *(+1/-1)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/index.vue` *(+16/-2)*
+
+#### Documentation & Scaffolding (`⚪ ignore`) — 3 file(s) (+133/-5)
+- `docs/ai/context/ui-components.md` *(+123/-0)*
+- `packages/stage-ui/README.md` *(+4/-0)*
+- `server/apps/api/README.md` *(+6/-5)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 2 file(s) (+16/-0)
+- `packages/i18n/src/locales/en/stage.yaml` *(+8/-0)*
+- `packages/i18n/src/locales/zh-Hans/stage.yaml` *(+8/-0)*
+
+#### UI Primitives & Pages (`📦 import / inspect`) — 11 file(s) (+965/-13)
+- `packages/stage-pages/src/pages/settings/flux.vue` *(+13/-13)*
+- `packages/ui/README.md` *(+27/-0)*
+- `packages/ui/src/components/misc/index.ts` *(+1/-0)*
+- `packages/ui/src/components/misc/swipe-action-button.vue` *(+52/-0)*
+- `packages/ui/src/components/swipe-actions/context.ts` *(+52/-0)*
+- `packages/ui/src/components/swipe-actions/index.ts` *(+5/-0)*
+- `packages/ui/src/components/swipe-actions/swipe-actions-content.vue` *(+22/-0)*
+- `packages/ui/src/components/swipe-actions/swipe-actions-item.vue` *(+97/-0)*
+- `packages/ui/src/components/swipe-actions/swipe-actions-list.vue` *(+52/-0)*
+- `packages/ui/src/components/swipe-actions/swipe-actions-root.vue` *(+643/-0)*
+- `packages/ui/src/index.ts` *(+1/-0)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 16 file(s) (+1070/-407)
+- `packages/stage-ui/src/components/misc/swipe-actions.browser.test.ts` *(+137/-0)*
+- `packages/stage-ui/src/components/misc/swipe-actions.story.vue` *(+57/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/sessions-dialog.browser.test.ts` *(+470/-11)*
+- `packages/stage-ui/src/components/scenarios/chat/components/sessions-drawer.browser.test.ts` *(+1/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/sessions-list.vue` *(+83/-70)*
+- `packages/stage-ui/stories/setup.server.ts` *(+2/-1)*
+- `server/apps/api/src/routes/stripe/checkout.test.ts` *(+71/-46)*
+- `server/apps/api/src/routes/stripe/index.ts` *(+7/-10)*
+- `server/apps/api/src/routes/stripe/operations/checkout.ts` *(+20/-38)*
+- `server/apps/api/src/routes/stripe/operations/webhook.ts` *(+3/-3)*
+- `server/apps/api/src/routes/stripe/price-catalog.test.ts` *(+88/-52)*
+- `server/apps/api/src/routes/stripe/price-catalog.ts` *(+106/-65)*
+- `server/apps/api/src/routes/stripe/route.test.ts` *(+17/-20)*
+- `server/apps/api/src/routes/stripe/schema.ts` *(+5/-19)*
+- `server/apps/api/src/services/adapters/config-kv/definitions.ts` *(+3/-32)*
+- `server/apps/api/src/services/adapters/config-kv/index.test.ts` *(+0/-40)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (5)
+- [#2540](https://github.com/moeru-ai/airi/pull/2540) `fix(stage-ui): apply Apple Speech locale in hearing settings` by **@nekomeowww** *(4 comments)*
+- [#2538](https://github.com/moeru-ai/airi/pull/2538) `refactor(live2d): move live2d asset download to stage-ui-live2d` by **@drHuangMHT** *(6 comments)*
+- [#2536](https://github.com/moeru-ai/airi/pull/2536) `feat(ui): add bidirectional swipe actions for conversations` by **@nekomeowww** *(21 comments)*
+- [#2537](https://github.com/moeru-ai/airi/pull/2537) `add bilingual subtitles` by **@phx3334** *(17 comments)*
+- [#2539](https://github.com/moeru-ai/airi/pull/2539) `feat(tamagotchi): pause stage if screen is locked or system is suspending` by **@drHuangMHT** *(3 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (2)
+- [#2522](https://github.com/moeru-ai/airi/pull/2522) `fix(stage-tamagotchi): keep controls island open on native Wayland` — `OPEN` ➔ `MERGED`, `Draft` ➔ `Ready`
+- [#2533](https://github.com/moeru-ai/airi/pull/2533) `refactor(api): restore Stripe product catalog as Flux pack source` — `OPEN` ➔ `MERGED`, `Draft` ➔ `Ready`
+
+#### 💬 Discussion Activity (12)
+- [#2286](https://github.com/moeru-ai/airi/pull/2286) `fix(stage-ui): cancel animation frames and remove drag listeners on unmount` — *+5 comments (4 ➔ 9 total)*
+- [#2525](https://github.com/moeru-ai/airi/pull/2525) `fix(stage-pages): load speech provider voices after configuration updates` — *+4 comments (19 ➔ 23 total)*
+- [#2477](https://github.com/moeru-ai/airi/pull/2477) `feat(client): support Responses API with user-provided API keys` — *+5 comments (23 ➔ 28 total)*
+- [#2530](https://github.com/moeru-ai/airi/pull/2530) `fix(stage-tamagotchi): remove obsolete mouse tracking IPC` — *+2 comments (0 ➔ 2 total)*
+- [#2339](https://github.com/moeru-ai/airi/pull/2339) `feat(api): add Apple IAP payment channel backend` — *+8 comments (30 ➔ 38 total)*
+- [#2522](https://github.com/moeru-ai/airi/pull/2522) `fix(stage-tamagotchi): keep controls island open on native Wayland` — *+2 comments (6 ➔ 8 total)*
+- [#2473](https://github.com/moeru-ai/airi/pull/2473) `feat(auth): add native email change flow` — *+6 comments (3 ➔ 9 total)*
+- [#2471](https://github.com/moeru-ai/airi/pull/2471) `feat(stage-ui): sync user providers to a cloud replica` — *+17 comments (35 ➔ 52 total)*
+- [#2352](https://github.com/moeru-ai/airi/pull/2352) `fix(stage-ui-three): maintain vrm emotion weights and prevent morph conflicts` — *+1 comments (39 ➔ 40 total)*
+- [#2435](https://github.com/moeru-ai/airi/pull/2435) `feat(stage-ui): add local FunASR transcription provider` — *+3 comments (184 ➔ 187 total)*
+- [#2121](https://github.com/moeru-ai/airi/pull/2121) `chore(i18n): update translations` — *+3 comments (86 ➔ 89 total)*
+- [#2533](https://github.com/moeru-ai/airi/pull/2533) `refactor(api): restore Stripe product catalog as Flux pack source` — *+13 comments (7 ➔ 20 total)*
+
+---
 ## [2026-09-12] Upstream Delta: `3fcae726..553d8a0d` (8 commits, 64 files, 19 PR update(s))
 
 ### 🎯 Executive Highlights

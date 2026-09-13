@@ -52,8 +52,11 @@ import {
   electronStartDraggingWindow,
   noticeWindowEventa,
 } from '../../shared/eventa'
+import { useStageWindowLifecycleStore } from '../stores/stage-window-lifecycle'
 import { builtinTools } from '../stores/tools/builtin'
 import { useWindowStore } from '../stores/window'
+
+const { stagePaused } = storeToRefs(useStageWindowLifecycleStore())
 
 const widgetStageRef = ref<InstanceType<typeof WidgetStage>>()
 const tools = ref<any[]>([])
@@ -943,6 +946,7 @@ watch([stream, () => vadLoaded.value], async ([s, loaded]) => {
     <WidgetStage
       ref="widgetStageRef"
       v-model:state="componentStateStage"
+      :paused="stagePaused"
       :class="['w-full h-full', 'flex-1']"
       :focus-at="{ x: live2dLookAtX, y: live2dLookAtY }"
       :scale="computedScale"
