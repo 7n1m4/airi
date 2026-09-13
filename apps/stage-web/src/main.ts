@@ -57,6 +57,8 @@ if (redirectParam) {
 }
 
 router.beforeEach((to, from) => {
+  if (to.path === '/modules/artistry')
+    return '/settings/modules/artistry'
   if (to.path !== from.path)
     NProgress.start()
 })

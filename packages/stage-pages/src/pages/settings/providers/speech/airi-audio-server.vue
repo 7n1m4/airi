@@ -2,15 +2,15 @@
 import type { VoiceInfo } from '@proj-airi/stage-ui/stores/providers'
 import type { SpeechProvider } from '@xsai-ext/providers/utils'
 
-import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { electronExecuteShellCommand } from '@proj-airi/stage-shared'
 import {
+  ProcessLifecycleCard,
   SpeechPlayground,
   SpeechProviderSettings,
 } from '@proj-airi/stage-ui/components'
+import { useProcessSpawner } from '@proj-airi/stage-ui/composables'
 import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { FieldInput, FieldRange, FieldSelect } from '@proj-airi/ui'
+import { FieldRange, FieldSelect } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,
@@ -148,185 +148,17 @@ function copyCommand(cmd: string, stepIndex: number) {
   }
 }
 
-// Process Spawner & Lifecycle (Electron IPC)
-const isElectron = typeof window !== 'undefined' && Boolean((window as any)?.electron)
-const executeShellInvoke = isElectron ? useElectronEventaInvoke(electronExecuteShellCommand) : null
-
-const spawnCommand = computed<string>({
-  get: () => (providers.value[providerId]?.spawnCommand as string) ?? '',
-  set: (val: string) => {
-    if (!providers.value[providerId])
-      providers.value[providerId] = {}
-    providers.value[providerId].spawnCommand = val
-  },
+// --- AIRI Audio Server Process Spawner & Lifecycle ---
+const audioSpawner = useProcessSpawner({
+  storageKeyPrefix: 'settings/providers/airi-audio-server',
+  defaultSpawnCommand: (providers.value[providerId]?.spawnCommand as string) || '',
+  defaultStopCommand: (providers.value[providerId]?.stopCommand as string) || '',
+  defaultAutoSpawn: Boolean(providers.value[providerId]?.autoSpawnOnLaunch),
+  spawnSuccessDelayMs: 1500,
+  stopSuccessDelayMs: 1000,
+  onSpawnSuccess: checkServerStatus,
+  onStopSuccess: checkServerStatus,
 })
-
-const stopCommand = computed<string>({
-  get: () => (providers.value[providerId]?.stopCommand as string) ?? '',
-  set: (val: string) => {
-    if (!providers.value[providerId])
-      providers.value[providerId] = {}
-    providers.value[providerId].stopCommand = val
-  },
-})
-
-const autoSpawnOnLaunch = computed<boolean>({
-  get: () => Boolean(providers.value[providerId]?.autoSpawnOnLaunch),
-  set: (val: boolean) => {
-    if (!providers.value[providerId])
-      providers.value[providerId] = {}
-    providers.value[providerId].autoSpawnOnLaunch = val
-  },
-})
-
-const isExecutingCommand = ref(false)
-const executingAction = ref<'spawn' | 'stop' | null>(null)
-const showExecutionLogs = ref(false)
-const copiedLogs = ref(false)
-const lastExecutionResult = ref<{
-  action: 'spawn' | 'stop'
-  success: boolean
-  exitCode: number | null
-  stdout: string
-  stderr: string
-  error?: string
-  timestamp: string
-} | null>(null)
-
-async function handleSpawnServer() {
-  const cmd = spawnCommand.value.trim()
-  if (!cmd) {
-    toast.error('Please configure a spawn command first.')
-    return
-  }
-
-  if (!isElectron || !executeShellInvoke) {
-    if (typeof navigator !== 'undefined') {
-      await navigator.clipboard.writeText(cmd)
-    }
-    toast.info('Command copied to clipboard. Direct process execution requires the desktop Electron app.')
-    return
-  }
-
-  isExecutingCommand.value = true
-  executingAction.value = 'spawn'
-  try {
-    const res = await executeShellInvoke({ command: cmd })
-    lastExecutionResult.value = {
-      action: 'spawn',
-      success: res.success,
-      exitCode: res.exitCode,
-      stdout: res.stdout,
-      stderr: res.stderr,
-      error: res.error,
-      timestamp: new Date().toLocaleTimeString(),
-    }
-    showExecutionLogs.value = true
-
-    if (res.success) {
-      toast.success('Spawn command executed successfully')
-      // Allow the process a moment to initialize its network listener before checking status
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      await checkServerStatus()
-    }
-    else {
-      toast.error(`Spawn failed (Exit ${res.exitCode ?? '!'}): ${res.error || res.stderr.slice(0, 120) || 'Unknown error'}`)
-    }
-  }
-  catch (err: any) {
-    lastExecutionResult.value = {
-      action: 'spawn',
-      success: false,
-      exitCode: 1,
-      stdout: '',
-      stderr: err.message,
-      error: err.message,
-      timestamp: new Date().toLocaleTimeString(),
-    }
-    showExecutionLogs.value = true
-    toast.error(`Process spawner error: ${err.message}`)
-  }
-  finally {
-    isExecutingCommand.value = false
-    executingAction.value = null
-  }
-}
-
-async function handleStopServer() {
-  const cmd = stopCommand.value.trim()
-  if (!cmd) {
-    toast.error('Please configure a stop command first.')
-    return
-  }
-
-  if (!isElectron || !executeShellInvoke) {
-    if (typeof navigator !== 'undefined') {
-      await navigator.clipboard.writeText(cmd)
-    }
-    toast.info('Command copied to clipboard. Direct process execution requires the desktop Electron app.')
-    return
-  }
-
-  isExecutingCommand.value = true
-  executingAction.value = 'stop'
-  try {
-    const res = await executeShellInvoke({ command: cmd })
-    lastExecutionResult.value = {
-      action: 'stop',
-      success: res.success,
-      exitCode: res.exitCode,
-      stdout: res.stdout,
-      stderr: res.stderr,
-      error: res.error,
-      timestamp: new Date().toLocaleTimeString(),
-    }
-    showExecutionLogs.value = true
-
-    if (res.success) {
-      toast.success('Stop command executed successfully')
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      await checkServerStatus()
-    }
-    else {
-      toast.error(`Stop failed (Exit ${res.exitCode ?? '!'}): ${res.error || res.stderr.slice(0, 120) || 'Unknown error'}`)
-    }
-  }
-  catch (err: any) {
-    lastExecutionResult.value = {
-      action: 'stop',
-      success: false,
-      exitCode: 1,
-      stdout: '',
-      stderr: err.message,
-      error: err.message,
-      timestamp: new Date().toLocaleTimeString(),
-    }
-    showExecutionLogs.value = true
-    toast.error(`Process stopper error: ${err.message}`)
-  }
-  finally {
-    isExecutingCommand.value = false
-    executingAction.value = null
-  }
-}
-
-function copyLogs() {
-  if (!lastExecutionResult.value || typeof navigator === 'undefined')
-    return
-  const text = [
-    `=== Action: ${lastExecutionResult.value.action.toUpperCase()} (${lastExecutionResult.value.timestamp}) ===`,
-    `Exit Code: ${lastExecutionResult.value.exitCode ?? 'N/A'}`,
-    lastExecutionResult.value.stdout ? `\n--- STDOUT ---\n${lastExecutionResult.value.stdout}` : '',
-    lastExecutionResult.value.stderr ? `\n--- STDERR ---\n${lastExecutionResult.value.stderr}` : '',
-    lastExecutionResult.value.error ? `\n--- ERROR ---\n${lastExecutionResult.value.error}` : '',
-  ].filter(Boolean).join('\n')
-
-  navigator.clipboard.writeText(text)
-  copiedLogs.value = true
-  setTimeout(() => {
-    copiedLogs.value = false
-  }, 2000)
-}
 
 async function checkServerStatus() {
   isCheckingHealth.value = true
@@ -783,9 +615,9 @@ onMounted(async () => {
     providers.value[providerId].model = defaultModel
   }
   await checkServerStatus()
-  if (serverOnline.value === false && autoSpawnOnLaunch.value && spawnCommand.value.trim() && isElectron) {
+  if (serverOnline.value === false && audioSpawner.autoSpawnOnLaunch.value && audioSpawner.spawnCommand.value.trim() && audioSpawner.isElectron.value) {
     toast.info('AIRI Audio Server is unreachable. Auto-spawning configured server...')
-    await handleSpawnServer()
+    await audioSpawner.handleSpawn()
   }
 })
 
@@ -979,186 +811,16 @@ async function handleGenerateSpeech(input: string, voiceId: string, _useSSML: bo
     </div>
 
     <!-- Server Lifecycle & Process Spawner Card -->
-    <div class="shadow-xs border border-neutral-200/80 rounded-2xl bg-white p-5 dark:border-neutral-800 dark:bg-neutral-900/60">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex items-center gap-2.5">
-          <div class="h-9 w-9 flex items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
-            <span class="i-solar:server-square-bold-duotone text-lg" />
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h3 class="text-sm text-neutral-900 font-bold dark:text-neutral-100">
-                Server Lifecycle & Process Spawner
-              </h3>
-              <span
-                :class="[
-                  'px-2 py-0.5 text-[10px] font-semibold rounded-full border',
-                  isElectron
-                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:text-emerald-400'
-                    : 'bg-neutral-100 text-neutral-500 border-neutral-200 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-400',
-                ]"
-              >
-                {{ isElectron ? 'Desktop IPC Ready' : 'Web Browser Mode' }}
-              </span>
-            </div>
-            <p class="text-[11px] text-neutral-500 dark:text-neutral-400">
-              Run local sidecar binary or execute remote start/stop scripts directly from AIRI.
-            </p>
-          </div>
-        </div>
-
-        <!-- Action Buttons -->
-        <div class="flex flex-wrap items-center self-start gap-2 sm:self-auto">
-          <button
-            v-if="lastExecutionResult"
-            type="button"
-            class="dark:border-neutral-750 dark:hover:bg-neutral-750 inline-flex cursor-pointer items-center gap-1.5 border border-neutral-200 rounded-xl bg-neutral-50 px-3 py-1.5 text-xs text-neutral-700 font-medium transition-all active:scale-95 dark:bg-neutral-800 hover:bg-neutral-100 dark:text-neutral-300"
-            @click="showExecutionLogs = !showExecutionLogs"
-          >
-            <span class="i-solar:terminal-linear text-xs" />
-            <span>{{ showExecutionLogs ? 'Hide Logs' : 'Terminal Logs' }}</span>
-            <span
-              :class="[
-                'ml-1 px-1.5 py-0.2 rounded text-[10px] font-mono font-bold',
-                lastExecutionResult.success
-                  ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'
-                  : 'bg-red-500/20 text-red-600 dark:text-red-400',
-              ]"
-            >
-              {{ lastExecutionResult.exitCode === 0 ? '0' : lastExecutionResult.exitCode ?? '!' }}
-            </span>
-          </button>
-
-          <button
-            v-if="stopCommand.trim()"
-            type="button"
-            :disabled="isExecutingCommand"
-            class="shadow-xs inline-flex cursor-pointer items-center gap-1.5 border border-red-200 rounded-xl bg-red-50 px-3.5 py-1.5 text-xs text-red-700 font-semibold transition-all active:scale-95 dark:border-red-900/50 dark:bg-red-950/40 hover:bg-red-100 dark:text-red-300 disabled:opacity-50 dark:hover:bg-red-900/60"
-            @click="handleStopServer"
-          >
-            <span
-              :class="[
-                'text-xs',
-                isExecutingCommand && executingAction === 'stop' ? 'i-solar:restart-bold animate-spin' : 'i-solar:stop-bold',
-              ]"
-            />
-            <span>{{ isExecutingCommand && executingAction === 'stop' ? 'Stopping...' : 'Stop Server' }}</span>
-          </button>
-
-          <button
-            type="button"
-            :disabled="isExecutingCommand || !spawnCommand.trim()"
-            class="shadow-xs inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-1.5 text-xs text-white font-semibold transition-all active:scale-95 hover:bg-amber-600 disabled:opacity-50"
-            @click="handleSpawnServer"
-          >
-            <span
-              :class="[
-                'text-xs',
-                isExecutingCommand && executingAction === 'spawn' ? 'i-solar:restart-bold animate-spin' : 'i-solar:play-bold',
-              ]"
-            />
-            <span>{{ isExecutingCommand && executingAction === 'spawn' ? 'Spawning...' : 'Spawn Server' }}</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Command Configuration Form -->
-      <div class="grid grid-cols-1 mt-4 gap-3 lg:grid-cols-2">
-        <FieldInput
-          v-model="spawnCommand"
-          label="Spawn Command"
-          description="Command to start or spawn the server process (local executable, script, or remote SSH command)."
-          placeholder="e.g. npx airi-audio-server or ./start_server.sh or ssh user@host &quot;command&quot;"
-        />
-
-        <FieldInput
-          v-model="stopCommand"
-          label="Stop Command (Optional)"
-          description="Optional command to terminate or stop the server process."
-          placeholder="e.g. killall airi-audio-server or ./stop_server.sh or ssh user@host &quot;command&quot;"
-        />
-      </div>
-
-      <!-- Auto-spawn Switch & Hints -->
-      <div class="mt-3 flex flex-col justify-between gap-2 border-t border-neutral-100 pt-3 sm:flex-row sm:items-center dark:border-neutral-800/80">
-        <label class="flex cursor-pointer select-none items-center gap-2 text-xs text-neutral-700 dark:text-neutral-300">
-          <input
-            v-model="autoSpawnOnLaunch"
-            type="checkbox"
-            class="h-4 w-4 border-neutral-300 rounded text-amber-500 accent-amber-500 dark:border-neutral-700 focus:ring-amber-500"
-          >
-          <span class="font-medium">Auto-spawn server on launch if unreachable</span>
-        </label>
-
-        <span class="text-[11px] text-neutral-400">
-          <template v-if="isElectron">
-            Commands execute securely within Electron's local host environment.
-          </template>
-          <template v-else>
-            Running in browser: clicking Spawn will copy the command for external terminal execution.
-          </template>
-        </span>
-      </div>
-
-      <!-- Collapsible Terminal Execution Logs Drawer -->
-      <div
-        v-if="showExecutionLogs && lastExecutionResult"
-        class="mt-3 border border-neutral-800 rounded-xl bg-neutral-950 p-3.5 text-xs text-neutral-200 font-mono"
-      >
-        <div class="flex items-center justify-between border-b border-neutral-800/80 pb-2">
-          <div class="flex items-center gap-2">
-            <div class="flex gap-1.5">
-              <span class="inline-block h-2.5 w-2.5 rounded-full bg-red-500/80" />
-              <span class="inline-block h-2.5 w-2.5 rounded-full bg-amber-500/80" />
-              <span class="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500/80" />
-            </div>
-            <span class="text-[11px] text-neutral-400">
-              Terminal Output ({{ lastExecutionResult.action.toUpperCase() }} at {{ lastExecutionResult.timestamp }})
-            </span>
-          </div>
-
-          <div class="flex items-center gap-2">
-            <span
-              :class="[
-                'px-1.5 py-0.5 rounded text-[10px] font-bold uppercase',
-                lastExecutionResult.success ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400',
-              ]"
-            >
-              Exit Code: {{ lastExecutionResult.exitCode ?? 'N/A' }}
-            </span>
-            <button
-              type="button"
-              class="cursor-pointer text-[11px] text-neutral-400 hover:text-white"
-              @click="copyLogs"
-            >
-              {{ copiedLogs ? 'Copied!' : 'Copy' }}
-            </button>
-            <button
-              type="button"
-              class="cursor-pointer text-[11px] text-neutral-400 hover:text-white"
-              @click="showExecutionLogs = false"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-
-        <div class="mt-2.5 max-h-48 overflow-y-auto whitespace-pre-wrap text-[11px] leading-relaxed">
-          <div v-if="lastExecutionResult.stdout" class="text-neutral-300">
-            {{ lastExecutionResult.stdout }}
-          </div>
-          <div v-if="lastExecutionResult.stderr" class="text-amber-400">
-            {{ lastExecutionResult.stderr }}
-          </div>
-          <div v-if="lastExecutionResult.error && !lastExecutionResult.stderr.includes(lastExecutionResult.error)" class="text-red-400">
-            Error: {{ lastExecutionResult.error }}
-          </div>
-          <div v-if="!lastExecutionResult.stdout && !lastExecutionResult.stderr && !lastExecutionResult.error" class="text-neutral-500 italic">
-            (Command finished with no output)
-          </div>
-        </div>
-      </div>
-    </div>
+    <ProcessLifecycleCard
+      :spawner="audioSpawner"
+      title="Server Lifecycle & Process Spawner"
+      description="Run local sidecar binary or execute remote start/stop scripts directly from AIRI."
+      placeholder-spawn="e.g. npx airi-audio-server or ./start_server.sh or ssh user@host &quot;command&quot;"
+      placeholder-stop="e.g. killall airi-audio-server or ./stop_server.sh or ssh user@host &quot;command&quot;"
+      spawn-button-label="Spawn Server"
+      stop-button-label="Stop Server"
+      icon="i-solar:server-square-bold-duotone"
+    />
 
     <!-- Provider Settings: Two Column Layout (Basic + Voice on Left, Playground on Right) -->
     <SpeechProviderSettings

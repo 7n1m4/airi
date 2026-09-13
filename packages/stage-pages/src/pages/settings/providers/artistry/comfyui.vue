@@ -3,10 +3,12 @@ import type { ComfyUIWorkflowTemplate } from '@proj-airi/stage-ui/stores/modules
 
 import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import { artistryComfyHealthCheck } from '@proj-airi/stage-shared'
+import { ProcessLifecycleCard } from '@proj-airi/stage-ui/components'
+import { useProcessSpawner } from '@proj-airi/stage-ui/composables'
 import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
 import { FieldInput } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 
 const artistryStore = useArtistryStore()
@@ -70,6 +72,26 @@ async function testConnection() {
     connectionStatus.value = 'failed'
   }
 }
+
+// --- ComfyUI Process Spawner & Lifecycle ---
+const comfySpawner = useProcessSpawner({
+  storageKeyPrefix: 'artistry:comfyui',
+  spawnSuccessDelayMs: 2500,
+  stopSuccessDelayMs: 1000,
+  onSpawnSuccess: async () => {
+    await testConnection()
+  },
+  onStopSuccess: async () => {
+    await testConnection()
+  },
+})
+
+onMounted(async () => {
+  await testConnection()
+  if (connectionStatus.value === 'failed' && comfySpawner.autoSpawnOnLaunch.value && comfySpawner.spawnCommand.value.trim() && comfySpawner.isElectron.value) {
+    await comfySpawner.handleSpawn()
+  }
+})
 
 // --- Workflow Upload & Modal Target Configurator ---
 const isModalOpen = ref(false)
@@ -328,18 +350,34 @@ function copyToClipboard(text: string) {
 
 <template>
   <div class="flex flex-col gap-6">
-    <!-- Header: 2-Step Setup Guide -->
+    <!-- Header: 2-Step Setup Guide & Playground CTA -->
     <div class="flex flex-col gap-4 border border-indigo-500/20 rounded-2xl bg-indigo-500/5 p-5">
-      <div class="flex items-center gap-3">
-        <div class="i-solar:gallery-bold-duotone shrink-0 text-3xl text-indigo-500" />
-        <div class="flex flex-col">
-          <h2 class="text-xl text-neutral-800 font-bold dark:text-neutral-100">
-            ComfyUI Setup & Instructions
-          </h2>
-          <p class="text-xs text-neutral-500 dark:text-neutral-400">
-            Follow these two simple steps to connect ComfyUI workflows to your AIRI characters.
-          </p>
+      <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div class="flex items-center gap-3">
+          <div class="i-solar:gallery-bold-duotone shrink-0 text-3xl text-indigo-500" />
+          <div class="flex flex-col">
+            <h2 class="text-xl text-neutral-800 font-bold dark:text-neutral-100">
+              ComfyUI Setup & Instructions
+            </h2>
+            <p class="text-xs text-neutral-500 dark:text-neutral-400">
+              Follow these two simple steps to connect ComfyUI workflows to your AIRI characters.
+            </p>
+          </div>
         </div>
+
+        <RouterLink
+          to="/settings/modules/artistry"
+          :class="[
+            'shrink-0 inline-flex items-center gap-2',
+            'rounded-xl bg-indigo-500 hover:bg-indigo-600',
+            'px-4 py-2.5 text-xs font-semibold text-white',
+            'shadow-sm hover:shadow active:scale-97 transition-all',
+          ]"
+        >
+          <div class="i-solar:magic-stick-3-bold-duotone text-base" />
+          <span>Image Testing Playground</span>
+          <div class="i-solar:arrow-right-line-duotone text-xs" />
+        </RouterLink>
       </div>
 
       <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -362,12 +400,15 @@ function copyToClipboard(text: string) {
             2
           </div>
           <div class="flex flex-col gap-1">
-            <span class="text-sm text-neutral-800 font-bold dark:text-neutral-200">Assign to Character Card</span>
+            <span class="text-sm text-neutral-800 font-bold dark:text-neutral-200">Assign to Character or Test Live</span>
             <span class="text-xs text-neutral-500 leading-relaxed dark:text-neutral-400">
-              After uploading below, go to
+              After uploading below, test it immediately in the
+              <RouterLink to="/settings/modules/artistry" class="text-indigo-600 font-semibold underline dark:text-indigo-400 hover:text-indigo-700">
+                Image Testing Playground
+              </RouterLink>, or open
               <RouterLink to="/settings/airi-card" class="text-indigo-600 font-semibold underline dark:text-indigo-400 hover:text-indigo-700">
                 AIRI Cards
-              </RouterLink>, click the pencil icon to edit your character, open the <strong>Artistry</strong> tab, select <strong>ComfyUI</strong>, and click Apply.
+              </RouterLink> to bind it to your character's Artistry tab.
             </span>
           </div>
         </div>
@@ -385,11 +426,14 @@ function copyToClipboard(text: string) {
           <div class="flex flex-col">
             <span class="text-sm font-bold">{{ successBannerMessage }}</span>
             <span class="text-xs">
-              Now go to
+              Now try it out in the
+              <RouterLink to="/settings/modules/artistry" class="font-bold underline hover:text-emerald-900 dark:hover:text-white">
+                Image Testing Playground
+              </RouterLink>
+              or activate it in
               <RouterLink to="/settings/airi-card" class="font-bold underline hover:text-emerald-900 dark:hover:text-white">
                 AIRI Cards &gt; Edit Character &gt; Artistry Tab
-              </RouterLink>
-              to activate it for your character!
+              </RouterLink>!
             </span>
           </div>
         </div>
@@ -452,6 +496,18 @@ function copyToClipboard(text: string) {
           python main.py --enable-cors-header "*"
         </div>
       </div>
+
+      <!-- Process Spawner & Server Lifecycle -->
+      <ProcessLifecycleCard
+        :spawner="comfySpawner"
+        title="ComfyUI Lifecycle & Process Spawner"
+        description="Spawn local batch runners or execute remote SSH commands to boot ComfyUI."
+        placeholder-spawn="e.g. ./run_nvidia_gpu.bat or ~/start_comfy.sh or ssh user@host &quot;command&quot;"
+        placeholder-stop="e.g. taskkill /F /IM python.exe or killall python3 or ssh user@host &quot;command&quot;"
+        spawn-button-label="Spawn ComfyUI"
+        stop-button-label="Stop ComfyUI"
+        icon="i-solar:gallery-wide-bold-duotone"
+      />
     </div>
 
     <!-- Workflow Templates Section -->
