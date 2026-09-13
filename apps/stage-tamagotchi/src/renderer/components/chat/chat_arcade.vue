@@ -232,26 +232,40 @@ async function mountDosGame(buffer: ArrayBuffer | ArrayBufferLike, gameTitle: st
       let execCmd = emulatorStart?.trim()
       if (!execCmd) {
         // Scan for .exe / .com / .bat in zip
-        const executables = fileList.filter(f => !f.endsWith('/') && /\.(?:exe|com|bat)$/i.test(f))
+        const executables = fileList.filter((f) => {
+          if (f.endsWith('/') || f.endsWith('\\'))
+            return false
+          if (!/\.(?:exe|com|bat)$/i.test(f))
+            return false
+
+          // Arbitrarily filter out choice.exe (.com / .bat) from being a candidate ever
+          const filename = f.split(/[/\\]/).pop()?.toLowerCase() || ''
+          if (/^choice\.(?:exe|com|bat)$/i.test(filename))
+            return false
+
+          return true
+        })
         console.info('[Arcade] Candidate executables found:', executables)
 
         // Exclude DOS utility & configuration binaries
-        const IGNORED_BINS = ['setup', 'install', 'config', 'settings', 'sound', 'setsound', 'choice', 'readme', 'help', 'terrain']
+        const IGNORED_BINS = ['setup', 'install', 'config', 'settings', 'sound', 'setsound', 'choice', 'readme', 'help', 'terrain', 'dos4gw', 'cwspd']
         const validCandidates = executables.filter((e) => {
-          const base = e.split('/').pop()?.toLowerCase().replace(/\.(?:exe|com|bat)$/, '') || ''
+          const filename = e.split(/[/\\]/).pop()?.toLowerCase() || ''
+          const base = filename.replace(/\.(?:exe|com|bat)$/i, '')
           return !IGNORED_BINS.includes(base)
         })
 
         // Best match: contains game title tokens, or primary launchers (main, game, play, start, run, go)
         const titleTokens = (gameTitle || '').toLowerCase().replace(/[^a-z0-9]/g, ' ').split(/\s+/).filter(t => t.length > 2)
         const titleMatch = validCandidates.find((e) => {
-          const base = e.split('/').pop()?.toLowerCase() || ''
+          const filename = e.split(/[/\\]/).pop()?.toLowerCase() || ''
+          const base = filename.replace(/\.(?:exe|com|bat)$/i, '')
           return titleTokens.some(tok => base.includes(tok))
         })
 
         const commonLauncher = validCandidates.find((e) => {
-          const base = e.split('/').pop()?.toLowerCase() || ''
-          return /^(?:main|game|play|start|run|go)\.(?:exe|com|bat)$/i.test(base)
+          const filename = e.split(/[/\\]/).pop()?.toLowerCase() || ''
+          return /^(?:main|game|play|start|run|go)\.(?:exe|com|bat)$/i.test(filename)
         })
 
         execCmd = titleMatch || commonLauncher || validCandidates[0] || executables[0] || 'dir /w'
