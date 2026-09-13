@@ -32,6 +32,8 @@ function normalizeProviderId(id: string) {
     return 'pocket-tts-local'
   if (id === 'moss')
     return 'moss-nano-local'
+  if (id === 'chatterbox')
+    return 'airi-audio-server'
   return id
 }
 
@@ -139,11 +141,16 @@ async function handleAudioDrop(e: DragEvent) {
   }
 }
 
+const audioServerPromptTranscript = ref('')
+
 async function processAudioClone(file: File) {
   const normId = normalizeProviderId(selectedProvider.value)
   try {
     toast.info(`Cloning vocal timbre from "${file.name}"...`)
-    const cloned = await cloneVoiceFromFile(file)
+    const cloned = await cloneVoiceFromFile(file, {
+      referenceText: audioServerPromptTranscript.value.trim() || undefined,
+    })
+    audioServerPromptTranscript.value = ''
     // Refresh voices catalog
     await speechStore.loadVoicesForProvider(normId)
     // Select newly cloned voice
@@ -162,7 +169,12 @@ async function processAudioClone(file: File) {
 
 const isSelectedVoiceCloned = computed(() => {
   const currentVoiceId = activeVoiceTab.value === 'user' ? selectedUserVoice.value : selectedVoice.value
-  return currentVoiceId.startsWith('voice-profile-') || currentVoiceId.startsWith('pocket_clone_') || currentVoiceId.startsWith('moss_clone_')
+  if (!currentVoiceId)
+    return false
+  if (currentVoiceId.startsWith('voice-profile-') || currentVoiceId.startsWith('pocket_clone_') || currentVoiceId.startsWith('moss_clone_'))
+    return true
+  const v = providerVoices.value.find((item: any) => item.id === currentVoiceId)
+  return (v as any)?.type === 'cloned' || (v as any)?.description?.includes('Cloned')
 })
 
 async function handleDeleteCurrentClonedVoice() {
@@ -174,6 +186,16 @@ async function handleDeleteCurrentClonedVoice() {
   try {
     await removeClonedVoice(currentVoiceId)
     await speechStore.loadVoicesForProvider(normId)
+    if (activeVoiceTab.value === 'user') {
+      if (selectedUserVoice.value === currentVoiceId) {
+        selectedUserVoice.value = availableVoices.value[0]?.id || ''
+      }
+    }
+    else {
+      if (selectedVoice.value === currentVoiceId) {
+        selectedVoice.value = availableVoices.value[0]?.id || ''
+      }
+    }
     toast.success('Cloned voice deleted')
   }
   catch (err: any) {
@@ -1157,6 +1179,27 @@ function handleContinue() {
           </div>
         </div>
 
+        <!-- AIRI Audio Server Prompt Transcript Input (Zero-Shot Alignment) -->
+        <div
+          v-if="supportsVoiceCloning && normalizeProviderId(selectedProvider) === 'airi-audio-server'"
+          class="flex flex-col gap-1 px-1 -mt-1"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] text-neutral-400 font-bold uppercase dark:text-neutral-500">
+              Prompt Spoken Transcript (Optional)
+            </span>
+            <span class="text-[9px] text-amber-600 font-medium dark:text-amber-400">
+              Acoustic Alignment for OmniVoice / Higgs / Fish
+            </span>
+          </div>
+          <input
+            v-model="audioServerPromptTranscript"
+            type="text"
+            placeholder="Type exact words spoken in the audio sample before dropping..."
+            class="w-full border border-neutral-200/80 rounded-xl bg-white/60 px-3 py-1.5 text-xs text-neutral-800 outline-none dark:border-neutral-800 focus:border-primary-500 dark:bg-neutral-900/60 dark:text-neutral-200"
+          >
+        </div>
+
         <!-- Acoustic Sliders (Speed & Pitch) -->
         <div :class="['grid grid-cols-1 md:grid-cols-2 gap-4 pt-1']">
           <div :class="['flex flex-col gap-1.5']">
@@ -1340,6 +1383,27 @@ function handleContinue() {
               <span>{{ isCloning ? 'Cloning...' : 'Upload WAV' }}</span>
             </button>
           </div>
+        </div>
+
+        <!-- AIRI Audio Server Prompt Transcript Input (Zero-Shot Alignment) -->
+        <div
+          v-if="supportsVoiceCloning && normalizeProviderId(selectedProvider) === 'airi-audio-server'"
+          class="flex flex-col gap-1 px-1 -mt-1"
+        >
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] text-neutral-400 font-bold uppercase dark:text-neutral-500">
+              Prompt Spoken Transcript (Optional)
+            </span>
+            <span class="text-[9px] text-purple-600 font-medium dark:text-purple-400">
+              Acoustic Alignment for OmniVoice / Higgs / Fish
+            </span>
+          </div>
+          <input
+            v-model="audioServerPromptTranscript"
+            type="text"
+            placeholder="Type exact words spoken in the audio sample before dropping..."
+            class="w-full border border-neutral-200/80 rounded-xl bg-white/60 px-3 py-1.5 text-xs text-neutral-800 outline-none dark:border-neutral-800 focus:border-purple-500 dark:bg-neutral-900/60 dark:text-neutral-200"
+          >
         </div>
 
         <!-- Acoustic Sliders (Speed & Pitch) -->
