@@ -74,6 +74,10 @@ export function createProvidersConfigSelectors(state: ProvidersConfigSelectorsSt
     if (!metadata)
       return false
 
+    // Local on-device model providers with required weights must be explicitly activated by the user
+    if (providerId === 'apple-core-ai')
+      return !!state.addedProviders.value[providerId]
+
     // Providers that require no credentials are always configured.
     // `browser-web-speech-api` is special-cased for upstream parity (its
     // metadata already flags `requiresCredentials: false`, so this branch is
