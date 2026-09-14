@@ -51,6 +51,57 @@ That is the promise of this fork: **one enduring presence across conversations, 
 
 The complete implementation catalog lives in the [feature report](./docs/content/en/docs/chronicles/feature-report.md). The [showcase](./docs/content/en/docs/showcase/index.md) presents the major experiences visually.
 
+---
+
+## Capability comparison
+
+> **Legend**: ✅ Implemented capability · ◐ Partial capability · ❌ No equivalent integrated implementation found in the inspected source. These describe feature scope, not bug-free certification.
+
+| Capability | This Fork | Upstream |
+| :--- | :---: | :---: |
+| **AI provider integrations**¹ | **77** | 69 |
+| **Built-in on-device providers**² | **9** | 2 |
+| **Official hosted AI with integrated account/payment management** | ❌ | ✅ |
+| [**Interactive Live2D scripts, choices, and discoverable gimmicks**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/live2d-runtime/src/dsl/interpreter.ts) | ✅ | ❌ |
+| [**Live2D motion recording and keyframe timeline editing**](https://github.com/moeru-ai/airi/blob/42e3e9e8573d3159d40e637fa11a21e13398ebda/packages/stage-ui/src/features/devtools/motion/live2d/devtools.vue) | ❌ | ✅ |
+| [**Generate reusable VRM animations from text**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/stores/modules/text-to-motion.ts) | ✅ | ❌ |
+| [**Emotion- and dialogue-triggered VRM auras/VFX**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui-three/src/components/ThreeScene.vue) | ✅ | ❌ |
+| [**Head-following captions with animated mood effects**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui-live2d/src/composables/live2d/head-tethered-caption.ts) | ✅ | ❌ |
+| [**Head-anchored radial controls for the desktop companion**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/components/scenes/HeadTetheredRadialMenu.vue) | ✅ | ❌ |
+| [**Tachie avatars with emotion-based illustration switching**](https://github.com/moeru-ai/airi/tree/42e3e9e8573d3159d40e637fa11a21e13398ebda/packages/stage-ui-tachie) | ❌ | ✅ |
+| [**Edit avatar textures in-app, including AI edits and model export**](https://github.com/dasilva333/airi/tree/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/components/scenarios/settings/model-settings) | ✅ | ❌ |
+| [**Reusable actor, outfit, and scene presets with model/voice/prompt bindings**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/docs/content/en/docs/manual/config/studio.md) | ✅ | ❌ |
+| [**Switch actors and voices within dialogue at playback time**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/components/scenes/ControlStripHost.vue) | ✅ | ❌ |
+| [**Autonomous scene direction with persistent visual continuity**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/stores/modules/artistry-autonomous.ts) | ✅ | ◐ Partial |
+| [**Production Studio with cast inspection and Director decision history**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-pages/src/pages/settings/airi-card/components/tabs/ProductionStudioTab.vue) | ✅ | ❌ |
+| [**Rehearse acted dialogue and generate model-specific acting instructions**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/apps/stage-tamagotchi/src/renderer/components/chat/chat_rehearsal.vue) | ✅ | ❌ |
+| [**Reusable voice profiles with an audio-effects studio**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/components/scenarios/settings/model-settings/audio-studio.vue) | ✅ | ❌ |
+| [**Contextual spoken fillers while waiting for an answer**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/libs/pacing/turn-pacing-coordinator.ts) | ✅ | ❌ |
+| [**Consolidate conversations and journals into lifetime memory**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/stores/memory-lifetime.ts) | ✅ | ❌ |
+| [**Back up and selectively sync to your own S3/R2 storage**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-pages/src/pages/settings/modules/cloud-sync.vue) | ✅ | ❌ |
+
+<small>
+
+¹ **77 versus 69** counts integrations in the main chat/vision/TTS/STT registry, excluding "None" and the virtual Audio Studio wrapper. It does not count companies, models, or separate Artistry backends.<br>
+² **9 versus 2** counts registered embedded engines across supported platforms. Fork covers chat, vision, TTS, and Whisper transcription; upstream's two are Kokoro and Apple Speech. Separately installed local servers are excluded. FlowMDM is represented by the motion row. Audited snapshots: fork <code>fc46a6e</code>, upstream <code>42e3e9e</code>.
+
+</small>
+
+<details>
+<summary><b>Meaningful distinctions behind the capabilities</b></summary>
+
+- **Studio is a scene-authoring system:** A concept can bind an avatar, voice, expression state, background, image-prompt fragment, and generation overrides. Base and Layer concepts let users compose locations, actors, outfits, and atmosphere. The implementation supports both Director-driven changes and actor-driven presets—including pinned backgrounds with autonomous generation disabled. [Studio manual](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/docs/content/en/docs/manual/config/studio.md).
+- **Actor handoff measures performance behavior:** Playback distinguishes the actor whose tokens are being parsed from the actor currently speaking. It resolves voices for synthesis ahead of time and activates the actor when their marker reaches playback. A single reply can perform multiple speaking roles with their corresponding avatars and voices.
+- **Artistry's "Partial" is specific and earned:** Upstream already evaluates recent conversation, scores whether an image is warranted, generates it, and routes it to the background, chat, a floating widget, or both. This fork adds a persistent visual scratchpad, concept selection and composition, configurable history depth, a separate Director model option, and durable decision records. The Director also distinguishes scene management from the currently speaking actor's model ownership. [Upstream implementation](https://github.com/moeru-ai/airi/blob/42e3e9e8573d3159d40e637fa11a21e13398ebda/packages/stage-ui/src/stores/modules/artistry-autonomous.ts), [Director controls](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-pages/src/pages/settings/airi-card/components/tabs/CardCreationTabArtistry.vue).
+- **Studio interfaces expose depth to users:** The character configuration contains the concept registry, active stack, concept editor, and recent Director decisions. The chatbox provides dedicated Artistry surfaces (Director's Monitor, Cast Review, Scene Vault, Stage Directives) alongside a Rehearsal Room for testing dialogue, expressions, motions, and VFX through the speech/stage pipeline. [Chatbox navigation](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/apps/stage-tamagotchi/src/renderer/pages/chat.vue).
+- **Live2D interactivity vs. motion editing:** This fork executes state variables, eligibility conditions, choices, chained actions, costume commands, expressions, and sound. The introspector exposes discovered switches, wardrobes, parts, and reactions through the Gimmick Deck and Model Customizer for compatible authored packages. Upstream provides a dedicated motion workbench with direct controls, recording, playback, and keyframe editing. [Gimmick introspection](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui-live2d/src/interpreter/introspector.ts), [Model Customizer](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/components/scenarios/settings/model-settings/ModelCustomizer.vue).
+- **Animation and presentation deliberate limits:** Text-to-motion has generation, library storage, export, and playback paths, but the chat tool limits support to VRM. The verified production VFX path attaches auras to VRM bones. Head-following captions add mood effects and paced presentation, while the radial menu supplies companion positioning/display controls. [Motion tool format checks](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/apps/stage-tamagotchi/src/renderer/stores/tools/builtin/generate-motion.ts).
+- **Memory and sync precision:** Upstream has saved conversations and image journaling; long-term companion-memory settings remain WIP in this snapshot. This fork consolidates conversations into persistent lifetime relationship artifacts, and supplies user-owned S3/R2 backup and selective sync. [Upstream memory page](https://github.com/moeru-ai/airi/blob/42e3e9e8573d3159d40e637fa11a21e13398ebda/packages/stage-pages/src/pages/settings/modules/memory-long-term.vue).
+
+</details>
+
+---
+
 ## Design principles
 
 ### Character before interface
@@ -350,7 +401,7 @@ The provider system supports multiple configured instances rather than treating 
 
 This repository is a maintained downstream fork of [moeru-ai/airi](https://github.com/moeru-ai/airi).
 
-It preserves the original project's credit, foundation, and broad architectural lineage while pursuing a distinct daily-driver direction: persistent character continuity, selective upstream integration, modular faculties, desktop embodiment, and user-owned data.
+It preserves the original project's credit, foundation, and broad architectural lineage while pursuing a distinct daily-driver direction: persistent character continuity, selective upstream integration, modular faculties, desktop embodiment, and user-owned data. (See the [Capability comparison](#capability-comparison) above for a concrete breakdown of how the runtimes and creator workflows differ.)
 
 The aim is not to erase where AIRI came from. It is to carry the character somewhere more personal, durable, and free.
 
