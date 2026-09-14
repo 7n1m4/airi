@@ -155,7 +155,7 @@ export function stripMarkers(text: string) {
     .replace(/<\|[\s\S]*?\|>/g, '')
     // NOTICE: older AIRI card prompt text accidentally taught some models to close ACT tags
     // with plain `>` instead of `|>`. Strip those legacy markers too so they never leak into UI/TTS.
-    .replace(/<\|(?:ACT|DELAY|llm_[\w:-])[^\r\n>]*>/gi, '')
+    .replace(/<\|(?:ACTOR|ACT|DELAY|llm_[\w:-])[^\r\n>]*>/gi, '')
 }
 
 /**

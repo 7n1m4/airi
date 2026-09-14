@@ -605,7 +605,7 @@ const prepSteps = ref<PrepStep[]>([
     id: 'brain',
     label: 'Brain Consciousness',
     desc: 'Connecting neural reasoning pipeline...',
-    icon: 'i-solar:brain-bold-duotone',
+    icon: 'i-ph:brain-duotone',
     status: 'pending',
   },
   {
@@ -927,7 +927,7 @@ async function handleStartChatting() {
           <div :class="['flex items-center justify-between mb-1']">
             <div :class="['flex items-center gap-2']">
               <div :class="['h-7 w-7 rounded-lg bg-cyan-500/15 text-cyan-400 flex items-center justify-center text-sm']">
-                <div :class="['i-solar:brain-bold-duotone text-base']" />
+                <div :class="['i-ph:brain-duotone text-base']" />
               </div>
               <h2 :class="['text-sm font-bold text-neutral-900 dark:text-white']">
                 Brain

@@ -12,6 +12,7 @@ import { toast } from 'vue-sonner'
 
 import CardImportWizard from '../../../../../../../../stage-pages/src/pages/settings/airi-card/components/CardImportWizard.vue'
 
+import { stripMarkers } from '../../../../../../composables/response-categoriser'
 import {
   compileCardBundle,
   deterministicActorKey,
@@ -51,7 +52,7 @@ const USER_TOKEN_REGEX = /(?<!\{)\{user\}(?!\})/g
 function formatField(text?: string) {
   if (!text)
     return ''
-  return text.replace(USER_TOKEN_REGEX, userName.value).replace(/\bRichard\b/g, userName.value)
+  return stripMarkers(text.replace(USER_TOKEN_REGEX, userName.value).replace(/\bRichard\b/g, userName.value)).trim()
 }
 
 const CHARACTER_EMOJIS: Record<string, string> = {
@@ -1727,51 +1728,64 @@ onBeforeUnmount(() => {
       @submit-draft="handleWizardSubmitDraft"
     />
 
-    <!-- Backdrop Overlay for Webview Drawer -->
-    <div
-      v-if="isElectron && activeBrowserSource"
-      class="backdrop-blur-xs fixed inset-0 z-40 bg-black/50 transition-opacity duration-300"
-      @click="closeWebview"
-    />
-
     <!-- Electron In-App Webview Side Drawer with automatic card download interceptor -->
-    <div
-      v-if="isElectron"
-      :class="[
-        'fixed inset-y-0 right-0 z-50 w-[70vw] border-l border-neutral-200 bg-white shadow-2xl transition-transform duration-500 ease-in-out dark:border-neutral-800 dark:bg-neutral-900',
-        activeBrowserSource ? 'translate-x-0 pointer-events-auto' : 'translate-x-full pointer-events-none',
-      ]"
-    >
-      <div class="relative z-10 h-full flex flex-col">
-        <div class="relative z-20 flex items-center justify-between border-b border-neutral-200 bg-white/95 p-4 backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-900/95">
-          <div class="flex items-center gap-3">
-            <h3 class="text-lg text-neutral-800 font-bold dark:text-neutral-200">
-              Browse {{ activeBrowserSource?.name }}
-            </h3>
-            <span class="rounded-full bg-primary-500/10 px-2.5 py-0.5 text-xs text-primary-600 font-semibold dark:text-primary-400">
-              Card Interceptor Active
-            </span>
+    <Teleport to="body">
+      <!-- Backdrop Overlay for Webview Drawer -->
+      <Transition
+        enter-active-class="transition-opacity duration-300 ease-out"
+        leave-active-class="transition-opacity duration-200 ease-in"
+        enter-from-class="opacity-0"
+        leave-to-class="opacity-0"
+      >
+        <div
+          v-if="isElectron && activeBrowserSource"
+          class="backdrop-blur-xs fixed inset-0 z-40 bg-black/50"
+          @click="closeWebview"
+        />
+      </Transition>
+
+      <Transition
+        enter-active-class="transition-transform duration-300 ease-out"
+        leave-active-class="transition-transform duration-200 ease-in"
+        enter-from-class="translate-x-full"
+        leave-to-class="translate-x-full"
+      >
+        <div
+          v-if="isElectron && activeBrowserSource"
+          class="fixed inset-y-0 right-0 z-50 w-[70vw] border-l border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900"
+        >
+          <div class="relative z-10 h-full flex flex-col">
+            <div class="relative z-20 flex items-center justify-between border-b border-neutral-200 bg-white/95 p-4 backdrop-blur-md dark:border-neutral-800 dark:bg-neutral-900/95">
+              <div class="flex items-center gap-3">
+                <h3 class="text-lg text-neutral-800 font-bold dark:text-neutral-200">
+                  Browse {{ activeBrowserSource?.name }}
+                </h3>
+                <span class="rounded-full bg-primary-500/10 px-2.5 py-0.5 text-xs text-primary-600 font-semibold dark:text-primary-400">
+                  Card Interceptor Active
+                </span>
+              </div>
+              <button
+                type="button"
+                class="relative z-30 flex cursor-pointer items-center justify-center rounded-xl p-2 text-neutral-400 transition-colors active:scale-95 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
+                title="Close Browser"
+                @click.stop="closeWebview"
+              >
+                <div class="i-solar:close-square-bold-duotone h-6 w-6" />
+              </button>
+            </div>
+            <div class="relative z-10 flex-1 bg-white dark:bg-neutral-950">
+              <component
+                is="webview"
+                v-if="activeBrowserSource"
+                :src="activeBrowserSource.url"
+                class="h-full w-full"
+                allowpopups
+              />
+            </div>
           </div>
-          <button
-            type="button"
-            class="relative z-30 flex cursor-pointer items-center justify-center rounded-xl p-2 text-neutral-400 transition-colors active:scale-95 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-100"
-            title="Close Browser"
-            @click.stop="closeWebview"
-          >
-            <div class="i-solar:close-square-bold-duotone h-6 w-6" />
-          </button>
         </div>
-        <div class="relative z-10 flex-1 bg-white dark:bg-neutral-950">
-          <component
-            is="webview"
-            v-if="activeBrowserSource"
-            :src="activeBrowserSource.url"
-            class="h-full w-full"
-            allowpopups
-          />
-        </div>
-      </div>
-    </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 

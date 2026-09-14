@@ -1,7 +1,7 @@
 import type { ChatSlices, ChatSlicesText } from '../types/chat'
 
 const ACTOR_TOKEN_PATTERN = /^<\|ACTOR:\s*([\w-]+)\s*(?:\|>|>)$/i
-const LLM_MARKER_PATTERN = /<\|[\s\S]*?\|>|<\|(?:ACT|DELAY|llm_[\w:-])[^\r\n>]*>/gi
+const LLM_MARKER_PATTERN = /<\|[\s\S]*?\|>|<\|(?:ACTOR|ACT|DELAY|llm_[\w:-])[^\r\n>]*>/gi
 
 export interface ActorSliceState {
   currentActorId?: string

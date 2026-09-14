@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
+import { parseActor } from '../../../../../../composables/queues'
+import { stripMarkers, stripPacingEnvelopes } from '../../../../../../composables/response-categoriser'
 import { useLocalVoiceClone } from '../../../../../../composables/use-local-voice-clone'
 import { getStarterCharacter, STARTER_CHARACTERS } from '../../../../../../constants/prompts/character-defaults'
 import { getKokoroAdapter } from '../../../../../../libs/inference/adapters/kokoro'
@@ -12,6 +14,7 @@ import { getMossAdapterInstance } from '../../../../../../stores/providers/moss-
 import { getPocketTtsAdapterInstance } from '../../../../../../stores/providers/pocket-audio-utils'
 import { useSettingsUserProfile } from '../../../../../../stores/settings/user-profile'
 import { KOKORO_MODELS } from '../../../../../../workers/kokoro/constants'
+import { formatActorName } from '../../../../../markdown/actor-colors'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
 const props = defineProps<{
@@ -482,25 +485,37 @@ const resolvedPersona = computed(() => {
   if (draftStore.state.importedCardDraft) {
     const rawData = draftStore.state.importedCardDraft as any
     const data = rawData.data || rawData
-    const greeting = data.first_mes || data.greetings?.[0]
+    const greeting = data.first_mes || data.greetings?.[0] || ''
+    const substituted = greeting.replace(USER_TOKEN_REGEX, userName)
+    const actorId = parseActor(substituted)
+    let actorName: string | undefined
+    if (actorId) {
+      const airiExt = data.extensions?.airi
+      actorName = airiExt?.visual_assets?.[actorId]?.name || formatActorName(actorId)
+    }
     return {
       name: data.nickname || data.name || 'Companion',
-      greeting: greeting ? greeting.replace(USER_TOKEN_REGEX, userName) : '',
+      actorName,
+      greeting: stripPacingEnvelopes(stripMarkers(substituted)).trim(),
     }
   }
 
   if (STARTER_CHARACTERS[personaCardId]) {
     const p = getStarterCharacter(personaCardId)
+    const substituted = (p.greetings[0] || '').replace(USER_TOKEN_REGEX, userName)
     return {
       name: p.name,
-      greeting: (p.greetings[0] || '').replace(USER_TOKEN_REGEX, userName),
+      actorName: undefined,
+      greeting: stripPacingEnvelopes(stripMarkers(substituted)).trim(),
     }
   }
 
   const d = STARTER_CHARACTERS.default
+  const substituted = (d.greetings[0] || '').replace(USER_TOKEN_REGEX, userName)
   return {
     name: d.name,
-    greeting: (d.greetings[0] || '').replace(USER_TOKEN_REGEX, userName),
+    actorName: undefined,
+    greeting: stripPacingEnvelopes(stripMarkers(substituted)).trim(),
   }
 })
 
@@ -513,8 +528,14 @@ const sampleGreeting = computed(() => {
   return `Hello ${userName.value}! I'm ${companionName.value}. Everything is ready — how do I sound?`
 })
 
+watch(sampleText, (val) => {
+  if (val && (val.includes('<|') || val.includes('<think_aloud'))) {
+    sampleText.value = stripPacingEnvelopes(stripMarkers(val)).trim()
+  }
+})
+
 watch([sampleGreeting, companionName, userName], ([g, cName, uName]) => {
-  if (!sampleText.value || sampleText.value === g) {
+  if (!sampleText.value || sampleText.value === g || sampleText.value.includes('<|')) {
     sampleText.value = g
   }
   if (!userSampleText.value) {
@@ -537,6 +558,9 @@ async function refreshVoices() {
 }
 
 onMounted(() => {
+  if (!sampleText.value || sampleText.value.includes('<|')) {
+    sampleText.value = sampleGreeting.value
+  }
   void checkEngineReadiness()
   void speechStore.loadVoicesForProvider(normalizeProviderId(selectedProvider.value))
 })
@@ -650,9 +674,10 @@ async function togglePreview(target: 'companion' | 'user' = 'companion') {
 
   isPlayingTarget.value = target
   try {
-    const textToSpeak = target === 'user'
+    const rawTextToSpeak = target === 'user'
       ? (userSampleText.value || `Hello ${companionName.value}! I am ${userName.value}.`)
       : (sampleText.value || sampleGreeting.value)
+    const textToSpeak = stripPacingEnvelopes(stripMarkers(rawTextToSpeak)).trim()
     const providerId = normalizeProviderId(selectedProvider.value)
     const voiceId = target === 'user'
       ? (selectedUserVoice.value || availableVoices.value[1]?.id || availableVoices.value[0]?.id || 'adam')
@@ -1239,11 +1264,21 @@ function handleContinue() {
         <!-- Companion Audio Preview & Editable Playground -->
         <div :class="['p-3.5 rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white dark:bg-neutral-900/60 shadow-sm flex flex-col gap-2.5']">
           <div :class="['flex items-center justify-between']">
-            <div :class="['flex items-center gap-2']">
-              <span :class="['text-xs font-bold text-neutral-800 dark:text-white']">
+            <div :class="['flex items-center gap-2 min-w-0 flex-wrap']">
+              <span :class="['text-xs font-bold text-neutral-800 dark:text-white truncate']">
                 {{ companionName }}'s Greeting Sample
               </span>
-              <span :class="['text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/10 text-neutral-500 font-mono']">
+              <span
+                v-if="resolvedPersona.actorName"
+                :class="[
+                  'text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0',
+                  'bg-primary-500/15 text-primary-600 dark:text-primary-400 border border-primary-500/30',
+                ]"
+              >
+                <div class="i-solar:user-speak-bold-duotone h-3 w-3" />
+                <span>{{ resolvedPersona.actorName }}</span>
+              </span>
+              <span :class="['text-[10px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-white/10 text-neutral-500 font-mono shrink-0']">
                 Live Preview
               </span>
             </div>

@@ -13,11 +13,14 @@ import { toast } from 'vue-sonner'
 
 import RendererStage from '../../../../../scenes/RendererStage.vue'
 
+import { parseActor } from '../../../../../../composables/queues'
+import { stripMarkers, stripPacingEnvelopes } from '../../../../../../composables/response-categoriser'
 import { DisplayModelFormat, useDisplayModelsStore } from '../../../../../../stores/display-models'
 import { useSpeechStore } from '../../../../../../stores/modules/speech'
 import { useProvidersStore } from '../../../../../../stores/providers'
 import { useSettings } from '../../../../../../stores/settings'
 import { useSettingsUserProfile } from '../../../../../../stores/settings/user-profile'
+import { formatActorName } from '../../../../../markdown/actor-colors'
 import { useStarterCardCommit } from '../composables/useStarterCardCommit'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
@@ -164,6 +167,26 @@ const { resolvePersona, compileCardPayload, commitStarterCompanion } = useStarte
 const resolvedPersona = computed(() => resolvePersona(draft.state, userName.value))
 const fullGreeting = computed(() => resolvedPersona.value.firstGreeting)
 
+const parsedActorId = computed(() => parseActor(fullGreeting.value))
+
+const greetingActorName = computed(() => {
+  const actorId = parsedActorId.value
+  if (!actorId)
+    return undefined
+
+  const rawCard = resolvedPersona.value.importedCardRaw
+  const airiExt = (rawCard as any)?.data?.extensions?.airi || (rawCard as any)?.extensions?.airi
+  const asset = airiExt?.visual_assets?.[actorId]
+  if (asset?.name) {
+    return asset.name
+  }
+  return formatActorName(actorId)
+})
+
+const cleanGreeting = computed(() => {
+  return stripPacingEnvelopes(stripMarkers(fullGreeting.value)).trim()
+})
+
 // --- 3. Typewriter Effect ---
 const typedGreeting = ref('')
 let typeTimer: ReturnType<typeof setInterval> | undefined
@@ -189,7 +212,7 @@ function startTypewriter(text: string) {
   }, 22)
 }
 
-watch(fullGreeting, (newGreeting) => {
+watch(cleanGreeting, (newGreeting) => {
   if (newGreeting) {
     startTypewriter(newGreeting)
   }
@@ -226,7 +249,7 @@ async function playGreetingVoice() {
     const audioData = await speechStore.speech(
       rawProvider as any,
       modelId,
-      fullGreeting.value,
+      cleanGreeting.value,
       voiceId,
       providerConfig,
     )
@@ -564,11 +587,21 @@ async function handleLaunch() {
 
         <!-- Turn 0 Dialogue Bubble (Floating Frosted Glass) -->
         <div :class="['rounded-2xl border border-neutral-200/80 dark:border-neutral-800 bg-white/95 dark:bg-neutral-900/90 backdrop-blur-md p-4 shadow-lg flex flex-col gap-2.5 shrink-0']">
-          <div :class="['flex items-center justify-between text-xs']">
-            <div :class="['flex items-center gap-2 font-bold text-neutral-800 dark:text-neutral-200']">
-              <div :class="['w-2 h-2 rounded-full bg-primary-500']" />
-              <span>{{ resolvedPersona.name }}</span>
-              <span :class="['text-[10px] font-normal px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-mono']">
+          <div :class="['flex items-center justify-between text-xs gap-2']">
+            <div :class="['flex items-center gap-2 font-bold text-neutral-800 dark:text-neutral-200 min-w-0 flex-wrap']">
+              <div :class="['w-2 h-2 rounded-full bg-primary-500 shrink-0']" />
+              <span :class="['truncate max-w-[150px]']">{{ resolvedPersona.name }}</span>
+              <span
+                v-if="greetingActorName"
+                :class="[
+                  'text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0',
+                  'bg-primary-500/15 text-primary-600 dark:text-primary-400 border border-primary-500/30',
+                ]"
+              >
+                <div class="i-solar:user-speak-bold-duotone h-3 w-3" />
+                <span>{{ greetingActorName }}</span>
+              </span>
+              <span :class="['text-[10px] font-normal px-2 py-0.5 rounded-md bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-mono shrink-0']">
                 {{ t('onboarding.steps.finale.greetingCard') }}
               </span>
             </div>
@@ -579,7 +612,7 @@ async function handleLaunch() {
               type="button"
               :disabled="isPlayingAudio"
               :class="[
-                'px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer border',
+                'px-2.5 py-1 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer border shrink-0',
                 isPlayingAudio
                   ? 'bg-primary-500/15 border-primary-500/30 text-primary-600 dark:text-primary-400 animate-pulse'
                   : 'bg-black/5 dark:bg-white/5 border-transparent text-neutral-600 dark:text-neutral-300 hover:bg-black/10 dark:hover:bg-white/10',
@@ -591,7 +624,7 @@ async function handleLaunch() {
             </button>
             <span
               v-else
-              :class="['text-[10px] text-neutral-400 font-mono flex items-center gap-1']"
+              :class="['text-[10px] text-neutral-400 font-mono flex items-center gap-1 shrink-0']"
             >
               <div :class="['i-solar:volume-cross-bold w-3 h-3 text-neutral-400']" />
               <span>Silent Mode</span>
@@ -601,7 +634,7 @@ async function handleLaunch() {
           <!-- Typewriter Greeting Text -->
           <div :class="['text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed font-sans min-h-[38px]']">
             {{ typedGreeting }}
-            <span v-if="typedGreeting.length < fullGreeting.length" :class="['inline-block w-1.5 h-3 bg-primary-500 ml-0.5 animate-pulse']" />
+            <span v-if="typedGreeting.length < cleanGreeting.length" :class="['inline-block w-1.5 h-3 bg-primary-500 ml-0.5 animate-pulse']" />
           </div>
         </div>
       </div>

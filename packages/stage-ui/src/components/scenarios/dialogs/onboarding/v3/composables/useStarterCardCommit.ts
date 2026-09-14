@@ -1,9 +1,11 @@
-import type { ChatHistoryItem } from '../../../../../../types/chat'
+import type { ChatHistoryItem, ChatSlices } from '../../../../../../types/chat'
 import type { OnboardingV3DraftState } from '../stores/useOnboardingV3Draft'
 
 import { SPOTLIGHT_MODELS } from '@proj-airi/stage-ui/constants'
 import { nanoid } from 'nanoid'
 
+import { parseActor } from '../../../../../../composables/queues'
+import { stripMarkers, stripPacingEnvelopes } from '../../../../../../composables/response-categoriser'
 import {
   DEFAULT_ACTING_MODEL_EXPRESSION_PROMPT,
   DEFAULT_ARTISTRY_WIDGET_INSTRUCTION,
@@ -655,11 +657,19 @@ export function useStarterCardCommit() {
         content: persona.systemPrompt || '',
         createdAt: Date.now(),
       }
+      const cleanGreetingText = stripPacingEnvelopes(stripMarkers(persona.firstGreeting)).trim()
+      const actorId = parseActor(persona.firstGreeting)
+      const greetingSlice: ChatSlices = {
+        type: 'text',
+        text: cleanGreetingText,
+        ...(actorId ? { actorId, startsActor: true } : {}),
+      }
       const greetingItem: ChatHistoryItem = {
         id: nanoid(),
         role: 'assistant',
-        content: persona.firstGreeting,
-        slices: [{ type: 'text', text: persona.firstGreeting }],
+        content: cleanGreetingText,
+        rawContent: persona.firstGreeting,
+        slices: [greetingSlice],
         tool_results: [],
         createdAt: Date.now(),
       }
