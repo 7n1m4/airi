@@ -14,7 +14,7 @@ import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-sto
 import { buildSystemPrompt, useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
 import { useSettings, useSettingsAudioDevice, useSettingsChat } from '@proj-airi/stage-ui/stores/settings'
-import { BasicTextarea } from '@proj-airi/ui'
+import { BasicContentEditable } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 import { computed, ref, useTemplateRef } from 'vue'
@@ -52,6 +52,7 @@ const {
   attachments,
   isComposing,
   isImagineMode,
+  handleFilePaste,
   handleFileSelect,
   removeAttachment,
   handleSend,
@@ -154,19 +155,20 @@ const contextPercentage = computed(() => {
         </div>
       </div>
 
-      <BasicTextarea
+      <BasicContentEditable
         v-model="messageInput"
-        :send-mode="settingsChat.sendMode"
+        :submit-on-enter="settingsChat.sendMode === 'enter'"
         :placeholder="isImagineMode ? 'Describe a scene to imagine...' : t('stage.message')"
-        text="neutral-900 dark:primary-50 placeholder:neutral-900/60 dark:placeholder:white/60"
-        bg="transparent"
-        min-h="[100px]" max-h="[300px]" w-full
-        p-4 font-medium
-        outline-none transition="all duration-250 ease-in-out placeholder:all placeholder:duration-250 placeholder:ease-in-out"
-        :class="{
-          'transition-colors-none placeholder:transition-colors-none': themeColorsHueDynamic,
-        }"
+        default-height="100px"
+        :class="[
+          'min-h-[100px] max-h-[300px] w-full p-4 font-medium outline-none overflow-y-auto bg-transparent',
+          'text-neutral-900 dark:text-primary-50',
+          'data-[empty]:before:text-neutral-900/60 dark:data-[empty]:before:text-white/60',
+          'transition-all duration-250 ease-in-out data-[empty]:before:transition-all data-[empty]:before:duration-250 data-[empty]:before:ease-in-out',
+          themeColorsHueDynamic ? 'transition-colors-none data-[empty]:before:transition-colors-none' : '',
+        ]"
         @submit="handleSend"
+        @paste-file="handleFilePaste"
         @compositionstart="isComposing = true"
         @compositionend="isComposing = false"
       />

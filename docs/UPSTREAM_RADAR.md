@@ -6,6 +6,100 @@
 
 ---
 
+## [2026-09-14] Upstream Delta: `42e3e9e8..1a79f8b1` (3 commits, 25 files, 16 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 3 commits (`42e3e9e8..1a79f8b1`) resolving Safari Form Assistant keyboard accessory bar disruption via a new plaintext contenteditable primitive (#2461), fixing Apple Speech locale changes by localizing provider instance disposal (#2540), and debouncing speech voice loading with deep cloning to prevent reactive proxy serialization errors (#2525). In active PRs, upstream opened a new drop-in filesystem plugin runtime (#2541), added anti-slop linter rules (#2542), and continues active work on bilingual subtitles (#2537) and multi-window speech settings synchronization (#2467).
+* **Discussion & Community Buzz**:
+  - 💬 **#2537: `add bilingual subtitles` (+17 new comments, 34 total)**: High discussion velocity regarding positional synchronization between TTS audio chunks and bracketed UST translation segments.
+  - 💬 **#2477: `feat(client): support Responses API with user-provided API keys` (+12 new comments, 40 total)**: Continued architecture debate over API proxying with user credentials.
+  - 💬 **#2541: `Telltworose/feat/drop in plugins` (12 comments)**: Notable immediate interest around loading drop-in plugins from the local filesystem.
+  - 💬 **#2461: `fix(stage-layouts): avoid Safari Form Assistant` (+9 new comments, 28 total, merged)**: Review discussion concluding mobile Safari compatibility fixes.
+  - 💬 **#2467: `fix(stage-ui): synchronize speech settings across windows` (+8 new comments, 22 total)**: In-depth technical discussion resolving follower-window race conditions and save barriers.
+  - 💬 **#2539: `feat(tamagotchi): pause stage if screen is locked or system is suspending` (+5 new comments, 8 total)**: Desktop powerMonitor lifecycle integration.
+  - 💬 **#2530: `fix(stage-tamagotchi): remove obsolete mouse tracking IPC` (+4 new comments, 6 total)**: Refining Vitest browser test fixtures for follower stage windows.
+  - 💬 **#2459: `fix(core-agent): prevent plain-text tool call leaks` (+3 new comments, 41 total)**: Detailed review on bounded candidate buffering and JSON streaming integrity.
+  - 💬 **#2121: `chore(i18n): update translations` (+3 new comments, 92 total)**: Ongoing community translation string additions.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2525 / `54e49766d8`: `fix(stage-pages): load speech provider voices after configuration updates`**: Essential fix. Uses `cloneDeep` from `es-toolkit` to snapshot provider configs before sending to synced Pinia actions (avoiding reactive Proxy serialization bugs), and adds 500ms `watchDebounced` on `apiKey`/`baseUrl` across speech providers to stop duplicate voice queries.
+  - ⭐ **PR #2540 / `9f30a1977e`: `fix(stage-ui): apply Apple Speech locale in hearing settings`**: Key architectural fix for `useProviderStore`. Caches instances by `{ configKey, instance }` so config modifications cleanly dispose and recreate instances locally. Ensures `disposeProviderInstance` remains renderer-local rather than broadcast across windows.
+  - 🔍 **PR #2539: `feat(tamagotchi): pause stage if screen is locked or system is suspending`**: Clean powerMonitor hooks (`suspend`, `lock-screen`) to pause avatar rendering and save CPU/battery on desktop.
+  - 🔍 **PR #2461 / `1a79f8b1ca`: `fix(stage-layouts): avoid Safari Form Assistant`**: Introduces `BasicContentEditable` (`packages/ui/src/components/form/content-editable/basic-content-editable.vue`) using `contenteditable="plaintext-only"` to bypass Safari Form Assistant overlays.
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/stage-ui/src/stores/providers/provider.ts`**: Touched by PR #2540. Our fork has custom providers and offline engine wiring; apply provider cache changes with care.
+  - ⚠️ **`apps/stage-tamagotchi/src/main/services/airi/plugins/` (PR #2541)**: Upstream's new drop-in plugin loader touches Electron main services. Do not merge directly; evaluate compatibility with our injeca dependency injection structure.
+  - ⚠️ **`packages/stage-layouts/src/components/Layouts/MobileInteractiveArea.vue` (PR #2461)**: Mobile layout changes do not apply to our decoupled desktop Control Strip (`ControlStrip.vue`).
+  - ⚪ **`apps/stage-tamagotchi/src/shared/eventa/index.ts` (PR #2530)**: Obsolete mouse tracking IPC removal. Already cleaned up in our fork.
+
+### 📋 Upstream Commits
+- `1a79f8b1ca` fix(stage-layouts): avoid Safari Form Assistant (#2461) [#2461](https://github.com/moeru-ai/airi/pull/2461) _(RainbowBird, 2026-09-14)_
+- `9f30a1977e` fix(stage-ui): apply Apple Speech locale in hearing settings (#2540) [#2540](https://github.com/moeru-ai/airi/pull/2540) _(Neko, 2026-09-14)_
+- `54e49766d8` fix(stage-pages): load speech provider voices after configuration updates (#2525) [#2525](https://github.com/moeru-ai/airi/pull/2525) _(Columbina, 2026-09-13)_
+
+### 🔬 Subsystem Breakdown
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 3 file(s) (+474/-14)
+- `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.browser.test.ts` *(+135/-13)*
+- `apps/stage-tamagotchi/src/renderer/components/chat-viewport-layout.browser.test.ts` *(+32/-1)*
+- `apps/stage-tamagotchi/src/renderer/components/content-editable.browser.test.ts` *(+307/-0)*
+
+#### Documentation & Scaffolding (`⚪ ignore`) — 1 file(s) (+20/-0)
+- `docs/ai/context/ui-components.md` *(+20/-0)*
+
+#### Stage Layouts & Shells (`🔍 inspect`) — 1 file(s) (+18/-17)
+- `packages/stage-layouts/src/components/Layouts/MobileInteractiveArea.vue` *(+18/-17)*
+
+#### UI Primitives & Pages (`📦 import / inspect`) — 13 file(s) (+339/-50)
+- `packages/stage-pages/package.json` *(+1/-0)*
+- `packages/stage-pages/src/pages/settings/providers/speech/alibaba-cloud-model-studio.vue` *(+13/-13)*
+- `packages/stage-pages/src/pages/settings/providers/speech/deepgram-tts.vue` *(+14/-4)*
+- `packages/stage-pages/src/pages/settings/providers/speech/elevenlabs.vue` *(+13/-13)*
+- `packages/stage-pages/src/pages/settings/providers/speech/kokoro-local.vue` *(+9/-4)*
+- `packages/stage-pages/src/pages/settings/providers/speech/player2-speech.vue` *(+4/-1)*
+- `packages/stage-pages/src/pages/settings/providers/speech/volcengine.vue` *(+14/-13)*
+- `packages/ui/README.md` *(+28/-0)*
+- `packages/ui/src/components/form/combobox/combobox.vue` *(+10/-2)*
+- `packages/ui/src/components/form/content-editable/basic-content-editable.vue` *(+220/-0)*
+- `packages/ui/src/components/form/content-editable/index.ts` *(+5/-0)*
+- `packages/ui/src/components/form/index.ts` *(+1/-0)*
+- `packages/ui/src/components/layouts/scrollable-area.vue` *(+7/-0)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 4 file(s) (+82/-5)
+- `packages/stage-ui/src/components/scenarios/chat/components/chat-history-scroll-container.vue` *(+5/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history.vue` *(+2/-1)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-history-scroll.browser.test.ts` *(+29/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-history-scroll.ts` *(+46/-4)*
+
+#### Provider & Model Integrations (`📦 import / inspect`) — 2 file(s) (+83/-11)
+- `packages/stage-ui/src/stores/providers/provider-model-catalog.browser.test.ts` *(+64/-0)*
+- `packages/stage-ui/src/stores/providers/provider.ts` *(+19/-11)*
+
+#### Root Build & Tooling (`🔍 inspect`) — 1 file(s) (+3/-0)
+- `pnpm-lock.yaml` *(+3/-0)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (2)
+- [#2541](https://github.com/moeru-ai/airi/pull/2541) `Telltworose/feat/drop in plugins` by **@telltworose** *(17 comments)*
+- [#2542](https://github.com/moeru-ai/airi/pull/2542) `chore(lint): integrate anti-slop rule sets` by **@nekomeowww** *(2 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (3)
+- [#2461](https://github.com/moeru-ai/airi/pull/2461) `fix(stage-layouts): avoid Safari Form Assistant` — `OPEN` ➔ `MERGED`
+- [#2540](https://github.com/moeru-ai/airi/pull/2540) `fix(stage-ui): apply Apple Speech locale in hearing settings` — `OPEN` ➔ `MERGED`
+- [#2525](https://github.com/moeru-ai/airi/pull/2525) `fix(stage-pages): load speech provider voices after configuration updates` — `OPEN` ➔ `MERGED`
+
+#### 💬 Discussion Activity (11)
+- [#2467](https://github.com/moeru-ai/airi/pull/2467) `fix(stage-ui): synchronize speech settings across windows` — *+11 comments (14 ➔ 25 total)*
+- [#2477](https://github.com/moeru-ai/airi/pull/2477) `feat(client): support Responses API with user-provided API keys` — *+12 comments (28 ➔ 40 total)*
+- [#2539](https://github.com/moeru-ai/airi/pull/2539) `feat(tamagotchi): pause stage if screen is locked or system is suspending` — *+5 comments (3 ➔ 8 total)*
+- [#2538](https://github.com/moeru-ai/airi/pull/2538) `refactor(live2d): move live2d asset download to stage-ui-live2d` — *+1 comments (6 ➔ 7 total)*
+- [#2459](https://github.com/moeru-ai/airi/pull/2459) `fix(core-agent): prevent plain-text tool call leaks` — *+3 comments (38 ➔ 41 total)*
+- [#2461](https://github.com/moeru-ai/airi/pull/2461) `fix(stage-layouts): avoid Safari Form Assistant` — *+9 comments (19 ➔ 28 total)*
+- [#2537](https://github.com/moeru-ai/airi/pull/2537) `add bilingual subtitles` — *+17 comments (17 ➔ 34 total)*
+- [#2419](https://github.com/moeru-ai/airi/pull/2419) `test: include pipelines audio in root vitest projects` — *+1 comments (0 ➔ 1 total)*
+- [#2530](https://github.com/moeru-ai/airi/pull/2530) `fix(stage-tamagotchi): remove obsolete mouse tracking IPC` — *+4 comments (2 ➔ 6 total)*
+- [#2540](https://github.com/moeru-ai/airi/pull/2540) `fix(stage-ui): apply Apple Speech locale in hearing settings` — *+2 comments (4 ➔ 6 total)*
+- [#2121](https://github.com/moeru-ai/airi/pull/2121) `chore(i18n): update translations` — *+3 comments (89 ➔ 92 total)*
+
+---
 ## [2026-09-13] Upstream Delta: `553d8a0d..42e3e9e8` (3 commits, 37 files, 19 PR update(s))
 
 ### 🎯 Executive Highlights

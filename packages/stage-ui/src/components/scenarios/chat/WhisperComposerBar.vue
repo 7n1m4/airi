@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BasicTextarea } from '@proj-airi/ui'
+import { BasicContentEditable } from '@proj-airi/ui'
 import { useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { ref, useTemplateRef } from 'vue'
@@ -98,6 +98,7 @@ const {
   attachments,
   isComposing,
   isListening,
+  handleFilePaste,
   handleFileSelect,
   removeAttachment,
   handleSend,
@@ -353,14 +354,15 @@ defineExpose({
         </button>
       </div>
 
-      <!-- [Textarea] Auto-Expanding Input -->
+      <!-- [ContentEditable] Auto-Expanding Input (Bypasses Safari Form Assistant) -->
       <div class="min-w-0 flex-1 px-1">
-        <BasicTextarea
+        <BasicContentEditable
           v-model="messageInput"
           :placeholder="placeholder || (activeCard?.name ? `Message ${activeCard.name}...` : 'Say something...')"
-          class="max-h-[8lh] min-h-[calc(1lh+4px)] w-full resize-none overflow-y-auto border-0 bg-transparent px-1.5 py-1 text-sm text-neutral-800 outline-none scrollbar-none dark:text-neutral-100 placeholder:text-neutral-400 placeholder:dark:text-neutral-500"
-          default-height="1lh"
+          class="max-h-[8lh] min-h-[calc(1lh+4px)] w-full overflow-y-auto border-0 bg-transparent px-1.5 py-1 text-sm text-neutral-800 outline-none scrollbar-none dark:text-neutral-100 data-[empty]:before:text-neutral-400 dark:data-[empty]:before:text-neutral-500"
+          default-height="calc(1lh + 4px)"
           @submit="onSubmit"
+          @paste-file="handleFilePaste"
           @compositionstart="isComposing = true"
           @compositionend="isComposing = false"
         />
