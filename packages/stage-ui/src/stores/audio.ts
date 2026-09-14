@@ -71,6 +71,35 @@ function calculateVolume(analyser: AnalyserNode, mode: 'linear' | 'minmax' = 'li
 export const useAudioContext = defineStore('audio-context', () => {
   const audioContext = shallowRef<AudioContext>(new AudioContext())
 
+  async function setSinkId(sinkId: string) {
+    if (!audioContext.value)
+      return
+    if ('setSinkId' in audioContext.value && typeof (audioContext.value as any).setSinkId === 'function') {
+      try {
+        await (audioContext.value as any).setSinkId(sinkId || '')
+      }
+      catch (error) {
+        console.warn('[AudioContext] Failed to set sinkId:', error)
+      }
+    }
+  }
+
+  // Restore saved output sink if present in localStorage
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const savedSink = localStorage.getItem('settings/audio/output')
+      if (savedSink) {
+        const parsed = JSON.parse(savedSink)
+        if (typeof parsed === 'string' && parsed) {
+          void setSinkId(parsed)
+        }
+      }
+    }
+    catch {
+      // Ignore JSON parse errors or localStorage access errors
+    }
+  }
+
   // iOS silent mode workaround: must run from a user gesture.
   // Register a one-time listener so the first interaction unlocks playback.
   function unlockOnInteraction() {
@@ -86,14 +115,17 @@ export const useAudioContext = defineStore('audio-context', () => {
   return {
     audioContext,
     calculateVolume,
+    setSinkId,
   }
 })
 
 export function useAudioDevice(requestPermission: boolean = false) {
   const devices = useDevicesList({ constraints: { audio: true }, requestPermissions: requestPermission })
   const audioInputs = computed(() => devices.audioInputs.value)
+  const audioOutputs = computed(() => devices.audioOutputs.value)
 
   const selectedAudioInput = ref<string>('')
+  const selectedAudioOutput = ref<string>('')
 
   function findBestDevice(inputs: MediaDeviceInfo[]) {
     if (inputs.length === 0)
@@ -121,6 +153,13 @@ export function useAudioDevice(requestPermission: boolean = false) {
   const selectedAudioInputLabel = computed(() => {
     const device = audioInputs.value.find(d => d.deviceId === selectedAudioInput.value)
     return device?.label || 'Unknown Device'
+  })
+
+  const selectedAudioOutputLabel = computed(() => {
+    if (!selectedAudioOutput.value)
+      return 'Default Output Device'
+    const device = audioOutputs.value.find(d => d.deviceId === selectedAudioOutput.value)
+    return device?.label || selectedAudioOutput.value || 'Default Output Device'
   })
 
   const deviceConstraints = computed<MediaStreamConstraints>(() => ({
@@ -167,8 +206,11 @@ export function useAudioDevice(requestPermission: boolean = false) {
 
   return {
     audioInputs,
+    audioOutputs,
     selectedAudioInput,
     selectedAudioInputLabel,
+    selectedAudioOutput,
+    selectedAudioOutputLabel,
     stream,
     deviceConstraints,
 

@@ -14,22 +14,26 @@ import {
 import { useAnalytics } from '@proj-airi/stage-ui/composables'
 import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
+import { useSettingsAudioDevice } from '@proj-airi/stage-ui/stores/settings'
 import {
   FieldCheckbox,
   FieldInput,
   FieldRange,
+  FieldSelect,
   Skeleton,
   Textarea,
 } from '@proj-airi/ui'
 import { generateSpeech } from '@xsai/generate-speech'
 import { storeToRefs } from 'pinia'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { RouterLink } from 'vue-router'
 
 const { t } = useI18n()
 const providersStore = useProvidersStore()
 const speechStore = useSpeechStore()
+const settingsAudioDevice = useSettingsAudioDevice()
+const { audioOutputs, selectedAudioOutput } = storeToRefs(settingsAudioDevice)
 const { configuredSpeechProvidersMetadata } = storeToRefs(providersStore)
 const {
   activeSpeechProvider,
@@ -61,6 +65,36 @@ const audioPlayer = ref<HTMLAudioElement | null>(null)
 const errorMessage = ref('')
 const activeTab = ref<'global' | 'studio'>('global')
 
+const audioOutputOptions = computed(() => {
+  const options = [
+    {
+      label: t('settings.pages.modules.speech.sections.section.audio-output.default'),
+      value: '',
+    },
+  ]
+
+  const seen = new Set<string>(['', 'default'])
+
+  for (const device of audioOutputs.value) {
+    if (device.deviceId && !seen.has(device.deviceId)) {
+      seen.add(device.deviceId)
+      options.push({
+        label: device.label || `Audio Output (${device.deviceId.slice(0, 8)}...)`,
+        value: device.deviceId,
+      })
+    }
+  }
+
+  if (selectedAudioOutput.value && !seen.has(selectedAudioOutput.value)) {
+    options.push({
+      label: `${selectedAudioOutput.value} (Disconnected)`,
+      value: selectedAudioOutput.value,
+    })
+  }
+
+  return options
+})
+
 // Sync OpenAI Compatible model and voice from provider config
 function syncOpenAICompatibleSettings() {
   if (activeSpeechProvider.value !== 'openai-compatible-audio-speech')
@@ -89,6 +123,14 @@ function syncOpenAICompatibleSettings() {
 }
 
 onMounted(async () => {
+  if (audioOutputs.value.some(device => !device.label)) {
+    try {
+      await settingsAudioDevice.askPermission()
+    }
+    catch {
+      // Ignored if permissions are unavailable or dismissed
+    }
+  }
   await providersStore.loadModelsForConfiguredProviders()
   await speechStore.loadVoicesForProvider(activeSpeechProvider.value)
   syncOpenAICompatibleSettings()
@@ -186,8 +228,16 @@ async function generateTestSpeech() {
     audioUrl.value = URL.createObjectURL(new Blob([response]))
 
     // Play the audio
-    setTimeout(() => {
+    setTimeout(async () => {
       if (audioPlayer.value) {
+        if (selectedAudioOutput.value && 'setSinkId' in HTMLMediaElement.prototype && typeof (audioPlayer.value as any).setSinkId === 'function') {
+          try {
+            await (audioPlayer.value as any).setSinkId(selectedAudioOutput.value)
+          }
+          catch (err) {
+            console.warn('[speech.vue] Failed to set sinkId on audioPlayer:', err)
+          }
+        }
         audioPlayer.value.play()
       }
     }, 100)
@@ -214,6 +264,17 @@ function stopTestAudio() {
     audioUrl.value = ''
   }
 }
+
+watch(selectedAudioOutput, async (newSinkId) => {
+  if (audioPlayer.value && 'setSinkId' in HTMLMediaElement.prototype && typeof (audioPlayer.value as any).setSinkId === 'function') {
+    try {
+      await (audioPlayer.value as any).setSinkId(newSinkId || '')
+    }
+    catch (err) {
+      console.warn('[speech.vue] Failed to update sinkId on audioPlayer:', err)
+    }
+  }
+})
 
 // Clean up when component is unmounted
 onUnmounted(() => {
@@ -319,6 +380,18 @@ function handleDeleteProvider(providerId: string) {
     <!-- Tab Contents -->
     <div v-if="activeTab === 'global'" flex="~ col md:row gap-6">
       <div bg="neutral-100 dark:[rgba(0,0,0,0.3)]" rounded-xl p-4 flex="~ col gap-4" class="h-fit w-full md:w-[40%]">
+        <!-- Audio Output Selection -->
+        <div>
+          <FieldSelect
+            v-model="selectedAudioOutput"
+            :label="t('settings.pages.modules.speech.sections.section.audio-output.title')"
+            :description="t('settings.pages.modules.speech.sections.section.audio-output.description')"
+            :options="audioOutputOptions"
+            :placeholder="t('settings.pages.modules.speech.sections.section.audio-output.placeholder')"
+            layout="vertical"
+          />
+        </div>
+
         <div>
           <div flex="~ col gap-4">
             <div>

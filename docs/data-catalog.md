@@ -831,6 +831,7 @@ interface StoredCustomVrmAnimation {
 | `settings/speech/ssml-enabled` | `boolean` | `false` | `stores/modules/speech.ts` |
 | `settings/speech/language` | `string` | `'en-US'` | `stores/modules/speech.ts` |
 | `settings/speech/voice-profiles` | `VoiceProfile[]` | `[]` | `stores/modules/speech.ts` |
+| `settings/audio/output` | `string` | `''` | `stores/settings/audio-device.ts` |
 
 ```typescript
 // File: packages/stage-ui/src/stores/providers/types.ts
@@ -875,6 +876,8 @@ interface VoiceProfile {
 | `settings/hearing/detection-mode` | `'vad' \| 'manual'` | `'vad'` | `stores/modules/hearing.ts` |
 | `settings/hearing/speech-provider-settings` | `Record<string, { deviceId, sampleRate }>` | `{}` | `stores/modules/hearing.ts` |
 | `settings/hearing/transcription-provider-settings` | `Record<string, { deviceId, sampleRate }>` | `{}` | `stores/modules/hearing.ts` |
+| `settings/audio/input` | `string` | `''` | `stores/settings/audio-device.ts` |
+| `settings/audio/input/enabled` | `boolean` | `false` | `stores/settings/audio-device.ts` |
 
 ### 4.6 Vision (VLM)
 

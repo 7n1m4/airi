@@ -23,7 +23,7 @@
 
 | Package / Workspace | Test Suites (Files) | Total Tests | Primary Subsystem Focus |
 |---|:---:|:---:|---|
-| [`packages/stage-ui`](../packages/stage-ui) | 76 | 906 | Chat, Pacing, WebGPU Workers, BYOS Sync, Providers, Live2D, Memory, Artistry, Proactivity, MCP, Cloudflare OAuth, Gemini Live Bidi, Chat Input Bridge |
+| [`packages/stage-ui`](../packages/stage-ui) | 77 | 909 | Chat, Pacing, WebGPU Workers, BYOS Sync, Providers, Live2D, Memory, Artistry, Proactivity, MCP, Cloudflare OAuth, Gemini Live Bidi, Chat Input Bridge, Audio Device Routing |
 | [`packages/live2d-runtime`](../packages/live2d-runtime) | 5 | 79 | Live2D Scripting DSL VM, Command Parser, Selector, Template, VarStore |
 | [`packages/stage-pages`](../packages/stage-pages) | 2 | 34 | Settings Topology & Devtools Context Flow Formatters |
 | [`apps/stage-tamagotchi`](../apps/stage-tamagotchi) | 6 | 32 | Desktop Multi-Window, Display Bounds, Location, Widgets, Airi Plugins |
@@ -152,6 +152,7 @@
 | **TTS Chunker** | [`packages/pipelines-audio/src/processors/tts-chunker.test.ts`](../packages/pipelines-audio/src/processors/tts-chunker.test.ts) | 8 | Node / Pure TS | Blocking in CI | Sentence-boundary text chunker with punctuation lookahead. | Pure text segmentation. |
 | **Playback Lead Coordinator** | [`packages/pipelines-audio/src/processors/lead-coordinator.test.ts`](../packages/pipelines-audio/src/processors/lead-coordinator.test.ts) | 7 | Node / Pure TS | Blocking in CI | Audio playback queue sequencing, jitter buffer, and token ordering. | Queue timing logic; mocks audio hardware sinks. |
 | **Speech Store Pitch/Rate Helpers** | [`packages/stage-ui/src/stores/modules/speech.test.ts`](../packages/stage-ui/src/stores/modules/speech.test.ts) | 3 | Node / Pure TS | Blocking in CI | Positive/negative percentage formatting and zero-guarding. | Pure formatting helpers. |
+| **Audio Output Device Selection & Routing** | [`packages/stage-ui/src/stores/settings/audio-device.test.ts`](../packages/stage-ui/src/stores/settings/audio-device.test.ts) | 3 | Node / Pinia | Blocking in CI | Output device enumeration, persistence of `settings/audio/output`, dynamic `AudioContext.setSinkId` invocation, and resetState restoration. | Tests Pinia store state and mocked sink routing; does not mount physical OS audio hardware sinks. |
 | **End-to-End Speech Pipeline** | [`packages/pipelines-audio/src/speech-pipeline.test.ts`](../packages/pipelines-audio/src/speech-pipeline.test.ts) | 2 | Node / Pure TS | Blocking in CI | Processor chaining, lifecycle initialization, and teardown. | Pipeline architecture test with mock processors. |
 
 #### Autonomous Systems, Artistry, Proactivity & Tool Hub

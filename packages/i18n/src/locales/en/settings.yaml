@@ -641,6 +641,11 @@ pages:
             use-ssml:
               description: Enable to input raw SSML instead of plain text
               label: Use Custom SSML
+          audio-output:
+            title: Audio Output Device
+            description: Select the audio output device for speech synthesis and playback.
+            default: Default Output Device
+            placeholder: Select an audio output device
       title: Speech (TTS)
     title: Modules
     vision:
