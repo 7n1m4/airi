@@ -4,6 +4,7 @@ stepper:
   nextStep: 次のステップ
   jumpToStep: 任意のステップへ移動
   allSteps: 全ステップ ({count})
+  stepCount: ステップ {current} / {total}
 
 shell:
   close: 閉じる
@@ -11,6 +12,10 @@ shell:
   previous: 戻る
   next: 続ける
   skip: あとで設定
+  brand: AIRI コンパニオンセットアップ
+  stageReady: ステージ準備完了
+  closeSetup: セットアップを閉じる (後で再開)
+  placeholderNotice: このモジュールは現在構成中です。次のステップに進むことができます。
 
 steps:
   welcome:
@@ -42,7 +47,8 @@ steps:
     zeroTrustBadge: ゼロトラスト
     localOption:
       title: ローカルパートナー (完全オフライン)
-      description: 100% オフライン＆プライベート。すべてのキャラクターカード、記憶、ステータスはローカルデータベースにのみ保存され、クラウドテレメトリは一切送信されません。
+      description: 100%
+        オフライン＆プライベート。すべてのキャラクターカード、記憶、ステータスはローカルデータベースにのみ保存され、クラウドテレメトリは一切送信されません。
       badge: オフライン優先
       action: ローカルで続ける
     cloudOption:
@@ -55,8 +61,44 @@ steps:
     restore:
       foundCompanions: Cloudflare R2 に {count} 体のパートナーが見つかりました
       restoreAndLaunch: 復元してステージを起動 (~30秒)
-      restoreAndBuild: 復元して新しいパートナーを作成
+      restoreAndBuild: 復元して別のコンパニオンを作成
       syncing: リモートパートナーを復元中...
+      bannerTitle: リモートバックアップを検出
+      bannerDesc: Cloudflare R2 保管庫に {count} 体のコンパニオンが見つかりました。
+      restoring: コンパニオンを復元中...
+      restoreAll: 復元してステージを起動
+    stepBadge: アーキテクチャトリアージ · ステップ {current} / {total}
+    companionGreeting: AIRI
+      へようこそ！ステージのセットアップ方法を選択してください。完全ローカル・オフラインで動作させることも、アカウントにサインインして複数デバイス間で同期することも可能です。
+    local:
+      badge: オフライン優先
+      title: ローカルコンパニオン (完全隔離)
+      description: 100% オフライン＆プライベート。すべてのキャラクターカード、記憶、状態はローカルに保存され、外部クラウド通信は一切行いません。
+      selectedCta: 選択中 (ローカルモード)
+      selectCta: ローカルモードを選択
+      features:
+        f1: 端末内完全オフライン保存
+        f2: クラウドテレメトリ・外部通信ゼロ
+        f3: ローカルDBによる超高速起動
+    cloud:
+      badge: マルチデバイス同期
+      title: アカウントサインイン (Cloudflare)
+      description: アカウントを接続して、エンドツーエンド暗号化により複数デバイス間でコンパニオン、設定、記憶保管庫を同期します。
+      selectedCta: 選択中 (クラウド連携)
+      selectCta: クラウド同期を選択
+      features:
+        f1: Cloudflare R2 暗号化バックアップ
+        f2: 複数デバイス間のシームレスな同期
+        f3: Edge Vault 資格情報の自動復元
+    auth:
+      connected: Cloudflare に接続完了
+      disconnect: 接続解除
+      autoTab: 1クリックブラウザ認証
+      tokenTab: API トークン
+      verifying: 確認中...
+      oauthButton: Cloudflare でサインイン
+      tokenPlaceholder: Cloudflare API トークンを入力...
+      verifyToken: トークンを接続
 
   appearance:
     label: 外観
@@ -72,6 +114,8 @@ steps:
       dark: ダーク
       light: ライト
       system: システム連動
+      darkDesc: 深みのある黒曜石トーン
+      lightDesc: 明るいスタジオトーン
     colorSection:
       title: シグネチャーアクセントパレット
       description: ボタンやハイライト、アバターの発光効果を彩るパーソナルカラーを選択します。
@@ -82,6 +126,7 @@ steps:
         flora: アース＆フローラ
         ocean: オーシャン＆スカイ
         royal: ロイヤル＆ブルーム
+      activeColor: '選択中: {color}'
     perDeviceToggle: 外観設定をこのデバイス限定にする (クラウド同期から除外)
 
   experience:
@@ -114,6 +159,36 @@ steps:
         title: オールインワン (Swiss Army)
         tag: 全機能搭載 · フル装備
         description: '最高峰のフルスペック体験：双方向音声認識、画像分析、画面見守り、自発的対話、アート生成、外部ツール、4象限記憶。'
+      quiet:
+        title: 静かな観察者
+        badge: ⚡ 最速 · ミニマリスト
+        subtitle: テキスト・表情・記憶
+        description: 音声オーバーヘッドゼロ。アバターの表情、思考の間、長期記憶を備えた超高速テキストコンパニオン。
+      casual:
+        title: カジュアルコンパニオン
+        badge: ✨ 人気の選択肢
+        subtitle: 音声対話 & 画像認識
+        description: リアルタイム音声認識(STT)、表現豊かな音声(TTS)、画像認識、自然な会話テンポ、長期記憶。
+      muse:
+        title: クリエイティブミューズ
+        badge: 🎨 ビジュアルフォーカス
+        subtitle: 音声・視覚・画像生成
+        description: 音声対話、画像生成(Pollinations/ComfyUI)、チャット画像認識、表情豊かなモーフィング。
+      copilot:
+        title: エグゼクティブコパイロット
+        badge: 💼 プロダクティビティ
+        subtitle: 音声 + アクションツール
+        description: 音声対話、デスクトップ画面監視、ローカルファイルMCPツール、リアルタイムWeb検索。
+      roommate:
+        title: アンビエントルームメイト
+        badge: 🌙 自律的な存在感
+        subtitle: 日常ルーティン & 寄り添い
+        description: 音声対話、環境ハートビート、睡眠スケジュール、クワイエットアワー、画面認識。
+      swiss-army:
+        title: 万能アーミーナイフ
+        badge: 🔥 全機能 · オールインワン
+        subtitle: フルスペック自律型マルチモーダル
+        description: すべてを備えた最高峰コンパニオン。聴覚、ニューラル音声、思考テンポ、2パスACT表情、画面認識、アート生成、認知記憶階層。
     advanced:
       toggle: '高度な設定：個別モジュールのカスタマイズ'
       description: 各感覚および認知モジュールの有効/無効を手動で切り替えます。
@@ -128,6 +203,8 @@ steps:
         artistry: アート生成 (画像生成と自律ディレクター)
         memory: 記憶体系 (4象限認知メモリ)
         tools: 外部ツール (Web検索とデスクトップMCP)
+    hideModules: モジュールを非表示
+    customizeModules: '高度な設定: モジュールを個別にカスタマイズ'
 
   profile:
     label: プロフィール
@@ -140,6 +217,9 @@ steps:
     pronouns:
       label: 代名詞 / 自称
       placeholder: 例：私、僕、俺、自分
+      he: 男性
+      she: 女性
+      they: ノンバイナリー
     relationship:
       label: パートナーとの関係性
       options:

@@ -23,12 +23,12 @@ const emit = defineEmits<{
 const { t, te } = useI18n()
 
 function getStepLabel(step: OnboardingV3StepDef): string {
-  const key = `onboarding.stepper.steps.${step.id}.label`
+  const key = `onboarding.steps.${step.id}.label`
   return te(key) ? t(key) : step.label
 }
 
 function getStepSubtitle(step: OnboardingV3StepDef): string | undefined {
-  const key = `onboarding.stepper.steps.${step.id}.subtitle`
+  const key = `onboarding.steps.${step.id}.subtitle`
   return te(key) ? t(key) : step.subtitle
 }
 
@@ -75,7 +75,7 @@ function handleNextBatch() {
 
 <template>
   <nav
-    :aria-label="t('onboarding.stepper.ariaProgress')"
+    :aria-label="t('onboarding.stepper.ariaLabel')"
     style="-webkit-app-region: no-drag;"
     :class="['flex items-center space-x-1.5 bg-black/5 dark:bg-neutral-900/60 border border-neutral-200/80 dark:border-white/5 rounded-full px-2 py-1 text-xs select-none']"
   >

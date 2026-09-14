@@ -40,14 +40,14 @@ const { t, te } = useI18n()
 function getStepLabel(step?: OnboardingV3StepDef): string {
   if (!step)
     return ''
-  const key = `onboarding.stepper.steps.${step.id}.label`
+  const key = `onboarding.steps.${step.id}.label`
   return te(key) ? t(key) : step.label
 }
 
 function getStepSubtitle(step?: OnboardingV3StepDef): string {
   if (!step?.subtitle)
     return ''
-  const key = `onboarding.stepper.steps.${step.id}.subtitle`
+  const key = `onboarding.steps.${step.id}.subtitle`
   return te(key) ? t(key) : step.subtitle
 }
 

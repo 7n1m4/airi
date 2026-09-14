@@ -4,6 +4,7 @@ stepper:
   nextStep: 下一步
   jumpToStep: 跳轉至任意步驟
   allSteps: 全部引導步驟 ({count})
+  stepCount: 步驟 {current} / {total}
 
 shell:
   close: 關閉
@@ -11,6 +12,10 @@ shell:
   previous: 返回
   next: 繼續
   skip: 稍後設定
+  brand: AIRI 夥伴設定
+  stageReady: 舞台就緒
+  closeSetup: 關閉設定 (稍後繼續)
+  placeholderNotice: 該模組正在設定中，您可以繼續進行下一步。
 
 steps:
   welcome:
@@ -55,8 +60,43 @@ steps:
     restore:
       foundCompanions: 在 Cloudflare R2 中發現 {count} 個伴侶備份
       restoreAndLaunch: 復原並啟動舞台 (~30秒)
-      restoreAndBuild: 復原並建立新伴侶
+      restoreAndBuild: 還原並建立新夥伴
       syncing: 正在復原雲端伴侶...
+      bannerTitle: 發現雲端備份
+      bannerDesc: 在您的 Cloudflare R2 保管庫中發現了 {count} 個夥伴檔案。
+      restoring: 正在還原夥伴...
+      restoreAll: 還原並啟動舞台
+    stepBadge: 架構分流 · 步驟 {current} / {total}
+    companionGreeting: 歡迎來到 AIRI！請選擇舞台的運作架構。您可以完全在本機離線運作，也可以登入帳號以實現跨裝置同步。
+    local:
+      badge: 離線優先
+      title: 本機夥伴 (完全隔離)
+      description: 100% 離線與隱私保護。所有角色卡、記憶與狀態均保存在本機資料庫中，絕無雲端遙測通訊。
+      selectedCta: 已選擇 (離線模式)
+      selectCta: 選擇本機模式
+      features:
+        f1: 裝置內 100% 離線儲存
+        f2: 零雲端遙測與外部網路請求
+        f3: 基於本機資料庫極速秒開
+    cloud:
+      badge: 多裝置同步
+      title: 帳號登入 (Cloudflare)
+      description: 連接您的帳號，透過端對端加密跨裝置順暢同步夥伴、設定與記憶庫。
+      selectedCta: 已選擇 (雲端備份)
+      selectCta: 選擇雲端同步
+      features:
+        f1: Cloudflare R2 加密雲端備份
+        f2: 順暢的多裝置即時同步
+        f3: Edge Vault 憑證自動復原
+    auth:
+      connected: 已連線至 Cloudflare
+      disconnect: 中斷連線
+      autoTab: 一鍵瀏覽器授權
+      tokenTab: API 權杖
+      verifying: 驗證中...
+      oauthButton: 使用 Cloudflare 登入
+      tokenPlaceholder: 貼上您的 Cloudflare API 權杖...
+      verifyToken: 連接權杖
 
   appearance:
     label: 外觀
@@ -72,6 +112,8 @@ steps:
       dark: 暗色模式
       light: 亮色模式
       system: 跟隨系統
+      darkDesc: 深邃黑曜石質感
+      lightDesc: 明亮自然光影工作台
     colorSection:
       title: 專屬強調色盤
       description: 選擇能夠展現個性的強調色彩，應用於按鈕、醒目提示以及伴侶光暈特效。
@@ -82,6 +124,7 @@ steps:
         flora: 大地與生機
         ocean: 蔚藍與晴空
         royal: 尊貴與繁花
+      activeColor: '目前套用: {color}'
     perDeviceToggle: 僅在本裝置保留此外觀（不參與雲端同步覆蓋）
 
   experience:
@@ -114,6 +157,36 @@ steps:
         title: 全能旗艦
         tag: 步驟完整 · 應有盡有
         description: '旗艦級頂配體驗：語音雙向識別、視覺分析、桌面監控、主動感知、藝術創作、外部工具與四象限記憶。'
+      quiet:
+        title: 靜默觀察者
+        badge: ⚡ 極速 · 極簡主義
+        subtitle: 文字、表情與記憶
+        description: 零音訊開銷，具備舞台化身表情、思考節奏與長期記憶的輕量級文字夥伴。
+      casual:
+        title: 日常夥伴
+        badge: ✨ 熱門之選
+        subtitle: 語音對話與視覺感知
+        description: 即時語音轉寫(STT)、情感語音合成(TTS)、聊天圖片感知、自然交流節奏與記憶。
+      muse:
+        title: 靈感繆斯
+        badge: 🎨 視覺焦點
+        subtitle: 語音、視覺與藝術創作
+        description: 語音對話、圖像生成(Pollinations/ComfyUI)、圖片理解與豐富的化身變形。
+      copilot:
+        title: 高效副駕駛
+        badge: 💼 生產力助手
+        subtitle: 語音 + 行動工具
+        description: 語音對話、桌面螢幕觀察、本機檔案系統 MCP 工具與即時網路搜尋。
+      roommate:
+        title: 日常室友
+        badge: 🌙 主動陪伴
+        subtitle: 生活作息與常駐存在
+        description: 語音交流、環境心跳、就寢作息、免打擾時段與螢幕感知。
+      swiss-army:
+        title: 全能瑞士刀
+        badge: 🔥 全功能 · 應有盡有
+        subtitle: 全功能自主多模態
+        description: 旗艦級全能數位夥伴。聽覺、神經語音、思考節奏、雙階段ACT表情、螢幕觀察、藝術生成與認知記憶層級。
     advanced:
       toggle: '高級：自訂各個模組開關'
       description: 手動啟用或停用特定的感官與認知能力模組。
@@ -128,6 +201,8 @@ steps:
         artistry: 藝術創作 (AI 繪圖與自主導演)
         memory: 記憶體系 (四象限認知記憶)
         tools: 外部工具 (聯網搜尋與桌面 MCP)
+    hideModules: 隱藏模組
+    customizeModules: '進階: 自訂個別模組'
 
   profile:
     label: 使用者畫像
@@ -140,6 +215,9 @@ steps:
     pronouns:
       label: 稱謂人稱代名詞
       placeholder: 例如：他、她、TA
+      he: 男性
+      she: 女性
+      they: 非二元性別
     relationship:
       label: 相處關係動態
       options:

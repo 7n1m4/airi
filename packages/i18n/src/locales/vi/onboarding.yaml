@@ -4,6 +4,7 @@ stepper:
   nextStep: Bước tiếp
   jumpToStep: Chuyển tới bước bất kỳ
   allSteps: Tất cả các bước ({count})
+  stepCount: Bước {current} / {total}
 
 shell:
   close: Đóng
@@ -11,14 +12,22 @@ shell:
   previous: Quay lại
   next: Tiếp tục
   skip: Thiết lập sau
+  brand: Thiết lập Bạn đồng hành AIRI
+  stageReady: Sân khấu đã sẵn sàng
+  closeSetup: Đóng thiết lập (Lưu lại sau)
+  placeholderNotice: Mô-đun này đang được cấu hình. Bạn có thể chuyển sang bước tiếp theo.
 
 steps:
   welcome:
     label: Chào mừng
     subtitle: Studio người bạn đồng hành riêng tư
     heroTitle: Chào mừng đến với AIRI
-    heroSubtitle: Sân khấu dành riêng cho bạn đồng hành của bạn — hoàn tất trong vài phút, 100% riêng tư trên máy của bạn.
-    companionQuote: 'Xin chào! Mình là người bạn đồng hành số tự quản của bạn. Cho dù bạn muốn trò chuyện bằng giọng nói, thưởng thức các màn trình diễn biểu cảm hay chỉ cần một sự hiện diện tĩnh lặng trên màn hình, mình luôn sẵn sàng đồng hành cùng bạn.'
+    heroSubtitle: Sân khấu dành riêng cho bạn đồng hành của bạn — hoàn tất trong vài
+      phút, 100% riêng tư trên máy của bạn.
+    companionQuote: 'Xin chào! Mình là người bạn đồng hành số tự quản của bạn. Cho
+      dù bạn muốn trò chuyện bằng giọng nói, thưởng thức các màn trình diễn biểu
+      cảm hay chỉ cần một sự hiện diện tĩnh lặng trên màn hình, mình luôn sẵn
+      sàng đồng hành cùng bạn.'
     pills:
       webgpu: Lõi WebGPU nội bộ
       offline: 100% Ngoại tuyến & Riêng tư
@@ -29,7 +38,8 @@ steps:
       setupLater: Thiết lập sau
     dialog:
       savedTitle: Đã lưu thiết lập
-      savedDescription: 'Bạn có thể mở lại thiết lập bạn đồng hành bất kỳ lúc nào qua biểu tượng AIRI trên thanh menu macOS hoặc khay hệ thống:'
+      savedDescription: 'Bạn có thể mở lại thiết lập bạn đồng hành bất kỳ lúc nào qua
+        biểu tượng AIRI trên thanh menu macOS hoặc khay hệ thống:'
       trayItem: Thiết lập & Đăng nhập bạn đồng hành (V3)
       continue: Tiếp tục thiết lập
       closeToTray: Thu nhỏ vào khay
@@ -38,16 +48,19 @@ steps:
     label: Tài khoản
     subtitle: Đăng nhập & Cấu trúc hệ thống
     title: Đăng nhập tài khoản & Cấu trúc hệ thống
-    description: Chọn chạy hoàn toàn cách ly ngoại tuyến trên máy tính này, hoặc liên kết tài khoản để đồng bộ và sao lưu đám mây liền mạch.
+    description: Chọn chạy hoàn toàn cách ly ngoại tuyến trên máy tính này, hoặc
+      liên kết tài khoản để đồng bộ và sao lưu đám mây liền mạch.
     zeroTrustBadge: Zero-Trust
     localOption:
       title: Bạn đồng hành nội bộ (Cách ly / Ngoại tuyến)
-      description: 100% ngoại tuyến và riêng tư. Mọi thẻ nhân vật, ký ức và trạng thái chỉ lưu trong cơ sở dữ liệu trên máy bạn mà không gửi dữ liệu ra ngoài.
+      description: 100% ngoại tuyến và riêng tư. Mọi thẻ nhân vật, ký ức và trạng thái
+        chỉ lưu trong cơ sở dữ liệu trên máy bạn mà không gửi dữ liệu ra ngoài.
       badge: Ưu tiên nội bộ
       action: Tiếp tục trên máy
     cloudOption:
       title: Đăng nhập tài khoản (Cloudflare)
-      description: Kết nối tài khoản để đồng bộ bạn đồng hành, cài đặt và kho lưu trữ ký ức giữa các thiết bị với mã hóa đầu cuối.
+      description: Kết nối tài khoản để đồng bộ bạn đồng hành, cài đặt và kho lưu trữ
+        ký ức giữa các thiết bị với mã hóa đầu cuối.
       badge: Đồng bộ đa thiết bị
       connect: Đăng nhập với Cloudflare
       connected: Đã kết nối Cloudflare
@@ -55,14 +68,54 @@ steps:
     restore:
       foundCompanions: 'Tìm thấy {count} bạn đồng hành trên Cloudflare R2'
       restoreAndLaunch: Khôi phục & Khởi chạy sân khấu (~30 giây)
-      restoreAndBuild: Khôi phục & Tạo bạn đồng hành mới
+      restoreAndBuild: Khôi phục & Tạo bạn đồng hành khác
       syncing: Đang khôi phục dữ liệu từ xa...
+      bannerTitle: Tìm thấy bản sao lưu từ xa
+      bannerDesc: Tìm thấy {count} bạn đồng hành trong kho Cloudflare R2 của bạn.
+      restoring: Đang khôi phục bạn đồng hành...
+      restoreAll: Khôi phục & Khởi chạy sân khấu
+    stepBadge: Phân loại kiến trúc · Bước {current} / {total}
+    companionGreeting: Chào mừng bạn đến với AIRI! Hãy chọn cách bạn muốn thiết lập sân khấu của
+      mình. Bạn có thể chạy hoàn toàn cục bộ ngoại tuyến hoặc đăng nhập để đồng
+      bộ hóa trên nhiều thiết bị.
+    local:
+      badge: Ưu tiên ngoại tuyến
+      title: Bạn đồng hành cục bộ (Biệt lập)
+      description: 100% ngoại tuyến và riêng tư. Tất cả thẻ nhân vật, ký ức và trạng thái
+        được lưu trữ cục bộ, không có dữ liệu từ xa lên đám mây.
+      selectedCta: Đã chọn (Cục bộ)
+      selectCta: Chọn chế độ cục bộ
+      features:
+        f1: Lưu trữ 100% ngoại tuyến trên thiết bị
+        f2: Không có dữ liệu đo từ xa hoặc kết nối ngoài
+        f3: Khởi động tức thì với cơ sở dữ liệu cục bộ
+    cloud:
+      badge: Đồng bộ nhiều thiết bị
+      title: Đăng nhập tài khoản (Cloudflare)
+      description: Kết nối tài khoản của bạn để đồng bộ hóa bạn đồng hành, cài đặt và kho
+        lưu trữ ký ức với mã hóa đầu cuối.
+      selectedCta: Đã chọn (Đám mây)
+      selectCta: Chọn đồng bộ đám mây
+      features:
+        f1: Sao lưu mã hóa trên Cloudflare R2
+        f2: Đồng bộ hóa liền mạch giữa các thiết bị
+        f3: Tự động khôi phục thông tin đăng nhập kho lưu trữ
+    auth:
+      connected: Đã kết nối với Cloudflare
+      disconnect: Ngắt kết nối
+      autoTab: Trình duyệt 1 lần nhấp
+      tokenTab: Mã thông báo API
+      verifying: Đang xác minh...
+      oauthButton: Đăng nhập bằng Cloudflare
+      tokenPlaceholder: Dán mã thông báo API Cloudflare...
+      verifyToken: Kết nối mã
 
   appearance:
     label: Giao diện
     subtitle: Ngôn ngữ, chủ đề & màu sắc
     title: Ngôn ngữ & Diện mạo trực quan
-    description: Tùy chỉnh ngôn ngữ hiển thị giao diện, chủ đề sáng tối và màu sắc điểm nhấn đặc trưng của bạn.
+    description: Tùy chỉnh ngôn ngữ hiển thị giao diện, chủ đề sáng tối và màu sắc
+      điểm nhấn đặc trưng của bạn.
     languageSection:
       title: Ngôn ngữ hiển thị
       description: Chọn ngôn ngữ chính cho AIRI. Bạn có thể thay đổi bất cứ lúc nào.
@@ -72,9 +125,12 @@ steps:
       dark: Tối
       light: Sáng
       system: Theo hệ thống
+      darkDesc: Tông màu obsidian trầm ấm
+      lightDesc: Không gian studio sáng tự nhiên
     colorSection:
       title: Bảng màu điểm nhấn đặc trưng
-      description: Chọn tông màu cá tính để làm nổi bật các nút bấm, viền và hiệu ứng hào quang của bạn đồng hành.
+      description: Chọn tông màu cá tính để làm nổi bật các nút bấm, viền và hiệu ứng
+        hào quang của bạn đồng hành.
       defaultColor: Xanh lơ mặc định
       custom: Mã màu HEX tùy chọn
       groups:
@@ -82,38 +138,88 @@ steps:
         flora: Đất mẹ & Cỏ cây
         ocean: Đại dương & Bầu trời
         royal: Quý phái & Nở rộ
-    perDeviceToggle: Chỉ lưu diện mạo này trên thiết bị hiện tại (không bị đồng bộ đám mây ghi đè)
+      activeColor: 'Đang chọn: {color}'
+    perDeviceToggle: Chỉ lưu diện mạo này trên thiết bị hiện tại (không bị đồng bộ
+      đám mây ghi đè)
 
   experience:
     label: Trải nghiệm
     subtitle: Nguyên mẫu tương tác
     title: Các nguyên mẫu tương tác
-    description: Chọn phong cách tương tác định sẵn. Hệ thống sẽ tự động bật các tính năng phù hợp và ẩn đi các bước không cần thiết.
+    description: Chọn phong cách tương tác định sẵn. Hệ thống sẽ tự động bật các
+      tính năng phù hợp và ẩn đi các bước không cần thiết.
     archetypes:
       quietObserver:
         title: Người quan sát thầm lặng (Quiet Observer)
         tag: Nhanh nhất · Tối giản
-        description: Bạn đồng hành dạng văn bản siêu nhẹ. Hiện thân vẫn biểu cảm trên sân khấu, có suy nghĩ nội tâm và ký ức dài hạn, không tốn tài nguyên âm thanh hay hình ảnh.
+        description: Bạn đồng hành dạng văn bản siêu nhẹ. Hiện thân vẫn biểu cảm trên
+          sân khấu, có suy nghĩ nội tâm và ký ức dài hạn, không tốn tài nguyên
+          âm thanh hay hình ảnh.
       casualCompanion:
         title: Bạn đồng hành gần gũi (Casual Companion)
         tag: Phổ biến nhất
-        description: Bạn đồng hành giọng nói và hình ảnh chuẩn mực. Giọng nói tự nhiên (STT/TTS), nhận diện ảnh trò chuyện (VLM), nhịp điệu chân thực và ký ức dài hạn.
+        description: Bạn đồng hành giọng nói và hình ảnh chuẩn mực. Giọng nói tự nhiên
+          (STT/TTS), nhận diện ảnh trò chuyện (VLM), nhịp điệu chân thực và ký
+          ức dài hạn.
       creativeMuse:
         title: Nàng thơ sáng tạo (Creative Muse)
         tag: Tập trung nghệ thuật thị giác
-        description: Studio cảm hứng nghệ thuật. Giao tiếp giọng nói, tự vẽ tranh minh họa (Pollinations/ComfyUI), thấu hiểu hình ảnh và biểu cảm phong phú.
+        description: Studio cảm hứng nghệ thuật. Giao tiếp giọng nói, tự vẽ tranh minh
+          họa (Pollinations/ComfyUI), thấu hiểu hình ảnh và biểu cảm phong phú.
       executiveCopilot:
         title: Trợ lý điều hành (Executive Copilot)
         tag: Tối ưu năng suất
-        description: Dành cho công việc hiệu quả. Đối thoại giọng nói, nhận biết cửa sổ màn hình làm việc, công cụ MCP hệ thống tệp nội bộ và tìm kiếm web trực tiếp.
+        description: Dành cho công việc hiệu quả. Đối thoại giọng nói, nhận biết cửa sổ
+          màn hình làm việc, công cụ MCP hệ thống tệp nội bộ và tìm kiếm web
+          trực tiếp.
       ambientRoommate:
         title: Người bạn chung phòng (Ambient Roommate)
         tag: Hiện diện chủ động
-        description: Nhịp sống sinh hoạt thường nhật. Giọng nói ấm áp, nhịp tim môi trường chủ động bắt chuyện, giờ ngủ yên tĩnh và quan sát màn hình.
+        description: Nhịp sống sinh hoạt thường nhật. Giọng nói ấm áp, nhịp tim môi
+          trường chủ động bắt chuyện, giờ ngủ yên tĩnh và quan sát màn hình.
       swissArmy:
         title: Đa năng toàn diện (Swiss Army)
         tag: Đầy đủ tính năng · Trọn gói
-        description: 'Trải nghiệm đỉnh cao toàn diện: Giọng nói hai chiều, thị giác AI, quan sát màn hình, chủ động tương tác, sáng tạo tranh ảnh, công cụ ngoài và ký ức 4 góc phần tư.'
+        description: 'Trải nghiệm đỉnh cao toàn diện: Giọng nói hai chiều, thị giác AI,
+          quan sát màn hình, chủ động tương tác, sáng tạo tranh ảnh, công cụ
+          ngoài và ký ức 4 góc phần tư.'
+      quiet:
+        title: Người quan sát tĩnh lặng
+        badge: ⚡ Nhanh nhất · Tối giản
+        subtitle: Văn bản, Biểu cảm & Ký ức
+        description: Không tiêu tốn tài nguyên âm thanh, biểu cảm avatar, nhịp suy nghĩ và
+          bộ nhớ dài hạn.
+      casual:
+        title: Bạn đồng hành thường ngày
+        badge: ✨ Lựa chọn phổ biến
+        subtitle: Đối thoại giọng nói & Thị giác
+        description: Nhận dạng giọng nói (STT), giọng đọc cảm xúc (TTS), nhận diện ảnh,
+          nhịp điệu tự nhiên và ký ức.
+      muse:
+        title: Nàng thơ sáng tạo
+        badge: 🎨 Tiêu điểm hình ảnh
+        subtitle: Giọng nói, Thị giác & Nghệ thuật
+        description: Đối thoại giọng nói, tạo ảnh (Pollinations/ComfyUI), thị giác ảnh chat
+          và biến đổi biểu cảm avatar.
+      copilot:
+        title: Trợ lý điều hành
+        badge: 💼 Năng suất công việc
+        subtitle: Giọng nói + Công cụ hành động
+        description: Đối thoại giọng nói, theo dõi màn hình máy tính, công cụ tệp MCP cục
+          bộ và tìm kiếm web trực tiếp.
+      roommate:
+        title: Bạn cùng phòng
+        badge: 🌙 Hiện diện chủ động
+        subtitle: Thói quen sống & Hiện diện
+        description: Giọng nói, nhịp thở môi trường, lịch ngủ, giờ yên tĩnh và nhận biết
+          màn hình.
+      swiss-army:
+        title: Dao đa năng Thụy Sĩ
+        badge: 🔥 Đầy đủ tính năng · Tất cả trong một
+        subtitle: Đa phương thức tự chủ toàn diện
+        description: Bạn đồng hành toàn năng đỉnh cao. Lắng nghe, giọng nói nơ-ron, nhịp
+          suy nghĩ, biểu cảm ACT 2 giai đoạn, theo dõi màn hình, vẽ tranh và ký
+          ức nhận thức.
     advanced:
       toggle: 'Nâng cao: Tùy chỉnh từng mô-đun riêng lẻ'
       description: Bật hoặc tắt thủ công các mô-đun giác quan và nhận thức theo ý bạn.
@@ -128,18 +234,24 @@ steps:
         artistry: Nghệ thuật (Tạo ảnh AI và đạo diễn tự quản)
         memory: Ký ức (Hệ thống ghi nhớ 4 góc phần tư)
         tools: Công cụ (Tìm kiếm web và MCP máy tính)
+    hideModules: Ẩn mô-đun
+    customizeModules: 'Nâng cao: Tùy chỉnh mô-đun'
 
   profile:
     label: Hồ sơ
     subtitle: Bạn là ai?
     title: Danh tính & Mối quan hệ của bạn
-    description: Cho bạn đồng hành biết cách xưng hô với bạn và mối quan hệ bạn mong muốn xây dựng.
+    description: Cho bạn đồng hành biết cách xưng hô với bạn và mối quan hệ bạn mong
+      muốn xây dựng.
     userName:
       label: Bạn muốn bạn đồng hành gọi mình là gì?
       placeholder: 'Ví dụ: Chủ nhân, Alex, Tiền bối, Producer'
     pronouns:
       label: Đại từ xưng hô mong muốn
       placeholder: 'Ví dụ: anh, chị, bạn, mình'
+      he: Nam
+      she: Nữ
+      they: Phi nhị nguyên giới
     relationship:
       label: Phong cách mối quan hệ
       options:
@@ -150,13 +262,15 @@ steps:
         student: Người học trò tò mò
     userBio:
       label: Đôi nét về bạn (Bối cảnh tùy chọn)
-      placeholder: Chia sẻ sở thích hoặc thói quen hàng ngày để bạn đồng hành thấu hiểu bạn sâu sắc hơn.
+      placeholder: Chia sẻ sở thích hoặc thói quen hàng ngày để bạn đồng hành thấu
+        hiểu bạn sâu sắc hơn.
 
   vessel:
     label: Hiện thân
     subtitle: Thể xác Live2D / VRM
     title: Chọn một hiện thân vật lý
-    description: Chọn hình mẫu 3D VRM hoặc mô hình 2D Live2D để làm hiện thân cho bạn đồng hành của bạn.
+    description: Chọn hình mẫu 3D VRM hoặc mô hình 2D Live2D để làm hiện thân cho
+      bạn đồng hành của bạn.
     filters:
       all: Tất cả hiện thân
       installed: Đã cài đặt
@@ -174,7 +288,8 @@ steps:
     label: Nhận thức
     subtitle: Lõi tư duy (LLM)
     title: Nhận thức & Khối óc tư duy
-    description: Kết nối mô hình ngôn ngữ lớn định hình suy nghĩ, tính cách và câu trả lời của bạn đồng hành.
+    description: Kết nối mô hình ngôn ngữ lớn định hình suy nghĩ, tính cách và câu
+      trả lời của bạn đồng hành.
     tabs:
       cloud: Nhà cung cấp đám mây (Khuyên dùng)
       local: Lõi chạy nội bộ (Riêng tư & Ngoại tuyến)
@@ -196,7 +311,8 @@ steps:
     label: Linh hồn
     subtitle: Tính cách cốt lõi
     title: Linh hồn & Nhân cách nhân vật
-    description: Lựa chọn hoặc tùy chỉnh danh tính nền tảng, thói quen ăn nói và câu chuyện của bạn đồng hành.
+    description: Lựa chọn hoặc tùy chỉnh danh tính nền tảng, thói quen ăn nói và câu
+      chuyện của bạn đồng hành.
     presetCards:
       airi: AIRI (Linh hồn tự quản mặc định)
       custom: Thẻ nhân vật tùy chỉnh
@@ -211,7 +327,8 @@ steps:
     label: Thính giác
     subtitle: Nhận diện giọng nói (STT)
     title: Thính giác & Nhận dạng giọng nói
-    description: Cấu hình thiết bị micro thu âm, tính năng phát hiện giọng nói (VAD) và bộ giải mã văn bản.
+    description: Cấu hình thiết bị micro thu âm, tính năng phát hiện giọng nói (VAD)
+      và bộ giải mã văn bản.
     micSelect: Thiết bị micro
     testMic: Thử micro
     vadThreshold: Độ nhạy nhận diện giọng nói
@@ -224,7 +341,8 @@ steps:
     label: Phát âm
     subtitle: Tổng hợp giọng nói nơ-ron (TTS)
     title: Phát âm & Tổng hợp giọng nói
-    description: Trao giọng nói cho bạn đồng hành của bạn. Lựa chọn giọng nơ-ron đám mây truyền cảm hoặc giọng tổng hợp nội bộ.
+    description: Trao giọng nói cho bạn đồng hành của bạn. Lựa chọn giọng nơ-ron đám
+      mây truyền cảm hoặc giọng tổng hợp nội bộ.
     voiceCards:
       kokoro: Kokoro TTS (WebGPU / WASM trên máy)
       elevenlabs: ElevenLabs (Giọng đám mây siêu chân thực)
@@ -239,29 +357,37 @@ steps:
     label: Suy nghĩ
     subtitle: Nhịp điệu và lời thì thầm nội tâm
     title: Tư duy & Nhịp điệu đối thoại
-    description: Tùy chỉnh độ ngắt nghỉ khi suy nghĩ, từ đệm tự nhiên và những lời thì thầm nội tâm khi tính toán câu trả lời phức tạp.
+    description: Tùy chỉnh độ ngắt nghỉ khi suy nghĩ, từ đệm tự nhiên và những lời
+      thì thầm nội tâm khi tính toán câu trả lời phức tạp.
     presets:
       snappy:
         title: Nhanh nhạy (Snappy)
-        description: Phản hồi siêu tốc trong 200 mili giây. Độ trễ suy nghĩ gần như không đáng kể.
+        description: Phản hồi siêu tốc trong 200 mili giây. Độ trễ suy nghĩ gần như
+          không đáng kể.
       balanced:
         title: Cân bằng (Balanced)
-        description: Nhịp điệu trò chuyện tự nhiên của con người với các khoảng nghỉ và từ đệm hợp lý cho các câu hỏi phức tạp.
+        description: Nhịp điệu trò chuyện tự nhiên của con người với các khoảng nghỉ và
+          từ đệm hợp lý cho các câu hỏi phức tạp.
       deepCot:
         title: Suy ngẫm sâu (Deep CoT)
-        description: Chuỗi suy luận logic nhiều bước kèm theo những lời độc thoại thì thầm phong phú trong khi suy nghĩ.
+        description: Chuỗi suy luận logic nhiều bước kèm theo những lời độc thoại thì
+          thầm phong phú trong khi suy nghĩ.
     subconsciousAsides: Lời độc thoại thì thầm (Needle 2 WASM)
-    asidesDescription: Cho phép bạn đồng hành phát ra những lời lẩm bẩm suy nghĩ nội tâm trong khi soạn câu trả lời dài.
+    asidesDescription: Cho phép bạn đồng hành phát ra những lời lẩm bẩm suy nghĩ nội
+      tâm trong khi soạn câu trả lời dài.
 
   emotions:
     label: Cảm xúc
     subtitle: Cầu nối biểu cảm ACT 2 bước
     title: Cảm xúc & Cầu nối ACT
-    description: Liên kết các cung bậc cảm xúc từ văn bản đối thoại thành biểu cảm gương mặt và cử chỉ chân thực của hiện thân.
+    description: Liên kết các cung bậc cảm xúc từ văn bản đối thoại thành biểu cảm
+      gương mặt và cử chỉ chân thực của hiện thân.
     pass1Title: 'Bước 1: Trích xuất biểu cảm'
-    pass1Desc: Chuẩn hóa các biến đổi biểu cảm thành các thẻ lệnh hành động chuẩn <|ACT:*|>.
+    pass1Desc: Chuẩn hóa các biến đổi biểu cảm thành các thẻ lệnh hành động chuẩn
+      <|ACT:*|>.
     pass2Title: 'Bước 2: Chỉ dẫn diễn xuất'
-    pass2Desc: Các hướng dẫn trong prompt hệ thống chỉ cho nhân vật biết khi nào và cách biểu lộ cảm xúc phù hợp.
+    pass2Desc: Các hướng dẫn trong prompt hệ thống chỉ cho nhân vật biết khi nào và
+      cách biểu lộ cảm xúc phù hợp.
     liveExpressionTest: Thử biểu cảm trực tiếp
     testExpressions:
       happy: Vui vẻ / Mỉm cười
@@ -274,17 +400,20 @@ steps:
     label: Thị giác
     subtitle: Nhận diện ảnh chat (VLM)
     title: Nhận thức thị giác (VLM)
-    description: Giúp bạn đồng hành có thể nhìn, thấu hiểu và phản hồi lại những bức ảnh bạn gửi trong khung chat.
+    description: Giúp bạn đồng hành có thể nhìn, thấu hiểu và phản hồi lại những bức
+      ảnh bạn gửi trong khung chat.
     engineTitle: Mô hình phân tích thị giác
     testImage: Thử nhận diện hình ảnh
-    testPrompt: Tải lên một hình ảnh để kiểm tra khả năng thấu hiểu hình ảnh của bạn đồng hành.
+    testPrompt: Tải lên một hình ảnh để kiểm tra khả năng thấu hiểu hình ảnh của bạn
+      đồng hành.
     perceptionAccuracy: Độ trễ và độ chuẩn xác của thị giác
 
   screen:
     label: Màn hình
     subtitle: Quan sát màn hình máy tính
     title: Quan sát màn hình máy tính
-    description: Cho phép bạn đồng hành kín đáo quan sát màn hình của bạn trong nền để đưa ra những lời nhắc nhở và chia sẻ hữu ích.
+    description: Cho phép bạn đồng hành kín đáo quan sát màn hình của bạn trong nền
+      để đưa ra những lời nhắc nhở và chia sẻ hữu ích.
     deliveryMode:
       title: Cách thức thông báo
       voiceAndBubble: Cả giọng nói & Bong bóng (Hiện diện trọn vẹn)
@@ -295,17 +424,21 @@ steps:
       title: Bộ lọc mức độ quan trọng
       ocr: OCR nhẹ nhàng (Chiếm dụng CPU cực thấp)
       vlm: Phân tích thị giác sâu bằng mô hình VLM
-    privacyExclusions: Danh sách loại trừ riêng tư (Tự động bỏ qua ngân hàng, mật khẩu và cửa sổ riêng tư)
+    privacyExclusions: Danh sách loại trừ riêng tư (Tự động bỏ qua ngân hàng, mật
+      khẩu và cửa sổ riêng tư)
 
   proactivity:
     label: Chủ động
     subtitle: Nhịp sống & Nhịp tim môi trường
     title: Nhịp sống sinh hoạt & Tương tác chủ động
-    description: Thiết lập tần suất chủ động hỏi thăm, giờ nghỉ ngơi yên lặng và nhịp sống của bạn đồng hành.
+    description: Thiết lập tần suất chủ động hỏi thăm, giờ nghỉ ngơi yên lặng và
+      nhịp sống của bạn đồng hành.
     heartbeats: Nhịp tim môi trường tự quản
-    heartbeatsDesc: Khi một khoảng thời gian trôi qua trong im lặng, bạn đồng hành có thể chủ động mở lời tùy theo ngữ cảnh.
+    heartbeatsDesc: Khi một khoảng thời gian trôi qua trong im lặng, bạn đồng hành
+      có thể chủ động mở lời tùy theo ngữ cảnh.
     quietHours: Giờ yên tĩnh / Chế độ nghỉ ngơi
-    quietHoursDesc: Bạn đồng hành sẽ vào chế độ ngủ trong các khung giờ đã chọn (không phát ra âm thanh đột ngột).
+    quietHoursDesc: Bạn đồng hành sẽ vào chế độ ngủ trong các khung giờ đã chọn
+      (không phát ra âm thanh đột ngột).
     scheduleFrom: Giờ đi ngủ
     scheduleTo: Giờ thức dậy
 
@@ -313,54 +446,65 @@ steps:
     label: Nghệ thuật
     subtitle: Vẽ tranh & Đạo diễn tự quản
     title: Sáng tạo nghệ thuật & Vẽ tranh AI
-    description: Trang bị cho bạn đồng hành khả năng vẽ tranh chân dung, chụp ảnh tự sướng và vẽ bối cảnh sân khấu.
+    description: Trang bị cho bạn đồng hành khả năng vẽ tranh chân dung, chụp ảnh tự
+      sướng và vẽ bối cảnh sân khấu.
     engines:
       pollinations: Pollinations AI (100% miễn phí & không cần cấu hình)
       comfyui: ComfyUI (Cụm máy chủ nội bộ http://127.0.0.1:8188)
       disabled: Tắt chức năng vẽ tranh
     styleChips: Phong cách mỹ thuật
     previewButton: Tạo tranh vẽ thử
-    autonomousDirector: Đạo diễn tự quản (Cho phép bạn đồng hành tự ý vẽ tranh khi có cảm hứng trong lúc trò chuyện)
+    autonomousDirector: Đạo diễn tự quản (Cho phép bạn đồng hành tự ý vẽ tranh khi
+      có cảm hứng trong lúc trò chuyện)
 
   memory:
     label: Ký ức
     subtitle: Hệ thống ghi nhớ 4 góc phần tư
     title: 4 góc phần tư ký ức theo thời gian
-    description: Tìm hiểu cách bạn đồng hành ghi dấu những kỷ niệm, lưu trữ điều cốt lõi và củng cố nhận thức trong giấc ngủ.
+    description: Tìm hiểu cách bạn đồng hành ghi dấu những kỷ niệm, lưu trữ điều cốt
+      lõi và củng cố nhận thức trong giấc ngủ.
     quadrants:
       stmm:
         title: Ký ức làm việc ngắn hạn (STMM)
         desc: Tóm tắt đối thoại hàng ngày và bộ đệm trượt của những tin nhắn gần nhất.
       ltmm:
         title: Nhật ký văn bản bất khả xâm phạm (LTMM)
-        desc: Những cột mốc vĩnh viễn và sự thật cốt lõi được khắc ghi trong cơ sở dữ liệu vector trên máy.
+        desc: Những cột mốc vĩnh viễn và sự thật cốt lõi được khắc ghi trong cơ sở dữ
+          liệu vector trên máy.
       eternalThread:
         title: Sợi chỉ vĩnh cửu (Đồ thị quan hệ trọn đời)
-        desc: Sự gắn kết tin cậy không ngừng sâu sắc hơn qua từng lần trò chuyện và những kỷ niệm chung.
+        desc: Sự gắn kết tin cậy không ngừng sâu sắc hơn qua từng lần trò chuyện và
+          những kỷ niệm chung.
       dreaming:
         title: Cố kết giấc mơ (DRMM & Tiếng vọng cảm xúc)
-        desc: Quy trình chạy ngầm hàng đêm nhằm tổng hợp các mỏ neo cảm xúc và giải quyết những mâu thuẫn nhận thức.
+        desc: Quy trình chạy ngầm hàng đêm nhằm tổng hợp các mỏ neo cảm xúc và giải
+          quyết những mâu thuẫn nhận thức.
 
   tools:
     label: Công cụ
     subtitle: Tự động hóa & MCP máy tính
     title: Tự động hóa, MCP & Công cụ mở rộng
-    description: Tiếp thêm sức mạnh cho bạn đồng hành với khả năng tìm kiếm web trực tiếp và tương tác với máy tính.
+    description: Tiếp thêm sức mạnh cho bạn đồng hành với khả năng tìm kiếm web trực
+      tiếp và tương tác với máy tính.
     webSearch:
       title: Tìm kiếm web trực tiếp (DuckDuckGo / Brave)
-      desc: Giúp bạn đồng hành tra cứu tin tức thời sự, thời tiết và tài liệu kỹ thuật mà không cần khóa API.
+      desc: Giúp bạn đồng hành tra cứu tin tức thời sự, thời tiết và tài liệu kỹ thuật
+        mà không cần khóa API.
     desktopMcp:
       title: Model Context Protocol (Hệ thống tệp máy tính)
-      desc: Đọc và chỉnh sửa các tệp trong vùng làm việc được cấp phép, chạy các tập lệnh hỗ trợ lập trình.
+      desc: Đọc và chỉnh sửa các tệp trong vùng làm việc được cấp phép, chạy các tập
+        lệnh hỗ trợ lập trình.
     motionGen:
       title: Tạo cử động 3D (FlowMDM)
-      desc: Tự động tạo chuyển động nhân vật 3D và các đoạn hoạt cảnh VRMA tùy biến theo lời thoại.
+      desc: Tự động tạo chuyển động nhân vật 3D và các đoạn hoạt cảnh VRMA tùy biến
+        theo lời thoại.
 
   finale:
     label: Sẵn sàng
     subtitle: Kiểm tra cuối cùng & Lên sân khấu
     title: Bảng kiểm định mức độ sẵn sàng
-    description: Rà soát tình trạng hoạt động của 4 trụ cột cơ bản trước khi chính thức bước lên sân khấu.
+    description: Rà soát tình trạng hoạt động của 4 trụ cột cơ bản trước khi chính
+      thức bước lên sân khấu.
     pillars:
       audio: Đầu vào âm thanh & Thính giác
       reasoning: Nhận thức & Khối óc tư duy

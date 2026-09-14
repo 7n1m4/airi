@@ -4,6 +4,7 @@ stepper:
   nextStep: 다음 단계
   jumpToStep: 원하는 단계로 이동
   allSteps: 전체 온보딩 단계 ({count})
+  stepCount: 단계 {current} / {total}
 
 shell:
   close: 닫기
@@ -11,6 +12,10 @@ shell:
   previous: 이전
   next: 계속
   skip: 나중에 설정
+  brand: AIRI 컴패니언 설정
+  stageReady: 스테이지 준비 완료
+  closeSetup: 설정 닫기 (나중에 재개)
+  placeholderNotice: 이 모듈은 현재 구성 중입니다. 다음 단계로 진행할 수 있습니다.
 
 steps:
   welcome:
@@ -18,7 +23,8 @@ steps:
     subtitle: 프라이빗 컴패니언 스튜디오
     heroTitle: AIRI에 오신 것을 환영합니다
     heroSubtitle: 나만의 디지털 컴패니언 무대 —— 단 몇 분 만에 설정하고 100% 로컬 머신에서 안전하게 실행하세요.
-    companionQuote: 안녕하세요! 저는 당신의 자율형 디지털 컴패니언입니다. 음성 대화, 풍부한 무대 퍼포먼스, 혹은 조용한 데스크톱 곁지기까지, 언제든 당신의 일상에 맞추어 함께할 준비가 되어 있어요.
+    companionQuote: 안녕하세요! 저는 당신의 자율형 디지털 컴패니언입니다. 음성 대화, 풍부한 무대 퍼포먼스, 혹은 조용한 데스크톱
+      곁지기까지, 언제든 당신의 일상에 맞추어 함께할 준비가 되어 있어요.
     pills:
       webgpu: 로컬 WebGPU 코어
       offline: 100% 오프라인 및 프라이버시 보호
@@ -42,7 +48,8 @@ steps:
     zeroTrustBadge: 제로 트러스트
     localOption:
       title: 로컬 컴패니언 (오프라인 보호)
-      description: 100% 오프라인 및 비공개. 모든 캐릭터 카드, 기억, 상태가 로컬 브라우저/데스크톱 데이터베이스에만 저장되며 클라우드 텔레메트리는 전송되지 않습니다.
+      description: 100% 오프라인 및 비공개. 모든 캐릭터 카드, 기억, 상태가 로컬 브라우저/데스크톱 데이터베이스에만 저장되며 클라우드
+        텔레메트리는 전송되지 않습니다.
       badge: 오프라인 우선
       action: 로컬에서 계속하기
     cloudOption:
@@ -55,8 +62,44 @@ steps:
     restore:
       foundCompanions: Cloudflare R2에서 {count}개의 컴패니언을 찾았습니다
       restoreAndLaunch: 복원하고 스테이지 실행 (~30초)
-      restoreAndBuild: 복원하고 새 컴패니언 생성
+      restoreAndBuild: 복원 후 새 컴패니언 생성
       syncing: 원격 컴패니언 복원 중...
+      bannerTitle: 원격 백업 발견
+      bannerDesc: Cloudflare R2 보관소에서 {count}개의 컴패니언을 찾았습니다.
+      restoring: 컴패니언 복원 중...
+      restoreAll: 복원 후 스테이지 시작
+    stepBadge: 아키텍처 선별 · 단계 {current} / {total}
+    companionGreeting: AIRI에 오신 것을 환영합니다! 스테이지 설정 방식을 선택하세요. 100% 로컬 오프라인으로 실행하거나 계정에 로그인하여 기기 간
+      동기화를 활성화할 수 있습니다.
+    local:
+      badge: 오프라인 우선
+      title: 로컬 컴패니언 (완전 격리)
+      description: 100% 오프라인 및 프라이빗. 모든 컴패니언 카드, 기억, 상태가 로컬 DB에 저장되며 외부 클라우드 통신이 없습니다.
+      selectedCta: 선택됨 (로컬 모드)
+      selectCta: 로컬 모드 선택
+      features:
+        f1: 기기 내 100% 오프라인 저장
+        f2: 클라우드 원격 측정 및 외부 통신 제로
+        f3: 로컬 데이터베이스 기반 즉각 시작
+    cloud:
+      badge: 다중 기기 동기화
+      title: 계정 로그인 (Cloudflare)
+      description: 계정을 연결하여 종단간 암호화를 통해 기기 간에 컴패니언, 설정, 기억 보관소를 동기화합니다.
+      selectedCta: 선택됨 (클라우드 연동)
+      selectCta: 클라우드 동기화 선택
+      features:
+        f1: Cloudflare R2 암호화 백업
+        f2: 원활한 다중 기기 동기화
+        f3: Edge Vault 자격 증명 자동 복구
+    auth:
+      connected: Cloudflare 연결 완료
+      disconnect: 연결 해제
+      autoTab: 1클릭 브라우저 인증
+      tokenTab: API 토큰
+      verifying: 확인 중...
+      oauthButton: Cloudflare로 로그인
+      tokenPlaceholder: Cloudflare API 토큰 붙여넣기...
+      verifyToken: 토큰 연결
 
   appearance:
     label: 외관
@@ -72,6 +115,8 @@ steps:
       dark: 다크 모드
       light: 라이트 모드
       system: 시스템 동기화
+      darkDesc: 깊은 흑요석 톤
+      lightDesc: 밝은 자연광 스튜디오
     colorSection:
       title: 시그니처 강조 팔레트
       description: 버튼, 하이라이트, 아바타 광채 효과를 장식할 고유한 악센트 색상을 선택하세요.
@@ -82,6 +127,7 @@ steps:
         flora: 어스 & 플로라
         ocean: 오션 & 스카이
         royal: 로열 & 블룸
+      activeColor: '적용 중: {color}'
     perDeviceToggle: 이 외관 설정을 현재 기기에만 유지 (클라우드 동기화 덮어쓰기 방지)
 
   experience:
@@ -97,11 +143,13 @@ steps:
       casualCompanion:
         title: 친근한 동반자 (Casual Companion)
         tag: 인기 선택
-        description: 대표적인 음성 및 비주얼 컴패니언. 자연스러운 음성 대화 (STT/TTS), 사진 인식 (VLM), 편안한 대화 호흡과 장기 기억.
+        description: 대표적인 음성 및 비주얼 컴패니언. 자연스러운 음성 대화 (STT/TTS), 사진 인식 (VLM), 편안한 대화 호흡과
+          장기 기억.
       creativeMuse:
         title: 창작의 뮤즈 (Creative Muse)
         tag: 비주얼 포커스
-        description: 시각적 영감의 스튜디오. 음성 대화, 자율적 AI 이미지 생성 (Pollinations/ComfyUI), 사진 이해와 풍부한 표정 변화.
+        description: 시각적 영감의 스튜디오. 음성 대화, 자율적 AI 이미지 생성 (Pollinations/ComfyUI), 사진 이해와
+          풍부한 표정 변화.
       executiveCopilot:
         title: 비즈니스 코파일럿 (Executive Copilot)
         tag: 생산성 중심
@@ -113,7 +161,39 @@ steps:
       swissArmy:
         title: 만능 컴패니언 (Swiss Army)
         tag: 전 기능 탑재 · 올인원
-        description: '모든 기능을 갖춘 플래그십 경험: 양방향 음성, 비전 분석, 화면 관찰, 자발적 대화, 예술 창작, 외부 도구 및 4사분면 기억.'
+        description: '모든 기능을 갖춘 플래그십 경험: 양방향 음성, 비전 분석, 화면 관찰, 자발적 대화, 예술 창작, 외부 도구 및
+          4사분면 기억.'
+      quiet:
+        title: 조용한 관찰자
+        badge: ⚡ 가장 빠름 · 미니멀
+        subtitle: 텍스트, 표정 & 기억
+        description: 오디오 오버헤드 제로, 아바타 감정 표현, 생각 호흡 및 장기 기억을 갖춘 초경량 텍스트 컴패니언.
+      casual:
+        title: 캐주얼 컴패니언
+        badge: ✨ 인기 있는 선택
+        subtitle: 음성 대화 & 비전
+        description: 실시간 음성 인식(STT), 감성 음성 합성(TTS), 사진 인식, 자연스러운 템포 및 기억.
+      muse:
+        title: 크리에이티브 뮤즈
+        badge: 🎨 비주얼 포커스
+        subtitle: 음성, 비전 & 아트 생성
+        description: 음성 대화, 이미지 생성(Pollinations/ComfyUI), 채팅 사진 인식 및 풍부한 아바타 모핑.
+      copilot:
+        title: 이그제큐티브 코파일럿
+        badge: 💼 생산성
+        subtitle: 음성 + 작업 도구
+        description: 음성 대화, 데스크톱 화면 감지, 로컬 파일시스템 MCP 도구 및 실시간 웹 검색.
+      roommate:
+        title: 앰비언트 룸메이트
+        badge: 🌙 일상적인 존재감
+        subtitle: 생활 루틴 & 교감
+        description: 음성 대화, 환경 심장박동, 수면 스케줄, 방해 금지 시간 및 화면 인지.
+      swiss-army:
+        title: 만능 맥가이버 컴패니언
+        badge: 🔥 풀옵션 · 올인원
+        subtitle: 완전 자율형 멀티모달
+        description: 모든 기능을 갖춘 플래그십 컴패니언. 청각, 뉴럴 보이스, 생각 템포, 2-패스 ACT 감정, 화면 감지, 아트 생성 및 인지
+          기억 계층.
     advanced:
       toggle: '고급: 개별 모듈 직접 설정'
       description: 특정 감각 및 인지 기능 모듈을 켜거나 끌 수 있습니다.
@@ -128,6 +208,8 @@ steps:
         artistry: 예술 창작 (이미지 생성 및 자율 디렉터)
         memory: 기억 체계 (4사분면 인지 메모리)
         tools: 도구 (웹 검색 및 데스크톱 MCP)
+    hideModules: 모듈 숨기기
+    customizeModules: '고급: 개별 모듈 사용자 정의'
 
   profile:
     label: 프로필
@@ -140,6 +222,9 @@ steps:
     pronouns:
       label: 호칭 대명사
       placeholder: '예: 그, 그녀, 당신'
+      he: 남성
+      she: 여성
+      they: 논바이너리
     relationship:
       label: 관계 역동
       options:

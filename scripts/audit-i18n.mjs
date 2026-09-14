@@ -238,6 +238,79 @@ if (enFiles.includes('onboarding.yaml')) {
       console.log(`   ✅ 100% Onboarding Parity across all ${locales.length} languages!`)
     }
   }
+
+  // Component Template Audit: Scan Vue/TS components in Onboarding V3
+  console.log(`\n🔍 Onboarding V3 Component Template Key Audit:`)
+  const ONBOARDING_V3_DIR = path.resolve(REPO_ROOT, 'packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3')
+  if (fs.existsSync(ONBOARDING_V3_DIR)) {
+    const enOnboardingPath = path.join(LOCALES_DIR, 'en', 'onboarding.yaml')
+    try {
+      const enYaml = yaml.parse(fs.readFileSync(enOnboardingPath, 'utf8')) || {}
+      function getYamlKeys(obj, prefix = '') {
+        const set = new Set()
+        for (const [k, v] of Object.entries(obj)) {
+          const p = prefix ? `${prefix}.${k}` : k
+          set.add(p)
+          if (v && typeof v === 'object' && !Array.isArray(v)) {
+            for (const child of getYamlKeys(v, p)) {
+              set.add(child)
+            }
+          }
+        }
+        return set
+      }
+      const validEnKeys = getYamlKeys(enYaml, 'onboarding')
+
+      function findComponentFiles(dir) {
+        const list = []
+        for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+          const full = path.join(dir, entry.name)
+          if (entry.isDirectory())
+            list.push(...findComponentFiles(full))
+          else if (entry.name.endsWith('.vue') || entry.name.endsWith('.ts'))
+            list.push(full)
+        }
+        return list
+      }
+
+      const componentFiles = findComponentFiles(ONBOARDING_V3_DIR)
+      const keyRegex = /[\b\s(](?:t|te)\(\s*['"](onboarding\.[\w.-]+)['"]/g
+      const usedKeys = new Map()
+
+      for (const compFile of componentFiles) {
+        const src = fs.readFileSync(compFile, 'utf8')
+        let match
+        while ((match = keyRegex.exec(src)) !== null) {
+          const key = match[1]
+          if (!usedKeys.has(key))
+            usedKeys.set(key, [])
+          usedKeys.get(key).push(path.relative(REPO_ROOT, compFile).replace(/\\/g, '/'))
+        }
+      }
+
+      const missingTemplateKeys = []
+      for (const [key, files] of usedKeys.entries()) {
+        if (!validEnKeys.has(key)) {
+          missingTemplateKeys.push({ key, files: [...new Set(files)] })
+        }
+      }
+
+      if (missingTemplateKeys.length === 0) {
+        console.log(`   ✅ 100% Template-to-YAML Parity: All ${usedKeys.size} keys used in ${componentFiles.length} V3 components exist in en/onboarding.yaml!`)
+      }
+      else {
+        console.error(`   ❌ Found ${missingTemplateKeys.length} missing translation key(s) called in templates:`)
+        for (const item of missingTemplateKeys) {
+          console.error(`      - ${item.key} (used in: ${item.files.join(', ')})`)
+        }
+        totalErrors += missingTemplateKeys.length
+      }
+    }
+    catch (e) {
+      console.error(`   ❌ Failed component template key audit: ${e.message}`)
+      totalErrors++
+    }
+  }
 }
 
 if (isStrict && (totalErrors > 0 || totalMissingAcrossMonorepo > 0)) {

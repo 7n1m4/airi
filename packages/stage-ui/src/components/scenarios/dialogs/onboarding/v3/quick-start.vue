@@ -898,7 +898,7 @@ async function handleStartChatting() {
       <!-- Identity Strip (Your name & Companion name) -->
       <div :class="['flex items-center gap-3 self-stretch sm:self-auto']">
         <div :class="['flex flex-col gap-1']">
-          <label :class="['text-[11px] font-medium text-neutral-500 dark:text-neutral-400']">{{ t('onboarding.steps.profile.nameLabel') }}</label>
+          <label :class="['text-[11px] font-medium text-neutral-500 dark:text-neutral-400']">{{ t('onboarding.steps.profile.userName.label') }}</label>
           <input
             v-model="userName"
             type="text"

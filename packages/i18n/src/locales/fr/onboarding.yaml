@@ -4,6 +4,7 @@ stepper:
   nextStep: Étape suivante
   jumpToStep: Aller à n'importe quelle étape
   allSteps: Toutes les étapes ({count})
+  stepCount: Étape {current} sur {total}
 
 shell:
   close: Fermer
@@ -11,14 +12,23 @@ shell:
   previous: Retour
   next: Continuer
   skip: Configurer plus tard
+  brand: Configuration du Compagnon AIRI
+  stageReady: Scène Prête
+  closeSetup: Fermer la configuration (Enregistrer pour plus tard)
+  placeholderNotice: Ce module est en cours de configuration. Vous pouvez passer à l'étape
+    suivante.
 
 steps:
   welcome:
     label: Bienvenue
     subtitle: Studio de compagnon privé
     heroTitle: Bienvenue sur AIRI
-    heroSubtitle: La scène de votre compagnon virtuel — configurée en quelques minutes, 100% sur votre machine.
-    companionQuote: "Bonjour ! Je suis votre compagnon numérique autonome. Que vous souhaitiez une conversation vocale, des performances scéniques expressives ou une présence discrète sur votre bureau, je suis prête à m'adapter à votre univers."
+    heroSubtitle: La scène de votre compagnon virtuel — configurée en quelques
+      minutes, 100% sur votre machine.
+    companionQuote: "Bonjour ! Je suis votre compagnon numérique autonome. Que vous
+      souhaitiez une conversation vocale, des performances scéniques expressives
+      ou une présence discrète sur votre bureau, je suis prête à m'adapter à
+      votre univers."
     pills:
       webgpu: Cœur WebGPU local
       offline: 100% hors-ligne et privé
@@ -29,7 +39,9 @@ steps:
       setupLater: Configurer plus tard
     dialog:
       savedTitle: Configuration sauvegardée pour plus tard
-      savedDescription: 'Vous pouvez rouvrir la configuration de votre compagnon à tout moment depuis la barre de menus ou la zone de notification de votre système :'
+      savedDescription: 'Vous pouvez rouvrir la configuration de votre compagnon à
+        tout moment depuis la barre de menus ou la zone de notification de votre
+        système :'
       trayItem: Configuration et connexion du compagnon (V3)
       continue: Poursuivre la configuration
       closeToTray: Réduire dans la barre d'état
@@ -38,16 +50,21 @@ steps:
     label: Compte
     subtitle: Connexion et architecture
     title: Connexion et architecture du compte
-    description: Choisissez d'exécuter l'application de façon totalement isolée et hors-ligne sur cet appareil, ou de connecter un compte pour synchroniser et sauvegarder vos données dans le cloud.
+    description: Choisissez d'exécuter l'application de façon totalement isolée et
+      hors-ligne sur cet appareil, ou de connecter un compte pour synchroniser
+      et sauvegarder vos données dans le cloud.
     zeroTrustBadge: Zéro-Confiance
     localOption:
       title: Compagnon local (Isolé / Hors-ligne)
-      description: 100% hors-ligne et privé. Toutes les cartes de personnage, mémoires et états sont stockés localement sur votre machine sans aucune télémétrie cloud.
+      description: 100% hors-ligne et privé. Toutes les cartes de personnage, mémoires
+        et états sont stockés localement sur votre machine sans aucune
+        télémétrie cloud.
       badge: Priorité locale
       action: Continuer en local
     cloudOption:
       title: Connexion au compte (Cloudflare)
-      description: Connectez votre compte pour synchroniser vos compagnons, réglages et mémoires entre vos appareils avec un chiffrement de bout en bout.
+      description: Connectez votre compte pour synchroniser vos compagnons, réglages
+        et mémoires entre vos appareils avec un chiffrement de bout en bout.
       badge: Synchronisation multi-appareils
       connect: Se connecter avec Cloudflare
       connected: Connecté à Cloudflare
@@ -55,26 +72,70 @@ steps:
     restore:
       foundCompanions: '{count} compagnon(s) trouvé(s) sur Cloudflare R2'
       restoreAndLaunch: Restaurer et lancer la scène (~30s)
-      restoreAndBuild: Restaurer et créer un nouveau compagnon
+      restoreAndBuild: Restaurer et Créer un Autre Compagnon
       syncing: Restauration des compagnons distants...
+      bannerTitle: Sauvegardes Distantes Trouvées
+      bannerDesc: '{count} compagnon(s) trouvé(s) dans votre coffre Cloudflare R2.'
+      restoring: Restauration des compagnons...
+      restoreAll: Restaurer et Lancer la Scène
+    stepBadge: Triage de l'Architecture · Étape {current} sur {total}
+    companionGreeting: Bienvenue sur AIRI ! Choisissez la méthode de configuration de votre
+      scène. Vous pouvez fonctionner à 100% en local hors ligne, ou vous
+      connecter pour synchroniser vos appareils.
+    local:
+      badge: Hors Ligne d'Abord
+      title: Compagnon Local (Air-Gapped)
+      description: 100% hors ligne et privé. Toutes les cartes, mémoires et états sont
+        stockés localement sans télémétrie cloud.
+      selectedCta: Sélectionné (Local)
+      selectCta: Choisir le Mode Local
+      features:
+        f1: Stockage 100% hors ligne sur l'appareil
+        f2: Zéro télémétrie cloud ni requêtes externes
+        f3: Démarrage instantané avec base locale
+    cloud:
+      badge: Synchronisation Multi-Appareils
+      title: Connexion Cloudflare
+      description: Connectez votre compte pour synchroniser compagnons, paramètres et
+        coffres de mémoire avec chiffrement de bout en bout.
+      selectedCta: Sélectionné (Cloud)
+      selectCta: Choisir la Synchronisation Cloud
+      features:
+        f1: Sauvegardes chiffrées sur Cloudflare R2
+        f2: Synchronisation transparente multi-appareils
+        f3: Récupération automatique du coffre sécurisé
+    auth:
+      connected: Connecté à Cloudflare
+      disconnect: Déconnecter
+      autoTab: Navigateur en 1 Clic
+      tokenTab: Jeton API
+      verifying: Vérification...
+      oauthButton: Se connecter avec Cloudflare
+      tokenPlaceholder: Collez votre jeton API Cloudflare...
+      verifyToken: Connecter le Jeton
 
   appearance:
     label: Apparence
     subtitle: Langue, thème et accent
     title: Langue et apparence visuelle
-    description: Choisissez la langue de votre interface, le thème visuel et la couleur d'accentuation distinctive.
+    description: Choisissez la langue de votre interface, le thème visuel et la
+      couleur d'accentuation distinctive.
     languageSection:
       title: Langue d'affichage
-      description: Sélectionnez la langue principale d'AIRI. Vous pourrez la modifier à tout moment.
+      description: Sélectionnez la langue principale d'AIRI. Vous pourrez la modifier
+        à tout moment.
     themeSection:
       title: Mode de thème
       description: Choisissez votre mode d'apparence préféré.
       dark: Sombre
       light: Clair
       system: Synchronisé avec le système
+      darkDesc: Tons obsidienne profonds
+      lightDesc: Studio lumineux en plein jour
     colorSection:
       title: Palette d'accentuation
-      description: Choisissez une nuance personnalisée pour teinter les boutons, surbrillances et halos d'avatar.
+      description: Choisissez une nuance personnalisée pour teinter les boutons,
+        surbrillances et halos d'avatar.
       defaultColor: Cyan par défaut
       custom: Hexadécimal personnalisé
       groups:
@@ -82,41 +143,94 @@ steps:
         flora: Terre & Végétal
         ocean: Océan & Ciel
         royal: Royal & Floraison
-    perDeviceToggle: Conserver cette apparence uniquement sur cet appareil (exclure de la synchronisation cloud)
+      activeColor: 'Actif : {color}'
+    perDeviceToggle: Conserver cette apparence uniquement sur cet appareil (exclure
+      de la synchronisation cloud)
 
   experience:
     label: Expérience
     subtitle: Archétype d'interaction
     title: Archétypes d'interaction
-    description: Sélectionnez un modèle d'expérience préconfiguré. Les modules inutiles seront automatiquement masqués.
+    description: Sélectionnez un modèle d'expérience préconfiguré. Les modules
+      inutiles seront automatiquement masqués.
     archetypes:
       quietObserver:
         title: L'Observateur Silencieux
         tag: Le plus rapide · Minimaliste
-        description: Compagnon textuel ultra-léger. L'avatar réagit avec émotion, dispose de pensées intérieures et de mémoire à long terme, sans aucune charge audio ou visuelle.
+        description: Compagnon textuel ultra-léger. L'avatar réagit avec émotion,
+          dispose de pensées intérieures et de mémoire à long terme, sans aucune
+          charge audio ou visuelle.
       casualCompanion:
         title: Le Compagnon Quotidien
         tag: Choix populaire
-        description: Le compagnon vocal et visuel par excellence. Voix naturelle (STT/TTS), compréhension des images du chat (VLM), pauses de conversation réalistes et mémoire.
+        description: Le compagnon vocal et visuel par excellence. Voix naturelle
+          (STT/TTS), compréhension des images du chat (VLM), pauses de
+          conversation réalistes et mémoire.
       creativeMuse:
         title: La Muse Créative
         tag: Accent sur l'art visuel
-        description: Studio d'inspiration artistique. Voix parlée, génération d'images autonome (Pollinations/ComfyUI), compréhension de photos et riches expressions faciales.
+        description: Studio d'inspiration artistique. Voix parlée, génération d'images
+          autonome (Pollinations/ComfyUI), compréhension de photos et riches
+          expressions faciales.
       executiveCopilot:
         title: Le Copilote Exécutif
         tag: Productivité ciblée
-        description: Taillé pour l'efficacité. Dialogue vocal, perception des fenêtres du bureau, historique d'applications, outils MCP locaux et recherche web en temps réel.
+        description: Taillé pour l'efficacité. Dialogue vocal, perception des fenêtres
+          du bureau, historique d'applications, outils MCP locaux et recherche
+          web en temps réel.
       ambientRoommate:
         title: Le Colocataire Ambiant
         tag: Présence proactive
-        description: Présence et routine quotidienne partagée. Voix parlée, battements de cœur spontanés, horaires de sommeil respectueux et observation de l'écran.
+        description: Présence et routine quotidienne partagée. Voix parlée, battements
+          de cœur spontanés, horaires de sommeil respectueux et observation de
+          l'écran.
       swissArmy:
         title: Le Couteau Suisse (Tout-en-un)
         tag: Toutes les étapes · Complet
-        description: "L'expérience fleuron intégrale : dialogue vocal bidirectionnel, vision, observation d'écran, proactivité, création artistique, outils MCP et mémoire à 4 quadrants."
+        description: "L'expérience fleuron intégrale : dialogue vocal bidirectionnel,
+          vision, observation d'écran, proactivité, création artistique, outils
+          MCP et mémoire à 4 quadrants."
+      quiet:
+        title: L'Observateur Silencieux
+        badge: ⚡ Le Plus Rapide · Minimaliste
+        subtitle: Texte, Expressions & Mémoire
+        description: Zéro surcharge audio, émotions d'avatar, pauses de réflexion et
+          mémoire à long terme.
+      casual:
+        title: Le Compagnon Décontracté
+        badge: ✨ Choix Populaire
+        subtitle: Dialogue Vocal & Vision
+        description: Transcription vocale en direct (STT), voix émotionnelle (TTS), vision
+          photo, rythme naturel et mémoire.
+      muse:
+        title: La Muse Créative
+        badge: 🎨 Accent Visuel
+        subtitle: Voix, Vision & Créativité
+        description: Dialogue vocal, génération d’images (Pollinations/ComfyUI), vision par
+          chat et métamorphoses expressives.
+      copilot:
+        title: Le Copilote Exécutif
+        badge: 💼 Productivité
+        subtitle: Voix + Outils d'Action
+        description: Dialogue vocal, observation de l'écran, outils système MCP locaux et
+          recherche web en temps réel.
+      roommate:
+        title: Le Colocataire Ambiant
+        badge: 🌙 Présence Proactive
+        subtitle: Routine & Présence Vivante
+        description: Voix parlée, battements de cœur ambiants, rythme de sommeil, heures
+          calmes et perception de l'écran.
+      swiss-army:
+        title: Le Couteau Suisse
+        badge: 🔥 Toutes Options · Tout-en-un
+        subtitle: Multimodal Autonome Complet
+        description: Le compagnon tout-en-un par excellence. Ouïe, voix neuronale, pauses
+          de réflexion, émotions ACT en 2 passes, vision d'écran, art et mémoire
+          cognitive.
     advanced:
       toggle: 'Avancé : Personnaliser les modules individuels'
-      description: Activez ou désactivez manuellement les différents modules sensoriels et cognitifs.
+      description: Activez ou désactivez manuellement les différents modules
+        sensoriels et cognitifs.
       modules:
         hearing: Ouïe (Transcription vocale par microphone)
         speech: Parole (Synthèse vocale neuronale)
@@ -128,18 +242,24 @@ steps:
         artistry: Art visuel (Génération d'images et directeur autonome)
         memory: Mémoire (Hiérarchie cognitive en 4 quadrants)
         tools: Outils (Recherche web et MCP de bureau)
+    hideModules: Masquer les modules
+    customizeModules: 'Avancé : Personnaliser les modules'
 
   profile:
     label: Profil
     subtitle: Qui êtes-vous ?
     title: Votre identité et relation
-    description: Indiquez à votre compagnon comment vous nommer et quelle dynamique relationnelle vous souhaitez instaurer.
+    description: Indiquez à votre compagnon comment vous nommer et quelle dynamique
+      relationnelle vous souhaitez instaurer.
     userName:
       label: Comment votre compagnon doit-il vous appeler ?
       placeholder: 'Ex. : Maître, Alex, Senpai, Producteur'
     pronouns:
       label: Pronoms préférés
       placeholder: 'Ex. : il/lui, elle, iel'
+      he: Masculin
+      she: Féminin
+      they: Non-Binaire
     relationship:
       label: Dynamique relationnelle
       options:
@@ -150,13 +270,15 @@ steps:
         student: Apprenti curieux
     userBio:
       label: À propos de vous (Contexte optionnel)
-      placeholder: Partagez vos passions ou votre routine pour permettre à votre compagnon de mieux vous comprendre.
+      placeholder: Partagez vos passions ou votre routine pour permettre à votre
+        compagnon de mieux vous comprendre.
 
   vessel:
     label: Enveloppe corporelle
     subtitle: Corps d'avatar Live2D / VRM
     title: Choisir une enveloppe physique
-    description: Sélectionnez un modèle 3D VRM ou un avatar 2D Live2D pour incarner votre compagnon.
+    description: Sélectionnez un modèle 3D VRM ou un avatar 2D Live2D pour incarner
+      votre compagnon.
     filters:
       all: Tous les avatars
       installed: Déjà installés
@@ -174,7 +296,8 @@ steps:
     label: Conscience
     subtitle: Cœur de raisonnement (LLM)
     title: Conscience et esprit de raisonnement
-    description: Connectez le modèle de langage qui anime les pensées, la personnalité et la répartie de votre compagnon.
+    description: Connectez le modèle de langage qui anime les pensées, la
+      personnalité et la répartie de votre compagnon.
     tabs:
       cloud: Fournisseurs Cloud (Recommandé)
       local: Moteurs locaux (Privé et hors-ligne)
@@ -196,7 +319,8 @@ steps:
     label: Âme & Persona
     subtitle: Cœur de personnalité
     title: Âme du personnage et personnalité
-    description: Sélectionnez ou personnalisez l'identité fondamentale, les tics de langage et l'histoire de votre compagnon.
+    description: Sélectionnez ou personnalisez l'identité fondamentale, les tics de
+      langage et l'histoire de votre compagnon.
     presetCards:
       airi: AIRI (Esprit autonome par défaut)
       custom: Carte de personnage personnalisée
@@ -211,7 +335,8 @@ steps:
     label: Ouïe
     subtitle: Transcription vocale (STT)
     title: Ouïe et reconnaissance vocale
-    description: Configurez l'entrée microphone, la détection d'activité vocale (VAD) et le moteur de transcription.
+    description: Configurez l'entrée microphone, la détection d'activité vocale
+      (VAD) et le moteur de transcription.
     micSelect: Périphérique micro
     testMic: Tester le microphone
     vadThreshold: Sensibilité de détection de la voix
@@ -224,7 +349,8 @@ steps:
     label: Parole
     subtitle: Synthèse vocale neuronale (TTS)
     title: Voix et synthèse vocale
-    description: Donnez une voix à votre compagnon. Choisissez parmi des voix neuronales cloud ou une synthèse locale privée.
+    description: Donnez une voix à votre compagnon. Choisissez parmi des voix
+      neuronales cloud ou une synthèse locale privée.
     voiceCards:
       kokoro: Kokoro TTS (WebGPU / WASM local)
       elevenlabs: ElevenLabs (Voix cloud ultra-réalistes)
@@ -239,29 +365,35 @@ steps:
     label: Réflexion
     subtitle: Rythme et apartés intérieurs
     title: Réflexion et rythme de dialogue
-    description: Ajustez les pauses de réflexion, les interjections naturelles et les apartés intérieurs pendant le raisonnement.
+    description: Ajustez les pauses de réflexion, les interjections naturelles et
+      les apartés intérieurs pendant le raisonnement.
     presets:
       snappy:
         title: Dynamique (Snappy)
         description: Réponse ultra-rapide en 200 ms. Délai d'attente de réflexion minime.
       balanced:
         title: Équilibré (Balanced)
-        description: Rythme de conversation humaine naturelle avec pauses et interjections adaptatives pour les questions complexes.
+        description: Rythme de conversation humaine naturelle avec pauses et
+          interjections adaptatives pour les questions complexes.
       deepCot:
         title: Pensée profonde (Deep CoT)
-        description: Raisonnement logique étendu ponctué de riches murmures intérieurs pendant l'élaboration de la réponse.
+        description: Raisonnement logique étendu ponctué de riches murmures intérieurs
+          pendant l'élaboration de la réponse.
     subconsciousAsides: Apartés intérieurs prononcés (Needle 2 WASM)
-    asidesDescription: Autoriser le personnage à murmurer ses pensées à voix basse pendant qu'il élabore une réponse complexe.
+    asidesDescription: Autoriser le personnage à murmurer ses pensées à voix basse
+      pendant qu'il élabore une réponse complexe.
 
   emotions:
     label: Émotions
     subtitle: Passerelle d'expressions ACT
     title: Émotions et pont ACT
-    description: Reliez les nuances émotionnelles du dialogue aux mouvements et expressions faciales de l'avatar.
+    description: Reliez les nuances émotionnelles du dialogue aux mouvements et
+      expressions faciales de l'avatar.
     pass1Title: "Passe 1 : Extraction d'expressions"
     pass1Desc: Normalise les expressions du modèle en jetons d'action standards <|ACT:*|>.
     pass2Title: "Passe 2 : Directives de jeu d'acteur"
-    pass2Desc: Consignes dans le prompt système apprenant au personnage quand et comment exprimer ses émotions.
+    pass2Desc: Consignes dans le prompt système apprenant au personnage quand et
+      comment exprimer ses émotions.
     liveExpressionTest: Test d'expressions en direct
     testExpressions:
       happy: Joie / Sourire
@@ -274,17 +406,20 @@ steps:
     label: Vision
     subtitle: Analyse d'images du chat (VLM)
     title: Perception visuelle (VLM)
-    description: Permettez à votre compagnon d'examiner, comprendre et commenter les images que vous envoyez dans le chat.
+    description: Permettez à votre compagnon d'examiner, comprendre et commenter les
+      images que vous envoyez dans le chat.
     engineTitle: Modèle d'analyse visuelle
     testImage: Tester la perception visuelle
-    testPrompt: Téléversez une image pour vérifier la compréhension visuelle de votre compagnon.
+    testPrompt: Téléversez une image pour vérifier la compréhension visuelle de
+      votre compagnon.
     perceptionAccuracy: Latence et précision de perception
 
   screen:
     label: Écran
     subtitle: Observation du bureau
     title: Observation de l'écran du bureau
-    description: Permettez à votre compagnon de jeter un coup d'œil bienveillant à votre écran en arrière-plan pour formuler des remarques utiles.
+    description: Permettez à votre compagnon de jeter un coup d'œil bienveillant à
+      votre écran en arrière-plan pour formuler des remarques utiles.
     deliveryMode:
       title: Mode de notification
       voiceAndBubble: Voix et bulle (Présence totale)
@@ -295,17 +430,21 @@ steps:
       title: Filtre de pertinence visuelle
       ocr: OCR léger (Consommation CPU infime)
       vlm: Analyse visuelle approfondie par modèle VLM
-    privacyExclusions: Liste d'exclusion de confidentialité (Exclut banques, mots de passe et fenêtres privées)
+    privacyExclusions: Liste d'exclusion de confidentialité (Exclut banques, mots de
+      passe et fenêtres privées)
 
   proactivity:
     label: Proactivité
     subtitle: Routine et battements de cœur
     title: Routine de vie et proactivité
-    description: Définissez la fréquence des prises de parole spontanées, les heures de sommeil et le rythme de vie.
+    description: Définissez la fréquence des prises de parole spontanées, les heures
+      de sommeil et le rythme de vie.
     heartbeats: Battements de cœur ambiants
-    heartbeatsDesc: Après un moment de silence, votre compagnon peut spontanément relancer la conversation selon le contexte.
+    heartbeatsDesc: Après un moment de silence, votre compagnon peut spontanément
+      relancer la conversation selon le contexte.
     quietHours: Heures de calme / Routine de sommeil
-    quietHoursDesc: Votre compagnon passe en mode sommeil durant les plages choisies (aucun avertissement vocal impromptu).
+    quietHoursDesc: Votre compagnon passe en mode sommeil durant les plages choisies
+      (aucun avertissement vocal impromptu).
     scheduleFrom: Heure de coucher
     scheduleTo: Heure de réveil
 
@@ -313,54 +452,65 @@ steps:
     label: Art visuel
     subtitle: Création d'images et mise en scène
     title: Création artistique et dessin
-    description: Offrez à votre compagnon la possibilité de réaliser des portraits, des autoportraits et d'illustrer la scène.
+    description: Offrez à votre compagnon la possibilité de réaliser des portraits,
+      des autoportraits et d'illustrer la scène.
     engines:
       pollinations: Pollinations AI (100% gratuit et sans configuration)
       comfyui: ComfyUI (Instance locale http://127.0.0.1:8188)
       disabled: Désactiver la création artistique
     styleChips: Styles artistiques
     previewButton: Générer une illustration test
-    autonomousDirector: Réalisateur autonome (Permet au compagnon de dessiner de son propre chef au cours du dialogue)
+    autonomousDirector: Réalisateur autonome (Permet au compagnon de dessiner de son
+      propre chef au cours du dialogue)
 
   memory:
     label: Mémoire
     subtitle: Hiérarchie cognitive en 4 quadrants
     title: Les 4 quadrants de mémoire temporelle
-    description: Découvrez comment votre compagnon tisse des souvenirs, retient les faits essentiels et consolide ses connaissances pendant son sommeil.
+    description: Découvrez comment votre compagnon tisse des souvenirs, retient les
+      faits essentiels et consolide ses connaissances pendant son sommeil.
     quadrants:
       stmm:
         title: Mémoire de travail à court terme (STMM)
         desc: Résumés quotidiens et mémoire tampon des derniers échanges.
       ltmm:
         title: Journal sacré immuable (LTMM)
-        desc: Événements marquants et faits clés immuables gravés dans la base vectorielle locale.
+        desc: Événements marquants et faits clés immuables gravés dans la base
+          vectorielle locale.
       eternalThread:
         title: Fil éternel (Graphe relationnel durable)
-        desc: Distillation continue de la complicité, du niveau de confiance et de votre histoire partagée.
+        desc: Distillation continue de la complicité, du niveau de confiance et de votre
+          histoire partagée.
       dreaming:
         title: Consolidation de rêve (DRMM et échos émotionnels)
-        desc: Processus nocturne synthétisant les ancres émotionnelles et résolvant les contradictions.
+        desc: Processus nocturne synthétisant les ancres émotionnelles et résolvant les
+          contradictions.
 
   tools:
     label: Outils
     subtitle: Automatisation et MCP de bureau
     title: Automatisation, MCP et outils externes
-    description: Enrichissez votre compagnon avec la recherche web en temps réel et des capacités système.
+    description: Enrichissez votre compagnon avec la recherche web en temps réel et
+      des capacités système.
     webSearch:
       title: Recherche web en direct (DuckDuckGo / Brave)
-      desc: Permet à votre compagnon de consulter l'actualité, la météo et de la documentation sans clé d'API.
+      desc: Permet à votre compagnon de consulter l'actualité, la météo et de la
+        documentation sans clé d'API.
     desktopMcp:
       title: Model Context Protocol (Fichiers du bureau)
-      desc: Lecture et écriture de fichiers dans l'espace de travail autorisé et exécution de scripts d'aide.
+      desc: Lecture et écriture de fichiers dans l'espace de travail autorisé et
+        exécution de scripts d'aide.
     motionGen:
       title: Animation 3D générative (FlowMDM)
-      desc: Génération à la volée d'animations d'avatar 3D et d'extraits VRMA adaptés au sens de la réplique.
+      desc: Génération à la volée d'animations d'avatar 3D et d'extraits VRMA adaptés
+        au sens de la réplique.
 
   finale:
     label: Lancement
     subtitle: Vérification finale et envol
     title: Matrice d'intégrité avant départ
-    description: Passez en revue l'état opérationnel des 4 piliers fondamentaux avant de monter sur scène.
+    description: Passez en revue l'état opérationnel des 4 piliers fondamentaux
+      avant de monter sur scène.
     pillars:
       audio: Entrée audio et ouïe
       reasoning: Conscience et esprit de raisonnement

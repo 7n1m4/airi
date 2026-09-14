@@ -243,11 +243,11 @@ watch(
         ]"
       >
         <div :class="['flex flex-col gap-1.5']">
-          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">{{ t('onboarding.steps.profile.nameLabel') }}</label>
+          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">{{ t('onboarding.steps.profile.userName.label') }}</label>
           <input
             v-model="userProfileStore.name"
             type="text"
-            :placeholder="t('onboarding.steps.profile.namePlaceholder')"
+            :placeholder="t('onboarding.steps.profile.userName.placeholder')"
             :class="[
               'w-full border border-neutral-200 rounded-xl bg-white px-3.5 py-2 text-sm text-neutral-800 outline-none',
               'dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-900 dark:text-neutral-200 transition-colors',
@@ -259,7 +259,7 @@ watch(
         </div>
 
         <div :class="['flex flex-col gap-1.5']">
-          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">{{ t('onboarding.steps.profile.pronounsLabel') }}</label>
+          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">{{ t('onboarding.steps.profile.pronouns.label') }}</label>
           <div :class="['grid grid-cols-3 gap-2']">
             <button
               v-for="opt in [
@@ -290,11 +290,11 @@ watch(
         </div>
 
         <div :class="['flex flex-col gap-1.5']">
-          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">{{ t('onboarding.steps.profile.bioLabel') }}</label>
+          <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">{{ t('onboarding.steps.profile.userBio.label') }}</label>
           <textarea
             v-model="userProfileStore.description"
             rows="3"
-            :placeholder="t('onboarding.steps.profile.bioPlaceholder')"
+            :placeholder="t('onboarding.steps.profile.userBio.placeholder')"
             :class="[
               'w-full border border-neutral-200 rounded-xl bg-white px-3.5 py-2 text-sm text-neutral-800 outline-none resize-none',
               'dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-900 dark:text-neutral-200 transition-colors',

@@ -4,6 +4,7 @@ stepper:
   nextStep: 下一步
   jumpToStep: 跳转至任意步骤
   allSteps: 全部引导步骤 ({count})
+  stepCount: 步骤 {current} / {total}
 
 shell:
   close: 关闭
@@ -11,6 +12,10 @@ shell:
   previous: 返回
   next: 继续
   skip: 稍后设置
+  brand: AIRI 伴侣设置
+  stageReady: 舞台就绪
+  closeSetup: 关闭设置 (稍后继续)
+  placeholderNotice: 该模块正在配置中，您可以继续进行下一步。
 
 steps:
   welcome:
@@ -57,6 +62,41 @@ steps:
       restoreAndLaunch: 恢复并启动舞台 (~30秒)
       restoreAndBuild: 恢复并创建新伴侣
       syncing: 正在恢复云端伴侣...
+      bannerTitle: 发现云端备份
+      bannerDesc: 在您的 Cloudflare R2 保管库中发现了 {count} 个伴侣档案。
+      restoring: 正在恢复伴侣...
+      restoreAll: 恢复并启动舞台
+    stepBadge: 架构分流 · 步骤 {current} / {total}
+    companionGreeting: 欢迎来到 AIRI！请选择舞台的运行架构。您可以完全在本地离线运行，也可以登录账号以实现多设备同步。
+    local:
+      badge: 离线优先
+      title: 本地伴侣 (完全隔离)
+      description: 100% 离线与隐私保护。所有角色卡、记忆与状态均保存在本地数据库中，绝无云端遥测通信。
+      selectedCta: 已选择 (离线模式)
+      selectCta: 选择本地模式
+      features:
+        f1: 设备内 100% 离线存储
+        f2: 零云端遥测与外部网络请求
+        f3: 基于本地数据库极速秒开
+    cloud:
+      badge: 多设备同步
+      title: 账号登录 (Cloudflare)
+      description: 连接您的账号，通过端到端加密跨设备无缝同步伴侣、配置与记忆库。
+      selectedCta: 已选择 (云端备份)
+      selectCta: 选择云端同步
+      features:
+        f1: Cloudflare R2 加密云端备份
+        f2: 顺畅的多设备实时同步
+        f3: Edge Vault 凭据自动恢复
+    auth:
+      connected: 已连接至 Cloudflare
+      disconnect: 断开连接
+      autoTab: 一键浏览器授权
+      tokenTab: API 令牌
+      verifying: 验证中...
+      oauthButton: 使用 Cloudflare 登录
+      tokenPlaceholder: 粘贴您的 Cloudflare API 令牌...
+      verifyToken: 连接令牌
 
   appearance:
     label: 外观
@@ -72,6 +112,8 @@ steps:
       dark: 暗色模式
       light: 亮色模式
       system: 跟随系统
+      darkDesc: 深邃黑曜石质感
+      lightDesc: 明亮自然光影工作台
     colorSection:
       title: 专属强调色盘
       description: 选择能够展现个性的强调色彩，应用于按钮、高亮以及伴侣光晕特效。
@@ -82,6 +124,7 @@ steps:
         flora: 大地与生机
         ocean: 蔚蓝与晴空
         royal: 尊贵与繁花
+      activeColor: '当前应用: {color}'
     perDeviceToggle: 仅在本设备保留此外观（不参与云端同步覆盖）
 
   experience:
@@ -114,6 +157,36 @@ steps:
         title: 全能旗舰
         tag: 步骤完整 · 应有尽有
         description: 旗舰级顶配体验：语音双向识别、视觉分析、桌面监控、主动感知、艺术创作、外部工具与四象限记忆。
+      quiet:
+        title: 静默观察者
+        badge: ⚡ 极速 · 极简主义
+        subtitle: 文本、表情与记忆
+        description: 零音频开销，具备舞台化身表情、思考节奏与长期记忆的轻量级文本伴侣。
+      casual:
+        title: 日常伴侣
+        badge: ✨ 热门之选
+        subtitle: 语音对话与视觉感知
+        description: 实时语音转写(STT)、情感语音合成(TTS)、聊天图片感知、自然交流节奏与记忆。
+      muse:
+        title: 灵感缪斯
+        badge: 🎨 视觉焦点
+        subtitle: 语音、视觉与艺术创作
+        description: 语音对话、图像生成(Pollinations/ComfyUI)、图片理解与丰富的化身变形。
+      copilot:
+        title: 高效副驾驶
+        badge: 💼 生产力助手
+        subtitle: 语音 + 行动工具
+        description: 语音对话、桌面屏幕观察、本地文件系统 MCP 工具与实时网络搜索。
+      roommate:
+        title: 日常室友
+        badge: 🌙 主动陪伴
+        subtitle: 生活作息与常驻存在
+        description: 语音交流、环境心跳、就寝作息、免打扰时段与屏幕感知。
+      swiss-army:
+        title: 全能瑞士军刀
+        badge: 🔥 全功能 · 一应俱全
+        subtitle: 全功能自主多模态
+        description: 旗舰级全能数字伴侣。听觉、神经语音、思考节奏、双阶段ACT表情、屏幕观察、艺术生成与认知记忆层级。
     advanced:
       toggle: '高级：自定义各个模块开关'
       description: 手动启用或禁用特定的感官与认知能力模块。
@@ -128,6 +201,8 @@ steps:
         artistry: 艺术创作 (AI 绘画与自主导演)
         memory: 记忆体系 (四象限认知记忆)
         tools: 外部工具 (联网搜索与桌面 MCP)
+    hideModules: 隐藏模块
+    customizeModules: '高级: 自定义单个模块'
 
   profile:
     label: 用户画像
@@ -140,6 +215,9 @@ steps:
     pronouns:
       label: 称谓人称代词
       placeholder: 例如：他、她、TA
+      he: 男性
+      she: 女性
+      they: 非二元性别
     relationship:
       label: 相处关系动态
       options:

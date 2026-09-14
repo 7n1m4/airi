@@ -189,7 +189,7 @@ const activeColorName = computed(() => {
             <div :class="['i-solar:global-bold-duotone text-lg text-primary-500']" />
             <div>
               <h2 :class="['text-xs font-bold text-neutral-800 dark:text-neutral-200']">
-                {{ t('onboarding.steps.appearance.languageSection') }}
+                {{ t('onboarding.steps.appearance.languageSection.title') }}
               </h2>
               <p :class="['text-[11px] text-neutral-400']">
                 Current: <span :class="['text-primary-500 font-semibold uppercase']">{{ currentLanguage }}</span>
@@ -253,7 +253,7 @@ const activeColorName = computed(() => {
 
         <div :class="['text-[11px] text-neutral-400 flex items-center gap-1.5 pt-2 border-t border-neutral-100 dark:border-neutral-800/80']">
           <div :class="['i-solar:info-circle-linear text-xs text-neutral-400']" />
-          <span>{{ t('onboarding.steps.appearance.languageNote') }}</span>
+          <span>{{ t('onboarding.steps.appearance.languageSection.description') }}</span>
         </div>
       </div>
 
@@ -272,15 +272,15 @@ const activeColorName = computed(() => {
               <div :class="[isDark ? 'i-solar:moon-bold-duotone text-indigo-400' : 'i-solar:sun-2-bold-duotone text-amber-500', 'text-lg']" />
               <div>
                 <h2 :class="['text-xs font-bold text-neutral-800 dark:text-neutral-200']">
-                  {{ t('onboarding.steps.appearance.themeSection') }}
+                  {{ t('onboarding.steps.appearance.themeSection.title') }}
                 </h2>
                 <p :class="['text-[11px] text-neutral-400']">
-                  {{ t('onboarding.steps.appearance.themeDesc') }}
+                  {{ t('onboarding.steps.appearance.themeSection.description') }}
                 </p>
               </div>
             </div>
             <span :class="['text-[10px] font-mono px-2 py-0.5 rounded-full border border-neutral-200 dark:border-neutral-700 text-neutral-500 dark:text-neutral-400 bg-neutral-50 dark:bg-neutral-800/50']">
-              {{ isDark ? t('onboarding.steps.appearance.darkMode') : t('onboarding.steps.appearance.lightMode') }}
+              {{ isDark ? t('onboarding.steps.appearance.themeSection.dark') : t('onboarding.steps.appearance.themeSection.light') }}
             </span>
           </div>
 
@@ -302,10 +302,10 @@ const activeColorName = computed(() => {
               </div>
               <div :class="['min-w-0']">
                 <div :class="['text-xs font-bold', isDark ? 'text-indigo-400' : 'text-neutral-800 dark:text-neutral-200']">
-                  {{ t('onboarding.steps.appearance.darkMode') }}
+                  {{ t('onboarding.steps.appearance.themeSection.dark') }}
                 </div>
                 <div :class="['text-[10px] text-neutral-400 truncate']">
-                  {{ t('onboarding.steps.appearance.darkDesc') }}
+                  {{ t('onboarding.steps.appearance.themeSection.darkDesc') }}
                 </div>
               </div>
             </button>
@@ -326,10 +326,10 @@ const activeColorName = computed(() => {
               </div>
               <div :class="['min-w-0']">
                 <div :class="['text-xs font-bold', !isDark ? 'text-amber-500' : 'text-neutral-800 dark:text-neutral-200']">
-                  {{ t('onboarding.steps.appearance.lightMode') }}
+                  {{ t('onboarding.steps.appearance.themeSection.light') }}
                 </div>
                 <div :class="['text-[10px] text-neutral-400 truncate']">
-                  {{ t('onboarding.steps.appearance.lightDesc') }}
+                  {{ t('onboarding.steps.appearance.themeSection.lightDesc') }}
                 </div>
               </div>
             </button>
@@ -349,10 +349,10 @@ const activeColorName = computed(() => {
               <div :class="['i-solar:palette-bold-duotone text-lg text-primary-500']" />
               <div>
                 <h2 :class="['text-xs font-bold text-neutral-800 dark:text-neutral-200']">
-                  {{ t('onboarding.steps.appearance.accentSection') }}
+                  {{ t('onboarding.steps.appearance.colorSection.title') }}
                 </h2>
                 <p :class="['text-[11px] text-neutral-400']">
-                  <span :class="['text-primary-500 font-semibold']">{{ t('onboarding.steps.appearance.activeLabel', { color: activeColorName }) }}</span>
+                  <span :class="['text-primary-500 font-semibold']">{{ t('onboarding.steps.appearance.colorSection.activeColor', { color: activeColorName }) }}</span>
                 </p>
               </div>
             </div>
@@ -366,7 +366,7 @@ const activeColorName = computed(() => {
                 @click="resetColorToDefault"
               >
                 <div :class="['i-solar:restart-linear text-xs']" />
-                <span>{{ t('onboarding.steps.appearance.resetDefault') }}</span>
+                <span>{{ t('onboarding.steps.appearance.colorSection.defaultColor') }}</span>
               </button>
               <SettingsThemeHeaderWidget shrink-0 />
             </div>
@@ -426,7 +426,7 @@ const activeColorName = computed(() => {
         <div :class="['i-solar:laptop-minimalistic-bold-duotone text-base text-primary-500 shrink-0']" />
         <div :class="['min-w-0']">
           <div :class="['font-semibold text-neutral-800 dark:text-neutral-200']">
-            {{ t('onboarding.steps.appearance.syncPerDevice') }}
+            {{ t('onboarding.steps.appearance.perDeviceToggle') }}
           </div>
           <div :class="['text-[11px] text-neutral-400 truncate']">
             Prevents remote cloud sync from overwriting this machine's language and theme preferences.

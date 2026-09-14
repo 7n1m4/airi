@@ -14,9 +14,9 @@ const { t } = useI18n()
 const showSkipConfirmation = ref(false)
 
 const featurePills = computed(() => [
-  { icon: 'i-solar:cpu-bolt-bold-duotone', label: t('onboarding.steps.welcome.pills.localGpu'), color: 'text-cyan-400' },
-  { icon: 'i-solar:shield-check-bold-duotone', label: t('onboarding.steps.welcome.pills.privacy'), color: 'text-emerald-400' },
-  { icon: 'i-solar:magic-stick-3-bold-duotone', label: t('onboarding.steps.welcome.pills.mixMatch'), color: 'text-purple-400' },
+  { icon: 'i-solar:cpu-bolt-bold-duotone', label: t('onboarding.steps.welcome.pills.webgpu'), color: 'text-cyan-400' },
+  { icon: 'i-solar:shield-check-bold-duotone', label: t('onboarding.steps.welcome.pills.offline'), color: 'text-emerald-400' },
+  { icon: 'i-solar:magic-stick-3-bold-duotone', label: t('onboarding.steps.welcome.pills.souls'), color: 'text-purple-400' },
 ])
 
 function confirmCloseToTray() {
@@ -59,10 +59,10 @@ function confirmCloseToTray() {
       :class="['text-center']"
     >
       <h1 :class="['text-3xl text-neutral-900 dark:text-white font-bold tracking-tight']">
-        {{ t('onboarding.steps.welcome.title') }}
+        {{ t('onboarding.steps.welcome.heroTitle') }}
       </h1>
       <p :class="['mt-2 text-sm text-neutral-600 dark:text-neutral-400']">
-        {{ t('onboarding.steps.welcome.description') }}
+        {{ t('onboarding.steps.welcome.heroSubtitle') }}
       </p>
     </div>
 
@@ -92,7 +92,7 @@ function confirmCloseToTray() {
           'text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed backdrop-blur-md bg-primary-500/5 dark:bg-primary-950/20 shadow-lg shadow-primary-950/10',
         ]"
       >
-        "{{ t('onboarding.steps.welcome.companionGreeting') }}"
+        "{{ t('onboarding.steps.welcome.companionQuote') }}"
       </div>
     </div>
 
@@ -103,33 +103,37 @@ function confirmCloseToTray() {
       :enter="{ opacity: 1, y: 0 }"
       :duration="400"
       :delay="300"
-      :class="['flex flex-wrap items-center justify-center gap-2.5 pt-1']"
+      :class="['flex flex-wrap items-center justify-center gap-2 max-w-lg']"
     >
       <div
         v-for="pill in featurePills"
         :key="pill.label"
-        :class="['inline-flex items-center gap-2 rounded-full border border-neutral-200 dark:border-white/10 bg-black/[0.03] dark:bg-white/[0.03] px-3.5 py-1 text-xs text-neutral-700 dark:text-neutral-300']"
+        :class="[
+          'flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium',
+          'border-neutral-200/80 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-md',
+          'text-neutral-700 dark:text-neutral-300 shadow-xs',
+        ]"
       >
-        <div :class="[pill.icon, pill.color, 'h-4 w-4']" />
+        <div :class="[pill.icon, pill.color, 'h-3.5 w-3.5 shrink-0']" />
         <span>{{ pill.label }}</span>
       </div>
     </div>
 
-    <!-- Action Bar -->
+    <!-- Action Buttons -->
     <div
       v-motion
       :initial="{ opacity: 0, y: 10 }"
       :enter="{ opacity: 1, y: 0 }"
       :duration="400"
       :delay="400"
-      :class="['flex flex-wrap items-center justify-center gap-3 pt-3']"
+      :class="['flex flex-col sm:flex-row items-center gap-3 pt-3']"
     >
       <button
         v-if="props.onQuickStart"
         type="button"
         :class="[
-          'flex items-center gap-2 rounded-xl bg-cyan-500/15 hover:bg-cyan-500/25 border border-cyan-500/30 px-5 py-2.5',
-          'text-sm font-semibold text-cyan-600 dark:text-cyan-300 shadow-md shadow-cyan-500/10 transition-all active:scale-95 cursor-pointer',
+          'rounded-xl px-5 py-2.5 text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer',
+          'border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 shadow-sm shadow-cyan-500/10',
         ]"
         @click="props.onQuickStart"
       >
@@ -139,10 +143,9 @@ function confirmCloseToTray() {
 
       <Button
         variant="primary"
-        size="lg"
         :class="[
-          'flex items-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-500 px-6 py-2.5',
-          'text-sm font-semibold text-white shadow-lg shadow-primary-600/25 transition-all active:scale-95 cursor-pointer',
+          'rounded-xl px-6 py-2.5 text-sm font-semibold shadow-lg shadow-primary-500/20 transition-all cursor-pointer',
+          'flex items-center gap-2',
         ]"
         @click="props.onNext"
       >
@@ -159,7 +162,7 @@ function confirmCloseToTray() {
       </button>
     </div>
 
-    <!-- Skip / Setup Later Confirmation Dialog -->
+    <!-- Skip Later Confirmation Modal Dialog -->
     <div
       v-if="showSkipConfirmation"
       :class="['fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fadeIn']"
@@ -171,14 +174,14 @@ function confirmCloseToTray() {
 
         <div>
           <h3 :class="['text-base font-bold text-neutral-900 dark:text-white']">
-            {{ t('onboarding.steps.welcome.skipDialog.title') }}
+            {{ t('onboarding.steps.welcome.dialog.savedTitle') }}
           </h3>
           <p :class="['mt-2 text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed']">
-            {{ t('onboarding.steps.welcome.skipDialog.description') }}
+            {{ t('onboarding.steps.welcome.dialog.savedDescription') }}
           </p>
           <div :class="['mt-3 rounded-xl border border-primary-500/30 bg-primary-500/10 dark:bg-primary-950/30 px-3.5 py-2 text-xs font-semibold text-primary-600 dark:text-primary-300 flex items-center justify-center gap-2']">
             <div :class="['i-solar:cursor-square-bold-duotone h-4 w-4']" />
-            <span>{{ t('onboarding.steps.welcome.skipDialog.trayMenuLabel') }}</span>
+            <span>{{ t('onboarding.steps.welcome.dialog.trayItem') }}</span>
           </div>
         </div>
 
@@ -188,14 +191,14 @@ function confirmCloseToTray() {
             :class="['flex-1 rounded-xl border border-neutral-200 dark:border-white/10 bg-neutral-100 dark:bg-white/5 px-4 py-2 text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-white/10 transition-colors cursor-pointer']"
             @click="showSkipConfirmation = false"
           >
-            {{ t('onboarding.steps.welcome.skipDialog.continueButton') }}
+            {{ t('onboarding.steps.welcome.dialog.continue') }}
           </button>
           <button
             type="button"
             :class="['flex-1 rounded-xl bg-primary-600 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-500 transition-colors shadow-md shadow-primary-600/30 cursor-pointer']"
             @click="confirmCloseToTray"
           >
-            {{ t('onboarding.steps.welcome.skipDialog.closeButton') }}
+            {{ t('onboarding.steps.welcome.dialog.closeToTray') }}
           </button>
         </div>
       </div>
