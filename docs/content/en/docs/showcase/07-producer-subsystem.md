@@ -1,22 +1,38 @@
-# AI Producer Subsystem
+# AI Producer Subsystem & Intimacy Engine
 
-![AI Producer Subsystem](/showcase/hero-07-producer-subsystem.avif)
+![AI Producer Directives in Live Chat](/showcase/producer-directives-live-chat.avif)
 
-The AI Producer is a dual-track suggestions engine that gives characters two completely different modes of proactive interaction. Producer Lite is the game-changer: a fully stateless suggestion engine that operates entirely within the chatbox context using only the local conversation thread. It generates context-aware, user-mimicking interactive suggestions with zero configuration, database records, or storyline setups — it works instantly on any character session. Recently integrated into the Actor Stage, suggestions now appear alongside the character.
+The **AI Producer Subsystem** is a dual-track cognitive director that transforms passive chatting into dynamic, interactive storytelling. Acting as an intelligent backstage prompter, it generates context-aware user suggestions, branching choices, and emotional directives in real time.
 
-The Quick-Suggest magic wand triggers suggestions from your current composer input text. A Play-All button does sequential TTS playback of all alternative paths. Decoupled preview textareas let you edit suggestions before sending. The WhisperDock inside the actor stage provides floating voice control for hands-free interaction.
+---
 
-Producer+ handles the full orchestration side: Producer OE (Open-Ended), GD-IT (Gameshow Host / Initial Turn), and GD-NT (Next Turn) engines tie suggestion choices directly to the Intimacy Engine's variables (`intimacyChange`, `tensionChange`, `mood`), storyline guidelines, local scene settings, and custom encounter rules. Cache-aligned full-context suggestions come with editable prompt templates for custom prompting.
+## Producer Lite: Instant Stateless Suggestions
+
+![Producer Directives in Live Chat](/showcase/producer-directives-live-chat.avif)
+
+Operating with zero configuration or complex database setup, **Producer Lite** works immediately on any character session:
+- **Quick-Suggest Magic Wand**: Analyzes the latest turns and suggests three contextual replies matching your conversational persona.
+- **Stage Suggestions**: Interactive suggestions can float directly on the Actor Stage alongside the character for immersive, hands-free interaction.
+- **Sequential TTS Playback**: Audition multiple suggested dialogue paths aloud before choosing which line to speak.
+
+---
+
+## Producer+ & The Intimacy Engine
+
+![Producer Prompt & Configuration Modal](/showcase/producer-prompt-modal.avif)
+
+For rich roleplay and visual novel scenarios, **Producer+** orchestrates branching narratives tied to relationship dynamics:
+- **Intimacy & Tension Tracking**: Dynamically computes `intimacyChange`, `tensionChange`, and character `moodState` based on conversational choices.
+- **Dating Sim Presets**: Amagami-style turn pacing, storyline goals, and branching encounter paths.
+- **Producer Directives**: Allows users to whisper hidden narrative instructions to the character mid-conversation without breaking immersion.
+
+---
 
 ## Key Capabilities
 
-- Producer Lite: stateless, zero-config, works instantly on any session
-- Quick-Suggest magic wand triggered from composer input text
-- Play-All button for sequential TTS playback of suggestions
-- WhisperDock floating voice control in the actor stage
-- Producer+: OE, GD-IT, and GD-NT engines with intimacy engine integration
-- Cache-aligned full-context suggestions with editable prompt templates
-- Eternal Record context injection for deeper historical pattern reference
-- Token-driven multi-character synchronization
-
-> See the [full feature breakdown](/en/docs/chronicles/feature-report#17-ai-producer-subsystem) in the Feature Report.
+- **Producer Lite**: Lightweight, zero-config suggestions generated purely from local conversation context.
+- **Stage WhisperDock**: Floating vocal suggestions and controls rendered on the transparent actor stage.
+- **Intimacy & Tension Variables**: Dynamic numerical tracking of relationship milestones.
+- **Branching Encounter Presets**: Integrated Dating Sim storyline goals and scenario conditions.
+- **Cache-Aligned Prompting**: Optimized prompt structures maximizing LLM KV-cache reuse.
+- **Producer Directives**: Backstage whisper directives steering character actions in real time.

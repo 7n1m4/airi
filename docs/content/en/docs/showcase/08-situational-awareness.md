@@ -1,22 +1,48 @@
-# Situational Awareness & Proactivity
+# Situational Awareness & Conversational Pacing
 
-![Situational Awareness](/showcase/hero-08-situational-awareness.avif)
+![Situational Awareness & Pacing](/showcase/hero-08-situational-awareness.avif)
 
-Characters in this fork don't just respond — they perceive and react to your real-world desktop environment. Real-time OS sensor injection feeds the active window title, program name, and user idle (AFK) status into the LLM context. Activity history tracks which applications you've been using and for how long, enabling grounded and reactive roleplay that references your actual behavior.
+The **Situational Awareness & Pacing** engine grants characters continuous peripheral perception of your digital workspace. Rather than waiting passively for typed prompts, characters observe your active windows, monitor system telemetry, track idle periods, and engage in natural conversational pacing with contextual spoken fillers.
 
-Environment telemetry covers CPU/GPU load, system volume (via native sensor, with an AppleScript fallback on macOS to prevent system diagnostics crashes), and local time — characters can coordinate their energy levels or suggestions with your PC's state. Tool-aware proactivity lets the AI fetch contextually relevant tools during proactive evaluation, so a character discussing music can query your system volume or current playback.
+---
 
-Deep Context Awareness means the character knows its own state — when it's blushing, wearing accessories, or what stickers are on screen. Metric-driven milestones track session-level metadata (total turns, journal entries) to trigger special conversational moments. Mid-card-switch proactivity guards and session ownership validation prevent the character from speaking into the wrong session during rapid character changes.
+## Desktop Perception & Environmental Sensors
+
+![Situational Awareness Telemetry](/showcase/hero-08-situational-awareness.avif)
+
+AIRI gathers environmental telemetry without compromising user privacy:
+- **Active Window Telemetry**: Tracks active application titles (IDE, browser tabs, media players) to generate relevant conversational banter.
+- **Hardware Load Sensors**: Measures CPU, GPU, and RAM utilization to react with concern or amusement during heavy gaming or rendering workloads.
+- **AFK & Idle Detection**: Distinguishes between active typing, brief reading pauses, and extended away-from-keyboard states.
+
+---
+
+## Continuous Screen Perception & Vision Simulator
+
+![Vision Simulator Interactive](/showcase/settings-vision-simulator-interactive.avif)
+
+- **Cascaded Salience Gate**: Background screen capture pipeline with perceptual hashing (pHash) and OCR filtering to only send meaningful screen changes to the Vision LLM.
+- **Interactive Vision Simulator**: Test and calibrate screen perception sensitivity, OCR confidence thresholds, and application exclusion lists inside settings.
+- **Privacy Exclusions**: Automatically blanks out password managers, private messaging apps, and banking windows from screen perception.
+
+---
+
+## Conversational Pacing & Dynamic Spoken Fillers
+
+![Conversational Pacing & Audio Fillers](/showcase/pacing-audio-fillers.avif)
+
+Natural conversations include brief verbal pauses, thinking fillers, and emotional affirmations:
+- **Dynamic Spoken Fillers**: During long LLM inference turns, AIRI speaks brief contextual fillers (*"Hmm, let me see..."*, *"Give me a second..."*) to eliminate awkward silence.
+- **Prewarming & Audio Caching**: Pre-synthesizes high-probability filler phrases into an in-memory PCM cache for instantaneous playback.
+- **Seamless Answer Handoff**: Smoothly transitions from thinking filler audio into the generated main response without audio pops or clipping.
+
+---
 
 ## Key Capabilities
 
-- Real-time OS sensors: active window, program name, AFK status
-- Activity history tracking with per-application usage duration
-- Environment telemetry: CPU/GPU load, system volume, local time
-- AppleScript fallback for active window tracking on macOS
-- Tool-aware proactivity fetching contextually relevant tools
-- Deep Context Awareness: expression, sticker, and scene awareness
-- Metric-driven conversational milestones
-- Mid-card-switch proactivity guards and session validation
-
-> See the [full feature breakdown](/en/docs/chronicles/feature-report#18-situational-awareness--proactivity) in the Feature Report.
+- **Active-Window Awareness**: Contextual reactions based on current desktop software and tasks.
+- **System Telemetry Sensing**: Live awareness of CPU/GPU utilization and system idle status.
+- **Cascaded Salience Gate**: Intelligent vision filter preventing redundant VLM API calls.
+- **Privacy Exclusions**: Excludes sensitive windows and applications from screen capture.
+- **Dynamic Spoken Fillers**: Eliminates inference silence with natural vocal thinking sounds.
+- **Zero-Latency Audio Prewarming**: Cached acoustic buffers ensuring instant vocal feedback.

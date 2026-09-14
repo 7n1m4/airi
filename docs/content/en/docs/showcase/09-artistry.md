@@ -1,23 +1,61 @@
-# Artistry & Creative Generation
+# Production Studio & Autonomous Artistry
 
-![Artistry](/showcase/hero-09-artistry.avif)
+![Production Studio & Autonomous Artistry](/showcase/hero-09-artistry-studio.avif)
 
-The image generation pipeline has been completely redesigned for performance and creative control. Native ComfyUI API support provides direct, high-speed HTTP integration with any local or network ComfyUI instance — no middleware, CLI bridges, or WSL required. Replicate Cloud is a first-class remote provider with pricing transparency built into the UI, and NanoBanana rounds out the backend options.
+The **Production Studio & Autonomous Artistry** subsystem turns AIRI from a conversational agent into a full-fledged cinematic director. Powered by an autonomous **Director Loop**, ComfyUI Bring-Your-Own-Workflow (BYOW) integration, persistent visual state tracking, and a durable Scene Vault, AIRI generates story illustrations, selfies, and visual novel backdrops in real time as conversations unfold.
 
-"Bring Your Own Workflow" (BYOW) lets you upload any `workflow_api.json` from ComfyUI and visually map specific nodes — prompts, seeds, LoRA weights — to be AI-controllable. Workflow templates and presets can be saved and reused as named node graphs, with different characters assigned unique generation personalities and prompt prefixes. Bidirectional `{{PROMPT}}` / `{{IMAGE}}` placeholders enable clean remix and image-conditioned flows across all provider backends.
+---
 
-"Imagine" mode puts image generation directly in the chatbox — click a button, type a prompt, generate on demand. No need to go through the AI or settings. Generated art is instantly archived into the character-scoped Image Journal, and the Background-Journal bridge lets you set any generated image as the character's background in one click. ComfyUI support extends to the web surface for browser-based generation.
+## The Director's Monitor
+
+![Director's Monitor](/showcase/studio-directors-monitor.avif)
+
+The **Director's Monitor** is the command deck for cinematic storytelling:
+- **Narrative Tension & Pacing Gauges**: Live evaluation of story tension (`82/100`), pacing coefficients, and narrative arc progress.
+- **Multi-Actor Manifestation Tags**: Tracks which cast members and locations are currently manifested (`PLACE_ALT_2`, `ACTOR_OSHINO_SHINOBU`, `ACTOR_MR_SQUEAKS`).
+- **Live Visual State Board**: Maintains consistent character outfits, hairstyles, lighting conditions, and environments across consecutive generated images.
+
+---
+
+## Timelines & Multi-Arc Visual State
+
+![Branching Story Timelines & Visual State Board](/showcase/studio-timelines-and-visual-state.avif)
+
+Storylines branch and evolve over time:
+- **Branching Universe Timelines**: Switch between divergent story timelines (e.g. *Main Timeline*, *Timeline 6*, *Beach Trip Arc*) with complete visual isolation.
+- **World Bible Directives**: Author rigid prompt constraints, cast character tags, and wardrobe tokens to ensure generated art remains true to character lore.
+
+![Stage Directives & World Bible](/showcase/studio-stage-directives-world-bible.avif)
+
+---
+
+## Scene Vault: Generated Art & Selfie History
+
+![Scene Vault Gallery](/showcase/studio-scene-vault.avif)
+
+The **Scene Vault** is a persistent visual archive preserving every illustration generated during conversations:
+- **Universe-Scoped Galleries**: Browse generated art grouped by character, universe arc, and episode session.
+- **Metadata Overlays**: Inspect prompt seeds, sampler settings, LoRA weights, and generation timestamps.
+- **1-Click Stage Background Binding**: Set any generated illustration as the active stage backdrop with a single click.
+
+---
+
+## Global Generation Canvas & Autonomous Controls
+
+![Live Studio Generation Canvas](/showcase/settings-artistry-live-studio-canvas.avif)
+
+- **Universal Engine Support**: Direct integration with local ComfyUI, Pollinations AI, Replicate, and Nano Banana Google AI Studio.
+- **Autonomous Director Sensitivity Deck**: Fine-tune the manifestation threshold (`23%`), evaluation targets, and context history depth for spontaneous background image generation.
+
+![Director Sensitivity Tuning Deck](/showcase/studio-director-sensitivity-controls.avif)
+
+---
 
 ## Key Capabilities
 
-- Native ComfyUI API with no middleware or WSL requirements
-- Replicate Cloud with in-UI pricing transparency
-- "Bring Your Own Workflow" (BYOW) with visual node mapping
-- Workflow templates and presets with per-character personalities
-- Bidirectional `{{PROMPT}}` / `{{IMAGE}}` placeholders
-- "Imagine" mode for user-driven on-demand generation
-- Automated Image Journal handoff and background bridge
-- ComfyUI Web Surface support for browser-based generation
-- Global and per-character provider control with dynamic prompt stripping
-
-> See the [full feature breakdown](/en/docs/chronicles/feature-report#15-artistry--creative-generation) in the Feature Report.
+- **Autonomous Director Loop**: Evaluates narrative shifts and generates matching imagery without manual prompts.
+- **Persistent Visual State Board**: Guarantees visual continuity of clothing, hairstyles, and scenery across turns.
+- **Branching Story Universes**: Multiple timeline tracks with isolated scene and image histories.
+- **Scene Vault Archive**: Durable local storage for generated art, character selfies, and stage backgrounds.
+- **ComfyUI BYOW Protocol**: Upload custom `workflow_api.json` templates with exposed field substitution.
+- **Director Sensitivity Tuning**: Configurable autonomy thresholds for seamless background generation.

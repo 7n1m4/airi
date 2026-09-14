@@ -1,23 +1,62 @@
-# Chatbox Redesign
+# 3-Column Chat Workspace & Grounding
 
-![Chatbox Redesign](/showcase/hero-05-chatbox-redesign.avif)
+![3-Column Chat Workspace](/showcase/hero-05-chatbox-redesign.avif)
 
-The main conversation workspace has been completely re-architected into a three-column layout where navigation, conversation, and context sidebars are separated into dedicated surfaces that never compete for screen space. A sliding left sidebar acts as the primary navigation hub — switch between Chat Messages, Studio Monitor, World Bible, Media Library, and Settings. On mobile, it operates as a responsive overlay drawer.
+The **Chat Workspace** is a high-performance conversational environment designed for power users and creators. Expanding far beyond a simple bubble list, it features a **3-column layout**, real-time pre-flight memory and context grounding inspection, spoken sentence highlights, arcade gaming backseat modes, an immutable event ledger, and minimal single-column focus states.
 
-The right context panel displays Memory Cards (Echo chips, daily summaries, journal entries) and a lazy-loading Media Gallery in a unified collapsible header bar. A centered session switcher and quick LLM selector ("Brain Popover") sit in the titlebar. Naked-on-idle premium button styling keeps the interface clean, revealing hover states only on cursor movement.
+---
 
-The chat UX is packed with enrichments: real-time spoken highlights use the CSS Custom Highlight API to show the exact sentence being uttered without any DOM thrashing. Mood tags like `[happy]` or `[sad]` color-code chat bubbles with background tints and border glows. Screenplay actor formatting adds high-contrast dynamic chips with actor-aware colored text. Both user and assistant messages are inline-editable. Draft autosave preserves typed text across restarts. Timeline management lets you Fork & Switch, Trim Timeline, or Delete Following directly from the message action menu.
+## 3-Column Studio Workspace
+
+![Full 3-Column Chat Workspace](/showcase/chatbox-workspace-full.avif)
+
+The interface is structured into three dedicated functional zones:
+- **Left Column (Navigation & Sessions)**: Instant character switching, branching timeline trees, and session forks.
+- **Center Column (Interactive Transcript)**: Markdown messages, thinking accordions, emotional actor badges (`[ 🗣 Aqua ]`), spoken audio waveforms, and inline tool results.
+- **Right Column (Context Grounding & Memory)**: Live inspection of system prompt injections, active memories (STMM/LTMM), MCP tools, and sensory telemetry.
+
+---
+
+## Context Injections & Memory Grounding
+
+![Context Injections Menu](/showcase/chatbox-context-injections-menu.avif)
+
+### Memory Context Popover & Rolling Cache
+
+![Memory Context Popover](/showcase/memory-context-popover.avif)
+
+- **Memory Context Popover**: Inspect exactly which Short-Term Memories, Long-Term Journal entries, and Echo Chips were injected into the active LLM context window.
+- **Dynamic Context Toggles**: Instantly toggle whether active window titles, clipboard contents, or recent sensory events are included in the prompt.
+
+---
+
+## Interactive Modes & Tools
+
+### Arcade Gaming & Stream Backseat Mode
+
+![Arcade Gaming Backseat](/showcase/chatbox-arcade-gaming-backseat.avif)
+
+- **Gaming Backseat Mode**: Tailors the chatbox for stream commentary and gaming sessions, enabling rapid voice-activated interjections and concise status reports.
+- **Minimal Single-Column View**: Collapse side panels for a focused, distraction-free writing experience.
+
+![Minimal Single-Column Focus Mode](/showcase/chatbox-minimal-single-column.avif)
+
+### Event Ledger & Daily Recap
+
+![Event Ledger Activity Trail](/showcase/chatbox-event-ledger.avif)
+
+- **Event Ledger**: An append-only activity log tracing system events, background proactivity heartbeats, tool calls, and model switches.
+- **Daily Recap Modal**: Synthesizes daily conversations into high-level recaps and action items for seamless continuity across days.
+
+![Daily Recap Modal](/showcase/chatbox-daily-recap-modal.avif)
+
+---
 
 ## Key Capabilities
 
-- Three-column workspace: left nav, center chat, right context panel
-- Centered session switcher and Brain Popover in the titlebar
-- Real-time spoken highlights via CSS Custom Highlight API (zero DOM thrashing)
-- Mood tags with color-coded chat bubbles
-- Screenplay actor formatting with dynamic chips
-- Inline editing for both user and assistant messages
-- Draft autosave, configurable send key, context meter
-- Timeline management: Fork & Switch, Trim Timeline, Delete Following
-- Caption system with colored segments and actor-aware tracking
-
-> See the [full feature breakdown](/en/docs/chronicles/feature-report#21-chatbox-redesign) in the Feature Report.
+- **3-Column Architecture**: Session navigation, active transcript, and context grounding on one screen.
+- **Pre-Flight Grounding Panel**: Real-time inspection of system prompt components and token budgets.
+- **Sentence-Sync Audio Highlighting**: Live karaoke-style text highlighting matching TTS speech playback.
+- **Memory Context Inspection**: Visual audit of STMM, LTMM, and Echo Chip prompt injections.
+- **Arcade Backseat Mode**: Optimized layout and behavior for gaming commentary and live streams.
+- **Append-Only Event Ledger**: Complete observability over background triggers and model transactions.

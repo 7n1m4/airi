@@ -49,7 +49,7 @@ That is the promise of this fork: **one enduring presence across conversations, 
 | **World** | Desktop stages, web and pocket surfaces, Discord, scenes, sidecars, and other places the same character can inhabit |
 | **Sovereignty** | Local-first storage, portable character data, optional user-owned cloud sync, and no developer-operated analytics |
 
-The complete implementation catalog lives in the [feature report](./docs/content/en/docs/chronicles/feature-report.md). The [showcase](./docs/content/en/docs/showcase/index.md) presents the major experiences visually.
+The complete implementation catalog lives in the [feature report](https://dasilva333.github.io/airi/en/docs/chronicles/feature-report). The [showcase](https://dasilva333.github.io/airi/en/docs/showcase/) presents the major experiences visually.
 
 ---
 
@@ -389,11 +389,11 @@ The provider system supports multiple configured instances rather than treating 
 
 | Document | Use it for |
 |---|---|
-| [Showcase](./docs/content/en/docs/showcase/index.md) | Visual introduction to the major experiences |
-| [Feature report](./docs/content/en/docs/chronicles/feature-report.md) | Detailed inventory of fork-specific capabilities |
+| [Showcase](https://dasilva333.github.io/airi/en/docs/showcase/) | Visual introduction to the major experiences |
+| [Feature report](https://dasilva333.github.io/airi/en/docs/chronicles/feature-report) | Detailed inventory of fork-specific capabilities |
 | [Rosetta Stone](./docs/rosetta-stone.md) | Canonical architecture and source-location map |
 | [Major features](./docs/project-major-features-added.md) | Higher-level implementation catalog |
-| [Roadmap](./docs/content/en/docs/chronicles/roadmap.md) | Pending ideas and planning history; implementation may move ahead of the document |
+| [Roadmap](https://dasilva333.github.io/airi/en/docs/chronicles/roadmap) | Pending ideas and planning history; implementation may move ahead of the document |
 | [Agent guide](./AGENTS.md) | Repository-specific working rules for contributors and coding agents |
 | [Contributing guide](./.github/CONTRIBUTING.md) | Setup, development, and contribution workflow |
 

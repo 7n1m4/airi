@@ -54,6 +54,13 @@ export const SHARED_SIDEBAR: SharedSidebarSection[] = [
         items: [
           { text: 'Gallery', link: 'showcase/' },
           {
+            text: 'Getting Started',
+            items: [
+              { text: 'Onboarding V3 & Quick Start', link: 'showcase/11-onboarding-v3' },
+              { text: 'Settings Hub & Engine Room', link: 'showcase/12-settings-hub' },
+            ],
+          },
+          {
             text: 'Character System',
             items: [
               { text: 'AIRI Card System', link: 'showcase/01-card-system' },

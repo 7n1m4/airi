@@ -1,24 +1,59 @@
-# Discord Integration Revamp
+# Discord Gateway & Connected Surfaces
 
-![Discord Integration](/showcase/hero-10-discord-integration.avif)
+![Discord Gateway & Connected Surfaces](/showcase/hero-10-discord-surfaces.avif)
 
-The Discord bot integration has been rebuilt from the ground up — upstream doesn't have one in functional form. The Classic TTS Voice Pipeline chains Discord Audio → Deepgram STT → Custom LLM → Custom TTS → Discord Audio, with browser-side 24kHz PCM resampling and raw streaming into the active connection's voice player. Self-speaker muting prevents echo-back, and STT ingestion auto-injects voice channel transcripts into chat sessions.
+The **Discord Gateway & Connected Surfaces** subsystem bridges AIRI directly into Discord servers, group chats, and direct messages. Featuring dual execution targets — **Local PC Gateway** and **Cloudflare Workers 24/7 Edge Relay** — it enables characters to participate in text and voice channels, analyze image attachments via VLM, and run autonomously around the clock without keeping your desktop on.
 
-The Bidirectional Gemini Live Audio Bridge is a pure JS audio pipeline connecting Discord voice channels directly to Gemini Live sessions. Audio-to-audio — zero text involved. The auto-session lifecycle starts and stops Gemini Live based on channel activity, with `/summon` and `/leave` voice commands for manual control.
+---
 
-Ten slash commands (`/status`, `/imagine`, `/character`, `/new`, `/history`, `/director`, `/vision`, `/selfie`, `/timelines`, `/journalmoment`) expose full control. The image pipeline lets companions "see" Discord image attachments (via VLM routing) and send visual manifestations back. Per-channel isolation maps each channel to its own character and session. Interaction modes (Queue vs. Steer) let you choose ordered processing or proactive/reactive flow, and the NO_REPLY hook lets the AI intelligently decide to stay silent.
+## Dual Execution: Local Gateway vs Cloud Relay
+
+![Discord Bot Connection Deck](/showcase/discord-bot-connection.avif)
+
+AIRI supports two distinct deployment modes based on your infrastructure needs:
+- **Local (This PC) Mode**: The bot connects directly from your desktop app. Commands and voice audio route through your local LLM and TTS pipeline, with immediate sync to your active desktop stage.
+- **Cloud Relay Studio**: Deploys a stateless, 24/7 character instance to Cloudflare Workers with Edge KV memory. Your companion responds on Discord even when your computer is shut down.
+
+![Cloud Relay Studio & Cloudflare Edge Engine](/showcase/discord-cloud-relay-studio.avif)
+
+---
+
+## Access & Channel Routing Matrix
+
+![Access & Context Routing Table](/showcase/discord-access-routing-table.avif)
+
+Granular routing controls ensure characters only speak when and where intended:
+- **Global Fallback Modes**: Strict Deny Unassigned, Shared Fallback Character, or Isolated Memory Fallback.
+- **Per-Channel Character Mapping**: Bind specific character cards to individual channels (`#general`, `#gaming`, `#lounge`) with dedicated trigger rules (Mentions only vs All messages).
+- **Owner Security & DM Isolation**: Restricts administrative commands to authorized Discord user IDs.
+
+---
+
+## 1-Click Cloudflare Edge Deployment
+
+AIRI includes a guided wizard to package and publish characters to Cloudflare Workers:
+
+### Step 1: Session History Seeding
+
+![Edge Deployment: Session Selection Modal](/showcase/discord-cloudflare-deploy-modal.avif)
+
+- Select which local conversation timeline seeds the character's cloud memory, ensuring conversational continuity between desktop and Discord.
+
+### Step 2: Edge Configuration & Prompt Preview
+
+![Edge Deployment: Configuration Modal](/showcase/discord-cloudflare-config-modal.avif)
+
+- Configure root subdomain handles (`character.workers.dev`).
+- Choose edge-optimized models (Cloudflare Workers AI, OpenRouter, DeepSeek).
+- Live preview of the assembled system prompt with Discord formatting directives and tool capabilities.
+
+---
 
 ## Key Capabilities
 
-- Classic TTS pipeline: Discord → STT → LLM → TTS → Discord (raw PCM streaming)
-- Bidirectional Gemini Live Audio Bridge: audio-to-audio with zero text
-- Auto-session lifecycle with `/summon` and `/leave` voice commands
-- 10 slash commands: `/status`, `/vision`, `/selfie`, `/timelines`, `/journalmoment`, and more
-- Image pipeline: VLM routing for attachments + visual manifestations out
-- Per-channel isolation with `channelId → character → session` mapping
-- DM access control with sync isolation
-- Queue vs. Steer interaction modes with NO_REPLY intelligent silence
-
-> See the [full feature breakdown](/en/docs/chronicles/feature-report#24-discord-integration-revamp) in the Feature Report.
->
-> See the [Discord Commands manual](/en/docs/manual/config/discord-commands) for full configuration details.
+- **Dual Target Execution**: Seamless switching between Local Desktop Gateway and 24/7 Cloudflare Edge Workers.
+- **Per-Channel Routing Table**: Map different characters and memory pools to specific server channels.
+- **VLM Image Intake**: Analyzes user image uploads and screenshots shared in Discord chat.
+- **1-Click Edge Deployment**: Automated bundle compilation and publishing to Cloudflare Workers.
+- **Interactive Simulation Sandbox**: Test bot replies and channel directives inside settings before going live.
+- **Owner Authorization Matrix**: Strict permission gates protecting companion settings from unauthorized users.

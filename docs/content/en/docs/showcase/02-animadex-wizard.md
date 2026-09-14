@@ -2,21 +2,58 @@
 
 ![AnimaDex Guided Card Creator](/showcase/hero-02-animadex-wizard.avif)
 
-The AnimaDex Wizard is a standalone multi-step card creator that guides you from a blank slate to a fully configured character in minutes. It pulls from a dataset of character metadata — series, archetypes, tags — and uses WD14 visual auto-tagging to index your model collection. Step 3 features an AI story idea suggester that generates clickable scenario cards with skeleton loading states and custom prompting guidelines based on your character's archetype.
+The **AnimaDex Wizard** is an AI-assisted character synthesis suite that guides creators from a blank slate to a fully embodied character in minutes. Leveraging indexed anime character datasets, WD14 visual auto-tagging, and LLM story generation, AnimaDex matches characters to avatars, voices, and bespoke narrative scenarios automatically.
 
-Voice and model binding is automated. The extensible provider registry auto-matches voices with fallback proxies, pre-fills model bindings in Step 2's visual roster grid, and supports per-character idle animation selection in the auto-assign flow. The speech/UST pipeline integrates directly into the wizard so your character can speak the moment they're created.
+---
 
-Batch utilities in the Studio panel let you apply the same auto-assignment logic to existing cards — bulk-assign voices and motions without redoing everything. The final confirmation step splits into three explicit actions with backup-on-apply so you never lose work.
+## Intelligent Character Discovery & Search
+
+![Search Autocomplete](/showcase/animadex-search-autocomplete.avif)
+
+The AnimaDex catalog features instantaneous, indexed full-text search across thousands of established anime and game characters:
+- **Instant Autocomplete**: Real-time typeahead matching series names, character aliases, archetypes, and visual traits.
+- **Custom Character Drafting**: For original characters (OCs), the Custom Character Modal provides structured forms to define visual descriptions, tropes, and behavioral quirks.
+
+![Custom Character Creation Modal](/showcase/animadex-custom-character-modal.avif)
+
+---
+
+## Automated Embodiment & Alignment
+
+### Visual Model Matching & WD14 Auto-Tagging
+
+![Cast Gallery & Model Matching](/showcase/animadex-cast-gallery.avif)
+
+AnimaDex connects character metadata directly to your 3D and 2D avatar collection:
+- **WD14 Visual Tagger**: Analyzes installed VRM and Live2D models, extracting hair colors, eye traits, clothing styles, and facial features.
+- **Automated Voice Assignment**: Scans the available TTS provider registry and auto-matches character gender, age, and accent profiles with fallback voice routing.
+
+### Multi-Actor Cast Alignment
+
+![Actor Alignment](/showcase/animadex-actor-alignment.avif)
+
+For multi-actor or visual novel scenarios, AnimaDex organizes characters into cast rosters:
+- Aligns actor identifiers (`actor_aqua`, `actor_nia`, etc.) with specific visual models and wardrobe assets.
+- Preserves token bindings so multi-character conversations transition seamlessly on stage.
+
+---
+
+## AI Story & Scenario Generation
+
+![AI Story & Scenario Generator](/showcase/animadex-story-generator.avif)
+
+Step 3 of the wizard features an LLM scenario idea generator tailored to the character's archetype:
+- **Trope-Driven Scenarios**: Select from narrative tropes (Slice of Life, Cyberpunk Heist, Fantasy Guild, Late Night Study) to generate three distinct scenario proposals.
+- **Turn 0 Greeting Synthesis**: Produces fully formed first greetings containing inline acting tokens, emotional markers, and personalized `{{user}}` substitutions.
+- **Action-Split Confirmation**: Allows inspecting, editing, or re-rolling proposals before committing the card to the stage.
+
+---
 
 ## Key Capabilities
 
-- Dataset-driven character metadata (series, archetypes, tags)
-- WD14 auto-tagging for visual indexing and model binding
-- AI story idea suggester with archetype-based scenario cards
-- Voice auto-assignment via extensible provider registry
-- Per-character idle animation selection in the wizard
-- Speech/UST pipeline integration for immediate voice capability
-- Batch auto-assign utilities for existing cards in the Studio panel
-- Action-split confirmation with backup-on-apply
-
-> See the [full feature breakdown](/en/docs/chronicles/feature-report#3-animadex-guided-card-creator) in the Feature Report.
+- **Indexed Anime Dataset Search**: Real-time autocomplete across thousands of established characters.
+- **Custom Character Creator**: Fast drafting for original characters (OCs) and custom lore.
+- **WD14 Visual Model Tagging**: Automatic visual trait extraction for intelligent model matching.
+- **Auto-Assigned Voice Profiles**: Immediate speech capability matching character archetypes.
+- **Multi-Actor Cast Rosters**: Seamless alignment of multi-character card assets.
+- **AI Story Idea Suggester**: Generates 3 contextual scenario proposals with first-turn greetings and acting cues.
