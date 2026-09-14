@@ -9,7 +9,7 @@ import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useRoute, useRouter } from 'vue-router'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -272,6 +272,43 @@ const providerBlocks = computed(() => {
 
 <template>
   <div mb-6 flex flex-col gap-5>
+    <!-- Free AI Hub Spotlight Banner -->
+    <div
+      :class="[
+        'flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border transition-all',
+        'bg-gradient-to-r from-primary-500/10 via-amber-500/5 to-transparent',
+        'border-primary-500/25 dark:border-primary-500/35',
+        'shadow-sm',
+      ]"
+    >
+      <div class="flex items-center gap-3.5">
+        <div class="h-11 w-11 flex shrink-0 items-center justify-center rounded-xl bg-primary-500/15 text-2xl text-primary-600 dark:text-primary-400">
+          <div class="i-solar:magic-stick-3-bold-duotone" />
+        </div>
+        <div class="flex flex-col gap-0.5">
+          <div class="flex items-center gap-2">
+            <h3 class="text-base text-neutral-900 font-bold tracking-tight dark:text-neutral-100">
+              Free AI Catalog & Model Hub
+            </h3>
+            <span class="rounded-full bg-amber-500/20 px-2 py-0.2 text-[10px] text-amber-700 font-bold tracking-wider uppercase dark:text-amber-300">
+              New
+            </span>
+          </div>
+          <p class="max-w-xl text-xs text-neutral-600 dark:text-neutral-400">
+            Browse 370+ free model endpoints across 24 providers with real-time rate limits, intelligence & speed rankings, and operational advisories.
+          </p>
+        </div>
+      </div>
+
+      <RouterLink
+        to="/settings/providers/free-hub"
+        class="inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-xs text-white font-semibold shadow-sm transition-all hover:bg-primary-600 hover:shadow"
+      >
+        <span>Explore Free Hub</span>
+        <div class="i-solar:arrow-right-linear text-sm" />
+      </RouterLink>
+    </div>
+
     <div
       v-if="activeTabRecommendations"
       :class="[

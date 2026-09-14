@@ -1,0 +1,788 @@
+<script setup lang="ts">
+import { useFreeAICatalogStore } from '@proj-airi/stage-ui/stores'
+import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
+
+const catalogStore = useFreeAICatalogStore()
+const {
+  searchQuery,
+  selectedModality,
+  selectedPlatform,
+  filterOnlyTools,
+  filterHighRpm,
+  filterHighContext,
+  sortBy,
+  sortDirection,
+  viewMode,
+  catalogVersion,
+  catalogGeneratedAt,
+  totalModelsCount,
+  availablePlatforms,
+  countsByModality,
+  filteredModels,
+  selectedModelDetail,
+} = storeToRefs(catalogStore)
+
+function formatNumber(num: number | null | undefined): string {
+  if (num === null || num === undefined)
+    return '—'
+  if (num >= 1_000_000)
+    return `${(num / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+  if (num >= 1_000)
+    return `${(num / 1_000).toFixed(1).replace(/\.0$/, '')}k`
+  return num.toLocaleString()
+}
+
+function formatContext(tokens: number | null | undefined): string {
+  if (!tokens)
+    return '—'
+  if (tokens >= 1_000_000)
+    return `${(tokens / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`
+  if (tokens >= 1_000)
+    return `${Math.round(tokens / 1_000)}k`
+  return `${tokens}`
+}
+
+function openExternalUrl(url: string) {
+  if (!url)
+    return
+  window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+const activeFiltersCount = computed(() => {
+  let count = 0
+  if (selectedModality.value !== 'all')
+    count++
+  if (selectedPlatform.value !== 'all')
+    count++
+  if (filterOnlyTools.value)
+    count++
+  if (filterHighRpm.value)
+    count++
+  if (filterHighContext.value)
+    count++
+  if (searchQuery.value.trim())
+    count++
+  return count
+})
+</script>
+
+<template>
+  <div class="mx-auto max-w-6xl flex flex-col gap-5 pb-16">
+    <!-- Hero Header Banner -->
+    <div
+      :class="[
+        'relative overflow-hidden rounded-2xl border p-6',
+        'bg-gradient-to-br from-primary-500/10 via-amber-500/5 to-transparent',
+        'border-primary-500/20 dark:border-primary-500/30',
+      ]"
+    >
+      <div class="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-center gap-2.5">
+            <div class="i-solar:magic-stick-3-bold-duotone text-2xl text-primary-500" />
+            <h1 class="text-2xl text-neutral-900 font-bold tracking-tight dark:text-neutral-100">
+              Free AI Hub
+            </h1>
+            <span
+              class="rounded-full bg-primary-500/20 px-2.5 py-0.5 text-xs text-primary-700 font-semibold tracking-wider uppercase dark:text-primary-300"
+            >
+              Phase 1 Preview
+            </span>
+          </div>
+          <p class="max-w-2xl text-sm text-neutral-600 dark:text-neutral-400">
+            Explore 370+ free model endpoints across 24 AI providers with live rate limits, speed and intelligence scores, context windows, and operational quirks.
+          </p>
+        </div>
+
+        <div class="flex flex-col items-start gap-1 text-xs text-neutral-500 md:items-end">
+          <div class="flex items-center gap-2">
+            <span class="text-neutral-700 font-medium dark:text-neutral-300">Catalog Version:</span>
+            <code class="rounded bg-neutral-200/60 px-1.5 py-0.5 text-[11px] font-mono dark:bg-neutral-800">
+              {{ catalogVersion }}
+            </code>
+          </div>
+          <span v-if="catalogGeneratedAt" class="text-[11px]">
+            Generated: {{ new Date(catalogGeneratedAt).toLocaleDateString() }}
+          </span>
+          <span class="text-[11px] text-primary-600 font-medium dark:text-primary-400">
+            {{ totalModelsCount }} total models cataloged
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search & View Bar -->
+    <div class="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+      <!-- Search input -->
+      <div class="relative flex-1">
+        <div class="i-solar:magnifer-linear absolute left-3.5 top-1/2 text-base text-neutral-400 -translate-y-1/2" />
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search models, providers, architectures (e.g. Llama 3.3, Groq, Gemini, Qwen)..."
+          class="w-full border border-neutral-200/80 rounded-xl bg-white/70 py-2.5 pl-10 pr-9 text-sm transition-all dark:border-neutral-800 focus:border-primary-500 dark:bg-neutral-900/50 placeholder:text-neutral-400 focus:outline-none focus:ring-2 focus:ring-primary-500/30"
+        >
+        <button
+          v-if="searchQuery"
+          class="absolute right-3 top-1/2 p-0.5 text-neutral-400 -translate-y-1/2 hover:text-neutral-600 dark:hover:text-neutral-200"
+          @click="searchQuery = ''"
+        >
+          <div class="i-solar:close-circle-linear text-base" />
+        </button>
+      </div>
+
+      <!-- View Switcher -->
+      <div class="flex items-center border border-neutral-200/80 rounded-xl bg-neutral-100/80 p-1 dark:border-neutral-800 dark:bg-neutral-900/60">
+        <button
+          type="button"
+          :class="[
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+            viewMode === 'table'
+              ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 shadow-sm'
+              : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300',
+          ]"
+          @click="viewMode = 'table'"
+        >
+          <div class="i-solar:list-linear text-sm" />
+          <span>Table</span>
+        </button>
+        <button
+          type="button"
+          :class="[
+            'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+            viewMode === 'cards'
+              ? 'bg-white dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 shadow-sm'
+              : 'text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300',
+          ]"
+          @click="viewMode = 'cards'"
+        >
+          <div class="i-solar:widget-4-linear text-sm" />
+          <span>Cards</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Control Island -->
+    <div class="flex flex-col gap-3 border border-neutral-200/70 rounded-2xl bg-neutral-50/60 p-4 dark:border-neutral-800/70 dark:bg-neutral-900/30">
+      <!-- Modality Tabs -->
+      <div class="flex flex-wrap items-center gap-2">
+        <span class="mr-1 text-xs text-neutral-400 font-semibold tracking-wider uppercase">Modality:</span>
+        <button
+          type="button"
+          :class="[
+            'px-3 py-1 rounded-lg text-xs font-medium transition-all',
+            selectedModality === 'all'
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-200/60 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-300/60',
+          ]"
+          @click="selectedModality = 'all'"
+        >
+          All ({{ countsByModality.all }})
+        </button>
+        <button
+          type="button"
+          :class="[
+            'px-3 py-1 rounded-lg text-xs font-medium transition-all',
+            selectedModality === 'chat'
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-200/60 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-300/60',
+          ]"
+          @click="selectedModality = 'chat'"
+        >
+          Chat ({{ countsByModality.chat }})
+        </button>
+        <button
+          type="button"
+          :class="[
+            'px-3 py-1 rounded-lg text-xs font-medium transition-all',
+            selectedModality === 'vision'
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-200/60 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-300/60',
+          ]"
+          @click="selectedModality = 'vision'"
+        >
+          Vision ({{ countsByModality.vision }})
+        </button>
+        <button
+          type="button"
+          :class="[
+            'px-3 py-1 rounded-lg text-xs font-medium transition-all',
+            selectedModality === 'transcription'
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-200/60 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-300/60',
+          ]"
+          @click="selectedModality = 'transcription'"
+        >
+          STT Hearing ({{ countsByModality.transcription }})
+        </button>
+        <button
+          type="button"
+          :class="[
+            'px-3 py-1 rounded-lg text-xs font-medium transition-all',
+            selectedModality === 'embedding'
+              ? 'bg-primary-500 text-white shadow-sm'
+              : 'bg-neutral-200/60 dark:bg-neutral-800/80 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-300/60',
+          ]"
+          @click="selectedModality = 'embedding'"
+        >
+          Embeddings ({{ countsByModality.embedding }})
+        </button>
+      </div>
+
+      <div class="h-px bg-neutral-200/50 dark:bg-neutral-800/50" />
+
+      <!-- Deep Filters: Provider, Capabilities & Sorting -->
+      <div class="flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Platform Filter -->
+          <div class="flex items-center gap-1.5">
+            <span class="text-neutral-500 font-medium">Provider:</span>
+            <select
+              v-model="selectedPlatform"
+              class="border border-neutral-200 rounded-lg bg-white px-2.5 py-1 text-xs text-neutral-800 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            >
+              <option value="all">
+                All Providers ({{ availablePlatforms.length }})
+              </option>
+              <option
+                v-for="p in availablePlatforms"
+                :key="p.id"
+                :value="p.id"
+              >
+                {{ p.name }} ({{ p.count }})
+              </option>
+            </select>
+          </div>
+
+          <!-- Feature Toggles -->
+          <button
+            type="button"
+            :class="[
+              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all',
+              filterOnlyTools
+                ? 'bg-blue-500/15 border-blue-500/40 text-blue-700 dark:text-blue-300 font-medium'
+                : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300',
+            ]"
+            @click="filterOnlyTools = !filterOnlyTools"
+          >
+            <div class="i-solar:wrench-bold-duotone text-sm text-blue-500" />
+            <span>Tools Supported</span>
+          </button>
+
+          <button
+            type="button"
+            :class="[
+              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all',
+              filterHighRpm
+                ? 'bg-amber-500/15 border-amber-500/40 text-amber-700 dark:text-amber-300 font-medium'
+                : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300',
+            ]"
+            @click="filterHighRpm = !filterHighRpm"
+          >
+            <div class="i-solar:bolt-bold-duotone text-sm text-amber-500" />
+            <span>High RPM (&ge; 20)</span>
+          </button>
+
+          <button
+            type="button"
+            :class="[
+              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all',
+              filterHighContext
+                ? 'bg-purple-500/15 border-purple-500/40 text-purple-700 dark:text-purple-300 font-medium'
+                : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300',
+            ]"
+            @click="filterHighContext = !filterHighContext"
+          >
+            <div class="i-solar:document-text-bold-duotone text-sm text-purple-500" />
+            <span>Context &ge; 128k</span>
+          </button>
+        </div>
+
+        <!-- Sort Controls -->
+        <div class="flex items-center gap-2">
+          <span class="text-neutral-500 font-medium">Sort By:</span>
+          <select
+            v-model="sortBy"
+            class="border border-neutral-200 rounded-lg bg-white px-2.5 py-1 text-xs text-neutral-800 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          >
+            <option value="intelligence">
+              Intelligence Rank
+            </option>
+            <option value="speed">
+              Speed Rank
+            </option>
+            <option value="context">
+              Context Window
+            </option>
+            <option value="rpm">
+              Rate Limit (RPM)
+            </option>
+          </select>
+
+          <button
+            type="button"
+            class="border border-neutral-200 rounded-lg p-1 text-neutral-600 dark:border-neutral-700 hover:bg-neutral-200/50 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            title="Toggle sort direction"
+            @click="sortDirection = sortDirection === 'asc' ? 'desc' : 'asc'"
+          >
+            <div
+              :class="sortDirection === 'asc' ? 'i-solar:sort-from-bottom-to-top-linear' : 'i-solar:sort-from-top-to-bottom-linear'"
+              class="text-sm"
+            />
+          </button>
+
+          <button
+            v-if="activeFiltersCount > 0"
+            type="button"
+            class="ml-2 text-xs text-neutral-400 transition-colors hover:text-rose-500"
+            @click="catalogStore.resetFilters()"
+          >
+            Reset ({{ activeFiltersCount }})
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Filter Count Display -->
+    <div class="flex items-center justify-between px-1 text-xs text-neutral-500">
+      <span>
+        Showing <strong class="text-neutral-800 dark:text-neutral-200">{{ filteredModels.length }}</strong> of {{ totalModelsCount }} models
+      </span>
+      <span v-if="selectedPlatform !== 'all'">
+        Filtered to platform: <strong class="text-primary-600 dark:text-primary-400">{{ selectedPlatform }}</strong>
+      </span>
+    </div>
+
+    <!-- EMPTY STATE -->
+    <div
+      v-if="filteredModels.length === 0"
+      class="flex flex-col items-center justify-center border border-neutral-300 rounded-2xl border-dashed p-12 text-center dark:border-neutral-800"
+    >
+      <div class="i-solar:ghost-linear mb-2 text-4xl text-neutral-400" />
+      <h3 class="mb-1 text-base text-neutral-800 font-semibold dark:text-neutral-200">
+        No matching models found
+      </h3>
+      <p class="mb-4 max-w-md text-xs text-neutral-500">
+        Try clearing your search query or loosening your capability filters.
+      </p>
+      <button
+        type="button"
+        class="rounded-xl bg-primary-500 px-4 py-2 text-xs text-white font-semibold transition-all hover:bg-primary-600"
+        @click="catalogStore.resetFilters()"
+      >
+        Reset All Filters
+      </button>
+    </div>
+
+    <!-- VIEW: DATA TABLE -->
+    <div
+      v-else-if="viewMode === 'table'"
+      class="overflow-hidden border border-neutral-200/80 rounded-2xl bg-white/70 shadow-sm dark:border-neutral-800/80 dark:bg-neutral-900/40"
+    >
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="border-b border-neutral-200/80 bg-neutral-50/80 text-neutral-500 font-semibold tracking-wider uppercase dark:border-neutral-800 dark:bg-neutral-900/80">
+            <tr>
+              <th class="px-4 py-3">
+                Model & Platform
+              </th>
+              <th class="px-4 py-3 text-center">
+                Intel / Speed
+              </th>
+              <th class="px-4 py-3 text-center">
+                Context
+              </th>
+              <th class="px-4 py-3">
+                Free Quota & Limits
+              </th>
+              <th class="px-4 py-3 text-center">
+                Caps
+              </th>
+              <th class="px-4 py-3 text-center">
+                Advisories
+              </th>
+              <th class="px-4 py-3 text-right">
+                Details
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-neutral-200/60 dark:divide-neutral-800/60">
+            <tr
+              v-for="model in filteredModels"
+              :key="model.id"
+              class="group cursor-pointer transition-colors hover:bg-primary-500/5 dark:hover:bg-primary-500/10"
+              @click="catalogStore.selectModel(model.id)"
+            >
+              <!-- Model & Platform -->
+              <td class="max-w-xs px-4 py-3">
+                <div class="flex flex-col gap-0.5">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-neutral-900 font-semibold transition-colors dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                      {{ model.displayName }}
+                    </span>
+                    <span
+                      v-if="model.sizeLabel === 'Frontier'"
+                      class="rounded bg-amber-500/20 px-1.5 py-0.2 text-[10px] text-amber-700 font-bold uppercase dark:text-amber-300"
+                    >
+                      Frontier
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-1.5 text-[11px] text-neutral-500">
+                    <span class="rounded bg-neutral-200/50 px-1.5 py-0.2 text-[10px] font-mono dark:bg-neutral-800">
+                      {{ model.platformDisplayName }}
+                    </span>
+                    <span class="max-w-[180px] truncate text-[10px] font-mono" :title="model.modelId">
+                      {{ model.modelId }}
+                    </span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Intel & Speed Ranks -->
+              <td class="px-4 py-3 text-center">
+                <div class="inline-flex flex-col items-center gap-0.5">
+                  <span class="text-neutral-700 font-semibold dark:text-neutral-300">
+                    Rank #{{ model.intelligenceRank || '—' }}
+                  </span>
+                  <span class="text-[10px] text-neutral-400">
+                    Speed: {{ model.speedRank || '—' }}/11
+                  </span>
+                </div>
+              </td>
+
+              <!-- Context Window -->
+              <td class="px-4 py-3 text-center font-mono">
+                <span class="rounded bg-neutral-100 px-2 py-0.5 text-neutral-700 font-medium dark:bg-neutral-800 dark:text-neutral-300">
+                  {{ formatContext(model.contextWindow) }}
+                </span>
+              </td>
+
+              <!-- Quota & Rate Limits -->
+              <td class="px-4 py-3">
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-neutral-800 font-medium dark:text-neutral-200">
+                    {{ model.monthlyTokenBudget || 'Free Tier' }}
+                  </span>
+                  <span class="text-[11px] text-neutral-500 font-mono">
+                    {{ model.limits?.rpm ? `${model.limits.rpm} RPM` : 'Uncapped RPM' }}
+                    {{ model.limits?.rpd ? `· ${formatNumber(model.limits.rpd)} RPD` : '' }}
+                  </span>
+                </div>
+              </td>
+
+              <!-- Capabilities -->
+              <td class="px-4 py-3 text-center">
+                <div class="inline-flex items-center gap-1.5">
+                  <div
+                    v-if="model.supportsTools"
+                    class="i-solar:wrench-bold-duotone text-base text-blue-500"
+                    title="Tools & Function Calling Supported"
+                  />
+                  <div
+                    v-if="model.supportsVision"
+                    class="i-solar:eye-bold-duotone text-base text-purple-500"
+                    title="Vision (VLM) Supported"
+                  />
+                  <div
+                    v-if="model.modality === 'transcription'"
+                    class="i-solar:microphone-3-bold-duotone text-base text-emerald-500"
+                    title="Audio Transcription"
+                  />
+                </div>
+              </td>
+
+              <!-- Advisories / Quirks -->
+              <td class="px-4 py-3 text-center">
+                <span
+                  v-if="model.allQuirks.length > 0"
+                  class="inline-flex items-center gap-1 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] text-amber-700 font-semibold dark:text-amber-300"
+                  :title="model.allQuirks.map(q => q.title).join(', ')"
+                >
+                  <div class="i-solar:shield-warning-bold-duotone text-xs" />
+                  <span>{{ model.allQuirks.length }}</span>
+                </span>
+                <span v-else class="text-xs text-neutral-300 dark:text-neutral-700">
+                  —
+                </span>
+              </td>
+
+              <!-- Action -->
+              <td class="px-4 py-3 text-right">
+                <button
+                  type="button"
+                  class="rounded-lg bg-primary-500/10 px-2.5 py-1 text-xs text-primary-600 font-medium transition-all hover:bg-primary-500/20 dark:text-primary-400"
+                  @click.stop="catalogStore.selectModel(model.id)"
+                >
+                  Inspect
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- VIEW: CARDS GRID -->
+    <div
+      v-else-if="viewMode === 'cards'"
+      class="grid grid-cols-1 gap-3.5 lg:grid-cols-3 md:grid-cols-2"
+    >
+      <div
+        v-for="model in filteredModels"
+        :key="model.id"
+        :class="[
+          'flex flex-col justify-between p-4 rounded-2xl border transition-all cursor-pointer group',
+          'border-neutral-200/80 dark:border-neutral-800/80 bg-white/70 dark:bg-neutral-900/40',
+          'hover:border-primary-500/50 hover:shadow-md hover:-translate-y-0.5',
+        ]"
+        @click="catalogStore.selectModel(model.id)"
+      >
+        <div class="flex flex-col gap-2">
+          <!-- Top Row: Platform & Badges -->
+          <div class="flex items-center justify-between gap-2">
+            <span class="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-700 font-semibold dark:bg-neutral-800 dark:text-neutral-300">
+              {{ model.platformDisplayName }}
+            </span>
+            <div class="flex items-center gap-1.5">
+              <span
+                v-if="model.sizeLabel === 'Frontier'"
+                class="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] text-amber-700 font-bold uppercase dark:text-amber-300"
+              >
+                Frontier
+              </span>
+              <div
+                v-if="model.supportsTools"
+                class="i-solar:wrench-bold-duotone text-sm text-blue-500"
+                title="Tools Supported"
+              />
+              <div
+                v-if="model.supportsVision"
+                class="i-solar:eye-bold-duotone text-sm text-purple-500"
+                title="Vision Supported"
+              />
+            </div>
+          </div>
+
+          <!-- Model Name & ID -->
+          <div>
+            <h3 class="text-sm text-neutral-900 font-bold transition-colors dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+              {{ model.displayName }}
+            </h3>
+            <p class="truncate text-[11px] text-neutral-400 font-mono" :title="model.modelId">
+              {{ model.modelId }}
+            </p>
+          </div>
+
+          <!-- Metrics Matrix -->
+          <div class="grid grid-cols-2 mt-2 gap-2 border-t border-neutral-100 pt-2 text-xs dark:border-neutral-800/80">
+            <div>
+              <span class="block text-[10px] text-neutral-400 tracking-wider uppercase">Context</span>
+              <span class="text-neutral-800 font-semibold dark:text-neutral-200">
+                {{ formatContext(model.contextWindow) }} tokens
+              </span>
+            </div>
+            <div>
+              <span class="block text-[10px] text-neutral-400 tracking-wider uppercase">Rate Limits</span>
+              <span class="text-neutral-800 font-semibold dark:text-neutral-200">
+                {{ model.limits?.rpm ? `${model.limits.rpm} RPM` : 'Uncapped' }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card Footer -->
+        <div class="mt-4 flex items-center justify-between border-t border-neutral-100 pt-3 dark:border-neutral-800/80">
+          <span
+            v-if="model.allQuirks.length > 0"
+            class="inline-flex items-center gap-1 text-[11px] text-amber-600 font-medium dark:text-amber-400"
+          >
+            <div class="i-solar:shield-warning-bold-duotone" />
+            <span>{{ model.allQuirks.length }} {{ model.allQuirks.length === 1 ? 'advisory' : 'advisories' }}</span>
+          </span>
+          <span v-else class="text-[11px] text-neutral-400">
+            {{ model.monthlyTokenBudget }}
+          </span>
+
+          <span class="flex items-center gap-1 text-xs text-primary-600 font-medium transition-transform group-hover:translate-x-0.5 dark:text-primary-400">
+            <span>Inspect</span>
+            <div class="i-solar:alt-arrow-right-linear text-xs" />
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE-OVER METADATA INSPECTOR DRAWER -->
+    <Teleport to="body">
+      <div
+        v-if="selectedModelDetail"
+        class="fixed inset-0 z-50 overflow-hidden"
+        @keydown.escape="catalogStore.selectModel(null)"
+      >
+        <!-- Backdrop -->
+        <div
+          class="fixed inset-0 bg-black/40 backdrop-blur-sm transition-opacity"
+          @click="catalogStore.selectModel(null)"
+        />
+
+        <!-- Slide Drawer Panel -->
+        <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
+          <div class="max-w-md w-screen flex flex-col justify-between border-l border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
+            <!-- Drawer Header -->
+            <div class="flex items-start justify-between border-b border-neutral-200/80 p-6 dark:border-neutral-800">
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-2">
+                  <span class="rounded bg-primary-500/15 px-2 py-0.5 text-xs text-primary-700 font-semibold dark:text-primary-300">
+                    {{ selectedModelDetail.platformDisplayName }}
+                  </span>
+                  <span
+                    v-if="selectedModelDetail.sizeLabel"
+                    class="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-600 font-bold uppercase dark:bg-neutral-800 dark:text-neutral-400"
+                  >
+                    {{ selectedModelDetail.sizeLabel }}
+                  </span>
+                </div>
+                <h2 class="mt-1 text-lg text-neutral-900 font-bold dark:text-neutral-100">
+                  {{ selectedModelDetail.displayName }}
+                </h2>
+                <code class="text-xs text-neutral-400 font-mono">
+                  {{ selectedModelDetail.modelId }}
+                </code>
+              </div>
+
+              <button
+                type="button"
+                class="rounded-xl p-2 text-neutral-400 transition-all hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                @click="catalogStore.selectModel(null)"
+              >
+                <div class="i-solar:close-circle-linear text-xl" />
+              </button>
+            </div>
+
+            <!-- Drawer Body -->
+            <div class="flex flex-1 flex-col gap-6 overflow-y-auto p-6 text-sm">
+              <!-- Key Capabilities -->
+              <div class="flex flex-col gap-2">
+                <h4 class="text-xs text-neutral-400 font-semibold tracking-wider uppercase">
+                  Technical Specifications
+                </h4>
+                <div class="grid grid-cols-2 gap-2.5">
+                  <div class="border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-800/40">
+                    <span class="block text-xs text-neutral-400">Context Window</span>
+                    <span class="text-base text-neutral-900 font-bold dark:text-neutral-100">
+                      {{ formatNumber(selectedModelDetail.contextWindow) }}
+                    </span>
+                    <span class="block text-[10px] text-neutral-500">tokens</span>
+                  </div>
+
+                  <div class="border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-800/40">
+                    <span class="block text-xs text-neutral-400">Intelligence Rank</span>
+                    <span class="text-base text-neutral-900 font-bold dark:text-neutral-100">
+                      #{{ selectedModelDetail.intelligenceRank || '—' }}
+                    </span>
+                    <span class="block text-[10px] text-neutral-500">Relative capability</span>
+                  </div>
+
+                  <div class="border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-800/40">
+                    <span class="block text-xs text-neutral-400">Speed Rank</span>
+                    <span class="text-base text-neutral-900 font-bold dark:text-neutral-100">
+                      {{ selectedModelDetail.speedRank || '—' }} / 11
+                    </span>
+                    <span class="block text-[10px] text-neutral-500">Empirical latency</span>
+                  </div>
+
+                  <div class="border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-800/40">
+                    <span class="block text-xs text-neutral-400">Monthly Budget</span>
+                    <span class="text-base text-neutral-900 font-bold dark:text-neutral-100">
+                      {{ selectedModelDetail.monthlyTokenBudget || 'Free Tier' }}
+                    </span>
+                    <span class="block text-[10px] text-neutral-500">Estimated capacity</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Rate Limits Details -->
+              <div class="flex flex-col gap-2">
+                <h4 class="text-xs text-neutral-400 font-semibold tracking-wider uppercase">
+                  Rate Limits & Quota
+                </h4>
+                <div class="flex flex-col gap-2 border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-4 text-xs font-mono dark:border-neutral-800 dark:bg-neutral-800/40">
+                  <div class="flex justify-between">
+                    <span class="text-neutral-500">Requests Per Minute (RPM):</span>
+                    <span class="text-neutral-800 font-bold dark:text-neutral-200">{{ selectedModelDetail.limits?.rpm || 'Uncapped / Not Published' }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-neutral-500">Requests Per Day (RPD):</span>
+                    <span class="text-neutral-800 font-bold dark:text-neutral-200">{{ selectedModelDetail.limits?.rpd ? formatNumber(selectedModelDetail.limits.rpd) : 'Uncapped / Not Published' }}</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <span class="text-neutral-500">Tokens Per Minute (TPM):</span>
+                    <span class="text-neutral-800 font-bold dark:text-neutral-200">{{ selectedModelDetail.limits?.tpm ? formatNumber(selectedModelDetail.limits.tpm) : 'Uncapped / Not Published' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Operational Quirks & Advisories -->
+              <div class="flex flex-col gap-2">
+                <h4 class="flex items-center justify-between text-xs text-neutral-400 font-semibold tracking-wider uppercase">
+                  <span>Operational Advisories ({{ selectedModelDetail.allQuirks.length }})</span>
+                </h4>
+
+                <div v-if="selectedModelDetail.allQuirks.length === 0" class="border border-neutral-200/60 rounded-xl p-3 text-xs text-neutral-500 dark:border-neutral-800">
+                  ✓ No operational quirks or idiosyncrasies recorded for this model.
+                </div>
+
+                <div
+                  v-for="quirk in selectedModelDetail.allQuirks"
+                  :key="quirk.slug"
+                  :class="[
+                    'p-3.5 rounded-xl border flex flex-col gap-1 text-xs',
+                    quirk.severity === 'blocker'
+                      ? 'border-rose-500/30 bg-rose-500/10 text-rose-800 dark:text-rose-200'
+                      : quirk.severity === 'warning'
+                        ? 'border-amber-500/30 bg-amber-500/10 text-amber-800 dark:text-amber-200'
+                        : 'border-blue-500/30 bg-blue-500/10 text-blue-800 dark:text-blue-200',
+                  ]"
+                >
+                  <div class="flex items-center gap-1.5 font-bold">
+                    <div class="i-solar:shield-warning-bold-duotone text-sm" />
+                    <span>{{ quirk.title }}</span>
+                  </div>
+                  <p class="text-[11px] leading-relaxed opacity-90">
+                    {{ quirk.body }}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Drawer Footer Action -->
+            <div class="flex flex-col gap-2 border-t border-neutral-200/80 bg-neutral-50/50 p-6 dark:border-neutral-800 dark:bg-neutral-900/50">
+              <button
+                v-if="selectedModelDetail.platformSignupUrl"
+                type="button"
+                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-xs text-white font-semibold shadow-sm transition-all hover:bg-primary-600"
+                @click="openExternalUrl(selectedModelDetail.platformSignupUrl)"
+              >
+                <span>Get API Key from {{ selectedModelDetail.platformDisplayName }}</span>
+                <div class="i-solar:arrow-right-up-linear text-sm" />
+              </button>
+
+              <div class="mt-1 text-center text-[11px] text-neutral-400">
+                Phase 1 Preview — Browsing and discovery only. 1-click provider instantiation arriving in Phase 2.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+  </div>
+</template>
+
+<route lang="yaml">
+meta:
+  layout: settings
+  title: Free AI Hub
+  subtitleKey: settings.title
+  stageTransition:
+    name: slide
+</route>

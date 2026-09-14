@@ -1227,6 +1227,9 @@ export function resolveSettingsBackRoute(
   if (normalizedRoute.startsWith('/settings/providers/')) {
     const segments = normalizedRoute.split('/').filter(Boolean)
     const category = segments[2]
+    if (category === 'free-hub') {
+      return '/settings/providers'
+    }
     const hash = category && category !== 'chat' ? `#${category}` : '#chat'
     return `/settings/providers${hash}`
   }

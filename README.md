@@ -59,9 +59,12 @@ The complete implementation catalog lives in the [feature report](https://dasilv
 
 | Capability | This Fork | Upstream |
 | :--- | :---: | :---: |
-| **AI provider integrations**¹ | **77** | 69 |
-| **Built-in on-device providers**² | **9** | 2 |
-| **Official hosted AI with integrated account/payment management** | ❌ | ✅ |
+| **Registered AI provider integrations**¹ | **77** | 69 |
+| **Built-in on-device inference engines**² | **9** | 2 |
+| **Account-backed portable provider vault**³ | ✅ (Cloudflare R2/KV) | ❌ |
+| **Direct provider & model selection**⁴ | ✅ (Full User Custody) | ◐ (Chat/Vision locked to `Auto`) |
+| **Prepaid proprietary inference proxy**⁵ | ❌ (Direct Vendor APIs) | ✅ (Stripe / Flux Credits) |
+| **Guided free-tier catalog & preset templates**⁶ | ✅ (Planned / In Design) | ❌ |
 | [**Interactive Live2D scripts, choices, and discoverable gimmicks**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/live2d-runtime/src/dsl/interpreter.ts) | ✅ | ❌ |
 | [**Live2D motion recording and keyframe timeline editing**](https://github.com/moeru-ai/airi/blob/42e3e9e8573d3159d40e637fa11a21e13398ebda/packages/stage-ui/src/features/devtools/motion/live2d/devtools.vue) | ❌ | ✅ |
 | [**Generate reusable VRM animations from text**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/stores/modules/text-to-motion.ts) | ✅ | ❌ |
@@ -82,8 +85,12 @@ The complete implementation catalog lives in the [feature report](https://dasilv
 
 <small>
 
-¹ **77 versus 69** counts integrations in the main chat/vision/TTS/STT registry, excluding "None" and the virtual Audio Studio wrapper. It does not count companies, models, or separate Artistry backends.<br>
-² **9 versus 2** counts registered embedded engines across supported platforms. Fork covers chat, vision, TTS, and Whisper transcription; upstream's two are Kokoro and Apple Speech. Separately installed local servers are excluded. FlowMDM is represented by the motion row. Audited snapshots: fork <code>fc46a6e</code>, upstream <code>42e3e9e</code>.
+¹ **77 versus 69** counts distinct registered integrations across chat, vision, TTS, and STT in the primary provider registry, excluding "None" and virtual wrappers. It does not count companies, models, or separate Artistry backends.<br>
+² **9 versus 2** counts native embedded on-device runtimes (Web-RWKV, WebLLM, Moondream, Whisper ONNX, Kokoro ONNX, FlowMDM, etc.). Upstream embeds Kokoro and Apple Speech. Separately installed local servers are excluded. FlowMDM is represented by the motion row. Audited snapshots: fork <code>fc46a6e</code>, upstream <code>42e3e9e</code>.<br>
+³ **Portable Provider Vault**: This fork enables users to sign in once via their private Cloudflare account to synchronize and restore API credentials and multi-instance configurations across desktop, web, and mobile without third-party escrow. Upstream syncs settings to its proprietary cloud account.<br>
+⁴ **Inference Custody**: Upstream's hosted service hardcodes chat and vision models to an opaque <code>Auto</code> gateway route where the operator chooses the underlying LLM. This fork preserves direct user choice over every endpoint, model, and parameter.<br>
+⁵ **Prepaid Inference**: Upstream operates a turnkey paid gateway where users purchase "Flux" credits via Stripe without obtaining third-party API keys. This fork deliberately does not operate an inference business, favoring direct-to-provider keys, local engines, and free-tier aggregation.<br>
+⁶ **Free-Tier Catalog**: In design under <code>docs/design-free-ai-catalog-and-resilient-fallback.md</code> to provide in-app discovery, quick presets, and client-side failover for dozens of free provider tiers.
 
 </small>
 
