@@ -33,14 +33,14 @@ In practice, binary checkboxes are misleading. There is a fundamental architectu
 
 ---
 
-#### 1.2 Lessons from the September 2026 Competitive Audit
+##### 1.2 Lessons from the September 2026 Competitive Audit
 
 An independent 11-page competitive evaluation published on September 14, 2026 reviewed visible AI companions and forks. It recommended `dasilva333/airi` second overall for a Windows desktop trial behind Project N.E.K.O., while identifying `dasilva333/airi` as the **strongest active general-purpose AIRI fork in the sampled forks**.
 
 The audit revealed a core structural asymmetry:
 - **Asymmetric Scrutiny**: AIRI was subjected to forensic static and operational code auditing (CI run IDs, commit SHAs, Vitest assertion boundaries, NSIS uninstaller configs, and README download links). Competitors were evaluated predominantly by Steam store listings, marketing claims, and user review counts.
 - **The Circular Pigeonhole Trap**: The audit assigned generic user needs to competitors (*"VRM character with local memory"* to Utsuwa, *"Advanced local roleplay/voice"* to Soul of Waifu, *"Relationship continuity"* to Nomi, *"Windows avatar with low setup"* to N.E.K.O.) while categorizing AIRI circularly as *"Highly customized AIRI experience"*.
-- **The Ground Truth Reframe**: AIRI covers every one of those needs with greater depth than the assigned winners—beating Utsuwa on voice (duplex barge-in vs push-to-talk), Soul of Waifu on architecture (modular monorepo vs 1.8 GB RAR), and Nomi on cost/sovereignty ($0 local BYOS vs $16/month closed cloud).
+- **The Empirical Reframe**: AIRI provides concrete, verified alternatives for each of those functional requirements: native hardware duplex audio with barge-in interruption compared to push-to-talk, clean cross-platform Electron packaging compared to complex manual scripts, and zero-cost local data sovereignty compared to metered recurring cloud subscriptions.
 
 This dossier exists to document the objective, verifiable technical facts across every contender.
 
@@ -57,8 +57,8 @@ Below are dense, high-level architectural notes for each active desktop companio
 - **Architecture**: Decoupled Electron desktop runtime (`apps/stage-tamagotchi`). Clean division between Actor Stage (`RendererStage.vue`), Main Ribbon (`ControlStrip.vue`), and Chat Orchestrator.
 - **Embodiment Depth & The Unified Model Canvas**:
   - **4 Native Avatar Runtimes**: Full forward/backward compatibility across VRM 0.0 & 1.0, Live2D Cubism (2.1 `.moc` through 3.0/4.0/5.0 `.moc3`), MMD (PMX physics & VMD motion pipelines), and Spine 2D skeletal.
-  - **Unified Idle Animation & Expression System**: Unlike competitors with fragmented or hardcoded scripts, a single unified widget and store architecture drives configurable idle motion cycles, blink timers, and dynamic emotion/motion invocation across *all 4 model types simultaneously*.
-  - **Dedicated Unity C# Companion Sidecar (`apps/stage-mate`)**: Offloads high-fidelity physics, tactile collisions, and transparent OS rendering to an absorbed Unity engine.
+  - **Unified Idle Animation & Expression System**: Operates a unified widget and store architecture providing user-configurable idle motion cycles, blink timers, and dynamic emotion/motion invocation across all 4 supported avatar formats.
+  - **High-Fidelity Unity Companion Sidecar (`apps/stage-mate`)**: Connects an integrated Unity C# companion sidecar for tactile physics, camera controls, and transparent OS rendering.
   - **Kinetic Synthesis & Surgery**: Procedural Text-to-Motion generation via LLM keyframing / FlowMDM, skeletal bone-anchored particle VFX auras, and in-app Texture Forge (MToon surgery, AI repainting).
   - **`<|ACTOR|>` Conceptual State Scoping**: Rather than just switching character models, `<|ACTOR|>` acts as an abstract conceptual container holding live global state, allowing inline `<|ACT:*|>` emotion/motion tokens to influence and mutate the scoped state of each individual actor dynamically within the turn.
 - **Speech & Audio Custody**:
@@ -69,14 +69,14 @@ Below are dense, high-level architectural notes for each active desktop companio
   - In-process WebGPU & WASM local neural TTS (**Kokoro-WebGPU**, **Pocket-TTS**, **MOSS-TTS**) + 10+ cloud TTS backends.
   - Reusable per-character Audio Studio profiles (pitch, rate, reverb/filters).
 - **Cognition & Staging**:
-  - **77 Registered AI Provider Integrations** (across LLM, speech, vision, and tool backends; including 10+ distinct TTS engines and 6+ STT engines).
+  - **77 Registered AI Provider Integrations** across LLM, speech, vision, and tool backends (including 10+ distinct TTS engines and 6+ STT engines).
   - **10-Turn Auditable Tool Execution**: Deeply modularized, testable `core-agent` loop supporting up to 10 sequential tool iterations with strict loop termination guards.
-  - **Fine-Grained Tool Context Gating**: Dynamic schema pruning that injects only relevant tool definitions into the LLM context window—eliminating context pollution, token bloat, and prompt confusion.
+  - **Fine-Grained Tool Context Gating**: Dynamic schema pruning that injects only relevant tool definitions into the LLM context window—reducing unnecessary tool-schema context, token bloat, and prompt confusion.
   - **2-Pass ACT Expression Bridge**: Normalizes dialogue intent to vendor blendshapes with dual-key persistence (`content` vs unstripped `rawContent` to eliminate historical behavioral drift).
   - **Grounding Context Assembler**: VLM screen analysis, telemetry cues, and multi-tier memory injection.
 - **Memory & Storage Stack**:
   - **DuckDB-WASM Analytical Engine**: High-performance in-browser analytical database and local vector embedding indexer.
-  - **Hybrid Semantic Retrieval Engine**: Combines WebGPU `@huggingface/transformers` (`bge-small-en-v1.5`), in-memory BM25 lexical search, 5W extraction (`who`/`what`/`where`/`when`/`why`), temporal decay, Reciprocal Rank Fusion (RRF, $k=60$), and MMR diversity reranking. Compatible with Long-Context Memory (LoCoMo) retrieval evaluation patterns.
+  - **Hybrid Semantic Retrieval Engine**: Combines WebGPU `@huggingface/transformers` (`bge-small-en-v1.5`), in-memory BM25 lexical search, 5W extraction (`who`/`what`/`where`/`when`/`why`), temporal decay, Reciprocal Rank Fusion (RRF, $k=60$), and MMR diversity reranking. Retrieval evaluation against standard long-context memory benchmarks is currently planned.
   - **IndexedDB / unstorage / localforage**: Binary-safe repository persistence and outbox queues.
   - **2-Tier Temporal Memory**: Short-Term Memory daily summaries (STMM), immutable Sacred Journal (LTMM), Lifetime Relational Thread, Dreaming Worker consolidation, and Subconscious Echo Chips.
   - Optional user-owned Cloudflare R2/KV backup and selective synchronization (BYOS).
@@ -86,10 +86,10 @@ Below are dense, high-level architectural notes for each active desktop companio
   - Ambient proactivity heartbeats with `NO_REPLY` smart silence directive.
   - Autonomous Artistry Director with ComfyUI Bring-Your-Own-Workflow (`workflow_api.json`).
 - **Sovereignty & Economics**:
-  - 0 telemetry, 0 tracking pixels, 0 central server operators.
+  - 0 application-level telemetry or tracking pixels.
   - 100% local-first IndexedDB and DuckDB-WASM storage.
-  - $0 mandatory subscriptions, no metered credit burning.
-  - Canonical Onboarding V3 with `Quick Start (60s)`.
+  - $0 mandatory subscriptions; no metered platform credit charges (external model API keys billed directly by user's chosen providers).
+  - Canonical Onboarding V3 with streamlined Quick Start wizard.
 
 ---
 
@@ -401,18 +401,20 @@ This matrix extends the verified capability catalog from the AIRI repository, pr
 
 ---
 
-### 3.1 Embodiment & Avatar Integration Depth
+#### 3.1 Embodiment & Avatar Integration Depth
 
 | Capability / Dimension | `dasilva333/airi` | Upstream AIRI | Project N.E.K.O. | NekoGPT | Utsuwa | Soul of Waifu | Open-LLM-VTuber | Amica | Komorebi | AITuberKit | VPet |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **VRM 0.0 & 1.0 Runtime** | ✅ Built-in | ✅ Built-in | ✅ Built-in | ❌ (Live2D-only gate) | ✅ Built-in | ✅ Built-in | ❌ (Live2D-only) | ✅ Built-in | ❌ (Live2D-only) | ✅ Built-in | ❌ (Plugin only) |
-| **Live2D Cubism (2.1 – 5.0)** | ✅ (2.1 to 5.0) | ✅ (3/4/5) | ✅ (3/4/5) | ✅ (3/4) | ❌ | ✅ (3/4) | ✅ (3/4/5) | ❌ | ✅ (Cubism 5) | ✅ (3/4) | ❌ (Plugin only) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **VRM 0.0 & 1.0 Runtime** | ✅ Built-in | ✅ Built-in | ✅ Built-in | ❌ (Live2D-only gate) | ✅ Built-in | ✅ Built-in | ❌ (Live2D-only) | ✅ Built-in | ❌ (Live2D-only) | ✅ Built-in | ◐ Plugin |
+| **Live2D Cubism (2.1 – 5.0)** | ✅ (2.1 to 5.0) | ✅ (3/4/5) | ✅ (3/4/5) | ✅ (3/4) | ❌ | ✅ (3/4) | ✅ (3/4/5) | ❌ | ✅ (Cubism 5) | ✅ (3/4) | ◐ Plugin |
 | **MMD Runtime (PMX & VMD)** | ✅ Built-in | ❌ | ✅ (`three-mmd`) | ❌ (Banned) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Spine 2D Skeletal Runtime** | ✅ Built-in | ❌ | ❌ | ❌ (Banned) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ (Plugin only) |
-| **Expression Morphs & Blendshapes**| ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ◐ (Sprite states) |
+| **Spine 2D Skeletal Runtime** | ✅ Built-in | ❌ | ❌ | ❌ (Banned) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ◐ Plugin |
+| **Expression Morphs & Blendshapes**| ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ◐ (Sprite states) |
 | **Bone-Attached Particle VFX Auras**| ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Configurable Idle Animation Cycles**| ✅ (All 4 Types) | ◐ (VRM/Live2D) | ◐ (VRM/Live2D) | ◐ (Live2D-only) | ◐ (VRM-only) | ◐ (VRM/Live2D) | ◐ (Live2D-only) | ◐ (VRM-only) | ◐ (Live2D-only) | ◐ (VRM/Live2D) | ◐ (Sprites) |
-| **Dedicated High-Fidelity Sidecar** | ✅ (`stage-mate`) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **User-Configurable Idle Cycles**| ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in | ✅ Built-in |
+| **Motion Recording & Timeline Editor**| ❌ | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **VMC / OSC Motion Capture Streaming**| ❌ | ❌ | ✅ (`/api/vmc`) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **High-Fidelity Unity Companion Sidecar**| ✅ (`stage-mate`) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Turing-Complete DSL Scripts** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Procedural Text-to-Motion** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **In-App Texture Surgery** | ✅ (Texture Forge) | ❌ | ❌ | ◐ (ArtMesh Tint) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -424,44 +426,46 @@ This matrix extends the verified capability catalog from the AIRI repository, pr
 ### 3.2 Speech, Duplex Conversational Loop & Audio Custody
 
 | Capability / Dimension | `dasilva333/airi` | Upstream AIRI | Project N.E.K.O. | NekoGPT | Utsuwa | Soul of Waifu | Open-LLM-VTuber | Amica | Komorebi | AITuberKit | VPet |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Full Duplex Audio & Barge-In** | ✅ (Silero VAD + AEC) | ✅ Real-Time | ◐ Async break | ◐ Sequential | ❌ (Issue #128) | ◐ Python VAD | ◐ WebSocket VAD | ✅ Silero Abort | ◐ Sequential | ◐ WS Event abort | ❌ (Batch play) |
 | **Turn Pacing & Thinking Fillers** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Subconscious Spoken Asides** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **In-Process WebGPU / WASM TTS** | ✅ (Kokoro/Pocket/MOSS) | ✅ (Kokoro) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **UST Stage-Direction Filtering** | ✅ Built-in | ◐ Basic regex | ◐ Basic regex | ◐ Basic regex | ◐ Basic regex | ◐ Basic regex | ◐ Basic regex | ◐ Basic regex | ◐ Basic regex | ◐ Basic regex | ❌ |
+| **Speech Stage-Direction Filtering**| ✅ (UST Engine) | ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ❌ |
 | **Custom Pronunciation Rules** | ✅ Built-in | ❌ | ◐ Word list | ◐ Word list | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Character Audio Studio Profiles** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Mid-Dialogue Voice Switching** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Distinct TTS Engine Integrations** | **10+ Engines** | 8 Engines | 4 Engines | 10 Local/Cloud | 4 Engines | 3 Engines | 5 Engines | 6 Engines | 2 Engines | 8 Engines | 2 Engines |
-| **Total AI Integrations (All Kinds)**| **77 Providers** | 69 Providers | Cloud/Local | 10 Local/Cloud | Local/Cloud | Local/Cloud | Backend-bound | 6+ Adapters | Piper/Whisper | 11+ REST/WS | EdgeTTS Plugin |
+| **Voice Conversion Post-Processing**| ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (`RVC-v2`) | ❌ | ✅ (`RVC`) | ❌ | ❌ | ◐ Community RVC |
+| **Distinct TTS Engine Integrations** | **17 Engines** | 8 Engines | 4 Engines | 10 Engines | 4 Engines | 3 Engines | 5 Engines | 6 Engines | 2 Engines | 8 Engines | 2 Engines |
+| **Dedicated Transcription (STT)** | **8 Engines** | 6 Engines | 3 Engines | 3 Engines | 2 Engines | 2 Engines | 4 Engines | 3 Engines | 2 Engines | 2 Engines | 1 Engine |
 
 ---
 
 ### 3.3 Cognition, Prompting & Multi-Character Staging
 
 | Capability / Dimension | `dasilva333/airi` | Upstream AIRI | Project N.E.K.O. | NekoGPT | Utsuwa | Soul of Waifu | Open-LLM-VTuber | Amica | Komorebi | AITuberKit | VPet |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Bring-Your-Own Model / API Key** | ✅ Full Custody | ✅ Full Custody | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Plugin Key |
 | **Run Inference Locally (Ollama/etc)**| ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ✅ Supported | ◐ Plugin |
-| **Hosted Managed AI Routing** | ❌ (Strict Local) | ◐ (Auto Proxy) | ◐ Default Cloud | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Hosted Managed AI Routing** | ❌ (No AIRI Host) | ✅ (Auto Proxy) | ✅ (Default Cloud)| ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **2-Pass ACT Normalization** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Multi-Actor Dynamic Staging** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Fine-Grained Tool Context Gating**| ✅ Dynamic Pruning| ❌ | ❌ | ◐ Static Filter | ❌ | ❌ | ❌ | ❌ | ◐ Static Filter | ❌ | ❌ |
 | **Production Studio / Rehearsal** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Multi-Step Tool Execution Loop** | ✅ (10-Step Loop) | ◐ | ◐ | ◐ (4-Step Loop) | ❌ | ❌ | ◐ (Issue #444) | ❌ | ✅ (`tool_loop.rs`) | ❌ | ❌ |
+| **Multi-Step Tool Execution Loop** | ✅ (10-Step Max) | ◐ | ◐ | ✅ (4-Step Max) | ❌ | ❌ | ◐ (Issue #444) | ❌ | ✅ (`tool_loop.rs`) | ❌ | ❌ |
+| **Local Personality Fine-Tuning** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (`trainer`) | ❌ | ❌ |
 
 ---
 
 ### 3.4 Memory Hierarchy & Temporal Continuity
 
 | Capability / Dimension | `dasilva333/airi` | Upstream AIRI | Project N.E.K.O. | NekoGPT | Utsuwa | Soul of Waifu | Open-LLM-VTuber | Amica | Komorebi | AITuberKit | VPet |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | **Primary Storage Engine** | **DuckDB-WASM + IDB** | Unstorage IDB | SQLite FTS5 | SQL.js WASM | IndexedDB | SQLite + Chroma | Letta Archival | LocalStorage | SQLite FTS5 | LocalStorage / Dify | `LinePutScript` (.lps) |
 | **Daily Summaries (STMM)** | ✅ Built-in | ◐ In-Progress | ◐ | ✅ (Sync Cache) | ◐ | ◐ | ◐ | ❌ | ◐ | ❌ | ❌ (Rolling JSON) |
 | **Persistent Episodic Journal** | ✅ (Sacred Journal)| ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Cross-Session Relationship Thread**| ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Subconscious Memory Anchors** | ✅ (Echo Chips) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Interactive Memory Browser UI**| ❌ | ❌ | ✅ (`/memory`) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **User-Owned Cloud Sync (BYOS)**| ✅ (S3/R2/KV) | ❌ (Proprietary) | ❌ | ❌ | ◐ Import/Export | ❌ | ❌ | ❌ | ❌ | ❌ | ◐ Steam Cloud |
 | **Local Vector / Keyword Search** | ✅ (DuckDB+BM25) | ❌ | ✅ (SQLite FTS5) | ✅ (256-dim Hash) | ✅ (Transformers) | ✅ (ChromaDB) | ✅ (Letta) | ❌ | ✅ (SQLite FTS5) | ◐ Dify Plugin | ❌ |
 
@@ -470,33 +474,84 @@ This matrix extends the verified capability catalog from the AIRI repository, pr
 ### 3.5 Perception, Agency & Visual Artistry
 
 | Capability / Dimension | `dasilva333/airi` | Upstream AIRI | Project N.E.K.O. | NekoGPT | Utsuwa | Soul of Waifu | Open-LLM-VTuber | Amica | Komorebi | AITuberKit | VPet |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Image & Photo Input (VLM)** | ✅ Built-in | ✅ Built-in | ✅ Supported | ◐ Attachment | ✅ Attachment | ◐ Attachment | ◐ Attachment | ✅ Snapshot | ◐ Screenshot | ✅ Supported | ❌ |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Image & Photo Input (VLM)** | ✅ Built-in | ✅ Built-in | ✅ Supported | ✅ Attachment | ✅ Attachment | ✅ Attachment | ✅ Attachment | ✅ Snapshot | ✅ Screenshot | ✅ Supported | ❌ |
 | **Live Webcam Video Input** | ✅ Built-in | ✅ Built-in | ◐ | ❌ | ❌ | ❌ | ◐ | ✅ Built-in | ❌ | ✅ Built-in | ❌ |
 | **Continuous Screen Observation**| ✅ Salience Gated | ❌ | ✅ (OCR/VLM) | ❌ | ❌ | ❌ | ◐ (BrowserBase) | ❌ | ✅ (`xcap`) | ❌ | ❌ |
 | **Context-Aware Initiation / Silence**| ✅ (`NO_REPLY`) | ❌ | ◐ (Timer) | ❌ | ❌ | ❌ | ❌ | ◐ (Gestures) | ◐ (`proactive.rs`)| ◐ (Chatter loop) | ◐ (Stat alerts) |
 | **Autonomous ComfyUI Director**| ✅ (BYOW) | ◐ Partial | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Native OS Input Automation** | ✅ (via MCP) | ❌ | ✅ (ZeroMQ) | ❌ | ❌ | ❌ | ◐ (BrowserBase) | ❌ | ✅ (`enigo`) | ❌ | ❌ |
-| **Stream Live Chat Ingestion** | ✅ (via Plugins) | ❌ | ❌ | ❌ | ❌ | ❌ | ◐ (Bilibili) | ❌ | ❌ | ✅ (YouTube/OneComme) | ❌ |
+| **Native OS Input Automation** | ✅ Built-in (MCP) | ❌ | ✅ (ZeroMQ) | ❌ | ❌ | ❌ | ◐ (BrowserBase) | ❌ | ✅ (`enigo`) | ❌ | ❌ |
+| **Stream Live Chat Ingestion** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ◐ (Bilibili) | ❌ | ❌ | ✅ (YouTube/OneComme) | ❌ |
+| **Steam Workshop & Modding** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ (Workshop Tools)|
 
 ---
 
 ### 3.6 Sovereignty, Packaging & Operating Cost
 
 | Capability / Dimension | `dasilva333/airi` | Upstream AIRI | Project N.E.K.O. | NekoGPT | Utsuwa | Soul of Waifu | Open-LLM-VTuber | Amica | Komorebi | AITuberKit | VPet |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Telemetry Audited Scope** | **0 Telemetry** | Minimal | Steam64 Logged | **0 Telemetry** | **0 Telemetry** | **0 Telemetry** | **0 Telemetry** | **0 Telemetry** | **0 Telemetry** | **0 Telemetry** | **0 Telemetry** |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Audited Telemetry Scope** | **0 App Telemetry** | Minimal | Steam64 Logged | **0 App Telemetry**| **0 App Telemetry**| **0 App Telemetry**| **0 App Telemetry**| **0 App Telemetry**| **0 App Telemetry**| **0 App Telemetry**| **0 App Telemetry**|
 | **Acquisition Price** | **$0 (Free)** | $0 (Free) | $0 (Free) | **~$10 ($9.99 on Steam)** | $0 (Free) | $0 (Free) | $0 (Free) | $0 (Free) | $0 (Free) | $0 (Free) | $0 (Free on Steam) |
 | **Monthly Subscription** | **$0 (None)** | Optional Stripe | Free + Paid Cloud | $0 (One-time Buy) | $0 | $0 | $0 | $0 | $0 | $0 | $0 |
 | **Software License** | **MIT** | MIT | Apache-2.0 | 🔒 Proprietary | AGPL-3.0 | GPL-3.0 | MIT | MIT | MIT | ⚠️ Non-Commercial v2 | MIT / Apache-2.0 |
 | **Source Accessibility** | **Public Open Source**| Public Open Source| Public Open Source| 🔒 Private Repo | Public Open Source| ⚠️ Issues (#57/#64)| Public Open Source| Public Open Source| Public Open Source| Public Source | Public Open Source |
 | **Single Desktop Installer** | ✅ (Win/Mac/Linux) | ✅ | ✅ (Steam) | ✅ (Steam Depot) | ✅ (~20MB) | ❌ (1.8GB RAR) | ❌ (Python Req) | ◐ (Tauri/Web) | ✅ (~30MB) | ❌ (Web/Docker) | ✅ (Steam / ~100MB) |
-| **Onboarding Quick Start** | ✅ (<60s to Speech) | ◐ | ◐ (Steam Default)| ◐ | ◐ | ❌ (Manual Setup) | ❌ (Python Req) | ◐ | ◐ | ◐ | ✅ (Instant Play) |
+| **Integrated First-Run Flow** | ✅ (Quick Start V3)| ◐ Standard Setup| ◐ Steam Default | ◐ Standard Setup| ◐ Standard Setup| ❌ Manual Scripts | ❌ Python CLI | ◐ Standard Setup| ◐ Standard Setup| ◐ Web Setup | ✅ Instant Launch |
 
 ---
 
-## 4. Next Steps for Research & Validation
+## 4. Methodological Appendices & Evidence Register
 
-1. **Empirical Latency & Memory Profiling**: Benchmark real-world duplex response latency across AIRI (WebGPU/Kokoro/WebAudio), Utsuwa (Tauri/VAD), Amica (Next/Silero), and Komorebi (Tauri 2/Piper).
-2. **Multi-Agent vs. Multi-Actor Analysis**: Contrast NekoGPT's `@open-agent-loops/core` multi-agent paradigm against AIRI's `<|ACTOR|>` mid-stream multi-character dynamic staging.
-3. **Upstream Radar Tracking**: Maintain tracking in `docs/UPSTREAM_RADAR.md` to monitor ongoing fork divergences and evaluate selective cherry-pick candidates.
+### 4.1 Inspected Software Revisions & Sources
+
+| Project | Inspected Revision / Commit | Source Type | Repository / Distribution Channel |
+| :--- | :--- | :--- | :--- |
+| `dasilva333/airi` | `115cae22c8` | Public Git Repository | `https://github.com/dasilva333/airi` |
+| Upstream AIRI | `moeru-ai/airi@v0.12.0-beta.5` | Public Git Repository | `https://github.com/moeru-ai/airi` |
+| Project N.E.K.O. | `v0.9.0` / `v0.9.0.1` | Public Git / Steamworks | `https://github.com/Project-N-E-K-O/N.E.K.O` |
+| NekoGPT | `commit 5c87598` (`refactor/monorepo-mac`) | Private Git Repository | Commercial Steam Product (`Shinobu`) |
+| Utsuwa | `v0.14.0` | Public Git Repository | `https://github.com/JuiceBoxxGames/Utsuwa` |
+| Soul of Waifu | `v2.5.1` | Public Git / RAR Archive | `https://github.com/jofizcd/Soul-of-Waifu` |
+| Open-LLM-VTuber | `v1.2.1` | Public Git Repository | `https://github.com/Open-LLM-VTuber/Open-LLM-VTuber` |
+| Amica | `app-v0.2.1` prerelease | Public Git Repository | `https://github.com/semperai/amica` |
+| Komorebi | Latest `main` (commit `69260ee`) | Public Git Repository | `https://github.com/kiskaserver/interactive_assistent` |
+| AITuberKit | `v2.0.0`+ release branch | Public Git Repository | `https://github.com/tegnike/aituber-kit` |
+| VPet | `v1.1.0`+ / `VPet-Simulator` | Public Git / Steamworks | `https://github.com/LorisYounger/VPet` |
+
+### 4.2 Speech Provider Enumeration & Counting Rules
+
+- **Speech (TTS) Engines in `dasilva333/airi` (17 distinct engines, excluding `speech-noop` and `virtual-audio-studio`)**:
+  1. `kokoro-local` (in-process WebGPU/WASM)
+  2. `moss-nano-local` (in-process browser OPFS)
+  3. `pocket-tts-local` (in-process Kyutai model)
+  4. `airi-audio-server` (self-hosted companion audio gateway)
+  5. `openai-audio-speech` (OpenAI official API)
+  6. `openai-compatible-audio-speech` (BYO endpoint gateway)
+  7. `chatterbox` (local expressive voice engine)
+  8. `aws-polly-tts` (Amazon AWS Polly neural)
+  9. `elevenlabs` (ElevenLabs neural)
+  10. `deepgram-tts` (Deepgram Aura)
+  11. `microsoft-speech` (Azure Cognitive speech)
+  12. `index-tts-vllm` (vLLM local serving)
+  13. `alibaba-cloud-model-studio` (CosyVoice / Qwen-TTS)
+  14. `volcengine` (ByteDance speech)
+  15. `openrouter-audio-speech` (OpenRouter audio models)
+  16. `comet-api-speech` (Comet API gateway)
+  17. `player2-speech` (Player2 character voices)
+  *(Additional: `voicevox`, `aivis-speech`, `minimax-speech`, `mimo-audio-speech`, `google-gemini-audio-speech`)*.
+
+- **Transcription (STT) Engines in `dasilva333/airi` (8 distinct engines)**:
+  1. `whisper-local` (in-process WebGPU Whisper)
+  2. `browser-web-speech-api` (OS/Browser native speech recognition)
+  3. `openai-audio-transcription` (OpenAI Whisper API)
+  4. `openai-compatible-audio-transcription` (OpenAI-compatible STT gateway)
+  5. `aliyun-nls-transcription` (Aliyun real-time NLS)
+  6. `deepgram-transcription` (Deepgram Nova real-time STT)
+  7. `xai-audio-transcription` (xAI speech recognition)
+  8. `comet-api-transcription` (Comet enterprise transcription)
+
+### 4.3 Telemetry Audit Boundary
+
+- **Audited Scope**: Analysis covers primary application source code, declared SDK initializations, and distribution package configurations.
+- **Project N.E.K.O.**: Confirmed Steam64 ID and pseudonymized device telemetry initialized on startup in `utils/token_tracker/telemetry.py` when running under Steamworks (`steam_appid.txt: 4099310`).
+- **Open-Source Local Contenders**: Evaluated for absence of first-party analytics beacons or tracking telemetry in application source repositories. External third-party API providers (OpenAI, Anthropic, ElevenLabs) remain governed by their respective vendor data retention and privacy policies.
