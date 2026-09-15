@@ -21,7 +21,7 @@ export const providerAzureAIFoundry = defineProvider<AzureAIFoundryConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.azure-ai-foundry.title'),
   description: 'azure.com',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.azure-ai-foundry.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:microsoft',
 
   createProviderConfig: ({ t }) => azureAIFoundryConfigSchema.extend({

@@ -19,7 +19,7 @@ const consciousnessStore = useConsciousnessStore()
 const cardStore = useAiriCardStore()
 const llmStore = useLLM()
 
-const { persistedVisionProvidersMetadata, configuredProviders } = storeToRefs(providersStore)
+const { configuredVisionProvidersMetadata, configuredProviders } = storeToRefs(providersStore)
 const { activeCard } = storeToRefs(cardStore)
 const {
   activeProvider,
@@ -364,12 +364,12 @@ async function runSimulation() {
 
         <div class="max-w-full">
           <fieldset
-            v-if="persistedVisionProvidersMetadata.length > 0"
+            v-if="configuredVisionProvidersMetadata.length > 0"
             class="max-h-[260px] min-w-0 flex flex-col gap-2 overflow-y-auto pr-1"
             role="radiogroup"
           >
             <RadioCardSimple
-              v-for="metadata in persistedVisionProvidersMetadata"
+              v-for="metadata in configuredVisionProvidersMetadata"
               :id="metadata.id"
               :key="metadata.id"
               v-model="activeProvider"

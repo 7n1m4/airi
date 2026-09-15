@@ -137,4 +137,38 @@ describe('providers converters', () => {
       baseUrl: 'https://integrate.api.nvidia.com/v1/',
     })
   })
+
+  it('tags vision models using pattern matching when explicit modalities are absent', async () => {
+    const definition = {
+      id: 'opencode-go',
+      tasks: ['chat', 'vision'],
+      name: 'OpenCode Go',
+      nameLocalize: ({ t }: { t: (input: string) => string }) => t('name.key'),
+      description: 'test',
+      descriptionLocalize: ({ t }: { t: (input: string) => string }) => t('description.key'),
+      createProviderConfig: () => z.object({
+        apiKey: z.string(),
+        baseUrl: z.string().optional().default('https://opencode.ai/zen/go/v1/'),
+      }),
+      extraMethods: {
+        listModels: async () => [
+          { id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek Vision' },
+          { id: 'deepseek-v4-flash', name: 'DeepSeek Flash' },
+          { id: 'gpt-4o', name: 'GPT-4o' },
+        ],
+      },
+      createProvider: () => ({}) as any,
+    } as any
+
+    const metadata = convertProviderDefinitionToMetadata(definition, ((key: string) => key) as any)
+    const models = await metadata.capabilities.listModels?.({ apiKey: 'k' })
+
+    const visionModel = models?.find(m => m.id === 'deepseek-v4-flash-vision-exp')
+    const chatModel = models?.find(m => m.id === 'deepseek-v4-flash')
+    const gpt4oModel = models?.find(m => m.id === 'gpt-4o')
+
+    expect(visionModel?.capabilities).toContain('vision')
+    expect(gpt4oModel?.capabilities).toContain('vision')
+    expect(chatModel?.capabilities).not.toContain('vision')
+  })
 })

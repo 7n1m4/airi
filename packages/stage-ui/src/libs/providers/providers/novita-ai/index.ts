@@ -21,7 +21,7 @@ export const providerNovitaAI = defineProvider<NovitaConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.novita.title'),
   description: 'Scalable Cloud - 10,000+ models with ultra-fast, low-latency inference',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.novita.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:novita',
   iconColor: 'i-lobe-icons:novita-color',
   business: () => ({

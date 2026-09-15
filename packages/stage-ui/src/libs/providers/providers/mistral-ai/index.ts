@@ -21,7 +21,7 @@ export const providerMistralAI = defineProvider<MistralConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.mistral.title'),
   description: 'European Open-Weights - High-efficiency, low-latency models',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.mistral.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:mistral',
   business: () => ({
     pricing: 'paid',

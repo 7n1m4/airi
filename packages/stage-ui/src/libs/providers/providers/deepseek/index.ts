@@ -22,7 +22,7 @@ export const providerDeepSeek = defineProvider<DeepSeekConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.deepseek.title'),
   description: 'Value Leader - Strong reasoning and coding at aggressive pricing',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.deepseek.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:deepseek',
   business: () => ({
     pricing: 'paid',

@@ -20,7 +20,7 @@ export const providerAlibabaCloud = defineProvider<AlibabaCloudConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.alibaba-cloud.title'),
   description: 'Model Studio - Large-scale model service platform by Alibaba Cloud',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.alibaba-cloud.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:alibabacloud',
   business: () => ({
     pricing: 'paid',

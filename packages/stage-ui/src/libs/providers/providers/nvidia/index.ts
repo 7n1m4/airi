@@ -22,7 +22,7 @@ export const providerNvidia = defineProvider<NvidiaConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.nvidia.title'),
   description: 'NIM Optimized - High-performance inference on NVIDIA GPU infrastructure',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.nvidia.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   business: () => ({
     pricing: 'paid',
     deployment: 'cloud',

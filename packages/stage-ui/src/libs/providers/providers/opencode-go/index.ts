@@ -48,7 +48,7 @@ export const providerOpenCodeGo = defineProvider<OpenCodeGoConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.opencode-go.title'),
   description: 'Developer API Platform - Plans start at $10 a month',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.opencode-go.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:openai-compatible',
   business: () => ({
     pricing: 'paid',

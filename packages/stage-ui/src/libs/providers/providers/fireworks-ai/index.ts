@@ -21,7 +21,7 @@ export const providerFireworksAI = defineProvider<FireworksConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.fireworks.title'),
   description: 'Speed-Optimized - $1 free credit for premium model hosting',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.fireworks.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:fireworks',
   business: () => ({
     pricing: 'paid',

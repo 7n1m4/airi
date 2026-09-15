@@ -21,7 +21,7 @@ export const providerModelScope = defineProvider<ModelscopeConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.modelscope.title'),
   description: 'Open-Source Hub - 2k free daily API calls for open models',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.modelscope.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:modelscope',
   iconColor: 'i-lobe-icons:modelscope-color',
   business: () => ({

@@ -9,7 +9,7 @@ export const providerCloudflareWorkersAI = defineProvider({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.cloudflare-workers-ai.title'),
   description: 'AI on the Edge - 10k free Neurons/day across many models',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.cloudflare-workers-ai.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-simple-icons:cloudflare',
   iconColor: 'i-lobe-icons:cloudflare-color',
   business: () => ({

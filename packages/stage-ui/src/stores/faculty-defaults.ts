@@ -71,7 +71,7 @@ export const FACTORY_SAFE_DEFAULTS: GlobalFacultyDefaultsState = {
     recoveryIntervalMinutes: 15,
   },
   vision: {
-    primaryProvider: 'blip',
+    primaryProvider: 'blip-local',
     primaryModel: 'SmilingWolf/wd-swinv2-tagger-v3',
     fallbackProvider: '',
     fallbackModel: '',

@@ -21,7 +21,7 @@ export const providerTogetherAI = defineProvider<TogetherConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.together.title'),
   description: 'Open Model Fast Lane - Cost-effective access to fast open-source inference',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.together.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:together',
   business: () => ({
     pricing: 'paid',

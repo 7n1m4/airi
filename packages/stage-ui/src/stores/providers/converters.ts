@@ -101,7 +101,11 @@ function mapModelsToMetadataModels(providerId: string, models: any[]) {
     const hasVisionModality = model.architecture?.modality?.includes('image')
       || (inputModalities.includes('image') && outputModalities.includes('text'))
 
-    const isVision = hasVisionModality || (model.capabilities?.vision === true)
+    const idLower = (model.id || '').toLowerCase()
+    const nameLower = (model.name || model.display_name || '').toLowerCase()
+    const matchesVisionPattern = /vision|image|\bvl\b|-vl|_vl|omni|\b4o\b|\b4\.5\b|pixtral|llava|internvl|florence|moondream|cogvlm|minicpm|gemini-1\.5|gemini-2|gemini-3|claude-3|claude-4/i.test(`${idLower} ${nameLower}`)
+
+    const isVision = hasVisionModality || (model.capabilities?.vision === true) || matchesVisionPattern
 
     if (typeof localStorage !== 'undefined' && localStorage.getItem('airi:debug') === '1') {
       console.log(`[VLM Check] ${model.id}: input=[${inputModalities.join(', ')}] output=[${outputModalities.join(', ')}] modality=${model.architecture?.modality} isVision=${isVision}`)

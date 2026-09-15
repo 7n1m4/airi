@@ -4,14 +4,18 @@ import type { CatalogGame } from './ArcadeCatalogModal.vue'
 import JSZip from 'jszip'
 import localforage from 'localforage'
 
+import { useFacultyDefaultsStore } from '@proj-airi/stage-ui/stores'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
 import { useChatStreamStore } from '@proj-airi/stage-ui/stores/chat/stream-store'
+import { useLLM } from '@proj-airi/stage-ui/stores/llm'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
+import { useVisionStore } from '@proj-airi/stage-ui/stores/modules/vision'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { storeToRefs } from 'pinia'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
 
 import ArcadeCatalogModal from './ArcadeCatalogModal.vue'
 
@@ -24,7 +28,10 @@ const chatOrchestrator = useChatOrchestratorStore()
 const chatSession = useChatSessionStore()
 const chatStream = useChatStreamStore()
 const consciousnessStore = useConsciousnessStore()
+const facultyDefaultsStore = useFacultyDefaultsStore()
+const llmStore = useLLM()
 const providersStore = useProvidersStore()
+const visionStore = useVisionStore()
 const { activeCard } = storeToRefs(airiCardStore)
 
 // --- Engine State ---
@@ -870,6 +877,26 @@ function focusCanvas() {
 }
 
 // --- Backseat Chat & Banter Stream ---
+interface TurnAction {
+  type: 'click' | 'key_press' | 'type_text' | 'wait'
+  target_description?: string
+  x?: number
+  y?: number
+  key?: string
+  text?: string
+  ms?: number
+}
+
+interface TurnPlan {
+  game_name?: string
+  screen_state?: string
+  thought?: string
+  commentary?: string
+  macro_intent?: string
+  actions: TurnAction[]
+  executed?: boolean
+}
+
 interface BackseatMessage {
   id: string
   sender: 'character' | 'user'
@@ -879,6 +906,7 @@ interface BackseatMessage {
   emotion?: 'neutral' | 'smug' | 'panicked' | 'cheering' | 'thinking'
   isAdvice?: boolean
   imageAttachment?: string
+  turnPlan?: TurnPlan
 }
 
 const chatTranscript = ref<BackseatMessage[]>([
@@ -897,6 +925,9 @@ const transcriptContainerRef = ref<HTMLDivElement | null>(null)
 
 // --- Frame Capture & Backseat Interaction ---
 const isCapturing = ref(false)
+const isTakingTurn = ref(false)
+const isExecutingActions = ref(false)
+const autoExecuteTurn = ref(false)
 const attachedFrame = ref<{ dataUrl: string, base64: string, mimeType: string } | null>(null)
 const activeLlmReplyId = ref<string | null>(null)
 
@@ -1182,6 +1213,305 @@ async function handleSendAdvice(presetText?: string) {
   await dispatchUserMessage(promptText, frame || undefined)
 }
 
+// --- Option A: Autonomous Turn & Co-pilot Execution Primitives ---
+
+async function executeClick(normX: number, normY: number) {
+  if (activeEngine.value === 'jsdos') {
+    const canvas = dosContainerRef.value?.querySelector('canvas')
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect()
+      const clientX = rect.left + (normX / 1000) * rect.width
+      const clientY = rect.top + (normY / 1000) * rect.height
+      const canvasX = Math.round((normX / 1000) * canvas.width)
+      const canvasY = Math.round((normY / 1000) * canvas.height)
+
+      canvas.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX, clientY, button: 0 }))
+      await new Promise(r => setTimeout(r, 40))
+      canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX, clientY, button: 0, buttons: 1 }))
+      await new Promise(r => setTimeout(r, 80))
+      canvas.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX, clientY, button: 0, buttons: 0 }))
+      canvas.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX, clientY, button: 0 }))
+
+      if (currentCommandInterface) {
+        try {
+          if (typeof currentCommandInterface.sendMouse === 'function') {
+            currentCommandInterface.sendMouse(canvasX, canvasY, 1)
+            await new Promise(r => setTimeout(r, 80))
+            currentCommandInterface.sendMouse(canvasX, canvasY, 0)
+          }
+          else if (typeof currentCommandInterface.sendMouseClick === 'function') {
+            currentCommandInterface.sendMouseClick(0, canvasX, canvasY)
+          }
+        }
+        catch (err) {
+          console.warn('[Arcade] CI sendMouse failed:', err)
+        }
+      }
+    }
+  }
+  else if (activeEngine.value === 'canvas-2048') {
+    canvasRef.value?.focus()
+  }
+}
+
+function resolveKeyDetails(rawKey: string): { key: string, code: string, keyCode: number } {
+  const k = (rawKey || '').trim()
+  const lower = k.toLowerCase()
+
+  if (lower === 'enter' || lower === 'return')
+    return { key: 'Enter', code: 'Enter', keyCode: 13 }
+  if (lower === 'space' || lower === 'spacebar' || lower === ' ')
+    return { key: ' ', code: 'Space', keyCode: 32 }
+  if (lower === 'escape' || lower === 'esc')
+    return { key: 'Escape', code: 'Escape', keyCode: 27 }
+  if (lower === 'arrowup' || lower === 'up')
+    return { key: 'ArrowUp', code: 'ArrowUp', keyCode: 38 }
+  if (lower === 'arrowdown' || lower === 'down')
+    return { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40 }
+  if (lower === 'arrowleft' || lower === 'left')
+    return { key: 'ArrowLeft', code: 'ArrowLeft', keyCode: 37 }
+  if (lower === 'arrowright' || lower === 'right')
+    return { key: 'ArrowRight', code: 'ArrowRight', keyCode: 39 }
+  if (lower === 'backspace')
+    return { key: 'Backspace', code: 'Backspace', keyCode: 8 }
+  if (lower === 'tab')
+    return { key: 'Tab', code: 'Tab', keyCode: 9 }
+
+  const charCode = k.toUpperCase().charCodeAt(0)
+  return {
+    key: k,
+    code: /^\d$/.test(k) ? `Digit${k}` : `Key${k.toUpperCase()}`,
+    keyCode: Number.isNaN(charCode) ? 0 : charCode,
+  }
+}
+
+async function executeKeyPress(rawKey: string) {
+  const details = resolveKeyDetails(rawKey)
+
+  if (activeEngine.value === 'canvas-2048') {
+    if (details.key === 'ArrowLeft' || details.key === 'a')
+      move('left')
+    else if (details.key === 'ArrowRight' || details.key === 'd')
+      move('right')
+    else if (details.key === 'ArrowUp' || details.key === 'w')
+      move('up')
+    else if (details.key === 'ArrowDown' || details.key === 's')
+      move('down')
+    return
+  }
+
+  if (activeEngine.value === 'jsdos') {
+    const target = (dosContainerRef.value?.querySelector('canvas') as HTMLElement | null) || window
+    target.dispatchEvent(new KeyboardEvent('keydown', {
+      key: details.key,
+      code: details.code,
+      keyCode: details.keyCode,
+      which: details.keyCode,
+      bubbles: true,
+      cancelable: true,
+    }))
+
+    await new Promise(r => setTimeout(r, 60))
+
+    target.dispatchEvent(new KeyboardEvent('keyup', {
+      key: details.key,
+      code: details.code,
+      keyCode: details.keyCode,
+      which: details.keyCode,
+      bubbles: true,
+      cancelable: true,
+    }))
+
+    if (currentCommandInterface) {
+      try {
+        if (typeof currentCommandInterface.simulateKeyPress === 'function') {
+          currentCommandInterface.simulateKeyPress(details.keyCode || details.key)
+        }
+        else if (typeof currentCommandInterface.sendKeyEvent === 'function') {
+          currentCommandInterface.sendKeyEvent(details.keyCode, true)
+          await new Promise(r => setTimeout(r, 60))
+          currentCommandInterface.sendKeyEvent(details.keyCode, false)
+        }
+      }
+      catch (err) {
+        console.warn('[Arcade] CI sendKeyEvent failed:', err)
+      }
+    }
+  }
+}
+
+async function executeTypeText(text: string) {
+  for (const char of text) {
+    await executeKeyPress(char)
+    await new Promise(r => setTimeout(r, 80))
+  }
+}
+
+async function executeTurnPlan(plan: TurnPlan) {
+  if (!plan.actions || plan.actions.length === 0)
+    return
+
+  isExecutingActions.value = true
+  try {
+    for (const action of plan.actions) {
+      if (action.type === 'click' && action.x !== undefined && action.y !== undefined) {
+        await executeClick(action.x, action.y)
+      }
+      else if (action.type === 'key_press' && action.key) {
+        await executeKeyPress(action.key)
+      }
+      else if (action.type === 'type_text' && action.text) {
+        await executeTypeText(action.text)
+      }
+      else if (action.type === 'wait') {
+        await new Promise(resolve => setTimeout(resolve, action.ms || 300))
+      }
+      await new Promise(resolve => setTimeout(resolve, 150))
+    }
+    plan.executed = true
+    toast.success(`Executed moves: ${plan.macro_intent || currentGameTitle.value}`)
+  }
+  catch (err: any) {
+    console.error('[Arcade] Failed executing moves:', err)
+    toast.error(`Execution error: ${err.message || err}`)
+  }
+  finally {
+    isExecutingActions.value = false
+  }
+}
+
+async function handleAiriTakeTurn() {
+  if (isTakingTurn.value || isExecutingActions.value)
+    return
+
+  isTakingTurn.value = true
+  try {
+    const frame = await captureCurrentGameFrame()
+    if (!frame) {
+      triggerReactiveReaction('I can\'t see the game screen clearly right now—make sure the game is running!', 'thinking')
+      return
+    }
+
+    // Resolve user's configured global Vision provider & model
+    const vlmProviderId = visionStore.activeProvider
+      || facultyDefaultsStore.defaults.vision?.primaryProvider
+      || 'opencode-go'
+    const vlmModelId = visionStore.activeModel
+      || facultyDefaultsStore.defaults.vision?.primaryModel
+      || 'deepseek-v4-flash-vision-exp'
+
+    const vlmProvider = await providersStore.getProviderInstance<any>(vlmProviderId)
+    if (!vlmProvider) {
+      throw new Error(`Unable to initialize Vision Provider "${vlmProviderId}". Please check Settings > Vision.`)
+    }
+
+    const turnPrompt = `You are Airi, an expert retro gaming companion and autonomous co-pilot playing "${currentGameTitle.value}".
+You have just been passed the controller to take a strategic turn!
+Carefully inspect the provided game screenshot:
+1. Analyze the exact visual layout, UI elements, active dialog options, status bars, and coordinates.
+2. Formulate your tactical reasoning ("thought").
+3. Produce energetic, in-character spoken dialogue for the player ("commentary", 1-2 sentences).
+4. Formulate the high-level objective of this turn ("macro_intent").
+5. Specify the exact sequence of executable input actions ("actions"). Mouse click coordinates MUST be normalized integers from 0 to 1000 (where 0,0 is top-left and 1000,1000 is bottom-right of the game display canvas).
+
+Respond STRICTLY in valid JSON matching this schema:
+{
+  "game_name": "${currentGameTitle.value}",
+  "screen_state": "brief visual description",
+  "thought": "tactical reasoning about what to do",
+  "commentary": "spoken dialogue to player",
+  "macro_intent": "short intent title (e.g., Place Coal Power Plant, Select Start City)",
+  "actions": [
+    {
+      "type": "click",
+      "target_description": "palette button / map coordinate",
+      "x": 44,
+      "y": 431
+    },
+    {
+      "type": "key_press",
+      "key": "Enter"
+    }
+  ]
+}`
+
+    let rawResponseText = ''
+
+    if (typeof vlmProvider.captionImage === 'function') {
+      if (typeof vlmProvider.loadModel === 'function' && !vlmProvider.isModelLoaded?.value) {
+        await vlmProvider.loadModel()
+      }
+      rawResponseText = await vlmProvider.captionImage(frame.dataUrl, { prompt: turnPrompt })
+    }
+    else {
+      const vlmMessages = [
+        {
+          role: 'user' as const,
+          content: [
+            { type: 'text', text: turnPrompt },
+            { type: 'image_url' as const, image_url: { url: frame.dataUrl } },
+          ],
+        },
+      ]
+      const response = await llmStore.generate(
+        vlmModelId,
+        vlmProvider,
+        vlmMessages as any,
+        { vision: true },
+      )
+      rawResponseText = response.text || ''
+    }
+
+    // Robust JSON extraction
+    let parsed: any = null
+    try {
+      const jsonMatch = rawResponseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, rawResponseText]
+      parsed = JSON.parse(jsonMatch[1] || rawResponseText)
+    }
+    catch {
+      parsed = {
+        commentary: rawResponseText.replace(/```[\s\S]*?```/g, '').trim() || 'I see the screen! Taking my turn now.',
+        macro_intent: 'Autonomous Turn',
+        actions: [],
+      }
+    }
+
+    const planCommentary = parsed.commentary || 'Passed the controller to me? Watch this!'
+    const plan: TurnPlan = {
+      game_name: parsed.game_name || currentGameTitle.value,
+      screen_state: parsed.screen_state || '',
+      thought: parsed.thought || '',
+      commentary: planCommentary,
+      macro_intent: parsed.macro_intent || 'Airi Strategic Move',
+      actions: Array.isArray(parsed.actions) ? parsed.actions : [],
+      executed: false,
+    }
+
+    chatTranscript.value.push({
+      id: `turn-${Date.now()}`,
+      sender: 'character',
+      authorName: activeCard.value?.name || 'AIRI',
+      text: planCommentary,
+      timestamp: 'Just now',
+      emotion: 'cheering',
+      imageAttachment: frame.dataUrl,
+      turnPlan: plan,
+    })
+    scrollToBottom()
+
+    if (autoExecuteTurn.value && plan.actions.length > 0) {
+      await executeTurnPlan(plan)
+    }
+  }
+  catch (err: any) {
+    console.error('[Arcade] Airi turn failed:', err)
+    triggerReactiveReaction(`I hit a snag analyzing the screen: ${err.message || 'Vision inference failed'}. Check Settings > Vision!`, 'panicked')
+  }
+  finally {
+    isTakingTurn.value = false
+  }
+}
+
 function toggleMute() {
   isMuted.value = !isMuted.value
   if (currentCommandInterface) {
@@ -1266,6 +1596,23 @@ onUnmounted(() => {
 
         <!-- Actions: Savestate & Controls -->
         <div class="flex items-center gap-1.5">
+          <!-- Airi Take Turn / Pass Controller -->
+          <button
+            class="shadow-2xs flex items-center gap-1.5 border border-purple-500/40 rounded-lg from-purple-600 to-indigo-600 bg-gradient-to-r px-3 py-1.5 text-xs text-white font-bold transition-all active:scale-95 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50"
+            :disabled="isTakingTurn || isExecutingActions || isCapturing"
+            title="Pass the controller: Airi inspects the screen with your global VLM, shares tactical commentary, and takes a turn!"
+            @click="handleAiriTakeTurn"
+          >
+            <div :class="isTakingTurn ? 'i-solar:restart-bold animate-spin' : 'i-solar:gamepad-charge-bold'" class="text-xs" />
+            <span>{{ isTakingTurn ? 'Analyzing Move...' : 'Airi Take a Turn' }}</span>
+          </button>
+
+          <!-- Auto-Play Toggle -->
+          <label class="flex cursor-pointer select-none items-center gap-1 border border-neutral-200/80 rounded-lg bg-white/80 px-2 py-1 text-[10px] text-neutral-600 font-semibold dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-300">
+            <input v-model="autoExecuteTurn" type="checkbox" class="size-3 rounded accent-purple-600">
+            <span>Auto-Play</span>
+          </label>
+
           <!-- Quick Ask Airi -->
           <button
             class="shadow-2xs flex items-center gap-1.5 border border-primary-500/40 rounded-lg bg-primary-500 px-3 py-1.5 text-xs text-white font-bold transition-all active:scale-95 hover:bg-primary-600 disabled:opacity-50"
@@ -1514,7 +1861,73 @@ onUnmounted(() => {
               </span>
             </div>
             <div class="shadow-xs max-w-[90%] rounded-2xl rounded-tl-none bg-white p-3 text-xs text-neutral-800 leading-relaxed dark:bg-neutral-800/80 dark:text-neutral-200">
-              {{ msg.text }}
+              <div
+                v-if="msg.imageAttachment"
+                class="mb-2 overflow-hidden border border-neutral-200 rounded-lg bg-black/40 shadow-inner dark:border-neutral-700"
+              >
+                <img
+                  :src="msg.imageAttachment"
+                  alt="Captured game screen"
+                  class="max-h-44 w-full object-contain"
+                >
+              </div>
+              <div>{{ msg.text }}</div>
+
+              <!-- Turn Plan Card -->
+              <div
+                v-if="msg.turnPlan"
+                class="mt-2.5 border border-purple-500/30 rounded-xl bg-purple-500/5 p-2.5 space-y-2 dark:border-purple-400/30 dark:bg-purple-950/20"
+              >
+                <div class="flex items-center justify-between gap-1 text-[11px] text-purple-700 font-bold dark:text-purple-300">
+                  <div class="flex items-center gap-1.5">
+                    <div class="i-solar:gamepad-charge-bold text-sm text-purple-500" />
+                    <span>🎯 {{ msg.turnPlan.macro_intent }}</span>
+                  </div>
+                  <span
+                    v-if="msg.turnPlan.executed"
+                    class="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] text-emerald-600 font-bold dark:bg-emerald-950/50 dark:text-emerald-400"
+                  >
+                    Executed ✓
+                  </span>
+                </div>
+
+                <div
+                  v-if="msg.turnPlan.thought"
+                  class="text-[10px] text-neutral-500 leading-snug italic dark:text-neutral-400"
+                >
+                  {{ msg.turnPlan.thought }}
+                </div>
+
+                <!-- Actions list -->
+                <div
+                  v-if="msg.turnPlan.actions?.length > 0"
+                  class="flex flex-wrap gap-1 pt-0.5"
+                >
+                  <span
+                    v-for="(act, idx) in msg.turnPlan.actions"
+                    :key="idx"
+                    class="shadow-2xs border border-neutral-200/80 rounded bg-white/90 px-1.5 py-0.5 text-[9px] text-neutral-700 font-mono dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300"
+                  >
+                    {{ act.type === 'click' ? `🖱️ Click (${act.x}, ${act.y})` : act.type === 'key_press' ? `⌨️ Key [${act.key}]` : act.type === 'type_text' ? `⌨️ Type "${act.text}"` : '⏳ Wait' }}
+                  </span>
+                </div>
+
+                <!-- Execute Move Button -->
+                <div
+                  v-if="!msg.turnPlan.executed && msg.turnPlan.actions?.length > 0"
+                  class="pt-1"
+                >
+                  <button
+                    type="button"
+                    class="shadow-xs w-full flex items-center justify-center gap-1.5 rounded-lg from-purple-600 to-indigo-600 bg-gradient-to-r px-3 py-1.5 text-[10px] text-white font-bold transition-all active:scale-95 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50"
+                    :disabled="isExecutingActions"
+                    @click="executeTurnPlan(msg.turnPlan)"
+                  >
+                    <div :class="isExecutingActions ? 'i-solar:restart-bold animate-spin' : 'i-solar:play-bold'" class="text-xs" />
+                    <span>{{ isExecutingActions ? 'Executing Moves...' : '▶ Execute Moves on Canvas' }}</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

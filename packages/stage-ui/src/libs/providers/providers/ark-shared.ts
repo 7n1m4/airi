@@ -64,7 +64,7 @@ export function createArkChatProviderDefinition(options: ArkProviderDefinitionOp
     nameLocalize: ({ t }) => t(nameKey) || name,
     description,
     descriptionLocalize: ({ t }) => t(descriptionKey) || description,
-    tasks: ['chat'],
+    tasks: ['chat', 'vision'],
     icon,
     iconColor,
     business: () => ({

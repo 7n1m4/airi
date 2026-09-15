@@ -262,22 +262,25 @@ const allFacultyProviders = computed<ProviderItem[]>(() => {
 
   if (activeDrawerFaculty.value === 'vision') {
     const recommendedMap: Record<string, string> = {
-      moondream: 'Moondream2 VLM (Local, WebGPU)',
-      blip: 'Waifu Diffusion Tagger (WD Local)',
-      none: 'None (Skip Vision)',
+      'moondream-local': 'Moondream2 VLM (Local, WebGPU)',
+      'moondream': 'Moondream2 VLM (Local, WebGPU)',
+      'blip-local': 'Waifu Diffusion Tagger (WD Local)',
+      'blip': 'Waifu Diffusion Tagger (WD Local)',
+      'none': 'None (Skip Vision)',
     }
     const recommendedList: ProviderItem[] = [
-      { id: 'moondream', name: 'Moondream2 VLM (Local, WebGPU)', isRecommended: true },
-      { id: 'blip', name: 'Waifu Diffusion Tagger (WD Local)', isRecommended: true },
+      { id: 'moondream-local', name: 'Moondream2 VLM (Local, WebGPU)', isRecommended: true },
+      { id: 'blip-local', name: 'Waifu Diffusion Tagger (WD Local)', isRecommended: true },
       { id: 'none', name: 'None (Skip Vision)', isRecommended: true },
     ]
     const otherList: ProviderItem[] = allVisionProvidersMetadata.value
-      .filter(p => !(p.id in recommendedMap))
+      .filter(p => !(p.id in recommendedMap) && p.id !== 'moondream-local' && p.id !== 'blip-local' && p.id !== 'none')
       .map(p => ({
         id: p.id,
         name: p.localizedName || p.name,
         isRecommended: false,
       }))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }))
     return [...recommendedList, ...otherList]
   }
 
@@ -285,7 +288,11 @@ const allFacultyProviders = computed<ProviderItem[]>(() => {
 })
 
 const recommendedProviders = computed(() => allFacultyProviders.value.filter(p => p.isRecommended))
-const otherProviders = computed(() => allFacultyProviders.value.filter(p => !p.isRecommended))
+const otherProviders = computed(() =>
+  allFacultyProviders.value
+    .filter(p => !p.isRecommended)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
+)
 
 function resolveModelsForFacultyProvider(faculty: FacultyName | null, provider: string): Array<{ id: string, name: string }> {
   if (!faculty || !provider)
@@ -430,8 +437,11 @@ function resolveModelsForFacultyProvider(faculty: FacultyName | null, provider: 
       ]
     }
     const list = providersStore.getModelsForProvider(provider)
-    if (list.length > 0)
-      return list.map(m => ({ id: m.id, name: m.name || m.id }))
+    if (list.length > 0) {
+      const visionModels = list.filter(m => m.capabilities?.includes('vision'))
+      const finalList = visionModels.length > 0 ? visionModels : list
+      return finalList.map(m => ({ id: m.id, name: m.name || m.id }))
+    }
   }
 
   return []
@@ -591,7 +601,7 @@ const speechFallbackPreset = computed({
 // Proactively fetch models when primary provider changes
 watch(tempPrimaryProvider, async (p) => {
   if (p) {
-    if (activeDrawerFaculty.value === 'consciousness') {
+    if (activeDrawerFaculty.value === 'consciousness' || activeDrawerFaculty.value === 'vision') {
       await providersStore.fetchModelsForProvider(p)
     }
     else if (activeDrawerFaculty.value === 'artistry' && p === 'pollinations') {
@@ -611,7 +621,7 @@ watch(tempPrimaryProvider, async (p) => {
 
 watch(tempFallbackProvider, async (p) => {
   if (p) {
-    if (activeDrawerFaculty.value === 'consciousness') {
+    if (activeDrawerFaculty.value === 'consciousness' || activeDrawerFaculty.value === 'vision') {
       await providersStore.fetchModelsForProvider(p)
     }
     else if (activeDrawerFaculty.value === 'artistry' && p === 'pollinations') {
@@ -623,10 +633,25 @@ watch(tempFallbackProvider, async (p) => {
 function openDrawer(faculty: FacultyName) {
   activeDrawerFaculty.value = faculty
   const conf = defaults.value[faculty]
-  tempPrimaryProvider.value = conf.primaryProvider
+  let primaryProv = conf.primaryProvider
+  let fallbackProv = conf.fallbackProvider
+
+  if (faculty === 'vision') {
+    if (primaryProv === 'moondream')
+      primaryProv = 'moondream-local'
+    else if (primaryProv === 'blip' || primaryProv === 'wd14')
+      primaryProv = 'blip-local'
+
+    if (fallbackProv === 'moondream')
+      fallbackProv = 'moondream-local'
+    else if (fallbackProv === 'blip' || fallbackProv === 'wd14')
+      fallbackProv = 'blip-local'
+  }
+
+  tempPrimaryProvider.value = primaryProv
   tempPrimaryModel.value = conf.primaryModel
   tempPrimaryVoiceId.value = conf.primaryVoiceId || (faculty === 'speech' ? 'af_heart' : '')
-  tempFallbackProvider.value = conf.fallbackProvider
+  tempFallbackProvider.value = fallbackProv
   tempFallbackModel.value = conf.fallbackModel
   tempFallbackVoiceId.value = conf.fallbackVoiceId || ''
   tempAutoFailover.value = conf.autoFailover
@@ -634,11 +659,11 @@ function openDrawer(faculty: FacultyName) {
   tempNotificationStyle.value = conf.notificationStyle
   tempRecoveryInterval.value = conf.recoveryIntervalMinutes
 
-  if (faculty === 'consciousness') {
-    if (conf.primaryProvider)
-      providersStore.fetchModelsForProvider(conf.primaryProvider)
-    if (conf.fallbackProvider)
-      providersStore.fetchModelsForProvider(conf.fallbackProvider)
+  if (faculty === 'consciousness' || faculty === 'vision') {
+    if (primaryProv)
+      providersStore.fetchModelsForProvider(primaryProv)
+    if (fallbackProv)
+      providersStore.fetchModelsForProvider(fallbackProv)
   }
   else if (faculty === 'artistry') {
     artistryStore.fetchPollinationsModels()

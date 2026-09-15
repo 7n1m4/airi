@@ -165,7 +165,7 @@ export const providerAzureOpenAI = defineProvider<AzureOpenAIConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.azure-openai.title'),
   description: 'Azure OpenAI API',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.azure-openai.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-simple-icons:microsoftazure',
   extraMethods: {
     listModels: async (config, _provider) => {

@@ -22,7 +22,7 @@ export const providerAIHubMix = defineProvider<AIHubMixConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.aihubmix.title'),
   description: 'Unified API Bridge - Versatile router aggregating major models into one endpoint',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.aihubmix.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:aihubmix',
   iconColor: 'i-lobe-icons:aihubmix-color',
   business: () => ({

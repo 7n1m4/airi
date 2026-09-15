@@ -21,7 +21,7 @@ export const providerMoonshotAI = defineProvider<MoonshotConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.moonshot.title'),
   description: 'Long-Context Specialist - Kimi Chat with 256k context window',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.moonshot.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:moonshot',
   business: () => ({
     pricing: 'free',

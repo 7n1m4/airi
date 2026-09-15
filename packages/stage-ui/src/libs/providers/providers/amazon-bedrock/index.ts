@@ -211,7 +211,7 @@ export const providerAmazonBedrock = defineProvider<AmazonBedrockConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.amazon-bedrock.title'),
   description: 'AWS Ecosystem - Access Titan, Claude, and Llama on AWS',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.amazon-bedrock.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:aws',
   iconColor: 'i-lobe-icons:aws-color',
   business: () => ({

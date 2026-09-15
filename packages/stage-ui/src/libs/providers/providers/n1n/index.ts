@@ -23,7 +23,7 @@ export const providerN1N = defineProvider<N1NConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.n1n.title'),
   description: 'Enterprise Gateway - Unified billing for 500+ global models',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.n1n.description'),
-  tasks: ['chat'],
+  tasks: ['chat', 'vision'],
   icon: 'i-lobe-icons:openai',
   business: () => ({
     pricing: 'paid',
