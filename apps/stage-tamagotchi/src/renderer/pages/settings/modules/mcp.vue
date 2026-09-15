@@ -441,6 +441,18 @@ watch(searchQuery, (val) => {
   fetchRegistry(val)
 })
 
+function isOfficialFilesystemPreset(server: RegistryServer): boolean {
+  const primaryPkg = server.packages?.[0]
+  const id = primaryPkg?.identifier || server.package_name || server.canonicalName
+  return id === '@modelcontextprotocol/server-filesystem'
+}
+
+function isOpenWebSearchPreset(server: RegistryServer): boolean {
+  const primaryPkg = server.packages?.[0]
+  const id = primaryPkg?.identifier || server.package_name || server.canonicalName
+  return id === 'open-websearch'
+}
+
 function getInstallState(server: RegistryServer): {
   canInstall: boolean
   label: string
@@ -450,13 +462,8 @@ function getInstallState(server: RegistryServer): {
   if (isInstalled(server))
     return { canInstall: false, label: 'Installed' }
 
-  // Known zero-config presets always installable
-  if (
-    server.name.toLowerCase().includes('open web search')
-    || server.package_name?.includes('open-websearch')
-    || server.name.toLowerCase().includes('filesystem')
-    || server.package_name?.includes('server-filesystem')
-  ) {
+  // Exact canonical presets: open-websearch and official filesystem
+  if (isOpenWebSearchPreset(server) || isOfficialFilesystemPreset(server)) {
     return { canInstall: true, label: 'Install' }
   }
 
@@ -474,20 +481,37 @@ function getInstallState(server: RegistryServer): {
     return {
       canInstall: false,
       label: 'Manual Setup',
-      reason: 'No installation package metadata provided.',
+      reason: 'No installation package metadata provided by the registry.',
     }
   }
 
-  if (primaryPkg.registryType === 'pypi') {
+  // Strictly require npm packages for automatic execution via npx
+  if (primaryPkg.registryType !== 'npm') {
+    if (primaryPkg.registryType === 'pypi') {
+      return {
+        canInstall: false,
+        label: 'Python (Manual)',
+        reason: 'Python PyPI package. Requires manual Python virtual environment or uvx configuration.',
+      }
+    }
     return {
       canInstall: false,
-      label: 'Python (Manual)',
-      reason: 'Python PyPI package. Requires manual Python virtual environment or uvx configuration.',
+      label: 'Manual Setup',
+      reason: `Unsupported registry type "${primaryPkg.registryType}". Only npm packages are currently supported for automatic installation.`,
     }
   }
 
-  const requiredEnv = primaryPkg.environmentVariables?.filter(e => e.isRequired).map(e => e.name) || []
-  const requiredArgs = primaryPkg.packageArguments?.filter(a => a.isRequired).map(a => a.name) || []
+  // Strictly require stdio transport for local process execution
+  if (primaryPkg.transport?.type && primaryPkg.transport.type !== 'stdio') {
+    return {
+      canInstall: false,
+      label: 'Unsupported Transport',
+      reason: `Transport "${primaryPkg.transport.type}" is not supported for local stdio process execution.`,
+    }
+  }
+
+  const requiredEnv = primaryPkg.environmentVariables?.filter(e => e.isRequired && !e.default).map(e => e.name) || []
+  const requiredArgs = primaryPkg.packageArguments?.filter(a => a.isRequired && !a.default).map(a => a.name) || []
 
   if (requiredEnv.length > 0 || requiredArgs.length > 0) {
     const missing = [...requiredEnv, ...requiredArgs].join(', ')
@@ -515,14 +539,14 @@ async function handleInstall(server: RegistryServer) {
   lastActionMessage.value = ''
   errorMessage.value = ''
   try {
-    const rawSlug = server.package_name || server.name.toLowerCase().replace(/\s+/g, '-')
-    let slug = rawSlug
+    const primaryPkg = server.packages?.[0]
+    let slug = server.package_name || server.canonicalName.replace(/^@/, '').replace(/\//g, '-').toLowerCase()
     const command = 'npx'
     let args: string[] = ['-y']
     let env: Record<string, string> | undefined
 
-    // Specialized 0-key Web Search
-    if (server.name.toLowerCase().includes('open web search') || rawSlug.includes('open-websearch')) {
+    // Specialized 0-key Web Search preset
+    if (isOpenWebSearchPreset(server)) {
       slug = 'open-websearch'
       args = ['-y', 'open-websearch@latest']
       env = {
@@ -530,8 +554,8 @@ async function handleInstall(server: RegistryServer) {
         SEARCH_MODE: 'auto',
       }
     }
-    // Specialized Official Filesystem MCP
-    else if (server.name.toLowerCase().includes('filesystem') || rawSlug.includes('server-filesystem')) {
+    // Specialized Official Filesystem MCP preset
+    else if (isOfficialFilesystemPreset(server)) {
       slug = 'filesystem'
       const home = typeof process !== 'undefined' && process.env?.HOME ? process.env.HOME : '/Users'
       args = [
@@ -542,16 +566,38 @@ async function handleInstall(server: RegistryServer) {
         `${home}/Desktop`,
       ]
     }
-    else if (server.package_name && server.package_name !== server.name) {
-      args.push(server.package_name)
-    }
-    else if (server.source_code_url?.includes('github.com')) {
-      const parts = server.source_code_url.split('/')
-      const repo = parts[4]?.replace('.git', '')
-      if (repo && (repo.startsWith('mcp-server-') || repo.endsWith('-mcp-server') || repo.endsWith('-mcp')))
-        args.push(repo)
-      else
-        args.push(server.package_name || slug)
+    else if (primaryPkg) {
+      const pkgId = primaryPkg.identifier || server.package_name || slug
+      const pkgSpec = primaryPkg.version ? `${pkgId}@${primaryPkg.version}` : pkgId
+      args.push(pkgSpec)
+
+      // Append fixed/default package arguments if specified
+      if (primaryPkg.packageArguments?.length) {
+        for (const arg of primaryPkg.packageArguments) {
+          if (arg.default) {
+            args.push(arg.default)
+          }
+        }
+      }
+
+      // Append declared runtime arguments if specified
+      if (primaryPkg.runtimeArguments?.length) {
+        for (const rtArg of primaryPkg.runtimeArguments) {
+          if (rtArg.value) {
+            args.push(rtArg.value)
+          }
+        }
+      }
+
+      // Populate default environment variables if specified
+      if (primaryPkg.environmentVariables?.length) {
+        for (const e of primaryPkg.environmentVariables) {
+          if (e.default) {
+            env = env || {}
+            env[e.name] = e.default
+          }
+        }
+      }
     }
     else {
       args.push(slug)
@@ -571,11 +617,17 @@ async function handleInstall(server: RegistryServer) {
 
     const result = await handleApplyAndRestart()
     currentTab.value = 'manage'
-    if (result && result.failed && result.failed.includes(slug)) {
+    if (result?.started?.includes(slug)) {
+      lastActionMessage.value = `Successfully installed and started ${server.name}`
+    }
+    else if (result?.failed?.includes(slug)) {
       errorMessage.value = `Server "${server.name}" was added to mcp.json but failed to start. Check server logs in the runtime panel.`
     }
+    else if (result?.skipped?.includes(slug)) {
+      lastActionMessage.value = `Server "${server.name}" was added to mcp.json (startup was skipped because it is disabled or already running).`
+    }
     else {
-      lastActionMessage.value = `Successfully installed and started ${server.name}`
+      lastActionMessage.value = `Server "${server.name}" was added to mcp.json (state unconfirmed).`
     }
   }
   catch (error) {

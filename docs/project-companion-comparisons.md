@@ -433,12 +433,12 @@ This matrix extends the verified capability catalog from the AIRI repository, pr
 | **Turn Pacing & Thinking Fillers** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Subconscious Spoken Asides** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **In-Process WebGPU / WASM TTS** | ✅ (Kokoro/Pocket/MOSS) | ✅ (Kokoro) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Voice-Conditioned Synthesis (No RVC)**| ✅ (Pocket/MOSS/Cloud)| ❌ | ◐ (Cloud Credentials)| ❌ | ◐ (OmniVoice) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Voice-Conditioned Synthesis (No RVC)**| ✅ Built-in In-Engine Studio | ❌ (Fixed Models) | ◐ External Server / Cloud | ◐ External Server / Cloud | ◐ External Server (OmniVoice) | ❌ (Requires RVC Filter) | ◐ External Server / Cloud | ◐ Cloud API Only (ElevenLabs) | ❌ (Fixed Models) | ◐ External Server / Cloud | ❌ (Fixed SAPI Models) |
 | **Audio-to-Audio Voice Conversion (RVC)**| ❌ (Not implemented) | ❌ | ❌ | ❌ | ❌ | ✅ (`RVC-v2` Post) | ❌ | ✅ (`RVC` Post) | ❌ | ❌ | ◐ Community RVC |
 | **Speech Stage-Direction Filtering**| ✅ (UST Engine) | ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ◐ Built-in Regex| ❌ |
 | **Custom Pronunciation Rules** | ✅ Built-in | ❌ | ◐ Word list | ◐ Word list | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Character Audio Studio Profiles** | ✅ Built-in | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **Registered Speech Integrations** | **23 Integrations** | 8 Integrations | 4 Integrations | 10 Integrations | 4 Integrations | 3 Integrations | 5 Integrations | 6 Integrations | 2 Integrations | 8 Integrations | 2 Integrations |
+| **Registered Speech Integrations** | **23 Integrations** | 8 Integrations | 11 Integrations | 10 Integrations | 4 Integrations | 2 Integrations (+1 RVC) | 19 Integrations | 6 Integrations (+1 RVC) | 2 Integrations | 10 Integrations | 2 Integrations (+RVC Plugins) |
 | **Dedicated Transcription (STT)** | **8 Integrations** | 6 Integrations | 3 Integrations | 3 Integrations | 2 Integrations | 2 Integrations | 4 Integrations | 3 Integrations | 2 Integrations | 2 Integrations | 1 Integration |
 
 ---
@@ -540,7 +540,8 @@ A companion's voice pipeline determines whether conversations feel natural, resp
 
 | Capability / Dimension | `dasilva333/airi` | Upstream AIRI | Project N.E.K.O. | NekoGPT | Utsuwa | Soul of Waifu | Open-LLM-VTuber | Amica | Komorebi | AITuberKit | VPet |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Voice-Conditioned Synthesis (No RVC)**| ✅ Local in-process (Pocket-TTS embeddings, MOSS prompt codes) + Cloud (ElevenLabs, Chatterbox) | ❌ | ◐ Local server (GPT-SoVITS v3) + Cloud (MiniMax, CosyVoice, Doubao) | ◐ Local server (Fish TTS, Piper) + Cloud (ElevenLabs, Fish Cloud) | ◐ Local server (OmniVoice) + Cloud (ElevenLabs) | ❌ (Relies on RVC post-processing for custom timbre) | ◐ Local server (GPT-SoVITS, ChatTTS, CosyVoice) | ◐ Cloud (ElevenLabs) | ❌ (Fixed Piper ONNX models) | ◐ Local server (Style-Bert-VITS2, GPT-SoVITS) + Cloud (ElevenLabs) | ❌ (Fixed OS SAPI / modded VITS) |
+| **Voice-Conditioned Synthesis (No RVC)**| ✅ Built-in In-Engine Studio (Pocket-TTS embeddings, MOSS prompt codes, `useLocalVoiceClone`) | ❌ (Fixed Models / Standard TTS) | ◐ External Server / Cloud (GPT-SoVITS v3 daemon, MiniMax, CosyVoice, Doubao) | ◐ External Server / Cloud (Fish TTS local daemon, Fish Cloud, ElevenLabs) | ◐ External Server (OmniVoice localhost HTTP, ElevenLabs) | ❌ (Requires RVC Filter; Fixed Edge-TTS / Coqui base) | ◐ External Server / Cloud (GPT-SoVITS daemon, CosyVoice, MiniMax, Cartesia) | ◐ Cloud API Only (ElevenLabs cloned voice ID) | ❌ (Fixed Models; Piper ONNX) | ◐ External Server / Cloud (Style-Bert-VITS2, GPT-SoVITS, ElevenLabs, Cartesia) | ❌ (Fixed SAPI Models; requires modded plugins) |
+| **Target-Voice Deployment Scope** | In-Process WebGPU / WASM + Local Server + Cloud | In-Process WebGPU (Fixed Kokoro) + Cloud | Local Server Daemon (GPT-SoVITS) + Cloud API | Local Server Daemon (Fish TTS) + Cloud API | Local Server Daemon (OmniVoice) + Cloud API | Local Conversion Filter (RVC v2) + Cloud TTS | Local Server Daemon (GPT-SoVITS) + Cloud API | Cloud API Only (ElevenLabs) + Local Filter (RVC) | Local In-Process Engine Only (Fixed Piper ONNX) | Local Server Daemon (Style-Bert-VITS2) + Cloud API | OS Native Engine (SAPI) + Modded Plugins |
 | **Audio-to-Audio Timbre Conversion (RVC)**| ❌ (Not implemented) | ❌ | ❌ | ❌ | ❌ | ✅ (RVC-v2 post-processing filter) | ❌ | ✅ (RVC post-processing filter) | ❌ | ❌ | ◐ Community RVC/VITS plugins |
 | **Separate Conversion Stage Required** | ⚡ None required (Single-pass synthesis) | ⚡ None required | ⚡ None required | ⚡ None required | ⚡ None required | ◐ Additional stage when RVC enabled (optional) | ⚡ None required | ◐ Additional stage when RVC enabled (optional) | ⚡ None required | ⚡ None required | ◐ Additional stage when RVC enabled (optional) |
 | **Latency Characteristics** | Model, hardware, & buffering dependent (Pocket-TTS ~200ms to first chunk in reference benchmarks) | Model & hardware dependent | Model & transport dependent | Model & transport dependent | Model & transport dependent | Additional conversion/buffering; not benchmarked in-app (see note) | Model & transport dependent | Additional conversion/buffering; not benchmarked in-app (see note) | Model & hardware dependent | Model & transport dependent | Variable plugin delay |
@@ -550,9 +551,13 @@ A companion's voice pipeline determines whether conversations feel natural, resp
 | **Turn Pacing & Speculative Fillers** | ✅ Built-in turn pacing coordinator with natural conversational thinking fillers & asides | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **In-Process WebGPU / WASM Local TTS** | ✅ 3 In-Process Local Engines (Kokoro-WebGPU, Pocket-TTS WASM, MOSS-TTS OPFS) | ✅ Kokoro-WebGPU | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Phonetic & Stage-Direction Filtering**| ✅ **UST Engine** (Universal Speech Transformers: phonetic rules, regex stripping, pronunciation lexicons) | ◐ Built-in regex | ◐ Built-in regex | ◐ Built-in regex | ◐ Built-in regex | ◐ Built-in regex | ◐ Built-in regex | ◐ Built-in regex | ◐ Built-in regex | ◐ Built-in regex | ❌ |
-| **Registered Speech Integrations** | **23 Integrations** | 8 Integrations | 4 Integrations | 10 Integrations | 4 Integrations | 3 Integrations | 5 Integrations | 6 Integrations | 2 Integrations | 8 Integrations | 2 Integrations |
+| **Registered Speech Integrations** | **23 Integrations** | 8 Integrations | 11 Integrations | 10 Integrations | 4 Integrations | 2 Integrations (+1 RVC) | 19 Integrations | 6 Integrations (+1 RVC) | 2 Integrations | 10 Integrations | 2 Integrations (+RVC Plugins) |
 
 > **Architectural Note — Voice-Conditioned Synthesis vs. Audio-to-Audio RVC Conversion:**
+> - **Evaluation Boundary Definitions for Voice Conditioning:**
+>   - **Full (`✅ Built-in In-Engine Studio`):** Zero-shot voice cloning and conditioned synthesis run directly within the companion runtime with in-app reference audio enrollment and custody (e.g., AIRI's 26 cataloged Pocket-TTS voice embeddings, MOSS prompt codes, and `useLocalVoiceClone` studio), with zero requirement for external server daemons or secondary audio-to-audio conversion passes.
+>   - **Partial (`◐ External Server / Cloud`):** Voice-conditioned or cloned synthesis is supported, but depends on an external background server daemon (e.g. GPT-SoVITS, Fish TTS, OmniVoice) running as a separate process or third-party cloud API keys (e.g. ElevenLabs cloned voices), lacking an integrated zero-setup in-engine reference enrollment studio.
+>   - **None (`❌ Fixed Models or RVC-Dependent`):** Employs fixed pre-trained voice models without direct conditioning (e.g. Piper ONNX, Windows SAPI, Kokoro base), or requires secondary audio-to-audio voice conversion (RVC) to alter timbre rather than direct text-to-speech conditioning.
 > - **Processing Path:** Voice-conditioned TTS generates speech directly in the target voice from text input (e.g. via reference voice embeddings or prompt codes). In contrast, RVC is an audio-to-audio conversion pipeline: it takes already-synthesized speech audio (e.g. from Edge-TTS), extracts pitch contours via Harvest or RMVPE, queries an index file via HuBERT/ContentVec representations, and resynthesizes the audio using a neural vocoder.
 > - **Latency Bounds:** Direct synthesis does not add a second processing stage, though initial generation latency remains model-, hardware-, and transport-dependent (e.g. Pocket-TTS advertises ~200ms to first audio chunk in reference implementations). RVC requires completion or chunking of initial TTS before running its secondary pitch extraction and vocoding hops (RVC documentation reports approximately 90ms with supported ASIO configurations and 170ms end-to-end; network and unbuffered pipelines introduce additional delay).
 > - **Distinct Capabilities:** Direct voice conditioning provides streamlined, single-pass character speech without extra infrastructure. RVC provides timbre transfer across arbitrary audio inputs—allowing it to convert external human vocal performances, singing, or third-party audio that was not generated by the companion's TTS engine.
@@ -650,79 +655,122 @@ In `packages/stage-ui/src/stores/providers/registry/speech.ts`, `dasilva333/airi
 
 > **Counting Methodology Note:** These counts represent registered speech-provider configurations in the frontend registry. Because OpenAI-compatible adapters and multi-model gateways can access overlapping underlying neural models, these represent distinct configuration interfaces rather than 23 distinct proprietary neural architectures.
 
-#### Competitor Speech-Provider Inventories (Audited)
+#### Competitor Speech-Provider Inventories (Audited & Pinned)
 
-- **Upstream AIRI (`moeru-ai/airi`) (8 integrations)**:
+- **Upstream AIRI (`moeru-ai/airi@v0.12.0-beta.5`) (8 integrations)**:
+  *Source: `packages/stage-ui/src/stores/providers/registry/speech.ts`*
   1. `browser-speech-synthesis` (Web Speech API)
-  2. `kokoro-local` (In-process WebGPU Kokoro)
-  3. `openai-audio-speech` (OpenAI TTS)
+  2. `kokoro-local` (In-process WebGPU Kokoro neural engine)
+  3. `openai-audio-speech` (OpenAI TTS API)
   4. `elevenlabs` (ElevenLabs neural speech)
-  5. `microsoft-speech` (Azure Speech)
-  6. `voicevox` (Local VOICEVOX)
-  7. `aivis-speech` (Local AivisSpeech)
-  8. `openai-compatible-audio-speech` (Generic OpenAI-compatible TTS)
+  5. `microsoft-speech` (Azure Cognitive Speech services)
+  6. `voicevox` (Local VOICEVOX engine)
+  7. `aivis-speech` (Local AivisSpeech engine)
+  8. `openai-compatible-audio-speech` (Configurable OpenAI-compatible HTTP endpoint)
 
-- **Project N.E.K.O. (4 integrations)**:
-  1. `GPT-SoVITS v3` (Local streaming PCM / binary socket)
-  2. `Doubao TTS` (Volcengine / ByteDance Cloud)
-  3. `CosyVoice` (Alibaba Cloud Model Studio)
-  4. `OpenAI-compatible TTS` (Generic HTTP speech endpoint)
+- **Project N.E.K.O. (`Project-N-E-K-O/N.E.K.O@bf65bef`) (11 integrations)**:
+  *Source: `main_logic/tts_client/__init__.py:450-495`, `utils/tts/providers/`*
+  1. `gptsovits` (Local GPT-SoVITS v2/v3 streaming server)
+  2. `vllm_omni` (Local vLLM-Omni speech server)
+  3. `custom` (Configurable OpenAI-compatible HTTP speech endpoint)
+  4. `minimax` (`utils/tts/providers/minimax.py`: MiniMax T2A Cloud API)
+  5. `elevenlabs` (`utils/tts/providers/elevenlabs.py`: ElevenLabs Cloud API)
+  6. `cosyvoice` (Alibaba Cloud Model Studio CosyVoice API)
+  7. `mimo` (`utils/tts/providers/mimo.py`: Xiaomi MIMO speech API)
+  8. `doubao_tts` (Volcengine / ByteDance Cloud TTS API)
+  9. `gemini` (`utils/tts/providers/gemini.py`: Google Gemini speech synthesis)
+  10. `grok` (`utils/tts/providers/grok.py`: xAI Grok speech synthesis)
+  11. `stepfun` (`utils/tts/providers/stepfun.py`: StepFun Step-Audio speech API)
 
-- **NekoGPT (`NekoGPT-Opensource`) (10 integrations)**:
-  1. `Kokoro Local` (`http://localhost:8880`)
-  2. `Piper Local` (`http://localhost:10200`)
-  3. `Fish TTS Local` (Local neural clone)
-  4. `S2Cpp` (Local C++ speech runtime)
-  5. `OmniVoice Local` (Local voice server)
-  6. `ElevenLabs Flash v2.5` (Cloud neural speech)
-  7. `OpenAI TTS` (Cloud speech)
-  8. `Azure SSML` (Cloud Cognitive speech)
-  9. `Google Cloud TTS` (Cloud speech)
-  10. `Fish Audio Cloud` (Cloud voice cloning)
+- **NekoGPT (`NekoGPT-Opensource@5c87598`) (10 integrations)**:
+  *Source: `apps/renderer/src/pages/WaifuSpecifications.tsx:1027-1038`, `apps/desktop/src/services/voice/tts-service.ts:14-21`*
+  1. `neko-local` (Local Piper HTTP server on port 10200)
+  2. `kokoro` (Local Kokoro FastAPI server on port 8880)
+  3. `s2cpp` (Local S2Cpp C++ speech server)
+  4. `omnivoice` (Local OmniVoice server on port 8000)
+  5. `fish` (Local Fish TTS server)
+  6. `web-speech` (Browser Web Speech API)
+  7. `elevenlabs` (ElevenLabs Cloud API)
+  8. `fish-cloud` (Fish Audio Cloud API)
+  9. `azure` (Microsoft Azure SSML API)
+  10. `google` (Google Cloud Text-to-Speech API)
 
-- **Utsuwa (4 integrations)**:
-  1. `OpenAI Speech` (Cloud TTS)
-  2. `ElevenLabs` (Cloud neural speech)
-  3. `Groq TTS` (Cloud low-latency speech)
-  4. `OmniVoice` (Local voice cloning HTTP server)
+- **Utsuwa (`JuiceBoxxGames/Utsuwa@f89a34b`) (4 integrations)**:
+  *Source: `src/lib/services/tts/index.ts:149-165`*
+  1. `elevenlabs` (ElevenLabs Cloud API via `ElevenLabsTTS`)
+  2. `openai-tts` (OpenAI Speech API via `OpenAITTS`)
+  3. `local-tts` (Localhost HTTP TTS server endpoint via OpenAI-compatible `OpenAITTS`)
+  4. `omnivoice` (Local OmniVoice voice-cloning proxy via `OpenAITTS`)
+  *(Note on Utsuwa Providers: Groq is configured exclusively as an LLM/STT provider in `src/lib/services/llm/` and `src/lib/services/stt/`, not as a speech synthesis engine. Reconciled to `local-tts`).*
 
-- **Soul of Waifu (3 integrations)**:
-  1. `Edge-TTS` (Cloud Microsoft Edge speech)
-  2. `Coqui TTS` (Local Python neural TTS)
-  3. `RVC v2` (Optional audio-to-audio timbre post-processing filter)
+- **Soul of Waifu (`jofizcd/Soul-of-Waifu@747048b`) (2 synthesis integrations + 1 audio conversion filter)**:
+  *Source: `backend/tts/`, `backend/rvc/`*
+  - *Speech Synthesis Engines (2):*
+    1. `Edge-TTS` (`backend/tts/edge_tts_provider.py`: Microsoft Edge neural speech)
+    2. `Coqui TTS` (`backend/tts/coqui_provider.py`: Local Python neural TTS engine)
+  - *Audio Conversion Filter (1):*
+    - `RVC v2` (`backend/rvc/`: HuBERT/RMVPE audio-to-audio timbre post-processing conversion filter)
 
-- **Open-LLM-VTuber (5 integrations)**:
-  1. `Edge-TTS` (Cloud speech)
-  2. `Bark / ChatTTS` (Local expressive speech)
-  3. `CosyVoice` (Local / cloud voice cloning)
-  4. `GPT-SoVITS` (Local few-shot voice synthesis)
-  5. `OpenAI-compatible speech` (Generic HTTP TTS)
+- **Open-LLM-VTuber (`Open-LLM-VTuber/Open-LLM-VTuber@992309c`) (19 integrations)**:
+  *Source: `src/open_llm_vtuber/tts/tts_factory.py:8-216`*
+  1. `azure_tts` (Azure Cognitive Speech)
+  2. `bark_tts` (Suno Bark neural speech)
+  3. `edge_tts` (Microsoft Edge TTS)
+  4. `pyttsx3_tts` (Offline system TTS via pyttsx3)
+  5. `cosyvoice_tts` (CosyVoice v1 API)
+  6. `cosyvoice2_tts` (CosyVoice v2 API)
+  7. `melo_tts` (MeloTTS multilingual engine)
+  8. `x_tts` (Coqui XTTS-v2)
+  9. `gpt_sovits_tts` (GPT-SoVITS local server)
+  10. `siliconflow_tts` (SiliconFlow cloud TTS gateway)
+  11. `coqui_tts` (Coqui TTS local engine)
+  12. `fish_api_tts` (Fish Audio Cloud API)
+  13. `minimax_tts` (MiniMax T2A Cloud API)
+  14. `sherpa_onnx_tts` (Sherpa-ONNX embedded offline engine)
+  15. `openai_tts` (OpenAI Audio Speech)
+  16. `spark_tts` (iFlytek Spark TTS)
+  17. `elevenlabs_tts` (ElevenLabs Cloud API)
+  18. `cartesia_tts` (Cartesia Sonic low-latency API)
+  19. `piper_tts` (Piper local ONNX engine)
 
-- **Amica (6 integrations)**:
-  1. `ElevenLabs` (Cloud neural speech)
-  2. `Coqui TTS` (Local Python neural engine)
-  3. `Piper` (Local ONNX lightweight TTS)
-  4. `OpenAI Speech` (Cloud TTS)
-  5. `Web Speech API` (Browser speech synthesis)
-  6. `RVC` (Optional audio-to-audio timbre post-processing filter)
+- **Amica (`semperai/amica@ca2415c`) (6 synthesis integrations + 1 audio conversion filter)**:
+  *Source: `src/features/`*
+  - *Speech Synthesis Engines (6):*
+    1. `elevenlabs` (`src/features/elevenlabs/elevenlabs.ts`: ElevenLabs Cloud API)
+    2. `openaiTTS` (`src/features/openaiTTS/openaiTTS.ts`: OpenAI Speech API)
+    3. `coquiLocal` / `localXTTS` (`src/features/coquiLocal/coquiLocal.ts` & `src/features/localXTTS/`: Local Coqui XTTS server)
+    4. `piper` (`src/features/piper/piper.ts`: Local ONNX lightweight TTS)
+    5. `kokoro` (`src/features/kokoro/kokoro.ts`: Kokoro TTS engine)
+    6. `speecht5` (`src/features/speecht5/speecht5.ts`: Local Transformers SpeechT5 engine)
+  - *Audio Conversion Filter (1):*
+    - `rvc` (`src/features/rvc/rvc.ts`: Local RVC client post-processing filter)
 
-- **Komorebi (2 integrations)**:
-  1. `Piper ONNX` (Local offline neural TTS via `komorebi-voice`)
-  2. `Deepgram / SoVITS` (Optional cloud/local audio backend)
+- **Komorebi (`kiskaserver/interactive_assistent@a2df4dc`) (2 integrations)**:
+  *Source: `src-tauri/crates/voice/src/tts.rs`, `src-tauri/crates/voice/src/sovits.rs`*
+  1. `Piper ONNX` (`src-tauri/crates/voice/src/tts.rs`: Local offline neural TTS via `komorebi-voice`)
+  2. `GPT-SoVITS` (`src-tauri/crates/voice/src/sovits.rs`: HTTP streaming client to GPT-SoVITS server)
+  *(Note on Komorebi Audio: `deepgram.rs` in `voice/src/` is a speech-to-text (STT) transcription client, not a TTS engine).*
 
-- **AITuberKit (8 integrations)**:
-  1. `VOICEVOX` (Local Japanese neural engine)
-  2. `AivisSpeech` (Local neural engine)
-  3. `Style-Bert-VITS2` (Local expressive Japanese TTS)
-  4. `GPT-SoVITS` (Local voice cloning)
-  5. `ElevenLabs` (Cloud neural speech)
-  6. `OpenAI Speech` (Cloud TTS)
-  7. `Azure Cognitive Speech` (Cloud SSML)
-  8. `Google Cloud TTS` (Cloud speech)
+- **AITuberKit (`tegnike/aituber-kit@c7ea2b6`) (10 integrations)**:
+  *Source: `src/features/messages/synthesize*.ts`*
+  1. `VOICEVOX` (`src/features/messages/synthesizeVoicevox.ts`: Local VOICEVOX HTTP API)
+  2. `AivisSpeech Local` (`src/features/messages/synthesizeAivisSpeech.ts`: Local AivisSpeech HTTP API)
+  3. `Aivis Cloud API` (`src/features/messages/synthesizeVoiceAivisCloudApi.ts`: Remote AivisSpeech API)
+  4. `Style-Bert-VITS2` (`src/features/messages/synthesizeStyleBertVITS2.ts`: Local Style-Bert-VITS2 HTTP API)
+  5. `GPT-SoVITS` (`src/features/messages/synthesizeVoiceGSVI.ts`: Local GSVI API endpoint)
+  6. `ElevenLabs` (`src/features/messages/synthesizeVoiceElevenlabs.ts`: ElevenLabs Cloud API)
+  7. `OpenAI TTS` (`src/features/messages/synthesizeVoiceOpenAI.ts`: OpenAI Speech API)
+  8. `Azure OpenAI Speech` (`src/features/messages/synthesizeVoiceAzureOpenAI.ts`: Azure Cognitive Speech API)
+  9. `Google Cloud TTS` (`src/features/messages/synthesizeVoiceGoogle.ts`: Google Cloud Text-to-Speech API)
+  10. `Cartesia` (`src/features/messages/synthesizeVoiceCartesia.ts`: Cartesia Sonic low-latency API)
 
-- **VPet (2 integrations / modded ecosystem)**:
-  1. `Windows SAPI` (Native OS speech synthesis)
-  2. `Edge-TTS / VITS` (Community plugin wrappers via `VPet.Plugin.LLM`)
+- **VPet (`LorisYounger/VPet@ffb9cc2`) (2 core/plugin integrations + community RVC wrappers)**:
+  *Source: `VPet-Simulator.Core/` and `VPet.Plugin.LLM`*
+  - *Core & Official Plugin Integrations (2):*
+    1. `Windows SAPI` (Native Win32 `System.Speech` synthesis)
+    2. `Edge-TTS` (Official `VPet.Plugin.LLM` cloud TTS integration)
+  - *Community Post-Processing Extensions:*
+    - Community RVC / VITS wrappers (e.g. `VPet-Plugin-RVC` modded post-processing filters)
 
 - **Transcription (STT) Integrations in `dasilva333/airi` (8 integrations)**:
   1. `whisper-local` (In-process WebGPU Whisper transcription)

@@ -1,7 +1,7 @@
 /**
- * Live health probe for the Official Model Context Protocol Registry.
+ * Sample payload compatibility check for the Official Model Context Protocol Registry.
  *
- * Validates endpoint availability, latency, response schema, and detects
+ * Validates endpoint availability, latency, basic sample payload structure, and detects
  * HTTP deprecation/sunset headers to prevent silent upstream catalog failures.
  *
  * Usage:
@@ -82,7 +82,7 @@ async function probeMcpRegistry() {
   }
 
   if (data.servers.length === 0) {
-    console.error('❌ [MCP Registry Probe] Schema validation failed: Registry returned 0 servers.')
+    console.error('❌ [MCP Registry Probe] Sample check failed: Registry returned 0 servers.')
     process.exit(1)
   }
 
@@ -90,12 +90,12 @@ async function probeMcpRegistry() {
   const sample = sampleEntry?.server || sampleEntry
 
   if (!sample || typeof sample !== 'object' || !sample.name || typeof sample.name !== 'string') {
-    console.error('❌ [MCP Registry Probe] Schema validation failed: server missing valid `name` string field', sample)
+    console.error('❌ [MCP Registry Probe] Sample check failed: server missing valid `name` string field', sample)
     process.exit(1)
   }
 
   if (!sample.version || typeof sample.version !== 'string') {
-    console.error('❌ [MCP Registry Probe] Schema validation failed: server missing valid `version` string field', sample)
+    console.error('❌ [MCP Registry Probe] Sample check failed: server missing valid `version` string field', sample)
     process.exit(1)
   }
 
@@ -103,15 +103,15 @@ async function probeMcpRegistry() {
   const hasValidRemote = Array.isArray(sample.remotes) && sample.remotes.some((r: any) => r && typeof r.url === 'string' && typeof r.type === 'string')
 
   if (!hasValidPackage && !hasValidRemote) {
-    console.error('❌ [MCP Registry Probe] Schema validation failed: server entry contains neither valid `packages` nor valid `remotes` metadata', sample)
+    console.error('❌ [MCP Registry Probe] Sample check failed: server entry contains neither valid `packages` nor valid `remotes` metadata', sample)
     process.exit(1)
   }
 
-  console.log(`  ✓ GET payload & schema check passed in ${getLatency}ms.`)
+  console.log(`  ✓ GET payload & sample structure check passed in ${getLatency}ms.`)
   console.log(`    - Sample server: "${sample.name}" (Title: ${sample.title || 'N/A'}, Version: ${sample.version})`)
-  console.log(`    - Validated transports: ${hasValidPackage ? 'Packages: YES' : 'Packages: NO'} | ${hasValidRemote ? 'Remotes: YES' : 'Remotes: NO'}`)
+  console.log(`    - Detected transports: ${hasValidPackage ? 'Packages: YES' : 'Packages: NO'} | ${hasValidRemote ? 'Remotes: YES' : 'Remotes: NO'}`)
 
-  console.log(`✅ [MCP Registry Probe] Official MCP Registry is healthy & schema compatible (Total RTT: ${headLatency + getLatency}ms)`)
+  console.log(`✅ [MCP Registry Probe] Official MCP Registry sample payload compatibility check passed (Total RTT: ${headLatency + getLatency}ms)`)
 }
 
 probeMcpRegistry().catch((err) => {
