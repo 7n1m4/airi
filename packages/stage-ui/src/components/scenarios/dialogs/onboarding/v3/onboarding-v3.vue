@@ -116,11 +116,21 @@ function handleSkip() {
 </script>
 
 <template>
-  <div :class="['h-full w-full flex flex-col justify-between select-none relative text-neutral-900 dark:text-white overflow-hidden']">
+  <div
+    :class="[
+      'h-full w-full flex flex-col justify-between select-none relative text-neutral-900 dark:text-white overflow-hidden',
+      'bg-neutral-50/85 dark:bg-neutral-950/85 backdrop-blur-2xl backdrop-saturate-150',
+    ]"
+    style="-webkit-backdrop-filter: blur(40px) saturate(150%);"
+  >
     <!-- Edgeless Header Bar (With Drag Region & Traffic Light Clearance) -->
     <header
       data-tauri-drag-region
-      :class="['h-14 pl-22 pr-6 pt-2 pb-1 flex items-center justify-between select-none flex-shrink-0 border-b border-neutral-200/80 dark:border-white/5']"
+      :class="[
+        'h-14 px-4 sm:pl-22 sm:pr-6 pt-2 pb-1 flex items-center justify-between select-none flex-shrink-0',
+        'border-b border-neutral-200/80 dark:border-white/10 bg-white/40 dark:bg-black/20 backdrop-blur-md',
+      ]"
+      style="-webkit-backdrop-filter: blur(20px);"
     >
       <!-- Left: Brand Title -->
       <div :class="['flex items-center space-x-2 text-xs font-semibold tracking-wider text-primary-500 select-none pointer-events-none whitespace-nowrap shrink-0']">

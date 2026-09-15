@@ -6,6 +6,204 @@
 
 ---
 
+## [2026-09-15] Upstream Delta: `1a79f8b1..3da3cf81` (6 commits, 104 files, 26 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 6 commits (`1a79f8b1..3da3cf81`) featuring a major overhaul to support the OpenAI Responses API (+4,079/-1,094 across 94 files in #2477), inter-window speech settings synchronization (#2467), removal of duplicate speech voice loads on mount (#2543), anti-slop linting rules (#2544), and commercial Apple In-App Purchase backend integration (#2339). In active PRs, upstream opened bundled Sherpaw offline speech recognition (#2550), chat image understanding (#2551), revived bilingual subtitles (#2552), and is experiencing huge community engagement around local drop-in plugins and folder extension imports (#2541, #2506).
+* **Discussion & Community Buzz**:
+  - 💬 **#2506: `feat(plugin-host): import extensions from folders` (+39 new comments, 142 total)**: Major community momentum evaluating external folder scanning, hot-reloading, and manifest formats for extensions.
+  - 💬 **#2541: `Telltworose/feat/drop in plugins` (+39 new comments, 56 total)**: Intense discussion spike around drop-in plugin runtime and file placement.
+  - 💬 **#2537: `add bilingual subtitles` (+9 new comments, 43 total, closed in favor of #2552)**: Active dialogue on translation chunk synchronization leading into the clean refactor in #2552.
+  - 💬 **#2435: `feat(stage-ui): add local FunASR transcription provider` (+7 new comments, 194 total)**: Continued community interest in local Chinese/multilingual speech-to-text.
+  - 💬 **#2551: `feat(stage-ui): add chat image understanding across Web and Electron` (12 comments)**: High initial review activity on multi-modal vision prompt plumbing.
+  - 💬 **#2547: `feat(stage-ui): add hearing and sign-in status capsules` (9 comments)**: UI review on status indicators.
+  - 💬 **#2550: `feat(hearing): add bundled Sherpaw speech recognition` (5 comments)**: Offline STT packaging discussion.
+  - 💬 **#2546: `feat(stage-ui): add voice messages and mobile dictation` (5 comments)**: Voice messaging primitives.
+  - 💬 **#2538: `refactor(live2d): move live2d asset download to stage-ui-live2d` (+4 new comments, 11 total)**: Internal module boundary cleanup.
+  - 💬 **#2525: `fix(stage-pages): load speech provider voices after configuration updates` (+4 new comments, 27 total)**: Debounce timing verification.
+  - 💬 **#2467: `fix(stage-ui): synchronize speech settings across windows` (+3 new comments, 28 total, merged)**: Resolving cross-window follower race conditions.
+  - 💬 **#2477: `feat(client): support Responses API with user-provided API keys` (+2 new comments, 42 total, merged)**: Large-scale client integration debate.
+  - 💬 **#2339: `feat(api): add Apple IAP payment channel backend` (+2 new comments, 40 total, merged)**: Commercial payment verification review.
+  - 💬 **#2121: `chore(i18n): update translations` (+2 new comments, 94 total)**: Routine localization additions.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2543 / Commit `7cfd395561`: `fix(stage-pages): avoid duplicate speech voice loads`**: Clean, high-value fix. Removes `{ immediate: true }` from debounced watchers across speech provider settings (`alibaba-cloud-model-studio.vue`, `deepgram-tts.vue`, `elevenlabs.vue`, `volcengine.vue`), stopping redundant immediate voice queries on mount.
+  - 🔍 **PR #2477 (Selective Primitive): `response-citations.vue`**: Isolated UI primitive (`packages/stage-ui/src/components/scenarios/chat/components/response-citations.vue`) for rendering web citations and numbered clickable links from grounding sources.
+  - 🔍 **PR #2550: `feat(hearing): add bundled Sherpaw speech recognition` (Monitor)**: Upstream exploration of bundled offline speech recognition using Sherpa-onnx. Worth monitoring as a candidate offline hearing provider.
+  - ⚪ **Auto-Reject / Do Not Port**: PR #2339 (`Apple IAP backend` - violates local-first invariant); PR #2467 (`cross-window speech sync` - tightly coupled to upstream remote server sync).
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/core-agent/` & `packages/stage-ui/src/stores/chat.ts` (PR #2477)**: Upstream heavily refactored orchestrator runtimes, turn projections, and streaming handlers for OpenAI Responses API. Our fork maintains custom memory injection, `<|ACTOR|>` routing, and emotional cue parsing in these files; avoid blanket merges.
+  - ⚠️ **`apps/stage-tamagotchi/src/renderer/components/InteractiveArea.vue` (PR #2477)**: Touches legacy monolithic area. In our fork, desktop UI is cleanly decoupled into `ControlStrip.vue` and `chat/` views.
+  - ⚠️ **Plugin Ecosystems (PR #2541, #2506, #2549)**: Upstream is implementing folder/kit loaders. Must be evaluated against our `injeca` DI container rather than merged directly.
+
+### 📋 Upstream Commits
+- `3da3cf8154` chore(nix): update pnpmDeps hash (#2553) [#2553](https://github.com/moeru-ai/airi/pull/2553) _(Weathercold, 2026-09-15)_
+- `e1957d2832` feat(client): support Responses API with user-provided API keys (#2477) [#2477](https://github.com/moeru-ai/airi/pull/2477) _(RainbowBird, 2026-09-15)_
+- `7cfd395561` fix(stage-pages): avoid duplicate speech voice loads (#2543) [#2543](https://github.com/moeru-ai/airi/pull/2543) _(Columbina, 2026-09-14)_
+- `a5716a8370` chore(nix): update pnpmDeps hash (#2548) [#2548](https://github.com/moeru-ai/airi/pull/2548) _(Weathercold, 2026-09-14)_
+- `7eec25eeeb` chore(lint): add eslint-plugin-slop (#2544) [#2544](https://github.com/moeru-ai/airi/pull/2544) _(Neko, 2026-09-15)_
+- `334f8b9c6c` fix(stage-ui): synchronize speech settings across windows (#2467) [#2467](https://github.com/moeru-ai/airi/pull/2467) _(Columbina, 2026-09-14)_
+
+### 🔬 Subsystem Breakdown
+#### Mobile & Web Platforms (`⚪ ignore / low-priority`) — 2 file(s) (+6/-6)
+- `apps/stage-pocket/src/pages/devtools/performance-playground.vue` *(+3/-3)*
+- `apps/stage-web/src/pages/devtools/performance-playground.vue` *(+3/-3)*
+
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 1 file(s) (+7/-1)
+- `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.vue` *(+7/-1)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 41 file(s) (+1507/-384)
+- `eslint.config.ts` *(+21/-0)*
+- `nix/pnpm-deps-hash.txt` *(+1/-1)*
+- `packages/{provider-inference/src/providers/cloud/azure-openai/index.test.ts => core-agent/src/agents/spark-command/azure-openai.test.ts}` *(+3/-2)*
+- `packages/provider-inference/src/generation.ts` *(+24/-0)*
+- `packages/provider-inference/src/model-catalog.test.ts` *(+55/-0)*
+- `packages/provider-inference/src/model-catalog.ts` *(+64/-0)*
+- `packages/provider-inference/src/providers/cloud/ark-providers.test.ts` *(+1/-1)*
+- `packages/provider-inference/src/providers/cloud/openai-compatible/index.ts` *(+27/-7)*
+- `packages/provider-inference/src/providers/cloud/openai/index.ts` *(+56/-13)*
+- `packages/provider-inference/src/providers/cloud/openrouter-ai/index.test.ts` *(+2/-81)*
+- `packages/provider-inference/src/providers/cloud/openrouter-ai/index.ts` *(+10/-0)*
+- `packages/provider-inference/src/providers/responses.test.ts` *(+96/-0)*
+- `packages/provider-inference/src/responses.browser.test.ts` *(+111/-0)*
+- `packages/provider-inference/src/types.ts` *(+51/-2)*
+- `packages/provider-inference/src/validators/openai-compatible.test.ts` *(+38/-0)*
+- `packages/provider-inference/src/validators/openai-compatible.ts` *(+20/-4)*
+- `packages/stage-ui/src/components/scenarios/chat/components/assistant-item.vue` *(+35/-14)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history.browser.test.ts` *(+30/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history.vue` *(+7/-2)*
+- `packages/stage-ui/src/components/scenarios/chat/components/response-citations.browser.test.ts` *(+15/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/response-citations.vue` *(+22/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/tool-call-results.test.ts` *(+18/-14)*
+- `packages/stage-ui/src/components/scenarios/chat/components/tool-call-results.ts` *(+17/-27)*
+- `packages/stage-ui/src/components/scenarios/providers/index.ts` *(+1/-0)*
+- `packages/stage-ui/src/components/scenarios/providers/provider-generation-settings.vue` *(+97/-0)*
+- `packages/stage-ui/src/components/scenarios/providers/speech-provider-settings.vue` *(+109/-50)*
+- `packages/stage-ui/src/composables/use-data-maintenance.browser.test.ts` *(+10/-0)*
+- `packages/stage-ui/src/composables/vision/use-vision-inference.test.ts` *(+45/-46)*
+- `packages/stage-ui/src/composables/vision/use-vision-inference.ts` *(+17/-26)*
+- `packages/stage-ui/src/stores/ai/chat-llm/llm.test.ts` *(+11/-13)*
+- `packages/stage-ui/src/stores/ai/chat-llm/llm.ts` *(+5/-6)*
+- `packages/stage-ui/src/stores/character/orchestrator/index.test.ts` *(+12/-10)*
+- `packages/stage-ui/src/stores/character/orchestrator/store.ts` *(+2/-1)*
+- `packages/stage-ui/src/stores/markdown-stress.ts` *(+8/-12)*
+- `packages/stage-ui/src/stores/mods/api/context-bridge.ts` *(+2/-2)*
+- `packages/stage-ui/src/stores/modules/artistry-autonomous.ts` *(+12/-11)*
+- `packages/stage-ui/src/stores/modules/consciousness.test.ts` *(+4/-3)*
+- `packages/stage-ui/src/stores/tool-call-rerun.test.ts` *(+80/-1)*
+- `packages/stage-ui/src/stores/tool-call-rerun.ts` *(+83/-35)*
+- `patches/@xsai-ext__responses@0.5.0.patch` *(+281/-0)*
+- `pnpm-workspace.yaml` *(+4/-0)*
+
+#### Root Build & Tooling (`🔍 inspect`) — 3 file(s) (+87/-88)
+- `package.json` *(+1/-0)*
+- `packages/provider-inference/package.json` *(+2/-1)*
+- `pnpm-lock.yaml` *(+84/-87)*
+
+#### Core Agent Runtime (`🔍 inspect`) — 37 file(s) (+2379/-526)
+- `packages/core-agent/README.md` *(+62/-0)*
+- `packages/core-agent/package.json` *(+2/-0)*
+- `packages/core-agent/src/agents/spark-command/openrouter-ai.test.ts` *(+86/-0)*
+- `packages/core-agent/src/agents/spark-notify/agent.test.ts` *(+5/-6)*
+- `packages/core-agent/src/agents/spark-notify/agent.ts` *(+14/-10)*
+- `packages/core-agent/src/agents/spark-notify/types.ts` *(+6/-5)*
+- `packages/core-agent/src/contracts/llm-port.ts` *(+4/-3)*
+- `packages/core-agent/src/index.ts` *(+4/-4)*
+- `packages/core-agent/src/messages/chat-completions.test.ts` *(+50/-0)*
+- `packages/core-agent/src/messages/chat-completions.ts` *(+189/-0)*
+- `packages/core-agent/src/messages/compaction.test.ts` *(+3/-2)*
+- `packages/core-agent/src/messages/compaction.ts` *(+11/-12)*
+- `packages/core-agent/src/messages/index.ts` *(+0/-1)*
+- `packages/core-agent/src/messages/preview.test.ts` *(+14/-0)*
+- `packages/core-agent/src/messages/preview.ts` *(+45/-0)*
+- `packages/core-agent/src/messages/projection.test.ts` *(+6/-5)*
+- `packages/core-agent/src/messages/projection.ts` *(+5/-4)*
+- `packages/core-agent/src/messages/render-context.ts` *(+87/-0)*
+- `packages/core-agent/src/messages/render-provider-chat.test.ts` *(+3/-2)*
+- `packages/core-agent/src/messages/render-provider-chat.ts` *(+7/-81)*
+- `packages/core-agent/src/messages/turns.test.ts` *(+39/-0)*
+- `packages/core-agent/src/messages/turns.ts` *(+107/-0)*
+- `packages/core-agent/src/messages/types.test.ts` *(+18/-3)*
+- `packages/core-agent/src/messages/types.ts` *(+124/-19)*
+- `packages/core-agent/src/runtime/chat-completions.test.ts` *(+76/-0)*
+- `packages/core-agent/src/runtime/chat-completions.ts` *(+53/-0)*
+- `packages/core-agent/src/runtime/chat-orchestrator-runtime.test.ts` *(+142/-45)*
+- `packages/core-agent/src/runtime/chat-orchestrator-runtime.ts` *(+74/-100)*
+- `packages/core-agent/src/runtime/generation.ts` *(+81/-0)*
+- `packages/core-agent/src/runtime/llm-service.test.ts` *(+106/-42)*
+- `packages/core-agent/src/runtime/llm-service.ts` *(+33/-171)*
+- `packages/core-agent/src/runtime/request-context.ts` *(+21/-0)*
+- `packages/core-agent/src/runtime/responses.test.ts` *(+613/-0)*
+- `packages/core-agent/src/runtime/responses.ts` *(+218/-0)*
+- `packages/core-agent/src/runtime/xsai-events.ts` *(+45/-0)*
+- `packages/core-agent/src/types/chat.ts` *(+7/-0)*
+- `packages/core-agent/src/types/llm.ts` *(+19/-11)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 2 file(s) (+12/-0)
+- `packages/i18n/src/locales/en/settings.yaml` *(+6/-0)*
+- `packages/i18n/src/locales/zh-Hans/settings.yaml` *(+6/-0)*
+
+#### Documentation & Scaffolding (`⚪ ignore`) — 2 file(s) (+71/-0)
+- `packages/provider-inference/README.md` *(+39/-0)*
+- `patches/README.md` *(+32/-0)*
+
+#### Stage Layouts & Shells (`🔍 inspect`) — 1 file(s) (+6/-10)
+- `packages/stage-layouts/src/composables/useChatToolCallRerun.ts` *(+6/-10)*
+
+#### UI Primitives & Pages (`📦 import / inspect`) — 8 file(s) (+40/-13)
+- `packages/stage-pages/README.md` *(+4/-0)*
+- `packages/stage-pages/src/pages/settings/providers/chat/[providerId].vue` *(+7/-2)*
+- `packages/stage-pages/src/pages/settings/providers/speech/alibaba-cloud-model-studio.vue` *(+0/-1)*
+- `packages/stage-pages/src/pages/settings/providers/speech/deepgram-tts.vue` *(+0/-1)*
+- `packages/stage-pages/src/pages/settings/providers/speech/elevenlabs.vue` *(+0/-1)*
+- `packages/stage-pages/src/pages/settings/providers/speech/volcengine.vue` *(+0/-1)*
+- `packages/stage-pages/src/pages/settings/providers/vision/[providerId].vue` *(+7/-2)*
+- `packages/stage-pages/src/pages/v2/settings/providers/edit/[providerId]/index.vue` *(+22/-5)*
+
+#### Cognitive & Consciousness (`⚠️ hand-merge`) — 2 file(s) (+70/-72)
+- `packages/stage-ui/src/stores/chat.contract.test.ts` *(+60/-64)*
+- `packages/stage-ui/src/stores/chat.ts` *(+10/-8)*
+
+#### Provider & Model Integrations (`📦 import / inspect`) — 5 file(s) (+54/-58)
+- `packages/stage-ui/src/stores/providers/config.test.ts` *(+4/-4)*
+- `packages/stage-ui/src/stores/providers/config.ts` *(+7/-5)*
+- `packages/stage-ui/src/stores/providers/provider-model-catalog.browser.test.ts` *(+18/-0)*
+- `packages/stage-ui/src/stores/providers/provider.test.ts` *(+10/-5)*
+- `packages/stage-ui/src/stores/providers/provider.ts` *(+15/-44)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (11)
+- [#2553](https://github.com/moeru-ai/airi/pull/2553) `chore(nix): update pnpmDeps hash` by **@Weathercold** *(1 comments)*
+- [#2552](https://github.com/moeru-ai/airi/pull/2552) `Phx3334/feat/bilingual subtitles` by **@phx3334** *(4 comments)*
+- [#2551](https://github.com/moeru-ai/airi/pull/2551) `feat(stage-ui): add chat image understanding across Web and Electron` by **@luoling8192** *(12 comments)*
+- [#2550](https://github.com/moeru-ai/airi/pull/2550) `feat(hearing): add bundled Sherpaw speech recognition` by **@luoling8192** *(5 comments)*
+- [#2549](https://github.com/moeru-ai/airi/pull/2549) `feat(plugin-sdk): support extension-hosted kits` by **@leaft** *(Draft)* *(1 comments)*
+- [#2545](https://github.com/moeru-ai/airi/pull/2545) `fix(stage-ui): clone synchronized provider config` by **@0xSelenicDove** *(1 comments)*
+- [#2543](https://github.com/moeru-ai/airi/pull/2543) `fix(stage-pages): avoid duplicate speech voice loads` by **@0xSelenicDove** *(4 comments)*
+- [#2548](https://github.com/moeru-ai/airi/pull/2548) `chore(nix): update pnpmDeps hash` by **@Weathercold** *(1 comments)*
+- [#2544](https://github.com/moeru-ai/airi/pull/2544) `chore(lint): add eslint-plugin-slop` by **@nekomeowww** *(5 comments)*
+- [#2547](https://github.com/moeru-ai/airi/pull/2547) `feat(stage-ui): add hearing and sign-in status capsules` by **@nekomeowww** *(9 comments)*
+- [#2546](https://github.com/moeru-ai/airi/pull/2546) `feat(stage-ui): add voice messages and mobile dictation` by **@nekomeowww** *(5 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (5)
+- [#2477](https://github.com/moeru-ai/airi/pull/2477) `feat(client): support Responses API with user-provided API keys` — `OPEN` ➔ `MERGED`
+- [#2537](https://github.com/moeru-ai/airi/pull/2537) `add bilingual subtitles` — `OPEN` ➔ `CLOSED`
+- [#2467](https://github.com/moeru-ai/airi/pull/2467) `fix(stage-ui): synchronize speech settings across windows` — `OPEN` ➔ `MERGED`
+- [#2542](https://github.com/moeru-ai/airi/pull/2542) `chore(lint): integrate anti-slop rule sets` — `OPEN` ➔ `CLOSED`
+- [#2339](https://github.com/moeru-ai/airi/pull/2339) `feat(api): add Apple IAP payment channel backend` — `OPEN` ➔ `MERGED`
+
+#### 💬 Discussion Activity (10)
+- [#2477](https://github.com/moeru-ai/airi/pull/2477) `feat(client): support Responses API with user-provided API keys` — *+2 comments (40 ➔ 42 total)*
+- [#2506](https://github.com/moeru-ai/airi/pull/2506) `feat(plugin-host): import extensions from folders` — *+39 comments (103 ➔ 142 total)*
+- [#2541](https://github.com/moeru-ai/airi/pull/2541) `Telltworose/feat/drop in plugins` — *+39 comments (17 ➔ 56 total)*
+- [#2537](https://github.com/moeru-ai/airi/pull/2537) `add bilingual subtitles` — *+9 comments (34 ➔ 43 total)*
+- [#2435](https://github.com/moeru-ai/airi/pull/2435) `feat(stage-ui): add local FunASR transcription provider` — *+7 comments (187 ➔ 194 total)*
+- [#2538](https://github.com/moeru-ai/airi/pull/2538) `refactor(live2d): move live2d asset download to stage-ui-live2d` — *+4 comments (7 ➔ 11 total)*
+- [#2121](https://github.com/moeru-ai/airi/pull/2121) `chore(i18n): update translations` — *+2 comments (92 ➔ 94 total)*
+- [#2467](https://github.com/moeru-ai/airi/pull/2467) `fix(stage-ui): synchronize speech settings across windows` — *+3 comments (25 ➔ 28 total)*
+- [#2525](https://github.com/moeru-ai/airi/pull/2525) `fix(stage-pages): load speech provider voices after configuration updates` — *+4 comments (23 ➔ 27 total)*
+- [#2339](https://github.com/moeru-ai/airi/pull/2339) `feat(api): add Apple IAP payment channel backend` — *+2 comments (38 ➔ 40 total)*
+
+---
 ## [2026-09-14] Upstream Delta: `42e3e9e8..1a79f8b1` (3 commits, 25 files, 16 PR update(s))
 
 ### 🎯 Executive Highlights

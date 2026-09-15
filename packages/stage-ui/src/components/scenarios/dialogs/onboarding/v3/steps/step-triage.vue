@@ -310,10 +310,10 @@ async function handleRestoreAndBuildAnother() {
       <!-- Option 1: Local Companion (100% Offline) -->
       <div
         :class="[
-          'relative flex flex-col justify-between overflow-hidden rounded-2xl p-5 border-2 transition-all duration-200 cursor-pointer min-h-[340px]',
+          'relative flex flex-col justify-between overflow-hidden rounded-2xl p-5 border-2 transition-all duration-200 cursor-pointer min-h-[340px] backdrop-blur-xl',
           selectedPath === 'local'
-            ? 'border-primary-500 bg-gradient-to-b from-primary-500/10 to-indigo-500/5 dark:from-primary-950/40 dark:to-indigo-950/20 shadow-lg shadow-primary-500/10 ring-1 ring-primary-500/30'
-            : 'border-neutral-200/80 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/60 hover:border-neutral-300 dark:hover:border-neutral-700 backdrop-blur-md',
+            ? 'border-primary-500 bg-white/95 dark:bg-neutral-900/95 shadow-lg shadow-primary-500/10 ring-1 ring-primary-500/30'
+            : 'border-neutral-200/80 dark:border-neutral-800 bg-white/85 dark:bg-neutral-900/75 hover:border-neutral-300 dark:hover:border-neutral-700',
         ]"
         @click="chooseLocal"
       >
@@ -340,64 +340,67 @@ async function handleRestoreAndBuildAnother() {
             <div
               :class="[
                 'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors',
-                selectedPath === 'local' ? 'border-primary-500' : 'border-neutral-300 dark:border-neutral-600',
+                selectedPath === 'local'
+                  ? 'border-primary-500 bg-primary-500'
+                  : 'border-neutral-300 dark:border-neutral-600',
               ]"
             >
-              <div v-if="selectedPath === 'local'" :class="['h-2.5 w-2.5 rounded-full bg-primary-500 shadow-xs']" />
+              <div
+                v-if="selectedPath === 'local'"
+                :class="['h-2 w-2 rounded-full bg-white']"
+              />
             </div>
           </div>
 
-          <!-- Title & Description -->
+          <!-- Main Info -->
           <div>
             <h2 :class="['text-base font-bold text-neutral-900 dark:text-white']">
               {{ t('onboarding.steps.triage.local.title') }}
             </h2>
-            <p :class="['text-xs text-neutral-600 dark:text-neutral-400 mt-1.5 leading-relaxed']">
+            <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed']">
               {{ t('onboarding.steps.triage.local.description') }}
             </p>
           </div>
 
           <!-- Feature Bullets -->
-          <div :class="['space-y-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/80 text-xs']">
-            <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
-              <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>{{ t('onboarding.steps.triage.local.features.f1') }}</span>
-            </div>
-            <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
-              <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>{{ t('onboarding.steps.triage.local.features.f2') }}</span>
-            </div>
-            <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
-              <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>{{ t('onboarding.steps.triage.local.features.f3') }}</span>
+          <div :class="['space-y-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/80']">
+            <div
+              v-for="(bullet, i) in [
+                t('onboarding.steps.triage.local.bullet1'),
+                t('onboarding.steps.triage.local.bullet2'),
+                t('onboarding.steps.triage.local.bullet3'),
+              ]"
+              :key="i"
+              :class="['flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300']"
+            >
+              <div :class="['i-solar:check-circle-bold text-primary-500 shrink-0 h-4 w-4']" />
+              <span>{{ bullet }}</span>
             </div>
           </div>
         </div>
 
-        <!-- Bottom Action CTA -->
-        <div :class="['pt-4 mt-4 border-t border-neutral-100 dark:border-neutral-800/80']">
-          <div
-            :class="[
-              'w-full py-2.5 rounded-xl text-xs font-semibold text-center transition-all flex items-center justify-center gap-2',
-              selectedPath === 'local'
-                ? 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
-                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700',
-            ]"
+        <!-- Action Button -->
+        <div :class="['pt-5']">
+          <Button
+            type="button"
+            :class="['w-full justify-center text-xs py-2.5 font-semibold rounded-xl']"
+            :variant="selectedPath === 'local' ? 'primary' : 'secondary'"
+            @click.stop="chooseLocal"
           >
-            <span>{{ selectedPath === 'local' ? t('onboarding.steps.triage.local.selectedCta') : t('onboarding.steps.triage.local.selectCta') }}</span>
-          </div>
+            {{ selectedPath === 'local' ? t('onboarding.steps.triage.local.selected') : t('onboarding.steps.triage.local.cta') }}
+          </Button>
         </div>
       </div>
 
       <!-- Option 2: Account Sign-In (Cloudflare) -->
       <div
         :class="[
-          'relative flex flex-col justify-between overflow-hidden rounded-2xl p-5 border-2 transition-all duration-200 cursor-pointer min-h-[340px]',
+          'relative flex flex-col justify-between overflow-hidden rounded-2xl p-5 border-2 transition-all duration-200 cursor-pointer min-h-[340px] backdrop-blur-xl',
           selectedPath === 'cloud'
             ? isAuthenticated
-              ? 'border-emerald-500 bg-gradient-to-b from-emerald-500/10 to-teal-500/5 dark:from-emerald-950/40 dark:to-teal-950/20 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/30'
-              : 'border-primary-500 bg-gradient-to-b from-primary-500/10 to-indigo-500/5 dark:from-primary-950/40 dark:to-indigo-950/20 shadow-lg shadow-primary-500/10 ring-1 ring-primary-500/30'
-            : 'border-neutral-200/80 dark:border-neutral-800 bg-white/70 dark:bg-neutral-900/60 hover:border-neutral-300 dark:hover:border-neutral-700 backdrop-blur-md',
+              ? 'border-emerald-500 bg-white/95 dark:bg-neutral-900/95 shadow-lg shadow-emerald-500/10 ring-1 ring-emerald-500/30'
+              : 'border-primary-500 bg-white/95 dark:bg-neutral-900/95 shadow-lg shadow-primary-500/10 ring-1 ring-primary-500/30'
+            : 'border-neutral-200/80 dark:border-neutral-800 bg-white/85 dark:bg-neutral-900/75 hover:border-neutral-300 dark:hover:border-neutral-700',
         ]"
         @click="chooseCloud"
       >

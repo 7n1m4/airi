@@ -72,45 +72,55 @@ This executes `scripts/release/publish-mac.js`, which handles:
 
 ---
 
-### Step 5: iOS IPA Build & Publish
+### Step 5: iOS IPA Build & Upload (Mandatory Release Step)
+> [!IMPORTANT]
+> An Apple platform release is **incomplete** until both the macOS `.dmg` and the iOS `.ipa` are published. Because [`README.md`](../../../../README.md) advertises direct download badges for both platforms, omitting this step leaves the iOS download button pointing to a **404 Not Found** release asset.
 
-AIRI iOS (`apps/stage-pocket`) can be built headlessly or exported via Xcode.
-
-#### Option A: Automated Headless Build & Upload
-To compile the web bundle, sync native Capacitor dependencies, build the `.xcarchive`, package the `.ipa`, and upload directly to the GitHub release:
+To compile the web bundle, sync native Capacitor dependencies, build the `.xcarchive`, package the `.ipa`, and upload directly to the active GitHub release:
 ```bash
 pnpm run release:ios
 ```
 *(Or from the pocket workspace: `pnpm -F @proj-airi/stage-pocket run release:ios`.)*
 
 This script (`apps/stage-pocket/scripts/build-ipa.ts`):
-1. Runs `vite build` and `cap sync ios`.
+1. Executes `pnpm run build && pnpm exec cap sync ios` to compile the web bundle into `dist/` and sync assets into `ios/App/App/public/`.
 2. Automatically patches `CapApp-SPM/Package.swift` to ensure Swift 6.0 compatibility and links `CoreLLMKit` / `CoreMLBackend` for native on-device AI.
 3. Runs `xcodebuild archive` to create `build/App.xcarchive`.
 4. Extracts `App.app` into an `ipa-staging/Payload` container and packages `AIRI-[version]-ios.ipa` (and `App.ipa`).
-5. Uploads the `.ipa` to the matching GitHub release `v[version]` on `dasilva333/airi`.
-
-#### Option B: Headless Local IPA Build (No Upload)
-To compile and package the IPA locally for verification or ad-hoc testing:
-```bash
-pnpm run build:pocket:ipa
-```
-The output file is written to `apps/stage-pocket/build/AIRI-[version]-ios.ipa`.
-
-#### Option C: Manual Xcode Archive Export
-If you need custom provisioning profiles, Ad Hoc distribution, or App Store Connect submission:
-1. Open the project in Xcode:
-   ```bash
-   pnpm run open:ios
-   # or: open apps/stage-pocket/ios/App/App.xcodeproj
-   ```
-2. Select target **App** and destination **Any iOS Device (arm64)**.
-3. Select **Product** → **Archive**.
-4. In the Xcode Organizer, select **Distribute App** (App Store Connect / Ad-Hoc / Enterprise / Development) and export.
+5. Uploads `AIRI-[version]-ios.ipa` to the matching GitHub release `v[version]` on `dasilva333/airi` with `--clobber`.
 
 ---
 
-### Step 6: Manual Desktop Alternative / Verification
+### Step 6: Local iOS Simulation & Manual Xcode Prerequisites
+If you are developing locally, testing in the Xcode iOS Simulator, or exporting manual archives (Ad Hoc / TestFlight / App Store Connect):
+
+> [!WARNING]
+> Xcode has no knowledge of Vite or pnpm. If you launch the simulator or archive without compiling the web frontend, `ios/App/App/public` will be empty and the app will crash to a blank white screen with `The file “index.html” couldn’t be opened`.
+
+1. **Pre-build & Sync Web Assets**:
+   Always compile the web application and sync assets into the iOS container first:
+   ```bash
+   pnpm run open:ios
+   # (This automatically executes: pnpm run build && cap sync ios && cap open ios)
+   ```
+   Or manually:
+   ```bash
+   pnpm -F @proj-airi/stage-pocket run build
+   pnpm -F @proj-airi/stage-pocket exec cap sync ios
+   ```
+2. **Local Headless IPA Compilation (Without Upload)**:
+   ```bash
+   pnpm run build:pocket:ipa
+   ```
+   Output: `apps/stage-pocket/build/AIRI-[version]-ios.ipa`.
+3. **Manual Xcode Archive / Distribution**:
+   - In Xcode, select target **App** and destination **Any iOS Device (arm64)**.
+   - Select **Product** → **Archive**.
+   - In Organizer, choose **Distribute App** (App Store Connect / Ad-Hoc / Enterprise / Development).
+
+---
+
+### Step 7: Manual Desktop Alternative / Verification
 If you need to run macOS desktop packaging manually:
 1. **Build macOS Executable**:
    ```bash
@@ -157,4 +167,9 @@ If you need to run macOS desktop packaging manually:
 ### Xcode SPM Dependency or CoreAI Failures
 - **Symptoms**: `xcodebuild archive` fails resolving Swift Package Manager packages or complains about missing `CoreLLMKit`.
 - **Resolution**: Run `pnpm -F @proj-airi/stage-pocket run ios:resolve` to refresh SPM dependencies, or verify that `apps/stage-pocket/scripts/build-ipa.ts` successfully executed `patchSpmPackageForCoreAI()`.
+
+### iOS Simulator Blank White Screen (Missing `index.html`)
+- **Symptoms**: Simulator or device launches into a blank screen with error: `[DevBridge] Navigation failed: The file “index.html” couldn’t be opened because there is no such file.`
+- **Cause**: The Vite web bundle was never compiled into `apps/stage-pocket/dist` or synced to `apps/stage-pocket/ios/App/App/public`.
+- **Resolution**: Run `pnpm -F @proj-airi/stage-pocket run build && pnpm -F @proj-airi/stage-pocket exec cap sync ios` (or `pnpm run open:ios`), then re-run the scheme in Xcode.
 
