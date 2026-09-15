@@ -788,32 +788,5 @@ In `packages/stage-ui/src/stores/providers/registry/speech.ts`, `dasilva333/airi
 - **Duplex & Barge-In Boundaries:** Silero VAD provides client-side voice activity detection for interrupt triggers and audio buffer clearing; it does not constitute hardware acoustic echo cancellation (AEC). Systems using Silero VAD achieve software-driven barge-in interruption, which depends on audio output muting and prompt cancellation rather than hardware acoustic isolation.
 - **DSP Filter Processing:** The `virtual-audio-studio` audio processor implements parametric equalization, formant shifting, dynamic compression, and spatial reverb via Web Audio API filter graphs. Processing latency is dictated by browser audio context sample rates and buffer sizes.
 
-### 5.4 Initiatives & Community Outreach Planning
 
-#### 5.4.1 Community Scrutiny & Discussion Draft (Planned Outreach)
-
-> **Initiative Context:**
-> This section records planned outreach materials and candidate discussion drafts for technical communities (e.g. r/LocalLLaMA, r/AICompanions, r/selfhosted). Maintained internally to coordinate future distribution, gather reviewer feedback, and invite upstream/competitor corrections without cluttering the public-facing `COMPARISONS.md` guide.
-
-```markdown
-Title: 11 desktop AI companions compared: voice, memory, avatars, and local execution
-
-Hey everyone,
-
-I maintain an active fork of AIRI (an open-source desktop AI companion runtime). Over the past few months, our team did a deep architectural audit across 11 desktop companion projects (including VPet, Project N.E.K.O., Open-LLM-VTuber, Komorebi, Amica, NekoGPT, Utsuwa, AITuberKit, Soul of Waifu, and AIRI).
-
-We wanted to move past superficial marketing tables ("Supports VRM: Yes/No") and evaluate what actually runs on the user’s machine.
-
-Three core architectural findings stood out:
-
-1. Voice Custody & Latency: "Supports local voice" means completely different things across projects. Most open companions (Open-LLM-VTuber, N.E.K.O., Utsuwa) require orchestrating external Python servers (GPT-SoVITS, OmniVoice) on separate localhost ports. Only a few run neural speech directly in-process via WebGPU/WASM (Kokoro, Pocket-TTS). Additionally, direct zero-shot conditioning (generating target timbre directly from text) is often confused with RVC (an audio-to-audio conversion pass requiring secondary pitch extraction and vocoding).
-2. Memory Architecture: Most apps still rely on flat sliding context windows or basic vector dumps. When companions attempt true long-term continuity, the divide is stark: Project N.E.K.O. provides an active web-based CRUD table over raw SQLite records, whereas AIRI implements multi-tier temporal hierarchies (daily episodic rollups, immutable journals, and lifetime relational threads).
-3. Autonomy & Agency: True ambient presence remains rare. Very few projects implement continuous salience-gated vision or proactive heartbeats with smart silence (knowing when NOT to speak while the user is working). Komorebi stands out with native Rust desktop automation and local LoRA personality fine-tuning, while VPet remains unmatched for pure Win32 desktop physics and modding scale.
-
-We've organized the full comparison into three visual panels (Voice, Memory, and Avatars) in our root repository guide:
-👉 Public Guide: https://github.com/dasilva333/airi/blob/main/COMPARISONS.md
-👉 Full Forensic Dossier with Commit/Source Line Citations: https://github.com/dasilva333/airi/blob/main/docs/project-companion-comparisons.md
-
-Because software moves fast, we treat this as a living document. If you maintain or use any of these companions and spot an outdated implementation, missing adapter, or mischaracterized pipeline, please let us know in the comments or open a PR!
-```
 
