@@ -1,81 +1,103 @@
-# 🚀 AIRI v0.9.31-stable.20260911 — Release Notes
+# 🚀 AIRI v0.9.32-stable.20260915 — Release Notes
 
-This release is highlighted by the debut of **Onboarding V3** featuring an express **Quick Start Cockpit**, a built-in **AI Character Creator**, an **Instant-Response UI Overhaul across Chat, Settings & Model Galleries**, **On-Device Moondream2 WebGPU Vision**, and **Granular Submesh Wardrobe Controls**.
+This release introduces the **Arcade Room & Autonomous Game Copilot** with over 8,900 retro classics, dedicated **Audio Output Device Selection**, the **Cloudflare & BYOS CloudSync Infrastructure Overhaul**, the **Free AI Hub**, an **Official MCP Registry** integration with live health probes, the **Live2D Gimmick Deck**, **100% Localization Parity across 9 languages**, and comprehensive **Power Throttling & Lifecycle Management**.
 
 ---
 
 ## ✨ Key Highlights
 
-### 🌟 1. Onboarding V3: The Complete Companion Setup Reimagined
+### 🕹️ 1. Arcade Room & Autonomous Retro Game Copilot
 
-* ⚡ **Quick Start Cockpit (60-Second Setup)**:
-  * Designed for users who want immediate gratification without navigating complex setup menus.
-  * Launch instantly with the official AIRI character triad (Airi, Neuro-inspired, or custom) alongside a real-time on-device LLM inference benchmark that validates your local setup before entering the stage.
-* 🎨 **Built-in AI Character Creator**:
-  * Added as a full-featured creation suite directly within the Persona step alongside Starter Presets and the Community Hub.
-  * **Image-to-Character Tagger**: Drop any avatar artwork or reference photo to automatically extract visual traits via the integrated **Waifu Diffusion (WD) Tagger**.
-  * **AI Story & Scenario Synthesis**: Select an anime trope archetype (*Tsundere, Kuudere, Genki, Deredere, Dandere, etc.*) and let the LLM generate 3 rich backstory and greeting scenario proposals with in-place editing and instant vessel binding.
-* 🎭 **6 Tailored Experience Archetypes (12–19 Dynamic Steps)**:
-  * Rather than forcing a rigid checklist, the wizard adapts dynamically based on how you plan to use AIRI:
-    1. **The Quiet Observer** *(12 Steps · Minimalist)*: Lightweight text companion with inner thoughts, zero audio/vision overhead.
-    2. **The Casual Companion** *(15 Steps · Popular Choice)*: Spoken dialogue, chat photo perception, and long-term memory.
-    3. **The Creative Muse** *(15 Steps · Visual Focus)*: Spoken voice, visual generation (Pollinations/ComfyUI), and expressive avatar morphs.
-    4. **The Executive Copilot** *(15 Steps · Productivity)*: Voice dialogue, active display perception, window tracking, and filesystem MCP tools.
-    5. **The Ambient Roommate** *(15 Steps · Proactive Presence)*: Ambient heartbeats, sleep schedule, quiet hours, and display awareness.
-    6. **The Swiss Army Companion** *(19 Steps · Master Journey)*: The complete all-in-one flagship setup across all multimodal faculties.
-* 💃 **3D Vessel Coverflow & Dedicated Emotions Cockpit**:
-  * **Unified Avatar Coverflow**: Browse local (`✓ Installed`) and community (`🌐 Free Download`) VRM and Live2D avatars side-by-side in a responsive 3D carousel.
-  * **Dedicated Emotions Cockpit**: An interactive soundboard and live avatar stage to preview emotional expressions and calibrate 2-pass `<|ACT:...|>` kinetic animations so your companion emotes naturally during speech.
-* 🛡️ **Stage Finale & Pre-Flight Honesty Matrix**:
-  * Replaces fake completion checkmarks with a real pre-flight diagnostics check verifying your Audio Input, Brain Reasoning Core, Neural Voice Synthesis, and 3D Avatar Stage are 100% operational before launching directly into Turn 0 of your stage.
+* 🎮 **Built-in JS-DOS & Archive.org Retro Catalog**:
+  * Added a dedicated **Arcade Room** workspace in the desktop stage.
+  * Embedded high-performance JS-DOS WebAssembly runtime with direct access to an 8,900+ MS-DOS retro game library powered by Archive.org.
+  * Features instant screenshot capture and companion quick-ask integration.
+* 🤖 **Autonomous Game Copilot with Ghost Cursor**:
+  * Introduced `useArcadeAgent`: your companion can now perceive game video frames, analyze gameplay state, and provide real-time strategic commentary and assistance.
+  * Real-time **Ghost Cursor** overlay displays where the companion is looking and pointing on the retro canvas.
+  * Built-in dynamic vision resolution scaling, Moondream VLM progress feedback, and automated safety failovers (e.g. SimCity operational verification).
 
 ---
 
-### ⚡ 2. Instant-Response UI & Zero-Hang Performance Overhaul
+### 🎙️ 2. Audio Pipeline & Voice Studio Overhaul
 
-We systematically hunted down the most frustrating UI freezes across the app—where clicking a tab or opening a window used to leave you staring at an unresponsive screen for seconds—and gave them instant visual feedback and progressive hydration:
-
-* 💬 **Chatbox Fast-Boot & Virtualized History**:
-  * Rebuilt the desktop chatbox with a pre-paint shell that opens instantly without window jank, while heavy background services hydrate smoothly in parallel.
-  * Added zero-jank reverse-scroll windowing so you can scroll through thousands of past conversation messages with silky-smooth frame rates.
-* 👗 **Instant Model Settings & Avatar Customizer**:
-  * Eliminated multi-second freezes when clicking into Model Settings or Avatar Customization.
-  * Scene engines (`ThreeScene`, `Live2DScene`, `SpineScene`, `MMDScene`) are now asynchronously split with skeleton loading placeholders and a 150ms deferred hydration gate, delivering immediate feedback the moment you click.
-* 🎨 **Standalone Card Editor Hub & Instant Discover Avatars**:
-  * Decoupled the character editor into its own dedicated route (`/settings/card-editor/:id`) with instant responsive breadcrumbs and skeleton states.
-  * The Model Selector and Discover Avatars surfaces now load cached author previews immediately, eliminating empty whiteout states.
-* 🛡️ **Eliminated Duplicate T-Pose Avatars & DOM Flickering**:
-  * Cached active 3D avatar instances in `modelStore` to prevent models from reloading or flickering during UI redraws, and added defensive scene sweeps to permanently fix duplicate T-pose avatars spawning on route transitions.
+* 🔊 **Audio Output Device Selection**:
+  * You can now select dedicated speaker and audio output devices specifically for TTS speech playback, independently from system default outputs.
+* 🛠️ **`airi-audio-server` Process Management**:
+  * Integrated process lifecycle supervision and background server spawner for `airi-audio-server`.
+  * Added voice curation studio, transcript alignment, and inline zero-shot voice cloning.
+* ⚡ **Pre-Warmed Audio Fillers & Voice Stability**:
+  * Integrated inline pre-warm controls for conversational fillers in Onboarding V3.
+  * Fixed Kokoro WASM synthesis timeouts and normalized voice metadata.
 
 ---
 
-### 👁️ 3. Local On-Device Vision (Moondream2 WebGPU)
+### ☁️ 3. Cloudflare & BYOS CloudSync Infrastructure Overhaul
 
-* 🧠 **100% Local Vision Perception**:
-  * Integrated **Moondream2** directly via WebGPU, allowing AIRI to analyze shared photos and screen regions locally on your machine with 0 API keys and complete privacy.
-* 🧪 **Faux-Chat Vision Simulator**:
-  * Integrated a responsive dual-column test simulator in Vision settings to preview 1-hop direct image analysis versus 2-hop OCR/CLIP salience filtering before sending frames to your companion.
-
----
-
-### 🎮 4. Stage-Mate (Unity Companion) & Wardrobe Polish
-
-* 🪡 **Granular Submesh Wardrobe Controls**:
-  * You can now toggle individual submesh primitives on 3D avatars directly within the Wardrobe customizer and Stage-Mate (e.g., toggling specific jackets, hats, glasses, or accessories on and off).
-* 🖐️ **Hand-Bone Anchored Border Peeking**:
-  * When your companion peeks from the edges of your display, the offset is now anchored directly to the humanoid hand bone across macOS and Windows for a natural window-gripping stance.
-* 🎯 **Gunslinger Aiming & Bullet Hole Projections**:
-  * Normalized crosshair aiming thresholds and added projected window bullet holes onto desktop targets during interactive shooting play.
-* 🖥️ **Multi-Monitor Radial Menu & Break-the-Ice Greet**:
-  * The mascot's head-anchored radial menu now detects and spans all connected displays with quick monitor jump slices, and new empty chat sessions feature a friendly "Break the Ice" callout.
+* 🌐 **Cloudflare Connect Wizard & Account Hub**:
+  * Added a dedicated Cloudflare account status indicator, streamlined connect wizard, and account hub in Settings.
+  * Fixed OAuth token serialization bugs, added automatic Cloudflare Account ID resolution, and added auto-restoration for Edge Vault credentials with built-in connection healing controls.
+* 📦 **Unconditional 3D Asset Backups & Model Sync**:
+  * Removed upload gates on display models, backgrounds, VMD dance animations, and VRMA motions, ensuring all custom 3D companion assets are reliably backed up to private Cloudflare R2 / S3 storage.
+  * Remote model preview thumbnails now reconcile automatically to R2, and dictionary keys are preserved during remote manifest synchronizations.
+* 🧹 **Selective Sync & Disk Reclaim**:
+  * Enhanced the **Selective Sync Panel** with bulk "Select All" / "Deselect All" controls, preserved chat session selection states, and character-scoped storage breakdowns.
+  * Introduced **Prune Unlinked Local Models**: safely purge local cached 3D binaries to reclaim local disk space while keeping your assets secure in your remote R2 backup.
+* ⚡ **Sync Engine Performance & Request Throttling**:
+  * Eliminated redundant reads and API request flooding across BYOS cloud synchronization routines.
+  * Bundled LevelDB integrity pre-flight checks to protect IndexedDB local state from Chromium WAL corruption.
 
 ---
 
-### ☁️ 5. Cloudflare Zero-Trust & BYOS Sync Hardening
+### 🔌 4. Official MCP Registry & Live Memory Hub
 
-* 🔄 **Zero-Flood Sync Engine**:
-  * Rebuilt the Bring-Your-Own-Storage (BYOS) sync pipeline to eliminate redundant database reads and prevent API rate-limiting during high-volume conversations.
-* 🔑 **Edge Vault Self-Healing & Account Resolution**:
-  * Fixed OAuth token serialization edge cases, added automatic account ID discovery, and enabled self-healing controls that automatically restore encrypted credentials from the Cloudflare Edge Vault.
-* 🧹 **Local Storage Pruning & LevelDB Safety Guard**:
-  * Added a "Prune Unlinked Local Models" feature with exact byte reporting to free up disk space, paired with startup integrity guards that prevent Chromium from discarding database WAL files.
+* 🌐 **Official Model Context Protocol Registry**:
+  * Migrated tool discovery to the official MCP registry with real-time health probing and hardened installer gating.
+  * Added custom developer MCP capability packs within the Character Card Editor.
+* 🧠 **Live Memory Hub Telemetry**:
+  * Connected reactive memory telemetry to the settings surface for monitoring active recall and memory retention.
+
+---
+
+### 🎭 5. Live2D Gimmick Deck & ModelCustomizer Upgrades
+
+* 🃏 **Live2D Gimmick Deck**:
+  * Added the Live2D Gimmick Deck with a hybrid translation architecture and Live2D DSL runtime bridge.
+  * Access feature-gated gimmicks and costume interactions directly from the avatar context menu.
+* 🎛️ **Soundboard & Reactions**:
+  * ModelCustomizer now features an integrated **Voice & Reactions soundboard** and language controls to trigger character lines and physical animations.
+* 🛡️ **Stage-Mate Native Mesh & Memory Fixes**:
+  * Resolved native memory leaks, process storms, and mesh accumulation during repeated avatar swaps.
+
+---
+
+### 🌐 6. Free AI Hub & Provider Ecosystem
+
+* 🎁 **Free AI Hub Discovery Surface**:
+  * New discovery surface showcasing free and zero-configuration AI providers and models.
+* ☁️ **Expanded Provider Capabilities**:
+  * Added Amazon Bedrock backend support and forward-ported Tier 1 & Tier 2 model providers with CORS bypass.
+  * Added process lifecycle cards and process management for local ComfyUI instances, including direct Artistry Playground callouts.
+  * Fixed Apple Core AI weight requirement checks and cache invalidation.
+
+---
+
+### 🌍 7. 100% Localization Parity Across All 9 Languages
+
+* 🌐 **Full Monorepo Translation Coverage**:
+  * Completed 100% localization parity across English, Chinese (Simplified/Traditional), Japanese, Korean, Spanish, French, German, and Russian.
+  * Covers Onboarding V3, Desktop Settings, Tamagotchi Stage, Tray menus, and Companion comparison views.
+  * Added automated i18n auditing tools (`pnpm run i18n:audit`).
+
+---
+
+### 🔋 8. Power Throttling & Desktop Stability
+
+* 💤 **Display Lock & Sleep Power Throttling**:
+  * Stage rendering loops, 3D/Live2D animations, and sensory observation tickers now automatically pause when the OS locks or goes to sleep, saving battery and GPU cycles.
+* 🔒 **Channel Server Token Hardening**:
+  * Resolved token sync loops in the local Gateway WebSocket channel server to protect paired mobile connections.
+* 📱 **Safari & Mobile Web Form Shield**:
+  * Mitigated iOS Safari Form Assistant popups from obscuring input in Pocket and Web companion stages.
+* 🛡️ **Uninstaller Safety**:
+  * Hardened desktop uninstallers to prevent accidental user data loss in custom directories.
