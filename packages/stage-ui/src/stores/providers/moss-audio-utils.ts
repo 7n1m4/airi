@@ -214,3 +214,20 @@ function applyMossEdgeFadePlanar(planar: Float32Array, waveformLength: number, c
     }
   }
 }
+
+/**
+ * Defensive sanitizer for MOSS TTS inputs.
+ * Ensures that square brackets `[...]` and raw token markers (e.g. `<|...|>`)
+ * are flattened/stripped before being fed into MOSS's ONNX tokenizer, preventing
+ * looping / repeating token artifacts.
+ */
+export function sanitizeMossInputText(text: string): string {
+  if (!text)
+    return ''
+
+  return text
+    .replace(/<\|.*?\|>/g, ' ')
+    .replace(/[[\]]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}

@@ -349,6 +349,14 @@ function stopVoicePreview() {
   isPreviewLoading.value = false
 }
 
+function formatServerErrorMessage(err: any, endpointName: string): string {
+  const message = err?.message || ''
+  if (message.includes('404') || err?.status === 404) {
+    return `${endpointName} endpoint not found (HTTP 404). Please update your airi-audio-server to the latest commit.`
+  }
+  return err?.message || 'Unknown error occurred'
+}
+
 async function toggleVoicePreview(v: AudioServerVoice) {
   if (activePreviewVoiceId.value === v.id) {
     stopVoicePreview()
@@ -371,7 +379,9 @@ async function toggleVoicePreview(v: AudioServerVoice) {
 
     const res = await fetch(audioUrl, { headers: getAuthHeaders() })
     if (!res.ok) {
-      throw new Error(`Server returned HTTP ${res.status}`)
+      const error: any = new Error(`Server returned HTTP ${res.status}`)
+      error.status = res.status
+      throw error
     }
 
     const blob = await res.blob()
@@ -394,7 +404,7 @@ async function toggleVoicePreview(v: AudioServerVoice) {
   }
   catch (err: any) {
     stopVoicePreview()
-    toast.error(`Audio preview error: ${err?.message || 'Could not load audio'}`)
+    toast.error(`Audio preview error: ${formatServerErrorMessage(err, 'Voice audio preview')}`)
   }
   finally {
     isPreviewLoading.value = false
@@ -468,7 +478,9 @@ async function submitVoiceUpload() {
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}))
-      throw new Error(errData?.error || `Upload failed with HTTP ${res.status}`)
+      const error: any = new Error(errData?.error || `Upload failed with HTTP ${res.status}`)
+      error.status = res.status
+      throw error
     }
 
     const data = await res.json()
@@ -480,7 +492,7 @@ async function submitVoiceUpload() {
     }
   }
   catch (err: any) {
-    uploadError.value = err?.message || 'Failed to upload voice.'
+    uploadError.value = formatServerErrorMessage(err, 'Voice upload')
     toast.error(uploadError.value)
   }
   finally {
@@ -518,7 +530,9 @@ async function submitSaveTranscript() {
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}))
-      throw new Error(errData?.error || `Update failed with HTTP ${res.status}`)
+      const error: any = new Error(errData?.error || `Update failed with HTTP ${res.status}`)
+      error.status = res.status
+      throw error
     }
 
     // Update in-memory models
@@ -536,7 +550,7 @@ async function submitSaveTranscript() {
     isEditTranscriptModalOpen.value = false
   }
   catch (err: any) {
-    editTranscriptError.value = err?.message || 'Failed to save transcript.'
+    editTranscriptError.value = formatServerErrorMessage(err, 'Voice transcript update')
     toast.error(editTranscriptError.value)
   }
   finally {
@@ -565,7 +579,9 @@ async function executeDeleteVoice() {
 
     if (!res.ok) {
       const errData = await res.json().catch(() => ({}))
-      throw new Error(errData?.error || `Delete failed with HTTP ${res.status}`)
+      const error: any = new Error(errData?.error || `Delete failed with HTTP ${res.status}`)
+      error.status = res.status
+      throw error
     }
 
     toast.success(`Voice "${targetVoiceName}" removed.`)
@@ -576,7 +592,7 @@ async function executeDeleteVoice() {
     await checkServerStatus()
   }
   catch (err: any) {
-    toast.error(err?.message || 'Failed to delete voice.')
+    toast.error(formatServerErrorMessage(err, 'Voice deletion'))
   }
   finally {
     isDeletingVoice.value = false

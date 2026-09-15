@@ -1030,6 +1030,8 @@ async function generateSpeechBuffered(request: TtsRequest, signal: AbortSignal):
     }
   }
 
+  let profileId: string | undefined
+
   if (targetProviderId === 'virtual-audio-studio' && targetVoice) {
     let profile = speechStore.savedVoiceProfiles.find(p => p.id === targetVoice?.id || p.name === targetVoice?.id)
     if (!profile && activeCard.value?.extensions?.airi?.voice_profiles) {
@@ -1042,6 +1044,7 @@ async function generateSpeechBuffered(request: TtsRequest, signal: AbortSignal):
     }
 
     if (profile) {
+      profileId = profile.id
       targetProviderId = profile.baseProvider
       targetModel = profile.baseModel
 
@@ -1113,7 +1116,7 @@ async function generateSpeechBuffered(request: TtsRequest, signal: AbortSignal):
   if (!model || !voice)
     return null
 
-  const transformedText = speechStore.transformTextForSpeech(request.text, activeSpeechProvider.value)
+  const transformedText = speechStore.transformTextForSpeech(request.text, profileId ? 'virtual-audio-studio' : targetProviderId, profileId)
 
   if (!transformedText.trim())
     return null

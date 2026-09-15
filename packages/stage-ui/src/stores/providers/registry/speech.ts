@@ -36,7 +36,7 @@ import { getDefaultKokoroModel, getKokoroVoiceList, KOKORO_MODELS, kokoroModelsT
 import { models as elevenLabsModels } from '../elevenlabs/list-models'
 import { createNativeElevenLabsProvider } from '../elevenlabs/native'
 import { logWarn, toProviderRootBaseUrl, toV1SpeechBaseUrl, validateProviderBaseUrl } from '../helpers'
-import { getMossAdapterInstance, preprocessMossReferenceAudio } from '../moss-audio-utils'
+import { getMossAdapterInstance, preprocessMossReferenceAudio, sanitizeMossInputText } from '../moss-audio-utils'
 import { buildOpenAICompatibleProvider } from '../openai-compatible-builder'
 import { getPocketTtsAdapterInstance, preprocessPocketReferenceAudio } from '../pocket-audio-utils'
 import { hexToBytes, readSSEAudioStream } from '../sse-audio-stream'
@@ -462,8 +462,15 @@ export function createSpeechMetadata(t: ComposerTranslation): Record<string, Pro
                     throw new Error('Invalid request body')
                   }
                   const body = JSON.parse(init.body)
-                  const text = body.input
+                  const text = sanitizeMossInputText(body.input)
                   const voiceId = body.voice
+
+                  if (!text) {
+                    return new Response(new ArrayBuffer(0), {
+                      status: 200,
+                      headers: { 'Content-Type': 'audio/wav' },
+                    })
+                  }
 
                   if (!voiceId) {
                     throw new Error('Voice parameter is required')
