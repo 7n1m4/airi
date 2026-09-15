@@ -40,7 +40,7 @@ An independent 11-page competitive evaluation published on September 14, 2026 re
 The audit revealed a core structural asymmetry:
 - **Asymmetric Scrutiny**: AIRI was subjected to forensic static and operational code auditing (CI run IDs, commit SHAs, Vitest assertion boundaries, NSIS uninstaller configs, and README download links). Competitors were evaluated predominantly by Steam store listings, marketing claims, and user review counts.
 - **The Circular Pigeonhole Trap**: The audit assigned generic user needs to competitors (*"VRM character with local memory"* to Utsuwa, *"Advanced local roleplay/voice"* to Soul of Waifu, *"Relationship continuity"* to Nomi, *"Windows avatar with low setup"* to N.E.K.O.) while categorizing AIRI circularly as *"Highly customized AIRI experience"*.
-- **The Empirical Reframe**: AIRI provides concrete, verified alternatives for each of those functional requirements: native hardware duplex audio with barge-in interruption compared to push-to-talk, clean cross-platform Electron packaging compared to complex manual scripts, and zero-cost local data sovereignty compared to metered recurring cloud subscriptions.
+- **The Empirical Reframe**: AIRI provides concrete, verified alternatives for each of those functional requirements: client-side software VAD barge-in interruption compared to unmanaged push-to-talk, clean cross-platform Electron packaging compared to complex manual scripts, and zero-cost local data sovereignty compared to metered recurring cloud subscriptions.
 
 This dossier exists to document the objective, verifiable technical facts across every contender.
 
@@ -115,12 +115,12 @@ Below are dense, high-level architectural notes for each active desktop companio
   - **Limits**: No procedural motion diffusion (no Text-to-VRMA), no in-app texture surgery, no bone-attached particle VFX auras, and single-actor viewports only (no mid-sentence multi-actor persona switching).
 - **Audio & Voice Custody**:
   - **TTS Engines**: GPT-SoVITS v3 (streaming JSON PCM / raw binary frames), Doubao TTS, CosyVoice, OpenAI-compatible speech.
-  - **Duplex Boundaries**: Asynchronous request-response streaming architecture. Lacks sub-50ms native hardware duplex barge-in, speculative thinking fillers, or dynamic spoken asides.
+  - **Duplex Boundaries**: Asynchronous request-response streaming architecture. Lacks software VAD barge-in interruption, speculative thinking fillers, or dynamic spoken asides.
   - **Text Preprocessing**: Basic regex stripping of markdown stage directions; lacks full UST phonetic/token transformers.
 - **Memory Architecture**:
-  - **Storage**: SQLite backed by FTS5 full-text search with CJK tokenization and vector embeddings. Context budgeting via `tiktoken`.
-  - **Memory Inspection**: Features a web-based "Memory Browser" (`/memory`) for manual inspection, editing, and deletion.
-  - **Limits**: Lacks multi-tier STMM daily episodic summaries, LTMM immutable Sacred Journal, and dreaming consolidation.
+  - **Storage & Cognitive Layers**: Documents 5 cognitive memory layers (`working`, `recent`, `facts`, `reflections`, `persona`) in `time_indexed.db` (SQLite with FTS5 full-text search, CJK tokenization, and vector embeddings). Context budgeting via `tiktoken`.
+  - **Memory Inspection**: Features a web-based "Memory Browser" (`/memory`) CRUD table for manual search, inspection, and deletion of live memory records.
+  - **Limits**: Lacks automated calendar daily rollups (STMM), immutable write-locked Sacred Journal (LTMM), and lifetime relationship thread distillation.
 - **Perception & Autonomy**:
   - **Screen Perception**: Proactive screen-capture pipeline with caching to reduce redundant inference. OCR + VLM analysis for computer automation.
   - **Heartbeat Scheduling**: 20s–60s evaluation cycles with dual interaction paths (*Proactive Interrupt* dialogue vs *Passive Callback* system prompt injection).
@@ -150,7 +150,7 @@ Below are dense, high-level architectural notes for each active desktop companio
 - **Audio & Voice Custody**:
   - **TTS Providers**: Local adapters (Kokoro at `:8880`, Piper at `:10200`, Fish TTS Local, S2Cpp, OmniVoice) and Cloud adapters (ElevenLabs Flash v2.5, OpenAI, Azure SSML, Google Cloud, Fish Audio Cloud).
   - **STT Engines**: Local Whisper ONNX runtime (WebGPU/WASM worker with `whisper-small`) and Whisper.cpp / Transformers.js worker, plus cloud speech APIs.
-  - **Turn Dynamics**: Bounded sequential turns; lacks sub-50ms native duplex barge-in cancellation and dynamic thinking fillers.
+  - **Turn Dynamics**: Bounded sequential turns; lacks software VAD barge-in interruption and dynamic thinking fillers.
 - **Cognition & Agent Architecture**:
   - **Bounded Agent Loop (`packages/agent/src/NekoAgentRuntime.ts`)**: Powered by `@open-agent-loops/core` with `maxSteps: 4`, sequential tool execution mode, and per-session promise queue serialization.
   - **Built-in Tool Suite**: 5 core tools (`updateEmotionState`, `setCharacterState`, `enqueueTTS`, `saveMemoryNote`, `searchMemory`).
@@ -175,7 +175,7 @@ Below are dense, high-level architectural notes for each active desktop companio
   - **Desktop Overlay**: Tauri native window transparency (`transparent: true`, `always_on_top: true`, `decorations: false`).
 - **Audio & Voice Custody**:
   - **Interaction Model**: Push-to-Talk (PTT) and Hands-Free Voice Mode driven by client-side Web Audio VAD.
-  - **Duplex & Barge-In Reality**: Lacks native hardware AEC duplex streaming; speech turn loop is sequential (Listen → Transcribe → Infer → TTS Stream). Real-time stream truncation on barge-in interruption (Issue #128 proposal) remains an open proposal.
+  - **Duplex & Barge-In Reality**: Lacks software VAD barge-in stream cancellation; speech turn loop is sequential (Listen → Transcribe → Infer → TTS Stream). Real-time stream truncation on barge-in interruption (Issue #128 proposal) remains an open proposal.
   - **TTS Providers**: Cloud providers (OpenAI, ElevenLabs, Groq) and local HTTP endpoints. Incorporates OmniVoice for voice cloning.
   - **Missing Primitives**: Lacks in-process local WebGPU TTS (e.g. Kokoro-WebGPU), thinking fillers, and adaptive pacing.
 - **Cognitive Staging**:
@@ -314,7 +314,7 @@ Below are dense, high-level architectural notes for each active desktop companio
   - **Emotion & Lip-Sync**: LLM emotion intent markers trigger `.exp3.json` expressions and motion groups; Web Audio RMS lip-sync drives `ParamMouthOpenY`.
 - **Audio & Voice Custody**:
   - **Local Speech**: Sub-100ms offline vocal generation via `Piper` ONNX neural TTS and local `whisper.cpp` transcription in `komorebi-voice` (with Deepgram / SoVITS options).
-  - **Limits**: Sequential audio queue; lacks sub-50ms acoustic duplex barge-in cancellation, dynamic thinking fillers, and UST phonetic transformers.
+  - **Limits**: Sequential audio queue; lacks software VAD barge-in cancellation, dynamic thinking fillers, and UST phonetic transformers.
 - **Cognition, Tools & Computer Use**:
   - **Screen Perception**: Uses `xcap` in `komorebi-desktop` for full-desktop or window-region screen captures passed as multimodal payloads.
   - **OS Automation**: Uses `enigo` to simulate mouse movement, clicking, and keystrokes for computer automation.
@@ -331,7 +331,7 @@ Below are dense, high-level architectural notes for each active desktop companio
   - **Limits**: Zero procedural motion generation (static VRMA/BVH clips), no bone particle VFX, and no in-app texture editing.
 - **Audio & Voice Custody**:
   - **Speech Engines**: Broad adapter library for local (VOICEVOX, AivisSpeech, Style-Bert-VITS2, GPT-SoVITS) and cloud TTS (ElevenLabs, OpenAI, Azure, Google). STT via Web Speech API or cloud Whisper.
-  - **Realtime WebSocket**: Integrates OpenAI Realtime API over WebSocket for bidirectional audio; lacks native acoustic echo cancellation (AEC), hardware-level duplex suppression, or thinking fillers.
+  - **Realtime WebSocket**: Integrates OpenAI Realtime API over WebSocket for bidirectional audio; lacks client-side software VAD barge-in interruption or thinking fillers.
 - **Streaming & Cognitive Staging**:
   - **Stream Comment Scraping**: YouTube Data API v3 polling and OneComme (わんコメ) WebSocket integration for multi-platform live chat reading.
   - **Limits**: Strictly single-actor 1:1 prompt factory with simple bracketed regex emotion tags (`[happy]`, `[motion:name]`); no multi-actor `<|ACTOR|>` staging.
@@ -515,7 +515,8 @@ A companion's visual embodiment defines whether it is an interactive 3D/2D entit
 
 | Capability / Dimension | `dasilva333/airi` | Upstream AIRI | Project N.E.K.O. | NekoGPT | Utsuwa | Soul of Waifu | Open-LLM-VTuber | Amica | Komorebi | AITuberKit | VPet |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Supported Avatar Formats** | **4 Runtimes** (VRM 0/1, Live2D 2.1-5.0, MMD, Spine) | **2 Runtimes** (VRM 0/1, Live2D 3/4/5) | **3 Runtimes** (VRM 0/1, Live2D 3/4/5, MMD) | **1 Runtime** (Live2D 3/4 only; 3D purged) | **1 Runtime** (VRM 0/1 only) | **2 Runtimes** (VRM 0/1, Live2D 3/4) | **1 Runtime** (Live2D 3/4/5 web) | **1 Runtime** (VRM 0/1 only) | **1 Runtime** (Live2D Cubism 5) | **2 Runtimes** (VRM 0/1, Live2D 3/4) | **2D Sprites** (Win32 WPF frames) |
+| **Interactive Skeletal / 3D Runtimes** | **4 Runtimes** (VRM 0/1, Live2D 2.1-5.0, MMD PMX/VMD, Spine 2D) | **2 Runtimes** (VRM 0/1, Live2D 3/4/5) | **3 Runtimes** (VRM 0/1, Live2D 3/4/5, MMD) | **1 Runtime** (Live2D 3/4 only; 3D purged) | **1 Runtime** (VRM 0/1 only) | **2 Runtimes** (VRM 0/1, Live2D 3/4) | **1 Runtime** (Live2D 3/4/5 web; client VRM) | **1 Runtime** (VRM 0/1 only) | **1 Runtime** (Live2D Cubism 5) | **2 Runtimes** (VRM 0/1, Live2D 3/4) | ❌ None (No native skeletal runtimes) |
+| **Static 2D / Sprite / PNGTuber Modes** | ❌ (Strictly interactive skeletal runtimes) | Tachie (illustrated sprite switching) | PNGTuber 2D sprites (`/api/pngtuber`) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | MotionPNGTuber (video state switching) | Win32 frame-by-frame PNG player (`PNGAnimation`) |
 | **Live Material & Texture Editing** | ✅ **V-HACK & L-HACK**: MToon shader inspection, Texture Forge AI repainting | ❌ | ❌ | ◐ ArtMesh RGBA tinting (`multiply`/`screen`) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Persistent Modification Export** | ✅ Client-side `.vrm` binary repacking & export (`exportSurgicallyModifiedVRM`) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Motion Recording & Timeline Editor**| ❌ | ✅ Built-in Live2D keyframe motion recorder | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -524,7 +525,7 @@ A companion's visual embodiment defines whether it is an interactive 3D/2D entit
 | **Live2D Turing-Complete Scripting VM**| ✅ Custom DSL (`VarFloats`, choices, chained `start_mtn`, `change_cos`) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Multi-Actor Kinetic Staging** | ✅ `<\|ACTOR\|>` tokens scope live state across avatars in one turn | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **In-App Community Model Discovery**| ✅ **Discover Avatars Hub** (`explore.vue`): 3D coverflow carousel across 4 runtimes (VRM, Live2D, Spine, MMD), 44+ spotlight models with 1-click downloads, and curated directory of open archives (7,000+ models across Booth, VRoid Hub, Steam Workshop, Eikanya, Ko-fi, itch.io) | ❌ | ❌ (No in-app open web discovery portal; relies on external Steam client) | ❌ (Fixed bundled roster) | ❌ (Manual folder drops `/models`) | ❌ (Manual folder drops) | ❌ (Manual folder drops) | ❌ (Manual folder drops) | ❌ (Manual folder drops) | ❌ (Manual folder drops) | ❌ (No cross-format model discovery portal; relies on Steam Workshop for pet mods) |
-| **Steam Workshop UGC Ecosystem**| ❌ (Decoupled from proprietary Steam client; uses open web discovery + drag-and-drop + BYOS cloud sync) | ❌ | ✅ Steam Workshop model sharing in Steam release (`steam_appid.txt: 4099310`) | ◐ Steam depot verified asset tree (`assets/avatars/`) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Native Steam Workshop integration with in-app `VPet-Simulator.Tool` |
+| **Steam Workshop UGC Ecosystem**| ❌ (Decoupled from proprietary Steam client; uses open web discovery + drag-and-drop + BYOS cloud sync) | ❌ | ✅ Steam Workshop model sharing in Steam release (`steam_appid.txt: 4099310`) | ❌ (Steam depot packaging scripts only; no UGC Workshop publishing/subscription) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ Native Steam Workshop integration with in-app `VPet-Simulator.Tool` |
 
 > **Architectural Note — Three Distinct Tiers of Avatar Acquisition, Discovery & Modding:**
 > 1. **In-App 3D/2D Binary Surgery (V-HACK & L-HACK):** Deep runtime modification of 3D/2D asset internals. AIRI parses GLTF node trees live in memory, inspects and mutates MToon shader properties, repaints textures on the fly via generative AI (Texture Forge), erases alpha channels on canvas, and serializes the modified model back into a downloadable `.vrm` binary file without requiring external DCC tools like Blender or Unity.
@@ -539,10 +540,10 @@ A companion's voice pipeline determines whether conversations feel natural, resp
 
 | Capability / Dimension | `dasilva333/airi` | Upstream AIRI | Project N.E.K.O. | NekoGPT | Utsuwa | Soul of Waifu | Open-LLM-VTuber | Amica | Komorebi | AITuberKit | VPet |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Voice-Conditioned Synthesis (No RVC)**| ✅ (Pocket-TTS embeddings, MOSS prompt codes, ElevenLabs, Chatterbox) | ❌ | ◐ (Cloud credentials: MiniMax, ElevenLabs, CosyVoice) | ❌ | ◐ (OmniVoice server) | ❌ | ❌ | ❌ | ❌ (Fixed Piper ONNX) | ❌ | ❌ |
+| **Voice-Conditioned Synthesis (No RVC)**| ✅ Local in-process (Pocket-TTS embeddings, MOSS prompt codes) + Cloud (ElevenLabs, Chatterbox) | ❌ | ◐ Local server (GPT-SoVITS v3) + Cloud (MiniMax, CosyVoice, Doubao) | ◐ Local server (Fish TTS, Piper) + Cloud (ElevenLabs, Fish Cloud) | ◐ Local server (OmniVoice) + Cloud (ElevenLabs) | ❌ (Relies on RVC post-processing for custom timbre) | ◐ Local server (GPT-SoVITS, ChatTTS, CosyVoice) | ◐ Cloud (ElevenLabs) | ❌ (Fixed Piper ONNX models) | ◐ Local server (Style-Bert-VITS2, GPT-SoVITS) + Cloud (ElevenLabs) | ❌ (Fixed OS SAPI / modded VITS) |
 | **Audio-to-Audio Timbre Conversion (RVC)**| ❌ (Not implemented) | ❌ | ❌ | ❌ | ❌ | ✅ (RVC-v2 post-processing filter) | ❌ | ✅ (RVC post-processing filter) | ❌ | ❌ | ◐ Community RVC/VITS plugins |
-| **Separate Conversion Stage Required** | ⚡ None required (Single-pass synthesis) | ⚡ None required | ⚡ None required | ⚡ None required | ⚡ None required | ⏳ Required (Generates TTS then converts) | ⚡ None required | ⏳ Required (Generates TTS then converts) | ⚡ None required | ⚡ None required | ⏳ Required for RVC plugins |
-| **Latency Characteristics** | Model, hardware, & buffering dependent (Pocket-TTS ~200ms to first chunk in reference benchmarks) | Model & hardware dependent | Model & transport dependent | Model & transport dependent | Model & transport dependent | Base TTS latency + RVC conversion hop (~90–170ms in tuned local ASIO; higher over network) | Model & transport dependent | Base TTS latency + RVC conversion hop (~90–170ms in tuned local ASIO; higher over network) | Model & hardware dependent | Model & transport dependent | Variable plugin delay |
+| **Separate Conversion Stage Required** | ⚡ None required (Single-pass synthesis) | ⚡ None required | ⚡ None required | ⚡ None required | ⚡ None required | ◐ Additional stage when RVC enabled (optional) | ⚡ None required | ◐ Additional stage when RVC enabled (optional) | ⚡ None required | ⚡ None required | ◐ Additional stage when RVC enabled (optional) |
+| **Latency Characteristics** | Model, hardware, & buffering dependent (Pocket-TTS ~200ms to first chunk in reference benchmarks) | Model & hardware dependent | Model & transport dependent | Model & transport dependent | Model & transport dependent | Additional conversion/buffering; not benchmarked in-app (see note) | Model & transport dependent | Additional conversion/buffering; not benchmarked in-app (see note) | Model & hardware dependent | Model & transport dependent | Variable plugin delay |
 | **Distinct Capability** | Generates speech directly in target voice from text | Standard TTS | Generates speech directly via cloud cloned routes | Standard TTS | Generates speech via OmniVoice | Converts arbitrary input audio (including non-TTS speech & singing) | Standard TTS | Converts arbitrary input audio (including non-TTS speech & singing) | Standard TTS | Standard TTS | Standard TTS |
 | **Duplex Barge-In & Interruption** | ✅ Software barge-in (Silero VAD token abort + buffer flush, 74 pacing tests) | ✅ Real-time VAD interruption | ◐ Async break | ◐ Sequential turn queue | ❌ (Push-to-talk default; Issue #128) | ◐ Python VAD thread | ◐ WebSocket VAD interrupt | ✅ Silero VAD (`@ricky0123/vad-web`) with abort | ◐ Sequential turn queue | ◐ WebSocket event abort on speech | ❌ (Fire-and-forget batch audio) |
 | **In-Engine DSP Filter Graphs** | ✅ `virtual-audio-studio` (Parametric EQ, formant shifting, compressor, reverb) | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ |
@@ -648,6 +649,80 @@ In `packages/stage-ui/src/stores/providers/registry/speech.ts`, `dasilva333/airi
 23. `google-gemini-audio-speech` (Google Gemini speech synthesis)
 
 > **Counting Methodology Note:** These counts represent registered speech-provider configurations in the frontend registry. Because OpenAI-compatible adapters and multi-model gateways can access overlapping underlying neural models, these represent distinct configuration interfaces rather than 23 distinct proprietary neural architectures.
+
+#### Competitor Speech-Provider Inventories (Audited)
+
+- **Upstream AIRI (`moeru-ai/airi`) (8 integrations)**:
+  1. `browser-speech-synthesis` (Web Speech API)
+  2. `kokoro-local` (In-process WebGPU Kokoro)
+  3. `openai-audio-speech` (OpenAI TTS)
+  4. `elevenlabs` (ElevenLabs neural speech)
+  5. `microsoft-speech` (Azure Speech)
+  6. `voicevox` (Local VOICEVOX)
+  7. `aivis-speech` (Local AivisSpeech)
+  8. `openai-compatible-audio-speech` (Generic OpenAI-compatible TTS)
+
+- **Project N.E.K.O. (4 integrations)**:
+  1. `GPT-SoVITS v3` (Local streaming PCM / binary socket)
+  2. `Doubao TTS` (Volcengine / ByteDance Cloud)
+  3. `CosyVoice` (Alibaba Cloud Model Studio)
+  4. `OpenAI-compatible TTS` (Generic HTTP speech endpoint)
+
+- **NekoGPT (`NekoGPT-Opensource`) (10 integrations)**:
+  1. `Kokoro Local` (`http://localhost:8880`)
+  2. `Piper Local` (`http://localhost:10200`)
+  3. `Fish TTS Local` (Local neural clone)
+  4. `S2Cpp` (Local C++ speech runtime)
+  5. `OmniVoice Local` (Local voice server)
+  6. `ElevenLabs Flash v2.5` (Cloud neural speech)
+  7. `OpenAI TTS` (Cloud speech)
+  8. `Azure SSML` (Cloud Cognitive speech)
+  9. `Google Cloud TTS` (Cloud speech)
+  10. `Fish Audio Cloud` (Cloud voice cloning)
+
+- **Utsuwa (4 integrations)**:
+  1. `OpenAI Speech` (Cloud TTS)
+  2. `ElevenLabs` (Cloud neural speech)
+  3. `Groq TTS` (Cloud low-latency speech)
+  4. `OmniVoice` (Local voice cloning HTTP server)
+
+- **Soul of Waifu (3 integrations)**:
+  1. `Edge-TTS` (Cloud Microsoft Edge speech)
+  2. `Coqui TTS` (Local Python neural TTS)
+  3. `RVC v2` (Optional audio-to-audio timbre post-processing filter)
+
+- **Open-LLM-VTuber (5 integrations)**:
+  1. `Edge-TTS` (Cloud speech)
+  2. `Bark / ChatTTS` (Local expressive speech)
+  3. `CosyVoice` (Local / cloud voice cloning)
+  4. `GPT-SoVITS` (Local few-shot voice synthesis)
+  5. `OpenAI-compatible speech` (Generic HTTP TTS)
+
+- **Amica (6 integrations)**:
+  1. `ElevenLabs` (Cloud neural speech)
+  2. `Coqui TTS` (Local Python neural engine)
+  3. `Piper` (Local ONNX lightweight TTS)
+  4. `OpenAI Speech` (Cloud TTS)
+  5. `Web Speech API` (Browser speech synthesis)
+  6. `RVC` (Optional audio-to-audio timbre post-processing filter)
+
+- **Komorebi (2 integrations)**:
+  1. `Piper ONNX` (Local offline neural TTS via `komorebi-voice`)
+  2. `Deepgram / SoVITS` (Optional cloud/local audio backend)
+
+- **AITuberKit (8 integrations)**:
+  1. `VOICEVOX` (Local Japanese neural engine)
+  2. `AivisSpeech` (Local neural engine)
+  3. `Style-Bert-VITS2` (Local expressive Japanese TTS)
+  4. `GPT-SoVITS` (Local voice cloning)
+  5. `ElevenLabs` (Cloud neural speech)
+  6. `OpenAI Speech` (Cloud TTS)
+  7. `Azure Cognitive Speech` (Cloud SSML)
+  8. `Google Cloud TTS` (Cloud speech)
+
+- **VPet (2 integrations / modded ecosystem)**:
+  1. `Windows SAPI` (Native OS speech synthesis)
+  2. `Edge-TTS / VITS` (Community plugin wrappers via `VPet.Plugin.LLM`)
 
 - **Transcription (STT) Integrations in `dasilva333/airi` (8 integrations)**:
   1. `whisper-local` (In-process WebGPU Whisper transcription)

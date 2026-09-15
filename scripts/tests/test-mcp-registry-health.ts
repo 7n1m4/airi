@@ -82,14 +82,36 @@ async function probeMcpRegistry() {
   }
 
   if (data.servers.length === 0) {
-    console.warn('⚠️ [MCP Registry Probe] Registry returned 0 servers.')
-  }
-  else {
-    const sample = data.servers[0]?.server || data.servers[0]
-    console.log(`  ✓ GET payload check passed in ${getLatency}ms. Sample server: "${sample?.name || 'unknown'}" (${sample?.title || 'no title'})`)
+    console.error('❌ [MCP Registry Probe] Schema validation failed: Registry returned 0 servers.')
+    process.exit(1)
   }
 
-  console.log(`✅ [MCP Registry Probe] Official MCP Registry is healthy (Total RTT: ${headLatency + getLatency}ms)`)
+  const sampleEntry = data.servers[0]
+  const sample = sampleEntry?.server || sampleEntry
+
+  if (!sample || typeof sample !== 'object' || !sample.name || typeof sample.name !== 'string') {
+    console.error('❌ [MCP Registry Probe] Schema validation failed: server missing valid `name` string field', sample)
+    process.exit(1)
+  }
+
+  if (!sample.version || typeof sample.version !== 'string') {
+    console.error('❌ [MCP Registry Probe] Schema validation failed: server missing valid `version` string field', sample)
+    process.exit(1)
+  }
+
+  const hasValidPackage = Array.isArray(sample.packages) && sample.packages.some((p: any) => p && typeof p.identifier === 'string' && typeof p.registryType === 'string')
+  const hasValidRemote = Array.isArray(sample.remotes) && sample.remotes.some((r: any) => r && typeof r.url === 'string' && typeof r.type === 'string')
+
+  if (!hasValidPackage && !hasValidRemote) {
+    console.error('❌ [MCP Registry Probe] Schema validation failed: server entry contains neither valid `packages` nor valid `remotes` metadata', sample)
+    process.exit(1)
+  }
+
+  console.log(`  ✓ GET payload & schema check passed in ${getLatency}ms.`)
+  console.log(`    - Sample server: "${sample.name}" (Title: ${sample.title || 'N/A'}, Version: ${sample.version})`)
+  console.log(`    - Validated transports: ${hasValidPackage ? 'Packages: YES' : 'Packages: NO'} | ${hasValidRemote ? 'Remotes: YES' : 'Remotes: NO'}`)
+
+  console.log(`✅ [MCP Registry Probe] Official MCP Registry is healthy & schema compatible (Total RTT: ${headLatency + getLatency}ms)`)
 }
 
 probeMcpRegistry().catch((err) => {

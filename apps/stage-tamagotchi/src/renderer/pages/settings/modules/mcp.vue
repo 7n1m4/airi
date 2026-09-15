@@ -39,14 +39,36 @@ const expandedServers = ref<Set<string>>(new Set())
 const configPath = computed(() => status.value?.path ?? '')
 
 // Discover Tab State
+interface RegistryPackage {
+  registryType: string
+  identifier: string
+  version?: string
+  runtimeHint?: string
+  transport?: {
+    type: string
+    url?: string
+  }
+  runtimeArguments?: Array<{ value: string, type?: string }>
+  packageArguments?: Array<{ name: string, isRequired?: boolean, type?: string, default?: string, description?: string }>
+  environmentVariables?: Array<{ name: string, isRequired?: boolean, isSecret?: boolean, description?: string, default?: string }>
+}
+
+interface RegistryRemote {
+  type: string
+  url: string
+  headers?: Array<{ name: string, isRequired?: boolean, isSecret?: boolean }>
+}
+
 interface RegistryServer {
+  canonicalName: string
   name: string
   short_description: string
   github_stars?: number
   url: string
   source_code_url?: string
   package_name?: string
-  remotes?: Array<{ url_direct: string, transport: string }>
+  packages?: RegistryPackage[]
+  remotes?: RegistryRemote[]
 }
 
 const searchQuery = ref('')
@@ -336,9 +358,11 @@ async function handleApplyAndRestart() {
     const result = await applyAndRestart()
     await refreshStatus()
     lastActionMessage.value = `MCP servers restarted. Started: ${result.started.length}, Failed: ${result.failed.length}, Skipped: ${result.skipped.length}`
+    return result
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
+    throw error
   }
   finally {
     isBusy.value = false
@@ -346,7 +370,10 @@ async function handleApplyAndRestart() {
 }
 
 // Registry Fetching
+let latestSearchSeq = 0
+
 const fetchRegistry = useDebounceFn(async (query: string) => {
+  const currentSeq = ++latestSearchSeq
   isRegistryLoading.value = true
   registryError.value = ''
   try {
@@ -362,20 +389,22 @@ const fetchRegistry = useDebounceFn(async (query: string) => {
       throw new Error(`Registry API error: ${response.status} ${response.statusText}`)
 
     const data = await response.json()
+    if (currentSeq !== latestSearchSeq)
+      return
+
     const rawServers: any[] = data.servers || []
     let servers: RegistryServer[] = rawServers.map((entry: any) => {
       const s = entry.server || entry
       const pkg = s.packages?.[0]
       return {
+        canonicalName: s.name,
         name: s.title || s.name,
         short_description: s.description || '',
         url: s.websiteUrl || s.repository?.url || '',
         source_code_url: s.repository?.url || '',
         package_name: pkg?.identifier || s.name,
-        remotes: s.remotes?.map((r: any) => ({
-          url_direct: r.url,
-          transport: r.type,
-        })),
+        packages: s.packages || [],
+        remotes: s.remotes || [],
       }
     })
 
@@ -390,14 +419,21 @@ const fetchRegistry = useDebounceFn(async (query: string) => {
         servers = matches
       }
     }
-    registryServers.value = servers
+
+    if (currentSeq === latestSearchSeq) {
+      registryServers.value = servers
+    }
   }
   catch (error) {
-    registryError.value = 'Failed to load registry.'
-    console.error(error)
+    if (currentSeq === latestSearchSeq) {
+      registryError.value = 'Failed to load registry.'
+      console.error(error)
+    }
   }
   finally {
-    isRegistryLoading.value = false
+    if (currentSeq === latestSearchSeq) {
+      isRegistryLoading.value = false
+    }
   }
 }, 300)
 
@@ -405,9 +441,79 @@ watch(searchQuery, (val) => {
   fetchRegistry(val)
 })
 
+function getInstallState(server: RegistryServer): {
+  canInstall: boolean
+  label: string
+  reason?: string
+  requiredEnv?: string[]
+} {
+  if (isInstalled(server))
+    return { canInstall: false, label: 'Installed' }
+
+  // Known zero-config presets always installable
+  if (
+    server.name.toLowerCase().includes('open web search')
+    || server.package_name?.includes('open-websearch')
+    || server.name.toLowerCase().includes('filesystem')
+    || server.package_name?.includes('server-filesystem')
+  ) {
+    return { canInstall: true, label: 'Install' }
+  }
+
+  // Remote-only servers (no local executable package)
+  if ((!server.packages || server.packages.length === 0) && server.remotes && server.remotes.length > 0) {
+    return {
+      canInstall: false,
+      label: 'Remote Only',
+      reason: 'This server is hosted as a remote HTTP/SSE service and cannot be launched as a local stdio process.',
+    }
+  }
+
+  const primaryPkg = server.packages?.[0]
+  if (!primaryPkg) {
+    return {
+      canInstall: false,
+      label: 'Manual Setup',
+      reason: 'No installation package metadata provided.',
+    }
+  }
+
+  if (primaryPkg.registryType === 'pypi') {
+    return {
+      canInstall: false,
+      label: 'Python (Manual)',
+      reason: 'Python PyPI package. Requires manual Python virtual environment or uvx configuration.',
+    }
+  }
+
+  const requiredEnv = primaryPkg.environmentVariables?.filter(e => e.isRequired).map(e => e.name) || []
+  const requiredArgs = primaryPkg.packageArguments?.filter(a => a.isRequired).map(a => a.name) || []
+
+  if (requiredEnv.length > 0 || requiredArgs.length > 0) {
+    const missing = [...requiredEnv, ...requiredArgs].join(', ')
+    return {
+      canInstall: false,
+      label: 'Config Required',
+      reason: `Requires missing parameters or credentials: ${missing}. Configure manually in Edit JSON.`,
+      requiredEnv,
+    }
+  }
+
+  return { canInstall: true, label: 'Install' }
+}
+
 async function handleInstall(server: RegistryServer) {
+  const state = getInstallState(server)
+  if (!state.canInstall) {
+    if (state.reason) {
+      errorMessage.value = state.reason
+    }
+    return
+  }
+
   isBusy.value = true
   lastActionMessage.value = ''
+  errorMessage.value = ''
   try {
     const rawSlug = server.package_name || server.name.toLowerCase().replace(/\s+/g, '-')
     let slug = rawSlug
@@ -463,9 +569,14 @@ async function handleInstall(server: RegistryServer) {
       },
     })
 
-    await handleApplyAndRestart()
+    const result = await handleApplyAndRestart()
     currentTab.value = 'manage'
-    lastActionMessage.value = `Successfully installed ${server.name}`
+    if (result && result.failed && result.failed.includes(slug)) {
+      errorMessage.value = `Server "${server.name}" was added to mcp.json but failed to start. Check server logs in the runtime panel.`
+    }
+    else {
+      lastActionMessage.value = `Successfully installed and started ${server.name}`
+    }
   }
   catch (error) {
     errorMessage.value = error instanceof Error ? error.message : String(error)
@@ -848,14 +959,19 @@ onMounted(async () => {
 
             <Button
               size="sm"
-              :variant="isInstalled(server) ? 'secondary' : 'primary'"
-              :disabled="isBusy || isInstalled(server)"
+              :variant="isInstalled(server) ? 'secondary' : (getInstallState(server).canInstall ? 'primary' : 'secondary')"
+              :disabled="isBusy || isInstalled(server) || !getInstallState(server).canInstall"
+              :title="getInstallState(server).reason || (isInstalled(server) ? 'Already installed' : 'Install server')"
               @click="handleInstall(server)"
             >
               <template #icon>
-                <div :i-ph:download-simple-bold="!isInstalled(server)" :i-ph:check-bold="isInstalled(server)" />
+                <div
+                  :i-ph:download-simple-bold="!isInstalled(server) && getInstallState(server).canInstall"
+                  :i-ph:check-bold="isInstalled(server)"
+                  :i-ph:gear-bold="!isInstalled(server) && !getInstallState(server).canInstall"
+                />
               </template>
-              {{ isInstalled(server) ? 'Installed' : 'Install' }}
+              {{ isInstalled(server) ? 'Installed' : getInstallState(server).label }}
             </Button>
           </div>
 
@@ -864,17 +980,46 @@ onMounted(async () => {
           </p>
 
           <div class="mt-auto flex items-center justify-between border-t border-black/5 pt-4 dark:border-white/5">
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
+              <!-- Transport Badges from Metadata -->
               <div
-                v-if="server.remotes?.length"
+                v-if="server.packages?.some(p => p.transport?.type === 'stdio')"
+                class="rounded-full bg-neutral-100 px-2 py-0.5 text-[9px] text-neutral-600 font-bold tracking-widest uppercase dark:bg-neutral-800 dark:text-neutral-400"
+              >
+                STDIO
+              </div>
+              <div
+                v-if="server.remotes?.some(r => r.type === 'sse') || server.packages?.some(p => p.transport?.type === 'sse')"
                 class="rounded-full bg-blue-100 px-2 py-0.5 text-[9px] text-blue-600 font-bold tracking-widest uppercase dark:bg-blue-500/10 dark:text-blue-400"
               >
                 SSE
               </div>
               <div
-                class="rounded-full bg-neutral-100 px-2 py-0.5 text-[9px] text-neutral-500 font-bold tracking-widest uppercase dark:bg-neutral-800"
+                v-if="server.remotes?.some(r => r.type === 'streamable-http') || server.packages?.some(p => p.transport?.type === 'streamable-http')"
+                class="rounded-full bg-purple-100 px-2 py-0.5 text-[9px] text-purple-600 font-bold tracking-widest uppercase dark:bg-purple-500/10 dark:text-purple-400"
               >
-                STDIO
+                HTTP
+              </div>
+              <!-- Package Registry Badges -->
+              <div
+                v-if="server.packages?.some(p => p.registryType === 'pypi')"
+                class="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] text-amber-700 font-bold tracking-widest uppercase dark:bg-amber-500/10 dark:text-amber-400"
+              >
+                PYPI
+              </div>
+              <div
+                v-else-if="server.packages?.some(p => p.registryType === 'npm')"
+                class="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] text-emerald-700 font-bold tracking-widest uppercase dark:bg-emerald-500/10 dark:text-emerald-400"
+              >
+                NPM
+              </div>
+              <!-- Config Required Badge -->
+              <div
+                v-if="getInstallState(server).requiredEnv?.length"
+                :title="`Requires environment variables: ${getInstallState(server).requiredEnv?.join(', ')}`"
+                class="rounded-full bg-orange-100 px-2 py-0.5 text-[9px] text-orange-700 font-bold tracking-widest uppercase dark:bg-orange-500/10 dark:text-orange-400"
+              >
+                KEY REQUIRED
               </div>
             </div>
             <a
@@ -882,6 +1027,7 @@ onMounted(async () => {
               :href="server.source_code_url"
               target="_blank"
               class="text-neutral-400 transition-colors hover:text-black dark:hover:text-white"
+              title="View repository"
             >
               <div i-ph:github-logo-bold class="text-lg" />
             </a>

@@ -7,10 +7,7 @@ import {
 } from '@proj-airi/stage-ui/stores'
 import { useMemoryLifetimeStore } from '@proj-airi/stage-ui/stores/memory-lifetime'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
+import { computed, onMounted, ref, watch } from 'vue'
 
 const cardStore = useAiriCardStore()
 const textJournalStore = useTextJournalStore()
@@ -19,19 +16,42 @@ const lifetimeStore = useMemoryLifetimeStore()
 
 const { activeCardId } = storeToRefs(cardStore)
 const { entries, loading: textJournalLoading } = storeToRefs(textJournalStore)
-const { loading: stmmLoading } = storeToRefs(shortTermMemoryStore)
-const { artifacts, isProvisioning } = storeToRefs(lifetimeStore)
+const { loading: stmmLoading, error: stmmError } = storeToRefs(shortTermMemoryStore)
+const { artifacts, loading: lifetimeLoading, isProvisioning, error: lifetimeError } = storeToRefs(lifetimeStore)
 
-onMounted(async () => {
+const isInitializing = ref(false)
+const initError = ref<string | null>(null)
+
+async function loadMemoryData(characterId?: string) {
+  isInitializing.value = true
+  initError.value = null
   try {
-    void textJournalStore.load()
-    if (activeCardId.value) {
-      void lifetimeStore.loadForCharacter(activeCardId.value)
+    const tasks: Promise<unknown>[] = [
+      textJournalStore.load(),
+      shortTermMemoryStore.load(),
+    ]
+    if (characterId) {
+      tasks.push(lifetimeStore.loadForCharacter(characterId))
+    }
+    const results = await Promise.allSettled(tasks)
+    for (const r of results) {
+      if (r.status === 'rejected') {
+        console.warn('[MemoryHub] Store load error:', r.reason)
+        initError.value = r.reason instanceof Error ? r.reason.message : String(r.reason)
+      }
     }
   }
-  catch (err) {
-    console.warn('[MemoryHub] Store init warning:', err)
+  finally {
+    isInitializing.value = false
   }
+}
+
+onMounted(() => {
+  void loadMemoryData(activeCardId.value)
+})
+
+watch(activeCardId, (newId) => {
+  void loadMemoryData(newId)
 })
 
 const totalDepthTokens = computed(() => {
@@ -72,11 +92,26 @@ const formattedDepthTokens = computed(() => {
   return `${totalDepthTokens.value.toLocaleString()} Tokens`
 })
 
-const systemIntegrity = computed(() => {
-  if (textJournalLoading.value || stmmLoading.value || isProvisioning.value) {
-    return 'Syncing...'
+const memoryStatus = computed(() => {
+  if (initError.value || stmmError.value || lifetimeError.value) {
+    return {
+      label: 'Error',
+      dotClass: 'bg-red-500',
+      textClass: 'text-red-600 dark:text-red-400',
+    }
   }
-  return '100% Ready'
+  if (isInitializing.value || textJournalLoading.value || stmmLoading.value || lifetimeLoading.value || isProvisioning.value) {
+    return {
+      label: 'Syncing...',
+      dotClass: 'bg-amber-500 animate-pulse',
+      textClass: 'text-amber-700 dark:text-amber-300',
+    }
+  }
+  return {
+    label: 'Ready',
+    dotClass: 'bg-emerald-500',
+    textClass: 'text-neutral-700 dark:text-neutral-200',
+  }
 })
 
 const memorySections = [
@@ -167,19 +202,24 @@ const memorySections = [
         <div class="flex shrink-0 items-center gap-2.5">
           <div class="shadow-2xs min-w-32 border border-neutral-200/60 rounded-xl bg-white/60 px-3.5 py-2.5 transition-all dark:border-neutral-700/50 dark:bg-neutral-900/50">
             <div class="mb-0.5 text-[9px] text-neutral-400 font-bold tracking-widest uppercase dark:text-neutral-500">
-              System Integrity
+              Memory Status
             </div>
-            <div class="flex items-center gap-1.5 text-xs text-neutral-700 font-semibold dark:text-neutral-200">
-              <div class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-              {{ systemIntegrity }}
+            <div :class="['flex items-center gap-1.5 text-xs font-semibold', memoryStatus.textClass]">
+              <div :class="['h-1.5 w-1.5 rounded-full', memoryStatus.dotClass]" />
+              {{ memoryStatus.label }}
             </div>
           </div>
-          <div class="shadow-2xs min-w-32 border border-neutral-200/60 rounded-xl bg-white/60 px-3.5 py-2.5 transition-all dark:border-neutral-700/50 dark:bg-neutral-900/50">
+          <div class="shadow-2xs min-w-36 border border-neutral-200/60 rounded-xl bg-white/60 px-3.5 py-2.5 transition-all dark:border-neutral-700/50 dark:bg-neutral-900/50">
             <div class="mb-0.5 text-[9px] text-neutral-400 font-bold tracking-widest uppercase dark:text-neutral-500">
-              Total Depth
+              Estimated Stored Tokens
             </div>
-            <div class="text-xs text-neutral-700 font-semibold dark:text-neutral-200">
-              {{ formattedDepthTokens }}
+            <div class="flex items-baseline gap-1">
+              <span class="text-xs text-neutral-700 font-semibold dark:text-neutral-200">
+                {{ formattedDepthTokens }}
+              </span>
+              <span class="text-[9px] text-neutral-400 dark:text-neutral-500">
+                (STMM + LTMM + Lifetime)
+              </span>
             </div>
           </div>
         </div>
@@ -188,11 +228,11 @@ const memorySections = [
 
     <!-- The Four Quads: Compact, Full-Card Clickable Tiles -->
     <div class="grid gap-3.5 lg:grid-cols-2 md:grid-cols-2">
-      <section
+      <RouterLink
         v-for="section in memorySections"
         :key="section.id"
-        class="group shadow-2xs relative cursor-pointer overflow-hidden border border-neutral-200/80 rounded-2xl bg-white p-5 transition-all dark:border-neutral-800 hover:border-primary-500/40 dark:bg-neutral-900/60 hover:shadow-md"
-        @click="router.push(section.route)"
+        :to="section.route"
+        class="group shadow-2xs relative block cursor-pointer overflow-hidden border border-neutral-200/80 rounded-2xl bg-white p-5 text-left no-underline transition-all dark:border-neutral-800 hover:border-primary-500/40 dark:bg-neutral-900/60 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary-500/40"
       >
         <!-- Background Accent Glow -->
         <div :class="['absolute -right-4 -top-4 h-28 w-28 rounded-full bg-gradient-to-br blur-3xl opacity-15 transition-all group-hover:opacity-35', section.accent]" />
@@ -232,7 +272,7 @@ const memorySections = [
             </li>
           </ul>
         </div>
-      </section>
+      </RouterLink>
     </div>
   </div>
 </template>
