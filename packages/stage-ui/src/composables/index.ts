@@ -1,3 +1,4 @@
+export * from './arcade'
 export * from './audio'
 export * from './canvas-alpha'
 export * from './llm-marker-parser'

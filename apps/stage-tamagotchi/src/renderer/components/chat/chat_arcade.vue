@@ -1,17 +1,19 @@
 <script setup lang="ts">
+import type { GameAdapter, TurnPlan } from '@proj-airi/stage-ui/types'
+
 import type { CatalogGame } from './ArcadeCatalogModal.vue'
 
 import JSZip from 'jszip'
 import localforage from 'localforage'
 
-import { useFacultyDefaultsStore } from '@proj-airi/stage-ui/stores'
+import { ArcadeGhostCursor } from '@proj-airi/stage-ui/components'
+import { useArcadeAgent } from '@proj-airi/stage-ui/composables'
+import { useCharacterStore } from '@proj-airi/stage-ui/stores/character'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
 import { useChatStreamStore } from '@proj-airi/stage-ui/stores/chat/stream-store'
-import { useLLM } from '@proj-airi/stage-ui/stores/llm'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useVisionStore } from '@proj-airi/stage-ui/stores/modules/vision'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { storeToRefs } from 'pinia'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -24,14 +26,13 @@ const emit = defineEmits<{
 }>()
 
 const airiCardStore = useAiriCardStore()
+const characterStore = useCharacterStore()
+const arcadeAgent = useArcadeAgent()
 const chatOrchestrator = useChatOrchestratorStore()
 const chatSession = useChatSessionStore()
 const chatStream = useChatStreamStore()
 const consciousnessStore = useConsciousnessStore()
-const facultyDefaultsStore = useFacultyDefaultsStore()
-const llmStore = useLLM()
 const providersStore = useProvidersStore()
-const visionStore = useVisionStore()
 const { activeCard } = storeToRefs(airiCardStore)
 
 // --- Engine State ---
@@ -877,26 +878,6 @@ function focusCanvas() {
 }
 
 // --- Backseat Chat & Banter Stream ---
-interface TurnAction {
-  type: 'click' | 'key_press' | 'type_text' | 'wait'
-  target_description?: string
-  x?: number
-  y?: number
-  key?: string
-  text?: string
-  ms?: number
-}
-
-interface TurnPlan {
-  game_name?: string
-  screen_state?: string
-  thought?: string
-  commentary?: string
-  macro_intent?: string
-  actions: TurnAction[]
-  executed?: boolean
-}
-
 interface BackseatMessage {
   id: string
   sender: 'character' | 'user'
@@ -925,9 +906,6 @@ const transcriptContainerRef = ref<HTMLDivElement | null>(null)
 
 // --- Frame Capture & Backseat Interaction ---
 const isCapturing = ref(false)
-const isTakingTurn = ref(false)
-const isExecutingActions = ref(false)
-const autoExecuteTurn = ref(false)
 const attachedFrame = ref<{ dataUrl: string, base64: string, mimeType: string } | null>(null)
 const activeLlmReplyId = ref<string | null>(null)
 
@@ -1347,169 +1325,86 @@ async function executeTypeText(text: string) {
   }
 }
 
-async function executeTurnPlan(plan: TurnPlan) {
-  if (!plan.actions || plan.actions.length === 0)
-    return
-
-  isExecutingActions.value = true
-  try {
-    for (const action of plan.actions) {
-      if (action.type === 'click' && action.x !== undefined && action.y !== undefined) {
-        await executeClick(action.x, action.y)
+function createCurrentGameAdapter(): GameAdapter {
+  return {
+    id: activeEngine.value === 'jsdos' ? (currentGameIdentifier.value || 'jsdos') : 'canvas-2048',
+    title: currentGameTitle.value,
+    engine: activeEngine.value === 'jsdos' ? 'jsdos' : 'html5-canvas',
+    captureFrame: async () => {
+      const frame = await captureCurrentGameFrame()
+      return frame?.dataUrl || null
+    },
+    getCanvasElement: () => {
+      if (activeEngine.value === 'jsdos') {
+        return dosContainerRef.value?.querySelector('canvas') || null
       }
-      else if (action.type === 'key_press' && action.key) {
-        await executeKeyPress(action.key)
+      return canvasRef.value || null
+    },
+    executeClick: async (normX, normY) => {
+      await executeClick(normX, normY)
+    },
+    executeKeyPress: async (key) => {
+      await executeKeyPress(key)
+    },
+    executeTypeText: async (text) => {
+      await executeTypeText(text)
+    },
+    duckAudio: (duck) => {
+      if (currentCommandInterface?.sound) {
+        try {
+          if (typeof currentCommandInterface.sound.setVolume === 'function') {
+            currentCommandInterface.sound.setVolume(duck ? 0.3 : 1.0)
+          }
+        }
+        catch {}
       }
-      else if (action.type === 'type_text' && action.text) {
-        await executeTypeText(action.text)
-      }
-      else if (action.type === 'wait') {
-        await new Promise(resolve => setTimeout(resolve, action.ms || 300))
-      }
-      await new Promise(resolve => setTimeout(resolve, 150))
-    }
-    plan.executed = true
-    toast.success(`Executed moves: ${plan.macro_intent || currentGameTitle.value}`)
-  }
-  catch (err: any) {
-    console.error('[Arcade] Failed executing moves:', err)
-    toast.error(`Execution error: ${err.message || err}`)
-  }
-  finally {
-    isExecutingActions.value = false
+    },
   }
 }
 
 async function handleAiriTakeTurn() {
-  if (isTakingTurn.value || isExecutingActions.value)
+  if (arcadeAgent.turnState.value !== 'idle') {
+    arcadeAgent.interrupt()
+    toast.info('Controller returned to player!')
     return
+  }
 
-  isTakingTurn.value = true
-  try {
-    const frame = await captureCurrentGameFrame()
-    if (!frame) {
-      triggerReactiveReaction('I can\'t see the game screen clearly right now—make sure the game is running!', 'thinking')
-      return
-    }
+  arcadeAgent.bindAdapter(createCurrentGameAdapter())
 
-    // Resolve user's configured global Vision provider & model
-    const vlmProviderId = visionStore.activeProvider
-      || facultyDefaultsStore.defaults.vision?.primaryProvider
-      || 'opencode-go'
-    const vlmModelId = visionStore.activeModel
-      || facultyDefaultsStore.defaults.vision?.primaryModel
-      || 'deepseek-v4-flash-vision-exp'
-
-    const vlmProvider = await providersStore.getProviderInstance<any>(vlmProviderId)
-    if (!vlmProvider) {
-      throw new Error(`Unable to initialize Vision Provider "${vlmProviderId}". Please check Settings > Vision.`)
-    }
-
-    const turnPrompt = `You are Airi, an expert retro gaming companion and autonomous co-pilot playing "${currentGameTitle.value}".
-You have just been passed the controller to take a strategic turn!
-Carefully inspect the provided game screenshot:
-1. Analyze the exact visual layout, UI elements, active dialog options, status bars, and coordinates.
-2. Formulate your tactical reasoning ("thought").
-3. Produce energetic, in-character spoken dialogue for the player ("commentary", 1-2 sentences).
-4. Formulate the high-level objective of this turn ("macro_intent").
-5. Specify the exact sequence of executable input actions ("actions"). Mouse click coordinates MUST be normalized integers from 0 to 1000 (where 0,0 is top-left and 1000,1000 is bottom-right of the game display canvas).
-
-Respond STRICTLY in valid JSON matching this schema:
-{
-  "game_name": "${currentGameTitle.value}",
-  "screen_state": "brief visual description",
-  "thought": "tactical reasoning about what to do",
-  "commentary": "spoken dialogue to player",
-  "macro_intent": "short intent title (e.g., Place Coal Power Plant, Select Start City)",
-  "actions": [
-    {
-      "type": "click",
-      "target_description": "palette button / map coordinate",
-      "x": 44,
-      "y": 431
+  const plan = await arcadeAgent.takeTurn({
+    onCommentary: (turnPlan) => {
+      chatTranscript.value.push({
+        id: `turn-${Date.now()}`,
+        sender: 'character',
+        authorName: activeCard.value?.name || 'AIRI',
+        text: turnPlan.spoken_commentary,
+        timestamp: 'Just now',
+        emotion: 'cheering',
+        turnPlan,
+      })
+      scrollToBottom()
     },
-    {
-      "type": "key_press",
-      "key": "Enter"
-    }
-  ]
-}`
-
-    let rawResponseText = ''
-
-    if (typeof vlmProvider.captionImage === 'function') {
-      if (typeof vlmProvider.loadModel === 'function' && !vlmProvider.isModelLoaded?.value) {
-        await vlmProvider.loadModel()
+    speakCommentary: async (textWithEmotion) => {
+      try {
+        await characterStore.emitTextOutput(textWithEmotion)
       }
-      rawResponseText = await vlmProvider.captionImage(frame.dataUrl, { prompt: turnPrompt })
-    }
-    else {
-      const vlmMessages = [
-        {
-          role: 'user' as const,
-          content: [
-            { type: 'text', text: turnPrompt },
-            { type: 'image_url' as const, image_url: { url: frame.dataUrl } },
-          ],
-        },
-      ]
-      const response = await llmStore.generate(
-        vlmModelId,
-        vlmProvider,
-        vlmMessages as any,
-        { vision: true },
-      )
-      rawResponseText = response.text || ''
-    }
-
-    // Robust JSON extraction
-    let parsed: any = null
-    try {
-      const jsonMatch = rawResponseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/) || [null, rawResponseText]
-      parsed = JSON.parse(jsonMatch[1] || rawResponseText)
-    }
-    catch {
-      parsed = {
-        commentary: rawResponseText.replace(/```[\s\S]*?```/g, '').trim() || 'I see the screen! Taking my turn now.',
-        macro_intent: 'Autonomous Turn',
-        actions: [],
+      catch (err) {
+        console.warn('[Arcade] Character speech playback failed:', err)
       }
-    }
+    },
+  })
 
-    const planCommentary = parsed.commentary || 'Passed the controller to me? Watch this!'
-    const plan: TurnPlan = {
-      game_name: parsed.game_name || currentGameTitle.value,
-      screen_state: parsed.screen_state || '',
-      thought: parsed.thought || '',
-      commentary: planCommentary,
-      macro_intent: parsed.macro_intent || 'Airi Strategic Move',
-      actions: Array.isArray(parsed.actions) ? parsed.actions : [],
-      executed: false,
-    }
+  if (plan) {
+    plan.executed = true
+    toast.success(`Airi finished move: ${plan.plan.slice(0, 35)}...`)
+  }
+}
 
-    chatTranscript.value.push({
-      id: `turn-${Date.now()}`,
-      sender: 'character',
-      authorName: activeCard.value?.name || 'AIRI',
-      text: planCommentary,
-      timestamp: 'Just now',
-      emotion: 'cheering',
-      imageAttachment: frame.dataUrl,
-      turnPlan: plan,
-    })
-    scrollToBottom()
-
-    if (autoExecuteTurn.value && plan.actions.length > 0) {
-      await executeTurnPlan(plan)
-    }
-  }
-  catch (err: any) {
-    console.error('[Arcade] Airi turn failed:', err)
-    triggerReactiveReaction(`I hit a snag analyzing the screen: ${err.message || 'Vision inference failed'}. Check Settings > Vision!`, 'panicked')
-  }
-  finally {
-    isTakingTurn.value = false
-  }
+async function handleExecuteMovesOnCanvas(plan: TurnPlan) {
+  arcadeAgent.bindAdapter(createCurrentGameAdapter())
+  await arcadeAgent.executePlan(plan)
+  plan.executed = true
+  toast.success('Moves executed on canvas!')
 }
 
 function toggleMute() {
@@ -1596,20 +1491,46 @@ onUnmounted(() => {
 
         <!-- Actions: Savestate & Controls -->
         <div class="flex items-center gap-1.5">
-          <!-- Airi Take Turn / Pass Controller -->
+          <!-- Airi Pass Controller / Take Turn -->
           <button
-            class="shadow-2xs flex items-center gap-1.5 border border-purple-500/40 rounded-lg from-purple-600 to-indigo-600 bg-gradient-to-r px-3 py-1.5 text-xs text-white font-bold transition-all active:scale-95 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50"
-            :disabled="isTakingTurn || isExecutingActions || isCapturing"
-            title="Pass the controller: Airi inspects the screen with your global VLM, shares tactical commentary, and takes a turn!"
+            class="shadow-2xs flex items-center gap-1.5 border rounded-lg px-3 py-1.5 text-xs text-white font-bold transition-all active:scale-95 disabled:opacity-50"
+            :class="[
+              arcadeAgent.turnState.value === 'executing'
+                ? 'border-amber-500/40 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 animate-pulse'
+                : arcadeAgent.turnState.value === 'thinking' || arcadeAgent.turnState.value === 'capturing'
+                  ? 'border-purple-500/40 bg-gradient-to-r from-purple-600 to-indigo-600'
+                  : 'border-purple-500/40 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700',
+            ]"
+            :disabled="isCapturing"
+            :title="arcadeAgent.turnState.value === 'executing' ? 'Airi is currently playing! Click to take back controller.' : 'Pass the controller: Airi inspects the screen with your global VLM, shares tactical commentary, and takes a turn!'"
             @click="handleAiriTakeTurn"
           >
-            <div :class="isTakingTurn ? 'i-solar:restart-bold animate-spin' : 'i-solar:gamepad-charge-bold'" class="text-xs" />
-            <span>{{ isTakingTurn ? 'Analyzing Move...' : 'Airi Take a Turn' }}</span>
+            <div
+              :class="[
+                arcadeAgent.turnState.value === 'thinking' || arcadeAgent.turnState.value === 'capturing'
+                  ? 'i-solar:restart-bold animate-spin'
+                  : arcadeAgent.turnState.value === 'executing'
+                    ? 'i-solar:hand-shake-bold'
+                    : 'i-solar:gamepad-charge-bold',
+              ]"
+              class="text-xs"
+            />
+            <span>
+              {{
+                arcadeAgent.turnState.value === 'capturing'
+                  ? 'Observing...'
+                  : arcadeAgent.turnState.value === 'thinking'
+                    ? 'Airi Planning Move...'
+                    : arcadeAgent.turnState.value === 'executing'
+                      ? 'Take Back Controller'
+                      : 'Pass to Airi'
+              }}
+            </span>
           </button>
 
           <!-- Auto-Play Toggle -->
           <label class="flex cursor-pointer select-none items-center gap-1 border border-neutral-200/80 rounded-lg bg-white/80 px-2 py-1 text-[10px] text-neutral-600 font-semibold dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-300">
-            <input v-model="autoExecuteTurn" type="checkbox" class="size-3 rounded accent-purple-600">
+            <input v-model="arcadeAgent.autoPlay.value" type="checkbox" class="size-3 rounded accent-purple-600">
             <span>Auto-Play</span>
           </label>
 
@@ -1719,6 +1640,13 @@ onUnmounted(() => {
             </span>
             <span class="mt-1 text-[10px] text-white/60 font-medium">Use Arrow Keys or WASD</span>
           </div>
+
+          <!-- Ghost Cursor overlay for 2048 -->
+          <ArcadeGhostCursor
+            v-if="activeEngine === 'canvas-2048'"
+            :cursor-state="arcadeAgent.cursorState.value"
+            :character-name="activeCard?.name || 'Airi'"
+          />
         </div>
 
         <!-- JSDOS WEB PLAYER CONTAINER -->
@@ -1783,6 +1711,13 @@ onUnmounted(() => {
           <div
             ref="dosContainerRef"
             class="h-full w-full overflow-hidden rounded-xl"
+          />
+
+          <!-- Ghost Cursor overlay for JSDOS -->
+          <ArcadeGhostCursor
+            v-if="activeEngine === 'jsdos'"
+            :cursor-state="arcadeAgent.cursorState.value"
+            :character-name="activeCard?.name || 'Airi'"
           />
         </div>
       </div>
@@ -1881,7 +1816,7 @@ onUnmounted(() => {
                 <div class="flex items-center justify-between gap-1 text-[11px] text-purple-700 font-bold dark:text-purple-300">
                   <div class="flex items-center gap-1.5">
                     <div class="i-solar:gamepad-charge-bold text-sm text-purple-500" />
-                    <span>🎯 {{ msg.turnPlan.macro_intent }}</span>
+                    <span>🎯 {{ msg.turnPlan.plan }}</span>
                   </div>
                   <span
                     v-if="msg.turnPlan.executed"
@@ -1889,13 +1824,6 @@ onUnmounted(() => {
                   >
                     Executed ✓
                   </span>
-                </div>
-
-                <div
-                  v-if="msg.turnPlan.thought"
-                  class="text-[10px] text-neutral-500 leading-snug italic dark:text-neutral-400"
-                >
-                  {{ msg.turnPlan.thought }}
                 </div>
 
                 <!-- Actions list -->
@@ -1920,11 +1848,11 @@ onUnmounted(() => {
                   <button
                     type="button"
                     class="shadow-xs w-full flex items-center justify-center gap-1.5 rounded-lg from-purple-600 to-indigo-600 bg-gradient-to-r px-3 py-1.5 text-[10px] text-white font-bold transition-all active:scale-95 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50"
-                    :disabled="isExecutingActions"
-                    @click="executeTurnPlan(msg.turnPlan)"
+                    :disabled="arcadeAgent.turnState.value !== 'idle'"
+                    @click="handleExecuteMovesOnCanvas(msg.turnPlan)"
                   >
-                    <div :class="isExecutingActions ? 'i-solar:restart-bold animate-spin' : 'i-solar:play-bold'" class="text-xs" />
-                    <span>{{ isExecutingActions ? 'Executing Moves...' : '▶ Execute Moves on Canvas' }}</span>
+                    <div :class="arcadeAgent.turnState.value === 'executing' ? 'i-solar:restart-bold animate-spin' : 'i-solar:play-bold'" class="text-xs" />
+                    <span>{{ arcadeAgent.turnState.value === 'executing' ? 'Executing Moves...' : '▶ Execute Moves on Canvas' }}</span>
                   </button>
                 </div>
               </div>

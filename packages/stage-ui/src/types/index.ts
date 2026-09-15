@@ -1,3 +1,4 @@
+export * from './arcade'
 export * from './card.schema'
 export * from './character'
 export * from './chat'
