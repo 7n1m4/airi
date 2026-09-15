@@ -350,15 +350,35 @@ const fetchRegistry = useDebounceFn(async (query: string) => {
   isRegistryLoading.value = true
   registryError.value = ''
   try {
-    const url = new URL('https://api.pulsemcp.com/v0beta/servers')
-    url.searchParams.set('count_per_page', '30')
+    const url = new URL('https://registry.modelcontextprotocol.io/v0.1/servers')
+    url.searchParams.set('version', 'latest')
+    url.searchParams.set('limit', '30')
     const trimmedQuery = query.trim()
     if (trimmedQuery)
-      url.searchParams.set('query', trimmedQuery)
+      url.searchParams.set('search', trimmedQuery)
 
     const response = await fetch(url.toString())
+    if (!response.ok)
+      throw new Error(`Registry API error: ${response.status} ${response.statusText}`)
+
     const data = await response.json()
-    let servers: RegistryServer[] = data.servers || []
+    const rawServers: any[] = data.servers || []
+    let servers: RegistryServer[] = rawServers.map((entry: any) => {
+      const s = entry.server || entry
+      const pkg = s.packages?.[0]
+      return {
+        name: s.title || s.name,
+        short_description: s.description || '',
+        url: s.websiteUrl || s.repository?.url || '',
+        source_code_url: s.repository?.url || '',
+        package_name: pkg?.identifier || s.name,
+        remotes: s.remotes?.map((r: any) => ({
+          url_direct: r.url,
+          transport: r.type,
+        })),
+      }
+    })
+
     if (trimmedQuery) {
       const lower = trimmedQuery.toLowerCase()
       const matches = servers.filter(s =>
@@ -416,10 +436,13 @@ async function handleInstall(server: RegistryServer) {
         `${home}/Desktop`,
       ]
     }
+    else if (server.package_name && server.package_name !== server.name) {
+      args.push(server.package_name)
+    }
     else if (server.source_code_url?.includes('github.com')) {
       const parts = server.source_code_url.split('/')
       const repo = parts[4]?.replace('.git', '')
-      if (repo && repo.startsWith('mcp-server-'))
+      if (repo && (repo.startsWith('mcp-server-') || repo.endsWith('-mcp-server') || repo.endsWith('-mcp')))
         args.push(repo)
       else
         args.push(server.package_name || slug)
@@ -452,9 +475,14 @@ async function handleInstall(server: RegistryServer) {
   }
 }
 
-function isInstalled(name: string) {
+function isInstalled(serverOrName: RegistryServer | string) {
+  const name = typeof serverOrName === 'string' ? serverOrName : serverOrName.name
+  const pkg = typeof serverOrName === 'string' ? '' : serverOrName.package_name || ''
   const slug = name.toLowerCase().replace(/\s+/g, '-')
+  const pkgSlug = pkg ? pkg.toLowerCase().replace(/\s+/g, '-') : ''
+
   return !!config.value?.mcpServers?.[slug]
+    || (!!pkgSlug && !!config.value?.mcpServers?.[pkgSlug])
     || (name.toLowerCase().includes('open web search') && !!config.value?.mcpServers?.['open-websearch'])
     || (name.toLowerCase().includes('filesystem') && !!config.value?.mcpServers?.filesystem)
 }
@@ -800,7 +828,7 @@ onMounted(async () => {
       <div v-if="registryServers.length" class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div
           v-for="server in registryServers"
-          :key="server.url"
+          :key="server.package_name || server.name || server.url"
           :class="[
             'group relative flex flex-col p-5 rounded-2xl transition-all duration-300',
             'bg-white/50 dark:bg-neutral-900/40 border border-neutral-200/70 dark:border-neutral-700/50',
@@ -820,14 +848,14 @@ onMounted(async () => {
 
             <Button
               size="sm"
-              :variant="isInstalled(server.name) ? 'secondary' : 'primary'"
-              :disabled="isBusy || isInstalled(server.name)"
+              :variant="isInstalled(server) ? 'secondary' : 'primary'"
+              :disabled="isBusy || isInstalled(server)"
               @click="handleInstall(server)"
             >
               <template #icon>
-                <div :i-ph:download-simple-bold="!isInstalled(server.name)" :i-ph:check-bold="isInstalled(server.name)" />
+                <div :i-ph:download-simple-bold="!isInstalled(server)" :i-ph:check-bold="isInstalled(server)" />
               </template>
-              {{ isInstalled(server.name) ? 'Installed' : 'Install' }}
+              {{ isInstalled(server) ? 'Installed' : 'Install' }}
             </Button>
           </div>
 

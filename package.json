@@ -48,6 +48,7 @@
     "test:attention:desktop": "tsx scripts/tests/attention-ecology-harness/live-desktop-observer.ts",
     "test:attention:dashboard": "tsx scripts/tests/attention-ecology-harness/live-desktop-dashboard.ts",
     "test:run": "vitest run",
+    "test:mcp-registry": "tsx scripts/tests/test-mcp-registry-health.ts",
     "test:catalog:audit": "node scripts/audit-test-catalog.mjs",
     "i18n:audit": "node scripts/audit-i18n.mjs",
     "lint": "moeru-lint .",

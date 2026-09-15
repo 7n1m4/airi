@@ -6,8 +6,11 @@ The Model Context Protocol (MCP) ecosystem does have a free, open registry API t
 
 ## Official MCP Registry API
 
-The official MCP Registry is hosted at `registry.modelcontextprotocol.io` and is described as the authoritative repository for publicly available MCP servers, “like an app store for MCP servers.” The public API exposes core endpoints such as `GET /v0/servers` for paginated server lists, `GET /v0/servers/{id}` for individual server metadata, and `POST /v0/publish` for publishing new servers (with authentication), which together satisfy the requirement for a free, open API listing MCP servers.[^1]
+The official MCP Registry is hosted at `registry.modelcontextprotocol.io` and is described as the authoritative repository for publicly available MCP servers, “like an app store for MCP servers.” The public API exposes core endpoints such as `GET /v0.1/servers` (supporting `version=latest`, `limit=30`, and substring `search` queries) for paginated server lists, `GET /v0/servers/{id}` for individual server metadata, and `POST /v0/publish` for publishing new servers (with authentication), which together satisfy the requirement for a free, open API listing MCP servers.[^1]
 The registry is community‑owned and backed by contributors including Anthropic, GitHub, PulseMCP, and Microsoft, with an extensible metadata model designed so that sub‑registries or tools can add extra properties like tags, categorization, and curation data.[^2][^1]
+
+> [!NOTE]
+> PulseMCP previously operated an unauthenticated directory endpoint at `api.pulsemcp.com/v0beta/servers`. This endpoint was sunsetted in 2026 (`API_SUNSET`), and PulseMCP's newer `v0.1` API is commercialized and gated behind `X-API-Key` and `X-Tenant-ID` headers. Client applications consuming community MCP servers should use the unauthenticated official MCP Registry endpoint at `https://registry.modelcontextprotocol.io/v0.1/servers`.
 
 ## Support for Trending/Popularity in the Official API
 
