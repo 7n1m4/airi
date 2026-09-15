@@ -134,42 +134,19 @@ Every companion in this ecosystem was built to solve a specific problem. Underst
      - **In-Process WebGPU/WASM TTS** (zero Python, zero external daemons, executes entirely within the client application).
      - **Local Server Daemons** (requires running Python FastAPI / PyTorch servers on separate ports).
      - **Audio-to-Audio Timbre Conversion (RVC)** (an optional secondary vocoding filter that alters pitch and timbre after TTS completes).
-2. **"Duplex Voice" Requires Software Barge-In:**
+2. **"Supports VRM / Live2D" Goes Far Beyond File Loading:**
+   - Evaluating avatar support purely on whether a `.vrm` or `.model3.json` loads misses what the companion actually *does* with that body:
+     - **Viewport Looping vs. Reactive Agency:** A static transparent window playing looped idle animations differs vastly from dynamic blendshape emotion parsing, tactile touch reactions, and head-following physics.
+     - **Fixed Clips vs. Generative Motion:** Pre-baked animation playback limits expression; runtime procedural motion generation (Text-to-VRMA) allows companions to synthesize novel physical actions on the fly.
+     - **In-App Custody vs. External DCC Dependency:** Whether users can toggle wardrobes, switch actors mid-dialogue, or modify textures in-engine directly, versus needing external Blender or Unity pipelines for basic changes.
+3. **"Duplex Voice" Requires Software Barge-In:**
    - Desktop companions using Silero VAD achieve software-driven barge-in interruption by cutting audio output buffers and aborting LLM token streams. No desktop companion currently implements hardware acoustic echo cancellation (AEC); quiet environments or headset audio remain essential.
-3. **Memory Depth is About Temporal Hierarchy:**
+4. **Memory Depth is About Temporal Hierarchy:**
    - Raw vector search over a flat chat log inevitably causes context bloat and contradictory recall. Meaningful continuity requires segmenting short-term daily episodic rollups (STMM), immutable narrative journals (LTMM), and lifetime relational bonds.
 
 ---
 
-## 5. Community Review & Reddit Ready Draft
-
-Below is a self-contained, 350-word discussion draft designed for community scrutiny on **r/LocalLLaMA** and **r/AICompanions**:
-
-```markdown
-Title: 11 desktop AI companions compared: voice, memory, avatars, and local execution
-
-Hey everyone,
-
-I maintain an active fork of AIRI (an open-source desktop AI companion runtime). Over the past few months, our team did a deep architectural audit across 11 desktop companion projects (including VPet, Project N.E.K.O., Open-LLM-VTuber, Komorebi, Amica, NekoGPT, Utsuwa, AITuberKit, Soul of Waifu, and AIRI).
-
-We wanted to move past superficial marketing tables ("Supports VRM: Yes/No") and evaluate what actually runs on the user’s machine.
-
-Three core architectural findings stood out:
-
-1. Voice Custody & Latency: "Supports local voice" means completely different things across projects. Most open companions (Open-LLM-VTuber, N.E.K.O., Utsuwa) require orchestrating external Python servers (GPT-SoVITS, OmniVoice) on separate localhost ports. Only a few run neural speech directly in-process via WebGPU/WASM (Kokoro, Pocket-TTS). Additionally, direct zero-shot conditioning (generating target timbre directly from text) is often confused with RVC (an audio-to-audio conversion pass requiring secondary pitch extraction and vocoding).
-2. Memory Architecture: Most apps still rely on flat sliding context windows or basic vector dumps. When companions attempt true long-term continuity, the divide is stark: Project N.E.K.O. provides an active web-based CRUD table over raw SQLite records, whereas AIRI implements multi-tier temporal hierarchies (daily episodic rollups, immutable journals, and lifetime relational threads).
-3. Autonomy & Agency: True ambient presence remains rare. Very few projects implement continuous salience-gated vision or proactive heartbeats with smart silence (knowing when NOT to speak while the user is working). Komorebi stands out with native Rust desktop automation and local LoRA personality fine-tuning, while VPet remains unmatched for pure Win32 desktop physics and modding scale.
-
-We've organized the full comparison into three visual panels (Voice, Memory, and Avatars) in our root repository guide:
-👉 Public Guide: https://github.com/dasilva333/airi/blob/main/COMPARISONS.md
-👉 Full Forensic Dossier with Commit/Source Line Citations: https://github.com/dasilva333/airi/blob/main/docs/project-companion-comparisons.md
-
-Because software moves fast, we treat this as a living document. If you maintain or use any of these companions and spot an outdated implementation, missing adapter, or mischaracterized pipeline, please let us know in the comments or open a PR!
-```
-
----
-
-## 6. How to Contribute Corrections
+## 5. How to Contribute Corrections
 
 If you are a user or maintainer of any featured companion and notice:
 - A new version or release that introduces in-process speech or updated memory models
