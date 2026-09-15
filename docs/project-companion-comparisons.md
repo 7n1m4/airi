@@ -247,10 +247,11 @@ Below are dense, high-level architectural notes for each active desktop companio
 
 ---
 
-### 2.8 MateEngine (Rendering Toy vs. Integrated Companion)
+### 2.8 MateEngine (Rendering Dependency — Outside Companion-App Comparison)
 
-- **Architecture & Standalone Scope**: Unity-based desktop toy (`shinyflvre/Mate-Engine`). Provides high-fidelity Unity rendering, tactile interactions, and camera controls, but lacks native companion cognitive faculties: system prompt configuration is limited to a single flat text box, and native TTS does not exist (external voice mod is a separate component).
-- **Integration into AIRI**: In `dasilva333/airi`, MateEngine's high-fidelity rendering and physics were packaged into a dedicated companion sidecar (`apps/stage-mate`), replacing its minimal prompt box with AIRI's 77-provider brain, multi-tier memory hierarchy, duplex TTS audio, and autonomous direction.
+> **MateEngine — rendering dependency, outside the companion-app comparison.** AIRI integrates a modified Unity runtime through Stage-Mate (`apps/stage-mate`). This dossier evaluates complete conversational companion applications; it does not rank standalone avatar renderers that require separate external components to provide a conversational experience.
+- **Standalone Scope**: Unity-based desktop toy (`shinyflvre/Mate-Engine`). Provides high-fidelity Unity rendering, tactile interactions, and camera controls, but lacks native companion cognitive faculties: system prompt configuration is limited to a single flat text box, and native TTS does not exist (external voice mod is a separate component).
+- **Integration into AIRI**: Rather than competing as an independent companion, MateEngine's rendering and physics engine are integrated into AIRI through the `apps/stage-mate` sidecar, connected to AIRI's 77-provider cognitive pipeline, multi-tier memory hierarchy, and duplex audio runtime.
 
 ---
 
@@ -397,7 +398,6 @@ This matrix extends the verified capability catalog from the AIRI repository, pr
 > ✅ **Implemented & Verified**: Dedicated, integrated capability present in source/release.
 > ◐ **Partial / Constrained**: Feature exists but has notable boundaries (e.g., push-to-talk only, external backend required, locked routes).
 > ❌ **Absent**: No equivalent integrated implementation found in inspected source or documentation.
-> 🔄 **Absorbed**: Feature integrated into AIRI via a dedicated sidecar or subsystem.
 
 ---
 
