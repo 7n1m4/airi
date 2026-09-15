@@ -30,6 +30,8 @@
     "./features/motions/live2d": "./src/features/motions/live2d/index.ts",
     "./features/*": "./src/features/*",
     "./libs/*": "./src/libs/*.ts",
+    "./libs/inference": "./src/libs/inference/index.ts",
+    "./libs/inference/*": "./src/libs/inference/*",
     "./libs/pacing": "./src/libs/pacing/index.ts",
     "./libs/pacing/*": "./src/libs/pacing/*",
     "./libs/vfx": "./src/libs/vfx/index.ts",

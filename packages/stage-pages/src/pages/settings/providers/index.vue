@@ -3,6 +3,7 @@ import { IconStatusItem, RippleGrid } from '@proj-airi/stage-ui/components'
 import { ModelCacheManager } from '@proj-airi/stage-ui/components/scenarios/settings'
 import { useAnalytics } from '@proj-airi/stage-ui/composables'
 import { useRippleGridState } from '@proj-airi/stage-ui/composables/use-ripple-grid-state'
+import { formatBytes, getModelCacheSize } from '@proj-airi/stage-ui/libs/inference'
 import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
@@ -225,7 +226,32 @@ const activeTabRecommendations = computed(() => {
   }
 })
 
+const modelCacheSize = ref(0)
+const isCacheLoading = ref(true)
+const isTargetHighlighted = ref(false)
+
+async function refreshCacheSize() {
+  try {
+    modelCacheSize.value = await getModelCacheSize()
+  }
+  finally {
+    isCacheLoading.value = false
+  }
+}
+
+function scrollToCacheManager() {
+  const el = document.getElementById('model-cache-oversight')
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    isTargetHighlighted.value = true
+    setTimeout(() => {
+      isTargetHighlighted.value = false
+    }, 2000)
+  }
+}
+
 onMounted(() => {
+  refreshCacheSize()
   if (route.hash) {
     const hashId = route.hash.replace('#', '')
     if (providerBlocksConfig.some(b => b.id === hashId)) {
@@ -309,40 +335,96 @@ const providerBlocks = computed(() => {
       </RouterLink>
     </div>
 
-    <div
-      v-if="activeTabRecommendations"
-      :class="[
-        'bg-primary-500/10 dark:bg-primary-800/25',
-        'border-1 border-primary-500/20',
-        'rounded-lg p-5',
-      ]"
-    >
+    <!-- Recommendations & Quick Model Cache Overview (Responsive Split) -->
+    <div class="grid grid-cols-1 items-stretch gap-4 lg:grid-cols-12">
+      <!-- Active Tab Recommendations (8/12 on lg, 9/12 on xl) -->
       <div
-        mb-2
-        flex
-        items-center
-        gap-2
-        text-xl
-        font-semibold
-        :class="['text-primary-800 dark:text-primary-100']"
+        v-if="activeTabRecommendations"
+        :class="[
+          'lg:col-span-8 xl:col-span-9',
+          'bg-primary-500/10 dark:bg-primary-800/25',
+          'border-1 border-primary-500/20',
+          'rounded-2xl p-5 flex flex-col justify-between',
+        ]"
       >
-        <div i-solar:map-arrow-square-bold-duotone />
-        <span>{{ activeTabRecommendations.title }}</span>
-        <div
-
-          ml-auto rounded-full px-2 py-0.5 text-xs font-bold tracking-wider uppercase
-          :class="[
-            'bg-primary-500/20',
-            'text-primary-600 dark:text-primary-300',
-          ]"
-        >
-          {{ activeTabRecommendations.badge }}
+        <div>
+          <div
+            mb-2
+            flex
+            items-center
+            gap-2
+            text-xl
+            font-semibold
+            :class="['text-primary-800 dark:text-primary-100']"
+          >
+            <div i-solar:map-arrow-square-bold-duotone />
+            <span>{{ activeTabRecommendations.title }}</span>
+            <div
+              ml-auto rounded-full px-2 py-0.5 text-xs font-bold tracking-wider uppercase
+              :class="[
+                'bg-primary-500/20',
+                'text-primary-600 dark:text-primary-300',
+              ]"
+            >
+              {{ activeTabRecommendations.badge }}
+            </div>
+          </div>
+          <div
+            :class="['text-primary-700 dark:text-primary-300 text-xs sm:text-sm leading-relaxed']"
+            v-html="activeTabRecommendations.description"
+          />
         </div>
       </div>
+
+      <!-- Quick Model Cache Status Widget -->
       <div
-        :class="['text-primary-700 dark:text-primary-300']"
-        v-html="activeTabRecommendations.description"
-      />
+        :class="[
+          activeTabRecommendations ? 'lg:col-span-4 xl:col-span-3' : 'lg:col-span-12',
+          'flex flex-col justify-between gap-3 p-4 rounded-2xl border transition-all',
+          'bg-neutral-500/5 dark:bg-neutral-800/30',
+          'border-neutral-200 dark:border-neutral-800/80',
+        ]"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <div class="flex items-center gap-2.5">
+            <div class="h-9 w-9 flex shrink-0 items-center justify-center rounded-xl bg-sky-500/15 text-lg text-sky-600 dark:text-sky-400">
+              <div class="i-solar:server-square-bold-duotone" />
+            </div>
+            <div class="flex flex-col">
+              <span class="text-sm text-neutral-900 font-bold leading-tight tracking-tight dark:text-neutral-100">
+                {{ $t('settings.pages.providers.cache.title') }}
+              </span>
+              <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
+                {{ $t('settings.pages.providers.cache.subtitle') }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Total size badge -->
+          <div
+            v-if="!isCacheLoading"
+            :class="[
+              'rounded-full px-2.5 py-0.8 text-xs font-semibold shrink-0',
+              modelCacheSize > 0
+                ? 'bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
+                : 'bg-neutral-200/60 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400',
+            ]"
+          >
+            {{ formatBytes(modelCacheSize) }}
+          </div>
+        </div>
+
+        <div class="pt-1">
+          <button
+            type="button"
+            class="shadow-xs w-full inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-neutral-200/70 px-3 py-1.5 text-xs text-neutral-700 font-semibold transition-all active:scale-98 dark:bg-neutral-800/80 hover:bg-neutral-200/90 dark:text-neutral-200 dark:hover:bg-neutral-700/80"
+            @click="scrollToCacheManager"
+          >
+            <span>{{ $t('settings.pages.providers.cache.manage') }}</span>
+            <div class="i-solar:arrow-down-linear text-xs" />
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="flex flex-row flex-wrap gap-2 pb-2">
@@ -430,8 +512,13 @@ const providerBlocks = computed(() => {
       </template>
     </RippleGrid>
 
-    <div mt-6 max-w-2xl>
-      <ModelCacheManager />
+    <div
+      id="model-cache-oversight"
+      mt-6 max-w-2xl
+      class="rounded-xl transition-all duration-500"
+      :class="isTargetHighlighted ? 'ring-2 ring-primary-500 ring-offset-4 ring-offset-neutral-900/10 dark:ring-offset-neutral-900' : ''"
+    >
+      <ModelCacheManager @change="refreshCacheSize" />
     </div>
   </div>
   <div

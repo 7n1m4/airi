@@ -15,6 +15,9 @@ interface KnownModelItem {
   description?: string
 }
 
+const emit = defineEmits<{
+  (e: 'change', size: number): void
+}>()
 const cacheSize = ref(0)
 const loading = ref(true)
 const clearing = ref(false)
@@ -216,6 +219,7 @@ async function refresh() {
   loading.value = true
   try {
     cacheSize.value = await getModelCacheSize()
+    emit('change', cacheSize.value)
     const map: Record<string, boolean> = {}
     await Promise.all(
       knownModels.map(async (m) => {

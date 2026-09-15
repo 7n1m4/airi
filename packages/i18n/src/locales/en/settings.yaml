@@ -737,6 +737,15 @@ pages:
           Local options like <b>Ollama</b> and <b>LM Studio</b> also support
           vision-capable models (VLMs).
       start_here: Start here
+      motion:
+        title: 3D Gestures & Kinetics?
+        description: Synthesize real-time 3D VRM character motions and gestures
+          on-device using <b>FlowMDM (Local WebGPU)</b> generative diffusion.
+      cloud:
+        title: Cloud Sync & Backups?
+        description: Keep your cards, memory archives, and settings safe across devices.
+          Use <b>Local File System</b> for desktop/NAS backups or
+          <b>S3-Compatible Storage</b> (Cloudflare R2, MinIO, AWS S3).
     filters:
       pricing: Pricing
       deployment: Deployment
@@ -1397,6 +1406,10 @@ pages:
         title: Volcengine Coding Plan
         description: Volcengine Coding Plan
     title: Inference Providers
+    cache:
+      title: Model Cache
+      subtitle: On-device neural weights
+      manage: Manage
   connection:
     description: Configure server endpoints, local channel gateway, and model
       download credentials (e.g. Hugging Face)
