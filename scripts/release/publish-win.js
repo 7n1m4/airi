@@ -8,7 +8,7 @@ import { execSync } from 'node:child_process'
 const safeEnv = { ...process.env }
 delete safeEnv.GITHUB_TOKEN
 safeEnv.GH_SSL_NO_VERIFY = 'true'
-safeEnv.NODE_OPTIONS = '--max-old-space-size=8192'
+delete safeEnv.NODE_OPTIONS
 
 function execute(cmd, options = {}) {
   console.log(`\n🤖 Running: ${cmd}`)
