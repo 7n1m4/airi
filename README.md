@@ -49,7 +49,7 @@ That is the promise of this fork: **one enduring presence across conversations, 
 | **World** | Desktop stages, web and pocket surfaces, Discord, scenes, sidecars, and other places the same character can inhabit |
 | **Sovereignty** | Local-first storage, portable character data, optional user-owned cloud sync, and no developer-operated analytics |
 
-The complete implementation catalog lives in the [feature report](https://dasilva333.github.io/airi/en/docs/chronicles/feature-report). The [showcase](https://dasilva333.github.io/airi/en/docs/showcase/) presents the major experiences visually.
+The complete implementation catalog lives in the [feature report](https://dasilva333.github.io/airi/en/docs/chronicles/feature-report). The [showcase](https://dasilva333.github.io/airi/en/docs/showcase/) presents the major experiences visually. For an evidence-backed architectural landscape comparing 11 desktop AI companions (VPet, Project N.E.K.O., Open-LLM-VTuber, Komorebi, Amica, NekoGPT, etc.), see [**COMPARISONS.md**](COMPARISONS.md).
 
 ---
 
