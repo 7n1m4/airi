@@ -154,45 +154,74 @@ Return ONLY a JSON object with this exact structure:
 }
 \`\`\``
 
-      const vlmProviderId = visionStore.activeProvider
-        || facultyDefaultsStore.defaults.vision?.primaryProvider
-        || 'deepseek'
-      const vlmModelId = visionStore.activeModel
-        || facultyDefaultsStore.defaults.vision?.primaryModel
-        || 'deepseek-v4-flash-vision-exp'
+      // 1. Resolve from global faculty defaults (with card override or Hub matrix)
+      const resolvedFaculty = facultyDefaultsStore.resolveFaculty('vision')
 
-      const vlmProvider = await providersStore.getProviderInstance<any>(vlmProviderId)
-      if (!vlmProvider) {
-        throw new Error(`Unable to initialize Vision Provider "${vlmProviderId}". Please check Settings > Vision.`)
+      // Use the global faculty default unless visionStore has an explicit non-tagger override
+      let vlmProviderId = resolvedFaculty.provider
+      let vlmModelId = resolvedFaculty.model
+
+      // If faculty default was unconfigured or points to an image tagger (blip-local), fall back to visionStore or deepseek
+      if (!vlmProviderId || vlmProviderId === 'blip-local') {
+        vlmProviderId = (visionStore.activeProvider && visionStore.activeProvider !== 'blip-local')
+          ? visionStore.activeProvider
+          : 'deepseek'
+      }
+
+      if (!vlmModelId || vlmModelId.includes('wd-swinv2') || vlmModelId.includes('wd-v1-4')) {
+        vlmModelId = (visionStore.activeModel && !visionStore.activeModel.includes('wd-'))
+          ? visionStore.activeModel
+          : 'deepseek-v4-flash-vision-exp'
       }
 
       const turnPrompt = `${systemPrompt}\n\nHere is our current game screen for '${gameTitle}'. It's your turn, what do you do?`
 
+      async function queryVlm(providerId: string, modelId: string): Promise<string> {
+        const provider = await providersStore.getProviderInstance<any>(providerId)
+        if (!provider) {
+          throw new Error(`Unable to initialize Vision Provider "${providerId}". Please check Settings > Vision.`)
+        }
+
+        if (typeof provider.captionImage === 'function') {
+          if (typeof provider.loadModel === 'function' && !provider.isModelLoaded?.value) {
+            await provider.loadModel()
+          }
+          return await provider.captionImage(frameDataUrl, { prompt: turnPrompt })
+        }
+        else {
+          const vlmMessages = [
+            {
+              role: 'user' as const,
+              content: [
+                { type: 'text' as const, text: turnPrompt },
+                { type: 'image_url' as const, image_url: { url: frameDataUrl } },
+              ],
+            },
+          ]
+          const response = await llmStore.generate(
+            modelId,
+            provider,
+            vlmMessages as any,
+            { vision: true },
+          )
+          return response.text || ''
+        }
+      }
+
       let rawResponseText = ''
 
-      if (typeof vlmProvider.captionImage === 'function') {
-        if (typeof vlmProvider.loadModel === 'function' && !vlmProvider.isModelLoaded?.value) {
-          await vlmProvider.loadModel()
-        }
-        rawResponseText = await vlmProvider.captionImage(frameDataUrl, { prompt: turnPrompt })
+      try {
+        rawResponseText = await queryVlm(vlmProviderId, vlmModelId)
       }
-      else {
-        const vlmMessages = [
-          {
-            role: 'user' as const,
-            content: [
-              { type: 'text' as const, text: turnPrompt },
-              { type: 'image_url' as const, image_url: { url: frameDataUrl } },
-            ],
-          },
-        ]
-        const response = await llmStore.generate(
-          vlmModelId,
-          vlmProvider,
-          vlmMessages as any,
-          { vision: true },
-        )
-        rawResponseText = response.text || ''
+      catch (primaryErr: any) {
+        const visionConf = facultyDefaultsStore.defaults?.vision
+        if (visionConf?.autoFailover && visionConf.fallbackProvider && visionConf.fallbackProvider !== vlmProviderId) {
+          console.warn(`[ArcadeAgent] Primary VLM [${vlmProviderId}] failed (${primaryErr.message}). Attempting automated safety fallback to [${visionConf.fallbackProvider}]...`)
+          rawResponseText = await queryVlm(visionConf.fallbackProvider, visionConf.fallbackModel)
+        }
+        else {
+          throw primaryErr
+        }
       }
 
       if (isCancelled)

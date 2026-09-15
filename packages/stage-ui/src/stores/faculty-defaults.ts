@@ -71,8 +71,8 @@ export const FACTORY_SAFE_DEFAULTS: GlobalFacultyDefaultsState = {
     recoveryIntervalMinutes: 15,
   },
   vision: {
-    primaryProvider: 'blip-local',
-    primaryModel: 'SmilingWolf/wd-swinv2-tagger-v3',
+    primaryProvider: 'moondream-local',
+    primaryModel: 'Xenova/moondream2',
     fallbackProvider: '',
     fallbackModel: '',
     autoFailover: false,
@@ -195,8 +195,8 @@ export const useFacultyDefaultsStore = defineStore('faculty-defaults', () => {
         window.localStorage.setItem('artistry-model', JSON.stringify(model))
       }
       else if (faculty === 'vision') {
-        window.localStorage.setItem('settings/vision/active-provider', JSON.stringify(provider))
-        window.localStorage.setItem('settings/vision/active-model', JSON.stringify(model))
+        window.localStorage.setItem('settings/vision/active-provider', provider)
+        window.localStorage.setItem('settings/vision/active-model', model)
       }
     }
     catch {}

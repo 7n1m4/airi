@@ -294,7 +294,7 @@ const otherProviders = computed(() =>
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
 )
 
-function resolveModelsForFacultyProvider(faculty: FacultyName | null, provider: string): Array<{ id: string, name: string }> {
+function resolveModelsForFacultyProvider(faculty: FacultyName | null, provider: string, currentModel?: string): Array<{ id: string, name: string }> {
   if (!faculty || !provider)
     return []
 
@@ -424,31 +424,38 @@ function resolveModelsForFacultyProvider(faculty: FacultyName | null, provider: 
     if (provider === 'none' || !provider) {
       return [{ id: '', name: 'None (Skip Vision)' }]
     }
-    if (provider === 'openai') {
-      return [
-        { id: 'gpt-4o', name: 'GPT-4o' },
-        { id: 'gpt-4o-mini', name: 'GPT-4o mini' },
-      ]
-    }
-    if (provider === 'gemini') {
-      return [
-        { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
-        { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
-      ]
-    }
     const list = providersStore.getModelsForProvider(provider)
+    const resultList: { id: string, name: string }[] = []
+
+    const providerConfig = providersStore.getProviderConfig(provider)
+    const configuredModel = providerConfig?.model as string | undefined
+    if (configuredModel) {
+      resultList.push({ id: configuredModel, name: `${configuredModel} (Configured Model)` })
+    }
+
     if (list.length > 0) {
       const visionModels = list.filter(m => m.capabilities?.includes('vision'))
       const finalList = visionModels.length > 0 ? visionModels : list
-      return finalList.map(m => ({ id: m.id, name: m.name || m.id }))
+      for (const m of finalList) {
+        if (!resultList.some(r => r.id === m.id)) {
+          resultList.push({ id: m.id, name: m.name || m.id })
+        }
+      }
     }
+
+    if (currentModel && !resultList.some(r => r.id === currentModel)) {
+      resultList.unshift({ id: currentModel, name: `${currentModel} (Current)` })
+    }
+
+    if (resultList.length > 0)
+      return resultList
   }
 
   return []
 }
 
-const primaryProviderModels = computed(() => resolveModelsForFacultyProvider(activeDrawerFaculty.value, tempPrimaryProvider.value))
-const fallbackProviderModels = computed(() => resolveModelsForFacultyProvider(activeDrawerFaculty.value, tempFallbackProvider.value))
+const primaryProviderModels = computed(() => resolveModelsForFacultyProvider(activeDrawerFaculty.value, tempPrimaryProvider.value, tempPrimaryModel.value))
+const fallbackProviderModels = computed(() => resolveModelsForFacultyProvider(activeDrawerFaculty.value, tempFallbackProvider.value, tempFallbackModel.value))
 
 interface VoiceOption {
   id: string
