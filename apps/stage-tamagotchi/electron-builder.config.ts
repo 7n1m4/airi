@@ -187,7 +187,7 @@ export default {
     shortcutName: '${productName}',
     uninstallDisplayName: '${productName}',
     createDesktopShortcut: 'always',
-    deleteAppDataOnUninstall: true,
+    deleteAppDataOnUninstall: false,
     oneClick: false,
     allowToChangeInstallationDirectory: true,
   },

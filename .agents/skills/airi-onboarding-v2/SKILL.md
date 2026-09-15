@@ -1,26 +1,18 @@
 ---
 name: airi-onboarding-v2
 description: >-
-  Build/debug first-run Onboarding V2: setup steps, returning-user restore, gate/draft contracts, completion flags, model downloads, provider selection, atomic starter-card assembly. Existing-card editing uses airi-card-editor-wizard.
+  [DEPRECATED] Legacy Onboarding V2 reference guide. Active canonical onboarding is airi-onboarding-v3 (19 semantic steps, Quick Start, sliding stepper, docs/design-onboarding-v3.md).
 ---
 
-# AIRI Onboarding (V2 Architecture)
+# AIRI Onboarding (V2 Architecture) [DEPRECATED]
 
-The V2 onboarding flow is the single canonical, fully shipped first-run wizard. Legacy V1 files have been retired; every new step is written under `v2/steps/`.
+> [!CAUTION]
+> **DEPRECATED — DO NOT USE FOR ACTIVE DEVELOPMENT**
+> Onboarding V2 is retired and preserved solely for historical/reference purposes.
+> The active canonical implementation is **Onboarding V3** documented in `airi-onboarding-v3` and [`docs/design-onboarding-v3.md`](../../docs/design-onboarding-v3.md).
+> All platforms (Electron `/onboarding-v3`, Web, Pocket) mount **`OnboardingV3`** (`packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/`).
 
-## 0. Lineage — Why the Code Calls It "v2" When It Is the 4th Generation
-
-The codebase id `v2` refers to an architecture version, not a generation counter. Do not "upgrade to v3" because v3 already happened in the fork's product history:
-
-| Generation | Codename | Scope | Status |
-|---|---|---|---|
-| (upstream) | Easy Mode / Advanced Mode | Pick an LLM provider (+ sign in to AIRI cloud account) → done | Retired |
-| (fork) v1 | — | Only pick LLM | Retired |
-| (fork) v2 | — | LLM + pick character | Retired |
-| (fork) v3 | Sense Portal (easy mode) | Easy-mode TTS + LLM setup, then character | Retired |
-| **(fork) v4 — `v2` in code** | **Onboarding V2** | **Full multi-domain wizard: STT, LLM, user profile, persona, vessel, TTS, cloud sync/restore** | **Active, canonical** |
-
-Commit-history markers if you're digging through git: "implement functional Sense Portal (easy mode) onboarding flow" (v3) → "scaffold onboarding v2" (v4 begins) → "V2 Step 1 STT Playground…" etc. Future post-V2 roadmap (Advanced Setup Lab, ACT/VRMA/ComfyUI/proactivity steps) has been unified into canonical `docs/project-onboarding-modernize.md` (historical proposal archived at `docs/archive/proposal-onboarding-overhaul.md`) and is NOT part of this skill's shipped surface.
+## Legacy V2 Historical Reference
 
 ## Key Files/Locations
 

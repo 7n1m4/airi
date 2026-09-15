@@ -76,6 +76,7 @@ Concept-to-file-path index for rapid context retrieval. Use this to find where a
 | **Caption Overlay** | `apps/stage-tamagotchi/src/renderer/pages/caption.vue` (UI) | `apps/stage-tamagotchi/src/main/windows/caption/` (Manager) |
 | **Widgets Host** | `apps/stage-tamagotchi/src/renderer/pages/widgets.vue` | `apps/stage-tamagotchi/src/main/windows/widgets/index.ts` (Manager) |
 | **Stage-Mate (Unity Companion)** | `apps/stage-mate/` (Sidecar Runtime) \| `apps/stage-tamagotchi/src/main/services/airi/stage-mate/index.ts` (Service) \| Spec: [`docs/project-gunslinger-sidecar-mod.md`](./project-gunslinger-sidecar-mod.md) |
+| **Onboarding V3 (Canonical)** | `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/onboarding-v3.vue` (UI) \| `apps/stage-tamagotchi/src/renderer/pages/onboarding-v3.vue` (Page `/onboarding-v3`) \| `apps/stage-tamagotchi/src/main/windows/onboarding/index.ts` (Electron Window) \| Spec: [`docs/design-onboarding-v3.md`](./design-onboarding-v3.md). *(V2 under `v2/` is deprecated reference)* |
 
 ---
 
