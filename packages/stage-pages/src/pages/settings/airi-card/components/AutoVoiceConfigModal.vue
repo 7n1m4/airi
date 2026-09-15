@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { createAudioBlob } from '@proj-airi/stage-shared'
 import { useIdleAnimations } from '@proj-airi/stage-ui/composables'
 import { voicePresets } from '@proj-airi/stage-ui/constants/voices'
 import { useLLM } from '@proj-airi/stage-ui/stores/llm'
@@ -489,7 +490,7 @@ async function playPreview(rec: Recommendation) {
     if (activePlayingId.value !== rec.characterId)
       return
 
-    const audioUrl = URL.createObjectURL(new Blob([audioData]))
+    const audioUrl = URL.createObjectURL(createAudioBlob(audioData))
     const audio = new Audio(audioUrl)
     audio.addEventListener('ended', () => {
       if (activePlayingId.value === rec.characterId) {

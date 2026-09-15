@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { VoiceProfile } from '../../../../stores/providers/types'
 
+import { createAudioBlob } from '@proj-airi/stage-shared'
 import {
   FieldCheckbox,
   FieldInput,
@@ -282,7 +283,7 @@ async function playTestVoice() {
     }
 
     // Set downloadable audio source URL
-    audioUrl.value = URL.createObjectURL(new Blob([response], { type: 'audio/mpeg' }))
+    audioUrl.value = URL.createObjectURL(createAudioBlob(response))
 
     if (audioContext.state === 'suspended') {
       await audioContext.resume()

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { createAudioBlob } from '@proj-airi/stage-shared'
 import { voicePresets } from '@proj-airi/stage-ui/constants/voices'
 import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
@@ -243,7 +244,7 @@ async function playVoicePreview() {
         voiceForm.value.testText,
         voiceForm.value.baseVoice,
       )
-      const audioUrl = URL.createObjectURL(new Blob([audioData]))
+      const audioUrl = URL.createObjectURL(createAudioBlob(audioData))
       const audio = new Audio(audioUrl)
       audio.play()
       return
@@ -263,7 +264,7 @@ async function playVoicePreview() {
       voiceForm.value.testText,
       voiceForm.value.baseVoice,
     )
-    const audioUrl = URL.createObjectURL(new Blob([audioData]))
+    const audioUrl = URL.createObjectURL(createAudioBlob(audioData))
     const audio = new Audio(audioUrl)
     audio.play()
   }

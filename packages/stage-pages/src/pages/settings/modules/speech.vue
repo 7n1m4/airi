@@ -3,6 +3,7 @@ import type { SpeechProviderWithExtraOptions } from '@xsai-ext/providers/utils'
 
 import AudioStudio from '@proj-airi/stage-ui/components/scenarios/settings/model-settings/audio-studio.vue'
 
+import { createAudioBlob } from '@proj-airi/stage-shared'
 import {
   Alert,
   ErrorContainer,
@@ -225,7 +226,7 @@ async function generateTestSpeech() {
     })
 
     // Convert the response to a blob and create an object URL
-    audioUrl.value = URL.createObjectURL(new Blob([response]))
+    audioUrl.value = URL.createObjectURL(createAudioBlob(response))
 
     // Play the audio
     setTimeout(async () => {

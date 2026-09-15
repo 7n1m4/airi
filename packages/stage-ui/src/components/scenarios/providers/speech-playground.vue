@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { VoiceInfo } from '../../../stores/providers'
 
+import { createAudioBlob } from '@proj-airi/stage-shared'
 import { FieldCheckbox, FieldSelect } from '@proj-airi/ui'
 import { computed, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -98,7 +99,7 @@ async function handleGenerateTestSpeech() {
     }
 
     // Convert the response to a blob and create an object URL
-    audioUrl.value = URL.createObjectURL(new Blob([response]))
+    audioUrl.value = URL.createObjectURL(createAudioBlob(response))
 
     // Play the audio
     setTimeout(() => {

@@ -1,3 +1,4 @@
+import { createAudioBlob } from '@proj-airi/stage-shared'
 import { useBroadcastChannel } from '@vueuse/core'
 import { ref } from 'vue'
 import { toast } from 'vue-sonner'
@@ -93,7 +94,7 @@ export function useSpeechCaptionPlayer() {
           const audioData = await speechStore.speech(provider as any, 'virtual', sentence, id)
           if (signal.aborted)
             throw new DOMException('Aborted', 'AbortError')
-          const audioUrl = URL.createObjectURL(new Blob([audioData]))
+          const audioUrl = URL.createObjectURL(createAudioBlob(audioData))
           return { text: sentence, audio: new Audio(audioUrl) }
         }),
       )
