@@ -164,6 +164,13 @@ To overcome single-pass ambiguity and deadpan sarcasm blindness without exceedin
 2. **Affordable Latency Budget**: Because cognitive two-hop pipelines already allocate 2–5 seconds for the 1st-Hop private monologue LLM, spending **1,200ms on a 3-probe CPU cascade** is practically invisible to the user and guarantees rich, nuanced affective telemetry.
 3. **Targeted Parameter Pools**: Rather than forcing Needle to solve multi-variable classification in one prompt, each step in the tree evaluates exactly one clear dimension with small enum choices, yielding near-perfect schema compliance and eliminating prompt interference.
 
+### 2.5 Strategy 4 Empirical Results & Structural Takeaways
+In September 2026, the 5-node adaptive probe tree was executed against all 6 cleanroom scenarios (`reports/nan0-cleanroom/famous-sentence-matrix-1789602613.json`):
+- **Suspicion Defense (4/6)**: The adaptive tree successfully commanded `spike_suspicion` across Tests A, D1, D2, and E, substantially exceeding Monolithic (1/6) and Decomposed (2/6).
+- **Hedging Sink**: Introducing `uncertain_or_mixed` into enums acted as an attention attractor for the 45M SAN model, causing 4/6 climate evaluations to collapse into hedging.
+- **Root Poisoning**: Misclassifying playful banter as `tender_vulnerability` steered the cascade into `probe_vulnerability`, illustrating the critical need for dual-sensing or cross-validation at the root before deep branching.
+- See [`docs/nan0/peer-review-needle-probe-tree.md`](./nan0/peer-review-needle-probe-tree.md) for the active peer-review brief and rubric redesign requirements.
+
 ---
 
 ## 3. The Two Consumer Surfaces

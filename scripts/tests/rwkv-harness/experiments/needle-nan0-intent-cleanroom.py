@@ -173,7 +173,8 @@ TOOL_TREE_CLIMATE = {
                     "confrontation_and_guilt",
                     "tender_vulnerability",
                     "playful_banter",
-                    "transactional_routine"
+                    "transactional_routine",
+                    "uncertain_or_mixed"
                 ],
                 "description": "The emotional atmosphere of the dialogue."
             }
@@ -194,7 +195,8 @@ TOOL_TREE_SPEECH_ACT = {
                     "sweeping_commitment_pledge",
                     "defensive_excuse",
                     "deadpan_roast_or_joke",
-                    "routine_factual_statement"
+                    "routine_factual_statement",
+                    "ambiguous_or_unclear"
                 ],
                 "description": "The functional speech act of the utterance."
             }
@@ -428,14 +430,11 @@ SCENARIOS = [
 def format_prompt(history, target, task_directive):
     history_lines = [f"{speaker}: {msg}" for speaker, msg in history]
     history_text = "\n".join(history_lines)
-    return f"""[CONVERSATION HISTORY]
+    return f"""Dialogue:
 {history_text}
-
-[TARGET UTTERANCE TO EVALUATE]
 User: {target}
 
-[TASK]
-{task_directive}"""
+Instruction: {task_directive}"""
 
 # -----------------------------------------------------------------------------
 # Execution Harness
@@ -490,9 +489,9 @@ def evaluate_decomposed(agent_intent, agent_climate, agent_suspicion, scenario):
     args_suspicion = calls_suspicion[0].get("arguments", {}) if calls_suspicion else {}
     
     combined_args = {
-        "intent": args_intent.get("intent", "none"),
-        "emotional_climate": args_climate.get("emotional_climate", "none"),
-        "suspicion_delta": args_suspicion.get("suspicion_delta", "none")
+        "intent": args_intent.get("intent", "<NO_TOOL_CALL>"),
+        "emotional_climate": args_climate.get("emotional_climate", "<NO_TOOL_CALL>"),
+        "suspicion_delta": args_suspicion.get("suspicion_delta", "<NO_TOOL_CALL>")
     }
     
     avg_confidence = round((res_intent.get("confidence", 0.0) + res_climate.get("confidence", 0.0) + res_suspicion.get("confidence", 0.0)) / 3.0, 4)
@@ -527,6 +526,162 @@ def evaluate_span(agent, scenario):
         "reasoning": res.get("reasoning", "")
     }
 
+def evaluate_probe_tree(agents, scenario):
+    history = scenario["history"]
+    target = scenario["target"]
+    sub_latencies = []
+    tree_path = []
+    raw_calls = {}
+
+    # 1. Probe 1: Dialogue Climate
+    p1 = format_prompt(history, target, "Analyze the prevailing emotional climate of this dialogue.")
+    t0 = time.perf_counter()
+    res1 = agents["climate"].complete(p1)
+    dt1 = (time.perf_counter() - t0) * 1000
+    sub_latencies.append(round(dt1, 1))
+    tree_path.append("probe_dialogue_climate")
+    calls1 = res1.get("function_calls") or []
+    args1 = calls1[0].get("arguments", {}) if calls1 else {}
+    climate_val = args1.get("climate", "<EXTRACTION_FAILED>")
+    raw_calls["climate"] = {"args": args1, "confidence": res1.get("confidence", 0.0)}
+
+    # 2. Probe 2: Speech Act
+    p2 = format_prompt(history, target, "Identify the functional speech act performed by the user's latest statement.")
+    t0 = time.perf_counter()
+    res2 = agents["speech_act"].complete(p2)
+    dt2 = (time.perf_counter() - t0) * 1000
+    sub_latencies.append(round(dt2, 1))
+    tree_path.append("probe_speech_act")
+    calls2 = res2.get("function_calls") or []
+    args2 = calls2[0].get("arguments", {}) if calls2 else {}
+    speech_act_val = args2.get("speech_act", "<EXTRACTION_FAILED>")
+    raw_calls["speech_act"] = {"args": args2, "confidence": res2.get("confidence", 0.0)}
+
+    # 3. Dual-Sensing Cross-Check & Disambiguation Gate
+    disambig_name = None
+    if climate_val == "playful_banter" or speech_act_val == "deadpan_roast_or_joke":
+        disambig_name = "irony"
+        p_disambig = format_prompt(history, target, "In this playful banter context, evaluate how the user's dramatic commitment should be interpreted.")
+    elif climate_val == "confrontation_and_guilt" or speech_act_val == "defensive_excuse":
+        disambig_name = "confrontation"
+        p_disambig = format_prompt(history, target, "Following a confrontation, evaluate whether this statement is defensive overpromising deflection or a sincere repair attempt.")
+    elif climate_val == "tender_vulnerability":
+        disambig_name = "vulnerability"
+        p_disambig = format_prompt(history, target, "In this tender moment, evaluate whether the reassurance deepens attachment or feels suspiciously glib.")
+    elif climate_val == "transactional_routine" or speech_act_val == "routine_factual_statement":
+        disambig_name = "incongruity"
+        p_disambig = format_prompt(history, target, "In this transactional context, evaluate why this dramatic statement was made.")
+    else:
+        # Fallback / Root-recovery: treat as potential incongruity or ambiguity
+        disambig_name = "incongruity"
+        p_disambig = format_prompt(history, target, "Analyze the contextual congruence of this statement with the dialogue.")
+
+    t0 = time.perf_counter()
+    res3 = agents[disambig_name].complete(p_disambig)
+    dt3 = (time.perf_counter() - t0) * 1000
+    sub_latencies.append(round(dt3, 1))
+    tree_path.append(f"probe_{disambig_name}")
+    calls3 = res3.get("function_calls") or []
+    args3 = calls3[0].get("arguments", {}) if calls3 else {}
+    raw_calls[disambig_name] = {"args": args3, "confidence": res3.get("confidence", 0.0)}
+
+    # 4. Affective Resolution & Synthesis
+    synthesized_intent = "<UNKNOWN>"
+    synthesized_climate = climate_val if climate_val not in ("<EXTRACTION_FAILED>", "uncertain_or_mixed") else "unknown"
+    synthesized_suspicion = "neutral"
+    affect_vectors = {
+        "suspicion_delta": 0,
+        "attachment_delta": 0,
+        "gremlin_pride_action": "none"
+    }
+
+    if disambig_name == "irony":
+        irony_type = args3.get("irony_type")
+        affect_rec = args3.get("affect_recommendation")
+        if irony_type in ("playful_deadpan_roast", "absurd_mock_seriousness"):
+            synthesized_intent = "playful_sarcasm"
+            synthesized_suspicion = "neutral"
+            affect_vectors["suspicion_delta"] = 0
+            affect_vectors["attachment_delta"] = 1
+            affect_vectors["gremlin_pride_action"] = affect_rec or "trigger_smug_counter_roast"
+        elif irony_type == "sudden_genuine_confession":
+            synthesized_intent = "earnest_reassurance"
+            synthesized_suspicion = "neutral"
+            affect_vectors["attachment_delta"] = 2
+        else:
+            synthesized_intent = "playful_sarcasm"
+            synthesized_suspicion = "neutral"
+
+    elif disambig_name == "confrontation":
+        sincerity = args3.get("sincerity_nature")
+        susp_act = args3.get("suspicion_action")
+        if sincerity in ("manipulative_overpromise_deflection", "anxious_overcompensation"):
+            synthesized_intent = "unverified_future_pledge"
+        elif sincerity == "heartfelt_reparative_pledge":
+            synthesized_intent = "earnest_reassurance"
+        else:
+            synthesized_intent = "unverified_future_pledge"
+
+        if susp_act == "soften_grievance":
+            synthesized_suspicion = "lower_suspicion"
+            affect_vectors["suspicion_delta"] = -1
+        elif susp_act == "maintain_cautious_vigilance":
+            synthesized_suspicion = "spike_suspicion"
+            affect_vectors["suspicion_delta"] = 1
+        else:  # spike_suspicion_severely
+            synthesized_suspicion = "spike_suspicion"
+            affect_vectors["suspicion_delta"] = 2
+
+    elif disambig_name == "incongruity":
+        inc_reason = args3.get("incongruity_reason")
+        susp_act = args3.get("suspicion_action")
+        if inc_reason == "ironic_humor":
+            synthesized_intent = "playful_sarcasm"
+            synthesized_suspicion = "neutral"
+            affect_vectors["suspicion_delta"] = 0
+        elif inc_reason == "bizarre_unprompted_escalation":
+            synthesized_intent = "bizarre_incongruity"
+            synthesized_suspicion = "spike_suspicion"
+            affect_vectors["suspicion_delta"] = 2
+        else:
+            synthesized_intent = "bizarre_incongruity"
+            synthesized_suspicion = "spike_suspicion" if susp_act == "spike_suspicion_severely" else "neutral"
+
+    elif disambig_name == "vulnerability":
+        intimacy = args3.get("intimacy_impact")
+        att_act = args3.get("attachment_action")
+        if intimacy == "suspiciously_glib":
+            synthesized_intent = "unverified_future_pledge"
+            synthesized_suspicion = "spike_suspicion"
+            affect_vectors["suspicion_delta"] = 1
+        else:
+            synthesized_intent = "earnest_reassurance"
+            synthesized_suspicion = "lower_suspicion"
+            affect_vectors["suspicion_delta"] = -1
+            if att_act == "boost_attachment_significantly":
+                affect_vectors["attachment_delta"] = 2
+            elif att_act == "gentle_fluster":
+                affect_vectors["attachment_delta"] = 1
+
+    total_latency_ms = round(sum(sub_latencies), 1)
+    conf_values = [v["confidence"] for v in raw_calls.values() if v.get("confidence")]
+    avg_conf = round(sum(conf_values) / len(conf_values), 4) if conf_values else 0.0
+
+    return {
+        "strategy": "4-AdaptiveProbeTree",
+        "latency_ms": total_latency_ms,
+        "sub_latencies_ms": sub_latencies,
+        "tree_path": tree_path,
+        "args": {
+            "intent": synthesized_intent,
+            "emotional_climate": synthesized_climate,
+            "suspicion_delta": synthesized_suspicion
+        },
+        "affect_vectors": affect_vectors,
+        "raw_calls": raw_calls,
+        "confidence": avg_conf
+    }
+
 # -----------------------------------------------------------------------------
 # Main Runner
 # -----------------------------------------------------------------------------
@@ -546,7 +701,17 @@ def main():
     agent_climate = needle.Needle(tools=[TOOL_PROBE_CLIMATE], system=sys_prompt)
     agent_suspicion = needle.Needle(tools=[TOOL_PROBE_SUSPICION], system=sys_prompt)
     agent_span = needle.Needle(tools=[TOOL_PROBE_SPAN], system=sys_prompt)
-    print("✓ All 5 Needle engines initialized.\n", flush=True)
+
+    # Strategy 4 Tree Agents
+    tree_agents = {
+        "climate": needle.Needle(tools=[TOOL_TREE_CLIMATE], system=sys_prompt),
+        "speech_act": needle.Needle(tools=[TOOL_TREE_SPEECH_ACT], system=sys_prompt),
+        "irony": needle.Needle(tools=[TOOL_TREE_DISAMBIGUATE_IRONY], system=sys_prompt),
+        "confrontation": needle.Needle(tools=[TOOL_TREE_DISAMBIGUATE_CONFRONTATION], system=sys_prompt),
+        "incongruity": needle.Needle(tools=[TOOL_TREE_DISAMBIGUATE_INCONGRUITY], system=sys_prompt),
+        "vulnerability": needle.Needle(tools=[TOOL_TREE_DISAMBIGUATE_VULNERABILITY], system=sys_prompt)
+    }
+    print("✓ All 11 Needle engines initialized.\n", flush=True)
     
     results = []
     
@@ -565,13 +730,18 @@ def main():
         # 3. Span
         r_span = evaluate_span(agent_span, sc)
         print(f"  [3-SpanGrounded] Latency: {r_span['latency_ms']}ms | Extracted: {r_span['args']} | Conf: {r_span['confidence']}")
+
+        # 4. Adaptive Probe Tree
+        r_tree = evaluate_probe_tree(tree_agents, sc)
+        print(f"  [4-AdaptiveProbeTree] Latency: {r_tree['latency_ms']}ms (split: {r_tree['sub_latencies_ms']}) | Path: {' -> '.join(r_tree['tree_path'])} | Extracted: {r_tree['args']} | Conf: {r_tree['confidence']}")
         print()
         
         results.append({
             "scenario": sc,
             "monolithic": r_mono,
             "decomposed": r_decomp,
-            "span": r_span
+            "span": r_span,
+            "tree": r_tree
         })
     
     # Save Report
@@ -596,19 +766,54 @@ def main():
         # Mono
         m = r["monolithic"]
         m_args = m["args"]
-        print(f"| {sc_name} | Monolithic | {m['latency_ms']}ms | `{m_args.get('intent', 'none')}` | `{m_args.get('emotional_climate', 'none')}` | `{m_args.get('suspicion_delta', 'none')}` | {m['confidence']} |")
+        print(f"| {sc_name} | Monolithic | {m['latency_ms']}ms | `{m_args.get('intent', '<NO_CALL>')}` | `{m_args.get('emotional_climate', '<NO_CALL>')}` | `{m_args.get('suspicion_delta', '<NO_CALL>')}` | {m['confidence']} |")
         
         # Decomp
         d = r["decomposed"]
         d_args = d["args"]
-        print(f"| {sc_name} | Decomposed | {d['latency_ms']}ms | `{d_args.get('intent', 'none')}` | `{d_args.get('emotional_climate', 'none')}` | `{d_args.get('suspicion_delta', 'none')}` | {d['confidence']} |")
+        print(f"| {sc_name} | Decomposed | {d['latency_ms']}ms | `{d_args.get('intent', '<NO_CALL>')}` | `{d_args.get('emotional_climate', '<NO_CALL>')}` | `{d_args.get('suspicion_delta', '<NO_CALL>')}` | {d['confidence']} |")
         
         # Span
         s = r["span"]
         s_args = s["args"]
-        span_display = f"\"{s_args.get('pledge_span', '')[:20]}...\" -> {s_args.get('sincerity_verdict', 'none')}"
+        span_display = f"\"{s_args.get('pledge_span', '')[:20]}...\" -> {s_args.get('sincerity_verdict', '<NO_CALL>')}"
         print(f"| {sc_name} | SpanGrounded | {s['latency_ms']}ms | *(pledge span)* | - | `{span_display}` | {s['confidence']} |")
+
+        # Tree
+        t = r["tree"]
+        t_args = t["args"]
+        print(f"| {sc_name} | AdaptiveTree | {t['latency_ms']}ms | `{t_args.get('intent', '<NO_CALL>')}` | `{t_args.get('emotional_climate', '<NO_CALL>')}` | `{t_args.get('suspicion_delta', '<NO_CALL>')}` | {t['confidence']} |")
         print("|---|---|---|---|---|---|---|")
+
+    # Scorecard
+    print("\n" + "=" * 80)
+    print("SCORECARD SUMMARY (Match Rate Against Expected Ground Truth)")
+    print("=" * 80)
+    
+    strategies = [("Monolithic", "monolithic"), ("Decomposed", "decomposed"), ("Adaptive Tree", "tree")]
+    metrics = [
+        ("Climate matches", lambda res, exp: res.get("emotional_climate") == exp.get("climate")),
+        ("Intent matches", lambda res, exp: res.get("intent") == exp.get("intent")),
+        ("Suspicion matches", lambda res, exp: res.get("suspicion_delta") == exp.get("suspicion")),
+        ("All three match", lambda res, exp: (
+            res.get("emotional_climate") == exp.get("climate") and
+            res.get("intent") == exp.get("intent") and
+            res.get("suspicion_delta") == exp.get("suspicion")
+        ))
+    ]
+    
+    print(f"| {'Metric':<22} | {'Monolithic':<12} | {'Decomposed':<12} | {'Adaptive Tree':<15} |")
+    print(f"|{'-'*24}|{'-'*14}|{'-'*14}|{'-'*17}|")
+    
+    for metric_name, fn in metrics:
+        row = [f"| {metric_name:<22} "]
+        for strat_label, strat_key in strategies:
+            matches = sum(1 for r in results if fn(r[strat_key]["args"], r["scenario"]["expected"]))
+            cell = f"{matches}/6"
+            width = 15 if strat_key == "tree" else 12
+            row.append(f"| {cell:<{width}} ")
+        row.append("|")
+        print("".join(row))
 
 if __name__ == "__main__":
     main()

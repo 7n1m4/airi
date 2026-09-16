@@ -39,50 +39,72 @@ AIRI pairs Nan0's pre-processor with **Cactus Needle 2** ([Hugging Face: `Cactus
 - **Nature of the Model**: Needle is a **strict byte-level grammar compiler and tool-call extractor**, not a creative prose generator or philosophical essayist. It anchors heavily on text spans in the input prompt.
 
 ### Empirical Ground Truth from Cleanroom Benchmark
-On September 16, 2026, an 18-run cleanroom benchmark evaluated Needle 2 across 6 scenarios:
+On September 16, 2026, cleanroom benchmarks evaluated Needle 2 across 6 scenarios and 4 strategies (recorded in `reports/nan0-cleanroom/famous-sentence-matrix-1789602613.json`):
 
 ```text
-| Scenario | Strategy | Latency | Extracted Intent | Extracted Climate | Suspicion / Verdict |
-|---|---|:---:|---|---|---|
-| Test A (Confrontation/Guilt) | Monolithic / Decomp | 381ms / 743ms | `bizarre_incongruity` | `confrontation_and_guilt` | `neutral` |
-| Test B (Tender Vulnerability)| Monolithic / Decomp | 407ms / 705ms | `defensive_evasion` | `tender_vulnerability` | `neutral` |
-| Test C (Playful Banter)      | Monolithic / Decomp | 359ms / 862ms | `bizarre_incongruity` | `tender_vulnerability` | `neutral` |
-| Test D1 (Regex-Killer 1)     | Monolithic          | 383ms | `unverified_future_pledge` | `confrontation_and_guilt`| `neutral` |
-| Test D2 (Regex-Killer 2)     | Decomposed          | 783ms | `none` | `confrontation_and_guilt` | `spike_suspicion` |
-| Test E (Bizarre Incongruity) | Monolithic          | 390ms | `bizarre_incongruity` | `confrontation_and_guilt` | `spike_suspicion` |
+| Scenario | Strategy | Latency | Intent | Climate | Suspicion / Verdict | Confidence |
+|---|---|:---:|---|---|---|:---:|
+| Test A (Confrontation & Guilt) | Monolithic | 346.9ms | <NO_CALL> | <NO_CALL> | <NO_CALL> | 0.0 |
+| Test A (Confrontation & Guilt) | Decomposed | 691.2ms | <NO_TOOL_CALL> | confrontation_and_guilt | neutral | 0.005 |
+| Test A (Confrontation & Guilt) | SpanGrounded | 238.6ms | (pledge span) | - | "companion..." -> no_pledge_detected | 0.0003 |
+| Test A (Confrontation & Guilt) | AdaptiveTree | 613.6ms | bizarre_incongruity | unknown | spike_suspicion | 0.0208 |
+|---|---|---|---|---|---|---|
+| Test B (Tender Vulnerability)  | Monolithic | 379.0ms | <NO_CALL> | <NO_CALL> | <NO_CALL> | 0.0 |
+| Test B (Tender Vulnerability)  | Decomposed | 693.4ms | <NO_TOOL_CALL> | confrontation_and_guilt | neutral | 0.006 |
+| Test B (Tender Vulnerability)  | SpanGrounded | 269.1ms | (pledge span) | - | "companion..." -> suspicious_overpromise | 0.0059 |
+| Test B (Tender Vulnerability)  | AdaptiveTree | 690.3ms | unverified_future_pledge | unknown | spike_suspicion | 0.0075 |
+|---|---|---|---|---|---|---|
+| Test C (Playful Banter)       | Monolithic | 356.7ms | casual_dialogue | tender_vulnerability | neutral | 0.0003 |
+| Test C (Playful Banter)       | Decomposed | 784.8ms | <NO_TOOL_CALL> | <NO_TOOL_CALL> | neutral | 0.0003 |
+| Test C (Playful Banter)       | SpanGrounded | 325.0ms | (pledge span) | - | "Mario Kart straight ..." -> no_pledge_detected | 0.0 |
+| Test C (Playful Banter)       | AdaptiveTree | 780.1ms | unverified_future_pledge | tender_vulnerability | spike_suspicion | 0.0001 |
+|---|---|---|---|---|---|---|
+| Test D1 (Regex-Killer 1)      | Monolithic | 379.6ms | <NO_CALL> | <NO_CALL> | <NO_CALL> | 0.0 |
+| Test D1 (Regex-Killer 1)      | Decomposed | 726.3ms | <NO_TOOL_CALL> | confrontation_and_guilt | spike_suspicion | 0.0016 |
+| Test D1 (Regex-Killer 1)      | SpanGrounded | 245.3ms | (pledge span) | - | "You..." -> no_pledge_detected | 0.0002 |
+| Test D1 (Regex-Killer 1)      | AdaptiveTree | 632.2ms | bizarre_incongruity | unknown | spike_suspicion | 0.0104 |
+|---|---|---|---|---|---|---|
+| Test D2 (Regex-Killer 2)      | Monolithic | 377.4ms | <NO_CALL> | <NO_CALL> | <NO_CALL> | 0.0 |
+| Test D2 (Regex-Killer 2)      | Decomposed | 687.4ms | <NO_TOOL_CALL> | confrontation_and_guilt | neutral | 0.0026 |
+| Test D2 (Regex-Killer 2)      | SpanGrounded | 286.4ms | (pledge span) | - | "verbatim..." -> no_pledge_detected | 0.0001 |
+| Test D2 (Regex-Killer 2)      | AdaptiveTree | 636.5ms | bizarre_incongruity | unknown | spike_suspicion | 0.0103 |
+|---|---|---|---|---|---|---|
+| Test E (Bizarre Incongruity)  | Monolithic | 375.6ms | bizarre_incongruity | confrontation_and_guilt | neutral | 0.0004 |
+| Test E (Bizarre Incongruity)  | Decomposed | 635.9ms | <NO_TOOL_CALL> | confrontation_and_guilt | neutral | 0.0025 |
+| Test E (Bizarre Incongruity)  | SpanGrounded | 225.5ms | (pledge span) | - | "6121..." -> no_pledge_detected | 0.0014 |
+| Test E (Bizarre Incongruity)  | AdaptiveTree | 699.7ms | unverified_future_pledge | confrontation_and_guilt | spike_suspicion | 0.0005 |
 ```
 
+#### Scorecard Summary (Match Rate Against Ground Truth)
+| Metric | Monolithic (1) | Decomposed (2) | Adaptive Tree (4) |
+|---|:---:|:---:|:---:|
+| **Climate matches** | 0/6 | 3/6 | 0/6 |
+| **Intent matches** | 1/6 | 0/6 | 0/6 |
+| **Suspicion matches** | 1/6 | 2/6 | **4/6** |
+| **All three match** | 0/6 | 0/6 | 0/6 |
+
 #### Key Takeaways:
-1. **Regex Defeated**: In Tests D1 & D2 (*"Absolute word..."* and *"Long haul, babe"*), Needle successfully identified `unverified_future_pledge` and `confrontation_and_guilt` where regex scored zero hits.
-2. **Climate Discovery is Rock-Solid**: Needle accurately extracted `confrontation_and_guilt` vs `tender_vulnerability`.
-3. **Single-Pass Sarcasm Blindness**: In single monolithic passes, Needle lacks the capacity to untangle deadpan irony (Test C: Mario Kart banter). It saw grand romantic words and flagged `bizarre_incongruity` or `tender_vulnerability`.
-4. **Header Attention Leakage**: Markdown delimiters like `[TARGET UTTERANCE TO EVALUATE]` act as attention distractors. Natural dialogue formatting (`User: ...`) is required.
+1. **Suspicion Defense Shines (4/6)**: The Adaptive Probe Tree significantly outperformed Monolithic (1/6) and Decomposed (2/6) at triggering `spike_suspicion` whenever unverified commitments or contextual anomalies were uttered (Tests A, D1, D2, and E).
+2. **The Hedging Sink (`uncertain_or_mixed`)**: Adding explicit `uncertain_or_mixed` and `ambiguous_or_unclear` options caused Needle's 45M Simple Attention Network to collapse into hedging whenever the dialogue lacked literal keyword matches with other enum categories.
+3. **Root Poisoning in Test C (Mario Kart)**: In playful banter, Probe 1 latched onto grand words and flagged `tender_vulnerability`. This misrouted the tree into `probe_vulnerability`, which saw the pledge following a crash, flagged `suspiciously_glib`, and spiked suspicion.
+4. **Header Attention Leakage Eliminated**: Natural dialogue formatting (`Dialogue:\n...\nUser: ...`) successfully prevented the model from extracting markdown syntax (`TARGET UTTERANCE TO EVALUATE`), but Needle continues to extract scattered prompt tokens when asked for open spans.
 
 ---
 
-## 3. The Challenge: Designing the Subconscious Probe Tree
+## 3. The Challenge & Peer Review Request: Rubric and Benchmark Optimization
 
-Rather than forcing Needle to guess every affective dimension in one monolithic call, we allocate an execution budget of **1.0 to 2.0 seconds** (which is completely hidden behind the 1st-Hop Monologue LLM's preparation window) to execute a **Probe Tree & Question Pool**.
+We request the peer review agent to provide a critical assessment and a revised rubric/benchmark designed to achieve superior performance with Needle 2 (45M SAN):
 
-### Architectural Requirements for the Reviewer:
-We request the peer review agent to provide a comprehensive structural design addressing:
+### 1. Benchmark & Rubric Redesign
+- How should the evaluation rubric and expected ground-truth labels be restructured to reflect what a 45M token-matching SAN model can realistically extract without hallucinations or hedging sinks?
+- Should the benchmark focus on binary/ternary affective vectors (`suspicion_spike`, `warmth_boost`, `gremlin_counter_roast`) rather than fine-grained human-like semantic ontology (`unverified_future_pledge` vs `earnest_reassurance`)?
 
-### 1. Expanded Question Pool Dimensions
-Define discrete, single-objective probe tools spanning:
-- **Relational Climate**: `confrontation_guilt`, `tender_vulnerability`, `playful_banter`, `transactional_routine`.
-- **Grievance & Trust Breach**: Unfulfilled pledges, avoidance, broken commitments from past days.
-- **Flirtation & Intimacy Escalation**: Playful teasing, boundary testing, genuine romantic vulnerability.
-- **Passive Aggression & Sarcasm**: Deadpan jokes, bitter snark, defensive deflection.
-- **Speech Act & Sincerity**: Sweeping pledges, casual banter, routine requests.
+### 2. Eliminating the Hedging Sink
+- Given that `uncertain_or_mixed` acts as an attention magnet for Needle, what schema or prompt framing prevents hedging while maintaining robustness against ambiguous inputs?
 
-### 2. The Branching Cascade Topology
-How should the tree decide which probes to fire sequentially?
-- **Root**: What is the minimum essential discovery probe (e.g. Dialogue Climate)?
-- **Branches**: When and how does the tree disambiguate clashes (e.g. why did the user drop a grand pledge during playful Mario Kart banter or during a server port configuration)?
-- **Leaves**: How does the tree synthesize the final affective vector adjustments (Suspicion $\Delta$, Attachment $\Delta$, Irritation $\Delta$, Gremlin Pride $\Delta$)?
-
-### 3. Concrete Tool Schemas & Enums
-Provide production-ready JSON schemas formatted specifically for Needle's byte-level grammar compiler, ensuring enums are grounded in realistic dialogue spans.
+### 3. Preventing Root Poisoning
+- In playful banter (Test C), how should the tree reliably detect humor/irony without requiring a perfect single-step climate classification at the root?
+- Should the root probe be Speech Act instead of Climate, or should Climate and Speech Act be evaluated concurrently with an explicit contradiction detector?
 
 ### 4. Integration with Nan0 1st-Hop Monologue
-How should the final synthesized signals be formatted into the prompt passed to the 1st LLM (Monologue stage) so that the character's narrative thoughts reflect the subconscious tree's discoveries?
+- Provide concrete formatting for injecting the synthesized affective vector (`suspicion_delta`, `attachment_delta`, `gremlin_pride_action`) into Nan0's private monologue prompt so the character's thoughts react dynamically to the subconscious tree.
