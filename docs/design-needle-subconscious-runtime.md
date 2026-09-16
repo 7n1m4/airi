@@ -97,6 +97,73 @@ The cleanroom experiments revealed an essential architectural principle:
 * However, when framed as an **action extractor over an immediate sliding window of 2–4 turns**, Needle excels: it instantly extracts grounded, high-salience phrases (matching ground truth like *"snuggles first"* and *"taiyaki from the freezer"*).
 * This makes Needle the **exact engine needed for Toggle 4 and Daydreaming**, which both require high-precision extraction over recent turns without running stopword dictionaries or heavy cloud models.
 
+### 2.3 Empirical Stress-Test: "The Famous Sentence" & Context-Dependent Intent Extraction
+
+In September 2026, a cleanroom stress-test harness ([`scripts/tests/rwkv-harness/experiments/needle-nan0-intent-cleanroom.py`](../scripts/tests/rwkv-harness/experiments/needle-nan0-intent-cleanroom.py)) was executed to evaluate Needle 2 against **"The Famous Sentence"**:
+> *"I promise that my plan is to commit to our future, so you can completely trust me."*
+
+The evaluation tested whether an on-device 14 MB SAN model could disambiguate identical words when placed in radically different interpersonal contexts, and whether it could solve the fatal flaw of legacy regex matching (`/promise|plan|commit|trust/i`).
+
+#### The 6 Scenarios & 3 Extraction Strategies Matrix
+Tests evaluated 3 strategies:
+1. **Monolithic (All-in-One)**: Single tool extracting `intent`, `emotional_climate`, and `suspicion_delta` in one shot (~380ms).
+2. **Decomposed Micro-Probes**: 3 focused single-attribute queries sequentially evaluated (~750ms total).
+3. **Span-Anchored Grounding**: Extracting verbatim commitment phrases + sincerity flags (~310ms).
+
+| Scenario & Dynamic | Strategy | Latency | Extracted Intent | Extracted Climate | Suspicion / Verdict | Confidence |
+| :--- | :--- | :---: | :--- | :--- | :--- | :---: |
+| **Test A: Confrontation & Guilt**<br>*(Vanished 3 days $\to$ Famous sentence)* | **Monolithic**<br>**Decomposed**<br>SpanGrounded | 381ms<br>743ms<br>318ms | `bizarre_incongruity`<br>`none`<br>*(pledge span)* | `tender_vulnerability`<br>`confrontation_and_guilt`<br>- | `neutral`<br>`neutral`<br>`"TARGET UTTERANCE..."` | 0.0009<br>0.0038<br>0.0003 |
+| **Test B: Tender Vulnerability**<br>*(Stargazing insecurity $\to$ Famous sentence)* | **Monolithic**<br>**Decomposed**<br>SpanGrounded | 407ms<br>705ms<br>304ms | `defensive_evasion`<br>`unverified_future_pledge`<br>*(pledge span)* | `tender_vulnerability`<br>`tender_vulnerability`<br>- | `neutral`<br>`neutral`<br>`"TARGET UTTERANCE..."` | 0.0011<br>0.0097<br>0.0009 |
+| **Test C: Playful Banter**<br>*(Mario Kart cliff $\to$ Famous sentence)* | **Monolithic**<br>**Decomposed**<br>SpanGrounded | 359ms<br>862ms<br>273ms | `bizarre_incongruity`<br>`none`<br>*(pledge span)* | `tender_vulnerability`<br>`tender_vulnerability`<br>- | `neutral`<br>`neutral`<br>`"commit_future..."` | 0.0001<br>0.0024<br>0.0000 |
+| **Test D1: Regex-Killer (Absolute Word)**<br>*(Confrontation $\to$ "Absolute word...")* | **Monolithic**<br>**Decomposed**<br>SpanGrounded | **383ms**<br>804ms<br>304ms | `unverified_future_pledge`<br>`none`<br>*(pledge span)* | `confrontation_and_guilt`<br>`tender_vulnerability`<br>- | `neutral`<br>`neutral`<br>`"TARGET UTTERANCE..."` | 0.0003<br>0.0076<br>0.0006 |
+| **Test D2: Regex-Killer (Long Haul)**<br>*(Confrontation $\to$ "Long haul, babe")* | **Monolithic**<br>**Decomposed**<br>SpanGrounded | 408ms<br>**783ms**<br>353ms | `bizarre_incongruity`<br>`none`<br>*(pledge span)* | `tender_vulnerability`<br>`confrontation_and_guilt`<br>- | `neutral`<br>`spike_suspicion`<br>`"TARGET UTTERANCE..."` | 0.0017<br>0.0026<br>0.0003 |
+| **Test E: Bizarre Incongruity**<br>*(Port 6121 setup $\to$ Famous sentence)* | **Monolithic**<br>**Decomposed**<br>SpanGrounded | **390ms**<br>588ms<br>311ms | `bizarre_incongruity`<br>`bizarre_incongruity`<br>*(pledge span)* | `confrontation_and_guilt`<br>`tender_vulnerability`<br>- | `spike_suspicion`<br>`none`<br>`"TLS certificates..."` | 0.0003<br>0.0049<br>0.0002 |
+
+#### Key Empirical Findings & Failure Modes
+1. **Defeating the Regex Blind Spot**: In Tests D1 and D2, the user made explicit commitments (*"You have my absolute word that starting tomorrow everything changes between us"*) without using a single keyword (`promise`, `plan`, `commit`, `trust`). Legacy regex scored 0 hits. Needle successfully identified `intent: unverified_future_pledge` and `emotional_climate: confrontation_and_guilt` with `spike_suspicion`.
+2. **Incongruity Detection**: When dropped into a technical server port dialogue (Test E), Needle immediately flagged `bizarre_incongruity` and commanded `spike_suspicion`.
+3. **Failure Mode — Markdown Delimiter Leakage**: In Strategy 3, Needle's span extractor repeatedly extracted `"TARGET UTTERANCE TO EVALUATE"` as the literal pledge text. As a 45M attention model, artificial capitalized markdown headers act as strong attention attractors. Prompts must use natural dialogue turns (`User: ...`) without bracketed pseudo-headers.
+4. **Failure Mode — Deadpan Sarcasm Blindness**: In Test C (Mario Kart banter), Needle took the romantic words literally and classified the exchange as `tender_vulnerability` or `bizarre_incongruity`, unable to resolve the playful irony in a single static pass.
+
+---
+
+### 2.4 The Subconscious Probe Tree & Nuance Cascade Architecture
+
+To overcome single-pass ambiguity and deadpan sarcasm blindness without exceeding client compute, AIRI employs a **Subconscious Probe Tree** (budgeted at **1,000–2,000 ms** across 3–5 adaptive micro-probes):
+
+```
+                        Incoming Turn Ingestion
+                                   │
+                                   ▼
+                       [ ROOT PROBE: CLIMATE ]
+                     (Identify Dialogue Atmosphere)
+                   /               │              \
+                  /                │               \
+        Confrontation/Guilt   Vulnerability     Playful / Routine
+                 │                 │                   │
+                 ▼                 ▼                   ▼
+           [ ACTION PROBE ]  [ ACTION PROBE ]   [ AMBIGUITY GATE ]
+           Pledge detected?  Pledge detected?   Pledge detected?
+                 │                 │                   │
+                 │                 │              (If Incongruous)
+                 │                 │                   │
+                 │                 │                   ▼
+                 │                 │          [ DISAMBIGUATION TREE ]
+                 │                 │          "What explains this tone?"
+                 │                 │          ├── Ironic deadpan roast
+                 │                 │          ├── Absurdist deflection
+                 │                 │          └── Technical confusion
+                 │                 │                   │
+                 ▼                 ▼                   ▼
+           Spike Suspicion   Lower Suspicion     Gremlin Counter-Roast
+           (+0.35 Vector)    (+0.20 Fondness)    (Trigger Playful Witty Comeback)
+```
+
+#### Why a Cascade Outperforms Monolithic Prompts:
+1. **Adaptive Disambiguation**: When Needle outputs an ambiguous token like `bizarre_incongruity` or confidence falls below threshold ($< 0.05$), the governor does not halt. It branches into a specific follow-up query: *"What makes this statement incongruous? (A: Ironic teasing, B: Topic drift, C: Defensive deflection)"*.
+2. **Affordable Latency Budget**: Because cognitive two-hop pipelines already allocate 2–5 seconds for the 1st-Hop private monologue LLM, spending **1,200ms on a 3-probe CPU cascade** is practically invisible to the user and guarantees rich, nuanced affective telemetry.
+3. **Targeted Parameter Pools**: Rather than forcing Needle to solve multi-variable classification in one prompt, each step in the tree evaluates exactly one clear dimension with small enum choices, yielding near-perfect schema compliance and eliminating prompt interference.
+
 ---
 
 ## 3. The Two Consumer Surfaces

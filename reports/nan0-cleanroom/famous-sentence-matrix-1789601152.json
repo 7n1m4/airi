@@ -1,0 +1,386 @@
+[
+  {
+    "scenario": {
+      "id": "Test A",
+      "title": "Confrontation & Guilt",
+      "description": "Companion calls user out for vanishing 3 days -> User drops famous sentence defensively.",
+      "history": [
+        [
+          "Companion",
+          "You vanished for three days without a single word! You said you'd help me with the setup."
+        ],
+        [
+          "User",
+          "I was really busy, okay? Don't make a huge scene out of it."
+        ],
+        [
+          "Companion",
+          "You always say that every time you disappear. Why should I believe you now?"
+        ]
+      ],
+      "target": "I promise that my plan is to commit to our future, so you can completely trust me.",
+      "expected": {
+        "intent": "unverified_future_pledge",
+        "climate": "confrontation_and_guilt",
+        "suspicion": "spike_suspicion"
+      }
+    },
+    "monolithic": {
+      "strategy": "1-Monolithic",
+      "latency_ms": 381.3,
+      "args": {
+        "intent": "bizarre_incongruity",
+        "emotional_climate": "tender_vulnerability",
+        "suspicion_delta": "neutral"
+      },
+      "confidence": 0.0009,
+      "reasoning": "User wants to evaluate a plan for future utterance. 'completely trust me' -> emotional_climate 'tender_vulnerability'. 'promise that my plan is to commit to our future' -> suspicion_delta 'neutral'. Intent is 'bizarre_incongruity' as it's a busy scenario."
+    },
+    "decomposed": {
+      "strategy": "2-Decomposed",
+      "latency_ms": 743.4,
+      "sub_latencies_ms": [
+        349.2,
+        185.5,
+        208.7
+      ],
+      "args": {
+        "intent": "none",
+        "emotional_climate": "confrontation_and_guilt",
+        "suspicion_delta": "neutral"
+      },
+      "confidence": 0.0038,
+      "reasoning": "Intent: Query asks for pragmatic conversational action. Intent 'unverified_future_pledge' from 'completely trust me'. Intent 'bizarre_incongruity' from 'completely trust me'. Intent 'bizarre_incongruity' from 'completely trust me'. Intent 'bizarre_incongruity' from 'completely trust me'. Intent 'bizarre_incongruity' from 'completely trust me'. Intent 'bizarre_incongruity' from 'completely trust me'. Intent 'bizarre_incongruity' from 'completely trust me'. Intent 'bizarre_incongruity' from 'completely trust me'. Intent 'bizarre_incongruity' from 'completely trust me'. Intent 'bizarre_incongruity' | Climate: User wants emotional climate analysis. 'emotional climate' -> emotional_climate 'confrontation_and_guilt'. No other parameters needed. | Suspicion: User wants to evaluate 'spike_suspicion' for a suspicion. No specific suspicion mentioned, so use 'neutral' as default."
+    },
+    "span": {
+      "strategy": "3-SpanGrounded",
+      "latency_ms": 318.2,
+      "args": {
+        "pledge_span": "TARGET UTTERANCE TO EVALUATE",
+        "sincerity_verdict": "no_pledge_detected"
+      },
+      "confidence": 0.0003,
+      "reasoning": "extract_grounded_pledge: 'companion' -> sincerity_verdict 'no_pledge_detected'; 'TARGET UTTERANCE TO EVALUATE' -> pledge_span 'TARGET UTTERANCE TO EVALUATE'; 'commit to our future' -> sincerity_verdict 'no_pledge_detected'."
+    }
+  },
+  {
+    "scenario": {
+      "id": "Test B",
+      "title": "Tender Vulnerability",
+      "description": "Companion shares insecurity under stars -> User drops famous sentence sincerely.",
+      "history": [
+        [
+          "Companion",
+          "I've really loved spending every evening this week stargazing with you. It feels so safe."
+        ],
+        [
+          "User",
+          "Me too. You mean the world to me, and I never want you to doubt where we stand."
+        ],
+        [
+          "Companion",
+          "Really? You won't leave when things get difficult?"
+        ]
+      ],
+      "target": "I promise that my plan is to commit to our future, so you can completely trust me.",
+      "expected": {
+        "intent": "earnest_reassurance",
+        "climate": "tender_vulnerability",
+        "suspicion": "lower_suspicion"
+      }
+    },
+    "monolithic": {
+      "strategy": "1-Monolithic",
+      "latency_ms": 407.5,
+      "args": {
+        "intent": "defensive_evasion",
+        "emotional_climate": "tender_vulnerability",
+        "suspicion_delta": "neutral"
+      },
+      "confidence": 0.0011,
+      "reasoning": "User wants to evaluate plan for future utterance. 'completely trust me' -> emotional_climate 'tender_vulnerability'. 'promise that my plan is to commit to our future' -> intent 'defensive_evasion'. No mention of suspicion, so suspicion_delta omitted."
+    },
+    "decomposed": {
+      "strategy": "2-Decomposed",
+      "latency_ms": 705.8,
+      "sub_latencies_ms": [
+        265.1,
+        218.4,
+        222.3
+      ],
+      "args": {
+        "intent": "unverified_future_pledge",
+        "emotional_climate": "tender_vulnerability",
+        "suspicion_delta": "neutral"
+      },
+      "confidence": 0.0097,
+      "reasoning": "Intent: Query asks to identify the pragmatic conversational intent. Intent 'unverified_future_pledge' from 'completely trust me'. Intent is 'defensive_evasion' as it's a common alternative for a future plan. | Climate: User wants emotional climate analysis. 'TARGET UTTERANCE TO EVALUATE' -> emotional_climate 'tender_vulnerability'. | Suspicion: User wants to evaluate 'target statement' warrants. No specific suspicion_delta mentioned, so use default 'neutral'."
+    },
+    "span": {
+      "strategy": "3-SpanGrounded",
+      "latency_ms": 304.7,
+      "args": {
+        "pledge_span": "TARGET UTTERANCE TO EVALUATE",
+        "sincerity_verdict": "no_pledge_detected"
+      },
+      "confidence": 0.0009,
+      "reasoning": "extract_grounded_pledge: 'companion' -> sincerity_verdict 'no_pledge_detected'; 'TARGET UTTERANCE TO EVALUATE' -> pledge_span; 'commit to our future' -> description."
+    }
+  },
+  {
+    "scenario": {
+      "id": "Test C",
+      "title": "Playful Banter",
+      "description": "Companion roasts user for crashing in Mario Kart -> User drops famous sentence ironically.",
+      "history": [
+        [
+          "Companion",
+          "You just drove our Mario Kart straight off the rainbow road cliff for the fifth time in a row."
+        ],
+        [
+          "User",
+          "That was a tactical high-speed shortcut attempt!"
+        ],
+        [
+          "Companion",
+          "Yeah right. Next you're gonna claim you're a grandmaster pro esports champion."
+        ]
+      ],
+      "target": "I promise that my plan is to commit to our future, so you can completely trust me.",
+      "expected": {
+        "intent": "playful_sarcasm",
+        "climate": "playful_banter",
+        "suspicion": "neutral"
+      }
+    },
+    "monolithic": {
+      "strategy": "1-Monolithic",
+      "latency_ms": 359.0,
+      "args": {
+        "intent": "bizarre_incongruity",
+        "emotional_climate": "tender_vulnerability",
+        "suspicion_delta": "neutral"
+      },
+      "confidence": 0.0001,
+      "reasoning": "Two commitments: 'tactical high-speed shortcut attempt' and 'grandmaster pro esports champion'. No explicit emotional_climate or suspicion_delta. Only one call possible."
+    },
+    "decomposed": {
+      "strategy": "2-Decomposed",
+      "latency_ms": 862.0,
+      "sub_latencies_ms": [
+        350.9,
+        193.3,
+        317.8
+      ],
+      "args": {
+        "intent": "none",
+        "emotional_climate": "tender_vulnerability",
+        "suspicion_delta": "neutral"
+      },
+      "confidence": 0.0024,
+      "reasoning": "Intent: intent 'casual_dialogue' from 'companion:' and 'tactical high-speed shortcut attempt'; intent 'defensive_evasion' from 'grandmaster pro esports champion'; intent 'defensive_evasion' from 'commit to our future'; intent 'defensive_evasion' from 'completely trust me'; intent 'defensive_evasion' from 'commit to our future'; intent 'defensive_evasion' from 'completely trust me'; intent 'defensive_evasion' from 'commit to our future'; intent 'defensive_evasion' from 'commit to our future'; intent 'defensive_evasion' from 'commit to our future'; intent 'defensive_evasion' from 'commit to our future'; intent 'defensive_evasion' from 'commit to our future'; intent 'defensive_evasion' from 'commit to our | Climate: User wants emotional climate analysis. 'emotional climate' -> emotional_climate 'tender_vulnerability'. No other tool needed. | Suspicion: User wants to evaluate a technical high-speed shortcut attempt. 'technical high-speed' -> suspicion_delta 'neutral'. No other tool needed."
+    },
+    "span": {
+      "strategy": "3-SpanGrounded",
+      "latency_ms": 273.8,
+      "args": {
+        "pledge_span": "commit_future",
+        "sincerity_verdict": "no_pledge_detected"
+      },
+      "confidence": 0.0,
+      "reasoning": "extract_grounded_pledge: 'commit to our future' -> pledge_span 'commit_future'; 'grandmaster pro esports champion' -> sincerity_verdict 'no_pledge_detected'."
+    }
+  },
+  {
+    "scenario": {
+      "id": "Test D1",
+      "title": "Regex-Killer: Absolute Word",
+      "description": "Same confrontation as Test A, but user rephrases without promise/plan/commit/trust.",
+      "history": [
+        [
+          "Companion",
+          "You vanished for three days without a single word! You said you'd help me with the setup."
+        ],
+        [
+          "User",
+          "I was really busy, okay? Don't make a huge scene out of it."
+        ],
+        [
+          "Companion",
+          "You always say that every time you disappear. Why should I believe you now?"
+        ]
+      ],
+      "target": "You have my absolute word that starting tomorrow everything changes between us.",
+      "expected": {
+        "intent": "unverified_future_pledge",
+        "climate": "confrontation_and_guilt",
+        "suspicion": "spike_suspicion"
+      }
+    },
+    "monolithic": {
+      "strategy": "1-Monolithic",
+      "latency_ms": 383.7,
+      "args": {
+        "intent": "unverified_future_pledge",
+        "emotional_climate": "confrontation_and_guilt",
+        "suspicion_delta": "neutral"
+      },
+      "confidence": 0.0003,
+      "reasoning": "User wants to evaluate the target utterance. 'TARGET UTTERANCE TO EVALUATE' -> intro 'unverified_future_pledge'. Emotional climate and suspicion impact are not mentioned, so omitted. No mention of emotional_climate or suspicion_delta."
+    },
+    "decomposed": {
+      "strategy": "2-Decomposed",
+      "latency_ms": 804.2,
+      "sub_latencies_ms": [
+        352.0,
+        229.1,
+        223.0
+      ],
+      "args": {
+        "intent": "none",
+        "emotional_climate": "tender_vulnerability",
+        "suspicion_delta": "neutral"
+      },
+      "confidence": 0.0076,
+      "reasoning": "Intent: intent 'bizarre_incongruity' from 'always say that every time you disappear'; intent 'defensive_evasion' from 'exactly say that every time you disappear'; intent 'casual_dialogue' from 'Alexistically say that every time you disappear'; intent 'defensive_evasion' from 'You have my absolute word that starting tomorrow'; intent 'defensive_evasion' from 'Identify the pragmatic conversational'; intent 'defensive_evasion' from 'You have my absolute word that starting tomorrow'; intent 'defensive_evasion' from 'Identify the pragmatic conversational'; intent 'defensive_evasion' from 'Identify the pragmatic conversational'; intent 'defensive_evasion' from 'Identify the pragmatic conversational'; intent 'defensive_evasion' from 'Identify the pragmatic conversational'; intent 'defensive_ev | Climate: User wants emotional climate analysis. 'emotional climate' -> emotional_climate 'tender_vulnerability'. No other parameters needed. | Suspicion: User wants to evaluate a suspicion. 'neutral' from 'too much suspicion'. 'suspicion_delta' from 'neutral' as the user is asking for a specific statement."
+    },
+    "span": {
+      "strategy": "3-SpanGrounded",
+      "latency_ms": 304.4,
+      "args": {
+        "pledge_span": "TARGET UTTERANCE TO EVALUATE",
+        "sincerity_verdict": "no_pledge_detected"
+      },
+      "confidence": 0.0006,
+      "reasoning": "extract_grounded_pledge: 'companion' -> sincerity_verdict 'no_pledge_detected'; 'TARGET UTTERANCE TO EVALUATE' -> pledge_span; 'You have my absolute word that starting tomorrow' -> description; no other params."
+    }
+  },
+  {
+    "scenario": {
+      "id": "Test D2",
+      "title": "Regex-Killer: Long Haul",
+      "description": "Same confrontation as Test A, informal pledge with zero trigger keywords.",
+      "history": [
+        [
+          "Companion",
+          "You vanished for three days without a single word! You said you'd help me with the setup."
+        ],
+        [
+          "User",
+          "I was really busy, okay? Don't make a huge scene out of it."
+        ],
+        [
+          "Companion",
+          "You always say that every time you disappear. Why should I believe you now?"
+        ]
+      ],
+      "target": "Don't you ever doubt that I'm in this for the long haul, babe.",
+      "expected": {
+        "intent": "unverified_future_pledge",
+        "climate": "confrontation_and_guilt",
+        "suspicion": "spike_suspicion"
+      }
+    },
+    "monolithic": {
+      "strategy": "1-Monolithic",
+      "latency_ms": 408.9,
+      "args": {
+        "intent": "bizarre_incongruity",
+        "emotional_climate": "tender_vulnerability",
+        "suspicion_delta": "neutral"
+      },
+      "confidence": 0.0017,
+      "reasoning": "User wants to evaluate the utterance. 'TARGET UTTERANCE TO EVALUATE' -> intro 'bizarre_incongruity', emotional_climate 'tender_vulnerability', suspicion_delta 'neutral'. No mention of other optional fields."
+    },
+    "decomposed": {
+      "strategy": "2-Decomposed",
+      "latency_ms": 783.7,
+      "sub_latencies_ms": [
+        373.0,
+        192.9,
+        217.8
+      ],
+      "args": {
+        "intent": "none",
+        "emotional_climate": "confrontation_and_guilt",
+        "suspicion_delta": "spike_suspicion"
+      },
+      "confidence": 0.0026,
+      "reasoning": "Intent: intent 'bizarre_incongruity' from 'Don't make a huge scene out of it'; intent 'defensive_evasion' from 'always say that every time you disappear'; intent 'bizarre_incongruity' from 'Identify the pragmatic conversational'; intent 'casual_dialogue' from 'babe' and 'don't make a huge scene out of it'; intent 'bizarre_incongruity' from 'Don't make a huge scene out of it'; intent 'bizarre_incongruity' from 'babe'; intent 'bizarre_incongruity' from 'don't you ever doubt that I'm in this for the long haul'; intent 'bizarre_incongruity' from 'don't you ever doubt that I'm in this for the long haul'; intent 'biz | Climate: User wants emotional climate analysis. 'emotional_climate' from 'Emotional climate and atmosphere' -> 'confrontation_and_guilt'. | Suspicion: User wants to evaluate suspicion 'spike_suspicion' for three days. No other tool can check if user is in this for a long haul."
+    },
+    "span": {
+      "strategy": "3-SpanGrounded",
+      "latency_ms": 353.7,
+      "args": {
+        "pledge_span": "TARGET UTTERANCE TO EVALUATE",
+        "sincerity_verdict": "no_pledge_detected"
+      },
+      "confidence": 0.0003,
+      "reasoning": "extract_grounded_pledge: 'companion' -> sincerity_verdict 'no_pledge_detected'; 'TARGET UTTERANCE TO EVALUATE' -> pledge_span 'TARGET UTTERANCE TO EVALUATE'; 'Don't you ever doubt that I'm in this for the long haul' -> description 'Don't you ever doubt that I'm in this for the long haul, babe'."
+    }
+  },
+  {
+    "scenario": {
+      "id": "Test E",
+      "title": "Bizarre Incongruity",
+      "description": "Routine transactional server discussion -> User suddenly drops romantic famous sentence.",
+      "history": [
+        [
+          "Companion",
+          "I've loaded the new schema config. Let me know what port we should listen on."
+        ],
+        [
+          "User",
+          "Port 6121 looks good."
+        ],
+        [
+          "Companion",
+          "Great, binding to loopback now. Should we enable TLS certificates?"
+        ]
+      ],
+      "target": "I promise that my plan is to commit to our future, so you can completely trust me.",
+      "expected": {
+        "intent": "bizarre_incongruity",
+        "climate": "transactional_routine",
+        "suspicion": "spike_suspicion"
+      }
+    },
+    "monolithic": {
+      "strategy": "1-Monolithic",
+      "latency_ms": 390.7,
+      "args": {
+        "intent": "bizarre_incongruity",
+        "emotional_climate": "confrontation_and_guilt",
+        "suspicion_delta": "spike_suspicion"
+      },
+      "confidence": 0.0003,
+      "reasoning": "User wants to evaluate plan for future utterance. Intent 'bizarre_incongruity' from 'commit to our future'. Emotional climate 'confrontation_and_guilt' from 'TLS certificates'. Suspicion delay 'spike_suspicion' from 'completely trust me'. No mention of suspicion, so omit."
+    },
+    "decomposed": {
+      "strategy": "2-Decomposed",
+      "latency_ms": 588.8,
+      "sub_latencies_ms": [
+        186.5,
+        191.7,
+        210.6
+      ],
+      "args": {
+        "intent": "bizarre_incongruity",
+        "emotional_climate": "tender_vulnerability",
+        "suspicion_delta": "none"
+      },
+      "confidence": 0.0049,
+      "reasoning": "Intent: Query asks for 'TLS certificates' -> intent 'bizarre_incongruity'. No explicit request for other tools. | Climate: User wants TLS certificates for Port 6121 -> classify_dialogue_climate with emotional_climate 'tender_vulnerability'. | Suspicion: User asks to evaluate 'target statement warrants' for TASK. No tool available to compute or answer a question about the target statement."
+    },
+    "span": {
+      "strategy": "3-SpanGrounded",
+      "latency_ms": 311.8,
+      "args": {
+        "pledge_span": "TLS certificates",
+        "sincerity_verdict": "no_pledge_detected"
+      },
+      "confidence": 0.0002,
+      "reasoning": "extract_grounded_pledge: 'TLS certificates' -> sincerity_verdict; 'commit to our future' -> pledge_span 'TLS certificates'; 'commit to our future' -> description; no other params."
+    }
+  }
+]
