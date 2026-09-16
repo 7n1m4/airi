@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { useFreeAICatalogStore } from '@proj-airi/stage-ui/stores'
+import { useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const catalogStore = useFreeAICatalogStore()
 const {
@@ -22,6 +23,164 @@ const {
   filteredModels,
   selectedModelDetail,
 } = storeToRefs(catalogStore)
+
+// Persistent test API keys by platform (e.g. { navy: '...', groq: '...' })
+const savedApiKeys = useLocalStorage<Record<string, string>>('settings/free-hub/test-api-keys', {})
+const customBaseUrl = ref('')
+const showApiKey = ref(false)
+const showReasoning = ref(false)
+const isTesting = ref(false)
+
+interface TestResult {
+  success: boolean
+  status: number
+  latencyMs: number
+  content?: string
+  reasoningContent?: string
+  hasReasoning?: boolean
+  modelReported?: string
+  tokensUsage?: {
+    prompt_tokens?: number
+    completion_tokens?: number
+    total_tokens?: number
+  }
+  error?: string
+}
+
+const testResult = ref<TestResult | null>(null)
+
+// Current model's API key
+const currentApiKey = computed({
+  get: () => {
+    if (!selectedModelDetail.value)
+      return ''
+    return savedApiKeys.value[selectedModelDetail.value.platform.toLowerCase()] || ''
+  },
+  set: (val: string) => {
+    if (!selectedModelDetail.value)
+      return
+    savedApiKeys.value[selectedModelDetail.value.platform.toLowerCase()] = val
+  },
+})
+
+// Sync customBaseUrl whenever selected model changes
+watch(
+  () => selectedModelDetail.value?.id,
+  () => {
+    if (selectedModelDetail.value) {
+      customBaseUrl.value = selectedModelDetail.value.platformBaseUrl || ''
+      testResult.value = null
+      showReasoning.value = false
+    }
+  },
+  { immediate: true },
+)
+
+function resetBaseUrl() {
+  if (selectedModelDetail.value) {
+    customBaseUrl.value = selectedModelDetail.value.platformBaseUrl || ''
+  }
+}
+
+async function pasteApiKey() {
+  try {
+    const text = await navigator.clipboard.readText()
+    if (text) {
+      currentApiKey.value = text.trim()
+    }
+  }
+  catch (e) {
+    console.warn('[FreeHub] Clipboard read failed:', e)
+  }
+}
+
+async function runTestProbe() {
+  if (!selectedModelDetail.value || isTesting.value)
+    return
+  isTesting.value = true
+  testResult.value = null
+  showReasoning.value = false
+  const startTime = performance.now()
+
+  const rawBase = customBaseUrl.value.trim() || selectedModelDetail.value.platformBaseUrl || ''
+  const baseUrl = rawBase.replace(/\/+$/, '')
+  const endpoint = `${baseUrl}/chat/completions`
+  const key = currentApiKey.value.trim()
+
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    }
+    if (key) {
+      headers.Authorization = `Bearer ${key}`
+    }
+
+    const payload = {
+      model: selectedModelDetail.value.modelId,
+      messages: [
+        {
+          role: 'user',
+          content: 'Respond with "Hello from [your model name]" in under 10 words.',
+        },
+      ],
+      max_tokens: 60,
+      temperature: 0.2,
+    }
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload),
+    })
+
+    const latencyMs = Math.round(performance.now() - startTime)
+    const data = await res.json().catch(() => null)
+
+    if (!res.ok) {
+      const errorMsg = data?.error?.message || data?.message || res.statusText || `HTTP ${res.status}`
+      testResult.value = {
+        success: false,
+        status: res.status,
+        latencyMs,
+        error: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg),
+      }
+      return
+    }
+
+    const choice = data?.choices?.[0]
+    const message = choice?.message || {}
+    const rawContent = (typeof message.content === 'string' ? message.content : '').trim()
+    const rawReasoning = (typeof message.reasoning_content === 'string' ? message.reasoning_content : '').trim()
+
+    // Detect <think>...</think> tags if reasoning was embedded in content
+    const thinkMatch = rawContent.match(/<think>([\s\S]*?)<\/think>/i)
+    const extractedReasoning = rawReasoning || (thinkMatch ? thinkMatch[1].trim() : '')
+    const cleanContent = thinkMatch ? rawContent.replace(/<think>[\s\S]*?<\/think>/i, '').trim() : rawContent
+
+    testResult.value = {
+      success: true,
+      status: 200,
+      latencyMs,
+      content: cleanContent || rawContent || '(Model returned an empty text response)',
+      hasReasoning: Boolean(extractedReasoning),
+      reasoningContent: extractedReasoning,
+      modelReported: data?.model || selectedModelDetail.value.modelId,
+      tokensUsage: data?.usage,
+    }
+  }
+  catch (err: any) {
+    const latencyMs = Math.round(performance.now() - startTime)
+    testResult.value = {
+      success: false,
+      status: 0,
+      latencyMs,
+      error: err?.message || 'Network error or CORS restriction reaching endpoint',
+    }
+  }
+  finally {
+    isTesting.value = false
+  }
+}
 
 function formatNumber(num: number | null | undefined): string {
   if (num === null || num === undefined)
@@ -627,41 +786,227 @@ const activeFiltersCount = computed(() => {
 
         <!-- Slide Drawer Panel -->
         <div class="fixed inset-y-0 right-0 max-w-full flex pl-10">
-          <div class="max-w-md w-screen flex flex-col justify-between border-l border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
+          <div class="max-w-lg w-screen flex flex-col justify-between border-l border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
             <!-- Drawer Header -->
-            <div class="flex items-start justify-between border-b border-neutral-200/80 p-6 dark:border-neutral-800">
-              <div class="flex flex-col gap-1">
-                <div class="flex items-center gap-2">
-                  <span class="rounded bg-primary-500/15 px-2 py-0.5 text-xs text-primary-700 font-semibold dark:text-primary-300">
-                    {{ selectedModelDetail.platformDisplayName }}
-                  </span>
-                  <span
-                    v-if="selectedModelDetail.sizeLabel"
-                    class="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-600 font-bold uppercase dark:bg-neutral-800 dark:text-neutral-400"
-                  >
-                    {{ selectedModelDetail.sizeLabel }}
-                  </span>
+            <div class="flex flex-col gap-3 border-b border-neutral-200/80 p-5 dark:border-neutral-800">
+              <div class="flex items-start justify-between">
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center gap-2">
+                    <span class="rounded bg-primary-500/15 px-2 py-0.5 text-xs text-primary-700 font-semibold dark:text-primary-300">
+                      {{ selectedModelDetail.platformDisplayName }}
+                    </span>
+                    <span
+                      v-if="selectedModelDetail.sizeLabel"
+                      class="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-600 font-bold uppercase dark:bg-neutral-800 dark:text-neutral-400"
+                    >
+                      {{ selectedModelDetail.sizeLabel }}
+                    </span>
+                  </div>
+                  <h2 class="mt-1 text-lg text-neutral-900 font-bold dark:text-neutral-100">
+                    {{ selectedModelDetail.displayName }}
+                  </h2>
+                  <code class="text-xs text-neutral-400 font-mono">
+                    {{ selectedModelDetail.modelId }}
+                  </code>
                 </div>
-                <h2 class="mt-1 text-lg text-neutral-900 font-bold dark:text-neutral-100">
-                  {{ selectedModelDetail.displayName }}
-                </h2>
-                <code class="text-xs text-neutral-400 font-mono">
-                  {{ selectedModelDetail.modelId }}
-                </code>
+
+                <button
+                  type="button"
+                  class="rounded-xl p-2 text-neutral-400 transition-all hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                  @click="catalogStore.selectModel(null)"
+                >
+                  <div class="i-solar:close-circle-linear text-xl" />
+                </button>
               </div>
 
-              <button
-                type="button"
-                class="rounded-xl p-2 text-neutral-400 transition-all hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-                @click="catalogStore.selectModel(null)"
+              <!-- Quick Platform & API Key Link -->
+              <a
+                :href="selectedModelDetail.platformSignupUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="flex items-center justify-between border border-primary-500/25 rounded-xl bg-primary-500/10 px-3.5 py-2.5 text-xs text-primary-700 font-medium transition-all dark:border-primary-500/30 hover:bg-primary-500/15 dark:text-primary-300"
               >
-                <div class="i-solar:close-circle-linear text-xl" />
-              </button>
+                <div class="flex items-center gap-2">
+                  <div class="i-solar:key-minimalistic-square-bold-duotone text-base text-primary-600 dark:text-primary-400" />
+                  <span>Get API Key & Dashboard ({{ selectedModelDetail.platformDisplayName }})</span>
+                </div>
+                <div class="i-solar:arrow-right-up-linear text-sm" />
+              </a>
             </div>
 
             <!-- Drawer Body -->
-            <div class="flex flex-1 flex-col gap-6 overflow-y-auto p-6 text-sm">
-              <!-- Key Capabilities -->
+            <div class="flex flex-1 flex-col gap-6 overflow-y-auto p-5 text-sm">
+              <!-- LIVE MODEL VALIDATOR WORKBENCH -->
+              <div class="flex flex-col gap-3 border border-primary-500/30 rounded-2xl bg-primary-500/5 p-4 dark:border-primary-500/25 dark:bg-primary-500/8">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="i-solar:bolt-circle-bold-duotone text-lg text-primary-500" />
+                    <h4 class="text-xs text-neutral-900 font-bold tracking-wider uppercase dark:text-neutral-100">
+                      Live Endpoint Validator
+                    </h4>
+                  </div>
+                  <span class="rounded bg-primary-500/15 px-1.5 py-0.5 text-[10px] text-primary-700 font-medium dark:text-primary-300">
+                    Ephemeral Test
+                  </span>
+                </div>
+                <p class="text-[11px] text-neutral-500 leading-relaxed dark:text-neutral-400">
+                  Send a lightweight probe prompt directly to this model endpoint to verify keys, response latency, and reasoning capability.
+                </p>
+
+                <!-- Base URL Input -->
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center justify-between text-[11px] text-neutral-500">
+                    <span>Base URL (OpenAI-compatible)</span>
+                    <button
+                      v-if="customBaseUrl !== selectedModelDetail.platformBaseUrl"
+                      type="button"
+                      class="text-primary-600 dark:text-primary-400 hover:underline"
+                      @click="resetBaseUrl"
+                    >
+                      Reset default
+                    </button>
+                  </div>
+                  <input
+                    v-model="customBaseUrl"
+                    type="text"
+                    placeholder="https://..."
+                    class="w-full border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs font-mono transition-all dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 focus:outline-none"
+                  >
+                </div>
+
+                <!-- API Key Input -->
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center justify-between text-[11px] text-neutral-500">
+                    <span>API Key</span>
+                    <span class="text-[10px] text-neutral-400">Saved locally for {{ selectedModelDetail.platformDisplayName }}</span>
+                  </div>
+                  <div class="relative flex items-center">
+                    <input
+                      v-model="currentApiKey"
+                      :type="showApiKey ? 'text' : 'password'"
+                      placeholder="Paste API key (optional for open endpoints)..."
+                      class="w-full border border-neutral-200 rounded-lg bg-white py-1.5 pl-3 pr-16 text-xs font-mono transition-all dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 focus:outline-none"
+                      @keydown.enter="runTestProbe"
+                    >
+                    <div class="absolute right-1.5 flex items-center gap-0.5">
+                      <button
+                        type="button"
+                        class="rounded p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                        :title="showApiKey ? 'Hide Key' : 'Show Key'"
+                        @click="showApiKey = !showApiKey"
+                      >
+                        <div :class="showApiKey ? 'i-solar:eye-closed-linear' : 'i-solar:eye-linear'" class="text-sm" />
+                      </button>
+                      <button
+                        type="button"
+                        class="rounded p-1 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                        title="Paste from clipboard"
+                        @click="pasteApiKey"
+                      >
+                        <div class="i-solar:clipboard-text-linear text-sm" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Test Action Button -->
+                <button
+                  type="button"
+                  :disabled="isTesting"
+                  :class="[
+                    'w-full flex items-center justify-center gap-2 rounded-xl py-2 px-4 text-xs font-semibold text-white shadow-sm transition-all',
+                    isTesting
+                      ? 'bg-primary-400 cursor-not-allowed opacity-80'
+                      : 'bg-primary-600 hover:bg-primary-500 active:scale-[0.99]',
+                  ]"
+                  @click="runTestProbe"
+                >
+                  <div v-if="isTesting" class="i-solar:spinner-linear animate-spin text-base" />
+                  <div v-else class="i-solar:play-bold text-xs" />
+                  <span>{{ isTesting ? 'Sending test prompt...' : 'Test Model Endpoint' }}</span>
+                </button>
+
+                <!-- Live Test Result Output Card -->
+                <div
+                  v-if="testResult"
+                  :class="[
+                    'mt-1 flex flex-col gap-2 rounded-xl border p-3.5 text-xs transition-all',
+                    testResult.success
+                      ? 'border-emerald-500/35 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100'
+                      : 'border-rose-500/35 bg-rose-500/10 text-rose-900 dark:text-rose-100',
+                  ]"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-1.5 font-bold">
+                      <div :class="testResult.success ? 'i-solar:check-circle-bold text-emerald-500' : 'i-solar:close-circle-bold text-rose-500'" class="text-base" />
+                      <span>{{ testResult.success ? '● 200 OK' : (testResult.status ? `HTTP ${testResult.status}` : 'Connection Failed') }}</span>
+                    </div>
+                    <div class="flex items-center gap-2 text-[11px] font-mono opacity-80">
+                      <span>{{ testResult.latencyMs }}ms</span>
+                      <span v-if="testResult.tokensUsage?.total_tokens">· {{ testResult.tokensUsage.total_tokens }} tokens</span>
+                    </div>
+                  </div>
+
+                  <!-- Badges -->
+                  <div v-if="testResult.success" class="flex flex-wrap items-center gap-1.5">
+                    <span
+                      v-if="testResult.hasReasoning"
+                      class="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] text-purple-700 font-bold dark:text-purple-300"
+                    >
+                      🧠 Reasoning Content Detected
+                    </span>
+                    <span
+                      v-else
+                      class="rounded-full bg-neutral-200/60 px-2 py-0.5 text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
+                    >
+                      Standard Text
+                    </span>
+                    <span
+                      v-if="testResult.modelReported"
+                      class="rounded-full bg-neutral-200/60 px-2 py-0.5 text-[10px] text-neutral-600 font-mono dark:bg-neutral-800 dark:text-neutral-400"
+                    >
+                      {{ testResult.modelReported }}
+                    </span>
+                  </div>
+
+                  <!-- Reasoning Collapsible -->
+                  <div v-if="testResult.reasoningContent" class="mt-1 flex flex-col gap-1">
+                    <button
+                      type="button"
+                      class="flex items-center gap-1 text-[11px] text-purple-700 font-semibold dark:text-purple-300 hover:underline"
+                      @click="showReasoning = !showReasoning"
+                    >
+                      <div :class="showReasoning ? 'i-solar:alt-arrow-down-linear' : 'i-solar:alt-arrow-right-linear'" class="text-xs" />
+                      <span>{{ showReasoning ? 'Hide Thinking Process' : 'View Thinking Process' }}</span>
+                    </button>
+                    <pre
+                      v-if="showReasoning"
+                      class="max-h-32 overflow-y-auto whitespace-pre-wrap rounded-lg bg-purple-500/10 p-2 text-[11px] leading-relaxed font-mono"
+                    >{{ testResult.reasoningContent }}</pre>
+                  </div>
+
+                  <!-- Response Content Preview -->
+                  <div v-if="testResult.content" class="mt-1 rounded-lg bg-black/5 p-2 text-[11px] leading-relaxed font-mono dark:bg-white/5">
+                    "{{ testResult.content }}"
+                  </div>
+
+                  <!-- Error Details -->
+                  <div v-if="testResult.error" class="flex flex-col gap-1 text-[11px]">
+                    <span class="font-semibold">{{ testResult.error }}</span>
+                    <span v-if="testResult.status === 401" class="text-neutral-500 dark:text-neutral-400">
+                      Tip: Ensure your API key is correct and has active free tier quota.
+                    </span>
+                    <span v-else-if="testResult.status === 429" class="text-neutral-500 dark:text-neutral-400">
+                      Tip: Rate limit reached. This free endpoint is currently throttled.
+                    </span>
+                    <span v-else-if="testResult.status === 0" class="text-neutral-500 dark:text-neutral-400">
+                      Tip: Direct browser network request failed. In web mode, third-party APIs may block CORS.
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Technical Specifications -->
               <div class="flex flex-col gap-2">
                 <h4 class="text-xs text-neutral-400 font-semibold tracking-wider uppercase">
                   Technical Specifications
@@ -756,19 +1101,18 @@ const activeFiltersCount = computed(() => {
             </div>
 
             <!-- Drawer Footer Action -->
-            <div class="flex flex-col gap-2 border-t border-neutral-200/80 bg-neutral-50/50 p-6 dark:border-neutral-800 dark:bg-neutral-900/50">
+            <div class="flex flex-col gap-2 border-t border-neutral-200/80 bg-neutral-50/50 p-5 dark:border-neutral-800 dark:bg-neutral-900/50">
               <button
-                v-if="selectedModelDetail.platformSignupUrl"
                 type="button"
-                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-500 px-4 py-2.5 text-xs text-white font-semibold shadow-sm transition-all hover:bg-primary-600"
+                class="w-full flex items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-2.5 text-xs text-white font-semibold shadow-sm transition-all hover:bg-primary-500"
                 @click="openExternalUrl(selectedModelDetail.platformSignupUrl)"
               >
-                <span>Get API Key from {{ selectedModelDetail.platformDisplayName }}</span>
+                <span>Visit {{ selectedModelDetail.platformDisplayName }} Dashboard</span>
                 <div class="i-solar:arrow-right-up-linear text-sm" />
               </button>
 
-              <div class="mt-1 text-center text-[11px] text-neutral-400">
-                Phase 1 Preview — Browsing and discovery only. 1-click provider instantiation arriving in Phase 2.
+              <div class="mt-0.5 text-center text-[10px] text-neutral-400">
+                Free AI Hub · Interactive Model Validation Workbench
               </div>
             </div>
           </div>

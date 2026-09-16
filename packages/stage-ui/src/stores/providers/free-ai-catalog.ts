@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import baselineCatalog from '../../assets/free-ai-catalog-baseline.json'
+import bundledPlatforms from '../../assets/free-ai-platforms.json'
 
 export interface RemoteCatalogQuirk {
   slug: string
@@ -37,39 +38,30 @@ export interface RemoteCatalogModel {
   quirks?: RemoteCatalogQuirk[]
 }
 
+export interface FreeAIPlatformMeta {
+  id: string
+  name: string
+  baseUrl: string
+  signupUrl: string
+  keyless?: boolean
+  validateUrl?: string | null
+  extraHeaders?: Record<string, string> | null
+  timeoutMs?: number | null
+  note?: string | null
+}
+
 export interface FreeAICatalogModel extends RemoteCatalogModel {
   id: string
   modality: 'chat' | 'vision' | 'transcription' | 'embedding'
   allQuirks: RemoteCatalogQuirk[]
   platformDisplayName: string
   platformSignupUrl: string
+  platformBaseUrl: string
 }
 
-const KNOWN_PLATFORM_META: Record<string, { name: string, signupUrl: string }> = {
-  google: { name: 'Google AI Studio', signupUrl: 'https://aistudio.google.com/app/apikey' },
-  groq: { name: 'Groq', signupUrl: 'https://console.groq.com/keys' },
-  cerebras: { name: 'Cerebras', signupUrl: 'https://cloud.cerebras.ai' },
-  mistral: { name: 'Mistral AI', signupUrl: 'https://console.mistral.ai/api-keys' },
-  nvidia: { name: 'NVIDIA NIM', signupUrl: 'https://build.nvidia.com' },
-  huggingface: { name: 'HuggingFace', signupUrl: 'https://huggingface.co/settings/tokens' },
-  cloudflare: { name: 'Cloudflare Workers AI', signupUrl: 'https://dash.cloudflare.com' },
-  cohere: { name: 'Cohere', signupUrl: 'https://dashboard.cohere.com/api-keys' },
-  modelscope: { name: 'ModelScope', signupUrl: 'https://modelscope.cn/my/overview' },
-  openrouter: { name: 'OpenRouter', signupUrl: 'https://openrouter.ai/keys' },
-  github: { name: 'GitHub Models', signupUrl: 'https://github.com/settings/tokens' },
-  zhipu: { name: 'Z.ai (Zhipu)', signupUrl: 'https://open.bigmodel.cn' },
-  aihorde: { name: 'AI Horde', signupUrl: 'https://aihorde.net' },
-  opencode: { name: 'OpenCode Zen', signupUrl: 'https://opencode.ai' },
-  sail: { name: 'Sail Research', signupUrl: 'https://sail.ai' },
-  electronhub: { name: 'ElectronHub', signupUrl: 'https://electronhub.top' },
-  experiential: { name: 'Experiential AI', signupUrl: 'https://experiential.ai' },
-  router9: { name: 'Router9', signupUrl: 'https://router9.com' },
-  septor: { name: 'Septor', signupUrl: 'https://septor.net' },
-  clod: { name: 'Clod', signupUrl: 'https://clod.io' },
-  speechify: { name: 'Speechify', signupUrl: 'https://speechify.com' },
-  blaze: { name: 'Blaze', signupUrl: 'https://blaze.ai' },
-  ollama: { name: 'Ollama', signupUrl: 'https://ollama.com' },
-}
+const KNOWN_PLATFORM_META: Record<string, FreeAIPlatformMeta> = bundledPlatforms as unknown as Record<string, FreeAIPlatformMeta>
+
+export { bundledPlatforms }
 
 export const useFreeAICatalogStore = defineStore('free-ai-catalog', () => {
   // Raw parsed baseline catalog
@@ -104,7 +96,8 @@ export const useFreeAICatalogStore = defineStore('free-ai-catalog', () => {
       const platformKey = item.platform.toLowerCase()
       const meta = KNOWN_PLATFORM_META[platformKey] || {
         name: item.platform.charAt(0).toUpperCase() + item.platform.slice(1),
-        signupUrl: '',
+        signupUrl: `https://${platformKey}.ai`,
+        baseUrl: `https://api.${platformKey}.ai/v1`,
       }
 
       // Collect platform-level quirks targeting this platform
@@ -134,7 +127,8 @@ export const useFreeAICatalogStore = defineStore('free-ai-catalog', () => {
         monthlyTokenBudget: item.monthlyTokenBudget || 'Free Tier',
         allQuirks: Array.from(mergedQuirksMap.values()),
         platformDisplayName: meta.name,
-        platformSignupUrl: meta.signupUrl,
+        platformSignupUrl: meta.signupUrl || `https://${platformKey}.ai`,
+        platformBaseUrl: meta.baseUrl || `https://api.${platformKey}.ai/v1`,
       }
     }
 

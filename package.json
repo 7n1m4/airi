@@ -50,6 +50,7 @@
     "test:run": "vitest run",
     "test:mcp-registry": "tsx scripts/tests/test-mcp-registry-health.ts",
     "test:catalog:audit": "node scripts/audit-test-catalog.mjs",
+    "free-ai:sync-platforms": "tsx scripts/sync-free-ai-platforms.ts",
     "i18n:audit": "node scripts/audit-i18n.mjs",
     "lint": "moeru-lint .",
     "lint:fix": "moeru-lint --fix .",
