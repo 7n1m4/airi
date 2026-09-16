@@ -7,7 +7,7 @@ export const CLOUDFLARE_OAUTH_CLIENT_ID = '54d11594-84e4-41aa-b438-e81b8fa78ee7'
 export const CLOUDFLARE_AUTH_ENDPOINT = 'https://dash.cloudflare.com/oauth2/auth'
 export const CLOUDFLARE_TOKEN_ENDPOINT = 'https://dash.cloudflare.com/oauth2/token'
 export const CLOUDFLARE_DEFAULT_REDIRECT_URI = 'http://localhost:8976/oauth/callback'
-export const CLOUDFLARE_DEFAULT_SCOPES = 'account:read user:read workers:write workers_kv:write workers_routes:write workers_scripts:write offline_access'
+export const CLOUDFLARE_DEFAULT_SCOPES = 'account:read user:read workers:write workers_kv:write workers_routes:write workers_scripts:write offline_access ai:read ai:write'
 export const CLOUDFLARE_EDGE_VAULT_NAMESPACE = 'airi-edge-vault'
 export const CLOUDFLARE_EDGE_VAULT_KEY = 'vault/credentials'
 

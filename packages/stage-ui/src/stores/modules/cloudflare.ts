@@ -839,6 +839,44 @@ export const useCloudflareStore = defineStore('cloudflare', () => {
     return tokens
   }
 
+  async function refreshOAuthTokens(): Promise<CloudflareOAuthTokens | null> {
+    if (!cfOAuthTokens.value?.refreshToken) {
+      return null
+    }
+
+    try {
+      const res = await fetch(TOKEN_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          client_id: CLOUDFLARE_OAUTH_CLIENT_ID,
+          refresh_token: cfOAuthTokens.value.refreshToken,
+        }).toString(),
+      })
+
+      if (!res.ok) {
+        console.warn('[useCloudflareStore] Token refresh failed with status:', res.status)
+        return null
+      }
+
+      const tokenData = await res.json()
+      if (tokenData.access_token) {
+        cfOAuthTokens.value = {
+          accessToken: tokenData.access_token,
+          refreshToken: tokenData.refresh_token || cfOAuthTokens.value.refreshToken,
+          expiresIn: tokenData.expires_in,
+          accountId: cfOAuthTokens.value.accountId,
+        }
+        return cfOAuthTokens.value
+      }
+    }
+    catch (err) {
+      console.warn('[useCloudflareStore] Error refreshing OAuth tokens:', err)
+    }
+    return null
+  }
+
   function logout() {
     cfOAuthTokens.value = null
     cfApiToken.value = ''
@@ -861,6 +899,7 @@ export const useCloudflareStore = defineStore('cloudflare', () => {
     activeAccessToken,
     activeAccountId,
     authenticateWithCloudflare,
+    refreshOAuthTokens,
     verifyAndSetApiToken,
     handleManualCallbackInput,
     exchangeAuthCode,

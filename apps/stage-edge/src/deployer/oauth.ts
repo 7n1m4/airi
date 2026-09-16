@@ -29,6 +29,8 @@ const DEFAULT_SCOPES = [
   'workers_routes:write',
   'workers_scripts:write',
   'offline_access',
+  'ai:read',
+  'ai:write',
 ]
 
 function base64UrlEncode(buffer: Buffer): string {
