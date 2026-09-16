@@ -216,7 +216,7 @@ export const localEngineMetadata: Record<string, ProviderMetadata> = {
   'moondream-local': {
     id: 'moondream-local',
     category: 'vision',
-    tasks: ['vision', 'image-to-text', 'chat'],
+    tasks: ['vision', 'image-to-text'],
     nameKey: 'settings.pages.providers.provider.moondream-local.title',
     name: 'Moondream2 VLM (Local, WebGPU)',
     descriptionKey: 'settings.pages.providers.provider.moondream-local.description',
