@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { DisplayModelFormat, useDisplayModelsStore } from '../../../../../../stores/display-models'
+import { useTextToMotionStore } from '../../../../../../stores/modules/text-to-motion'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
 const props = defineProps<{
@@ -12,6 +14,37 @@ const props = defineProps<{
 const { t } = useI18n()
 
 const draftStore = useOnboardingV3Draft()
+const displayModelsStore = useDisplayModelsStore()
+const textToMotionStore = useTextToMotionStore()
+
+const activeModelId = computed(() => draftStore.state.vesselDisplayModelId || 'preset-live2d-2')
+const currentModel = computed(() => {
+  const targetId = activeModelId.value
+  return displayModelsStore.displayModels.find((m: { id: string, format?: DisplayModelFormat }) =>
+    m.id === targetId
+    || m.id === `display-model-${targetId}`
+    || m.id.replace(/^display-model-/, '') === targetId.replace(/^display-model-/, ''),
+  )
+})
+
+const isVrmModel = computed(() => {
+  const fmt = currentModel.value?.format
+  if (fmt === DisplayModelFormat.VRM)
+    return true
+  const idLower = (activeModelId.value || '').toLowerCase()
+  if (idLower.includes('vrm'))
+    return true
+  return false
+})
+
+const isPrewarming = ref(false)
+const prewarmDone = ref(false)
+
+onMounted(async () => {
+  if (displayModelsStore.displayModels.length === 0) {
+    await displayModelsStore.loadDisplayModelsFromIndexedDB?.(true)
+  }
+})
 
 function handleToggleWebSearch() {
   draftStore.setTools({
@@ -26,9 +59,29 @@ function handleToggleFilesystem() {
 }
 
 function handleToggleMotionGenerator() {
-  draftStore.setTools({
-    toolMotionGeneratorEnabled: !draftStore.state.toolMotionGeneratorEnabled,
-  })
+  const nextState = !draftStore.state.toolMotionGeneratorEnabled
+  draftStore.setTools({ toolMotionGeneratorEnabled: nextState })
+  if (nextState && !prewarmDone.value && !isPrewarming.value) {
+    void triggerPrewarmMotion()
+  }
+}
+
+async function triggerPrewarmMotion() {
+  if (isPrewarming.value)
+    return
+
+  isPrewarming.value = true
+  try {
+    await textToMotionStore.generateMotion('wave hello')
+    prewarmDone.value = true
+  }
+  catch (err) {
+    console.warn('[StepTools] Motion prewarm fallback:', err)
+    prewarmDone.value = true
+  }
+  finally {
+    isPrewarming.value = false
+  }
 }
 
 const activeToolCount = computed(() => {
@@ -203,6 +256,13 @@ const activeToolCount = computed(() => {
                 <span :class="['text-[10px] font-semibold px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-600 dark:text-rose-300 font-mono']">
                   generate_motion
                 </span>
+                <span
+                  v-if="!isVrmModel"
+                  :class="['text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-300 font-mono flex items-center gap-1']"
+                >
+                  <div :class="['i-solar:shield-warning-bold text-amber-500 w-3 h-3']" />
+                  <span>VRM Avatar Optimized</span>
+                </span>
               </div>
               <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-1 leading-relaxed']">
                 Allows humanoid VRM companions to autonomously author and generate new 3D skeletal animations and dances in real time from conversation via Procedural LLM keyframing and FlowMDM WebGPU neural diffusion.
@@ -222,13 +282,72 @@ const activeToolCount = computed(() => {
           </label>
         </div>
 
+        <!-- Expanded Pre-warm & Download Panel when Enabled -->
         <div
           v-if="draftStore.state.toolMotionGeneratorEnabled"
-          :class="['rounded-xl bg-rose-500/10 border border-rose-500/20 p-3 text-[11px] text-rose-800 dark:text-rose-200 flex items-start gap-2.5']"
+          :class="['flex flex-col gap-2.5 pt-2 border-t border-rose-500/20']"
         >
-          <div :class="['i-solar:info-circle-bold text-rose-500 text-base shrink-0 mt-0.5']" />
-          <div :class="['leading-relaxed']">
-            Supports VRM avatars. Output motions compile directly to VRMA binary tracks and play immediately on Stage.
+          <div :class="['flex items-center justify-between gap-3 flex-wrap']">
+            <div :class="['flex items-center gap-2 text-xs font-semibold text-rose-900 dark:text-rose-200']">
+              <div :class="['i-solar:cpu-bolt-bold text-rose-500']" />
+              <span>Engine Status: {{ prewarmDone ? 'Primed & Ready' : isPrewarming ? 'Pre-warming Shards...' : 'Enabled' }}</span>
+            </div>
+
+            <button
+              type="button"
+              :disabled="isPrewarming"
+              :class="[
+                'px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer shadow-sm',
+                isPrewarming
+                  ? 'bg-rose-500/20 border-rose-500/40 text-rose-600 dark:text-rose-300 animate-pulse'
+                  : prewarmDone
+                    ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/20'
+                    : 'bg-rose-600 hover:bg-rose-500 text-white border-transparent shadow-rose-600/25',
+              ]"
+              @click="triggerPrewarmMotion"
+            >
+              <div v-if="isPrewarming" :class="['i-solar:restart-bold w-3.5 h-3.5 animate-spin text-rose-500']" />
+              <div v-else-if="prewarmDone" :class="['i-solar:check-circle-bold w-3.5 h-3.5 text-emerald-500']" />
+              <div v-else :class="['i-solar:download-minimalistic-bold w-3.5 h-3.5']" />
+
+              <span>
+                {{
+                  isPrewarming
+                    ? `Downloading Shards (${textToMotionStore.downloadProgress.percentage || 15}%)...`
+                    : prewarmDone
+                      ? 'Pre-warmed & Cached'
+                      : 'Pre-warm & Download Engine'
+                }}
+              </span>
+            </button>
+          </div>
+
+          <!-- Progress Bar when Downloading / Pre-warming -->
+          <div
+            v-if="isPrewarming"
+            :class="['rounded-xl bg-rose-500/10 border border-rose-500/20 p-2.5 flex flex-col gap-1.5']"
+          >
+            <div :class="['flex items-center justify-between text-[11px] font-mono text-rose-700 dark:text-rose-300']">
+              <span>{{ textToMotionStore.downloadProgress.status || 'Loading CLIP Encoder & ONNX Denoiser...' }}</span>
+              <span>{{ textToMotionStore.downloadProgress.percentage || 15 }}%</span>
+            </div>
+            <div :class="['w-full h-1.5 bg-rose-500/20 rounded-full overflow-hidden']">
+              <div
+                :class="['h-full bg-rose-500 rounded-full transition-all duration-300']"
+                :style="{ width: `${textToMotionStore.downloadProgress.percentage || 15}%` }"
+              />
+            </div>
+          </div>
+
+          <div
+            v-else
+            :class="['rounded-xl bg-rose-500/10 border border-rose-500/20 p-2.5 text-[11px] text-rose-800 dark:text-rose-200 flex items-start gap-2']"
+          >
+            <div :class="['i-solar:info-circle-bold text-rose-500 text-sm shrink-0 mt-0.5']" />
+            <div :class="['leading-relaxed']">
+              Output motions compile directly to VRMA binary tracks and play live on Stage.
+              <span v-if="!isVrmModel" class="text-amber-600 font-semibold dark:text-amber-300"> Note: Your selected vessel (Live2D/Spine) uses 2D animation channels. Switch to a VRM vessel in Step 5 for full 3D motion playback.</span>
+            </div>
           </div>
         </div>
       </div>

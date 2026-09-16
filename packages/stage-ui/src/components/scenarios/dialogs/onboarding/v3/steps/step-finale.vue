@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,
@@ -17,6 +18,7 @@ import { parseActor } from '../../../../../../composables/queues'
 import { stripMarkers, stripPacingEnvelopes } from '../../../../../../composables/response-categoriser'
 import { DisplayModelFormat, useDisplayModelsStore } from '../../../../../../stores/display-models'
 import { useSpeechStore } from '../../../../../../stores/modules/speech'
+import { useTextToMotionStore } from '../../../../../../stores/modules/text-to-motion'
 import { useProvidersStore } from '../../../../../../stores/providers'
 import { useSettings } from '../../../../../../stores/settings'
 import { useSettingsUserProfile } from '../../../../../../stores/settings/user-profile'
@@ -44,8 +46,64 @@ const userProfileStore = useSettingsUserProfile()
 const speechStore = useSpeechStore()
 const providersStore = useProvidersStore()
 const displayModelsStore = useDisplayModelsStore()
+const textToMotionStore = useTextToMotionStore()
+const customVrmAnimationsStore = useCustomVrmAnimationsStore()
+const modelStore = useModelStore()
 
 const { stageModelRenderer } = storeToRefs(settingsStore)
+
+// --- Motion Playground Demo (VRM + Primed Motion Tool) ---
+const isMotionDemoEligible = computed(() => {
+  return modelType.value === 'vrm' && draft.state.toolMotionGeneratorEnabled === true
+})
+
+const motionPrompt = ref('')
+const isGeneratingMotion = ref(false)
+const motionDemoStatus = ref('')
+
+const motionPresets = [
+  { label: '👋 Wave Hello', prompt: 'Waving right hand while left arm up' },
+  { label: '💋 Blow Kiss', prompt: 'Hand extended towards viewer on chin blowing kisses' },
+  { label: '🙇 Graceful Bow', prompt: 'Graceful bow with hand on chest' },
+  { label: '💃 Celebration', prompt: 'Spin around and wave with both hands' },
+]
+
+function selectMotionPreset(presetPrompt: string) {
+  motionPrompt.value = presetPrompt
+}
+
+async function handleGenerateMotionDemo() {
+  const prompt = motionPrompt.value.trim()
+  if (!prompt || isGeneratingMotion.value)
+    return
+
+  isGeneratingMotion.value = true
+  motionDemoStatus.value = 'Generating 3D VRMA animation...'
+  try {
+    const result = await textToMotionStore.generateMotion(prompt, {
+      onLog: (msg) => { motionDemoStatus.value = msg },
+    })
+
+    if (result && result.buffer) {
+      const blobPart = new Uint8Array(result.buffer)
+      const file = new File([blobPart], `${prompt.slice(0, 15).replace(/[^a-z0-9]/gi, '_')}.vrma`, {
+        type: 'application/octet-stream',
+      })
+      const motionKey = await customVrmAnimationsStore.addCustomAnimation(file)
+      modelStore.triggerMotion(motionKey)
+      toast.success('3D Motion compiled & playing on stage!')
+      motionDemoStatus.value = 'Motion active on stage!'
+    }
+  }
+  catch (err) {
+    console.error('[StepFinale] Failed to generate motion demo:', err)
+    toast.error('Motion generation failed.')
+    motionDemoStatus.value = 'Generation failed.'
+  }
+  finally {
+    isGeneratingMotion.value = false
+  }
+}
 
 // --- Fallback Image Previews ---
 const presetLive2dPreview = new URL('../../../../../../assets/live2d/models/hiyori/preview.png', import.meta.url).href
@@ -746,6 +804,73 @@ async function handleLaunch() {
                   </span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <!-- Interactive Motion Generator Playground Widget (VRM + Primed Motion Tool) -->
+          <div
+            v-if="isMotionDemoEligible"
+            :class="['rounded-2xl border border-rose-500/30 bg-rose-500/5 dark:bg-rose-950/20 p-3 flex flex-col gap-2 shadow-sm animate-fadeIn']"
+          >
+            <div :class="['flex items-center justify-between gap-2']">
+              <div :class="['flex items-center gap-2 text-xs font-bold text-neutral-800 dark:text-neutral-100']">
+                <div :class="['i-solar:running-2-bold-duotone text-rose-500 text-base']" />
+                <span>Kinetic 3D Motion Live Playground</span>
+              </div>
+              <span :class="['text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-600 dark:text-rose-300 font-mono']">
+                generate_motion
+              </span>
+            </div>
+
+            <!-- Quick Preset Chips -->
+            <div :class="['flex flex-wrap gap-1.5']">
+              <button
+                v-for="preset in motionPresets"
+                :key="preset.label"
+                type="button"
+                :class="[
+                  'px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all cursor-pointer border',
+                  motionPrompt === preset.prompt
+                    ? 'bg-rose-500/20 text-rose-700 dark:text-rose-200 border-rose-500/40 shadow-sm font-semibold'
+                    : 'bg-white/70 dark:bg-neutral-800/70 text-neutral-700 dark:text-neutral-300 border-neutral-200/80 dark:border-neutral-700/60 hover:bg-rose-500/10',
+                ]"
+                @click="selectMotionPreset(preset.prompt)"
+              >
+                {{ preset.label }}
+              </button>
+            </div>
+
+            <!-- Custom Prompt Input & Action Button -->
+            <div :class="['flex items-center gap-2']">
+              <input
+                v-model="motionPrompt"
+                type="text"
+                placeholder="Type how you want her to move (e.g. wave hello, graceful bow)..."
+                :class="[
+                  'flex-1 px-3 py-1.5 rounded-xl border border-neutral-300/80 dark:border-neutral-700/80 bg-white dark:bg-neutral-900/90',
+                  'text-xs text-neutral-900 dark:text-white placeholder:text-neutral-400 focus:outline-none focus:border-rose-500/60',
+                ]"
+                @keydown.enter="handleGenerateMotionDemo"
+              >
+              <button
+                type="button"
+                :disabled="isGeneratingMotion || !motionPrompt.trim()"
+                :class="[
+                  'px-3.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border shrink-0',
+                  isGeneratingMotion || !motionPrompt.trim()
+                    ? 'bg-neutral-200/60 dark:bg-neutral-800/60 text-neutral-400 border-transparent cursor-not-allowed'
+                    : 'bg-rose-600 hover:bg-rose-500 text-white border-transparent shadow-md shadow-rose-600/30',
+                ]"
+                @click="handleGenerateMotionDemo"
+              >
+                <div v-if="isGeneratingMotion" :class="['i-solar:restart-bold w-3.5 h-3.5 animate-spin']" />
+                <div v-else :class="['i-solar:running-2-bold w-3.5 h-3.5']" />
+                <span>{{ isGeneratingMotion ? 'Generating...' : 'Animate VRM' }}</span>
+              </button>
+            </div>
+
+            <div v-if="motionDemoStatus" :class="['text-[10px] font-mono text-rose-600 dark:text-rose-300 truncate']">
+              {{ motionDemoStatus }}
             </div>
           </div>
         </div>

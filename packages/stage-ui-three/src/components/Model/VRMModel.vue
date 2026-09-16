@@ -873,6 +873,11 @@ onMounted(async () => {
   await until(() => scene.value).toBeTruthy()
   await loadModel()
 
+  // Register motion trigger listener (from modelStore / BroadcastChannel)
+  modelStore.onTriggerMotion((key) => {
+    void playTransientAnimation(key)
+  })
+
   /*
     * Downward info flow
     * - Pinia store value updated => command take effect

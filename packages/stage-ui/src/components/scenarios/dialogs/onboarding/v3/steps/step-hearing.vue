@@ -57,8 +57,20 @@ const transcribedText = ref('')
 const testStreamingText = ref('')
 const isVerified = computed(() => verification.value === 'verified' || transcribedText.value.trim().length > 0 || testStreamingText.value.trim().length > 0)
 
-// --- Mic Device Options ---
+// --- Mic Device Options & Active Device Transparency ---
 const micOptions = computed(() => audioInputs.value.map(d => ({ label: d.label || d.deviceId, value: d.deviceId })))
+
+const activeMicLabel = computed(() => {
+  if (selectedAudioInput.value) {
+    const matched = audioInputs.value.find(d => d.deviceId === selectedAudioInput.value)
+    if (matched?.label)
+      return matched.label
+  }
+  if (audioInputs.value.length > 0 && audioInputs.value[0].label) {
+    return audioInputs.value[0].label
+  }
+  return 'Default Microphone Input'
+})
 
 // --- Whisper WebGPU Management ---
 type WhisperDL = 'idle' | 'downloading' | 'ready' | 'error'
@@ -500,18 +512,20 @@ onMounted(() => {
     })()
   }
 
-  if (audioInputs.value.length === 0) {
-    void startStream().then(() => {
-      stopStream()
+  void (async () => {
+    try {
+      await audioDevice.askPermission()
+    }
+    catch (err) {
+      console.debug('[V3 Hearing] Permission ask on mount:', err)
+    }
+    finally {
       if (!selectedAudioInput.value && audioInputs.value.length > 0) {
         selectedAudioInput.value = audioInputs.value[0].deviceId
       }
-    })
-  }
-  else if (!selectedAudioInput.value && audioInputs.value.length > 0) {
-    selectedAudioInput.value = audioInputs.value[0].deviceId
-  }
-  void setupMonitoring()
+      await setupMonitoring()
+    }
+  })()
 })
 
 watch(audioInputs, (inputs) => {
@@ -556,19 +570,85 @@ watch(selectedAudioInput, async () => {
         </p>
       </div>
 
-      <!-- Microphone Device Picker (Auto-hides if <= 1 device) -->
+      <!-- Microphone Device Selection & Active Device Transparency -->
+      <!-- Case A: Multiple Microphone Devices Detected (> 1) -->
       <div
         v-if="audioInputs.length > 1"
         :class="['p-4 rounded-xl', 'bg-white/40 dark:bg-neutral-900/40', 'border border-neutral-200/60 dark:border-neutral-800/80', 'backdrop-blur-md']"
       >
         <FieldSelect
           v-model="selectedAudioInput"
-          label="Microphone"
-          description="Choose the input device to verify."
+          label="Microphone Input Device"
+          description="Select which physical microphone device to use for speech verification."
           :options="micOptions"
           placeholder="Select an audio input device"
           layout="vertical"
         />
+      </div>
+
+      <!-- Case B: Single Active Microphone Detected (1 Device) -->
+      <div
+        v-else-if="audioInputs.length === 1"
+        :class="[
+          'p-3.5 rounded-xl flex items-center justify-between gap-3',
+          'bg-white/40 dark:bg-neutral-900/40',
+          'border border-neutral-200/60 dark:border-neutral-800/80 backdrop-blur-md',
+        ]"
+      >
+        <div :class="['flex items-center gap-3 min-w-0']">
+          <div :class="['h-9 w-9 rounded-lg bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0']">
+            <div :class="['i-solar:microphone-3-bold-duotone text-lg']" />
+          </div>
+          <div :class="['flex flex-col min-w-0']">
+            <div :class="['flex items-center gap-2 font-bold text-xs text-neutral-800 dark:text-neutral-100']">
+              <span>Active Microphone Input</span>
+              <span :class="['w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse']" />
+            </div>
+            <span :class="['text-xs text-neutral-500 dark:text-neutral-400 truncate font-mono']">
+              {{ activeMicLabel }}
+            </span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          title="Rescan audio devices"
+          :class="['p-2 rounded-lg bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200 transition-colors cursor-pointer shrink-0']"
+          @click="startStream"
+        >
+          <div :class="['i-solar:restart-bold w-4 h-4']" />
+        </button>
+      </div>
+
+      <!-- Case C: 0 Devices Detected or Permission Unprompted -->
+      <div
+        v-else
+        :class="[
+          'p-3.5 rounded-xl flex items-center justify-between gap-3',
+          'bg-amber-500/10 border border-amber-500/30 backdrop-blur-md',
+        ]"
+      >
+        <div :class="['flex items-center gap-3 min-w-0']">
+          <div :class="['h-9 w-9 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0']">
+            <div :class="['i-solar:shield-warning-bold text-lg']" />
+          </div>
+          <div :class="['flex flex-col min-w-0']">
+            <span :class="['font-bold text-xs text-amber-900 dark:text-amber-200']">
+              Microphone Access Required
+            </span>
+            <span :class="['text-[11px] text-amber-700/80 dark:text-amber-300/80']">
+              Click below to grant microphone permission in your browser/app.
+            </span>
+          </div>
+        </div>
+
+        <Button
+          variant="primary"
+          class="h-8 shrink-0 px-3 text-xs font-semibold"
+          @click="startStream"
+        >
+          <span>Grant Access</span>
+        </Button>
       </div>
 
       <!-- Choose Speech Engine: Hero Cards -->
