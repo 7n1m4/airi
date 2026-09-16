@@ -82,14 +82,14 @@ function navigateTo(to: string) {
         @click="navigateTo('/settings')"
       >
         <div class="flex items-center gap-2.5">
-          <div class="shadow-xs size-7 flex items-center justify-center rounded-lg bg-primary-500 text-white">
-            <div class="i-solar:settings-bold-duotone size-4" />
+          <div class="shadow-xs size-8 flex items-center justify-center rounded-lg bg-primary-500 text-white">
+            <div class="i-solar:settings-bold-duotone size-4.5" />
           </div>
           <div class="flex flex-col">
-            <span class="text-xs text-neutral-900 font-bold tracking-wider uppercase dark:text-neutral-100">
+            <span class="text-sm text-neutral-900 font-bold tracking-wider uppercase dark:text-neutral-100">
               Settings
             </span>
-            <span class="text-[10px] text-neutral-400 font-mono dark:text-neutral-500">
+            <span class="text-xs text-neutral-400 font-mono dark:text-neutral-500">
               設定 · Hub
             </span>
           </div>
@@ -104,9 +104,9 @@ function navigateTo(to: string) {
     <div class="flex-1 overflow-y-auto px-3 scrollbar-none space-y-5">
       <div v-for="group in navGroups" :key="group.id" class="space-y-1.5">
         <!-- Section Header -->
-        <div class="flex items-center justify-between px-3 text-[10px] text-neutral-400 font-bold tracking-widest uppercase dark:text-neutral-500">
+        <div class="flex items-center justify-between px-3 text-xs text-neutral-400 font-bold tracking-wider uppercase dark:text-neutral-500">
           <span>{{ group.title }}</span>
-          <span v-if="group.glyph" class="text-[11px] font-mono opacity-60">{{ group.glyph }}</span>
+          <span v-if="group.glyph" class="text-xs text-neutral-400 font-mono dark:text-neutral-500">{{ group.glyph }}</span>
         </div>
 
         <!-- Section Items -->
@@ -116,7 +116,7 @@ function navigateTo(to: string) {
             :key="item.id"
             type="button"
             :class="[
-              'group relative w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-xs font-medium transition-all duration-150 active:scale-[0.98]',
+              'group relative w-full flex items-center justify-between rounded-xl px-3 py-2 text-left text-sm font-medium transition-all duration-150 active:scale-[0.98]',
               isItemActive(item.to)
                 ? 'bg-primary-500 text-white shadow-sm font-semibold'
                 : 'text-neutral-600 dark:text-neutral-400 hover:bg-neutral-200/60 dark:hover:bg-neutral-800/60 hover:text-neutral-900 dark:hover:text-neutral-200',
@@ -127,7 +127,7 @@ function navigateTo(to: string) {
               <div
                 :class="[
                   item.icon,
-                  'size-4 shrink-0 transition-transform group-hover:scale-110',
+                  'size-5 shrink-0 transition-transform group-hover:scale-110',
                   isItemActive(item.to)
                     ? 'text-white'
                     : 'text-neutral-500 dark:text-neutral-400 group-hover:text-neutral-900 dark:group-hover:text-neutral-100',
@@ -139,10 +139,10 @@ function navigateTo(to: string) {
             <span
               v-if="item.glyph"
               :class="[
-                'ml-1 text-[10px] font-mono shrink-0 transition-opacity',
+                'ml-1 text-xs font-mono shrink-0 transition-colors',
                 isItemActive(item.to)
-                  ? 'text-white/80 font-bold'
-                  : 'text-neutral-400 dark:text-neutral-600 group-hover:opacity-100 opacity-60',
+                  ? 'text-white/90 font-bold'
+                  : 'text-neutral-400 dark:text-neutral-500 group-hover:text-primary-500 dark:group-hover:text-primary-400',
               ]"
             >
               {{ item.glyph }}
@@ -156,10 +156,10 @@ function navigateTo(to: string) {
     <div class="border-t border-neutral-200/60 px-4 pt-3 dark:border-neutral-800/60">
       <button
         type="button"
-        class="shadow-2xs w-full flex items-center justify-center gap-2 border border-neutral-200/60 rounded-xl bg-white/60 px-3 py-1.5 text-xs text-neutral-600 font-medium backdrop-blur-md transition-all active:scale-95 dark:border-neutral-800/60 dark:bg-neutral-900/60 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+        class="shadow-2xs w-full flex items-center justify-center gap-2 border border-neutral-200/60 rounded-xl bg-white/60 px-3 py-1.5 text-sm text-neutral-600 font-medium backdrop-blur-md transition-all active:scale-95 dark:border-neutral-800/60 dark:bg-neutral-900/60 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
         @click="navigateTo('/')"
       >
-        <div class="i-solar:arrow-left-line-duotone size-3.5" />
+        <div class="i-solar:arrow-left-line-duotone size-4" />
         <span>Return to Stage</span>
       </button>
     </div>

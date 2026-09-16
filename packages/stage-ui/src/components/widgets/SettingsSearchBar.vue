@@ -224,21 +224,21 @@ onUnmounted(() => {
       v-else
       :class="[
         'group relative flex flex-1 items-center rounded-xl px-3 py-1.5 transition-all duration-200',
-        'border border-neutral-200/80 bg-white/70 shadow-2xs backdrop-blur-md',
-        'dark:border-neutral-800/80 dark:bg-neutral-900/70',
+        'border border-neutral-300/80 bg-white/80 shadow-xs backdrop-blur-md',
+        'dark:border-neutral-700/80 dark:bg-neutral-900/80',
         'hover:border-primary-500/50',
         'focus-within:border-primary-500 focus-within:ring-2 focus-within:ring-primary-500/20',
       ]"
       @click="isOpen = true; inputRef?.focus()"
     >
-      <div class="i-solar:magnifer-bold-duotone mr-2 shrink-0 text-base text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary-500" />
+      <div class="i-solar:magnifer-bold-duotone mr-2 shrink-0 text-base text-neutral-400 dark:text-neutral-400 group-focus-within:text-primary-500" />
       <input
         ref="inputRef"
         v-model="searchQuery"
         type="text"
         placeholder="Search settings, characters, providers..."
         :class="[
-          'w-full bg-transparent text-xs outline-none',
+          'w-full bg-transparent text-sm outline-none',
           'text-neutral-800 placeholder-neutral-400',
           'dark:text-neutral-100 dark:placeholder-neutral-500',
         ]"
@@ -259,9 +259,9 @@ onUnmounted(() => {
       <div class="ml-2 shrink-0 items-center gap-1 hidden sm:flex">
         <span
           :class="[
-            'rounded-md border px-1.5 py-0.5 text-[10px] font-semibold',
-            'border-neutral-200/80 bg-neutral-100/80 text-neutral-400',
-            'dark:border-neutral-800 dark:bg-neutral-800/80 dark:text-neutral-500',
+            'rounded-md border px-1.5 py-0.5 text-xs font-mono font-medium',
+            'border-neutral-200 bg-neutral-100 text-neutral-500 shadow-2xs',
+            'dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400',
           ]"
         >
           ⌘K

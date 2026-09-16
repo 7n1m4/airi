@@ -66,7 +66,7 @@ function handleBack() {
     <!-- Master-Detail Dual-Pane Mode (Desktop / Widescreen >= 1024px) -->
     <div v-if="isWidescreen" class="h-full w-full flex overflow-hidden">
       <!-- Left: Navigation Sidebar -->
-      <aside class="h-full w-64 shrink-0 xl:w-72">
+      <aside class="h-full w-72 shrink-0 xl:w-80">
         <SettingsSidebarNav />
       </aside>
 
