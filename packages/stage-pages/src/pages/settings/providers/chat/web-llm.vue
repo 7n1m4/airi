@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { detectWebGPU } from '@proj-airi/stage-shared/webgpu'
 import {
   Alert,
   ProviderAdvancedSettings,
@@ -8,7 +9,7 @@ import {
   ProviderSettingsLayout,
 } from '@proj-airi/stage-ui/components'
 import { useProviderValidation } from '@proj-airi/stage-ui/composables/use-provider-validation'
-import { clearWebLlmCache, formatBytes, getWebLlmCacheSize, isWebLlmModelCached, WEB_LLM_MODELS } from '@proj-airi/stage-ui/libs/inference'
+import { clearWebLlmCache, DEFAULT_WEB_LLM_FP32_MODEL, DEFAULT_WEB_LLM_MODEL, formatBytes, getWebLlmCacheSize, isWebLlmModelCached, WEB_LLM_MODELS } from '@proj-airi/stage-ui/libs/inference'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { FieldInput, FieldRange, FieldSelect } from '@proj-airi/ui'
 import { computed, onMounted, ref, watch } from 'vue'
@@ -28,9 +29,13 @@ const {
   handleResetSettings,
 } = useProviderValidation(providerId)
 
+// --- Hardware Capability Detection ---
+const webgpuSupported = ref(true)
+const fp16Supported = ref(true)
+
 // --- Model selection (curated id or custom repo) ---
 const model = computed({
-  get: () => (getActiveInstanceConfig().options.model as string) || WEB_LLM_MODELS[0].id,
+  get: () => (getActiveInstanceConfig().options.model as string) || (fp16Supported.value ? DEFAULT_WEB_LLM_MODEL : DEFAULT_WEB_LLM_FP32_MODEL),
   set: (value) => {
     getActiveInstanceConfig().options.model = value
   },
@@ -72,10 +77,16 @@ const activeInstanceLabel = computed(() => {
 // A custom repo overrides the curated selection and needs both assets.
 const isCustomModel = computed(() => !!modelUrl.value.trim())
 
-const modelOptions = WEB_LLM_MODELS.map(m => ({
-  label: `${m.name} — ${m.vramMB} MB VRAM`,
-  value: m.id,
-}))
+const availableModels = computed(() => {
+  return fp16Supported.value ? WEB_LLM_MODELS : WEB_LLM_MODELS.filter(m => !m.fp16)
+})
+
+const modelOptions = computed(() => {
+  return availableModels.value.map(m => ({
+    label: `${m.name} — ${m.vramMB} MB VRAM`,
+    value: m.id,
+  }))
+})
 
 // Keep the VRAM bookkeeping estimate in sync with the selected curated model so
 // the provider's pre-allocation check reflects the resident model.
@@ -90,6 +101,21 @@ const cacheSize = ref(0)
 const isCached = ref(false)
 const cacheLoading = ref(true)
 const clearing = ref(false)
+
+async function checkWebGPU() {
+  const caps = await detectWebGPU().catch(() => null)
+  if (caps) {
+    webgpuSupported.value = caps.supported
+    fp16Supported.value = caps.fp16Supported
+    // If FP16 is not supported and an FP16 model is selected, switch to default FP32 model
+    if (!caps.fp16Supported) {
+      const current = WEB_LLM_MODELS.find(m => m.id === model.value)
+      if (current?.fp16) {
+        model.value = DEFAULT_WEB_LLM_FP32_MODEL
+      }
+    }
+  }
+}
 
 async function refreshCache() {
   cacheLoading.value = true
@@ -128,7 +154,10 @@ async function toggleProvider() {
   }
 }
 
-onMounted(refreshCache)
+onMounted(async () => {
+  await checkWebGPU()
+  await refreshCache()
+})
 </script>
 
 <template>
@@ -143,7 +172,16 @@ onMounted(refreshCache)
     :beginner-recommended="providerMetadata?.beginnerRecommended"
   >
     <ProviderSettingsContainer class="w-full space-y-6">
-      <Alert type="info">
+      <Alert v-if="!fp16Supported" type="warning">
+        <template #title>
+          FP32 Universal Compatibility Mode Active
+        </template>
+        <template #content>
+          Your GPU or driver (e.g. NVIDIA Pascal GTX 10-series or legacy graphics) does not support WebGPU 16-bit float shaders (<code>shader-f16</code>). The model catalog has been adjusted to offer FP32-compatible models (Hermes 3, Phi 3.5 Mini, Llama 3.2, Phi 4 Mini FP32).
+        </template>
+      </Alert>
+
+      <Alert v-else type="info">
         <template #title>
           {{ t('settings.pages.providers.provider.web-llm.alert.title') }}
         </template>

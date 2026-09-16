@@ -5,7 +5,7 @@ import type { ProviderMetadata } from '../../../../../../stores/providers'
 
 import { Capacitor } from '@capacitor/core'
 import { isApplePlatform, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
-import { isWebGPUSupported } from '@proj-airi/stage-shared/webgpu'
+import { detectWebGPU } from '@proj-airi/stage-shared/webgpu'
 import { Button } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
@@ -14,7 +14,7 @@ import { toast } from 'vue-sonner'
 import CompanionBubble from '../components/companion-bubble.vue'
 import ProviderPickerGrid from '../components/provider-picker-grid.vue'
 
-import { WEB_LLM_MODELS } from '../../../../../../libs/inference/constants'
+import { DEFAULT_WEB_LLM_FP32_MODEL, WEB_LLM_MODELS } from '../../../../../../libs/inference/constants'
 import { NativeAI } from '../../../../../../libs/native-ai'
 import { useProvidersStore } from '../../../../../../stores/providers'
 import { DEFAULT_APPLE_CORE_AI_MODEL } from '../../../../../../stores/providers/apple-core-ai'
@@ -67,6 +67,12 @@ const isLoadingActiveProviderModels = computed(() => providersStore.isLoadingMod
 
 // --- Hardware detection (webllm needs WebGPU) ---
 const webgpuSupported = ref(false)
+const fp16Supported = ref(true)
+
+const availableWebLlmModels = computed(() => {
+  return fp16Supported.value ? WEB_LLM_MODELS : WEB_LLM_MODELS.filter(m => !m.fp16)
+})
+
 onMounted(async () => {
   if (isIOSNative.value) {
     await checkCoreAiResident()
@@ -75,7 +81,19 @@ onMounted(async () => {
     }
   }
   else if (isWebLlmPlatform.value) {
-    webgpuSupported.value = await isWebGPUSupported()
+    const caps = await detectWebGPU().catch(() => null)
+    webgpuSupported.value = caps ? caps.supported : false
+    fp16Supported.value = caps ? caps.fp16Supported : false
+    if (webgpuSupported.value && !fp16Supported.value) {
+      const current = WEB_LLM_MODELS.find(m => m.id === selectedLlmModel.value)
+      if (current?.fp16) {
+        selectedLlmModel.value = DEFAULT_WEB_LLM_FP32_MODEL
+        if (selectedProviderId.value === 'web-llm') {
+          selectedModelId.value = DEFAULT_WEB_LLM_FP32_MODEL
+          recordDraft()
+        }
+      }
+    }
     await checkModelResident()
   }
 })
@@ -676,6 +694,15 @@ watch(verified, (v) => {
       <span>WebGPU isn't available in this browser. Pick a free or cloud provider below (e.g. OpenRouter, Gemini, Pollinations, MiMo) to power your companion.</span>
     </div>
 
+    <!-- WebGPU FP32 Universal notice when shader-f16 is missing (Desktop/Web only) -->
+    <div
+      v-else-if="isWebLlmPlatform && webgpuSupported && !fp16Supported"
+      class="flex flex-shrink-0 items-start gap-2 border border-blue-400/40 rounded-xl bg-blue-50/80 p-3 text-xs text-blue-900 dark:border-blue-700/60 dark:bg-blue-900/20 dark:text-blue-200"
+    >
+      <div class="i-solar:info-circle-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500" />
+      <span>Legacy GPU / 32-bit WebGPU mode active (no <code>shader-f16</code> support). Showing universal FP32 models compatible with your hardware.</span>
+    </div>
+
     <!-- WebLLM Local Engine (Desktop / Web only) -->
     <div
       v-if="isWebLlmPlatform"
@@ -689,7 +716,7 @@ watch(verified, (v) => {
 
       <div class="grid grid-cols-1 gap-2">
         <button
-          v-for="model in WEB_LLM_MODELS"
+          v-for="model in availableWebLlmModels"
           :key="model.id"
           :disabled="!webgpuSupported"
           :class="[
@@ -711,7 +738,7 @@ watch(verified, (v) => {
             <div class="flex flex-wrap items-center gap-2">
               <span class="text-sm text-neutral-800 font-bold dark:text-neutral-100">{{ model.name }}</span>
               <span
-                v-if="model.id === 'Qwen3.5-4B-q4f16_1-MLC'"
+                v-if="model.id === 'Qwen3.5-4B-q4f16_1-MLC' || (!fp16Supported && model.id === 'Hermes-3-Llama-3.2-3B-q4f32_1-MLC')"
                 class="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 font-bold dark:text-amber-400"
               >
                 ⭐ RECOMMENDED

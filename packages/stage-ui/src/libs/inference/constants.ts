@@ -125,43 +125,89 @@ export interface WebLlmModelInfo {
   name: string
   description: string
   vramMB: number
+  /** Whether this model requires WebGPU `shader-f16` (FP16) support. False indicates standard FP32 compatibility. */
+  fp16?: boolean
 }
 
 export const WEB_LLM_MODELS: readonly WebLlmModelInfo[] = [
+  // --- Standard FP16 Models (Requires WebGPU shader-f16 feature) ---
   {
     id: 'Qwen3.5-0.8B-q4f16_1-MLC',
     name: 'Qwen 3.5 0.8B (Fast Distill)',
     description: 'Ultra-fast pre-filtering and event-log distillation; complements the web-rwkv salience gate.',
     vramMB: 1629,
+    fp16: true,
   },
   {
     id: 'gemma3-1b-it-q4f16_1-MLC',
     name: 'Gemma 3 1B (Ultra-Low Fallback)',
     description: 'Lightweight runner for integrated GPUs, mobile devices, and VRAM-constrained setups.',
     vramMB: 711,
+    fp16: true,
   },
   {
     id: 'Ministral-3-3B-Reasoning-2512-q4f16_1-MLC',
     name: 'Ministral 3 3B Reasoning',
     description: 'First native small chain-of-thought model. Ideal for complex multi-step reasoning.',
     vramMB: 2864,
+    fp16: true,
   },
   {
     id: 'Phi-4-mini-instruct-q4f16_1-MLC',
     name: 'Phi 4 Mini Instruct',
     description: 'Top-tier 3.8B instruction model; modern generalist outperforming Phi-3.5-mini.',
     vramMB: 3438,
+    fp16: true,
   },
   {
     id: 'Qwen3.5-4B-q4f16_1-MLC',
     name: 'Qwen 3.5 4B (Main Chat)',
     description: 'Next-gen Qwen architecture; sweet-spot balance for rich character roleplay.',
     vramMB: 3868,
+    fp16: true,
+  },
+
+  // --- FP32 Universal Models (Compatible with Pascal GTX 1060/1070/1080 and legacy GPUs without shader-f16) ---
+  {
+    id: 'Hermes-3-Llama-3.2-3B-q4f32_1-MLC',
+    name: 'Hermes 3 Llama 3.2 3B (FP32 Universal)',
+    description: 'Rich character roleplay & instructions. Universal WebGPU FP32 compatibility (GTX 1060 / legacy GPUs).',
+    vramMB: 2600,
+    fp16: false,
+  },
+  {
+    id: 'Phi-3.5-mini-instruct-q4f32_1-MLC',
+    name: 'Phi 3.5 Mini Instruct (FP32 Universal)',
+    description: 'High-capability 3.8B model with strong reasoning. Universal WebGPU FP32 compatibility.',
+    vramMB: 3200,
+    fp16: false,
+  },
+  {
+    id: 'Llama-3.2-1B-Instruct-q4f32_1-MLC',
+    name: 'Llama 3.2 1B Instruct (FP32 Universal)',
+    description: 'Ultra-fast, lightweight 1.2B instruction model for low-end hardware.',
+    vramMB: 1100,
+    fp16: false,
+  },
+  {
+    id: 'Llama-3.2-3B-Instruct-q4f32_1-MLC',
+    name: 'Llama 3.2 3B Instruct (FP32 Universal)',
+    description: 'Strong general instruction & chat model with standard FP32 precision.',
+    vramMB: 2600,
+    fp16: false,
+  },
+  {
+    id: 'Phi-4-mini-instruct-q4f32_1-MLC',
+    name: 'Phi 4 Mini Instruct (FP32 Universal)',
+    description: 'Next-gen compact generalist running with standard WebGPU FP32 compute.',
+    vramMB: 3400,
+    fp16: false,
   },
 ]
 
 /** Default WebLLM model id — the fast-distill tier, light enough to coexist with the salience gate. */
 export const DEFAULT_WEB_LLM_MODEL: string = WEB_LLM_MODELS[0].id
+export const DEFAULT_WEB_LLM_FP32_MODEL: string = 'Hermes-3-Llama-3.2-3B-q4f32_1-MLC'
 
 // ---------------------------------------------------------------------------
 // Timeouts (ms)

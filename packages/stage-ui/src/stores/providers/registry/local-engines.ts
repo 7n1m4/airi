@@ -1,7 +1,7 @@
 import type { ProviderMetadata } from '../types'
 
 import { isApplePlatform, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
-import { isWebGPUSupported } from '@proj-airi/stage-shared/webgpu'
+import { detectWebGPU, isWebGPUSupported } from '@proj-airi/stage-shared/webgpu'
 import { computed } from 'vue'
 
 import { createLocalVisionAdapter, DEFAULT_LOCAL_VISION_MODEL, LOCAL_VISION_MODELS } from '../../../libs/inference'
@@ -111,7 +111,10 @@ export const localEngineMetadata: Record<string, ProviderMetadata> = {
       // any). The model id is the MLC `model_id`; a custom repo is surfaced as a
       // separate entry so it can be selected from the consciousness dropdown.
       listModels: async (config) => {
-        const models = WEB_LLM_MODELS.map(m => ({
+        const caps = await detectWebGPU().catch(() => null)
+        const fp16Supported = caps ? caps.fp16Supported : true
+        const candidateModels = fp16Supported ? WEB_LLM_MODELS : WEB_LLM_MODELS.filter(m => !m.fp16)
+        const models = candidateModels.map(m => ({
           id: m.id,
           name: m.name,
           provider: 'web-llm',

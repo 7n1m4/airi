@@ -19,6 +19,7 @@ export {
   isWebLlmModelCached,
 } from './cache-utils'
 export {
+  DEFAULT_WEB_LLM_FP32_MODEL,
   DEFAULT_WEB_LLM_MODEL,
   DEFAULT_WEB_RWKV_MODEL,
   MAX_RESTARTS,
