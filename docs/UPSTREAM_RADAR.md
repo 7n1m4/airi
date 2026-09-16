@@ -6,6 +6,116 @@
 
 ---
 
+## [2026-09-16] Upstream Delta: `3da3cf81..1b019c32` (2 commits, 44 files, 16 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 2 commits (`3da3cf81..1b019c32`) including the landmark Extension folder import feature in Plugin Host (#2506, +2,711/-517 across 40 files) and a fix for onboarding provider credentials lost during cross-window Pinia sync (#2557). In active PRs, upstream refreshed and rebased major CCv3 character card compilation (#2119) and card editor rebuild (#2120) branches, addressed streaming audio transcription upload bugs (#2560), and continued expanding cloud server Responses gateway with commercial Flux settlement (#2554).
+* **Discussion & Community Buzz**:
+  - 💬 **#2435: `feat(stage-ui): add local FunASR transcription provider` (+2 new comments, 196 total)**: Continued massive community velocity for offline Chinese ASR.
+  - 💬 **#2506: `feat(plugin-host): import extensions from folders` (+2 new comments, 144 total, merged)**: Culmination of extensive community discussion on Extension Manifest v2 and safe folder imports.
+  - 💬 **#2121: `chore(i18n): update translations` (+3 new comments, 97 total)**: Steady Crowdin localization translation submissions.
+  - 💬 **#2119: `feat(stage-ui): compile CCv3 character card runtime` (54 comments)**: Major refresh and rebase activity on CCv3 Lorebook, macro, and greeting compilation.
+  - 💬 **#2120: `refactor(stage-pages): rebuild AIRI Card editor` (37 comments)**: Updated multi-tab card editor with dirty draft state tracking.
+  - 💬 **#2558: `fix(stage-ui): hide browser local transcription provider until its settings page exists` (10 comments)**: Discussion on hiding incomplete `<WIP />` provider settings pages.
+  - 💬 **#2552: `feat(stage) add bilingual subtitles` (+5 new comments, 9 total)**: Active community design iteration on dual-language subtitle chunk synchronization.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2560: `fix(stage-ui): emit Uint8Array chunks for streaming transcription audio`**: High-value audio pipeline fix. Changes VAD and audio worklet streaming emitters to output `Uint8Array` instead of raw `ArrayBuffer`, avoiding Chromium `fetch` streaming body rejections (`TypeError: Failed to fetch`).
+  - ⭐ **PR #2561: `fix(stage-pages): keep required field labels on one line`**: Clean, low-risk CSS fix in `CardCreationDialog` preventing CJK labels (`名字`, `版本`) from line-breaking on narrow screens.
+  - 🔍 **PR #2119 (Selective Utilities): `compile CCv3 character card runtime`**: Isolated Lorebook matching primitives (regex scanning in lazy Worker with 1s timeout, depth sorting, selective keys) could be extracted for this fork's prompt builder without adopting upstream's monolithic chat session refactoring.
+  - 🔍 **PR #2552: `feat(stage) add bilingual subtitles` (Monitor)**: Relevant to our `airi-caption-subsystem`; monitor for clean subtitle segment sync patterns.
+  - ⚪ **Auto-Reject / Do Not Port**: PR #2554 (`hosted Responses gateway with Flux settlement` - violates local-first invariant); Commit `1b019c32b3` / PR #2557 (`onboarding pinia-plugin-synced` - our fork uses Onboarding V3 and `providersRepo`).
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`apps/stage-tamagotchi/src/main/services/airi/plugins/` (Commit `827d22502e` / PR #2506)**: Massive additions to Electron main plugin loading and directory imports. Our fork uses decoupled desktop surfaces and `injeca` dependency injection; do not directly merge without adapting to `injeca`.
+  - ⚠️ **`packages/stage-ui/src/stores/chat.ts` (PR #2119)**: Upstream changes prompt compilation and conversation model flow. Our fork maintains multi-actor routing (`<|ACTOR|>`), STMM/LTMM memory layers, and emotional cue parsing in this pipeline.
+  - ⚠️ **`server/` Cloud Services (PR #2554)**: Hosted cloud routing, Stripe/Flux settlement, and rate-limiting infrastructure are strictly incompatible with our local-first desktop focus.
+
+### 📋 Upstream Commits
+- `1b019c32b3` fix(stage-ui): persist onboarding provider config through synced actions (#2557) [#2557](https://github.com/moeru-ai/airi/pull/2557) _(凌莞~(=^▽^=), 2026-09-16)_
+- `827d22502e` feat(plugin-host): import extensions from folders (#2506) [#2506](https://github.com/moeru-ai/airi/pull/2506) _(leafyy, 2026-09-16)_
+
+### 🔬 Subsystem Breakdown
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 20 file(s) (+1565/-308)
+- `apps/stage-tamagotchi/src/main/index.ts` *(+14/-1)*
+- `apps/stage-tamagotchi/src/main/services/airi/plugins/examples/devtools-sample-plugin/README.md` *(+7/-10)*
+- `apps/stage-tamagotchi/src/main/services/airi/plugins/examples/devtools-sample-plugin/extension.airi.json` *(+23/-8)*
+- `apps/stage-tamagotchi/src/main/services/airi/plugins/host/debug.ts` *(+1/-3)*
+- `apps/stage-tamagotchi/src/main/services/airi/plugins/host/directory-import.test.ts` *(+312/-0)*
+- `apps/stage-tamagotchi/src/main/services/airi/plugins/host/directory-import.ts` *(+516/-0)*
+- `apps/stage-tamagotchi/src/main/services/airi/plugins/host/index.ts` *(+64/-7)*
+- `apps/stage-tamagotchi/src/main/services/airi/plugins/host/registry.ts` *(+42/-43)*
+- `apps/stage-tamagotchi/src/main/services/airi/plugins/index.test.ts` *(+429/-10)*
+- `apps/stage-tamagotchi/src/main/services/airi/plugins/index.ts` *(+120/-6)*
+- `apps/stage-tamagotchi/src/main/services/airi/plugins/kits/widget/asset-url.ts` *(+3/-2)*
+- `apps/stage-tamagotchi/src/main/services/airi/plugins/types.ts` *(+10/-6)*
+- `apps/stage-tamagotchi/src/renderer/App.vue` *(+9/-0)*
+- `apps/stage-tamagotchi/src/renderer/widgets/extension-ui/components/extension-ui-host.vue` *(+2/-1)*
+- `apps/stage-tamagotchi/src/renderer/widgets/extension-ui/composables/use-extension-ui-for-module.ts` *(+1/-2)*
+- `apps/stage-tamagotchi/src/renderer/widgets/extension-ui/composables/use-iframe-message-port.ts` *(+1/-2)*
+- `apps/stage-tamagotchi/src/renderer/widgets/extension-ui/host.ts` *(+1/-1)*
+- `apps/stage-tamagotchi/src/shared/eventa/index.ts` *(+0/-45)*
+- `apps/stage-tamagotchi/src/shared/eventa/plugin/capabilities.ts` *(+2/-19)*
+- `apps/stage-tamagotchi/src/shared/eventa/plugin/host.ts` *(+8/-142)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 2 file(s) (+38/-0)
+- `packages/i18n/src/locales/en/settings.yaml` *(+19/-0)*
+- `packages/i18n/src/locales/zh-Hans/settings.yaml` *(+19/-0)*
+
+#### Documentation & Scaffolding (`⚪ ignore`) — 3 file(s) (+52/-1)
+- `packages/plugin-sdk/README.md` *(+32/-0)*
+- `packages/plugin-sdk/docs/design/multi-transport.md` *(+1/-1)*
+- `packages/stage-shared/README.md` *(+19/-0)*
+
+#### Root Build & Tooling (`🔍 inspect`) — 3 file(s) (+9/-0)
+- `packages/plugin-sdk/package.json` *(+2/-0)*
+- `packages/stage-shared/package.json` *(+1/-0)*
+- `pnpm-lock.yaml` *(+6/-0)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 14 file(s) (+1083/-219)
+- `packages/plugin-sdk/src/extension/index.test.ts` *(+1/-3)*
+- `packages/plugin-sdk/src/extension/shared.ts` *(+0/-2)*
+- `packages/plugin-sdk/src/plugin-host/core.test.ts` *(+404/-49)*
+- `packages/plugin-sdk/src/plugin-host/core.ts` *(+31/-8)*
+- `packages/plugin-sdk/src/plugin-host/runtimes/node/loaders/fs.ts` *(+8/-7)*
+- `packages/plugin-sdk/src/plugin-host/shared/index.ts` *(+1/-0)*
+- `packages/plugin-sdk/src/plugin-host/shared/manifest.ts` *(+42/-0)*
+- `packages/plugin-sdk/src/plugin-host/shared/types.ts` *(+181/-68)*
+- `packages/stage-shared/src/plugin-host.ts` *(+119/-0)*
+- `packages/stage-ui/src/components/scenarios/dialogs/onboarding/onboarding.browser.test.ts` *(+184/-0)*
+- `packages/stage-ui/src/components/scenarios/dialogs/onboarding/onboarding.vue` *(+7/-8)*
+- `packages/stage-ui/src/components/scenarios/dialogs/onboarding/step-provider-configuration.vue` *(+19/-7)*
+- `packages/stage-ui/src/stores/devtools/plugin-host-debug.test.ts` *(+57/-1)*
+- `packages/stage-ui/src/stores/devtools/plugin-host-debug.ts` *(+29/-66)*
+
+#### UI Primitives & Pages (`📦 import / inspect`) — 1 file(s) (+174/-4)
+- `packages/stage-pages/src/pages/devtools/plugin-host.vue` *(+174/-4)*
+
+#### Provider & Model Integrations (`📦 import / inspect`) — 1 file(s) (+111/-0)
+- `packages/stage-ui/src/stores/providers/onboarding-save.browser.test.ts` *(+111/-0)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (9)
+- [#2119](https://github.com/moeru-ai/airi/pull/2119) `feat(stage-ui): compile CCv3 character card runtime` by **@luoling8192** *(54 comments)*
+- [#2120](https://github.com/moeru-ai/airi/pull/2120) `refactor(stage-pages): rebuild AIRI Card editor` by **@luoling8192** *(37 comments)*
+- [#2561](https://github.com/moeru-ai/airi/pull/2561) `fix(stage-pages): keep required field labels on one line` by **@chiba233** *(0 comments)*
+- [#2560](https://github.com/moeru-ai/airi/pull/2560) `fix(stage-ui): emit Uint8Array chunks for streaming transcription audio` by **@JamesHu6657** *(0 comments)*
+- [#2558](https://github.com/moeru-ai/airi/pull/2558) `fix(stage-ui): hide browser local transcription provider until its settings page exists` by **@Fan-xxy** *(10 comments)*
+- [#2554](https://github.com/moeru-ai/airi/pull/2554) `feat(api): add stateless Responses gateway with Flux settlement` by **@luoling8192** *(4 comments)*
+- [#2557](https://github.com/moeru-ai/airi/pull/2557) `fix(stage-ui): persist onboarding provider config through synced actions` by **@clansty** *(2 comments)*
+- [#2556](https://github.com/moeru-ai/airi/pull/2556) `fix: treat cleanup failure as best-effort in routeModelAliasCandidates` by **@zapabob** *(1 comments)*
+- [#2555](https://github.com/moeru-ai/airi/pull/2555) `test(stage-tamagotchi): cover Fade on Hover interaction recovery` by **@lorenzozanee** *(0 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (2)
+- [#2549](https://github.com/moeru-ai/airi/pull/2549) `feat(plugin-sdk): support extension-hosted kits` — `OPEN` ➔ `CLOSED`
+- [#2506](https://github.com/moeru-ai/airi/pull/2506) `feat(plugin-host): import extensions from folders` — `OPEN` ➔ `MERGED`
+
+#### 💬 Discussion Activity (5)
+- [#2549](https://github.com/moeru-ai/airi/pull/2549) `feat(plugin-sdk): support extension-hosted kits` — *+1 comments (1 ➔ 2 total)*
+- [#2552](https://github.com/moeru-ai/airi/pull/2552) `feat(stage)    add bilingual subtitles` — *+5 comments (4 ➔ 9 total)*
+- [#2506](https://github.com/moeru-ai/airi/pull/2506) `feat(plugin-host): import extensions from folders` — *+2 comments (142 ➔ 144 total)*
+- [#2435](https://github.com/moeru-ai/airi/pull/2435) `feat(stage-ui): add local FunASR transcription provider` — *+2 comments (194 ➔ 196 total)*
+- [#2121](https://github.com/moeru-ai/airi/pull/2121) `chore(i18n): update translations` — *+3 comments (94 ➔ 97 total)*
+
+---
 ## [2026-09-15] Upstream Delta: `1a79f8b1..3da3cf81` (6 commits, 104 files, 26 PR update(s))
 
 ### 🎯 Executive Highlights
