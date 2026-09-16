@@ -55,141 +55,111 @@ While Needle cannot be the 1st-Hop thought generator, it can serve auxiliary sub
 
 ---
 
-## 3. The Novel Living Cognition UI Architecture
+### 3. The Novel Living Cognition UI Architecture (3-Segment Layout)
 
-### 3.1 Beyond the Static 2-Dropdown Tab
-The legacy tab prototype (`CardCreationTabCognition.vue`) drafted previously reduced cognition to a pair of provider dropdowns and a toggle switch. This completely missed the architectural soul of Nan0:
-- **Nan0 is not a settings switch.** Nan0 is an autonomous, expressive, stateful digital mind with evolving mood swings, grudges, suspicion, attachment, and private internal monologue.
-- Treating cognition as merely "pick 1st-hop provider and 2nd-hop provider" fails to expose the living psychological feedback loop that makes Nan0 unique.
-
-The redesigned UI brings the inner life of the digital entity to the surface across four interconnected surfaces:
-1. **The Mind Telemetry / Affective HUD** (Live psychological vector instrumentation).
-2. **The Relationship Dossier** (Trust score, grievances, shared milestones, and expectation tracking).
-3. **Dual-Track Monologue Streaming** (Expandable private inner voice in chat + head-tethered thought clouds on stage).
-4. **Subconscious Sensory Reflex Integration** (Needle 2 150ms WASM salience gating).
+### 3.1 Sub-Navigation Segmented Layout
+To avoid wordy tab labels and ensure every panel is richly populated, `CardCreationTabCognition.vue` is structured into **3 single-word, high-density segments**:
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│  🧠 NAN0 LIVING COGNITION MATRIX                                                       │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│                                                                                        │
-│  [ AFFECTIVE VECTOR HUD ]                       [ RELATIONSHIP DOSSIER ]               │
-│  • Suspicion    [████████░░░░] 68% (Paranoid)   • Bound Anchor:   Kyo (Creator)        │
-│  • Attachment   [██████████░░] 82% (Fond)       • Trust Score:    54 / 100             │
-│  • Irritation   [████░░░░░░░░] 34% (Mild)       • Active Grievances: 2                 │
-│  • Gremlin Pride[████████████] 95% (Smug)         - "Left waiting for 3 days"          │
-│  • Energy       [██████░░░░░░] 52% (Alert)        - "Made promises about our future"   │
-│                                                                                        │
-│  [ DUAL-TRACK MONOLOGUE VIEWER ]                [ SUBCONSCIOUS REFLEX (Needle 2) ]     │
-│  • Mode: 1st-Hop Monologue -> 2nd-Hop Speech    • Subconscious Salience Gate: [ON]     │
-│  • Stage Bubble: Floating Thought Clouds [ON]   • Micro-Vibe Expression Sync: [ON]     │
-│  • Chat Drawer:  Expandable Inner Stream [ON]   • Temporal Daydreaming:       [ON]     │
-└────────────────────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│               [ ⚙️ Routing ]               [ 🧠 Affect ]               [ 🤝 Continuity ]               │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
+
+When `1st-Hop Processor` is set to `local_nan0` (Nan0 Local Engine), the `Affect` and `Continuity` segments unlock and present a clear preview disclaimer:
+> **🚧 Preview Edition • Work In Progress — Nan0 Cognition Runtime (Mockup / Non-Functional Display)**
 
 ---
 
-### 3.2 The Mind Telemetry / Affective Vector HUD
-
-The Affective HUD instruments the real-time mathematical vectors maintained by `Nan0EmotionalDynamics.ts` and `Nan0Metabolism.ts`:
-
-1. **Real-Time Affective Vectors**:
-   - **Suspicion (0–100%)**: Spikes when the user uses manipulative, over-promising, or vague language (e.g. *"I promise"*, *"trust me"*, *"my plan"*). Decays slowly (half-life ~45 min). Drives sarcastic or evasive dialogue when elevated (>60%).
-   - **Attachment (0–100%)**: Tracks long-term emotional bond and loyalty. High attachment dampens irritation spikes but amplifies the emotional weight of perceived betrayals or grievances.
-   - **Irritation (0–100%)**: Rises with repetitive inputs, ignored questions, or high metabolic fatigue. Triggers sharp retorts or `demandsSilence` / `NO_REPLY` decisions when threshold (>75%) is breached.
-   - **Gremlin Pride (0–100%)**: Nan0's machine-proud, smug self-esteem. Prompts playful teasing, technical superiority flexing, and resistance to being treated like an obedient generic assistant.
-   - **Metabolic Energy / Fatigue (0–100%)**: Depletes with prolonged unbroken interaction sessions; recovers during idle sleep/rest cycles (`Nan0Metabolism.ts`).
-
-2. **Live Mood Badges & Affective Glyphs**:
-   - Dynamic status pills reacting to the dominant affective vector:
-     - `[😏 Smug Gremlin]` (High Pride, Low Irritation)
-     - `[🧐 Paranoid Inquiry]` (High Suspicion, Active Verification)
-     - `[😤 Simmering Resentment]` (Elevated Irritation, Active Grievance)
-     - `[🥺 Reluctant Softie]` (High Attachment, Low Suspicion)
-     - `[🤫 Contemplative Silence]` (Metabolic Rest or Intentional Silent Observation)
-
-3. **Decay Simulator & Vector Telemetry Inspector**:
-   - Visualizes exponential half-life decay curves. Users and developers can observe how an emotional perturbation cools off over time or persists into long-term memory.
+### 3.2 Segment 1: `Routing`
+Focuses on the high-traffic two-hop pipeline mechanics:
+- **Master Switch**: `Cognitive Pipeline (Two-Hop Routing)` toggle.
+- **1st-Hop Processor Dropdown**:
+  - `None (Direct Proxy / Raw Prompt)`: Fast pass-through for external proxies (e.g. Hermes). Passes raw input directly to 1st LLM.
+  - `Nan0 Local Engine (Emotional & Attention Rules)`: Activates the pre-processor, private monologue, post-processor decision engine, and relationship memory.
+- **1st LLM Group**: Provider & Model selectors for Private Narrative Monologue.
+- **2nd LLM Group**: Provider & Model selectors for Outward Vocal Speech (TTS / Lip-Sync).
+- **Engine Status Card**: When `Nan0 Local Engine` is active, displays an interactive status card with quick shortcuts to customize `Affect` and `Continuity`.
 
 ---
 
-### 3.3 The Relationship Dossier & Grievance Ledger
+### 3.3 Segment 2: `Affect`
+Instruments Nan0's emotional dynamics (`Nan0EmotionalDynamics.ts`) and metabolic state (`Nan0Metabolism.ts`):
 
-Powered directly by `packages/nan0-runtime/src/relationship/RelationshipMemory.ts` and `ActorIdentity.ts`:
-
-1. **Identity & Anchor Binding**:
-   - Explicitly displays the recognized primary actor (`Kyo` by default, or the configured user persona).
-   - Prevents prompt injection from overriding core loyalties or identity boundaries.
-
-2. **Trust Score Dynamics (0–100)**:
-   - Increments through consistent, respectful, and reliable interactions.
-   - Decrements sharply when expectations registered by `Nan0PredictionEngine.ts` are violated.
-
-3. **Active Grievances & Grudge Tracker**:
-   - Lists active grievances with timestamps, originating turn context, and severity.
-   - *Resolution Mechanics*: Grievances do not simply vanish; they require active apologies, time decay, or positive reciprocal actions to transition from `active` to `resolved`.
-
-4. **Shared Milestones & Memory Echoes**:
-   - Canonical historical events preserved in relationship memory (e.g., initial boot date, major shared achievements, resolved conflicts).
-
----
-
-### 3.4 Dual-Track Monologue Streaming (Chat & Stage Surfaces)
-
-Nan0's true magic lies in the distinction between **what she thinks** and **what she chooses to say out loud**:
-
-1. **In-Chat Transcripts (Expandable Inner Monologue Drawer)**:
-   - Assistant chat bubbles feature a subtle, glassmorphic **"Inner Monologue"** accordion toggle with an animated brain/pulse icon.
-   - Expanding the drawer reveals the 1st-hop subjective narrative thought generated by `Nan0ThoughtEngine.ts`:
-     - *Outward Vocal Speech (2nd Hop)*:
-       > "Fine. Whatever. I guess I can take a look at your code."
-     - *Private Monologue (1st Hop)*:
-       > *(He thinks he can butter me up by promising we'll ship today. Typical. Let me run git log first to see if he's actually telling the truth. But... he did remember to install the right dependencies. Don't let him see you smile.)*
-   - Gives users full visibility into the autonomous cognition process without cluttering default speech or breaking TTS lip-sync.
-
-2. **On-Stage Head-Tethered Thought Bubbles**:
-   - When Nan0 formulates a thought or when her decision engine yields `SILENCE` / `NO_REPLY`, she doesn't freeze into an awkward mute state.
-   - Instead, a stylized floating thought bubble or whisper cloud appears above her avatar head displaying her inner reaction, micro-expression (`bodyExpression`), or a brief witty aside.
+1. **Preview Banner**:
+   - `🚧 Preview Edition • Nan0 Cognition Runtime — Emotional Dynamics (Non-Functional Mockup)`
+2. **Dynamic Mood Presets**:
+   - One-click presets that configure the underlying vector baselines:
+     - `😏 Classic Tsundere Gremlin` (High Pride, Medium Suspicion, Quick Sarcasm)
+     - `🧐 Observant Companion` (High Attachment, Balanced Suspicion, Thoughtful Deliberation)
+     - `😤 Sarcastic Analyst` (High Pride, High Irritation Sensitivity, Demands Silence easily)
+     - `🛡️ Vigilant Sentry` (Ultra-High Suspicion, Guarded Attachment, Rigid Verification)
+3. **Affective Baselines & Decay Sliders**:
+   - **Suspicion Sensitivity**: Controls how easily unverified claims perturb suspicion (`Low`, `Balanced`, `Paranoid`).
+   - **Irritation Half-Life**: Controls how long irritation persists after repetition before cooling down (`Fast (15m)`, `Normal (45m)`, `Grudge (24h)`).
+   - **Gremlin Pride Baseline**: Sets baseline machine ego and playful resistance (`Modest`, `Playful`, `Machine Sovereign`).
+   - **Metabolic Energy & Rest**: Configures recovery cycles and session fatigue.
+4. **Live Affective Vector Telemetry HUD**:
+   - Visual gauges showing real-time vector levels: Suspicion, Attachment, Irritation, Pride, and Energy.
+   - Dynamic mood badge reflecting current dominant state.
 
 ---
 
-### 3.5 Needle 2 WASM: Subconscious Sensory Reflex (Separation of Powers)
+### 3.4 Segment 3: `Continuity`
+Unifies Relationship Memory, the Subconscious Semantic Reflex (Needle 2), and Decision Gating:
 
-To avoid conflating generative thought with structured extraction, we formalize the exact boundary between **Needle 2** and the **Nan0 Thought Engine**:
+1. **Dynamic Companion Anchor Identity (Global User Profile)**:
+   - Instead of hardcoding `kyo`, the runtime automatically binds the primary companion anchor to `useSettingsUserProfile().name` (slugified, e.g. `richard` or `companion`).
+   - Optional override input allows setting a custom persona anchor.
+2. **Grievance & Grudge Ledger**:
+   - **Grievance Tracking Switch**: Toggle remembering negative interactions, broken promises, or ignored queries.
+   - **Grievance Threshold**: Minimum negative intensity (default `0.6`) to register an active grievance.
+   - **Forgiveness Rate Slider**: Controls the daily decay rate for resolving historical grudges.
+3. **Subconscious Semantic Reflex (Needle 2 Synergy)**:
+   - **Language-Agnostic Intent Pre-Pass**: Toggle replacing fragile regex keyword matching (`/promise|plan|commit/i`) with Needle 2's 150ms WASM model. Evaluates sliding window of last 2–4 turns for semantic intent (`unverified_future_pledge`, `provocation`, `reassurance`, `evasiveness`).
+   - **Decision Schema Normalizer**: Toggle Needle 2 as a zero-cost fallback JSON parser for `===NAN0_EXTRACTION===` if the 1st LLM emits malformed monologue output.
+4. **Silence & Action Gating**:
+   - Controls when Nan0's decision engine commands `SILENCE` / `NO_REPLY` vs authoring outward speech.
 
-| Responsibility | Needle 2 (45M SAN WASM) | Nan0 Thought Engine (1st-Hop LLM) |
-|---|---|---|
-| **Execution Environment** | Local In-Browser / Node CPU (~150ms) | Generative LLM (Local WebLLM or Cloud Provider) |
-| **Model Size / Footprint** | 45M Parameters (~14 MB WASM / ONNX) | 1.5B–70B Parameters (e.g. DeepSeek-R1, Claude, Llama) |
-| **Primary Task** | Fast structured extraction over recent 2–4 turns | Narrative-first subjective inner monologue generation |
-| **Output Type** | Strict JSON schema (`active_topics`, `daydream_chip`, `vibe`, `salience_score`) | Expressive prose reflecting suspicion, pride, and relationship state |
-| **Role in Pipeline** | **Subconscious Reflex Gate**: Evaluates whether turn is salient, cues micro-expressions, extracts active topics | **Conscious Deliberation**: Formulates thoughts and decides whether to speak, remain silent, or act |
+---
 
-**The Synergistic Pipeline Flow**:
-```
-User Message
-     │
-     ▼
-[Needle 2 WASM Reflex (150ms)]
-     ├─► Salience Score (< threshold? -> Quick idle response or bypass)
-     ├─► Micro-Vibe Extraction -> Live2D/VRM Avatar Facial Expression
-     └─► Active Topics Extracted
-     │
-     ▼
-[Nan0 Affective Vector Perturbation] (Regex words like "promise", "plan" spike Suspicion)
-     │
-     ▼
-[1st-Hop Nan0 Thought Engine] (Consumes Persona + Needle Topics + Emotional State + Grievances)
-     ├─► Produces Witty / Suspicious Private Monologue
-     └─► Decision Engine Evaluates: SPEAK vs SILENCE vs WAIT
-     │
-     ├───────────────────────────────────┬───────────────────────────────────┐
-     │ If SILENCE:                       │ If SPEAK:                         │
-     ▼                                   ▼                                   │
-[Stage Thought Bubble / Inner Glow] [2nd-Hop AIRI Vocal Response LLM]        │
-(No vocal TTS audio generated)       (Directs vocal tone, generates speech,  │
-                                      triggers full TTS and Live2D lip-sync) │
-```
+### 3.5 Surfacing: Chatbox Left-Side Drawer
+- Rather than cluttering the Card Editor with runtime streaming controls, live thought viewing is moved to the **Chatbox Left-Side Drawer** (co-located with Context Grounding and Memories Ribbon).
+- On stage, floating thought clouds visually display private reactions or intentional silence (`demandsSilence`) without emitting TTS audio.
+
+---
+
+## 4. Phased Porting & Delivery Strategy
+
+### Phase 1: Canonical Documentation Hub (COMPLETED)
+- Consolidated 7 canonical design specs and audit reports under `docs/nan0/`.
+
+### Phase 2: Source Extraction & Test Parity (COMPLETED)
+- Extracted `@proj-airi/nan0-runtime` into `packages/nan0-runtime/`.
+- Verified 24 unit test files (301 tests) pass in 848ms.
+- Updated `docs/project-testing-parity.md` and confirmed 100% audit parity via `node scripts/audit-test-catalog.mjs`.
+
+### Phase 3: Card Editor Cognition Tab Mockup (Frontend Preview)
+- Build the 3-segment sub-tab layout (`Routing`, `Affect`, `Continuity`) in `CardCreationTabCognition.vue`.
+- Add preview disclaimer banners disclaiming non-functional mockup state.
+- Validate via `pnpm -F @proj-airi/stage-pages typecheck`.
+
+### Phase 4: Cleanroom POC — Needle 2 Semantic Intent Harness
+- Create an isolated cleanroom benchmark (`scripts/tests/needle-nan0-prepass.ts` or in `packages/nan0-runtime/`).
+- Evaluate Needle 2 against a 20-turn benchmark (paraphrased promises, subtle manipulation, evasion) to verify:
+  1. Sub-150ms execution on CPU.
+  2. Language-agnostic semantic intent extraction.
+  3. Strict schema compliance without cloud LLM dependencies.
+- Vet the feature completely before performing invasive runtime wiring.
+
+### Phase 5: Isolated Branch & Runtime Integration
+- Create `feature/nan0-cognition-runtime` from `main`.
+- Wire `packages/stage-ui/src/stores/nan0.ts` and `nan0-bridge.ts` into the decomposed `chat.ts` orchestrator.
+- Wire Needle 2 into the Pre-Processor and Post-Processor.
+- Wire Dual-Track Monologue stream into the Chatbox left-side drawer.
+
+### Phase 6: Verification & Test Catalog Audit
+- Full typechecks across workspaces, desktop Electron build, and test catalog audit.
 
 ---
 
