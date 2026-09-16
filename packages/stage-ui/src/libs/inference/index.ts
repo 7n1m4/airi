@@ -4,6 +4,8 @@ export { createLocalMoondreamAdapter, getMoondreamAdapter } from './adapters/moo
 export type { LocalMoondreamAdapter } from './adapters/moondream'
 export { createNeedleClient, needleClient } from './adapters/needle-client'
 export type { NeedleClient } from './adapters/needle-client'
+export { createWebRwkvAdapter, getWebRwkvAdapter } from './adapters/web-rwkv'
+export type { WebRwkvAdapter, WebRwkvGenerateOptions } from './adapters/web-rwkv'
 export {
   clearModelCache,
   clearNeedleCache,

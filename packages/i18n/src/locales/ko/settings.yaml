@@ -411,20 +411,6 @@ pages:
       username-description: Factorio 서버의 사용자 이름
       username-placeholder: Factorio 사용자 이름을 입력하세요
       configured: Factorio 구성 완료!
-    gaming-minecraft:
-      description: Minecraft 플레이 중!
-      title: Minecraft
-      enable: Minecraft 통합 사용
-      enable-description: AIRI가 Minecraft를 접근하기 위해 허용
-      server-address: 서버 주소
-      server-address-description: Minecraft 서버의 IP 주소 및 호스트 이름
-      server-address-placeholder: '서버 주소 입력 (예시: localhost 및 play.example.com)'
-      server-port: 서버 포트
-      server-port-description: 'Minecraft 서버의 포트 번호 (기본값: 25565)'
-      username: 사용자 이름
-      username-description: Minecraft 서버의 사용자 이름
-      username-placeholder: Minecraft 사용자 이름을 입력하세요
-      configured: Minecraft 구성 완료!
     hearing:
       description: 음성 인식 작동 방식 구성
       title: 청력

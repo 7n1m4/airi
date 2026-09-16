@@ -11,7 +11,7 @@ A generic, cross-game agent harness and execution engine for AIRI that enables c
 
 ### The Upstream Problem: Per-Game Bespoke Integrations
 Upstream AIRI attempted game support by building bespoke, tightly-coupled adapters:
-1. **Minecraft (`services/minecraft`)**: Required a 4-layer cognitive architecture coupled to Mineflayer (PrismarineJS), parsing Java Edition raw network packets (`minecraft-data`), managing voxel raycasts, and tracking inventory slots. Upstream startup audits (`docs/runtime-stability-audit.md`) revealed that discovering Minecraft dependencies synchronously delayed desktop window startup by over 20 seconds.
+1. **Bespoke Game Bot Clients**: Required complex cognitive architectures coupled to external bot libraries, parsing raw game network packets, managing spatial raycasts, and tracking inventory slots. Discovery of heavy external game dependencies synchronously delayed desktop window startup by over 20 seconds.
 2. **Factorio**: Relied on Factorio's RCON (Remote Console) socket and custom Lua injection scripts (`settings/factorio/*`).
 3. **The Fundamental Dead End**: Supporting $N$ games required maintaining $N$ separate protocols, game-specific bot clients, and brittle state machines. Whenever a game updated, its bespoke bridge broke.
 
@@ -336,7 +336,7 @@ Because game pacing varies drastically across titles, the Arcade Room settings d
 
 | Capability | Upstream Approach | Proposed Generic Runtime |
 | :--- | :--- | :--- |
-| **Technology Stack** | Mineflayer (Node.js) + Factorio RCON | JS-DOS (WebAssembly) + HTML5 Canvas |
+| **Technology Stack** | Bespoke bot libraries (Node.js) + Factorio RCON | JS-DOS (WebAssembly) + HTML5 Canvas |
 | **External Dependencies** | Node native modules, external game instances | Zero external installs; 100% in-process WebAssembly |
 | **New Game Cost** | Weeks to months (bespoke protocol implementation) | Minutes (ROM / shareware file drag-and-drop) |
 | **User Interaction** | Dry terminal chat or silent bot | Live backseat voice/chat banter with vocal fillers |

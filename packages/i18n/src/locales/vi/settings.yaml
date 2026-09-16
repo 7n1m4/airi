@@ -428,20 +428,6 @@ pages:
       username-description: Tên người dùng của bạn trên máy chủ Factorio
       username-placeholder: Nhập tên người dùng Factorio của bạn
       configured: Đã cấu hình Factorio thành công!
-    gaming-minecraft:
-      description: Chơi Minecraft!
-      title: Minecraft
-      enable: Bật tích hợp Minecraft
-      enable-description: Cho phép AIRI tương tác với trò chơi Minecraft
-      server-address: Địa chỉ máy chủ
-      server-address-description: Địa chỉ IP hoặc tên máy chủ của máy chủ Minecraft
-      server-address-placeholder: Nhập địa chỉ máy chủ (ví dụ localhost hoặc play.example.com)
-      server-port: Cổng máy chủ
-      server-port-description: Số cổng của máy chủ Minecraft (mặc định 25565)
-      username: Tên người dùng
-      username-description: Tên người dùng của bạn trên máy chủ Minecraft
-      username-placeholder: Nhập tên người dùng Minecraft của bạn
-      configured: Đã cấu hình Minecraft thành công!
     hearing:
       description: Cấu hình nhận diện giọng nói
       title: Nghe

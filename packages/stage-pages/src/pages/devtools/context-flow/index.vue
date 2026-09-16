@@ -53,8 +53,8 @@ const testStrategy = ref<ContextUpdateStrategy>(ContextUpdateStrategy.ReplaceSel
 const testSparkNotifyPayload = ref(JSON.stringify({
   kind: 'ping',
   urgency: 'immediate',
-  headline: 'Minecraft entity `zombie` attacked you, health dropped 2 points.',
-  note: 'Triggered from minecraft',
+  headline: 'Game entity `zombie` attacked you, health dropped 2 points.',
+  note: 'Triggered from game',
   destinations: ['character'],
   payload: {
     message: 'Hello from Context Flow devtools',

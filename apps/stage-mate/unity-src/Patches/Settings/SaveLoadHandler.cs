@@ -171,7 +171,6 @@ public class SaveLoadHandler : MonoBehaviour
 
         public int settingsVersion = 0;
         public bool alarmsEnabled = true;
-        public bool enableMinecraftMessages = false;
 
         public string selectedParticleTheme = "Standard";
         public bool enableFeedSystem = false;

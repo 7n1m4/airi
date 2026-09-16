@@ -19,7 +19,7 @@ The **Modules** regulate the AI's "thought processes" and specialized tasks.
 - **Short-Term Memory**: Configuration of the conversation window and token budget.
 - **Long-Term Memory**: Management of memory storage and retrieval mechanisms.
 - **Discord**: Discord bot integration using your bot token from the Discord Developer Portal.
-- **Integrations**: Support for external platforms like X (Twitter), Minecraft, Factorio, and MCP Servers (Model Context Protocol).
+- **Integrations**: Support for external platforms like X (Twitter), Factorio, and MCP Servers (Model Context Protocol).
 
 ---
 

@@ -62,7 +62,7 @@ describe('store character', () => {
 
     const airiCardStore = useAiriCardStore(pinia)
     // @ts-expect-error - testing purpose
-    airiCardStore.systemPrompt = 'You are a brave adventurer in Minecraft.'
+    airiCardStore.systemPrompt = 'You are a brave adventurer.'
     // @ts-expect-error - testing purpose
     airiCardStore.activeCard = {
       name: 'Hero',
@@ -90,7 +90,7 @@ describe('store character', () => {
     const store = useCharacterStore()
 
     expect(store.name).toBe('Hero')
-    expect(store.systemPrompt).toBe('You are a brave adventurer in Minecraft.')
+    expect(store.systemPrompt).toBe('You are a brave adventurer.')
   })
 
   it('records reactions and trims to the max size', () => {

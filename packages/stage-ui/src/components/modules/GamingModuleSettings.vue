@@ -19,7 +19,7 @@ interface GamingModuleStore extends StoreGeneric {
 interface Props {
   // The gaming store instance with the expected interface (enabled, serverAddress, serverPort, username, configured, saveSettings)
   store: GamingModuleStore
-  // Prefix for i18n translation keys (e.g., 'settings.pages.modules.gaming-minecraft')
+  // Prefix for i18n translation keys (e.g., 'settings.pages.modules.gaming-factorio')
   i18nKeyPrefix: string
 }
 

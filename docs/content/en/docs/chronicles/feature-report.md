@@ -237,8 +237,7 @@ A game layer on top of the Actor Stage (Amagami-inspired), plus experimental gam
 - **Choice System with Time Pressure**: A delta-ticking engine processes countdown timers on choices with fallback logic if the user doesn't answer in time; scored choices, journey metrics, and Amagami-inspired intimacy/tension/action-points-style stats display on the overlay HUD.
 - **Storyline Presets**: Curated story catalogs with branching branch choices, per-card scenery routing, open-ended vs goal-driven modes, max-score/temp-turn settings, and choice-weight displays for debugging.
 - **Instruction Sequencer**: A command pipeline that translates game events into stage instructions (motion triggers, expression changes, costume swaps, background swaps).
-- **Cross-Window Sync**: Coordinators + secondary-window broadcast pattern keeps the game state consistent between the Chatbox and Actor Stage windows (raw `BroadcastChannel` `dating-sim-sync` — intentionally outside the `airi-*` naming convention).
-- **Game Presence Modules** *(new)*: `gaming-module-factory` spawns game-companion modules (Minecraft default port 25565, Factorio) so the character can join/monitor actual game sessions.
+- **Game Presence Modules** *(new)*: `gaming-module-factory` spawns game-companion modules (Factorio) so the character can join/monitor actual game sessions.
 
 ---
 

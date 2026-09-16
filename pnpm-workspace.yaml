@@ -25,8 +25,6 @@ patchedDependencies:
   '@moeru/eventa': patches/@moeru__eventa.patch
   '@moeru/eventa@0.3.0': patches/@moeru__eventa@0.3.0.patch
   active-win@9.0.0: patches/active-win@9.0.0.patch
-  mineflayer-pathfinder: patches/mineflayer-pathfinder.patch
-  mineflayer@4.33.0: patches/mineflayer@4.33.0.patch
   node-gyp@11.5.0: patches/node-gyp@11.5.0.patch
   pixi-live2d-display: patches/pixi-live2d-display.patch
   srvx: patches/srvx.patch

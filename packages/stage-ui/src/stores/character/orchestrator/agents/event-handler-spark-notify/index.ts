@@ -83,7 +83,7 @@ export const sparkCommandSchema = z.object({
       persona: z.array(z.object({
         strength: z.enum(['very-high', 'high', 'medium', 'low', 'very-low']),
         traits: z.string().describe('Trait name to adjust behavior. For example, "bravery", "cautiousness", "friendliness".'),
-      }).strict()).nullable().describe('Personas can be used to adjust the behavior of sub-agents. For example, when using as NPC in games, or player in Minecraft, the persona can help define the character\'s traits and decision-making style.'),
+      }).strict()).nullable().describe('Personas can be used to adjust the behavior of sub-agents. For example, when using as NPC in games, the persona can help define the character\'s traits and decision-making style.'),
       options: z.array(z.object({
         label: z.string().describe('Short and brief label for this option, used for identification, should be within a sentence.'),
         steps: z.array(z.string()).describe('Step-by-step instructions for the sub-agent to follow, useful when providing detailed guidance.'),

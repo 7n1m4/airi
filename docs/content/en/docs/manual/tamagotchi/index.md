@@ -39,7 +39,6 @@ Some of the features are not really ready, but we are working hard to make them 
 - Local Speech Synthesis (GPT-SoVITS, IndexTTS, etc.)
 - Singing
 - Configuring Discord from UI (but it works already and requires coding skills to set it up)
-- Configuring Minecraft agent from UI (but it works already and requires coding skills to set it up)
 :::
 
 But first...

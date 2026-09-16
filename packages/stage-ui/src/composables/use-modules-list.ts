@@ -10,7 +10,6 @@ import { useArtistryStore } from '../stores/modules/artistry'
 import { useConsciousnessStore } from '../stores/modules/consciousness'
 import { useDiscordStore } from '../stores/modules/discord'
 import { useFactorioStore } from '../stores/modules/gaming-factorio'
-import { useMinecraftStore } from '../stores/modules/gaming-minecraft'
 import { useHearingStore } from '../stores/modules/hearing'
 import { useSpeechStore } from '../stores/modules/speech'
 import { useTwitterStore } from '../stores/modules/twitter'
@@ -38,7 +37,6 @@ export function useModulesList() {
   const hearingStore = useHearingStore()
   const discordStore = useDiscordStore()
   const twitterStore = useTwitterStore()
-  const minecraftStore = useMinecraftStore()
   const factorioStore = useFactorioStore()
   const artistryStore = useArtistryStore()
   const visionStore = useVisionStore()
@@ -135,15 +133,6 @@ export function useModulesList() {
       to: '/settings/modules/x',
       configured: twitterStore.configured,
       category: 'messaging',
-    },
-    {
-      id: 'gaming-minecraft',
-      name: t('settings.pages.modules.gaming-minecraft.title'),
-      description: t('settings.pages.modules.gaming-minecraft.description'),
-      iconColor: 'i-vscode-icons:file-type-minecraft',
-      to: '/settings/modules/gaming-minecraft',
-      configured: minecraftStore.configured,
-      category: 'gaming',
     },
     {
       id: 'gaming-factorio',

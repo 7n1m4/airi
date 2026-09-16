@@ -518,21 +518,6 @@ pages:
       username-description: Your username in the Factorio server
       username-placeholder: Enter your Factorio username
       configured: Factorio is properly configured!
-    gaming-minecraft:
-      description: Play Minecraft cooperatively with autonomous mining, building, and
-        dialogue
-      title: Minecraft Companion
-      enable: Enable Minecraft Integration
-      enable-description: Allow AIRI to interact with Minecraft game
-      server-address: Server Address
-      server-address-description: The IP address or hostname of the Minecraft server
-      server-address-placeholder: Enter server address (e.g., localhost or play.example.com)
-      server-port: Server Port
-      server-port-description: The port number of the Minecraft server (default 25565)
-      username: Username
-      username-description: Your username in the Minecraft server
-      username-placeholder: Enter your Minecraft username
-      configured: Minecraft is properly configured!
     hearing:
       description: Microphone input, voice activity detection (VAD), and streaming
         transcription

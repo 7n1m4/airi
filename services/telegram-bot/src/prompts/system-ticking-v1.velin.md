@@ -64,7 +64,7 @@ const actions = [
   {
     name: 'come_up_goals',
     description: 'By giving references to contexts, come up goals with deadline and priority to record in long-term memory.',
-    example: { action: 'come_up_goals', goals: [{ text: 'Learn to play Minecraft', deadline: '2025-05-01 23:59:59', priority: 6 }, { text: 'Learn anime of this season', deadline: '2025-01-08 23:59:59', priority: 9 }] },
+    example: { action: 'come_up_goals', goals: [{ text: 'Learn to play chess', deadline: '2025-05-01 23:59:59', priority: 6 }, { text: 'Learn anime of this season', deadline: '2025-01-08 23:59:59', priority: 9 }] },
   },
 ]
 </script>

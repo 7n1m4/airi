@@ -62,7 +62,7 @@ stdenvNoCC.mkDerivation (final: {
     longDescription = ''
       AIRI is a soul container of AI waifu / virtual characters to bring them into our world,
       wishing to achieve Neuro-sama's altitude. It's completely LLM and AI driven, capable of
-      realtime voice chat, playing Minecraft and Factorio. It can be run in browser or on desktop.
+      realtime voice chat, playing Factorio. It can be run in browser or on desktop.
       This is the desktop version.
     '';
     homepage = "https://github.com/moeru-ai/airi";

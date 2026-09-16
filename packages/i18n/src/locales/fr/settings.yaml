@@ -445,20 +445,6 @@ pages:
       username-description: Votre nom d'utilisateur sur le serveur Factorio
       username-placeholder: Entrez votre nom d'utilisateur Factorio
       configured: Factorio est correctement configuré !
-    gaming-minecraft:
-      description: Jouer à Minecraft !
-      title: Minecraft
-      enable: Activer l'intégration Minecraft
-      enable-description: Autoriser AIRI à interagir avec le jeu Minecraft
-      server-address: Adresse du serveur
-      server-address-description: L'adresse IP ou le nom d'hôte du serveur Minecraft
-      server-address-placeholder: Entrez l'adresse du serveur (ex. localhost ou play.exemple.com)
-      server-port: Port du serveur
-      server-port-description: Le numéro de port du serveur Minecraft (par défaut 25565)
-      username: Nom d'utilisateur
-      username-description: Votre nom d'utilisateur sur le serveur Minecraft
-      username-placeholder: Entrez votre nom d'utilisateur Minecraft
-      configured: Minecraft est correctement configuré !
     hearing:
       description: Configurer la reconnaissance vocale
       title: Audition

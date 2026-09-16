@@ -440,21 +440,6 @@ pages:
       username-description: Su nombre de usuario en el servidor de Factorio
       username-placeholder: Ingrese su nombre de usuario de Factorio
       configured: '¡Factorio está configurado correctamente!'
-    gaming-minecraft:
-      description: '¡Jugando Minecraft!'
-      title: Minecraft
-      enable: Habilitar integración con Minecraft
-      enable-description: Permitir que AIRI interactúe con el juego Minecraft
-      server-address: Dirección del servidor
-      server-address-description: La dirección IP o nombre de host del servidor de Minecraft
-      server-address-placeholder: Ingrese la dirección del servidor (por ejemplo,
-        localhost o play.ejemplo.com)
-      server-port: Puerto del servidor
-      server-port-description: El número de puerto del servidor de Minecraft (por defecto 25565)
-      username: Nombre de usuario
-      username-description: Su nombre de usuario en el servidor de Minecraft
-      username-placeholder: Ingrese su nombre de usuario de Minecraft
-      configured: '¡Minecraft está configurado correctamente!'
     hearing:
       description: Configurar cómo funciona el reconocimiento de voz
       title: Audición

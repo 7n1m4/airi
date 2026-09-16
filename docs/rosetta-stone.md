@@ -248,7 +248,6 @@ These use `localStorage` for settings and are **not** serialized inside the AIRI
 | **Twitter** | `packages/stage-ui/src/stores/modules/twitter.ts` | — | `settings/twitter/*` |
 | **Live Session (Gemini)** | `packages/stage-ui/src/stores/modules/live-session.ts` | `notice/gemini.vue` | `settings/gemini/*` |
 | **Artistry Autonomous** | `packages/stage-ui/src/stores/modules/artistry-autonomous.ts` | — | in-memory (director notes in IndexedDB) |
-| **Gaming: Minecraft** | `packages/stage-ui/src/stores/modules/gaming-minecraft.ts` | — | `settings/minecraft/*` |
 | **Gaming: Factorio** | `packages/stage-ui/src/stores/modules/gaming-factorio.ts` | — | `settings/factorio/*` |
 
 ### Module Wiring Pattern

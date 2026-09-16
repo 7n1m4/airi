@@ -68,7 +68,6 @@ export function createEikiReferenceFixture(): SettingsTopology {
     { id: 'mod-06-text-to-motion', label: 'MODULE 06 · Text to Motion', shortLabel: 'M06', route: '/settings/modules/text-to-motion', icon: 'i-solar:running-round-bold-duotone' },
     { id: 'mod-07-discord', label: 'MODULE 07 · Discord Bot', shortLabel: 'M07', route: '/settings/modules/messaging-discord', icon: 'i-simple-icons:discord' },
     { id: 'mod-08-twitter', label: 'MODULE 08 · X (Twitter)', shortLabel: 'M08', route: '/settings/modules/x', icon: 'i-simple-icons:x' },
-    { id: 'mod-09-minecraft', label: 'MODULE 09 · Minecraft', shortLabel: 'M09', route: '/settings/modules/gaming-minecraft', icon: 'i-vscode-icons:file-type-minecraft' },
     { id: 'mod-10-factorio', label: 'MODULE 10 · Factorio', shortLabel: 'M10', route: '/settings/modules/gaming-factorio', icon: 'i-solar:gamepad-bold-duotone' },
     { id: 'mod-11-mcp', label: 'MODULE 11 · MCP Servers', shortLabel: 'M11', route: '/settings/modules/mcp', icon: 'i-solar:server-bold-duotone' },
     { id: 'mod-12-beat-sync', label: 'MODULE 12 · Beat Sync', shortLabel: 'M12', route: '/settings/modules/beat-sync', icon: 'i-solar:music-notes-bold-duotone' },

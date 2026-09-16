@@ -805,7 +805,7 @@ interface SparkCommandGuidance {
   type: 'proposal' | 'instruction' | 'memory-recall'
   /**
    * Personas can be used to adjust the behavior of sub-agents.
-   * For example, when using as NPC in games, or player in Minecraft,
+   * For example, when using as NPC or player in games,
    * the persona can help define the character's traits and decision-making style.
    *
    * Example:
@@ -1058,13 +1058,13 @@ export interface ProtocolEvents<C = undefined> {
    * - Allow untrusted agents to broadcast without auth/capability checks.
    *
    * Examples:
-   * - Minecraft attack/death: kind=alarm, urgency=immediate (fast bubble-up).
-   *   e.g., fromAgent='minecraft', headline='Under attack by witch', payload includes hp/location/gear.
+   * - Game battle alert: kind=alarm, urgency=immediate (fast bubble-up).
+   *   e.g., fromAgent='game-agent', headline='Under attack in dungeon', payload includes hp/location/gear.
    * - Cat bowl empty from HomeAssistant: kind=alarm, urgency=soon.
    * - IM/email "read now": kind=ping, urgency=immediate.
    * - Action Required email: kind=reminder, urgency=later.
    *
-   * destinations controls routing (e.g. ['character'], ['character','minecraft-agent']).
+   * destinations controls routing (e.g. ['character'], ['character','game-agent']).
    */
   'spark:notify': SparkNotifyEvent
 
@@ -1074,7 +1074,7 @@ export interface ProtocolEvents<C = undefined> {
    * - Character: state=working, note="Seen it, responding".
    * - Sub-agent: state=done, note="Healed and safe".
    * - Sub-agent: state=blocked/dropped with note when it cannot comply.
-   * - Minecraft: state=working, note="Pillared up; healing" in reply to a command.
+   * - Sub-agent: state=working, note="Taking cover; healing" in reply to a command.
    */
   'spark:emit': SparkEmitEvent
 

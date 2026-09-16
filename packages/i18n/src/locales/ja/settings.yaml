@@ -419,20 +419,6 @@ pages:
       username-description: Factorioサーバーでのユーザー名
       username-placeholder: Factorioユーザー名を入力
       configured: Factorioは適切に設定されています！
-    gaming-minecraft:
-      description: Minecraftをプレイ！
-      title: Minecraft
-      enable: Minecraft連携を有効にする
-      enable-description: AIRIがMinecraftゲームと対話できるようにする
-      server-address: サーバーアドレス
-      server-address-description: MinecraftサーバーのIPアドレスまたはホスト名
-      server-address-placeholder: サーバーアドレスを入力 (例： localhostまたはplay.example.com)
-      server-port: サーバーポート
-      server-port-description: Minecraftサーバーのポート番号 (デフォルト 25565)
-      username: ユーザー名
-      username-description: Minecraftサーバーでのユーザー名
-      username-placeholder: Minecraftユーザー名を入力
-      configured: Minecraftは適切に設定されています！
     hearing:
       description: 音声認識の動作を設定する
       title: 聴覚

@@ -206,7 +206,6 @@ export default defineConfig({
               {
                 text: 'Games & Social Platforms',
                 items: [
-                  { text: 'Minecraft', link: withBase('/en/docs/contributing/services/minecraft') },
                   { text: 'Satori Bot', link: withBase('/en/docs/contributing/services/satori') },
                   { text: 'Telegram Bot', link: withBase('/en/docs/contributing/services/telegram') },
                   { text: 'Discord Bot', link: withBase('/en/docs/contributing/services/discord') },
@@ -330,7 +329,6 @@ export default defineConfig({
               {
                 text: '游戏与社交平台',
                 items: [
-                  { text: 'Minecraft', link: withBase('/zh-Hans/docs/contributing/services/minecraft') },
                   { text: 'Satori Bot', link: withBase('/zh-Hans/docs/contributing/services/satori') },
                   { text: 'Telegram Bot', link: withBase('/zh-Hans/docs/contributing/services/telegram') },
                   { text: 'Discord Bot', link: withBase('/zh-Hans/docs/contributing/services/discord') },
@@ -480,7 +478,6 @@ export default defineConfig({
               {
                 text: 'ゲーム＆ソーシャルプラットフォーム',
                 items: [
-                  { text: 'Minecraft', link: withBase('/ja/docs/contributing/services/minecraft') },
                   { text: 'Satori Bot', link: withBase('/ja/docs/contributing/services/satori') },
                   { text: 'Telegram Bot', link: withBase('/ja/docs/contributing/services/telegram') },
                   { text: 'Discord Bot', link: withBase('/ja/docs/contributing/services/discord') },

@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import type { DuckDBWasmDrizzleDatabase } from '@proj-airi/drizzle-duckdb-wasm'
 import type { Live2DLipSync, Live2DLipSyncOptions } from '@proj-airi/model-driver-lipsync'
 import type { Profile } from '@proj-airi/model-driver-lipsync/shared/wlipsync'
 import type { TtsRequest } from '@proj-airi/pipelines-audio'
@@ -8,8 +7,6 @@ import type { UnElevenLabsOptions } from 'unspeech'
 
 import type { EmotionPayload } from '../../constants/emotions'
 
-import { drizzle } from '@proj-airi/drizzle-duckdb-wasm'
-import { getImportUrlBundles } from '@proj-airi/drizzle-duckdb-wasm/bundles/import-url-browser'
 import { useElectronWindowResizeStateEvent } from '@proj-airi/electron-vueuse'
 import { createLive2DLipSync } from '@proj-airi/model-driver-lipsync'
 import { wlipsyncProfile } from '@proj-airi/model-driver-lipsync/shared/wlipsync'
@@ -68,7 +65,6 @@ const emits = defineEmits<{
 
 const state = defineModel<'pending' | 'loading' | 'mounted'>('state', { default: 'pending' })
 
-const db = ref<DuckDBWasmDrizzleDatabase>()
 // const transformersProvider = createTransformers({ embedWorkerURL })
 
 const settingsStore = useSettings()
@@ -1679,8 +1675,6 @@ chatHookCleanups.push(onAssistantResponseEnd(async (message) => {
   //   ...transformersProvider.embed('Xenova/nomic-embed-text-v1'),
   //   input: message,
   // })
-
-  // await db.value?.execute(`INSERT INTO memory_test (vec) VALUES (${JSON.stringify(res.embedding)});`)
 }))
 
 // Animation finishes decoupled
@@ -1768,10 +1762,11 @@ if (typeof window !== 'undefined') {
   window.addEventListener(resizeStateEventName, handleResizeStateChange as EventListener)
 }
 
-onMounted(async () => {
-  db.value = drizzle({ connection: { bundles: getImportUrlBundles() } })
-  await db.value.execute(`CREATE TABLE memory_test (vec FLOAT[768]);`)
-  state.value = 'mounted'
+onMounted(() => {
+  // The Electron control strip renders its model in a separate actor window.
+  if (isElectron.value)
+    state.value = 'mounted'
+
   void customVrmAnimationsStore.loadCustomAnimations()
 })
 

@@ -396,8 +396,7 @@ async function handleToggleSalienceGate() {
   await airiCardStore.toggleSalienceGate(activeCardId.value)
   const isEnabled = !!activeCard.value?.extensions?.airi?.salienceGateEnabled
   if (isEnabled) {
-    const { getWebRwkvAdapter } = await import('@proj-airi/stage-ui/libs/inference/adapters/web-rwkv')
-    const { DEFAULT_WEB_RWKV_MODEL } = await import('@proj-airi/stage-ui/libs/inference/constants')
+    const { getWebRwkvAdapter, DEFAULT_WEB_RWKV_MODEL } = await import('@proj-airi/stage-ui/libs/inference')
     const { useProvidersStore } = await import('@proj-airi/stage-ui/stores/providers')
     const adapter = await getWebRwkvAdapter()
     if (adapter.state === 'idle') {
@@ -405,7 +404,7 @@ async function handleToggleSalienceGate() {
       const config = providersStore.getProviderConfig('web-rwkv')
       const modelUrl = (config?.model as string) || DEFAULT_WEB_RWKV_MODEL
       const vocab = (config?.vocab as string) || undefined
-      void adapter.loadModel(modelUrl, vocab).catch(err => console.error('[SalienceGate] Error loading web-rwkv model on toggle:', err))
+      void adapter.loadModel(modelUrl, vocab).catch((err: unknown) => console.error('[SalienceGate] Error loading web-rwkv model on toggle:', err))
     }
   }
 }

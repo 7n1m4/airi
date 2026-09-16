@@ -117,7 +117,6 @@ To help users understand how to leverage their configured tools, the "Configure"
 
 In addition to acting as a client, some AIRI services implement the **MCP Server** role to expose internal functionality to external tools:
 - **Twitter Services**: [mcp-adapter.ts](file:///c:/Users/h4rdc/Documents/Github/airi-rebase-scratch/services/twitter-services/src/adapters/mcp-adapter.ts) exposes timeline reading and tweet searching capabilities over SSE.
-- **Minecraft Debug**: [mcp-repl-server.ts](file:///c:/Users/h4rdc/Documents/Github/airi-rebase-scratch/services/minecraft/src/debug/mcp-repl-server.ts) provides a REPL-style MCP interface for minecraft service debugging.
 
 ## Relevant Skills
 

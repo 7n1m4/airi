@@ -427,20 +427,6 @@ pages:
       username-description: Ваше имя пользователя на сервере Factorio
       username-placeholder: Введите ваше имя пользователя Factorio
       configured: Factorio настроен правильно!
-    gaming-minecraft:
-      description: Играем в Minecraft!
-      title: Minecraft
-      enable: Включить интеграцию Minecraft
-      enable-description: Разрешить AIRI взаимодействовать с игрой Minecraft
-      server-address: Адрес сервера
-      server-address-description: IP-адрес или имя хоста сервера Minecraft
-      server-address-placeholder: Введите адрес сервера (например, localhost или play.example.com)
-      server-port: Порт сервера
-      server-port-description: Номер порта сервера Minecraft (по умолчанию 25565)
-      username: Имя пользователя
-      username-description: Ваше имя пользователя на сервере Minecraft
-      username-placeholder: Введите ваше имя пользователя Minecraft
-      configured: Minecraft настроен правильно!
     hearing:
       description: Настройка распознавания речи
       title: Слух

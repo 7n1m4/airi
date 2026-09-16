@@ -142,7 +142,7 @@ Bridges connect external devices and services to AIRI. They do not own UI; they 
 
 - VS Code extension for editor context and commands.
 - Browser extension for page context.
-- Minecraft service for game events and commands.
+- Game service for game events and commands.
 
 Remote plugins are services in any language that connect over Eventa and register capabilities. They are preferred for server integrations and non-JS/TS stacks.
 

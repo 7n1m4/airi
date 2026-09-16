@@ -409,20 +409,6 @@ pages:
       username-description: 您在異星工廠伺服器中的使用者名稱
       username-placeholder: 輸入您的異星工廠使用者名稱
       configured: 異星工廠已正確設定！
-    gaming-minecraft:
-      description: 一起玩 Minecraft！
-      title: 我的世界 Minecraft
-      enable: 啟用我的世界集成
-      enable-description: 允許 AIRI 與我的世界遊戲互動
-      server-address: 伺服器地址
-      server-address-description: 我的世界伺服器的 IP 地址或主機名稱
-      server-address-placeholder: 輸入伺服器地址（例如：localhost 或 play.example.com）
-      server-port: 伺服器端口
-      server-port-description: 我的世界伺服器的端口號（預設 25565）
-      username: 使用者名稱
-      username-description: 您在我的世界伺服器中的使用者名稱
-      username-placeholder: 輸入您的我的世界使用者名稱
-      configured: 我的世界已正確設定！
     hearing:
       description: 語音辨識
       title: 聽覺

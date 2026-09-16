@@ -39,7 +39,6 @@ description: 如何使用桌面版的 Project AIRI
 - 本地语音合成（例如 GPT-SoVITS、IndexTTS 等）
 - AI 唱歌
 - 从用户界面配置 Discord（但已经可以用了！只是需要掌握一些写代码的能力才能配置）
-- 从用户界面配置 Minecraft Agent 智能体（但已经可以用了！只是需要掌握一些写代码的能力才能配置）
 :::
 
 但首先。。。

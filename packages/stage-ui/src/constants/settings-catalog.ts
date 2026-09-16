@@ -465,21 +465,6 @@ export const SETTINGS_CATALOG_ITEMS: CatalogNodeItem[] = [
 
   // Cluster: GAMING & WORLDS 遊
   {
-    id: 'mod-gaming-minecraft',
-    label: 'Minecraft Companion',
-    shortLabel: 'MC',
-    titleKey: 'settings.pages.modules.gaming-minecraft.title',
-    descriptionKey: 'settings.pages.modules.gaming-minecraft.description',
-    description: 'Play Minecraft cooperatively with autonomous mining, building, and dialogue',
-    glyph: '方',
-    clusterGroup: 'GAMING & WORLDS 遊',
-    route: '/settings/modules/gaming-minecraft',
-    icon: 'i-vscode-icons:file-type-minecraft',
-    order: 12,
-    parentId: 'area-modules',
-    kind: 'page',
-  },
-  {
     id: 'mod-gaming-factorio',
     label: 'Factorio Companion',
     shortLabel: 'Factory',

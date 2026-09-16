@@ -191,7 +191,7 @@ const SUGGESTED_TAG_GROUPS: SuggestedTagCategory[] = [
   {
     label: 'Gaming',
     icon: 'i-solar:gamepad-bold-duotone',
-    tags: ['steam', 'minecraft', 'destiny', 'factorio'],
+    tags: ['steam', 'destiny', 'factorio'],
   },
   {
     label: 'Dev & Work',

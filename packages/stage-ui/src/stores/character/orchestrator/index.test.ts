@@ -116,7 +116,7 @@ describe('store character-orchestrator', () => {
 
     const airiCardStore = useAiriCardStore(pinia)
     // @ts-expect-error - testing purpose
-    airiCardStore.systemPrompt = 'You are a brave adventurer in Minecraft.'
+    airiCardStore.systemPrompt = 'You are a brave adventurer.'
     // @ts-expect-error - testing purpose
     airiCardStore.activeCard = {
       name: 'Hero',
@@ -146,7 +146,7 @@ describe('store character-orchestrator', () => {
     mockedStore(useLLM).stream.mockImplementation(async (_model: string, _provider: unknown, _messages: unknown, options: any) => {
       if (options?.tools?.length) {
         await options.tools[1].execute({ commands: [{
-          destinations: ['minecraft'],
+          destinations: ['game-agent'],
           intent: 'action',
           priority: 'critical',
           interrupt: 'false',
@@ -167,7 +167,7 @@ describe('store character-orchestrator', () => {
     const store = useCharacterOrchestratorStore()
     const event: WebSocketEventOf<'spark:notify'> = {
       type: 'spark:notify',
-      source: 'minecraft',
+      source: 'game-agent',
       data: {
         id: nanoid(),
         eventId: nanoid(),
