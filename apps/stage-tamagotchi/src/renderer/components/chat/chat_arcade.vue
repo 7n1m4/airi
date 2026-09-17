@@ -210,13 +210,20 @@ async function resolveArchiveOrgBundle(identifier: string): Promise<ArchiveOrgRe
 async function mountDosGame(buffer: ArrayBuffer | ArrayBufferLike, gameTitle: string, emulatorStart?: string): Promise<ArrayBuffer | ArrayBufferLike> {
   const Dos = await ensureJsDosLoaded()
 
+  if (currentCommandInterface) {
+    try {
+      await currentCommandInterface.exit()
+    }
+    catch {}
+    currentCommandInterface = null
+  }
+
   if (dosPlayerInstance) {
     try {
       dosPlayerInstance.stop()
     }
     catch {}
     dosPlayerInstance = null
-    currentCommandInterface = null
   }
 
   await nextTick()
@@ -282,16 +289,21 @@ async function mountDosGame(buffer: ArrayBuffer | ArrayBufferLike, gameTitle: st
       console.info(`[Arcade] Using startup target: "${execCmd}"`)
 
       // Format DOS autoexec commands
-      const cleanTarget = execCmd.replace(/\//g, '\\')
-      const lastSlashIdx = cleanTarget.lastIndexOf('\\')
+      const trimmedCmd = execCmd.trim()
+      const firstSpaceIdx = trimmedCmd.indexOf(' ')
+      const binaryPart = firstSpaceIdx !== -1 ? trimmedCmd.slice(0, firstSpaceIdx) : trimmedCmd
+      const argsPart = firstSpaceIdx !== -1 ? trimmedCmd.slice(firstSpaceIdx) : ''
+
+      const cleanBinary = binaryPart.replace(/\//g, '\\')
+      const lastSlashIdx = cleanBinary.lastIndexOf('\\')
       let autoexecLines = ''
       if (lastSlashIdx !== -1) {
-        const dir = cleanTarget.slice(0, lastSlashIdx)
-        const exe = cleanTarget.slice(lastSlashIdx + 1)
-        autoexecLines = `cd ${dir}\r\n${exe}`
+        const dir = cleanBinary.slice(0, lastSlashIdx)
+        const exe = cleanBinary.slice(lastSlashIdx + 1)
+        autoexecLines = `cd ${dir}\r\n${exe}${argsPart}`
       }
       else {
-        autoexecLines = cleanTarget
+        autoexecLines = `${cleanBinary}${argsPart}`
       }
 
       const dosboxConf = `[sdl]
@@ -356,6 +368,10 @@ ${autoexecLines}
     autoStart: true,
     kiosk: true,
     renderAspect: '4/3',
+    fsChanges: {
+      local: true,
+      urlToKey: async () => currentGameIdentifier.value,
+    },
     onEvent: (event: string, ci: any) => {
       if (event === 'ci-ready') {
         currentCommandInterface = ci
@@ -543,18 +559,98 @@ async function handleQuickLoad() {
     return
 
   try {
-    const state = await arcadeSavestatesStore.getItem<Uint8Array>(currentGameIdentifier.value)
+    const state = await arcadeSavestatesStore.getItem<Uint8Array | Blob | ArrayBuffer>(currentGameIdentifier.value)
     if (!state) {
       triggerReactiveReaction(`No saved snapshot found for ${currentGameTitle.value}!`, 'panicked')
       return
     }
 
     triggerReactiveReaction(`📂 Restoring savestate for ${currentGameTitle.value}...`, 'cheering')
-    await mountDosGame(state.buffer, currentGameTitle.value)
+    isDosEngineLoading.value = true
+    dosLoadingProgress.value = 'Preparing savestate...'
+
+    // 1. Retrieve the base game bundle from local cache
+    let baseBuffer = await arcadeCacheStore.getItem<ArrayBuffer | Blob>(currentGameIdentifier.value)
+    let emulatorStart: string | undefined
+
+    if (!baseBuffer) {
+      // Fallback: If not in cache, resolve preset bundle
+      const preset = GAME_PRESETS.find(p => p.id === currentGameIdentifier.value)
+      if (preset) {
+        dosLoadingProgress.value = 'Resolving base game bundle...'
+        let targetUrl = preset.bundleUrl
+        if (!targetUrl) {
+          const resolved = await resolveArchiveOrgBundle(preset.id)
+          targetUrl = resolved.bundleUrl
+          emulatorStart = resolved.emulatorStart
+        }
+        baseBuffer = await fetchWithProgress(targetUrl, (pct) => {
+          dosLoadingProgress.value = `Downloading base game ${pct}%...`
+        })
+      }
+    }
+
+    if (!baseBuffer) {
+      throw new Error(`Base game bundle not found in cache for ${currentGameTitle.value}`)
+    }
+
+    let rawBaseBuffer: ArrayBuffer
+    if (baseBuffer instanceof Blob) {
+      rawBaseBuffer = await (baseBuffer as Blob).arrayBuffer()
+    }
+    else if ((baseBuffer as any) instanceof ArrayBuffer) {
+      rawBaseBuffer = baseBuffer as ArrayBuffer
+    }
+    else if ((baseBuffer as any).buffer instanceof ArrayBuffer) {
+      rawBaseBuffer = (baseBuffer as any).buffer
+    }
+    else {
+      rawBaseBuffer = baseBuffer as any
+    }
+
+    let stateBytes: Uint8Array | ArrayBuffer
+    if (state instanceof Blob) {
+      stateBytes = await (state as Blob).arrayBuffer()
+    }
+    else if ((state as any) instanceof Uint8Array) {
+      stateBytes = state as Uint8Array
+    }
+    else if ((state as any).buffer instanceof ArrayBuffer) {
+      stateBytes = new Uint8Array((state as any).buffer)
+    }
+    else {
+      stateBytes = state as any
+    }
+
+    // 2. Merge delta savegame files into base bundle
+    dosLoadingProgress.value = 'Merging savestate...'
+    const baseZip = await JSZip.loadAsync(rawBaseBuffer.slice(0))
+    const deltaZip = await JSZip.loadAsync(stateBytes)
+
+    let mergedCount = 0
+    for (const [relativePath, entry] of Object.entries(deltaZip.files)) {
+      if (!entry.dir) {
+        // Preserve base config if delta doesn't contain a valid dosbox.conf
+        if (relativePath === '.jsdos/dosbox.conf' && baseZip.file('.jsdos/dosbox.conf')) {
+          continue
+        }
+        const fileData = await entry.async('uint8array')
+        baseZip.file(relativePath, fileData)
+        mergedCount++
+      }
+    }
+
+    console.info(`[Arcade] Merged ${mergedCount} savestate files into base bundle for ${currentGameTitle.value}`)
+    const mergedBuffer = await baseZip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
+
+    dosLoadingProgress.value = 'Booting DOSBox with savestate...'
+    await mountDosGame(mergedBuffer, currentGameTitle.value, emulatorStart)
   }
   catch (err: any) {
     console.error('[Arcade] QuickLoad error:', err)
     triggerReactiveReaction(`Failed to load savestate: ${err.message || err}`, 'panicked')
+    isDosEngineLoading.value = false
+    dosLoadingProgress.value = ''
   }
 }
 
@@ -1450,8 +1546,8 @@ onUnmounted(() => {
         @change="handleFileInputChange"
       >
 
-      <!-- Game Top Toolbar -->
-      <div class="mb-3 flex items-center justify-between border border-neutral-200/40 rounded-xl bg-white/70 px-4 py-2.5 shadow-sm backdrop-blur-md dark:border-neutral-800/40 dark:bg-neutral-900/60">
+      <!-- Game Top Toolbar (Library & Game Selection) -->
+      <div class="mb-3 flex items-center justify-between border border-neutral-200/40 rounded-xl bg-white/70 px-4 py-2 shadow-sm backdrop-blur-md dark:border-neutral-800/40 dark:bg-neutral-900/60">
         <!-- Title & Preset Selector -->
         <div class="flex items-center gap-3">
           <div class="i-solar:gamepad-bold-duotone text-xl text-primary-500" />
@@ -1489,73 +1585,8 @@ onUnmounted(() => {
           </button>
         </div>
 
-        <!-- Actions: Savestate & Controls -->
+        <!-- Right: Audio, Save/Load & Status -->
         <div class="flex items-center gap-1.5">
-          <!-- Airi Pass Controller / Take Turn -->
-          <button
-            class="shadow-2xs flex items-center gap-1.5 border rounded-lg px-3 py-1.5 text-xs text-white font-bold transition-all active:scale-95 disabled:opacity-50"
-            :class="[
-              arcadeAgent.turnState.value === 'executing'
-                ? 'border-amber-500/40 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 animate-pulse'
-                : arcadeAgent.turnState.value === 'thinking' || arcadeAgent.turnState.value === 'capturing'
-                  ? 'border-purple-500/40 bg-gradient-to-r from-purple-600 to-indigo-600'
-                  : 'border-purple-500/40 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700',
-            ]"
-            :disabled="isCapturing"
-            :title="arcadeAgent.turnState.value === 'executing' ? 'Airi is currently playing! Click to take back controller.' : 'Pass the controller: Airi inspects the screen with your global VLM, shares tactical commentary, and takes a turn!'"
-            @click="handleAiriTakeTurn"
-          >
-            <div
-              :class="[
-                arcadeAgent.turnState.value === 'thinking' || arcadeAgent.turnState.value === 'capturing'
-                  ? 'i-solar:restart-bold animate-spin'
-                  : arcadeAgent.turnState.value === 'executing'
-                    ? 'i-solar:hand-shake-bold'
-                    : 'i-solar:gamepad-charge-bold',
-              ]"
-              class="text-xs"
-            />
-            <span>
-              {{
-                arcadeAgent.turnState.value === 'capturing'
-                  ? 'Observing...'
-                  : arcadeAgent.turnState.value === 'thinking'
-                    ? 'Airi Planning Move...'
-                    : arcadeAgent.turnState.value === 'executing'
-                      ? 'Take Back Controller'
-                      : 'Pass to Airi'
-              }}
-            </span>
-          </button>
-
-          <!-- Auto-Play Toggle -->
-          <label class="flex cursor-pointer select-none items-center gap-1 border border-neutral-200/80 rounded-lg bg-white/80 px-2 py-1 text-[10px] text-neutral-600 font-semibold dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-300">
-            <input v-model="arcadeAgent.autoPlay.value" type="checkbox" class="size-3 rounded accent-purple-600">
-            <span>Auto-Play</span>
-          </label>
-
-          <!-- Quick Ask Airi -->
-          <button
-            class="shadow-2xs flex items-center gap-1.5 border border-primary-500/40 rounded-lg bg-primary-500 px-3 py-1.5 text-xs text-white font-bold transition-all active:scale-95 hover:bg-primary-600 disabled:opacity-50"
-            :disabled="isCapturing"
-            title="Instantly snap game screen and ask Airi what to do next"
-            @click="handleQuickAsk"
-          >
-            <div :class="isCapturing ? 'i-solar:restart-bold animate-spin' : 'i-solar:plain-bold'" class="text-xs" />
-            <span>Quick Ask Airi</span>
-          </button>
-
-          <!-- Attach Frame -->
-          <button
-            class="shadow-2xs dark:hover:bg-neutral-750 flex items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-white px-2.5 py-1.5 text-xs text-neutral-700 font-medium transition-all active:scale-95 dark:border-neutral-700/80 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200 disabled:opacity-50"
-            :disabled="isCapturing"
-            title="Capture current game frame and attach to chat message"
-            @click="handleAttachFrame"
-          >
-            <div class="i-solar:camera-bold text-xs text-primary-500" />
-            <span>Attach Frame</span>
-          </button>
-
           <!-- QuickSave / QuickLoad (JS-DOS only) -->
           <template v-if="activeEngine === 'jsdos'">
             <button
@@ -1719,6 +1750,90 @@ onUnmounted(() => {
             :cursor-state="arcadeAgent.cursorState.value"
             :character-name="activeCard?.name || 'Airi'"
           />
+        </div>
+      </div>
+
+      <!-- AI Companion Bottom Control Deck -->
+      <div class="mt-3 flex items-center justify-between border border-neutral-200/50 rounded-xl bg-white/70 px-4 py-2.5 shadow-sm backdrop-blur-md dark:border-neutral-800/50 dark:bg-neutral-900/70">
+        <!-- Left: Primary Companion Actions -->
+        <div class="flex items-center gap-2.5">
+          <!-- Airi Pass Controller / Take Turn -->
+          <button
+            class="shadow-2xs flex items-center gap-2 border rounded-lg px-3.5 py-1.5 text-xs text-white font-bold transition-all active:scale-95 disabled:opacity-50"
+            :class="[
+              arcadeAgent.turnState.value === 'executing'
+                ? 'border-amber-500/40 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 animate-pulse'
+                : arcadeAgent.turnState.value === 'thinking' || arcadeAgent.turnState.value === 'capturing'
+                  ? 'border-purple-500/40 bg-gradient-to-r from-purple-600 to-indigo-600'
+                  : 'border-purple-500/40 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700',
+            ]"
+            :disabled="isCapturing"
+            :title="arcadeAgent.turnState.value === 'executing' ? 'Airi is currently playing! Click to take back controller.' : 'Pass the controller: Airi inspects the screen with your global VLM, shares tactical commentary, and takes a turn!'"
+            @click="handleAiriTakeTurn"
+          >
+            <div
+              :class="[
+                arcadeAgent.turnState.value === 'thinking' || arcadeAgent.turnState.value === 'capturing'
+                  ? 'i-solar:restart-bold animate-spin'
+                  : arcadeAgent.turnState.value === 'executing'
+                    ? 'i-solar:hand-shake-bold'
+                    : 'i-solar:gamepad-charge-bold',
+              ]"
+              class="text-sm"
+            />
+            <span>
+              {{
+                arcadeAgent.turnState.value === 'capturing'
+                  ? 'Observing Game...'
+                  : arcadeAgent.turnState.value === 'thinking'
+                    ? 'Airi Planning Move...'
+                    : arcadeAgent.turnState.value === 'executing'
+                      ? 'Take Back Controller'
+                      : 'Pass to Airi'
+              }}
+            </span>
+          </button>
+
+          <!-- Auto-Play Toggle -->
+          <label class="flex cursor-pointer select-none items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-neutral-50/80 px-2.5 py-1.5 text-xs text-neutral-700 font-semibold transition-colors dark:border-neutral-700/80 dark:bg-neutral-800/80 hover:bg-neutral-100 dark:text-neutral-200">
+            <input v-model="arcadeAgent.autoPlay.value" type="checkbox" class="size-3.5 rounded accent-purple-600">
+            <span>Auto-Play</span>
+          </label>
+        </div>
+
+        <!-- Right: Real-Time Companion Tools & Memory -->
+        <div class="flex items-center gap-2">
+          <!-- Quick Ask Airi -->
+          <button
+            class="shadow-2xs flex items-center gap-1.5 border border-primary-500/40 rounded-lg bg-primary-500 px-3 py-1.5 text-xs text-white font-bold transition-all active:scale-95 hover:bg-primary-600 disabled:opacity-50"
+            :disabled="isCapturing"
+            title="Instantly snap game screen and ask Airi what to do next"
+            @click="handleQuickAsk"
+          >
+            <div :class="isCapturing ? 'i-solar:restart-bold animate-spin' : 'i-solar:plain-bold'" class="text-xs" />
+            <span>Quick Ask Airi</span>
+          </button>
+
+          <!-- Attach Frame -->
+          <button
+            class="shadow-2xs dark:hover:bg-neutral-750 flex items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-white px-2.5 py-1.5 text-xs text-neutral-700 font-medium transition-all active:scale-95 dark:border-neutral-700/80 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200 disabled:opacity-50"
+            :disabled="isCapturing"
+            title="Capture current game frame and attach to chat message"
+            @click="handleAttachFrame"
+          >
+            <div class="i-solar:camera-bold text-xs text-primary-500" />
+            <span>Attach Frame</span>
+          </button>
+
+          <!-- Turn Memory Indicator (if turns have occurred) -->
+          <div
+            v-if="arcadeAgent.turnHistory.value.length > 0"
+            class="ml-1 flex items-center gap-1 border border-purple-500/20 rounded-full bg-purple-500/10 px-2.5 py-1 text-[10px] text-purple-600 font-medium dark:text-purple-400"
+            :title="`Recorded ${arcadeAgent.turnHistory.value.length} recent turns in memory`"
+          >
+            <div class="i-solar:history-bold text-xs" />
+            <span>Turn {{ arcadeAgent.turnHistory.value[arcadeAgent.turnHistory.value.length - 1].turnIndex }}</span>
+          </div>
         </div>
       </div>
 

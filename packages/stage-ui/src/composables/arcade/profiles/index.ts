@@ -7,29 +7,24 @@ export const simCityProfile: ArcadeProfile = {
     const s = titleOrId.toLowerCase()
     return s.includes('simcity') || s.includes('sim city')
   },
-  systemPromptAddendum: `## SIMCITY (DOS) SPATIAL & STRATEGIC GUIDE:
-- Layout:
-  - Left Tool Palette (X: 15 to 110): Contains construction tools stacked vertically:
-    • Bulldozer (top)
-    • Road (paves transport routes)
-    • Power Line / Wire (connects zones to electricity)
-    • Residential Zone 'R' (homes)
-    • Commercial Zone 'C' (stores / businesses)
-    • Industrial Zone 'I' (factories / jobs)
-    • Police & Fire Departments
-    • Stadium & Park
-    • Seaport & Airport
-    • Power Plants (Coal / Nuclear)
-  - Center/Right Map Viewport (X: 130 to 980, Y: 50 to 950): The isometric terrain where building occurs.
-  - Top Bar: City Name, Funds ($), Date, and Speed indicators.
-  - Bottom Status / Demand: R-C-I indicator bars (Green R, Blue C, Yellow I).
-- Core Strategy:
-  1. If fresh map with zero power: First select Coal Power Plant from tool palette, place it on the map.
-  2. Run power lines from power plant toward flat land.
-  3. Lay roads in grids or loops.
-  4. Place Residential (R), Commercial (C), and Industrial (I) zones adjacent to roads and powered lines.
-  5. Always observe the R-C-I demand bars to know what the city currently needs.
-- Coordinate Norm: Return normalized coordinates [0, 1000] for clicking tool icons and map tiles.`,
+  systemPromptAddendum: `## SIMCITY (DOS CLASSIC) FACTUAL INTERFACE & TOOLBAR GROUNDING:
+- Left Tool Palette (2 Columns x 7 Rows):
+  - Column 1 (Left, ~X: 45) | Column 2 (Right, ~X: 85):
+    • Row 1 (~Y: 125): Bulldozer ($1) (Clears rubble/trees/land) | Road ($10) (Paved transport)
+    • Row 2 (~Y: 165): Power Lines ($5) (Carries power across tiles) | Rail ($20) (High capacity transit)
+    • Row 3 (~Y: 205): Park ($10) (Boosts land value) | Residential Zone ($100) (3x3 'R' housing)
+    • Row 4 (~Y: 245): Commercial Zone ($100) (3x3 'C' stores) | Industrial Zone ($100) (3x3 'I' factories/jobs)
+    • Row 5 (~Y: 285): Police Dept ($500) (Reduces crime) | Fire Dept ($500) (Controls fires)
+    • Row 6 (~Y: 325): Stadium ($3,000) (Recreation) | Seaport ($3,000) (Waterfront commerce)
+    • Row 7 (~Y: 365): Airport ($10,000) (Air commerce) | Power Plant (Coal $3,000 / Nuclear $5,000)
+- Essential City Mechanics:
+  • Power Plants: Clicking the Power Plant icon (Row 7, Right) allows building Coal or Nuclear plants (4x4 tiles).
+  • Zones (R, C, I): Standard zones are 3x3 tiles. They require road access and electricity to develop.
+  • Power Distribution: Connected zones conduct electricity among touching neighbors. Wires are needed across open ground.
+  • Active Tool Feedback: The bottom-left blue status line shows the currently selected tool name and price.
+  • Status & Demands: Top message bar displays Funds ($), Date, and citizen alerts. The R-C-I meter indicates demand.
+- Main Map Viewport: The playable terrain canvas spans roughly X: 140 to 970, Y: 110 to 920.
+- Normalized Coordinates: Return coordinates in the range [0, 1000] (0 = top/left, 1000 = bottom/right).`,
 }
 
 export const game2048Profile: ArcadeProfile = {

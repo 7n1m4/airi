@@ -10,6 +10,14 @@ import { useVisionStore } from '../../stores/modules/vision'
 import { useProvidersStore } from '../../stores/providers'
 import { resolveArcadeProfile } from './profiles'
 
+export interface ArcadeTurnMemory {
+  turnIndex: number
+  plan: string
+  spoken: string
+  actionsSummary: string
+  timestamp: number
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -27,6 +35,7 @@ export function useArcadeAgent() {
   const autoPlay = ref<boolean>(false)
   const stepConfirmation = ref<boolean>(false)
   const lastError = ref<string | null>(null)
+  const turnHistory = ref<ArcadeTurnMemory[]>([])
 
   const cursorState = ref<CursorState>({
     visible: false,
@@ -39,12 +48,18 @@ export function useArcadeAgent() {
 
   let isCancelled = false
 
+  function clearHistory() {
+    turnHistory.value = []
+  }
+
   function bindAdapter(adapter: GameAdapter) {
     activeAdapter.value = adapter
+    clearHistory()
   }
 
   function unbindAdapter() {
     activeAdapter.value = null
+    clearHistory()
     interrupt()
   }
 
@@ -174,7 +189,15 @@ Return ONLY a JSON object with this exact structure:
           : 'deepseek-v4-flash-vision-exp'
       }
 
-      const turnPrompt = `${systemPrompt}\n\nHere is our current game screen for '${gameTitle}'. It's your turn, what do you do?`
+      let historySection = ''
+      if (turnHistory.value.length > 0) {
+        const recentTurns = turnHistory.value.slice(-3).map(t =>
+          `- Turn ${t.turnIndex}: Planned "${t.plan}" (Actions: ${t.actionsSummary})`,
+        ).join('\n')
+        historySection = `\n\n## RECENT TURN HISTORY (Last executed moves):\n${recentTurns}\n\nSTRATEGIC ADAPTATION RULE: Visually check the game screen to verify if your previous moves took effect. If an action did not produce the intended visual change on screen (e.g. the tool was not selected or placement was invalid), DO NOT repeat the identical action. Re-verify the tool position, adjust your coordinates, or pursue an alternative move.`
+      }
+
+      const turnPrompt = `${systemPrompt}${historySection}\n\nHere is our current game screen for '${gameTitle}'. It's your turn, what do you do?`
 
       async function queryVlm(providerId: string, modelId: string): Promise<string> {
         const provider = await providersStore.getProviderInstance<any>(providerId)
@@ -235,6 +258,26 @@ Return ONLY a JSON object with this exact structure:
 
       const parsed: TurnPlan = JSON.parse(jsonMatch[0])
       currentTurnPlan.value = parsed
+
+      // Record to turn history
+      turnHistory.value.push({
+        turnIndex: turnHistory.value.length + 1,
+        plan: parsed.plan,
+        spoken: parsed.spoken_commentary,
+        actionsSummary: parsed.actions.map(a =>
+          a.type === 'click'
+            ? `Click (${a.x}, ${a.y})`
+            : a.type === 'drag'
+              ? `Drag (${a.fromX}, ${a.fromY} -> ${a.toX}, ${a.toY})`
+              : a.type === 'key_press'
+                ? `Key ${a.key}`
+                : a.type,
+        ).join(', '),
+        timestamp: Date.now(),
+      })
+      if (turnHistory.value.length > 5) {
+        turnHistory.value.shift()
+      }
 
       if (options?.onCommentary) {
         options.onCommentary(parsed)
@@ -366,6 +409,8 @@ Return ONLY a JSON object with this exact structure:
     autoPlay,
     stepConfirmation,
     lastError,
+    turnHistory,
+    clearHistory,
     bindAdapter,
     unbindAdapter,
     takeTurn,
