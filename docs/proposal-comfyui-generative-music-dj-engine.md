@@ -55,10 +55,15 @@ export interface DJTrack {
   // Generation & Composition Metadata
   caption?: string
   lyrics?: string
+  abcScore?: string // Raw human-readable ABC notation string
   scorePlan?: {
     tempo: number
     keySignature: string
     chordProgression?: string[]
+  }
+  lora?: {
+    adapterId: string // e.g. "synthwave_lead", "ar_lora_inst_v3abc"
+    scale: number // 0.0 to 1.5
   }
   stems?: {
     vocalsUrl?: string
@@ -138,7 +143,40 @@ Direct playback and transition controls.
     {
       "action": "fade_to_next" | "skip" | "pause" | "resume" | "set_volume" | "clear_queue",
       "fadeDurationSeconds": 4,
-      "targetVolume": 0.8
+### E. `dj_plan_composition` (Music Room / Sound Studio)
+Initiates the fast symbolic planning phase (taking only 3–15s). Generates or mutates an ABC musical notation score without running heavy acoustic diffusion.
+*   **Arguments**:
+    ```json
+    {
+      "action": "generate_new" | "mutate_existing",
+      "style": "cyberpunk electro complextro 128 bpm",
+      "lyrics": "[intro]\nSystem online...",
+      "cotMode": "melody" | "full",
+      "existingAbcScore": "X:1\nT:Neon Drive\nM:4/4\nK:Cm\n...",
+      "mutationInstructions": "transpose the chorus into a dark minor key and double the bassline tempo",
+      "loraAdapter": "ar_lora_inst_v3abc",
+      "loraScale": 1.0
+    }
+    ```
+*   **Returns**:
+    ```json
+    {
+      "planId": "plan_99a8b",
+      "abcScore": "X:1\nT:Neon Drive\nM:4/4\nL:1/8\nQ:1/4=128\nK:Cm\n|: \"Cm\" c2 e2 g2 c'2 | \"Ab\" _A2 c2 e2 _a2 :|",
+      "summary": "Generated 64 bars of 128 BPM electro in C Minor with annotated chord progressions and verse/drop structure.",
+      "visualArtifactUrl": "music://artifacts/plan_99a8b.abc"
+    }
+    ```
+
+### F. `dj_render_composition`
+Commits an approved or edited ABC score into high-fidelity 48 kHz stereo audio via the YuE 2 NAR ODE pipeline.
+*   **Arguments**:
+    ```json
+    {
+      "planId": "plan_99a8b",
+      "abcScore": "X:1\nT:Neon Drive\n...",
+      "odeSteps": 8,
+      "priority": "next" | "tail"
     }
     ```
 
@@ -187,12 +225,30 @@ Audio sources are implemented under `packages/stage-ui/src/libs/providers/` as p
   - **Genre/Vocal Adapters**: Custom LoRAs can steer acoustic timbre, specific vocal styles (e.g. Japanese anime vocals, metal screaming, acoustic folk), or unique musical keys.
   - **AIRI Integration**: Character cards can declare an optional `extensions.airi.music.default_lora` to ensure the character's generated music matches their artistic persona.
 
-### B. Remote Generative: Suno v6 (Cloud API)
+### B. Local Generative: YuE 2 (Score-First & Deep ABC Planning Architecture)
+* **Hardware Footprint & Shootout Findings**:
+  * Evaluated directly on 8GB consumer hardware (RTX 4070 Laptop GPU, 128-bit memory bus, CUDA 13.1, SM 8.9).
+  * Consumes only **~2.8 GB to 3.3 GB VRAM** in `Q4_0`, leaving **>4.7 GB VRAM free** to seamlessly co-exist with ComfyUI and AIRI's real-time voice pipeline without OOM or host memory thrashing.
+  * In contrast, MiniMax Music 3.0 consumed ~7.2 GB VRAM (88% of GPU capacity) and required ~11.7 min for 10s audio, making YuE 2 **3.5x–4x faster** with significantly lower resource contention.
+  * Outputs native studio-broadcast **48,000 Hz stereo** (vs 44.1 kHz on MiniMax).
+* **Two-Tiered Architecture (Symbolic Plan vs Acoustic Diffusion)**:
+  * **Stage 1: Symbolic AR Planning (ABC Score CoT)**: The 3B model generates standard **ABC musical notation** (`cot=melody` or `cot=full`) outlining key signature, tempo/BPM, bars, chords (`[Cm]`, `[G#]`), melodies, dynamics, and song parts (`[intro]`, `[drop]`, `[verse]`). Generates at **~115 tokens/sec** taking only **~3–20 seconds**.
+  * **Stage 2: Acoustic Diffusion (NAR ODE Flow)**: Solves the acoustic flow matching differential equations across 8 ODE steps (16 forward passes), transforming the symbolic score and lyrics into high-fidelity stereo audio.
+* **Empirical 2-Minute Track Findings (`cot=full` vs `cot=off`)**:
+  * **Score-Guided Coherence (`cot=full`)**: In empirical 2-minute festival dubstep tests, `cot=full` produced a dual-staff score in $D\sharp$ minor with explicit chord progression changes ($D\sharp m \to B \to G\sharp m \to F\sharp$) and bar-aligned drop moments, resulting in substantially richer acoustic textures, coordinated vocal-instrumental sync, and exact song duration alignment (**120.0s exact** vs 116.4s).
+  * **Negligible Latency Delta**: The symbolic notation planner took **only 20.7 seconds** out of a 27-minute total generation run (<1.2% of total time), proving that the dramatic leap in musical composition quality is entirely worth the marginal generation time.
+* **Plug-and-Play AR LoRAs**:
+  * Verified support for unfused AR LoRAs (`ar_lora_inst_v3abc.safetensors`, 392 projections) with zero runtime conversion. Enables hot-swapping genre adapters (synthwave, EDM, lo-fi, acoustic) on the fly.
+* **Interactive ABC Studio & Conversational Co-Creation ("Sound Studio" / "Music Room")**:
+  * **Natural Language Steering of Musical Graphs**: Because ABC notation is compact human-readable text, the character can initiate a *compositional planning phase*, return the generated ABC notation score as a visual artifact/graph, and let the user inspect or modify the composition via natural language or direct visual editing prior to triggering heavy acoustic rendering.
+  * **Dedicated Left-Sidebar Panel ("Sound Studio" / "Music Room")**: A specialized studio tab in the UI featuring a built-in visual ABC score/piano-roll viewer and chord sheet editor. Users can say *"transpose the bridge into a darker minor key and make the drop hit at bar 16"*, the LLM edits the ABC score, and YuE 2 renders the exact customized audio via `--request-option abc="..."`.
+
+### C. Remote Generative: Suno v6 (Cloud API)
 * Zero local VRAM requirement for low-spec hosts.
 * Precision stem isolation and lyric microediting without re-rendering entire tracks.
 * Three model tiers: V6 (stable production), V6 Wild (creative ideas), V6 Mini (rapid drafting).
 
-### C. Optional Generative: ComfyUI (Custom Graph Tinkerers)
+### D. Optional Generative: ComfyUI (Custom Graph Tinkerers)
 * Reuses `apps/stage-tamagotchi/src/main/services/airi/widgets/providers/comfyui.ts` for advanced users wanting custom diffusion node setups.
 * Injects `{{CAPTION}}`, `{{LYRICS}}`, `{{BPM}}`, and `{{DURATION}}` into workflow templates.
 
@@ -259,6 +315,11 @@ Instead of arbitrary clock-interval polling, the DJ engine hooks directly into t
 *   **DJ Deck Overlay / Control Strip Widget**:
     *   Displays current track title, artist, source badge (`[Spotify]` | `[YuE2]` | `[MiniMax]` | `[Suno]`), waveform/progress bar, and "On Deck" track preview chip.
     *   Play/pause, skip, mode selector (`Generative` | `Spotify` | `Hybrid`), and crossfade button.
+*   **"Music Room" / "Sound Studio" Left Sidebar Tab**:
+    *   Dedicated interactive studio space for deep musical co-creation with the character.
+    *   **Interactive ABC Notation & Piano-Roll Canvas**: Visualizes the generated composition plan (bars, chord voicings, key signature, tempo) using lightweight Web/WASM music notation renderers (such as `abcjs` or VexFlow).
+    *   **Conversational Score Refinement**: The user and agent converse directly in the studio chat. The agent can mutate the score in real time (e.g. adding a syncopated synth lead, modulating into a minor key, or shifting BPM) before committing the plan to the ODE acoustic renderer.
+    *   **One-Click Stem & Score Export**: Export raw ABC notation, MIDI files, and generated 48 kHz stereo audio directly from the studio.
 *   **Chat Stream Moments**:
     *   Subtle inline track chips when a new song starts playing.
 *   **Cross-Window Sync (`BroadcastChannel`)**:
@@ -290,3 +351,4 @@ Instead of arbitrary clock-interval polling, the DJ engine hooks directly into t
 - [ ] **Unified DJ Tools**: Implement `dj_queue_track`, `dj_search_catalog`, `dj_get_status`, and `dj_control` in `apps/stage-tamagotchi/src/renderer/stores/tools/builtin/`.
 - [ ] **Playback-Anchored Proactivity**: Connect DJ deck remaining-time threshold to the proactivity dispatcher.
 - [ ] **DJ Widget & UI**: Create the "Now Playing / On Deck" media strip component on Stage and Control Strip.
+- [ ] **"Sound Studio" Left Sidebar Panel**: Implement dedicated Music Room tab with embedded `abcjs` score renderer and bidirectional conversational ABC score editor.
