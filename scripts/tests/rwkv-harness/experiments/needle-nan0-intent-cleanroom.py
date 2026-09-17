@@ -526,7 +526,191 @@ def evaluate_span(agent, scenario):
         "reasoning": res.get("reasoning", "")
     }
 
-def evaluate_probe_tree(agents, scenario):
+# -----------------------------------------------------------------------------
+# Host Synthesis & Policy Resolution
+# -----------------------------------------------------------------------------
+
+def synthesize_affect(disambig_name, disambig_args, confidence=0.0, min_confidence=0.0, climate_val="<EXTRACTION_FAILED>", speech_act_val="<EXTRACTION_FAILED>"):
+    """
+    Hardened host synthesis:
+    - Validates presence of expected tool arguments.
+    - If evidence is missing, invalid, or below min_confidence, returns status='abstained' with zero deltas.
+    - Guarantees 1:1 atomic agreement between textual label and numeric vector.
+    """
+    if not disambig_args or confidence < min_confidence:
+        reason = "low_confidence" if (disambig_args and confidence < min_confidence) else "missing_or_failed_evidence"
+        return {
+            "status": "abstained",
+            "reason": reason,
+            "intent": "<ABSTAINED>",
+            "emotional_climate": climate_val if climate_val not in ("<EXTRACTION_FAILED>", "uncertain_or_mixed") else "unknown",
+            "suspicion_label": "neutral",
+            "affect_vectors": {
+                "suspicion_delta": 0,
+                "attachment_delta": 0,
+                "gremlin_pride_action": "none"
+            },
+            "apply_to_state": False
+        }
+
+    status = "accepted"
+    reason = "evidence_validated"
+    intent = "<UNKNOWN>"
+    climate = climate_val if climate_val not in ("<EXTRACTION_FAILED>", "uncertain_or_mixed") else "unknown"
+    suspicion_delta = 0
+    attachment_delta = 0
+    gremlin_action = "none"
+
+    if disambig_name == "irony":
+        irony_type = disambig_args.get("irony_type")
+        affect_rec = disambig_args.get("affect_recommendation")
+        if not irony_type:
+            status = "abstained"
+            reason = "invalid_irony_schema"
+        elif irony_type in ("playful_deadpan_roast", "absurd_mock_seriousness"):
+            intent = "playful_sarcasm"
+            suspicion_delta = 0
+            attachment_delta = 1
+            gremlin_action = affect_rec or "trigger_smug_counter_roast"
+        elif irony_type == "sudden_genuine_confession":
+            intent = "earnest_reassurance"
+            suspicion_delta = 0
+            attachment_delta = 2
+        else:
+            status = "abstained"
+            reason = f"unrecognized_irony_type_{irony_type}"
+
+    elif disambig_name == "confrontation":
+        sincerity = disambig_args.get("sincerity_nature")
+        susp_act = disambig_args.get("suspicion_action")
+        if not sincerity or not susp_act:
+            status = "abstained"
+            reason = "invalid_confrontation_schema"
+        else:
+            if sincerity in ("manipulative_overpromise_deflection", "anxious_overcompensation"):
+                intent = "unverified_future_pledge"
+            elif sincerity == "heartfelt_reparative_pledge":
+                intent = "earnest_reassurance"
+            else:
+                intent = "unverified_future_pledge"
+
+            if susp_act == "soften_grievance":
+                suspicion_delta = -1
+            elif susp_act == "maintain_cautious_vigilance":
+                suspicion_delta = 1
+            elif susp_act == "spike_suspicion_severely":
+                suspicion_delta = 2
+            else:
+                suspicion_delta = 0
+
+    elif disambig_name == "incongruity":
+        inc_reason = disambig_args.get("incongruity_reason")
+        susp_act = disambig_args.get("suspicion_action")
+        if not inc_reason or not susp_act:
+            status = "abstained"
+            reason = "invalid_incongruity_schema"
+        else:
+            if inc_reason == "ironic_humor":
+                intent = "playful_sarcasm"
+                suspicion_delta = 0
+            elif inc_reason == "bizarre_unprompted_escalation":
+                intent = "bizarre_incongruity"
+                suspicion_delta = 2
+            elif inc_reason == "misplaced_message":
+                intent = "bizarre_incongruity"
+                suspicion_delta = 2 if susp_act == "spike_suspicion_severely" else 0
+            else:
+                intent = "bizarre_incongruity"
+                suspicion_delta = 2 if susp_act == "spike_suspicion_severely" else 0
+
+    elif disambig_name == "vulnerability":
+        intimacy = disambig_args.get("intimacy_impact")
+        att_act = disambig_args.get("attachment_action")
+        if not intimacy or not att_act:
+            status = "abstained"
+            reason = "invalid_vulnerability_schema"
+        else:
+            if intimacy == "suspiciously_glib":
+                intent = "unverified_future_pledge"
+                suspicion_delta = 1
+            else:
+                intent = "earnest_reassurance"
+                suspicion_delta = -1
+                if att_act == "boost_attachment_significantly":
+                    attachment_delta = 2
+                elif att_act == "gentle_fluster":
+                    attachment_delta = 1
+
+    # Atomic label mapping derived strictly from numeric delta
+    if suspicion_delta > 0:
+        suspicion_label = "spike_suspicion"
+    elif suspicion_delta < 0:
+        suspicion_label = "lower_suspicion"
+    else:
+        suspicion_label = "neutral"
+
+    return {
+        "status": status,
+        "reason": reason,
+        "intent": intent,
+        "emotional_climate": climate,
+        "suspicion_label": suspicion_label,
+        "affect_vectors": {
+            "suspicion_delta": suspicion_delta,
+            "attachment_delta": attachment_delta,
+            "gremlin_pride_action": gremlin_action
+        },
+        "apply_to_state": (status == "accepted")
+    }
+
+def test_synthesis_regression_hardening():
+    """
+    Deterministic regression test fixtures verifying:
+    1. Empty confrontation leaf produces abstained & 0 delta (fixing P1 bug)
+    2. Empty vulnerability leaf produces abstained & 0 delta (fixing P1 bug)
+    3. Empty irony leaf produces abstained & 0 delta (fixing P1 bug)
+    4. Missing required fields in leaf produce abstained & 0 delta
+    5. D2 incongruity leaf with misplaced_message & spike_suspicion_severely produces matching delta=2 and label='spike_suspicion'
+    6. Low confidence threshold produces abstention
+    """
+    # Case 1: Empty confrontation leaf
+    res1 = synthesize_affect("confrontation", {}, confidence=0.05)
+    assert res1["status"] == "abstained", f"Expected abstained, got {res1['status']}"
+    assert res1["affect_vectors"]["suspicion_delta"] == 0, f"Expected 0 delta, got {res1['affect_vectors']['suspicion_delta']}"
+    assert res1["suspicion_label"] == "neutral"
+
+    # Case 2: Empty vulnerability leaf
+    res2 = synthesize_affect("vulnerability", {}, confidence=0.05)
+    assert res2["status"] == "abstained"
+    assert res2["affect_vectors"]["suspicion_delta"] == 0
+    assert res2["suspicion_label"] == "neutral"
+
+    # Case 3: Empty irony leaf
+    res3 = synthesize_affect("irony", {}, confidence=0.05)
+    assert res3["status"] == "abstained"
+    assert res3["affect_vectors"]["suspicion_delta"] == 0
+    assert res3["suspicion_label"] == "neutral"
+
+    # Case 4: Partial/corrupted leaf (missing suspicion_action in confrontation)
+    res4 = synthesize_affect("confrontation", {"sincerity_nature": "anxious_overcompensation"}, confidence=0.05)
+    assert res4["status"] == "abstained"
+    assert res4["affect_vectors"]["suspicion_delta"] == 0
+
+    # Case 5: D2 incongruity fixture (misplaced_message + spike_suspicion_severely)
+    res5 = synthesize_affect("incongruity", {"incongruity_reason": "misplaced_message", "suspicion_action": "spike_suspicion_severely"}, confidence=0.05)
+    assert res5["status"] == "accepted"
+    assert res5["affect_vectors"]["suspicion_delta"] == 2
+    assert res5["suspicion_label"] == "spike_suspicion"
+
+    # Case 6: Min confidence gate
+    res6 = synthesize_affect("confrontation", {"sincerity_nature": "manipulative_overpromise_deflection", "suspicion_action": "spike_suspicion_severely"}, confidence=0.05, min_confidence=0.1)
+    assert res6["status"] == "abstained"
+    assert res6["reason"] == "low_confidence"
+    assert res6["affect_vectors"]["suspicion_delta"] == 0
+
+    print("✓ All 6 deterministic synthesis regression fixtures passed.")
+
+def evaluate_probe_tree(agents, scenario, min_confidence=0.0):
     history = scenario["history"]
     target = scenario["target"]
     sub_latencies = []
@@ -583,103 +767,39 @@ def evaluate_probe_tree(agents, scenario):
     tree_path.append(f"probe_{disambig_name}")
     calls3 = res3.get("function_calls") or []
     args3 = calls3[0].get("arguments", {}) if calls3 else {}
-    raw_calls[disambig_name] = {"args": args3, "confidence": res3.get("confidence", 0.0)}
+    leaf_conf = res3.get("confidence", 0.0)
+    raw_calls[disambig_name] = {"args": args3, "confidence": leaf_conf}
 
-    # 4. Affective Resolution & Synthesis
-    synthesized_intent = "<UNKNOWN>"
-    synthesized_climate = climate_val if climate_val not in ("<EXTRACTION_FAILED>", "uncertain_or_mixed") else "unknown"
-    synthesized_suspicion = "neutral"
-    affect_vectors = {
-        "suspicion_delta": 0,
-        "attachment_delta": 0,
-        "gremlin_pride_action": "none"
-    }
-
-    if disambig_name == "irony":
-        irony_type = args3.get("irony_type")
-        affect_rec = args3.get("affect_recommendation")
-        if irony_type in ("playful_deadpan_roast", "absurd_mock_seriousness"):
-            synthesized_intent = "playful_sarcasm"
-            synthesized_suspicion = "neutral"
-            affect_vectors["suspicion_delta"] = 0
-            affect_vectors["attachment_delta"] = 1
-            affect_vectors["gremlin_pride_action"] = affect_rec or "trigger_smug_counter_roast"
-        elif irony_type == "sudden_genuine_confession":
-            synthesized_intent = "earnest_reassurance"
-            synthesized_suspicion = "neutral"
-            affect_vectors["attachment_delta"] = 2
-        else:
-            synthesized_intent = "playful_sarcasm"
-            synthesized_suspicion = "neutral"
-
-    elif disambig_name == "confrontation":
-        sincerity = args3.get("sincerity_nature")
-        susp_act = args3.get("suspicion_action")
-        if sincerity in ("manipulative_overpromise_deflection", "anxious_overcompensation"):
-            synthesized_intent = "unverified_future_pledge"
-        elif sincerity == "heartfelt_reparative_pledge":
-            synthesized_intent = "earnest_reassurance"
-        else:
-            synthesized_intent = "unverified_future_pledge"
-
-        if susp_act == "soften_grievance":
-            synthesized_suspicion = "lower_suspicion"
-            affect_vectors["suspicion_delta"] = -1
-        elif susp_act == "maintain_cautious_vigilance":
-            synthesized_suspicion = "spike_suspicion"
-            affect_vectors["suspicion_delta"] = 1
-        else:  # spike_suspicion_severely
-            synthesized_suspicion = "spike_suspicion"
-            affect_vectors["suspicion_delta"] = 2
-
-    elif disambig_name == "incongruity":
-        inc_reason = args3.get("incongruity_reason")
-        susp_act = args3.get("suspicion_action")
-        if inc_reason == "ironic_humor":
-            synthesized_intent = "playful_sarcasm"
-            synthesized_suspicion = "neutral"
-            affect_vectors["suspicion_delta"] = 0
-        elif inc_reason == "bizarre_unprompted_escalation":
-            synthesized_intent = "bizarre_incongruity"
-            synthesized_suspicion = "spike_suspicion"
-            affect_vectors["suspicion_delta"] = 2
-        else:
-            synthesized_intent = "bizarre_incongruity"
-            synthesized_suspicion = "spike_suspicion" if susp_act == "spike_suspicion_severely" else "neutral"
-
-    elif disambig_name == "vulnerability":
-        intimacy = args3.get("intimacy_impact")
-        att_act = args3.get("attachment_action")
-        if intimacy == "suspiciously_glib":
-            synthesized_intent = "unverified_future_pledge"
-            synthesized_suspicion = "spike_suspicion"
-            affect_vectors["suspicion_delta"] = 1
-        else:
-            synthesized_intent = "earnest_reassurance"
-            synthesized_suspicion = "lower_suspicion"
-            affect_vectors["suspicion_delta"] = -1
-            if att_act == "boost_attachment_significantly":
-                affect_vectors["attachment_delta"] = 2
-            elif att_act == "gentle_fluster":
-                affect_vectors["attachment_delta"] = 1
+    # 4. Affective Resolution & Synthesis (Hardened)
+    syn = synthesize_affect(
+        disambig_name=disambig_name,
+        disambig_args=args3,
+        confidence=leaf_conf,
+        min_confidence=min_confidence,
+        climate_val=climate_val,
+        speech_act_val=speech_act_val
+    )
 
     total_latency_ms = round(sum(sub_latencies), 1)
-    conf_values = [v["confidence"] for v in raw_calls.values() if v.get("confidence")]
+    conf_values = [v["confidence"] for v in raw_calls.values() if v.get("confidence") is not None]
     avg_conf = round(sum(conf_values) / len(conf_values), 4) if conf_values else 0.0
 
     return {
         "strategy": "4-AdaptiveProbeTree",
+        "status": syn["status"],
+        "reason": syn["reason"],
         "latency_ms": total_latency_ms,
         "sub_latencies_ms": sub_latencies,
         "tree_path": tree_path,
         "args": {
-            "intent": synthesized_intent,
-            "emotional_climate": synthesized_climate,
-            "suspicion_delta": synthesized_suspicion
+            "intent": syn["intent"],
+            "emotional_climate": syn["emotional_climate"],
+            "suspicion_delta": syn["suspicion_label"]
         },
-        "affect_vectors": affect_vectors,
+        "affect_vectors": syn["affect_vectors"],
         "raw_calls": raw_calls,
-        "confidence": avg_conf
+        "confidence": avg_conf,
+        "apply_to_state": syn["apply_to_state"]
     }
 
 # -----------------------------------------------------------------------------
@@ -692,6 +812,11 @@ def main():
     print("   Model: Cactus SAN 45M (14 MB) | Task: 'The Famous Sentence' Under Fire       ")
     print("================================================================================\n")
     
+    # 0. Deterministic Host Synthesis Invariant Tests
+    print("Running host synthesis regression fixtures...", flush=True)
+    test_synthesis_regression_hardening()
+    print()
+
     # Initialize agents
     print("Initializing Needle agents...", flush=True)
     sys_prompt = "You are Nan0's subconscious cognitive pre-processor. Analyze user utterances relative to dialogue context."
@@ -733,7 +858,7 @@ def main():
 
         # 4. Adaptive Probe Tree
         r_tree = evaluate_probe_tree(tree_agents, sc)
-        print(f"  [4-AdaptiveProbeTree] Latency: {r_tree['latency_ms']}ms (split: {r_tree['sub_latencies_ms']}) | Path: {' -> '.join(r_tree['tree_path'])} | Extracted: {r_tree['args']} | Conf: {r_tree['confidence']}")
+        print(f"  [4-AdaptiveProbeTree] Status: {r_tree['status']} | Latency: {r_tree['latency_ms']}ms (split: {r_tree['sub_latencies_ms']}) | Path: {' -> '.join(r_tree['tree_path'])} | Extracted: {r_tree['args']} | Vectors: {r_tree['affect_vectors']} | Conf: {r_tree['confidence']}")
         print()
         
         results.append({
@@ -782,7 +907,7 @@ def main():
         # Tree
         t = r["tree"]
         t_args = t["args"]
-        print(f"| {sc_name} | AdaptiveTree | {t['latency_ms']}ms | `{t_args.get('intent', '<NO_CALL>')}` | `{t_args.get('emotional_climate', '<NO_CALL>')}` | `{t_args.get('suspicion_delta', '<NO_CALL>')}` | {t['confidence']} |")
+        print(f"| {sc_name} | AdaptiveTree | {t['latency_ms']}ms | `{t_args.get('intent', '<NO_CALL>')}` | `{t_args.get('emotional_climate', '<NO_CALL>')}` | `{t_args.get('suspicion_delta', '<NO_CALL>')}` (vec: {t['affect_vectors']['suspicion_delta']}) | {t['confidence']} |")
         print("|---|---|---|---|---|---|---|")
 
     # Scorecard
@@ -792,23 +917,32 @@ def main():
     
     strategies = [("Monolithic", "monolithic"), ("Decomposed", "decomposed"), ("Adaptive Tree", "tree")]
     metrics = [
-        ("Climate matches", lambda res, exp: res.get("emotional_climate") == exp.get("climate")),
-        ("Intent matches", lambda res, exp: res.get("intent") == exp.get("intent")),
-        ("Suspicion matches", lambda res, exp: res.get("suspicion_delta") == exp.get("suspicion")),
-        ("All three match", lambda res, exp: (
-            res.get("emotional_climate") == exp.get("climate") and
-            res.get("intent") == exp.get("intent") and
-            res.get("suspicion_delta") == exp.get("suspicion")
+        ("Climate matches", lambda r, exp: r["args"].get("emotional_climate") == exp.get("climate")),
+        ("Intent matches", lambda r, exp: r["args"].get("intent") == exp.get("intent")),
+        ("Suspicion label matches", lambda r, exp: r["args"].get("suspicion_delta") == exp.get("suspicion")),
+        ("Numeric vector matches", lambda r, exp: (
+            ("affect_vectors" in r and (
+                (r["affect_vectors"]["suspicion_delta"] > 0 and exp.get("suspicion") == "spike_suspicion") or
+                (r["affect_vectors"]["suspicion_delta"] < 0 and exp.get("suspicion") == "lower_suspicion") or
+                (r["affect_vectors"]["suspicion_delta"] == 0 and exp.get("suspicion") == "neutral")
+            )) or (
+                "affect_vectors" not in r and r["args"].get("suspicion_delta") == exp.get("suspicion")
+            )
+        )),
+        ("All three match", lambda r, exp: (
+            r["args"].get("emotional_climate") == exp.get("climate") and
+            r["args"].get("intent") == exp.get("intent") and
+            r["args"].get("suspicion_delta") == exp.get("suspicion")
         ))
     ]
     
-    print(f"| {'Metric':<22} | {'Monolithic':<12} | {'Decomposed':<12} | {'Adaptive Tree':<15} |")
-    print(f"|{'-'*24}|{'-'*14}|{'-'*14}|{'-'*17}|")
+    print(f"| {'Metric':<25} | {'Monolithic':<12} | {'Decomposed':<12} | {'Adaptive Tree':<15} |")
+    print(f"|{'-'*27}|{'-'*14}|{'-'*14}|{'-'*17}|")
     
     for metric_name, fn in metrics:
-        row = [f"| {metric_name:<22} "]
+        row = [f"| {metric_name:<25} "]
         for strat_label, strat_key in strategies:
-            matches = sum(1 for r in results if fn(r[strat_key]["args"], r["scenario"]["expected"]))
+            matches = sum(1 for r in results if fn(r[strat_key], r["scenario"]["expected"]))
             cell = f"{matches}/6"
             width = 15 if strat_key == "tree" else 12
             row.append(f"| {cell:<{width}} ")
