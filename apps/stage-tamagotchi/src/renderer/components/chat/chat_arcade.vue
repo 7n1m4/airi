@@ -20,6 +20,7 @@ import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
 import ArcadeCatalogModal from './ArcadeCatalogModal.vue'
+import ArcadeTuningModal from './ArcadeTuningModal.vue'
 
 const emit = defineEmits<{
   (e: 'ready'): void
@@ -44,6 +45,9 @@ const isGameReady = ref(false)
 const isDosEngineLoading = ref(false)
 const dosLoadingProgress = ref('')
 const isCatalogOpen = ref(false)
+const isTuningModalOpen = ref(false)
+const hasCustomPrompt = ref(false)
+const isPointerLocked = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 // --- IndexedDB Stores ---
@@ -55,6 +59,11 @@ const arcadeCacheStore = localforage.createInstance({
 const arcadeSavestatesStore = localforage.createInstance({
   name: 'airi-arcade-savestates',
   storeName: 'states',
+})
+
+const arcadePromptsStore = localforage.createInstance({
+  name: 'airi-arcade-prompts',
+  storeName: 'prompts',
 })
 
 // --- Game Presets ---
@@ -307,7 +316,7 @@ async function mountDosGame(buffer: ArrayBuffer | ArrayBufferLike, gameTitle: st
       }
 
       const dosboxConf = `[sdl]
-autolock=false
+autolock=true
 fullscreen=false
 fulldouble=false
 output=surface
@@ -352,6 +361,16 @@ ${autoexecLines}
     }
     else {
       console.info('[Arcade] Bundle already contains .jsdos/dosbox.conf.')
+      const confFile = zip.file('.jsdos/dosbox.conf')
+      if (confFile) {
+        const confText = await confFile.async('string')
+        if (confText.includes('autolock=false')) {
+          const updatedConf = confText.replace(/autolock\s*=\s*false/g, 'autolock=true')
+          zip.file('.jsdos/dosbox.conf', updatedConf)
+          effectiveBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
+          console.info('[Arcade] Upgraded existing .jsdos/dosbox.conf to autolock=true')
+        }
+      }
     }
   }
   catch (err) {
@@ -368,6 +387,7 @@ ${autoexecLines}
     autoStart: true,
     kiosk: true,
     renderAspect: '4/3',
+    mouseCapture: true,
     fsChanges: {
       local: true,
       urlToKey: async () => currentGameIdentifier.value,
@@ -534,6 +554,44 @@ function handleCatalogLaunch(game: CatalogGame) {
   })
 }
 
+// Pointer Lock Controls (1:1 Cursor Tracking without Drift)
+function onPointerLockChange() {
+  const canvas = dosContainerRef.value?.querySelector('canvas')
+  isPointerLocked.value = !!(
+    document.pointerLockElement
+    && (document.pointerLockElement === canvas || dosContainerRef.value?.contains(document.pointerLockElement))
+  )
+}
+
+function requestGamePointerLock() {
+  const canvas = dosContainerRef.value?.querySelector('canvas')
+  if (canvas && typeof canvas.requestPointerLock === 'function') {
+    try {
+      canvas.requestPointerLock()
+    }
+    catch (err) {
+      console.warn('[Arcade] Pointer lock request failed:', err)
+    }
+  }
+}
+
+function releaseGamePointerLock() {
+  if (document.pointerLockElement && typeof document.exitPointerLock === 'function') {
+    try {
+      document.exitPointerLock()
+    }
+    catch (err) {
+      console.warn('[Arcade] Pointer lock exit failed:', err)
+    }
+  }
+}
+
+function handleDosContainerClick() {
+  if (isGameReady.value && !isPointerLocked.value) {
+    requestGamePointerLock()
+  }
+}
+
 // Savestates
 async function handleQuickSave() {
   if (activeEngine.value !== 'jsdos' || !currentCommandInterface) {
@@ -653,6 +711,60 @@ async function handleQuickLoad() {
     dosLoadingProgress.value = ''
   }
 }
+
+// AI Game Guidance & Prompt Tuning
+async function loadCustomPromptForGame(gameId: string) {
+  try {
+    const saved = await arcadePromptsStore.getItem<string>(gameId)
+    if (saved && saved.trim()) {
+      arcadeAgent.customPromptAddendum.value = saved
+      hasCustomPrompt.value = true
+    }
+    else {
+      arcadeAgent.customPromptAddendum.value = null
+      hasCustomPrompt.value = false
+    }
+  }
+  catch (err) {
+    console.warn('[Arcade] Failed to load custom prompt for game:', err)
+    arcadeAgent.customPromptAddendum.value = null
+    hasCustomPrompt.value = false
+  }
+}
+
+async function handleSaveCustomPrompt(prompt: string) {
+  try {
+    if (prompt && prompt.trim()) {
+      await arcadePromptsStore.setItem(currentGameIdentifier.value, prompt)
+      arcadeAgent.customPromptAddendum.value = prompt
+      hasCustomPrompt.value = true
+      triggerReactiveReaction(`Custom AI guidance saved for ${currentGameTitle.value}!`, 'smug')
+    }
+    else {
+      await handleResetCustomPrompt()
+    }
+  }
+  catch (err) {
+    console.error('[Arcade] Failed to save custom prompt:', err)
+    triggerReactiveReaction('Failed to save custom guidance.', 'panicked')
+  }
+}
+
+async function handleResetCustomPrompt() {
+  try {
+    await arcadePromptsStore.removeItem(currentGameIdentifier.value)
+    arcadeAgent.customPromptAddendum.value = null
+    hasCustomPrompt.value = false
+    triggerReactiveReaction(`Reset AI guidance to default profile for ${currentGameTitle.value}.`, 'smug')
+  }
+  catch (err) {
+    console.error('[Arcade] Failed to reset custom prompt:', err)
+  }
+}
+
+watch(currentGameIdentifier, (newId) => {
+  void loadCustomPromptForGame(newId)
+})
 
 // --- Game Engine State (2048 Retro Canvas) ---
 const canvasRef = ref<HTMLCanvasElement | null>(null)
@@ -1515,10 +1627,13 @@ function toggleMute() {
 
 onMounted(() => {
   initGame()
+  void loadCustomPromptForGame(currentGameIdentifier.value)
+  document.addEventListener('pointerlockchange', onPointerLockChange)
   emit('ready')
 })
 
 onUnmounted(() => {
+  document.removeEventListener('pointerlockchange', onPointerLockChange)
   if (dosPlayerInstance) {
     try {
       dosPlayerInstance.stop()
@@ -1602,6 +1717,19 @@ onUnmounted(() => {
               @click="handleQuickLoad"
             >
               <div class="i-solar:upload-track-2-bold text-base" />
+            </button>
+            <button
+              class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs font-medium transition-all active:scale-95"
+              :class="[
+                isPointerLocked
+                  ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                  : 'border-neutral-200/80 bg-white text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-750',
+              ]"
+              :title="isPointerLocked ? 'Cursor is locked inside game (1:1 motion). Press ESC to unlock.' : 'Lock mouse cursor inside game for 1:1 motion without offset/drift'"
+              @click="isPointerLocked ? releaseGamePointerLock() : requestGamePointerLock()"
+            >
+              <div :class="isPointerLocked ? 'i-solar:lock-keyhole-minimalistic-bold text-emerald-500' : 'i-solar:mouse-bold text-neutral-500 dark:text-neutral-400'" class="text-xs" />
+              <span class="text-[11px]">{{ isPointerLocked ? 'Locked (ESC)' : 'Lock Cursor' }}</span>
             </button>
           </template>
 
@@ -1741,8 +1869,20 @@ onUnmounted(() => {
 
           <div
             ref="dosContainerRef"
-            class="h-full w-full overflow-hidden rounded-xl"
+            class="h-full w-full cursor-crosshair overflow-hidden rounded-xl"
+            @click="handleDosContainerClick"
           />
+
+          <!-- Cursor Lock Hint Badge (Shown when game is loaded but cursor not locked) -->
+          <transition name="fade">
+            <div
+              v-if="isGameReady && !isPointerLocked"
+              class="pointer-events-none absolute bottom-3 z-30 flex items-center gap-1.5 border border-white/10 rounded-full bg-black/80 px-3 py-1 text-[11px] text-white/90 shadow-xl backdrop-blur-md"
+            >
+              <div class="i-solar:mouse-bold text-xs text-purple-400" />
+              <span>Click game to lock cursor &bull; Press <kbd class="rounded bg-white/20 px-1 py-0.5 text-[9px] text-white font-mono">ESC</kbd> to unlock</span>
+            </div>
+          </transition>
 
           <!-- Ghost Cursor overlay for JSDOS -->
           <ArcadeGhostCursor
@@ -1825,6 +1965,22 @@ onUnmounted(() => {
             <span>Attach Frame</span>
           </button>
 
+          <!-- AI Guidance & Tuning Button -->
+          <button
+            class="shadow-2xs flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all active:scale-95 disabled:opacity-50"
+            :class="[
+              hasCustomPrompt
+                ? 'border-amber-500/40 bg-amber-50/80 text-amber-700 hover:bg-amber-100 dark:border-amber-600/40 dark:bg-amber-950/40 dark:text-amber-300'
+                : 'border-neutral-200/80 bg-white text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-750',
+            ]"
+            :title="hasCustomPrompt ? 'Custom AI strategy active! Click to tune or view' : 'Tune AI guidance, rules, and coordinates for this game'"
+            @click="isTuningModalOpen = true"
+          >
+            <div :class="hasCustomPrompt ? 'i-solar:tuning-square-2-bold text-amber-500' : 'i-solar:tuning-square-2-bold text-purple-500'" class="text-xs" />
+            <span>AI Guidance</span>
+            <span v-if="hasCustomPrompt" class="size-1.5 rounded-full bg-amber-500" />
+          </button>
+
           <!-- Turn Memory Indicator (if turns have occurred) -->
           <div
             v-if="arcadeAgent.turnHistory.value.length > 0"
@@ -1856,12 +2012,16 @@ onUnmounted(() => {
           </template>
           <template v-else>
             <span class="flex items-center gap-1">
-              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Drag &amp; Drop</kbd>
-              Load Custom .zip/.jsdos
+              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Click Game</kbd>
+              Lock Cursor
             </span>
             <span class="flex items-center gap-1">
-              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">IndexedDB</kbd>
-              Offline Cached
+              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">ESC</kbd>
+              Unlock
+            </span>
+            <span class="flex items-center gap-1">
+              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Drag &amp; Drop</kbd>
+              Load .zip
             </span>
           </template>
         </div>
@@ -2075,6 +2235,17 @@ onUnmounted(() => {
       :open="isCatalogOpen"
       @close="isCatalogOpen = false"
       @launch="handleCatalogLaunch"
+    />
+
+    <!-- AI Guidance & Tuning Modal -->
+    <ArcadeTuningModal
+      :open="isTuningModalOpen"
+      :game-title="currentGameTitle"
+      :game-identifier="currentGameIdentifier"
+      :custom-prompt="arcadeAgent.customPromptAddendum.value"
+      @close="isTuningModalOpen = false"
+      @save="handleSaveCustomPrompt"
+      @reset="handleResetCustomPrompt"
     />
   </div>
 </template>

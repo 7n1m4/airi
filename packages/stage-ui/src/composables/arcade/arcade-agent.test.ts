@@ -126,4 +126,12 @@ describe('useArcadeAgent', () => {
     expect(agent.cursorState.value.visible).toBe(false)
     expect(duckSpy).toHaveBeenCalledWith(false)
   })
+
+  it('exposes customPromptAddendum ref and defaults to null', () => {
+    const agent = useArcadeAgent()
+    expect(agent.customPromptAddendum.value).toBeNull()
+
+    agent.customPromptAddendum.value = '## CUSTOM USER STRATEGY:\n- Focus on roads first'
+    expect(agent.customPromptAddendum.value).toContain('CUSTOM USER STRATEGY')
+  })
 })

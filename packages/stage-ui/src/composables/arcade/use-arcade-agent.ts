@@ -36,6 +36,7 @@ export function useArcadeAgent() {
   const stepConfirmation = ref<boolean>(false)
   const lastError = ref<string | null>(null)
   const turnHistory = ref<ArcadeTurnMemory[]>([])
+  const customPromptAddendum = ref<string | null>(null)
 
   const cursorState = ref<CursorState>({
     visible: false,
@@ -139,12 +140,13 @@ export function useArcadeAgent() {
       const gameTitle = activeAdapter.value.title
       const profile = resolveArcadeProfile(gameTitle)
       const characterName = cardStore.activeCard?.name || 'Airi'
+      const promptAddendum = customPromptAddendum.value?.trim() || profile.systemPromptAddendum
 
       const systemPrompt = `You are ${characterName}, an intelligent and expressive AI companion playing '${gameTitle}' with the player!
 You are looking at the current active game screen right now.
 It is your turn to take action in the game!
 
-${profile.systemPromptAddendum}
+${promptAddendum}
 
 ## YOUR TASK:
 1. Examine the game screen and evaluate the current state.
@@ -410,6 +412,7 @@ Return ONLY a JSON object with this exact structure:
     stepConfirmation,
     lastError,
     turnHistory,
+    customPromptAddendum,
     clearHistory,
     bindAdapter,
     unbindAdapter,
