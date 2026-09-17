@@ -28,6 +28,7 @@ const chat_event_log = defineAsyncComponent(() => import('../components/chat/cha
 const chat_lifetime = defineAsyncComponent(() => import('../components/chat/chat_lifetime.vue'))
 const chat_media = defineAsyncComponent(() => import('../components/chat/chat_media.vue'))
 const chat_messages = defineAsyncComponent(() => import('../components/chat/chat_messages.vue'))
+const chat_music = defineAsyncComponent(() => import('../components/chat/chat_music.vue'))
 const chat_rehearsal = defineAsyncComponent(() => import('../components/chat/chat_rehearsal.vue'))
 const chat_studio = defineAsyncComponent(() => import('../components/chat/chat_studio.vue'))
 const chat_world = defineAsyncComponent(() => import('../components/chat/chat_world.vue'))
@@ -132,7 +133,7 @@ const rightPanelMediaCollapsed = useLocalStorage('airi:chat:rp-media-collapsed',
 
 // Left Panel Routing States
 const isLeftPanelOpen = useLocalStorage('airi:chat:left-panel-open', true)
-const activeSurface = useLocalStorage<'messages' | 'director' | 'world' | 'characters' | 'media' | 'archives' | 'rehearsal' | 'event-log' | 'arcade'>('airi:chat:left-panel-active', 'messages')
+const activeSurface = useLocalStorage<'messages' | 'director' | 'world' | 'characters' | 'media' | 'archives' | 'rehearsal' | 'event-log' | 'arcade' | 'music'>('airi:chat:left-panel-active', 'messages')
 
 // Guard removed legacy surfaces
 if ((activeSurface.value as string) === 'notes') {
@@ -149,6 +150,7 @@ const SURFACE_LABELS: Record<string, string> = {
   'event-log': 'Production Log',
   'rehearsal': 'Rehearsal Room',
   'arcade': 'Arcade Room',
+  'music': 'Sound Studio',
 }
 
 const SURFACE_ICONS: Record<string, string> = {
@@ -161,6 +163,7 @@ const SURFACE_ICONS: Record<string, string> = {
   'event-log': 'i-solar:document-text-bold-duotone',
   'rehearsal': 'i-solar:clapperboard-text-bold-duotone',
   'arcade': 'i-solar:gamepad-bold-duotone',
+  'music': 'i-solar:music-notes-bold-duotone',
 }
 
 const NAV_SECTIONS = [
@@ -170,6 +173,7 @@ const NAV_SECTIONS = [
       { id: 'messages', label: 'Live Dialog', icon: 'i-solar:chat-line-bold-duotone' },
       { id: 'arcade', label: 'Arcade Room', icon: 'i-solar:gamepad-bold-duotone' },
       { id: 'rehearsal', label: 'Rehearsal Room', icon: 'i-solar:clapperboard-text-bold-duotone' },
+      { id: 'music', label: 'Sound Studio', icon: 'i-solar:music-notes-bold-duotone' },
     ],
   },
   {
@@ -366,6 +370,7 @@ const activeSurfaceComponent = computed(() => {
     'rehearsal': chat_rehearsal,
     'event-log': chat_event_log,
     'arcade': chat_arcade,
+    'music': chat_music,
   }
   return markRaw(map[activeSurface.value] || chat_messages)
 })

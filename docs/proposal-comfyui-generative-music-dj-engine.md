@@ -236,6 +236,8 @@ Audio sources are implemented under `packages/stage-ui/src/libs/providers/` as p
   ```
   - **Hot-Swapping Cartridges**: In the desktop UI, LoRAs are rendered as visual *synthesizer cartridges* with configurable scale sliders (0.0 to 1.5).
   - **Automated Fine-Tuning**: Users can drag and drop 5–10 reference stems/recordings or ABC scores. The server queues a background LoRA training worker (`rank=16..32`, target modules: `q_proj`, `v_proj`, `k_proj`, `o_proj`) and registers the resulting `.safetensors` adapter automatically upon completion.
+  - **VRAM Concurrency Guard During Training**: Backward-pass gradients during LoRA fine-tuning consume significant GPU memory. While a training job is actively executing, `airi-audio-server` engages an automated hardware guard on `/v1/audio/speech` (and other inference endpoints), returning a temporary busy state (`503 Service Unavailable / In Training`) to prevent concurrent TTS requests from causing CUDA out-of-memory crashes on 8GB consumer GPUs.
+  - **Runtime LoRA Injection & Dynamic Scaling**: Unfused AR LoRAs (`--lora`) are natively supported by `audio.cpp`. Dynamic runtime scaling (`loraScale: 0.0 - 1.5`) without restarting the model process is an active area of investigation in `audio.cpp`; if live alpha scaling is not natively supported in the current C++ engine, switching cartridges initiates a lightweight model instance reload (~5–10s) rather than live in-memory multiplier interpolation.
 
 ### B. Local Generative: YuE 2 (Score-First & Deep ABC Planning Architecture)
 * **Hardware Footprint & Shootout Findings**:
@@ -270,13 +272,18 @@ Audio sources are implemented under `packages/stage-ui/src/libs/providers/` as p
 * **Audio Transport**: Uses **Spotify Web Playback SDK** in the renderer (or Spotify Connect API for remote playback on external speakers).
 * *Note: Requires Spotify Premium per Spotify API terms.*
 
-### E. Fail-Safe & Latency Controller
-* When `dj_queue_track` targets local generation, a generation timeout watcher (e.g., 45 seconds) is established.
-* If generation fails, throws OOM, or times out while Track A has `< 20s` remaining:
-  1. The controller automatically falls back to Suno v6 cloud generation or executes a fallback search on Spotify matching the target genre/mood.
-  2. The replacement track is cued immediately to the "On Deck" slot.
-  3. The agent is notified via status telemetry to provide in-character commentary:
-     > *"My local synth module hit an overload, so I'm pulling this track from the cloud while it cools down!"*
+### E. Fail-Safe & Latency Controller (The Generation Time Reality)
+* **Latency Tiering**:
+  * **Instantaneous / Real-Time Tier (< 10s)**: Spotify streaming (0s), Pre-rendered local "Record Crate" tracks (0s), and Suno v6 cloud API (<10s).
+  * **Heavy Asynchronous Tier (~27 min on 8GB GPU)**: Full 2-minute YuE 2 NAR ODE generation.
+* **Operational Dispatch Logic**:
+  * When `dj_queue_track` is called with `priority="next"` (for an imminent track transition occurring in < 60s), the engine **strictly routes to the Real-Time Tier** (Spotify, Suno v6, or pre-rendered local tracks).
+  * When local YuE 2 song creation is requested during an active set, the system registers it as a **"Backstage Studio Order"** (`priority="tail"` or background job). It generates asynchronously without blocking the "On Deck" slot.
+  * If a scheduled local generation job fails, throws OOM, or times out:
+    1. The controller automatically falls back to Suno v6 cloud generation or executes a fallback search on Spotify matching the target genre/mood.
+    2. The replacement track is cued immediately to the "On Deck" slot.
+    3. The agent is notified via status telemetry to provide in-character commentary:
+       > *"My local synth module hit an overload, so I'm pulling this track from the cloud while it cools down!"*
 
 ---
 
@@ -318,7 +325,9 @@ Instead of arbitrary clock-interval polling, the DJ engine hooks directly into t
 1. **Threshold Event**: When the active track reaches `remainingMs <= 40000` (40 seconds) and the "On Deck" slot is empty.
 2. **Contextual Wakeup**: The proactivity dispatcher sends a telemetry event to the consciousness orchestrator:
    > *"[DJ Deck Status]: Current track 'Digital Love' ends in 38s. Mode: Hybrid. User mood: Focused/Coding. What is next on deck?"*
-3. **Agent Action**: The LLM evaluates recent chat history and user feedback, calling `dj_queue_track` to queue either a real song or a generated beat.
+3. **Agent Action (Pacing & Source Resolution)**:
+   - For immediate succession (`priority="next"`), the LLM selects a track from the real-time sources: Spotify, Suno v6, or an already-rendered song in the character's local "Record Crate".
+   - If the agent is inspired to create an entirely new original local song via YuE 2, it initiates an asynchronous composition job (`priority="tail"`) for later in the session, while simultaneously queueing an instant track or short interlude for the immediate transition.
 
 ---
 

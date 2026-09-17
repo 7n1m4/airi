@@ -23,6 +23,8 @@
     "./components/scenes/*": "./src/components/scenes/*",
     "./components/*": "./src/components/*.ts",
     "./components": "./src/components/index.ts",
+    "./composables/arcade": "./src/composables/arcade/index.ts",
+    "./composables/arcade/*": "./src/composables/arcade/*",
     "./composables/*": "./src/composables/*.ts",
     "./composables": "./src/composables/index.ts",
     "./constants/*": "./src/constants/*.ts",
