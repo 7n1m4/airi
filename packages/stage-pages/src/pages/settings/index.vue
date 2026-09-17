@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 
 import SettingsQuickAccess from './components/SettingsQuickAccess.vue'
+import SettingsUpdateBanner from './components/SettingsUpdateBanner.vue'
 
 import { SETTINGS_CATALOG_ITEMS } from '../../composables/settings-topology/settings-catalog'
 
@@ -87,7 +88,10 @@ function isActive(to: string) {
 </script>
 
 <template>
-  <div flex="~ col gap-8" pb-12 font-normal>
+  <div flex="~ col gap-6" pb-12 font-normal>
+    <!-- Desktop Update Banner (isStageTamagotchi only) -->
+    <SettingsUpdateBanner />
+
     <!-- Quick Access Shortcuts -->
     <SettingsQuickAccess />
 

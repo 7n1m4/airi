@@ -776,6 +776,17 @@ interface StoredCustomVrmAnimation {
 }
 ```
 
+### 3.5 Retro Arcade Storage (Bundles, Savestates & Tuning Prompts)
+
+| Attribute | Value |
+| :--- | :--- |
+| **Store** | `apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue` |
+| **Databases** | `localforage.createInstance({ name: 'airi-arcade-cache', storeName: 'games' })`<br>`localforage.createInstance({ name: 'airi-arcade-savestates', storeName: 'states' })`<br>`localforage.createInstance({ name: 'airi-arcade-prompts', storeName: 'prompts' })` |
+| **Key Pattern** | `{gameIdentifier}` (e.g. `msdos_SimCity_1989`, `CIVILIZATION_201902`, `custom_*`) |
+| **Type** | `ArrayBuffer` (game bundles), `Uint8Array` (delta savestates), `string` (custom prompt addendum) |
+| **Sync** | **Not synced** via BYOS (local offline preservation cache and per-device state) |
+| **Size** | Medium to Large (game bundles: 1MB–30MB; savestates: 10KB–2MB; prompts: <5KB) |
+
 ---
 
 ## 4. localStorage — Settings, Preferences & UI State
@@ -1146,6 +1157,7 @@ Persisted Three.js scene state — camera rig, model transform, lighting, and sk
 | `settings/gemini/inference-completion-tokens` | `number` (all-time inference completion/output tokens) | `stores/modules/live-session.ts` |
 | `airi:context-width-map` | `string` (JSON) | `packages/stage-pages/.../CardCreationTabGeneration.vue` |
 | `airi-chatbox-draft` | `string` | `apps/stage-tamagotchi/.../InteractiveArea.vue` |
+| `settings/system/update-checker` | `DesktopUpdateCache` (JSON string) | `packages/stage-pages/.../use-desktop-release-checker.ts` |
 | `vhack_gemini_api_key` | `string` | `stores/vhack.ts` |
 | `vhack_gemini_model` | `string` | `stores/vhack.ts` |
 | `vhack_gemini_res` | `string` | `stores/vhack.ts` |
