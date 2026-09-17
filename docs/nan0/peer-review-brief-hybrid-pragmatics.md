@@ -2,8 +2,8 @@
 
 **Date:** September 16, 2026
 **Target Subsystem:** Nan0 Living Cognition Pre-Processor & Emotional Dynamics
-**Repository Anchor Commit:** [`0e540d574f`](https://github.com/dasilva333/airi/commit/0e540d574f) (`main`)
-**Context & Working Tree:** Clean on `main`; isolated Phase 5 benchmark diagnostics verified.
+**Repository Anchor Commit:** [`564f1cd63d`](https://github.com/dasilva333/airi/commit/564f1cd63d) (`main`)
+**Context & Working Tree:** Phase 5 host hardening and shadow isolation committed; uncommitted data-maintenance files preserved.
 
 ---
 
