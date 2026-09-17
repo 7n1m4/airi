@@ -14,6 +14,9 @@ import {
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import ExportVaultModal from './components/ExportVaultModal.vue'
+import ImportVaultModal from './components/ImportVaultModal.vue'
+
 const { t } = useI18n()
 
 const {
@@ -44,6 +47,15 @@ const importError = ref('')
 const importFileInput = ref<HTMLInputElement>()
 const importType = ref<'chats' | 'characters' | 'memory' | 'backgrounds'>('chats')
 const isDesktop = computed(() => isStageTamagotchi())
+
+const isExportVaultOpen = ref(false)
+const isImportVaultOpen = ref(false)
+const showLegacyTools = ref(false)
+
+async function onVaultImported() {
+  setStatus(t('settings.pages.data.status.imported'))
+  orphanedGroups.value = await getOrphanedGroups()
+}
 
 function setStatus(message: string, tone: 'neutral' | 'success' | 'error' = 'success') {
   statusMessage.value = message
@@ -173,8 +185,8 @@ const isRestoreMappingOpen = ref(false)
 const restoreMappings = ref<Record<string, string>>({})
 
 const existingCharacters = computed(() => {
-  return Array.from(airiCardStore.cards.values()).map(card => ({
-    id: card.name,
+  return Array.from(airiCardStore.cards.entries()).map(([id, card]) => ({
+    id,
     name: card.nickname || card.name,
   }))
 })
@@ -242,112 +254,151 @@ async function executeRestore() {
 
 <template>
   <div class="flex flex-col gap-4 pb-4">
-    <div class="border-2 border-neutral-200/50 rounded-xl bg-white/70 p-4 shadow-sm dark:border-neutral-800/60 dark:bg-neutral-900/60">
-      <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-        <div class="flex flex-col gap-1 md:max-w-[560px]">
-          <div class="text-lg font-medium">
-            {{ t('settings.pages.data.sections.chats.title') }}
+    <!-- Unified Data Vault Card -->
+    <div class="border-2 border-primary/20 rounded-2xl bg-primary/5 p-6 shadow-sm dark:border-primary/30 dark:bg-primary/10">
+      <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+        <div>
+          <div class="text-xl text-neutral-900 font-bold dark:text-white">
+            Data Vault: Archive & Universal Import
           </div>
-          <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            {{ t('settings.pages.data.sections.chats.description') }}
+          <p class="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+            Create selective, human-readable ZIP archives across all memory pillars or restore data with automatic companion linking.
           </p>
         </div>
-        <div class="flex flex-col items-start gap-2 sm:items-end">
-          <div class="flex flex-wrap gap-2">
-            <Button variant="secondary" @click="triggerExport('chats')">
-              {{ t('settings.pages.data.sections.chats.export') }}
-            </Button>
-            <Button variant="primary" @click="triggerImportPicker('chats')">
-              {{ t('settings.pages.data.sections.chats.import') }}
-            </Button>
-          </div>
-          <DoubleCheckButton
-            variant="danger"
-            @confirm="runAction(deleteAllChatSessions, 'settings.pages.data.status.chats_deleted')"
-          >
-            {{ t('settings.pages.data.sections.chats.delete') }}
-            <template #confirm>
-              {{ t('settings.pages.data.confirmations.yes') }}
-            </template>
-            <template #cancel>
-              {{ t('settings.pages.card.cancel') }}
-            </template>
-          </DoubleCheckButton>
-        </div>
-      </div>
-      <input ref="importFileInput" type="file" accept="application/json" class="hidden" @change="handleImport">
-      <p v-if="importError" class="text-sm text-red-500">
-        {{ importError }}
-      </p>
-    </div>
-
-    <!-- Characters -->
-    <div class="border-2 border-neutral-200/50 rounded-xl bg-white/70 p-4 shadow-sm dark:border-neutral-800/60 dark:bg-neutral-900/60">
-      <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-        <div class="flex flex-col gap-1 md:max-w-[560px]">
-          <div class="text-lg font-medium">
-            {{ t('settings.pages.data.sections.characters.title') }}
-          </div>
-          <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            {{ t('settings.pages.data.sections.characters.description') }}
-          </p>
-        </div>
-        <div class="flex flex-col items-start gap-2 sm:items-end">
-          <div class="flex flex-wrap gap-2">
-            <Button variant="secondary" @click="triggerExport('characters')">
-              {{ t('settings.pages.data.sections.characters.export') }}
-            </Button>
-            <Button variant="primary" @click="triggerImportPicker('characters')">
-              {{ t('settings.pages.data.sections.characters.import') }}
-            </Button>
-          </div>
+        <div class="flex flex-wrap gap-3">
+          <Button variant="secondary" class="flex items-center gap-2" @click="isImportVaultOpen = true">
+            <span>📥</span>
+            <span>Universal Import</span>
+          </Button>
+          <Button variant="primary" class="flex items-center gap-2" @click="isExportVaultOpen = true">
+            <span>📦</span>
+            <span>Export Archive</span>
+          </Button>
         </div>
       </div>
     </div>
 
-    <!-- Memory -->
-    <div class="border-2 border-neutral-200/50 rounded-xl bg-white/70 p-4 shadow-sm dark:border-neutral-800/60 dark:bg-neutral-900/60">
-      <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-        <div class="flex flex-col gap-1 md:max-w-[560px]">
-          <div class="text-lg font-medium">
-            {{ t('settings.pages.data.sections.memory.title') }}
-          </div>
-          <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            {{ t('settings.pages.data.sections.memory.description') }}
-          </p>
-        </div>
-        <div class="flex flex-col items-start gap-2 sm:items-end">
-          <div class="flex flex-wrap gap-2">
-            <Button variant="secondary" @click="triggerExport('memory')">
-              {{ t('settings.pages.data.sections.memory.export') }}
-            </Button>
-            <Button variant="primary" @click="triggerImportPicker('memory')">
-              {{ t('settings.pages.data.sections.memory.import') }}
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Collapsible Legacy Single-File Domain Tools -->
+    <div class="border border-neutral-200/60 rounded-xl bg-white/40 p-4 dark:border-neutral-800/60 dark:bg-neutral-900/40">
+      <button
+        type="button"
+        class="w-full flex items-center justify-between text-left text-sm text-neutral-700 font-semibold dark:text-neutral-300"
+        @click="showLegacyTools = !showLegacyTools"
+      >
+        <span>Individual Domain Tools (Legacy Single-File JSON)</span>
+        <span class="text-xs text-neutral-400">{{ showLegacyTools ? '▲ Hide' : '▼ Show' }}</span>
+      </button>
 
-    <!-- Backgrounds -->
-    <div class="border-2 border-neutral-200/50 rounded-xl bg-white/70 p-4 shadow-sm dark:border-neutral-800/60 dark:bg-neutral-900/60">
-      <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-        <div class="flex flex-col gap-1 md:max-w-[560px]">
-          <div class="text-lg font-medium">
-            {{ t('settings.pages.data.sections.backgrounds.title') }}
+      <div v-if="showLegacyTools" class="mt-4 flex flex-col gap-4">
+        <!-- Chats -->
+        <div class="border-2 border-neutral-200/50 rounded-xl bg-white/70 p-4 shadow-sm dark:border-neutral-800/60 dark:bg-neutral-900/60">
+          <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div class="flex flex-col gap-1 md:max-w-[560px]">
+              <div class="text-lg font-medium">
+                {{ t('settings.pages.data.sections.chats.title') }}
+              </div>
+              <p class="text-sm text-neutral-600 dark:text-neutral-400">
+                {{ t('settings.pages.data.sections.chats.description') }}
+              </p>
+            </div>
+            <div class="flex flex-col items-start gap-2 sm:items-end">
+              <div class="flex flex-wrap gap-2">
+                <Button variant="secondary" @click="triggerExport('chats')">
+                  {{ t('settings.pages.data.sections.chats.export') }}
+                </Button>
+                <Button variant="primary" @click="triggerImportPicker('chats')">
+                  {{ t('settings.pages.data.sections.chats.import') }}
+                </Button>
+              </div>
+              <DoubleCheckButton
+                variant="danger"
+                @confirm="runAction(deleteAllChatSessions, 'settings.pages.data.status.chats_deleted')"
+              >
+                {{ t('settings.pages.data.sections.chats.delete') }}
+                <template #confirm>
+                  {{ t('settings.pages.data.confirmations.yes') }}
+                </template>
+                <template #cancel>
+                  {{ t('settings.pages.card.cancel') }}
+                </template>
+              </DoubleCheckButton>
+            </div>
           </div>
-          <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            {{ t('settings.pages.data.sections.backgrounds.description') }}
+          <input ref="importFileInput" type="file" accept="application/json" class="hidden" @change="handleImport">
+          <p v-if="importError" class="text-sm text-red-500">
+            {{ importError }}
           </p>
         </div>
-        <div class="flex flex-col items-start gap-2 sm:items-end">
-          <div class="flex flex-wrap gap-2">
-            <Button variant="secondary" @click="triggerExport('backgrounds')">
-              {{ t('settings.pages.data.sections.backgrounds.export') }}
-            </Button>
-            <Button variant="primary" @click="triggerImportPicker('backgrounds')">
-              {{ t('settings.pages.data.sections.backgrounds.import') }}
-            </Button>
+
+        <!-- Characters -->
+        <div class="border-2 border-neutral-200/50 rounded-xl bg-white/70 p-4 shadow-sm dark:border-neutral-800/60 dark:bg-neutral-900/60">
+          <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div class="flex flex-col gap-1 md:max-w-[560px]">
+              <div class="text-lg font-medium">
+                {{ t('settings.pages.data.sections.characters.title') }}
+              </div>
+              <p class="text-sm text-neutral-600 dark:text-neutral-400">
+                {{ t('settings.pages.data.sections.characters.description') }}
+              </p>
+            </div>
+            <div class="flex flex-col items-start gap-2 sm:items-end">
+              <div class="flex flex-wrap gap-2">
+                <Button variant="secondary" @click="triggerExport('characters')">
+                  {{ t('settings.pages.data.sections.characters.export') }}
+                </Button>
+                <Button variant="primary" @click="triggerImportPicker('characters')">
+                  {{ t('settings.pages.data.sections.characters.import') }}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Memory -->
+        <div class="border-2 border-neutral-200/50 rounded-xl bg-white/70 p-4 shadow-sm dark:border-neutral-800/60 dark:bg-neutral-900/60">
+          <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div class="flex flex-col gap-1 md:max-w-[560px]">
+              <div class="text-lg font-medium">
+                {{ t('settings.pages.data.sections.memory.title') }}
+              </div>
+              <p class="text-sm text-neutral-600 dark:text-neutral-400">
+                {{ t('settings.pages.data.sections.memory.description') }}
+              </p>
+            </div>
+            <div class="flex flex-col items-start gap-2 sm:items-end">
+              <div class="flex flex-wrap gap-2">
+                <Button variant="secondary" @click="triggerExport('memory')">
+                  {{ t('settings.pages.data.sections.memory.export') }}
+                </Button>
+                <Button variant="primary" @click="triggerImportPicker('memory')">
+                  {{ t('settings.pages.data.sections.memory.import') }}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Backgrounds -->
+        <div class="border-2 border-neutral-200/50 rounded-xl bg-white/70 p-4 shadow-sm dark:border-neutral-800/60 dark:bg-neutral-900/60">
+          <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
+            <div class="flex flex-col gap-1 md:max-w-[560px]">
+              <div class="text-lg font-medium">
+                {{ t('settings.pages.data.sections.backgrounds.title') }}
+              </div>
+              <p class="text-sm text-neutral-600 dark:text-neutral-400">
+                {{ t('settings.pages.data.sections.backgrounds.description') }}
+              </p>
+            </div>
+            <div class="flex flex-col items-start gap-2 sm:items-end">
+              <div class="flex flex-wrap gap-2">
+                <Button variant="secondary" @click="triggerExport('backgrounds')">
+                  {{ t('settings.pages.data.sections.backgrounds.export') }}
+                </Button>
+                <Button variant="primary" @click="triggerImportPicker('backgrounds')">
+                  {{ t('settings.pages.data.sections.backgrounds.import') }}
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -721,6 +772,12 @@ async function executeRestore() {
       </DialogContent>
     </DialogPortal>
   </DialogRoot>
+
+  <!-- Export Vault Modal -->
+  <ExportVaultModal v-model="isExportVaultOpen" />
+
+  <!-- Universal Import Vault Modal -->
+  <ImportVaultModal v-model="isImportVaultOpen" @imported="onVaultImported" />
 </template>
 
 <route lang="yaml">

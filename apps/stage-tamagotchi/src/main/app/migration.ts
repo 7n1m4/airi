@@ -25,7 +25,6 @@ const ESSENTIAL_EXTENSIONS = [
 const TRANSIENT_PREFIXES = [
   'Singleton',
   'LOCK',
-  'CURRENT',
   'LOG',
   'LOG.old',
 ]

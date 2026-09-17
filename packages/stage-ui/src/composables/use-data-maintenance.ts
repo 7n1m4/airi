@@ -1,9 +1,16 @@
 import type { ChatSessionsExport } from '../types/chat-session'
+import type {
+  ArchivePayload,
+  BackgroundArchiveItem,
+  ExtractedVaultPayload,
+} from '../utils/data-vault'
 
 import { isStageTamagotchi } from '@proj-airi/stage-shared'
 import { useLive2d } from '@proj-airi/stage-ui-live2d'
 
 import { chatSessionsRepo } from '../database/repos/chat-sessions.repo'
+import { echoChipsRepo } from '../database/repos/echo-chips.repo'
+import { lifetimeMemoryRepo } from '../database/repos/lifetime-memory.repo'
 import { useBackgroundStore } from '../stores/background'
 import { useChatOrchestratorStore } from '../stores/chat'
 import { useChatSessionStore } from '../stores/chat/session-store'
@@ -21,6 +28,11 @@ import { useTwitterStore } from '../stores/modules/twitter'
 import { useOnboardingStore } from '../stores/onboarding'
 import { useProvidersStore } from '../stores/providers'
 import { useSettings, useSettingsAudioDevice } from '../stores/settings'
+import {
+  applyCompanionAlignment,
+  createDataVaultArchive,
+  inspectImportPayload,
+} from '../utils/data-vault'
 
 export function useDataMaintenance() {
   const chatStore = useChatSessionStore()
@@ -353,6 +365,22 @@ export function useDataMaintenance() {
     }
 
     for (const [orphanId, targetId] of Object.entries(mappingObj)) {
+      const effectiveTargetId = targetId === 'new' ? orphanId : targetId
+      const orphanCharIndex = index?.characters[orphanId] as any
+
+      // Find the session with the highest message count in the orphaned group
+      let bestSessionId = orphanCharIndex?.activeSessionId || ''
+      let maxMsgCount = -1
+      if (orphanCharIndex?.sessions) {
+        for (const [sid, smeta] of Object.entries(orphanCharIndex.sessions) as [string, any][]) {
+          const count = smeta.messageCount ?? 0
+          if (count > maxMsgCount) {
+            maxMsgCount = count
+            bestSessionId = sid
+          }
+        }
+      }
+
       if (targetId === 'new') {
         nextCards.set(orphanId, {
           name: orphanId,
@@ -380,6 +408,10 @@ export function useDataMaintenance() {
             },
           },
         } as any)
+
+        if (orphanCharIndex && bestSessionId) {
+          orphanCharIndex.activeSessionId = bestSessionId
+        }
       }
       else {
         if (index && index.characters[orphanId]) {
@@ -389,7 +421,6 @@ export function useDataMaintenance() {
               sessions: {},
             }
           }
-          const orphanCharIndex = index.characters[orphanId] as any
           const targetCharIndex = index.characters[targetId] as any
 
           for (const [sessionId, meta] of Object.entries(orphanCharIndex.sessions) as [string, any][]) {
@@ -408,11 +439,82 @@ export function useDataMaintenance() {
             }
           }
 
-          if (!targetCharIndex.activeSessionId) {
-            targetCharIndex.activeSessionId = orphanCharIndex.activeSessionId
+          // Point active session to the populated session if current is empty or missing
+          const currentTargetActive = targetCharIndex.activeSessionId
+          const currentTargetCount = currentTargetActive ? (targetCharIndex.sessions[currentTargetActive]?.messageCount ?? 0) : 0
+          if (!currentTargetActive || (maxMsgCount > currentTargetCount && currentTargetCount <= 1)) {
+            targetCharIndex.activeSessionId = bestSessionId || orphanCharIndex.activeSessionId
           }
 
           delete index.characters[orphanId]
+        }
+      }
+
+      // Re-key multi-pillar memory records to effective target companion
+      if (orphanId !== effectiveTargetId) {
+        try {
+          await shortTermMemoryStore.load()
+          let stmmChanged = false
+          for (const block of shortTermMemoryStore.blocks) {
+            if (block.characterId === orphanId) {
+              block.characterId = effectiveTargetId
+              stmmChanged = true
+            }
+          }
+          if (stmmChanged) {
+            await shortTermMemoryStore.persist(shortTermMemoryStore.blocks)
+          }
+        }
+        catch (e) {
+          console.error(`Failed to migrate short-term memory for orphan ${orphanId}`, e)
+        }
+
+        try {
+          await textJournalStore.load()
+          let ltmmChanged = false
+          for (const entry of textJournalStore.entries) {
+            if (entry.characterId === orphanId) {
+              entry.characterId = effectiveTargetId
+              ltmmChanged = true
+            }
+          }
+          if (ltmmChanged) {
+            await textJournalStore.persist(textJournalStore.entries)
+          }
+        }
+        catch (e) {
+          console.error(`Failed to migrate text journal for orphan ${orphanId}`, e)
+        }
+
+        try {
+          const artifact = await lifetimeMemoryRepo.getByCharacter(orphanId)
+          if (artifact) {
+            artifact.characterId = effectiveTargetId
+            await lifetimeMemoryRepo.save(effectiveTargetId, 'global', artifact)
+            await lifetimeMemoryRepo.delete(orphanId, 'global')
+          }
+        }
+        catch (e) {
+          console.error(`Failed to migrate lifetime memory for orphan ${orphanId}`, e)
+        }
+
+        try {
+          const chips = await echoChipsRepo.getAll('local')
+          if (Array.isArray(chips)) {
+            let chipsChanged = false
+            for (const chip of chips) {
+              if (chip.characterId === orphanId) {
+                chip.characterId = effectiveTargetId
+                chipsChanged = true
+              }
+            }
+            if (chipsChanged) {
+              await echoChipsRepo.saveAll('local', chips)
+            }
+          }
+        }
+        catch (e) {
+          console.error(`Failed to migrate echo chips for orphan ${orphanId}`, e)
         }
       }
     }
@@ -422,6 +524,214 @@ export function useDataMaintenance() {
     }
 
     airiCardStore.cards = nextCards
+  }
+
+  async function getVaultStats() {
+    await Promise.all([
+      shortTermMemoryStore.load(),
+      textJournalStore.load(),
+    ])
+
+    const charactersCount = airiCardStore.cards.size
+    const charactersEstimatedBytes = JSON.stringify(Array.from(airiCardStore.cards.entries())).length
+
+    const chatStoreAny = chatStore as any
+    if (!chatStoreAny.ready) {
+      await chatStoreAny.initialize()
+    }
+    const index = chatStoreAny.index
+    let sessionsCount = 0
+    let messagesCount = 0
+    if (index?.characters) {
+      for (const char of Object.values(index.characters) as any[]) {
+        if (char.sessions) {
+          for (const s of Object.values(char.sessions) as any[]) {
+            sessionsCount++
+            messagesCount += (s.messageCount ?? 0)
+          }
+        }
+      }
+    }
+    const chatSessionsEstimatedBytes = messagesCount * 400 + sessionsCount * 200
+
+    const stmmCount = shortTermMemoryStore.blocks.length
+    const ltmmCount = textJournalStore.entries.length
+    const memoryEstimatedBytes = JSON.stringify(shortTermMemoryStore.blocks).length + JSON.stringify(textJournalStore.entries).length
+
+    let backgroundsCount = 0
+    let backgroundsBytes = 0
+    for (const entry of backgroundStore.entries.values()) {
+      backgroundsCount++
+      if (entry.blob?.size) {
+        backgroundsBytes += entry.blob.size
+      }
+    }
+
+    const providersCount = Object.keys(providersStore.providers || {}).length
+
+    return {
+      characters: { count: charactersCount, estimatedBytes: charactersEstimatedBytes },
+      chatSessions: { sessionsCount, messagesCount, estimatedBytes: chatSessionsEstimatedBytes },
+      memory: { stmmCount, ltmmCount, estimatedBytes: memoryEstimatedBytes },
+      backgrounds: { count: backgroundsCount, totalBytes: backgroundsBytes },
+      providers: { count: providersCount, estimatedBytes: 2048 },
+    }
+  }
+
+  async function exportDataVaultArchive(selection: {
+    characters?: boolean
+    chatSessions?: boolean
+    memory?: boolean
+    providers?: boolean
+    settings?: boolean
+    backgrounds?: boolean
+  }): Promise<Blob> {
+    const payload: ArchivePayload = {}
+
+    if (selection.characters) {
+      payload.characters = Array.from(airiCardStore.cards.entries())
+    }
+
+    if (selection.chatSessions) {
+      payload.chatSessions = await chatStore.exportSessions()
+    }
+
+    if (selection.memory) {
+      await Promise.all([shortTermMemoryStore.load(), textJournalStore.load()])
+
+      const lifetimeArtifacts: Record<string, any> = {}
+      for (const charId of airiCardStore.cards.keys()) {
+        try {
+          const art = await lifetimeMemoryRepo.getByCharacter(charId)
+          if (art) {
+            lifetimeArtifacts[charId] = art
+          }
+        }
+        catch (e) {
+          console.error(`Failed to export lifetime artifact for ${charId}`, e)
+        }
+      }
+
+      let echoChips: any[] = []
+      try {
+        echoChips = (await echoChipsRepo.getAll('local')) || []
+      }
+      catch (e) {
+        console.error('Failed to export echo chips', e)
+      }
+
+      payload.memory = {
+        format: 'airi-memory:v2',
+        timestamp: Date.now(),
+        shortTermBlocks: shortTermMemoryStore.blocks,
+        journalEntries: textJournalStore.entries,
+        lifetimeArtifacts,
+        echoChips,
+      }
+    }
+
+    if (selection.providers) {
+      payload.providers = providersStore.providers || {}
+    }
+
+    if (selection.settings) {
+      payload.settings = {
+        stageModelSelected: settingsStore.stageModelSelected,
+      }
+    }
+
+    if (selection.backgrounds) {
+      const bgList: BackgroundArchiveItem[] = []
+      for (const [id, entry] of backgroundStore.entries.entries()) {
+        if (entry.blob) {
+          bgList.push({
+            metadata: {
+              id,
+              title: entry.title,
+              type: entry.type,
+              characterId: entry.characterId,
+              createdAt: entry.createdAt,
+              prompt: entry.prompt,
+              remixId: entry.remixId,
+              universeId: entry.universeId,
+              sessionId: entry.sessionId,
+            },
+            blob: entry.blob,
+          })
+        }
+      }
+      payload.backgrounds = bgList
+    }
+
+    return await createDataVaultArchive(payload)
+  }
+
+  async function inspectVaultImport(files: (Blob | File | { name?: string, data?: any })[]) {
+    return await inspectImportPayload(files, airiCardStore.cards)
+  }
+
+  async function commitVaultImport(payload: ExtractedVaultPayload) {
+    // 1. Characters
+    if (payload.characters && payload.characters.length > 0) {
+      for (const [id, card] of payload.characters) {
+        if (!airiCardStore.cards.has(id)) {
+          airiCardStore.cards.set(id, card)
+        }
+      }
+    }
+
+    // 2. Chat Sessions
+    if (payload.chatSessions) {
+      await chatStore.importSessions(payload.chatSessions)
+    }
+
+    // 3. Memory
+    if (payload.memory) {
+      await importMemory(payload.memory)
+
+      if (payload.memory.lifetimeArtifacts) {
+        for (const [charId, art] of Object.entries(payload.memory.lifetimeArtifacts) as [string, any][]) {
+          try {
+            await lifetimeMemoryRepo.save(charId, 'global', art)
+          }
+          catch (e) {
+            console.error(`Failed to import lifetime memory for ${charId}`, e)
+          }
+        }
+      }
+
+      if (Array.isArray(payload.memory.echoChips) && payload.memory.echoChips.length > 0) {
+        try {
+          const existing = (await echoChipsRepo.getAll('local')) || []
+          const existingIds = new Set(existing.map((c: any) => c.id))
+          const newChips = payload.memory.echoChips.filter((c: any) => !existingIds.has(c.id))
+          if (newChips.length > 0) {
+            await echoChipsRepo.saveAll('local', [...existing, ...newChips])
+          }
+        }
+        catch (e) {
+          console.error('Failed to import echo chips', e)
+        }
+      }
+    }
+
+    // 4. Backgrounds
+    if (payload.backgrounds && payload.backgrounds.length > 0) {
+      for (const bg of payload.backgrounds) {
+        if (!backgroundStore.entries.has(bg.metadata.id) && bg.metadata.type !== 'builtin') {
+          await backgroundStore.addBackground(
+            bg.metadata.type,
+            bg.blob,
+            bg.metadata.title,
+            bg.metadata.prompt,
+            bg.metadata.characterId,
+            bg.metadata.remixId,
+            bg.metadata.universeId,
+            bg.metadata.sessionId,
+          )
+        }
+      }
+    }
   }
 
   return {
@@ -442,5 +752,10 @@ export function useDataMaintenance() {
     getOrphanedGroups,
     nukeOrphanedGroups,
     restoreOrphanedGroups,
+    getVaultStats,
+    exportDataVaultArchive,
+    inspectVaultImport,
+    applyCompanionAlignment,
+    commitVaultImport,
   }
 }
