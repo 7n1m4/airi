@@ -343,6 +343,53 @@ export function useDataMaintenance() {
       }
     }
     await chatStoreAny.persistIndex()
+
+    // Clean up memory across pillars for nuked characters
+    try {
+      await shortTermMemoryStore.load()
+      const initialStmmLen = shortTermMemoryStore.blocks.length
+      const nextBlocks = shortTermMemoryStore.blocks.filter(b => !characterIds.includes(b.characterId))
+      if (nextBlocks.length !== initialStmmLen) {
+        await shortTermMemoryStore.persist(nextBlocks)
+      }
+    }
+    catch (e) {
+      console.error('Failed to clean up short-term memory during orphan nuke', e)
+    }
+
+    try {
+      await textJournalStore.load()
+      const initialLtmmLen = textJournalStore.entries.length
+      const nextEntries = textJournalStore.entries.filter(e => !characterIds.includes(e.characterId))
+      if (nextEntries.length !== initialLtmmLen) {
+        await textJournalStore.persist(nextEntries)
+      }
+    }
+    catch (e) {
+      console.error('Failed to clean up text journal during orphan nuke', e)
+    }
+
+    for (const charId of characterIds) {
+      try {
+        await lifetimeMemoryRepo.delete(charId, 'global')
+      }
+      catch (e) {
+        console.error(`Failed to delete lifetime memory for ${charId}`, e)
+      }
+    }
+
+    try {
+      const chips = await echoChipsRepo.getAll('local')
+      if (Array.isArray(chips)) {
+        const nextChips = chips.filter((c: any) => !characterIds.includes(c.characterId))
+        if (nextChips.length !== chips.length) {
+          await echoChipsRepo.saveAll('local', nextChips)
+        }
+      }
+    }
+    catch (e) {
+      console.error('Failed to clean up echo chips during orphan nuke', e)
+    }
   }
 
   async function restoreOrphanedGroups(mappings: string[] | Record<string, string>) {

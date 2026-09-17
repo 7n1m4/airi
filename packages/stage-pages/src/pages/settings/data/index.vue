@@ -2,6 +2,7 @@
 import { isStageTamagotchi } from '@proj-airi/stage-shared'
 import { useDataMaintenance } from '@proj-airi/stage-ui/composables/use-data-maintenance'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { useCloudflareStore } from '@proj-airi/stage-ui/stores/modules/cloudflare'
 import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
 import { Button, DoubleCheckButton } from '@proj-airi/ui'
 import {
@@ -13,11 +14,13 @@ import {
 } from 'reka-ui'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 
 import ExportVaultModal from './components/ExportVaultModal.vue'
 import ImportVaultModal from './components/ImportVaultModal.vue'
 
 const { t } = useI18n()
+const router = useRouter()
 
 const {
   deleteAllModels,
@@ -40,6 +43,8 @@ const {
 } = useDataMaintenance()
 
 const syncEngineStore = useSyncEngineStore()
+const cloudflareStore = useCloudflareStore()
+const airiCardStore = useAiriCardStore()
 
 const statusMessage = ref('')
 const statusTone = ref<'neutral' | 'success' | 'error'>('neutral')
@@ -153,11 +158,47 @@ async function handleImport(event: Event) {
   }
 }
 
+// --- Cloud Sync Bridge State ---
+const isCloudSyncConfigured = computed(() => {
+  if (syncEngineStore.activeProvider === 's3') {
+    return Boolean(syncEngineStore.s3Bucket)
+  }
+  if (syncEngineStore.activeProvider === 'local-fs') {
+    return Boolean(syncEngineStore.fsBackupPath)
+  }
+  return false
+})
+
+const cloudSyncStatus = computed(() => {
+  if (syncEngineStore.syncEnabled) {
+    return {
+      label: `Active • Auto-Syncing (${syncEngineStore.syncInterval}m)`,
+      badgeClass: 'bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/25 dark:text-emerald-400 border-emerald-500/30',
+      dotClass: 'bg-emerald-500 animate-pulse',
+    }
+  }
+  if (isCloudSyncConfigured.value) {
+    return {
+      label: 'Configured • Auto-Sync Paused',
+      badgeClass: 'bg-amber-500/15 text-amber-600 dark:bg-amber-500/25 dark:text-amber-400 border-amber-500/30',
+      dotClass: 'bg-amber-500',
+    }
+  }
+  return {
+    label: 'Not Configured',
+    badgeClass: 'bg-neutral-500/15 text-neutral-600 dark:bg-neutral-500/25 dark:text-neutral-400 border-neutral-500/30',
+    dotClass: 'bg-neutral-400',
+  }
+})
+
 const formattedBackupLocation = computed(() => {
   if (syncEngineStore.activeProvider === 'local-fs') {
-    return syncEngineStore.fsBackupPath
+    return syncEngineStore.fsBackupPath || 'Default OS Share'
   }
-  return ''
+  if (syncEngineStore.activeProvider === 's3') {
+    return syncEngineStore.s3Bucket ? `${syncEngineStore.s3Bucket} (${syncEngineStore.s3Endpoint || 'S3/R2'})` : 'No bucket specified'
+  }
+  return syncEngineStore.activeProvider
 })
 
 const formattedLastSyncTime = computed(() => {
@@ -169,25 +210,25 @@ const formattedLastSyncTime = computed(() => {
 async function handleTriggerBackup() {
   await syncEngineStore.triggerSync()
   if (!syncEngineStore.syncError) {
-    setStatus(`Backup completed successfully!`)
+    setStatus('Cloud backup completed successfully!', 'success')
   }
   else {
     setStatus(`Backup failed: ${syncEngineStore.syncError}`, 'error')
   }
 }
 
-const airiCardStore = useAiriCardStore()
+// --- Unlinked Data (Orphaned Sessions & Memories) State ---
 const orphanedGroups = ref<{ characterId: string, messageCount: number, lastActive: number, preview: string }[]>([])
-const isModalOpen = ref(false)
+const isUnlinkedExpanded = ref(false)
 const selectedOrphans = ref<string[]>([])
-
+const quickMergeTargets = ref<Record<string, string>>({})
 const isRestoreMappingOpen = ref(false)
 const restoreMappings = ref<Record<string, string>>({})
 
 const existingCharacters = computed(() => {
   return Array.from(airiCardStore.cards.entries()).map(([id, card]) => ({
     id,
-    name: card.nickname || card.name,
+    name: card.nickname || card.name || id,
   }))
 })
 
@@ -199,12 +240,6 @@ onMounted(() => {
   loadOrphans()
 })
 
-function openManageModal() {
-  selectedOrphans.value = []
-  isModalOpen.value = true
-  loadOrphans()
-}
-
 function selectAll() {
   selectedOrphans.value = orphanedGroups.value.map(g => g.characterId)
 }
@@ -213,22 +248,77 @@ function deselectAll() {
   selectedOrphans.value = []
 }
 
-async function confirmNuke() {
-  if (confirm(`Are you sure you want to delete all sessions associated with the selected character IDs? This action is permanent and cannot be undone.`)) {
-    try {
-      await nukeOrphanedGroups(selectedOrphans.value)
-      selectedOrphans.value = []
-      setStatus(`Successfully nuked selected orphaned sessions!`)
-      await loadOrphans()
-    }
-    catch (e) {
-      console.error(e)
-      setStatus(e instanceof Error ? e.message : String(e), 'error')
-    }
+function toggleSelect(id: string) {
+  if (selectedOrphans.value.includes(id)) {
+    selectedOrphans.value = selectedOrphans.value.filter(item => item !== id)
+  }
+  else {
+    selectedOrphans.value.push(id)
   }
 }
 
-function handleRestore() {
+async function restoreSingle(orphanId: string, targetId: string) {
+  try {
+    await restoreOrphanedGroups({ [orphanId]: targetId })
+    setStatus(targetId === 'new' ? `Recreated companion for ${orphanId}!` : `Merged ${orphanId} into companion!`, 'success')
+    await loadOrphans()
+  }
+  catch (e) {
+    console.error(e)
+    setStatus(e instanceof Error ? e.message : String(e), 'error')
+  }
+}
+
+async function nukeSingle(orphanId: string) {
+  try {
+    await nukeOrphanedGroups([orphanId])
+    selectedOrphans.value = selectedOrphans.value.filter(id => id !== orphanId)
+    setStatus(`Purged unlinked data for ${orphanId}!`, 'success')
+    await loadOrphans()
+  }
+  catch (e) {
+    console.error(e)
+    setStatus(e instanceof Error ? e.message : String(e), 'error')
+  }
+}
+
+async function restoreBulkSelected() {
+  if (selectedOrphans.value.length === 0)
+    return
+  const mappings: Record<string, string> = {}
+  for (const id of selectedOrphans.value) {
+    mappings[id] = 'new'
+  }
+  try {
+    await restoreOrphanedGroups(mappings)
+    const count = selectedOrphans.value.length
+    selectedOrphans.value = []
+    setStatus(`Successfully recreated ${count} companion(s)!`, 'success')
+    await loadOrphans()
+  }
+  catch (e) {
+    console.error(e)
+    setStatus(e instanceof Error ? e.message : String(e), 'error')
+  }
+}
+
+async function nukeBulkSelected() {
+  if (selectedOrphans.value.length === 0)
+    return
+  try {
+    await nukeOrphanedGroups(selectedOrphans.value)
+    const count = selectedOrphans.value.length
+    selectedOrphans.value = []
+    setStatus(`Successfully purged ${count} unlinked group(s)!`, 'success')
+    await loadOrphans()
+  }
+  catch (e) {
+    console.error(e)
+    setStatus(e instanceof Error ? e.message : String(e), 'error')
+  }
+}
+
+function openAdvancedMapping() {
   restoreMappings.value = {}
   selectedOrphans.value.forEach((id) => {
     restoreMappings.value[id] = 'new'
@@ -236,13 +326,13 @@ function handleRestore() {
   isRestoreMappingOpen.value = true
 }
 
-async function executeRestore() {
+async function executeAdvancedRestore() {
   try {
     await restoreOrphanedGroups(restoreMappings.value)
     const count = Object.keys(restoreMappings.value).length
     isRestoreMappingOpen.value = false
     selectedOrphans.value = []
-    setStatus(`Successfully restored/merged ${count} companion(s)!`)
+    setStatus(`Successfully restored/merged ${count} companion(s)!`, 'success')
     await loadOrphans()
   }
   catch (e) {
@@ -254,6 +344,38 @@ async function executeRestore() {
 
 <template>
   <div class="flex flex-col gap-4 pb-4">
+    <!-- Live Status Banner -->
+    <div
+      v-if="statusMessage"
+      :class="[
+        'flex items-center justify-between rounded-xl px-4 py-3 text-sm transition-all border',
+        statusTone === 'error'
+          ? 'bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30'
+          : statusTone === 'success'
+            ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+            : 'bg-neutral-500/10 text-neutral-700 dark:text-neutral-300 border-neutral-500/30',
+      ]"
+    >
+      <div class="flex items-center gap-2">
+        <div
+          :class="[
+            'size-4',
+            statusTone === 'error'
+              ? 'i-solar:danger-triangle-bold text-red-500'
+              : 'i-solar:check-circle-bold text-emerald-500',
+          ]"
+        />
+        <span>{{ statusMessage }}</span>
+      </div>
+      <button
+        type="button"
+        class="text-xs opacity-60 hover:opacity-100"
+        @click="statusMessage = ''"
+      >
+        ✕
+      </button>
+    </div>
+
     <!-- Unified Data Vault Card -->
     <div class="border-2 border-primary/20 rounded-2xl bg-primary/5 p-6 shadow-sm dark:border-primary/30 dark:bg-primary/10">
       <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
@@ -274,6 +396,329 @@ async function executeRestore() {
             <span>📦</span>
             <span>Export Archive</span>
           </Button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cloud Sync Bridge & Status Card (Phase 4) -->
+    <div class="border-2 border-sky-500/25 rounded-2xl bg-sky-500/5 p-6 shadow-sm dark:border-sky-500/35 dark:bg-sky-500/10">
+      <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-sky-500/15 text-sky-600 dark:text-sky-300">
+            <div class="i-solar:cloud-upload-bold-duotone size-6" />
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xl text-neutral-900 font-bold dark:text-white">
+                Cloud Sync: Zero-Custody Continuous Backup
+              </span>
+              <span
+                :class="[
+                  'inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold border',
+                  cloudSyncStatus.badgeClass,
+                ]"
+              >
+                <span :class="['h-1.5 w-1.5 rounded-full', cloudSyncStatus.dotClass]" />
+                {{ cloudSyncStatus.label }}
+              </span>
+            </div>
+            <p class="mt-0.5 text-sm text-neutral-600 dark:text-neutral-400">
+              Modern continuous replication to your personal Cloudflare R2, S3 bucket, or local network share.
+            </p>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <Button
+            :variant="syncEngineStore.syncEnabled ? 'primary' : 'secondary'"
+            size="sm"
+            @click="syncEngineStore.syncEnabled = !syncEngineStore.syncEnabled"
+          >
+            {{ syncEngineStore.syncEnabled ? 'Auto-Sync Active' : 'Enable Auto-Sync' }}
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            :disabled="syncEngineStore.isSyncing"
+            class="flex items-center gap-1.5"
+            @click="handleTriggerBackup"
+          >
+            <div :class="['i-solar:refresh-circle-bold size-4', syncEngineStore.isSyncing ? 'animate-spin' : '']" />
+            <span>{{ syncEngineStore.isSyncing ? 'Syncing...' : 'Sync Now' }}</span>
+          </Button>
+          <Button
+            variant="primary"
+            size="sm"
+            class="flex items-center gap-1.5"
+            @click="router.push('/settings/modules/cloud-sync')"
+          >
+            <span>Open Cloud Sync Settings</span>
+            <div class="i-solar:arrow-right-bold size-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      <!-- Zero-Custody Reassurance Tip & Model Notice -->
+      <div class="mt-4 flex flex-col gap-2.5 border border-sky-500/20 rounded-xl bg-white/70 p-3.5 text-xs text-neutral-700 dark:border-sky-500/30 dark:bg-neutral-900/60 dark:text-neutral-300">
+        <div class="flex items-start gap-2">
+          <div class="i-solar:shield-check-bold mt-0.5 shrink-0 text-base text-sky-500" />
+          <div>
+            <span class="text-sky-700 font-semibold dark:text-sky-300">Zero-Custody Automatic Replication:</span>
+            Cloud Sync continuously mirrors your conversations, companions, daily memory summaries, and settings to storage you control (Cloudflare R2, AWS S3, or Local Share). We never see or hold custody of your data — client-side encrypted and 100% user-owned.
+          </div>
+        </div>
+        <div class="flex items-start gap-2 border-t border-sky-500/15 pt-2 dark:border-sky-500/25">
+          <div class="i-solar:box-minimalistic-bold-duotone mt-0.5 shrink-0 text-base text-indigo-500" />
+          <div>
+            <span class="text-indigo-700 font-semibold dark:text-indigo-300">Live2D, VRM, Spine & MMD Avatars:</span>
+            Because character models are large binary assets (textures, meshes, physics, and motion clips), there is no manual single-file JSON export. <strong>Cloud Sync is the only automated mechanism that backs up, preserves, and synchronizes your imported avatar models across devices.</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Metadata Strip -->
+      <div class="grid grid-cols-1 mt-4 gap-3 sm:grid-cols-3">
+        <div class="rounded-lg bg-neutral-100/70 p-2.5 dark:bg-neutral-800/50">
+          <div class="text-[11px] text-neutral-500 font-medium tracking-wider uppercase dark:text-neutral-400">
+            Active Target
+          </div>
+          <div class="mt-0.5 truncate text-xs text-neutral-800 font-semibold dark:text-neutral-200">
+            {{ formattedBackupLocation }}
+          </div>
+        </div>
+        <div class="rounded-lg bg-neutral-100/70 p-2.5 dark:bg-neutral-800/50">
+          <div class="text-[11px] text-neutral-500 font-medium tracking-wider uppercase dark:text-neutral-400">
+            Cloudflare Edge Hub
+          </div>
+          <div class="mt-0.5 flex items-center gap-1.5 text-xs text-neutral-800 font-semibold dark:text-neutral-200">
+            <span :class="['h-2 w-2 rounded-full', cloudflareStore.isAuthenticated ? 'bg-emerald-500' : 'bg-neutral-400']" />
+            <span class="truncate">{{ cloudflareStore.isAuthenticated ? (cloudflareStore.cfAccountId ? `${cloudflareStore.cfAccountId.slice(0, 12)}...` : 'Authenticated') : 'Not Linked' }}</span>
+          </div>
+        </div>
+        <div class="rounded-lg bg-neutral-100/70 p-2.5 dark:bg-neutral-800/50">
+          <div class="text-[11px] text-neutral-500 font-medium tracking-wider uppercase dark:text-neutral-400">
+            Last Synchronized
+          </div>
+          <div class="mt-0.5 truncate text-xs text-neutral-800 font-semibold dark:text-neutral-200">
+            {{ formattedLastSyncTime }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Unlinked Conversations & Memories Section (Phase 3) -->
+    <div class="border-2 border-neutral-200/60 rounded-2xl bg-white/70 p-6 shadow-sm dark:border-neutral-800/60 dark:bg-neutral-900/60">
+      <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-300">
+            <div class="i-solar:ghost-bold-duotone size-6" />
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-xl text-neutral-900 font-bold dark:text-white">
+                Unlinked Conversations & Memories
+              </span>
+              <span
+                :class="[
+                  'px-2 py-0.5 rounded-full text-xs font-semibold border',
+                  orphanedGroups.length > 0
+                    ? 'bg-amber-500/15 text-amber-600 dark:bg-amber-500/25 dark:text-amber-400 border-amber-500/30'
+                    : 'bg-emerald-500/15 text-emerald-600 dark:bg-emerald-500/25 dark:text-emerald-400 border-emerald-500/30',
+                ]"
+              >
+                {{ orphanedGroups.length === 0 ? 'All Linked' : `${orphanedGroups.length} Unlinked Group(s)` }}
+              </span>
+            </div>
+            <p class="mt-0.5 text-sm text-neutral-600 dark:text-neutral-400">
+              Recover chat histories and memories left behind by deleted or renamed companions, or merge them into an active companion.
+            </p>
+          </div>
+        </div>
+
+        <div v-if="orphanedGroups.length > 0" class="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            class="flex items-center gap-1.5"
+            @click="isUnlinkedExpanded = !isUnlinkedExpanded"
+          >
+            <div :class="['size-3.5 transition-transform duration-200', isUnlinkedExpanded ? 'i-solar:alt-arrow-up-bold' : 'i-solar:alt-arrow-down-bold']" />
+            <span>{{ isUnlinkedExpanded ? 'Collapse List' : `Review & Manage (${orphanedGroups.length})` }}</span>
+          </Button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div
+        v-if="orphanedGroups.length === 0"
+        class="mt-6 flex flex-col items-center justify-center border border-neutral-300/80 rounded-xl border-dashed bg-neutral-50/50 py-10 dark:border-neutral-700/80 dark:bg-neutral-800/30"
+      >
+        <div class="i-solar:shield-check-bold-duotone size-12 text-emerald-500/80" />
+        <div class="mt-3 text-sm text-neutral-800 font-semibold dark:text-neutral-200">
+          All Conversations & Memories Linked
+        </div>
+        <p class="mt-1 max-w-md text-center text-xs text-neutral-500 dark:text-neutral-400">
+          All chat sessions, daily summaries, text journal entries, and lifetime memories are tied to active companions. No orphaned data detected.
+        </p>
+      </div>
+
+      <!-- Expandable Orphan Content (when orphans exist) -->
+      <div
+        v-else-if="isUnlinkedExpanded"
+        class="mt-5 border-t border-neutral-200/60 pt-4 dark:border-neutral-800/60"
+      >
+        <!-- Bulk Management Toolbar -->
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              @click="selectedOrphans.length === orphanedGroups.length ? deselectAll() : selectAll()"
+            >
+              {{ selectedOrphans.length === orphanedGroups.length ? 'Deselect All' : 'Select All' }}
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              :disabled="selectedOrphans.length === 0"
+              @click="restoreBulkSelected"
+            >
+              ✨ Recreate Selected ({{ selectedOrphans.length }})
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              :disabled="selectedOrphans.length === 0"
+              @click="openAdvancedMapping"
+            >
+              🤝 Merge Selected...
+            </Button>
+          </div>
+          <div>
+            <DoubleCheckButton
+              variant="danger"
+              size="sm"
+              :disabled="selectedOrphans.length === 0"
+              @confirm="nukeBulkSelected"
+            >
+              🗑️ Purge Selected
+              <template #confirm>
+                Confirm Purge ({{ selectedOrphans.length }})
+              </template>
+              <template #cancel>
+                Cancel
+              </template>
+            </DoubleCheckButton>
+          </div>
+        </div>
+
+        <!-- Bounded Scrollable Orphan Cards List -->
+        <div :class="['flex flex-col gap-3', orphanedGroups.length > 2 ? 'max-h-[560px] overflow-y-auto pr-1.5' : '']">
+          <div
+            v-for="group in orphanedGroups"
+            :key="group.characterId"
+            :class="[
+              'border-2 rounded-xl p-4 transition-all',
+              selectedOrphans.includes(group.characterId)
+                ? 'border-primary/50 bg-primary/5 dark:bg-primary/10'
+                : 'border-neutral-200/70 bg-neutral-50/50 dark:border-neutral-800/70 dark:bg-neutral-900/50',
+            ]"
+          >
+            <div class="flex flex-col gap-3">
+              <!-- Header Row -->
+              <div class="flex flex-wrap items-center justify-between gap-2">
+                <div class="flex items-center gap-2.5">
+                  <input
+                    type="checkbox"
+                    :checked="selectedOrphans.includes(group.characterId)"
+                    class="h-4 w-4 cursor-pointer accent-primary-500"
+                    @change="toggleSelect(group.characterId)"
+                  >
+                  <span class="rounded-md bg-neutral-200/70 px-2 py-0.5 text-xs text-neutral-800 font-semibold font-mono dark:bg-neutral-800 dark:text-neutral-200">
+                    {{ group.characterId }}
+                  </span>
+                  <span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] text-primary font-semibold">
+                    {{ group.messageCount }} messages
+                  </span>
+                </div>
+                <div class="text-xs text-neutral-500 dark:text-neutral-400">
+                  Last active: <span class="text-neutral-700 font-medium dark:text-neutral-300">{{ group.lastActive ? new Date(group.lastActive).toLocaleString() : 'Unknown' }}</span>
+                </div>
+              </div>
+
+              <!-- Dialogue Snippet Preview -->
+              <div
+                v-if="group.preview"
+                class="border-l-3 border-primary/60 rounded-r-lg bg-white/80 p-3 text-xs text-neutral-700 italic dark:bg-neutral-800/70 dark:text-neutral-300"
+              >
+                <span class="mr-1 text-[11px] text-neutral-400 font-semibold uppercase not-italic">Recent Dialogue:</span>
+                “{{ group.preview }}”
+              </div>
+              <div
+                v-else
+                class="rounded-lg bg-white/50 p-2.5 text-xs text-neutral-400 italic dark:bg-neutral-800/40"
+              >
+                No message text preview recorded
+              </div>
+
+              <!-- Inline 1-Click Actions -->
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    class="flex items-center gap-1.5"
+                    @click="restoreSingle(group.characterId, 'new')"
+                  >
+                    <span>✨</span>
+                    <span>Recreate Companion</span>
+                  </Button>
+
+                  <div class="flex items-center gap-1.5">
+                    <select
+                      v-model="quickMergeTargets[group.characterId]"
+                      class="h-8 border border-neutral-300 rounded-lg bg-white px-2.5 py-1 text-xs text-neutral-800 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                    >
+                      <option value="">
+                        Merge into existing...
+                      </option>
+                      <option
+                        v-for="char in existingCharacters"
+                        :key="char.id"
+                        :value="char.id"
+                      >
+                        🤝 {{ char.name }} ({{ char.id }})
+                      </option>
+                    </select>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      :disabled="!quickMergeTargets[group.characterId]"
+                      @click="restoreSingle(group.characterId, quickMergeTargets[group.characterId])"
+                    >
+                      Merge
+                    </Button>
+                  </div>
+                </div>
+
+                <div>
+                  <DoubleCheckButton
+                    variant="danger"
+                    size="sm"
+                    @confirm="nukeSingle(group.characterId)"
+                  >
+                    🗑️ Purge
+                    <template #confirm>
+                      Confirm Purge
+                    </template>
+                    <template #cancel>
+                      Cancel
+                    </template>
+                  </DoubleCheckButton>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -400,59 +845,6 @@ async function executeRestore() {
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Backup -->
-    <div class="border-2 border-neutral-200/50 rounded-xl bg-white/70 p-4 shadow-sm dark:border-neutral-800/60 dark:bg-neutral-900/60">
-      <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-        <div class="flex flex-col gap-1 md:max-w-[560px]">
-          <div class="text-lg font-medium">
-            Auto-Backup & Manual Backup
-          </div>
-          <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            Configure auto-backup or trigger a manual backup.
-          </p>
-          <div class="mt-2 text-sm text-neutral-500">
-            <div>Backup Provider: <span class="font-semibold">{{ syncEngineStore.activeProvider === 'local-fs' ? 'Local File System / Samba' : syncEngineStore.activeProvider }}</span></div>
-            <div v-if="formattedBackupLocation">
-              Backup Location: <span class="font-mono">{{ formattedBackupLocation }}</span>
-            </div>
-            <div>Last Backup: <span class="font-mono">{{ formattedLastSyncTime }}</span></div>
-          </div>
-        </div>
-        <div class="flex flex-col items-start gap-2 sm:items-end">
-          <div class="flex flex-wrap gap-2">
-            <Button :variant="syncEngineStore.syncEnabled ? 'primary' : 'secondary'" @click="syncEngineStore.syncEnabled = !syncEngineStore.syncEnabled">
-              {{ syncEngineStore.syncEnabled ? 'Auto-Backup Enabled' : 'Auto-Backup Disabled' }}
-            </Button>
-            <Button variant="primary" :disabled="syncEngineStore.isSyncing" @click="handleTriggerBackup">
-              Trigger Backup
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Orphaned Sessions Maintenance -->
-    <div class="border-2 border-neutral-200/50 rounded-xl bg-white/70 p-4 shadow-sm dark:border-neutral-800/60 dark:bg-neutral-900/60">
-      <div class="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_auto]">
-        <div class="flex flex-col gap-1 md:max-w-[560px]">
-          <div class="text-lg font-medium">
-            Orphaned Sessions Maintenance
-          </div>
-          <p class="text-sm text-neutral-600 dark:text-neutral-400">
-            Clean up or restore chat histories left behind by deleted characters.
-          </p>
-          <div class="mt-2 text-sm text-neutral-500">
-            Orphaned Groups Found: <span class="font-semibold">{{ orphanedGroups.length }}</span>
-          </div>
-        </div>
-        <div class="flex flex-col items-start gap-2 sm:items-end">
-          <Button variant="secondary" @click="openManageModal">
-            Manage Orphans
-          </Button>
         </div>
       </div>
     </div>
@@ -613,116 +1005,6 @@ async function executeRestore() {
     </div>
   </div>
 
-  <DialogRoot :open="isModalOpen" @update:open="isModalOpen = $event">
-    <DialogPortal>
-      <DialogOverlay class="fixed inset-0 z-100 bg-black/50 backdrop-blur-sm data-[state=closed]:animate-fadeOut data-[state=open]:animate-fadeIn" />
-      <DialogContent class="fixed left-1/2 top-1/2 z-100 m-0 max-h-[90vh] max-w-5xl w-[92vw] flex flex-col border border-neutral-200 rounded-2xl bg-white p-6 shadow-2xl -translate-x-1/2 -translate-y-1/2 data-[state=closed]:animate-contentHide data-[state=open]:animate-contentShow dark:border-neutral-700 dark:bg-neutral-800">
-        <div class="h-full flex flex-col gap-6 overflow-hidden">
-          <div class="flex items-center justify-between border-b border-neutral-200 pb-3 dark:border-neutral-700">
-            <div>
-              <DialogTitle class="from-primary-500 to-primary-400 bg-gradient-to-r bg-clip-text text-xl text-transparent font-bold">
-                Manage Orphaned Sessions
-              </DialogTitle>
-              <p class="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
-                Preview, restore, or purge session histories from characters that have been deleted.
-              </p>
-            </div>
-          </div>
-
-          <div class="flex-1 overflow-y-auto pr-1">
-            <div v-if="orphanedGroups.length === 0" class="flex flex-col items-center justify-center py-12 text-neutral-500 dark:text-neutral-400">
-              <div class="mb-2 text-4xl">
-                🎉
-              </div>
-              <p class="text-sm font-medium">
-                No orphaned session groups found.
-              </p>
-              <p class="mt-1 text-xs text-neutral-400">
-                Everything is clean!
-              </p>
-            </div>
-            <div v-else class="flex flex-col gap-4">
-              <div class="flex items-center gap-2">
-                <Button variant="secondary" size="sm" @click="selectAll">
-                  Select All
-                </Button>
-                <Button variant="secondary" size="sm" @click="deselectAll">
-                  Deselect All
-                </Button>
-              </div>
-
-              <div class="overflow-x-auto border border-neutral-200 rounded-xl dark:border-neutral-700">
-                <table class="w-full border-collapse table-fixed text-left">
-                  <thead>
-                    <tr class="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-700 dark:bg-neutral-900">
-                      <th class="w-12 p-3" />
-                      <th class="w-24 p-3 text-xs text-neutral-500 font-semibold uppercase dark:text-neutral-400">
-                        Messages
-                      </th>
-                      <th class="w-44 p-3 text-xs text-neutral-500 font-semibold uppercase dark:text-neutral-400">
-                        Last Active
-                      </th>
-                      <th class="p-3 text-xs text-neutral-500 font-semibold uppercase dark:text-neutral-400">
-                        Preview
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="group in orphanedGroups"
-                      :key="group.characterId"
-                      :class="['border-b border-neutral-100 dark:border-neutral-800 last:border-none', 'hover:bg-neutral-50/50 dark:hover:bg-neutral-900/30']"
-                    >
-                      <td class="p-3 text-center">
-                        <input
-                          v-model="selectedOrphans"
-                          type="checkbox"
-                          :value="group.characterId"
-                          :class="['h-4 w-4 cursor-pointer accent-primary-500']"
-                        >
-                      </td>
-                      <td :class="['p-3 text-sm text-neutral-600 dark:text-neutral-400']">
-                        {{ group.messageCount }}
-                      </td>
-                      <td :class="['whitespace-nowrap p-3 text-sm text-neutral-600 dark:text-neutral-400']">
-                        {{ group.lastActive ? new Date(group.lastActive).toLocaleString() : 'Never' }}
-                      </td>
-                      <td :class="['p-3 text-xs text-neutral-500 dark:text-neutral-400 font-normal line-clamp-3 whitespace-normal break-words']">
-                        {{ group.preview || 'No messages' }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between border-t border-neutral-200 pt-4 dark:border-neutral-700">
-            <Button
-              variant="secondary"
-              label="Close"
-              @click="isModalOpen = false"
-            />
-            <div class="flex gap-2">
-              <Button
-                variant="danger"
-                label="Nuke Selected"
-                :disabled="selectedOrphans.length === 0"
-                @click="confirmNuke"
-              />
-              <Button
-                variant="primary"
-                label="Restore Selected"
-                :disabled="selectedOrphans.length === 0"
-                @click="handleRestore"
-              />
-            </div>
-          </div>
-        </div>
-      </DialogContent>
-    </DialogPortal>
-  </DialogRoot>
-
   <DialogRoot :open="isRestoreMappingOpen" @update:open="isRestoreMappingOpen = $event">
     <DialogPortal>
       <DialogOverlay class="fixed inset-0 z-110 bg-black/50 backdrop-blur-sm data-[state=closed]:animate-fadeOut data-[state=open]:animate-fadeIn" />
@@ -765,7 +1047,7 @@ async function executeRestore() {
             <Button
               variant="primary"
               label="Confirm Restore"
-              @click="executeRestore"
+              @click="executeAdvancedRestore"
             />
           </div>
         </div>

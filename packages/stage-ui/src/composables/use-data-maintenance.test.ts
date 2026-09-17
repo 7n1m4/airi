@@ -408,7 +408,7 @@ describe('useDataMaintenance characterization tests', () => {
   })
 
   describe('orphan Nuking (nukeOrphanedGroups)', () => {
-    it('deletes sessions from repository and removes character from index', async () => {
+    it('deletes sessions from repository and removes character from index and memory stores', async () => {
       mockChatIndex.characters = {
         'orphan-junk': {
           sessions: {
@@ -418,12 +418,29 @@ describe('useDataMaintenance characterization tests', () => {
         },
       }
 
+      mockSTMMBlocks.value = [
+        { id: 'stmm-junk', characterId: 'orphan-junk', content: 'Orphan STMM' },
+        { id: 'stmm-keep', characterId: 'valid-char', content: 'Keep this' },
+      ]
+      mockLTMMEntries.value = [
+        { id: 'ltmm-junk', characterId: 'orphan-junk', text: 'Orphan LTMM' },
+        { id: 'ltmm-keep', characterId: 'valid-char', text: 'Keep this' },
+      ]
+
       const { nukeOrphanedGroups } = useDataMaintenance()
       await nukeOrphanedGroups(['orphan-junk'])
 
       expect(mockChatSessionsRepo.deleteSession).toHaveBeenCalledWith('sess-junk-1')
       expect(mockChatSessionsRepo.deleteSession).toHaveBeenCalledWith('sess-junk-2')
       expect(mockChatIndex.characters['orphan-junk']).toBeUndefined()
+
+      expect(mockSTMMBlocks.value).toEqual([
+        { id: 'stmm-keep', characterId: 'valid-char', content: 'Keep this' },
+      ])
+      expect(mockLTMMEntries.value).toEqual([
+        { id: 'ltmm-keep', characterId: 'valid-char', text: 'Keep this' },
+      ])
+      expect(mockLifetimeMemoryRepo.delete).toHaveBeenCalledWith('orphan-junk', 'global')
     })
   })
 })
