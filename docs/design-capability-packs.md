@@ -111,8 +111,8 @@ To keep the system intuitive, Capability Packs are categorized into three config
 │ 🏃 Kinetic Motion Pack        │ • generate_motion (FlowMDM VRMA)         │
 │    [Tier 1: Shipped]          │ • On-device neural procedural motion     │
 ├───────────────────────────────┼──────────────────────────────────────────┤
-│ 🖥️ Desktop Computer Use Pack  │ • @proj-airi/computer-use-mcp            │
-│    [Tier 3: Future / Deferred]│ • macOS OS actions & Chrome DOM bridge   │
+│ 🖥️ Desktop Computer Use Pack  │ • @auv-js AUV daemon (Eventa IPC)        │
+│    [Tier 3: Planned Design]   │ • Native OS actions & window inspection  │
 ├───────────────────────────────┼──────────────────────────────────────────┤
 │ ⚙️ Custom Developer MCP        │ • mcp.json raw stdio server manager      │
 │    [Tier 3: Shipped]          │ • Third-party database & API bridges     │
@@ -164,20 +164,49 @@ To keep the system intuitive, Capability Packs are categorized into three config
 ### Future & Planned Add-On Packs
 
 #### 7. 🖥️ Desktop Computer Use & OS Automation Pack (Tier 3: Privileged Automation)
-* **Status**: **Deferred for Future Roadmap** (Technical Research Completed).
-* **Underlying Package**: Upstream `@proj-airi/computer-use-mcp` (`services/computer-use-mcp`).
-* **Concept**: Elevating the companion from a conversationalist to an active desktop assistant capable of navigating macOS applications, inspecting web pages, and executing test suites.
-* **Underlying Capabilities**:
-  - *Native Desktop Actions*: Coordinate clicking, typing, hotkey execution, app launch/focus, and screen capture.
-  - *Browser DOM Bridge*: Element-level web inspection and form filling via a local WebSocket bridge (`ws://127.0.0.1:8765`) paired with the AIRI Chrome extension.
-  - *Terminal Execution*: Controlled PTY commands and diagnostic test runner workflows.
-* **Why Deferred (Non-Trivial Configuration Footprint)**:
-  Unlike Tier 1 and Tier 2 packs, `computer-use-mcp` is a high-privilege system that requires extensive non-trivial setup and security gating:
-  1. *OS Permissions*: Mandatory macOS Accessibility and Screen Recording authorizations in System Settings.
-  2. *Action Approval Mode*: Requiring user interaction loops (`actions` vs. `all` vs. `never`) so the model cannot act without explicit confirmation.
-  3. *Application Whitelisting*: Explicit list of safe target apps (`COMPUTER_USE_OPENABLE_APPS`, e.g. `Terminal, Cursor, Chrome`).
-  4. *Browser DOM Bridge Setup*: Unpacking and connecting the companion Chrome extension.
-  *Decision*: Deferred to a dedicated phase where automated permission onboarding and approval UX can be engineered safely.
+* **Status**: **Roadmap Design Specification** (Evaluated against Upstream PR #2565 / Commit `c38b0a34f3`).
+* **Underlying Runtime**: Host-managed AUV daemon (`@auv-js/cli` and `@auv-js/sdk`) exposed via typed Eventa IPC (`shared/eventa/computer-use.ts`).
+* **Concept**: Elevating the companion from a conversationalist to an active desktop assistant capable of navigating desktop applications, inspecting windows, capturing screenshots, and executing keyboard or mouse input.
+
+##### The Naive Assumption vs. Upstream Reality (PR #2565 Lessons)
+The initial naive roadmap envisioned computer use as a simple 1-line entry in `mcp.json` (e.g. `@proj-airi/computer-use-mcp`) delegated through generic stdio `mcp_call_tool`. Upstream's production implementation in **PR #2565** proved why generic MCP stdio is inadequate for native OS automation, establishing 6 critical lessons:
+
+1. **Multimodal VLM Injection vs. Text-Only MCP**:
+   - *Problem*: Generic MCP stdio returns text strings. Vision models (Claude 3.5 Sonnet, GPT-4o, Gemini 1.5/2.0) require native `{ type: 'image_url' }` base64 data URLs to visually inspect the desktop.
+   - *Upstream Architecture*: Split the capability into two paired tools:
+     - `computer_use`: Executes CLI actions (`invoke app.launch`, `invoke input.click`, etc.) and returns structured metadata + screenshot artifact file paths.
+     - `computer_use_read_image`: A dedicated companion tool that reads the generated screenshot artifact from disk and formats it directly as an OpenAI-compatible multimodal image block: `[{ type: 'image_url', image_url: { url: 'data:image/png;base64,...' } }]`.
+2. **Private Daemon Lifecycle & Serialization Queue**:
+   - *Problem*: Spawning CLI processes ad-hoc causes high latency and introduces catastrophic race conditions if multiple windows or conversational turns trigger simultaneous input events.
+   - *Upstream Architecture*: Spawns a long-lived private daemon (`AuvDaemon`) bound to a local Unix domain socket (`unix:///tmp/auv-.../s`, `0700` permissions) or Windows named pipe. All incoming operations pass through a single serialized Promise queue (`enqueue()`) in Electron main to guarantee atomic UI interactions.
+3. **Chat History Tool-Bleed Protection (`requiresExplicitSelection`)**:
+   - *Problem*: Normal MCP tools (e.g. web search) are harmlessly auto-inherited into the conversation context from chat history. If an OS automation tool is auto-inherited, the LLM might hallucinate and trigger unintended desktop clicks on subsequent unrelated turns.
+   - *Upstream Architecture*: Modified `packages/stage-ui/src/stores/chat.ts` to introduce `requiresExplicitSelection: true`. Tools flagged with this rule are **never** auto-inherited from message history and cannot be rerun from cache unless the user explicitly re-selects the tool for that specific prompt.
+4. **Strict Screenshot Path Sandboxing**:
+   - *Problem*: An image-reading tool exposed to an LLM creates a severe file-exfiltration vulnerability if a prompt injection directs the model to read `~/.ssh/id_rsa` or `/etc/passwd`.
+   - *Upstream Architecture*: `readImage()` enforces strict `realpath()` validation, ensuring files reside strictly within `join(app.getPath('userData'), 'computer-use')`, asserts PNG/JPEG magic bytes, and enforces an 8 MiB ceiling.
+5. **ASAR Unpacking for Platform Binaries**:
+   - *Problem*: `@auv-js/cli` ships precompiled native Mach-O/ELF executables per platform. Packaged Electron apps cannot execute binaries from within the virtual `app.asar` archive.
+   - *Upstream Architecture*: Resolves binary paths dynamically to `app.asar.unpacked` when packaged, configured via `electron-builder.config.ts`.
+6. **Injeca DI Container Encapsulation (Fork Invariant)**:
+   - Upstream hardwired `setupComputerUse` directly into `main/index.ts`. In our fork (`dasilva333/airi`), all Electron main services must be encapsulated as modular `injeca` services (`defineService`) and cleanly decoupled between `RendererStage` and `ControlStrip`.
+
+##### macOS Permission Boundaries & Current Fork Status
+A key point of confusion in desktop automation is the distinction between display perception and synthetic input:
+* **Screen Recording Permission (Already Solved in Fork)**:
+  - Required for reading framebuffer pixels and capturing desktop contents.
+  - *Current Reality*: Our fork's **Attention Ecology / Screen Watching** subsystem (`apps/stage-tamagotchi/src/main/services/electron/vision.ts` and `WithScreenCapture.vue`) has already solved this boundary. Users have already granted Screen Recording access to the signed AIRI application bundle in macOS *System Settings > Privacy & Security > Screen Recording*.
+* **Accessibility Permission (`AXIsProcessTrusted`)**:
+  - Required for synthesizing CGEvents (mouse moves, clicks, drag operations, keystrokes) and inspecting accessibility trees (`AXUIElementCopyAttributeValue`).
+  - *Requirement*: AIRI must invoke `app.probePermissions` or `AXIsProcessTrustedWithOptions` to prompt the user to enable Accessibility in macOS *System Settings > Privacy & Security > Accessibility*.
+* **Host Process Context**:
+  - Because AIRI is already a signed macOS Electron bundle with user-granted permissions, managing AUV as an internal daemon spawned by Electron main ensures the subprocess operates under AIRI's established TCC security envelope, rather than triggering fragmented permissions for unbundled Node/npx scripts.
+
+##### Hardened Plan of Attack for `dasilva333/airi`
+1. **Service Registration**: Wrap the AUV daemon runtime in an `injeca` service (`apps/stage-tamagotchi/src/main/services/airi/computer-use.ts`).
+2. **IPC Contracts**: Maintain typed `@moeru/eventa` definitions for `computerUseRun` and `computerUseReadImage`.
+3. **Safety Guardrail**: Adopt upstream's `requiresExplicitSelection` store logic in `packages/stage-ui/src/stores/chat.ts` to protect prompt turns from accidental tool inheritance.
+4. **UI Presentation**: Surface the capability pack in `CardCreationTabTools.vue` as a Tier 3 pack, with clear status indicators for macOS Accessibility and Screen Recording readiness.
 
 ---
 
