@@ -57,10 +57,25 @@ In your Chloe GF Universe example:
 2. You decide to isolate this timeline and switch the chat session to `"chloe-gf-uni"`.
 3. **The Migration Resolver**:
    When the session's `universeId` is updated in the UI, the system runs a background migration transaction:
-   * Query the Text Journal, STMM, Echo Chips, and Background stores for all entries matching `entry.sessionId === activeSessionId`.
+   * Query the Text Journal, STMM, Echo Chips, and Background stores for all primary entries matching `entry.sessionId === activeSessionId`.
    * Update their `universeId` property to `"chloe-gf-uni"`.
    * Persist the updated records.
-4. **Outcome**: All text memories, daily summaries, emotional anchors, and generated gallery photos created during that session are cleanly pulled into the new universe. They disappear from the `"global"` timeline instantly, leaving the original universe completely untainted.
+4. **Outcome & Asset Boundaries (Primary vs. Secondary)**:
+   * **Primary Assets (Migrated)**: All raw message turns, session-stamped text memories, active emotional anchors, and generated photos/selfies created during that session are cleanly reassigned to `"chloe-gf-uni"`. They immediately appear under the new universe and disappear from queries in `"global"`.
+   * **Secondary Artifacts (Stay Behind — No Automatic Regeneration)**: Multi-session Short-Term Memory (STMM) daily blocks and the consolidated Lifetime Artifact (`local:memory/lifetime/{characterId}:{universeId}`) are **deliberately not regenerated automatically**:
+     * *Source Universe Leftovers ("Ghosts")*: Past daily summaries and the consolidated lifetime biography in `"global"` remain intact as-is. They retain historical traces and mentions of facts established during the migrated session. We explicitly choose not to burn heavy LLM tokens or trigger non-deterministic summarization loops to retroactively rewrite history upon session moves.
+     * *Target Universe Clean Slate*: The target universe (`"chloe-gf-uni"`) does not inherit secondary artifacts from `"global"`. It starts with a clean slate for lifetime memory, populated only by the moved session's primary history.
+     * *Manual Rebuild on Demand*: If a user desires clean daily blocks in either universe, they can trigger **"Rebuild Short-Term Memory"** via *Settings &rarr; System & Data &rarr; Memory*.
+     * *Future Consideration*: The `UniversePickerModal` can optionally support a *"Seed new universe with a snapshot copy of current artifacts"* toggle when creating a new universe from an existing timeline.
+
+---
+
+## 3.1 Fork Architectural Distinctions (vs. Upstream AIRI)
+
+For contributors and users comparing forks:
+1. **ACT Token Preservation in History**: This fork preserves full `rawContent` on assistant messages, retaining emotion cues (`<|ACT:smile|>`), motion markers, and multi-actor transition tags (`<|ACTOR:...|>`) in chat storage. Upstream strips these action tokens before saving turns.
+2. **Universe Isolation**: This fork organizes all memory pillars and session streams into flat, decoupled Universes (`universeId`). Upstream has no concept of universes.
+3. **Decoupled Tool Calls**: Neither upstream nor this fork stores raw tool invocations or tool result payloads in permanent conversational chat history, preventing context explosion and tool-loop hallucination spirals.
 
 ---
 
