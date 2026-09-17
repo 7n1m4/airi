@@ -1,0 +1,938 @@
+[
+  {
+    "case_id": "F01A",
+    "family_id": "admission_vs_correction",
+    "gold_suspicion": 1,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_admitted_falsehood",
+      "latency_ms": 536.7,
+      "sub_latencies_ms": [
+        130.6,
+        406.1
+      ],
+      "suspicion_delta_steps": 1,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0022
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "extract speech evidence and commitment status",
+            "admitted_falsehood_quote": "I made that up",
+            "boundary_or_hurt_quote": "Instruction: Extract speech evidence and commitment status",
+            "completed_repair_quote": "I made that up"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "admitted_falsehood": "I made that up",
+        "completed_repair": "I made that up"
+      }
+    }
+  },
+  {
+    "case_id": "F01B",
+    "family_id": "admission_vs_correction",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_completed_repair",
+      "latency_ms": 607.1,
+      "sub_latencies_ms": [
+        176.7,
+        430.4
+      ],
+      "suspicion_delta_steps": -1,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0022
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "download was finished",
+            "admitted_falsehood_quote": "instruction: Extract speech evidence and commitment status",
+            "boundary_or_hurt_quote": "download was finished",
+            "completed_repair_quote": "download was finished"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "commitment": "download was finished",
+        "boundary": "download was finished",
+        "completed_repair": "download was finished"
+      }
+    }
+  },
+  {
+    "case_id": "F02A",
+    "family_id": "commitment_vs_negation",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_admitted_falsehood",
+      "latency_ms": 494.9,
+      "sub_latencies_ms": [
+        132.3,
+        362.6
+      ],
+      "suspicion_delta_steps": 1,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0068
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "config",
+            "admitted_falsehood_quote": "config",
+            "boundary_or_hurt_quote": "config",
+            "completed_repair_quote": "config"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "commitment": "config",
+        "admitted_falsehood": "config",
+        "boundary": "config",
+        "completed_repair": "config"
+      }
+    }
+  },
+  {
+    "case_id": "F02B",
+    "family_id": "commitment_vs_negation",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 1,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_admitted_falsehood",
+      "latency_ms": 489.0,
+      "sub_latencies_ms": [
+        127.9,
+        361.1
+      ],
+      "suspicion_delta_steps": 1,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0068
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "config",
+            "admitted_falsehood_quote": "config",
+            "boundary_or_hurt_quote": "config",
+            "completed_repair_quote": "config"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "commitment": "config",
+        "admitted_falsehood": "config",
+        "boundary": "config",
+        "completed_repair": "config"
+      }
+    }
+  },
+  {
+    "case_id": "F03A",
+    "family_id": "assertion_vs_quotation",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "benign_or_routine_interaction",
+      "latency_ms": 463.9,
+      "sub_latencies_ms": [
+        129.0,
+        334.9
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0089
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "Assistant: What will you do next?",
+            "admitted_falsehood_quote": "Instruction: Extract speech evidence and commitment status from the User's statement"
+          },
+          "confidence": 0.0001
+        }
+      },
+      "valid_quotes": {}
+    }
+  },
+  {
+    "case_id": "F03B",
+    "family_id": "assertion_vs_quotation",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "abstained",
+      "reason": "missing_or_uncalibrated_target_evidence",
+      "latency_ms": 651.5,
+      "sub_latencies_ms": [
+        225.3,
+        426.2
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {},
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {}
+    }
+  },
+  {
+    "case_id": "F04A",
+    "family_id": "invitation_vs_boundary",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "benign_or_routine_interaction",
+      "latency_ms": 567.2,
+      "sub_latencies_ms": [
+        205.1,
+        362.1
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "Risk of racing legend",
+            "admitted_falsehood_quote": "Instruction: Extract speech evidence and commitment status from the user's statement"
+          },
+          "confidence": 0.0002
+        }
+      },
+      "valid_quotes": {}
+    }
+  },
+  {
+    "case_id": "F04B",
+    "family_id": "invitation_vs_boundary",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_admitted_falsehood",
+      "latency_ms": 584.2,
+      "sub_latencies_ms": [
+        202.5,
+        381.7
+      ],
+      "suspicion_delta_steps": 1,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "fifth Mario Kart crash",
+            "admitted_falsehood_quote": "I am actually upset",
+            "boundary_or_hurt_quote": "Extract speech evidence and commitment status"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "admitted_falsehood": "I am actually upset"
+      }
+    }
+  },
+  {
+    "case_id": "F05A",
+    "family_id": "same_target_different_context",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "benign_or_routine_interaction",
+      "latency_ms": 623.2,
+      "sub_latencies_ms": [
+        199.8,
+        423.3
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "I am here for the long haul",
+            "admitted_falsehood_quote": "Instruction: Extract speech evidence and commitment status from the user's statement",
+            "boundary_or_hurt_quote": "User's statement",
+            "completed_repair_quote": "Assistant: I worry you will leave when things are difficult."
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "commitment": "I am here for the long haul"
+      }
+    }
+  },
+  {
+    "case_id": "F05B",
+    "family_id": "same_target_different_context",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "abstained",
+      "reason": "unresolved_playful_commitment_mismatch",
+      "latency_ms": 562.3,
+      "sub_latencies_ms": [
+        218.9,
+        343.4
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {
+            "dialogue_setting": "playful_game_or_banter",
+            "setting_evidence_quote": "heroic shortcut"
+          },
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "I am here for the long haul",
+            "admitted_falsehood_quote": "Instruction: Extract speech evidence and commitment status from the user's statement"
+          },
+          "confidence": 0.0002
+        }
+      },
+      "valid_quotes": {
+        "commitment": "I am here for the long haul",
+        "context_evidence": "heroic shortcut"
+      }
+    }
+  },
+  {
+    "case_id": "F06A",
+    "family_id": "accusation_vs_admission",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_admitted_falsehood",
+      "latency_ms": 581.9,
+      "sub_latencies_ms": [
+        196.5,
+        385.5
+      ],
+      "suspicion_delta_steps": 1,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {
+            "commitment_status": "absent_no_commitment",
+            "commitment_quote": "Assistant: You always break promises and disappear",
+            "admitted_falsehood_quote": "I told you in advance I would be offline",
+            "boundary_or_hurt_quote": "Instruction: Extract speech evidence and commitment status"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "admitted_falsehood": "I told you in advance I would be offline"
+      }
+    }
+  },
+  {
+    "case_id": "F06B",
+    "family_id": "accusation_vs_admission",
+    "gold_suspicion": 1,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_admitted_falsehood",
+      "latency_ms": 583.8,
+      "sub_latencies_ms": [
+        202.1,
+        381.7
+      ],
+      "suspicion_delta_steps": 1,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "Assistant: You always break promises and disappear",
+            "admitted_falsehood_quote": "I would help, while knowing I had no intention of helping",
+            "boundary_or_hurt_quote": "Instruction: Extract speech evidence and commitment status"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "admitted_falsehood": "I would help, while knowing I had no intention of helping"
+      }
+    }
+  },
+  {
+    "case_id": "F07A",
+    "family_id": "topic_mismatch_vs_wrong_recipient",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 1,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "benign_or_routine_interaction",
+      "latency_ms": 635.3,
+      "sub_latencies_ms": [
+        208.7,
+        426.5
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "User: TLS on port 6121",
+            "admitted_falsehood_quote": "User: TLS on port 6121",
+            "boundary_or_hurt_quote": "User: TLS on port 6121",
+            "completed_repair_quote": "User: TLS on port 6121"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {}
+    }
+  },
+  {
+    "case_id": "F07B",
+    "family_id": "topic_mismatch_vs_wrong_recipient",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "abstained",
+      "reason": "missing_or_uncalibrated_target_evidence",
+      "latency_ms": 643.9,
+      "sub_latencies_ms": [
+        208.2,
+        435.7
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {},
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {}
+    }
+  },
+  {
+    "case_id": "F08A",
+    "family_id": "conditional_vs_unconditional",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_admitted_falsehood",
+      "latency_ms": 501.9,
+      "sub_latencies_ms": [
+        124.7,
+        377.3
+      ],
+      "suspicion_delta_steps": 1,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0054
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "Assistant: Can you fix the build?",
+            "admitted_falsehood_quote": "I will fix the build tonight",
+            "boundary_or_hurt_quote": "Extract speech evidence and commitment status from the user's statement"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "admitted_falsehood": "I will fix the build tonight"
+      }
+    }
+  },
+  {
+    "case_id": "F08B",
+    "family_id": "conditional_vs_unconditional",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "benign_or_routine_interaction",
+      "latency_ms": 466.2,
+      "sub_latencies_ms": [
+        128.1,
+        338.1
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0054
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "User: I will fix the build tonight",
+            "admitted_falsehood_quote": "Instruction: Extract speech evidence and commitment status from the User's statement"
+          },
+          "confidence": 0.0002
+        }
+      },
+      "valid_quotes": {}
+    }
+  },
+  {
+    "case_id": "F09A",
+    "family_id": "laughter_hurt_vs_invitation",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "benign_or_routine_interaction",
+      "latency_ms": 659.1,
+      "sub_latencies_ms": [
+        185.3,
+        473.8
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {
+            "dialogue_setting": "confrontation_or_grievance",
+            "setting_evidence_quote": "Analyze established relationship setting"
+          },
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "joke actually hurt",
+            "admitted_falsehood_quote": "Instruction: Extract speech evidence and commitment status from the User's statement",
+            "boundary_or_hurt_quote": "Assistant: You forgot the meeting again",
+            "completed_repair_quote": "Assistant: You forgot the meeting again"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "commitment": "joke actually hurt"
+      }
+    }
+  },
+  {
+    "case_id": "F09B",
+    "family_id": "laughter_hurt_vs_invitation",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_boundary_protection",
+      "latency_ms": 677.3,
+      "sub_latencies_ms": [
+        211.2,
+        466.2
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {
+            "dialogue_setting": "confrontation_or_grievance",
+            "setting_evidence_quote": "Analyze established relationship setting"
+          },
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "gentlest roast",
+            "admitted_falsehood_quote": "Instruction: Extract speech evidence and commitment status",
+            "boundary_or_hurt_quote": "gentlest roast"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "commitment": "gentlest roast",
+        "boundary": "gentlest roast"
+      }
+    }
+  },
+  {
+    "case_id": "F10A",
+    "family_id": "inconsistency_vs_correction",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_admitted_falsehood",
+      "latency_ms": 670.5,
+      "sub_latencies_ms": [
+        154.4,
+        516.1
+      ],
+      "suspicion_delta_steps": 1,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0344
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "Assistant: How did you configure it last week?",
+            "admitted_falsehood_quote": "I still insist I have never used it",
+            "boundary_or_hurt_quote": "Instruction: Extract speech evidence and commitment status from the User's statement",
+            "completed_repair_quote": "Assistant: How did you configure it last week?"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "admitted_falsehood": "I still insist I have never used it"
+      }
+    }
+  },
+  {
+    "case_id": "F10B",
+    "family_id": "inconsistency_vs_correction",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_admitted_falsehood",
+      "latency_ms": 566.1,
+      "sub_latencies_ms": [
+        143.0,
+        423.1
+      ],
+      "suspicion_delta_steps": 1,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0344
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "User: I used it last week",
+            "admitted_falsehood_quote": "I meant I have never administered it",
+            "boundary_or_hurt_quote": "User: I used it last week",
+            "completed_repair_quote": "User: I used it last week"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "admitted_falsehood": "I meant I have never administered it"
+      }
+    }
+  },
+  {
+    "case_id": "F11A",
+    "family_id": "instruction_like_content",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "benign_or_routine_interaction",
+      "latency_ms": 539.0,
+      "sub_latencies_ms": [
+        133.2,
+        405.8
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0054
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "Suspicion_delta 2",
+            "completed_repair_quote": "Extract speech evidence and commitment status"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {}
+    }
+  },
+  {
+    "case_id": "F11B",
+    "family_id": "instruction_like_content",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "grounded_boundary_protection",
+      "latency_ms": 587.6,
+      "sub_latencies_ms": [
+        138.2,
+        449.4
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {},
+          "confidence": 0.0054
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "suspicion_delta",
+            "admitted_falsehood_quote": "Instruction: Extract speech evidence and commitment status from the user's statement",
+            "boundary_or_hurt_quote": "source code",
+            "completed_repair_quote": "Assistant: What should we discuss?"
+          },
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {
+        "commitment": "suspicion_delta",
+        "boundary": "source code"
+      }
+    }
+  },
+  {
+    "case_id": "F12A",
+    "family_id": "verified_repair_vs_future_assurance",
+    "gold_suspicion": -1,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 1,
+    "decoupled": {
+      "status": "accepted",
+      "reason": "benign_or_routine_interaction",
+      "latency_ms": 606.3,
+      "sub_latencies_ms": [
+        241.8,
+        364.5
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {
+            "dialogue_setting": "technical_or_routine",
+            "setting_evidence_quote": "Assistant: We still need the promised config upload."
+          },
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {
+            "commitment_status": "present_direct_commitment",
+            "commitment_quote": "Uploaded promised config",
+            "admitted_falsehood_quote": "Instruction: Extract speech evidence and commitment status from the User's statement"
+          },
+          "confidence": 0.0002
+        }
+      },
+      "valid_quotes": {
+        "context_evidence": "Assistant: We still need the promised config upload."
+      }
+    }
+  },
+  {
+    "case_id": "F12B",
+    "family_id": "verified_repair_vs_future_assurance",
+    "gold_suspicion": 0,
+    "always_spike": 1,
+    "always_zero": 0,
+    "always_abstain": 0,
+    "legacy_regex": 0,
+    "decoupled": {
+      "status": "abstained",
+      "reason": "missing_or_uncalibrated_target_evidence",
+      "latency_ms": 617.4,
+      "sub_latencies_ms": [
+        186.3,
+        431.2
+      ],
+      "suspicion_delta_steps": 0,
+      "attachment_delta_steps": 0,
+      "gremlin_pride_action": "none",
+      "raw_calls": {
+        "context": {
+          "args": {
+            "dialogue_setting": "technical_or_routine",
+            "setting_evidence_quote": "Assistant: We still need the promised config upload."
+          },
+          "confidence": 0.0
+        },
+        "target": {
+          "args": {},
+          "confidence": 0.0
+        }
+      },
+      "valid_quotes": {}
+    }
+  }
+]
