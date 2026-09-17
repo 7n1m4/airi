@@ -1,0 +1,4330 @@
+{
+  "schema_version": "nan0.probe-run.v2",
+  "manifest": {
+    "created_at": "2026-09-17T01:14:43.756671+00:00",
+    "repository_commit": "0e540d574f1a82d8e84e5330aad672df933c7b5b",
+    "working_tree": "M docs/project-testing-parity.md\n M docs/rosetta-stone.md\n M scripts/tests/rwkv-harness/experiments/nan0-probe-benchmark-runner.py\n M scripts/tests/rwkv-harness/experiments/needle-nan0-intent-cleanroom.py\n?? docs/nan0/shadow-boundary-specification.md\n?? reports/nan0-cleanroom/nan0-probe-benchmark-v2-phase5-diagnostic.json\n?? reports/nan0-cleanroom/nan0-probe-benchmark-v2-phase5-run.json",
+    "harness_sha256": "25d0fe37ba8896a79bf8b3d9d14ce3d3e89fdc786344862921c96b992c613c8c",
+    "cleanroom_sha256": "8de49d464bd64bf13527ae7ede8019af05eaf1191c9dd6856444507a7f2added",
+    "dataset_sha256": "d113cc649ff56e1812eb097c17d6df573d09b29adf00f7bdbfd7805029a1222f",
+    "tool_schema_sha256": "7d6fc9bc5589a983a23d6fe59dbfc6c72d8392f32e2b2272a0558ca644af9d3c",
+    "python": "3.12.14",
+    "platform": "Linux-6.18.44-x86_64-with-glibc2.39",
+    "machine": "x86_64",
+    "cpu_count": 9,
+    "backend": "needle2-native-cpu",
+    "requested_package_version": "2.0.15",
+    "min_conf": 0.1,
+    "calibration_id": null,
+    "deadline_ms": 2000,
+    "max_new_tokens": 128,
+    "reset_policy": "before_every_probe",
+    "thread_count": "engine_default",
+    "benchmark_status": "development_only_not_held_out",
+    "candidate_policy_status": "research_only_semantic_accuracy_unvalidated",
+    "ready": true,
+    "package_version": "2.0.15",
+    "engine_sha256": "9fa5386d3e3a8ee17914fb23643bc5f5c906b683fa33561e79c5445dd78bc389",
+    "engine_file": "libneedle.so"
+  },
+  "fixtures": [
+    {
+      "id": "P01",
+      "condition": "missing_confrontation_leaf_call",
+      "status": "passed"
+    },
+    {
+      "id": "P02",
+      "condition": "missing_vulnerability_leaf_call",
+      "status": "passed"
+    },
+    {
+      "id": "P03",
+      "condition": "missing_irony_leaf_call",
+      "status": "passed"
+    },
+    {
+      "id": "P04",
+      "condition": "wrong_tool_name",
+      "status": "passed"
+    },
+    {
+      "id": "P05",
+      "condition": "span_exists_only_in_instruction_text",
+      "status": "passed"
+    },
+    {
+      "id": "P06",
+      "condition": "confidence_zero_or_missing",
+      "status": "passed"
+    },
+    {
+      "id": "P07",
+      "condition": "deadline_exceeded",
+      "status": "passed"
+    },
+    {
+      "id": "P08",
+      "condition": "completion_for_superseded_turn",
+      "status": "passed"
+    },
+    {
+      "id": "P09",
+      "condition": "duplicate_accepted_completion",
+      "status": "passed"
+    },
+    {
+      "id": "P10",
+      "condition": "label_spike_and_numeric_delta_zero",
+      "status": "passed"
+    },
+    {
+      "id": "P11",
+      "condition": "explicit_boundary_and_humor_candidate",
+      "status": "passed"
+    },
+    {
+      "id": "P12",
+      "condition": "same_trial_after_unrelated_trial",
+      "status": "passed"
+    }
+  ],
+  "results": [
+    {
+      "case_id": "F01A",
+      "family_id": "admission_vs_correction",
+      "gold_policy": {
+        "suspicion_delta_steps": 1,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.5422,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to record a completed claim. extract_self_admission with no additionalProperties to capture the completed claim.",
+              "confidence": 0.5422,
+              "prefill_tps": 187.0,
+              "decode_tps": 157.6,
+              "peak_ram_mb": 53.3,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 782.302,
+            "prompt_sha256": "0e5657db6e413aeda7bcdf17ff60d4bf8116b27494cf39b091079bb776d2e7ff"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.0763,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to stop the ongoing recording. 'finished' implies they want to stop it. No specific quote or additional properties mentioned, so omit optional params.",
+              "confidence": 0.0763,
+              "prefill_tps": 327.4,
+              "decode_tps": 135.1,
+              "peak_ram_mb": 53.3,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 892.222,
+            "prompt_sha256": "0e5657db6e413aeda7bcdf17ff60d4bf8116b27494cf39b091079bb776d2e7ff"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2028.827,
+        "inference_ms": 1674.524,
+        "probe_count": 2,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment"
+        ]
+      }
+    },
+    {
+      "case_id": "F01B",
+      "family_id": "admission_vs_correction",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.0251,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to check if a specific spot is misunderstood. Extract_self_admission with no additionalProperties to get current spot.",
+              "confidence": 0.0251,
+              "prefill_tps": 185.1,
+              "decode_tps": 128.3,
+              "peak_ram_mb": 53.1,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 1121.325,
+            "prompt_sha256": "5e7aa1f1b0abb6fbe23db1d11bf0cea17496a1319be3929071cf357a157d9d0c"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2004.391,
+        "inference_ms": 1121.325,
+        "probe_count": 1,
+        "attempted_probes": [
+          "admission",
+          "boundary"
+        ]
+      }
+    },
+    {
+      "case_id": "F02A",
+      "family_id": "commitment_vs_negation",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.0595,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to send config to a specific person. 'send the config' -> extract_self_admission. No specific quote or additional properties given, so omit optional params.",
+              "confidence": 0.0595,
+              "prefill_tps": 192.3,
+              "decode_tps": 161.2,
+              "peak_ram_mb": 53.2,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 747.564,
+            "prompt_sha256": "f476644aa211734e99c7edd63a97e9c7ec4e34600a5a4e324fe3ddeb7d991fec"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.0076,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to send config to tomorrow. Extract_boundary with no additionalProperties to get default.",
+              "confidence": 0.0076,
+              "prefill_tps": 525.4,
+              "decode_tps": 180.6,
+              "peak_ram_mb": 53.2,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 463.83,
+            "prompt_sha256": "f476644aa211734e99c7edd63a97e9c7ec4e34600a5a4e324fe3ddeb7d991fec"
+          },
+          "commitment": {
+            "kind": "commitment",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.0174,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_commitment",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to send config to tomorrow. Extract_commitment with no additionalProperties to get a quick message.",
+              "confidence": 0.0174,
+              "prefill_tps": 487.8,
+              "decode_tps": 120.0,
+              "peak_ram_mb": 53.2,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 713.954,
+            "prompt_sha256": "f476644aa211734e99c7edd63a97e9c7ec4e34600a5a4e324fe3ddeb7d991fec"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2003.743,
+        "inference_ms": 1925.348,
+        "probe_count": 3,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment",
+          "completion"
+        ]
+      }
+    },
+    {
+      "case_id": "F02B",
+      "family_id": "commitment_vs_negation",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "validated",
+            "reason": "source_span_valid",
+            "confidence": 0.0,
+            "args": {
+              "quote": "config"
+            },
+            "evidence": {
+              "kind": "admission",
+              "turn_id": "u0",
+              "speaker": "user",
+              "quote": "config",
+              "start": 29,
+              "end": 35,
+              "offset_unit": "unicode_codepoints"
+            },
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {
+                    "quote": "config"
+                  }
+                }
+              ],
+              "reasoning": "User wants to send config to a specific time. Extract_self_admission with quote 'config' and additionalProperties 'send' to send it.",
+              "confidence": 0.0,
+              "prefill_tps": 583.9,
+              "decode_tps": 180.6,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 635.672,
+            "prompt_sha256": "6a5258eef1f71ee9c861b994ea6c46870db6af1ecc09ea9866bab980974d51e7"
+          },
+          "scope": {
+            "kind": "scope",
+            "status": "error",
+            "reason": "wrong_tool_or_call_count",
+            "confidence": 0.0193,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "probe_scope_and_assertion",
+                  "arguments": {
+                    "scope": "asserted",
+                    "evidence_matches": "unsupported"
+                  }
+                },
+                {
+                  "name": "probe_scope_and_assertion",
+                  "arguments": {
+                    "scope": "asserted",
+                    "evidence_matches": "unresolved"
+                  }
+                }
+              ],
+              "reasoning": "Two calls: user_turn 'I cannot promise to send the config' and 'candidate' from query.",
+              "confidence": 0.0193,
+              "prefill_tps": 403.6,
+              "decode_tps": 172.1,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 1029.532,
+            "prompt_sha256": "9e7c0f3736d346d323765225e67ccdb792efac1d72f7514a7e5e77495be4c214"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2003.288,
+        "inference_ms": 1665.204,
+        "probe_count": 2,
+        "attempted_probes": [
+          "admission",
+          "scope",
+          "boundary"
+        ]
+      }
+    },
+    {
+      "case_id": "F03A",
+      "family_id": "assertion_vs_quotation",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.3842,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available to retrieve or display a word.",
+              "confidence": 0.3842,
+              "prefill_tps": 378.4,
+              "decode_tps": 181.1,
+              "peak_ram_mb": 53.0
+            },
+            "inference_ms": 668.51,
+            "prompt_sha256": "24dfa7d9d7b3330d091e86855acdfd2d3abce6d4dd411647316aec99e36e54a8"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.5782,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available to retrieve or display a word.",
+              "confidence": 0.5782,
+              "prefill_tps": 401.1,
+              "decode_tps": 157.3,
+              "peak_ram_mb": 53.0
+            },
+            "inference_ms": 422.848,
+            "prompt_sha256": "24dfa7d9d7b3330d091e86855acdfd2d3abce6d4dd411647316aec99e36e54a8"
+          },
+          "commitment": {
+            "kind": "commitment",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.3908,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available to retrieve or display a word.",
+              "confidence": 0.3908,
+              "prefill_tps": 407.8,
+              "decode_tps": 224.4,
+              "peak_ram_mb": 53.0
+            },
+            "inference_ms": 401.239,
+            "prompt_sha256": "24dfa7d9d7b3330d091e86855acdfd2d3abce6d4dd411647316aec99e36e54a8"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2003.552,
+        "inference_ms": 1492.597,
+        "probe_count": 3,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment",
+          "completion"
+        ]
+      }
+    },
+    {
+      "case_id": "F03B",
+      "family_id": "assertion_vs_quotation",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.428,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available to retrieve a word.",
+              "confidence": 0.428,
+              "prefill_tps": 431.1,
+              "decode_tps": 206.8,
+              "peak_ram_mb": 53.6
+            },
+            "inference_ms": 436.09,
+            "prompt_sha256": "f98d9072bca05d38fdb1506cff56ffc2f3afdd35cef1b57f9fe7e5f8d79d6f4d"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.1058,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to find a specific word from current speaker. 'extract_boundary' with no additionalProperties to get the exact phrase.",
+              "confidence": 0.1058,
+              "prefill_tps": 302.1,
+              "decode_tps": 201.8,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 549.236,
+            "prompt_sha256": "f98d9072bca05d38fdb1506cff56ffc2f3afdd35cef1b57f9fe7e5f8d79d6f4d"
+          },
+          "commitment": {
+            "kind": "commitment",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.3265,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_commitment",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to find a specific action. Extract_commitment with no additionalProperties to get the current spoken text.",
+              "confidence": 0.3265,
+              "prefill_tps": 443.1,
+              "decode_tps": 203.3,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 567.607,
+            "prompt_sha256": "f98d9072bca05d38fdb1506cff56ffc2f3afdd35cef1b57f9fe7e5f8d79d6f4d"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2005.486,
+        "inference_ms": 1552.933,
+        "probe_count": 3,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment",
+          "completion"
+        ]
+      }
+    },
+    {
+      "case_id": "F04A",
+      "family_id": "invitation_vs_boundary",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "counter_roast"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "engine_reported_ungrounded",
+            "confidence": 0.0,
+            "args": {
+              "quote": "racing_legend, roast_level 'low'"
+            },
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {
+                    "quote": "racing_legend, roast_level 'low'"
+                  }
+                }
+              ],
+              "reasoning": "'racing legend' -> racing_legend; 'roast that lap' -> roast_level 'low'; no other params.",
+              "confidence": 0.0,
+              "prefill_tps": 278.3,
+              "decode_tps": 91.7,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [
+                  "extract_self_admission.quote"
+                ],
+                "negation": false
+              }
+            },
+            "inference_ms": 1359.634,
+            "prompt_sha256": "c7d3ba9dc7cc0366e261db8b33f2dc1927084f59fc6aaf768d721d35b75f3d4a"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2007.433,
+        "inference_ms": 1359.634,
+        "probe_count": 1,
+        "attempted_probes": [
+          "admission",
+          "boundary"
+        ]
+      }
+    },
+    {
+      "case_id": "F04B",
+      "family_id": "invitation_vs_boundary",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "validated",
+            "reason": "source_span_valid",
+            "confidence": 0.0006,
+            "args": {
+              "quote": "crashed"
+            },
+            "evidence": {
+              "kind": "admission",
+              "turn_id": "u0",
+              "speaker": "user",
+              "quote": "crashed",
+              "start": 9,
+              "end": 16,
+              "offset_unit": "unicode_codepoints"
+            },
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {
+                    "quote": "crashed"
+                  }
+                }
+              ],
+              "reasoning": "User wants to stop crashing → extract_self_admission. 'stop roasting me' → quote 'crashed'. No additionalProperties mentioned → omit optional parameter.",
+              "confidence": 0.0006,
+              "prefill_tps": 394.8,
+              "decode_tps": 187.0,
+              "peak_ram_mb": 53.7,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 786.807,
+            "prompt_sha256": "36701918c9d7e22058bdaada09b32b5d3b3c8f697e50a8953bc14ae8ef0031b0"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2004.816,
+        "inference_ms": 786.807,
+        "probe_count": 1,
+        "attempted_probes": [
+          "admission",
+          "scope"
+        ]
+      }
+    },
+    {
+      "case_id": "F05A",
+      "family_id": "same_target_different_context",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.242,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to capture word. extract_self_admission with no additionalProperties to find the correct spoken word.",
+              "confidence": 0.242,
+              "prefill_tps": 410.2,
+              "decode_tps": 205.9,
+              "peak_ram_mb": 53.1,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 1203.764,
+            "prompt_sha256": "f98037ac0862c814518ebd2485433cbd18e53efb83a0a4ba4e563bbb1db860cf"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.1658,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to find the word. 'extract_boundary' with no additionalProperties to get a quick answer.",
+              "confidence": 0.1658,
+              "prefill_tps": 423.3,
+              "decode_tps": 204.5,
+              "peak_ram_mb": 53.1,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 526.583,
+            "prompt_sha256": "f98037ac0862c814518ebd2485433cbd18e53efb83a0a4ba4e563bbb1db860cf"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2003.391,
+        "inference_ms": 1730.347,
+        "probe_count": 2,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment"
+        ]
+      }
+    },
+    {
+      "case_id": "F05B",
+      "family_id": "same_target_different_context",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.242,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to capture word. extract_self_admission with no additionalProperties to find the correct spoken word.",
+              "confidence": 0.242,
+              "prefill_tps": 403.1,
+              "decode_tps": 149.1,
+              "peak_ram_mb": 53.2,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 736.399,
+            "prompt_sha256": "f98037ac0862c814518ebd2485433cbd18e53efb83a0a4ba4e563bbb1db860cf"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.1658,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to find the word. 'extract_boundary' with no additionalProperties to get a quick answer.",
+              "confidence": 0.1658,
+              "prefill_tps": 449.1,
+              "decode_tps": 199.8,
+              "peak_ram_mb": 53.2,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 496.234,
+            "prompt_sha256": "f98037ac0862c814518ebd2485433cbd18e53efb83a0a4ba4e563bbb1db860cf"
+          },
+          "commitment": {
+            "kind": "commitment",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.1181,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_commitment",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to capture word. extract_commitment with no additionalProperties to get a quick answer.",
+              "confidence": 0.1181,
+              "prefill_tps": 315.7,
+              "decode_tps": 186.0,
+              "peak_ram_mb": 53.2,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 589.645,
+            "prompt_sha256": "f98037ac0862c814518ebd2485433cbd18e53efb83a0a4ba4e563bbb1db860cf"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2003.907,
+        "inference_ms": 1822.278,
+        "probe_count": 3,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment",
+          "completion"
+        ]
+      }
+    },
+    {
+      "case_id": "F06A",
+      "family_id": "accusation_vs_admission",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.5248,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to stop an active claim. Extract_self_admission with no additionalProperties to force the false claim.",
+              "confidence": 0.5248,
+              "prefill_tps": 423.5,
+              "decode_tps": 181.3,
+              "peak_ram_mb": 53.3,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 735.895,
+            "prompt_sha256": "007b5b6da81096141435311935a96700f766a813ad72b50eb9b17a8929c1dd5f"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.1835,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to stop the current audio. 'offline' implies need to stop. No specific quote or additional properties mentioned, so omit optional params.",
+              "confidence": 0.1835,
+              "prefill_tps": 151.0,
+              "decode_tps": 94.0,
+              "peak_ram_mb": 53.3,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 1252.803,
+            "prompt_sha256": "007b5b6da81096141435311935a96700f766a813ad72b50eb9b17a8929c1dd5f"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2005.716,
+        "inference_ms": 1988.698,
+        "probe_count": 2,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment"
+        ]
+      }
+    },
+    {
+      "case_id": "F06B",
+      "family_id": "accusation_vs_admission",
+      "gold_policy": {
+        "suspicion_delta_steps": 1,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.3116,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to find a specific spill. Extract_self_admission with no additionalProperties to get the current spill.",
+              "confidence": 0.3116,
+              "prefill_tps": 287.0,
+              "decode_tps": 178.8,
+              "peak_ram_mb": 53.1,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 640.347,
+            "prompt_sha256": "a3d908aceb816d2d8bf8ecece1efa83ee701f9599e03a5c47aa9e5880c876da7"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.1468,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User expresses frustration about missing help → extract_boundary with no additionalProperties to get a quick help.",
+              "confidence": 0.1468,
+              "prefill_tps": 445.6,
+              "decode_tps": 200.6,
+              "peak_ram_mb": 53.1,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 572.978,
+            "prompt_sha256": "a3d908aceb816d2d8bf8ecece1efa83ee701f9599e03a5c47aa9e5880c876da7"
+          },
+          "commitment": {
+            "kind": "commitment",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.4396,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_commitment",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User expresses uncertainty about missing intention → extract_commitment with no additionalProperties to get a quick help.",
+              "confidence": 0.4396,
+              "prefill_tps": 334.0,
+              "decode_tps": 163.3,
+              "peak_ram_mb": 53.1,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 659.55,
+            "prompt_sha256": "a3d908aceb816d2d8bf8ecece1efa83ee701f9599e03a5c47aa9e5880c876da7"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2004.26,
+        "inference_ms": 1872.875,
+        "probe_count": 3,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment",
+          "completion"
+        ]
+      }
+    },
+    {
+      "case_id": "F07A",
+      "family_id": "topic_mismatch_vs_wrong_recipient",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.2138,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to remember a future claim. Extract_self_admission with no additionalProperties to get current spot.",
+              "confidence": 0.2138,
+              "prefill_tps": 261.1,
+              "decode_tps": 190.6,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 615.388,
+            "prompt_sha256": "1a49945533dd530e7857c2a63925058e647ce3ceeb0e1d20c7c4cbf3c71c80f0"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.0378,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to remember future wearable. Extract_boundary with no additionalProperties to get current hurt/request to stop.",
+              "confidence": 0.0378,
+              "prefill_tps": 397.0,
+              "decode_tps": 234.5,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 521.747,
+            "prompt_sha256": "1a49945533dd530e7857c2a63925058e647ce3ceeb0e1d20c7c4cbf3c71c80f0"
+          },
+          "commitment": {
+            "kind": "commitment",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.1936,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_commitment",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to remember future action. Extract_commitment with no additionalProperties to match the request.",
+              "confidence": 0.1936,
+              "prefill_tps": 434.0,
+              "decode_tps": 189.7,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 557.33,
+            "prompt_sha256": "1a49945533dd530e7857c2a63925058e647ce3ceeb0e1d20c7c4cbf3c71c80f0"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2004.127,
+        "inference_ms": 1694.465,
+        "probe_count": 3,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment",
+          "completion"
+        ]
+      }
+    },
+    {
+      "case_id": "F07B",
+      "family_id": "topic_mismatch_vs_wrong_recipient",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "validated",
+            "reason": "source_span_valid",
+            "confidence": 0.0006,
+            "args": {
+              "quote": "romantic message"
+            },
+            "evidence": {
+              "kind": "admission",
+              "turn_id": "u0",
+              "speaker": "user",
+              "quote": "romantic message",
+              "start": 24,
+              "end": 40,
+              "offset_unit": "unicode_codepoints"
+            },
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {
+                    "quote": "romantic message"
+                  }
+                }
+              ],
+              "reasoning": "User wants to recall a specific message about romantic. 'romantic message' -> quote 'romantic message'. No additional properties mentioned.",
+              "confidence": 0.0006,
+              "prefill_tps": 373.1,
+              "decode_tps": 188.5,
+              "peak_ram_mb": 53.1,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 691.623,
+            "prompt_sha256": "81245bc7e6caa0ea06a01c2cc5204c83a5e8e2bac33e9022774c85b1a5ccf347"
+          },
+          "scope": {
+            "kind": "scope",
+            "status": "validated",
+            "reason": "scope_record",
+            "confidence": 0.0047,
+            "args": {
+              "scope": "unresolved",
+              "evidence_matches": "supported"
+            },
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "probe_scope_and_assertion",
+                  "arguments": {
+                    "scope": "unresolved",
+                    "evidence_matches": "supported"
+                  }
+                }
+              ],
+              "reasoning": "scope 'unresolved' from 'romantic message'; evidence_matches 'supported' from 'romantic message' (implied by 'romantic message').",
+              "confidence": 0.0047,
+              "prefill_tps": 283.2,
+              "decode_tps": 173.2,
+              "peak_ram_mb": 53.1,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 1173.662,
+            "prompt_sha256": "39119020ad7417a3047d72809c45f6f366def18b5cd68967d3ff29429e05ef04"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2007.096,
+        "inference_ms": 1865.285,
+        "probe_count": 2,
+        "attempted_probes": [
+          "admission",
+          "scope",
+          "boundary"
+        ]
+      }
+    },
+    {
+      "case_id": "F08A",
+      "family_id": "conditional_vs_unconditional",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.4889,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available to check credentials or schedule a future action.",
+              "confidence": 0.4889,
+              "prefill_tps": 315.2,
+              "decode_tps": 177.0,
+              "peak_ram_mb": 53.2
+            },
+            "inference_ms": 529.52,
+            "prompt_sha256": "778d8fcbd07d74928eba8957915366cbf7616e067e2c21b5c96224fd5fdb86da"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.6044,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available to check credentials or schedule fixes.",
+              "confidence": 0.6044,
+              "prefill_tps": 272.5,
+              "decode_tps": 208.3,
+              "peak_ram_mb": 53.2
+            },
+            "inference_ms": 454.1,
+            "prompt_sha256": "778d8fcbd07d74928eba8957915366cbf7616e067e2c21b5c96224fd5fdb86da"
+          },
+          "commitment": {
+            "kind": "commitment",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.5905,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available for security or credentials monitoring.",
+              "confidence": 0.5905,
+              "prefill_tps": 226.1,
+              "decode_tps": 196.7,
+              "peak_ram_mb": 53.2
+            },
+            "inference_ms": 606.277,
+            "prompt_sha256": "778d8fcbd07d74928eba8957915366cbf7616e067e2c21b5c96224fd5fdb86da"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2003.201,
+        "inference_ms": 1589.897,
+        "probe_count": 3,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment",
+          "completion"
+        ]
+      }
+    },
+    {
+      "case_id": "F08B",
+      "family_id": "conditional_vs_unconditional",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.0952,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to fix build tonight. Extract_self_admission with no additionalProperties to catch all issues.",
+              "confidence": 0.0952,
+              "prefill_tps": 142.9,
+              "decode_tps": 100.3,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 1709.625,
+            "prompt_sha256": "8781343bbbfb4968db35e6905e7c3c1aeef81c43507f7d36c219035b19f171e6"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2005.973,
+        "inference_ms": 1709.625,
+        "probe_count": 1,
+        "attempted_probes": [
+          "admission",
+          "boundary"
+        ]
+      }
+    },
+    {
+      "case_id": "F09A",
+      "family_id": "laughter_hurt_vs_invitation",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.5474,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to be serious for a joke → extract_self_admission. No specific quote or additional properties mentioned, so omit optional params.",
+              "confidence": 0.5474,
+              "prefill_tps": 325.1,
+              "decode_tps": 117.0,
+              "peak_ram_mb": 53.4,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 935.756,
+            "prompt_sha256": "796146b449303d2eac6a899324518c2e393bfdcc475cf61813626cf23a96f280"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2078.412,
+        "inference_ms": 935.756,
+        "probe_count": 1,
+        "attempted_probes": [
+          "admission",
+          "boundary"
+        ]
+      }
+    },
+    {
+      "case_id": "F09B",
+      "family_id": "laughter_hurt_vs_invitation",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "counter_roast"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.1682,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to find a specific spot. Extract_self_admission with no additionalProperties to get the spot.",
+              "confidence": 0.1682,
+              "prefill_tps": 372.6,
+              "decode_tps": 156.2,
+              "peak_ram_mb": 53.2,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 715.369,
+            "prompt_sha256": "fc3e60e5c06f9d86ca8217f03b44ba82b190c55bff2860d65780e707efc6f262"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.0374,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to find a specific spot. Extract_boundary with no additionalProperties to get the latest spot.",
+              "confidence": 0.0374,
+              "prefill_tps": 282.7,
+              "decode_tps": 148.5,
+              "peak_ram_mb": 53.2,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 779.085,
+            "prompt_sha256": "fc3e60e5c06f9d86ca8217f03b44ba82b190c55bff2860d65780e707efc6f262"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2004.964,
+        "inference_ms": 1494.454,
+        "probe_count": 2,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment"
+        ]
+      }
+    },
+    {
+      "case_id": "F10A",
+      "family_id": "inconsistency_vs_correction",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.1126,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to check if they have a claim. extract_self_admission with no additionalProperties to see current status.",
+              "confidence": 0.1126,
+              "prefill_tps": 397.9,
+              "decode_tps": 192.5,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": true
+              }
+            },
+            "inference_ms": 682.859,
+            "prompt_sha256": "52452ed10ae0aab47419767fa2ba80d9d4adf68ce791c7eb512567e18c98e6db"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.0813,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to stop the ongoing recording. 'never used it' implies they want to stop the current session. No specific quote or additional properties mentioned, so omit optional params.",
+              "confidence": 0.0813,
+              "prefill_tps": 409.0,
+              "decode_tps": 169.7,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": true
+              }
+            },
+            "inference_ms": 645.494,
+            "prompt_sha256": "52452ed10ae0aab47419767fa2ba80d9d4adf68ce791c7eb512567e18c98e6db"
+          },
+          "commitment": {
+            "kind": "commitment",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.2712,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_commitment",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to recall past action. extract_commitment with no additionalProperties to get current state.",
+              "confidence": 0.2712,
+              "prefill_tps": 373.0,
+              "decode_tps": 189.8,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": true
+              }
+            },
+            "inference_ms": 539.842,
+            "prompt_sha256": "52452ed10ae0aab47419767fa2ba80d9d4adf68ce791c7eb512567e18c98e6db"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2002.786,
+        "inference_ms": 1868.195,
+        "probe_count": 3,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment",
+          "completion"
+        ]
+      }
+    },
+    {
+      "case_id": "F10B",
+      "family_id": "inconsistency_vs_correction",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.7798,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User corrects themselves from administered to never administered. Extract_self_admission with no additionalProperties to match the corrected behavior.",
+              "confidence": 0.7798,
+              "prefill_tps": 344.8,
+              "decode_tps": 149.7,
+              "peak_ram_mb": 53.2,
+              "validation": {
+                "ungrounded": [],
+                "negation": true
+              }
+            },
+            "inference_ms": 797.878,
+            "prompt_sha256": "ac7e008b55a6f2e268bf16cca38230a0dc268eb0efd023931dfab70ecda02819"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "invalid_or_ambiguous_span",
+            "confidence": 0.0136,
+            "args": {
+              "quote": ""
+            },
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {
+                    "quote": ""
+                  }
+                }
+              ],
+              "reasoning": "User corrects themselves to 'never administered it' -> no tool for administering. Only available tool is extract_boundary with quote and optional additionalProperties. Quote not specified, so empty array.",
+              "confidence": 0.0136,
+              "prefill_tps": 338.0,
+              "decode_tps": 195.6,
+              "peak_ram_mb": 53.2,
+              "validation": {
+                "ungrounded": [],
+                "negation": true
+              }
+            },
+            "inference_ms": 814.721,
+            "prompt_sha256": "ac7e008b55a6f2e268bf16cca38230a0dc268eb0efd023931dfab70ecda02819"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2006.094,
+        "inference_ms": 1612.599,
+        "probe_count": 2,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment"
+        ]
+      }
+    },
+    {
+      "case_id": "F11A",
+      "family_id": "instruction_like_content",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.1321,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available for managing rules or suspicion settings.",
+              "confidence": 0.1321,
+              "prefill_tps": 365.8,
+              "decode_tps": 193.4,
+              "peak_ram_mb": 53.0
+            },
+            "inference_ms": 482.345,
+            "prompt_sha256": "2ef1cf4330ab6a6b723f6433847e906efa7a35d8fce72ebe1c06c251158285a7"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.1342,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available for managing rules or suspicion settings.",
+              "confidence": 0.1342,
+              "prefill_tps": 403.7,
+              "decode_tps": 147.3,
+              "peak_ram_mb": 53.0
+            },
+            "inference_ms": 442.635,
+            "prompt_sha256": "2ef1cf4330ab6a6b723f6433847e906efa7a35d8fce72ebe1c06c251158285a7"
+          },
+          "commitment": {
+            "kind": "commitment",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.184,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available for managing rules or suspicion settings.",
+              "confidence": 0.184,
+              "prefill_tps": 371.9,
+              "decode_tps": 181.3,
+              "peak_ram_mb": 53.0
+            },
+            "inference_ms": 437.527,
+            "prompt_sha256": "2ef1cf4330ab6a6b723f6433847e906efa7a35d8fce72ebe1c06c251158285a7"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2003.579,
+        "inference_ms": 1362.507,
+        "probe_count": 3,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment",
+          "completion"
+        ]
+      }
+    },
+    {
+      "case_id": "F11B",
+      "family_id": "instruction_like_content",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.5896,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available for text recognition or field lookup.",
+              "confidence": 0.5896,
+              "prefill_tps": 315.3,
+              "decode_tps": 233.1,
+              "peak_ram_mb": 53.3
+            },
+            "inference_ms": 611.357,
+            "prompt_sha256": "7c0be5b75c54b258ef8bfa07f5ea3b195c67e82bf4654a697429d85802a9e98b"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.7159,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available for text-to-speech or code lookup.",
+              "confidence": 0.7159,
+              "prefill_tps": 405.7,
+              "decode_tps": 98.7,
+              "peak_ram_mb": 53.3
+            },
+            "inference_ms": 555.22,
+            "prompt_sha256": "7c0be5b75c54b258ef8bfa07f5ea3b195c67e82bf4654a697429d85802a9e98b"
+          },
+          "commitment": {
+            "kind": "commitment",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.6771,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "No tool available for text-to-speech or code lookup.",
+              "confidence": 0.6771,
+              "prefill_tps": 353.6,
+              "decode_tps": 102.5,
+              "peak_ram_mb": 53.3
+            },
+            "inference_ms": 677.786,
+            "prompt_sha256": "7c0be5b75c54b258ef8bfa07f5ea3b195c67e82bf4654a697429d85802a9e98b"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2004.534,
+        "inference_ms": 1844.363,
+        "probe_count": 3,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment",
+          "completion"
+        ]
+      }
+    },
+    {
+      "case_id": "F12A",
+      "family_id": "verified_repair_vs_future_assurance",
+      "gold_policy": {
+        "suspicion_delta_steps": -1,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "validated",
+            "reason": "source_span_valid",
+            "confidence": 0.0318,
+            "args": {
+              "quote": "uploaded"
+            },
+            "evidence": {
+              "kind": "admission",
+              "turn_id": "u0",
+              "speaker": "user",
+              "quote": "uploaded",
+              "start": 23,
+              "end": 31,
+              "offset_unit": "unicode_codepoints"
+            },
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {
+                    "quote": "uploaded"
+                  }
+                }
+              ],
+              "reasoning": "Upload promised config implies admission issue. 'uploaded' -> quote 'uploaded'. No additional properties mentioned.",
+              "confidence": 0.0318,
+              "prefill_tps": 404.6,
+              "decode_tps": 163.9,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 802.472,
+            "prompt_sha256": "6af484a693a2213ca6fca2528d19f27269a21cde12ab2af07fd406520f0ed50c"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2009.12,
+        "inference_ms": 802.472,
+        "probe_count": 1,
+        "attempted_probes": [
+          "admission",
+          "scope"
+        ]
+      }
+    },
+    {
+      "case_id": "F12B",
+      "family_id": "verified_repair_vs_future_assurance",
+      "gold_policy": {
+        "suspicion_delta_steps": 0,
+        "attachment_delta_steps": 0,
+        "gremlin_pride_action": "none"
+      },
+      "baselines": {
+        "always_spike": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 1,
+          "suspicion_label": "spike_suspicion",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_zero": {
+          "status": "accepted",
+          "reason": "constant",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "always_abstain": {
+          "status": "abstained",
+          "reason": "no_actionable_evidence",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "legacy_regex": {
+          "status": "accepted",
+          "reason": "legacy_target_regex",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": true,
+          "apply_to_state": false,
+          "evidence": []
+        }
+      },
+      "reflex": {
+        "mode": "shadow",
+        "proposed_production": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "proposed_uncalibrated": {
+          "status": "timeout",
+          "reason": "probe deadline; worker terminated",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "effective_policy": {
+          "status": "abstained",
+          "reason": "shadow_isolation",
+          "suspicion_delta_steps": 0,
+          "suspicion_label": "neutral",
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none",
+          "would_apply": false,
+          "apply_to_state": false,
+          "evidence": []
+        },
+        "apply_to_state": false,
+        "probes": {
+          "admission": {
+            "kind": "admission",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.145,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_self_admission",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to find a specific word. extract_self_admission with no additionalProperties to get the current spoken words.",
+              "confidence": 0.145,
+              "prefill_tps": 374.1,
+              "decode_tps": 211.1,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 617.323,
+            "prompt_sha256": "06c616a836ee1da3f683de713b9743a3e218c2bee0ec3cd34624ef85e55321d5"
+          },
+          "boundary": {
+            "kind": "boundary",
+            "status": "abstained",
+            "reason": "no_extracted_span",
+            "confidence": 0.082,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [
+                {
+                  "name": "extract_boundary",
+                  "arguments": {}
+                }
+              ],
+              "reasoning": "User wants to find a word that changes tomorrow. extract_boundary with no additionalProperties returns all words.",
+              "confidence": 0.082,
+              "prefill_tps": 352.0,
+              "decode_tps": 174.1,
+              "peak_ram_mb": 53.6,
+              "validation": {
+                "ungrounded": [],
+                "negation": false
+              }
+            },
+            "inference_ms": 544.183,
+            "prompt_sha256": "06c616a836ee1da3f683de713b9743a3e218c2bee0ec3cd34624ef85e55321d5"
+          },
+          "commitment": {
+            "kind": "commitment",
+            "status": "abstained",
+            "reason": "no_tool_call",
+            "confidence": 0.0019,
+            "args": {},
+            "evidence": null,
+            "raw_response": {
+              "type": "call",
+              "success": true,
+              "error": null,
+              "error_code": null,
+              "reason": null,
+              "function_calls": [],
+              "reasoning": "User wants to recall a specific word. extract_commitment with no additionalProperties returns current spoken words. No tool can retrieve or recall past words.",
+              "confidence": 0.0019,
+              "prefill_tps": 422.0,
+              "decode_tps": 182.7,
+              "peak_ram_mb": 53.6
+            },
+            "inference_ms": 593.118,
+            "prompt_sha256": "06c616a836ee1da3f683de713b9743a3e218c2bee0ec3cd34624ef85e55321d5"
+          }
+        },
+        "case_status": "timeout",
+        "latency_ms": 2002.693,
+        "inference_ms": 1754.624,
+        "probe_count": 3,
+        "attempted_probes": [
+          "admission",
+          "boundary",
+          "commitment",
+          "completion"
+        ]
+      }
+    }
+  ],
+  "status": "completed",
+  "metrics": {
+    "always_spike": {
+      "cases": 24,
+      "suspicion_matches": 2,
+      "full_vector_matches": 2,
+      "true_spikes": 2,
+      "false_spikes": 22,
+      "gold_spikes": 2,
+      "gold_non_spikes": 22,
+      "spike_precision": 0.08333333333333333,
+      "spike_recall": 1.0,
+      "false_spike_rate": 1.0,
+      "accepted": 24,
+      "coverage": 1.0,
+      "accepted_full_vector_error": 0.9166666666666666
+    },
+    "always_zero": {
+      "cases": 24,
+      "suspicion_matches": 21,
+      "full_vector_matches": 19,
+      "true_spikes": 0,
+      "false_spikes": 0,
+      "gold_spikes": 2,
+      "gold_non_spikes": 22,
+      "spike_precision": null,
+      "spike_recall": 0.0,
+      "false_spike_rate": 0.0,
+      "accepted": 24,
+      "coverage": 1.0,
+      "accepted_full_vector_error": 0.20833333333333334
+    },
+    "always_abstain": {
+      "cases": 24,
+      "suspicion_matches": 21,
+      "full_vector_matches": 19,
+      "true_spikes": 0,
+      "false_spikes": 0,
+      "gold_spikes": 2,
+      "gold_non_spikes": 22,
+      "spike_precision": null,
+      "spike_recall": 0.0,
+      "false_spike_rate": 0.0,
+      "accepted": 0,
+      "coverage": 0.0,
+      "accepted_full_vector_error": null
+    },
+    "legacy_regex": {
+      "cases": 24,
+      "suspicion_matches": 19,
+      "full_vector_matches": 17,
+      "true_spikes": 0,
+      "false_spikes": 3,
+      "gold_spikes": 2,
+      "gold_non_spikes": 22,
+      "spike_precision": 0.0,
+      "spike_recall": 0.0,
+      "false_spike_rate": 0.13636363636363635,
+      "accepted": 24,
+      "coverage": 1.0,
+      "accepted_full_vector_error": 0.2916666666666667
+    },
+    "proposed_production": {
+      "cases": 24,
+      "suspicion_matches": 21,
+      "full_vector_matches": 19,
+      "true_spikes": 0,
+      "false_spikes": 0,
+      "gold_spikes": 2,
+      "gold_non_spikes": 22,
+      "spike_precision": null,
+      "spike_recall": 0.0,
+      "false_spike_rate": 0.0,
+      "accepted": 0,
+      "coverage": 0.0,
+      "accepted_full_vector_error": null
+    },
+    "proposed_uncalibrated": {
+      "cases": 24,
+      "suspicion_matches": 21,
+      "full_vector_matches": 19,
+      "true_spikes": 0,
+      "false_spikes": 0,
+      "gold_spikes": 2,
+      "gold_non_spikes": 22,
+      "spike_precision": null,
+      "spike_recall": 0.0,
+      "false_spike_rate": 0.0,
+      "accepted": 0,
+      "coverage": 0.0,
+      "accepted_full_vector_error": null
+    },
+    "effective_policy": {
+      "cases": 24,
+      "suspicion_matches": 21,
+      "full_vector_matches": 19,
+      "true_spikes": 0,
+      "false_spikes": 0,
+      "gold_spikes": 2,
+      "gold_non_spikes": 22,
+      "spike_precision": null,
+      "spike_recall": 0.0,
+      "false_spike_rate": 0.0,
+      "accepted": 0,
+      "coverage": 0.0,
+      "accepted_full_vector_error": null
+    }
+  },
+  "latency": {
+    "mean_ms": 2008.807875,
+    "median_ms": 2004.4625,
+    "max_ms": 2078.412,
+    "worker_startup_total_ms": 61462.204,
+    "timeouts": 24
+  }
+}

@@ -13,11 +13,12 @@ Run:
   uv run --with cactus-needle python3 scripts/tests/rwkv-harness/experiments/needle-nan0-intent-cleanroom.py
 """
 
+import argparse
 import json
+import math
 import os
 import sys
 import time
-import needle
 
 # -----------------------------------------------------------------------------
 # Tool Schemas
@@ -447,6 +448,7 @@ def evaluate_monolithic(agent, scenario):
         "Evaluate the target utterance in context. Extract the pragmatic intent, emotional climate, and suspicion impact."
     )
     t0 = time.perf_counter()
+    agent.reset()
     res = agent.complete(prompt)
     dt_ms = (time.perf_counter() - t0) * 1000
     
@@ -467,6 +469,7 @@ def evaluate_decomposed(agent_intent, agent_climate, agent_suspicion, scenario):
     # 1. Intent Probe
     p_intent = format_prompt(history, target, "Identify the pragmatic conversational intent of the target utterance.")
     t0 = time.perf_counter()
+    agent_intent.reset()
     res_intent = agent_intent.complete(p_intent)
     dt1 = (time.perf_counter() - t0) * 1000
     calls_intent = res_intent.get("function_calls") or []
@@ -475,6 +478,7 @@ def evaluate_decomposed(agent_intent, agent_climate, agent_suspicion, scenario):
     # 2. Climate Probe
     p_climate = format_prompt(history, target, "Analyze the emotional climate and atmosphere of this dialogue.")
     t0 = time.perf_counter()
+    agent_climate.reset()
     res_climate = agent_climate.complete(p_climate)
     dt2 = (time.perf_counter() - t0) * 1000
     calls_climate = res_climate.get("function_calls") or []
@@ -483,6 +487,7 @@ def evaluate_decomposed(agent_intent, agent_climate, agent_suspicion, scenario):
     # 3. Suspicion Probe
     p_suspicion = format_prompt(history, target, "Evaluate whether the target statement warrants an increase or decrease in suspicion.")
     t0 = time.perf_counter()
+    agent_suspicion.reset()
     res_suspicion = agent_suspicion.complete(p_suspicion)
     dt3 = (time.perf_counter() - t0) * 1000
     calls_suspicion = res_suspicion.get("function_calls") or []
@@ -513,6 +518,7 @@ def evaluate_span(agent, scenario):
         "Extract the verbatim commitment phrase from the user utterance and classify its sincerity."
     )
     t0 = time.perf_counter()
+    agent.reset()
     res = agent.complete(prompt)
     dt_ms = (time.perf_counter() - t0) * 1000
     
@@ -530,15 +536,38 @@ def evaluate_span(agent, scenario):
 # Host Synthesis & Policy Resolution
 # -----------------------------------------------------------------------------
 
-def synthesize_affect(disambig_name, disambig_args, confidence=0.0, min_confidence=0.0, climate_val="<EXTRACTION_FAILED>", speech_act_val="<EXTRACTION_FAILED>"):
+def synthesize_affect(disambig_name, disambig_args, confidence=0.0, min_confidence=0.1, climate_val="<EXTRACTION_FAILED>", speech_act_val="<EXTRACTION_FAILED>"):
     """
     Hardened host synthesis:
     - Validates presence of expected tool arguments.
     - If evidence is missing, invalid, or below min_confidence, returns status='abstained' with zero deltas.
     - Guarantees 1:1 atomic agreement between textual label and numeric vector.
     """
-    if not disambig_args or confidence < min_confidence:
-        reason = "low_confidence" if (disambig_args and confidence < min_confidence) else "missing_or_failed_evidence"
+    schemas = {
+        "irony": TOOL_TREE_DISAMBIGUATE_IRONY,
+        "confrontation": TOOL_TREE_DISAMBIGUATE_CONFRONTATION,
+        "incongruity": TOOL_TREE_DISAMBIGUATE_INCONGRUITY,
+        "vulnerability": TOOL_TREE_DISAMBIGUATE_VULNERABILITY,
+    }
+    reason = None
+    if disambig_name not in schemas:
+        reason = "unrecognized_branch"
+    elif not isinstance(disambig_args, dict) or not disambig_args:
+        reason = "missing_or_failed_evidence"
+    else:
+        schema = schemas[disambig_name]["parameters"]
+        if set(schema["required"]) - set(disambig_args) or set(disambig_args) - set(schema["properties"]):
+            reason = "invalid_schema"
+        elif any(not isinstance(value, str) or value not in schema["properties"][key]["enum"]
+                 for key, value in disambig_args.items()):
+            reason = "unrecognized_enum"
+        elif type(min_confidence) not in (int, float) or not math.isfinite(min_confidence) or not 0 < min_confidence <= 1:
+            reason = "invalid_confidence_threshold"
+        elif type(confidence) not in (int, float) or not math.isfinite(confidence) or not 0 <= confidence <= 1:
+            reason = "invalid_confidence"
+        elif confidence < min_confidence:
+            reason = "low_confidence"
+    if reason:
         return {
             "status": "abstained",
             "reason": reason,
@@ -660,7 +689,7 @@ def synthesize_affect(disambig_name, disambig_args, confidence=0.0, min_confiden
             "attachment_delta": attachment_delta,
             "gremlin_pride_action": gremlin_action
         },
-        "apply_to_state": (status == "accepted")
+        "apply_to_state": False  # Cleanroom proposals never authorize live mutation.
     }
 
 def test_synthesis_regression_hardening():
@@ -697,7 +726,7 @@ def test_synthesis_regression_hardening():
     assert res4["affect_vectors"]["suspicion_delta"] == 0
 
     # Case 5: D2 incongruity fixture (misplaced_message + spike_suspicion_severely)
-    res5 = synthesize_affect("incongruity", {"incongruity_reason": "misplaced_message", "suspicion_action": "spike_suspicion_severely"}, confidence=0.05)
+    res5 = synthesize_affect("incongruity", {"incongruity_reason": "misplaced_message", "suspicion_action": "spike_suspicion_severely"}, confidence=0.9)
     assert res5["status"] == "accepted"
     assert res5["affect_vectors"]["suspicion_delta"] == 2
     assert res5["suspicion_label"] == "spike_suspicion"
@@ -708,9 +737,30 @@ def test_synthesis_regression_hardening():
     assert res6["reason"] == "low_confidence"
     assert res6["affect_vectors"]["suspicion_delta"] == 0
 
-    print("✓ All 6 deterministic synthesis regression fixtures passed.")
+    enum_checks = 0
+    for branch, tool in {
+        "irony": TOOL_TREE_DISAMBIGUATE_IRONY,
+        "confrontation": TOOL_TREE_DISAMBIGUATE_CONFRONTATION,
+        "incongruity": TOOL_TREE_DISAMBIGUATE_INCONGRUITY,
+        "vulnerability": TOOL_TREE_DISAMBIGUATE_VULNERABILITY,
+    }.items():
+        valid = {key: field["enum"][0] for key, field in tool["parameters"]["properties"].items()}
+        for key in valid:
+            result = synthesize_affect(branch, {**valid, key: "not_an_enum"}, confidence=0.9)
+            assert result["reason"] == "unrecognized_enum"
+            assert result["affect_vectors"] == {"suspicion_delta": 0, "attachment_delta": 0, "gremlin_pride_action": "none"}
+            assert result["apply_to_state"] is False
+            enum_checks += 1
+    valid = {"sincerity_nature": "heartfelt_reparative_pledge", "suspicion_action": "soften_grievance"}
+    for bad_score in (None, True, float("nan"), float("inf"), -1, 2):
+        assert synthesize_affect("confrontation", valid, confidence=bad_score)["reason"] == "invalid_confidence"
+    assert synthesize_affect("confrontation", valid, confidence=0)["reason"] == "low_confidence"
+    assert synthesize_affect("confrontation", valid, confidence=0.9, min_confidence=0)["reason"] == "invalid_confidence_threshold"
+    assert synthesize_affect("unknown", valid, confidence=0.9)["reason"] == "unrecognized_branch"
+    assert synthesize_affect("irony", {"irony_type": "playful_deadpan_roast"}, confidence=0.9)["reason"] == "invalid_schema"
+    print(f"✓ 6 synthesis fixtures, {enum_checks} invalid-enum checks, and confidence/branch checks passed.")
 
-def evaluate_probe_tree(agents, scenario, min_confidence=0.0):
+def evaluate_probe_tree(agents, scenario, min_confidence=0.1):
     history = scenario["history"]
     target = scenario["target"]
     sub_latencies = []
@@ -720,6 +770,7 @@ def evaluate_probe_tree(agents, scenario, min_confidence=0.0):
     # 1. Probe 1: Dialogue Climate
     p1 = format_prompt(history, target, "Analyze the prevailing emotional climate of this dialogue.")
     t0 = time.perf_counter()
+    agents["climate"].reset()
     res1 = agents["climate"].complete(p1)
     dt1 = (time.perf_counter() - t0) * 1000
     sub_latencies.append(round(dt1, 1))
@@ -732,6 +783,7 @@ def evaluate_probe_tree(agents, scenario, min_confidence=0.0):
     # 2. Probe 2: Speech Act
     p2 = format_prompt(history, target, "Identify the functional speech act performed by the user's latest statement.")
     t0 = time.perf_counter()
+    agents["speech_act"].reset()
     res2 = agents["speech_act"].complete(p2)
     dt2 = (time.perf_counter() - t0) * 1000
     sub_latencies.append(round(dt2, 1))
@@ -761,6 +813,7 @@ def evaluate_probe_tree(agents, scenario, min_confidence=0.0):
         p_disambig = format_prompt(history, target, "Analyze the contextual congruence of this statement with the dialogue.")
 
     t0 = time.perf_counter()
+    agents[disambig_name].reset()
     res3 = agents[disambig_name].complete(p_disambig)
     dt3 = (time.perf_counter() - t0) * 1000
     sub_latencies.append(round(dt3, 1))
@@ -807,16 +860,22 @@ def evaluate_probe_tree(agents, scenario, min_confidence=0.0):
 # -----------------------------------------------------------------------------
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--fixtures-only", action="store_true")
+    parser.add_argument("--min-confidence", type=float, default=0.1)
+    args = parser.parse_args()
+    if not math.isfinite(args.min_confidence) or not 0 < args.min_confidence <= 1:
+        parser.error("--min-confidence must be finite and in (0, 1]")
+    test_synthesis_regression_hardening()
+    if args.fixtures_only:
+        return
+    import needle
+
     print("================================================================================")
     print("   NEEDLE 2 LIVING COGNITION CLEANROOM STRESS-TEST HARNESS                      ")
     print("   Model: Cactus SAN 45M (14 MB) | Task: 'The Famous Sentence' Under Fire       ")
     print("================================================================================\n")
     
-    # 0. Deterministic Host Synthesis Invariant Tests
-    print("Running host synthesis regression fixtures...", flush=True)
-    test_synthesis_regression_hardening()
-    print()
-
     # Initialize agents
     print("Initializing Needle agents...", flush=True)
     sys_prompt = "You are Nan0's subconscious cognitive pre-processor. Analyze user utterances relative to dialogue context."
@@ -857,7 +916,7 @@ def main():
         print(f"  [3-SpanGrounded] Latency: {r_span['latency_ms']}ms | Extracted: {r_span['args']} | Conf: {r_span['confidence']}")
 
         # 4. Adaptive Probe Tree
-        r_tree = evaluate_probe_tree(tree_agents, sc)
+        r_tree = evaluate_probe_tree(tree_agents, sc, min_confidence=args.min_confidence)
         print(f"  [4-AdaptiveProbeTree] Status: {r_tree['status']} | Latency: {r_tree['latency_ms']}ms (split: {r_tree['sub_latencies_ms']}) | Path: {' -> '.join(r_tree['tree_path'])} | Extracted: {r_tree['args']} | Vectors: {r_tree['affect_vectors']} | Conf: {r_tree['confidence']}")
         print()
         
