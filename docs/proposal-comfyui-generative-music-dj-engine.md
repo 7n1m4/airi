@@ -222,8 +222,20 @@ Audio sources are implemented under `packages/stage-ui/src/libs/providers/` as p
   2. Users can run `npm run add-music` anytime to download GGUF music weights and verified sidecars in 1 click.
 * **Advanced Capability: YuE 2 AR LoRAs & Style Conditioning**:
   `audio.cpp` supports LoRA adapter injection into the Autoregressive (AR) stage (`--lora <path>`):
-  - **Genre/Vocal Adapters**: Custom LoRAs can steer acoustic timbre, specific vocal styles (e.g. Japanese anime vocals, metal screaming, acoustic folk), or unique musical keys.
+  - **Genre/Vocal Adapters**: Custom LoRAs steer acoustic timbre, specific vocal styles (e.g. Japanese anime vocals, metal screaming, acoustic folk), or unique musical keys.
   - **AIRI Integration**: Character cards can declare an optional `extensions.airi.music.default_lora` to ensure the character's generated music matches their artistic persona.
+* **LoRA Management & Training Lifecycle (`/v1/audio/music/loras`)**:
+  `airi-audio-server` provides a complete RESTful adapter cartridge management and training pipeline:
+  ```json
+  GET    /v1/audio/music/loras              // List installed LoRAs, ranks, sizes, tags
+  POST   /v1/audio/music/loras              // Upload ready-to-use .safetensors adapter
+  DELETE /v1/audio/music/loras/:id          // Archive or remove an adapter
+  POST   /v1/audio/music/loras/train        // Trigger background style/voice fine-tuning run
+  GET    /v1/audio/music/loras/jobs         // Monitor progress, epochs, loss, and ETAs
+  POST   /v1/audio/music/loras/jobs/:id/cancel // Abort an in-flight training session
+  ```
+  - **Hot-Swapping Cartridges**: In the desktop UI, LoRAs are rendered as visual *synthesizer cartridges* with configurable scale sliders (0.0 to 1.5).
+  - **Automated Fine-Tuning**: Users can drag and drop 5–10 reference stems/recordings or ABC scores. The server queues a background LoRA training worker (`rank=16..32`, target modules: `q_proj`, `v_proj`, `k_proj`, `o_proj`) and registers the resulting `.safetensors` adapter automatically upon completion.
 
 ### B. Local Generative: YuE 2 (Score-First & Deep ABC Planning Architecture)
 * **Hardware Footprint & Shootout Findings**:
@@ -319,6 +331,7 @@ Instead of arbitrary clock-interval polling, the DJ engine hooks directly into t
     *   Dedicated interactive studio space for deep musical co-creation with the character.
     *   **Interactive ABC Notation & Piano-Roll Canvas**: Visualizes the generated composition plan (bars, chord voicings, key signature, tempo) using lightweight Web/WASM music notation renderers (such as `abcjs` or VexFlow).
     *   **Conversational Score Refinement**: The user and agent converse directly in the studio chat. The agent can mutate the score in real time (e.g. adding a syncopated synth lead, modulating into a minor key, or shifting BPM) before committing the plan to the ODE acoustic renderer.
+    *   **LoRA Cartridge Rack & Training Workshop**: Visual rack displaying installed genre and vocal style adapters (rank, size, scale slider `0.0`–`1.5`, active switch). Features a drag-and-drop dropzone for training custom LoRAs from audio stems or ABC notation datasets with live epoch/loss telemetry.
     *   **One-Click Stem & Score Export**: Export raw ABC notation, MIDI files, and generated 48 kHz stereo audio directly from the studio.
 *   **Chat Stream Moments**:
     *   Subtle inline track chips when a new song starts playing.
@@ -338,10 +351,11 @@ Instead of arbitrary clock-interval polling, the DJ engine hooks directly into t
 
 ## 📅 9. Roadmap & Implementation Checklist
 
-- [ ] **AIRI Audio Server Music Extension**:
-  - [ ] Add `POST /v1/audio/music` endpoint handling genre prompts, structured lyrics, and duration.
-  - [ ] Add 1-click installation script (`npm run add-music` / `install.bat` music option) for MiniMax Music 3 and YuE 2 GGUF models.
-  - [ ] Add AR LoRA adapter support flag in `airi-audio-server` config.
+- [x] **AIRI Audio Server Music & LoRA Extension**:
+  - [x] Add `POST /v1/audio/music` endpoint handling genre prompts, structured lyrics, duration, and LoRA adapters.
+  - [x] Add `POST /v1/audio/music/plan` for fast symbolic ABC score planning.
+  - [x] Add LoRA adapter management & training endpoints (`/v1/audio/music/loras`, `/v1/audio/music/loras/train`, `/v1/audio/music/loras/jobs`).
+  - [x] Add 1-click installation script (`npm run add-music` / `install.bat` music option) for MiniMax Music 3 and YuE 2 GGUF models.
 - [ ] **AIRI Client Music Provider**:
   - [ ] Define `MusicProvider`, `DJTrack`, and provider registry entries in `packages/stage-ui/src/libs/providers/`.
   - [ ] Implement `AiriAudioServerMusicProvider` connecting to `/v1/audio/music`.
@@ -351,4 +365,4 @@ Instead of arbitrary clock-interval polling, the DJ engine hooks directly into t
 - [ ] **Unified DJ Tools**: Implement `dj_queue_track`, `dj_search_catalog`, `dj_get_status`, and `dj_control` in `apps/stage-tamagotchi/src/renderer/stores/tools/builtin/`.
 - [ ] **Playback-Anchored Proactivity**: Connect DJ deck remaining-time threshold to the proactivity dispatcher.
 - [ ] **DJ Widget & UI**: Create the "Now Playing / On Deck" media strip component on Stage and Control Strip.
-- [ ] **"Sound Studio" Left Sidebar Panel**: Implement dedicated Music Room tab with embedded `abcjs` score renderer and bidirectional conversational ABC score editor.
+- [ ] **"Sound Studio" Left Sidebar Panel**: Implement dedicated Music Room tab with embedded `abcjs` score renderer, LoRA Cartridge Rack, and bidirectional conversational ABC score editor.
