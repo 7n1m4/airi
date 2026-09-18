@@ -533,7 +533,7 @@ export function useStarterCardCommit() {
    * 7. Marks onboarding as completed and resets draft
    */
   async function commitStarterCompanion(draft: OnboardingV3DraftState): Promise<string | null> {
-    const userName = draft.userName || userProfileStore.name || 'User'
+    const userName = draft.userName || userProfileStore.name || 'Richy'
     const persona = resolvePersona(draft, userName)
 
     // 1. Persist User Profile

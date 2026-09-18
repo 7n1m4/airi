@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Button } from '@proj-airi/ui'
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import CompanionBubble from '../components/companion-bubble.vue'
@@ -16,9 +16,23 @@ const props = defineProps<{
 const { t } = useI18n()
 
 // V3 onboarding step 4 — User Profile & Identity.
-// Fields bind directly to the real `useSettingsUserProfile` store and sync to draft.
-const userProfileStore = useSettingsUserProfile()
+// Fields bind strictly to `useOnboardingV3Draft` (Rule 1 Draft Isolation).
+// Persisted atomically to `useSettingsUserProfile` on finale completion.
 const draft = useOnboardingV3Draft()
+const userProfileStore = useSettingsUserProfile()
+
+const DEFAULT_NAMES = new Set(['Richy', 'Richie', 'Dave', 'Maya', 'Elena', 'User', ''])
+
+// Seed draft if not already initialized
+if (!draft.state.userName) {
+  draft.state.userName = userProfileStore.name || 'Richy'
+}
+if (!draft.state.userDescription) {
+  draft.state.userDescription = userProfileStore.description || 'A hands-on, down-to-earth creator who loves building things from scratch. Prefers honest, direct conversation and cozy downtime after a long day of work.'
+}
+if (draft.state.userPrompt === undefined) {
+  draft.state.userPrompt = userProfileStore.prompt || ''
+}
 
 interface UserArchetype {
   id: string
@@ -84,53 +98,20 @@ function selectGender(gender: 'male' | 'female' | 'non-binary') {
   }
 }
 
-function applyUserProfileToDraft(profile: {
-  name?: string
-  description?: string
-  prompt?: string
-  archetypeId?: string
-  gender?: 'male' | 'female' | 'non-binary'
-}) {
-  if (typeof (draft as any).setUserProfile === 'function') {
-    draft.setUserProfile(profile)
-  }
-  else if (draft.state) {
-    if (profile.name !== undefined)
-      draft.state.userName = profile.name
-    if (profile.description !== undefined)
-      draft.state.userDescription = profile.description
-    if (profile.prompt !== undefined)
-      draft.state.userPrompt = profile.prompt
-    if (profile.gender !== undefined)
-      draft.state.userGender = profile.gender
-    if (profile.archetypeId !== undefined)
-      draft.state.selectedUserArchetypeId = profile.archetypeId
-  }
-}
-
 function applyArchetype(archetype: UserArchetype) {
   selectedArchetypeId.value = archetype.id
-  userProfileStore.name = archetype.name
-  userProfileStore.description = archetype.description
-  userProfileStore.prompt = archetype.prompt
-  selectGender(archetype.gender)
-  applyUserProfileToDraft({
-    name: archetype.name,
-    description: archetype.description,
-    prompt: archetype.prompt,
-    gender: archetype.gender,
-    archetypeId: archetype.id,
-  })
-}
 
-// Watch inputs and keep draft updated
-watch(
-  [() => userProfileStore.name, () => userProfileStore.description, () => userProfileStore.prompt, selectedGender],
-  ([name, description, prompt, gender]) => {
-    applyUserProfileToDraft({ name, description, prompt, gender })
-  },
-  { immediate: true },
-)
+  // Smart name preservation: only overwrite if the name has not been custom-typed
+  const currentName = (draft.state.userName || '').trim()
+  if (DEFAULT_NAMES.has(currentName)) {
+    draft.state.userName = archetype.name
+  }
+
+  draft.state.userDescription = archetype.description
+  draft.state.userPrompt = archetype.prompt
+  draft.state.selectedUserArchetypeId = archetype.id
+  selectGender(archetype.gender)
+}
 </script>
 
 <template>
@@ -245,7 +226,7 @@ watch(
         <div :class="['flex flex-col gap-1.5']">
           <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">{{ t('onboarding.steps.profile.userName.label') }}</label>
           <input
-            v-model="userProfileStore.name"
+            v-model="draft.state.userName"
             type="text"
             :placeholder="t('onboarding.steps.profile.userName.placeholder')"
             :class="[
@@ -292,7 +273,7 @@ watch(
         <div :class="['flex flex-col gap-1.5']">
           <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">{{ t('onboarding.steps.profile.userBio.label') }}</label>
           <textarea
-            v-model="userProfileStore.description"
+            v-model="draft.state.userDescription"
             rows="3"
             :placeholder="t('onboarding.steps.profile.userBio.placeholder')"
             :class="[
@@ -308,7 +289,7 @@ watch(
         <div :class="['flex flex-col gap-1.5']">
           <label :class="['text-xs text-neutral-700 font-bold dark:text-neutral-300']">Visual Prompt Tags</label>
           <textarea
-            v-model="userProfileStore.prompt"
+            v-model="draft.state.userPrompt"
             rows="3"
             placeholder=", short dark hair, spectacles, formal grey business suit"
             :class="[
@@ -344,7 +325,7 @@ watch(
       </button>
 
       <div :class="['text-[11px] text-neutral-400 font-medium']">
-        Displaying as: <span :class="['text-neutral-700 dark:text-neutral-200 font-semibold']">{{ userProfileStore.name || 'User' }}</span>
+        Displaying as: <span :class="['text-neutral-700 dark:text-neutral-200 font-semibold']">{{ draft.state.userName || 'Richy' }}</span>
       </div>
 
       <Button

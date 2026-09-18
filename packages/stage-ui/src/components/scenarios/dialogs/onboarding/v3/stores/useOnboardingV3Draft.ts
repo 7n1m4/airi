@@ -224,6 +224,8 @@ export const useOnboardingV3Draft = defineStore('onboarding-v3-draft', () => {
       artistry: false,
       tools: false,
     },
+    userName: 'Richy',
+    userDescription: 'A hands-on, down-to-earth creator who loves building things from scratch. Prefers honest, direct conversation and cozy downtime after a long day of work.',
     userGender: 'male',
     pacingPreset: 'balanced',
     subconsciousAsides: true,
@@ -313,6 +315,12 @@ export const useOnboardingV3Draft = defineStore('onboarding-v3-draft', () => {
     state.value.ttsProvider = 'kokoro-local'
     state.value.ttsModel = 'q4'
     state.value.ttsVoiceId = 'af_bella'
+  }
+  if (!state.value.userName || state.value.userName === 'User') {
+    state.value.userName = 'Richy'
+  }
+  if (!state.value.userDescription || state.value.userDescription === 'An observer/manager of this stage.') {
+    state.value.userDescription = 'A hands-on, down-to-earth creator who loves building things from scratch. Prefers honest, direct conversation and cozy downtime after a long day of work.'
   }
 
   function setArchitecture(architecture: OnboardingArchitecture) {

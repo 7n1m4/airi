@@ -219,7 +219,7 @@ onMounted(async () => {
 })
 
 // --- 2. Persona & Greeting Resolution ---
-const userName = computed(() => draft.state.userName || userProfileStore.name || 'Master')
+const userName = computed(() => draft.state.userName || userProfileStore.name || 'Richy')
 const { resolvePersona, compileCardPayload, commitStarterCompanion } = useStarterCardCommit()
 
 const resolvedPersona = computed(() => resolvePersona(draft.state, userName.value))

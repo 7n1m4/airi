@@ -712,6 +712,38 @@ function triggerAvatarFilePicker() {
   avatarFileInput.value?.click()
 }
 
+function removeAvatarImage() {
+  customAvatar.value = ''
+  if (avatarFileInput.value) {
+    avatarFileInput.value.value = ''
+  }
+  syncCreatorDraft()
+  toast.info('Avatar image removed')
+}
+
+function resetIdentitySection() {
+  customAvatar.value = ''
+  if (avatarFileInput.value) {
+    avatarFileInput.value.value = ''
+  }
+  customName.value = ''
+  customSeries.value = ''
+  customTags.value = []
+  newTagInput.value = ''
+  syncCreatorDraft()
+  toast.info('Identity fields, tags, and avatar reset.')
+}
+
+const canResetIdentity = computed(() => {
+  return Boolean(
+    customAvatar.value
+    || customName.value
+    || customSeries.value
+    || customTags.value.length > 0
+    || newTagInput.value,
+  )
+})
+
 function addTag() {
   const val = newTagInput.value.trim().replace(/^#/, '')
   if (val) {
@@ -1316,34 +1348,52 @@ onBeforeUnmount(() => {
               </span>
             </div>
 
-            <!-- Mode Pill Toggle -->
-            <div :class="['flex items-center p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium']">
+            <div :class="['flex items-center gap-2']">
+              <!-- Reset Identity Fields Button -->
               <button
+                v-if="canResetIdentity"
                 type="button"
                 :class="[
-                  'px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5',
-                  identityMode === 'custom'
-                    ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-2xs font-semibold'
-                    : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white',
+                  'px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all flex items-center gap-1.5 cursor-pointer',
+                  'text-neutral-500 hover:text-rose-600 dark:text-neutral-400 dark:hover:text-rose-400',
+                  'hover:bg-rose-500/10 dark:hover:bg-rose-500/15 active:scale-95 border border-transparent hover:border-rose-500/20',
                 ]"
-                @click="identityMode = 'custom'"
+                title="Reset avatar, tags, and identity fields"
+                @click="resetIdentitySection"
               >
-                <div :class="['i-solar:upload-track-bold-duotone h-3.5 w-3.5']" />
-                <span>Upload Custom Image</span>
+                <div :class="['i-solar:restart-bold-duotone h-3.5 w-3.5']" />
+                <span>Reset Fields</span>
               </button>
-              <button
-                type="button"
-                :class="[
-                  'px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5',
-                  identityMode === 'catalog'
-                    ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-2xs font-semibold'
-                    : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white',
-                ]"
-                @click="identityMode = 'catalog'"
-              >
-                <div :class="['i-solar:book-bookmark-bold-duotone h-3.5 w-3.5']" />
-                <span>Browse Catalog (Anime)</span>
-              </button>
+
+              <!-- Mode Pill Toggle -->
+              <div :class="['flex items-center p-0.5 rounded-lg bg-neutral-100 dark:bg-neutral-800 text-[11px] font-medium']">
+                <button
+                  type="button"
+                  :class="[
+                    'px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5',
+                    identityMode === 'custom'
+                      ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-2xs font-semibold'
+                      : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white',
+                  ]"
+                  @click="identityMode = 'custom'"
+                >
+                  <div :class="['i-solar:upload-track-bold-duotone h-3.5 w-3.5']" />
+                  <span>Upload Custom Image</span>
+                </button>
+                <button
+                  type="button"
+                  :class="[
+                    'px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1.5',
+                    identityMode === 'catalog'
+                      ? 'bg-white dark:bg-neutral-700 text-neutral-900 dark:text-white shadow-2xs font-semibold'
+                      : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-white',
+                  ]"
+                  @click="identityMode = 'catalog'"
+                >
+                  <div :class="['i-solar:book-bookmark-bold-duotone h-3.5 w-3.5']" />
+                  <span>Browse Catalog (Anime)</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1373,13 +1423,27 @@ onBeforeUnmount(() => {
                 <span :class="['text-[9px] text-neutral-400']">PNG, JPG, WebP</span>
               </div>
 
-              <!-- Hover Overlay to Change -->
+              <!-- Hover Overlay to Change or Remove -->
               <div
                 v-if="customAvatar"
-                :class="['absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-semibold gap-1 backdrop-blur-2xs']"
+                :class="['absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-semibold gap-1.5 backdrop-blur-2xs p-1']"
               >
-                <div :class="['i-solar:restart-bold-duotone h-5 w-5']" />
-                <span>Change</span>
+                <button
+                  type="button"
+                  :class="['flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/20 hover:bg-white/30 transition-colors cursor-pointer w-20 justify-center']"
+                  @click.stop="triggerAvatarFilePicker"
+                >
+                  <div :class="['i-solar:restart-bold-duotone h-3.5 w-3.5']" />
+                  <span>Change</span>
+                </button>
+                <button
+                  type="button"
+                  :class="['flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/85 hover:bg-rose-600 transition-colors cursor-pointer text-white w-20 justify-center shadow-xs']"
+                  @click.stop="removeAvatarImage"
+                >
+                  <div :class="['i-solar:trash-bin-trash-bold-duotone h-3.5 w-3.5']" />
+                  <span>Remove</span>
+                </button>
               </div>
 
               <input

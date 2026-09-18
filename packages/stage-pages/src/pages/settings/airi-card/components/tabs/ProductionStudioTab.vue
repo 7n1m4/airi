@@ -94,7 +94,7 @@ function handleAddConcept() {
 function handleAddUserProfileConcept() {
   const nextAssets = { ...visualAssets.value }
   nextAssets.concept_user = {
-    description: userProfileStore.description || 'An observer/manager of this stage.',
+    description: userProfileStore.description || 'A hands-on, down-to-earth creator who loves building things from scratch. Prefers honest, direct conversation and cozy downtime after a long day of work.',
     prompt: userProfileStore.prompt || '',
     isBase: false,
   }

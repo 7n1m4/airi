@@ -480,7 +480,7 @@ watch(selectedProvider, async (providerId) => {
 // 4. Greeting Text Resolution
 const resolvedPersona = computed(() => {
   const personaCardId = draftStore.state.personaCardId || 'default'
-  const userName = draftStore.state.userName || userProfileStore.name || 'Manager'
+  const userName = draftStore.state.userName || userProfileStore.name || 'Richy'
 
   if (draftStore.state.importedCardDraft) {
     const rawData = draftStore.state.importedCardDraft as any
@@ -520,7 +520,7 @@ const resolvedPersona = computed(() => {
 })
 
 const companionName = computed(() => resolvedPersona.value.name || 'Companion')
-const userName = computed(() => draftStore.state.userName || userProfileStore.name || 'User')
+const userName = computed(() => draftStore.state.userName || userProfileStore.name || 'Richy')
 
 const sampleGreeting = computed(() => {
   if (resolvedPersona.value.greeting)
