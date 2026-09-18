@@ -4,7 +4,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { resolveArcadeProfile } from './profiles'
-import { useArcadeAgent } from './use-arcade-agent'
+import { normalizePlanActions, useArcadeAgent } from './use-arcade-agent'
 import { burnCoordinateGridToCanvas, drawCoordinateGrid } from './utils/grid-overlay'
 
 vi.mock('vue-i18n', () => ({
@@ -26,8 +26,9 @@ describe('arcade Profiles', () => {
 
   it('contains calibrated tool palette coordinates for SimCity DOS', () => {
     const profile = resolveArcadeProfile('SimCity')
-    expect(profile.systemPromptAddendum).toContain('Row 1 (~Y: 230): Bulldozer')
-    expect(profile.systemPromptAddendum).toContain('Row 7 (~Y: 630): Airport')
+    expect(profile.systemPromptAddendum).toContain('Row 1 (~Y: 206): Bulldozer')
+    expect(profile.systemPromptAddendum).toContain('Row 2 (~Y: 280): Road')
+    expect(profile.systemPromptAddendum).toContain('Row 7 (~Y: 655): Coal Power Plant')
     expect(profile.systemPromptAddendum).toContain('Column 1 (Left, ~X: 52)')
     expect(profile.systemPromptAddendum).toContain('Column 2 (Right, ~X: 88)')
   })
@@ -99,7 +100,7 @@ describe('useArcadeAgent', () => {
     await agent.executePlan(testPlan)
 
     expect(duckSpy).toHaveBeenCalledWith(true)
-    expect(clickSpy).toHaveBeenCalledWith(250, 350, undefined)
+    expect(clickSpy).toHaveBeenCalledWith(250, 350, 'left')
     expect(keySpy).toHaveBeenCalledWith('Space', undefined)
     expect(duckSpy).toHaveBeenCalledWith(false)
     expect(agent.turnState.value).toBe('idle')
@@ -202,5 +203,63 @@ describe('useArcadeAgent', () => {
     const mockCanvas = { width: 640, height: 480 } as HTMLCanvasElement
     const res = burnCoordinateGridToCanvas(mockCanvas)
     expect(res).toBeNull()
+  })
+
+  it('normalizes drag actions with alternative property naming', () => {
+    const rawActions = [
+      { type: 'drag', startX: 250, startY: 545, endX: 560, endY: 545, label: 'Pave Road' },
+      { type: 'drag', from_x: 100, from_y: 200, to_x: 300, to_y: 400 },
+      { type: 'click', normX: 88, normY: 230 },
+    ]
+
+    const normalized = normalizePlanActions(rawActions)
+    expect(normalized[0]).toMatchObject({
+      type: 'drag',
+      fromX: 250,
+      fromY: 545,
+      toX: 560,
+      toY: 545,
+    })
+    expect(normalized[1]).toMatchObject({
+      type: 'drag',
+      fromX: 100,
+      fromY: 200,
+      toX: 300,
+      toY: 400,
+    })
+    expect(normalized[2]).toMatchObject({
+      type: 'click',
+      x: 88,
+      y: 230,
+    })
+  })
+
+  it('executes executeDrag on adapter when drag action is dispatched', async () => {
+    const agent = useArcadeAgent()
+    const dragSpy = vi.fn().mockResolvedValue(undefined)
+    const mockAdapter: GameAdapter = {
+      id: 'test-game',
+      title: 'Test Game',
+      engine: 'jsdos',
+      captureFrame: vi.fn().mockResolvedValue(null),
+      getCanvasElement: vi.fn().mockReturnValue(null),
+      executeClick: vi.fn().mockResolvedValue(undefined),
+      executeDrag: dragSpy,
+      executeKeyPress: vi.fn().mockResolvedValue(undefined),
+      executeTypeText: vi.fn().mockResolvedValue(undefined),
+    }
+
+    agent.bindAdapter(mockAdapter)
+
+    const testPlan: TurnPlan = {
+      plan: 'Drag test plan',
+      spoken_commentary: 'Testing drag',
+      actions: [
+        { type: 'drag', fromX: 250, fromY: 545, toX: 560, toY: 545, label: 'Drag Road' },
+      ],
+    }
+
+    await agent.executePlan(testPlan)
+    expect(dragSpy).toHaveBeenCalledWith(250, 545, 560, 545)
   })
 })

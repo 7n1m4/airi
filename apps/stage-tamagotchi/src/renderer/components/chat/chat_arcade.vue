@@ -389,7 +389,7 @@ ${autoexecLines}
     autoStart: true,
     kiosk: true,
     renderAspect: '4/3',
-    mouseCapture: true,
+    mouseCapture: false,
     fsChanges: {
       local: true,
       urlToKey: async () => currentGameIdentifier.value,
@@ -397,6 +397,12 @@ ${autoexecLines}
     onEvent: (event: string, ci: any) => {
       if (event === 'ci-ready') {
         currentCommandInterface = ci
+        if (typeof window !== 'undefined') {
+          const win = window as any
+          win.__AIRI_ARCADE_CI__ = ci
+          win.__AIRI_ARCADE_CLICK__ = executeClick
+          win.__AIRI_ARCADE_DRAG__ = executeDrag
+        }
         isGameReady.value = true
         isDosEngineLoading.value = false
         triggerReactiveReaction(`DOSBox loaded ${gameTitle}! Ready when you are!`, 'cheering')
@@ -1385,42 +1391,114 @@ async function handleSendAdvice(presetText?: string) {
 
 // --- Option A: Autonomous Turn & Co-pilot Execution Primitives ---
 
-async function executeClick(normX: number, normY: number) {
+async function executeClick(normX: number, normY: number, button: 'left' | 'right' | 'middle' = 'left') {
+  const btn = button === 'right' ? 2 : button === 'middle' ? 1 : 0
+  const normClampedX = Math.max(0, Math.min(1000, normX))
+  const normClampedY = Math.max(0, Math.min(1000, normY))
+
   if (activeEngine.value === 'jsdos') {
-    const canvas = dosContainerRef.value?.querySelector('canvas')
-    if (canvas) {
-      const rect = canvas.getBoundingClientRect()
-      const clientX = rect.left + (normX / 1000) * rect.width
-      const clientY = rect.top + (normY / 1000) * rect.height
-      const canvasX = Math.round((normX / 1000) * canvas.width)
-      const canvasY = Math.round((normY / 1000) * canvas.height)
+    const ci = currentCommandInterface || (typeof window !== 'undefined' ? (window as any).__AIRI_ARCADE_CI__ : null)
+    if (ci) {
+      try {
+        let gameX = normClampedX / 1000
+        let gameY = normClampedY / 1000
 
-      canvas.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, cancelable: true, clientX, clientY, button: 0 }))
-      await new Promise(r => setTimeout(r, 40))
-      canvas.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true, clientX, clientY, button: 0, buttons: 1 }))
-      await new Promise(r => setTimeout(r, 80))
-      canvas.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true, clientX, clientY, button: 0, buttons: 0 }))
-      canvas.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, clientX, clientY, button: 0 }))
-
-      if (currentCommandInterface) {
-        try {
-          if (typeof currentCommandInterface.sendMouse === 'function') {
-            currentCommandInterface.sendMouse(canvasX, canvasY, 1)
-            await new Promise(r => setTimeout(r, 80))
-            currentCommandInterface.sendMouse(canvasX, canvasY, 0)
-          }
-          else if (typeof currentCommandInterface.sendMouseClick === 'function') {
-            currentCommandInterface.sendMouseClick(0, canvasX, canvasY)
+        const container = dosContainerRef.value
+        const canvas = container?.querySelector('canvas')
+        if (container && canvas) {
+          const cRect = container.getBoundingClientRect()
+          const kRect = canvas.getBoundingClientRect()
+          if (kRect.width > 0 && kRect.height > 0) {
+            const clientX = cRect.left + (normClampedX / 1000) * cRect.width
+            const clientY = cRect.top + (normClampedY / 1000) * cRect.height
+            gameX = Math.max(0, Math.min(1, (clientX - kRect.left) / kRect.width))
+            gameY = Math.max(0, Math.min(1, (clientY - kRect.top) / kRect.height))
           }
         }
-        catch (err) {
-          console.warn('[Arcade] CI sendMouse failed:', err)
+
+        console.info(`[Arcade] executeClick at (${normClampedX}, ${normClampedY}) -> game (${gameX.toFixed(3)}, ${gameY.toFixed(3)}), button: ${btn}`)
+        if (typeof ci.sendMouseMotion === 'function') {
+          ci.sendMouseMotion(gameX, gameY)
+          await new Promise(r => setTimeout(r, 60))
+        }
+        if (typeof ci.sendMouseButton === 'function') {
+          ci.sendMouseButton(btn, true)
+          await new Promise(r => setTimeout(r, 120))
+          ci.sendMouseButton(btn, false)
         }
       }
+      catch (err) {
+        console.warn('[Arcade] CI executeClick failed:', err)
+      }
+    }
+    else {
+      console.warn('[Arcade] executeClick called but CommandInterface is not ready.')
     }
   }
   else if (activeEngine.value === 'canvas-2048') {
     canvasRef.value?.focus()
+  }
+}
+
+async function executeDrag(fromNormX: number, fromNormY: number, toNormX: number, toNormY: number) {
+  const normStartX = Math.max(0, Math.min(1000, fromNormX))
+  const normStartY = Math.max(0, Math.min(1000, fromNormY))
+  const normEndX = Math.max(0, Math.min(1000, toNormX))
+  const normEndY = Math.max(0, Math.min(1000, toNormY))
+
+  if (activeEngine.value === 'jsdos') {
+    const ci = currentCommandInterface || (typeof window !== 'undefined' ? (window as any).__AIRI_ARCADE_CI__ : null)
+    if (ci) {
+      try {
+        let startX = normStartX / 1000
+        let startY = normStartY / 1000
+        let endX = normEndX / 1000
+        let endY = normEndY / 1000
+
+        const container = dosContainerRef.value
+        const canvas = container?.querySelector('canvas')
+        if (container && canvas) {
+          const cRect = container.getBoundingClientRect()
+          const kRect = canvas.getBoundingClientRect()
+          if (kRect.width > 0 && kRect.height > 0) {
+            const startClientX = cRect.left + (normStartX / 1000) * cRect.width
+            const startClientY = cRect.top + (normStartY / 1000) * cRect.height
+            const endClientX = cRect.left + (normEndX / 1000) * cRect.width
+            const endClientY = cRect.top + (normEndY / 1000) * cRect.height
+
+            startX = Math.max(0, Math.min(1, (startClientX - kRect.left) / kRect.width))
+            startY = Math.max(0, Math.min(1, (startClientY - kRect.top) / kRect.height))
+            endX = Math.max(0, Math.min(1, (endClientX - kRect.left) / kRect.width))
+            endY = Math.max(0, Math.min(1, (endClientY - kRect.top) / kRect.height))
+          }
+        }
+
+        console.info(`[Arcade] executeDrag from (${normStartX}, ${normStartY}) -> (${normEndX}, ${normEndY}) [game: (${startX.toFixed(3)}, ${startY.toFixed(3)}) -> (${endX.toFixed(3)}, ${endY.toFixed(3)})]`)
+        ci.sendMouseMotion?.(startX, startY)
+        await new Promise(r => setTimeout(r, 60))
+
+        ci.sendMouseButton?.(0, true)
+        await new Promise(r => setTimeout(r, 80))
+
+        // Intermediate drag steps
+        const steps = 10
+        for (let s = 1; s <= steps; s++) {
+          const curX = startX + (endX - startX) * (s / steps)
+          const curY = startY + (endY - startY) * (s / steps)
+          ci.sendMouseMotion?.(curX, curY)
+          await new Promise(r => setTimeout(r, 35))
+        }
+
+        await new Promise(r => setTimeout(r, 40))
+        ci.sendMouseButton?.(0, false)
+      }
+      catch (err) {
+        console.warn('[Arcade] CI executeDrag failed:', err)
+      }
+    }
+    else {
+      console.warn('[Arcade] executeDrag called but CommandInterface is not ready.')
+    }
   }
 }
 
@@ -1532,8 +1610,11 @@ function createCurrentGameAdapter(): GameAdapter {
       }
       return canvasRef.value || null
     },
-    executeClick: async (normX, normY) => {
-      await executeClick(normX, normY)
+    executeClick: async (normX, normY, button) => {
+      await executeClick(normX, normY, button)
+    },
+    executeDrag: async (fromX, fromY, toX, toY) => {
+      await executeDrag(fromX, fromY, toX, toY)
     },
     executeKeyPress: async (key) => {
       await executeKeyPress(key)
@@ -2152,7 +2233,7 @@ onUnmounted(() => {
                     :key="idx"
                     class="shadow-2xs border border-neutral-200/80 rounded bg-white/90 px-1.5 py-0.5 text-[9px] text-neutral-700 font-mono dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300"
                   >
-                    {{ act.type === 'click' ? `🖱️ Click (${act.x}, ${act.y})` : act.type === 'drag' ? `👆 Drag (${act.fromX}, ${act.fromY}) ➔ (${act.toX}, ${act.toY})` : act.type === 'key_press' ? `⌨️ Key [${act.key}]` : act.type === 'type_text' ? `⌨️ Type "${act.text}"` : '⏳ Wait' }}
+                    {{ act.type === 'click' ? `🖱️ Click (${act.x}, ${act.y})` : act.type === 'drag' ? `👆 Drag (${act.fromX ?? (act as any).startX ?? (act as any).from_x ?? '?'}, ${act.fromY ?? (act as any).startY ?? (act as any).from_y ?? '?'}) ➔ (${act.toX ?? (act as any).endX ?? (act as any).to_x ?? '?'}, ${act.toY ?? (act as any).endY ?? (act as any).to_y ?? '?'})` : act.type === 'key_press' ? `⌨️ Key [${act.key}]` : act.type === 'type_text' ? `⌨️ Type "${act.text}"` : '⏳ Wait' }}
                   </span>
                 </div>
 

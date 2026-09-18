@@ -1,4 +1,4 @@
-import type { CursorState, GameAdapter, TurnPlan, TurnState } from '../../types/arcade'
+import type { CursorState, GameAction, GameAdapter, TurnPlan, TurnState } from '../../types/arcade'
 
 import { useTimeoutFn } from '@vueuse/core'
 import { ref } from 'vue'
@@ -20,6 +20,45 @@ export interface ArcadeTurnMemory {
 
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+export function normalizePlanActions(actions: any[]): GameAction[] {
+  if (!Array.isArray(actions))
+    return []
+
+  return actions.map((act) => {
+    if (!act || typeof act !== 'object')
+      return act
+
+    if (act.type === 'click') {
+      const x = Number(act.x ?? act.clientX ?? act.normX ?? 0)
+      const y = Number(act.y ?? act.clientY ?? act.normY ?? 0)
+      return {
+        ...act,
+        type: 'click' as const,
+        x: Number.isFinite(x) ? Math.max(0, Math.min(1000, Math.round(x))) : 0,
+        y: Number.isFinite(y) ? Math.max(0, Math.min(1000, Math.round(y))) : 0,
+        button: act.button || 'left',
+      }
+    }
+
+    if (act.type === 'drag') {
+      const fromX = Number(act.fromX ?? act.startX ?? act.from_x ?? act.start_x ?? act.x1 ?? act.from?.x ?? act.x ?? 0)
+      const fromY = Number(act.fromY ?? act.startY ?? act.from_y ?? act.start_y ?? act.y1 ?? act.from?.y ?? act.y ?? 0)
+      const toX = Number(act.toX ?? act.endX ?? act.to_x ?? act.end_x ?? act.x2 ?? act.to?.x ?? 0)
+      const toY = Number(act.toY ?? act.endY ?? act.to_y ?? act.end_y ?? act.y2 ?? act.to?.y ?? 0)
+      return {
+        ...act,
+        type: 'drag' as const,
+        fromX: Number.isFinite(fromX) ? Math.max(0, Math.min(1000, Math.round(fromX))) : 0,
+        fromY: Number.isFinite(fromY) ? Math.max(0, Math.min(1000, Math.round(fromY))) : 0,
+        toX: Number.isFinite(toX) ? Math.max(0, Math.min(1000, Math.round(toX))) : 0,
+        toY: Number.isFinite(toY) ? Math.max(0, Math.min(1000, Math.round(toY))) : 0,
+      }
+    }
+
+    return act
+  })
 }
 
 export function useArcadeAgent() {
@@ -156,18 +195,23 @@ ${promptAddendum}
 5. Produce an exact list of actions to execute on the game interface:
    - The game screen image includes an overlay coordinate grid with labeled lines every 100 units from 0 to 1000. Use these grid lines and axis numbers to accurately pinpoint coordinates for clicks and drags.
    - Mouse clicks use normalized coordinates [0, 1000] (0 = top/left, 1000 = bottom/right).
+   - Mouse drags use fromX, fromY, toX, toY normalized in [0, 1000] (0 = top/left, 1000 = bottom/right).
    - Key presses use standardized key strings ('ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Space', 'y', 'n', etc.).
 
 Return ONLY a JSON object with this exact structure:
 \`\`\`json
 {
-  "spoken_commentary": "I'm going to zone a nice residential area right here near the trees!",
+  "spoken_commentary": "I'm going to zone an industrial area and run a road along it!",
   "emotion": "excited",
-  "plan": "Select Residential Zone tool from left menu (X: 50, Y: 185) and place at (X: 350, Y: 420).",
+  "plan": "Select Industrial Zone (X: 88, Y: 430) and place at (X: 350, Y: 420), then pave a road from (X: 250, Y: 545) to (X: 560, Y: 545).",
   "actions": [
-    { "type": "click", "x": 50, "y": 185, "label": "Select Residential Zone" },
+    { "type": "click", "x": 88, "y": 430, "label": "Select Industrial Zone" },
     { "type": "wait", "durationMs": 200 },
-    { "type": "click", "x": 350, "y": 420, "label": "Place Residential Zone" }
+    { "type": "click", "x": 350, "y": 420, "label": "Place Industrial Zone" },
+    { "type": "wait", "durationMs": 200 },
+    { "type": "click", "x": 88, "y": 230, "label": "Select Road Tool" },
+    { "type": "wait", "durationMs": 200 },
+    { "type": "drag", "fromX": 250, "fromY": 545, "toX": 560, "toY": 545, "label": "Pave Road" }
   ]
 }
 \`\`\``
@@ -260,6 +304,7 @@ Return ONLY a JSON object with this exact structure:
       }
 
       const parsed: TurnPlan = JSON.parse(jsonMatch[0])
+      parsed.actions = normalizePlanActions(parsed.actions)
       currentTurnPlan.value = parsed
 
       // Record to turn history
@@ -326,6 +371,7 @@ Return ONLY a JSON object with this exact structure:
       return
 
     isCancelled = false
+    plan.actions = normalizePlanActions(plan.actions)
     currentTurnPlan.value = plan
     turnState.value = 'executing'
     cursorState.value.visible = true
@@ -362,6 +408,7 @@ Return ONLY a JSON object with this exact structure:
           const endX = Math.max(0, Math.min(1000, action.toX))
           const endY = Math.max(0, Math.min(1000, action.toY))
 
+          cursorState.value.activeActionLabel = action.label || 'Drag'
           await animateCursor(cursorState.value.x, cursorState.value.y, startX, startY, 200)
           cursorState.value.clicking = true
           await animateCursor(startX, startY, endX, endY, 300)
