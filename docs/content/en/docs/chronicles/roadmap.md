@@ -148,11 +148,12 @@ This document tracks all active pending items, architectural roadmaps, and featu
 
 ## Visual Manifestation & Stage Presentation
 
-### Dynamic Desktop Ambient Lighting (Screen Bounce) for Three.js / VRM
+### Dynamic Desktop Ambient Lighting (Screen Bounce) for 3D (VRM & MMD) and 2D (Live2D)
 *Reference: [design-desktop-ambient-lighting.md](../../../../../design-desktop-ambient-lighting.md)*
 *   **Perimeter Band Sampling**: Low-resolution (160x90) 10 Hz desktop screen capture with mascot window bounding-box exclusion to eliminate self-sampling feedback loops.
 *   **Color Science & Temporal Smoothing**: RGB-to-HSV conversion, saturation gamma boosting ($I = \text{lerp}(I_{\min}, I_{\max}, S^{\gamma})$), and delta-time exponential smoothing with angular shortest-path hue wrapping.
-*   **Three.js Dynamic Directional Rig**: Drive 4-point unshadowed directional lights (`topLight`, `bottomLight`, `leftLight`, `rightLight`) in `ThreeScene.vue` for realistic monitor bounce on VRM / MToon shaders.
+*   **Three.js Dynamic Directional Rig (VRM & MMD Parity)**: Drive 4-point unshadowed directional lights (`topLight`, `bottomLight`, `leftLight`, `rightLight`) in `ThreeScene.vue` and `MMD.vue` for realistic monitor bounce on VRM MToon and MMD PMX shaders.
+*   **2D Live2D WebGL Shader Filter (Upstream PR #2391 Extension)**: Adapt screen ambient environment parameters into a PixiJS `ScreenAmbientLightFilter` on `Live2DModel` for 2D ambient tinting and screen-edge bounce.
 
 ### Autoregressive Live2D Ambient Motion & Micro-Movement Synthesis
 *Reference: [design-live2d-autoregressive-motion.md](../../../../../design-live2d-autoregressive-motion.md)*

@@ -6,6 +6,184 @@
 
 ---
 
+## [2026-09-18] Upstream Delta: `fa159df1..09aa7a7d` (9 commits, 85 files, 28 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 9 commits (`fa159df1..09aa7a7d34`) and processed 28 PR updates, primarily focused on hosted commercial infra (stateless `/v1/responses` gateway with Flux billing settlement in #2554, and chat-round TTS billing in #2491), canvas scene rendering consolidation (#2581), VRM emotion weight/morph conflict prevention (#2352), streaming transcription audio chunking (#2560), and card creation UI refactoring (#2568). Meanwhile, the Extension Activation Planner (#2572) and Live2D Screen Ambient Light (#2391) transitioned to Ready for review.
+* **Discussion & Community Buzz**:
+  - 💬 **#2554: `feat(api): add stateless Responses gateway with Flux settlement` (+84 new comments, total 92)**: High-velocity architectural review on server-side response schemas, model routing, and token settlement.
+  - 💬 **#2491: `feat(server): group TTS billing history by chat round` (+7 new comments, total 59)**: Finalizing chat-round aggregation and token accounting for hosted TTS.
+  - 💬 **#2568: `refactor(stage-ui): airi card ui` (+6 new comments, total 15)**: Feedback on card creation dialog tab reworks and layout styling.
+  - 💬 **#2391: `feat(stage-*): add screen ambient light` (+5 new comments, total 6)**: Transitioned from Draft to Ready with community interest in Live2D model ambient lighting.
+  - 💬 **#2121: `chore(i18n): update translations` (+3 new comments, total 102)**: Ongoing Crowdin translation updates crossing 100+ comments.
+  - 💬 **#2546: `feat(stage-ui): add voice messages and mobile dictation` (+3 new comments, total 8)**: Active mobile voice input development.
+  - 💬 **#2120: `refactor(stage-pages): rebuild AIRI Card editor` (+1 new comments, total 41)**: Iterative discussion on draft saving and card editor redesign.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2352 / Commit `16e30f763b`: `fix(stage-ui-three): maintain vrm emotion weights and prevent morph conflicts`**: High-value avatar stability fix. Prevents morph weights from getting stuck when transitioning between emotions or when an emotion state is cleared before reset fires by maintaining `trackedExpressionNames` in `useVRMEmote`.
+  - ⭐ **PR #2580: `fix(stage-tamagotchi): prevent duplicate user data folder openings`**: Crucial Electron multi-window fix. Filters `ipcMain` Eventa calls by checking `event.sender.id === webContents.id` so a single action in one window does not trigger duplicate handlers across other window services (e.g. `ControlStrip` vs `Stage`).
+  - ⭐ **PR #2584: `fix(pipelines-audio): stop yielding tiny boost chunks`**: Audio pipeline efficiency fix. Prevents TTS chunker from prematurely dispatching micro-chunks (e.g. 1-2 character soft punctuation splits) during the initial `boost` phase unless `chunkWordsCount >= minimumWords`, avoiding costly fixed backend synthesis latency.
+  - ⭐ **PR #2560 / Commit `01e6064388`: `fix(stage-ui): emit Uint8Array chunks for streaming transcription audio`**: Enqueues `Uint8Array` rather than raw `ArrayBuffer` in Web Audio transcription streams, adhering to standard `ReadableStream<ArrayBufferView>` expectations and improving streaming STT provider compatibility.
+  - ⭐ **PR #2577 / Commit `5b759a9af5`: `fix(ui): give focus rings room and centre the add button`**: Clean, zero-risk UI styling polish for `field-values.vue` and `bottom-drawer.vue`.
+  - 🔍 **PR #2590: `feat(provider): add display names for v2 Provider connections`**: Allows custom user-facing nicknames for multiple connections of the same provider type. Highly compatible with our local multi-account `providersStore`.
+  - ⚪ **Auto-Reject / Do Not Port**: PR #2554 / Commit `70bcee06a3`, PR #2491 / Commit `0040675e86`, and PR #2583 / Commit `03bcd64bfc` (hosted cloud server, Stripe/Flux billing, Redis tracking, remote provider accounts); Commit `1ce988917e` canvas scene repainting (diverges from our decoupled `RendererStage.vue` and dedicated background store architecture).
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`apps/stage-tamagotchi/src/renderer/pages/index.vue` (Commit `1ce988917e`)**: Upstream continues modifying `index.vue` around legacy `controls-island` and monolithic canvas layering. In our fork, desktop surfaces are decoupled into `RendererStage.vue` and `ControlStripHost.vue`. Do not sync directly.
+  - ⚠️ **Background Rendering Architecture (`Stage.vue` & 3D/2D Scene Canvas components)**: Upstream shifted background drawing directly into each renderer's canvas via `coverRect` (`1ce988917e`). Our fork manages layered scenes and autonomous artistry via `airi-scenes-backgrounds` and `RendererStage.vue`.
+  - ⚠️ **`packages/stage-pages/src/pages/settings/airi-card/components/CardCreationDialog.vue` (Commit `ab99b18800`)**: Upstream refactored card creation tabs and styling. Our fork has extensive custom extensions (e.g. AnimaDex bindings, ACT cues, multi-actor card schemas) in `CardCreationDialog.vue`. Merge manually with caution.
+
+### 📋 Upstream Commits
+- `09aa7a7d34` fix(stage-ui): restore official chat default (#2587) [#2587](https://github.com/moeru-ai/airi/pull/2587) _(RainbowBird, 2026-09-18)_
+- `03bcd64bfc` feat(stage-ui): allow official provider protocol selection (#2583) [#2583](https://github.com/moeru-ai/airi/pull/2583) _(RainbowBird, 2026-09-18)_
+- `70bcee06a3` feat(api): add stateless Responses gateway with Flux settlement (#2554) [#2554](https://github.com/moeru-ai/airi/pull/2554) _(RainbowBird, 2026-09-18)_
+- `0040675e86` feat(server): group TTS billing history by chat round (#2491) [#2491](https://github.com/moeru-ai/airi/pull/2491) _(RainbowBird, 2026-09-18)_
+- `16e30f763b` fix(stage-ui-three): maintain vrm emotion weights and prevent morph conflicts (#2352) [#2352](https://github.com/moeru-ai/airi/pull/2352) _(이윤진(Lee Yunjin), 2026-09-18)_
+- `ab99b18800` refactor(stage-ui): airi card ui (#2568) [#2568](https://github.com/moeru-ai/airi/pull/2568) _(凌莞~(=^▽^=), 2026-09-18)_
+- `1ce988917e` fix(stage-ui): paint the scene into the canvas each renderer already draws (#2581) [#2581](https://github.com/moeru-ai/airi/pull/2581) _(蓝莓🫐, 2026-09-18)_
+- `5b759a9af5` fix(ui): give focus rings room and centre the add button (#2577) [#2577](https://github.com/moeru-ai/airi/pull/2577) _(蓝莓🫐, 2026-09-17)_
+- `01e6064388` fix(stage-ui): emit Uint8Array chunks for streaming transcription audio (#2560) [#2560](https://github.com/moeru-ai/airi/pull/2560) _(Shucheng Hu, 2026-09-17)_
+
+### 🔬 Subsystem Breakdown
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 1 file(s) (+11/-15)
+- `apps/stage-tamagotchi/src/renderer/pages/index.vue` *(+11/-15)*
+
+#### Mobile & Web Platforms (`⚪ ignore / low-priority`) — 1 file(s) (+50/-0)
+- `apps/stage-web/src/pages/official-provider-chat.browser.test.ts` *(+50/-0)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 2 file(s) (+10/-0)
+- `packages/i18n/src/locales/en/settings.yaml` *(+5/-0)*
+- `packages/i18n/src/locales/zh-Hans/settings.yaml` *(+5/-0)*
+
+#### Documentation & Scaffolding (`⚪ ignore`) — 1 file(s) (+5/-1)
+- `packages/provider-inference/README.md` *(+5/-1)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 21 file(s) (+487/-43)
+- `packages/provider-inference/src/generation.ts` *(+20/-1)*
+- `packages/provider-inference/src/index.ts` *(+1/-0)*
+- `packages/provider-inference/src/providers/cloud/openai-compatible/index.ts` *(+8/-5)*
+- `packages/provider-inference/src/providers/cloud/openai/index.ts` *(+17/-14)*
+- `packages/provider-inference/src/providers/responses.test.ts` *(+12/-0)*
+- `packages/stage-shared/src/cover-fit.test.ts` *(+27/-0)*
+- `packages/stage-shared/src/cover-fit.ts` *(+31/-0)*
+- `packages/stage-shared/src/index.ts` *(+1/-0)*
+- `packages/stage-ui-mmd/src/components/scenes/MMD.vue` *(+91/-1)*
+- `packages/stage-ui-spine/src/components/scenes/Spine.vue` *(+3/-0)*
+- `packages/stage-ui-spine/src/components/scenes/spine/Model.vue` *(+81/-1)*
+- `packages/stage-ui-tachie/src/components/scenes/tachie.vue` *(+3/-0)*
+- `packages/stage-ui-tachie/src/components/scenes/tachie/canvas.vue` *(+89/-1)*
+- `packages/stage-ui/src/libs/providers/providers/official/index.test.ts` *(+45/-1)*
+- `packages/stage-ui/src/libs/providers/providers/official/index.ts` *(+39/-10)*
+- `packages/stage-ui/src/libs/speech/streaming-pipeline.ts` *(+5/-0)*
+- `packages/stage-ui/src/libs/speech/tts-session.ts` *(+2/-0)*
+- `packages/stage-ui/src/stores/modules/hearing.ts` *(+9/-9)*
+- `packages/stage-ui/src/stores/modules/speech.ts` *(+1/-0)*
+- `pnpm-workspace.yaml` *(+1/-0)*
+- `vitest.config.ts` *(+1/-0)*
+
+#### UI Primitives & Pages (`📦 import / inspect`) — 7 file(s) (+319/-220)
+- `packages/stage-pages/src/pages/devtools/providers-transcription-realtime-aliyun-nls.vue` *(+3/-3)*
+- `packages/stage-pages/src/pages/settings/airi-card/components/CardCreationDialog.vue` *(+248/-191)*
+- `packages/stage-pages/src/pages/settings/airi-card/components/tabs/CardCreationTabArtistry.vue` *(+22/-17)*
+- `packages/stage-pages/src/pages/settings/providers/chat/official-provider.vue` *(+9/-0)*
+- `packages/stage-pages/src/pages/settings/providers/transcription/aliyun-nls-transcription.vue` *(+3/-3)*
+- `packages/ui/src/components/form/field/field-values.vue` *(+28/-5)*
+- `packages/ui/src/components/layouts/bottom-drawer.vue` *(+6/-1)*
+
+#### 3D, Live2D & Motion (`🔍 inspect`) — 11 file(s) (+912/-113)
+- `packages/stage-ui-live2d/src/components/scenes/Live2D.vue` *(+3/-0)*
+- `packages/stage-ui-live2d/src/components/scenes/live2d/Canvas.vue` *(+100/-1)*
+- `packages/stage-ui-three/src/components/Environment/SkyBox.vue` *(+29/-8)*
+- `packages/stage-ui-three/src/components/Model/VRMModel.vue` *(+24/-5)*
+- `packages/stage-ui-three/src/components/ThreeScene.vue` *(+141/-3)*
+- `packages/stage-ui-three/src/composables/vrm/animation.test.ts` *(+108/-0)*
+- `packages/stage-ui-three/src/composables/vrm/animation.ts` *(+17/-3)*
+- `packages/stage-ui-three/src/composables/vrm/expression.test.ts` *(+249/-0)*
+- `packages/stage-ui-three/src/composables/vrm/expression.ts` *(+205/-24)*
+- `packages/stage-ui-three/src/composables/vrm/lip-sync.ts` *(+19/-5)*
+- `packages/stage-ui/src/components/scenes/Stage.vue` *(+17/-64)*
+
+#### Root Build & Tooling (`🔍 inspect`) — 1 file(s) (+9/-0)
+- `pnpm-lock.yaml` *(+9/-0)*
+
+#### Cloud Services, Billing & Auth (`⚪ ignore / rejected in fork (offline-first architecture)`) — 38 file(s) (+2494/-249)
+- `server/apps/api/README.md` *(+61/-0)*
+- `server/apps/api/package.json` *(+2/-0)*
+- `server/apps/api/src/app.test.ts` *(+32/-1)*
+- `server/apps/api/src/app.ts` *(+23/-2)*
+- `server/apps/api/src/routes/audio-speech-ws/session.ts` *(+3/-1)*
+- `server/apps/api/src/routes/openai/v1/gateway.ts` *(+14/-4)*
+- `server/apps/api/src/routes/openai/v1/index.ts` *(+37/-5)*
+- `server/apps/api/src/routes/openai/v1/middlewares/index.ts` *(+0/-1)*
+- `server/apps/api/src/routes/openai/v1/middlewares/traffic-control.ts` *(+0/-78)*
+- `server/apps/api/src/routes/openai/v1/model-routing.ts` *(+130/-0)*
+- `server/apps/api/src/routes/openai/v1/operations/chat-completions/index.ts` *(+9/-97)*
+- `server/apps/api/src/routes/openai/v1/operations/responses/index.ts` *(+233/-0)*
+- `server/apps/api/src/routes/openai/v1/operations/responses/request.test.ts` *(+187/-0)*
+- `server/apps/api/src/routes/openai/v1/operations/responses/request.ts` *(+86/-0)*
+- `server/apps/api/src/routes/openai/v1/route.test.ts` *(+613/-1)*
+- `server/apps/api/src/schemas/generation-protocol.test.ts` *(+25/-0)*
+- `server/apps/api/src/schemas/generation-protocol.ts` *(+21/-0)*
+- `server/apps/api/src/services/adapters/config-kv/definitions.ts` *(+4/-0)*
+- `server/apps/api/src/services/adapters/llm/chat-completions.ts` *(+20/-0)*
+- `server/apps/api/src/services/adapters/llm/index.ts` *(+11/-0)*
+- `server/apps/api/src/services/adapters/llm/responses.ts` *(+33/-0)*
+- `server/apps/api/src/services/adapters/llm/schemas/README.md` *(+22/-0)*
+- `server/apps/api/src/services/adapters/llm/schemas/openresponses-schema.ts` *(+344/-0)*
+- `server/apps/api/src/services/adapters/llm/schemas/request-openapi.json` *(+1/-0)*
+- `server/apps/api/src/services/adapters/llm/schemas/responses.ts` *(+105/-0)*
+- `server/apps/api/src/services/adapters/llm/types.ts` *(+11/-0)*
+- `server/apps/api/src/services/domain/billing/billing-service.ts` *(+2/-0)*
+- `server/apps/api/src/services/domain/billing/flux-meter.ts` *(+2/-0)*
+- `server/apps/api/src/services/domain/flux-transaction.test.ts` *(+16/-0)*
+- `server/apps/api/src/services/domain/flux-transaction.ts` *(+40/-11)*
+- `server/apps/api/src/services/domain/llm-router/router.ts` *(+61/-40)*
+- `server/apps/api/src/services/domain/llm-router/tests/router.test.ts` *(+84/-0)*
+- `server/apps/api/src/services/domain/llm-router/types.ts` *(+7/-1)*
+- `server/apps/api/src/services/domain/llm-tracing/index.test.ts` *(+60/-1)*
+- `server/apps/api/src/services/domain/llm-tracing/index.ts` *(+30/-5)*
+- `server/apps/api/src/services/domain/openai-speech/index.ts` *(+4/-1)*
+- `server/docs/ai/adr/2026-09-15-hosted-responses.md` *(+141/-0)*
+- `server/docs/ai/adr/2026-09-17-tts-flux-history-read-model.md` *(+20/-0)*
+
+#### Telemetry & Analytics (`⚪ ignore / rejected in fork`) — 2 file(s) (+48/-7)
+- `server/apps/api/src/routes/openai/v1/middlewares/telemetry.test.ts` *(+38/-0)*
+- `server/apps/api/src/routes/openai/v1/middlewares/telemetry.ts` *(+10/-7)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (13)
+- [#2590](https://github.com/moeru-ai/airi/pull/2590) `feat(provider): add display names for v2 Provider connections` by **@nayounsang** *(1 comments)*
+- [#2589](https://github.com/moeru-ai/airi/pull/2589) `fix(api): ignore empty Responses SSE messages` by **@luoling8192** *(4 comments)*
+- [#2588](https://github.com/moeru-ai/airi/pull/2588) `docs(contributing): align GitHub setup guide with pinned tooling` by **@Redestiny** *(1 comments)*
+- [#2587](https://github.com/moeru-ai/airi/pull/2587) `fix(stage-ui): restore official chat default` by **@luoling8192** *(1 comments)*
+- [#2586](https://github.com/moeru-ai/airi/pull/2586) `Nanakura/chore/remove vscode integration` by **@cuwayo** *(0 comments)*
+- [#2583](https://github.com/moeru-ai/airi/pull/2583) `feat(stage-ui): allow official provider protocol selection` by **@luoling8192** *(1 comments)*
+- [#2584](https://github.com/moeru-ai/airi/pull/2584) `fix(pipelines-audio): stop yielding tiny boost chunks` by **@FlowerWater1019** *(1 comments)*
+- [#2581](https://github.com/moeru-ai/airi/pull/2581) `fix(stage-ui): paint the scene into the canvas each renderer already draws` by **@chiba233** *(1 comments)*
+- [#2580](https://github.com/moeru-ai/airi/pull/2580) `fix(stage-tamagotchi): prevent duplicate user data folder openings` by **@jim139129** *(1 comments)*
+- [#2578](https://github.com/moeru-ai/airi/pull/2578) `fix(stage-tamagotchi): hold clicks where a scene is painted` by **@chiba233** *(2 comments)*
+- [#2576](https://github.com/moeru-ai/airi/pull/2576) `fix(stage-tamagotchi): let a scene decide click-through per pixel` by **@chiba233** *(1 comments)*
+- [#2577](https://github.com/moeru-ai/airi/pull/2577) `fix(ui): give focus rings room and centre the add button` by **@chiba233** *(1 comments)*
+- [#2575](https://github.com/moeru-ai/airi/pull/2575) `fix(stage-pages): hide unavailable providers from v2 catalog` by **@Bruce-Yii** *(0 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (8)
+- [#2554](https://github.com/moeru-ai/airi/pull/2554) `feat(api): add stateless Responses gateway with Flux settlement` — `OPEN` ➔ `MERGED`
+- [#2572](https://github.com/moeru-ai/airi/pull/2572) `feat(plugin-host): add activation planner` — `Draft` ➔ `Ready`
+- [#2491](https://github.com/moeru-ai/airi/pull/2491) `feat(server): group TTS billing history by chat round` — `OPEN` ➔ `MERGED`
+- [#2568](https://github.com/moeru-ai/airi/pull/2568) `refactor(stage-ui): airi card ui` — `OPEN` ➔ `MERGED`
+- [#2352](https://github.com/moeru-ai/airi/pull/2352) `fix(stage-ui-three): maintain vrm emotion weights and prevent morph conflicts` — `OPEN` ➔ `MERGED`
+- [#2391](https://github.com/moeru-ai/airi/pull/2391) `feat(stage-*): add screen ambient light` — `Draft` ➔ `Ready`
+- [#2560](https://github.com/moeru-ai/airi/pull/2560) `fix(stage-ui): emit Uint8Array chunks for streaming transcription audio` — `OPEN` ➔ `MERGED`
+- [#2569](https://github.com/moeru-ai/airi/pull/2569) `feat(stage-tamagotchi): show recent VRM resource events` — `OPEN` ➔ `CLOSED`
+
+#### 💬 Discussion Activity (7)
+- [#2554](https://github.com/moeru-ai/airi/pull/2554) `feat(api): add stateless Responses gateway with Flux settlement` — *+84 comments (8 ➔ 92 total)*
+- [#2491](https://github.com/moeru-ai/airi/pull/2491) `feat(server): group TTS billing history by chat round` — *+7 comments (52 ➔ 59 total)*
+- [#2568](https://github.com/moeru-ai/airi/pull/2568) `refactor(stage-ui): airi card ui` — *+6 comments (9 ➔ 15 total)*
+- [#2121](https://github.com/moeru-ai/airi/pull/2121) `chore(i18n): update translations` — *+3 comments (99 ➔ 102 total)*
+- [#2391](https://github.com/moeru-ai/airi/pull/2391) `feat(stage-*): add screen ambient light` — *+5 comments (1 ➔ 6 total)*
+- [#2546](https://github.com/moeru-ai/airi/pull/2546) `feat(stage-ui): add voice messages and mobile dictation` — *+3 comments (5 ➔ 8 total)*
+- [#2120](https://github.com/moeru-ai/airi/pull/2120) `refactor(stage-pages): rebuild AIRI Card editor` — *+1 comments (40 ➔ 41 total)*
+
+---
 ## [2026-09-17] Upstream Delta: `1b019c32..fa159df1` (12 commits, 74 files, 35 PR update(s))
 
 ### 🎯 Executive Highlights

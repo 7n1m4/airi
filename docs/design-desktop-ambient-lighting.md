@@ -1,10 +1,12 @@
-# Design Specification: Dynamic Desktop Ambient Lighting (Screen Bounce) for Three.js / VRM
+# Design Specification: Dynamic Desktop Ambient Lighting (Screen Bounce) for 3D (VRM & MMD) and 2D (Live2D)
 
 ## 1. Overview & Motivation
 
-When a 3D desktop mascot (VRM / MMD) renders over a transparent desktop window, standard static three-point lighting often makes the character look "pasted on" or detached from the desktop environment. In real-world lighting, desktop monitors and active applications cast strong localized ambient light onto nearby physical objects.
+When a desktop mascot renders over a transparent desktop window, standard static lighting often makes the character look "pasted on" or detached from the desktop environment. In real-world lighting, desktop monitors and active applications cast strong localized ambient light onto nearby physical objects.
 
-This document specifies the architecture, mathematical model, and implementation roadmap for **Dynamic Desktop Ambient Lighting** in AIRI (`@proj-airi/stage-ui-three` / `@proj-airi/stage-ui-vrm`). Inspired by the desktop global illumination probe in Mate-Engine (`DesktopAmbientProbe.cs`), this system samples the screen perimeter surrounding the mascot, computes continuous color and saturation-boosted light values, and drives a real-time 4-point directional lighting rig in Three.js.
+This document specifies the architecture, mathematical model, and implementation roadmap for **Dynamic Desktop Ambient Lighting** across AIRI's avatar runtimes:
+1. **3D Avatars (VRM & MMD)**: Driving real-time 4-point directional lighting rigs in Three.js (`@proj-airi/stage-ui-three` and `@proj-airi/stage-ui-mmd`).
+2. **2D Avatars (Live2D Extension)**: Driving a real-time WebGL/PixiJS post-processing shader filter (`@proj-airi/stage-ui-live2d`), adopting and integrating the upstream pattern established in **PR #2391** (`feat(stage-*): add screen ambient light`).
 
 ```
                    [ 🖥️ Top Screen Band (Menu Bar / Active App Header) ]
@@ -12,7 +14,7 @@ This document specifies the architecture, mathematical model, and implementation
                                           ▼
                                    [ topLight (0, 3, 0) ]
                                          ↓
- [ 🖥️ Left Screen Band ] ──► [ leftLight (-3, 0, 0) ]   👩 VRM Model   [ rightLight (3, 0, 0) ] ◄── [ 🖥️ Right Screen Band ]
+ [ 🖥️ Left Screen Band ] ──► [ leftLight (-3, 0, 0) ]   👩 3D/2D Model   [ rightLight (3, 0, 0) ] ◄── [ 🖥️ Right Screen Band ]
                                          ↑
                                   [ bottomLight (0, -3, 0) ]
                                           ▲
@@ -44,12 +46,19 @@ flowchart TD
         F --> G[DampHSV Temporal Exponential Smoothing]
     end
 
-    subgraph ThreeRig["4. Three.js Lighting Rig"]
+    subgraph ThreeRig["4a. 3D Lighting Rig (VRM & MMD / Three.js)"]
         G --> H1[TresDirectionalLight: Top Light]
         G --> H2[TresDirectionalLight: Bottom Light]
         G --> H3[TresDirectionalLight: Left Light]
         G --> H4[TresDirectionalLight: Right Light]
-        H1 & H2 & H3 & H4 --> I[VRM / MToon Shading Pass]
+        H1 & H2 & H3 & H4 --> I1[VRM / MToon Shading Pass]
+        H1 & H2 & H3 & H4 --> I2[MMD / PMX Toon Shading Pass]
+    end
+
+    subgraph Live2DFilter["4b. 2D Shader Filter (Live2D / PixiJS - Upstream PR #2391)"]
+        G --> J1[Color Matrix / Ambient Uniforms]
+        J1 --> J2[ScreenAmbientLightFilter on Live2D Model]
+        J2 --> J3[Ambient Tint & Edge Bounce Pass]
     end
 ```
 
@@ -132,33 +141,65 @@ VRM's MToon shader naturally supports multiple directional lights:
 2. **Left/Right Bounce**: Colors the toon rim and indirect shade boundaries according to the apps flanking the character.
 3. **Bottom Bounce**: Picks up the taskbar/dock color, giving soft under-chin/feet grounding.
 
+### 4.3 MMD Scene Integration & Shading Feasibility
+Like VRM, AIRI's MMD pipeline (`@proj-airi/stage-ui-mmd` / `packages/stage-ui-mmd/src/components/scenes/MMD.vue`) runs entirely on Three.js:
+- **Shared Scene Graph**: `MMD.vue` manages an underlying Three.js scene, camera, and render loop powered by `MMDLoader` and `MMDAnimationHelper`.
+- **Zero-Shader-Rewrite Feasibility**: MMD PMX materials (`MeshToonMaterial`, `MeshPhongMaterial`, or custom PMX toon shaders) natively receive Three.js directional lights (`THREE.DirectionalLight`).
+- **Direct Drop-in**: The exact same 4-point directional bounce rig (`topLight`, `bottomLight`, `leftLight`, `rightLight`) configured for `ThreeScene.vue` can be mounted in `MMD.vue`, illuminating MMD models with real-time desktop color bounce with zero material modifications.
+
 ---
 
-## 5. Web & Non-Electron Fallbacks
+## 5. Cross-Engine Extension: 2D Live2D Ambient Lighting (Upstream PR #2391)
+
+While 3D models (VRM & MMD) respond directly to scene light sources via vertex normals, 2D avatars present a different challenge:
+
+### 5.1 3D vs. 2D Lighting Paradigm
+* **3D (VRM & MMD)**: Meshes have 3D normals, depth buffers, and complex toon shaders that natively sample scene lights.
+* **2D (Live2D Cubism)**: Models consist of flat 2D sprite meshes rendered via WebGL / PixiJS. They possess no 3D surface normals or depth buffers and cannot interact with Three.js directional light objects.
+
+### 5.2 Upstream Reference Architecture: PR #2391
+Upstream PR [#2391](https://github.com/moeru-ai/airi/pull/2391) (`feat(stage-*): add screen ambient light`, authored by `@chiba233`) introduces an elegant post-processing solution specifically for Live2D:
+1. **PixiJS WebGL Shader Filter**: Implements `ScreenAmbientLightFilter` in `packages/stage-ui-live2d/src/filters/screen-ambient-light.ts` (+644 lines), applying dynamic ambient tinting, screen color bleed, and luminance adaptation directly to the Live2D model texture.
+2. **Model Lifecycle Binding**: Bound into `packages/stage-ui-live2d/src/components/scenes/live2d/Model.vue` to update uniform parameters during frame rendering, with clean disposal on unmount to prevent GPU texture leakage.
+3. **Shared Sampling & Environment Calculation**: Encapsulated in `packages/stage-shared/src/screen-ambient-light/sampling.ts` and `environment.ts`, computing dominant color, display luminance, and edge bounds.
+
+### 5.3 Unified Sampling Core Strategy
+To avoid running duplicate screen capture loops, AIRI can deploy a single unified capture & perimeter extraction service (`useScreenAmbientLight` / `packages/stage-shared/src/screen-ambient-light/`):
+* **Dual Output Dispatch**:
+  * **When VRM or MMD is active**: The extracted 4-band HSV colors drive the Three.js 4-point directional lighting rig in `ThreeScene.vue` / `MMD.vue`.
+  * **When Live2D is active**: The extracted ambient environment parameters drive the PixiJS `ScreenAmbientLightFilter` uniforms on the `Live2DModel`.
+  * **When Spine is active**: Future 2D lighting can reuse the same filter uniforms as Live2D.
+
+---
+
+## 6. Web & Non-Electron Fallbacks
 
 When running in browser environments without OS desktop screen capture permissions (`stage-web` or `stage-pocket`):
 * **Stage Scenery Fallback**: The probe automatically samples the active background image loaded in `useBackgroundStore().activeBackground`.
-* **Quadrant Sampling**: The background image canvas is sliced into Top/Bottom/Left/Right quadrants to generate consistent scene-matched lighting.
+* **Quadrant Sampling**: The background image canvas is sliced into Top/Bottom/Left/Right quadrants to generate consistent scene-matched lighting across both 3D lights and 2D filters.
 
 ---
 
-## 6. Settings & Control Customizer Schema
+## 7. Settings & Control Customizer Schema
 
 | Key | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
-| `ambientScreenLightEnabled` | `boolean` | `false` | Master toggle for dynamic desktop bounce lighting. |
+| `ambientScreenLightEnabled` | `boolean` | `false` | Master toggle for dynamic desktop bounce lighting (VRM, MMD, Live2D). |
 | `ambientScreenLightSmoothing` | `number` | `0.85` | Exponential smoothing factor ($0.0 \to 1.0$). |
 | `ambientScreenLightIntensity` | `number` | `1.0` | Global multiplier for ambient bounce intensity. |
 | `ambientScreenLightCaptureHz` | `number` | `10` | Screen sampling frequency (Hz). |
 
 ---
 
-## 7. Implementation File Roadmap
+## 8. Implementation File Roadmap
 
-| Path | Purpose |
-| :--- | :--- |
-| `packages/stage-ui-three/src/composables/vrm/use-desktop-ambient-lighting.ts` | **NEW**: Pure composable managing capture stream, color extraction, `DampHSV` math, and light state refs. |
-| `packages/stage-ui-three/src/components/ThreeScene.vue` | **MODIFY**: Mount the 4 directional bounce lights and bind to composable refs. |
-| `packages/stage-ui/src/stores/settings/stage.ts` | **MODIFY**: Add settings schema keys for ambient bounce lighting. |
-| `packages/stage-ui/src/constants/control-customizer.ts` | **MODIFY**: Add toggle entry in Control Strip Customizer under `stage-lighting`. |
-| `packages/i18n/src/locales/en/settings.yaml` | **MODIFY**: Add localized strings for ambient screen lighting controls. |
+| Phase | Path | Purpose |
+| :--- | :--- | :--- |
+| **Phase 1 (3D Core)** | `packages/stage-shared/src/screen-ambient-light/` | **NEW/PORT**: Unified desktop screen capture, mask exclusion, and color science sampling engine. |
+| **Phase 1 (VRM)** | `packages/stage-ui-three/src/components/ThreeScene.vue` | **MODIFY**: Mount the 4 directional bounce lights and bind to sampling refs. |
+| **Phase 2 (MMD)** | `packages/stage-ui-mmd/src/components/scenes/MMD.vue` | **MODIFY**: Mount the 4 directional bounce lights in MMD Three.js scene (full 3D parity with VRM). |
+| **Phase 3 (Live2D)** | `packages/stage-ui-live2d/src/filters/screen-ambient-light.ts` | **PORT (PR #2391)**: PixiJS WebGL shader filter applying ambient tint and luminance to Live2D. |
+| **Phase 3 (Live2D)** | `packages/stage-ui-live2d/src/components/scenes/live2d/Model.vue` | **PORT (PR #2391)**: Attach filter to Live2D model instance with lifecycle disposal. |
+| **Phase 4 (UI/Settings)** | `packages/stage-ui/src/stores/settings/stage.ts` | **MODIFY**: Add settings schema keys for cross-model ambient bounce lighting. |
+| **Phase 4 (UI/Settings)** | `packages/stage-ui/src/constants/control-customizer.ts` | **MODIFY**: Add toggle entry in Control Strip Customizer under `stage-lighting`. |
+| **Phase 4 (i18n)** | `packages/i18n/src/locales/en/settings.yaml` | **MODIFY**: Add localized strings for ambient screen lighting controls. |
