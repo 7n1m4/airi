@@ -270,7 +270,7 @@ const activeModelDisplay = computed(() => {
     return matched.name
   }
   const modelShort = currentModel.value?.split('/').pop() || currentModel.value || 'None'
-  return `${modelShort} / ${currentProvider.value || 'None'}`
+  return `${currentProvider.value || 'None'} / ${modelShort}`
 })
 </script>
 

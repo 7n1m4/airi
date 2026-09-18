@@ -170,7 +170,8 @@ export const useSpeechStore = defineStore('speech', () => {
     const metadataLoaded = Object.keys(providersStore.providerMetadata).length > 0
 
     // Only reset if metadata is loaded and the provider actually doesn't exist in metadata
-    if (metadataLoaded && !providersStore.providerMetadata[providerId]) {
+    const baseId = providerId.includes(':') ? providerId.split(':')[0] : providerId
+    if (metadataLoaded && !providersStore.providerMetadata[baseId]) {
       activeSpeechProvider.value = 'speech-noop'
       activeSpeechModel.value = ''
       activeSpeechVoiceId.value = ''

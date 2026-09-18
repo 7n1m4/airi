@@ -276,11 +276,14 @@ export const useHearingStore = defineStore('hearing-store', () => {
     if (onboardingStore.needsOnboarding)
       return
 
-    if (Object.keys(providersStore.providerMetadata).length > 0 && activeTranscriptionProvider.value && !providersStore.providerMetadata[activeTranscriptionProvider.value]) {
-      console.warn(`[Hearing] Provider ${activeTranscriptionProvider.value} no longer exists. Resetting.`)
-      activeTranscriptionProvider.value = ''
-      activeTranscriptionModel.value = ''
-      activeCustomModelName.value = ''
+    if (Object.keys(providersStore.providerMetadata).length > 0 && activeTranscriptionProvider.value) {
+      const baseId = activeTranscriptionProvider.value.includes(':') ? activeTranscriptionProvider.value.split(':')[0] : activeTranscriptionProvider.value
+      if (!providersStore.providerMetadata[baseId]) {
+        console.warn(`[Hearing] Provider ${activeTranscriptionProvider.value} no longer exists. Resetting.`)
+        activeTranscriptionProvider.value = ''
+        activeTranscriptionModel.value = ''
+        activeCustomModelName.value = ''
+      }
     }
   }, { immediate: true })
 

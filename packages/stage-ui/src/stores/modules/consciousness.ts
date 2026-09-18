@@ -104,9 +104,12 @@ export const useConsciousnessStore = defineStore('consciousness', () => {
     if (onboardingStore.needsOnboarding)
       return
 
-    if (Object.keys(providersStore.providerMetadata).length > 0 && activeProvider.value && !providersStore.providerMetadata[activeProvider.value]) {
-      activeProvider.value = ''
-      activeModel.value = ''
+    if (Object.keys(providersStore.providerMetadata).length > 0 && activeProvider.value) {
+      const baseId = activeProvider.value.includes(':') ? activeProvider.value.split(':')[0] : activeProvider.value
+      if (!providersStore.providerMetadata[baseId]) {
+        activeProvider.value = ''
+        activeModel.value = ''
+      }
     }
   }, { immediate: true })
 

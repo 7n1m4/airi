@@ -284,10 +284,13 @@ export const useVisionStore = defineStore('vision', () => {
 
   // Self-healing: Reset active provider if it no longer exists
   watch(activeProvider, () => {
-    if (Object.keys(providersStore.providerMetadata).length > 0 && activeProvider.value && !providersStore.providerMetadata[activeProvider.value]) {
-      console.warn(`[Vision] Provider ${activeProvider.value} no longer exists. Resetting.`)
-      activeProvider.value = ''
-      resetModelSelection()
+    if (Object.keys(providersStore.providerMetadata).length > 0 && activeProvider.value) {
+      const baseId = activeProvider.value.includes(':') ? activeProvider.value.split(':')[0] : activeProvider.value
+      if (!providersStore.providerMetadata[baseId]) {
+        console.warn(`[Vision] Provider ${activeProvider.value} no longer exists. Resetting.`)
+        activeProvider.value = ''
+        resetModelSelection()
+      }
     }
   }, { immediate: true })
 

@@ -19,6 +19,7 @@ import {
 } from '../../../../../../constants/prompts/character-defaults'
 import { useChatSessionStore } from '../../../../../../stores/chat/session-store'
 import { useDisplayModelsStore } from '../../../../../../stores/display-models'
+import { ensureMcpServersForAllowedTools } from '../../../../../../stores/mcp-tool-bridge'
 import { useAiriCardStore } from '../../../../../../stores/modules/airi-card'
 import { useSpeechStore } from '../../../../../../stores/modules/speech'
 import { useVisionStore } from '../../../../../../stores/modules/vision'
@@ -427,6 +428,16 @@ export function populateAiriExtensions(
     }
   }
 
+  // Grounding & Situational Awareness
+  const isGroundingConfigured = draft.sensorGroundingEnabled !== undefined
+  airi.groundingEnabled = isGroundingConfigured ? Boolean(draft.sensorGroundingEnabled) : (airi.groundingEnabled ?? true)
+  airi.groundingMemoryEnabled = airi.groundingMemoryEnabled ?? true
+  airi.groundingTopicsEnabled = airi.groundingTopicsEnabled ?? true
+  airi.salienceGateEnabled = draft.salienceGatingEnabled !== undefined ? Boolean(draft.salienceGatingEnabled) : (airi.salienceGateEnabled ?? true)
+  if (airi.recentTopics === undefined) {
+    airi.recentTopics = []
+  }
+
   airi.generation = {
     enabled: true,
     provider: draft.llmProvider || 'openai',
@@ -634,6 +645,12 @@ export function useStarterCardCommit() {
     const payload = compileCardPayload(draft, persona, displayModelsStore.displayModels)
     if (draft.modules?.speech && payload.data?.extensions?.airi?.modules?.speech) {
       payload.data.extensions.airi.modules.speech.voice_id = charProfileId
+    }
+
+    // Ensure desktop MCP servers (open-websearch, filesystem) are configured in mcp.json if allowedTools are present
+    const allowedTools = payload.data?.extensions?.airi?.generation?.known?.allowedTools
+    if (Array.isArray(allowedTools) && allowedTools.length > 0) {
+      void ensureMcpServersForAllowedTools(allowedTools)
     }
 
     const createdCardId = await cardStore.addCard(payload)
