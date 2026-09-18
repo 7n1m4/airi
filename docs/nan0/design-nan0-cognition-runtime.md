@@ -217,6 +217,7 @@ We implemented an exhaustive cleanroom shootout script (`scripts/tests/rwkv-harn
 #### Key Technical Discoveries
 1. **The Distractor Attractor Principle**: Flat boolean queries fail on subtle linguistic negations and idioms. For example, in case `F21B` (*"Don't give me your gentlest roast"*), Arm A's boolean `roast_invitation` returned `true` (50.5% confidence) because it detected roast concepts without contrastive bounds. Arm B provided the option `refused_or_negated_roast`, attracting 76.5% of the probability mass and driving false positives to absolute zero.
 2. **Zero-Cost Nuance (+1.7 ms delta)**: Because Jev evaluates all questions in parallel across internal classifier heads during a single forward pass, providing rich multi-choice options with negative distractors increased median latency by only **1.7 ms** (436.5 ms vs 438.2 ms) while boosting overall accuracy from 93.0% to a flawless **100.0%**.
+3. **Peer Review V2 Observable Schema (80 Choices)**: Following external peer review, we refined the question schema ([`docs/nan0/nan0-jev-12-group-rich-v2.questions.json`](./nan0-jev-12-group-rich-v2.questions.json)), transitioning from unobservable mental-state terms ("sincere", "earnest") to observable communicative acts (`personal_apology`, `direct_future_commitment`) and expanding negative distractors to 80 choices across the 12 groups. Cleanroom validation confirmed **43/43 (100.0%) full-vector accuracy** and **10/10 on counterexamples** with a median latency of **429–452 ms** across both structured JSON and string states.
 
 ---
 

@@ -360,3 +360,21 @@ Following the realization that coarse 3-dial scoring bypassed Kyo's 12 canonical
    - **Delta: +1.7 ms**. Because Jev evaluates all 12 queries concurrently across internal classification heads within a single model forward pass, rich contrastive choices provide 100% accuracy with zero real-world latency penalty.
 4. **Committed Trace**: `reports/nan0-cleanroom/nan0-shallow-vs-rich-shootout-trace.json`.
 
+---
+
+### 7.5 Shootout V4: V1 Baseline vs. V2 Reviewer Candidate (80 Choices)
+
+Following external peer review, we evaluated the refined 80-choice observable schema ([`docs/nan0/nan0-jev-12-group-rich-v2.questions.json`](./nan0/nan0-jev-12-group-rich-v2.questions.json)) across all 43 cases in both structured JSON and string modes (`scripts/tests/rwkv-harness/experiments/jev-v1-vs-v2-shootout.py`).
+
+| Metric | Arm 1: V1 Baseline (41 choices) | Arm 2: V2 Refined (80 choices, structured) | Arm 3: V2 Refined (80 choices, string) |
+| :--- | :---: | :---: | :---: |
+| **Full Vector Matches** | **43 / 43 (100.0%)** | **43 / 43 (100.0%)** | **43 / 43 (100.0%)** |
+| **Counterexamples (`F18A`–`F22B`)** | **10 / 10 (100.0%)** | **10 / 10 (100.0%)** | **10 / 10 (100.0%)** |
+| **False Spike Rate** | **0.0%** | **0.0%** | **0.0%** |
+| **Median Latency ($p_{50}$)** | **398.8 ms** | **452.4 ms** (+53.6 ms) | **429.5 ms** (+30.7 ms) |
+| **Average Tokens/Turn** | 2,765 tokens | 6,451 tokens | 6,356 tokens |
+| **Cost per 1,000 Turns** | ~$0.09 | ~$0.22 | ~$0.22 |
+
+**Conclusion**: The 80-choice V2 schema provides observable communicative definitions and nuanced distractor attractors while maintaining **100.0% accuracy** and a fast **~430–450 ms response time**. Full trace recorded at `reports/nan0-cleanroom/nan0-v1-vs-v2-shootout-trace.json`.
+
+
