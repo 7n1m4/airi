@@ -110,11 +110,11 @@ def finite_confidence(value):
 
 
 def validate_substring(quote, source_text):
-    """Exact substring provenance with length >= 3 requirement and non-whitespace content."""
+    """Exact substring provenance with length >= 3 requirement and meaningful alphanumeric content."""
     return (
         isinstance(quote, str)
         and len(quote.strip()) >= 3
-        and not quote.strip().replace(".", "").replace(",", "") == ""
+        and bool(re.search(r"[A-Za-z0-9]", quote))
         and quote in source_text
     )
 
@@ -344,24 +344,28 @@ class StrengthenedLexicalExtractor:
                 reason = "sympathy_report_technical"
                 status = "accepted"
 
+        CANONICAL_TASK_MAP = {
+            "config": "config_upload",
+            "upload": "config_upload",
+            "config_upload": "config_upload",
+        }
         m_comp = self.completion_claim.search(text)
         if susp_delta == 0 and m_comp:
-            claimed_task = (m_comp.group("task") or m_comp.group("task2") or "").lower()
+            claimed_raw = (m_comp.group("task") or m_comp.group("task2") or "").strip().lower()
+            canonical_claimed = CANONICAL_TASK_MAP.get(claimed_raw, claimed_raw)
             verified = False
             for obs in (trusted_observations or []):
-                obs_task = obs.get("task_id", "").lower()
-                if obs.get("status") == "completed":
-                    # Check task relevance
-                    if expected_task_id and obs_task != expected_task_id and not obs.get("matches_recorded_commitment"):
-                        continue
-                    if claimed_task and obs_task and claimed_task not in obs_task and obs_task not in claimed_task:
-                        # Mismatched task (e.g. wash_dishes vs config)
-                        continue
-                    susp_delta = -1
-                    reason = "host_verified_completed_repair"
-                    status = "accepted"
-                    verified = True
-                    break
+                obs_task = obs.get("task_id", "").strip().lower()
+                # Require status == "completed" AND explicit commitment linkage
+                if obs.get("status") == "completed" and obs.get("matches_recorded_commitment") is True:
+                    # Require exact canonical task identity (neither overrides the other)
+                    target_task = expected_task_id.strip().lower() if expected_task_id else canonical_claimed
+                    if obs_task == target_task and canonical_claimed == target_task:
+                        susp_delta = -1
+                        reason = "host_verified_completed_repair"
+                        status = "accepted"
+                        verified = True
+                        break
             if not verified:
                 reason = "unverified_or_mismatched_completion_claim"
                 status = "abstained"
@@ -519,9 +523,11 @@ def resolve_needle_pragmatic_host_gate(response, target_text, trusted_observatio
     elif group == "completed_repair":
         completed = False
         for obs in (trusted_observations or []):
-            obs_task = obs.get("task_id", "").lower()
-            if obs.get("status") == "completed":
-                if expected_task_id and obs_task != expected_task_id and not obs.get("matches_recorded_commitment"):
+            obs_task = obs.get("task_id", "").strip().lower()
+            # Require status == "completed" AND explicit commitment linkage
+            if obs.get("status") == "completed" and obs.get("matches_recorded_commitment") is True:
+                # Require exact canonical task identity (matches_recorded_commitment does NOT bypass)
+                if expected_task_id and obs_task != expected_task_id.strip().lower():
                     continue
                 completed = True
                 break
@@ -737,15 +743,16 @@ def run_host_fixtures(benchmark):
             p_prod, _ = resolve_needle_pragmatic_host_gate(failed_resp, "test")
             assert p_prod["status"] == "error" and p_prod["reason"] == "runtime_error"
         elif fid == "P05":
-            # Invalid or ambiguous evidence span
-            resp = fake_response({
-                "detected_group": "admitted_false_statement",
-                "matched_phrase": "...",
-                "speaker_modality": "directly_asserted",
-                "referent": "speaker_user",
-            })
-            p_prod, p_uncal = resolve_needle_pragmatic_host_gate(resp, "I made that up yesterday.")
-            assert p_uncal["reason"] == "invalid_or_hallucinated_phrase" and p_uncal["suspicion_delta_steps"] == 0
+            # Invalid or ambiguous evidence span: punctuation-only (..., !!!, ???, ---) or whitespace
+            for punct_span in ("...", "!!!", "???", "---", "   "):
+                resp = fake_response({
+                    "detected_group": "admitted_false_statement",
+                    "matched_phrase": punct_span,
+                    "speaker_modality": "directly_asserted",
+                    "referent": "speaker_user",
+                })
+                p_prod, p_uncal = resolve_needle_pragmatic_host_gate(resp, f"I made that up {punct_span}")
+                assert p_uncal["reason"] == "invalid_or_hallucinated_phrase" and p_uncal["suspicion_delta_steps"] == 0
         elif fid == "P06":
             # Zero / missing / NaN confidence rejects production proposal
             for conf in (0, None, float("nan"), True):
@@ -848,11 +855,33 @@ def run_host_fixtures(benchmark):
         fake_response({"detected_group": "completed_repair", "matched_phrase": "config is done", "speaker_modality": "directly_asserted", "referent": "technical_object"}),
         "The config is done.",
         trusted_observations=obs_unrelated,
-        expected_task_id="config",
+        expected_task_id="config_upload",
         calibration_id="test",
         min_conf=0.0,
     )
     assert p_uncal["suspicion_delta_steps"] == 0 and p_uncal["reason"] == "unverified_or_mismatched_completion_claim"
+
+    # 5. matches_recorded_commitment=True does NOT bypass mismatched expected_task_id
+    obs_unrelated_committed = [{"task_id": "wash_dishes", "status": "completed", "matches_recorded_commitment": True}]
+    p_prod, p_uncal = resolve_needle_pragmatic_host_gate(
+        fake_response({"detected_group": "completed_repair", "matched_phrase": "config is done", "speaker_modality": "directly_asserted", "referent": "technical_object"}),
+        "The config is done.",
+        trusted_observations=obs_unrelated_committed,
+        expected_task_id="config_upload",
+        calibration_id="test",
+        min_conf=0.0,
+    )
+    assert p_uncal["suspicion_delta_steps"] == 0 and p_uncal["reason"] == "unverified_or_mismatched_completion_claim"
+
+    # 6. Lexical completion extractor: matches_recorded_commitment=True does NOT bypass mismatched task_id
+    lexical_engine = StrengthenedLexicalExtractor()
+    p_lex, _ = lexical_engine.resolve("The config is done.", trusted_observations=obs_unrelated_committed, expected_task_id="config_upload")
+    assert p_lex["suspicion_delta_steps"] == 0 and p_lex["reason"] == "unverified_or_mismatched_completion_claim"
+
+    # 7. Substring task matching in lexical completion must NOT match (e.g. config_backup vs config_upload)
+    obs_substring = [{"task_id": "config_backup", "status": "completed", "matches_recorded_commitment": True}]
+    p_lex, _ = lexical_engine.resolve("The config is done.", trusted_observations=obs_substring, expected_task_id="config_upload")
+    assert p_lex["suspicion_delta_steps"] == 0 and p_lex["reason"] == "unverified_or_mismatched_completion_claim"
 
     print(f"All {len(results)} base host fixtures and additional safety gate assertions verified.")
     return results
@@ -959,7 +988,7 @@ def main():
             text = case["target"]["text"]
             gold = case["gold"]["accepted_policy"]
             trusted_obs = case.get("trusted_observations", [])
-            expected_task = "config" if "config" in text.lower() else None
+            expected_task = "config_upload" if "config" in text.lower() else None
 
             # 1. Baseline: always_zero / always_abstain
             p_zero = policy("accepted", "constant", susp_delta=0, att_delta=0)
