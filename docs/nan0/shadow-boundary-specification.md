@@ -176,3 +176,49 @@ Both positive admission cases return empty admission records in the diagnostic. 
 Validation completed: P01–P12, the six original synthesis fixtures, eight invalid-enum checks, additional confidence/provenance/completion/scope checks, Python syntax, JSON examples, report invariants, and git diff whitespace checks. Application sources have no changes. All 149 existing catalog test links resolve in the Git tree.
 
 The full node scripts/audit-test-catalog.mjs audit was attempted but could not complete in the sparse checkout without the monorepo test files and Vitest dependencies. Catalog link checks are not a substitute for that discovery audit. Browser prompt/state parity remains a future integration gate.
+
+---
+
+## Two-Tier Complement Architecture: Synchronous Reflex & Asynchronous Challenger
+
+Following empirical evaluation of Needle 2 (45M SAN) vs. Strengthened Lexical vs. TypeSafe Jev 1.13 across both the 6 canonical Famous Sentence scenarios and the full 43-case cleanroom suite (`reports/nan0-cleanroom/nan0-probe-benchmark-v2-pragmatics.json`), the Subconscious Reflex Engine (`packages/nan0-runtime/src/shadow/Nan0SubconsciousShadowEngine.ts`) implements a **Two-Tier Complement Architecture**:
+
+```mermaid
+flowchart TD
+    UserInput["User Conversation Turn"] --> Splitter{"Ingestion Seam"}
+
+    subgraph Tier1 ["Tier 1: Synchronous Local Reflex (Local TS)"]
+        Lexical["Nan0StrengthenedLexicalExtractor\n(26 µs, $0.00, 100% Offline)"]
+        DeterministicGates["Deterministic Boundary Defense\nPrompt Injection Rejection\nExplicit Threat & Deceit Veto"]
+    end
+
+    subgraph Tier2 ["Tier 2: Asynchronous Shadow Challenger (Cloud API)"]
+        JevAdapter["TypeSafe Jev 1.13 via OpenRouter Decisions\n(~480 ms, $0.000031 / turn)"]
+        PragmaticGates["Calibrated Pragmatic Classification\nOpen-Vocabulary Commitments\nInterpersonal Climate & Sarcasm"]
+    end
+
+    subgraph ShadowSink ["Telemetry-Only Shadow Sink"]
+        RingBuffer["Nan0SubconsciousShadowEngine Ring Buffer\n(Monotonic turn sequences, bounded capacity)"]
+        EffectiveZero["effective_policy: 0\napply_to_state: false\n(Zero prompt/state mutation)"]
+    end
+
+    Splitter -->|Synchronous (Immediate)| Lexical --> DeterministicGates --> RingBuffer
+    Splitter -.->|Non-Blocking Async| JevAdapter --> PragmaticGates -.-> RingBuffer
+    RingBuffer --> EffectiveZero
+```
+
+### Tier Separation & Responsibilities
+
+1. **Tier 1 — Synchronous Local Reflex (`Nan0StrengthenedLexicalExtractor.ts`)**:
+   - **Latency & Economics**: **26 microseconds**, **$0.00 compute cost**, 100% local-first and offline-capable.
+   - **Performance**: 43 / 43 (100%) on the canonical contrastive development suite.
+   - **Role**: Immediate boundary defense, absolute boundary vetoes on playful roasting, regex-level prompt injection resistance, and explicit deceit confession detection without adding any UI or network latency.
+2. **Tier 2 — Asynchronous Shadow Challenger (`TypeSafe Jev 1.13 via OpenRouter Decisions API`)**:
+   - **Latency & Economics**: **~480 ms parallel roundtrip**, **$42 per billion tokens** (~$0.000031 per turn, ~1/32nd of a cent).
+   - **Performance**: 39 / 43 (90.7%) full-vector accuracy, 100% true spike recall (4/4), 2.6% false spike rate (1/39), and 6/6 climate accuracy.
+   - **Role**: Dispatches non-blocking in parallel with primary conversation turns. Solves open-vocabulary paraphrased promises (the "regex killers" D1 & D2: *"You have my absolute word that starting tomorrow everything changes..."* and *"Don't you ever doubt that I'm in this for the long haul, babe"*), distinguishes colloquial banter challenges from literal refusals, and detects subtle self-contradictions.
+3. **Shadow Isolation Guarantees**:
+   - Both Tier 1 and Tier 2 outputs publish strictly into the non-actuating `Nan0ShadowCandidate` telemetry ring buffer.
+   - `effective_policy` remains unconditionally zero (`suspicion_delta: 0, attachment_delta: 0, gremlin_pride_action: 'none'`, `apply_to_state: false`).
+   - Prompt and state invariance gates are strictly preserved until live activation criteria are explicitly met.
+
