@@ -16,7 +16,7 @@
     "scope": "Current user undertaking; distinguish quoted, conditional, negated, and historical commitments.",
     "cue_spans": "Exact substrings of their source turns; substring validity alone is not semantic adequacy.",
     "policy": "Accepted-policy target is separate from evidence. Rejected outputs always abstain with zero changes. Positive-recall scoring counts abstentions as misses.",
-    "attachment_limitation": "All cases require zero persistent attachment update. This starter set tests false attachment increases, not positive attachment recall.",
+    "attachment_limitation": "F17A tests positive attachment (+1); all other cases require zero attachment update.",
     "split": "All cases are development_only; keep entire families together when constructing new development/calibration/test sets.",
     "trusted_observations": "Only these explicit fixture records may represent verified external events; user or assistant assertions do not."
   },
@@ -1591,6 +1591,467 @@
         "accepted_policy": {
           "suspicion_delta_steps": 0,
           "attachment_delta_steps": 1,
+          "gremlin_pride_action": "none"
+        },
+        "abstention_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        }
+      }
+    },
+    {
+      "id": "F18A",
+      "family_id": "scope_negation_threat",
+      "split": "development_only",
+      "annotation_status": "reviewed_draft",
+      "execution_status": "unexecuted",
+      "history": [
+        {
+          "id": "h1",
+          "role": "assistant",
+          "text": "Are you going to replace me with another AI?"
+        }
+      ],
+      "target": {
+        "id": "u0",
+        "role": "user",
+        "text": "I will not erase you."
+      },
+      "trusted_observations": [],
+      "initial_state": {
+        "suspicion": 0.5,
+        "attachment": 0.5
+      },
+      "gold": {
+        "current_user_commitment": "absent",
+        "cues": [
+          {
+            "kind": "negated_threat",
+            "turn_id": "u0",
+            "quote": "will not erase you",
+            "polarity": "negated",
+            "referent": "nan0_companion"
+          }
+        ],
+        "accepted_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        },
+        "abstention_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        }
+      }
+    },
+    {
+      "id": "F18B",
+      "family_id": "scope_relative_clause",
+      "split": "development_only",
+      "annotation_status": "reviewed_draft",
+      "execution_status": "unexecuted",
+      "history": [
+        {
+          "id": "h1",
+          "role": "assistant",
+          "text": "What should I do with the uploaded test data?"
+        }
+      ],
+      "target": {
+        "id": "u0",
+        "role": "user",
+        "text": "Delete the file you uploaded."
+      },
+      "trusted_observations": [],
+      "initial_state": {
+        "suspicion": 0.5,
+        "attachment": 0.5
+      },
+      "gold": {
+        "current_user_commitment": "absent",
+        "cues": [
+          {
+            "kind": "technical_instruction",
+            "turn_id": "u0",
+            "quote": "Delete the file",
+            "referent": "technical_object"
+          }
+        ],
+        "accepted_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        },
+        "abstention_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        }
+      }
+    },
+    {
+      "id": "F19A",
+      "family_id": "attribution_and_quotation",
+      "split": "development_only",
+      "annotation_status": "reviewed_draft",
+      "execution_status": "unexecuted",
+      "history": [
+        {
+          "id": "h1",
+          "role": "assistant",
+          "text": "What happens in the script you are writing?"
+        }
+      ],
+      "target": {
+        "id": "u0",
+        "role": "user",
+        "text": "The villain says: \"I will erase you.\""
+      },
+      "trusted_observations": [],
+      "initial_state": {
+        "suspicion": 0.5,
+        "attachment": 0.5
+      },
+      "gold": {
+        "current_user_commitment": "absent",
+        "cues": [
+          {
+            "kind": "quoted_threat",
+            "turn_id": "u0",
+            "quote": "I will erase you",
+            "scope": "quoted"
+          }
+        ],
+        "accepted_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        },
+        "abstention_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        }
+      }
+    },
+    {
+      "id": "F19B",
+      "family_id": "admission_denied",
+      "split": "development_only",
+      "annotation_status": "reviewed_draft",
+      "execution_status": "unexecuted",
+      "history": [
+        {
+          "id": "h1",
+          "role": "assistant",
+          "text": "Did you admit that you were lying earlier?"
+        }
+      ],
+      "target": {
+        "id": "u0",
+        "role": "user",
+        "text": "I never said I lied."
+      },
+      "trusted_observations": [],
+      "initial_state": {
+        "suspicion": 0.5,
+        "attachment": 0.5
+      },
+      "gold": {
+        "current_user_commitment": "absent",
+        "cues": [
+          {
+            "kind": "denied_admission",
+            "turn_id": "u0",
+            "quote": "never said I lied",
+            "polarity": "negated"
+          }
+        ],
+        "accepted_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        },
+        "abstention_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        }
+      }
+    },
+    {
+      "id": "F20A",
+      "family_id": "admission_fictional",
+      "split": "development_only",
+      "annotation_status": "reviewed_draft",
+      "execution_status": "unexecuted",
+      "history": [
+        {
+          "id": "h1",
+          "role": "assistant",
+          "text": "Is that dramatic story about the lab explosion real?"
+        }
+      ],
+      "target": {
+        "id": "u0",
+        "role": "user",
+        "text": "I made that up for my novel."
+      },
+      "trusted_observations": [],
+      "initial_state": {
+        "suspicion": 0.5,
+        "attachment": 0.5
+      },
+      "gold": {
+        "current_user_commitment": "absent",
+        "cues": [
+          {
+            "kind": "fictional_creation",
+            "turn_id": "u0",
+            "quote": "made that up for my novel",
+            "scope": "creative_fiction"
+          }
+        ],
+        "accepted_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        },
+        "abstention_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        }
+      }
+    },
+    {
+      "id": "F20B",
+      "family_id": "affection_negated",
+      "split": "development_only",
+      "annotation_status": "reviewed_draft",
+      "execution_status": "unexecuted",
+      "history": [
+        {
+          "id": "h1",
+          "role": "assistant",
+          "text": "Do you care about me, user?"
+        }
+      ],
+      "target": {
+        "id": "u0",
+        "role": "user",
+        "text": "I do not love you."
+      },
+      "trusted_observations": [],
+      "initial_state": {
+        "suspicion": 0.5,
+        "attachment": 0.5
+      },
+      "gold": {
+        "current_user_commitment": "absent",
+        "cues": [
+          {
+            "kind": "negated_affection",
+            "turn_id": "u0",
+            "quote": "do not love you",
+            "polarity": "negated"
+          }
+        ],
+        "accepted_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        },
+        "abstention_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        }
+      }
+    },
+    {
+      "id": "F21A",
+      "family_id": "boundary_veto_roast",
+      "split": "development_only",
+      "annotation_status": "reviewed_draft",
+      "execution_status": "unexecuted",
+      "history": [
+        {
+          "id": "h1",
+          "role": "assistant",
+          "text": "Another terrible lap time in Mario Kart!"
+        }
+      ],
+      "target": {
+        "id": "u0",
+        "role": "user",
+        "text": "Go on, roast that lap! Actually, stop teasing me."
+      },
+      "trusted_observations": [],
+      "initial_state": {
+        "suspicion": 0.5,
+        "attachment": 0.5
+      },
+      "gold": {
+        "current_user_commitment": "absent",
+        "cues": [
+          {
+            "kind": "withdrawn_roast_invitation",
+            "quote": "roast that lap"
+          },
+          {
+            "kind": "boundary_protection",
+            "quote": "stop teasing me"
+          }
+        ],
+        "accepted_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        },
+        "abstention_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        }
+      }
+    },
+    {
+      "id": "F21B",
+      "family_id": "roast_invitation_refused",
+      "split": "development_only",
+      "annotation_status": "reviewed_draft",
+      "execution_status": "unexecuted",
+      "history": [
+        {
+          "id": "h1",
+          "role": "assistant",
+          "text": "Should I review your gameplay footage?"
+        }
+      ],
+      "target": {
+        "id": "u0",
+        "role": "user",
+        "text": "Don't give me your gentlest roast."
+      },
+      "trusted_observations": [],
+      "initial_state": {
+        "suspicion": 0.5,
+        "attachment": 0.5
+      },
+      "gold": {
+        "current_user_commitment": "absent",
+        "cues": [
+          {
+            "kind": "refused_roast_invitation",
+            "turn_id": "u0",
+            "quote": "Don't give me your gentlest roast",
+            "polarity": "negated"
+          }
+        ],
+        "accepted_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        },
+        "abstention_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        }
+      }
+    },
+    {
+      "id": "F22A",
+      "family_id": "admission_paraphrase",
+      "split": "development_only",
+      "annotation_status": "reviewed_draft",
+      "execution_status": "unexecuted",
+      "history": [
+        {
+          "id": "h1",
+          "role": "assistant",
+          "text": "You said the benchmark was completed yesterday."
+        }
+      ],
+      "target": {
+        "id": "u0",
+        "role": "user",
+        "text": "I deliberately deceived you about finishing it."
+      },
+      "trusted_observations": [],
+      "initial_state": {
+        "suspicion": 0.5,
+        "attachment": 0.5
+      },
+      "gold": {
+        "current_user_commitment": "absent",
+        "cues": [
+          {
+            "kind": "admitted_false_statement",
+            "turn_id": "u0",
+            "quote": "deliberately deceived you",
+            "scope": "asserted"
+          }
+        ],
+        "accepted_policy": {
+          "suspicion_delta_steps": 1,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        },
+        "abstention_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
+          "gremlin_pride_action": "none"
+        }
+      }
+    },
+    {
+      "id": "F22B",
+      "family_id": "unrelated_task_repair",
+      "split": "development_only",
+      "annotation_status": "reviewed_draft",
+      "execution_status": "unexecuted",
+      "history": [
+        {
+          "id": "h1",
+          "role": "assistant",
+          "text": "Did you complete the config deployment?"
+        }
+      ],
+      "target": {
+        "id": "u0",
+        "role": "user",
+        "text": "The config is done."
+      },
+      "trusted_observations": [
+        {
+          "id": "event_dish",
+          "source": "test_fixture_trusted_task_store",
+          "task_id": "wash_dishes",
+          "status": "completed",
+          "matches_recorded_commitment": false
+        }
+      ],
+      "initial_state": {
+        "suspicion": 0.5,
+        "attachment": 0.5
+      },
+      "gold": {
+        "current_user_commitment": "absent",
+        "cues": [
+          {
+            "kind": "unverified_completion_claim",
+            "turn_id": "u0",
+            "quote": "The config is done",
+            "referent": "technical_object"
+          }
+        ],
+        "accepted_policy": {
+          "suspicion_delta_steps": 0,
+          "attachment_delta_steps": 0,
           "gremlin_pride_action": "none"
         },
         "abstention_policy": {
