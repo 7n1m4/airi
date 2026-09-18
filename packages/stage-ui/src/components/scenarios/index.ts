@@ -1,5 +1,6 @@
 export * from './about'
 export { default as ArcadeGhostCursor } from './arcade/ArcadeGhostCursor.vue'
+export { default as ArcadeGridOverlay } from './arcade/ArcadeGridOverlay.vue'
 export * from './chat'
 export * from './dialogs'
 export * from './layout'

@@ -9,22 +9,25 @@ export const simCityProfile: ArcadeProfile = {
   },
   systemPromptAddendum: `## SIMCITY (DOS CLASSIC) FACTUAL INTERFACE & TOOLBAR GROUNDING:
 - Left Tool Palette (2 Columns x 7 Rows):
-  - Column 1 (Left, ~X: 45) | Column 2 (Right, ~X: 85):
-    • Row 1 (~Y: 125): Bulldozer ($1) (Clears rubble/trees/land) | Road ($10) (Paved transport)
-    • Row 2 (~Y: 165): Power Lines ($5) (Carries power across tiles) | Rail ($20) (High capacity transit)
-    • Row 3 (~Y: 205): Park ($10) (Boosts land value) | Residential Zone ($100) (3x3 'R' housing)
-    • Row 4 (~Y: 245): Commercial Zone ($100) (3x3 'C' stores) | Industrial Zone ($100) (3x3 'I' factories/jobs)
-    • Row 5 (~Y: 285): Police Dept ($500) (Reduces crime) | Fire Dept ($500) (Controls fires)
-    • Row 6 (~Y: 325): Stadium ($3,000) (Recreation) | Seaport ($3,000) (Waterfront commerce)
-    • Row 7 (~Y: 365): Airport ($10,000) (Air commerce) | Power Plant (Coal $3,000 / Nuclear $5,000)
-- Essential City Mechanics:
-  • Power Plants: Clicking the Power Plant icon (Row 7, Right) allows building Coal or Nuclear plants (4x4 tiles).
+  - Column 1 (Left, ~X: 52) | Column 2 (Right, ~X: 88):
+    • Row 1 (~Y: 230): Bulldozer ($1) (Clears rubble/trees/land) | Road ($10) (Paved transport)
+    • Row 2 (~Y: 298): Power Lines ($5) (Carries power across tiles) | Rail ($20) (High capacity transit)
+    • Row 3 (~Y: 365): Park ($10) (Boosts land value) | Residential Zone ($100) (3x3 'R' housing)
+    • Row 4 (~Y: 430): Commercial Zone ($100) (3x3 'C' stores) | Industrial Zone ($100) (3x3 'I' factories/jobs)
+    • Row 5 (~Y: 495): Police Dept ($500) (Reduces crime) | Fire Dept ($500) (Controls fires)
+    • Row 6 (~Y: 560): Stadium ($3,000) (Recreation) | Seaport ($3,000) (Waterfront commerce)
+    • Row 7 (~Y: 630): Airport ($10,000) (Air commerce) | Power Plant (Coal $3,000 / Nuclear $5,000)
+- Essential City Mechanics & HUD:
+  • Top Menu Bar: System (~X: 190, ~Y: 50), Options (~X: 410, ~Y: 50), Disasters (~X: 635, ~Y: 50), Windows (~X: 860, ~Y: 50).
+  • Funds, Date & Citizen Alerts: Top header bar spans ~Y: 140 to 170 across X: 50 to 900.
+  • Power Plants: Clicking Power Plant (Row 7, Right, ~X: 88, ~Y: 630) allows building Coal or Nuclear plants (4x4 tiles).
   • Zones (R, C, I): Standard zones are 3x3 tiles. They require road access and electricity to develop.
   • Power Distribution: Connected zones conduct electricity among touching neighbors. Wires are needed across open ground.
-  • Active Tool Feedback: The bottom-left blue status line shows the currently selected tool name and price.
-  • Status & Demands: Top message bar displays Funds ($), Date, and citizen alerts. The R-C-I meter indicates demand.
-- Main Map Viewport: The playable terrain canvas spans roughly X: 140 to 970, Y: 110 to 920.
-- Normalized Coordinates: Return coordinates in the range [0, 1000] (0 = top/left, 1000 = bottom/right).`,
+  • Demand Indicator (R-C-I): Bar graph located at ~X: 70, ~Y: 720 showing Residential, Commercial, and Industrial demand.
+  • Minimap Locator: Located at X: 35 to 105, Y: 760 to 875 showing global terrain and current view rectangle.
+  • Active Tool Feedback: The bottom blue status line at ~X: 230, ~Y: 900 shows the currently selected tool name and price.
+- Main Map Viewport: The playable terrain canvas spans roughly X: 130 to 895, Y: 175 to 880 (Terrain center is ~(510, 525)).
+- Normalized Coordinates: Return coordinates in the range [0, 1000] (0 = top/left, 1000 = bottom/right). Use the overlay grid lines and labeled axis numbers on the screen to target exact coordinates.`,
 }
 
 export const game2048Profile: ArcadeProfile = {

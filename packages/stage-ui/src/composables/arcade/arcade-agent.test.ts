@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { resolveArcadeProfile } from './profiles'
 import { useArcadeAgent } from './use-arcade-agent'
+import { burnCoordinateGridToCanvas, drawCoordinateGrid } from './utils/grid-overlay'
 
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
@@ -23,9 +24,12 @@ describe('arcade Profiles', () => {
     expect(resolveArcadeProfile('2048 Puzzle').id).toBe('2048')
   })
 
-  it('resolves generic profile for unknown titles', () => {
-    expect(resolveArcadeProfile('Civilization').id).toBe('generic')
-    expect(resolveArcadeProfile('Warcraft II').id).toBe('generic')
+  it('contains calibrated tool palette coordinates for SimCity DOS', () => {
+    const profile = resolveArcadeProfile('SimCity')
+    expect(profile.systemPromptAddendum).toContain('Row 1 (~Y: 230): Bulldozer')
+    expect(profile.systemPromptAddendum).toContain('Row 7 (~Y: 630): Airport')
+    expect(profile.systemPromptAddendum).toContain('Column 1 (Left, ~X: 52)')
+    expect(profile.systemPromptAddendum).toContain('Column 2 (Right, ~X: 88)')
   })
 })
 
@@ -133,5 +137,70 @@ describe('useArcadeAgent', () => {
 
     agent.customPromptAddendum.value = '## CUSTOM USER STRATEGY:\n- Focus on roads first'
     expect(agent.customPromptAddendum.value).toContain('CUSTOM USER STRATEGY')
+  })
+
+  it('supports replaying a plan multiple times and keeps currentTurnPlan updated', async () => {
+    const agent = useArcadeAgent()
+    const clickSpy = vi.fn().mockResolvedValue(undefined)
+    const mockAdapter: GameAdapter = {
+      id: 'test-game',
+      title: 'Test Game',
+      engine: 'jsdos',
+      captureFrame: vi.fn().mockResolvedValue(null),
+      getCanvasElement: vi.fn().mockReturnValue(null),
+      executeClick: clickSpy,
+      executeKeyPress: vi.fn().mockResolvedValue(undefined),
+      executeTypeText: vi.fn().mockResolvedValue(undefined),
+    }
+
+    agent.bindAdapter(mockAdapter)
+
+    const testPlan: TurnPlan = {
+      plan: 'Replayable test plan',
+      spoken_commentary: 'Testing replay',
+      actions: [
+        { type: 'click', x: 100, y: 200 },
+      ],
+      executed: true,
+    }
+
+    await agent.executePlan(testPlan)
+    expect(clickSpy).toHaveBeenCalledTimes(1)
+    expect(agent.currentTurnPlan.value).toStrictEqual(testPlan)
+
+    // Replay
+    await agent.executePlan(testPlan)
+    expect(clickSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('draws 100-interval coordinate grid onto canvas context without error', () => {
+    const mockCtx = {
+      save: vi.fn(),
+      restore: vi.fn(),
+      beginPath: vi.fn(),
+      moveTo: vi.fn(),
+      lineTo: vi.fn(),
+      stroke: vi.fn(),
+      fill: vi.fn(),
+      strokeRect: vi.fn(),
+      fillText: vi.fn(),
+      arc: vi.fn(),
+      quadraticCurveTo: vi.fn(),
+      closePath: vi.fn(),
+      setLineDash: vi.fn(),
+    } as unknown as CanvasRenderingContext2D
+
+    drawCoordinateGrid(mockCtx, 1000, 1000)
+    expect(mockCtx.save).toHaveBeenCalled()
+    expect(mockCtx.restore).toHaveBeenCalled()
+    expect(mockCtx.strokeRect).toHaveBeenCalledWith(0, 0, 1000, 1000)
+    expect(mockCtx.fillText).toHaveBeenCalledWith('500,500', expect.any(Number), expect.any(Number))
+    expect(mockCtx.fillText).toHaveBeenCalledWith('100', expect.any(Number), expect.any(Number))
+  })
+
+  it('burnCoordinateGridToCanvas handles environment safely without document', () => {
+    const mockCanvas = { width: 640, height: 480 } as HTMLCanvasElement
+    const res = burnCoordinateGridToCanvas(mockCanvas)
+    expect(res).toBeNull()
   })
 })

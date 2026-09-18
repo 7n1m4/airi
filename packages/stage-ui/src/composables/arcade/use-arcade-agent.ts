@@ -154,6 +154,7 @@ ${promptAddendum}
 3. Formulate your spoken in-character thoughts/commentary for the player (1-2 lively sentences).
 4. Select a concise emotional acting cue: 'excited', 'smug', 'thoughtful', 'worried', 'triumphant', or 'focused'.
 5. Produce an exact list of actions to execute on the game interface:
+   - The game screen image includes an overlay coordinate grid with labeled lines every 100 units from 0 to 1000. Use these grid lines and axis numbers to accurately pinpoint coordinates for clicks and drags.
    - Mouse clicks use normalized coordinates [0, 1000] (0 = top/left, 1000 = bottom/right).
    - Key presses use standardized key strings ('ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Enter', 'Space', 'y', 'n', etc.).
 
@@ -321,9 +322,11 @@ Return ONLY a JSON object with this exact structure:
   }
 
   async function executePlan(plan: TurnPlan): Promise<void> {
-    if (!activeAdapter.value || isCancelled)
+    if (!activeAdapter.value)
       return
 
+    isCancelled = false
+    currentTurnPlan.value = plan
     turnState.value = 'executing'
     cursorState.value.visible = true
 

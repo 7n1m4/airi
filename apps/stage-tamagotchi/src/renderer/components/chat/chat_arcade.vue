@@ -6,8 +6,8 @@ import type { CatalogGame } from './ArcadeCatalogModal.vue'
 import JSZip from 'jszip'
 import localforage from 'localforage'
 
-import { ArcadeGhostCursor } from '@proj-airi/stage-ui/components'
-import { useArcadeAgent } from '@proj-airi/stage-ui/composables'
+import { ArcadeGhostCursor, ArcadeGridOverlay } from '@proj-airi/stage-ui/components'
+import { burnCoordinateGridToCanvas, burnCoordinateGridToDataUrl, useArcadeAgent } from '@proj-airi/stage-ui/composables'
 import { useCharacterStore } from '@proj-airi/stage-ui/stores/character'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
@@ -15,6 +15,7 @@ import { useChatStreamStore } from '@proj-airi/stage-ui/stores/chat/stream-store
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
+import { useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
@@ -48,6 +49,7 @@ const isCatalogOpen = ref(false)
 const isTuningModalOpen = ref(false)
 const hasCustomPrompt = ref(false)
 const isPointerLocked = ref(false)
+const showGridOverlay = useLocalStorage('arcade/show-grid-overlay', false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
 // --- IndexedDB Stores ---
@@ -1180,79 +1182,56 @@ function getGameGreeting(title: string): { text: string, emotion: BackseatMessag
   return { text: `Booting up ${title}! Show me what you've got!`, emotion: 'smug' }
 }
 
-function convertImageDataToDataUrl(shot: { width: number, height: number, data: ArrayLike<number> }): string {
+async function captureCurrentGameFrame(options: { withGrid?: boolean } = {}): Promise<{ dataUrl: string, base64: string, mimeType: string } | null> {
+  const withGrid = options.withGrid !== undefined ? options.withGrid : showGridOverlay.value
   try {
-    const offscreen = document.createElement('canvas')
-    offscreen.width = shot.width
-    offscreen.height = shot.height
-    const ctx = offscreen.getContext('2d')
-    if (!ctx)
-      return ''
-
-    let imgData: ImageData
-    if (typeof ImageData !== 'undefined' && shot instanceof ImageData) {
-      imgData = shot
-    }
-    else {
-      imgData = ctx.createImageData(shot.width, shot.height)
-      imgData.data.set(shot.data)
-    }
-
-    ctx.putImageData(imgData, 0, 0)
-    return offscreen.toDataURL('image/jpeg', 0.85)
-  }
-  catch (e) {
-    console.error('[Arcade] Failed converting ImageData to DataURL:', e)
-    return ''
-  }
-}
-
-async function captureCurrentGameFrame(): Promise<{ dataUrl: string, base64: string, mimeType: string } | null> {
-  try {
-    let dataUrl = ''
     if (activeEngine.value === 'jsdos') {
       if (currentCommandInterface && typeof currentCommandInterface.screenshot === 'function') {
         try {
           const shot = await currentCommandInterface.screenshot()
-          if (typeof shot === 'string') {
-            dataUrl = shot
-          }
-          else if (shot && typeof (shot as HTMLCanvasElement).toDataURL === 'function') {
-            dataUrl = (shot as HTMLCanvasElement).toDataURL('image/jpeg', 0.85)
+          if (shot && typeof (shot as HTMLCanvasElement).getContext === 'function') {
+            const burned = burnCoordinateGridToCanvas(shot as HTMLCanvasElement, withGrid)
+            if (burned)
+              return burned
           }
           else if (shot && typeof shot.width === 'number' && typeof shot.height === 'number' && shot.data) {
-            dataUrl = convertImageDataToDataUrl(shot)
+            const burned = burnCoordinateGridToCanvas(shot as ImageData, withGrid)
+            if (burned)
+              return burned
+          }
+          else if (typeof shot === 'string' && shot.startsWith('data:image/')) {
+            return withGrid
+              ? await burnCoordinateGridToDataUrl(shot)
+              : {
+                  dataUrl: shot,
+                  base64: shot.split(',')[1] || shot,
+                  mimeType: shot.startsWith('data:image/png') ? 'image/png' : 'image/jpeg',
+                }
           }
         }
         catch (e) {
           console.warn('[Arcade] CommandInterface screenshot failed, falling back to canvas query:', e)
         }
       }
-      if (!dataUrl && dosContainerRef.value) {
+
+      if (dosContainerRef.value) {
         const canvas = dosContainerRef.value.querySelector('canvas')
         if (canvas) {
-          try {
-            dataUrl = canvas.toDataURL('image/jpeg', 0.85)
-          }
-          catch (e) {
-            console.warn('[Arcade] Canvas toDataURL failed:', e)
-          }
+          const burned = burnCoordinateGridToCanvas(canvas, withGrid)
+          if (burned)
+            return burned
         }
       }
     }
     else if (activeEngine.value === 'canvas-2048') {
       if (canvasRef.value) {
-        dataUrl = canvasRef.value.toDataURL('image/jpeg', 0.85)
+        const burned = burnCoordinateGridToCanvas(canvasRef.value, withGrid)
+        if (burned)
+          return burned
       }
     }
 
-    if (!dataUrl)
-      return null
-
-    const mimeType = dataUrl.startsWith('data:image/png') ? 'image/png' : 'image/jpeg'
-    const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl
-
-    return { dataUrl, base64, mimeType }
+    return null
   }
   catch (err) {
     console.error('[Arcade] Failed to capture game frame:', err)
@@ -1265,13 +1244,18 @@ async function handleAttachFrame() {
     return
   isCapturing.value = true
   try {
-    const frame = await captureCurrentGameFrame()
+    const frame = await captureCurrentGameFrame({ withGrid: showGridOverlay.value })
     if (!frame) {
       triggerReactiveReaction('Couldn\'t snap a screenshot right now—is the game still rendering?', 'thinking')
       return
     }
     attachedFrame.value = frame
-    triggerReactiveReaction('📸 Game screen captured! What do you want to ask about it?', 'smug')
+    triggerReactiveReaction(
+      showGridOverlay.value
+        ? '📸 Game screen with coordinate grid captured! What do you want to ask about it?'
+        : '📸 Game screen snapshot captured! What do you want to ask about it?',
+      'smug',
+    )
   }
   finally {
     isCapturing.value = false
@@ -1283,7 +1267,7 @@ async function handleQuickAsk() {
     return
   isCapturing.value = true
   try {
-    const frame = await captureCurrentGameFrame()
+    const frame = await captureCurrentGameFrame({ withGrid: showGridOverlay.value })
     if (!frame) {
       triggerReactiveReaction('Couldn\'t capture the screen right now—is the game ready?', 'thinking')
       return
@@ -1539,7 +1523,7 @@ function createCurrentGameAdapter(): GameAdapter {
     title: currentGameTitle.value,
     engine: activeEngine.value === 'jsdos' ? 'jsdos' : 'html5-canvas',
     captureFrame: async () => {
-      const frame = await captureCurrentGameFrame()
+      const frame = await captureCurrentGameFrame({ withGrid: showGridOverlay.value })
       return frame?.dataUrl || null
     },
     getCanvasElement: () => {
@@ -1609,10 +1593,24 @@ async function handleAiriTakeTurn() {
 }
 
 async function handleExecuteMovesOnCanvas(plan: TurnPlan) {
-  arcadeAgent.bindAdapter(createCurrentGameAdapter())
-  await arcadeAgent.executePlan(plan)
-  plan.executed = true
-  toast.success('Moves executed on canvas!')
+  const isReplay = Boolean(plan.executed)
+  arcadeAgent.currentTurnPlan.value = plan
+  try {
+    arcadeAgent.bindAdapter(createCurrentGameAdapter())
+    await arcadeAgent.executePlan(plan)
+    plan.executed = true
+    toast.success(isReplay ? 'Moves replayed on canvas!' : 'Moves executed on canvas!')
+  }
+  catch (err) {
+    console.error('[Arcade] Failed to execute plan on canvas:', err)
+    toast.error('Failed to execute moves on canvas.')
+  }
+}
+
+function isPlanExecuting(plan?: TurnPlan) {
+  if (!plan)
+    return false
+  return arcadeAgent.turnState.value === 'executing' && arcadeAgent.currentTurnPlan.value === plan
 }
 
 function toggleMute() {
@@ -1733,6 +1731,22 @@ onUnmounted(() => {
             </button>
           </template>
 
+          <!-- Coordinate Grid Overlay Toggle (Normalized [0, 1000] calibration) -->
+          <button
+            class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs font-medium transition-all active:scale-95"
+            :class="[
+              showGridOverlay
+                ? 'border-sky-500/40 bg-sky-500/15 text-sky-600 dark:text-sky-400'
+                : 'border-neutral-200/80 bg-white text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-750',
+            ]"
+            :title="showGridOverlay ? 'Coordinate grid overlay is ON. Click to hide.' : 'Show 100-interval normalized coordinate grid overlay [0, 1000] for spatial calibration'"
+            @click="showGridOverlay = !showGridOverlay"
+          >
+            <div :class="showGridOverlay ? 'i-solar:widget-2-bold text-sky-500' : 'i-solar:widget-2-outline text-neutral-500 dark:text-neutral-400'" class="text-xs" />
+            <span class="text-[11px]">Grid</span>
+            <span v-if="showGridOverlay" class="size-1.5 rounded-full bg-sky-500" />
+          </button>
+
           <button
             class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
             :title="isMuted ? 'Unmute Audio' : 'Mute Audio'"
@@ -1799,6 +1813,12 @@ onUnmounted(() => {
             </span>
             <span class="mt-1 text-[10px] text-white/60 font-medium">Use Arrow Keys or WASD</span>
           </div>
+
+          <!-- Coordinate Grid overlay for 2048 -->
+          <ArcadeGridOverlay
+            v-if="activeEngine === 'canvas-2048'"
+            :visible="showGridOverlay"
+          />
 
           <!-- Ghost Cursor overlay for 2048 -->
           <ArcadeGhostCursor
@@ -1884,6 +1904,12 @@ onUnmounted(() => {
             </div>
           </transition>
 
+          <!-- Coordinate Grid overlay for JSDOS -->
+          <ArcadeGridOverlay
+            v-if="activeEngine === 'jsdos' && isGameReady"
+            :visible="showGridOverlay"
+          />
+
           <!-- Ghost Cursor overlay for JSDOS -->
           <ArcadeGhostCursor
             v-if="activeEngine === 'jsdos'"
@@ -1938,6 +1964,21 @@ onUnmounted(() => {
           <label class="flex cursor-pointer select-none items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-neutral-50/80 px-2.5 py-1.5 text-xs text-neutral-700 font-semibold transition-colors dark:border-neutral-700/80 dark:bg-neutral-800/80 hover:bg-neutral-100 dark:text-neutral-200">
             <input v-model="arcadeAgent.autoPlay.value" type="checkbox" class="size-3.5 rounded accent-purple-600">
             <span>Auto-Play</span>
+          </label>
+
+          <!-- Grid Overlay Toggle -->
+          <label
+            class="flex cursor-pointer select-none items-center gap-1.5 border rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
+            :class="[
+              showGridOverlay
+                ? 'border-sky-500/50 bg-sky-500/10 text-sky-700 dark:border-sky-400/50 dark:bg-sky-950/30 dark:text-sky-300'
+                : 'border-neutral-200/80 bg-neutral-50/80 text-neutral-700 dark:border-neutral-700/80 dark:bg-neutral-800/80 hover:bg-neutral-100 dark:text-neutral-200',
+            ]"
+            title="Toggle 100-interval normalized coordinate grid [0, 1000] across live game view, frame attachments, and AI assistance"
+          >
+            <input v-model="showGridOverlay" type="checkbox" class="size-3.5 rounded accent-sky-500">
+            <div :class="showGridOverlay ? 'i-solar:widget-2-bold text-sky-500' : 'i-solar:widget-2-outline text-neutral-400'" class="text-xs" />
+            <span>Grid Overlay</span>
           </label>
         </div>
 
@@ -2020,8 +2061,8 @@ onUnmounted(() => {
               Unlock
             </span>
             <span class="flex items-center gap-1">
-              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Drag &amp; Drop</kbd>
-              Load .zip
+              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Grid</kbd>
+              [0, 1000] Overlay
             </span>
           </template>
         </div>
@@ -2111,23 +2152,44 @@ onUnmounted(() => {
                     :key="idx"
                     class="shadow-2xs border border-neutral-200/80 rounded bg-white/90 px-1.5 py-0.5 text-[9px] text-neutral-700 font-mono dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300"
                   >
-                    {{ act.type === 'click' ? `🖱️ Click (${act.x}, ${act.y})` : act.type === 'key_press' ? `⌨️ Key [${act.key}]` : act.type === 'type_text' ? `⌨️ Type "${act.text}"` : '⏳ Wait' }}
+                    {{ act.type === 'click' ? `🖱️ Click (${act.x}, ${act.y})` : act.type === 'drag' ? `👆 Drag (${act.fromX}, ${act.fromY}) ➔ (${act.toX}, ${act.toY})` : act.type === 'key_press' ? `⌨️ Key [${act.key}]` : act.type === 'type_text' ? `⌨️ Type "${act.text}"` : '⏳ Wait' }}
                   </span>
                 </div>
 
-                <!-- Execute Move Button -->
+                <!-- Execute / Replay Move Button (Permanently available for testing & debugging moves) -->
                 <div
-                  v-if="!msg.turnPlan.executed && msg.turnPlan.actions?.length > 0"
+                  v-if="msg.turnPlan.actions?.length > 0"
                   class="pt-1"
                 >
                   <button
                     type="button"
-                    class="shadow-xs w-full flex items-center justify-center gap-1.5 rounded-lg from-purple-600 to-indigo-600 bg-gradient-to-r px-3 py-1.5 text-[10px] text-white font-bold transition-all active:scale-95 hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50"
+                    class="shadow-xs w-full flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-bold transition-all active:scale-95 disabled:opacity-50"
+                    :class="[
+                      msg.turnPlan.executed
+                        ? 'border border-purple-500/40 bg-purple-500/10 text-purple-700 hover:bg-purple-500/20 dark:border-purple-400/40 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50'
+                        : 'from-purple-600 to-indigo-600 bg-gradient-to-r text-white hover:from-purple-700 hover:to-indigo-700',
+                    ]"
                     :disabled="arcadeAgent.turnState.value !== 'idle'"
+                    :title="msg.turnPlan.executed ? 'Replay these moves on the active game canvas to debug positioning' : 'Execute these moves on the active game canvas'"
                     @click="handleExecuteMovesOnCanvas(msg.turnPlan)"
                   >
-                    <div :class="arcadeAgent.turnState.value === 'executing' ? 'i-solar:restart-bold animate-spin' : 'i-solar:play-bold'" class="text-xs" />
-                    <span>{{ arcadeAgent.turnState.value === 'executing' ? 'Executing Moves...' : '▶ Execute Moves on Canvas' }}</span>
+                    <div
+                      :class="[
+                        isPlanExecuting(msg.turnPlan)
+                          ? 'i-solar:restart-bold animate-spin'
+                          : msg.turnPlan.executed
+                            ? 'i-solar:restart-bold'
+                            : 'i-solar:play-bold',
+                      ]"
+                      class="text-xs"
+                    />
+                    <span>
+                      {{
+                        isPlanExecuting(msg.turnPlan)
+                          ? (msg.turnPlan.executed ? 'Replaying Moves...' : 'Executing Moves...')
+                          : (msg.turnPlan.executed ? '🔄 Replay Moves on Canvas' : '▶ Execute Moves on Canvas')
+                      }}
+                    </span>
                   </button>
                 </div>
               </div>
