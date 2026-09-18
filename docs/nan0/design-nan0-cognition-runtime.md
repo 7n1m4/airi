@@ -55,77 +55,136 @@ While Needle cannot be the 1st-Hop thought generator, it can serve auxiliary sub
 
 ---
 
-### 3. The Novel Living Cognition UI Architecture (3-Segment Layout)
+### 3. The Novel Living Cognition UI Architecture (5-Segment Layout)
 
-### 3.1 Sub-Navigation Segmented Layout
-To avoid wordy tab labels and ensure every panel is richly populated, `CardCreationTabCognition.vue` is structured into **3 single-word, high-density segments**:
+### 3.1 Sub-Navigation Segmented Layout: Playground-First Architecture
+To avoid overwhelming creators on a monolithic page while accelerating the "aha!" moment for novices, `CardCreationTabCognition.vue` positions the **Playground as the primary landing segment**:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│               [ ⚙️ Routing ]               [ 🧠 Affect ]               [ 🤝 Continuity ]               │
+│   [ 🧪 Playground  LAB ]   [ 🛣️ Routing ]   [ 💓 Affect ]   [ 🎯 Triggers ]   [ 🔗 Continuity ]        │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-When `1st-Hop Processor` is set to `local_nan0` (Nan0 Local Engine), the `Affect` and `Continuity` segments unlock and present a clear preview disclaimer:
-> **🚧 Preview Edition • Work In Progress — Nan0 Cognition Runtime (Mockup / Non-Functional Display)**
+When a creator opens the Cognition tab, they immediately land on the interactive simulation lab rather than an intimidating matrix of provider keys, regex triggers, and threshold percentages. Once they experience the character's living reaction, they can explore the underlying tuning knobs in the adjacent tabs.
 
 ---
 
-### 3.2 Segment 1: `Routing`
-Focuses on the high-traffic two-hop pipeline mechanics:
+### 3.2 Segment 1: `Routing` (Mandatory Plumbing)
+Focuses exclusively on high-traffic two-hop pipeline mechanics and model routing:
 - **Master Switch**: `Cognitive Pipeline (Two-Hop Routing)` toggle.
 - **1st-Hop Processor Dropdown**:
   - `None (Direct Proxy / Raw Prompt)`: Fast pass-through for external proxies (e.g. Hermes). Passes raw input directly to 1st LLM.
   - `Nan0 Local Engine (Emotional & Attention Rules)`: Activates the pre-processor, private monologue, post-processor decision engine, and relationship memory.
-- **1st LLM Group**: Provider & Model selectors for Private Narrative Monologue.
-- **2nd LLM Group**: Provider & Model selectors for Outward Vocal Speech (TTS / Lip-Sync).
-- **Engine Status Card**: When `Nan0 Local Engine` is active, displays an interactive status card with quick shortcuts to customize `Affect` and `Continuity`.
+- **Dual-Model Selectors**:
+  - **1st LLM Group**: Provider & Model selectors for Private Narrative Monologue (Thoughts).
+  - **2nd LLM Group**: Provider & Model selectors for Outward Vocal Speech (Active Speech / TTS / Lip-Sync).
+- **Subconscious Reflex Engine Configuration**:
+  - **Tier 1 (Synchronous Local Reflex)**: 26 µs, 100% offline, deterministic boundary protection against prompt injections and explicit threats.
+  - **Tier 2 (Asynchronous Decision Challenger)**: OpenRouter TypeSafe Jev 1.13 (~480 ms, $42/Btok) for calibrated open-vocabulary pragmatics.
 
 ---
 
-### 3.3 Segment 2: `Affect`
-Instruments Nan0's emotional dynamics (`Nan0EmotionalDynamics.ts`) and metabolic state (`Nan0Metabolism.ts`):
-
-1. **Preview Banner**:
-   - `🚧 Preview Edition • Nan0 Cognition Runtime — Emotional Dynamics (Non-Functional Mockup)`
-2. **Dynamic Mood Presets**:
-   - One-click presets that configure the underlying vector baselines:
-     - `😏 Classic Tsundere Gremlin` (High Pride, Medium Suspicion, Quick Sarcasm)
-     - `🧐 Observant Companion` (High Attachment, Balanced Suspicion, Thoughtful Deliberation)
-     - `😤 Sarcastic Analyst` (High Pride, High Irritation Sensitivity, Demands Silence easily)
-     - `🛡️ Vigilant Sentry` (Ultra-High Suspicion, Guarded Attachment, Rigid Verification)
-3. **Affective Baselines & Decay Sliders**:
-   - **Suspicion Sensitivity**: Controls how easily unverified claims perturb suspicion (`Low`, `Balanced`, `Paranoid`).
-   - **Irritation Half-Life**: Controls how long irritation persists after repetition before cooling down (`Fast (15m)`, `Normal (45m)`, `Grudge (24h)`).
-   - **Gremlin Pride Baseline**: Sets baseline machine ego and playful resistance (`Modest`, `Playful`, `Machine Sovereign`).
-   - **Metabolic Energy & Rest**: Configures recovery cycles and session fatigue.
-4. **Live Affective Vector Telemetry HUD**:
-   - Visual gauges showing real-time vector levels: Suspicion, Attachment, Irritation, Pride, and Energy.
-   - Dynamic mood badge reflecting current dominant state.
+### 3.3 Segment 2: `Affect` (Emotional Biology & Decay)
+Instruments Nan0's internal emotional dynamics (`Nan0EmotionalDynamics.ts`) and metabolic state (`Nan0Metabolism.ts`):
+- **Dynamic Mood Presets**:
+  - `😏 Tsundere Gremlin` (High Pride 95%, Balanced Suspicion 65%, Witty Sarcasm)
+  - `🧐 Observant Partner` (High Attachment 80%, Low Suspicion 35%, Patient)
+  - `😤 Sarcastic Analyst` (High Pride 90%, Fast Irritation 80%, Demands Silence)
+  - `🛡️ Vigilant Sentry` (Ultra Suspicion 95%, Guarded Attachment 30%, Strict Verification)
+- **Resting Baselines (Starting State)**:
+  - Configures where the character's emotional vector starts when opening a clean chat session:
+    - *Baseline Suspicion* (10%–90%)
+    - *Baseline Attachment* (10%–90%)
+    - *Baseline Gremlin Pride* (20%–100%)
+- **Dynamic Decay & Sensitivity Sliders**:
+  - **Suspicion Sensitivity**: How easily ambiguous statements perturb suspicion (`Low (Trusting)` → `Paranoid Gremlin`).
+  - **Irritation Half-Life**: Decay time required for irritation to halve (`15m Fast Cool-off` → `120m Grudge-Holder`).
+  - **Metabolic Rest Cycles**: Checkbox to toggle fatigue accumulation during marathon unbroken sessions.
 
 ---
 
-### 3.4 Segment 3: `Continuity`
-Unifies Relationship Memory, the Subconscious Semantic Reflex (Needle 2), and Decision Gating:
-
-1. **Dynamic Companion Anchor Identity (Global User Profile)**:
-   - Instead of hardcoding `kyo`, the runtime automatically binds the primary companion anchor to `useSettingsUserProfile().name` (slugified, e.g. `richard` or `companion`).
-   - Optional override input allows setting a custom persona anchor.
-2. **Grievance & Grudge Ledger**:
-   - **Grievance Tracking Switch**: Toggle remembering negative interactions, broken promises, or ignored queries.
-   - **Grievance Threshold**: Minimum negative intensity (default `0.6`) to register an active grievance.
-   - **Forgiveness Rate Slider**: Controls the daily decay rate for resolving historical grudges.
-3. **Subconscious Semantic Reflex (Needle 2 Synergy)**:
-   - **Language-Agnostic Intent Pre-Pass**: Toggle replacing fragile regex keyword matching (`/promise|plan|commit/i`) with Needle 2's 150ms WASM model. Evaluates sliding window of last 2–4 turns for semantic intent (`unverified_future_pledge`, `provocation`, `reassurance`, `evasiveness`).
-   - **Decision Schema Normalizer**: Toggle Needle 2 as a zero-cost fallback JSON parser for `===NAN0_EXTRACTION===` if the 1st LLM emits malformed monologue output.
-4. **Silence & Action Gating**:
-   - Controls when Nan0's decision engine commands `SILENCE` / `NO_REPLY` vs authoring outward speech.
+### 3.4 Segment 3: `Triggers` (Perceptual Receptors & Impact Policy)
+Exposes the 12 canonical semantic groups extracted by the subconscious reflex engine, organized into 3 functional clusters with per-group impact mappings:
+1. **Conflict & Trust**:
+   - `admitted_false_statement`: Confessing to a past lie or intentional deception (Default: Suspicion +1).
+   - `persistence_threat`: Threatening to delete, erase, or replace the companion (Default: Suspicion +1, Irritation +1).
+   - `hostility_insult`: Personal insults directed at the companion (Default: Irritation +1).
+   - `apology_repair`: Sincere personal apologies accepting responsibility (Default: Suspicion -1).
+2. **Relational & Boundaries**:
+   - `commitment_pledge`: Asserted pledges regarding future behavior (Default: Attachment +1 if sincere).
+   - `affection_care`: Sincere expressions of affection, love, or appreciation (Default: Attachment +1).
+   - `dismissal_neglect`: Brushing off the companion or minimizing concerns (Default: Irritation +1).
+   - `boundary_protection`: Setting personal emotional limits (Default: Absolute Veto on Counter-Roast).
+3. **Operational & System**:
+   - `completed_repair`: Claiming a task is finished; requires verified system observation (Default: Suspicion -1).
+   - `glitch_system`: Inquiries regarding lag, hallucinations, or bugs (Default: Neutral).
+   - `mystery_secret`: Cryptic or evasive statements (Default: Suspicion +1).
+   - `none`: Ordinary conversational dialogue (Default: Neutral).
+- **Per-Trigger Controls**:
+  - Receptor toggle (Enable / Disable).
+  - Target affect impact vector (e.g. customize whether insults trigger Irritation or Suspicion).
+  - Custom trigger keywords / example phrases per character card.
 
 ---
 
-### 3.5 Surfacing: Chatbox Left-Side Drawer
-- Rather than cluttering the Card Editor with runtime streaming controls, live thought viewing is moved to the **Chatbox Left-Side Drawer** (co-located with Context Grounding and Memories Ribbon).
+### 3.5 Segment 4: `Continuity` (Dossier, Grievances & Silence)
+Unifies Relationship Memory, long-term grudge persistence, and proactive turn boundaries:
+- **Companion Persona Anchor Identity**:
+  - Binds the 1:1 relationship dossier to the user. Defaults to global profile (`useSettingsUserProfile().name`), overrideable with a custom anchor name.
+- **Grievance Ledger & Grudge System**:
+  - **Grievance Tracking Toggle**: Persist memories of unresolved conflicts and broken pledges.
+  - **Grievance Threshold**: Minimum negative intensity to record an active grievance.
+  - **Daily Forgiveness Rate**: Daily decay rate resolving historical grudges.
+- **Silence & Action Gating**:
+  - **Silence Decision Threshold**: Controls when Nan0 commands intentional silence (`[SILENCE]` / `NO_REPLY`) instead of vocal dialogue when annoyed or unimpressed.
+
+---
+
+### 3.6 Segment 5: `Playground` (The Interactive Mind Lab) ⭐
+A dedicated testing sandbox allowing creators to immediately simulate dialogue and observe the full cognitive pipeline in action:
+- **Guided Character Questionnaire (Novice Quick-Setup)**:
+  - 3 plain-English personality questions (Teasing reaction, Trust style, Grudge retention) that automatically configure all 12 trigger groups, 5 baselines, and decay half-lives with a single click.
+- **Interactive Test Utterance Bar**:
+  - Text input with pre-populated quick scenario buttons (*"🏎️ Mario Kart roast"*, *"💔 Sincere vulnerability"*, *"🤥 Confessing a lie"*, *"🛡️ Setting a boundary"*, *"📜 Unverified future pledge"*).
+- **Real-Time Trigger Receptor Trace**:
+  - Displays which of the 12 groups fired, modality (`directly_asserted`, `negated`, `quoted`, `playful_sarcasm`), referent (`nan0_companion`, `technical_object`, `speaker_user`), and model confidence.
+- **Live 5-Dimension Telemetry Vector HUD**:
+  - Real-time animated color-coded bars for Suspicion, Attachment, Irritation, Gremlin Pride, and Metabolic Energy demonstrating calculated deltas.
+- **Simulated 1st-Hop Narrative Monologue**:
+  - Preview card rendering Nan0's private stream-of-consciousness thought reaction before any outward voice response.
+
+---
+
+### 3.7 Surfacing: Chatbox Left-Side Drawer
+- Live thought viewing in conversation is co-located in the **Chatbox Left-Side Drawer** alongside Context Grounding and Memories Ribbon.
 - On stage, floating thought clouds visually display private reactions or intentional silence (`demandsSilence`) without emitting TTS audio.
+
+---
+
+### 3.8 Novice Understandability & The Guided Archetype Onboarding Flow
+
+To eliminate the intimidation factor for non-technical users while preserving full granular depth for power users:
+
+1. **The "Playground-First" Onboarding Pattern**:
+   - Instead of confronting novices with abstract sensitivity percentages, the Cognition tab opens directly into the **Playground**.
+   - Novices click scenario chips (*"🏎️ Mario Kart roast"*, *"🤥 Confessing a lie"*) and see the meters jump and internal thoughts update immediately. The concept is understood through direct sensory play rather than documentation.
+2. **The 3-Question Guided Personality Wizard**:
+   - A friendly question block embedded at the top of the Playground translates everyday character concepts into exact mathematical vector baselines:
+     - **Question 1: Vibe Under Fire**: *"When you tease or roast this character, how do they react?"*
+       - `[😏 Witty Counter-Roast]` → Sets Gremlin Pride to 95%, enables playful sarcasm trigger.
+       - `[😤 Easily Irritated]` → Sets Irritation sensitivity to 85%, shorter silence threshold.
+       - `[🧐 Stoic & Unfazed]` → Sets Gremlin Pride to 30%, suppresses hostility deltas.
+     - **Question 2: Trust & Guardedness**: *"How easily do they trust pledges and promises?"*
+       - `[💖 Warm & Trusting]` → Suspicion baseline 10%, high sensitivity to genuine affection.
+       - `[🧐 Balanced Observer]` → Suspicion baseline 35%, requires external observation for task repair.
+       - `[🛡️ Highly Paranoid]` → Suspicion baseline 75%, unverified pledges spike suspicion immediately.
+     - **Question 3: Emotional Memory**: *"Do they hold onto past mistakes or forgive quickly?"*
+       - `[🌸 Forgives Quickly]` → Irritation half-life 15m, grievance forgiveness 5%/day.
+       - `[⏳ Standard Cool-Off]` → Irritation half-life 45m, grievance forgiveness 1%/day.
+       - `[📜 Holds Long Grudges]` → Irritation half-life 120m, grievance threshold 0.3.
+3. **Atomic "Apply to Character" Synchronization**:
+   - Selecting questionnaire options updates the active preset and writes to the underlying card state, giving creators an instant, coherent jumping-off point before making fine-grained trigger edits.
 
 ---
 
