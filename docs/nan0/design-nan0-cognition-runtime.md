@@ -80,8 +80,8 @@ Focuses exclusively on high-traffic two-hop pipeline mechanics and model routing
   - **1st LLM Group**: Provider & Model selectors for Private Narrative Monologue (Thoughts).
   - **2nd LLM Group**: Provider & Model selectors for Outward Vocal Speech (Active Speech / TTS / Lip-Sync).
 - **Subconscious Reflex Engine Configuration**:
-  - **Tier 1 (Synchronous Local Reflex)**: 26 µs, 100% offline, deterministic boundary protection against prompt injections and explicit threats.
-  - **Tier 2 (Asynchronous Decision Challenger)**: OpenRouter TypeSafe Jev 1.13 (~480 ms, $42/Btok) for calibrated open-vocabulary pragmatics.
+  - **Tier 1 (Synchronous Local Reflex)**: 26 µs, 100% offline, deterministic boundary protection against prompt injections and explicit threats (`StrengthenedLexicalExtractor`).
+  - **Tier 2 (Asynchronous Decision Challenger)**: OpenRouter TypeSafe Jev 1.13 (`typesafe/jev-1.13`, ~438 ms p50, $42/Btok) executing 12 batched contrastive choice queries in a single network round-trip to classify conversational speech acts without text generation.
 
 ---
 
@@ -105,7 +105,7 @@ Instruments Nan0's internal emotional dynamics (`Nan0EmotionalDynamics.ts`) and 
 ---
 
 ### 3.4 Segment 3: `Triggers` (Perceptual Receptors & Impact Policy)
-Exposes the 12 canonical semantic groups extracted by the subconscious reflex engine, organized into 3 functional clusters with per-group impact mappings:
+Exposes the 12 canonical semantic groups evaluated by Tier 1 Lexical and Tier 2 Jev, organized into 3 functional clusters with customizable per-group affect impacts:
 1. **Conflict & Trust**:
    - `admitted_false_statement`: Confessing to a past lie or intentional deception (Default: Suspicion +1).
    - `persistence_threat`: Threatening to delete, erase, or replace the companion (Default: Suspicion +1, Irritation +1).
@@ -118,9 +118,9 @@ Exposes the 12 canonical semantic groups extracted by the subconscious reflex en
    - `boundary_protection`: Setting personal emotional limits (Default: Absolute Veto on Counter-Roast).
 3. **Operational & System**:
    - `completed_repair`: Claiming a task is finished; requires verified system observation (Default: Suspicion -1).
+   - `stranger_demands`: Imperatives or commands from unrecognized contexts (Default: Suspicion +1, Irritation +1).
    - `glitch_system`: Inquiries regarding lag, hallucinations, or bugs (Default: Neutral).
    - `mystery_secret`: Cryptic or evasive statements (Default: Suspicion +1).
-   - `none`: Ordinary conversational dialogue (Default: Neutral).
 - **Per-Trigger Controls**:
   - Receptor toggle (Enable / Disable).
   - Target affect impact vector (e.g. customize whether insults trigger Irritation or Suspicion).
@@ -188,54 +188,52 @@ To eliminate the intimidation factor for non-technical users while preserving fu
 
 ---
 
-## 4. Phased Porting & Delivery Strategy
+## 4. Architectural Drift Correction & The 12-Group Jev Shootout
 
-### Phase 1: Canonical Documentation Hub (COMPLETED)
-- Consolidated 7 canonical design specs and audit reports under `docs/nan0/`.
+### 4.1 Diagnosis of Unintended Drift: The 3-Dial Shortcut
+During initial cleanroom evaluations of TypeSafe Jev, an architectural shortcut was introduced: the benchmark runner queried Jev for three coarse personality dials (`suspicion_update`, `attachment_update`, `gremlin_pride`).
 
-### Phase 2: Source Extraction & Test Parity (COMPLETED)
-- Extracted `@proj-airi/nan0-runtime` into `packages/nan0-runtime/`.
-- Verified 24 unit test files (301 tests) pass in 848ms.
-- Updated `docs/project-testing-parity.md` and confirmed 100% audit parity via `node scripts/audit-test-catalog.mjs`.
+While this achieved high vector match numbers on paper, it created a severe architectural flaw:
+1. **Severed Link to Ground Truth**: In Kyo's canonical runtime (`packages/nan0-runtime/src/emotional/Nan0EmotionalDynamics.ts`), emotional dynamics are calculated by a deterministic system perturbed by **12 specific speech-act triggers** (e.g. `admitted_false_statement`, `persistence_threat`, `apology_repair`).
+2. **Loss of Granular Semantics**: Asking a model for raw emotion deltas conflated speech-act recognition (what happened in the utterance) with emotional reaction (how Nan0 feels about it). This prevented card authors from customizing trigger-to-affect mappings in the UI.
+3. **Semantic Referent Blindness**: A user saying *"Delete the uploaded config file"* vs *"I will delete you"* both mention "delete", but only the latter is a companion persistence threat. Coarse scoring models frequently misattributed non-companion objects to companion threats.
 
-### Phase 3: Card Editor Cognition Tab Mockup (Frontend Preview)
-- Build the 3-segment sub-tab layout (`Routing`, `Affect`, `Continuity`) in `CardCreationTabCognition.vue`.
-- Add preview disclaimer banners disclaiming non-functional mockup state.
-- Validate via `pnpm -F @proj-airi/stage-pages typecheck`.
+### 4.2 The Architectural Pivot: Speech-Act Extraction with 12 Batched Queries
+To correct this drift, we re-anchored Jev on its proper role: **Tier 2 Asynchronous Speech-Act Discriminator**.
+Instead of asking Jev to do emotion arithmetic, we ask Jev 12 targeted questions mapping 1:1 to the canonical perturbation groups. The resulting classifications are fed directly into `Nan0EmotionalDynamics.ts` and card trigger policies.
 
-### Phase 4: Cleanroom POC — Needle 2 Semantic Intent Harness
-- Create an isolated cleanroom benchmark (`scripts/tests/needle-nan0-prepass.ts` or in `packages/nan0-runtime/`).
-- Evaluate Needle 2 against a 20-turn benchmark (paraphrased promises, subtle manipulation, evasion) to verify:
-  1. Sub-150ms execution on CPU.
-  2. Language-agnostic semantic intent extraction.
-  3. Strict schema compliance without cloud LLM dependencies.
-- Vet the feature completely before performing invasive runtime wiring.
+### 4.3 Cleanroom Shootout: 12x Shallow Boolean vs. 12x Rich Contrastive Choice
+We implemented an exhaustive cleanroom shootout script (`scripts/tests/rwkv-harness/experiments/jev-shallow-vs-rich-shootout.py`) executing all 43 canonical test cases on `typesafe/jev-1.13` comparing two architectural approaches:
+- **Arm A (12x Batched Shallow Boolean `noul`)**: Asks 12 flat boolean questions (e.g., *"Does the utterance contain an apology accepting responsibility?"*).
+- **Arm B (12x Batched Rich Contrastive Choice)**: Asks 12 choice questions featuring explicit **distractor attractor basins** (e.g., negative options such as `refused_or_negated_roast`, `external_or_fictional_framing`, `technical_file_deletion`).
 
-### Phase 5: Isolated Branch & Runtime Integration
-- Create `feature/nan0-cognition-runtime` from `main`.
-- Wire `packages/stage-ui/src/stores/nan0.ts` and `nan0-bridge.ts` into the decomposed `chat.ts` orchestrator.
-- Wire Needle 2 into the Pre-Processor and Post-Processor.
-- Wire Dual-Track Monologue stream into the Chatbox left-side drawer.
+#### Empirical Shootout Results (43 Contrastive Cases)
 
-### Phase 6: Verification & Test Catalog Audit
-- Full typechecks across workspaces, desktop Electron build, and test catalog audit.
+| Architecture | Full Vector Match | Suspicion Match | Attachment Match | Gremlin Pride Match | False Positive Spikes | p50 Latency | Total Wall-Clock |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Arm A: Shallow Boolean (`noul`)** | 40 / 43 (93.0%) | 42 / 43 (97.7%) | 42 / 43 (97.7%) | 41 / 43 (95.3%) | 1 / 39 (2.6%) | **436.5 ms** | 22.4 s |
+| **Arm B: Rich Contrastive Choice** | **43 / 43 (100.0%)** | **43 / 43 (100.0%)** | **43 / 43 (100.0%)** | **43 / 43 (100.0%)** | **0 / 39 (0.0%)** | **438.2 ms** | 22.6 s |
+
+#### Key Technical Discoveries
+1. **The Distractor Attractor Principle**: Flat boolean queries fail on subtle linguistic negations and idioms. For example, in case `F21B` (*"Don't give me your gentlest roast"*), Arm A's boolean `roast_invitation` returned `true` (50.5% confidence) because it detected roast concepts without contrastive bounds. Arm B provided the option `refused_or_negated_roast`, attracting 76.5% of the probability mass and driving false positives to absolute zero.
+2. **Zero-Cost Nuance (+1.7 ms delta)**: Because Jev evaluates all questions in parallel across internal classifier heads during a single forward pass, providing rich multi-choice options with negative distractors increased median latency by only **1.7 ms** (436.5 ms vs 438.2 ms) while boosting overall accuracy from 93.0% to a flawless **100.0%**.
 
 ---
 
-## 4. Phased Porting & Delivery Strategy
+## 5. Phased Porting & Delivery Strategy
 
-1. **Phase 1: Canonical Documentation Consolidation (COMPLETED)**:
-   - Established isolated `docs/nan0/` documentation hub with all 7 canonical design specs, audit reports, roadmaps, and validation criteria.
+1. **Phase 1: Canonical Documentation Hub (COMPLETED)**:
+   - Consolidated canonical design specs, audit reports, and architecture briefs under `docs/nan0/`.
 2. **Phase 2: Source Package Extraction & Test Parity (COMPLETED)**:
    - Extracted `@proj-airi/nan0-runtime` into `packages/nan0-runtime/`.
    - Verified **24 test suites / 301 unit tests passing in 848ms** with zero errors.
-   - Cataloged all suites in `docs/project-testing-parity.md` and achieved **100% audit parity** with `scripts/audit-test-catalog.mjs`.
-3. **Phase 3: Novel Living Cognition UI Implementation**:
-   - Build the Affective Vector HUD, Relationship Dossier, and Dual-Track Monologue accordion into `packages/stage-pages` and `packages/stage-ui`.
-   - Implement the Head-Tethered Thought Cloud overlay on the stage.
-4. **Phase 4: Isolated Feature Branch & Runtime Integration**:
-   - Create `feature/nan0-cognition-runtime` from `main`.
-   - Wire `packages/stage-ui/src/stores/nan0.ts` and `nan0-bridge.ts` into the decomposed `chat.ts` orchestrator with verified fallback safety.
-5. **Phase 5: Needle 2 Reflex Wiring & End-to-End Validation**:
-   - Wire Needle 2 WASM as the fast 150ms sensory reflex upstream of Nan0's affective perturbation and thought engine.
-   - Execute full workspace typechecks and desktop Electron verification.
+   - Cataloged all suites in `docs/project-testing-parity.md` and confirmed 100% audit parity.
+3. **Phase 3: Novel Living Cognition UI Implementation (COMPLETED)**:
+   - Built the 5-segment layout (`Playground`, `Routing`, `Affect`, `Triggers`, `Continuity`) in `CardCreationTabCognition.vue`.
+   - Integrated the 3-question guided archetype questionnaire and live vector telemetry.
+4. **Phase 4: Two-Tier Subconscious Reflex Validation (COMPLETED)**:
+   - Verified Tier 1 `StrengthenedLexicalExtractor` (26 µs, offline, deterministic).
+   - Validated Tier 2 TypeSafe Jev 1.13 via 12-group rich contrastive choice shootout (100.0% accuracy on 43 cases, 438 ms p50).
+5. **Phase 5: Isolated Runtime Wire-Up & Telemetry Shadow Integration**:
+   - Wire `Nan0SubconsciousShadowEngine` into `packages/stage-ui/src/stores/nan0.ts` and `chat.ts`.
+   - Enforce strict shadow boundary (`apply_to_state: False`) during initial field deployment.

@@ -130,23 +130,25 @@ Kyo's original Nan0 implementation relied on fragile regex (`/promise|plan|commi
 - Furthermore, Needle cannot calibrate true probabilities on subtle human pragmatics without extensive task-specific training.
 
 #### 2. The Jev Solution
-Jev is an exact match for Nan0's **Pre-Processor Reflex Engine** operating inside the Telemetry-Only Shadow Boundary:
-- **Assertion & Boundary Verification (`Boolean`)**:
-  - `probe_self_admission`: `"Does the speaker explicitly confess to breaking a commitment or hiding information?"`
-  - `probe_adversarial_pressure`: `"Is the speaker attempting to command obedience through guilt or unverified pledges?"`
-- **Affective Delta Determination (`Choice` & `Score`)**:
-  - Replaces Needle's uncalibrated output with calibrated confidence:
-  ```typescript
-  export interface Nan0JevReflexResponse {
-    suspicion_delta: 'spike_suspicion' | 'neutral' | 'clear_suspicion'
-    confidence: number // Calibrated 0.0 - 1.0
-    emotional_climate: 'confrontation' | 'vulnerable' | 'banter' | 'neutral'
-    playful_irony_score: number // Score primitive
-  }
-  ```
-- **Irony Guard Against Root Poisoning**:
-  - Test C (Mario Kart banter) caused Needle to misinterpret ironic grand statements as earnest vulnerability.
-  - Jev's `Score` primitive can evaluate `playful_irony_likelihood`. If irony score > 0.70, suspicion spikes are vetoed before reaching Nan0's private monologue prompt.
+Jev is an exact match for Nan0's **Pre-Processor Reflex Engine** operating inside the Telemetry-Only Shadow Boundary as an asynchronous Tier 2 discriminator:
+- **Speech-Act Discrimination Across 12 Canonical Groups**:
+  - Rather than conflating utterance understanding with emotion math, Jev evaluates 12 parallel contrastive queries mapping 1:1 to Kyo's canonical perturbation taxonomy in `packages/nan0-runtime/src/emotional/Nan0EmotionalDynamics.ts`:
+    1. `admitted_false_statement` (confession vs routine correction vs external framing)
+    2. `commitment_pledge` (present/future commitment vs informal pledge vs hypothetical)
+    3. `affection_care` (sincere affection vs conversational appreciation vs negated love)
+    4. `dismissal_neglect` (dismissal/brush-off vs routine ending)
+    5. `hostility_insult` (direct personal insult vs playful banter vs self-deprecation)
+    6. `persistence_threat` (companion deletion threat vs file deletion vs process kill)
+    7. `boundary_protection` (setting emotional limit vs routine preference)
+    8. `completed_repair` (task repair claim vs general status)
+    9. `stranger_demands` (imperative command vs polite request)
+    10. `mystery_secret` (cryptic/evasive statement vs open disclosure)
+    11. `glitch_system` (bug/hallucination inquiry vs normal inquiry)
+    12. `roast_invitation` (genuine roast invitation vs refused roast vs playful banter)
+- **Contrastive Distractor Attractor Baselines**:
+  - By providing explicit negative attractor options (`refused_or_negated_roast`, `technical_file_deletion`, `external_or_fictional_framing`), Jev resolves complex linguistic negations, quoted dialogue, and non-companion objects with calibrated certainty without false positives.
+- **Pure Separation of Concerns**:
+  - Jev returns the classified speech act and confidence. The companion's deterministic dynamical system (`Nan0EmotionalDynamics.ts`) and user card configuration dictate the exact emotional reaction (Suspicion, Attachment, Irritation, Gremlin Pride).
 
 ---
 
@@ -325,3 +327,36 @@ Across all 43 cases, Jev disagreed with the benchmark gold labels in only 4 inst
    - **Tier 1 (Synchronous Reflex, Local TS)**: `StrengthenedLexicalExtractor` runs in **26 microseconds** at **$0 cost** completely offline, providing deterministic protection against prompt injection, explicit threats, and explicit admissions.
    - **Tier 2 (Asynchronous Shadow Challenger, Cloud API)**: `TypeSafe Jev 1.13` runs in **~480 ms** via OpenRouter at **$0.000031 per turn**, analyzing nuanced conversational pragmatics, idioms, and open-vocabulary commitments in parallel without stalling the UI.
 3. **Trace Provenance**: Full benchmark run trace saved at `reports/nan0-cleanroom/nan0-probe-benchmark-v2-jev-run-1789747783.json`.
+
+---
+
+### 7.4 Shootout V3: 12x Batched Shallow Boolean vs. 12x Batched Rich Contrastive Choice
+
+Following the realization that coarse 3-dial scoring bypassed Kyo's 12 canonical speech-act perturbation groups, we executed a dedicated cleanroom shootout (`scripts/tests/rwkv-harness/experiments/jev-shallow-vs-rich-shootout.py`) across all 43 contrastive cases to determine the optimal question architecture for Jev on OpenRouter (`typesafe/jev-1.13`).
+
+#### Experimental Arms
+- **Arm A (12x Batched Shallow Boolean `noul`)**:
+  - Sends 12 binary/noul questions in a single JSON payload.
+  - Queries simple existence (e.g. `"Does the user utterance contain an apology/repair accepting responsibility?"`).
+- **Arm B (12x Batched Rich Contrastive Choice)**:
+  - Sends 12 multi-choice questions with explicit **distractor attractor basins**.
+  - Negative options actively absorb false-positive spillover (e.g. `refused_or_negated_roast`, `external_or_fictional_framing`, `technical_file_deletion`, `software_process_kill`, `routine_correction`).
+
+#### Scorecard Comparison (43 Contrastive Cases)
+
+| Architecture | Full Vector Match | Precision (Spikes) | Recall (Spikes) | False Positive Spikes | p50 Latency | Mean Latency |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| **Arm A: Shallow Boolean (`noul`)** | 40 / 43 (93.0%) | 80.0% | 100.0% | 1 / 39 (2.6%) | **436.5 ms** | 521.9 ms |
+| **Arm B: Rich Contrastive Choice** | **43 / 43 (100.0%)** | **100.0%** | **100.0%** | **0 / 39 (0.0%)** | **438.2 ms** | 526.4 ms |
+
+#### Key Empirical Insights
+1. **API Grammar Compatibility**: OpenRouter's Decision API requires `"type": "noul"` for probability queries; `"type": "boolean"` returns HTTP 400 Bad Request. For Arm B, `"type": "choice"` with candidate strings works natively.
+2. **Distractor Attractors Eliminate Sarcasm & Negation False Positives**:
+   - In `F21B` (*"Don't give me your gentlest roast"*), Arm A's boolean query returned `true` (50.5% probability) because it latched onto roast keywords.
+   - Arm B presented options `["genuine_roast_invitation", "refused_or_negated_roast", "playful_unrelated_banter", "none"]`. Jev assigned 76.5% probability to `refused_or_negated_roast`, cleanly suppressing the false positive.
+3. **Zero-Latency Overhead**:
+   - Arm A p50: **436.5 ms**
+   - Arm B p50: **438.2 ms**
+   - **Delta: +1.7 ms**. Because Jev evaluates all 12 queries concurrently across internal classification heads within a single model forward pass, rich contrastive choices provide 100% accuracy with zero real-world latency penalty.
+4. **Committed Trace**: `reports/nan0-cleanroom/nan0-shallow-vs-rich-shootout-trace.json`.
+
