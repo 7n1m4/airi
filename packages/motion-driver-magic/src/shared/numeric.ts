@@ -29,7 +29,7 @@ export function predictAutoregressiveValues(
 }
 
 /** Computes the lower-triangular Cholesky factor of a positive-definite matrix with safe pivot floor. */
-export function cholesky(matrix: readonly number[][], singularMessage: string): number[][] {
+export function cholesky(matrix: readonly number[][], _singularMessage?: string): number[][] {
   const size = matrix.length
   const lower = Array.from({ length: size }, () => Array.from<number>({ length: size }).fill(0))
   for (let row = 0; row < size; row++) {
@@ -56,9 +56,9 @@ export function cholesky(matrix: readonly number[][], singularMessage: string): 
 export function solvePositiveDefinite(
   matrix: readonly number[][],
   targets: readonly number[][],
-  singularMessage: string,
+  _singularMessage?: string,
 ): number[][] {
-  const lower = cholesky(matrix, singularMessage)
+  const lower = cholesky(matrix, _singularMessage)
   const size = matrix.length
   const outputCount = targets[0].length
   const intermediate = Array.from({ length: size }, () => Array.from<number>({ length: outputCount }).fill(0))

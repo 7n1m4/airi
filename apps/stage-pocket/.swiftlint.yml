@@ -1,2 +1,13 @@
+# SwiftLint configuration for stage-pocket
+
 excluded:
   - ios/DerivedData
+  - ios/App/CapApp-SPM
+  - ios/App/App/NativeAI/CoreLLMKit
+
+disabled_rules:
+  - line_length
+  - type_body_length
+  - file_length
+  - function_body_length
+  - cyclomatic_complexity

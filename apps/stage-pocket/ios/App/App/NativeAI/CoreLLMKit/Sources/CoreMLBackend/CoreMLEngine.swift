@@ -887,12 +887,18 @@ public actor CoreMLEngine: LLMEngine {
         cfg.computeUnits = loadedUnits
 
         if let v1 = speculative as? CoreMLChain, !v1.mtpLoaded, let mtp = v1.config.mtp {
-            let drafter = try await CoreMLChain.loadCompiled(bundleURL: bundleURL, name: mtp.drafter, configuration: cfg)
+            let drafter = try await CoreMLChain.loadCompiled(
+                bundleURL: bundleURL, name: mtp.drafter, configuration: cfg
+            )
             var verify: [MLModel] = []
             for name in mtp.verifyChunks {
-                verify.append(try await CoreMLChain.loadCompiled(bundleURL: bundleURL, name: name, configuration: cfg))
+                verify.append(try await CoreMLChain.loadCompiled(
+                    bundleURL: bundleURL, name: name, configuration: cfg
+                ))
             }
-            let verifyHead = try await CoreMLChain.loadCompiled(bundleURL: bundleURL, name: mtp.verifyLmhead, configuration: cfg)
+            let verifyHead = try await CoreMLChain.loadCompiled(
+                bundleURL: bundleURL, name: mtp.verifyLmhead, configuration: cfg
+            )
             try v1.installMTP(drafter: drafter, verifyChunks: verify, verifyHead: verifyHead)
         } else if let v2 = speculative as? CoreMLChainV2, !v2.mtpLoaded, let drafterURL = v2.drafterURL {
 
