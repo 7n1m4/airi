@@ -108,11 +108,20 @@ async function runBenchmarkProbe() {
     })
     const elapsedMs = Math.round(performance.now() - startTime)
 
-    const rawReasoning = (result as any).reasoning || (result as any).reasoning_content || ''
+    const rawReasoning = result.reasoningText
+      || (result as any).reasoning
+      || (result as any).reasoning_content
+      || (result.messages?.length && ((result.messages[result.messages.length - 1] as any)?.reasoning_content || (result.messages[result.messages.length - 1] as any)?.reasoning))
+      || ''
+    const reasoningTokens = Number(
+      (result.usage as any)?.completion_tokens_details?.reasoning_tokens
+      || (result.usage as any)?.reasoning_tokens
+      || 0,
+    )
     const textHasThinkTag = result.text ? result.text.includes('<think>') : false
     const modelLower = modelId.toLowerCase()
-    const isKnownReasoning = /(r1|qwq|o1|o3|reason|thinking|kimi-k1\.5)/i.test(modelLower)
-    const isReasoning = !!rawReasoning || textHasThinkTag || isKnownReasoning
+    const isKnownReasoning = /(r1|qwq|o1|o3|o4|reason|thinking|kimi-k1\.5)/i.test(modelLower)
+    const isReasoning = !!rawReasoning || reasoningTokens > 0 || textHasThinkTag || isKnownReasoning
 
     draftStore.setBrainBenchmark({
       latencyMs: elapsedMs,
