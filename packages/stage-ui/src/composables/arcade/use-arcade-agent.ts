@@ -411,12 +411,20 @@ Return ONLY a JSON object with this exact structure:
           cursorState.value.activeActionLabel = action.label || 'Drag'
           await animateCursor(cursorState.value.x, cursorState.value.y, startX, startY, 200)
           cursorState.value.clicking = true
-          await animateCursor(startX, startY, endX, endY, 300)
+
+          // Synchronize ghost cursor glide with the adapter's step execution
+          const dist = Math.hypot(endX - startX, endY - startY)
+          const steps = Math.max(12, Math.min(60, Math.ceil(dist / 8)))
+          const dragDurationMs = 80 + steps * 25 + 60
 
           if (activeAdapter.value.executeDrag) {
-            await activeAdapter.value.executeDrag(startX, startY, endX, endY)
+            await Promise.all([
+              animateCursor(startX, startY, endX, endY, dragDurationMs),
+              activeAdapter.value.executeDrag(startX, startY, endX, endY),
+            ])
           }
           else {
+            await animateCursor(startX, startY, endX, endY, 300)
             await activeAdapter.value.executeClick(endX, endY)
           }
           cursorState.value.clicking = false

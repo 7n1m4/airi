@@ -17,7 +17,7 @@ import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consci
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
 import ArcadeCatalogModal from './ArcadeCatalogModal.vue'
@@ -47,8 +47,21 @@ const isDosEngineLoading = ref(false)
 const dosLoadingProgress = ref('')
 const isCatalogOpen = ref(false)
 const isTuningModalOpen = ref(false)
-const hasCustomPrompt = ref(false)
 const isPointerLocked = ref(false)
+const hasCustomPrompt = ref(false)
+const isFpsGame = computed(() => {
+  const title = (currentGameTitle.value || '').toLowerCase()
+  const id = (currentGameIdentifier.value || '').toLowerCase()
+  return (
+    title.includes('doom')
+    || title.includes('wolfenstein')
+    || title.includes('heretic')
+    || title.includes('hexen')
+    || title.includes('quake')
+    || id.includes('doom')
+    || id.includes('wolf')
+  )
+})
 const showGridOverlay = useLocalStorage('arcade/show-grid-overlay', false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
@@ -317,8 +330,9 @@ async function mountDosGame(buffer: ArrayBuffer | ArrayBufferLike, gameTitle: st
         autoexecLines = `${cleanBinary}${argsPart}`
       }
 
+      const autolockVal = isFpsGame.value ? 'true' : 'false'
       const dosboxConf = `[sdl]
-autolock=true
+autolock=${autolockVal}
 fullscreen=false
 fulldouble=false
 output=surface
@@ -366,11 +380,21 @@ ${autoexecLines}
       const confFile = zip.file('.jsdos/dosbox.conf')
       if (confFile) {
         const confText = await confFile.async('string')
-        if (confText.includes('autolock=false')) {
-          const updatedConf = confText.replace(/autolock\s*=\s*false/g, 'autolock=true')
-          zip.file('.jsdos/dosbox.conf', updatedConf)
-          effectiveBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
-          console.info('[Arcade] Upgraded existing .jsdos/dosbox.conf to autolock=true')
+        if (!isFpsGame.value) {
+          if (confText.includes('autolock=true')) {
+            const updatedConf = confText.replace(/autolock\s*=\s*true/g, 'autolock=false')
+            zip.file('.jsdos/dosbox.conf', updatedConf)
+            effectiveBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
+            console.info('[Arcade] Switched existing .jsdos/dosbox.conf to autolock=false for non-FPS game')
+          }
+        }
+        else {
+          if (confText.includes('autolock=false')) {
+            const updatedConf = confText.replace(/autolock\s*=\s*false/g, 'autolock=true')
+            zip.file('.jsdos/dosbox.conf', updatedConf)
+            effectiveBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
+            console.info('[Arcade] Upgraded existing .jsdos/dosbox.conf to autolock=true for FPS game')
+          }
         }
       }
     }
@@ -389,7 +413,7 @@ ${autoexecLines}
     autoStart: true,
     kiosk: true,
     renderAspect: '4/3',
-    mouseCapture: false,
+    mouseCapture: isFpsGame.value,
     fsChanges: {
       local: true,
       urlToKey: async () => currentGameIdentifier.value,
@@ -572,10 +596,11 @@ function onPointerLockChange() {
 }
 
 function requestGamePointerLock() {
-  const canvas = dosContainerRef.value?.querySelector('canvas')
-  if (canvas && typeof canvas.requestPointerLock === 'function') {
+  const target = (dosContainerRef.value?.querySelector('.emulator-mouse-overlay') as HTMLElement | null)
+    || (dosContainerRef.value?.querySelector('canvas') as HTMLElement | null)
+  if (target && typeof target.requestPointerLock === 'function') {
     try {
-      canvas.requestPointerLock()
+      target.requestPointerLock()
     }
     catch (err) {
       console.warn('[Arcade] Pointer lock request failed:', err)
@@ -595,7 +620,7 @@ function releaseGamePointerLock() {
 }
 
 function handleDosContainerClick() {
-  if (isGameReady.value && !isPointerLocked.value) {
+  if (isFpsGame.value && isGameReady.value && !isPointerLocked.value) {
     requestGamePointerLock()
   }
 }
@@ -1480,17 +1505,22 @@ async function executeDrag(fromNormX: number, fromNormY: number, toNormX: number
         ci.sendMouseButton?.(0, true)
         await new Promise(r => setTimeout(r, 80))
 
-        // Intermediate drag steps
-        const steps = 10
+        // Intermediate drag steps: calculate density dynamically so tiles are never skipped
+        const dist = Math.hypot(normEndX - normStartX, normEndY - normStartY)
+        const steps = Math.max(12, Math.min(60, Math.ceil(dist / 8)))
+        const stepDelay = 25
         for (let s = 1; s <= steps; s++) {
           const curX = startX + (endX - startX) * (s / steps)
           const curY = startY + (endY - startY) * (s / steps)
           ci.sendMouseMotion?.(curX, curY)
-          await new Promise(r => setTimeout(r, 35))
+          await new Promise(r => setTimeout(r, stepDelay))
         }
 
-        await new Promise(r => setTimeout(r, 40))
+        // Finalize drag at end position with hold before release
+        ci.sendMouseMotion?.(endX, endY)
+        await new Promise(r => setTimeout(r, 80))
         ci.sendMouseButton?.(0, false)
+        await new Promise(r => setTimeout(r, 60))
       }
       catch (err) {
         console.warn('[Arcade] CI executeDrag failed:', err)
@@ -1798,6 +1828,7 @@ onUnmounted(() => {
               <div class="i-solar:upload-track-2-bold text-base" />
             </button>
             <button
+              v-if="isFpsGame"
               class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs font-medium transition-all active:scale-95"
               :class="[
                 isPointerLocked
@@ -1974,10 +2005,10 @@ onUnmounted(() => {
             @click="handleDosContainerClick"
           />
 
-          <!-- Cursor Lock Hint Badge (Shown when game is loaded but cursor not locked) -->
+          <!-- Cursor Lock Hint Badge (Shown when game is loaded but cursor not locked for FPS games) -->
           <transition name="fade">
             <div
-              v-if="isGameReady && !isPointerLocked"
+              v-if="isFpsGame && isGameReady && !isPointerLocked"
               class="pointer-events-none absolute bottom-3 z-30 flex items-center gap-1.5 border border-white/10 rounded-full bg-black/80 px-3 py-1 text-[11px] text-white/90 shadow-xl backdrop-blur-md"
             >
               <div class="i-solar:mouse-bold text-xs text-purple-400" />
