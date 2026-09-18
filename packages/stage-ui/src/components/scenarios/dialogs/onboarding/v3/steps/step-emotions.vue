@@ -13,7 +13,7 @@ import {
   DialogRoot,
   DialogTitle,
 } from 'reka-ui'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
@@ -414,6 +414,10 @@ watch(activeModelId, async (newId) => {
 onMounted(async () => {
   await initializeStageRenderer()
   await loadModelCapabilities()
+})
+
+onBeforeUnmount(() => {
+  syncDraft()
 })
 
 function handleContinue() {

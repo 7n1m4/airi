@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Button } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useLLM } from '../../../../../../stores/llm'
@@ -9,6 +9,7 @@ import { useAiriCardStore } from '../../../../../../stores/modules/airi-card'
 import { useConsciousnessStore } from '../../../../../../stores/modules/consciousness'
 import { useVisionStore } from '../../../../../../stores/modules/vision'
 import { useProvidersStore } from '../../../../../../stores/providers'
+import { resolvePersona } from '../composables/useStarterCardCommit'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
 const props = defineProps<{
@@ -43,7 +44,36 @@ const promptShimForward = ref<string>(
   draftStore.state.visionPromptShimForward || visionStore.promptShimForward || 'You are an objective image analysis model. Analyze the provided image in the context of the conversation and the user\'s latest message. Describe the key visual details, subjects, actions, colors, text, or any specific elements mentioned or asked about by the user, so that the primary chat LLM can respond appropriately. Keep your analysis descriptive and objective, and avoid any conversational filler.',
 )
 
-const characterName = computed(() => activeCard.value?.name || draftStore.state.companionName || 'Airi')
+const userName = computed(() => draftStore.state.userName?.trim() || 'Richy')
+const resolvedPersona = computed(() => resolvePersona(draftStore.state, userName.value))
+const characterName = computed(() => draftStore.state.companionName || resolvedPersona.value.name || activeCard.value?.name || 'Airi')
+
+const characterPersonaContext = computed(() => {
+  const p = resolvedPersona.value
+  const name = characterName.value
+  const desc = p.description
+    || (draftStore.state.customCharacterCardBundle as any)?.data?.description
+    || (draftStore.state.customCharacterTags?.length ? `Tags: ${draftStore.state.customCharacterTags.join(', ')}` : '')
+  const personality = p.personality
+    || (draftStore.state.customCharacterCardBundle as any)?.data?.personality
+  const scenario = p.scenario
+    || (draftStore.state.customCharacterProposal as any)?.scenario
+    || (draftStore.state.customCharacterCardBundle as any)?.data?.scenario
+
+  const parts: string[] = [`You are ${name}.`]
+
+  if (desc) {
+    parts.push(`[APPEARANCE & VISUAL IDENTITY]:\n${desc}`)
+  }
+  if (personality) {
+    parts.push(`[PERSONALITY & TRAITS]:\n${personality}`)
+  }
+  if (scenario) {
+    parts.push(`[CHARACTER LORE & SCENARIO]:\n${scenario}`)
+  }
+
+  return parts.join('\n\n')
+})
 
 const activePromptShim = computed({
   get() {
@@ -151,6 +181,15 @@ onMounted(() => {
   }
 })
 
+onBeforeUnmount(() => {
+  syncDraft()
+})
+
+function handleContinue() {
+  syncDraft()
+  props.onNext()
+}
+
 // ----------------------------------------------------------------------------------
 // Faux-Chat Simulator State & Actions
 // ----------------------------------------------------------------------------------
@@ -230,9 +269,17 @@ async function runSimulation() {
     }
 
     const question = simulatedUserQuestion.value || 'Hey, what do you think of this picture?'
-    const directPrompt = activePromptShim.value
-      ? `${activePromptShim.value}\n\nUser: ${question}`
-      : question
+    const personaContext = characterPersonaContext.value
+    const complianceGuidance = draftStore.state.overrideLimits && draftStore.state.customProse
+      ? `[RESPONSE LENGTH & FORMAT INSTRUCTION]:\n${draftStore.state.customProse}`
+      : ''
+
+    const directPrompt = [
+      personaContext,
+      complianceGuidance,
+      activePromptShim.value,
+      `User: ${question}`,
+    ].filter(Boolean).join('\n\n')
     const forwardPrompt = activePromptShim.value || 'Describe what is happening in this image in detail.'
     const promptToSend = strategy.value === 'direct' ? directPrompt : forwardPrompt
 
@@ -259,11 +306,16 @@ async function runSimulation() {
         },
       ]
 
+      const vlmOptions: any = { vision: true }
+      if (draftStore.state.overrideLimits && draftStore.state.maxTokens) {
+        vlmOptions.max_tokens = draftStore.state.maxTokens
+      }
+
       const vlmResponse = await llmStore.generate(
         activeModel.value,
         vlmProvider,
         vlmMessages as any,
-        { vision: true },
+        vlmOptions,
       )
       hop1Result.value = vlmResponse.text || '[No visual description generated]'
     }
@@ -282,9 +334,14 @@ async function runSimulation() {
 
         try {
           const consciousnessProvider = await providersStore.getProviderInstance(consciousProviderId) as any
-          const charName = characterName.value
-          const brevityGuidance = 'Keep your response short, punchy, and conversational (strictly at most 1 short paragraph, like a quick chat message or instant reply). Do not write multi-paragraph stories, extensive stage narration, or internal monologues.'
-          const systemPrompt = `You are ${charName}. React naturally, playfully, and in-character to what the user said, incorporating the visual sensory observation.\n\n${brevityGuidance}`
+          const brevityGuidance = draftStore.state.overrideLimits && draftStore.state.customProse
+            ? `[RESPONSE LENGTH & FORMAT INSTRUCTION]:\n${draftStore.state.customProse}`
+            : 'Keep your response short, punchy, and conversational (strictly at most 1 short paragraph, like a quick chat message or instant reply). Do not write multi-paragraph stories, extensive stage narration, or internal monologues.'
+          const systemPrompt = [
+            characterPersonaContext.value,
+            'React naturally, playfully, and in-character to what the user said, incorporating the visual sensory observation.',
+            brevityGuidance,
+          ].join('\n\n')
 
           const consciousnessMessages = [
             { role: 'system' as const, content: systemPrompt },
@@ -294,10 +351,16 @@ async function runSimulation() {
             },
           ]
 
+          const consciousOptions: any = {}
+          if (draftStore.state.overrideLimits && draftStore.state.maxTokens) {
+            consciousOptions.max_tokens = draftStore.state.maxTokens
+          }
+
           const consciousnessResponse = await llmStore.generate(
             consciousModelId,
             consciousnessProvider,
             consciousnessMessages as any,
+            consciousOptions,
           )
 
           hop2Result.value = consciousnessResponse.text || '[No character response generated]'
@@ -657,7 +720,7 @@ async function runSimulation() {
           'flex items-center gap-2 rounded-xl bg-primary-600 hover:bg-primary-500 px-5 py-2',
           'text-xs font-semibold text-white shadow-md shadow-primary-600/25 transition-all active:scale-95 cursor-pointer',
         ]"
-        @click="props.onNext"
+        @click="handleContinue"
       >
         <span>{{ t('onboarding.shell.next') }}</span>
         <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />

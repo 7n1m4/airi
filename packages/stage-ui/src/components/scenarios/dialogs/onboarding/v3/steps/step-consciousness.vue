@@ -410,6 +410,8 @@ type ProbeState = 'idle' | 'connecting' | 'inferencing' | 'verified' | 'error'
 const probeState = ref<ProbeState>('idle')
 const probeResponseMessage = ref('')
 const probeErrorMessage = ref('')
+const probeBenchmarkMs = ref<number | null>(draft.state.brainBenchmark?.latencyMs ?? null)
+const probeHasReasoning = ref<boolean>(draft.state.brainBenchmark?.hasReasoning ?? false)
 
 async function testBrainConnection() {
   if (probeState.value === 'connecting' || probeState.value === 'inferencing' || !selectedProviderId.value || !selectedModelId.value.trim())
@@ -426,17 +428,40 @@ async function testBrainConnection() {
     }
 
     probeState.value = 'inferencing'
+    const startTime = performance.now()
 
     const { generateText } = await import('@xsai/generate-text')
     const result = await generateText({
       ...(providerInstance as any).chat(selectedModelId.value.trim()),
       messages: [{ role: 'user', content: 'Say "Ready to assist!" in under 5 words.' }],
     })
+    const elapsedMs = Math.round(performance.now() - startTime)
+    probeBenchmarkMs.value = elapsedMs
+
+    const rawReasoning = (result as any).reasoning || (result as any).reasoning_content || ''
+    const textHasThinkTag = result.text ? result.text.includes('<think>') : false
+    const modelLower = selectedModelId.value.trim().toLowerCase()
+    const isKnownReasoning = /(r1|qwq|o1|o3|reason|thinking|kimi-k1\.5)/i.test(modelLower)
+    const isReasoning = !!rawReasoning || textHasThinkTag || isKnownReasoning
+    probeHasReasoning.value = isReasoning
 
     if (result && result.text) {
       probeState.value = 'verified'
       probeResponseMessage.value = result.text.trim()
-      toast.success('Brain connection verified!')
+
+      draft.setBrainBenchmark({
+        latencyMs: elapsedMs,
+        hasReasoning: isReasoning,
+        reasoningSnippet: rawReasoning ? String(rawReasoning).slice(0, 120) : undefined,
+        testedModel: selectedModelId.value.trim(),
+        testedAt: Date.now(),
+      })
+
+      // Auto-calibrate pacingPreset based on measured latency and reasoning
+      const recommendedPreset = isReasoning || elapsedMs > 2500 ? 'deep' : elapsedMs < 800 ? 'snappy' : 'balanced'
+      draft.setThinking({ pacingPreset: recommendedPreset })
+
+      toast.success(`Brain connection verified! (${elapsedMs}ms TTFT · ${isReasoning ? 'Reasoning Model' : 'Standard Model'})`)
       emit('verified')
     }
     else {
@@ -501,6 +526,7 @@ function confirmSkipAnyway() {
 
 onBeforeUnmount(() => {
   downloadAbort.value?.abort()
+  recordDraft()
 })
 </script>
 
@@ -1043,7 +1069,9 @@ onBeforeUnmount(() => {
                   <span class="relative h-2.5 w-2.5 flex">
                     <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-emerald-500" />
                   </span>
-                  <span class="text-emerald-600 dark:text-emerald-400">Verified</span>
+                  <span class="text-[11px] text-emerald-600 font-mono dark:text-emerald-400">
+                    Verified{{ probeBenchmarkMs !== null ? ` (${probeBenchmarkMs}ms)` : '' }}
+                  </span>
                 </template>
 
                 <!-- 🔴 Error -->
@@ -1056,13 +1084,25 @@ onBeforeUnmount(() => {
               </div>
             </div>
 
-            <!-- Verified Response Bubble -->
+            <!-- Verified Response Bubble & Telemetry Tag -->
             <div
               v-if="probeState === 'verified' && probeResponseMessage"
-              class="flex items-center gap-2 rounded-lg bg-emerald-500/10 p-2.5 text-xs text-emerald-700 dark:text-emerald-300"
+              class="flex flex-col gap-1.5 rounded-lg bg-emerald-500/10 p-2.5 text-xs text-emerald-700 dark:text-emerald-300"
             >
-              <div class="i-solar:chat-round-dots-bold-duotone h-4 w-4 flex-shrink-0 text-emerald-500" />
-              <span class="truncate italic">"{{ probeResponseMessage }}"</span>
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0 flex items-center gap-2 truncate">
+                  <div class="i-solar:chat-round-dots-bold-duotone h-4 w-4 flex-shrink-0 text-emerald-500" />
+                  <span class="truncate italic">"{{ probeResponseMessage }}"</span>
+                </div>
+                <div class="flex shrink-0 items-center gap-1.5 text-[10px] font-mono">
+                  <span v-if="probeBenchmarkMs !== null" class="rounded bg-emerald-500/20 px-1.5 py-0.5 text-emerald-700 font-bold dark:text-emerald-300">
+                    {{ probeBenchmarkMs }}ms TTFT
+                  </span>
+                  <span :class="['px-1.5 py-0.5 rounded font-bold', probeHasReasoning ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300']">
+                    {{ probeHasReasoning ? '🧠 Reasoning Model' : '⚡ Standard Stream' }}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <!-- Error Details Banner -->

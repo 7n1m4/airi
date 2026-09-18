@@ -7,7 +7,7 @@ import {
 } from '@proj-airi/stage-shared'
 import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import ArtPreviewModal from '../components/art-preview-modal.vue'
@@ -292,6 +292,10 @@ function syncDraft() {
     imageJournalToolEnabled: imageJournalToolEnabled.value,
   })
 }
+
+onBeforeUnmount(() => {
+  syncDraft()
+})
 
 function handleNext() {
   syncDraft()

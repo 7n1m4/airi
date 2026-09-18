@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useProactivityStore } from '@proj-airi/stage-ui/stores/proactivity'
 import { Button } from '@proj-airi/ui'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
@@ -106,6 +106,10 @@ function syncDraft() {
     smartSilenceDirectiveEnabled: smartSilenceDirectiveEnabled.value,
   })
 }
+
+onBeforeUnmount(() => {
+  syncDraft()
+})
 </script>
 
 <template>

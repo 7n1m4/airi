@@ -1,12 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import { isThinkingAudioCached, prewarmThinkingFillers } from '../../../../../../libs/pacing/pacing-prewarm'
+import { useLLM } from '../../../../../../stores/llm'
+import { useAiriCardStore } from '../../../../../../stores/modules/airi-card'
 import { useSpeechStore } from '../../../../../../stores/modules/speech'
 import { useProvidersStore } from '../../../../../../stores/providers'
 import { DEFAULT_PACING_FILLERS } from '../../../../../../types/pacing'
+import { resolvePersona } from '../composables/useStarterCardCommit'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
 const props = defineProps<{
@@ -19,6 +23,119 @@ const { t } = useI18n()
 const draftStore = useOnboardingV3Draft()
 const providersStore = useProvidersStore()
 const speechStore = useSpeechStore()
+
+// 0. Persona & Model Hardware Telemetry State
+const cardStore = useAiriCardStore()
+const llmStore = useLLM()
+const { activeCard } = storeToRefs(cardStore)
+
+const userName = computed(() => draftStore.state.userName?.trim() || 'Richy')
+const resolvedPersona = computed(() => resolvePersona(draftStore.state, userName.value))
+const characterName = computed(() => draftStore.state.companionName || resolvedPersona.value.name || activeCard.value?.name || 'Airi')
+
+const characterPersonaContext = computed(() => {
+  const p = resolvedPersona.value
+  const name = characterName.value
+  const desc = p.description
+    || (draftStore.state.customCharacterCardBundle as any)?.data?.description
+    || (draftStore.state.customCharacterTags?.length ? `Tags: ${draftStore.state.customCharacterTags.join(', ')}` : '')
+  const personality = p.personality
+    || (draftStore.state.customCharacterCardBundle as any)?.data?.personality
+  const scenario = p.scenario
+    || (draftStore.state.customCharacterProposal as any)?.scenario
+    || (draftStore.state.customCharacterCardBundle as any)?.data?.scenario
+
+  const parts: string[] = [`You are ${name}.`]
+
+  if (desc) {
+    parts.push(`[APPEARANCE & VISUAL IDENTITY]:\n${desc}`)
+  }
+  if (personality) {
+    parts.push(`[PERSONALITY & TRAITS]:\n${personality}`)
+  }
+  if (scenario) {
+    parts.push(`[CHARACTER LORE & SCENARIO]:\n${scenario}`)
+  }
+
+  return parts.join('\n\n')
+})
+
+const currentProviderId = computed(() => draftStore.state.llmProvider || '')
+const currentModelId = computed(() => draftStore.state.llmModel || '')
+const benchmarkLatency = computed(() => draftStore.state.brainBenchmark?.latencyMs ?? null)
+const hasBenchmarkReasoning = computed(() => draftStore.state.brainBenchmark?.hasReasoning ?? false)
+
+const isKnownReasoningModel = computed(() => {
+  const m = currentModelId.value.toLowerCase()
+  return /(r1|qwq|o1|o3|reason|thinking|kimi-k1\.5)/i.test(m)
+})
+
+const isReasoningModel = computed(() => {
+  return hasBenchmarkReasoning.value || isKnownReasoningModel.value || selectedProfile.value === 'deep'
+})
+
+const reasoningModelSubtitle = computed(() => {
+  return isReasoningModel.value
+    ? 'Emits <think> / reasoning_content (Requires Deep CoT)'
+    : 'Low-latency direct reply (Ideal for Snappy / Balanced)'
+})
+
+const isProbingBenchmark = ref(false)
+
+async function runBenchmarkProbe() {
+  if (isProbingBenchmark.value)
+    return
+
+  const providerId = currentProviderId.value
+  const modelId = currentModelId.value
+  if (!providerId || !modelId) {
+    toast.warning('No Consciousness Brain Model configured in Step 8 yet.')
+    return
+  }
+
+  isProbingBenchmark.value = true
+  try {
+    const providerInstance = await providersStore.getProviderInstance(providerId)
+    if (!providerInstance || typeof (providerInstance as any).chat !== 'function') {
+      throw new Error(`Provider "${providerId}" does not expose chat completions.`)
+    }
+
+    const startTime = performance.now()
+    const { generateText } = await import('@xsai/generate-text')
+    const result = await generateText({
+      ...(providerInstance as any).chat(modelId),
+      messages: [{ role: 'user', content: 'Say "Ready to assist!" in under 5 words.' }],
+    })
+    const elapsedMs = Math.round(performance.now() - startTime)
+
+    const rawReasoning = (result as any).reasoning || (result as any).reasoning_content || ''
+    const textHasThinkTag = result.text ? result.text.includes('<think>') : false
+    const modelLower = modelId.toLowerCase()
+    const isKnownReasoning = /(r1|qwq|o1|o3|reason|thinking|kimi-k1\.5)/i.test(modelLower)
+    const isReasoning = !!rawReasoning || textHasThinkTag || isKnownReasoning
+
+    draftStore.setBrainBenchmark({
+      latencyMs: elapsedMs,
+      hasReasoning: isReasoning,
+      reasoningSnippet: rawReasoning ? String(rawReasoning).slice(0, 120) : undefined,
+      testedModel: modelId,
+      testedAt: Date.now(),
+    })
+
+    const recommendedPreset = isReasoning || elapsedMs > 2500 ? 'deep' : elapsedMs < 800 ? 'snappy' : 'balanced'
+    selectedProfile.value = recommendedPreset
+    syncDraft()
+
+    toast.success(`Hardware benchmarked: ${elapsedMs}ms TTFT (${isReasoning ? 'Reasoning Model' : 'Standard Stream'})`)
+  }
+  catch (err: any) {
+    console.error('[Step 10 Thinking] Probe error:', err)
+    toast.error(err?.message || 'Hardware benchmark failed. Check network & API key.')
+  }
+  finally {
+    isProbingBenchmark.value = false
+  }
+}
 
 // 1. Pacing Profile Presets State
 type PacingSelection = 'disabled' | 'snappy' | 'balanced' | 'deep'
@@ -73,7 +190,7 @@ onMounted(async () => {
 })
 
 // 4. Response Length & Depth Cadence State
-export type ResponseLengthTierId = 'short' | 'balanced' | 'rich'
+export type ResponseLengthTierId = 'short' | 'balanced' | 'rich' | 'custom'
 
 export interface ResponseLengthTier {
   id: ResponseLengthTierId
@@ -113,6 +230,15 @@ const RESPONSE_LENGTH_TIERS: ResponseLengthTier[] = [
     prose: 'Respond in descriptive, long-form paragraphs (up to 2 paragraphs of rich context and detail).',
     icon: 'i-solar:book-bookmark-bold-duotone',
   },
+  {
+    id: 'custom',
+    title: 'Custom Budget',
+    tag: 'USER DEFINED',
+    tokens: 350,
+    desc: 'Custom token ceiling with direct prose guidance.',
+    prose: 'Respond concisely and keep answers within requested bounds.',
+    icon: 'i-solar:tuning-square-2-bold-duotone',
+  },
 ]
 
 const overrideLimits = ref<boolean>(draftStore.state.overrideLimits ?? false)
@@ -120,13 +246,17 @@ const contextWidth = ref<number | undefined>(draftStore.state.contextWidth)
 const selectedLengthTier = ref<ResponseLengthTierId>(
   draftStore.state.maxTokens && draftStore.state.maxTokens <= 120
     ? 'short'
-    : draftStore.state.maxTokens && draftStore.state.maxTokens > 250
-      ? 'rich'
-      : 'balanced',
+    : draftStore.state.maxTokens === 200
+      ? 'balanced'
+      : draftStore.state.maxTokens === 500
+        ? 'rich'
+        : draftStore.state.maxTokens
+          ? 'custom'
+          : 'balanced',
 )
 const maxTokens = ref<number>(
   draftStore.state.maxTokens
-  || (selectedLengthTier.value === 'short' ? 120 : selectedLengthTier.value === 'rich' ? 500 : 200),
+  || (selectedLengthTier.value === 'short' ? 120 : selectedLengthTier.value === 'rich' ? 500 : selectedLengthTier.value === 'custom' ? 350 : 200),
 )
 const isProseEditing = ref(false)
 const customProse = ref<string>(
@@ -135,9 +265,18 @@ const customProse = ref<string>(
   || RESPONSE_LENGTH_TIERS[1].prose,
 )
 
+// Auto-lock overrideLimits on reasoning models
+watch(isReasoningModel, (isReasoning) => {
+  if (isReasoning) {
+    overrideLimits.value = false
+  }
+}, { immediate: true })
+
 function selectLengthTier(tier: ResponseLengthTier) {
   selectedLengthTier.value = tier.id
-  maxTokens.value = tier.tokens
+  if (tier.id !== 'custom') {
+    maxTokens.value = tier.tokens
+  }
   if (!isProseEditing.value) {
     customProse.value = tier.prose
   }
@@ -158,10 +297,95 @@ function handleResetToDefaults() {
 }
 
 function toggleOverrideLimits() {
-  if (!overrideLimits.value && selectedProfile.value === 'deep') {
-    toast.warning('Warning: Enforcing token limits on Deep CoT models can truncate reasoning mid-thought!')
+  if (isReasoningModel.value) {
+    toast.warning('Response length cannot be enforced on reasoning models. Hard token limits truncate internal chain-of-thought.')
+    return
   }
   overrideLimits.value = !overrideLimits.value
+}
+
+// 5. Cadence Simulator / Response Preview State & Action
+const testSimulationPrompt = ref('What do you like to do on a rainy day?')
+const isSimulating = ref(false)
+const simulationResult = ref('')
+const simulationLatencyMs = ref<number | null>(null)
+const simulationTokens = ref<number | null>(null)
+const simulationSentences = ref<number | null>(null)
+const simulationError = ref('')
+
+async function runCadenceSimulation() {
+  if (isSimulating.value)
+    return
+
+  const providerId = currentProviderId.value
+  const modelId = currentModelId.value
+  if (!providerId || !modelId) {
+    simulationError.value = 'Please configure a Brain Model in Step 8 (Consciousness) first.'
+    return
+  }
+
+  simulationError.value = ''
+  isSimulating.value = true
+  simulationResult.value = ''
+  simulationLatencyMs.value = null
+  simulationTokens.value = null
+  simulationSentences.value = null
+
+  const startTime = performance.now()
+
+  try {
+    const providerInstance = await providersStore.getProviderInstance(providerId) as any
+    if (!providerInstance) {
+      throw new Error(`Unable to initialize provider "${providerId}".`)
+    }
+
+    const messages = [
+      {
+        role: 'system' as const,
+        content: [
+          characterPersonaContext.value,
+          overrideLimits.value && customProse.value
+            ? `[RESPONSE LENGTH & FORMAT INSTRUCTION]:\n${customProse.value}`
+            : '',
+        ].filter(Boolean).join('\n\n'),
+      },
+      {
+        role: 'user' as const,
+        content: testSimulationPrompt.value.trim() || 'Tell me about yourself.',
+      },
+    ]
+
+    const options: any = {}
+    if (overrideLimits.value && maxTokens.value) {
+      options.max_tokens = maxTokens.value
+    }
+
+    const response = await llmStore.generate(
+      modelId,
+      providerInstance,
+      messages as any,
+      options,
+    )
+
+    const elapsed = Math.round(performance.now() - startTime)
+    simulationLatencyMs.value = elapsed
+
+    const clean = response?.text ? response.text.trim() : ''
+    simulationResult.value = clean
+
+    const words = clean.split(/\s+/).filter(Boolean).length
+    simulationTokens.value = Math.round(clean.length / 3.8) || words
+
+    const sentences = clean.split(/[.!?]+/).filter((s: string) => s.trim().length > 0).length
+    simulationSentences.value = sentences
+  }
+  catch (err: any) {
+    console.error('[Step 10 Cadence Simulation] Error:', err)
+    simulationError.value = err?.message || 'Simulation failed. Check provider credentials.'
+  }
+  finally {
+    isSimulating.value = false
+  }
 }
 
 // Auto sync disabled state & deep CoT state
@@ -242,6 +466,43 @@ async function handlePrewarmAudioCache() {
   }
 }
 
+// Draft Synchronization
+function syncDraft() {
+  draftStore.setThinking({
+    pacingPreset: selectedProfile.value,
+    subconsciousAsides: selectedProfile.value !== 'disabled',
+    subconsciousTier1: selectedProfile.value !== 'disabled' ? tier1Enabled.value : false,
+    subconsciousTier2: selectedProfile.value !== 'disabled' ? tier2Enabled.value : false,
+    subconsciousTier3: selectedProfile.value !== 'disabled' ? tier3Enabled.value : false,
+    overrideLimits: overrideLimits.value,
+    contextWidth: contextWidth.value,
+    maxTokens: maxTokens.value,
+    customProse: customProse.value,
+  })
+}
+
+// Reactively synchronize any configuration adjustments immediately
+watch(
+  [
+    selectedProfile,
+    tier1Enabled,
+    tier2Enabled,
+    tier3Enabled,
+    overrideLimits,
+    contextWidth,
+    maxTokens,
+    customProse,
+  ],
+  () => {
+    syncDraft()
+  },
+  { deep: true },
+)
+
+onBeforeUnmount(() => {
+  syncDraft()
+})
+
 // Navigation
 function handleContinue(skipPrompt = false) {
   if (
@@ -254,17 +515,7 @@ function handleContinue(skipPrompt = false) {
     return
   }
 
-  draftStore.setThinking({
-    pacingPreset: selectedProfile.value,
-    subconsciousAsides: selectedProfile.value !== 'disabled',
-    subconsciousTier1: selectedProfile.value !== 'disabled' ? tier1Enabled.value : false,
-    subconsciousTier2: selectedProfile.value !== 'disabled' ? tier2Enabled.value : false,
-    subconsciousTier3: selectedProfile.value !== 'disabled' ? tier3Enabled.value : false,
-    overrideLimits: overrideLimits.value,
-    contextWidth: contextWidth.value,
-    maxTokens: maxTokens.value,
-    customProse: customProse.value,
-  })
+  syncDraft()
   props.onNext()
 }
 
@@ -321,6 +572,75 @@ function handleSkipPrewarmAndContinue() {
           <span>{{ selectedProfile === 'disabled' ? 'SILENT • 0 MB VRAM' : 'PACING ACTIVE' }}</span>
         </span>
       </div>
+    </div>
+
+    <!-- Model Hardware Telemetry & Benchmark Profile Card -->
+    <div
+      :class="[
+        'p-3.5 rounded-2xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs transition-all',
+        isReasoningModel
+          ? 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/30'
+          : 'bg-white/70 dark:bg-white/[0.02] border-neutral-200/80 dark:border-white/10',
+      ]"
+    >
+      <div :class="['flex items-center gap-3 min-w-0']">
+        <div
+          :class="[
+            'w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0 shadow-xs border',
+            isReasoningModel
+              ? 'bg-amber-500/20 text-amber-500 border-amber-500/30'
+              : 'bg-primary-500/10 text-primary-500 border-primary-500/20',
+          ]"
+        >
+          <div :class="isReasoningModel ? 'i-solar:brain-bold-duotone w-5 h-5' : 'i-solar:bolt-bold-duotone w-5 h-5'" />
+        </div>
+        <div :class="['flex flex-col min-w-0']">
+          <div :class="['flex items-center gap-2 flex-wrap']">
+            <span :class="['text-xs font-bold text-neutral-900 dark:text-white truncate']">
+              {{ currentModelId || 'Brain Model (Not Selected)' }}
+            </span>
+            <span
+              :class="[
+                'text-[9px] font-mono font-bold px-1.5 py-0.2 rounded uppercase',
+                isReasoningModel
+                  ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300'
+                  : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300',
+              ]"
+            >
+              {{ isReasoningModel ? '🧠 Reasoning Model' : '⚡ Standard Stream' }}
+            </span>
+            <span
+              v-if="currentProviderId"
+              :class="['text-[9px] font-mono px-1.5 py-0.2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500']"
+            >
+              {{ currentProviderId }}
+            </span>
+          </div>
+          <div :class="['text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-2 mt-0.5']">
+            <span :class="['font-mono font-semibold', benchmarkLatency ? 'text-primary-600 dark:text-primary-400' : 'text-neutral-400']">
+              {{ benchmarkLatency ? `${benchmarkLatency}ms TTFT` : 'Latency Unmeasured' }}
+            </span>
+            <span>•</span>
+            <span>{{ reasoningModelSubtitle }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Benchmark Probe Button -->
+      <button
+        type="button"
+        :disabled="isProbingBenchmark || !currentModelId"
+        :class="[
+          'px-3 py-1.5 rounded-xl border text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shrink-0 shadow-xs',
+          isProbingBenchmark
+            ? 'bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border-transparent cursor-not-allowed'
+            : 'border-neutral-200 dark:border-white/10 hover:border-primary-500/40 hover:bg-primary-500/5 text-neutral-700 dark:text-neutral-200',
+        ]"
+        @click="runBenchmarkProbe"
+      >
+        <div :class="[isProbingBenchmark ? 'i-solar:restart-circle-bold animate-spin text-primary-500' : 'i-solar:link-circle-bold text-primary-500', 'w-3.5 h-3.5']" />
+        <span>{{ isProbingBenchmark ? 'Probing...' : benchmarkLatency ? 'Re-benchmark' : 'Probe Hardware' }}</span>
+      </button>
     </div>
 
     <!-- Section 1: Pacing Profile Presets -->
@@ -683,32 +1003,45 @@ function handleSkipPrewarmAndContinue() {
         </button>
       </div>
 
-      <!-- Warning for Deep CoT Reasoning Models (Always visible when Deep CoT is active, whether limits are on or off) -->
+      <!-- Warning for Deep CoT / Reasoning Models -->
       <div
-        v-if="selectedProfile === 'deep'"
+        v-if="isReasoningModel || selectedProfile === 'deep'"
         :class="['p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5 animate-fadeIn']"
       >
-        <div :class="['i-solar:danger-triangle-bold w-4 h-4 flex-shrink-0 mt-0.5 text-amber-500']" />
+        <div :class="['i-solar:lock-bold w-4 h-4 flex-shrink-0 mt-0.5 text-amber-500']" />
         <div :class="['leading-relaxed text-[11px]']">
           <span :class="['font-bold block text-amber-900 dark:text-amber-100 text-xs mb-0.5']">
-            Deep CoT Incompatibility — Keep Limits Disabled:
+            Reasoning Architecture Incompatibility — Keep Limits Disabled:
           </span>
-          Thinking models (DeepSeek R1, Kimi k3, o1, etc.) consume tokens dynamically during internal chain-of-thought deliberation before emitting outward speech. Enforcing any hard token limit will cut off reasoning mid-thought and break responses. Keep this setting disabled for Deep CoT models.
+          Thinking and reasoning models ({{ currentModelId || 'Deep CoT' }}) consume tokens dynamically during internal chain-of-thought deliberation before emitting outward speech. Enforcing any hard token limit will cut off reasoning mid-thought and break responses. Response length enforcement is locked off for reasoning models.
         </div>
       </div>
 
       <!-- Override Limits Switch -->
       <div
-        :class="['flex items-center justify-between rounded-xl p-2.5 bg-white dark:bg-neutral-900/50 border border-neutral-200/60 dark:border-white/5 cursor-pointer hover:border-neutral-300 dark:hover:border-white/10 transition-colors']"
+        :class="[
+          'flex items-center justify-between rounded-xl p-2.5 bg-white dark:bg-neutral-900/50 border border-neutral-200/60 dark:border-white/5 transition-colors',
+          isReasoningModel ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:border-neutral-300 dark:hover:border-white/10',
+        ]"
         @click="toggleOverrideLimits"
       >
         <div :class="['flex flex-col']">
-          <span :class="['text-xs font-semibold text-neutral-800 dark:text-neutral-200']">Enforce Response Length</span>
+          <div :class="['flex items-center gap-2']">
+            <span :class="['text-xs font-semibold text-neutral-800 dark:text-neutral-200']">Enforce Response Length</span>
+            <span
+              v-if="isReasoningModel"
+              :class="['text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center gap-1']"
+            >
+              <div :class="['i-solar:lock-bold w-2.5 h-2.5']" />
+              <span>LOCKED OFF (REASONING MODEL)</span>
+            </span>
+          </div>
           <span :class="['text-[10px] text-neutral-400']">Guide companion response brevity and maximum token budget</span>
         </div>
         <div
           :class="[
-            'relative h-5 w-9 inline-flex shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-in-out',
+            'relative h-5 w-9 inline-flex shrink-0 items-center rounded-full transition-colors duration-200 ease-in-out',
+            isReasoningModel ? 'cursor-not-allowed bg-neutral-200 dark:bg-neutral-800' : 'cursor-pointer',
             overrideLimits ? 'bg-primary-500' : 'bg-neutral-300 dark:bg-neutral-700',
           ]"
         >
@@ -728,12 +1061,12 @@ function handleSkipPrewarmAndContinue() {
           !overrideLimits ? 'opacity-40 pointer-events-none' : '',
         ]"
       >
-        <!-- 3 Length Tiers Side-by-Side Cards -->
+        <!-- 4 Length Tiers Side-by-Side Cards -->
         <div :class="['flex flex-col gap-1.5']">
           <label :class="['text-[10px] text-neutral-400 font-bold uppercase tracking-tight']">
             Spoken Cadence & Depth
           </label>
-          <div :class="['grid grid-cols-1 sm:grid-cols-3 gap-3']">
+          <div :class="['grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3']">
             <div
               v-for="tier in RESPONSE_LENGTH_TIERS"
               :key="tier.id"
@@ -764,9 +1097,50 @@ function handleSkipPrewarmAndContinue() {
 
               <div :class="['mt-3 pt-2.5 border-t border-neutral-200/40 dark:border-white/5 flex items-center justify-between text-[10px] font-mono']">
                 <span :class="['text-neutral-400']">Token Ceiling:</span>
-                <span :class="['text-primary-500 font-bold']">~{{ tier.tokens }} tokens</span>
+                <span :class="['text-primary-500 font-bold']">
+                  {{ tier.id === 'custom' ? `~${maxTokens} tokens` : `~${tier.tokens} tokens` }}
+                </span>
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Custom Token Budget Slider (When Custom tier is selected) -->
+        <div
+          v-if="selectedLengthTier === 'custom'"
+          :class="['p-3 rounded-xl border border-primary-500/30 bg-primary-500/5 flex flex-col gap-2 animate-fadeIn']"
+        >
+          <div :class="['flex items-center justify-between']">
+            <div :class="['flex items-center gap-1.5']">
+              <div :class="['i-solar:tuning-square-2-bold-duotone text-primary-500 w-4 h-4']" />
+              <span :class="['text-xs font-bold text-neutral-800 dark:text-neutral-200']">Custom Token Ceiling</span>
+            </div>
+            <div :class="['flex items-center gap-1.5']">
+              <input
+                v-model.number="maxTokens"
+                type="number"
+                min="50"
+                max="2000"
+                step="10"
+                :class="['w-20 px-2 py-0.5 text-xs font-mono font-bold text-right border border-neutral-200 dark:border-white/10 rounded-lg bg-white dark:bg-neutral-900 text-primary-600 dark:text-primary-400 focus:outline-none focus:border-primary-500']"
+              >
+              <span :class="['text-[11px] font-mono text-neutral-400 font-medium']">tokens</span>
+            </div>
+          </div>
+          <input
+            v-model.number="maxTokens"
+            type="range"
+            min="50"
+            max="2000"
+            step="10"
+            :class="['w-full accent-primary-500 cursor-pointer']"
+          >
+          <div :class="['flex justify-between text-[9px] font-mono text-neutral-400']">
+            <span>50 (Micro)</span>
+            <span>200 (Standard)</span>
+            <span>500 (Rich)</span>
+            <span>1000 (Detailed)</span>
+            <span>2000 (Max)</span>
           </div>
         </div>
 
@@ -838,6 +1212,99 @@ function handleSkipPrewarmAndContinue() {
             rows="3"
             :class="['w-full border border-neutral-200 dark:border-white/10 rounded-xl bg-white dark:bg-neutral-900 p-2.5 text-[11px] text-neutral-800 dark:text-neutral-200 outline-none focus:border-primary-400']"
           />
+        </div>
+      </div>
+
+      <!-- Interactive Cadence Simulator / Response Preview (Always Interactive) -->
+      <div :class="['flex flex-col gap-2.5 border-t border-neutral-200/40 dark:border-white/5 pt-3']">
+        <div :class="['flex items-center justify-between']">
+          <div :class="['flex items-center gap-2']">
+            <div :class="['i-solar:play-circle-bold-duotone text-primary-500 w-4 h-4']" />
+            <span :class="['text-xs font-bold text-neutral-800 dark:text-neutral-200 uppercase tracking-wider']">
+              Response Cadence Simulator
+            </span>
+          </div>
+          <span :class="['text-[9px] font-mono text-neutral-400']">
+            Live Test with {{ currentModelId || 'Configured Model' }}
+          </span>
+        </div>
+        <p :class="['text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed']">
+          Simulate a turn to verify how your companion speaks under current settings{{ overrideLimits ? ' (with token budget and compliance instruction enforced)' : ' (unconstrained output)' }}.
+        </p>
+
+        <div :class="['flex gap-2']">
+          <input
+            v-model="testSimulationPrompt"
+            type="text"
+            placeholder="Enter a test prompt for your companion..."
+            :disabled="isSimulating"
+            :class="['flex-1 text-xs border border-neutral-200 dark:border-white/10 rounded-xl px-3 py-2 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 focus:outline-none focus:border-primary-500 disabled:opacity-50']"
+            @keydown.enter="runCadenceSimulation"
+          >
+          <button
+            type="button"
+            :disabled="isSimulating || !currentModelId"
+            :class="[
+              'px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer',
+              isSimulating
+                ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
+                : !currentModelId
+                  ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
+                  : 'bg-primary-600 hover:bg-primary-500 text-white shadow-primary-600/20',
+            ]"
+            @click="runCadenceSimulation"
+          >
+            <div :class="[isSimulating ? 'i-solar:refresh-circle-bold animate-spin w-3.5 h-3.5' : 'i-solar:play-bold w-3.5 h-3.5']" />
+            <span>{{ isSimulating ? 'Simulating...' : 'Simulate Turn' }}</span>
+          </button>
+        </div>
+
+        <!-- Simulation Error Banner -->
+        <div
+          v-if="simulationError"
+          :class="['p-2.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs flex items-center gap-2']"
+        >
+          <div :class="['i-solar:danger-triangle-bold w-4 h-4 flex-shrink-0']" />
+          <span :class="['text-[11px] leading-relaxed']">{{ simulationError }}</span>
+        </div>
+
+        <!-- Simulation Output Box -->
+        <div
+          v-if="simulationResult || isSimulating"
+          :class="['p-3 rounded-xl border border-neutral-200/60 dark:border-white/5 bg-white dark:bg-neutral-900/60 flex flex-col gap-2 animate-fadeIn']"
+        >
+          <div :class="['flex items-center justify-between border-b border-neutral-200/40 dark:border-white/5 pb-1.5']">
+            <span :class="['text-[10px] font-bold text-neutral-500 uppercase tracking-wider font-mono']">
+              Simulated Companion Output
+            </span>
+            <div
+              v-if="simulationLatencyMs"
+              :class="['flex items-center gap-2 text-[10px] font-mono']"
+            >
+              <span :class="['px-1.5 py-0.2 rounded bg-neutral-100 dark:bg-white/5 text-neutral-600 dark:text-neutral-300']">
+                ⏱️ {{ simulationLatencyMs }}ms TTFT
+              </span>
+              <span :class="['px-1.5 py-0.2 rounded bg-primary-500/10 text-primary-600 dark:text-primary-400 font-bold']">
+                📝 ~{{ simulationTokens }} tokens
+              </span>
+              <span :class="['px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400']">
+                💬 {{ simulationSentences }} sentences
+              </span>
+            </div>
+          </div>
+          <div
+            v-if="isSimulating"
+            :class="['flex items-center gap-2 text-xs text-neutral-400 italic py-2']"
+          >
+            <div :class="['i-solar:refresh-circle-bold animate-spin w-4 h-4 text-primary-500']" />
+            <span>Generating response with cadence enforcement...</span>
+          </div>
+          <p
+            v-else
+            :class="['text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed whitespace-pre-wrap select-text']"
+          >
+            {{ simulationResult }}
+          </p>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useProactivityStore } from '@proj-airi/stage-ui/stores/proactivity'
 import { formatSensorPayload } from '@proj-airi/stage-ui/stores/proactivity-telemetry'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
@@ -274,6 +274,10 @@ function syncDraft() {
     smartSilenceDirectiveEnabled: smartSilenceDirectiveEnabled.value,
   })
 }
+
+onBeforeUnmount(() => {
+  syncDraft()
+})
 
 function handleNext() {
   syncDraft()

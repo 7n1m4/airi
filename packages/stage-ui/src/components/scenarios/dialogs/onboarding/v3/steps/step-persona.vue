@@ -12,7 +12,8 @@ import { toast } from 'vue-sonner'
 
 import CardImportWizard from '../../../../../../../../stage-pages/src/pages/settings/airi-card/components/CardImportWizard.vue'
 
-import { stripMarkers } from '../../../../../../composables/response-categoriser'
+import { parseActor } from '../../../../../../composables/queues'
+import { stripMarkers, stripPacingEnvelopes } from '../../../../../../composables/response-categoriser'
 import {
   compileCardBundle,
   deterministicActorKey,
@@ -23,6 +24,7 @@ import { useAnimaDexWizardStore } from '../../../../../../stores/animadex-wizard
 import { useDisplayModelsStore } from '../../../../../../stores/display-models'
 import { useConsciousnessStore } from '../../../../../../stores/modules/consciousness'
 import { useProvidersStore } from '../../../../../../stores/providers'
+import { formatActorName } from '../../../../../markdown/actor-colors'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
 const props = defineProps<{
@@ -46,13 +48,13 @@ const activeTab = ref<PersonaTab>(
 )
 
 // User's name from Step 4 Profile
-const userName = computed(() => draft.state.userName?.trim() || 'Richard')
+const userName = computed(() => draft.state.userName?.trim() || 'Richy')
 const USER_TOKEN_REGEX = /(?<!\{)\{user\}(?!\})/g
 
 function formatField(text?: string) {
   if (!text)
     return ''
-  return stripMarkers(text.replace(USER_TOKEN_REGEX, userName.value).replace(/\bRichard\b/g, userName.value)).trim()
+  return stripPacingEnvelopes(stripMarkers(text.replace(USER_TOKEN_REGEX, userName.value).replace(/\bRichard\b/g, userName.value))).trim()
 }
 
 const CHARACTER_EMOJIS: Record<string, string> = {
@@ -665,6 +667,49 @@ function syncCreatorDraft() {
   }
 }
 
+// Section 3: Clean Greeting Display & Actor Resolution
+const activeProposalActorId = computed(() => {
+  const greeting = activeProposal.value?.greeting
+  if (!greeting)
+    return null
+  return parseActor(greeting)
+})
+
+const activeProposalActorName = computed(() => {
+  const actorId = activeProposalActorId.value
+  if (!actorId)
+    return undefined
+
+  const rawCard = draft.state.importedCardDraft
+  const airiExt = (rawCard as any)?.data?.extensions?.airi || (rawCard as any)?.extensions?.airi
+  const asset = airiExt?.visual_assets?.[actorId]
+  if (asset?.name) {
+    return asset.name
+  }
+  return formatActorName(actorId)
+})
+
+const activeProposalGreetingDisplay = computed({
+  get: () => {
+    if (!activeProposal.value?.greeting)
+      return ''
+    return stripPacingEnvelopes(stripMarkers(activeProposal.value.greeting)).replace(/^\s+/, '')
+  },
+  set: (newVal: string) => {
+    if (!activeProposal.value)
+      return
+    const current = activeProposal.value.greeting || ''
+    const existingActor = parseActor(current)
+    const charName = customName.value.trim() || 'AI Companion'
+    const actorKey = existingActor || deterministicActorKey(charName)
+
+    // Option C: Strip markers/envelopes from the user-typed input and prefix with the preserved ACTOR tag
+    const cleanNewVal = stripPacingEnvelopes(stripMarkers(newVal)).replace(/^\s+/, '')
+    activeProposal.value.greeting = cleanNewVal ? `<|ACTOR:${actorKey}|> ${cleanNewVal}` : ''
+    syncCreatorDraft()
+  },
+})
+
 function onSelectTab(tab: PersonaTab) {
   activeTab.value = tab
   if (tab === 'creator') {
@@ -1019,6 +1064,9 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   removeIpcListener()
+  if (activeTab.value === 'creator' || draft.state.personaSource === 'creator') {
+    syncCreatorDraft()
+  }
 })
 </script>
 
@@ -1693,7 +1741,7 @@ onBeforeUnmount(() => {
               <span :class="['h-4 w-4 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0', activeProposalId === p.id ? 'bg-primary-500 text-white' : 'bg-neutral-200 dark:bg-neutral-600 text-neutral-600 dark:text-neutral-300']">
                 {{ p.id }}
               </span>
-              <span class="truncate">{{ p.title }}</span>
+              <span class="truncate">{{ formatField(p.title) }}</span>
             </button>
           </div>
 
@@ -1701,18 +1749,27 @@ onBeforeUnmount(() => {
           <div v-if="activeProposal" :class="['flex flex-col gap-3 pt-1']">
             <div>
               <div :class="['flex items-center justify-between mb-1']">
-                <label :class="['text-[11px] font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5']">
+                <label :class="['text-[11px] font-bold text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5 flex-wrap']">
                   <div :class="['i-solar:chat-round-dots-bold-duotone h-3.5 w-3.5 text-primary-500']" />
                   <span>Opening Greeting (Turn 0 Speech)</span>
+                  <span
+                    v-if="activeProposalActorName"
+                    :class="[
+                      'text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1 shrink-0',
+                      'bg-primary-500/15 text-primary-600 dark:text-primary-400 border border-primary-500/30',
+                    ]"
+                  >
+                    <div :class="['i-solar:user-speak-bold-duotone h-3 w-3']" />
+                    <span>{{ activeProposalActorName }}</span>
+                  </span>
                 </label>
                 <span :class="['text-[10px] text-neutral-400 italic']">Spoken immediately upon stage launch</span>
               </div>
               <textarea
-                v-model="activeProposal.greeting"
+                v-model="activeProposalGreetingDisplay"
                 rows="2"
                 placeholder="First words spoken by the companion..."
                 :class="['w-full p-2.5 rounded-xl bg-neutral-100/80 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white resize-none focus:outline-hidden focus:border-primary-500']"
-                @input="syncCreatorDraft"
               />
             </div>
 

@@ -119,6 +119,13 @@ export interface OnboardingV3DraftState {
   expressionMappings?: Record<string, string>
   actingModelExpressionPrompt?: string
   previewStrength?: number
+  brainBenchmark?: {
+    latencyMs?: number
+    hasReasoning?: boolean
+    reasoningSnippet?: string
+    testedModel?: string
+    testedAt?: number
+  }
 }
 
 export const ARCHETYPE_MODULE_PRESETS: Record<ExperienceArchetypeId, ModuleBundleConfig> = {
@@ -737,6 +744,19 @@ export const useOnboardingV3Draft = defineStore('onboarding-v3-draft', () => {
       state.value.previewStrength = emotions.previewStrength
   }
 
+  function setBrainBenchmark(benchmark: {
+    latencyMs?: number
+    hasReasoning?: boolean
+    reasoningSnippet?: string
+    testedModel?: string
+    testedAt?: number
+  }) {
+    state.value.brainBenchmark = {
+      ...state.value.brainBenchmark,
+      ...benchmark,
+    }
+  }
+
   function reset() {
     state.reset()
   }
@@ -762,6 +782,7 @@ export const useOnboardingV3Draft = defineStore('onboarding-v3-draft', () => {
     setProactivity,
     setMemory,
     setTools,
+    setBrainBenchmark,
     reset,
   }
 })

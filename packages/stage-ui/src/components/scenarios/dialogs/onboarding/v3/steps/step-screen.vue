@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Button } from '@proj-airi/ui'
-import { ref } from 'vue'
+import { onBeforeUnmount, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
@@ -96,6 +96,10 @@ function syncDraft() {
     screenWatcherInterval: screenWatcherInterval.value,
   })
 }
+
+onBeforeUnmount(() => {
+  syncDraft()
+})
 </script>
 
 <template>

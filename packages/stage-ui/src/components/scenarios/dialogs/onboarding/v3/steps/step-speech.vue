@@ -740,6 +740,13 @@ onBeforeUnmount(() => {
     audioPlayer.value = null
   }
   isPlayingTarget.value = null
+  draftStore.setSpeech({
+    provider: normalizeProviderId(selectedProvider.value),
+    model: selectedModel.value,
+    voiceId: selectedVoice.value,
+    pitch: pitch.value,
+    rate: speed.value,
+  })
 })
 
 // 7. Navigation Handlers
