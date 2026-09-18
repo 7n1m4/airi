@@ -14,6 +14,7 @@ import ArtPreviewModal from '../components/art-preview-modal.vue'
 import ComfyuiWorkflowModal from '../components/comfyui-workflow-modal.vue'
 
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
+import { buildArtistryPromptFromPersona } from '../types'
 
 const props = defineProps<{
   onNext: () => void
@@ -47,6 +48,29 @@ const activeVesselName = computed(() => {
   return found?.name || modelId
 })
 
+const hasPersonaTags = computed(() => (draft.state.customCharacterTags?.length ?? 0) > 0)
+
+const promptSourceLabel = computed(() => {
+  if (hasPersonaTags.value) {
+    const name = draft.state.companionName
+      || draft.state.customCharacterCardBundle?.data?.name
+      || activeVesselName.value
+    return `${name} (Persona Tags)`
+  }
+  return activeVesselName.value
+})
+
+function buildPromptFromPersona(): string {
+  const charName = draft.state.companionName
+    || draft.state.customCharacterCardBundle?.data?.name
+    || (activeVesselName.value !== 'Avatar' ? activeVesselName.value : undefined)
+  return buildArtistryPromptFromPersona(
+    charName,
+    draft.state.customCharacterTags || [],
+    draft.state.customCharacterSeries,
+  )
+}
+
 function getVesselDefaultPrompt(modelId?: string): string {
   const mid = (modelId || '').toLowerCase()
   if (mid.includes('hiyori')) {
@@ -58,13 +82,30 @@ function getVesselDefaultPrompt(modelId?: string): string {
   return 'masterpiece, best quality, 1girl, vibrant anime illustration, beautiful lighting, expressive features, clean lines,'
 }
 
-// Seed visual prompt on first load if empty
+// Seed visual prompt on first load if empty or holding stale vessel file placeholders
 onMounted(() => {
-  if (!visualPrompt.value.trim()) {
-    visualPrompt.value = getVesselDefaultPrompt(draft.state.vesselDisplayModelId)
+  const isStaleVesselDefault = /\.(zip|vrm|pmx|pmd|skel|moc3)/i.test(visualPrompt.value)
+    || visualPrompt.value.includes('custom avatar')
+  if (!visualPrompt.value.trim() || isStaleVesselDefault) {
+    if (hasPersonaTags.value) {
+      visualPrompt.value = buildPromptFromPersona()
+    }
+    else {
+      visualPrompt.value = getVesselDefaultPrompt(draft.state.vesselDisplayModelId)
+    }
     syncDraft()
   }
 })
+
+function resetToPersonaPrompt() {
+  if (hasPersonaTags.value) {
+    visualPrompt.value = buildPromptFromPersona()
+  }
+  else {
+    visualPrompt.value = getVesselDefaultPrompt(draft.state.vesselDisplayModelId)
+  }
+  syncDraft()
+}
 
 function resetToDefaultPrompt() {
   visualPrompt.value = getVesselDefaultPrompt(draft.state.vesselDisplayModelId)
@@ -478,7 +519,7 @@ function handleNext() {
             <span>👗</span> Character Visual Style & LoRA Prefix
           </span>
           <span :class="['text-[10px] bg-primary-500/10 text-primary-600 dark:text-primary-300 px-2 py-0.5 rounded-full border border-primary-500/20 font-medium']">
-            ✨ Auto-injected from {{ activeVesselName }}
+            ✨ Auto-injected from {{ promptSourceLabel }}
           </span>
         </div>
         <p :class="['text-[11px] text-neutral-500 dark:text-neutral-400 leading-normal']">
@@ -495,13 +536,25 @@ function handleNext() {
             @input="syncDraft"
           />
           <div :class="['absolute bottom-2.5 left-3 right-3 flex items-center justify-between']">
-            <button
-              type="button"
-              :class="['text-[10px] text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer']"
-              @click="resetToDefaultPrompt"
-            >
-              ↺ Reset to Vessel Default
-            </button>
+            <div :class="['flex items-center gap-2']">
+              <button
+                v-if="hasPersonaTags"
+                type="button"
+                :class="['text-[10px] text-primary-600 dark:text-primary-400 hover:text-primary-700 dark:hover:text-primary-300 font-medium transition-colors cursor-pointer flex items-center gap-1']"
+                @click="resetToPersonaPrompt"
+              >
+                <span>✨</span>
+                <span>Reset to Persona Tags</span>
+              </button>
+              <span v-if="hasPersonaTags" :class="['text-neutral-300 dark:text-neutral-700 text-xs']">•</span>
+              <button
+                type="button"
+                :class="['text-[10px] text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer']"
+                @click="resetToDefaultPrompt"
+              >
+                ↺ Reset to Vessel Default
+              </button>
+            </div>
             <button
               type="button"
               :disabled="selectedProvider === 'none'"

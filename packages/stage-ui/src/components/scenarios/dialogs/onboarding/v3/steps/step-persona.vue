@@ -26,6 +26,7 @@ import { useConsciousnessStore } from '../../../../../../stores/modules/consciou
 import { useProvidersStore } from '../../../../../../stores/providers'
 import { formatActorName } from '../../../../../markdown/actor-colors'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
+import { buildArtistryPromptFromPersona } from '../types'
 
 const props = defineProps<{
   onNext: () => void
@@ -664,6 +665,7 @@ function syncCreatorDraft() {
       importedCardDraft: cardBundle,
     })
     draft.state.companionName = charName
+    draft.state.artistryVisualPrompt = buildArtistryPromptFromPersona(charName, customTags.value, customSeries.value)
   }
 }
 
@@ -820,9 +822,13 @@ async function runBlipAutoTag() {
       const extracted = await providerInstance.captionImage?.(customAvatar.value)
       if (extracted && extracted.trim()) {
         const tagsFromBlip = extracted
-          .split(/[,;\s]+/)
+          .split(/[,;]+/)
+          .map((t: string) => t.trim())
           .filter(Boolean)
-          .map((t: string) => t.startsWith('#') ? t : `#${t}`)
+          .map((t: string) => {
+            const clean = t.startsWith('#') ? t.slice(1).trim() : t.trim()
+            return `#${clean.replace(/\s+/g, '-')}`
+          })
         for (const t of tagsFromBlip) {
           if (!customTags.value.includes(t))
             customTags.value.push(t)

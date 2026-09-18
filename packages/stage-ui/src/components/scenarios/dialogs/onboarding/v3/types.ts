@@ -51,3 +51,40 @@ export const ONBOARDING_V3_STEPS: OnboardingV3StepDef[] = [
   { id: 'tools', label: 'Tools', subtitle: 'Automation & Desktop MCP', index: 17, moduleKey: 'tools' },
   { id: 'finale', label: 'Stage Finale', subtitle: 'Pre-Flight Readiness & Launch', index: 18 },
 ]
+
+export function buildArtistryPromptFromPersona(charName?: string, tags?: string[], _series?: string): string {
+  const ignoredBackgroundTags = new Set([
+    'no humans',
+    'no-humans',
+    'black background',
+    'black-background',
+    'white background',
+    'white-background',
+    'grey background',
+    'gray background',
+    'simple background',
+    'simple-background',
+    'solid background',
+    'solid-background',
+    'monochrome',
+    'borders',
+    'border',
+    'blank background',
+    'blank-background',
+  ])
+
+  const cleanTags = (tags || [])
+    .map(t => t.replace(/^#/, '').replace(/-/g, ' ').trim())
+    .filter(t => t.length > 0 && !ignoredBackgroundTags.has(t.toLowerCase()))
+
+  const parts = ['masterpiece', 'best quality', '1girl']
+  const cleanName = (charName || '').trim()
+  if (cleanName && !['AI Companion', 'Companion', 'Mochi-chan'].includes(cleanName)) {
+    parts.push(cleanName)
+  }
+  if (cleanTags.length > 0) {
+    parts.push(...cleanTags)
+  }
+  parts.push('detailed anime aesthetic,')
+  return parts.join(', ')
+}

@@ -110,6 +110,11 @@ const userCustomModels = computed<UnifiedVesselItem[]>(() => {
       formatLabel = 'Live2D (2D)'
     }
 
+    const cleanName = (m.name || m.id || 'custom avatar')
+      .replace(/\.(zip|vrm|pmx|pmd|skel|moc3)$/i, '')
+      .replace(/[_-]+/g, ' ')
+      .trim()
+
     return {
       id: m.id,
       name: m.name || m.id,
@@ -120,7 +125,7 @@ const userCustomModels = computed<UnifiedVesselItem[]>(() => {
       author: 'Custom Import',
       sourceSiteName: 'Local Vault',
       description: 'Custom imported companion avatar stored in your IndexedDB repository.',
-      prompt: `masterpiece, best quality, 1girl, ${m.name || 'custom avatar'}, detailed anime aesthetic,`,
+      prompt: `masterpiece, best quality, 1girl, ${cleanName || 'custom avatar'}, detailed anime aesthetic,`,
     }
   })
 })
