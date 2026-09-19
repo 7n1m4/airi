@@ -27,6 +27,7 @@ vi.mock('../modules/airi-card', () => {
       getCard: vi.fn(() => card),
       updateCard: vi.fn(),
     }),
+    buildSystemPrompt: vi.fn(() => ''),
   }
 })
 
@@ -315,5 +316,61 @@ describe('chat orchestrator bridged tool loop runtime contracts', () => {
     expect((assistantMsg as any)?.rawContent).toContain('<tool_call>{"name": unquoted_broken}</tool_call>')
     expect((assistantMsg as any)?.categorization?.reasoning).toContain('{"name": unquoted_broken}')
     expect(assistantMsg?.content).toBe('Finished tool execution.')
+  })
+
+  it('preserves reasoning-delta when text-delta arrives and across tool calls', async () => {
+    const chatStore = useChatOrchestratorStore(pinia)
+    const chatSession = useChatSessionStore(pinia)
+    const llmStore = useLLM(pinia)
+
+    const sessionId = 'session-reasoning-preservation'
+    chatSession.activeSessionId = sessionId
+    chatSession.setSessionMessages(sessionId, [])
+
+    const executedTools: string[] = []
+    const tools = [
+      {
+        type: 'function',
+        function: { name: 'tool_check' },
+        execute: async () => {
+          executedTools.push('tool_check')
+          return 'check_ok'
+        },
+      },
+    ]
+
+    llmStore.stream = vi.fn(async (_model, _provider, _msgs, options) => {
+      if (executedTools.length === 0) {
+        // Stream reasoning-delta followed by bridged tool call
+        await options.onStreamEvent({
+          type: 'reasoning-delta',
+          text: 'I should first check the tool before answering.',
+        })
+        await options.onStreamEvent({
+          type: 'text-delta',
+          text: '<|tool_check:foo="bar"|>',
+        })
+      }
+      else {
+        // Round 2: Stream content text-delta
+        await options.onStreamEvent({
+          type: 'text-delta',
+          text: 'Here is the answer after running the tool.',
+        })
+      }
+    })
+
+    await chatStore.ingest('Hello, run the check', {
+      triggerOnly: false,
+      tools: tools as any,
+    }, sessionId)
+
+    expect(executedTools).toEqual(['tool_check'])
+
+    const history = chatSession.getSessionMessages(sessionId)
+    const assistantMsg = history.find(m => m.role === 'assistant')
+    expect(assistantMsg).toBeDefined()
+    expect(assistantMsg?.content).toBe('Here is the answer after running the tool.')
+    expect((assistantMsg as any)?.categorization?.reasoning).toBe('I should first check the tool before answering.')
   })
 })

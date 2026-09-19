@@ -885,9 +885,15 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           const current = categorizer.getCurrent()
           if (current) {
             const finalSpeech = current.speech || (cardFallback !== false && current.reasoning ? current.reasoning : '')
-             ;(buildingMessage as any).categorization = {
+            const existingCategorization = (buildingMessage as any).categorization || {}
+            const finalReasoning = current.reasoning && existingCategorization.reasoning && !existingCategorization.reasoning.includes(current.reasoning)
+              ? `${existingCategorization.reasoning}\n\n${current.reasoning}`
+              : (current.reasoning || existingCategorization.reasoning || '')
+
+            ;(buildingMessage as any).categorization = {
+              ...existingCategorization,
               speech: finalSpeech,
-              reasoning: current.reasoning,
+              reasoning: finalReasoning,
             }
           }
 
@@ -1112,14 +1118,23 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
               return
 
             const cardFallback = activeCard.value?.extensions?.airi?.generation?.known?.reasoningFallback
-            const finalCategorization = categorizeResponse(fullText, effectiveProviderId, { reasoningFallback: cardFallback !== false })
+            const hasToolCalls = buildingMessage.slices.some(s => s.type === 'tool-call') || needsBridgedFollowUp
+            const finalCategorization = categorizeResponse(fullText, effectiveProviderId, {
+              reasoningFallback: cardFallback !== false && !hasToolCalls,
+            })
+
+            const existingCategorization = (buildingMessage as any).categorization || {}
+            const finalReasoning = finalCategorization.reasoning && existingCategorization.reasoning && !existingCategorization.reasoning.includes(finalCategorization.reasoning)
+              ? `${existingCategorization.reasoning}\n\n${finalCategorization.reasoning}`
+              : (finalCategorization.reasoning || existingCategorization.reasoning || '')
 
             ;(buildingMessage as any).categorization = {
+              ...existingCategorization,
               speech: finalCategorization.speech,
-              reasoning: finalCategorization.reasoning || ((buildingMessage as any).categorization?.reasoning ?? ''),
+              reasoning: finalReasoning,
             }
 
-            if (buildingMessage.content !== finalCategorization.speech) {
+            if (finalCategorization.speech && buildingMessage.content !== finalCategorization.speech) {
               buildingMessage.content = finalCategorization.speech
             }
 
