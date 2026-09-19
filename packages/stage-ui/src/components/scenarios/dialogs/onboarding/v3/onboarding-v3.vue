@@ -135,7 +135,7 @@ function handleSkip() {
       <!-- Left: Brand Title -->
       <div :class="['flex items-center space-x-2 text-xs font-semibold tracking-wider text-primary-500 select-none pointer-events-none whitespace-nowrap shrink-0']">
         <div :class="['i-solar:shield-star-bold-duotone w-4 h-4 shrink-0']" />
-        <span>{{ t('onboarding.shell.brand') }}</span>
+        <span class="hidden md:inline">{{ t('onboarding.shell.brand') }}</span>
       </div>
 
       <!-- Center: 5-Item Dynamic Sliding Window Stepper (Visible in Guided Wizard) -->

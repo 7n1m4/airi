@@ -12,10 +12,12 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
+import CloudflareConnectDialog from '../../../cloudflare/CloudflareConnectDialog.vue'
 import ProviderPickerGrid from '../../v2/components/provider-picker-grid.vue'
 
 import { DEFAULT_WEB_LLM_FP32_MODEL, WEB_LLM_MODELS } from '../../../../../../libs/inference/constants'
 import { NativeAI } from '../../../../../../libs/native-ai'
+import { useCloudflareStore } from '../../../../../../stores/modules/cloudflare'
 import { useProvidersStore } from '../../../../../../stores/providers'
 import { DEFAULT_APPLE_CORE_AI_MODEL } from '../../../../../../stores/providers/apple-core-ai'
 import { BrainModelPicker } from '../../../../chat'
@@ -34,10 +36,90 @@ const { t } = useI18n()
 
 // --- Stores & Draft ---
 const providersStore = useProvidersStore()
+const cloudflareStore = useCloudflareStore()
 const draft = useOnboardingV3Draft()
 
 const selectedProviderId = ref(draft.state.llmProvider ?? '')
 const selectedModelId = ref(draft.state.llmModel ?? '')
+
+const isConnectModalOpen = ref(false)
+const activeTab = ref<'free' | 'local' | 'custom'>('free')
+
+const isCloudflareConnected = computed(() => {
+  return Boolean(cloudflareStore.activeAccountId && cloudflareStore.activeAccessToken)
+})
+
+const cloudflarePresets = [
+  {
+    id: '@cf/meta/llama-3.3-70b-instruct',
+    name: 'Meta LLaMA 3.3 70B',
+    description: 'Frontier capability, fast & versatile',
+    badge: 'Frontier',
+  },
+  {
+    id: '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
+    name: 'DeepSeek R1 Distill 32B',
+    description: 'Deep chain-of-thought reasoning',
+    badge: 'Reasoning',
+  },
+  {
+    id: '@cf/zai-org/glm-4.7-flash',
+    name: 'GLM-4.7 Flash',
+    description: 'Fast thinking & bilingual dialogue',
+    badge: 'Fast CoT',
+  },
+  {
+    id: '@cf/qwen/qwen2.5-7b-instruct',
+    name: 'Qwen 2.5 7B Instruct',
+    description: 'Snappy everyday conversationalist',
+    badge: 'Snappy',
+  },
+]
+
+const pollinationsPresets = [
+  {
+    id: 'openai',
+    name: 'GPT-4o Mini (Pollinations)',
+    description: 'Standard smart conversationalist',
+  },
+  {
+    id: 'deepseek',
+    name: 'DeepSeek V3 (Pollinations)',
+    description: 'High-intelligence open weights',
+  },
+  {
+    id: 'mistral',
+    name: 'Mistral Small (Pollinations)',
+    description: 'Snappy reasoning & instruction following',
+  },
+]
+
+function selectCloudflareModel(modelId: string) {
+  selectedProviderId.value = 'cloudflare-workers-ai'
+  selectedModelId.value = modelId
+
+  if (!providersStore.providers['cloudflare-workers-ai']) {
+    providersStore.providers['cloudflare-workers-ai'] = {}
+  }
+  providersStore.providers['cloudflare-workers-ai'].apiKey = cloudflareStore.activeAccessToken
+  providersStore.providers['cloudflare-workers-ai'].accountId = cloudflareStore.activeAccountId
+  providersStore.markProviderAdded('cloudflare-workers-ai')
+  recordDraft()
+}
+
+function selectPollinationsModel(modelId: string) {
+  selectedProviderId.value = 'pollinations'
+  selectedModelId.value = modelId
+  providersStore.markProviderAdded('pollinations')
+  recordDraft()
+}
+
+function handleCloudflareConnected() {
+  isConnectModalOpen.value = false
+  if (cloudflareStore.activeAccountId && cloudflareStore.activeAccessToken) {
+    selectCloudflareModel('@cf/meta/llama-3.3-70b-instruct')
+  }
+}
 
 const { allChatProvidersMetadata, configuredChatProvidersMetadata } = storeToRefs(providersStore)
 
@@ -64,9 +146,23 @@ const availableWebLlmModels = computed(() => {
 })
 
 onMounted(async () => {
+  if (selectedProviderId.value === 'web-llm' || selectedProviderId.value === 'apple-core-ai') {
+    activeTab.value = 'local'
+  }
+  else if (selectedProviderId.value && selectedProviderId.value !== 'cloudflare-workers-ai' && selectedProviderId.value !== 'pollinations') {
+    activeTab.value = 'custom'
+  }
+  else {
+    activeTab.value = 'free'
+  }
+
+  if (!selectedModelId.value && isCloudflareConnected.value) {
+    selectCloudflareModel('@cf/meta/llama-3.3-70b-instruct')
+  }
+
   if (isIOSNative.value) {
     await checkCoreAiResident()
-    if (!selectedProviderId.value) {
+    if (!selectedProviderId.value && !isCloudflareConnected.value) {
       selectCoreAiModel()
     }
   }
@@ -572,10 +668,10 @@ onBeforeUnmount(() => {
         </p>
       </div>
 
-      <!-- Quick-Pick for Configured Brains -->
+      <!-- Quick-Pick for Configured Brains (Top Option) -->
       <div
-        v-if="configuredChatProvidersMetadata.length > 0"
-        class="flex flex-col gap-3 border border-purple-500/30 rounded-xl bg-purple-500/10 p-4 backdrop-blur-md"
+        v-if="configuredChatProvidersMetadata.length > 0 || selectedProviderId"
+        class="flex flex-col gap-2.5 border border-purple-500/30 rounded-xl bg-purple-500/10 p-3.5 backdrop-blur-md"
       >
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
@@ -584,9 +680,6 @@ onBeforeUnmount(() => {
           </div>
           <span class="rounded-full bg-purple-500/20 px-2 py-0.5 text-[10px] text-purple-700 font-bold dark:text-purple-300">1-CLICK SELECTION</span>
         </div>
-        <p class="text-xs text-neutral-600 leading-relaxed dark:text-neutral-400">
-          You already have active AI LLM models configured in AIRI! Attach one of your existing models to this companion in 1 click:
-        </p>
         <BrainModelPicker
           v-model:provider="selectedProviderId"
           v-model:model="selectedModelId"
@@ -597,534 +690,811 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <!-- Apple Core AI Local Engine (iOS Native) -->
-      <div
-        v-if="isIOSNative"
-        :class="['p-4 rounded-xl', 'bg-white/40 dark:bg-neutral-900/40', 'border border-neutral-200/60 dark:border-neutral-800/80', 'backdrop-blur-md', 'flex flex-col gap-3']"
-      >
-        <div class="flex items-center gap-2">
-          <div class="i-solar:cpu-bolt-bold-duotone h-4 w-4 text-primary-500" />
-          <span class="text-xs text-neutral-500 font-bold tracking-wider uppercase dark:text-neutral-400">Apple Core AI (Neural Engine)</span>
-          <span class="ml-auto rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 font-bold dark:text-emerald-400">ANE ACCELERATED · 100% OFFLINE</span>
-        </div>
+      <!-- 3-Tier Brain Selector Tabs -->
+      <div class="flex items-center gap-1 rounded-xl bg-neutral-200/50 p-1 backdrop-blur-md dark:bg-neutral-800/50">
+        <button
+          type="button"
+          :class="[
+            'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+            activeTab === 'free'
+              ? 'bg-white text-primary-600 shadow-sm dark:bg-neutral-900 dark:text-primary-400'
+              : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200',
+          ]"
+          @click="activeTab = 'free'"
+        >
+          <div class="i-solar:cloud-bold-duotone h-4 w-4" />
+          <span>Free Cloud AI</span>
+          <span class="rounded-full bg-amber-500/10 px-1.5 py-0.2 text-[9px] text-amber-600 font-bold hidden sm:inline-block dark:text-amber-400">Zero Setup</span>
+        </button>
 
-        <div class="grid grid-cols-1 gap-2">
-          <button
-            type="button"
-            :class="[
-              'relative flex items-center gap-3 border-2 rounded-xl p-3.5 text-left transition-all duration-300 cursor-pointer',
-              isCoreAiSelected
-                ? 'border-primary-500 bg-primary-500/5 shadow-lg shadow-primary-500/10 dark:border-primary-400'
-                : 'border-neutral-200/60 bg-white/40 dark:border-neutral-800/80 dark:bg-neutral-900/40 hover:border-primary-500/50',
-            ]"
-            @click="selectCoreAiModel"
-          >
-            <div
-              class="h-10 w-10 flex flex-shrink-0 items-center justify-center rounded-xl"
-              :class="[isCoreAiSelected ? 'bg-primary-500/15' : 'bg-neutral-100 dark:bg-neutral-800']"
-            >
-              <div class="i-solar:cpu-bolt-bold-duotone h-6 w-6" :class="isCoreAiSelected ? 'text-primary-500' : 'text-neutral-500'" />
-            </div>
-            <div class="min-w-0 flex-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-sm text-neutral-800 font-bold dark:text-neutral-100">Gemma 4 E2B IT (Speculative CoreML)</span>
-                <span class="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 font-bold dark:text-amber-400">
-                  ⭐ RECOMMENDED ON-DEVICE
-                </span>
-              </div>
-              <p class="mt-0.5 truncate text-xs text-neutral-500 dark:text-neutral-400">
-                High-speed neural dialogue on Apple Neural Engine (~45+ tok/s). 100% offline & private.
-              </p>
-            </div>
-            <span class="flex-shrink-0 rounded-md bg-neutral-100 px-2 py-1 text-[10px] text-neutral-600 font-bold font-mono dark:bg-neutral-800 dark:text-neutral-300">
-              ~1.4 GB RAM
-            </span>
-          </button>
-        </div>
+        <button
+          type="button"
+          :class="[
+            'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+            activeTab === 'local'
+              ? 'bg-white text-primary-600 shadow-sm dark:bg-neutral-900 dark:text-primary-400'
+              : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200',
+          ]"
+          @click="activeTab = 'local'"
+        >
+          <div class="i-solar:cpu-bolt-bold-duotone h-4 w-4" />
+          <span>Local On-Device</span>
+          <span class="rounded-full bg-emerald-500/10 px-1.5 py-0.2 text-[9px] text-emerald-600 font-bold hidden sm:inline-block dark:text-emerald-400">Offline</span>
+        </button>
 
-        <!-- Core AI In-Context Download & Action Controls -->
-        <div v-if="isCoreAiSelected" class="flex flex-col gap-2.5 border border-neutral-200/60 rounded-xl bg-white/40 p-3.5 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40">
-          <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0 flex-1 flex-col">
-              <span class="truncate text-xs text-neutral-800 font-semibold dark:text-neutral-200">
-                Selected: Gemma 4 E2B IT (Speculative CoreML)
+        <button
+          type="button"
+          :class="[
+            'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer',
+            activeTab === 'custom'
+              ? 'bg-white text-primary-600 shadow-sm dark:bg-neutral-900 dark:text-primary-400'
+              : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200',
+          ]"
+          @click="activeTab = 'custom'"
+        >
+          <div class="i-solar:key-minimalistic-square-bold-duotone h-4 w-4" />
+          <span>Custom API Key</span>
+        </button>
+      </div>
+
+      <!-- TAB 1: FREE CLOUD AI (Zero Setup / Recommended) -->
+      <div v-if="activeTab === 'free'" class="flex flex-col gap-4">
+        <!-- Cloudflare Workers AI Card -->
+        <div class="flex flex-col gap-3 border border-neutral-200/60 rounded-xl bg-white/40 p-4 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="i-simple-icons:cloudflare h-4.5 w-4.5 text-[#F38020]" />
+              <span class="text-xs text-neutral-700 font-bold tracking-wider uppercase dark:text-neutral-300">Cloudflare Workers AI</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span v-if="isCloudflareConnected" class="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 font-bold dark:text-emerald-400">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Connected
               </span>
-              <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
-                {{ coreAiState === 'ready' ? 'Model is compiled and ready to think on Apple Neural Engine.' : (coreAiState === 'downloading' ? 'Downloading CoreML weight bundle and compiling on device…' : 'Click to download and compile model on Apple Neural Engine.') }}
+              <span v-else class="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 font-bold dark:text-amber-400">
+                Zero-Trust OAuth
               </span>
             </div>
+          </div>
 
-            <!-- Action buttons -->
-            <div class="flex flex-shrink-0 items-center gap-2">
-              <Button
-                v-if="coreAiState === 'idle'"
-                variant="primary"
-                class="h-[34px] flex cursor-pointer items-center gap-1.5 px-3.5 text-xs font-medium"
-                @click="startCoreAiDownload"
+          <!-- Connected State: 4 Model Presets Grid -->
+          <template v-if="isCloudflareConnected">
+            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <button
+                v-for="preset in cloudflarePresets"
+                :key="preset.id"
+                type="button"
+                :class="[
+                  'relative flex items-start gap-3 border-2 rounded-xl p-3 text-left transition-all duration-200 cursor-pointer',
+                  selectedProviderId === 'cloudflare-workers-ai' && selectedModelId === preset.id
+                    ? 'border-primary-500 bg-primary-500/5 shadow-md shadow-primary-500/10 dark:border-primary-400'
+                    : 'border-neutral-200/60 bg-white/50 dark:border-neutral-800/80 dark:bg-neutral-900/50 hover:border-primary-500/40',
+                ]"
+                @click="selectCloudflareModel(preset.id)"
               >
-                <div class="i-solar:cloud-download-bold-duotone text-base" />
-                <span>Download & Compile</span>
-              </Button>
-
-              <div
-                v-else-if="coreAiState === 'ready'"
-                class="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-600 font-bold dark:text-emerald-400"
-              >
-                <div class="i-solar:check-circle-bold-duotone text-base" />
-                <span>Active & Ready</span>
-              </div>
-
-              <Button
-                v-else-if="coreAiState === 'error'"
-                variant="primary"
-                class="h-[34px] flex cursor-pointer items-center gap-1.5 px-3.5 text-xs font-medium"
-                @click="startCoreAiDownload"
-              >
-                <div class="i-solar:restart-bold-duotone text-base" />
-                <span>Retry Download</span>
-              </Button>
-            </div>
-          </div>
-
-          <!-- Download progress bar -->
-          <div v-if="coreAiState === 'downloading'" class="flex flex-col gap-1.5 pt-1">
-            <div class="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
-              <span class="truncate">{{ coreAiStatusText }}</span>
-              <span class="font-bold font-mono">{{ Math.floor(coreAiProgress) }}%</span>
-            </div>
-            <div class="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
-              <div class="h-full rounded-full from-primary-500 to-indigo-500 bg-gradient-to-r transition-all duration-150" :style="{ width: `${coreAiProgress}%` }" />
-            </div>
-          </div>
-
-          <!-- Error message -->
-          <div v-if="coreAiState === 'error' && coreAiErrorMessage" class="break-all text-[11px] text-red-600/80 dark:text-red-400/80">
-            {{ coreAiErrorMessage }}
-          </div>
-
-          <!-- Warmup notice -->
-          <div class="flex items-start gap-2.5 border border-amber-500/20 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
-            <div class="i-solar:hourglass-line-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500" />
-            <div class="min-w-0 flex-1 space-y-0.5">
-              <span class="font-bold">First-Launch On-Device Warmup Notice</span>
-              <p class="text-[11px] text-amber-800/90 leading-relaxed dark:text-amber-300/90">
-                When starting the companion for the first time, Apple Neural Engine takes <strong>~60–90 seconds</strong> to compile model graphs and warm up memory buffers. Please be patient while it initializes — all subsequent chat replies run near-instantaneously (~45+ tok/s)!
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- WebGPU warning when local engine unavailable (Desktop/Web only) -->
-      <div
-        v-if="isWebLlmPlatform && !webgpuSupported"
-        class="flex flex-shrink-0 items-start gap-2 border border-amber-300/60 rounded-xl bg-amber-50/80 p-3 text-xs text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-300"
-      >
-        <div class="i-solar:danger-triangle-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0" />
-        <span>WebGPU isn't available in this browser. Pick a free or cloud provider below (e.g. OpenRouter, Gemini, Pollinations, MiMo) to power your companion.</span>
-      </div>
-
-      <!-- WebGPU FP32 Universal notice when shader-f16 is missing (Desktop/Web only) -->
-      <div
-        v-else-if="isWebLlmPlatform && webgpuSupported && !fp16Supported"
-        class="flex flex-shrink-0 items-start gap-2 border border-blue-400/40 rounded-xl bg-blue-50/80 p-3 text-xs text-blue-900 dark:border-blue-700/60 dark:bg-blue-900/20 dark:text-blue-200"
-      >
-        <div class="i-solar:info-circle-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500" />
-        <span>Legacy GPU / 32-bit WebGPU mode active (no <code>shader-f16</code> support). Showing universal FP32 models compatible with your hardware.</span>
-      </div>
-
-      <!-- WebLLM Local Engine (Desktop / Web only) -->
-      <div
-        v-if="isWebLlmPlatform"
-        :class="['p-4 rounded-xl', 'bg-white/40 dark:bg-neutral-900/40', 'border border-neutral-200/60 dark:border-neutral-800/80', 'backdrop-blur-md', 'flex flex-col gap-3', !webgpuSupported ? 'opacity-60' : '']"
-      >
-        <div class="flex items-center gap-2">
-          <div class="i-solar:cpu-bolt-bold-duotone h-4 w-4 text-primary-500" />
-          <span class="text-xs text-neutral-500 font-bold tracking-wider uppercase dark:text-neutral-400">Local WebLLM (WebGPU Engine)</span>
-          <span class="ml-auto rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 font-bold dark:text-emerald-400">OFFLINE · LOCAL</span>
-        </div>
-
-        <div class="grid grid-cols-1 gap-2">
-          <button
-            v-for="model in availableWebLlmModels"
-            :key="model.id"
-            type="button"
-            :disabled="!webgpuSupported"
-            :class="[
-              'relative flex items-center gap-3 border-2 rounded-xl p-3.5 text-left transition-all duration-300 cursor-pointer',
-              isWebLlmSelected && selectedLlmModel === model.id
-                ? 'border-primary-500 bg-primary-500/5 shadow-lg shadow-primary-500/10 dark:border-primary-400'
-                : 'border-neutral-200/60 bg-white/40 dark:border-neutral-800/80 dark:bg-neutral-900/40 hover:border-primary-500/50',
-              !webgpuSupported ? 'cursor-not-allowed opacity-50' : '',
-            ]"
-            @click="selectWebLlmModel(model.id)"
-          >
-            <div
-              class="h-10 w-10 flex flex-shrink-0 items-center justify-center rounded-xl"
-              :class="[isWebLlmSelected && selectedLlmModel === model.id ? 'bg-primary-500/15' : 'bg-neutral-100 dark:bg-neutral-800']"
-            >
-              <div class="i-solar:cpu-bolt-bold-duotone h-6 w-6" :class="isWebLlmSelected && selectedLlmModel === model.id ? 'text-primary-500' : 'text-neutral-500'" />
-            </div>
-            <div class="min-w-0 flex-1">
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-sm text-neutral-800 font-bold dark:text-neutral-100">{{ model.name }}</span>
-                <span
-                  v-if="model.id === 'Qwen3.5-4B-q4f16_1-MLC' || (!fp16Supported && model.id === 'Hermes-3-Llama-3.2-3B-q4f32_1-MLC')"
-                  class="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 font-bold dark:text-amber-400"
+                <div
+                  :class="[
+                    'h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5',
+                    selectedProviderId === 'cloudflare-workers-ai' && selectedModelId === preset.id
+                      ? 'bg-primary-500/15 text-primary-500'
+                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500',
+                  ]"
                 >
-                  ⭐ RECOMMENDED
-                </span>
-              </div>
-              <p class="mt-0.5 truncate text-xs text-neutral-500 dark:text-neutral-400">
-                {{ model.description }}
-              </p>
-            </div>
-            <span class="flex-shrink-0 rounded-md bg-neutral-100 px-2 py-1 text-[10px] text-neutral-600 font-bold font-mono dark:bg-neutral-800 dark:text-neutral-300">
-              ~{{ (model.vramMB / 1024).toFixed(1) }} GB VRAM
-            </span>
-          </button>
-        </div>
-
-        <!-- In-context download & action controls -->
-        <div v-if="isWebLlmSelected" class="flex flex-col gap-2.5 border border-neutral-200/60 rounded-xl bg-white/40 p-3.5 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40">
-          <div class="flex items-center justify-between gap-3">
-            <div class="min-w-0 flex flex-1 flex-col">
-              <span class="truncate text-xs text-neutral-800 font-semibold dark:text-neutral-200">
-                Selected: {{ WEB_LLM_MODELS.find(m => m.id === selectedLlmModel)?.name }}
-              </span>
-              <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
-                {{ downloadState === 'ready' ? 'Model is downloaded and ready to think.' : (downloadState === 'downloading' ? 'Downloading model shards into browser cache…' : 'Click to download and activate this model locally on WebGPU.') }}
-              </span>
-            </div>
-
-            <!-- Action buttons -->
-            <div class="flex flex-shrink-0 items-center gap-2">
-              <Button
-                v-if="downloadState === 'idle'"
-                variant="primary"
-                class="h-[34px] flex cursor-pointer items-center gap-1.5 px-3.5 text-xs font-medium"
-                :disabled="!webgpuSupported"
-                @click="startWebLlmDownload"
-              >
-                <div class="i-solar:cloud-download-bold-duotone text-base" />
-                <span>Download & Activate</span>
-              </Button>
-
-              <Button
-                v-else-if="downloadState === 'downloading'"
-                variant="secondary"
-                class="h-[34px] flex cursor-pointer items-center gap-1.5 px-3 text-xs font-medium"
-                @click="cancelWebLlmDownload"
-              >
-                <div class="i-solar:close-circle-bold-duotone text-base" />
-                <span>Cancel</span>
-              </Button>
-
-              <div
-                v-else-if="downloadState === 'ready'"
-                class="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-600 font-bold dark:text-emerald-400"
-              >
-                <div class="i-solar:check-circle-bold-duotone text-base" />
-                <span>Active & Ready</span>
-              </div>
-
-              <Button
-                v-else-if="downloadState === 'error'"
-                variant="primary"
-                class="h-[34px] flex cursor-pointer items-center gap-1.5 px-3.5 text-xs font-medium"
-                @click="startWebLlmDownload"
-              >
-                <div class="i-solar:restart-bold-duotone text-base" />
-                <span>Retry Download</span>
-              </Button>
-            </div>
-          </div>
-
-          <!-- Download progress bar -->
-          <div v-if="downloadState === 'downloading'" class="flex flex-col gap-1.5 pt-1">
-            <div class="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
-              <span class="truncate">{{ downloadStatusText }}</span>
-              <span class="font-bold font-mono">{{ Math.floor(downloadProgress) }}%</span>
-            </div>
-            <div class="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
-              <div class="h-full rounded-full from-primary-500 to-indigo-500 bg-gradient-to-r transition-all duration-150" :style="{ width: `${downloadProgress}%` }" />
-            </div>
-          </div>
-
-          <!-- Error message -->
-          <div v-if="downloadState === 'error' && downloadErrorMessage" class="break-all text-[11px] text-red-600/80 dark:text-red-400/80">
-            {{ downloadErrorMessage }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Cloud / Local Provider Matrix -->
-      <div :class="['p-4 rounded-xl', 'bg-white/40 dark:bg-neutral-900/40', 'border border-neutral-200/60 dark:border-neutral-800/80', 'backdrop-blur-md', 'flex flex-col gap-3']">
-        <div class="flex items-center justify-between">
-          <span class="text-xs text-neutral-500 font-bold tracking-wider uppercase dark:text-neutral-400">Choose an AI Brain Provider</span>
-          <span class="text-[10px] text-neutral-400">Alphabetical · Tap to select</span>
-        </div>
-        <ProviderPickerGrid
-          :model-value="selectedProviderId"
-          :providers="allChatProvidersMetadata"
-          @select="onSelectProvider"
-          @update:model-value="(id: string) => { selectedProviderId = id }"
-        />
-      </div>
-
-      <!-- Action Anchor -->
-      <div ref="actionTargetRef" class="flex flex-col scroll-mt-4 gap-3">
-        <!-- Streamlined Inline Credentials Card -->
-        <div
-          v-if="inlineConfigProvider"
-          class="border border-neutral-200/60 rounded-xl bg-white/70 p-4 shadow-sm backdrop-blur-md space-y-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
-        >
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2.5">
-              <div class="h-8 w-8 flex items-center justify-center rounded-lg bg-primary-500/10 text-primary-500">
-                <div :class="[inlineConfigProvider.iconColor || inlineConfigProvider.icon || 'i-solar:shield-keyhole-bold-duotone', 'h-5 w-5']" />
-              </div>
-              <div>
-                <h4 class="text-sm text-neutral-800 font-bold dark:text-neutral-100">
-                  Configure {{ inlineConfigProvider.name }}
-                </h4>
-                <p class="text-[11px] text-neutral-500 dark:text-neutral-400">
-                  Enter your API credentials to load AI models.
-                </p>
-              </div>
-            </div>
-
-            <a
-              v-if="inlineConfigProvider.consoleUrl"
-              :href="inlineConfigProvider.consoleUrl"
-              target="_blank"
-              class="flex items-center gap-1 text-[11px] text-primary-500 font-semibold hover:underline"
-            >
-              <span>Get Key</span>
-              <div class="i-solar:square-top-down-bold h-3.5 w-3.5" />
-            </a>
-          </div>
-
-          <!-- API Key Field -->
-          <div class="space-y-1.5">
-            <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
-              API Key <span class="text-red-500">*</span>
-            </label>
-            <div class="relative flex items-center">
-              <input
-                v-model="apiKeyInput"
-                :type="showApiKey ? 'text' : 'password'"
-                :placeholder="getApiKeyPlaceholder(inlineConfigProvider.id)"
-                class="w-full border border-neutral-200 rounded-lg bg-white px-3 py-2 pr-10 text-xs text-neutral-800 font-mono outline-none transition dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-neutral-100"
-                @keydown.enter="saveAndConnectInline"
-              >
-              <button
-                type="button"
-                class="absolute right-2.5 cursor-pointer text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
-                @click="showApiKey = !showApiKey"
-              >
-                <div :class="showApiKey ? 'i-solar:eye-bold' : 'i-solar:eye-closed-bold'" class="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          <!-- Collapsible Base URL -->
-          <div class="space-y-1">
-            <button
-              type="button"
-              class="flex cursor-pointer items-center gap-1 text-[11px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
-              @click="showBaseUrl = !showBaseUrl"
-            >
-              <div :class="showBaseUrl ? 'i-solar:alt-arrow-down-line-duotone' : 'i-solar:alt-arrow-right-line-duotone'" class="h-3.5 w-3.5" />
-              <span>Advanced: Custom Base URL</span>
-            </button>
-            <div v-if="showBaseUrl" class="pt-1">
-              <input
-                v-model="baseUrlInput"
-                type="text"
-                placeholder="https://api.example.com/v1"
-                class="w-full border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-800 font-mono outline-none transition dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-neutral-100"
-              >
-            </div>
-          </div>
-
-          <!-- Action buttons -->
-          <div class="flex items-center justify-end gap-2 pt-1">
-            <button
-              type="button"
-              class="cursor-pointer border border-neutral-200 rounded-lg px-3 py-1.5 text-xs text-neutral-600 font-semibold dark:border-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              @click="handleCancelConfig"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              :disabled="!apiKeyInput.trim() || isSavingConfig"
-              class="flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary-500 px-4 py-1.5 text-xs text-white font-bold shadow-md transition active:scale-95 disabled:cursor-not-allowed hover:bg-primary-600 disabled:opacity-50"
-              @click="saveAndConnectInline"
-            >
-              <div v-if="isSavingConfig" class="i-solar:restart-square-bold h-3.5 w-3.5 animate-spin" />
-              <span>{{ isSavingConfig ? 'Connecting…' : 'Save & Connect' }}</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 4-Item Model Section: Input Box, Discovered Dropdown, Get Models Trigger, Live Probe -->
-        <div
-          v-if="!isWebLlmSelected && !isCoreAiSelected && selectedProviderId && (isProviderConfigured || selectedChatProvider?.requiresCredentials === false)"
-          :class="['p-4 rounded-xl', 'bg-white/40 dark:bg-neutral-900/40', 'border border-neutral-200/60 dark:border-neutral-800/80', 'backdrop-blur-md space-y-4']"
-        >
-          <!-- Section Header -->
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-neutral-500 font-bold uppercase dark:text-neutral-400">Model Selection & Test</span>
-            <span v-if="selectedChatProvider" class="text-[11px] text-neutral-400 font-semibold">
-              {{ selectedChatProvider.name }}
-            </span>
-          </div>
-
-          <!-- Item 1: Selected Model Input Box -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between">
-              <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
-                Active Model ID <span class="text-red-500">*</span>
-              </label>
-              <span class="text-[10px] text-neutral-400">Type directly or pick below</span>
-            </div>
-            <input
-              v-model="selectedModelId"
-              type="text"
-              placeholder="e.g. gemini-2.5-flash, gpt-4o-mini, mistral-large-latest"
-              class="w-full border border-neutral-200 rounded-lg bg-white px-3 py-2 text-xs text-neutral-800 font-mono outline-none transition dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-neutral-100"
-            >
-          </div>
-
-          <!-- Item 2 & Item 3: Models Dropdown + Get Models Trigger -->
-          <div class="space-y-1.5">
-            <div class="flex items-center justify-between">
-              <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
-                Discovered Models
-              </label>
-              <button
-                type="button"
-                :disabled="isLoadingActiveProviderModels"
-                class="flex cursor-pointer items-center gap-1 text-[11px] text-primary-500 font-bold hover:underline disabled:opacity-50"
-                @click="fetchLiveModels"
-              >
-                <div :class="[isLoadingActiveProviderModels ? 'animate-spin' : '', 'i-solar:restart-square-bold h-3.5 w-3.5']" />
-                <span>{{ isLoadingActiveProviderModels ? 'Querying API…' : 'Get Models' }}</span>
+                  <div class="i-solar:bolt-bold-duotone h-5 w-5" />
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-1">
+                    <span class="truncate text-xs text-neutral-800 font-bold dark:text-neutral-100">{{ preset.name }}</span>
+                    <span class="flex-shrink-0 rounded bg-primary-500/10 px-1.5 py-0.2 text-[9px] text-primary-600 font-bold dark:text-primary-400">
+                      {{ preset.badge }}
+                    </span>
+                  </div>
+                  <p class="line-clamp-1 mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
+                    {{ preset.description }}
+                  </p>
+                </div>
               </button>
             </div>
 
-            <div class="relative flex items-center">
-              <select
-                :disabled="isLoadingActiveProviderModels || providerModels.length === 0"
-                :value="selectedModelId"
-                class="w-full cursor-pointer appearance-none border border-neutral-200 rounded-lg bg-white px-3 py-2 pr-8 text-xs text-neutral-800 outline-none transition dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-neutral-100 disabled:opacity-60"
-                @change="onSelectModelFromDropdown"
+            <!-- Connected Account footer hint -->
+            <div class="flex items-center justify-between pt-1 text-[11px] text-neutral-400">
+              <span class="truncate">Account: <span class="text-neutral-600 font-mono dark:text-neutral-300">{{ cloudflareStore.activeAccountId }}</span></span>
+              <button
+                type="button"
+                class="cursor-pointer text-primary-500 hover:underline"
+                @click="isConnectModalOpen = true"
               >
-                <option value="" disabled selected>
-                  {{ isLoadingActiveProviderModels ? 'Querying API models…' : (providerModels.length > 0 ? 'Select a discovered model' : 'No Models Found') }}
-                </option>
-                <option
-                  v-for="model in providerModels"
-                  :key="model.id"
-                  :value="model.id"
+                Switch Account
+              </button>
+            </div>
+          </template>
+
+          <!-- Disconnected State: Connect Button -->
+          <template v-else>
+            <div class="flex flex-col gap-3 border border-amber-500/20 rounded-xl bg-amber-500/5 p-3.5">
+              <p class="text-xs text-neutral-600 leading-relaxed dark:text-neutral-300">
+                Connect your Cloudflare account to unlock high-speed LLaMA 3.3 70B, DeepSeek R1 32B, and GLM 4.7 Flash with generous free daily limits.
+              </p>
+              <div class="flex items-center gap-2">
+                <Button
+                  variant="primary"
+                  class="h-[34px] flex cursor-pointer items-center gap-1.5 px-4 text-xs font-medium"
+                  @click="isConnectModalOpen = true"
                 >
-                  {{ model.name || model.id }}
-                </option>
-              </select>
-              <div class="pointer-events-none absolute right-2.5 text-neutral-400">
-                <div class="i-solar:alt-arrow-down-line-duotone h-4 w-4" />
+                  <div class="i-simple-icons:cloudflare text-sm" />
+                  <span>Connect Cloudflare Account</span>
+                </Button>
               </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Pollinations AI Card -->
+        <div class="flex flex-col gap-3 border border-neutral-200/60 rounded-xl bg-white/40 p-4 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="i-solar:magic-stick-3-bold-duotone h-4.5 w-4.5 text-purple-500" />
+              <span class="text-xs text-neutral-700 font-bold tracking-wider uppercase dark:text-neutral-300">Pollinations AI</span>
+            </div>
+            <span class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 font-bold dark:text-emerald-400">
+              100% Free · No Sign-in
+            </span>
+          </div>
+
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <button
+              v-for="preset in pollinationsPresets"
+              :key="preset.id"
+              type="button"
+              :class="[
+                'relative flex flex-col gap-1 border-2 rounded-xl p-3 text-left transition-all duration-200 cursor-pointer',
+                selectedProviderId === 'pollinations' && selectedModelId === preset.id
+                  ? 'border-primary-500 bg-primary-500/5 shadow-md shadow-primary-500/10 dark:border-primary-400'
+                  : 'border-neutral-200/60 bg-white/50 dark:border-neutral-800/80 dark:bg-neutral-900/50 hover:border-primary-500/40',
+              ]"
+              @click="selectPollinationsModel(preset.id)"
+            >
+              <span class="truncate text-xs text-neutral-800 font-bold dark:text-neutral-100">{{ preset.name }}</span>
+              <p class="line-clamp-2 text-[11px] text-neutral-500 dark:text-neutral-400">
+                {{ preset.description }}
+              </p>
+            </button>
+          </div>
+        </div>
+
+        <!-- Free AI Hub Notice Banner -->
+        <div class="flex items-center justify-between gap-3 border border-neutral-200/50 rounded-xl bg-neutral-100/70 p-3.5 text-xs dark:border-neutral-700/50 dark:bg-neutral-800/50">
+          <div class="min-w-0 flex items-center gap-2.5">
+            <div class="i-solar:stars-line-bold-duotone h-4.5 w-4.5 flex-shrink-0 text-amber-500" />
+            <span class="truncate text-neutral-600 dark:text-neutral-300">
+              Want more free models? Explore <strong>370+ free endpoints</strong> in the Free AI Hub.
+            </span>
+          </div>
+          <span class="flex-shrink-0 text-[11px] text-neutral-400">
+            Available in Settings
+          </span>
+        </div>
+
+        <!-- Live Connection Test Probe for Free Models -->
+        <div
+          v-if="(selectedProviderId === 'cloudflare-workers-ai' || selectedProviderId === 'pollinations') && selectedModelId"
+          class="flex flex-col gap-2.5 border border-neutral-200/60 rounded-xl bg-white/40 p-4 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40"
+        >
+          <div class="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              :disabled="probeState === 'connecting' || probeState === 'inferencing' || !selectedModelId.trim()"
+              class="flex cursor-pointer items-center gap-2 border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-700 font-semibold shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 hover:bg-neutral-100 dark:text-neutral-300 disabled:opacity-50 dark:hover:bg-neutral-700"
+              @click="testBrainConnection"
+            >
+              <div v-if="probeState === 'connecting' || probeState === 'inferencing'" class="i-solar:restart-square-bold h-4 w-4 animate-spin text-primary-500" />
+              <div v-else class="i-solar:plain-bold-duotone h-4 w-4 text-primary-500" />
+              <span>{{ probeState === 'connecting' || probeState === 'inferencing' ? 'Testing…' : 'Test Brain Connection' }}</span>
+            </button>
+
+            <!-- Progress Dot & Status -->
+            <div class="flex items-center gap-1.5 text-xs font-semibold">
+              <template v-if="probeState === 'connecting'">
+                <span class="relative h-2.5 w-2.5 flex">
+                  <span class="absolute h-full w-full inline-flex animate-ping rounded-full bg-amber-400 opacity-75" />
+                  <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-amber-500" />
+                </span>
+                <span class="text-amber-600 dark:text-amber-400">Connecting…</span>
+              </template>
+
+              <template v-else-if="probeState === 'inferencing'">
+                <span class="relative h-2.5 w-2.5 flex">
+                  <span class="absolute h-full w-full inline-flex animate-ping rounded-full bg-yellow-400 opacity-75" />
+                  <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-yellow-500" />
+                </span>
+                <span class="text-yellow-600 dark:text-yellow-400">Inferencing…</span>
+              </template>
+
+              <template v-else-if="probeState === 'verified'">
+                <span class="relative h-2.5 w-2.5 flex">
+                  <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-emerald-500" />
+                </span>
+                <span class="text-[11px] text-emerald-600 font-mono dark:text-emerald-400">
+                  Verified{{ probeBenchmarkMs !== null ? ` (${probeBenchmarkMs}ms)` : '' }}
+                </span>
+              </template>
+
+              <template v-else-if="probeState === 'error'">
+                <span class="relative h-2.5 w-2.5 flex">
+                  <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-red-500" />
+                </span>
+                <span class="text-red-600 dark:text-red-400">Failed</span>
+              </template>
             </div>
           </div>
 
-          <!-- Item 4: Live Connection Test Probe -->
-          <div class="flex flex-col gap-2.5 border-t border-neutral-200/50 pt-3 dark:border-neutral-800/50">
+          <!-- Verified Response Bubble & Telemetry Tag -->
+          <div
+            v-if="probeState === 'verified' && probeResponseMessage"
+            class="flex flex-col gap-1.5 rounded-lg bg-emerald-500/10 p-2.5 text-xs text-emerald-700 dark:text-emerald-300"
+          >
             <div class="flex items-center justify-between gap-2">
+              <div class="min-w-0 flex items-center gap-2 truncate">
+                <div class="i-solar:chat-round-dots-bold-duotone h-4 w-4 flex-shrink-0 text-emerald-500" />
+                <span class="truncate italic">"{{ probeResponseMessage }}"</span>
+              </div>
+              <div class="flex shrink-0 items-center gap-1.5 text-[10px] font-mono">
+                <span v-if="probeBenchmarkMs !== null" class="rounded bg-emerald-500/20 px-1.5 py-0.5 text-emerald-700 font-bold dark:text-emerald-300">
+                  {{ probeBenchmarkMs }}ms TTFT
+                </span>
+                <span :class="['px-1.5 py-0.5 rounded font-bold', probeHasReasoning ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300']">
+                  {{ probeHasReasoning ? '🧠 Reasoning Model' : '⚡ Standard Stream' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error Details Banner -->
+          <div
+            v-else-if="probeState === 'error' && probeErrorMessage"
+            class="flex items-start gap-2 rounded-lg bg-red-500/10 p-2.5 text-xs text-red-600 dark:text-red-400"
+          >
+            <div class="i-solar:danger-triangle-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
+            <div class="min-w-0 flex-1">
+              <span class="font-bold">Test Failed:</span>
+              <p class="mt-0.5 break-all text-[11px] leading-snug">
+                {{ probeErrorMessage }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: LOCAL ON-DEVICE (Offline) -->
+      <div v-if="activeTab === 'local'" class="flex flex-col gap-4">
+        <!-- Apple Core AI Local Engine (iOS Native) -->
+        <div
+          v-if="isIOSNative"
+          :class="['p-4 rounded-xl', 'bg-white/40 dark:bg-neutral-900/40', 'border border-neutral-200/60 dark:border-neutral-800/80', 'backdrop-blur-md', 'flex flex-col gap-3']"
+        >
+          <div class="flex items-center gap-2">
+            <div class="i-solar:cpu-bolt-bold-duotone h-4 w-4 text-primary-500" />
+            <span class="text-xs text-neutral-500 font-bold tracking-wider uppercase dark:text-neutral-400">Apple Core AI (Neural Engine)</span>
+            <span class="ml-auto rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 font-bold dark:text-emerald-400">ANE ACCELERATED · 100% OFFLINE</span>
+          </div>
+
+          <div class="grid grid-cols-1 gap-2">
+            <button
+              type="button"
+              :class="[
+                'relative flex items-center gap-3 border-2 rounded-xl p-3.5 text-left transition-all duration-300 cursor-pointer',
+                isCoreAiSelected
+                  ? 'border-primary-500 bg-primary-500/5 shadow-lg shadow-primary-500/10 dark:border-primary-400'
+                  : 'border-neutral-200/60 bg-white/40 dark:border-neutral-800/80 dark:bg-neutral-900/40 hover:border-primary-500/50',
+              ]"
+              @click="selectCoreAiModel"
+            >
+              <div
+                class="h-10 w-10 flex flex-shrink-0 items-center justify-center rounded-xl"
+                :class="[isCoreAiSelected ? 'bg-primary-500/15' : 'bg-neutral-100 dark:bg-neutral-800']"
+              >
+                <div class="i-solar:cpu-bolt-bold-duotone h-6 w-6" :class="isCoreAiSelected ? 'text-primary-500' : 'text-neutral-500'" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-sm text-neutral-800 font-bold dark:text-neutral-100">Gemma 4 E2B IT (Speculative CoreML)</span>
+                  <span class="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 font-bold dark:text-amber-400">
+                    ⭐ RECOMMENDED ON-DEVICE
+                  </span>
+                </div>
+                <p class="mt-0.5 truncate text-xs text-neutral-500 dark:text-neutral-400">
+                  High-speed neural dialogue on Apple Neural Engine (~45+ tok/s). 100% offline & private.
+                </p>
+              </div>
+              <span class="flex-shrink-0 rounded-md bg-neutral-100 px-2 py-1 text-[10px] text-neutral-600 font-bold font-mono dark:bg-neutral-800 dark:text-neutral-300">
+                ~1.4 GB RAM
+              </span>
+            </button>
+          </div>
+
+          <!-- Core AI In-Context Download & Action Controls -->
+          <div v-if="isCoreAiSelected" class="flex flex-col gap-2.5 border border-neutral-200/60 rounded-xl bg-white/40 p-3.5 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0 flex-1 flex-col">
+                <span class="truncate text-xs text-neutral-800 font-semibold dark:text-neutral-200">
+                  Selected: Gemma 4 E2B IT (Speculative CoreML)
+                </span>
+                <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
+                  {{ coreAiState === 'ready' ? 'Model is compiled and ready to think on Apple Neural Engine.' : (coreAiState === 'downloading' ? 'Downloading CoreML weight bundle and compiling on device…' : 'Click to download and compile model on Apple Neural Engine.') }}
+                </span>
+              </div>
+
+              <!-- Action buttons -->
+              <div class="flex flex-shrink-0 items-center gap-2">
+                <Button
+                  v-if="coreAiState === 'idle'"
+                  variant="primary"
+                  class="h-[34px] flex cursor-pointer items-center gap-1.5 px-3.5 text-xs font-medium"
+                  @click="startCoreAiDownload"
+                >
+                  <div class="i-solar:cloud-download-bold-duotone text-base" />
+                  <span>Download & Compile</span>
+                </Button>
+
+                <div
+                  v-else-if="coreAiState === 'ready'"
+                  class="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-600 font-bold dark:text-emerald-400"
+                >
+                  <div class="i-solar:check-circle-bold-duotone text-base" />
+                  <span>Active & Ready</span>
+                </div>
+
+                <Button
+                  v-else-if="coreAiState === 'error'"
+                  variant="primary"
+                  class="h-[34px] flex cursor-pointer items-center gap-1.5 px-3.5 text-xs font-medium"
+                  @click="startCoreAiDownload"
+                >
+                  <div class="i-solar:restart-bold-duotone text-base" />
+                  <span>Retry Download</span>
+                </Button>
+              </div>
+            </div>
+
+            <!-- Download progress bar -->
+            <div v-if="coreAiState === 'downloading'" class="flex flex-col gap-1.5 pt-1">
+              <div class="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+                <span class="truncate">{{ coreAiStatusText }}</span>
+                <span class="font-bold font-mono">{{ Math.floor(coreAiProgress) }}%</span>
+              </div>
+              <div class="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+                <div class="h-full rounded-full from-primary-500 to-indigo-500 bg-gradient-to-r transition-all duration-150" :style="{ width: `${coreAiProgress}%` }" />
+              </div>
+            </div>
+
+            <!-- Error message -->
+            <div v-if="coreAiState === 'error' && coreAiErrorMessage" class="break-all text-[11px] text-red-600/80 dark:text-red-400/80">
+              {{ coreAiErrorMessage }}
+            </div>
+
+            <!-- Warmup notice -->
+            <div class="flex items-start gap-2.5 border border-amber-500/20 rounded-lg bg-amber-500/10 p-3 text-xs text-amber-900 dark:border-amber-400/20 dark:bg-amber-500/10 dark:text-amber-200">
+              <div class="i-solar:hourglass-line-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0 text-amber-500" />
+              <div class="min-w-0 flex-1 space-y-0.5">
+                <span class="font-bold">First-Launch On-Device Warmup Notice</span>
+                <p class="text-[11px] text-amber-800/90 leading-relaxed dark:text-amber-300/90">
+                  When starting the companion for the first time, Apple Neural Engine takes <strong>~60–90 seconds</strong> to compile model graphs and warm up memory buffers. Please be patient while it initializes — all subsequent chat replies run near-instantaneously (~45+ tok/s)!
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WebGPU warning when local engine unavailable (Desktop/Web only) -->
+        <div
+          v-if="isWebLlmPlatform && !webgpuSupported"
+          class="flex flex-shrink-0 items-start gap-2 border border-amber-300/60 rounded-xl bg-amber-50/80 p-3 text-xs text-amber-800 dark:border-amber-700/60 dark:bg-amber-900/20 dark:text-amber-300"
+        >
+          <div class="i-solar:danger-triangle-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0" />
+          <span>WebGPU isn't available in this browser. Pick a free or cloud provider below (e.g. OpenRouter, Gemini, Pollinations, MiMo) to power your companion.</span>
+        </div>
+
+        <!-- WebGPU FP32 Universal notice when shader-f16 is missing (Desktop/Web only) -->
+        <div
+          v-else-if="isWebLlmPlatform && webgpuSupported && !fp16Supported"
+          class="flex flex-shrink-0 items-start gap-2 border border-blue-400/40 rounded-xl bg-blue-50/80 p-3 text-xs text-blue-900 dark:border-blue-700/60 dark:bg-blue-900/20 dark:text-blue-200"
+        >
+          <div class="i-solar:info-circle-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500" />
+          <span>Legacy GPU / 32-bit WebGPU mode active (no <code>shader-f16</code> support). Showing universal FP32 models compatible with your hardware.</span>
+        </div>
+
+        <!-- WebLLM Local Engine (Desktop / Web only) -->
+        <div
+          v-if="isWebLlmPlatform"
+          :class="['p-4 rounded-xl', 'bg-white/40 dark:bg-neutral-900/40', 'border border-neutral-200/60 dark:border-neutral-800/80', 'backdrop-blur-md', 'flex flex-col gap-3', !webgpuSupported ? 'opacity-60' : '']"
+        >
+          <div class="flex items-center gap-2">
+            <div class="i-solar:cpu-bolt-bold-duotone h-4 w-4 text-primary-500" />
+            <span class="text-xs text-neutral-500 font-bold tracking-wider uppercase dark:text-neutral-400">Local WebLLM (WebGPU Engine)</span>
+            <span class="ml-auto rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 font-bold dark:text-emerald-400">OFFLINE · LOCAL</span>
+          </div>
+
+          <div class="grid grid-cols-1 gap-2">
+            <button
+              v-for="model in availableWebLlmModels"
+              :key="model.id"
+              type="button"
+              :disabled="!webgpuSupported"
+              :class="[
+                'relative flex items-center gap-3 border-2 rounded-xl p-3.5 text-left transition-all duration-300 cursor-pointer',
+                isWebLlmSelected && selectedLlmModel === model.id
+                  ? 'border-primary-500 bg-primary-500/5 shadow-lg shadow-primary-500/10 dark:border-primary-400'
+                  : 'border-neutral-200/60 bg-white/40 dark:border-neutral-800/80 dark:bg-neutral-900/40 hover:border-primary-500/50',
+                !webgpuSupported ? 'cursor-not-allowed opacity-50' : '',
+              ]"
+              @click="selectWebLlmModel(model.id)"
+            >
+              <div
+                class="h-10 w-10 flex flex-shrink-0 items-center justify-center rounded-xl"
+                :class="[isWebLlmSelected && selectedLlmModel === model.id ? 'bg-primary-500/15' : 'bg-neutral-100 dark:bg-neutral-800']"
+              >
+                <div class="i-solar:cpu-bolt-bold-duotone h-6 w-6" :class="isWebLlmSelected && selectedLlmModel === model.id ? 'text-primary-500' : 'text-neutral-500'" />
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-sm text-neutral-800 font-bold dark:text-neutral-100">{{ model.name }}</span>
+                  <span
+                    v-if="model.id === 'Qwen3.5-4B-q4f16_1-MLC' || (!fp16Supported && model.id === 'Hermes-3-Llama-3.2-3B-q4f32_1-MLC')"
+                    class="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 font-bold dark:text-amber-400"
+                  >
+                    ⭐ RECOMMENDED
+                  </span>
+                </div>
+                <p class="mt-0.5 truncate text-xs text-neutral-500 dark:text-neutral-400">
+                  {{ model.description }}
+                </p>
+              </div>
+              <span class="flex-shrink-0 rounded-md bg-neutral-100 px-2 py-1 text-[10px] text-neutral-600 font-bold font-mono dark:bg-neutral-800 dark:text-neutral-300">
+                ~{{ (model.vramMB / 1024).toFixed(1) }} GB VRAM
+              </span>
+            </button>
+          </div>
+
+          <!-- In-context download & action controls -->
+          <div v-if="isWebLlmSelected" class="flex flex-col gap-2.5 border border-neutral-200/60 rounded-xl bg-white/40 p-3.5 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40">
+            <div class="flex items-center justify-between gap-3">
+              <div class="min-w-0 flex flex-1 flex-col">
+                <span class="truncate text-xs text-neutral-800 font-semibold dark:text-neutral-200">
+                  Selected: {{ WEB_LLM_MODELS.find(m => m.id === selectedLlmModel)?.name }}
+                </span>
+                <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
+                  {{ downloadState === 'ready' ? 'Model is downloaded and ready to think.' : (downloadState === 'downloading' ? 'Downloading model shards into browser cache…' : 'Click to download and activate this model locally on WebGPU.') }}
+                </span>
+              </div>
+
+              <!-- Action buttons -->
+              <div class="flex flex-shrink-0 items-center gap-2">
+                <Button
+                  v-if="downloadState === 'idle'"
+                  variant="primary"
+                  class="h-[34px] flex cursor-pointer items-center gap-1.5 px-3.5 text-xs font-medium"
+                  :disabled="!webgpuSupported"
+                  @click="startWebLlmDownload"
+                >
+                  <div class="i-solar:cloud-download-bold-duotone text-base" />
+                  <span>Download & Activate</span>
+                </Button>
+
+                <Button
+                  v-else-if="downloadState === 'downloading'"
+                  variant="secondary"
+                  class="h-[34px] flex cursor-pointer items-center gap-1.5 px-3 text-xs font-medium"
+                  @click="cancelWebLlmDownload"
+                >
+                  <div class="i-solar:close-circle-bold-duotone text-base" />
+                  <span>Cancel</span>
+                </Button>
+
+                <div
+                  v-else-if="downloadState === 'ready'"
+                  class="flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs text-emerald-600 font-bold dark:text-emerald-400"
+                >
+                  <div class="i-solar:check-circle-bold-duotone text-base" />
+                  <span>Active & Ready</span>
+                </div>
+
+                <Button
+                  v-else-if="downloadState === 'error'"
+                  variant="primary"
+                  class="h-[34px] flex cursor-pointer items-center gap-1.5 px-3.5 text-xs font-medium"
+                  @click="startWebLlmDownload"
+                >
+                  <div class="i-solar:restart-bold-duotone text-base" />
+                  <span>Retry Download</span>
+                </Button>
+              </div>
+            </div>
+
+            <!-- Download progress bar -->
+            <div v-if="downloadState === 'downloading'" class="flex flex-col gap-1.5 pt-1">
+              <div class="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
+                <span class="truncate">{{ downloadStatusText }}</span>
+                <span class="font-bold font-mono">{{ Math.floor(downloadProgress) }}%</span>
+              </div>
+              <div class="h-2 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-700">
+                <div class="h-full rounded-full from-primary-500 to-indigo-500 bg-gradient-to-r transition-all duration-150" :style="{ width: `${downloadProgress}%` }" />
+              </div>
+            </div>
+
+            <!-- Error message -->
+            <div v-if="downloadState === 'error' && downloadErrorMessage" class="break-all text-[11px] text-red-600/80 dark:text-red-400/80">
+              {{ downloadErrorMessage }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: CUSTOM API KEY -->
+      <div v-if="activeTab === 'custom'" class="flex flex-col gap-4">
+        <!-- Cloud / Local Provider Matrix -->
+        <div :class="['p-4 rounded-xl', 'bg-white/40 dark:bg-neutral-900/40', 'border border-neutral-200/60 dark:border-neutral-800/80', 'backdrop-blur-md', 'flex flex-col gap-3']">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-neutral-500 font-bold tracking-wider uppercase dark:text-neutral-400">Choose an AI Brain Provider</span>
+            <span class="text-[10px] text-neutral-400">Alphabetical · Tap to select</span>
+          </div>
+          <ProviderPickerGrid
+            :model-value="selectedProviderId"
+            :providers="allChatProvidersMetadata"
+            @select="onSelectProvider"
+            @update:model-value="(id: string) => { selectedProviderId = id }"
+          />
+        </div>
+
+        <!-- Action Anchor -->
+        <div ref="actionTargetRef" class="flex flex-col scroll-mt-4 gap-3">
+          <!-- Streamlined Inline Credentials Card -->
+          <div
+            v-if="inlineConfigProvider"
+            class="border border-neutral-200/60 rounded-xl bg-white/70 p-4 shadow-sm backdrop-blur-md space-y-3 dark:border-neutral-800/80 dark:bg-neutral-900/70"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <div class="h-8 w-8 flex items-center justify-center rounded-lg bg-primary-500/10 text-primary-500">
+                  <div :class="[inlineConfigProvider.iconColor || inlineConfigProvider.icon || 'i-solar:shield-keyhole-bold-duotone', 'h-5 w-5']" />
+                </div>
+                <div>
+                  <h4 class="text-sm text-neutral-800 font-bold dark:text-neutral-100">
+                    Configure {{ inlineConfigProvider.name }}
+                  </h4>
+                  <p class="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    Enter your API credentials to load AI models.
+                  </p>
+                </div>
+              </div>
+
+              <a
+                v-if="inlineConfigProvider.consoleUrl"
+                :href="inlineConfigProvider.consoleUrl"
+                target="_blank"
+                class="flex items-center gap-1 text-[11px] text-primary-500 font-semibold hover:underline"
+              >
+                <span>Get Key</span>
+                <div class="i-solar:square-top-down-bold h-3.5 w-3.5" />
+              </a>
+            </div>
+
+            <!-- API Key Field -->
+            <div class="space-y-1.5">
+              <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
+                API Key <span class="text-red-500">*</span>
+              </label>
+              <div class="relative flex items-center">
+                <input
+                  v-model="apiKeyInput"
+                  :type="showApiKey ? 'text' : 'password'"
+                  :placeholder="getApiKeyPlaceholder(inlineConfigProvider.id)"
+                  class="w-full border border-neutral-200 rounded-lg bg-white px-3 py-2 pr-10 text-xs text-neutral-800 font-mono outline-none transition dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-neutral-100"
+                  @keydown.enter="saveAndConnectInline"
+                >
+                <button
+                  type="button"
+                  class="absolute right-2.5 cursor-pointer text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200"
+                  @click="showApiKey = !showApiKey"
+                >
+                  <div :class="showApiKey ? 'i-solar:eye-bold' : 'i-solar:eye-closed-bold'" class="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <!-- Collapsible Base URL -->
+            <div class="space-y-1">
               <button
                 type="button"
-                :disabled="probeState === 'connecting' || probeState === 'inferencing' || !selectedModelId.trim()"
-                class="flex cursor-pointer items-center gap-2 border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-700 font-semibold shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 hover:bg-neutral-100 dark:text-neutral-300 disabled:opacity-50 dark:hover:bg-neutral-700"
-                @click="testBrainConnection"
+                class="flex cursor-pointer items-center gap-1 text-[11px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300"
+                @click="showBaseUrl = !showBaseUrl"
               >
-                <div v-if="probeState === 'connecting' || probeState === 'inferencing'" class="i-solar:restart-square-bold h-4 w-4 animate-spin text-primary-500" />
-                <div v-else class="i-solar:plain-bold-duotone h-4 w-4 text-primary-500" />
-                <span>{{ probeState === 'connecting' || probeState === 'inferencing' ? 'Testing…' : 'Test Brain Connection' }}</span>
+                <div :class="showBaseUrl ? 'i-solar:alt-arrow-down-line-duotone' : 'i-solar:alt-arrow-right-line-duotone'" class="h-3.5 w-3.5" />
+                <span>Advanced: Custom Base URL</span>
               </button>
-
-              <!-- Progress Dot & Status -->
-              <div class="flex items-center gap-1.5 text-xs font-semibold">
-                <!-- 🟠 Connecting -->
-                <template v-if="probeState === 'connecting'">
-                  <span class="relative h-2.5 w-2.5 flex">
-                    <span class="absolute h-full w-full inline-flex animate-ping rounded-full bg-amber-400 opacity-75" />
-                    <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-amber-500" />
-                  </span>
-                  <span class="text-amber-600 dark:text-amber-400">Connecting…</span>
-                </template>
-
-                <!-- 🟡 Inferencing -->
-                <template v-else-if="probeState === 'inferencing'">
-                  <span class="relative h-2.5 w-2.5 flex">
-                    <span class="absolute h-full w-full inline-flex animate-ping rounded-full bg-yellow-400 opacity-75" />
-                    <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-yellow-500" />
-                  </span>
-                  <span class="text-yellow-600 dark:text-yellow-400">Inferencing…</span>
-                </template>
-
-                <!-- 🟢 Verified -->
-                <template v-else-if="probeState === 'verified'">
-                  <span class="relative h-2.5 w-2.5 flex">
-                    <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-emerald-500" />
-                  </span>
-                  <span class="text-[11px] text-emerald-600 font-mono dark:text-emerald-400">
-                    Verified{{ probeBenchmarkMs !== null ? ` (${probeBenchmarkMs}ms)` : '' }}
-                  </span>
-                </template>
-
-                <!-- 🔴 Error -->
-                <template v-else-if="probeState === 'error'">
-                  <span class="relative h-2.5 w-2.5 flex">
-                    <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-red-500" />
-                  </span>
-                  <span class="text-red-600 dark:text-red-400">Failed</span>
-                </template>
+              <div v-if="showBaseUrl" class="pt-1">
+                <input
+                  v-model="baseUrlInput"
+                  type="text"
+                  placeholder="https://api.example.com/v1"
+                  class="w-full border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-800 font-mono outline-none transition dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-neutral-100"
+                >
               </div>
             </div>
 
-            <!-- Verified Response Bubble & Telemetry Tag -->
-            <div
-              v-if="probeState === 'verified' && probeResponseMessage"
-              class="flex flex-col gap-1.5 rounded-lg bg-emerald-500/10 p-2.5 text-xs text-emerald-700 dark:text-emerald-300"
-            >
+            <!-- Action buttons -->
+            <div class="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                class="cursor-pointer border border-neutral-200 rounded-lg px-3 py-1.5 text-xs text-neutral-600 font-semibold dark:border-neutral-700 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                @click="handleCancelConfig"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                :disabled="!apiKeyInput.trim() || isSavingConfig"
+                class="flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary-500 px-4 py-1.5 text-xs text-white font-bold shadow-md transition active:scale-95 disabled:cursor-not-allowed hover:bg-primary-600 disabled:opacity-50"
+                @click="saveAndConnectInline"
+              >
+                <div v-if="isSavingConfig" class="i-solar:restart-square-bold h-3.5 w-3.5 animate-spin" />
+                <span>{{ isSavingConfig ? 'Connecting…' : 'Save & Connect' }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4-Item Model Section: Input Box, Discovered Dropdown, Get Models Trigger, Live Probe -->
+          <div
+            v-if="!isWebLlmSelected && !isCoreAiSelected && selectedProviderId && (isProviderConfigured || selectedChatProvider?.requiresCredentials === false)"
+            :class="['p-4 rounded-xl', 'bg-white/40 dark:bg-neutral-900/40', 'border border-neutral-200/60 dark:border-neutral-800/80', 'backdrop-blur-md space-y-4']"
+          >
+            <!-- Section Header -->
+            <div class="flex items-center justify-between">
+              <span class="text-xs text-neutral-500 font-bold uppercase dark:text-neutral-400">Model Selection & Test</span>
+              <span v-if="selectedChatProvider" class="text-[11px] text-neutral-400 font-semibold">
+                {{ selectedChatProvider.name }}
+              </span>
+            </div>
+
+            <!-- Item 1: Selected Model Input Box -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
+                  Active Model ID <span class="text-red-500">*</span>
+                </label>
+                <span class="text-[10px] text-neutral-400">Type directly or pick below</span>
+              </div>
+              <input
+                v-model="selectedModelId"
+                type="text"
+                placeholder="e.g. gemini-2.5-flash, gpt-4o-mini, mistral-large-latest"
+                class="w-full border border-neutral-200 rounded-lg bg-white px-3 py-2 text-xs text-neutral-800 font-mono outline-none transition dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-neutral-100"
+              >
+            </div>
+
+            <!-- Item 2 & Item 3: Models Dropdown + Get Models Trigger -->
+            <div class="space-y-1.5">
+              <div class="flex items-center justify-between">
+                <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
+                  Discovered Models
+                </label>
+                <button
+                  type="button"
+                  :disabled="isLoadingActiveProviderModels"
+                  class="flex cursor-pointer items-center gap-1 text-[11px] text-primary-500 font-bold hover:underline disabled:opacity-50"
+                  @click="fetchLiveModels"
+                >
+                  <div :class="[isLoadingActiveProviderModels ? 'animate-spin' : '', 'i-solar:restart-square-bold h-3.5 w-3.5']" />
+                  <span>{{ isLoadingActiveProviderModels ? 'Querying API…' : 'Get Models' }}</span>
+                </button>
+              </div>
+
+              <div class="relative flex items-center">
+                <select
+                  :disabled="isLoadingActiveProviderModels || providerModels.length === 0"
+                  :value="selectedModelId"
+                  class="w-full cursor-pointer appearance-none border border-neutral-200 rounded-lg bg-white px-3 py-2 pr-8 text-xs text-neutral-800 outline-none transition dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-neutral-100 disabled:opacity-60"
+                  @change="onSelectModelFromDropdown"
+                >
+                  <option value="" disabled selected>
+                    {{ isLoadingActiveProviderModels ? 'Querying API models…' : (providerModels.length > 0 ? 'Select a discovered model' : 'No Models Found') }}
+                  </option>
+                  <option
+                    v-for="model in providerModels"
+                    :key="model.id"
+                    :value="model.id"
+                  >
+                    {{ model.name || model.id }}
+                  </option>
+                </select>
+                <div class="pointer-events-none absolute right-2.5 text-neutral-400">
+                  <div class="i-solar:alt-arrow-down-line-duotone h-4 w-4" />
+                </div>
+              </div>
+            </div>
+
+            <!-- Item 4: Live Connection Test Probe -->
+            <div class="flex flex-col gap-2.5 border-t border-neutral-200/50 pt-3 dark:border-neutral-800/50">
               <div class="flex items-center justify-between gap-2">
-                <div class="min-w-0 flex items-center gap-2 truncate">
-                  <div class="i-solar:chat-round-dots-bold-duotone h-4 w-4 flex-shrink-0 text-emerald-500" />
-                  <span class="truncate italic">"{{ probeResponseMessage }}"</span>
-                </div>
-                <div class="flex shrink-0 items-center gap-1.5 text-[10px] font-mono">
-                  <span v-if="probeBenchmarkMs !== null" class="rounded bg-emerald-500/20 px-1.5 py-0.5 text-emerald-700 font-bold dark:text-emerald-300">
-                    {{ probeBenchmarkMs }}ms TTFT
-                  </span>
-                  <span :class="['px-1.5 py-0.5 rounded font-bold', probeHasReasoning ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300']">
-                    {{ probeHasReasoning ? '🧠 Reasoning Model' : '⚡ Standard Stream' }}
-                  </span>
+                <button
+                  type="button"
+                  :disabled="probeState === 'connecting' || probeState === 'inferencing' || !selectedModelId.trim()"
+                  class="flex cursor-pointer items-center gap-2 border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-700 font-semibold shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 hover:bg-neutral-100 dark:text-neutral-300 disabled:opacity-50 dark:hover:bg-neutral-700"
+                  @click="testBrainConnection"
+                >
+                  <div v-if="probeState === 'connecting' || probeState === 'inferencing'" class="i-solar:restart-square-bold h-4 w-4 animate-spin text-primary-500" />
+                  <div v-else class="i-solar:plain-bold-duotone h-4 w-4 text-primary-500" />
+                  <span>{{ probeState === 'connecting' || probeState === 'inferencing' ? 'Testing…' : 'Test Brain Connection' }}</span>
+                </button>
+
+                <!-- Progress Dot & Status -->
+                <div class="flex items-center gap-1.5 text-xs font-semibold">
+                  <template v-if="probeState === 'connecting'">
+                    <span class="relative h-2.5 w-2.5 flex">
+                      <span class="absolute h-full w-full inline-flex animate-ping rounded-full bg-amber-400 opacity-75" />
+                      <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-amber-500" />
+                    </span>
+                    <span class="text-amber-600 dark:text-amber-400">Connecting…</span>
+                  </template>
+
+                  <template v-else-if="probeState === 'inferencing'">
+                    <span class="relative h-2.5 w-2.5 flex">
+                      <span class="absolute h-full w-full inline-flex animate-ping rounded-full bg-yellow-400 opacity-75" />
+                      <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-yellow-500" />
+                    </span>
+                    <span class="text-yellow-600 dark:text-yellow-400">Inferencing…</span>
+                  </template>
+
+                  <template v-else-if="probeState === 'verified'">
+                    <span class="relative h-2.5 w-2.5 flex">
+                      <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-emerald-500" />
+                    </span>
+                    <span class="text-[11px] text-emerald-600 font-mono dark:text-emerald-400">
+                      Verified{{ probeBenchmarkMs !== null ? ` (${probeBenchmarkMs}ms)` : '' }}
+                    </span>
+                  </template>
+
+                  <template v-else-if="probeState === 'error'">
+                    <span class="relative h-2.5 w-2.5 flex">
+                      <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-red-500" />
+                    </span>
+                    <span class="text-red-600 dark:text-red-400">Failed</span>
+                  </template>
                 </div>
               </div>
-            </div>
 
-            <!-- Error Details Banner -->
-            <div
-              v-else-if="probeState === 'error' && probeErrorMessage"
-              class="flex items-start gap-2 rounded-lg bg-red-500/10 p-2.5 text-xs text-red-600 dark:text-red-400"
-            >
-              <div class="i-solar:danger-triangle-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
-              <div class="min-w-0 flex-1">
-                <span class="font-bold">Test Failed:</span>
-                <p class="mt-0.5 break-all text-[11px] leading-snug">
-                  {{ probeErrorMessage }}
-                </p>
+              <!-- Verified Response Bubble & Telemetry Tag -->
+              <div
+                v-if="probeState === 'verified' && probeResponseMessage"
+                class="flex flex-col gap-1.5 rounded-lg bg-emerald-500/10 p-2.5 text-xs text-emerald-700 dark:text-emerald-300"
+              >
+                <div class="flex items-center justify-between gap-2">
+                  <div class="min-w-0 flex items-center gap-2 truncate">
+                    <div class="i-solar:chat-round-dots-bold-duotone h-4 w-4 flex-shrink-0 text-emerald-500" />
+                    <span class="truncate italic">"{{ probeResponseMessage }}"</span>
+                  </div>
+                  <div class="flex shrink-0 items-center gap-1.5 text-[10px] font-mono">
+                    <span v-if="probeBenchmarkMs !== null" class="rounded bg-emerald-500/20 px-1.5 py-0.5 text-emerald-700 font-bold dark:text-emerald-300">
+                      {{ probeBenchmarkMs }}ms TTFT
+                    </span>
+                    <span :class="['px-1.5 py-0.5 rounded font-bold', probeHasReasoning ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300']">
+                      {{ probeHasReasoning ? '🧠 Reasoning Model' : '⚡ Standard Stream' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Error Details Banner -->
+              <div
+                v-else-if="probeState === 'error' && probeErrorMessage"
+                class="flex items-start gap-2 rounded-lg bg-red-500/10 p-2.5 text-xs text-red-600 dark:text-red-400"
+              >
+                <div class="i-solar:danger-triangle-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
+                <div class="min-w-0 flex-1">
+                  <span class="font-bold">Test Failed:</span>
+                  <p class="mt-0.5 break-all text-[11px] leading-snug">
+                    {{ probeErrorMessage }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -1225,6 +1595,12 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
+
+    <!-- Cloudflare Connect Dialog -->
+    <CloudflareConnectDialog
+      v-model="isConnectModalOpen"
+      @connected="handleCloudflareConnected"
+    />
   </div>
 </template>
 
