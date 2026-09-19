@@ -26,7 +26,7 @@ Deployment surface map for shipping AIRI. Desktop releases are manual + script-a
 
 Canonical references: **`docs/content/en/docs/contributing/windows-release-guide.md`** and **`docs/content/en/docs/contributing/macos-release-guide.md`**. The workflow unified by `scripts/release/publish-win.js` / `publish-mac.js`:
 
-1. **Release notes first.** `git log [previous-tag]..HEAD --oneline`; draft user-facing notes inline for USER review/approval; save to `release-notes.md` (uncommitted).
+1. **Release notes first.** `git log [previous-tag]..HEAD --oneline`; draft user-facing notes following canonical format (`# 🚀 AIRI v<ver>`, executive blurb, `## ✨ Key Highlights`, domain categories with emojis, step-by-step onboarding breakdown, no raw commit dumps or code variable slop). Present inline in natural Markdown (never inside a single massive triple-backtick block); save to `release-notes.md` (uncommitted).
 2. **Version stamp.** `apps/stage-tamagotchi/package.json` → `[major].[minor].[patch]-stable.[YYYYMMDD]`.
 3. **Tag.** `git tag v<version> && git push origin v<version>` (fork remote; never touch upstream without authorization).
 4. **Build + publish.** `pnpm run release:win` or `pnpm run release:mac`.

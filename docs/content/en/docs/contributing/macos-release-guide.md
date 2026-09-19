@@ -10,9 +10,43 @@ Do not proceed blindly. Draft notes inline for user review before stamping or ta
    ```bash
    git log [previous-tag]..HEAD --oneline
    ```
-2. **Draft Summary**: Focus on outward-facing user features (new UI controls, stage widgets, bug fixes, and stability improvements).
-3. **Present Inline**: Present the gathered notes inline to the user for review.
+2. **Draft Curated Release Notes**: Structure the release notes according to the canonical release format below. Focus on user-facing value, capabilities, workflows, and visual improvements.
+3. **Present Inline in Natural Markdown**: Present the drafted notes directly to the user as formatted Markdown. Never wrap the entire release notes in a single giant triple-backtick block in chat responses.
 4. **Save Draft**: Once reviewed, save the notes to `release-notes.md` in the project root (uncommitted). Both desktop and iOS upload scripts automatically ingest this file.
+
+#### Canonical Release Notes Format & Editorial Invariants
+Every stable release must adhere to the following standard template and quality rules:
+
+```markdown
+# 🚀 AIRI v[version] — Release Notes
+
+[Opening Executive Blurb: 1–2 paragraphs synthesizing the headlining themes, brand new systems, and major improvements of this release.]
+
+---
+
+## ✨ Key Highlights
+
+### [Emoji] [Domain 1]: [Feature Title & Theme] (e.g., Brand New Feature / WIP Preview)
+[*Optional italicized disclaimer for early-access or experimental features*]
+- **[Feature Subhead]**: [Clear description of user capability and behavior.]
+- **[Feature Subhead]**: [Clear description of user capability and behavior.]
+
+### [Emoji] [Domain 2]: [Feature Title]
+...
+
+### 🧙 Onboarding V3: Step-by-Step Experience Polish & Hardware Intelligence
+- **Step 1 (Triage)**: [Specific improvements made to this step]
+- **Step 4 (User Profile)**: [Specific improvements made to this step]
+- **Step 6 (Persona)**: [Specific improvements made to this step]
+- **Step 8 (Consciousness)**: [Specific improvements made to this step]
+...
+```
+
+**Editorial Rules**:
+- **Zero Low-Level Code Slop**: Never cite internal variable names, private methods, or trivial code tokens (e.g. avoid `reasoningText`, `setProviderConfig`, store mutations). Frame all highlights around end-user capabilities, workflow fluidity, and reliability.
+- **No Raw Commit Dumps**: Do not append raw `git log` hashes or commit messages to user-facing release notes.
+- **Accurate Feature Framing**: Clearly distinguish brand-new features (e.g. Arcade, Sound Studio) from bug fixes, and flag early-access surfaces with explicit Work in Progress (WIP) notices.
+- **Step-by-Step Stepper Organization**: When documenting extensive onboarding overhauls, organize changes by numbered steps (`Step X (Name)`) for scannability.
 
 ---
 
