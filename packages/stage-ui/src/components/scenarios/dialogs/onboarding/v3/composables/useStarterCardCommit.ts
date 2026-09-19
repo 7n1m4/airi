@@ -3,6 +3,7 @@ import type { OnboardingV3DraftState } from '../stores/useOnboardingV3Draft'
 
 import { SPOTLIGHT_MODELS } from '@proj-airi/stage-ui/constants'
 import { nanoid } from 'nanoid'
+import { unref } from 'vue'
 
 import { parseActor } from '../../../../../../composables/queues'
 import { stripMarkers, stripPacingEnvelopes } from '../../../../../../composables/response-categoriser'
@@ -25,6 +26,7 @@ import { useSpeechStore } from '../../../../../../stores/modules/speech'
 import { useVisionStore } from '../../../../../../stores/modules/vision'
 import { useOnboardingStore } from '../../../../../../stores/onboarding'
 import { useSettingsUserProfile } from '../../../../../../stores/settings/user-profile'
+import { useSyncEngineStore } from '../../../../../../stores/sync-engine'
 
 export const USER_TOKEN_REGEX = /(?<!\{)\{user\}(?!\})/g
 
@@ -609,6 +611,7 @@ export function useStarterCardCommit() {
   const displayModelsStore = useDisplayModelsStore()
   const chatSessionStore = useChatSessionStore()
   const onboardingStore = useOnboardingStore()
+  const syncEngineStore = useSyncEngineStore()
 
   /**
    * Commits the complete companion setup to production stores:
@@ -775,7 +778,20 @@ export function useStarterCardCommit() {
       console.warn('[useStarterCardCommit] Failed to commit Turn 0 greeting:', err)
     }
 
-    // 7. Mark onboarding completed
+    // 7. Add card to selective sync if cloud sync and selective sync are active
+    try {
+      if (unref(syncEngineStore.syncEnabled) && unref(syncEngineStore.selectiveSyncEnabled)) {
+        const displayModelId = cardStore.getCardDisplayModelId(createdCardId)
+          || payload.data?.extensions?.airi?.modules?.displayModelId
+          || draft.vesselDisplayModelId
+        syncEngineStore.addCardToSelectiveSync(createdCardId, displayModelId)
+      }
+    }
+    catch (err) {
+      console.warn('[useStarterCardCommit] Failed to add card to selective sync:', err)
+    }
+
+    // 8. Mark onboarding completed
     try {
       onboardingStore.markSetupCompleted()
     }

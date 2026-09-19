@@ -3673,6 +3673,20 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     return 'cloud-only'
   }
 
+  function addCardToSelectiveSync(cardId: string, displayModelId?: string): void {
+    const updated = new Set(selectiveCheckedIds.value || [])
+    updated.add(`chat-${cardId}`)
+    updated.add(`bg-char-${cardId}`)
+    if (displayModelId) {
+      updated.add(`model-${displayModelId}`)
+      const rawModelId = displayModelId.replace('display-model-', '')
+      if (rawModelId !== displayModelId) {
+        updated.add(`model-${rawModelId}`)
+      }
+    }
+    selectiveCheckedIds.value = Array.from(updated)
+  }
+
   async function syncCard(cardId: string, displayModelId?: string): Promise<boolean> {
     if (!syncEnabled.value) {
       toast.error('Cloud Sync is currently disabled.')
@@ -3680,13 +3694,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     }
 
     if (selectiveSyncEnabled.value) {
-      const updated = new Set(selectiveCheckedIds.value || [])
-      updated.add(`chat-${cardId}`)
-      updated.add(`bg-char-${cardId}`)
-      if (displayModelId) {
-        updated.add(`model-${displayModelId}`)
-      }
-      selectiveCheckedIds.value = Array.from(updated)
+      addCardToSelectiveSync(cardId, displayModelId)
     }
 
     toast.info('Starting targeted sync for character assets...')
@@ -3732,6 +3740,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     selectiveCheckedIds,
     perDeviceAppearance,
     getCardSyncStatus,
+    addCardToSelectiveSync,
     syncCard,
     fetchGDriveManifest,
     saveGDriveManifest,
