@@ -289,7 +289,7 @@ watch(() => props.sending, (val) => {
     ref="chatHistoryRef"
     flex="~ col"
     relative h-full w-full
-    class="gap-2 overflow-x-hidden overflow-y-auto rounded-xl px-2 py-2"
+    class="gap-2 overflow-x-hidden overflow-y-auto rounded-xl px-2 pb-0 pt-2"
     :class="[variant === 'mobile' ? 'gap-1' : 'gap-2']"
     @scroll="handleScroll"
   >
