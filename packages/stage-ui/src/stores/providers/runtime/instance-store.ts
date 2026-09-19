@@ -124,14 +124,26 @@ export function createProviderInstanceStore(
     state.value = { version: 2, instancesByInstanceKey }
   }
 
+  function cleanInfix(providerId: string, instanceId?: string): string {
+    if (!instanceId || instanceId === PRIMARY_INSTANCE_INFIX)
+      return PRIMARY_INSTANCE_INFIX
+    let clean = instanceId
+    const prefix = `${providerId}:`
+    while (clean.startsWith(prefix)) {
+      clean = clean.slice(prefix.length)
+    }
+    return clean || PRIMARY_INSTANCE_INFIX
+  }
+
   function normalizeInstance(
     instance: Partial<ProviderInstanceConfig>,
     providerId: string,
     infix: string,
   ): PersistedProviderInstance {
+    const resolvedInfix = cleanInfix(providerId, infix)
     return {
-      instanceId: `${providerId}:${infix}`,
-      id: infix,
+      instanceId: `${providerId}:${resolvedInfix}`,
+      id: resolvedInfix,
       providerId,
       label: instance.label ?? 'Default',
       options: instance.options ?? {},
@@ -139,13 +151,41 @@ export function createProviderInstanceStore(
     }
   }
 
+  function healDirtySnapshot(snap: ProviderInstanceStoreSnapshot) {
+    if (!snap || typeof snap.instancesByInstanceKey !== 'object')
+      return
+    let touched = false
+    const healed: ProviderInstanceStoreSnapshot['instancesByInstanceKey'] = {}
+    for (const [key, row] of Object.entries(snap.instancesByInstanceKey)) {
+      if (!row || typeof row !== 'object')
+        continue
+      const providerId = row.providerId || key.split(':')[0]
+      const cleanId = cleanInfix(providerId, row.id)
+      const cleanKey = toStorageKey(providerId, cleanId)
+
+      if (cleanKey !== key || row.id !== cleanId || row.instanceId !== cleanKey) {
+        touched = true
+        healed[cleanKey] = normalizeInstance(row, providerId, cleanId)
+      }
+      else {
+        healed[key] = row
+      }
+    }
+    if (touched) {
+      snap.instancesByInstanceKey = healed
+    }
+  }
+
   function snapshot(): ProviderInstanceStoreSnapshot {
     migrate()
-    return state.value as ProviderInstanceStoreSnapshot
+    const snap = state.value as ProviderInstanceStoreSnapshot
+    healDirtySnapshot(snap)
+    return snap
   }
 
   function toStorageKey(providerId: string, instanceId?: string) {
-    return `${providerId}:${instanceId ?? PRIMARY_INSTANCE_INFIX}`
+    const resolvedInfix = cleanInfix(providerId, instanceId)
+    return `${providerId}:${resolvedInfix}`
   }
 
   function readRow(providerId: string, instanceId?: string) {
@@ -253,14 +293,15 @@ export function createProviderInstanceStore(
    */
   function addInstance(providerId: string, label: string, template: Record<string, unknown> = {}) {
     const normalizedLabel = label.trim() || `Instance ${listInstances(providerId).length + 1}`
-    const newId = `${providerId}:${normalizedLabel.toLowerCase().replace(/\W+/g, '-')}`
+    const slug = normalizedLabel.toLowerCase().replace(/\W+/g, '-')
+    const storageKey = toStorageKey(providerId, slug)
 
-    const existing = snapshot().instancesByInstanceKey[newId]
+    const existing = snapshot().instancesByInstanceKey[storageKey]
     if (existing)
       return existing
 
     return writeRow({
-      id: newId,
+      id: slug,
       providerId,
       label: normalizedLabel,
       options: { ...template },

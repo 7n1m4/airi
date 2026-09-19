@@ -55,7 +55,13 @@ function handleSaveAndActivate() {
   if (!model.value)
     return
 
-  const targetInstanceId = props.instanceId || '*'
+  const rawInstanceId = props.instanceId || '*'
+  let cleanInstanceId = rawInstanceId
+  const prefix = `${props.providerId}:`
+  while (cleanInstanceId.startsWith(prefix)) {
+    cleanInstanceId = cleanInstanceId.slice(prefix.length)
+  }
+  const targetInstanceId = cleanInstanceId || '*'
   const providerKey = targetInstanceId !== '*' ? `${props.providerId}:${targetInstanceId}` : props.providerId
   const providerMetadata = providersStore.getProviderMetadata(props.providerId)
   const baseName = providerMetadata?.name || providerMetadata?.localizedName || props.providerId
@@ -111,7 +117,13 @@ function handleFetchModels() {
 }
 
 onMounted(() => {
-  const targetInstanceId = props.instanceId || '*'
+  const rawInstanceId = props.instanceId || '*'
+  let cleanInstanceId = rawInstanceId
+  const prefix = `${props.providerId}:`
+  while (cleanInstanceId.startsWith(prefix)) {
+    cleanInstanceId = cleanInstanceId.slice(prefix.length)
+  }
+  const targetInstanceId = cleanInstanceId || '*'
   const providerKey = targetInstanceId !== '*' ? `${props.providerId}:${targetInstanceId}` : props.providerId
   if (!model.value && (consciousnessStore.activeProvider === providerKey || consciousnessStore.activeProvider === props.providerId)) {
     model.value = consciousnessStore.activeModel

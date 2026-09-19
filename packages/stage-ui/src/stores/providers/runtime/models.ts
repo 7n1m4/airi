@@ -34,8 +34,14 @@ export function createProviderModels(deps: ProviderModelsDeps) {
     if (providerKey.includes(':')) {
       const parts = providerKey.split(':')
       providerId = parts[0]
-      if (!targetInstanceId)
-        targetInstanceId = parts[1]
+      if (!targetInstanceId) {
+        let instance = parts.slice(1).join(':')
+        const prefix = `${providerId}:`
+        while (instance.startsWith(prefix)) {
+          instance = instance.slice(prefix.length)
+        }
+        targetInstanceId = instance || undefined
+      }
     }
 
     const config = deps.providerInstanceOptions?.(providerId, targetInstanceId)

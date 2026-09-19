@@ -267,14 +267,19 @@ export const useProvidersStore = defineStore('providers', () => {
       else {
         for (const inst of instances) {
           const baseName = metadata.name || metadata.localizedName || metadata.id
+          let cleanId = inst.id
+          const prefix = `${metadata.id}:`
+          while (cleanId.startsWith(prefix)) {
+            cleanId = cleanId.slice(prefix.length)
+          }
           const displayName = isMulti
-            ? `${baseName} (${inst.label || inst.id})`
+            ? `${baseName} (${inst.label || cleanId})`
             : baseName
-          const valKey = isMulti ? `${metadata.id}:${inst.id}` : metadata.id
+          const valKey = isMulti ? `${metadata.id}:${cleanId}` : metadata.id
           list.push({
             value: valKey,
             providerId: metadata.id,
-            instanceId: inst.id,
+            instanceId: cleanId,
             label: displayName,
           })
         }

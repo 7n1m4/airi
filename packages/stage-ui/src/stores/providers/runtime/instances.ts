@@ -60,7 +60,12 @@ export function createProviderInstances(deps: ProviderInstancesDeps) {
     if (providerKey.includes(':')) {
       const parts = providerKey.split(':')
       providerId = parts[0]
-      targetInstanceId = parts[1]
+      let instance = parts.slice(1).join(':')
+      const prefix = `${providerId}:`
+      while (instance.startsWith(prefix)) {
+        instance = instance.slice(prefix.length)
+      }
+      targetInstanceId = instance || undefined
     }
 
     const metadata = providerMetadata[providerId]

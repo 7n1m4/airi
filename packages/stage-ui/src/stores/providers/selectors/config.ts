@@ -25,7 +25,13 @@ export function createProvidersConfigSelectors(state: ProvidersConfigSelectorsSt
   function splitProviderKey(providerKey: string): { providerId: string, instanceId?: string } {
     if (providerKey.includes(':')) {
       const parts = providerKey.split(':')
-      return { providerId: parts[0], instanceId: parts[1] }
+      const providerId = parts[0]
+      let instance = parts.slice(1).join(':')
+      const prefix = `${providerId}:`
+      while (instance.startsWith(prefix)) {
+        instance = instance.slice(prefix.length)
+      }
+      return { providerId, instanceId: instance || undefined }
     }
     return { providerId: providerKey }
   }

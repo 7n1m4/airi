@@ -79,11 +79,35 @@ async function resolveModels<TConfig extends { apiKey?: string | null, baseUrl?:
   if (providerExtra?.listModels) {
     return providerExtra.listModels(config, provider)
   }
-  if (!isModelProvider(provider)) {
-    return listModels({ baseURL: config.baseUrl!, apiKey: config.apiKey! })
+
+  const queryModels = async (baseUrl: string | URL | undefined, apiKey: string | undefined) => {
+    if (!baseUrl) {
+      if (!isModelProvider(provider))
+        return []
+      return listModels(provider.model())
+    }
+    return listModels({ baseURL: baseUrl, apiKey: apiKey || '' })
   }
 
-  return listModels(provider.model())
+  const rawUrl = typeof config.baseUrl === 'string' ? config.baseUrl.trim() : (config.baseUrl ? String(config.baseUrl) : '')
+  const apiKey = typeof config.apiKey === 'string' ? config.apiKey.trim() : ''
+
+  try {
+    return await queryModels(rawUrl, apiKey)
+  }
+  catch (primaryErr) {
+    // If querying models failed on host (e.g. 404 on /models), try appending /v1 if absent
+    if (rawUrl && !rawUrl.replace(/\/+$/, '').endsWith('/v1')) {
+      try {
+        const v1Url = `${rawUrl.replace(/\/+$/, '')}/v1`
+        return await queryModels(v1Url, apiKey)
+      }
+      catch {
+        // Fallback failed; keep primary error
+      }
+    }
+    throw primaryErr
+  }
 }
 
 async function pickValidationModel<TConfig extends { apiKey?: string | null, baseUrl?: string | URL | null }>(

@@ -311,5 +311,108 @@ describe('phase 5: upstream migration compatibility & defensive validation', () 
         baseUrl: 'https://custom.endpoint/v1',
       })
     })
+
+    it('resolves double-prefixed composite provider keys like openai-compatible:openai-compatible:vllm resiliently', async () => {
+      const deps = makeDeps({
+        providerMetadata: {
+          'openai-compatible': makeCloudProviderMetadata('openai-compatible'),
+        },
+        providerInstanceOptions: (providerId, instanceId) => {
+          if (providerId === 'openai-compatible' && instanceId === 'vllm') {
+            return { apiKey: 'sk-vllm-key', baseUrl: 'http://10.0.0.91:8000/v1' }
+          }
+          return undefined
+        },
+      })
+      const { getProviderInstance } = createProviderInstances(deps)
+      const instance = await getProviderInstance('openai-compatible:openai-compatible:vllm')
+      expect(instance).toEqual({ stubProvider: 'openai-compatible' })
+      expect(deps.providerMetadata['openai-compatible'].createProvider).toHaveBeenCalledWith({
+        apiKey: 'sk-vllm-key',
+        baseUrl: 'http://10.0.0.91:8000/v1',
+      })
+    })
+  })
+
+  describe('multi-instance slug normalization & redundant prefix resilience', () => {
+    it('addInstance creates clean slug and does not duplicate providerId in id or instanceId', () => {
+      const store = createProviderInstanceStore(ref({ version: 2 as const, instancesByInstanceKey: {} }))
+      const row = store.addInstance('openai-compatible', 'vLLM Server', {
+        apiKey: 'sk-test',
+        baseUrl: 'http://10.0.0.91:8000/v1',
+      })
+
+      expect(row.id).toBe('vllm-server')
+      expect(row.instanceId).toBe('openai-compatible:vllm-server')
+
+      const instances = store.listInstances('openai-compatible')
+      expect(instances).toHaveLength(1)
+      expect(instances[0].id).toBe('vllm-server')
+
+      // Resolves options via clean slug
+      const opts = store.providerInstanceOptions('openai-compatible', 'vllm-server')
+      expect(opts).toEqual({ apiKey: 'sk-test', baseUrl: 'http://10.0.0.91:8000/v1' })
+
+      // Defensively resolves options even if passed with redundant providerId prefix
+      const optsDefensive = store.providerInstanceOptions('openai-compatible', 'openai-compatible:vllm-server')
+      expect(optsDefensive).toEqual({ apiKey: 'sk-test', baseUrl: 'http://10.0.0.91:8000/v1' })
+    })
+
+    it('healDirtySnapshot automatically heals existing double-prefixed storage keys and row IDs', () => {
+      const dirtySnapshot = {
+        version: 2 as const,
+        instancesByInstanceKey: {
+          'openai-compatible:openai-compatible:vllm': {
+            instanceId: 'openai-compatible:openai-compatible:vllm',
+            id: 'openai-compatible:vllm',
+            providerId: 'openai-compatible',
+            label: 'vllm',
+            options: { apiKey: 'sk-vllm-persisted', baseUrl: 'http://10.0.0.91:8000/v1' },
+            isPrimary: false,
+          } as any,
+        },
+      }
+
+      const store = createProviderInstanceStore(ref(dirtySnapshot))
+      const instances = store.listInstances('openai-compatible')
+      expect(instances).toHaveLength(1)
+      expect(instances[0].id).toBe('vllm')
+      expect(instances[0].instanceId).toBe('openai-compatible:vllm')
+
+      // Options accessible through both clean and dirty lookup
+      expect(store.providerInstanceOptions('openai-compatible', 'vllm')).toEqual({
+        apiKey: 'sk-vllm-persisted',
+        baseUrl: 'http://10.0.0.91:8000/v1',
+      })
+      expect(store.providerInstanceOptions('openai-compatible', 'openai-compatible:vllm')).toEqual({
+        apiKey: 'sk-vllm-persisted',
+        baseUrl: 'http://10.0.0.91:8000/v1',
+      })
+    })
+
+    it('splitProviderKey correctly handles clean and double-prefixed composite keys', () => {
+      const testCases = [
+        { key: 'openai-compatible', expectedProv: 'openai-compatible', expectedInst: undefined },
+        { key: 'openai-compatible:*', expectedProv: 'openai-compatible', expectedInst: '*' },
+        { key: 'openai-compatible:vllm', expectedProv: 'openai-compatible', expectedInst: 'vllm' },
+        { key: 'openai-compatible:openai-compatible:vllm', expectedProv: 'openai-compatible', expectedInst: 'vllm' },
+      ]
+
+      for (const tc of testCases) {
+        const sel = createProvidersConfigSelectors({
+          providerCredentials: ref({}),
+          addedProviders: ref({}),
+          providerMetadata: {
+            'openai-compatible': makeCloudProviderMetadata('openai-compatible'),
+          },
+          providerInstanceOptions: (prov, inst) => {
+            expect(prov).toBe(tc.expectedProv)
+            expect(inst).toBe(tc.expectedInst)
+            return { apiKey: 'sk-test' }
+          },
+        })
+        expect(sel.isProviderConfigured(tc.key)).toBe(true)
+      }
+    })
   })
 })

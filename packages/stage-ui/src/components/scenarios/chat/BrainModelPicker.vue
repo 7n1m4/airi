@@ -93,6 +93,7 @@ const newProvider = ref('')
 const newModel = ref('')
 const availableModels = ref<any[]>([])
 const isLoadingModels = ref(false)
+const isManualModel = ref(false)
 
 // Seeding default favorites reactively to perfectly handle asynchronous card store hydration
 watch(cards, (newCards) => {
@@ -154,6 +155,7 @@ onMounted(() => {
 watch(newProvider, async (provider) => {
   if (!provider) {
     availableModels.value = []
+    isManualModel.value = false
     return
   }
 
@@ -166,10 +168,13 @@ watch(newProvider, async (provider) => {
       const nameB = (b.name || b.id.split('/').pop() || b.id).toLowerCase()
       return nameA.localeCompare(nameB)
     })
+    // Automatically switch to manual entry if no models are discovered
+    isManualModel.value = availableModels.value.length === 0
   }
   catch (err) {
     console.error('[BrainModelPicker] Failed to load models for provider:', provider, err)
     availableModels.value = []
+    isManualModel.value = true
   }
   finally {
     isLoadingModels.value = false
@@ -177,19 +182,23 @@ watch(newProvider, async (provider) => {
 }, { immediate: true })
 
 function handleAddFavorite() {
-  if (!newName.value.trim() || !newModel.value)
+  if (!newModel.value.trim())
     return
+
+  const modelId = newModel.value.trim()
+  const displayName = newName.value.trim() || modelId.split('/').pop() || modelId
 
   favorites.value.push({
     id: String(Date.now()),
-    name: newName.value.trim(),
+    name: displayName,
     provider: newProvider.value,
-    model: newModel.value,
+    model: modelId,
   })
 
   // Reset inputs & hide form
   newName.value = ''
   newModel.value = ''
+  isManualModel.value = false
   showAddForm.value = false
 }
 
@@ -450,7 +459,7 @@ const activeModelDisplay = computed(() => {
               <input
                 v-model="newName"
                 type="text"
-                placeholder="Name (e.g. Fast Model)"
+                placeholder="Name (optional, defaults to model)"
                 class="w-full border border-neutral-200/60 rounded-lg bg-transparent px-2.5 py-1.5 text-xs text-neutral-800 outline-none transition-all dark:border-neutral-800 focus:border-primary-500 dark:text-neutral-200 placeholder:text-neutral-400/60 focus:ring-1 focus:ring-primary-500/20"
               >
 
@@ -467,27 +476,54 @@ const activeModelDisplay = computed(() => {
                   </select>
                 </div>
 
-                <div class="flex-1">
+                <div class="flex flex-1 items-center gap-1">
+                  <!-- Manual Model Input -->
+                  <input
+                    v-if="isManualModel || (!isLoadingModels && availableModels.length === 0)"
+                    v-model="newModel"
+                    type="text"
+                    placeholder="Model ID (e.g. model-name)"
+                    class="w-full border border-neutral-200/60 rounded-lg bg-white px-2.5 py-1.5 text-xs text-neutral-800 outline-none transition-all dark:border-neutral-800 focus:border-primary-500 dark:bg-neutral-900 dark:text-neutral-200 placeholder:text-neutral-400/60 focus:ring-1 focus:ring-primary-500/20"
+                  >
+
+                  <!-- Discovered Models Dropdown -->
                   <select
+                    v-else
                     v-model="newModel"
                     class="w-full border border-neutral-200/60 rounded-lg bg-white px-2 py-1.5 text-xs text-neutral-800 outline-none transition-all dark:border-neutral-800 focus:border-primary-500 dark:bg-neutral-900 dark:text-neutral-200 focus:ring-1 focus:ring-primary-500/20"
-                    :disabled="isLoadingModels || availableModels.length === 0"
+                    :disabled="isLoadingModels"
                   >
                     <option value="" disabled selected>
-                      {{ isLoadingModels ? 'Loading...' : availableModels.length === 0 ? 'No Models' : 'Select Model' }}
+                      {{ isLoadingModels ? 'Loading...' : 'Select Model' }}
                     </option>
                     <option v-for="model in availableModels" :key="model.id" :value="model.id">
                       {{ model.name || model.id.split('/').pop() || model.id }}
                     </option>
                   </select>
+
+                  <!-- Toggle between Dropdown and Manual Input -->
+                  <button
+                    v-if="availableModels.length > 0"
+                    type="button"
+                    class="shrink-0 border border-neutral-200/60 rounded-lg p-1.5 text-neutral-500 transition-colors dark:border-neutral-800 hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                    :title="isManualModel ? 'Choose from discovered models' : 'Enter custom model ID'"
+                    @click="isManualModel = !isManualModel"
+                  >
+                    <div :class="isManualModel ? 'i-solar:list-bold-duotone' : 'i-solar:pen-bold-duotone'" class="size-3.5" />
+                  </button>
                 </div>
               </div>
+
+              <!-- Endpoint Model Fallback Hint -->
+              <p v-if="!isLoadingModels && availableModels.length === 0" class="text-[10px] text-amber-600/90 leading-tight dark:text-amber-400/90">
+                No models discovered from endpoint. Enter model ID manually.
+              </p>
 
               <!-- Add Button -->
               <button
                 type="button"
                 class="w-full flex items-center justify-center gap-1.5 rounded-xl bg-primary-500 px-3 py-2 text-xs text-white font-bold tracking-wider uppercase shadow-md shadow-primary-500/10 transition-all disabled:pointer-events-none active:scale-[0.98] disabled:scale-100 hover:scale-[1.02] hover:bg-primary-600 disabled:opacity-40"
-                :disabled="!newName.trim() || !newModel"
+                :disabled="!newModel.trim()"
                 @click="handleAddFavorite"
               >
                 <div class="i-solar:add-circle-bold-duotone text-sm" />
