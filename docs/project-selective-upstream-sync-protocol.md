@@ -223,6 +223,12 @@ The following areas represent permanent or intentional architectural divergences
 - **Upstream Reality**: Upstream focuses predominantly on 1:1 character cards, VRM/Live2D, and experimental Godot 4 sidecar skeletons.
 - **Filter Rule**: Upstream patches assuming single-actor cards or Godot sidecars must not be blindly imported over the fork's multi-actor or Unity sidecar runtimes.
 
+### 5. Hosted Responses API & Server-Side LLM Gateways
+- **Fork Reality**: `dasilva333/airi` is strictly client- and local-first, directly dispatching to AI providers (e.g. OpenRouter, Ollama, OpenAI, Anthropic, Gemini) via client-side adapters and WebGPU/local runtimes (`packages/provider-inference`, `packages/stage-ui/src/stores/providers`). There is no intermediate proxy or server-side responses gateway.
+- **Upstream Reality**: Upstream is actively building and hardening a hosted `/v1/responses` gateway (OpenResponses specification) with server-side settlement, Flux billing, token aggregation, and OpenRouter routing in `server/apps/api`.
+- **Filter Rule**: We do not support the Responses API (at least not yet, and there is no plan to do so). Upstream commits, PRs, or diffs touching the Responses API (`server/apps/api/.../responses`, OpenResponses schemas, or client adapters specifically binding to `/v1/responses`) can be safely ignored and treated as auto-rejects for porting.
+
 ## Relevant Skills
 
 - [[airi-roadmap-upstream-research]]
+

@@ -53,6 +53,10 @@ This fork (`dasilva333/airi`) has undergone deep, structural architectural shift
    - **Web Speech API** (`browser-web-speech-api`): Browser-native STT; routes audio data over the network to browser vendor servers (e.g. Google).
    - **Apple Speech** (`SFSpeechRecognizer`): Native Apple framework supporting genuine on-device offline recognition on Apple Silicon.
    - While Apple Speech has legitimate on-device privacy value, it is currently an upstream-focused provider not wired in this fork. Distinguish these architectures carefully rather than conflating them or recommending unported provider patches.
+8. **Responses API & Hosted Server-Side Gateways**:
+   - This fork is strictly client/local-first with direct provider connections and local WebGPU/WASM inference (`packages/provider-inference`, `packages/stage-ui/src/stores/providers`).
+   - Upstream actively develops a hosted `/v1/responses` gateway (OpenResponses schema, Flux billing, OpenRouter routing in `server/apps/api`).
+   - **Filter Rule**: This fork does not support the Responses API (at least not yet, and there is no plan to do so). All upstream changes touching `/v1/responses` or OpenResponses are auto-rejects and can be safely ignored.
 
 ## Upstream Radar vs. Cherry-Pick Triage SOP
 

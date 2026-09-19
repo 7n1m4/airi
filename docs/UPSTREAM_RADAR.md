@@ -6,6 +6,103 @@
 
 ---
 
+## [2026-09-19] Upstream Delta: `09aa7a7d..62ef8676` (6 commits, 27 files, 18 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 6 commits (`09aa7a7d..62ef8676`) and recorded 18 PR updates (11 new, 7 discussion). Work remains heavily centered on hardening the hosted `/v1/responses` gateway and OpenRouter search routing (#2604, #2601, #2593, #2589), client-side graceful handling of interrupted streaming responses (#2596), enabling official provider web search (#2602), and Electron automation window-role guidelines (#2592). In PRs, performance bundling (#2603), inlay window reuse (#2600), Y-API provider (#2598), and bundled Sherpaw STT (#2550) are advancing.
+* **Discussion & Community Buzz**:
+  - 💬 **#2596: `fix: handle interrupted Responses streams` (21 comments)**: High discussion on preserving partial assistant text across network/provider drops and retry indexing.
+  - 💬 **#2391: `feat(stage-*): add screen ambient light` (+8 new comments, total 14)**: Growing community buzz and testing around real-time screen color sampling and Live2D lighting shaders.
+  - 💬 **#2589: `fix(api): complete OpenRouter Responses streams at EOF` (+6 new comments, total 10)**: Server-side SSE completion and buffer flushing fixes.
+  - 💬 **#2594: `fix(api): normalize OpenRouter Responses event names` (7 comments)**: OpenRouter response event normalization.
+  - 💬 **#2593: `fix(api): recover completed OpenRouter Responses streams` (6 comments)**: Resilient stream reconnection and recovery.
+  - 💬 **#2121: `chore(i18n): update translations` (+3 new comments, total 105)**: Active community localization updates crossing 100+ comments.
+  - 💬 **#2603: `perf(stage-tamagotchi): reduce packaged desktop bundle size` (3 comments)**: Packaging footprint optimization discussion.
+  - 💬 **#2550: `feat(hearing): add bundled Sherpaw speech recognition` (+2 new comments, total 10)**: Interest in offline WASM speech-to-text via sherpa-onnx.
+  - 💬 **#2552: `feat(stage) add bilingual subtitles` (+1 new comments, total 10)**: Subtitle chunking and bilingual display coordination.
+  - 💬 **#2530: `fix(stage-tamagotchi): remove obsolete mouse tracking IPC` (+1 new comments, total 7)**: Cleanup of legacy mouse event routing.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2596 / Commit `41e48b12ce`: `fix: handle interrupted Responses streams` (frontend/core-agent only)**: High UX value. Preserves partial streaming assistant replies with `interrupted: true` rather than discarding output on transport drop, and updates retry logic (`retrySourceIndexFrom`, `canRetryMessageAt`) in `chat.ts` and `history.vue`. Excludes interrupted turns from cloud sync.
+  - ⭐ **PR #2600: `fix(stage-tamagotchi): reuse the inlay window and add a close control`**: Window lifecycle cleanup. Reuses existing inlay window instances and adds an explicit close action, preventing window leaks in Electron.
+  - ⭐ **PR #2598: `feat(providers): add Y-API provider`**: Self-contained provider integration in `packages/provider-inference/src/providers/cloud/y-api/index.ts` with localization keys.
+  - 🔍 **PR #2603: `perf(stage-tamagotchi): reduce packaged desktop bundle size`**: Desktop bundle optimizations in `electron-builder.config.ts` and UnoCSS; worth reviewing for our own Electron distribution.
+  - 🔍 **PR #2550: `feat(hearing): add bundled Sherpaw speech recognition`**: Offline WASM STT integration via sherpa-onnx (`vite-plugin-sherpaw`). Excellent offline alignment, though needs evaluation against our audio pipeline.
+  - ⚪ **Auto-Reject / Do Not Port**: Commits `62ef8676f6`, `542db6c89b`, `cfffa9b6f3` and PRs #2594, #2591, #2589 (hosted cloud API server / Stripe / Flux); Commit `470c4664a3` (hosted web search default for official provider).
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/stage-ui/src/stores/chat.ts` & `packages/core-agent/src/runtime/chat-orchestrator-runtime.ts` (Commit `41e48b12ce`)**: Our fork features `<|ACTOR|>` routing, multi-actor state, and memory journal integrations. Porting the interrupted-stream handling must be done selectively by hand.
+  - ⚠️ **`apps/stage-tamagotchi/src/renderer/pages/index.vue` (PR #2391 Screen Ambient Light)**: Upstream continues building on the monolithic `index.vue` / `controls-island`. Our fork decouples the stage into `RendererStage.vue` and `ControlStripHost.vue`. Ambient lighting logic must target `RendererStage.vue` if ported.
+  - ⚠️ **`packages/stage-ui/src/components/scenes/Stage.vue` (PR #2552 Bilingual Subtitles)**: Upstream modifies legacy `Stage.vue` and `pipelines-audio`; our fork uses `packages/stage-layouts` and `airi-caption-subsystem`.
+
+### 📋 Upstream Commits
+- `62ef8676f6` fix(api): route web search through OpenRouter (#2604) [#2604](https://github.com/moeru-ai/airi/pull/2604) _(RainbowBird, 2026-09-19)_
+- `470c4664a3` fix(stage-ui): enable official web search by default (#2602) [#2602](https://github.com/moeru-ai/airi/pull/2602) _(RainbowBird, 2026-09-19)_
+- `542db6c89b` fix(api): preserve Responses provider fields (#2601) [#2601](https://github.com/moeru-ai/airi/pull/2601) _(RainbowBird, 2026-09-19)_
+- `41e48b12ce` fix: handle interrupted Responses streams (#2596) [#2596](https://github.com/moeru-ai/airi/pull/2596) _(RainbowBird, 2026-09-19)_
+- `cfffa9b6f3` fix(api): recover completed OpenRouter Responses streams (#2593) [#2593](https://github.com/moeru-ai/airi/pull/2593) _(RainbowBird, 2026-09-19)_
+- `332af7f66f` docs(skills): preserve Electron window roles during automation (#2592) [#2592](https://github.com/moeru-ai/airi/pull/2592) _(Neko, 2026-09-19)_
+
+### 🔬 Subsystem Breakdown
+#### Documentation & Scaffolding (`⚪ ignore`) — 1 file(s) (+17/-1)
+- `.agents/skills/agent-browser-electron/SKILL.md` *(+17/-1)*
+
+#### Core Agent Runtime (`🔍 inspect`) — 4 file(s) (+138/-9)
+- `packages/core-agent/README.md` *(+2/-2)*
+- `packages/core-agent/src/runtime/chat-orchestrator-runtime.test.ts` *(+105/-1)*
+- `packages/core-agent/src/runtime/chat-orchestrator-runtime.ts` *(+29/-6)*
+- `packages/core-agent/src/types/chat.ts` *(+2/-0)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 7 file(s) (+101/-8)
+- `packages/stage-ui/src/components/scenarios/chat/components/history.browser.test.ts` *(+51/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history.story.vue` *(+29/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history.vue` *(+11/-1)*
+- `packages/stage-ui/src/libs/chat-sync/wire-message.test.ts` *(+2/-1)*
+- `packages/stage-ui/src/libs/chat-sync/wire-message.ts` *(+5/-3)*
+- `packages/stage-ui/src/libs/providers/providers/official/index.test.ts` *(+2/-2)*
+- `packages/stage-ui/src/libs/providers/providers/official/index.ts` *(+1/-1)*
+
+#### Cognitive & Consciousness (`⚠️ hand-merge`) — 2 file(s) (+57/-4)
+- `packages/stage-ui/src/stores/chat.contract.test.ts` *(+51/-0)*
+- `packages/stage-ui/src/stores/chat.ts` *(+6/-4)*
+
+#### Cloud Services, Billing & Auth (`⚪ ignore / rejected in fork (offline-first architecture)`) — 13 file(s) (+522/-650)
+- `server/apps/api/README.md` *(+2/-1)*
+- `server/apps/api/src/routes/openai/v1/index.ts` *(+2/-1)*
+- `server/apps/api/src/routes/openai/v1/operations/responses/index.ts` *(+110/-14)*
+- `server/apps/api/src/routes/openai/v1/operations/responses/request.test.ts` *(+64/-70)*
+- `server/apps/api/src/routes/openai/v1/operations/responses/request.ts` *(+139/-70)*
+- `server/apps/api/src/routes/openai/v1/route.test.ts` *(+118/-3)*
+- `server/apps/api/src/services/adapters/llm/responses.ts` *(+49/-17)*
+- `server/apps/api/src/services/adapters/llm/schemas/README.md` *(+0/-22)*
+- `server/apps/api/src/services/adapters/llm/schemas/openresponses-schema.ts` *(+0/-344)*
+- `server/apps/api/src/services/adapters/llm/schemas/request-openapi.json` *(+0/-1)*
+- `server/apps/api/src/services/adapters/llm/schemas/responses.ts` *(+0/-105)*
+- `server/apps/api/src/services/domain/llm-router/tests/router.test.ts` *(+26/-0)*
+- `server/docs/ai/adr/2026-09-15-hosted-responses.md` *(+12/-2)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (11)
+- [#2598](https://github.com/moeru-ai/airi/pull/2598) `feat(providers): add Y-API provider` by **@jiweiyeah** *(1 comments)*
+- [#2603](https://github.com/moeru-ai/airi/pull/2603) ` perf(stage-tamagotchi): reduce packaged desktop bundle size` by **@nayounsang** *(3 comments)*
+- [#2604](https://github.com/moeru-ai/airi/pull/2604) `fix(api): route web search through OpenRouter` by **@luoling8192** *(1 comments)*
+- [#2602](https://github.com/moeru-ai/airi/pull/2602) `fix: enable official web search by default` by **@luoling8192** *(1 comments)*
+- [#2601](https://github.com/moeru-ai/airi/pull/2601) `fix(api): preserve Responses provider fields` by **@luoling8192** *(1 comments)*
+- [#2600](https://github.com/moeru-ai/airi/pull/2600) `fix(stage-tamagotchi): reuse the inlay window and add a close control` by **@Fan-xxy** *(1 comments)*
+- [#2596](https://github.com/moeru-ai/airi/pull/2596) `fix: handle interrupted Responses streams` by **@luoling8192** *(21 comments)*
+- [#2594](https://github.com/moeru-ai/airi/pull/2594) `fix(api): normalize OpenRouter Responses event names` by **@luoling8192** *(7 comments)*
+- [#2593](https://github.com/moeru-ai/airi/pull/2593) `fix(api): recover completed OpenRouter Responses streams` by **@luoling8192** *(6 comments)*
+- [#2592](https://github.com/moeru-ai/airi/pull/2592) `docs(skills): preserve Electron window roles during automation` by **@nekomeowww** *(4 comments)*
+- [#2591](https://github.com/moeru-ai/airi/pull/2591) `fix(api): allow packaged transcription preflight` by **@lorenzozanee** *(0 comments)*
+
+#### 💬 Discussion Activity (7)
+- [#2588](https://github.com/moeru-ai/airi/pull/2588) `docs(contributing): align GitHub setup guide with pinned tooling` — *+1 comments (1 ➔ 2 total)*
+- [#2530](https://github.com/moeru-ai/airi/pull/2530) `fix(stage-tamagotchi): remove obsolete mouse tracking IPC` — *+1 comments (6 ➔ 7 total)*
+- [#2391](https://github.com/moeru-ai/airi/pull/2391) `feat(stage-*): add screen ambient light` — *+8 comments (6 ➔ 14 total)*
+- [#2552](https://github.com/moeru-ai/airi/pull/2552) `feat(stage)    add bilingual subtitles` — *+1 comments (9 ➔ 10 total)*
+- [#2121](https://github.com/moeru-ai/airi/pull/2121) `chore(i18n): update translations` — *+3 comments (102 ➔ 105 total)*
+- [#2550](https://github.com/moeru-ai/airi/pull/2550) `feat(hearing): add bundled Sherpaw speech recognition` — *+2 comments (8 ➔ 10 total)*
+- [#2589](https://github.com/moeru-ai/airi/pull/2589) `fix(api): complete OpenRouter Responses streams at EOF` — *+6 comments (4 ➔ 10 total)*
+
+---
 ## [2026-09-18] Upstream Delta: `fa159df1..09aa7a7d` (9 commits, 85 files, 28 PR update(s))
 
 ### 🎯 Executive Highlights

@@ -28,6 +28,25 @@ const stageMateWinCandidates = [
 const stageMateWinSource = stageMateWinCandidates.find(dir => fs.existsSync(path.join(dir, 'StageMate.exe')) || fs.existsSync(path.join(dir, 'MateEngineX.exe')))
 const hasStageMateWin = Boolean(stageMateWinSource)
 
+// Each target platform keeps only the matching `${arch}` native directory.
+const nativeAddonFilePatterns = {
+  darwin: [
+    '!**/node_modules/uiohook-napi/prebuilds/!(darwin-${arch}){,/**}',
+    '!**/node_modules/electron-click-drag-plugin/build/Release/!(darwin-${arch}){,/**}',
+  ],
+  linux: [
+    // uiohook-napi ships an x86-64 binary in its Linux ARM64 directory.
+    '!**/node_modules/uiohook-napi/prebuilds/!(linux-${arch}){,/**}',
+    '!**/node_modules/uiohook-napi/prebuilds/linux-arm64{,/**}',
+    // Linux does not use electron-click-drag-plugin.
+    '!**/node_modules/electron-click-drag-plugin/build/Release/{darwin-arm64,darwin-x64,linux-x64,win32-x64}{,/**}',
+  ],
+  win32: [
+    '!**/node_modules/uiohook-napi/prebuilds/!(win32-${arch}){,/**}',
+    '!**/node_modules/electron-click-drag-plugin/build/Release/!(win32-${arch}){,/**}',
+  ],
+} as const
+
 console.info(`[electron-builder/config] Stage-Mate macOS App found: ${hasStageMateMac} (${stageMateMacSource})`)
 console.info(`[electron-builder/config] Stage-Mate Windows binary found: ${hasStageMateWin} (${stageMateWinSource})`)
 
@@ -148,6 +167,25 @@ export default {
     '!src/**/*',
     '!**/node_modules/**/{CHANGELOG.md,README.md,README,readme.md,readme}',
     '!**/node_modules/**/{.turbo,test,src,__tests__,tests,example,examples}',
+    // The renderer uses the browser ONNX backend. The node package and its
+    // platform binaries are not loaded by the packaged renderer.
+    '!**/node_modules/onnxruntime-node{,/**}',
+    // Vite bundles the browser runtime and its WASM assets into `out/renderer`.
+    '!**/node_modules/onnxruntime-web{,/**}',
+    // Workspace hoisting exposes build tools to electron-builder's file walk.
+    // The packaged app has no runtime import of these tools.
+    '!**/node_modules/@rolldown{,/**}',
+    '!**/node_modules/rolldown{,/**}',
+    '!**/node_modules/lightningcss{,/**}',
+    '!**/node_modules/lightningcss-*{,/**}',
+    '!**/node_modules/fsevents{,/**}',
+    // Transformers runs inside browser workers in the desktop app. Sharp is its
+    // Node-only image backend and has no packaged main-process consumer.
+    '!**/node_modules/sharp{,/**}',
+    '!**/node_modules/@img{,/**}',
+    // uiohook-napi loads the selected prebuild. Its bundled libuiohook C source is
+    // only used to build that binary and does not participate in runtime loading.
+    '!**/node_modules/uiohook-napi/libuiohook{,/**}',
     '**/node_modules/**/*',
     '!electron.vite.config.{js,ts,mjs,cjs}',
     '!vite.config.{js,ts,mjs,cjs}',
@@ -168,6 +206,7 @@ export default {
     license: 'MIT',
   },
   win: {
+    files: nativeAddonFilePatterns.win32,
     executableName: 'airi-dasilva333',
     target: [
       'nsis',
@@ -192,6 +231,7 @@ export default {
     allowToChangeInstallationDirectory: true,
   },
   mac: {
+    files: nativeAddonFilePatterns.darwin,
     artifactName: 'airi-dasilva333-${version}-${arch}-mac.${ext}',
     entitlementsInherit: 'build/entitlements.mac.plist',
     extendInfo: [
@@ -223,6 +263,7 @@ export default {
     artifactName: 'airi-dasilva333-${version}-darwin-${arch}.${ext}',
   },
   linux: {
+    files: nativeAddonFilePatterns.linux,
     target: [
       'deb',
       'rpm',
