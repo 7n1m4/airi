@@ -408,6 +408,16 @@ const availableVoices = computed(() => {
       { id: 'LJS', label: 'LJ Speech (Female Preset)' },
     ]
   }
+  if (normId === 'deepgram-tts') {
+    return [
+      { id: 'aura-2-luna-en', label: 'Luna (Female · Friendly & Natural)' },
+      { id: 'aura-2-asteria-en', label: 'Asteria (Female · Confident & Clear)' },
+      { id: 'aura-2-aurora-en', label: 'Aurora (Female · Cheerful & Expressive)' },
+      { id: 'aura-2-cora-en', label: 'Cora (Female · Smooth & Melodic)' },
+      { id: 'aura-2-orion-en', label: 'Orion (Male · Approachable & Calm)' },
+      { id: 'aura-2-zeus-en', label: 'Zeus (Male · Deep & Trustworthy)' },
+    ]
+  }
 
   return [
     { id: 'cloud_voice_1', label: 'Rachel (Expressive · Conversational)' },
@@ -433,12 +443,6 @@ watch(availableVoices, (voices) => {
       const alt = voices.find(v => v.id !== selectedVoice.value) || voices[0]
       selectedUserVoice.value = alt.id
     }
-  }
-}, { immediate: true })
-
-watch(selectedUserVoice, (val) => {
-  if (val) {
-    userProfileStore.voiceProfileId = val
   }
 }, { immediate: true })
 

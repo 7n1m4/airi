@@ -78,6 +78,30 @@ export interface ResolvedPersona {
   importedCardRaw?: any
 }
 
+export function resolveCanonicalCompanionName(draft: OnboardingV3DraftState, persona?: Partial<ResolvedPersona>): string {
+  if (draft.companionName && draft.companionName.trim())
+    return draft.companionName.trim()
+  if (persona?.nickname && persona.nickname !== persona.name)
+    return persona.nickname.trim()
+  const rawData = (persona as any)?.importedCardRaw?.data || (persona as any)?.importedCardRaw || (draft.importedCardDraft as any)?.data || draft.importedCardDraft
+  if (rawData?.nickname && rawData.nickname !== rawData.name)
+    return rawData.nickname.trim()
+  const airiExt = rawData?.extensions?.airi
+  if (airiExt?.active_concepts && airiExt.active_concepts.length > 0) {
+    const actorKey = airiExt.active_concepts[0]
+    if (actorKey.startsWith('actor_')) {
+      const clean = actorKey.replace(/^actor_/, '')
+      return clean.charAt(0).toUpperCase() + clean.slice(1)
+    }
+  }
+  return persona?.name || rawData?.name || 'Companion'
+}
+
+export function resolveVoiceProfileId(companionName: string): string {
+  const clean = companionName.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '') || 'companion'
+  return `voice_profile_${clean}`
+}
+
 /**
  * Resolves character persona data from the onboarding draft state.
  * Handles imported cards, starter character presets, and installed cards,
@@ -289,8 +313,12 @@ export function populateAiriExtensions(
   draft: OnboardingV3DraftState,
   activeModelId: string,
   displayModels: any[] = [],
+  persona?: ResolvedPersona,
 ): void {
   const isSpeechEnabled = Boolean(draft.modules?.speech && draft.ttsProvider !== 'speech-noop')
+  const charName = resolveCanonicalCompanionName(draft, persona)
+  const charProfileId = resolveVoiceProfileId(charName)
+
   airi.agents = airi.agents || {}
   airi.modules = airi.modules || {}
   airi.modules.displayModelId = activeModelId
@@ -298,12 +326,57 @@ export function populateAiriExtensions(
     provider: draft.llmProvider || 'openai',
     model: draft.llmModel || 'gpt-4o',
   }
-  airi.modules.speech = {
-    provider: draft.modules?.speech ? (draft.ttsProvider || 'kokoro-local') : 'speech-noop',
-    model: draft.modules?.speech ? (draft.ttsModel || 'q4') : '',
-    voice_id: draft.modules?.speech ? (draft.ttsVoiceId || 'af_bella') : '',
-    pitch: draft.ttsPitch ?? 1.0,
-    rate: draft.ttsRate ?? 1.0,
+  if (isSpeechEnabled) {
+    const charBaseProvider = draft.ttsProvider || 'kokoro-local'
+    const charBaseModel = draft.ttsModel || 'q4'
+    const charRawVoice = draft.ttsVoiceId || 'af_bella'
+
+    const charVoiceProfile = {
+      id: charProfileId,
+      name: `${charName}'s Voice`,
+      baseProvider: charBaseProvider,
+      baseModel: charBaseModel,
+      baseVoice: charRawVoice,
+      effects: {
+        pitch: draft.ttsPitch ?? 1.0,
+        rate: draft.ttsRate ?? 1.0,
+        volume: 1.0,
+        asmr: 0,
+        radio: 0,
+        robot: 0,
+        reverb: 0,
+        spatial: 0,
+      },
+      ust: {
+        enabled: true,
+        mode: 'mute' as const,
+        customStripChars: '*_[]()<>"\'',
+        stripEmojis: true,
+        tildeReplacement: '',
+        autoLowercaseCapsThreshold: 2,
+        autoLowercaseCapsExclude: [],
+        convertBracketsToTokenFormat: true,
+        customReplacements: [],
+      },
+    }
+
+    const existingProfiles = (airi.voice_profiles || []).filter(
+      (p: any) => p && p.id !== charProfileId,
+    )
+    airi.voice_profiles = [charVoiceProfile, ...existingProfiles]
+
+    airi.modules.speech = {
+      provider: 'virtual-audio-studio',
+      model: 'virtual',
+      voice_id: charProfileId,
+    }
+  }
+  else {
+    airi.modules.speech = {
+      provider: 'speech-noop',
+      model: '',
+      voice_id: '',
+    }
   }
 
   // Update actor modules and visual_assets manifestations if present
@@ -321,8 +394,8 @@ export function populateAiriExtensions(
             airi.modules[key].manifestation.modelId = activeModelId
           }
           if (draft.modules?.speech) {
-            airi.modules[key].speech = airi.modules.speech
-            asset.speech = airi.modules.speech
+            airi.modules[key].speech = { ...airi.modules.speech }
+            asset.speech = { ...airi.modules.speech }
           }
         }
       }
@@ -473,7 +546,11 @@ export function compileCardPayload(
     targetData.extensions = targetData.extensions || {}
     targetData.extensions.airi = targetData.extensions.airi || {}
 
-    populateAiriExtensions(targetData.extensions.airi, draft, activeModelId, displayModels)
+    if (resolvedPersona.nickname) {
+      targetData.nickname = resolvedPersona.nickname
+    }
+
+    populateAiriExtensions(targetData.extensions.airi, draft, activeModelId, displayModels, resolvedPersona)
     resolvePromptDirectives(draft, card)
     return card
   }
@@ -516,7 +593,7 @@ export function compileCardPayload(
     },
   }
 
-  populateAiriExtensions(cardPayload.data.extensions.airi, draft, activeModelId, displayModels)
+  populateAiriExtensions(cardPayload.data.extensions.airi, draft, activeModelId, displayModels, resolvedPersona)
   resolvePromptDirectives(draft, cardPayload)
   return cardPayload
 }
@@ -561,16 +638,17 @@ export function useStarterCardCommit() {
     }
 
     // 2. Persist Voice Profile
-    let charProfileId = draft.ttsVoiceId || 'af_bella'
+    const charName = resolveCanonicalCompanionName(draft, persona)
+    const charProfileId = resolveVoiceProfileId(charName)
+    let charVoiceProfile: any = null
+
     if (draft.modules?.speech) {
       try {
-        const charName = persona.name || 'Companion'
         const charBaseProvider = draft.ttsProvider || 'kokoro-local'
         const charBaseModel = draft.ttsModel || 'q4'
         const charRawVoice = draft.ttsVoiceId || 'af_bella'
-        charProfileId = `voice_profile_${charName.toLowerCase().replace(/\s+/g, '_')}`
 
-        const charVoiceProfile = {
+        charVoiceProfile = {
           id: charProfileId,
           name: `${charName}'s Voice`,
           baseProvider: charBaseProvider,
@@ -600,8 +678,8 @@ export function useStarterCardCommit() {
         }
 
         speechStore.saveVoiceProfile(charVoiceProfile as any)
-        speechStore.activeSpeechProvider = charBaseProvider
-        speechStore.activeSpeechModel = charBaseModel
+        speechStore.activeSpeechProvider = 'virtual-audio-studio'
+        speechStore.activeSpeechModel = 'virtual'
         speechStore.activeSpeechVoiceId = charProfileId
       }
       catch (err) {
@@ -643,9 +721,6 @@ export function useStarterCardCommit() {
 
     // 4. Compile & Persist AiriCard
     const payload = compileCardPayload(draft, persona, displayModelsStore.displayModels)
-    if (draft.modules?.speech && payload.data?.extensions?.airi?.modules?.speech) {
-      payload.data.extensions.airi.modules.speech.voice_id = charProfileId
-    }
 
     // Ensure desktop MCP servers (open-websearch, filesystem) are configured in mcp.json if allowedTools are present
     const allowedTools = payload.data?.extensions?.airi?.generation?.known?.allowedTools

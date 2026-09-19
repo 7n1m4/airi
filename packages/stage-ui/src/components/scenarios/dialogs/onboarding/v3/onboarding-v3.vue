@@ -314,6 +314,7 @@ function handleSkip() {
         v-else-if="currentStepId === 'finale'"
         :on-previous="handlePrevious"
         :on-finish="() => emit('finish')"
+        @finish="emit('finish')"
       />
 
       <!-- Placeholder View for Subsequent Steps during Incremental Assembly -->

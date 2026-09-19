@@ -31,6 +31,7 @@ import {
   electronGetCorsBypassUrls,
   electronGetMonitorCount,
   electronGetStageDisabled,
+  electronOpenChat,
   electronResetWindowPositions,
   electronSetCorsBypassUrls,
   electronSetIgnoreMouseEvents,
@@ -510,6 +511,10 @@ app.whenReady().then(async () => {
         // NOTICE: Main process is the single owner of the stage→caption follow. The renderer
         // only sets `captionOpen` for bookkeeping; it does not separately toggle the caption.
         syncCaptionToStage(enabled, { captureInFlight: isCapturingStage })
+      })
+      defineInvokeHandler(context, electronOpenChat, async (enabled?: boolean) => {
+        console.log('[@proj-airi/stage-tamagotchi] [Main] Global open chat triggered:', enabled)
+        await deps.chatWindow.openChat(enabled)
       })
       defineInvokeHandler(context, electronStageSetAlwaysOnTop, async (flag) => {
         console.log('[@proj-airi/stage-tamagotchi] [Main] Actor Stage always-on-top changed:', flag)

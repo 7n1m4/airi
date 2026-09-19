@@ -16,8 +16,8 @@ const toggleStageVisibility = useElectronEventaInvoke(electronStageToggleVisibil
 
 async function handleCloseV3() {
   try {
-    await toggleStageVisibility(true)
-    await openChat(true)
+    void toggleStageVisibility(true).catch((error: unknown) => console.warn('[Onboarding V3 Page] Failed to reveal Stage:', error))
+    void openChat(true).catch((error: unknown) => console.warn('[Onboarding V3 Page] Failed to open Chat window:', error))
   }
   catch (error) {
     console.warn('[Onboarding V3 Page] Failed to reveal Stage or Chat window:', error)

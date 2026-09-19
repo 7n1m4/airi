@@ -523,12 +523,14 @@ function copyPayload() {
 
 // --- 7. Atomic Launch to Stage ---
 const isSubmitting = ref(false)
+const launchError = ref<string | null>(null)
 
 async function handleLaunch() {
   if (isSubmitting.value)
     return
 
   isSubmitting.value = true
+  launchError.value = null
   let createdCardId: string | null = null
 
   try {
@@ -538,13 +540,21 @@ async function handleLaunch() {
   catch (err) {
     console.error('[StepFinale] Failed to launch companion:', err)
     const msg = err instanceof Error ? err.message : String(err)
+    launchError.value = msg
     toast.error(`Failed to create companion card: ${msg}`)
   }
   finally {
     isSubmitting.value = false
     if (createdCardId) {
-      emit('finish')
-      props.onFinish?.()
+      try {
+        emit('finish')
+        props.onFinish?.()
+      }
+      catch (finishErr) {
+        console.error('[StepFinale] Failed during finish transition:', finishErr)
+        const msg = finishErr instanceof Error ? finishErr.message : String(finishErr)
+        launchError.value = msg
+      }
     }
   }
 }
@@ -877,6 +887,28 @@ async function handleLaunch() {
 
         <!-- Launch Actions Area -->
         <div :class="['flex flex-col gap-3 pt-3 border-t border-neutral-200/80 dark:border-white/5 shrink-0']">
+          <!-- Persistent Launch Error Banner -->
+          <div
+            v-if="launchError"
+            :class="['p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs flex items-start justify-between gap-3 shadow-sm']"
+          >
+            <div :class="['flex items-start gap-2.5 min-w-0']">
+              <div :class="['i-solar:danger-triangle-bold text-rose-500 w-4 h-4 shrink-0 mt-0.5']" />
+              <div :class="['flex flex-col gap-0.5 min-w-0']">
+                <span :class="['font-semibold text-rose-700 dark:text-rose-300']">Launch Issue</span>
+                <span :class="['text-[11px] opacity-90 break-words font-mono select-text']">{{ launchError }}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              :class="['p-1 rounded-lg hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 transition-colors shrink-0 cursor-pointer']"
+              title="Dismiss error"
+              @click="launchError = null"
+            >
+              <div :class="['i-solar:close-circle-bold w-4 h-4']" />
+            </button>
+          </div>
+
           <!-- Bottom Action Buttons -->
           <div :class="['flex items-center justify-between gap-3']">
             <button

@@ -417,8 +417,6 @@ export function compileCardBundle(options: {
           provider: boundVoice.provider,
           model: boundVoice.model || '',
           voice_id: boundVoice.voice_id,
-          pitch: boundVoice.pitch ?? 1.0,
-          rate: boundVoice.rate ?? 1.0,
         }
       : null,
   }
@@ -487,7 +485,7 @@ export function compileCardBundle(options: {
     spec_version: '3.0' as const,
     data: {
       name: slugName,
-      nickname: proposal.name || firstChar.name,
+      nickname: firstChar.name || proposal.name,
       avatar: customAvatarUrl || firstChar.avatarUrl,
       creator: 'AIRI Character Creator',
       character_version: '1.0.0',

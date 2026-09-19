@@ -264,6 +264,40 @@ async function handleImportFiles(files: FileList | null) {
   }
 }
 
+function extractSpeechFromCard(card: any) {
+  if (!card)
+    return null
+  const data = 'data' in card ? card.data : card
+  const airi = data?.extensions?.airi
+  if (!airi)
+    return null
+  const speech = airi.modules?.speech
+  if (!speech || speech.provider === 'speech-noop')
+    return null
+
+  if (speech.provider === 'virtual-audio-studio') {
+    const profiles = airi.voice_profiles || []
+    const profile = profiles.find((p: any) => p && p.id === speech.voice_id)
+    if (profile) {
+      return {
+        provider: profile.baseProvider,
+        model: profile.baseModel,
+        voiceId: profile.baseVoice,
+        pitch: profile.effects?.pitch ?? profile.pitch ?? 1.0,
+        rate: profile.effects?.rate ?? profile.rate ?? 1.0,
+      }
+    }
+  }
+
+  return {
+    provider: speech.provider,
+    model: speech.model,
+    voiceId: speech.voice_id,
+    pitch: speech.pitch ?? 1.0,
+    rate: speech.rate ?? 1.0,
+  }
+}
+
 function handleWizardSubmitDraft(finalCard: any) {
   applyPersonaToDraft({
     source: 'import',
@@ -273,6 +307,10 @@ function handleWizardSubmitDraft(finalCard: any) {
   const cardName = ('data' in finalCard ? finalCard.data?.name : finalCard?.name) || finalCard?.name
   if (cardName && draft.state) {
     draft.state.companionName = cardName
+  }
+  const extractedSpeech = extractSpeechFromCard(finalCard)
+  if (extractedSpeech && typeof (draft as any).setSpeech === 'function') {
+    ;(draft as any).setSpeech(extractedSpeech)
   }
   toast.success(`Mounted custom card "${importedName.value}" to draft!`)
 }
