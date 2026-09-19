@@ -67,7 +67,8 @@ function handleOpenStudio() {
 }
 
 function handleOpenCharacterConfig() {
-  const route = activeCardId.value ? `/settings/airi-card?cardId=${activeCardId.value}` : '/settings/airi-card'
+  const targetId = activeCardId.value || airiCardStore.activeCardId || 'default'
+  const route = `/settings/airi-card/edit?id=${targetId}`
   void openSettings({
     route,
   }).catch((err: any) => {

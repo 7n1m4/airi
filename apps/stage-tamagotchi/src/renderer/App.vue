@@ -188,6 +188,30 @@ const isMainWindow = computed(() => {
   return initialHash === '' || initialHash === '#/' || initialHash === '#'
 })
 
+// Listen for custom toast notifications and navigation events from main process
+watch(context, (ctx) => {
+  if (!ctx || isMainWindow.value)
+    return
+  ctx.on(electronShowToastEvent, (event) => {
+    const payload = event?.body
+    if (!payload)
+      return
+    toast(payload.message, {
+      description: payload.description,
+      duration: payload.duration || 4000,
+    })
+  })
+  ctx.on(electronSettingsNavigate, (event) => {
+    const payload = event?.body
+    if (payload?.route) {
+      console.info('[Settings] Received navigate event:', payload.route)
+      void router.push(payload.route).catch((err) => {
+        console.warn('[Settings] Failed to push route:', err)
+      })
+    }
+  })
+}, { immediate: true })
+
 onMounted(async () => {
   const startupAt = performance.now()
   const logStep = (label: string) => {
@@ -296,28 +320,6 @@ onMounted(async () => {
       ;(window as any).electron.ipcRenderer.removeAllListeners('dating-sim-toggle')
     }
   }
-
-  // Listen for custom toast notifications from main process
-  watch(context, (ctx) => {
-    if (!ctx || isMainWindow.value)
-      return
-    ctx.on(electronShowToastEvent, (event) => {
-      const payload = event?.body
-      if (!payload)
-        return
-      toast(payload.message, {
-        description: payload.description,
-        duration: payload.duration || 4000,
-      })
-    })
-    ctx.on(electronSettingsNavigate, (event) => {
-      const payload = event?.body
-      if (payload?.route) {
-        debug('[Settings] Navigating to:', payload.route)
-        router.push(payload.route)
-      }
-    })
-  }, { immediate: true })
 })
 
 watch([themeColorsHue, themeColorsChromaMultiplier], ([hue, multiplier]) => {

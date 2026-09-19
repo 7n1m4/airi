@@ -3,6 +3,7 @@ import type { Config } from '../../libs/electron/persistence'
 import type { I18n } from '../../libs/i18n'
 import type { ServerChannel } from '../../services/airi/channel-server'
 import type { McpStdioManager } from '../../services/airi/mcp-servers'
+import type { SettingsWindowManager } from '../settings'
 import type { WidgetsWindowManager } from '../widgets'
 
 import { join, resolve } from 'node:path'
@@ -33,6 +34,7 @@ export interface ChatWindowManager {
 }
 
 export function setupChatWindowReusableFunc(params: {
+  settingsWindow: SettingsWindowManager
   widgetsManager: WidgetsWindowManager
   serverChannel: ServerChannel
   mcpStdioManager: McpStdioManager
@@ -208,6 +210,7 @@ export function setupChatWindowReusableFunc(params: {
 
     await setupChatWindowElectronInvokes({
       window,
+      settingsWindow: params.settingsWindow,
       widgetsManager: params.widgetsManager,
       serverChannel: params.serverChannel,
       mcpStdioManager: params.mcpStdioManager,
