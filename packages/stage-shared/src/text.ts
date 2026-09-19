@@ -131,3 +131,21 @@ export function healMozibake(text: string): string {
 
   return healed
 }
+
+/**
+ * Normalizes text for resilient search comparisons:
+ * 1. NFKC normalization (converts full-width Latin/numbers, half-width katakana, ligatures)
+ * 2. Lowercase
+ * 3. NFD normalization and diacritic removal (accents, umlauts)
+ * 4. Whitespace trimming
+ */
+export function normalizeSearchText(text?: string | null): string {
+  if (!text)
+    return ''
+  return text
+    .normalize('NFKC')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036F]/g, '')
+    .trim()
+}

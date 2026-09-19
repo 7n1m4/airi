@@ -19,6 +19,7 @@ import {
   discordServiceStart,
   discordServiceStop,
   discordServiceSummon,
+  normalizeSearchText,
 } from '@proj-airi/stage-shared'
 import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
 import { useLive2d } from '@proj-airi/stage-ui-live2d'
@@ -1068,11 +1069,20 @@ export const useDiscordStore = defineStore('discord', () => {
           return
         }
 
-        // Fuzzy match: Try exact ID, then exact name, then partial name
+        // Fuzzy match: Try exact ID, then exact name/nickname, then partial match
+        const queryNorm = normalizeSearchText(query)
         const allCards = Array.from(airiCard.cards.entries())
-        const target = allCards.find(([id]) => id === query)
-          || allCards.find(([, card]) => card.name.toLowerCase() === query.toLowerCase())
-          || allCards.find(([, card]) => card.name.toLowerCase().includes(query.toLowerCase()))
+        const target = allCards.find(([id]) => id === query || normalizeSearchText(id) === queryNorm)
+          || allCards.find(([, card]) => {
+            const nameNorm = normalizeSearchText(card.name || (card as any).data?.name)
+            const nicknameNorm = normalizeSearchText(card.nickname || (card as any).data?.nickname)
+            return (nicknameNorm && nicknameNorm === queryNorm) || nameNorm === queryNorm
+          })
+          || allCards.find(([, card]) => {
+            const nameNorm = normalizeSearchText(card.name || (card as any).data?.name)
+            const nicknameNorm = normalizeSearchText(card.nickname || (card as any).data?.nickname)
+            return (nicknameNorm && nicknameNorm.includes(queryNorm)) || nameNorm.includes(queryNorm)
+          })
 
         if (target) {
           const [id, card] = target

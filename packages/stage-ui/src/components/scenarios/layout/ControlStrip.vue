@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { isStageTamagotchi } from '@proj-airi/stage-shared'
+import { isStageTamagotchi, normalizeSearchText } from '@proj-airi/stage-shared'
 import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
 import { useLive2d } from '@proj-airi/stage-ui-live2d'
 import { useMmd } from '@proj-airi/stage-ui-mmd/stores/mmd'
@@ -404,11 +404,20 @@ const charFavEntries = computed(() =>
 )
 
 const sortedCharacters = computed(() => {
-  const query = characterSearch.value.toLowerCase().trim()
+  const query = normalizeSearchText(characterSearch.value)
   const entries = [...cards.value.entries()].map(([id, card], idx) => ({ id, card, idx }))
-  const filtered = entries.filter(
-    ({ card }) => !query || card.name.toLowerCase().includes(query),
-  )
+  const filtered = entries.filter(({ id, card }) => {
+    if (!query)
+      return true
+    const name = normalizeSearchText(card.name || (card as any).data?.name)
+    const nickname = normalizeSearchText(card.nickname || (card as any).data?.nickname)
+    const idNorm = normalizeSearchText(id)
+    const desc = normalizeSearchText(card.description || (card as any).data?.description)
+    return name.includes(query)
+      || nickname.includes(query)
+      || idNorm.includes(query)
+      || desc.includes(query)
+  })
   filtered.sort((a, b) => {
     if (a.card.createdAt !== undefined && b.card.createdAt !== undefined)
       return b.card.createdAt - a.card.createdAt
@@ -2443,7 +2452,7 @@ function getShortLabel(btnId: string): string {
             <div
               v-for="[id, card] in charFavEntries"
               :key="id"
-              :title="card.name"
+              :title="card.nickname ? `${card.nickname} (${card.name})` : card.name"
               :class="[
                 'group relative aspect-square cursor-pointer overflow-hidden border rounded-xl bg-neutral-100 dark:bg-neutral-800/40 hover:ring-2 hover:ring-amber-500/50 transition-all duration-200 shadow-xs',
                 id === activeCardId ? 'border-amber-400 ring-2 ring-amber-400/50' : 'border-neutral-200 dark:border-neutral-700/60',
@@ -2458,7 +2467,7 @@ function getShortLabel(btnId: string): string {
                 size-class="h-full w-full"
               />
               <div class="absolute bottom-0 left-0 right-0 truncate bg-black/60 px-1 py-0.5 text-center text-[8px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                {{ card.name }}
+                {{ card.nickname || card.name }}
               </div>
               <!-- Star Corner Favorite Button -->
               <button
@@ -2494,9 +2503,12 @@ function getShortLabel(btnId: string): string {
                 />
                 <div class="min-w-0 flex flex-1 flex-col">
                   <div class="flex items-center gap-1.5 truncate">
-                    <span class="truncate font-semibold">{{ card.name }}</span>
+                    <span class="truncate font-semibold">{{ card.nickname || card.name }}</span>
                     <span v-if="id === activeCardId" class="shrink-0 scale-90 border border-amber-500/30 rounded bg-amber-500/20 px-1 py-0.2 text-[8px] text-amber-700 font-bold uppercase dark:text-amber-300">Active</span>
                   </div>
+                  <span v-if="card.nickname && card.name && card.nickname.trim() !== card.name.trim()" class="truncate text-[10px] text-neutral-400 dark:text-neutral-500">
+                    {{ card.name }}
+                  </span>
                 </div>
               </div>
               <!-- Right Star Toggle -->
@@ -2526,6 +2538,7 @@ function getShortLabel(btnId: string): string {
               <div
                 v-for="[id, card] in sortedCharacters"
                 :key="id"
+                :title="card.nickname ? `${card.nickname} (${card.name})` : card.name"
                 :class="[
                   'group relative aspect-square border rounded-xl overflow-hidden cursor-pointer bg-neutral-100 dark:bg-neutral-800 transition-all duration-200 shadow-xs',
                   id === activeCardId
@@ -2542,7 +2555,7 @@ function getShortLabel(btnId: string): string {
                   size-class="size-full"
                 />
                 <div class="absolute bottom-0 left-0 right-0 truncate bg-black/60 px-1 py-0.5 text-center text-[8px] text-white opacity-0 transition-opacity group-hover:opacity-100">
-                  {{ card.name }}
+                  {{ card.nickname || card.name }}
                 </div>
                 <!-- Hover Favorite Star -->
                 <button

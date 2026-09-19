@@ -2,6 +2,7 @@
 import type { Card, ccv3 } from '@proj-airi/ccc'
 import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
 
+import { normalizeSearchText } from '@proj-airi/stage-shared'
 import { Alert } from '@proj-airi/stage-ui/components'
 import { useBackgroundStore } from '@proj-airi/stage-ui/stores/background'
 import { DisplayModelFormat, useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
@@ -341,6 +342,7 @@ const cardSourceLinks = [
 interface CardItem {
   id: string
   name: string
+  nickname?: string
   description?: string
   deprecated?: boolean
   customizable?: boolean
@@ -630,7 +632,8 @@ const cardsArray = computed<CardItem[]>(() => {
   return Array.from(cards.value.entries()).map(([id, card], index) => ({
     id,
     name: card.name || '',
-    description: card.description || '',
+    nickname: card.nickname || (card as any).data?.nickname || '',
+    description: card.description || (card as any).data?.description || '',
     createdAt: card.createdAt,
     updatedAt: card.updatedAt,
     index,
@@ -648,10 +651,12 @@ const filteredCards = computed<CardItem[]>(() => {
   if (!searchQuery.value)
     return list
 
-  const query = searchQuery.value.toLowerCase()
+  const query = normalizeSearchText(searchQuery.value)
   return list.filter(item =>
-    item.name.toLowerCase().includes(query)
-    || (item.description && item.description.toLowerCase().includes(query)),
+    normalizeSearchText(item.name).includes(query)
+    || normalizeSearchText(item.nickname).includes(query)
+    || normalizeSearchText(item.id).includes(query)
+    || (item.description && normalizeSearchText(item.description).includes(query)),
   )
 })
 
@@ -661,10 +666,10 @@ const sortedFilteredCards = computed<CardItem[]>(() => {
   const sorted = [...filteredCards.value]
 
   if (sortOption.value === 'nameAsc') {
-    sorted.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+    sorted.sort((a, b) => ((a.nickname || a.name) || '').localeCompare((b.nickname || b.name) || ''))
   }
   else if (sortOption.value === 'nameDesc') {
-    sorted.sort((a, b) => (b.name || '').localeCompare(a.name || ''))
+    sorted.sort((a, b) => ((b.nickname || b.name) || '').localeCompare((a.nickname || a.name) || ''))
   }
   else if (sortOption.value === 'recent') {
     sorted.sort((a, b) => {
@@ -1312,6 +1317,7 @@ function getDisplayModelId(id: string) {
           :id="item.id"
           :key="item.id"
           :name="item.name"
+          :nickname="item.nickname"
           :description="item.description"
           :is-active="item.id === activeCardId"
           :is-selected="item.id === selectedCardId && isCardDialogOpen"

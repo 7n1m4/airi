@@ -23,6 +23,7 @@ const emit = defineEmits<{
 interface Props {
   id: string
   name: string
+  nickname?: string
   description?: string
   isActive: boolean
   isSelected: boolean
@@ -112,14 +113,19 @@ function handleSelfieClick() {
           ]"
         >
           <div :class="['flex items-center justify-between']">
-            <span
-              :class="[
-                'text-sm text-white font-semibold tracking-wide uppercase drop-shadow-sm truncate',
-              ]"
-            >{{ name }}</span>
+            <div class="min-w-0 flex flex-1 flex-col">
+              <span
+                :class="[
+                  'text-sm text-white font-semibold tracking-wide uppercase drop-shadow-sm truncate',
+                ]"
+              >{{ nickname || name }}</span>
+              <span v-if="nickname && name && nickname.trim() !== name.trim()" class="truncate text-[10px] text-white/70">
+                {{ name }}
+              </span>
+            </div>
             <div
               v-if="isActive"
-              :class="['rounded-md p-0.5 bg-primary-500/80 text-white']"
+              :class="['rounded-md p-0.5 bg-primary-500/80 text-white shrink-0 ml-1.5']"
             >
               <div
                 i-solar:check-circle-bold-duotone
@@ -147,9 +153,14 @@ function handleSelfieClick() {
         >
           <!-- Card header (name and badge) -->
           <div :class="['z-1 flex items-start justify-between gap-2']">
-            <h3 :class="['flex-1 truncate text-lg font-normal']">
-              {{ name }}
-            </h3>
+            <div class="min-w-0 flex flex-1 flex-col">
+              <h3 :class="['truncate text-lg font-normal']">
+                {{ nickname || name }}
+              </h3>
+              <span v-if="nickname && name && nickname.trim() !== name.trim()" class="truncate text-xs text-neutral-400 dark:text-neutral-500">
+                {{ name }}
+              </span>
+            </div>
             <div :class="['flex shrink-0 items-center gap-2']">
               <div
                 v-if="isActive"
