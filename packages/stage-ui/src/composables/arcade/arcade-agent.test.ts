@@ -3,6 +3,8 @@ import type { GameAdapter, TurnPlan } from '../../types/arcade'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { useLLM } from '../../stores/llm'
+import { useProvidersStore } from '../../stores/providers'
 import { resolveArcadeProfile } from './profiles'
 import { normalizePlanActions, useArcadeAgent } from './use-arcade-agent'
 import { burnCoordinateGridToCanvas, drawCoordinateGrid } from './utils/grid-overlay'
@@ -27,8 +29,10 @@ describe('arcade Profiles', () => {
   it('contains calibrated tool palette coordinates for SimCity DOS', () => {
     const profile = resolveArcadeProfile('SimCity')
     expect(profile.systemPromptAddendum).toContain('Row 1 (~Y: 206): Bulldozer')
-    expect(profile.systemPromptAddendum).toContain('Row 2 (~Y: 280): Road')
-    expect(profile.systemPromptAddendum).toContain('Row 7 (~Y: 655): Coal Power Plant')
+    expect(profile.systemPromptAddendum).toContain('Road ($10)')
+    expect(profile.systemPromptAddendum).toContain('Row 2 (~Y: 280): Power Lines')
+    expect(profile.systemPromptAddendum).toContain('Row 6 (~Y: 580): Stadium ($3,000) (Recreation) | Power Plant')
+    expect(profile.systemPromptAddendum).toContain('Row 7 (~Y: 655): Seaport ($3,000) (Waterfront commerce) | Airport')
     expect(profile.systemPromptAddendum).toContain('Column 1 (Left, ~X: 52)')
     expect(profile.systemPromptAddendum).toContain('Column 2 (Right, ~X: 88)')
   })
@@ -261,5 +265,117 @@ describe('useArcadeAgent', () => {
 
     await agent.executePlan(testPlan)
     expect(dragSpy).toHaveBeenCalledWith(250, 545, 560, 545)
+  })
+
+  it('preserves history when adapter id matches and resets when id changes', () => {
+    const agent = useArcadeAgent()
+    const adapter1: GameAdapter = {
+      id: 'simcity',
+      title: 'SimCity',
+      engine: 'jsdos',
+      captureFrame: vi.fn().mockResolvedValue(null),
+      getCanvasElement: vi.fn().mockReturnValue(null),
+      executeClick: vi.fn().mockResolvedValue(undefined),
+      executeKeyPress: vi.fn().mockResolvedValue(undefined),
+      executeTypeText: vi.fn().mockResolvedValue(undefined),
+    }
+
+    const adapter1Clone: GameAdapter = { ...adapter1 }
+
+    const adapter2: GameAdapter = {
+      ...adapter1,
+      id: 'game-2048',
+      title: '2048',
+    }
+
+    agent.bindAdapter(adapter1)
+    agent.turnHistory.value.push({
+      turnIndex: 1,
+      plan: 'Build road',
+      spoken: 'Roads first!',
+      actionsSummary: 'Click (88, 280)',
+      rawResponse: '{"plan":"Build road"}',
+      timestamp: Date.now(),
+    })
+    expect(agent.turnHistory.value.length).toBe(1)
+
+    // Re-binding the same game ID should PRESERVE history
+    agent.bindAdapter(adapter1Clone)
+    expect(agent.turnHistory.value.length).toBe(1)
+
+    // Binding a different game ID should RESET history
+    agent.bindAdapter(adapter2)
+    expect(agent.turnHistory.value.length).toBe(0)
+  })
+
+  it('constructs structured multi-turn conversation messages across sequential turns', async () => {
+    const agent = useArcadeAgent()
+    const providersStore = useProvidersStore()
+    const llmStore = useLLM()
+
+    const mockProvider = { id: 'test-vlm' }
+    vi.spyOn(providersStore, 'getProviderInstance').mockResolvedValue(mockProvider as any)
+
+    const generateSpy = vi.spyOn(llmStore, 'generate').mockImplementation(async (_model, _provider, messages) => {
+      const turnNum = (messages as any[]).filter(m => m.role === 'assistant').length + 1
+      return {
+        text: JSON.stringify({
+          spoken_commentary: `Executing turn ${turnNum}`,
+          emotion: 'focused',
+          plan: `Plan for turn ${turnNum}`,
+          actions: [{ type: 'click', x: 100 * turnNum, y: 200 * turnNum }],
+        }),
+      } as any
+    })
+
+    const mockAdapter: GameAdapter = {
+      id: 'test-simcity',
+      title: 'SimCity (1989)',
+      engine: 'jsdos',
+      captureFrame: vi.fn().mockResolvedValue('data:image/png;base64,frame-data'),
+      getCanvasElement: vi.fn().mockReturnValue(null),
+      executeClick: vi.fn().mockResolvedValue(undefined),
+      executeKeyPress: vi.fn().mockResolvedValue(undefined),
+      executeTypeText: vi.fn().mockResolvedValue(undefined),
+    }
+
+    agent.bindAdapter(mockAdapter)
+
+    // Turn 1
+    const plan1 = await agent.takeTurn()
+    expect(plan1).not.toBeNull()
+    expect(generateSpy).toHaveBeenCalledTimes(1)
+
+    const firstCallMessages = generateSpy.mock.calls[0][2] as any[]
+    // Turn 1 should have: System message + 1 User message with text and image_url
+    expect(firstCallMessages).toHaveLength(2)
+    expect(firstCallMessages[0].role).toBe('system')
+    expect(firstCallMessages[0].content).toContain('playing \'SimCity (1989)\'')
+    expect(firstCallMessages[1].role).toBe('user')
+    expect(firstCallMessages[1].content).toEqual([
+      { type: 'text', text: expect.stringContaining('Turn 1: Here is our current game screen for \'SimCity (1989)\'') },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,frame-data' } },
+    ])
+
+    // Turn 2
+    const plan2 = await agent.takeTurn()
+    expect(plan2).not.toBeNull()
+    expect(generateSpy).toHaveBeenCalledTimes(2)
+
+    const secondCallMessages = generateSpy.mock.calls[1][2] as any[]
+    // Turn 2 should have: System + User 1 (text-only) + Assistant 1 (JSON) + User 2 (text + image)
+    expect(secondCallMessages).toHaveLength(4)
+    expect(secondCallMessages[0].role).toBe('system')
+    expect(secondCallMessages[1].role).toBe('user')
+    expect(secondCallMessages[1].content).toContain('Turn 1: Here is our game screen for \'SimCity (1989)\'')
+    // Previous user message should NOT contain image_url (preventing huge payload bloat)
+    expect(typeof secondCallMessages[1].content).toBe('string')
+    expect(secondCallMessages[2].role).toBe('assistant')
+    expect(secondCallMessages[2].content).toContain('Plan for turn 1')
+    expect(secondCallMessages[3].role).toBe('user')
+    expect(secondCallMessages[3].content).toEqual([
+      { type: 'text', text: expect.stringContaining('Turn 2: Here is the updated game screen after executing your previous moves.') },
+      { type: 'image_url', image_url: { url: 'data:image/png;base64,frame-data' } },
+    ])
   })
 })

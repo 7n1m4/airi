@@ -10,17 +10,17 @@ export const simCityProfile: ArcadeProfile = {
   systemPromptAddendum: `## SIMCITY (DOS CLASSIC) FACTUAL INTERFACE & TOOLBAR GROUNDING:
 - Left Tool Palette (2 Columns x 7 Rows):
   - Column 1 (Left, ~X: 52) | Column 2 (Right, ~X: 88):
-    • Row 1 (~Y: 206): Bulldozer ($1) (Clears rubble/trees/land) | Power Lines ($5) (Carries power across tiles)
-    • Row 2 (~Y: 280): Road ($10) (Paved transport) | Rail ($20) (High capacity transit)
+    • Row 1 (~Y: 206): Bulldozer ($1) (Clears rubble/trees/land) | Road ($10) (Paved transport)
+    • Row 2 (~Y: 280): Power Lines ($5) (Carries power across tiles) | Rail ($20) (High capacity transit)
     • Row 3 (~Y: 355): Park ($10) (Boosts land value) | Residential Zone ($100) (3x3 'R' housing)
     • Row 4 (~Y: 430): Commercial Zone ($100) (3x3 'C' stores) | Industrial Zone ($100) (3x3 'I' factories/jobs)
     • Row 5 (~Y: 505): Police Dept ($500) (Reduces crime) | Fire Dept ($500) (Controls fires)
-    • Row 6 (~Y: 580): Stadium ($3,000) (Recreation) | Seaport ($3,000) (Waterfront commerce)
-    • Row 7 (~Y: 655): Coal Power Plant ($3,000) | Nuclear Power Plant ($5,000) (or Airport $10,000)
+    • Row 6 (~Y: 580): Stadium ($3,000) (Recreation) | Power Plant ($3,000) (Generates electricity)
+    • Row 7 (~Y: 655): Seaport ($3,000) (Waterfront commerce) | Airport ($10,000) (Air transit/commerce)
 - Essential City Mechanics & HUD:
   • Top Menu Bar: System (~X: 190, ~Y: 50), Options (~X: 410, ~Y: 50), Disasters (~X: 635, ~Y: 50), Windows (~X: 860, ~Y: 50).
   • Funds, Date & Citizen Alerts: Top header bar spans ~Y: 140 to 170 across X: 50 to 900.
-  • Power Plants: Clicking Coal Power Plant (Row 7, Left, ~X: 52, ~Y: 655) or Nuclear Power Plant (Row 7, Right, ~X: 88, ~Y: 655) builds 4x4 power generators.
+  • Power Plants: Clicking Power Plant (Row 6, Right, ~X: 88, ~Y: 580) builds 4x4 power generators.
   • Zones (R, C, I): Standard zones are 3x3 tiles. They require road access and electricity to develop.
   • Power Distribution: Connected zones conduct electricity among touching neighbors. Wires are needed across open ground.
   • Demand Indicator (R-C-I): Bar graph located at ~X: 70, ~Y: 720 showing Residential, Commercial, and Industrial demand.

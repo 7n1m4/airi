@@ -15,6 +15,7 @@ export interface ArcadeTurnMemory {
   plan: string
   spoken: string
   actionsSummary: string
+  rawResponse?: string
   timestamp: number
 }
 
@@ -93,8 +94,10 @@ export function useArcadeAgent() {
   }
 
   function bindAdapter(adapter: GameAdapter) {
+    if (activeAdapter.value?.id !== adapter.id) {
+      clearHistory()
+    }
     activeAdapter.value = adapter
-    clearHistory()
   }
 
   function unbindAdapter() {
@@ -236,15 +239,65 @@ Return ONLY a JSON object with this exact structure:
           : 'deepseek-v4-flash-vision-exp'
       }
 
-      let historySection = ''
-      if (turnHistory.value.length > 0) {
-        const recentTurns = turnHistory.value.slice(-3).map(t =>
-          `- Turn ${t.turnIndex}: Planned "${t.plan}" (Actions: ${t.actionsSummary})`,
-        ).join('\n')
-        historySection = `\n\n## RECENT TURN HISTORY (Last executed moves):\n${recentTurns}\n\nSTRATEGIC ADAPTATION RULE: Visually check the game screen to verify if your previous moves took effect. If an action did not produce the intended visual change on screen (e.g. the tool was not selected or placement was invalid), DO NOT repeat the identical action. Re-verify the tool position, adjust your coordinates, or pursue an alternative move.`
+      const maxHistoryTurns = 5
+      const recentHistory = turnHistory.value.slice(-maxHistoryTurns)
+
+      const vlmMessages: Array<{
+        role: 'system' | 'user' | 'assistant'
+        content: string | Array<{ type: 'text', text: string } | { type: 'image_url', image_url: { url: string } }>
+      }> = [
+        {
+          role: 'system',
+          content: systemPrompt,
+        },
+      ]
+
+      for (const t of recentHistory) {
+        vlmMessages.push({
+          role: 'user',
+          content: `Turn ${t.turnIndex}: Here is our game screen for '${gameTitle}'. What do you do?`,
+        })
+
+        const assistantContent = t.rawResponse || JSON.stringify({
+          spoken_commentary: t.spoken,
+          emotion: 'focused',
+          plan: t.plan,
+          actions: [],
+        }, null, 2)
+
+        vlmMessages.push({
+          role: 'assistant',
+          content: assistantContent,
+        })
       }
 
-      const turnPrompt = `${systemPrompt}${historySection}\n\nHere is our current game screen for '${gameTitle}'. It's your turn, what do you do?`
+      const nextTurnNumber = turnHistory.value.length > 0
+        ? turnHistory.value[turnHistory.value.length - 1].turnIndex + 1
+        : 1
+
+      const currentTurnPrompt = recentHistory.length > 0
+        ? `Turn ${nextTurnNumber}: Here is the updated game screen after executing your previous moves.
+STRATEGIC ADAPTATION RULE: Visually check the game screen to verify if your previous moves took effect. If an action did not produce the intended visual change on screen (e.g. the tool was not selected or placement was invalid), DO NOT repeat the identical action. Re-verify the tool position, adjust your coordinates, or pursue an alternative move.
+It's your turn, what do you do?`
+        : `Turn 1: Here is our current game screen for '${gameTitle}'. It's your turn, what do you do?`
+
+      vlmMessages.push({
+        role: 'user',
+        content: [
+          { type: 'text', text: currentTurnPrompt },
+          { type: 'image_url', image_url: { url: frameDataUrl } },
+        ],
+      })
+
+      // Single-prompt fallback for legacy captionImage providers
+      let singlePromptFallback = systemPrompt
+      if (recentHistory.length > 0) {
+        const recentTurns = recentHistory.map(t =>
+          `- Turn ${t.turnIndex}: Planned "${t.plan}" (Actions: ${t.actionsSummary})`,
+        ).join('\n')
+        singlePromptFallback += `\n\n## RECENT TURN HISTORY (Last executed moves):\n${recentTurns}\n\nSTRATEGIC ADAPTATION RULE: Visually check the game screen to verify if your previous moves took effect. If an action did not produce the intended visual change on screen (e.g. the tool was not selected or placement was invalid), DO NOT repeat the identical action. Re-verify the tool position, adjust your coordinates, or pursue an alternative move.`
+      }
+      singlePromptFallback += `\n\nHere is our current game screen for '${gameTitle}'. It's your turn, what do you do?`
 
       async function queryVlm(providerId: string, modelId: string): Promise<string> {
         const provider = await providersStore.getProviderInstance<any>(providerId)
@@ -256,18 +309,9 @@ Return ONLY a JSON object with this exact structure:
           if (typeof provider.loadModel === 'function' && !provider.isModelLoaded?.value) {
             await provider.loadModel()
           }
-          return await provider.captionImage(frameDataUrl, { prompt: turnPrompt })
+          return await provider.captionImage(frameDataUrl, { prompt: singlePromptFallback })
         }
         else {
-          const vlmMessages = [
-            {
-              role: 'user' as const,
-              content: [
-                { type: 'text' as const, text: turnPrompt },
-                { type: 'image_url' as const, image_url: { url: frameDataUrl } },
-              ],
-            },
-          ]
           const response = await llmStore.generate(
             modelId,
             provider,
@@ -309,7 +353,7 @@ Return ONLY a JSON object with this exact structure:
 
       // Record to turn history
       turnHistory.value.push({
-        turnIndex: turnHistory.value.length + 1,
+        turnIndex: nextTurnNumber,
         plan: parsed.plan,
         spoken: parsed.spoken_commentary,
         actionsSummary: parsed.actions.map(a =>
@@ -321,9 +365,10 @@ Return ONLY a JSON object with this exact structure:
                 ? `Key ${a.key}`
                 : a.type,
         ).join(', '),
+        rawResponse: jsonMatch[0],
         timestamp: Date.now(),
       })
-      if (turnHistory.value.length > 5) {
+      if (turnHistory.value.length > maxHistoryTurns) {
         turnHistory.value.shift()
       }
 
