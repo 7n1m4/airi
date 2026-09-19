@@ -40,6 +40,7 @@ const activeCardRef = ref<any>({
 vi.mock('../modules/airi-card', () => {
   const updateCard = vi.fn()
   return {
+    buildSystemPrompt: (card: any) => card?.systemPrompt || '',
     useAiriCardStore: () => ({
       activeCard: activeCardRef,
       activeCardId: ref('card-airi'),
@@ -813,5 +814,77 @@ describe('chat orchestrator prompt & grounding contracts (P1-P4, Intrusions)', (
 
     // Staging is committed only after the whole turn completes
     expect(pendingIntrusionStaging.journal).toBeUndefined()
+  })
+
+  it('guarantees character persona system prompt is placed at messages[0] when sending chat message', async () => {
+    const chatStore = useChatOrchestratorStore(pinia)
+    const chatSession = useChatSessionStore(pinia)
+    const llmStore = useLLM(pinia)
+
+    const sessionId = 'session-persona-prompt-guarantee'
+    chatSession.activeSessionId = sessionId
+    chatSession.setSessionMessages(sessionId, [])
+
+    // Set persona system prompt on the active card
+    activeCardRef.value.systemPrompt = 'You are Airi, a cheerful AI companion with strict character guidelines.'
+
+    let capturedMessages: any[] = []
+    llmStore.stream = vi.fn(async (_model, _provider, msgs, options) => {
+      capturedMessages = structuredClone(msgs)
+      await options.onStreamEvent({
+        type: 'text-delta',
+        text: 'Hello there!',
+      })
+    })
+
+    await chatStore.ingest('Hey Airi!', { triggerOnly: false }, sessionId)
+
+    // Assert that messages[0] is the character's system prompt
+    expect(capturedMessages.length).toBeGreaterThanOrEqual(2)
+    expect(capturedMessages[0].role).toBe('system')
+    expect(capturedMessages[0].content).toBe('You are Airi, a cheerful AI companion with strict character guidelines.')
+
+    // Assert that the user message is present after persona
+    const userMsg = capturedMessages.find(m => m.role === 'user')
+    expect(userMsg).toBeDefined()
+    expect(extractUserText(userMsg?.content)).toContain('Hey Airi!')
+  })
+
+  it('omits unknown/empty placeholder context and formats valid module context correctly', async () => {
+    const chatStore = useChatOrchestratorStore(pinia)
+    const chatSession = useChatSessionStore(pinia)
+    const llmStore = useLLM(pinia)
+
+    const sessionId = 'session-no-empty-context-block'
+    chatSession.activeSessionId = sessionId
+    chatSession.setSessionMessages(sessionId, [])
+
+    activeCardRef.value.systemPrompt = 'Character Persona'
+
+    let capturedMessages: any[] = []
+    llmStore.stream = vi.fn(async (_model, _provider, msgs, options) => {
+      capturedMessages = structuredClone(msgs)
+      await options.onStreamEvent({
+        type: 'text-delta',
+        text: 'Clean context!',
+      })
+    })
+
+    await chatStore.ingest('Clean message', { triggerOnly: false }, sessionId)
+
+    // Verify no message contains the "Module unknown" or "No special expressions" junk
+    const unknownMsg = capturedMessages.find(
+      (m: any) => m.role === 'system' && typeof m.content === 'string' && (
+        m.content.includes('Module unknown')
+        || m.content.includes('No special expressions or props currently active')
+      ),
+    )
+    expect(unknownMsg).toBeUndefined()
+
+    // Verify valid datetime context is correctly formatted with its own module key
+    const datetimeMsg = capturedMessages.find(
+      (m: any) => m.role === 'system' && typeof m.content === 'string' && m.content.includes('Module datetime:'),
+    )
+    expect(datetimeMsg).toBeDefined()
   })
 })

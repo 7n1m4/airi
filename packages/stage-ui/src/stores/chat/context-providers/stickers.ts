@@ -8,16 +8,19 @@ import { useStickersStore } from '../../stickers'
 /**
  * Creates context about the available stickers that the assistant can use.
  */
-export function createStickersContext(): ContextMessage {
+export function createStickersContext(): ContextMessage | null {
   const stickersStore = useStickersStore()
   const availableStickers = stickersStore.currentLibrary.map((s: any) => s.label).join(', ')
+
+  if (!availableStickers) {
+    return null
+  }
 
   return {
     id: nanoid(),
     contextId: 'stickers',
-    text: availableStickers
-      ? `CRITICAL: You have access to a "Kawaii Sticker System". You can ONLY spawn stickers with the following labels: ${availableStickers}. Do not attempt to use any other labels as they do not exist in your library. Use the spawn_sticker tool with exactly one of these labels.`
-      : 'No stickers are currently available in your character-specific library. You cannot use the Kawaii Sticker System at this time.',
+    source: 'stickers',
+    text: `CRITICAL: You have access to a "Kawaii Sticker System". You can ONLY spawn stickers with the following labels: ${availableStickers}. Do not attempt to use any other labels as they do not exist in your library. Use the spawn_sticker tool with exactly one of these labels.`,
     strategy: ContextUpdateStrategy.ReplaceSelf,
     createdAt: Date.now(),
   }

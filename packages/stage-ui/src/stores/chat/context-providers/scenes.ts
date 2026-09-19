@@ -12,7 +12,7 @@ const SCENES_CONTEXT_ID = 'system:scenes'
  * Creates a context message containing the current background/scene information.
  * This allows the LLM to be aware of its visual environment.
  */
-export function createScenesContext(): ContextMessage {
+export function createScenesContext(): ContextMessage | null {
   const backgroundStore = useBackgroundStore()
   const airiCardStore = useAiriCardStore()
 
@@ -23,18 +23,20 @@ export function createScenesContext(): ContextMessage {
   // We exclude 'selfie' and other image types to prevent roleplay confusion.
   const isValidScene = background && ['builtin', 'scene', 'journal'].includes(background.type)
 
-  let sceneInfo = 'Unknown Location'
-  if (background && isValidScene) {
-    sceneInfo = background.title
-    if (background.prompt) {
-      // For generated backgrounds, the prompt often contains more descriptive detail
-      sceneInfo += ` (Vibe: ${background.prompt})`
-    }
+  if (!background || !isValidScene) {
+    return null
+  }
+
+  let sceneInfo = background.title
+  if (background.prompt) {
+    // For generated backgrounds, the prompt often contains more descriptive detail
+    sceneInfo += ` (Vibe: ${background.prompt})`
   }
 
   return {
     id: nanoid(),
     contextId: SCENES_CONTEXT_ID,
+    source: 'scenes',
     strategy: ContextUpdateStrategy.ReplaceSelf,
     text: `Current Scene: ${sceneInfo}`,
     createdAt: Date.now(),

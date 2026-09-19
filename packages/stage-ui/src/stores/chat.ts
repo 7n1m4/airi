@@ -12,7 +12,7 @@ import { createQueue } from '@proj-airi/stream-kit'
 import { useBroadcastChannel } from '@vueuse/core'
 import { nanoid } from 'nanoid'
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, reactive, ref, toRaw, watch } from 'vue'
+import { computed, reactive, ref, toRaw, unref, watch } from 'vue'
 
 import { useAnalytics } from '../composables'
 import { createLlmJsonInterceptor } from '../composables/llm-json-interceptor'
@@ -64,7 +64,7 @@ import { parseBridgeArguments, recognizeToolMarker, tryParseLenientJson } from '
 import { useEventLogStore } from './event-log'
 import { useLLM } from './llm'
 import { useTextJournalStore } from './memory-text-journal'
-import { useAiriCardStore } from './modules/airi-card'
+import { buildSystemPrompt, useAiriCardStore } from './modules/airi-card'
 import { useAutonomousArtistryStore } from './modules/artistry-autonomous'
 import { useConsciousnessStore } from './modules/consciousness'
 import { useLiveSessionStore } from './modules/live-session'
@@ -385,7 +385,9 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
     if (!options.triggerOnly && !sendingMessage && !finalAttachments.length)
       return
 
+    await chatSession.loadSession?.(sessionId)
     chatSession.ensureSession(sessionId)
+    await chatSession.refreshActiveSystemMessage({ sessionId })
 
     // Execute history compaction if limit has been reached
     const compactionStore = useCompactionStore()
@@ -535,15 +537,29 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
     }
 
     // Inject current datetime context before composing the message
-    chatContext.ingestContextMessage(createDatetimeContext())
-    chatContext.ingestContextMessage(createStickersContext())
-    chatContext.ingestContextMessage(createScenesContext())
+    const dtContext = createDatetimeContext()
+    if (dtContext) {
+      chatContext.ingestContextMessage(dtContext)
+    }
+
+    const stickersContext = createStickersContext()
+    if (stickersContext) {
+      chatContext.ingestContextMessage(stickersContext)
+    }
+
+    const scenesContext = createScenesContext()
+    if (scenesContext) {
+      chatContext.ingestContextMessage(scenesContext)
+    }
 
     // Skip expressions context if user cleared expression acting prompts
     const acting = activeCard.value?.extensions?.airi?.acting
     const hasExpressionPrompts = !acting || (acting.modelExpressionPrompt !== '' && acting.speechExpressionPrompt !== '')
     if (hasExpressionPrompts) {
-      chatContext.ingestContextMessage(createExpressionsContext())
+      const expressionsContext = createExpressionsContext()
+      if (expressionsContext) {
+        chatContext.ingestContextMessage(expressionsContext)
+      }
     }
 
     const eternalRecordContext = createEternalRecordContext(activeCard.value?.extensions?.airi?.eternal_record)
@@ -1171,6 +1187,48 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           }
         }
 
+        const getMsgStringContent = (content: any): string => {
+          if (typeof content === 'string')
+            return content
+          if (Array.isArray(content)) {
+            return content.map((part) => {
+              if (typeof part === 'string')
+                return part
+              if (part && typeof part === 'object' && 'text' in part)
+                return String(part.text ?? '')
+              return ''
+            }).join('')
+          }
+          return ''
+        }
+
+        // Ensure that newMessages always starts with the active character's canonical system prompt.
+        const rawSystemPrompt = unref(airiCardStore.systemPrompt)
+        const effectiveSystemPrompt = (typeof rawSystemPrompt === 'string' && rawSystemPrompt.trim() ? rawSystemPrompt.trim() : '')
+          || buildSystemPrompt(activeCard.value)
+        const firstMsgContent = newMessages.length > 0 ? getMsgStringContent(newMessages[0].content) : ''
+        const hasPersonaSystemMessage = newMessages.length > 0
+          && newMessages[0].role === 'system'
+          && !firstMsgContent.startsWith('These are the contextual information retrieved')
+          && !firstMsgContent.startsWith('[ENVIRONMENTAL AWARENESS]')
+          && !firstMsgContent.includes('[CONTEXT_AWARENESS]')
+
+        if (!hasPersonaSystemMessage) {
+          if (effectiveSystemPrompt) {
+            newMessages.unshift({
+              role: 'system',
+              content: effectiveSystemPrompt,
+            })
+          }
+        }
+        else if (effectiveSystemPrompt && firstMsgContent !== effectiveSystemPrompt) {
+          // Keep persona system message synchronized with active card
+          newMessages[0] = {
+            ...newMessages[0],
+            content: effectiveSystemPrompt,
+          }
+        }
+
         const contextsSnapshot = chatContext.getContextsSnapshot()
         const groundingEnabled = activeCard.value?.extensions?.airi?.groundingEnabled
         const sensorPayload = groundingEnabled ? proactivityStore.sensorPayload : ''
@@ -1254,58 +1312,65 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           template: artistry?.artistryIntrusionPrompt,
         })
 
-        if (Object.keys(contextsSnapshot).length > 0 || sensorPayload || climaxPrompt || dreamPrompt || journalPrompt || artistryPrompt) {
-          const system = newMessages.slice(0, 1)
-          const afterSystem = newMessages.slice(1, newMessages.length)
+        // Build module contexts, filtering out empty modules and meaningless placeholders
+        const validModuleEntries = Object.entries(contextsSnapshot).map(([key, messages]) => {
+          const messageTexts = messages
+            .map(m => m && typeof m === 'object' && 'text' in m ? m.text : String(m))
+            .filter(t => t && t.trim() && !t.includes('No special expressions or props currently active') && !t.includes('No stickers are currently available') && !t.includes('Current Scene: Unknown Location'))
+          return [key, messageTexts] as const
+        }).filter(([_, texts]) => texts.length > 0)
 
-          let contextContent = ''
-          if (Object.keys(contextsSnapshot).length > 0) {
-            contextContent += 'These are the contextual information retrieved or on-demand updated from other modules:\n'
-              + `${Object.entries(contextsSnapshot).map(([key, messages]) => {
-                const messageTexts = messages
-                  .map(m => m && typeof m === 'object' && 'text' in m ? m.text : String(m))
-                  .filter(Boolean)
-                return `Module ${key}:\n${messageTexts.map(t => `- ${t}`).join('\n')}`
-              }).join('\n')}\n`
-          }
+        let contextContent = ''
+        if (validModuleEntries.length > 0) {
+          contextContent += 'These are the contextual information retrieved or on-demand updated from other modules:\n'
+            + `${validModuleEntries.map(([key, texts]) => `Module ${key}:\n${texts.map(t => `- ${t}`).join('\n')}`).join('\n')}\n`
+        }
 
-          if (sensorPayload) {
-            contextContent += `${contextContent ? '\n---\n' : ''
-            }[ENVIRONMENTAL AWARENESS]\n`
-            + `The following telemetry describes your current environmental context. `
-            + `Use it to stay grounded in the user's reality and inform your response. `
-            + `You may reference specific values (like time or active applications) if relevant `
-            + `to the conversation, but avoid a dry, technical recitation of the data.\n`
-            + `---\n`
-            + `${sensorPayload}\n`
-          }
+        if (sensorPayload) {
+          contextContent += `${contextContent ? '\n---\n' : ''
+          }[ENVIRONMENTAL AWARENESS]\n`
+          + `The following telemetry describes your current environmental context. `
+          + `Use it to stay grounded in the user's reality and inform your response. `
+          + `You may reference specific values (like time or active applications) if relevant `
+          + `to the conversation, but avoid a dry, technical recitation of the data.\n`
+          + `---\n`
+          + `${sensorPayload}\n`
+        }
 
-          if (climaxPrompt) {
-            contextContent += `${contextContent ? '\n---\n' : ''}${climaxPrompt}\n`
-          }
+        if (climaxPrompt) {
+          contextContent += `${contextContent ? '\n---\n' : ''}${climaxPrompt}\n`
+        }
 
-          if (dreamPrompt) {
-            contextContent += `${contextContent ? '\n---\n' : ''}[INSPECTIVE DREAM STATE]\n${dreamPrompt}\n`
-          }
+        if (dreamPrompt) {
+          contextContent += `${contextContent ? '\n---\n' : ''}[INSPECTIVE DREAM STATE]\n${dreamPrompt}\n`
+        }
 
-          if (journalPrompt) {
-            contextContent += `${contextContent ? '\n---\n' : ''}[INSPECTIVE JOURNAL REFLECTION]\n${journalPrompt}\n`
-          }
+        if (journalPrompt) {
+          contextContent += `${contextContent ? '\n---\n' : ''}[INSPECTIVE JOURNAL REFLECTION]\n${journalPrompt}\n`
+        }
 
-          if (artistryPrompt) {
-            contextContent += `${contextContent ? '\n---\n' : ''}[INSPECTIVE ARTWORK AWARENESS]\n${artistryPrompt}\n`
-          }
+        if (artistryPrompt) {
+          contextContent += `${contextContent ? '\n---\n' : ''}[INSPECTIVE ARTWORK AWARENESS]\n${artistryPrompt}\n`
+        }
 
+        if (contextContent.trim().length > 0) {
           debug('[Chat Debug] Combined contextContent to inject:', contextContent.trim())
 
-          newMessages = [
-            ...system,
-            {
-              role: 'system',
-              content: contextContent.trim(),
-            },
-            ...afterSystem,
-          ]
+          // Find insertion point right after persona system prompt (index 0 if persona, else index 0)
+          const personaIdx = newMessages.findIndex((m) => {
+            if (m.role !== 'system')
+              return false
+            const content = getMsgStringContent(m.content)
+            return !content.startsWith('These are the contextual information retrieved')
+              && !content.startsWith('[ENVIRONMENTAL AWARENESS]')
+              && !content.includes('[CONTEXT_AWARENESS]')
+          })
+
+          const insertIdx = personaIdx >= 0 ? personaIdx + 1 : 0
+          newMessages.splice(insertIdx, 0, {
+            role: 'system',
+            content: contextContent.trim(),
+          })
         }
 
         // Evaluate Decoupled Two-Hop Cognition Pipeline

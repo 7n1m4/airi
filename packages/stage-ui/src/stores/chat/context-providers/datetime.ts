@@ -15,6 +15,7 @@ export function createDatetimeContext(): ContextMessage {
   return {
     id: nanoid(),
     contextId: DATETIME_CONTEXT_ID,
+    source: 'datetime',
     strategy: ContextUpdateStrategy.ReplaceSelf,
     text: `Current datetime: ${now.toISOString()} (${now.toLocaleString()})`,
     createdAt: Date.now(),

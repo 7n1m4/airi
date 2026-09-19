@@ -11,7 +11,7 @@ const EXPRESSIONS_CONTEXT_ID = 'system:expressions'
  * Creates a context message containing currently active visual expressions, props, and accessories.
  * This allows the LLM to know its current visual state (e.g., "Wearing Glasses", "Blushing").
  */
-export function createExpressionsContext(): ContextMessage {
+export function createExpressionsContext(): ContextMessage | null {
   const live2dStore = useLive2d()
   const vrmStore = useModelStore()
 
@@ -36,15 +36,16 @@ export function createExpressionsContext(): ContextMessage {
   }
 
   const list = Array.from(active)
-  const text = list.length > 0
-    ? `Active Visual Expressions/Props: [${list.join(', ')}]`
-    : 'No special expressions or props currently active.'
+  if (list.length === 0) {
+    return null
+  }
 
   return {
     id: nanoid(),
     contextId: EXPRESSIONS_CONTEXT_ID,
+    source: 'expressions',
     strategy: ContextUpdateStrategy.ReplaceSelf,
-    text,
+    text: `Active Visual Expressions/Props: [${list.join(', ')}]`,
     createdAt: Date.now(),
   }
 }

@@ -840,7 +840,7 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     if (!sessionId || !ready.value)
       return
 
-    const meta = sessionMetas.value[sessionId]
+    const meta = sessionMetas.value[sessionId] || getSessionMeta(sessionId)
     if (!meta)
       return
 
@@ -855,13 +855,15 @@ export const useChatSessionStore = defineStore('chat-session', () => {
       return
     }
 
-    const currentMessages = sessionMessages.value[sessionId]
-    if (!currentMessages || currentMessages.length === 0)
-      return
-
+    const currentMessages = sessionMessages.value[sessionId] ?? []
     const nextSystemMessage = options?.prompt
       ? generateInitialMessageFromPrompt(options.prompt, targetCharacterId)
       : generateInitialMessage()
+
+    if (currentMessages.length === 0) {
+      await setSessionMessages(sessionId, [nextSystemMessage])
+      return
+    }
 
     let changed = false
     const nextContent = extractMessageContent(nextSystemMessage)
@@ -914,6 +916,15 @@ export const useChatSessionStore = defineStore('chat-session', () => {
       }
 
       finalMessages.push(msg)
+    }
+
+    if (personaIndices.length === 0) {
+      finalMessages.unshift({
+        ...nextSystemMessage,
+        id: nanoid(),
+        createdAt: Date.now(),
+      })
+      changed = true
     }
 
     if (changed) {
@@ -1548,6 +1559,7 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     getSessionDisplayTitle,
 
     ensureSession,
+    loadSession,
     setSessionMessages,
     persistSessionMessages,
     getSessionMessages,

@@ -581,10 +581,17 @@ export const useProactivityStore = defineStore('proactivity', () => {
         }
 
         const contextsSnapshot = chatContext.getContextsSnapshot()
-        if (Object.keys(contextsSnapshot).length > 0) {
+        const validModuleEntries = Object.entries(contextsSnapshot).map(([key, messages]) => {
+          const messageTexts = (Array.isArray(messages) ? messages : [messages])
+            .map(m => m && typeof m === 'object' && 'text' in m ? m.text : String(m))
+            .filter(t => t && t.trim() && !t.includes('No special expressions or props currently active') && !t.includes('No stickers are currently available') && !t.includes('Current Scene: Unknown Location'))
+          return [key, messageTexts] as const
+        }).filter(([_, texts]) => texts.length > 0)
+
+        if (validModuleEntries.length > 0) {
           messages.push({
             role: 'system',
-            content: `These are the contextual information retrieved or on-demand updated from other modules:\n${Object.entries(contextsSnapshot).map(([key, value]) => `Module ${key}: ${JSON.stringify(value)}`).join('\n')}`,
+            content: `These are the contextual information retrieved or on-demand updated from other modules:\n${validModuleEntries.map(([key, texts]) => `Module ${key}:\n${texts.map(t => `- ${t}`).join('\n')}`).join('\n')}`,
           })
         }
 

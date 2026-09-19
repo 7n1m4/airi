@@ -69,6 +69,7 @@ export interface ContextMessage extends ContextUpdate<Record<string, unknown>, s
   metadata?: {
     source: MetadataEventSource
   }
+  source?: string
   createdAt: number
 }
 
