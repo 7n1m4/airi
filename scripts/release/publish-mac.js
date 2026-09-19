@@ -111,16 +111,15 @@ async function main() {
   }
 
   const files = fs.readdirSync(distDir)
-  const setupDmg = files.find(f => (f.startsWith('airi-dasilva333') || f.startsWith('AIRI')) && f.includes(version) && f.endsWith('.dmg'))
+  const artifacts = files.filter(f => (f.startsWith('airi-dasilva333') || f.startsWith('AIRI')) && f.includes(version) && (f.endsWith('.dmg') || f.endsWith('.zip')))
 
-  if (!setupDmg) {
-    console.error(`\n❌ Error: Could not find generated DMG executable matching "(airi-dasilva333|AIRI)*${version}*.dmg" in ${distDir}`)
+  if (artifacts.length === 0) {
+    console.error(`\n❌ Error: Could not find generated DMG/ZIP executables matching "(airi-dasilva333|AIRI)*${version}*.(dmg|zip)" in ${distDir}`)
     console.log('Available files in dist:', files)
     process.exit(1)
   }
 
-  const dmgPath = path.join('apps', 'stage-tamagotchi', 'dist', setupDmg)
-  console.log(`\n🎉 Found installer asset: ${dmgPath}`)
+  console.log(`\n🎉 Found macOS release asset(s):`, artifacts)
 
   // Step 4: Check if GitHub release already exists, if not, create it
   console.log(`\n🌐 Checking if GitHub release ${tag} exists...`)
@@ -148,17 +147,22 @@ async function main() {
     }
   }
 
-  // Step 5: Upload the DMG
-  console.log(`\n🚀 Uploading ${setupDmg} to release ${tag}...`)
-  try {
-    execute(`gh release upload ${tag} "${dmgPath}" --repo dasilva333/airi --clobber`)
-    console.log(`\n🏆 Success! macOS DMG installer uploaded to GitHub release:`)
-    console.log(`👉 https://github.com/dasilva333/airi/releases/tag/${tag}`)
+  // Step 5: Upload the artifacts
+  for (const artifact of artifacts) {
+    const artifactPath = path.join('apps', 'stage-tamagotchi', 'dist', artifact)
+    console.log(`\n🚀 Uploading ${artifact} to release ${tag}...`)
+    try {
+      execute(`gh release upload ${tag} "${artifactPath}" --repo dasilva333/airi --clobber`)
+      console.log(`✅ Successfully uploaded: ${artifact}`)
+    }
+    catch (err) {
+      console.error(`❌ Failed to upload ${artifact}. Error:`, err.message)
+      process.exit(1)
+    }
   }
-  catch (err) {
-    console.error(`❌ Failed to upload DMG installer. Error:`, err.message)
-    process.exit(1)
-  }
+
+  console.log(`\n🏆 Success! All macOS artifacts uploaded to GitHub release:`)
+  console.log(`👉 https://github.com/dasilva333/airi/releases/tag/${tag}`)
 }
 
 main().catch((err) => {
