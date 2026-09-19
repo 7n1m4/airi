@@ -1,14 +1,26 @@
 <script setup lang="ts">
+import type { FreeAICatalogModel } from '@proj-airi/stage-ui/stores/providers/free-ai-catalog'
+
 import { CloudflareConnectDialog } from '@proj-airi/stage-ui/components'
 import { useFreeAICatalogStore } from '@proj-airi/stage-ui/stores'
+import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useCloudflareStore } from '@proj-airi/stage-ui/stores/modules/cloudflare'
+import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
+import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
+const router = useRouter()
 const catalogStore = useFreeAICatalogStore()
 const cloudflareStore = useCloudflareStore()
+const providersStore = useProvidersStore()
+const consciousnessStore = useConsciousnessStore()
+const airiCardStore = useAiriCardStore()
+
+const { activeCard, activeCardId } = storeToRefs(airiCardStore)
 
 const {
   searchQuery,
@@ -37,6 +49,8 @@ const showReasoning = ref(false)
 const isTesting = ref(false)
 const isReauthorizing = ref(false)
 const isConnectModalOpen = ref(false)
+const isSaving = ref(false)
+const isActivating = ref(false)
 
 interface TestResult {
   success: boolean
@@ -93,6 +107,177 @@ const currentApiKey = computed({
 
 function clearManualCloudflareKey() {
   delete savedApiKeys.value.cloudflare
+}
+
+function resolveProviderId(platform: string): string {
+  const p = platform.toLowerCase()
+  switch (p) {
+    case 'cloudflare':
+      return 'cloudflare-workers-ai'
+    case 'github':
+      return 'github-models'
+    case 'lmstudio':
+      return 'lm-studio'
+    case 'groq':
+    case 'openrouter':
+    case 'deepseek':
+    case 'together':
+    case 'mistral':
+    case 'cerebras':
+    case 'siliconflow':
+    case 'cohere':
+    case 'hyperbolic':
+    case 'fireworks':
+    case 'ollama':
+    case 'ai21':
+      return p
+    default:
+      return 'openai-compatible'
+  }
+}
+
+const targetProviderId = computed(() => {
+  if (!selectedModelDetail.value)
+    return ''
+  return resolveProviderId(selectedModelDetail.value.platform)
+})
+
+const isProviderSaved = computed(() => {
+  if (!targetProviderId.value)
+    return false
+  return Boolean(providersStore.configuredProviders[targetProviderId.value])
+})
+
+const isActiveModel = computed(() => {
+  if (!selectedModelDetail.value || !targetProviderId.value)
+    return false
+  return consciousnessStore.activeProvider === targetProviderId.value
+    && consciousnessStore.activeModel === selectedModelDetail.value.modelId
+})
+
+function isModelActive(item: FreeAICatalogModel): boolean {
+  const pid = resolveProviderId(item.platform)
+  return consciousnessStore.activeProvider === pid && consciousnessStore.activeModel === item.modelId
+}
+
+function isPlatformConfigured(platform: string): boolean {
+  const pid = resolveProviderId(platform)
+  return Boolean(providersStore.configuredProviders[pid])
+}
+
+function getTargetProviderConfig(pid: string) {
+  const key = currentApiKey.value.trim()
+  const rawBase = customBaseUrl.value.trim() || selectedModelDetail.value?.platformBaseUrl || ''
+  const baseUrl = resolvePlatformBaseUrl(rawBase).replace(/\/+$/, '')
+
+  if (pid === 'cloudflare-workers-ai') {
+    return {
+      apiKey: key || cloudflareStore.activeAccessToken,
+      accountId: cloudflareStore.activeAccountId,
+    }
+  }
+
+  if (pid === 'openai-compatible') {
+    return {
+      apiKey: key,
+      baseUrl,
+    }
+  }
+
+  // Other native providers
+  const config: Record<string, any> = {
+    apiKey: key,
+  }
+  if (baseUrl) {
+    config.baseUrl = baseUrl
+  }
+  return config
+}
+
+async function handleSaveProvider(): Promise<boolean> {
+  if (!selectedModelDetail.value || !targetProviderId.value)
+    return false
+
+  const pid = targetProviderId.value
+  const config = getTargetProviderConfig(pid)
+
+  if (pid === 'cloudflare-workers-ai' && (!config.apiKey || !config.accountId)) {
+    toast.error('Cloudflare Workers AI requires both Account ID and API Key/OAuth Token.')
+    return false
+  }
+
+  isSaving.value = true
+  try {
+    if (!providersStore.providers[pid]) {
+      providersStore.providers[pid] = {}
+    }
+    Object.assign(providersStore.providers[pid], config)
+    providersStore.markProviderAdded(pid)
+    void providersStore.validateProvider(pid).catch(() => {})
+    toast.success(`Saved ${selectedModelDetail.value.platformDisplayName} to AIRI Providers!`)
+    return true
+  }
+  catch (err: any) {
+    toast.error(err?.message || 'Failed to save provider')
+    return false
+  }
+  finally {
+    isSaving.value = false
+  }
+}
+
+async function handleUseAsActiveModel() {
+  if (!selectedModelDetail.value || !targetProviderId.value)
+    return
+
+  const pid = targetProviderId.value
+  const modelId = selectedModelDetail.value.modelId
+  const modelName = selectedModelDetail.value.displayName
+
+  isActivating.value = true
+  try {
+    // 1. Ensure provider credentials are saved
+    const saved = await handleSaveProvider()
+    if (!saved)
+      return
+
+    // 2. Set as global default consciousness
+    consciousnessStore.activeProvider = pid
+    consciousnessStore.activeModel = modelId
+
+    // 3. Update active character card if present
+    if (activeCard.value) {
+      airiCardStore.updateCard(activeCardId.value, {
+        extensions: {
+          ...activeCard.value.extensions,
+          airi: {
+            ...activeCard.value.extensions?.airi,
+            modules: {
+              ...activeCard.value.extensions?.airi?.modules,
+              consciousness: {
+                provider: pid,
+                model: modelId,
+              },
+            },
+          },
+        },
+      } as any)
+    }
+
+    const charName = activeCard.value?.name || 'Active Character'
+    toast.success(`Set ${modelName} as active model for AIRI and ${charName}!`, {
+      action: {
+        label: 'Open Chat',
+        onClick: () => router.push('/chat'),
+      },
+    })
+  }
+  catch (err: any) {
+    toast.error(err?.message || 'Failed to set active model')
+  }
+  finally {
+    isActivating.value = false
+  }
 }
 
 // Sync customBaseUrl whenever selected model or cloudflare account changes
@@ -676,10 +861,25 @@ const activeFiltersCount = computed(() => {
                     >
                       Frontier
                     </span>
+                    <span
+                      v-if="isModelActive(model)"
+                      class="inline-flex items-center gap-1 rounded bg-emerald-500/20 px-1.5 py-0.2 text-[10px] text-emerald-700 font-bold uppercase dark:text-emerald-300"
+                    >
+                      <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                      Active
+                    </span>
                   </div>
                   <div class="flex items-center gap-1.5 text-[11px] text-neutral-500">
                     <span class="rounded bg-neutral-200/50 px-1.5 py-0.2 text-[10px] font-mono dark:bg-neutral-800">
                       {{ model.platformDisplayName }}
+                    </span>
+                    <span
+                      v-if="isPlatformConfigured(model.platform)"
+                      class="inline-flex items-center gap-0.5 rounded bg-primary-500/15 px-1.5 py-0.2 text-[10px] text-primary-700 font-medium dark:text-primary-300"
+                      title="Platform configured in AIRI"
+                    >
+                      <div class="i-solar:check-circle-bold text-[10px]" />
+                      Configured
                     </span>
                     <span class="max-w-[180px] truncate text-[10px] font-mono" :title="model.modelId">
                       {{ model.modelId }}
@@ -790,10 +990,27 @@ const activeFiltersCount = computed(() => {
         <div class="flex flex-col gap-2">
           <!-- Top Row: Platform & Badges -->
           <div class="flex items-center justify-between gap-2">
-            <span class="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-700 font-semibold dark:bg-neutral-800 dark:text-neutral-300">
-              {{ model.platformDisplayName }}
-            </span>
             <div class="flex items-center gap-1.5">
+              <span class="rounded-md bg-neutral-100 px-2 py-0.5 text-[11px] text-neutral-700 font-semibold dark:bg-neutral-800 dark:text-neutral-300">
+                {{ model.platformDisplayName }}
+              </span>
+              <span
+                v-if="isPlatformConfigured(model.platform)"
+                class="inline-flex items-center gap-0.5 rounded bg-primary-500/15 px-1.5 py-0.5 text-[10px] text-primary-700 font-medium dark:text-primary-300"
+                title="Platform configured in AIRI"
+              >
+                <div class="i-solar:check-circle-bold text-[10px]" />
+                Configured
+              </span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <span
+                v-if="isModelActive(model)"
+                class="inline-flex items-center gap-1 rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] text-emerald-700 font-bold uppercase dark:text-emerald-300"
+              >
+                <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                Active
+              </span>
               <span
                 v-if="model.sizeLabel === 'Frontier'"
                 class="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] text-amber-700 font-bold uppercase dark:text-amber-300"
@@ -890,6 +1107,20 @@ const activeFiltersCount = computed(() => {
                       class="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] text-neutral-600 font-bold uppercase dark:bg-neutral-800 dark:text-neutral-400"
                     >
                       {{ selectedModelDetail.sizeLabel }}
+                    </span>
+                    <span
+                      v-if="isProviderSaved"
+                      class="inline-flex items-center gap-1 rounded bg-primary-500/15 px-2 py-0.5 text-xs text-primary-700 font-medium dark:text-primary-300"
+                    >
+                      <div class="i-solar:check-circle-bold text-xs" />
+                      Configured
+                    </span>
+                    <span
+                      v-if="isActiveModel"
+                      class="inline-flex items-center gap-1 rounded bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-700 font-bold uppercase dark:text-emerald-300"
+                    >
+                      <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                      Active Model
                     </span>
                   </div>
                   <h2 class="mt-1 text-lg text-neutral-900 font-bold dark:text-neutral-100">
@@ -1174,6 +1405,73 @@ const activeFiltersCount = computed(() => {
                       Tip: Direct browser network request failed. In web mode, third-party APIs may block CORS.
                     </span>
                   </div>
+                </div>
+              </div>
+
+              <!-- AIRI INTEGRATION ACTIONS -->
+              <div class="flex flex-col gap-2.5 border border-primary-500/30 rounded-2xl bg-primary-500/5 p-4 dark:border-primary-500/25 dark:bg-primary-500/8">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <div class="i-solar:transfer-horizontal-bold-duotone text-lg text-primary-500" />
+                    <h4 class="text-xs text-neutral-900 font-bold tracking-wider uppercase dark:text-neutral-100">
+                      AIRI Integration
+                    </h4>
+                  </div>
+                  <span
+                    v-if="isActiveModel"
+                    class="flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-700 font-bold dark:text-emerald-300"
+                  >
+                    <span class="size-1.5 animate-pulse rounded-full bg-emerald-500" />
+                    Active Chat Model
+                  </span>
+                  <span
+                    v-else-if="isProviderSaved"
+                    class="rounded-full bg-primary-500/20 px-2 py-0.5 text-[10px] text-primary-700 font-semibold dark:text-primary-300"
+                  >
+                    Provider Configured
+                  </span>
+                </div>
+
+                <p class="text-[11px] text-neutral-500 leading-relaxed dark:text-neutral-400">
+                  Save this endpoint to your AIRI Providers registry, or set it as the active model for conversation across your companion and character cards.
+                </p>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <!-- Save Provider Button -->
+                  <button
+                    type="button"
+                    :disabled="isSaving"
+                    :class="[
+                      'flex items-center justify-center gap-1.5 rounded-xl border py-2 px-3 text-xs font-semibold shadow-xs transition-all',
+                      isProviderSaved
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
+                        : 'border-neutral-300 bg-white hover:bg-neutral-50 text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-750',
+                    ]"
+                    @click="handleSaveProvider"
+                  >
+                    <div v-if="isSaving" class="i-solar:spinner-linear animate-spin text-sm" />
+                    <div v-else-if="isProviderSaved" class="i-solar:check-circle-bold text-sm text-emerald-500" />
+                    <div v-else class="i-solar:archive-down-minim-bold-duotone text-sm" />
+                    <span>{{ isSaving ? 'Saving...' : (isProviderSaved ? 'Provider Saved' : 'Save Provider') }}</span>
+                  </button>
+
+                  <!-- Use as Active Model Button -->
+                  <button
+                    type="button"
+                    :disabled="isActivating"
+                    :class="[
+                      'flex items-center justify-center gap-1.5 rounded-xl py-2 px-3 text-xs font-semibold text-white shadow-sm transition-all',
+                      isActiveModel
+                        ? 'bg-emerald-600 hover:bg-emerald-500'
+                        : 'bg-primary-600 hover:bg-primary-500 active:scale-[0.99]',
+                    ]"
+                    @click="handleUseAsActiveModel"
+                  >
+                    <div v-if="isActivating" class="i-solar:spinner-linear animate-spin text-sm" />
+                    <div v-else-if="isActiveModel" class="i-solar:check-circle-bold text-sm text-white" />
+                    <div v-else class="i-solar:magic-stick-3-bold-duotone text-sm" />
+                    <span>{{ isActivating ? 'Setting...' : (isActiveModel ? 'Active Model' : 'Use as Active Model') }}</span>
+                  </button>
                 </div>
               </div>
 
