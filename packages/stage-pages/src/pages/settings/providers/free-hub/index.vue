@@ -6,6 +6,7 @@ import { useFreeAICatalogStore } from '@proj-airi/stage-ui/stores'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useCloudflareStore } from '@proj-airi/stage-ui/stores/modules/cloudflare'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
+import { useHearingStore } from '@proj-airi/stage-ui/stores/modules/hearing'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -18,6 +19,7 @@ const catalogStore = useFreeAICatalogStore()
 const cloudflareStore = useCloudflareStore()
 const providersStore = useProvidersStore()
 const consciousnessStore = useConsciousnessStore()
+const hearingStore = useHearingStore()
 const airiCardStore = useAiriCardStore()
 
 const { activeCard, activeCardId } = storeToRefs(airiCardStore)
@@ -51,6 +53,15 @@ const isReauthorizing = ref(false)
 const isConnectModalOpen = ref(false)
 const isSaving = ref(false)
 const isActivating = ref(false)
+const filterConfiguredOnly = ref(false)
+
+const displayedModels = computed<FreeAICatalogModel[]>(() => {
+  let list = filteredModels.value
+  if (filterConfiguredOnly.value) {
+    list = list.filter(m => isPlatformConfigured(m.platform, m.modality))
+  }
+  return list
+})
 
 interface TestResult {
   success: boolean
@@ -109,8 +120,21 @@ function clearManualCloudflareKey() {
   delete savedApiKeys.value.cloudflare
 }
 
-function resolveProviderId(platform: string): string {
+function resolveProviderId(platform: string, modality?: string): string {
   const p = platform.toLowerCase()
+  if (modality === 'transcription') {
+    switch (p) {
+      case 'deepgram':
+        return 'deepgram-transcription'
+      case 'xai':
+        return 'xai-audio-transcription'
+      case 'openai':
+        return 'openai-audio-transcription'
+      default:
+        return 'openai-compatible-audio-transcription'
+    }
+  }
+
   switch (p) {
     case 'cloudflare':
       return 'cloudflare-workers-ai'
@@ -139,7 +163,7 @@ function resolveProviderId(platform: string): string {
 const targetProviderId = computed(() => {
   if (!selectedModelDetail.value)
     return ''
-  return resolveProviderId(selectedModelDetail.value.platform)
+  return resolveProviderId(selectedModelDetail.value.platform, selectedModelDetail.value.modality)
 })
 
 const isProviderSaved = computed(() => {
@@ -151,17 +175,24 @@ const isProviderSaved = computed(() => {
 const isActiveModel = computed(() => {
   if (!selectedModelDetail.value || !targetProviderId.value)
     return false
+  if (selectedModelDetail.value.modality === 'transcription') {
+    return hearingStore.activeTranscriptionProvider === targetProviderId.value
+      && hearingStore.activeTranscriptionModel === selectedModelDetail.value.modelId
+  }
   return consciousnessStore.activeProvider === targetProviderId.value
     && consciousnessStore.activeModel === selectedModelDetail.value.modelId
 })
 
 function isModelActive(item: FreeAICatalogModel): boolean {
-  const pid = resolveProviderId(item.platform)
+  const pid = resolveProviderId(item.platform, item.modality)
+  if (item.modality === 'transcription') {
+    return hearingStore.activeTranscriptionProvider === pid && hearingStore.activeTranscriptionModel === item.modelId
+  }
   return consciousnessStore.activeProvider === pid && consciousnessStore.activeModel === item.modelId
 }
 
-function isPlatformConfigured(platform: string): boolean {
-  const pid = resolveProviderId(platform)
+function isPlatformConfigured(platform: string, modality?: string): boolean {
+  const pid = resolveProviderId(platform, modality)
   return Boolean(providersStore.configuredProviders[pid])
 }
 
@@ -174,6 +205,16 @@ function getTargetProviderConfig(pid: string) {
     return {
       apiKey: key || cloudflareStore.activeAccessToken,
       accountId: cloudflareStore.activeAccountId,
+    }
+  }
+
+  if (pid === 'openai-compatible-audio-transcription') {
+    const isCloudflare = selectedModelDetail.value?.platform.toLowerCase() === 'cloudflare'
+    return {
+      apiKey: key || (isCloudflare ? cloudflareStore.activeAccessToken : ''),
+      baseUrl: baseUrl || (isCloudflare
+        ? `https://api.cloudflare.com/client/v4/accounts/${cloudflareStore.activeAccountId}/ai/v1`
+        : ''),
     }
   }
 
@@ -192,6 +233,13 @@ function getTargetProviderConfig(pid: string) {
     config.baseUrl = baseUrl
   }
   return config
+}
+
+function openProviderSettings() {
+  if (!targetProviderId.value || !selectedModelDetail.value)
+    return
+  const category = selectedModelDetail.value.modality === 'transcription' ? 'transcription' : 'chat'
+  void router.push(`/settings/providers/${category}/${targetProviderId.value}`)
 }
 
 async function handleSaveProvider(): Promise<boolean> {
@@ -241,36 +289,50 @@ async function handleUseAsActiveModel() {
     if (!saved)
       return
 
-    // 2. Set as global default consciousness
-    consciousnessStore.activeProvider = pid
-    consciousnessStore.activeModel = modelId
+    // 2. Set as active model depending on modality
+    if (selectedModelDetail.value.modality === 'transcription') {
+      hearingStore.activeTranscriptionProvider = pid
+      hearingStore.activeTranscriptionModel = modelId
 
-    // 3. Update active character card if present
-    if (activeCard.value) {
-      airiCardStore.updateCard(activeCardId.value, {
-        extensions: {
-          ...activeCard.value.extensions,
-          airi: {
-            ...activeCard.value.extensions?.airi,
-            modules: {
-              ...activeCard.value.extensions?.airi?.modules,
-              consciousness: {
-                provider: pid,
-                model: modelId,
+      toast.success(`Set ${modelName} as active hearing model!`, {
+        action: {
+          label: 'Hearing Settings',
+          onClick: () => router.push('/settings/hearing'),
+        },
+      })
+    }
+    else {
+      // Global default consciousness
+      consciousnessStore.activeProvider = pid
+      consciousnessStore.activeModel = modelId
+
+      // Update active character card if present
+      if (activeCard.value) {
+        airiCardStore.updateCard(activeCardId.value, {
+          extensions: {
+            ...activeCard.value.extensions,
+            airi: {
+              ...activeCard.value.extensions?.airi,
+              modules: {
+                ...activeCard.value.extensions?.airi?.modules,
+                consciousness: {
+                  provider: pid,
+                  model: modelId,
+                },
               },
             },
           },
-        },
-      } as any)
-    }
+        } as any)
+      }
 
-    const charName = activeCard.value?.name || 'Active Character'
-    toast.success(`Set ${modelName} as active model for AIRI and ${charName}!`, {
-      action: {
-        label: 'Open Chat',
-        onClick: () => router.push('/chat'),
-      },
-    })
+      const charName = activeCard.value?.name || 'Active Character'
+      toast.success(`Set ${modelName} as active model for AIRI and ${charName}!`, {
+        action: {
+          label: 'Open Chat',
+          onClick: () => router.push('/chat'),
+        },
+      })
+    }
   }
   catch (err: any) {
     toast.error(err?.message || 'Failed to set active model')
@@ -495,10 +557,17 @@ const activeFiltersCount = computed(() => {
     count++
   if (filterHighContext.value)
     count++
+  if (filterConfiguredOnly.value)
+    count++
   if (searchQuery.value.trim())
     count++
   return count
 })
+
+function handleResetFilters() {
+  catalogStore.resetFilters()
+  filterConfiguredOnly.value = false
+}
 </script>
 
 <template>
@@ -731,6 +800,20 @@ const activeFiltersCount = computed(() => {
             <div class="i-solar:document-text-bold-duotone text-sm text-purple-500" />
             <span>Context &ge; 128k</span>
           </button>
+
+          <button
+            type="button"
+            :class="[
+              'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all',
+              filterConfiguredOnly
+                ? 'bg-primary-500/15 border-primary-500/40 text-primary-700 dark:text-primary-300 font-medium'
+                : 'border-neutral-200 dark:border-neutral-700 text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300',
+            ]"
+            @click="filterConfiguredOnly = !filterConfiguredOnly"
+          >
+            <div class="i-solar:check-circle-bold text-sm text-primary-500" />
+            <span>Configured Only</span>
+          </button>
         </div>
 
         <!-- Sort Controls -->
@@ -770,7 +853,7 @@ const activeFiltersCount = computed(() => {
             v-if="activeFiltersCount > 0"
             type="button"
             class="ml-2 text-xs text-neutral-400 transition-colors hover:text-rose-500"
-            @click="catalogStore.resetFilters()"
+            @click="handleResetFilters()"
           >
             Reset ({{ activeFiltersCount }})
           </button>
@@ -781,7 +864,7 @@ const activeFiltersCount = computed(() => {
     <!-- Active Filter Count Display -->
     <div class="flex items-center justify-between px-1 text-xs text-neutral-500">
       <span>
-        Showing <strong class="text-neutral-800 dark:text-neutral-200">{{ filteredModels.length }}</strong> of {{ totalModelsCount }} models
+        Showing <strong class="text-neutral-800 dark:text-neutral-200">{{ displayedModels.length }}</strong> of {{ totalModelsCount }} models
       </span>
       <span v-if="selectedPlatform !== 'all'">
         Filtered to platform: <strong class="text-primary-600 dark:text-primary-400">{{ selectedPlatform }}</strong>
@@ -790,7 +873,7 @@ const activeFiltersCount = computed(() => {
 
     <!-- EMPTY STATE -->
     <div
-      v-if="filteredModels.length === 0"
+      v-if="displayedModels.length === 0"
       class="flex flex-col items-center justify-center border border-neutral-300 rounded-2xl border-dashed p-12 text-center dark:border-neutral-800"
     >
       <div class="i-solar:ghost-linear mb-2 text-4xl text-neutral-400" />
@@ -803,7 +886,7 @@ const activeFiltersCount = computed(() => {
       <button
         type="button"
         class="rounded-xl bg-primary-500 px-4 py-2 text-xs text-white font-semibold transition-all hover:bg-primary-600"
-        @click="catalogStore.resetFilters()"
+        @click="handleResetFilters()"
       >
         Reset All Filters
       </button>
@@ -843,7 +926,7 @@ const activeFiltersCount = computed(() => {
           </thead>
           <tbody class="divide-y divide-neutral-200/60 dark:divide-neutral-800/60">
             <tr
-              v-for="model in filteredModels"
+              v-for="model in displayedModels"
               :key="model.id"
               class="group cursor-pointer transition-colors hover:bg-primary-500/5 dark:hover:bg-primary-500/10"
               @click="catalogStore.selectModel(model.id)"
@@ -978,7 +1061,7 @@ const activeFiltersCount = computed(() => {
       class="grid grid-cols-1 gap-3.5 lg:grid-cols-3 md:grid-cols-2"
     >
       <div
-        v-for="model in filteredModels"
+        v-for="model in displayedModels"
         :key="model.id"
         :class="[
           'flex flex-col justify-between p-4 rounded-2xl border transition-all cursor-pointer group',
@@ -1120,7 +1203,7 @@ const activeFiltersCount = computed(() => {
                       class="inline-flex items-center gap-1 rounded bg-emerald-500/20 px-2 py-0.5 text-xs text-emerald-700 font-bold uppercase dark:text-emerald-300"
                     >
                       <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-                      Active Model
+                      {{ selectedModelDetail.modality === 'transcription' ? 'Active Hearing Model' : 'Active Model' }}
                     </span>
                   </div>
                   <h2 class="mt-1 text-lg text-neutral-900 font-bold dark:text-neutral-100">
@@ -1422,7 +1505,7 @@ const activeFiltersCount = computed(() => {
                     class="flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-700 font-bold dark:text-emerald-300"
                   >
                     <span class="size-1.5 animate-pulse rounded-full bg-emerald-500" />
-                    Active Chat Model
+                    {{ selectedModelDetail.modality === 'transcription' ? 'Active Hearing Model' : 'Active Chat Model' }}
                   </span>
                   <span
                     v-else-if="isProviderSaved"
@@ -1470,7 +1553,19 @@ const activeFiltersCount = computed(() => {
                     <div v-if="isActivating" class="i-solar:spinner-linear animate-spin text-sm" />
                     <div v-else-if="isActiveModel" class="i-solar:check-circle-bold text-sm text-white" />
                     <div v-else class="i-solar:magic-stick-3-bold-duotone text-sm" />
-                    <span>{{ isActivating ? 'Setting...' : (isActiveModel ? 'Active Model' : 'Use as Active Model') }}</span>
+                    <span>{{ isActivating ? 'Setting...' : (isActiveModel ? (selectedModelDetail.modality === 'transcription' ? 'Active Hearing Model' : 'Active Model') : (selectedModelDetail.modality === 'transcription' ? 'Use as Hearing Model' : 'Use as Active Model')) }}</span>
+                  </button>
+                </div>
+
+                <!-- Subtle link to provider settings -->
+                <div v-if="isProviderSaved && targetProviderId" class="mt-1 flex items-center justify-end">
+                  <button
+                    type="button"
+                    class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                    @click="openProviderSettings"
+                  >
+                    <span>Open in {{ selectedModelDetail.platformDisplayName }} Settings</span>
+                    <div class="i-solar:arrow-right-up-linear text-xs" />
                   </button>
                 </div>
               </div>

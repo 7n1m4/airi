@@ -351,7 +351,7 @@
     "validateUrl": null,
     "extraHeaders": null,
     "timeoutMs": null,
-    "note": "free key"
+    "note": "paid models only"
   },
   "openrouter": {
     "id": "openrouter",
@@ -431,7 +431,7 @@
     "validateUrl": null,
     "extraHeaders": null,
     "timeoutMs": null,
-    "note": "free key"
+    "note": "prepaid credits"
   },
   "requesty": {
     "id": "requesty",
