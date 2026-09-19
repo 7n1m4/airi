@@ -2,6 +2,7 @@ import type { ContextMessage } from '../../../types/chat'
 
 import { ContextUpdateStrategy } from '@proj-airi/server-sdk'
 import { nanoid } from 'nanoid'
+import { unref } from 'vue'
 
 import { useBackgroundStore } from '../../background'
 import { useAiriCardStore } from '../../modules/airi-card'
@@ -16,7 +17,8 @@ export function createScenesContext(): ContextMessage | null {
   const backgroundStore = useBackgroundStore()
   const airiCardStore = useAiriCardStore()
 
-  const activeBackgroundId = airiCardStore.activeCard?.extensions?.airi?.modules?.activeBackgroundId
+  const card = unref(airiCardStore.activeCard) as any
+  const activeBackgroundId = card?.extensions?.airi?.modules?.activeBackgroundId
   const background = activeBackgroundId ? backgroundStore.entries.get(activeBackgroundId) : null
 
   // NOTICE: Scoping the visible scenes available to only items intended as environmental backgrounds.

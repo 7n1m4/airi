@@ -1512,6 +1512,14 @@ Format your output as a raw thought log.`
 
         debug(`[ChatDebug] Model: ${effectiveModel}, Provider: ${effectiveProviderId}, Vision Supported: ${isVisionSupported}`)
 
+        // NOTICE: Strict runtime safety check ensuring persona system prompt is never omitted or misplaced
+        if (import.meta.env.DEV) {
+          if (newMessages.length === 0 || newMessages[0].role !== 'system') {
+            console.error('[CRITICAL] Prompt invariant violated: messages[0] must be role: "system"', newMessages)
+            throw new Error('Prompt invariant violated: persona system message missing from messages[0]')
+          }
+        }
+
         await llmStore.stream(effectiveModel, effectiveProvider, newMessages as Message[], {
           headers,
           tools: effectiveTools,
