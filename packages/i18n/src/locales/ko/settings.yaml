@@ -195,9 +195,9 @@ pages:
           카드 버전, 이전 카드에서 변경하는 경우 이를 늘려야 합니다.
         consciousness_model: 이 캐릭터에 대한 의식 모델(AI 모델)을 선택합니다.
         speech_model: 이 캐릭터의 음성 합성 모델과 음성을 선택합니다.
-        identity_prompting: 이 필드들은 캐릭터 정의에 도움이 되지만, 현재 별도의 런타임 레이어로 분리되어 있지는 않습니다. 시스템 프롬프트는 AIRI의
-          활성 프롬프트 조합에 직접 사용됩니다. 히스토리 후속 지침은 주로 카드 호환성과 향후 프롬프트 파이프라인을 위해 유지되므로,
-          실시간 동작 차이를 기대하지 않고 지금 작성해 두셔도 좋습니다.
+        identity_prompting: 이 필드들은 캐릭터 정의에 도움이 되지만, 현재 별도의 런타임 레이어로 분리되어 있지는 않습니다. 시스템
+          프롬프트는 AIRI의 활성 프롬프트 조합에 직접 사용됩니다. 히스토리 후속 지침은 주로 카드 호환성과 향후 프롬프트
+          파이프라인을 위해 유지되므로, 실시간 동작 차이를 기대하지 않고 지금 작성해 두셔도 좋습니다.
       errors:
         name: 이름은 유효하거나 비어 있지 않아야 합니다.
         version: '오류: 잘못된 버전 번호입니다!'
@@ -516,6 +516,11 @@ pages:
             use-ssml:
               description: 일반 텍스트 대신 원시 SSML을 입력할 수 있습니다
               label: 사용자 지정 SSML 사용
+          audio-output:
+            title: 오디오 출력 장치
+            description: 음성 합성 및 재생을 위한 오디오 출력 장치를 선택합니다.
+            default: 기본 출력 장치
+            placeholder: 오디오 출력 장치 선택
       title: 음성
     title: 모듈
     vision:
@@ -1238,6 +1243,14 @@ pages:
         description: 강력하고 무료인 클라우드 비전을 원하시면 <b>Google Gemini</b>를 사용해 보세요. <b>Ollama</b>
           및 <b>LM Studio</b> 같은 로컬 도구도 비전 지원 모델(VLM)을 지원합니다.
         title: 세상을 인식하고 싶으신가요?
+      motion:
+        title: 3D 모션 및 제스처?
+        description: <b>FlowMDM (로컬 WebGPU)</b> 생성형 확산을 사용하여 온디바이스에서 실시간 3D VRM 캐릭터 모션 및
+          제스처를 합성합니다.
+      cloud:
+        title: 클라우드 동기화 및 백업?
+        description: 기기 간에 캐릭터 카드, 기억 보관소 및 설정을 안전하게 유지하세요. 데스크톱/NAS 백업에는 <b>로컬 파일 시스템</b>을
+          사용하거나 <b>S3 호환 스토리지</b>(Cloudflare R2, MinIO, AWS S3)를 사용하세요.
     speech:
       app_local_audio:
         description: 음성 합성을 위한 로컬 오디오 출력 설정을 구성합니다.
@@ -1252,6 +1265,10 @@ pages:
         device_id: 입력 장치 ID
         device_id_placeholder: '입력 장치 ID 입력 (예: "default")...'
         title: 앱 (로컬) 오디오 설정
+    cache:
+      title: 모델 캐시
+      subtitle: 온디바이스 신경망 가중치
+      manage: 관리
   connection:
     description: WebSocket 서버 연결 구성
     title: 연결
@@ -1618,8 +1635,8 @@ providers:
 privacy:
   remote-sync:
     title: 클라우드 동기화 활성화
-    description: 기본적으로 꺼져 있습니다. 비활성화 시 AIRI는 로컬에서만 작동하며 원격 세션을 가져오거나 airi-api.moeru.ai로 채팅
-      기록을 동기화하지 않습니다.
+    description: 기본적으로 꺼져 있습니다. 비활성화 시 AIRI는 로컬에서만 작동하며 원격 세션을 가져오거나
+      airi-api.moeru.ai로 채팅 기록을 동기화하지 않습니다.
 groups:
   character:
     title: 캐릭터 및 장면

@@ -512,6 +512,11 @@ pages:
             use-ssml:
               description: 啟用後可以輸入原始 SSML 而不是純文字
               label: 使用自訂 SSML
+          audio-output:
+            title: 音訊輸出裝置
+            description: 選取用於語音合成與音訊播放的輸出裝置。
+            default: 預設輸出裝置
+            placeholder: 選取音訊輸出裝置
       title: 發聲
     title: 機體模組
     vision:
@@ -1229,6 +1234,13 @@ pages:
         description: 建議使用 <b>Google Gemini</b> 取得強大且免費的雲端視覺理解能力。本機的 <b>Ollama</b> 和
           <b>LM Studio</b> 也支援多模態視覺模型（VLM）。
         title: 感知現實世界？
+      motion:
+        title: 3D 動作與手勢？
+        description: 使用 <b>FlowMDM (本地 WebGPU)</b> 生成式擴散模型，在裝置端即時合成 3D VRM 角色動作與手势。
+      cloud:
+        title: 雲端同步與備份？
+        description: 跨裝置安全保存您的角色卡、記憶檔案和設定。桌面端/NAS 備份可使用<b>本機檔案系統</b>，或使用 <b>S3 相容儲存</b>
+          (Cloudflare R2, MinIO, AWS S3)。
     speech:
       app_local_audio:
         description: 設定語音合成的本機音訊輸出選項。
@@ -1243,6 +1255,10 @@ pages:
         device_id: 輸入裝置 ID
         device_id_placeholder: 輸入輸入裝置 ID（例如 "default"）...
         title: 應用程式內（本機）音訊設定
+    cache:
+      title: 模型快取
+      subtitle: 裝置端神經網絡權重
+      manage: 管理
   connection:
     description: 設置 WebSocket 伺服器連接
     title: 連接

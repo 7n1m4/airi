@@ -366,9 +366,9 @@ async function handleRestoreAndBuildAnother() {
           <div :class="['space-y-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/80']">
             <div
               v-for="(bullet, i) in [
-                t('onboarding.steps.triage.local.bullet1'),
-                t('onboarding.steps.triage.local.bullet2'),
-                t('onboarding.steps.triage.local.bullet3'),
+                t('onboarding.steps.triage.local.features.f1'),
+                t('onboarding.steps.triage.local.features.f2'),
+                t('onboarding.steps.triage.local.features.f3'),
               ]"
               :key="i"
               :class="['flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-300']"
@@ -387,7 +387,7 @@ async function handleRestoreAndBuildAnother() {
             :variant="selectedPath === 'local' ? 'primary' : 'secondary'"
             @click.stop="chooseLocal"
           >
-            {{ selectedPath === 'local' ? t('onboarding.steps.triage.local.selected') : t('onboarding.steps.triage.local.cta') }}
+            {{ selectedPath === 'local' ? t('onboarding.steps.triage.local.selectedCta') : t('onboarding.steps.triage.local.selectCta') }}
           </Button>
         </div>
       </div>

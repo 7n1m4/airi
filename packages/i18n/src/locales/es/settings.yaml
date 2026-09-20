@@ -208,10 +208,10 @@ pages:
           cambios desde una tarjeta anterior.
         consciousness_model: Seleccione el modelo de conciencia (modelo IA) para este personaje.
         speech_model: Seleccione el modelo de síntesis de voz y la voz para este personaje.
-        identity_prompting: Todos estos campos ayudan a definir el personaje, pero actualmente no
-          son capas de tiempo de ejecución separadas. El prompt del sistema se
-          utiliza en el ensamblado del prompt activo de AIRI. Las instrucciones
-          posteriores al historial se mantienen principalmente por
+        identity_prompting: Todos estos campos ayudan a definir el personaje, pero
+          actualmente no son capas de tiempo de ejecución separadas. El prompt
+          del sistema se utiliza en el ensamblado del prompt activo de AIRI. Las
+          instrucciones posteriores al historial se mantienen principalmente por
           compatibilidad de tarjetas y trabajo futuro en el flujo de prompts,
           por lo que puedes rellenarlas ahora sin esperar un comportamiento en
           vivo distinto por el momento.
@@ -333,13 +333,13 @@ pages:
         scene: Escena
     explore:
       title: Descubrir avatares
-      description: Explora archivos de la comunidad, repositorios externos y bibliotecas de
-        modelos gratuitos para VRM, Live2D, Spine y MMD.
+      description: Explora archivos de la comunidad, repositorios externos y
+        bibliotecas de modelos gratuitos para VRM, Live2D, Spine y MMD.
     tip:
       title: ¿Buscas más avatares?
-      description: ¿Cansado de los modelos que tienes? ¿Quieres descargar algunos nuevos y
-        geniales de forma gratuita? Consulta nuestro catálogo seleccionado de
-        avatares y mercados.
+      description: ¿Cansado de los modelos que tienes? ¿Quieres descargar algunos
+        nuevos y geniales de forma gratuita? Consulta nuestro catálogo
+        seleccionado de avatares y mercados.
       action: Descubrir avatares
   modules:
     beat_sync:
@@ -548,6 +548,12 @@ pages:
             use-ssml:
               description: Habilitar para ingresar SSML crudo en lugar de texto plano
               label: Usar SSML Personalizado
+          audio-output:
+            title: Dispositivo de salida de audio
+            description: Selecciona el dispositivo de salida de audio para la síntesis de
+              voz y la reproducción.
+            default: Dispositivo de salida predeterminado
+            placeholder: Selecciona un dispositivo de salida de audio
       title: Habla
     title: Módulos
     vision:
@@ -1349,6 +1355,21 @@ pages:
           nube. Las opciones locales como <b>Ollama</b> y <b>LM Studio</b>
           también admiten modelos con visión (VLM).
         title: ¿Ver el mundo?
+      motion:
+        title: ¿Gestos y cinética 3D?
+        description: Sintetiza movimientos y gestos de personajes VRM en 3D en tiempo real
+          en el dispositivo usando difusión generativa <b>FlowMDM (WebGPU
+          local)</b>.
+      cloud:
+        title: ¿Sincronización en la nube y copias de seguridad?
+        description: Mantén tus tarjetas, archivos de memoria y configuraciones seguras
+          entre dispositivos. Usa el <b>Sistema de archivos local</b> para
+          copias en escritorio/NAS o <b>Almacenamiento compatible con S3</b>
+          (Cloudflare R2, MinIO, AWS S3).
+    cache:
+      title: Caché de modelos
+      subtitle: Pesos neuronales en el dispositivo
+      manage: Administrar
   connection:
     description: Configure la conexión del servidor y los tokens de descarga
       externos (por ejemplo, Hugging Face)
@@ -1386,13 +1407,13 @@ pages:
     description: Configurar el entorno donde vive el personaje
     title: Escena
     beta_label: Sistema de escenas
-    beta_description: Cada tarjeta de personaje especifica su propio fondo preferido de esta
-      galería. Configurarlo aquí lo establecerá como predeterminado para el
-      personaje activo actualmente.
+    beta_description: Cada tarjeta de personaje especifica su propio fondo preferido
+      de esta galería. Configurarlo aquí lo establecerá como predeterminado para
+      el personaje activo actualmente.
     background_image:
       title: Fondo del personaje activo
-      no_background: No hay ningún fondo activo para este personaje. Sube una imagen cuadrada
-        o apaisada para obtener los mejores resultados.
+      no_background: No hay ningún fondo activo para este personaje. Sube una imagen
+        cuadrada o apaisada para obtener los mejores resultados.
       upload: Subir a la galería
       change: Cambiar fondo
       clear: Borrar predeterminado
@@ -1405,8 +1426,8 @@ pages:
       active_badge: Escena actual
     tip:
       label: ¡Consejo!
-      description: Usar una imagen cuadrada aprovechará el recorte <b>cover</b> en modo
-        vertical, enfocándose en el centro de la escena.
+      description: Usar una imagen cuadrada aprovechará el recorte <b>cover</b> en
+        modo vertical, enfocándose en el centro de la escena.
   system:
     color-scheme:
       description: Cambiar el esquema de colores del escenario.
@@ -1610,8 +1631,8 @@ pages:
         button: Open
   chat:
     title: Ajustes de chat y entrada
-    description: Combinaciones de teclas de envío, tiempos de espera de transmisión y
-      comportamiento de las burbujas de mensajes
+    description: Combinaciones de teclas de envío, tiempos de espera de transmisión
+      y comportamiento de las burbujas de mensajes
     send-mode:
       title: Modo de envío
       description: Elige la combinación de teclas para enviar mensajes.
@@ -1630,12 +1651,12 @@ pages:
       showcase: Muestrario
   dating-sim:
     title: Modo Dating Sim
-    description: Ajusta modos de juego interactivos, umbrales de intimidad y reglas de
-      comportamiento visual
+    description: Ajusta modos de juego interactivos, umbrales de intimidad y reglas
+      de comportamiento visual
   stage:
     title: Controles flotantes
-    description: Personaliza las ranuras de la barra de acciones flotante, el borde de
-      acoplamiento y los activadores rápidos
+    description: Personaliza las ranuras de la barra de acciones flotante, el borde
+      de acoplamiento y los activadores rápidos
 sections:
   section:
     general:
@@ -1751,8 +1772,8 @@ chat:
       double-enter: Doble Enter para enviar
   stream-idle-timeout:
     title: Tiempo de espera de transmisión inactiva
-    description: Cancela la respuesta si la transmisión del modelo deja de producir eventos
-      durante demasiado tiempo.
+    description: Cancela la respuesta si la transmisión del modelo deja de producir
+      eventos durante demasiado tiempo.
     options:
       10s: 10 segundos
       15s: 15 segundos

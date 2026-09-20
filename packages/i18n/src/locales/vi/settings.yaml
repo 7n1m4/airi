@@ -201,12 +201,13 @@ pages:
           Phiên bản thẻ, hãy tăng giá trị này nếu bạn đã chỉnh sửa thẻ từ trước.
         consciousness_model: Chọn mô hình ý thức (mô hình AI) cho nhân vật này.
         speech_model: Chọn mô hình tổng hợp tiếng nói và giọng đọc cho nhân vật này.
-        identity_prompting: Các trường này đều giúp định hình nhân vật, nhưng hiện tại chúng không
-          phải là các lớp thời gian chạy riêng biệt. Lời nhắc hệ thống được sử
-          dụng trực tiếp trong quá trình lắp ráp lời nhắc hoạt động của AIRI.
-          Hướng dẫn sau lịch sử hiện được giữ lại chủ yếu để tương thích thẻ và
-          quy trình lời nhắc trong tương lai, vì vậy bạn có thể điền ngay bây
-          giờ mà chưa cần mong đợi sự khác biệt về hành vi trực tiếp riêng biệt.
+        identity_prompting: Các trường này đều giúp định hình nhân vật, nhưng hiện tại
+          chúng không phải là các lớp thời gian chạy riêng biệt. Lời nhắc hệ
+          thống được sử dụng trực tiếp trong quá trình lắp ráp lời nhắc hoạt
+          động của AIRI. Hướng dẫn sau lịch sử hiện được giữ lại chủ yếu để
+          tương thích thẻ và quy trình lời nhắc trong tương lai, vì vậy bạn có
+          thể điền ngay bây giờ mà chưa cần mong đợi sự khác biệt về hành vi
+          trực tiếp riêng biệt.
       errors:
         name: Tên không hợp lệ hoặc rỗng.
         version: 'Lỗi: Số phiên bản không hợp lệ!'
@@ -323,13 +324,13 @@ pages:
         scene: Bối cảnh
     explore:
       title: Khám phá hình đại diện
-      description: Khám phá kho lưu trữ cộng đồng, kho lưu trữ bên ngoài và thư viện mô
-        hình miễn phí cho VRM, Live2D, Spine và MMD.
+      description: Khám phá kho lưu trữ cộng đồng, kho lưu trữ bên ngoài và thư viện
+        mô hình miễn phí cho VRM, Live2D, Spine và MMD.
     tip:
       title: Tìm kiếm thêm hình đại diện?
-      description: Bạn đã chán các mô hình hiện có? Muốn tải xuống một số mô hình mới miễn
-        phí? Hãy xem danh mục hình đại diện và thị trường được tuyển chọn của
-        chúng tôi.
+      description: Bạn đã chán các mô hình hiện có? Muốn tải xuống một số mô hình mới
+        miễn phí? Hãy xem danh mục hình đại diện và thị trường được tuyển chọn
+        của chúng tôi.
       action: Khám phá hình đại diện
   modules:
     beat_sync:
@@ -534,6 +535,11 @@ pages:
             use-ssml:
               description: Bật để nhập SSML thô thay vì văn bản
               label: Dùng SSML tùy chỉnh
+          audio-output:
+            title: Thiết bị đầu ra âm thanh
+            description: Chọn thiết bị đầu ra âm thanh để tổng hợp giọng nói và phát lại.
+            default: Thiết bị đầu ra mặc định
+            placeholder: Chọn thiết bị đầu ra âm thanh
       title: Giọng nói
     title: Module
     vision:
@@ -1301,6 +1307,16 @@ pages:
           phí. Các tùy chọn cục bộ như <b>Ollama</b> và <b>LM Studio</b> cũng hỗ
           trợ các mô hình thị giác (VLM).
         title: Nhìn thế giới xung quanh?
+      motion:
+        title: Cử chỉ & Động học 3D?
+        description: Tổng hợp chuyển động và cử chỉ nhân vật 3D VRM theo thời gian thực
+          trên thiết bị bằng mô hình khuếch tán tạo sinh <b>FlowMDM (WebGPU cục
+          bộ)</b>.
+      cloud:
+        title: Đồng bộ hóa đám mây & Sao lưu?
+        description: Giữ an toàn cho thẻ, kho lưu trữ ký ức và cài đặt trên các thiết bị.
+          Sử dụng <b>Hệ thống tệp cục bộ</b> để sao lưu máy tính/NAS hoặc <b>Bộ
+          nhớ tương thích S3</b> (Cloudflare R2, MinIO, AWS S3).
     speech:
       app_local_audio:
         description: Cấu hình cài đặt đầu ra âm thanh cục bộ để tổng hợp giọng nói.
@@ -1316,6 +1332,10 @@ pages:
         device_id: ID thiết bị đầu vào
         device_id_placeholder: "Nhập ID thiết bị đầu vào (ví dụ: 'default')..."
         title: Cài đặt âm thanh ứng dụng (cục bộ)
+    cache:
+      title: Bộ nhớ đệm mô hình
+      subtitle: Trọng số nơ-ron trên thiết bị
+      manage: Quản lý
   connection:
     description: Cấu hình kết nối máy chủ WebSocket
     title: Kết nối
@@ -1345,19 +1365,19 @@ pages:
         the network. If empty, the gateway will not require authentication.
     hf-token:
       label: Mã thông báo Hugging Face (Tùy chọn)
-      description: Mã thông báo truy cập người dùng Hugging Face của bạn. Được sử dụng để
-        tải xuống mô hình và tránh lỗi giới hạn tốc độ/bị bóp băng thông.
+      description: Mã thông báo truy cập người dùng Hugging Face của bạn. Được sử dụng
+        để tải xuống mô hình và tránh lỗi giới hạn tốc độ/bị bóp băng thông.
       placeholder: hf_...
   scene:
     description: Cấu hình môi trường nhân vật sinh sống
     title: Bối cảnh
     beta_label: Hệ thống cảnh
-    beta_description: Mỗi thẻ nhân vật chỉ định hình nền ưa thích riêng từ thư viện này. Đặt ở
-      đây sẽ đặt làm mặc định cho nhân vật đang hoạt động.
+    beta_description: Mỗi thẻ nhân vật chỉ định hình nền ưa thích riêng từ thư viện
+      này. Đặt ở đây sẽ đặt làm mặc định cho nhân vật đang hoạt động.
     background_image:
       title: Hình nền nhân vật đang hoạt động
-      no_background: Không có hình nền nào đang hoạt động cho nhân vật này. Hãy tải lên hình
-        ảnh vuông hoặc ngang để có kết quả tốt nhất.
+      no_background: Không có hình nền nào đang hoạt động cho nhân vật này. Hãy tải
+        lên hình ảnh vuông hoặc ngang để có kết quả tốt nhất.
       upload: Tải lên thư viện
       change: Đổi hình nền
       clear: Xóa mặc định
@@ -1370,8 +1390,8 @@ pages:
       active_badge: Cảnh hiện tại
     tip:
       label: Mẹo!
-      description: Sử dụng hình ảnh vuông sẽ tận dụng tính năng cắt <b>cover</b> ở chế độ
-        dọc, tập trung vào trung tâm của cảnh.
+      description: Sử dụng hình ảnh vuông sẽ tận dụng tính năng cắt <b>cover</b> ở chế
+        độ dọc, tập trung vào trung tâm của cảnh.
   system:
     color-scheme:
       description: Đổi bảng màu sân khấu.
@@ -1574,8 +1594,8 @@ pages:
         button: Mở
   chat:
     title: Cài đặt trò chuyện & Nhập liệu
-    description: Tổ hợp phím gửi, thời gian chờ phản hồi luồng và hành vi của bong bóng tin
-      nhắn
+    description: Tổ hợp phím gửi, thời gian chờ phản hồi luồng và hành vi của bong
+      bóng tin nhắn
     send-mode:
       title: Chế độ gửi
       description: Chọn tổ hợp phím để gửi tin nhắn.
@@ -1594,8 +1614,8 @@ pages:
       showcase: Trưng bày
   dating-sim:
     title: Chế độ Dating Sim
-    description: Điều chỉnh các chế độ trò chơi tương tác, ngưỡng tiến độ thân mật và quy
-      tắc hành vi hình ảnh
+    description: Điều chỉnh các chế độ trò chơi tương tác, ngưỡng tiến độ thân mật
+      và quy tắc hành vi hình ảnh
   stage:
     title: Điều khiển nổi
     description: Tùy chỉnh các khe thanh tác vụ nổi, cạnh neo và trình kích hoạt nhanh
@@ -1722,8 +1742,8 @@ providers:
 privacy:
   remote-sync:
     title: Bật đồng bộ đám mây
-    description: Mặc định tắt. Khi tắt, AIRI chỉ hoạt động cục bộ và sẽ không tìm nạp phiên
-      từ xa hoặc đồng bộ lịch sử trò chuyện với airi-api.moeru.ai.
+    description: Mặc định tắt. Khi tắt, AIRI chỉ hoạt động cục bộ và sẽ không tìm
+      nạp phiên từ xa hoặc đồng bộ lịch sử trò chuyện với airi-api.moeru.ai.
 groups:
   character:
     title: Nhân vật & Cảnh

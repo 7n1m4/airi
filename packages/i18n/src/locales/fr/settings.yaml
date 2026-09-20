@@ -210,13 +210,13 @@ pages:
         consciousness_model: Sélectionnez le modèle de conscience (modèle AB) pour ce caractère.
         speech_model: Sélectionnez le modèle de synthèse vocale et la voix pour ce
           personnage.
-        identity_prompting: Tous ces champs aident à définir le personnage, mais ne constituent
-          pas aujourd'hui des couches d'exécution distinctes. Le prompt système
-          est utilisé dans l'assemblage du prompt actif d'AIRI. Les instructions
-          post-historique sont principalement conservées pour la compatibilité
-          des fiches et les futurs travaux de pipeline de prompts, vous pouvez
-          donc les remplir sans attendre de comportement distinct pour le
-          moment.
+        identity_prompting: Tous ces champs aident à définir le personnage, mais ne
+          constituent pas aujourd'hui des couches d'exécution distinctes. Le
+          prompt système est utilisé dans l'assemblage du prompt actif d'AIRI.
+          Les instructions post-historique sont principalement conservées pour
+          la compatibilité des fiches et les futurs travaux de pipeline de
+          prompts, vous pouvez donc les remplir sans attendre de comportement
+          distinct pour le moment.
       errors:
         name: Le nom doit être valide ou non vide.
         version: 'Erreur : numéro de version invalide !'
@@ -554,6 +554,12 @@ pages:
             use-ssml:
               description: Activez pour saisir du SSML brut au lieu de texte simple
               label: Utiliser SSML personnalisé
+          audio-output:
+            title: Périphérique de sortie audio
+            description: Sélectionnez le périphérique de sortie audio pour la synthèse
+              vocale et la lecture.
+            default: Périphérique de sortie par défaut
+            placeholder: Sélectionnez un périphérique de sortie audio
       title: Parole
     title: Modules
     vision:
@@ -1348,6 +1354,17 @@ pages:
           gratuite. Les options locales comme <b>Ollama</b> et <b>LM Studio</b>
           prennent également en charge les modèles avec vision (VLM).
         title: Voir le monde ?
+      motion:
+        title: Gestes et cinétique 3D ?
+        description: Synthétisez des mouvements et gestes de personnages VRM 3D en temps
+          réel sur l'appareil à l'aide de la diffusion générative <b>FlowMDM
+          (WebGPU local)</b>.
+      cloud:
+        title: Synchronisation cloud et sauvegardes ?
+        description: Gardez vos cartes, archives de mémoire et paramètres en sécurité sur
+          tous vos appareils. Utilisez le <b>Système de fichiers local</b> pour
+          les sauvegardes bureau/NAS ou le <b>Stockage compatible S3</b>
+          (Cloudflare R2, MinIO, AWS S3).
     speech:
       app_local_audio:
         description: Configurer les paramètres de sortie audio locale pour la synthèse
@@ -1363,6 +1380,10 @@ pages:
         device_id: ID du périphérique d'entrée
         device_id_placeholder: "Entrez l'ID du périphérique d'entrée (ex : 'default')..."
         title: Paramètres audio de l'application (local)
+    cache:
+      title: Cache des modèles
+      subtitle: Poids neuronaux sur l'appareil
+      manage: Gérer
   connection:
     description: Configuration de la connexion au serveur WebSocket
     title: Connexion
@@ -1393,20 +1414,20 @@ pages:
         the network. If empty, the gateway will not require authentication.
     hf-token:
       label: Jeton Hugging Face (Facultatif)
-      description: Votre jeton d'accès utilisateur Hugging Face. Utilisé pour télécharger
-        des modèles et éviter les erreurs de limitation de débit.
+      description: Votre jeton d'accès utilisateur Hugging Face. Utilisé pour
+        télécharger des modèles et éviter les erreurs de limitation de débit.
       placeholder: hf_...
   scene:
     description: Configurer l’environnement où vit le personnage
     title: Scène
     beta_label: Système de scènes
-    beta_description: Chaque fiche de personnage spécifie son propre arrière-plan préféré à
-      partir de cette galerie. Le définir ici le configurera par défaut pour le
-      personnage actuellement actif.
+    beta_description: Chaque fiche de personnage spécifie son propre arrière-plan
+      préféré à partir de cette galerie. Le définir ici le configurera par
+      défaut pour le personnage actuellement actif.
     background_image:
       title: Arrière-plan du personnage actif
-      no_background: Aucun arrière-plan actif pour ce personnage. Téléversez une image carrée
-        ou paysage pour de meilleurs résultats.
+      no_background: Aucun arrière-plan actif pour ce personnage. Téléversez une image
+        carrée ou paysage pour de meilleurs résultats.
       upload: Téléverser dans la galerie
       change: Changer d'arrière-plan
       clear: Effacer la valeur par défaut
@@ -1420,8 +1441,9 @@ pages:
       active_badge: Scène actuelle
     tip:
       label: Astuce !
-      description: L'utilisation d'une image carrée tirera parti du recadrage <b>cover</b>
-        en mode portrait, en se concentrant sur le centre de la scène.
+      description: L'utilisation d'une image carrée tirera parti du recadrage
+        <b>cover</b> en mode portrait, en se concentrant sur le centre de la
+        scène.
   system:
     color-scheme:
       description: Modifier le schéma de couleurs de la scène.
@@ -1626,8 +1648,8 @@ pages:
         button: Ouvrir
   chat:
     title: Paramètres de chat et saisie
-    description: Combinaisons de touches d'envoi, délais d'attente de réponse en flux et
-      comportement des bulles de messages
+    description: Combinaisons de touches d'envoi, délais d'attente de réponse en
+      flux et comportement des bulles de messages
     send-mode:
       title: Mode d'envoi
       description: Choisissez la combinaison de touches pour envoyer des messages.
@@ -1646,12 +1668,12 @@ pages:
       showcase: Vitrine
   dating-sim:
     title: Mode Dating Sim
-    description: Ajuster les modes de jeu interactifs, les seuils de progression d'intimité
-      et les règles de comportement visuel
+    description: Ajuster les modes de jeu interactifs, les seuils de progression
+      d'intimité et les règles de comportement visuel
   stage:
     title: Contrôles flottants
-    description: Personnaliser les emplacements de la bande d'actions flottante, le bord
-      d'ancrage et les déclencheurs rapides
+    description: Personnaliser les emplacements de la bande d'actions flottante, le
+      bord d'ancrage et les déclencheurs rapides
 sections:
   section:
     general:
@@ -1750,9 +1772,9 @@ providers:
 privacy:
   remote-sync:
     title: Activer la synchronisation cloud
-    description: Désactivé par défaut. Si désactivé, AIRI reste exclusivement local et ne
-      récupérera aucune session distante ni ne synchronisera l'historique de
-      discussion avec airi-api.moeru.ai.
+    description: Désactivé par défaut. Si désactivé, AIRI reste exclusivement local
+      et ne récupérera aucune session distante ni ne synchronisera l'historique
+      de discussion avec airi-api.moeru.ai.
 groups:
   character:
     title: Personnage et scène
@@ -1768,8 +1790,8 @@ chat:
       double-enter: Double Entrée pour envoyer
   stream-idle-timeout:
     title: Délai d'inactivité du flux
-    description: Annule une réponse si le flux du modèle cesse de produire des événements
-      pendant trop longtemps.
+    description: Annule une réponse si le flux du modèle cesse de produire des
+      événements pendant trop longtemps.
     options:
       10s: 10 secondes
       15s: 15 secondes

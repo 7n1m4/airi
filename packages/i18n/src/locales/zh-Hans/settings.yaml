@@ -543,6 +543,11 @@ pages:
             use-ssml:
               description: 启用后可以输入原始 SSML 而不是纯文本
               label: 选用自定义 SSML
+          audio-output:
+            title: 音频输出设备
+            description: 选择用于语音合成与音频播放的输出设备。
+            default: 默认输出设备
+            placeholder: 选择音频输出设备
       title: 发声
     title: 机体模块
     vision:
@@ -1261,6 +1266,13 @@ pages:
         description: 推荐使用 <b>Google Gemini</b> 获取强大且免费的云端视觉理解能力。本地的 <b>Ollama</b> 和
           <b>LM Studio</b> 也支持多模态视觉模型（VLM）。
         title: 感知现实世界？
+      motion:
+        title: 3D 动作与手势？
+        description: 使用 <b>FlowMDM (本地 WebGPU)</b> 生成式扩散模型，在设备端实时合成 3D VRM 角色动作与手势。
+      cloud:
+        title: 云端同步与备份？
+        description: 跨设备安全保存您的角色卡、记忆档案和设置。桌面端/NAS 备份可使用<b>本地文件系统</b>，或使用 <b>S3 兼容存储</b>
+          (Cloudflare R2, MinIO, AWS S3)。
     speech:
       app_local_audio:
         description: 配置语音合成的本地音频输出设置。
@@ -1275,6 +1287,10 @@ pages:
         device_id: 输入设备 ID
         device_id_placeholder: 输入输入设备 ID（例如 "default"）...
         title: 应用内（本地）音频设置
+    cache:
+      title: 模型缓存
+      subtitle: 设备端神经网络权重
+      manage: 管理
   connection:
     description: 配置 WebSocket 服务器连接
     title: 连接

@@ -524,6 +524,11 @@ pages:
             use-ssml:
               description: 平文の代わりに生のSSMLを入力できるようにする
               label: カスタムSSMLを使用する
+          audio-output:
+            title: 音声出力デバイス
+            description: 音声合成および再生用の音声出力デバイスを選択します。
+            default: デフォルトの出力デバイス
+            placeholder: 音声出力デバイスを選択
       title: 音声
     title: モジュール
     vision:
@@ -1251,6 +1256,14 @@ pages:
         description: 強力で無料のクラウド画像認識には <b>Google Gemini</b> をご利用ください。ローカルの <b>Ollama</b>
           や <b>LM Studio</b> も視覚対応モデル（VLM）をサポートしています。
         title: 世界を見る（視覚認識）？
+      motion:
+        title: 3Dジェスチャーとキネティクス？
+        description: <b>FlowMDM (ローカル WebGPU)</b> 生成拡散を使用して、デバイス上でリアルタイムの3D
+          VRMキャラクターのモーションとジェスチャーを合成します。
+      cloud:
+        title: クラウド同期とバックアップ？
+        description: カード、記憶アーカイブ、設定をデバイス間で安全に保ちます。デスクトップ/NASバックアップには<b>ローカルファイルシステム</b>を、または<b>S3互換ストレージ</b>（Cloudflare
+          R2、MinIO、AWS S3）を使用します。
     speech:
       app_local_audio:
         description: 音声合成用のローカル音声出力設定を構成します。
@@ -1265,6 +1278,10 @@ pages:
         device_id: 入力デバイス ID
         device_id_placeholder: '入力デバイス ID を入力 (例: "default")...'
         title: アプリ (ローカル) 音声設定
+    cache:
+      title: モデルキャッシュ
+      subtitle: デバイス上のニューラルウェイト
+      manage: 管理
   connection:
     description: WebSocketサーバー接続の設定
     title: 接続
@@ -1622,8 +1639,8 @@ providers:
 privacy:
   remote-sync:
     title: クラウド同期を有効化
-    description: デフォルトで無効です。無効の場合、AIRI は完全にローカルのみで動作し、リモートセッションの取得や airi-api.moeru.ai
-      へのチャット履歴の同期は行いません。
+    description: デフォルトで無効です。無効の場合、AIRI は完全にローカルのみで動作し、リモートセッションの取得や
+      airi-api.moeru.ai へのチャット履歴の同期は行いません。
 groups:
   character:
     title: キャラクター＆シーン
