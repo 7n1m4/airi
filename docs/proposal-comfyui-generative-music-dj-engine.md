@@ -360,11 +360,13 @@ Instead of arbitrary clock-interval polling, the DJ engine hooks directly into t
 
 ## 📅 9. Roadmap & Implementation Checklist
 
-- [x] **AIRI Audio Server Music & LoRA Extension**:
+- [x] **AIRI Audio Server Music & Sound Generation Extension**:
   - [x] Add `POST /v1/audio/music` endpoint handling genre prompts, structured lyrics, duration, and LoRA adapters.
   - [x] Add `POST /v1/audio/music/plan` for fast symbolic ABC score planning.
   - [x] Add LoRA adapter management & training endpoints (`/v1/audio/music/loras`, `/v1/audio/music/loras/train`, `/v1/audio/music/loras/jobs`).
-  - [x] Add 1-click installation script (`npm run add-music` / `install.bat` music option) for MiniMax Music 3 and YuE 2 GGUF models.
+  - [x] Add `POST /v1/audio/voice-design` endpoint for natural language character voice synthesis via `MOSS-VoiceGenerator`.
+  - [x] Add `POST /v1/audio/sfx` endpoint for rapid 8-step sound effects & foley synthesis via `Stable Audio 3 Small SFX`.
+  - [x] Add 1-click model downloaders (`npm run add-music`, `npm run add-voicegen`, `npm run add-sfx`) and modular `install.bat` wizard.
 - [ ] **AIRI Client Music Provider**:
   - [ ] Define `MusicProvider`, `DJTrack`, and provider registry entries in `packages/stage-ui/src/libs/providers/`.
   - [ ] Implement `AiriAudioServerMusicProvider` connecting to `/v1/audio/music`.
