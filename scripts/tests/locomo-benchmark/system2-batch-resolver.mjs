@@ -60,7 +60,17 @@ export async function resolveSystem2Batch(items, opts = {}) {
   }
 
   const model = opts.model || 'deepseek-v4.1-flash'
-  const batchSize = opts.batchSize || 10
+  // ARCHITECTURAL NOTICE (AIRI Production Porting):
+  // 1. One-Shot Default: Ingesting the full deductive queue in a single prompt enables cross-question global
+  //    reasoning and cuts network round-trips/latency in half (~94s vs ~182s on conv-47).
+  // 2. Unforced Ceiling: Do NOT hardcode arbitrary max_tokens / output parameters in the request payload;
+  //    allow the underlying provider configuration (e.g. opencode.json limit.output or provider profile)
+  //    to define the output ceiling naturally.
+  // 3. Configurable Chunking: Chunking should remain a configurable parameter in AIRI (via Settings > Cognition
+  //    or System-2 Dispatch). While one-shotting succeeds on current benchmarks (~126 questions / ~24K completion tokens),
+  //    larger datasets (+20% volume) or providers with stricter per-request token caps will require chunking
+  //    to avoid hitting provider output truncation boundaries.
+  const batchSize = opts.batchSize || items.length
   const timeoutMs = opts.timeoutMs || 300_000 // 5 minutes timeout per user directive
   const results = {}
 

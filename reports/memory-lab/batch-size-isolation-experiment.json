@@ -1,0 +1,526 @@
+{
+  "timestamp": "2026-09-21T20:09:01.616Z",
+  "monolithic": {
+    "durationSec": 94.08,
+    "finishReason": "stop",
+    "usage": {
+      "prompt_tokens": 32824,
+      "completion_tokens": 24318,
+      "total_tokens": 57142,
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 32824,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 21446
+      }
+    },
+    "answeredCount": 119,
+    "insufficientCount": 7,
+    "missingCount": 0,
+    "avgUpstreamF1": 69.70555742983133
+  },
+  "chunked": {
+    "durationSec": 182.18,
+    "requests": 13,
+    "avgUpstreamF1": 69.32073750996054
+  },
+  "diffs": [
+    {
+      "id": "q_5",
+      "cat": 1,
+      "question": "What are John and James' favorite games?",
+      "gold": "John's favorite game is CS:GO, and James's is Apex Legends.",
+      "chunkedPred": "John's favorite game is CS:GO, James's favorite game is Apex Legends.",
+      "chunkedF1": "0.90",
+      "monoPred": "CS:GO, Apex Legends",
+      "monoF1": "0.50",
+      "delta": "-0.40"
+    },
+    {
+      "id": "q_6",
+      "cat": 3,
+      "question": "Does James live in Connecticut?",
+      "gold": "Likely yes",
+      "chunkedPred": "Likely yes",
+      "chunkedF1": "1.00",
+      "monoPred": "Yes",
+      "monoF1": "0.67",
+      "delta": "-0.33"
+    },
+    {
+      "id": "q_8",
+      "cat": 1,
+      "question": "How many pets does James have?",
+      "gold": "Three dogs.",
+      "chunkedPred": "Three dogs.",
+      "chunkedF1": "1.00",
+      "monoPred": "three",
+      "monoF1": "0.67",
+      "delta": "-0.33"
+    },
+    {
+      "id": "q_15",
+      "cat": 2,
+      "question": "When did James start playing Civilization VI?",
+      "gold": "March 2022",
+      "chunkedPred": "29 April 2022",
+      "chunkedF1": "0.40",
+      "monoPred": "UNKNOWN",
+      "monoF1": "0.00",
+      "delta": "-0.40"
+    },
+    {
+      "id": "q_18",
+      "cat": 1,
+      "question": "Which books has John recommended to James?",
+      "gold": "The Name of the Wind, Stormlight Archive, Kingkiller Chronicles, Expanse",
+      "chunkedPred": "The Name of the Wind, The Stormlight Archive, Kingkiller Chronicle, The Expanse",
+      "chunkedF1": "1.00",
+      "monoPred": "The Name of the Wind, The Stormlight Archive, Kingkiller Chronicle, The Expanse series",
+      "monoF1": "0.92",
+      "delta": "-0.08"
+    },
+    {
+      "id": "q_23",
+      "cat": 2,
+      "question": "When will John start his new job?",
+      "gold": "In July, 2022",
+      "chunkedPred": "next month",
+      "chunkedF1": "0.00",
+      "monoPred": "July 2022",
+      "monoF1": "0.80",
+      "delta": "0.80"
+    },
+    {
+      "id": "q_24",
+      "cat": 1,
+      "question": "What kind of games has James tried to develop?",
+      "gold": "football simulator, virtual world inspired by Witcher 3",
+      "chunkedPred": "UNKNOWN",
+      "chunkedF1": "0.00",
+      "monoPred": "strategy game, football simulator, Witcher 3-inspired virtual world",
+      "monoF1": "0.80",
+      "delta": "0.80"
+    },
+    {
+      "id": "q_26",
+      "cat": 1,
+      "question": "Which countries has James visited?",
+      "gold": "Italy, Mexico, Turkey, Canada, Greenland",
+      "chunkedPred": "Italy",
+      "chunkedF1": "0.20",
+      "monoPred": "Italy, Turkey, Mexico, Canada, Greenland",
+      "monoF1": "1.00",
+      "delta": "0.80"
+    },
+    {
+      "id": "q_36",
+      "cat": 3,
+      "question": "Who is Jill?",
+      "gold": "Most likely John's partner.",
+      "chunkedPred": "John's girlfriend",
+      "chunkedF1": "0.33",
+      "monoPred": "UNKNOWN",
+      "monoF1": "0.00",
+      "delta": "-0.33"
+    },
+    {
+      "id": "q_38",
+      "cat": 1,
+      "question": "What happened to John's job situation in 2022?",
+      "gold": "quit his IT Job, secured his dream job, aspires to become an eSports competition organizer",
+      "chunkedPred": "He left his IT job and started a new job",
+      "chunkedF1": "0.28",
+      "monoPred": "left IT job after 3 years and started a new job",
+      "monoF1": "0.15",
+      "delta": "-0.12"
+    },
+    {
+      "id": "q_44",
+      "cat": 3,
+      "question": "Why didn't John want to go to Starbucks?",
+      "gold": "Possibly because he likes to drink beer on his days off.",
+      "chunkedPred": "He wanted a beer",
+      "chunkedF1": "0.29",
+      "monoPred": "wanted beer",
+      "monoF1": "0.15",
+      "delta": "-0.13"
+    },
+    {
+      "id": "q_49",
+      "cat": 1,
+      "question": "What gaming equipments did John buy or refurbish?",
+      "gold": "Sennheiser headphones, Logitech mouse, gaming desk",
+      "chunkedPred": "gaming desk, headphones",
+      "chunkedF1": "0.56",
+      "monoPred": "Sennheiser headphones, Logitech mouse, gaming desk",
+      "monoF1": "1.00",
+      "delta": "0.44"
+    },
+    {
+      "id": "q_51",
+      "cat": 1,
+      "question": "Which new games did John start play during the course of the conversation with James?",
+      "gold": "AC Valhalla, Witcher 3, FIFA 23, Dungeons of the Dragons, futuristic dystopian game",
+      "chunkedPred": "Dungeons of the Dragon",
+      "chunkedF1": "0.20",
+      "monoPred": "Dungeons of the Dragon, chess, FIFA 23, The Witcher 3, AC Valhalla, Among Us",
+      "monoF1": "0.80",
+      "delta": "0.60"
+    },
+    {
+      "id": "q_53",
+      "cat": 2,
+      "question": "How long did it take for James to complete his Witcher-inspired game?",
+      "gold": "six months",
+      "chunkedPred": "UNKNOWN",
+      "chunkedF1": "0.00",
+      "monoPred": "nearly six months",
+      "monoF1": "0.80",
+      "delta": "0.80"
+    },
+    {
+      "id": "q_54",
+      "cat": 1,
+      "question": "What kind of programming-related events has John hosted?",
+      "gold": "online programming competition, programming seminar",
+      "chunkedPred": "programming seminar",
+      "chunkedF1": "0.70",
+      "monoPred": "programming seminar, online competition",
+      "monoF1": "0.90",
+      "delta": "0.20"
+    },
+    {
+      "id": "q_56",
+      "cat": 1,
+      "question": "Which of James's family members have visited him in the last year?",
+      "gold": "mother, sister",
+      "chunkedPred": "his mother",
+      "chunkedF1": "0.33",
+      "monoPred": "mother",
+      "monoF1": "0.50",
+      "delta": "0.17"
+    },
+    {
+      "id": "q_61",
+      "cat": 2,
+      "question": "What was James' big moment with Samantha in October 2023?",
+      "gold": "They decided to live together and rented an apartment not far from McGee's bar.",
+      "chunkedPred": "they decided to move in together",
+      "chunkedF1": "0.44",
+      "monoPred": "moving in together",
+      "monoF1": "0.13",
+      "delta": "-0.31"
+    },
+    {
+      "id": "q_68",
+      "cat": 4,
+      "question": "What type of mobile application does James plan to build with John?",
+      "gold": "An app for dog walking and pet care",
+      "chunkedPred": "dog walking and pet care",
+      "chunkedF1": "0.80",
+      "monoPred": "dog walking and pet care app",
+      "monoF1": "0.91",
+      "delta": "0.11"
+    },
+    {
+      "id": "q_69",
+      "cat": 4,
+      "question": "How does James plan to make his dog-sitting app unique?",
+      "gold": "By allowing users to customize their pup's preferences/needs",
+      "chunkedPred": "personal touch",
+      "chunkedF1": "0.00",
+      "monoPred": "personalized pup preferences and needs",
+      "monoF1": "0.17",
+      "delta": "0.17"
+    },
+    {
+      "id": "q_71",
+      "cat": 4,
+      "question": "What did James offer to do for John regarding pets?",
+      "gold": "help find the perfect pet",
+      "chunkedPred": "help find the perfect pet",
+      "chunkedF1": "1.00",
+      "monoPred": "help find a pet",
+      "monoF1": "0.86",
+      "delta": "-0.14"
+    },
+    {
+      "id": "q_78",
+      "cat": 4,
+      "question": "What did James adopt in April 2022?",
+      "gold": "a pup",
+      "chunkedPred": "a pup",
+      "chunkedF1": "1.00",
+      "monoPred": "Ned",
+      "monoF1": "0.00",
+      "delta": "-1.00"
+    },
+    {
+      "id": "q_80",
+      "cat": 4,
+      "question": "Why did James embody the appearance of the game character from the woman he saw during a walk?",
+      "gold": "He found her appearance and eyes amazing.",
+      "chunkedPred": "Her appearance amazed him",
+      "chunkedF1": "0.60",
+      "monoPred": "fell in love at first sight",
+      "monoF1": "0.00",
+      "delta": "-0.60"
+    },
+    {
+      "id": "q_81",
+      "cat": 4,
+      "question": "What inspired James to create the game character in the virtual world?",
+      "gold": "Appearance of a woman he saw during a walk",
+      "chunkedPred": "A woman he saw during a walk",
+      "chunkedF1": "0.83",
+      "monoPred": "a stranger woman he saw on a walk",
+      "monoF1": "0.62",
+      "delta": "-0.22"
+    },
+    {
+      "id": "q_82",
+      "cat": 4,
+      "question": "Which country did James visit in 2021?",
+      "gold": "Italy",
+      "chunkedPred": "UNKNOWN",
+      "chunkedF1": "0.00",
+      "monoPred": "Italy",
+      "monoF1": "1.00",
+      "delta": "1.00"
+    },
+    {
+      "id": "q_83",
+      "cat": 4,
+      "question": "What impresses John about Japan?",
+      "gold": "Technologically advanced megacities and tasty street food",
+      "chunkedPred": "megacities, advanced technology, huge screens on buildings, tasty street food",
+      "chunkedF1": "0.75",
+      "monoPred": "megacities, technological advancement, huge screens on buildings, street food",
+      "monoF1": "0.67",
+      "delta": "-0.08"
+    },
+    {
+      "id": "q_84",
+      "cat": 4,
+      "question": "What kind of assignment was giving John a hard time at work?",
+      "gold": "Coding assignment",
+      "chunkedPred": "a difficult coding assignment",
+      "chunkedF1": "0.80",
+      "monoPred": "coding assignment",
+      "monoF1": "1.00",
+      "delta": "0.20"
+    },
+    {
+      "id": "q_88",
+      "cat": 4,
+      "question": "What did John organize with his friends on May 8, 2022?",
+      "gold": "A tournament for CS:GO",
+      "chunkedPred": "CS:GO charity tournament",
+      "chunkedF1": "0.67",
+      "monoPred": "charity tournament",
+      "monoF1": "0.40",
+      "delta": "-0.27"
+    },
+    {
+      "id": "q_91",
+      "cat": 4,
+      "question": "What did the system John created help the charitable foundation with?",
+      "gold": "tracking inventory, resources, and donations",
+      "chunkedPred": "streamlining operations",
+      "chunkedF1": "0.00",
+      "monoPred": "streamline operations, track inventory, resources, and donations, and generate reports",
+      "monoF1": "0.67",
+      "delta": "0.67"
+    },
+    {
+      "id": "q_98",
+      "cat": 4,
+      "question": "What is Max good at doing according to James?",
+      "gold": "catching frisbees in mid-air",
+      "chunkedPred": "catching frisbees",
+      "chunkedF1": "0.67",
+      "monoPred": "catching frisbees in mid-air",
+      "monoF1": "1.00",
+      "delta": "0.33"
+    },
+    {
+      "id": "q_110",
+      "cat": 4,
+      "question": "What game genre did John start exploring instead of shooters?",
+      "gold": "strategy and RPG games",
+      "chunkedPred": "strategy and RPG games",
+      "chunkedF1": "1.00",
+      "monoPred": "strategy and RPG",
+      "monoF1": "0.80",
+      "delta": "-0.20"
+    },
+    {
+      "id": "q_112",
+      "cat": 4,
+      "question": "What aspect of \"The Witcher 3\" does John find immersive?",
+      "gold": "shaping the world with choices",
+      "chunkedPred": "choices shaping the world",
+      "chunkedF1": "0.86",
+      "monoPred": "story and characters",
+      "monoF1": "0.00",
+      "delta": "-0.86"
+    },
+    {
+      "id": "q_114",
+      "cat": 4,
+      "question": "What is James planning to do after receiving Samantha's phone number?",
+      "gold": "call her",
+      "chunkedPred": "ask her out",
+      "chunkedF1": "0.40",
+      "monoPred": "call her",
+      "monoF1": "1.00",
+      "delta": "0.60"
+    },
+    {
+      "id": "q_115",
+      "cat": 4,
+      "question": "What is John organizing with his siblings?",
+      "gold": "a gaming night",
+      "chunkedPred": "gaming night",
+      "chunkedF1": "1.00",
+      "monoPred": "gaming tournament",
+      "monoF1": "0.50",
+      "delta": "-0.50"
+    },
+    {
+      "id": "q_117",
+      "cat": 4,
+      "question": "What were some difficulties James faced during the development of his game?",
+      "gold": "balancing mechanics and ensuring fairness",
+      "chunkedPred": "bug in code, balancing mechanics, ensuring fairness",
+      "chunkedF1": "0.73",
+      "monoPred": "code bug messing up game mechanics, balancing mechanics and fairness",
+      "monoF1": "0.46",
+      "delta": "-0.27"
+    },
+    {
+      "id": "q_121",
+      "cat": 4,
+      "question": "What did James and Samantha discover they both enjoy at McGee's bar?",
+      "gold": "Lager beer",
+      "chunkedPred": "lager beer",
+      "chunkedF1": "1.00",
+      "monoPred": "lager",
+      "monoF1": "0.67",
+      "delta": "-0.33"
+    },
+    {
+      "id": "q_124",
+      "cat": 4,
+      "question": "Why did James sign up for a cooking class?",
+      "gold": "He wanted to learn something new",
+      "chunkedPred": "to learn something new",
+      "chunkedF1": "0.80",
+      "monoPred": "wanted to learn something new",
+      "monoF1": "0.91",
+      "delta": "0.11"
+    },
+    {
+      "id": "q_128",
+      "cat": 4,
+      "question": "What kind of dream did James have recently?",
+      "gold": "a dream with a medieval castle full of puzzles and traps",
+      "chunkedPred": "a crazy, vivid dream",
+      "chunkedF1": "0.18",
+      "monoPred": "medieval castle with puzzles and traps",
+      "monoF1": "0.77",
+      "delta": "0.59"
+    },
+    {
+      "id": "q_132",
+      "cat": 4,
+      "question": "What career milestone did John achieve recently in September 2022?",
+      "gold": "making his first mobile game",
+      "chunkedPred": "making first mobile game",
+      "chunkedF1": "0.89",
+      "monoPred": "made his first mobile game",
+      "monoF1": "0.80",
+      "delta": "-0.09"
+    },
+    {
+      "id": "q_133",
+      "cat": 4,
+      "question": "What type of game is John's upcoming mobile game?",
+      "gold": "2D adventure",
+      "chunkedPred": "2D adventure game",
+      "chunkedF1": "0.80",
+      "monoPred": "2D adventure game with puzzles and exploration",
+      "monoF1": "0.50",
+      "delta": "-0.30"
+    },
+    {
+      "id": "q_134",
+      "cat": 4,
+      "question": "What does John do to stay informed and constantly learn about game design?",
+      "gold": "watch tutorials and keep up with developer forums",
+      "chunkedPred": "watches tutorials and keeps up with developer forums",
+      "chunkedF1": "1.00",
+      "monoPred": "reads magazine, watches tutorials, keeps up with developer forums",
+      "monoF1": "0.88",
+      "delta": "-0.12"
+    },
+    {
+      "id": "q_137",
+      "cat": 4,
+      "question": "What kind of games is James excited to play with his new video card?",
+      "gold": "RPGs",
+      "chunkedPred": "RPGs",
+      "chunkedF1": "1.00",
+      "monoPred": "RPGs, Cyberpunk 2077",
+      "monoF1": "0.50",
+      "delta": "-0.50"
+    },
+    {
+      "id": "q_140",
+      "cat": 4,
+      "question": "What did James lose progress on due to a power outage?",
+      "gold": "a game",
+      "chunkedPred": "a game",
+      "chunkedF1": "1.00",
+      "monoPred": "game progress",
+      "monoF1": "0.67",
+      "delta": "-0.33"
+    },
+    {
+      "id": "q_142",
+      "cat": 4,
+      "question": "What was the purpose of the gaming tournament organized by John on 31 October, 2022?",
+      "gold": "To raise money for a children's hospital",
+      "chunkedPred": "to raise money for a children's hospital",
+      "chunkedF1": "1.00",
+      "monoPred": "raise money for a children's hospital",
+      "monoF1": "0.91",
+      "delta": "-0.09"
+    },
+    {
+      "id": "q_144",
+      "cat": 4,
+      "question": "Where did James and Samantha decide to live together on 31 October, 2022?",
+      "gold": "In an apartment not far from McGee's bar",
+      "chunkedPred": "near McGee's bar",
+      "chunkedF1": "0.40",
+      "monoPred": "apartment not far from McGee's bar",
+      "monoF1": "0.92",
+      "delta": "0.52"
+    },
+    {
+      "id": "q_145",
+      "cat": 4,
+      "question": "Why did James and Samantha choose an apartment near McGee's bar?",
+      "gold": "They love spending time together at the bar",
+      "chunkedPred": "they love the bar",
+      "chunkedF1": "0.60",
+      "monoPred": "they love McGee's bar",
+      "monoF1": "0.55",
+      "delta": "-0.05"
+    }
+  ]
+}

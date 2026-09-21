@@ -197,7 +197,7 @@ export class DualSearcherPass3 {
           }
 
           let kwScore = 0
-          const tLower = (turn.rawText || '').toLowerCase()
+          const tLower = (turn.text || turn.rawText || '').toLowerCase()
           for (const qt of qTokens) {
             if (tLower.includes(qt))
               kwScore += 0.05
@@ -221,10 +221,11 @@ export class DualSearcherPass3 {
 
           const criteria = {}
           topSessionTurns.forEach((item, idx) => {
-            const snippet = item.turn.rawText.length <= 380
-              ? item.turn.rawText
-              : `${item.turn.rawText.slice(0, 380)}...`
-            criteria[`turn_${idx}`] = `${item.turn.id} (${item.turn.speaker}): ${snippet}`
+            const fullSnippet = item.turn.text || item.turn.rawText
+            const snippet = fullSnippet.length <= 380
+              ? fullSnippet
+              : `${fullSnippet.slice(0, 380)}...`
+            criteria[`turn_${idx}`] = `${item.turn.id}: ${snippet}`
           })
           criteria.none = 'None of the above turns contain relevant evidence.'
 

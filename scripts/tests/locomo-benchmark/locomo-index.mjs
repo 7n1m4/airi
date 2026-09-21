@@ -115,9 +115,13 @@ export class LocomoMemoryIndex {
         const dateTimeKey = `${key}_date_time`
         const timestamp = conversation[dateTimeKey] || ''
 
-        for (const turn of val) {
+        for (let tIdx = 0; tIdx < val.length; tIdx++) {
+          const turn = val[tIdx]
+          const prevTurn = tIdx > 0 ? val[tIdx - 1] : null
           const id = turn.dia_id
-          const text = `${turn.speaker}: ${turn.text}`
+          // Anaphora-resolution window: prepend immediate prior turn if present in session
+          const contextPrefix = prevTurn ? `${prevTurn.speaker}: ${prevTurn.text}\n` : ''
+          const text = `${contextPrefix}${turn.speaker}: ${turn.text}`
           const tokens = tokenize(text)
           const freqs = {}
           for (const t of tokens) {

@@ -71,7 +71,7 @@ export async function jevZeroShotTriage(jev, question) {
       probabilities,
       temporalSubtype,
       searchScope,
-      method: 'typesafe_jev_system1',
+      method: jev?.method || (jev?.type === 'laya' ? 'laya_system1_onnx' : 'typesafe_jev_system1'),
     }
   }
   catch (err) {
