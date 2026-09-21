@@ -11,7 +11,6 @@
 
 import { format } from 'date-fns'
 
-import { extractCandidateSpans, selectAnswerSpanWithJev } from './span-reader.mjs'
 import { parseLoCoMoDateTime, resolveTemporalExpression } from './temporal-resolver.mjs'
 
 const DIGIT_TO_WORD = {
@@ -69,9 +68,10 @@ export function normalizeCountAnswer(ans, question) {
 export function shouldEscalateToSystem2(ledgerResult, triage, system1Pred) {
   if (ledgerResult)
     return false
+  const isList = triage?.category === 1 || triage?.searchScope === 'multi_session' || triage?.choice === 'c1_multihop'
   const isDetective = triage?.category === 3 || triage?.choice === 'c3_detective'
   const isAbstain = system1Pred === 'UNKNOWN'
-  return isDetective || isAbstain
+  return isList || isDetective || isAbstain
 }
 
 export class AnswerHeadPass3 {
@@ -203,53 +203,9 @@ export class AnswerHeadPass3 {
       }
     }
 
-    // 3. Step 4: Grounded Span Selection via TypeSafe Jev System-1
-    if (this.jev && textCandidates && textCandidates.length > 0) {
-      const isMultiSession = triage?.searchScope === 'multi_session' || triage?.category === 1
-      const topContexts = textCandidates.slice(0, isMultiSession ? 6 : 3)
-        .map(c => c.rawText || c.text || '')
-        .filter(Boolean)
-
-      const contextPassage = topContexts.join(' ')
-      const candidateSpans = extractCandidateSpans(contextPassage, question)
-
-      if (candidateSpans.length > 0) {
-        const spanRes = await selectAnswerSpanWithJev(this.jev, question, contextPassage, candidateSpans)
-        if (spanRes.status === 'found' && spanRes.answer && spanRes.confidence >= 0.35) {
-          return spanRes.answer
-        }
-        if (spanRes.status === 'abstain') {
-          // Jev explicitly abstained because the literal answer is not present in candidate spans
-          return 'UNKNOWN'
-        }
-      }
-      else {
-        // No candidate spans could be extracted from literal text
-        return 'UNKNOWN'
-      }
-    }
-
-    // 4. Needle SLM Generative Fallback
-    if (this.needle && textCandidates && textCandidates.length > 0) {
-      const topCand = textCandidates[0]
-      const evidenceSnippet = (topCand.rawText || topCand.text || '').slice(0, 200)
-      const prompt = `Evidence: ${evidenceSnippet}\nQuestion: ${question}\nShort Answer:`
-
-      const response = this.needle.complete(prompt, 32)
-      if (response && typeof response === 'string') {
-        const clean = response.trim().replace(/^(answer:\s*)/i, '').trim()
-        if (
-          clean.length > 0
-          && !clean.startsWith('{')
-          && !clean.includes('"type":"call"')
-          && !clean.includes('No tool available')
-          && !clean.includes('truncated')
-        ) {
-          return clean
-        }
-      }
-    }
-
+    // 3. System-1 Clean Abstention
+    // Non-graph, non-date conversational queries cleanly return UNKNOWN
+    // to escalate to System-2 reading comprehension without brittle regex span chopping.
     return 'UNKNOWN'
   }
 }

@@ -25,6 +25,7 @@ import {
   aggregateBenchmarkResults,
   computeBleu1,
   computeTokenF1,
+  computeUpstreamLoCoMoF1,
 } from './locomo-metrics.mjs'
 import { NeedleNode } from './needle-node.mjs'
 import { resolvePlaceHierarchically } from './place-resolver.mjs'
@@ -52,12 +53,12 @@ const Q_EMBEDDINGS_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-co
 const BASE_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger.json')
 const PASS3_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger-pass3.json')
 const PASS1_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass2-trace.json')
-const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass7-report.md')
-const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass7-trace.json')
+const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass8-report.md')
+const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass8-trace.json')
 
 console.log('================================================================')
-console.log('LoCoMo conv-47 Pass 7: Unified Evidence Bundles + Uncapped System-2 + Scorer Parity')
-console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 1 vs Pass 7')
+console.log('LoCoMo conv-47 Pass 8: Jev In-Session Semantic Distillation & Clean Dual-Process Architecture')
+console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 1 vs Pass 8')
 console.log('================================================================\n')
 
 // 1. Load Dataset
@@ -199,6 +200,7 @@ for (let i = 0; i < qas.length; i++) {
   // C. Answer Head: Graph Deductive Formatter + Jev Span Reader + Temporal Resolver
   const p3Pred = await answerHead.formatAnswer(q.question, p3SearchRes, jevTriage)
   const p3F1 = computeTokenF1(p3Pred, q.answer)
+  const p3UpstreamF1 = computeUpstreamLoCoMoF1(p3Pred, q.answer, goldCategory)
   const p3Bleu = computeBleu1(p3Pred, q.answer)
 
   pass3Results.push({
@@ -212,16 +214,21 @@ for (let i = 0; i < qas.length; i++) {
     ledgerResult: p3SearchRes.ledgerResult,
     evidenceRecall: p3Recall,
     topEvidenceIds: p3SearchRes.topEvidence,
-    metrics: { f1: p3F1, bleu: p3Bleu },
+    metrics: { f1: p3F1, upstreamF1: p3UpstreamF1, bleu: p3Bleu },
   })
 
   // Autonomous dual-process routing:
-  // Escalates to System-2 ONLY if System-1 could not resolve the answer from graph or literal text,
-  // or if Jev zero-shot triage predicted open-domain deduction.
+  // Escalates to System-2 if System-1 abstains (UNKNOWN), if query is an open-domain deduction (C3),
+  // or if query is a multi-hop / multi-session list (C1).
   const needsSystem2 = shouldEscalateToSystem2(p3SearchRes.ledgerResult, jevTriage, p3Pred)
 
   if (needsSystem2) {
     const isDetectiveTriage = jevTriage.category === 3 || jevTriage.choice === 'c3_detective'
+    const isListTriage = jevTriage.category === 1 || jevTriage.searchScope === 'multi_session' || jevTriage.choice === 'c1_multihop'
+    const routeReason = isDetectiveTriage
+      ? 'triage_c3_detective'
+      : (isListTriage ? 'triage_c1_multihop' : 'reader_abstention_unknown')
+
     const evidenceBlocks = p3SearchRes.candidateObjects.map((c) => {
       const turnId = c.refDiaId || c.id || 'dialogue'
       const dateStr = c.timestamp || 'Unknown date'
@@ -235,7 +242,7 @@ for (let i = 0; i < qas.length; i++) {
       index: i,
       question: q.question,
       evidence: evidenceBlocks,
-      reason: isDetectiveTriage ? 'triage_c3_detective' : 'reader_abstention_unknown',
+      reason: routeReason,
     })
   }
 
@@ -244,7 +251,7 @@ for (let i = 0; i < qas.length; i++) {
     const bRec = ((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p1Rec = ((pass1Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p3Rec = ((pass3Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
-    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 1: ${p1Rec}% | Pass 7 (Jev): ${p3Rec}%`)
+    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 1: ${p1Rec}% | Pass 8 (Jev): ${p3Rec}%`)
   }
 }
 
@@ -264,6 +271,11 @@ if (system2Queue.length > 0) {
       pass3Results[item.index].finalPrediction = refinedPred
       pass3Results[item.index].system2Resolved = true
       pass3Results[item.index].routeReason = item.reason
+      pass3Results[item.index].metrics = {
+        f1: computeTokenF1(refinedPred, qas[item.index].answer),
+        upstreamF1: computeUpstreamLoCoMoF1(refinedPred, qas[item.index].answer, qas[item.index].category),
+        bleu: computeBleu1(refinedPred, qas[item.index].answer),
+      }
     }
   }
 }
@@ -280,17 +292,19 @@ const bRecallPct = (baselineHits / totalGoldEvidenceTurns) * 100
 const p1RecallPct = (pass1Hits / totalGoldEvidenceTurns) * 100
 const p3RecallPct = (pass3Hits / totalGoldEvidenceTurns) * 100
 
-const reportMd = `# LoCoMo conv-47 Pass 7: Unified Evidence Bundles + Uncapped System-2 + Scorer Parity Benchmark Report
+const reportMd = `# LoCoMo conv-47 Pass 8: Jev In-Session Semantic Distillation & Clean Dual-Process Architecture Benchmark Report
 
 - **Date**: ${new Date().toISOString()}
 - **Dataset**: conv-47 (31 sessions, 689 turns, 150 non-adversarial QA pairs)
 - **Duration**: ${shootoutDurationSec}s
 - **Architecture**:
-  - **Span Extraction**: Needle 2 WASM (Cactus SAN 45M on CPU)
+  - **In-Session Semantic Distillation**: Jev System-1 (\`type: 'choice'\`) dynamic turn distillation over session candidate pool
+  - **Clean Dual-Process Routing**: System-1 deterministic graph & date-fns arithmetic; clean UNKNOWN abstention
+  - **Auto-Escalation**: Multi-hop list queries (Category 1 / \`multi_session\`) escalate directly to System-2
   - **Triage & Cognitive Scope**: TypeSafe Jev System-1 API multi-field schema (\`category\`, \`temporal_subtype\`, \`search_scope\`)
   - **Reranking**: Batched TypeSafe Jev System-1 API (\`jev-latest\`, batched 10-15 candidates / call)
   - **Conversational Window Hydration**: Verbatim 3-turn dialogue window context (\`[D{s}:{t-1}, D{s}:{t}, D{s}:{t+1}]\`)
-  - **Unified Evidence Bundling**: Shared session-diversified candidate pool across System-1 Span Reader and System-2
+  - **Unified Evidence Bundling**: Shared session-diversified candidate pool across System-1 and System-2
   - **Uncapped System-2 Context**: 6000-char evidence budget with explicit turn IDs and session dates
   - **Temporal Arithmetic**: Jev-Governed Calendar Arithmetic & Greeting-Filtered Duration Extraction
   - **Deductive Synthesis (System-2)**: Ultra-Concise Batched DeepSeek Flash via OpenCode Go with strict token/polar constraints
@@ -299,7 +313,7 @@ const reportMd = `# LoCoMo conv-47 Pass 7: Unified Evidence Bundles + Uncapped S
 
 ## 1. Top-Line Scorecard
 
-| Metric | Baseline (Regex) | Pass 1 (Laya Coprocessor) | Pass 7 (Unified Evidence + Uncapped S2) | Pass 7 vs Pass 1 Delta |
+| Metric | Baseline (Regex) | Pass 1 (Laya Coprocessor) | Pass 8 (Jev Distillation + Clean S2) | Pass 8 vs Pass 1 Delta |
 | :--- | :--- | :--- | :--- | :--- |
 | **Evidence Recall@3** | ${bRecallPct.toFixed(2)}% | ${p1RecallPct.toFixed(2)}% | **${p3RecallPct.toFixed(2)}%** | **${(p3RecallPct - p1RecallPct) >= 0 ? '+' : ''}${(p3RecallPct - p1RecallPct).toFixed(2)}%** |
 | **Official Upstream F1** | ${bAgg.overall.upstreamF1.toFixed(2)}% | ${p1Agg.overall.upstreamF1.toFixed(2)}% | **${p3Agg.overall.upstreamF1.toFixed(2)}%** | **${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1).toFixed(2)}%** |
@@ -312,7 +326,7 @@ const reportMd = `# LoCoMo conv-47 Pass 7: Unified Evidence Bundles + Uncapped S
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
-console.log(`Saved Pass 7 report to ${OUTPUT_REPORT_PATH}`)
+console.log(`Saved Pass 8 report to ${OUTPUT_REPORT_PATH}`)
 
 const detailedComparison = qas.map((q, idx) => ({
   index: idx,
@@ -333,9 +347,9 @@ fs.writeFileSync(OUTPUT_TRACE_PATH, JSON.stringify({
   metrics: { baseline: bAgg, pass1: p1Agg, pass3: p3Agg },
   detailedComparison,
 }, null, 2))
-console.log(`Saved Pass 7 trace to ${OUTPUT_TRACE_PATH}`)
+console.log(`Saved Pass 8 trace to ${OUTPUT_TRACE_PATH}`)
 
 console.log('\n======================================================')
-console.log('PASS 7 SHOOTOUT COMPLETE')
+console.log('PASS 8 SHOOTOUT COMPLETE')
 console.log('======================================================')
 console.log(reportMd)

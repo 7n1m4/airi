@@ -271,3 +271,45 @@ describe('pass 7: Jev Multi-Field Triage, Greeting Filtering & Count Normalizati
     assert.equal(elapsedDays, 9, 'Elapsed days between July 11 and July 20 is 9 days, not 19 days')
   })
 })
+
+describe('pass 8: Clean Dual-Process Routing & Category 1 List Escalation', () => {
+  it('auto-escalates Category 1 multi-hop and multi_session list queries directly to System-2', async () => {
+    const { shouldEscalateToSystem2 } = await import('./answer-head-pass3.mjs')
+
+    const triageC1 = { category: 1, choice: 'c1_multihop', searchScope: 'single_session' }
+    const triageMultiSession = { category: 4, choice: 'c4_literal', searchScope: 'multi_session' }
+
+    // When ledger result is null, Category 1 or multi_session always escalates to System-2
+    assert.equal(shouldEscalateToSystem2(null, triageC1, 'Some single answer'), true)
+    assert.equal(shouldEscalateToSystem2(null, triageMultiSession, 'Some single answer'), true)
+
+    // Deterministic graph ledger results never escalate
+    assert.equal(shouldEscalateToSystem2({ type: 'pet_list' }, triageC1, 'Three dogs.'), false)
+  })
+
+  it('cleanly abstains with UNKNOWN for non-graph, non-temporal conversational queries', async () => {
+    const { AnswerHeadPass3 } = await import('./answer-head-pass3.mjs')
+    const head = new AnswerHeadPass3()
+
+    const q = 'How does James communicate with his gaming team?'
+    const searchResult = {
+      ledgerResult: null,
+      textCandidates: [
+        {
+          id: 'D4:14',
+          rawText: 'James: And yeah, we can totally use voice chat so it feels like we\'re in the same room.',
+          text: 'James: And yeah, we can totally use voice chat so it feels like we\'re in the same room.',
+        },
+      ],
+    }
+    const triage = {
+      category: 4,
+      choice: 'c4_literal',
+      temporalSubtype: 'none',
+      searchScope: 'single_session',
+    }
+
+    const ans = await head.formatAnswer(q, searchResult, triage)
+    assert.equal(ans, 'UNKNOWN', 'Non-graph, non-temporal query must cleanly abstain to UNKNOWN without brittle regex span chopping')
+  })
+})

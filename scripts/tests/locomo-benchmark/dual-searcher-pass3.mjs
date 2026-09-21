@@ -138,6 +138,121 @@ export class DualSearcherPass3 {
       weightKeyword: isLiteral ? 0.50 : 0.32,
     })
 
+    // --- 2.5 Jev In-Session Semantic Distillation ---
+    // When a candidate is an abstract session summary (kind: 'ltmm' or id: 'sum_session_X_summary'),
+    // dynamically distill the exact evidence-bearing raw dialogue turn using Jev System-1 choice
+    const summaryCandidates = hybridHits.filter(c =>
+      c.id.startsWith('sum_') || c.kind === 'ltmm' || (c.session && c.kind !== 'raw' && !c.refDiaId),
+    )
+
+    if (summaryCandidates.length > 0 && this.hybridSearcher?.index?.documents) {
+      const uniqueSessions = [...new Set(summaryCandidates.map(c => c.session).filter(Boolean))]
+      const sessionDistillMap = new Map() // sessionKey -> winning raw turn document
+      const jevQuestions = {}
+      const sessionDateHeaders = []
+
+      for (const sKey of uniqueSessions) {
+        const sessionRawTurns = Array.from(this.hybridSearcher.index.documents.values()).filter(d =>
+          d.kind === 'raw' && d.session === sKey,
+        )
+
+        if (sessionRawTurns.length === 0)
+          continue
+
+        // Score turns within this session using vector cosine similarity + lexical keyword overlap
+        const qTokens = question.toLowerCase().split(/\W+/).filter(t => t.length > 2)
+        const scoredTurns = sessionRawTurns.map((turn) => {
+          let vSim = 0
+          if (queryVector && this.hybridSearcher.embeddings?.[turn.id]) {
+            let dot = 0
+            let magA = 0
+            let magB = 0
+            const emb = this.hybridSearcher.embeddings[turn.id]
+            for (let k = 0; k < queryVector.length; k++) {
+              dot += queryVector[k] * emb[k]
+              magA += queryVector[k] * queryVector[k]
+              magB += emb[k] * emb[k]
+            }
+            if (magA && magB) {
+              vSim = dot / (Math.sqrt(magA) * Math.sqrt(magB))
+            }
+          }
+
+          let kwScore = 0
+          const tLower = (turn.rawText || '').toLowerCase()
+          for (const qt of qTokens) {
+            if (tLower.includes(qt))
+              kwScore += 0.05
+          }
+
+          return { turn, score: vSim + kwScore }
+        }).sort((a, b) => b.score - a.score)
+
+        const topSessionTurns = scoredTurns.slice(0, 8)
+        sessionDistillMap.set(sKey, { topSessionTurns, winningTurn: topSessionTurns[0]?.turn })
+
+        if (this.jev) {
+          const sessionDoc = this.hybridSearcher.index.documents.get(`sum_${sKey}_summary`) || topSessionTurns[0]?.turn
+          const sessionTimestamp = sessionDoc?.timestamp || ''
+          sessionDateHeaders.push(`${sKey} Date: ${sessionTimestamp}`)
+
+          const criteria = {}
+          topSessionTurns.forEach((item, idx) => {
+            criteria[`turn_${idx}`] = `${item.turn.id}: ${item.turn.speaker}: ${item.turn.rawText.slice(0, 160)}`
+          })
+          criteria.none = 'None of the above turns contain relevant evidence.'
+
+          jevQuestions[`distill_${sKey}`] = {
+            type: 'choice',
+            instructions: `Select the dialogue turn from ${sKey} that directly answers or contains key evidence for the question.`,
+            criteria,
+          }
+        }
+      }
+
+      // Execute batched Jev distillation across all matched sessions in a single forward pass
+      if (this.jev && Object.keys(jevQuestions).length > 0) {
+        try {
+          const stateHeader = `Question to answer: ${question}\n${sessionDateHeaders.join('\n')}`
+          const distillRes = await this.jev.systemOne(stateHeader, jevQuestions)
+          const answers = distillRes.answers || {}
+
+          for (const sKey of uniqueSessions) {
+            const sessData = sessionDistillMap.get(sKey)
+            if (!sessData)
+              continue
+            const ans = answers[`distill_${sKey}`]
+            if (ans && typeof ans.choice === 'string' && ans.choice.startsWith('turn_')) {
+              const idx = Number.parseInt(ans.choice.replace('turn_', ''), 10)
+              if (idx >= 0 && idx < sessData.topSessionTurns.length) {
+                sessData.winningTurn = sessData.topSessionTurns[idx].turn
+              }
+            }
+          }
+        }
+        catch (err) {
+          console.warn(`[DualSearcher] In-session Jev distillation error: ${err.message}`)
+        }
+      }
+
+      // Replace summary candidates with the distilled winning raw turns in-place
+      for (const cand of hybridHits) {
+        if (cand.id.startsWith('sum_') || cand.kind === 'ltmm' || (cand.session && cand.kind !== 'raw' && !cand.refDiaId)) {
+          const sessData = sessionDistillMap.get(cand.session)
+          if (sessData && sessData.winningTurn) {
+            const win = sessData.winningTurn
+            cand.id = win.id
+            cand.refDiaId = win.id
+            cand.speaker = win.speaker
+            cand.rawText = win.rawText
+            cand.text = win.text
+            cand.kind = 'raw'
+            cand.timestamp = win.timestamp || cand.timestamp
+          }
+        }
+      }
+    }
+
     // --- 3. Provenance Deduplication ---
     const deduplicatedHits = []
     const seenEvidenceIds = new Set()

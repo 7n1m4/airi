@@ -60,7 +60,8 @@ export async function resolveSystem2Batch(items, opts = {}) {
   }
 
   const model = opts.model || 'deepseek-v4.1-flash'
-  const batchSize = opts.batchSize || 15
+  const batchSize = opts.batchSize || 10
+  const timeoutMs = opts.timeoutMs || 300_000 // 5 minutes timeout per user directive
   const results = {}
 
   const systemPrompt = `You are a concise factual reading assistant.
@@ -107,60 +108,76 @@ Do not include markdown codeblocks or conversational filler.`
       temperature: 0.1,
     }
 
-    try {
-      const sessionId = `locomo-system2-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
-      const res = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'x-opencode-session': sessionId,
-        },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(45000),
-      })
+    let attempts = 0
+    let success = false
+    while (attempts < 3 && !success) {
+      attempts++
+      try {
+        const sessionId = `locomo-system2-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+        const res = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+            'x-opencode-session': sessionId,
+          },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(timeoutMs),
+        })
 
-      if (!res.ok) {
-        const errText = await res.text()
-        console.warn(`[System2Resolver] API error ${res.status}: ${errText}`)
-        continue
-      }
-
-      const data = await res.json()
-      const contentStr = data.choices?.[0]?.message?.content
-      if (contentStr) {
-        let parsed = {}
-        try {
-          parsed = JSON.parse(contentStr)
-        }
-        catch {
-          // Attempt to extract JSON substring if wrapped in markdown
-          const jsonMatch = contentStr.match(/\{[\s\S]*\}/)
-          if (jsonMatch)
-            parsed = JSON.parse(jsonMatch[0])
-        }
-
-        const answers = parsed.answers || parsed
-
-        for (const [id, val] of Object.entries(answers)) {
-          // Reject cross-chunk or unrequested IDs
-          if (!validChunkIds.has(id))
+        if (!res.ok) {
+          const errText = await res.text()
+          console.warn(`[System2Resolver] API error ${res.status} (attempt ${attempts}): ${errText}`)
+          if (attempts < 3) {
+            await new Promise(r => setTimeout(r, 2000))
             continue
-
-          if (typeof val === 'string' && val.trim().length > 0) {
-            results[id] = val.trim()
           }
-          else if (val && typeof val === 'object') {
-            // Strictly require status === 'answered' and valid non-empty answer
-            if (val.status === 'answered' && typeof val.answer === 'string' && val.answer.trim().length > 0) {
-              results[id] = val.answer.trim()
+          break
+        }
+
+        const data = await res.json()
+        const contentStr = data.choices?.[0]?.message?.content
+        if (contentStr) {
+          let parsed = {}
+          try {
+            parsed = JSON.parse(contentStr)
+          }
+          catch {
+            // Attempt to extract JSON substring if wrapped in markdown
+            const jsonMatch = contentStr.match(/\{[\s\S]*\}/)
+            if (jsonMatch)
+              parsed = JSON.parse(jsonMatch[0])
+          }
+
+          const answers = parsed.answers || parsed
+
+          for (const [id, val] of Object.entries(answers)) {
+            // Reject cross-chunk or unrequested IDs
+            if (!validChunkIds.has(id))
+              continue
+
+            if (typeof val === 'string' && val.trim().length > 0) {
+              results[id] = val.trim()
+            }
+            else if (val && typeof val === 'object') {
+              // Strictly require status === 'answered' and valid non-empty answer
+              if (val.status === 'answered' && typeof val.answer === 'string' && val.answer.trim().length > 0) {
+                results[id] = val.answer.trim()
+              }
             }
           }
         }
+        success = true
       }
-    }
-    catch (err) {
-      console.warn(`[System2Resolver] Error during batch resolution: ${err.message}`)
+      catch (err) {
+        if (attempts >= 3) {
+          console.warn(`[System2Resolver] Error during batch resolution after ${attempts} attempts: ${err.message}`)
+        }
+        else {
+          console.warn(`[System2Resolver] Attempt ${attempts} failed (${err.message}), retrying in 2s...`)
+          await new Promise(r => setTimeout(r, 2000))
+        }
+      }
     }
   }
 
