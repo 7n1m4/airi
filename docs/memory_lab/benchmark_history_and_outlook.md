@@ -22,6 +22,9 @@ This document provides a deep-dive into the iterative optimization of the AIRI M
 | **Hardened**  | **14B**| Gemini | 27.36% | 65.33% | 7.09% | **18.03%**| **Foundation Fix**: Schema hardening and token expansion. C2 recovered; C3 suppressed by discipline. |
 | **Abstract** | **15** | ChatGPT| **Regress**| --- | --- | --- | **Over-Integrated**: Abstraction noise drowned out literal facts + extraction slop. |
 | **Hybrid SOTA**| **16** | ChatGPT| 39.22% | 72.00% | 8.95% | 15.03% | **Ultimate Hybrid**: Tiered Router (09 Spine + Gated 11/14 hatches). Strong literal spine, but routing remained too conservative to unlock major C1/C3 gains. |
+| **System-1**  | **Pass 2** | Laya/Needle | 12.29% | --- | 10.70% | 4.61% | **Entity Ledger**: Cactus SAN 45M WASM extraction + in-memory graph. C1 jumped to 17.89%. |
+| **System-1**  | **Pass 3** | Jev/Needle  | **18.95%** | --- | **19.62%** 🏆 | 8.16% | **Full Jev S1**: Batched Jev reranking (57.14% recall) + Hierarchical Place Tree. **C1 (30.05%) & C3 (19.62%) All-Time Records** in 128s. |
+
 
 ---
 
@@ -83,11 +86,22 @@ This document provides a deep-dive into the iterative optimization of the AIRI M
 *   **What Failed To Break Through**: Bridge remained underpowered for multi-hop, Detective routing was too conservative for open-domain, temporal performance stayed inconsistent, and normalization still showed structured-output brittleness.
 *   **Lesson**: The remaining bottleneck is now primarily routing and activation policy rather than the absence of a viable top-level architecture.
 
+### Era 10: The System-1 Cognitive Era (Pass 2 & Pass 3)
+*   **The Paradigm Shift**: Transition from passive, multi-minute generative LLM RAG pipelines to **non-autoregressive System-1 coprocessors** paired with an **In-Memory Entity Ledger**.
+*   **Architecture**:
+    - **Needle 2 WASM (Cactus SAN 45M)**: Ultra-fast local span extraction for entities, events, and dates directly from raw dialogue turns (~120ms).
+    - **TypeSafe Jev System-1 API**: Cloud discriminative classifier handling Zero-Shot Triage (C1–C4), Hierarchical Entity Resolution (Real vs Fictional -> Country -> State), and Batched Candidate Cross-Encoder Reranking (10 candidates scored in parallel in ~350ms).
+    - **Entity Ledger Graph**: Persistent typed graph joining entities, proof bundles, and attributes across conversations.
+*   **Metric Impact**:
+    - **Evidence Recall@3 hit 57.14%** (All-Time Record, beating baseline 38.42% and Pass 1 45.32%).
+    - **C1 Multi-Hop reached 30.05% F1** (All-Time Record, beating Run 11's 25.20% and Run 16's 11.10%).
+    - **C3 Detective reached 19.62% F1** (All-Time Record, shattering Run 14A's 13.54%).
+    - **Total Latency**: All 150 questions completed in **128 seconds (~2 minutes)**, compared to 18–79 minutes in the heavy prompt eras.
+
 ---
 
-## 🏁 The Lab State (2026-04-11)
-1. **Run 14B**: COMPLETE. Gemini foundation stabilized; temporal leak fixed.
-2. **Run 15**: COMPLETE. ChatGPT over-integrated baseline (REJECTED).
-3. **Run 16**: COMPLETE. Ultimate Hybrid validated the routed architecture, but did not yet unlock the expected C1/C3 gains.
-4. **Next Move**: Tighten routing, strengthen Bridge behavior, and harden Detective/normalization reliability without replacing the architecture.
-5. **Diagnostic Suite**: Fully patched; forensic snapshots for Runs 09/11/15 finalized.
+## 🏁 The Lab State (2026-09-21)
+1. **Pass 2**: COMPLETE. Cactus SAN 45M WASM extraction + Entity Ledger in-memory graph.
+2. **Pass 3**: COMPLETE. Full TypeSafe Jev Architecture (Batched Reranking + Hierarchical Place Tree). Established all-time records in C1, C3, and Evidence Recall.
+3. **Next Move**: Bridge the C2 temporal gap against Run 07 (without 18-minute thinking loops) and close the C4 token brevity gap against Run 16 using local generative span trimming.
+
