@@ -165,3 +165,60 @@ describe('label-Blind Routing Invariance', () => {
     }
   })
 })
+
+describe('pass 6: Jev Multi-Field Triage & Temporal Non-Hijack', () => {
+  it('prevents subordinate "when" from hijacking literal queries to session dates', async () => {
+    const { AnswerHeadPass3 } = await import('./answer-head-pass3.mjs')
+    const head = new AnswerHeadPass3()
+
+    const q = 'What instrument did James used to play when he was younger?'
+    const searchResult = {
+      ledgerResult: null,
+      textCandidates: [
+        {
+          id: 'D24:14',
+          rawText: 'James: I used to play guitar when I was a teenager.',
+          text: 'James: I used to play guitar when I was a teenager.',
+          timestamp: '11:42 am on 18 September, 2022',
+        },
+      ],
+    }
+    const triage = {
+      category: 4,
+      choice: 'c4_literal',
+      temporalSubtype: 'none',
+      searchScope: 'single_session',
+    }
+
+    // Because temporalSubtype is 'none', it does not format the session date 'September 18, 2022'
+    const ans = await head.formatAnswer(q, searchResult, triage)
+    assert.notEqual(ans, 'September 18, 2022', 'Should not hijack to session timestamp')
+  })
+
+  it('correctly extracts elapsed duration when temporalSubtype is duration', async () => {
+    const { AnswerHeadPass3 } = await import('./answer-head-pass3.mjs')
+    const head = new AnswerHeadPass3()
+
+    const q = 'How many days did James plan to spend on his trip in Canada?'
+    const searchResult = {
+      ledgerResult: null,
+      textCandidates: [
+        {
+          id: 'D16:13',
+          rawText: 'James: I plan to stay for 19 days in total before flying home.',
+          text: 'James: I plan to stay for 19 days in total before flying home.',
+          timestamp: '5:13 pm on 9 July, 2022',
+        },
+      ],
+    }
+    const triage = {
+      category: 2,
+      choice: 'c2_temporal',
+      temporalSubtype: 'duration',
+      searchScope: 'single_session',
+    }
+
+    const ans = await head.formatAnswer(q, searchResult, triage)
+    assert.equal(ans, '19 days', 'Should extract duration string rather than date')
+  })
+})

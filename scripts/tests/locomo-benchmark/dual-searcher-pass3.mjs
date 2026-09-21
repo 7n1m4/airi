@@ -129,7 +129,11 @@ export class DualSearcherPass3 {
 
     // --- 2. Hybrid Text Search (BGE + BM25 RRF with Triage Adaptation) ---
     const isLiteral = triage?.choice === 'c4_literal' || triage?.category === 4
-    const hybridHits = this.hybridSearcher.searchHybrid(question, 15, queryVector, {
+    const isMultiSession = triage?.searchScope === 'multi_session' || triage?.category === 1
+    const searchLimit = isMultiSession ? 25 : 15
+    const effectiveLimit = isMultiSession ? Math.max(limit, 6) : limit
+
+    const hybridHits = this.hybridSearcher.searchHybrid(question, searchLimit, queryVector, {
       weightVector: isLiteral ? 0.50 : 0.68,
       weightKeyword: isLiteral ? 0.50 : 0.32,
     })
@@ -148,7 +152,7 @@ export class DualSearcherPass3 {
     // --- 4. Batched Candidate Cross-Encoder Reranking via TypeSafe Jev ---
     let rankedHits = deduplicatedHits
     if (this.jev) {
-      rankedHits = await jevRerankCandidates(this.jev, question, deduplicatedHits, 10)
+      rankedHits = await jevRerankCandidates(this.jev, question, deduplicatedHits, searchLimit >= 25 ? 15 : 10)
     }
 
     // Helper to resolve a candidate's canonical raw dialogue turn document
@@ -164,15 +168,45 @@ export class DualSearcherPass3 {
       return doc
     }
 
-    // Hydrate all rankedHits with verbatim raw dialogue turns
+    // Helper to build conversational dialogue turn window (turn - 1, turn, turn + 1)
+    const getConversationalWindow = (canonicalId) => {
+      const doc = getRawDoc(canonicalId)
+      if (!doc)
+        return ''
+      if (doc.kind !== 'raw')
+        return doc.rawText || doc.text || ''
+
+      const m = canonicalId?.match(/^D(\d+):(\d+)$/i)
+      if (!m)
+        return `${doc.speaker}: ${doc.rawText || doc.text}`
+
+      const s = Number.parseInt(m[1], 10)
+      const t = Number.parseInt(m[2], 10)
+      const prevDoc = this.hybridSearcher?.index?.documents?.get(`D${s}:${t - 1}`)
+      const nextDoc = this.hybridSearcher?.index?.documents?.get(`D${s}:${t + 1}`)
+
+      const lines = []
+      if (prevDoc && prevDoc.kind === 'raw') {
+        lines.push(`${prevDoc.speaker}: ${prevDoc.rawText || prevDoc.text}`)
+      }
+      lines.push(`${doc.speaker}: ${doc.rawText || doc.text}`)
+      if (nextDoc && nextDoc.kind === 'raw') {
+        lines.push(`${nextDoc.speaker}: ${nextDoc.rawText || nextDoc.text}`)
+      }
+      return lines.join('\n')
+    }
+
+    // Hydrate all rankedHits with verbatim conversational dialogue turn windows
     for (const cand of rankedHits) {
       const canonicalId = cand.refDiaId || cand.id
       const rawDoc = getRawDoc(canonicalId)
       if (rawDoc) {
         cand.speaker = rawDoc.speaker || cand.speaker
-        cand.rawText = rawDoc.rawText || cand.rawText
-        cand.text = rawDoc.text || cand.text
+        cand.windowText = getConversationalWindow(canonicalId)
+        cand.rawText = cand.windowText || rawDoc.rawText || cand.rawText
+        cand.text = cand.windowText || rawDoc.text || cand.text
         cand.timestamp = rawDoc.timestamp || cand.timestamp
+        cand.session = rawDoc.session || cand.session
       }
     }
 
@@ -190,36 +224,63 @@ export class DualSearcherPass3 {
             id: evId,
             refDiaId: evId,
             speaker: rawDoc?.speaker,
-            text: rawDoc?.text || evId,
-            rawText: rawDoc?.rawText || evId,
+            text: getConversationalWindow(evId) || rawDoc?.text || evId,
+            rawText: getConversationalWindow(evId) || rawDoc?.rawText || evId,
             timestamp: rawDoc?.timestamp,
+            session: rawDoc?.session,
           })
         }
       }
     }
 
-    // Fill remaining slots from the highest-scoring Jev-reranked candidates
+    // If multi_session, enforce session diversity across candidates first
+    if (isMultiSession) {
+      const seenSessions = new Set()
+      for (const cand of rankedHits) {
+        const canonicalId = cand.refDiaId || cand.id
+        const rawDoc = getRawDoc(canonicalId)
+        const sessionKey = rawDoc?.session || cand.session
+        if (sessionKey && !seenSessions.has(sessionKey)) {
+          seenSessions.add(sessionKey)
+          if (!mergedEvidence.includes(canonicalId) && mergedEvidence.length < effectiveLimit) {
+            mergedEvidence.push(canonicalId)
+            candidateObjects.push({
+              id: cand.id,
+              refDiaId: canonicalId,
+              speaker: rawDoc?.speaker || cand.speaker,
+              text: cand.windowText || cand.text,
+              rawText: cand.windowText || cand.rawText,
+              timestamp: rawDoc?.timestamp || cand.timestamp,
+              session: sessionKey,
+            })
+          }
+        }
+      }
+    }
+
+    // Fill remaining slots up to effectiveLimit
     for (const cand of rankedHits) {
       const canonicalId = cand.refDiaId || cand.id
-      if (!mergedEvidence.includes(canonicalId) && mergedEvidence.length < limit) {
+      if (!mergedEvidence.includes(canonicalId) && mergedEvidence.length < effectiveLimit) {
         mergedEvidence.push(canonicalId)
         const rawDoc = getRawDoc(canonicalId)
         candidateObjects.push({
           id: cand.id,
           refDiaId: canonicalId,
           speaker: rawDoc?.speaker || cand.speaker,
-          text: rawDoc?.text || cand.text,
-          rawText: rawDoc?.rawText || cand.rawText,
+          text: cand.windowText || cand.text,
+          rawText: cand.windowText || cand.rawText,
           timestamp: rawDoc?.timestamp || cand.timestamp,
+          session: rawDoc?.session || cand.session,
         })
       }
     }
 
     return {
       ledgerResult,
-      textCandidates: rankedHits.slice(0, limit),
-      topEvidence: mergedEvidence.slice(0, limit),
-      candidateObjects: candidateObjects.slice(0, limit),
+      textCandidates: rankedHits.slice(0, effectiveLimit),
+      topEvidence: mergedEvidence.slice(0, effectiveLimit),
+      candidateObjects: candidateObjects.slice(0, effectiveLimit),
       combinedCandidates: rankedHits,
     }
   }

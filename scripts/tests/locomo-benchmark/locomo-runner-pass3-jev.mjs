@@ -52,12 +52,12 @@ const Q_EMBEDDINGS_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-co
 const BASE_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger.json')
 const PASS3_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger-pass3.json')
 const PASS1_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass2-trace.json')
-const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass5-report.md')
-const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass5-trace.json')
+const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass6-report.md')
+const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass6-trace.json')
 
 console.log('================================================================')
-console.log('LoCoMo conv-47 Pass 5: Autonomous Dual-Process Architecture Shootout')
-console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 1 vs Pass 5 (Hydrated + Label-Blind)')
+console.log('LoCoMo conv-47 Pass 6: Jev Cognitive Triage + Window Hydration + System-2 Precision')
+console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 1 vs Pass 6')
 console.log('================================================================\n')
 
 // 1. Load Dataset
@@ -273,24 +273,25 @@ const bRecallPct = (baselineHits / totalGoldEvidenceTurns) * 100
 const p1RecallPct = (pass1Hits / totalGoldEvidenceTurns) * 100
 const p3RecallPct = (pass3Hits / totalGoldEvidenceTurns) * 100
 
-const reportMd = `# LoCoMo conv-47 Pass 5: Autonomous Dual-Process Architecture (System-1 Jev + System-2 DeepSeek Flash) Benchmark Report
+const reportMd = `# LoCoMo conv-47 Pass 6: Jev Cognitive Triage + Turn Window Hydration + System-2 Precision Benchmark Report
 
 - **Date**: ${new Date().toISOString()}
 - **Dataset**: conv-47 (31 sessions, 689 turns, 150 non-adversarial QA pairs)
 - **Duration**: ${shootoutDurationSec}s
 - **Architecture**:
   - **Span Extraction**: Needle 2 WASM (Cactus SAN 45M on CPU)
-  - **Triage & Reranking**: TypeSafe Jev System-1 API (\`jev-latest\`, batched 10 candidates / call)
-  - **Span Reading**: TypeSafe Jev System-1 Choice Reader with Sentence Boundary Isolation (\`span-reader.mjs\`)
-  - **Evidence Grounding**: Verbatim Dialogue Turn Hydration (strips synthetic observation noise)
-  - **Temporal Arithmetic**: Session-Anchored Calendar Arithmetic with 'Last Year' Support (\`date-fns\`)
-  - **Deductive Synthesis (System-2)**: Label-Blind Batched DeepSeek Flash via OpenCode Go (\`system2-batch-resolver.mjs\`)
+  - **Triage & Cognitive Scope**: TypeSafe Jev System-1 API multi-field schema (\`category\`, \`temporal_subtype\`, \`search_scope\`)
+  - **Reranking**: Batched TypeSafe Jev System-1 API (\`jev-latest\`, batched 10-15 candidates / call)
+  - **Conversational Window Hydration**: Verbatim 3-turn dialogue window context (\`[D{s}:{t-1}, D{s}:{t}, D{s}:{t+1}]\`)
+  - **Multi-Session Candidate Expansion**: Autonomous session diversity up to 6 distinct sessions for list/aggregation queries
+  - **Temporal Arithmetic**: Jev-Governed Calendar Arithmetic & Duration Extraction (strips ad-hoc regex overrides)
+  - **Deductive Synthesis (System-2)**: Ultra-Concise Batched DeepSeek Flash via OpenCode Go with strict token/polar constraints
   - **Entity Hierarchy**: Jev Hierarchical Place Resolution Tree (Real vs Fictional -> Country -> State)
   - **Storage**: In-Memory Entity Ledger with Graph Traversal
 
 ## 1. Top-Line Scorecard
 
-| Metric | Baseline (Regex) | Pass 1 (Laya Coprocessor) | Pass 5 (Autonomous Dual-Process) | Pass 5 vs Pass 1 Delta |
+| Metric | Baseline (Regex) | Pass 1 (Laya Coprocessor) | Pass 6 (Jev Triage + Window + S2 Precision) | Pass 6 vs Pass 1 Delta |
 | :--- | :--- | :--- | :--- | :--- |
 | **Evidence Recall@3** | ${bRecallPct.toFixed(2)}% | ${p1RecallPct.toFixed(2)}% | **${p3RecallPct.toFixed(2)}%** | **${(p3RecallPct - p1RecallPct) >= 0 ? '+' : ''}${(p3RecallPct - p1RecallPct).toFixed(2)}%** |
 | **Official Upstream F1** | ${bAgg.overall.upstreamF1.toFixed(2)}% | ${p1Agg.overall.upstreamF1.toFixed(2)}% | **${p3Agg.overall.upstreamF1.toFixed(2)}%** | **${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1).toFixed(2)}%** |
@@ -303,7 +304,7 @@ const reportMd = `# LoCoMo conv-47 Pass 5: Autonomous Dual-Process Architecture 
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
-console.log(`Saved Pass 5 report to ${OUTPUT_REPORT_PATH}`)
+console.log(`Saved Pass 6 report to ${OUTPUT_REPORT_PATH}`)
 
 const detailedComparison = qas.map((q, idx) => ({
   index: idx,

@@ -63,17 +63,21 @@ export async function resolveSystem2Batch(items, opts = {}) {
   const batchSize = opts.batchSize || 15
   const results = {}
 
-  const systemPrompt = `You are a concise deductive reader.
-Answer each item independently. Use dialogue evidence for personal facts. Use general knowledge only to interpret those facts.
-Enforce the requested entity type, medium (e.g. board game vs video game), actor, and time scope.
-Do not turn an unsupported summary assertion into evidence. If support is insufficient or conflicting, return status "insufficient".
-Give the shortest sufficient answer, preserving qualifications.
+  const systemPrompt = `You are an ultra-concise factual reading assistant.
+Answer each item independently. Ground personal facts strictly in the provided dialogue evidence; use general knowledge only to interpret or deduce unstated implications.
+Rules:
+1. Output ONLY the minimal factual answer (1 to 4 words). Do NOT include reasoning, evidence citations, parenthetical commentary, or conversational filler.
+2. For yes/no questions, answer strictly with "Yes" or "No".
+3. For questions asking for a count or number, output solely the number or number word (e.g. "2" or "Two").
+4. For questions asking for a list of items, separate items with commas.
+5. NEVER use slashes ('/') between alternative words; use 'or' or commas instead.
+6. If the provided evidence is conflicting or genuinely insufficient to answer, return status "insufficient".
 Output ONLY a valid JSON object matching this schema:
 {
   "answers": {
     "<item_id>": {
       "status": "answered" | "insufficient",
-      "answer": "<concise answer string>",
+      "answer": "<minimal answer string>",
       "usedGeneralKnowledge": boolean
     }
   }

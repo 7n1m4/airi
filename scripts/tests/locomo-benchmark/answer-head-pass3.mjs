@@ -76,42 +76,53 @@ export class AnswerHeadPass3 {
       }
     }
 
-    // 2. Step 5: Bounded Temporal Joins & Anchor Arithmetic (C2 Queries)
-    const isTemporal = (triage?.category === 2)
-      || (triage?.choice === 'c2_temporal')
-      || /\b(when|what date|what day|what year|what month|how long ago|how many days|how long did)\b/i.test(question)
+    // 2. Step 5: Jev-Governed Bounded Temporal Joins & Anchor Arithmetic (C2 Queries)
+    const isDuration = triage?.temporalSubtype === 'duration'
+    const isCalendarDate = triage?.temporalSubtype === 'calendar_date'
+      || (triage?.category === 2 && triage?.temporalSubtype !== 'duration')
 
-    if (isTemporal && textCandidates && textCandidates.length > 0) {
+    if ((isDuration || isCalendarDate) && textCandidates && textCandidates.length > 0) {
       for (const cand of textCandidates.slice(0, 3)) {
         const text = cand.rawText || cand.text || ''
         const rawTimestamp = cand.timestamp
           || (this.index?.documents?.get(cand.refDiaId || cand.id)?.timestamp)
           || ''
 
-        // A. Resolve relative temporal expressions (e.g. "last year", "three days ago", "last week")
-        const relMatch = text.match(/\b(last year|last week|yesterday|last month|\d+\s+days?\s+ago|one\s+days?\s+ago|two\s+days?\s+ago|three\s+days?\s+ago|four\s+days?\s+ago|five\s+days?\s+ago|six\s+days?\s+ago|seven\s+days?\s+ago)\b/i)
-        if (relMatch && rawTimestamp) {
-          const resolved = resolveTemporalExpression(relMatch[0], rawTimestamp, cand.refDiaId || cand.id)
-          if (resolved && resolved.formatted_label && resolved.kind !== 'unknown') {
-            return resolved.formatted_label
+        // A. Duration Queries (e.g. "19 days", "six months", "nearly three months", "one month")
+        if (isDuration) {
+          const durMatch = text.match(/\b(?:nearly\s+|about\s+|approximately\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|several|a few)\s+(?:days?|weeks?|months?|years?|hours?)\b/i)
+          if (durMatch) {
+            return durMatch[0].trim()
           }
         }
 
-        // B. Look for explicit dates/months/years mentioned in the turn text
-        // e.g. "April 26, 2022", "July 11, 2022", "March 2022", "in 2021", "In July, 2022"
-        const explicitDateMatch = text.match(/\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,\s+\d{4})?\b|\b(?:in\s+)?(19\d\d|20\d\d)\b|\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December),?\s+\d{4}\b/i)
-        if (explicitDateMatch) {
-          return explicitDateMatch[0].trim()
-        }
+        // B. Calendar Date Queries
+        if (isCalendarDate) {
+          // B1. Resolve relative temporal expressions (e.g. "last year", "three days ago", "last week")
+          const relMatch = text.match(/\b(last year|last week|yesterday|last month|\d+\s+days?\s+ago|one\s+days?\s+ago|two\s+days?\s+ago|three\s+days?\s+ago|four\s+days?\s+ago|five\s+days?\s+ago|six\s+days?\s+ago|seven\s+days?\s+ago)\b/i)
+          if (relMatch && rawTimestamp) {
+            const resolved = resolveTemporalExpression(relMatch[0], rawTimestamp, cand.refDiaId || cand.id)
+            if (resolved && resolved.formatted_label && resolved.kind !== 'unknown') {
+              return resolved.formatted_label
+            }
+          }
 
-        // C. If turn describes an event happening in that session (without relative offset)
-        // Check if question asks "when did [event]" and we have an anchor timestamp
-        if (rawTimestamp && /\bwhen\b/i.test(question)) {
-          const cleanDate = parseLoCoMoDateTime(rawTimestamp)
-          if (cleanDate) {
-            const dt = new Date(cleanDate)
-            if (!Number.isNaN(dt.getTime())) {
-              return format(dt, 'MMMM d, yyyy')
+          // B2. Look for explicit dates/months/years mentioned in the turn text
+          // e.g. "April 26, 2022", "July 11, 2022", "March 2022", "in 2021", "In July, 2022"
+          const explicitDateMatch = text.match(/\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,\s+\d{4})?\b|\b(?:in\s+)?(19\d\d|20\d\d)\b|\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December),?\s+\d{4}\b/i)
+          if (explicitDateMatch) {
+            return explicitDateMatch[0].trim()
+          }
+
+          // B3. If turn describes an event happening in that session (without relative offset)
+          // Check if question asks "when" as a root question and we have an anchor timestamp
+          if (rawTimestamp && /^\s*when\b/i.test(question)) {
+            const cleanDate = parseLoCoMoDateTime(rawTimestamp)
+            if (cleanDate) {
+              const dt = new Date(cleanDate)
+              if (!Number.isNaN(dt.getTime())) {
+                return format(dt, 'MMMM d, yyyy')
+              }
             }
           }
         }

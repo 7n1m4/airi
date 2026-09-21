@@ -18,21 +18,44 @@ export const JEV_TRIAGE_SCHEMA = {
       c4_literal: 'Direct retrieval of a single specific named entity, statement, or fact mentioned explicitly in dialogue.',
     },
   },
+  temporal_subtype: {
+    type: 'choice',
+    instructions: 'If this query asks about time, determine what kind of time value is requested. Otherwise select none.',
+    criteria: {
+      calendar_date: 'Asks when an event occurred (specific date, month, year, or session timestamp).',
+      duration: 'Asks for an elapsed quantity or length of time (e.g. how many days, how long did it take, duration).',
+      none: 'Does not ask for a time, date, or duration (e.g. asking what object, what instrument, what game).',
+    },
+  },
+  search_scope: {
+    type: 'choice',
+    instructions: 'Determine whether answering this question requires finding a single conversation turn or aggregating across multiple distinct conversations.',
+    criteria: {
+      single_session: 'The target fact is described within a single conversation session.',
+      multi_session: 'Requires gathering, listing, or comparing entities across multiple separate sessions (e.g. list of all games played, all countries visited, all books recommended).',
+    },
+  },
 }
 
 /**
- * Classifies question intent via TypeSafe Jev.
+ * Classifies question intent, temporal subtype, and search scope via TypeSafe Jev System-1.
  * @param {import('./jev-client.mjs').TypeSafeJevClient} jev
  * @param {string} question
- * @returns {Promise<{ category: number, choice: string, confidence: number, probabilities: object }>}
+ * @returns {Promise<{ category: number, choice: string, confidence: number, probabilities: object, temporalSubtype: string, searchScope: string, method: string }>}
  */
 export async function jevZeroShotTriage(jev, question) {
   try {
     const res = await jev.systemOne(`Query to classify: ${question}`, JEV_TRIAGE_SCHEMA)
-    const ans = res.answers?.category || {}
-    const choice = ans.choice || 'c4_literal'
-    const confidence = ans.confidence ?? 0.5
-    const probabilities = ans.probabilities || {}
+    const ansCat = res.answers?.category || {}
+    const ansTemp = res.answers?.temporal_subtype || {}
+    const ansScope = res.answers?.search_scope || {}
+
+    const choice = ansCat.choice || 'c4_literal'
+    const confidence = ansCat.confidence ?? 0.5
+    const probabilities = ansCat.probabilities || {}
+
+    const temporalSubtype = ansTemp.choice || 'none'
+    const searchScope = ansScope.choice || 'single_session'
 
     const map = {
       c1_multihop: 1,
@@ -46,18 +69,43 @@ export async function jevZeroShotTriage(jev, question) {
       choice,
       confidence,
       probabilities,
+      temporalSubtype,
+      searchScope,
       method: 'typesafe_jev_system1',
     }
   }
   catch (err) {
     console.warn(`[JevTriage] Classification error (${err.message}), falling back to regex`)
     // Heuristic fallback
-    if (/\b(when|what time|what date|how long|which (year|month|day))\b/i.test(question)) {
-      return { category: 2, choice: 'c2_temporal', confidence: 0.7, method: 'regex_fallback' }
+    let cat = 4
+    let choice = 'c4_literal'
+    let tempSub = 'none'
+    let scope = 'single_session'
+
+    if (/\b(how long|how many days|how many months|how many years)\b/i.test(question)) {
+      cat = 2
+      choice = 'c2_temporal'
+      tempSub = 'duration'
     }
-    if (/\b(how many|list of|all the|names of)\b/i.test(question)) {
-      return { category: 1, choice: 'c1_multihop', confidence: 0.7, method: 'regex_fallback' }
+    else if (/\b(when|what time|what date|which (year|month|day))\b/i.test(question)) {
+      cat = 2
+      choice = 'c2_temporal'
+      tempSub = 'calendar_date'
     }
-    return { category: 4, choice: 'c4_literal', confidence: 0.5, method: 'regex_fallback' }
+    else if (/\b(how many|list of|all the|names of|which countries|which games|which books)\b/i.test(question)) {
+      cat = 1
+      choice = 'c1_multihop'
+      scope = 'multi_session'
+    }
+
+    return {
+      category: cat,
+      choice,
+      confidence: 0.5,
+      probabilities: {},
+      temporalSubtype: tempSub,
+      searchScope: scope,
+      method: 'regex_fallback',
+    }
   }
 }

@@ -4,9 +4,27 @@
  * routing requests to `https://api.typesafe.ai/v1/systemone`.
  */
 
+import fs from 'node:fs'
+import path from 'node:path'
+
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const ROOT = path.resolve(__dirname, '../../..')
+
 export class TypeSafeJevClient {
   constructor(apiKey, endpoint = 'https://api.typesafe.ai/v1/systemone', model = 'jev-latest') {
-    this.apiKey = apiKey || process.env.TYPESAFE_API_KEY
+    let key = apiKey || process.env.TYPESAFE_API_KEY
+    if (!key) {
+      const envPath = path.join(ROOT, '.env')
+      if (fs.existsSync(envPath)) {
+        const content = fs.readFileSync(envPath, 'utf8')
+        const match = content.match(/TYPESAFE_API_KEY=(.+)/)
+        if (match)
+          key = match[1].trim()
+      }
+    }
+    this.apiKey = key
     this.endpoint = endpoint
     this.model = model
   }
