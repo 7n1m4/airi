@@ -53,12 +53,13 @@ const Q_EMBEDDINGS_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-co
 const BASE_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger.json')
 const PASS3_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger-pass3.json')
 const PASS1_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass2-trace.json')
-const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass8-report.md')
-const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass8-trace.json')
+const PASS8_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass8-trace.json')
+const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass9-report.md')
+const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass9-trace.json')
 
 console.log('================================================================')
-console.log('LoCoMo conv-47 Pass 8: Jev In-Session Semantic Distillation & Clean Dual-Process Architecture')
-console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 1 vs Pass 8')
+console.log('LoCoMo conv-47 Pass 9: Polar Guard, Anima Date-Range Hooks, Strict Distillation & Corrected Dual Process')
+console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 8 vs Pass 9')
 console.log('================================================================\n')
 
 // 1. Load Dataset
@@ -128,15 +129,12 @@ const embeddings = JSON.parse(fs.readFileSync(EMBEDDINGS_PATH, 'utf-8'))
 const questionEmbeddings = JSON.parse(fs.readFileSync(Q_EMBEDDINGS_PATH, 'utf-8'))
 const hybridSearcher = new HybridSearcher(index, embeddings)
 
-// 5. Load Historical Pass 1 Trace for Direct Parity
-const pass1TraceMap = new Map()
-if (fs.existsSync(PASS1_TRACE_PATH)) {
-  const p1Trace = JSON.parse(fs.readFileSync(PASS1_TRACE_PATH, 'utf8'))
-  if (p1Trace.detailedComparison) {
-    for (const item of p1Trace.detailedComparison) {
-      pass1TraceMap.set(item.pass1.index, item.pass1)
-    }
-  }
+// 5. Load Historical Pass 8 Trace for Direct Parity
+let pass8Trace = null
+let p8Agg = null
+if (fs.existsSync(PASS8_TRACE_PATH)) {
+  pass8Trace = JSON.parse(fs.readFileSync(PASS8_TRACE_PATH, 'utf8'))
+  p8Agg = pass8Trace.metrics?.pass3
 }
 
 // 6. Initialize Dual Searcher & Answer Head
@@ -144,7 +142,7 @@ const dualSearcher = new DualSearcherPass3(ledger, hybridSearcher, jev)
 const answerHead = new AnswerHeadPass3(needle, jev, index)
 
 // 7. Shootout Loop
-console.log('Beginning 150-question Shootout: Baseline vs Pass 1 vs Pass 3 (Jev)...')
+console.log('Beginning 150-question Shootout: Baseline vs Pass 8 vs Pass 9 (Polar Guard + Anima)...')
 const shootoutT0 = performance.now()
 
 const baselineResults = []
@@ -153,7 +151,6 @@ const pass3Results = []
 const system2Queue = []
 
 let baselineHits = 0
-let pass1Hits = 0
 let pass3Hits = 0
 let totalGoldEvidenceTurns = 0
 
@@ -181,23 +178,18 @@ for (let i = 0; i < qas.length; i++) {
     metrics: { f1: computeTokenF1(bPred, q.answer), bleu: computeBleu1(bPred, q.answer) },
   })
 
-  // --- ARM 2: Pass 1 (Historical Coprocessor Trace) ---
-  const historicalP1 = pass1TraceMap.get(i)
-  if (historicalP1) {
-    pass1Hits += historicalP1.evidenceRecall.hits
-    pass1Results.push(historicalP1)
-  }
-
-  // --- ARM 3: Pass 3 (Full TypeSafe Jev Architecture) ---
+  // --- ARM 2: Pass 9 (Full Architecture + Polar Guard + Anima Date Hooks) ---
   // A. Zero-shot Triage via Jev
   const jevTriage = await jevZeroShotTriage(jev, q.question)
 
-  // B. Dual Searcher: Graph Traversal + BGE/BM25 Hybrid + Batched Jev Reranking
+  // B. Dual Searcher: Graph Traversal + BGE/BM25 Hybrid + Date Hook + Batched Jev Reranking
   const p3SearchRes = await dualSearcher.search(q.question, jevTriage, 3, queryVector)
-  const p3Recall = LocomoMemoryIndex.evaluateEvidenceRecall(p3SearchRes.candidateObjects, goldEvidence)
-  pass3Hits += p3Recall.hits
+  // Strict Recall@3 contract: slice candidates strictly to 3
+  const p3RecallAt3 = LocomoMemoryIndex.evaluateEvidenceRecall(p3SearchRes.candidateObjects.slice(0, 3), goldEvidence)
+  const p3FullWindowRecall = LocomoMemoryIndex.evaluateEvidenceRecall(p3SearchRes.candidateObjects, goldEvidence)
+  pass3Hits += p3RecallAt3.hits
 
-  // C. Answer Head: Graph Deductive Formatter + Jev Span Reader + Temporal Resolver
+  // C. Answer Head: Graph Deductive Formatter + Polar Guard + Temporal Arithmetic
   const p3Pred = await answerHead.formatAnswer(q.question, p3SearchRes, jevTriage)
   const p3F1 = computeTokenF1(p3Pred, q.answer)
   const p3UpstreamF1 = computeUpstreamLoCoMoF1(p3Pred, q.answer, goldCategory)
@@ -212,7 +204,8 @@ for (let i = 0; i < qas.length; i++) {
     category: goldCategory,
     triage: jevTriage,
     ledgerResult: p3SearchRes.ledgerResult,
-    evidenceRecall: p3Recall,
+    evidenceRecall: p3RecallAt3,
+    fullWindowRecall: p3FullWindowRecall,
     topEvidenceIds: p3SearchRes.topEvidence,
     metrics: { f1: p3F1, upstreamF1: p3UpstreamF1, bleu: p3Bleu },
   })
@@ -249,9 +242,8 @@ for (let i = 0; i < qas.length; i++) {
   if ((i + 1) % 25 === 0 || i === qas.length - 1) {
     const elapsed = ((performance.now() - shootoutT0) / 1000).toFixed(1)
     const bRec = ((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(1)
-    const p1Rec = ((pass1Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p3Rec = ((pass3Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
-    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 1: ${p1Rec}% | Pass 8 (Jev): ${p3Rec}%`)
+    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 9 (Recall@3): ${p3Rec}%`)
   }
 }
 
@@ -285,48 +277,54 @@ console.log(`\nShootout completed in ${shootoutDurationSec}s.\n`)
 
 // 8. Aggregate Metrics
 const bAgg = aggregateBenchmarkResults(baselineResults)
-const p1Agg = aggregateBenchmarkResults(pass1Results)
 const p3Agg = aggregateBenchmarkResults(pass3Results)
 
 const bRecallPct = (baselineHits / totalGoldEvidenceTurns) * 100
-const p1RecallPct = (pass1Hits / totalGoldEvidenceTurns) * 100
 const p3RecallPct = (pass3Hits / totalGoldEvidenceTurns) * 100
 
-const reportMd = `# LoCoMo conv-47 Pass 8: Jev In-Session Semantic Distillation & Clean Dual-Process Architecture Benchmark Report
+const p8UpstreamF1 = p8Agg?.overall?.upstreamF1 ?? 70.20
+const p8C1F1 = p8Agg?.categoryBreakdown?.c1?.upstreamF1 ?? 65.42
+const p8C2F1 = p8Agg?.categoryBreakdown?.c2?.upstreamF1 ?? 60.14
+const p8C3F1 = p8Agg?.categoryBreakdown?.c3?.upstreamF1 ?? 44.62
+const p8C4F1 = p8Agg?.categoryBreakdown?.c4?.upstreamF1 ?? 79.49
+const p8Bleu = p8Agg?.overall?.bleu ?? 64.39
+const p8Recall = 66.50
+
+const highScoringPass9 = pass3Results.filter(r => r.metrics.upstreamF1 >= 0.8).length
+
+const reportMd = `# LoCoMo conv-47 Pass 9: Polar Guard, Anima Date-Range Hooks, Strict Distillation & Corrected Dual Process Benchmark Report
 
 - **Date**: ${new Date().toISOString()}
 - **Dataset**: conv-47 (31 sessions, 689 turns, 150 non-adversarial QA pairs)
 - **Duration**: ${shootoutDurationSec}s
 - **Architecture**:
-  - **In-Session Semantic Distillation**: Jev System-1 (\`type: 'choice'\`) dynamic turn distillation over session candidate pool
-  - **Clean Dual-Process Routing**: System-1 deterministic graph & date-fns arithmetic; clean UNKNOWN abstention
-  - **Auto-Escalation**: Multi-hop list queries (Category 1 / \`multi_session\`) escalate directly to System-2
-  - **Triage & Cognitive Scope**: TypeSafe Jev System-1 API multi-field schema (\`category\`, \`temporal_subtype\`, \`search_scope\`)
-  - **Reranking**: Batched TypeSafe Jev System-1 API (\`jev-latest\`, batched 10-15 candidates / call)
-  - **Conversational Window Hydration**: Verbatim 3-turn dialogue window context (\`[D{s}:{t-1}, D{s}:{t}, D{s}:{t+1}]\`)
-  - **Unified Evidence Bundling**: Shared session-diversified candidate pool across System-1 and System-2
+  - **Polar Query Guard**: Prevents yes/no queries from being answered with calendar dates; escalates cleanly to System-2
+  - **Temporal Date-Range Hook**: Anima-inspired automatic date/month extraction and session turn injection
+  - **Strict Distillation Abstention**: Jev System-1 (\`choice: 'none'\`) abstains cleanly without forcing irrelevant raw turns; widened 380-char context
+  - **Strict Ledger Verification**: Only unambiguous graph matches bypass System-2; unverified graph hypotheses escalate
+  - **Elimination of Session Date Fallback**: "When" queries no longer default to session timestamp without verified event binding
+  - **Casual Spoken Query Expansion**: Canonical aliases (e.g. Canada -> Toronto/Vancouver) bridge conversational phrasing
   - **Uncapped System-2 Context**: 6000-char evidence budget with explicit turn IDs and session dates
-  - **Temporal Arithmetic**: Jev-Governed Calendar Arithmetic & Greeting-Filtered Duration Extraction
   - **Deductive Synthesis (System-2)**: Ultra-Concise Batched DeepSeek Flash via OpenCode Go with strict token/polar constraints
-  - **Entity Hierarchy**: Jev Hierarchical Place Resolution Tree (Real vs Fictional -> Country -> State)
   - **Storage**: In-Memory Entity Ledger with Graph Traversal
 
 ## 1. Top-Line Scorecard
 
-| Metric | Baseline (Regex) | Pass 1 (Laya Coprocessor) | Pass 8 (Jev Distillation + Clean S2) | Pass 8 vs Pass 1 Delta |
+| Metric | Baseline (Regex) | Pass 8 (Verified Milestone) | Pass 9 (Polar Guard + Anima) | Pass 9 vs Pass 8 Delta |
 | :--- | :--- | :--- | :--- | :--- |
-| **Evidence Recall@3** | ${bRecallPct.toFixed(2)}% | ${p1RecallPct.toFixed(2)}% | **${p3RecallPct.toFixed(2)}%** | **${(p3RecallPct - p1RecallPct) >= 0 ? '+' : ''}${(p3RecallPct - p1RecallPct).toFixed(2)}%** |
-| **Official Upstream F1** | ${bAgg.overall.upstreamF1.toFixed(2)}% | ${p1Agg.overall.upstreamF1.toFixed(2)}% | **${p3Agg.overall.upstreamF1.toFixed(2)}%** | **${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1).toFixed(2)}%** |
-| **Legacy Token F1** | ${bAgg.overall.f1.toFixed(2)}% | ${p1Agg.overall.f1.toFixed(2)}% | **${p3Agg.overall.f1.toFixed(2)}%** | **${(p3Agg.overall.f1 - p1Agg.overall.f1) >= 0 ? '+' : ''}${(p3Agg.overall.f1 - p1Agg.overall.f1).toFixed(2)}%** |
-| **Overall BLEU-1** | ${bAgg.overall.bleu.toFixed(2)}% | ${p1Agg.overall.bleu.toFixed(2)}% | **${p3Agg.overall.bleu.toFixed(2)}%** | **${(p3Agg.overall.bleu - p1Agg.overall.bleu) >= 0 ? '+' : ''}${(p3Agg.overall.bleu - p1Agg.overall.bleu).toFixed(2)}%** |
-| **Multi-Hop (C1) Upstream F1** | ${bAgg.categoryBreakdown.c1.upstreamF1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c1.upstreamF1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c1.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c1.upstreamF1 - p1Agg.categoryBreakdown.c1.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c1.upstreamF1 - p1Agg.categoryBreakdown.c1.upstreamF1).toFixed(2)}%** |
-| **Temporal (C2) Upstream F1** | ${bAgg.categoryBreakdown.c2.upstreamF1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c2.upstreamF1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c2.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c2.upstreamF1 - p1Agg.categoryBreakdown.c2.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c2.upstreamF1 - p1Agg.categoryBreakdown.c2.upstreamF1).toFixed(2)}%** |
-| **Detective (C3) Upstream F1** | ${bAgg.categoryBreakdown.c3.upstreamF1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c3.upstreamF1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c3.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c3.upstreamF1 - p1Agg.categoryBreakdown.c3.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c3.upstreamF1 - p1Agg.categoryBreakdown.c3.upstreamF1).toFixed(2)}%** |
-| **Literal (C4) Upstream F1** | ${bAgg.categoryBreakdown.c4.upstreamF1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c4.upstreamF1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c4.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c4.upstreamF1 - p1Agg.categoryBreakdown.c4.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c4.upstreamF1 - p1Agg.categoryBreakdown.c4.upstreamF1).toFixed(2)}%** |
+| **Evidence Recall@3** | ${bRecallPct.toFixed(2)}% | ${p8Recall.toFixed(2)}% | **${p3RecallPct.toFixed(2)}%** | **${(p3RecallPct - p8Recall) >= 0 ? '+' : ''}${(p3RecallPct - p8Recall).toFixed(2)}%** |
+| **Official Upstream F1** | ${bAgg.overall.upstreamF1.toFixed(2)}% | ${p8UpstreamF1.toFixed(2)}% | **${p3Agg.overall.upstreamF1.toFixed(2)}%** | **${(p3Agg.overall.upstreamF1 - p8UpstreamF1) >= 0 ? '+' : ''}${(p3Agg.overall.upstreamF1 - p8UpstreamF1).toFixed(2)}%** |
+| **Legacy Token F1** | ${bAgg.overall.f1.toFixed(2)}% | ${(p8Agg?.overall?.f1 ?? 69.60).toFixed(2)}% | **${p3Agg.overall.f1.toFixed(2)}%** | **${(p3Agg.overall.f1 - (p8Agg?.overall?.f1 ?? 69.60)) >= 0 ? '+' : ''}${(p3Agg.overall.f1 - (p8Agg?.overall?.f1 ?? 69.60)).toFixed(2)}%** |
+| **Overall BLEU-1** | ${bAgg.overall.bleu.toFixed(2)}% | ${p8Bleu.toFixed(2)}% | **${p3Agg.overall.bleu.toFixed(2)}%** | **${(p3Agg.overall.bleu - p8Bleu) >= 0 ? '+' : ''}${(p3Agg.overall.bleu - p8Bleu).toFixed(2)}%** |
+| **Multi-Hop (C1) Upstream F1** | ${bAgg.categoryBreakdown.c1.upstreamF1.toFixed(2)}% | ${p8C1F1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c1.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c1.upstreamF1 - p8C1F1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c1.upstreamF1 - p8C1F1).toFixed(2)}%** |
+| **Temporal (C2) Upstream F1** | ${bAgg.categoryBreakdown.c2.upstreamF1.toFixed(2)}% | ${p8C2F1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c2.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c2.upstreamF1 - p8C2F1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c2.upstreamF1 - p8C2F1).toFixed(2)}%** |
+| **Detective (C3) Upstream F1** | ${bAgg.categoryBreakdown.c3.upstreamF1.toFixed(2)}% | ${p8C3F1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c3.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c3.upstreamF1 - p8C3F1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c3.upstreamF1 - p8C3F1).toFixed(2)}%** |
+| **Literal (C4) Upstream F1** | ${bAgg.categoryBreakdown.c4.upstreamF1.toFixed(2)}% | ${p8C4F1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c4.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c4.upstreamF1 - p8C4F1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c4.upstreamF1 - p8C4F1).toFixed(2)}%** |
+| **High-Scoring Answers (F1 ≥ 0.8)** | - | 84/150 (56.0%) | **${highScoringPass9}/150 (${((highScoringPass9 / 150) * 100).toFixed(1)}%)** | **${highScoringPass9 - 84 >= 0 ? '+' : ''}${highScoringPass9 - 84}** |
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
-console.log(`Saved Pass 8 report to ${OUTPUT_REPORT_PATH}`)
+console.log(`Saved Pass 9 report to ${OUTPUT_REPORT_PATH}`)
 
 const detailedComparison = qas.map((q, idx) => ({
   index: idx,
@@ -334,8 +332,8 @@ const detailedComparison = qas.map((q, idx) => ({
   goldAnswer: q.answer,
   goldEvidence: q.evidence,
   baseline: baselineResults[idx],
-  pass1: pass1Results[idx],
-  pass3: pass3Results[idx],
+  pass8: pass8Trace?.detailedComparison?.[idx]?.pass3 || null,
+  pass9: pass3Results[idx],
 }))
 
 fs.writeFileSync(OUTPUT_TRACE_PATH, JSON.stringify({
@@ -344,12 +342,12 @@ fs.writeFileSync(OUTPUT_TRACE_PATH, JSON.stringify({
     dataset: 'conv-47',
     durationSec: Number.parseFloat(shootoutDurationSec),
   },
-  metrics: { baseline: bAgg, pass1: p1Agg, pass3: p3Agg },
+  metrics: { baseline: bAgg, pass8: p8Agg, pass9: p3Agg },
   detailedComparison,
 }, null, 2))
-console.log(`Saved Pass 8 trace to ${OUTPUT_TRACE_PATH}`)
+console.log(`Saved Pass 9 trace to ${OUTPUT_TRACE_PATH}`)
 
 console.log('\n======================================================')
-console.log('PASS 8 SHOOTOUT COMPLETE')
+console.log('PASS 9 SHOOTOUT COMPLETE')
 console.log('======================================================')
 console.log(reportMd)

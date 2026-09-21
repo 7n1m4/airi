@@ -160,8 +160,7 @@ Do not include markdown codeblocks or conversational filler.`
               results[id] = val.trim()
             }
             else if (val && typeof val === 'object') {
-              // Strictly require status === 'answered' and valid non-empty answer
-              if (val.status === 'answered' && typeof val.answer === 'string' && val.answer.trim().length > 0) {
+              if (typeof val.answer === 'string' && val.answer.trim().length > 0 && val.status !== 'insufficient') {
                 results[id] = val.answer.trim()
               }
             }

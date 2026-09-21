@@ -313,3 +313,57 @@ describe('pass 8: Clean Dual-Process Routing & Category 1 List Escalation', () =
     assert.equal(ans, 'UNKNOWN', 'Non-graph, non-temporal query must cleanly abstain to UNKNOWN without brittle regex span chopping')
   })
 })
+
+describe('pass 9: Polar Query Guard, Temporal Date Hook & Distillation Abstention', () => {
+  it('strictly prevents polar queries from returning calendar dates', async () => {
+    const { AnswerHeadPass3 } = await import('./answer-head-pass3.mjs')
+    const head = new AnswerHeadPass3()
+
+    const q = 'Did James have a girlfriend during April 2022?'
+    const searchResult = {
+      ledgerResult: null,
+      textCandidates: [
+        {
+          id: 'D6:6',
+          timestamp: '9:32 pm on 20 April, 2022',
+          rawText: 'James: I haven\'t been dating anyone lately. Just focusing on work.',
+          text: 'James: I haven\'t been dating anyone lately. Just focusing on work.',
+        },
+      ],
+    }
+    const triage = {
+      category: 3,
+      choice: 'c3_detective',
+      temporalSubtype: 'calendar_date',
+    }
+
+    const ans = await head.formatAnswer(q, searchResult, triage)
+    assert.equal(ans, 'UNKNOWN', 'Polar query must cleanly return UNKNOWN and never return a calendar date string')
+  })
+
+  it('correctly extracts dates for Anima temporal date hook', async () => {
+    const { extractQuestionDates } = await import('./temporal-date-hook.mjs')
+
+    const q1 = 'Did James have a girlfriend during April 2022?'
+    const dates1 = extractQuestionDates(q1)
+    assert.equal(dates1.length, 1)
+    assert.equal(dates1[0].month, 'April')
+    assert.equal(dates1[0].year, '2022')
+
+    const q2 = 'How long has John been playing the drums as of 27 March, 2022?'
+    const dates2 = extractQuestionDates(q2)
+    assert.equal(dates2.length, 1)
+    assert.equal(dates2[0].day, '27')
+    assert.equal(dates2[0].month, 'March')
+    assert.equal(dates2[0].year, '2022')
+  })
+
+  it('escalates unverified graph results to System-2', async () => {
+    const { shouldEscalateToSystem2 } = await import('./answer-head-pass3.mjs')
+
+    const unverifiedLedger = { type: 'pet_list', verified: false }
+    const triage = { category: 4, choice: 'c4_literal' }
+
+    assert.equal(shouldEscalateToSystem2(unverifiedLedger, triage, 'Some answer'), true, 'Unverified graph results must escalate to System-2')
+  })
+})

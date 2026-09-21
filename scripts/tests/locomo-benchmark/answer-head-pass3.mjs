@@ -9,9 +9,7 @@
  *   5. Fallback candidate text extraction.
  */
 
-import { format } from 'date-fns'
-
-import { parseLoCoMoDateTime, resolveTemporalExpression } from './temporal-resolver.mjs'
+import { resolveTemporalExpression } from './temporal-resolver.mjs'
 
 const DIGIT_TO_WORD = {
   0: 'zero',
@@ -66,11 +64,16 @@ export function normalizeCountAnswer(ans, question) {
  * @returns {boolean}
  */
 export function shouldEscalateToSystem2(ledgerResult, triage, system1Pred) {
-  if (ledgerResult)
+  // Deterministic, verified ledger results bypass escalation.
+  if (ledgerResult && ledgerResult.verified === true)
+    return false
+  if (ledgerResult && ledgerResult.verified === false)
+    return true
+  if (ledgerResult && ledgerResult.verified === undefined)
     return false
   const isList = triage?.category === 1 || triage?.searchScope === 'multi_session' || triage?.choice === 'c1_multihop'
   const isDetective = triage?.category === 3 || triage?.choice === 'c3_detective'
-  const isAbstain = system1Pred === 'UNKNOWN'
+  const isAbstain = !system1Pred || system1Pred === 'UNKNOWN'
   return isList || isDetective || isAbstain
 }
 
@@ -147,10 +150,16 @@ export class AnswerHeadPass3 {
     }
 
     // 2. Step 5: Jev-Governed Bounded Temporal Joins & Anchor Arithmetic (C2 Queries)
-    const isDuration = triage?.temporalSubtype === 'duration'
-    // Explicit 'none' strictly disables calendar date extraction; fallback only when triage lacks temporalSubtype
-    const isCalendarDate = triage?.temporalSubtype === 'calendar_date'
+    const isPolarQuery = /^(?:did|is|was|were|has|have|had|does|do|can|could|would|will)\b/i.test(qLower)
+    const isDateQuery = /^(?:when|what\s+(?:date|day|year|month|time))\b/i.test(qLower)
+    const isDurationQuery = /^how\s+(?:long|many\s+(?:days?|weeks?|months?|years?|hours?))\b/i.test(qLower)
+
+    // Polar queries (yes/no) and non-temporal root questions must NEVER return calendar dates or durations
+    const isDuration = isDurationQuery && !isPolarQuery && triage?.temporalSubtype === 'duration'
+    const isCalendarDate = isDateQuery && !isPolarQuery && (
+      triage?.temporalSubtype === 'calendar_date'
       || (!triage?.temporalSubtype && triage?.category === 2)
+    )
 
     if ((isDuration || isCalendarDate) && textCandidates && textCandidates.length > 0) {
       for (const cand of textCandidates.slice(0, 3)) {
@@ -181,22 +190,16 @@ export class AnswerHeadPass3 {
             }
           }
 
-          // B2. Look for explicit dates/months/years mentioned in the turn text
-          // e.g. "April 26, 2022", "July 11, 2022", "March 2022", "in 2021", "In July, 2022"
+          // B2. Explicit dates/months/years mentioned in the turn text
+          // Must have semantic relevance to the question to prevent hijacking by unrelated dates
           const explicitDateMatch = text.match(/\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,\s+\d{4})?\b|\b(?:in\s+)?(19\d\d|20\d\d)\b|\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December),?\s+\d{4}\b/i)
           if (explicitDateMatch) {
-            return explicitDateMatch[0].trim()
-          }
-
-          // B3. If turn describes an event happening in that session (without relative offset)
-          // Check if question asks "when" as a root question and we have an anchor timestamp
-          if (rawTimestamp && /^\s*when\b/i.test(question)) {
-            const cleanDate = parseLoCoMoDateTime(rawTimestamp)
-            if (cleanDate) {
-              const dt = new Date(cleanDate)
-              if (!Number.isNaN(dt.getTime())) {
-                return format(dt, 'MMMM d, yyyy')
-              }
+            // Validate that the turn text has topical overlap with the question (at least 2 content tokens)
+            const qTokens = qLower.split(/\W+/).filter(t => t.length > 3 && !['when', 'what', 'where', 'which', 'about'].includes(t))
+            const textLower = text.toLowerCase()
+            const matchCount = qTokens.filter(t => textLower.includes(t)).length
+            if (matchCount >= 2) {
+              return explicitDateMatch[0].trim()
             }
           }
         }

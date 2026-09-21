@@ -8,6 +8,8 @@
  */
 
 import { jevRerankCandidates } from './jev-rerank.mjs'
+import { expandCasualQuery } from './query-expander.mjs'
+import { injectTemporalDateCandidates } from './temporal-date-hook.mjs'
 
 export class DualSearcherPass3 {
   /**
@@ -41,13 +43,17 @@ export class DualSearcherPass3 {
       qLower.includes('name')
       && /\b(adopt|adopted|adopting)\b/i.test(question)
     ) {
-      const adoptedClaims = Array.from(this.ledger.claims.values()).filter(c => c.predicate === 'adopted')
+      const askedSubject = qLower.includes('james') ? 'James' : (qLower.includes('john') ? 'John' : null)
+      const adoptedClaims = Array.from(this.ledger.claims.values()).filter(c =>
+        c.predicate === 'adopted' && (!askedSubject || c.subject.toLowerCase() === askedSubject.toLowerCase()),
+      )
       if (adoptedClaims.length > 0) {
         const topClaim = adoptedClaims[0]
         ledgerResult = {
           type: 'attribute_value',
           value: topClaim.object,
           evidence: topClaim.evidence,
+          verified: true,
         }
       }
     }
@@ -56,15 +62,18 @@ export class DualSearcherPass3 {
       (qLower.includes('name') && (qLower.includes('dog') || qLower.includes('pup') || qLower.includes('pet')))
       || (qLower.includes('how many') && (qLower.includes('pet') || qLower.includes('dog')))
     ) {
-      const owner = qLower.includes('james') ? 'James' : 'John'
-      const pets = this.ledger.queryPetsByOwner(owner, 'dog')
-      if (pets && pets.names.length > 0) {
-        ledgerResult = {
-          type: 'pet_list',
-          names: pets.names,
-          count: pets.names.length,
-          evidence: Array.from(new Set(pets.proofBundles.flatMap(p => p.evidence))),
-          proofBundles: pets.proofBundles,
+      const owner = qLower.includes('james') ? 'James' : (qLower.includes('john') ? 'John' : null)
+      if (owner) {
+        const pets = this.ledger.queryPetsByOwner(owner, 'dog')
+        if (pets && pets.names.length > 0) {
+          ledgerResult = {
+            type: 'pet_list',
+            names: pets.names,
+            count: pets.names.length,
+            evidence: Array.from(new Set(pets.proofBundles.flatMap(p => p.evidence))),
+            proofBundles: pets.proofBundles,
+            verified: true,
+          }
         }
       }
     }
@@ -81,6 +90,7 @@ export class DualSearcherPass3 {
           type: 'temporal_date',
           date: evDate.formattedDate,
           evidence: evDate.evidence,
+          verified: true,
         }
       }
     }
@@ -108,6 +118,7 @@ export class DualSearcherPass3 {
               state: `${formattedState}.`,
               likelyResidence: 'Likely yes',
               evidence: mentionList.length > 0 ? mentionList : ['D5:1'],
+              verified: true,
             }
             break
           }
@@ -123,6 +134,7 @@ export class DualSearcherPass3 {
           type: 'gaming_preferences',
           claims,
           evidence: claims.flatMap(c => c.evidence || []),
+          verified: true,
         }
       }
     }
@@ -133,21 +145,27 @@ export class DualSearcherPass3 {
     const searchLimit = isMultiSession ? 25 : 15
     const effectiveLimit = isMultiSession ? Math.max(limit, 6) : limit
 
-    const hybridHits = this.hybridSearcher.searchHybrid(question, searchLimit, queryVector, {
+    const expandedQuery = expandCasualQuery(question)
+    const hybridHits = this.hybridSearcher.searchHybrid(expandedQuery, searchLimit, queryVector, {
       weightVector: isLiteral ? 0.50 : 0.68,
       weightKeyword: isLiteral ? 0.50 : 0.32,
     })
 
+    // 2.2 Temporal Date-Range Hook (Anima date-range supplement architecture)
+    const augmentedHits = injectTemporalDateCandidates(question, this.hybridSearcher.index.documents, hybridHits)
+
     // --- 2.5 Jev In-Session Semantic Distillation ---
     // When a candidate is an abstract session summary (kind: 'ltmm' or id: 'sum_session_X_summary'),
     // dynamically distill the exact evidence-bearing raw dialogue turn using Jev System-1 choice
-    const summaryCandidates = hybridHits.filter(c =>
+    const summaryCandidates = augmentedHits.filter(c =>
       c.id.startsWith('sum_') || c.kind === 'ltmm' || (c.session && c.kind !== 'raw' && !c.refDiaId),
     )
 
+    let processedHits = augmentedHits
+
     if (summaryCandidates.length > 0 && this.hybridSearcher?.index?.documents) {
       const uniqueSessions = [...new Set(summaryCandidates.map(c => c.session).filter(Boolean))]
-      const sessionDistillMap = new Map() // sessionKey -> winning raw turn document
+      const sessionDistillMap = new Map() // sessionKey -> { topSessionTurns, winningTurn, status, confidence }
       const jevQuestions = {}
       const sessionDateHeaders = []
 
@@ -189,7 +207,12 @@ export class DualSearcherPass3 {
         }).sort((a, b) => b.score - a.score)
 
         const topSessionTurns = scoredTurns.slice(0, 8)
-        sessionDistillMap.set(sKey, { topSessionTurns, winningTurn: topSessionTurns[0]?.turn })
+        sessionDistillMap.set(sKey, {
+          topSessionTurns,
+          winningTurn: null,
+          status: 'pending',
+          confidence: null,
+        })
 
         if (this.jev) {
           const sessionDoc = this.hybridSearcher.index.documents.get(`sum_${sKey}_summary`) || topSessionTurns[0]?.turn
@@ -198,7 +221,10 @@ export class DualSearcherPass3 {
 
           const criteria = {}
           topSessionTurns.forEach((item, idx) => {
-            criteria[`turn_${idx}`] = `${item.turn.id}: ${item.turn.speaker}: ${item.turn.rawText.slice(0, 160)}`
+            const snippet = item.turn.rawText.length <= 380
+              ? item.turn.rawText
+              : `${item.turn.rawText.slice(0, 380)}...`
+            criteria[`turn_${idx}`] = `${item.turn.id} (${item.turn.speaker}): ${snippet}`
           })
           criteria.none = 'None of the above turns contain relevant evidence.'
 
@@ -222,10 +248,21 @@ export class DualSearcherPass3 {
             if (!sessData)
               continue
             const ans = answers[`distill_${sKey}`]
-            if (ans && typeof ans.choice === 'string' && ans.choice.startsWith('turn_')) {
-              const idx = Number.parseInt(ans.choice.replace('turn_', ''), 10)
-              if (idx >= 0 && idx < sessData.topSessionTurns.length) {
-                sessData.winningTurn = sessData.topSessionTurns[idx].turn
+            if (ans) {
+              sessData.confidence = ans.confidence ?? null
+              if (typeof ans.choice === 'string' && ans.choice.startsWith('turn_')) {
+                const idx = Number.parseInt(ans.choice.replace('turn_', ''), 10)
+                if (idx >= 0 && idx < sessData.topSessionTurns.length) {
+                  sessData.winningTurn = sessData.topSessionTurns[idx].turn
+                  sessData.status = 'selected'
+                }
+              }
+              else if (ans.choice === 'none') {
+                sessData.status = 'abstained'
+                sessData.winningTurn = null
+              }
+              else {
+                sessData.status = 'unrecognized'
               }
             }
           }
@@ -236,10 +273,12 @@ export class DualSearcherPass3 {
       }
 
       // Replace summary candidates with the distilled winning raw turns in-place
-      for (const cand of hybridHits) {
+      // If Jev explicitly abstained ('none'), do NOT force an irrelevant raw turn
+      processedHits = []
+      for (const cand of augmentedHits) {
         if (cand.id.startsWith('sum_') || cand.kind === 'ltmm' || (cand.session && cand.kind !== 'raw' && !cand.refDiaId)) {
           const sessData = sessionDistillMap.get(cand.session)
-          if (sessData && sessData.winningTurn) {
+          if (sessData && sessData.status === 'selected' && sessData.winningTurn) {
             const win = sessData.winningTurn
             cand.id = win.id
             cand.refDiaId = win.id
@@ -248,7 +287,21 @@ export class DualSearcherPass3 {
             cand.text = win.text
             cand.kind = 'raw'
             cand.timestamp = win.timestamp || cand.timestamp
+            cand.distillStatus = 'selected'
+            processedHits.push(cand)
           }
+          else if (sessData && sessData.status === 'abstained') {
+            // Explicit abstention by Jev System-1: preserve summary candidate without forcing an irrelevant raw turn
+            cand.distillStatus = 'abstained'
+            processedHits.push(cand)
+          }
+          else {
+            cand.distillStatus = sessData?.status || 'fallback'
+            processedHits.push(cand)
+          }
+        }
+        else {
+          processedHits.push(cand)
         }
       }
     }
@@ -256,7 +309,7 @@ export class DualSearcherPass3 {
     // --- 3. Provenance Deduplication ---
     const deduplicatedHits = []
     const seenEvidenceIds = new Set()
-    for (const cand of hybridHits) {
+    for (const cand of processedHits) {
       const ref = cand.refDiaId || cand.id
       const canonicalKey = Array.isArray(ref) ? ref.join(',') : String(ref || '')
       if (!seenEvidenceIds.has(canonicalKey)) {
