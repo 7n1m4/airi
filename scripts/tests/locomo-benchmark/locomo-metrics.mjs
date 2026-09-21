@@ -123,16 +123,35 @@ export function computeUpstreamF1Single(prediction, groundTruth) {
 /**
  * Official Upstream LoCoMo F1 evaluation.
  * Mirrors https://github.com/snap-research/locomo/blob/main/task_eval/evaluation.py
+ *
+ * Upstream applies multi-answer splitting ONLY to Category 1 (multi-hop).
+ * Categories 2, 3, and 4 use single-answer F1, with Category 3 pre-processing ';' delimiter.
+ *
+ * @param {string} prediction
+ * @param {string} groundTruth
+ * @param {number|null} [category=null] - 1 (multi-hop), 2 (temporal), 3 (open-domain), 4 (single-hop)
  */
-export function computeUpstreamLoCoMoF1(prediction, groundTruth) {
-  const predictions = (prediction || '').split(',').map(p => p.trim())
-  const groundTruths = (groundTruth || '').split(',').map(g => g.trim())
+export function computeUpstreamLoCoMoF1(prediction, groundTruth, category = null) {
+  let gt = String(groundTruth || '')
+  const pred = String(prediction || '')
 
-  const scores = groundTruths.map((gt) => {
-    return Math.max(...predictions.map(pred => computeUpstreamF1Single(pred, gt)))
-  })
+  if (category === 3) {
+    gt = gt.split(';')[0].trim()
+  }
 
-  return scores.reduce((a, b) => a + b, 0) / (scores.length || 1)
+  // Category 1: Multi-Hop list evaluation (splits into sub-answers)
+  if (category === 1) {
+    const predictions = pred.split(',').map(p => p.trim())
+    const groundTruths = gt.split(',').map(g => g.trim())
+
+    const scores = groundTruths.map((g) => {
+      return Math.max(...predictions.map(p => computeUpstreamF1Single(p, g)))
+    })
+    return scores.reduce((a, b) => a + b, 0) / (scores.length || 1)
+  }
+
+  // Categories 2, 3, 4 (or default single-answer evaluation)
+  return computeUpstreamF1Single(pred, gt)
 }
 
 export function computeExactMatch(prediction, groundTruth) {
@@ -156,7 +175,7 @@ export function aggregateBenchmarkResults(evalList) {
   for (const item of evalList) {
     const catKey = `c${item.category}`
     const f1 = computeTokenF1(item.prediction, item.groundTruth)
-    const upstreamF1 = computeUpstreamLoCoMoF1(item.prediction, item.groundTruth)
+    const upstreamF1 = computeUpstreamLoCoMoF1(item.prediction, item.groundTruth, item.category)
     const bleu = computeBleu1(item.prediction, item.groundTruth)
     const em = computeExactMatch(item.prediction, item.groundTruth)
 

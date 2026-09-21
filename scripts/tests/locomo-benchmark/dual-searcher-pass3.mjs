@@ -151,6 +151,31 @@ export class DualSearcherPass3 {
       rankedHits = await jevRerankCandidates(this.jev, question, deduplicatedHits, 10)
     }
 
+    // Helper to resolve a candidate's canonical raw dialogue turn document
+    const getRawDoc = (canonicalId) => {
+      const doc = this.hybridSearcher?.index?.documents?.get(canonicalId)
+      if (doc && doc.kind === 'raw')
+        return doc
+      if (doc?.refDiaId) {
+        const rawRef = this.hybridSearcher?.index?.documents?.get(doc.refDiaId)
+        if (rawRef)
+          return rawRef
+      }
+      return doc
+    }
+
+    // Hydrate all rankedHits with verbatim raw dialogue turns
+    for (const cand of rankedHits) {
+      const canonicalId = cand.refDiaId || cand.id
+      const rawDoc = getRawDoc(canonicalId)
+      if (rawDoc) {
+        cand.speaker = rawDoc.speaker || cand.speaker
+        cand.rawText = rawDoc.rawText || cand.rawText
+        cand.text = rawDoc.text || cand.text
+        cand.timestamp = rawDoc.timestamp || cand.timestamp
+      }
+    }
+
     // --- 5. Provenance-Preserving Evidence Merging ---
     const mergedEvidence = []
     const candidateObjects = []
@@ -160,7 +185,15 @@ export class DualSearcherPass3 {
       for (const evId of ledgerResult.evidence) {
         if (!mergedEvidence.includes(evId)) {
           mergedEvidence.push(evId)
-          candidateObjects.push({ id: evId, refDiaId: evId })
+          const rawDoc = getRawDoc(evId)
+          candidateObjects.push({
+            id: evId,
+            refDiaId: evId,
+            speaker: rawDoc?.speaker,
+            text: rawDoc?.text || evId,
+            rawText: rawDoc?.rawText || evId,
+            timestamp: rawDoc?.timestamp,
+          })
         }
       }
     }
@@ -170,11 +203,14 @@ export class DualSearcherPass3 {
       const canonicalId = cand.refDiaId || cand.id
       if (!mergedEvidence.includes(canonicalId) && mergedEvidence.length < limit) {
         mergedEvidence.push(canonicalId)
+        const rawDoc = getRawDoc(canonicalId)
         candidateObjects.push({
           id: cand.id,
-          refDiaId: cand.refDiaId,
-          text: cand.text,
-          rawText: cand.rawText,
+          refDiaId: canonicalId,
+          speaker: rawDoc?.speaker || cand.speaker,
+          text: rawDoc?.text || cand.text,
+          rawText: rawDoc?.rawText || cand.rawText,
+          timestamp: rawDoc?.timestamp || cand.timestamp,
         })
       }
     }

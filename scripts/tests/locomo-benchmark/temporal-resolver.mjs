@@ -159,6 +159,23 @@ export function resolveTemporalExpression(rawExpression, anchorDateInput, turnId
     }
   }
 
+  // 5. "last year"
+  if (raw.includes('last year')) {
+    const prevYear = anchor.getFullYear() - 1
+    return {
+      raw_expression: rawExpression,
+      anchor_turn_id: turnId,
+      anchor_date: format(anchor, 'yyyy-MM-dd'),
+      kind: 'interval',
+      precision: 'year',
+      start: `${prevYear}-01-01`,
+      end_inclusive: `${prevYear}-12-31`,
+      formatted_label: `In ${prevYear}`,
+      policy: 'calendar_last_year_v1',
+      ambiguous: false,
+    }
+  }
+
   // 4. "in April 2022" / "in April"
   const monthMatch = raw.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s*(\d{4})?\b/i)
   if (monthMatch) {

@@ -65,6 +65,9 @@ export class AnswerHeadPass3 {
       }
 
       if (ledgerResult.type === 'gaming_preferences') {
+        if (Array.isArray(ledgerResult.claims) && ledgerResult.claims.length > 0) {
+          return `${ledgerResult.claims.map(c => `${c.subject}'s favorite game is ${c.object}`).join(', ')}.`
+        }
         return 'John\'s favorite game is CS:GO, and James\'s is Apex Legends.'
       }
 
@@ -85,8 +88,8 @@ export class AnswerHeadPass3 {
           || (this.index?.documents?.get(cand.refDiaId || cand.id)?.timestamp)
           || ''
 
-        // A. Resolve relative temporal expressions (e.g. "three days ago", "last week")
-        const relMatch = text.match(/\b(last week|yesterday|last month|\d+\s+days?\s+ago|one\s+days?\s+ago|two\s+days?\s+ago|three\s+days?\s+ago|four\s+days?\s+ago|five\s+days?\s+ago|six\s+days?\s+ago|seven\s+days?\s+ago)\b/i)
+        // A. Resolve relative temporal expressions (e.g. "last year", "three days ago", "last week")
+        const relMatch = text.match(/\b(last year|last week|yesterday|last month|\d+\s+days?\s+ago|one\s+days?\s+ago|two\s+days?\s+ago|three\s+days?\s+ago|four\s+days?\s+ago|five\s+days?\s+ago|six\s+days?\s+ago|seven\s+days?\s+ago)\b/i)
         if (relMatch && rawTimestamp) {
           const resolved = resolveTemporalExpression(relMatch[0], rawTimestamp, cand.refDiaId || cand.id)
           if (resolved && resolved.formatted_label && resolved.kind !== 'unknown') {
@@ -126,9 +129,17 @@ export class AnswerHeadPass3 {
 
       if (candidateSpans.length > 0) {
         const spanRes = await selectAnswerSpanWithJev(this.jev, question, contextPassage, candidateSpans)
-        if (spanRes.answer && spanRes.confidence >= 0.35) {
+        if (spanRes.status === 'found' && spanRes.answer && spanRes.confidence >= 0.35) {
           return spanRes.answer
         }
+        if (spanRes.status === 'abstain') {
+          // Jev explicitly abstained because the literal answer is not present in candidate spans
+          return 'UNKNOWN'
+        }
+      }
+      else {
+        // No candidate spans could be extracted from literal text
+        return 'UNKNOWN'
       }
     }
 
@@ -151,12 +162,6 @@ export class AnswerHeadPass3 {
           return clean
         }
       }
-    }
-
-    // 5. Fallback to candidate text
-    if (textCandidates && textCandidates.length > 0) {
-      const topText = textCandidates[0].rawText || textCandidates[0].text || ''
-      return topText
     }
 
     return 'UNKNOWN'

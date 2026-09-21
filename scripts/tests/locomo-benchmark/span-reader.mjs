@@ -219,29 +219,32 @@ export function extractCandidateSpans(text, question = '') {
     }
   }
 
-  // 5. Clean 1-3 word noun phrases (strip leading/trailing stopwords)
-  const words = clean.replace(/[^a-z0-9+#/'-]/gi, ' ').split(/\s+/).filter(Boolean)
-  for (let i = 0; i < words.length; i++) {
-    const wLower = words[i].toLowerCase()
-    if (STOPWORDS.has(wLower) || words[i].length < 3)
-      continue
+  // 5. Clean 1-3 word noun phrases (bounded within each sentence to prevent cross-sentence bridging)
+  const sentences = clean.split(/(?<=[.?!])\s+/)
+  for (const sentence of sentences) {
+    const words = sentence.replace(/[^a-z0-9+#/'-]/gi, ' ').split(/\s+/).filter(Boolean)
+    for (let i = 0; i < words.length; i++) {
+      const wLower = words[i].toLowerCase()
+      if (STOPWORDS.has(wLower) || words[i].length < 2)
+        continue
 
-    // 1-gram
-    spans.push(words[i])
+      // 1-gram
+      spans.push(words[i])
 
-    // 2-gram
-    if (i + 1 < words.length) {
-      const w2 = words[i + 1]
-      const w2Lower = w2.toLowerCase()
-      if (!STOPWORDS.has(w2Lower) && w2.length >= 2) {
-        spans.push(`${words[i]} ${w2}`)
-      }
-      else if (i + 2 < words.length) {
-        // e.g. "Python and C++" or "Legend of Zelda"
-        const w3 = words[i + 2]
-        const w3Lower = w3.toLowerCase()
-        if (!STOPWORDS.has(w3Lower) && w3.length >= 2) {
-          spans.push(`${words[i]} ${w2} ${w3}`)
+      // 2-gram
+      if (i + 1 < words.length) {
+        const w2 = words[i + 1]
+        const w2Lower = w2.toLowerCase()
+        if (!STOPWORDS.has(w2Lower) && w2.length >= 2) {
+          spans.push(`${words[i]} ${w2}`)
+        }
+        else if (i + 2 < words.length) {
+          // e.g. "Python and C++" or "Legend of Zelda"
+          const w3 = words[i + 2]
+          const w3Lower = w3.toLowerCase()
+          if (!STOPWORDS.has(w3Lower) && w3.length >= 2) {
+            spans.push(`${words[i]} ${w2} ${w3}`)
+          }
         }
       }
     }
@@ -253,6 +256,9 @@ export function extractCandidateSpans(text, question = '') {
   for (const s of spans) {
     const sNorm = s.trim().toLowerCase()
     if (sNorm.length < 2 || seen.has(sNorm))
+      continue
+    // Validate that the span is an exact verbatim substring of the evidence passage
+    if (!clean.toLowerCase().includes(sNorm))
       continue
     seen.add(sNorm)
     uniqueSpans.push(s.trim())
@@ -290,11 +296,11 @@ export function extractCandidateSpans(text, question = '') {
  * @param {string} question
  * @param {string} contextText - Raw evidence dialogue turn(s)
  * @param {string[]} candidateSpans
- * @returns {Promise<{ answer: string|null, confidence: number, choice: string }>}
+ * @returns {Promise<{ status: 'found' | 'abstain' | 'error', answer: string|null, confidence: number, choice: string }>}
  */
 export async function selectAnswerSpanWithJev(jev, question, contextText, candidateSpans = []) {
   if (!jev || !question || !contextText) {
-    return { answer: null, confidence: 0, choice: 'none' }
+    return { status: 'abstain', answer: null, confidence: 0, choice: 'none' }
   }
 
   let candidates = candidateSpans
@@ -303,7 +309,7 @@ export async function selectAnswerSpanWithJev(jev, question, contextText, candid
   }
 
   if (candidates.length === 0) {
-    return { answer: null, confidence: 0, choice: 'none' }
+    return { status: 'abstain', answer: null, confidence: 0, choice: 'none' }
   }
 
   // Limit to at most 10 best candidates to stay well within Jev criteria bounds
@@ -334,6 +340,7 @@ export async function selectAnswerSpanWithJev(jev, question, contextText, candid
       const idx = Number.parseInt(choice.replace('choice_', ''), 10)
       if (idx >= 0 && idx < boundedCandidates.length) {
         return {
+          status: 'found',
           answer: boundedCandidates[idx],
           confidence,
           choice,
@@ -341,10 +348,10 @@ export async function selectAnswerSpanWithJev(jev, question, contextText, candid
       }
     }
 
-    return { answer: null, confidence, choice: 'none' }
+    return { status: 'abstain', answer: null, confidence, choice: 'none' }
   }
   catch (err) {
     console.warn(`[SpanReader] Jev span selection error: ${err.message}`)
-    return { answer: null, confidence: 0, choice: 'error' }
+    return { status: 'error', answer: null, confidence: 0, choice: 'error' }
   }
 }

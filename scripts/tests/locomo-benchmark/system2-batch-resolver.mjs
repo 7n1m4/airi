@@ -4,7 +4,10 @@
  * Dispatches Category 3 (Detective / Implication) questions where the answer
  * is not explicitly stated in conversational text to DeepSeek Flash via OpenCode Go.
  *
- * Uses structured JSON schema batched into a single HTTP request (up to 20 items / batch).
+ * Features:
+ *   - Strict ID validation (rejects unrequested or cross-chunk IDs).
+ *   - Typed contract: { id, status, answer, usedGeneralKnowledge }.
+ *   - Verbatim evidence grounding: interprets dialogue evidence using world knowledge.
  */
 
 import fs from 'node:fs'
@@ -60,13 +63,32 @@ export async function resolveSystem2Batch(items, opts = {}) {
   const batchSize = opts.batchSize || 15
   const results = {}
 
+  const systemPrompt = `You are a concise deductive reader.
+Answer each item independently. Use dialogue evidence for personal facts. Use general knowledge only to interpret those facts.
+Enforce the requested entity type, medium (e.g. board game vs video game), actor, and time scope.
+Do not turn an unsupported summary assertion into evidence. If support is insufficient or conflicting, return status "insufficient".
+Give the shortest sufficient answer, preserving qualifications.
+Output ONLY a valid JSON object matching this schema:
+{
+  "answers": {
+    "<item_id>": {
+      "status": "answered" | "insufficient",
+      "answer": "<concise answer string>",
+      "usedGeneralKnowledge": boolean
+    }
+  }
+}
+Do not include markdown codeblocks or conversational filler.`
+
   for (let i = 0; i < items.length; i += batchSize) {
     const chunk = items.slice(i, i + batchSize)
+    const validChunkIds = new Set(chunk.map(it => it.id))
+
     const itemMap = {}
     for (const it of chunk) {
       itemMap[it.id] = {
         question: it.question,
-        evidence: (it.evidence || '').slice(0, 500),
+        evidence: (it.evidence || '').slice(0, 800),
       }
     }
 
@@ -74,14 +96,8 @@ export async function resolveSystem2Batch(items, opts = {}) {
       model,
       response_format: { type: 'json_object' },
       messages: [
-        {
-          role: 'system',
-          content: 'You are a concise deductive reader. For each item in the input batch, infer the unstated concept, game name, medical condition, entity, or deductive conclusion from conversational clues. Output ONLY a valid JSON object matching this schema: {"answers": {"<item_id>": "<concise 1-4 word answer>"}}. Do not include conversational filler or explanations.',
-        },
-        {
-          role: 'user',
-          content: JSON.stringify(itemMap),
-        },
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: JSON.stringify(itemMap) },
       ],
       temperature: 0.1,
     }
@@ -107,11 +123,31 @@ export async function resolveSystem2Batch(items, opts = {}) {
       const data = await res.json()
       const contentStr = data.choices?.[0]?.message?.content
       if (contentStr) {
-        const parsed = JSON.parse(contentStr)
-        const ans = parsed.answers || parsed
-        for (const [k, v] of Object.entries(ans)) {
-          if (typeof v === 'string') {
-            results[k] = v.trim()
+        let parsed = {}
+        try {
+          parsed = JSON.parse(contentStr)
+        }
+        catch {
+          // Attempt to extract JSON substring if wrapped in markdown
+          const jsonMatch = contentStr.match(/\{[\s\S]*\}/)
+          if (jsonMatch)
+            parsed = JSON.parse(jsonMatch[0])
+        }
+
+        const answers = parsed.answers || parsed
+
+        for (const [id, val] of Object.entries(answers)) {
+          // Reject cross-chunk or unrequested IDs
+          if (!validChunkIds.has(id))
+            continue
+
+          if (typeof val === 'string' && val.trim().length > 0) {
+            results[id] = val.trim()
+          }
+          else if (val && typeof val === 'object') {
+            if (val.status !== 'insufficient' && typeof val.answer === 'string' && val.answer.trim().length > 0) {
+              results[id] = val.answer.trim()
+            }
           }
         }
       }

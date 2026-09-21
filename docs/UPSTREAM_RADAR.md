@@ -6,6 +6,97 @@
 
 ---
 
+## [2026-09-21] Upstream Delta: `6670dc9d..8e2e5b01` (5 commits, 32 files, 9 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 5 commits (`6670dc9d..8e2e5b01`) across 32 files and recorded 9 PR updates (7 new, 0 status/lifecycle changes, 2 discussion changes). Focus centered on: (1) native vision routing and client-side image compression (#2629), bypassing intermediate pre-description when models support vision natively and introducing canvas downscaling to 3MB; (2) active chat response interruption and abort handling (#2624), retaining partial assistant outputs marked `{ interrupted: true }` and coordinating TTS speech cancellation with new prompt sends via `useChatInterruption`; (3) chat action control unification across Web/Mobile/Electron (#2623), standardizing stop/send actions to 36px circular buttons with a square stop glyph; (4) Web image controls alignment (#2622), switching to a gallery icon and unifying 32px secondary controls; and (5) Mobile composer stabilization (#2621), adopting a fixed 3-part layout and removing legacy dock/drag code.
+* **Discussion & Community Buzz**:
+  - 💬 **#2624: `fix(stage-ui): interrupt active chat responses` (38 comments)**: Heavy discussion on interaction ergonomics, abort signal handling, partial message persistence, and coordinating multi-window/BroadcastChannel cancellations across LLM streams and audio playback.
+  - 💬 **#2629: `feat(stage-ui): route chat images to native vision` (22 comments)**: High interest and debate over native vision dispatch vs. pre-description fallbacks, canvas client-side image downscaling, and attachment byte caps.
+  - 💬 **#2121: `chore(i18n): update translations` (+3 new comments, total 111)**: Milestone crossing 110+ comments for ongoing multilingual community translation sync.
+  - 💬 **#2567: `feat(provider-inference): add AnonRouter chat provider` (+1 new comments, total 4)**: Continued interest in anonymous router inference provider integration.
+  - 💬 **#2630: `fix(stage-ui): preserve new chat selection` (2 comments)**: Active review on preserving selection state when switching or creating chats.
+  - 💬 **#2627: `fix(stage-ui): initialize Kokoro catalogs before discovery` (2 comments)**: New fix addressing Kokoro local TTS catalog initialization race condition before model discovery runs.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2629 / Commit `8e2e5b010d`: Client-side image compression & native vision routing**: High value for stage chat ergonomics. Modifies `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-images.ts` with `compressImage` (canvas downscaling to max edge 1920, JPEG quality 0.85, 3MB cap), preventing payload explosion/OOM on high-res image pastes. The native vision check (`selectedModel?.metadata?.abilities?.vision === true`) is also a clean bypass for multimodal models.
+  - ⭐ **PR #2624 / Commit `fe11decc22`: Partial message preservation on abort & `interrupted: true` flag**: Excellent UX fix. Retains streamed partial assistant text when aborted (`abortSignal.aborted && hasAssistantOutput(buildingMessage)`) and appends it to session history with `{ interrupted: true }` instead of dropping it completely.
+  - 🔍 **PR #2627 [Open PR]: `fix(stage-ui): initialize Kokoro catalogs before discovery`**: Worth evaluating for our local Kokoro TTS pipeline to ensure voice catalogs are populated before model discovery queries them.
+  - 🔍 **PR #2623 / Commit `dce185ba1d` & PR #2622 / Commit `8abff7a238`: Chat composer action styling**: Clean visual polish aligning secondary action buttons (gallery icon, mic, send) and unified stop glyph. Can be adapted into our custom chat composer.
+  - ⚪ **Auto-Reject / Do Not Port**: Upstream `packages/core-agent/` architectural abstractions (this fork uses Pinia stores for chat orchestration); upstream `MobileInteractiveArea.vue` and `InteractiveArea.vue` full file ports (conflicts with our 1.8k-line customized `InteractiveArea.vue` which houses text journal, STMM/LTMM, echo chips, and autonomous artistry).
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/stage-ui/src/stores/chat.ts` (Commits `8e2e5b010d`, `fe11decc22`)**: Upstream touched `chat.ts` for vision routing and `cancelPendingSends`. Our fork contains extensive custom logic (multi-actor `<|ACTOR|>` switching, STMM/LTMM text journal hooks, Echo chips, and universe scoping). Do not merge directly; cherry-pick isolated snippets only.
+  - ⚠️ **`apps/stage-tamagotchi/src/renderer/components/InteractiveArea.vue` (Commits `fe11decc22`, `dce185ba1d`)**: Upstream modified stop/send controls and event handling in `InteractiveArea.vue`. In our fork, `InteractiveArea.vue` is heavily customized with memory and artistry modals.
+  - ⚠️ **`packages/core-agent/` Architecture**: Upstream moved core chat runtime into `packages/core-agent/src/runtime/chat-orchestrator-runtime.ts`. Our fork maintains runtime logic in `packages/stage-ui/src/stores/chat/`. Any port of interruption logic must be implemented in the store layer.
+
+### 📋 Upstream Commits
+- `8e2e5b010d` feat(stage-ui): route chat images to native vision (#2629) [#2629](https://github.com/moeru-ai/airi/pull/2629) _(RainbowBird, 2026-09-21)_
+- `fe11decc22` fix(stage-ui): interrupt active chat responses (#2624) [#2624](https://github.com/moeru-ai/airi/pull/2624) _(RainbowBird, 2026-09-21)_
+- `dce185ba1d` refactor(stage-layouts): unify chat action controls (#2623) [#2623](https://github.com/moeru-ai/airi/pull/2623) _(RainbowBird, 2026-09-21)_
+- `8abff7a238` fix(stage-layouts): align web image controls (#2622) [#2622](https://github.com/moeru-ai/airi/pull/2622) _(RainbowBird, 2026-09-21)_
+- `59af59fbbf` fix(stage-layouts): stabilize mobile chat composer (#2621) [#2621](https://github.com/moeru-ai/airi/pull/2621) _(RainbowBird, 2026-09-21)_
+
+### 🔬 Subsystem Breakdown
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 2 file(s) (+41/-73)
+- `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.browser.test.ts` *(+14/-58)*
+- `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.vue` *(+27/-15)*
+
+#### Core Agent Runtime (`🔍 inspect`) — 2 file(s) (+35/-0)
+- `packages/core-agent/src/runtime/chat-orchestrator-runtime.test.ts` *(+27/-0)*
+- `packages/core-agent/src/runtime/chat-orchestrator-runtime.ts` *(+8/-0)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 2 file(s) (+6/-4)
+- `packages/i18n/src/locales/en/stage.yaml` *(+3/-2)*
+- `packages/i18n/src/locales/zh-Hans/stage.yaml` *(+3/-2)*
+
+#### Stage Layouts & Shells (`🔍 inspect`) — 10 file(s) (+542/-323)
+- `packages/stage-layouts/src/components/Layouts/InteractiveArea.vue` *(+6/-1)*
+- `packages/stage-layouts/src/components/Layouts/InteractiveArea/Actions/ViewControls.vue` *(+10/-5)*
+- `packages/stage-layouts/src/components/Layouts/MobileInteractiveArea.vue` *(+67/-250)*
+- `packages/stage-layouts/src/components/Widgets/ChatActionButtons.vue` *(+20/-37)*
+- `packages/stage-layouts/src/components/Widgets/ChatArea.vue` *(+47/-29)*
+- `packages/stage-layouts/src/components/Widgets/ChatToolbarButton.vue` *(+26/-0)*
+- `packages/stage-layouts/src/composables/use-chat-interruption.test.ts` *(+242/-0)*
+- `packages/stage-layouts/src/composables/use-chat-interruption.ts` *(+105/-0)*
+- `packages/stage-layouts/src/composables/useStopSpeakingButton.test.ts` *(+12/-0)*
+- `packages/stage-layouts/src/composables/useStopSpeakingButton.ts` *(+7/-1)*
+
+#### UI Primitives & Pages (`📦 import / inspect`) — 1 file(s) (+2/-2)
+- `packages/stage-pages/src/pages/settings/data/components/chats-section.vue` *(+2/-2)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 13 file(s) (+397/-50)
+- `packages/stage-ui/src/components/scenarios/chat/components/image-attachment-preview.vue` *(+2/-2)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-composer.test.ts` *(+36/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-composer.ts` *(+14/-3)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-images.browser.test.ts` *(+1/-1)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-images.ts` *(+74/-13)*
+- `packages/stage-ui/src/components/scenarios/chat/index.ts` *(+1/-1)*
+- `packages/stage-ui/src/composables/use-data-maintenance.ts` *(+4/-4)*
+- `packages/stage-ui/src/stores/mods/api/context-bridge.contract.browser.test.ts` *(+137/-7)*
+- `packages/stage-ui/src/stores/mods/api/context-bridge.ts` *(+58/-16)*
+- `packages/stage-ui/src/stores/mods/api/context-channel.test.ts` *(+14/-0)*
+- `packages/stage-ui/src/stores/mods/api/context-channel.ts` *(+11/-0)*
+- `packages/stage-ui/src/stores/speech-output-control.browser.test.ts` *(+32/-0)*
+- `packages/stage-ui/src/stores/speech-output-control.ts` *(+13/-3)*
+
+#### Cognitive & Consciousness (`⚠️ hand-merge`) — 2 file(s) (+103/-8)
+- `packages/stage-ui/src/stores/chat.contract.test.ts` *(+98/-5)*
+- `packages/stage-ui/src/stores/chat.ts` *(+5/-3)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (7)
+- [#2630](https://github.com/moeru-ai/airi/pull/2630) `fix(stage-ui): preserve new chat selection` by **@luoling8192** *(2 comments)*
+- [#2629](https://github.com/moeru-ai/airi/pull/2629) `feat(stage-ui): route chat images to native vision` by **@luoling8192** *(22 comments)*
+- [#2627](https://github.com/moeru-ai/airi/pull/2627) `fix(stage-ui): initialize Kokoro catalogs before discovery` by **@lorenzozanee** *(2 comments)*
+- [#2624](https://github.com/moeru-ai/airi/pull/2624) `fix(stage-ui): interrupt active chat responses` by **@luoling8192** *(38 comments)*
+- [#2623](https://github.com/moeru-ai/airi/pull/2623) `refactor(stage-layouts): unify chat action controls` by **@luoling8192** *(1 comments)*
+- [#2622](https://github.com/moeru-ai/airi/pull/2622) `fix(stage-layouts): unify web chat controls` by **@luoling8192** *(1 comments)*
+- [#2621](https://github.com/moeru-ai/airi/pull/2621) `fix(stage-layouts): align chat image controls` by **@luoling8192** *(1 comments)*
+
+#### 💬 Discussion Activity (2)
+- [#2121](https://github.com/moeru-ai/airi/pull/2121) `chore(i18n): update translations` — *+3 comments (108 ➔ 111 total)*
+- [#2567](https://github.com/moeru-ai/airi/pull/2567) `feat(provider-inference): add AnonRouter chat provider` — *+1 comments (3 ➔ 4 total)*
+
+---
 ## [2026-09-20] Upstream Delta: `62ef8676..6670dc9d` (12 commits, 124 files, 33 PR update(s))
 
 ### 🎯 Executive Highlights

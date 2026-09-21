@@ -64,6 +64,9 @@ export class EntityLedger {
     const id = mentionId || `m_${this.mentions.size + 1}`
     const mention = { mentionId: id, span, turnId, entityId }
     this.mentions.set(id, mention)
+    if (entityId && this.entities.has(entityId)) {
+      this.entities.get(entityId).mentions.add(id)
+    }
     return mention
   }
 
@@ -88,7 +91,7 @@ export class EntityLedger {
     if (!predMap.has(predicate)) {
       predMap.set(predicate, new Set())
     }
-    predMap.get(predicate).add(claimId)
+    predMap.get(predicate).add(id)
 
     // Index by Object + Predicate
     if (typeof object === 'string') {
@@ -99,7 +102,7 @@ export class EntityLedger {
       if (!objPredMap.has(predicate)) {
         objPredMap.set(predicate, new Set())
       }
-      objPredMap.get(predicate).add(claimId)
+      objPredMap.get(predicate).add(id)
     }
 
     // Index by Source Turn IDs
@@ -107,7 +110,7 @@ export class EntityLedger {
       if (!this.bySource.has(turnId)) {
         this.bySource.set(turnId, new Set())
       }
-      this.bySource.get(turnId).add(claimId)
+      this.bySource.get(turnId).add(id)
     }
 
     return claim
