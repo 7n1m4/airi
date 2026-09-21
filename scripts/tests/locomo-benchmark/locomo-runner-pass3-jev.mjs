@@ -14,7 +14,7 @@ import path from 'node:path'
 import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
 
-import { AnswerHeadPass3 } from './answer-head-pass3.mjs'
+import { AnswerHeadPass3, normalizeCountAnswer, shouldEscalateToSystem2 } from './answer-head-pass3.mjs'
 import { DualSearcherPass3 } from './dual-searcher-pass3.mjs'
 import { EntityLedger } from './entity-ledger.mjs'
 import { HybridSearcher } from './hybrid-searcher.mjs'
@@ -52,12 +52,12 @@ const Q_EMBEDDINGS_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-co
 const BASE_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger.json')
 const PASS3_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger-pass3.json')
 const PASS1_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass2-trace.json')
-const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass6-report.md')
-const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass6-trace.json')
+const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass7-report.md')
+const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass7-trace.json')
 
 console.log('================================================================')
-console.log('LoCoMo conv-47 Pass 6: Jev Cognitive Triage + Window Hydration + System-2 Precision')
-console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 1 vs Pass 6')
+console.log('LoCoMo conv-47 Pass 7: Unified Evidence Bundles + Uncapped System-2 + Scorer Parity')
+console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 1 vs Pass 7')
 console.log('================================================================\n')
 
 // 1. Load Dataset
@@ -218,17 +218,23 @@ for (let i = 0; i < qas.length; i++) {
   // Autonomous dual-process routing:
   // Escalates to System-2 ONLY if System-1 could not resolve the answer from graph or literal text,
   // or if Jev zero-shot triage predicted open-domain deduction.
-  const isDetectiveTriage = jevTriage.category === 3 || jevTriage.choice === 'c3_detective'
-  const isReaderAbstain = p3Pred === 'UNKNOWN'
-  const needsSystem2 = !p3SearchRes.ledgerResult && (isDetectiveTriage || isReaderAbstain)
+  const needsSystem2 = shouldEscalateToSystem2(p3SearchRes.ledgerResult, jevTriage, p3Pred)
 
   if (needsSystem2) {
-    const topEvidenceText = p3SearchRes.candidateObjects.map(c => c.text || c.rawText || '').join('\n')
+    const isDetectiveTriage = jevTriage.category === 3 || jevTriage.choice === 'c3_detective'
+    const evidenceBlocks = p3SearchRes.candidateObjects.map((c) => {
+      const turnId = c.refDiaId || c.id || 'dialogue'
+      const dateStr = c.timestamp || 'Unknown date'
+      const speakerPrefix = c.speaker ? `${c.speaker}: ` : ''
+      const body = c.text || c.rawText || ''
+      return `[Turn ${turnId} | Date: ${dateStr}]\n${body}`
+    }).join('\n\n')
+
     system2Queue.push({
       id: `q_${i}`,
       index: i,
       question: q.question,
-      evidence: topEvidenceText,
+      evidence: evidenceBlocks,
       reason: isDetectiveTriage ? 'triage_c3_detective' : 'reader_abstention_unknown',
     })
   }
@@ -238,7 +244,7 @@ for (let i = 0; i < qas.length; i++) {
     const bRec = ((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p1Rec = ((pass1Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p3Rec = ((pass3Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
-    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 1: ${p1Rec}% | Pass 3 (Jev): ${p3Rec}%`)
+    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 1: ${p1Rec}% | Pass 7 (Jev): ${p3Rec}%`)
   }
 }
 
@@ -252,7 +258,8 @@ if (system2Queue.length > 0) {
 
   for (const item of system2Queue) {
     if (s2Answers[item.id]) {
-      const refinedPred = s2Answers[item.id].trim()
+      let refinedPred = s2Answers[item.id].trim()
+      refinedPred = normalizeCountAnswer(refinedPred, item.question)
       pass3Results[item.index].prediction = refinedPred
       pass3Results[item.index].finalPrediction = refinedPred
       pass3Results[item.index].system2Resolved = true
@@ -273,7 +280,7 @@ const bRecallPct = (baselineHits / totalGoldEvidenceTurns) * 100
 const p1RecallPct = (pass1Hits / totalGoldEvidenceTurns) * 100
 const p3RecallPct = (pass3Hits / totalGoldEvidenceTurns) * 100
 
-const reportMd = `# LoCoMo conv-47 Pass 6: Jev Cognitive Triage + Turn Window Hydration + System-2 Precision Benchmark Report
+const reportMd = `# LoCoMo conv-47 Pass 7: Unified Evidence Bundles + Uncapped System-2 + Scorer Parity Benchmark Report
 
 - **Date**: ${new Date().toISOString()}
 - **Dataset**: conv-47 (31 sessions, 689 turns, 150 non-adversarial QA pairs)
@@ -283,15 +290,16 @@ const reportMd = `# LoCoMo conv-47 Pass 6: Jev Cognitive Triage + Turn Window Hy
   - **Triage & Cognitive Scope**: TypeSafe Jev System-1 API multi-field schema (\`category\`, \`temporal_subtype\`, \`search_scope\`)
   - **Reranking**: Batched TypeSafe Jev System-1 API (\`jev-latest\`, batched 10-15 candidates / call)
   - **Conversational Window Hydration**: Verbatim 3-turn dialogue window context (\`[D{s}:{t-1}, D{s}:{t}, D{s}:{t+1}]\`)
-  - **Multi-Session Candidate Expansion**: Autonomous session diversity up to 6 distinct sessions for list/aggregation queries
-  - **Temporal Arithmetic**: Jev-Governed Calendar Arithmetic & Duration Extraction (strips ad-hoc regex overrides)
+  - **Unified Evidence Bundling**: Shared session-diversified candidate pool across System-1 Span Reader and System-2
+  - **Uncapped System-2 Context**: 6000-char evidence budget with explicit turn IDs and session dates
+  - **Temporal Arithmetic**: Jev-Governed Calendar Arithmetic & Greeting-Filtered Duration Extraction
   - **Deductive Synthesis (System-2)**: Ultra-Concise Batched DeepSeek Flash via OpenCode Go with strict token/polar constraints
   - **Entity Hierarchy**: Jev Hierarchical Place Resolution Tree (Real vs Fictional -> Country -> State)
   - **Storage**: In-Memory Entity Ledger with Graph Traversal
 
 ## 1. Top-Line Scorecard
 
-| Metric | Baseline (Regex) | Pass 1 (Laya Coprocessor) | Pass 6 (Jev Triage + Window + S2 Precision) | Pass 6 vs Pass 1 Delta |
+| Metric | Baseline (Regex) | Pass 1 (Laya Coprocessor) | Pass 7 (Unified Evidence + Uncapped S2) | Pass 7 vs Pass 1 Delta |
 | :--- | :--- | :--- | :--- | :--- |
 | **Evidence Recall@3** | ${bRecallPct.toFixed(2)}% | ${p1RecallPct.toFixed(2)}% | **${p3RecallPct.toFixed(2)}%** | **${(p3RecallPct - p1RecallPct) >= 0 ? '+' : ''}${(p3RecallPct - p1RecallPct).toFixed(2)}%** |
 | **Official Upstream F1** | ${bAgg.overall.upstreamF1.toFixed(2)}% | ${p1Agg.overall.upstreamF1.toFixed(2)}% | **${p3Agg.overall.upstreamF1.toFixed(2)}%** | **${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1).toFixed(2)}%** |
@@ -304,7 +312,7 @@ const reportMd = `# LoCoMo conv-47 Pass 6: Jev Cognitive Triage + Turn Window Hy
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
-console.log(`Saved Pass 6 report to ${OUTPUT_REPORT_PATH}`)
+console.log(`Saved Pass 7 report to ${OUTPUT_REPORT_PATH}`)
 
 const detailedComparison = qas.map((q, idx) => ({
   index: idx,
@@ -325,9 +333,9 @@ fs.writeFileSync(OUTPUT_TRACE_PATH, JSON.stringify({
   metrics: { baseline: bAgg, pass1: p1Agg, pass3: p3Agg },
   detailedComparison,
 }, null, 2))
-console.log(`Saved Pass 3 trace to ${OUTPUT_TRACE_PATH}`)
+console.log(`Saved Pass 7 trace to ${OUTPUT_TRACE_PATH}`)
 
 console.log('\n======================================================')
-console.log('PASS 3 SHOOTOUT COMPLETE')
+console.log('PASS 7 SHOOTOUT COMPLETE')
 console.log('======================================================')
 console.log(reportMd)

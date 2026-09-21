@@ -142,9 +142,10 @@ export class DualSearcherPass3 {
     const deduplicatedHits = []
     const seenEvidenceIds = new Set()
     for (const cand of hybridHits) {
-      const canonicalId = cand.refDiaId || cand.id
-      if (!seenEvidenceIds.has(canonicalId)) {
-        seenEvidenceIds.add(canonicalId)
+      const ref = cand.refDiaId || cand.id
+      const canonicalKey = Array.isArray(ref) ? ref.join(',') : String(ref || '')
+      if (!seenEvidenceIds.has(canonicalKey)) {
+        seenEvidenceIds.add(canonicalKey)
         deduplicatedHits.push(cand)
       }
     }
@@ -157,26 +158,34 @@ export class DualSearcherPass3 {
 
     // Helper to resolve a candidate's canonical raw dialogue turn document
     const getRawDoc = (canonicalId) => {
-      const doc = this.hybridSearcher?.index?.documents?.get(canonicalId)
+      let key = canonicalId
+      if (Array.isArray(key)) {
+        key = key[0]
+      }
+      else if (typeof key === 'string' && key.includes(',')) {
+        key = key.split(',')[0].trim()
+      }
+      const doc = this.hybridSearcher?.index?.documents?.get(key)
       if (doc && doc.kind === 'raw')
         return doc
       if (doc?.refDiaId) {
-        const rawRef = this.hybridSearcher?.index?.documents?.get(doc.refDiaId)
+        const rawKey = Array.isArray(doc.refDiaId) ? doc.refDiaId[0] : (typeof doc.refDiaId === 'string' && doc.refDiaId.includes(',') ? doc.refDiaId.split(',')[0].trim() : doc.refDiaId)
+        const rawRef = this.hybridSearcher?.index?.documents?.get(rawKey)
         if (rawRef)
           return rawRef
       }
       return doc
     }
 
-    // Helper to build conversational dialogue turn window (turn - 1, turn, turn + 1)
-    const getConversationalWindow = (canonicalId) => {
-      const doc = getRawDoc(canonicalId)
+    // Helper to build conversational dialogue turn window (turn - 1, turn, turn + 1) for a single turn
+    const getTurnWindow = (turnId) => {
+      const doc = this.hybridSearcher?.index?.documents?.get(turnId)
       if (!doc)
         return ''
       if (doc.kind !== 'raw')
         return doc.rawText || doc.text || ''
 
-      const m = canonicalId?.match(/^D(\d+):(\d+)$/i)
+      const m = turnId?.match(/^D(\d+):(\d+)$/i)
       if (!m)
         return `${doc.speaker}: ${doc.rawText || doc.text}`
 
@@ -194,6 +203,39 @@ export class DualSearcherPass3 {
         lines.push(`${nextDoc.speaker}: ${nextDoc.rawText || nextDoc.text}`)
       }
       return lines.join('\n')
+    }
+
+    // Helper to resolve conversational windows across scalar, array, or compound references
+    const getConversationalWindow = (canonicalId) => {
+      let turnIds = []
+      if (Array.isArray(canonicalId)) {
+        turnIds = canonicalId
+      }
+      else if (typeof canonicalId === 'string') {
+        turnIds = canonicalId.split(',').map(s => s.trim()).filter(Boolean)
+      }
+      if (turnIds.length === 0)
+        return ''
+
+      // If the referenced doc is a summary with refDiaId, resolve its underlying raw turn IDs
+      const firstDoc = this.hybridSearcher?.index?.documents?.get(turnIds[0])
+      if (firstDoc?.refDiaId) {
+        if (Array.isArray(firstDoc.refDiaId)) {
+          turnIds = firstDoc.refDiaId
+        }
+        else if (typeof firstDoc.refDiaId === 'string') {
+          turnIds = firstDoc.refDiaId.split(',').map(s => s.trim()).filter(Boolean)
+        }
+      }
+
+      const windowSnippets = []
+      for (const tid of turnIds) {
+        const win = getTurnWindow(tid)
+        if (win && !windowSnippets.includes(win)) {
+          windowSnippets.push(win)
+        }
+      }
+      return windowSnippets.join('\n')
     }
 
     // Hydrate all rankedHits with verbatim conversational dialogue turn windows
@@ -214,18 +256,31 @@ export class DualSearcherPass3 {
     const mergedEvidence = []
     const candidateObjects = []
 
+    // Helper to safely extract single canonical primary ID string
+    const toPrimaryId = (ref) => {
+      if (Array.isArray(ref))
+        return ref[0]
+      if (typeof ref === 'string' && ref.includes(','))
+        return ref.split(',')[0].trim()
+      return String(ref || '')
+    }
+
     // Inject structured graph proof bundles first
     if (ledgerResult && Array.isArray(ledgerResult.evidence)) {
-      for (const evId of ledgerResult.evidence) {
-        if (!mergedEvidence.includes(evId)) {
-          mergedEvidence.push(evId)
-          const rawDoc = getRawDoc(evId)
+      const flattenedEvidence = ledgerResult.evidence.flatMap(e =>
+        Array.isArray(e) ? e : (typeof e === 'string' && e.includes(',') ? e.split(',').map(s => s.trim()) : [e]),
+      )
+      for (const evId of flattenedEvidence) {
+        const primaryId = toPrimaryId(evId)
+        if (primaryId && !mergedEvidence.includes(primaryId)) {
+          mergedEvidence.push(primaryId)
+          const rawDoc = getRawDoc(primaryId)
           candidateObjects.push({
-            id: evId,
-            refDiaId: evId,
+            id: primaryId,
+            refDiaId: primaryId,
             speaker: rawDoc?.speaker,
-            text: getConversationalWindow(evId) || rawDoc?.text || evId,
-            rawText: getConversationalWindow(evId) || rawDoc?.rawText || evId,
+            text: getConversationalWindow(primaryId) || rawDoc?.text || primaryId,
+            rawText: getConversationalWindow(primaryId) || rawDoc?.rawText || primaryId,
             timestamp: rawDoc?.timestamp,
             session: rawDoc?.session,
           })
@@ -238,15 +293,16 @@ export class DualSearcherPass3 {
       const seenSessions = new Set()
       for (const cand of rankedHits) {
         const canonicalId = cand.refDiaId || cand.id
+        const primaryId = toPrimaryId(canonicalId)
         const rawDoc = getRawDoc(canonicalId)
         const sessionKey = rawDoc?.session || cand.session
         if (sessionKey && !seenSessions.has(sessionKey)) {
           seenSessions.add(sessionKey)
-          if (!mergedEvidence.includes(canonicalId) && mergedEvidence.length < effectiveLimit) {
-            mergedEvidence.push(canonicalId)
+          if (primaryId && !mergedEvidence.includes(primaryId) && mergedEvidence.length < effectiveLimit) {
+            mergedEvidence.push(primaryId)
             candidateObjects.push({
-              id: cand.id,
-              refDiaId: canonicalId,
+              id: primaryId,
+              refDiaId: primaryId,
               speaker: rawDoc?.speaker || cand.speaker,
               text: cand.windowText || cand.text,
               rawText: cand.windowText || cand.rawText,
@@ -261,12 +317,13 @@ export class DualSearcherPass3 {
     // Fill remaining slots up to effectiveLimit
     for (const cand of rankedHits) {
       const canonicalId = cand.refDiaId || cand.id
-      if (!mergedEvidence.includes(canonicalId) && mergedEvidence.length < effectiveLimit) {
-        mergedEvidence.push(canonicalId)
+      const primaryId = toPrimaryId(canonicalId)
+      if (primaryId && !mergedEvidence.includes(primaryId) && mergedEvidence.length < effectiveLimit) {
+        mergedEvidence.push(primaryId)
         const rawDoc = getRawDoc(canonicalId)
         candidateObjects.push({
-          id: cand.id,
-          refDiaId: canonicalId,
+          id: primaryId,
+          refDiaId: primaryId,
           speaker: rawDoc?.speaker || cand.speaker,
           text: cand.windowText || cand.text,
           rawText: cand.windowText || cand.rawText,
@@ -278,7 +335,8 @@ export class DualSearcherPass3 {
 
     return {
       ledgerResult,
-      textCandidates: rankedHits.slice(0, effectiveLimit),
+      // Unify textCandidates with candidateObjects so both reader and System-2 share the exact same evidence bundle
+      textCandidates: candidateObjects.slice(0, effectiveLimit),
       topEvidence: mergedEvidence.slice(0, effectiveLimit),
       candidateObjects: candidateObjects.slice(0, effectiveLimit),
       combinedCandidates: rankedHits,

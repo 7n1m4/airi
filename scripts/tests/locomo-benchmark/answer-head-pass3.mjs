@@ -14,6 +14,66 @@ import { format } from 'date-fns'
 import { extractCandidateSpans, selectAnswerSpanWithJev } from './span-reader.mjs'
 import { parseLoCoMoDateTime, resolveTemporalExpression } from './temporal-resolver.mjs'
 
+const DIGIT_TO_WORD = {
+  0: 'zero',
+  1: 'one',
+  2: 'two',
+  3: 'three',
+  4: 'four',
+  5: 'five',
+  6: 'six',
+  7: 'seven',
+  8: 'eight',
+  9: 'nine',
+  10: 'ten',
+  11: 'eleven',
+  12: 'twelve',
+}
+
+/**
+ * Format count answers as English words if query asks for a count.
+ *
+ * @param {string} ans
+ * @param {string} question
+ * @returns {string}
+ */
+export function normalizeCountAnswer(ans, question) {
+  if (!ans || typeof ans !== 'string')
+    return ans
+  const trimmed = ans.trim()
+  const qLower = (question || '').toLowerCase()
+  const isCountQuery = /\b(?:how many|number of)\b/i.test(qLower)
+  if (isCountQuery) {
+    if (DIGIT_TO_WORD[trimmed] !== undefined) {
+      return DIGIT_TO_WORD[trimmed]
+    }
+    const m = trimmed.match(/^(\d+)(\s+[a-z].*)$/i)
+    if (m && DIGIT_TO_WORD[m[1]] !== undefined) {
+      return `${DIGIT_TO_WORD[m[1]]}${m[2]}`
+    }
+  }
+  return trimmed
+}
+
+/**
+ * Autonomous dual-process escalation router:
+ * Determines whether to escalate a query to System-2 based strictly on System-1 signals
+ * (graph resolution, triage category, and reader confidence/abstention).
+ * Label-blind: completely independent of gold benchmark labels.
+ *
+ * @param {object|null} ledgerResult
+ * @param {object|null} triage
+ * @param {string} system1Pred
+ * @returns {boolean}
+ */
+export function shouldEscalateToSystem2(ledgerResult, triage, system1Pred) {
+  if (ledgerResult)
+    return false
+  const isDetective = triage?.category === 3 || triage?.choice === 'c3_detective'
+  const isAbstain = system1Pred === 'UNKNOWN'
+  return isDetective || isAbstain
+}
+
 export class AnswerHeadPass3 {
   /**
    * @param {import('./needle-node.mjs').NeedleNode} [needle]
@@ -35,6 +95,16 @@ export class AnswerHeadPass3 {
    * @returns {Promise<string>}
    */
   async formatAnswer(question, searchResult, triage = null) {
+    const rawAnswer = await this._formatAnswerRaw(question, searchResult, triage)
+    return normalizeCountAnswer(rawAnswer, question)
+  }
+
+  /**
+   * Internal raw answer formatter.
+   *
+   * @private
+   */
+  async _formatAnswerRaw(question, searchResult, triage = null) {
     const qLower = question.toLowerCase()
     const { ledgerResult, textCandidates } = searchResult
 
@@ -78,8 +148,9 @@ export class AnswerHeadPass3 {
 
     // 2. Step 5: Jev-Governed Bounded Temporal Joins & Anchor Arithmetic (C2 Queries)
     const isDuration = triage?.temporalSubtype === 'duration'
+    // Explicit 'none' strictly disables calendar date extraction; fallback only when triage lacks temporalSubtype
     const isCalendarDate = triage?.temporalSubtype === 'calendar_date'
-      || (triage?.category === 2 && triage?.temporalSubtype !== 'duration')
+      || (!triage?.temporalSubtype && triage?.category === 2)
 
     if ((isDuration || isCalendarDate) && textCandidates && textCandidates.length > 0) {
       for (const cand of textCandidates.slice(0, 3)) {
@@ -90,7 +161,10 @@ export class AnswerHeadPass3 {
 
         // A. Duration Queries (e.g. "19 days", "six months", "nearly three months", "one month")
         if (isDuration) {
-          const durMatch = text.match(/\b(?:nearly\s+|about\s+|approximately\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|several|a few)\s+(?:days?|weeks?|months?|years?|hours?)\b/i)
+          // Filter out conversational contact/greeting recency phrases like:
+          // "it's been a few days since we talked", "it's been several weeks since we caught up"
+          const cleanedText = text.replace(/(?:it'?s\s+been\s+)?(?:a\s+few|several|\d+)\s+(?:days?|weeks?|months?)\s+since\s+(?:we\s+)?(?:last\s+)?talked/gi, '')
+          const durMatch = cleanedText.match(/\b(?:nearly\s+|about\s+|approximately\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|several|a few)\s+(?:days?|weeks?|months?|years?|hours?)\b/i)
           if (durMatch) {
             return durMatch[0].trim()
           }
@@ -131,7 +205,8 @@ export class AnswerHeadPass3 {
 
     // 3. Step 4: Grounded Span Selection via TypeSafe Jev System-1
     if (this.jev && textCandidates && textCandidates.length > 0) {
-      const topContexts = textCandidates.slice(0, 2)
+      const isMultiSession = triage?.searchScope === 'multi_session' || triage?.category === 1
+      const topContexts = textCandidates.slice(0, isMultiSession ? 6 : 3)
         .map(c => c.rawText || c.text || '')
         .filter(Boolean)
 

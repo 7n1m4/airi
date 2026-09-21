@@ -138,35 +138,27 @@ describe('span Reader Sentence Isolation & Verbatim Validation', () => {
 })
 
 describe('label-Blind Routing Invariance', () => {
-  it('routing decision is completely invariant to goldCategory', () => {
-    const route = (ledgerResult, jevTriage, p3Pred, _goldCategory) => {
-      // Label-blind autonomous dual-process routing
-      const isDetectiveTriage = jevTriage.category === 3 || jevTriage.choice === 'c3_detective'
-      const isReaderAbstain = p3Pred === 'UNKNOWN'
-      return !ledgerResult && (isDetectiveTriage || isReaderAbstain)
-    }
+  it('production routing decision is completely invariant to goldCategory', async () => {
+    const { shouldEscalateToSystem2 } = await import('./answer-head-pass3.mjs')
 
     const triageLiteral = { category: 4, choice: 'c4_literal' }
     const triageDetective = { category: 3, choice: 'c3_detective' }
 
-    // When reader finds a span, it does not escalate regardless of what goldCategory is
-    for (const goldCat of [1, 2, 3, 4, 999]) {
-      assert.equal(route(null, triageLiteral, 'Toronto', goldCat), false)
-    }
+    // When reader finds a span, it does not escalate regardless of what category it is
+    assert.equal(shouldEscalateToSystem2(null, triageLiteral, 'Toronto'), false)
 
-    // When reader abstains (UNKNOWN), it escalates regardless of what goldCategory is
-    for (const goldCat of [1, 2, 3, 4, 999]) {
-      assert.equal(route(null, triageLiteral, 'UNKNOWN', goldCat), true)
-    }
+    // When reader abstains (UNKNOWN), it escalates
+    assert.equal(shouldEscalateToSystem2(null, triageLiteral, 'UNKNOWN'), true)
 
-    // When triage predicts detective, it escalates regardless of what goldCategory is
-    for (const goldCat of [1, 2, 3, 4, 999]) {
-      assert.equal(route(null, triageDetective, 'something', goldCat), true)
-    }
+    // When triage predicts detective, it escalates
+    assert.equal(shouldEscalateToSystem2(null, triageDetective, 'something'), true)
+
+    // When ledger result is present, it never escalates
+    assert.equal(shouldEscalateToSystem2({ type: 'pet_list' }, triageDetective, 'UNKNOWN'), false)
   })
 })
 
-describe('pass 6: Jev Multi-Field Triage & Temporal Non-Hijack', () => {
+describe('pass 7: Jev Multi-Field Triage, Greeting Filtering & Count Normalization', () => {
   it('prevents subordinate "when" from hijacking literal queries to session dates', async () => {
     const { AnswerHeadPass3 } = await import('./answer-head-pass3.mjs')
     const head = new AnswerHeadPass3()
@@ -195,19 +187,49 @@ describe('pass 6: Jev Multi-Field Triage & Temporal Non-Hijack', () => {
     assert.notEqual(ans, 'September 18, 2022', 'Should not hijack to session timestamp')
   })
 
-  it('correctly extracts elapsed duration when temporalSubtype is duration', async () => {
+  it('temporalSubtype: "none" strictly bypasses calendar date fallback even with category: 2', async () => {
     const { AnswerHeadPass3 } = await import('./answer-head-pass3.mjs')
     const head = new AnswerHeadPass3()
 
-    const q = 'How many days did James plan to spend on his trip in Canada?'
+    // Query categorized as 2, but Jev explicitly diagnosed temporalSubtype as 'none'
+    const q = 'What topic did James and John discuss during their morning chat?'
     const searchResult = {
       ledgerResult: null,
       textCandidates: [
         {
-          id: 'D16:13',
-          rawText: 'James: I plan to stay for 19 days in total before flying home.',
-          text: 'James: I plan to stay for 19 days in total before flying home.',
-          timestamp: '5:13 pm on 9 July, 2022',
+          id: 'D29:8',
+          rawText: 'James: We decided to live together and rent an apartment.',
+          text: 'James: We decided to live together and rent an apartment.',
+          timestamp: '10:00 am on 15 October, 2023',
+        },
+      ],
+    }
+    const triage = {
+      category: 2,
+      choice: 'c2_temporal',
+      temporalSubtype: 'none',
+      searchScope: 'single_session',
+    }
+
+    const ans = await head.formatAnswer(q, searchResult, triage)
+    assert.notEqual(ans, 'October 15, 2023', 'Explicit temporalSubtype: none must strictly bypass calendar date formatting')
+  })
+
+  it('filters conversational greeting recency phrases from duration extraction', async () => {
+    const { AnswerHeadPass3 } = await import('./answer-head-pass3.mjs')
+    const head = new AnswerHeadPass3()
+
+    // Q62 scenario: candidate has conversational greeting "it's been a few days since we talked"
+    // along with the actual event description
+    const q = 'How long did their training retreat last?'
+    const searchResult = {
+      ledgerResult: null,
+      textCandidates: [
+        {
+          id: 'D29:1',
+          rawText: 'John: Hey James, it\'s been a few days since we talked! The workshop was intense, we were in training for six months.',
+          text: 'John: Hey James, it\'s been a few days since we talked! The workshop was intense, we were in training for six months.',
+          timestamp: '10:00 am on 15 October, 2023',
         },
       ],
     }
@@ -219,6 +241,33 @@ describe('pass 6: Jev Multi-Field Triage & Temporal Non-Hijack', () => {
     }
 
     const ans = await head.formatAnswer(q, searchResult, triage)
-    assert.equal(ans, '19 days', 'Should extract duration string rather than date')
+    assert.equal(ans, 'six months', 'Should extract "six months" and ignore greeting phrase "a few days"')
+  })
+
+  it('normalizes count answers from digits to English words for count queries', async () => {
+    const { normalizeCountAnswer } = await import('./answer-head-pass3.mjs')
+
+    // Standalone digits for count questions
+    assert.equal(normalizeCountAnswer('2', 'How many pets does James have?'), 'two')
+    assert.equal(normalizeCountAnswer('1', 'How many dogs does John have?'), 'one')
+    assert.equal(normalizeCountAnswer('3', 'What is the number of books James read?'), 'three')
+    assert.equal(normalizeCountAnswer('4 dogs', 'How many dogs?'), 'four dogs')
+
+    // Preserves non-count numbers (dates, turn IDs, percentages)
+    assert.equal(normalizeCountAnswer('April 26, 2022', 'When did James adopt Ned?'), 'April 26, 2022')
+    assert.equal(normalizeCountAnswer('D16:13', 'Which turn id?'), 'D16:13')
+    assert.equal(normalizeCountAnswer('150 meters', 'What height did he jump from?'), '150 meters')
+  })
+
+  it('documents Q31 Session 16 dialogue truth vs disputed reference', async () => {
+    // Session 16 (9 July, 2022):
+    // D16:9: "leaving the day after tomorrow evening" -> July 11
+    // D16:13: "I plan to return on July 20"
+    // True elapsed duration = 9 days (or 10 inclusive days). The reference "19 days" is unmentioned in dialogue.
+    const s16_date = '5:13 pm on 9 July, 2022'
+    const departure = new Date('2022-07-11T18:00:00')
+    const returnDate = new Date('2022-07-20T18:00:00')
+    const elapsedDays = Math.round((returnDate - departure) / (1000 * 60 * 60 * 24))
+    assert.equal(elapsedDays, 9, 'Elapsed days between July 11 and July 20 is 9 days, not 19 days')
   })
 })

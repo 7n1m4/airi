@@ -63,21 +63,22 @@ export async function resolveSystem2Batch(items, opts = {}) {
   const batchSize = opts.batchSize || 15
   const results = {}
 
-  const systemPrompt = `You are an ultra-concise factual reading assistant.
+  const systemPrompt = `You are a concise factual reading assistant.
 Answer each item independently. Ground personal facts strictly in the provided dialogue evidence; use general knowledge only to interpret or deduce unstated implications.
 Rules:
-1. Output ONLY the minimal factual answer (1 to 4 words). Do NOT include reasoning, evidence citations, parenthetical commentary, or conversational filler.
+1. For single-entity, person, place, game, or attribute questions, output ONLY the minimal factual answer (1 to 4 words). Do NOT include reasoning, evidence citations, parenthetical commentary, or conversational filler.
 2. For yes/no questions, answer strictly with "Yes" or "No".
-3. For questions asking for a count or number, output solely the number or number word (e.g. "2" or "Two").
-4. For questions asking for a list of items, separate items with commas.
-5. NEVER use slashes ('/') between alternative words; use 'or' or commas instead.
-6. If the provided evidence is conflicting or genuinely insufficient to answer, return status "insufficient".
+3. For questions asking for a count or number, output the count as an English word (e.g. "two", "three").
+4. For questions asking for duration or elapsed time, include the numeric amount and unit (e.g. "six months", "nearly three months").
+5. For questions asking for a list of items (e.g. countries, books, games, charities), list ALL supported items separated by commas. Do NOT truncate the list to 1-4 words.
+6. NEVER use slashes ('/') between alternative words; use 'or' or commas instead.
+7. If the provided evidence is conflicting or genuinely insufficient to answer, return status "insufficient".
 Output ONLY a valid JSON object matching this schema:
 {
   "answers": {
     "<item_id>": {
       "status": "answered" | "insufficient",
-      "answer": "<minimal answer string>",
+      "answer": "<factual answer string>",
       "usedGeneralKnowledge": boolean
     }
   }
@@ -92,7 +93,7 @@ Do not include markdown codeblocks or conversational filler.`
     for (const it of chunk) {
       itemMap[it.id] = {
         question: it.question,
-        evidence: (it.evidence || '').slice(0, 800),
+        evidence: (it.evidence || '').slice(0, 6000),
       }
     }
 
@@ -116,6 +117,7 @@ Do not include markdown codeblocks or conversational filler.`
           'x-opencode-session': sessionId,
         },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(45000),
       })
 
       if (!res.ok) {
@@ -149,7 +151,8 @@ Do not include markdown codeblocks or conversational filler.`
             results[id] = val.trim()
           }
           else if (val && typeof val === 'object') {
-            if (val.status !== 'insufficient' && typeof val.answer === 'string' && val.answer.trim().length > 0) {
+            // Strictly require status === 'answered' and valid non-empty answer
+            if (val.status === 'answered' && typeof val.answer === 'string' && val.answer.trim().length > 0) {
               results[id] = val.answer.trim()
             }
           }
