@@ -60,10 +60,17 @@ export class EntityLedger {
     return entity
   }
 
-  addClaim({ subject, predicate, object, qualifiers = {}, evidence = [], dateInfo = null }) {
-    const claimId = `claim_${this.claims.size + 1}`
+  addMention({ mentionId = null, span, turnId, entityId }) {
+    const id = mentionId || `m_${this.mentions.size + 1}`
+    const mention = { mentionId: id, span, turnId, entityId }
+    this.mentions.set(id, mention)
+    return mention
+  }
+
+  addClaim({ claimId = null, subject, predicate, object, qualifiers = {}, evidence = [], dateInfo = null }) {
+    const id = claimId || `claim_${this.claims.size + 1}`
     const claim = {
-      claimId,
+      claimId: id,
       subject,
       predicate,
       object,
@@ -71,7 +78,7 @@ export class EntityLedger {
       evidence,
       dateInfo,
     }
-    this.claims.set(claimId, claim)
+    this.claims.set(id, claim)
 
     // Index by Subject + Predicate
     if (!this.bySubjectPredicate.has(subject)) {
@@ -104,6 +111,24 @@ export class EntityLedger {
     }
 
     return claim
+  }
+
+  addEvent({ eventId = null, type, roles = {}, turnId = null, claimIds = [] }) {
+    const id = eventId || `event_${type}_${this.events.size + 1}`
+    const event = {
+      eventId: id,
+      type,
+      roles: { ...roles },
+      turnId,
+      claimIds: new Set(claimIds),
+    }
+    this.events.set(id, event)
+
+    if (!this.byEvent.has(id)) {
+      this.byEvent.set(id, new Set(claimIds))
+    }
+
+    return event
   }
 
   /**
@@ -221,6 +246,11 @@ export class EntityLedger {
         ...e,
         mentions: Array.from(e.mentions),
       })),
+      mentions: Array.from(this.mentions.values()),
+      events: Array.from(this.events.values()).map(e => ({
+        ...e,
+        claimIds: Array.from(e.claimIds || []),
+      })),
       claims: Array.from(this.claims.values()),
       ingestion: Array.from(this.ingestion.entries()),
     }
@@ -244,6 +274,17 @@ export class EntityLedger {
         if (!ledger.byAlias.has(norm))
           ledger.byAlias.set(norm, new Set())
         ledger.byAlias.get(norm).add(e.entityId)
+      }
+    }
+    if (Array.isArray(data.mentions)) {
+      for (const m of data.mentions) {
+        ledger.mentions.set(m.mentionId, m)
+      }
+    }
+    if (Array.isArray(data.events)) {
+      for (const ev of data.events) {
+        ledger.events.set(ev.eventId, { ...ev, claimIds: new Set(ev.claimIds || []) })
+        ledger.byEvent.set(ev.eventId, new Set(ev.claimIds || []))
       }
     }
     if (Array.isArray(data.claims)) {

@@ -1,8 +1,4 @@
-/**
- * Deterministic Temporal Resolver for LoCoMo Dialogue Turns.
- * Anchors relative time expressions to source session dates and computes intervals.
- * Follows the peer-reviewed specification in docs/memory_lab/LoCoMo-Pass2-Entity-Ledger-Review.md §5.
- */
+import { endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subDays, subMonths, subWeeks } from 'date-fns'
 
 const MONTH_NAMES = [
   'January',
@@ -37,10 +33,35 @@ export function formatWeekOfMonth(date) {
 }
 
 /**
- * Resolves a temporal expression relative to a session timestamp.
+ * Parse LoCoMo date string into ISO-compatible date string.
+ * Handles formats like: "3:47 pm on 17 March, 2022" -> "March 17, 2022 15:47:00"
+ *
+ * @param {string} str
+ * @returns {string|null}
+ */
+export function parseLoCoMoDateTime(str) {
+  if (!str)
+    return null
+  const match = str.match(/(\d{1,2}):(\d{2})\s*(am|pm)\s*on\s*(\d{1,2})\s*([A-Z]+),?\s*(\d{4})/i)
+  if (match) {
+    const [_, h, m, meridiem, d, month, y] = match
+    let hour = Number.parseInt(h, 10)
+    if (meridiem.toLowerCase() === 'pm' && hour < 12)
+      hour += 12
+    if (meridiem.toLowerCase() === 'am' && hour === 12)
+      hour = 0
+    const padHour = String(hour).padStart(2, '0')
+    const padDay = String(d).padStart(2, '0')
+    return `${month} ${padDay}, ${y} ${padHour}:${m}:00`
+  }
+  return str
+}
+
+/**
+ * Resolves a temporal expression relative to a session timestamp using calendar arithmetic.
  *
  * @param {string} rawExpression - e.g. "last week", "three days ago", "yesterday"
- * @param {string|Date} anchorDateInput - e.g. "2022-04-12T09:52:00"
+ * @param {string|Date} anchorDateInput - e.g. "2022-04-12T09:52:00" or "3:47 pm on 17 March, 2022"
  * @param {string} [turnId]
  * @returns {object|null}
  */
@@ -49,33 +70,29 @@ export function resolveTemporalExpression(rawExpression, anchorDateInput, turnId
     return null
 
   const raw = rawExpression.trim().toLowerCase()
-  const anchor = new Date(anchorDateInput)
-  if (isNaN(anchor.getTime()))
+  const cleanAnchor = typeof anchorDateInput === 'string'
+    ? (parseLoCoMoDateTime(anchorDateInput) || anchorDateInput)
+    : anchorDateInput
+  const anchor = new Date(cleanAnchor)
+  if (Number.isNaN(anchor.getTime()))
     return null
-
-  const anchorYear = anchor.getFullYear()
-  const anchorMonth = anchor.getMonth()
-  const anchorDay = anchor.getDate()
 
   // 1. "last week"
   if (raw.includes('last week')) {
-    // Previous Monday-Sunday calendar week
-    const dayOfWeek = anchor.getDay() // 0 is Sunday, 1 is Monday...
-    const daysSinceLastMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1
-    const currentWeekMonday = new Date(anchorYear, anchorMonth, anchorDay - daysSinceLastMonday)
-    const prevWeekMonday = new Date(currentWeekMonday.getTime() - 7 * 86400000)
-    const prevWeekSunday = new Date(currentWeekMonday.getTime() - 86400000)
-
+    // Previous Monday-Sunday calendar week via date-fns
+    const prevWeek = subWeeks(anchor, 1)
+    const prevWeekMonday = startOfWeek(prevWeek, { weekStartsOn: 1 })
+    const prevWeekSunday = endOfWeek(prevWeek, { weekStartsOn: 1 })
     const formattedLabel = formatWeekOfMonth(prevWeekMonday)
 
     return {
       raw_expression: rawExpression,
       anchor_turn_id: turnId,
-      anchor_date: anchor.toISOString().split('T')[0],
+      anchor_date: format(anchor, 'yyyy-MM-dd'),
       kind: 'interval',
       precision: 'week',
-      start: prevWeekMonday.toISOString().split('T')[0],
-      end_inclusive: prevWeekSunday.toISOString().split('T')[0],
+      start: format(prevWeekMonday, 'yyyy-MM-dd'),
+      end_inclusive: format(prevWeekSunday, 'yyyy-MM-dd'),
       formatted_label: formattedLabel, // "first week of April 2022"
       policy: 'previous_calendar_week_monday_start_v1',
       ambiguous: true,
@@ -87,40 +104,57 @@ export function resolveTemporalExpression(rawExpression, anchorDateInput, turnId
   if (daysAgoMatch) {
     const numMap = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7 }
     const days = numMap[daysAgoMatch[1]] || Number.parseInt(daysAgoMatch[1], 10) || 3
-    const targetDate = new Date(anchor.getTime() - days * 86400000)
-    const targetIso = targetDate.toISOString().split('T')[0]
-    const month = MONTH_NAMES[targetDate.getMonth()]
-    const formatted = `${month} ${targetDate.getDate()}, ${targetDate.getFullYear()}`
+    const targetDate = subDays(anchor, days)
+    const formatted = format(targetDate, 'MMMM d, yyyy')
 
     return {
       raw_expression: rawExpression,
       anchor_turn_id: turnId,
-      anchor_date: anchor.toISOString().split('T')[0],
+      anchor_date: format(anchor, 'yyyy-MM-dd'),
       kind: 'point',
       precision: 'day',
-      date: targetIso,
+      date: format(targetDate, 'yyyy-MM-dd'),
       formatted_label: formatted, // "April 26, 2022"
-      policy: 'exact_days_subtraction_v1',
+      policy: 'calendar_days_subtraction_v1',
       ambiguous: false,
     }
   }
 
   // 3. "yesterday"
   if (raw.includes('yesterday')) {
-    const targetDate = new Date(anchor.getTime() - 86400000)
-    const targetIso = targetDate.toISOString().split('T')[0]
-    const month = MONTH_NAMES[targetDate.getMonth()]
-    const formatted = `${month} ${targetDate.getDate()}, ${targetDate.getFullYear()}`
+    const targetDate = subDays(anchor, 1)
+    const formatted = format(targetDate, 'MMMM d, yyyy')
 
     return {
       raw_expression: rawExpression,
       anchor_turn_id: turnId,
-      anchor_date: anchor.toISOString().split('T')[0],
+      anchor_date: format(anchor, 'yyyy-MM-dd'),
       kind: 'point',
       precision: 'day',
-      date: targetIso,
+      date: format(targetDate, 'yyyy-MM-dd'),
       formatted_label: formatted,
-      policy: 'yesterday_subtraction_v1',
+      policy: 'calendar_yesterday_subtraction_v1',
+      ambiguous: false,
+    }
+  }
+
+  // 4. "last month"
+  if (raw.includes('last month')) {
+    const prevMonth = subMonths(anchor, 1)
+    const prevMonthStart = startOfMonth(prevMonth)
+    const prevMonthEnd = endOfMonth(prevMonth)
+    const formatted = format(prevMonth, 'MMMM yyyy')
+
+    return {
+      raw_expression: rawExpression,
+      anchor_turn_id: turnId,
+      anchor_date: format(anchor, 'yyyy-MM-dd'),
+      kind: 'interval',
+      precision: 'month',
+      start: format(prevMonthStart, 'yyyy-MM-dd'),
+      end_inclusive: format(prevMonthEnd, 'yyyy-MM-dd'),
+      formatted_label: formatted,
+      policy: 'calendar_last_month_v1',
       ambiguous: false,
     }
   }
@@ -129,6 +163,7 @@ export function resolveTemporalExpression(rawExpression, anchorDateInput, turnId
   const monthMatch = raw.match(/\b(january|february|march|april|may|june|july|august|september|october|november|december)\s*(\d{4})?\b/i)
   if (monthMatch) {
     const mName = monthMatch[1].charAt(0).toUpperCase() + monthMatch[1].slice(1).toLowerCase()
+    const anchorYear = anchor.getFullYear()
     const yr = monthMatch[2] || anchorYear
     return {
       raw_expression: rawExpression,

@@ -50,7 +50,7 @@ export async function jevRerankCandidates(jev, question, candidates, maxCandidat
     const ans = answers[`cand_${idx}`] || {}
     const rawScore = typeof ans.score === 'number' ? ans.score : 1.0 // 0..3 scale
     const normJevScore = Math.max(0, Math.min(1, rawScore / 3.0)) // normalize to 0..1
-    const originalScore = cand.score ?? 0.5
+    const originalScore = cand.fusedScore ?? cand.score ?? 0.5
     const finalScore = (normJevScore * 0.7) + (originalScore * 0.3)
 
     return {

@@ -1,13 +1,29 @@
 /**
- * Answer Head Pass 3: Graph-Augmented Deductive Formatter + Needle SLM Generative Fallback.
+ * Answer Head Pass 3.1: Graph-Augmented Deductive Formatter + Jev Span Reader + Temporal Anchor Arithmetic.
+ *
+ * Implements Steps 4 & 5 of the architectural roadmap:
+ *   1. Structured Graph Deductive Formatter (Pets, Places, Games, Attributes).
+ *   2. Bounded Temporal Joins & Anchor Arithmetic via date-fns (C2 queries).
+ *   3. Grounded Span Selection via TypeSafe Jev System-1 (C4 single-hop & factual spans).
+ *   4. Needle SLM Generative Fallback (bounded to clean natural string output).
+ *   5. Fallback candidate text extraction.
  */
+
+import { format } from 'date-fns'
+
+import { extractCandidateSpans, selectAnswerSpanWithJev } from './span-reader.mjs'
+import { parseLoCoMoDateTime, resolveTemporalExpression } from './temporal-resolver.mjs'
 
 export class AnswerHeadPass3 {
   /**
    * @param {import('./needle-node.mjs').NeedleNode} [needle]
+   * @param {import('./jev-client.mjs').TypeSafeJevClient} [jev]
+   * @param {import('./locomo-index.mjs').LocomoMemoryIndex} [index]
    */
-  constructor(needle = null) {
+  constructor(needle = null, jev = null, index = null) {
     this.needle = needle
+    this.jev = jev
+    this.index = index
   }
 
   /**
@@ -15,13 +31,14 @@ export class AnswerHeadPass3 {
    *
    * @param {string} question
    * @param {object} searchResult
-   * @returns {string}
+   * @param {object} [triage]
+   * @returns {Promise<string>}
    */
-  formatAnswer(question, searchResult) {
+  async formatAnswer(question, searchResult, triage = null) {
     const qLower = question.toLowerCase()
     const { ledgerResult, textCandidates } = searchResult
 
-    // 1. Structured Graph Formatter
+    // 1. Structured Graph Formatter (Deterministic Graph Traversal)
     if (ledgerResult) {
       if (ledgerResult.type === 'pet_list') {
         if (qLower.includes('how many')) {
@@ -56,7 +73,66 @@ export class AnswerHeadPass3 {
       }
     }
 
-    // 2. Needle SLM Generative Fallback
+    // 2. Step 5: Bounded Temporal Joins & Anchor Arithmetic (C2 Queries)
+    const isTemporal = (triage?.category === 2)
+      || (triage?.choice === 'c2_temporal')
+      || /\b(when|what date|what day|what year|what month|how long ago|how many days|how long did)\b/i.test(question)
+
+    if (isTemporal && textCandidates && textCandidates.length > 0) {
+      for (const cand of textCandidates.slice(0, 3)) {
+        const text = cand.rawText || cand.text || ''
+        const rawTimestamp = cand.timestamp
+          || (this.index?.documents?.get(cand.refDiaId || cand.id)?.timestamp)
+          || ''
+
+        // A. Resolve relative temporal expressions (e.g. "three days ago", "last week")
+        const relMatch = text.match(/\b(last week|yesterday|last month|\d+\s+days?\s+ago|one\s+days?\s+ago|two\s+days?\s+ago|three\s+days?\s+ago|four\s+days?\s+ago|five\s+days?\s+ago|six\s+days?\s+ago|seven\s+days?\s+ago)\b/i)
+        if (relMatch && rawTimestamp) {
+          const resolved = resolveTemporalExpression(relMatch[0], rawTimestamp, cand.refDiaId || cand.id)
+          if (resolved && resolved.formatted_label && resolved.kind !== 'unknown') {
+            return resolved.formatted_label
+          }
+        }
+
+        // B. Look for explicit dates/months/years mentioned in the turn text
+        // e.g. "April 26, 2022", "July 11, 2022", "March 2022", "in 2021", "In July, 2022"
+        const explicitDateMatch = text.match(/\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,\s+\d{4})?\b|\b(?:in\s+)?(19\d\d|20\d\d)\b|\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December),?\s+\d{4}\b/i)
+        if (explicitDateMatch) {
+          return explicitDateMatch[0].trim()
+        }
+
+        // C. If turn describes an event happening in that session (without relative offset)
+        // Check if question asks "when did [event]" and we have an anchor timestamp
+        if (rawTimestamp && /\bwhen\b/i.test(question)) {
+          const cleanDate = parseLoCoMoDateTime(rawTimestamp)
+          if (cleanDate) {
+            const dt = new Date(cleanDate)
+            if (!Number.isNaN(dt.getTime())) {
+              return format(dt, 'MMMM d, yyyy')
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Step 4: Grounded Span Selection via TypeSafe Jev System-1
+    if (this.jev && textCandidates && textCandidates.length > 0) {
+      const topContexts = textCandidates.slice(0, 2)
+        .map(c => c.rawText || c.text || '')
+        .filter(Boolean)
+
+      const contextPassage = topContexts.join(' ')
+      const candidateSpans = extractCandidateSpans(contextPassage, question)
+
+      if (candidateSpans.length > 0) {
+        const spanRes = await selectAnswerSpanWithJev(this.jev, question, contextPassage, candidateSpans)
+        if (spanRes.answer && spanRes.confidence >= 0.35) {
+          return spanRes.answer
+        }
+      }
+    }
+
+    // 4. Needle SLM Generative Fallback
     if (this.needle && textCandidates && textCandidates.length > 0) {
       const topCand = textCandidates[0]
       const evidenceSnippet = (topCand.rawText || topCand.text || '').slice(0, 200)
@@ -77,22 +153,9 @@ export class AnswerHeadPass3 {
       }
     }
 
-    // 3. Fallback to candidate text & heuristics
+    // 5. Fallback to candidate text
     if (textCandidates && textCandidates.length > 0) {
       const topText = textCandidates[0].rawText || textCandidates[0].text || ''
-
-      // C2 Temporal heuristic
-      if (qLower.includes('when') || qLower.includes('date') || qLower.includes('how long')) {
-        const dateMatch = topText.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,\s+\d{4})?|\b\d{1,2}\s+(?:years?|months?|weeks?|days?)\s+ago|\b(?:in\s+)?(19\d\d|20\d\d)\b/i)
-        if (dateMatch)
-          return dateMatch[0]
-      }
-
-      // Health problem heuristic
-      if (/health problem|medical|condition/i.test(question) && /fingers are too big|exercise|run/i.test(topText)) {
-        return 'Obesity'
-      }
-
       return topText
     }
 

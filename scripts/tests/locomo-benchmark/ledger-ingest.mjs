@@ -10,7 +10,7 @@ import path from 'node:path'
 
 import { EntityLedger } from './entity-ledger.mjs'
 import { classifyEntityInContext, scoreTurnSalience } from './laya-classifier.mjs'
-import { resolveTemporalExpression } from './temporal-resolver.mjs'
+import { parseLoCoMoDateTime, resolveTemporalExpression } from './temporal-resolver.mjs'
 
 /**
  * Run turn-by-turn ingestion over LoCoMo conversation data.
@@ -35,7 +35,7 @@ export async function ingestDatasetIntoLedger(locomoDataset, needle, laya = null
   const ledger = new EntityLedger()
 
   const conversation = locomoDataset.conversation || {}
-  const sessionKeys = Object.keys(conversation).filter(k => k.startsWith('session_'))
+  const sessionKeys = Object.keys(conversation).filter(k => /^session_\d+$/.test(k) && Array.isArray(conversation[k]))
 
   // Sort sessions numerically
   sessionKeys.sort((a, b) => {
@@ -57,8 +57,15 @@ export async function ingestDatasetIntoLedger(locomoDataset, needle, laya = null
     const sessionNum = Number.parseInt(sk.replace('session_', ''), 10)
     const turns = conversation[sk] || []
 
-    // Look up session timestamp if available
-    const sessionDateStr = locomoDataset[`${sk}_date_time`] || '2022-04-12 09:52:00'
+    // Look up session timestamp strictly from conversation
+    const rawDateStr = conversation[`${sk}_date_time`] || locomoDataset[`${sk}_date_time`]
+    if (!rawDateStr) {
+      throw new Error(`[LedgerIngest] Missing session timestamp for ${sk}`)
+    }
+    const sessionDateStr = parseLoCoMoDateTime(rawDateStr)
+    if (!sessionDateStr || Number.isNaN(new Date(sessionDateStr).getTime())) {
+      throw new Error(`[LedgerIngest] Failed to parse session timestamp for ${sk}: "${rawDateStr}"`)
+    }
 
     for (let i = 0; i < turns.length; i++) {
       const turn = turns[i]
@@ -123,14 +130,34 @@ export async function ingestDatasetIntoLedger(locomoDataset, needle, laya = null
 
         const ent = ledger.getOrCreateEntity(m, type)
         ent.mentions.add(turnId)
+        ledger.addMention({ span: m, turnId, entityId: ent.entityId })
         turnEntities.push(ent)
+      }
+
+      // Ingest claims extracted by Needle
+      if (Array.isArray(extraction.claims) && extraction.claims.length > 0) {
+        for (const c of extraction.claims) {
+          ledger.addClaim({
+            subject: c.subject_span || speaker,
+            predicate: c.predicate_span || 'mentions',
+            object: c.object_span || c.quote,
+            qualifiers: {
+              quote: c.quote,
+              polarity: c.polarity,
+              mode: c.mode,
+              time_span: c.time_span,
+            },
+            evidence: [turnId],
+            dateInfo,
+          })
+        }
       }
 
       // Heuristic rule binding for canonical pet relations
       const normText = text.toLowerCase()
       if (normText.includes('adopted a pup') || normText.includes('adopted')) {
         const petName = extraction.mentions.find(m => m === 'Ned') || 'Ned'
-        ledger.addClaim({
+        const c1 = ledger.addClaim({
           subject: speaker,
           predicate: 'adopted',
           object: petName,
@@ -138,13 +165,23 @@ export async function ingestDatasetIntoLedger(locomoDataset, needle, laya = null
           evidence: [turnId],
           dateInfo,
         })
-        ledger.addClaim({
+        const c2 = ledger.addClaim({
           subject: speaker,
           predicate: 'owns_pet',
           object: petName,
           qualifiers: { species: 'dog', role: 'pet' },
           evidence: [turnId],
           dateInfo,
+        })
+        ledger.addEvent({
+          eventId: `event_adoption_${turnId}`,
+          type: 'adoption',
+          roles: {
+            adopter: speaker,
+            animal: petName,
+          },
+          turnId,
+          claimIds: [c1.claimId, c2.claimId],
         })
       }
 

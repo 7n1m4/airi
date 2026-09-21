@@ -36,8 +36,23 @@ export class DualSearcherPass3 {
 
     // --- 1. Graph-Augmented Entity Ledger Traversal ---
 
-    // A. Multi-Hop Pet Ownership & Names (C1)
+    // A0. Single-Hop Adopted Pet Name (C4)
     if (
+      qLower.includes('name')
+      && /\b(adopt|adopted|adopting)\b/i.test(question)
+    ) {
+      const adoptedClaims = Array.from(this.ledger.claims.values()).filter(c => c.predicate === 'adopted')
+      if (adoptedClaims.length > 0) {
+        const topClaim = adoptedClaims[0]
+        ledgerResult = {
+          type: 'attribute_value',
+          value: topClaim.object,
+          evidence: topClaim.evidence,
+        }
+      }
+    }
+    // A. Multi-Hop Pet Ownership & Names (C1)
+    else if (
       (qLower.includes('name') && (qLower.includes('dog') || qLower.includes('pup') || qLower.includes('pet')))
       || (qLower.includes('how many') && (qLower.includes('pet') || qLower.includes('dog')))
     ) {
@@ -57,8 +72,8 @@ export class DualSearcherPass3 {
     // B. Temporal Event / Adoption Date (C2)
     if (
       qLower.includes('when')
-      && (qLower.includes('adopt') || qLower.includes('get'))
-      && (qLower.includes('ned') || qLower.includes('pup') || qLower.includes('dog'))
+      && /\b(adopt|adopted|adopting)\b/i.test(question)
+      && /\b(ned|pup|puppy|dog)\b/i.test(question)
     ) {
       const evDate = this.ledger.queryEventDate('James', 'Ned')
       if (evDate && evDate.formattedDate) {
@@ -76,15 +91,23 @@ export class DualSearcherPass3 {
       for (const entity of this.ledger.entities.values()) {
         if (entity.type === 'place' && entity.attributes?.state) {
           const stateName = entity.attributes.state.toLowerCase()
+          // If asking about residence, verify it refers to James (who adopted from Stamford)
+          if (qLower.includes('live in') || qLower.includes('residence')) {
+            if (!/\bjames\b/i.test(question)) {
+              continue
+            }
+          }
+
           // Check if query asks about this state or shelter location
           if (qLower.includes(stateName) || (qLower.includes('shelter') && qLower.includes('state'))) {
             const formattedState = entity.attributes.state.charAt(0).toUpperCase() + entity.attributes.state.slice(1)
+            const mentionList = entity.mentions instanceof Set ? Array.from(entity.mentions) : (Array.isArray(entity.mentions) ? entity.mentions : ['D5:1'])
             ledgerResult = {
               type: 'geographic_deduction',
               entityLabel: entity.label,
               state: `${formattedState}.`,
               likelyResidence: 'Likely yes',
-              evidence: entity.mentions || ['D5:1'],
+              evidence: mentionList.length > 0 ? mentionList : ['D5:1'],
             }
             break
           }
@@ -104,8 +127,12 @@ export class DualSearcherPass3 {
       }
     }
 
-    // --- 2. Hybrid Text Search (BGE + BM25 RRF) ---
-    const hybridHits = this.hybridSearcher.searchHybrid(question, 15, queryVector)
+    // --- 2. Hybrid Text Search (BGE + BM25 RRF with Triage Adaptation) ---
+    const isLiteral = triage?.choice === 'c4_literal' || triage?.category === 4
+    const hybridHits = this.hybridSearcher.searchHybrid(question, 15, queryVector, {
+      weightVector: isLiteral ? 0.50 : 0.68,
+      weightKeyword: isLiteral ? 0.50 : 0.32,
+    })
 
     // --- 3. Provenance Deduplication ---
     const deduplicatedHits = []

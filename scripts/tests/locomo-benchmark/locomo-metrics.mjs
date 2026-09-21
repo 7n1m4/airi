@@ -3,6 +3,8 @@
  * Implements SQuAD/LoCoMo token F1, BLEU-1, and category breakdowns.
  */
 
+import { stemWord } from './porter-stemmer.mjs'
+
 export function normalizeAnswer(text) {
   if (typeof text !== 'string')
     text = String(text || '')
@@ -80,39 +82,96 @@ export function computeBleu1(prediction, groundTruth) {
   return bp * precision
 }
 
+export function normalizeAnswerUpstream(s) {
+  if (!s || typeof s !== 'string')
+    s = String(s || '')
+  s = s.replace(/,/g, '')
+  s = s.toLowerCase()
+  s = s.replace(/[!"#$%&'()*+,-./:;<=>?@[\\\]^_`{|}~]/g, '')
+  s = s.replace(/\b(a|an|the|and)\b/g, ' ')
+  return s.trim().split(/\s+/).filter(Boolean).join(' ')
+}
+
+export function computeUpstreamF1Single(prediction, groundTruth) {
+  const pTokens = normalizeAnswerUpstream(prediction).split(' ').filter(Boolean).map(stemWord)
+  const gTokens = normalizeAnswerUpstream(groundTruth).split(' ').filter(Boolean).map(stemWord)
+
+  if (pTokens.length === 0 && gTokens.length === 0)
+    return 1.0
+  if (pTokens.length === 0 || gTokens.length === 0)
+    return 0.0
+
+  const gCounts = new Map()
+  for (const t of gTokens) gCounts.set(t, (gCounts.get(t) || 0) + 1)
+
+  let overlap = 0
+  for (const t of pTokens) {
+    if ((gCounts.get(t) || 0) > 0) {
+      overlap++
+      gCounts.set(t, gCounts.get(t) - 1)
+    }
+  }
+
+  if (overlap === 0)
+    return 0.0
+
+  const p = overlap / pTokens.length
+  const r = overlap / gTokens.length
+  return (2 * p * r) / (p + r)
+}
+
+/**
+ * Official Upstream LoCoMo F1 evaluation.
+ * Mirrors https://github.com/snap-research/locomo/blob/main/task_eval/evaluation.py
+ */
+export function computeUpstreamLoCoMoF1(prediction, groundTruth) {
+  const predictions = (prediction || '').split(',').map(p => p.trim())
+  const groundTruths = (groundTruth || '').split(',').map(g => g.trim())
+
+  const scores = groundTruths.map((gt) => {
+    return Math.max(...predictions.map(pred => computeUpstreamF1Single(pred, gt)))
+  })
+
+  return scores.reduce((a, b) => a + b, 0) / (scores.length || 1)
+}
+
 export function computeExactMatch(prediction, groundTruth) {
   return normalizeAnswer(prediction) === normalizeAnswer(groundTruth) ? 1.0 : 0.0
 }
 
 export function aggregateBenchmarkResults(evalList) {
   const categories = {
-    c1: { name: 'Multi-Hop (C1)', count: 0, sumF1: 0, sumBleu: 0, sumEm: 0 },
-    c2: { name: 'Temporal (C2)', count: 0, sumF1: 0, sumBleu: 0, sumEm: 0 },
-    c3: { name: 'Open-Domain / Detective (C3)', count: 0, sumF1: 0, sumBleu: 0, sumEm: 0 },
-    c4: { name: 'Single-Hop Literal (C4)', count: 0, sumF1: 0, sumBleu: 0, sumEm: 0 },
+    c1: { name: 'Multi-Hop (C1)', count: 0, sumF1: 0, sumUpstreamF1: 0, sumBleu: 0, sumEm: 0 },
+    c2: { name: 'Temporal (C2)', count: 0, sumF1: 0, sumUpstreamF1: 0, sumBleu: 0, sumEm: 0 },
+    c3: { name: 'Open-Domain / Detective (C3)', count: 0, sumF1: 0, sumUpstreamF1: 0, sumBleu: 0, sumEm: 0 },
+    c4: { name: 'Single-Hop Literal (C4)', count: 0, sumF1: 0, sumUpstreamF1: 0, sumBleu: 0, sumEm: 0 },
   }
 
   let totalCount = 0
   let totalSumF1 = 0
+  let totalSumUpstreamF1 = 0
   let totalSumBleu = 0
   let totalSumEm = 0
 
   for (const item of evalList) {
     const catKey = `c${item.category}`
     const f1 = computeTokenF1(item.prediction, item.groundTruth)
+    const upstreamF1 = computeUpstreamLoCoMoF1(item.prediction, item.groundTruth)
     const bleu = computeBleu1(item.prediction, item.groundTruth)
     const em = computeExactMatch(item.prediction, item.groundTruth)
 
-    item.metrics = { f1, bleu, em }
+    item.metrics = { f1, upstreamF1, bleu, em }
 
     totalCount++
     totalSumF1 += f1
+    totalSumUpstreamF1 += upstreamF1
     totalSumBleu += bleu
     totalSumEm += em
 
     if (categories[catKey]) {
       categories[catKey].count++
       categories[catKey].sumF1 += f1
+      categories[catKey].sumUpstreamF1 += upstreamF1
       categories[catKey].sumBleu += bleu
       categories[catKey].sumEm += em
     }
@@ -121,6 +180,7 @@ export function aggregateBenchmarkResults(evalList) {
   const overall = {
     count: totalCount,
     f1: totalCount > 0 ? (totalSumF1 / totalCount) * 100 : 0,
+    upstreamF1: totalCount > 0 ? (totalSumUpstreamF1 / totalCount) * 100 : 0,
     bleu: totalCount > 0 ? (totalSumBleu / totalCount) * 100 : 0,
     em: totalCount > 0 ? (totalSumEm / totalCount) * 100 : 0,
   }
@@ -131,6 +191,7 @@ export function aggregateBenchmarkResults(evalList) {
       name: v.name,
       count: v.count,
       f1: v.count > 0 ? (v.sumF1 / v.count) * 100 : 0,
+      upstreamF1: v.count > 0 ? (v.sumUpstreamF1 / v.count) * 100 : 0,
       bleu: v.count > 0 ? (v.sumBleu / v.count) * 100 : 0,
       em: v.count > 0 ? (v.sumEm / v.count) * 100 : 0,
     }

@@ -139,7 +139,7 @@ if (fs.existsSync(PASS1_TRACE_PATH)) {
 
 // 6. Initialize Dual Searcher & Answer Head
 const dualSearcher = new DualSearcherPass3(ledger, hybridSearcher, jev)
-const answerHead = new AnswerHeadPass3(needle)
+const answerHead = new AnswerHeadPass3(needle, jev, index)
 
 // 7. Shootout Loop
 console.log('Beginning 150-question Shootout: Baseline vs Pass 1 vs Pass 3 (Jev)...')
@@ -194,8 +194,8 @@ for (let i = 0; i < qas.length; i++) {
   const p3Recall = LocomoMemoryIndex.evaluateEvidenceRecall(p3SearchRes.candidateObjects, goldEvidence)
   pass3Hits += p3Recall.hits
 
-  // C. Answer Head: Graph Deductive Formatter + Needle SLM
-  const p3Pred = answerHead.formatAnswer(q.question, p3SearchRes)
+  // C. Answer Head: Graph Deductive Formatter + Jev Span Reader + Temporal Resolver
+  const p3Pred = await answerHead.formatAnswer(q.question, p3SearchRes, jevTriage)
   const p3F1 = computeTokenF1(p3Pred, q.answer)
   const p3Bleu = computeBleu1(p3Pred, q.answer)
 
@@ -233,7 +233,7 @@ const bRecallPct = (baselineHits / totalGoldEvidenceTurns) * 100
 const p1RecallPct = (pass1Hits / totalGoldEvidenceTurns) * 100
 const p3RecallPct = (pass3Hits / totalGoldEvidenceTurns) * 100
 
-const reportMd = `# LoCoMo conv-47 Pass 3: Full TypeSafe Jev Architecture Benchmark Report
+const reportMd = `# LoCoMo conv-47 Pass 3.1: Full TypeSafe Jev Architecture Benchmark Report
 
 - **Date**: ${new Date().toISOString()}
 - **Dataset**: conv-47 (31 sessions, 689 turns, 150 non-adversarial QA pairs)
@@ -241,20 +241,23 @@ const reportMd = `# LoCoMo conv-47 Pass 3: Full TypeSafe Jev Architecture Benchm
 - **Architecture**:
   - **Span Extraction**: Needle 2 WASM (Cactus SAN 45M on CPU)
   - **Triage & Reranking**: TypeSafe Jev System-1 API (\`jev-latest\`, batched 10 candidates / call)
+  - **Span Reading**: TypeSafe Jev System-1 Choice Reader (\`span-reader.mjs\`)
+  - **Temporal Arithmetic**: Session-Anchored Calendar Arithmetic (\`date-fns\`)
   - **Entity Hierarchy**: Jev Hierarchical Place Resolution Tree (Real vs Fictional -> Country -> State)
   - **Storage**: In-Memory Entity Ledger with Graph Traversal
 
 ## 1. Top-Line Scorecard
 
-| Metric | Baseline (Regex) | Pass 1 (Laya Coprocessor) | Pass 3 (Full Jev) | Pass 3 vs Pass 1 Delta |
+| Metric | Baseline (Regex) | Pass 1 (Laya Coprocessor) | Pass 3.1 (Full Jev) | Pass 3.1 vs Pass 1 Delta |
 | :--- | :--- | :--- | :--- | :--- |
 | **Evidence Recall@3** | ${bRecallPct.toFixed(2)}% | ${p1RecallPct.toFixed(2)}% | **${p3RecallPct.toFixed(2)}%** | **${(p3RecallPct - p1RecallPct) >= 0 ? '+' : ''}${(p3RecallPct - p1RecallPct).toFixed(2)}%** |
-| **Overall Token F1** | ${bAgg.overall.f1.toFixed(2)}% | ${p1Agg.overall.f1.toFixed(2)}% | **${p3Agg.overall.f1.toFixed(2)}%** | **+${(p3Agg.overall.f1 - p1Agg.overall.f1).toFixed(2)}%** |
-| **Overall BLEU-1** | ${bAgg.overall.bleu.toFixed(2)}% | ${p1Agg.overall.bleu.toFixed(2)}% | **${p3Agg.overall.bleu.toFixed(2)}%** | **+${(p3Agg.overall.bleu - p1Agg.overall.bleu).toFixed(2)}%** |
-| **Multi-Hop (C1) F1** | ${bAgg.categoryBreakdown.c1.f1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c1.f1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c1.f1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c1.f1 - p1Agg.categoryBreakdown.c1.f1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c1.f1 - p1Agg.categoryBreakdown.c1.f1).toFixed(2)}%** |
-| **Temporal (C2) F1** | ${bAgg.categoryBreakdown.c2.f1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c2.f1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c2.f1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c2.f1 - p1Agg.categoryBreakdown.c2.f1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c2.f1 - p1Agg.categoryBreakdown.c2.f1).toFixed(2)}%** |
-| **Detective (C3) F1** | ${bAgg.categoryBreakdown.c3.f1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c3.f1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c3.f1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c3.f1 - p1Agg.categoryBreakdown.c3.f1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c3.f1 - p1Agg.categoryBreakdown.c3.f1).toFixed(2)}%** |
-| **Literal (C4) F1** | ${bAgg.categoryBreakdown.c4.f1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c4.f1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c4.f1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c4.f1 - p1Agg.categoryBreakdown.c4.f1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c4.f1 - p1Agg.categoryBreakdown.c4.f1).toFixed(2)}%** |
+| **Official Upstream F1** | ${bAgg.overall.upstreamF1.toFixed(2)}% | ${p1Agg.overall.upstreamF1.toFixed(2)}% | **${p3Agg.overall.upstreamF1.toFixed(2)}%** | **${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1).toFixed(2)}%** |
+| **Legacy Token F1** | ${bAgg.overall.f1.toFixed(2)}% | ${p1Agg.overall.f1.toFixed(2)}% | **${p3Agg.overall.f1.toFixed(2)}%** | **${(p3Agg.overall.f1 - p1Agg.overall.f1) >= 0 ? '+' : ''}${(p3Agg.overall.f1 - p1Agg.overall.f1).toFixed(2)}%** |
+| **Overall BLEU-1** | ${bAgg.overall.bleu.toFixed(2)}% | ${p1Agg.overall.bleu.toFixed(2)}% | **${p3Agg.overall.bleu.toFixed(2)}%** | **${(p3Agg.overall.bleu - p1Agg.overall.bleu) >= 0 ? '+' : ''}${(p3Agg.overall.bleu - p1Agg.overall.bleu).toFixed(2)}%** |
+| **Multi-Hop (C1) Upstream F1** | ${bAgg.categoryBreakdown.c1.upstreamF1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c1.upstreamF1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c1.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c1.upstreamF1 - p1Agg.categoryBreakdown.c1.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c1.upstreamF1 - p1Agg.categoryBreakdown.c1.upstreamF1).toFixed(2)}%** |
+| **Temporal (C2) Upstream F1** | ${bAgg.categoryBreakdown.c2.upstreamF1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c2.upstreamF1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c2.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c2.upstreamF1 - p1Agg.categoryBreakdown.c2.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c2.upstreamF1 - p1Agg.categoryBreakdown.c2.upstreamF1).toFixed(2)}%** |
+| **Detective (C3) Upstream F1** | ${bAgg.categoryBreakdown.c3.upstreamF1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c3.upstreamF1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c3.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c3.upstreamF1 - p1Agg.categoryBreakdown.c3.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c3.upstreamF1 - p1Agg.categoryBreakdown.c3.upstreamF1).toFixed(2)}%** |
+| **Literal (C4) Upstream F1** | ${bAgg.categoryBreakdown.c4.upstreamF1.toFixed(2)}% | ${p1Agg.categoryBreakdown.c4.upstreamF1.toFixed(2)}% | **${p3Agg.categoryBreakdown.c4.upstreamF1.toFixed(2)}%** | **${(p3Agg.categoryBreakdown.c4.upstreamF1 - p1Agg.categoryBreakdown.c4.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.categoryBreakdown.c4.upstreamF1 - p1Agg.categoryBreakdown.c4.upstreamF1).toFixed(2)}%** |
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
