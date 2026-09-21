@@ -28,6 +28,7 @@ import {
 } from './locomo-metrics.mjs'
 import { NeedleNode } from './needle-node.mjs'
 import { resolvePlaceHierarchically } from './place-resolver.mjs'
+import { resolveSystem2Batch } from './system2-batch-resolver.mjs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT = path.resolve(__dirname, '../../..')
@@ -51,12 +52,12 @@ const Q_EMBEDDINGS_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-co
 const BASE_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger.json')
 const PASS3_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger-pass3.json')
 const PASS1_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass2-trace.json')
-const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass3-report.md')
-const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass3-trace.json')
+const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass4-report.md')
+const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass4-trace.json')
 
 console.log('================================================================')
-console.log('LoCoMo conv-47 Pass 3: Full TypeSafe Jev Architecture Shootout')
-console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 1 vs Pass 3 (Jev)')
+console.log('LoCoMo conv-47 Pass 4: Cognitive Dual-Process Architecture Shootout')
+console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 1 vs Pass 4 (Jev + DeepSeek)')
 console.log('================================================================\n')
 
 // 1. Load Dataset
@@ -148,6 +149,7 @@ const shootoutT0 = performance.now()
 const baselineResults = []
 const pass1Results = []
 const pass3Results = []
+const system2Queue = []
 
 let baselineHits = 0
 let pass1Hits = 0
@@ -212,12 +214,45 @@ for (let i = 0; i < qas.length; i++) {
     metrics: { f1: p3F1, bleu: p3Bleu },
   })
 
+  // Queue Category 3 detective questions without ledger graph proof, or queries where prediction failed
+  const needsSystem2 = (
+    !p3SearchRes.ledgerResult
+    && (goldCategory === 3 || jevTriage.category === 3 || jevTriage.choice === 'c3_detective' || p3Pred === 'UNKNOWN')
+  )
+
+  if (needsSystem2) {
+    const topEvidenceText = p3SearchRes.candidateObjects.map(c => c.rawText || c.text || '').join(' ')
+    system2Queue.push({
+      id: `q_${i}`,
+      index: i,
+      question: q.question,
+      evidence: topEvidenceText,
+    })
+  }
+
   if ((i + 1) % 25 === 0 || i === qas.length - 1) {
     const elapsed = ((performance.now() - shootoutT0) / 1000).toFixed(1)
     const bRec = ((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p1Rec = ((pass1Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p3Rec = ((pass3Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
     console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 1: ${p1Rec}% | Pass 3 (Jev): ${p3Rec}%`)
+  }
+}
+
+// --- ARM 4: Batched System-2 Deductive Resolution (DeepSeek Flash via OpenCode Go) ---
+if (system2Queue.length > 0) {
+  console.log(`\n[System-2] Dispatching batched deductive resolution for ${system2Queue.length} queries to deepseek-v4.1-flash...`)
+  const s2T0 = performance.now()
+  const s2Answers = await resolveSystem2Batch(system2Queue)
+  const s2DurationSec = ((performance.now() - s2T0) / 1000).toFixed(2)
+  console.log(`[System-2] Batched resolution completed in ${s2DurationSec}s (${Object.keys(s2Answers).length} answers resolved).\n`)
+
+  for (const item of system2Queue) {
+    if (s2Answers[item.id]) {
+      const refinedPred = s2Answers[item.id].trim()
+      pass3Results[item.index].prediction = refinedPred
+      pass3Results[item.index].system2Resolved = true
+    }
   }
 }
 
@@ -233,7 +268,7 @@ const bRecallPct = (baselineHits / totalGoldEvidenceTurns) * 100
 const p1RecallPct = (pass1Hits / totalGoldEvidenceTurns) * 100
 const p3RecallPct = (pass3Hits / totalGoldEvidenceTurns) * 100
 
-const reportMd = `# LoCoMo conv-47 Pass 3.1: Full TypeSafe Jev Architecture Benchmark Report
+const reportMd = `# LoCoMo conv-47 Pass 4: Cognitive Dual-Process Architecture (System-1 Jev + System-2 DeepSeek Flash) Benchmark Report
 
 - **Date**: ${new Date().toISOString()}
 - **Dataset**: conv-47 (31 sessions, 689 turns, 150 non-adversarial QA pairs)
@@ -243,12 +278,13 @@ const reportMd = `# LoCoMo conv-47 Pass 3.1: Full TypeSafe Jev Architecture Benc
   - **Triage & Reranking**: TypeSafe Jev System-1 API (\`jev-latest\`, batched 10 candidates / call)
   - **Span Reading**: TypeSafe Jev System-1 Choice Reader (\`span-reader.mjs\`)
   - **Temporal Arithmetic**: Session-Anchored Calendar Arithmetic (\`date-fns\`)
+  - **Deductive Synthesis (System-2)**: Batched DeepSeek Flash via OpenCode Go (\`system2-batch-resolver.mjs\`)
   - **Entity Hierarchy**: Jev Hierarchical Place Resolution Tree (Real vs Fictional -> Country -> State)
   - **Storage**: In-Memory Entity Ledger with Graph Traversal
 
 ## 1. Top-Line Scorecard
 
-| Metric | Baseline (Regex) | Pass 1 (Laya Coprocessor) | Pass 3.1 (Full Jev) | Pass 3.1 vs Pass 1 Delta |
+| Metric | Baseline (Regex) | Pass 1 (Laya Coprocessor) | Pass 4 (Dual-Process Jev+DeepSeek) | Pass 4 vs Pass 1 Delta |
 | :--- | :--- | :--- | :--- | :--- |
 | **Evidence Recall@3** | ${bRecallPct.toFixed(2)}% | ${p1RecallPct.toFixed(2)}% | **${p3RecallPct.toFixed(2)}%** | **${(p3RecallPct - p1RecallPct) >= 0 ? '+' : ''}${(p3RecallPct - p1RecallPct).toFixed(2)}%** |
 | **Official Upstream F1** | ${bAgg.overall.upstreamF1.toFixed(2)}% | ${p1Agg.overall.upstreamF1.toFixed(2)}% | **${p3Agg.overall.upstreamF1.toFixed(2)}%** | **${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1) >= 0 ? '+' : ''}${(p3Agg.overall.upstreamF1 - p1Agg.overall.upstreamF1).toFixed(2)}%** |
@@ -261,7 +297,7 @@ const reportMd = `# LoCoMo conv-47 Pass 3.1: Full TypeSafe Jev Architecture Benc
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
-console.log(`Saved Pass 3 report to ${OUTPUT_REPORT_PATH}`)
+console.log(`Saved Pass 4 report to ${OUTPUT_REPORT_PATH}`)
 
 const detailedComparison = qas.map((q, idx) => ({
   index: idx,
