@@ -6,6 +6,243 @@
 
 ---
 
+## [2026-09-20] Upstream Delta: `62ef8676..6670dc9d` (12 commits, 124 files, 33 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 12 commits (`62ef8676..6670dc9d`) across 124 files and recorded 33 PR updates (20 new, 7 status/lifecycle changes, 6 discussion changes). The dominant developments are: (1) multimodal chat image understanding across Web and Electron (#2551), allowing vision models to describe attached images before passing prompt text to chat models; (2) screen ambient lighting for Live2D models (#2391), a 6.8k-line feature introducing real-time display color sampling and Live2D shaders; (3) TTS chunking optimization (#2584), enforcing `minimumWords` on boost chunks to eliminate micro-fragment delays; (4) settings layout scroll reset (#2606) and inlay window reuse (#2600); (5) Safari/Firefox streaming transcription buffering (#2610); and (6) server-side payment CORE refactoring (#2368) and auth session fixes (#2614). In PRs, desktop performance bundling (#2603, #2611, #2612, #2613), window/cursor IPC deduplication (#2607), and 3D bounding box caching (#2608) are active.
+* **Discussion & Community Buzz**:
+  - 💬 **#2551: `feat(stage-ui): add chat image understanding across Web and Electron` (+11 new comments, total 23)**: High volume of technical discussion and visual regression verification leading to merge, covering mobile/desktop image paste and vision model prompt projections.
+  - 💬 **#2614: `fix(auth): avoid bridge sessions on token routes` (19 comments)**: Intense debate over hosted auth bridge sessions and token request routing.
+  - 💬 **#2391: `feat(stage-*): add screen ambient light` (+5 new comments, total 19)**: Shipped feature with active community feedback on ambient light shader performance and screen color sampling.
+  - 💬 **#2615: `fix(auth): stop minting sessions for jwt requests` (15 comments)**: Substantial discussion regarding JWT request session lifecycle.
+  - 💬 **#2368: `refactor(api): extract payment CORE to support other payment providers [2/2]` (+1 new comments, total 12)**: Architectural discussion on abstracting payment providers beyond Stripe.
+  - 💬 **#2121: `chore(i18n): update translations` (+3 new comments, total 108)**: Milestone crossing 100+ comments for ongoing multilingual community translation sync.
+  - 💬 **#1971: `feat(mcp): progressive tool disclosure — awareness catalog + on-use native promotion` (10 comments)**: Active interest in MCP progressive tool discovery patterns.
+  - 💬 **#2606: `fix(stage-layouts): reset scroll when settings pages change` (9 comments)**: Discussion and verification around viewport reuse during settings page transitions.
+  - 💬 **#1974: `feat(hearing): local voice — STT/TTS wiring, caption window, global shortcuts, VAD auto-send` (9 comments)**: Continued community attention on local voice pipeline architecture.
+  - 💬 **#1973: `feat(memory): opt-in long-term memory (local IndexedDB store + recall)` (9 comments)**: Ongoing discussion around local long-term memory store.
+  - 💬 **#1975: `feat(vision): headless background screen vision as a silent chat-context signal` (8 comments)**: Discussion regarding headless screen perception signals.
+  - 💬 **#2610: `fix(stage-ui): buffer Safari transcription stream uploads` (7 comments)**: Troubleshooting Safari/Firefox `Request.duplex` lack of support.
+  - 💬 **#1972: `feat(stage-ui): configurable chat response length limits` (7 comments)**: Community interest in configurable response token caps.
+  - 💬 **#2603: `perf(stage-tamagotchi): reduce packaged desktop bundle size` (+2 new comments, total 5)**: Split into modular PRs (#2611, #2612, #2613) to trim CJK fonts, duplicate ONNX runtimes, and build-only deps.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2584 / Commit `b972b9fcae`: `fix(pipelines-audio): stop yielding tiny boost chunks`**: High-value audio pipeline fix. Modifies `packages/pipelines-audio/src/processors/tts-chunker.ts` to require `chunkWordsCount >= minimumWords` during boost chunking, preventing tiny leading phrases (e.g. `嗯，`) from incurring full synthesis round-trip latency and causing audio stutter. Clean, isolated, and tested.
+  - ⭐ **PR #2606 / Commit `aea991bd9e`: `fix(stage-layouts): reset scroll when settings pages change`**: Clean UX fix in `packages/stage-layouts/src/layouts/settings.vue`. Fixes scroll retention across settings pages when `RouterView` reuses the viewport container by resetting `scrollTop = 0` on `route.path` change.
+  - ⭐ **PR #2610 / Commit `4804e7989e`: `fix(stage-ui): buffer Safari transcription stream uploads`**: Cross-browser fix in `packages/stage-ui/src/libs/providers/stream-transcription/index.ts`. Detects `duplex in Request.prototype` and falls back to an `ArrayBuffer` body when streaming uploads are unsupported by Safari 27 and Firefox.
+  - ⭐ **PR #2600 / Commit `32cb0433b8`: `fix(stage-tamagotchi): reuse the inlay window and add a close control`**: Electron window lifecycle fix. Reuses existing inlay window instances and adds an explicit close action, preventing window leaks in `apps/stage-tamagotchi/src/main/windows/inlay/`.
+  - 🔍 **PR #2607: `perf(stage-tamagotchi): stop re-sending unchanged cursor position and window bounds` [Draft]**: Good candidate once finalized to suppress redundant Electron IPC traffic during mouse movement.
+  - 🔍 **PR #2608 & #2609: `perf(stage-ui-three)`**: VRM framerate limiting and bounding box layout caching; worth evaluating for 3D performance improvements.
+  - 🔍 **PR #2611, #2612, #2613: `perf(stage-tamagotchi)`**: Desktop packaging footprint optimizations (stripping redundant ONNX runtimes and non-essential font subsets).
+  - 🔍 **PR #2551 / Commit `29ac56b95d` (`describeChatImages` helper)**: Standalone helper `packages/stage-ui/src/stores/chat/image-projection.ts` can be selectively adapted for pre-describing images with a vision model before sending to text-only LLMs.
+  - ⚪ **Auto-Reject / Do Not Port**: Commits `9805c0a0f3` (PR #2368) & `21096a4389` (PR #2614), PR #2615 (hosted billing, Stripe drizzle drop, server auth tokens); Commit `26f37192e0` (PR #2391 screen ambient light directly modifies legacy monolithic `index.vue` / `controls-island`, incompatible with our decoupled `RendererStage.vue`).
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/stage-ui/src/stores/chat.ts` (Commit `29ac56b95d` / PR #2551)**: Upstream modifies `chat.ts` for vision image projection. Our fork has heavy customizations in `chat.ts` (multi-actor `<|ACTOR|>` switching, STMM/LTMM text journal integration, Echo chips). Do not merge directly; extract modular logic from `image-projection.ts` if needed.
+  - ⚠️ **`packages/stage-layouts/src/components/Widgets/ChatArea.vue` & `InteractiveArea.vue` (Commit `29ac56b95d`)**: Upstream reworked clipboard and drag/drop handlers in `ChatArea.vue`. Our fork uses dedicated decoupled chat layouts (`airi-desktop-chatbox`) with grounding panels and custom tokens.
+  - ⚠️ **`apps/stage-tamagotchi/src/renderer/pages/index.vue` (Commit `26f37192e0` / PR #2391)**: Upstream attaches screen ambient lighting to the monolithic `pages/index.vue`. Our fork decoupled the stage into `RendererStage.vue` and `ControlStripHost.vue`. Any port of screen ambient light must target `RendererStage.vue`.
+  - ⚠️ **`packages/ui/src/components/form/content-editable/` (Commit `175638973d`)**: Upstream deleted `basic-content-editable.vue`. Verify if our fork references this before syncing UI primitives.
+
+### 📋 Upstream Commits
+- `6670dc9d13` test(stage-ui): control idle timing in desktop pan regression (#2620) [#2620](https://github.com/moeru-ai/airi/pull/2620) _(Neko, 2026-09-20)_
+- `29ac56b95d` feat(stage-ui): add chat image understanding across Web and Electron (#2551) [#2551](https://github.com/moeru-ai/airi/pull/2551) _(RainbowBird, 2026-09-20)_
+- `31e9b32182` chore(nix): update pnpmDeps hash (#2619) [#2619](https://github.com/moeru-ai/airi/pull/2619) _(Weathercold, 2026-09-20)_
+- `bdabe0934e` fix(stage-pocket): hide iOS keyboard accessory bar (#2618) [#2618](https://github.com/moeru-ai/airi/pull/2618) _(RainbowBird, 2026-09-20)_
+- `32cb0433b8` fix(stage-tamagotchi): reuse the inlay window and add a close control (#2600) [#2600](https://github.com/moeru-ai/airi/pull/2600) _(xy, 2026-09-20)_
+- `aea991bd9e` fix(stage-layouts): reset scroll when settings pages change (#2606) [#2606](https://github.com/moeru-ai/airi/pull/2606) _(Neko, 2026-09-20)_
+- `21096a4389` fix(auth): avoid bridge sessions on token routes (#2614) [#2614](https://github.com/moeru-ai/airi/pull/2614) _(RainbowBird, 2026-09-20)_
+- `4804e7989e` fix(stage-ui): buffer Safari transcription stream uploads (#2610) [#2610](https://github.com/moeru-ai/airi/pull/2610) _(Lulu, 2026-09-20)_
+- `175638973d` Revert "fix(stage-layouts): avoid Safari Form Assistant (#2461)" [#2461](https://github.com/moeru-ai/airi/pull/2461) _(RainbowBird, 2026-09-20)_
+- `9805c0a0f3` refactor(api): extract payment CORE to support other payment providers [2/2] (#2368) [#2368](https://github.com/moeru-ai/airi/pull/2368) _(Lulu, 2026-09-20)_
+- `26f37192e0` feat(stage-*): add screen ambient light (#2391) [#2391](https://github.com/moeru-ai/airi/pull/2391) _(Makito, 2026-09-20)_
+- `b972b9fcae` fix(pipelines-audio): stop yielding tiny boost chunks (#2584) [#2584](https://github.com/moeru-ai/airi/pull/2584) _(Penluna, 2026-09-19)_
+
+### 🔬 Subsystem Breakdown
+#### Mobile & Web Platforms (`⚪ ignore / low-priority`) — 4 file(s) (+21/-10)
+- `apps/stage-pocket/ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved` *(+5/-5)*
+- `apps/stage-pocket/ios/App/CapApp-SPM/Package.swift` *(+7/-5)*
+- `apps/stage-pocket/package.json` *(+1/-0)*
+- `apps/stage-pocket/src/main.ts` *(+8/-0)*
+
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 33 file(s) (+2357/-662)
+- `apps/stage-tamagotchi/src/main/index.ts` *(+6/-1)*
+- `apps/stage-tamagotchi/src/main/tray/index.ts` *(+2/-2)*
+- `apps/stage-tamagotchi/src/main/windows/inlay/index.ts` *(+50/-47)*
+- `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.browser.test.ts` *(+19/-173)*
+- `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.vue` *(+48/-59)*
+- `apps/stage-tamagotchi/src/renderer/components/chat-image-attachment-preview.vue` *(+0/-32)*
+- `apps/stage-tamagotchi/src/renderer/components/chat-viewport-layout.browser.test.ts` *(+1/-32)*
+- `apps/stage-tamagotchi/src/renderer/components/content-editable.browser.test.ts` *(+0/-307)*
+- `apps/stage-tamagotchi/src/renderer/components/devtools/live2d-ambient-light/controls.vue` *(+128/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/devtools/live2d-ambient-light/diagnostics-colors.vue` *(+152/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/devtools/live2d-ambient-light/diagnostics-metrics.vue` *(+163/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/devtools/live2d-ambient-light/diagnostics-preview.vue` *(+110/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/devtools/live2d-ambient-light/diagnostics.vue` *(+40/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/devtools/live2d-ambient-light/format.ts` *(+9/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/devtools/live2d-ambient-light/sampling.vue` *(+81/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/devtools/live2d-ambient-light/shader-preview.vue` *(+154/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/devtools/live2d-ambient-light/shader.vue` *(+140/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/resource-status-island/index.vue` *(+2/-0)*
+- `apps/stage-tamagotchi/src/renderer/composables/use-screen-ambient-light-diagnostics.ts` *(+58/-0)*
+- `apps/stage-tamagotchi/src/renderer/composables/use-screen-ambient-light.browser.test.ts` *(+156/-0)*
+- `apps/stage-tamagotchi/src/renderer/composables/use-screen-ambient-light.ts` *(+533/-0)*
+- `apps/stage-tamagotchi/src/renderer/composables/use-stage-painted-mask.browser.test.ts` *(+104/-0)*
+- `apps/stage-tamagotchi/src/renderer/composables/use-stage-painted-mask.ts` *(+249/-0)*
+- `apps/stage-tamagotchi/src/renderer/pages/chat-page-shell.vue` *(+1/-0)*
+- `apps/stage-tamagotchi/src/renderer/pages/chat.vue` *(+4/-1)*
+- `apps/stage-tamagotchi/src/renderer/pages/devtools/live2d-ambient-light.vue` *(+24/-0)*
+- `apps/stage-tamagotchi/src/renderer/pages/index.vue` *(+14/-0)*
+- `apps/stage-tamagotchi/src/renderer/pages/inlay/index.vue` *(+22/-1)*
+- `apps/stage-tamagotchi/src/renderer/pages/settings/system/developer.vue` *(+6/-0)*
+- `apps/stage-tamagotchi/src/renderer/pages/widgets.vue` *(+4/-4)*
+- `apps/stage-tamagotchi/src/shared/screen-ambient-light-diagnostics.ts` *(+72/-0)*
+- `apps/stage-tamagotchi/src/shared/utils/electron/display.ts` *(+2/-2)*
+- `apps/stage-tamagotchi/src/renderer/components/chat-image-attachment-preview.browser.test.ts => packages/stage-ui/src/components/scenarios/chat/components/image-attachment-preview.browser.test.ts` *(+3/-1)*
+
+#### Documentation & Scaffolding (`⚪ ignore`) — 2 file(s) (+18/-18)
+- `docs/ai/context/ui-components.md` *(+0/-18)*
+- `packages/stage-ui/README.md` *(+18/-0)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 29 file(s) (+2437/-126)
+- `nix/pnpm-deps-hash.txt` *(+1/-1)*
+- `packages/pipelines-audio/src/processors/tts-chunker.test.ts` *(+32/-1)*
+- `packages/pipelines-audio/src/processors/tts-chunker.ts` *(+18/-1)*
+- `packages/stage-shared/src/screen-ambient-light/environment.test.ts` *(+77/-0)*
+- `packages/stage-shared/src/screen-ambient-light/environment.ts` *(+451/-0)*
+- `packages/stage-shared/src/screen-ambient-light/index.ts` *(+2/-0)*
+- `packages/stage-shared/src/screen-ambient-light/sampling.test.ts` *(+552/-0)*
+- `packages/stage-shared/src/screen-ambient-light/sampling.ts` *(+770/-0)*
+- `packages/stage-shared/src/stores/screen-ambient-light.ts` *(+119/-0)*
+- `packages/stage-ui/src/components/data-pane/index.ts` *(+1/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/chat-history-scroll-container.vue` *(+0/-5)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history.browser.test.ts` *(+40/-16)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history.vue` *(+1/-2)*
+- `packages/stage-ui/src/components/scenarios/chat/components/image-attachment-preview.vue` *(+23/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/user-item.vue` *(+11/-5)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-history-scroll.browser.test.ts` *(+0/-29)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-history-scroll.ts` *(+4/-46)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-images.browser.test.ts` *(+113/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-images.ts` *(+110/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/index.ts` *(+3/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/utils.ts` *(+2/-12)*
+- `packages/stage-ui/src/composables/use-data-maintenance.ts` *(+3/-0)*
+- `packages/stage-ui/src/composables/vision/use-vision-inference.ts` *(+3/-1)*
+- `packages/stage-ui/src/libs/providers/stream-transcription/index.ts` *(+15/-7)*
+- `packages/stage-ui/src/stores/devtools/context-observability.ts` *(+12/-0)*
+- `packages/stage-ui/src/stores/modules/vision.browser.test.ts` *(+69/-0)*
+- `packages/stage-ui/src/stores/modules/vision/store.ts` *(+3/-0)*
+- `pnpm-workspace.yaml` *(+1/-0)*
+- `vitest.config.ts` *(+1/-0)*
+
+#### Root Build & Tooling (`🔍 inspect`) — 3 file(s) (+25/-1)
+- `package.json` *(+2/-1)*
+- `packages/stage-shared/package.json` *(+2/-0)*
+- `pnpm-lock.yaml` *(+21/-0)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 7 file(s) (+353/-0)
+- `packages/i18n/glossary/terms.yaml` *(+56/-0)*
+- `packages/i18n/src/locales/en/stage.yaml` *(+14/-0)*
+- `packages/i18n/src/locales/en/tamagotchi/settings.yaml` *(+131/-0)*
+- `packages/i18n/src/locales/en/tamagotchi/stage.yaml` *(+3/-0)*
+- `packages/i18n/src/locales/zh-Hans/stage.yaml` *(+14/-0)*
+- `packages/i18n/src/locales/zh-Hans/tamagotchi/stage.yaml` *(+4/-0)*
+- `packages/i18n/src/locales/zh-Hant/tamagotchi/settings.yaml` *(+131/-0)*
+
+#### Stage Layouts & Shells (`🔍 inspect`) — 4 file(s) (+111/-30)
+- `packages/stage-layouts/src/components/Layouts/InteractiveArea.vue` *(+3/-1)*
+- `packages/stage-layouts/src/components/Layouts/MobileInteractiveArea.vue` *(+51/-23)*
+- `packages/stage-layouts/src/components/Widgets/ChatArea.vue` *(+46/-4)*
+- `packages/stage-layouts/src/layouts/settings.vue` *(+11/-2)*
+
+#### UI Primitives & Pages (`📦 import / inspect`) — 6 file(s) (+7/-261)
+- `packages/stage-pages/src/pages/settings/modules/vision.vue` *(+7/-0)*
+- `packages/ui/README.md` *(+0/-28)*
+- `packages/ui/src/components/form/content-editable/basic-content-editable.vue` *(+0/-220)*
+- `packages/ui/src/components/form/content-editable/index.ts` *(+0/-5)*
+- `packages/ui/src/components/form/index.ts` *(+0/-1)*
+- `packages/ui/src/components/layouts/scrollable-area.vue` *(+0/-7)*
+
+#### 3D, Live2D & Motion (`🔍 inspect`) — 13 file(s) (+2335/-16)
+- `packages/stage-ui-live2d/package.json` *(+5/-0)*
+- `packages/stage-ui-live2d/src/components/diagnostics/screen-ambient-light-preview.vue` *(+129/-0)*
+- `packages/stage-ui-live2d/src/components/scenes/Live2D.vue` *(+41/-0)*
+- `packages/stage-ui-live2d/src/components/scenes/live2d/Model.vue` *(+143/-14)*
+- `packages/stage-ui-live2d/src/composables/live2d/motion-manager.test.ts` *(+248/-0)*
+- `packages/stage-ui-live2d/src/composables/live2d/motion-manager.ts` *(+206/-1)*
+- `packages/stage-ui-live2d/src/filters/screen-ambient-light.browser.test.ts` *(+643/-0)*
+- `packages/stage-ui-live2d/src/filters/screen-ambient-light.ts` *(+640/-0)*
+- `packages/stage-ui-live2d/src/index.ts` *(+1/-0)*
+- `packages/stage-ui-live2d/src/utils/ambient-light-test-card.browser.test.ts` *(+109/-0)*
+- `packages/stage-ui-live2d/src/utils/ambient-light-test-card.ts` *(+135/-0)*
+- `packages/stage-ui-live2d/vitest.config.ts` *(+25/-1)*
+- `packages/stage-ui-live2d/vitest.node.config.ts` *(+10/-0)*
+
+#### Cognitive & Consciousness (`⚠️ hand-merge`) — 4 file(s) (+232/-12)
+- `packages/stage-ui/src/stores/chat.contract.test.ts` *(+95/-0)*
+- `packages/stage-ui/src/stores/chat.ts` *(+43/-12)*
+- `packages/stage-ui/src/stores/chat/image-projection.test.ts` *(+49/-0)*
+- `packages/stage-ui/src/stores/chat/image-projection.ts` *(+45/-0)*
+
+#### Cloud Services, Billing & Auth (`⚪ ignore / rejected in fork (offline-first architecture)`) — 19 file(s) (+4082/-437)
+- `server/apps/api/drizzle/0024_drop_stripe_tables.sql` *(+5/-0)*
+- `server/apps/api/drizzle/meta/0024_snapshot.json` *(+3329/-0)*
+- `server/apps/api/drizzle/meta/_journal.json` *(+7/-0)*
+- `server/apps/api/src/app.ts` *(+0/-1)*
+- `server/apps/api/src/routes/stripe/index.ts` *(+1/-3)*
+- `server/apps/api/src/routes/stripe/operations/webhook.ts` *(+3/-68)*
+- `server/apps/api/src/routes/stripe/payment-release.test.ts` *(+1/-27)*
+- `server/apps/api/src/routes/stripe/route.test.ts` *(+0/-25)*
+- `server/apps/api/src/schemas/flux.ts` *(+0/-3)*
+- `server/apps/api/src/schemas/index.ts` *(+0/-1)*
+- `server/apps/api/src/schemas/stripe.ts` *(+0/-78)*
+- `server/apps/api/src/services/domain/payment/index.ts` *(+0/-17)*
+- `server/apps/auth/src/auth.ts` *(+5/-6)*
+- `server/apps/auth/src/oidc-access-token.ts` *(+52/-0)*
+- `server/apps/auth/src/plugins/oidc-jwt-bearer.ts` *(+128/-147)*
+- `server/apps/auth/src/routes.ts` *(+59/-61)*
+- `server/apps/auth/src/tests/oidc-jwt-bearer.test.ts` *(+200/-0)*
+- `server/apps/auth/src/tests/routes-oidc-token-auth.test.ts` *(+156/-0)*
+- `server/docs/ai/adr/2026-09-20-oidc-jwt-session-boundary.md` *(+136/-0)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (20)
+- [#2620](https://github.com/moeru-ai/airi/pull/2620) `test(stage-ui): control idle timing in desktop pan regression` by **@nekomeowww** *(2 comments)*
+- [#2619](https://github.com/moeru-ai/airi/pull/2619) `chore(nix): update pnpmDeps hash` by **@Weathercold** *(1 comments)*
+- [#2618](https://github.com/moeru-ai/airi/pull/2618) `fix(stage-pocket): hide iOS keyboard accessory bar` by **@luoling8192** *(2 comments)*
+- [#2606](https://github.com/moeru-ai/airi/pull/2606) `fix(stage-layouts): reset scroll when settings pages change` by **@nekomeowww** *(9 comments)*
+- [#2614](https://github.com/moeru-ai/airi/pull/2614) `fix(auth): avoid bridge sessions on token routes` by **@luoling8192** *(19 comments)*
+- [#2607](https://github.com/moeru-ai/airi/pull/2607) `perf(stage-tamagotchi): stop re-sending unchanged cursor position and window bounds` by **@FlowerWater1019** *(Draft)* *(3 comments)*
+- [#2617](https://github.com/moeru-ai/airi/pull/2617) `fix(stage-ui): buffer Safari uploads at the official HTTP wrapper` by **@lulu0119** *(1 comments)*
+- [#2610](https://github.com/moeru-ai/airi/pull/2610) `fix(stage-ui): buffer Safari transcription stream uploads` by **@lulu0119** *(7 comments)*
+- [#2615](https://github.com/moeru-ai/airi/pull/2615) `fix(auth): stop minting sessions for jwt requests` by **@luoling8192** *(15 comments)*
+- [#2616](https://github.com/moeru-ai/airi/pull/2616) `test(stage-ui): poll the provider status instead of reading it synchronously` by **@FlowerWater1019** *(1 comments)*
+- [#2612](https://github.com/moeru-ai/airi/pull/2612) `perf(stage-tamagotchi): exclude special CJK fonts` by **@nayounsang** *(2 comments)*
+- [#2613](https://github.com/moeru-ai/airi/pull/2613) `perf(stage-tamagotchi): remove packaging-only dependencies` by **@nayounsang** *(1 comments)*
+- [#2611](https://github.com/moeru-ai/airi/pull/2611) `perf(stage-tamagotchi): exclude duplicate ONNX runtimes` by **@nayounsang** *(2 comments)*
+- [#2609](https://github.com/moeru-ai/airi/pull/2609) `feat(stage-ui-three): add a VRM frame rate limit` by **@FlowerWater1019** *(1 comments)*
+- [#2608](https://github.com/moeru-ai/airi/pull/2608) `perf(stage-ui-three): cache the screen bounding box instead of forcing layout per read` by **@FlowerWater1019** *(1 comments)*
+- [#1975](https://github.com/moeru-ai/airi/pull/1975) `feat(vision): headless background screen vision as a silent chat-context signal` by **@FlowerWater1019** *(8 comments)*
+- [#1974](https://github.com/moeru-ai/airi/pull/1974) `feat(hearing): local voice — STT/TTS wiring, caption window, global shortcuts, VAD auto-send` by **@FlowerWater1019** *(9 comments)*
+- [#1973](https://github.com/moeru-ai/airi/pull/1973) `feat(memory): opt-in long-term memory (local IndexedDB store + recall)` by **@FlowerWater1019** *(9 comments)*
+- [#1972](https://github.com/moeru-ai/airi/pull/1972) `feat(stage-ui): configurable chat response length limits (max tokens + reply-length hint)` by **@FlowerWater1019** *(7 comments)*
+- [#1971](https://github.com/moeru-ai/airi/pull/1971) `feat(mcp): progressive tool disclosure — awareness catalog + on-use native promotion` by **@FlowerWater1019** *(10 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (7)
+- [#2551](https://github.com/moeru-ai/airi/pull/2551) `feat(stage-ui): add chat image understanding across Web and Electron` — `OPEN` ➔ `MERGED`
+- [#2600](https://github.com/moeru-ai/airi/pull/2600) `fix(stage-tamagotchi): reuse the inlay window and add a close control` — `OPEN` ➔ `MERGED`
+- [#2589](https://github.com/moeru-ai/airi/pull/2589) `fix(api): complete OpenRouter Responses streams at EOF` — `OPEN` ➔ `CLOSED`
+- [#2603](https://github.com/moeru-ai/airi/pull/2603) ` [DO NOT MERGE] perf(stage-tamagotchi): reduce packaged desktop bundle size` — `OPEN` ➔ `CLOSED`, ➔ `Draft`
+- [#2368](https://github.com/moeru-ai/airi/pull/2368) `refactor(api): extract payment CORE to support other payment providers [2/2]` — `OPEN` ➔ `MERGED`
+- [#2391](https://github.com/moeru-ai/airi/pull/2391) `feat(stage-*): add screen ambient light` — `OPEN` ➔ `MERGED`
+- [#2584](https://github.com/moeru-ai/airi/pull/2584) `fix(pipelines-audio): stop yielding tiny boost chunks` — `OPEN` ➔ `MERGED`
+
+#### 💬 Discussion Activity (6)
+- [#2551](https://github.com/moeru-ai/airi/pull/2551) `feat(stage-ui): add chat image understanding across Web and Electron` — *+11 comments (12 ➔ 23 total)*
+- [#2603](https://github.com/moeru-ai/airi/pull/2603) ` [DO NOT MERGE] perf(stage-tamagotchi): reduce packaged desktop bundle size` — *+2 comments (3 ➔ 5 total)*
+- [#2368](https://github.com/moeru-ai/airi/pull/2368) `refactor(api): extract payment CORE to support other payment providers [2/2]` — *+1 comments (11 ➔ 12 total)*
+- [#2121](https://github.com/moeru-ai/airi/pull/2121) `chore(i18n): update translations` — *+3 comments (105 ➔ 108 total)*
+- [#2391](https://github.com/moeru-ai/airi/pull/2391) `feat(stage-*): add screen ambient light` — *+5 comments (14 ➔ 19 total)*
+- [#2588](https://github.com/moeru-ai/airi/pull/2588) `docs(contributing): align GitHub setup guide with pinned tooling` — *+1 comments (2 ➔ 3 total)*
+
+---
 ## [2026-09-19] Upstream Delta: `09aa7a7d..62ef8676` (6 commits, 27 files, 18 PR update(s))
 
 ### 🎯 Executive Highlights
