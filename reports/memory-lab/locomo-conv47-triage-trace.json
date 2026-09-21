@@ -1,0 +1,2586 @@
+{
+  "summary": {
+    "totalQuestions": 150,
+    "overallRegexAccuracy": 70,
+    "overallLayaAccuracy": 25.3,
+    "avgLayaLatencyMs": 241.5,
+    "categoryBreakdown": {
+      "1": {
+        "name": "Multi-Hop (C1)",
+        "count": 20,
+        "regexHits": 1,
+        "layaHits": 1
+      },
+      "2": {
+        "name": "Temporal (C2)",
+        "count": 34,
+        "regexHits": 30,
+        "layaHits": 34
+      },
+      "3": {
+        "name": "Detective (C3)",
+        "count": 13,
+        "regexHits": 1,
+        "layaHits": 3
+      },
+      "4": {
+        "name": "Literal (C4)",
+        "count": 83,
+        "regexHits": 73,
+        "layaHits": 0
+      }
+    }
+  },
+  "results": [
+    {
+      "index": 0,
+      "question": "What are John's suspected health problems?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0336,
+        "match": true,
+        "latencyMs": 175.53725000000009
+      }
+    },
+    {
+      "index": 1,
+      "question": "Which recreational activity was James pursuing on March 16, 2022?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0244,
+        "match": true,
+        "latencyMs": 156.73320799999988
+      }
+    },
+    {
+      "index": 2,
+      "question": "Which places or events have John and James planned to meet at?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.1478,
+        "match": true,
+        "latencyMs": 151.32466599999998
+      }
+    },
+    {
+      "index": 3,
+      "question": "Do both James and John have pets?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 1,
+        "method": "regex_multihop",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0027,
+        "match": false,
+        "latencyMs": 156.31854199999998
+      }
+    },
+    {
+      "index": 4,
+      "question": "When did John resume playing drums in his adulthood?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.1463,
+        "match": true,
+        "latencyMs": 159.745042
+      }
+    },
+    {
+      "index": 5,
+      "question": "What are John and James' favorite games?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0052,
+        "match": false,
+        "latencyMs": 153.8357920000003
+      }
+    },
+    {
+      "index": 6,
+      "question": "Does James live in Connecticut?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0701,
+        "match": true,
+        "latencyMs": 145.80937499999982
+      }
+    },
+    {
+      "index": 7,
+      "question": "In which state is the shelter from which James adopted the puppy?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0161,
+        "match": false,
+        "latencyMs": 161.09066699999994
+      }
+    },
+    {
+      "index": 8,
+      "question": "How many pets does James have?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0133,
+        "match": false,
+        "latencyMs": 512.7618750000001
+      }
+    },
+    {
+      "index": 9,
+      "question": "What are the names of James's dogs?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0132,
+        "match": false,
+        "latencyMs": 428.75908400000026
+      }
+    },
+    {
+      "index": 10,
+      "question": "When did James adopt Ned?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0182,
+        "match": true,
+        "latencyMs": 227.60845800000016
+      }
+    },
+    {
+      "index": 11,
+      "question": "How was John feeling on April 10, 2022?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0575,
+        "match": true,
+        "latencyMs": 194.8462499999996
+      }
+    },
+    {
+      "index": 12,
+      "question": "Did James have a girlfriend during April 2022?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0123,
+        "match": false,
+        "latencyMs": 200.02450000000044
+      }
+    },
+    {
+      "index": 13,
+      "question": "When did James visit Italy?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0499,
+        "match": true,
+        "latencyMs": 143.53195799999958
+      }
+    },
+    {
+      "index": 14,
+      "question": "When did James buy himself a new adventure book?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0717,
+        "match": true,
+        "latencyMs": 158.3772909999998
+      }
+    },
+    {
+      "index": 15,
+      "question": "When did James start playing Civilization VI?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.033,
+        "match": true,
+        "latencyMs": 156.33583299999918
+      }
+    },
+    {
+      "index": 16,
+      "question": "What is the game with different colored cards that was John talking about with James?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0097,
+        "match": false,
+        "latencyMs": 157.28833399999985
+      }
+    },
+    {
+      "index": 17,
+      "question": "What is the board game where you have to find the imposter that John mentions to James?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0167,
+        "match": true,
+        "latencyMs": 191.90012500000012
+      }
+    },
+    {
+      "index": 18,
+      "question": "Which books has John recommended to James?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0214,
+        "match": false,
+        "latencyMs": 160.67116700000042
+      }
+    },
+    {
+      "index": 19,
+      "question": "Was James feeling lonely before meeting Samantha?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0151,
+        "match": false,
+        "latencyMs": 157.70799999999963
+      }
+    },
+    {
+      "index": 20,
+      "question": "How many charity tournaments has John organized till date?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0334,
+        "match": false,
+        "latencyMs": 158.8973329999999
+      }
+    },
+    {
+      "index": 21,
+      "question": "When did John first organize a charity tournament with his friends?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0727,
+        "match": true,
+        "latencyMs": 160.4859580000002
+      }
+    },
+    {
+      "index": 22,
+      "question": "Who or which organizations have been the beneficiaries of John's charity tournaments?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0192,
+        "match": false,
+        "latencyMs": 163.49225000000024
+      }
+    },
+    {
+      "index": 23,
+      "question": "When will John start his new job?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0276,
+        "match": true,
+        "latencyMs": 157.05454100000043
+      }
+    },
+    {
+      "index": 24,
+      "question": "What kind of games has James tried to develop?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0114,
+        "match": false,
+        "latencyMs": 158.95158300000003
+      }
+    },
+    {
+      "index": 25,
+      "question": "Are John and James fans of the same football team?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0079,
+        "match": false,
+        "latencyMs": 162.23283300000003
+      }
+    },
+    {
+      "index": 26,
+      "question": "Which countries has James visited?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0298,
+        "match": false,
+        "latencyMs": 161.32858399999986
+      }
+    },
+    {
+      "index": 27,
+      "question": "What kind of classes has James joined?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0048,
+        "match": false,
+        "latencyMs": 162.45895800000017
+      }
+    },
+    {
+      "index": 28,
+      "question": "When did James volunteer at an organization?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.095,
+        "match": true,
+        "latencyMs": 157.3874169999999
+      }
+    },
+    {
+      "index": 29,
+      "question": "When did James depart for his trip to Canada?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.1234,
+        "match": true,
+        "latencyMs": 176.64641699999993
+      }
+    },
+    {
+      "index": 30,
+      "question": "Which country did James book tickets for in July 2022?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0256,
+        "match": false,
+        "latencyMs": 165.9104159999997
+      }
+    },
+    {
+      "index": 31,
+      "question": "How many days did James plan to spend on his trip in Canada?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0181,
+        "match": true,
+        "latencyMs": 172.61979100000008
+      }
+    },
+    {
+      "index": 32,
+      "question": "Where was James at on July 12, 2022?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0352,
+        "match": true,
+        "latencyMs": 169.36366699999962
+      }
+    },
+    {
+      "index": 33,
+      "question": "Did John and James study together?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0105,
+        "match": false,
+        "latencyMs": 166.3467500000006
+      }
+    },
+    {
+      "index": 34,
+      "question": "Which countries did James visit in July 2022?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0426,
+        "match": false,
+        "latencyMs": 360.2044999999998
+      }
+    },
+    {
+      "index": 35,
+      "question": "What additional country did James visit during his trip to Canada?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0136,
+        "match": false,
+        "latencyMs": 521.1293750000004
+      }
+    },
+    {
+      "index": 36,
+      "question": "Who is Jill?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0057,
+        "match": false,
+        "latencyMs": 406.14195800000016
+      }
+    },
+    {
+      "index": 37,
+      "question": "When did John spend time with his sister and dogs?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0813,
+        "match": true,
+        "latencyMs": 512.35275
+      }
+    },
+    {
+      "index": 38,
+      "question": "What happened to John's job situation in 2022?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0368,
+        "match": false,
+        "latencyMs": 479.85320799999863
+      }
+    },
+    {
+      "index": 39,
+      "question": "When did John start his job in IT?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0924,
+        "match": true,
+        "latencyMs": 296.9181669999998
+      }
+    },
+    {
+      "index": 40,
+      "question": "What kind of tricks do James's pets know?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0025,
+        "match": false,
+        "latencyMs": 215.17050000000017
+      }
+    },
+    {
+      "index": 41,
+      "question": "When did James meet Samantha?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0369,
+        "match": true,
+        "latencyMs": 211.17920799999956
+      }
+    },
+    {
+      "index": 42,
+      "question": "When did James take his 3 dogs to the beach?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0968,
+        "match": true,
+        "latencyMs": 238.8446669999994
+      }
+    },
+    {
+      "index": 43,
+      "question": "When did John plan his next meeting with his siblings?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0712,
+        "match": true,
+        "latencyMs": 233.3395840000012
+      }
+    },
+    {
+      "index": 44,
+      "question": "Why didn't John want to go to Starbucks?",
+      "goldCategory": 3,
+      "regex": {
+        "category": 3,
+        "method": "regex_detective",
+        "match": true
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0098,
+        "match": false,
+        "latencyMs": 216.9927919999991
+      }
+    },
+    {
+      "index": 45,
+      "question": "What kind of beer does McGee's bar serve?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0119,
+        "match": false,
+        "latencyMs": 201.02304200000071
+      }
+    },
+    {
+      "index": 46,
+      "question": "When did John and James meet at McGee's bar?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0442,
+        "match": true,
+        "latencyMs": 176.25304200000028
+      }
+    },
+    {
+      "index": 47,
+      "question": "When did James ask Samantha to be his girlfriend?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.044,
+        "match": true,
+        "latencyMs": 193.98904199999924
+      }
+    },
+    {
+      "index": 48,
+      "question": "When did James, Samantha and John go to the baseball game together?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0437,
+        "match": true,
+        "latencyMs": 193.74025000000074
+      }
+    },
+    {
+      "index": 49,
+      "question": "What gaming equipments did John buy or refurbish?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0118,
+        "match": false,
+        "latencyMs": 185.81658400000015
+      }
+    },
+    {
+      "index": 50,
+      "question": "When did James start taking cooking classes?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0491,
+        "match": true,
+        "latencyMs": 174.074125000001
+      }
+    },
+    {
+      "index": 51,
+      "question": "Which new games did John start play during the course of the conversation with James?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0225,
+        "match": false,
+        "latencyMs": 177.4164579999997
+      }
+    },
+    {
+      "index": 52,
+      "question": "When did John start working on his 2D Adventure mobile game?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.1187,
+        "match": true,
+        "latencyMs": 543.8709999999992
+      }
+    },
+    {
+      "index": 53,
+      "question": "How long did it take for James to complete his Witcher-inspired game?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0202,
+        "match": true,
+        "latencyMs": 466.60762500000055
+      }
+    },
+    {
+      "index": 54,
+      "question": "What kind of programming-related events has John hosted?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0038,
+        "match": false,
+        "latencyMs": 323.0159160000003
+      }
+    },
+    {
+      "index": 55,
+      "question": "When did John and his programming friends host an online programming competition?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0688,
+        "match": true,
+        "latencyMs": 225.6453330000004
+      }
+    },
+    {
+      "index": 56,
+      "question": "Which of James's family members have visited him in the last year?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0215,
+        "match": false,
+        "latencyMs": 183.194042000001
+      }
+    },
+    {
+      "index": 57,
+      "question": "When did James' mother and her friend visit him?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0605,
+        "match": true,
+        "latencyMs": 181.7288329999992
+      }
+    },
+    {
+      "index": 58,
+      "question": "When did James try Cyberpunk 2077 game?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.1273,
+        "match": true,
+        "latencyMs": 178.97258299999885
+      }
+    },
+    {
+      "index": 59,
+      "question": "When did John and his gaming friends organize the charity tournament?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0461,
+        "match": true,
+        "latencyMs": 173.8484580000004
+      }
+    },
+    {
+      "index": 60,
+      "question": "What games has John played with his friends at charity tournaments?",
+      "goldCategory": 1,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0283,
+        "match": false,
+        "latencyMs": 176.9783750000006
+      }
+    },
+    {
+      "index": 61,
+      "question": "What was James' big moment with Samantha in October 2023?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0384,
+        "match": true,
+        "latencyMs": 174.89795799999956
+      }
+    },
+    {
+      "index": 62,
+      "question": "How long did James and Samantha date for before deciding to move in together?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0527,
+        "match": true,
+        "latencyMs": 176.13183299999946
+      }
+    },
+    {
+      "index": 63,
+      "question": "When did James, his family and his dogs start on a road trip together?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0709,
+        "match": true,
+        "latencyMs": 176.12045799999942
+      }
+    },
+    {
+      "index": 64,
+      "question": "How long did John practice chess for before winning the chess tournament?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0326,
+        "match": true,
+        "latencyMs": 176.2721249999995
+      }
+    },
+    {
+      "index": 65,
+      "question": "When did James and his family visit Mark and Josh?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.1188,
+        "match": true,
+        "latencyMs": 175.40879200000018
+      }
+    },
+    {
+      "index": 66,
+      "question": "When did John work with a game developer on a project?",
+      "goldCategory": 2,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.1092,
+        "match": true,
+        "latencyMs": 210.5047080000004
+      }
+    },
+    {
+      "index": 67,
+      "question": "What programming languages has James worked with?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0106,
+        "match": false,
+        "latencyMs": 180.24916700000176
+      }
+    },
+    {
+      "index": 68,
+      "question": "What type of mobile application does James plan to build with John?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.025,
+        "match": false,
+        "latencyMs": 180.54758399999992
+      }
+    },
+    {
+      "index": 69,
+      "question": "How does James plan to make his dog-sitting app unique?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0056,
+        "match": false,
+        "latencyMs": 204.50716599999942
+      }
+    },
+    {
+      "index": 70,
+      "question": "What has John mostly found with the metal detector so far?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0089,
+        "match": false,
+        "latencyMs": 181.35470799999894
+      }
+    },
+    {
+      "index": 71,
+      "question": "What did James offer to do for John regarding pets?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0346,
+        "match": false,
+        "latencyMs": 185.89441699999952
+      }
+    },
+    {
+      "index": 72,
+      "question": "What instrument is John learning to play as of 27 March, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0242,
+        "match": false,
+        "latencyMs": 189.56816600000093
+      }
+    },
+    {
+      "index": 73,
+      "question": "How long has John been playing the drums as of 27 March, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0447,
+        "match": false,
+        "latencyMs": 176.25004100000297
+      }
+    },
+    {
+      "index": 74,
+      "question": "What game did John play in an intense tournament at the gaming convention in March 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0147,
+        "match": false,
+        "latencyMs": 177.04554199999984
+      }
+    },
+    {
+      "index": 75,
+      "question": "What game was James playing in the online gaming tournament in April 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0146,
+        "match": false,
+        "latencyMs": 485.08374999999796
+      }
+    },
+    {
+      "index": 76,
+      "question": "How does James communicate with his gaming team?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0138,
+        "match": false,
+        "latencyMs": 605.1328749999993
+      }
+    },
+    {
+      "index": 77,
+      "question": "What advice did James receive from the famous players he met at the tournament?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0148,
+        "match": false,
+        "latencyMs": 550.520875000002
+      }
+    },
+    {
+      "index": 78,
+      "question": "What did James adopt in April 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0243,
+        "match": false,
+        "latencyMs": 637.1217910000014
+      }
+    },
+    {
+      "index": 79,
+      "question": "What is the name of the pup that was adopted by James?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0202,
+        "match": false,
+        "latencyMs": 431.2573330000014
+      }
+    },
+    {
+      "index": 80,
+      "question": "Why did James embody the appearance of the game character from the woman he saw during a walk?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 3,
+        "method": "regex_detective",
+        "match": false
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0217,
+        "match": false,
+        "latencyMs": 269.31612499999756
+      }
+    },
+    {
+      "index": 81,
+      "question": "What inspired James to create the game character in the virtual world?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0199,
+        "match": false,
+        "latencyMs": 336.2291670000013
+      }
+    },
+    {
+      "index": 82,
+      "question": "Which country did James visit in 2021?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0394,
+        "match": false,
+        "latencyMs": 430.0390419999967
+      }
+    },
+    {
+      "index": 83,
+      "question": "What impresses John about Japan?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0169,
+        "match": false,
+        "latencyMs": 422.0721670000021
+      }
+    },
+    {
+      "index": 84,
+      "question": "What kind of assignment was giving John a hard time at work?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0096,
+        "match": false,
+        "latencyMs": 224.41291600000113
+      }
+    },
+    {
+      "index": 85,
+      "question": "What breed is Daisy, one of James' dogs?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0128,
+        "match": false,
+        "latencyMs": 199.7598340000004
+      }
+    },
+    {
+      "index": 86,
+      "question": "What type of pizza is James' favorite?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0219,
+        "match": false,
+        "latencyMs": 183.77625000000262
+      }
+    },
+    {
+      "index": 87,
+      "question": "What type of pizza is John's favorite?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0179,
+        "match": false,
+        "latencyMs": 173.1922080000004
+      }
+    },
+    {
+      "index": 88,
+      "question": "What did John organize with his friends on May 8, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0326,
+        "match": false,
+        "latencyMs": 444.6871250000004
+      }
+    },
+    {
+      "index": 89,
+      "question": "What did John and his friends do with the remaining money after helping the dog shelter?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0311,
+        "match": false,
+        "latencyMs": 382.77391700000226
+      }
+    },
+    {
+      "index": 90,
+      "question": "What was the main goal of the money raised from the charity tournament organized by John and his friends in May 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0312,
+        "match": false,
+        "latencyMs": 469.9769159999996
+      }
+    },
+    {
+      "index": 91,
+      "question": "What did the system John created help the charitable foundation with?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0268,
+        "match": false,
+        "latencyMs": 252.07045799999833
+      }
+    },
+    {
+      "index": 92,
+      "question": "What did John create for the charitable foundation that helped generate reports for analysis?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0143,
+        "match": false,
+        "latencyMs": 218.20316600000297
+      }
+    },
+    {
+      "index": 93,
+      "question": "What did John receive for achieving second place in the tournament?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0181,
+        "match": false,
+        "latencyMs": 184.17608299999847
+      }
+    },
+    {
+      "index": 94,
+      "question": "What project is James working on in his game design course?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0346,
+        "match": false,
+        "latencyMs": 185.50991700000304
+      }
+    },
+    {
+      "index": 95,
+      "question": "Who does James support in football matches?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0102,
+        "match": false,
+        "latencyMs": 180.45950000000084
+      }
+    },
+    {
+      "index": 96,
+      "question": "Which football club does John support?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0137,
+        "match": false,
+        "latencyMs": 170.44229100000302
+      }
+    },
+    {
+      "index": 97,
+      "question": "What disagreement do James and John have about their football teams?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0101,
+        "match": false,
+        "latencyMs": 174.78570899999977
+      }
+    },
+    {
+      "index": 98,
+      "question": "What is Max good at doing according to James?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0115,
+        "match": false,
+        "latencyMs": 173.45670800000153
+      }
+    },
+    {
+      "index": 99,
+      "question": "What is the main focus of the organization that James volunteered with?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0188,
+        "match": false,
+        "latencyMs": 175.24695799999972
+      }
+    },
+    {
+      "index": 100,
+      "question": "Will there be an interview required to volunteer with the organization James volunteered for?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0172,
+        "match": false,
+        "latencyMs": 175.76287500000035
+      }
+    },
+    {
+      "index": 101,
+      "question": "How did John relax in his free time on 9 July, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0259,
+        "match": false,
+        "latencyMs": 175.25941700000112
+      }
+    },
+    {
+      "index": 102,
+      "question": "What did James enjoy doing on cold winter days?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0143,
+        "match": false,
+        "latencyMs": 174.20104100000026
+      }
+    },
+    {
+      "index": 103,
+      "question": "What new hobby did James become interested in on 9 July, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0193,
+        "match": false,
+        "latencyMs": 203.20933400000285
+      }
+    },
+    {
+      "index": 104,
+      "question": "Where did James plan to visit after Toronto?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0219,
+        "match": false,
+        "latencyMs": 176.54475000000093
+      }
+    },
+    {
+      "index": 105,
+      "question": "When did James plan to return from his trip to Toronto and Vancouver?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0643,
+        "match": false,
+        "latencyMs": 177.1721660000003
+      }
+    },
+    {
+      "index": 106,
+      "question": "What online game did John start playing recently for improving strategy?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0264,
+        "match": false,
+        "latencyMs": 182.72054200000275
+      }
+    },
+    {
+      "index": 107,
+      "question": "What made John leave his IT job?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0191,
+        "match": false,
+        "latencyMs": 199.6654579999995
+      }
+    },
+    {
+      "index": 108,
+      "question": "Which game tournaments does John plan to organize besides CS:GO?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0077,
+        "match": false,
+        "latencyMs": 173.38516700000037
+      }
+    },
+    {
+      "index": 109,
+      "question": "What happened to James's puppy during the recent visit to the clinic?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0339,
+        "match": false,
+        "latencyMs": 186.88933299999917
+      }
+    },
+    {
+      "index": 110,
+      "question": "What game genre did John start exploring instead of shooters?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0222,
+        "match": false,
+        "latencyMs": 179.8275829999984
+      }
+    },
+    {
+      "index": 111,
+      "question": "Which RPG game is John playing and enjoying on 10 August, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0171,
+        "match": false,
+        "latencyMs": 361.27587499999936
+      }
+    },
+    {
+      "index": 112,
+      "question": "What aspect of \"The Witcher 3\" does John find immersive?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0164,
+        "match": false,
+        "latencyMs": 767.6788750000014
+      }
+    },
+    {
+      "index": 113,
+      "question": "Whose phone number did James receive during the beach outing?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.019,
+        "match": false,
+        "latencyMs": 563.4480000000003
+      }
+    },
+    {
+      "index": 114,
+      "question": "What is James planning to do after receiving Samantha's phone number?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0212,
+        "match": false,
+        "latencyMs": 442.07354199999827
+      }
+    },
+    {
+      "index": 115,
+      "question": "What is John organizing with his siblings?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0209,
+        "match": false,
+        "latencyMs": 303.96691700000156
+      }
+    },
+    {
+      "index": 116,
+      "question": "What type of beer does John not like?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0065,
+        "match": false,
+        "latencyMs": 233.515707999999
+      }
+    },
+    {
+      "index": 117,
+      "question": "What were some difficulties James faced during the development of his game?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0081,
+        "match": false,
+        "latencyMs": 247.1912080000002
+      }
+    },
+    {
+      "index": 118,
+      "question": "What has John been teaching his siblings?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0249,
+        "match": false,
+        "latencyMs": 242.4185830000024
+      }
+    },
+    {
+      "index": 119,
+      "question": "What kind of programs are John's siblings making?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 3,
+        "choice": "c3_detective",
+        "confidence": 0.0254,
+        "match": false,
+        "latencyMs": 229.54562499999884
+      }
+    },
+    {
+      "index": 120,
+      "question": "Which company's headphones did John choose for gaming?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0103,
+        "match": false,
+        "latencyMs": 243.531332999999
+      }
+    },
+    {
+      "index": 121,
+      "question": "What did James and Samantha discover they both enjoy at McGee's bar?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 1,
+        "method": "regex_multihop",
+        "match": false
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0236,
+        "match": false,
+        "latencyMs": 237.78991700000188
+      }
+    },
+    {
+      "index": 122,
+      "question": "How much does James pay per cooking class?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.004,
+        "match": false,
+        "latencyMs": 222.29575000000114
+      }
+    },
+    {
+      "index": 123,
+      "question": "What did James learn to make in the cooking class besides omelette and meringue?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0331,
+        "match": false,
+        "latencyMs": 202.953125
+      }
+    },
+    {
+      "index": 124,
+      "question": "Why did James sign up for a cooking class?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 3,
+        "method": "regex_detective",
+        "match": false
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0063,
+        "match": false,
+        "latencyMs": 181.5448749999996
+      }
+    },
+    {
+      "index": 125,
+      "question": "What did James prepare for the first time in the cooking class?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0344,
+        "match": false,
+        "latencyMs": 184.85991699999795
+      }
+    },
+    {
+      "index": 126,
+      "question": "What is the name of the board game John tried in September 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0251,
+        "match": false,
+        "latencyMs": 189.393084000003
+      }
+    },
+    {
+      "index": 127,
+      "question": "Where does James get his ideas from?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0058,
+        "match": false,
+        "latencyMs": 186.5899999999965
+      }
+    },
+    {
+      "index": 128,
+      "question": "What kind of dream did James have recently?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0095,
+        "match": false,
+        "latencyMs": 533.0194169999959
+      }
+    },
+    {
+      "index": 129,
+      "question": "What kind of music does John like?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0107,
+        "match": false,
+        "latencyMs": 441.7647910000014
+      }
+    },
+    {
+      "index": 130,
+      "question": "What instrument did James used to play when he was younger?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0198,
+        "match": false,
+        "latencyMs": 331.9306250000009
+      }
+    },
+    {
+      "index": 131,
+      "question": "What did John use to play when he was younger to let off steam?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0259,
+        "match": false,
+        "latencyMs": 223.19195899999613
+      }
+    },
+    {
+      "index": 132,
+      "question": "What career milestone did John achieve recently in September 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0665,
+        "match": false,
+        "latencyMs": 216.84616699999606
+      }
+    },
+    {
+      "index": 133,
+      "question": "What type of game is John's upcoming mobile game?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0026,
+        "match": false,
+        "latencyMs": 193.85970799999632
+      }
+    },
+    {
+      "index": 134,
+      "question": "What does John do to stay informed and constantly learn about game design?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0133,
+        "match": false,
+        "latencyMs": 186.87341699999524
+      }
+    },
+    {
+      "index": 135,
+      "question": "What kind of gig was John offered at the game dev non-profit organization?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.015,
+        "match": false,
+        "latencyMs": 195.68141699999978
+      }
+    },
+    {
+      "index": 136,
+      "question": "What does John feel about starting the journey as a programming mentor for game developers?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0519,
+        "match": false,
+        "latencyMs": 188.5525409999973
+      }
+    },
+    {
+      "index": 137,
+      "question": "What kind of games is James excited to play with his new video card?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.014,
+        "match": false,
+        "latencyMs": 185.9079170000041
+      }
+    },
+    {
+      "index": 138,
+      "question": "What inspired James to create his game?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0356,
+        "match": false,
+        "latencyMs": 179.47437499999796
+      }
+    },
+    {
+      "index": 139,
+      "question": "What sparked James' passion for gaming when he was a kid?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 2,
+        "method": "regex_temporal",
+        "match": false
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0248,
+        "match": false,
+        "latencyMs": 184.2172500000015
+      }
+    },
+    {
+      "index": 140,
+      "question": "What did James lose progress on due to a power outage?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0249,
+        "match": false,
+        "latencyMs": 190.32979199999681
+      }
+    },
+    {
+      "index": 141,
+      "question": "What games were played at the gaming tournament organized by John on 31 October, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0168,
+        "match": false,
+        "latencyMs": 188.13887499999691
+      }
+    },
+    {
+      "index": 142,
+      "question": "What was the purpose of the gaming tournament organized by John on 31 October, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0182,
+        "match": false,
+        "latencyMs": 187.458209000004
+      }
+    },
+    {
+      "index": 143,
+      "question": "What decision did James and Samantha make on 31 October, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0237,
+        "match": false,
+        "latencyMs": 184.31349999999657
+      }
+    },
+    {
+      "index": 144,
+      "question": "Where did James and Samantha decide to live together on 31 October, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0357,
+        "match": false,
+        "latencyMs": 186.58574999999837
+      }
+    },
+    {
+      "index": 145,
+      "question": "Why did James and Samantha choose an apartment near McGee's bar?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 3,
+        "method": "regex_detective",
+        "match": false
+      },
+      "laya": {
+        "category": 1,
+        "choice": "c1_multihop",
+        "confidence": 0.0184,
+        "match": false,
+        "latencyMs": 207.19566599999962
+      }
+    },
+    {
+      "index": 146,
+      "question": "What game is John hooked on playing on 5 November, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0136,
+        "match": false,
+        "latencyMs": 187.13829200000328
+      }
+    },
+    {
+      "index": 147,
+      "question": "What did John suggest James practice before playing FIFA 23 together?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0283,
+        "match": false,
+        "latencyMs": 196.99425000000338
+      }
+    },
+    {
+      "index": 148,
+      "question": "What project did John work on with a game developer by 7 November, 2022?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.0446,
+        "match": false,
+        "latencyMs": 188.87345900000219
+      }
+    },
+    {
+      "index": 149,
+      "question": "What is the name of John's cousin's dog?",
+      "goldCategory": 4,
+      "regex": {
+        "category": 4,
+        "method": "regex_literal_default",
+        "match": true
+      },
+      "laya": {
+        "category": 2,
+        "choice": "c2_temporal",
+        "confidence": 0.019,
+        "match": false,
+        "latencyMs": 191.23612500000309
+      }
+    }
+  ]
+}

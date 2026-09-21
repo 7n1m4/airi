@@ -17,6 +17,7 @@ import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka
 import { computed, defineAsyncComponent, markRaw, nextTick, onUnmounted, ref, watch } from 'vue'
 
 import LogoDark from '../../../../../packages/stage-layouts/src/assets/logo-dark.svg'
+import ChatNan0CognitionPanel from '../components/chat/ChatNan0CognitionPanel.vue'
 import ChatWorkspaceCoordinator from '../components/chat/ChatWorkspaceCoordinator.vue'
 
 import { electronApplySizePreset, electronOpenSettings } from '../../shared/eventa'
@@ -131,6 +132,17 @@ const mediaDisplayCount = ref(12)
 const rightPanelMemoriesCollapsed = useLocalStorage('airi:chat:rp-memories-collapsed', false)
 const rightPanelCurrentSceneCollapsed = useLocalStorage('airi:chat:rp-current-scene-collapsed', false)
 const rightPanelMediaCollapsed = useLocalStorage('airi:chat:rp-media-collapsed', false)
+const rightPanelNan0Collapsed = useLocalStorage('airi:chat:rp-nan0-collapsed', false)
+
+// Nan0 Cognition Pipeline Seam
+const isNan0Active = computed(() => {
+  const airiExt = activeCard.value?.extensions?.airi as any
+  const cognition = airiExt?.modules?.cognition ?? airiExt?.cognition
+  if (!cognition?.enabled)
+    return false
+  const processor = cognition.processor ?? cognition.firstHopProcessor
+  return processor === 'local_nan0' || processor === 'nan0'
+})
 
 // Left Panel Routing States
 const isLeftPanelOpen = useLocalStorage('airi:chat:left-panel-open', true)
@@ -1797,6 +1809,29 @@ function selectSurface(surface: typeof activeSurface.value) {
           >
             <!-- Panel Body -->
             <div class="flex flex-col gap-4 p-4">
+              <!-- Nan0 Cognition Section (Conditionally Mounted) -->
+              <div v-if="isNan0Active" class="flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                  <span
+                    :class="['flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase transition-colors',
+                             rightPanelNan0Collapsed
+                               ? 'bg-neutral-100/50 text-neutral-400 dark:bg-neutral-800/50'
+                               : 'bg-primary-50/50 text-primary-500 dark:bg-primary-950/30 dark:text-primary-400']"
+                    @click="rightPanelNan0Collapsed = !rightPanelNan0Collapsed"
+                  >
+                    <span class="i-solar:brain-bold-duotone text-xs" />
+                    Nan0 Cognition
+                    <span :class="rightPanelNan0Collapsed ? 'i-solar:eye-closed-linear' : 'i-solar:eye-linear'" class="text-xs" />
+                  </span>
+                  <span class="text-[9px] text-neutral-400 font-mono uppercase">
+                    Two-Hop Active
+                  </span>
+                </div>
+                <div v-if="!rightPanelNan0Collapsed">
+                  <ChatNan0CognitionPanel />
+                </div>
+              </div>
+
               <!-- Memories Section -->
               <div class="flex flex-col gap-2">
                 <div class="flex items-center justify-between">

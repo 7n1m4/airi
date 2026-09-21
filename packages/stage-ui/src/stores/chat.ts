@@ -68,6 +68,7 @@ import { buildSystemPrompt, useAiriCardStore } from './modules/airi-card'
 import { useAutonomousArtistryStore } from './modules/artistry-autonomous'
 import { useConsciousnessStore } from './modules/consciousness'
 import { useLiveSessionStore } from './modules/live-session'
+import { useNan0Store } from './modules/nan0'
 import { useVisionStore } from './modules/vision'
 import { useProactivityStore } from './proactivity'
 import { useProvidersStore } from './providers'
@@ -1436,6 +1437,11 @@ Format your output as a raw thought log.`
                 ...newMessages.filter(m => m.role !== 'system'),
               ]
 
+              const nan0Store = useNan0Store()
+              if (processorMode === 'local_nan0') {
+                nan0Store.setProcessing(true)
+              }
+
               const firstHopResponse = await llmStore.generate(
                 firstHopModelId,
                 firstHopProvider as any,
@@ -1452,16 +1458,29 @@ Format your output as a raw thought log.`
 
               let monologueText = ''
               if (processorMode === 'local_nan0') {
-                // TODO (Kyo Integration):
-                // 1. Run local metabonomics, relationships, and emotional baseline decays first.
-                // 2. Parse rawOutput matching the strict token format ([EMOTION], [ATTENTION], [MONOLOGUE], [DECISION]).
-                // 3. Extract the inner monologue content to assign to monologueText.
-                // 4. Update the character's active emotion and physics levels in the card store.
-                // 5. If [DECISION] is SILENCE, abort/silence the assistant turn here.
-
-                // Placeholder parse:
+                nan0Store.setProcessing(false)
+                // Parse rawOutput matching the strict token format ([EMOTION], [ATTENTION], [MONOLOGUE], [DECISION]).
                 const monologueMatch = rawOutput.match(/\[MONOLOGUE\]\s*([\s\S]*?)(?:\[DECISION\]|$)/i)
                 monologueText = monologueMatch ? monologueMatch[1].trim() : rawOutput
+                nan0Store.setInnerMonologue(monologueText)
+
+                const decisionMatch = rawOutput.match(/\[DECISION\]\s*(SPEAK|SILENCE)/i)
+                if (decisionMatch) {
+                  const decisionVal = decisionMatch[1].toUpperCase() as 'SPEAK' | 'SILENCE'
+                  nan0Store.setExecutiveState(decisionVal, decisionVal === 'SILENCE' ? 'Demands Silence' : 'Vocal Dialogue')
+                }
+
+                const emotionMatch = rawOutput.match(/\[EMOTION\]\s*([^\n\r]+)/i)
+                if (emotionMatch) {
+                  const pairs = emotionMatch[1].split(/[,;]/)
+                  for (const pair of pairs) {
+                    const [k, v] = pair.split(':').map(s => s.trim().toLowerCase())
+                    const num = Number.parseFloat(v)
+                    if (k && !Number.isNaN(num)) {
+                      nan0Store.updateEmotion(k, num)
+                    }
+                  }
+                }
               }
               else {
                 // Pass-through: Treat the entire output as the monologue
@@ -1484,6 +1503,9 @@ Format your output as a raw thought log.`
               }
             }
             catch (err) {
+              if (processorMode === 'local_nan0') {
+                useNan0Store().setProcessing(false)
+              }
               console.error('[Cognition] 1st-Hop pre-pass failed, continuing to 2nd-Hop:', err)
             }
           }

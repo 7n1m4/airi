@@ -1,0 +1,9 @@
+{
+  "name": "laya-cleanroom",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "@receptron/laya": "0.1.1"
+  }
+}
