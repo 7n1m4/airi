@@ -10,6 +10,8 @@ import type {
 } from '@xsai-ext/providers/utils'
 import type { ProgressInfo } from '@xsai-transformers/shared/types'
 
+import type { System1Provider } from '../../libs/providers/types'
+
 export interface ProviderValidationResult {
   errors: unknown[]
   reason: string
@@ -19,7 +21,7 @@ export interface ProviderValidationResult {
 export interface ProviderMetadata {
   id: string
   order?: number
-  category: 'chat' | 'embed' | 'speech' | 'transcription' | 'vision'
+  category: 'chat' | 'embed' | 'speech' | 'transcription' | 'vision' | 'system1'
   tasks: string[]
   nameKey: string
   name: string
@@ -50,6 +52,7 @@ export interface ProviderMetadata {
     | SpeechProviderWithExtraOptions
     | TranscriptionProvider
     | TranscriptionProviderWithExtraOptions
+    | System1Provider
     | Promise<ChatProvider>
     | Promise<ChatProviderWithExtraOptions>
     | Promise<EmbedProvider>
@@ -58,6 +61,7 @@ export interface ProviderMetadata {
     | Promise<SpeechProviderWithExtraOptions>
     | Promise<TranscriptionProvider>
     | Promise<TranscriptionProviderWithExtraOptions>
+    | Promise<System1Provider>
   capabilities: {
     listModels?: (config: Record<string, unknown>) => Promise<ModelInfo[]>
     listVoices?: (config: Record<string, unknown>) => Promise<VoiceInfo[]>

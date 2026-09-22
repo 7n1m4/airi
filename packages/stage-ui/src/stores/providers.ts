@@ -239,6 +239,17 @@ export const useProvidersStore = defineStore('providers', () => {
     )
   })
 
+  const allSystem1ProvidersMetadata = computed(() => {
+    return availableProvidersMetadata.value.filter(metadata =>
+      metadata.category === 'system1'
+      || metadata.tasks.some(task => ['system1', 'system_one', 'system-one'].includes(task.toLowerCase())),
+    )
+  })
+
+  const configuredSystem1ProvidersMetadata = computed(() => {
+    return allSystem1ProvidersMetadata.value.filter(metadata => configuredProviders.value[metadata.id] || shouldListProvider(metadata.id))
+  })
+
   const configuredChatProvidersMetadata = computed(() => {
     return allChatProvidersMetadata.value.filter(metadata => configuredProviders.value[metadata.id] || shouldListProvider(metadata.id))
   })
@@ -252,6 +263,51 @@ export const useProvidersStore = defineStore('providers', () => {
     }> = []
 
     for (const metadata of configuredChatProvidersMetadata.value) {
+      const instances = instanceStore.listInstances(metadata.id)
+      const isMulti = instances.length > 1
+
+      if (instances.length === 0) {
+        const baseName = metadata.name || metadata.localizedName || metadata.id
+        list.push({
+          value: metadata.id,
+          providerId: metadata.id,
+          instanceId: '*',
+          label: baseName,
+        })
+      }
+      else {
+        for (const inst of instances) {
+          const baseName = metadata.name || metadata.localizedName || metadata.id
+          let cleanId = inst.id
+          const prefix = `${metadata.id}:`
+          while (cleanId.startsWith(prefix)) {
+            cleanId = cleanId.slice(prefix.length)
+          }
+          const displayName = isMulti
+            ? `${baseName} (${inst.label || cleanId})`
+            : baseName
+          const valKey = isMulti ? `${metadata.id}:${cleanId}` : metadata.id
+          list.push({
+            value: valKey,
+            providerId: metadata.id,
+            instanceId: cleanId,
+            label: displayName,
+          })
+        }
+      }
+    }
+    return list
+  })
+
+  const configuredSystem1ProviderOptions = computed(() => {
+    const list: Array<{
+      value: string
+      providerId: string
+      instanceId: string
+      label: string
+    }> = []
+
+    for (const metadata of configuredSystem1ProvidersMetadata.value) {
       const instances = instanceStore.listInstances(metadata.id)
       const isMulti = instances.length > 1
 
@@ -302,6 +358,13 @@ export const useProvidersStore = defineStore('providers', () => {
 
   const persistedProvidersMetadata = computed(() => {
     return availableProvidersMetadata.value.filter(metadata => shouldListProvider(metadata.id))
+  })
+
+  const persistedSystem1ProvidersMetadata = computed(() => {
+    return persistedProvidersMetadata.value.filter(metadata =>
+      metadata.category === 'system1'
+      || metadata.tasks.some(task => ['system1', 'system_one', 'system-one'].includes(task.toLowerCase())),
+    )
   })
 
   const persistedChatProvidersMetadata = computed(() => {
@@ -395,15 +458,19 @@ export const useProvidersStore = defineStore('providers', () => {
     allAudioSpeechProvidersMetadata,
     allAudioTranscriptionProvidersMetadata,
     allVisionProvidersMetadata,
+    allSystem1ProvidersMetadata,
     configuredChatProvidersMetadata,
     configuredChatProviderOptions,
     configuredSpeechProvidersMetadata,
     configuredTranscriptionProvidersMetadata,
     configuredVisionProvidersMetadata,
+    configuredSystem1ProvidersMetadata,
+    configuredSystem1ProviderOptions,
     persistedProvidersMetadata,
     persistedChatProvidersMetadata,
     persistedSpeechProvidersMetadata,
     persistedTranscriptionProvidersMetadata,
     persistedVisionProvidersMetadata,
+    persistedSystem1ProvidersMetadata,
   }
 })

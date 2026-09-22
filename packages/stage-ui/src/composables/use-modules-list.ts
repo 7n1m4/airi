@@ -12,6 +12,7 @@ import { useDiscordStore } from '../stores/modules/discord'
 import { useFactorioStore } from '../stores/modules/gaming-factorio'
 import { useHearingStore } from '../stores/modules/hearing'
 import { useSpeechStore } from '../stores/modules/speech'
+import { useSystemOneStore } from '../stores/modules/system-one'
 import { useTwitterStore } from '../stores/modules/twitter'
 import { useVisionStore } from '../stores/modules/vision'
 import { useSyncEngineStore } from '../stores/sync-engine'
@@ -33,6 +34,7 @@ export function useModulesList() {
 
   // Initialize stores
   const consciousnessStore = useConsciousnessStore()
+  const systemOneStore = useSystemOneStore()
   const speechStore = useSpeechStore()
   const hearingStore = useHearingStore()
   const discordStore = useDiscordStore()
@@ -51,6 +53,15 @@ export function useModulesList() {
       icon: 'i-solar:ghost-bold-duotone',
       to: '/settings/modules/consciousness',
       configured: consciousnessStore.configured,
+      category: 'essential',
+    },
+    {
+      id: 'system-one',
+      name: t('settings.pages.modules.system-one.title', 'System 1 Coprocessor'),
+      description: t('settings.pages.modules.system-one.description', 'High-speed cognitive coprocessor for zero-shot query triage, batched candidate reranking, and affective heuristics'),
+      icon: 'i-solar:cpu-bolt-bold-duotone',
+      to: '/settings/modules/system-one',
+      configured: systemOneStore.configured,
       category: 'essential',
     },
     {

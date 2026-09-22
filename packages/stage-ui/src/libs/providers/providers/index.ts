@@ -37,6 +37,8 @@ import './openpaths'
 import './byteplus'
 import './byteplus-coding-plan'
 import './volcengine-coding-plan'
+import './typesafe-ai'
+import './laya-local'
 
 export {
   getDefinedProvider,

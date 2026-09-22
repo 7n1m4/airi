@@ -20,6 +20,21 @@ import type { $ZodType } from 'zod/v4/core'
  */
 export type ProviderTranslationFn = (key: string, ...args: any[]) => string
 
+export interface System1Answer {
+  choice?: string
+  score?: number
+  confidence?: number
+  probabilities?: Record<string, number>
+}
+
+export interface System1Response {
+  answers: Record<string, System1Answer>
+}
+
+export interface System1Provider {
+  systemOne: (state: string | object, questions: Record<string, any>, model?: string) => Promise<System1Response>
+}
+
 export type ProviderInstance
   = | ChatProvider
     | ChatProviderWithExtraOptions
@@ -31,6 +46,7 @@ export type ProviderInstance
     | TranscriptionProviderWithExtraOptions
     | ModelProvider
     | ModelProviderWithExtraOptions
+    | System1Provider
 
 export function isModelProvider(providerInstance: ProviderInstance): providerInstance is ModelProvider | ModelProviderWithExtraOptions {
   if ('model' in providerInstance && typeof providerInstance.model === 'function') {
@@ -186,4 +202,5 @@ export enum ProviderValidationCheck {
   Embeddings = 'embeddings',
   Speech = 'speech',
   Transcription = 'transcription',
+  System1 = 'system1',
 }

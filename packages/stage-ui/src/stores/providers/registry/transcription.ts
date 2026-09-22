@@ -9,6 +9,7 @@ import type {
   TranscriptionProviderWithExtraOptions,
 } from '@xsai-ext/providers/utils'
 
+import type { System1Provider } from '../../../libs/providers/types'
 import type { AliyunRealtimeSpeechExtraOptions } from '../aliyun/stream-transcription'
 import type { ModelInfo, ProviderMetadata } from '../types'
 
@@ -48,6 +49,7 @@ type AnyProvider
     | SpeechProviderWithExtraOptions
     | TranscriptionProvider
     | TranscriptionProviderWithExtraOptions
+    | System1Provider
 
 /**
  * Transcription (STT) provider metadata registry.

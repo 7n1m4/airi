@@ -23,6 +23,9 @@ function getCategoryFromTasks(tasks: string[]): ProviderMetadata['category'] {
   if (tasks.some(task => ['vision', 'image-to-text'].includes(task.toLowerCase()))) {
     return 'vision'
   }
+  if (tasks.some(task => ['system1', 'system_one', 'system-one'].includes(task.toLowerCase()))) {
+    return 'system1'
+  }
 
   return 'chat'
 }

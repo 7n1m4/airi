@@ -26,6 +26,7 @@ const {
   allAudioSpeechProvidersMetadata,
   allAudioTranscriptionProvidersMetadata,
   allVisionProvidersMetadata,
+  allSystem1ProvidersMetadata,
 } = storeToRefs(providersStore)
 
 const allCloudProvidersMetadata = computed(() => {
@@ -197,6 +198,13 @@ const providerBlocksConfig = [
     title: 'Motion',
     description: 'Motion generation model providers. e.g. FlowMDM (Local WebGPU).',
     providersRef: allMotionProvidersMetadata,
+  },
+  {
+    id: 'system1',
+    icon: 'i-solar:cpu-bolt-bold-duotone',
+    title: 'System 1',
+    description: 'Ultra-fast cognitive coprocessors and classifiers for zero-shot query triage, batched candidate reranking, and affective heuristics.',
+    providersRef: allSystem1ProvidersMetadata,
   },
   {
     id: 'cloud',
@@ -502,7 +510,7 @@ const providerBlocks = computed(() => {
           :icon="provider.icon"
           :icon-color="provider.iconColor"
           :icon-image="provider.iconImage"
-          :to="`/settings/providers/${provider.category === 'vision' ? 'chat' : provider.category}/${provider.id}`"
+          :to="`/settings/providers/${activeTabId === 'system1' ? 'system1' : provider.category === 'vision' ? 'chat' : provider.category}/${provider.id}`"
           :configured="provider.configured"
           :pricing="provider.pricing as any"
           :deployment="provider.deployment as any"

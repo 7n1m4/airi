@@ -689,6 +689,10 @@ pages:
     text-to-motion:
       title: Text to Motion
       description: Procedural LLM keyframes, FlowMDM 3D diffusion, and VRMA compilation
+    system-one:
+      title: System 1 Coprocessor
+      description: High-speed cognitive coprocessor for zero-shot query triage, batched
+        candidate reranking, and affective heuristics
   providers:
     explained:
       chat: Text generation model providers. e.g. OpenRouter, OpenAI, Ollama.
