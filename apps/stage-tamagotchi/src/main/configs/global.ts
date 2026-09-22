@@ -35,6 +35,7 @@ export function createGlobalAppConfig() {
       windows: [],
       microphoneToggleHotkey: 'Scroll',
       corsBypassUrls: [
+        'https://api.typesafe.ai/*',
         'https://api.deepgram.com/*',
         'https://opencode.ai/*',
         'https://pioneer.ai/*',

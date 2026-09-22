@@ -3,6 +3,7 @@
  */
 
 export const DEFAULT_CORS_BYPASS_URLS: string[] = [
+  'https://api.typesafe.ai/*',
   'https://api.cloudflare.com/*',
   'https://dash.cloudflare.com/*',
   'https://api.deepgram.com/*',
@@ -28,6 +29,7 @@ export const DEFAULT_CORS_BYPASS_URLS: string[] = [
 ]
 
 export const DEFAULT_SKIP_CORS_HOSTS: string[] = [
+  'api.typesafe.ai',
   'api.cloudflare.com',
   'dash.cloudflare.com',
   'api.deepgram.com',

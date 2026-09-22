@@ -78,7 +78,7 @@ export function useProviderValidation(providerId: string) {
         finalValidationMessage = validationResult.reason
 
       if (isValid.value)
-        providersStore.markProviderAdded(providerId)
+        providersStore.forceProviderConfigured(providerId)
     }
     catch (error) {
       isValid.value = false

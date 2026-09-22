@@ -276,19 +276,23 @@ const isCurrentProviderConfigured = computed(() => {
       <Alert
         v-if="!isCurrentProviderConfigured"
         type="warning"
-        :title="`${activeProvider} requires configuration`"
       >
-        <div :class="['flex items-center justify-between gap-2']">
-          <span :class="['text-xs']">
-            Provide your API key in the Providers page to enable System 1 live requests.
-          </span>
-          <RouterLink
-            to="/settings/providers"
-            :class="['text-xs font-semibold text-primary-600 dark:text-primary-400 underline shrink-0']"
-          >
-            Configure Key
-          </RouterLink>
-        </div>
+        <template #title>
+          {{ activeProvider }} requires configuration
+        </template>
+        <template #content>
+          <div :class="['flex items-center justify-between gap-2']">
+            <span :class="['text-xs']">
+              Provide your API key in the Providers page to enable System 1 live requests.
+            </span>
+            <RouterLink
+              :to="`/settings/providers/system1/${activeProvider}`"
+              :class="['text-xs font-semibold text-primary-600 dark:text-primary-400 underline shrink-0']"
+            >
+              Configure Key
+            </RouterLink>
+          </div>
+        </template>
       </Alert>
 
       <!-- Model Selection -->

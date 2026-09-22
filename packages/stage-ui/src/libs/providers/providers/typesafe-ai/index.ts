@@ -76,6 +76,78 @@ export const providerTypeSafeAI = defineProvider<TypeSafeConfig>({
     }
   },
 
+  validators: {
+    validateConfig: [
+      () => ({
+        id: 'typesafe-ai:check-config',
+        name: 'Check configuration',
+        validator: async (config: TypeSafeConfig) => {
+          const errors: Array<{ error: unknown }> = []
+          if (!config.apiKey?.trim())
+            errors.push({ error: new Error('API key is required.') })
+          return {
+            errors,
+            reason: errors.map(e => (e.error as Error).message).join(', '),
+            reasonKey: '',
+            valid: errors.length === 0,
+          }
+        },
+      }),
+    ],
+    validateProvider: [
+      () => ({
+        id: 'typesafe-ai:check-connectivity',
+        name: 'Check TypeSafe AI connectivity',
+        validator: async (config: TypeSafeConfig) => {
+          const errors: Array<{ error: unknown }> = []
+          const endpoint = config.baseUrl || 'https://api.typesafe.ai/v1/systemone'
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 10_000)
+          try {
+            // NOTICE: TypeSafe AI doesn't have a dedicated health endpoint, so we
+            // send a minimal systemOne request to verify the key + connectivity.
+            const res = await fetch(endpoint, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${config.apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                model: 'jev-latest',
+                state: 'ping',
+                questions: { ping: { type: 'choice', instructions: 'Connectivity check.', criteria: { ok: 'ok' } } },
+              }),
+              signal: controller.signal,
+            })
+            if (res.status === 401 || res.status === 403) {
+              errors.push({ error: new Error('Invalid API key — authentication rejected.') })
+            }
+            else if (res.status >= 500) {
+              errors.push({ error: new Error(`TypeSafe AI server error: HTTP ${res.status}`) })
+            }
+          }
+          catch (e: any) {
+            if (e?.name !== 'AbortError') {
+              errors.push({ error: new Error(`Connectivity check failed: ${e?.message || String(e)}`) })
+            }
+            else {
+              errors.push({ error: new Error('Connectivity check timed out after 10s.') })
+            }
+          }
+          finally {
+            clearTimeout(timeout)
+          }
+          return {
+            errors,
+            reason: errors.map(e => (e.error as Error).message).join(', '),
+            reasonKey: '',
+            valid: errors.length === 0,
+          }
+        },
+      }),
+    ],
+  },
+
   validationRequiredWhen(config) {
     return !!config.apiKey?.trim()
   },
