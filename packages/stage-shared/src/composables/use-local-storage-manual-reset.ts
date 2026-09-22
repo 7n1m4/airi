@@ -7,7 +7,8 @@ import { unref, watch } from 'vue'
 export function useLocalStorageManualReset<T>(key: MaybeRefOrGetter<string>, initialValue: MaybeRefOrGetter<T>, options?: UseStorageOptions<T> & WatchOptions): ManualResetRefReturn<T> {
   const value = unref(initialValue)
   const localStorageState = useLocalStorage<T>(key, value, options)
-  const state = refManualReset<T>(localStorageState)
+  const state = refManualReset<T>(value)
+  state.value = localStorageState.value
 
   const { resume, pause } = watch(state, newValue => localStorageState.value = newValue, options)
   watch(localStorageState, (newValue) => {

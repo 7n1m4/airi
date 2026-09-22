@@ -424,7 +424,7 @@ const {
 const { supportsStreamInput } = storeToRefs(hearingPipeline)
 const chatStore = useChatOrchestratorStore()
 const hearingStore = useHearingStore()
-const { hearingDetectionMode } = storeToRefs(hearingStore)
+const { hearingDetectionMode, vadThreshold } = storeToRefs(hearingStore)
 const isStartingAudio = ref(false)
 
 const shouldUseStreamInput = computed(() => supportsStreamInput.value && !!stream.value)
@@ -436,7 +436,7 @@ const {
   dispose: disposeVAD,
   loaded: vadLoaded,
 } = useVAD(workletUrl, {
-  threshold: ref(0.6),
+  threshold: vadThreshold,
   onSpeechStart: () => {
     if (hearingDetectionMode.value === 'vad')
       void handleSpeechStart()
@@ -508,8 +508,9 @@ async function startAudioInteraction() {
       else if (hearingDetectionMode.value === 'vad') {
         console.info('[Main Page] Skipping separate VAD in streaming mode (provider handles segmentation)')
       }
-      else {
-        console.info('[Main Page] Manual mode enabled, waiting for push-to-talk trigger')
+      else if (!shouldUseStreamInput.value) {
+        console.info('[Main Page] Manual mode enabled, starting recording immediately')
+        await startRecord()
       }
     }
 
@@ -930,7 +931,7 @@ onUnmounted(async () => {
 })
 
 watch([stream, () => vadLoaded.value], async ([s, loaded]) => {
-  if (enabled.value && loaded && s) {
+  if (enabled.value && loaded && s && hearingDetectionMode.value === 'vad' && !shouldUseStreamInput.value) {
     try {
       await startVAD(s)
     }

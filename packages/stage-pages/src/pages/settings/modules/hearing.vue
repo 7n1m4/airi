@@ -37,6 +37,7 @@ const {
   autoSendEnabled,
   autoSendDelay,
   hearingDetectionMode,
+  vadThreshold,
 } = storeToRefs(hearingStore)
 const providersStore = useProvidersStore()
 const { configuredTranscriptionProvidersMetadata } = storeToRefs(providersStore)
@@ -83,7 +84,8 @@ const testStreamingText = ref<string>('')
 const testStatusMessage = ref<string>('')
 const testStreamWasStarted = ref(false) // Track if we started the stream for testing
 
-const useVADThreshold = ref(0.6) // 0.1 - 0.9
+const useVADThreshold = vadThreshold // Persisted 0.1 - 0.9
+const volumeThreshold = ref(15) // Local volume-based fallback threshold (1 - 80)
 const useVADModel = ref(true) // Toggle between VAD and volume-based detection
 const shouldUseStreamInput = computed(() => supportsStreamInput.value && !!stream.value)
 
@@ -199,7 +201,7 @@ async function setupAudioMonitoring() {
     const analyzer = startAnalyzer(audioContext.value)
     onAnalyzerUpdate((volumeLevel) => {
       if (!useVADModel.value || !loadedVAD.value) {
-        isSpeechVolume.value = volumeLevel > useVADThreshold.value
+        isSpeechVolume.value = volumeLevel > volumeThreshold.value
       }
     })
     if (analyzer)
@@ -836,7 +838,7 @@ onUnmounted(() => {
 
               <div v-else class="space-y-3">
                 <FieldRange
-                  v-model="useVADThreshold"
+                  v-model="volumeThreshold"
                   label="Sensitivity"
                   description="Adjust the threshold for speech detection"
                   :min="1"

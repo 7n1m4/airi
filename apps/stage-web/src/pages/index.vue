@@ -16,7 +16,7 @@ import { useVAD } from '@proj-airi/stage-ui/stores/ai/models/vad'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { useLLM } from '@proj-airi/stage-ui/stores/llm'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useHearingSpeechInputPipeline } from '@proj-airi/stage-ui/stores/modules/hearing'
+import { useHearingSpeechInputPipeline, useHearingStore } from '@proj-airi/stage-ui/stores/modules/hearing'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { useSettings, useSettingsAudioDevice, useSettingsControlStrip } from '@proj-airi/stage-ui/stores/settings'
 import { usePositioningStore } from '@proj-airi/stage-ui/stores/settings/positioning'
@@ -103,13 +103,16 @@ watch([activeChatProvider, activeChatModel], async () => {
 
 const shouldUseStreamInput = computed(() => supportsStreamInput.value && !!stream.value)
 
+const hearingStore = useHearingStore()
+const { vadThreshold } = storeToRefs(hearingStore)
+
 const {
   init: initVAD,
   dispose: disposeVAD,
   start: startVAD,
   loaded: vadLoaded,
 } = useVAD(workletUrl, {
-  threshold: ref(0.6),
+  threshold: vadThreshold,
   onSpeechStart: () => handleSpeechStart(),
   onSpeechEnd: () => handleSpeechEnd(),
 })
