@@ -7,18 +7,22 @@ export type { NeedleClient } from './adapters/needle-client'
 export { createWebRwkvAdapter, getWebRwkvAdapter } from './adapters/web-rwkv'
 export type { WebRwkvAdapter, WebRwkvGenerateOptions } from './adapters/web-rwkv'
 export {
+  clearLayaCache,
   clearModelCache,
   clearNeedleCache,
   clearSingleModelCache,
   clearWebLlmCache,
   evictOtherWhisperModels,
   formatBytes,
+  getLayaCacheSize,
   getModelCacheSize,
   getNeedleCacheSize,
   getWebLlmCacheSize,
+  isLayaModelCached,
   isModelCached,
   isNeedleModelCached,
   isWebLlmModelCached,
+  LAYA_CACHE_NAME,
 } from './cache-utils'
 export {
   DEFAULT_WEB_LLM_FP32_MODEL,
@@ -63,6 +67,20 @@ export type {
   GpuWorkerHostOptions,
   WorkerHostPhase,
 } from './gpu-worker-host'
+export {
+  deleteLayaModel,
+  downloadLayaModel,
+  ensureOrtConfigured,
+  isLayaDownloaded,
+  LAYA_FP16_MODEL_FILE,
+  LAYA_HF_REPO,
+  LAYA_INT8_MODEL_FILE,
+  loadLayaSession,
+  loadLayaTokenizer,
+  resetLayaSession,
+  runLayaSystemOne,
+} from './laya-engine'
+export type { LayaDownloadProgress } from './laya-engine'
 export {
   classifyError,
   createRequestId,

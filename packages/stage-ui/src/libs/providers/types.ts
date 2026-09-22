@@ -29,6 +29,10 @@ export interface System1Answer {
 
 export interface System1Response {
   answers: Record<string, System1Answer>
+  usage?: {
+    input_tokens: number
+    output_tokens: number
+  }
 }
 
 export interface System1Provider {

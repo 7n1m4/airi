@@ -4,7 +4,7 @@ import { computed, onMounted, ref } from 'vue'
 
 import { clearModelCache, clearSingleModelCache, DEFAULT_WEB_RWKV_MODEL, formatBytes, getModelCacheSize, isModelCached } from '../../../libs/inference'
 
-export type ModelCategory = 'all' | 'llm' | 'audio' | 'vision' | 'motion'
+export type ModelCategory = 'all' | 'llm' | 'audio' | 'vision' | 'misc'
 
 interface KnownModelItem {
   id: string
@@ -160,11 +160,19 @@ const knownModels: KnownModelItem[] = [
     description: 'Real-time video and image portrait matting',
   },
 
-  // 4. Motion & Kinetics
+  // 4. Miscellaneous & System 1 (Motion, Decisions, Embeddings)
+  {
+    id: 'tozp/laya-onnx',
+    name: 'Laya 80M / ModernBERT (System 1 Decisions)',
+    category: 'misc',
+    runtime: 'ONNX Web / WASM',
+    icon: 'i-solar:cpu-bolt-bold-duotone',
+    description: 'Ultra-fast on-device System-1 decision & question triage model',
+  },
   {
     id: 'dasilva333/flowmdm-onnx',
     name: 'FlowMDM Motion Denoiser',
-    category: 'motion',
+    category: 'misc',
     runtime: 'WebGPU',
     icon: 'i-solar:running-bold-duotone',
     description: '100-step generative diffusion Text-to-VRMA gesture synthesizer',
@@ -172,7 +180,7 @@ const knownModels: KnownModelItem[] = [
   {
     id: 'Xenova/clip-vit-base-patch32',
     name: 'CLIP Motion & Text Encoder',
-    category: 'motion',
+    category: 'misc',
     runtime: 'Transformers.js',
     icon: 'i-solar:compass-bold-duotone',
     description: 'Semantic motion matching and attention ecology text embedder',
@@ -184,7 +192,7 @@ const categories: { id: ModelCategory, label: string, icon: string }[] = [
   { id: 'llm', label: 'LLMs', icon: 'i-solar:chat-round-line-bold-duotone' },
   { id: 'audio', label: 'Audio & Voice', icon: 'i-solar:volume-loud-bold-duotone' },
   { id: 'vision', label: 'Vision & Art', icon: 'i-solar:gallery-bold-duotone' },
-  { id: 'motion', label: 'Motion', icon: 'i-solar:running-bold-duotone' },
+  { id: 'misc', label: 'Misc', icon: 'i-solar:box-minimalistic-bold-duotone' },
 ]
 
 const cachedModelMap = ref<Record<string, boolean>>({})
@@ -195,7 +203,7 @@ const categoryCounts = computed(() => {
     llm: { total: 0, cached: 0 },
     audio: { total: 0, cached: 0 },
     vision: { total: 0, cached: 0 },
-    motion: { total: 0, cached: 0 },
+    misc: { total: 0, cached: 0 },
   }
 
   for (const model of knownModels) {

@@ -49,7 +49,7 @@ watch(activeProvider, (newProv) => {
     activeModel.value = 'jev-latest'
   }
   else if (newProv === 'laya-local') {
-    activeModel.value = 'convai-laya-80m-onnx'
+    activeModel.value = 'tozp/laya-onnx'
   }
 })
 

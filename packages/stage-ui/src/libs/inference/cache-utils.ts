@@ -10,6 +10,7 @@ const MOSS_OPFS_DIR_NAME = 'nano-reader-browser-model-store'
 // `cacheBackend` is `"cache"`; see `createScopedArtifactCache` in the library).
 const WEBLLM_CACHE_NAMES = ['webllm/model', 'webllm/wasm', 'webllm/config'] as const
 export const NEEDLE_CACHE_NAME = 'needle-cache'
+export const LAYA_CACHE_NAME = 'laya-cache'
 
 async function getDirectorySizeRecursive(dirHandle: FileSystemDirectoryHandle): Promise<number> {
   let size = 0
@@ -169,16 +170,17 @@ async function isOpfsModelCached(modelUrl: string): Promise<boolean> {
  * Returns 0 if no caches exist or all are empty.
  */
 export async function getModelCacheSize(): Promise<number> {
-  const [transformersSize, opfsSize, mossSize, webLlmSize, needleSize, nativeSize] = await Promise.all([
+  const [transformersSize, opfsSize, mossSize, webLlmSize, needleSize, layaSize, nativeSize] = await Promise.all([
     getTransformersCacheSize(),
     getOpfsCacheSize(),
     getMossOpfsCacheSize(),
     getWebLlmCacheSize(),
     getNeedleCacheSize(),
+    getLayaCacheSize(),
     NativeAI.listCachedModels().then(res => res.totalSizeBytes).catch(() => 0),
   ])
 
-  return transformersSize + opfsSize + mossSize + webLlmSize + needleSize + nativeSize
+  return transformersSize + opfsSize + mossSize + webLlmSize + needleSize + layaSize + nativeSize
 }
 
 async function getTransformersCacheSize(): Promise<number> {
@@ -223,6 +225,7 @@ export async function clearModelCache(): Promise<void> {
     clearMossOpfsCache(),
     clearWebLlmCache(),
     clearNeedleCache(),
+    clearLayaCache(),
     NativeAI.listCachedModels().then(async (res) => {
       for (const m of res.models) {
         await NativeAI.deleteCachedModel({ modelId: m.modelId }).catch(() => {})
@@ -249,6 +252,10 @@ export async function clearSingleModelCache(modelId: string): Promise<void> {
   }
   if (modelId === 'needle-2' || modelId.includes('needle2') || modelId.includes('needle')) {
     await clearNeedleCache()
+    return
+  }
+  if (modelId.includes('laya')) {
+    await clearLayaCache()
     return
   }
   if (modelId.startsWith('http')) {
@@ -500,6 +507,69 @@ export async function isNeedleModelCached(): Promise<boolean> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Laya (Cache Storage API, `laya-cache` scope)
+// ---------------------------------------------------------------------------
+
+export async function getLayaCacheSize(): Promise<number> {
+  if (typeof caches === 'undefined')
+    return 0
+
+  try {
+    const has = await caches.has(LAYA_CACHE_NAME)
+    if (!has)
+      return 0
+    const cache = await caches.open(LAYA_CACHE_NAME)
+    const keys = await cache.keys()
+    let totalSize = 0
+    for (const request of keys) {
+      const response = await cache.match(request)
+      if (response) {
+        const cl = response.headers.get('content-length')
+        if (cl) {
+          totalSize += Number.parseInt(cl, 10)
+        }
+        else {
+          const blob = await response.blob()
+          totalSize += blob.size
+        }
+      }
+    }
+    return totalSize
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to get Laya cache size', error)
+    return 0
+  }
+}
+
+export async function clearLayaCache(): Promise<void> {
+  if (typeof caches === 'undefined')
+    return
+  try {
+    await caches.delete(LAYA_CACHE_NAME)
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to clear Laya cache', error)
+  }
+}
+
+export async function isLayaModelCached(): Promise<boolean> {
+  if (typeof caches === 'undefined')
+    return false
+  try {
+    const has = await caches.has(LAYA_CACHE_NAME)
+    if (!has)
+      return false
+    const cache = await caches.open(LAYA_CACHE_NAME)
+    const keys = await cache.keys()
+    return keys.length > 0
+  }
+  catch {
+    return false
+  }
+}
+
 /**
  * Check whether a specific model has cached files.
  * Matches by looking for cache entries whose URL contains the model ID.
@@ -518,6 +588,9 @@ export async function isModelCached(modelId: string): Promise<boolean> {
   }
   if (modelId === 'needle-2' || modelId.includes('needle2') || modelId.includes('needle')) {
     return isNeedleModelCached()
+  }
+  if (modelId.includes('laya')) {
+    return isLayaModelCached()
   }
   if (modelId.startsWith('http')) {
     return isOpfsModelCached(modelId)

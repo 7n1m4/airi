@@ -27,6 +27,7 @@ const {
   allAudioTranscriptionProvidersMetadata,
   allVisionProvidersMetadata,
   allSystem1ProvidersMetadata,
+  configuredProviders,
 } = storeToRefs(providersStore)
 
 const allCloudProvidersMetadata = computed(() => {
@@ -290,6 +291,7 @@ const providerBlocks = computed(() => {
         })
         .map(provider => ({
           ...provider,
+          configured: (provider as any).configured ?? !!configuredProviders.value[provider.id],
           renderIndex: globalIndex++,
         }))
 

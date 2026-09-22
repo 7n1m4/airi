@@ -691,8 +691,8 @@ pages:
       description: Procedural LLM keyframes, FlowMDM 3D diffusion, and VRMA compilation
     system-one:
       title: System 1 Coprocessor
-      description: High-speed cognitive coprocessor for zero-shot query triage, batched
-        candidate reranking, and affective heuristics
+      description: High-speed cognitive coprocessor for zero-shot query triage,
+        batched candidate reranking, and affective heuristics
   providers:
     explained:
       chat: Text generation model providers. e.g. OpenRouter, OpenAI, Ollama.
@@ -1394,6 +1394,10 @@ pages:
       volcengine-coding-plan:
         title: Volcengine Coding Plan
         description: Volcengine Coding Plan
+      laya-local:
+        title: Local Laya (On-Device)
+        description: Client-side ModernBERT System 1 classification running locally via
+          WebGPU/WASM
     title: Inference Providers
     cache:
       title: Model Cache

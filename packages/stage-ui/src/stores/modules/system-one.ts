@@ -135,9 +135,14 @@ export const useSystemOneStore = defineStore('system-one', () => {
     if (activeProvider.value === 'laya-local') {
       return [
         {
-          id: 'convai-laya-80m-onnx',
-          name: 'Laya 80M (ModernBERT ONNX)',
-          description: 'On-device ModernBERT sequence classifier running in Web Worker',
+          id: 'tozp/laya-onnx',
+          name: 'Laya INT8 (424 MB, Recommended)',
+          description: 'On-device ModernBERT quantized INT8 sequence classifier',
+        },
+        {
+          id: 'tozp/laya-onnx-fp16',
+          name: 'Laya FP16 (843 MB, Desktop GPU)',
+          description: 'On-device ModernBERT FP16 precision sequence classifier',
         },
       ]
     }

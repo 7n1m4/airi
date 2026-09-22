@@ -2,13 +2,14 @@ import type { System1Response } from '../../types'
 
 import { z } from 'zod'
 
+import { downloadLayaModel, runLayaSystemOne } from '../../../inference/laya-engine'
 import { defineProvider } from '../registry'
 
 const layaLocalConfigSchema = z.object({
   model: z
     .string('Model')
     .optional()
-    .default('convai-laya-80m-onnx'),
+    .default('tozp/laya-onnx'),
 })
 
 type LayaLocalConfig = z.input<typeof layaLocalConfigSchema>
@@ -18,31 +19,23 @@ export const providerLayaLocal = defineProvider<LayaLocalConfig>({
   order: 2,
   name: 'Local Laya (On-Device)',
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.laya-local.title'),
-  description: 'Client-side ModernBERT System 1 classification running in Web Worker',
+  description: 'Client-side ModernBERT System 1 classification running locally via WebGPU/WASM',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.laya-local.description'),
   tasks: ['system1'],
   icon: 'i-solar:laptop-minimalistic-bold-duotone',
 
   createProviderConfig: () => layaLocalConfigSchema,
 
-  createProvider(_config) {
+  createProvider(config) {
     return {
-      systemOne: async (_state: string | object, questions: Record<string, any>, _model = 'convai-laya-80m-onnx'): Promise<System1Response> => {
-        // Local ModernBERT ONNX evaluation stub - evaluates questions with deterministic schema defaults
-        const answers: Record<string, any> = {}
-        for (const [key, q] of Object.entries(questions)) {
-          if (q.type === 'choice') {
-            const firstChoice = Object.keys(q.criteria || {})[0] || 'c4_literal'
-            answers[key] = { choice: firstChoice, confidence: 0.95 }
-          }
-          else if (q.type === 'score') {
-            answers[key] = { score: 2.5 }
-          }
-          else {
-            answers[key] = { choice: 'ok' }
-          }
+      systemOne: async (state: string | object, questions: Record<string, any>, model?: string): Promise<System1Response> => {
+        const targetModel = model || config?.model || 'tozp/laya-onnx'
+        const precision = targetModel.includes('fp16') ? 'fp16' : 'int8'
+        const res = await runLayaSystemOne(state, questions, precision)
+        return {
+          answers: res.answers,
+          usage: res.usage,
         }
-        return { answers }
       },
     }
   },
@@ -52,13 +45,36 @@ export const providerLayaLocal = defineProvider<LayaLocalConfig>({
   },
 
   extraMethods: {
+    async loadModel(config, _provider, hooks) {
+      const precision = config?.model?.includes('fp16') ? 'fp16' : 'int8'
+      await downloadLayaModel({
+        precision,
+        onProgress: (p) => {
+          hooks?.onProgress?.({
+            status: 'progress',
+            name: p.file,
+            file: p.file,
+            loaded: p.loaded,
+            total: p.total,
+            progress: p.percentage,
+          })
+        },
+      })
+    },
+
     async listModels() {
       return [
         {
-          id: 'convai-laya-80m-onnx',
-          name: 'Laya 80M (ModernBERT ONNX)',
+          id: 'tozp/laya-onnx',
+          name: 'Laya INT8 (424 MB, Recommended)',
           provider: 'laya-local',
-          description: 'On-device ModernBERT sequence classifier for System 1 decisions',
+          description: 'On-device ModernBERT quantized INT8 sequence classifier',
+        },
+        {
+          id: 'tozp/laya-onnx-fp16',
+          name: 'Laya FP16 (843 MB, Desktop GPU)',
+          provider: 'laya-local',
+          description: 'On-device ModernBERT FP16 precision sequence classifier',
         },
       ]
     },
