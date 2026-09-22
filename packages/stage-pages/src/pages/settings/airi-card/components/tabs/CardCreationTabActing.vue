@@ -1114,6 +1114,14 @@ function resetThresholdsToDefaults() {
                   <p class="mt-2 text-[10px] text-neutral-400 leading-relaxed dark:text-neutral-500">
                     Stored locally in browser cache. If not downloaded now, will automatically prime on first reasoning turn.
                   </p>
+
+                  <!-- Performance Advisory -->
+                  <div class="mt-2.5 flex items-start gap-2 border border-amber-200/70 rounded-lg bg-amber-50/70 p-2.5 text-[11px] text-amber-800 dark:border-amber-800/40 dark:bg-amber-950/20 dark:text-amber-300">
+                    <div class="i-solar:danger-triangle-bold mt-0.5 shrink-0 text-xs text-amber-600 dark:text-amber-400" />
+                    <p class="leading-relaxed">
+                      <strong class="font-semibold">Performance Advisory:</strong> Real-time on-device neural extraction (Needle 2 WASM) and dynamic speech synthesis execute in parallel during the thinking phase. On machines with integrated GPUs or limited CPU cores, this compute burst can cause brief cursor stutter or UI latency while generating. If you experience slowdown, disable this tier or choose the <strong>Snappy Chat</strong> preset (cached audio fillers only).
+                    </p>
+                  </div>
                 </div>
               </div>
 
