@@ -397,7 +397,9 @@ export const useTextJournalStore = defineStore('text-journal', () => {
     query: string
     limit?: number
     characterId?: string
-  }) {
+    previousTurn?: string
+    anaphoraEnabled?: boolean
+  }): Promise<(TextJournalEntry & { kind: string, score?: number })[]> {
     try {
       await load()
     }
@@ -412,7 +414,10 @@ export const useTextJournalStore = defineStore('text-journal', () => {
     const targetCharacterId = input.characterId ?? activeCardId.value
     let results: Awaited<ReturnType<typeof layeredMemory.search>> = []
     try {
-      results = await layeredMemory.search(query, input.limit ?? 3, targetCharacterId)
+      results = await layeredMemory.search(query, input.limit ?? 3, targetCharacterId, {
+        previousTurn: input.previousTurn,
+        anaphoraEnabled: input.anaphoraEnabled,
+      })
     }
     catch (err) {
       console.warn('[TextJournal:Search] layeredMemory.search failed, using local ranking fallback:', err)
@@ -430,6 +435,7 @@ export const useTextJournalStore = defineStore('text-journal', () => {
           return {
             ...existing,
             kind: res.kind,
+            score: res.score,
           }
         }
 
@@ -442,11 +448,12 @@ export const useTextJournalStore = defineStore('text-journal', () => {
           title: `[${res.kind.toUpperCase()}] Memory`,
           content: res.content,
           kind: res.kind,
+          score: res.score,
           source: res.source ?? 'tool',
           type: 'message',
           createdAt: new Date(res.timestamp).getTime(),
           updatedAt: new Date(res.timestamp).getTime(),
-        } as TextJournalEntry & { kind: string }
+        } as TextJournalEntry & { kind: string, score?: number }
       })
     }
 
@@ -471,7 +478,7 @@ export const useTextJournalStore = defineStore('text-journal', () => {
       })
       .filter(({ score }) => score > 0)
       .sort((a, b) => b.score - a.score)
-      .map(({ entry }) => ({ ...entry, kind: 'ltmm' as string }))
+      .map(({ entry, score }) => ({ ...entry, kind: 'ltmm' as string, score }))
 
     const limit = Math.max(1, Math.min(input.limit ?? 10, 10))
     return ranked.slice(0, limit)

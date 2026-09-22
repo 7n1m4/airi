@@ -97,9 +97,9 @@ export const searchWorker = {
     await loadEmbeddingModel()
     return callWorker('index', { documents })
   },
-  search: async (query: string, limit?: number, characterId?: string) => {
+  search: async (query: string, limit?: number, characterId?: string, temporalHooks?: any[]) => {
     await loadEmbeddingModel()
-    return callWorker('search', { query, limit, characterId })
+    return callWorker('search', { query, limit, characterId, temporalHooks })
   },
   remove: (id: string) => callWorker('remove', { id }),
   persist: () => callWorker('persist'),

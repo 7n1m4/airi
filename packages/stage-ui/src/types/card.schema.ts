@@ -218,6 +218,13 @@ const AiriExtensionSchema = looseObject({
   groundingTopicsEnabled: optional(boolean()),
   groundingDirectorScratchpadEnabled: optional(boolean()),
   salienceGateEnabled: optional(boolean()),
+  firstHopProcessor: optional(union([literal('default'), literal('nan0'), literal('universe_rag')])),
+  universeRag: optional(looseObject({
+    enabled: optional(boolean()),
+    minScore: optional(number()),
+    maxCandidates: optional(number()),
+    temporalBoost: optional(boolean()),
+  })),
   recentTopics: optional(array(looseObject({
     topic: string(),
     weight: number(),

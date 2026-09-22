@@ -16,6 +16,16 @@ interface SearchDocument {
   tokenFreqs?: Record<string, number>
 }
 
+interface ExtractedDateHook {
+  text: string
+  day?: number
+  month?: string
+  monthIndex?: number
+  year?: number
+  isoDateHint?: string
+  isRelative?: boolean
+}
+
 interface SearchSnapshot {
   documents: SearchDocument[]
 }
@@ -253,6 +263,67 @@ function getKeywordCandidates(query: string, limit: number, characterId?: string
     }))
 }
 
+function getTemporalCandidates(
+  temporalHooks: ExtractedDateHook[],
+  limit: number,
+  characterId?: string,
+) {
+  if (!temporalHooks || !temporalHooks.length)
+    return []
+
+  const filteredDocs = [...documents.values()].filter(doc => !characterId || doc.characterId === characterId)
+  const matchedDocs: { id: string, score: number }[] = []
+
+  for (const doc of filteredDocs) {
+    if (!doc.timestamp)
+      continue
+
+    let matchScore = 0
+    const docDate = new Date(doc.timestamp)
+    const isValidDate = !Number.isNaN(docDate.getTime())
+
+    for (const hook of temporalHooks) {
+      if (hook.isoDateHint && doc.timestamp.startsWith(hook.isoDateHint)) {
+        matchScore = Math.max(matchScore, 1.0)
+      }
+      else if (isValidDate) {
+        let partialScore = 0
+        let criteriaCount = 0
+
+        if (hook.year !== undefined) {
+          criteriaCount++
+          if (docDate.getFullYear() === hook.year)
+            partialScore += 0.4
+        }
+        if (hook.monthIndex !== undefined) {
+          criteriaCount++
+          if (docDate.getMonth() === hook.monthIndex)
+            partialScore += 0.4
+        }
+        if (hook.day !== undefined) {
+          criteriaCount++
+          if (docDate.getDate() === hook.day)
+            partialScore += 0.2
+        }
+
+        if (criteriaCount > 0 && partialScore >= 0.4) {
+          matchScore = Math.max(matchScore, partialScore)
+        }
+      }
+      else if (hook.text && doc.timestamp.includes(hook.text)) {
+        matchScore = Math.max(matchScore, 0.7)
+      }
+    }
+
+    if (matchScore > 0) {
+      matchedDocs.push({ id: doc.id, score: matchScore })
+    }
+  }
+
+  matchedDocs.sort((a, b) => b.score - a.score)
+  return matchedDocs.slice(0, limit)
+}
+
 function upsertDocument(document: SearchDocument) {
   documents.set(document.id, document)
 }
@@ -329,20 +400,29 @@ globalThis.addEventListener('message', async (e) => {
       }
 
       case 'search': {
-        const { query, limit = 10, characterId } = payload
+        const { query, limit = 10, characterId, temporalHooks } = payload
         const queryVector = await getVector(query)
         const candidateLimit = Math.max(limit * 5, 20)
 
         const vectorHits = getVectorCandidates(queryVector, candidateLimit, characterId)
         const keywordHits = getKeywordCandidates(query, candidateLimit, characterId)
+
+        let temporalHits: { id: string, score: number }[] = []
+        if (temporalHooks && Array.isArray(temporalHooks) && temporalHooks.length > 0) {
+          const temporalQuota = Math.max(1, Math.floor(candidateLimit * 0.25))
+          temporalHits = getTemporalCandidates(temporalHooks, temporalQuota, characterId)
+        }
+
         const candidateIds = new Set([
           ...vectorHits.map(h => h.id),
           ...keywordHits.map(h => h.id),
+          ...temporalHits.map(h => h.id),
         ])
 
         const results = {
           vectorHits,
           keywordHits,
+          temporalHits,
           documents: [...documents.values()]
             .filter(document => candidateIds.has(document.id))
             .map(document => ({

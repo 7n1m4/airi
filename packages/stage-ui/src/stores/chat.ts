@@ -742,17 +742,43 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
       }
 
       // 2. RAG Universe Memory Injection
-      if (activeCard.value?.extensions?.airi?.groundingMemoryEnabled && !options.triggerOnly && typeof sendingMessage === 'string' && sendingMessage.trim().length > 3) {
-        chatLog('Grounding Memory active. Fetching semantic query matches...')
+      const isUniverseRagEnabled = activeCard.value?.extensions?.airi?.groundingMemoryEnabled
+        || activeCard.value?.extensions?.airi?.universeRag?.enabled
+        || activeCard.value?.extensions?.airi?.firstHopProcessor === 'universe_rag'
+
+      if (isUniverseRagEnabled && !options.triggerOnly && typeof sendingMessage === 'string' && sendingMessage.trim().length > 3) {
+        chatLog('Grounding Memory active. Fetching semantic query matches with conversational anaphora...')
         try {
+          // Extract preceding completed turn for anaphora resolution
+          const sessionMessages = chatSession.getSessionMessages(sessionId)
+          let previousTurnText: string | undefined
+          for (let i = sessionMessages.length - 1; i >= 0; i--) {
+            const msg = sessionMessages[i]
+            if (msg && msg.id !== userMessageId) {
+              const text = typeof msg.content === 'string'
+                ? msg.content
+                : Array.isArray(msg.content)
+                  ? msg.content.map((p: any) => p?.text || '').join(' ')
+                  : ''
+              if (text.trim()) {
+                previousTurnText = text.trim()
+                break
+              }
+            }
+          }
+
           const textJournalStore = useTextJournalStore()
           const results = await textJournalStore.searchEntries({
             query: sendingMessage,
             limit: 3,
             characterId: activeCardId.value,
+            previousTurn: previousTurnText,
+            anaphoraEnabled: true,
           })
-          if (results && results.length > 0) {
-            groundingMessages.push(formatSemanticMemoriesBlock(results))
+          const minScore = activeCard.value?.extensions?.airi?.universeRag?.minScore ?? 0.25
+          const filteredResults = results.filter(r => (r.score === undefined || r.score >= minScore))
+          if (filteredResults && filteredResults.length > 0) {
+            groundingMessages.push(formatSemanticMemoriesBlock(filteredResults))
             chatLog('Grounding Memory payload injected into inference step.')
           }
         }

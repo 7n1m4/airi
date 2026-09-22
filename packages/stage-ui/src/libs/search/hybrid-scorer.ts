@@ -1,3 +1,5 @@
+import type { ExtractedDateHook } from './query-analyzer'
+
 export type MemoryLayer = 'raw' | 'stmm' | 'ltmm'
 
 export interface SearchCandidate {
@@ -21,12 +23,14 @@ export interface HybridSearchResult extends SearchDocumentMeta {
   temporalScore: number
   layerBoost: number
   profile: QueryProfile
+  dateMatchBoost?: number
 }
 
 export interface ScorerConfig {
   weightVector: number
   weightKeyword: number
   temporalWeight: number
+  temporalMatchBonus?: number
   minVectorSimilarity: number
   minScoreSpread: number
   halfLifeDays: number
@@ -44,6 +48,7 @@ export const defaultScorerConfig: ScorerConfig = {
   weightVector: 0.68,
   weightKeyword: 0.32,
   temporalWeight: 0.12,
+  temporalMatchBonus: 0.25,
   minVectorSimilarity: 0.38,
   minScoreSpread: 0.04,
   halfLifeDays: 30,
@@ -82,6 +87,43 @@ function getTemporalScore(timestamp: string, halfLifeDays: number) {
     return 1
 
   return 0.5 ** (ageDays / Math.max(1, halfLifeDays))
+}
+
+export function computeDateMatchBoost(
+  timestamp: string,
+  hooks?: ExtractedDateHook[],
+  bonus = 0.25,
+): number {
+  if (!hooks || !hooks.length || !timestamp)
+    return 0
+
+  const docDate = new Date(timestamp)
+  const isValidDate = !Number.isNaN(docDate.getTime())
+
+  for (const hook of hooks) {
+    if (hook.isoDateHint && timestamp.startsWith(hook.isoDateHint)) {
+      return bonus
+    }
+
+    if (isValidDate) {
+      if (hook.year !== undefined && hook.monthIndex !== undefined) {
+        if (docDate.getFullYear() === hook.year && docDate.getMonth() === hook.monthIndex) {
+          if (hook.day !== undefined && docDate.getDate() === hook.day) {
+            return bonus
+          }
+          return bonus * 0.7
+        }
+      }
+      else if (hook.year !== undefined && docDate.getFullYear() === hook.year) {
+        return bonus * 0.4
+      }
+    }
+    else if (hook.text && timestamp.includes(hook.text)) {
+      return bonus * 0.6
+    }
+  }
+
+  return 0
 }
 
 export function detectQueryProfile(query: string): QueryProfile {
@@ -206,6 +248,7 @@ export function scoreHybridResults(
   vectorCandidates: SearchCandidate[],
   keywordCandidates: SearchCandidate[],
   config: ScorerConfig = defaultScorerConfig,
+  temporalHooks?: ExtractedDateHook[],
 ): HybridSearchResult[] {
   const profile = detectQueryProfile(query)
   const effectiveConfig = adjustConfigForProfile(config, profile)
@@ -233,7 +276,12 @@ export function scoreHybridResults(
 
       const temporalScore = getTemporalScore(document.timestamp, effectiveConfig.halfLifeDays)
       const layerBoost = effectiveConfig.layerBoosts[document.kind] ?? 0
-      const score = signalScore + (temporalScore * effectiveConfig.temporalWeight) + layerBoost
+      const dateMatchBoost = computeDateMatchBoost(
+        document.timestamp,
+        temporalHooks,
+        effectiveConfig.temporalMatchBonus ?? 0.25,
+      )
+      const score = signalScore + (temporalScore * effectiveConfig.temporalWeight) + layerBoost + dateMatchBoost
 
       return {
         ...document,
@@ -243,9 +291,10 @@ export function scoreHybridResults(
         temporalScore,
         layerBoost,
         profile,
+        dateMatchBoost,
       }
     })
-    .filter(result => result.vectorScore > 0 || result.keywordScore > 0)
+    .filter(result => result.vectorScore > 0 || result.keywordScore > 0 || (result.dateMatchBoost && result.dateMatchBoost > 0))
 
   results.sort((a, b) => {
     if (b.score !== a.score)

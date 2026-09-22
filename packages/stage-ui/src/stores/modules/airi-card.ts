@@ -248,6 +248,13 @@ export interface AiriExtension {
   groundingTopicsEnabled?: boolean
   groundingDirectorScratchpadEnabled?: boolean
   salienceGateEnabled?: boolean
+  firstHopProcessor?: 'default' | 'nan0' | 'universe_rag'
+  universeRag?: {
+    enabled?: boolean
+    minScore?: number
+    maxCandidates?: number
+    temporalBoost?: boolean
+  }
   recentTopics?: Array<{ topic: string, weight: number }>
   visual_assets?: Record<string, {
     description: string
