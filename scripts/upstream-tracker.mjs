@@ -47,6 +47,24 @@ const STATE_FILE = path.join(REPO_ROOT, '.upstream-tracker-state.json')
 const RADAR_LOG_FILE = path.join(REPO_ROOT, 'docs', 'UPSTREAM_RADAR.md')
 const UPSTREAM_REPO = 'moeru-ai/airi'
 
+const WATCHED_PRS = [
+  {
+    number: 2634,
+    title: 'feat(cortico-bridge): embed Cortico persona core as AIRI\'s brain',
+    focus: 'External Cortico daemon vs in-process native memory; track maintainer reaction to 2-process / web breakage',
+  },
+  {
+    number: 2550,
+    title: 'feat(hearing): add bundled Sherpaw speech recognition',
+    focus: 'Offline Sherpaw STT model packaging (Paraformer/Zipformer) via tsdown and Vite plugin',
+  },
+  {
+    number: 2641,
+    title: 'feat(stage-ui): show chat image analysis status',
+    focus: 'Accessible live status indicator for text-only models undergoing vision pre-processing',
+  },
+]
+
 // 2. Subsystem Definitions & Selective-Sync Classification
 // Aligned with docs/project-selective-upstream-sync-protocol.md
 const SUBSYSTEM_RULES = [
@@ -534,6 +552,26 @@ function formatTerminalBrief(delta, prDelta) {
     }
   }
 
+  if (WATCHED_PRS.length > 0 && prDelta?.nextTrackedMap) {
+    lines.push('\n👁️ Watched Upstream PRs Radar:')
+    const tracked = prDelta.nextTrackedMap
+    for (const w of WATCHED_PRS) {
+      const info = tracked[String(w.number)]
+      if (info) {
+        const stateStr = info.isDraft ? 'Draft' : info.state
+        const commentChange = prDelta?.commentChanges?.find(c => c.number === w.number)
+        const updateNotice = commentChange ? ` 🚨 (+${commentChange.delta} comments, ${commentChange.newCount} total!)` : ''
+        lines.push(`  • #${w.number} [${stateStr}] (${info.commentsCount} comments)${updateNotice}: ${info.title}`)
+        lines.push(`    ↳ ${w.focus}`)
+        lines.push(`    ↳ ${info.url}`)
+      }
+      else {
+        lines.push(`  • #${w.number}: ${w.title}`)
+        lines.push(`    ↳ ${w.focus}`)
+      }
+    }
+  }
+
   return lines.join('\n')
 }
 
@@ -611,6 +649,26 @@ function formatMarkdownSection(delta, prDelta, customNotes = '') {
     }
   }
 
+  if (WATCHED_PRS.length > 0 && prDelta?.nextTrackedMap) {
+    lines.push('### 👁️ Watched PRs Monitor')
+    const tracked = prDelta.nextTrackedMap
+    for (const w of WATCHED_PRS) {
+      const info = tracked[String(w.number)]
+      if (info) {
+        const stateStr = info.isDraft ? 'Draft' : info.state
+        const commentChange = prDelta?.commentChanges?.find(c => c.number === w.number)
+        const updateNotice = commentChange ? ` — 🚨 **+${commentChange.delta} comments** (${commentChange.newCount} total)` : ` — *(${info.commentsCount} comments)*`
+        lines.push(`- [#${w.number}](${info.url}) \`${info.title}\` [${stateStr}]${updateNotice}`)
+        lines.push(`  - *Focus*: ${w.focus}`)
+      }
+      else {
+        lines.push(`- [#${w.number}](https://github.com/${UPSTREAM_REPO}/pull/${w.number}) \`${w.title}\``)
+        lines.push(`  - *Focus*: ${w.focus}`)
+      }
+    }
+    lines.push('')
+  }
+
   lines.push('---')
   return lines.join('\n')
 }
@@ -627,6 +685,18 @@ function ensureRadarLogHeader() {
 > Guided by: [\`docs/project-selective-upstream-sync-protocol.md\`](./project-selective-upstream-sync-protocol.md).
 
 ---
+
+## 👁️ Active Upstream Watchlist (High-Interest Monitored PRs)
+
+| PR | Title | Author | State | Priority / Rationale | Tracking Directives & Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| [#2634](https://github.com/moeru-ai/airi/pull/2634) | \`[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain\` | \`@peachoolong-uwu\` | \`Draft\` (0 comments) | 🔴 **High Alert** (Radical divergence) | Proposes external Cortico daemon (\`ws://localhost:6122\`) replacing native memory. **Directive**: Monitor maintainer reaction to 2-process requirement & Web/Mobile breakage. Hold off on comments until maintainers triage. |
+| [#2550](https://github.com/moeru-ai/airi/pull/2550) | \`feat(hearing): add bundled Sherpaw speech recognition\` | \`@luoling8192\` | \`Open\` (15 comments) | 🟡 **Evaluation** (Offline STT) | Offline Sherpaw STT model packaging (Paraformer/Zipformer) via tsdown and Vite plugin. **Directive**: Monitor packaging structure for local speech pipeline. |
+| [#2641](https://github.com/moeru-ai/airi/pull/2641) | \`feat(stage-ui): show chat image analysis status\` | \`@luoling8192\` | \`Open\` (1 comments) | 🟢 **Cherry-Pick Watch** (UI Polish) | Accessible live status indicator for text-only models undergoing vision analysis. **Directive**: Cherry-pick once merged upstream. |
+
+---
+
+<!-- RADAR_ENTRIES -->
 `
     fs.writeFileSync(RADAR_LOG_FILE, initialContent, 'utf8')
   }
@@ -635,7 +705,17 @@ function ensureRadarLogHeader() {
 function appendToRadarLog(markdownSection) {
   ensureRadarLogHeader()
   const currentContent = fs.readFileSync(RADAR_LOG_FILE, 'utf8')
-  // Prepend under the header
+  const marker = '<!-- RADAR_ENTRIES -->'
+  const markerIndex = currentContent.indexOf(marker)
+  if (markerIndex !== -1) {
+    const header = currentContent.slice(0, markerIndex + marker.length)
+    const rest = currentContent.slice(markerIndex + marker.length)
+    const updated = `${header}\n\n${markdownSection.trim()}\n${rest.trimStart()}`
+    fs.writeFileSync(RADAR_LOG_FILE, updated, 'utf8')
+    return
+  }
+
+  // Fallback: Prepend under the first header divider
   const headerSplit = currentContent.indexOf('---')
   if (headerSplit !== -1) {
     const header = currentContent.slice(0, headerSplit + 3)

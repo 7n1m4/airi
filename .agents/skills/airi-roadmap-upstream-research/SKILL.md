@@ -57,6 +57,27 @@ This fork (`dasilva333/airi`) has undergone deep, structural architectural shift
    - This fork is strictly client/local-first with direct provider connections and local WebGPU/WASM inference (`packages/provider-inference`, `packages/stage-ui/src/stores/providers`).
    - Upstream actively develops a hosted `/v1/responses` gateway (OpenResponses schema, Flux billing, OpenRouter routing in `server/apps/api`).
    - **Filter Rule**: This fork does not support the Responses API (at least not yet, and there is no plan to do so). All upstream changes touching `/v1/responses` or OpenResponses are auto-rejects and can be safely ignored.
+9. **Native In-Process Memory & Cognition vs. External Daemon Bridges (Cortico PR #2634)**:
+   - This fork is strictly 100% in-process: character memory is powered natively by the Eight Pillars (STMM daily summaries, LTMM immutable Sacred Journal, Echo chips, distilled Lifetime Artifacts, and Orama hybrid search) stored directly in client-side IndexedDB (`local:*`) and `localforage`.
+   - It requires zero secondary terminal processes, zero daemons, and maintains full parity across Desktop (Electron), Web, and Mobile (Capacitor).
+   - Upstream PR #2634 proposes offloading character cognition and persona to an external Cortico daemon (`@proj-airi/cortico-bridge` on `ws://localhost:6122`), breaking single-command launch (`pnpm dev:bridge` requirement), gutting native memory settings pages, breaking Web/Mobile compatibility, and relying on raw unindexed host directory scans. **External persona daemons are auto-rejects for core adoption.**
+
+## Upstream Radar Watchlist (High-Interest Monitored PRs)
+
+Maintain an active rolling monitor of high-impact upstream PRs during scheduled radar checks. When running `scripts/upstream-tracker.mjs`, evaluate changes in discussion velocity, maintainer triage, or lifecycle transitions for these specific items:
+
+- **PR #2634: `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain`**
+  - **Author**: `@peachoolong-uwu` | **State**: Draft
+  - **Focus**: Community proposal to replace native memory with an external Cortico WebSocket daemon (`ws://localhost:6122`).
+  - **Monitoring Objective**: Track upstream maintainer reactions (@luoling8192, @nekomeowww) regarding the 2-process developer friction (`pnpm dev:bridge`), loss of Web/Mobile parity, and deletion of native memory settings. Hold off on commenting until maintainers officially weigh in.
+- **PR #2550: `feat(hearing): add bundled Sherpaw speech recognition`**
+  - **Author**: `@luoling8192` | **State**: Open
+  - **Focus**: Local streaming speech recognition bundling offline Paraformer/Zipformer models packaged via tsdown.
+  - **Monitoring Objective**: Monitor model packaging and asset delivery for potential porting to local-first speech pipeline.
+- **PR #2641: `feat(stage-ui): show chat image analysis status`**
+  - **Author**: `@luoling8192` | **State**: Open
+  - **Focus**: Accessible live status indicators in chat history while uncached images undergo vision analysis.
+  - **Monitoring Objective**: Evaluate visual polish for adoption once merged upstream.
 
 ## Upstream Radar vs. Cherry-Pick Triage SOP
 

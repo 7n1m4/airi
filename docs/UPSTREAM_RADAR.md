@@ -6,6 +6,154 @@
 
 ---
 
+## 👁️ Active Upstream Watchlist (High-Interest Monitored PRs)
+
+| PR | Title | Author | State | Priority / Rationale | Tracking Directives & Status |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| [#2634](https://github.com/moeru-ai/airi/pull/2634) | `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain` | `@peachoolong-uwu` | `Draft` (0 comments) | 🔴 **High Alert** (Radical divergence) | Proposes external Cortico daemon (`ws://localhost:6122`) replacing native memory. **Directive**: Monitor maintainer reaction to 2-process requirement & Web/Mobile breakage. Hold off on comments until maintainers triage. |
+| [#2550](https://github.com/moeru-ai/airi/pull/2550) | `feat(hearing): add bundled Sherpaw speech recognition` | `@luoling8192` | `Open` (15 comments) | 🟡 **Evaluation** (Offline STT) | Offline Sherpaw STT model packaging (Paraformer/Zipformer) via tsdown and Vite plugin. **Directive**: Monitor packaging structure for local speech pipeline. |
+| [#2641](https://github.com/moeru-ai/airi/pull/2641) | `feat(stage-ui): show chat image analysis status` | `@luoling8192` | `Open` (1 comments) | 🟢 **Cherry-Pick Watch** (UI Polish) | Accessible live status indicator for text-only models undergoing vision analysis. **Directive**: Cherry-pick once merged upstream. |
+
+---
+
+<!-- RADAR_ENTRIES -->
+
+## [2026-09-22] Upstream Delta: `8e2e5b01..308ee2b3` (10 commits, 47 files, 21 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 10 commits (`8e2e5b01..308ee2b3`) across 47 files and recorded 21 PR updates (13 new, 2 status changes, 6 discussion changes). Core focus centered on: (1) chat image analysis optimization and concurrency (#2640, #2635), caching generated image descriptions on chat message history to prevent redundant vision inference across turns, and throttling concurrent image descriptions using a 4-slot Semaphore while preserving turn order; (2) session selection stabilization (#2630, #2631), decoupling shared index updates from window-local navigation to fix Issue #2595 (where initial message sync restored stale sessions); (3) web and layout chat control refinements (#2633), extracting `chat-panel-header.vue` and modularizing session list/drawer components; (4) authentication staleness protection (#2483), rejecting out-of-order auth requests; (5) dependency and tooling updates, bumping `@moeru/eventa` to 1.0.1 (#2632) and nix pnpmDeps hash (#2637); and (6) server deployment cleanup (#2642), removing deprecated Railway configs.
+* **Discussion & Community Buzz**:
+  - 💬 **#2471: `feat(stage-ui): sync user providers to a cloud replica` (+3 new comments, total 65)**: Continuous heavy discussion on hosted cloud replica syncing of user providers vs. client privacy and local storage.
+  - 💬 **#2484: `feat(stage-ui): show Cloud announcements on Web and Electron` (+5 new comments, total 27)**: Fast-moving velocity discussing broadcast cloud announcement banners across Web and desktop platforms.
+  - 💬 **#2550: `feat(hearing): add bundled Sherpaw speech recognition` (+5 new comments, total 15)**: Notable velocity on bundling Sherpaw streaming STT models (Paraformer / Zipformer) with tsdown packaging and Vite plugin delivery.
+  - 💬 **#2121: `chore(i18n): update translations` (+3 new comments, total 114)**: Continuous community translation stream crossing 114 total comments.
+  - 💬 **#2624: `fix(stage-ui): interrupt active chat responses` (+1 new comments, total 39)**: Sustained discussion on multi-window abort signals and partial assistant message retention.
+  - 💬 **#1139: `feat: Add export/import config buttons` (21 comments)**: Re-emerged activity around config export/import for first-time setup and DevTools.
+  - 💬 **#2634: `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain` (Draft)**: High-profile community architecture RFC introducing `@proj-airi/cortico-bridge` daemon to replace local memory with external Cortico workspace.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2635 (Commit `f9f440b236`) & PR #2640 (Commit `2d8bcd43f2`): Image description caching & Semaphore concurrency**: High value for stage chat. PR #2635 adds `imageDescriptions` caching to chat session message records, preventing expensive repeated vision inference calls on historical turns during multi-turn chats with text-only models. PR #2640 bounds concurrency to 4 simultaneous tasks with `Semaphore` from `es-toolkit` while maintaining source order via `Promise.all`.
+  - ⭐ **PR #2630 (Commit `5a21724640`) & PR #2631 (Commit `1cb4fad3d4`): Decouple shared index sync from window-local session navigation**: Clean state-machine fix for Issue #2595. Deletes the reactive `watch(index)` in `session-store.ts` that caused incoming synchronized index broadcasts to reset the user's active session selection during the first message in a newly created session.
+  - 🔍 **PR #2641 [Open PR]: Accessible `Analyzing images…` status**: Adds an accessible live status indicator to the chat history while uncached images are undergoing vision analysis. Clean UX enhancement to monitor when upstream merges.
+  - 🔍 **PR #2550 [Open PR]: Bundled Sherpaw offline streaming speech recognition**: Adds local streaming STT via Sherpaw (Paraformer/Zipformer). While our fork uses Whisper WebGPU, bundling lightweight on-device Chinese/English models is an interesting alternative worth tracking.
+  - ⚪ **Auto-Reject / Do Not Port**:
+    - **PR #2634 (Cortico bridge)**: Externalizes cognitive brain to a separate daemon process (`ws://localhost:6122`) and eliminates STMM/LTMM. Our fork has native two-layer STMM summaries, immutable LTMM Sacred Journal, Dreaming reflections, and Echo chips built directly into the engine.
+    - **PR #2636 (S3 sync via hosted API server)**: Cloud relay attachment storage routed through remote API server. Our fork already has native client-side BYOS (direct to S3/R2/Drive) without central accounts.
+    - **PR #2483 / #2471 / #2484 (Auth / Cloud Replica / Cloud Announcements)**: Conflicts with our strict local-first, zero-telemetry, account-free architecture.
+    - **`controls-island-auth-button.vue`**: Modifies deprecated and removed `controls-island` surface.
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/stage-ui/src/stores/chat.ts` (Commit `f9f440b236`)**: Upstream modified `chat.ts` to add `getImageDescription` and `saveImageDescription`. Our fork's `chat.ts` contains deep divergent customizations (multi-actor `<|ACTOR|>` orchestration, STMM/LTMM hooks, Echo chips, and universe scoping). Do not overwrite; cherry-pick the caching methods manually.
+  - ⚠️ **`packages/stage-ui/src/stores/chat/session-store.ts` (Commits `5a21724640`, `1cb4fad3d4`)**: Upstream touched session lifecycle watchers and selection state. Our fork has custom universe metadata and session persistence. Apply the removal of `watch(index)` carefully without wiping fork-specific session initialization logic.
+  - ⚠️ **`apps/stage-tamagotchi/src/main/services/airi/auth.ts` (Commit `7e2ecdce17`)**: Upstream continues expanding Electron main-process authentication services and endpoints. This fork does not run hosted cloud authentication.
+
+### 📋 Upstream Commits
+- `308ee2b3aa` chore(server): remove deprecated Railway configs (#2642) [#2642](https://github.com/moeru-ai/airi/pull/2642) _(RainbowBird, 2026-09-22)_
+- `2d8bcd43f2` perf(stage-ui): analyze chat images concurrently (#2640) [#2640](https://github.com/moeru-ai/airi/pull/2640) _(RainbowBird, 2026-09-22)_
+- `f9f440b236` fix(stage-ui): reuse chat image descriptions (#2635) [#2635](https://github.com/moeru-ai/airi/pull/2635) _(RainbowBird, 2026-09-22)_
+- `6783485bad` docs(skills): add adaptive PR context guidance (#2638) [#2638](https://github.com/moeru-ai/airi/pull/2638) _(RainbowBird, 2026-09-22)_
+- `892a199996` chore(nix): update pnpmDeps hash (#2637) [#2637](https://github.com/moeru-ai/airi/pull/2637) _(Weathercold, 2026-09-22)_
+- `5c8449c244` chore(deps): bump eventa to 1.0.1 (#2632) [#2632](https://github.com/moeru-ai/airi/pull/2632) _(Neko, 2026-09-22)_
+- `7e2ecdce17` fix(auth): discard stale authentication requests (#2483) [#2483](https://github.com/moeru-ai/airi/pull/2483) _(RainbowBird, 2026-09-22)_
+- `686479e67c` feat(stage-layouts): refine web chat controls (#2633) [#2633](https://github.com/moeru-ai/airi/pull/2633) _(RainbowBird, 2026-09-22)_
+- `1cb4fad3d4` refactor(stage-ui): separate chat data from selection (#2631) [#2631](https://github.com/moeru-ai/airi/pull/2631) _(RainbowBird, 2026-09-22)_
+- `5a21724640` fix(stage-ui): preserve new chat selection (#2630) [#2630](https://github.com/moeru-ai/airi/pull/2630) _(RainbowBird, 2026-09-22)_
+
+### 🔬 Subsystem Breakdown
+#### Documentation & Scaffolding (`⚪ ignore`) — 2 file(s) (+259/-16)
+- `.agents/skills/create-pr/SKILL.md` *(+104/-16)*
+- `.agents/skills/create-pr/references/pr-body.md` *(+155/-0)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 12 file(s) (+626/-48)
+- `.agents/skills/create-pr/agents/openai.yaml` *(+1/-1)*
+- `nix/pnpm-deps-hash.txt` *(+1/-1)*
+- `packages/stage-ui/src/components/misc/profile-switcher-popover.vue` *(+12/-6)*
+- `packages/stage-ui/src/components/scenarios/chat/components/sessions-dialog.browser.test.ts` *(+68/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/sessions-dialog.vue` *(+60/-4)*
+- `packages/stage-ui/src/components/scenarios/chat/components/sessions-drawer.vue` *(+7/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/sessions-list.vue` *(+133/-15)*
+- `packages/stage-ui/src/libs/auth-fetch.ts` *(+8/-8)*
+- `packages/stage-ui/src/stores/auth.browser.test.ts` *(+258/-0)*
+- `packages/stage-ui/src/stores/auth.test.ts` *(+2/-0)*
+- `packages/stage-ui/src/stores/auth.ts` *(+75/-12)*
+- `pnpm-workspace.yaml` *(+1/-1)*
+
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 7 file(s) (+219/-49)
+- `apps/stage-tamagotchi/src/main/services/airi/auth.test.ts` *(+138/-0)*
+- `apps/stage-tamagotchi/src/main/services/airi/auth.ts` *(+62/-45)*
+- `apps/stage-tamagotchi/src/main/services/airi/http-server/server.ts` *(+3/-0)*
+- `apps/stage-tamagotchi/src/renderer/composables/use-onboarding-authentication.test.ts` *(+6/-0)*
+- `apps/stage-tamagotchi/src/renderer/composables/use-onboarding-authentication.ts` *(+6/-3)*
+- `apps/stage-tamagotchi/src/renderer/pages/onboarding.vue` *(+1/-0)*
+- `apps/stage-tamagotchi/src/renderer/pages/settings/account/index.vue` *(+3/-1)*
+
+#### Deprecated Surfaces (Control Island) (`⚪ ignore / rejected in fork (decoupled into Control Strip)`) — 2 file(s) (+9/-6)
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/controls-island-auth-button.test.ts` *(+6/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/controls-island-auth-button.vue` *(+3/-6)*
+
+#### Core Agent Runtime (`🔍 inspect`) — 1 file(s) (+5/-0)
+- `packages/core-agent/src/types/chat.ts` *(+5/-0)*
+
+#### Root Build & Tooling (`🔍 inspect`) — 2 file(s) (+28/-28)
+- `packages/electron-screen-capture/package.json` *(+1/-1)*
+- `pnpm-lock.yaml` *(+27/-27)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 2 file(s) (+2/-0)
+- `packages/i18n/src/locales/en/stage.yaml` *(+1/-0)*
+- `packages/i18n/src/locales/zh-Hans/stage.yaml` *(+1/-0)*
+
+#### Stage Layouts & Shells (`🔍 inspect`) — 7 file(s) (+161/-101)
+- `packages/stage-layouts/src/components/Layouts/Header.vue` *(+0/-2)*
+- `packages/stage-layouts/src/components/Layouts/HeaderAvatar.vue` *(+1/-1)*
+- `packages/stage-layouts/src/components/Layouts/InteractiveArea.vue` *(+3/-1)*
+- `packages/stage-layouts/src/components/Layouts/MobileInteractiveArea.vue` *(+1/-1)*
+- `packages/stage-layouts/src/components/Widgets/ChatActionButtons.vue` *(+65/-31)*
+- `packages/stage-layouts/src/components/Widgets/ChatArea.vue` *(+22/-65)*
+- `packages/stage-layouts/src/components/Widgets/chat-panel-header.vue` *(+69/-0)*
+
+#### Cognitive & Consciousness (`⚠️ hand-merge`) — 7 file(s) (+272/-32)
+- `packages/stage-ui/src/stores/chat.contract.test.ts` *(+34/-0)*
+- `packages/stage-ui/src/stores/chat.ts` *(+51/-6)*
+- `packages/stage-ui/src/stores/chat/image-projection.test.ts` *(+63/-2)*
+- `packages/stage-ui/src/stores/chat/image-projection.ts` *(+27/-17)*
+- `packages/stage-ui/src/stores/chat/session-store.browser.test.ts` *(+38/-0)*
+- `packages/stage-ui/src/stores/chat/session-store.test.ts` *(+59/-0)*
+- `packages/stage-ui/src/stores/chat/session-store.ts` *(+0/-7)*
+
+#### Cloud Services, Billing & Auth (`⚪ ignore / rejected in fork (offline-first architecture)`) — 5 file(s) (+23/-57)
+- `server/README.md` *(+13/-12)*
+- `server/apps/api/README.md` *(+5/-5)*
+- `server/apps/api/railway.toml` *(+0/-18)*
+- `server/apps/auth/README.md` *(+5/-5)*
+- `server/apps/auth/railway.toml` *(+0/-17)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (13)
+- [#1139](https://github.com/moeru-ai/airi/pull/1139) `feat: Add export/import config buttons, integrated into the Airi first-time setup page and DevTools page` by **@Decolv** *(21 comments)*
+- [#2642](https://github.com/moeru-ai/airi/pull/2642) `chore(server): remove deprecated Railway configs` by **@luoling8192** *(1 comments)*
+- [#2640](https://github.com/moeru-ai/airi/pull/2640) `perf(stage-ui): analyze chat images concurrently` by **@luoling8192** *(1 comments)*
+- [#2641](https://github.com/moeru-ai/airi/pull/2641) `feat(stage-ui): show chat image analysis status` by **@luoling8192** *(1 comments)*
+- [#2639](https://github.com/moeru-ai/airi/pull/2639) `feat(stage-kirie): adopt Android devices` by **@LemonNekoGH** *(Draft)* *(0 comments)*
+- [#2635](https://github.com/moeru-ai/airi/pull/2635) `fix(stage-ui): reuse chat image descriptions` by **@luoling8192** *(1 comments)*
+- [#2636](https://github.com/moeru-ai/airi/pull/2636) `feat(chat): sync image attachments through S3` by **@luoling8192** *(1 comments)*
+- [#2638](https://github.com/moeru-ai/airi/pull/2638) `docs(skills): add adaptive PR context guidance` by **@luoling8192** *(2 comments)*
+- [#2637](https://github.com/moeru-ai/airi/pull/2637) `chore(nix): update pnpmDeps hash` by **@Weathercold** *(1 comments)*
+- [#2632](https://github.com/moeru-ai/airi/pull/2632) `chore(deps): bump eventa to 1.0.1` by **@nekomeowww** *(2 comments)*
+- [#2634](https://github.com/moeru-ai/airi/pull/2634) `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain` by **@peachoolong-uwu** *(Draft)* *(0 comments)*
+- [#2633](https://github.com/moeru-ai/airi/pull/2633) `feat(stage-layouts): refine web chat controls` by **@luoling8192** *(1 comments)*
+- [#2631](https://github.com/moeru-ai/airi/pull/2631) `refactor(stage-ui): separate chat data from selection` by **@luoling8192** *(4 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (2)
+- [#2483](https://github.com/moeru-ai/airi/pull/2483) `fix(auth): discard stale authentication requests` — `OPEN` ➔ `MERGED`
+- [#2630](https://github.com/moeru-ai/airi/pull/2630) `fix(stage-ui): preserve new chat selection` — `OPEN` ➔ `MERGED`
+
+#### 💬 Discussion Activity (6)
+- [#2471](https://github.com/moeru-ai/airi/pull/2471) `feat(stage-ui): sync user providers to a cloud replica` — *+3 comments (62 ➔ 65 total)*
+- [#2121](https://github.com/moeru-ai/airi/pull/2121) `chore(i18n): update translations` — *+3 comments (111 ➔ 114 total)*
+- [#2550](https://github.com/moeru-ai/airi/pull/2550) `feat(hearing): add bundled Sherpaw speech recognition` — *+5 comments (10 ➔ 15 total)*
+- [#2483](https://github.com/moeru-ai/airi/pull/2483) `fix(auth): discard stale authentication requests` — *+4 comments (2 ➔ 6 total)*
+- [#2484](https://github.com/moeru-ai/airi/pull/2484) `feat(stage-ui): show Cloud announcements on Web and Electron` — *+5 comments (22 ➔ 27 total)*
+- [#2624](https://github.com/moeru-ai/airi/pull/2624) `fix(stage-ui): interrupt active chat responses` — *+1 comments (38 ➔ 39 total)*
+
+---
 ## [2026-09-21] Upstream Delta: `6670dc9d..8e2e5b01` (5 commits, 32 files, 9 PR update(s))
 
 ### 🎯 Executive Highlights
