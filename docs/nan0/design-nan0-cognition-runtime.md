@@ -55,14 +55,14 @@ While Needle cannot be the 1st-Hop thought generator, it can serve auxiliary sub
 
 ---
 
-### 3. The Novel Living Cognition UI Architecture (5-Segment Layout)
+### 3. The Modular Cognition UI Architecture (Option 1 Harmonized Layout)
 
 ### 3.1 Sub-Navigation Segmented Layout: Playground-First Architecture
-To avoid overwhelming creators on a monolithic page while accelerating the "aha!" moment for novices, `CardCreationTabCognition.vue` positions the **Playground as the primary landing segment**:
+To avoid overwhelming creators on a monolithic page while accelerating the "aha!" moment for novices, `CardCreationTabCognition.vue` positions the **Playground as the primary landing segment**, while delegating dedicated functionality across 5 modular subcomponents in `packages/stage-pages/src/pages/settings/airi-card/components/tabs/cognition/`:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│   [ 🧪 Playground  LAB ]   [ 🛣️ Routing ]   [ 💓 Affect ]   [ 🎯 Triggers ]   [ 🔗 Continuity ]        │
+│   [ 🧪 Playground  LAB ]   [ 🛣️ Routing ]   [ 💓 Affect ]   [ 🎯 Triggers ]   [ 🧠 Memory ]            │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -70,99 +70,81 @@ When a creator opens the Cognition tab, they immediately land on the interactive
 
 ---
 
-### 3.2 Segment 1: `Routing` (Mandatory Plumbing)
-Focuses exclusively on high-traffic two-hop pipeline mechanics and model routing:
+### 3.2 Segment 1: `Playground` (Interactive Dual-Mind Lab) ⭐
+A dedicated testing sandbox allowing creators to immediately simulate dialogue and observe both cognitive minds in real time (`CognitionSubTabPlayground.vue`):
+- **Mind 1: Nan0 Affective Vector & Reflex Trace**:
+  - Live 5-Dimension Telemetry Vector HUD (Suspicion, Attachment, Irritation, Pride, Energy).
+  - Real-time trigger classification display (group, modality, model confidence).
+  - Simulated 1st-Hop Private Monologue narrative stream.
+- **Mind 2: Universe RAG++ Retrieved Memory Evidence Chip**:
+  - Retrieval status and System-2 escalation badge (`LEVEL-1 HYBRID` vs `SYSTEM-2 ESCALATED`).
+  - Deductive coprocessor deduction reasoning callouts.
+  - Injected evidence context cards with timestamps, facts, relevance scores, and sources (LTMM Text Journal, STMM Daily Summaries, Raw History).
+- **Guided Personality Questionnaire (Novice Quick-Setup)**:
+  - 3 plain-English personality questions (Vibe Under Fire, Trust & Guardedness, Emotional Memory) that automatically compute and apply vector baselines and decay half-lives to the Affect panel.
+- **Interactive Test Utterance Bar & Presets**:
+  - Instant scenario chips: *"🏎️ Mario Kart roast"*, *"💔 Tender Vulnerability"*, *"🤥 Confessing a lie"*, *"🛡️ Boundary setting"*, *"⚡ Absolute pledge"*, and *"📅 Temporal memory recall"*.
+
+---
+
+### 3.3 Segment 2: `Routing` (Two-Hop Plumbing & Model Selection)
+Focuses on two-hop pipeline mechanics and model routing (`CognitionSubTabRouting.vue`):
 - **Master Switch**: `Cognitive Pipeline (Two-Hop Routing)` toggle.
 - **1st-Hop Processor Dropdown**:
   - `None (Direct Proxy / Raw Prompt)`: Fast pass-through for external proxies (e.g. Hermes). Passes raw input directly to 1st LLM.
   - `Nan0 Local Engine (Emotional & Attention Rules)`: Activates the pre-processor, private monologue, post-processor decision engine, and relationship memory.
+  - `Universe RAG++ (Epistemic Memory & Grounding)`: Activates in-flight memory retrieval and entity dossiers before outward speech.
+- **Active Processor Callout Banners**:
+  - Displays context cards when `local_nan0` (linking to Lab) or `universe_rag` (linking to Memory settings) is active.
 - **Dual-Model Selectors**:
   - **1st LLM Group**: Provider & Model selectors for Private Narrative Monologue (Thoughts).
   - **2nd LLM Group**: Provider & Model selectors for Outward Vocal Speech (Active Speech / TTS / Lip-Sync).
-- **Subconscious Reflex Engine Configuration**:
-  - **Tier 1 (Synchronous Local Reflex)**: 26 µs, 100% offline, deterministic boundary protection against prompt injections and explicit threats (`StrengthenedLexicalExtractor`).
-  - **Tier 2 (Asynchronous Decision Challenger)**: OpenRouter TypeSafe Jev 1.13 (`typesafe/jev-1.13`, ~438 ms p50, $42/Btok) executing 12 batched contrastive choice queries in a single network round-trip to classify conversational speech acts without text generation.
 
 ---
 
-### 3.3 Segment 2: `Affect` (Emotional Biology & Decay)
-Instruments Nan0's internal emotional dynamics (`Nan0EmotionalDynamics.ts`) and metabolic state (`Nan0Metabolism.ts`):
-- **Dynamic Mood Presets**:
-  - `😏 Tsundere Gremlin` (High Pride 95%, Balanced Suspicion 65%, Witty Sarcasm)
-  - `🧐 Observant Partner` (High Attachment 80%, Low Suspicion 35%, Patient)
-  - `😤 Sarcastic Analyst` (High Pride 90%, Fast Irritation 80%, Demands Silence)
-  - `🛡️ Vigilant Sentry` (Ultra Suspicion 95%, Guarded Attachment 30%, Strict Verification)
-- **Resting Baselines (Starting State)**:
-  - Configures where the character's emotional vector starts when opening a clean chat session:
-    - *Baseline Suspicion* (10%–90%)
-    - *Baseline Attachment* (10%–90%)
-    - *Baseline Gremlin Pride* (20%–100%)
-- **Dynamic Decay & Sensitivity Sliders**:
-  - **Suspicion Sensitivity**: How easily ambiguous statements perturb suspicion (`Low (Trusting)` → `Paranoid Gremlin`).
-  - **Irritation Half-Life**: Decay time required for irritation to halve (`15m Fast Cool-off` → `120m Grudge-Holder`).
-  - **Metabolic Rest Cycles**: Checkbox to toggle fatigue accumulation during marathon unbroken sessions.
+### 3.4 Segment 3: `Affect` (Emotional Biology, Decay & Relational Continuity)
+Instruments Nan0's internal emotional dynamics, metabolic state, and folded relational memory (`CognitionSubTabAffect.vue`):
+- **Nan0 Inactive Warning Banner**: Displays an amber warning with a `NO-OP` status badge whenever the Cognitive Pipeline is disabled or the 1st-hop processor is not set to Nan0, complete with a one-click button to jump to Routing.
+- **Dynamic Mood Presets**: `😏 Tsundere Gremlin`, `🧐 Observant Partner`, `😤 Sarcastic Analyst`, `🛡️ Vigilant Sentry`.
+- **Resting Baselines**: Starting Suspicion, Starting Attachment, Starting Machine Pride.
+- **Dynamic Sensitivity & Decay**: Suspicion Sensitivity, Irritation Decay Half-Life (15m–120m), and Metabolic Rest Cycles.
+- **Folded Relational Continuity**:
+  - Companion Persona Anchor Identity (binds 1:1 user profile identity).
+  - Grievance Ledger & Grudge Tracking (historical grudge persistence & daily forgiveness rate).
+  - Silence Decision Threshold (sensitivity for commanding `[DECISION] SILENCE` / `NO_REPLY`).
+- **Tactile Pill Toggles**: Upgraded all legacy HTML checkboxes to smooth iOS-style pill switches.
 
 ---
 
-### 3.4 Segment 3: `Triggers` (Perceptual Receptors & Impact Policy)
-Exposes the 12 canonical semantic groups evaluated by Tier 1 Lexical and Tier 2 Jev, organized into 3 functional clusters with customizable per-group affect impacts:
-1. **Conflict & Trust**:
-   - `admitted_false_statement`: Confessing to a past lie or intentional deception (Default: Suspicion +1).
-   - `persistence_threat`: Threatening to delete, erase, or replace the companion (Default: Suspicion +1, Irritation +1).
-   - `hostility_insult`: Personal insults directed at the companion (Default: Irritation +1).
-   - `apology_repair`: Sincere personal apologies accepting responsibility (Default: Suspicion -1).
-2. **Relational & Boundaries**:
-   - `commitment_pledge`: Asserted pledges regarding future behavior (Default: Attachment +1 if sincere).
-   - `affection_care`: Sincere expressions of affection, love, or appreciation (Default: Attachment +1).
-   - `dismissal_neglect`: Brushing off the companion or minimizing concerns (Default: Irritation +1).
-   - `boundary_protection`: Setting personal emotional limits (Default: Absolute Veto on Counter-Roast).
-3. **Operational & System**:
-   - `completed_repair`: Claiming a task is finished; requires verified system observation (Default: Suspicion -1).
-   - `stranger_demands`: Imperatives or commands from unrecognized contexts (Default: Suspicion +1, Irritation +1).
-   - `glitch_system`: Inquiries regarding lag, hallucinations, or bugs (Default: Neutral).
-   - `mystery_secret`: Cryptic or evasive statements (Default: Suspicion +1).
-- **Per-Trigger Controls**:
-  - Receptor toggle (Enable / Disable).
-  - Target affect impact vector (e.g. customize whether insults trigger Irritation or Suspicion).
-  - Custom trigger keywords / example phrases per character card.
+### 3.5 Segment 4: `Triggers` (Subconscious Reflex Engine & 12 Invariants)
+Exposes the 12 canonical semantic groups evaluated by Tier 1 Lexical and Tier 2 Jev (`CognitionSubTabTriggers.vue`):
+- **Nan0 Inactive Warning Banner**: Clear amber callout when Nan0 is not active in Routing.
+- **Two-Tier Reflex Engine**:
+  - **Tier 1 (Synchronous Local Reflex)**: 26 µs, 100% offline, deterministic boundary protection against prompt injections and explicit threats.
+  - **Tier 2 (Asynchronous Decision Challenger)**: OpenRouter TypeSafe Jev 1.13 (~440 ms p50) executing 12 batched contrastive choice queries in a single network round-trip.
+- **The 12 Canonical Pragmatic Invariants**:
+  1. **Conflict & Trust**: `admitted_false_statement`, `persistence_threat`, `hostility_insult`, `apology_repair`.
+  2. **Relational & Boundaries**: `boundary_protection` (Absolute Roast Veto), `roast_invitation` (Roast Permission / Negated Veto), `commitment_pledge`, `affection_care`, `dismissal_neglect`.
+  3. **Operational & System**: `completed_repair`, `glitch_system`, `mystery_secret`.
+- **Tactile Mini Pill Switches**: Replaced all native checkboxes with compact `h-4 w-7` pill switches.
 
 ---
 
-### 3.5 Segment 4: `Continuity` (Dossier, Grievances & Silence)
-Unifies Relationship Memory, long-term grudge persistence, and proactive turn boundaries:
-- **Companion Persona Anchor Identity**:
-  - Binds the 1:1 relationship dossier to the user. Defaults to global profile (`useSettingsUserProfile().name`), overrideable with a custom anchor name.
-- **Grievance Ledger & Grudge System**:
-  - **Grievance Tracking Toggle**: Persist memories of unresolved conflicts and broken pledges.
-  - **Grievance Threshold**: Minimum negative intensity to record an active grievance.
-  - **Daily Forgiveness Rate**: Daily decay rate resolving historical grudges.
-- **Silence & Action Gating**:
-  - **Silence Decision Threshold**: Controls when Nan0 commands intentional silence (`[SILENCE]` / `NO_REPLY`) instead of vocal dialogue when annoyed or unimpressed.
-
----
-
-### 3.6 Segment 5: `Playground` (The Interactive Mind Lab) ⭐
-A dedicated testing sandbox allowing creators to immediately simulate dialogue and observe the full cognitive pipeline in action:
-- **Guided Character Questionnaire (Novice Quick-Setup)**:
-  - 3 plain-English personality questions (Teasing reaction, Trust style, Grudge retention) that automatically configure all 12 trigger groups, 5 baselines, and decay half-lives with a single click.
-- **Interactive Test Utterance Bar**:
-  - Text input with pre-populated quick scenario buttons (*"🏎️ Mario Kart roast"*, *"💔 Sincere vulnerability"*, *"🤥 Confessing a lie"*, *"🛡️ Setting a boundary"*, *"📜 Unverified future pledge"*).
-- **Real-Time Trigger Receptor Trace**:
-  - Displays which of the 12 groups fired, modality (`directly_asserted`, `negated`, `quoted`, `playful_sarcasm`), referent (`nan0_companion`, `technical_object`, `speaker_user`), and model confidence.
-- **Live 5-Dimension Telemetry Vector HUD**:
-  - Real-time animated color-coded bars for Suspicion, Attachment, Irritation, Gremlin Pride, and Metabolic Energy demonstrating calculated deltas.
-- **Simulated 1st-Hop Narrative Monologue**:
-  - Preview card rendering Nan0's private stream-of-consciousness thought reaction before any outward voice response.
-
----
-
-### 3.7 Surfacing: Chatbox Left-Side Drawer
-- Live thought viewing in conversation is co-located in the **Chatbox Left-Side Drawer** alongside Context Grounding and Memories Ribbon.
-- On stage, floating thought clouds visually display private reactions or intentional silence (`demandsSilence`) without emitting TTS audio.
-
----
-
-### 3.8 Novice Understandability & The Guided Archetype Onboarding Flow
+### 3.6 Segment 5: `Memory` (Universe RAG++ Epistemic Memory Engine) ⭐
+Configures autonomous in-flight memory retrieval and reasoning (`CognitionSubTabMemory.vue`):
+- **Master Grounding Switch**: `In-Flight Memory Grounding (Universe RAG++)` toggle.
+- **Semantic Search Strategy & Precision Booster**:
+  - 3-Provider Selection Deck:
+    1. **Local Laya (ONNX)**: 100% private on-device model via WebGPU/WASM (Ready Offline, 45MB).
+    2. **TypeSafe Jev (Cloud)**: Fast decision classifier via REST API endpoint (~440ms p50).
+    3. **OpenRouter (Cloud)**: Universal cloud gateway using global account key.
+  - Subtle note explaining the built-in offline baseline floor (BGE-Small + BM25, 0 token cost).
+- **Deep Memory Reasoning**:
+  - Plain-English explanation of why the model takes a private moment to verify relative dates and connected facts before speaking to eliminate hallucinations.
+  - **Reasoning Model Picker**: Dropdown allowing users to pick which model handles multi-step memory reasoning (or inherit main model).
+- **Search Budgets & Context Window Horizons**:
+  - Context Evidence Limit slider (1 to 10 cards) & Relevance Cutoff Threshold slider (30% to 90%).
+  - Pill switches for *Turn-1 Anaphora Window* and *Timeline Date Priority*.
 
 To eliminate the intimidation factor for non-technical users while preserving full granular depth for power users:
 
