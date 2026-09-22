@@ -34,7 +34,7 @@ const isRefreshingSensors = ref(false)
 
 async function handleProvision() {
   try {
-    await visionOrchestrator.provisionModels({ enableVlm: screenWatchingEnableVlm.value })
+    await visionOrchestrator.provisionModels({ enableVlm: screenWatchingVlmTier.value === 'moondream' })
   }
   catch (err) {
     console.error('[CardCreationTabProactivity] Provisioning failed:', err)

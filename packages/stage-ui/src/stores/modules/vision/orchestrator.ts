@@ -22,7 +22,11 @@ import { ref } from 'vue'
 import { ATTENTION_GUARD_WORKLOAD_ID } from '../../../composables/vision/use-vision-workloads'
 import { createAttentionGuardAdapter } from '../../../libs/inference/adapters/attention-guard'
 import { useChatOrchestratorStore } from '../../chat'
+import { useLLM } from '../../llm'
 import { useModsServerChannelStore } from '../../mods/api/channel-server'
+import { useProvidersStore } from '../../providers'
+import { useLiveSessionStore } from '../live-session'
+import { useVisionStore } from '../vision'
 
 export { ATTENTION_GUARD_WORKLOAD_ID, useVisionWorkloads, VISION_WORKLOADS } from '../../../composables/vision/use-vision-workloads'
 
@@ -41,6 +45,7 @@ export interface VisionCapturePayload {
   timestamp: number
   interestTags?: string[]
   enableVlm?: boolean
+  vlmTier?: 'lightweight' | 'moondream' | 'external'
 }
 
 export interface VisionOrchestratorResult {
@@ -237,7 +242,8 @@ export const useVisionOrchestratorStore = defineStore('vision-orchestrator', () 
 
     if (payload.workloadId === ATTENTION_GUARD_WORKLOAD_ID) {
       try {
-        const adapter = await ensureGuardLoaded({ enableVlm: payload.enableVlm })
+        const isMoondream = payload.vlmTier === 'moondream' || (Boolean(payload.enableVlm) && payload.vlmTier !== 'external')
+        const adapter = await ensureGuardLoaded({ enableVlm: isMoondream })
         const tags = Array.isArray(payload.interestTags) ? Array.from(payload.interestTags).map(t => String(t)) : []
         const result: AttentionGuardProcessResult = await adapter.process(
           payload.dataUrl,
@@ -250,6 +256,66 @@ export const useVisionOrchestratorStore = defineStore('vision-orchestrator', () 
         lastError.value = null
 
         if (result.decision === 'PROMOTE') {
+          // If external VLM tier is selected, query the global VLM for a rich scene caption
+          if (payload.vlmTier === 'external') {
+            try {
+              const visionStore = useVisionStore()
+              const providersStore = useProvidersStore()
+              const llmStore = useLLM()
+
+              if (visionStore.activeProvider && visionStore.activeModel) {
+                const vlmProvider = await providersStore.getProviderInstance(visionStore.activeProvider) as any
+                const base64 = payload.dataUrl.includes(',') ? payload.dataUrl.split(',')[1] : payload.dataUrl
+                const prompt = 'Observe this screenshot and describe what is happening in 1-2 concise, objective sentences. Mention any visible applications, active tasks, code, games, or errors. Do not use conversational filler or speak as a character.'
+
+                const vlmMessages = [
+                  {
+                    role: 'user' as const,
+                    content: [
+                      { type: 'text', text: prompt },
+                      {
+                        type: 'image_url' as const,
+                        image_url: {
+                          url: `data:image/png;base64,${base64}`,
+                        },
+                      },
+                    ],
+                  },
+                ]
+
+                console.log(`[Vision Orchestrator] Requesting external VLM (${visionStore.activeProvider}/${visionStore.activeModel}) caption for promoted event...`)
+                const vlmResponse = await llmStore.generate(
+                  visionStore.activeModel,
+                  vlmProvider,
+                  vlmMessages as any,
+                  { vision: true },
+                )
+
+                const caption = vlmResponse.text?.trim().replace(/^["']|["']$/g, '').replace(/\r?\n+/g, ' ').trim()
+                if (caption) {
+                  result.caption = caption
+                  if (result.summary && result.summary.includes('[Visual Event]')) {
+                    const lines = result.summary.split('\n')
+                    const matchIdx = lines.findIndex(l => l.startsWith('Matched Interests:'))
+                    const insertIdx = matchIdx >= 0 ? matchIdx + 1 : (lines.length > 1 ? 2 : lines.length)
+                    lines.splice(insertIdx, 0, `Screen Content Tags: ${caption}`)
+                    result.summary = lines.join('\n')
+                  }
+                  else {
+                    result.summary = `[Visual Event]\nScreen Content Tags: ${caption}${result.summary ? `\n${result.summary}` : ''}`
+                  }
+                  useLiveSessionStore().recordInferenceUsage(vlmResponse.usage)
+                }
+              }
+              else {
+                console.warn('[Vision Orchestrator] External VLM tier selected, but no global vision provider/model is configured in Vision Settings.')
+              }
+            }
+            catch (vlmErr: any) {
+              console.warn('[Vision Orchestrator] External VLM caption failed, keeping deterministic summary:', vlmErr)
+            }
+          }
+
           lastResultText.value = result.summary ?? `[Visual Event] (${result.ocrErrorPatterns.join(', ')})`
           if (result.summary && promotionAllowed()) {
             publishContext(result.summary, payload.workloadId, payload.sourceId)

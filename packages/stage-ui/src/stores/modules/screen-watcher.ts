@@ -367,9 +367,10 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
           : ATTENTION_GUARD_WORKLOAD_ID
 
       // Guard readiness check
+      const isMoondream = config.vlmTier === 'moondream' || (Boolean(config.enableVlm) && config.vlmTier !== 'external')
       if (workloadId === ATTENTION_GUARD_WORKLOAD_ID) {
         try {
-          const adapter = await visionOrchestrator.ensureGuardLoaded()
+          const adapter = await visionOrchestrator.ensureGuardLoaded({ enableVlm: isMoondream })
           if (adapter.state !== 'ready' && adapter.state !== 'processing') {
             console.log('[ScreenWatcher:Tick] ⏳ Attention Ecology Guard is loading/downloading models, waiting for ready...')
             return
@@ -411,7 +412,8 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         sourceId,
         workloadId,
         interestTags: cleanTags,
-        enableVlm: Boolean(config.enableVlm),
+        enableVlm: isMoondream,
+        vlmTier: config.vlmTier || (config.enableVlm ? 'moondream' : 'lightweight'),
         timestamp: snapshot.timestamp || Date.now(),
       })
       lastLatencyMs.value = Math.round(performance.now() - tickStart)
@@ -517,7 +519,8 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
     // Warm guard worker before first tick if using attention guard
     if (!activeConfig.value?.workload || activeConfig.value.workload === 'attention-guard') {
-      void visionOrchestrator.ensureGuardLoaded({ enableVlm: Boolean(activeConfig.value?.enableVlm) })
+      const isMoondream = activeConfig.value?.vlmTier === 'moondream' || (Boolean(activeConfig.value?.enableVlm) && activeConfig.value?.vlmTier !== 'external')
+      void visionOrchestrator.ensureGuardLoaded({ enableVlm: isMoondream })
         .then(() => console.log('[ScreenWatcher:Init] 🚀 Attention Ecology Guard ready.'))
         .catch((err: any) => console.warn('[ScreenWatcher:Init] Guard pre-warm in progress or failed:', err))
     }
@@ -565,14 +568,15 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       activeConfig.value?.enabled,
       activeConfig.value?.captureIntervalMs,
       activeConfig.value?.enableVlm,
+      activeConfig.value?.vlmTier,
       activeConfig.value?.respectSchedule,
       activeCard.value?.extensions?.airi?.heartbeats?.schedule?.start,
       activeCard.value?.extensions?.airi?.heartbeats?.schedule?.end,
     ],
-    ([cardId, enabled, _interval, enableVlm, respectSchedule, start, end]) => {
+    ([cardId, enabled, _interval, enableVlm, vlmTier, respectSchedule, start, end]) => {
       if (!isPrimaryHostWindow())
         return
-      console.log('[ScreenWatcher:Watch] Card / config changed:', { cardId, enabled, enableVlm, respectSchedule, start, end })
+      console.log('[ScreenWatcher:Watch] Card / config changed:', { cardId, enabled, enableVlm, vlmTier, respectSchedule, start, end })
       restartWatcher()
     },
     { immediate: true },
