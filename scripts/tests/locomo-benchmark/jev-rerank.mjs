@@ -29,7 +29,23 @@ export async function jevRerankCandidates(jev, question, candidates, maxCandidat
   const questions = {}
   for (let idx = 0; idx < pool.length; idx++) {
     const cand = pool[idx]
-    const snippet = (cand.rawText || cand.text || '').replace(/\s+/g, ' ').trim().slice(0, 280)
+    // Context-preserving snippet: prioritize contextual text (containing turn - 1 window)
+    const textToUse = (cand.text || cand.windowText || cand.rawText || '').replace(/\r/g, '').trim()
+    let snippet = textToUse
+    if (snippet.length > 380) {
+      // If truncated, guarantee target turn (last turn) is preserved
+      const lines = snippet.split('\n')
+      if (lines.length > 1) {
+        const lastLine = lines[lines.length - 1]
+        const remainingBudget = Math.max(80, 380 - lastLine.length - 15)
+        const priorLines = lines.slice(0, -1).join(' ').slice(-remainingBudget)
+        snippet = `...${priorLines}\n${lastLine}`
+      }
+      else {
+        snippet = snippet.slice(0, 380)
+      }
+    }
+    snippet = snippet.replace(/\s+/g, ' ').trim()
     questions[`cand_${idx}`] = {
       type: 'score',
       instructions: `Candidate Fact: "${snippet}"\nEvaluate how directly and accurately this candidate provides the key answer or essential evidence for the question.`,

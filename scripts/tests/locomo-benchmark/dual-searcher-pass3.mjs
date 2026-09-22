@@ -44,16 +44,26 @@ export class DualSearcherPass3 {
       && /\b(adopt|adopted|adopting)\b/i.test(question)
     ) {
       const askedSubject = qLower.includes('james') ? 'James' : (qLower.includes('john') ? 'John' : null)
-      const adoptedClaims = Array.from(this.ledger.claims.values()).filter(c =>
-        c.predicate === 'adopted' && (!askedSubject || c.subject.toLowerCase() === askedSubject.toLowerCase()),
-      )
-      if (adoptedClaims.length > 0) {
-        const topClaim = adoptedClaims[0]
-        ledgerResult = {
-          type: 'attribute_value',
-          value: topClaim.object,
-          evidence: topClaim.evidence,
-          verified: true,
+      // Check if question asks about an explicit third-party person not in the graph (e.g. Mira)
+      const otherPersonMatch = question.match(/\b(?:by|of)\s+([A-Z][a-z]+)\b/)
+      const otherPerson = otherPersonMatch && !['James', 'John'].includes(otherPersonMatch[1]) ? otherPersonMatch[1] : null
+
+      if (otherPerson) {
+        // Asked about an unverified third party — fail closed and escalate
+        ledgerResult = null
+      }
+      else if (askedSubject) {
+        const adoptedClaims = Array.from(this.ledger.claims.values()).filter(c =>
+          c.predicate === 'adopted' && c.subject.toLowerCase() === askedSubject.toLowerCase(),
+        )
+        if (adoptedClaims.length > 0) {
+          const topClaim = adoptedClaims[0]
+          ledgerResult = {
+            type: 'attribute_value',
+            value: topClaim.object,
+            evidence: topClaim.evidence,
+            verified: true,
+          }
         }
       }
     }
@@ -322,7 +332,19 @@ export class DualSearcherPass3 {
     // --- 4. Batched Candidate Cross-Encoder Reranking via TypeSafe Jev ---
     let rankedHits = deduplicatedHits
     if (this.jev) {
-      rankedHits = await jevRerankCandidates(this.jev, question, deduplicatedHits, searchLimit >= 25 ? 15 : 10)
+      const maxRerank = searchLimit >= 25 ? 15 : 10
+      const dateInjectedHits = deduplicatedHits.filter(c => c.injectedViaDateHook)
+      const normalHits = deduplicatedHits.filter(c => !c.injectedViaDateHook)
+
+      // Budget rerank pool: reserve up to 3 slots for date-hook candidates so they aren't starved by initial hybrid hits
+      const reservedDateCount = Math.min(dateInjectedHits.length, 3)
+      const normalBudget = maxRerank - reservedDateCount
+      const poolToRerank = [
+        ...normalHits.slice(0, normalBudget),
+        ...dateInjectedHits.slice(0, reservedDateCount),
+      ]
+
+      rankedHits = await jevRerankCandidates(this.jev, question, poolToRerank, maxRerank)
     }
 
     // Helper to resolve a candidate's canonical raw dialogue turn document

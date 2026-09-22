@@ -99,30 +99,32 @@ Do not include markdown codeblocks or conversational filler.`
   for (let i = 0; i < items.length; i += batchSize) {
     const chunk = items.slice(i, i + batchSize)
     const validChunkIds = new Set(chunk.map(it => it.id))
-
-    const itemMap = {}
-    for (const it of chunk) {
-      itemMap[it.id] = {
-        question: it.question,
-        evidence: (it.evidence || '').slice(0, 6000),
-      }
-    }
-
-    const payload = {
-      model,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: JSON.stringify(itemMap) },
-      ],
-      temperature: 0.1,
-    }
+    const resolvedIds = new Set()
+    const insufficientIds = new Set()
+    let pendingItems = [...chunk]
 
     let attempts = 0
-    let success = false
-    while (attempts < 3 && !success) {
+    while (attempts < 3 && pendingItems.length > 0) {
       attempts++
       try {
+        const itemMap = {}
+        for (const it of pendingItems) {
+          itemMap[it.id] = {
+            question: it.question,
+            evidence: (it.evidence || '').slice(0, 6000),
+          }
+        }
+
+        const payload = {
+          model,
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: JSON.stringify(itemMap) },
+          ],
+          temperature: 0.1,
+        }
+
         const sessionId = `locomo-system2-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
         const res = await fetch(`${baseUrl}/chat/completions`, {
           method: 'POST',
@@ -146,17 +148,45 @@ Do not include markdown codeblocks or conversational filler.`
         }
 
         const data = await res.json()
-        const contentStr = data.choices?.[0]?.message?.content
+        const choice = data.choices?.[0]
+        const finishReason = choice?.finish_reason
+        const contentStr = choice?.message?.content
+
+        if (finishReason === 'length') {
+          console.warn(`[System2Resolver] Provider output truncated (finish_reason: length) on attempt ${attempts}.`)
+        }
+
+        if (opts.telemetry && Array.isArray(opts.telemetry)) {
+          opts.telemetry.push({
+            sessionId,
+            finishReason,
+            usage: data.usage,
+            pendingCount: pendingItems.length,
+            attempt: attempts,
+          })
+        }
+
         if (contentStr) {
           let parsed = {}
           try {
             parsed = JSON.parse(contentStr)
           }
           catch {
-            // Attempt to extract JSON substring if wrapped in markdown
+            // Attempt to extract JSON substring if wrapped in markdown or truncated
             const jsonMatch = contentStr.match(/\{[\s\S]*\}/)
-            if (jsonMatch)
-              parsed = JSON.parse(jsonMatch[0])
+            if (jsonMatch) {
+              try {
+                parsed = JSON.parse(jsonMatch[0])
+              }
+              catch {
+                // If JSON is malformed due to truncation, attempt partial item extraction
+                const itemRegex = /"([^"]+)":\s*\{\s*"status":\s*"([^"]+)",\s*"answer":\s*"([^"]+)"/g
+                let match
+                while ((match = itemRegex.exec(contentStr)) !== null) {
+                  parsed[match[1]] = { status: match[2], answer: match[3] }
+                }
+              }
+            }
           }
 
           const answers = parsed.answers || parsed
@@ -166,17 +196,43 @@ Do not include markdown codeblocks or conversational filler.`
             if (!validChunkIds.has(id))
               continue
 
-            if (typeof val === 'string' && val.trim().length > 0) {
-              results[id] = val.trim()
-            }
-            else if (val && typeof val === 'object') {
-              if (typeof val.answer === 'string' && val.answer.trim().length > 0 && val.status !== 'insufficient') {
+            if (val && typeof val === 'object') {
+              if (val.status === 'answered' && typeof val.answer === 'string' && val.answer.trim().length > 0) {
                 results[id] = val.answer.trim()
+                resolvedIds.add(id)
+              }
+              else if (val.status === 'insufficient') {
+                insufficientIds.add(id)
+              }
+            }
+            else if (typeof val === 'string' && val.trim().length > 0) {
+              const lower = val.trim().toLowerCase()
+              if (lower === 'insufficient') {
+                insufficientIds.add(id)
+              }
+              else if (lower !== 'unknown' && !lower.startsWith('error:')) {
+                results[id] = val.trim()
+                resolvedIds.add(id)
               }
             }
           }
         }
-        success = true
+
+        // Check for missing/unresolved items
+        const nextPending = pendingItems.filter(it => !resolvedIds.has(it.id) && !insufficientIds.has(it.id))
+        if (nextPending.length === 0) {
+          // All items in this chunk successfully resolved or determined insufficient
+          break
+        }
+
+        if (attempts < 3) {
+          console.warn(`[System2Resolver] ${nextPending.length}/${pendingItems.length} items unresolved on attempt ${attempts} (finish_reason: ${finishReason || 'unknown'}). Retrying unresolved items...`)
+          pendingItems = nextPending
+          await new Promise(r => setTimeout(r, 2000))
+        }
+        else {
+          console.warn(`[System2Resolver] ${nextPending.length} items remain unresolved after ${attempts} attempts.`)
+        }
       }
       catch (err) {
         if (attempts >= 3) {

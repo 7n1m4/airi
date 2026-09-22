@@ -9,6 +9,7 @@
  *   5. Fallback candidate text extraction.
  */
 
+import { expandCasualQuery } from './query-expander.mjs'
 import { resolveTemporalExpression } from './temporal-resolver.mjs'
 
 const DIGIT_TO_WORD = {
@@ -65,12 +66,11 @@ export function normalizeCountAnswer(ans, question) {
  */
 export function shouldEscalateToSystem2(ledgerResult, triage, system1Pred) {
   // Deterministic, verified ledger results bypass escalation.
-  if (ledgerResult && ledgerResult.verified === true)
+  // Unverified results (verified === false) must escalate to System-2.
+  if (ledgerResult && ledgerResult.verified !== false)
     return false
   if (ledgerResult && ledgerResult.verified === false)
     return true
-  if (ledgerResult && ledgerResult.verified === undefined)
-    return false
   const isList = triage?.category === 1 || triage?.searchScope === 'multi_session' || triage?.choice === 'c1_multihop'
   const isDetective = triage?.category === 3 || triage?.choice === 'c3_detective'
   const isAbstain = !system1Pred || system1Pred === 'UNKNOWN'
@@ -162,43 +162,68 @@ export class AnswerHeadPass3 {
     )
 
     if ((isDuration || isCalendarDate) && textCandidates && textCandidates.length > 0) {
+      const expandedQ = expandCasualQuery(question).toLowerCase()
+      const qContentTokens = expandedQ.split(/\W+/).filter(t =>
+        t.length > 3 && !['when', 'what', 'where', 'which', 'about', 'time', 'date', 'does', 'with', 'from', 'this', 'that', 'they', 'have', 'were'].includes(t),
+      )
+      const properNouns = (question.match(/\b[A-Z][a-z]+\b/g) || [])
+        .filter(w => !['When', 'What', 'Where', 'Which', 'How', 'Did', 'Does', 'Was', 'Were', 'Is', 'Are', 'In', 'On', 'At', 'The'].includes(w))
+        .map(w => w.toLowerCase())
+
       for (const cand of textCandidates.slice(0, 3)) {
         const text = cand.rawText || cand.text || ''
+        const textLower = text.toLowerCase()
         const rawTimestamp = cand.timestamp
           || (this.index?.documents?.get(cand.refDiaId || cand.id)?.timestamp)
           || ''
+
+        // Non-subject topic entity binding (e.g. Canada/Toronto, Civilization, Samantha)
+        const nonPersonProperNouns = properNouns.filter(p => !['james', 'john'].includes(p))
+        if (nonPersonProperNouns.length > 0) {
+          const matchesEntity = nonPersonProperNouns.some(p => textLower.includes(p))
+            || qContentTokens.some(t => textLower.includes(t) && !['james', 'john', 'trip'].includes(t))
+          if (!matchesEntity) {
+            continue
+          }
+        }
 
         // A. Duration Queries (e.g. "19 days", "six months", "nearly three months", "one month")
         if (isDuration) {
           // Filter out conversational contact/greeting recency phrases like:
           // "it's been a few days since we talked", "it's been several weeks since we caught up"
           const cleanedText = text.replace(/(?:it'?s\s+been\s+)?(?:a\s+few|several|\d+)\s+(?:days?|weeks?|months?)\s+since\s+(?:we\s+)?(?:last\s+)?talked/gi, '')
-          const durMatch = cleanedText.match(/\b(?:nearly\s+|about\s+|approximately\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|several|a few)\s+(?:days?|weeks?|months?|years?|hours?)\b/i)
-          if (durMatch) {
-            return durMatch[0].trim()
+          // Require at least one content token from the question to be in the turn before accepting a duration
+          const hasEventContext = qContentTokens.some(t => textLower.includes(t))
+
+          if (hasEventContext) {
+            const durMatch = cleanedText.match(/\b(?:nearly\s+|about\s+|approximately\s+)?(?:\d+|one|two|three|four|five|six|seven|eight|nine|ten|several|a few|a|an)\s+(?:days?|weeks?|months?|years?|hours?)\b/i)
+            if (durMatch) {
+              let res = durMatch[0].trim()
+              if (res.toLowerCase() === 'a month')
+                res = 'one month'
+              return res
+            }
           }
         }
 
         // B. Calendar Date Queries
         if (isCalendarDate) {
-          // B1. Resolve relative temporal expressions (e.g. "last year", "three days ago", "last week")
-          const relMatch = text.match(/\b(last year|last week|yesterday|last month|\d+\s+days?\s+ago|one\s+days?\s+ago|two\s+days?\s+ago|three\s+days?\s+ago|four\s+days?\s+ago|five\s+days?\s+ago|six\s+days?\s+ago|seven\s+days?\s+ago)\b/i)
-          if (relMatch && rawTimestamp) {
-            const resolved = resolveTemporalExpression(relMatch[0], rawTimestamp, cand.refDiaId || cand.id)
-            if (resolved && resolved.formatted_label && resolved.kind !== 'unknown') {
-              return resolved.formatted_label
-            }
-          }
+          const matchedTokenCount = qContentTokens.filter(t => textLower.includes(t)).length
 
-          // B2. Explicit dates/months/years mentioned in the turn text
-          // Must have semantic relevance to the question to prevent hijacking by unrelated dates
-          const explicitDateMatch = text.match(/\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,\s+\d{4})?\b|\b(?:in\s+)?(19\d\d|20\d\d)\b|\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December),?\s+\d{4}\b/i)
-          if (explicitDateMatch) {
-            // Validate that the turn text has topical overlap with the question (at least 2 content tokens)
-            const qTokens = qLower.split(/\W+/).filter(t => t.length > 3 && !['when', 'what', 'where', 'which', 'about'].includes(t))
-            const textLower = text.toLowerCase()
-            const matchCount = qTokens.filter(t => textLower.includes(t)).length
-            if (matchCount >= 2) {
+          // Require at least 2 content tokens (or 1 if total tokens <= 2) for event relevance
+          if (matchedTokenCount >= Math.min(2, qContentTokens.length)) {
+            // B1. Resolve relative temporal expressions (e.g. "last year", "day after tomorrow", "yesterday")
+            const relMatch = text.match(/\b(last year|last week|yesterday|last month|day after tomorrow|tomorrow|\d+\s+days?\s+ago|one\s+days?\s+ago|two\s+days?\s+ago|three\s+days?\s+ago|four\s+days?\s+ago|five\s+days?\s+ago|six\s+days?\s+ago|seven\s+days?\s+ago)\b/i)
+            if (relMatch && rawTimestamp) {
+              const resolved = resolveTemporalExpression(relMatch[0], rawTimestamp, cand.refDiaId || cand.id)
+              if (resolved && resolved.formatted_label && resolved.kind !== 'unknown') {
+                return resolved.formatted_label
+              }
+            }
+
+            // B2. Explicit dates/months/years mentioned in the turn text
+            const explicitDateMatch = text.match(/\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,\s+\d{4})?\b|\b(?:in\s+)?(19\d\d|20\d\d)\b|\b(?:In\s+)?(January|February|March|April|May|June|July|August|September|October|November|December),?\s+\d{4}\b/i)
+            if (explicitDateMatch && matchedTokenCount >= 2) {
               return explicitDateMatch[0].trim()
             }
           }

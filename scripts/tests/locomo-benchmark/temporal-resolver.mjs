@@ -1,4 +1,4 @@
-import { endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subDays, subMonths, subWeeks } from 'date-fns'
+import { addDays, endOfMonth, endOfWeek, format, startOfMonth, startOfWeek, subDays, subMonths, subWeeks } from 'date-fns'
 
 const MONTH_NAMES = [
   'January',
@@ -116,6 +116,42 @@ export function resolveTemporalExpression(rawExpression, anchorDateInput, turnId
       date: format(targetDate, 'yyyy-MM-dd'),
       formatted_label: formatted, // "April 26, 2022"
       policy: 'calendar_days_subtraction_v1',
+      ambiguous: false,
+    }
+  }
+
+  // 2.5 "day after tomorrow"
+  if (raw.includes('day after tomorrow')) {
+    const targetDate = addDays(anchor, 2)
+    const formatted = format(targetDate, 'MMMM d, yyyy')
+
+    return {
+      raw_expression: rawExpression,
+      anchor_turn_id: turnId,
+      anchor_date: format(anchor, 'yyyy-MM-dd'),
+      kind: 'point',
+      precision: 'day',
+      date: format(targetDate, 'yyyy-MM-dd'),
+      formatted_label: formatted,
+      policy: 'calendar_day_after_tomorrow_v1',
+      ambiguous: false,
+    }
+  }
+
+  // 2.6 "tomorrow"
+  if (raw.includes('tomorrow') && !raw.includes('day after tomorrow')) {
+    const targetDate = addDays(anchor, 1)
+    const formatted = format(targetDate, 'MMMM d, yyyy')
+
+    return {
+      raw_expression: rawExpression,
+      anchor_turn_id: turnId,
+      anchor_date: format(anchor, 'yyyy-MM-dd'),
+      kind: 'point',
+      precision: 'day',
+      date: format(targetDate, 'yyyy-MM-dd'),
+      formatted_label: formatted,
+      policy: 'calendar_tomorrow_v1',
       ambiguous: false,
     }
   }

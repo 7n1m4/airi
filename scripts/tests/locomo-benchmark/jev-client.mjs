@@ -14,7 +14,8 @@ const ROOT = path.resolve(__dirname, '../../..')
 
 export class TypeSafeJevClient {
   constructor(apiKey, endpoint = 'https://api.typesafe.ai/v1/systemone', model = 'jev-latest') {
-    let key = apiKey || process.env.TYPESAFE_API_KEY
+    let key = (typeof apiKey === 'object' && apiKey !== null) ? apiKey.apiKey : apiKey
+    key = key || process.env.TYPESAFE_API_KEY
     if (!key) {
       const envPath = path.join(ROOT, '.env')
       if (fs.existsSync(envPath)) {

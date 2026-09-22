@@ -367,3 +367,74 @@ describe('pass 9: Polar Query Guard, Temporal Date Hook & Distillation Abstentio
     assert.equal(shouldEscalateToSystem2(unverifiedLedger, triage, 'Some answer'), true, 'Unverified graph results must escalate to System-2')
   })
 })
+
+describe('pass 11: Fixes A, B, C, D & Response Validation Regression Suite', () => {
+  it('resolves "day after tomorrow" and "tomorrow" offsets correctly', async () => {
+    const { resolveTemporalExpression } = await import('./temporal-resolver.mjs')
+    const anchor = '5:13 pm on 9 July, 2022'
+
+    const resAfter = resolveTemporalExpression('day after tomorrow', anchor, 'D16:9')
+    assert.ok(resAfter)
+    assert.equal(resAfter.formatted_label, 'July 11, 2022')
+    assert.equal(resAfter.date, '2022-07-11')
+
+    const resTomorrow = resolveTemporalExpression('tomorrow', anchor, 'D16:9')
+    assert.ok(resTomorrow)
+    assert.equal(resTomorrow.formatted_label, 'July 10, 2022')
+    assert.equal(resTomorrow.date, '2022-07-10')
+  })
+
+  it('fails closed on unbound third-party adoption queries (Mira)', async () => {
+    const { DualSearcherPass3 } = await import('./dual-searcher-pass3.mjs')
+    const { EntityLedger } = await import('./entity-ledger.mjs')
+
+    const ledger = new EntityLedger()
+    ledger.addClaim({ subject: 'James', predicate: 'adopted', object: 'Ned', evidence: ['D1:1'] })
+
+    const mockHybrid = { searchHybrid: () => [], index: { documents: new Map() } }
+    const searcher = new DualSearcherPass3(ledger, mockHybrid, null)
+    // Querying for Mira should fail closed (return null for ledgerResult)
+    const miraResult = await searcher.search('What is the name of the puppy adopted by Mira?')
+    assert.equal(miraResult.ledgerResult, null, 'Unbound third-party subject must not match James')
+
+    // Querying for James should succeed
+    const jamesResult = await searcher.search('What is the name of the puppy adopted by James?')
+    assert.ok(jamesResult.ledgerResult)
+    assert.equal(jamesResult.ledgerResult.value, 'Ned')
+    assert.equal(jamesResult.ledgerResult.verified, true)
+  })
+
+  it('preserves contextual turn-1 text in reranker snippet formatting', async () => {
+    // Check that context from turn - 1 is preserved and not stripped to rawText
+    const mockCand = {
+      id: 'D13:5',
+      text: 'John: When do you start the new job?\nJames: Thank you! I\'m starting next month.',
+      rawText: 'James: Thank you! I\'m starting next month.',
+    }
+    const textToUse = (mockCand.text || mockCand.windowText || mockCand.rawText || '').trim()
+    assert.ok(textToUse.includes('new job'), 'Context from preceding turn must be retained')
+  })
+
+  it('reserves candidate pool slots for injected date-hook candidates', () => {
+    const normalHits = Array.from({ length: 15 }, (_, i) => ({ id: `N${i}`, score: 0.9 - i * 0.05 }))
+    const dateInjectedHits = [
+      { id: 'D1', injectedViaDateHook: true, score: 0.8 },
+      { id: 'D2', injectedViaDateHook: true, score: 0.7 },
+    ]
+    const deduplicatedHits = [...normalHits, ...dateInjectedHits]
+
+    const maxRerank = 10
+    const dHits = deduplicatedHits.filter(c => c.injectedViaDateHook)
+    const nHits = deduplicatedHits.filter(c => !c.injectedViaDateHook)
+    const reservedDateCount = Math.min(dHits.length, 3)
+    const normalBudget = maxRerank - reservedDateCount
+    const poolToRerank = [
+      ...nHits.slice(0, normalBudget),
+      ...dHits.slice(0, reservedDateCount),
+    ]
+
+    assert.equal(poolToRerank.length, 10)
+    assert.ok(poolToRerank.some(c => c.id === 'D1'), 'Date hook candidate D1 must be in pool')
+    assert.ok(poolToRerank.some(c => c.id === 'D2'), 'Date hook candidate D2 must be in pool')
+  })
+})

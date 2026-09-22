@@ -103,13 +103,14 @@ export function injectTemporalDateCandidates(question, documents, candidates, ma
 
     // Score turns within this session by question keyword overlap
     const scored = rawTurns.map((turn) => {
-      const textLower = (turn.rawText || turn.text || '').toLowerCase()
+      const textLower = (turn.text || turn.rawText || '').toLowerCase()
       let kwScore = 0
       for (const qt of qTokens) {
         if (textLower.includes(qt))
           kwScore += 1
       }
-      return { turn, score: kwScore }
+      const normScore = Math.min(1.0, kwScore * 0.25)
+      return { turn, score: normScore }
     }).sort((a, b) => b.score - a.score)
 
     for (const item of scored.slice(0, 2)) {
@@ -118,6 +119,7 @@ export function injectTemporalDateCandidates(question, documents, candidates, ma
           ...item.turn,
           injectedViaDateHook: true,
           score: item.score,
+          fusedScore: item.score,
         })
       }
     }
