@@ -54,7 +54,21 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
   const lastError = ref<string | null>(null)
 
   // Promotion rate-limiting state
-  const recentPromotionTimestamps: number[] = []
+  const recentPromotionTimestamps = ref<number[]>([])
+
+  const hourlyPromotionsCount = computed(() => {
+    const windowStart = Date.now() - 60 * 60 * 1000
+    return recentPromotionTimestamps.value.filter(t => t >= windowStart).length
+  })
+
+  const nextHourlyResetAt = computed<number | null>(() => {
+    const windowStart = Date.now() - 60 * 60 * 1000
+    const active = recentPromotionTimestamps.value.filter(t => t >= windowStart).sort((a, b) => a - b)
+    if (active.length === 0)
+      return null
+    // The earliest event in the window will roll off exactly 1 hour after it occurred
+    return active[0] + 60 * 60 * 1000
+  })
 
   let timerHandle: any = null
 
@@ -74,12 +88,12 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     }
 
     const windowStart = now - 60 * 60 * 1000
-    while (recentPromotionTimestamps.length > 0 && recentPromotionTimestamps[0] < windowStart) {
-      recentPromotionTimestamps.shift()
+    while (recentPromotionTimestamps.value.length > 0 && recentPromotionTimestamps.value[0] < windowStart) {
+      recentPromotionTimestamps.value.shift()
     }
 
     const maxPerHour = config.maxPerHour || 4
-    if (recentPromotionTimestamps.length >= maxPerHour) {
+    if (recentPromotionTimestamps.value.length >= maxPerHour) {
       console.log(`[ScreenWatcher:RateLimit] 🛑 Promotion throttled: Reached max ${maxPerHour} interventions per hour.`)
       return false
     }
@@ -450,7 +464,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
             }
             else {
               lastPromotionAt.value = now
-              recentPromotionTimestamps.push(now)
+              recentPromotionTimestamps.value.push(now)
               const eventsToDispatch = [...observationBuffer.value]
               observationBuffer.value = []
               await dispatchPromotedReaction(eventsToDispatch, config)
@@ -476,7 +490,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
           if (!isSpeaking || !config.deferWhileSpeaking) {
             console.log(`[ScreenWatcher:Promotion] 🚰 Draining ${observationBuffer.value.length} pending buffered observation(s) after pipe cleared...`)
             lastPromotionAt.value = now
-            recentPromotionTimestamps.push(now)
+            recentPromotionTimestamps.value.push(now)
             const eventsToDispatch = [...observationBuffer.value]
             observationBuffer.value = []
             await dispatchPromotedReaction(eventsToDispatch, config)
@@ -605,6 +619,9 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     lastSummary,
     lastLatencyMs,
     lastError,
+    hourlyPromotionsCount,
+    nextHourlyResetAt,
+    recentPromotionTimestamps,
     activeConfig,
     isEnabled,
     startWatcher,

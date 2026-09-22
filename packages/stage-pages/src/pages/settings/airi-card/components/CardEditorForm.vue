@@ -302,13 +302,14 @@ const screenWatchingSourceType = ref<'displays' | 'applications' | 'auto_focused
 const screenWatchingSourceId = ref<string>('')
 const screenWatchingCaptureIntervalMs = ref<number>(2000)
 const screenWatchingDownscalePercent = ref<number>(100)
-const screenWatchingWorkload = ref<'attention-guard' | 'screen:interpret' | 'screen:ocr'>('attention-guard')
+const screenWatchingWorkload = ref<'attention-guard' | 'screen:interpret'>('attention-guard')
 const screenWatchingPublishToContext = ref<boolean>(true)
 const screenWatchingInterestTags = ref<string[]>(['antigravity', 'terminal_error', 'youtube', 'discord'])
 const screenWatchingDeferWhileSpeaking = ref<boolean>(true)
 const screenWatchingMaxPerHour = ref<number>(4)
 const screenWatchingHysteresisMinutes = ref<number>(3)
 const screenWatchingEnableVlm = ref<boolean>(false)
+const screenWatchingVlmTier = ref<'lightweight' | 'moondream' | 'external'>('lightweight')
 const screenWatchingRespectSchedule = ref<boolean>(true)
 
 // Sensors & Event Ledger
@@ -965,6 +966,7 @@ async function saveCard(card: Card): Promise<boolean> {
           maxPerHour: screenWatchingMaxPerHour.value,
           hysteresisMinutes: screenWatchingHysteresisMinutes.value,
           enableVlm: screenWatchingEnableVlm.value,
+          vlmTier: screenWatchingVlmTier.value,
           respectSchedule: screenWatchingRespectSchedule.value,
           pauseWhenAfk: presencePauseWhenAfk.value,
           afkThresholdMinutes: presenceAfkThresholdMinutes.value,
@@ -1213,13 +1215,16 @@ function initializeCard(): Card {
   screenWatchingSourceId.value = airiExt?.screenWatching?.sourceId ?? ''
   screenWatchingCaptureIntervalMs.value = airiExt?.screenWatching?.captureIntervalMs ?? 2000
   screenWatchingDownscalePercent.value = airiExt?.screenWatching?.downscalePercent ?? 100
-  screenWatchingWorkload.value = airiExt?.screenWatching?.workload ?? 'attention-guard'
+  const loadedWorkload = airiExt?.screenWatching?.workload
+  screenWatchingWorkload.value = (loadedWorkload === 'screen:interpret') ? 'screen:interpret' : 'attention-guard'
   screenWatchingPublishToContext.value = airiExt?.screenWatching?.publishToContext ?? true
   screenWatchingInterestTags.value = airiExt?.screenWatching?.interestTags ?? ['antigravity', 'terminal_error', 'youtube', 'discord']
   screenWatchingDeferWhileSpeaking.value = airiExt?.screenWatching?.deferWhileSpeaking ?? true
   screenWatchingMaxPerHour.value = airiExt?.screenWatching?.maxPerHour ?? 4
   screenWatchingHysteresisMinutes.value = airiExt?.screenWatching?.hysteresisMinutes ?? 3
   screenWatchingEnableVlm.value = airiExt?.screenWatching?.enableVlm ?? false
+  screenWatchingVlmTier.value = airiExt?.screenWatching?.vlmTier
+    ?? (screenWatchingEnableVlm.value ? 'moondream' : 'lightweight')
   screenWatchingRespectSchedule.value = airiExt?.screenWatching?.respectSchedule ?? true
 
   // Sensors & Event Ledger
@@ -1752,6 +1757,7 @@ function handleGeneratorSave(newValue: string) {
       v-model:screen-watching-max-per-hour="screenWatchingMaxPerHour"
       v-model:screen-watching-hysteresis-minutes="screenWatchingHysteresisMinutes"
       v-model:screen-watching-enable-vlm="screenWatchingEnableVlm"
+      v-model:screen-watching-vlm-tier="screenWatchingVlmTier"
       v-model:screen-watching-respect-schedule="screenWatchingRespectSchedule"
       v-model:event-ledger-enabled="eventLedgerEnabled"
       v-model:event-ledger-sample-depth="eventLedgerSampleDepth"

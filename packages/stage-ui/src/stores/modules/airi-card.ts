@@ -138,6 +138,7 @@ export interface ScreenWatchingConfig {
   maxPerHour: number
   hysteresisMinutes: number
   enableVlm?: boolean
+  vlmTier?: 'lightweight' | 'moondream' | 'external'
   respectSchedule?: boolean
   pauseWhenAfk?: boolean
   afkThresholdMinutes?: number

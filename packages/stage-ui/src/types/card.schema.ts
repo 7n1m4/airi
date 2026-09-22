@@ -141,6 +141,8 @@ const AiriScreenWatchingSchema = object({
   deferWhileSpeaking: optional(boolean()),
   maxPerHour: optional(number()),
   hysteresisMinutes: optional(number()),
+  enableVlm: optional(boolean()),
+  vlmTier: optional(union([literal('lightweight'), literal('moondream'), literal('external')])),
   respectSchedule: optional(boolean()),
   pauseWhenAfk: optional(boolean()),
   afkThresholdMinutes: optional(number()),

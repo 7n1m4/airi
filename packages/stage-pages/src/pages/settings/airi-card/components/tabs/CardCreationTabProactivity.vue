@@ -2,7 +2,7 @@
 import { isWithinSchedule } from '@proj-airi/stage-shared'
 import { useVisionSources } from '@proj-airi/stage-ui/composables'
 import { isModelCached } from '@proj-airi/stage-ui/libs/inference'
-import { useProactivityStore } from '@proj-airi/stage-ui/stores'
+import { useProactivityStore, useScreenWatcherStore } from '@proj-airi/stage-ui/stores'
 import { useVisionStore } from '@proj-airi/stage-ui/stores/modules/vision'
 import { useVisionOrchestratorStore } from '@proj-airi/stage-ui/stores/modules/vision/orchestrator'
 import { storeToRefs } from 'pinia'
@@ -25,9 +25,11 @@ const emit = defineEmits<{
 }>()
 
 const proactivityStore = useProactivityStore()
+const screenWatcherStore = useScreenWatcherStore()
 const visionStore = useVisionStore()
 const visionOrchestrator = useVisionOrchestratorStore()
 const { isProvisioning, provisioningPercent, provisioningMessage, isLightweightReady, isVlmReady } = storeToRefs(visionOrchestrator)
+const { hourlyPromotionsCount, nextHourlyResetAt } = storeToRefs(screenWatcherStore)
 const isRefreshingSensors = ref(false)
 
 async function handleProvision() {
@@ -138,7 +140,7 @@ const screenWatchingSourceType = defineModel<'displays' | 'applications' | 'auto
 const screenWatchingSourceId = defineModel<string>('screenWatchingSourceId', { default: '' })
 const screenWatchingCaptureIntervalMs = defineModel<number>('screenWatchingCaptureIntervalMs', { default: 2000 })
 const screenWatchingDownscalePercent = defineModel<number>('screenWatchingDownscalePercent', { default: 100 })
-const screenWatchingWorkload = defineModel<'attention-guard' | 'screen:interpret' | 'screen:ocr'>('screenWatchingWorkload', { default: 'attention-guard' })
+const screenWatchingWorkload = defineModel<'attention-guard' | 'screen:interpret'>('screenWatchingWorkload', { default: 'attention-guard' })
 const screenWatchingPublishToContext = defineModel<boolean>('screenWatchingPublishToContext', { default: true })
 const screenWatchingInterestTags = defineModel<string[]>('screenWatchingInterestTags', {
   default: () => ['antigravity', 'terminal_error', 'youtube', 'discord'],
@@ -146,7 +148,54 @@ const screenWatchingInterestTags = defineModel<string[]>('screenWatchingInterest
 const screenWatchingMaxPerHour = defineModel<number>('screenWatchingMaxPerHour', { default: 4 })
 const screenWatchingHysteresisMinutes = defineModel<number>('screenWatchingHysteresisMinutes', { default: 3 })
 const screenWatchingEnableVlm = defineModel<boolean>('screenWatchingEnableVlm', { default: false })
+const screenWatchingVlmTier = defineModel<'lightweight' | 'moondream' | 'external'>('screenWatchingVlmTier', {
+  default: 'lightweight',
+})
 const screenWatchingRespectSchedule = defineModel<boolean>('screenWatchingRespectSchedule', { default: true })
+
+// If user switches to direct commentary (screen:interpret), promote lightweight to external or moondream
+// since direct commentary requires full visual comprehension.
+watch(screenWatchingWorkload, (workload) => {
+  if (workload === 'screen:interpret' && screenWatchingVlmTier.value === 'lightweight') {
+    screenWatchingVlmTier.value = 'external'
+  }
+})
+
+// Sync screenWatchingVlmTier with screenWatchingEnableVlm for backward-compatibility
+if (screenWatchingVlmTier.value === 'lightweight' && screenWatchingEnableVlm.value) {
+  screenWatchingVlmTier.value = 'moondream'
+}
+
+watch(screenWatchingVlmTier, (tier) => {
+  screenWatchingEnableVlm.value = tier === 'moondream'
+})
+watch(screenWatchingEnableVlm, (enabled) => {
+  if (enabled && screenWatchingVlmTier.value === 'lightweight') {
+    screenWatchingVlmTier.value = 'moondream'
+  }
+  else if (!enabled && screenWatchingVlmTier.value === 'moondream') {
+    screenWatchingVlmTier.value = 'lightweight'
+  }
+})
+const globalVisionProviderLabel = computed(() => {
+  const provider = visionStore.activeProvider
+  const model = visionStore.activeModel
+  if (!provider)
+    return 'Not configured'
+  return model ? `${provider} (${model})` : provider
+})
+
+const isHourlyBudgetExhausted = computed(() => {
+  const limit = screenWatchingMaxPerHour.value || 4
+  return (hourlyPromotionsCount.value || 0) >= limit
+})
+
+const nextHourlyResetLabel = computed(() => {
+  if (!nextHourlyResetAt.value)
+    return 'the next hour'
+  const date = new Date(nextHourlyResetAt.value)
+  return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+})
 
 // Capture-resolution readout for the downscale slider. Percentages are applied
 // relative to the display's native size; 100% means a full native-resolution
@@ -815,31 +864,94 @@ const intervalPresets = [2, 5, 10, 20]
             </div>
           </div>
 
-          <!-- 2. Zero-Cost Salience & Interest Tags -->
+          <!-- 2. Perception Mode & Visual Engine -->
           <div class="flex flex-col gap-3 border-t border-neutral-100 pt-4 dark:border-neutral-800">
             <span class="text-xs text-neutral-700 font-semibold tracking-wider uppercase dark:text-neutral-300">
-              2. Zero-Cost Salience Gating & Interest Tags
+              2. Perception Mode & Visual Engine
             </span>
 
-            <!-- Vision Engine Workload -->
-            <div class="flex flex-col gap-1.5">
-              <label class="text-xs text-neutral-700 font-medium dark:text-neutral-300">
-                Vision Engine Workload
-              </label>
-              <select
-                v-model="screenWatchingWorkload"
-                class="border border-neutral-200 rounded-lg bg-neutral-50 px-3 py-1.5 text-xs outline-none dark:border-neutral-700 dark:bg-neutral-800"
-              >
-                <option value="attention-guard">
-                  Attention Ecology Guard (0-Cost Local WebGPU / OCR)
-                </option>
-                <option value="screen:interpret">
-                  screen:interpret (Full Visual Scene Comprehension)
-                </option>
-                <option value="screen:ocr">
-                  screen:ocr (WASM Text Stream Extraction)
-                </option>
-              </select>
+            <!-- Vision Engine Mode / Behavior -->
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between">
+                <label class="text-xs text-neutral-700 font-medium dark:text-neutral-300">
+                  Perception & Delivery Mode
+                </label>
+                <span class="rounded-full bg-neutral-200/60 px-2 py-0.5 text-[10px] text-neutral-600 font-semibold font-mono dark:bg-neutral-800 dark:text-neutral-300">
+                  {{ screenWatchingWorkload === 'attention-guard' ? 'Ambient Memory & Grounding' : 'Direct Live Commentary' }}
+                </span>
+              </div>
+
+              <div class="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+                <!-- Mode 1: Ambient Awareness (Attention Ecology) -->
+                <button
+                  type="button"
+                  :class="[
+                    'flex flex-col gap-1.5 p-3.5 rounded-xl border text-xs transition-all text-left relative overflow-hidden',
+                    screenWatchingWorkload === 'attention-guard'
+                      ? 'border-primary-500 bg-primary-50/70 text-primary-950 ring-1 ring-primary-500 dark:border-primary-500 dark:bg-primary-950/40 dark:text-primary-100'
+                      : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700/80 dark:bg-neutral-800/80 dark:text-neutral-300 dark:hover:bg-neutral-700/60',
+                  ]"
+                  @click="screenWatchingWorkload = 'attention-guard'"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-[13px] font-bold">
+                      <div class="i-solar:radar-bold-duotone text-lg text-primary-600 dark:text-primary-400" />
+                      <span>Ambient Awareness</span>
+                    </div>
+                    <span class="rounded-full bg-primary-100 px-2 py-0.5 text-[9px] text-primary-800 font-semibold dark:bg-primary-900/60 dark:text-primary-300">
+                      Recommended
+                    </span>
+                  </div>
+                  <span class="text-[11px] text-neutral-600 leading-relaxed dark:text-neutral-400">
+                    Silently perceives your screen in the background. Uses 4-stage salience filters (pHash, CLIP, OCR) to ignore idle screens and quietly injects notable visual context into memory without interrupting you.
+                  </span>
+                  <div class="flex items-center gap-2 pt-1 text-[10px] text-neutral-500 font-medium dark:text-neutral-400">
+                    <span class="flex items-center gap-1">
+                      <div class="i-solar:check-circle-bold text-emerald-500" />
+                      Zero chat spam
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <div class="i-solar:check-circle-bold text-emerald-500" />
+                      Subconscious memory
+                    </span>
+                  </div>
+                </button>
+
+                <!-- Mode 2: Direct Chat Commentary (Screen Interpret) -->
+                <button
+                  type="button"
+                  :class="[
+                    'flex flex-col gap-1.5 p-3.5 rounded-xl border text-xs transition-all text-left relative overflow-hidden',
+                    screenWatchingWorkload === 'screen:interpret'
+                      ? 'border-indigo-500 bg-indigo-50/70 text-indigo-950 ring-1 ring-indigo-500 dark:border-indigo-500 dark:bg-indigo-950/40 dark:text-indigo-100'
+                      : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700/80 dark:bg-neutral-800/80 dark:text-neutral-300 dark:hover:bg-neutral-700/60',
+                  ]"
+                  @click="screenWatchingWorkload = 'screen:interpret'"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-[13px] font-bold">
+                      <div class="i-solar:chat-round-line-bold-duotone text-lg text-indigo-600 dark:text-indigo-400" />
+                      <span>Direct Commentary</span>
+                    </div>
+                    <span class="rounded-full bg-indigo-100 px-2 py-0.5 text-[9px] text-indigo-800 font-semibold dark:bg-indigo-900/60 dark:text-indigo-300">
+                      Chat Ingestion
+                    </span>
+                  </div>
+                  <span class="text-[11px] text-neutral-600 leading-relaxed dark:text-neutral-400">
+                    Actively speaks and posts chat bubbles reacting in character to what you are doing on screen. Creates conversational message turns directly in your active chat transcript.
+                  </span>
+                  <div class="flex items-center gap-2 pt-1 text-[10px] text-neutral-500 font-medium dark:text-neutral-400">
+                    <span class="flex items-center gap-1">
+                      <div class="i-solar:chat-dots-bold text-indigo-500" />
+                      Live speech & bubbles
+                    </span>
+                    <span class="flex items-center gap-1">
+                      <div class="i-solar:fire-bold text-amber-500" />
+                      High proactivity
+                    </span>
+                  </div>
+                </button>
+              </div>
             </div>
 
             <!-- Vision Analysis Engine / Mode -->
@@ -849,26 +961,29 @@ const intervalPresets = [2, 5, 10, 20]
                   Analysis Tier & Engine
                 </label>
                 <span class="rounded-full bg-neutral-200/60 px-2 py-0.5 text-[10px] text-neutral-600 font-semibold font-mono dark:bg-neutral-800 dark:text-neutral-300">
-                  {{ screenWatchingEnableVlm ? 'Premium (Moondream2 VLM)' : 'Lightweight (Local OCR)' }}
+                  {{ screenWatchingVlmTier === 'external' ? `External (${globalVisionProviderLabel})` : screenWatchingVlmTier === 'moondream' ? 'Premium (Moondream2 VLM)' : 'Lightweight (Local OCR)' }}
                 </span>
               </div>
-              <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <button
                   type="button"
+                  :disabled="screenWatchingWorkload === 'screen:interpret'"
                   :class="[
                     'flex flex-col gap-1 p-3 rounded-xl border text-xs transition-all text-left',
-                    !screenWatchingEnableVlm
-                      ? 'border-primary-500 bg-primary-50 text-primary-900 ring-1 ring-primary-500 dark:border-primary-500 dark:bg-primary-950/60 dark:text-primary-200'
-                      : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700/80 dark:bg-neutral-800/80 dark:text-neutral-300 dark:hover:bg-neutral-700/60',
+                    screenWatchingWorkload === 'screen:interpret'
+                      ? 'opacity-40 cursor-not-allowed border-neutral-200 bg-neutral-100/60 dark:border-neutral-800 dark:bg-neutral-800/40 text-neutral-400'
+                      : screenWatchingVlmTier === 'lightweight'
+                        ? 'border-primary-500 bg-primary-50 text-primary-900 ring-1 ring-primary-500 dark:border-primary-500 dark:bg-primary-950/60 dark:text-primary-200'
+                        : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700/80 dark:bg-neutral-800/80 dark:text-neutral-300 dark:hover:bg-neutral-700/60',
                   ]"
-                  @click="screenWatchingEnableVlm = false"
+                  @click="screenWatchingVlmTier = 'lightweight'"
                 >
                   <div class="flex items-center gap-2 font-bold">
                     <div class="i-solar:bolt-bold-duotone text-base text-amber-500" />
                     <span>Lightweight Mode</span>
                   </div>
                   <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
-                    Fast & zero extra VRAM. Uses local WASM OCR + CLIP zero-shot interest matching. Instant boot, 0MB download.
+                    {{ screenWatchingWorkload === 'screen:interpret' ? 'Unavailable for Direct Commentary. Commentary requires semantic visual comprehension (Moondream2 or External).' : 'Fast & zero extra VRAM. Uses local WASM OCR + CLIP zero-shot interest matching. Instant boot, 0MB download.' }}
                   </span>
                 </button>
 
@@ -876,30 +991,80 @@ const intervalPresets = [2, 5, 10, 20]
                   type="button"
                   :class="[
                     'flex flex-col gap-1 p-3 rounded-xl border text-xs transition-all text-left',
-                    screenWatchingEnableVlm
+                    screenWatchingVlmTier === 'moondream'
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-900 ring-1 ring-indigo-500 dark:border-indigo-500 dark:bg-indigo-950/60 dark:text-indigo-200'
                       : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700/80 dark:bg-neutral-800/80 dark:text-neutral-300 dark:hover:bg-neutral-700/60',
                   ]"
-                  @click="screenWatchingEnableVlm = true"
+                  @click="screenWatchingVlmTier = 'moondream'"
                 >
                   <div class="flex items-center gap-2 font-bold">
                     <div class="i-solar:eye-bold-duotone text-base text-indigo-500" />
-                    <span>Premium Mode (Moondream2)</span>
+                    <span>Premium Mode</span>
                   </div>
                   <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
-                    Local WebGPU VLM. Generates 1-sentence semantic scene descriptions for promoted events (~700MB download).
+                    Local WebGPU VLM (Moondream2). Generates semantic scene descriptions for promoted events (~700MB download).
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  :class="[
+                    'flex flex-col gap-1 p-3 rounded-xl border text-xs transition-all text-left',
+                    screenWatchingVlmTier === 'external'
+                      ? 'border-sky-500 bg-sky-50 text-sky-900 ring-1 ring-sky-500 dark:border-sky-500 dark:bg-sky-950/60 dark:text-sky-200'
+                      : 'border-neutral-200 bg-white text-neutral-600 hover:bg-neutral-100 dark:border-neutral-700/80 dark:bg-neutral-800/80 dark:text-neutral-300 dark:hover:bg-neutral-700/60',
+                  ]"
+                  @click="screenWatchingVlmTier = 'external'"
+                >
+                  <div class="flex items-center gap-2 font-bold">
+                    <div class="i-solar:cloud-upload-bold-duotone text-base text-sky-500" />
+                    <span>External VLM</span>
+                  </div>
+                  <div class="truncate text-[10px] text-sky-700 font-medium dark:text-sky-300">
+                    Active: {{ globalVisionProviderLabel }}
+                  </div>
+                  <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    Routes promoted events through your configured Global Vision Provider without local WebGPU/VRAM overhead.
                   </span>
                 </button>
               </div>
 
-              <!-- Engine Provisioning & Readiness -->
-              <div class="flex flex-col gap-2.5 border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-3.5 dark:border-neutral-800 dark:bg-neutral-900/40">
+              <!-- External VLM Status Banner -->
+              <div
+                v-if="screenWatchingVlmTier === 'external'"
+                class="flex items-center justify-between border border-sky-200/80 rounded-xl bg-sky-50/50 p-3.5 dark:border-sky-900/60 dark:bg-sky-950/20"
+              >
+                <div class="flex items-center gap-2.5">
+                  <div class="i-solar:cloud-check-bold-duotone text-lg text-sky-500" />
+                  <div class="flex flex-col">
+                    <span class="text-xs text-neutral-800 font-semibold dark:text-neutral-200">
+                      Global Vision Provider Active
+                    </span>
+                    <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      Promoted frames will be evaluated using {{ globalVisionProviderLabel }}. No local model downloads required.
+                    </span>
+                  </div>
+                </div>
+                <router-link
+                  to="/settings/vision"
+                  class="flex items-center gap-1 rounded-lg bg-sky-100/80 px-2.5 py-1 text-xs text-sky-700 font-medium transition-colors dark:bg-sky-900/50 hover:bg-sky-200 dark:text-sky-300 dark:hover:bg-sky-800/60"
+                >
+                  <span>Configure</span>
+                  <div class="i-solar:arrow-right-linear text-xs" />
+                </router-link>
+              </div>
+
+              <!-- Engine Provisioning & Readiness (Local WebGPU / WASM only) -->
+              <div
+                v-else
+                class="flex flex-col gap-2.5 border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-3.5 dark:border-neutral-800 dark:bg-neutral-900/40"
+              >
                 <div class="flex items-center justify-between">
                   <div class="flex items-center gap-2">
                     <div
                       :class="[
                         'text-base',
-                        (screenWatchingEnableVlm ? isVlmReady : isLightweightReady)
+                        (screenWatchingVlmTier === 'moondream' ? isVlmReady : isLightweightReady)
                           ? 'i-solar:check-circle-bold-duotone text-emerald-500'
                           : isProvisioning
                             ? 'i-solar:refresh-circle-bold-duotone text-primary-500 animate-spin'
@@ -908,10 +1073,10 @@ const intervalPresets = [2, 5, 10, 20]
                     />
                     <div class="flex flex-col">
                       <span class="text-xs text-neutral-800 font-semibold dark:text-neutral-200">
-                        {{ screenWatchingEnableVlm ? 'Moondream2 VLM Package (~1.1GB)' : 'Lightweight OCR Package (~307MB)' }}
+                        {{ screenWatchingVlmTier === 'moondream' ? 'Moondream2 VLM Package (~1.1GB)' : 'Lightweight OCR Package (~307MB)' }}
                       </span>
                       <span class="text-[10px] text-neutral-500 dark:text-neutral-400">
-                        {{ screenWatchingEnableVlm ? 'CLIP Vision/Text + Tesseract WASM + Moondream2 Scene VLM' : 'CLIP Vision/Text Towers + Local Tesseract WASM' }}
+                        {{ screenWatchingVlmTier === 'moondream' ? 'CLIP Vision/Text + Tesseract WASM + Moondream2 Scene VLM' : 'CLIP Vision/Text Towers + Local Tesseract WASM' }}
                       </span>
                     </div>
                   </div>
@@ -919,14 +1084,14 @@ const intervalPresets = [2, 5, 10, 20]
                   <span
                     :class="[
                       'px-2 py-0.5 rounded-full text-[10px] font-semibold font-mono',
-                      (screenWatchingEnableVlm ? isVlmReady : isLightweightReady)
+                      (screenWatchingVlmTier === 'moondream' ? isVlmReady : isLightweightReady)
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300'
                         : isProvisioning
                           ? 'bg-primary-100 text-primary-700 dark:bg-primary-950 dark:text-primary-300'
                           : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300',
                     ]"
                   >
-                    {{ (screenWatchingEnableVlm ? isVlmReady : isLightweightReady) ? 'Ready (Cached)' : isProvisioning ? 'Downloading...' : 'Not Cached' }}
+                    {{ (screenWatchingVlmTier === 'moondream' ? isVlmReady : isLightweightReady) ? 'Ready (Cached)' : isProvisioning ? 'Downloading...' : 'Not Cached' }}
                   </span>
                 </div>
 
@@ -947,7 +1112,7 @@ const intervalPresets = [2, 5, 10, 20]
                 <!-- Action button -->
                 <div v-else class="flex items-center justify-between pt-1">
                   <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
-                    {{ (screenWatchingEnableVlm ? isVlmReady : isLightweightReady) ? 'Model weights are verified & cached locally in WebGPU engine.' : 'Download & compile models on demand before saving.' }}
+                    {{ (screenWatchingVlmTier === 'moondream' ? isVlmReady : isLightweightReady) ? 'Model weights are verified & cached locally in WebGPU engine.' : 'Download & compile models on demand before saving.' }}
                   </span>
 
                   <button
@@ -955,12 +1120,19 @@ const intervalPresets = [2, 5, 10, 20]
                     class="flex items-center gap-1.5 rounded-lg bg-neutral-200/80 px-3 py-1.5 text-xs text-neutral-700 font-semibold transition-colors dark:bg-neutral-800 hover:bg-neutral-300 dark:text-neutral-200 dark:hover:bg-neutral-700"
                     @click="handleProvision"
                   >
-                    <div :class="(screenWatchingEnableVlm ? isVlmReady : isLightweightReady) ? 'i-solar:refresh-linear' : 'i-solar:download-minimalistic-bold'" />
-                    <span>{{ (screenWatchingEnableVlm ? isVlmReady : isLightweightReady) ? 'Re-verify Engine' : 'Provision Models' }}</span>
+                    <div :class="(screenWatchingVlmTier === 'moondream' ? isVlmReady : isLightweightReady) ? 'i-solar:refresh-linear' : 'i-solar:download-minimalistic-bold'" />
+                    <span>{{ (screenWatchingVlmTier === 'moondream' ? isVlmReady : isLightweightReady) ? 'Re-verify Engine' : 'Provision Models' }}</span>
                   </button>
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- 3. Salience Gating & Interest Keywords -->
+          <div class="flex flex-col gap-3 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+            <span class="text-xs text-neutral-700 font-semibold tracking-wider uppercase dark:text-neutral-300">
+              3. Salience Gating & Interest Keywords
+            </span>
 
             <!-- Interest Tags -->
             <div class="flex flex-col gap-2.5">
@@ -1007,24 +1179,20 @@ const intervalPresets = [2, 5, 10, 20]
 
               <!-- Categorized Suggested Tags -->
               <div class="mt-1 flex flex-col gap-2.5 border-t border-neutral-100 pt-2.5 dark:border-neutral-800">
-                <div class="flex items-center gap-1.5 text-[11px] text-neutral-500 font-semibold tracking-wider uppercase dark:text-neutral-400">
-                  <div class="i-solar:lightbulb-bolt-bold-duotone text-sm text-amber-500" />
-                  <span>Suggested keywords (click to add):</span>
-                </div>
-
-                <div class="flex flex-col gap-2 pl-0.5">
+                <span class="text-[11px] text-neutral-500 font-medium dark:text-neutral-400">Quick-Add Presets</span>
+                <div class="flex flex-col gap-2">
                   <div
                     v-for="group in SUGGESTED_TAG_GROUPS"
                     :key="group.label"
-                    class="flex flex-wrap items-center gap-2"
+                    class="flex flex-col gap-1 rounded-lg bg-white/60 p-2 text-xs dark:bg-neutral-900/40"
                   >
-                    <div class="min-w-[95px] flex shrink-0 items-center gap-1.5 text-[11px] text-neutral-400 font-medium">
-                      <div :class="[group.icon, 'text-xs text-neutral-400']" />
-                      <span>{{ group.label }}:</span>
+                    <div class="flex items-center gap-1.5 text-[11px] text-neutral-600 font-medium dark:text-neutral-400">
+                      <div :class="[group.icon, 'text-sm']" />
+                      <span>{{ group.label }}</span>
                     </div>
-                    <div class="flex flex-wrap items-center gap-1.5">
+                    <div class="flex flex-wrap gap-1.5">
                       <button
-                        v-for="tag in group.tags.filter(t => !screenWatchingInterestTags?.includes(t))"
+                        v-for="tag in group.tags"
                         :key="tag"
                         type="button"
                         class="flex cursor-pointer items-center gap-1 border border-neutral-300 rounded-md border-dashed bg-white px-2 py-0.5 text-[11px] text-neutral-600 font-medium transition-all dark:border-neutral-700 hover:border-primary-400 dark:bg-neutral-800/80 hover:bg-primary-50 dark:text-neutral-300 hover:text-primary-600 dark:hover:border-primary-600 dark:hover:bg-primary-950/50 dark:hover:text-primary-300"
@@ -1033,12 +1201,6 @@ const intervalPresets = [2, 5, 10, 20]
                         <span class="text-neutral-400">+</span>
                         <span>#{{ tag }}</span>
                       </button>
-                      <span
-                        v-if="group.tags.every(t => screenWatchingInterestTags?.includes(t))"
-                        class="text-[10px] text-neutral-400 italic"
-                      >
-                        (All added)
-                      </span>
                     </div>
                   </div>
                 </div>
@@ -1048,10 +1210,10 @@ const intervalPresets = [2, 5, 10, 20]
             </div>
           </div>
 
-          <!-- 3. Real-Time Reactions & Delivery -->
+          <!-- 4. Real-Time Reactions & Delivery -->
           <div class="flex flex-col gap-3.5 border-t border-neutral-100 pt-4 dark:border-neutral-800">
             <span class="text-xs text-neutral-700 font-semibold tracking-wider uppercase dark:text-neutral-300">
-              3. Real-Time Reactions & Delivery
+              4. Real-Time Reactions & Delivery
             </span>
 
             <!-- React Immediately (Real-Time Push) Toggle -->
@@ -1074,32 +1236,60 @@ const intervalPresets = [2, 5, 10, 20]
             </div>
 
             <!-- Rate Limits & Cooldown -->
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div class="flex flex-col gap-1.5">
-                <label class="text-xs text-neutral-700 font-medium dark:text-neutral-300">
-                  Max Interventions per Hour
-                </label>
-                <input
-                  v-model.number="screenWatchingMaxPerHour"
-                  type="number"
-                  min="1"
-                  max="30"
-                  class="w-full border border-neutral-200 rounded-lg bg-neutral-50 px-3 py-1.5 text-xs dark:border-neutral-700 dark:bg-neutral-800"
-                >
-                <span class="text-[11px] text-neutral-400">Prevents repetitive chat triggers during intense work sessions.</span>
+            <div class="flex flex-col gap-3">
+              <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div class="flex flex-col gap-1.5">
+                  <div class="flex items-center justify-between">
+                    <label class="text-xs text-neutral-700 font-medium dark:text-neutral-300">
+                      Max Interventions per Hour
+                    </label>
+                    <span
+                      :class="[
+                        'rounded-full px-2 py-0.5 text-[10px] font-semibold font-mono',
+                        isHourlyBudgetExhausted
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          : 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400',
+                      ]"
+                    >
+                      Used: {{ hourlyPromotionsCount || 0 }} / {{ screenWatchingMaxPerHour || 4 }}
+                    </span>
+                  </div>
+                  <input
+                    v-model.number="screenWatchingMaxPerHour"
+                    type="number"
+                    min="1"
+                    max="30"
+                    class="w-full border border-neutral-200 rounded-lg bg-neutral-50 px-3 py-1.5 text-xs dark:border-neutral-700 dark:bg-neutral-800"
+                  >
+                  <span class="text-[11px] text-neutral-400">Prevents repetitive chat triggers during intense work sessions.</span>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label class="text-xs text-neutral-700 font-medium dark:text-neutral-300">
+                    Hysteresis Cooldown (Minutes)
+                  </label>
+                  <input
+                    v-model.number="screenWatchingHysteresisMinutes"
+                    type="number"
+                    min="1"
+                    max="60"
+                    class="w-full border border-neutral-200 rounded-lg bg-neutral-50 px-3 py-1.5 text-xs dark:border-neutral-700 dark:bg-neutral-800"
+                  >
+                  <span class="text-[11px] text-neutral-400">Minimum quiet duration enforced after any promoted speech turn.</span>
+                </div>
               </div>
-              <div class="flex flex-col gap-1.5">
-                <label class="text-xs text-neutral-700 font-medium dark:text-neutral-300">
-                  Hysteresis Cooldown (Minutes)
-                </label>
-                <input
-                  v-model.number="screenWatchingHysteresisMinutes"
-                  type="number"
-                  min="1"
-                  max="60"
-                  class="w-full border border-neutral-200 rounded-lg bg-neutral-50 px-3 py-1.5 text-xs dark:border-neutral-700 dark:bg-neutral-800"
-                >
-                <span class="text-[11px] text-neutral-400">Minimum quiet duration enforced after any promoted speech turn.</span>
+
+              <!-- Hourly Budget Exhaustion Warning Banner -->
+              <div
+                v-if="isHourlyBudgetExhausted"
+                class="flex items-start gap-2.5 border border-amber-300/80 rounded-xl bg-amber-50/80 p-3 text-xs text-amber-900 dark:border-amber-800/70 dark:bg-amber-950/40 dark:text-amber-200"
+              >
+                <div class="i-solar:danger-triangle-bold-duotone mt-0.5 shrink-0 text-base text-amber-600 dark:text-amber-400" />
+                <div class="flex flex-col gap-0.5">
+                  <span class="text-[11px] font-semibold tracking-wide uppercase">Hourly Rate Limit Reached</span>
+                  <span class="text-[11px] leading-relaxed">
+                    The system has already invoked the maximum number of events ({{ hourlyPromotionsCount }}/{{ screenWatchingMaxPerHour || 4 }}) for this hour. Increase the limit above or wait until <strong class="font-semibold font-mono">{{ nextHourlyResetLabel }}</strong> to continue triggering visual reactions.
+                  </span>
+                </div>
               </div>
             </div>
           </div>
