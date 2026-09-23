@@ -71,6 +71,22 @@ export const JEV_AFFECT_SCHEMA = {
   },
 }
 
+export const JEV_ENTITY_CLASSIFIER_SCHEMA = {
+  entity_type: {
+    type: 'choice',
+    instructions: 'Classify the referent of the target mention in this dialogue context. If it is conversational syntax, a reaction, filler, or not a genuine entity/concept, select conversational_artifact.',
+    criteria: {
+      person: 'A named human being, friend, family member, or character (e.g. Asuka, Shinji, John, User).',
+      animal: 'A pet, animal species, or pet name (e.g. penguin, Pen-Pen, dog, cat, Max, rabbit).',
+      place: 'A city, country, venue, or geographic location (e.g. Tokyo-3, Germany, Stamford).',
+      organization: 'An organization, agency, rescue, military branch, or company (e.g. NERV, WILLE, NASA).',
+      activity: 'A game, sport, hobby, academic subject, or project (e.g. CS:GO, Apex Legends, Trigonometry).',
+      concept: 'An abstract idea, philosophical concept, key lore element, or topic (e.g. Human Instrumentality, AT Field).',
+      conversational_artifact: 'Grammar words, sentence starters, conversational reactions, adverbs, or non-entity phrases (e.g. Obviously, Which, Deal, Goodnight, Disappear).',
+    },
+  },
+}
+
 export interface CandidateItem {
   id: string
   text: string
@@ -293,6 +309,56 @@ export const useSystemOneStore = defineStore('system-one', () => {
     }
   }
 
+  async function classifyEntities(
+    candidates: Array<{ mention: string, context?: string }>,
+  ): Promise<Map<string, 'person' | 'animal' | 'place' | 'organization' | 'activity' | 'concept' | 'conversational_artifact' | 'unknown'>> {
+    const results = new Map<string, any>()
+    if (candidates.length === 0)
+      return results
+
+    if (!configured.value) {
+      candidates.forEach((c) => {
+        results.set(c.mention, 'unknown')
+      })
+      return results
+    }
+
+    // Chunk into batches of up to 10 candidates per Jev forward pass
+    const BATCH_SIZE = 10
+    for (let i = 0; i < candidates.length; i += BATCH_SIZE) {
+      const batch = candidates.slice(i, i + BATCH_SIZE)
+      const questions: Record<string, any> = {}
+      const stateLines: string[] = ['Dialogue Context & Target Mentions to Classify:']
+
+      batch.forEach((c, idx) => {
+        stateLines.push(`[Mention #${idx + 1}]: "${c.mention}"${c.context ? ` (Context: "${c.context}")` : ''}`)
+        questions[`mention_${idx}`] = {
+          type: 'choice',
+          instructions: `Classify the candidate mention "${c.mention}". If it is an ordinary conversational word, sentence starter, adverb, reaction, or not a genuine entity/concept, choose conversational_artifact.`,
+          criteria: JEV_ENTITY_CLASSIFIER_SCHEMA.entity_type.criteria,
+        }
+      })
+
+      try {
+        const res = await execute(stateLines.join('\n'), questions)
+        const answers = res.answers || {}
+        batch.forEach((c, idx) => {
+          const ans = answers[`mention_${idx}`] || {}
+          const choice = ans.choice || 'conversational_artifact'
+          results.set(c.mention, choice)
+        })
+      }
+      catch (err) {
+        console.warn('[SystemOne] Failed to classify candidate batch via Jev:', err)
+        batch.forEach((c) => {
+          results.set(c.mention, 'unknown')
+        })
+      }
+    }
+
+    return results
+  }
+
   function resetState() {
     activeProvider.reset()
     activeModel.reset()
@@ -312,6 +378,7 @@ export const useSystemOneStore = defineStore('system-one', () => {
     runTriage,
     runRerank,
     runAffect,
+    classifyEntities,
     resetState,
   }
 })
