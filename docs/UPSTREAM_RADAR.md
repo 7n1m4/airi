@@ -11,13 +11,71 @@
 | PR | Title | Author | State | Priority / Rationale | Tracking Directives & Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | [#2634](https://github.com/moeru-ai/airi/pull/2634) | `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain` | `@peachoolong-uwu` | `Draft` (0 comments) | 🔴 **High Alert** (Radical divergence) | Proposes external Cortico daemon (`ws://localhost:6122`) replacing native memory. **Directive**: Monitor maintainer reaction to 2-process requirement & Web/Mobile breakage. Hold off on comments until maintainers triage. |
-| [#2550](https://github.com/moeru-ai/airi/pull/2550) | `feat(hearing): add bundled Sherpaw speech recognition` | `@luoling8192` | `Open` (15 comments) | 🟡 **Evaluation** (Offline STT) | Offline Sherpaw STT model packaging (Paraformer/Zipformer) via tsdown and Vite plugin. **Directive**: Monitor packaging structure for local speech pipeline. |
+| [#2550](https://github.com/moeru-ai/airi/pull/2550) | `feat(hearing): add bundled Sherpaw speech recognition` | `@luoling8192` | `Open` (17 comments) | 🟡 **Evaluation** (Offline STT) | Offline Sherpaw STT model packaging (Paraformer/Zipformer) via tsdown and Vite plugin. **Directive**: Monitor packaging structure for local speech pipeline. |
 | [#2641](https://github.com/moeru-ai/airi/pull/2641) | `feat(stage-ui): show chat image analysis status` | `@luoling8192` | `Open` (1 comments) | 🟢 **Cherry-Pick Watch** (UI Polish) | Accessible live status indicator for text-only models undergoing vision analysis. **Directive**: Cherry-pick once merged upstream. |
 
 ---
 
 <!-- RADAR_ENTRIES -->
 
+## [2026-09-23] Upstream Delta: `308ee2b3..595ea726` (1 commits, 6 files, 7 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 1 commit (`595ea7260d`) across 6 files and recorded 7 PR updates (4 new PRs, 0 status changes, 3 discussion changes). Core focus centered on: (1) Stage Tamagotchi controls-island audio UX (#2643 / `595ea7260d`), replacing the stop-speaking control with an explicit speech mute toggle (`controls-island-speech-mute.vue`); (2) Speech input & VAD resilience (#2645 by @luoling8192), binding voice input only when the microphone stream is ready, serializing start/stop across toggles and device switches, enforcing single VAD ownership, and cleanly tearing down cancelled transcription sessions; (3) Hosted API cost billing & usage ledgering (#2644 by @luoling8192), adding Drizzle schema migrations (`llm_cost_receipts`) and OpenRouter adapters to compute and store token usage costs; (4) Electron desktop authentication stability (#2190 by @Gujiassh), isolating loopback OIDC login attempt identities to prevent stale cancellations; and (5) Ongoing community discussions on offline Sherpaw speech recognition (#2550), packaging-only dependency removal (#2613), and translations (#2121).
+* **Discussion & Community Buzz**:
+  - 💬 **#2644: `feat(api): add provider cost billing with OpenRouter adapter` (11 comments)**: Immediate high discussion velocity regarding server-side token pricing calculation, receipt schemas, and billing middleware.
+  - 💬 **#2550: `feat(hearing): add bundled Sherpaw speech recognition` (+2 new comments, total 17)**: Watched PR continues steady discussion velocity on packaging offline Zipformer/Paraformer models for streaming on-device STT.
+  - 💬 **#2190: `fix(stage-tamagotchi): prevent duplicate OIDC login cancellation` (6 comments)**: Discussion resolving desktop race conditions where superseded browser login attempts abort newly initiated sign-in flows.
+  - 💬 **#2121: `chore(i18n): update translations` (+4 new comments, total 118)**: High-volume rolling localization maintenance.
+  - 💬 **#2613: `perf(stage-tamagotchi): remove packaging-only dependencies` (+2 new comments, total 3)**: Pruning dev-only packaging tools from the Electron production bundle footprint.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2645 [Open PR]: `fix(stage-ui): restore voice input after microphone changes`**: High value for audio/speech input stability. Fixes an issue where switching microphone devices or hot-plugging caused input streaming to hang without reconnecting. It serializes audio state transitions, binds speech listeners only after stream acquisition, ensures single-owner VAD per mode, and implements clean teardown of upstream audio streams upon cancellation. Relevant to `packages/stage-ui/src/stores/modules/hearing.ts`, `vad.ts`, and audio device management.
+  - 🔍 **PR #2641 [Open PR - Watched]: `feat(stage-ui): show chat image analysis status`**: Continues on watchlist. Adds accessible status indication during vision pre-processing for text-only LLMs.
+  - 🔍 **PR #2550 [Open PR - Watched]: `feat(hearing): add bundled Sherpaw speech recognition`**: Offline STT packaging via Vite/tsdown. Keep tracking for local speech pipeline alternatives.
+  - ⚪ **Auto-Reject / Do Not Port**:
+    - **Commit `595ea7260d` / PR #2643 (`controls-island-speech-mute.vue`)**: Upstream continues modifying `controls-island`. This fork permanently deleted `controls-island` in favor of the decoupled Control Strip (`windows/main`, `ControlStrip.vue`).
+    - **PR #2644 (Provider cost billing & OpenRouter adapter)**: Hosted server-side API billing, Drizzle DB migrations, and PostgreSQL tables for hosted AIRI services. Incompatible with this fork's strictly local-first, zero-account, client-only architecture.
+    - **PR #2190 (OIDC login cancellation fix)**: Desktop OIDC authentication services (`auth.ts`). This fork does not use hosted cloud accounts or OIDC authentication.
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/stage-ui/src/stores/modules/hearing.ts` & `vad.ts` (PR #2645)**: If porting PR #2645's microphone recovery improvements, review our fork's speech runtime / audio input pipeline to ensure custom VAD configurations, live session integrations, and actor speech routing remain intact.
+  - ⚠️ **`apps/stage-tamagotchi/src/main/services/airi/auth.ts` (PR #2190)**: Upstream continues expanding Electron main process OIDC authentication state machines. Our fork does not maintain or run this remote service.
+  - ⚠️ **`apps/stage-tamagotchi/.../controls-island/` (Commit `595ea7260d`)**: Upstream still relies on the monolith stage island. Any speech mute features in our fork should be wired into the Control Strip actions, not `controls-island`.
+
+### 📋 Upstream Commits
+- `595ea7260d` fix(stage-tamagotchi): mute speech output from the controls island (#2643) [#2643](https://github.com/moeru-ai/airi/pull/2643) _(蓝莓🫐, 2026-09-23)_
+
+### 🔬 Subsystem Breakdown
+#### Deprecated Surfaces (Control Island) (`⚪ ignore / rejected in fork (decoupled into Control Strip)`) — 4 file(s) (+87/-70)
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/{controls-island-stop-speaking.test.ts => controls-island-speech-mute.test.ts}` *(+28/-24)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/controls-island-speech-mute.vue` *(+57/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/controls-island-stop-speaking.vue` *(+0/-44)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/index.vue` *(+2/-2)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 2 file(s) (+4/-4)
+- `packages/i18n/src/locales/en/tamagotchi/stage.yaml` *(+2/-2)*
+- `packages/i18n/src/locales/zh-Hans/tamagotchi/stage.yaml` *(+2/-2)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (4)
+- [#2645](https://github.com/moeru-ai/airi/pull/2645) `fix(stage-ui): restore voice input after microphone changes` by **@luoling8192** *(1 comments)*
+- [#2644](https://github.com/moeru-ai/airi/pull/2644) `feat(api): add provider cost billing with OpenRouter adapter` by **@luoling8192** *(11 comments)*
+- [#2643](https://github.com/moeru-ai/airi/pull/2643) `fix(stage-tamagotchi): mute speech output from the controls island` by **@chiba233** *(1 comments)*
+- [#2190](https://github.com/moeru-ai/airi/pull/2190) `fix(stage-tamagotchi): prevent duplicate OIDC login cancellation` by **@Gujiassh** *(6 comments)*
+
+#### 💬 Discussion Activity (3)
+- [#2613](https://github.com/moeru-ai/airi/pull/2613) `perf(stage-tamagotchi): remove packaging-only dependencies` — *+2 comments (1 ➔ 3 total)*
+- [#2550](https://github.com/moeru-ai/airi/pull/2550) `feat(hearing): add bundled Sherpaw speech recognition` — *+2 comments (15 ➔ 17 total)*
+- [#2121](https://github.com/moeru-ai/airi/pull/2121) `chore(i18n): update translations` — *+4 comments (114 ➔ 118 total)*
+
+### 👁️ Watched PRs Monitor
+- [#2634](https://github.com/moeru-ai/airi/pull/2634) `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain` [Draft] — *(0 comments)*
+  - *Focus*: External Cortico daemon vs in-process native memory; track maintainer reaction to 2-process / web breakage
+- [#2550](https://github.com/moeru-ai/airi/pull/2550) `feat(hearing): add bundled Sherpaw speech recognition` [OPEN] — 🚨 **+2 comments** (17 total)
+  - *Focus*: Offline Sherpaw STT model packaging (Paraformer/Zipformer) via tsdown and Vite plugin
+- [#2641](https://github.com/moeru-ai/airi/pull/2641) `feat(stage-ui): show chat image analysis status` [OPEN] — *(1 comments)*
+  - *Focus*: Accessible live status indicator for text-only models undergoing vision pre-processing
+
+---
 ## [2026-09-22] Upstream Delta: `8e2e5b01..308ee2b3` (10 commits, 47 files, 21 PR update(s))
 
 ### 🎯 Executive Highlights

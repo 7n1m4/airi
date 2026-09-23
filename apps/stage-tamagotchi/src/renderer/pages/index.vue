@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { VoiceInputBinding } from '@proj-airi/stage-ui/libs/audio'
 import type { ChatProvider } from '@xsai-ext/providers/utils'
 
 import workletUrl from '@proj-airi/stage-ui/workers/vad/process.worklet?worker&url'
@@ -15,6 +16,7 @@ import { useMmd } from '@proj-airi/stage-ui-mmd'
 import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
 import { WidgetStage } from '@proj-airi/stage-ui/components/scenes'
 import { useAudioRecorder } from '@proj-airi/stage-ui/composables/audio/audio-recorder'
+import { createVoiceInputBinding } from '@proj-airi/stage-ui/libs/audio'
 import { useVAD } from '@proj-airi/stage-ui/stores/ai/models/vad'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { useLive2d } from '@proj-airi/stage-ui/stores/live2d'
@@ -425,7 +427,6 @@ const { supportsStreamInput } = storeToRefs(hearingPipeline)
 const chatStore = useChatOrchestratorStore()
 const hearingStore = useHearingStore()
 const { hearingDetectionMode, vadThreshold } = storeToRefs(hearingStore)
-const isStartingAudio = ref(false)
 
 const shouldUseStreamInput = computed(() => supportsStreamInput.value && !!stream.value)
 
@@ -489,44 +490,23 @@ async function handleSpeechEnd() {
   stopRecord()
 }
 
-async function startAudioInteraction() {
-  if (isStartingAudio.value) {
-    console.warn('[Main Page] Audio interaction startup already in progress, skipping duplicate call')
-    return
-  }
+let currentBinding: VoiceInputBinding | undefined
 
-  isStartingAudio.value = true
+async function startAudioInteraction(binding: VoiceInputBinding) {
+  currentBinding = binding
+  console.info('[Main Page] Starting audio interaction with mode:', binding.mode)
+
   try {
-    console.info('[Main Page] Starting audio interaction')
-
-    if (stream.value) {
-      if (hearingDetectionMode.value === 'vad' && !shouldUseStreamInput.value) {
-        console.info('[Main Page] Initializing separate VAD for non-streaming mode')
-        await initVAD()
-        await startVAD(stream.value)
-      }
-      else if (hearingDetectionMode.value === 'vad') {
-        console.info('[Main Page] Skipping separate VAD in streaming mode (provider handles segmentation)')
-      }
-      else if (!shouldUseStreamInput.value) {
-        console.info('[Main Page] Manual mode enabled, starting recording immediately')
-        await startRecord()
-      }
-    }
-
-    if (shouldUseStreamInput.value) {
+    if (binding.mode === 'stream') {
       console.info('[Main Page] Starting streaming transcription...', {
         supportsStreamInput: supportsStreamInput.value,
-        hasStream: !!stream.value,
+        hasStream: !!binding.stream,
       })
 
-      if (!stream.value) {
-        console.warn('[Main Page] Stream not available despite shouldUseStreamInput being true')
-        return
-      }
-
-      await transcribeForMediaStream(stream.value, {
+      await transcribeForMediaStream(binding.stream, {
         onSentenceEnd: (delta) => {
+          if (currentBinding !== binding)
+            return
           console.info('[Main Page] Received transcription delta:', delta)
           if (!delta || !delta.trim()) {
             return
@@ -534,6 +514,8 @@ async function startAudioInteraction() {
           postCaption({ type: 'caption-speaker', text: delta })
         },
         onSpeechEnd: (text) => {
+          if (currentBinding !== binding)
+            return
           console.info('[Main Page] Speech ended, final text:', text)
           if (!text || !text.trim()) {
             return
@@ -568,13 +550,19 @@ async function startAudioInteraction() {
       })
 
       console.info('[Main Page] Streaming transcription started successfully')
+      return
+    }
+
+    if (hearingDetectionMode.value === 'vad') {
+      console.info('[Main Page] Initializing separate VAD for non-streaming mode')
+      await initVAD()
+      if (!vadLoaded.value || currentBinding !== binding)
+        return
+      await startVAD(binding.stream)
     }
     else {
-      console.warn('[Main Page] Not starting streaming transcription:', {
-        shouldUseStreamInput: shouldUseStreamInput.value,
-        hasStream: !!stream.value,
-        supportsStreamInput: supportsStreamInput.value,
-      })
+      console.info('[Main Page] Manual mode enabled, starting recording immediately')
+      await startRecord()
     }
 
     if (stopOnStopRecord)
@@ -587,7 +575,7 @@ async function startAudioInteraction() {
         return
       }
 
-      if (shouldUseStreamInput.value)
+      if (currentBinding !== binding)
         return
 
       const text = await transcribeForRecording(recording)
@@ -626,12 +614,10 @@ async function startAudioInteraction() {
   catch (e) {
     console.error('Audio interaction init failed:', e)
   }
-  finally {
-    isStartingAudio.value = false
-  }
 }
 
 async function stopAudioInteraction() {
+  currentBinding = undefined
   try {
     clearVadSafetyTimeout()
     await stopRecord()
@@ -639,30 +625,41 @@ async function stopAudioInteraction() {
     stopOnStopRecord = undefined
     await stopStreamingTranscription(false)
     stopVAD()
+    disposeVAD()
   }
   catch (e) {
     console.warn('[Main Page] Error during audio interaction stop:', e)
   }
 }
 
+const voiceInputBinding = createVoiceInputBinding({
+  start: startAudioInteraction,
+  stop: stopAudioInteraction,
+})
+
+watch([enabled, stream, supportsStreamInput], ([isEnabled, currentStream, supportsStream]) => {
+  const binding: VoiceInputBinding | undefined = isEnabled && currentStream
+    ? { stream: currentStream, mode: supportsStream ? 'stream' : 'recording' }
+    : undefined
+  void voiceInputBinding.update(binding).catch((error) => {
+    console.error('[Main Page] Audio interaction failed:', error)
+  })
+}, { immediate: true })
+
 watch(enabled, async (val) => {
-  console.info('[Main Page] Audio enabled changed:', val, 'stream available:', !!stream.value)
-  if (val) {
-    await askPermission()
-    await startStream()
-    await startAudioInteraction()
-  }
-  else {
-    await stopAudioInteraction()
+  if (val && !stream.value) {
+    try {
+      await askPermission()
+      await startStream()
+    }
+    catch (err) {
+      console.warn('[Main Page] Failed to initialize microphone stream:', err)
+    }
   }
 }, { immediate: true })
 
-watch(stream, async (newStream) => {
-  if (enabled.value && newStream) {
-    console.info('[Main Page] Stream changed while enabled, restarting audio interaction')
-    await stopAudioInteraction()
-    await startAudioInteraction()
-  }
+onUnmounted(() => {
+  void voiceInputBinding.update().catch(error => console.error('[Main Page] Failed to stop audio interaction:', error))
 })
 
 async function handleOpenCustomizer(e?: Event) {
@@ -911,9 +908,13 @@ onMounted(async () => {
 })
 
 watch(hearingDetectionMode, async () => {
-  if (enabled.value) {
-    await stopAudioInteraction()
-    await startAudioInteraction()
+  if (enabled.value && stream.value) {
+    const binding: VoiceInputBinding = {
+      stream: stream.value,
+      mode: supportsStreamInput.value ? 'stream' : 'recording',
+    }
+    await voiceInputBinding.update()
+    await voiceInputBinding.update(binding)
   }
 })
 

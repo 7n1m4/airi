@@ -238,7 +238,7 @@ export function collectUniqueCandidateMentions(
  * - Unknown tokens never pollute 'concept'.
  */
 export function extractTurnKnowledge(
-  passage: string,
+  _passage: string,
   turn: DialogueTurn,
   ledger: EntityLedger,
   classificationMap?: Map<string, any>,

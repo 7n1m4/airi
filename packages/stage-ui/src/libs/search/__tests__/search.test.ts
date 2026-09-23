@@ -182,7 +182,7 @@ describe('semantic Search & Memory Refinements', () => {
   describe('layeredMemory.search with DualSearcherPass3 & Knowledge Graph', () => {
     it('executes baseline search with heuristic triage and in-memory entity graph traversal', async () => {
       const ledger = new EntityLedger()
-      const ent = ledger.getOrCreateEntity('Paris', 'place')
+      ledger.getOrCreateEntity('Paris', 'place')
       ledger.addClaim({
         subject: 'Paris',
         predicate: 'has attraction',

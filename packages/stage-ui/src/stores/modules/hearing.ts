@@ -734,6 +734,8 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
           maxAlternatives: (options?.providerOptions?.maxAlternatives as number) ?? (providerConfig.maxAlternatives as number) ?? 1,
           abortSignal: abortController.signal,
           onSentenceEnd: (delta) => {
+            if (abortController.signal.aborted)
+              return
             bumpIdle() // Bump idle timer on activity (only if enabled)
             // Call the options callback
             options?.onSentenceEnd?.(delta)
@@ -746,6 +748,8 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
             })
           },
           onSpeechEnd: (text) => {
+            if (abortController.signal.aborted)
+              return
             hearingStore.isTranscribing = false
             // Call the options callback
             options?.onSpeechEnd?.(text)
@@ -763,6 +767,7 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
           audioContext: {} as AudioContext, // Not used for Web Speech API
           workletNode: {} as AudioWorkletNode, // Not used for Web Speech API
           mediaStreamSource: {} as MediaStreamAudioSourceNode, // Not used for Web Speech API
+          mediaStream: stream,
           audioStreamController: undefined,
           abortController,
           result: { ...result, mode: 'stream' as const, recognition: recognitionInstance },
@@ -906,6 +911,8 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
               const { done, value } = await reader.read()
               if (done)
                 break
+              if (abortController.signal.aborted)
+                break
               if (value) {
                 fullText += value
                 // Use captured callbacks to avoid cross-session leakage
@@ -927,8 +934,10 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
             console.error('Error reading text stream:', err)
           }
           finally {
-            // Use captured callbacks to avoid cross-session leakage
-            sessionCallbacks.onSpeechEnd?.(fullText)
+            if (!abortController.signal.aborted) {
+              // Use captured callbacks to avoid cross-session leakage
+              sessionCallbacks.onSpeechEnd?.(fullText)
+            }
             hearingStore.isTranscribing = false
           }
         })()

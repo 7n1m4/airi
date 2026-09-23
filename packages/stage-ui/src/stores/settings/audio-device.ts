@@ -26,16 +26,31 @@ export const useSettingsAudioDevice = defineStore('settings-audio-devices', () =
 
   const selectedAudioOutputPersist = useLocalStorageManualReset<string>('settings/audio/output', selectedAudioOutputNonPersist.value)
 
+  let stopPendingAudioInput = false
+
+  async function handleStartStream() {
+    stopPendingAudioInput = false
+    await startStream()
+    if (stopPendingAudioInput) {
+      stopStream()
+    }
+  }
+
+  function handleStopStream() {
+    stopPendingAudioInput = true
+    stopStream()
+  }
+
   watch(selectedAudioInputPersist, (newValue) => {
     selectedAudioInputNonPersist.value = newValue
   })
 
   watch(selectedAudioInputEnabledPersist, (val) => {
     if (val) {
-      startStream()
+      void handleStartStream()
     }
     else {
-      stopStream()
+      handleStopStream()
     }
   })
 
@@ -56,8 +71,12 @@ export const useSettingsAudioDevice = defineStore('settings-audio-devices', () =
     const hasSelectedInput = selectedAudioInputPersist.value
       && audioInputs.value.some(device => device.deviceId === selectedAudioInputPersist.value)
 
-    if (selectedAudioInputEnabledPersist.value && hasSelectedInput) {
-      startStream()
+    if (hasSelectedInput) {
+      selectedAudioInputNonPersist.value = selectedAudioInputPersist.value
+    }
+
+    if (selectedAudioInputEnabledPersist.value) {
+      void handleStartStream()
     }
     if (selectedAudioInputNonPersist.value && !selectedAudioInputEnabledPersist.value) {
       selectedAudioInputPersist.value = selectedAudioInputNonPersist.value
@@ -73,7 +92,7 @@ export const useSettingsAudioDevice = defineStore('settings-audio-devices', () =
     selectedAudioInputPersist.value = ''
     selectedAudioInputNonPersist.value = ''
     selectedAudioInputEnabledPersist.value = false
-    stopStream()
+    handleStopStream()
 
     selectedAudioOutputPersist.value = ''
     selectedAudioOutputNonPersist.value = ''
@@ -93,8 +112,8 @@ export const useSettingsAudioDevice = defineStore('settings-audio-devices', () =
     stream,
 
     askPermission,
-    startStream,
-    stopStream,
+    startStream: handleStartStream,
+    stopStream: handleStopStream,
     applyOutputSink,
     resetState,
   }

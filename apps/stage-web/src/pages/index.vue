@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { VoiceInputBinding } from '@proj-airi/stage-ui/libs/audio'
 import type { ChatProvider } from '@xsai-ext/providers/utils'
 
 import InteractiveArea from '@proj-airi/stage-layouts/components/Layouts/InteractiveArea.vue'
@@ -12,6 +13,7 @@ import { useBackgroundStore } from '@proj-airi/stage-layouts/stores/background'
 import { ControlStrip } from '@proj-airi/stage-ui/components'
 import { WidgetStage } from '@proj-airi/stage-ui/components/scenes'
 import { useAudioRecorder } from '@proj-airi/stage-ui/composables/audio/audio-recorder'
+import { createVoiceInputBinding } from '@proj-airi/stage-ui/libs/audio'
 import { useVAD } from '@proj-airi/stage-ui/stores/ai/models/vad'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { useLLM } from '@proj-airi/stage-ui/stores/llm'
@@ -118,17 +120,26 @@ const {
 })
 
 let stopOnStopRecord: (() => void) | undefined
+let currentBinding: VoiceInputBinding | undefined
 
-async function startAudioInteraction() {
+async function startAudioInteraction(binding: VoiceInputBinding) {
+  currentBinding = binding
   try {
     await initVAD()
-    if (stream.value)
-      await startVAD(stream.value)
+    if (!vadLoaded.value)
+      return
+    if (currentBinding !== binding)
+      return
+
+    await startVAD(binding.stream)
 
     // Hook once
     stopOnStopRecord = onStopRecord(async (recording) => {
       const text = await transcribeForRecording(recording)
       if (!text || !text.trim())
+        return
+
+      if (currentBinding !== binding)
         return
 
       try {
@@ -184,7 +195,8 @@ async function handleSpeechEnd() {
   stopRecord()
 }
 
-function stopAudioInteraction() {
+async function stopAudioInteraction() {
+  currentBinding = undefined
   try {
     clearVadSafetyTimeout()
     stopOnStopRecord?.()
@@ -194,28 +206,22 @@ function stopAudioInteraction() {
   catch {}
 }
 
-watch(enabled, async (val) => {
-  if (val) {
-    await startAudioInteraction()
-  }
-  else {
-    stopAudioInteraction()
-  }
+const voiceInputBinding = createVoiceInputBinding({
+  start: startAudioInteraction,
+  stop: stopAudioInteraction,
+})
+
+watch([enabled, stream, supportsStreamInput], ([isEnabled, currentStream, supportsStream]) => {
+  const binding: VoiceInputBinding | undefined = isEnabled && currentStream
+    ? { stream: currentStream, mode: supportsStream ? 'stream' : 'recording' }
+    : undefined
+  void voiceInputBinding.update(binding).catch((error) => {
+    console.error('Audio interaction failed:', error)
+  })
 }, { immediate: true })
 
 onUnmounted(() => {
-  stopAudioInteraction()
-})
-
-watch([stream, () => vadLoaded.value], async ([s, loaded]) => {
-  if (enabled.value && loaded && s) {
-    try {
-      await startVAD(s)
-    }
-    catch (e) {
-      console.error('Failed to start VAD with stream:', e)
-    }
-  }
+  void voiceInputBinding.update().catch(error => console.error('Failed to stop audio interaction:', error))
 })
 </script>
 

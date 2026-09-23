@@ -30,36 +30,44 @@ export function useVAD(workerUrl: string, options?: UseVADOptions) {
 
   const loaded = ref(false)
   const loading = ref(false)
+  let initialization: Promise<void> | undefined
+  let generation = 0
 
   const threshold = toRef(options.threshold)
 
   async function init() {
-    if (loaded.value || loading.value || manager.value)
+    if (loaded.value)
       return
 
+    if (initialization)
+      return await initialization
+
+    const currentGeneration = ++generation
     loading.value = true
     inferenceError.value = ''
 
-    try {
-      vad.value = await createVAD({
+    const currentInitialization = (async () => {
+      const createdVad = await createVAD({
         sampleRate: 16000,
         speechThreshold: threshold.value,
         exitThreshold: (threshold.value ?? 0.6) * 0.3,
         minSilenceDurationMs: 400,
       })
+      if (generation !== currentGeneration)
+        return
 
       // Set up event handlers
-      vad.value.on('speech-start', () => {
+      createdVad.on('speech-start', () => {
         isSpeech.value = true
         options?.onSpeechStart?.()
       })
 
-      vad.value.on('speech-end', () => {
+      createdVad.on('speech-end', () => {
         isSpeech.value = false
         options?.onSpeechEnd?.()
       })
 
-      vad.value.on('debug', ({ data }) => {
+      createdVad.on('debug', ({ data }) => {
         if (data?.probability !== undefined) {
           isSpeechProb.value = data.probability
 
@@ -71,14 +79,14 @@ export function useVAD(workerUrl: string, options?: UseVADOptions) {
         }
       })
 
-      vad.value.on('status', ({ type, message }) => {
+      createdVad.on('status', ({ type, message }) => {
         if (type === 'error') {
           inferenceError.value = message
         }
       })
 
       // Create and initialize audio manager
-      const m = createVADStates(vad.value, workerUrl, {
+      const m = createVADStates(createdVad, workerUrl, {
         minChunkSize: 512,
         // NOTICE: VAD will have it's own audio context since
         // it needs special sample rate and latency settings
@@ -88,21 +96,48 @@ export function useVAD(workerUrl: string, options?: UseVADOptions) {
         },
       })
 
-      await m.initialize()
-      manager.value = m
-      loaded.value = true
-    }
-    catch (error) {
-      inferenceError.value = error instanceof Error ? error.message : String(error)
-    }
-    finally {
-      loading.value = false
-    }
+      try {
+        await m.initialize()
+        if (generation !== currentGeneration) {
+          m.dispose()
+          return
+        }
+
+        vad.value = createdVad
+        manager.value = m
+        loaded.value = true
+      }
+      catch (error) {
+        m.dispose()
+        throw error
+      }
+    })()
+
+    const settledInitialization = currentInitialization
+      .catch((error) => {
+        if (generation === currentGeneration)
+          inferenceError.value = error instanceof Error ? error.message : String(error)
+      })
+      .finally(() => {
+        if (initialization === settledInitialization)
+          initialization = undefined
+        if (generation === currentGeneration)
+          loading.value = false
+      })
+
+    initialization = settledInitialization
+    await settledInitialization
   }
 
   async function start(stream: MediaStream) {
-    if (manager.value)
-      await manager.value.start(stream)
+    const currentManager = manager.value
+    const currentGeneration = generation
+    if (!currentManager)
+      return
+
+    await currentManager.start(stream)
+    if (generation !== currentGeneration || manager.value !== currentManager)
+      currentManager.dispose()
   }
 
   function stop() {
@@ -110,9 +145,12 @@ export function useVAD(workerUrl: string, options?: UseVADOptions) {
   }
 
   function dispose() {
+    generation += 1
+    initialization = undefined
     manager.value?.stop()
     manager.value?.dispose()
     manager.value = undefined
+    vad.value = undefined
 
     isSpeech.value = false
     isSpeechProb.value = 0
