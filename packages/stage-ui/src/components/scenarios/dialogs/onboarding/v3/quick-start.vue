@@ -198,6 +198,16 @@ function getInitialProvider(): string {
   if (hasWebLlm)
     return 'web-llm'
 
+  // Prefer LanLan Free (zero-setup, no API key required)
+  const hasLanlanFree = allChatProviders.value.some((p: any) => p.id === 'lanlan-free')
+  if (hasLanlanFree)
+    return 'lanlan-free'
+
+  // Prefer Kilo (coding-optimized free gateway, no API key required)
+  const hasKilo = allChatProviders.value.some((p: any) => p.id === 'kilo')
+  if (hasKilo)
+    return 'kilo'
+
   return allChatProviders.value[0]?.id || 'openai'
 }
 
@@ -236,14 +246,13 @@ const llmModel = computed({
       return 'gpt-4o'
     if (llmProvider.value === 'gemini')
       return 'gemini-2.5-flash'
+    if (llmProvider.value === 'lanlan-free')
+      return 'free-model'
+    if (llmProvider.value === 'kilo')
+      return 'kilo-auto'
     return 'default'
   },
   set: val => draftStore.setConsciousness({ model: val }),
-})
-
-const apiKey = computed({
-  get: () => draftStore.state.llmApiKey || '',
-  set: val => draftStore.state.llmApiKey = val,
 })
 
 const showApiKey = ref(false)
