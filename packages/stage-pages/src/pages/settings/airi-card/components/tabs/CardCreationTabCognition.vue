@@ -1,7 +1,8 @@
 <script setup lang="ts">
+import type { RerankerProviderId } from './cognition/CognitionSubTabMemory.vue'
 import type { TriggerGroup } from './cognition/CognitionSubTabTriggers.vue'
 
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 import CognitionSubTabAffect from './cognition/CognitionSubTabAffect.vue'
 import CognitionSubTabMemory from './cognition/CognitionSubTabMemory.vue'
@@ -40,22 +41,23 @@ const subTabs = [
 
 // --- Affect State ---
 type MoodPresetId = 'gremlin' | 'companion' | 'analyst' | 'sentry'
-const selectedMoodPreset = ref<MoodPresetId>('gremlin')
-const baselineSuspicion = ref(0.20)
-const baselineAttachment = ref(0.60)
-const baselinePride = ref(0.85)
-const suspicionSensitivity = ref(0.65)
-const irritationHalfLifeMinutes = ref(45)
-const metabolicRestEnabled = ref(true)
-const companionAnchorOverride = ref('')
-const grievanceTrackingEnabled = ref(true)
-const grievanceThreshold = ref(0.6)
-const dailyForgivenessRate = ref(0.01)
-const silenceThreshold = ref(0.75)
+const selectedMoodPreset = defineModel<MoodPresetId>('selectedMoodPreset', { default: 'gremlin' })
+const baselineSuspicion = defineModel<number>('baselineSuspicion', { default: 0.20 })
+const baselineAttachment = defineModel<number>('baselineAttachment', { default: 0.60 })
+const baselinePride = defineModel<number>('baselinePride', { default: 0.85 })
+const suspicionSensitivity = defineModel<number>('suspicionSensitivity', { default: 0.65 })
+const irritationHalfLifeMinutes = defineModel<number>('irritationHalfLifeMinutes', { default: 45 })
+const metabolicRestEnabled = defineModel<boolean>('metabolicRestEnabled', { default: true })
+const companionAnchorOverride = defineModel<string>('companionAnchorOverride', { default: '' })
+const grievanceTrackingEnabled = defineModel<boolean>('grievanceTrackingEnabled', { default: true })
+const grievanceThreshold = defineModel<number>('grievanceThreshold', { default: 0.6 })
+const dailyForgivenessRate = defineModel<number>('dailyForgivenessRate', { default: 0.01 })
+const silenceThreshold = defineModel<number>('silenceThreshold', { default: 0.75 })
 
 // --- Triggers State (The True 12 Pragmatic Invariants) ---
-const tier1LocalReflexEnabled = ref(true)
-const tier2JevChallengerEnabled = ref(true)
+const tier1LocalReflexEnabled = defineModel<boolean>('tier1LocalReflexEnabled', { default: true })
+const tier2JevChallengerEnabled = defineModel<boolean>('tier2JevChallengerEnabled', { default: true })
+const triggerOverrides = defineModel<Record<string, { enabled: boolean }>>('triggerOverrides', { default: () => ({}) })
 const triggerGroups = ref<TriggerGroup[]>([
   // Conflict & Trust
   {
@@ -185,16 +187,32 @@ const triggerGroups = ref<TriggerGroup[]>([
 ])
 
 // --- Memory State (Universe RAG++) ---
-const universeRagGroundingEnabled = ref(true)
-const precisionRerankerEnabled = ref(true)
-type RerankerProviderId = 'laya' | 'typesafe_jev' | 'openrouter'
-const selectedRerankerProvider = ref<RerankerProviderId>('laya')
-const system2EscalationEnabled = ref(true)
-const deepMemoryReasoningModel = ref('inherit')
-const evidenceLimit = ref(4)
-const memoryRelevanceThreshold = ref(0.65)
-const turn1AnaphoraEnabled = ref(true)
-const timelineDatePriorityEnabled = ref(true)
+const universeRagGroundingEnabled = defineModel<boolean>('universeRagGroundingEnabled', { default: true })
+const precisionRerankerEnabled = defineModel<boolean>('precisionRerankerEnabled', { default: true })
+const selectedRerankerProvider = defineModel<RerankerProviderId>('selectedRerankerProvider', { default: 'laya-local' })
+const system2EscalationEnabled = defineModel<boolean>('system2EscalationEnabled', { default: true })
+const deepMemoryReasoningModel = defineModel<string>('deepMemoryReasoningModel', { default: 'inherit' })
+const evidenceLimit = defineModel<number>('evidenceLimit', { default: 4 })
+const memoryRelevanceThreshold = defineModel<number>('memoryRelevanceThreshold', { default: 0.65 })
+const turn1AnaphoraEnabled = defineModel<boolean>('turn1AnaphoraEnabled', { default: true })
+const timelineDatePriorityEnabled = defineModel<boolean>('timelineDatePriorityEnabled', { default: true })
+
+watch(triggerOverrides, (newOverrides) => {
+  if (!newOverrides)
+    return
+  triggerGroups.value.forEach((tg) => {
+    if (newOverrides[tg.id] !== undefined)
+      tg.enabled = newOverrides[tg.id].enabled
+  })
+}, { immediate: true, deep: true })
+
+watch(triggerGroups, (newGroups) => {
+  const overrides: Record<string, { enabled: boolean }> = {}
+  newGroups.forEach((tg) => {
+    overrides[tg.id] = { enabled: tg.enabled }
+  })
+  triggerOverrides.value = overrides
+}, { deep: true })
 
 function handleApplyQuestionnaire(config: {
   baselineSuspicion: number

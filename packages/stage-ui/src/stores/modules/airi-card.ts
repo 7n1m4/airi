@@ -1,6 +1,6 @@
 import type { Card, ccv3 } from '@proj-airi/ccc'
 
-import type { AiriPacing } from '../../types/card.schema'
+import type { AiriCognition, AiriPacing } from '../../types/card.schema'
 import type { VoiceProfile } from '../providers'
 
 import { debug } from '@proj-airi/stage-shared'
@@ -158,6 +158,8 @@ export interface AiriExtension {
       moduleConfigs?: Record<string, any>
     }
 
+    cognition?: AiriCognition
+
     speech: {
       provider: string // Example: "elevenlabs"
       model: string // Example: "eleven_multilingual_v2"
@@ -237,6 +239,8 @@ export interface AiriExtension {
       enabled?: boolean
     }
   }
+
+  cognition?: AiriCognition
 
   heartbeats?: HeartbeatConfig
   dreamState?: DreamStateConfig

@@ -130,6 +130,36 @@ const cognitivePipelineEnabled = ref<boolean>(false)
 const firstHopProcessor = ref<'none' | 'local_nan0' | 'universe_rag'>('none')
 const selectedFirstHopProvider = ref<string>('')
 const selectedFirstHopModel = ref<string>('')
+
+// Cognition - Affect State
+const selectedMoodPreset = ref<'gremlin' | 'companion' | 'analyst' | 'sentry'>('gremlin')
+const baselineSuspicion = ref<number>(0.20)
+const baselineAttachment = ref<number>(0.60)
+const baselinePride = ref<number>(0.85)
+const suspicionSensitivity = ref<number>(0.65)
+const irritationHalfLifeMinutes = ref<number>(45)
+const metabolicRestEnabled = ref<boolean>(true)
+const companionAnchorOverride = ref<string>('')
+const grievanceTrackingEnabled = ref<boolean>(true)
+const grievanceThreshold = ref<number>(0.6)
+const dailyForgivenessRate = ref<number>(0.01)
+const silenceThreshold = ref<number>(0.75)
+
+// Cognition - Triggers State
+const tier1LocalReflexEnabled = ref<boolean>(true)
+const tier2JevChallengerEnabled = ref<boolean>(true)
+const triggerOverrides = ref<Record<string, { enabled: boolean }>>({})
+
+// Cognition - Memory State (Universe RAG++)
+const universeRagGroundingEnabled = ref<boolean>(true)
+const precisionRerankerEnabled = ref<boolean>(true)
+const selectedRerankerProvider = ref<'laya-local' | 'typesafe-ai' | 'openrouter-ai'>('laya-local')
+const system2EscalationEnabled = ref<boolean>(true)
+const deepMemoryReasoningModel = ref<string>('inherit')
+const evidenceLimit = ref<number>(4)
+const memoryRelevanceThreshold = ref<number>(0.65)
+const turn1AnaphoraEnabled = ref<boolean>(true)
+const timelineDatePriorityEnabled = ref<boolean>(true)
 const selectedArtistryProvider = ref<string>('')
 const selectedArtistryModel = ref<string>('')
 const selectedArtistryPromptPrefix = ref<string>('')
@@ -1034,6 +1064,44 @@ async function saveCard(card: Card): Promise<boolean> {
     },
   }
 
+  // Inject cognition configuration
+  cardWithModules.extensions.airi.cognition = {
+    enabled: cognitivePipelineEnabled.value,
+    processor: firstHopProcessor.value,
+    provider: selectedFirstHopProvider.value || consciousnessProvider.value,
+    model: selectedFirstHopModel.value,
+    affect: {
+      preset: selectedMoodPreset.value,
+      baselineSuspicion: baselineSuspicion.value,
+      baselineAttachment: baselineAttachment.value,
+      baselinePride: baselinePride.value,
+      suspicionSensitivity: suspicionSensitivity.value,
+      irritationHalfLifeMinutes: irritationHalfLifeMinutes.value,
+      dailyForgivenessRate: dailyForgivenessRate.value,
+      grievanceThreshold: grievanceThreshold.value,
+      silenceThreshold: silenceThreshold.value,
+      metabolicRestEnabled: metabolicRestEnabled.value,
+      grievanceTrackingEnabled: grievanceTrackingEnabled.value,
+      companionAnchorOverride: companionAnchorOverride.value,
+    },
+    triggers: {
+      tier1LocalReflexEnabled: tier1LocalReflexEnabled.value,
+      tier2JevChallengerEnabled: tier2JevChallengerEnabled.value,
+      overrides: triggerOverrides.value,
+    },
+    searchEngine: {
+      universeRagEnabled: universeRagGroundingEnabled.value,
+      rerankerEnabled: precisionRerankerEnabled.value,
+      rerankerProvider: selectedRerankerProvider.value,
+      system2EscalationEnabled: system2EscalationEnabled.value,
+      reasoningModel: deepMemoryReasoningModel.value,
+      evidenceLimit: evidenceLimit.value,
+      relevanceThreshold: memoryRelevanceThreshold.value,
+      anaphoraEnabled: turn1AnaphoraEnabled.value,
+      timelinePriorityEnabled: timelineDatePriorityEnabled.value,
+    },
+  }
+
   // Inject artistry manually to avoid TS errors
   cardWithModules.extensions.airi.artistry = {
     provider: selectedArtistryProvider.value || defaultArtistryProvider.value,
@@ -1112,10 +1180,42 @@ function initializeCard(): Card {
   selectedDisplayModelId.value = airiExt?.modules?.displayModelId || defaultDisplayModelId.value
   const activeBg = airiExt?.modules?.activeBackgroundId || (airiExt?.modules as any)?.preferredBackgroundId
   selectedActiveBackgroundId.value = !activeBg ? 'none' : activeBg
-  cognitivePipelineEnabled.value = (airiExt?.modules as any)?.cognition?.enabled ?? false
-  firstHopProcessor.value = (airiExt?.modules as any)?.cognition?.processor ?? 'none'
-  selectedFirstHopProvider.value = (airiExt?.modules as any)?.cognition?.provider || consciousnessProvider.value
-  selectedFirstHopModel.value = (airiExt?.modules as any)?.cognition?.model || ''
+
+  const cognitionData = (airiExt as any)?.cognition || (airiExt?.modules as any)?.cognition
+  cognitivePipelineEnabled.value = cognitionData?.enabled ?? false
+  firstHopProcessor.value = cognitionData?.processor ?? 'none'
+  selectedFirstHopProvider.value = cognitionData?.provider || consciousnessProvider.value
+  selectedFirstHopModel.value = cognitionData?.model || ''
+
+  // Cognition - Affect
+  selectedMoodPreset.value = cognitionData?.affect?.preset ?? 'gremlin'
+  baselineSuspicion.value = cognitionData?.affect?.baselineSuspicion ?? 0.20
+  baselineAttachment.value = cognitionData?.affect?.baselineAttachment ?? 0.60
+  baselinePride.value = cognitionData?.affect?.baselinePride ?? 0.85
+  suspicionSensitivity.value = cognitionData?.affect?.suspicionSensitivity ?? 0.65
+  irritationHalfLifeMinutes.value = cognitionData?.affect?.irritationHalfLifeMinutes ?? 45
+  metabolicRestEnabled.value = cognitionData?.affect?.metabolicRestEnabled ?? true
+  companionAnchorOverride.value = cognitionData?.affect?.companionAnchorOverride ?? ''
+  grievanceTrackingEnabled.value = cognitionData?.affect?.grievanceTrackingEnabled ?? true
+  grievanceThreshold.value = cognitionData?.affect?.grievanceThreshold ?? 0.6
+  dailyForgivenessRate.value = cognitionData?.affect?.dailyForgivenessRate ?? 0.01
+  silenceThreshold.value = cognitionData?.affect?.silenceThreshold ?? 0.75
+
+  // Cognition - Triggers
+  tier1LocalReflexEnabled.value = cognitionData?.triggers?.tier1LocalReflexEnabled ?? true
+  tier2JevChallengerEnabled.value = cognitionData?.triggers?.tier2JevChallengerEnabled ?? true
+  triggerOverrides.value = cognitionData?.triggers?.overrides ?? {}
+
+  // Cognition - Memory State (Universe RAG++)
+  universeRagGroundingEnabled.value = cognitionData?.searchEngine?.universeRagEnabled ?? true
+  precisionRerankerEnabled.value = cognitionData?.searchEngine?.rerankerEnabled ?? true
+  selectedRerankerProvider.value = cognitionData?.searchEngine?.rerankerProvider ?? 'laya-local'
+  system2EscalationEnabled.value = cognitionData?.searchEngine?.system2EscalationEnabled ?? true
+  deepMemoryReasoningModel.value = cognitionData?.searchEngine?.reasoningModel ?? 'inherit'
+  evidenceLimit.value = cognitionData?.searchEngine?.evidenceLimit ?? 4
+  memoryRelevanceThreshold.value = cognitionData?.searchEngine?.relevanceThreshold ?? 0.65
+  turn1AnaphoraEnabled.value = cognitionData?.searchEngine?.anaphoraEnabled ?? true
+  timelineDatePriorityEnabled.value = cognitionData?.searchEngine?.timelinePriorityEnabled ?? true
   selectedArtistryProvider.value = airiExt?.artistry?.provider || defaultArtistryProvider.value
   selectedArtistryModel.value = airiExt?.artistry?.model || ''
   selectedArtistryPromptPrefix.value = airiExt?.artistry?.promptPrefix || ''
@@ -1693,6 +1793,30 @@ function handleGeneratorSave(newValue: string) {
       v-model:selected-first-hop-model="selectedFirstHopModel"
       v-model:selected-consciousness-provider="selectedConsciousnessProvider"
       v-model:selected-consciousness-model="selectedConsciousnessModel"
+      v-model:selected-mood-preset="selectedMoodPreset"
+      v-model:baseline-suspicion="baselineSuspicion"
+      v-model:baseline-attachment="baselineAttachment"
+      v-model:baseline-pride="baselinePride"
+      v-model:suspicion-sensitivity="suspicionSensitivity"
+      v-model:irritation-half-life-minutes="irritationHalfLifeMinutes"
+      v-model:metabolic-rest-enabled="metabolicRestEnabled"
+      v-model:companion-anchor-override="companionAnchorOverride"
+      v-model:grievance-tracking-enabled="grievanceTrackingEnabled"
+      v-model:grievance-threshold="grievanceThreshold"
+      v-model:daily-forgiveness-rate="dailyForgivenessRate"
+      v-model:silence-threshold="silenceThreshold"
+      v-model:tier1-local-reflex-enabled="tier1LocalReflexEnabled"
+      v-model:tier2-jev-challenger-enabled="tier2JevChallengerEnabled"
+      v-model:trigger-overrides="triggerOverrides"
+      v-model:universe-rag-grounding-enabled="universeRagGroundingEnabled"
+      v-model:precision-reranker-enabled="precisionRerankerEnabled"
+      v-model:selected-reranker-provider="selectedRerankerProvider"
+      v-model:system2-escalation-enabled="system2EscalationEnabled"
+      v-model:deep-memory-reasoning-model="deepMemoryReasoningModel"
+      v-model:evidence-limit="evidenceLimit"
+      v-model:memory-relevance-threshold="memoryRelevanceThreshold"
+      v-model:turn1-anaphora-enabled="turn1AnaphoraEnabled"
+      v-model:timeline-date-priority-enabled="timelineDatePriorityEnabled"
       :consciousness-provider-options="consciousnessProviderOptions"
       :consciousness-model-options="consciousnessModelOptions"
       :first-hop-model-options="firstHopModelOptions"

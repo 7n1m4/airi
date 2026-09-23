@@ -40,6 +40,47 @@ export const MessageExampleSchema = array(
   'Message Example must be an array of example turns',
 )
 
+export const AiriCognitionSchema = looseObject({
+  enabled: optional(boolean()),
+  processor: optional(union([literal('none'), literal('local_nan0'), literal('universe_rag')])),
+  provider: optional(string()),
+  model: optional(string()),
+  affect: optional(looseObject({
+    preset: optional(union([literal('gremlin'), literal('companion'), literal('analyst'), literal('sentry')])),
+    baselineSuspicion: optional(number()),
+    baselineAttachment: optional(number()),
+    baselinePride: optional(number()),
+    suspicionSensitivity: optional(number()),
+    irritationHalfLifeMinutes: optional(number()),
+    dailyForgivenessRate: optional(number()),
+    grievanceThreshold: optional(number()),
+    silenceThreshold: optional(number()),
+    metabolicRestEnabled: optional(boolean()),
+    grievanceTrackingEnabled: optional(boolean()),
+    companionAnchorOverride: optional(string()),
+  })),
+  triggers: optional(looseObject({
+    tier1LocalReflexEnabled: optional(boolean()),
+    tier2JevChallengerEnabled: optional(boolean()),
+    overrides: optional(record(string(), looseObject({
+      enabled: boolean(),
+    }))),
+  })),
+  searchEngine: optional(looseObject({
+    universeRagEnabled: optional(boolean()),
+    rerankerEnabled: optional(boolean()),
+    rerankerProvider: optional(union([literal('laya-local'), literal('typesafe-ai'), literal('openrouter-ai')])),
+    system2EscalationEnabled: optional(boolean()),
+    reasoningModel: optional(string()),
+    evidenceLimit: optional(number()),
+    relevanceThreshold: optional(number()),
+    anaphoraEnabled: optional(boolean()),
+    timelinePriorityEnabled: optional(boolean()),
+  })),
+})
+
+export type AiriCognition = InferOutput<typeof AiriCognitionSchema>
+
 /**
  * AIRI Extension Schema parts
  */
@@ -49,6 +90,7 @@ const AiriModulesSchema = object({
     model: string(),
     moduleConfigs: optional(record(string(), unknown())),
   })),
+  cognition: optional(AiriCognitionSchema),
   speech: optional(object({
     provider: string(),
     model: string(),
@@ -208,6 +250,7 @@ export type AiriPacing = InferOutput<typeof AiriPacingSchema>
 
 const AiriExtensionSchema = looseObject({
   modules: optional(AiriModulesSchema),
+  cognition: optional(AiriCognitionSchema),
   heartbeats: optional(AiriHeartbeatSchema),
   dreamState: optional(AiriDreamStateSchema),
   shortTermMemory: optional(AiriShortTermMemorySchema),
