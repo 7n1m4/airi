@@ -103,4 +103,49 @@ describe('query-analyzer', () => {
       expect(result.expandedQuery).toContain('concert')
     })
   })
+
+  describe('heuristicTriage', () => {
+    it('classifies temporal queries as C2', async () => {
+      const { heuristicTriage } = await import('./query-analyzer')
+      const q1 = heuristicTriage('When did we visit Tokyo?')
+      expect(q1.category).toBe(2)
+      expect(q1.choice).toBe('c2_temporal')
+      expect(q1.temporalSubtype).toBe('calendar_date')
+
+      const q2 = heuristicTriage('How many days ago did the package arrive?')
+      expect(q2.category).toBe(2)
+      expect(q2.choice).toBe('c2_temporal')
+      expect(q2.temporalSubtype).toBe('duration')
+    })
+
+    it('classifies multi-hop and list queries as C1', async () => {
+      const { heuristicTriage } = await import('./query-analyzer')
+      const q1 = heuristicTriage('What is the connection between Alice and Bob?')
+      expect(q1.category).toBe(1)
+      expect(q1.choice).toBe('c1_multihop')
+      expect(q1.searchScope).toBe('multi_session')
+
+      const q2 = heuristicTriage('List all the different places we visited')
+      expect(q2.category).toBe(1)
+      expect(q2.choice).toBe('c1_multihop')
+    })
+
+    it('classifies open-domain and detective queries as C3', async () => {
+      const { heuristicTriage } = await import('./query-analyzer')
+      const q1 = heuristicTriage('Why did she react with frustration?')
+      expect(q1.category).toBe(3)
+      expect(q1.choice).toBe('c3_detective')
+
+      const q2 = heuristicTriage('What was his attitude towards the proposal?')
+      expect(q2.category).toBe(3)
+      expect(q2.choice).toBe('c3_detective')
+    })
+
+    it('defaults standard factual queries to C4 literal', async () => {
+      const { heuristicTriage } = await import('./query-analyzer')
+      const q1 = heuristicTriage('What is his favorite ice cream flavor?')
+      expect(q1.category).toBe(4)
+      expect(q1.choice).toBe('c4_literal')
+    })
+  })
 })

@@ -18,9 +18,11 @@ import { useAuthStore } from './auth'
 import { CHAT_STREAM_CHANNEL_NAME } from './chat/constants'
 import { stageJournalIntrusion } from './chat/intrusion-staging'
 import { useChatSessionStore } from './chat/session-store'
+import { useEntityLedgerStore } from './entity-ledger'
 import { useEventLogStore } from './event-log'
 import { useLLM } from './llm'
 import { useAiriCardStore } from './modules/airi-card'
+import { useSystemOneStore } from './modules/system-one'
 import { useProvidersStore } from './providers'
 
 function normalizeEntry(entry: TextJournalEntry): TextJournalEntry {
@@ -72,6 +74,8 @@ export const useTextJournalStore = defineStore('text-journal', () => {
   const entries = ref<TextJournalEntry[]>([])
   const loading = ref(false)
   const initializedForUserId = ref<string | null>(null)
+  const lastSearchTriage = ref<any>(null)
+  const lastSearchMode = ref<'pass11' | 'baseline'>('baseline')
 
   function getCurrentUserId() {
     return userId.value || 'local'
@@ -412,30 +416,73 @@ export const useTextJournalStore = defineStore('text-journal', () => {
       return []
 
     const targetCharacterId = input.characterId ?? activeCardId.value
+
+    let entityLedgerStore: ReturnType<typeof useEntityLedgerStore> | undefined
+    let systemOneStore: ReturnType<typeof useSystemOneStore> | undefined
+    try {
+      entityLedgerStore = useEntityLedgerStore()
+    }
+    catch {}
+    try {
+      systemOneStore = useSystemOneStore()
+    }
+    catch {}
+
     let results: Awaited<ReturnType<typeof layeredMemory.search>> = []
     try {
       results = await layeredMemory.search(query, input.limit ?? 3, targetCharacterId, {
         previousTurn: input.previousTurn,
         anaphoraEnabled: input.anaphoraEnabled,
+        ledger: entityLedgerStore?.activeLedger,
+        systemOneStore,
       })
     }
     catch (err) {
       console.warn('[TextJournal:Search] layeredMemory.search failed, using local ranking fallback:', err)
     }
 
+    lastSearchTriage.value = layeredMemory.lastTriage
+    lastSearchMode.value = layeredMemory.lastSearchMode
+
     if (results.length > 0) {
       // Log search results for developer review
       console.info(`[TextJournal:Search] Query: "${query}" | Results:`, results)
 
       // Map layered results back to the most relevant TextJournalEntry if it exists,
-      // or provide surrogate entries for STMM/Raw.
+      // or provide surrogate entries for KG claims, STMM, or Raw.
       return results.map((res) => {
+        if (res.isKgClaim) {
+          return {
+            id: res.id,
+            userId: getCurrentUserId(),
+            characterId: input.characterId ?? activeCardId.value ?? '',
+            characterName: activeCard.value?.name ?? 'Unknown',
+            title: `[Knowledge Graph] ${res.subject} ${res.predicate} ${res.object}`,
+            content: res.content,
+            kind: 'kg_claim',
+            score: res.score,
+            source: res.source ?? 'tool',
+            type: 'message',
+            createdAt: new Date(res.timestamp).getTime(),
+            updatedAt: new Date(res.timestamp).getTime(),
+            subject: res.subject,
+            predicate: res.predicate,
+            object: res.object,
+            dateInfo: res.dateInfo,
+            claimId: res.claimId,
+            evidence: res.evidence,
+            isKgClaim: true,
+            triage: res.triage,
+          } as unknown as TextJournalEntry & { kind: string, score?: number, isKgClaim?: boolean, subject?: string, predicate?: string, object?: string, dateInfo?: any, claimId?: string }
+        }
+
         const existing = entries.value.find(e => e.id === res.id)
         if (existing) {
           return {
             ...existing,
             kind: res.kind,
             score: res.score,
+            triage: res.triage,
           }
         }
 
@@ -453,7 +500,8 @@ export const useTextJournalStore = defineStore('text-journal', () => {
           type: 'message',
           createdAt: new Date(res.timestamp).getTime(),
           updatedAt: new Date(res.timestamp).getTime(),
-        } as TextJournalEntry & { kind: string, score?: number }
+          triage: res.triage,
+        } as unknown as TextJournalEntry & { kind: string, score?: number, triage?: any }
       })
     }
 
@@ -702,5 +750,7 @@ ${input.instructions ? `\nAdditional Instructions: ${input.instructions}\n` : ''
     backgroundIndexAll,
     persist,
     createJournalMoment,
+    lastSearchTriage,
+    lastSearchMode,
   }
 })

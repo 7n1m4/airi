@@ -311,6 +311,13 @@ Microphone → VadDetector → AudioBuffer → STTProvider inference → text �
 - **Tool integration**: `apps/stage-tamagotchi/src/renderer/stores/tools/builtin/text-journal.ts` — exposes `create` and `search` actions to the LLM
 - **Search index**: `packages/stage-ui/src/libs/search/layered-memory.ts` — `Transformers.js` / Orama / Voy, stored in separate `airi-search-index` IndexedDB
 
+### Knowledge Graph (Entity Ledger)
+- **Store**: `packages/stage-ui/src/stores/entity-ledger.ts`
+- **Repo**: `packages/stage-ui/src/database/repos/entity-ledger.repo.ts` — `local:entity-ledger:{characterId}`
+- **Priming Engine**: `packages/stage-ui/src/libs/search/ledger-priming.ts` — Turn knowledge extraction, System 1 zero-shot entity classification, candidate mention proposal
+- **Core Lib**: `packages/stage-ui/src/libs/search/entity-ledger.ts` — in-memory normalized Maps (`entities`, `claims`, `sources`, `byAlias`, `byObjectPredicate`)
+- **Inspector Modal**: `packages/stage-pages/src/pages/settings/modules/components/EntityDetailModal.vue` — cognitive audit trail, dialogue turn provenance, manual classification, noise deletion
+
 ### Short-Term Memory (Daily Summaries)
 - **Store**: `packages/stage-ui/src/stores/memory-short-term.ts`
 - **Repo**: `packages/stage-ui/src/database/repos/short-term-memory.repo.ts` — `local:memory/short-term/{userId}`

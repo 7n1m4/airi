@@ -1,13 +1,36 @@
 import type { SearchCandidate, SearchDocumentMeta } from '../hybrid-scorer'
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
+import { EntityLedger } from '../entity-ledger'
 import {
   defaultScorerConfig,
   detectQueryProfile,
   scoreHybridResults,
-
 } from '../hybrid-scorer'
+import { layeredMemory } from '../layered-memory'
+
+vi.mock('../../workers/search', () => ({
+  searchWorker: {
+    init: vi.fn(async () => {}),
+    search: vi.fn(async () => ({
+      documents: [
+        {
+          id: 'doc-paris',
+          content: 'We had a lovely walk near the Eiffel Tower in Paris on 2024-05-10.',
+          kind: 'journal_entry',
+          timestamp: '2024-05-10T12:00:00.000Z',
+          source: 'user',
+        },
+      ],
+      vectorHits: [{ id: 'doc-paris', score: 0.88 }],
+      keywordHits: [{ id: 'doc-paris', score: 0.92 }],
+    })),
+    index: vi.fn(async () => 1),
+    persist: vi.fn(async () => ({})),
+    remove: vi.fn(async () => {}),
+  },
+}))
 
 describe('semantic Search & Memory Refinements', () => {
   describe('query Profile Detection', () => {
@@ -153,6 +176,83 @@ describe('semantic Search & Memory Refinements', () => {
 
       expect(temporalResults[0].id).toBe('past1')
       expect(temporalResults[0].dateMatchBoost).toBeGreaterThan(0)
+    })
+  })
+
+  describe('layeredMemory.search with DualSearcherPass3 & Knowledge Graph', () => {
+    it('executes baseline search with heuristic triage and in-memory entity graph traversal', async () => {
+      const ledger = new EntityLedger()
+      const ent = ledger.getOrCreateEntity('Paris', 'place')
+      ledger.addClaim({
+        subject: 'Paris',
+        predicate: 'has attraction',
+        object: 'Eiffel Tower',
+        evidence: ['Visited Eiffel Tower in Paris.'],
+        dateInfo: { formatted_label: 'May 10, 2024', iso_date: '2024-05-10' },
+      })
+
+      const results = await layeredMemory.search('Tell me about Paris trip', 5, 'card-1', {
+        ledger,
+      })
+
+      expect(layeredMemory.lastSearchMode).toBe('baseline')
+      expect(layeredMemory.lastTriage).toBeDefined()
+      expect(layeredMemory.lastTriage?.category).toBe(4) // C4 literal default
+
+      // Should contain Knowledge Graph hit as top priority
+      const kgClaim = results.find(r => r.isKgClaim)
+      expect(kgClaim).toBeDefined()
+      expect(kgClaim?.subject).toBe('Paris')
+      expect(kgClaim?.predicate).toBe('has attraction')
+      expect(kgClaim?.object).toBe('Eiffel Tower')
+
+      // Should also contain worker hybrid hit
+      const workerDoc = results.find(r => r.id === 'doc-paris')
+      expect(workerDoc).toBeDefined()
+    })
+
+    it('engages Pass 11 System 1 triage and cross-encoder reranker when systemOneStore is configured', async () => {
+      const ledger = new EntityLedger()
+      ledger.getOrCreateEntity('Alice', 'person')
+      ledger.addClaim({
+        subject: 'Alice',
+        predicate: 'works at',
+        object: 'Cyberdyne',
+        evidence: ['Alice joined Cyberdyne.'],
+      })
+
+      const mockSystemOneStore = {
+        configured: true,
+        runTriage: vi.fn(async () => ({
+          category: 1,
+          choice: 'c1_multihop',
+          confidence: 0.95,
+          probabilities: { c1_multihop: 0.95 },
+          temporalSubtype: 'none',
+          searchScope: 'multi_session',
+          method: 'system1_zero_shot',
+          latencyMs: 42,
+        })),
+        runRerank: vi.fn(async (q: string, pool: any[]) => ({
+          rankedCandidates: pool.map((c, idx) => ({
+            id: c.id,
+            finalScore: idx === 0 ? 0.99 : 0.80,
+            normJevScore: 1.0,
+          })),
+          latencyMs: 55,
+        })),
+      }
+
+      const results = await layeredMemory.search('Alice connections across all sessions', 5, 'card-1', {
+        ledger,
+        systemOneStore: mockSystemOneStore,
+      })
+
+      expect(mockSystemOneStore.runTriage).toHaveBeenCalled()
+      expect(mockSystemOneStore.runRerank).toHaveBeenCalled()
+      expect(layeredMemory.lastSearchMode).toBe('pass11')
+      expect(layeredMemory.lastTriage?.choice).toBe('c1_multihop')
+      expect(results.length).toBeGreaterThan(0)
     })
   })
 })

@@ -367,3 +367,78 @@ export function analyzeQuery(
     extractedKeywords,
   }
 }
+
+export interface TriageDecision {
+  category: number
+  choice: string
+  confidence: number
+  probabilities?: Record<string, number>
+  temporalSubtype: string
+  searchScope: string
+  method?: string
+  latencyMs?: number | null
+}
+
+/**
+ * Deterministic rule-based query triage heuristic for when System 1 is unconfigured or offline.
+ * Mirrors the Pass 11 baseline triage rules.
+ */
+export function heuristicTriage(query: string): TriageDecision {
+  const norm = query.toLowerCase()
+
+  // 1. Temporal cues (C2)
+  if (
+    /\b(when|what date|which day|what time|how long|how many (?:days|weeks|months|years) ago|how long ago|start|finish|schedule|appointment|timeline)\b/i.test(norm)
+    || /\b(yesterday|today|tomorrow|last (?:week|month|year)|next (?:week|month|year))\b/i.test(norm)
+    || /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(norm)
+  ) {
+    const isDuration = /\b(how long|how many (?:days|weeks|months|years|hours|minutes))\b/i.test(norm)
+    return {
+      category: 2,
+      choice: 'c2_temporal',
+      confidence: 0.8,
+      temporalSubtype: isDuration ? 'duration' : 'calendar_date',
+      searchScope: 'single_session',
+      method: 'heuristic_regex_temporal',
+    }
+  }
+
+  // 2. Multi-hop / List / Aggregation cues (C1)
+  if (
+    /\b(both|and .* (?:also|as well)|between|connection|relationship|all the things|list|how many|all of the|every|total|count)\b/i.test(norm)
+    || /\b(different (?:places|jobs|events|pets|animals|games|books|movies|friends))\b/i.test(norm)
+  ) {
+    return {
+      category: 1,
+      choice: 'c1_multihop',
+      confidence: 0.75,
+      temporalSubtype: 'none',
+      searchScope: 'multi_session',
+      method: 'heuristic_regex_multihop',
+    }
+  }
+
+  // 3. Open-domain / Detective cues (C3)
+  if (
+    /\b(why|suspect|infer|imply|attitude|impression|personality|trait|opinion|perspective|motivation|reason for|likely)\b/i.test(norm)
+  ) {
+    return {
+      category: 3,
+      choice: 'c3_detective',
+      confidence: 0.7,
+      temporalSubtype: 'none',
+      searchScope: 'single_session',
+      method: 'heuristic_regex_detective',
+    }
+  }
+
+  // 4. Default: Literal Single-hop (C4)
+  return {
+    category: 4,
+    choice: 'c4_literal',
+    confidence: 0.85,
+    temporalSubtype: 'none',
+    searchScope: 'single_session',
+    method: 'heuristic_literal_default',
+  }
+}

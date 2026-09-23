@@ -28,7 +28,7 @@ const textJournalStore = useTextJournalStore()
 const entityLedgerStore = useEntityLedgerStore()
 
 const { cards, activeCardId } = storeToRefs(cardStore)
-const { entries, loading } = storeToRefs(textJournalStore)
+const { entries, loading, lastSearchTriage, lastSearchMode } = storeToRefs(textJournalStore)
 
 const activeTab = ref<'records' | 'graph'>('records')
 const graphSubTab = ref<'entities' | 'claims' | 'sources'>('entities')
@@ -39,8 +39,13 @@ const claimSearchTerm = ref('')
 const selectedEntityId = ref<string | null>(null)
 const isEntityDetailOpen = ref(false)
 
-function openEntityDetail(entityId: string) {
-  selectedEntityId.value = entityId
+function openEntityDetail(idOrLabel: string) {
+  let targetId = idOrLabel
+  const entByLabel = entityLedgerStore.activeLedger.byAlias.get(idOrLabel.toLowerCase())
+  if (entByLabel && entByLabel.size > 0) {
+    targetId = Array.from(entByLabel)[0]
+  }
+  selectedEntityId.value = targetId
   isEntityDetailOpen.value = true
 }
 
@@ -385,6 +390,50 @@ watch(characterOptions, (options) => {
           </div>
         </div>
 
+        <!-- Cognitive Strategy & Triage Banner -->
+        <div
+          v-if="searchTerm.trim() && (lastSearchTriage || isSearching)"
+          class="flex flex-wrap items-center justify-between gap-3 border rounded-2xl px-5 py-3 text-xs transition-all"
+          :class="[
+            lastSearchMode === 'pass11'
+              ? 'border-primary-500/30 bg-primary-500/5 text-primary-700 dark:text-primary-300'
+              : 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300',
+          ]"
+        >
+          <div class="flex items-center gap-2.5">
+            <div
+              class="text-base"
+              :class="[
+                isSearching
+                  ? 'i-solar:loading-bold animate-spin'
+                  : (lastSearchMode === 'pass11' ? 'i-solar:cpu-bolt-bold-duotone text-primary-500' : 'i-solar:database-bold-duotone text-emerald-500'),
+              ]"
+            />
+            <span class="font-bold tracking-wider uppercase">
+              {{
+                isSearching
+                  ? 'Analyzing Query & Traversing Graph...'
+                  : (lastSearchMode === 'pass11'
+                    ? `Pass 11: ${lastSearchTriage?.choice?.toUpperCase().replace('_', ' ') || 'COGNITIVE TRIAGE'}`
+                    : 'Baseline Floor: Hybrid RRF + Graph')
+              }}
+            </span>
+            <span v-if="!isSearching && lastSearchTriage?.confidence" class="rounded-md bg-white/70 px-2 py-0.5 text-[10px] font-bold dark:bg-black/40">
+              {{ Math.round(lastSearchTriage.confidence * 100) }}% confidence
+            </span>
+            <span v-if="!isSearching && lastSearchTriage?.searchScope === 'multi_session'" class="rounded-md bg-indigo-500/10 px-2 py-0.5 text-[10px] text-indigo-600 font-bold dark:text-indigo-400">
+              Multi-Session Scope
+            </span>
+            <span v-if="!isSearching && lastSearchTriage?.temporalSubtype && lastSearchTriage.temporalSubtype !== 'none'" class="rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 font-bold dark:text-amber-400">
+              {{ lastSearchTriage.temporalSubtype }}
+            </span>
+          </div>
+
+          <div v-if="!isSearching && lastSearchTriage?.latencyMs" class="text-[10px] text-neutral-400 font-medium">
+            Triage latency: {{ lastSearchTriage.latencyMs }}ms
+          </div>
+        </div>
+
         <div v-if="loading || isSearching" class="border-2 border-neutral-200 rounded-[2.5rem] border-dashed bg-neutral-50/50 p-12 text-center text-neutral-400 dark:border-neutral-800 dark:bg-neutral-950/40">
           <div class="i-solar:loading-bold mx-auto mb-4 animate-spin text-4xl" />
           {{ isSearching ? 'Probing memory layers...' : 'Opening the vault...' }}
@@ -395,60 +444,116 @@ watch(characterOptions, (options) => {
         </div>
 
         <div v-else class="flex flex-col gap-6">
-          <article
-            v-for="entry in visibleEntries"
-            :key="entry.id"
-            class="group relative overflow-hidden border border-neutral-200 rounded-[2rem] bg-white p-8 shadow-sm transition-all dark:border-neutral-800 hover:border-emerald-500/30 dark:bg-neutral-900/60"
-          >
-            <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-              <div class="flex flex-wrap items-center gap-3">
-                <div class="rounded-xl bg-emerald-500/10 px-4 py-1.5 text-xs text-emerald-600 font-bold shadow-inner dark:text-emerald-400">
-                  {{ entry.characterName }}
+          <template v-for="entry in visibleEntries" :key="entry.id">
+            <!-- Knowledge Graph Relational Triple Card -->
+            <article
+              v-if="(entry as any).kind === 'kg_claim'"
+              class="group relative overflow-hidden border border-primary-500/30 rounded-[2rem] bg-white p-7 shadow-sm transition-all dark:border-primary-500/20 hover:border-primary-500/60 dark:bg-neutral-900/60 hover:shadow-md"
+            >
+              <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2.5">
+                  <div class="flex items-center gap-1.5 rounded-xl bg-primary-500/10 px-3.5 py-1 text-xs text-primary-600 font-bold dark:text-primary-400">
+                    <div class="i-solar:diagram-up-bold-duotone text-sm" />
+                    <span>Knowledge Graph Claim</span>
+                  </div>
+                  <span v-if="(entry as any).score" class="rounded-lg bg-neutral-100 px-2.5 py-0.5 text-[10px] text-neutral-600 font-bold dark:bg-neutral-800 dark:text-neutral-300">
+                    Match Score: {{ Math.round((entry as any).score * 100) }}%
+                  </span>
                 </div>
-                <div
-                  :class="[
-                    'rounded-xl px-4 py-1.5 text-xs font-bold uppercase tracking-widest',
-                    (entry as any).kind === 'raw_turn'
-                      ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
-                      : (entry as any).kind === 'stmm_block'
-                        ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400'
-                        : entry.source === 'tool'
-                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                          : entry.source === 'seed'
-                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                            : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400',
-                  ]"
-                >
-                  Source: {{ (entry as any).kind === 'raw_turn' ? 'Chat' : (entry as any).kind === 'stmm_block' ? 'Recap' : 'Journal' }}
-                </div>
-              </div>
-              <div class="flex items-center gap-3">
                 <div class="text-[10px] text-neutral-400 font-bold tracking-widest uppercase">
                   {{ formatTimestamp(entry.createdAt) }}
                 </div>
+              </div>
+
+              <!-- Relational Triple Visual -->
+              <div class="flex flex-wrap items-center gap-2.5 border border-neutral-100 rounded-2xl bg-neutral-50/70 p-4 dark:border-neutral-800 dark:bg-black/20">
+                <span class="rounded-lg bg-sky-500/10 px-3 py-1 text-xs text-sky-600 font-bold dark:text-sky-400">
+                  {{ (entry as any).subject }}
+                </span>
+                <span class="text-xs text-neutral-400 font-mono">➔</span>
+                <span class="rounded-lg bg-emerald-500/10 px-3 py-1 text-xs text-emerald-600 font-bold dark:text-emerald-400">
+                  {{ (entry as any).predicate }}
+                </span>
+                <span class="text-xs text-neutral-400 font-mono">➔</span>
+                <span class="rounded-lg bg-purple-500/10 px-3 py-1 text-xs text-purple-600 font-bold dark:text-purple-400">
+                  {{ (entry as any).object }}
+                </span>
+                <span v-if="(entry as any).dateInfo?.formatted_label" class="ml-auto rounded-md bg-amber-500/10 px-2.5 py-0.5 text-[10px] text-amber-600 font-bold dark:text-amber-400">
+                  {{ (entry as any).dateInfo.formatted_label }}
+                </span>
+              </div>
+
+              <!-- Footer Action -->
+              <div class="mt-4 flex items-center justify-between border-t border-neutral-100 pt-2 dark:border-neutral-800/80">
+                <span class="text-[11px] text-neutral-400">
+                  Claim ID: <code class="text-[10px] font-mono">{{ (entry as any).claimId }}</code>
+                </span>
                 <button
-                  v-if="!(entry as any).kind || (entry as any).kind === 'ltmm_entry'"
-                  class="rounded-lg p-1 text-neutral-400 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
-                  title="Delete journal record"
-                  @click="handleDeleteEntry(entry.id)"
+                  type="button"
+                  class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs text-primary-600 font-bold transition-all hover:bg-primary-50 dark:text-primary-400 hover:text-primary-700 dark:hover:bg-primary-950/30"
+                  @click="openEntityDetail((entry as any).subject)"
                 >
-                  <div class="i-solar:trash-bin-trash-bold-duotone text-sm" />
+                  <div class="i-solar:eye-bold-duotone text-sm" />
+                  <span>Inspect Entity</span>
                 </button>
               </div>
-            </div>
+            </article>
 
-            <div class="flex flex-col gap-4">
-              <h4 class="text-xl text-neutral-800 font-bold leading-tight dark:text-neutral-100">
-                {{ entry.title }}
-              </h4>
-              <div class="relative overflow-hidden border border-neutral-100 rounded-2xl bg-neutral-50/50 p-6 dark:border-neutral-800 dark:bg-black/20">
-                <MarkdownRenderer
-                  :content="entry.content"
-                  class="text-sm text-neutral-700 leading-relaxed dark:text-neutral-300"
-                />
+            <!-- Standard Record Card -->
+            <article
+              v-else
+              class="group relative overflow-hidden border border-neutral-200 rounded-[2rem] bg-white p-8 shadow-sm transition-all dark:border-neutral-800 hover:border-emerald-500/30 dark:bg-neutral-900/60"
+            >
+              <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-3">
+                  <div class="rounded-xl bg-emerald-500/10 px-4 py-1.5 text-xs text-emerald-600 font-bold shadow-inner dark:text-emerald-400">
+                    {{ entry.characterName }}
+                  </div>
+                  <div
+                    :class="[
+                      'rounded-xl px-4 py-1.5 text-xs font-bold uppercase tracking-widest',
+                      (entry as any).kind === 'raw_turn'
+                        ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
+                        : (entry as any).kind === 'stmm_block'
+                          ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                          : entry.source === 'tool'
+                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                            : entry.source === 'seed'
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                              : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400',
+                    ]"
+                  >
+                    Source: {{ (entry as any).kind === 'raw_turn' ? 'Chat' : (entry as any).kind === 'stmm_block' ? 'Recap' : 'Journal' }}
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="text-[10px] text-neutral-400 font-bold tracking-widest uppercase">
+                    {{ formatTimestamp(entry.createdAt) }}
+                  </div>
+                  <button
+                    v-if="!(entry as any).kind || (entry as any).kind === 'ltmm_entry'"
+                    class="rounded-lg p-1 text-neutral-400 opacity-0 transition-all hover:bg-rose-50 hover:text-rose-500 group-hover:opacity-100 dark:hover:bg-rose-950/30 dark:hover:text-rose-400"
+                    title="Delete journal record"
+                    @click="handleDeleteEntry(entry.id)"
+                  >
+                    <div class="i-solar:trash-bin-trash-bold-duotone text-sm" />
+                  </button>
+                </div>
               </div>
-            </div>
-          </article>
+
+              <div class="flex flex-col gap-4">
+                <h4 class="text-xl text-neutral-800 font-bold leading-tight dark:text-neutral-100">
+                  {{ entry.title }}
+                </h4>
+                <div class="relative overflow-hidden border border-neutral-100 rounded-2xl bg-neutral-50/50 p-6 dark:border-neutral-800 dark:bg-black/20">
+                  <MarkdownRenderer
+                    :content="entry.content"
+                    class="text-sm text-neutral-700 leading-relaxed dark:text-neutral-300"
+                  />
+                </div>
+              </div>
+            </article>
+          </template>
         </div>
       </section>
 
