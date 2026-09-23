@@ -100,6 +100,15 @@ export interface RankedCandidateItem extends CandidateItem {
   finalScore: number
 }
 
+export interface EntityClassificationAudit {
+  choice: 'person' | 'animal' | 'place' | 'organization' | 'activity' | 'concept' | 'conversational_artifact' | 'unknown'
+  confidence?: number
+  probabilities?: Record<string, number>
+  model: string
+  provider: string
+  timestamp: number
+}
+
 export const useSystemOneStore = defineStore('system-one', () => {
   const providersStore = useProvidersStore()
 
@@ -311,14 +320,19 @@ export const useSystemOneStore = defineStore('system-one', () => {
 
   async function classifyEntities(
     candidates: Array<{ mention: string, context?: string }>,
-  ): Promise<Map<string, 'person' | 'animal' | 'place' | 'organization' | 'activity' | 'concept' | 'conversational_artifact' | 'unknown'>> {
-    const results = new Map<string, any>()
+  ): Promise<Map<string, EntityClassificationAudit>> {
+    const results = new Map<string, EntityClassificationAudit>()
     if (candidates.length === 0)
       return results
 
     if (!configured.value) {
       candidates.forEach((c) => {
-        results.set(c.mention, 'unknown')
+        results.set(c.mention, {
+          choice: 'unknown',
+          model: 'none',
+          provider: 'none',
+          timestamp: Date.now(),
+        })
       })
       return results
     }
@@ -344,14 +358,26 @@ export const useSystemOneStore = defineStore('system-one', () => {
         const answers = res.answers || {}
         batch.forEach((c, idx) => {
           const ans = answers[`mention_${idx}`] || {}
-          const choice = ans.choice || 'conversational_artifact'
-          results.set(c.mention, choice)
+          const choice = (ans.choice || 'conversational_artifact') as EntityClassificationAudit['choice']
+          results.set(c.mention, {
+            choice,
+            confidence: typeof ans.confidence === 'number' ? ans.confidence : 0.85,
+            probabilities: ans.probabilities || {},
+            model: activeModel.value,
+            provider: activeProvider.value,
+            timestamp: Date.now(),
+          })
         })
       }
       catch (err) {
         console.warn('[SystemOne] Failed to classify candidate batch via Jev:', err)
         batch.forEach((c) => {
-          results.set(c.mention, 'unknown')
+          results.set(c.mention, {
+            choice: 'unknown',
+            model: activeModel.value,
+            provider: activeProvider.value,
+            timestamp: Date.now(),
+          })
         })
       }
     }

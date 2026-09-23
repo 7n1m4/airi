@@ -241,7 +241,7 @@ export function extractTurnKnowledge(
   passage: string,
   turn: DialogueTurn,
   ledger: EntityLedger,
-  classificationMap?: Map<string, EntityType | 'conversational_artifact' | 'unknown'>,
+  classificationMap?: Map<string, any>,
 ): void {
   const text = turn.text.trim()
   if (!text)
@@ -267,7 +267,8 @@ export function extractTurnKnowledge(
 
   // 4. Bind Entities strictly via System 1 Classification
   for (const m of extraction.mentions) {
-    const classified = classificationMap?.get(m) || classificationMap?.get(m.toLowerCase())
+    const audit = classificationMap?.get(m) || classificationMap?.get(m.toLowerCase())
+    const classified = typeof audit === 'object' && audit !== null && 'choice' in audit ? audit.choice : audit
 
     // If System 1 classified this as conversational noise or syntax, drop it completely!
     if (classified === 'conversational_artifact')
@@ -286,7 +287,12 @@ export function extractTurnKnowledge(
       type = 'unknown'
     }
 
-    const ent = ledger.getOrCreateEntity(m, type)
+    const attributes: Record<string, any> = {}
+    if (typeof audit === 'object' && audit !== null) {
+      attributes.systemOne = audit
+    }
+
+    const ent = ledger.getOrCreateEntity(m, type, attributes)
     ent.mentions.add(turn.id)
     ledger.addMention({ span: m, turnId: turn.id, entityId: ent.entityId })
   }

@@ -9,6 +9,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import { toast } from 'vue-sonner'
 
+import EntityDetailModal from './components/EntityDetailModal.vue'
+
 interface CharacterOption { value: string, label: string }
 
 function formatTimestamp(timestamp: number) {
@@ -33,6 +35,14 @@ const graphSubTab = ref<'entities' | 'claims' | 'sources'>('entities')
 const entityTypeFilter = ref<EntityType | 'all'>('all')
 const entitySearchTerm = ref('')
 const claimSearchTerm = ref('')
+
+const selectedEntityId = ref<string | null>(null)
+const isEntityDetailOpen = ref(false)
+
+function openEntityDetail(entityId: string) {
+  selectedEntityId.value = entityId
+  isEntityDetailOpen.value = true
+}
 
 const selectedCharacter = ref('all')
 const searchTerm = ref('')
@@ -716,10 +726,13 @@ watch(characterOptions, (options) => {
             <div
               v-for="ent in filteredEntities"
               :key="ent.entityId"
-              class="border border-neutral-200 rounded-2xl bg-white p-4 shadow-sm transition-all dark:border-neutral-800 hover:border-primary-500/30 dark:bg-neutral-900/60"
+              class="group cursor-pointer border border-neutral-200 rounded-2xl bg-white p-4 shadow-sm transition-all dark:border-neutral-800 hover:border-primary-500/50 dark:bg-neutral-900/60 hover:shadow-md"
+              @click="openEntityDetail(ent.entityId)"
             >
               <div class="flex items-start justify-between gap-2">
-                <span class="text-sm text-neutral-800 font-bold dark:text-neutral-100">{{ ent.label }}</span>
+                <span class="text-sm text-neutral-800 font-bold transition-colors dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                  {{ ent.label }}
+                </span>
                 <span
                   class="rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase"
                   :class="[
@@ -735,17 +748,22 @@ watch(characterOptions, (options) => {
                   {{ ent.type }}
                 </span>
               </div>
-              <div v-if="Object.keys(ent.attributes).length > 0" class="mt-3 flex flex-wrap gap-1.5 border-t border-neutral-100 pt-2 dark:border-neutral-800">
+              <div v-if="Object.keys(ent.attributes).filter(k => k !== 'systemOne').length > 0" class="mt-3 flex flex-wrap gap-1.5 border-t border-neutral-100 pt-2 dark:border-neutral-800">
                 <span
                   v-for="(val, key) in ent.attributes"
+                  v-show="key !== 'systemOne'"
                   :key="key"
                   class="rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
                 >
-                  {{ key }}: <strong>{{ val }}</strong>
+                  {{ key }}: <strong>{{ typeof val === 'object' ? JSON.stringify(val) : val }}</strong>
                 </span>
               </div>
-              <div class="mt-2 text-[10px] text-neutral-400">
-                Mentions: {{ ent.mentions.size }}
+              <div class="mt-2 flex items-center justify-between text-[10px] text-neutral-400">
+                <span>Mentions: {{ ent.mentions.size }}</span>
+                <span class="flex items-center gap-1 text-primary-500 font-semibold opacity-0 transition-opacity group-hover:opacity-100">
+                  <span>Inspect</span>
+                  <div class="i-solar:eye-bold-duotone text-xs" />
+                </span>
               </div>
             </div>
           </div>
@@ -811,6 +829,13 @@ watch(characterOptions, (options) => {
         </div>
       </section>
     </div>
+
+    <!-- Entity Detail Inspector Modal -->
+    <EntityDetailModal
+      v-model:open="isEntityDetailOpen"
+      :entity-id="selectedEntityId"
+      @deleted="selectedEntityId = null"
+    />
   </div>
 </template>
 

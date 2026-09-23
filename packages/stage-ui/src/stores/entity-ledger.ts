@@ -1,3 +1,5 @@
+import type { ClaimRecord, EntityType, SourceRecord } from '../libs/search/entity-ledger'
+
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -95,6 +97,96 @@ export const useEntityLedgerStore = defineStore('entity-ledger', () => {
       claimsExtracted: 0,
       availableCharacterKeys: [],
     }
+  }
+
+  function getEntitySources(entityId: string): SourceRecord[] {
+    const ent = activeLedger.value.entities.get(entityId)
+    if (!ent)
+      return []
+    const results: SourceRecord[] = []
+    for (const turnId of ent.mentions) {
+      const src = activeLedger.value.sources.get(turnId)
+      if (src)
+        results.push(src)
+    }
+    return results
+  }
+
+  function getEntityClaims(entityId: string): ClaimRecord[] {
+    const ent = activeLedger.value.entities.get(entityId)
+    if (!ent)
+      return []
+    const subjectClaims = activeLedger.value.queryClaims(ent.label)
+    const objectClaims: ClaimRecord[] = []
+    const objectPredMap = activeLedger.value.byObjectPredicate.get(ent.label.toLowerCase())
+    if (objectPredMap) {
+      for (const claimIdSet of objectPredMap.values()) {
+        for (const cId of claimIdSet) {
+          const c = activeLedger.value.claims.get(cId)
+          if (c && !subjectClaims.some(sc => sc.claimId === c.claimId))
+            objectClaims.push(c)
+        }
+      }
+    }
+    return [...subjectClaims, ...objectClaims]
+  }
+
+  async function updateEntityType(entityId: string, newType: EntityType) {
+    const ent = activeLedger.value.entities.get(entityId)
+    if (!ent)
+      return
+    ent.type = newType
+    activeLedger.value = EntityLedger.fromJSON(activeLedger.value.toJSON())
+    if (currentLoadedCharacterId.value) {
+      await entityLedgerRepo.saveLedger(currentLoadedCharacterId.value, activeLedger.value.toJSON())
+    }
+  }
+
+  async function deleteEntity(entityId: string) {
+    const ent = activeLedger.value.entities.get(entityId)
+    if (!ent)
+      return
+    activeLedger.value.entities.delete(entityId)
+    activeLedger.value.byAlias.delete(ent.label.toLowerCase())
+    activeLedger.value = EntityLedger.fromJSON(activeLedger.value.toJSON())
+    if (currentLoadedCharacterId.value) {
+      await entityLedgerRepo.saveLedger(currentLoadedCharacterId.value, activeLedger.value.toJSON())
+    }
+  }
+
+  async function reclassifyEntity(entityId: string) {
+    const ent = activeLedger.value.entities.get(entityId)
+    if (!ent)
+      return null
+    const systemOneStore = useSystemOneStore()
+    const srcs = getEntitySources(entityId)
+    const contextSnippet = srcs.slice(0, 3).map(s => `${s.speaker}: ${s.text}`).join('\n')
+
+    const classificationMap = await systemOneStore.classifyEntities([
+      { mention: ent.label, context: contextSnippet },
+    ])
+
+    const audit = classificationMap.get(ent.label) || classificationMap.get(ent.label.toLowerCase())
+    if (audit) {
+      const choice = typeof audit === 'object' && 'choice' in audit ? audit.choice : audit
+      if (choice && choice !== 'conversational_artifact' && choice !== 'unknown') {
+        ent.type = choice as EntityType
+      }
+      ent.attributes.systemOne = typeof audit === 'object'
+        ? audit
+        : {
+            choice,
+            model: systemOneStore.activeModel,
+            provider: systemOneStore.activeProvider,
+            timestamp: Date.now(),
+          }
+      activeLedger.value = EntityLedger.fromJSON(activeLedger.value.toJSON())
+      if (currentLoadedCharacterId.value) {
+        await entityLedgerRepo.saveLedger(currentLoadedCharacterId.value, activeLedger.value.toJSON())
+      }
+      return audit
+    }
+    return null
   }
 
   /**
@@ -432,5 +524,10 @@ export const useEntityLedgerStore = defineStore('entity-ledger', () => {
     loadLedger,
     clearLedger,
     rebuildKnowledgeGraph,
+    getEntitySources,
+    getEntityClaims,
+    updateEntityType,
+    deleteEntity,
+    reclassifyEntity,
   }
 })
