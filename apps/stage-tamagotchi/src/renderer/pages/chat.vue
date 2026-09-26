@@ -12,6 +12,8 @@ import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useLiveSessionStore } from '@proj-airi/stage-ui/stores/modules/live-session'
+import { useSettings } from '@proj-airi/stage-ui/stores/settings'
+import { usePositioningStore } from '@proj-airi/stage-ui/stores/settings/positioning'
 import { useBroadcastChannel, useLocalStorage, useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
@@ -137,9 +139,42 @@ const rightPanelMediaCollapsed = useLocalStorage('airi:chat:rp-media-collapsed',
 const rightPanelNan0Collapsed = useLocalStorage('airi:chat:rp-nan0-collapsed', false)
 const toggleStageVisibility = useElectronEventaInvoke(electronStageToggleVisibility)
 const rightPanelStageCollapsed = useLocalStorage('airi:chat:rp-stage-collapsed', true)
-const stageXOffset = ref(0)
-const stageYOffset = ref(0)
-const stageScale = ref(1)
+
+const settingsStore = useSettings()
+const positioningStore = usePositioningStore()
+const { stageModelRenderer, stageModelSelected } = storeToRefs(settingsStore)
+
+const stageScale = computed(() => {
+  return positioningStore.getPosition(stageModelSelected.value).scale
+})
+
+const stageXOffset = computed(() => {
+  return positioningStore.getPosition(stageModelSelected.value).x
+})
+
+const stageYOffset = computed(() => {
+  const y = positioningStore.getPosition(stageModelSelected.value).y
+  if (stageModelRenderer.value === 'live2d') {
+    return -y
+  }
+  return y
+})
+
+function handleStageScaleChange(newScale: number) {
+  const key = stageModelSelected.value
+  const current = positioningStore.getPosition(key)
+  positioningStore.setPosition(key, { ...current, scale: newScale })
+}
+
+function handleStageOffsetChange(offset: { x: number, y: number }) {
+  const key = stageModelSelected.value
+  const current = positioningStore.getPosition(key)
+  positioningStore.setPosition(key, {
+    ...current,
+    x: offset.x,
+    y: stageModelRenderer.value === 'live2d' ? -offset.y : offset.y,
+  })
+}
 
 function toggleRightPanelStage() {
   rightPanelStageCollapsed.value = !rightPanelStageCollapsed.value
@@ -1856,8 +1891,8 @@ function selectSurface(surface: typeof activeSurface.value) {
                     :radial-menu-enabled="false"
                     :draggable="true"
                     class="absolute inset-0 h-full w-full"
-                    @offset-change="({ x, y }) => { stageXOffset = x; stageYOffset = y }"
-                    @scale-change="(s) => stageScale = s"
+                    @offset-change="handleStageOffsetChange"
+                    @scale-change="handleStageScaleChange"
                   />
                 </div>
               </div>
