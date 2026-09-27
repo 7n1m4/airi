@@ -206,6 +206,7 @@ pages:
         systemprompt: '错误：请提供系统提示。'
         posthistoryinstructions: '错误：必须提供消息历史后的提示。'
       none: 无（无背景）
+      presence_info: 配置此角色卡的可视形象、声音及认知存在（模型形象、语音、意识脑与场景）。如未设置，将使用全局默认配置。
     modules: 模块
     name_asc: 名称 (A-Z)
     name_desc: 名称 (Z-A)
@@ -227,6 +228,7 @@ pages:
     try_different_search: 尝试使用其他关键词搜索
     upload: 上传
     upload_desc: 点击或拖拽文件到此处上传
+    presence: 具现 (Presence)
   memory:
     description: 存放记忆的地方，以及策略
     title: 记忆体

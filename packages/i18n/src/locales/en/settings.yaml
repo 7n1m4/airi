@@ -256,6 +256,9 @@ pages:
         scenario: 'Error: A scenario is required.'
         systemprompt: 'Error: Please, provide a system prompt.'
         posthistoryinstructions: 'Error: Post history prompt is required.'
+      presence_info: Configure the visual, vocal, and cognitive presence for this character
+        (Avatar, Voice, Consciousness, and Scene). If not set, global defaults
+        will be used.
     modules: Modules
     name_asc: Name (A-Z)
     name_desc: Name (Z-A)
@@ -280,6 +283,7 @@ pages:
     loading_tab: Loading {tab}...
     loading_tab_subtitle: Preparing configuration fields and options
     loading_tab_failed: Failed to load {tab}
+    presence: Presence
   memory:
     description: Manage active awareness context, idle summaries, episodic logs, and
       lifetime relational bonds.

@@ -92,73 +92,11 @@ function handleSaveVoice(payload: { baseProvider: string, baseModel: string, bas
 <template>
   <div class="tab-content ml-auto mr-auto w-95%">
     <p class="mb-3">
-      {{ t('settings.pages.card.creation.modules_info') }}
+      {{ t('settings.pages.card.creation.presence_info', t('settings.pages.card.creation.modules_info')) }}
     </p>
 
     <div :class="['grid', 'grid-cols-1', 'sm:grid-cols-2', 'gap-4', 'ml-auto', 'mr-auto', 'w-90%']">
-      <!-- Row 1 Left: Consciousness (LLM) -->
-      <div :class="['flex', 'flex-col', 'gap-2']">
-        <label :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']">
-          <div i-lucide:brain />
-          Consciousness (LLM)
-        </label>
-        <BrainModelPicker
-          v-model:provider="selectedConsciousnessProvider"
-          v-model:model="selectedConsciousnessModel"
-          variant="button"
-          title="Select Consciousness LLM"
-          side="bottom"
-          class="w-full"
-        />
-      </div>
-
-      <!-- Row 1 Right: Voice / Speech Button -->
-      <div :class="['flex', 'flex-col', 'gap-2']">
-        <label :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']">
-          <div i-lucide:music />
-          Voice / Speech
-        </label>
-        <button
-          type="button"
-          class="h-9 w-full flex items-center justify-between border border-neutral-200 rounded-xl bg-white px-3 text-xs text-neutral-700 font-medium shadow-sm transition-all dark:border-neutral-800 hover:border-primary-300 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-primary-800"
-          title="Configure Custom Voice"
-          @click="showVoiceCreator = true"
-        >
-          <div class="flex items-center gap-2 overflow-hidden pr-2">
-            <div class="i-solar:music-notes-bold-duotone shrink-0 text-sm text-primary-500" />
-            <span class="truncate text-[11px] font-mono">
-              {{ activeVoiceDisplay }}
-            </span>
-          </div>
-          <div class="i-solar:pen-bold-duotone ml-1 shrink-0 text-xs text-neutral-400" />
-        </button>
-      </div>
-
-      <!-- Studio Multi-Actor Voice Warning Callout (Span 2) -->
-      <div
-        v-if="hasVisualAssets"
-        :class="[
-          'sm:col-span-2 flex flex-col gap-2 rounded-xl p-3 text-xs leading-relaxed transition-all',
-          'border border-amber-500/25 bg-amber-500/10 text-amber-900 dark:text-amber-200',
-        ]"
-      >
-        <div class="flex items-start gap-2">
-          <div class="i-solar:info-circle-bold-duotone mt-0.5 shrink-0 text-base text-amber-600 dark:text-amber-400" />
-          <p>
-            This card contains Staging actor concepts (<code class="rounded bg-amber-500/20 px-1 py-0.5 text-[11px] font-mono">visual_assets</code>), so voices are managed dynamically per actor rather than globally. This field serves as a base display / fallback value. To configure an actor's voice, open <strong>Staging</strong>, click the <strong>Edit</strong> button on the target actor in the <strong>Concept Registry</strong>, switch to the <strong>Speech</strong> tab, and assign their voice there.
-          </p>
-        </div>
-        <button
-          type="button"
-          class="ml-6 inline-flex items-center self-start gap-1.5 text-[11px] text-amber-700 font-bold dark:text-amber-300 hover:underline"
-          @click="emit('staging')"
-        >
-          <div class="i-solar:clapperboard-play-bold-duotone text-xs" />
-          <span>Configure actor voices in Staging &rarr;</span>
-        </button>
-      </div>
-
-      <!-- Row 2: Models / Avatar (Span 2) -->
+      <!-- Row 1: Models / Avatar (Span 2 - Top Headline Anchor) -->
       <div :class="['flex', 'flex-col', 'gap-2', 'sm:col-span-2']">
         <label :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']">
           <div i-solar:user-circle-bold-duotone />
@@ -216,6 +154,68 @@ function handleSaveVoice(payload: { baseProvider: string, baseModel: string, bas
           :selected-model="selectedModel"
           @pick="(model) => selectedDisplayModelId = model?.id || ''"
         />
+      </div>
+
+      <!-- Row 2 Left: Consciousness (LLM) -->
+      <div :class="['flex', 'flex-col', 'gap-2']">
+        <label :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']">
+          <div i-lucide:brain />
+          Consciousness (LLM)
+        </label>
+        <BrainModelPicker
+          v-model:provider="selectedConsciousnessProvider"
+          v-model:model="selectedConsciousnessModel"
+          variant="button"
+          title="Select Consciousness LLM"
+          side="bottom"
+          class="w-full"
+        />
+      </div>
+
+      <!-- Row 2 Right: Voice / Speech Button -->
+      <div :class="['flex', 'flex-col', 'gap-2']">
+        <label :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']">
+          <div i-lucide:music />
+          Voice / Speech
+        </label>
+        <button
+          type="button"
+          class="h-9 w-full flex items-center justify-between border border-neutral-200 rounded-xl bg-white px-3 text-xs text-neutral-700 font-medium shadow-sm transition-all dark:border-neutral-800 hover:border-primary-300 dark:bg-neutral-900 dark:text-neutral-200 dark:hover:border-primary-800"
+          title="Configure Custom Voice"
+          @click="showVoiceCreator = true"
+        >
+          <div class="flex items-center gap-2 overflow-hidden pr-2">
+            <div class="i-solar:music-notes-bold-duotone shrink-0 text-sm text-primary-500" />
+            <span class="truncate text-[11px] font-mono">
+              {{ activeVoiceDisplay }}
+            </span>
+          </div>
+          <div class="i-solar:pen-bold-duotone ml-1 shrink-0 text-xs text-neutral-400" />
+        </button>
+      </div>
+
+      <!-- Studio Multi-Actor Voice Warning Callout (Span 2) -->
+      <div
+        v-if="hasVisualAssets"
+        :class="[
+          'sm:col-span-2 flex flex-col gap-2 rounded-xl p-3 text-xs leading-relaxed transition-all',
+          'border border-amber-500/25 bg-amber-500/10 text-amber-900 dark:text-amber-200',
+        ]"
+      >
+        <div class="flex items-start gap-2">
+          <div class="i-solar:info-circle-bold-duotone mt-0.5 shrink-0 text-base text-amber-600 dark:text-amber-400" />
+          <p>
+            This card contains Staging actor concepts (<code class="rounded bg-amber-500/20 px-1 py-0.5 text-[11px] font-mono">visual_assets</code>), so voices are managed dynamically per actor rather than globally. This field serves as a base display / fallback value. To configure an actor's voice, open <strong>Staging</strong>, click the <strong>Edit</strong> button on the target actor in the <strong>Concept Registry</strong>, switch to the <strong>Speech</strong> tab, and assign their voice there.
+          </p>
+        </div>
+        <button
+          type="button"
+          class="ml-6 inline-flex items-center self-start gap-1.5 text-[11px] text-amber-700 font-bold dark:text-amber-300 hover:underline"
+          @click="emit('staging')"
+        >
+          <div class="i-solar:clapperboard-play-bold-duotone text-xs" />
+          <span>Configure actor voices in Staging &rarr;</span>
+        </button>
       </div>
 
       <!-- Row 3: Preferred Background (Span 2) -->

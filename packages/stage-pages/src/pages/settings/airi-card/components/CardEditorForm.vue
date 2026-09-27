@@ -53,6 +53,7 @@ const tabLoaders: Record<string, () => Promise<any>> = {
   identity: () => import('./tabs/CardCreationTabIdentity.vue'),
   generation: () => import('./tabs/CardCreationTabGeneration.vue'),
   acting: () => import('./tabs/CardCreationTabActing.vue'),
+  presence: () => import('./tabs/CardCreationTabModules.vue'),
   modules: () => import('./tabs/CardCreationTabModules.vue'),
   cognition: () => import('./tabs/CardCreationTabCognition.vue'),
   artistry: () => import('./tabs/CardCreationTabArtistry.vue'),
@@ -885,7 +886,7 @@ const tabs: Tab[] = [
   { id: 'identity', label: 'Identity', icon: 'i-solar:user-circle-bold-duotone' },
   { id: 'generation', label: 'Generation', icon: 'i-solar:tuning-square-bold-duotone' },
   { id: 'acting', label: 'Acting', icon: 'i-solar:mask-happly-bold-duotone' },
-  { id: 'modules', label: t('settings.pages.card.modules'), icon: 'i-solar:widget-4-bold-duotone' },
+  { id: 'presence', label: t('settings.pages.card.presence', 'Presence'), icon: 'i-solar:magic-stick-3-bold-duotone' },
   { id: 'artistry', label: t('settings.pages.card.creation.artistry', 'Artistry'), icon: 'i-solar:gallery-bold-duotone' },
   { id: 'proactivity', label: t('settings.pages.card.creation.proactivity', 'Proactivity'), icon: 'i-solar:heart-pulse-bold-duotone' },
   { id: 'tools', label: 'Tools', icon: 'i-solar:widget-bold-duotone' },
@@ -1875,6 +1876,8 @@ function handleGeneratorSave(newValue: string) {
         :model-options="generationModelOptions"
         :provider-placeholder="getDefaultPlaceholder(selectedConsciousnessProvider || consciousnessProvider)"
         :model-placeholder="getDefaultPlaceholder(selectedConsciousnessModel || defaultConsciousnessModel)"
+        :system-prompt="cardSystemPrompt"
+        :card-name="cardName"
         @sparkle-click="openSparkleGenerator"
       />
       <CardCreationTabActing
@@ -1919,7 +1922,7 @@ function handleGeneratorSave(newValue: string) {
         @sparkle-click="openSparkleGenerator"
       />
       <CardCreationTabModules
-        v-else-if="activeTab === 'modules'"
+        v-else-if="activeTab === 'presence' || activeTab === 'modules'"
         v-model:selected-consciousness-provider="selectedConsciousnessProvider"
         v-model:selected-consciousness-model="selectedConsciousnessModel"
         v-model:selected-speech-provider="selectedSpeechProvider"
