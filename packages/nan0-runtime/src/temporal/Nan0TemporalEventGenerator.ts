@@ -254,18 +254,75 @@ export function computeLivedDuration(input: {
   return objective * Math.min(1.8, Math.max(0.6, multiplier))
 }
 
-function explicitReturnPromise(text: string, at: number): { description: string, dueAt: number } | null {
+function explicitReturnPromise(
+  text: string,
+  at: number,
+  systemOneAnswers?: Record<string, { choice: string, confidence?: number }>,
+): { description: string, dueAt: number } | null {
+  // 1. Language-agnostic System 1 classification has priority if provided
+  const returnScope = systemOneAnswers?.temporal_return_scope?.choice
+  if (returnScope && returnScope !== 'none' && returnScope !== 'unspecified_away') {
+    let durationMs = 15 * 60_000
+    switch (returnScope) {
+      case 'immediate_minutes':
+        durationMs = 60_000
+        break
+      case 'short_break':
+        durationMs = 30 * 60_000
+        break
+      case 'extended_hours':
+        durationMs = 2 * 3_600_000
+        break
+      case 'next_day_or_more':
+        durationMs = 24 * 3_600_000
+        break
+    }
+
+    // If explicit fine-grained numbers or units are detected in text, refine the duration
+    const numMatch = text.match(/\b(?:in\s+)?(\d{1,4})\s*(seconds?|minutes?|hours?|[smh])\b/i)
+    if (numMatch && numMatch[1] && numMatch[2]) {
+      const amount = Number(numMatch[1])
+      const unit = numMatch[2].toLowerCase()
+      const unitMs = unit.startsWith('s') ? 1_000 : unit.startsWith('m') ? 60_000 : 3_600_000
+      const parsedMs = amount * unitMs
+      if (Number.isFinite(parsedMs) && parsedMs >= 5_000 && parsedMs <= 7 * DAY_MS) {
+        durationMs = parsedMs
+      }
+    }
+    else if (/half\s+an?\s*minute/i.test(text)) {
+      durationMs = 30_000
+    }
+    else if (/half\s+an?\s*hour/i.test(text)) {
+      durationMs = 30 * 60_000
+    }
+    else if (/an?\s*hour/i.test(text)) {
+      durationMs = 60 * 60_000
+    }
+    else if (/an?\s*minute/i.test(text)) {
+      durationMs = 60_000
+    }
+
+    return { description: bounded(text, 200), dueAt: at + durationMs }
+  }
+
+  // 2. Offline / regex floor when System 1 is unavailable
   const matched = text.match(/\b(?:in\s+)?(\d{1,4})\s*(seconds?|minutes?|hours?|[smh])\b/i)
     || text.match(/\b(?:an?|half\s+an?)\s*(hour|minute)s?\b/i)
   if (!matched)
     return null
 
   let durationMs = 15 * 60_000
-  if (/half\s+an?\s*hour/i.test(matched[0])) {
+  if (/half\s+an?\s*minute/i.test(matched[0])) {
+    durationMs = 30_000
+  }
+  else if (/half\s+an?\s*hour/i.test(matched[0])) {
     durationMs = 30 * 60_000
   }
   else if (/an?\s*hour/i.test(matched[0])) {
     durationMs = 60 * 60_000
+  }
+  else if (/an?\s*minute/i.test(matched[0])) {
+    durationMs = 60_000
   }
   else if (matched[1] && matched[2]) {
     const amount = Number(matched[1])
@@ -454,9 +511,12 @@ export function recordLivedTemporalObservation(input: {
   const text = typeof input.observation.content === 'string' ? input.observation.content : ''
   const hasCommitment = input.systemOneAnswers
     ? (input.systemOneAnswers.commitment_pledge?.choice === 'direct_future_commitment'
-      || input.systemOneAnswers.commitment_pledge?.choice === 'conditional_commitment')
+      || input.systemOneAnswers.commitment_pledge?.choice === 'conditional_commitment'
+      || (input.systemOneAnswers.temporal_return_scope?.choice
+        && input.systemOneAnswers.temporal_return_scope?.choice !== 'none'
+        && input.systemOneAnswers.temporal_return_scope?.choice !== 'unspecified_away'))
     : false
-  const promise = hasCommitment ? explicitReturnPromise(text, at) : null
+  const promise = hasCommitment ? explicitReturnPromise(text, at, input.systemOneAnswers) : null
   if (promise && !lived.trackedPromises.some(item => item.sourceObservationId === input.observation.id)) {
     lived.trackedPromises.push({ promiseId: `promise_${input.createId()}`, actorId: 'kyo', description: promise.description, madeAt: at, dueAt: promise.dueAt, sourceObservationId: input.observation.id, sourceMemoryId: null, status: 'active', fulfilledAt: null, brokenAt: null, crossedThresholdIds: [] })
   }

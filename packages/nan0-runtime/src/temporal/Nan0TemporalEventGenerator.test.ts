@@ -37,6 +37,45 @@ describe('nan0TemporalEventGenerator', () => {
     expect(repeated.created.filter(candidate => candidate.event.eventType === 'promise-broken')).toHaveLength(0)
   })
 
+  it('correctly parses minute and half-minute durations, and handles language-agnostic System 1 return scope', () => {
+    let id = 0
+    const clock = new ControllableNan0Clock({ wallTime: 1_000 })
+
+    // 1. "in a minute" regex test
+    const minuteRec = recordLivedTemporalObservation({
+      engine: createEmptyTemporalEngineState(),
+      observation: { id: 'obs-minute', source: 'chat', actorId: 'kyo', content: 'be right back in a minute', metadata: {}, timestamp: 1_000 },
+      previousKyoInteractionAt: null,
+      clock,
+      createId: () => String(++id),
+      systemOneAnswers: { commitment_pledge: { choice: 'direct_future_commitment', confidence: 0.95 } },
+    })
+    expect(minuteRec.engine.lived?.trackedPromises[0].dueAt).toBe(1_000 + 60_000)
+
+    // 2. "half a minute" regex test
+    const halfMinuteRec = recordLivedTemporalObservation({
+      engine: createEmptyTemporalEngineState(),
+      observation: { id: 'obs-half-min', source: 'chat', actorId: 'kyo', content: 'wait for me, half a minute', metadata: {}, timestamp: 1_000 },
+      previousKyoInteractionAt: null,
+      clock,
+      createId: () => String(++id),
+      systemOneAnswers: { commitment_pledge: { choice: 'direct_future_commitment', confidence: 0.95 } },
+    })
+    expect(halfMinuteRec.engine.lived?.trackedPromises[0].dueAt).toBe(1_000 + 30_000)
+
+    // 3. System 1 temporal_return_scope language-agnostic test (e.g. Spanish input)
+    const systemOneRec = recordLivedTemporalObservation({
+      engine: createEmptyTemporalEngineState(),
+      observation: { id: 'obs-es', source: 'chat', actorId: 'kyo', content: 'vuelvo en un momento', metadata: {}, timestamp: 5_000 },
+      previousKyoInteractionAt: null,
+      clock,
+      createId: () => String(++id),
+      systemOneAnswers: { temporal_return_scope: { choice: 'immediate_minutes', confidence: 0.92 } },
+    })
+    expect(systemOneRec.engine.lived?.trackedPromises).toHaveLength(1)
+    expect(systemOneRec.engine.lived?.trackedPromises[0].dueAt).toBe(5_000 + 60_000)
+  })
+
   it('keeps subjective duration consequential without replacing objective time', () => {
     const objectiveDurationMs = 60_000
     const lived = computeLivedDuration({ objectiveDurationMs, emotionalState: { boredom: 0.9, attachment: 0.9, irritation: 0.5, curiosity: 0.2 }, focused: false, waiting: true })

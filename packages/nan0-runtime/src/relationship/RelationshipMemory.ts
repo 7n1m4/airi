@@ -436,9 +436,25 @@ async function applyGrievanceAsync(
   // If System 1 Jev is available, evaluate grievance salience and recurrence
   if (options?.systemOneProvider) {
     try {
-      const activeGrievanceList = record.activeGrievances.filter(g => g.status === 'active' || g.status === 'nurtured')
+      const activeGrievanceList = record.activeGrievances
+        .filter(g => g.status === 'active' || g.status === 'nurtured')
+        .sort((a, b) => currentGrievanceSeverity(b, input.timestamp) - currentGrievanceSeverity(a, input.timestamp))
+        .slice(0, 3)
+
       const questions: Record<string, Nan0JevQuestion> = {
         ...NAN0_JEV_GRIEVANCE_RECURRENCE_QUESTIONS,
+        trigger_concept: {
+          type: 'choice',
+          instructions: 'Classify the core grievance topic or concept expressed in the text.',
+          criteria: {
+            deceit_dishonesty: 'Lying, deception, hiding truth, broken promises.',
+            technical_failure: 'Crashes, bugs, deleted files, system malfunction.',
+            insult_attack: 'Hostility, insults, rudeness, disrespect.',
+            neglect_dismissal: 'Ignoring, dismissing, brushing off, abandonment.',
+            boundary_violation: 'Ignoring personal limits, unwelcome probing or behavior.',
+            none: 'No specific grievance concept.',
+          },
+        },
       }
 
       // NOTICE: Dynamic F8 Grievance Identification:
@@ -478,25 +494,61 @@ async function applyGrievanceAsync(
       // If Jev classifies as recurrence of an active grievance, reinforce the matched one
       if (jevRes.answers?.grievance_recurrence?.choice === 'recurrence_reinforced') {
         const matchedId = jevRes.answers?.matched_grievance_id?.choice
-        const activeOne = matchedId && matchedId !== 'none'
+        const activeOne = (matchedId && matchedId !== 'none')
           ? record.activeGrievances.find(g => g.grievanceId === matchedId)
-          : (activeGrievanceList.length === 1
+          : (matchedId === undefined && activeGrievanceList.length === 1
               ? activeGrievanceList[0]
-              : record.activeGrievances.find(g => input.description.toLowerCase().includes(g.description.toLowerCase())))
+              : undefined)
 
-        // NOTICE: Safe abstention (Fix F8): if no grievance is specifically matched by ID or description,
-        // do NOT fall back to activeGrievances[0]. We abstain to avoid false grievance escalation.
-        if (activeOne) {
-          return record.activeGrievances.map(grievance => grievance.grievanceId === activeOne.grievanceId
-            ? {
-                ...grievance,
-                lastReinforcedAt: input.timestamp,
-                reinforcementCount: grievance.reinforcementCount + 1,
-                action: 'reinforce',
-              }
-            : grievance)
+        // NOTICE: Pure Safe Abstention (Zero Regex Fallback):
+        // If Jev evaluates recurrence, but matched_grievance_id is 'none' or unmatched,
+        // we safely abstain and return activeGrievances. We NEVER fall back to lexical regex or activeGrievances[0].
+        if (!activeOne) {
+          return record.activeGrievances
         }
+
+        return record.activeGrievances.map(grievance => grievance.grievanceId === activeOne.grievanceId
+          ? {
+              ...grievance,
+              lastReinforcedAt: input.timestamp,
+              reinforcementCount: grievance.reinforcementCount + 1,
+              action: 'reinforce',
+            }
+          : grievance)
       }
+
+      // NOTICE: Single-pass new grievance formation (Fix F7):
+      // Consume trigger_concept classified concurrently in the single forward pass above.
+      const triggerChoice = jevRes.answers?.trigger_concept?.choice
+      const lexical = extractTriggerPhrases(input.description)
+      const triggerPhrases = input.triggerPhrases?.length
+        ? input.triggerPhrases
+        : (triggerChoice && triggerChoice !== 'none')
+            ? Array.from(new Set([triggerChoice, ...lexical])).slice(0, 5)
+            : lexical
+
+      const claim = input.claim
+      const grievanceId = `grievance:${createId()}`
+      return [...record.activeGrievances, {
+        ...provenance(input, `provenance:${grievanceId}`),
+        grievanceId,
+        description: input.description,
+        severity: clamp(input.intensity),
+        status: 'active',
+        lastReinforcedAt: input.timestamp,
+        reinforcementCount: 0,
+        decayRatePerDay: DEFAULT_GRIEVANCE_DECAY_PER_DAY,
+        resolvedAt: null,
+        triggerPhrases,
+        metadata: {},
+        claimId: claim?.claimId ?? `claim:${createId()}`,
+        subject: claim?.subject ?? input.actorId,
+        predicate: claim?.predicate ?? 'grievance',
+        object: claim?.object ?? input.description,
+        action: 'new',
+        supersededBy: null,
+        supersededAt: null,
+      }]
     }
     catch {
       // Safe abstention on Jev failure: do not fabricate grievance deltas
@@ -504,9 +556,10 @@ async function applyGrievanceAsync(
     }
   }
 
+  // Offline fallback when no System 1 provider is supplied:
   const triggerPhrases = input.triggerPhrases?.length
     ? input.triggerPhrases
-    : await extractTriggerPhrasesAsync(input.description, options?.systemOneProvider, options?.jevModel)
+    : extractTriggerPhrases(input.description)
 
   return applyGrievance(record, { ...input, triggerPhrases }, createId)
 }

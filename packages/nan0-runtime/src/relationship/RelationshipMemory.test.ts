@@ -991,11 +991,12 @@ describe('relationshipMemory', () => {
       description: 'You still have not written the documentation as promised.',
     }, createId, { systemOneProvider: mockJev })
 
-    // Verify Jev was given the matched_grievance_id question with the active grievances
+    // Verify Jev was given the matched_grievance_id and bundled trigger_concept questions
     expect(capturedQuestions.matched_grievance_id).toBeDefined()
     expect(capturedQuestions.matched_grievance_id.criteria['grievance:gr-1']).toBeDefined()
     expect(capturedQuestions.matched_grievance_id.criteria['grievance:gr-2']).toBeDefined()
     expect(capturedQuestions.matched_grievance_id.criteria.none).toBeDefined()
+    expect(capturedQuestions.trigger_concept).toBeDefined()
 
     // Verify gr-2 was reinforced, NOT gr-1!
     const gr1 = third.record?.activeGrievances.find(g => g.grievanceId === 'grievance:gr-1')
@@ -1004,7 +1005,7 @@ describe('relationshipMemory', () => {
     expect(gr2?.reinforcementCount).toBe(1)
     expect(gr2?.lastReinforcedAt).toBe(200)
 
-    // Fourth turn: Jev answers matched_grievance_id: 'none'. Safe abstention must NOT reinforce gr-1 or gr-2!
+    // Fourth turn: Jev answers matched_grievance_id: 'none'. Safe abstention must NOT reinforce gr-1 or gr-2 AND must not create new grievance!
     const abstainingJev: Nan0SystemOneProvider = async () => ({
       answers: {
         grievance_salience: { choice: 'substantive_grievance', confidence: 0.95 },
@@ -1027,9 +1028,85 @@ describe('relationshipMemory', () => {
       description: 'Completely different complaint.',
     }, createId, { systemOneProvider: abstainingJev })
 
+    expect(fourth.record?.activeGrievances).toHaveLength(2) // No new grievance created!
     const gr1After = fourth.record?.activeGrievances.find(g => g.grievanceId === 'grievance:gr-1')
     const gr2After = fourth.record?.activeGrievances.find(g => g.grievanceId === 'grievance:gr-2')
     expect(gr1After?.reinforcementCount).toBe(0)
     expect(gr2After?.reinforcementCount).toBe(1) // unchanged from turn 3!
+  })
+
+  it('caps matched_grievance_id criteria to top 3 grievances by severity and bundles trigger_concept in new grievances', async () => {
+    let nextId = 0
+    const createId = () => `gr-${++nextId}`
+    let rel = createEmptyRelationshipState(100)
+
+    // Add 4 distinct grievances with varying severities above 0.6 threshold
+    const testCases = [
+      { desc: 'Deploy pipeline crashed', intensity: 0.65 },
+      { desc: 'Deleted production database', intensity: 0.75 },
+      { desc: 'Insulted companion personally', intensity: 0.85 },
+      { desc: 'Ignored critical alerts', intensity: 0.95 },
+    ]
+
+    for (let i = 0; i < testCases.length; i++) {
+      const res = applyRelationshipEvidence(rel, {
+        actorId: 'kyo',
+        actorKind: 'kyo',
+        source: 'chat',
+        eventId: `ev-${i + 1}`,
+        turnId: `turn-${i + 1}`,
+        thoughtId: `thought-${i + 1}`,
+        timestamp: 100 + i,
+        eventType: 'negative',
+        intensity: testCases[i].intensity,
+        rule: `test.rule-${i + 1}`,
+        description: testCases[i].desc,
+      }, createId)
+      rel = res.relationships
+    }
+
+    expect(rel.records['relationship:kyo'].activeGrievances).toHaveLength(4)
+
+    let capturedQuestions: any = null
+    const singlePassJev: Nan0SystemOneProvider = async (_state, questions) => {
+      capturedQuestions = questions
+      return {
+        answers: {
+          grievance_salience: { choice: 'substantive_grievance', confidence: 0.95 },
+          grievance_recurrence: { choice: 'recurrence_unrelated', confidence: 0.9 },
+          trigger_concept: { choice: 'technical_failure', confidence: 0.92 },
+        },
+      }
+    }
+
+    const newGrievanceRes = await applyRelationshipEvidenceAsync(rel, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'ev-new',
+      turnId: 'turn-new',
+      thoughtId: 'thought-new',
+      timestamp: 200,
+      eventType: 'negative',
+      intensity: 0.75,
+      rule: 'test.rule-new',
+      description: 'The system crashed and wiped my work.',
+    }, createId, { systemOneProvider: singlePassJev })
+
+    // 1. Verify criteria was capped to top 3 (plus none)
+    const grievances = rel.records['relationship:kyo'].activeGrievances
+    const criteriaKeys = Object.keys(capturedQuestions.matched_grievance_id.criteria)
+    expect(criteriaKeys).toHaveLength(4) // 3 grievances + 'none'
+    expect(capturedQuestions.matched_grievance_id.criteria[grievances[3].grievanceId]).toBeDefined() // 0.95
+    expect(capturedQuestions.matched_grievance_id.criteria[grievances[2].grievanceId]).toBeDefined() // 0.85
+    expect(capturedQuestions.matched_grievance_id.criteria[grievances[1].grievanceId]).toBeDefined() // 0.75
+    expect(capturedQuestions.matched_grievance_id.criteria[grievances[0].grievanceId]).toBeUndefined() // lowest severity (0.65) omitted
+    expect(capturedQuestions.matched_grievance_id.criteria.none).toBeDefined()
+
+    // 2. Verify single-pass trigger_concept was incorporated into the new grievance
+    expect(newGrievanceRes.record?.activeGrievances).toHaveLength(5)
+    const newest = newGrievanceRes.record?.activeGrievances[4]
+    expect(newest).toBeDefined()
+    expect(newest?.triggerPhrases).toContain('technical_failure')
   })
 })

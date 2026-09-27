@@ -556,7 +556,7 @@ export const useTextJournalStore = defineStore('text-journal', () => {
       })
       .filter(({ score }) => score > 0)
       .sort((a, b) => b.score - a.score)
-      .map(({ entry, score }) => ({ ...entry, kind: 'ltmm' as string, score }))
+      .map(({ entry, score }) => ({ ...entry, kind: 'ltmm' as string, score: Number((score / 7).toFixed(3)) }))
 
     const limit = Math.max(1, Math.min(input.limit ?? 10, 10))
     return ranked.slice(0, limit)
