@@ -517,13 +517,15 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 | `packages/stream-kit/` | Streaming utilities |
 | `packages/electron-eventa/` | Electron Eventa bindings |
 | `packages/font-*` | Font packages (allseto, departure-mono, xiaolai) |
-| `apps/stage-tamagotchi` | Electron app (main + renderer) |
-| `apps/stage-web` | Web app (hosted at `/airi/web-stage/` on GitHub Pages via `.github/workflows/deploy-docs.yml`; build with `pnpm run build:web:pages`) |
+| `apps/stage-tamagotchi` | Electron app (main + renderer). Desktop stage: fully self-contained in-process runtime. |
+| `apps/stage-web` | Web app (hosted at `/airi/web-stage/` on GitHub Pages via `.github/workflows/deploy-docs.yml`; build with `pnpm run build:web:pages`). Web stage: relies on `apps/server` as its backend service. |
+| `apps/stage-pocket` | Mobile app (Capacitor iOS/Android). Pocket stage: hosted natively by Capacitor. |
+| `apps/server` | Dedicated backend service for the Web Stage (`apps/stage-web`) topology (WebSocket channel server, API proxy, storage). Required for web-stage deployments. |
 | `.github/workflows/deploy-docs.yml` | GitHub Pages CI deploy workflow (builds Docs to `/airi/` root and Web Stage to `/airi/web-stage/`; local build via `pnpm run build:pages`) |
 | `docs/design-web-stage-pages-deployment.md` | Web Stage GitHub Pages deployment architecture & surface reference |
 | `apps/stage-tamagotchi/src/main/services/airi/` | Main process services (discord, widgets, MCP) |
 | `scripts/` | Utility scripts (`yaml-manager.js`, `pr_summary.sh`) |
-| `crates/` | Legacy Tauri desktop app (current desktop is Electron — ignore) |
+| `crates/` | ❌ Removed (formerly legacy Tauri desktop app; superseded by Electron `apps/stage-tamagotchi`) |
 | `docs/` | Proposal docs, reference sheets, how-to guides |
 | `docs/content/en/docs/` | In-app manual content (vitepress) |
 | `scripts/motion-export/` | ONNX texture-export lineage (`compile_onnx.py`, `inspect_sampler.py`, `test_onnx_parity.py`) |

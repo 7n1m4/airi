@@ -4,7 +4,6 @@ packages:
   - packages/**
   - plugins/**
   - integrations/**
-  - services/**
   - examples/**
   - docs/**
   - apps/**

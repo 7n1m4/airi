@@ -64,7 +64,7 @@ The complete implementation catalog lives in the [feature report](https://dasilv
 | **Account-backed portable provider vault**³ | ✅ (Cloudflare R2/KV) | ❌ |
 | **Direct provider & model selection**⁴ | ✅ (Full User Custody) | ◐ (Chat/Vision locked to `Auto`) |
 | **Prepaid proprietary inference proxy**⁵ | ❌ (Direct Vendor APIs) | ✅ (Stripe / Flux Credits) |
-| **Guided free-tier catalog & preset templates**⁶ | ✅ (Planned / In Design) | ❌ |
+| **Guided free-tier catalog & preset templates**⁶ | ✅ (Live: Quick-Add & Inline Testing) | ❌ |
 | [**Interactive Live2D scripts, choices, and discoverable gimmicks**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/live2d-runtime/src/dsl/interpreter.ts) | ✅ | ❌ |
 | [**Live2D motion recording and keyframe timeline editing**](https://github.com/moeru-ai/airi/blob/42e3e9e8573d3159d40e637fa11a21e13398ebda/packages/stage-ui/src/features/devtools/motion/live2d/devtools.vue) | ❌ | ✅ |
 | [**Generate reusable VRM animations from text**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/stores/modules/text-to-motion.ts) | ✅ | ❌ |

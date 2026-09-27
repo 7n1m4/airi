@@ -112,9 +112,24 @@ stats.html
 stats-*.json
 web-ext.config.ts
 
-# Data
+# Data & Databases
 .postgres
 twitter-session.json
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+apps/server/.airi-db/
+.airi-db/
+
+# Scratch, patches & logs
+*.patch
+*.diff
+git_log_*.txt
+story-build-log.txt
+temp_check.txt
+fixed_data.txt
+tmp_*
 
 # Symlinks created by nix build
 result*
