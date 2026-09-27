@@ -313,7 +313,7 @@ const activeModelDisplay = computed(() => {
           :title="title"
         >
           <div class="i-ph:brain-duotone text-sm text-primary-500" />
-          <span class="max-w-40 truncate text-[11px] font-mono">
+          <span class="max-w-xs truncate text-[11px] font-mono sm:max-w-sm">
             {{ buttonLabel || activeModelDisplay }}
           </span>
           <div class="i-solar:alt-arrow-down-bold text-[10px] text-neutral-400" />

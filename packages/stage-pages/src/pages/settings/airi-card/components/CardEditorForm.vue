@@ -23,10 +23,10 @@ import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { useSettingsStageModel } from '@proj-airi/stage-ui/stores/settings/stage-model'
 import { DEFAULT_PACING_FILLERS } from '@proj-airi/stage-ui/types/pacing'
 import { Button } from '@proj-airi/ui'
-import { until } from '@vueuse/core'
+import { until, useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { DialogTitle } from 'reka-ui'
-import { computed, defineAsyncComponent, onMounted, ref, toRaw, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, ref, toRaw, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
@@ -170,6 +170,13 @@ const isMmd = computed(() => {
     return false
   return model.format === DisplayModelFormat.PMXZip || model.format === DisplayModelFormat.PMXDirectory || model.format === DisplayModelFormat.PMD
 })
+
+// Chat model favorites reference (to validate custom favorites without wiping them)
+const chatFavorites = useLocalStorage<{ provider: string, model: string }[]>('airi:chat-model-favorites', [])
+
+// Initialization tracking: prevent watchers from clearing model selections during card rehydration
+const initializingDepth = ref(0)
+const isInitializing = computed(() => initializingDepth.value > 0)
 
 // Modules configuration
 const selectedConsciousnessProvider = ref<string>('')
@@ -803,8 +810,8 @@ async function ensureProviderModelsAndVoices() {
   if (initialProvidersLoaded)
     return
   initialProvidersLoaded = true
-  const consProvider = consciousnessProvider.value
-  const spProvider = speechProvider.value
+  const consProvider = selectedConsciousnessProvider.value || consciousnessProvider.value
+  const spProvider = selectedSpeechProvider.value || speechProvider.value
   if (consProvider) {
     void consciousnessStore.loadModelsForProvider(consProvider)
   }
@@ -819,45 +826,68 @@ async function ensureProviderModelsAndVoices() {
 
 // Watch consciousness provider changes and reload models
 watch(selectedConsciousnessProvider, async (newProvider, oldProvider) => {
-  if (oldProvider !== undefined && newProvider !== oldProvider && newProvider) {
-    await consciousnessStore.loadModelsForProvider(newProvider)
-    // Reset model selection to default or empty
+  if (isInitializing.value || !oldProvider || !newProvider || newProvider === oldProvider) {
+    return
+  }
+
+  await consciousnessStore.loadModelsForProvider(newProvider)
+
+  // Only reset model selection if the new provider has models loaded and the selected model is not in catalog or favorites
+  const availableModels = providersStore.getModelsForProvider(newProvider)
+  const isKnownFavorite = chatFavorites.value.some(f => f.provider === newProvider && f.model === selectedConsciousnessModel.value)
+  if (selectedConsciousnessModel.value && availableModels.length > 0 && !isKnownFavorite && !availableModels.some(m => m.id === selectedConsciousnessModel.value)) {
     selectedConsciousnessModel.value = ''
   }
 })
 
 watch(generationProvider, async (newProvider, oldProvider) => {
-  if (oldProvider !== undefined && newProvider !== oldProvider && newProvider) {
-    await consciousnessStore.loadModelsForProvider(newProvider)
+  if (isInitializing.value || !oldProvider || !newProvider || newProvider === oldProvider) {
+    return
+  }
+
+  await consciousnessStore.loadModelsForProvider(newProvider)
+
+  const availableModels = providersStore.getModelsForProvider(newProvider)
+  const isKnownFavorite = chatFavorites.value.some(f => f.provider === newProvider && f.model === generationModel.value)
+  if (generationModel.value && availableModels.length > 0 && !isKnownFavorite && !availableModels.some(m => m.id === generationModel.value)) {
     generationModel.value = ''
   }
 })
 
 watch(selectedFirstHopProvider, async (newProvider, oldProvider) => {
-  if (oldProvider !== undefined && newProvider !== oldProvider && newProvider) {
-    await consciousnessStore.loadModelsForProvider(newProvider)
+  if (isInitializing.value || !oldProvider || !newProvider || newProvider === oldProvider) {
+    return
+  }
+
+  await consciousnessStore.loadModelsForProvider(newProvider)
+
+  const availableModels = providersStore.getModelsForProvider(newProvider)
+  const isKnownFavorite = chatFavorites.value.some(f => f.provider === newProvider && f.model === selectedFirstHopModel.value)
+  if (selectedFirstHopModel.value && availableModels.length > 0 && !isKnownFavorite && !availableModels.some(m => m.id === selectedFirstHopModel.value)) {
     selectedFirstHopModel.value = ''
   }
 })
 
 // Watch speech provider changes and reload models/voices
 watch(selectedSpeechProvider, async (newProvider, oldProvider) => {
-  if (oldProvider !== undefined && newProvider !== oldProvider && newProvider) {
-    await speechStore.loadVoicesForProvider(newProvider)
-    const metadata = providersStore.getProviderMetadata(newProvider)
-    if (metadata?.capabilities.listModels) {
-      await providersStore.fetchModelsForProvider(newProvider)
-    }
-    await loadActingSpeechCapabilities(newProvider)
+  if (isInitializing.value || !oldProvider || !newProvider || newProvider === oldProvider) {
+    return
+  }
 
-    const availableModels = providersStore.getModelsForProvider(newProvider)
-    if (selectedSpeechModel.value && availableModels.length > 0 && !availableModels.some(m => m.id === selectedSpeechModel.value)) {
-      selectedSpeechModel.value = ''
-    }
-    const availableVoices = speechStore.getVoicesForProvider(newProvider)
-    if (selectedSpeechVoiceId.value && availableVoices.length > 0 && !availableVoices.some(v => v.id === selectedSpeechVoiceId.value) && !speechStore.savedVoiceProfiles.some(p => p.id === selectedSpeechVoiceId.value)) {
-      selectedSpeechVoiceId.value = ''
-    }
+  await speechStore.loadVoicesForProvider(newProvider)
+  const metadata = providersStore.getProviderMetadata(newProvider)
+  if (metadata?.capabilities.listModels) {
+    await providersStore.fetchModelsForProvider(newProvider)
+  }
+  await loadActingSpeechCapabilities(newProvider)
+
+  const availableModels = providersStore.getModelsForProvider(newProvider)
+  if (selectedSpeechModel.value && availableModels.length > 0 && !availableModels.some(m => m.id === selectedSpeechModel.value)) {
+    selectedSpeechModel.value = ''
+  }
+  const availableVoices = speechStore.getVoicesForProvider(newProvider)
+  if (selectedSpeechVoiceId.value && availableVoices.length > 0 && !availableVoices.some(v => v.id === selectedSpeechVoiceId.value) && !speechStore.savedVoiceProfiles.some(p => p.id === selectedSpeechVoiceId.value)) {
+    selectedSpeechVoiceId.value = ''
   }
 })
 
@@ -953,7 +983,7 @@ watch(activeTab, (tab) => {
   void loadTab(tab)
   if (tab !== 'identity') {
     void ensureProviderModelsAndVoices()
-    if (tab === 'modules') {
+    if (tab === 'presence' || tab === 'modules') {
       void displayModelsStore.loadDisplayModelsFromIndexedDB(true)
     }
   }
@@ -1289,7 +1319,7 @@ async function saveCard(card: Card): Promise<boolean> {
 
   if (isEditMode.value && props.cardId) {
     // Edit mode: update existing card
-    cardStore.updateCard(props.cardId, cardWithModules)
+    await cardStore.updateCard(props.cardId, cardWithModules)
   }
   else {
     // Create mode: add new card
@@ -1310,214 +1340,222 @@ async function saveCard(card: Card): Promise<boolean> {
 
 // Initialize card data - load from existing card if in edit mode
 function initializeCard(): Card {
-  // Extract existing card data if in edit mode
-  const existingCard = (isEditMode.value && props.cardId) ? cardStore.getCard(props.cardId) : undefined
-  const airiExt = existingCard?.extensions?.airi as AiriExtension | undefined
+  initializingDepth.value++
+  try {
+    // Extract existing card data if in edit mode
+    const existingCard = (isEditMode.value && props.cardId) ? cardStore.getCard(props.cardId) : undefined
+    const airiExt = existingCard?.extensions?.airi as AiriExtension | undefined
 
-  // Initialize module selections with fallback logic (handles all cases: create, edit with/without extension)
-  selectedConsciousnessProvider.value = airiExt?.modules?.consciousness?.provider || consciousnessProvider.value
-  selectedConsciousnessModel.value = airiExt?.modules?.consciousness?.model || defaultConsciousnessModel.value
-  selectedSpeechProvider.value = airiExt?.modules?.speech?.provider || speechProvider.value
-  selectedSpeechModel.value = airiExt?.modules?.speech?.model || defaultSpeechModel.value
-  selectedSpeechVoiceId.value = airiExt?.modules?.speech?.voice_id || defaultSpeechVoiceId.value
-  selectedDisplayModelId.value = airiExt?.modules?.displayModelId || defaultDisplayModelId.value
-  const activeBg = airiExt?.modules?.activeBackgroundId || (airiExt?.modules as any)?.preferredBackgroundId
-  selectedActiveBackgroundId.value = !activeBg ? 'none' : activeBg
+    // Initialize module selections with fallback logic (handles all cases: create, edit with/without extension)
+    selectedConsciousnessProvider.value = airiExt?.modules?.consciousness?.provider || consciousnessProvider.value
+    selectedConsciousnessModel.value = airiExt?.modules?.consciousness?.model || defaultConsciousnessModel.value
+    selectedSpeechProvider.value = airiExt?.modules?.speech?.provider || speechProvider.value
+    selectedSpeechModel.value = airiExt?.modules?.speech?.model || defaultSpeechModel.value
+    selectedSpeechVoiceId.value = airiExt?.modules?.speech?.voice_id || defaultSpeechVoiceId.value
+    selectedDisplayModelId.value = airiExt?.modules?.displayModelId || defaultDisplayModelId.value
+    const activeBg = airiExt?.modules?.activeBackgroundId || (airiExt?.modules as any)?.preferredBackgroundId
+    selectedActiveBackgroundId.value = !activeBg ? 'none' : activeBg
 
-  const cognitionData = (airiExt as any)?.cognition || (airiExt?.modules as any)?.cognition
-  cognitivePipelineEnabled.value = cognitionData?.enabled ?? false
-  firstHopProcessor.value = cognitionData?.processor ?? 'none'
-  selectedFirstHopProvider.value = cognitionData?.provider || consciousnessProvider.value
-  selectedFirstHopModel.value = cognitionData?.model || ''
+    const cognitionData = (airiExt as any)?.cognition || (airiExt?.modules as any)?.cognition
+    cognitivePipelineEnabled.value = cognitionData?.enabled ?? false
+    firstHopProcessor.value = cognitionData?.processor ?? 'none'
+    selectedFirstHopProvider.value = cognitionData?.provider || consciousnessProvider.value
+    selectedFirstHopModel.value = cognitionData?.model || ''
 
-  // Cognition - Affect
-  selectedMoodPreset.value = cognitionData?.affect?.preset ?? 'gremlin'
-  baselineSuspicion.value = cognitionData?.affect?.baselineSuspicion ?? 0.20
-  baselineAttachment.value = cognitionData?.affect?.baselineAttachment ?? 0.60
-  baselinePride.value = cognitionData?.affect?.baselinePride ?? 0.85
-  suspicionSensitivity.value = cognitionData?.affect?.suspicionSensitivity ?? 0.65
-  irritationHalfLifeMinutes.value = cognitionData?.affect?.irritationHalfLifeMinutes ?? 45
-  metabolicRestEnabled.value = cognitionData?.affect?.metabolicRestEnabled ?? true
-  companionAnchorOverride.value = cognitionData?.affect?.companionAnchorOverride ?? ''
-  grievanceTrackingEnabled.value = cognitionData?.affect?.grievanceTrackingEnabled ?? true
-  grievanceThreshold.value = cognitionData?.affect?.grievanceThreshold ?? 0.6
-  dailyForgivenessRate.value = cognitionData?.affect?.dailyForgivenessRate ?? 0.01
-  silenceThreshold.value = cognitionData?.affect?.silenceThreshold ?? 0.75
+    // Cognition - Affect
+    selectedMoodPreset.value = cognitionData?.affect?.preset ?? 'gremlin'
+    baselineSuspicion.value = cognitionData?.affect?.baselineSuspicion ?? 0.20
+    baselineAttachment.value = cognitionData?.affect?.baselineAttachment ?? 0.60
+    baselinePride.value = cognitionData?.affect?.baselinePride ?? 0.85
+    suspicionSensitivity.value = cognitionData?.affect?.suspicionSensitivity ?? 0.65
+    irritationHalfLifeMinutes.value = cognitionData?.affect?.irritationHalfLifeMinutes ?? 45
+    metabolicRestEnabled.value = cognitionData?.affect?.metabolicRestEnabled ?? true
+    companionAnchorOverride.value = cognitionData?.affect?.companionAnchorOverride ?? ''
+    grievanceTrackingEnabled.value = cognitionData?.affect?.grievanceTrackingEnabled ?? true
+    grievanceThreshold.value = cognitionData?.affect?.grievanceThreshold ?? 0.6
+    dailyForgivenessRate.value = cognitionData?.affect?.dailyForgivenessRate ?? 0.01
+    silenceThreshold.value = cognitionData?.affect?.silenceThreshold ?? 0.75
 
-  // Cognition - Triggers
-  tier1LocalReflexEnabled.value = cognitionData?.triggers?.tier1LocalReflexEnabled ?? true
-  tier2JevChallengerEnabled.value = cognitionData?.triggers?.tier2JevChallengerEnabled ?? true
-  triggerOverrides.value = cognitionData?.triggers?.overrides ?? {}
+    // Cognition - Triggers
+    tier1LocalReflexEnabled.value = cognitionData?.triggers?.tier1LocalReflexEnabled ?? true
+    tier2JevChallengerEnabled.value = cognitionData?.triggers?.tier2JevChallengerEnabled ?? true
+    triggerOverrides.value = cognitionData?.triggers?.overrides ?? {}
 
-  // Cognition - Memory State (Universe RAG++)
-  universeRagGroundingEnabled.value = cognitionData?.searchEngine?.universeRagEnabled ?? true
-  precisionRerankerEnabled.value = cognitionData?.searchEngine?.rerankerEnabled ?? true
-  selectedRerankerProvider.value = cognitionData?.searchEngine?.rerankerProvider ?? 'laya-local'
-  system2EscalationEnabled.value = cognitionData?.searchEngine?.system2EscalationEnabled ?? true
-  deepMemoryReasoningModel.value = cognitionData?.searchEngine?.reasoningModel ?? 'inherit'
-  evidenceLimit.value = cognitionData?.searchEngine?.evidenceLimit ?? 4
-  memoryRelevanceThreshold.value = cognitionData?.searchEngine?.relevanceThreshold ?? 0.65
-  turn1AnaphoraEnabled.value = cognitionData?.searchEngine?.anaphoraEnabled ?? true
-  timelineDatePriorityEnabled.value = cognitionData?.searchEngine?.timelinePriorityEnabled ?? true
-  selectedArtistryProvider.value = airiExt?.artistry?.provider || defaultArtistryProvider.value
-  selectedArtistryModel.value = airiExt?.artistry?.model || ''
-  selectedArtistryPromptPrefix.value = airiExt?.artistry?.promptPrefix || ''
-  selectedArtistryWidgetInstruction.value = airiExt?.artistry?.widgetInstruction ?? DEFAULT_ARTISTRY_WIDGET_INSTRUCTION
-  selectedArtistryAutonomousEnabled.value = airiExt?.artistry?.autonomousEnabled ?? false
-  selectedArtistryAutonomousThreshold.value = airiExt?.artistry?.autonomousThreshold ?? 49
-  selectedArtistryAutonomousMonitorEnabled.value = airiExt?.artistry?.autonomousMonitorEnabled ?? true
-  selectedArtistryAutonomousMonitorDiscordEnabled.value = airiExt?.artistry?.autonomousMonitorDiscordEnabled ?? false
-  selectedArtistryAutonomousHistoryDepth.value = airiExt?.artistry?.autonomousHistoryDepth ?? 3
-  selectedArtistryAutonomousModelMode.value = airiExt?.artistry?.autonomousModelMode ?? 'inherit'
-  selectedArtistryAutonomousProvider.value = airiExt?.artistry?.autonomousProvider || ''
-  selectedArtistryAutonomousModel.value = airiExt?.artistry?.autonomousModel || ''
-  selectedArtistryAutonomousTarget.value = airiExt?.artistry?.autonomousTarget ?? 'assistant'
-  selectedArtistrySpawnMode.value = airiExt?.artistry?.spawnMode ?? 'bg'
-  generationEnabled.value = airiExt?.generation?.enabled ?? false
-  generationProvider.value = airiExt?.generation?.provider || airiExt?.modules?.consciousness?.provider || consciousnessProvider.value
-  generationModel.value = airiExt?.generation?.model || airiExt?.modules?.consciousness?.model || defaultConsciousnessModel.value
-  generationMaxTokens.value = normalizeOptionalNumber(airiExt?.generation?.known?.maxTokens)
-  generationTemperature.value = normalizeOptionalNumber(airiExt?.generation?.known?.temperature)
-  generationTopP.value = normalizeOptionalNumber(airiExt?.generation?.known?.topP)
-  generationContextWidth.value = normalizeOptionalNumber(airiExt?.generation?.known?.contextWidth)
-  generationReasoningFallback.value = airiExt?.generation?.known?.reasoningFallback ?? true
-  generationAllowedTools.value = airiExt?.generation?.known?.allowedTools
-  generationAdvancedJson.value = airiExt?.generation?.advanced ? JSON.stringify(airiExt.generation.advanced, null, 2) : '{\n  \n}'
-  selectedActingModelExpressionPrompt.value = airiExt?.acting?.modelExpressionPrompt ?? DEFAULT_ACTING_MODEL_PROMPT
-  selectedActingSpeechExpressionPrompt.value = airiExt?.acting?.speechExpressionPrompt ?? DEFAULT_ACTING_SPEECH_EXPRESSION_PROMPT
-  selectedActingSpeechMannerismPrompt.value = airiExt?.acting?.speechMannerismPrompt ?? DEFAULT_ACTING_SPEECH_MANNERISM_PROMPT
-  pacingEnabled.value = airiExt?.acting?.pacing?.enabled ?? false
-  pacingArmMinMs.value = airiExt?.acting?.pacing?.armMinMs ?? 1200
-  pacingArmMaxMs.value = airiExt?.acting?.pacing?.armMaxMs ?? 3500
-  pacingMaxFillerDurationMs.value = airiExt?.acting?.pacing?.maxFillerDurationMs ?? 3000
-  pacingCategoryThreshold.value = airiExt?.acting?.pacing?.categoryThreshold ?? 1
-  pacingMaxFillersPerTurn.value = airiExt?.acting?.pacing?.maxFillersPerTurn ?? 3
-  pacingIntervalMs.value = airiExt?.acting?.pacing?.pacingIntervalMs ?? 15000
-  pacingDynamicAsidesEnabled.value = airiExt?.acting?.pacing?.dynamicAsidesEnabled ?? false
-  pacingSemanticExtractorEnabled.value = airiExt?.acting?.pacing?.semanticExtractorEnabled ?? false
-  pacingDynamicAfterMs.value = airiExt?.acting?.pacing?.dynamicAfterMs ?? 15000
-  pacingCandidateTtlMs.value = airiExt?.acting?.pacing?.candidateTtlMs ?? 15000
-  pacingMaxFillerSynthesisBudgetMs.value = airiExt?.acting?.pacing?.maxFillerSynthesisBudgetMs ?? 3200
-  pacingMaxSynthesisBudgetMs.value = airiExt?.acting?.pacing?.maxSynthesisBudgetMs ?? 3200
-  pacingProfile.value = (airiExt?.acting?.pacing as any)?.pacingProfile ?? 'balanced'
-  pacingExperimentalOrganicPivots.value = airiExt?.acting?.pacing?.experimentalOrganicPivots ?? false
-  pacingFillers.value = airiExt?.acting?.pacing?.fillers && airiExt.acting.pacing.fillers.length > 0
-    ? JSON.parse(JSON.stringify(airiExt.acting.pacing.fillers))
-    : JSON.parse(JSON.stringify(DEFAULT_PACING_FILLERS))
-  // Context-aware idle animation initialization:
-  // Check if the current stage model matches an actor with custom idleAnimations override.
-  const visualAssets = airiExt?.visual_assets || {}
-  const currentModelId = defaultDisplayModelId.value
-  let resolvedIdleAnims = airiExt?.acting?.idleAnimations || []
-  if (currentModelId) {
-    for (const asset of Object.values(visualAssets)) {
-      const a = asset as any
-      if (a?.manifestation?.modelId === currentModelId && a.idleAnimations) {
-        resolvedIdleAnims = a.idleAnimations
-        break
+    // Cognition - Memory State (Universe RAG++)
+    universeRagGroundingEnabled.value = cognitionData?.searchEngine?.universeRagEnabled ?? true
+    precisionRerankerEnabled.value = cognitionData?.searchEngine?.rerankerEnabled ?? true
+    selectedRerankerProvider.value = cognitionData?.searchEngine?.rerankerProvider ?? 'laya-local'
+    system2EscalationEnabled.value = cognitionData?.searchEngine?.system2EscalationEnabled ?? true
+    deepMemoryReasoningModel.value = cognitionData?.searchEngine?.reasoningModel ?? 'inherit'
+    evidenceLimit.value = cognitionData?.searchEngine?.evidenceLimit ?? 4
+    memoryRelevanceThreshold.value = cognitionData?.searchEngine?.relevanceThreshold ?? 0.65
+    turn1AnaphoraEnabled.value = cognitionData?.searchEngine?.anaphoraEnabled ?? true
+    timelineDatePriorityEnabled.value = cognitionData?.searchEngine?.timelinePriorityEnabled ?? true
+    selectedArtistryProvider.value = airiExt?.artistry?.provider || defaultArtistryProvider.value
+    selectedArtistryModel.value = airiExt?.artistry?.model || ''
+    selectedArtistryPromptPrefix.value = airiExt?.artistry?.promptPrefix || ''
+    selectedArtistryWidgetInstruction.value = airiExt?.artistry?.widgetInstruction ?? DEFAULT_ARTISTRY_WIDGET_INSTRUCTION
+    selectedArtistryAutonomousEnabled.value = airiExt?.artistry?.autonomousEnabled ?? false
+    selectedArtistryAutonomousThreshold.value = airiExt?.artistry?.autonomousThreshold ?? 49
+    selectedArtistryAutonomousMonitorEnabled.value = airiExt?.artistry?.autonomousMonitorEnabled ?? true
+    selectedArtistryAutonomousMonitorDiscordEnabled.value = airiExt?.artistry?.autonomousMonitorDiscordEnabled ?? false
+    selectedArtistryAutonomousHistoryDepth.value = airiExt?.artistry?.autonomousHistoryDepth ?? 3
+    selectedArtistryAutonomousModelMode.value = airiExt?.artistry?.autonomousModelMode ?? 'inherit'
+    selectedArtistryAutonomousProvider.value = airiExt?.artistry?.autonomousProvider || ''
+    selectedArtistryAutonomousModel.value = airiExt?.artistry?.autonomousModel || ''
+    selectedArtistryAutonomousTarget.value = airiExt?.artistry?.autonomousTarget ?? 'assistant'
+    selectedArtistrySpawnMode.value = airiExt?.artistry?.spawnMode ?? 'bg'
+    generationEnabled.value = airiExt?.generation?.enabled ?? false
+    generationProvider.value = airiExt?.generation?.provider || airiExt?.modules?.consciousness?.provider || consciousnessProvider.value
+    generationModel.value = airiExt?.generation?.model || airiExt?.modules?.consciousness?.model || defaultConsciousnessModel.value
+    generationMaxTokens.value = normalizeOptionalNumber(airiExt?.generation?.known?.maxTokens)
+    generationTemperature.value = normalizeOptionalNumber(airiExt?.generation?.known?.temperature)
+    generationTopP.value = normalizeOptionalNumber(airiExt?.generation?.known?.topP)
+    generationContextWidth.value = normalizeOptionalNumber(airiExt?.generation?.known?.contextWidth)
+    generationReasoningFallback.value = airiExt?.generation?.known?.reasoningFallback ?? true
+    generationAllowedTools.value = airiExt?.generation?.known?.allowedTools
+    generationAdvancedJson.value = airiExt?.generation?.advanced ? JSON.stringify(airiExt.generation.advanced, null, 2) : '{\n  \n}'
+    selectedActingModelExpressionPrompt.value = airiExt?.acting?.modelExpressionPrompt ?? DEFAULT_ACTING_MODEL_PROMPT
+    selectedActingSpeechExpressionPrompt.value = airiExt?.acting?.speechExpressionPrompt ?? DEFAULT_ACTING_SPEECH_EXPRESSION_PROMPT
+    selectedActingSpeechMannerismPrompt.value = airiExt?.acting?.speechMannerismPrompt ?? DEFAULT_ACTING_SPEECH_MANNERISM_PROMPT
+    pacingEnabled.value = airiExt?.acting?.pacing?.enabled ?? false
+    pacingArmMinMs.value = airiExt?.acting?.pacing?.armMinMs ?? 1200
+    pacingArmMaxMs.value = airiExt?.acting?.pacing?.armMaxMs ?? 3500
+    pacingMaxFillerDurationMs.value = airiExt?.acting?.pacing?.maxFillerDurationMs ?? 3000
+    pacingCategoryThreshold.value = airiExt?.acting?.pacing?.categoryThreshold ?? 1
+    pacingMaxFillersPerTurn.value = airiExt?.acting?.pacing?.maxFillersPerTurn ?? 3
+    pacingIntervalMs.value = airiExt?.acting?.pacing?.pacingIntervalMs ?? 15000
+    pacingDynamicAsidesEnabled.value = airiExt?.acting?.pacing?.dynamicAsidesEnabled ?? false
+    pacingSemanticExtractorEnabled.value = airiExt?.acting?.pacing?.semanticExtractorEnabled ?? false
+    pacingDynamicAfterMs.value = airiExt?.acting?.pacing?.dynamicAfterMs ?? 15000
+    pacingCandidateTtlMs.value = airiExt?.acting?.pacing?.candidateTtlMs ?? 15000
+    pacingMaxFillerSynthesisBudgetMs.value = airiExt?.acting?.pacing?.maxFillerSynthesisBudgetMs ?? 3200
+    pacingMaxSynthesisBudgetMs.value = airiExt?.acting?.pacing?.maxSynthesisBudgetMs ?? 3200
+    pacingProfile.value = (airiExt?.acting?.pacing as any)?.pacingProfile ?? 'balanced'
+    pacingExperimentalOrganicPivots.value = airiExt?.acting?.pacing?.experimentalOrganicPivots ?? false
+    pacingFillers.value = airiExt?.acting?.pacing?.fillers && airiExt.acting.pacing.fillers.length > 0
+      ? JSON.parse(JSON.stringify(airiExt.acting.pacing.fillers))
+      : JSON.parse(JSON.stringify(DEFAULT_PACING_FILLERS))
+    // Context-aware idle animation initialization:
+    // Check if the current stage model matches an actor with custom idleAnimations override.
+    const visualAssets = airiExt?.visual_assets || {}
+    const currentModelId = defaultDisplayModelId.value
+    let resolvedIdleAnims = airiExt?.acting?.idleAnimations || []
+    if (currentModelId) {
+      for (const asset of Object.values(visualAssets)) {
+        const a = asset as any
+        if (a?.manifestation?.modelId === currentModelId && a.idleAnimations) {
+          resolvedIdleAnims = a.idleAnimations
+          break
+        }
       }
     }
+    selectedActingIdleAnimations.value = [...resolvedIdleAnims]
+    compactionStrategy.value = airiExt?.generation?.compaction?.strategy || 'none'
+    compactionMinKeepTurns.value = airiExt?.generation?.compaction?.minKeepTurns ?? 15
+    try {
+      selectedArtistryConfigStr.value = airiExt?.artistry?.options ? JSON.stringify(airiExt.artistry.options, null, 2) : '{\n  \n}'
+    }
+    catch {
+      selectedArtistryConfigStr.value = '{\n  \n}'
+    }
+
+    heartbeatsEnabled.value = airiExt?.heartbeats?.enabled ?? false
+    heartbeatsIntervalMinutes.value = airiExt?.heartbeats?.intervalMinutes ?? 5
+    heartbeatsPrompt.value = airiExt?.heartbeats?.prompt ?? DEFAULT_HEARTBEATS_PROMPT
+    heartbeatsInjectIntoPrompt.value = airiExt?.heartbeats?.injectIntoPrompt ?? true
+    heartbeatsUseAsLocalGate.value = airiExt?.heartbeats?.useAsLocalGate ?? true
+    heartbeatsScheduleStart.value = airiExt?.heartbeats?.schedule?.start ?? '09:00'
+    heartbeatsScheduleEnd.value = airiExt?.heartbeats?.schedule?.end ?? '22:00'
+    heartbeatsContextWindowHistory.value = airiExt?.heartbeats?.contextOptions?.windowHistory ?? true
+    heartbeatsContextSystemLoad.value = airiExt?.heartbeats?.contextOptions?.systemLoad ?? true
+    heartbeatsContextUsageMetrics.value = airiExt?.heartbeats?.contextOptions?.usageMetrics ?? true
+    heartbeatsRespectSchedule.value = airiExt?.heartbeats?.respectSchedule ?? true
+    presencePauseWhenAfk.value = airiExt?.heartbeats?.pauseWhenAfk ?? airiExt?.screenWatching?.pauseWhenAfk ?? true
+    presenceAfkThresholdMinutes.value = airiExt?.heartbeats?.afkThresholdMinutes ?? airiExt?.screenWatching?.afkThresholdMinutes ?? 5
+    // Dream State
+    dreamStateEnabled.value = airiExt?.dreamState?.enabled ?? false
+    dreamStateStrictAfkGating.value = airiExt?.dreamState?.strictAfkGating ?? true
+    dreamStateRichness.value = airiExt?.dreamState?.journalingThreshold ?? 'balanced'
+    dreamStateAfkThresholdMinutes.value = airiExt?.dreamState?.afkThresholdMinutes ?? 5
+    dreamStateSessionTimeoutMinutes.value = airiExt?.dreamState?.sessionTimeoutMinutes ?? 60
+    dreamStateMaxSessionsPerDay.value = airiExt?.dreamState?.maxSessionsPerDay ?? 4
+    dreamStateMinConversationTurns.value = airiExt?.dreamState?.minConversationTurns ?? 4
+    dreamStateInjectDreamContext.value = airiExt?.dreamState?.injectDreamContext ?? false
+
+    // Screen Watching (Attention Ecology)
+    screenWatchingEnabled.value = airiExt?.screenWatching?.enabled ?? false
+    screenWatchingDeliveryMode.value = airiExt?.screenWatching?.deliveryMode ?? 'both'
+    screenWatchingSourceType.value = airiExt?.screenWatching?.sourceType ?? 'displays'
+    screenWatchingSourceId.value = airiExt?.screenWatching?.sourceId ?? ''
+    screenWatchingCaptureIntervalMs.value = airiExt?.screenWatching?.captureIntervalMs ?? 2000
+    screenWatchingDownscalePercent.value = airiExt?.screenWatching?.downscalePercent ?? 100
+    const loadedWorkload = airiExt?.screenWatching?.workload
+    screenWatchingWorkload.value = (loadedWorkload === 'screen:interpret') ? 'screen:interpret' : 'attention-guard'
+    screenWatchingPublishToContext.value = airiExt?.screenWatching?.publishToContext ?? true
+    screenWatchingInterestTags.value = airiExt?.screenWatching?.interestTags ?? ['antigravity', 'terminal_error', 'youtube', 'discord']
+    screenWatchingDeferWhileSpeaking.value = airiExt?.screenWatching?.deferWhileSpeaking ?? true
+    screenWatchingMaxPerHour.value = airiExt?.screenWatching?.maxPerHour ?? 4
+    screenWatchingHysteresisMinutes.value = airiExt?.screenWatching?.hysteresisMinutes ?? 3
+    screenWatchingEnableVlm.value = airiExt?.screenWatching?.enableVlm ?? false
+    screenWatchingVlmTier.value = airiExt?.screenWatching?.vlmTier
+      ?? (screenWatchingEnableVlm.value ? 'moondream' : 'lightweight')
+    screenWatchingRespectSchedule.value = airiExt?.screenWatching?.respectSchedule ?? true
+    screenWatchingGatingMode.value = airiExt?.screenWatching?.gatingMode ?? 'trigger_tags'
+    screenWatchingSentinelProvider.value = airiExt?.screenWatching?.sentinelProvider ?? 'laya-local'
+    screenWatchingSentinelQuestions.value = airiExt?.screenWatching?.sentinelQuestions
+      ? JSON.parse(JSON.stringify(airiExt.screenWatching.sentinelQuestions))
+      : JSON.parse(JSON.stringify(DEFAULT_SENTINEL_QUESTIONS))
+    screenWatchingSentinelPolicy.value = airiExt?.screenWatching?.sentinelPolicy ?? 'any'
+    screenWatchingSentinelThreshold.value = airiExt?.screenWatching?.sentinelThreshold ?? 0.75
+    screenWatchingSentinelEvidenceEnabled.value = airiExt?.screenWatching?.sentinelEvidenceEnabled ?? true
+
+    // Sensors & Event Ledger
+    eventLedgerEnabled.value = airiExt?.eventLedger?.enabled ?? true
+    eventLedgerSampleDepth.value = airiExt?.eventLedger?.sampleDepth ?? 6
+    eventLedgerDomains.value = airiExt?.eventLedger?.domains ?? ['vision', 'tools', 'chat', 'memory', 'discord']
+
+    // Short-Term Memory (24h Daily Summaries)
+    shortTermMemoryEnabled.value = airiExt?.shortTermMemory ? true : true
+    shortTermMemoryWindowSize.value = airiExt?.shortTermMemory?.windowSize ?? 3
+    shortTermMemoryTokenBudget.value = airiExt?.shortTermMemory?.tokenBudgetPerDay ?? 1000
+
+    groundingEnabled.value = airiExt?.groundingEnabled ?? false
+
+    // Load Tools Tab configuration
+    selectedInjectDreamContext.value = airiExt?.dreamState?.injectDreamContext ?? false
+    selectedDreamIntrusionPrompt.value = airiExt?.dreamState?.dreamIntrusionPrompt ?? DEFAULT_DREAM_INTRUSION_PROMPT
+    selectedInjectJournalContext.value = airiExt?.textJournal?.injectJournalContext ?? false
+    selectedJournalIntrusionPrompt.value = airiExt?.textJournal?.journalIntrusionPrompt ?? DEFAULT_JOURNAL_INTRUSION_PROMPT
+    selectedInjectArtistryContext.value = airiExt?.artistry?.injectArtistryContext ?? false
+    selectedArtistryIntrusionPrompt.value = airiExt?.artistry?.artistryIntrusionPrompt ?? DEFAULT_ARTISTRY_INTRUSION_PROMPT
+    selectedTextJournalInstruction.value = airiExt?.textJournal?.widgetInstruction ?? DEFAULT_TEXT_JOURNAL_WIDGET_INSTRUCTION
+
+    loadActingSpeechCapabilities(selectedSpeechProvider.value || speechProvider.value)
+
+    // Return existing card data or defaults
+    if (existingCard) {
+      return { ...toRaw(existingCard) }
+    }
+
+    return {
+      name: t('settings.pages.card.creation.defaults.name'),
+      nickname: undefined,
+      version: '1.0',
+      description: '',
+      notes: undefined,
+      personality: t('settings.pages.card.creation.defaults.personality'),
+      scenario: t('settings.pages.card.creation.defaults.scenario'),
+      systemPrompt: t('settings.pages.card.creation.defaults.systemprompt'),
+      postHistoryInstructions: (t('settings.pages.card.creation.defaults.posthistoryinstructions') !== 'settings.pages.card.creation.defaults.posthistoryinstructions' && t('settings.pages.card.creation.defaults.posthistoryinstructions')) || DEFAULT_POST_HISTORY_INSTRUCTIONS,
+      greetings: [],
+      messageExample: [],
+    }
   }
-  selectedActingIdleAnimations.value = [...resolvedIdleAnims]
-  compactionStrategy.value = airiExt?.generation?.compaction?.strategy || 'none'
-  compactionMinKeepTurns.value = airiExt?.generation?.compaction?.minKeepTurns ?? 15
-  try {
-    selectedArtistryConfigStr.value = airiExt?.artistry?.options ? JSON.stringify(airiExt.artistry.options, null, 2) : '{\n  \n}'
-  }
-  catch {
-    selectedArtistryConfigStr.value = '{\n  \n}'
-  }
-
-  heartbeatsEnabled.value = airiExt?.heartbeats?.enabled ?? false
-  heartbeatsIntervalMinutes.value = airiExt?.heartbeats?.intervalMinutes ?? 5
-  heartbeatsPrompt.value = airiExt?.heartbeats?.prompt ?? DEFAULT_HEARTBEATS_PROMPT
-  heartbeatsInjectIntoPrompt.value = airiExt?.heartbeats?.injectIntoPrompt ?? true
-  heartbeatsUseAsLocalGate.value = airiExt?.heartbeats?.useAsLocalGate ?? true
-  heartbeatsScheduleStart.value = airiExt?.heartbeats?.schedule?.start ?? '09:00'
-  heartbeatsScheduleEnd.value = airiExt?.heartbeats?.schedule?.end ?? '22:00'
-  heartbeatsContextWindowHistory.value = airiExt?.heartbeats?.contextOptions?.windowHistory ?? true
-  heartbeatsContextSystemLoad.value = airiExt?.heartbeats?.contextOptions?.systemLoad ?? true
-  heartbeatsContextUsageMetrics.value = airiExt?.heartbeats?.contextOptions?.usageMetrics ?? true
-  heartbeatsRespectSchedule.value = airiExt?.heartbeats?.respectSchedule ?? true
-  presencePauseWhenAfk.value = airiExt?.heartbeats?.pauseWhenAfk ?? airiExt?.screenWatching?.pauseWhenAfk ?? true
-  presenceAfkThresholdMinutes.value = airiExt?.heartbeats?.afkThresholdMinutes ?? airiExt?.screenWatching?.afkThresholdMinutes ?? 5
-  // Dream State
-  dreamStateEnabled.value = airiExt?.dreamState?.enabled ?? false
-  dreamStateStrictAfkGating.value = airiExt?.dreamState?.strictAfkGating ?? true
-  dreamStateRichness.value = airiExt?.dreamState?.journalingThreshold ?? 'balanced'
-  dreamStateAfkThresholdMinutes.value = airiExt?.dreamState?.afkThresholdMinutes ?? 5
-  dreamStateSessionTimeoutMinutes.value = airiExt?.dreamState?.sessionTimeoutMinutes ?? 60
-  dreamStateMaxSessionsPerDay.value = airiExt?.dreamState?.maxSessionsPerDay ?? 4
-  dreamStateMinConversationTurns.value = airiExt?.dreamState?.minConversationTurns ?? 4
-  dreamStateInjectDreamContext.value = airiExt?.dreamState?.injectDreamContext ?? false
-
-  // Screen Watching (Attention Ecology)
-  screenWatchingEnabled.value = airiExt?.screenWatching?.enabled ?? false
-  screenWatchingDeliveryMode.value = airiExt?.screenWatching?.deliveryMode ?? 'both'
-  screenWatchingSourceType.value = airiExt?.screenWatching?.sourceType ?? 'displays'
-  screenWatchingSourceId.value = airiExt?.screenWatching?.sourceId ?? ''
-  screenWatchingCaptureIntervalMs.value = airiExt?.screenWatching?.captureIntervalMs ?? 2000
-  screenWatchingDownscalePercent.value = airiExt?.screenWatching?.downscalePercent ?? 100
-  const loadedWorkload = airiExt?.screenWatching?.workload
-  screenWatchingWorkload.value = (loadedWorkload === 'screen:interpret') ? 'screen:interpret' : 'attention-guard'
-  screenWatchingPublishToContext.value = airiExt?.screenWatching?.publishToContext ?? true
-  screenWatchingInterestTags.value = airiExt?.screenWatching?.interestTags ?? ['antigravity', 'terminal_error', 'youtube', 'discord']
-  screenWatchingDeferWhileSpeaking.value = airiExt?.screenWatching?.deferWhileSpeaking ?? true
-  screenWatchingMaxPerHour.value = airiExt?.screenWatching?.maxPerHour ?? 4
-  screenWatchingHysteresisMinutes.value = airiExt?.screenWatching?.hysteresisMinutes ?? 3
-  screenWatchingEnableVlm.value = airiExt?.screenWatching?.enableVlm ?? false
-  screenWatchingVlmTier.value = airiExt?.screenWatching?.vlmTier
-    ?? (screenWatchingEnableVlm.value ? 'moondream' : 'lightweight')
-  screenWatchingRespectSchedule.value = airiExt?.screenWatching?.respectSchedule ?? true
-  screenWatchingGatingMode.value = airiExt?.screenWatching?.gatingMode ?? 'trigger_tags'
-  screenWatchingSentinelProvider.value = airiExt?.screenWatching?.sentinelProvider ?? 'laya-local'
-  screenWatchingSentinelQuestions.value = airiExt?.screenWatching?.sentinelQuestions
-    ? JSON.parse(JSON.stringify(airiExt.screenWatching.sentinelQuestions))
-    : JSON.parse(JSON.stringify(DEFAULT_SENTINEL_QUESTIONS))
-  screenWatchingSentinelPolicy.value = airiExt?.screenWatching?.sentinelPolicy ?? 'any'
-  screenWatchingSentinelThreshold.value = airiExt?.screenWatching?.sentinelThreshold ?? 0.75
-  screenWatchingSentinelEvidenceEnabled.value = airiExt?.screenWatching?.sentinelEvidenceEnabled ?? true
-
-  // Sensors & Event Ledger
-  eventLedgerEnabled.value = airiExt?.eventLedger?.enabled ?? true
-  eventLedgerSampleDepth.value = airiExt?.eventLedger?.sampleDepth ?? 6
-  eventLedgerDomains.value = airiExt?.eventLedger?.domains ?? ['vision', 'tools', 'chat', 'memory', 'discord']
-
-  // Short-Term Memory (24h Daily Summaries)
-  shortTermMemoryEnabled.value = airiExt?.shortTermMemory ? true : true
-  shortTermMemoryWindowSize.value = airiExt?.shortTermMemory?.windowSize ?? 3
-  shortTermMemoryTokenBudget.value = airiExt?.shortTermMemory?.tokenBudgetPerDay ?? 1000
-
-  groundingEnabled.value = airiExt?.groundingEnabled ?? false
-
-  // Load Tools Tab configuration
-  selectedInjectDreamContext.value = airiExt?.dreamState?.injectDreamContext ?? false
-  selectedDreamIntrusionPrompt.value = airiExt?.dreamState?.dreamIntrusionPrompt ?? DEFAULT_DREAM_INTRUSION_PROMPT
-  selectedInjectJournalContext.value = airiExt?.textJournal?.injectJournalContext ?? false
-  selectedJournalIntrusionPrompt.value = airiExt?.textJournal?.journalIntrusionPrompt ?? DEFAULT_JOURNAL_INTRUSION_PROMPT
-  selectedInjectArtistryContext.value = airiExt?.artistry?.injectArtistryContext ?? false
-  selectedArtistryIntrusionPrompt.value = airiExt?.artistry?.artistryIntrusionPrompt ?? DEFAULT_ARTISTRY_INTRUSION_PROMPT
-  selectedTextJournalInstruction.value = airiExt?.textJournal?.widgetInstruction ?? DEFAULT_TEXT_JOURNAL_WIDGET_INSTRUCTION
-
-  loadActingSpeechCapabilities(selectedSpeechProvider.value || speechProvider.value)
-
-  // Return existing card data or defaults
-  if (existingCard) {
-    return { ...toRaw(existingCard) }
-  }
-
-  return {
-    name: t('settings.pages.card.creation.defaults.name'),
-    nickname: undefined,
-    version: '1.0',
-    description: '',
-    notes: undefined,
-    personality: t('settings.pages.card.creation.defaults.personality'),
-    scenario: t('settings.pages.card.creation.defaults.scenario'),
-    systemPrompt: t('settings.pages.card.creation.defaults.systemprompt'),
-    postHistoryInstructions: (t('settings.pages.card.creation.defaults.posthistoryinstructions') !== 'settings.pages.card.creation.defaults.posthistoryinstructions' && t('settings.pages.card.creation.defaults.posthistoryinstructions')) || DEFAULT_POST_HISTORY_INSTRUCTIONS,
-    greetings: [],
-    messageExample: [],
+  finally {
+    void nextTick(() => {
+      initializingDepth.value = Math.max(0, initializingDepth.value - 1)
+    })
   }
 }
 
