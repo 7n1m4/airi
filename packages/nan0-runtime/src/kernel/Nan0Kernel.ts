@@ -849,6 +849,7 @@ export class Nan0Kernel {
         temporalEventId: canonicalObservation.metadata.temporalEventId,
         evaluationId: canonicalObservation.metadata.evaluationId,
         autonomous: isInternalObservation,
+        systemOneAnswers,
       },
     }
 
@@ -858,6 +859,7 @@ export class Nan0Kernel {
       inputEvent: inputTimelineEvent.event,
       text,
       at: canonicalObservation.timestamp,
+      systemOneAnswers,
     })
     const turn: Nan0ConversationTurn = {
       ...preparedTurn,
@@ -1506,7 +1508,10 @@ export class Nan0Kernel {
     const inputMemory = this.state.memories.find(item => item.id === turn.inputContentReference)
     const inputEvent = this.state.timeline.events.find(item => item.eventId === turn.inputEventId)
     const inputOwnership = turn.metadata.ownership as import('../types').Nan0ActorOwnership | undefined
-    const relationshipEvidence = inferRelationshipEvidence(inputMemory?.content ?? '')
+    const relationshipEvidence = inferRelationshipEvidence(
+      inputMemory?.content ?? '',
+      turn.metadata.systemOneAnswers as import('../types').Nan0JevSystemOneAnswers | undefined,
+    )
     const relationshipResult = inputEvent
       ? await applyRelationshipEvidenceAsync(this.state.relationships, {
           actorId: turn.inputActorId,

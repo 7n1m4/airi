@@ -1,31 +1,34 @@
-# Nan0 Runtime: Milestones 1–5 Local Starter
+# Nan0 Cognition Runtime
 
-This package is intentionally local-first. Copy `packages/nan0-runtime` into the AIRI workspace and test without pushing.
+The standalone, TypeScript-native port of Nan0 cognition integrated into AIRI.
 
-## Implemented
+For architectural decisions, deep-dive specifications, and the heuristic-elimination journey, read **[ARCHITECTURE-SYSTEM1-UPGRADE.md](./ARCHITECTURE-SYSTEM1-UPGRADE.md)**.
 
-1. Package scaffold and typed contracts.
-2. Observation → kernel → expression message path.
-3. Provider-neutral reasoning client call.
-4. Explicit port seam for the Python cognition pipeline.
-5. Local persisted state plus versioned legacy-memory import.
+## Architecture Highlights
 
-## Not yet equivalent to the Python Nan0
+1. **System 1 (Jev Fast Decisions)**: Mandatory non-autoregressive discrete triage evaluated in ~100–150ms per forward pass, powering conversational continuity, relationship evidence, emotional perturbation, and boundary defense.
+2. **System 2 (Consciousness & Outward Speech)**: Dual-pass reasoning client driving internal private thought monologue followed by outward speech generation.
+3. **Continuity & Threads**: Neural topic routing without heuristic regex pattern matching.
+4. **Relationship Memory**: Evidence classification mapping directly to PCL belief assertions, commitments, breaches, and repairs.
+5. **Autonomy & Metabolism**: Temporal event tracking, pending intentions, and proactive idle heartbeats.
 
-The current context builder and memory retrieval are deliberately minimal. They prove the route works. Replace them with the existing Python behavior after providing the Python source and representative database export.
-
-## Local commands
+## Local Commands
 
 ```bash
-pnpm install
+# Typecheck
 pnpm --filter @proj-airi/nan0-runtime typecheck
-pnpm --filter @proj-airi/nan0-runtime build
-pnpm dev:tamagotchi
+
+# Unit Tests (Hermetic, deterministic, offline via mock System 1 fixtures)
+pnpm --filter @proj-airi/nan0-runtime test
+
+# Headless CLI Test Harness (Interactive REPL or scripted scenarios)
+pnpm --filter @proj-airi/nan0-runtime run harness
+pnpm --filter @proj-airi/nan0-runtime run harness --scenario scripts/fixtures/example-scenario.json
 ```
 
-## Local observability
+## Observability & Diagnostics
 
-Nan0 diagnostics are disabled by default. Set `NAN0_DEBUG=true` before starting the Electron app to enable the local observatory. Console and JSONL output default to enabled once debugging is on; individual controls are:
+Set `NAN0_DEBUG=true` before starting the application or harness to enable the local observatory:
 
 ```text
 NAN0_DEBUG_CONSOLE=true
@@ -34,11 +37,3 @@ NAN0_DEBUG_PRIVATE_THOUGHTS=false
 NAN0_DEBUG_VERBOSE=false
 NAN0_DEBUG_LOG_DIR=logs
 ```
-
-Relative log directories resolve beneath Electron's user-data directory. JSONL files are named `nan0-kernel-YYYY-MM-DD.jsonl`. Private narrative text remains excluded unless `NAN0_DEBUG_PRIVATE_THOUGHTS=true`; diagnostics never enter chat, TTS, rendering, or memory.
-
-## Host wiring
-
-Create an AIRI-specific `Nan0ReasoningClient` that calls the current xsAI generation path. Then create `CallbackHostBindings` and feed AIRI chat messages through `emitObservation()`.
-
-Do not push until the package typechecks and AIRI still starts.

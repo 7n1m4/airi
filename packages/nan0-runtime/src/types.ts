@@ -1495,6 +1495,7 @@ export interface Nan0EpistemicGroundingContext {
 }
 
 export type {
+  Nan0JevSystemOneAnswers,
   Nan0SystemOneProvider,
   Nan0SystemOneResponse,
 } from './shadow/Nan0ShadowTypes'

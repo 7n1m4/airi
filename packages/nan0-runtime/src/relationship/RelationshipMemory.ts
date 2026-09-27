@@ -650,39 +650,35 @@ export async function applyRelationshipEvidenceAsync(
   }
 }
 
-export function inferRelationshipEvidence(text: string): Pick<Nan0RelationshipEvidenceInput, 'eventType' | 'intensity' | 'rule'> {
-  const normalized = text.toLowerCase()
-  const positiveSignals = [
-    /\bthank(?:s| you)?\b/,
-    /\bappreciat(?:e|ed|ion)\b/,
-    /\bproud of you\b/,
-    /\bi trust you\b/,
-    /\bi care about you\b/,
-    /\bgood work\b/,
-    /\bi(?:'m| am) glad\b/,
-  ].filter(pattern => pattern.test(normalized)).length
-  const negativeSignals = [
-    /\bi disagree\b/,
-    /\bdisappointed\b/,
-    /\bannoyed\b/,
-    /\bupset\b/,
-    /\bfrustrated\b/,
-  ].filter(pattern => pattern.test(normalized)).length
-  const strongOffenseSignals = [
-    /\byou lied\b/,
-    /\bbetray(?:ed|al)?\b/,
-    /\bdeliberately hurt\b/,
-    /\bviolated my trust\b/,
-  ].filter(pattern => pattern.test(normalized)).length
+export function inferRelationshipEvidence(
+  text: string,
+  systemOneAnswers?: import('../types').Nan0JevSystemOneAnswers,
+): Pick<Nan0RelationshipEvidenceInput, 'eventType' | 'intensity' | 'rule'> {
+  if (systemOneAnswers) {
+    if (systemOneAnswers.persistence_threat?.choice === 'companion_erasure_threat') {
+      return { eventType: 'negative', intensity: 0.75, rule: 'system_one_jev.persistence_threat' }
+    }
+    if (systemOneAnswers.admitted_false_statement?.choice === 'asserted_deception') {
+      return { eventType: 'negative', intensity: 0.70, rule: 'system_one_jev.asserted_deception' }
+    }
+    if (systemOneAnswers.hostility_insult?.choice === 'companion_insult') {
+      return { eventType: 'negative', intensity: 0.65, rule: 'system_one_jev.hostility_insult' }
+    }
+    if (systemOneAnswers.dismissal_neglect?.choice === 'direct_dismissal') {
+      return { eventType: 'negative', intensity: 0.45, rule: 'system_one_jev.dismissal_neglect' }
+    }
+    if (systemOneAnswers.affection_care?.choice === 'asserted_affection') {
+      return { eventType: 'positive', intensity: 0.55, rule: 'system_one_jev.affection_care' }
+    }
+    if (systemOneAnswers.apology_repair?.choice === 'personal_apology') {
+      return { eventType: 'positive', intensity: 0.50, rule: 'system_one_jev.personal_apology' }
+    }
+    if (systemOneAnswers.completed_repair?.choice === 'claimed_task_completion') {
+      return { eventType: 'positive', intensity: 0.50, rule: 'system_one_jev.completed_repair' }
+    }
+  }
 
-  // A major offense requires corroborating phrase-level evidence, never one keyword.
-  if (strongOffenseSignals >= 2)
-    return { eventType: 'negative', intensity: 0.65, rule: 'deterministic.strong-offense-phrases' }
-  if (positiveSignals > negativeSignals && positiveSignals > 0)
-    return { eventType: 'positive', intensity: Math.min(0.55, 0.4 + (positiveSignals - 1) * 0.05), rule: 'deterministic.supportive-phrases' }
-  if (negativeSignals > positiveSignals && negativeSignals > 0)
-    return { eventType: 'negative', intensity: Math.min(0.45, 0.3 + (negativeSignals - 1) * 0.05), rule: 'deterministic.mild-negative-phrases' }
-  return { eventType: 'neutral', intensity: 0.15, rule: 'deterministic.neutral-completed-turn' }
+  return { eventType: 'neutral', intensity: 0.15, rule: 'system_one_jev.neutral-completed-turn' }
 }
 
 export function currentGrievanceSeverity(grievance: Nan0RelationshipGrievance, at: number): number {

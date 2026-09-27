@@ -7,7 +7,6 @@ import type {
 } from './Nan0ShadowTypes'
 
 import { mapJevAnswersToProposal, NAN0_JEV_12_GROUP_QUESTIONS } from './Nan0JevSchema'
-import { Nan0StrengthenedLexicalExtractor } from './Nan0StrengthenedLexicalExtractor'
 
 export interface Nan0ShadowEngineOptions {
   maxBufferCapacity?: number
@@ -17,7 +16,7 @@ export interface Nan0ShadowEngineOptions {
   schemaVersion?: string
   actorMappingVersion?: string
   engineRevision?: string
-  backend?: 'strengthened_lexical' | 'needle_san_wasm' | 'needle_native_cpu' | 'system_one_jev'
+  backend?: 'needle_san_wasm' | 'needle_native_cpu' | 'system_one_jev'
   telemetrySink?: (record: Nan0ShadowTelemetryRecord) => void
   systemOneProvider?: Nan0SystemOneProvider
   jevModel?: string
@@ -25,7 +24,6 @@ export interface Nan0ShadowEngineOptions {
 
 export class Nan0SubconsciousShadowEngine {
   private readonly maxCapacity: number
-  private readonly lexicalExtractor: Nan0StrengthenedLexicalExtractor
   private readonly telemetrySink?: (record: Nan0ShadowTelemetryRecord) => void
   private readonly systemOneProvider?: Nan0SystemOneProvider
   private readonly jevModel?: string
@@ -51,18 +49,17 @@ export class Nan0SubconsciousShadowEngine {
 
   constructor(options: Nan0ShadowEngineOptions = {}) {
     this.maxCapacity = options.maxBufferCapacity ?? 200
-    this.lexicalExtractor = new Nan0StrengthenedLexicalExtractor()
     this.telemetrySink = options.telemetrySink
     this.systemOneProvider = options.systemOneProvider
     this.jevModel = options.jevModel
 
     this.versions = {
-      ruleSetVersion: options.ruleSetVersion ?? (options.systemOneProvider ? 'nan0.jev.v2' : 'nan0.lexical.v2'),
+      ruleSetVersion: options.ruleSetVersion ?? 'nan0.jev.v2',
       policyMappingVersion: options.policyMappingVersion ?? 'nan0.policy.v2',
       schemaVersion: options.schemaVersion ?? 'nan0.pragmatics.schema.v2',
       actorMappingVersion: options.actorMappingVersion ?? 'nan0.actor.v1',
       engineRevision: options.engineRevision ?? 'cactus-needle-2.0.15',
-      backend: options.backend ?? (options.systemOneProvider ? 'system_one_jev' : 'strengthened_lexical'),
+      backend: options.backend ?? (options.systemOneProvider ? 'system_one_jev' : 'needle_native_cpu'),
     }
   }
 
@@ -80,25 +77,26 @@ export class Nan0SubconsciousShadowEngine {
    */
   public dispatch(snapshot: Nan0TurnSnapshot): void {
     if (!this.systemOneProvider) {
-      this.dispatchInternalSync(snapshot)
+      return
     }
-    else {
-      if (this.activeJobs > 0) {
-        // Concurrency circuit breaker: drop overlapping async shadow dispatch to prevent inference stampedes
-        this.droppedRecords++
-        return
-      }
-      void this.dispatchAsync(snapshot).catch((err) => {
-        console.error('[Nan0SubconsciousShadowEngine] error in shadow dispatch:', err)
-      })
+    if (this.activeJobs > 0) {
+      // Concurrency circuit breaker: drop overlapping async shadow dispatch to prevent inference stampedes
+      this.droppedRecords++
+      return
     }
+    void this.dispatchAsync(snapshot).catch((err) => {
+      console.error('[Nan0SubconsciousShadowEngine] error in shadow dispatch:', err)
+    })
   }
 
   /**
    * Asynchronously dispatches the turn snapshot, engaging System 1 Jev when configured
-   * while recording lexical fallback telemetry and enforcing strict shadow invariants.
+   * and enforcing strict shadow invariants.
    */
   public async dispatchAsync(snapshot: Nan0TurnSnapshot): Promise<Nan0ShadowTelemetryRecord | null> {
+    if (!this.systemOneProvider) {
+      return null
+    }
     if (this.activeJobs > 0) {
       this.droppedRecords++
       return null
@@ -135,37 +133,28 @@ export class Nan0SubconsciousShadowEngine {
         const queueMs = 0
         const t0 = performance.now()
 
-        // 3. Resolve lexical proposal as baseline floor
-        const { proposal: lexicalProposal, durationMs: resolutionMs } = this.lexicalExtractor.resolve(snapshot)
-
-        // 4. Resolve System 1 Jev proposal if provider is configured
         let needleProposal: Nan0PolicyProposal | null = null
         let inferenceMs = 0
-        let backend = this.versions.backend
+        const backend = 'system_one_jev'
 
-        if (this.systemOneProvider) {
-          const j0 = performance.now()
-          try {
-            const res = await this.systemOneProvider(snapshot.text, NAN0_JEV_12_GROUP_QUESTIONS, this.jevModel)
-            inferenceMs = res.latencyMs ?? (performance.now() - j0)
-            needleProposal = mapJevAnswersToProposal(res.answers, snapshot)
-            backend = 'system_one_jev'
-          }
-          catch (err) {
-            console.warn('[Nan0SubconsciousShadowEngine] System 1 Jev dispatch failed, falling back to lexical floor:', err)
-            needleProposal = null
-          }
+        const j0 = performance.now()
+        try {
+          const res = await this.systemOneProvider(snapshot.text, NAN0_JEV_12_GROUP_QUESTIONS, this.jevModel)
+          inferenceMs = res.latencyMs ?? (performance.now() - j0)
+          needleProposal = mapJevAnswersToProposal(res.answers, snapshot)
+        }
+        catch (err) {
+          console.warn('[Nan0SubconsciousShadowEngine] System 1 Jev dispatch failed:', err)
+          needleProposal = null
         }
 
         const totalMs = performance.now() - t0
         const record = this.finalizeRecord(
           snapshot,
           state,
-          lexicalProposal,
           needleProposal,
           backend,
           queueMs,
-          resolutionMs,
           inferenceMs,
           totalMs,
         )
@@ -183,72 +172,12 @@ export class Nan0SubconsciousShadowEngine {
     }
   }
 
-  private dispatchInternalSync(snapshot: Nan0TurnSnapshot): Nan0ShadowTelemetryRecord | null {
-    try {
-      this.pendingJobs++
-      const state = this.getOrCreateSessionState(snapshot.sessionId)
-
-      // 1. Invalidation check
-      if (snapshot.epoch < state.currentEpoch) {
-        state.staleCount++
-        this.pendingJobs--
-        return null
-      }
-
-      // 2. Monotonic sequence & duplicate checking
-      if (snapshot.turnSeq <= state.lastPublishedSeq) {
-        state.staleCount++
-        if (snapshot.turnSeq === state.lastPublishedSeq) {
-          state.duplicateCount++
-        }
-        this.pendingJobs--
-        return null
-      }
-
-      state.lastSeenSeq = Math.max(state.lastSeenSeq, snapshot.turnSeq)
-      state.lastDispatchedSeq = snapshot.turnSeq
-
-      this.activeJobs++
-      this.pendingJobs--
-
-      const queueMs = 0
-      const t0 = performance.now()
-
-      // 3. Resolve lexical proposal
-      const { proposal: lexicalProposal, durationMs: resolutionMs } = this.lexicalExtractor.resolve(snapshot)
-      const totalMs = performance.now() - t0
-
-      const record = this.finalizeRecord(
-        snapshot,
-        state,
-        lexicalProposal,
-        null,
-        this.versions.backend,
-        queueMs,
-        resolutionMs,
-        0,
-        totalMs,
-      )
-
-      this.activeJobs--
-      return record
-    }
-    catch (err) {
-      this.activeJobs = Math.max(0, this.activeJobs - 1)
-      this.pendingJobs = Math.max(0, this.pendingJobs - 1)
-      console.error('[Nan0SubconsciousShadowEngine] error in shadow dispatch:', err)
-      return null
-    }
-  }
-
   private finalizeRecord(
     snapshot: Nan0TurnSnapshot,
     state: ReturnType<typeof this.getOrCreateSessionState>,
-    lexicalProposal: Nan0PolicyProposal,
     needleProposal: Nan0PolicyProposal | null,
     backend: Nan0ShadowTelemetryRecord['versions']['backend'],
     queueMs: number,
-    resolutionMs: number,
     inferenceMs: number,
     totalMs: number,
   ): Nan0ShadowTelemetryRecord {
@@ -277,7 +206,17 @@ export class Nan0SubconsciousShadowEngine {
 
     state.lastPublishedSeq = snapshot.turnSeq
 
-    const activeProposal = needleProposal ?? lexicalProposal
+    const activeProposal: Nan0PolicyProposal = needleProposal ?? {
+      status: 'abstained',
+      reason: 'no_proposal',
+      suspicionDeltaSteps: 0,
+      suspicionLabel: 'neutral',
+      attachmentDeltaSteps: 0,
+      gremlinPrideAction: 'none',
+      wouldApply: false,
+      applyToState: false,
+      evidence: [],
+    }
 
     const record: Nan0ShadowTelemetryRecord = {
       identity: {
@@ -305,7 +244,7 @@ export class Nan0SubconsciousShadowEngine {
         scope: activeProposal.status === 'accepted' ? 'asserted' : 'unresolved',
         referent: activeProposal.evidence[0]?.referent || 'unresolved',
         reason: activeProposal.reason,
-        validationReason: needleProposal ? 'system_one_jev_classified' : 'deterministic_provenance_passed',
+        validationReason: needleProposal ? 'system_one_jev_classified' : 'abstained_no_proposal',
       },
       taskLinkage: {
         expectedTaskId: snapshot.expectedTaskId ?? null,
@@ -313,7 +252,6 @@ export class Nan0SubconsciousShadowEngine {
         commitmentLinkage: snapshot.trustedObservations?.some(o => o.matchesRecordedCommitment === true) ?? false,
       },
       outcomes: {
-        lexicalProposal,
         needleProposal,
         status: activeProposal.status,
         effectiveVectors: {
@@ -332,7 +270,7 @@ export class Nan0SubconsciousShadowEngine {
       timing: {
         queueMs,
         inferenceMs: round3(inferenceMs),
-        hostResolutionMs: round3(resolutionMs),
+        hostResolutionMs: null,
         totalMs: round3(totalMs),
         timeoutToWorkerExitMs: null,
         coldStartupMs: null,

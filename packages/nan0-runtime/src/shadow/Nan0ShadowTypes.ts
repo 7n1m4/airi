@@ -46,6 +46,8 @@ export interface Nan0SystemOneResponse {
   latencyMs?: number
 }
 
+export type Nan0JevSystemOneAnswers = Nan0SystemOneResponse['answers']
+
 export type Nan0SystemOneProvider = (
   state: string | object,
   questions: Record<string, any>,
@@ -113,7 +115,7 @@ export interface Nan0ShadowTelemetryRecord {
     schemaVersion: string
     actorMappingVersion: string
     engineRevision: string
-    backend: 'strengthened_lexical' | 'needle_san_wasm' | 'needle_native_cpu' | 'system_one_jev'
+    backend: 'needle_san_wasm' | 'needle_native_cpu' | 'system_one_jev'
   }
   consumption: {
     lastSeenSeq: number
@@ -137,7 +139,6 @@ export interface Nan0ShadowTelemetryRecord {
     commitmentLinkage: boolean
   }
   outcomes: {
-    lexicalProposal: Nan0PolicyProposal
     needleProposal: Nan0PolicyProposal | null
     status: 'accepted' | 'abstained' | 'rejected' | 'error' | 'timeout'
     effectiveVectors: {
@@ -156,7 +157,7 @@ export interface Nan0ShadowTelemetryRecord {
   timing: {
     queueMs: number
     inferenceMs: number
-    hostResolutionMs: number
+    hostResolutionMs: number | null
     totalMs: number
     timeoutToWorkerExitMs: number | null
     coldStartupMs: number | null

@@ -864,12 +864,19 @@ describe('relationshipMemory', () => {
 
   it('wires System 1 Jev through Nan0Kernel recordAssistantTurn for relationship evidence', async () => {
     let jevCalled = false
-    const mockJev: Nan0SystemOneProvider = async () => {
+    const mockJev: Nan0SystemOneProvider = async (_state, questions): Promise<import('../types').Nan0SystemOneResponse> => {
       jevCalled = true
+      if ('grievance_salience' in questions) {
+        return {
+          answers: {
+            grievance_salience: { choice: 'substantive_grievance', confidence: 0.9 },
+            grievance_recurrence: { choice: 'new_unrelated_issue', confidence: 0.9 },
+          },
+        }
+      }
       return {
         answers: {
-          grievance_salience: { choice: 'substantive_grievance', confidence: 0.9 },
-          grievance_recurrence: { choice: 'new_unrelated_issue', confidence: 0.9 },
+          admitted_false_statement: { choice: 'asserted_deception', confidence: 0.95 },
         },
       }
     }
