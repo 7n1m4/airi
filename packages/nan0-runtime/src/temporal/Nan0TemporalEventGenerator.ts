@@ -79,6 +79,7 @@ export function createEmptyTemporalTrackingState(): Nan0TemporalTrackingState {
     lastExternalInputAt: null,
     lastRhythmCheckAt: null,
     lastReflectionAt: null,
+    departureAcknowledged: false,
   }
 }
 
@@ -170,6 +171,7 @@ export function normalizeTemporalTrackingState(
     lastExternalInputAt: Number.isFinite(value?.lastExternalInputAt) ? Number(value?.lastExternalInputAt) : null,
     lastRhythmCheckAt: Number.isFinite(value?.lastRhythmCheckAt) ? Number(value?.lastRhythmCheckAt) : null,
     lastReflectionAt: Number.isFinite(value?.lastReflectionAt) ? Number(value?.lastReflectionAt) : null,
+    departureAcknowledged: Boolean(value?.departureAcknowledged),
   }
 }
 
@@ -233,6 +235,7 @@ export function mergeTemporalTrackingStates(
     lastExternalInputAt: Math.max(left.lastExternalInputAt ?? 0, right.lastExternalInputAt ?? 0) || null,
     lastRhythmCheckAt: Math.max(left.lastRhythmCheckAt ?? 0, right.lastRhythmCheckAt ?? 0) || null,
     lastReflectionAt: Math.max(left.lastReflectionAt ?? 0, right.lastReflectionAt ?? 0) || null,
+    departureAcknowledged: right.departureAcknowledged ?? left.departureAcknowledged ?? false,
   })
 }
 
@@ -265,7 +268,7 @@ function explicitReturnPromise(
     let durationMs = 15 * 60_000
     switch (returnScope) {
       case 'immediate_minutes':
-        durationMs = 60_000
+        durationMs = 3 * 60_000
         break
       case 'short_break':
         durationMs = 30 * 60_000
@@ -506,7 +509,9 @@ export function recordLivedTemporalObservation(input: {
     })
     return fulfilled
   })
-  lived = { ...normalizeTemporalTrackingState(engine.lived), trackedPromises: promises, lastExternalInputAt: at, crossedIdleThresholdIds: [] }
+  const returnScope = input.systemOneAnswers?.temporal_return_scope?.choice
+  const departureAcknowledged = returnScope === 'unspecified_away'
+  lived = { ...normalizeTemporalTrackingState(engine.lived), trackedPromises: promises, lastExternalInputAt: at, crossedIdleThresholdIds: [], departureAcknowledged }
   lived = updateRhythm(lived, input.observation, input.clock, at)
   const text = typeof input.observation.content === 'string' ? input.observation.content : ''
   const hasCommitment = input.systemOneAnswers
@@ -643,7 +648,7 @@ export function evaluateLivedTemporalEvents(input: {
 
   lived = normalizeTemporalTrackingState(engine.lived)
   const lastInput = lived.lastExternalInputAt
-  if (lastInput != null) {
+  if (lastInput != null && !lived.departureAcknowledged) {
     const objective = Math.max(0, at - lastInput)
     const waiting = lived.waitingStates.some(item => item.status === 'active') || lived.trackedPromises.some(item => item.status === 'active')
     const livedDuration = computeLivedDuration({ objectiveDurationMs: objective, emotionalState: input.emotionalState, focused: input.focused, waiting })
@@ -706,7 +711,7 @@ export function evaluateLivedTemporalEvents(input: {
   lived = normalizeTemporalTrackingState(engine.lived)
   engine = { ...engine, revision: engine.revision + 1, lastEvaluationAt: at, lived: { ...lived, revision: lived.revision + 1, lastRhythmCheckAt: at } }
   const future = [
-    ...(lived.lastExternalInputAt == null ? [] : IDLE_THRESHOLDS.filter(item => !lived.crossedIdleThresholdIds.includes(item.id)).map(item => lived.lastExternalInputAt! + item.durationMs)),
+    ...(lived.lastExternalInputAt == null || lived.departureAcknowledged ? [] : IDLE_THRESHOLDS.filter(item => !lived.crossedIdleThresholdIds.includes(item.id)).map(item => lived.lastExternalInputAt! + item.durationMs)),
     ...lived.trackedPromises.filter(item => item.status === 'active').map(item => item.crossedThresholdIds.includes('overdue') ? promiseBreakAt(item) : item.dueAt),
     ...lived.waitingStates.filter(item => item.status === 'active').map(item => item.expectedAt),
     ...lived.detectedRhythms.filter(item => item.isActive).map(item => item.expectedNextAt + 6 * 60 * 60_000),

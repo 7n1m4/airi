@@ -12,8 +12,7 @@ export interface Nan0JevQuestion {
 }
 
 /**
- * Validated 12-Group, 80-Choice Contrastive Pragmatic Questions for System 1 Jev.
- * Matches docs/nan0/nan0-jev-12-group-rich-v2.questions.json
+ * Validated 13-Group Contrastive Pragmatic Questions for System 1 Jev.
  */
 export const NAN0_JEV_QUESTIONS: Record<string, Nan0JevQuestion> = {
   apology_repair: {

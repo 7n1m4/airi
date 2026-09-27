@@ -535,7 +535,7 @@ async function applyGrievanceAsync(
       const claim = input.claim
       const claimMatch = claim && record.activeGrievances.find(g =>
         g.predicate && g.object
-        && g.predicate === claim.predicate
+        && g.predicate.toLowerCase() === claim.predicate.toLowerCase()
         && g.object.toLowerCase() === claim.object.toLowerCase(),
       )
 

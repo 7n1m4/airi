@@ -992,6 +992,7 @@ export interface Nan0TemporalTrackingState {
   lastExternalInputAt: number | null
   lastRhythmCheckAt: number | null
   lastReflectionAt: number | null
+  departureAcknowledged?: boolean
 }
 
 export interface Nan0TemporalSleepCompatibilityState {
