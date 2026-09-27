@@ -46,6 +46,13 @@ export interface Nan0SystemOneTurnState {
 ```
 Formatted cleanly for the model via `formatSystemOnePromptState()`:
 ```
+[TARGET UTTERANCE TO CLASSIFY]:
+user: "Great, I just pushed the fixes."
+
+[RECENT DIALOGUE HISTORY]:
+user: "Are we still on track for the release today?"
+assistant: "Yes, I'm checking the final verification tests right now."
+
 [RETRIEVED EVIDENCE / MEMORY]:
 [entity_ledger] User prefers direct feedback over pleasantries (relevance: 0.88)
 [journal] Project timeline review: Completed phase 1 milestones
@@ -55,14 +62,11 @@ Promise #promise-1: "Review pull request #42" (due: 2026-09-27T18:00:00.000Z)
 
 [ACTIVE GRIEVANCES]:
 Grievance #grievance-2: "Unannounced schedule cancellation" (severity: 0.6)
-
-[RECENT DIALOGUE HISTORY]:
-user: "Are we still on track for the release today?"
-assistant: "Yes, I'm checking the final verification tests right now."
-
-[TARGET UTTERANCE TO CLASSIFY]:
-user: "Great, I just pushed the fixes."
 ```
+
+> [!NOTE]
+> **Context Capacity & Attention Primacy Architecture:**
+> TypeSafe Jev supports up to 32k tokens, while on-device Laya (`convaiinnovations/laya` / `tozp/laya-onnx`) is based on **ModernBERT-large**, natively supporting **8,192 (8k)** tokens with unpadded FlashAttention and RoPE (not legacy BERT 512). The pipeline does NOT artificially gimp or truncate the retrieved semantic search context. Placing `[TARGET UTTERANCE TO CLASSIFY]` at the head of the prompt ensures maximal attention primacy across sequence classification heads and prevents any runner truncation from starving the target utterance.
 
 ### 2.4 Multi-Tier Compatibility
 - **Live Models / CLI**: In `nan0-cli.ts` and `nan0.ts`, the payload checks `toPromptString()` or `formatSystemOnePromptState(turnState)` to present the human-readable grounded prompt.
@@ -105,9 +109,11 @@ user: "Great, I just pushed the fixes."
 - **Problem**: Mentions of goal keywords advanced goals, even for negative statements ("I have NOT investigated...").
 - **Resolution**: In `packages/nan0-runtime/src/goals/Nan0GoalEngine.ts`, added `hasNegation(text)`. Negated utterances immediately exit with 0 progress.
 
-### F8 (P2): Grievance Recurrence Attributed to Grievance #0
-- **Problem**: Recurrent grievances unconditionally updated `activeGrievances[0]` instead of matching the specific grievance.
-- **Resolution**: In `packages/nan0-runtime/src/relationship/RelationshipMemory.ts`, `updateGrievanceRecord` matches against `matched_grievance_id` or description, safely abstaining if no match is found.
+### F8 (P2): Grievance Recurrence Attribution & Blind Fallback
+- **Problem**: In `RelationshipMemory.ts`, `matched_grievance_id` was read from Jev answers but never defined in `NAN0_JEV_GRIEVANCE_RECURRENCE_QUESTIONS`. When `matchedId` was undefined, the code blindly fell back to `record.activeGrievances.find(...)` (reinforcing grievance #0 regardless of what was said).
+- **Resolution**:
+  1. Dynamically constructs the `matched_grievance_id` question mapping active grievance IDs to descriptions plus `'none'`, and supplies it to Jev in `applyGrievanceAsync`.
+  2. Eliminates the blind fallback to grievance #0. If Jev answers `'none'` or fails to match a specific grievance, the system safely abstains without reinforcing unrelated grievances.
 
 ---
 
@@ -116,7 +122,7 @@ user: "Great, I just pushed the fixes."
 | Package | Check | Command | Status |
 |---|---|---|---|
 | `@proj-airi/nan0-runtime` | TypeScript Typecheck | `pnpm -F @proj-airi/nan0-runtime typecheck` | Passed (0 errors) |
-| `@proj-airi/nan0-runtime` | Unit & Invariant Tests | `pnpm -F @proj-airi/nan0-runtime test` | Passed (346/346 tests across 26 test files) |
+| `@proj-airi/nan0-runtime` | Unit & Invariant Tests | `pnpm -F @proj-airi/nan0-runtime test` | Passed (347/347 tests across 26 test files) |
 | `@proj-airi/nan0-runtime` | Build / Dist Types | `pnpm -F @proj-airi/nan0-runtime build` | Passed (`dist/index.mjs` & `dist/index.d.mts`) |
 | `@proj-airi/stage-ui` | TypeScript / Vue-TSC | `pnpm -F @proj-airi/stage-ui typecheck` | Passed (0 errors) |
 | `@proj-airi/stage-ui` | System 1 Store Tests | `pnpm -F @proj-airi/stage-ui exec vitest run src/stores/modules/system-one.test.ts` | Passed (11/11 tests) |

@@ -1,3 +1,4 @@
+import type { Nan0JevQuestion } from '../shadow/Nan0JevSchema'
 import type {
   DefaultIdentityOptions,
   Nan0ActorKind,
@@ -435,6 +436,24 @@ async function applyGrievanceAsync(
   // If System 1 Jev is available, evaluate grievance salience and recurrence
   if (options?.systemOneProvider) {
     try {
+      const activeGrievanceList = record.activeGrievances.filter(g => g.status === 'active' || g.status === 'nurtured')
+      const questions: Record<string, Nan0JevQuestion> = {
+        ...NAN0_JEV_GRIEVANCE_RECURRENCE_QUESTIONS,
+      }
+
+      // NOTICE: Dynamic F8 Grievance Identification:
+      // Provide Jev with explicit grievance choices so it can attribute recurrence to the exact grievance.
+      if (activeGrievanceList.length > 0) {
+        questions.matched_grievance_id = {
+          type: 'choice',
+          instructions: 'If this turn reinforces an active grievance, select which specific grievance is being referenced. If none match or if it is a new issue, select none.',
+          criteria: {
+            ...Object.fromEntries(activeGrievanceList.map(g => [g.grievanceId, g.description.slice(0, 150)])),
+            none: 'Does not match any listed active grievance.',
+          },
+        }
+      }
+
       const jevRes = await options.systemOneProvider(
         {
           targetTurn: { text: input.description },
@@ -446,7 +465,7 @@ async function applyGrievanceAsync(
             object: g.object,
           })),
         },
-        NAN0_JEV_GRIEVANCE_RECURRENCE_QUESTIONS,
+        questions,
         options.jevModel,
       )
 
@@ -461,10 +480,12 @@ async function applyGrievanceAsync(
         const matchedId = jevRes.answers?.matched_grievance_id?.choice
         const activeOne = matchedId && matchedId !== 'none'
           ? record.activeGrievances.find(g => g.grievanceId === matchedId)
-          : (record.activeGrievances.length === 1
-              ? record.activeGrievances[0]
-              : record.activeGrievances.find(g => input.description.toLowerCase().includes(g.description.toLowerCase()))
-                ?? record.activeGrievances.find(g => g.status === 'active' || g.status === 'nurtured'))
+          : (activeGrievanceList.length === 1
+              ? activeGrievanceList[0]
+              : record.activeGrievances.find(g => input.description.toLowerCase().includes(g.description.toLowerCase())))
+
+        // NOTICE: Safe abstention (Fix F8): if no grievance is specifically matched by ID or description,
+        // do NOT fall back to activeGrievances[0]. We abstain to avoid false grievance escalation.
         if (activeOne) {
           return record.activeGrievances.map(grievance => grievance.grievanceId === activeOne.grievanceId
             ? {

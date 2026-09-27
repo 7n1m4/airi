@@ -192,13 +192,28 @@ export interface Nan0SystemOneTurnState {
   active_grievances?: string[]
 }
 
+// NOTICE: Context capacity & attention primacy:
+// TypeSafe Jev supports up to 32k tokens, and Laya (ModernBERT-large) natively supports 8,192 (8k)
+// tokens with RoPE/FlashAttention (not legacy BERT 512). We do not artificially gimp or truncate
+// the retrieved context; we place [TARGET UTTERANCE TO CLASSIFY] at the top for optimal attention
+// primacy across transformer classification heads.
 export function formatSystemOnePromptState(state: Nan0SystemOneTurnState): string {
   const sections: string[] = []
 
+  // 1. Target utterance first for attention primacy
+  sections.push(`[TARGET UTTERANCE TO CLASSIFY]:\n${state.target_turn.speaker}: "${state.target_turn.text}"`)
+
+  // 2. Recent dialogue history immediately following for conversational grounding
+  if (state.recent_history && state.recent_history.length > 0) {
+    sections.push(`[RECENT DIALOGUE HISTORY]:\n${state.recent_history.map(h => `${h.speaker}: "${h.text}"`).join('\n')}`)
+  }
+
+  // 3. Grounded semantic search memories / facts
   if (state.retrieved_evidence && state.retrieved_evidence.length > 0) {
     sections.push(`[RETRIEVED EVIDENCE / MEMORY]:\n${state.retrieved_evidence.join('\n')}`)
   }
 
+  // 4. Active commitments & grievances
   if (state.active_commitments && state.active_commitments.length > 0) {
     sections.push(`[ACTIVE COMMITMENTS]:\n${state.active_commitments.join('\n')}`)
   }
@@ -206,12 +221,6 @@ export function formatSystemOnePromptState(state: Nan0SystemOneTurnState): strin
   if (state.active_grievances && state.active_grievances.length > 0) {
     sections.push(`[ACTIVE GRIEVANCES]:\n${state.active_grievances.join('\n')}`)
   }
-
-  if (state.recent_history && state.recent_history.length > 0) {
-    sections.push(`[RECENT DIALOGUE HISTORY]:\n${state.recent_history.map(h => `${h.speaker}: "${h.text}"`).join('\n')}`)
-  }
-
-  sections.push(`[TARGET UTTERANCE TO CLASSIFY]:\n${state.target_turn.speaker}: "${state.target_turn.text}"`)
 
   return sections.join('\n\n')
 }

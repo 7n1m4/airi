@@ -925,4 +925,111 @@ describe('relationshipMemory', () => {
       rule: 'system_one_jev.completed_repair',
     })
   })
+
+  it('accurately attributes recurrence to matched_grievance_id when multiple active grievances exist and safely abstains on none (Fix F8)', async () => {
+    let capturedQuestions: any = null
+    const mockJev: Nan0SystemOneProvider = async (_state, questions) => {
+      capturedQuestions = questions
+      return {
+        answers: {
+          grievance_salience: { choice: 'substantive_grievance', confidence: 0.95 },
+          grievance_recurrence: { choice: 'recurrence_reinforced', confidence: 0.95 },
+          matched_grievance_id: { choice: 'grievance:gr-2', confidence: 0.9 },
+        },
+      }
+    }
+
+    const state = createEmptyRelationshipState(100)
+    let nextId = 0
+    const createId = () => `id-${++nextId}`
+
+    // Seed relationship with two active grievances
+    const initial = await applyRelationshipEvidenceAsync(state, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'event-1',
+      turnId: 'turn-1',
+      thoughtId: 'thought-1',
+      timestamp: 100,
+      eventType: 'negative',
+      intensity: 0.7,
+      rule: 'test.rule-1',
+      description: 'Schedule canceled without notice.',
+      triggerPhrases: ['schedule'],
+    }, () => 'gr-1')
+
+    const withTwo = await applyRelationshipEvidenceAsync(initial.relationships, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'event-2',
+      turnId: 'turn-2',
+      thoughtId: 'thought-2',
+      timestamp: 110,
+      eventType: 'negative',
+      intensity: 0.7,
+      rule: 'test.rule-2',
+      description: 'Missing documentation on deploy.',
+      triggerPhrases: ['documentation'],
+    }, () => 'gr-2')
+
+    expect(withTwo.record?.activeGrievances).toHaveLength(2)
+
+    // Third turn: user brings up grievance gr-2 again
+    const third = await applyRelationshipEvidenceAsync(withTwo.relationships, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'event-3',
+      turnId: 'turn-3',
+      thoughtId: 'thought-3',
+      timestamp: 200,
+      eventType: 'negative',
+      intensity: 0.7,
+      rule: 'test.rule-3',
+      description: 'You still have not written the documentation as promised.',
+    }, createId, { systemOneProvider: mockJev })
+
+    // Verify Jev was given the matched_grievance_id question with the active grievances
+    expect(capturedQuestions.matched_grievance_id).toBeDefined()
+    expect(capturedQuestions.matched_grievance_id.criteria['grievance:gr-1']).toBeDefined()
+    expect(capturedQuestions.matched_grievance_id.criteria['grievance:gr-2']).toBeDefined()
+    expect(capturedQuestions.matched_grievance_id.criteria.none).toBeDefined()
+
+    // Verify gr-2 was reinforced, NOT gr-1!
+    const gr1 = third.record?.activeGrievances.find(g => g.grievanceId === 'grievance:gr-1')
+    const gr2 = third.record?.activeGrievances.find(g => g.grievanceId === 'grievance:gr-2')
+    expect(gr1?.reinforcementCount).toBe(0)
+    expect(gr2?.reinforcementCount).toBe(1)
+    expect(gr2?.lastReinforcedAt).toBe(200)
+
+    // Fourth turn: Jev answers matched_grievance_id: 'none'. Safe abstention must NOT reinforce gr-1 or gr-2!
+    const abstainingJev: Nan0SystemOneProvider = async () => ({
+      answers: {
+        grievance_salience: { choice: 'substantive_grievance', confidence: 0.95 },
+        grievance_recurrence: { choice: 'recurrence_reinforced', confidence: 0.95 },
+        matched_grievance_id: { choice: 'none', confidence: 0.9 },
+      },
+    })
+
+    const fourth = await applyRelationshipEvidenceAsync(third.relationships, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'event-4',
+      turnId: 'turn-4',
+      thoughtId: 'thought-4',
+      timestamp: 300,
+      eventType: 'negative',
+      intensity: 0.7,
+      rule: 'test.rule-4',
+      description: 'Completely different complaint.',
+    }, createId, { systemOneProvider: abstainingJev })
+
+    const gr1After = fourth.record?.activeGrievances.find(g => g.grievanceId === 'grievance:gr-1')
+    const gr2After = fourth.record?.activeGrievances.find(g => g.grievanceId === 'grievance:gr-2')
+    expect(gr1After?.reinforcementCount).toBe(0)
+    expect(gr2After?.reinforcementCount).toBe(1) // unchanged from turn 3!
+  })
 })
