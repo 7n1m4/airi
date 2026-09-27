@@ -4,11 +4,13 @@ import type {
   Nan0DecisionConstraintResult,
   Nan0DecisionRecord,
   Nan0EmotionalDecisionShift,
+  Nan0IdentityState,
   Nan0RelationshipContext,
   Nan0Thought,
   Nan0ThoughtPolicy,
 } from '../types'
 
+import { isOwnerActor } from '../identity/ActorIdentity'
 import { NAN0_DEFAULT_THOUGHT_POLICY } from '../thought/Nan0ThoughtPolicy'
 
 export const NAN0_SPEAKABILITY_THRESHOLD = 0.35
@@ -33,6 +35,7 @@ export interface Nan0DecisionEngineInput {
   capabilities: Readonly<Nan0DecisionCapabilities>
   decisionId: string
   createdAt: number
+  identity?: Nan0IdentityState
   additionalConstraints?: readonly Nan0DecisionConstraintResult[]
   minimumSpeakAttention?: number
   policy?: string
@@ -115,7 +118,7 @@ function dynamicSpeakabilityThreshold(input: Nan0DecisionEngineInput): {
   for (const [emotion, weight] of Object.entries(policy.emotionalModifiers))
     add(`emotion.${emotion}`, finite(thought.emotionalSnapshot?.[emotion]), weight)
 
-  if (thought.actorId === 'kyo')
+  if (isOwnerActor(thought.actorId, input.identity))
     add('relationship.kyo', 1, policy.relationshipModifiers.kyo)
   add('relationship.familiarity', finite(input.relationship?.dimensions.familiarity), policy.relationshipModifiers.familiarity)
   add('relationship.trust', finite(input.relationship?.dimensions.trust), policy.relationshipModifiers.trust)

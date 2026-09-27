@@ -366,6 +366,9 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
 
     const systemOneStore = useSystemOneStore()
     const systemOneProvider: Nan0SystemOneProvider = async (state, questions, model) => {
+      if (!systemOneStore.configured) {
+        throw new Error('System 1 provider is not configured')
+      }
       const stateStr = typeof state === 'string' ? state : JSON.stringify(state)
       const res = await systemOneStore.execute(stateStr, questions, model)
       const normalizedAnswers: Record<string, { choice: string, confidence?: number, probabilities?: Record<string, number> }> = {}
@@ -489,19 +492,6 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
       const cardId = observation.metadata?.cardId as string | undefined
       const k = await ensureKernel(cardId, kernelConfig)
 
-      // Dispatch non-blocking telemetry to shadow engine
-      if (shadowEngine.value) {
-        shadowEngine.value.dispatch({
-          sessionId: observation.sessionId || 'default',
-          cardId: cardId || 'default',
-          turnId: `turn_${Date.now()}`,
-          turnSeq: 1,
-          epoch: 1,
-          text: typeof observation.content === 'string' ? observation.content : JSON.stringify(observation.content),
-          timestamp: observation.timestamp || Date.now(),
-        })
-      }
-
       // Connect Consumer 4 Dreaming emotional afterglow to Nan0 morning restoration deltas
       const dreamMood = observation.metadata?.pendingDreamMood as string | undefined
       if (dreamMood && typeof dreamMood === 'string' && dreamMood.trim()) {
@@ -509,6 +499,25 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
       }
 
       const prepared = await k.prepareTurn(observation, options)
+
+      // Synchronize reflex badge from inline System 1 / reflex decision
+      if (prepared.reflexOutcome) {
+        const group = prepared.reflexOutcome.group
+        if (group && group !== 'none') {
+          const meta = REFLEX_META[group] ?? {
+            label: group,
+            cluster: 'relational',
+            icon: 'i-solar:target-bold-duotone',
+          }
+          setReflex({
+            group,
+            label: meta.label,
+            confidence: prepared.reflexOutcome.confidence ?? (prepared.reflexOutcome.source === 'system_one_jev' ? 0.95 : 0.8),
+            cluster: meta.cluster,
+            icon: meta.icon,
+          })
+        }
+      }
 
       // Synchronize reactive state for UI
       setInnerMonologue(prepared.thought.narrative || prepared.thought.privateText || prepared.thought.interpretation || '')

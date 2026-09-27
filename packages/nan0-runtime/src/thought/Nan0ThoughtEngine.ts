@@ -390,7 +390,8 @@ function pressureScores(input: Nan0ThoughtEngineInput): PressureScores {
   const text = observationText(input.observation)
   const lower = text.toLowerCase()
   const lowInformation = looksLowInformation(text)
-  const addressed = input.ownership.actorId === 'kyo'
+  const isOwner = input.ownership.kind === 'owner' || input.ownership.kind === 'kyo' || input.ownership.actorId === 'kyo'
+  const addressed = isOwner
     || /\b(?:nan0|you|your)\b/i.test(text)
     || text.includes('?')
   const emotionalIntensity = clamp(
@@ -420,7 +421,7 @@ function pressureScores(input: Nan0ThoughtEngineInput): PressureScores {
   let speakability = 0.45
   let goalPressure = 0
 
-  if (input.ownership.actorId === 'kyo') {
+  if (isOwner) {
     relationshipPressure = Math.max(0.7, relationshipPressure + 0.65)
     speakability = Math.max(0.45, speakability + 0.35)
     reasonCodes.push('actor.kyo-attachment')

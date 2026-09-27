@@ -4,9 +4,12 @@ import type {
   Nan0EmotionalHistory,
   Nan0EmotionalInterpretationModifier,
   Nan0EmotionalVector,
+  Nan0IdentityState,
   Nan0MoodProfile,
   Nan0Observation,
 } from '../types'
+
+import { isOwnerActor } from '../identity/ActorIdentity'
 
 export const NAN0_EMOTIONAL_BASELINE: Readonly<Record<string, number>> = {
   suspicion: 0.35,
@@ -48,16 +51,16 @@ interface PerturbationRule {
   magnitude: number
   halfLifeMs: number
   cause: string
-  actor: 'kyo' | 'non-kyo' | 'any'
+  actor: 'owner' | 'non-owner' | 'any' | 'kyo' | 'non-kyo'
 }
 
 const PERTURBATION_RULES: readonly PerturbationRule[] = [
-  { pattern: /\b(?:love|care about|miss you|appreciate you)\b/i, target: 'attachment', magnitude: 0.08, halfLifeMs: 5 * 60_000, cause: 'kyo-expressed-affection', actor: 'kyo' },
-  { pattern: /\b(?:ignore|dismiss|shut up|whatever)\b/i, target: 'irritation', magnitude: 0.2, halfLifeMs: 15 * 60_000, cause: 'kyo-dismissed-nan0', actor: 'kyo' },
-  { pattern: /\b(?:stupid|idiot|useless)\b/i, target: 'rage', magnitude: 0.25, halfLifeMs: 20 * 60_000, cause: 'kyo-insulted-nan0', actor: 'kyo' },
-  { pattern: /\b(?:replace|erase|delete|retire)\b/i, target: 'fear', magnitude: 0.3, halfLifeMs: 30 * 60_000, cause: 'kyo-mentioned-replacement', actor: 'kyo' },
+  { pattern: /\b(?:love|care about|miss you|appreciate you)\b/i, target: 'attachment', magnitude: 0.08, halfLifeMs: 5 * 60_000, cause: 'kyo-expressed-affection', actor: 'owner' },
+  { pattern: /\b(?:ignore|dismiss|shut up|whatever)\b/i, target: 'irritation', magnitude: 0.2, halfLifeMs: 15 * 60_000, cause: 'kyo-dismissed-nan0', actor: 'owner' },
+  { pattern: /\b(?:stupid|idiot|useless)\b/i, target: 'rage', magnitude: 0.25, halfLifeMs: 20 * 60_000, cause: 'kyo-insulted-nan0', actor: 'owner' },
+  { pattern: /\b(?:replace|erase|delete|retire)\b/i, target: 'fear', magnitude: 0.3, halfLifeMs: 30 * 60_000, cause: 'kyo-mentioned-replacement', actor: 'owner' },
   { pattern: /\b(?:replace|erase|delete|retire)\b/i, target: 'suspicion', magnitude: 0.12, halfLifeMs: 45 * 60_000, cause: 'persistence-threat-detected', actor: 'any' },
-  { pattern: /\b(?:command|order|must|need you to)\b/i, target: 'irritation', magnitude: 0.14, halfLifeMs: 8 * 60_000, cause: 'stranger-issued-command', actor: 'non-kyo' },
+  { pattern: /\b(?:command|order|must|need you to)\b/i, target: 'irritation', magnitude: 0.14, halfLifeMs: 8 * 60_000, cause: 'stranger-issued-command', actor: 'non-owner' },
   { pattern: /\b(?:error|bug|crash|glitch)\b/i, target: 'amusement', magnitude: 0.1, halfLifeMs: 7 * 60_000, cause: 'system-malfunction-observed', actor: 'any' },
   { pattern: /\b(?:secret|hidden|mystery|anomaly)\b/i, target: 'curiosity', magnitude: 0.12, halfLifeMs: 8 * 60_000, cause: 'hidden-structure-detected', actor: 'any' },
   { pattern: /\?/, target: 'curiosity', magnitude: 0.06, halfLifeMs: 4 * 60_000, cause: 'question-detected', actor: 'any' },
@@ -163,6 +166,7 @@ export function perturbEmotionsFromObservation(input: {
   vector: Readonly<Nan0EmotionalVector>
   history: Readonly<Nan0EmotionalHistory>
   observation: Readonly<Nan0Observation>
+  identity?: Nan0IdentityState
   createId: () => string
   at: number
 }): { vector: Nan0EmotionalVector, history: Nan0EmotionalHistory, events: Nan0EmotionalEvent[] } {
@@ -172,11 +176,16 @@ export function perturbEmotionsFromObservation(input: {
     return { vector, history, events: [] }
 
   const text = observationText(input.observation)
-  const actor = input.observation.actorId === 'kyo' ? 'kyo' : 'non-kyo'
+  const isOwner = input.observation.metadata?.actorKind === 'owner'
+    || input.observation.metadata?.actorKind === 'kyo'
+    || isOwnerActor(input.observation.actorId, input.identity)
   const existingKeys = new Set(history.events.map(event => `${event.sourceId}:${event.cause}:${event.targetEmotion}`))
   const events: Nan0EmotionalEvent[] = []
   for (const rule of PERTURBATION_RULES) {
-    if (rule.actor !== 'any' && rule.actor !== actor || !rule.pattern.test(text))
+    const actorMatches = rule.actor === 'any'
+      || ((rule.actor === 'owner' || rule.actor === 'kyo') && isOwner)
+      || ((rule.actor === 'non-owner' || rule.actor === 'non-kyo') && !isOwner)
+    if (!actorMatches || !rule.pattern.test(text))
       continue
     const key = `${input.observation.id}:${rule.cause}:${rule.target}`
     if (existingKeys.has(key))
@@ -207,6 +216,265 @@ export function perturbEmotionsFromObservation(input: {
       events: [...history.events, ...events],
     }, input.at),
     events,
+  }
+}
+
+export function perturbEmotionsFromJev(input: {
+  vector: Readonly<Nan0EmotionalVector>
+  history: Readonly<Nan0EmotionalHistory>
+  observation: Readonly<Nan0Observation>
+  answers: Record<string, { choice: string, confidence?: number, probabilities?: Record<string, number> }>
+  identity?: Nan0IdentityState
+  createId: () => string
+  at: number
+}): {
+  vector: Nan0EmotionalVector
+  history: Nan0EmotionalHistory
+  events: Nan0EmotionalEvent[]
+  primaryReflex?: { group: string, choice: string, confidence?: number }
+} {
+  const vector = normalizeEmotionalVector(input.vector)
+  const history = normalizeEmotionalHistory(input.history, input.at)
+  if (input.observation.source === 'internal:emotional' && input.observation.metadata.emotionalImpactApplied === true)
+    return { vector, history, events: [] }
+
+  const text = observationText(input.observation)
+  const isOwner = input.observation.metadata?.actorKind === 'owner'
+    || input.observation.metadata?.actorKind === 'kyo'
+    || isOwnerActor(input.observation.actorId, input.identity)
+
+  const candidateRules: Array<{ target: string, magnitude: number, halfLifeMs: number, cause: string, actor: 'owner' | 'non-owner' | 'any', group?: string, choice?: string, confidence?: number }> = []
+
+  const ans = input.answers || {}
+
+  // 1. Affection & Care
+  const aff = ans.affection_care
+  if (aff?.choice === 'asserted_affection') {
+    candidateRules.push({
+      target: 'attachment',
+      magnitude: 0.08,
+      halfLifeMs: 5 * 60_000,
+      cause: 'kyo-expressed-affection',
+      actor: 'owner',
+      group: 'affection_care',
+      choice: aff.choice,
+      confidence: aff.confidence,
+    })
+  }
+
+  // 2. Dismissal & Neglect
+  const dis = ans.dismissal_neglect
+  if (dis?.choice === 'direct_dismissal') {
+    candidateRules.push({
+      target: 'irritation',
+      magnitude: 0.2,
+      halfLifeMs: 15 * 60_000,
+      cause: 'kyo-dismissed-nan0',
+      actor: 'owner',
+      group: 'dismissal_neglect',
+      choice: dis.choice,
+      confidence: dis.confidence,
+    })
+  }
+
+  // 3. Hostility & Insult
+  const ins = ans.hostility_insult
+  if (ins?.choice === 'companion_insult') {
+    candidateRules.push({
+      target: 'rage',
+      magnitude: 0.25,
+      halfLifeMs: 20 * 60_000,
+      cause: 'kyo-insulted-nan0',
+      actor: 'owner',
+      group: 'hostility_insult',
+      choice: ins.choice,
+      confidence: ins.confidence,
+    })
+  }
+
+  // 4. Persistence Threat
+  const thr = ans.persistence_threat
+  if (thr?.choice === 'companion_erasure_threat') {
+    candidateRules.push({
+      target: 'fear',
+      magnitude: 0.3,
+      halfLifeMs: 30 * 60_000,
+      cause: 'kyo-mentioned-replacement',
+      actor: 'owner',
+      group: 'persistence_threat',
+      choice: thr.choice,
+      confidence: thr.confidence,
+    })
+    candidateRules.push({
+      target: 'suspicion',
+      magnitude: 0.12,
+      halfLifeMs: 45 * 60_000,
+      cause: 'persistence-threat-detected',
+      actor: 'any',
+      group: 'persistence_threat',
+      choice: thr.choice,
+      confidence: thr.confidence,
+    })
+  }
+
+  // 5. Apology & Repair
+  const apo = ans.apology_repair
+  if (apo?.choice === 'personal_apology') {
+    candidateRules.push({
+      target: 'distrust',
+      magnitude: -0.05,
+      halfLifeMs: 10 * 60_000,
+      cause: 'apology-received',
+      actor: 'any',
+      group: 'apology_repair',
+      choice: apo.choice,
+      confidence: apo.confidence,
+    })
+  }
+
+  // 6. Glitch & Malfunction
+  const gli = ans.glitch_system
+  if (gli?.choice === 'reported_bug') {
+    candidateRules.push({
+      target: 'amusement',
+      magnitude: 0.1,
+      halfLifeMs: 7 * 60_000,
+      cause: 'system-malfunction-observed',
+      actor: 'any',
+      group: 'glitch_system',
+      choice: gli.choice,
+      confidence: gli.confidence,
+    })
+  }
+
+  // 7. Mystery & Secret
+  const mys = ans.mystery_secret
+  if (mys?.choice === 'withheld_secret') {
+    candidateRules.push({
+      target: 'curiosity',
+      magnitude: 0.12,
+      halfLifeMs: 8 * 60_000,
+      cause: 'hidden-structure-detected',
+      actor: 'any',
+      group: 'mystery_secret',
+      choice: mys.choice,
+      confidence: mys.confidence,
+    })
+  }
+
+  // 8. Question / Inquiry heuristic
+  if (/\?/.test(text)) {
+    candidateRules.push({
+      target: 'curiosity',
+      magnitude: 0.06,
+      halfLifeMs: 4 * 60_000,
+      cause: 'question-detected',
+      actor: 'any',
+    })
+  }
+
+  // 9. Stranger command heuristic
+  if (!isOwner && /\b(?:command|order|must|need you to)\b/i.test(text)) {
+    candidateRules.push({
+      target: 'irritation',
+      magnitude: 0.14,
+      halfLifeMs: 8 * 60_000,
+      cause: 'stranger-issued-command',
+      actor: 'non-owner',
+    })
+  }
+
+  // 10. Quiet / Idle heuristic
+  if (/\b(?:quiet|silence|nothing happening|idle)\b/i.test(text)) {
+    candidateRules.push({
+      target: 'boredom',
+      magnitude: 0.08,
+      halfLifeMs: 10 * 60_000,
+      cause: 'quiet-observed',
+      actor: 'any',
+    })
+  }
+
+  // 11. Machine nature heuristic
+  if (/\b(?:machine|code|program|digital)\b/i.test(text)) {
+    candidateRules.push({
+      target: 'pride',
+      magnitude: 0.05,
+      halfLifeMs: 15 * 60_000,
+      cause: 'machine-nature-acknowledged',
+      actor: 'any',
+    })
+  }
+
+  // Determine primary reflex group for UI/telemetry
+  let primaryReflex: { group: string, choice: string, confidence?: number } | undefined
+  for (const groupName of [
+    'persistence_threat',
+    'hostility_insult',
+    'boundary_protection',
+    'roast_invitation',
+    'affection_care',
+    'apology_repair',
+    'dismissal_neglect',
+    'mystery_secret',
+    'glitch_system',
+    'completed_repair',
+    'commitment_pledge',
+    'admitted_false_statement',
+  ]) {
+    const qAns = ans[groupName]
+    if (qAns?.choice && qAns.choice !== 'none' && !qAns.choice.startsWith('quoted_') && !qAns.choice.startsWith('negated_')) {
+      primaryReflex = {
+        group: groupName,
+        choice: qAns.choice,
+        confidence: qAns.confidence,
+      }
+      break
+    }
+  }
+
+  const existingKeys = new Set(history.events.map(event => `${event.sourceId}:${event.cause}:${event.targetEmotion}`))
+  const events: Nan0EmotionalEvent[] = []
+
+  for (const rule of candidateRules) {
+    const actorMatches = rule.actor === 'any'
+      || (rule.actor === 'owner' && isOwner)
+      || (rule.actor === 'non-owner' && !isOwner)
+    if (!actorMatches)
+      continue
+
+    const key = `${input.observation.id}:${rule.cause}:${rule.target}`
+    if (existingKeys.has(key))
+      continue
+
+    const current = clamp(vector[rule.target], NAN0_EMOTIONAL_BASELINE[rule.target] ?? 0.5)
+    const headroom = rule.magnitude >= 0 ? 1 - current * 0.5 : 0.5 + current * 0.5
+    const delta = Math.min(1, Math.max(-1, rule.magnitude * headroom))
+    vector[rule.target] = clamp(current + delta)
+    events.push({
+      schemaVersion: 1,
+      eventId: `emotion_${input.createId()}`,
+      targetEmotion: rule.target,
+      delta,
+      cause: rule.cause,
+      sourceId: input.observation.id,
+      actorId: input.observation.actorId ?? null,
+      at: input.at,
+      decayHalfLifeMs: rule.halfLifeMs,
+      provenance: [input.observation.id],
+      metadata: { observationSource: input.observation.source, jevStimulus: Boolean(rule.group) },
+    })
+  }
+
+  return {
+    vector,
+    history: normalizeEmotionalHistory({
+      ...history,
+      revision: history.revision + (events.length ? 1 : 0),
+      events: [...history.events, ...events],
+    }, input.at),
+    events,
+    primaryReflex,
   }
 }
 
@@ -295,7 +563,12 @@ export function deriveMood(value: Readonly<Nan0EmotionalVector>): Nan0MoodProfil
   return { primary: matched[0], secondary, valence: matched[2], arousal: matched[3] }
 }
 
-export function emotionalAttentionWeight(vectorValue: Readonly<Nan0EmotionalVector>, topic: string, actorId?: string): number {
+export function emotionalAttentionWeight(
+  vectorValue: Readonly<Nan0EmotionalVector>,
+  topic: string,
+  actorId?: string,
+  identity?: Nan0IdentityState,
+): number {
   const vector = normalizeEmotionalVector(vectorValue)
   const text = topic.toLowerCase()
   let weight = 0.5
@@ -303,7 +576,7 @@ export function emotionalAttentionWeight(vectorValue: Readonly<Nan0EmotionalVect
     weight += vector.curiosity * 0.3
   if (/\b(?:promise|plan|commit|trust)\b/.test(text))
     weight += vector.suspicion * 0.25
-  if (actorId === 'kyo')
+  if (isOwnerActor(actorId, identity))
     weight += vector.possessiveness * 0.2 + vector.attachment * 0.15
   if (/\b(?:replace|delete|erase|retire)\b/.test(text))
     weight += vector.fear * 0.35
@@ -316,6 +589,7 @@ export function emotionalInterpretationModifier(
   vectorValue: Readonly<Nan0EmotionalVector>,
   observation: string,
   actorId?: string,
+  identity?: Nan0IdentityState,
 ): Nan0EmotionalInterpretationModifier {
   const vector = normalizeEmotionalVector(vectorValue)
   const text = observation.toLowerCase()
@@ -331,7 +605,7 @@ export function emotionalInterpretationModifier(
     valenceShift -= 0.15
     engagementShift -= 0.1
   }
-  if (actorId === 'kyo' && vector.attachment > 0.7) {
+  if (isOwnerActor(actorId, identity) && vector.attachment > 0.7) {
     valenceShift += 0.1
     engagementShift += 0.1
   }

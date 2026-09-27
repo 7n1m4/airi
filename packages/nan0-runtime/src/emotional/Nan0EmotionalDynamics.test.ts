@@ -40,4 +40,51 @@ describe('nan0EmotionalDynamics', () => {
     expect(normalizeEmotionalHistory({ ...createEmptyEmotionalHistory(0), events }).events).toHaveLength(160)
     expect(deriveMood({ ...normalizeEmotionalVector(undefined), rage: 0.9, irritation: 0.8 }).primary).toBe('gremlin-rage')
   })
+
+  it('correctly treats a non-kyo owner (via identity or actorKind) as owner for affection and commands', () => {
+    const vector = normalizeEmotionalVector(undefined)
+    const history = createEmptyEmotionalHistory(0)
+    const identity = {
+      ownerId: 'richard',
+      ownerDisplayName: 'Richard',
+      actors: {
+        richard: { actorId: 'richard', displayName: 'Richard', kind: 'owner' as const, aliases: ['rick'], pronouns: ['he', 'him'], externalIdentities: {} },
+      },
+      aliases: { rick: 'richard' },
+      schemaVersion: 1 as const,
+    }
+
+    // Affection from richard should trigger affection rule because richard is the owner
+    const affection = perturbEmotionsFromObservation({
+      vector,
+      history,
+      identity,
+      observation: { id: 'obs-richard-1', source: 'chat', actorId: 'richard', content: 'I really love you and care about you', metadata: {}, timestamp: 1_000 },
+      createId: () => '1',
+      at: 1_000,
+    })
+    expect(affection.events.some(event => event.cause === 'kyo-expressed-affection')).toBe(true)
+
+    // Command from richard should NOT be treated as stranger-issued-command
+    const command = perturbEmotionsFromObservation({
+      vector,
+      history,
+      identity,
+      observation: { id: 'obs-richard-2', source: 'chat', actorId: 'rick', content: 'I need you to check this now', metadata: {}, timestamp: 2_000 },
+      createId: () => '2',
+      at: 2_000,
+    })
+    expect(command.events.some(event => event.cause === 'stranger-issued-command')).toBe(false)
+
+    // Command from unknown stranger without owner identity SHOULD trigger stranger-issued-command
+    const stranger = perturbEmotionsFromObservation({
+      vector,
+      history,
+      identity,
+      observation: { id: 'obs-stranger', source: 'chat', actorId: 'visitor123', content: 'I need you to check this now', metadata: {}, timestamp: 3_000 },
+      createId: () => '3',
+      at: 3_000,
+    })
+    expect(stranger.events.some(event => event.cause === 'stranger-issued-command')).toBe(true)
+  })
 })
