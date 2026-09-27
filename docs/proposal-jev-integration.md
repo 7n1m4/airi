@@ -72,11 +72,11 @@ flowchart TD
     Screen --> VisualDesc
 
     subgraph "System 1 Fast Decision Gate (TypeSafe Jev ~100-150ms)"
-        JevGate{"Jev Parallel Decision Substrate\n($42/Btok)"}
+        JevGate{"Jev Parallel Decision Substrate\n($42/Btok / Laya Local)"}
         ActionPicker["Gaming Action Picker (Choice)\n[ENGAGE, RETREAT, ITEM]"]
         ProgScreenGate["Programmable Vision Gate (Boolean)\n['Is entry interesting?' / Custom]"]
         VoiceMatcher["Voice & Pitch Matcher (Choice/Score)\n[Voice ID, Pitch Semi, Speed]"]
-        ExprDispatch["Streaming Expression & Motion (Choice)\n[Smug, LeanForward, Nod]"]
+        NinjaSwap["Dual-Duty Ninja-Swap Interceptor (Choice/Score)\n[Speech Tags + ACT Cues from Compiled Whitelist]"]
         TokenCompactor["Token Compaction Gate (Choice/Score)\n[Filter Routine Banter]"]
         TruthVerifier["Reflex Gate (Boolean/Choice)\n[12 Speech-Act Groups]"]
         TopicFilter["Salience Topic Classifier (Choice)\n[Recent Topics Toggle 4]"]
@@ -102,7 +102,10 @@ flowchart TD
     JevGate -->|Game Macro Decision| ActionPicker
     JevGate -->|Visual Delta Evaluated| ProgScreenGate
     JevGate -->|Archetype Match| VoiceMatcher
-    JevGate -->|Streaming Stride Intent| ExprDispatch
+    MainLLM -->|Sentence Stride + Whitelist| JevGate
+    JevGate -->|Dual-Duty Resolution (~110ms)| NinjaSwap
+    NinjaSwap -->|Inject <|ACT:...||> Cue| AvatarRig
+    NinjaSwap -->|Inject [tag] & Dispatch Audio| SpeechTTS
     JevGate -->|Salience Retention Score| TokenCompactor
     JevGate -->|Speech-Act & Perturbation| TruthVerifier
     JevGate -->|Turn Topic Clustered| TopicFilter
@@ -110,10 +113,8 @@ flowchart TD
     ActionPicker -->|Execute 10 Hz Key Vector| GameInput
     ProgScreenGate -->|Pass Custom Condition| MainLLM
     VoiceMatcher -->|Bind Profile & Offsets| VoiceBinding
-    ExprDispatch -->|Trigger Expression/Motion| AvatarRig
     TokenCompactor -->|Curated High-Signal Turns| MemorySummarizer
     TruthVerifier -->|Calibrated Suspicion Delta| Nan0Mono
-    MainLLM --> SpeechTTS
 ```
 
 ### Domain A: The Gaming Initiative (Arcade Room Retro Games & Show Harness)
@@ -488,50 +489,131 @@ export async function autoMatchCharacterVoiceWithJev(character: CharacterItem) {
 
 ---
 
-### Domain F: Real-Time Speech-to-Motion & Expression Gating (Streaming ACT Dispatch)
-*Relevant Docs: [`airi-acting-cue-act-tokens/SKILL.md`](../.agents/skills/airi-acting-cue-act-tokens/SKILL.md), [`airi-character-rendering/SKILL.md`](../.agents/skills/airi-character-rendering/SKILL.md)*
+### Domain F: Dual-Duty Ninja-Swap Interceptor: Real-Time Speech Tags & ACT Tokens
+*Relevant Docs: [`airi-acting-cue-act-tokens/SKILL.md`](../.agents/skills/airi-acting-cue-act-tokens/SKILL.md), [`airi-character-rendering/SKILL.md`](../.agents/skills/airi-character-rendering/SKILL.md), [`airi-audio-pipeline/SKILL.md`](../.agents/skills/airi-audio-pipeline/SKILL.md)*
 
-#### 1. The Bottleneck: XML Generation Overhead & Out-of-Sync Acting
-- Standard avatar interaction requires the character to dynamically change facial expressions (smile, frown, blush, smirk) and physical motions (nod, tilt head, lean in) while speaking.
-- Today, this relies on the System-2 LLM generating inline markers such as `<act emotion="smug" motion="lean_forward"/>`. This approach suffers from:
-  1. **Token Cost & Latency**: Generates 15–30 extra tokens per response, slowing Time-to-First-Token (TTFT).
-  2. **Model Non-Compliance**: Smaller or local models (e.g. 7B/8B) frequently hallucinate invalid emotion names or omit tags entirely.
-  3. **Temporal Desync**: Motions arrive bundled inside text chunks rather than aligned to real-time speech delivery cadence.
+#### 1. The Bottleneck: The Voice-Face Emotional Disconnect & Prompt Pollution
 
-#### 2. The Jev Solution: Decoupled Real-Time Sentence-Stride Classification
-We decouple physical acting from the primary LLM dialogue generator. As the LLM streams tokens, the Contextual Speech Runtime (`speech.ts`) slices text into sentence strides:
-- **Pipeline Timing**:
-  1. LLM emits sentence: *"You actually thought you could sneak past me without saying anything?"*
-  2. Text sent concurrently to TTS audio synthesizer AND Jev decision gateway.
-  3. **TTS Synthesis**: Takes ~250–500ms before raw PCM audio is ready for playback.
-  4. **Jev Classification**: Takes **~110–140ms**, completing *well before* audio playback begins!
-- **Jev Dispatch Signature**:
+Traditional avatar interaction relies on two distinct annotation systems that historically clash:
+1. **Physical Blendshapes & Gestures**: Emitting inline `<|ACT:emotion="smug",motion="lean_forward"|>` cues to drive Live2D, VRM, and Stage-Mate rigs.
+2. **Audio Speech Tags**: Prepending expressive audio tags (e.g. `[whisper]`, `[giggle]`, `*sigh*`) to drive inflection-aware TTS backends (`airi-audio-server` / Chatterbox, Fish Audio, IndexTTS-2.0, Higgs, OmniVoice).
+
+Forcing the primary conversational LLM (System 2) to generate both inline creates severe failure modes:
+1. **Token Cost, Latency & Cache Invalidation**: Generates 20–40 extra markup tokens per turn, degrades Time-to-First-Token (TTFT), and breaks KV-cache prefix stability.
+2. **Model Non-Compliance**: Smaller or local models (7B/8B) routinely hallucinate invalid tag names or drop markers altogether.
+3. **The Flaw of Concurrent Execution (The Emotional Disconnect)**:
+   - If TTS audio synthesis is dispatched immediately while Jev evaluates avatar blendshapes in parallel, the TTS engine receives flat, unannotated text.
+   - The result is an **uncanny voice-face desync**: the 3D model smiles or smirks, but the voice sounds monotone and flat.
+4. **The Hardware Junk Drawer & Persona Integrity**:
+   - 3D VRM and Live2D rigs often expose 40–100 raw blendshapes (`EyeClose_L`, `MouthSmile_R`, `FaceAngry_02`, `SpecialDance_01`).
+   - Dumping the full hardware catalog into Jev at runtime dilutes classification probabilities and violates character personas. For example, a cold, stoic character's model may technically possess `happy` and `kawaii_peace` blendshapes; if Jev has `happy` in its candidate pool, it will trigger smiling when the user tells a joke, completely breaking character immersion.
+5. **The Infeasibility of Simple Regex**:
+   - Card authors write natural language acting guidelines and markdown bullet lists (*"Available emotions: deadpan, glare, smirk. Never smile."*), not repetitive `<|ACT:...|>` or `[tag]` syntax on every token. A naive regex looking for markup tags matches zero tokens.
+
+---
+
+#### 2. The Architectural Solution: Two-Tier Persona Compiler & Stride Interceptor
+
+We resolve this by decoupling prompt interpretation from real-time sentence-stride execution into two distinct phases:
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│  Tier 1: Authoring-Time Reverse Extractor ("The Persona Compiler")     │
+│  Trigger: When author edits Acting Tab prompts or imports a card       │
+│  Engine:  Local Needle 2 (WASM), local tiny LLM, or Jev schema query   │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │
+                                     ▼
+                Compiled Character Whitelist Cache
+                ┌────────────────────────────────────────────────────────┐
+                │ whitelisted_emotions: ["deadpan", "glare", "smirk"]   │
+                │ whitelisted_motions:  ["arms_crossed", "head_turn"]   │
+                │ whitelisted_speech:   ["whisper", "sigh", "neutral"]   │
+                └────────────────────┬───────────────────────────────────┘
+                                     │
+                                     ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│  Tier 2: Real-Time Sentence Stride Interceptor (~110ms Ninja-Swap)     │
+│  Trigger: Live sentence emitted by primary chat LLM                    │
+│  Engine:  TypeSafe Jev / Laya Local (Single Merged Request)            │
+│                                                                        │
+│  Jev options fed STRICTLY from Compiled Whitelist:                     │
+│    - act_emotion: ["none", "deadpan", "glare", "smirk"]                │
+│    - act_motion:  ["none", "idle", "arms_crossed", "head_turn"]        │
+│    - speech_tag:  ["none", "whisper", "sigh"]                          │
+└────────────────────────────────────┬───────────────────────────────────┘
+                                     │
+           ┌─────────────────────────┴─────────────────────────┐
+           ▼                                                   ▼
+┌──────────────────────────────────────┐   ┌──────────────────────────────────────┐
+│  Avatar Rig (Live2D / VRM / Mate)    │   │  Audio Engine (Chatterbox / Index)   │
+│  Inject: <|ACT:emotion="smug"...|>   │   │  Inject: "[sigh] You actually..."    │
+└──────────────────────────────────────┘   └──────────────────────────────────────┘
+```
+
+##### Tier 1: Authoring-Time Persona Compiler (Reverse Extractor)
+- **When It Runs**: Asynchronously in the background when the user edits `acting.modelExpressionPrompt` or `acting.speechExpressionPrompt` in `CardCreationTabActing.vue` (debounced by ~500ms), or upon card import/switch.
+- **Inputs Intersected**:
+  1. **Avatar Hardware Catalog**: All valid expressions and motions actually wired in the Model Customizer (`character.expressions`, `character.motions`).
+  2. **Active Speech Engine Capabilities**: Programmatic `speechCapabilities.expressionTags` queried from the active speech provider (e.g. `airi-audio-server` / Chatterbox `GET /capabilities` endpoint, Fish Audio, or IndexTTS-2.0).
+  3. **Author's Natural Language Prompts**: The freeform instructions describing the character's expressive demeanor and constraints.
+- **Extraction Task**:
+  *"Given this character's acting guidelines, the 3D model's mapped capabilities, and available TTS speech tags, extract the exact subset of emotion keys, motion keys, and speech tags this character is authorized to use."*
+- **Output**:
+  A tight, validated whitelist saved directly into the card's reactive extension state (`extensions.airi.acting.compiledWhitelists`):
   ```json
   {
-    "state": "You actually thought you could sneak past me without saying anything?",
-    "questions": [
-      {
+    "whitelistedEmotions": ["none", "deadpan", "glare", "smirk", "neutral"],
+    "whitelistedMotions": ["none", "idle_subtle", "arms_crossed", "head_turn_away"],
+    "whitelistedSpeechTags": ["none", "whisper", "sigh", "curious"]
+  }
+  ```
+- **Cost & Latency**: Runs offline once at authoring/import time (~300–800ms) with zero impact on real-time conversational streaming.
+
+##### Tier 2: Real-Time Sentence Stride Interceptor (~110ms Ninja-Swap)
+- **When It Runs**: During live chat generation in `ControlStripHost.vue` / `speech.ts`.
+- **The Stride Buffer**: Slices text into sentence strides as tokens stream from the LLM (*"Wait, did you really think I wouldn't notice you sneaking in here?"*).
+- **The Single-Pass Merged Request**:
+  - Instead of splitting speech tags and ACT cues into separate requests (which would cost 220ms+ and cause voice-face desync), the interceptor dispatches **1 Merged Request** to Jev/Laya.
+  - Multi-head classification evaluates all questions across a **single shared forward pass** in ~110ms ($42/Btok or free local Laya):
+  ```json
+  {
+    "state": {
+      "sentence": "Wait, did you really think I wouldn't notice you sneaking in here?",
+      "character_persona": "Tsundere persona: defensive when caught off-guard, crosses arms, hides relief behind mild indignation."
+    },
+    "questions": {
+      "speech_tag": {
         "type": "choice",
-        "question": "What facial expression best conveys the companion's emotional tone for this spoken sentence?",
-        "options": ["neutral", "smug", "flustered", "angry", "tender", "pout", "shocked"]
+        "instructions": "Select the voice speech tag from the character's allowed tags that best matches this line.",
+        "options": ["none", "whisper", "sigh", "curious"]
       },
-      {
+      "act_emotion": {
         "type": "choice",
-        "question": "What physical gesture or head motion should accompany this delivery?",
-        "options": ["idle_subtle", "head_tilt", "nod_agreement", "lean_forward", "arms_crossed", "giggle"]
+        "instructions": "What facial expression from the character's allowed emotions should the avatar adopt?",
+        "options": ["none", "deadpan", "glare", "smirk", "neutral"]
       },
-      {
+      "act_motion": {
+        "type": "choice",
+        "instructions": "What physical gesture from the character's allowed motions should accompany this spoken line?",
+        "options": ["none", "idle_subtle", "arms_crossed", "head_turn_away"]
+      },
+      "intensity": {
         "type": "score",
-        "question": "What is the emotional intensity of this line (0.0 = subtle, 1.0 = exaggerated)?",
+        "instructions": "Score emotional intensity (0.0 = subtle, 1.0 = exaggerated).",
         "min": 0.0,
         "max": 1.0
       }
-    ]
+    }
   }
   ```
-- **Immediate Actuation**:
-  - The Live2D/VRM/Stage-Mate renderer transitions blendshapes to `smug` (intensity `0.85`) and triggers `lean_forward` at the exact millisecond audio playback starts.
-  - Zero XML tokens generated by the LLM; 100% clean prompt caching; universal support across any local or cloud LLM.
+- **Why 1 Merged Request Guarantees Emotional Coherence**:
+  Because both the voice inflection (`speech_tag`) and facial blendshape (`act_emotion`) are evaluated over the **same unified latent transformer state**, the voice and face are derived from the exact same emotional appraisal—preventing "laughing voice with angry face" dissonance.
+- **The Ninja-Swap Execution**:
+  1. Jev returns in ~110ms: `speech_tag: "sigh"`, `act_emotion: "smirk"`, `act_motion: "arms_crossed"`, `intensity: 0.8`.
+  2. The interceptor injects `<|ACT:{"emotion":{"name":"smug","intensity":0.8},"motion":"arms_crossed"}|>` into the special-token queue to actuate the 3D/2D rig and subtitle indicators.
+  3. The interceptor prepends `[sigh] ` to the sentence chunk before handing it to the TTS synthesizer.
+  4. Both audio and avatar blendshapes fire in **100% emotional harmony**, with the 110ms buffer naturally absorbed into conversational turn-pacing silence. Zero prompt pollution on the primary LLM; 100% prefix-cache alignment.
 
 ---
 
@@ -732,8 +814,9 @@ console.log(`System 1 evaluated in ${systemOneStore.lastLatencyMs}ms`)
   - Add user-programmable natural language trigger prompt input to Settings > Vision.
 - [ ] **Phase 5: AnimaDex Wizard Fast Voice Matching & Acoustic Assignment**
   - Implement Jev batched voice selection, pitch semitone offset, and rate multiplier prediction in `guided.vue` Step 1 $\rightarrow$ Step 2 transition (`prefillRosterBindings`).
-- [ ] **Phase 6: Streaming Speech-to-Motion & Expression Gating**
-  - Add sentence-stride Jev classifier hook to `packages/stage-ui/src/stores/speech.ts` to trigger Live2D/VRM/Stage-Mate expressions and motions before TTS audio playback starts.
+- [ ] **Phase 6: Dual-Duty Ninja-Swap Interceptor (Speech Tags + ACT Cues)**
+  - Implement Tier 1 Authoring-Time Persona Compiler in `CardCreationTabActing.vue` (using local Needle 2 / WASM) to reconcile natural language acting prompts with model blendshapes and speech provider expression capabilities into cached whitelists.
+  - Implement Tier 2 Real-Time Sentence-Stride Interceptor in `ControlStripHost.vue` / `speech.ts`: batch single-pass Jev decision (~110ms), inject `<|ACT:...|>` visual cues, and prepend speech tags (e.g. `[whisper]`) to TTS synthesis payloads for 100% voice-face emotional synchronization.
 - [ ] **Phase 7: Memory Token Compaction & Pre-Summary Salience Curation**
   - Implement Jev pre-summary salience filter in memory consolidation pipeline to strip routine banter and compress raw dialogue transcripts by ~70% before invoking System-2 summary LLMs.
 
