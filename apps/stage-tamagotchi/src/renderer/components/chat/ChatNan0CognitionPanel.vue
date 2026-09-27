@@ -1,9 +1,22 @@
 <script setup lang="ts">
+import { useAiriCardStore } from '@proj-airi/stage-ui/stores'
 import { useNan0Store } from '@proj-airi/stage-ui/stores/modules/nan0'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
+const cardStore = useAiriCardStore()
 const nan0Store = useNan0Store()
 const showInnerMonologue = ref(false)
+
+onMounted(() => {
+  nan0Store.hydrateFromStorage(cardStore.activeCardId)
+})
+
+watch(
+  () => cardStore.activeCardId,
+  (newCardId) => {
+    nan0Store.hydrateFromStorage(newCardId)
+  },
+)
 
 // 12 Canonical Emotional Dimensions paired in 2-column x 6-row grid
 interface EmotionConfig {
@@ -122,9 +135,10 @@ const clusterBadgeClass = computed(() => {
     <!-- Executive State & Last Reflex Section -->
     <div class="flex flex-col gap-2 border-t border-neutral-200/50 pt-2.5 dark:border-neutral-800/50">
       <!-- Last Reflex Badge -->
-      <div v-if="nan0Store.lastReflex" class="flex flex-col gap-1">
+      <div class="flex flex-col gap-1">
         <span class="text-[9px] text-neutral-400 font-bold tracking-wider uppercase">Last Reflex</span>
         <div
+          v-if="nan0Store.lastReflex"
           :class="[
             'flex items-center justify-between gap-1.5 px-2 py-1 rounded-lg border text-[10px] font-medium transition-colors',
             clusterBadgeClass,
@@ -137,6 +151,13 @@ const clusterBadgeClass = computed(() => {
           <span class="shrink-0 text-[9px] font-mono opacity-80">
             {{ Math.round(nan0Store.lastReflex.confidence * 100) }}%
           </span>
+        </div>
+        <div
+          v-else
+          class="flex items-center gap-1.5 border border-neutral-200/50 rounded-lg bg-neutral-50/50 px-2 py-1 text-[10px] text-neutral-400 font-normal dark:border-neutral-800/50 dark:bg-neutral-900/30 dark:text-neutral-500"
+        >
+          <span class="i-solar:radar-2-bold-duotone text-xs opacity-60" />
+          <span>Awaiting observation</span>
         </div>
       </div>
 
@@ -158,7 +179,7 @@ const clusterBadgeClass = computed(() => {
             </span>
           </div>
           <span class="max-w-[110px] truncate text-[9px] text-neutral-500 font-normal dark:text-neutral-400">
-            {{ nan0Store.decisionReason }}
+            {{ nan0Store.decisionReason || 'Awaiting turn' }}
           </span>
         </div>
       </div>

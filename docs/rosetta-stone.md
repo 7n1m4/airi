@@ -478,6 +478,7 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 | `airi::beat-sync` | `stage-shared/src/beat-sync/eventa.ts` | **(raw `new BroadcastChannel`, note `::`)** Audio beat detection & lip-sync amplitude relay across processes/windows |
 | `dating-sim-sync` | `stores/dating-sim.ts` | **(raw `new BroadcastChannel`)** Dating-sim game-state sync across windows; a dedicated `live2d-dsl-bridge` channel relays DSL motion commands |
 | `airi:inference:web-llm` | `stage-ui/src/libs/inference/adapters/web-llm-channel.ts` | Single-owner WebLLM coordinator (leader election over BroadcastChannel, preventing multi-window VRAM duplication) |
+| `airi:nan0:state-sync` | `stage-ui/src/stores/modules/nan0.ts` | Single-owner Nan0 cognition state sync (Main Stage Window leader broadcasts emotional vectors, reflex badges, and executive decisions to secondary windows like Chatbox) |
 
 ---
 
@@ -601,6 +602,13 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 - **HMR State & Multi-Window Pitfalls**: Without `acceptHMRUpdate`, saving `.ts` store files triggers full page reloads across open Electron windows. Wiring soft HMR (`acceptHMRUpdate`) patches store state in-place, but requires 0A–0D taxonomy gates: (0A) Prerequisite module splits for multi-store files (`hearing.ts`, `character/index.ts`); (0B) Pure state stores; (0C) Vertical completion gate landing single `dispose` ledgers, `effectScope()` disposers, async epoch guards, and `acceptHMRUpdate` atomically in one change; (0D) Hard invalidation (`import.meta.hot.invalidate()`) for WebGPU allocators, workers, and AudioContext.
 - **Key Mitigation Rules**: (1) Exactly ONE `import.meta.hot.dispose()` callback per module to prevent Vite `disposeMap` overwrites; (2) `hmrEpoch` checks post-await in streaming loops; (3) Controlled accept callbacks for ABI invalidation before store patching; (4) Repository-relative links and `pnpm -F @proj-airi/stage-tamagotchi dev` execution.
 - **Canonical Reference**: Full technical architecture, remedies, and mitigation strategies are documented in [`docs/project-hmr-resilience-architecture.md`](./project-hmr-resilience-architecture.md).
+
+### Multi-Window Single-Leader Cognition (Nan0 & Stage Architecture)
+
+- **Single-Owner Invariant**: `Nan0Kernel` is strictly owned, instantiated, and executed by the **Main Window (`#/`)**, where `isMainWindow()` is `true`. Secondary windows (such as Desktop Chatbox `#/chat` and Actor Stage `#/actor`) are UI display mirrors.
+- **Why Secondary Windows Must NOT Run Nan0Kernel**: Instantiating a second kernel or running `prepareTurn()` in secondary windows creates split-brain state, duplicate System 1 shadow inference, double emotional decay, and competing `localStorage` writes.
+- **Enforcement & Guard**: `ensureKernel()` and `prepareTurn()` explicitly enforce `if (!isMainWindow()) throw/warn`. Secondary windows hydrate on mount/card change via `hydrateFromStorage()` and receive live streaming state over `BroadcastChannel('airi:nan0:state-sync')`.
+- **Regression Protection**: Tested under `packages/stage-ui/src/stores/modules/nan0.test.ts` ("strictly prohibits secondary windows from running prepareTurn or booting Nan0Kernel").
 
 
 

@@ -1,5 +1,6 @@
 import type {
   Nan0ConversationTurn,
+  Nan0Decision,
   Nan0EntityLedgerAdapter,
   Nan0EpistemicFact,
   Nan0EpistemicGroundingContext,
@@ -33,6 +34,13 @@ import { useTextJournalStore } from '../memory-text-journal'
 import { useProvidersStore } from '../providers'
 import { useSystemOneStore } from './system-one'
 
+// NOTICE: Architectural Invariant - Multi-Window Single-Leader Model (Pass 11 & Domain 5)
+// In AIRI Electron desktop (stage-tamagotchi), only the Main Window (Control Strip / Stage at '#/' or '')
+// is the orchestrator for sensory proactivity, speech, and Nan0Kernel execution.
+// Secondary windows (like the Chatbox '#/chat' or Actor Stage '#/actor') are UI display mirrors.
+// They MUST NEVER instantiate Nan0Kernel or execute prepareTurn(). Doing so causes split-brain state,
+// duplicate shadow engines, and competing writes to localStorage ('nan0/kernel-state/*').
+// Secondary windows hydrate via hydrateFromStorage() and receive live state over BroadcastChannel('airi:nan0:state-sync').
 export function isMainWindow(): boolean {
   if (typeof window === 'undefined')
     return true
@@ -53,7 +61,7 @@ export interface Nan0ReflexInfo {
 export interface Nan0StateSyncMessage {
   emotions: Record<string, number>
   lastReflex: Nan0ReflexInfo | null
-  decision: 'SPEAK' | 'SILENCE' | 'WAIT'
+  decision: Nan0Decision
   decisionReason: string
   innerMonologue: string
   isProcessing: boolean
@@ -100,22 +108,14 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
   const emotions = ref<Record<string, number>>({ ...NAN0_DEFAULT_EMOTIONS })
 
   // Last Reflex Trigger
-  const lastReflex = ref<Nan0ReflexInfo | null>({
-    group: 'apology_repair',
-    label: 'Apology & Repair',
-    confidence: 0.98,
-    cluster: 'conflict',
-    icon: 'i-solar:hand-heart-bold-duotone',
-  })
+  const lastReflex = ref<Nan0ReflexInfo | null>(null)
 
   // Executive Decision State
-  const decision = ref<'SPEAK' | 'SILENCE' | 'WAIT'>('SPEAK')
-  const decisionReason = ref<string>('Balanced Affect')
+  const decision = ref<Nan0Decision>('SPEAK')
+  const decisionReason = ref<string>('Awaiting turn')
 
   // Inner Monologue
-  const innerMonologue = ref<string>(
-    'User expressed an apology. Suspicion reduced slightly, but pride demands maintaining a guarded posture.',
-  )
+  const innerMonologue = ref<string>('')
 
   // 1st-Hop Execution State
   const isProcessing = ref<boolean>(false)
@@ -235,7 +235,7 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
     broadcastCurrentState()
   }
 
-  function setExecutiveState(newDecision: 'SPEAK' | 'SILENCE' | 'WAIT', reason = '') {
+  function setExecutiveState(newDecision: Nan0Decision, reason = '') {
     decision.value = newDecision
     if (reason)
       decisionReason.value = reason
@@ -314,6 +314,44 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
     return kernel.value
   }
 
+  function hydrateFromStorage(cardId?: string) {
+    const targetCardId = cardId || activeCardId.value || 'default'
+    activeCardId.value = targetCardId
+    const key = `nan0/kernel-state/${targetCardId}`
+    if (typeof globalThis.localStorage !== 'undefined') {
+      try {
+        const raw = globalThis.localStorage.getItem(key)
+        if (raw) {
+          const parsed = JSON.parse(raw)
+          if (parsed && typeof parsed === 'object') {
+            if (parsed.emotionalState && typeof parsed.emotionalState === 'object') {
+              emotions.value = { ...NAN0_DEFAULT_EMOTIONS, ...parsed.emotionalState }
+            }
+            const lastThought = Array.isArray(parsed.thoughts) && parsed.thoughts.length > 0
+              ? parsed.thoughts[parsed.thoughts.length - 1]
+              : parsed.thought
+            if (lastThought?.narrative || lastThought?.privateText) {
+              innerMonologue.value = lastThought.narrative || lastThought.privateText || ''
+            }
+            const lastDecision = Array.isArray(parsed.decisions) && parsed.decisions.length > 0
+              ? parsed.decisions[parsed.decisions.length - 1]
+              : parsed.decision
+            if (lastDecision?.finalDecision) {
+              decision.value = lastDecision.finalDecision
+              decisionReason.value = lastDecision.suppressionReason
+                || (lastDecision.reasonCodes?.length ? lastDecision.reasonCodes.join(', ') : 'Nan0 Decision')
+            }
+          }
+        }
+      }
+      catch (e) {
+        console.warn('[Nan0Store] Failed to hydrate from storage:', e)
+      }
+    }
+  }
+
+  // NOTICE: Secondary windows must never boot or orchestrate Nan0Kernel.
+  // All kernel operations are strictly owned by the main stage window.
   async function ensureKernel(cardId?: string, config?: Nan0KernelConfig): Promise<Nan0Kernel> {
     if (!isMainWindow()) {
       console.warn('[Nan0Store] Secondary renderer window detected. Nan0Kernel orchestration is restricted to the main stage window.')
@@ -457,6 +495,16 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
     if (snapshot.emotionalState) {
       setEmotions(snapshot.emotionalState)
     }
+    const lastThought = snapshot.thoughts?.length ? snapshot.thoughts[snapshot.thoughts.length - 1] : undefined
+    if (lastThought?.narrative || lastThought?.privateText) {
+      innerMonologue.value = lastThought.narrative || lastThought.privateText || ''
+    }
+    const lastDecision = snapshot.decisions?.length ? snapshot.decisions[snapshot.decisions.length - 1] : undefined
+    if (lastDecision?.finalDecision) {
+      decision.value = lastDecision.finalDecision
+      decisionReason.value = lastDecision.suppressionReason
+        || (lastDecision.reasonCodes?.length ? lastDecision.reasonCodes.join(', ') : 'Nan0 Decision')
+    }
 
     // Initialize shadow engine for reflex observation
     shadowEngine.value = new Nan0SubconsciousShadowEngine({
@@ -485,6 +533,9 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
     return instance
   }
 
+  // NOTICE: prepareTurn must strictly execute within the main stage window.
+  // In secondary windows (#/chat), user input is relayed over 'airi-chat-input-bridge'
+  // to the main window, where performSend() executes prepareTurn() as the single leader.
   async function prepareTurn(
     observation: Nan0Observation,
     options?: Nan0PrepareTurnOptions,
@@ -648,6 +699,7 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
     setKernel,
     getKernel,
     ensureKernel,
+    hydrateFromStorage,
     prepareTurn,
     recordAssistantTurn,
     recordSilenceDecision,

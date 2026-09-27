@@ -6,6 +6,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { isMainWindow, NAN0_DEFAULT_EMOTIONS, useNan0Store } from './nan0'
 
+let mockIsTamagotchi = false
+
+vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@proj-airi/stage-shared')>()
+  return {
+    ...mod,
+    isStageTamagotchi: () => mockIsTamagotchi,
+  }
+})
+
 vi.mock('vue-i18n', () => ({
   useI18n: () => ({
     t: (key: string) => key,
@@ -98,6 +108,12 @@ describe('useNan0Store (Host Orchestrator Integration)', () => {
         stateStore: new InMemoryStateStore(),
         reasoningClient,
         clock: new SystemNan0Clock(),
+        systemOneProvider: vi.fn().mockResolvedValue({
+          answers: {
+            dialogue_intent: { choice: 'greeting', confidence: 0.9 },
+            relational_direction: { choice: 'deepen', confidence: 0.8 },
+          },
+        }),
         decisionCapabilities: {
           canSpeak: true,
           canBodyExpress: true,
@@ -311,11 +327,89 @@ describe('useNan0Store (Host Orchestrator Integration)', () => {
       expect(store.emotions.warmth).toBeGreaterThan(initialWarmth)
     })
 
-    it('enforces main window restrictions on ensureKernel and prepareTurn', () => {
-      expect(isMainWindow()).toBe(true)
+    it('starts with clean empty defaults for lastReflex, decisionReason, and innerMonologue', () => {
+      const store = useNan0Store()
+      expect(store.lastReflex).toBeNull()
+      expect(store.decisionReason).toBe('Awaiting turn')
+      expect(store.innerMonologue).toBe('')
+    })
+
+    it('hydrates emotional state, thoughts, and decisions from localStorage via hydrateFromStorage', () => {
+      const store = useNan0Store()
+      const cardId = 'card_test_hydrate'
+      const key = `nan0/kernel-state/${cardId}`
+
+      const fakePersistedState = {
+        schemaVersion: 2,
+        emotionalState: {
+          suspicion: 0.42,
+          attachment: 0.88,
+          pride: 0.75,
+        },
+        thoughts: [
+          {
+            thoughtId: 'th_prev',
+            narrative: 'Previous thought',
+          },
+          {
+            thoughtId: 'th_latest',
+            narrative: 'Deep live inner monologue loaded from persistence.',
+          },
+        ],
+        decisions: [
+          {
+            decisionId: 'dec_1',
+            finalDecision: 'SPEAK',
+            suppressionReason: null,
+            reasonCodes: ['expressive.dialogue'],
+          },
+        ],
+      }
+
+      globalThis.localStorage.setItem(key, JSON.stringify(fakePersistedState))
+      store.hydrateFromStorage(cardId)
+
+      expect(store.emotions.suspicion).toBe(0.42)
+      expect(store.emotions.attachment).toBe(0.88)
+      expect(store.emotions.pride).toBe(0.75)
+      expect(store.innerMonologue).toBe('Deep live inner monologue loaded from persistence.')
+      expect(store.decision).toBe('SPEAK')
+      expect(store.decisionReason).toBe('expressive.dialogue')
+
+      // Clean up localStorage
+      globalThis.localStorage.removeItem(key)
+    })
+
+    it('strictly prohibits secondary windows from running prepareTurn or booting Nan0Kernel', async () => {
+      mockIsTamagotchi = true
+      window.location.hash = '#/chat'
+
+      expect(isMainWindow()).toBe(false)
 
       const store = useNan0Store()
-      expect(store).toBeDefined()
+
+      // 1. prepareTurn must reject immediately in secondary windows to prevent split-brain execution
+      const observation: Nan0Observation = {
+        id: 'obs_secondary_test',
+        source: 'chat',
+        actorId: 'kyo',
+        sessionId: 'session_1',
+        timestamp: Date.now(),
+        content: 'Hello from secondary window',
+        metadata: {},
+      }
+      await expect(store.prepareTurn(observation)).rejects.toThrow(
+        '[Nan0Store] prepareTurn must be orchestrated from the main stage window.',
+      )
+
+      // 2. ensureKernel must refuse orchestration in secondary windows
+      const kernelResult = await store.ensureKernel('secondary_card')
+      expect(kernelResult).toBeNull()
+
+      // Reset environment
+      window.location.hash = '#/'
+      mockIsTamagotchi = false
+      expect(isMainWindow()).toBe(true)
     })
   })
 })

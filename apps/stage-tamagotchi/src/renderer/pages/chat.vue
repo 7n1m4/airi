@@ -197,9 +197,10 @@ onUnmounted(() => {
 const isNan0Active = computed(() => {
   const airiExt = activeCard.value?.extensions?.airi as any
   const cognition = airiExt?.modules?.cognition ?? airiExt?.cognition
-  if (!cognition?.enabled)
+  const processor = cognition?.processor ?? cognition?.firstHopProcessor ?? airiExt?.firstHopProcessor
+  const enabled = cognition?.enabled ?? (processor === 'local_nan0' || processor === 'nan0')
+  if (!enabled)
     return false
-  const processor = cognition.processor ?? cognition.firstHopProcessor
   return processor === 'local_nan0' || processor === 'nan0'
 })
 

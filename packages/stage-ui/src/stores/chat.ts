@@ -1405,11 +1405,14 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
         }
 
         // Evaluate Decoupled Two-Hop Cognition Pipeline
-        const cognitionConfig = (activeCard.value?.extensions?.airi as any)?.modules?.cognition
-        if (cognitionConfig?.enabled && bridgedSteps === 1) {
-          const firstHopProviderId = cognitionConfig.provider
-          const firstHopModelId = cognitionConfig.model
-          const processorMode = cognitionConfig.processor || 'none'
+        const airiExt = activeCard.value?.extensions?.airi as any
+        const cognitionConfig = airiExt?.modules?.cognition ?? airiExt?.cognition
+        const isCognitionEnabled = cognitionConfig?.enabled
+          ?? (airiExt?.firstHopProcessor === 'nan0' || airiExt?.firstHopProcessor === 'local_nan0')
+        if (isCognitionEnabled && bridgedSteps === 1) {
+          const firstHopProviderId = cognitionConfig?.provider || effectiveProviderId
+          const firstHopModelId = cognitionConfig?.model || effectiveModel
+          const processorMode = cognitionConfig?.processor || cognitionConfig?.firstHopProcessor || airiExt?.firstHopProcessor || 'none'
 
           if (firstHopProviderId && firstHopModelId) {
             chatLog('[Cognition] Executing 1st-Hop pre-pass thoughts...', {
@@ -1425,7 +1428,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
                 headers['x-opencode-session'] = sessionId
               }
 
-              if (processorMode === 'local_nan0') {
+              if (processorMode === 'local_nan0' || processorMode === 'nan0') {
                 const nan0Store = useNan0Store()
                 const userContentStr = typeof sendingMessage === 'string'
                   ? sendingMessage

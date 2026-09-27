@@ -32,6 +32,7 @@ Multi-window AIRI (Electron chat + stage + caption + widgets, or web split panes
 | `airi::stage-three-runtime-trace` | `stage-three-runtime-trace.ts` :48 (renderer bridge) | `stage-three-runtime-diagnostics.ts` | runtime trace diagnostics |
 | `airi_cf_oauth_channel` | `modules/cloudflare.ts` :255 (onboarding CORS proxy) | OAuth popup relay window | credential exchange |
 | `airi:inference:web-llm` | `web-llm-channel.ts` (Leader / Client single-owner coordinator) | All windows (Chat, Onboarding, Actor, DatingSim, Memory) | `WebLlmChannelMessage` (ping, pong, load, generate, cancel, state-change) |
+| `airi:nan0:state-sync` | `stores/modules/nan0.ts` :170 (Main Stage Window leader) | Secondary windows (Chatbox `ChatNan0CognitionPanel.vue`) | `Nan0StateSyncMessage` (emotions, lastReflex, decision, monologue) |
 
 ## 2. Rules & SOPs
 
