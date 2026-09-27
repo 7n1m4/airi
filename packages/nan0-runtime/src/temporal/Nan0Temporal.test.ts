@@ -14,6 +14,7 @@ import { Nan0Kernel } from '../kernel/Nan0Kernel'
 import { InMemoryStateStore } from '../persistence/InMemoryStateStore'
 import { mergeNan0States } from '../persistence/LocalStorageStateStore'
 import { createEmptyRelationshipState } from '../relationship/RelationshipMemory'
+import { createMockSystemOneProvider } from '../test-utils/mock-system-one'
 import { appendTimelineEvent, createEmptyTimelineState } from '../timeline/SessionTimeline'
 import { ControllableNan0Clock } from './Nan0Clock'
 import {
@@ -113,6 +114,7 @@ function kernel(input: {
       reasoningClient: client,
       privateThoughtTimeoutMs: input.timeout,
       createId: () => `temporal-${++id}`,
+      systemOneProvider: createMockSystemOneProvider(),
     }),
   }
 }

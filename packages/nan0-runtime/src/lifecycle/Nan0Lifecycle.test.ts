@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { Nan0Kernel } from '../kernel/Nan0Kernel'
 import { InMemoryStateStore } from '../persistence/InMemoryStateStore'
 import { ControllableNan0Clock } from '../temporal/Nan0Clock'
+import { createMockSystemOneProvider } from '../test-utils/mock-system-one'
 import { mergeActionIntents, mergeComputationAttempts, privateThoughtTimeoutPolicy } from './Nan0Lifecycle'
 
 const observation: Nan0Observation = {
@@ -43,6 +44,7 @@ function kernel(client: Nan0ReasoningClient, store = new InMemoryStateStore(), t
     privateThoughtProviderMetadata: { providerId: 'safe-provider', model: 'safe-model' },
     createId: () => `lifecycle-${++id}`,
     clock,
+    systemOneProvider: createMockSystemOneProvider(),
   })
 }
 
@@ -120,11 +122,12 @@ describe('bounded Nan0 computation lifecycle', () => {
   })
 
   it('does not recover a computation still active in the current owner', async () => {
-    const subject = kernel(hangingClient(), new InMemoryStateStore(), 30)
+    const store = new InMemoryStateStore()
+    const subject = kernel(hangingClient(), store, 30)
     await subject.boot()
     const pending = subject.prepareTurn(observation)
-    await Promise.resolve()
-    await Promise.resolve()
+    for (let i = 0; i < 10 && !(await store.load())?.turns.length; i++)
+      await Promise.resolve()
     expect(await subject.recoverInterruptedPreparedTurns()).toBe(0)
     await pending
   })
@@ -134,8 +137,8 @@ describe('bounded Nan0 computation lifecycle', () => {
     const source = kernel(hangingClient(), sourceStore, 30)
     await source.boot()
     const pending = source.prepareTurn(observation)
-    await Promise.resolve()
-    await Promise.resolve()
+    for (let i = 0; i < 10 && !(await sourceStore.load())?.turns.length; i++)
+      await Promise.resolve()
     const snapshot = await sourceStore.load()
     expect(snapshot?.turns[0].status).toBe('prepared')
 

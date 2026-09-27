@@ -621,12 +621,16 @@ export class Nan0Kernel {
       actorId: ownership.actorId,
       memoryCount: this.state.memories.length,
     })
+    if (!isInternalObservation && text.length > 0 && !this.dependencies.systemOneProvider) {
+      throw new Error('Nan0Kernel: System 1 provider is required to process observations. Please configure a System 1 provider.')
+    }
+
     const hasSystemOne = !isInternalObservation
       && Boolean(this.dependencies.systemOneProvider)
       && text.length > 0
       && options?.tier2JevChallengerEnabled !== false
 
-    const { emotionalEvents, reflexOutcome } = hasSystemOne
+    const { emotionalEvents, reflexOutcome, answers: systemOneAnswers } = hasSystemOne
       ? await this.updateEmotionalStateForObservationAsync(canonicalObservation, options)
       : this.updateEmotionalStateForObservationSync(canonicalObservation)
     if (isOwnerActor(ownership.actorId, this.state.identity)) {
@@ -637,6 +641,7 @@ export class Nan0Kernel {
         previousKyoInteractionAt: this.state.temporal.lastKyoInteractionAt,
         clock: this.clock,
         createId: this.createId,
+        systemOneAnswers,
       })
       this.state = { ...this.state, temporal: { ...this.state.temporal, engine: lived.engine } }
       for (const promise of normalizeTemporalTrackingState(lived.engine.lived).trackedPromises.filter(item => !trackedPromiseIds.has(item.promiseId))) {
@@ -1016,7 +1021,7 @@ export class Nan0Kernel {
       ownership,
       emotionalState: structuredClone(this.state.emotionalState),
       mood: deriveMood(this.state.emotionalState),
-      interpretationModifier: emotionalInterpretationModifier(this.state.emotionalState, text, ownership.actorId, this.state.identity),
+      interpretationModifier: emotionalInterpretationModifier(this.state.emotionalState, text, ownership.actorId, this.state.identity, systemOneAnswers),
       recentEmotionalEvents: normalizeEmotionalHistory(this.state.emotionalHistory, this.state.createdAt).events.slice(-6),
       attentionContext: composeAttentionContext(this.state.attention!, this.state.internalObservations!),
       predictionContext: composePredictionContext(this.state.prediction!, canonicalObservation.timestamp),
@@ -1031,6 +1036,8 @@ export class Nan0Kernel {
       policy: thoughtPolicy,
       signal: controller.signal,
       retrievedMemoryContext,
+      reflexOutcome,
+      systemOneAnswers,
       onStreamProgress: async (progress: { attempt: number, phase: 'narrative' | 'extraction', partialNarrativeLength: number }) => {
         const phaseChanged = progress.phase !== persistedProgressPhase
         if (!phaseChanged && progress.partialNarrativeLength - persistedProgressLength < 512)
@@ -1253,6 +1260,7 @@ export class Nan0Kernel {
       thoughtPolicy,
       createGoalId: this.createId,
       now: this.now(),
+      systemOneAnswers,
     })
     const linkedGoal = goals.find(goal => goal.supportingThoughtIds.includes(thoughtId)) ?? null
     const pendingIntentions = formPendingIntentions({
@@ -3215,6 +3223,7 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
   ): {
     emotionalEvents: Nan0EmotionalEvent[]
     reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
+    answers?: Record<string, { choice: string, confidence?: number, probabilities?: Record<string, number> }>
   } {
     const decayed = decayEmotions({
       vector: this.state.emotionalState,
@@ -3245,6 +3254,7 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
   ): Promise<{
     emotionalEvents: Nan0EmotionalEvent[]
     reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
+    answers?: Record<string, { choice: string, confidence?: number, probabilities?: Record<string, number> }>
   }> {
     const decayed = decayEmotions({
       vector: this.state.emotionalState,
@@ -3259,6 +3269,7 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
       primaryReflex?: { group: string, choice: string, confidence?: number }
     }
     let reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null = null
+    let answers: Record<string, { choice: string, confidence?: number, probabilities?: Record<string, number> }> | undefined
 
     try {
       const timeoutMs = options?.jevTimeoutMs ?? 1500
@@ -3273,6 +3284,7 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
       const jevResult = await Promise.race([jevPromise, timeoutPromise])
 
       if (jevResult?.answers && Object.keys(jevResult.answers).length > 0) {
+        answers = jevResult.answers
         perturbed = perturbEmotionsFromJev({
           vector: decayed.vector,
           history: decayed.history,
@@ -3323,7 +3335,8 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
         : null
     }
 
-    return this.applyPerturbedEmotions(observation, decayed, perturbed, reflexOutcome)
+    const applied = this.applyPerturbedEmotions(observation, decayed, perturbed, reflexOutcome)
+    return { ...applied, answers }
   }
 
   private applyEmotionalConsequence(
@@ -3463,10 +3476,10 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
     }
   }
 
-  private estimateEmotionalWeight(content: string): number {
-    const punctuation = (content.match(/[!?]/g) ?? []).length
-    const intensityWords = (content.match(/\b(hate|love|angry|afraid|happy|furious|sorry|proud)\b/gi) ?? []).length
-    return clamp((punctuation * 0.08) + (intensityWords * 0.15), 0, 1)
+  private estimateEmotionalWeight(content: string, confidence = 0.3): number {
+    const arousal = this.state.emotionalState?.arousal ?? 0.3
+    const importance = clamp((arousal * 0.5) + (confidence * 0.5), 0.1, 1)
+    return importance
   }
 
   private retrieveRelevantMemories(

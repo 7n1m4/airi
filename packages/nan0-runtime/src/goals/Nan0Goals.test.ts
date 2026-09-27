@@ -159,11 +159,18 @@ function evaluate(input: {
   existing?: Nan0Goal[]
   relationship?: Nan0RelationshipContext
   obligations?: Parameters<typeof evaluateNan0Goals>[0]['trustedObligations']
+  systemOneAnswers?: Record<string, { choice: string, confidence?: number }>
 } = {}): Nan0Goal[] {
   const current = input.current ?? thought('1', signal())
   const allThoughts = input.thoughts ?? [current]
+  const text = input.observationText ?? 'Please remember to revisit the copper lighthouse later.'
+  const systemOneAnswers = input.systemOneAnswers ?? (
+    text.toLowerCase().includes('remember to') || text.toLowerCase().includes('please')
+      ? { user_directive: { choice: 'user_directive', confidence: 0.95 } }
+      : undefined
+  )
   return evaluateNan0Goals({
-    observationText: input.observationText ?? 'Please remember to revisit the copper lighthouse later.',
+    observationText: text,
     ownership: input.ownership ?? ownership(),
     thought: current,
     decision: decision(current),
@@ -176,6 +183,7 @@ function evaluate(input: {
     trustedObligations: input.obligations,
     createGoalId: () => String(++nextGoalId),
     now: 100,
+    systemOneAnswers,
   })
 }
 

@@ -18,6 +18,7 @@ import { InMemoryStateStore } from '../persistence/InMemoryStateStore'
 import { LocalStorageStateStore } from '../persistence/LocalStorageStateStore'
 import { ControllableNan0Clock } from '../temporal/Nan0Clock'
 import { createEmptyTemporalState } from '../temporal/Nan0Temporal'
+import { createMockSystemOneProvider } from '../test-utils/mock-system-one'
 import { createEmptyTimelineState } from '../timeline/SessionTimeline'
 import {
   applyRelationshipEvidence,
@@ -67,7 +68,7 @@ function createKernel(
       createId: () => `${prefix}-${++nextId}`,
       identityOptions,
       entityLedger,
-      systemOneProvider,
+      systemOneProvider: systemOneProvider ?? createMockSystemOneProvider(),
     }),
   }
 }

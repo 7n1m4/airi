@@ -12,6 +12,7 @@ import { Nan0Kernel } from '../kernel/Nan0Kernel'
 import { InMemoryStateStore } from '../persistence/InMemoryStateStore'
 import { mergeNan0States } from '../persistence/LocalStorageStateStore'
 import { ControllableNan0Clock } from '../temporal/Nan0Clock'
+import { createMockSystemOneProvider } from '../test-utils/mock-system-one'
 import { mergeNan0Thoughts, NAN0_THOUGHT_EXTRACTION_DELIMITER } from './Nan0ThoughtEngine'
 
 function thoughtEnvelope(
@@ -83,6 +84,7 @@ function createKernel(
       capabilityDefinitions,
       memoryRetriever,
       diagnostic,
+      systemOneProvider: createMockSystemOneProvider(),
     }),
     store,
   }

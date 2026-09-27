@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest'
 import { Nan0Kernel } from '../kernel/Nan0Kernel'
 import { InMemoryStateStore } from '../persistence/InMemoryStateStore'
 import { ControllableNan0Clock } from '../temporal/Nan0Clock'
+import { createMockSystemOneProvider } from '../test-utils/mock-system-one'
 import {
   CONTINUITY_DORMANT_AFTER_MS,
   CONTINUITY_MAX_CONTEXT_THREADS,
@@ -36,6 +37,7 @@ function createKernel(
       reasoningClient,
       clock,
       createId: () => `${prefix}-${++nextId}`,
+      systemOneProvider: createMockSystemOneProvider(),
     }),
   }
 }

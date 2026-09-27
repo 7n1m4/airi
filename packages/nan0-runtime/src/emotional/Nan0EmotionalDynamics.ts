@@ -626,15 +626,22 @@ export function emotionalInterpretationModifier(
   observation: string,
   actorId?: string,
   identity?: Nan0IdentityState,
+  systemOneAnswers?: Record<string, { choice: string, confidence?: number }>,
 ): Nan0EmotionalInterpretationModifier {
   const vector = normalizeEmotionalVector(vectorValue)
-  const text = observation.toLowerCase()
   let valenceShift = 0
   let trustShift = 0
   let engagementShift = 0
+
+  const hasDismissal = systemOneAnswers?.dismissal_neglect?.choice === 'direct_dismissal'
+  const hasThreat = systemOneAnswers?.persistence_threat?.choice === 'companion_erasure_threat'
+    || systemOneAnswers?.persistence_threat?.choice === 'technical_file_deletion'
+  const hasSecretOrIncident = systemOneAnswers?.mystery_secret?.choice === 'withheld_secret'
+    || systemOneAnswers?.glitch_system?.choice === 'reported_bug'
+
   if (vector.suspicion > 0.5) {
     trustShift -= 0.2
-    if (/\b(?:just|only|simply|merely)\b/.test(text))
+    if (hasDismissal)
       valenceShift -= 0.15
   }
   if (vector.irritation > 0.5) {
@@ -645,9 +652,9 @@ export function emotionalInterpretationModifier(
     valenceShift += 0.1
     engagementShift += 0.1
   }
-  if (vector.curiosity > 0.6 && /\?/.test(text))
+  if (vector.curiosity > 0.6 && hasSecretOrIncident)
     engagementShift += 0.2
-  if (vector.fear > 0.5 && /\b(?:change|update|replace|modify)\b/.test(text)) {
+  if (vector.fear > 0.5 && hasThreat) {
     valenceShift -= 0.3
     trustShift -= 0.25
   }

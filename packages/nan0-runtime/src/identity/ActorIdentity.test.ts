@@ -8,6 +8,7 @@ import { InMemoryStateStore } from '../persistence/InMemoryStateStore'
 import { createEmptyRelationshipState } from '../relationship/RelationshipMemory'
 import { ControllableNan0Clock } from '../temporal/Nan0Clock'
 import { createEmptyTemporalState } from '../temporal/Nan0Temporal'
+import { createMockSystemOneProvider } from '../test-utils/mock-system-one'
 import { createDefaultIdentityState, hydrateIdentityState, isOwnerActor, nan0Ownership, normalizeActorId, resolveObservationOwnership } from './ActorIdentity'
 
 const reasoningClient: Nan0ReasoningClient = {
@@ -36,6 +37,7 @@ function createKernel(stateStore = new InMemoryStateStore()) {
     reasoningClient,
     clock: new ControllableNan0Clock({ wallTime: 1000, monotonicTime: 1000 }),
     createId: () => `id-${++nextId}`,
+    systemOneProvider: createMockSystemOneProvider(),
   })
 }
 
@@ -350,6 +352,7 @@ describe('actor identity ownership', () => {
         ownerDisplayName: 'Richard',
         ownerAliases: ['rick'],
       },
+      systemOneProvider: createMockSystemOneProvider(),
     })
     await kernel.boot()
 

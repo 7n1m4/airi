@@ -26,6 +26,7 @@ describe('nan0TemporalEventGenerator', () => {
       previousKyoInteractionAt: null,
       clock,
       createId: () => String(++id),
+      systemOneAnswers: { commitment_pledge: { choice: 'direct_future_commitment', confidence: 0.95 } },
     })
     expect(recorded.engine.lived?.trackedPromises).toHaveLength(1)
     clock.setWallTime(13 * 60_000 + 1_000)

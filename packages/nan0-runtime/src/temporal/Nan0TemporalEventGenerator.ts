@@ -255,15 +255,26 @@ export function computeLivedDuration(input: {
 }
 
 function explicitReturnPromise(text: string, at: number): { description: string, dueAt: number } | null {
-  const matched = text.match(/\b(?:i promise\s+)?i(?:'ll| will)\s+(?:be back|return)\s+in\s+(\d{1,4})\s*(seconds?|minutes?|hours?)\b/i)
-  if (!matched)
-    return null
-  const amount = Number(matched[1])
-  const unitMs = matched[2].toLowerCase().startsWith('second') ? 1_000 : matched[2].toLowerCase().startsWith('minute') ? 60_000 : 3_600_000
-  const durationMs = amount * unitMs
+  const matched = text.match(/\b(?:in\s+)?(\d{1,4})\s*(seconds?|minutes?|hours?|[smh])\b/i)
+    || text.match(/\b(?:an?|half\s+an?)\s*(hour|minute)s?\b/i)
+  let durationMs = 15 * 60_000
+  if (matched) {
+    if (/half\s+an?\s*hour/i.test(matched[0])) {
+      durationMs = 30 * 60_000
+    }
+    else if (/an?\s*hour/i.test(matched[0])) {
+      durationMs = 60 * 60_000
+    }
+    else if (matched[1] && matched[2]) {
+      const amount = Number(matched[1])
+      const unit = matched[2].toLowerCase()
+      const unitMs = unit.startsWith('s') ? 1_000 : unit.startsWith('m') ? 60_000 : 3_600_000
+      durationMs = amount * unitMs
+    }
+  }
   if (!Number.isFinite(durationMs) || durationMs < 5_000 || durationMs > 7 * DAY_MS)
-    return null
-  return { description: bounded(matched[0], 200), dueAt: at + durationMs }
+    durationMs = 15 * 60_000
+  return { description: bounded(text, 200), dueAt: at + durationMs }
 }
 
 function promiseBreakAt(promise: Readonly<Nan0TrackedPromise>): number {
@@ -389,6 +400,7 @@ export function recordLivedTemporalObservation(input: {
   previousKyoInteractionAt: number | null
   clock: Nan0Clock
   createId: () => string
+  systemOneAnswers?: Record<string, { choice: string, confidence?: number }>
 }): Nan0LivedTemporalEvaluation {
   let engine: Nan0TemporalEngineState = { ...input.engine, lived: normalizeTemporalTrackingState(input.engine.lived) }
   const created: Nan0LivedTemporalCandidate[] = []
@@ -430,7 +442,11 @@ export function recordLivedTemporalObservation(input: {
   lived = { ...normalizeTemporalTrackingState(engine.lived), trackedPromises: promises, lastExternalInputAt: at, crossedIdleThresholdIds: [] }
   lived = updateRhythm(lived, input.observation, input.clock, at)
   const text = typeof input.observation.content === 'string' ? input.observation.content : ''
-  const promise = explicitReturnPromise(text, at)
+  const hasCommitment = input.systemOneAnswers
+    ? (input.systemOneAnswers.commitment_pledge?.choice === 'direct_future_commitment'
+      || input.systemOneAnswers.commitment_pledge?.choice === 'conditional_commitment')
+    : false
+  const promise = hasCommitment ? explicitReturnPromise(text, at) : null
   if (promise && !lived.trackedPromises.some(item => item.sourceObservationId === input.observation.id)) {
     lived.trackedPromises.push({ promiseId: `promise_${input.createId()}`, actorId: 'kyo', description: promise.description, madeAt: at, dueAt: promise.dueAt, sourceObservationId: input.observation.id, sourceMemoryId: null, status: 'active', fulfilledAt: null, brokenAt: null, crossedThresholdIds: [] })
   }

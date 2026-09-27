@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { InMemoryStateStore } from '../persistence/InMemoryStateStore'
 import { ControllableNan0Clock } from '../temporal/Nan0Clock'
+import { createMockSystemOneProvider } from '../test-utils/mock-system-one'
 import { Nan0Kernel } from './Nan0Kernel'
 
 const hour = 3_600_000
@@ -43,6 +44,7 @@ function harness(input: { response?: string, client?: Nan0ReasoningClient, timeo
     clock,
     createId: () => `temporal-auto-${++id}`,
     privateThoughtTimeoutMs: input.timeout ?? 100,
+    systemOneProvider: createMockSystemOneProvider(),
     temporalEngineConfiguration: {
       minimumObservationSignificance: 0,
       maxConditionsPerEvaluation: 5,

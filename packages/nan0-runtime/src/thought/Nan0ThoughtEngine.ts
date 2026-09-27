@@ -68,6 +68,8 @@ export interface Nan0ThoughtEngineInput {
     partialNarrativeLength: number
   }) => void | Promise<void>
   retrievedMemoryContext?: string | Nan0EpistemicGroundingContext | null
+  reflexOutcome?: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
+  systemOneAnswers?: Record<string, { choice: string, confidence?: number }>
 }
 
 interface PressureScores {
@@ -397,7 +399,8 @@ function pressureScores(input: Nan0ThoughtEngineInput): PressureScores {
   const emotionalIntensity = clamp(
     (input.emotionalState.irritation ?? 0) * 0.55
     + (input.emotionalState.suspicion ?? 0) * 0.25
-    + (text.match(/[!?]/g)?.length ?? 0) * 0.08,
+    + (input.emotionalState.rage ?? 0) * 0.4
+    + (input.emotionalState.fear ?? 0) * 0.3,
   )
   const relationshipBase = clamp(
     Math.abs(input.relationship.emotionalBalance) * 0.25
@@ -435,7 +438,9 @@ function pressureScores(input: Nan0ThoughtEngineInput): PressureScores {
     speakability -= 0.55
     reasonCodes.push('event.low-information')
   }
-  if (/\b(stupid|hate|shut up|useless|idiot|betray|lied)\b/i.test(lower)) {
+  const isInsult = input.reflexOutcome?.group === 'hostility_insult'
+    || input.systemOneAnswers?.hostility_insult?.choice === 'companion_insult'
+  if (isInsult) {
     relationshipPressure += 0.35
     speakability += 0.15
     reasonCodes.push('event.relational-friction')
