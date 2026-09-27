@@ -19,6 +19,7 @@
   ],
   "scripts": {
     "build": "tsdown",
+    "harness": "tsx scripts/nan0-cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

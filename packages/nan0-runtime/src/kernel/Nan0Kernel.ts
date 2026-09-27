@@ -232,6 +232,7 @@ export interface Nan0PrepareTurnOptions {
   heartbeatTickId?: string
   retrievedMemoryContext?: string | Nan0EpistemicGroundingContext | null
   tier2JevChallengerEnabled?: boolean
+  jevTimeoutMs?: number
 }
 
 function defaultInitialState(
@@ -616,11 +617,18 @@ export class Nan0Kernel {
     this.diagnostic('prepareTurn.start', {
       ...diagnosticContext,
       thoughtId,
-      observationId: observation.id,
+      observationId: canonicalObservation.id,
       actorId: ownership.actorId,
       memoryCount: this.state.memories.length,
     })
-    const { emotionalEvents, reflexOutcome } = await this.updateEmotionalStateForObservation(canonicalObservation, options)
+    const hasSystemOne = !isInternalObservation
+      && Boolean(this.dependencies.systemOneProvider)
+      && text.length > 0
+      && options?.tier2JevChallengerEnabled !== false
+
+    const { emotionalEvents, reflexOutcome } = hasSystemOne
+      ? await this.updateEmotionalStateForObservationAsync(canonicalObservation, options)
+      : this.updateEmotionalStateForObservationSync(canonicalObservation)
     if (isOwnerActor(ownership.actorId, this.state.identity)) {
       const trackedPromiseIds = new Set(normalizeTemporalTrackingState(this.state.temporal.engine.lived).trackedPromises.map(promise => promise.promiseId))
       const lived = recordLivedTemporalObservation({
@@ -3154,117 +3162,20 @@ OUTPUT RULE
 Respond only with Nan0's outward expression. Do not output JSON, labels, analysis, or the thought_id.`
   }
 
-  private async updateEmotionalStateForObservation(
+  private applyPerturbedEmotions(
     observation: Nan0Observation,
-    options?: Nan0PrepareTurnOptions,
-  ): Promise<{
-    emotionalEvents: Nan0EmotionalEvent[]
-    reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
-  }> {
-    const decayed = decayEmotions({
-      vector: this.state.emotionalState,
-      history: normalizeEmotionalHistory(this.state.emotionalHistory, this.state.createdAt),
-      at: observation.timestamp,
-    })
-
-    const isInternalObservation = observation.source.startsWith('internal:')
-    const text = observationText(observation).trim()
-    const hasSystemOne = !isInternalObservation
-      && Boolean(this.dependencies.systemOneProvider)
-      && text.length > 0
-      && options?.tier2JevChallengerEnabled !== false
-
-    let perturbed: {
+    decayed: { vector: Nan0EmotionalVector, history: Nan0EmotionalHistory, changed: boolean },
+    perturbed: {
       vector: Nan0EmotionalVector
       history: Nan0EmotionalHistory
       events: Nan0EmotionalEvent[]
       primaryReflex?: { group: string, choice: string, confidence?: number }
-    }
-    let reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null = null
-
-    if (hasSystemOne && this.dependencies.systemOneProvider) {
-      try {
-        const timeoutMs = 500
-        const jevPromise = this.dependencies.systemOneProvider(
-          text,
-          NAN0_JEV_12_GROUP_QUESTIONS,
-          this.dependencies.jevModel,
-        )
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('System 1 Jev evaluation timed out')), timeoutMs),
-        )
-        const jevResult = await Promise.race([jevPromise, timeoutPromise])
-
-        if (jevResult?.answers && Object.keys(jevResult.answers).length > 0) {
-          perturbed = perturbEmotionsFromJev({
-            vector: decayed.vector,
-            history: decayed.history,
-            observation,
-            answers: jevResult.answers,
-            identity: this.state.identity,
-            createId: this.createId,
-            at: observation.timestamp,
-          })
-          reflexOutcome = perturbed.primaryReflex
-            ? {
-                ...perturbed.primaryReflex,
-                source: 'system_one_jev',
-              }
-            : null
-
-          this.diagnostic('system_one.jev.executed', {
-            observationId: observation.id,
-            latencyMs: jevResult.latencyMs,
-            answersCount: Object.keys(jevResult.answers).length,
-            primaryReflex: reflexOutcome,
-          })
-        }
-        else {
-          throw new Error('System 1 Jev returned empty answers')
-        }
-      }
-      catch (error) {
-        this.diagnostic('system_one.jev.fallback', {
-          reason: error instanceof Error ? error.message : String(error),
-          observationId: observation.id,
-        })
-        const localPerturbed = perturbEmotionsFromObservation({
-          vector: decayed.vector,
-          history: decayed.history,
-          observation,
-          identity: this.state.identity,
-          createId: this.createId,
-          at: observation.timestamp,
-        })
-        perturbed = localPerturbed
-        reflexOutcome = localPerturbed.events.length > 0
-          ? {
-              group: localPerturbed.events[0].cause,
-              choice: localPerturbed.events[0].targetEmotion,
-              source: 'local_reflex',
-            }
-          : null
-      }
-    }
-    else {
-      const localPerturbed = perturbEmotionsFromObservation({
-        vector: decayed.vector,
-        history: decayed.history,
-        observation,
-        identity: this.state.identity,
-        createId: this.createId,
-        at: observation.timestamp,
-      })
-      perturbed = localPerturbed
-      reflexOutcome = localPerturbed.events.length > 0
-        ? {
-            group: localPerturbed.events[0].cause,
-            choice: localPerturbed.events[0].targetEmotion,
-            source: 'local_reflex',
-          }
-        : null
-    }
-
+    },
+    reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null,
+  ): {
+    emotionalEvents: Nan0EmotionalEvent[]
+    reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
+  } {
     const mood = deriveMood(perturbed.vector)
     const previousMood = normalizeEmotionalHistory(this.state.emotionalHistory, this.state.createdAt).lastComputedMood
     this.state = {
@@ -3297,6 +3208,122 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
     if (mood.primary !== previousMood)
       this.diagnostic('emotion.mood.changed', { previousMood, mood: mood.primary, at: observation.timestamp })
     return { emotionalEvents: perturbed.events, reflexOutcome }
+  }
+
+  private updateEmotionalStateForObservationSync(
+    observation: Nan0Observation,
+  ): {
+    emotionalEvents: Nan0EmotionalEvent[]
+    reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
+  } {
+    const decayed = decayEmotions({
+      vector: this.state.emotionalState,
+      history: normalizeEmotionalHistory(this.state.emotionalHistory, this.state.createdAt),
+      at: observation.timestamp,
+    })
+    const localPerturbed = perturbEmotionsFromObservation({
+      vector: decayed.vector,
+      history: decayed.history,
+      observation,
+      identity: this.state.identity,
+      createId: this.createId,
+      at: observation.timestamp,
+    })
+    const reflexOutcome = localPerturbed.events.length > 0
+      ? {
+          group: localPerturbed.events[0].cause,
+          choice: localPerturbed.events[0].targetEmotion,
+          source: 'local_reflex' as const,
+        }
+      : null
+    return this.applyPerturbedEmotions(observation, decayed, localPerturbed, reflexOutcome)
+  }
+
+  private async updateEmotionalStateForObservationAsync(
+    observation: Nan0Observation,
+    options?: Nan0PrepareTurnOptions,
+  ): Promise<{
+    emotionalEvents: Nan0EmotionalEvent[]
+    reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
+  }> {
+    const decayed = decayEmotions({
+      vector: this.state.emotionalState,
+      history: normalizeEmotionalHistory(this.state.emotionalHistory, this.state.createdAt),
+      at: observation.timestamp,
+    })
+    const text = observationText(observation).trim()
+    let perturbed: {
+      vector: Nan0EmotionalVector
+      history: Nan0EmotionalHistory
+      events: Nan0EmotionalEvent[]
+      primaryReflex?: { group: string, choice: string, confidence?: number }
+    }
+    let reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null = null
+
+    try {
+      const timeoutMs = options?.jevTimeoutMs ?? 1500
+      const jevPromise = this.dependencies.systemOneProvider!(
+        text,
+        NAN0_JEV_12_GROUP_QUESTIONS,
+        this.dependencies.jevModel,
+      )
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('System 1 Jev evaluation timed out')), timeoutMs),
+      )
+      const jevResult = await Promise.race([jevPromise, timeoutPromise])
+
+      if (jevResult?.answers && Object.keys(jevResult.answers).length > 0) {
+        perturbed = perturbEmotionsFromJev({
+          vector: decayed.vector,
+          history: decayed.history,
+          observation,
+          answers: jevResult.answers,
+          identity: this.state.identity,
+          createId: this.createId,
+          at: observation.timestamp,
+        })
+        reflexOutcome = perturbed.primaryReflex
+          ? {
+              ...perturbed.primaryReflex,
+              source: 'system_one_jev',
+            }
+          : null
+
+        this.diagnostic('system_one.jev.executed', {
+          observationId: observation.id,
+          latencyMs: jevResult.latencyMs,
+          answersCount: Object.keys(jevResult.answers).length,
+          primaryReflex: reflexOutcome,
+        })
+      }
+      else {
+        throw new Error('System 1 Jev returned empty answers')
+      }
+    }
+    catch (error) {
+      this.diagnostic('system_one.jev.fallback', {
+        reason: error instanceof Error ? error.message : String(error),
+        observationId: observation.id,
+      })
+      const localPerturbed = perturbEmotionsFromObservation({
+        vector: decayed.vector,
+        history: decayed.history,
+        observation,
+        identity: this.state.identity,
+        createId: this.createId,
+        at: observation.timestamp,
+      })
+      perturbed = localPerturbed
+      reflexOutcome = localPerturbed.events.length > 0
+        ? {
+            group: localPerturbed.events[0].cause,
+            choice: localPerturbed.events[0].targetEmotion,
+            source: 'local_reflex',
+          }
+        : null
+    }
+
+    return this.applyPerturbedEmotions(observation, decayed, perturbed, reflexOutcome)
   }
 
   private applyEmotionalConsequence(

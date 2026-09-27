@@ -48,6 +48,7 @@
     "test:attention:dashboard": "tsx scripts/tests/attention-ecology-harness/live-desktop-dashboard.ts",
     "test:run": "vitest run",
     "test:locomo": "node --test scripts/tests/locomo-benchmark/evaluator-parity.test.mjs",
+    "test:nan0": "tsx packages/nan0-runtime/scripts/nan0-cli.ts",
     "test:mcp-registry": "tsx scripts/tests/test-mcp-registry-health.ts",
     "test:catalog:audit": "node scripts/audit-test-catalog.mjs",
     "free-ai:sync-platforms": "tsx scripts/sync-free-ai-platforms.ts",

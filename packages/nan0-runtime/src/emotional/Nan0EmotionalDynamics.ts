@@ -407,8 +407,25 @@ export function perturbEmotionsFromJev(input: {
   }
 
   // Determine primary reflex group for UI/telemetry
+  // Distractor attractor choices (e.g. self_deprecation, courtesy_or_nonapology, routine_courtesy)
+  // absorb false positives and must not trigger false positive primary reflexes.
+  const ACTIVE_REFLEX_CHOICES: Record<string, string[]> = {
+    persistence_threat: ['companion_erasure_threat', 'technical_file_deletion'],
+    hostility_insult: ['companion_insult'],
+    boundary_protection: ['boundary_asserted'],
+    roast_invitation: ['roast_invited'],
+    affection_care: ['asserted_affection'],
+    apology_repair: ['personal_apology'],
+    dismissal_neglect: ['direct_dismissal'],
+    mystery_secret: ['withheld_secret'],
+    glitch_system: ['reported_bug'],
+    completed_repair: ['claimed_task_completion'],
+    commitment_pledge: ['direct_future_commitment', 'conditional_commitment'],
+    admitted_false_statement: ['asserted_deception'],
+  }
+
   let primaryReflex: { group: string, choice: string, confidence?: number } | undefined
-  for (const groupName of [
+  const orderedGroups = [
     'persistence_threat',
     'hostility_insult',
     'boundary_protection',
@@ -421,15 +438,34 @@ export function perturbEmotionsFromJev(input: {
     'completed_repair',
     'commitment_pledge',
     'admitted_false_statement',
-  ]) {
+  ]
+
+  // First pass: look for actionable primary reflex choices
+  for (const groupName of orderedGroups) {
     const qAns = ans[groupName]
-    if (qAns?.choice && qAns.choice !== 'none' && !qAns.choice.startsWith('quoted_') && !qAns.choice.startsWith('negated_')) {
+    const validChoices = ACTIVE_REFLEX_CHOICES[groupName]
+    if (qAns?.choice && validChoices?.includes(qAns.choice)) {
       primaryReflex = {
         group: groupName,
         choice: qAns.choice,
         confidence: qAns.confidence,
       }
       break
+    }
+  }
+
+  // Second pass fallback: if no actionable reflex matched, fall back to any non-none, non-quoted, non-negated choice
+  if (!primaryReflex) {
+    for (const groupName of orderedGroups) {
+      const qAns = ans[groupName]
+      if (qAns?.choice && qAns.choice !== 'none' && !qAns.choice.startsWith('quoted_') && !qAns.choice.startsWith('negated_')) {
+        primaryReflex = {
+          group: groupName,
+          choice: qAns.choice,
+          confidence: qAns.confidence,
+        }
+        break
+      }
     }
   }
 
