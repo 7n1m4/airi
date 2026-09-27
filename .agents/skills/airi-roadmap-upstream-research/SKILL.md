@@ -70,14 +70,10 @@ Maintain an active rolling monitor of high-impact upstream PRs during scheduled 
   - **Author**: `@peachoolong-uwu` | **State**: Draft
   - **Focus**: Community proposal to replace native memory with an external Cortico WebSocket daemon (`ws://localhost:6122`).
   - **Monitoring Objective**: Track upstream maintainer reactions (@luoling8192, @nekomeowww) regarding the 2-process developer friction (`pnpm dev:bridge`), loss of Web/Mobile parity, and deletion of native memory settings. Hold off on commenting until maintainers officially weigh in.
-- **PR #2550: `feat(hearing): add bundled Sherpaw speech recognition`**
+- **PR #2672: `refactor(stage-ui): bind conversations to window-local characters`**
   - **Author**: `@luoling8192` | **State**: Open
-  - **Focus**: Local streaming speech recognition bundling offline Paraformer/Zipformer models packaged via tsdown.
-  - **Monitoring Objective**: Monitor model packaging and asset delivery for potential porting to local-first speech pipeline.
-- **PR #2641: `feat(stage-ui): show chat image analysis status`**
-  - **Author**: `@luoling8192` | **State**: Open
-  - **Focus**: Accessible live status indicators in chat history while uncached images undergo vision analysis.
-  - **Monitoring Objective**: Evaluate visual polish for adoption once merged upstream.
+  - **Focus**: Window-local character selection, conversation scoping, standalone card profile page, shared CharacterCard component.
+  - **Monitoring Objective**: Track upstream maintainer implementation of window-local character selection and conversation scoping. Evaluate whether extracting a shared `CharacterCard` component offers value for our decoupled Control Strip and stage surfaces.
 
 ## Upstream Radar vs. Cherry-Pick Triage SOP
 

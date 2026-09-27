@@ -11,13 +11,168 @@
 | PR | Title | Author | State | Priority / Rationale | Tracking Directives & Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | [#2634](https://github.com/moeru-ai/airi/pull/2634) | `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain` | `@peachoolong-uwu` | `Draft` (0 comments) | 🔴 **High Alert** (Radical divergence) | Proposes external Cortico daemon (`ws://localhost:6122`) replacing native memory. **Directive**: Monitor maintainer reaction to 2-process requirement & Web/Mobile breakage. Hold off on comments until maintainers triage. |
-| [#2550](https://github.com/moeru-ai/airi/pull/2550) | `feat(hearing): add bundled Sherpaw speech recognition` | `@luoling8192` | `Open` (17 comments) | 🟡 **Evaluation** (Offline STT) | Offline Sherpaw STT model packaging (Paraformer/Zipformer) via tsdown and Vite plugin. **Directive**: Monitor packaging structure for local speech pipeline. |
-| [#2641](https://github.com/moeru-ai/airi/pull/2641) | `feat(stage-ui): show chat image analysis status` | `@luoling8192` | `Open` (1 comments) | 🟢 **Cherry-Pick Watch** (UI Polish) | Accessible live status indicator for text-only models undergoing vision analysis. **Directive**: Cherry-pick once merged upstream. |
+| [#2672](https://github.com/moeru-ai/airi/pull/2672) | `refactor(stage-ui): bind conversations to window-local characters` | `@luoling8192` | `Open` (20 comments) | 🟡 **Architectural Interest** (Window decoupling) | Decouples character definition from window selection, scopes conversations to window-local character, adds standalone profile page and shared CharacterCard. **Directive**: Track decoupling pattern across windows and evaluate shared CharacterCard component. |
 
 ---
 
 <!-- RADAR_ENTRIES -->
 
+## [2026-09-27] Upstream Delta: `c83fae45..07ed52e3` (6 commits, 69 files, 19 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 6 commits (`07ed52e39d`, `c4da510353`, `4bba665da9`, `1437f3cc49`, `e8c939039b`, `0fbd91c27b`) across 69 files, accompanied by 19 PR updates (11 new PRs, 4 status changes, 4 discussion changes). Core focus centered on: (1) **Cloud Provider Sync (#2471 / `0fbd91c27b`)**: Merged remote database synchronization for user provider configs to a cloud replica via `server/apps/api` (Drizzle migration 0025, schemas, merge logic in `stage-ui`); (2) **Extensible LLM Request Tracking (#2673 / `07ed52e39d`)**: Added Drizzle migration 0026 and request tracking schemas (`llm_request_log`, `llm_request_attempt`) to `server/apps/api` for server-side generation usage, token tracking, and observation middleware; (3) **Steam OAuth Profile Extraction (#2647 / `1437f3cc49`)**: Enhanced the auth service to query Steam WebAPI (`GetPlayerSummaries`) to extract persona name and avatar URL during the initial Steam OpenID sign-up flow; (4) **Server S3 Object Storage Adapter (#2669 / `4bba665da9`)**: Added optional S3-compatible backend storage support to `server/apps/api` with ADR documentation; (5) **Window-Local Character & Conversation Decoupling (#2672 by @luoling8192)**: Major new architectural PR (20 comments) refactoring `stage-ui` to bind conversations to window-local characters rather than sharing a single global selection snapshot across windows; and (6) **Electron Multi-Window IPC Isolation (#2667 by @jim139129)**: New PR fixing cross-window Eventa IPC listener leakage by applying `onlySameWindow: true` transport filters.
+* **Discussion & Community Buzz**:
+  - 💬 **#2672: `refactor(stage-ui): bind conversations to window-local characters` (20 total comments)**: Heavy architectural discussion around decoupling character selection and conversation state per window on desktop and mobile.
+  - 💬 **#2644: `feat(api): add provider-cost Flux settlement` (+12 new comments, total 23)**: Ongoing discussion regarding provider cost metering, OpenRouter pricing, and Flux credit deductions in the hosted backend.
+  - 💬 **#2673: `feat(api): add extensible LLM request tracking` (16 total comments)**: Technical alignment on Drizzle database schemas and LLM routing retry observation.
+  - 💬 **#2524: `feat(provider-inference): refresh Volcengine coding-plan models from endpoint` (+1 new comments, total 10)**: Steady activity around endpoint-based dynamic model discovery for Volcengine.
+  - 💬 **#2674: `fix(api): allow Apple sandbox purchases for dedicated test accounts` (5 comments)**: Discussion on Apple App Store IAP test account sandbox integration.
+  - 💬 **#2121: `chore(i18n): update translations` (+2 new comments, total 127)**: High-volume community translation maintenance.
+  - 💬 **#2550: `feat(hearing): add bundled Sherpaw speech recognition` (17 total comments)**: Monitored PR maintaining steady evaluation status for local offline STT packaging.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2667: `fix(stage-tamagotchi): isolate Eventa IPC contexts by window` by @jim139129**: High-value desktop IPC safety candidate. In Electron multi-window environments, shared `ipcMain` listeners could leak renderer requests across window contexts. Applies Eventa's `onlySameWindow: true` transport filter and ensures clean IPC listener disposal on window close. Excellent fit for our decoupled desktop architecture (Control Strip, Actor Stage, Control Strip Customizer).
+  - 🔍 **PR #2672: `refactor(stage-ui): bind conversations to window-local characters` by @luoling8192 (Architectural Reference Only)**: Worth studying for how upstream structures window-local character selection and restored conversation state, though our fork already enforces decoupled window lifecycles and universe-isolated sessions.
+  - ⚪ **Auto-Reject / Do Not Port**:
+    - **Commit `0fbd91c27b` / PR #2471 (`feat(stage-ui): sync user providers to a cloud replica`)**: Modifies provider config and inference services to sync to upstream hosted cloud database replica. Directly conflicts with our local-first, zero-account architecture where provider instances are persisted locally in `providersStore` (`providersRepo`).
+    - **Commit `07ed52e39d` / PR #2673 & Commit `4bba665da9` / PR #2669 (`feat(api): LLM request tracking` & `feat(api-server): S3 object storage`)**: Server-hosted API infrastructure in `server/apps/api`. Our fork has no backend server dependencies and uses client-side BYOS (S3/R2/Google Drive) directly.
+    - **Commit `1437f3cc49` / PR #2647 & PR #2674 (`feat(auth): Steam profile fetch` & `fix(api): Apple sandbox purchases`)**: Hosted account auth and commercial IAP billing.
+    - **`apps/stage-tamagotchi/.../controls-island-overflow.browser.test.ts` (Commit `0fbd91c27b`)**: Touches deprecated `controls-island`, removed in this fork.
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/stage-ui/src/stores/providers/*` and `services/inference-service-providers.ts` (Commit `0fbd91c27b`)**: Heavy upstream modifications (+1196/-164) introducing cloud sync merge logic (`merge.ts`) and API client replicas. Our fork maintains strictly local-first `providersStore` instances (`airi-provider-store-instances`). Never blindly merge upstream provider store diffs.
+  - ⚠️ **`apps/stage-tamagotchi/.../controls-island/*` (Commit `0fbd91c27b`)**: Upstream continues patching `controls-island` test surfaces. Our fork completely decoupled the desktop into `windows/stage` (Actor Stage) and `windows/main` (Control Strip).
+  - ⚠️ **`server/apps/api/*` and `server/apps/auth/*` (Commits `07ed52e39d`, `4bba665da9`, `1437f3cc49`)**: Massive additions (+9245/-619) for Drizzle migrations (0025, 0026), Steam OAuth, and request tracking. Keep our repository clean from hosted cloud infrastructure.
+
+### 📋 Upstream Commits
+- `07ed52e39d` feat(api): add extensible LLM request tracking (#2673) [#2673](https://github.com/moeru-ai/airi/pull/2673) _(RainbowBird, 2026-09-27)_
+- `c4da510353` chore(nix): update pnpmDeps hash (#2670) [#2670](https://github.com/moeru-ai/airi/pull/2670) _(Weathercold, 2026-09-27)_
+- `4bba665da9` feat(api-server): add optional S3 object storage (#2669) [#2669](https://github.com/moeru-ai/airi/pull/2669) _(RainbowBird, 2026-09-27)_
+- `1437f3cc49` feat(auth): fetch the Steam profile on sign-in (#2647) [#2647](https://github.com/moeru-ai/airi/pull/2647) _(Lulu, 2026-09-27)_
+- `e8c939039b` chore: update sponsors svg (#2668) [#2668](https://github.com/moeru-ai/airi/pull/2668) _(Neko, 2026-09-27)_
+- `0fbd91c27b` feat(stage-ui): sync user providers to a cloud replica (#2471) [#2471](https://github.com/moeru-ai/airi/pull/2471) _(Lulu, 2026-09-27)_
+
+### 🔬 Subsystem Breakdown
+#### Deprecated Surfaces (Control Island) (`⚪ ignore / rejected in fork (decoupled into Control Strip)`) — 1 file(s) (+3/-0)
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/controls-island-overflow.browser.test.ts` *(+3/-0)*
+
+#### Documentation & Scaffolding (`⚪ ignore`) — 1 file(s) (+1/-1)
+- `docs/content/public/assets/sponsors/sponsors.json` *(+1/-1)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 5 file(s) (+165/-286)
+- `nix/pnpm-deps-hash.txt` *(+1/-1)*
+- `packages/stage-ui/src/components/menu/icon-status-item.vue` *(+31/-0)*
+- `packages/stage-ui/src/services/inference-service-providers.test.ts` *(+73/-134)*
+- `packages/stage-ui/src/services/inference-service-providers.ts` *(+58/-151)*
+- `pnpm-workspace.yaml` *(+2/-0)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 2 file(s) (+8/-0)
+- `packages/i18n/src/locales/en/settings.yaml` *(+4/-0)*
+- `packages/i18n/src/locales/zh-Hans/settings.yaml` *(+4/-0)*
+
+#### UI Primitives & Pages (`📦 import / inspect`) — 2 file(s) (+6/-6)
+- `packages/stage-pages/src/pages/settings/providers/index.vue` *(+4/-0)*
+- `packages/stage-pages/src/pages/v2/settings/providers.vue` *(+2/-6)*
+
+#### Provider & Model Integrations (`📦 import / inspect`) — 7 file(s) (+1196/-164)
+- `packages/stage-ui/src/stores/providers/config.test.ts` *(+469/-52)*
+- `packages/stage-ui/src/stores/providers/config.ts` *(+321/-97)*
+- `packages/stage-ui/src/stores/providers/merge.test.ts` *(+137/-0)*
+- `packages/stage-ui/src/stores/providers/merge.ts` *(+109/-0)*
+- `packages/stage-ui/src/stores/providers/onboarding-save.browser.test.ts` *(+3/-0)*
+- `packages/stage-ui/src/stores/providers/provider.test.ts` *(+124/-0)*
+- `packages/stage-ui/src/stores/providers/provider.ts` *(+33/-15)*
+
+#### Root Build & Tooling (`🔍 inspect`) — 1 file(s) (+324/-0)
+- `pnpm-lock.yaml` *(+324/-0)*
+
+#### Cloud Services, Billing & Auth (`⚪ ignore / rejected in fork (offline-first architecture)`) — 49 file(s) (+9245/-619)
+- `server/apps/api/README.md` *(+86/-0)*
+- `server/apps/api/drizzle/0025_premium_frog_thor.sql` *(+14/-0)*
+- `server/apps/api/drizzle/0026_llm_request_tracking.sql` *(+58/-0)*
+- `server/apps/api/drizzle/meta/0025_snapshot.json` *(+3264/-0)*
+- `server/apps/api/drizzle/meta/0026_snapshot.json` *(+3723/-0)*
+- `server/apps/api/drizzle/meta/_journal.json` *(+15/-1)*
+- `server/apps/api/package.json` *(+2/-0)*
+- `server/apps/api/src/app.ts` *(+27/-13)*
+- `server/apps/api/src/libs/env.ts` *(+5/-3)*
+- `server/apps/api/src/libs/tests/env.test.ts` *(+12/-0)*
+- `server/apps/api/src/routes/llm-requests/index.ts` *(+66/-0)*
+- `server/apps/api/src/routes/openai/v1/middlewares/billing.ts` *(+1/-1)*
+- `server/apps/api/src/routes/openai/v1/model-routing.ts` *(+9/-2)*
+- `server/apps/api/src/routes/openai/v1/operations/chat-completions/index.ts` *(+163/-82)*
+- `server/apps/api/src/routes/openai/v1/operations/responses/index.ts` *(+40/-10)*
+- `server/apps/api/src/routes/openai/v1/route.test.ts` *(+117/-1)*
+- `server/apps/api/src/routes/providers/index.ts` *(+14/-52)*
+- `server/apps/api/src/routes/providers/route.test.ts` *(+31/-101)*
+- `server/apps/api/src/routes/providers/schema.ts` *(+3/-26)*
+- `server/apps/api/src/schemas/index.ts` *(+1/-0)*
+- `server/apps/api/src/schemas/llm-request-attempt.ts` *(+31/-0)*
+- `server/apps/api/src/schemas/llm-request-log.ts` *(+37/-2)*
+- `server/apps/api/src/schemas/providers.ts` *(+9/-25)*
+- `server/apps/api/src/services/adapters/object-store.integration.test.ts` *(+65/-0)*
+- `server/apps/api/src/services/adapters/object-store.test.ts` *(+124/-0)*
+- `server/apps/api/src/services/adapters/object-store.ts` *(+79/-0)*
+- `server/apps/api/src/services/adapters/s3-config.test.ts` *(+46/-0)*
+- `server/apps/api/src/services/adapters/s3-config.ts` *(+22/-0)*
+- `server/apps/api/src/services/domain/billing/billing.ts` *(+1/-14)*
+- `server/apps/api/src/services/domain/billing/tests/billing.test.ts` *(+1/-56)*
+- `server/apps/api/src/services/domain/generation-observation.ts` *(+66/-0)*
+- `server/apps/api/src/services/domain/generation-usage.test.ts` *(+91/-0)*
+- `server/apps/api/src/services/domain/generation-usage.ts` *(+86/-0)*
+- `server/apps/api/src/services/domain/llm-router/attempt.ts` *(+22/-0)*
+- `server/apps/api/src/services/domain/llm-router/router.ts` *(+36/-1)*
+- `server/apps/api/src/services/domain/llm-router/tests/router.test.ts` *(+42/-0)*
+- `server/apps/api/src/services/domain/llm-router/types.ts` *(+3/-0)*
+- `server/apps/api/src/services/domain/providers.test.ts` *(+127/-50)*
+- `server/apps/api/src/services/domain/providers.ts` *(+93/-148)*
+- `server/apps/api/src/services/domain/request-log.test.ts` *(+123/-0)*
+- `server/apps/api/src/services/domain/request-log.ts` *(+80/-12)*
+- `server/apps/api/src/services/domain/user-deletion/tests/service-deletion.test.ts` *(+8/-5)*
+- `server/apps/auth/src/auth.ts` *(+1/-1)*
+- `server/apps/auth/src/env.ts` *(+1/-0)*
+- `server/apps/auth/src/plugins/steam.ts` *(+81/-2)*
+- `server/apps/auth/src/tests/env.test.ts` *(+1/-0)*
+- `server/apps/auth/src/tests/steam.test.ts` *(+120/-11)*
+- `server/docs/ai/adr/2026-09-27-llm-request-tracking.md` *(+112/-0)*
+- `server/docs/ai/adr/2026-09-27-s3-object-storage.md` *(+86/-0)*
+
+#### Telemetry & Analytics (`⚪ ignore / rejected in fork`) — 1 file(s) (+3/-11)
+- `server/apps/api/src/routes/openai/v1/middlewares/telemetry.ts` *(+3/-11)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (11)
+- [#2672](https://github.com/moeru-ai/airi/pull/2672) `refactor(stage-ui): bind conversations to window-local characters` by **@luoling8192** *(20 comments)*
+- [#2674](https://github.com/moeru-ai/airi/pull/2674) `fix(api): allow Apple sandbox purchases for dedicated test accounts` by **@Neko-233** *(5 comments)*
+- [#2673](https://github.com/moeru-ai/airi/pull/2673) `feat(api): add extensible LLM request tracking` by **@luoling8192** *(16 comments)*
+- [#2670](https://github.com/moeru-ai/airi/pull/2670) `chore(nix): update pnpmDeps hash` by **@Weathercold** *(1 comments)*
+- [#2669](https://github.com/moeru-ai/airi/pull/2669) `feat(api-server): add optional S3 object storage` by **@luoling8192** *(1 comments)*
+- [#2031](https://github.com/moeru-ai/airi/pull/2031) `docs(ui-server-auth): fix stale server-dev auth UI domain in README` by **@lulu0119** *(3 comments)*
+- [#1884](https://github.com/moeru-ai/airi/pull/1884) `chore(server): remove unused CLIENT_URL from env template` by **@lulu0119** *(3 comments)*
+- [#1879](https://github.com/moeru-ai/airi/pull/1879) `fix(ui-server-auth): clarify social-only email sign-in hint` by **@lulu0119** *(2 comments)*
+- [#1584](https://github.com/moeru-ai/airi/pull/1584) `fix(stage-tamagotchi): add drag region to onboarding layout` by **@lulu0119** *(5 comments)*
+- [#2668](https://github.com/moeru-ai/airi/pull/2668) `chore: update sponsors svg` by **@nekomeowww** *(2 comments)*
+- [#2667](https://github.com/moeru-ai/airi/pull/2667) `fix(stage-tamagotchi): isolate Eventa IPC contexts by window` by **@jim139129** *(1 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (4)
+- [#2647](https://github.com/moeru-ai/airi/pull/2647) `feat(auth): fetch the Steam profile on sign-in` — `OPEN` ➔ `MERGED`
+- [#2662](https://github.com/moeru-ai/airi/pull/2662) `feat(i18n): add Indonesian language support` — `OPEN` ➔ `CLOSED`
+- [#2580](https://github.com/moeru-ai/airi/pull/2580) `fix(stage-tamagotchi): prevent duplicate user data folder openings` — `OPEN` ➔ `CLOSED`
+- [#2471](https://github.com/moeru-ai/airi/pull/2471) `feat(stage-ui): sync user providers to a cloud replica` — `OPEN` ➔ `MERGED`
+
+#### 💬 Discussion Activity (4)
+- [#2644](https://github.com/moeru-ai/airi/pull/2644) `feat(api): add provider-cost Flux settlement` — *+12 comments (11 ➔ 23 total)*
+- [#2524](https://github.com/moeru-ai/airi/pull/2524) `feat(provider-inference): refresh Volcengine coding-plan models from endpoint` — *+1 comments (9 ➔ 10 total)*
+- [#2662](https://github.com/moeru-ai/airi/pull/2662) `feat(i18n): add Indonesian language support` — *+3 comments (0 ➔ 3 total)*
+- [#2121](https://github.com/moeru-ai/airi/pull/2121) `chore(i18n): update translations` — *+2 comments (125 ➔ 127 total)*
+
+### 👁️ Watched PRs Monitor
+- [#2634](https://github.com/moeru-ai/airi/pull/2634) `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain` [Draft] — *(0 comments)*
+  - *Focus*: External Cortico daemon vs in-process native memory; track maintainer reaction to 2-process / web breakage
+- [#2550](https://github.com/moeru-ai/airi/pull/2550) `feat(hearing): add bundled Sherpaw speech recognition` [OPEN] — *(17 comments)*
+  - *Focus*: Offline Sherpaw STT model packaging (Paraformer/Zipformer) via tsdown and Vite plugin
+- [#2641](https://github.com/moeru-ai/airi/pull/2641) `feat(stage-ui): show chat image analysis status` [CLOSED] — *(1 comments)*
+  - *Focus*: Accessible live status indicator for text-only models undergoing vision pre-processing
+
+---
 ## [2026-09-26] Upstream Delta: `a142a053..c83fae45` (4 commits, 37 files, 10 PR update(s))
 
 ### 🎯 Executive Highlights
