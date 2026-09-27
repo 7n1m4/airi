@@ -681,19 +681,73 @@ const activeTimelineTag = computed(() => {
 // --- Generation Stats Popover & Token Output Limits ---
 const isStatsPopoverOpen = ref(false)
 
-const PROSE_PRESETS: Record<number, string> = {
-  80: 'Respond in extremely short, single-sentence replies. Keep your output direct, concise, and absolute.',
-  120: 'Respond in concise replies, typically one or two sentences. Avoid unnecessary detail.',
-  200: 'Respond in moderate, conversational paragraphs (approx. 2-3 sentences). Keep it natural and punchy.',
-  350: 'Respond in detailed paragraphs (approx. 1-2 short paragraphs). Provide depth but stay focused.',
-  600: 'Respond in descriptive, long-form paragraphs (up to 2 paragraphs of rich context and detail).',
+interface ProseBracket {
+  min: number
+  max: number
+  defaultTokens: number
+  label: string
+  sublabel: string
+  directive: string
+}
+
+const PROSE_BRACKETS: ProseBracket[] = [
+  {
+    min: 60,
+    max: 90,
+    defaultTokens: 75,
+    label: '60–90t',
+    sublabel: '1 short sent',
+    directive: 'Respond in an extremely short, single-sentence reply (approx. 5–12 words). Keep your output direct, concise, and absolute without second thoughts or follow-up questions.',
+  },
+  {
+    min: 91,
+    max: 160,
+    defaultTokens: 125,
+    label: '91–160t',
+    sublabel: '2 sentences',
+    directive: 'Respond in exactly two conversational sentences (approx. 20–35 words total). Deliver a complete thought in the first sentence, and a natural reaction or follow-up in the second.',
+  },
+  {
+    min: 161,
+    max: 280,
+    defaultTokens: 220,
+    label: '161–280t',
+    sublabel: '1 paragraph',
+    directive: 'Respond in a single cohesive paragraph of 3 to 4 sentences (approx. 50–80 words). Provide clear context and depth, but keep everything unified in one single paragraph without line breaks.',
+  },
+  {
+    min: 281,
+    max: 450,
+    defaultTokens: 360,
+    label: '281–450t',
+    sublabel: '2 paragraphs',
+    directive: 'Respond in two descriptive paragraphs separated by a line break (approx. 90–140 words total). Use the first paragraph to address the core subject, and the second paragraph to expand with rich nuance, background detail, or creative commentary.',
+  },
+]
+
+function resolveProsePreset(tokens: number): string {
+  const bracket = PROSE_BRACKETS.find(b => tokens >= b.min && tokens <= b.max)
+  if (bracket)
+    return bracket.directive
+  if (tokens > 450)
+    return PROSE_BRACKETS[3].directive
+  return PROSE_BRACKETS[0].directive
+}
+
+function resolveProseBracket(tokens: number): ProseBracket {
+  const bracket = PROSE_BRACKETS.find(b => tokens >= b.min && tokens <= b.max)
+  if (bracket)
+    return bracket
+  if (tokens > 450)
+    return PROSE_BRACKETS[3]
+  return PROSE_BRACKETS[0]
 }
 
 const LIMITS_REGEX = /\[TOKEN_OUTPUT_LIMITS:\s*(\d+)\][\s\S]*?- STYLE INSTRUCTION:\s*([\s\S]*?)\[\/TOKEN_OUTPUT_LIMITS\]\n*/
 
 const popoverOverrideEnabled = ref(false)
 const popoverContextWidth = ref<number | undefined>(undefined)
-const popoverMaxTokens = ref<number>(200)
+const popoverMaxTokens = ref<number>(220)
 const popoverCustomProse = ref('')
 const isProseEditing = ref(false)
 
@@ -704,7 +758,7 @@ function loadPopoverState() {
   const airiExt = activeCard.value.extensions?.airi
   popoverOverrideEnabled.value = airiExt?.generation?.enabled ?? false
   popoverContextWidth.value = airiExt?.generation?.known?.contextWidth
-  popoverMaxTokens.value = airiExt?.generation?.known?.maxTokens ?? 200
+  popoverMaxTokens.value = airiExt?.generation?.known?.maxTokens ?? 220
 
   const parsed = parseTokenLimits(activeCard.value.systemPrompt || '')
   if (parsed) {
@@ -712,7 +766,7 @@ function loadPopoverState() {
     popoverCustomProse.value = parsed.prose
   }
   else {
-    popoverCustomProse.value = PROSE_PRESETS[popoverMaxTokens.value] || PROSE_PRESETS[200]
+    popoverCustomProse.value = resolveProsePreset(popoverMaxTokens.value)
   }
 }
 
@@ -789,10 +843,16 @@ function handleContextPresetClick(width: number) {
 }
 
 function handleTokensSliderChange() {
-  const matchingPreset = PROSE_PRESETS[popoverMaxTokens.value]
-  if (matchingPreset) {
-    popoverCustomProse.value = matchingPreset
+  if (!isProseEditing.value) {
+    popoverCustomProse.value = resolveProsePreset(popoverMaxTokens.value)
   }
+  saveCardGenerationSettings()
+}
+
+function handleSnapToBracket(bracket: ProseBracket) {
+  popoverMaxTokens.value = bracket.defaultTokens
+  popoverCustomProse.value = bracket.directive
+  isProseEditing.value = false
   saveCardGenerationSettings()
 }
 
@@ -803,8 +863,8 @@ function handleResetToDefaults() {
   const airiExt = activeCard.value.extensions?.airi
   const cleanedPrompt = stripTokenLimitsFromPrompt(activeCard.value.systemPrompt || '')
 
-  popoverMaxTokens.value = 200
-  popoverCustomProse.value = PROSE_PRESETS[200]
+  popoverMaxTokens.value = 220
+  popoverCustomProse.value = resolveProsePreset(220)
   isProseEditing.value = false
   popoverOverrideEnabled.value = false
 
@@ -1211,24 +1271,34 @@ function selectSurface(surface: typeof activeSurface.value) {
                   <!-- Token Limits Slider -->
                   <div class="flex flex-col gap-1.5">
                     <div class="flex items-center justify-between text-[10px]">
-                      <span class="text-neutral-400 font-bold tracking-tight uppercase">Response Token Limit</span>
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-neutral-400 font-bold tracking-tight uppercase">Response Token Limit</span>
+                        <span class="rounded bg-primary-500/10 px-1.5 py-0.2 text-[9px] text-primary-600 font-medium dark:text-primary-400">
+                          {{ resolveProseBracket(popoverMaxTokens).sublabel }}
+                        </span>
+                      </div>
                       <span class="text-primary-500 font-bold dark:text-primary-400">{{ popoverMaxTokens }} tokens</span>
                     </div>
                     <input
                       v-model.number="popoverMaxTokens"
                       type="range"
-                      min="80"
-                      max="600"
-                      step="1"
+                      min="60"
+                      max="450"
+                      step="5"
                       class="h-1 w-full cursor-pointer appearance-none rounded-lg bg-neutral-200 accent-primary-500 dark:bg-neutral-800"
                       @input="handleTokensSliderChange"
                     >
                     <div class="flex justify-between px-0.5 text-[8px] text-neutral-400 font-bold">
-                      <span>80t</span>
-                      <span>120t</span>
-                      <span>200t</span>
-                      <span>350t</span>
-                      <span>600t</span>
+                      <button
+                        v-for="b in PROSE_BRACKETS"
+                        :key="b.label"
+                        type="button"
+                        class="cursor-pointer transition hover:text-primary-500"
+                        :class="{ 'text-primary-600 dark:text-primary-400 font-extrabold': popoverMaxTokens >= b.min && popoverMaxTokens <= b.max }"
+                        @click="handleSnapToBracket(b)"
+                      >
+                        {{ b.label }}
+                      </button>
                     </div>
                   </div>
 
