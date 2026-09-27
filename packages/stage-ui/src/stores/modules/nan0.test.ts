@@ -3,16 +3,42 @@ import type { Nan0Observation, Nan0ReasoningClient } from '@proj-airi/nan0-runti
 import { InMemoryStateStore, Nan0Kernel, SystemNan0Clock } from '@proj-airi/nan0-runtime'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
 
 import { isMainWindow, NAN0_DEFAULT_EMOTIONS, useNan0Store } from './nan0'
 
 let mockIsTamagotchi = false
+const mockBroadcastPost = vi.fn()
+let mockBroadcastShouldThrow: Error | null = null
 
 vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
   const mod = await importOriginal<typeof import('@proj-airi/stage-shared')>()
   return {
     ...mod,
     isStageTamagotchi: () => mockIsTamagotchi,
+  }
+})
+
+vi.mock('@vueuse/core', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@vueuse/core')>()
+  return {
+    ...mod,
+    useBroadcastChannel: (options: { name: string }) => {
+      if (options.name === 'airi:nan0:state-sync') {
+        return {
+          data: ref(null),
+          post: vi.fn((payload) => {
+            mockBroadcastPost(payload)
+            if (mockBroadcastShouldThrow) {
+              throw mockBroadcastShouldThrow
+            }
+          }),
+          isSupported: ref(true),
+          close: vi.fn(),
+        }
+      }
+      return mod.useBroadcastChannel(options)
+    },
   }
 })
 
@@ -25,6 +51,8 @@ vi.mock('vue-i18n', () => ({
 describe('useNan0Store (Host Orchestrator Integration)', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    mockBroadcastPost.mockClear()
+    mockBroadcastShouldThrow = null
   })
 
   describe('baseline reactivity & defaults', () => {
@@ -410,6 +438,49 @@ describe('useNan0Store (Host Orchestrator Integration)', () => {
       window.location.hash = '#/'
       mockIsTamagotchi = false
       expect(isMainWindow()).toBe(true)
+    })
+
+    it('broadcasts sanitized clone-safe payload across window boundaries', () => {
+      const store = useNan0Store()
+      store.updateEmotion('pride', 0.9)
+
+      expect(mockBroadcastPost).toHaveBeenCalled()
+      const lastPayload = mockBroadcastPost.mock.calls[mockBroadcastPost.mock.calls.length - 1][0]
+      expect(lastPayload).toBeDefined()
+      expect(lastPayload.emotions.pride).toBe(0.9)
+      // Assert payload is plain serializable object without Vue proxy internals
+      expect(JSON.parse(JSON.stringify(lastPayload))).toEqual(lastPayload)
+    })
+
+    it('gracefully handles BroadcastChannel cloning/transport failures without throwing or breaking turns', async () => {
+      mockBroadcastShouldThrow = new Error('Failed to execute \'postMessage\' on \'BroadcastChannel\': #<Object> could not be cloned.')
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const store = useNan0Store()
+      const kernel = createMockKernel('SPEAK')
+      await kernel.boot()
+      store.setKernel(kernel, 'test_card')
+
+      const observation: Nan0Observation = {
+        id: 'obs_test_safe_broadcast',
+        source: 'chat',
+        actorId: 'kyo',
+        sessionId: 'session_1',
+        timestamp: Date.now(),
+        content: 'Hello Nan0, this should not crash even if broadcast throws.',
+        metadata: { cardId: 'test_card' },
+      }
+
+      // Must complete successfully without throwing
+      const prepared = await store.prepareTurn(observation)
+      expect(prepared).toBeDefined()
+      expect(prepared.decision.finalDecision).toBe('SPEAK')
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[Nan0Store] Failed to broadcast state sync across window boundary:',
+        expect.any(Error),
+      )
+
+      warnSpy.mockRestore()
     })
   })
 })

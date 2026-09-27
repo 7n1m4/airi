@@ -26,7 +26,7 @@ import {
 import { isStageTamagotchi } from '@proj-airi/stage-shared'
 import { useBroadcastChannel } from '@vueuse/core'
 import { defineStore } from 'pinia'
-import { computed, ref, shallowRef, watch } from 'vue'
+import { computed, ref, shallowRef, toRaw, watch } from 'vue'
 
 import { useEntityLedgerStore } from '../entity-ledger'
 import { useLLM } from '../llm'
@@ -201,14 +201,20 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
 
   function broadcastCurrentState() {
     if (isLeader && typeof window !== 'undefined') {
-      broadcastState({
-        emotions: emotions.value,
-        lastReflex: lastReflex.value,
-        decision: decision.value,
-        decisionReason: decisionReason.value,
-        innerMonologue: innerMonologue.value,
-        isProcessing: isProcessing.value,
-      })
+      try {
+        const cleanPayload: Nan0StateSyncMessage = JSON.parse(JSON.stringify({
+          emotions: toRaw(emotions.value),
+          lastReflex: toRaw(lastReflex.value),
+          decision: decision.value,
+          decisionReason: decisionReason.value,
+          innerMonologue: innerMonologue.value,
+          isProcessing: isProcessing.value,
+        }))
+        broadcastState(cleanPayload)
+      }
+      catch (err) {
+        console.warn('[Nan0Store] Failed to broadcast state sync across window boundary:', err)
+      }
     }
   }
 
