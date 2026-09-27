@@ -314,46 +314,48 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       return
     }
 
-    // Gate 1. Operating Schedule / Bedtime: defer if outside active hours
-    if (config.respectSchedule ?? true) {
-      const schedule = activeCard.value?.extensions?.airi?.heartbeats?.schedule
-      if (schedule?.start && schedule?.end) {
-        const isAwake = isWithinSchedule(schedule.start, schedule.end)
-        if (!isAwake) {
-          console.log(`[ScreenWatcher:Tick] ⏸️ Skipped: Outside operating schedule (${schedule.start} - ${schedule.end}) — character is asleep.`)
+    // Acquire lock synchronously at the very entry BEFORE any async awaiting to prevent concurrent overlapping captures
+    isCapturing.value = true
+
+    try {
+      // Gate 1. Operating Schedule / Bedtime: defer if outside active hours
+      if (config.respectSchedule ?? true) {
+        const schedule = activeCard.value?.extensions?.airi?.heartbeats?.schedule
+        if (schedule?.start && schedule?.end) {
+          const isAwake = isWithinSchedule(schedule.start, schedule.end)
+          if (!isAwake) {
+            console.log(`[ScreenWatcher:Tick] ⏸️ Skipped: Outside operating schedule (${schedule.start} - ${schedule.end}) — character is asleep.`)
+            return
+          }
+        }
+      }
+
+      // Gate 2. User Presence Safeguard: pause if user is away from computer (AFK)
+      const pauseWhenAfk = config.pauseWhenAfk ?? activeCard.value?.extensions?.airi?.heartbeats?.pauseWhenAfk ?? true
+      if (pauseWhenAfk) {
+        if (proactivityStore.idleTimeSec === undefined) {
+          await proactivityStore.refreshIdleTimeOnly()
+        }
+        const afkLimitMinutes = config.afkThresholdMinutes ?? activeCard.value?.extensions?.airi?.heartbeats?.afkThresholdMinutes ?? 5
+        const afkLimitSec = afkLimitMinutes * 60
+        const currentIdleSec = proactivityStore.idleTimeSec ?? 0
+        if (currentIdleSec >= afkLimitSec) {
+          console.log(`[ScreenWatcher:Tick] ⏸️ Skipped: User is away / AFK (${Math.floor(currentIdleSec / 60)}m ${currentIdleSec % 60}s idle, limit ${afkLimitMinutes}m).`)
           return
         }
       }
-    }
 
-    // Gate 2. User Presence Safeguard: pause if user is away from computer (AFK)
-    const pauseWhenAfk = config.pauseWhenAfk ?? activeCard.value?.extensions?.airi?.heartbeats?.pauseWhenAfk ?? true
-    if (pauseWhenAfk) {
-      if (proactivityStore.idleTimeSec === undefined) {
-        await proactivityStore.refreshIdleTimeOnly()
-      }
-      const afkLimitMinutes = config.afkThresholdMinutes ?? activeCard.value?.extensions?.airi?.heartbeats?.afkThresholdMinutes ?? 5
-      const afkLimitSec = afkLimitMinutes * 60
-      const currentIdleSec = proactivityStore.idleTimeSec ?? 0
-      if (currentIdleSec >= afkLimitSec) {
-        console.log(`[ScreenWatcher:Tick] ⏸️ Skipped: User is away / AFK (${Math.floor(currentIdleSec / 60)}m ${currentIdleSec % 60}s idle, limit ${afkLimitMinutes}m).`)
+      // Gate 3. Busy Pipe Safeguard: defer if user or assistant is active (Hard Mutex)
+      const isSpeaking = Boolean(chatOrchestrator.sending)
+        || Boolean(chatOrchestrator.activeSpokenText)
+        || Boolean(chatOrchestrator.isUserTyping)
+        || liveSessionStore.isActive
+      if (isSpeaking) {
+        console.log('[ScreenWatcher:Tick] ⏸️ Skipped: Busy Pipe (user or character is speaking/typing).')
         return
       }
-    }
 
-    // Gate 3. Busy Pipe Safeguard: defer if user or assistant is active (Hard Mutex)
-    const isSpeaking = Boolean(chatOrchestrator.sending)
-      || Boolean(chatOrchestrator.activeSpokenText)
-      || Boolean(chatOrchestrator.isUserTyping)
-      || liveSessionStore.isActive
-    if (isSpeaking) {
-      console.log('[ScreenWatcher:Tick] ⏸️ Skipped: Busy Pipe (user or character is speaking/typing).')
-      return
-    }
-
-    lastError.value = null
-
-    try {
+      lastError.value = null
       // Capture at the display's native resolution so glyph height stays high
       // enough for accurate OCR. The `downscalePercent` card setting is applied
       // relative to the display's real size (not a 720p baseline) and only acts
@@ -385,8 +387,6 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
           return
         }
       }
-
-      isCapturing.value = true
 
       const resLabel = useNative
         ? (displaySize ? `native ${displaySize.width}×${displaySize.height}` : 'native')
@@ -539,7 +539,8 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
   function startWatcher(): void {
     if (timerHandle) {
-      stopWatcher()
+      clearInterval(timerHandle)
+      timerHandle = null
     }
 
     const intervalMs = activeConfig.value?.captureIntervalMs || 2000
@@ -567,13 +568,18 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     }, intervalMs)
   }
 
-  function stopWatcher(): void {
+  function pauseWatcher(): void {
     if (timerHandle) {
-      console.log('[ScreenWatcher:Lifecycle] 🔴 Stopping ambient screen watcher.')
+      console.log('[ScreenWatcher:Lifecycle] ⏸️ Pausing ambient screen watcher timer.')
       clearInterval(timerHandle)
       timerHandle = null
     }
     isRunning.value = false
+  }
+
+  function stopWatcher(): void {
+    pauseWatcher()
+    console.log('[ScreenWatcher:Lifecycle] 🔴 Teardown ambient screen watcher and vision worker.')
     visionOrchestrator.terminate()
   }
 
@@ -584,9 +590,12 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     return hash === '' || hash === '#/' || hash === '#'
   }
 
+  let previousCardId: string | null = null
+  let previousWatcherConfigSignature: string = ''
+
   function restartWatcher(): void {
     if (!isPrimaryHostWindow()) {
-      stopWatcher()
+      pauseWatcher()
       return
     }
 
@@ -598,7 +607,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     }
   }
 
-  // React to card changes or screenWatching configuration toggles
+  // React to card changes or screenWatching configuration toggles with a stable value-equality guard
   watch(
     () => [
       activeCardId.value,
@@ -610,10 +619,37 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       activeCard.value?.extensions?.airi?.heartbeats?.schedule?.start,
       activeCard.value?.extensions?.airi?.heartbeats?.schedule?.end,
     ],
-    ([cardId, enabled, _interval, enableVlm, vlmTier, respectSchedule, start, end]) => {
+    ([cardId, enabled, interval, enableVlm, vlmTier, respectSchedule, start, end]) => {
       if (!isPrimaryHostWindow())
         return
-      console.log('[ScreenWatcher:Watch] Card / config changed:', { cardId, enabled, enableVlm, vlmTier, respectSchedule, start, end })
+
+      const nextSignature = JSON.stringify({
+        cardId,
+        enabled: Boolean(enabled),
+        interval: interval || 2000,
+        enableVlm: Boolean(enableVlm),
+        vlmTier: vlmTier || 'lightweight',
+        respectSchedule: respectSchedule ?? true,
+        start: start || '',
+        end: end || '',
+      })
+
+      // Skip redundant re-evaluations if the actual screen watcher values have not changed
+      if (nextSignature === previousWatcherConfigSignature) {
+        return
+      }
+
+      const cardChanged = previousCardId !== null && previousCardId !== cardId
+      previousCardId = cardId ? String(cardId) : null
+      previousWatcherConfigSignature = nextSignature
+
+      console.log('[ScreenWatcher:Watch] Screen watcher config changed:', { cardId, enabled, enableVlm, vlmTier, respectSchedule, start, end, cardChanged })
+
+      // If the card switched completely, perform a clean teardown first so the new card gets a fresh state
+      if (cardChanged) {
+        stopWatcher()
+      }
+
       restartWatcher()
     },
     { immediate: true },

@@ -196,10 +196,20 @@ export function createAttentionGuardAdapter(): AttentionGuardAdapter {
     })
   }
 
+  async function terminate(): Promise<void> {
+    try {
+      if (host.rpc && host.phase === 'ready') {
+        await host.rpc.unload().catch(() => {})
+      }
+    }
+    catch {}
+    host.terminate()
+  }
+
   return {
     load,
     process,
-    terminate: host.terminate,
+    terminate,
     get state() { return host.phase === 'busy' ? 'processing' : host.phase },
     get deviceLossCount() { return host.deviceLossCount },
     get lastLoadConfig() { return lastLoadConfig },

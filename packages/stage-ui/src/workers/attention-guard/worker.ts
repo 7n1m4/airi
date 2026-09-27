@@ -304,17 +304,22 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
     let ocrText = ''
     const bbox = state.prevGray ? computeDeltaBBox(state.prevGray, gray) : null
     if (bbox) {
-      const crop = cropToImageData(raw, rawImage.width, channels, bbox)
+      let crop: ImageData | null = cropToImageData(raw, rawImage.width, channels, bbox)
       if (crop) {
-        const { text } = await ocrImageData(crop)
-        ocrText = text
-        ocrErrorPatterns = matchPatterns(text, DEFAULT_ERROR_PATTERNS)
-        ocrInterestTags = matchInterestTags(text, interestTags)
+        try {
+          const { text } = await ocrImageData(crop)
+          ocrText = text
+          ocrErrorPatterns = matchPatterns(text, DEFAULT_ERROR_PATTERNS)
+          ocrInterestTags = matchInterestTags(text, interestTags)
 
-        const preview = ocrText.trim().replace(/\s+/g, ' ').slice(0, 100)
-        const frameArea = rawImage.width * rawImage.height
-        const fullFrameTag = bbox.width * bbox.height >= frameArea * 0.5 ? '[FULL-FRAME] ' : ''
-        console.log(`[attention-guard:worker] ${fullFrameTag}OCR bbox=(${bbox.left},${bbox.top},${bbox.width}×${bbox.height}) | chars=${ocrText.length} | preview="${preview}" | interestTargets=[${interestTags?.join(', ') || ''}] | interestHits=${ocrInterestTags.length} ([${ocrInterestTags.join(', ')}])`)
+          const preview = ocrText.trim().replace(/\s+/g, ' ').slice(0, 100)
+          const frameArea = rawImage.width * rawImage.height
+          const fullFrameTag = bbox.width * bbox.height >= frameArea * 0.5 ? '[FULL-FRAME] ' : ''
+          console.log(`[attention-guard:worker] ${fullFrameTag}OCR bbox=(${bbox.left},${bbox.top},${bbox.width}×${bbox.height}) | chars=${ocrText.length} | preview="${preview}" | interestTargets=[${interestTags?.join(', ') || ''}] | interestHits=${ocrInterestTags.length} ([${ocrInterestTags.join(', ')}])`)
+        }
+        finally {
+          crop = null
+        }
       }
     }
     stageMs.stage2Ms = performance.now() - t2
