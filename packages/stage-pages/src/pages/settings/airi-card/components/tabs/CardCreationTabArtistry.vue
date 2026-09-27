@@ -37,10 +37,16 @@ const selectedArtistryConfigStr = defineModel<string>('selectedArtistryConfigStr
 const { t } = useI18n()
 
 // Sub-Tab Navigation State
-type ArtistrySubTabId = 'engine' | 'presentation' | 'autonomous'
-const activeSubTab = ref<ArtistrySubTabId>('engine')
+type ArtistrySubTabId = 'autonomous' | 'engine' | 'presentation'
+const activeSubTab = ref<ArtistrySubTabId>('autonomous')
 
 const subTabs = [
+  {
+    id: 'autonomous' as const,
+    label: 'Director',
+    icon: 'i-solar:magic-stick-3-bold-duotone',
+    desc: 'Director evaluation loop',
+  },
   {
     id: 'engine' as const,
     label: 'Engine',
@@ -52,12 +58,6 @@ const subTabs = [
     label: 'Presentation',
     icon: 'i-solar:gallery-round-bold-duotone',
     desc: 'Visual triggers & routing',
-  },
-  {
-    id: 'autonomous' as const,
-    label: 'Director',
-    icon: 'i-solar:magic-stick-3-bold-duotone',
-    desc: 'Director evaluation loop',
   },
 ]
 
@@ -234,9 +234,195 @@ function applyTokenTemplate() {
     <!-- ================================================================= -->
     <div class="border border-neutral-200/80 rounded-xl bg-white/70 p-5 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/40">
       <!-- ================================================================= -->
-      <!-- 1. ENGINE & MODEL SUB-TAB                                         -->
+      <!-- 1. AUTONOMOUS DIRECTOR SUB-TAB                                    -->
       <!-- ================================================================= -->
-      <div v-if="activeSubTab === 'engine'" class="flex flex-col gap-6">
+      <div v-if="activeSubTab === 'autonomous'" class="flex flex-col gap-6">
+        <div class="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800">
+          <div class="flex flex-col gap-0.5">
+            <div class="flex items-center gap-2">
+              <div class="i-solar:magic-stick-3-bold-duotone text-lg text-primary-500" />
+              <h4 class="text-sm text-neutral-800 font-semibold dark:text-neutral-100">
+                Cinematic Autonomy (Autonomous Director)
+              </h4>
+            </div>
+            <p class="pl-6 text-xs text-neutral-500 dark:text-neutral-400">
+              A parallel 2nd-LLM evaluator that analyzes ongoing conversation and autonomously synthesizes background imagery.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            :class="[
+              'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
+              selectedArtistryAutonomousEnabled ? 'bg-primary-600' : 'bg-neutral-200 dark:bg-neutral-700',
+            ]"
+            @click="selectedArtistryAutonomousEnabled = !selectedArtistryAutonomousEnabled"
+          >
+            <span
+              aria-hidden="true"
+              :class="[
+                'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
+                selectedArtistryAutonomousEnabled ? 'translate-x-5' : 'translate-x-0',
+              ]"
+            />
+          </button>
+        </div>
+
+        <div v-if="selectedArtistryAutonomousEnabled" class="flex flex-col animate-fade-in gap-5">
+          <!-- Threshold Range Slider -->
+          <div class="flex flex-col gap-2 border border-neutral-100 rounded-xl bg-neutral-50/60 p-4 dark:border-neutral-800 dark:bg-neutral-950/30">
+            <div class="flex items-center justify-between">
+              <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
+                Manifestation Sensitivity Threshold
+              </label>
+              <span class="rounded bg-primary-500/10 px-2 py-0.5 text-xs text-primary-600 font-bold font-mono dark:text-primary-400">
+                {{ selectedArtistryAutonomousThreshold }}%
+              </span>
+            </div>
+            <input
+              v-model.number="selectedArtistryAutonomousThreshold"
+              type="range"
+              min="0"
+              max="100"
+              step="1"
+              class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-neutral-200 accent-primary-500 dark:bg-neutral-700"
+            >
+            <div class="flex justify-between text-[10px] text-neutral-400 tracking-tighter uppercase">
+              <span>Frequent Generation (0%)</span>
+              <span>Strict Climaxes (100%)</span>
+            </div>
+          </div>
+
+          <!-- Evaluation Target & Context Depth -->
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div class="w-full flex flex-col gap-1.5">
+              <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
+                Evaluation Target
+              </label>
+              <Select
+                v-model="selectedArtistryAutonomousTarget"
+                :options="autonomousTargetOptions"
+                class="w-full text-xs"
+              />
+              <p class="text-[10px] text-neutral-400">
+                Whether the Director judges User Prompts or Companion Reactions.
+              </p>
+            </div>
+
+            <div class="w-full flex flex-col gap-1.5">
+              <div class="flex items-center justify-between">
+                <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
+                  Context History Depth
+                </label>
+                <span class="text-xs text-primary-600 font-bold font-mono dark:text-primary-400">
+                  {{ selectedArtistryAutonomousHistoryDepth || 3 }} turns
+                </span>
+              </div>
+              <input
+                v-model.number="selectedArtistryAutonomousHistoryDepth"
+                type="range"
+                min="1"
+                max="12"
+                step="1"
+                class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-neutral-200 accent-primary-500 dark:bg-neutral-700"
+              >
+              <p class="text-[10px] text-neutral-400">
+                Turns of conversation history provided to the Director.
+              </p>
+            </div>
+          </div>
+
+          <!-- Surface Monitors -->
+          <div class="grid grid-cols-1 gap-3 border-t border-neutral-100 pt-3 sm:grid-cols-2 dark:border-neutral-800">
+            <div class="flex items-center justify-between border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-900/30">
+              <div class="flex flex-col">
+                <span class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">Desktop Director Notes</span>
+                <span class="text-[10px] text-neutral-400">Show grading notes in Desktop chat logs</span>
+              </div>
+              <button
+                type="button"
+                :class="[
+                  'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200',
+                  selectedArtistryAutonomousMonitorEnabled ? 'bg-primary-600' : 'bg-neutral-200 dark:bg-neutral-700',
+                ]"
+                @click="selectedArtistryAutonomousMonitorEnabled = !selectedArtistryAutonomousMonitorEnabled"
+              >
+                <span
+                  :class="[
+                    'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200',
+                    selectedArtistryAutonomousMonitorEnabled ? 'translate-x-4' : 'translate-x-0',
+                  ]"
+                />
+              </button>
+            </div>
+
+            <div class="flex items-center justify-between border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-900/30">
+              <div class="flex flex-col">
+                <span class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">Discord Director Notes</span>
+                <span class="text-[10px] text-neutral-400">Include reasoning in Discord captions</span>
+              </div>
+              <button
+                type="button"
+                :class="[
+                  'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200',
+                  selectedArtistryAutonomousMonitorDiscordEnabled ? 'bg-primary-600' : 'bg-neutral-200 dark:bg-neutral-700',
+                ]"
+                @click="selectedArtistryAutonomousMonitorDiscordEnabled = !selectedArtistryAutonomousMonitorDiscordEnabled"
+              >
+                <span
+                  :class="[
+                    'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200',
+                    selectedArtistryAutonomousMonitorDiscordEnabled ? 'translate-x-4' : 'translate-x-0',
+                  ]"
+                />
+              </button>
+            </div>
+          </div>
+
+          <!-- Director LLM Brain Picker -->
+          <div class="flex flex-col gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+            <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
+              Director Evaluation LLM Brain
+            </label>
+            <div class="flex items-center gap-2">
+              <Select
+                v-model="selectedArtistryAutonomousModelMode"
+                :options="autonomousModelModeOptions"
+                class="flex-1 text-xs"
+              />
+              <BrainModelPicker
+                v-if="selectedArtistryAutonomousModelMode === 'custom'"
+                v-model:provider="selectedArtistryAutonomousProvider"
+                v-model:model="selectedArtistryAutonomousModel"
+                variant="button"
+                title="Select Director Evaluation Model"
+                side="bottom"
+              />
+            </div>
+            <p v-if="selectedArtistryAutonomousModelMode === 'inherit'" class="text-[11px] text-neutral-400">
+              Inherits active companion LLM: <span class="text-neutral-600 font-semibold font-mono dark:text-neutral-300">{{ inheritedModelDisplay }}</span>
+            </p>
+            <p v-else class="text-[11px] text-neutral-400">
+              Dedicated lightweight LLM model assigned specifically to visual scene grading.
+            </p>
+          </div>
+        </div>
+
+        <div v-else class="flex flex-col items-center justify-center p-6 text-center text-neutral-400">
+          <div class="i-solar:forbidden-circle-bold-duotone text-3xl opacity-40" />
+          <p class="mt-2 text-xs font-medium">
+            Autonomous Artist is currently disabled.
+          </p>
+          <p class="text-[10px] text-neutral-400">
+            Toggle the switch above to configure background scene generation.
+          </p>
+        </div>
+      </div>
+
+      <!-- ================================================================= -->
+      <!-- 2. ENGINE & MODEL SUB-TAB                                         -->
+      <!-- ================================================================= -->
+      <div v-else-if="activeSubTab === 'engine'" class="flex flex-col gap-6">
         <div class="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800">
           <div class="flex flex-col gap-0.5">
             <div class="flex items-center gap-2">
@@ -589,192 +775,6 @@ function applyTokenTemplate() {
               class="w-full border border-neutral-200 rounded-xl bg-neutral-50/80 p-3 text-xs text-neutral-800 leading-relaxed font-mono outline-none transition-all dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800/40 dark:text-neutral-200 focus:ring-1 focus:ring-primary-500"
             />
           </div>
-        </div>
-      </div>
-
-      <!-- ================================================================= -->
-      <!-- 3. AUTONOMOUS DIRECTOR SUB-TAB                                    -->
-      <!-- ================================================================= -->
-      <div v-else-if="activeSubTab === 'autonomous'" class="flex flex-col gap-6">
-        <div class="flex items-center justify-between border-b border-neutral-100 pb-3 dark:border-neutral-800">
-          <div class="flex flex-col gap-0.5">
-            <div class="flex items-center gap-2">
-              <div class="i-solar:magic-stick-3-bold-duotone text-lg text-primary-500" />
-              <h4 class="text-sm text-neutral-800 font-semibold dark:text-neutral-100">
-                Cinematic Autonomy (Autonomous Director)
-              </h4>
-            </div>
-            <p class="pl-6 text-xs text-neutral-500 dark:text-neutral-400">
-              A parallel 2nd-LLM evaluator that analyzes ongoing conversation and autonomously synthesizes background imagery.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            :class="[
-              'relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
-              selectedArtistryAutonomousEnabled ? 'bg-primary-600' : 'bg-neutral-200 dark:bg-neutral-700',
-            ]"
-            @click="selectedArtistryAutonomousEnabled = !selectedArtistryAutonomousEnabled"
-          >
-            <span
-              aria-hidden="true"
-              :class="[
-                'pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
-                selectedArtistryAutonomousEnabled ? 'translate-x-5' : 'translate-x-0',
-              ]"
-            />
-          </button>
-        </div>
-
-        <div v-if="selectedArtistryAutonomousEnabled" class="flex flex-col animate-fade-in gap-5">
-          <!-- Threshold Range Slider -->
-          <div class="flex flex-col gap-2 border border-neutral-100 rounded-xl bg-neutral-50/60 p-4 dark:border-neutral-800 dark:bg-neutral-950/30">
-            <div class="flex items-center justify-between">
-              <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
-                Manifestation Sensitivity Threshold
-              </label>
-              <span class="rounded bg-primary-500/10 px-2 py-0.5 text-xs text-primary-600 font-bold font-mono dark:text-primary-400">
-                {{ selectedArtistryAutonomousThreshold }}%
-              </span>
-            </div>
-            <input
-              v-model.number="selectedArtistryAutonomousThreshold"
-              type="range"
-              min="0"
-              max="100"
-              step="1"
-              class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-neutral-200 accent-primary-500 dark:bg-neutral-700"
-            >
-            <div class="flex justify-between text-[10px] text-neutral-400 tracking-tighter uppercase">
-              <span>Frequent Generation (0%)</span>
-              <span>Strict Climaxes (100%)</span>
-            </div>
-          </div>
-
-          <!-- Evaluation Target & Context Depth -->
-          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div class="w-full flex flex-col gap-1.5">
-              <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
-                Evaluation Target
-              </label>
-              <Select
-                v-model="selectedArtistryAutonomousTarget"
-                :options="autonomousTargetOptions"
-                class="w-full text-xs"
-              />
-              <p class="text-[10px] text-neutral-400">
-                Whether the Director judges User Prompts or Companion Reactions.
-              </p>
-            </div>
-
-            <div class="w-full flex flex-col gap-1.5">
-              <div class="flex items-center justify-between">
-                <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
-                  Context History Depth
-                </label>
-                <span class="text-xs text-primary-600 font-bold font-mono dark:text-primary-400">
-                  {{ selectedArtistryAutonomousHistoryDepth || 3 }} turns
-                </span>
-              </div>
-              <input
-                v-model.number="selectedArtistryAutonomousHistoryDepth"
-                type="range"
-                min="1"
-                max="12"
-                step="1"
-                class="h-2 w-full cursor-pointer appearance-none rounded-lg bg-neutral-200 accent-primary-500 dark:bg-neutral-700"
-              >
-              <p class="text-[10px] text-neutral-400">
-                Turns of conversation history provided to the Director.
-              </p>
-            </div>
-          </div>
-
-          <!-- Surface Monitors -->
-          <div class="grid grid-cols-1 gap-3 border-t border-neutral-100 pt-3 sm:grid-cols-2 dark:border-neutral-800">
-            <div class="flex items-center justify-between border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-900/30">
-              <div class="flex flex-col">
-                <span class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">Desktop Director Notes</span>
-                <span class="text-[10px] text-neutral-400">Show grading notes in Desktop chat logs</span>
-              </div>
-              <button
-                type="button"
-                :class="[
-                  'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200',
-                  selectedArtistryAutonomousMonitorEnabled ? 'bg-primary-600' : 'bg-neutral-200 dark:bg-neutral-700',
-                ]"
-                @click="selectedArtistryAutonomousMonitorEnabled = !selectedArtistryAutonomousMonitorEnabled"
-              >
-                <span
-                  :class="[
-                    'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200',
-                    selectedArtistryAutonomousMonitorEnabled ? 'translate-x-4' : 'translate-x-0',
-                  ]"
-                />
-              </button>
-            </div>
-
-            <div class="flex items-center justify-between border border-neutral-200/80 rounded-xl bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-900/30">
-              <div class="flex flex-col">
-                <span class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">Discord Director Notes</span>
-                <span class="text-[10px] text-neutral-400">Include reasoning in Discord captions</span>
-              </div>
-              <button
-                type="button"
-                :class="[
-                  'relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200',
-                  selectedArtistryAutonomousMonitorDiscordEnabled ? 'bg-primary-600' : 'bg-neutral-200 dark:bg-neutral-700',
-                ]"
-                @click="selectedArtistryAutonomousMonitorDiscordEnabled = !selectedArtistryAutonomousMonitorDiscordEnabled"
-              >
-                <span
-                  :class="[
-                    'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200',
-                    selectedArtistryAutonomousMonitorDiscordEnabled ? 'translate-x-4' : 'translate-x-0',
-                  ]"
-                />
-              </button>
-            </div>
-          </div>
-
-          <!-- Director LLM Brain Picker -->
-          <div class="flex flex-col gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-            <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
-              Director Evaluation LLM Brain
-            </label>
-            <div class="flex items-center gap-2">
-              <Select
-                v-model="selectedArtistryAutonomousModelMode"
-                :options="autonomousModelModeOptions"
-                class="flex-1 text-xs"
-              />
-              <BrainModelPicker
-                v-if="selectedArtistryAutonomousModelMode === 'custom'"
-                v-model:provider="selectedArtistryAutonomousProvider"
-                v-model:model="selectedArtistryAutonomousModel"
-                variant="button"
-                title="Select Director Evaluation Model"
-                side="bottom"
-              />
-            </div>
-            <p v-if="selectedArtistryAutonomousModelMode === 'inherit'" class="text-[11px] text-neutral-400">
-              Inherits active companion LLM: <span class="text-neutral-600 font-semibold font-mono dark:text-neutral-300">{{ inheritedModelDisplay }}</span>
-            </p>
-            <p v-else class="text-[11px] text-neutral-400">
-              Dedicated lightweight LLM model assigned specifically to visual scene grading.
-            </p>
-          </div>
-        </div>
-
-        <div v-else class="flex flex-col items-center justify-center p-6 text-center text-neutral-400">
-          <div class="i-solar:forbidden-circle-bold-duotone text-3xl opacity-40" />
-          <p class="mt-2 text-xs font-medium">
-            Autonomous Artist is currently disabled.
-          </p>
-          <p class="text-[10px] text-neutral-400">
-            Toggle the switch above to configure background scene generation.
-          </p>
         </div>
       </div>
     </div>
