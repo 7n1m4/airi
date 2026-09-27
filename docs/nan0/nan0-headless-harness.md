@@ -53,7 +53,7 @@ The test harness wires directly into production-grade provider configurations:
 2. **System 1 Reflex & Pragmatics Engine (TypeSafe AI)**:
    - **Endpoint**: `POST https://api.typesafe.ai/v1/systemone`
    - **Model**: `jev-latest`
-   - **Batching**: Bundles `NAN0_JEV_12_GROUP_QUESTIONS` in parallel into a single model forward pass (~100–300ms) to classify conversational acts, affection, boundary threats, emotional labor, and epistemic queries.
+   - **Batching**: Bundles `NAN0_JEV_QUESTIONS` in parallel into a single model forward pass (~100–300ms) to classify conversational acts, affection, boundary threats, emotional labor, and epistemic queries.
 
 ### Environment Configuration
 

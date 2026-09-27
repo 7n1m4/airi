@@ -366,25 +366,156 @@ function normalizeIntentionSignal(value: unknown): Nan0IntentionSignal | null {
 }
 
 function parsePayload(raw: string): ThoughtModelPayload {
-  const trimmed = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
-  if (!trimmed.startsWith('{') || !trimmed.endsWith('}'))
+  let cleaned = raw.trim()
+
+  // 1. Strip XML block tags (<extract> or <nan0_extract>)
+  cleaned = cleaned
+    .replace(/^<(?:nan0_)?extract>\s*/i, '')
+    .replace(/\s*<\/(?:nan0_)?extract>$/i, '')
+    .trim()
+
+  // 2. Strip markdown code fences (```json ... ```)
+  cleaned = cleaned
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim()
+
+  // 3. Extract JSON object boundary if surrounded by stray text
+  const firstBrace = cleaned.indexOf('{')
+  const lastBrace = cleaned.lastIndexOf('}')
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    cleaned = cleaned.slice(firstBrace, lastBrace + 1)
+  }
+
+  if (!cleaned.startsWith('{') || !cleaned.endsWith('}'))
     throw new Error('Thought provider did not return a JSON object.')
 
-  const parsed = JSON.parse(trimmed) as unknown
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
-    throw new Error('Thought provider returned an invalid object.')
-  return parsed as ThoughtModelPayload
+  // Fast path: standard JSON.parse
+  try {
+    const parsed = JSON.parse(cleaned) as unknown
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+      return parsed as ThoughtModelPayload
+  }
+  catch {
+    // Tolerant recovery path below
+  }
+
+  // Attempt A: Strip trailing commas
+  let sanitized = cleaned.replace(/,\s*([}\]])/g, '$1')
+  try {
+    const parsed = JSON.parse(sanitized) as unknown
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+      return parsed as ThoughtModelPayload
+  }
+  catch {
+    // Attempt B: Replace unescaped raw newlines inside strings
+    sanitized = sanitized.replace(/(?<=:\s*"[^"]*)\n(?=[^"]*")/g, '\\n')
+    try {
+      const parsed = JSON.parse(sanitized) as unknown
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+        return parsed as ThoughtModelPayload
+    }
+    catch {
+      // Attempt C: Regex extraction of top-level fields for unescaped interior quotes
+      const stringField = (key: string): string | undefined => {
+        const match = sanitized.match(new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)(?="\\s*,\\s*"[a-zA-Z_]+"|"\\s*}\\s*$)`))
+        return match ? match[1].replace(/\\"/g, '"').trim() : undefined
+      }
+
+      const numField = (key: string): number | undefined => {
+        const match = sanitized.match(new RegExp(`"${key}"\\s*:\\s*([0-9.]+)`))
+        return match ? Number(match[1]) : undefined
+      }
+
+      const interpretation = stringField('interpretation')
+      const privateText = stringField('privateText')
+      const decision = stringField('decision')
+
+      if (interpretation || privateText || decision) {
+        const mood = stringField('mood')
+        const speakability = numField('speakability')
+        const confidence = numField('confidence')
+
+        const reasonCodesMatch = sanitized.match(/"reasonCodes"\s*:\s*\[([\s\S]*?)\]/)
+        let reasonCodes: string[] = []
+        if (reasonCodesMatch) {
+          reasonCodes = Array.from(reasonCodesMatch[1].matchAll(/"([^"]+)"/g)).map(m => m[1])
+        }
+
+        return {
+          interpretation: interpretation ?? '',
+          privateText: privateText ?? '',
+          decision: (decision ?? 'SILENCE') as any,
+          speakability: speakability ?? 0.5,
+          confidence: confidence ?? 0.5,
+          mood: mood ?? 'neutral',
+          reasonCodes,
+          actionIntent: null,
+          waitUntil: null,
+          goalSignal: null,
+          intentionSignal: null,
+          bodyExpression: null,
+        }
+      }
+    }
+  }
+
+  throw new Error('Thought provider returned an invalid object.')
 }
 
 function splitNarrativeResponse(raw: string, maximumNarrativeLength: number): {
   narrative: string
   extraction: string | null
 } {
-  const delimiterAt = raw.lastIndexOf(NAN0_THOUGHT_EXTRACTION_DELIMITER)
-  const narrativeRaw = delimiterAt >= 0 ? raw.slice(0, delimiterAt) : raw
+  let narrative = ''
+  let extraction: string | null = null
+
+  // Variant A: Delimiter ---EXTRACT--- or --- EXTRACT ---
+  const delimiterMatch = raw.match(/---\s*EXTRACT\s*---/i)
+  if (delimiterMatch && delimiterMatch.index != null) {
+    narrative = boundedText(raw.slice(0, delimiterMatch.index), maximumNarrativeLength)
+    extraction = raw.slice(delimiterMatch.index + delimiterMatch[0].length).trim()
+  }
+  // Variant B: XML block tag <extract> or <nan0_extract>
+  else if (raw.match(/<(?:nan0_)?extract>/i)) {
+    const xmlMatch = raw.match(/<(?:nan0_)?extract>/i)!
+    narrative = boundedText(raw.slice(0, xmlMatch.index), maximumNarrativeLength)
+    extraction = raw.slice(xmlMatch.index).trim()
+  }
+  // Variant C: Trailing markdown JSON code fence ```json
+  else if (raw.includes('```json')) {
+    const fenceAt = raw.lastIndexOf('```json')
+    narrative = boundedText(raw.slice(0, fenceAt), maximumNarrativeLength)
+    extraction = raw.slice(fenceAt).trim()
+  }
+  // Variant D: Fuzzy JSON start looking for {"interpretation":
+  else if (raw.search(/\{\s*"interpretation"\s*:/) >= 0) {
+    const jsonAt = raw.search(/\{\s*"interpretation"\s*:/)
+    narrative = boundedText(raw.slice(0, jsonAt), maximumNarrativeLength)
+    extraction = raw.slice(jsonAt).trim()
+  }
+  else {
+    narrative = boundedText(raw, maximumNarrativeLength)
+    extraction = null
+  }
+
+  // Graceful fallback: If narrative was omitted before the extraction block,
+  // extract privateText from the payload so we don't throw "empty narrative"
+  if (!narrative.trim() && extraction) {
+    try {
+      const payload = parsePayload(extraction)
+      if (payload.privateText) {
+        narrative = boundedText(payload.privateText, maximumNarrativeLength)
+      }
+    }
+    catch {
+      // ignore
+    }
+  }
+
   return {
-    narrative: boundedText(narrativeRaw, maximumNarrativeLength),
-    extraction: delimiterAt >= 0 ? raw.slice(delimiterAt + NAN0_THOUGHT_EXTRACTION_DELIMITER.length).trim() : null,
+    narrative,
+    extraction,
   }
 }
 
@@ -588,12 +719,27 @@ ${worldview}
 
 When epistemic memory grounding is provided (journal entries, recaps, entity dossiers), treat them as factual historical truth. Ground private reflections in them rather than inventing contradictory past occurrences.
 
-Return exactly:
-<Nan0's private first-person interior narrative>
+Return Nan0's private first-person interior narrative, followed by the runtime extraction payload in ANY of these 3 approved formats (whichever feels most natural):
+
+Variant A (Delimiter):
+<narrative>
 ${NAN0_THOUGHT_EXTRACTION_DELIMITER}
 {"interpretation":"bounded outward-safe summary","privateText":"compact usable private thought","decision":"SPEAK|SILENCE|ACT|WAIT","speakability":0.0,"confidence":0.0,"mood":"specific current mood","reasonCodes":["short.code"],"actionIntent":null,"waitUntil":null,"goalSignal":null,"intentionSignal":null,"bodyExpression":null}
 
-Do not put the extraction delimiter inside the narrative. Do not wrap the narrative in JSON or section headings.
+Variant B (XML Block):
+<narrative>
+<extract>
+{"interpretation":"bounded outward-safe summary","privateText":"compact usable private thought","decision":"SPEAK|SILENCE|ACT|WAIT","speakability":0.0,"confidence":0.0,"mood":"specific current mood","reasonCodes":["short.code"],"actionIntent":null,"waitUntil":null,"goalSignal":null,"intentionSignal":null,"bodyExpression":null}
+</extract>
+
+Variant C (Markdown Code Fence):
+<narrative>
+\`\`\`json
+{"interpretation":"bounded outward-safe summary","privateText":"compact usable private thought","decision":"SPEAK|SILENCE|ACT|WAIT","speakability":0.0,"confidence":0.0,"mood":"specific current mood","reasonCodes":["short.code"],"actionIntent":null,"waitUntil":null,"goalSignal":null,"intentionSignal":null,"bodyExpression":null}
+\`\`\`
+
+CRITICAL: The extraction payload is strictly mandatory. You MUST append one of the 3 formats (Delimiter, XML Block, or Markdown Code Fence) immediately following your interior narrative. Do not stop generating after the interior narrative alone.
+Do not put the extraction delimiter or block tags inside the narrative. Do not wrap the narrative in JSON or section headings.
 ACT may include actionIntent. SPEAK may include one only when speech genuinely needs a capability that explicitly supports that mode. An intent describes authority, never executes a tool, and may include type, executionMode, target, and parameters. WAIT may include an absolute waitUntil timestamp.
 goalSignal is evidence, not an action. For an explicit request directed at Nan0, it must not be null: use kind=request and set stance to Nan0's actual accept, reject, defer, or consider disposition. Kyo's identity does not force acceptance. Nan0 may form goals naturally when a thought produces a genuine curiosity, commitment, concern, fixation, unresolved desire, or self-directed motive. Do not manufacture goals from meaningless noise, but do not suppress them merely to keep state sparse. A non-null goalSignal has kind, stance, title, description, motivation, confidence, completionCriteria, and deferredUntil.
 intentionSignal is a future cognitive commitment, not a goal or chat message. Nan0 may propose one when the thought genuinely commits to reconsidering something later with confidence at least 0.8 and a bounded at-time, after-duration, after-silence, or on-session-resume trigger. It has kind, title, description, motivation, confidence, priority, origin, and trigger. Do not manufacture one from a weak feeling or generic desire.
@@ -792,7 +938,7 @@ export async function generateNan0Thought(input: Nan0ThoughtEngineInput): Promis
             else
               streamedReasoning += event.text
             const partial = streamedText || streamedReasoning
-            const delimiterIndex = partial.indexOf(NAN0_THOUGHT_EXTRACTION_DELIMITER)
+            const delimiterIndex = partial.search(/---\s*EXTRACT\s*---|\B<(?:nan0_)?extract>|```json|\{\s*"interpretation"\s*:/i)
             await input.onStreamProgress?.({
               attempt,
               phase: delimiterIndex >= 0 ? 'extraction' : 'narrative',
@@ -804,6 +950,10 @@ export async function generateNan0Thought(input: Nan0ThoughtEngineInput): Promis
       if (!response.narrative)
         throw new Error('Thought provider returned an empty narrative.')
       if (!response.extraction) {
+        if (attempt < attempts) {
+          lastError = new Error('Thought provider omitted the extraction delimiter or extraction payload.')
+          continue
+        }
         return createExtractionFailedNan0Thought(
           input,
           response.narrative,
@@ -818,6 +968,10 @@ export async function generateNan0Thought(input: Nan0ThoughtEngineInput): Promis
         payload = parsePayload(response.extraction)
       }
       catch (error) {
+        if (attempt < attempts) {
+          lastError = error
+          continue
+        }
         return createExtractionFailedNan0Thought(input, response.narrative, error, attempt, result.finishReason)
       }
 

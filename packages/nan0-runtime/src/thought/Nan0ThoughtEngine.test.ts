@@ -719,3 +719,59 @@ describe('nan0ThoughtEngine domain 4 epistemic grounding', () => {
     expect(prepared.systemContext).toContain(override)
   })
 })
+
+describe('nan0ThoughtEngine flexible extraction formats', () => {
+  const jsonPayload = JSON.stringify({
+    interpretation: 'Testing extraction variants.',
+    privateText: 'Testing private narrative extraction.',
+    decision: 'SPEAK',
+    speakability: 0.8,
+    confidence: 0.9,
+    mood: 'focused',
+    reasonCodes: ['test.variant'],
+  })
+
+  it('correctly parses Variant A with loose whitespace around delimiter', async () => {
+    const text = `Narrative thinking here.\n---  EXTRACT  ---\n${jsonPayload}`
+    const { prepared } = await preparedKernel(clientWith(text))
+    expect(prepared.thought.status).toBe('generated')
+    expect(prepared.thought.extractionStatus).toBe('parsed')
+    expect(prepared.thought.interpretation).toBe('Testing extraction variants.')
+    expect(prepared.thought.narrative).toBe('Narrative thinking here.')
+  })
+
+  it('correctly parses Variant B with XML block tags', async () => {
+    const text = `Internal reflections flowing naturally.\n<extract>\n${jsonPayload}\n</extract>`
+    const { prepared } = await preparedKernel(clientWith(text))
+    expect(prepared.thought.status).toBe('generated')
+    expect(prepared.thought.extractionStatus).toBe('parsed')
+    expect(prepared.thought.interpretation).toBe('Testing extraction variants.')
+    expect(prepared.thought.narrative).toBe('Internal reflections flowing naturally.')
+  })
+
+  it('correctly parses Variant B with nan0_extract XML block tags', async () => {
+    const text = `Internal reflections flowing naturally.\n<nan0_extract>\n${jsonPayload}\n</nan0_extract>`
+    const { prepared } = await preparedKernel(clientWith(text))
+    expect(prepared.thought.status).toBe('generated')
+    expect(prepared.thought.extractionStatus).toBe('parsed')
+    expect(prepared.thought.interpretation).toBe('Testing extraction variants.')
+  })
+
+  it('correctly parses Variant C with markdown code fence', async () => {
+    const text = `Contemplating the universe.\n\`\`\`json\n${jsonPayload}\n\`\`\``
+    const { prepared } = await preparedKernel(clientWith(text))
+    expect(prepared.thought.status).toBe('generated')
+    expect(prepared.thought.extractionStatus).toBe('parsed')
+    expect(prepared.thought.interpretation).toBe('Testing extraction variants.')
+    expect(prepared.thought.narrative).toBe('Contemplating the universe.')
+  })
+
+  it('correctly parses Variant D fuzzy JSON boundary without explicit delimiter', async () => {
+    const text = `Thinking out loud without delimiter.\n${jsonPayload}`
+    const { prepared } = await preparedKernel(clientWith(text))
+    expect(prepared.thought.status).toBe('generated')
+    expect(prepared.thought.extractionStatus).toBe('parsed')
+    expect(prepared.thought.interpretation).toBe('Testing extraction variants.')
+    expect(prepared.thought.narrative).toBe('Thinking out loud without delimiter.')
+  })
+})

@@ -118,7 +118,7 @@ import {
   recordRepair,
   relationshipContextForActor,
 } from '../relationship/RelationshipMemory'
-import { NAN0_JEV_12_GROUP_QUESTIONS } from '../shadow/Nan0JevSchema'
+import { NAN0_JEV_QUESTIONS } from '../shadow/Nan0JevSchema'
 import { formatSystemOnePromptState } from '../shadow/Nan0ShadowTypes'
 import { SystemNan0Clock } from '../temporal/Nan0Clock'
 import {
@@ -3365,7 +3365,7 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
       const timeoutMs = options?.jevTimeoutMs ?? 1500
       const jevPromise = this.dependencies.systemOneProvider!(
         systemOnePayload,
-        NAN0_JEV_12_GROUP_QUESTIONS,
+        NAN0_JEV_QUESTIONS,
         this.dependencies.jevModel,
       )
       const timeoutPromise = new Promise<never>((_, reject) =>

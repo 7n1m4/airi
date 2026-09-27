@@ -95,7 +95,7 @@ describe('nan0Kernel inline System 1 Jev execution', () => {
     expect(stateAfter.emotionalState.attachment).toBeGreaterThan(baselineAttachment)
   })
 
-  it('falls back to local perturbation rules when System 1 Jev times out', async () => {
+  it('safely abstains with zero perturbation when System 1 Jev times out', async () => {
     const hangingJevProvider: Nan0SystemOneProvider = async () => {
       // Simulate slow/hanging provider > 500ms
       await new Promise(resolve => setTimeout(resolve, 1000))

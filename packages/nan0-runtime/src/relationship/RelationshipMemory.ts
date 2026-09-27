@@ -493,6 +493,9 @@ async function applyGrievanceAsync(
 
       // If Jev classifies as recurrence of an active grievance, reinforce the matched one
       if (jevRes.answers?.grievance_recurrence?.choice === 'recurrence_reinforced') {
+        // NOTICE: Distinguish explicit-none safe abstention vs omission degraded-mode heuristic (Fix F8):
+        // If Jev explicitly answers matched_grievance_id = 'none', we strictly abstain (activeOne = undefined).
+        // If Jev omitted matched_grievance_id entirely and exactly one active grievance exists, we attribute to it.
         const matchedId = jevRes.answers?.matched_grievance_id?.choice
         const activeOne = (matchedId && matchedId !== 'none')
           ? record.activeGrievances.find(g => g.grievanceId === matchedId)
@@ -527,7 +530,26 @@ async function applyGrievanceAsync(
             ? Array.from(new Set([triggerChoice, ...lexical])).slice(0, 5)
             : lexical
 
+      // NOTICE: Peer Review Note 2 - Non-regex semantic claim equality check:
+      // If structured claim predicate and object match an existing active grievance, reinforce rather than duplicating.
       const claim = input.claim
+      const claimMatch = claim && record.activeGrievances.find(g =>
+        g.predicate && g.object
+        && g.predicate === claim.predicate
+        && g.object.toLowerCase() === claim.object.toLowerCase(),
+      )
+
+      if (claimMatch) {
+        return record.activeGrievances.map(grievance => grievance.grievanceId === claimMatch.grievanceId
+          ? {
+              ...grievance,
+              lastReinforcedAt: input.timestamp,
+              reinforcementCount: grievance.reinforcementCount + 1,
+              action: 'reinforce',
+            }
+          : grievance)
+      }
+
       const grievanceId = `grievance:${createId()}`
       return [...record.activeGrievances, {
         ...provenance(input, `provenance:${grievanceId}`),

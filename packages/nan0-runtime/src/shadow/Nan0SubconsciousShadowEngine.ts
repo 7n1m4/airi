@@ -6,7 +6,7 @@ import type {
   Nan0TurnSnapshot,
 } from './Nan0ShadowTypes'
 
-import { mapJevAnswersToProposal, NAN0_JEV_12_GROUP_QUESTIONS } from './Nan0JevSchema'
+import { mapJevAnswersToProposal, NAN0_JEV_QUESTIONS } from './Nan0JevSchema'
 
 export interface Nan0ShadowEngineOptions {
   maxBufferCapacity?: number
@@ -139,7 +139,7 @@ export class Nan0SubconsciousShadowEngine {
 
         const j0 = performance.now()
         try {
-          const res = await this.systemOneProvider(snapshot.text, NAN0_JEV_12_GROUP_QUESTIONS, this.jevModel)
+          const res = await this.systemOneProvider(snapshot.text, NAN0_JEV_QUESTIONS, this.jevModel)
           inferenceMs = res.latencyMs ?? (performance.now() - j0)
           needleProposal = mapJevAnswersToProposal(res.answers, snapshot)
         }

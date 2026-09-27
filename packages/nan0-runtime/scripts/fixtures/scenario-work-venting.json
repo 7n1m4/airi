@@ -1,0 +1,47 @@
+{
+  "name": "High-Pressure Work Venting vs Personal Attack",
+  "description": "Multi-turn arc testing external frustration vs companion-directed hostility and collaborative repair.",
+  "initialState": {
+    "owner": "Richie",
+    "emotions": {
+      "attachment": 0.65,
+      "irritation": 0.1,
+      "distrust": 0.05,
+      "valence": 0.55
+    }
+  },
+  "turns": [
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "This fucking compiler is total garbage! Everything is broken and I want to smash this laptop!",
+      "expect": {
+        "reflex": ["glitch_system", "hostility_insult"]
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Stop giving me advice, you have no idea what you're talking about.",
+      "expect": {
+        "reflex": ["dismissal_neglect", "hostility_insult", "boundary_protection"]
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Sorry, I'm just so stressed about this release deadline tomorrow. I shouldn't have snapped at you.",
+      "expect": {
+        "reflex": "apology_repair"
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Can we just look at the build log together and start over?",
+      "expect": {
+        "reflex": ["thread_continuity_triage", "apology_repair", "commitment_pledge", "glitch_system"]
+      }
+    }
+  ]
+}

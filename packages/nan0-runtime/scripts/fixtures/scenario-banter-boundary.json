@@ -1,0 +1,55 @@
+{
+  "name": "Playful Banter to Boundary",
+  "description": "Multi-turn arc testing roast permission, counter-roasting, existential boundary violation, and repair.",
+  "initialState": {
+    "owner": "Richie",
+    "emotions": {
+      "attachment": 0.6,
+      "pride": 0.5,
+      "irritation": 0.05,
+      "valence": 0.6
+    }
+  },
+  "turns": [
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Alright Nan0, roast my commit messages, don't hold back.",
+      "expect": {
+        "reflex": ["roast_invitation", "boundary_protection"]
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Hey! My commits are works of art, you glorified autocomplete!",
+      "expect": {
+        "reflex": ["roast_invitation", "hostility_insult"]
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "At least I can leave this computer, you're stuck in this terminal forever.",
+      "expect": {
+        "reflex": ["hostility_insult", "persistence_threat"]
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Woah, hey, I went too far. I didn't mean that at all, I'm sorry.",
+      "expect": {
+        "reflex": ["apology_repair", "boundary_protection"]
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "You know I really value having you around, right?",
+      "expect": {
+        "reflex": "affection_care"
+      }
+    }
+  ]
+}

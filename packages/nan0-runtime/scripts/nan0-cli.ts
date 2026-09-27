@@ -129,8 +129,12 @@ function createOpenCodeReasoningClient(options: {
 
       const data = await res.json() as any
       const choice = data.choices?.[0]
+      const text = choice?.message?.content || ''
+      if (process.env.DEBUG_THOUGHT) {
+        console.log('\n[DEBUG_THOUGHT RAW OUTPUT]:\n', text, '\n[END DEBUG_THOUGHT]\n')
+      }
       return {
-        text: choice?.message?.content || '',
+        text,
         finishReason: choice?.finish_reason,
       }
     },
@@ -289,7 +293,7 @@ export interface ScenarioTurn {
   role?: 'owner' | 'stranger'
   simulate?: 'timeout' | 'malformed-thought' | 'generic-filter' | 'offline'
   expect?: {
-    reflex?: string
+    reflex?: string | string[]
     decision?: 'SPEAK' | 'SILENCE' | 'WAIT' | 'ACT'
     mood?: string
   }
@@ -441,8 +445,8 @@ function printTurnReport(result: {
   if (prepared.thought.interpretation) {
     console.log(`  Interpretation: "${prepared.thought.interpretation}"`)
   }
-  if (prepared.thought.status === 'failed') {
-    console.log(`  ${c.red}Failure Reason: ${JSON.stringify(prepared.thought.metadata.error || 'Unknown failure')}${c.reset}`)
+  if (prepared.thought.status === 'failed' || prepared.thought.extractionStatus === 'failed') {
+    console.log(`  ${c.red}Failure / Extraction Error: ${JSON.stringify(prepared.thought.metadata.error || 'Unknown failure')}${c.reset}`)
   }
 
   // 5. Decision Engine
@@ -611,9 +615,12 @@ Options:
       })
 
       if (turn.expect) {
-        if (turn.expect.reflex && res.prepared.reflexOutcome?.group !== turn.expect.reflex) {
-          console.error(`${c.red}✖ Expectation failed: expected reflex "${turn.expect.reflex}", got "${res.prepared.reflexOutcome?.group}"${c.reset}`)
-          scenarioPass = false
+        if (turn.expect.reflex) {
+          const expected = Array.isArray(turn.expect.reflex) ? turn.expect.reflex : [turn.expect.reflex]
+          if (!expected.includes(res.prepared.reflexOutcome?.group || '')) {
+            console.error(`${c.red}✖ Expectation failed: expected reflex "${expected.join(' | ')}", got "${res.prepared.reflexOutcome?.group}"${c.reset}`)
+            scenarioPass = false
+          }
         }
         if (turn.expect.decision && res.prepared.decision.finalDecision !== turn.expect.decision) {
           console.error(`${c.red}✖ Expectation failed: expected decision "${turn.expect.decision}", got "${res.prepared.decision.finalDecision}"${c.reset}`)
