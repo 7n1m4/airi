@@ -4,10 +4,12 @@ import type {
   Nan0CommitmentInput,
   Nan0RepairInput,
 } from '../relationship/RelationshipMemory'
+import type { Nan0SystemOneTurnState } from '../shadow/Nan0ShadowTypes'
 import type {
   LegacyNan0Export,
   Nan0ActionAuthority,
   Nan0ActionIntentRecord,
+  Nan0ActorOwnership,
   Nan0ContinuityContext,
   Nan0ContinuityThreadStatus,
   Nan0ConversationTurn,
@@ -117,6 +119,7 @@ import {
   relationshipContextForActor,
 } from '../relationship/RelationshipMemory'
 import { NAN0_JEV_12_GROUP_QUESTIONS } from '../shadow/Nan0JevSchema'
+import { formatSystemOnePromptState } from '../shadow/Nan0ShadowTypes'
 import { SystemNan0Clock } from '../temporal/Nan0Clock'
 import {
   createEmptyTemporalState,
@@ -625,13 +628,37 @@ export class Nan0Kernel {
       throw new Error('Nan0Kernel: System 1 provider is required to process observations. Please configure a System 1 provider.')
     }
 
+    const recalledMemories = text
+      ? this.retrieveRelevantMemories(text, ownership.actorId, 10)
+      : []
+
+    let retrievedMemoryContext: string | Nan0EpistemicGroundingContext | null = null
+    if (options.retrievedMemoryContext !== undefined) {
+      retrievedMemoryContext = options.retrievedMemoryContext
+    }
+    else if (this.dependencies.memoryRetriever && text) {
+      try {
+        retrievedMemoryContext = await this.dependencies.memoryRetriever(text, ownership.actorId, 5)
+      }
+      catch (error) {
+        this.diagnostic('memoryRetriever.failed', {
+          ...diagnosticContext,
+          error: error instanceof Error ? error.message : String(error),
+        })
+        retrievedMemoryContext = null
+      }
+    }
+
     const hasSystemOne = !isInternalObservation
       && Boolean(this.dependencies.systemOneProvider)
       && text.length > 0
       && options?.tier2JevChallengerEnabled !== false
 
     const { emotionalEvents, reflexOutcome, answers: systemOneAnswers } = hasSystemOne
-      ? await this.updateEmotionalStateForObservationAsync(canonicalObservation, options)
+      ? await this.updateEmotionalStateForObservationAsync(canonicalObservation, options, {
+          ownership,
+          retrievedMemoryContext,
+        })
       : this.updateEmotionalStateForObservationSync(canonicalObservation)
     if (isOwnerActor(ownership.actorId, this.state.identity)) {
       const trackedPromiseIds = new Set(normalizeTemporalTrackingState(this.state.temporal.engine.lived).trackedPromises.map(promise => promise.promiseId))
@@ -751,27 +778,6 @@ export class Nan0Kernel {
       for (const goal of progress.progressed.filter(goal => goal.status === 'completed'))
         this.diagnostic('goal.completed', { ...diagnosticContext, goalId: goal.goalId, progress: goal.progress, at: canonicalObservation.timestamp })
       this.syncGoalTemporalConditions()
-    }
-
-    const recalledMemories = text
-      ? this.retrieveRelevantMemories(text, ownership.actorId, 10)
-      : []
-
-    let retrievedMemoryContext: string | Nan0EpistemicGroundingContext | null = null
-    if (options.retrievedMemoryContext !== undefined) {
-      retrievedMemoryContext = options.retrievedMemoryContext
-    }
-    else if (this.dependencies.memoryRetriever && text) {
-      try {
-        retrievedMemoryContext = await this.dependencies.memoryRetriever(text, ownership.actorId, 5)
-      }
-      catch (error) {
-        this.diagnostic('memoryRetriever.failed', {
-          ...diagnosticContext,
-          error: error instanceof Error ? error.message : String(error),
-        })
-        retrievedMemoryContext = null
-      }
     }
 
     const userEvent: Nan0MemoryRecord = {
@@ -1511,6 +1517,10 @@ export class Nan0Kernel {
     const relationshipEvidence = inferRelationshipEvidence(
       inputMemory?.content ?? '',
       turn.metadata.systemOneAnswers as import('../types').Nan0JevSystemOneAnswers | undefined,
+      {
+        hasVerifiedTaskCompletion: Boolean(turn.metadata.hasVerifiedTaskCompletion),
+        trustedObservations: turn.metadata.trustedObservations as any,
+      },
     )
     const relationshipResult = inputEvent
       ? await applyRelationshipEvidenceAsync(this.state.relationships, {
@@ -3235,14 +3245,20 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
       history: normalizeEmotionalHistory(this.state.emotionalHistory, this.state.createdAt),
       at: observation.timestamp,
     })
-    const localPerturbed = perturbEmotionsFromObservation({
-      vector: decayed.vector,
-      history: decayed.history,
-      observation,
-      identity: this.state.identity,
-      createId: this.createId,
-      at: observation.timestamp,
-    })
+    const localPerturbed = observation.source.startsWith('internal:')
+      ? perturbEmotionsFromObservation({
+          vector: decayed.vector,
+          history: decayed.history,
+          observation,
+          identity: this.state.identity,
+          createId: this.createId,
+          at: observation.timestamp,
+        })
+      : {
+          vector: decayed.vector,
+          history: decayed.history,
+          events: [],
+        }
     const reflexOutcome = localPerturbed.events.length > 0
       ? {
           group: localPerturbed.events[0].cause,
@@ -3256,6 +3272,10 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
   private async updateEmotionalStateForObservationAsync(
     observation: Nan0Observation,
     options?: Nan0PrepareTurnOptions,
+    context?: {
+      ownership?: Nan0ActorOwnership
+      retrievedMemoryContext?: string | Nan0EpistemicGroundingContext | null
+    },
   ): Promise<{
     emotionalEvents: Nan0EmotionalEvent[]
     reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
@@ -3276,10 +3296,75 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
     let reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null = null
     let answers: Record<string, { choice: string, confidence?: number, probabilities?: Record<string, number> }> | undefined
 
+    // Assemble rich context state for System 1
+    const recentHistory: Array<{ speaker: string, text: string }> = []
+    const byMemory = new Map(this.state.memories.map(m => [m.id, m]))
+    for (const turn of this.state.turns.slice(-4)) {
+      if (turn.inputContentReference) {
+        const mem = byMemory.get(turn.inputContentReference)
+        if (mem?.content) {
+          recentHistory.push({ speaker: turn.inputActorId || 'user', text: mem.content })
+        }
+      }
+      if (turn.outputContentReference) {
+        const mem = byMemory.get(turn.outputContentReference)
+        if (mem?.content) {
+          recentHistory.push({ speaker: turn.outputActorId || 'assistant', text: mem.content })
+        }
+      }
+    }
+
+    const evidenceStrings: string[] = []
+    const retrieved = context?.retrievedMemoryContext
+    if (typeof retrieved === 'string' && retrieved.trim()) {
+      evidenceStrings.push(retrieved.trim())
+    }
+    else if (typeof retrieved === 'object' && retrieved) {
+      if (retrieved.facts) {
+        for (const fact of retrieved.facts) {
+          evidenceStrings.push(`[${fact.source}] ${fact.content}${fact.relevance !== undefined ? ` (relevance: ${fact.relevance})` : ''}`)
+        }
+      }
+      if (retrieved.journalEntries) {
+        for (const entry of retrieved.journalEntries) {
+          evidenceStrings.push(`[journal] ${entry.title ? `${entry.title}: ` : ''}${entry.content}`)
+        }
+      }
+      if (retrieved.stmmRecaps) {
+        for (const recap of retrieved.stmmRecaps) {
+          evidenceStrings.push(`[stmm] ${recap.summary}`)
+        }
+      }
+    }
+
+    const activeCommitments: string[] = normalizeTemporalTrackingState(this.state.temporal.engine.lived).trackedPromises.filter(p => p.status === 'active').map(p => `Promise #${p.promiseId}: "${p.description}" (due: ${new Date(p.dueAt).toISOString()})`)
+
+    const activeGrievances: string[] = Object.values(this.state.relationships.records)
+      .flatMap(r => r.activeGrievances || [])
+      .filter(g => g.status === 'active' || g.status === 'nurtured')
+      .map(g => `Grievance #${g.grievanceId}: "${g.description}" (severity: ${g.severity})`)
+
+    const speaker = context?.ownership && isOwnerActor(context.ownership.actorId, this.state.identity)
+      ? (this.state.identity.actors[this.state.identity.ownerId ?? 'kyo']?.displayName || 'kyo')
+      : (context?.ownership?.actorId || observation.actorId || 'user')
+
+    const turnState: Nan0SystemOneTurnState = {
+      target_turn: { speaker, text },
+      recent_history: recentHistory.slice(-4),
+      retrieved_evidence: evidenceStrings,
+      active_commitments: activeCommitments,
+      active_grievances: activeGrievances,
+    }
+
+    const systemOnePayload = Object.assign(turnState, {
+      toPromptString: () => formatSystemOnePromptState(turnState),
+      toString: () => formatSystemOnePromptState(turnState),
+    })
+
     try {
       const timeoutMs = options?.jevTimeoutMs ?? 1500
       const jevPromise = this.dependencies.systemOneProvider!(
-        text,
+        systemOnePayload,
         NAN0_JEV_12_GROUP_QUESTIONS,
         this.dependencies.jevModel,
       )
@@ -3318,26 +3403,17 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
       }
     }
     catch (error) {
-      this.diagnostic('system_one.jev.fallback', {
+      this.diagnostic('system_one.jev.fallback_abstention', {
         reason: error instanceof Error ? error.message : String(error),
         observationId: observation.id,
       })
-      const localPerturbed = perturbEmotionsFromObservation({
+      // Safe abstention on provider failure/timeout: retain decay, apply NO regex perturbation deltas
+      perturbed = {
         vector: decayed.vector,
         history: decayed.history,
-        observation,
-        identity: this.state.identity,
-        createId: this.createId,
-        at: observation.timestamp,
-      })
-      perturbed = localPerturbed
-      reflexOutcome = localPerturbed.events.length > 0
-        ? {
-            group: localPerturbed.events[0].cause,
-            choice: localPerturbed.events[0].targetEmotion,
-            source: 'local_reflex',
-          }
-        : null
+        events: [],
+      }
+      reflexOutcome = null
     }
 
     const applied = this.applyPerturbedEmotions(observation, decayed, perturbed, reflexOutcome)

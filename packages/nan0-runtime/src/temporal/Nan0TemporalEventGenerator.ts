@@ -257,23 +257,25 @@ export function computeLivedDuration(input: {
 function explicitReturnPromise(text: string, at: number): { description: string, dueAt: number } | null {
   const matched = text.match(/\b(?:in\s+)?(\d{1,4})\s*(seconds?|minutes?|hours?|[smh])\b/i)
     || text.match(/\b(?:an?|half\s+an?)\s*(hour|minute)s?\b/i)
+  if (!matched)
+    return null
+
   let durationMs = 15 * 60_000
-  if (matched) {
-    if (/half\s+an?\s*hour/i.test(matched[0])) {
-      durationMs = 30 * 60_000
-    }
-    else if (/an?\s*hour/i.test(matched[0])) {
-      durationMs = 60 * 60_000
-    }
-    else if (matched[1] && matched[2]) {
-      const amount = Number(matched[1])
-      const unit = matched[2].toLowerCase()
-      const unitMs = unit.startsWith('s') ? 1_000 : unit.startsWith('m') ? 60_000 : 3_600_000
-      durationMs = amount * unitMs
-    }
+  if (/half\s+an?\s*hour/i.test(matched[0])) {
+    durationMs = 30 * 60_000
   }
+  else if (/an?\s*hour/i.test(matched[0])) {
+    durationMs = 60 * 60_000
+  }
+  else if (matched[1] && matched[2]) {
+    const amount = Number(matched[1])
+    const unit = matched[2].toLowerCase()
+    const unitMs = unit.startsWith('s') ? 1_000 : unit.startsWith('m') ? 60_000 : 3_600_000
+    durationMs = amount * unitMs
+  }
+
   if (!Number.isFinite(durationMs) || durationMs < 5_000 || durationMs > 7 * DAY_MS)
-    durationMs = 15 * 60_000
+    return null
   return { description: bounded(text, 200), dueAt: at + durationMs }
 }
 
@@ -426,8 +428,16 @@ export function recordLivedTemporalObservation(input: {
   }
 
   lived = normalizeTemporalTrackingState(engine.lived)
+  const isAbsenceReturn = Boolean(input.previousKyoInteractionAt && at - input.previousKyoInteractionAt >= 30_000)
+  const hasTaskEvidence = Boolean(
+    input.observation.metadata?.taskCompletion
+    || (input.observation.metadata?.trustedObservations as any[])?.some((obs: any) => obs.status === 'completed' && obs.matchesRecordedCommitment !== false),
+  )
+
   const promises = lived.trackedPromises.map((promise) => {
     if (promise.status !== 'active' || at <= promise.madeAt)
+      return promise
+    if (!isAbsenceReturn && !hasTaskEvidence)
       return promise
     const fulfilled = { ...promise, status: 'fulfilled' as const, fulfilledAt: at }
     const evidenceKey = `promise-kept:${promise.promiseId}`

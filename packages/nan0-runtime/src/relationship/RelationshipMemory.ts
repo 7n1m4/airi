@@ -451,13 +451,20 @@ async function applyGrievanceAsync(
       )
 
       // If Jev determines this is merely conversational filler, suppress grievance formation
-      if (jevRes.answers?.grievance_salience?.choice === 'conversational_filler') {
+      if (jevRes.answers?.grievance_salience?.choice === 'conversational_filler'
+        || jevRes.answers?.grievance_salience?.choice === 'none') {
         return record.activeGrievances
       }
 
-      // If Jev classifies as recurrence of an active grievance, reinforce it semantically
+      // If Jev classifies as recurrence of an active grievance, reinforce the matched one
       if (jevRes.answers?.grievance_recurrence?.choice === 'recurrence_reinforced') {
-        const activeOne = record.activeGrievances.find(g => g.status === 'active' || g.status === 'nurtured')
+        const matchedId = jevRes.answers?.matched_grievance_id?.choice
+        const activeOne = matchedId && matchedId !== 'none'
+          ? record.activeGrievances.find(g => g.grievanceId === matchedId)
+          : (record.activeGrievances.length === 1
+              ? record.activeGrievances[0]
+              : record.activeGrievances.find(g => input.description.toLowerCase().includes(g.description.toLowerCase()))
+                ?? record.activeGrievances.find(g => g.status === 'active' || g.status === 'nurtured'))
         if (activeOne) {
           return record.activeGrievances.map(grievance => grievance.grievanceId === activeOne.grievanceId
             ? {
@@ -471,7 +478,8 @@ async function applyGrievanceAsync(
       }
     }
     catch {
-      // Graceful fallback to regex floor
+      // Safe abstention on Jev failure: do not fabricate grievance deltas
+      return record.activeGrievances
     }
   }
 
@@ -653,6 +661,13 @@ export async function applyRelationshipEvidenceAsync(
 export function inferRelationshipEvidence(
   text: string,
   systemOneAnswers?: import('../types').Nan0JevSystemOneAnswers,
+  verification?: {
+    hasVerifiedTaskCompletion?: boolean
+    trustedObservations?: Array<{
+      status: 'completed' | 'in_progress' | 'failed'
+      matchesRecordedCommitment?: boolean
+    }>
+  },
 ): Pick<Nan0RelationshipEvidenceInput, 'eventType' | 'intensity' | 'rule'> {
   if (systemOneAnswers) {
     if (systemOneAnswers.persistence_threat?.choice === 'companion_erasure_threat') {
@@ -674,7 +689,14 @@ export function inferRelationshipEvidence(
       return { eventType: 'positive', intensity: 0.50, rule: 'system_one_jev.personal_apology' }
     }
     if (systemOneAnswers.completed_repair?.choice === 'claimed_task_completion') {
-      return { eventType: 'positive', intensity: 0.50, rule: 'system_one_jev.completed_repair' }
+      const isVerified = Boolean(
+        verification?.hasVerifiedTaskCompletion
+        || verification?.trustedObservations?.some(obs => obs.status === 'completed' && obs.matchesRecordedCommitment !== false),
+      )
+      if (isVerified) {
+        return { eventType: 'positive', intensity: 0.50, rule: 'system_one_jev.completed_repair' }
+      }
+      return { eventType: 'neutral', intensity: 0.15, rule: 'system_one_jev.unverified_claimed_completion' }
     }
   }
 

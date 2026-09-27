@@ -15,6 +15,7 @@ import type { CoreMood, MoodState } from '../../types/mood'
 
 import {
   deriveMood,
+  formatSystemOnePromptState,
   InMemoryStateStore,
   LocalStorageStateStore,
   Nan0Kernel,
@@ -369,7 +370,13 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
       if (!systemOneStore.configured) {
         throw new Error('System 1 provider is not configured')
       }
-      const stateStr = typeof state === 'string' ? state : JSON.stringify(state)
+      const stateStr = typeof state === 'string'
+        ? state
+        : typeof (state as any)?.toPromptString === 'function'
+          ? (state as any).toPromptString()
+          : (state && typeof state === 'object' && 'target_turn' in state)
+              ? formatSystemOnePromptState(state as any)
+              : JSON.stringify(state)
       const res = await systemOneStore.execute(stateStr, questions, model)
       const normalizedAnswers: Record<string, { choice: string, confidence?: number, probabilities?: Record<string, number> }> = {}
       for (const [k, ans] of Object.entries(res.answers || {})) {
@@ -456,7 +463,7 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
       systemOneProvider,
       jevModel: systemOneStore.activeModel || undefined,
       telemetrySink: (record) => {
-        const proposal = record.outcomes?.needleProposal || record.outcomes?.lexicalProposal
+        const proposal = record.outcomes?.needleProposal
         const group = proposal?.evidence?.[0]?.group
         if (group && group !== 'none') {
           const meta = REFLEX_META[group] ?? {

@@ -117,13 +117,13 @@ describe('nan0Kernel inline System 1 Jev execution', () => {
 
     const prepared = await kernel.prepareTurn(observation)
 
-    // Falls back to local regex without throwing
+    // Safely abstains on timeout without throwing or applying regex fallback
     expect(prepared).toBeDefined()
     expect(prepared.thought).toBeDefined()
-    expect(prepared.reflexOutcome?.source).toBe('local_reflex')
+    expect(prepared.reflexOutcome).toBeNull()
   })
 
-  it('falls back gracefully to local perturbation when System 1 Jev throws an error', async () => {
+  it('safely abstains without regex perturbation when System 1 Jev throws an error', async () => {
     const failingJevProvider: Nan0SystemOneProvider = async () => {
       throw new Error('500 Service Unavailable from Decisions endpoint')
     }
@@ -144,7 +144,7 @@ describe('nan0Kernel inline System 1 Jev execution', () => {
     const prepared = await kernel.prepareTurn(observation)
 
     expect(prepared).toBeDefined()
-    expect(prepared.reflexOutcome?.source).toBe('local_reflex')
+    expect(prepared.reflexOutcome).toBeNull()
   })
 
   it('bypasses System 1 Jev when tier2JevChallengerEnabled is false', async () => {
@@ -169,6 +169,6 @@ describe('nan0Kernel inline System 1 Jev execution', () => {
 
     expect(mockJevProvider).not.toHaveBeenCalled()
     expect(prepared).toBeDefined()
-    expect(prepared.reflexOutcome?.source).toBe('local_reflex')
+    expect(prepared.reflexOutcome).toBeNull()
   })
 })

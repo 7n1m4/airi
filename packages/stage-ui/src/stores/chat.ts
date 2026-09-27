@@ -711,6 +711,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
       // --- Grounding Injection ---
       // If grounding/sensors or memory is enabled, we sync and inject context payloads as system messages.
       const groundingMessages: any[] = []
+      let retrievedSemanticMemories: any[] = []
 
       // 0. VLM Image Analysis (Forward Mode)
       // Injected unconditionally when a VLM forward hop produced a result — no toggle required.
@@ -784,6 +785,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
             ?? 0.25
           const filteredResults = results.filter(r => (r.score === undefined || r.score >= minScore))
           if (filteredResults && filteredResults.length > 0) {
+            retrievedSemanticMemories = filteredResults
             groundingMessages.push(formatSemanticMemoriesBlock(filteredResults))
             chatLog('Grounding Memory payload injected into inference step.')
           }
@@ -1445,9 +1447,23 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
                   },
                 }
 
+                const mappedFacts = retrievedSemanticMemories.map(res => ({
+                  source: (res as any).isKgClaim ? 'entity_ledger' as const : (res as any).kind === 'stmm_summary' ? 'stmm' as const : 'journal' as const,
+                  title: res.title,
+                  content: res.content,
+                  relevance: res.score,
+                  subject: (res as any).subject,
+                  predicate: (res as any).predicate,
+                  object: (res as any).object,
+                  date: res.createdAt ? new Date(res.createdAt).toISOString() : undefined,
+                }))
+
                 const prepared = await nan0Store.prepareTurn(
                   observation,
-                  { autonomous: false },
+                  {
+                    autonomous: false,
+                    retrievedMemoryContext: mappedFacts.length > 0 ? { facts: mappedFacts } : undefined,
+                  },
                   {
                     providerId: firstHopProviderId,
                     modelId: firstHopModelId,

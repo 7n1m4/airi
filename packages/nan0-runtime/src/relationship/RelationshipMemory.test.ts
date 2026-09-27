@@ -902,4 +902,27 @@ describe('relationshipMemory', () => {
     expect(kyoRecord.activeGrievances).toHaveLength(1)
     expect(kyoRecord.activeGrievances[0].predicate).toBe('grievance')
   })
+
+  it('does not award positive repair evidence for claimed_task_completion without verified task evidence (Fix F1)', () => {
+    const unverifiedEvidence = inferRelationshipEvidence(
+      'I fixed it.',
+      { completed_repair: { choice: 'claimed_task_completion', confidence: 0.99 } },
+    )
+    expect(unverifiedEvidence).toEqual({
+      eventType: 'neutral',
+      intensity: 0.15,
+      rule: 'system_one_jev.unverified_claimed_completion',
+    })
+
+    const verifiedEvidence = inferRelationshipEvidence(
+      'I fixed it.',
+      { completed_repair: { choice: 'claimed_task_completion', confidence: 0.99 } },
+      { hasVerifiedTaskCompletion: true },
+    )
+    expect(verifiedEvidence).toEqual({
+      eventType: 'positive',
+      intensity: 0.50,
+      rule: 'system_one_jev.completed_repair',
+    })
+  })
 })

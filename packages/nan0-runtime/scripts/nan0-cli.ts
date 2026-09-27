@@ -32,6 +32,7 @@ import * as readline from 'node:readline'
 
 import { Nan0Kernel } from '../src/kernel/Nan0Kernel'
 import { InMemoryStateStore } from '../src/persistence/InMemoryStateStore'
+import { formatSystemOnePromptState } from '../src/shadow/Nan0ShadowTypes'
 import { SystemNan0Clock } from '../src/temporal/Nan0Clock'
 import { NAN0_DEFAULT_THOUGHT_POLICY } from '../src/thought/Nan0ThoughtPolicy'
 
@@ -149,8 +150,11 @@ function createTypeSafeSystemOneProvider(options: {
     if (typeof state === 'string') {
       statePayload = state
     }
-    else if (state && typeof state === 'object' && 'target_turn' in state && (state as any).target_turn?.text) {
-      statePayload = (state as any).target_turn.text
+    else if (state && typeof state === 'object' && typeof (state as any).toPromptString === 'function') {
+      statePayload = (state as any).toPromptString()
+    }
+    else if (state && typeof state === 'object' && 'target_turn' in state) {
+      statePayload = formatSystemOnePromptState(state as any)
     }
     else {
       statePayload = JSON.stringify(state)

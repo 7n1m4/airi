@@ -305,12 +305,20 @@ function selectThread(
   const terms = continuityTopicLabels(text)
   const continuityChoice = systemOneAnswers?.thread_continuity_triage?.choice
 
-  // 1. Explicit topic shift: Jev recognized the user wants a new thread/topic
-  if (continuityChoice === 'explicit_topic_shift') {
+  // 1. Explicit topic shift or new topic: Jev recognized a new thread or new topic
+  if (continuityChoice === 'explicit_topic_shift' || continuityChoice === 'none_or_new_topic') {
     return undefined
   }
 
-  // 2. Resumed topic: Jev recognized the user is referencing or resuming an earlier thread
+  // 2. Continuation or anaphoric follow-up: prioritize active current thread
+  const currentId = state.activeThreadByActorId[actorId]
+  const current = currentId ? candidates.find(thread => thread.threadId === currentId) : undefined
+  if (continuityChoice === 'continuation_or_followup') {
+    if (current)
+      return current
+  }
+
+  // 3. Resumed topic: Jev recognized the user is referencing or resuming an earlier thread
   if (continuityChoice === 'resumed_topic') {
     const scored = candidates
       .map(thread => ({ thread, score: overlapScore(thread.topicLabels, terms) }))
@@ -328,31 +336,31 @@ function selectThread(
       return dormant
   }
 
-  // 3. Topic label match (semantic keywords from turn text against existing threads)
-  const scored = candidates
-    .map(thread => ({ thread, score: overlapScore(thread.topicLabels, terms) }))
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score
-      || b.thread.activation - a.thread.activation
-      || b.thread.lastActiveAt - a.thread.lastActiveAt)
-
-  if (scored[0])
-    return scored[0].thread
-
-  // 4. Continuation or anaphoric follow-up
-  const currentId = state.activeThreadByActorId[actorId]
-  const current = currentId ? candidates.find(thread => thread.threadId === currentId) : undefined
-  if (current) {
-    if (continuityChoice === 'continuation_or_followup' || !terms.length) {
-      return current
-    }
-  }
-
-  // 5. Greeting or check-in: return most recent candidate thread within greeting window
+  // 4. Greeting or check-in: return most recent candidate thread within greeting window
   if (continuityChoice === 'greeting_or_checkin') {
     return candidates
       .filter(thread => at - thread.lastActiveAt <= CONTINUITY_GREETING_RESUME_WINDOW_MS)
       .sort((a, b) => b.lastActiveAt - a.lastActiveAt)[0]
+  }
+
+  // 5. Fallback for unclassified / offline paths
+  if (current && !terms.length) {
+    return current
+  }
+
+  if (!continuityChoice) {
+    const scored = candidates
+      .map(thread => ({ thread, score: overlapScore(thread.topicLabels, terms) }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score
+        || b.thread.activation - a.thread.activation
+        || b.thread.lastActiveAt - a.thread.lastActiveAt)
+
+    if (scored[0])
+      return scored[0].thread
+
+    if (current)
+      return current
   }
 
   return undefined

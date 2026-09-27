@@ -177,3 +177,41 @@ export interface Nan0ShadowTelemetryRecord {
     samplingProbability: number
   }
 }
+
+export interface Nan0SystemOneTurnState {
+  target_turn: {
+    speaker: string
+    text: string
+  }
+  recent_history?: Array<{
+    speaker: string
+    text: string
+  }>
+  retrieved_evidence?: string[]
+  active_commitments?: string[]
+  active_grievances?: string[]
+}
+
+export function formatSystemOnePromptState(state: Nan0SystemOneTurnState): string {
+  const sections: string[] = []
+
+  if (state.retrieved_evidence && state.retrieved_evidence.length > 0) {
+    sections.push(`[RETRIEVED EVIDENCE / MEMORY]:\n${state.retrieved_evidence.join('\n')}`)
+  }
+
+  if (state.active_commitments && state.active_commitments.length > 0) {
+    sections.push(`[ACTIVE COMMITMENTS]:\n${state.active_commitments.join('\n')}`)
+  }
+
+  if (state.active_grievances && state.active_grievances.length > 0) {
+    sections.push(`[ACTIVE GRIEVANCES]:\n${state.active_grievances.join('\n')}`)
+  }
+
+  if (state.recent_history && state.recent_history.length > 0) {
+    sections.push(`[RECENT DIALOGUE HISTORY]:\n${state.recent_history.map(h => `${h.speaker}: "${h.text}"`).join('\n')}`)
+  }
+
+  sections.push(`[TARGET UTTERANCE TO CLASSIFY]:\n${state.target_turn.speaker}: "${state.target_turn.text}"`)
+
+  return sections.join('\n\n')
+}

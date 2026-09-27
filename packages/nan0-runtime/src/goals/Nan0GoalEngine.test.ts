@@ -86,4 +86,53 @@ describe('nan0GoalEngine', () => {
     const result = updateGoalProgressFromObservation({ goals: [goal], observation: { id: 'evidence', source: 'chat', actorId: 'kyo', content: 'hidden anomaly evidence investigated', metadata: {}, timestamp: 1 }, at: 1 })
     expect(result.progressed[0]).toMatchObject({ status: 'completed', progress: 1 })
   })
+
+  it('does not advance or complete a goal when the statement contains negation (Fix F6)', () => {
+    const goal = withGoalMetabolism({
+      schemaVersion: 3,
+      goalId: 'goal-negation',
+      createdAt: 0,
+      updatedAt: 0,
+      origin: 'self-generated',
+      originActorId: 'nan0',
+      status: 'active',
+      kind: 'curiosity',
+      title: 'Investigate hidden anomaly',
+      description: 'Investigate hidden anomaly evidence',
+      motivation: 'curiosity',
+      priority: 0.5,
+      importance: 0.5,
+      confidence: 0.8,
+      urgency: 0.5,
+      activation: 1,
+      progress: 0.99,
+      parentGoalId: null,
+      conflictingGoalIds: [],
+      supportingThoughtIds: [],
+      supportingDecisionIds: [],
+      supportingTurnIds: [],
+      continuityThreadIds: [],
+      relationshipIds: [],
+      constitutionalReferences: [],
+      completionCriteria: [],
+      blockedReason: null,
+      deferredUntil: null,
+      metadata: {},
+    }, { lastProgressAt: 0 })
+    const result = updateGoalProgressFromObservation({
+      goals: [goal],
+      observation: {
+        id: 'evidence-negated',
+        source: 'chat',
+        actorId: 'kyo',
+        content: 'I have NOT investigated the hidden anomaly; no evidence or progress',
+        metadata: {},
+        timestamp: 1,
+      },
+      at: 1,
+    })
+    expect(result.progressed).toHaveLength(0)
+    expect(result.goals[0].status).toBe('active')
+    expect(result.goals[0].progress).toBe(0.99)
+  })
 })
