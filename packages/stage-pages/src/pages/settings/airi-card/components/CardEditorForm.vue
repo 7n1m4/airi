@@ -44,7 +44,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   (e: 'save', card: Card): void
   (e: 'cancel'): void
-  (e: 'studio', cardId: string): void
+  (e: 'review', cardId: string): void
 }>()
 const FieldAiGeneratorModal = defineAsyncComponent(() => import('./FieldAiGeneratorModal.vue'))
 const ImageTagExtractorModal = defineAsyncComponent(() => import('./ImageTagExtractorModal.vue'))
@@ -58,6 +58,7 @@ const tabLoaders: Record<string, () => Promise<any>> = {
   artistry: () => import('./tabs/CardCreationTabArtistry.vue'),
   proactivity: () => import('./tabs/CardCreationTabProactivity.vue'),
   tools: () => import('./tabs/CardCreationTabTools.vue'),
+  staging: () => import('./tabs/ProductionStudioTab.vue'),
 }
 
 const CardCreationTabIdentity = defineAsyncComponent({
@@ -97,6 +98,11 @@ const CardCreationTabProactivity = defineAsyncComponent({
 })
 const CardCreationTabTools = defineAsyncComponent({
   loader: tabLoaders.tools,
+  loadingComponent: TabLoadingPlaceholder,
+  delay: 0,
+})
+const CardCreationTabStaging = defineAsyncComponent({
+  loader: tabLoaders.staging,
   loadingComponent: TabLoadingPlaceholder,
   delay: 0,
 })
@@ -884,6 +890,7 @@ const tabs: Tab[] = [
   { id: 'proactivity', label: t('settings.pages.card.creation.proactivity', 'Proactivity'), icon: 'i-solar:heart-pulse-bold-duotone' },
   { id: 'tools', label: 'Tools', icon: 'i-solar:widget-bold-duotone' },
   { id: 'cognition', label: 'Cognition', icon: 'i-solar:cpu-bolt-bold-duotone' },
+  { id: 'staging', label: 'Staging', icon: 'i-solar:clapperboard-play-bold-duotone' },
 ]
 
 // Active tab state - set to first available tab by default
@@ -1748,9 +1755,9 @@ function handleGeneratorSave(newValue: string) {
         <Button
           v-if="isEditMode && props.cardId"
           variant="secondary"
-          icon="i-solar:clapperboard-play-bold-duotone"
-          label="Studio"
-          @click="emit('studio', props.cardId)"
+          icon="i-solar:eye-bold-duotone"
+          label="Review"
+          @click="emit('review', props.cardId)"
         />
         <Button
           variant="secondary"
@@ -1781,9 +1788,9 @@ function handleGeneratorSave(newValue: string) {
         <Button
           v-if="isEditMode && props.cardId"
           variant="secondary"
-          icon="i-solar:clapperboard-play-bold-duotone"
-          label="Studio"
-          @click="emit('studio', props.cardId)"
+          icon="i-solar:eye-bold-duotone"
+          label="Review"
+          @click="emit('review', props.cardId)"
         />
         <Button
           variant="ghost"
@@ -1936,7 +1943,7 @@ function handleGeneratorSave(newValue: string) {
         :consciousness-provider-active="Boolean(consciousnessProvider)"
         :speech-provider-active="Boolean(speechProvider)"
         :has-visual-assets="Object.keys(visualAssets).length > 0"
-        @studio="emit('studio', props.cardId || '')"
+        @staging="activeTab = 'staging'"
       />
       <CardCreationTabCognition
         v-else-if="activeTab === 'cognition'"
@@ -2065,6 +2072,11 @@ function handleGeneratorSave(newValue: string) {
         v-model:selected-journal-intrusion-prompt="selectedJournalIntrusionPrompt"
         v-model:selected-artistry-intrusion-prompt="selectedArtistryIntrusionPrompt"
         :dream-state-enabled="dreamStateEnabled"
+      />
+      <CardCreationTabStaging
+        v-else-if="activeTab === 'staging'"
+        :card-id="props.cardId || ''"
+        :card="card"
       />
       <div class="mt-4 flex flex-row justify-end gap-2">
         <Button

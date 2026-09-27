@@ -32,10 +32,10 @@ function handleSave() {
   }
 }
 
-function handleStudio(targetCardId: string) {
+function handleReview(targetCardId: string) {
   router.push({
     path: '/settings/airi-card',
-    query: { cardId: targetCardId, tab: 'studio' },
+    query: { cardId: targetCardId },
   })
 }
 </script>
@@ -48,7 +48,7 @@ function handleStudio(targetCardId: string) {
       mode="page"
       @cancel="handleCancel"
       @save="handleSave"
-      @studio="handleStudio"
+      @review="handleReview"
     />
   </div>
 </template>

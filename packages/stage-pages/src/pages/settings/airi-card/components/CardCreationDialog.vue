@@ -18,6 +18,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
+  (e: 'review', cardId: string): void
   (e: 'studio', cardId: string): void
 }>()
 
@@ -35,7 +36,7 @@ const modelValue = defineModel<boolean>()
           mode="dialog"
           @cancel="modelValue = false"
           @save="modelValue = false"
-          @studio="id => emit('studio', id)"
+          @review="id => emit('review', id)"
         />
       </DialogContent>
     </DialogPortal>

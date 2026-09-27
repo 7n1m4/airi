@@ -31,7 +31,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'studio'): void
+  (e: 'staging'): void
 }>()
 const selectedConsciousnessProvider = defineModel<string>('selectedConsciousnessProvider', { required: true })
 const selectedConsciousnessModel = defineModel<string>('selectedConsciousnessModel', { required: true })
@@ -145,16 +145,16 @@ function handleSaveVoice(payload: { baseProvider: string, baseModel: string, bas
         <div class="flex items-start gap-2">
           <div class="i-solar:info-circle-bold-duotone mt-0.5 shrink-0 text-base text-amber-600 dark:text-amber-400" />
           <p>
-            This card contains Studio actor concepts (<code class="rounded bg-amber-500/20 px-1 py-0.5 text-[11px] font-mono">visual_assets</code>), so voices are managed dynamically per actor rather than globally. This field serves as a base display / fallback value. To configure an actor's voice, open <strong>Studio</strong>, click the <strong>Edit</strong> button on the target actor in the <strong>Concept Registry</strong>, switch to the <strong>Speech</strong> tab, and assign their voice there.
+            This card contains Staging actor concepts (<code class="rounded bg-amber-500/20 px-1 py-0.5 text-[11px] font-mono">visual_assets</code>), so voices are managed dynamically per actor rather than globally. This field serves as a base display / fallback value. To configure an actor's voice, open <strong>Staging</strong>, click the <strong>Edit</strong> button on the target actor in the <strong>Concept Registry</strong>, switch to the <strong>Speech</strong> tab, and assign their voice there.
           </p>
         </div>
         <button
           type="button"
           class="ml-6 inline-flex items-center self-start gap-1.5 text-[11px] text-amber-700 font-bold dark:text-amber-300 hover:underline"
-          @click="emit('studio')"
+          @click="emit('staging')"
         >
           <div class="i-solar:clapperboard-play-bold-duotone text-xs" />
-          <span>Configure actor voices in Studio &rarr;</span>
+          <span>Configure actor voices in Staging &rarr;</span>
         </button>
       </div>
 

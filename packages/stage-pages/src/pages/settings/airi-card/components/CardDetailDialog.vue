@@ -145,19 +145,19 @@ interface Tab {
   icon: string
 }
 // Active tab ID state
-const activeTabId = ref(props.initialTab || '')
+const activeTabId = ref(props.initialTab === 'studio' ? 'staging' : (props.initialTab || ''))
 
 // Watch for initialTab changes to reset the tab when opening from a deep-link
 watch(() => props.initialTab, (newTab) => {
   if (newTab) {
-    activeTabId.value = newTab
+    activeTabId.value = newTab === 'studio' ? 'staging' : newTab
   }
 })
 
 // Watch for dialog open to apply initialTab
 watch(() => props.modelValue, (isOpen) => {
   if (isOpen && props.initialTab) {
-    activeTabId.value = props.initialTab
+    activeTabId.value = props.initialTab === 'studio' ? 'staging' : props.initialTab
   }
 })
 
@@ -206,11 +206,11 @@ const tabs = computed<Tab[]>(() => {
     icon: 'i-solar:gallery-linear',
   })
 
-  // Studio tab - always show
+  // Staging tab - always show
   availableTabs.push({
-    id: 'studio',
-    label: 'Studio',
-    icon: 'i-solar:magic-stick-3-linear',
+    id: 'staging',
+    label: 'Staging',
+    icon: 'i-solar:clapperboard-play-linear',
   })
 
   return availableTabs
@@ -256,10 +256,6 @@ function getModuleDisplayValue(value: string | undefined, defaultValue: string |
                   <DialogTitle text-2xl font-normal class="from-primary-500 to-primary-400 bg-gradient-to-r bg-clip-text text-transparent">
                     {{ selectedCard.name }}
                   </DialogTitle>
-                  <div v-if="isActive" class="flex items-center gap-1 rounded-full bg-primary-100 px-2 py-0.5 text-xs text-primary-600 font-medium dark:bg-primary-900/40 dark:text-primary-400">
-                    <div i-solar:check-circle-bold-duotone text-xs />
-                    {{ t('settings.pages.card.active_badge') }}
-                  </div>
                 </div>
                 <div mt-1 text-sm text-neutral-500 dark:text-neutral-400>
                   v{{ selectedCard.version }}
@@ -515,8 +511,8 @@ function getModuleDisplayValue(value: string | undefined, defaultValue: string |
               <StageBackgroundPicker :card-id="cardId" />
             </div>
 
-            <!-- Studio -->
-            <div v-if="activeTab === 'studio' && selectedCard">
+            <!-- Staging -->
+            <div v-if="(activeTab === 'staging' || activeTab === 'studio') && selectedCard">
               <ProductionStudioTab :card-id="cardId" :card="selectedCard" />
             </div>
           </div>
