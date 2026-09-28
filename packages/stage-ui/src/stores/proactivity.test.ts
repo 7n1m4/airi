@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import {
   checkIsPipeBusy,
+  evaluateHeartbeatGating,
   formatProactiveTailEnvelope,
   formatSensorPayload,
   isNoReplySentinel,
@@ -201,6 +202,107 @@ describe('proactivity telemetry, busy-pipe gating & prompt framing', () => {
       expect(result).toContain(
         '[FOCUS DIRECTIVE]\nReview situational context. Comment on user progress if natural, or output NO_REPLY to remain silent.',
       )
+    })
+  })
+
+  describe('evaluateHeartbeatGating (Active-User Timer vs AFK Safeguard)', () => {
+    const baseNow = 1700000000000
+
+    it('allows heartbeat when user is actively using PC (idle = 0s) and timer interval has elapsed', () => {
+      const result = evaluateHeartbeatGating({
+        now: baseNow,
+        lastHeartbeatTime: baseNow - (15 * 60 * 1000 + 1000), // 15m 1s ago
+        intervalMinutes: 15,
+        pauseWhenAfk: true,
+        afkThresholdMinutes: 5,
+        currentIdleSec: 0, // Actively typing/moving mouse!
+      })
+
+      expect(result.allowed).toBe(true)
+    })
+
+    it('blocks heartbeat when user is actively using PC but timer interval has not yet elapsed', () => {
+      const result = evaluateHeartbeatGating({
+        now: baseNow,
+        lastHeartbeatTime: baseNow - (5 * 60 * 1000), // only 5m elapsed
+        intervalMinutes: 15,
+        pauseWhenAfk: true,
+        afkThresholdMinutes: 5,
+        currentIdleSec: 0,
+      })
+
+      expect(result.allowed).toBe(false)
+      if (!result.allowed) {
+        expect(result.reason).toBe('interval_pending')
+        expect(result.detail).toContain('Next evaluation due in 10m 0s')
+      }
+    })
+
+    it('blocks heartbeat when user has walked away / AFK (idle >= afkThresholdMinutes)', () => {
+      const result = evaluateHeartbeatGating({
+        now: baseNow,
+        lastHeartbeatTime: baseNow - (20 * 60 * 1000), // interval elapsed
+        intervalMinutes: 15,
+        pauseWhenAfk: true,
+        afkThresholdMinutes: 5,
+        currentIdleSec: 360, // 6 minutes idle (user walked away from desk)
+      })
+
+      expect(result.allowed).toBe(false)
+      if (!result.allowed) {
+        expect(result.reason).toBe('user_afk')
+        expect(result.detail).toContain('User is away / AFK')
+      }
+    })
+
+    it('cRITICAL INVARIANT: does NOT require the user to be idle to fire (prevents the inverted deadlock bug)', () => {
+      // Historical failure mode: previous buggy logic required currentIdleSec >= intervalMinutes * 60,
+      // which meant an active user could never get heartbeats, and if interval > afkThreshold, it deadlocked.
+      const result = evaluateHeartbeatGating({
+        now: baseNow,
+        lastHeartbeatTime: baseNow - (20 * 60 * 1000),
+        intervalMinutes: 20,
+        pauseWhenAfk: true,
+        afkThresholdMinutes: 5,
+        currentIdleSec: 15, // user is at their desk, briefly paused 15s
+      })
+
+      expect(result.allowed).toBe(true)
+    })
+
+    it('respects operating schedule and blocks when outside schedule hours', () => {
+      const checkScheduleMock = vi.fn().mockReturnValue(false)
+      const result = evaluateHeartbeatGating(
+        {
+          now: baseNow,
+          lastHeartbeatTime: baseNow - (30 * 60 * 1000),
+          intervalMinutes: 15,
+          respectSchedule: true,
+          schedule: { start: '09:00', end: '22:00' },
+          currentIdleSec: 0,
+        },
+        checkScheduleMock,
+      )
+
+      expect(checkScheduleMock).toHaveBeenCalledWith('09:00', '22:00')
+      expect(result.allowed).toBe(false)
+      if (!result.allowed) {
+        expect(result.reason).toBe('outside_schedule')
+      }
+    })
+
+    it('allows forced heartbeat even if interval is pending or user is AFK', () => {
+      const result = evaluateHeartbeatGating({
+        now: baseNow,
+        lastHeartbeatTime: baseNow, // 0s elapsed
+        intervalMinutes: 60,
+        pauseWhenAfk: true,
+        afkThresholdMinutes: 5,
+        currentIdleSec: 9999, // very AFK
+        isForce: true,
+      })
+
+      expect(result.allowed).toBe(true)
     })
   })
 })

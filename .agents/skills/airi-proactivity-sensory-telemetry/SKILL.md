@@ -57,9 +57,11 @@ the user is appropriate before any TTS/LLM output is produced.
   refs exist in `proactivity.ts`; "attention ecology" gating here is heuristic (AFK
   threshold, schedule window, idle-stretch dedup via `firedForIdleSession`, line 75) plus
   history-derived usage metrics — not affective meters. Don't reference meters that don't exist.
-- **Idle-gated re-fire dedup.** "Interval" is reinterpreted as *required continuous idle
-  minutes* (lines 513-528): the heartbeat fires once per idle stretch and won't re-fire
-  until `idleTimeSec` drops back down (user returns) and the threshold is met again.
+- **CRITICAL INVARIANT: Heartbeats vs. Dream State Gating (DO NOT CONFLATE):**
+  - **Heartbeats (Active Desk Companion):** Heartbeats run on a wall-clock elapsed timer (`now - lastHeartbeatTime >= intervalMs`) to interact with a user who is **active at their desk** (e.g. co-working, gaming, coding).
+    - *Presence Gate (`pauseWhenAfk`)*: If the user has stepped away (`idleTimeSec >= afkThresholdMinutes`, default 5m), heartbeats **pause** so the companion does not talk to an empty room or burn tokens.
+    - *BANNED ANTI-PATTERN*: Never require the user to be idle/inactive to trigger a heartbeat. Requiring continuous idle time completely breaks the companion experience while using the PC and mathematically deadlocks with `pauseWhenAfk` whenever `intervalMinutes > afkThresholdMinutes`.
+  - **Dream State (Background Memory Consolidation):** The strict *inverse* of heartbeats. Dream State (`strictAfkGating`) runs **only** when the user IS away from the computer (`idleTimeSec >= afkThresholdMinutes`) during quiet hours/breaks. Never bleed this requirement into Heartbeats.
 - **Never fire during a session switch** — if session data hasn't resolved, the heartbeat
   defers ("Session switch in progress", line 496).
 - **`resolveRegisteredTools` is shared** with `LiveSessionStore` (uses the top-level

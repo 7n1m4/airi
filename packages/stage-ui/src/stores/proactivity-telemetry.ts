@@ -1,5 +1,97 @@
 import type { ActiveWindowEntry, SystemLoadAverages } from '@proj-airi/stage-shared'
 
+import {
+
+  isWithinSchedule,
+
+} from '@proj-airi/stage-shared'
+
+export interface HeartbeatGateInput {
+  now?: number
+  lastHeartbeatTime?: number
+  intervalMinutes?: number
+  pauseWhenAfk?: boolean
+  afkThresholdMinutes?: number
+  currentIdleSec?: number
+  isForce?: boolean
+  schedule?: {
+    start?: string
+    end?: string
+  }
+  respectSchedule?: boolean
+}
+
+export type HeartbeatGateResult
+  = | { allowed: true }
+    | { allowed: false, reason: 'outside_schedule' | 'user_afk' | 'interval_pending', detail?: string }
+
+/**
+ * Evaluates heuristic and presence gates for proactive heartbeats.
+ *
+ * CRITICAL ARCHITECTURAL INVARIANT:
+ * - Heartbeats are an active-user companion check-in. They run on a wall-clock elapsed timer.
+ * - Presence Gate (`pauseWhenAfk`): If the user is AFK (idle >= afkThresholdMinutes), heartbeats pause
+ *   so the AI does not talk to an empty desk or burn tokens.
+ * - Heartbeats must NEVER require user inactivity/idle time to fire. Inactivity gating belongs
+ *   strictly to background dream state consolidation (`strictAfkGating`).
+ */
+export function evaluateHeartbeatGating(
+  input: HeartbeatGateInput,
+  checkSchedule: (start: string, end: string) => boolean = isWithinSchedule,
+): HeartbeatGateResult {
+  if (input.isForce) {
+    return { allowed: true }
+  }
+
+  // 1. Operating Schedule Window
+  if (input.respectSchedule && input.schedule?.start && input.schedule?.end) {
+    const inWindow = checkSchedule(input.schedule.start, input.schedule.end)
+    if (!inWindow) {
+      return {
+        allowed: false,
+        reason: 'outside_schedule',
+        detail: `Outside operating window (${input.schedule.start} - ${input.schedule.end})`,
+      }
+    }
+  }
+
+  // 2. User Presence Safeguard (Pause when AFK)
+  const pauseWhenAfk = input.pauseWhenAfk ?? true
+  if (pauseWhenAfk) {
+    const afkThresholdMinutes = input.afkThresholdMinutes ?? 5
+    const afkThresholdSec = afkThresholdMinutes * 60
+    const currentIdleSec = input.currentIdleSec ?? 0
+
+    if (currentIdleSec >= afkThresholdSec) {
+      return {
+        allowed: false,
+        reason: 'user_afk',
+        detail: `User is away / AFK (${Math.floor(currentIdleSec / 60)}m ${currentIdleSec % 60}s idle, limit ${afkThresholdMinutes}m)`,
+      }
+    }
+  }
+
+  // 3. Wall-Clock Elapsed Timer
+  const now = input.now ?? Date.now()
+  const lastTime = input.lastHeartbeatTime ?? 0
+  const intervalMinutes = input.intervalMinutes || 1
+  const intervalMs = intervalMinutes * 60 * 1000
+  const timeSinceLast = now - lastTime
+  const timeLeftMs = Math.max(0, intervalMs - timeSinceLast)
+
+  if (timeLeftMs > 0) {
+    const mins = Math.floor(timeLeftMs / 60000)
+    const secs = Math.floor((timeLeftMs % 60000) / 1000)
+    return {
+      allowed: false,
+      reason: 'interval_pending',
+      detail: `Next evaluation due in ${mins}m ${secs}s (Interval: ${intervalMinutes}m)`,
+    }
+  }
+
+  return { allowed: true }
+}
+
 export interface PipeBusyState {
   sending?: boolean
   activeSpokenText?: string | null

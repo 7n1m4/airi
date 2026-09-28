@@ -612,7 +612,12 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 - **Enforcement & Guard**: `ensureKernel()` and `prepareTurn()` explicitly enforce `if (!isMainWindow()) throw/warn`. Secondary windows hydrate on mount/card change via `hydrateFromStorage()` and receive live streaming state over `BroadcastChannel('airi:nan0:state-sync')`.
 - **Regression Protection**: Tested under `packages/stage-ui/src/stores/modules/nan0.test.ts` ("strictly prohibits secondary windows from running prepareTurn or booting Nan0Kernel").
 
+### Proactive Heartbeats vs. Dream State Gating Invariants
 
+- **Heartbeats Are For Active Users**: Heartbeats represent an active desktop companion checking in periodically (`now - lastHeartbeatTime >= intervalMs`).
+- **Presence Gate (`pauseWhenAfk`)**: The only presence gate on heartbeats is to prevent speaking to an empty desk (`idleTimeSec >= afkThresholdMinutes`, default 5m). When the user is away, heartbeats pause to conserve tokens and avoid talking to an empty room.
+- **The Inverted Inactivity Antipattern (Deadlock)**: Never require the user to be inactive/idle (`idleTimeSec >= interval`) to trigger a heartbeat. Requiring continuous inactivity prevents the AI from speaking while the user is using the PC, and mathematically deadlocks with `pauseWhenAfk` whenever `intervalMinutes > afkThresholdMinutes`.
+- **Dream State Is The Strict Inverse**: Background memory consolidation (`dreamState`) strictly requires the user to BE away (`strictAfkGating: true`, `idleTimeSec >= afkThresholdMinutes`). Never conflate Dream State's idle requirement with Heartbeats. Pure gating logic is centralized in `evaluateHeartbeatGating` (`proactivity-telemetry.ts`) and tested under `packages/stage-ui/src/stores/proactivity.test.ts`.
 
 ---
 

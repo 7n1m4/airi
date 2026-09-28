@@ -5,7 +5,6 @@ import type { ChatStreamEventContext, StreamingAssistantMessage } from '../types
 import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import {
   debug,
-  isWithinSchedule,
   sensorsGetActiveWindow,
   sensorsGetActiveWindowHistory,
   sensorsGetIdleTime,
@@ -40,6 +39,7 @@ import { useLiveSessionStore } from './modules/live-session'
 import { useVisionStore } from './modules/vision'
 import {
   checkIsPipeBusy,
+  evaluateHeartbeatGating,
   formatProactiveTailEnvelope,
   formatSensorPayload,
   isNoReplySentinel,
@@ -96,9 +96,6 @@ export const useProactivityStore = defineStore('proactivity', () => {
   const isDreamStateEvaluating = ref(false)
   const isUpdatingSensors = ref(false)
   const isHeartbeatEvaluating = ref(false)
-  // Dedupes the local-activity-gated heartbeat to one send per continuous idle stretch.
-  // Cleared as soon as idleTimeSec drops back below the required threshold (user returned).
-  const firedForIdleSession = ref(false)
   let heartbeatInterval: any = null
 
   const isElectron = typeof window !== 'undefined' && !!(window as any).electron
@@ -571,65 +568,31 @@ export const useProactivityStore = defineStore('proactivity', () => {
 
       const now = new Date()
 
-      if (!options?.force && config?.respectSchedule && config?.schedule?.start && config?.schedule?.end) {
-        const isInWindow = isWithinSchedule(config!.schedule!.start, config!.schedule!.end)
-
-        if (!isInWindow) {
-          debug(`[Proactivity] Aborted: Outside schedule window (${config!.schedule!.start} - ${config!.schedule!.end}).`)
-          return
-        }
+      if (idleTimeSec.value === undefined && (config?.pauseWhenAfk ?? true)) {
+        await refreshIdleTimeOnly()
       }
 
-      // User Presence Safeguard: pause if user is away from computer (AFK)
-      const pauseWhenAfk = config?.pauseWhenAfk ?? true
-      if (pauseWhenAfk) {
-        if (idleTimeSec.value === undefined)
-          await refreshIdleTimeOnly()
+      // NOTICE: Architectural Invariant - Heartbeats are an active-user companion check-in.
+      // They fire every `intervalMinutes` (wall-clock elapsed timer) while the user is actively working at their desk.
+      // Presence Gate (`pauseWhenAfk`): If the user is away (idle >= afkThresholdMinutes, default 5m),
+      // heartbeats pause so the AI does not talk to an empty room or waste credits.
+      // Heartbeats must NEVER require user inactivity/idle time (which deadlocks with pauseWhenAfk).
+      // Background idle processing belongs strictly to Dream State (`strictAfkGating`).
+      const gateResult = evaluateHeartbeatGating({
+        now: now.getTime(),
+        lastHeartbeatTime: lastHeartbeatTime.value,
+        intervalMinutes: config?.intervalMinutes ?? 5,
+        pauseWhenAfk: config?.pauseWhenAfk ?? true,
+        afkThresholdMinutes: config?.afkThresholdMinutes ?? 5,
+        currentIdleSec: idleTimeSec.value ?? 0,
+        isForce: options?.force,
+        schedule: config?.schedule,
+        respectSchedule: config?.respectSchedule ?? true,
+      })
 
-        const afkThresholdMinutes = config?.afkThresholdMinutes ?? 5
-        const afkThresholdSec = afkThresholdMinutes * 60
-        const currentIdleSec = idleTimeSec.value ?? 0
-
-        if (!options?.force && currentIdleSec >= afkThresholdSec) {
-          debug(`[Proactivity] Aborted: User is away / AFK (${Math.floor(currentIdleSec / 60)}m ${currentIdleSec % 60}s idle, limit ${afkThresholdMinutes}m).`)
-          return
-        }
-      }
-
-      if (config?.useAsLocalGate) {
-        if (idleTimeSec.value === undefined)
-          await refreshIdleTimeOnly()
-
-        const requiredIdleSec = (config.intervalMinutes || 1) * 60
-        const currentIdleSec = idleTimeSec.value ?? 0
-
-        if (!options?.force && currentIdleSec < requiredIdleSec) {
-          firedForIdleSession.value = false
-          const remainingSec = requiredIdleSec - currentIdleSec
-
-          debug(`[Proactivity] Waiting for inactivity: ${Math.floor(remainingSec / 60)}m ${remainingSec % 60}s of continuous idle remaining (currently idle ${currentIdleSec}s, need ${config.intervalMinutes}m).`)
-          return
-        }
-
-        if (!options?.force && firedForIdleSession.value) {
-          debug('[Proactivity] Already sent a heartbeat for this idle session; waiting for the user to return before the next one.')
-          return
-        }
-
-        firedForIdleSession.value = true
-      }
-      else {
-        const intervalMs = (config?.intervalMinutes || 1) * 60 * 1000
-        const timeSinceLast = now.getTime() - lastHeartbeatTime.value
-        const timeLeftMs = Math.max(0, intervalMs - timeSinceLast)
-
-        if (!options?.force && timeLeftMs > 0) {
-          const mins = Math.floor(timeLeftMs / 60000)
-          const secs = Math.floor((timeLeftMs % 60000) / 1000)
-
-          debug(`[Proactivity] Next evaluation due in: ${mins}m ${secs}s (Interval: ${config?.intervalMinutes}m)`)
-          return
-        }
+      if (!gateResult.allowed) {
+        debug(`[Proactivity] Aborted: ${gateResult.detail || gateResult.reason}`)
+        return
       }
 
       if (config?.injectIntoPrompt) {
