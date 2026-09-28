@@ -198,7 +198,12 @@ export const useTextJournalStore = defineStore('text-journal', () => {
           console.error('[TextJournal:Index] Failed to load STMM for indexing:', err)
         }
 
-        // 3. Raw (Deduplicated entire corpus of all sessions)
+        // 3. Raw (Deduplicated recent corpus — bounded to protect WebGPU/swap).
+        // NOTICE: indexing the entire lifetime chat corpus forces hundreds of
+        // sequential bge-small-en ONNX embeddings and pins them in worker RAM.
+        // Cap to the most recent sessions/turns; older turns remain in IndexedDB.
+        const MAX_INDEX_SESSIONS = 8
+        const MAX_RAW_DOCS = 250
         const raw: any[] = []
         try {
           const index = await chatSessionsRepo.getIndex(userId)
@@ -206,13 +211,20 @@ export const useTextJournalStore = defineStore('text-journal', () => {
             const characterSessions = index.characters[cardId]
             const sessions = Object.values(characterSessions.sessions)
               .filter(s => (s.universeId || 'global') === currentUniverseId)
+              .sort((a: any, b: any) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))
+              .slice(0, MAX_INDEX_SESSIONS)
 
             const uniqueRaw = new Map<string, any>()
 
             for (const s of sessions) {
+              if (uniqueRaw.size >= MAX_RAW_DOCS)
+                break
               const session = await chatSessionsRepo.getSession(s.sessionId)
               if (session) {
-                for (const m of session.messages) {
+                const ordered = [...session.messages].sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0))
+                for (const m of ordered) {
+                  if (uniqueRaw.size >= MAX_RAW_DOCS)
+                    break
                   if (m.role === 'user' || m.role === 'assistant') {
                     const text = extractTextContent(m.content).trim()
                     if (text.length > 10) {
@@ -276,7 +288,13 @@ export const useTextJournalStore = defineStore('text-journal', () => {
 
         console.info(`[TextJournal:Index] Indexing counts for ${cardId} in universe ${currentUniverseId}: LTMM=${ltmm.length}, STMM=${stmm.length}, Raw=${raw.length}, Echoes=${echoes.length}, Lifetime=${lifetime.length}`)
 
-        await layeredMemory.indexDocuments([...ltmm, ...stmm, ...raw, ...echoes, ...lifetime])
+        // NOTICE: hard cap on total indexed docs per cycle so the search worker
+        // Map + embedding cache cannot grow with lifetime history.
+        const MAX_TOTAL_DOCS = 600
+        const allDocs = [...ltmm, ...stmm, ...raw, ...echoes, ...lifetime]
+          .sort((a: any, b: any) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .slice(0, MAX_TOTAL_DOCS)
+        await layeredMemory.indexDocuments(allDocs)
       }
       finally {
         indexingInProgress = null
@@ -424,142 +442,165 @@ export const useTextJournalStore = defineStore('text-journal', () => {
     })
   }
 
+  // NOTICE: single-flight search coalescing — a nan0 turn fans out to chat-tier
+  // RAG + Nan0 memoryRetriever for the same query; without dedup each fires its
+  // own bge-small-en ONNX embedding + Jev triage/rerank, doubling WebGPU pressure.
+  const inFlightSearches = new Map<string, Promise<(TextJournalEntry & { kind: string, score?: number })[]>>()
+
   async function searchEntries(input: {
     query: string
     limit?: number
     characterId?: string
     previousTurn?: string
     anaphoraEnabled?: boolean
+    signal?: AbortSignal
   }): Promise<(TextJournalEntry & { kind: string, score?: number })[]> {
-    try {
-      await load()
-    }
-    catch (err) {
-      throw new Error(`text_journal: failed to load entries before searching: ${err instanceof Error ? err.message : String(err)}`)
-    }
-
     const query = input.query.trim()
     if (!query)
       return []
 
     const targetCharacterId = input.characterId ?? activeCardId.value
+    const flightKey = `${targetCharacterId || ''}::${input.limit ?? 3}::${query}::${input.previousTurn || ''}`
+    const inFlight = inFlightSearches.get(flightKey)
+    if (inFlight)
+      return inFlight
 
-    let entityLedgerStore: ReturnType<typeof useEntityLedgerStore> | undefined
-    let systemOneStore: ReturnType<typeof useSystemOneStore> | undefined
-    try {
-      entityLedgerStore = useEntityLedgerStore()
-    }
-    catch {}
-    try {
-      systemOneStore = useSystemOneStore()
-    }
-    catch {}
+    const task = (async (): Promise<(TextJournalEntry & { kind: string, score?: number })[]> => {
+      try {
+        await load()
+      }
+      catch (err) {
+        throw new Error(`text_journal: failed to load entries before searching: ${err instanceof Error ? err.message : String(err)}`)
+      }
 
-    let results: Awaited<ReturnType<typeof layeredMemory.search>> = []
-    try {
-      results = await layeredMemory.search(query, input.limit ?? 3, targetCharacterId, {
-        previousTurn: input.previousTurn,
-        anaphoraEnabled: input.anaphoraEnabled,
-        ledger: entityLedgerStore?.activeLedger,
-        systemOneStore,
-      })
-    }
-    catch (err) {
-      console.warn('[TextJournal:Search] layeredMemory.search failed, using local ranking fallback:', err)
-    }
+      let entityLedgerStore: ReturnType<typeof useEntityLedgerStore> | undefined
+      let systemOneStore: ReturnType<typeof useSystemOneStore> | undefined
+      try {
+        entityLedgerStore = useEntityLedgerStore()
+      }
+      catch {}
+      try {
+        systemOneStore = useSystemOneStore()
+      }
+      catch {}
 
-    lastSearchTriage.value = layeredMemory.lastTriage
-    lastSearchMode.value = layeredMemory.lastSearchMode
+      let results: Awaited<ReturnType<typeof layeredMemory.search>> = []
+      try {
+        input.signal?.throwIfAborted?.()
+        results = await layeredMemory.search(query, input.limit ?? 3, targetCharacterId, {
+          previousTurn: input.previousTurn,
+          anaphoraEnabled: input.anaphoraEnabled,
+          ledger: entityLedgerStore?.activeLedger,
+          systemOneStore,
+          signal: input.signal,
+        })
+      }
+      catch (err) {
+        if ((err as Error)?.name === 'AbortError')
+          throw err
+        console.warn('[TextJournal:Search] layeredMemory.search failed, using local ranking fallback:', err)
+      }
 
-    if (results.length > 0) {
+      lastSearchTriage.value = layeredMemory.lastTriage
+      lastSearchMode.value = layeredMemory.lastSearchMode
+
+      if (results.length > 0) {
       // Log search results for developer review
-      console.info(`[TextJournal:Search] Query: "${query}" | Results:`, results)
+        console.info(`[TextJournal:Search] Query: "${query}" | Results:`, results)
 
-      // Map layered results back to the most relevant TextJournalEntry if it exists,
-      // or provide surrogate entries for KG claims, STMM, or Raw.
-      return results.map((res) => {
-        if (res.isKgClaim) {
+        // Map layered results back to the most relevant TextJournalEntry if it exists,
+        // or provide surrogate entries for KG claims, STMM, or Raw.
+        return results.map((res) => {
+          if (res.isKgClaim) {
+            return {
+              id: res.id,
+              userId: getCurrentUserId(),
+              characterId: input.characterId ?? activeCardId.value ?? '',
+              characterName: activeCard.value?.name ?? 'Unknown',
+              title: `[Knowledge Graph] ${res.subject} ${res.predicate} ${res.object}`,
+              content: res.content,
+              kind: 'kg_claim',
+              score: res.score,
+              source: res.source ?? 'tool',
+              type: 'message',
+              createdAt: new Date(res.timestamp).getTime(),
+              updatedAt: new Date(res.timestamp).getTime(),
+              subject: res.subject,
+              predicate: res.predicate,
+              object: res.object,
+              dateInfo: res.dateInfo,
+              claimId: res.claimId,
+              evidence: res.evidence,
+              isKgClaim: true,
+              triage: res.triage,
+            } as unknown as TextJournalEntry & { kind: string, score?: number, isKgClaim?: boolean, subject?: string, predicate?: string, object?: string, dateInfo?: any, claimId?: string }
+          }
+
+          const existing = entries.value.find(e => e.id === res.id)
+          if (existing) {
+            return {
+              ...existing,
+              kind: res.kind,
+              score: res.score,
+              triage: res.triage,
+              subGoal: res.subGoal,
+            }
+          }
+
+          // Surrogate entry for STMM/Raw context
           return {
             id: res.id,
             userId: getCurrentUserId(),
             characterId: input.characterId ?? activeCardId.value ?? '',
             characterName: activeCard.value?.name ?? 'Unknown',
-            title: `[Knowledge Graph] ${res.subject} ${res.predicate} ${res.object}`,
+            title: `[${res.kind.toUpperCase()}] Memory`,
             content: res.content,
-            kind: 'kg_claim',
+            kind: res.kind,
             score: res.score,
             source: res.source ?? 'tool',
             type: 'message',
             createdAt: new Date(res.timestamp).getTime(),
             updatedAt: new Date(res.timestamp).getTime(),
-            subject: res.subject,
-            predicate: res.predicate,
-            object: res.object,
-            dateInfo: res.dateInfo,
-            claimId: res.claimId,
-            evidence: res.evidence,
-            isKgClaim: true,
-            triage: res.triage,
-          } as unknown as TextJournalEntry & { kind: string, score?: number, isKgClaim?: boolean, subject?: string, predicate?: string, object?: string, dateInfo?: any, claimId?: string }
-        }
-
-        const existing = entries.value.find(e => e.id === res.id)
-        if (existing) {
-          return {
-            ...existing,
-            kind: res.kind,
-            score: res.score,
+            timestamp: res.timestamp,
             triage: res.triage,
             subGoal: res.subGoal,
-          }
-        }
+          } as unknown as TextJournalEntry & { kind: string, score?: number, triage?: any, subGoal?: string, timestamp?: string }
+        })
+      }
 
-        // Surrogate entry for STMM/Raw context
-        return {
-          id: res.id,
-          userId: getCurrentUserId(),
-          characterId: input.characterId ?? activeCardId.value ?? '',
-          characterName: activeCard.value?.name ?? 'Unknown',
-          title: `[${res.kind.toUpperCase()}] Memory`,
-          content: res.content,
-          kind: res.kind,
-          score: res.score,
-          source: res.source ?? 'tool',
-          type: 'message',
-          createdAt: new Date(res.timestamp).getTime(),
-          updatedAt: new Date(res.timestamp).getTime(),
-          timestamp: res.timestamp,
-          triage: res.triage,
-          subGoal: res.subGoal,
-        } as unknown as TextJournalEntry & { kind: string, score?: number, triage?: any, subGoal?: string, timestamp?: string }
-      })
+      // Fallback: local heuristic ranking on loaded entries (offline / headless fallback)
+      const normalizedQuery = query.toLowerCase()
+      const scopedEntries = entries.value.filter(entry => !targetCharacterId || entry.characterId === targetCharacterId)
+      const ranked = scopedEntries
+        .map((entry) => {
+          const title = entry.title.toLowerCase()
+          const content = entry.content.toLowerCase()
+          const characterName = entry.characterName.toLowerCase()
+
+          let score = 0
+          if (title.includes(normalizedQuery))
+            score += 4
+          if (content.includes(normalizedQuery))
+            score += 2
+          if (characterName.includes(normalizedQuery))
+            score += 1
+
+          return { entry, score }
+        })
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(({ entry, score }) => ({ ...entry, kind: 'ltmm' as string, score: Number((score / 7).toFixed(3)) }))
+
+      const limit = Math.max(1, Math.min(input.limit ?? 10, 10))
+      return ranked.slice(0, limit)
+    })()
+    inFlightSearches.set(flightKey, task)
+    try {
+      return await task
     }
-
-    // Fallback: local heuristic ranking on loaded entries (offline / headless fallback)
-    const normalizedQuery = query.toLowerCase()
-    const scopedEntries = entries.value.filter(entry => !targetCharacterId || entry.characterId === targetCharacterId)
-    const ranked = scopedEntries
-      .map((entry) => {
-        const title = entry.title.toLowerCase()
-        const content = entry.content.toLowerCase()
-        const characterName = entry.characterName.toLowerCase()
-
-        let score = 0
-        if (title.includes(normalizedQuery))
-          score += 4
-        if (content.includes(normalizedQuery))
-          score += 2
-        if (characterName.includes(normalizedQuery))
-          score += 1
-
-        return { entry, score }
-      })
-      .filter(({ score }) => score > 0)
-      .sort((a, b) => b.score - a.score)
-      .map(({ entry, score }) => ({ ...entry, kind: 'ltmm' as string, score: Number((score / 7).toFixed(3)) }))
-
-    const limit = Math.max(1, Math.min(input.limit ?? 10, 10))
-    return ranked.slice(0, limit)
+    finally {
+      inFlightSearches.delete(flightKey)
+    }
   }
 
   watch(incomingStreamEvent, (event) => {

@@ -268,11 +268,13 @@ export const useProactivityStore = defineStore('proactivity', () => {
   const isPrimaryWindowDelegate = computed(() => {
     if (typeof window === 'undefined')
       return true
-    // In multi-window Electron environments, standalone windows (like /chat, /settings)
-    // delegate background sensor polling to the primary Stage host window ('/' or root hash).
+    // NOTICE: allowlist the main Stage host only. The prior denylist
+    // (/chat|/settings|/devtools) still let #/actor and unnamed popouts poll
+    // sensors + load the journal + init the search worker concurrently, which
+    // duplicates bge/Laya WebGPU weights and IPC traffic per window and was
+    // observed as parallel 3.5s updateSensors runs (renderer:1 + renderer:2).
     const hash = window.location.hash || ''
-    const isSecondaryWindow = hash.includes('/chat') || hash.includes('/settings') || hash.includes('/devtools')
-    return !isSecondaryWindow
+    return hash === '' || hash === '#/' || hash === '#' || hash === '#!/'
   })
 
   const { pause, resume } = useIntervalFn(updateSensors, 10000, { immediate: false })

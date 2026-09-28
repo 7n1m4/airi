@@ -28,11 +28,22 @@ export function logMemoryProbe(tag: string = 'TICK', stats?: SubsystemStats): vo
 
     const deltaStr = delta >= 0 ? `+${delta.toFixed(1)} MB` : `${delta.toFixed(1)} MB`
     const winHash = typeof window !== 'undefined' ? (window.location.hash || '#/') : 'unknown'
+    // NOTICE: JS heap alone cannot see the watchdog-killer class (WebGPU Dawn,
+    // ONNX WASM, IndexedDB snapshots, compressor segments). Include Node/Electron
+    // RSS when available so airi.log shows native pressure alongside V8.
+    let nativeStr = ''
+    try {
+      const proc = (typeof process !== 'undefined' ? process : null) as any
+      const rssMB = proc?.memoryUsage?.() ? proc.memoryUsage().rss / (1024 * 1024) : 0
+      if (rssMB > 0)
+        nativeStr = ` | RSS: ${rssMB.toFixed(0)} MB`
+    }
+    catch {}
     const extraStr = stats?.extra ? ` | Details: ${JSON.stringify(stats.extra)}` : ''
     const actionStr = stats?.action ? ` | Action: [${stats.action}]` : ''
 
     console.log(
-      `[MEM-PROBE] [${tag}] Route: "${winHash}" | JS Heap: ${jsHeapUsed.toFixed(1)} MB / ${jsHeapTotal.toFixed(1)} MB (Limit: ${jsHeapLimit.toFixed(0)} MB, Δ: ${deltaStr})${actionStr}${extraStr}`,
+      `[MEM-PROBE] [${tag}] Route: "${winHash}" | JS Heap: ${jsHeapUsed.toFixed(1)} MB / ${jsHeapTotal.toFixed(1)} MB (Limit: ${jsHeapLimit.toFixed(0)} MB, Δ: ${deltaStr})${nativeStr}${actionStr}${extraStr}`,
     )
   }
   catch (err) {

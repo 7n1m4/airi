@@ -38,15 +38,32 @@ export interface LayeredSearchOptions {
   ledger?: EntityLedger
   triage?: TriageDecision
   universeId?: string
+  signal?: AbortSignal
   systemOneStore?: {
     configured: boolean
-    runTriage: (q: string) => Promise<any>
-    runRerank: (q: string, candidates: Array<{ id: string, text: string, score?: number }>) => Promise<any>
+    runTriage: (q: string, options?: { signal?: AbortSignal }) => Promise<any>
+    runRerank: (q: string, candidates: Array<{ id: string, text: string, score?: number }>, options?: { signal?: AbortSignal }) => Promise<any>
   }
 }
 
 let isPersisting = false
 let isIndexing = false
+let lastPersistAt = 0
+const MIN_PERSIST_INTERVAL_MS = 30_000
+const TRIAGE_TIMEOUT_MS = 2500
+const RERANK_TIMEOUT_MS = 4000
+const MAX_SUB_QUERIES = 3
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const timeout = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label} timed out (${ms}ms)`)), ms)
+  })
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer)
+      clearTimeout(timer)
+  }) as Promise<T>
+}
 
 const KIND_MAP: Record<string, MemoryLayer> = {
   user_turn: 'raw',
@@ -84,10 +101,16 @@ export const layeredMemory = {
   async persist() {
     if (isPersisting)
       return
+    // NOTICE: indexDocuments persists per cycle; without throttling every
+    // journal write serializes the full embedding snapshot to IndexedDB,
+    // spiking compressor/swap with MBs of number[] JSON.
+    if (Date.now() - lastPersistAt < MIN_PERSIST_INTERVAL_MS)
+      return
     isPersisting = true
     try {
       const snapshot = await searchWorker.persist()
       await indexStorage.setItem('snapshot', snapshot)
+      lastPersistAt = Date.now()
     }
     finally {
       isPersisting = false
@@ -112,10 +135,17 @@ export const layeredMemory = {
     }
     else if (options?.systemOneStore?.configured) {
       try {
-        triage = await options.systemOneStore.runTriage(query)
+        options?.signal?.throwIfAborted?.()
+        triage = await withTimeout(
+          options.systemOneStore.runTriage(query, { signal: options?.signal }),
+          TRIAGE_TIMEOUT_MS,
+          'System-1 triage',
+        )
         mode = 'pass11'
       }
       catch (err) {
+        if ((err as Error)?.name === 'AbortError')
+          throw err
         console.warn('[LayeredMemory] System 1 triage failed, falling back to heuristic:', err)
         triage = heuristicTriage(query)
         mode = 'baseline'
@@ -252,11 +282,15 @@ export const layeredMemory = {
     }
 
     // 5. Candidate Retrieval from Search Web Worker (Vector + BM25)
-    const subQueries = decomposeQuery(query, triage)
+    // NOTICE: cap sub-query fan-out — each sub-query is a full bge ONNX
+    // embedding + hybrid score; unbounded decomposition multiplies WebGPU
+    // work per chat turn and was a direct swap-pressure multiplier.
+    const subQueries = decomposeQuery(query, triage).slice(0, MAX_SUB_QUERIES)
     let scoredWorkerHits: LayeredSearchResult[] = []
 
     if (subQueries.length > 1) {
       // Multi-Pass Sub-Query Retrieval (Pass 11 Proof Bundles)
+      options?.signal?.throwIfAborted?.()
       const subResults = await Promise.all(
         subQueries.map(async (sq, idx) => {
           const isPrimary = idx === 0
@@ -266,6 +300,7 @@ export const layeredMemory = {
             workerLimit,
             characterId,
             subAnalysis.temporalHooks.length > 0 ? subAnalysis.temporalHooks : analysis.temporalHooks,
+            options?.signal,
           )
           return { sq, subAnalysis, res, isPrimary }
         }),
@@ -361,11 +396,13 @@ export const layeredMemory = {
     }
     else {
       // Standard Single-Pass Retrieval
+      options?.signal?.throwIfAborted?.()
       const rawResults = await searchWorker.search(
         analysis.expandedQuery,
         workerLimit,
         characterId,
         analysis.temporalHooks,
+        options?.signal,
       )
       const documents = rawResults.documents.map((document: SearchDocumentMeta & { kind: string }) => ({
         ...document,
@@ -417,12 +454,17 @@ export const layeredMemory = {
     let finalHits = mergedHits
     if (options?.systemOneStore?.configured && mergedHits.length > 0) {
       try {
-        const poolToRerank = mergedHits.slice(0, 10).map(h => ({
+        options?.signal?.throwIfAborted?.()
+        const poolToRerank = mergedHits.slice(0, 6).map(h => ({
           id: h.id,
           text: h.content,
           score: h.score,
         }))
-        const rerankRes = await options.systemOneStore.runRerank(query, poolToRerank)
+        const rerankRes = await withTimeout(
+          options.systemOneStore.runRerank(query, poolToRerank, { signal: options?.signal }),
+          RERANK_TIMEOUT_MS,
+          'System-1 rerank',
+        )
         if (rerankRes.rankedCandidates && rerankRes.rankedCandidates.length > 0) {
           const scoreMap = new Map<string, number>(rerankRes.rankedCandidates.map((r: any) => [r.id, Number(r.finalScore ?? r.score ?? 0)]))
           finalHits = mergedHits.map(h => ({
@@ -432,6 +474,8 @@ export const layeredMemory = {
         }
       }
       catch (err) {
+        if ((err as Error)?.name === 'AbortError' || String((err as Error)?.message || '').includes('timed out'))
+          throw err
         console.warn('[LayeredMemory] System 1 cross-encoder rerank failed, retaining RRF score:', err)
       }
     }

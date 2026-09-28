@@ -19,6 +19,22 @@ import { useSpeechStore } from './speech'
 import { useVisionStore } from './vision'
 import { ATTENTION_GUARD_WORKLOAD_ID, useVisionOrchestratorStore } from './vision/orchestrator'
 
+let cachedStageMateSendCaption: ((payload: any) => Promise<any>) | null = null
+async function getStageMateSendCaption() {
+  if (!cachedStageMateSendCaption) {
+    try {
+      const { useElectronEventaInvoke } = await import('@proj-airi/electron-vueuse')
+      const { electronStageMateSendCaption } = await import('@proj-airi/stage-shared')
+      cachedStageMateSendCaption = useElectronEventaInvoke(electronStageMateSendCaption)
+    }
+    catch (err) {
+      console.warn('[ScreenWatcher:Reaction] Failed to initialize Stage-Mate invoke:', err)
+      return null
+    }
+  }
+  return cachedStageMateSendCaption
+}
+
 export interface VisualObservationItem {
   timestamp: number
   summary: string
@@ -262,14 +278,14 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
         // 1. Direct Stage-Mate Unity sidecar hook
         try {
-          const { useElectronEventaInvoke } = await import('@proj-airi/electron-vueuse')
-          const { electronStageMateSendCaption } = await import('@proj-airi/stage-shared')
-          const sendCaption = useElectronEventaInvoke(electronStageMateSendCaption)
-          await sendCaption({
-            text: chunkText,
-            isActive: true,
-            speaker: activeCard.value?.name || 'assistant',
-          })
+          const sendCaption = await getStageMateSendCaption()
+          if (sendCaption) {
+            await sendCaption({
+              text: chunkText,
+              isActive: true,
+              speaker: activeCard.value?.name || 'assistant',
+            })
+          }
         }
         catch (err) {
           console.warn('[ScreenWatcher:Reaction] Failed to invoke Stage-Mate send-caption:', err)

@@ -30,6 +30,14 @@ export const OCR_ERROR_PATTERN_MIN = 2
 export const OCR_INTEREST_KEYWORD_MIN = 1
 
 let workerPromise: Promise<Worker> | null = null
+let ocrRecognizeCount = 0
+const OCR_RECYCLE_INTERVAL = 50
+const OCR_TIMEOUT_MS = 5000
+
+let scratchOcrSrcCanvas: OffscreenCanvas | null = null
+let scratchOcrSrcCtx: OffscreenCanvasRenderingContext2D | null = null
+let scratchOcrOutCanvas: OffscreenCanvas | null = null
+let scratchOcrOutCtx: OffscreenCanvasRenderingContext2D | null = null
 
 export async function getWorker(): Promise<Worker> {
   if (!workerPromise) {
@@ -40,9 +48,24 @@ export async function getWorker(): Promise<Worker> {
 
 export async function disposeOcrEngine(): Promise<void> {
   if (workerPromise) {
-    const worker = await workerPromise
-    await worker.terminate()
+    try {
+      const worker = await workerPromise
+      await worker.terminate()
+    }
+    catch {}
     workerPromise = null
+  }
+  if (scratchOcrSrcCanvas) {
+    scratchOcrSrcCanvas.width = 0
+    scratchOcrSrcCanvas.height = 0
+    scratchOcrSrcCanvas = null
+    scratchOcrSrcCtx = null
+  }
+  if (scratchOcrOutCanvas) {
+    scratchOcrOutCanvas.width = 0
+    scratchOcrOutCanvas.height = 0
+    scratchOcrOutCanvas = null
+    scratchOcrOutCtx = null
   }
 }
 
@@ -120,11 +143,18 @@ async function prepareOcrInput(imageData: ImageData): Promise<{ targetInput: Ima
   if (typeof OffscreenCanvas === 'undefined')
     return { targetInput: imageData, dispose: () => {} }
 
-  const srcCanvas = new OffscreenCanvas(imageData.width, imageData.height)
-  const srcCtx = srcCanvas.getContext('2d')
-  if (!srcCtx)
+  if (!scratchOcrSrcCanvas) {
+    scratchOcrSrcCanvas = new OffscreenCanvas(imageData.width, imageData.height)
+    scratchOcrSrcCtx = scratchOcrSrcCanvas.getContext('2d')
+  }
+  else {
+    scratchOcrSrcCanvas.width = imageData.width
+    scratchOcrSrcCanvas.height = imageData.height
+  }
+
+  if (!scratchOcrSrcCtx)
     return { targetInput: imageData, dispose: () => {} }
-  srcCtx.putImageData(imageData, 0, 0)
+  scratchOcrSrcCtx.putImageData(imageData, 0, 0)
 
   const maxEdge = Math.max(imageData.width, imageData.height)
   let scale: number
@@ -142,37 +172,49 @@ async function prepareOcrInput(imageData: ImageData): Promise<{ targetInput: Ima
 
   const outWidth = Math.max(1, Math.round(imageData.width * scale))
   const outHeight = Math.max(1, Math.round(imageData.height * scale))
-  const outCanvas = new OffscreenCanvas(outWidth, outHeight)
-  const outCtx = outCanvas.getContext('2d')
-  if (!outCtx) {
-    srcCanvas.width = 0
-    srcCanvas.height = 0
+
+  if (!scratchOcrOutCanvas) {
+    scratchOcrOutCanvas = new OffscreenCanvas(outWidth, outHeight)
+    scratchOcrOutCtx = scratchOcrOutCanvas.getContext('2d')
+  }
+  else {
+    scratchOcrOutCanvas.width = outWidth
+    scratchOcrOutCanvas.height = outHeight
+  }
+
+  if (!scratchOcrOutCtx) {
+    if (scratchOcrSrcCanvas) {
+      scratchOcrSrcCanvas.width = 0
+      scratchOcrSrcCanvas.height = 0
+    }
     return { targetInput: imageData, dispose: () => {} }
   }
 
-  outCtx.imageSmoothingEnabled = true
+  scratchOcrOutCtx.imageSmoothingEnabled = true
   try {
-    ;(outCtx as any).imageSmoothingQuality = 'high'
+    ;(scratchOcrOutCtx as any).imageSmoothingQuality = 'high'
   }
   catch {}
-  outCtx.drawImage(srcCanvas, 0, 0, outWidth, outHeight)
+  scratchOcrOutCtx.drawImage(scratchOcrSrcCanvas, 0, 0, outWidth, outHeight)
 
   // srcCanvas is no longer needed; release backing texture immediately
-  srcCanvas.width = 0
-  srcCanvas.height = 0
+  scratchOcrSrcCanvas.width = 0
+  scratchOcrSrcCanvas.height = 0
 
   try {
-    const conditioned = stretchContrast(outCtx.getImageData(0, 0, outWidth, outHeight))
-    outCtx.putImageData(conditioned, 0, 0)
+    const conditioned = stretchContrast(scratchOcrOutCtx.getImageData(0, 0, outWidth, outHeight))
+    scratchOcrOutCtx.putImageData(conditioned, 0, 0)
   }
   catch {}
 
   // Blob is a valid tesseract `ImageLike`; avoids an extra ArrayBuffer hop.
-  const blob = await outCanvas.convertToBlob({ type: 'image/png' })
+  const blob = await scratchOcrOutCanvas.convertToBlob({ type: 'image/png' })
 
   const dispose = () => {
-    outCanvas.width = 0
-    outCanvas.height = 0
+    if (scratchOcrOutCanvas) {
+      scratchOcrOutCanvas.width = 0
+      scratchOcrOutCanvas.height = 0
+    }
   }
 
   return { targetInput: blob, dispose }
@@ -187,16 +229,32 @@ export async function ocrImageData(imageData: ImageData): Promise<{ text: string
 
   let cleanup: (() => void) | null = null
   try {
+    ocrRecognizeCount++
+    if (ocrRecognizeCount >= OCR_RECYCLE_INTERVAL) {
+      console.log(`[Attention Guard OCR] ♻️ Periodic recycle (${ocrRecognizeCount} recognitions): releasing Tesseract WASM heap`)
+      await disposeOcrEngine()
+      ocrRecognizeCount = 0
+    }
+
     const worker = await getWorker()
     const { targetInput, dispose } = await prepareOcrInput(imageData)
     cleanup = dispose
-    // NOTICE: tesseract's `ImageLike` type omits `ImageData`, and the raw
-    // ImageData fallback is only hit when OffscreenCanvas is unavailable.
-    const { data: { text } } = await worker.recognize(targetInput as any)
+
+    // Add 5s timeout race to prevent indefinite hang on complex frames
+    const recognizePromise = worker.recognize(targetInput as any)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`Tesseract recognition timed out after ${OCR_TIMEOUT_MS}ms`)), OCR_TIMEOUT_MS)
+    })
+
+    const { data: { text } } = await Promise.race([recognizePromise, timeoutPromise])
     return { text: text || '', ocrMs: performance.now() - started }
   }
-  catch (err) {
-    console.warn('[Attention Guard OCR] OCR failed on delta crop:', err)
+  catch (err: any) {
+    console.warn('[Attention Guard OCR] OCR failed on delta crop:', err?.message || err)
+    if (err?.message?.includes('timed out')) {
+      await disposeOcrEngine().catch(() => {})
+      ocrRecognizeCount = 0
+    }
     return { text: '', ocrMs: performance.now() - started }
   }
   finally {

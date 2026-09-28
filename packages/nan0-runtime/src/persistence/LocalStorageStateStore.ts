@@ -103,6 +103,10 @@ export function mergeNan0States(
     }
   }
 
+  // NOTICE: memories were the one unbounded array in kernel state (thoughts/
+  // decisions/turns are sliced to 50). Cap to the most recent 200 so
+  // localStorage JSON + structuredClone per turn cannot grow with lifetime use.
+  const MAX_PERSISTED_MEMORIES = 200
   const memories = [...persisted.memories]
   const persistedMemoryIds = new Set(memories.map(memory => memory.id))
   for (const memory of candidate.memories) {
@@ -111,6 +115,8 @@ export function mergeNan0States(
       persistedMemoryIds.add(memory.id)
     }
   }
+  while (memories.length > MAX_PERSISTED_MEMORIES)
+    memories.shift()
 
   return {
     ...candidate,
@@ -201,13 +207,13 @@ export class LocalStorageStateStore implements Nan0StateStore {
       internalObservations: normalizeInternalObservationQueue(parsed.internalObservations),
       heartbeat: normalizeHeartbeatRuntimeState(parsed.heartbeat),
       cognitionPolicy: normalizeCognitionPolicyIdentity(parsed.cognitionPolicy, parsed.createdAt),
-      thoughts: mergeNan0Thoughts([], parsed.thoughts),
-      decisions: mergeNan0Decisions([], parsed.decisions),
+      thoughts: mergeNan0Thoughts([], parsed.thoughts).slice(-50),
+      decisions: mergeNan0Decisions([], parsed.decisions).slice(-50),
       goals: mergeNan0Goals([], parsed.goals),
       pendingIntentions: normalizePendingIntentionState(parsed.pendingIntentions, parsed.createdAt),
-      computations: mergeComputationAttempts([], parsed.computations),
+      computations: mergeComputationAttempts([], parsed.computations).slice(-50),
       actionIntents: mergeActionIntents([], parsed.actionIntents),
-      turns: normalizeConversationTurns(parsed.turns),
+      turns: normalizeConversationTurns(parsed.turns).slice(-50),
       timeline: parsed.timeline
         ? normalizeTimelineState(parsed.timeline)
         : createEmptyTimelineState(),

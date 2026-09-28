@@ -1465,7 +1465,11 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
                   observation,
                   {
                     autonomous: false,
-                    retrievedMemoryContext: mappedFacts.length > 0 ? { facts: mappedFacts } : undefined,
+                    // If Universe RAG / grounding search ran during turn ingestion, pass the resulting
+                    // facts (even if empty, i.e. facts: []) so Nan0Kernel does not fire a second duplicate search.
+                    retrievedMemoryContext: isUniverseRagEnabled
+                      ? { facts: mappedFacts }
+                      : (mappedFacts.length > 0 ? { facts: mappedFacts } : undefined),
                   },
                   {
                     providerId: firstHopProviderId,

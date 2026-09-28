@@ -98,9 +98,17 @@ export function createVisionService(params: { context: any }) {
     }
   })
 
+  let mainProcessCaptureCount = 0
+
   defineInvokeHandler(params.context, visionCaptureScreen, async (options) => {
     console.log('[Vision Service] visionCaptureScreen requested:', JSON.stringify(options))
     try {
+      mainProcessCaptureCount++
+      if (mainProcessCaptureCount % 20 === 0) {
+        const mem = process.memoryUsage()
+        console.log(`[Vision Service:MEM] [MAIN-PROC] Capture #${mainProcessCaptureCount} | RSS: ${(mem.rss / 1024 / 1024).toFixed(1)} MB | Heap: ${(mem.heapUsed / 1024 / 1024).toFixed(1)} / ${(mem.heapTotal / 1024 / 1024).toFixed(1)} MB | External: ${(mem.external / 1024 / 1024).toFixed(1)} MB | ArrayBuffers: ${((mem.arrayBuffers || 0) / 1024 / 1024).toFixed(1)} MB`)
+      }
+
       const types: ('screen' | 'window')[] = options?.type === 'window' ? ['window'] : ['screen']
       const thumbnailSize = resolveThumbnailSize(options)
       console.log(`[Vision Service] Requesting thumbnailSize: ${thumbnailSize.width}×${thumbnailSize.height} (${options?.native ? 'native' : 'scaled'})`)

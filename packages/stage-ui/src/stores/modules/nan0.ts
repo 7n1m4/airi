@@ -445,17 +445,22 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
     }
 
     const textJournalStore = useTextJournalStore()
+    // NOTICE: single-flight is enforced inside searchEntries; keep Nan0's
+    // default limit low (chat-tier RAG already fetched limit 6 for the same
+    // user text) so concurrent internal Jev/memory calls cannot each embed +
+    // rerank a wide candidate pool.
     const memoryRetriever = async (query: string, _actorId?: string, limit?: number): Promise<Nan0EpistemicGroundingContext | null> => {
+      // NOTICE: abort on timeout instead of orphaning — the prior Promise.race
+      // left the losing bge/Jev work running on WebGPU after the turn moved on.
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(new Error('Memory retrieval timed out (3000ms)')), 3000)
       try {
-        const searchPromise = textJournalStore.searchEntries({
+        const results = await textJournalStore.searchEntries({
           query,
-          limit: limit ?? 5,
+          limit: Math.min(limit ?? 3, 3),
           characterId: targetCardId,
+          signal: controller.signal,
         })
-        const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Memory retrieval timed out (3000ms)')), 3000),
-        )
-        const results = await Promise.race([searchPromise, timeoutPromise])
         const facts: Nan0EpistemicFact[] = results.map(res => ({
           source: (res as any).isKgClaim ? 'entity_ledger' : (res as any).kind === 'stmm_summary' ? 'stmm' : 'journal',
           title: res.title,
@@ -471,6 +476,9 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
       catch (err) {
         console.warn('[Nan0Store] Epistemic memory retrieval failed or timed out:', err)
         return null
+      }
+      finally {
+        clearTimeout(timer)
       }
     }
 

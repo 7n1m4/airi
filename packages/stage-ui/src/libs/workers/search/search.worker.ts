@@ -339,7 +339,15 @@ function getTemporalCandidates(
   return matchedDocs.slice(0, limit)
 }
 
+// NOTICE: bound worker RAM — chat history is unbounded but the in-memory
+// embedding + BM25 caches must not be. Evict oldest docs FIFO past the cap.
+const MAX_WORKER_DOCUMENTS = 600
 function upsertDocument(document: SearchDocument) {
+  if (!documents.has(document.id) && documents.size >= MAX_WORKER_DOCUMENTS) {
+    const oldestKey = documents.keys().next().value
+    if (oldestKey !== undefined)
+      documents.delete(oldestKey)
+  }
   documents.set(document.id, document)
 }
 
@@ -438,6 +446,9 @@ globalThis.addEventListener('message', async (e) => {
           ...temporalHits.map(h => h.id),
         ])
 
+        // NOTICE: never ship embedding arrays back over postMessage — each
+        // 384-dim number[] cloned per candidate per search is MBs of structured-
+        // clone traffic and compressor/swap pressure. Scores are sufficient.
         const results = {
           vectorHits,
           keywordHits,
@@ -451,7 +462,6 @@ globalThis.addEventListener('message', async (e) => {
               kind: document.kind,
               timestamp: document.timestamp,
               source: document.source,
-              embedding: document.embedding,
             })),
         }
 
@@ -460,10 +470,18 @@ globalThis.addEventListener('message', async (e) => {
       }
 
       case 'persist': {
+        // NOTICE: slim the IndexedDB snapshot — raw chat turns are the largest,
+        // lowest-value embedding set (re-embedded lazily on next index cycle),
+        // and full float64 JSON arrays bloat swap/compressor with MBs of text.
         const snapshot: SearchSnapshot = {
           documents: [...documents.values()].map((doc) => {
-            const { tokens, tokenFreqs, ...persistedDoc } = doc
-            return persistedDoc
+            const { tokens, tokenFreqs, embedding, ...persistedDoc } = doc
+            if (doc.kind === 'raw_turn' || !embedding?.length)
+              return persistedDoc
+            const quantized = new Array<number>(embedding.length)
+            for (let i = 0; i < embedding.length; i++)
+              quantized[i] = Math.round((embedding[i] as number) * 10000) / 10000
+            return { ...persistedDoc, embedding: quantized }
           }),
         }
 

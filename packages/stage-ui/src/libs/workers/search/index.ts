@@ -44,11 +44,34 @@ export async function getSearchWorker() {
   return worker
 }
 
-async function callWorker(type: string, payload?: any): Promise<any> {
+// NOTICE: abortable worker RPC. ONNX embedding runs cannot be cancelled
+// mid-flight inside the worker, but the caller must stop waiting on timeout/
+// turn-cancel so orphan GPU work cannot pile up behind stale chat turns.
+async function callWorker(type: string, payload?: any, signal?: AbortSignal): Promise<any> {
+  if (signal?.aborted)
+    throw new DOMException('Aborted', 'AbortError')
   const w = await getSearchWorker()
   const id = nextId++
   return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject })
+    const onAbort = () => {
+      pending.delete(id)
+      reject(new DOMException('Aborted', 'AbortError'))
+    }
+    if (signal) {
+      if (signal.aborted)
+        return onAbort()
+      signal.addEventListener('abort', onAbort, { once: true })
+    }
+    pending.set(id, {
+      resolve: (val: any) => {
+        signal?.removeEventListener('abort', onAbort)
+        resolve(val)
+      },
+      reject: (err: any) => {
+        signal?.removeEventListener('abort', onAbort)
+        reject(err)
+      },
+    })
     w.postMessage({ id, type, payload })
   })
 }
@@ -97,9 +120,9 @@ export const searchWorker = {
     await loadEmbeddingModel()
     return callWorker('index', { documents })
   },
-  search: async (query: string, limit?: number, characterId?: string, temporalHooks?: any[]) => {
+  search: async (query: string, limit?: number, characterId?: string, temporalHooks?: any[], signal?: AbortSignal) => {
     await loadEmbeddingModel()
-    return callWorker('search', { query, limit, characterId, temporalHooks })
+    return callWorker('search', { query, limit, characterId, temporalHooks }, signal)
   },
   remove: (id: string) => callWorker('remove', { id }),
   persist: () => callWorker('persist'),

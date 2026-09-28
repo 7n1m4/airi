@@ -204,7 +204,10 @@ export const useSystemOneStore = defineStore('system-one', () => {
     state: string | object,
     questions: Record<string, any>,
     modelOverride?: string,
+    options?: { signal?: AbortSignal },
   ): Promise<System1Response> {
+    if (options?.signal?.aborted)
+      throw new DOMException('Aborted', 'AbortError')
     isExecuting.value = true
     lastError.value = null
     const t0 = performance.now()
@@ -219,6 +222,7 @@ export const useSystemOneStore = defineStore('system-one', () => {
 
       const model = modelOverride || activeModel.value || 'typesafe/jev-1.13'
       const res = await instance.systemOne(state, questions, model)
+      options?.signal?.throwIfAborted?.()
       lastLatencyMs.value = Math.round(performance.now() - t0)
       return res
     }
@@ -232,8 +236,8 @@ export const useSystemOneStore = defineStore('system-one', () => {
     }
   }
 
-  async function runTriage(query: string) {
-    const res = await execute(`Query to classify: ${query}`, JEV_TRIAGE_SCHEMA)
+  async function runTriage(query: string, options?: { signal?: AbortSignal }) {
+    const res = await execute(`Query to classify: ${query}`, JEV_TRIAGE_SCHEMA, undefined, options)
     const ansCat = res.answers?.category || {}
     const ansTemp = res.answers?.temporal_subtype || {}
     const ansScope = res.answers?.search_scope || {}
@@ -276,10 +280,14 @@ export const useSystemOneStore = defineStore('system-one', () => {
     }
   }
 
-  async function runRerank(query: string, candidates: CandidateItem[]) {
-    const pool = candidates.slice(0, 10)
+  async function runRerank(query: string, candidates: CandidateItem[], options?: { signal?: AbortSignal }) {
+    // NOTICE: cap the rerank pool — each candidate becomes a Jev question in
+    // one request; 10-way reranks on every chat turn stall local Laya.
+    const pool = candidates.slice(0, 6)
     if (pool.length === 0)
       return { rankedCandidates: [], latencyMs: 0 }
+    if (options?.signal?.aborted)
+      throw new DOMException('Aborted', 'AbortError')
 
     const questions: Record<string, any> = {}
     for (let idx = 0; idx < pool.length; idx++) {
@@ -292,7 +300,7 @@ export const useSystemOneStore = defineStore('system-one', () => {
       }
     }
 
-    const res = await execute(`Question to answer: ${query}`, questions)
+    const res = await execute(`Question to answer: ${query}`, questions, undefined, options)
     const answers = res.answers || {}
 
     const ranked: RankedCandidateItem[] = pool.map((cand, idx) => {

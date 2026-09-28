@@ -1076,7 +1076,9 @@ watch([() => modelStore.activeExpressions, modelLoaded], ([active, loaded]) => {
     }
   }
   vrm.value.expressionManager.update()
-}, { deep: true })
+  // NOTICE: shallow watch only — the store always replaces activeExpressions
+  // via spread, so deep traversal only multiplies fires under broadcast storms.
+})
 
 // === ACT Emotion Mapping Sync ===
 // Injects user-configured VRM expression → ACT emotion mappings
