@@ -1,5 +1,5 @@
 diff --git a/dist/transformers.js b/dist/transformers.js
-index bbcc8933d81f85f0eb7ce54b9e4bcba9c38992c7..f754312d87addd085a8e3b338ee4355a7f7ea90e 100644
+index bbcc8933d81f85f0eb7ce54b9e4bcba9c38992c7..86320c185018610dac411f0240de3a122ea6b017 100644
 --- a/dist/transformers.js
 +++ b/dist/transformers.js
 @@ -37904,13 +37904,17 @@ class RawImage {
@@ -102,8 +102,47 @@ index bbcc8933d81f85f0eb7ce54b9e4bcba9c38992c7..f754312d87addd085a8e3b338ee4355a
  
              // Convert back so that image has the same number of channels as before
              return resizedImage.convert(numChannels);
+@@ -38298,7 +38320,8 @@ class RawImage {
+ 
+             // Create a new canvas of the desired size. This is needed since if the
+             // image is too small, we need to pad it with black pixels.
+-            const ctx = createCanvasFunction(crop_width, crop_height).getContext('2d');
++            let targetCanvas = createCanvasFunction(crop_width, crop_height);
++            const ctx = targetCanvas.getContext('2d');
+ 
+             let sourceX = 0;
+             let sourceY = 0;
+@@ -38324,7 +38347,13 @@ class RawImage {
+             );
+ 
+             // Create image from the resized data
+-            const resizedImage = new RawImage(ctx.getImageData(0, 0, crop_width, crop_height).data, crop_width, crop_height, 4);
++            const data = ctx.getImageData(0, 0, crop_width, crop_height).data;
++            canvas.width = 0;
++            canvas.height = 0;
++            targetCanvas.width = 0;
++            targetCanvas.height = 0;
++            targetCanvas = null;
++            const resizedImage = new RawImage(data, crop_width, crop_height, 4);
+ 
+             // Convert back so that image has the same number of channels as before
+             return resizedImage.convert(numChannels);
+@@ -38399,7 +38428,12 @@ class RawImage {
+         }
+ 
+         const canvas = this.toCanvas();
+-        return await canvas.convertToBlob({ type, quality });
++        try {
++            return await canvas.convertToBlob({ type, quality });
++        } finally {
++            canvas.width = 0;
++            canvas.height = 0;
++        }
+     }
+ 
+     toTensor(channel_format = 'CHW') {
 diff --git a/dist/transformers.web.js b/dist/transformers.web.js
-index 8158381bf49fa32a4fa8a3919807a0307c649ad0..b97b3b18948e879de29a989e448d33099f0646df 100644
+index 8158381bf49fa32a4fa8a3919807a0307c649ad0..c7f717c010f4aa4ee8e5cd35ba56004c99ae5376 100644
 --- a/dist/transformers.web.js
 +++ b/dist/transformers.web.js
 @@ -33298,13 +33298,17 @@ class RawImage {
@@ -206,8 +245,47 @@ index 8158381bf49fa32a4fa8a3919807a0307c649ad0..b97b3b18948e879de29a989e448d3309
  
              // Convert back so that image has the same number of channels as before
              return resizedImage.convert(numChannels);
+@@ -33692,7 +33714,8 @@ class RawImage {
+ 
+             // Create a new canvas of the desired size. This is needed since if the
+             // image is too small, we need to pad it with black pixels.
+-            const ctx = createCanvasFunction(crop_width, crop_height).getContext('2d');
++            let targetCanvas = createCanvasFunction(crop_width, crop_height);
++            const ctx = targetCanvas.getContext('2d');
+ 
+             let sourceX = 0;
+             let sourceY = 0;
+@@ -33718,7 +33741,13 @@ class RawImage {
+             );
+ 
+             // Create image from the resized data
+-            const resizedImage = new RawImage(ctx.getImageData(0, 0, crop_width, crop_height).data, crop_width, crop_height, 4);
++            const data = ctx.getImageData(0, 0, crop_width, crop_height).data;
++            canvas.width = 0;
++            canvas.height = 0;
++            targetCanvas.width = 0;
++            targetCanvas.height = 0;
++            targetCanvas = null;
++            const resizedImage = new RawImage(data, crop_width, crop_height, 4);
+ 
+             // Convert back so that image has the same number of channels as before
+             return resizedImage.convert(numChannels);
+@@ -33793,7 +33822,12 @@ class RawImage {
+         }
+ 
+         const canvas = this.toCanvas();
+-        return await canvas.convertToBlob({ type, quality });
++        try {
++            return await canvas.convertToBlob({ type, quality });
++        } finally {
++            canvas.width = 0;
++            canvas.height = 0;
++        }
+     }
+ 
+     toTensor(channel_format = 'CHW') {
 diff --git a/src/utils/image.js b/src/utils/image.js
-index 54db7938f2eef6d2b32d697fb5b151c3cf29df01..fe7aa122265e4917ff1f71249eb84f837281d5b7 100644
+index 54db7938f2eef6d2b32d697fb5b151c3cf29df01..3f7dd3d45d0011def6411b7d9ebc9b6bf66b8403 100644
 --- a/src/utils/image.js
 +++ b/src/utils/image.js
 @@ -170,13 +170,17 @@ export class RawImage {
@@ -310,3 +388,42 @@ index 54db7938f2eef6d2b32d697fb5b151c3cf29df01..fe7aa122265e4917ff1f71249eb84f83
  
              // Convert back so that image has the same number of channels as before
              return resizedImage.convert(numChannels);
+@@ -564,7 +586,8 @@ export class RawImage {
+ 
+             // Create a new canvas of the desired size. This is needed since if the
+             // image is too small, we need to pad it with black pixels.
+-            const ctx = createCanvasFunction(crop_width, crop_height).getContext('2d');
++            let targetCanvas = createCanvasFunction(crop_width, crop_height);
++            const ctx = targetCanvas.getContext('2d');
+ 
+             let sourceX = 0;
+             let sourceY = 0;
+@@ -590,7 +613,13 @@ export class RawImage {
+             );
+ 
+             // Create image from the resized data
+-            const resizedImage = new RawImage(ctx.getImageData(0, 0, crop_width, crop_height).data, crop_width, crop_height, 4);
++            const data = ctx.getImageData(0, 0, crop_width, crop_height).data;
++            canvas.width = 0;
++            canvas.height = 0;
++            targetCanvas.width = 0;
++            targetCanvas.height = 0;
++            targetCanvas = null;
++            const resizedImage = new RawImage(data, crop_width, crop_height, 4);
+ 
+             // Convert back so that image has the same number of channels as before
+             return resizedImage.convert(numChannels);
+@@ -665,7 +694,12 @@ export class RawImage {
+         }
+ 
+         const canvas = this.toCanvas();
+-        return await canvas.convertToBlob({ type, quality });
++        try {
++            return await canvas.convertToBlob({ type, quality });
++        } finally {
++            canvas.width = 0;
++            canvas.height = 0;
++        }
+     }
+ 
+     toTensor(channel_format = 'CHW') {

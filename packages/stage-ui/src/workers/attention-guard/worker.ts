@@ -377,27 +377,27 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
     let vlmStatus: 'ok' | 'degraded' | 'error' | undefined
     const snippet = extractRelevantSnippet(ocrText, ocrErrorPatterns, ocrInterestTags)
 
-    if (state.enableVlm) {
-      try {
-        const captionResult = await generateCaption(rawImage, state.device)
-        if (captionResult) {
-          caption = captionResult.caption
-          vlmStatus = 'ok'
+    if (promote) {
+      if (state.enableVlm) {
+        try {
+          const captionResult = await generateCaption(rawImage, state.device)
+          if (captionResult) {
+            caption = captionResult.caption
+            vlmStatus = 'ok'
+          }
+          else {
+            vlmStatus = 'error'
+          }
         }
-        else {
+        catch (vlmErr: any) {
+          console.warn('[attention-guard:worker] generateCaption error caught:', vlmErr?.message || vlmErr)
           vlmStatus = 'error'
         }
       }
-      catch (vlmErr: any) {
-        console.warn('[attention-guard:worker] generateCaption error caught:', vlmErr?.message || vlmErr)
-        vlmStatus = 'error'
+      else {
+        vlmStatus = 'degraded'
       }
-    }
-    else {
-      vlmStatus = 'degraded'
-    }
 
-    if (promote) {
       const t3 = performance.now()
       const zeroShot = await classifyZeroShot(embedding, state.device)
       const window = activeWindowLabel(zeroShot.topLabel)
@@ -413,6 +413,7 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
       stageMs.stage3Ms = performance.now() - t3
     }
     else {
+      vlmStatus = state.enableVlm ? 'ok' : 'degraded'
       state.accepted.push(embedding)
       if (state.accepted.length > 50) {
         state.accepted.shift()

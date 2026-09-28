@@ -346,7 +346,7 @@ packageExtensionsChecksum: sha256-UCFi+cr2PGQ7+Ux3cl4NB/aqHL2xwGcHHm2PMjek+0g=
 
 patchedDependencies:
   '@huggingface/transformers':
-    hash: e43ede4a1dd46c0f53f1c5a41ddf4051a8931c98bfd2ef195c94e884235979a0
+    hash: 4f27ef694cfa628ceeee0454cdcb1dad3387bbf312040d3e90ba2ae75cd2b80d
     path: patches/@huggingface__transformers.patch
   '@moeru/eventa':
     hash: 202582ad335e20eb2238183adf33edbbfca9fbf30bdc046a1ddf4db6e95467f7
@@ -732,7 +732,7 @@ importers:
         version: 0.9.0(vue@3.5.29(typescript@5.9.3))
       '@huggingface/transformers':
         specifier: ^3.8.1
-        version: 3.8.1(patch_hash=e43ede4a1dd46c0f53f1c5a41ddf4051a8931c98bfd2ef195c94e884235979a0)
+        version: 3.8.1(patch_hash=4f27ef694cfa628ceeee0454cdcb1dad3387bbf312040d3e90ba2ae75cd2b80d)
       '@moeru/eventa':
         specifier: 'catalog:'
         version: 1.0.0-beta.10(patch_hash=202582ad335e20eb2238183adf33edbbfca9fbf30bdc046a1ddf4db6e95467f7)(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))(hono@4.12.2)
@@ -1367,7 +1367,7 @@ importers:
         version: 0.9.0(vue@3.5.29(typescript@5.9.3))
       '@huggingface/transformers':
         specifier: ^3.8.1
-        version: 3.8.1(patch_hash=e43ede4a1dd46c0f53f1c5a41ddf4051a8931c98bfd2ef195c94e884235979a0)
+        version: 3.8.1(patch_hash=4f27ef694cfa628ceeee0454cdcb1dad3387bbf312040d3e90ba2ae75cd2b80d)
       '@iconify-json/carbon':
         specifier: ^1.2.18
         version: 1.2.18
@@ -1577,7 +1577,7 @@ importers:
         version: 0.9.0(vue@3.5.29(typescript@5.9.3))
       '@huggingface/transformers':
         specifier: ^3.8.1
-        version: 3.8.1(patch_hash=e43ede4a1dd46c0f53f1c5a41ddf4051a8931c98bfd2ef195c94e884235979a0)
+        version: 3.8.1(patch_hash=4f27ef694cfa628ceeee0454cdcb1dad3387bbf312040d3e90ba2ae75cd2b80d)
       '@moeru/eventa':
         specifier: 'catalog:'
         version: 1.0.0-beta.10(patch_hash=202582ad335e20eb2238183adf33edbbfca9fbf30bdc046a1ddf4db6e95467f7)(electron@40.8.0)(hono@4.11.3)
@@ -2747,7 +2747,7 @@ importers:
         version: 0.9.0(vue@3.5.29(typescript@5.9.3))
       '@huggingface/transformers':
         specifier: ^3.8.1
-        version: 3.8.1(patch_hash=e43ede4a1dd46c0f53f1c5a41ddf4051a8931c98bfd2ef195c94e884235979a0)
+        version: 3.8.1(patch_hash=4f27ef694cfa628ceeee0454cdcb1dad3387bbf312040d3e90ba2ae75cd2b80d)
       '@mlc-ai/web-llm':
         specifier: ^0.2.84
         version: 0.2.84
@@ -18516,7 +18516,7 @@ snapshots:
 
   '@huggingface/jinja@0.5.3': {}
 
-  '@huggingface/transformers@3.8.1(patch_hash=e43ede4a1dd46c0f53f1c5a41ddf4051a8931c98bfd2ef195c94e884235979a0)':
+  '@huggingface/transformers@3.8.1(patch_hash=4f27ef694cfa628ceeee0454cdcb1dad3387bbf312040d3e90ba2ae75cd2b80d)':
     dependencies:
       '@huggingface/jinja': 0.5.3
       onnxruntime-node: 1.21.0
@@ -22253,7 +22253,7 @@ snapshots:
 
   '@xsai-transformers/embed@0.0.11(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))':
     dependencies:
-      '@huggingface/transformers': 3.8.1(patch_hash=e43ede4a1dd46c0f53f1c5a41ddf4051a8931c98bfd2ef195c94e884235979a0)
+      '@huggingface/transformers': 3.8.1(patch_hash=4f27ef694cfa628ceeee0454cdcb1dad3387bbf312040d3e90ba2ae75cd2b80d)
       '@moeru/eventa': 0.3.0(patch_hash=bae5a63fe8dc6c8251889d169f15df22fcd64724aa05ef7fd88606bd4a235ea9)(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))
       '@moeru/std': 0.1.0-beta.17
       '@xsai-ext/shared-providers': 0.4.0-beta.12
@@ -22267,7 +22267,7 @@ snapshots:
 
   '@xsai-transformers/shared@0.0.11(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))':
     dependencies:
-      '@huggingface/transformers': 3.8.1(patch_hash=e43ede4a1dd46c0f53f1c5a41ddf4051a8931c98bfd2ef195c94e884235979a0)
+      '@huggingface/transformers': 3.8.1(patch_hash=4f27ef694cfa628ceeee0454cdcb1dad3387bbf312040d3e90ba2ae75cd2b80d)
       '@moeru/eventa': 0.3.0(patch_hash=bae5a63fe8dc6c8251889d169f15df22fcd64724aa05ef7fd88606bd4a235ea9)(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))
       '@moeru/std': 0.1.0-beta.17
       '@xsai-ext/shared-providers': 0.4.0-beta.12
@@ -22280,7 +22280,7 @@ snapshots:
 
   '@xsai-transformers/transcription@0.0.11(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))':
     dependencies:
-      '@huggingface/transformers': 3.8.1(patch_hash=e43ede4a1dd46c0f53f1c5a41ddf4051a8931c98bfd2ef195c94e884235979a0)
+      '@huggingface/transformers': 3.8.1(patch_hash=4f27ef694cfa628ceeee0454cdcb1dad3387bbf312040d3e90ba2ae75cd2b80d)
       '@moeru/eventa': 0.3.0(patch_hash=bae5a63fe8dc6c8251889d169f15df22fcd64724aa05ef7fd88606bd4a235ea9)(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))
       '@moeru/std': 0.1.0-beta.17
       '@xsai-ext/shared-providers': 0.4.0-beta.12
@@ -25799,7 +25799,7 @@ snapshots:
 
   kokoro-js@1.2.1:
     dependencies:
-      '@huggingface/transformers': 3.8.1(patch_hash=e43ede4a1dd46c0f53f1c5a41ddf4051a8931c98bfd2ef195c94e884235979a0)
+      '@huggingface/transformers': 3.8.1(patch_hash=4f27ef694cfa628ceeee0454cdcb1dad3387bbf312040d3e90ba2ae75cd2b80d)
       phonemizer: 1.2.1
 
   kolorist@1.8.0: {}
