@@ -1,13 +1,17 @@
 import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
 
+import JSZip from 'jszip'
+
+import { exportToJSON } from '@proj-airi/ccc'
+import { useDataMaintenance } from '@proj-airi/stage-ui/composables/use-data-maintenance'
 import { getLatestSelfie } from '@proj-airi/stage-ui/libs/character-media-resolver'
 import { useBackgroundStore } from '@proj-airi/stage-ui/stores/background'
-import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
 import { DisplayModelFormat, useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
 import { useSettingsStageModel } from '@proj-airi/stage-ui/stores/settings/stage-model'
 import { storeToRefs } from 'pinia'
+import { toRaw } from 'vue'
 
 import cardExportFrameUrl from '../card-export-frame.png?url'
 
@@ -30,6 +34,34 @@ export interface PngExportOptions {
   omitNotes?: boolean
   imageSourceUrl?: string | null
 }
+
+export interface ZipExportOptions {
+  flavor?: 'v2' | 'v1'
+  includeModels?: boolean
+  includeBackground?: boolean
+  includeVoiceProfiles?: boolean
+  includeCover?: boolean
+  includeMemories?: boolean
+  generateReadme?: boolean
+  coverImageUrl?: string | null
+}
+
+// 1 GB — archive readers hit 32-bit size-field issues past this point.
+export const ZIP_SIZE_CAP_BYTES = 1024 * 1024 * 1024
+
+const ZIP_MANIFEST_V1_FORMAT = 'airi-character-card'
+const ZIP_MANIFEST_V2_FORMAT = 'airi-card-package'
+
+const ZIP_MODEL_EXT: Partial<Record<DisplayModelFormat, string>> = {
+  [DisplayModelFormat.VRM]: 'vrm',
+  [DisplayModelFormat.Live2dZip]: 'zip',
+  [DisplayModelFormat.SpineZip]: 'zip',
+}
+
+type ZipModelRef
+  = | { file: File, name: string, format: DisplayModelFormat, ext: string }
+    | { skipped: 'mmd' | 'unsupported' | 'unavailable' }
+    | null
 
 /**
  * Generates a clean fallback avatar data URL for UI preview rendering.
@@ -67,9 +99,31 @@ export function useCardExport() {
   const displayModelsStore = useDisplayModelsStore()
   const backgroundStore = useBackgroundStore()
   const speechStore = useSpeechStore()
-  const chatSessionStore = useChatSessionStore()
   const stageModelStore = useSettingsStageModel()
+  const dataMaintenance = useDataMaintenance()
   const { stageModelSelected } = storeToRefs(stageModelStore)
+
+  /**
+   * Collects virtual-audio-studio voice IDs referenced by the card's speech
+   * module and visual-asset manifestations.
+   */
+  function collectVirtualVoiceIds(card: AiriCard): Set<string> {
+    const voiceIds = new Set<string>()
+    const speechConfig = (card as any).extensions?.airi?.modules?.speech
+    if (speechConfig && speechConfig.provider === 'virtual-audio-studio' && speechConfig.voice_id) {
+      voiceIds.add(speechConfig.voice_id)
+    }
+    const assets = (card as any).extensions?.airi?.visual_assets
+    if (assets) {
+      for (const key of Object.keys(assets)) {
+        const concept = assets[key] as any
+        if (concept.speech && concept.speech.provider === 'virtual-audio-studio' && concept.speech.voice_id) {
+          voiceIds.add(concept.speech.voice_id)
+        }
+      }
+    }
+    return voiceIds
+  }
 
   /**
    * Enriches card metadata with preferred background Data URL and virtual voice profiles.
@@ -82,20 +136,7 @@ export function useCardExport() {
     const card = JSON.parse(JSON.stringify(originalCard)) as AiriCard
 
     // Collect and append voice profiles referencing virtual-audio-studio
-    const voiceIds = new Set<string>()
-    const speechConfig = card.extensions?.airi?.modules?.speech
-    if (speechConfig && speechConfig.provider === 'virtual-audio-studio' && speechConfig.voice_id) {
-      voiceIds.add(speechConfig.voice_id)
-    }
-    const assets = card.extensions?.airi?.visual_assets
-    if (assets) {
-      for (const key of Object.keys(assets)) {
-        const concept = assets[key] as any
-        if (concept.speech && concept.speech.provider === 'virtual-audio-studio' && concept.speech.voice_id) {
-          voiceIds.add(concept.speech.voice_id)
-        }
-      }
-    }
+    const voiceIds = collectVirtualVoiceIds(card)
 
     const profiles: any[] = []
     for (const id of voiceIds) {
@@ -382,13 +423,14 @@ export function useCardExport() {
     if (!card)
       throw new Error(`Card with id ${cardId} not found`)
 
-    // Resolve episodic memories if requested
+    // Resolve episodic memories if requested — full records via the shared
+    // vault helper (index metas alone carry no transcript content).
     let sessions: any[] | undefined
     if (options.includeMemories) {
-      const charIndex = chatSessionStore.getCharacterIndex(cardId)
-      if (charIndex?.sessions) {
-        sessions = Object.values(charIndex.sessions)
-      }
+      const sessionsExport = await dataMaintenance.exportSessionsForCharacter(cardId)
+      const records = Object.values(sessionsExport.sessions || {})
+      if (records.length > 0)
+        sessions = records
     }
 
     const payload: Record<string, any> = {
@@ -490,6 +532,299 @@ export function useCardExport() {
     downloadBlob(blob, `${safeName}.png`)
   }
 
+  /**
+   * Upstream-equivalent whitelist for v1: provider/model strings only.
+   * Acting, agents, outfits, voice profiles, visual assets, and background
+   * bindings never ship in v1.
+   */
+  function sanitizeAiriForV1(airi: any) {
+    const modules = airi?.modules || {}
+    return {
+      modules: {
+        ...(modules.consciousness ? { consciousness: { provider: modules.consciousness.provider, model: modules.consciousness.model } } : {}),
+        ...(modules.speech ? { speech: { provider: modules.speech.provider, model: modules.speech.model, voice_id: modules.speech.voice_id } } : {}),
+      },
+    }
+  }
+
+  /**
+   * Resolves the card's display model binary for ZIP bundling.
+   * MMD split-storage (pmx + separate `${id}-textures`) can't be rebuilt into
+   * a valid archive, so MMD exports metadata only.
+   */
+  async function resolveModelForZip(modelId: string | null | undefined): Promise<ZipModelRef> {
+    if (!modelId || modelId === 'none')
+      return null
+
+    await displayModelsStore.loadDisplayModelsFromIndexedDB()
+    const model = await displayModelsStore.getDisplayModel(modelId) as any
+    if (!model)
+      return null
+
+    if (model.format === DisplayModelFormat.PMXZip
+      || model.format === DisplayModelFormat.PMXDirectory
+      || model.format === DisplayModelFormat.PMD) {
+      return { skipped: 'mmd' }
+    }
+
+    const ext = ZIP_MODEL_EXT[model.format as DisplayModelFormat]
+    if (!ext) {
+      return { skipped: 'unsupported' }
+    }
+
+    if (model.type === 'file' && model.file) {
+      // NOTICE: unwrap the Vue reactive proxy or the stored blob corrupts on read.
+      const file = toRaw(model.file) as File
+      return { file, name: model.name || 'model', format: model.format as DisplayModelFormat, ext }
+    }
+
+    if (model.type === 'url' && model.url) {
+      const res = await fetch(model.url)
+      const blob = await res.blob()
+      const name = model.name || 'model'
+      return { file: new File([blob], name), name, format: model.format as DisplayModelFormat, ext }
+    }
+
+    return { skipped: 'unavailable' }
+  }
+
+  /**
+   * Resolves the card's active scene background blob (builtin URLs are fetched to blob).
+   */
+  async function resolveBackgroundForZip(card: AiriCard): Promise<{ blob: Blob, title: string } | null> {
+    const bgId = (card as any).extensions?.airi?.modules?.activeBackgroundId
+    if (!bgId || bgId === 'none')
+      return null
+
+    const entry = backgroundStore.entries.get(bgId)
+    if (!entry)
+      return null
+
+    const title = entry.title || entry.id
+    if (entry.blob)
+      return { blob: entry.blob, title }
+
+    const url = (entry as any).url
+    if (!url)
+      return null
+
+    const res = await fetch(url)
+    return { blob: await res.blob(), title }
+  }
+
+  function buildZipReadme(input: {
+    name: string
+    flavor: 'v2' | 'v1'
+    modelName?: string
+    modelPath?: string
+    backgroundTitle?: string
+    voiceCount: number
+    sessionCount: number
+    messageCount: number
+  }) {
+    const lines = [
+      `# Character: ${input.name}`,
+      '',
+      `This character card package was created using AIRI (${input.flavor === 'v2' ? 'Extended v2' : 'Upstream-compatible v1'}).`,
+      '',
+      '## Compatibility',
+      `- **AIRI Fork (dasilva333)**: ${input.flavor === 'v2' ? 'Full support for multi-model loading, custom acting prompts, voice profiles, visual manifestations, and memories.' : 'Core CCv3 persona fields and primary display model.'}`,
+      `- **AIRI Upstream (moeru-ai/airi)**: ${input.flavor === 'v1' ? 'Compatible (primary display model and core CCv3 persona fields imported).' : 'v2 packages are fork-only; import `card.json` directly for the base persona.'}`,
+      '- **SillyTavern / CCv3 Readers**: Import `card.json` directly.',
+      '',
+      '## Assets & Credits',
+    ]
+    if (input.modelPath) {
+      lines.push(`- **Primary Model**: \`${input.modelPath}\`${input.modelName && input.modelName !== input.modelPath ? ` (${input.modelName})` : ''} — only share if the model license permits redistribution.`)
+    }
+    if (input.backgroundTitle)
+      lines.push(`- **Background**: \`background.png\` (${input.backgroundTitle})`)
+    if (input.voiceCount > 0)
+      lines.push(`- **Voice Profiles**: ${input.voiceCount} embedded virtual-audio-studio profile(s) under \`voices/\``)
+    if (input.sessionCount > 0)
+      lines.push(`- **Memories**: ${input.sessionCount} chat session(s), ${input.messageCount} message(s) under \`memories/\``)
+    return `${lines.join('\n')}\n`
+  }
+
+  /**
+   * Exports an AIRI card as a ZIP package (v2 Extended or v1 Upstream-compatible).
+   * Binaries ship as files — card.json stays free of inline base64 bloat.
+   */
+  async function exportCardZip(cardId: string, options: ZipExportOptions = {}) {
+    const {
+      flavor = 'v2',
+      includeModels = true,
+      includeBackground = true,
+      includeVoiceProfiles = true,
+      includeCover = true,
+      includeMemories = false,
+      generateReadme = true,
+      coverImageUrl = null,
+    } = options
+    const isV2 = flavor === 'v2'
+
+    const enriched = await getCardWithExportedBackground(cardId)
+    if (!enriched)
+      throw new Error(`Card with id ${cardId} not found`)
+    const safeName = (enriched.name || 'airi-card').toLowerCase().replace(/[^a-z0-9_-]/g, '_')
+
+    // Clean card.json: background Data URLs and inline voice profiles ship as
+    // separate files instead (v1 additionally drops all non-whitelisted airi blocks).
+    const clean: any = JSON.parse(JSON.stringify(enriched))
+    const preferredBackgroundName = clean.extensions?.airi?.modules?.preferredBackgroundName
+    if (clean.extensions?.airi?.modules)
+      delete clean.extensions.airi.modules.preferredBackgroundDataUrl
+    if (clean.extensions?.airi)
+      delete clean.extensions.airi.voice_profiles
+
+    let cardJson: any
+    if (isV2) {
+      cardJson = exportToJSON(clean)
+    }
+    else {
+      const { airi, ...restExtensions } = clean.extensions || {}
+      cardJson = exportToJSON({ ...clean, extensions: { ...restExtensions, airi: sanitizeAiriForV1(airi) } })
+    }
+
+    // --- Gather assets (sizes first for the 1 GB pre-flight estimate) ---
+    const model = includeModels
+      ? await resolveModelForZip(cardStore.getCardDisplayModelId(cardId))
+      : null
+    if (model && 'skipped' in model && model.skipped === 'mmd') {
+      console.warn('[useCardExport] MMD model bundling is unsupported, exporting metadata only')
+    }
+
+    let background: { blob: Blob, title: string } | null = null
+    if (isV2 && includeBackground) {
+      try {
+        background = await resolveBackgroundForZip(enriched)
+      }
+      catch (err) {
+        console.warn('[useCardExport] Background resolution failed, skipping background.png:', err)
+      }
+    }
+
+    const voiceProfiles: any[] = []
+    if (isV2 && includeVoiceProfiles) {
+      for (const id of collectVirtualVoiceIds(enriched)) {
+        const profile = speechStore.savedVoiceProfiles.find(p => p.id === id)
+        if (profile)
+          voiceProfiles.push(JSON.parse(JSON.stringify(profile)))
+      }
+    }
+
+    let coverBytes: Uint8Array | null = null
+    if (isV2 && includeCover && coverImageUrl) {
+      try {
+        coverBytes = await composeCardExportPng(coverImageUrl)
+      }
+      catch (err) {
+        console.warn('[useCardExport] Cover composition failed, skipping cover.png:', err)
+      }
+    }
+
+    let sessionsExport: any = null
+    let memoryExport: any = null
+    if (isV2 && includeMemories) {
+      sessionsExport = await dataMaintenance.exportSessionsForCharacter(cardId)
+      memoryExport = await dataMaintenance.exportMemoryForCharacter(cardId)
+    }
+
+    const cardJsonText = JSON.stringify(cardJson, null, 2)
+    const voicesTexts = voiceProfiles.map((p, i) => ({
+      filename: `${((p.id || `voice-${i + 1}`) as string).toLowerCase().replace(/[^a-z0-9_-]/g, '_')}.json`,
+      text: JSON.stringify(p, null, 2),
+    }))
+    const sessionsText = sessionsExport ? JSON.stringify(sessionsExport, null, 2) : null
+    const memoryText = memoryExport ? JSON.stringify(memoryExport, null, 2) : null
+
+    const encoder = new TextEncoder()
+    const estimated = (model && 'file' in model ? model.file.size : 0)
+      + (background?.blob.size ?? 0)
+      + (coverBytes?.length ?? 0)
+      + encoder.encode(cardJsonText).length
+      + voicesTexts.reduce((sum, v) => sum + encoder.encode(v.text).length, 0)
+      + (sessionsText ? encoder.encode(sessionsText).length : 0)
+      + (memoryText ? encoder.encode(memoryText).length : 0)
+    if (estimated > ZIP_SIZE_CAP_BYTES) {
+      throw new Error(`Package would be ~${(estimated / 1024 ** 3).toFixed(2)} GB, over the 1 GB archive cap — deselect assets to proceed`)
+    }
+
+    // --- Manifest ---
+    const createdAt = new Date().toISOString()
+    const modelFileName = model && 'file' in model
+      ? `${(model.name || 'model').replace(/\.[a-z0-9]+$/i, '').toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'model'}.${model.ext}`
+      : null
+    let manifest: any
+    if (!isV2) {
+      manifest = {
+        format: ZIP_MANIFEST_V1_FORMAT,
+        version: 1,
+        createdAt,
+        card: { path: 'card.json', spec: 'chara_card_v3' },
+      }
+      if (model && 'file' in model) {
+        manifest.resources = {
+          displayModel: { path: `models/body-model.${model.ext}`, format: model.format, name: model.file.name },
+        }
+      }
+    }
+    else {
+      manifest = {
+        format: ZIP_MANIFEST_V2_FORMAT,
+        version: 2,
+        generator: 'AIRI Fork (dasilva333)',
+        createdAt,
+        card: { path: 'card.json', spec: 'chara_card_v3' },
+        resources: {
+          ...(coverBytes ? { cardImage: { path: 'cover.png' } } : {}),
+          ...(background ? { backgroundImage: { path: 'background.png', title: background.title } } : {}),
+          displayModels: model && 'file' in model && modelFileName
+            ? [{ id: 'primary', format: model.format, name: model.file.name, path: `models/${modelFileName}`, role: 'base' }]
+            : [],
+          voiceProfiles: voicesTexts.map((v, i) => ({ id: voiceProfiles[i].id || `voice-${i + 1}`, path: `voices/${v.filename}` })),
+          ...(sessionsExport ? { memories: { chatSessions: { path: 'memories/chat_sessions.json' }, memory: { path: 'memories/memory.json' } } } : {}),
+        },
+      }
+    }
+
+    // --- Assemble ---
+    const zip = new JSZip()
+    zip.file('manifest.json', JSON.stringify(manifest, null, 2))
+    zip.file('card.json', cardJsonText)
+    if (model && 'file' in model) {
+      const modelPath = !isV2 ? `models/body-model.${model.ext}` : `models/${modelFileName}`
+      zip.file(modelPath, await model.file.arrayBuffer())
+    }
+    if (background)
+      zip.file('background.png', await background.blob.arrayBuffer())
+    if (coverBytes)
+      zip.file('cover.png', coverBytes)
+    for (const v of voicesTexts)
+      zip.file(`voices/${v.filename}`, v.text)
+    if (sessionsText)
+      zip.file('memories/chat_sessions.json', sessionsText)
+    if (memoryText)
+      zip.file('memories/memory.json', memoryText)
+    if (isV2 && generateReadme) {
+      const records = sessionsExport ? Object.values(sessionsExport.sessions || {}) as any[] : []
+      const messageCount = records.reduce((sum, r) => sum + (r.messages?.length ?? 0), 0)
+      zip.file('README.md', buildZipReadme({
+        name: enriched.name || 'airi-card',
+        flavor,
+        modelName: model && 'file' in model ? model.name : undefined,
+        modelPath: model && 'file' in model ? `models/${!isV2 ? `body-model.${model.ext}` : modelFileName}` : undefined,
+        backgroundTitle: background?.title ?? preferredBackgroundName,
+        voiceCount: voiceProfiles.length,
+        sessionCount: records.length,
+        messageCount,
+      }))
+    }
+
+    const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/zip' })
+    downloadBlob(blob, `${safeName}_card.zip`)
+  }
+
   return {
     getCardWithExportedBackground,
     buildCharaCardV2,
@@ -497,5 +832,6 @@ export function useCardExport() {
     generateFallbackAvatarDataUrl,
     exportCardJson,
     exportCardPng,
+    exportCardZip,
   }
 }

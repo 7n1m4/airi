@@ -96,6 +96,119 @@ export function useDataMaintenance() {
     await chatStore.importSessions(payload)
   }
 
+  // --- Per-Character (single-card ZIP) ---
+
+  /**
+   * Scoped variant of `exportSessions` for single-card ZIP `memories/chat_sessions.json`.
+   * Returns full `{ meta, messages }` records for one character — never metas-only.
+   */
+  async function exportSessionsForCharacter(characterId: string): Promise<ChatSessionsExport> {
+    const chatStoreAny = chatStore as any
+    if (!chatStoreAny.ready) {
+      await chatStoreAny.initialize()
+    }
+
+    const empty = {
+      format: 'chat-sessions-index:v1',
+      index: { userId: chatStoreAny.index?.userId ?? '', characters: {} },
+      sessions: {},
+    } as ChatSessionsExport
+
+    const charIndex = chatStore.getCharacterIndex(characterId)
+    if (!charIndex?.sessions) {
+      return empty
+    }
+
+    const sessions: Record<string, any> = {}
+    for (const sessionId of Object.keys(charIndex.sessions)) {
+      // NOTICE: messages are lazy — ensure the session is loaded before reading.
+      await chatStore.loadSession(sessionId)
+      const stored = await chatSessionsRepo.getSession(sessionId)
+      if (stored) {
+        sessions[sessionId] = stored
+        continue
+      }
+      const meta = chatStoreAny.sessionMetas[sessionId]
+      const messages = chatStore.getSessionMessages(sessionId)
+      if (meta && messages) {
+        sessions[sessionId] = { meta, messages }
+      }
+    }
+
+    return {
+      format: 'chat-sessions-index:v1',
+      index: {
+        userId: chatStoreAny.index?.userId ?? '',
+        characters: { [characterId]: charIndex },
+      },
+      sessions,
+    } as ChatSessionsExport
+  }
+
+  /**
+   * Scoped variant of the vault `memory.json` payload for single-card ZIP `memories/memory.json`.
+   * Covers one character across all five memory sources: chat-adjacent STMM blocks, LTMM journal
+   * entries, lifetime artifacts (enumerated per universe — a global-only read would drop the rest),
+   * and echo chips.
+   */
+  async function exportMemoryForCharacter(characterId: string) {
+    await Promise.all([shortTermMemoryStore.load(), textJournalStore.load()])
+
+    const shortTermBlocks = shortTermMemoryStore.blocks.filter((b: any) => b.characterId === characterId)
+    const journalEntries = textJournalStore.entries.filter((e: any) => e.characterId === characterId)
+
+    // Lifetime artifacts are universe-keyed — collect universes from this character's
+    // sessions, always including 'global'.
+    const universeIds = new Set<string>(['global'])
+    try {
+      const chatStoreAny = chatStore as any
+      if (!chatStoreAny.ready) {
+        await chatStoreAny.initialize()
+      }
+      const charIndex = chatStore.getCharacterIndex(characterId)
+      if (charIndex?.sessions) {
+        for (const meta of Object.values(charIndex.sessions) as any[]) {
+          universeIds.add(meta?.universeId || 'global')
+        }
+      }
+    }
+    catch (e) {
+      console.error(`Failed to enumerate universes for ${characterId}`, e)
+    }
+
+    const lifetimeArtifacts: Record<string, any> = {}
+    for (const universeId of universeIds) {
+      try {
+        const art = await lifetimeMemoryRepo.getByCharacter(characterId, universeId)
+        if (art) {
+          lifetimeArtifacts[universeId] = art
+        }
+      }
+      catch (e) {
+        console.error(`Failed to export lifetime artifact for ${characterId}:${universeId}`, e)
+      }
+    }
+
+    let echoChips: any[] = []
+    try {
+      const all = (await echoChipsRepo.getAll('local')) || []
+      echoChips = all.filter((c: any) => c.characterId === characterId)
+    }
+    catch (e) {
+      console.error('Failed to export echo chips', e)
+    }
+
+    return {
+      format: 'airi-memory:v2',
+      timestamp: Date.now(),
+      characterId,
+      shortTermBlocks,
+      journalEntries,
+      lifetimeArtifacts,
+      echoChips,
+    }
+  }
+
   // --- Characters ---
 
   async function exportAllCharacters() {
@@ -788,6 +901,8 @@ export function useDataMaintenance() {
     deleteAllChatSessions,
     exportChatSessions,
     importChatSessions,
+    exportSessionsForCharacter,
+    exportMemoryForCharacter,
     exportAllCharacters,
     importAllCharacters,
     exportMemory,

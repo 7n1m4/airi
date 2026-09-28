@@ -1,5 +1,7 @@
 # AIRI Card Import / Export Design
 
+> Doc ownership (2026-09-28): this document covers **all** portable formats and how they intermingle (JSON house backup, PNG ecosystem compatibility, ZIP complete bundle, Data Vault bulk archive). Fork schema internals and the ZIP Package Spec v2 definition live in [`docs/design-airi-card.md`](./design-airi-card.md) — this doc references that spec, it does not duplicate it.
+
 ## Goal
 
 AIRI cards should be portable.
@@ -16,7 +18,7 @@ The current AIRI card editor is too valuable to leave trapped in local storage.
 
 ## Product Direction
 
-The feature is intentionally split into two layers:
+The feature is intentionally split into three layers:
 
 ### 1. AIRI JSON
 
@@ -39,6 +41,19 @@ Use it for:
 
 The compatibility target is currently:
 - SillyTavern-style `chara_card_v2` PNG cards
+
+### 3. ZIP Complete Bundle (new)
+
+This is the whole-character package: card metadata plus binaries and (optionally) history.
+
+Use it for:
+- sharing a character with its display model, background, voice profiles, and cover art in one file
+- moving a character between devices/users without losing assets
+- upstream-compatible exchange (v1) or full fork-fidelity exchange (v2)
+
+Two flavors (spec in [`docs/design-airi-card.md`](./design-airi-card.md) §6):
+- **v1 Upstream (`moeru-ai` standard)**: `manifest.json` (`format: 'airi-character-card'`, `version: 1`) + CCv3 `card.json` + single `models/body-model.<ext>`. No memories, no voices, no background — upstream whitelist only.
+- **v2 Extended (fork)**: `manifest.json` (`format: 'airi-card-package'`, `version: 2`) + `card.json` + `cover.png` + `background.png` + `models/` + `voices/` + `memories/chat_sessions.json` + `README.md`. Fork-only: intentionally fails upstream validation until a v2 importer ships.
 
 ---
 
@@ -184,6 +199,43 @@ If the payload is compatibility-only, AIRI should:
 
 ---
 
+## ZIP Wiring: Reuse Data Vault, Narrow To One Character
+
+> Findings (2026-09-28 audit of `Settings -> Data` top export). Do not reinvent the wheel: the vault already solves archiving, full-fidelity session dump, multi-pillar memory dump, and binary-in-ZIP. The single-card ZIP reuses its accessors and patterns, with a different layout.
+
+### What the vault already does
+
+- `exportDataVaultArchive(selection)` in `packages/stage-ui/src/composables/use-data-maintenance.ts:628-714` builds an `ArchivePayload` per selected domain and zips it via `createDataVaultArchive()` (`packages/stage-ui/src/utils/data-vault/archive.ts:67-143`, `JSZip.generateAsync({ type: 'blob' })`). Import mirrors it via `extractDataVaultArchive()` + `commitVaultImport()`.
+- Chat: `chatStore.exportSessions()` (`session-store.ts:1103-1135`) dumps the **full** `{ format: 'chat-sessions-index:v1', index, sessions: Record<sessionId, { meta, messages }> }` — index plus every transcript, read from `chat-sessions.repo` with in-memory fallback.
+- Memory: `memory.json` (`format: 'airi-memory:v2'`) bundles STMM blocks + LTMM journal entries + `lifetimeArtifacts` per card + echo chips.
+- Backgrounds: `{ metadata, blob }` items → `backgrounds/<id>.<ext>` binaries + `backgrounds/metadata.json`.
+
+### Per-character narrowing (the plan — no new repo code)
+
+- **Chat:** filter `exportSessions()` output to `index.characters[cardId]` plus its session IDs. Reuse the full-record shape; never copy the metas-only pattern (see below).
+- **Memory — full pillars (LOCKED 2026-09-28):** same `airi-memory:v2` shape filtered by `characterId`: STMM blocks + LTMM journal entries + echo chips (all carry `characterId`, `universeId` falls back `'global'`) plus `lifetimeArtifacts`. Lifetime keys are universe-scoped (`local:memory/lifetime/{characterId}:{universeId}`, default `'global'` in `lifetime-memory.repo.ts:6-7`) — enumerate universes from the character's `sessionMetas` (+ `'global'`) and fetch each, so non-global universes are not silently dropped the way the vault's global-only read does.
+- **Background:** same `BackgroundArchiveItem` read, written as a single `background.png` instead of `backgrounds/<id>.<ext>`.
+- **Characters:** single card entry instead of the whole `cards` array.
+- **Do NOT reuse `createDataVaultArchive()` directly** — its layout is vault-style (`characters.json`, `chat-sessions.json`, …). The card package needs card layout (`manifest.json`, `card.json`, `models/`, …). Decompose instead: extract `exportSessionsForCharacter(cardId)` + `exportMemoryForCharacter(cardId)` helpers (thin filters over the vault logic, e.g. in `utils/data-vault/per-character.ts` or as `useDataMaintenance` additions) consumed by both Vault and `exportCardZip`.
+
+### Memories data reality and known bug
+
+Chat history is two-tier (`docs/data-catalog.md` §1.4/§1.5): light index `local:chat/index/{userId}` (`characters[cardId].sessions` = `ChatSessionMeta[]`: titles, counts, timestamps, `universeId`) and full records `local:chat/sessions/{sessionId}` (`{ meta, messages: ChatHistoryItem[] }`). In-memory mirrors are `sessionMetas` + `sessionMessages`; message reads require `await loadSession(sessionId)` first (lazy) — and `await initialize()` before `getCharacterIndex(cardId)` (the dialog already does this on open).
+
+> KNOWN BUG: `exportCardJson({ includeMemories })` (`use-card-export.ts:387-391`) and `detectedChatSessions` export **metas only** — no transcript content. The ZIP `memories/` dir MUST use full records: per session `await loadSession(id)` → `getSessionMessages(id)` → `memories/chat_sessions.json` as `{ version: 1, characterId, exportedAt, sessions: [{ meta, messages }] }`, plus `memories/memory.json` in vault `airi-memory:v2` shape filtered to the character. Fix JSON export to share the same helper.
+
+### Size cap (LOCKED 2026-09-28): 1 GB per ZIP
+
+No truncation, no streaming — estimate up front (model bytes + background bytes + JSON lengths) and abort with a clear error if the package would exceed **1 GB**. Rationale: archive-reader and 32-bit size-field issues past that point; the dialog already shows per-domain estimates via `getVaultStats()`, so surface the running total before generating.
+
+### ZIP import behavior (LOCKED 2026-09-28: export-only first)
+
+- v1 import: ignore `memories/` and any v2-only entries; import card + primary model through the upstream-equivalent path.
+- v2 `memories/` import comes after export validates: restore as new timelines/records, never overwriting live sessions (`storageState.isImportingRemoteData = true` while writing).
+- Upstream PR #1998 service file has zero memories handling — `memories/` is fork-only by design.
+
+---
+
 ## UI Direction
 
 Current direction:
@@ -197,22 +249,13 @@ This is the current intended split:
 - `Import` is page-level because it creates a new card
 - `Export` is per-card because it targets one specific card
 
-### Current UI Behavior
+### Current UI Behavior (updated 2026-09-28 — the old JSON/PNG-only menu description below was stale)
 
-- Import tile supports:
-  - AIRI JSON
-  - `chara_card_v2` / SillyTavern-style PNG
-- Export menu supports:
-  - JSON
-  - PNG
-
-### Later UI Possibilities
-
-- bulk export/import under `Settings -> Data`
-- export-all AIRI cards
-- backup bundles
-
-But those are later-phase lifecycle features, not current scope.
+- Per-card export is `CardExportDialog.vue` (`packages/stage-pages/src/pages/settings/airi-card/components/`): three segments — ZIP Package (flavors v2 Extended / v1 Standard, asset toggles + live archive-tree preview), Portable PNG, Raw JSON. PNG/JSON are wired via `use-card-export.ts`; ZIP generation (`exportCardZip`) is UI-rendered but unwired.
+- Import tile supports AIRI JSON and `chara_card_v2` / SillyTavern-style PNG (`parseImportedCard` / `parsePngCharaPayload` in `index.vue`).
+- Bulk export/import already exists under `Settings -> Data` and is **not** later-phase:
+  - **Data Vault** (`data/index.vue:379-401` → `ExportVaultModal.vue` / `ImportVaultModal.vue` → `useDataMaintenance().exportDataVaultArchive()` → `createDataVaultArchive()` in `packages/stage-ui/src/utils/data-vault/archive.ts`, JSZip): selective ZIP across domains `characters` / `chat-sessions` / `memory` / `providers` / `settings` / `backgrounds`.
+  - Legacy single-file JSON tools (collapsed by default): `exportAllCharacters`, `exportChatSessions`, `exportMemory`, `exportBackgrounds`.
 
 ---
 
@@ -313,7 +356,13 @@ The correct order is:
    Current recommendation: no. Keep JSON textual and durable first.
 
 5. Should compatibility import/export stay in the same UI action set or move into an advanced menu later?
-   Current recommendation: current simple menu is fine.
+   Current recommendation: `CardExportDialog.vue` three-segment modal is the answer — shipped.
+
+6. Should single-card ZIP memories restore on import, or export-only?
+   LOCKED 2026-09-28: export-only first; restore as new timelines/records later (never overwrite live sessions).
+
+7. Should ZIP memories include STMM/LTMM/lifetime/echo chips, or chat sessions only?
+   LOCKED 2026-09-28: full pillars — chat sessions + STMM + LTMM + lifetime + echo chips, all filtered to the character (lifetime enumerated per universe).
 
 ---
 
@@ -321,12 +370,14 @@ The correct order is:
 
 1. Keep AIRI JSON as the canonical backup format.
 2. Keep compatibility PNG focused on strict `chara_card_v2` interoperability.
-3. Improve import UI copy so users know AIRI supports:
-   - AIRI JSON
-   - `chara_card_v2` / SillyTavern-compatible PNG
-4. Later, improve the PNG render/composition quality without changing the compatibility contract.
+3. Wire `exportCardZip(cardId, options)` in `use-card-export.ts`: `exportToJSON()` for `card.json` (sanitized v1 / full v2), per-flavor manifest, model via `getDisplayModel()` (`toRaw`, MMD skipped), background blob, filtered voice profiles, `composeCardExportPng()` cover, full-record `memories/chat_sessions.json` + per-character `memories/memory.json` (STMM/LTMM/lifetime-per-universe/echo), README — all through `jszip`, all sharing new per-character vault helpers, with a pre-generate 1 GB size estimate that aborts cleanly.
+4. Fix the metas-only bug by routing JSON `includeMemories` through the same full-record helper.
+5. Validate: `pnpm -F stage-pages typecheck`, manual v1→upstream-shaped import check, v2 round-trip incl. a large-history character against the 1 GB guard; then spec the v2 memories importer.
+6. Later, improve the PNG render/composition quality without changing the compatibility contract.
 
 ## Relevant Skills
 
 - [[airi-card-editor-wizard]]
 - [[airi-card-schema]]
+- [[airi-data-persistence]]
+- [[airi-memory-chat-sessions]]

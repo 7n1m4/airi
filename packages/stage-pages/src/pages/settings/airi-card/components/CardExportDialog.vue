@@ -94,6 +94,7 @@ const displayModelInfo = computed(() => {
       rawFormat: 'vrm',
       filename: 'body-model.vrm',
       upstreamFilename: 'body-model.vrm',
+      upstreamFormat: 'vrm',
       isMmd: false,
       exportSupported: true,
       previewImage: null,
@@ -106,8 +107,10 @@ const displayModelInfo = computed(() => {
   const isLive2d = rawFormat.includes('live2d')
   const isSpine = rawFormat.includes('spine')
 
-  // Upstream mapping: [VRM]: 'vrm', [Live2dZip]: 'zip', [SpineZip]: 'zip'
+  // Upstream file extensions: [VRM]: 'vrm', [Live2dZip]: 'zip', [SpineZip]: 'zip'.
+  // Upstream manifest literals differ: 'vrm' | 'live2d-zip' | 'spine-zip' (never generic 'zip').
   const upstreamExt = isVrm ? 'vrm' : 'zip'
+  const upstreamFormat = isVrm ? 'vrm' : isLive2d ? 'live2d-zip' : isSpine ? 'spine-zip' : null
   const ext = isVrm ? 'vrm' : isMmd ? 'pmx' : 'zip'
   const cleanName = (model.name || 'model').toLowerCase().replace(/[^a-z0-9_-]/g, '_')
 
@@ -128,6 +131,7 @@ const displayModelInfo = computed(() => {
     rawFormat,
     filename: `${cleanName}.${ext}`,
     upstreamFilename: `body-model.${upstreamExt}`,
+    upstreamFormat,
     isMmd,
     exportSupported: !isMmd,
     previewImage: model.authorIcon || model.previewImage || null,
@@ -434,7 +438,7 @@ const previewJsonString = computed(() => {
   return JSON.stringify(payload, null, jsonPretty.value ? 2 : 0)
 })
 
-const { exportCardJson, exportCardPng } = useCardExport()
+const { exportCardJson, exportCardPng, exportCardZip } = useCardExport()
 const isExporting = ref(false)
 
 function handleClose() {
@@ -483,7 +487,18 @@ async function handleExportDownload() {
       handleClose()
     }
     else {
-      toast.info(`ZIP Package generation (${zipFlavor.value}) is coming in the next milestone!`)
+      await exportCardZip(props.cardId, {
+        flavor: zipFlavor.value,
+        includeModels: includeModels.value,
+        includeBackground: includeBackground.value,
+        includeVoiceProfiles: includeVoiceProfiles.value,
+        includeCover: includeCoverFrame.value,
+        includeMemories: includeMemories.value,
+        generateReadme: generateReadme.value,
+        coverImageUrl: activeCoverImageUrl.value,
+      })
+      toast.success(`Exported ${activeCard.value.name} as .zip`)
+      handleClose()
     }
   }
   catch (err: any) {
