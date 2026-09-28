@@ -129,6 +129,42 @@ function cropToImageData(raw: Uint8Array, fullWidth: number, channels: number, b
   }
 }
 
+let scratchDecodeCanvas: OffscreenCanvas | null = null
+let scratchDecodeCtx: OffscreenCanvasRenderingContext2D | null = null
+
+/**
+ * Decodes a base64 data URL into a RawImage using a single reused OffscreenCanvas
+ * and explicit ImageBitmap.close() to eliminate Blink Tag 14 / GPU texture accumulation.
+ */
+async function decodeDataUrlToRawImage(dataUrl: string): Promise<RawImage> {
+  const response = await fetch(dataUrl)
+  const blob = await response.blob()
+  const bitmap = await createImageBitmap(blob)
+  try {
+    const { width, height } = bitmap
+    if (!scratchDecodeCanvas) {
+      scratchDecodeCanvas = new OffscreenCanvas(width, height)
+      scratchDecodeCtx = scratchDecodeCanvas.getContext('2d', { willReadFrequently: true })
+    }
+    else if (scratchDecodeCanvas.width !== width || scratchDecodeCanvas.height !== height) {
+      scratchDecodeCanvas.width = width
+      scratchDecodeCanvas.height = height
+      scratchDecodeCtx = scratchDecodeCanvas.getContext('2d', { willReadFrequently: true })
+    }
+
+    if (!scratchDecodeCtx) {
+      throw new Error('Failed to acquire 2D context on scratch OffscreenCanvas')
+    }
+
+    scratchDecodeCtx.drawImage(bitmap, 0, 0)
+    const imgData = scratchDecodeCtx.getImageData(0, 0, width, height)
+    return new RawImage(imgData.data, width, height, 4)
+  }
+  finally {
+    bitmap.close()
+  }
+}
+
 defineStreamInvokeHandler(context, attentionGuardLoadEvent, toStreamHandler<any, any>(async ({ payload, emit }) => {
   let device = payload.device ?? 'webgpu'
   if (device === 'webgpu') {
@@ -213,7 +249,7 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
   try {
     // -- decode + Stage 0 perceptual hash -------------------------------------
     try {
-      rawImage = await RawImage.fromURL(dataUrl)
+      rawImage = await decodeDataUrlToRawImage(dataUrl)
     }
     catch (decodeErr: any) {
       console.warn('[attention-guard:worker] Invalid capture frame skipped (could not decode):', decodeErr?.message || decodeErr)
@@ -425,5 +461,11 @@ defineInvokeHandler(context, attentionGuardUnloadEvent, () => {
   void disposeTextEncoder()
   void disposeOcrEngine()
   void disposeVlmForwarder()
+  if (scratchDecodeCanvas) {
+    scratchDecodeCanvas.width = 0
+    scratchDecodeCanvas.height = 0
+    scratchDecodeCanvas = null
+    scratchDecodeCtx = null
+  }
   resetTickState()
 })

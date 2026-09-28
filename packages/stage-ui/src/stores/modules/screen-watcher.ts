@@ -276,8 +276,9 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         }
 
         // 2. BroadcastChannel to caption overlay / head-tether plank
+        let bc: BroadcastChannel | null = null
         try {
-          const bc = new BroadcastChannel('airi-caption-overlay')
+          bc = new BroadcastChannel('airi-caption-overlay')
           bc.postMessage({
             type: 'caption-assistant',
             segments: [
@@ -292,6 +293,12 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         }
         catch (err) {
           console.warn('[ScreenWatcher:Reaction] Failed to broadcast caption overlay:', err)
+        }
+        finally {
+          try {
+            bc?.close()
+          }
+          catch {}
         }
 
         // Wait comfortable reading speed before advancing (final chunk lingers indefinitely!)

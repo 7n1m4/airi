@@ -124,6 +124,7 @@ apps/server/.airi-db/
 
 # Scratch, patches & logs
 *.patch
+!patches/*.patch
 *.diff
 git_log_*.txt
 story-build-log.txt

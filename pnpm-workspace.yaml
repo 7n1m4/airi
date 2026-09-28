@@ -21,6 +21,7 @@ overrides:
   string.prototype.matchall: npm:@nolyfill/string.prototype.matchall@^1.0.44
   vite: ~6.2.5
 patchedDependencies:
+  '@huggingface/transformers': patches/@huggingface__transformers.patch
   '@moeru/eventa': patches/@moeru__eventa.patch
   '@moeru/eventa@0.3.0': patches/@moeru__eventa@0.3.0.patch
   active-win@9.0.0: patches/active-win@9.0.0.patch
