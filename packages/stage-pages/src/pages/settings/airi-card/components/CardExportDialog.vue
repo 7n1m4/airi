@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
 
-import { getLatestSelfie } from '@proj-airi/stage-ui/libs/character-media-resolver'
+import { extractModelIcon, getLatestSelfie } from '@proj-airi/stage-ui/libs/character-media-resolver'
 import { useBackgroundStore } from '@proj-airi/stage-ui/stores/background'
 import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
 import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
@@ -18,6 +18,8 @@ import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
 import cardExportFrameUrl from '../card-export-frame.png?url'
+
+import { useCardExport } from '../composables/use-card-export'
 
 interface Props {
   modelValue: boolean
@@ -132,14 +134,130 @@ const displayModelInfo = computed(() => {
   }
 })
 
-// Dynamic avatar resolution (Selfie -> Model Author Icon -> Model Preview -> Fallback)
-const avatarImageUrl = computed(() => {
-  if (props.cardId) {
-    const selfieUrl = getLatestSelfie(props.cardId)
-    if (selfieUrl)
-      return selfieUrl
+// ==================== 1.1 COVER ART SOURCES (4-TIER STRATEGY) ====================
+export type CoverArtSourceType = 'selfie' | 'preview' | 'author-icon' | 'letter'
+
+interface CoverArtOption {
+  type: CoverArtSourceType
+  label: string
+  sublabel: string
+  url: string | null
+  icon: string
+}
+
+const lazyExtractedIcon = ref<string | null>(null)
+const selectedCoverSource = ref<CoverArtSourceType>('selfie')
+
+// Lazy extract author icon from model zip if present
+watch(() => displayModelInfo.value?.id, async (modelId) => {
+  if (!modelId) {
+    lazyExtractedIcon.value = null
+    return
   }
-  return displayModelInfo.value?.previewImage || null
+  try {
+    const icon = await extractModelIcon(modelId)
+    if (icon) {
+      lazyExtractedIcon.value = icon
+    }
+  }
+  catch (err) {
+    console.warn('[CardExportDialog] Failed to extract model icon:', err)
+  }
+}, { immediate: true })
+
+const latestSelfieUrl = computed<string | null>(() => {
+  if (!props.cardId)
+    return null
+  return getLatestSelfie(props.cardId)
+})
+
+const modelPreviewUrl = computed<string | null>(() => {
+  const modelId = displayModelInfo.value?.id
+  if (!modelId)
+    return null
+  const model = displayModelsStore.displayModels.find(m => m.id === modelId)
+  return model?.previewImage || null
+})
+
+const authorIconUrl = computed<string | null>(() => {
+  const modelId = displayModelInfo.value?.id
+  if (!modelId)
+    return null
+  const model = displayModelsStore.displayModels.find(m => m.id === modelId)
+  return model?.authorIcon || lazyExtractedIcon.value || null
+})
+
+// Available cover art sources for this character
+const availableCoverSources = computed<CoverArtOption[]>(() => {
+  const sources: CoverArtOption[] = []
+
+  if (latestSelfieUrl.value) {
+    sources.push({
+      type: 'selfie',
+      label: 'Stage Selfie',
+      sublabel: 'Latest stage snapshot',
+      url: latestSelfieUrl.value,
+      icon: 'i-solar:camera-bold-duotone',
+    })
+  }
+
+  if (modelPreviewUrl.value) {
+    sources.push({
+      type: 'preview',
+      label: 'Model Render',
+      sublabel: `${displayModelInfo.value?.format || 'Avatar'} snapshot`,
+      url: modelPreviewUrl.value,
+      icon: 'i-solar:gallery-wide-bold-duotone',
+    })
+  }
+
+  if (authorIconUrl.value && authorIconUrl.value !== modelPreviewUrl.value) {
+    sources.push({
+      type: 'author-icon',
+      label: 'Author Icon',
+      sublabel: 'Model icon thumbnail',
+      url: authorIconUrl.value,
+      icon: 'i-solar:smile-circle-bold-duotone',
+    })
+  }
+
+  sources.push({
+    type: 'letter',
+    label: 'Initial Badge',
+    sublabel: 'Vector monogram art',
+    url: null,
+    icon: 'i-solar:text-bold-duotone',
+  })
+
+  return sources
+})
+
+// Auto-select the highest available tier on card or source change
+watch(availableCoverSources, (sources) => {
+  const exists = sources.some(s => s.type === selectedCoverSource.value)
+  if (!exists) {
+    selectedCoverSource.value = sources[0]?.type || 'letter'
+  }
+}, { immediate: true })
+
+// The active resolved image URL for PNG preview and export
+const activeCoverImageUrl = computed<string | null>(() => {
+  switch (selectedCoverSource.value) {
+    case 'selfie':
+      return latestSelfieUrl.value
+    case 'preview':
+      return modelPreviewUrl.value
+    case 'author-icon':
+      return authorIconUrl.value
+    case 'letter':
+    default:
+      return null
+  }
+})
+
+// Header badge avatar uses the active cover art or fallback
+const avatarImageUrl = computed(() => {
+  return activeCoverImageUrl.value || latestSelfieUrl.value || modelPreviewUrl.value || authorIconUrl.value || null
 })
 
 // ==================== 2. DYNAMIC VOICE PROFILE DETECTION ====================
@@ -300,26 +418,77 @@ const exportButtonLabel = computed(() => {
 
 // Dynamic JSON manifest string preview
 const previewJsonString = computed(() => {
-  const payload = {
+  const payload: Record<string, any> = {
     format: 'airi-card',
     version: 1,
     exportedAt: new Date().toISOString(),
     card: activeCard.value,
   }
+  if (jsonIncludeMemories.value && detectedChatSessions.value.length > 0) {
+    payload.sessions = detectedChatSessions.value
+  }
   return JSON.stringify(payload, null, jsonPretty.value ? 2 : 0)
 })
+
+const { exportCardJson, exportCardPng } = useCardExport()
+const isExporting = ref(false)
 
 function handleClose() {
   emit('update:modelValue', false)
 }
 
-function handleMockCopyPayload() {
-  navigator.clipboard?.writeText(previewJsonString.value)
-  toast.success(`Copied ${activeCard.value.name}'s payload to clipboard (Mock)`)
+async function handleCopyPayload() {
+  try {
+    if (activeSegment.value === 'json') {
+      await navigator.clipboard?.writeText(previewJsonString.value)
+      toast.success(`Copied ${activeCard.value.name}'s JSON manifest to clipboard`)
+    }
+    else {
+      toast.info(`Clipboard copy is currently only available for JSON manifest.`)
+    }
+  }
+  catch (err: any) {
+    console.error('[CardExportDialog] Failed to copy payload:', err)
+    toast.error(`Failed to copy to clipboard: ${err?.message || 'Permission denied'}`)
+  }
 }
 
-function handleMockExportDownload() {
-  toast.info(`Exporting ${activeCard.value.name} as .${activeSegment.value} is in design preview mode.`)
+async function handleExportDownload() {
+  if (!props.cardId) {
+    toast.error('Cannot export without a valid card ID')
+    return
+  }
+
+  isExporting.value = true
+  try {
+    if (activeSegment.value === 'json') {
+      await exportCardJson(props.cardId, {
+        pretty: jsonPretty.value,
+        includeMemories: jsonIncludeMemories.value,
+      })
+      toast.success(`Exported ${activeCard.value.name} as .json`)
+      handleClose()
+    }
+    else if (activeSegment.value === 'png') {
+      await exportCardPng(props.cardId, {
+        framed: pngFramed.value,
+        omitNotes: pngOmitNotes.value,
+        imageSourceUrl: activeCoverImageUrl.value,
+      })
+      toast.success(`Exported ${activeCard.value.name} as .png`)
+      handleClose()
+    }
+    else {
+      toast.info(`ZIP Package generation (${zipFlavor.value}) is coming in the next milestone!`)
+    }
+  }
+  catch (err: any) {
+    console.error('[CardExportDialog] Export failed:', err)
+    toast.error(`Export failed: ${err?.message || 'Unknown error'}`)
+  }
+  finally {
+    isExporting.value = false
+  }
 }
 </script>
 
@@ -867,6 +1036,57 @@ function handleMockExportDownload() {
 
             <!-- Right: PNG Options -->
             <div :class="['flex-1 w-full flex flex-col gap-3']">
+              <!-- Cover Art Source Picker -->
+              <div :class="['flex flex-col gap-2 rounded-xl border border-neutral-200 dark:border-neutral-800 p-3 bg-neutral-50/50 dark:bg-neutral-950/20 text-xs']">
+                <div :class="['flex items-center justify-between']">
+                  <span :class="['font-semibold text-neutral-800 dark:text-neutral-200 text-[11px] uppercase tracking-wider text-neutral-400']">
+                    Cover Art Source
+                  </span>
+                  <span :class="['text-[10px] text-neutral-400 font-mono']">
+                    {{ availableCoverSources.length }} available
+                  </span>
+                </div>
+
+                <div :class="['grid grid-cols-3 gap-2 mt-0.5']">
+                  <button
+                    v-for="source in availableCoverSources"
+                    :key="source.type"
+                    type="button"
+                    :class="[
+                      'flex items-center gap-2 p-2 rounded-lg border text-left transition-all',
+                      selectedCoverSource === source.type
+                        ? 'border-primary-500 bg-white dark:bg-neutral-800 text-primary-600 dark:text-primary-400 shadow-xs'
+                        : 'border-neutral-200/80 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700 bg-neutral-100/50 dark:bg-neutral-900/40 text-neutral-600 dark:text-neutral-400',
+                    ]"
+                    @click="selectedCoverSource = source.type"
+                  >
+                    <!-- Source Thumbnail / Icon -->
+                    <div
+                      :class="[
+                        'h-7 w-7 rounded-md shrink-0 overflow-hidden flex items-center justify-center border border-neutral-200 dark:border-neutral-700 bg-neutral-200/60 dark:bg-neutral-800',
+                      ]"
+                    >
+                      <img
+                        v-if="source.url"
+                        :src="source.url"
+                        :alt="source.label"
+                        :class="['h-full w-full object-cover object-top']"
+                      >
+                      <div
+                        v-else
+                        :class="[source.icon, 'text-sm text-neutral-500']"
+                      />
+                    </div>
+
+                    <div :class="['min-w-0 flex flex-col']">
+                      <span :class="['font-medium truncate text-xs']">{{ source.label }}</span>
+                      <span :class="['text-[10px] opacity-70 truncate']">{{ source.sublabel }}</span>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              <!-- PNG Framing & Scratchpad Options -->
               <div :class="['flex flex-col gap-2.5 rounded-xl border border-neutral-200 dark:border-neutral-800 p-3.5 text-xs bg-neutral-50/50 dark:bg-neutral-950/20']">
                 <label :class="['flex items-center gap-2 cursor-pointer select-none']">
                   <input v-model="pngFramed" type="checkbox" :class="['rounded text-primary-600']">
@@ -887,6 +1107,12 @@ function handleMockExportDownload() {
                 <div :class="['flex items-center justify-between']">
                   <span>Display Model</span>
                   <span :class="['font-medium text-neutral-700 dark:text-neutral-300']">{{ displayModelInfo?.name || 'Default' }}</span>
+                </div>
+                <div :class="['flex items-center justify-between']">
+                  <span>Cover Art Source</span>
+                  <span :class="['font-medium text-primary-600 dark:text-primary-400 capitalize']">
+                    {{ availableCoverSources.find(s => s.type === selectedCoverSource)?.label || 'Default' }}
+                  </span>
                 </div>
                 <div :class="['flex items-center justify-between']">
                   <span>Metadata Format</span>
@@ -958,7 +1184,8 @@ function handleMockExportDownload() {
           <Button
             variant="secondary"
             :class="['flex items-center gap-1.5 text-xs']"
-            @click="handleMockCopyPayload"
+            :disabled="isExporting"
+            @click="handleCopyPayload"
           >
             <div i-solar:copy-linear :class="['text-sm']" />
             <span>Copy {{ activeSegment.toUpperCase() }}</span>
@@ -967,6 +1194,7 @@ function handleMockExportDownload() {
           <div :class="['flex items-center gap-3']">
             <Button
               variant="secondary"
+              :disabled="isExporting"
               @click="handleClose"
             >
               Cancel
@@ -974,10 +1202,20 @@ function handleMockExportDownload() {
             <Button
               variant="primary"
               :class="['flex items-center gap-1.5 font-semibold']"
-              @click="handleMockExportDownload"
+              :disabled="isExporting"
+              @click="handleExportDownload"
             >
-              <div i-solar:download-minimalistic-bold-duotone :class="['text-base']" />
-              <span>{{ exportButtonLabel }}</span>
+              <div
+                v-if="isExporting"
+                i-solar:restart-circle-bold-duotone
+                :class="['text-base animate-spin']"
+              />
+              <div
+                v-else
+                i-solar:download-minimalistic-bold-duotone
+                :class="['text-base']"
+              />
+              <span>{{ isExporting ? 'Exporting...' : exportButtonLabel }}</span>
             </Button>
           </div>
         </div>
