@@ -15,6 +15,11 @@
  *   releases the slot immediately instead of stalling it until the op timeout.
  * - **VRAM accounting + WASM promotion**: allocation tokens and the
  *   device-loss → wasm fallback decision.
+ * - **Inactivity TTL + standby eviction**: every op resets an inactivity
+ *   timer (default 15 min); on expiry an idle `ready` host unloads its model,
+ *   releases its allocation, and keeps its load manifest so the adapter's
+ *   load-on-demand replay re-hydrates from local cache. The host also
+ *   registers an evictable unload handler with the coordinator on allocate.
  *
  * The host deliberately does NOT own the Eventa contract binding, per-op request
  * shapes, result encoding, UI status emission, or the adapter's request-level
@@ -87,7 +92,19 @@ export interface GpuWorkerHostOptions<Rpc> {
    * cleanup the host doesn't know about (UI status removal, clearing handlers).
    */
   onTerminate?: () => void
+  /**
+   * Inactivity TTL in ms before an idle `ready` host unloads its model.
+   * Defaults to {@link DEFAULT_INACTIVITY_TTL_MS} (15 min). Pass `null` or a
+   * non-positive value to disable TTL eviction (e.g. Settings "Never").
+   */
+  inactivityTtlMs?: number | null
 }
+
+/**
+ * Default inactivity TTL: a worker idle this long releases its GPU buffers
+ * and goes cold, re-hydrating on demand from local cache.
+ */
+export const DEFAULT_INACTIVITY_TTL_MS = 15 * 60 * 1000
 
 /**
  * The resilient worker handle returned by {@link createGpuWorkerHost}.
@@ -103,6 +120,15 @@ export interface GpuWorkerHost<Rpc> {
   readonly rpc: Rpc | null
   /** WebGPU device-loss events observed by this host. */
   readonly deviceLossCount: number
+  /** True while an exclusive operation holds this worker's mutex. */
+  readonly isLocked: boolean
+  /**
+   * Last load manifest retained across TTL/standby unloads so the adapter can
+   * re-initialize from local cache on its next `ensureLoaded()`. Opaque to the
+   * host — set by the adapter after each successful load. Cleared on
+   * terminate/reset.
+   */
+  readonly lastLoadManifest: unknown
 
   /** Move to an adapter-driven phase. Crash/respawn/terminate phases are host-owned. */
   setPhase: (phase: AdapterPhase) => void
@@ -165,6 +191,20 @@ export interface GpuWorkerHost<Rpc> {
   /** Mark the current allocation recently used (LRU ordering). */
   touch: () => void
 
+  /** Remember the load manifest (quantization, device, weights URI) for standby re-hydration. */
+  setLoadManifest: (manifest: unknown) => void
+
+  /** Override the inactivity TTL (`null`/non-positive disables TTL eviction). */
+  setInactivityTtlMs: (ms: number | null) => void
+
+  /**
+   * Unload the model when idle: best-effort `rpc.unload()`, release the
+   * allocation token, keep the worker and `lastLoadManifest`, phase → 'idle'
+   * so the adapter's load-on-demand replay re-hydrates. No-op unless
+   * `phase === 'ready'` and unlocked; defers (re-arms TTL) while busy.
+   */
+  unloadWorker: () => Promise<boolean>
+
   /** Tear down the worker, cancel a pending restart, release VRAM, and run `onTerminate`. */
   terminate: () => void
 
@@ -212,7 +252,39 @@ export function createGpuWorkerHost<Rpc>(options: GpuWorkerHostOptions<Rpc>): Gp
   // executor slot until the op timeout elapsed, stalling all other GPU work.
   let inflightAbort: AbortController | null = null
 
+  // NOTICE: Inactivity TTL countdown. Chromium never releases WebGPU buffers
+  // for idle workers, so an always-on companion would pin gigabytes of VRAM
+  // indefinitely. Every operation re-arms this timer; on expiry an idle host
+  // unloads and goes cold, re-hydrating on demand from local cache (<2s).
+  let inactivityTimer: ReturnType<typeof setTimeout> | null = null
+  let inactivityTtlMs: number | null = options.inactivityTtlMs === undefined
+    ? DEFAULT_INACTIVITY_TTL_MS
+    : options.inactivityTtlMs
+  let lastLoadManifest: unknown = null
+  let evictUnregister: (() => void) | null = null
+
   const operationMutex = new Mutex()
+
+  function isTtlEnabled(): boolean {
+    return inactivityTtlMs != null && inactivityTtlMs > 0
+  }
+
+  function clearInactivityTimer(): void {
+    if (inactivityTimer != null) {
+      clearTimeout(inactivityTimer)
+      inactivityTimer = null
+    }
+  }
+
+  function touchActivity(): void {
+    if (!isTtlEnabled() || inactivityTtlMs == null)
+      return
+    clearInactivityTimer()
+    inactivityTimer = setTimeout(() => {
+      inactivityTimer = null
+      void unloadWorker()
+    }, inactivityTtlMs)
+  }
 
   function destroyWorker(): void {
     if (worker) {
@@ -322,6 +394,7 @@ export function createGpuWorkerHost<Rpc>(options: GpuWorkerHostOptions<Rpc>): Gp
     if (isOom) {
       return Promise.reject(new Error(`[GpuWorkerHost:${resolveModelId()}] GPU out-of-memory circuit breaker active. Call reset() or switch to a smaller model to retry.`))
     }
+    touchActivity()
     return operationMutex.runExclusive(fn)
   }
 
@@ -334,6 +407,7 @@ export function createGpuWorkerHost<Rpc>(options: GpuWorkerHostOptions<Rpc>): Gp
     if (isOom) {
       return Promise.reject(new Error(`[GpuWorkerHost:${resolveModelId()}] GPU out-of-memory circuit breaker active. Call reset() or switch to a smaller model to retry.`))
     }
+    touchActivity()
     const opAbort = new AbortController()
     inflightAbort = opAbort
     return getGpuExecutor()
@@ -364,6 +438,16 @@ export function createGpuWorkerHost<Rpc>(options: GpuWorkerHostOptions<Rpc>): Gp
     if (allocationToken)
       coordinator.release(allocationToken)
     allocationToken = coordinator.requestAllocation(modelId, estimatedBytes)
+    // NOTICE: Single-tenant eviction wiring. The host registers its own
+    // unload/isActive pair so critical pressure and deep standby can reclaim
+    // this model with zero adapter changes — adapters only call allocate().
+    evictUnregister?.()
+    evictUnregister = coordinator.registerEvictable(modelId, {
+      unload: () => {
+        void unloadWorker()
+      },
+      isActive: () => phase !== 'ready' || operationMutex.isLocked() || inflightAbort != null,
+    })
   }
 
   function touch(): void {
@@ -371,11 +455,60 @@ export function createGpuWorkerHost<Rpc>(options: GpuWorkerHostOptions<Rpc>): Gp
       getGPUCoordinator().touch(allocationToken.modelId)
   }
 
+  function setLoadManifest(manifest: unknown): void {
+    lastLoadManifest = manifest
+  }
+
+  function setInactivityTtlMs(ms: number | null): void {
+    inactivityTtlMs = ms
+    if (!isTtlEnabled())
+      clearInactivityTimer()
+  }
+
+  async function unloadWorker(): Promise<boolean> {
+    // Only a warm idle host is evictable; anything else is either already
+    // cold or mid-flight. TTL expiry outside 'ready' is a no-op (the next
+    // operation re-arms the timer).
+    if (phase !== 'ready')
+      return false
+    // Guardrail: never evict live work. Re-arm so expiry retries after the
+    // operation drains instead of starving behind a busy worker.
+    if (operationMutex.isLocked() || inflightAbort) {
+      touchActivity()
+      return false
+    }
+    try {
+      const unload = (rpc as unknown as { unload?: () => unknown } | null)?.unload
+      if (typeof unload === 'function')
+        await unload.call(rpc)
+    }
+    catch (error) {
+      console.warn(`[GpuWorkerHost:${resolveModelId()}] Inactivity unload failed:`, error)
+    }
+    if (allocationToken) {
+      getGPUCoordinator().release(allocationToken)
+      allocationToken = null
+    }
+    // NOTICE: Worker and lastLoadManifest are retained — the adapter's
+    // load-on-demand replay (host.phase === 'idle') re-hydrates from local
+    // OPFS/browser cache without a respawn or network download.
+    phase = 'idle'
+    return true
+  }
+
+  function teardownEviction(): void {
+    evictUnregister?.()
+    evictUnregister = null
+  }
+
   function terminate(): void {
     if (restartTimer != null) {
       clearTimeout(restartTimer)
       restartTimer = null
     }
+    clearInactivityTimer()
+    teardownEviction()
+    lastLoadManifest = null
     operationMutex.cancel()
     destroyWorker()
     if (allocationToken) {
@@ -391,6 +524,9 @@ export function createGpuWorkerHost<Rpc>(options: GpuWorkerHostOptions<Rpc>): Gp
       clearTimeout(restartTimer)
       restartTimer = null
     }
+    clearInactivityTimer()
+    teardownEviction()
+    lastLoadManifest = null
     destroyWorker()
     if (allocationToken) {
       getGPUCoordinator().release(allocationToken)
@@ -406,6 +542,8 @@ export function createGpuWorkerHost<Rpc>(options: GpuWorkerHostOptions<Rpc>): Gp
     get isOom() { return isOom },
     get rpc() { return rpc },
     get deviceLossCount() { return deviceLossCount },
+    get isLocked() { return operationMutex.isLocked() },
+    get lastLoadManifest() { return lastLoadManifest },
     setPhase(next) { phase = next },
     ensure,
     reset,
@@ -416,6 +554,9 @@ export function createGpuWorkerHost<Rpc>(options: GpuWorkerHostOptions<Rpc>): Gp
     promoteDevice,
     allocate,
     touch,
+    setLoadManifest,
+    setInactivityTtlMs,
+    unloadWorker,
     terminate,
   }
 }

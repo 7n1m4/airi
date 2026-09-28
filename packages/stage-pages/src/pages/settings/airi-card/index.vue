@@ -62,11 +62,13 @@ const isCardDialogOpen = ref(false)
 const isCreateModePromptOpen = ref(false)
 const isExportDialogOpen = ref(false)
 const exportTargetCard = ref<AiriCard | null>(null)
+const exportTargetCardId = ref<string>('')
 
-function handleOpenExport(cardId: string) {
-  const card = cardStore.getCard(cardId)
+async function handleOpenExport(cardId: string) {
+  const card = await getCardWithExportedBackground(cardId)
   if (!card)
     return
+  exportTargetCardId.value = cardId
   exportTargetCard.value = card
   isExportDialogOpen.value = true
 }
@@ -1421,6 +1423,7 @@ function getDisplayModelId(id: string) {
   <CardExportDialog
     v-if="isExportDialogOpen"
     v-model="isExportDialogOpen"
+    :card-id="exportTargetCardId"
     :card="exportTargetCard"
   />
 

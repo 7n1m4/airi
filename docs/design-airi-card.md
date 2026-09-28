@@ -317,7 +317,29 @@ When upstream imports a character package via `importAiriCardPackage({ file, dis
      - Scene background bindings (`activeBackgroundId`).
    - *Implication for our export generator*: When exporting in `moeru-ai Standard (v1)` mode, we should match upstream's clean schema directly. When exporting in `dasilva333 Extended (v2)` mode, we retain all advanced blocks inside `extensions.airi`, while ensuring the root `card.json` still remains valid CCv3 so upstream can still parse the base persona cleanly.
 
-### 4.4 Upstream UI/UX Constraints
+### 4.4 Model Storage Formats & Engine Compatibility (VRM, Live2D, Spine, MMD, Tachie)
+
+In accordance with [`docs/data-catalog.md`](./data-catalog.md) (§3.2) and `packages/stage-ui/src/stores/display-models.ts`, models are stored and handled as follows:
+
+1. **Storage Mechanics in `dasilva333/airi`**:
+   - **Persistence**: Model records are stored in IndexedDB via `localforage` under keys `display-model-{nanoid}`.
+   - **Binary format**:
+     - **VRM** (`DisplayModelFormat.VRM`): Single `.vrm` binary `File` object stored directly.
+     - **Live2D** (`DisplayModelFormat.Live2dZip`): A single `.zip` file containing `model3.json`, `.moc3`, textures, motions, and physics.
+     - **Spine 2D** (`DisplayModelFormat.SpineZip`): A single `.zip` file containing `.skel` / `.json`, `.atlas`, and texture `.png`s.
+     - **MMD** (`DisplayModelFormat.PMXZip` / `PMXDirectory`): **Split storage architecture**. The root model file (`.pmx`) is stored under `display-model-{nanoid}`, while all texture files (`MmdTextureFile[]`) are separated and persisted under a secondary IndexedDB key `${id}-textures`.
+
+2. **Why MMD (`pmx-zip`) is Excluded from Card Export Packaging**:
+   - In upstream `moeru-ai/airi:main`, MMD is **not supported at all** in their export/import service (`MODEL_EXT` only defines `vrm`, `live2d-zip`, `spine-zip`, and `tachie-zip`).
+   - In our fork, MMD models were decomposed upon initial import into separate IndexedDB keys (`${id}` for the PMX binary and `${id}-textures` for an array of individual texture files).
+   - Rebuilding an MMD archive requires dynamically stitching the PMX and arbitrary loose texture files back into a single valid zip on export. Because of this complexity and lack of upstream parity, MMD export is currently unsupported. If a character is bound to an MMD model, the exporter warns that MMD bundling is disabled and exports only the character card metadata and other assets.
+
+3. **Explicit Clarification: No Tachie in `dasilva333/airi`**:
+   - Upstream includes `tachie-zip` in `MODEL_EXT` (a legacy visual-novel sprite format).
+   - **`dasilva333/airi` does NOT support Tachie**. Our avatar manifestation architecture focuses exclusively on the four supported engines (VRM, Live2D, Spine, and MMD) plus the Unity C# companion (`apps/stage-mate`).
+   - **Agent Invariant**: Never attempt to wire, parse, or export `tachie-zip` models in this fork.
+
+### 4.5 Upstream UI/UX Constraints
 
 - **No Export Options / Modal**: Exporting in `CardDetailDialog.vue` triggers `exportAiriCardPackage()` instantly with no user choices.
 - **No Opt-Out Mechanism**: Users cannot opt out of including the display model if it exists locally.
