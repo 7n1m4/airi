@@ -63,6 +63,17 @@ description: >-
 
 The only abort source today is `chat.ts`'s per-turn `AbortController` + `settingsChat.streamIdleTimeoutMs` (600 s default, `stores/settings/chat.ts:10`). No UI-facing abort exists — see `airi-interaction-pipelines` §7 for the stop/cancel audit.
 
+### 3.3 xsAI Package Boundaries & Tool Contracts
+
+The gateway sits on top of `@xsai/*` primitives. Follow these integration invariants:
+
+- **Granular Package Selection**: Always import granular `@xsai/*` packages (`@xsai/stream-text`, `@xsai/generate-text`, `@xsai/model`, `@xsai/tool`) rather than the umbrella `xsai` package to prevent bundling unused HTTP server or telemetry bloat into renderer bundles.
+- **Schema Normalization (`cleanJsonSchema`)**: Before sending tool definitions to LLM backends, run them through `cleanJsonSchema()` (`packages/stage-ui/src/libs/providers/tool-schema.ts`). This collapses nullable `anyOf`/`oneOf` constructs, strips `$schema`, and ensures object types always possess a defined `properties` record to satisfy strict provider validators (Grok/xAI, OpenAI, Azure).
+- **Tool-Loop Step Bounds**: Tool iteration loops are capped via `maxSteps: 10` in `streamText()`. Multi-turn interactions requiring deeper execution must plan orchestration across conversation turns rather than exceeding a single stream invocation.
+- **Lazy Tool Resolution**: Tools should always be passed as an async resolver `() => Promise<Tool[] | undefined>`. This avoids paying tool discovery or schema compilation costs if the target model has tool support disabled or is flagged incompatible in `toolsCompatibility`.
+
+---
+
 ## 4. Message Sanitization (`sanitizeMessages`, :65-110)
 
 - JSON-snapshots (`toRaw` + `JSON.parse(JSON.stringify())`) so xsai's `structuredClone` never touches Vue reactive proxies.

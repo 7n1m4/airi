@@ -40,11 +40,15 @@ Multi-window AIRI (Electron chat + stage + caption + widgets, or web split panes
 2. **Register every new channel**: add it to `docs/rosetta-stone.md` (the §13 canonical registry) with publisher, subscribers, and payload shape. This skill + the Rosetta Stone table is the contract; presenting an undocumented channel is a discoverability failure mode.
 3. **Strongly type payloads with generics** (`useBroadcastChannel<CaptionChannelEvent, CaptionChannelEvent>`) and differentiate publisher vs subscriber roles — many channels are bidirectional (control strip both dispatches and consumes).
 4. **Loop prevention is mandatory**: never republish a broadcast message in response to a broadcast message without an explicit circuit breaker or generator flag.
+5. **Single persistence owner per namespace**: one window (the leader, `isMainWindow() === true`) owns IndexedDB writes for a namespace; secondaries hydrate via `hydrateFromStorage()` and receive live deltas over the channel. Never add `storage`-event listeners as a second sync path. Fork precedents: `stores/modules/nan0.ts` (`ensureKernel` refuses in secondaries, `hydrateFromStorage` on mount/card change, live `airi:nan0:state-sync`), `libs/inference/adapters/web-llm-channel.ts` (single-owner leader election prevents multi-window VRAM duplication), `stores/sync-engine.ts` (`airi:store-reload` after BYOS import).
+6. **Follower-only secondary windows**: chat/caption/customizer windows render and forward intent to the leader; they never propose canonical state. Guard orchestration entry points with `if (!isMainWindow()) throw/warn` and route mutations through the leader-owned store action.
+7. **Watchers must not write to the channel**: a channel `watch`/`subscribe` callback must never call `post()` unconditionally — use a generator flag or idempotency key. A watcher may `await` an idempotent leader action (convergent on retry); it must not emit a new proposal. Receiving a remote snapshot must update local state silently and never re-emit.
 
 ## 3. Known Pitfalls & Failure Modes
 
 - **Memory leaks**: forgetting to close/dispose a raw channel on unmount → listener sprawl across window lifecycles.
-- **Message loops**: A→B→A bounce amplification (see loop prevention above).
+- **Message loops**: A→B→A bounce amplification (see loop prevention above). Regression probe: post one snapshot from the leader, assert the follower applies it with zero outbound posts; repeat the same snapshot and assert convergence (no second write, no proposal echo).
+- **Dual writers**: two windows persisting the same namespace causes last-write-wins churn. Fix with rule 5 (single owner + `hydrateFromStorage` + reload signal), not with extra debounce.
 - **Non-serializable payloads**: channels use structured clone — DOM nodes, class instances with methods, and Blobs will either throw or arrive rehydrated. Blob-like transfers (e.g. backgrounds) serialize via ArrayBuffer where needed.
 - **Data races**: delivery is async and not ordered against your local state changes — never assume a message arrived before your local code ran.
 

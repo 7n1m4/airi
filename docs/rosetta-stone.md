@@ -447,6 +447,8 @@ A game layer on top of the Actor Stage with deep Live2D integration. Implements 
 Cross-window communication relies on named `BroadcastChannel` instances. This is the **canonical registry** — the source of truth is the code (`grep -r "BroadcastChannel" packages apps`), not this table; keep both in sync when adding a channel.
 
 > ⚠️ **Two API styles coexist.** Most channels use VueUse `useBroadcastChannel({ name })`; two use the raw `new BroadcastChannel(...)` constructor (`airi::beat-sync`, `dating-sim-sync`). **Naming is inconsistent** — three conventions are in use: `airi-kebab`, `airi:snake`, and the odd `airi::beat-sync` (double colon). Match the exact existing string when adding a sender or receiver; do not "normalize."
+>
+> **Ownership rules** (no `pinia-plugin-synced` in this fork): single persistence owner per namespace (`isMainWindow()` leader writes, secondaries `hydrateFromStorage()` + live deltas), follower-only secondaries, watchers never re-emit snapshots. Full SOPs in `airi-broadcast-channels` §2.5–2.7.
 
 | Channel Name | Publisher / Domain | Purpose |
 | :--- | :--- | :--- |
@@ -643,9 +645,11 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 - [[airi-caption-subsystem]]
 - [[airi-character-rendering]]
 - [[airi-codebase-verification]]
+- [[airi-code-testing-hygiene]]
 - [[airi-data-persistence]]
 - [[airi-dating-sim-engine]]
 - [[airi-desktop-chatbox]]
+- [[airi-infra-library-references]]
 - [[airi-interaction-pipelines]]
 - [[airi-ipc-eventa]]
 - [[airi-llm-dispatch-gateway]]

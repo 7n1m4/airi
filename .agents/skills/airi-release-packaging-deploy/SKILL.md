@@ -26,7 +26,15 @@ Deployment surface map for shipping AIRI. Desktop releases are manual + script-a
 
 Canonical references: **`docs/content/en/docs/contributing/windows-release-guide.md`** and **`docs/content/en/docs/contributing/macos-release-guide.md`**. The workflow unified by `scripts/release/publish-win.js` / `publish-mac.js`:
 
-1. **Release notes first.** `git log [previous-tag]..HEAD --oneline`; draft user-facing notes following canonical format (`# 🚀 AIRI v<ver>`, executive blurb, `## ✨ Key Highlights`, domain categories with emojis, step-by-step onboarding breakdown, no raw commit dumps or code variable slop). Present inline in natural Markdown (never inside a single massive triple-backtick block); save to `release-notes.md` (uncommitted).
+1. **Release notes first.** Inspect commits (`git log [previous-tag]..HEAD --oneline`); draft user-facing notes saved to `release-notes.md` (uncommitted) following these communication standards:
+   - **User-Centric Framing**: Speak from the user's experience instead of exposing internal plumbing. Emphasize what the user can now do and what annoyance was removed (e.g. *"You can now retry a failed message directly from the chat"* instead of *"Refactored chat action menu state"*; *"Previously, provider dropdowns were cut off on narrow screens. We fixed this so..."*).
+   - **Audience Hierarchy**: Group notes logically:
+     - `## ✨ Product Updates` (User-facing enhancements across Local models, Chat, Stage, Providers).
+     - `### 🛠️ To Developers` (Plugin SDK, API contracts, desktop window managers).
+     - `### 🧪 To Contributors` (Packaging scripts, CI/CD, internal harnesses, audit tools).
+     - `### ⚠️ Upgrade Notes` (Only when manual user action or configuration migration is required).
+   - **Traceable Footnotes**: Keep bullet points punchy and readable without inline commit SHA clutter. Place footnote markers on each bullet and attribute commits below: `[^1]: Commit [abcdef123](https://github.com/dasilva333/airi/commit/abcdef123) by @contributor`.
+   - Present inline in natural Markdown (never inside an unrendered raw code fence).
 2. **Version stamp.** `apps/stage-tamagotchi/package.json` → `[major].[minor].[patch]-stable.[YYYYMMDD]`.
 3. **Tag.** `git tag v<version> && git push origin v<version>` (fork remote; never touch upstream without authorization).
 4. **Build + publish.** `pnpm run release:win` or `pnpm run release:mac`.

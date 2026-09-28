@@ -54,7 +54,7 @@ The five groups below organize navigation. Historical “Phase” labels do not 
 
 ## 3. Domain skill catalog
 
-The catalog contains 68 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
+The catalog contains 70 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
 
 ### 🟢 Phase 1: Core Plumbing & Infrastructure
 
@@ -328,7 +328,17 @@ The catalog contains 68 discoverable skills. Desktop chatbox and interaction pip
 #### 4.6 `airi-release-packaging-deploy`
 - **Target Domain**: Shipping AIRI artifacts and deploying services — stable releases, electron-builder packaging, CI matrix, mobile packaging, Docker/docs deploys, edge-worker deploys.
 - **Key Paths**: `release-tamagotchi.yml`, `apps/stage-tamagotchi/` (electron-builder config, `release:win`/`release:mac`), `apps/stage-pocket/` (Capacitor), `apps/stage-web/` (Docker/Pages), `apps/stage-edge/` (Cloudflare).
-- **Content**: Version stamping/git-tag/notes workflow, SignPath code signing + Apple notarization (CSC_CONTENT/APPLE_ID), `latest*.yml` auto-update feeds, Android APK + iOS IPA via Capacitor, ghcr.io Docker images, GitHub Pages docs deployment, Cloudflare worker deploys, and gh CLI release-upload auth quirks.
+- **Content**: Version stamping/git-tag/notes workflow, user-centric release note voice ("You can now...", audience breakdown, footnote commit tracing), SignPath code signing + Apple notarization (CSC_CONTENT/APPLE_ID), `latest*.yml` auto-update feeds, Android APK + iOS IPA via Capacitor, ghcr.io Docker images, GitHub Pages docs deployment, Cloudflare worker deploys, and gh CLI release-upload auth quirks.
+
+#### 4.7 `airi-code-testing-hygiene`
+- **Target Domain**: TypeScript Reactive Safety, Deep Module Cohesion, Fallback Precedence, Vitest Bug Reproduction & Import Boundary Hygiene.
+- **Key Paths**: `.agents/skills/airi-code-testing-hygiene/SKILL.md`, `packages/*/src/**/*.ts`, `packages/*/src/**/*.test.ts`, `docs/project-testing-parity.md`.
+- **Content**: Eliminating inline object/array fallback references (`?? {}`, `?? []`) in reactive getters/computed/watchers/stores, deep-module boundaries over shallow pass-through file shuffling, strict `??` vs `||` precedence, mandatory failing regression tests with `Issue #` naming and `// ROOT CAUSE:` comment blocks before bug patching, prohibiting test-only import hacks (`as unknown as`) to hide circular dependencies, Vue testing and reactivity invariants (never mock Pinia/core stores, headless async `nextTick` / microtask settling, `shallowRef` for heavy engine instances, `storeToRefs` destructuring guard), and Vue SFC hygiene (script→template→style order, split triggers, thin views, typed props/emits).
+
+#### 4.8 `airi-infra-library-references`
+- **Target Domain**: Generic library lookups (UnoCSS, tsdown, pnpm, VueUse) and translation-friendly docs prose — task-selected references with fork vetoes.
+- **Key Paths**: `.agents/skills/airi-infra-library-references/SKILL.md`, `references/` (`unocss.md`, `tsdown.md`, `pnpm.md`, `vueuse.md`, `prose.md`), `uno.config.ts`, `packages/ui/`.
+- **Content**: Router loading one reference per task; UnoCSS grouped class arrays with attributify banned, `useDark({ disableTransition: false })`, ManualReset storage semantics for Control Strip layouts, Chromatic-over-hex theming, scoped pnpm workspace commands, tsdown external/dep rules, and prose limits with user-centric release framing. Domain behavior stays in peer skills.
 
 ---
 
@@ -420,12 +430,12 @@ The catalog contains 68 discoverable skills. Desktop chatbox and interaction pip
 
 | Group | Discoverable skills |
 | --- | ---: |
-| Core plumbing and infrastructure | 8 |
+| Core plumbing and infrastructure | 9 |
 | Character, stage, motion and sensing | 14 |
-| Modules, cognition and memory | 22 |
-| Operational SOPs and research | 6 |
+| Modules, cognition and memory | 23 |
+| Operational SOPs and research | 8 |
 | UI surfaces and adjacent services | 16 |
-| **Total** | **66** |
+| **Total** | **70** |
 
 The counts follow the catalog groups above, not a separate historical rollout table.
 
