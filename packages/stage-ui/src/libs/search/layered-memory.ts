@@ -7,6 +7,7 @@ import memoryDriver from 'unstorage/drivers/memory'
 
 import { createStorage } from 'unstorage'
 
+import { shouldDegradeBackgroundWork } from '../../utils/memory-sentinel'
 import { searchWorker } from '../workers/search'
 import {
   defaultScorerConfig,
@@ -135,13 +136,21 @@ export const layeredMemory = {
     }
     else if (options?.systemOneStore?.configured) {
       try {
-        options?.signal?.throwIfAborted?.()
-        triage = await withTimeout(
-          options.systemOneStore.runTriage(query, { signal: options?.signal }),
-          TRIAGE_TIMEOUT_MS,
-          'System-1 triage',
-        )
-        mode = 'pass11'
+        // NOTICE: under memory pressure skip the Jev triage call entirely —
+        // heuristic triage is the safe degraded path and saves a classifier run.
+        if (shouldDegradeBackgroundWork()) {
+          triage = heuristicTriage(query)
+          mode = 'baseline'
+        }
+        else {
+          options?.signal?.throwIfAborted?.()
+          triage = await withTimeout(
+            options.systemOneStore.runTriage(query, { signal: options?.signal }),
+            TRIAGE_TIMEOUT_MS,
+            'System-1 triage',
+          )
+          mode = 'pass11'
+        }
       }
       catch (err) {
         if ((err as Error)?.name === 'AbortError')
@@ -243,7 +252,16 @@ export const layeredMemory = {
       }
 
       // B. Substring claim matching on subject, predicate, or object
-      for (const c of ledger.claims.values()) {
+      // NOTICE: cap scan depth so large graph histories do not block the event loop with O(claims) scans.
+      const MAX_UNINDEXED_CLAIMS_TO_SCAN = 100
+      let scannedCount = 0
+      const allClaims = Array.from(ledger.claims.values())
+      // Scan newest claims first
+      for (let i = allClaims.length - 1; i >= 0; i--) {
+        if (scannedCount >= MAX_UNINDEXED_CLAIMS_TO_SCAN)
+          break
+        const c = allClaims[i]
+        scannedCount++
         const sub = c.subject.toLowerCase()
         const pred = c.predicate.toLowerCase()
         const obj = c.object.toLowerCase()
@@ -290,21 +308,40 @@ export const layeredMemory = {
 
     if (subQueries.length > 1) {
       // Multi-Pass Sub-Query Retrieval (Pass 11 Proof Bundles)
+      // NOTICE: embed primary query once and reuse queryVector across sub-queries
+      // so we do not run multiple sequential WebGPU ONNX embeddings per turn.
       options?.signal?.throwIfAborted?.()
-      const subResults = await Promise.all(
-        subQueries.map(async (sq, idx) => {
-          const isPrimary = idx === 0
-          const subAnalysis = isPrimary ? analysis : analyzeQuery(sq, { anaphoraEnabled: false })
+
+      // 1. Run primary query first to compute the base vector
+      const primaryRes = await searchWorker.search(
+        analysis.expandedQuery,
+        workerLimit,
+        characterId,
+        analysis.temporalHooks,
+        options?.signal,
+      )
+      const primaryVector = primaryRes.queryVector
+
+      // 2. Run remaining sub-queries reusing primaryVector (with specialized keyword/BM25 per sub-plan)
+      const secondaryResults = await Promise.all(
+        subQueries.slice(1).map(async (sq) => {
+          const subAnalysis = analyzeQuery(sq, { anaphoraEnabled: false })
           const res = await searchWorker.search(
             subAnalysis.expandedQuery,
             workerLimit,
             characterId,
             subAnalysis.temporalHooks.length > 0 ? subAnalysis.temporalHooks : analysis.temporalHooks,
             options?.signal,
+            primaryVector,
           )
-          return { sq, subAnalysis, res, isPrimary }
+          return { sq, subAnalysis, res, isPrimary: false }
         }),
       )
+
+      const subResults = [
+        { sq: subQueries[0], subAnalysis: analysis, res: primaryRes, isPrimary: true },
+        ...secondaryResults,
+      ]
 
       // Merge unique documents across all sub-queries
       const docMap = new Map<string, SearchDocumentMeta>()
@@ -451,8 +488,9 @@ export const layeredMemory = {
     }
 
     // 8. Level-1 Cross-Encoder Reranker Booster (if System 1 is configured)
+    // NOTICE: skipped under memory pressure — RRF ordering stands on its own.
     let finalHits = mergedHits
-    if (options?.systemOneStore?.configured && mergedHits.length > 0) {
+    if (options?.systemOneStore?.configured && mergedHits.length > 0 && !shouldDegradeBackgroundWork()) {
       try {
         options?.signal?.throwIfAborted?.()
         const poolToRerank = mergedHits.slice(0, 6).map(h => ({

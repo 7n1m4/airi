@@ -223,39 +223,45 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
   const shadowEngine = shallowRef<Nan0SubconsciousShadowEngine | null>(null)
   const activeCardId = ref<string | null>(null)
 
-  function updateEmotion(dimension: string, value: number) {
+  function updateEmotion(dimension: string, value: number, shouldBroadcast = true) {
     emotions.value[dimension] = Math.min(1, Math.max(0, value))
-    broadcastCurrentState()
+    if (shouldBroadcast)
+      broadcastCurrentState()
   }
 
-  function setEmotions(newEmotions: Record<string, number>) {
+  function setEmotions(newEmotions: Record<string, number>, shouldBroadcast = true) {
     emotions.value = {
       ...emotions.value,
       ...newEmotions,
     }
-    broadcastCurrentState()
+    if (shouldBroadcast)
+      broadcastCurrentState()
   }
 
-  function setReflex(reflex: Nan0ReflexInfo | null) {
+  function setReflex(reflex: Nan0ReflexInfo | null, shouldBroadcast = true) {
     lastReflex.value = reflex
-    broadcastCurrentState()
+    if (shouldBroadcast)
+      broadcastCurrentState()
   }
 
-  function setExecutiveState(newDecision: Nan0Decision, reason = '') {
+  function setExecutiveState(newDecision: Nan0Decision, reason = '', shouldBroadcast = true) {
     decision.value = newDecision
     if (reason)
       decisionReason.value = reason
-    broadcastCurrentState()
+    if (shouldBroadcast)
+      broadcastCurrentState()
   }
 
-  function setInnerMonologue(text: string) {
+  function setInnerMonologue(text: string, shouldBroadcast = true) {
     innerMonologue.value = text
-    broadcastCurrentState()
+    if (shouldBroadcast)
+      broadcastCurrentState()
   }
 
-  function setProcessing(processing: boolean) {
+  function setProcessing(processing: boolean, shouldBroadcast = true) {
     isProcessing.value = processing
-    broadcastCurrentState()
+    if (shouldBroadcast)
+      broadcastCurrentState()
   }
 
   function resetToBaseline() {
@@ -572,7 +578,7 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
 
       const prepared = await k.prepareTurn(observation, options)
 
-      // Synchronize reflex badge from inline System 1 / reflex decision
+      // Synchronize reflex badge from inline System 1 / reflex decision (skip broadcast until trailing)
       if (prepared.reflexOutcome) {
         const group = prepared.reflexOutcome.group
         if (group && group !== 'none') {
@@ -587,16 +593,16 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
             confidence: prepared.reflexOutcome.confidence ?? (prepared.reflexOutcome.source === 'system_one_jev' ? 0.95 : 0.8),
             cluster: meta.cluster,
             icon: meta.icon,
-          })
+          }, false)
         }
       }
 
-      // Synchronize reactive state for UI
-      setInnerMonologue(prepared.thought.narrative || prepared.thought.privateText || prepared.thought.interpretation || '')
+      // Synchronize reactive state for UI (coalesced into single trailing broadcast)
+      setInnerMonologue(prepared.thought.narrative || prepared.thought.privateText || prepared.thought.interpretation || '', false)
 
       const snapshot = k.getStateSnapshot()
       if (snapshot.emotionalState) {
-        setEmotions(snapshot.emotionalState)
+        setEmotions(snapshot.emotionalState, false)
       }
 
       const finalDecision = prepared.decision.finalDecision
@@ -607,14 +613,14 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
       setExecutiveState(
         finalDecision === 'SPEAK' && allowed ? 'SPEAK' : finalDecision === 'SILENCE' ? 'SILENCE' : 'WAIT',
         reason,
+        false,
       )
-
-      broadcastCurrentState()
 
       return prepared
     }
     finally {
-      setProcessing(false)
+      // Single trailing broadcast sync for the completed turn
+      setProcessing(false, true)
     }
   }
 

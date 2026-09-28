@@ -71,15 +71,26 @@ export const useVisionStore = defineStore('vision', () => {
     return primaryDisplaySize.value
   }
 
+  // NOTICE: permission state changes only via OS Settings (app restart to take
+  // effect), so per-tick IPC checks double channel traffic on the 2-5s loop
+  // for no benefit. Cache for 60s; captureSnapshot is the only caller.
+  const PERMISSION_CACHE_TTL_MS = 60_000
+  let cachedPermission: string | null = null
+  let cachedPermissionAt = 0
+
   /**
    * Checks if the app has screen recording permissions on macOS.
    * Returns 'granted' on non-macOS platforms.
    */
   async function checkPermissions() {
+    if (cachedPermission && Date.now() - cachedPermissionAt < PERMISSION_CACHE_TTL_MS)
+      return cachedPermission
     try {
       // In renderer, we use the IPC handler to check via systemPreferences
       const status = await checkPermissionInvoke()
       console.log('[Vision Store] macOS Screen Capture Permission Status:', status)
+      cachedPermission = status
+      cachedPermissionAt = Date.now()
       return status
     }
     catch (err) {

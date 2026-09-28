@@ -153,6 +153,32 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     return chunks.filter(c => c.length > 0)
   }
 
+  /**
+   * Decodes a PNG data URL to raw bytes (exact-size ArrayBuffer) in chunks so
+   * multi-MB frames don't blow the call stack. The buffer is transferred —
+   * not cloned — to the attention-guard worker, neutering this side's copy.
+   */
+  function dataUrlToBytes(dataUrl: string): ArrayBuffer | undefined {
+    try {
+      const comma = dataUrl.indexOf(',')
+      const base64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl
+      if (!base64)
+        return undefined
+      const binary = atob(base64)
+      const len = binary.length
+      const out = new Uint8Array(len)
+      const CHUNK = 0x8000
+      for (let offset = 0; offset < len; offset += CHUNK) {
+        const end = Math.min(offset + CHUNK, len)
+        for (let i = offset; i < end; i++) out[i] = binary.charCodeAt(i)
+      }
+      return out.buffer
+    }
+    catch {
+      return undefined
+    }
+  }
+
   function formatObservationTimeline(items: VisualObservationItem[]): string {
     if (!items || items.length === 0)
       return 'No recent visual observations recorded.'
@@ -443,9 +469,13 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       const cleanTags = Array.isArray(rawTags) ? Array.from(rawTags).map(t => String(t)) : []
 
       let dataUrl: string | undefined = snapshot.dataUrl
+      // NOTICE: decode once for the zero-copy worker handoff; the transfer
+      // neuters this side's buffer, so slow CLIP/OCR ticks hold ~1 native copy.
+      let pngBytes: ArrayBuffer | undefined = dataUrlToBytes(dataUrl!)
       const tickStart = performance.now()
       const processed = await visionOrchestrator.processCapture({
         dataUrl: dataUrl!,
+        pngBytes,
         width,
         height,
         sourceId,
@@ -464,7 +494,9 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         activeWindow: proactivityStore.activeWinStr,
       })
       // NOTICE: Immediately release large base64 screen capture frame to reclaim V8 heap / PartitionAlloc memory
+      // (pngBytes was neutered by the transfer when the worker path used it).
       dataUrl = undefined
+      pngBytes = undefined
       snapshot.dataUrl = ''
 
       lastLatencyMs.value = Math.round(performance.now() - tickStart)
@@ -616,6 +648,26 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
   let previousCardId: string | null = null
   let previousWatcherConfigSignature: string = ''
 
+  // NOTICE: config writes land as several successive reactive updates (cardId
+  // first, then resolved config fields). Without coalescing, each one tears
+  // down (terminate() = cold worker + full model/shader reload) and restarts
+  // the guard — a reload storm from a single card switch or toggle flap.
+  const RESTART_DEBOUNCE_MS = 500
+  let restartDebounce: ReturnType<typeof setTimeout> | null = null
+
+  function scheduleRestart(cardChanged: boolean): void {
+    if (restartDebounce)
+      clearTimeout(restartDebounce)
+    restartDebounce = setTimeout(() => {
+      restartDebounce = null
+      // If the card switched completely, perform a clean teardown first so the new card gets a fresh state
+      if (cardChanged) {
+        stopWatcher()
+      }
+      restartWatcher()
+    }, RESTART_DEBOUNCE_MS)
+  }
+
   function restartWatcher(): void {
     if (!isPrimaryHostWindow()) {
       pauseWatcher()
@@ -668,17 +720,16 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
       console.log('[ScreenWatcher:Watch] Screen watcher config changed:', { cardId, enabled, enableVlm, vlmTier, respectSchedule, start, end, cardChanged })
 
-      // If the card switched completely, perform a clean teardown first so the new card gets a fresh state
-      if (cardChanged) {
-        stopWatcher()
-      }
-
-      restartWatcher()
+      scheduleRestart(cardChanged)
     },
     { immediate: true },
   )
 
   onUnmounted(() => {
+    if (restartDebounce) {
+      clearTimeout(restartDebounce)
+      restartDebounce = null
+    }
     stopWatcher()
   })
 

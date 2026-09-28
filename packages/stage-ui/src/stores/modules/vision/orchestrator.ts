@@ -48,6 +48,8 @@ export interface ChronoLogEntry {
 export interface VisionCapturePayload {
   /** Base64/URL-encoded capture frame. */
   dataUrl: string
+  /** Raw PNG bytes for the zero-copy worker handoff (preferred when present). */
+  pngBytes?: ArrayBuffer
   width: number
   height: number
   sourceId: string
@@ -343,11 +345,15 @@ export const useVisionOrchestratorStore = defineStore('vision-orchestrator', () 
         const isMoondream = payload.vlmTier === 'moondream' || (Boolean(payload.enableVlm) && payload.vlmTier !== 'external')
         const adapter = await ensureGuardLoaded({ enableVlm: isMoondream })
         const tags = Array.isArray(payload.interestTags) ? Array.from(payload.interestTags).map(t => String(t)) : []
+        const pngBytes = payload.pngBytes && payload.pngBytes.byteLength > 0
+          ? payload.pngBytes
+          : undefined
         const result: AttentionGuardProcessResult = await adapter.process(
           payload.dataUrl,
           payload.width,
           payload.height,
           tags,
+          pngBytes ? { pngBytes } : undefined,
         )
 
         lastResultAt.value = Date.now()

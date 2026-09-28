@@ -133,12 +133,13 @@ let scratchDecodeCanvas: OffscreenCanvas | null = null
 let scratchDecodeCtx: OffscreenCanvasRenderingContext2D | null = null
 
 /**
- * Decodes a base64 data URL into a RawImage using a single reused OffscreenCanvas
+ * Decodes raw PNG/JPEG bytes into a RawImage using a single reused OffscreenCanvas
  * and explicit ImageBitmap.close() to eliminate Blink Tag 14 / GPU texture accumulation.
+ * The Blob wraps the buffer without copying; callers should transfer (not clone)
+ * the bytes here so only one native copy ever exists per tick.
  */
-async function decodeDataUrlToRawImage(dataUrl: string): Promise<RawImage> {
-  const response = await fetch(dataUrl)
-  const blob = await response.blob()
+async function decodeBytesToRawImage(pngBytes: ArrayBuffer): Promise<RawImage> {
+  const blob = new Blob([pngBytes], { type: 'image/png' })
   const bitmap = await createImageBitmap(blob)
   try {
     const { width, height } = bitmap
@@ -163,6 +164,16 @@ async function decodeDataUrlToRawImage(dataUrl: string): Promise<RawImage> {
   finally {
     bitmap.close()
   }
+}
+
+/**
+ * Legacy data-URL decode path (fetch hop). Kept for callers without transferred
+ * bytes; strictly worse (Response + Blob allocations per tick) — prefer pngBytes.
+ */
+async function decodeDataUrlToRawImage(dataUrl: string): Promise<RawImage> {
+  const response = await fetch(dataUrl)
+  const blob = await response.blob()
+  return decodeBytesToRawImage(await blob.arrayBuffer())
 }
 
 defineStreamInvokeHandler(context, attentionGuardLoadEvent, toStreamHandler<any, any>(async ({ payload, emit }) => {
@@ -242,14 +253,18 @@ defineStreamInvokeHandler(context, attentionGuardLoadEvent, toStreamHandler<any,
   }
 }))
 
-defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, interestTags }) => {
+defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, pngBytes, interestTags }) => {
   const stageMs = { stage0Ms: 0, stage1Ms: 0, stage2Ms: 0, stage3Ms: 0 }
   let rawImage: RawImage | null = null
 
   try {
     // -- decode + Stage 0 perceptual hash -------------------------------------
     try {
-      rawImage = await decodeDataUrlToRawImage(dataUrl)
+      // NOTICE: transferred bytes are preferred — the sender's buffer is neutered
+      // on transfer, so no second native copy exists during slow CLIP/OCR ticks.
+      rawImage = pngBytes && pngBytes.byteLength > 0
+        ? await decodeBytesToRawImage(pngBytes)
+        : await decodeDataUrlToRawImage(dataUrl || '')
     }
     catch (decodeErr: any) {
       console.warn('[attention-guard:worker] Invalid capture frame skipped (could not decode):', decodeErr?.message || decodeErr)

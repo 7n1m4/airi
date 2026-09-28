@@ -48,7 +48,7 @@ export interface AttentionGuardAdapter {
     width: number,
     height: number,
     interestTags?: string[],
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal, pngBytes?: ArrayBuffer },
   ) => Promise<AttentionGuardProcessResult>
   /** Terminate the worker. */
   terminate: () => void
@@ -145,7 +145,7 @@ export function createAttentionGuardAdapter(): AttentionGuardAdapter {
     width: number,
     height: number,
     interestTags?: string[],
-    options?: { signal?: AbortSignal },
+    options?: { signal?: AbortSignal, pngBytes?: ArrayBuffer },
   ): Promise<AttentionGuardProcessResult> {
     throwIfAborted(options?.signal)
 
@@ -167,13 +167,24 @@ export function createAttentionGuardAdapter(): AttentionGuardAdapter {
 
       let result
       try {
+        // NOTICE: when raw bytes are available the multi-MB dataUrl string is
+        // omitted from the worker hop and the buffer is transferred (neutered
+        // on send) instead of structured-cloned — peak native per slow tick
+        // drops from ~2 copies to 1. Runtimes without transfer support fall
+        // back to cloning, which stays correct.
+        const pngBytes = options?.pngBytes && options.pngBytes.byteLength > 0
+          ? options.pngBytes
+          : undefined
         result = await host.runOnGpu(
           MODEL_NAMES.ATTENTION_GUARD,
           GPU_PRIORITY.ATTENTION_GUARD_PROCESS,
           options?.signal,
           ({ crashSignal }) => host.rpc!.process(
-            { dataUrl, width, height, interestTags: cleanInterestTags },
-            { signal: AbortSignal.any([signalWithTimeout(options?.signal, PROCESS_TIMEOUT), crashSignal]) },
+            { dataUrl: pngBytes ? undefined : dataUrl, pngBytes, width, height, interestTags: cleanInterestTags },
+            {
+              signal: AbortSignal.any([signalWithTimeout(options?.signal, PROCESS_TIMEOUT), crashSignal]),
+              ...(pngBytes ? { transfer: [pngBytes] } : {}),
+            } as any,
           ),
         )
       }

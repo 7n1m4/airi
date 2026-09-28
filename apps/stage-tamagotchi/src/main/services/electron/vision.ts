@@ -100,8 +100,32 @@ export function createVisionService(params: { context: any }) {
 
   let mainProcessCaptureCount = 0
 
+  // NOTICE: NativeImage/GPU-compositor pressure lives in the main process heap,
+  // which renderer performance.memory probes cannot see (flat 200-550MB V8
+  // while system memory ballooned). Log main RSS + system memory every N
+  // captures so airi.log shows the native side of the 2-5s polling loop.
+  let captureTickCount = 0
+  const MAIN_PROBE_EVERY_TICKS = 30
+
+  function logMainMemoryProbe(): void {
+    try {
+      const mu = process.memoryUsage()
+      const sys = process.getSystemMemoryInfo()
+      const toMB = (kb: number) => Math.round(kb / 1024)
+      console.log(
+        `[MEM-PROBE] [vision-main] tick=${captureTickCount} | RSS: ${toMB(mu.rss)} MB (heap ${toMB(mu.heapUsed)}/${toMB(mu.heapTotal)} MB, external ${toMB(mu.external)} MB) | System free: ${toMB(sys.free)} MB / ${toMB(sys.total)} MB, swapFree: ${toMB(sys.swapFree)} MB`,
+      )
+    }
+    catch {
+      // getSystemMemoryInfo unavailable (non-Electron test harness) — skip silently
+    }
+  }
+
   defineInvokeHandler(params.context, visionCaptureScreen, async (options) => {
     console.log('[Vision Service] visionCaptureScreen requested:', JSON.stringify(options))
+    captureTickCount++
+    if (captureTickCount % MAIN_PROBE_EVERY_TICKS === 0)
+      logMainMemoryProbe()
     try {
       mainProcessCaptureCount++
       if (mainProcessCaptureCount % 20 === 0) {

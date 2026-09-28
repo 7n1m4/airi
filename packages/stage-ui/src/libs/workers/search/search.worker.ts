@@ -427,8 +427,10 @@ globalThis.addEventListener('message', async (e) => {
       }
 
       case 'search': {
-        const { query, limit = 10, characterId, temporalHooks } = payload
-        const queryVector = await getVector(query)
+        const { query, limit = 10, characterId, temporalHooks, vector } = payload
+        const queryVector = (Array.isArray(vector) && vector.length > 0)
+          ? vector
+          : await getVector(query)
         const candidateLimit = Math.max(limit * 5, 20)
 
         const vectorHits = getVectorCandidates(queryVector, candidateLimit, characterId)
@@ -446,13 +448,15 @@ globalThis.addEventListener('message', async (e) => {
           ...temporalHits.map(h => h.id),
         ])
 
-        // NOTICE: never ship embedding arrays back over postMessage — each
+        // NOTICE: never ship document embedding arrays back over postMessage — each
         // 384-dim number[] cloned per candidate per search is MBs of structured-
-        // clone traffic and compressor/swap pressure. Scores are sufficient.
+        // clone traffic and compressor/swap pressure. We return queryVector so
+        // multi-plan sub-queries can reuse it across calls without re-running WebGPU embeddings.
         const results = {
           vectorHits,
           keywordHits,
           temporalHits,
+          queryVector,
           documents: [...documents.values()]
             .filter(document => candidateIds.has(document.id))
             .map(document => ({

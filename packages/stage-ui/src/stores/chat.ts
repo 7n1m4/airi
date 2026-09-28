@@ -25,6 +25,7 @@ import { createDatetimeContext, createEternalRecordContext, createExpressionsCon
 import { useChatContextStore } from './chat/context-store'
 import { formatChatError } from './chat/error-formatter'
 import {
+  budgetGroundingMessages,
   formatDirectorScratchpadBlock,
   formatEnvironmentalBlock,
   formatLifetimeMemoryBlock,
@@ -823,15 +824,16 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
       // const salienceText = ... (disabled)
 
       // Splice them into the message list!
-      if (groundingMessages.length > 0) {
+      const budgetedGroundingMessages = budgetGroundingMessages(groundingMessages, 7000, 2500)
+      if (budgetedGroundingMessages.length > 0) {
         if (options.triggerOnly) {
           const nextInferenceMessages = [...sessionMessagesForSend]
-          nextInferenceMessages.splice(sessionMessagesForSend.length - 1, 0, ...groundingMessages)
+          nextInferenceMessages.splice(sessionMessagesForSend.length - 1, 0, ...budgetedGroundingMessages)
           inferenceMessages = nextInferenceMessages
         }
         else {
           const nextInferenceMessages = [...sessionMessagesForSend, inferenceUserMessage]
-          nextInferenceMessages.splice(sessionMessagesForSend.length, 0, ...groundingMessages)
+          nextInferenceMessages.splice(sessionMessagesForSend.length, 0, ...budgetedGroundingMessages)
           inferenceMessages = nextInferenceMessages
         }
       }

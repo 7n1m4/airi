@@ -525,8 +525,14 @@ export interface AttentionGuardStageMs {
 }
 
 export interface AttentionGuardProcessRequest {
-  /** Base64/URL-encoded screen capture frame (PNG/JPEG). */
-  dataUrl: string
+  /** Base64/URL-encoded screen capture frame (PNG/JPEG). Omitted when pngBytes is transferred. */
+  dataUrl?: string
+  /**
+   * Raw PNG/JPEG bytes, zero-copy transferred (not cloned) to the worker.
+   * Preferred over dataUrl: kills the worker-side structured-clone copy plus
+   * the fetch()/Response allocation hop in the decode path.
+   */
+  pngBytes?: ArrayBuffer
   /** Capture width after the orchestrator's downscale (stable across ticks). */
   width: number
   height: number

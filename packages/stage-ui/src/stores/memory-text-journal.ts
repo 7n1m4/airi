@@ -15,6 +15,7 @@ import { lifetimeMemoryRepo } from '../database/repos/lifetime-memory.repo'
 import { shortTermMemoryRepo } from '../database/repos/short-term-memory.repo'
 import { textJournalRepo } from '../database/repos/text-journal.repo'
 import { layeredMemory } from '../libs/search/layered-memory'
+import { shouldDegradeBackgroundWork } from '../utils/memory-sentinel'
 import { useAuthStore } from './auth'
 import { CHAT_STREAM_CHANNEL_NAME } from './chat/constants'
 import { stageJournalIntrusion } from './chat/intrusion-staging'
@@ -158,6 +159,13 @@ export const useTextJournalStore = defineStore('text-journal', () => {
 
     indexingInProgress = (async () => {
       try {
+        // NOTICE: stand down under memory pressure — bulk ONNX embeddings are
+        // the most expensive background work per byte. Deferred, not dropped:
+        // the next load/index call retries once pressure clears.
+        if (shouldDegradeBackgroundWork()) {
+          console.warn('[TextJournal:Index] Deferred background indexing under memory pressure.')
+          return
+        }
         const userId = getCurrentUserId()
         const cardId = activeCardId.value
         if (!userId || !cardId)

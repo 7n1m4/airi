@@ -233,3 +233,39 @@ export function buildGroundingMessages(blocks: readonly (GroundingBlock | null |
   }
   return result
 }
+
+/**
+ * Bounds grounding messages to prevent memory compressor and swap death from unbounded managed strings.
+ * Applies individual block truncation limits and enforces a global character budget.
+ */
+export function budgetGroundingMessages(
+  messages: readonly GroundingMessage[],
+  maxTotalChars = 7000,
+  maxPerBlockChars = 2500,
+): GroundingMessage[] {
+  let remainingBudget = maxTotalChars
+  const budgeted: GroundingMessage[] = []
+
+  for (const msg of messages) {
+    if (remainingBudget <= 0)
+      break
+
+    let content = msg.content
+    if (content.length > maxPerBlockChars) {
+      content = `${content.slice(0, maxPerBlockChars)}\n[...truncated to fit budget]`
+    }
+
+    if (content.length > remainingBudget) {
+      if (remainingBudget > 200) {
+        content = `${content.slice(0, remainingBudget)}\n[...truncated to fit total budget]`
+        budgeted.push({ role: msg.role, content })
+      }
+      break
+    }
+
+    budgeted.push({ role: msg.role, content })
+    remainingBudget -= content.length
+  }
+
+  return budgeted
+}
