@@ -31,6 +31,37 @@ export interface PngExportOptions {
   imageSourceUrl?: string | null
 }
 
+/**
+ * Generates a clean fallback avatar data URL for UI preview rendering.
+ */
+export function generateFallbackAvatarDataUrl(name: string): string {
+  if (typeof document === 'undefined')
+    return ''
+
+  const canvas = document.createElement('canvas')
+  canvas.width = 512
+  canvas.height = 512
+  const ctx = canvas.getContext('2d')
+  if (!ctx)
+    return ''
+
+  // Stylized violet-to-pink gradient background
+  const grad = ctx.createLinearGradient(0, 0, 512, 512)
+  grad.addColorStop(0, '#6366f1')
+  grad.addColorStop(1, '#ec4899')
+  ctx.fillStyle = grad
+  ctx.fillRect(0, 0, 512, 512)
+
+  // Character Initial
+  ctx.fillStyle = '#ffffff'
+  ctx.font = 'bold 220px sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText((name[0] || 'A').toUpperCase(), 256, 266)
+
+  return canvas.toDataURL('image/png')
+}
+
 export function useCardExport() {
   const cardStore = useAiriCardStore()
   const displayModelsStore = useDisplayModelsStore()
@@ -292,10 +323,15 @@ export function useCardExport() {
     if (!context)
       throw new Error('Failed to create export canvas')
 
-    // Fit preview to portrait window width, anchor top, crop bottom
-    const scale = CARD_EXPORT_FRAME.innerWidth / preview.naturalWidth
-    const drawWidth = CARD_EXPORT_FRAME.innerWidth
+    // Fit preview to portrait window height and crop horizontal sides centered
+    const scale = Math.max(
+      CARD_EXPORT_FRAME.innerWidth / preview.naturalWidth,
+      CARD_EXPORT_FRAME.innerHeight / preview.naturalHeight,
+    )
+    const drawWidth = preview.naturalWidth * scale
     const drawHeight = preview.naturalHeight * scale
+    const drawX = CARD_EXPORT_FRAME.innerX + (CARD_EXPORT_FRAME.innerWidth - drawWidth) / 2
+    const drawY = CARD_EXPORT_FRAME.innerY + (CARD_EXPORT_FRAME.innerHeight - drawHeight) / 2
 
     context.save()
     context.beginPath()
@@ -308,8 +344,8 @@ export function useCardExport() {
     context.clip()
     context.drawImage(
       preview,
-      CARD_EXPORT_FRAME.innerX,
-      CARD_EXPORT_FRAME.innerY,
+      drawX,
+      drawY,
       drawWidth,
       drawHeight,
     )
@@ -333,31 +369,9 @@ export function useCardExport() {
    * Generates a clean fallback avatar canvas if no image or preview model is available.
    */
   async function generateFallbackAvatarPng(name: string): Promise<Uint8Array> {
-    const canvas = document.createElement('canvas')
-    canvas.width = 512
-    canvas.height = 512
-    const ctx = canvas.getContext('2d')
-    if (!ctx)
-      throw new Error('Failed to create fallback canvas')
-
-    // Gradient background
-    const grad = ctx.createLinearGradient(0, 0, 512, 512)
-    grad.addColorStop(0, '#6366f1')
-    grad.addColorStop(1, '#ec4899')
-    ctx.fillStyle = grad
-    ctx.fillRect(0, 0, 512, 512)
-
-    // Character Initial
-    ctx.fillStyle = '#ffffff'
-    ctx.font = 'bold 200px sans-serif'
-    ctx.textAlign = 'center'
-    ctx.textBaseline = 'middle'
-    ctx.fillText((name[0] || 'A').toUpperCase(), 256, 256)
-
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(b => b ? resolve(b) : reject(new Error('Fallback canvas export failed')), 'image/png')
-    })
-    return new Uint8Array(await blob.arrayBuffer())
+    const dataUrl = generateFallbackAvatarDataUrl(name)
+    const res = await fetch(dataUrl)
+    return new Uint8Array(await res.arrayBuffer())
   }
 
   /**
@@ -480,6 +494,7 @@ export function useCardExport() {
     getCardWithExportedBackground,
     buildCharaCardV2,
     composeCardExportPng,
+    generateFallbackAvatarDataUrl,
     exportCardJson,
     exportCardPng,
   }

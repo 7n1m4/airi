@@ -120,10 +120,16 @@ function handleSaveVoice(payload: { baseProvider: string, baseModel: string, bas
             <!-- Model Info -->
             <div class="min-w-0 flex flex-col">
               <span class="truncate text-xs text-neutral-700 font-bold dark:text-neutral-200">
-                {{ selectedModel?.name || 'Inherit Default' }}
+                {{ selectedDisplayModelId === 'none' ? 'None (Text-Only Companion)' : (selectedModel?.name || 'Inherit Default') }}
               </span>
               <span
-                v-if="selectedModel"
+                v-if="selectedDisplayModelId === 'none'"
+                class="mt-0.5 self-start rounded bg-neutral-500/10 px-1.5 py-0.2 text-[8px] text-neutral-600 font-bold uppercase dark:bg-neutral-800 dark:text-neutral-400"
+              >
+                Text-Only
+              </span>
+              <span
+                v-else-if="selectedModel"
                 class="mt-0.5 self-start rounded bg-primary-500/10 px-1.5 py-0.2 text-[8px] text-primary-500 font-bold uppercase"
               >
                 {{ formatLabel }}
@@ -137,15 +143,27 @@ function handleSaveVoice(payload: { baseProvider: string, baseModel: string, bas
             </div>
           </div>
 
-          <!-- Select Trigger Button -->
-          <button
-            type="button"
-            class="h-8 flex items-center justify-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-3 text-xs text-neutral-700 font-semibold shadow-sm transition-all dark:border-neutral-800 dark:bg-neutral-900 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800"
-            @click="modelSelectorOpen = true"
-          >
-            <div class="i-solar:gallery-send-bold-duotone text-xs" />
-            <span>Select Avatar</span>
-          </button>
+          <!-- Actions -->
+          <div class="flex items-center gap-1.5">
+            <button
+              v-if="selectedDisplayModelId && selectedDisplayModelId !== 'none'"
+              type="button"
+              class="h-8 flex items-center justify-center gap-1 border border-neutral-200 rounded-lg bg-neutral-100/60 px-2 text-xs text-neutral-600 font-medium transition-all dark:border-neutral-800 dark:bg-neutral-900/60 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"
+              title="Set to None (Text-Only Companion)"
+              @click="selectedDisplayModelId = 'none'"
+            >
+              <div class="i-solar:close-circle-linear text-xs" />
+              <span>None</span>
+            </button>
+            <button
+              type="button"
+              class="h-8 flex items-center justify-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-3 text-xs text-neutral-700 font-semibold shadow-sm transition-all dark:border-neutral-800 dark:bg-neutral-900 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              @click="modelSelectorOpen = true"
+            >
+              <div class="i-solar:gallery-send-bold-duotone text-xs" />
+              <span>{{ selectedDisplayModelId ? 'Change Avatar' : 'Select Avatar' }}</span>
+            </button>
+          </div>
         </div>
 
         <!-- Model Selector Dialog Component -->

@@ -19,7 +19,7 @@ import { toast } from 'vue-sonner'
 
 import cardExportFrameUrl from '../card-export-frame.png?url'
 
-import { useCardExport } from '../composables/use-card-export'
+import { generateFallbackAvatarDataUrl, useCardExport } from '../composables/use-card-export'
 
 interface Props {
   modelValue: boolean
@@ -82,7 +82,7 @@ const displayModelInfo = computed(() => {
   const modelId = (props.cardId ? cardStore.getCardDisplayModelId(props.cardId) : null)
     || (activeCard.value as any).displayModelId
     || (activeCard.value.extensions?.airi as any)?.model?.displayModelId
-  if (!modelId)
+  if (!modelId || modelId === 'none')
     return null
 
   const model = displayModelsStore.displayModels.find(m => m.id === modelId)
@@ -221,11 +221,14 @@ const availableCoverSources = computed<CoverArtOption[]>(() => {
     })
   }
 
+  // Real rendered vector monogram canvas for the Initial Badge
+  const monogramDataUrl = generateFallbackAvatarDataUrl(activeCard.value.name || 'A')
+
   sources.push({
     type: 'letter',
     label: 'Initial Badge',
     sublabel: 'Vector monogram art',
-    url: null,
+    url: monogramDataUrl,
     icon: 'i-solar:text-bold-duotone',
   })
 
@@ -250,6 +253,7 @@ const activeCoverImageUrl = computed<string | null>(() => {
     case 'author-icon':
       return authorIconUrl.value
     case 'letter':
+      return generateFallbackAvatarDataUrl(activeCard.value.name || 'A')
     default:
       return null
   }
@@ -1004,12 +1008,12 @@ async function handleExportDownload() {
                   'relative aspect-[925/1436] w-full max-w-[150px] overflow-hidden rounded-lg shadow-md border border-neutral-200 dark:border-neutral-700 bg-neutral-900',
                 ]"
               >
-                <div :class="['absolute inset-x-[7%] top-[5.5%] bottom-[10%] overflow-hidden rounded bg-neutral-800 flex items-center justify-center']">
+                <div :class="['absolute inset-x-[7%] top-[5.5%] bottom-[5.5%] overflow-hidden rounded bg-neutral-800 flex items-center justify-center']">
                   <img
                     v-if="avatarImageUrl"
                     :src="avatarImageUrl"
                     :alt="activeCard.name"
-                    :class="['h-full w-full object-cover object-top']"
+                    :class="['h-full w-full object-cover object-center']"
                   >
                   <div v-else i-solar:user-bold-duotone :class="['text-4xl text-primary-400/80']" />
                 </div>
