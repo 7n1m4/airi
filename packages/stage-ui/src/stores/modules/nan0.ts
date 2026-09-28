@@ -4,11 +4,13 @@ import type {
   Nan0EntityLedgerAdapter,
   Nan0EpistemicFact,
   Nan0EpistemicGroundingContext,
+  Nan0KernelState,
   Nan0Observation,
   Nan0PreparedTurn,
   Nan0PrepareTurnOptions,
   Nan0ReasoningClient,
   Nan0ReasoningRequest,
+  Nan0StateStore,
   Nan0SystemOneProvider,
 } from '@proj-airi/nan0-runtime'
 
@@ -49,6 +51,60 @@ export function isMainWindow(): boolean {
   const hash = window.location.hash || ''
   return hash === '' || hash === '#/' || hash === '#' || hash === '#!/'
 }
+
+// NOTICE: write-throttle decorator for the kernel state store. Nan0Kernel
+// issues a full load -> merge -> JSON.stringify -> localStorage.setItem cycle
+// (plus structuredClones) on every internal step, so a single chat turn fans
+// out to several synchronous multi-megabyte persistence cycles that stall the
+// main thread and feed compressor/swap pressure. This collapses them: at most
+// one disk write per 30s / 5 buffered saves, plus an explicit flush on SPEAK
+// turns (the durability point — silence/proactive turns can safely lag).
+// Single-writer only (leader window owns the kernel), so skipping intermediate
+// merges is safe: the next real save unions by id and the candidate wins ties.
+const KERNEL_SAVE_MIN_INTERVAL_MS = 30_000
+const KERNEL_SAVE_MAX_BUFFERED = 5
+
+class ThrottledNan0StateStore implements Nan0StateStore {
+  private lastSaveAt = 0
+  private bufferedSaves = 0
+  private pendingState: Nan0KernelState | null = null
+
+  constructor(private readonly inner: Nan0StateStore) {}
+
+  load(): Promise<Nan0KernelState | null> {
+    return this.inner.load()
+  }
+
+  async save(state: Nan0KernelState): Promise<Nan0KernelState> {
+    const now = Date.now()
+    const dueByTime = now - this.lastSaveAt >= KERNEL_SAVE_MIN_INTERVAL_MS
+    const dueByCount = this.bufferedSaves >= KERNEL_SAVE_MAX_BUFFERED
+    if (dueByTime || dueByCount)
+      return this.writeThrough(state, now)
+    this.bufferedSaves++
+    this.pendingState = state
+    return state
+  }
+
+  /** Force the latest buffered state to disk (SPEAK turns, assistant records). */
+  async flush(): Promise<void> {
+    if (!this.pendingState)
+      return
+    const state = this.pendingState
+    this.pendingState = null
+    await this.writeThrough(state, Date.now())
+  }
+
+  private async writeThrough(state: Nan0KernelState, now: number): Promise<Nan0KernelState> {
+    this.lastSaveAt = now
+    this.bufferedSaves = 0
+    this.pendingState = null
+    return this.inner.save(state)
+  }
+}
+
+// Retained per card so flush() reaches the wrapper after ensureKernel returns.
+const throttledStores = new Map<string, ThrottledNan0StateStore>()
 
 export interface Nan0ReflexInfo {
   group: string
@@ -377,9 +433,15 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
 
     activeCardId.value = targetCardId
 
-    const stateStore = typeof globalThis.localStorage !== 'undefined'
-      ? new LocalStorageStateStore(`nan0/kernel-state/${targetCardId}`)
-      : new InMemoryStateStore()
+    let throttled = throttledStores.get(targetCardId)
+    if (!throttled) {
+      const inner = typeof globalThis.localStorage !== 'undefined'
+        ? new LocalStorageStateStore(`nan0/kernel-state/${targetCardId}`)
+        : new InMemoryStateStore()
+      throttled = new ThrottledNan0StateStore(inner)
+      throttledStores.set(targetCardId, throttled)
+    }
+    const stateStore = throttled
 
     const reasoningClient: Nan0ReasoningClient = {
       generate: async (request: Nan0ReasoningRequest) => {
@@ -616,6 +678,18 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
         false,
       )
 
+      // Durability point: SPEAK turns always reach disk; silence/proactive
+      // turns ride the write throttle (30s / 5 buffered saves).
+      if (finalDecision === 'SPEAK' && allowed) {
+        try {
+          const targetCardId = (observation.metadata?.cardId as string | undefined) || activeCardId.value || 'default'
+          await throttledStores.get(targetCardId)?.flush()
+        }
+        catch (err) {
+          console.warn('[Nan0Store] Post-SPEAK state flush failed (throttled saves continue):', err)
+        }
+      }
+
       return prepared
     }
     finally {
@@ -636,6 +710,14 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
     if (!kernel.value)
       return null
     const res = await kernel.value.recordAssistantTurn(input)
+    // Assistant turns are spoken output — always durable, bypassing the throttle.
+    try {
+      const targetCardId = activeCardId.value || 'default'
+      await throttledStores.get(targetCardId)?.flush()
+    }
+    catch (err) {
+      console.warn('[Nan0Store] Assistant-turn state flush failed (throttled saves continue):', err)
+    }
     const snapshot = kernel.value.getStateSnapshot()
     if (snapshot.emotionalState) {
       setEmotions(snapshot.emotionalState)

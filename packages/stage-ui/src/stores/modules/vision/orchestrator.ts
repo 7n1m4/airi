@@ -22,6 +22,7 @@ import { ref } from 'vue'
 
 import { ATTENTION_GUARD_WORKLOAD_ID } from '../../../composables/vision/use-vision-workloads'
 import { createAttentionGuardAdapter } from '../../../libs/inference/adapters/attention-guard'
+import { shouldDegradeBackgroundWork } from '../../../utils/memory-sentinel'
 import { useChatOrchestratorStore } from '../../chat'
 import { useEntityLedgerStore } from '../../entity-ledger'
 import { useLLM } from '../../llm'
@@ -348,12 +349,16 @@ export const useVisionOrchestratorStore = defineStore('vision-orchestrator', () 
         const pngBytes = payload.pngBytes && payload.pngBytes.byteLength > 0
           ? payload.pngBytes
           : undefined
+        // NOTICE: under memory pressure the worker runs the cheap OCR path
+        // (downscale-only, never upscale). Error-pattern/keyword matching
+        // survives coarse glyphs; the WASM heap does not survive full-res OCR.
+        const degraded = shouldDegradeBackgroundWork()
         const result: AttentionGuardProcessResult = await adapter.process(
           payload.dataUrl,
           payload.width,
           payload.height,
           tags,
-          pngBytes ? { pngBytes } : undefined,
+          (pngBytes || degraded) ? { pngBytes, degraded } : undefined,
         )
 
         lastResultAt.value = Date.now()

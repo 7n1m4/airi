@@ -538,6 +538,11 @@ export interface AttentionGuardProcessRequest {
   height: number
   /** User/Character interest keywords (e.g. ['AIRI', 'chat_window', 'chrome', 'destiny']). */
   interestTags?: string[]
+  /**
+   * Memory-pressure hint: worker runs the cheap OCR path (downscale-only to
+   * 1280px, never upscale). Set by the orchestrator from the memory sentinel.
+   */
+  degraded?: boolean
 }
 
 export type AttentionGuardDecision = 'BASELINE' | 'IGNORE' | 'NOTE' | 'PROMOTE'

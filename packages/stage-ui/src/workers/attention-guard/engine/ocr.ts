@@ -75,6 +75,12 @@ const OCR_UPSCALE_FACTOR = 2
 const OCR_UPSCALE_MIN_EDGE = 1200
 /** Largest edge handed to tesseract. Full-frame/native crops are downscaled to this so OCR stays legible AND tractable. */
 const OCR_MAX_INPUT_EDGE = 2560
+/**
+ * Degraded-mode ceiling (memory-pressure path): never upscale, only shrink to
+ * this edge. Error-pattern/keyword matching survives coarse glyphs; the WASM
+ * heap and per-tick Blink buffers do not survive full-res upscaled OCR.
+ */
+const OCR_DEGRADED_MAX_EDGE = 1280
 
 /**
  * Grayscale + 1%/99% percentile contrast stretch so glyph edges are crisp.
@@ -138,8 +144,12 @@ function stretchContrast(image: ImageData): ImageData {
  *   - small crop      -> 2x upscale (capped) so glyphs clear the floor
  *   - in-sweet-spot   -> keep 1x
  * then stretch contrast with smooth interpolation before `worker.recognize()`.
+ *
+ * Degraded mode (memory pressure): downscale-only to `OCR_DEGRADED_MAX_EDGE`,
+ * never upscale. Coarse glyphs still match error patterns/keywords while the
+ * WASM heap and per-tick Blink buffers stay a fraction of full-res cost.
  */
-async function prepareOcrInput(imageData: ImageData): Promise<{ targetInput: ImageData | Blob, dispose: () => void }> {
+async function prepareOcrInput(imageData: ImageData, degraded = false): Promise<{ targetInput: ImageData | Blob, dispose: () => void }> {
   if (typeof OffscreenCanvas === 'undefined')
     return { targetInput: imageData, dispose: () => {} }
 
@@ -158,7 +168,11 @@ async function prepareOcrInput(imageData: ImageData): Promise<{ targetInput: Ima
 
   const maxEdge = Math.max(imageData.width, imageData.height)
   let scale: number
-  if (maxEdge > OCR_MAX_INPUT_EDGE) {
+  if (degraded) {
+    // Downscale-only: shrink oversized crops, leave small crops at 1x.
+    scale = maxEdge > OCR_DEGRADED_MAX_EDGE ? OCR_DEGRADED_MAX_EDGE / maxEdge : 1
+  }
+  else if (maxEdge > OCR_MAX_INPUT_EDGE) {
     // Full-frame / oversized crop: shrink to the tesseract sweet spot.
     scale = OCR_MAX_INPUT_EDGE / maxEdge
   }
@@ -221,7 +235,7 @@ async function prepareOcrInput(imageData: ImageData): Promise<{ targetInput: Ima
 }
 
 /** OCR of a delta-region crop (ImageData). Returns raw text + wall-clock ms. */
-export async function ocrImageData(imageData: ImageData): Promise<{ text: string, ocrMs: number }> {
+export async function ocrImageData(imageData: ImageData, options?: { degraded?: boolean }): Promise<{ text: string, ocrMs: number }> {
   const started = performance.now()
   if (!imageData || imageData.width <= 0 || imageData.height <= 0) {
     return { text: '', ocrMs: 0 }
@@ -237,7 +251,7 @@ export async function ocrImageData(imageData: ImageData): Promise<{ text: string
     }
 
     const worker = await getWorker()
-    const { targetInput, dispose } = await prepareOcrInput(imageData)
+    const { targetInput, dispose } = await prepareOcrInput(imageData, options?.degraded)
     cleanup = dispose
 
     // Add 5s timeout race to prevent indefinite hang on complex frames

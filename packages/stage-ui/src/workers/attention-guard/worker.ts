@@ -253,7 +253,7 @@ defineStreamInvokeHandler(context, attentionGuardLoadEvent, toStreamHandler<any,
   }
 }))
 
-defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, pngBytes, interestTags }) => {
+defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, pngBytes, interestTags, degraded }) => {
   const stageMs = { stage0Ms: 0, stage1Ms: 0, stage2Ms: 0, stage3Ms: 0 }
   let rawImage: RawImage | null = null
 
@@ -358,7 +358,7 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, pngBy
       let crop: ImageData | null = cropToImageData(raw, rawImage.width, channels, bbox)
       if (crop) {
         try {
-          const { text } = await ocrImageData(crop)
+          const { text } = await ocrImageData(crop, degraded ? { degraded: true } : undefined)
           ocrText = text
           ocrErrorPatterns = matchPatterns(text, DEFAULT_ERROR_PATTERNS)
           ocrInterestTags = matchInterestTags(text, interestTags)
