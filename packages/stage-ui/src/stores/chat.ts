@@ -73,6 +73,7 @@ import { useVisionStore } from './modules/vision'
 import { useProactivityStore } from './proactivity'
 import { useProvidersStore } from './providers'
 import { useSettingsChat } from './settings/chat'
+import { useSettingsUserProfile } from './settings/user-profile'
 
 export interface SendOptions {
   model?: string
@@ -1474,11 +1475,16 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
                   ? sendingMessage
                   : (inferenceUserMessage ? getMsgStringContent(inferenceUserMessage.content) : '')
 
+                const userProfileStore = useSettingsUserProfile()
+                const cardAnchor = (activeCard.value as any)?.extensions?.airi?.cognition?.affect?.companionAnchorOverride?.trim()
+                const globalName = userProfileStore.name?.trim()
+                const effectiveOwnerName = cardAnchor || globalName || 'User'
+
                 const observation: Nan0Observation = {
                   id: `obs_${nanoid()}`,
                   source: 'chat',
-                  actorId: 'kyo',
-                  displayName: 'User',
+                  actorId: 'owner',
+                  displayName: effectiveOwnerName,
                   sessionId,
                   timestamp: sendingCreatedAt || Date.now(),
                   content: userContentStr,

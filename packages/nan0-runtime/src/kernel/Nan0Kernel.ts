@@ -397,7 +397,7 @@ export class Nan0Kernel {
     if (persistedState)
       this.state = persistedState
 
-    let identity = hydrateIdentityState(this.state.identity)
+    let identity = hydrateIdentityState(this.state.identity, this.dependencies.identityOptions)
     const memories = this.state.memories.map((memory) => {
       const normalized = normalizeMemoryOwnership(memory, identity)
       identity = normalized.identity
@@ -1027,6 +1027,7 @@ export class Nan0Kernel {
       observationEventId: inputTimelineEvent.event.eventId,
       observation: canonicalObservation,
       ownership,
+      identity: this.state.identity,
       emotionalState: structuredClone(this.state.emotionalState),
       mood: deriveMood(this.state.emotionalState),
       interpretationModifier: emotionalInterpretationModifier(this.state.emotionalState, text, ownership.actorId, this.state.identity, systemOneAnswers),
@@ -1035,7 +1036,7 @@ export class Nan0Kernel {
       predictionContext: composePredictionContext(this.state.prediction!, canonicalObservation.timestamp),
       goalMetabolismContext: composeGoalMetabolismContext(this.state.goals, canonicalObservation.timestamp),
       temporalContext: composeLivedTemporalContext(this.state.temporal.engine, canonicalObservation.timestamp),
-      subjectiveTime: subjectiveTime(this.state.timeline, canonicalObservation.timestamp, sessionId),
+      subjectiveTime: subjectiveTime(this.state.timeline, canonicalObservation.timestamp, sessionId, this.state.identity?.ownerId),
       memories: structuredClone(recalledMemories),
       continuity: structuredClone(continuityContext),
       relationship: structuredClone(relationshipContext),

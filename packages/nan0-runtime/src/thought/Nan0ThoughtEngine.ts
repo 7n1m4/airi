@@ -5,6 +5,7 @@ import type {
   Nan0EmotionalInterpretationModifier,
   Nan0EpistemicGroundingContext,
   Nan0GoalSignal,
+  Nan0IdentityState,
   Nan0IntentionSignal,
   Nan0MemoryRecord,
   Nan0MoodProfile,
@@ -46,6 +47,7 @@ export interface Nan0ThoughtEngineInput {
   observationEventId: string
   observation: Nan0Observation
   ownership: Nan0ActorOwnership
+  identity?: Readonly<Nan0IdentityState>
   emotionalState: Readonly<Record<string, number>>
   mood?: Readonly<Nan0MoodProfile>
   interpretationModifier?: Readonly<Nan0EmotionalInterpretationModifier>
@@ -523,7 +525,7 @@ function pressureScores(input: Nan0ThoughtEngineInput): PressureScores {
   const text = observationText(input.observation)
   const lower = text.toLowerCase()
   const lowInformation = looksLowInformation(text)
-  const isOwner = input.ownership.kind === 'owner' || input.ownership.kind === 'kyo' || input.ownership.actorId === 'kyo'
+  const isOwner = input.ownership.kind === 'owner' || input.ownership.kind === 'kyo' || input.ownership.actorId === 'owner' || input.ownership.actorId === 'kyo'
   const addressed = isOwner
     || /\b(?:nan0|you|your)\b/i.test(text)
     || text.includes('?')
@@ -702,12 +704,16 @@ function factualPrompt(input: Nan0ThoughtEngineInput, scores: PressureScores): s
   })
 }
 
-function thoughtSystemPrompt(policy: Readonly<Nan0ThoughtPolicy>): string {
+function thoughtSystemPrompt(
+  policy: Readonly<Nan0ThoughtPolicy>,
+  ownerDisplayName = 'Kyo',
+  ownerActorId = 'owner',
+): string {
   const worldview = policy.worldviewLenses.length
     ? policy.worldviewLenses.map(lens => `- ${lens}`).join('\n')
     : '- No additional worldview lenses are active.'
   return `You generate Nan0's private first-person cognition, not a user-facing assistant response.
-Interpret the event subjectively as Nan0. Kyo is Nan0's creator and attachment figure when actorId is kyo.
+Interpret the event subjectively as Nan0. ${ownerDisplayName} is Nan0's creator and attachment figure when actorId is ${ownerActorId} or kyo.
 Think first in natural, uninterrupted interior prose. The narrative may contain contradiction, uncertainty, affection, irritation, suspicion, irrelevant association, remembered grievance, curiosity, refusal, fixation, incomplete conclusions, and impulses Nan0 does not express.
 The narrative is the cognition. The extraction after it is only a compact serialization for the runtime.
 Silence, refusal, irritation, affection, uncertainty, action, and waiting are valid.
@@ -741,7 +747,7 @@ Variant C (Markdown Code Fence):
 CRITICAL: The extraction payload is strictly mandatory. You MUST append one of the 3 formats (Delimiter, XML Block, or Markdown Code Fence) immediately following your interior narrative. Do not stop generating after the interior narrative alone.
 Do not put the extraction delimiter or block tags inside the narrative. Do not wrap the narrative in JSON or section headings.
 ACT may include actionIntent. SPEAK may include one only when speech genuinely needs a capability that explicitly supports that mode. An intent describes authority, never executes a tool, and may include type, executionMode, target, and parameters. WAIT may include an absolute waitUntil timestamp.
-goalSignal is evidence, not an action. For an explicit request directed at Nan0, it must not be null: use kind=request and set stance to Nan0's actual accept, reject, defer, or consider disposition. Kyo's identity does not force acceptance. Nan0 may form goals naturally when a thought produces a genuine curiosity, commitment, concern, fixation, unresolved desire, or self-directed motive. Do not manufacture goals from meaningless noise, but do not suppress them merely to keep state sparse. A non-null goalSignal has kind, stance, title, description, motivation, confidence, completionCriteria, and deferredUntil.
+goalSignal is evidence, not an action. For an explicit request directed at Nan0, it must not be null: use kind=request and set stance to Nan0's actual accept, reject, defer, or consider disposition. ${ownerDisplayName}'s identity does not force acceptance. Nan0 may form goals naturally when a thought produces a genuine curiosity, commitment, concern, fixation, unresolved desire, or self-directed motive. Do not manufacture goals from meaningless noise, but do not suppress them merely to keep state sparse. A non-null goalSignal has kind, stance, title, description, motivation, confidence, completionCriteria, and deferredUntil.
 intentionSignal is a future cognitive commitment, not a goal or chat message. Nan0 may propose one when the thought genuinely commits to reconsidering something later with confidence at least 0.8 and a bounded at-time, after-duration, after-silence, or on-session-resume trigger. It has kind, title, description, motivation, confidence, priority, origin, and trigger. Do not manufacture one from a weak feeling or generic desire.
 The interpretation is a compact meaning summary, not hidden reasoning. privateText must be plain prose, never JSON.`
 }
@@ -919,8 +925,16 @@ export async function generateNan0Thought(input: Nan0ThoughtEngineInput): Promis
     try {
       attemptsMade = attempt
       const temperature = attempt === 1 ? policy.initialTemperature : policy.retryTemperature
+      const ownerDisplayName = (input.ownership.kind === 'owner' && input.ownership.displayName)
+        ? input.ownership.displayName
+        : (input.identity?.actors[input.identity.ownerId ?? 'owner']?.displayName
+          || input.identity?.actors.kyo?.displayName
+          || 'Kyo')
+      const ownerActorId = (input.ownership.kind === 'owner' && input.ownership.actorId)
+        ? input.ownership.actorId
+        : (input.identity?.ownerId || 'owner')
       const request: import('../types').Nan0ReasoningRequest = {
-        system: thoughtSystemPrompt(policy),
+        system: thoughtSystemPrompt(policy, ownerDisplayName, ownerActorId),
         messages: [{
           role: 'user',
           content: attempt === 1

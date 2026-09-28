@@ -61,7 +61,7 @@ export function createDefaultIdentityState(options?: string | DefaultIdentityOpt
   const isKyo = ownerId === 'kyo'
   const ownerAliases = isKyo
     ? Array.from(new Set([...KYO_ALIASES, ...(opts?.ownerAliases ?? [])]))
-    : Array.from(new Set([ownerId, normalizeKey(ownerDisplayName), ...(opts?.ownerAliases?.map(normalizeKey) ?? [])]))
+    : Array.from(new Set([ownerId, normalizeKey(ownerDisplayName), 'owner', 'user', ...(opts?.ownerAliases?.map(normalizeKey) ?? [])]))
   const ownerPronouns = opts?.ownerPronouns ?? (isKyo ? ['she', 'her'] : ['they', 'them'])
 
   const owner = createActor(ownerId, ownerDisplayName, 'owner', ownerAliases, ownerPronouns)
@@ -98,22 +98,34 @@ export function hydrateIdentityState(
   state?: Partial<Nan0IdentityState>,
   options?: string | DefaultIdentityOptions,
 ): Nan0IdentityState {
+  const opts: DefaultIdentityOptions | undefined = typeof options === 'string'
+    ? { ownerDisplayName: options }
+    : options
+
   const defaults = createDefaultIdentityState(
     options ?? (state?.ownerId ? { ownerId: state.ownerId } : undefined),
   )
   const actors = structuredClone(state?.actors ?? {})
-  const ownerId = state?.ownerId ?? defaults.ownerId ?? 'kyo'
+  const ownerId: string = (opts?.ownerId
+    ? normalizeKey(opts.ownerId)
+    : (opts?.ownerDisplayName ? defaults.ownerId : (state?.ownerId ?? defaults.ownerId ?? 'kyo'))) || 'kyo'
 
   for (const [actorId, defaultActor] of Object.entries(defaults.actors)) {
     actors[actorId] = {
       ...defaultActor,
       ...actors[actorId],
       actorId,
-      displayName: actors[actorId]?.displayName || defaultActor.displayName,
+      displayName: (actorId === ownerId && opts?.ownerDisplayName)
+        ? opts.ownerDisplayName.trim()
+        : (actors[actorId]?.displayName || defaultActor.displayName),
       kind: actors[actorId]?.kind || defaultActor.kind,
       aliases: Array.from(new Set([...defaultActor.aliases, ...(actors[actorId]?.aliases ?? [])])),
       externalIdentities: { ...defaultActor.externalIdentities, ...actors[actorId]?.externalIdentities },
     }
+  }
+
+  if (opts?.ownerDisplayName && actors[ownerId]) {
+    actors[ownerId].displayName = opts.ownerDisplayName.trim()
   }
 
   const aliases = { ...state?.aliases }
@@ -124,6 +136,13 @@ export function hydrateIdentityState(
   }
 
   Object.assign(aliases, defaults.aliases)
+  if (ownerId) {
+    aliases.owner = ownerId
+    aliases[ownerId] = ownerId
+    for (const alias of KYO_ALIASES) {
+      aliases[alias] = ownerId
+    }
+  }
 
   return { actors, aliases, ownerId }
 }

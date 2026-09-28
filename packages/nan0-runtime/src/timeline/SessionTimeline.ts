@@ -347,10 +347,16 @@ export function subjectiveTime(
   timeline: Nan0TimelineState,
   at: number,
   sessionId: string | null = timeline.activeSessionId,
+  ownerId?: string,
 ): Nan0SubjectiveTime {
   const events = timelineEvents(timeline, sessionId ? { sessionId } : {})
   const session = sessionId ? timeline.sessions[sessionId] : undefined
-  const lastKyo = [...events].reverse().find(event => event.actorId === 'kyo')
+  const effectiveOwnerId = ownerId?.trim().toLowerCase()
+  const lastKyo = [...events].reverse().find(event =>
+    (effectiveOwnerId && event.actorId.toLowerCase() === effectiveOwnerId)
+    || event.actorId === 'owner'
+    || event.actorId === 'kyo',
+  )
   const lastNan0 = [...events].reverse().find(event => event.actorId === 'nan0'
     && (event.eventType === 'output' || event.eventType === 'silence'))
 

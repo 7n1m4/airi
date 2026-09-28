@@ -34,6 +34,8 @@ import { useEntityLedgerStore } from '../entity-ledger'
 import { useLLM } from '../llm'
 import { useTextJournalStore } from '../memory-text-journal'
 import { useProvidersStore } from '../providers'
+import { useSettingsUserProfile } from '../settings/user-profile'
+import { useAiriCardStore } from './airi-card'
 import { useSystemOneStore } from './system-one'
 
 // NOTICE: Architectural Invariant - Multi-Window Single-Leader Model (Pass 11 & Domain 5)
@@ -550,6 +552,13 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
       }
     }
 
+    const userProfileStore = useSettingsUserProfile()
+    const airiCardStore = useAiriCardStore()
+    const currentCard = airiCardStore.cards.get(targetCardId) || airiCardStore.activeCard
+    const cardAnchor = (currentCard as any)?.extensions?.airi?.cognition?.affect?.companionAnchorOverride?.trim()
+    const globalName = userProfileStore.name?.trim()
+    const effectiveOwnerName = cardAnchor || globalName || 'User'
+
     const instance = new Nan0Kernel({
       stateStore,
       reasoningClient,
@@ -564,8 +573,8 @@ export const useNan0Store = defineStore('nan0-cognition', () => {
         availableActionIntents: ['expression.body', 'memory.revisit', 'intention.form'],
       },
       identityOptions: {
-        ownerId: 'kyo',
-        ownerDisplayName: 'User',
+        ownerId: 'owner',
+        ownerDisplayName: effectiveOwnerName,
       },
     })
 

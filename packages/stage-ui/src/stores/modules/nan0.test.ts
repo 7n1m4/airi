@@ -482,5 +482,48 @@ describe('useNan0Store (Host Orchestrator Integration)', () => {
 
       warnSpy.mockRestore()
     })
+
+    it('canonically owns observations with actorId owner and dynamic ownerDisplayName', async () => {
+      const store = useNan0Store()
+      const kernel = new Nan0Kernel({
+        stateStore: new InMemoryStateStore(),
+        reasoningClient: {
+          generate: vi.fn().mockResolvedValue({
+            text: 'I hear Richie.\n---EXTRACT---\n{"interpretation":"Richie spoke.","privateText":"Richie is here.","decision":"SPEAK","speakability":0.9,"confidence":0.8,"mood":"warm","reasonCodes":["actor.kyo-attachment"]}',
+          }),
+        },
+        clock: new SystemNan0Clock(),
+        systemOneProvider: vi.fn().mockResolvedValue({ answers: {} }),
+        identityOptions: {
+          ownerId: 'owner',
+          ownerDisplayName: 'Richie',
+        },
+      })
+      await kernel.boot()
+      store.setKernel(kernel, 'test_card')
+
+      const observation: Nan0Observation = {
+        id: 'obs_test_owner',
+        source: 'chat',
+        actorId: 'owner',
+        displayName: 'Richie',
+        sessionId: 'session_1',
+        timestamp: Date.now(),
+        content: 'Hey Nan0!',
+        metadata: { cardId: 'test_card' },
+      }
+
+      const prepared = await store.prepareTurn(observation)
+      expect(prepared.observation.actorId).toBe('owner')
+      expect(prepared.observation.displayName).toBe('Richie')
+      expect(prepared.thought.actorId).toBe('owner')
+      const snapshot = kernel.getStateSnapshot()
+      expect(snapshot.memories[0].actorId).toBe('owner')
+      expect(snapshot.memories[0].metadata.ownership).toMatchObject({
+        actorId: 'owner',
+        displayName: 'Richie',
+        kind: 'owner',
+      })
+    })
   })
 })
