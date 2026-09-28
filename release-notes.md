@@ -1,66 +1,50 @@
-# 🚀 AIRI v0.9.34-stable.20260924 — Release Notes
+# 🚀 AIRI v0.9.35-stable.20260928 — Release Notes
 
-This release marks the full arrival of the **Nan0 Living Cognition Architecture**, graduating from an early design preview into an operational multi-domain cognitive core featuring subconscious shadow reflexes, long-term relationship memory, and epistemic grounding. Alongside Nan0, we introduce the **Mind Map 4D Cognitive Graph & Dual-View Memory Explorer**, providing rich visual insight into AIRI's evolving memory through both an interactive chronological timeline and a force-directed celestial constellation view.
+This release introduces the complete **Single-Card ZIP Export & Import Ecosystem**, enabling creators to effortlessly package, share, and backup entire companions—including 3D/2D avatar vessels, custom textures, voices, and isolated memories—in a single portable file. Alongside card portability, this update brings a major overhaul to both the **AIRI Card Hub** and **AIRI Card Editor**, unifying avatar staging and configuration under one coherent roof, and debuts the brand new **Embedded Stage Avatar Viewport** directly into Desktop Chat.
 
-Under the hood, this release debuts the **System 1 Coprocessor Engine**, pairing the remote **Jev** model with the local, free **Laya** runtime—offering users two flexible paths for intelligence (high-speed remote execution or completely free on-device processing) to power instant semantic triage, entity classification, and relational memory retrieval. In addition, creators gain access to the interactive **Conversational Pacing & Thinking Fillers Lab** for fine-tuning natural speech cadences, an **External VLM Vision Tier** for Screen Watching with hourly quota safeguards, robust **Serialized Voice Input Recovery** across microphone hardware changes, desktop window memory disposal, and vital companion animation restorations for both Live2D and MMD models.
+Under the hood, this release marks a monumental breakthrough in desktop resource management with **Active VRAM Eviction & Deep Standby Hibernation**. Local inference runtimes now automatically unload from VRAM after 15 minutes of inactivity, bringing idle resource usage down to near-zero and eliminating desktop memory pressure during long sessions. Additionally, creators gain access to the **Cognitive Screen Sentinel** (enabling natural-language question gates for proactive vision), a dedicated **Nan0 Live Cognition Desktop Panel**, smarter **Departure & Return Awareness** that silences false idle boredom alerts when you step away, a resolved **Proactivity AFK Deadlock**, and native **Indonesian Language Support**.
 
 ---
 
-## ✨ Key Highlights
+## ✨ Product Updates
 
-### 🧠 Nan0 Living Cognition: Subconscious Shadow Engine & Relationship Memory
-*Graduated from experimental UI preview to active cognitive architecture.*
-- **Full 5-Domain Architecture**: Transitioned Nan0 from a conceptual interface preview into an active cognitive kernel fully synchronized with chat turns and stage expressions.
-- **System 1 80-Choice Schema**: Subconscious reflex schema that evaluates immediate reactions, behavioral impulses, and emotional undertones in milliseconds across remote Jev and local Laya coprocessors before conscious response synthesis.
-- **PCL Grievance Ledger & Semantic Salience**: Long-term interpersonal relationship tracking that records mutual rapport, boundary respect, emotional warmth, and resolved friction over time.
-- **Epistemic Memory Grounding**: 1st-hop thought engine ensuring that inner monologues, self-reflections, and unspoken musings are strictly anchored to verified autobiographical memories.
-- **Configurable Owner Anchor & State Persistence**: Dynamic identity boundary protection within character definitions, enforcing clear companion versus owner distinctions while safeguarding cognition state across restarts.
+### 🗃️ Character Cards: AIRI Card Hub & Unified Card Editor
 
-### 🌌 Mind Map: 4D Cognitive Graph & Dual-View Memory Explorer
-- **Dual-View Explorer**: Seamless toggle between a Chronological Timeline and a force-directed Constellation Canvas directly from Chat and Long-Term Memory settings.
-- **Chronological Timeline View**: High-fidelity visual memory ledger strictly bounded to actual interaction timestamps. Features deterministic vertical event packing (+N overflow badges), closest-zoom (4.0x) playhead default, direct canvas ruler scrubbing, and smart camera follow.
-- **Constellation Canvas**: Dynamic force-directed relational graph displaying memories, entities, and conceptual connections as celestial stars and interconnected clusters.
-- **Universal Time Scrubber & Entity Detail Drawer**: Scrub through past dates to inspect relational triples, semantic confidence scores, and historical memory evidence.
+#### AIRI Card Hub (Everyone)
+- **Complete Single-Card ZIP Bundles**: You can now export and import individual characters as self-contained `.zip` archives containing all companion metadata, avatar models (VRM, Live2D, MMD, Spine), custom wardrobe textures, speech audio profiles, and isolated memory journals.
+- **Universal Format Compatibility**: Enhanced card export modal supporting Character Card V2 and V3 specifications, standalone JSON, and PNG images with embedded metadata chunks for broad compatibility across the companion ecosystem.
+- **Interactive Cover Art Selector & Live Preview**: Added a 3-column cover art picker with customizable crop aspect ratios, real-time dynamic query previews, and automatic monogram badge generation for text-only companion cards.
+- **Redesigned 5-Tab Card Inspector**: Overhauled the card inspect modal into five canonical tabs featuring comprehensive concept summaries, full specification sheets, and a unified avatar vessel selector.
+- **Crisp Typography & Smooth Streaming**: Eliminated CSS 3D transform text blurring and streamlined message streaming by removing unnecessary token cloning overhead.
 
-### ⚡ System 1 Coprocessor Engine: Jev, Laya & LoCoMo Memory Architecture
-- **Dual-Deployment Coprocessor**: Choose between the high-throughput remote **Jev** model (via TypeSafe AI and OpenRouter Decisions) or the completely free, zero-token local **Laya** runtime for instant on-device classification and reranking.
-- **LoCoMo Memory Architecture (75.97% F1 Score)**: Benchmark results achieve an outstanding **75.97% F1 score** with remote Jev and **72.74% F1 score** with local Laya, powered by a Dual-Searcher architecture uniting vector document retrieval with Knowledge Graph relational triples, automatic query triage (C1–C4), and zero-shot entity taxonomy classification.
-- **Interactive Coprocessor Lab**: Built-in 3-tab playground in Settings (`/settings/modules/system-one`) for live testing of Query Triage, Semantic Reranking, and Emotional Affect deltas.
+#### AIRI Card Editor (Unified Configuration)
+- **Unified Staging Tab**: Integrated avatar vessel staging directly into the card configuration flow (moving the previous Studio tab into Staging) to preview, calibrate, and bind 3D/2D avatar models alongside multi-actor cast rosters and scene backgrounds.
+- **Presence Tab (formerly Modules)**: Renamed Modules to Presence, elevating avatar presence and stage behaviors into a unified workspace equipped with an explicit "None" option for text-only companions and inline LLM connectivity test probes.
+- **Generation Tab Thinking Presets**: Added thinking mode preset chips directly in generation settings, allowing creators to easily toggle or disable reasoning overhead and fine-tune thinking token limits.
+- **Cognition Tab Enhancements**: Sub-tab models and universe RAG++ memory segment with upgraded pill toggles and persistent search engine state.
 
-### 🎙️ Conversational Pacing & Thinking Fillers Lab
-- **Dedicated Acting Sub-Tab Lab**: Interactive testing playground built into the Character Card Editor under the Acting tab.
-- **Spontaneous Spoken Asides & Thinking Fillers**: Natural vocal pauses, hums, and context-aware thinking fillers seamlessly generated during extended chain-of-thought deliberations.
-- **Interactive Scenario Presets**: Built-in challenging prompts (Relativistic Spacecraft, Chess Endgame, Kernel Deadlock, Riemann Hypothesis) to simulate complex reasoning latency and cadence handoffs.
-- **One-Click Pacing Profiles**: Quick presets (`Snappy`, `Balanced`, `Deep CoT`) with live waveform visualization, latency stopwatches, and cognitive gating diagnostics.
+### 🪟 Desktop Chat: Interactive Embedded Stage Viewport & 3D Visuals
+- **Embedded Stage Avatar Viewport**: You can now view and converse with your avatar companion directly inside the Desktop Chat window's right context panel. The embedded stage is fully interactive, synchronizes with global positioning, and expands on demand.
+- **3D Levitating Card Splash Loader**: Replaced the static launch screen with a smooth 3D levitating holographic card animation during application startup.
 
-### 🎭 Avatar Runtimes: Live2D Flicker Fix & MMD Animation Recovery
-- **MMD Models Break Free from T-Pose**: Fixed an issue in packaged desktop releases where 3D MMD companions were frozen in a T-pose due to unresolved motion assets under desktop protocols. Built-in dances and motions now load and play smoothly!
-- **Restored Live2D Idle Animation Cycles**: Fixed an issue where companion idle animation loops configured in the Avatar Customizer failed to trigger. 2D models now seamlessly cycle through their designated idle motions.
-- **Live2D Resize Buffer Repaint**: Ported canvas buffer repaint synchrony during window resizing, eliminating blank canvas flashing when resizing the avatar stage.
-- **Smooth MMD Motion Cycling**: Corrected animation playlist filtering so MMD companions cycle through their full repertoire of dances and motions without skipping tracks.
+### ⚡ Resource Intelligence: Active VRAM Eviction & Deep Standby Hibernation
+- **Automated VRAM Eviction (15-Minute Inactivity TTL)**: Heavy local AI models (WebGPU runtimes, Whisper transcription, Moondream vision, and speech synthesizers) now automatically unload from GPU memory after 15 minutes of inactivity, freeing system memory for other desktop applications.
+- **Seamless Deep Standby Recovery**: When you resume chatting or interact with your companion, runtimes dynamically reload on demand without requiring an application restart.
+- **Zero-Allocation Attention Guard**: Eliminated memory accumulation and buffer churn in continuous screen perception, capping background capture resolutions to 1080p and ensuring stable, leak-free background vision.
+- **In-App Memory Sentinel & Telemetry**: Added runtime diagnostic monitors that track memory pressure, buffer recycling, and background texture eviction across multi-hour sessions.
 
-### 👁️ Screen Watcher: External VLM Vision Tier & Visual Quota Safeguards
-- **3-Tier Visual Engine**: Added support for **External VLM** (routing through your configured global Vision model such as Claude 3.5 Sonnet, GPT-4o, or Gemini 2.0 Flash) alongside Lightweight WebGPU and Local Moondream.
-- **Direct Screen Commentary**: Switched to direct commentary (`screen:interpret`) for rich, human-like visual awareness of your desktop activities.
-- **Hourly Quota Tracking & Budget Safeguards**: Live intervention counters and automated cooldown timers to protect rate limits and prevent unexpected API usage.
+### 🧠 Nan0 Cognition: Desktop Inspector Panel & Departure Intelligence
+- **Live Desktop Cognition Panel**: Open a dedicated real-time desktop inspector window to observe Nan0's subconscious thoughts, emotional salience, and cognitive reflexes live as conversations unfold.
+- **Smart Departure & Return Dynamics**: When you tell your companion you are stepping away, heading to work, or going to bed, AIRI gracefully acknowledges the departure and suppresses false "idle boredom" interruptions until you return.
+- **System 1 Cognition Upgrades**: Upgraded conversational continuity and relationship memory to pure System 1 intelligence, eliminating brittle keyword matching and lexical fallbacks.
+- **Dynamic User Identity Anchors**: Subconscious reasoning prompts now dynamically resolve your configured user identity, completely removing legacy placeholder names.
 
-### 🌐 Free AI Hub & Proactivity Diagnostics
-- **Remote Ollama Authentication & URL Routing**: Fixed an issue where cloud-hosted or remote Ollama endpoints failed with 401 Unauthorized errors during conversations. Custom base URLs and authentication tokens are now fully respected.
-- **Heartbeat Failure Logging**: If proactive background heartbeats encounter network timeouts, rate limits, or unconfigured providers, errors are now explicitly reported to the Event Log instead of failing silently.
+### 👁️ Proactivity: Cognitive Screen Sentinel & AFK Deadlock Elimination
+- **Cognitive Screen Sentinel (Question-Based Semantic Gates)**: Instead of relying on rigid keyword lists or window tags (like "youtube" or "error"), the Screen Watcher can now be activated through natural-language questions. You can pose plain sentences as intelligent perception gates—such as *"Did the user hit a compiler error or failing test?"* or *"Did a notable, unexpected event happen on screen?"* AIRI's System 1 coprocessor continuously checks on-screen visual evidence against these questions in real time, only chiming in when a question is genuinely answered "yes."
+- **Decoupled Proactivity Heartbeats (AFK Deadlock Fix)**: Fixed an issue where proactivity suggestions would freeze when switching between active and idle tasks. Active-user heartbeats are now fully decoupled from idle detection gates, preventing AFK deadlocks.
+- **Auto-Healing Vision Lifecycle**: Resilient frame decoding that automatically recovers screen watchers after operating system sleep or display sleep events.
 
-### 🔊 Audio Pipeline & Hardware Recovery
-- **Serialized Voice Input Lifecycle**: Ported upstream hardware recovery (PR #2645) with an explicit state machine preventing dropped microphone streams, audio crashes, or UI freezes during microphone hardware changes.
-- **Persistent VAD & Push-to-Talk Recording**: Saved voice activity detection sensitivity thresholds across restarts and restored manual push-to-talk recording fallbacks.
-
-### ⚡ Performance, Card Editor & Stability
-- **Desktop Lazy Window Creation & Memory Disposal**: Electron secondary windows (Chat and Subtitles/Captions) are now created lazily on-demand and cleanly disposed when closed, releasing substantial V8 and GPU memory during long desktop sessions.
-- **Thinking Mode Preset Chips**: Added convenient click-to-merge preset chips in Card Generation settings to easily disable reasoning overhead or adjust thinking budgets per model.
-- **Fluid Card Editor Tab Transitions**: Integrated dedicated tab loading placeholders and state guards to prevent accidental saves or half-rendered forms when switching card editor tabs.
-- **Search Indexing Concurrency Lock**: Added an asynchronous queue lock to ensure safe, corruption-free text journal writes during rapid back-to-back chat interactions.
-
-### 🎨 Desktop Chat UI, Search & Onboarding Polish
-- **Side-by-Side Media Gallery**: Modernized chat interactive area with compact 85px thumbnails, leading control endcaps, and tighter padding.
-- **Diacritic-Normalized Search & Nickname Lookups**: Character switcher, Card Gallery, and Discord bot now seamlessly match diacritics, character nicknames, and fuzzy queries.
-- **Reasoning Stream Persistence**: Preserved multi-turn reasoning metadata across continuous message streaming and tool executions.
-- **Onboarding V3 Cloud Sync Registration**: Newly committed starter companion cards created during onboarding are now immediately enrolled into selective BYOS cloud synchronization upon completion.
-- **Onboarding Triage Locale Parity**: Fixed localized text keys for air-gapped and local companion setup paths across multiple languages.
+### 🌐 Knowledge Graph, Voice Matching & Indonesian Localization
+- **Knowledge Graph Entity Normalization**: Intelligent entity folding that resolves name variations, honorifics, and character nicknames, preventing fragmented graph clusters in the Mind Map.
+- **AnimaDex Fast Voice Matching**: Sub-second System 1 acoustic voice matching pairing synthesized voices to companion archetypes.
+- **Indonesian Language Support & Upstream Contributions**: Added native Indonesian localization across onboarding steps, settings pages, and companion dialogs. Special thanks to upstream contributor **@kaisaaru** for PR [#2662](https://github.com/moeru-ai/airi/pull/2662), with shoutouts to **@chiba233** for PR [#2658](https://github.com/moeru-ai/airi/pull/2658) (screen box sizing) and **@gg582** for PR [#2519](https://github.com/moeru-ai/airi/pull/2519) (Linux CI testing)!

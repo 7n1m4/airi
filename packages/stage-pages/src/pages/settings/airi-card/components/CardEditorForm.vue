@@ -87,11 +87,6 @@ const CardCreationTabGeneration = defineAsyncComponent({
   loadingComponent: TabLoadingPlaceholder,
   delay: 0,
 })
-const CardCreationTabModules = defineAsyncComponent({
-  loader: tabLoaders.modules,
-  loadingComponent: TabLoadingPlaceholder,
-  delay: 0,
-})
 const CardCreationTabProactivity = defineAsyncComponent({
   loader: tabLoaders.proactivity,
   loadingComponent: TabLoadingPlaceholder,
@@ -916,12 +911,11 @@ const tabs: Tab[] = [
   { id: 'identity', label: 'Identity', icon: 'i-solar:user-circle-bold-duotone' },
   { id: 'generation', label: 'Generation', icon: 'i-solar:tuning-square-bold-duotone' },
   { id: 'acting', label: 'Acting', icon: 'i-solar:mask-happly-bold-duotone' },
-  { id: 'presence', label: t('settings.pages.card.presence', 'Presence'), icon: 'i-solar:magic-stick-3-bold-duotone' },
+  { id: 'staging', label: 'Staging', icon: 'i-solar:clapperboard-play-bold-duotone' },
   { id: 'artistry', label: t('settings.pages.card.creation.artistry', 'Artistry'), icon: 'i-solar:gallery-bold-duotone' },
   { id: 'proactivity', label: t('settings.pages.card.creation.proactivity', 'Proactivity'), icon: 'i-solar:heart-pulse-bold-duotone' },
   { id: 'tools', label: 'Tools', icon: 'i-solar:widget-bold-duotone' },
   { id: 'cognition', label: 'Cognition', icon: 'i-solar:cpu-bolt-bold-duotone' },
-  { id: 'staging', label: 'Staging', icon: 'i-solar:clapperboard-play-bold-duotone' },
 ]
 
 // Active tab state - set to first available tab by default
@@ -983,7 +977,7 @@ watch(activeTab, (tab) => {
   void loadTab(tab)
   if (tab !== 'identity') {
     void ensureProviderModelsAndVoices()
-    if (tab === 'presence' || tab === 'modules') {
+    if (tab === 'staging' || tab === 'presence' || tab === 'modules') {
       void displayModelsStore.loadDisplayModelsFromIndexedDB(true)
     }
   }
@@ -1961,8 +1955,8 @@ function handleGeneratorSave(newValue: string) {
         :insert-speech-mannerism="insertSpeechMannerism"
         @sparkle-click="openSparkleGenerator"
       />
-      <CardCreationTabModules
-        v-else-if="activeTab === 'presence' || activeTab === 'modules'"
+      <CardCreationTabStaging
+        v-else-if="activeTab === 'staging'"
         v-model:selected-speech-provider="selectedSpeechProvider"
         v-model:selected-speech-model="selectedSpeechModel"
         v-model:selected-speech-voice-id="selectedSpeechVoiceId"
@@ -1974,12 +1968,11 @@ function handleGeneratorSave(newValue: string) {
         :display-model-options="displayModelOptions"
         :scene-options="sceneOptions"
         :speech-provider-placeholder="getDefaultPlaceholder(speechProvider)"
-        :default-speech-model-placeholder="getDefaultPlaceholder(defaultSpeechModel)"
-        :default-speech-voice-id-placeholder="getDefaultPlaceholder(defaultSpeechVoiceId)"
-        :default-display-model-id-placeholder="getDefaultPlaceholder(defaultDisplayModelId)"
-        :speech-provider-active="Boolean(speechProvider)"
-        :has-visual-assets="Object.keys(visualAssets).length > 0"
-        @staging="activeTab = 'staging'"
+        :speech-model-placeholder="getDefaultPlaceholder(defaultSpeechModel)"
+        :speech-voice-placeholder="getDefaultPlaceholder(defaultSpeechVoiceId)"
+        :display-model-placeholder="getDefaultPlaceholder(defaultDisplayModelId)"
+        :card-id="props.cardId || ''"
+        :card="card"
       />
       <CardCreationTabCognition
         v-else-if="activeTab === 'cognition'"
@@ -2108,11 +2101,6 @@ function handleGeneratorSave(newValue: string) {
         v-model:selected-journal-intrusion-prompt="selectedJournalIntrusionPrompt"
         v-model:selected-artistry-intrusion-prompt="selectedArtistryIntrusionPrompt"
         :dream-state-enabled="dreamStateEnabled"
-      />
-      <CardCreationTabStaging
-        v-else-if="activeTab === 'staging'"
-        :card-id="props.cardId || ''"
-        :card="card"
       />
       <div class="mt-4 flex flex-row justify-end gap-2">
         <Button
