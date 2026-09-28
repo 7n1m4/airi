@@ -26,6 +26,7 @@ import cardExportFrameUrl from './card-export-frame.png?url'
 import CardListItem from './components/CardListItem.vue'
 
 const CardDetailDialog = defineAsyncComponent(() => import('./components/CardDetailDialog.vue'))
+const CardExportDialog = defineAsyncComponent(() => import('./components/CardExportDialog.vue'))
 const CardImportWizard = defineAsyncComponent(() => import('./components/CardImportWizard.vue'))
 const CreateModeSelectorDialog = defineAsyncComponent(() => import('./components/CreateModeSelectorDialog.vue'))
 const DeleteCardDialog = defineAsyncComponent(() => import('./components/DeleteCardDialog.vue'))
@@ -59,6 +60,16 @@ const selectedCardId = ref<string>('')
 // Dialog state
 const isCardDialogOpen = ref(false)
 const isCreateModePromptOpen = ref(false)
+const isExportDialogOpen = ref(false)
+const exportTargetCard = ref<AiriCard | null>(null)
+
+function handleOpenExport(cardId: string) {
+  const card = cardStore.getCard(cardId)
+  if (!card)
+    return
+  exportTargetCard.value = card
+  isExportDialogOpen.value = true
+}
 
 function getCardSyncStatus(cardId: string): 'synced' | 'cloud-only' | 'partial' | 'syncing' {
   if (syncingCardIds.value.has(cardId)) {
@@ -752,6 +763,10 @@ function handleAdvancedMode() {
   router.push('/settings/airi-card/edit')
 }
 
+// NOTICE: Preserved for export execution pipeline
+void exportCard
+void exportCardPng
+
 async function exportCard(cardId: string) {
   const card = await getCardWithExportedBackground(cardId)
   if (!card) {
@@ -1331,8 +1346,7 @@ function getDisplayModelId(id: string) {
           @sync="handleCardSync(item.id)"
           @delete="confirmDelete(item.id)"
           @edit="handleEditCard(item.id)"
-          @export-json="exportCard(item.id)"
-          @export-png="exportCardPng(item.id)"
+          @export="handleOpenExport(item.id)"
         />
       </template>
 
@@ -1401,6 +1415,13 @@ function getDisplayModelId(id: string) {
     v-model="isImportWizardOpen"
     :card-data="importedCardData"
     @imported="handleSelectCard"
+  />
+
+  <!-- Card export dialog (mock preview) -->
+  <CardExportDialog
+    v-if="isExportDialogOpen"
+    v-model="isExportDialogOpen"
+    :card="exportTargetCard"
   />
 
   <!-- Card browser slide-over webview drawer (Only renders if running in Electron) -->
