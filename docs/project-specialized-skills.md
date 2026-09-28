@@ -99,9 +99,9 @@ The catalog contains 70 discoverable skills. Desktop chatbox and interaction pip
 - **Content**: The unstorage interceptor + outbox queue architecture, LWW vs mergeable-key vs manifest reconciliation rules, voice-profile reconciliation with quota gates, Google Drive AppData bootstrap + Edge Vault credential recovery, loop prevention (`isImportingRemoteData`), anti-contraction safeguard, and selective restore (metadata required, heavy blobs opt-in). Peer skill: `airi-cloud-relay-infrastructure` (edge relay side).
 
 #### 1.9 `airi-desktop-lifecycle-power-throttling`
-- **Target Domain**: Electron Window Lifecycle & OS Power Throttling (`powerMonitor`, `stagePaused`, Render Loop Freezing).
-- **Key Paths**: `apps/stage-tamagotchi/src/main/services/electron/window.ts`, `apps/stage-tamagotchi/src/shared/eventa.ts`, `apps/stage-tamagotchi/src/renderer/stores/stage-window-lifecycle.ts`, `apps/stage-tamagotchi/src/renderer/pages/index.vue`, `packages/stage-ui/src/components/scenes/ControlStripHost.vue`.
-- **Content**: Native Electron window state changes (`show`/`hide`/`minimize`/`restore`/`focus`/`blur`) and `powerMonitor` hooks (`suspend`/`resume`/`lock-screen`/`unlock-screen`), `ElectronWindowLifecycleState` eventa bridge, `stagePaused` state calculation, and automatic freezing of 3D/2D avatar render loops to eliminate CPU/battery drain during screen lock and OS sleep.
+- **Target Domain**: Electron Window Lifecycle & OS Power Throttling (`powerMonitor`, `stagePaused`, Render Loop Freezing, Multi-Tier Deep Standby & VRAM Hibernation).
+- **Key Paths**: `apps/stage-tamagotchi/src/main/services/electron/window.ts`, `apps/stage-tamagotchi/src/shared/eventa.ts`, `apps/stage-tamagotchi/src/renderer/stores/stage-window-lifecycle.ts`, `apps/stage-tamagotchi/src/renderer/pages/index.vue`, `packages/stage-ui/src/components/scenes/ControlStripHost.vue`, `docs/design-vram-eviction-and-standby-hibernation.md`.
+- **Content**: Native Electron window state changes (`show`/`hide`/`minimize`/`restore`/`focus`/`blur`) and `powerMonitor` hooks (`suspend`/`resume`/`lock-screen`/`unlock-screen`), `ElectronWindowLifecycleState` eventa bridge, `stagePaused` state calculation, Tier 1 instant render loop freezing (3D/2D animation loops paused), Tier 2 Deep Standby VRAM hibernation (unmounting idle neural inference workers when screen locked > 10m or OS suspended, reclaiming 3–4GB VRAM), and sub-2s transparent re-hydration.
 
 ---
 
@@ -118,9 +118,9 @@ The catalog contains 70 discoverable skills. Desktop chatbox and interaction pip
 - **Content**: Physical synthesis and transcription, VoiceProfile resolution, UST transformations, empty-input handling, format/decode/device failures, permission and stream cleanup. Speech intents belong to airi-speech-runtime; filler preparation belongs to airi-conversational-pacing.
 
 #### 2.3 `airi-local-inference-engines`
-- **Target Domain**: Local WebGPU & WASM Inference (Kokoro TTS, Whisper STT, WebLLM, Web-RWKV, Moondream VLM).
-- **Key Paths**: `packages/stage-ui/src/libs/inference/` (protocol/coordinator/`gpu-resource-coordinator`, `adapters/`), `packages/stage-ui/src/workers/kokoro/`, `packages/stage-ui/src/workers/moondream/`, `packages/stage-ui/src/libs/workers/worker.ts`. Note: WebLLM/Web-RWKV/Moondream run as workers under `packages/stage-ui/src/workers/`.
-- **Content**: Message protocol (`load-model`, `run-inference`, `progress`), serialized load queues, `GpuResourceCoordinator` VRAM pressure telemetry, and WebGPU detection.
+- **Target Domain**: Local WebGPU & WASM Inference (Kokoro TTS, Whisper STT, WebLLM, Web-RWKV, Moondream VLM, Automated VRAM Eviction & Standby Hibernation).
+- **Key Paths**: `packages/stage-ui/src/libs/inference/` (protocol/coordinator/`gpu-resource-coordinator`, `gpu-worker-host`, `adapters/`), `packages/stage-ui/src/workers/kokoro/`, `packages/stage-ui/src/workers/moondream/`, `packages/stage-ui/src/libs/workers/worker.ts`, `docs/design-vram-eviction-and-standby-hibernation.md`. Note: WebLLM/Web-RWKV/Moondream run as workers under `packages/stage-ui/src/workers/`.
+- **Content**: Message protocol (`load-model`, `run-inference`, `progress`), serialized load queues, `GpuResourceCoordinator` VRAM budget accounting and active LRU eviction under memory pressure (`CRITICAL_THRESHOLD = 0.95`), `createGpuWorkerHost` 15m inactivity TTL unloads, manifest retention for sub-2s re-hydration, and WebGPU detection.
 
 #### 2.4 `airi-stage-ui-surfaces`
 - **Target Domain**: Cross-app Control Strip (desktop Electron pill + `mode="mobile"` integration in stage-web/stage-pocket), floating Electron window overlays, `ControlStripHost.vue`/`WidgetStage`, `RendererStage.vue`, control islands, and the action-dispatch / button-catalog layer.

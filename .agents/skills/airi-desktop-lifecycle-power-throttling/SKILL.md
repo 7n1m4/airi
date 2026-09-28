@@ -38,29 +38,42 @@ This guide covers the end-to-end integration between native Electron power event
 [OS Sleep / Lock Screen]  OR  [Window Minimize / Hide]
               │
               ▼
-   Electron \`powerMonitor\`  &  \`BrowserWindow\` Events
+   Electron `powerMonitor`  &  `BrowserWindow` Events
    ('suspend', 'lock-screen', 'minimize', 'hide')
               │
               ▼
-   \`window.ts\` createWindowService
-   Emits \`electronWindowLifecycleChanged\`
-   (Sets \`visible: false\` when reason === 'suspend' or window hidden)
+   `window.ts` createWindowService
+   Emits `electronWindowLifecycleChanged`
+   (Sets `visible: false` when reason === 'suspend' or window hidden)
               │
               ▼ (IPC via Eventa)
-   \`stage-window-lifecycle.ts\` Pinia Store
-   \`stagePaused = computed(() => !state.visible || state.minimized)\`
-              │
-              ▼
-   \`apps/stage-tamagotchi/src/renderer/pages/index.vue\`
-   \`<WidgetStage :paused="stagePaused" />\`
-              │
-              ▼
-   \`ControlStripHost.vue\` -> \`RendererStage.vue\`
-   Halts \`requestAnimationFrame\` & physics ticking in:
-   - Three.js VRM (MToon shaders, spring bones, blink timers)
-   - Live2D (Cubism physics, breathing, motion loops)
-   - Spine & MMD canvas animators
+   `stage-window-lifecycle.ts` Pinia Store
+              ├─────────────────────────────────────────┐
+              ▼                                         ▼
+   [Tier 1: Instant Render Freeze]           [Tier 2: Deep Standby (>10m / Suspend)]
+   `stagePaused = true`                      `deepStandby = true`
+              │                                         │
+              ▼                                         ▼
+   `RendererStage.vue`                       `GpuResourceCoordinator`
+   Halts `requestAnimationFrame`:            Evicts idle WebGPU inference models:
+   - Three.js VRM (MToon, spring bones)      - Whisper STT, Kokoro TTS, Moondream VLM
+   - Live2D (Cubism physics, motion loops)   - Drops VRAM allocation from ~3GB to <150MB
+   - Spine & MMD canvas animators            - Preserves load manifests for lazy wake
 ```
+
+### Multi-Tier Power Management Architecture
+AIRI separates power management into two distinct architectural tiers (see [`docs/design-vram-eviction-and-standby-hibernation.md`](docs/design-vram-eviction-and-standby-hibernation.md)):
+
+1. **Tier 1: Instant Render Freezing (`stagePaused = true`)**:
+   - **Trigger**: Window minimized, hidden, or screen locked.
+   - **Action**: Immediately stops 60 FPS animation/physics loops across 3D VRM and 2D Live2D canvases.
+   - **Resource Impact**: Drops CPU and active GPU core compute to near 0%.
+   - **Recovery Latency**: 0 ms (textures and geometries remain bound in WebGL).
+2. **Tier 2: Deep Standby & VRAM Hibernation (`deepStandby = true`)**:
+   - **Trigger**: OS entering system sleep (`suspend`) or screen lock duration exceeding 10 minutes.
+   - **Action**: Signals `GpuResourceCoordinator` to execute clean `.unload()` on all idle WebGPU neural models (Whisper, Kokoro, Pocket-TTS, Moondream).
+   - **Resource Impact**: Reclaims up to 3–4 GB of held VRAM back to the OS and active desktop applications (games, 3D DCC tools).
+   - **Recovery Latency**: Sub-2s transparent re-hydration from local browser OPFS cache on next user prompt.
 
 ### State Transitions & Reasons
 `ElectronWindowLifecycleReason` values:

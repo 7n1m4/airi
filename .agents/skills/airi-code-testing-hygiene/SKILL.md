@@ -114,7 +114,7 @@ Keep the test consuming the exact same public boundary that production runtime c
 - **`shallowRef` for Heavy Opaque Instances**: Never wrap Three.js `Scene`/`Object3D`, Pixi `Application`, VRM avatars, or WebGPU device instances in standard `ref()` or `reactive()`. Deep reactive proxy traversal over massive external object graphs causes severe frame drops and proxy traps. Always use `shallowRef()`.
 - **Store Destructuring Trap**: Never destructure properties directly from a Pinia store (`const { activeCard } = useAiriCardStore()`), which strips reactivity. Access properties directly on the store (`store.activeCard`) or wrap with `storeToRefs()`.
 - **Mocking Platform Boundaries**: Never require a real Electron runtime in unit tests. Mock Electron IPC (`ipcRenderer`, `ipcMain`) and native OS services using `vi.fn()` or `vi.mock()`.
-- **Vitest Browser Mode**: When testing logic that depends heavily on real CSS styling, DOM element geometry (`getBoundingClientRect`), or browser resize observers, prefer Vitest browser mode (`*.browser.test.ts`) over simulated JSDOM mocks.
+- **Runner boundary (node default, browser opt-in)**: Suites run headless node by default (`docs/project-testing-parity.md`). Only `packages/audio-pipelines-transcribe/vitest.config.ts` provisions a `browser` project (`**/*.browser.{spec,test}.ts` on Playwright Chromium; zero such files exist today). Real CSS, `getBoundingClientRect` geometry, or resize-observer claims belong in a `*.browser.test.ts` under a package with that project configured — never in JSDOM mocks. No Playwright E2E harness exists in this fork.
 
 ---
 

@@ -67,6 +67,12 @@ In Electron or multi-tab web, each BrowserWindow or tab possesses an isolated V8
 ### 5. Handling Model Shard Downloads
 - Report download progress events via `progress` messages containing `loadedBytes` and `totalBytes` so UI progress bars update smoothly (e.g. in Onboarding).
 
+### 6. Automated VRAM Eviction & Standby Hibernation
+- **Active LRU Eviction Under Pressure**: `GpuResourceCoordinator` maintains an advisory budget (`estimatedVRAM * 0.70`). When total allocation reaches `CRITICAL_THRESHOLD = 0.95`, the coordinator invokes `getLRUModel()` to evict the oldest inactive model before an unrecoverable `GPUOutOfMemoryError` occurs.
+- **Inactivity TTL Countdown**: `createGpuWorkerHost` manages an inactivity timer (default: 15 minutes). If no new inference requests arrive within the TTL window, the worker triggers `.unload()` and releases its `AllocationToken`.
+- **Desktop Deep Standby Coordination**: When Electron `powerMonitor` signals extended lock (>10m) or OS `suspend`, background neural workers unmount.
+- **Manifest Retention & Fast Re-hydration**: Unloaded workers retain their `lastLoadManifest` (`quantization`, `device`, `modelId`). When the user resumes interaction, the adapter executes `ensureLoaded()` from local OPFS/browser cache, re-mounting the pipeline in < 2s without network overhead. Full spec in `docs/design-vram-eviction-and-standby-hibernation.md`.
+
 ## 4. Known Pitfalls & Failure Modes
 
 - **Web Worker `DataCloneError`**: WebGPU error objects (`GPUPipelineError`, `GPUOutOfMemoryError`, `DOMException`) cannot be serialized by browser `structuredClone`. Always pass them through `serializeWorkerError(err)` before posting or throwing across thread boundaries.
@@ -92,7 +98,8 @@ In Electron or multi-tab web, each BrowserWindow or tab possesses an isolated V8
 - [docs/project-rwkv-cleanroom-harness-plan.md](docs/project-rwkv-cleanroom-harness-plan.md) — RWKV cleanroom harness plan.
 - [docs/proposal-moss-tts-nano-provider-unified-webgpu.md](docs/proposal-moss-tts-nano-provider-unified-webgpu.md) — MOSS TTS nano provider unified WebGPU proposal.
 - [docs/research-moss-tts-nano-report.md](docs/research-moss-tts-nano-report.md) — MOSS TTS nano research report.
+- [docs/design-vram-eviction-and-standby-hibernation.md](docs/design-vram-eviction-and-standby-hibernation.md) — VRAM eviction, LRU pressure reclamation, and multi-tier standby hibernation specification.
 
 ## Related Skills & References
 
-- **Key Documents**: [[design-local-whisper-stt]], [[proposal-built-in-llm-webgpu]], [[proposal-attention-ecology-local-webgpu-guard]], [[proposal-toggle4-rework-and-rwkv-harness]], [[project-rwkv-kimi]], [[project-rwkv-cleanroom-harness-plan]], [[proposal-moss-tts-nano-provider-unified-webgpu]], [[research-moss-tts-nano-report]]
+- **Key Documents**: [[design-local-whisper-stt]], [[proposal-built-in-llm-webgpu]], [[proposal-attention-ecology-local-webgpu-guard]], [[proposal-toggle4-rework-and-rwkv-harness]], [[project-rwkv-kimi]], [[project-rwkv-cleanroom-harness-plan]], [[proposal-moss-tts-nano-provider-unified-webgpu]], [[research-moss-tts-nano-report]], [[design-vram-eviction-and-standby-hibernation]]

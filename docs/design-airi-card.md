@@ -192,9 +192,26 @@ card-package.zip/
 }
 ```
 
-### 4.2 CCv3 `card.json` Structure
+### 4.2 CCv3 `card.json` Structure & Codec (`@proj-airi/ccc`)
 
-Upstream exports `card.json` adhering strictly to **Character Card Spec V3 (CCv3)** via `@proj-airi/ccc`:
+Upstream exports `card.json` adhering strictly to **Character Card Spec V3 (CCv3)** using the `@proj-airi/ccc` codec (`characterCardV3.ts`).
+
+In upstream's implementation:
+- **Envelope Validation**: Validates `spec: 'chara_card_v3'` and numeric regex for `spec_version` (`/^\d+(?:\.\d+)*$/`), classifying versions into `older`, `current`, or `newer`.
+- **Open Unknown Field Preservation**: Uses Valibot `objectWithRest({}, unknown())` on all envelopes, entries, and extension schemas. When reading and round-tripping cards, unknown fields from other frontends (e.g. SillyTavern, Chub, Agnai) or future spec versions are preserved without silent truncation.
+- **CCv3 Standard Assets Array (`assets: Asset[]`)**: Declares standard assets accompanying the card:
+  ```typescript
+  export interface Asset {
+    type: string // e.g. 'icon', 'expression', 'outfit', 'audio'
+    uri: string // e.g. 'ccdefault:', relative path, or data URI
+    name: string // asset identifier
+    ext: string // file extension (png, vrm, wav, etc.)
+  }
+  ```
+- **Embedded Character Book / Lorebook (`character_book: CharacterBook`)**:
+  Supports standard World Info entries with keys, secondary keys, content, priority, insertion order, selective matching, and position flags (`before_char` / `after_char`).
+- **Standard Community Extensions (`extensions`)**:
+  Carries `depth_prompt` (`depth`, `prompt`, `role`), `fav`, `talkativeness`, and `world` alongside `extensions.airi`.
 
 ```json
 {
@@ -207,14 +224,36 @@ Upstream exports `card.json` adhering strictly to **Character Card Spec V3 (CCv3
     "scenario": "...",
     "first_mes": "Hello!",
     "alternate_greetings": [],
+    "group_only_greetings": [],
     "mes_example": "",
     "creator_notes": "",
+    "creator_notes_multilingual": {},
     "system_prompt": "...",
     "post_history_instructions": "...",
     "tags": [],
     "creator": "",
     "character_version": "1.0.0",
+    "source": [],
+    "creation_date": 1700000000,
+    "modification_date": 1700000100,
+    "assets": [
+      {
+        "type": "icon",
+        "uri": "ccdefault:",
+        "name": "main",
+        "ext": "png"
+      }
+    ],
+    "character_book": {
+      "name": "World Lore",
+      "entries": []
+    },
     "extensions": {
+      "depth_prompt": {
+        "depth": 4,
+        "prompt": "",
+        "role": "system"
+      },
       "airi": {
         "modules": {
           "consciousness": { "provider": "openai", "model": "gpt-4o" },
@@ -227,20 +266,58 @@ Upstream exports `card.json` adhering strictly to **Character Card Spec V3 (CCv3
 }
 ```
 
-### 4.3 Single Display Model Packaging
+### 4.3 Upstream Import Handler Nuances & Validation Rules
 
-When exporting, upstream queries `displayModelsStore`, fetches the local file or URL blob for `displayModelId`, and writes it into `models/body-model.<ext>`. On import, it reads the binary array buffer and registers it in `displayModelsStore.addDisplayModel()`.
+When upstream imports a character package via `importAiriCardPackage({ file, displayModelsStore })`, it executes a strict multi-step validation sequence. Any violation throws an `AiriCardPackageError` (`code: 'missing-file' | 'invalid-file'`):
 
-### 4.4 Security & Whitelist Sanitization (`sanitizeAiri`)
+1. **Exact Manifest Format String (`format: "airi-character-card"`)**:
+   - ⚠️ **Critical Discrepancy**: Upstream's manifest format constant is:
+     ```typescript
+     const FORMAT = 'airi-character-card' // NOT 'airi-card-package'
+     const VERSION = 1
+     const CARD_PATH = 'card.json'
+     const MANIFEST_PATH = 'manifest.json'
+     ```
+   - In `manifestSchema`, `format` is validated using `literal('airi-character-card')`. If the manifest specifies `"airi-card-package"`, upstream's `readJsonFile(zip, MANIFEST_PATH, manifestSchema)` will fail Valibot parsing and reject the zip with `invalid-file`.
+   - Therefore, when exporting for upstream compatibility, `manifest.json` **MUST** declare `"format": "airi-character-card"`.
 
-Upstream enforces a strict security whitelist (`sanitizeAiri()`). When importing a card package, it **intentionally strips**:
-- Custom extensions outside the hardcoded whitelist.
-- Agent prompts (`agents`).
-- Acting prompts (`acting`).
-- Dream state & heartbeat parameters.
-- Machine-local file paths and references.
+2. **Card Specification & Version Constraints**:
+   - `manifest.card.path` must strictly be `"card.json"`.
+   - `manifest.card.spec` must strictly be `"chara_card_v3"`.
+   - In `card.json`:
+     - `spec` must be strictly `literal('chara_card_v3')`.
+     - `spec_version` must be strictly `literal('3.0')`.
 
-### 4.5 Upstream UI/UX Constraints
+3. **Display Model Whitelist & Binary Paths**:
+   - `resources.displayModel.path` must point to an existing entry in the ZIP (typically `models/body-model.<ext>`).
+   - `resources.displayModel.format` is validated against a strict picklist of four formats:
+     ```typescript
+     picklist(['live2d-zip', 'spine-zip', 'tachie-zip', 'vrm'])
+     ```
+   - `resources.displayModel.name` is the original model file name (e.g. `nan0.vrm`).
+   - Upstream imports the model by reading the binary ArrayBuffer, instantiating `new File([data], resource.name)`, and calling `await displayModelsStore.addDisplayModel(resource.format, file)`.
+   - The resulting newly generated store ID is injected as the character's `displayModelId`.
+
+4. **Sanitization & Whitelist Stripping (`sanitizeAiri`)**:
+   - Upstream deliberately passes the imported card through `cardFromCharacterCard(cardJson, displayModelId)` and `sanitizeAiri()`.
+   - **Allowed in upstream**:
+     - `name`, `nickname`, `version` (defaults to `'1.0.0'`), `description`, `personality`, `scenario`, `first_mes`, `alternate_greetings`, `creator_notes`, `system_prompt`, `post_history_instructions`.
+     - `modules.consciousness`: `{ provider, model }`
+     - `modules.vision`: `{ provider, model }`
+     - `modules.speech`: `{ provider, model, voice_id }`
+     - `modules.displayModelId`: The newly imported model ID.
+     - `modules.artistry`: `{ provider, model, promptPrefix, widgetInstruction, spawnMode, options, autonomousEnabled, autonomousThreshold }`
+   - **Stripped upon import into upstream**:
+     - `acting` (acting cues, expression prompts, mannerisms).
+     - `agents` (custom subagent configurations).
+     - `outfits` (modular outfit variants).
+     - `voice_profiles` (bundled custom virtual voice profiles).
+     - `visual_assets` and `active_concepts`.
+     - `cognition`, `dreamState`, `shortTermMemory`, `screenWatching`, and `eventLedger`.
+     - Scene background bindings (`activeBackgroundId`).
+   - *Implication for our export generator*: When exporting in `moeru-ai Standard (v1)` mode, we should match upstream's clean schema directly. When exporting in `dasilva333 Extended (v2)` mode, we retain all advanced blocks inside `extensions.airi`, while ensuring the root `card.json` still remains valid CCv3 so upstream can still parse the base persona cleanly.
+
+### 4.4 Upstream UI/UX Constraints
 
 - **No Export Options / Modal**: Exporting in `CardDetailDialog.vue` triggers `exportAiriCardPackage()` instantly with no user choices.
 - **No Opt-Out Mechanism**: Users cannot opt out of including the display model if it exists locally.
