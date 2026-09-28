@@ -289,38 +289,86 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     })
   }
 
-  async function syncMetadataCacheFromMemory() {
+  // Single-flight metadata sync. Previously this Promise.all'd an Image+canvas
+  // decode for EVERY model on every sync (fired on each catalog load, mapping
+  // update, import, and delete) — an unbounded parallel native burst that
+  // rebooted machines via compressor/swap exhaustion. Now: strictly sequential
+  // passes (max 1 decode in flight), coalesced so overlapping triggers collapse
+  // into one trailing run with no lost updates.
+  let syncInFlight: Promise<void> | null = null
+  let syncDirty = false
+
+  async function syncMetadataCacheFromMemory(): Promise<void> {
+    if (syncInFlight) {
+      syncDirty = true
+      return syncInFlight
+    }
+    const task = (async () => {
+      try {
+        do {
+          syncDirty = false
+          await runMetadataSyncPass()
+        } while (syncDirty)
+      }
+      finally {
+        syncInFlight = null
+      }
+    })()
+    syncInFlight = task
+    return task
+  }
+
+  // Idle-deferred fire-and-forget sync for post-mutation refreshes (load,
+  // delete, capability scan). Awaited callers keep calling
+  // syncMetadataCacheFromMemory() directly. Skipped while hidden; the next
+  // visible trigger covers it since every pass reads live store state.
+  function scheduleMetadataSync(): void {
+    if (typeof document !== 'undefined' && document.hidden)
+      return
+    const run = () => {
+      void syncMetadataCacheFromMemory().catch((err) => {
+        console.error('[DisplayModels] Deferred metadata sync failed:', err)
+      })
+    }
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(run, { timeout: 2000 })
+    }
+    else {
+      setTimeout(run, 30)
+    }
+  }
+
+  async function runMetadataSyncPass(): Promise<void> {
     try {
       const rawModels = toRaw(displayModels.value)
-      const metaList = await Promise.all(rawModels
-        .filter(m => m.id.startsWith('display-model-'))
-        .map(async (m) => {
-          const rawM = toRaw(m)
-          const compressedPreview = await compressPreviewDataUrl(rawM.previewImage)
-          const compressedAuthorIcon = rawM.authorIcon ? await compressPreviewDataUrl(rawM.authorIcon, 256, 0.9) : undefined
-          return {
-            id: rawM.id,
-            format: rawM.format,
-            type: 'file' as const,
-            file: undefined,
-            name: rawM.name,
-            importedAt: rawM.importedAt || Date.now(),
-            authorIcon: compressedAuthorIcon,
-            previewImage: compressedPreview,
-            nsfw: rawM.nsfw,
-            groups: rawM.groups,
-            tags: rawM.tags,
-            expressions: rawM.expressions,
-            motions: rawM.motions,
-            emotionMappings: rawM.emotionMappings ? JSON.parse(JSON.stringify(rawM.emotionMappings)) : undefined,
-            motionMappings: rawM.motionMappings ? JSON.parse(JSON.stringify(rawM.motionMappings)) : undefined,
-            vfxMappings: rawM.vfxMappings ? JSON.parse(JSON.stringify(rawM.vfxMappings)) : undefined,
-            hiddenExpressions: rawM.hiddenExpressions ? [...rawM.hiddenExpressions] : undefined,
-            hiddenMotions: rawM.hiddenMotions ? [...rawM.hiddenMotions] : undefined,
-            favoriteExpressions: rawM.favoriteExpressions ? [...rawM.favoriteExpressions] : undefined,
-            outfits: rawM.outfits ? JSON.parse(JSON.stringify(rawM.outfits)) : undefined,
-          }
-        }))
+      const metaList = []
+      for (const m of rawModels.filter(m => m.id.startsWith('display-model-'))) {
+        const rawM = toRaw(m)
+        const compressedPreview = await compressPreviewDataUrl(rawM.previewImage)
+        const compressedAuthorIcon = rawM.authorIcon ? await compressPreviewDataUrl(rawM.authorIcon, 256, 0.9) : undefined
+        metaList.push({
+          id: rawM.id,
+          format: rawM.format,
+          type: 'file' as const,
+          file: undefined,
+          name: rawM.name,
+          importedAt: rawM.importedAt || Date.now(),
+          authorIcon: compressedAuthorIcon,
+          previewImage: compressedPreview,
+          nsfw: rawM.nsfw,
+          groups: rawM.groups,
+          tags: rawM.tags,
+          expressions: rawM.expressions,
+          motions: rawM.motions,
+          emotionMappings: rawM.emotionMappings ? JSON.parse(JSON.stringify(rawM.emotionMappings)) : undefined,
+          motionMappings: rawM.motionMappings ? JSON.parse(JSON.stringify(rawM.motionMappings)) : undefined,
+          vfxMappings: rawM.vfxMappings ? JSON.parse(JSON.stringify(rawM.vfxMappings)) : undefined,
+          hiddenExpressions: rawM.hiddenExpressions ? [...rawM.hiddenExpressions] : undefined,
+          hiddenMotions: rawM.hiddenMotions ? [...rawM.hiddenMotions] : undefined,
+          favoriteExpressions: rawM.favoriteExpressions ? [...rawM.favoriteExpressions] : undefined,
+          outfits: rawM.outfits ? JSON.parse(JSON.stringify(rawM.outfits)) : undefined,
+        })
+      }
       await storage.setItemRaw('local:display-models/metadata-cache', JSON.parse(JSON.stringify(metaList)))
     }
     catch (e) {
@@ -430,7 +478,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     }
 
     displayModels.value = models.sort((a, b) => b.importedAt - a.importedAt)
-    void syncMetadataCacheFromMemory()
+    scheduleMetadataSync()
     if (!silent)
       displayModelsFromIndexedDBLoading.value = false
     debug(`[DisplayModels:IDBScan] loadDisplayModelsFromIndexedDB finished in ${(performance.now() - startTime).toFixed(2)} ms. Total models loaded into store: ${displayModels.value.length}`)
@@ -1623,7 +1671,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     // Track deletion for sync propagation
     await storage.setItemRaw(`local:sync-metadata/deleted-models/${id}`, true)
     displayModels.value = displayModels.value.filter(model => model.id !== id)
-    void syncMetadataCacheFromMemory()
+    scheduleMetadataSync()
     broadcastModelsSync(Date.now())
   }
 
@@ -2287,7 +2335,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         await localforage.setItem(id, cleanModel)
       }
       displayModelCache.delete(id)
-      void syncMetadataCacheFromMemory()
+      scheduleMetadataSync()
     }
 
     (model as any).capabilitiesLoaded = true

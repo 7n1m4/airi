@@ -3,9 +3,83 @@ import localforage from 'localforage'
 import { useBackgroundStore } from '../stores/background'
 import { DisplayModelFormat, useDisplayModelsStore } from '../stores/display-models'
 
-// Global memory caches to avoid duplicate zip parsing or canvas computation
-export const iconCache = new Map<string, string>()
-export const colorCache = new Map<string, { light: string, dark: string }>()
+// Global memory caches to avoid duplicate zip parsing or canvas computation.
+//
+// HMR survival: module-scope Maps are wiped on every Vite re-evaluation,
+// forcing a full re-parse of every model zip + re-decode of every image across
+// the card grid (GB-scale transient ArrayBuffers per reload — the card-hub
+// reboot signature). The underlying Map OBJECTS live in import.meta.hot.data
+// so fresh generations adopt them; each evaluation still exports its own
+// binding (same object). No-op in production (import.meta.hot is undefined).
+interface MediaResolverHotData {
+  iconCache?: Map<string, string>
+  colorCache?: Map<string, { light: string, dark: string }>
+  iconPending?: Map<string, Promise<string | null>>
+}
+
+function getHotMaps(): {
+  iconCache: Map<string, string>
+  colorCache: Map<string, { light: string, dark: string }>
+  iconPending: Map<string, Promise<string | null>>
+} {
+  const hotData = import.meta.hot?.data as { mediaResolver?: MediaResolverHotData } | undefined
+  if (hotData) {
+    hotData.mediaResolver ??= {}
+    const shared = hotData.mediaResolver
+    shared.iconCache ??= new Map<string, string>()
+    shared.colorCache ??= new Map<string, { light: string, dark: string }>()
+    shared.iconPending ??= new Map<string, Promise<string | null>>()
+    return shared as Required<MediaResolverHotData>
+  }
+  return {
+    iconCache: new Map<string, string>(),
+    colorCache: new Map<string, { light: string, dark: string }>(),
+    iconPending: new Map<string, Promise<string | null>>(),
+  }
+}
+
+const sharedMaps = getHotMaps()
+export const iconCache = sharedMaps.iconCache
+export const colorCache = sharedMaps.colorCache
+const iconPending = sharedMaps.iconPending
+
+// Strict global concurrency cap for zip icon extraction. Each extraction holds
+// the FULL model binary + an inflated JSZip copy + a base64 icon in RAM, so
+// unbounded parallel extraction across a card grid is a multi-GB spike.
+const ICON_EXTRACTION_CONCURRENCY = 2
+let iconInFlight = 0
+const iconWaiters: Array<() => void> = []
+
+function pumpIconQueue(): void {
+  while (iconInFlight < ICON_EXTRACTION_CONCURRENCY && iconWaiters.length > 0) {
+    const release = iconWaiters.shift()
+    if (release) {
+      iconInFlight++
+      release()
+    }
+  }
+}
+
+function acquireIconSlot(): Promise<void> {
+  if (iconInFlight < ICON_EXTRACTION_CONCURRENCY) {
+    iconInFlight++
+    return Promise.resolve()
+  }
+  // NOTE: pumpIconQueue() owns the in-flight increment on dispatch — the
+  // waiter only resolves (counting here too would leak slots and stall).
+  return new Promise<void>((resolve) => {
+    iconWaiters.push(resolve)
+  })
+}
+
+function releaseIconSlot(): void {
+  iconInFlight = Math.max(0, iconInFlight - 1)
+  pumpIconQueue()
+}
+
+// Lazy avatar loads must never inflate warehouse-scale zips: above this size
+// the parse cost (full binary + JSZip copy in RAM) outweighs a grid thumbnail.
+const ICON_ZIP_MAX_BYTES = 15 * 1024 * 1024
 
 export function getLatestSelfie(cardId: string): string | null {
   try {
@@ -27,73 +101,110 @@ export async function extractModelIcon(displayModelId: string): Promise<string |
     return iconCache.get(displayModelId) || null
   }
 
-  const displayModelsStore = useDisplayModelsStore()
-  const model = displayModelsStore.displayModels.find(m => m.id === displayModelId)
-  if (!model)
-    return null
+  // Dedupe: several cards (and HMR generations) can request the same model at
+  // once — share one parse instead of inflating the zip N times.
+  const pending = iconPending.get(displayModelId)
+  if (pending)
+    return pending
 
-  // If the model already has authorIcon in metadata, return it directly
-  if (model.authorIcon) {
-    iconCache.set(displayModelId, model.authorIcon)
-    return model.authorIcon
-  }
-
-  // Fast skip for non-zip models (VRM, PMD, etc.) which never contain zip icon.png
-  if (model.format !== DisplayModelFormat.Live2dZip && model.format !== DisplayModelFormat.SpineZip && model.format !== DisplayModelFormat.PMXZip) {
-    iconCache.set(displayModelId, '')
-    return null
-  }
-
-  try {
-    const fullModel = await displayModelsStore.getDisplayModel(displayModelId)
-    if (!fullModel)
+  const task = (async (): Promise<string | null> => {
+    const displayModelsStore = useDisplayModelsStore()
+    const model = displayModelsStore.displayModels.find(m => m.id === displayModelId)
+    if (!model)
       return null
 
+    // If the model already has authorIcon in metadata, return it directly
+    if (model.authorIcon) {
+      iconCache.set(displayModelId, model.authorIcon)
+      return model.authorIcon
+    }
+
+    // Fast skip for non-zip models (VRM, PMD, etc.) which never contain zip icon.png
+    if (model.format !== DisplayModelFormat.Live2dZip && model.format !== DisplayModelFormat.SpineZip && model.format !== DisplayModelFormat.PMXZip) {
+      iconCache.set(displayModelId, '')
+      return null
+    }
+
+    await acquireIconSlot()
+    // Locals are explicitly released in finally: zipData holds the full binary,
+    // zip the inflated copy, fileData the base64 — none may linger per tick.
     let zipData: Blob | File | null = null
-    if (fullModel.type === 'file') {
-      zipData = fullModel.file || null
-    }
-    else if (fullModel.type === 'url') {
-      const res = await fetch(fullModel.url)
-      zipData = await res.blob()
-    }
-
-    if (zipData) {
-      const JSZip = (await import('jszip')).default
-      const zip = await JSZip.loadAsync(zipData)
-      const iconFileName = Object.keys(zip.files).find((name) => {
-        const lower = name.toLowerCase()
-        return lower.endsWith('icon.png') || lower.endsWith('icon.jpg')
-      })
-      if (iconFileName) {
-        const fileData = await zip.files[iconFileName].async('base64')
-        const mime = iconFileName.toLowerCase().endsWith('.jpg') ? 'image/jpeg' : 'image/png'
-        const rawDataUrl = `data:${mime};base64,${fileData}`
-
-        // Cache in memory, localforage, and model metadata so this tax is never paid again
-        iconCache.set(displayModelId, rawDataUrl)
-        model.authorIcon = rawDataUrl
-        void displayModelsStore.syncMetadataCacheFromMemory()
-        if (fullModel.type === 'file' && displayModelId.startsWith('display-model-')) {
-          void localforage.getItem<any>(displayModelId).then((stored) => {
-            if (stored && !stored.authorIcon) {
-              stored.authorIcon = rawDataUrl
-              return localforage.setItem(displayModelId, stored)
-            }
-          }).catch((err) => {
-            console.error('[CharacterMediaResolver] Failed to persist authorIcon to localforage:', err)
-          })
-        }
-        return rawDataUrl
+    let zip: any = null
+    let fileData: string | null = null
+    try {
+      const fullModel = await displayModelsStore.getDisplayModel(displayModelId)
+      if (!fullModel) {
+        iconCache.set(displayModelId, '')
+        return null
       }
+
+      if (fullModel.type === 'file') {
+        zipData = fullModel.file || null
+      }
+      else if (fullModel.type === 'url') {
+        const res = await fetch(fullModel.url)
+        zipData = await res.blob()
+      }
+
+      // Size guard: never inflate warehouse-scale zips for a grid thumbnail.
+      if (zipData && typeof zipData.size === 'number' && zipData.size > ICON_ZIP_MAX_BYTES) {
+        console.debug(`[CharacterMediaResolver] Skipping icon extraction for oversized model (${Math.round(zipData.size / 1024 / 1024)}MB > 15MB):`, displayModelId)
+        iconCache.set(displayModelId, '')
+        return null
+      }
+
+      if (zipData) {
+        const JSZip = (await import('jszip')).default
+        zip = await JSZip.loadAsync(zipData)
+        const iconFileName = Object.keys(zip.files).find((name) => {
+          const lower = name.toLowerCase()
+          return lower.endsWith('icon.png') || lower.endsWith('icon.jpg')
+        })
+        if (iconFileName) {
+          fileData = await zip.files[iconFileName].async('base64')
+          const mime = iconFileName.toLowerCase().endsWith('.jpg') ? 'image/jpeg' : 'image/png'
+          const rawDataUrl = `data:${mime};base64,${fileData}`
+
+          // Cache in memory, localforage, and model metadata so this tax is never paid again
+          iconCache.set(displayModelId, rawDataUrl)
+          model.authorIcon = rawDataUrl
+          void displayModelsStore.syncMetadataCacheFromMemory()
+          if (fullModel.type === 'file' && displayModelId.startsWith('display-model-')) {
+            void localforage.getItem<any>(displayModelId).then((stored) => {
+              if (stored && !stored.authorIcon) {
+                stored.authorIcon = rawDataUrl
+                return localforage.setItem(displayModelId, stored)
+              }
+            }).catch((err) => {
+              console.error('[CharacterMediaResolver] Failed to persist authorIcon to localforage:', err)
+            })
+          }
+          return rawDataUrl
+        }
+      }
+      iconCache.set(displayModelId, '')
+      return null
     }
-    iconCache.set(displayModelId, '')
-    return null
+    catch (e) {
+      console.error('[CharacterMediaResolver] Failed to extract icon:', e)
+      iconCache.set(displayModelId, '')
+      return null
+    }
+    finally {
+      zipData = null
+      zip = null
+      fileData = null
+      releaseIconSlot()
+    }
+  })()
+
+  iconPending.set(displayModelId, task)
+  try {
+    return await task
   }
-  catch (e) {
-    console.error('[CharacterMediaResolver] Failed to extract icon:', e)
-    iconCache.set(displayModelId, '')
-    return null
+  finally {
+    if (iconPending.get(displayModelId) === task)
+      iconPending.delete(displayModelId)
   }
 }
 
