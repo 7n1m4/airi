@@ -14,7 +14,7 @@ import { detectSpineVersionFromBinary, detectSpineVersionFromJson } from '@proj-
 import { loadVrmModelPreview as generateVrmPreview } from '@proj-airi/stage-ui-three/utils/vrm-preview'
 import { until, useBroadcastChannel } from '@vueuse/core'
 import { nanoid } from 'nanoid'
-import { defineStore } from 'pinia'
+import { acceptHMRUpdate, defineStore } from 'pinia'
 import { isProxy, ref, shallowRef, toRaw, triggerRef, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
@@ -173,6 +173,11 @@ function tryRewrapModelFile(file: any, preferredName?: string): File | undefined
   return undefined
 }
 
+// HMR epoch (Strategy C): bumped by the single dispose ledger at the bottom of
+// this module. Guards the sync-signal watcher against double IndexedDB
+// reloads from a superseded generation.
+let displayModelsEpoch = 0
+
 export const useDisplayModelsStore = defineStore('display-models', () => {
   const displayModels = shallowRef<DisplayModel[]>([])
   const displayModelsFromIndexedDBLoading = ref(false)
@@ -207,14 +212,35 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     }
   })()
 
-  const { data: modelsSyncSignal, post: broadcastModelsSync } = useBroadcastChannel({ name: 'airi:display-models-sync' })
+  const { data: modelsSyncSignal, post: broadcastModelsSync, close: closeModelsSyncChannel } = useBroadcastChannel({ name: 'airi:display-models-sync' })
 
+  // Epoch-guarded: a superseded generation's watcher must not fire duplicate
+  // IndexedDB catalog reloads after HMR re-evaluation.
+  const setupEpoch = displayModelsEpoch
   watch(modelsSyncSignal, (val) => {
     if (val) {
+      if (setupEpoch !== displayModelsEpoch)
+        return
       debug('[DisplayModels] Received display models sync signal, reloading from IndexedDB...')
       void loadDisplayModelsFromIndexedDB(true)
     }
   })
+
+  // Single teardown ledger (Strategy E — exactly ONE dispose per module): the
+  // sync BroadcastChannel is the multiplying native here (eager IndexedDB
+  // reloads and image-decode helpers are idempotent). Combined with the accept
+  // boundary below since this module is NOT effect-free. No-op in production.
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      displayModelsEpoch++
+      try {
+        closeModelsSyncChannel()
+      }
+      catch (err) {
+        debug('[DisplayModels:HMR] Channel close during HMR dispose failed:', err)
+      }
+    })
+  }
 
   async function compressPreviewDataUrl(dataUrl?: string, maxDim = 768, quality = 0.85): Promise<string | undefined> {
     if (!dataUrl || !dataUrl.startsWith('data:image/') || dataUrl.length < 50000) {
@@ -2299,3 +2325,10 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     syncMetadataCacheFromMemory,
   }
 })
+
+// Pinia HMR accept boundary. Ref/blob state (File handles, preview URLs)
+// transfers by reference via state patching; the sync channel above is closed
+// by the dispose ledger so reloads cannot duplicate it. No-op in production.
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useDisplayModelsStore, import.meta.hot))
+}

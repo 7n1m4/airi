@@ -240,3 +240,11 @@ export const useSpeakingStore = defineStore('character-speaking', () => {
     nowSpeakingAvatarBorderOpacity,
   }
 })
+
+// Phase 0D: this module manages raw WebAudio allocations (AudioContext, PCM
+// nodes, mic streams) that cannot be hot-swapped. Force a clean window reload
+// rather than strand native audio handles across re-evaluations. Covers all
+// stores in this module. No-op in production.
+if (import.meta.hot) {
+  import.meta.hot.invalidate('AudioContext HMR hard reload')
+}

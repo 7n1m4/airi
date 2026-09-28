@@ -82,6 +82,21 @@ export const useChatStreamStore = defineStore('chat-stream', () => {
     streamingMessage.value = { role: 'assistant', content: '', slices: [], tool_results: [], categorization: { speech: '', reasoning: '' } }
   }
 
+  // Single teardown ledger (Strategy E — exactly ONE dispose per module):
+  // clears this generation's streaming buffer so a superseded setup cannot
+  // leave ghost partial text behind after its stream was epoch-aborted in
+  // chat.ts. The successor generation owns a fresh buffer. No-op in production.
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      try {
+        resetStream()
+      }
+      catch (err) {
+        debug('[ChatStream:HMR] Buffer reset during HMR dispose failed:', err)
+      }
+    })
+  }
+
   return {
     streamingMessage,
     beginStream,
