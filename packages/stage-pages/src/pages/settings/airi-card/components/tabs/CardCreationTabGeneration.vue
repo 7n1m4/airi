@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { BrainModelPicker } from '@proj-airi/stage-ui/components/scenarios/chat'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { FieldCheckbox, FieldInput, FieldTextArea, Select } from '@proj-airi/ui'
 import { ref, watch } from 'vue'
@@ -7,8 +8,8 @@ import { useI18n } from 'vue-i18n'
 import { isThinkingPresetActive, THINKING_PRESETS, toggleThinkingPreset } from './generation-thinking-presets'
 
 const props = defineProps<{
-  providerOptions: { value: string, label: string }[]
-  modelOptions: { value: string, label: string }[]
+  providerOptions?: { value: string, label: string }[]
+  modelOptions?: { value: string, label: string }[]
   providerPlaceholder: string
   modelPlaceholder: string
   systemPrompt?: string
@@ -19,6 +20,8 @@ const emit = defineEmits<{
   (e: 'sparkle-click', fieldId: string): void
 }>()
 
+const consciousnessProvider = defineModel<string>('consciousnessProvider', { required: true })
+const consciousnessModel = defineModel<string>('consciousnessModel', { required: true })
 const generationEnabled = defineModel<boolean>('generationEnabled', { required: true })
 const generationProvider = defineModel<string>('generationProvider', { required: true })
 const generationModel = defineModel<string>('generationModel', { required: true })
@@ -33,6 +36,14 @@ const compactionStrategy = defineModel<string>('compactionStrategy', { required:
 const compactionMinKeepTurns = defineModel<number | undefined>('compactionMinKeepTurns', { required: true })
 const { t } = useI18n()
 const providersStore = useProvidersStore()
+
+// Keep generationProvider and generationModel in sync with consciousness
+watch([consciousnessProvider, consciousnessModel], ([cp, cm]) => {
+  if (cp)
+    generationProvider.value = cp
+  if (cm)
+    generationModel.value = cm
+}, { immediate: true })
 
 // Live Generation Test Probe State
 const probeOpen = ref(true)
@@ -50,12 +61,12 @@ async function runTestProbe() {
   if (probeRunning.value)
     return
 
-  const effectiveProvider = generationProvider.value || props.providerPlaceholder
-  const effectiveModel = generationModel.value || props.modelPlaceholder
+  const effectiveProvider = consciousnessProvider.value || generationProvider.value || props.providerPlaceholder
+  const effectiveModel = consciousnessModel.value || generationModel.value || props.modelPlaceholder
 
   if (!effectiveProvider || effectiveProvider === 'None' || !effectiveModel || effectiveModel === 'None') {
     probeStatus.value = 'error'
-    probeErrorMessage.value = 'No valid AI provider or model selected. Please select a provider and model above or in Presence.'
+    probeErrorMessage.value = 'No valid AI provider or model selected. Please select a Consciousness LLM above.'
     return
   }
 
@@ -175,8 +186,30 @@ watch([generationContextWidth, generationProvider, generationModel], () => {
 <template>
   <div class="tab-content ml-auto mr-auto w-95%">
     <p class="mb-3">
-      Tune per-character response generation without changing the rest of the app. This first pass focuses on the most common chat controls and saves them with the AIRI card.
+      Tune character consciousness and response generation. Select the companion's primary brain model, or customize sampling parameters and thinking modes.
     </p>
+
+    <!-- Top Headline Anchor: Consciousness (LLM) Picker -->
+    <div class="mx-auto mb-6 w-90% flex flex-col gap-2 border border-neutral-200 rounded-xl bg-neutral-50/50 p-4 dark:border-neutral-800 dark:bg-neutral-900/40">
+      <div class="flex items-center justify-between">
+        <label class="flex flex-row items-center gap-2 text-sm text-neutral-700 font-semibold dark:text-neutral-200">
+          <div i-lucide:brain class="text-primary-500" />
+          Consciousness (LLM)
+        </label>
+        <span class="text-xs text-neutral-400">
+          Primary brain engine for this character
+        </span>
+      </div>
+
+      <BrainModelPicker
+        v-model:provider="consciousnessProvider"
+        v-model:model="consciousnessModel"
+        variant="button"
+        title="Select Consciousness LLM"
+        side="bottom"
+        class="w-full"
+      />
+    </div>
 
     <div class="mx-auto mb-6 w-90% border border-amber-200 rounded-xl bg-amber-50/80 p-4 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
       Keys that work for one provider or model may be ignored or rejected by another. Start simple, and treat these as character-specific generation defaults rather than guaranteed cross-provider behavior.
@@ -185,8 +218,8 @@ watch([generationContextWidth, generationProvider, generationModel], () => {
     <div class="mx-auto mb-6 w-90% flex flex-col gap-4">
       <FieldCheckbox
         v-model="generationEnabled"
-        label="Use character-specific generation settings"
-        description="When disabled, this card inherits the global chat generation defaults."
+        label="Override global sampling & thinking parameters"
+        description="When disabled, this character uses the Consciousness LLM with global default temperature and token limits."
       />
       <FieldCheckbox
         v-model="generationReasoningFallback"
@@ -197,40 +230,6 @@ watch([generationContextWidth, generationProvider, generationModel], () => {
     </div>
 
     <div class="input-list ml-auto mr-auto w-90% flex flex-row flex-wrap justify-start gap-8" :class="[!generationEnabled ? 'pointer-events-none opacity-50' : '']">
-      <div class="field-block">
-        <label class="mb-2 flex flex-row items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
-          <div i-lucide:brain />
-          Provider
-        </label>
-        <Select
-          v-model="generationProvider"
-          :options="providerOptions"
-          :placeholder="providerPlaceholder"
-          class="w-full"
-        />
-      </div>
-
-      <div class="field-block">
-        <label class="mb-2 flex flex-row items-center gap-2 text-sm text-neutral-500 dark:text-neutral-400">
-          <div i-lucide:ghost />
-          Model
-        </label>
-        <Select
-          v-if="modelOptions && modelOptions.length > 0"
-          v-model="generationModel"
-          :options="modelOptions"
-          :placeholder="modelPlaceholder"
-          class="w-full"
-        />
-        <input
-          v-else
-          v-model="generationModel"
-          type="text"
-          class="w-full border border-neutral-200 rounded-lg border-solid bg-neutral-50 px-2.5 py-1.5 text-sm text-neutral-800 shadow-sm outline-none dark:border-neutral-800 focus:border-primary-300 dark:bg-neutral-950 focus:bg-neutral-50 dark:text-neutral-200 dark:focus:border-primary-400/50 dark:focus:bg-neutral-900"
-          :placeholder="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.manual_model_placeholder')"
-        >
-      </div>
-
       <FieldInput
         v-model="generationMaxTokens"
         class="field-block"

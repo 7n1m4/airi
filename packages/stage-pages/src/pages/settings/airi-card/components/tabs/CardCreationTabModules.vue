@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DisplayModel } from '@proj-airi/stage-ui/stores/display-models'
 
-import { BrainModelPicker } from '@proj-airi/stage-ui/components/scenarios/chat'
 import { ModelSelectorDialog } from '@proj-airi/stage-ui/components/scenarios/dialogs/model-selector'
 import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
@@ -12,20 +11,15 @@ import { useI18n } from 'vue-i18n'
 import VoiceCreatorModal from '../VoiceCreatorModal.vue'
 
 const props = defineProps<{
-  consciousnessProviderOptions: { value: string, label: string }[]
-  consciousnessModelOptions: { value: string, label: string }[]
   speechProviderOptions: { value: string, label: string }[]
   speechModelOptions: { value: string, label: string }[]
   speechVoiceOptions: { value: string, label: string }[]
   displayModelOptions: { value: string, label: string }[]
   sceneOptions: { value: string, label: string }[]
-  consciousnessProviderPlaceholder: string
-  defaultConsciousnessModelPlaceholder: string
   speechProviderPlaceholder: string
   defaultSpeechModelPlaceholder: string
   defaultSpeechVoiceIdPlaceholder: string
   defaultDisplayModelIdPlaceholder: string
-  consciousnessProviderActive: boolean
   speechProviderActive: boolean
   hasVisualAssets?: boolean
 }>()
@@ -33,8 +27,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'staging'): void
 }>()
-const selectedConsciousnessProvider = defineModel<string>('selectedConsciousnessProvider', { required: true })
-const selectedConsciousnessModel = defineModel<string>('selectedConsciousnessModel', { required: true })
 const selectedSpeechProvider = defineModel<string>('selectedSpeechProvider', { required: true })
 const selectedSpeechModel = defineModel<string>('selectedSpeechModel', { required: true })
 const selectedSpeechVoiceId = defineModel<string>('selectedSpeechVoiceId', { required: true })
@@ -174,24 +166,8 @@ function handleSaveVoice(payload: { baseProvider: string, baseModel: string, bas
         />
       </div>
 
-      <!-- Row 2 Left: Consciousness (LLM) -->
-      <div :class="['flex', 'flex-col', 'gap-2']">
-        <label :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']">
-          <div i-lucide:brain />
-          Consciousness (LLM)
-        </label>
-        <BrainModelPicker
-          v-model:provider="selectedConsciousnessProvider"
-          v-model:model="selectedConsciousnessModel"
-          variant="button"
-          title="Select Consciousness LLM"
-          side="bottom"
-          class="w-full"
-        />
-      </div>
-
-      <!-- Row 2 Right: Voice / Speech Button -->
-      <div :class="['flex', 'flex-col', 'gap-2']">
+      <!-- Row 2: Voice / Speech Button (Span 2) -->
+      <div :class="['flex', 'flex-col', 'gap-2', 'sm:col-span-2']">
         <label :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']">
           <div i-lucide:music />
           Voice / Speech
