@@ -1,6 +1,6 @@
 import type { ToolMessage } from '@xsai/shared-chat'
 
-import type { ChatStreamEventContext, StreamingAssistantMessage } from '../../types/chat'
+import type { ChatStreamEventContext, StreamDeltaContext, StreamingAssistantMessage } from '../../types/chat'
 import type { AsideCandidate } from '../../types/pacing'
 
 export function createChatHooks() {
@@ -8,15 +8,15 @@ export function createChatHooks() {
   const onAfterMessageComposedHooks: Array<(message: string, context: ChatStreamEventContext) => Promise<void>> = []
   const onBeforeSendHooks: Array<(message: string, context: ChatStreamEventContext) => Promise<void>> = []
   const onAfterSendHooks: Array<(message: string, context: ChatStreamEventContext) => Promise<void>> = []
-  const onTokenLiteralHooks: Array<(literal: string, context: ChatStreamEventContext) => Promise<void>> = []
-  const onTokenSpecialHooks: Array<(special: string, context: ChatStreamEventContext) => Promise<void>> = []
+  const onTokenLiteralHooks: Array<(literal: string, context: StreamDeltaContext) => Promise<void>> = []
+  const onTokenSpecialHooks: Array<(special: string, context: StreamDeltaContext) => Promise<void>> = []
   const onStreamEndHooks: Array<(context: ChatStreamEventContext) => Promise<void>> = []
   const onAssistantResponseEndHooks: Array<(message: string, context: ChatStreamEventContext) => Promise<void>> = []
   const onAssistantMessageHooks: Array<(message: StreamingAssistantMessage, messageText: string, context: ChatStreamEventContext) => Promise<void>> = []
   const onChatTurnCompleteHooks: Array<(chat: { output: StreamingAssistantMessage, outputText: string, toolCalls: ToolMessage[] }, context: ChatStreamEventContext) => Promise<void>> = []
   const onGenerationStoppedHooks: Array<(context: ChatStreamEventContext) => Promise<void>> = []
   const onWidgetHooks: Array<(payload: any, context: ChatStreamEventContext) => Promise<void>> = []
-  const onReasoningChunkHooks: Array<(chunk: string, context: ChatStreamEventContext) => Promise<void>> = []
+  const onReasoningChunkHooks: Array<(chunk: string, context: StreamDeltaContext) => Promise<void>> = []
   const onDynamicAsideCueHooks: Array<(cue: AsideCandidate, context: ChatStreamEventContext) => Promise<void>> = []
 
   function onBeforeMessageComposed(cb: (message: string, context: Omit<ChatStreamEventContext, 'composedMessage'>) => Promise<void>) {
@@ -55,7 +55,7 @@ export function createChatHooks() {
     }
   }
 
-  function onTokenLiteral(cb: (literal: string, context: ChatStreamEventContext) => Promise<void>) {
+  function onTokenLiteral(cb: (literal: string, context: StreamDeltaContext) => Promise<void>) {
     onTokenLiteralHooks.push(cb)
     return () => {
       const index = onTokenLiteralHooks.indexOf(cb)
@@ -64,7 +64,7 @@ export function createChatHooks() {
     }
   }
 
-  function onTokenSpecial(cb: (special: string, context: ChatStreamEventContext) => Promise<void>) {
+  function onTokenSpecial(cb: (special: string, context: StreamDeltaContext) => Promise<void>) {
     onTokenSpecialHooks.push(cb)
     return () => {
       const index = onTokenSpecialHooks.indexOf(cb)
@@ -130,7 +130,7 @@ export function createChatHooks() {
     }
   }
 
-  function onReasoningChunk(cb: (chunk: string, context: ChatStreamEventContext) => Promise<void>) {
+  function onReasoningChunk(cb: (chunk: string, context: StreamDeltaContext) => Promise<void>) {
     onReasoningChunkHooks.push(cb)
     return () => {
       const index = onReasoningChunkHooks.indexOf(cb)
@@ -185,12 +185,12 @@ export function createChatHooks() {
       await hook(message, context)
   }
 
-  async function emitTokenLiteralHooks(literal: string, context: ChatStreamEventContext) {
+  async function emitTokenLiteralHooks(literal: string, context: StreamDeltaContext) {
     for (const hook of onTokenLiteralHooks)
       await hook(literal, context)
   }
 
-  async function emitTokenSpecialHooks(special: string, context: ChatStreamEventContext) {
+  async function emitTokenSpecialHooks(special: string, context: StreamDeltaContext) {
     for (const hook of onTokenSpecialHooks)
       await hook(special, context)
   }
@@ -225,7 +225,7 @@ export function createChatHooks() {
       await hook(payload, context)
   }
 
-  async function emitReasoningChunkHooks(chunk: string, context: ChatStreamEventContext) {
+  async function emitReasoningChunkHooks(chunk: string, context: StreamDeltaContext) {
     for (const hook of onReasoningChunkHooks)
       await hook(chunk, context)
   }

@@ -84,14 +84,22 @@ export interface ChatStreamEventContext {
   assistantMessageCreatedAt?: number
 }
 
+/**
+ * Minimal per-token stream delta context. High-frequency token/reasoning
+ * events must NEVER carry composedMessage (full history + base64 image turns):
+ * cloning it per chunk saturated PartitionAlloc and took down machines via
+ * compressor/swap exhaustion. Receivers only need the replay-guard ids.
+ */
+export type StreamDeltaContext = Pick<ChatStreamEventContext, 'assistantMessageId' | 'assistantMessageCreatedAt'>
+
 export type ChatStreamEvent
   = | { type: 'before-compose', message: string, sessionId: string, context: Omit<ChatStreamEventContext, 'composedMessage'> }
     | { type: 'after-compose', message: string, sessionId: string, context: ChatStreamEventContext }
     | { type: 'before-send', message: string, sessionId: string, context: ChatStreamEventContext }
     | { type: 'after-send', message: string, sessionId: string, context: ChatStreamEventContext }
-    | { type: 'token-literal', literal: string, sessionId: string, context: ChatStreamEventContext }
-    | { type: 'token-special', special: string, sessionId: string, context: ChatStreamEventContext }
-    | { type: 'reasoning-chunk', text: string, sessionId: string, context: ChatStreamEventContext }
+    | { type: 'token-literal', literal: string, sessionId: string, context: StreamDeltaContext }
+    | { type: 'token-special', special: string, sessionId: string, context: StreamDeltaContext }
+    | { type: 'reasoning-chunk', text: string, sessionId: string, context: StreamDeltaContext }
     | { type: 'stream-end', sessionId: string, context: ChatStreamEventContext }
     | { type: 'assistant-end', message: string, sessionId: string, context: ChatStreamEventContext }
     | { type: 'assistant-message', message: ChatAssistantMessage, sessionId: string, messageText: string, context: ChatStreamEventContext }

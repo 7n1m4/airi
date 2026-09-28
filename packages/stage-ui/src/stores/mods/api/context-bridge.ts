@@ -1,7 +1,7 @@
 import type { ChatProvider } from '@xsai-ext/providers/utils'
 import type { UserMessage } from '@xsai/shared-chat'
 
-import type { ChatStreamEvent, ContextMessage } from '../../../types/chat'
+import type { ChatStreamEvent, ContextMessage, StreamDeltaContext } from '../../../types/chat'
 
 import { errorMessageFrom } from '@moeru/std'
 import { debug, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
@@ -20,6 +20,18 @@ import { useChatStreamStore } from '../../chat/stream-store'
 import { useConsciousnessStore } from '../../modules/consciousness'
 import { useProvidersStore } from '../../providers'
 import { useModsServerChannelStore } from './channel-server'
+
+/**
+ * Builds the minimal per-token delta context: replay-guard ids only. The full
+ * ChatStreamEventContext (history + base64 image turns) must never be cloned
+ * per token — see StreamDeltaContext.
+ */
+function slimDeltaContext(context: { assistantMessageId?: string, assistantMessageCreatedAt?: number }): StreamDeltaContext {
+  return {
+    assistantMessageId: context.assistantMessageId,
+    assistantMessageCreatedAt: context.assistantMessageCreatedAt,
+  }
+}
 
 export const useContextBridgeStore = defineStore('mods:api:context-bridge', () => {
   const mutex = new Mutex()
@@ -270,6 +282,10 @@ export const useContextBridgeStore = defineStore('mods:api:context-bridge', () =
 
           broadcastStreamEvent({ type: 'after-send', message, sessionId: chatSession.activeSessionId, context: JSON.parse(JSON.stringify(toRaw(context))) })
         }),
+        // NOTICE: per-token deltas carry ONLY the replay-guard ids — never the
+        // full context. Cloning composedMessage (full history + base64 image
+        // turns) per token saturated PartitionAlloc and took machines down via
+        // compressor/swap exhaustion. The slim object needs no JSON round-trip.
         chatOrchestrator.onTokenLiteral(async (literal, context) => {
           if (isProcessingRemoteStream) {
             // console.debug('[PipelineTTS:Bridge] Skipping broadcast of token-literal (remote stream in progress)')
@@ -277,19 +293,19 @@ export const useContextBridgeStore = defineStore('mods:api:context-bridge', () =
           }
 
           // console.log(`[PipelineTTS:Bridge] Broadcasting token-literal in ${window.location.hash || 'main'}`, { literal: literal.slice(0, 50) })
-          broadcastStreamEvent({ type: 'token-literal', literal, sessionId: chatSession.activeSessionId, context: JSON.parse(JSON.stringify(toRaw(context))) })
+          broadcastStreamEvent({ type: 'token-literal', literal, sessionId: chatSession.activeSessionId, context: slimDeltaContext(context) })
         }),
         chatOrchestrator.onTokenSpecial(async (special, context) => {
           if (isProcessingRemoteStream)
             return
 
-          broadcastStreamEvent({ type: 'token-special', special, sessionId: chatSession.activeSessionId, context: JSON.parse(JSON.stringify(toRaw(context))) })
+          broadcastStreamEvent({ type: 'token-special', special, sessionId: chatSession.activeSessionId, context: slimDeltaContext(context) })
         }),
         chatOrchestrator.onReasoningChunk(async (text, context) => {
           if (isProcessingRemoteStream)
             return
 
-          broadcastStreamEvent({ type: 'reasoning-chunk', text, sessionId: chatSession.activeSessionId, context: JSON.parse(JSON.stringify(toRaw(context))) })
+          broadcastStreamEvent({ type: 'reasoning-chunk', text, sessionId: chatSession.activeSessionId, context: slimDeltaContext(context) })
         }),
         chatOrchestrator.onStreamEnd(async (context) => {
           if (isProcessingRemoteStream)

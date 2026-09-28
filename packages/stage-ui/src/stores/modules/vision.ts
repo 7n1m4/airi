@@ -162,7 +162,12 @@ export const useVisionStore = defineStore('vision', () => {
     status.value = 'capturing'
 
     try {
-      const result = await captureSnapshot({ width: 1280, height: 720 }) as any
+      // NOTICE: the witness copy is persisted into chat history as a base64
+      // turn attachment and then cloned on every future stream delta — a
+      // 1280x720 PNG per heartbeat compounds into the exact blowup that took
+      // machines down. 640x360 is plenty for scene commentary; the OCR-grade
+      // native capture path (screen-watcher) is untouched.
+      const result = await captureSnapshot({ width: 640, height: 360 }) as any
 
       if (result?.error === 'permission_denied') {
         console.error('[Vision Store] Heartbeat: Screen capture failed due to permissions.')
