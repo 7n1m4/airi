@@ -33,7 +33,7 @@ Canonical references: **`docs/content/en/docs/contributing/windows-release-guide
      - `### 🛠️ To Developers` (Plugin SDK, API contracts, desktop window managers).
      - `### 🧪 To Contributors` (Packaging scripts, CI/CD, internal harnesses, audit tools).
      - `### ⚠️ Upgrade Notes` (Only when manual user action or configuration migration is required).
-   - **Traceable Footnotes**: Keep bullet points punchy and readable without inline commit SHA clutter. Place footnote markers on each bullet and attribute commits below: `[^1]: Commit [abcdef123](https://github.com/dasilva333/airi/commit/abcdef123) by @contributor`.
+   - **Traceable Footnotes & Upstream Attribution**: Keep bullet points punchy and readable without inline commit SHA clutter. When features, fixes, or localizations derive from upstream PRs (tracked in `docs/UPSTREAM_RADAR.md` or port commits), always cite and thank the upstream authors and PR links (e.g., `Special thanks to upstream contributor @author for PR [#1234](url)`).
    - Present inline in natural Markdown (never inside an unrendered raw code fence).
 2. **Version stamp.** `apps/stage-tamagotchi/package.json` → `[major].[minor].[patch]-stable.[YYYYMMDD]`.
 3. **Tag.** `git tag v<version> && git push origin v<version>` (fork remote; never touch upstream without authorization).

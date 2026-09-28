@@ -47,6 +47,7 @@ Every stable release must adhere to the following standard template and quality 
 - **No Raw Commit Dumps**: Do not append raw `git log` hashes or commit messages to user-facing release notes.
 - **Accurate Feature Framing**: Clearly distinguish brand-new features (e.g. Arcade, Sound Studio) from bug fixes, and flag early-access surfaces with explicit Work in Progress (WIP) notices.
 - **Step-by-Step Stepper Organization**: When documenting extensive onboarding overhauls, organize changes by numbered steps (`Step X (Name)`) for scannability.
+- **Upstream Contributor Attribution & Radar Shoutouts**: Whenever cherry-picking, adopting, or adapting upstream contributions (tracked in `docs/UPSTREAM_RADAR.md` or git commit logs), always acknowledge the original PRs with markdown links and credit the authors (e.g., `Special thanks to upstream contributor @author for PR [#1234](url)`). This honors community contributions and signals proactive monitoring of upstream advancements.
 
 ---
 
