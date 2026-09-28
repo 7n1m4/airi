@@ -54,7 +54,7 @@ The five groups below organize navigation. Historical “Phase” labels do not 
 
 ## 3. Domain skill catalog
 
-The catalog contains 67 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
+The catalog contains 68 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
 
 ### 🟢 Phase 1: Core Plumbing & Infrastructure
 
@@ -409,6 +409,11 @@ The catalog contains 67 discoverable skills. Desktop chatbox and interaction pip
 - **Key Paths**: `docs/shared-sidebar.ts`, `docs/.vitepress/config.ts`, `docs/content/en/`, `docs/content/ja/`, `docs/content/zh-Hans/`.
 - **Content**: VitePress documentation setup, `shared-sidebar.ts` single-source-of-truth syncing across web and in-app viewers, multi-locale synchronization, Markdown frontmatter standards, asset resolution rules, and strict separation between technical root docs (`docs/*.md`) and public user-facing guides (`docs/content/`).
 
+#### 5.16 `airi-ui-design-conventions`
+- **Target Domain**: AIRI UI Design Conventions, Component Selection Matrix, UnoCSS Readably Grouped Arrays, Chromatic Dynamic Theming & Palette Roles, Theme Switching Surfaces, Motion & Accessibility.
+- **Key Paths**: `.agents/skills/airi-ui-design-conventions/SKILL.md`, `packages/ui/`, `uno.config.ts`, `packages/stage-ui/src/stores/settings/theme.ts`, `packages/stage-ui/src/components/widgets/SettingsThemeHeaderWidget.vue`, `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/steps/step-appearance.vue`.
+- **Content**: Component hierarchy across `@proj-airi/ui` primitives (`BasicButton`, `Button`, `GhostButton`, `IconButton`, `OverlayButton`, `FieldInput`, `Input`, `FieldCheckbox`, `Select`, `BottomDrawer`), UnoCSS multi-line class array binding conventions, Chromatic `--chromatic-hue` dynamic theming vs. static neutral surfaces, the 4 canonical theme-switching surfaces (Onboarding V3 24-color spectrum, Settings General dark-mode toggle, Settings Header widget, Control Strip `'theme-mode'` action), shape/radii/spacing standards (8px, 12px, 32px drawers, -10°/10° parallelogram skew), motion timings (200ms/250ms/500ms, `AnimatedContent`), and the component discrepancy audit.
+
 ---
 
 ## 4. Inventory and routing review
@@ -419,8 +424,8 @@ The catalog contains 67 discoverable skills. Desktop chatbox and interaction pip
 | Character, stage, motion and sensing | 14 |
 | Modules, cognition and memory | 22 |
 | Operational SOPs and research | 6 |
-| UI surfaces and adjacent services | 15 |
-| **Total** | **65** |
+| UI surfaces and adjacent services | 16 |
+| **Total** | **66** |
 
 The counts follow the catalog groups above, not a separate historical rollout table.
 
