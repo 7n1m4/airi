@@ -4,6 +4,7 @@ import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
 
 import { normalizeSearchText } from '@proj-airi/stage-shared'
 import { Alert } from '@proj-airi/stage-ui/components'
+import { useDataMaintenance } from '@proj-airi/stage-ui/composables/use-data-maintenance'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
 import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
@@ -38,6 +39,7 @@ const { addCard, removeCard } = cardStore
 const { cards, activeCardId, cardsLoading } = storeToRefs(cardStore)
 const { selectiveSyncEnabled } = storeToRefs(syncEngineStore)
 const { getCardWithExportedBackground } = useCardExport()
+const { importCardZipPackage } = useDataMaintenance()
 
 const route = useRoute()
 const router = useRouter()
@@ -461,6 +463,37 @@ watch(inputFiles, async (newFiles) => {
     return
 
   try {
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      try {
+        const result = await importCardZipPackage(file)
+        selectedCardId.value = result.cardId
+        isCardDialogOpen.value = true
+
+        const bits = [`${result.flavor === 'v1' ? 'Upstream' : 'Extended'} package imported`]
+        if (result.importedModelIds.length > 0)
+          bits.push('display model')
+        if (result.importedBackgroundId)
+          bits.push('background')
+        if (result.importedVoiceCount > 0)
+          bits.push(`${result.importedVoiceCount} voice(s)`)
+        if (result.importedSessionCount > 0)
+          bits.push(`${result.importedSessionCount} session(s)`)
+        toast.success(`Card imported successfully (${bits.join(', ')})`)
+        if (result.warnings.length > 0) {
+          toast.warning('Some package assets were skipped', {
+            description: result.warnings.join('; '),
+          })
+        }
+      }
+      catch (error) {
+        console.error('[AiriCard] Error importing ZIP package:', error)
+        toast.error('Error importing ZIP package', {
+          description: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
+      return
+    }
+
     let importedCard: ImportedCardPayload
 
     if (file.name.toLowerCase().endsWith('.png')) {
@@ -897,7 +930,7 @@ function getDisplayModelId(id: string) {
 
     <!-- Toggleable Upload Area -->
     <div v-if="isUploadZoneOpen" class="w-full">
-      <InputFile v-model="inputFiles" accept="*.json,*.png" class="w-full">
+      <InputFile v-model="inputFiles" accept="*.json,*.png,*.zip" class="w-full">
         <template #default="{ isDragging }">
           <div
             :class="[

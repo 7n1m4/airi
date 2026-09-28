@@ -202,6 +202,8 @@ If the payload is compatibility-only, AIRI should:
 ## ZIP Wiring: Reuse Data Vault, Narrow To One Character
 
 > Findings (2026-09-28 audit of `Settings -> Data` top export). Do not reinvent the wheel: the vault already solves archiving, full-fidelity session dump, multi-pillar memory dump, and binary-in-ZIP. The single-card ZIP reuses its accessors and patterns, with a different layout.
+>
+> Implemented 2026-09-28: `importCardZipPackage()` in `use-data-maintenance.ts` + `.zip` branch in the `inputFiles` watcher (`index.vue`). Port notes: this fork's `addDisplayModel` returns `void` (upstream returned the model), so the fresh model id is resolved by diffing the in-memory catalog.
 
 ### What the vault already does
 
