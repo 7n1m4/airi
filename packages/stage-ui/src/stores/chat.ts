@@ -111,6 +111,8 @@ interface QueuedSend {
   generation: number
   sessionId: string
   cancelled?: boolean
+  /** HMR epoch at enqueue time; reloads reject stale queued sends. */
+  hmrEpoch?: number
   deferred: {
     resolve: () => void
     reject: (error: unknown) => void
@@ -138,6 +140,32 @@ interface ActiveSendHandle {
   getRawText: () => string
 }
 const activeSendHandles = new Map<string, ActiveSendHandle>()
+
+// Strategy C (HMR Async Epoch Guard): module-scope epoch bumped by the single
+// dispose handler below. Orphaned performSend loops from a superseded HMR
+// generation abort at their next shouldAbort() check instead of double-driving
+// speech/captions/history. Old closures read the OLD binding (bumped on
+// dispose); fresh generations start at 0. See
+// docs/project-hmr-resilience-architecture.md Strategies C & E.
+let chatEpoch = 0
+
+// Strategy E: exactly ONE import.meta.hot.dispose() per module (Vite silently
+// overwrites multiples). Bumps the epoch and aborts live HTTP streams so
+// orphaned generations cannot hang or duplicate turns. Queued (not yet
+// started) sends are rejected by their hmrEpoch stamp in the queue handler.
+// No-op in production/test (import.meta.hot is undefined).
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    chatEpoch++
+    for (const handle of activeSendHandles.values()) {
+      try {
+        handle.controller?.abort(new Error('[HMR] chat store re-evaluated during stream'))
+      }
+      catch {}
+    }
+    activeSendHandles.clear()
+  })
+}
 
 export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
   const llmStore = useLLM()
@@ -346,6 +374,12 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           return
         }
 
+        // Strategy C: queued under a superseded HMR generation — never start.
+        if (data.hmrEpoch !== undefined && data.hmrEpoch !== chatEpoch) {
+          deferred.reject(new Error('[HMR] Chat store re-evaluated before send could start'))
+          return
+        }
+
         try {
           await performSend(sendingMessage, options, generation, sessionId)
           deferred.resolve()
@@ -385,6 +419,10 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
 
     if (!options.triggerOnly && !sendingMessage && !finalAttachments.length)
       return
+
+    // Strategy C: captured before the first await; every shouldAbort() check
+    // below (and the stream loop) treats an epoch mismatch as a stop.
+    const sendEpoch = chatEpoch
 
     await chatSession.loadSession?.(sessionId)
     chatSession.ensureSession(sessionId)
@@ -569,7 +607,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
     }
 
     const isStaleGeneration = () => chatSession.getSessionGeneration(sessionId) !== generation
-    const shouldAbort = () => isStaleGeneration()
+    const shouldAbort = () => isStaleGeneration() || sendEpoch !== chatEpoch
     if (shouldAbort())
       return
 
@@ -2110,6 +2148,7 @@ Format your output as a raw thought log.`
         options,
         generation,
         sessionId,
+        hmrEpoch: chatEpoch,
         deferred: { resolve, reject },
       })
     })

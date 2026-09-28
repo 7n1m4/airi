@@ -46,6 +46,12 @@ import {
 } from './proactivity-telemetry'
 import { useProvidersStore } from './providers'
 
+// Strategy C (HMR Async Epoch Guard): module-scope epoch bumped by the dispose
+// handler below. Sensor ticks from a superseded HMR generation drop their
+// results after the probe await instead of writing stale refs. See
+// docs/project-hmr-resilience-architecture.md Strategies C & E.
+let proactivityEpoch = 0
+
 export const useProactivityStore = defineStore('proactivity', () => {
   const airiCardStore = useAiriCardStore()
   const { activeCard, activeCardId } = storeToRefs(airiCardStore)
@@ -135,6 +141,7 @@ export const useProactivityStore = defineStore('proactivity', () => {
   }
 
   async function updateSensors() {
+    const tickEpoch = proactivityEpoch
     if (isUpdatingSensors.value) {
       debug('[Proactivity] Sensor update already in progress, skipping tick.')
       return
@@ -186,6 +193,13 @@ export const useProactivityStore = defineStore('proactivity', () => {
         locTimeResult,
         volLevelResult,
       ] = await Promise.allSettled(probes)
+
+      // Strategy C: orphaned HMR-generation tick — drop results, write no
+      // state. The finally below still releases isUpdatingSensors.
+      if (tickEpoch !== proactivityEpoch) {
+        debug('[Proactivity] Dropping orphaned sensor tick after HMR reload.')
+        return
+      }
 
       // Map settled results back to reactive state
       if (idleMsResult.status === 'fulfilled' && (idleMsResult as any).value !== undefined) {
@@ -298,6 +312,28 @@ export const useProactivityStore = defineStore('proactivity', () => {
   onUnmounted(() => {
     pause()
   })
+
+  // Strategy E (Single Combined Teardown Ledger): exactly ONE dispose callback
+  // per module (Vite overwrites multiples). Without this, HMR re-evaluation
+  // orphans the raw heartbeat setInterval and the useIntervalFn sensor poll,
+  // multiplying heartbeat/sensor/IPC calls per reload until swap exhausts.
+  // No-op in production/test (import.meta.hot is undefined).
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      // Strategy C first: stale in-flight sensor ticks drop at their next check.
+      proactivityEpoch++
+      try {
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval)
+          heartbeatInterval = null
+        }
+        pause()
+      }
+      catch (err) {
+        debug('[Proactivity:HMR] Teardown during HMR dispose failed:', err)
+      }
+    })
+  }
 
   const sensorPayload = computed(() => {
     const config = activeCard.value?.extensions?.airi?.heartbeats
@@ -926,6 +962,14 @@ export const useProactivityStore = defineStore('proactivity', () => {
   }
 
   function startHeartbeatLoop() {
+    // Cross-generation stale clear: if a previous HMR generation's interval
+    // survived (dispose missed or raced), kill it before starting ours so
+    // heartbeat/sensor calls can never multiply across reloads.
+    const hotData = import.meta.hot?.data as { heartbeatInterval?: any } | undefined
+    if (hotData?.heartbeatInterval) {
+      clearInterval(hotData.heartbeatInterval)
+      hotData.heartbeatInterval = null
+    }
     if (heartbeatInterval)
       stopHeartbeatLoop()
 
@@ -934,12 +978,19 @@ export const useProactivityStore = defineStore('proactivity', () => {
       void evaluateHeartbeat()
       void evaluateDreamState()
     }, 10 * 1000)
+    if (hotData)
+      hotData.heartbeatInterval = heartbeatInterval
   }
 
   function stopHeartbeatLoop() {
     if (heartbeatInterval) {
       clearInterval(heartbeatInterval)
       heartbeatInterval = null
+    }
+    const hotData = import.meta.hot?.data as { heartbeatInterval?: any } | undefined
+    if (hotData?.heartbeatInterval) {
+      clearInterval(hotData.heartbeatInterval)
+      hotData.heartbeatInterval = null
     }
   }
 

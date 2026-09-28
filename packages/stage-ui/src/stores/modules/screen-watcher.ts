@@ -41,6 +41,14 @@ export interface VisualObservationItem {
   matchedInterests?: string[]
 }
 
+// Strategy C (HMR Async Epoch Guard): module-scope epoch bumped by the dispose
+// handler below. Orphaned in-flight ticks from a superseded HMR generation see
+// the mismatch after their awaits and abort before dispatching observations.
+// NOTE: on HMR re-evaluation this binding resets for the NEW generation while
+// old tick closures keep referencing the OLD binding — which is exactly what
+// makes the stale check work.
+let watcherEpoch = 0
+
 export const useScreenWatcherStore = defineStore('screen-watcher', () => {
   const airiCardStore = useAiriCardStore()
   const { activeCard, activeCardId } = storeToRefs(airiCardStore)
@@ -353,6 +361,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
   }
 
   async function captureAndProcess(): Promise<void> {
+    const tickEpoch = watcherEpoch
     if (isCapturing.value) {
       console.log('[ScreenWatcher:Tick] ⏳ Previous capture still in progress, skipping overlapping tick.')
       return
@@ -462,6 +471,13 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         return
       }
 
+      // Strategy C: orphaned HMR-generation tick — drop the frame, act on nothing.
+      if (tickEpoch !== watcherEpoch) {
+        console.log('[ScreenWatcher:Tick] 🛑 Aborting orphaned tick after HMR reload (post-capture).')
+        snapshot.dataUrl = ''
+        return
+      }
+
       captureCount.value++
       lastCaptureAt.value = Date.now()
 
@@ -498,6 +514,13 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       dataUrl = undefined
       pngBytes = undefined
       snapshot.dataUrl = ''
+
+      // Strategy C: orphaned HMR-generation tick — release refs above, then
+      // abort before promotions, buffer writes, or telemetry.
+      if (tickEpoch !== watcherEpoch) {
+        console.log('[ScreenWatcher:Tick] 🛑 Aborting orphaned tick after HMR reload (post-process).')
+        return
+      }
 
       lastLatencyMs.value = Math.round(performance.now() - tickStart)
       lastDecision.value = processed?.decision || 'UNKNOWN'
@@ -732,6 +755,28 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     }
     stopWatcher()
   })
+
+  // Strategy E (Single Combined Teardown Ledger): exactly ONE dispose callback
+  // per module (Vite overwrites multiples). Without this, HMR re-evaluation
+  // orphans the capture setInterval + restart debounce + guard worker, and
+  // each reload multiplies 1080p capture ticks into Tesseract/Moondream.
+  // No-op in production/test (import.meta.hot is undefined).
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      // Strategy C first: stale in-flight ticks abort at their next epoch check.
+      watcherEpoch++
+      if (restartDebounce) {
+        clearTimeout(restartDebounce)
+        restartDebounce = null
+      }
+      try {
+        stopWatcher()
+      }
+      catch (err) {
+        console.warn('[ScreenWatcher:HMR] Teardown during HMR dispose failed:', err)
+      }
+    })
+  }
 
   // Diagnostic Hook for console inspection
   if (typeof window !== 'undefined') {
