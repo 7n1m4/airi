@@ -4,6 +4,7 @@ import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-airi/el
 import { themeColorFromValue, useThemeColor } from '@proj-airi/stage-layouts/composables/theme-color'
 import { debug } from '@proj-airi/stage-shared'
 import { ToasterRoot } from '@proj-airi/stage-ui/components'
+import { getGPUCoordinator } from '@proj-airi/stage-ui/libs/inference'
 import { useSharedAnalyticsStore } from '@proj-airi/stage-ui/stores/analytics'
 import { useBackupStore } from '@proj-airi/stage-ui/stores/backup'
 import { useCharacterOrchestratorStore } from '@proj-airi/stage-ui/stores/character'
@@ -186,6 +187,23 @@ const isMainWindow = computed(() => {
   if (typeof window === 'undefined')
     return false
   return initialHash === '' || initialHash === '#/' || initialHash === '#'
+})
+
+// NOTICE: Tier-2 deep standby (extended lock/suspend). The Inference Leader
+// (main window, the only renderer hosting physical WebGPU workers) evicts idle
+// background workers (STT/TTS/VLM), dropping resident VRAM toward baseline.
+// Followers no-op: their coordinators hold no allocations. Adapters re-hydrate
+// on demand from local cache when interaction resumes.
+watch(() => stageWindowLifecycleStore.deepStandby, (standby) => {
+  if (!standby || !isMainWindow.value)
+    return
+  try {
+    const evicted = getGPUCoordinator().evictInactive()
+    console.info(`[App] Deep standby: evicted ${evicted.length} idle inference worker(s): ${evicted.join(', ') || 'none resident'}`)
+  }
+  catch (error) {
+    console.warn('[App] Deep standby inference eviction failed.', error)
+  }
 })
 
 // Listen for custom toast notifications and navigation events from main process

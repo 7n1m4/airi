@@ -35,20 +35,25 @@ const recordDeviceLoss = vi.fn()
 const requestAllocation = vi.fn((modelId: string) => ({ modelId, bytes: 0, allocatedAt: 0, lastUsedAt: 0 }))
 const release = vi.fn()
 const touch = vi.fn()
+const registerEvictable = vi.fn(() => () => {})
+const evictModel = vi.fn(() => false)
+const evictInactive = vi.fn(() => [] as string[])
 // Passthrough executor: runs work immediately with a no-op slot, like the real
 // concurrency-1 executor when uncontended. Slot/preemption itself is covered by
 // gpu-executor.test.ts; here we only assert the host's wiring around it.
 const run = vi.fn((_id: string, _p: number, work: (slot: { yield: () => Promise<void> }) => Promise<unknown>) => work({ yield: async () => {} }))
 vi.mock('./coordinator', () => ({
-  getGPUCoordinator: () => ({ requestAllocation, release, touch, recordDeviceLoss }),
+  getGPUCoordinator: () => ({ requestAllocation, release, touch, recordDeviceLoss, registerEvictable, evictModel, evictInactive }),
   getGpuExecutor: () => ({ run }),
 }))
 
-function makeHost() {
-  return createGpuWorkerHost<{ id: number }>({
+function makeHost(options: { inactivityTtlMs?: number | null, unload?: () => unknown } = {}) {
+  const unload = options.unload ?? (() => {})
+  return createGpuWorkerHost<{ id: number, unload: () => unknown }>({
     modelId: 'test-model',
     createWorker: () => new FakeWorker() as unknown as Worker,
-    createRpc: () => ({ id: FakeWorker.instances.length }),
+    createRpc: () => ({ id: FakeWorker.instances.length, unload }),
+    ...(options.inactivityTtlMs !== undefined ? { inactivityTtlMs: options.inactivityTtlMs } : {}),
   })
 }
 
@@ -59,6 +64,7 @@ describe('gpuWorkerHost', () => {
     requestAllocation.mockClear()
     release.mockClear()
     touch.mockClear()
+    registerEvictable.mockClear()
     run.mockClear()
     run.mockImplementation((_id: string, _p: number, work: (slot: { yield: () => Promise<void> }) => Promise<unknown>) => work({ yield: async () => {} }))
   })
@@ -235,6 +241,105 @@ describe('gpuWorkerHost', () => {
 
     host.terminate()
     expect(release).toHaveBeenCalledTimes(2)
+  })
+
+  describe('inactivity TTL', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('unloads an idle ready host on expiry, releasing VRAM but keeping the manifest', async () => {
+      const unload = vi.fn()
+      const host = makeHost({ inactivityTtlMs: 1000, unload })
+      host.ensure()
+      host.setPhase('ready')
+      host.allocate('m', 100)
+      host.setLoadManifest({ quantization: 'q8' })
+      expect(registerEvictable).toHaveBeenCalledWith('m', expect.objectContaining({ unload: expect.any(Function) }))
+      // Mirror the real load flow: the load itself runs through the host ops,
+      // which is what arms the countdown.
+      await host.runExclusive(async () => {})
+
+      await vi.advanceTimersByTimeAsync(1001)
+
+      expect(unload).toHaveBeenCalledTimes(1)
+      expect(release).toHaveBeenCalled()
+      expect(host.phase).toBe('idle')
+      expect(host.lastLoadManifest).toEqual({ quantization: 'q8' })
+
+      host.terminate()
+    })
+
+    it('resets the countdown on each operation', async () => {
+      const unload = vi.fn()
+      const host = makeHost({ inactivityTtlMs: 1000, unload })
+      host.ensure()
+      host.setPhase('ready')
+
+      await vi.advanceTimersByTimeAsync(800)
+      await host.runExclusive(async () => {})
+      await vi.advanceTimersByTimeAsync(800)
+      expect(unload).not.toHaveBeenCalled()
+
+      await vi.advanceTimersByTimeAsync(300)
+      expect(unload).toHaveBeenCalledTimes(1)
+
+      host.terminate()
+    })
+
+    it('defers expiry while an operation holds the worker, then unloads after it drains', async () => {
+      const unload = vi.fn()
+      const host = makeHost({ inactivityTtlMs: 1000, unload })
+      host.ensure()
+      host.setPhase('ready')
+
+      let releaseGate!: () => void
+      const gate = new Promise<void>((resolve) => { releaseGate = resolve })
+      const op = host.runExclusive(() => gate)
+      expect(host.isLocked).toBe(true)
+
+      await vi.advanceTimersByTimeAsync(1001)
+      expect(unload).not.toHaveBeenCalled()
+
+      releaseGate()
+      await op
+      expect(host.isLocked).toBe(false)
+      await vi.advanceTimersByTimeAsync(1001)
+      expect(unload).toHaveBeenCalledTimes(1)
+
+      host.terminate()
+    })
+
+    it('never arms the timer when TTL is disabled', async () => {
+      const unload = vi.fn()
+      const host = makeHost({ inactivityTtlMs: null, unload })
+      host.ensure()
+      host.setPhase('ready')
+      host.allocate('m', 100)
+
+      await vi.advanceTimersByTimeAsync(60 * 60 * 1000)
+      expect(unload).not.toHaveBeenCalled()
+      expect(host.phase).toBe('ready')
+
+      host.terminate()
+    })
+
+    it('unloadWorker is a no-op unless ready and unlocked', async () => {
+      const unload = vi.fn()
+      const host = makeHost({ inactivityTtlMs: null, unload })
+      host.ensure()
+
+      expect(await host.unloadWorker()).toBe(false)
+      host.setPhase('busy')
+      expect(await host.unloadWorker()).toBe(false)
+      expect(unload).not.toHaveBeenCalled()
+
+      host.terminate()
+    })
   })
 
   describe('oOM circuit breaker', () => {

@@ -54,12 +54,14 @@ export {
 } from './gpu-resource-coordinator'
 export type {
   AllocationToken,
+  EvictionHandler,
   GPUResourceCoordinator,
   GPUResourceUsage,
   MemoryPressureLevel,
 } from './gpu-resource-coordinator'
 export {
   createGpuWorkerHost,
+  DEFAULT_INACTIVITY_TTL_MS,
 } from './gpu-worker-host'
 export type {
   GpuWork,
