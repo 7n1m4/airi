@@ -1,4 +1,4 @@
-import { defineStore } from 'pinia'
+import { acceptHMRUpdate, defineStore } from 'pinia'
 
 import { useChatOrchestratorStore } from '../chat'
 import { useAutonomousArtistryStore } from '../modules/artistry-autonomous'
@@ -25,3 +25,12 @@ export const useChatMaintenanceStore = defineStore('chat-maintenance', () => {
     cleanupMessages,
   }
 })
+
+// Pinia HMR accept boundary. Deliberately NO dispose ledger: this module owns
+// no timers, channels, or workers (verified — no setInterval/BroadcastChannel;
+// the only timeout in chat/ is input-bridge's self-clearing ack timer), so
+// there is no prune interval to drain despite the briefing. Pure delegation
+// transfers cleanly. No-op in production (import.meta.hot is undefined).
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useChatMaintenanceStore, import.meta.hot))
+}

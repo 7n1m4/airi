@@ -15,7 +15,7 @@
  * surface) and reads the same grounding-extension flag added in airi-card.ts.
  */
 
-import { defineStore } from 'pinia'
+import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 interface SalienceTurnMetrics {
@@ -152,3 +152,12 @@ export const useChatSalienceStore = defineStore('chat-salience', () => {
     reset,
   }
 })
+
+// Pinia HMR accept boundary. Deliberately NO epoch guard: probeTurn
+// short-circuits (returns null) before its first await while the RWKV gate is
+// force-disabled, so there is no live async work to abandon — refs transfer
+// via state patching. If the gate is re-enabled, add a Strategy-C epoch check
+// after the adapter awaits. No-op in production (import.meta.hot is undefined).
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useChatSalienceStore, import.meta.hot))
+}
