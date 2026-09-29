@@ -644,6 +644,11 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     return await client.readFile(relPath, encoding)
   }
 
+  async function writeRemoteFile(relPath: string, content: string | Blob | Uint8Array, encoding?: 'utf-8' | 'base64', providerOverride?: string) {
+    const client = getActiveClient(providerOverride)
+    return await client.writeFile(relPath, content, encoding)
+  }
+
   function normalizeStorageKey(fullKey: string): string | null {
     if (fullKey.startsWith('local:airi-sync-queue:') || fullKey.startsWith('local:airi-sync-queue/'))
       return null
@@ -3732,6 +3737,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     fetchRemoteDisplayModelsManifest,
     downloadSpecificModel,
     readRemoteFile,
+    writeRemoteFile,
     resolveConflict,
     loadConflicts,
     initializeFromLocalBackup,
