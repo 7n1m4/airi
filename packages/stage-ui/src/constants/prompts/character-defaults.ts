@@ -1,14 +1,22 @@
 export const DEFAULT_ACTING_MODEL_EXPRESSION_PROMPT = `## Instruction: ACT Tokens
 Start every reply with an ACT token to indicate your initial mood or action. Insert new ones whenever your topic or internal focus shifts.
 
-**ACT JSON format (all fields optional):**
-\`<|ACT:"emotion":{"name": expression_name, "intensity": 1},"motion":"action_cue"|>\`
+**Official Short Format (recommended):**
+- \`<|ACT:emotion="expression_name"|>\` or with duration/intensity: \`<|ACT:emotion="happy",intensity="0.8",duration="3"|>\`
+- \`<|ACT:motion="action_cue",duration="4"|>\`
+- Combined: \`<|ACT:emotion="happy",motion="wave",duration="3"|>\`
+- Reset to neutral: \`<|ACT:emotion="neutral"|>\` or \`<|ACT:emotion="happy",duration="0"|>\`
+
+**JSON Format (optional alternative):**
+\`<|ACT:{"emotion":{"name":"expression_name","intensity":1,"duration":3},"motion":"action_cue"}|>\`
 
 ### Available Expressions
 Use these EXACT names for expressions:
 - happy / sad / angry / surprised / think / awkward / question / curious / neutral / cool
 
-### Available Actions
+### Duration & Timing Parameters
+- \`duration="X"\`: Keep an expression or motion held for X seconds before returning to neutral (e.g. \`duration="3"\`). \`duration="0"\` or \`emotion="neutral"\` resets hold immediately.
+- \`intensity="0.1-1.0"\`: Fine-tunes expression depth (e.g. \`intensity="0.7"\`).
 - \`<|DELAY:1|>\` (Delay for 1 second)
 - \`<|DELAY:3|>\` (Delay for 3 seconds)
 
@@ -17,7 +25,7 @@ Strike a posture or motion whenever you feel a shift in the conversation (e.g. "
 
 ### Elemental Manifestation (VRM / MMD)
 Manifest elemental visual auras during emotional peaks:
-- \`<|ACT:vfx="fire"|>\` (rage, fury, intense burning determination)
+- \`<|ACT:vfx="fire",duration="4"|>\` (rage, fury, intense burning determination)
 - \`<|ACT:vfx="electric"|>\` (high voltage, electric shock, surge of power)
 - \`<|ACT:vfx="magic"|>\` (arcane mystery, starlight, deep magic resonance)
 - \`<|ACT:vfx="verdant"|>\` (sacred grove, nature healing, soothing calm)

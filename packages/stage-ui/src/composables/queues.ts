@@ -26,8 +26,20 @@ export function useSpecialTokenQueue(emotionsQueue: UseQueueReturn<EmotionPayloa
     return Math.min(1, Math.max(0, value))
   }
 
+  const normalizeDuration = (value: unknown): number | undefined => {
+    if (typeof value === 'number' && !Number.isNaN(value) && value > 0)
+      return value
+    if (typeof value === 'string') {
+      const parsed = Number.parseFloat(value)
+      if (!Number.isNaN(parsed) && parsed > 0)
+        return parsed
+    }
+    return undefined
+  }
+
   function extractEmotions(payload: any): EmotionPayload[] {
     const results: EmotionPayload[] = []
+    const globalDuration = normalizeDuration(payload?.duration)
 
     // 1. Emotion object or string
     if (payload?.emotion && typeof payload.emotion === 'object' && !Array.isArray(payload.emotion)) {
@@ -35,14 +47,15 @@ export function useSpecialTokenQueue(emotionsQueue: UseQueueReturn<EmotionPayloa
         const normalized = normalizeEmotionName(payload.emotion.name)
         if (normalized) {
           const intensity = normalizeIntensity(payload.emotion.intensity)
-          results.push({ name: normalized, intensity })
+          const duration = normalizeDuration(payload.emotion.duration) ?? globalDuration
+          results.push({ name: normalized, intensity, duration })
         }
       }
     }
     else if (typeof payload?.emotion === 'string') {
       const normalized = normalizeEmotionName(payload.emotion)
       if (normalized) {
-        results.push({ name: normalized, intensity: 1 })
+        results.push({ name: normalized, intensity: 1, duration: globalDuration })
       }
     }
 
@@ -50,7 +63,7 @@ export function useSpecialTokenQueue(emotionsQueue: UseQueueReturn<EmotionPayloa
     if (typeof payload?.motion === 'string') {
       const normalized = normalizeEmotionName(payload.motion)
       if (normalized && !results.some(r => r.name === normalized)) {
-        results.push({ name: normalized, intensity: 1 })
+        results.push({ name: normalized, intensity: 1, duration: globalDuration })
       }
     }
 
@@ -59,7 +72,7 @@ export function useSpecialTokenQueue(emotionsQueue: UseQueueReturn<EmotionPayloa
     if (typeof vfxVal === 'string') {
       const normalized = normalizeEmotionName(vfxVal)
       if (normalized && !results.some(r => r.name === normalized)) {
-        results.push({ name: normalized, intensity: 1 })
+        results.push({ name: normalized, intensity: 1, duration: globalDuration })
       }
     }
 
@@ -90,17 +103,21 @@ export function useSpecialTokenQueue(emotionsQueue: UseQueueReturn<EmotionPayloa
       }
     }
 
-    // Attempt 3: Regex fallback for raw key-value pairs
+    // Attempt 3: Regex fallback for raw key-value pairs (short-form)
     if (emotions.length === 0) {
+      const durationMatch = /"?duration"?\s*[:=]\s*(?:"([^"]+)"|'([^']+)'|([\d.]+))/i.exec(payloadText)
+      const parsedDuration = durationMatch ? normalizeDuration(durationMatch[1] || durationMatch[2] || durationMatch[3]) : undefined
+
+      const intensityMatch = /"?intensity"?\s*[:=]\s*(?:"([^"]+)"|'([^']+)'|([\d.]+))/i.exec(payloadText)
+      const parsedIntensity = intensityMatch ? normalizeIntensity(Number.parseFloat(intensityMatch[1] || intensityMatch[2] || intensityMatch[3])) : 1
+
       const emotionMatch = /"?(?:emotion|motion|vfx|aura)"?\s*[:=]\s*(?:\{?[\s\S]*?"name"\s*[:=]\s*)?(?:"([^"]+)"|'([^']+)'|([^"}\s,]+))/gi
       let m
       while ((m = emotionMatch.exec(payloadText)) !== null) {
         const name = m[1] || m[2] || m[3]
         const normalized = normalizeEmotionName(name)
         if (normalized && !emotions.some(e => e.name === normalized)) {
-          const intensityMatch = /"?intensity"?\s*[:=]\s*([\d.]+)/i.exec(payloadText)
-          const intensity = intensityMatch ? normalizeIntensity(Number.parseFloat(intensityMatch[1])) : 1
-          emotions.push({ name: normalized, intensity })
+          emotions.push({ name: normalized, intensity: parsedIntensity, duration: parsedDuration })
         }
       }
     }

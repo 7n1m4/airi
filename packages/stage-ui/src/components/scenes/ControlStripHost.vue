@@ -239,21 +239,22 @@ const emotionsQueue = createQueue<EmotionPayload>({
     async (ctx) => {
       const emotionName = ctx.data.name
       const intensity = ctx.data.intensity
+      const duration = ctx.data.duration
 
       // Forward ACT emotion cues to Stage-Mate sidecar if enabled
       if (stageMateEnabled.value && isElectron.value) {
         import('@proj-airi/electron-vueuse').then(({ useElectronEventaInvoke }) => {
           import('@proj-airi/stage-shared').then(({ electronStageMateTriggerExpression }) => {
             const triggerExpr = useElectronEventaInvoke(electronStageMateTriggerExpression)
-            triggerExpr({ name: emotionName, weight: intensity, durationMs: 2500 })
+            triggerExpr({ name: emotionName, weight: intensity, durationMs: (duration ?? 2.5) * 1000 })
           })
         }).catch(() => {})
       }
 
       if (stageModelRenderer.value === 'vrm') {
-        debug('[Stage] VRM emotion/motion processing (standalone window active):', { name: emotionName, intensity: ctx.data.intensity })
+        debug('[Stage] VRM emotion/motion processing (standalone window active):', { name: emotionName, intensity: ctx.data.intensity, duration })
         if (emotionName === 'fire' || emotionName === 'electric' || emotionName === 'magic' || emotionName === 'verdant') {
-          vrmStore.triggerVfx(emotionName, 4.0)
+          vrmStore.triggerVfx(emotionName, duration ?? 4.0)
         }
 
         const matchedOption = customVrmAnimationsStore.animationOptions.find(opt =>
@@ -272,10 +273,10 @@ const emotionsQueue = createQueue<EmotionPayload>({
       else if (stageModelRenderer.value === 'live2d') {
         const emotionName = ctx.data.name
         const intensity = ctx.data.intensity
-        debug('[Stage] Live2D emotion processing:', { name: emotionName, intensity })
+        debug('[Stage] Live2D emotion processing:', { name: emotionName, intensity, duration })
 
         // Delegate to store (handles mappings, name-matched fallbacks, and robust resets)
-        const triggered = live2dStore.triggerEmotion(emotionName, intensity)
+        const triggered = live2dStore.triggerEmotion(emotionName, intensity, duration)
         if (!triggered) {
           // Final fallback: try motion mapping
           const motionGroup = (EMOTION_EmotionMotionName_value as any)[emotionName]

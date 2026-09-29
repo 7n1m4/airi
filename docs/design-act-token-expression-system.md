@@ -4,12 +4,23 @@ The AIRI ACT system lets the AI character express emotions in real-time via spec
 
 ## Token Format
 
+AIRI supports two primary ACT token formats:
+
+### Official Short Format (Recommended)
+- `<|ACT:emotion="happy",duration="3"|>`
+- `<|ACT:motion="wave",duration="4"|>`
+- Combined: `<|ACT:emotion="happy",motion="wave",duration="3"|>`
+- Immediate Reset: `<|ACT:emotion="neutral"|>` or `duration="0"`
+- Timed Delays: `<|DELAY:2|>`
+- Elemental VFX: `<|ACT:vfx="fire",duration="4"|>`
+
+### JSON Chaining Format (Alternative)
 ```
-<|ACT:"emotion":{"name":"heart","intensity":1},"motion":"action cue"|>
+<|ACT:{"emotion":{"name":"heart","intensity":1,"duration":3},"motion":"action cue"}|>
 <|DELAY:1|>
 ```
 
-The parser is resilient: it attempts strict JSON, then wraps bare key-value pairs in `{}`, then falls back to regex extraction.
+The parser in `queues.ts` extracts `name`, `intensity`, and `duration` with regex and JSON fallbacks.
 
 ## Pipeline
 

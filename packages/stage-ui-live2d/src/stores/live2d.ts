@@ -28,6 +28,7 @@ interface BroadcastChannelEventTriggerEmotion {
   type: 'live2d-trigger-emotion'
   name: string
   intensity: number
+  duration?: number
 }
 
 export const defaultModelParameters = {
@@ -59,7 +60,7 @@ export const useLive2d = defineStore('live2d', () => {
   const { post, data } = useBroadcastChannel<BroadcastChannelEvents, BroadcastChannelEvents>({ name: 'airi-stores-stage-ui-live2d' })
   const shouldUpdateViewHooks = ref(new Set<(reason?: string) => void>())
   const triggerMotionHooks = ref(new Set<(group: string, index?: number) => void>())
-  const triggerEmotionHooks = ref(new Set<(name: string, intensity: number) => void>())
+  const triggerEmotionHooks = ref(new Set<(name: string, intensity: number, duration?: number) => void>())
   const activeEmotionTimers = ref<Record<string, any>>({})
   const activeEmotionResets = ref<Record<string, () => void>>({})
 
@@ -127,7 +128,7 @@ export const useLive2d = defineStore('live2d', () => {
     }
   }
 
-  const onTriggerEmotion = (hook: (name: string, intensity: number) => void) => {
+  const onTriggerEmotion = (hook: (name: string, intensity: number, duration?: number) => void) => {
     triggerEmotionHooks.value.add(hook)
     return () => {
       triggerEmotionHooks.value.delete(hook)
@@ -179,8 +180,8 @@ export const useLive2d = defineStore('live2d', () => {
       triggerMotionHooks.value.forEach(hook => hook(resolvedGroup, resolvedIndex))
     }
     else if (event?.type === 'live2d-trigger-emotion') {
-      triggerEmotionHooks.value.forEach(hook => hook(event.name, event.intensity))
-      executeTriggerEmotion(event.name, event.intensity)
+      triggerEmotionHooks.value.forEach(hook => hook(event.name, event.intensity, event.duration))
+      executeTriggerEmotion(event.name, event.intensity, event.duration)
     }
   })
 
@@ -220,7 +221,20 @@ export const useLive2d = defineStore('live2d', () => {
     shouldUpdateView()
   }
 
-  function executeTriggerEmotion(emotionKey: string, intensity: number = 1) {
+  function executeTriggerEmotion(emotionKey: string, intensity: number = 1, duration?: number) {
+    // If neutral or duration 0 requested, immediately flush and reset all active emotions
+    if (emotionKey.toLowerCase() === 'neutral' || duration === 0) {
+      for (const fileName of Object.keys(activeEmotionResets.value)) {
+        if (activeEmotionTimers.value[fileName]) {
+          clearTimeout(activeEmotionTimers.value[fileName])
+          delete activeEmotionTimers.value[fileName]
+        }
+        activeEmotionResets.value[fileName]?.()
+        delete activeEmotionResets.value[fileName]
+      }
+      return true
+    }
+
     // 0. Direct match against available expressions fileName
     let targetFileNames = availableExpressions.value
       .filter(e => e.fileName === emotionKey || e.fileName.toLowerCase().endsWith(emotionKey.toLowerCase()) || emotionKey.toLowerCase().endsWith(e.fileName.toLowerCase()))
@@ -307,10 +321,22 @@ export const useLive2d = defineStore('live2d', () => {
         const originalValues: Record<string, number> = {}
         for (const param of expEntry.data.Parameters) {
           const id = param.Id || param.id
-          const value = (param.Value ?? param.value) * intensity
-          if (id !== undefined && value !== undefined) {
-            originalValues[id] = modelParameters.value[id] ?? 0
-            modelParameters.value[id] = value
+          const rawVal = param.Value ?? param.value
+          const blend = param.Blend || param.blend || 'Overwrite'
+          if (id !== undefined && rawVal !== undefined) {
+            const baseVal = modelParameters.value[id] ?? 0
+            originalValues[id] = baseVal
+
+            // Live2D Cubism blend mode evaluation: Add, Multiply, Overwrite
+            if (blend === 'Add') {
+              modelParameters.value[id] = baseVal + (rawVal * intensity)
+            }
+            else if (blend === 'Multiply') {
+              modelParameters.value[id] = baseVal * (rawVal * intensity)
+            }
+            else {
+              modelParameters.value[id] = rawVal * intensity
+            }
           }
         }
 
@@ -328,7 +354,8 @@ export const useLive2d = defineStore('live2d', () => {
         }
 
         activeEmotionResets.value[fileName] = reset
-        activeEmotionTimers.value[fileName] = setTimeout(reset, 2000)
+        const timerDuration = Math.max(0.1, duration ?? 2) * 1000
+        activeEmotionTimers.value[fileName] = setTimeout(reset, timerDuration)
       }
     }
 
@@ -356,11 +383,11 @@ export const useLive2d = defineStore('live2d', () => {
     onTriggerMotion,
     triggerMotion,
     onTriggerEmotion,
-    triggerEmotion(emotionKey: string, intensity: number = 1) {
-      console.info('[Live2D Store] Posting trigger-emotion event via BroadcastChannel:', { emotionKey, intensity })
-      post({ type: 'live2d-trigger-emotion', name: emotionKey, intensity })
-      triggerEmotionHooks.value.forEach(hook => hook(emotionKey, intensity))
-      return executeTriggerEmotion(emotionKey, intensity)
+    triggerEmotion(emotionKey: string, intensity: number = 1, duration?: number) {
+      console.info('[Live2D Store] Posting trigger-emotion event via BroadcastChannel:', { emotionKey, intensity, duration })
+      post({ type: 'live2d-trigger-emotion', name: emotionKey, intensity, duration })
+      triggerEmotionHooks.value.forEach(hook => hook(emotionKey, intensity, duration))
+      return executeTriggerEmotion(emotionKey, intensity, duration)
     },
     resetState,
     model,

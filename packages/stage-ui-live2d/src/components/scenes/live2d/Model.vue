@@ -1309,9 +1309,19 @@ async function loadModel() {
             if (expEntry?.data?.Parameters) {
               for (const param of expEntry.data.Parameters) {
                 const id = param.Id || param.id
-                const value = param.Value ?? param.value
-                if (id !== undefined && value !== undefined) {
-                  modelParameters.value[id] = value
+                const rawVal = param.Value ?? param.value
+                const blend = param.Blend || param.blend || 'Overwrite'
+                if (id !== undefined && rawVal !== undefined) {
+                  const baseVal = modelParameters.value[id] ?? 0
+                  if (blend === 'Add') {
+                    modelParameters.value[id] = baseVal + (rawVal * weight)
+                  }
+                  else if (blend === 'Multiply') {
+                    modelParameters.value[id] = baseVal * (rawVal * weight)
+                  }
+                  else {
+                    modelParameters.value[id] = rawVal * weight
+                  }
                 }
               }
             }
@@ -1632,9 +1642,19 @@ watch(activeExpressions, (newExps, oldExps) => {
       if (expEntry?.data?.Parameters) {
         for (const param of expEntry.data.Parameters) {
           const id = param.Id || param.id
-          const value = param.Value ?? param.value
-          if (id !== undefined && value !== undefined) {
-            modelParameters.value[id] = value
+          const rawVal = param.Value ?? param.value
+          const blend = param.Blend || param.blend || 'Overwrite'
+          if (id !== undefined && rawVal !== undefined) {
+            const baseVal = modelParameters.value[id] ?? 0
+            if (blend === 'Add') {
+              modelParameters.value[id] = baseVal + (rawVal * weight)
+            }
+            else if (blend === 'Multiply') {
+              modelParameters.value[id] = baseVal * (rawVal * weight)
+            }
+            else {
+              modelParameters.value[id] = rawVal * weight
+            }
           }
         }
       }
