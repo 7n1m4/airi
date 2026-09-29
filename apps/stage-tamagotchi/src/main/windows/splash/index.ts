@@ -41,7 +41,7 @@ export async function setupSplashWindowManager(): Promise<SplashWindowManager> {
     height,
     x: initialX,
     y: initialY,
-    show: false,
+    show: true,
     icon,
     webPreferences: {
       preload: resolve(dirname(fileURLToPath(import.meta.url)), '../preload/index.cjs'),
@@ -62,7 +62,10 @@ export async function setupSplashWindowManager(): Promise<SplashWindowManager> {
       window.show()
   })
 
-  await load(window, withHashRoute(baseUrl(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'renderer')), '/splash'))
+  void load(window, withHashRoute(baseUrl(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'renderer')), '/splash'))
+    .catch((err) => {
+      console.error('[@proj-airi/stage-tamagotchi] [Splash] Failed to load splash route:', err)
+    })
 
   return {
     getWindow: () => (window.isDestroyed() ? undefined : window),

@@ -313,6 +313,7 @@ export function setupActorStageWindowManager(params: {
       windowDisposers = []
       if (currentWindow === window)
         currentWindow = undefined
+      inFlightEnsurePromise = null
     }
 
     window.on('resize', onResize)
@@ -336,9 +337,9 @@ export function setupActorStageWindowManager(params: {
       () => window.removeListener('closed', onClosed),
     ]
 
+    currentWindow = window
     await load(window, withHashRoute(baseUrl(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'renderer')), '/actor'))
 
-    currentWindow = window
     for (const listener of createdListeners) {
       try {
         listener(window)
@@ -349,6 +350,8 @@ export function setupActorStageWindowManager(params: {
     return window
   }
 
+  let inFlightEnsurePromise: Promise<BrowserWindow | null> | null = null
+
   async function ensureWindow(): Promise<BrowserWindow | null> {
     if (isStageDisabledByFlag()) {
       console.info('[@proj-airi/stage-tamagotchi] [Stage] WebGL Actor Stage disabled via --disable-webgl-stage flag.')
@@ -356,7 +359,21 @@ export function setupActorStageWindowManager(params: {
     }
     if (currentWindow && !currentWindow.isDestroyed())
       return currentWindow
-    return await createStageWindow()
+
+    if (inFlightEnsurePromise)
+      return inFlightEnsurePromise
+
+    inFlightEnsurePromise = (async () => {
+      try {
+        const window = await createStageWindow()
+        return window
+      }
+      finally {
+        inFlightEnsurePromise = null
+      }
+    })()
+
+    return inFlightEnsurePromise
   }
 
   return {
@@ -431,6 +448,7 @@ export function setupActorStageWindowManager(params: {
         currentWindow.destroy()
       }
       currentWindow = undefined
+      inFlightEnsurePromise = null
     },
   }
 }

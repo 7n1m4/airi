@@ -71,6 +71,8 @@ export interface StartupSnapshot {
 
 // Renderer (Control Strip or Actor Stage) reports a milestone update to Main.
 export const electronSplashReportMilestone = defineInvokeEventa<void, StartupMilestonePayload>('eventa:invoke:electron:splash:report-milestone')
+// Splash window queries Main for the current aggregated startup snapshot.
+export const electronSplashGetSnapshot = defineInvokeEventa<StartupSnapshot, void>('eventa:invoke:electron:splash:get-snapshot')
 // Main broadcasts the aggregated startup snapshot to the Splash window.
 export const electronSplashStateChanged = defineEventa<StartupSnapshot>('eventa:event:electron:splash:state-changed')
 // Splash notifies Main that its exit fade completed and it can be destroyed.

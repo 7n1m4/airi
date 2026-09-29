@@ -396,8 +396,6 @@ onMounted(async () => {
 
   if (isMainWindow.value) {
     proactivityStore.registerTools(builtinTools)
-    proactivityStore.startHeartbeatLoop()
-    screenWatcherStore.restartWatcher()
   }
 
   logStep('Initializing Analytics & Card stores')
@@ -431,6 +429,16 @@ onMounted(async () => {
   characterOrchestratorStore.initialize()
   logStep('App Startup Complete')
   // Startup initialization complete
+
+  if (isMainWindow.value) {
+    // NOTICE: Defer heavy continuous sensory telemetry (ONNX / WebGPU) and
+    // screen watching until after startup completes and windows are revealed.
+    // Otherwise sensor model compiles block the main thread for 15-20s during the splash phase.
+    setTimeout(() => {
+      proactivityStore.startHeartbeatLoop()
+      screenWatcherStore.restartWatcher()
+    }, 1000)
+  }
 
   // Expose stage provider definitions to plugin host APIs.
   defineInvokeHandler(context.value, pluginProtocolListProviders, async () => listProvidersForPluginHost())

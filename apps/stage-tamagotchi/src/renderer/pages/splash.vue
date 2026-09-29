@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n'
 
 import {
   electronSplashDismiss,
+  electronSplashGetSnapshot,
   electronSplashReportMilestone,
   electronSplashStateChanged,
   electronStageRelease,
@@ -20,6 +21,7 @@ const { version } = useBuildInfo()
 const reportMilestone = useElectronEventaInvoke(electronSplashReportMilestone)
 const dismissSplash = useElectronEventaInvoke(electronSplashDismiss)
 const releaseStage = useElectronEventaInvoke(electronStageRelease)
+const getSnapshot = useElectronEventaInvoke(electronSplashGetSnapshot)
 
 const snapshot = ref<StartupSnapshot | null>(null)
 const exiting = ref(false)
@@ -80,6 +82,18 @@ async function handleContinueWithoutAvatar() {
   await releaseStage().catch(() => {})
 }
 
+async function fetchSnapshot() {
+  try {
+    const snap = await getSnapshot()
+    if (snap) {
+      snapshot.value = snap
+    }
+  }
+  catch (err) {
+    console.error('[@proj-airi/stage-tamagotchi] [Splash] Failed to query initial snapshot:', err)
+  }
+}
+
 const context = useElectronEventaContext()
 let stateListenerAttached = false
 watch(context, (ctx) => {
@@ -90,6 +104,7 @@ watch(context, (ctx) => {
     if (event?.body)
       snapshot.value = event.body
   })
+  void fetchSnapshot()
 }, { immediate: true })
 
 // NOTICE: Zero-click auto-close. Hold "Ready!" so the user perceives
@@ -110,9 +125,11 @@ watch(isReady, (ready) => {
   }, 300)
 })
 
-onMounted(() => {
-  // NOTICE: Watchdog marks the stalled milestone failed via the existing
-  // report contract. Main rebroadcasts, which flips this view into recovery.
+function resetWatchdog() {
+  if (watchdogTimer) {
+    clearTimeout(watchdogTimer)
+    watchdogTimer = undefined
+  }
   watchdogTimer = setTimeout(() => {
     const snap = snapshot.value
     if (!snap || snap.ready || snap.failed)
@@ -126,7 +143,23 @@ onMounted(() => {
         error: t('stage.startup.timeout'),
       }).catch(() => {})
     }
-  }, 10000)
+  }, 15000)
+}
+
+watch(snapshot, (snap) => {
+  if (!snap || snap.ready || snap.failed) {
+    if (watchdogTimer) {
+      clearTimeout(watchdogTimer)
+      watchdogTimer = undefined
+    }
+    return
+  }
+  resetWatchdog()
+})
+
+onMounted(() => {
+  void fetchSnapshot()
+  resetWatchdog()
 })
 
 onUnmounted(() => {

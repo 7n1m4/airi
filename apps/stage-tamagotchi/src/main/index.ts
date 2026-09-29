@@ -45,6 +45,7 @@ import {
   electronShowToast,
   electronShowToastEvent,
   electronSplashDismiss,
+  electronSplashGetSnapshot,
   electronSplashReportMilestone,
   electronSplashStateChanged,
   electronStageEnsure,
@@ -310,6 +311,52 @@ app.whenReady().then(async () => {
     }
   })
 
+  // Start splash window immediately (<100ms) so OS paints the frameless card
+  // and index.html pre-bootstrap CSS before heavy DI or Vite compilation.
+  const splashWindowManager = await setupSplashWindowManager()
+
+  const context = createContext(ipcMain).context
+
+  // NOTICE: Coordinated startup splash relay (Main is the single authority).
+  // The milestone table lives here because Pinia stores are per-window memory
+  // and cannot be shared between the Splash and Control Strip renderers.
+  const STARTUP_MILESTONE_IDS: StartupMilestoneId[] = ['core-services', 'sync-engine', 'character-card', 'stage-actor']
+  const startupMilestones = new Map<StartupMilestoneId, StartupResourceState>(
+    STARTUP_MILESTONE_IDS.map(id => [id, { id, status: 'queued' as StartupMilestoneStatus }]),
+  )
+  let splashDismissed = false
+
+  function buildStartupSnapshot(): StartupSnapshot {
+    const resources = STARTUP_MILESTONE_IDS.map(id => ({ ...startupMilestones.get(id)! }))
+    const finished = resources.filter(r => r.status === 'ready' || r.status === 'skipped').length
+    return {
+      resources,
+      progress: Math.round((finished / resources.length) * 100),
+      ready: resources.length > 0 && resources.every(r => r.status === 'ready' || r.status === 'skipped'),
+      failed: resources.find(r => r.status === 'failed'),
+    }
+  }
+
+  function emitStartupSnapshot() {
+    const splashWin = splashWindowManager.getWindow()
+    if (!splashWin || splashWin.isDestroyed())
+      return
+    const { context: splashContext, dispose } = createContext(ipcMain, splashWin)
+    splashContext.emit(electronSplashStateChanged, buildStartupSnapshot())
+    dispose()
+  }
+
+  defineInvokeHandler(context, electronSplashGetSnapshot, async () => {
+    return buildStartupSnapshot()
+  })
+
+  defineInvokeHandler(context, electronSplashReportMilestone, async (payload) => {
+    if (!payload || !STARTUP_MILESTONE_IDS.includes(payload.id))
+      return
+    startupMilestones.set(payload.id, { id: payload.id, status: payload.status, error: payload.error })
+    emitStartupSnapshot()
+  })
+
   injeca.setLogger(createLoggLogger(useLogg('injeca').useGlobalConfig()))
 
   const appConfig = injeca.provide('configs:app', () => createGlobalAppConfig())
@@ -380,9 +427,8 @@ app.whenReady().then(async () => {
     build: ({ dependsOn }) => setupActorStageWindowManager(dependsOn),
   })
 
-  // NOTICE: The splash shows immediately and owns the coordinated reveal.
-  // It is registered before the main window so it paints first.
-  const splashWindow = injeca.provide('windows:splash', () => setupSplashWindowManager())
+  // NOTICE: The splash window was created immediately at t=0ms above.
+  const splashWindow = injeca.provide('windows:splash', () => splashWindowManager)
 
   const mainWindow = injeca.provide('windows:main', {
     dependsOn: { settingsWindow, stageWindow, chatWindow, widgetsManager, noticeWindow, beatSync, autoUpdater, serverChannel, mcpStdioManager, i18n, onboardingWindowManager, appConfig },
@@ -415,7 +461,6 @@ app.whenReady().then(async () => {
   injeca.invoke({
     dependsOn: { mainWindow, tray, serverChannel, pluginHost, mcpStdioManager, onboardingWindow: onboardingWindowManager, appConfig, i18n, captionWindow, stageWindow, splashWindow, chatWindow, customizerWindow, beatSync },
     callback: (deps) => {
-      const context = createContext(ipcMain).context
       createServerChannelService({ serverChannel: deps.serverChannel })
       createMcpServersService({ context, manager: deps.mcpStdioManager })
       createI18nService({ context, window: deps.mainWindow, i18n: deps.i18n })
@@ -547,41 +592,6 @@ app.whenReady().then(async () => {
       })
       defineInvokeHandler(context, electronGetStageDisabled, async () => isStageDisabledByFlag())
 
-      // NOTICE: Coordinated startup splash relay (Main is the single authority).
-      // The milestone table lives here because Pinia stores are per-window memory
-      // and cannot be shared between the Splash and Control Strip renderers.
-      const STARTUP_MILESTONE_IDS: StartupMilestoneId[] = ['core-services', 'sync-engine', 'character-card', 'stage-actor']
-      const startupMilestones = new Map<StartupMilestoneId, StartupResourceState>(
-        STARTUP_MILESTONE_IDS.map(id => [id, { id, status: 'queued' as StartupMilestoneStatus }]),
-      )
-      let splashDismissed = false
-
-      function buildStartupSnapshot(): StartupSnapshot {
-        const resources = STARTUP_MILESTONE_IDS.map(id => ({ ...startupMilestones.get(id)! }))
-        const finished = resources.filter(r => r.status === 'ready' || r.status === 'skipped').length
-        return {
-          resources,
-          progress: Math.round((finished / resources.length) * 100),
-          ready: resources.length > 0 && resources.every(r => r.status === 'ready' || r.status === 'skipped'),
-          failed: resources.find(r => r.status === 'failed'),
-        }
-      }
-
-      function emitStartupSnapshot() {
-        const splashWin = deps.splashWindow.getWindow()
-        if (!splashWin || splashWin.isDestroyed())
-          return
-        const { context: splashContext, dispose } = createContext(ipcMain, splashWin)
-        splashContext.emit(electronSplashStateChanged, buildStartupSnapshot())
-        dispose()
-      }
-
-      defineInvokeHandler(context, electronSplashReportMilestone, async (payload) => {
-        if (!payload || !STARTUP_MILESTONE_IDS.includes(payload.id))
-          return
-        startupMilestones.set(payload.id, { id: payload.id, status: payload.status, error: payload.error })
-        emitStartupSnapshot()
-      })
       defineInvokeHandler(context, electronStageEnsure, async () => {
         const window = await deps.stageWindow.ensureWindow()
         // Late ensures (card switches after the splash is gone) show immediately.
