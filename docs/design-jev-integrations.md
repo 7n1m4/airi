@@ -155,8 +155,10 @@ flowchart TD
 
 The remaining unintegrated domains from the initial proposal are preserved in [`docs/proposal-jev-integration.md`](./proposal-jev-integration.md) for future promotion:
 
-1. **Domain A: Arcade Room Retro Gaming & Show Harness**:
-   - ~10 Hz asynchronous macro action picker (`Choice`) with local geometry steering for JS-DOS / ViZDoom, plus dynamic "backseat gaming" standing orders injected from chat.
+1. **Domain A: Arcade Room Retro Gaming, Catalog Triage & Self-Synthesizing Copilot**:
+   - Detailed Specification: [`proposal-generic-gaming-agent-runtime.md`](./proposal-generic-gaming-agent-runtime.md) (Section 5.4).
+   - **Catalog Triage**: Offline Jev classification over the 8,900+ DOS catalog recommending Path A (System-2 VLM Strategy) vs Path B (System-1 Reflex).
+   - **Two-Tier Semantic Experience**: System 2 compiles a sandboxed JavaScript "Mini Program" from human demonstration traces, commanding System 1 (Laya Local / Jev ~100ms) with adaptive lookahead latency compensation and dynamic chat standing orders.
 2. **Domain F: Dual-Duty Ninja-Swap Interceptor**:
    - Single-pass merged Jev evaluation (~110ms) reconciling authoring-time whitelists with live sentence strides to simultaneously inject avatar blendshapes (`<|ACT:...|>`) and speech inflection tags (`[whisper]`, `[sigh]`) with 100% voice-face emotional synchronization.
 3. **Domain G: Memory Token Compaction & Pre-Summary Filter**:

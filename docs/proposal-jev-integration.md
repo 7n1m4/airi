@@ -146,6 +146,10 @@ Its architecture establishes four crucial design patterns for AIRI's Arcade Room
    - Problem: AIRI should not speak over tense firefights or react to static corridors.
    - Query: `"Did a clutch victory, fatal mistake, or sudden ambush just occur?"`
    - If probability > 0.85, game audio ducks via the WebAudio gain node and AIRI's speech runtime triggers contextual banter.
+6. **Cognitive Path Picker, Catalog Triage & Self-Synthesizing Mini Programs**:
+   - Canonical Architecture: [`docs/proposal-generic-gaming-agent-runtime.md`](./proposal-generic-gaming-agent-runtime.md) (Section 5.4).
+   - **Catalog Batch Curation**: Jev batch-classifies the 8,900+ preservation catalog by tempo and input space, recommending Path A (System-2 VLM Strategy) vs Path B (System-1 Reflex).
+   - **Self-Synthesized State Interpreters**: System-2 compiles high-frequency human demonstration traces (`collector.start()`) into a pure JavaScript "Mini Program", allowing Jev to execute high-speed reflexes with adaptive lookahead latency compensation without needing internal RAM symbols.
 
 ---
 

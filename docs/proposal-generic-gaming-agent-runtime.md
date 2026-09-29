@@ -191,6 +191,142 @@ The Arcade Room supports two interactive modes selectable via a toggle:
    * The cognitive harness runs in spectator mode (sampling frames every 3–5 seconds or on major state shifts via lightweight OCR).
    * AIRI acts as your live personal gaming companion, cheering your victories, gasping at near-misses, and roasting your deaths!
 
+### 5.4 The Cognitive Path Picker & Two-Tier Semantic Architecture
+
+When launching an Arcade session, users are not forced into a one-size-fits-all model. Because AIRI cannot magically extract internal RAM pointers or symbol tables from 8,000 legacy DOS binaries on the fly, the runtime decouples gaming cognition into a **Two-Tier Semantic Architecture**:
+
+```mermaid
+flowchart TD
+    Launch[User Launches DOS / Canvas Game in Arcade Room] --> CurationCheck{Catalog Jev Metadata}
+
+    CurationCheck -->|Turn-Based / Strategy / Puzzle| RecA[Path A Recommended: System 2]
+    CurationCheck -->|Arcade / Reflex / Platformer / 2D Grid| RecB[Path B Recommended: System 1]
+
+    RecA --> PathPicker{Cognitive Engine Path Picker}
+    RecB --> PathPicker
+
+    PathPicker -->|Path A: Deliberative Strategy & Puzzles| S2[System-2 Multimodal Loop\nVLM -> CoT Reasoning -> Action Plan -> Execute\nLatency: 800ms - 2,500ms]
+
+    PathPicker -->|Path B: Real-Time Reflex Copilot| S1Workflow["'Help Me Help You' Demonstration\nUser plays 15s -> Collector traces deltas & keys"]
+
+    S1Workflow --> LLMCompiler[System-2 LLM Compiler\nSynthesizes 'Mini Program' Visual State Machine Interpreter]
+
+    LLMCompiler --> S1Sandbox[60-Second Sandboxed Safety Test\nAdaptive Lookahead Cadence + Jev Choice]
+
+    S1Sandbox --> Confirm{"User Approves?"}
+    Confirm -->|Yes| PersistStore["Atomic Persistence in IndexedDB\n(local:arcade_knowledge:game_id)"]
+    Confirm -->|Refine| S1Workflow
+```
+
+#### 5.4.1 The "Semantic Experience" of Pair Gaming
+In this architecture, the user enjoys a natural, cohesive semantic relationship with their companion:
+1. **The User interacts with System 2**: You converse, strategize, and joke with AIRI's conscious persona in the backseat chat.
+2. **System 2 manages its own System 1 interface**: System 2 observes human play, diagnoses the rules of the game, writes a specialized "Mini Program" (visual state machine interpreter), and commands System 1 as its high-speed motor reflexes.
+3. **The Illusion of Unified Play**: Technically, System 2 is not executing the 100ms reflex loop directly. However, because System 2 synthesized the state machine, monitors the game's health, and chimes in with live vocal commentary, the user genuinely experiences their companion playing alongside them with authentic agency.
+
+#### 5.4.2 Doing Our Homework: Jev Catalog Batch Curation Pass
+Rather than forcing users to guess which engine suits an unfamiliar 1989 shareware title, Project AIRI applies **TypeSafe Jev** to perform an offline batch curation pass over the 8,900+ MS-DOS preservation catalog:
+- **Triage Query**: Evaluates game title, year, developer, and archive metadata into:
+  - `tempo`: `turn_based` | `real_time_reflex` | `narrative_text`
+  - `input_modality`: `keyboard_arrows` | `mouse_pointer` | `complex_keypad`
+  - `visual_architecture`: `cga_text_mode` | `vga_graphics_mode` | `vector_3d`
+- **Recommended Path Badging**:
+  - *Civilization*, *SimCity*, *Oregon Trail*, *2048*, *Sokoban* $\rightarrow$ **Recommended: Path A (System 2)**.
+  - *Nibbles*, *Digger*, *Pac-Man*, *Prince of Persia*, *Doom*, *Wolfenstein 3D* $\rightarrow$ **Recommended: Path B (System 1)**.
+- The Path Picker modal clearly highlights the recommended engine while preserving full user agency to toggle modes.
+
+---
+
+#### 5.4.3 Path A: System-2 Deliberative Strategy Engine (Existing Operational Mode)
+- **Target Games**: Turn-based strategy (*SimCity 1989*, *Civilization*), point-and-click adventures (*The Secret of Monkey Island*), numerical puzzles (*2048*).
+- **Execution Pipeline**:
+  $$\text{Canvas Frame} \xrightarrow[\text{Capture}]{<5\text{ms}} \text{VLM Reasoning (CoT)} \xrightarrow[\text{ActionPlan JSON}]{800\text{ms}-2,500\text{ms}} \text{Ghost Cursor Dispatch}$$
+- **Characteristics**: High spatial context, zero pre-configuration required, tolerates complex graphical UI palettes, authentic spoken monologues explaining moves to the user.
+
+---
+
+#### 5.4.4 Path B: System-1 High-Speed Reflex Engine (Self-Synthesizing Mini Program)
+- **Target Games**: Real-time arcade titles, 2D grid mazes, platformers, action shooters (*Nibbles*, *Digger*, *Prince of Persia*, *Doom*).
+- **The Challenge**: Querying a multimodal LLM on every frame causes 1,500ms latency ($1,000s/month), causing the player to crash instantly. Conversely, Jev is non-autoregressive and blind to raw pixels.
+- **The Solution**: The **"Help Me Help You" Demonstration & Mini Program Synthesis Workflow**.
+
+##### Step 1: The Demonstration ("Help Me Help You")
+When Path B is selected for an unmapped title, AIRI prompts:
+> *"I haven't played this one yet! Play one quick 15-second round so I can observe how the game moves and learn the rules."*
+
+1. The user clicks **Record** (invoking `collector.start()`).
+2. The user plays for 10–20 seconds using normal keyboard controls.
+3. The lightweight runtime collector samples the canvas/framebuffer at 10 Hz:
+   - Captures $80 \times 40$ binary grid deltas ($\Delta = \text{Frame}_t - \text{Frame}_{t-1}$).
+   - Records active keypresses (`['ArrowUp']`, `['ArrowLeft']`, `[' ']`).
+   - Dedupes identical resting frames.
+4. User clicks **Stop** (`collector.end()`), yielding a compact JSON trace (~20–40 KB).
+
+##### Step 2: The LLM Compiler (Synthesizing the "Mini Program")
+The System-2 LLM receives the raw trace JSON and functions as a **metaprogramming compiler**:
+1. **Entity & Velocity Attribution**:
+   - The pixel that turns to `1` each frame without an erasing counterpart is the **Agent Head**.
+   - $\vec{v} = \text{Head}_t - \text{Head}_{t-1}$ determines the cardinal **Heading Vector** (`UP`, `DOWN`, `LEFT`, `RIGHT`).
+   - Isolated pixels appearing without movement are identified as **Targets/Objectives** (e.g. food numbers).
+   - Sudden multi-pixel surges in a fixed bounding box (e.g. 80 pixels appearing at rows 16–20) are classified as **Game Over / Death Modals**.
+2. **Mini Program Generation**:
+   The LLM writes a pure JavaScript visual state machine interpreter:
+   ```javascript
+   // Synthesized Game Knowledge Interpreter
+   export function extractGameState(currentGrid, lastGrid, lastState) {
+     const head = detectLeadingPixel(currentGrid, lastGrid)
+     const heading = computeVelocityVector(head, lastState?.head)
+     const obstacles = scanRadialRays(currentGrid, head, heading)
+     const target = locateNearestStaticTarget(currentGrid, head)
+
+     return {
+       snapshot: `Agent at (${head.x}, ${head.y}) moving ${heading}. Ahead: ${obstacles.ahead}. Left: ${obstacles.left}. Right: ${obstacles.right}. Target: ${target.direction} (dist: ${target.distance})`,
+       isDead: detectBoundingBoxSurge(currentGrid, [23, 16, 55, 20]),
+       head,
+       heading
+     }
+   }
+   ```
+3. **Jev Choice Schema Formulation**:
+   The LLM compiles the discrete action space with calibrated consequence framing:
+   ```json
+   {
+     "maneuver": {
+       "type": "choice",
+       "instructions": "Select the immediate steering maneuver to avoid collision and navigate toward target.",
+       "criteria": {
+         "TURN_LEFT": "Commit turn into open corridor (Safest path)",
+         "TURN_RIGHT": "Commit turn into obstacle (Fatal collision)",
+         "HOLD_STRAIGHT": "Continue straight ahead into wall (Fatal collision)"
+       }
+     }
+   }
+   ```
+
+##### Step 3: Adaptive Lookahead & Latency Compensation
+Execution latency differs fundamentally across inference backends:
+- **Laya Local (WASM / WebGPU)**: $15\text{ms} - 35\text{ms}$ RTT $\rightarrow$ 20–30 Hz execution.
+- **TypeSafe Jev (OpenRouter Alpha)**: $90\text{ms} - 150\text{ms}$ RTT $\rightarrow$ 5–10 Hz execution.
+
+To prevent overshooting obstacles while awaiting a network packet:
+1. The engine tracks the rolling round-trip time ($\tau_{\text{RTT}}$).
+2. The state extractor projects the agent's velocity vector forward by $\Delta t = \tau_{\text{RTT}}$.
+3. It asks Jev: *"At your projected position in $\tau_{\text{RTT}}$, which steering maneuver do you commit to?"*
+4. Between query ticks, the emulator executes the **Carry-Hold Pattern**, holding the last validated steering input so the game physics remain smooth and free of micro-stutter.
+
+##### Step 4: 60-Second Sandboxed Safety Test Run
+- AIRI announces: *"Got it! Let me try!"*
+- The runtime sends the initial start key (e.g. Space) and begins executing the synthesized loop.
+- **Safeguard Watchdog**:
+  - A strict **60-second execution ceiling** prevents runaway loops or unintended background consumption.
+  - Automatically suspends if unhandled exceptions occur, or when `isDead` evaluates to true.
+- Backseat advice from the chat composer (*"Watch out behind you!"*, *"Save ammo!"*) injects directly into Jev's live state snapshot in real time.
+
+##### Step 5: Permanent "Game Knowledge" Persistence
+- When the run completes, the UI prompts: *"Did Airi play well?"*
+- Upon user confirmation, the compiled Mini Program, key mappings, and Jev schema are saved atomically into IndexedDB under `local:arcade_knowledge:<game_identifier>`.
+- Any subsequent launch of that title instantly loads the Game Knowledge profile—enabling AIRI to play with instant native reflexes with zero re-calibration.
+
 ---
 
 ## 6. Subsystem Specifications
