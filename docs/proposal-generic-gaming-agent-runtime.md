@@ -150,182 +150,214 @@ Following the architecture documented in `airi-desktop-chatbox` (`references/wor
 * **Label**: `'Arcade Room'`
 * **Icon**: `'i-solar:gamepad-bold-duotone'`
 * **Code-Split Component**: `chat_arcade.vue` registered via `defineAsyncComponent` in `apps/stage-tamagotchi/src/renderer/pages/chat.vue`.
-* **Right Panel Behavior**: In `chat.vue`, `showRightPanel` is explicitly restricted to `activeSurface === 'messages'`. Selecting `'Arcade Room'` reclaims the entire window canvas width, giving optimal real estate for the game and chat split.
+* **Right Panel Behavior**: Reclaims the entire window canvas width, giving optimal real estate for the guided 5-stage setup studio and gameplay arena.
 
-### 5.2 Side-by-Side Layout Wireframe
+### 5.1 Architecture Transformation: The 5-Stage Guided Studio Lifecycle
+
+The legacy Arcade Room immediately dropped users into an unconfigured split window (65% game canvas, 35% chat panel) running a static preset, forcing catalog browsing into a cramped modal.
+
+The upgraded architecture **scraps the premature split layout in favor of a Guided 5-Stage Lifecycle**:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Stage1_Hub: Enter Arcade Room
+
+    state Stage1_Hub {
+        Full_Catalog_Grid: Full-screen Browse & Search (8,924 titles)
+        Faceted_Filters: Engine (S1/S2) • Technology Tiers (Fixed/Scroll/3D) • Genre • Controller
+        Knowledge_Dropdown: "Acquired Game Knowledge" library selector
+    }
+
+    Stage1_Hub --> Stage2_Config: User Selects Game
+
+    state Stage2_Config {
+        Engine_Pick: Recommended Engine Badge (System 1 Reflex vs System 2 Strategy)
+        Cost_Warnings: Tip & Cost Warning Callouts
+        S1_Provider: System 1 Backend (Laya Local ONNX $0 vs TypeSafe Jev Cloud)
+        S2_VLM_Provider: System 2 VLM Override
+        Persona_Select: Recommended Companion Persona (Pre-selected, editable)
+    }
+
+    Stage2_Config --> Stage3_Calibration: If New Game (No Knowledge)
+    Stage2_Config --> Stage5_ClassicArena: If Game Knowledge Already Acquired
+
+    state Stage3_Calibration {
+        Full_Viewport: Game Canvas 100% width (No Chat Sidebar yet!)
+        Airi_SpeechBubble: "Help me help you! Hit Start and play one quick 15s round!"
+        Countdown_Timer: 15s Timer & [Start Recording] Button
+        Buffer_Overlay: "Analyzing gameplay motion vectors & compiling state machine..."
+    }
+
+    Stage3_Calibration --> Stage4_Review: Recording Finished / Death Detected
+
+    state Stage4_Review {
+        Strategy_Summary: Airi explains her understanding of the rules & death conditions
+        Mini_Program_Spec: Synthesized actions & keybindings preview
+        Review_Actions: [Test 60s Trial Run] • [Re-Record] • [Approve & Save Knowledge]
+    }
+
+    Stage4_Review --> Stage5_ClassicArena: User Approves Knowledge
+
+    state Stage5_ClassicArena {
+        Game_Viewport: 65% Width Canvas running at full speed
+        Backseat_Chat: 35% Width Live Reactions & Persona Banter
+        Reflex_Driver: High-speed Laya/Jev loop driving keys in real time
+    }
+```
+
+---
+
+### 5.2 Stage 1: The Full-Screen Arcade Hub (Discovery & Curation)
+
+The default landing surface for Arcade Room is no longer an active game, but a **Full-Screen Discovery Hub**:
+
+1. **Top Header & Knowledge Selector**:
+   - Upgraded game selector on the top-left: switches from raw presets to the **"Acquired Game Knowledge" Library**, displaying games AIRI has already mastered with a `Mastered ✓` badge.
+   - Global Search input searching titles and publishers across the catalog.
+2. **Faceted Filter Tabs (Powered by the 8,924 Batch Jev Triage Dataset)**:
+   - **Cognitive Route**: `[All (8,924)]` | `[⚡ System 1 Reflex (3,627)]` | `[🧠 System 2 Strategy (4,408)]` | `[📖 Interactive Fiction (384)]`
+   - **Screen Motion Architecture**: `[Fixed Single Screen (2,720)]` | `[Scrolling 2D (1,485)]` | `[Flip-Screen (1,186)]` | `[3D Raycast (1,065)]`
+   - **Primary Genre**: `[Action]` `[Platformer]` `[Strategy]` `[RPG]` `[Shooter]` `[Puzzle]` `[Racing]`
+   - **Controller Interface**: `[Gamepad / Arrows]` `[Mouse Pointer]` `[Keyboard Typing]`
+3. **Tip & Cost Architecture Callouts**:
+   - > [!TIP]
+     > **System 1 Reflex Titles (Fixed Single Screen)**: Support automated self-synthesizing state interpreters and run locally at $0.00 cost with 15ms latency via on-device Laya ONNX.
+   - > [!WARNING]
+     > **System 2 Strategy Titles**: Depend on visual multimodal LLM reasoning on settled frames and consume vision tokens per move.
+
+---
+
+### 5.3 Stage 2: The Pre-Flight Provisioning Cockpit
+
+Selecting any game tile opens a focused provisioning sheet before booting the emulator:
+
+1. **Engine Recommendation**:
+   - Automatically highlights the triaged route (e.g. `⚡ System 1 High-Speed Reflex` for *Nibbles*, `🧠 System 2 Strategy` for *SimCity*) with an override switch.
+2. **Dedicated Gaming Inference Overrides**:
+   - **System 1 Decision Engine**:
+     - `Laya Local (On-Device WASM/ONNX)`: **15ms latency, $0.00 Free** *(Recommended default for gaming loops to avoid cloud latency and costs)*.
+     - `TypeSafe Jev (Cloud Alpha)`: **100ms latency, $42/Btok**.
+   - **System 2 Vision Model**: Inherits from Global Faculty Defaults (`facultyDefaultsStore.resolveFaculty('vision')`), with single-click dropdown override (e.g. Moondream WebGPU vs Gemini Flash Lite).
+3. **Companion Backseat Persona**:
+   - Pre-selects the recommended roleplay dynamic from our triage dataset:
+     - `hype_cheerleader`: Energetic, screaming at near-misses (*Doom*, *Wolfenstein*).
+     - `strategic_adviser`: Calculating budgets and territory (*SimCity*, *Civilization*).
+     - `detective_partner`: Investigating story clues and inventory (*Monkey Island*, *Zork*).
+     - `laidback_observer`: Relaxed retro commentary (*Nibbles*, *Pac-Man*).
+   - Allows full user customization before launch.
+4. **Knowledge Gateway**:
+   - If Game Knowledge exists in IndexedDB: shows **[ Launch Classic Game ]**.
+   - If title is uncalibrated: shows **[ Learn to Play (15s Setup) ]**.
+
+---
+
+### 5.4 Stage 3: The Distraction-Free Calibration Stage
+
+**The chat sidebar is completely hidden during calibration.** The game canvas occupies 100% of the viewport to maximize focus:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ [≡] AIRI - Chat Window [Arcade Room]                                                      [⚙] [_][□][X]│
+│ [≡] AIRI Arcade Studio — Calibration Mode                                                 [✕ Exit Setup]│
+├────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                        │
+│       ┌────────────────────────────────────────────────────────────────────────────────────────┐       │
+│       │ 🌸 AIRI: "Help me help you! Hit Start and play for 15s so I can learn how it moves!"   │       │
+│       └────────────────────────────────────────────────────────────────────────────────────────┘       │
+│                                                                                                        │
+│                             ┌──────────────────────────────────────────┐                               │
+│                             │                                          │                               │
+│                             │          FULL-SCREEN GAME CANVAS         │                               │
+│                             │             (QBasic Nibbles)             │                               │
+│                             │                                          │                               │
+│                             │                                          │                               │
+│                             └──────────────────────────────────────────┘                               │
+│                                                                                                        │
+│                              [ 🔴 START RECORDING ]   [ ⏱️ 15s Timer ]                                 │
+│                                                                                                        │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+1. **User Action**: The user clicks `[ Start Recording ]` (triggering `collector.start()`).
+2. **Trace Accumulation**: The user plays for 10–20 seconds. The collector samples:
+   - $80 \times 40$ binary grid deltas ($\Delta = \text{Frame}_t - \text{Frame}_{t-1}$) at 10 Hz.
+   - User keypresses (`ArrowUp`, `ArrowLeft`, `Space`).
+3. **Completion & Freezing**: When the timer finishes or death occurs, the canvas freezes, and a processing overlay appears:
+   *"AIRI is watching the replay... Analyzing motion vectors and compiling visual state machine..."*
+
+---
+
+### 5.5 Stage 4: Strategy Review & Knowledge Approval
+
+The System-2 LLM receives the recorded trace JSON and synthesizes an executable **Mini Program**:
+
+1. **Automated Rule Extraction**:
+   - **Player Entity**: Identifies the leading delta pixel as the agent head.
+   - **Velocity Vector**: Computes $\vec{v} = \text{Head}_t - \text{Head}_{t-1}$ (`UP`, `DOWN`, `LEFT`, `RIGHT`).
+   - **Static Targets**: Detects single unpaired pixels appearing without movement (e.g. food numbers).
+   - **Loss Condition**: Detects sudden multi-pixel surges in fixed bounding boxes (e.g. death dialog modal).
+2. **Review Dialog**:
+   - Displays AIRI's natural language comprehension of the game rules.
+   - Previews the synthesized pure JavaScript parser and keybindings.
+3. **Execution Controls**:
+   - **`[ 60-Second Sandboxed Test ]`**: Launches an automated 60-second trial run where AIRI plays live under a strict watchdog ceiling while you observe.
+   - **`[ Re-Record ]`**: Discards trace and returns to Stage 3 if the initial demonstration was flawed.
+   - **`[ Approve & Save Knowledge ]`**: Atomically persists the Mini Program into IndexedDB (`local:arcade_knowledge:<game_id>`).
+
+---
+
+### 5.6 Stage 5: The Classic Co-Pilot Arena (Game 65% + Backseat Chat 35%)
+
+Once knowledge is approved (or when launching a mastered game), the room opens in its refined classic split layout:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ [≡] AIRI - Chat Window [Arcade Room: QBasic Nibbles] [Mastered ✓]                         [⚙] [_][□][X]│
 ├─────────────────┬────────────────────────────────────────────────────┬─────────────────────────────────┤
 │  WORKSPACE      │             GAME VIEWPORT (65% Width)              │    BACKSEAT CHAT (35% Width)    │
 │                 │ ┌────────────────────────────────────────────────┐ │ ┌─────────────────────────────┐ │
-│ 💬 Chat View    │ │                                                │ │ │ 🌸 AIRI                     │ │
-│ 📹 Director     │ │              JS-DOS / RETRO CANVAS             │ │ │ "Alright, let's see what    │ │
-│ 📖 World Bible  │ │             (Doom / Civ I / 2048)              │ │ │ this game is all about!"    │ │
+│ 💬 Chat View    │ │                                                │ │ │ 🌸 AIRI [Laidback Observer]   │ │
+│ 📹 Director     │ │              JS-DOS / RETRO CANVAS             │ │ │ "Alright, let's grab that    │ │
+│ 📖 World Bible  │ │                 (QBasic Nibbles)               │ │ │ number 3 before the wall!"  │ │
 │ 🎨 Studio       │ │                                                │ │ │ <|ACT:emotion="smug"|>      │ │
 │ 📁 Media        │ │                    [ 4:3 ]                     │ │ ├─────────────────────────────┤ │
 │ 🧬 Thread       │ │                                                │ │ │ 👤 You                      │ │
-│ 📜 Event Ledger │ │                                                │ │ │ "Watch out behind you,      │ │
-│ 📝 Notes        │ │                                                │ │ │ there's an explosive barrel"│ │
-│ 🎬 Rehearsal    │ ├────────────────────────────────────────────────┤ │ ├─────────────────────────────┤ │
-│ 🕹️ Arcade Room  │ │ [Preset: Doom Shareware ▼] [Restart] [Savestate]│ │ │ 🌸 AIRI                     │ │
-│                 │ │ Mode: [● AI Playing] [○ You Play] [🔊 ────○──] │ │ │ "Wait, where?! Don't yell   │ │
-│ ─────────────── │ └────────────────────────────────────────────────┘ │ │ at me, I'm aiming!"         │ │
-│ ⚙️ Settings     │   Tips: Use [Space] to pause; LLM plays in bursts.  │ │ <|ACT:emotion="panicked"|>    │ │
-│                 │                                                    │ ├─────────────────────────────┤ │
-│                 │                                                    │ │ [ Backseat advice...      ] │ │
-│                 │                                                    │ │ [Careful!] [Shoot!] [Heal!] │ │
+│ 📜 Event Ledger │ │                                                │ │ │ "Watch out behind you!"     │ │
+│ 📝 Notes        │ │                                                │ │ ├─────────────────────────────┤ │
+│ 🎬 Rehearsal    │ ├────────────────────────────────────────────────┤ │ │ 🌸 AIRI                     │ │
+│ 🕹️ Arcade Room  │ │ [Engine: Laya Local $0 (15ms)] [Knowledge: ✓]   │ │ │ "I see it! Turning down!"   │ │
+│                 │ │ Mode: [● AI Playing] [○ You Play] [🔊 ────○──] │ │ │ <|ACT:emotion="excited"|>   │ │
+│ ─────────────── │ └────────────────────────────────────────────────┘ │ ├─────────────────────────────┤ │
+│ ⚙️ Settings     │   Reflex loop running at 15 Hz via Laya WASM.     │ │ [ Backseat advice...      ] │ │
 │                 │                                                    │ └─────────────────────────────┘ │
 └─────────────────┴────────────────────────────────────────────────────┴─────────────────────────────────┘
 ```
 
-### 5.3 Dual Play Modes
-The Arcade Room supports two interactive modes selectable via a toggle:
-1. **AI Autopilot (Agent Plays, User Backseats)**:
-   * The cognitive harness reads the canvas, selects discrete actions, and sends synthetic inputs.
-   * The user types or speaks backseat tips into the minimal chatbox.
-   * AIRI debates, panics, or listens, streaming dialogue into the chat transcript and TTS runtime.
-2. **Co-Pilot / Spectate (User Plays, Agent Backseats You)**:
-   * The user clicks into the game canvas and plays directly using standard keyboard/mouse controls.
-   * The cognitive harness runs in spectator mode (sampling frames every 3–5 seconds or on major state shifts via lightweight OCR).
-   * AIRI acts as your live personal gaming companion, cheering your victories, gasping at near-misses, and roasting your deaths!
+- **Motor Reflex Loop**: The compiled Mini Program runs at 15–20 Hz in the background, extracting state in $<1\text{ms}$ and querying Laya Local / Jev.
+- **Backseat Chat Stream**: AIRI provides continuous verbal personality banter, emotional cues (`<|ACT:emotion="..."|>`), and responds dynamically to user text or voice advice injected into her state payload.
 
-### 5.4 The Cognitive Path Picker & Two-Tier Semantic Architecture
+---
 
-When launching an Arcade session, users are not forced into a one-size-fits-all model. Because AIRI cannot magically extract internal RAM pointers or symbol tables from 8,000 legacy DOS binaries on the fly, the runtime decouples gaming cognition into a **Two-Tier Semantic Architecture**:
+### 5.7 The Acquired Game Knowledge Index & Registry
 
-```mermaid
-flowchart TD
-    Launch[User Launches DOS / Canvas Game in Arcade Room] --> CurationCheck{Catalog Jev Metadata}
+Acquired game knowledge profiles are persisted under `local:arcade_knowledge:<game_identifier>` with the following schema:
 
-    CurationCheck -->|Turn-Based / Strategy / Puzzle| RecA[Path A Recommended: System 2]
-    CurationCheck -->|Arcade / Reflex / Platformer / 2D Grid| RecB[Path B Recommended: System 1]
-
-    RecA --> PathPicker{Cognitive Engine Path Picker}
-    RecB --> PathPicker
-
-    PathPicker -->|Path A: Deliberative Strategy & Puzzles| S2[System-2 Multimodal Loop\nVLM -> CoT Reasoning -> Action Plan -> Execute\nLatency: 800ms - 2,500ms]
-
-    PathPicker -->|Path B: Real-Time Reflex Copilot| S1Workflow["'Help Me Help You' Demonstration\nUser plays 15s -> Collector traces deltas & keys"]
-
-    S1Workflow --> LLMCompiler[System-2 LLM Compiler\nSynthesizes 'Mini Program' Visual State Machine Interpreter]
-
-    LLMCompiler --> S1Sandbox[60-Second Sandboxed Safety Test\nAdaptive Lookahead Cadence + Jev Choice]
-
-    S1Sandbox --> Confirm{"User Approves?"}
-    Confirm -->|Yes| PersistStore["Atomic Persistence in IndexedDB\n(local:arcade_knowledge:game_id)"]
-    Confirm -->|Refine| S1Workflow
+```typescript
+export interface AcquiredGameKnowledge {
+  gameId: string
+  title: string
+  engine: 'system1_reflex' | 'system2_strategy' | 'system2_narrative'
+  technologyTier: 'fixed_single_screen' | 'flip_screen_rooms' | 'smooth_scrolling_camera' | 'first_person_or_3d' | 'static_ui_or_turn_based'
+  runtimeProvider: 'laya_local' | 'typesafe_jev' | 'vlm_faculty'
+  persona: 'hype_cheerleader' | 'strategic_adviser' | 'detective_partner' | 'laidback_observer'
+  miniProgramSource: string // Evaluated sandboxed pure JS extractor
+  actionSpace: {
+    instructions: string
+    choices: Record<string, string>
+    keyMapping: Record<string, string>
+  }
+  learnedAt: number
+}
 ```
-
-#### 5.4.1 The "Semantic Experience" of Pair Gaming
-In this architecture, the user enjoys a natural, cohesive semantic relationship with their companion:
-1. **The User interacts with System 2**: You converse, strategize, and joke with AIRI's conscious persona in the backseat chat.
-2. **System 2 manages its own System 1 interface**: System 2 observes human play, diagnoses the rules of the game, writes a specialized "Mini Program" (visual state machine interpreter), and commands System 1 as its high-speed motor reflexes.
-3. **The Illusion of Unified Play**: Technically, System 2 is not executing the 100ms reflex loop directly. However, because System 2 synthesized the state machine, monitors the game's health, and chimes in with live vocal commentary, the user genuinely experiences their companion playing alongside them with authentic agency.
-
-#### 5.4.2 Doing Our Homework: Jev Catalog Batch Curation Pass
-Rather than forcing users to guess which engine suits an unfamiliar 1989 shareware title, Project AIRI applies **TypeSafe Jev** to perform an offline batch curation pass over the 8,900+ MS-DOS preservation catalog:
-- **Triage Query**: Evaluates game title, year, developer, and archive metadata into:
-  - `tempo`: `turn_based` | `real_time_reflex` | `narrative_text`
-  - `input_modality`: `keyboard_arrows` | `mouse_pointer` | `complex_keypad`
-  - `visual_architecture`: `cga_text_mode` | `vga_graphics_mode` | `vector_3d`
-- **Recommended Path Badging**:
-  - *Civilization*, *SimCity*, *Oregon Trail*, *2048*, *Sokoban* $\rightarrow$ **Recommended: Path A (System 2)**.
-  - *Nibbles*, *Digger*, *Pac-Man*, *Prince of Persia*, *Doom*, *Wolfenstein 3D* $\rightarrow$ **Recommended: Path B (System 1)**.
-- The Path Picker modal clearly highlights the recommended engine while preserving full user agency to toggle modes.
-
----
-
-#### 5.4.3 Path A: System-2 Deliberative Strategy Engine (Existing Operational Mode)
-- **Target Games**: Turn-based strategy (*SimCity 1989*, *Civilization*), point-and-click adventures (*The Secret of Monkey Island*), numerical puzzles (*2048*).
-- **Execution Pipeline**:
-  $$\text{Canvas Frame} \xrightarrow[\text{Capture}]{<5\text{ms}} \text{VLM Reasoning (CoT)} \xrightarrow[\text{ActionPlan JSON}]{800\text{ms}-2,500\text{ms}} \text{Ghost Cursor Dispatch}$$
-- **Characteristics**: High spatial context, zero pre-configuration required, tolerates complex graphical UI palettes, authentic spoken monologues explaining moves to the user.
-
----
-
-#### 5.4.4 Path B: System-1 High-Speed Reflex Engine (Self-Synthesizing Mini Program)
-- **Target Games**: Real-time arcade titles, 2D grid mazes, platformers, action shooters (*Nibbles*, *Digger*, *Prince of Persia*, *Doom*).
-- **The Challenge**: Querying a multimodal LLM on every frame causes 1,500ms latency ($1,000s/month), causing the player to crash instantly. Conversely, Jev is non-autoregressive and blind to raw pixels.
-- **The Solution**: The **"Help Me Help You" Demonstration & Mini Program Synthesis Workflow**.
-
-##### Step 1: The Demonstration ("Help Me Help You")
-When Path B is selected for an unmapped title, AIRI prompts:
-> *"I haven't played this one yet! Play one quick 15-second round so I can observe how the game moves and learn the rules."*
-
-1. The user clicks **Record** (invoking `collector.start()`).
-2. The user plays for 10–20 seconds using normal keyboard controls.
-3. The lightweight runtime collector samples the canvas/framebuffer at 10 Hz:
-   - Captures $80 \times 40$ binary grid deltas ($\Delta = \text{Frame}_t - \text{Frame}_{t-1}$).
-   - Records active keypresses (`['ArrowUp']`, `['ArrowLeft']`, `[' ']`).
-   - Dedupes identical resting frames.
-4. User clicks **Stop** (`collector.end()`), yielding a compact JSON trace (~20–40 KB).
-
-##### Step 2: The LLM Compiler (Synthesizing the "Mini Program")
-The System-2 LLM receives the raw trace JSON and functions as a **metaprogramming compiler**:
-1. **Entity & Velocity Attribution**:
-   - The pixel that turns to `1` each frame without an erasing counterpart is the **Agent Head**.
-   - $\vec{v} = \text{Head}_t - \text{Head}_{t-1}$ determines the cardinal **Heading Vector** (`UP`, `DOWN`, `LEFT`, `RIGHT`).
-   - Isolated pixels appearing without movement are identified as **Targets/Objectives** (e.g. food numbers).
-   - Sudden multi-pixel surges in a fixed bounding box (e.g. 80 pixels appearing at rows 16–20) are classified as **Game Over / Death Modals**.
-2. **Mini Program Generation**:
-   The LLM writes a pure JavaScript visual state machine interpreter:
-   ```javascript
-   // Synthesized Game Knowledge Interpreter
-   export function extractGameState(currentGrid, lastGrid, lastState) {
-     const head = detectLeadingPixel(currentGrid, lastGrid)
-     const heading = computeVelocityVector(head, lastState?.head)
-     const obstacles = scanRadialRays(currentGrid, head, heading)
-     const target = locateNearestStaticTarget(currentGrid, head)
-
-     return {
-       snapshot: `Agent at (${head.x}, ${head.y}) moving ${heading}. Ahead: ${obstacles.ahead}. Left: ${obstacles.left}. Right: ${obstacles.right}. Target: ${target.direction} (dist: ${target.distance})`,
-       isDead: detectBoundingBoxSurge(currentGrid, [23, 16, 55, 20]),
-       head,
-       heading
-     }
-   }
-   ```
-3. **Jev Choice Schema Formulation**:
-   The LLM compiles the discrete action space with calibrated consequence framing:
-   ```json
-   {
-     "maneuver": {
-       "type": "choice",
-       "instructions": "Select the immediate steering maneuver to avoid collision and navigate toward target.",
-       "criteria": {
-         "TURN_LEFT": "Commit turn into open corridor (Safest path)",
-         "TURN_RIGHT": "Commit turn into obstacle (Fatal collision)",
-         "HOLD_STRAIGHT": "Continue straight ahead into wall (Fatal collision)"
-       }
-     }
-   }
-   ```
-
-##### Step 3: Adaptive Lookahead & Latency Compensation
-Execution latency differs fundamentally across inference backends:
-- **Laya Local (WASM / WebGPU)**: $15\text{ms} - 35\text{ms}$ RTT $\rightarrow$ 20–30 Hz execution.
-- **TypeSafe Jev (OpenRouter Alpha)**: $90\text{ms} - 150\text{ms}$ RTT $\rightarrow$ 5–10 Hz execution.
-
-To prevent overshooting obstacles while awaiting a network packet:
-1. The engine tracks the rolling round-trip time ($\tau_{\text{RTT}}$).
-2. The state extractor projects the agent's velocity vector forward by $\Delta t = \tau_{\text{RTT}}$.
-3. It asks Jev: *"At your projected position in $\tau_{\text{RTT}}$, which steering maneuver do you commit to?"*
-4. Between query ticks, the emulator executes the **Carry-Hold Pattern**, holding the last validated steering input so the game physics remain smooth and free of micro-stutter.
-
-##### Step 4: 60-Second Sandboxed Safety Test Run
-- AIRI announces: *"Got it! Let me try!"*
-- The runtime sends the initial start key (e.g. Space) and begins executing the synthesized loop.
-- **Safeguard Watchdog**:
-  - A strict **60-second execution ceiling** prevents runaway loops or unintended background consumption.
-  - Automatically suspends if unhandled exceptions occur, or when `isDead` evaluates to true.
-- Backseat advice from the chat composer (*"Watch out behind you!"*, *"Save ammo!"*) injects directly into Jev's live state snapshot in real time.
-
-##### Step 5: Permanent "Game Knowledge" Persistence
-- When the run completes, the UI prompts: *"Did Airi play well?"*
-- Upon user confirmation, the compiled Mini Program, key mappings, and Jev schema are saved atomically into IndexedDB under `local:arcade_knowledge:<game_identifier>`.
-- Any subsequent launch of that title instantly loads the Game Knowledge profile—enabling AIRI to play with instant native reflexes with zero re-calibration.
 
 ---
 
