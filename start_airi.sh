@@ -6,6 +6,9 @@
 # Safeguard: prevent VS Code from forcing Electron into Node mode
 unset ELECTRON_RUN_AS_NODE
 
+# Prevent onnxruntime-node from attempting broken CUDA binary downloads on Linux
+export ONNXRUNTIME_NODE_INSTALL_CUDA=skip
+
 # On Linux, disable Electron sandbox if needed for dev environments
 if [ "$(uname -s)" = "Linux" ]; then
   export ELECTRON_DISABLE_SANDBOX=1
@@ -29,8 +32,8 @@ if [ -n "${AIRI_USER_DATA_DIR:-}" ]; then
   mkdir -p "$AIRI_USER_DATA_DIR"
 fi
 
-# Ensure workspace dependencies and binaries (turbo, electron-vite, etc.) are installed
-if [ ! -d "node_modules" ] || ! command -v pnpm exec turbo &> /dev/null; then
+# Ensure workspace dependencies and binaries (turbo, electron-vite, tsx, etc.) are installed
+if [ ! -d "node_modules" ] || [ ! -f "node_modules/.bin/turbo" ] || [ ! -f "node_modules/.bin/tsx" ]; then
   echo "[0/2] Installing/updating project dependencies (pnpm install)..."
   pnpm install || { echo "Error: pnpm install failed."; exit 1; }
 fi

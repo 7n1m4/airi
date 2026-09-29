@@ -151,6 +151,7 @@ catalogs:
 ignoredBuiltDependencies:
   - '@prisma/client'
   - better-sqlite3
+  - onnxruntime-node
 
 onlyBuiltDependencies:
   - '@discordjs/opus'
@@ -171,7 +172,6 @@ onlyBuiltDependencies:
   - koffi
   - less
   - msw
-  - onnxruntime-node
   - protobufjs
   - sharp
   - simple-git-hooks
