@@ -42,6 +42,16 @@ const providersStore = useProvidersStore()
 const syncStore = useSyncEngineStore()
 const { displayModelsFromIndexedDBLoading, displayModels, remoteModelsCatalog, remoteCatalogLoading } = storeToRefs(displayModelStore)
 
+// Cloud Tab Source Selector (local peek state - does not alter global activeProvider)
+const selectedSourceProvider = ref<string>(syncStore.activeProvider || 's3')
+const isCustomSourceSelected = ref(false)
+
+watch(() => syncStore.activeProvider, (newVal) => {
+  if (!isCustomSourceSelected.value && newVal) {
+    selectedSourceProvider.value = newVal
+  }
+})
+
 const mapFormatRenderer: Record<DisplayModelFormat, string> = {
   [DisplayModelFormat.Live2dZip]: 'Live2D',
   [DisplayModelFormat.Live2dDirectory]: 'Live2D',
@@ -171,7 +181,7 @@ watch(() => props.initialTab, (newTab) => {
 
 watch(currentTab, (newTab) => {
   if (newTab === 'cloud' && remoteModelsCatalog.value.length === 0) {
-    void displayModelStore.fetchRemoteDisplayModelsCatalog()
+    void displayModelStore.fetchRemoteDisplayModelsCatalog(selectedSourceProvider.value)
   }
 })
 
@@ -549,7 +559,7 @@ async function loadRemotePreview(id: string) {
     return
   loadingPreviews.value[id] = true
   try {
-    const readRes = await syncStore.readRemoteFile(`assets/models/${id}-preview.png`, 'base64')
+    const readRes = await syncStore.readRemoteFile(`assets/models/${id}-preview.png`, 'base64', selectedSourceProvider.value)
     if (readRes.success && readRes.content) {
       remotePreviews.value[id] = `data:image/png;base64,${readRes.content}`
     }
@@ -644,7 +654,7 @@ const downloadingModelId = ref<string | null>(null)
 async function downloadAndPickModel(model: any) {
   downloadingModelId.value = model.id
   try {
-    const res = await syncStore.downloadSpecificModel(model.id)
+    const res = await syncStore.downloadSpecificModel(model.id, selectedSourceProvider.value)
     if (res.success) {
       toast.success(`Model ${model.name} downloaded successfully!`)
       const localModel = displayModelStore.displayModels.find(m => m.id === model.id)
@@ -667,6 +677,30 @@ async function downloadAndPickModel(model: any) {
   }
   finally {
     downloadingModelId.value = null
+  }
+}
+
+async function handleSourceProviderChange() {
+  isCustomSourceSelected.value = true
+  remotePreviews.value = {}
+  loadingPreviews.value = {}
+  failedPreviews.value = {}
+  remoteModelsCatalog.value = []
+
+  const res = await displayModelStore.fetchRemoteDisplayModelsCatalog(selectedSourceProvider.value)
+  if (res && !res.success) {
+    toast.error(`Failed to load catalog from ${selectedSourceProvider.value === 's3' ? 'S3' : 'Local FS'}: ${res.error || 'Unknown error'}`)
+  }
+}
+
+async function handleRefreshCloudCatalog() {
+  remotePreviews.value = {}
+  loadingPreviews.value = {}
+  failedPreviews.value = {}
+
+  const res = await displayModelStore.fetchRemoteDisplayModelsCatalog(selectedSourceProvider.value)
+  if (res && !res.success) {
+    toast.error(`Failed to refresh catalog from ${selectedSourceProvider.value === 's3' ? 'S3' : 'Local FS'}: ${res.error || 'Unknown error'}`)
   }
 }
 
@@ -1713,11 +1747,28 @@ async function runAutoLinkCatalog() {
           class="h-[32px] flex items-center justify-center gap-1.5 border border-transparent rounded-lg bg-neutral-100 px-3 py-1 text-xs text-neutral-600 font-semibold outline-none transition-all dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
           :disabled="remoteCatalogLoading"
           title="Refresh Cloud Catalog"
-          @click="displayModelStore.fetchRemoteCatalog()"
+          @click="handleRefreshCloudCatalog"
         >
           <div :class="['i-solar:refresh-bold text-xs', remoteCatalogLoading ? 'animate-spin' : '']" />
           <span>Refresh</span>
         </button>
+
+        <!-- Cloud Storage Source Selector (Peek Other Adapter) -->
+        <select
+          v-if="currentTab === 'cloud'"
+          v-model="selectedSourceProvider"
+          class="h-[32px] cursor-pointer border border-transparent rounded-lg bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600 font-semibold outline-none transition-all dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
+          :disabled="remoteCatalogLoading"
+          title="Cloud Source Adapter"
+          @change="handleSourceProviderChange"
+        >
+          <option value="s3">
+            S3 Cloud
+          </option>
+          <option value="local-fs">
+            Local FS
+          </option>
+        </select>
       </div>
 
       <div v-if="currentTab === 'library' && displayModelsFromIndexedDBLoading" class="py-6 text-center text-sm text-neutral-400">

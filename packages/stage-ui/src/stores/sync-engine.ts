@@ -368,8 +368,9 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
   }
 
   // Helper to get active client
-  function getActiveClient(): StorageClient {
-    if (activeProvider.value === 's3') {
+  function getActiveClient(providerOverride?: string): StorageClient {
+    const prov = providerOverride || activeProvider.value
+    if (prov === 's3') {
       return new S3StorageClient(
         s3Endpoint.value,
         s3Bucket.value,
@@ -411,8 +412,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     return await client.validate()
   }
 
-  async function fetchRemoteDisplayModelsManifest(): Promise<{ success: boolean, models?: any[], error?: string }> {
-    const client = getActiveClient()
+  async function fetchRemoteDisplayModelsManifest(providerOverride?: string): Promise<{ success: boolean, models?: any[], error?: string }> {
+    const client = getActiveClient(providerOverride)
     try {
       const modelsRes = await client.readFile('assets/models/manifest.json')
       if (modelsRes.success && modelsRes.content) {
@@ -528,8 +529,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
   // Alias for backward compatibility
   const getRemoteCatalog = fetchRemoteSyncManifestCatalog
 
-  async function downloadSpecificModel(id: string) {
-    const client = getActiveClient()
+  async function downloadSpecificModel(id: string, providerOverride?: string) {
+    const client = getActiveClient(providerOverride)
     // Read remote manifest
     let remoteModel: any = null
     try {
@@ -638,8 +639,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
     }
   }
 
-  async function readRemoteFile(relPath: string, encoding?: 'utf-8' | 'base64') {
-    const client = getActiveClient()
+  async function readRemoteFile(relPath: string, encoding?: 'utf-8' | 'base64', providerOverride?: string) {
+    const client = getActiveClient(providerOverride)
     return await client.readFile(relPath, encoding)
   }
 

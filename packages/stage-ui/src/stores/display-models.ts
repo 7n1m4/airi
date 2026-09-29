@@ -1675,28 +1675,34 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     broadcastModelsSync(Date.now())
   }
 
-  async function fetchRemoteDisplayModelsCatalog() {
+  async function fetchRemoteDisplayModelsCatalog(providerOverride?: string) {
     debug('[DisplayModels] fetchRemoteDisplayModelsCatalog: Starting fetch from remote sync client...')
     remoteCatalogLoading.value = true
     try {
       const { useSyncEngineStore } = await import('./sync-engine')
       const syncStore = useSyncEngineStore()
-      debug('[DisplayModels] fetchRemoteDisplayModelsCatalog: Sync engine store loaded. Active provider:', syncStore.activeProvider)
-      const res = await syncStore.fetchRemoteDisplayModelsManifest()
+      const targetProvider = providerOverride || syncStore.activeProvider
+      debug('[DisplayModels] fetchRemoteDisplayModelsCatalog: Sync engine store loaded. Target provider:', targetProvider)
+      const res = await syncStore.fetchRemoteDisplayModelsManifest(targetProvider)
       if (res && res.success) {
         remoteModelsCatalog.value = (res.models || []).map((m: any) => ({
           ...m,
           type: 'cloud',
         }))
-        debug(`[DisplayModels] fetchRemoteDisplayModelsCatalog: Successfully fetched ${remoteModelsCatalog.value.length} remote models. Saving to local storage cache...`)
-        await storage.setItemRaw('local:sync-metadata/remote-catalog-cache', JSON.parse(JSON.stringify(remoteModelsCatalog.value)))
+        debug(`[DisplayModels] fetchRemoteDisplayModelsCatalog: Successfully fetched ${remoteModelsCatalog.value.length} remote models.`)
+        if (!providerOverride || providerOverride === syncStore.activeProvider) {
+          await storage.setItemRaw('local:sync-metadata/remote-catalog-cache', JSON.parse(JSON.stringify(remoteModelsCatalog.value)))
+        }
+        return { success: true, count: remoteModelsCatalog.value.length }
       }
       else {
         debug('[DisplayModels] fetchRemoteDisplayModelsCatalog: Sync store returned unsuccessful response:', res)
+        return { success: false, error: res?.error || 'Failed to fetch remote catalog' }
       }
     }
-    catch (e) {
+    catch (e: any) {
       console.error('[DisplayModels] Failed to fetch remote models catalog:', e)
+      return { success: false, error: e?.message || String(e) }
     }
     finally {
       remoteCatalogLoading.value = false
