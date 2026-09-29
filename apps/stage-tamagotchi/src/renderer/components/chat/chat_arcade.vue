@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import type { GameAdapter, TurnPlan } from '@proj-airi/stage-ui/types'
-
-import type { CatalogGame } from './ArcadeCatalogModal.vue'
+import type {
+  ArcadeProvisioningConfig,
+  CalibrationTelemetryTrace,
+  CatalogGame,
+  GameAdapter,
+  TurnPlan,
+} from '@proj-airi/stage-ui/types'
 
 import JSZip from 'jszip'
 import localforage from 'localforage'
@@ -13,6 +17,7 @@ import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
 import { useChatStreamStore } from '@proj-airi/stage-ui/stores/chat/stream-store'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { useArcadeKnowledgeStore } from '@proj-airi/stage-ui/stores/modules/arcade-knowledge'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { useLocalStorage } from '@vueuse/core'
@@ -20,6 +25,9 @@ import { storeToRefs } from 'pinia'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
+import ArcadeCalibrationView from './arcade/ArcadeCalibrationView.vue'
+import ArcadeHub from './arcade/ArcadeHub.vue'
+import ArcadeProvisioningSheet from './arcade/ArcadeProvisioningSheet.vue'
 import ArcadeCatalogModal from './ArcadeCatalogModal.vue'
 import ArcadeTuningModal from './ArcadeTuningModal.vue'
 
@@ -28,6 +36,7 @@ const emit = defineEmits<{
 }>()
 
 const airiCardStore = useAiriCardStore()
+const arcadeKnowledgeStore = useArcadeKnowledgeStore()
 const characterStore = useCharacterStore()
 const arcadeAgent = useArcadeAgent()
 const chatOrchestrator = useChatOrchestratorStore()
@@ -584,6 +593,177 @@ function handleCatalogLaunch(game: CatalogGame) {
     bundleUrl: game.bundleUrl,
     thumbnailUrl: game.thumbnailUrl,
   })
+}
+
+// --- Guided Studio Stage State ---
+const currentStage = ref<'hub' | 'calibration' | 'arena'>('hub')
+const isProvisioningOpen = ref(false)
+const selectedGameForProvisioning = ref<CatalogGame | null>(null)
+const activeProvisioningConfig = ref<ArcadeProvisioningConfig | null>(null)
+const pendingCustomFile = ref<File | null>(null)
+
+function handleSelectGameFromHub(game: any) {
+  selectedGameForProvisioning.value = game
+  isProvisioningOpen.value = true
+}
+
+function handleUploadCustomFile(file: File) {
+  pendingCustomFile.value = file
+  selectedGameForProvisioning.value = {
+    identifier: `custom_${file.name.replace(/\W/g, '_')}`,
+    title: file.name.replace(/\.(zip|jsdos)$/i, ''),
+  }
+  isProvisioningOpen.value = true
+}
+
+async function handleStartCalibration(config: ArcadeProvisioningConfig) {
+  activeProvisioningConfig.value = config
+  isProvisioningOpen.value = false
+  currentStage.value = 'calibration'
+  await nextTick()
+
+  const game = selectedGameForProvisioning.value
+  if (!game)
+    return
+
+  if (pendingCustomFile.value) {
+    void launchCustomFile(pendingCustomFile.value)
+    pendingCustomFile.value = null
+  }
+  else if (game.identifier === '2048') {
+    handleSelectPreset('2048')
+  }
+  else {
+    void launchDosGame({
+      identifier: game.identifier,
+      title: game.title,
+      bundleUrl: game.bundleUrl,
+      thumbnailUrl: game.thumbnailUrl,
+    })
+  }
+}
+
+async function handleLaunchDirect(config: ArcadeProvisioningConfig) {
+  activeProvisioningConfig.value = config
+  isProvisioningOpen.value = false
+  currentStage.value = 'arena'
+  await nextTick()
+
+  const game = selectedGameForProvisioning.value
+  if (!game)
+    return
+
+  if (pendingCustomFile.value) {
+    void launchCustomFile(pendingCustomFile.value)
+    pendingCustomFile.value = null
+  }
+  else if (game.identifier === '2048') {
+    handleSelectPreset('2048')
+  }
+  else {
+    void launchDosGame({
+      identifier: game.identifier,
+      title: game.title,
+      bundleUrl: game.bundleUrl,
+      thumbnailUrl: game.thumbnailUrl,
+    })
+  }
+}
+
+function handleCancelCalibration() {
+  currentStage.value = 'hub'
+  if (dosPlayerInstance) {
+    try {
+      dosPlayerInstance.stop()
+    }
+    catch {}
+    dosPlayerInstance = null
+    currentCommandInterface = null
+  }
+  isGameReady.value = false
+  isDosEngineLoading.value = false
+}
+
+async function handleCalibrationCompleted(trace: CalibrationTelemetryTrace) {
+  const game = selectedGameForProvisioning.value
+  const config = activeProvisioningConfig.value
+
+  if (game && config) {
+    await arcadeKnowledgeStore.saveKnowledge({
+      gameId: game.identifier,
+      gameTitle: game.title,
+      acquiredAt: Date.now(),
+      lastPlayedAt: Date.now(),
+      motionArchitecture: trace.identifiedArchitecture,
+      recommendedSystem: game.classification?.recommended_system || 'system1_reflex',
+      gameplayPace: game.classification?.gameplay_pace || 'real_time_fast',
+      primaryGenre: game.classification?.primary_genre,
+      primaryController: game.classification?.primary_controller,
+      persona: config.companionPersona,
+      system1Engine: config.system1Engine,
+      system2Model: config.system2Model,
+      strategySummary: `Calibrated with motion entropy ${trace.motionEntropy.toFixed(2)}. ${trace.keyEvents.length} player keypresses recorded.`,
+      calibrationTrace: trace,
+      playCount: 1,
+    })
+  }
+
+  toast.success('Calibration complete! Acquired game intelligence.')
+  currentStage.value = 'arena'
+  await nextTick()
+
+  if (game) {
+    if (game.identifier === '2048') {
+      handleSelectPreset('2048')
+    }
+    else {
+      void launchDosGame({
+        identifier: game.identifier,
+        title: game.title,
+        bundleUrl: game.bundleUrl,
+        thumbnailUrl: game.thumbnailUrl,
+      })
+    }
+  }
+}
+
+// Available Games for Selector (Preset Classics + Acquired Knowledge)
+const availableGameOptions = computed(() => {
+  const acquired = arcadeKnowledgeStore.allProfiles.map(p => ({
+    id: p.gameId,
+    title: `🧠 ${p.gameTitle}`,
+    engine: p.gameId === '2048' ? ('canvas-2048' as const) : ('jsdos' as const),
+    isAcquired: true,
+  }))
+
+  const acquiredIds = new Set(acquired.map(a => a.id))
+  const presets = GAME_PRESETS.filter(p => !acquiredIds.has(p.id)).map(p => ({
+    ...p,
+    isAcquired: false,
+  }))
+
+  return {
+    acquired,
+    presets,
+  }
+})
+
+function handleSelectGameOption(gameId: string) {
+  if (gameId === '2048') {
+    handleSelectPreset('2048')
+    return
+  }
+
+  const acquired = arcadeKnowledgeStore.getKnowledge(gameId)
+  if (acquired) {
+    void launchDosGame({
+      identifier: acquired.gameId,
+      title: acquired.gameTitle,
+    })
+    return
+  }
+
+  handleSelectPreset(gameId)
 }
 
 // Pointer Lock Controls (1:1 Cursor Tracking without Drift)
@@ -1737,6 +1917,7 @@ function toggleMute() {
 onMounted(() => {
   initGame()
   void loadCustomPromptForGame(currentGameIdentifier.value)
+  void arcadeKnowledgeStore.initialize()
   document.addEventListener('pointerlockchange', onPointerLockChange)
   emit('ready')
 })
@@ -1758,651 +1939,706 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="h-full w-full flex overflow-hidden bg-neutral-100/60 dark:bg-neutral-950/40">
-    <!-- 1. LEFT PANE: Retro Game Viewport (65% width) -->
-    <div class="relative h-full flex flex-1 flex-col overflow-hidden border-r border-neutral-200/50 p-4 dark:border-neutral-800/50">
-      <!-- Hidden file input for custom ROM / ZIP -->
-      <input
-        ref="fileInputRef"
-        type="file"
-        accept=".zip,.jsdos"
-        class="hidden"
-        @change="handleFileInputChange"
-      >
+  <div class="h-full w-full overflow-hidden">
+    <!-- STAGE 1: Full-Screen Arcade Hub -->
+    <ArcadeHub
+      v-if="currentStage === 'hub'"
+      :initial-selected-game-id="currentGameIdentifier"
+      @select-game="handleSelectGameFromHub"
+      @upload-custom-file="handleUploadCustomFile"
+    />
 
-      <!-- Game Top Toolbar (Library & Game Selection) -->
-      <div class="mb-3 flex items-center justify-between border border-neutral-200/40 rounded-xl bg-white/70 px-4 py-2 shadow-sm backdrop-blur-md dark:border-neutral-800/40 dark:bg-neutral-900/60">
-        <!-- Title & Preset Selector -->
-        <div class="flex items-center gap-3">
-          <div class="i-solar:gamepad-bold-duotone text-xl text-primary-500" />
-          <div class="flex items-center gap-2">
-            <!-- Preset Selector Dropdown -->
-            <select
-              :value="currentGameIdentifier"
-              class="border border-neutral-200/80 rounded-lg bg-neutral-50 px-2.5 py-1 text-xs text-neutral-800 font-bold outline-none transition-colors dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
-              @change="(e: any) => handleSelectPreset(e.target.value)"
-            >
-              <option v-for="preset in GAME_PRESETS" :key="preset.id" :value="preset.id">
-                {{ preset.title }}
-              </option>
-            </select>
+    <!-- STAGE 3: 15s Calibration View -->
+    <ArcadeCalibrationView
+      v-else-if="currentStage === 'calibration'"
+      :game="selectedGameForProvisioning || { identifier: currentGameIdentifier, title: currentGameTitle }"
+      :config="activeProvisioningConfig || { system1Engine: 'laya_local', system2Model: 'gemini-2.5-flash', companionPersona: 'hype_coach' }"
+      :engine="activeEngine"
+      :loading="isDosEngineLoading"
+      :loading-progress="dosLoadingProgress"
+      :splash-url="currentSplashUrl"
+      :is-game-ready="isGameReady"
+      :is-pointer-locked="isPointerLocked"
+      :is-fps-game="isFpsGame"
+      :character-name="activeCard?.name || 'Airi'"
+      @cancel="handleCancelCalibration"
+      @completed="handleCalibrationCompleted"
+      @mount-dos-container="(el) => dosContainerRef = el"
+      @mount-canvas="(el) => canvasRef = el"
+      @dos-click="handleDosContainerClick"
+      @canvas-click="focusCanvas"
+      @canvas-keydown="handleCanvasKeyDown"
+      @drop-files="handleFileDrop"
+    />
+
+    <!-- STAGE 5: ACTIVE GAME ARENA -->
+    <div
+      v-else-if="currentStage === 'arena'"
+      class="h-full w-full flex overflow-hidden bg-neutral-100/60 dark:bg-neutral-950/40"
+    >
+      <!-- 1. LEFT PANE: Retro Game Viewport (65% width) -->
+      <div class="relative h-full flex flex-1 flex-col overflow-hidden border-r border-neutral-200/50 p-4 dark:border-neutral-800/50">
+        <!-- Hidden file input for custom ROM / ZIP -->
+        <input
+          ref="fileInputRef"
+          type="file"
+          accept=".zip,.jsdos"
+          class="hidden"
+          @change="handleFileInputChange"
+        >
+
+        <!-- Game Top Toolbar (Library & Game Selection) -->
+        <div class="mb-3 flex items-center justify-between border border-neutral-200/40 rounded-xl bg-white/70 px-4 py-2 shadow-sm backdrop-blur-md dark:border-neutral-800/40 dark:bg-neutral-900/60">
+          <!-- Title & Preset Selector -->
+          <div class="flex items-center gap-3">
+            <div class="i-solar:gamepad-bold-duotone text-xl text-primary-500" />
+            <div class="flex items-center gap-2">
+              <!-- Preset / Acquired Knowledge Selector Dropdown -->
+              <select
+                :value="currentGameIdentifier"
+                class="border border-neutral-200/80 rounded-lg bg-neutral-50 px-2.5 py-1 text-xs text-neutral-800 font-bold outline-none transition-colors dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-100"
+                @change="(e: any) => handleSelectGameOption(e.target.value)"
+              >
+                <optgroup v-if="availableGameOptions.acquired.length > 0" label="🧠 Calibrated Knowledge">
+                  <option v-for="game in availableGameOptions.acquired" :key="game.id" :value="game.id">
+                    {{ game.title }}
+                  </option>
+                </optgroup>
+                <optgroup label="⭐ Preset Classics">
+                  <option v-for="preset in availableGameOptions.presets" :key="preset.id" :value="preset.id">
+                    {{ preset.title }}
+                  </option>
+                </optgroup>
+              </select>
+            </div>
           </div>
-        </div>
 
-        <!-- Middle Tools: Browse Catalog & Load File -->
-        <div class="flex items-center gap-2">
-          <button
-            class="shadow-2xs flex items-center gap-1.5 border border-primary-500/30 rounded-lg bg-primary-500/10 px-3 py-1.5 text-xs text-primary-600 font-bold transition-all active:scale-95 hover:bg-primary-500/20 dark:text-primary-400"
-            @click="isCatalogOpen = true"
-          >
-            <div class="i-solar:magnifer-linear text-xs" />
-            <span>Browse 8,000+ Games</span>
-          </button>
-
-          <button
-            class="shadow-2xs dark:hover:bg-neutral-750 flex items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-white px-2.5 py-1.5 text-xs text-neutral-700 font-medium transition-all dark:border-neutral-700/80 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200"
-            title="Load custom .zip or .jsdos file"
-            @click="fileInputRef?.click()"
-          >
-            <div class="i-solar:folder-open-linear text-xs" />
-            <span>Load .zip</span>
-          </button>
-        </div>
-
-        <!-- Right: Audio, Save/Load & Status -->
-        <div class="flex items-center gap-1.5">
-          <!-- QuickSave / QuickLoad (JS-DOS only) -->
-          <template v-if="activeEngine === 'jsdos'">
+          <!-- Middle Tools: Return to Hub & Load File -->
+          <div class="flex items-center gap-2">
             <button
-              class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-              title="QuickSave (F5 snapshot)"
-              @click="handleQuickSave"
+              class="shadow-2xs flex items-center gap-1.5 border border-primary-500/40 rounded-lg bg-primary-500/15 px-3 py-1.5 text-xs text-primary-600 font-bold transition-all active:scale-95 hover:bg-primary-500/25 dark:text-primary-300"
+              title="Return to the Full-Screen Arcade Hub"
+              @click="currentStage = 'hub'"
             >
-              <div class="i-solar:diskette-bold text-base" />
+              <div class="i-solar:arrow-left-linear text-xs" />
+              <span>&larr; Arcade Hub</span>
             </button>
+
             <button
-              class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-              title="QuickLoad (Restore F9 snapshot)"
-              @click="handleQuickLoad"
+              class="shadow-2xs dark:hover:bg-neutral-750 flex items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-white px-2.5 py-1.5 text-xs text-neutral-700 font-medium transition-all dark:border-neutral-700/80 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200"
+              title="Load custom .zip or .jsdos file"
+              @click="fileInputRef?.click()"
             >
-              <div class="i-solar:upload-track-2-bold text-base" />
+              <div class="i-solar:folder-open-linear text-xs" />
+              <span>Load .zip</span>
             </button>
+          </div>
+
+          <!-- Right: Audio, Save/Load & Status -->
+          <div class="flex items-center gap-1.5">
+            <!-- QuickSave / QuickLoad (JS-DOS only) -->
+            <template v-if="activeEngine === 'jsdos'">
+              <button
+                class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                title="QuickSave (F5 snapshot)"
+                @click="handleQuickSave"
+              >
+                <div class="i-solar:diskette-bold text-base" />
+              </button>
+              <button
+                class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+                title="QuickLoad (Restore F9 snapshot)"
+                @click="handleQuickLoad"
+              >
+                <div class="i-solar:upload-track-2-bold text-base" />
+              </button>
+              <button
+                v-if="isFpsGame"
+                class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs font-medium transition-all active:scale-95"
+                :class="[
+                  isPointerLocked
+                    ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                    : 'border-neutral-200/80 bg-white text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-750',
+                ]"
+                :title="isPointerLocked ? 'Cursor is locked inside game (1:1 motion). Press ESC to unlock.' : 'Lock mouse cursor inside game for 1:1 motion without offset/drift'"
+                @click="isPointerLocked ? releaseGamePointerLock() : requestGamePointerLock()"
+              >
+                <div :class="isPointerLocked ? 'i-solar:lock-keyhole-minimalistic-bold text-emerald-500' : 'i-solar:mouse-bold text-neutral-500 dark:text-neutral-400'" class="text-xs" />
+                <span class="text-[11px]">{{ isPointerLocked ? 'Locked (ESC)' : 'Lock Cursor' }}</span>
+              </button>
+            </template>
+
+            <!-- Coordinate Grid Overlay Toggle (Normalized [0, 1000] calibration) -->
             <button
-              v-if="isFpsGame"
               class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs font-medium transition-all active:scale-95"
               :class="[
-                isPointerLocked
-                  ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                showGridOverlay
+                  ? 'border-sky-500/40 bg-sky-500/15 text-sky-600 dark:text-sky-400'
                   : 'border-neutral-200/80 bg-white text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-750',
               ]"
-              :title="isPointerLocked ? 'Cursor is locked inside game (1:1 motion). Press ESC to unlock.' : 'Lock mouse cursor inside game for 1:1 motion without offset/drift'"
-              @click="isPointerLocked ? releaseGamePointerLock() : requestGamePointerLock()"
+              :title="showGridOverlay ? 'Coordinate grid overlay is ON. Click to hide.' : 'Show 100-interval normalized coordinate grid overlay [0, 1000] for spatial calibration'"
+              @click="showGridOverlay = !showGridOverlay"
             >
-              <div :class="isPointerLocked ? 'i-solar:lock-keyhole-minimalistic-bold text-emerald-500' : 'i-solar:mouse-bold text-neutral-500 dark:text-neutral-400'" class="text-xs" />
-              <span class="text-[11px]">{{ isPointerLocked ? 'Locked (ESC)' : 'Lock Cursor' }}</span>
+              <div :class="showGridOverlay ? 'i-solar:widget-2-bold text-sky-500' : 'i-solar:widget-2-outline text-neutral-500 dark:text-neutral-400'" class="text-xs" />
+              <span class="text-[11px]">Grid</span>
+              <span v-if="showGridOverlay" class="size-1.5 rounded-full bg-sky-500" />
             </button>
-          </template>
 
-          <!-- Coordinate Grid Overlay Toggle (Normalized [0, 1000] calibration) -->
-          <button
-            class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs font-medium transition-all active:scale-95"
-            :class="[
-              showGridOverlay
-                ? 'border-sky-500/40 bg-sky-500/15 text-sky-600 dark:text-sky-400'
-                : 'border-neutral-200/80 bg-white text-neutral-600 hover:bg-neutral-50 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-750',
-            ]"
-            :title="showGridOverlay ? 'Coordinate grid overlay is ON. Click to hide.' : 'Show 100-interval normalized coordinate grid overlay [0, 1000] for spatial calibration'"
-            @click="showGridOverlay = !showGridOverlay"
-          >
-            <div :class="showGridOverlay ? 'i-solar:widget-2-bold text-sky-500' : 'i-solar:widget-2-outline text-neutral-500 dark:text-neutral-400'" class="text-xs" />
-            <span class="text-[11px]">Grid</span>
-            <span v-if="showGridOverlay" class="size-1.5 rounded-full bg-sky-500" />
-          </button>
+            <button
+              class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              :title="isMuted ? 'Unmute Audio' : 'Mute Audio'"
+              @click="toggleMute"
+            >
+              <div :class="isMuted ? 'i-solar:volume-cross-bold' : 'i-solar:volume-loud-bold'" class="text-base" />
+            </button>
 
-          <button
-            class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-            :title="isMuted ? 'Unmute Audio' : 'Mute Audio'"
-            @click="toggleMute"
-          >
-            <div :class="isMuted ? 'i-solar:volume-cross-bold' : 'i-solar:volume-loud-bold'" class="text-base" />
-          </button>
+            <button
+              v-if="activeEngine === 'canvas-2048'"
+              class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              title="Restart 2048"
+              @click="initGame"
+            >
+              <div class="i-solar:restart-bold text-base" />
+            </button>
 
-          <button
-            v-if="activeEngine === 'canvas-2048'"
-            class="rounded-lg p-2 text-neutral-500 transition-colors hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-800 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
-            title="Restart 2048"
-            @click="initGame"
-          >
-            <div class="i-solar:restart-bold text-base" />
-          </button>
-
-          <div class="ml-2 flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] text-emerald-500 font-bold">
-            <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-            <span>{{ activeEngine === 'jsdos' ? 'DOSBox Active' : 'Spectator' }}</span>
+            <div class="ml-2 flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[10px] text-emerald-500 font-bold">
+              <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+              <span>{{ activeEngine === 'jsdos' ? 'DOSBox Active' : 'Spectator' }}</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Main Game Viewport with Drag-and-Drop & Aspect-Ratio Lock -->
-      <div
-        class="relative flex flex-1 items-center justify-center overflow-hidden"
-        @dragover.prevent
-        @drop.prevent="handleFileDrop"
-      >
-        <!-- 2048 RETRO CANVAS VIEWPORT -->
+        <!-- Main Game Viewport with Drag-and-Drop & Aspect-Ratio Lock -->
         <div
-          v-if="activeEngine === 'canvas-2048'"
-          class="relative cursor-pointer border-4 rounded-2xl p-2 shadow-2xl transition-all duration-300"
-          :class="isCanvasFocused
-            ? 'border-primary-500/80 shadow-primary-500/20 ring-4 ring-primary-500/10'
-            : 'border-neutral-800/80 hover:border-neutral-700'"
-          @click="focusCanvas"
+          class="relative flex flex-1 items-center justify-center overflow-hidden"
+          @dragover.prevent
+          @drop.prevent="handleFileDrop"
         >
-          <!-- Retro Bezel Badge -->
-          <div class="backdrop-blur-xs absolute left-4 top-4 z-10 flex items-center gap-1 rounded bg-black/60 px-2 py-0.5 text-[9px] text-neutral-400 tracking-widest font-mono uppercase">
-            <span>CRT 60FPS</span>
-          </div>
-
-          <canvas
-            ref="canvasRef"
-            tabindex="0"
-            width="420"
-            height="420"
-            class="block rounded-xl outline-none"
-            @keydown="handleCanvasKeyDown"
-            @focus="isCanvasFocused = true"
-            @blur="isCanvasFocused = false"
-          />
-
-          <!-- Unfocused Click Overlay -->
+          <!-- 2048 RETRO CANVAS VIEWPORT -->
           <div
-            v-if="!isCanvasFocused"
-            class="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-black/40 backdrop-blur-[2px] transition-all"
+            v-if="activeEngine === 'canvas-2048'"
+            class="relative cursor-pointer border-4 rounded-2xl p-2 shadow-2xl transition-all duration-300"
+            :class="isCanvasFocused
+              ? 'border-primary-500/80 shadow-primary-500/20 ring-4 ring-primary-500/10'
+              : 'border-neutral-800/80 hover:border-neutral-700'"
+            @click="focusCanvas"
           >
-            <div class="i-solar:keyboard-bold mb-2 animate-bounce text-3xl text-white/90" />
-            <span class="rounded-full bg-neutral-900/80 px-3.5 py-1.5 text-xs text-white font-bold tracking-wide shadow-lg">
-              Click to Control Canvas
-            </span>
-            <span class="mt-1 text-[10px] text-white/60 font-medium">Use Arrow Keys or WASD</span>
-          </div>
+            <!-- Retro Bezel Badge -->
+            <div class="backdrop-blur-xs absolute left-4 top-4 z-10 flex items-center gap-1 rounded bg-black/60 px-2 py-0.5 text-[9px] text-neutral-400 tracking-widest font-mono uppercase">
+              <span>CRT 60FPS</span>
+            </div>
 
-          <!-- Coordinate Grid overlay for 2048 -->
-          <ArcadeGridOverlay
-            v-if="activeEngine === 'canvas-2048'"
-            :visible="showGridOverlay"
-          />
-
-          <!-- Ghost Cursor overlay for 2048 -->
-          <ArcadeGhostCursor
-            v-if="activeEngine === 'canvas-2048'"
-            :cursor-state="arcadeAgent.cursorState.value"
-            :character-name="activeCard?.name || 'Airi'"
-          />
-        </div>
-
-        <!-- JSDOS WEB PLAYER CONTAINER -->
-        <div
-          v-show="activeEngine === 'jsdos'"
-          class="relative h-full max-h-[580px] max-w-[780px] w-full flex items-center justify-center overflow-hidden border-4 border-neutral-800/80 rounded-2xl bg-black p-1 shadow-2xl"
-        >
-          <!-- DOS Bezel Badge -->
-          <div class="backdrop-blur-xs pointer-events-none absolute left-3 top-3 z-30 flex items-center gap-1.5 rounded bg-black/70 px-2 py-0.5 text-[9px] text-neutral-400 tracking-widest font-mono uppercase">
-            <span
-              class="h-1.5 w-1.5 rounded-full"
-              :class="isGameReady ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'"
+            <canvas
+              ref="canvasRef"
+              tabindex="0"
+              width="420"
+              height="420"
+              class="block rounded-xl outline-none"
+              @keydown="handleCanvasKeyDown"
+              @focus="isCanvasFocused = true"
+              @blur="isCanvasFocused = false"
             />
-            <span>{{ isGameReady ? 'DOSBox WASM &bull; 4:3' : 'DOSBox Initializing...' }}</span>
+
+            <!-- Unfocused Click Overlay -->
+            <div
+              v-if="!isCanvasFocused"
+              class="absolute inset-0 flex flex-col items-center justify-center rounded-xl bg-black/40 backdrop-blur-[2px] transition-all"
+            >
+              <div class="i-solar:keyboard-bold mb-2 animate-bounce text-3xl text-white/90" />
+              <span class="rounded-full bg-neutral-900/80 px-3.5 py-1.5 text-xs text-white font-bold tracking-wide shadow-lg">
+                Click to Control Canvas
+              </span>
+              <span class="mt-1 text-[10px] text-white/60 font-medium">Use Arrow Keys or WASD</span>
+            </div>
+
+            <!-- Coordinate Grid overlay for 2048 -->
+            <ArcadeGridOverlay
+              v-if="activeEngine === 'canvas-2048'"
+              :visible="showGridOverlay"
+            />
+
+            <!-- Ghost Cursor overlay for 2048 -->
+            <ArcadeGhostCursor
+              v-if="activeEngine === 'canvas-2048'"
+              :cursor-state="arcadeAgent.cursorState.value"
+              :character-name="activeCard?.name || 'Airi'"
+            />
           </div>
 
-          <!-- Splash Screen Overlay (Shown while loading or before ci-ready) -->
+          <!-- JSDOS WEB PLAYER CONTAINER -->
           <div
-            v-if="!isGameReady"
-            class="absolute inset-0 z-20 flex flex-col items-center justify-center overflow-hidden rounded-xl bg-neutral-950"
+            v-show="activeEngine === 'jsdos'"
+            class="relative h-full max-h-[580px] max-w-[780px] w-full flex items-center justify-center overflow-hidden border-4 border-neutral-800/80 rounded-2xl bg-black p-1 shadow-2xl"
           >
-            <!-- Ambient blurred backdrop -->
-            <img
-              v-if="currentSplashUrl"
-              :src="currentSplashUrl"
-              :alt="currentGameTitle"
-              class="absolute inset-0 h-full w-full scale-110 object-cover opacity-25 blur-lg filter"
-            >
-            <div class="absolute inset-0 from-black/90 via-black/50 to-black/80 bg-gradient-to-t" />
+            <!-- DOS Bezel Badge -->
+            <div class="backdrop-blur-xs pointer-events-none absolute left-3 top-3 z-30 flex items-center gap-1.5 rounded bg-black/70 px-2 py-0.5 text-[9px] text-neutral-400 tracking-widest font-mono uppercase">
+              <span
+                class="h-1.5 w-1.5 rounded-full"
+                :class="isGameReady ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'"
+              />
+              <span>{{ isGameReady ? 'DOSBox WASM &bull; 4:3' : 'DOSBox Initializing...' }}</span>
+            </div>
 
-            <!-- Clean Foreground Screenshot / Cover -->
+            <!-- Splash Screen Overlay (Shown while loading or before ci-ready) -->
             <div
-              v-if="currentSplashUrl"
-              class="relative z-10 max-h-[60%] max-w-[70%] overflow-hidden border border-white/15 rounded-xl shadow-2xl"
+              v-if="!isGameReady"
+              class="absolute inset-0 z-20 flex flex-col items-center justify-center overflow-hidden rounded-xl bg-neutral-950"
             >
+              <!-- Ambient blurred backdrop -->
               <img
+                v-if="currentSplashUrl"
                 :src="currentSplashUrl"
                 :alt="currentGameTitle"
-                class="max-h-[260px] w-auto object-contain"
-                @error="(e: any) => { e.target.style.display = 'none' }"
+                class="absolute inset-0 h-full w-full scale-110 object-cover opacity-25 blur-lg filter"
               >
-            </div>
-            <div v-else class="relative z-10 text-neutral-600">
-              <div class="i-solar:gamepad-bold text-6xl" />
-            </div>
+              <div class="absolute inset-0 from-black/90 via-black/50 to-black/80 bg-gradient-to-t" />
 
-            <!-- Title & Progress Bar / Spinner -->
-            <div class="relative z-10 mt-3 flex flex-col items-center px-4 text-center">
-              <div class="text-sm text-white font-bold tracking-wide drop-shadow-md">
-                {{ currentGameTitle }}
-              </div>
+              <!-- Clean Foreground Screenshot / Cover -->
               <div
-                v-if="isDosEngineLoading"
-                class="mt-2 flex items-center gap-2 border border-white/10 rounded-full bg-black/70 px-3.5 py-1 text-xs text-neutral-200 shadow-lg backdrop-blur-md"
+                v-if="currentSplashUrl"
+                class="relative z-10 max-h-[60%] max-w-[70%] overflow-hidden border border-white/15 rounded-xl shadow-2xl"
               >
-                <div class="i-solar:restart-bold animate-spin text-sm text-primary-400" />
-                <span>{{ dosLoadingProgress }}</span>
+                <img
+                  :src="currentSplashUrl"
+                  :alt="currentGameTitle"
+                  class="max-h-[260px] w-auto object-contain"
+                  @error="(e: any) => { e.target.style.display = 'none' }"
+                >
+              </div>
+              <div v-else class="relative z-10 text-neutral-600">
+                <div class="i-solar:gamepad-bold text-6xl" />
+              </div>
+
+              <!-- Title & Progress Bar / Spinner -->
+              <div class="relative z-10 mt-3 flex flex-col items-center px-4 text-center">
+                <div class="text-sm text-white font-bold tracking-wide drop-shadow-md">
+                  {{ currentGameTitle }}
+                </div>
+                <div
+                  v-if="isDosEngineLoading"
+                  class="mt-2 flex items-center gap-2 border border-white/10 rounded-full bg-black/70 px-3.5 py-1 text-xs text-neutral-200 shadow-lg backdrop-blur-md"
+                >
+                  <div class="i-solar:restart-bold animate-spin text-sm text-primary-400" />
+                  <span>{{ dosLoadingProgress }}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div
-            ref="dosContainerRef"
-            class="h-full w-full cursor-crosshair overflow-hidden rounded-xl"
-            @click="handleDosContainerClick"
-          />
-
-          <!-- Cursor Lock Hint Badge (Shown when game is loaded but cursor not locked for FPS games) -->
-          <transition name="fade">
             <div
-              v-if="isFpsGame && isGameReady && !isPointerLocked"
-              class="pointer-events-none absolute bottom-3 z-30 flex items-center gap-1.5 border border-white/10 rounded-full bg-black/80 px-3 py-1 text-[11px] text-white/90 shadow-xl backdrop-blur-md"
-            >
-              <div class="i-solar:mouse-bold text-xs text-purple-400" />
-              <span>Click game to lock cursor &bull; Press <kbd class="rounded bg-white/20 px-1 py-0.5 text-[9px] text-white font-mono">ESC</kbd> to unlock</span>
-            </div>
-          </transition>
-
-          <!-- Coordinate Grid overlay for JSDOS -->
-          <ArcadeGridOverlay
-            v-if="activeEngine === 'jsdos' && isGameReady"
-            :visible="showGridOverlay"
-          />
-
-          <!-- Ghost Cursor overlay for JSDOS -->
-          <ArcadeGhostCursor
-            v-if="activeEngine === 'jsdos'"
-            :cursor-state="arcadeAgent.cursorState.value"
-            :character-name="activeCard?.name || 'Airi'"
-          />
-        </div>
-      </div>
-
-      <!-- AI Companion Bottom Control Deck -->
-      <div class="mt-3 flex items-center justify-between border border-neutral-200/50 rounded-xl bg-white/70 px-4 py-2.5 shadow-sm backdrop-blur-md dark:border-neutral-800/50 dark:bg-neutral-900/70">
-        <!-- Left: Primary Companion Actions -->
-        <div class="flex items-center gap-2.5">
-          <!-- Airi Pass Controller / Take Turn -->
-          <button
-            class="shadow-2xs flex items-center gap-2 border rounded-lg px-3.5 py-1.5 text-xs text-white font-bold transition-all active:scale-95 disabled:opacity-50"
-            :class="[
-              arcadeAgent.turnState.value === 'executing'
-                ? 'border-amber-500/40 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 animate-pulse'
-                : arcadeAgent.turnState.value === 'thinking' || arcadeAgent.turnState.value === 'capturing'
-                  ? 'border-purple-500/40 bg-gradient-to-r from-purple-600 to-indigo-600'
-                  : 'border-purple-500/40 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700',
-            ]"
-            :disabled="isCapturing"
-            :title="arcadeAgent.turnState.value === 'executing' ? 'Airi is currently playing! Click to take back controller.' : 'Pass the controller: Airi inspects the screen with your global VLM, shares tactical commentary, and takes a turn!'"
-            @click="handleAiriTakeTurn"
-          >
-            <div
-              :class="[
-                arcadeAgent.turnState.value === 'thinking' || arcadeAgent.turnState.value === 'capturing'
-                  ? 'i-solar:restart-bold animate-spin'
-                  : arcadeAgent.turnState.value === 'executing'
-                    ? 'i-solar:hand-shake-bold'
-                    : 'i-solar:gamepad-charge-bold',
-              ]"
-              class="text-sm"
+              ref="dosContainerRef"
+              class="h-full w-full cursor-crosshair overflow-hidden rounded-xl"
+              @click="handleDosContainerClick"
             />
-            <span>
-              {{
-                arcadeAgent.turnState.value === 'capturing'
-                  ? 'Observing Game...'
-                  : arcadeAgent.turnState.value === 'thinking'
-                    ? 'Airi Planning Move...'
-                    : arcadeAgent.turnState.value === 'executing'
-                      ? 'Take Back Controller'
-                      : 'Pass to Airi'
-              }}
-            </span>
-          </button>
 
-          <!-- Auto-Play Toggle -->
-          <label class="flex cursor-pointer select-none items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-neutral-50/80 px-2.5 py-1.5 text-xs text-neutral-700 font-semibold transition-colors dark:border-neutral-700/80 dark:bg-neutral-800/80 hover:bg-neutral-100 dark:text-neutral-200">
-            <input v-model="arcadeAgent.autoPlay.value" type="checkbox" class="size-3.5 rounded accent-purple-600">
-            <span>Auto-Play</span>
-          </label>
-
-          <!-- Grid Overlay Toggle -->
-          <label
-            class="flex cursor-pointer select-none items-center gap-1.5 border rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
-            :class="[
-              showGridOverlay
-                ? 'border-sky-500/50 bg-sky-500/10 text-sky-700 dark:border-sky-400/50 dark:bg-sky-950/30 dark:text-sky-300'
-                : 'border-neutral-200/80 bg-neutral-50/80 text-neutral-700 dark:border-neutral-700/80 dark:bg-neutral-800/80 hover:bg-neutral-100 dark:text-neutral-200',
-            ]"
-            title="Toggle 100-interval normalized coordinate grid [0, 1000] across live game view, frame attachments, and AI assistance"
-          >
-            <input v-model="showGridOverlay" type="checkbox" class="size-3.5 rounded accent-sky-500">
-            <div :class="showGridOverlay ? 'i-solar:widget-2-bold text-sky-500' : 'i-solar:widget-2-outline text-neutral-400'" class="text-xs" />
-            <span>Grid Overlay</span>
-          </label>
-        </div>
-
-        <!-- Right: Real-Time Companion Tools & Memory -->
-        <div class="flex items-center gap-2">
-          <!-- Quick Ask Airi -->
-          <button
-            class="shadow-2xs flex items-center gap-1.5 border border-primary-500/40 rounded-lg bg-primary-500 px-3 py-1.5 text-xs text-white font-bold transition-all active:scale-95 hover:bg-primary-600 disabled:opacity-50"
-            :disabled="isCapturing"
-            title="Instantly snap game screen and ask Airi what to do next"
-            @click="handleQuickAsk"
-          >
-            <div :class="isCapturing ? 'i-solar:restart-bold animate-spin' : 'i-solar:plain-bold'" class="text-xs" />
-            <span>Quick Ask Airi</span>
-          </button>
-
-          <!-- Attach Frame -->
-          <button
-            class="shadow-2xs dark:hover:bg-neutral-750 flex items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-white px-2.5 py-1.5 text-xs text-neutral-700 font-medium transition-all active:scale-95 dark:border-neutral-700/80 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200 disabled:opacity-50"
-            :disabled="isCapturing"
-            title="Capture current game frame and attach to chat message"
-            @click="handleAttachFrame"
-          >
-            <div class="i-solar:camera-bold text-xs text-primary-500" />
-            <span>Attach Frame</span>
-          </button>
-
-          <!-- AI Guidance & Tuning Button -->
-          <button
-            class="shadow-2xs flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all active:scale-95 disabled:opacity-50"
-            :class="[
-              hasCustomPrompt
-                ? 'border-amber-500/40 bg-amber-50/80 text-amber-700 hover:bg-amber-100 dark:border-amber-600/40 dark:bg-amber-950/40 dark:text-amber-300'
-                : 'border-neutral-200/80 bg-white text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-750',
-            ]"
-            :title="hasCustomPrompt ? 'Custom AI strategy active! Click to tune or view' : 'Tune AI guidance, rules, and coordinates for this game'"
-            @click="isTuningModalOpen = true"
-          >
-            <div :class="hasCustomPrompt ? 'i-solar:tuning-square-2-bold text-amber-500' : 'i-solar:tuning-square-2-bold text-purple-500'" class="text-xs" />
-            <span>AI Guidance</span>
-            <span v-if="hasCustomPrompt" class="size-1.5 rounded-full bg-amber-500" />
-          </button>
-
-          <!-- Turn Memory Indicator (if turns have occurred) -->
-          <div
-            v-if="arcadeAgent.turnHistory.value.length > 0"
-            class="ml-1 flex items-center gap-1 border border-purple-500/20 rounded-full bg-purple-500/10 px-2.5 py-1 text-[10px] text-purple-600 font-medium dark:text-purple-400"
-            :title="`Recorded ${arcadeAgent.turnHistory.value.length} recent turns in memory`"
-          >
-            <div class="i-solar:history-bold text-xs" />
-            <span>Turn {{ arcadeAgent.turnHistory.value[arcadeAgent.turnHistory.value.length - 1].turnIndex }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bottom Status & Controls Guide -->
-      <div class="mt-3 flex items-center justify-between px-2 text-[11px] text-neutral-500 dark:text-neutral-400">
-        <div class="flex items-center gap-3">
-          <template v-if="activeEngine === 'canvas-2048'">
-            <span class="flex items-center gap-1">
-              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Arrows / WASD</kbd>
-              Move
-            </span>
-            <span class="flex items-center gap-1">
-              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">R</kbd>
-              Restart
-            </span>
-            <span class="flex items-center gap-1">
-              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">P</kbd>
-              Pause
-            </span>
-          </template>
-          <template v-else>
-            <span class="flex items-center gap-1">
-              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Click Game</kbd>
-              Lock Cursor
-            </span>
-            <span class="flex items-center gap-1">
-              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">ESC</kbd>
-              Unlock
-            </span>
-            <span class="flex items-center gap-1">
-              <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Grid</kbd>
-              [0, 1000] Overlay
-            </span>
-          </template>
-        </div>
-        <div class="text-[10px] text-neutral-400">
-          Generic Gaming Runtime &bull; Phase 2 JS-DOS &amp; 8,000+ Catalog
-        </div>
-      </div>
-    </div>
-
-    <!-- 2. RIGHT PANE: Backseat Chat Stream (35% width, w-88 to w-96) -->
-    <div class="w-88 flex flex-col bg-white/40 backdrop-blur-md dark:bg-neutral-950/20">
-      <!-- Backseat Header -->
-      <div class="flex items-center justify-between border-b border-neutral-200/40 p-3.5 dark:border-neutral-800/40">
-        <div class="flex items-center gap-2.5">
-          <div class="h-7 w-7 flex items-center justify-center rounded-lg bg-primary-500/10 text-primary-500">
-            <div class="i-solar:chat-line-bold-duotone text-base" />
-          </div>
-          <div>
-            <h4 class="text-xs text-neutral-800 font-bold dark:text-neutral-200">
-              {{ activeCard?.name || 'Airi' }}'s Live Reactions
-            </h4>
-            <span class="text-[10px] text-emerald-500 font-semibold">● Spectating {{ currentGameTitle }}</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Transcript Feed -->
-      <div
-        ref="transcriptContainerRef"
-        class="flex-1 overflow-y-auto p-4 space-y-3"
-      >
-        <template v-for="msg in chatTranscript" :key="msg.id">
-          <!-- Character Dialogue Bubble -->
-          <div v-if="msg.sender === 'character'" class="flex flex-col items-start gap-1">
-            <div class="flex items-center gap-1.5">
-              <span class="text-[10px] text-neutral-400 font-bold">{{ msg.authorName }}</span>
-              <span
-                v-if="msg.emotion && msg.emotion !== 'neutral'"
-                class="rounded-full px-1.5 py-0.2 text-[8px] font-bold tracking-wider uppercase"
-                :class="msg.emotion === 'smug'
-                  ? 'bg-purple-100 text-purple-600 dark:bg-purple-950/40 dark:text-purple-300'
-                  : msg.emotion === 'panicked'
-                    ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300'
-                    : 'bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300'"
-              >
-                {{ msg.emotion }}
-              </span>
-            </div>
-            <div class="shadow-xs max-w-[90%] rounded-2xl rounded-tl-none bg-white p-3 text-xs text-neutral-800 leading-relaxed dark:bg-neutral-800/80 dark:text-neutral-200">
+            <!-- Cursor Lock Hint Badge (Shown when game is loaded but cursor not locked for FPS games) -->
+            <transition name="fade">
               <div
-                v-if="msg.imageAttachment"
-                class="mb-2 overflow-hidden border border-neutral-200 rounded-lg bg-black/40 shadow-inner dark:border-neutral-700"
+                v-if="isFpsGame && isGameReady && !isPointerLocked"
+                class="pointer-events-none absolute bottom-3 z-30 flex items-center gap-1.5 border border-white/10 rounded-full bg-black/80 px-3 py-1 text-[11px] text-white/90 shadow-xl backdrop-blur-md"
               >
-                <img
-                  :src="msg.imageAttachment"
-                  alt="Captured game screen"
-                  class="max-h-44 w-full object-contain"
-                >
+                <div class="i-solar:mouse-bold text-xs text-purple-400" />
+                <span>Click game to lock cursor &bull; Press <kbd class="rounded bg-white/20 px-1 py-0.5 text-[9px] text-white font-mono">ESC</kbd> to unlock</span>
               </div>
-              <div>{{ msg.text }}</div>
+            </transition>
 
-              <!-- Turn Plan Card -->
-              <div
-                v-if="msg.turnPlan"
-                class="mt-2.5 border border-purple-500/30 rounded-xl bg-purple-500/5 p-2.5 space-y-2 dark:border-purple-400/30 dark:bg-purple-950/20"
-              >
-                <div class="flex items-center justify-between gap-1 text-[11px] text-purple-700 font-bold dark:text-purple-300">
-                  <div class="flex items-center gap-1.5">
-                    <div class="i-solar:gamepad-charge-bold text-sm text-purple-500" />
-                    <span>🎯 {{ msg.turnPlan.plan }}</span>
-                  </div>
-                  <span
-                    v-if="msg.turnPlan.executed"
-                    class="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] text-emerald-600 font-bold dark:bg-emerald-950/50 dark:text-emerald-400"
-                  >
-                    Executed ✓
-                  </span>
-                </div>
+            <!-- Coordinate Grid overlay for JSDOS -->
+            <ArcadeGridOverlay
+              v-if="activeEngine === 'jsdos' && isGameReady"
+              :visible="showGridOverlay"
+            />
 
-                <!-- Actions list -->
-                <div
-                  v-if="msg.turnPlan.actions?.length > 0"
-                  class="flex flex-wrap gap-1 pt-0.5"
-                >
-                  <span
-                    v-for="(act, idx) in msg.turnPlan.actions"
-                    :key="idx"
-                    class="shadow-2xs border border-neutral-200/80 rounded bg-white/90 px-1.5 py-0.5 text-[9px] text-neutral-700 font-mono dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300"
-                  >
-                    {{ act.type === 'click' ? `🖱️ Click (${act.x}, ${act.y})` : act.type === 'drag' ? `👆 Drag (${act.fromX ?? (act as any).startX ?? (act as any).from_x ?? '?'}, ${act.fromY ?? (act as any).startY ?? (act as any).from_y ?? '?'}) ➔ (${act.toX ?? (act as any).endX ?? (act as any).to_x ?? '?'}, ${act.toY ?? (act as any).endY ?? (act as any).to_y ?? '?'})` : act.type === 'key_press' ? `⌨️ Key [${act.key}]` : act.type === 'type_text' ? `⌨️ Type "${act.text}"` : '⏳ Wait' }}
-                  </span>
-                </div>
-
-                <!-- Execute / Replay Move Button (Permanently available for testing & debugging moves) -->
-                <div
-                  v-if="msg.turnPlan.actions?.length > 0"
-                  class="pt-1"
-                >
-                  <button
-                    type="button"
-                    class="shadow-xs w-full flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-bold transition-all active:scale-95 disabled:opacity-50"
-                    :class="[
-                      msg.turnPlan.executed
-                        ? 'border border-purple-500/40 bg-purple-500/10 text-purple-700 hover:bg-purple-500/20 dark:border-purple-400/40 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50'
-                        : 'from-purple-600 to-indigo-600 bg-gradient-to-r text-white hover:from-purple-700 hover:to-indigo-700',
-                    ]"
-                    :disabled="arcadeAgent.turnState.value !== 'idle'"
-                    :title="msg.turnPlan.executed ? 'Replay these moves on the active game canvas to debug positioning' : 'Execute these moves on the active game canvas'"
-                    @click="handleExecuteMovesOnCanvas(msg.turnPlan)"
-                  >
-                    <div
-                      :class="[
-                        isPlanExecuting(msg.turnPlan)
-                          ? 'i-solar:restart-bold animate-spin'
-                          : msg.turnPlan.executed
-                            ? 'i-solar:restart-bold'
-                            : 'i-solar:play-bold',
-                      ]"
-                      class="text-xs"
-                    />
-                    <span>
-                      {{
-                        isPlanExecuting(msg.turnPlan)
-                          ? (msg.turnPlan.executed ? 'Replaying Moves...' : 'Executing Moves...')
-                          : (msg.turnPlan.executed ? '🔄 Replay Moves on Canvas' : '▶ Execute Moves on Canvas')
-                      }}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
+            <!-- Ghost Cursor overlay for JSDOS -->
+            <ArcadeGhostCursor
+              v-if="activeEngine === 'jsdos'"
+              :cursor-state="arcadeAgent.cursorState.value"
+              :character-name="activeCard?.name || 'Airi'"
+            />
           </div>
-
-          <!-- User Backseat Tip Bubble -->
-          <div v-else class="flex flex-col items-end gap-1">
-            <span class="text-[10px] text-neutral-400 font-bold">You (Backseat Tip)</span>
-            <div class="shadow-xs max-w-[90%] rounded-2xl rounded-tr-none bg-primary-500 p-3 text-xs text-white leading-relaxed">
-              <div
-                v-if="msg.imageAttachment"
-                class="mb-2 overflow-hidden border border-white/25 rounded-lg bg-black/40 shadow-inner"
-              >
-                <img
-                  :src="msg.imageAttachment"
-                  alt="Captured game screen"
-                  class="max-h-44 w-full object-contain"
-                >
-              </div>
-              <div>{{ msg.text }}</div>
-            </div>
-          </div>
-        </template>
-      </div>
-
-      <!-- Quick Backseat Advice Chips -->
-      <div class="border-t border-neutral-200/30 px-3 py-2 dark:border-neutral-800/30">
-        <div class="mb-1 text-[9px] text-neutral-400 font-bold tracking-wider uppercase">
-          Quick Backseat Calls
         </div>
-        <div class="flex flex-wrap gap-1.5">
-          <button
-            v-for="tip in ['Watch your health!', 'Check that corner!', 'Save your ammo!', 'Awesome move!']"
-            :key="tip"
-            class="rounded-lg bg-neutral-100 px-2 py-1 text-[10px] text-neutral-600 font-medium transition-colors dark:bg-neutral-800 hover:bg-primary-50 dark:text-neutral-300 hover:text-primary-600 dark:hover:bg-primary-950/30 dark:hover:text-primary-400"
-            @click="handleSendAdvice(tip)"
-          >
-            {{ tip }}
-          </button>
-        </div>
-      </div>
 
-      <!-- Minimal Backseat Composer -->
-      <div class="border-t border-neutral-200/40 p-3 dark:border-neutral-800/40">
-        <!-- Attached Frame Preview Chip -->
-        <div
-          v-if="attachedFrame"
-          class="mb-2 flex items-center justify-between gap-2 border border-primary-500/30 rounded-lg bg-primary-500/10 p-1.5 px-2 backdrop-blur-sm"
-        >
-          <div class="flex items-center gap-2 overflow-hidden">
-            <img
-              :src="attachedFrame.dataUrl"
-              class="shadow-xs h-10 w-14 border border-primary-500/20 rounded object-cover"
-              alt="Snapshot Preview"
+        <!-- AI Companion Bottom Control Deck -->
+        <div class="mt-3 flex items-center justify-between border border-neutral-200/50 rounded-xl bg-white/70 px-4 py-2.5 shadow-sm backdrop-blur-md dark:border-neutral-800/50 dark:bg-neutral-900/70">
+          <!-- Left: Primary Companion Actions -->
+          <div class="flex items-center gap-2.5">
+            <!-- Airi Pass Controller / Take Turn -->
+            <button
+              class="shadow-2xs flex items-center gap-2 border rounded-lg px-3.5 py-1.5 text-xs text-white font-bold transition-all active:scale-95 disabled:opacity-50"
+              :class="[
+                arcadeAgent.turnState.value === 'executing'
+                  ? 'border-amber-500/40 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 animate-pulse'
+                  : arcadeAgent.turnState.value === 'thinking' || arcadeAgent.turnState.value === 'capturing'
+                    ? 'border-purple-500/40 bg-gradient-to-r from-purple-600 to-indigo-600'
+                    : 'border-purple-500/40 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700',
+              ]"
+              :disabled="isCapturing"
+              :title="arcadeAgent.turnState.value === 'executing' ? 'Airi is currently playing! Click to take back controller.' : 'Pass the controller: Airi inspects the screen with your global VLM, shares tactical commentary, and takes a turn!'"
+              @click="handleAiriTakeTurn"
             >
-            <div class="flex flex-col overflow-hidden">
-              <span class="text-[10px] text-primary-600 font-bold dark:text-primary-400">📸 Frame Snapshot Attached</span>
-              <span class="truncate text-[9px] text-neutral-500 dark:text-neutral-400">{{ currentGameTitle }}</span>
+              <div
+                :class="[
+                  arcadeAgent.turnState.value === 'thinking' || arcadeAgent.turnState.value === 'capturing'
+                    ? 'i-solar:restart-bold animate-spin'
+                    : arcadeAgent.turnState.value === 'executing'
+                      ? 'i-solar:hand-shake-bold'
+                      : 'i-solar:gamepad-charge-bold',
+                ]"
+                class="text-sm"
+              />
+              <span>
+                {{
+                  arcadeAgent.turnState.value === 'capturing'
+                    ? 'Observing Game...'
+                    : arcadeAgent.turnState.value === 'thinking'
+                      ? 'Airi Planning Move...'
+                      : arcadeAgent.turnState.value === 'executing'
+                        ? 'Take Back Controller'
+                        : 'Pass to Airi'
+                }}
+              </span>
+            </button>
+
+            <!-- Auto-Play Toggle -->
+            <label class="flex cursor-pointer select-none items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-neutral-50/80 px-2.5 py-1.5 text-xs text-neutral-700 font-semibold transition-colors dark:border-neutral-700/80 dark:bg-neutral-800/80 hover:bg-neutral-100 dark:text-neutral-200">
+              <input v-model="arcadeAgent.autoPlay.value" type="checkbox" class="size-3.5 rounded accent-purple-600">
+              <span>Auto-Play</span>
+            </label>
+
+            <!-- Grid Overlay Toggle -->
+            <label
+              class="flex cursor-pointer select-none items-center gap-1.5 border rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors"
+              :class="[
+                showGridOverlay
+                  ? 'border-sky-500/50 bg-sky-500/10 text-sky-700 dark:border-sky-400/50 dark:bg-sky-950/30 dark:text-sky-300'
+                  : 'border-neutral-200/80 bg-neutral-50/80 text-neutral-700 dark:border-neutral-700/80 dark:bg-neutral-800/80 hover:bg-neutral-100 dark:text-neutral-200',
+              ]"
+              title="Toggle 100-interval normalized coordinate grid [0, 1000] across live game view, frame attachments, and AI assistance"
+            >
+              <input v-model="showGridOverlay" type="checkbox" class="size-3.5 rounded accent-sky-500">
+              <div :class="showGridOverlay ? 'i-solar:widget-2-bold text-sky-500' : 'i-solar:widget-2-outline text-neutral-400'" class="text-xs" />
+              <span>Grid Overlay</span>
+            </label>
+          </div>
+
+          <!-- Right: Real-Time Companion Tools & Memory -->
+          <div class="flex items-center gap-2">
+            <!-- Quick Ask Airi -->
+            <button
+              class="shadow-2xs flex items-center gap-1.5 border border-primary-500/40 rounded-lg bg-primary-500 px-3 py-1.5 text-xs text-white font-bold transition-all active:scale-95 hover:bg-primary-600 disabled:opacity-50"
+              :disabled="isCapturing"
+              title="Instantly snap game screen and ask Airi what to do next"
+              @click="handleQuickAsk"
+            >
+              <div :class="isCapturing ? 'i-solar:restart-bold animate-spin' : 'i-solar:plain-bold'" class="text-xs" />
+              <span>Quick Ask Airi</span>
+            </button>
+
+            <!-- Attach Frame -->
+            <button
+              class="shadow-2xs dark:hover:bg-neutral-750 flex items-center gap-1.5 border border-neutral-200/80 rounded-lg bg-white px-2.5 py-1.5 text-xs text-neutral-700 font-medium transition-all active:scale-95 dark:border-neutral-700/80 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200 disabled:opacity-50"
+              :disabled="isCapturing"
+              title="Capture current game frame and attach to chat message"
+              @click="handleAttachFrame"
+            >
+              <div class="i-solar:camera-bold text-xs text-primary-500" />
+              <span>Attach Frame</span>
+            </button>
+
+            <!-- AI Guidance & Tuning Button -->
+            <button
+              class="shadow-2xs flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 text-xs font-medium transition-all active:scale-95 disabled:opacity-50"
+              :class="[
+                hasCustomPrompt
+                  ? 'border-amber-500/40 bg-amber-50/80 text-amber-700 hover:bg-amber-100 dark:border-amber-600/40 dark:bg-amber-950/40 dark:text-amber-300'
+                  : 'border-neutral-200/80 bg-white text-neutral-700 hover:bg-neutral-50 dark:border-neutral-700/80 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-750',
+              ]"
+              :title="hasCustomPrompt ? 'Custom AI strategy active! Click to tune or view' : 'Tune AI guidance, rules, and coordinates for this game'"
+              @click="isTuningModalOpen = true"
+            >
+              <div :class="hasCustomPrompt ? 'i-solar:tuning-square-2-bold text-amber-500' : 'i-solar:tuning-square-2-bold text-purple-500'" class="text-xs" />
+              <span>AI Guidance</span>
+              <span v-if="hasCustomPrompt" class="size-1.5 rounded-full bg-amber-500" />
+            </button>
+
+            <!-- Turn Memory Indicator (if turns have occurred) -->
+            <div
+              v-if="arcadeAgent.turnHistory.value.length > 0"
+              class="ml-1 flex items-center gap-1 border border-purple-500/20 rounded-full bg-purple-500/10 px-2.5 py-1 text-[10px] text-purple-600 font-medium dark:text-purple-400"
+              :title="`Recorded ${arcadeAgent.turnHistory.value.length} recent turns in memory`"
+            >
+              <div class="i-solar:history-bold text-xs" />
+              <span>Turn {{ arcadeAgent.turnHistory.value[arcadeAgent.turnHistory.value.length - 1].turnIndex }}</span>
             </div>
           </div>
-          <button
-            type="button"
-            class="rounded p-1 text-neutral-400 transition-colors hover:text-rose-500 dark:hover:text-rose-400"
-            title="Remove attachment"
-            @click="attachedFrame = null"
-          >
-            <div class="i-solar:close-circle-bold text-base" />
-          </button>
         </div>
 
-        <form
-          class="shadow-xs flex items-center gap-1.5 rounded-xl bg-white/80 p-1.5 ring-1 ring-neutral-200/60 dark:bg-neutral-900/80 dark:ring-neutral-800/60"
-          @submit.prevent="handleSendAdvice()"
-        >
-          <button
-            type="button"
-            class="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-primary-500 dark:hover:bg-neutral-800"
-            :title="attachedFrame ? 'Frame snapshot attached' : 'Snap and attach game screen'"
-            @click="handleAttachFrame"
-          >
-            <div class="i-solar:camera-bold text-sm" />
-          </button>
+        <!-- Bottom Status & Controls Guide -->
+        <div class="mt-3 flex items-center justify-between px-2 text-[11px] text-neutral-500 dark:text-neutral-400">
+          <div class="flex items-center gap-3">
+            <template v-if="activeEngine === 'canvas-2048'">
+              <span class="flex items-center gap-1">
+                <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Arrows / WASD</kbd>
+                Move
+              </span>
+              <span class="flex items-center gap-1">
+                <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">R</kbd>
+                Restart
+              </span>
+              <span class="flex items-center gap-1">
+                <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">P</kbd>
+                Pause
+              </span>
+            </template>
+            <template v-else>
+              <span class="flex items-center gap-1">
+                <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Click Game</kbd>
+                Lock Cursor
+              </span>
+              <span class="flex items-center gap-1">
+                <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">ESC</kbd>
+                Unlock
+              </span>
+              <span class="flex items-center gap-1">
+                <kbd class="border border-neutral-300 rounded bg-neutral-200/50 px-1.5 py-0.5 text-[10px] font-mono dark:border-neutral-700 dark:bg-neutral-800">Grid</kbd>
+                [0, 1000] Overlay
+              </span>
+            </template>
+          </div>
+          <div class="text-[10px] text-neutral-400">
+            Generic Gaming Runtime &bull; Phase 2 JS-DOS &amp; 8,000+ Catalog
+          </div>
+        </div>
+      </div>
 
-          <input
-            v-model="userInputText"
-            type="text"
-            placeholder="Give backseat advice..."
-            class="flex-1 bg-transparent px-1.5 text-xs text-neutral-800 outline-none dark:text-neutral-200 placeholder:text-neutral-400"
-            @keydown.stop
+      <!-- 2. RIGHT PANE: Backseat Chat Stream (35% width, w-88 to w-96) -->
+      <div class="w-88 flex flex-col bg-white/40 backdrop-blur-md dark:bg-neutral-950/20">
+        <!-- Backseat Header -->
+        <div class="flex items-center justify-between border-b border-neutral-200/40 p-3.5 dark:border-neutral-800/40">
+          <div class="flex items-center gap-2.5">
+            <div class="h-7 w-7 flex items-center justify-center rounded-lg bg-primary-500/10 text-primary-500">
+              <div class="i-solar:chat-line-bold-duotone text-base" />
+            </div>
+            <div>
+              <h4 class="text-xs text-neutral-800 font-bold dark:text-neutral-200">
+                {{ activeCard?.name || 'Airi' }}'s Live Reactions
+              </h4>
+              <span class="text-[10px] text-emerald-500 font-semibold">● Spectating {{ currentGameTitle }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transcript Feed -->
+        <div
+          ref="transcriptContainerRef"
+          class="flex-1 overflow-y-auto p-4 space-y-3"
+        >
+          <template v-for="msg in chatTranscript" :key="msg.id">
+            <!-- Character Dialogue Bubble -->
+            <div v-if="msg.sender === 'character'" class="flex flex-col items-start gap-1">
+              <div class="flex items-center gap-1.5">
+                <span class="text-[10px] text-neutral-400 font-bold">{{ msg.authorName }}</span>
+                <span
+                  v-if="msg.emotion && msg.emotion !== 'neutral'"
+                  class="rounded-full px-1.5 py-0.2 text-[8px] font-bold tracking-wider uppercase"
+                  :class="msg.emotion === 'smug'
+                    ? 'bg-purple-100 text-purple-600 dark:bg-purple-950/40 dark:text-purple-300'
+                    : msg.emotion === 'panicked'
+                      ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:text-rose-300'
+                      : 'bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-300'"
+                >
+                  {{ msg.emotion }}
+                </span>
+              </div>
+              <div class="shadow-xs max-w-[90%] rounded-2xl rounded-tl-none bg-white p-3 text-xs text-neutral-800 leading-relaxed dark:bg-neutral-800/80 dark:text-neutral-200">
+                <div
+                  v-if="msg.imageAttachment"
+                  class="mb-2 overflow-hidden border border-neutral-200 rounded-lg bg-black/40 shadow-inner dark:border-neutral-700"
+                >
+                  <img
+                    :src="msg.imageAttachment"
+                    alt="Captured game screen"
+                    class="max-h-44 w-full object-contain"
+                  >
+                </div>
+                <div>{{ msg.text }}</div>
+
+                <!-- Turn Plan Card -->
+                <div
+                  v-if="msg.turnPlan"
+                  class="mt-2.5 border border-purple-500/30 rounded-xl bg-purple-500/5 p-2.5 space-y-2 dark:border-purple-400/30 dark:bg-purple-950/20"
+                >
+                  <div class="flex items-center justify-between gap-1 text-[11px] text-purple-700 font-bold dark:text-purple-300">
+                    <div class="flex items-center gap-1.5">
+                      <div class="i-solar:gamepad-charge-bold text-sm text-purple-500" />
+                      <span>🎯 {{ msg.turnPlan.plan }}</span>
+                    </div>
+                    <span
+                      v-if="msg.turnPlan.executed"
+                      class="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] text-emerald-600 font-bold dark:bg-emerald-950/50 dark:text-emerald-400"
+                    >
+                      Executed ✓
+                    </span>
+                  </div>
+
+                  <!-- Actions list -->
+                  <div
+                    v-if="msg.turnPlan.actions?.length > 0"
+                    class="flex flex-wrap gap-1 pt-0.5"
+                  >
+                    <span
+                      v-for="(act, idx) in msg.turnPlan.actions"
+                      :key="idx"
+                      class="shadow-2xs border border-neutral-200/80 rounded bg-white/90 px-1.5 py-0.5 text-[9px] text-neutral-700 font-mono dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300"
+                    >
+                      {{ act.type === 'click' ? `🖱️ Click (${act.x}, ${act.y})` : act.type === 'drag' ? `👆 Drag (${act.fromX ?? (act as any).startX ?? (act as any).from_x ?? '?'}, ${act.fromY ?? (act as any).startY ?? (act as any).from_y ?? '?'}) ➔ (${act.toX ?? (act as any).endX ?? (act as any).to_x ?? '?'}, ${act.toY ?? (act as any).endY ?? (act as any).to_y ?? '?'})` : act.type === 'key_press' ? `⌨️ Key [${act.key}]` : act.type === 'type_text' ? `⌨️ Type "${act.text}"` : '⏳ Wait' }}
+                    </span>
+                  </div>
+
+                  <!-- Execute / Replay Move Button (Permanently available for testing & debugging moves) -->
+                  <div
+                    v-if="msg.turnPlan.actions?.length > 0"
+                    class="pt-1"
+                  >
+                    <button
+                      type="button"
+                      class="shadow-xs w-full flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-bold transition-all active:scale-95 disabled:opacity-50"
+                      :class="[
+                        msg.turnPlan.executed
+                          ? 'border border-purple-500/40 bg-purple-500/10 text-purple-700 hover:bg-purple-500/20 dark:border-purple-400/40 dark:bg-purple-900/30 dark:text-purple-300 dark:hover:bg-purple-900/50'
+                          : 'from-purple-600 to-indigo-600 bg-gradient-to-r text-white hover:from-purple-700 hover:to-indigo-700',
+                      ]"
+                      :disabled="arcadeAgent.turnState.value !== 'idle'"
+                      :title="msg.turnPlan.executed ? 'Replay these moves on the active game canvas to debug positioning' : 'Execute these moves on the active game canvas'"
+                      @click="handleExecuteMovesOnCanvas(msg.turnPlan)"
+                    >
+                      <div
+                        :class="[
+                          isPlanExecuting(msg.turnPlan)
+                            ? 'i-solar:restart-bold animate-spin'
+                            : msg.turnPlan.executed
+                              ? 'i-solar:restart-bold'
+                              : 'i-solar:play-bold',
+                        ]"
+                        class="text-xs"
+                      />
+                      <span>
+                        {{
+                          isPlanExecuting(msg.turnPlan)
+                            ? (msg.turnPlan.executed ? 'Replaying Moves...' : 'Executing Moves...')
+                            : (msg.turnPlan.executed ? '🔄 Replay Moves on Canvas' : '▶ Execute Moves on Canvas')
+                        }}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- User Backseat Tip Bubble -->
+            <div v-else class="flex flex-col items-end gap-1">
+              <span class="text-[10px] text-neutral-400 font-bold">You (Backseat Tip)</span>
+              <div class="shadow-xs max-w-[90%] rounded-2xl rounded-tr-none bg-primary-500 p-3 text-xs text-white leading-relaxed">
+                <div
+                  v-if="msg.imageAttachment"
+                  class="mb-2 overflow-hidden border border-white/25 rounded-lg bg-black/40 shadow-inner"
+                >
+                  <img
+                    :src="msg.imageAttachment"
+                    alt="Captured game screen"
+                    class="max-h-44 w-full object-contain"
+                  >
+                </div>
+                <div>{{ msg.text }}</div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Quick Backseat Advice Chips -->
+        <div class="border-t border-neutral-200/30 px-3 py-2 dark:border-neutral-800/30">
+          <div class="mb-1 text-[9px] text-neutral-400 font-bold tracking-wider uppercase">
+            Quick Backseat Calls
+          </div>
+          <div class="flex flex-wrap gap-1.5">
+            <button
+              v-for="tip in ['Watch your health!', 'Check that corner!', 'Save your ammo!', 'Awesome move!']"
+              :key="tip"
+              class="rounded-lg bg-neutral-100 px-2 py-1 text-[10px] text-neutral-600 font-medium transition-colors dark:bg-neutral-800 hover:bg-primary-50 dark:text-neutral-300 hover:text-primary-600 dark:hover:bg-primary-950/30 dark:hover:text-primary-400"
+              @click="handleSendAdvice(tip)"
+            >
+              {{ tip }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Minimal Backseat Composer -->
+        <div class="border-t border-neutral-200/40 p-3 dark:border-neutral-800/40">
+          <!-- Attached Frame Preview Chip -->
+          <div
+            v-if="attachedFrame"
+            class="mb-2 flex items-center justify-between gap-2 border border-primary-500/30 rounded-lg bg-primary-500/10 p-1.5 px-2 backdrop-blur-sm"
           >
-          <button
-            type="submit"
-            :disabled="!userInputText.trim() && !attachedFrame"
-            class="h-7 w-7 flex items-center justify-center rounded-lg bg-primary-500 text-white transition-opacity disabled:opacity-40"
+            <div class="flex items-center gap-2 overflow-hidden">
+              <img
+                :src="attachedFrame.dataUrl"
+                class="shadow-xs h-10 w-14 border border-primary-500/20 rounded object-cover"
+                alt="Snapshot Preview"
+              >
+              <div class="flex flex-col overflow-hidden">
+                <span class="text-[10px] text-primary-600 font-bold dark:text-primary-400">📸 Frame Snapshot Attached</span>
+                <span class="truncate text-[9px] text-neutral-500 dark:text-neutral-400">{{ currentGameTitle }}</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="rounded p-1 text-neutral-400 transition-colors hover:text-rose-500 dark:hover:text-rose-400"
+              title="Remove attachment"
+              @click="attachedFrame = null"
+            >
+              <div class="i-solar:close-circle-bold text-base" />
+            </button>
+          </div>
+
+          <form
+            class="shadow-xs flex items-center gap-1.5 rounded-xl bg-white/80 p-1.5 ring-1 ring-neutral-200/60 dark:bg-neutral-900/80 dark:ring-neutral-800/60"
+            @submit.prevent="handleSendAdvice()"
           >
-            <div class="i-solar:plain-bold text-xs" />
-          </button>
-        </form>
+            <button
+              type="button"
+              class="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-primary-500 dark:hover:bg-neutral-800"
+              :title="attachedFrame ? 'Frame snapshot attached' : 'Snap and attach game screen'"
+              @click="handleAttachFrame"
+            >
+              <div class="i-solar:camera-bold text-sm" />
+            </button>
+
+            <input
+              v-model="userInputText"
+              type="text"
+              placeholder="Give backseat advice..."
+              class="flex-1 bg-transparent px-1.5 text-xs text-neutral-800 outline-none dark:text-neutral-200 placeholder:text-neutral-400"
+              @keydown.stop
+            >
+            <button
+              type="submit"
+              :disabled="!userInputText.trim() && !attachedFrame"
+              class="h-7 w-7 flex items-center justify-center rounded-lg bg-primary-500 text-white transition-opacity disabled:opacity-40"
+            >
+              <div class="i-solar:plain-bold text-xs" />
+            </button>
+          </form>
+        </div>
       </div>
     </div>
+
+    <!-- STAGE 2: Pre-Flight Provisioning Sheet -->
+    <ArcadeProvisioningSheet
+      :open="isProvisioningOpen"
+      :game="selectedGameForProvisioning"
+      :has-acquired-knowledge="selectedGameForProvisioning ? arcadeKnowledgeStore.hasKnowledge(selectedGameForProvisioning.identifier) : false"
+      @close="isProvisioningOpen = false"
+      @start-calibration="handleStartCalibration"
+      @launch-direct="handleLaunchDirect"
+    />
 
     <!-- Retro Arcade Catalog Modal -->
     <ArcadeCatalogModal
