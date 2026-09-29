@@ -316,6 +316,41 @@ async function runCharacterCardStep() {
   }
 }
 
+async function waitForStageModelReady(timeoutMs = 15000): Promise<boolean> {
+  if (typeof BroadcastChannel === 'undefined')
+    return true
+
+  return new Promise<boolean>((resolve) => {
+    const channel = new BroadcastChannel('airi-stage-model-ready')
+    let settled = false
+
+    const timer = setTimeout(() => {
+      if (settled)
+        return
+      settled = true
+      channel.close()
+      console.warn(`[App] Stage model ready signal timed out after ${timeoutMs}ms; proceeding without blocking.`)
+      resolve(false)
+    }, timeoutMs)
+
+    channel.onmessage = (event) => {
+      if (event.data === 'ready') {
+        if (settled)
+          return
+        settled = true
+        clearTimeout(timer)
+        channel.close()
+        resolve(true)
+      }
+    }
+
+    try {
+      channel.postMessage('query')
+    }
+    catch {}
+  })
+}
+
 async function runStageActorStep() {
   await reportStartupMilestone('stage-actor', 'loading')
   try {
@@ -327,12 +362,21 @@ async function runStageActorStep() {
       await reportStartupMilestone('stage-actor', 'skipped')
       return
     }
+
+    // Arm the stage model ready waiter BEFORE ensuring the window
+    // so we cannot miss the initial 'mounted' broadcast.
+    const modelReadyPromise = waitForStageModelReady(15000)
+
     const ensured = await ensureActorStage().catch(() => ({ created: false }))
     if (!ensured?.created) {
       await reportStartupMilestone('stage-actor', 'skipped')
       return
     }
     await settingsStore.initializeStageModel()
+
+    // Hold milestone completion until the 3D VRM/Live2D model finishes loading into WebGL
+    await modelReadyPromise
+
     await reportStartupMilestone('stage-actor', 'ready')
   }
   catch (err) {

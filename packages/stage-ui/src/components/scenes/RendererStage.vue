@@ -111,7 +111,7 @@ const { resolveActiveIdleAnimations } = useIdleAnimations()
 const live2dActiveModelId = computed(() => stageModelRenderer.value === 'live2d' ? stageModelSelected.value : undefined)
 useLive2DStageAmbientMotion({ modelId: live2dActiveModelId })
 
-const { post: postStageModelReady } = useBroadcastChannel<string, string>({ name: 'airi-stage-model-ready' })
+const { data: stageModelQuery, post: postStageModelReady } = useBroadcastChannel<string, string>({ name: 'airi-stage-model-ready' })
 watch(componentState, (state) => {
   debug('[RendererStage] componentState changed:', state)
   if (state === 'mounted') {
@@ -119,6 +119,13 @@ watch(componentState, (state) => {
     postStageModelReady('ready')
   }
 }, { immediate: true })
+
+watch(stageModelQuery, (msg) => {
+  if (msg === 'query' && componentState.value === 'mounted') {
+    debug('[RendererStage] Model is already mounted, responding to ready query')
+    postStageModelReady('ready')
+  }
+})
 
 watch(() => activeCard.value?.extensions?.airi?.active_concepts, async (newConcepts) => {
   debug('[RendererStage] Active concepts changed:', newConcepts)

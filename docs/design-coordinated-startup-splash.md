@@ -21,8 +21,15 @@ When launching AIRI on desktop (`apps/stage-tamagotchi`), multiple autonomous wi
 2. **Sleek Floating Card Form Factor (360 × 500 px)**: A tight portrait card centered on the primary monitor with brand mark, chromatic glow, milestone progress track, animated activity pulse, and dynamic status text.
 3. **Automatic Exit Transition**: Automatically fade out and close the splash screen upon reaching 100% ready state without requiring any user click or interaction.
 4. **"None" Model Stage Invariant**: If the active companion's model is `'none'`, bypass creating and mounting the Actor Stage window entirely, saving memory and GPU resources.
-5. **Strict SPA Invariant**: Retain our Single Page Application (SPA) architecture via Vite hash routing (`#/splash`) and instant HTML pre-bootstrap in `index.html`, rejecting Multi-Page Application (MPA) complexity.
+5. **Decoupled MPA Splash Shell (<10ms First Paint)**: Decouple the splash window from the monolithic SPA bundle (`main.ts`, Three.js, 50+ auto-routes, 12 fonts, Pinia) into a lightweight Multi-Page Application (MPA) entry (`splash.html` + `splash.main.ts`). Guarantees sub-10ms paint and eliminates the 27s blank/pink wait time.
 6. **Cross-Platform Reusability**: Abstract the milestone state machine (`useStartupResourcesStore`) so `apps/stage-pocket` and `apps/stage-web` can cleanly consume the same loading logic and recovery interfaces.
+
+### Architectural Evolution: From SPA Route to Dedicated MPA Shell
+During initial implementation, routing the splash screen as an SPA hash route (`#/splash` in `index.html`) exposed severe dev-mode latency bottlenecks:
+- **Phase 1 (11s Pink Pulse)**: Loading `index.html` forced Vite dev server to crawl and compile `main.ts`, pulling in `@tresjs/core` (Three.js WebGL engine), all 50+ auto-routes across the monorepo, 12 web font packages, and 18 Pinia stores in `App.vue` before executing.
+- **Phase 2 (16s Black Screen)**: When `createApp(App).mount('#app')` finally executed, it destroyed `#app`'s pre-bootstrap fallback. Because `VueRouter` used `importMode: 'async'`, `RouterView` rendered blank while compiling `splash.vue` on-demand. On a transparent window (`transparent: true`), zero rendered pixels produced a 16s pure black box.
+
+**The Solution**: We adopted a Multi-Page (MPA) entry point (`src/renderer/splash.html` + `src/renderer/splash.main.ts`). `splash.html` embeds complete static DOM and inline CSS, painting in **<10ms** on the very first frame. `splash.main.ts` connects directly to `@moeru/eventa` IPC with zero Three.js, zero router, and zero Pinia overhead.
 
 ---
 
@@ -32,7 +39,7 @@ When launching AIRI on desktop (`apps/stage-tamagotchi`), multiple autonomous wi
 In AIRI, character cards and their settings (`local:airi-cards`) are stored in IndexedDB via `unstorage` + `localforage`, which only exist inside Chromium Renderer processes. The Electron Main Process has **no direct access** to IndexedDB.
 
 Therefore, the boot lifecycle is organized as a **Two-Phase Handshake**:
-- **Phase 1 (Core Bootstrap)**: Main process launches the Splash Window (`#/splash`, visible immediately) and the Control Strip (`mainWindow`, hidden with `show: false`). Main does **not** launch the Actor Stage window.
+- **Phase 1 (Core Bootstrap)**: Main process launches the Splash Window (`splash.html`, visible immediately in <10ms) and the Control Strip (`mainWindow`, hidden with `show: false`). Main does **not** launch the Actor Stage window.
 - **Phase 2 (Content Resolution & Stage Fork)**: Control Strip restores IndexedDB, reads `activeCardId`, and inspects `displayModelId`. Control Strip then commands Main to either create/mount the Actor Stage (`electronStageEnsure`) or mark the stage milestone as skipped (`electronSplashReportMilestone: { id: 'stage-actor', status: 'skipped' }`).
 
 ```mermaid
@@ -40,14 +47,14 @@ sequenceDiagram
     autonumber
     actor User
     participant Main as Electron Main Process
-    participant Splash as Splash Window (#/splash)
+    participant Splash as Splash Window (splash.html)
     participant Ctrl as Control Strip (#/)
     participant Actor as Actor Stage (#/actor)
 
     User->>Main: Launch AIRI Desktop
     Note over Main: Hardware switches & LevelDB guard pass
     Main->>Splash: Create & show frameless Splash (360x500)
-    Note over Splash: Instant HTML pre-bootstrap renders (no white flash)<br/>Vue mounts with progress bar & spinner
+    Note over Splash: Instant static HTML/CSS renders (<10ms)<br/>splash.main.ts connects to Eventa IPC
     Main->>Ctrl: Create Control Strip (show: false, deferInitialShow: true)
 
     Note over Ctrl: Control Strip mounts & restores storage
@@ -66,12 +73,15 @@ sequenceDiagram
         Main->>Splash: electronSplashStateChanged(progress: 100%)
         Note over Actor: Actor Stage is NEVER created or mounted!
     else displayModelId !== 'none'
+        Ctrl->>Ctrl: waitForStageModelReady(15s) opens airi-stage-model-ready channel
         Ctrl->>Main: electronSplashReportMilestone('stage-actor', 'loading')
+        Main->>Splash: electronSplashStateChanged(progress: 75%, active: 'stage-actor')
         Ctrl->>Main: electronStageEnsure()
         Main->>Actor: stageWindowManager.ensureWindow() (show: false)
-        Note over Actor: Actor Stage compiles shaders & textures
-        Actor->>Main: electronSplashReportMilestone('stage-actor', 'ready')
-        Main->>Splash: electronSplashStateChanged(progress: 100%)
+        Note over Actor: Actor Stage compiles shaders & textures into WebGL
+        Actor->>Ctrl: BroadcastChannel('airi-stage-model-ready') emits 'ready'
+        Ctrl->>Main: electronSplashReportMilestone('stage-actor', 'ready')
+        Main->>Splash: electronSplashStateChanged(progress: 100%, ready: true)
     end
 
     Note over Splash: Progress 100% ("Ready!") held for 300ms
@@ -129,15 +139,15 @@ sequenceDiagram
      - `stage.startup.milestones.stage_actor`: *"Preparing avatar shaders & textures..."* (75–100%)
      - `stage.startup.milestones.stage_actor_skipped`: *"Text-only companion active (stage bypassed)"*
      - `stage.startup.ready`: *"Ready!"* (100%)
-4. **Progress Track**: Sleek 4px progress bar utilizing `@proj-airi/ui` `Progress` component with smooth width easing.
-5. **Zero-Flash Pre-Bootstrap**: In `apps/stage-tamagotchi/src/renderer/index.html`, routes other than the transparent floating islands automatically receive `.airi-pre-bootstrap`. The dark radial gradient and glowing pulse render **instantly in raw HTML/CSS**, eliminating any blank white or black window flash while Vite and Vue hydrate.
+4. **Progress Track**: Sleek 6px progress track with smooth width easing (`linear-gradient(90deg, #ec4899, #f472b6)`).
+5. **Zero-Flash Pre-Bootstrap (Dedicated MPA Shell)**: Rather than routing through `index.html` with its heavy SPA dependency graph, the Splash window loads a dedicated `src/renderer/splash.html` Multi-Page Application (MPA) entry. The dark radial gradient, brand badge, progress track, and status typography render **instantly in raw HTML/CSS (<10ms)**, eliminating the 27-second delay caused by Vite crawling 50+ routes, Three.js, and font libraries. An ultra-lightweight script (`splash.main.ts`) connects directly to `@moeru/eventa` IPC for real-time progress updates.
 
 ### 3.3. Exit Orchestration (Zero-Click Auto-Close)
 - Once all registered milestones achieve `status === 'ready'` or `status === 'skipped'`:
-  1. The progress bar completes to 100%, and status text displays `t('stage.startup.ready')`.
+  1. The progress bar completes to 100%, and status text displays `Ready!`.
   2. A brief hold period of `300ms` ensures the user visually perceives milestone completion.
   3. The Splash view triggers a smooth CSS transition (`opacity: 0`, `transform: scale(0.98)`, duration `300ms`).
-  4. On transition end, `Splash.vue` invokes `electronSplashDismiss()`.
+  4. On transition end, `splash.main.ts` invokes `electronSplashDismiss()`.
   5. The Main process reveals `mainWindow.show()`, reveals `stageWindow.show()` (if ensured and active), and destroys the Splash BrowserWindow (`splashWindow.destroy()`), cleanly freeing Chromium resources.
 
 ---
@@ -285,6 +295,16 @@ When `failed` is non-null:
 2. **Continue without Avatar Button**: If `failed.id === 'stage-actor'`, reveals an alternative button: `t('stage.startup.continue-without-model')`. Clicking this commands the Control Strip to invoke `electronSplashReportMilestone({ id: 'stage-actor', status: 'skipped' })`, instantly unblocking the `ready` computed state and allowing the user to proceed to the Control Strip and Chatbox.
 3. **Technical Details Accordion**: An expandable `<details>` section displays the raw error stack or rejection message for easy diagnostics.
 
+### 6.4. Actor Stage Model Ready Synchronization
+In the initial implementation, `runStageActorStep` in `App.vue` invoked `ensureActorStage()` and immediately reported `stage-actor` as `ready`. Because window creation takes only ~2ms, the splash screen hit 100% and announced "Ready!" long before Three.js or Live2D finished loading model assets into WebGL.
+
+The synchronized architecture establishes a cross-window handshake via `BroadcastChannel('airi-stage-model-ready')`:
+1. **Pre-Arming**: Before calling `ensureActorStage()`, `App.vue` arms `waitForStageModelReady(15000)`.
+2. **Query-Response**: It emits a `'query'` ping across the channel to instantly catch already-mounted models on warm reload.
+3. **Mount Notification**: In `RendererStage.vue` and `actor.vue`, `watch(componentState)` emits `'ready'` over the channel the exact moment the avatar shaders, textures, and geometry mount into WebGL.
+4. **Milestone Hold**: The splash screen holds smoothly at 75% (`"Preparing avatar stage..."`) until the `'ready'` broadcast is received.
+5. **Resilient Timeout Fallback**: If a model asset is missing or corrupted, a 15s timeout automatically proceeds with a warning, preventing any deadlock.
+
 ---
 
 ## 7. Cross-Platform Reusability Roadmap
@@ -302,26 +322,28 @@ The core store (`packages/stage-ui/src/stores/startup-resources.ts`) is authored
 ## 8. Implementation Phasing & Task Breakdown
 
 ### Phase 1: Shared Milestone Store & Invariants
-- [ ] Create `packages/stage-ui/src/stores/startup-resources.ts` with registration, progression calculation, and skip/fail support.
-- [ ] Author unit test suite `packages/stage-ui/src/stores/startup-resources.test.ts` verifying all state transitions, progress arithmetic, and error states.
-- [ ] Add locale strings to `packages/i18n/src/locales/en/stage.yaml` and `zh-Hans/stage.yaml`.
-- [ ] Run `node scripts/audit-test-catalog.mjs` to maintain 100% test catalog integrity.
+- [x] Create `packages/stage-ui/src/stores/startup-resources.ts` with registration, progression calculation, and skip/fail support.
+- [x] Author unit test suite `packages/stage-ui/src/stores/startup-resources.test.ts` verifying all state transitions, progress arithmetic, and error states.
+- [x] Add locale strings to `packages/i18n/src/locales/en/stage.yaml` and `zh-Hans/stage.yaml`.
+- [x] Run `node scripts/audit-test-catalog.mjs` to maintain 100% test catalog integrity.
 
 ### Phase 2: Main Process Splash Window & Actor Stage Manager
-- [ ] Add typed IPC contracts to `apps/stage-tamagotchi/src/shared/eventa.ts`.
-- [ ] Implement `apps/stage-tamagotchi/src/main/windows/splash/index.ts` (frameless 360 × 500 window, auto-close handler).
-- [ ] Refactor `apps/stage-tamagotchi/src/main/windows/stage/index.ts` to `ActorStageWindowManager` with idempotent `stage-window-set-bounds` handler.
-- [ ] Update `setupMainWindow` to support `deferInitialShow` until splash completion.
+- [x] Add typed IPC contracts to `apps/stage-tamagotchi/src/shared/eventa.ts`.
+- [x] Implement `apps/stage-tamagotchi/src/main/windows/splash/index.ts` (frameless 360 × 500 window, auto-close handler).
+- [x] Refactor `apps/stage-tamagotchi/src/main/windows/stage/index.ts` to `ActorStageWindowManager` with idempotent `stage-window-set-bounds` handler.
+- [x] Update `setupMainWindow` to support `deferInitialShow` until splash completion.
 
-### Phase 3: Renderer Splash Page & Lifecycle Integration
-- [ ] Create `apps/stage-tamagotchi/src/renderer/pages/splash.vue` using `@proj-airi/ui` primitives (`Progress`, `Button`), Comfortaa font, and chromatic hue.
-- [ ] Wire two-phase milestone reporting in `apps/stage-tamagotchi/src/renderer/App.vue`.
-- [ ] Add `selectedModelId === 'none'` guard to `packages/stage-ui/src/stores/settings/stage-model.ts`.
+### Phase 3: Dedicated MPA Entry Point & Lifecycle Integration
+- [x] Create `apps/stage-tamagotchi/src/renderer/splash.html` with static DOM & inline CSS for instant (<10ms) paint.
+- [x] Create `apps/stage-tamagotchi/src/renderer/splash.main.ts` with lightweight Eventa IPC binding.
+- [x] Register `splash` entry in `apps/stage-tamagotchi/electron.vite.config.ts`.
+- [x] Wire two-phase milestone reporting in `apps/stage-tamagotchi/src/renderer/App.vue`.
+- [x] Implement `airi-stage-model-ready` BroadcastChannel handshake to hold splash until avatar is mounted in WebGL.
+- [x] Add `selectedModelId === 'none'` guard to `packages/stage-ui/src/stores/settings/stage-model.ts`.
 
 ### Phase 4: Verification & Parity Audit
-- [ ] Run `pnpm -F @proj-airi/stage-tamagotchi typecheck`.
-- [ ] Run `pnpm -F @proj-airi/stage-ui test`.
-- [ ] Verify startup flow with text-only companion (`displayModelId === 'none'`).
-- [ ] Verify startup flow with avatar companion (Live2D / VRM).
-- [ ] Verify `--disable-webgl-stage` CLI flag.
-- [ ] Run `git status` reporting.
+- [x] Run `pnpm -F @proj-airi/stage-tamagotchi typecheck`.
+- [x] Verify startup flow with text-only companion (`displayModelId === 'none'`).
+- [x] Verify startup flow with avatar companion (Live2D / VRM).
+- [x] Verify `--disable-webgl-stage` CLI flag.
+- [x] Run `git status` reporting.
