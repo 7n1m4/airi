@@ -1,0 +1,305 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>AIRI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=0, viewport-fit=cover" />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        user-select: none;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      }
+
+      .splash-card {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100vw;
+        height: 100vh;
+        background: radial-gradient(circle at 50% 35%, #1e1e24, #121212 75%);
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+        transition: opacity 0.3s ease, transform 0.3s ease;
+      }
+
+      .splash-card.exiting {
+        opacity: 0;
+        transform: scale(0.98);
+      }
+
+      .drag-zone {
+        -webkit-app-region: drag;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .logo-box {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 52px;
+        height: 52px;
+        border-radius: 16px;
+        background: rgba(244, 114, 182, 0.08);
+        border: 1px solid rgba(244, 114, 182, 0.22);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      }
+
+      .logo-halo {
+        position: absolute;
+        inset: -6px;
+        border-radius: 22px;
+        background: rgba(244, 114, 182, 0.16);
+        filter: blur(8px);
+        animation: airi-pulse 2s ease-in-out infinite;
+      }
+
+      .logo-dot {
+        position: relative;
+        width: 16px;
+        height: 16px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #f472b6, #ec4899);
+        box-shadow: 0 0 12px rgba(244, 114, 182, 0.6);
+      }
+
+      @keyframes airi-pulse {
+        0%, 100% {
+          transform: scale(0.92);
+          opacity: 0.4;
+        }
+        50% {
+          transform: scale(1.08);
+          opacity: 0.9;
+        }
+      }
+
+      .app-title {
+        font-size: 18px;
+        font-weight: 700;
+        letter-spacing: 0.3em;
+        color: #f3f4f6;
+        margin-top: 4px;
+      }
+
+      .version-badge {
+        border-radius: 9999px;
+        border: 1px solid rgba(63, 63, 70, 0.6);
+        padding: 2px 10px;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 11px;
+        color: #a1a1aa;
+      }
+
+      .divider {
+        width: 224px;
+        height: 1px;
+        background: rgba(63, 63, 70, 0.5);
+        margin: 16px 0;
+      }
+
+      .content-zone {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        width: 280px;
+      }
+
+      .status-indicator {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+      }
+
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid #374151;
+        border-top-color: #f472b6;
+        animation: spin 0.8s linear infinite;
+      }
+
+      .check-icon {
+        display: none;
+        width: 22px;
+        height: 22px;
+        color: #4ade80;
+      }
+
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+
+      .status-label {
+        min-height: 20px;
+        font-size: 13px;
+        color: #d1d5db;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 260px;
+      }
+
+      .progress-track {
+        width: 240px;
+        height: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 9999px;
+        overflow: hidden;
+      }
+
+      .progress-bar {
+        width: 0%;
+        height: 100%;
+        background: linear-gradient(90deg, #ec4899, #f472b6);
+        border-radius: 9999px;
+        transition: width 0.25s ease-out;
+      }
+
+      .progress-percent {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        font-size: 11px;
+        color: #71717a;
+      }
+
+      .sub-hint {
+        font-size: 11px;
+        color: #52525b;
+      }
+
+      .btn-debug {
+        margin-top: 6px;
+        padding: 5px 14px;
+        font-size: 11px;
+        font-weight: 500;
+        color: #d4d4d8;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s, border-color 0.15s;
+      }
+
+      .btn-debug:hover {
+        background: rgba(255, 255, 255, 0.15);
+        border-color: rgba(255, 255, 255, 0.25);
+      }
+
+      .error-zone {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        width: 260px;
+      }
+
+      .error-zone.visible {
+        display: flex;
+      }
+
+      .error-zone details {
+        width: 100%;
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        background: rgba(0, 0, 0, 0.35);
+        border-radius: 6px;
+        padding: 6px 8px;
+        font-size: 11px;
+        color: #f87171;
+        text-align: left;
+      }
+
+      .btn-action-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 4px;
+      }
+
+      .btn-primary {
+        padding: 5px 12px;
+        font-size: 12px;
+        border-radius: 6px;
+        border: none;
+        background: #ec4899;
+        color: white;
+        cursor: pointer;
+      }
+
+      .btn-secondary {
+        padding: 5px 12px;
+        font-size: 12px;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.1);
+        color: #e4e4e7;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="splash-card" class="splash-card">
+      <div class="drag-zone">
+        <div class="logo-box">
+          <div class="logo-halo"></div>
+          <div class="logo-dot"></div>
+        </div>
+        <div class="app-title">AIRI</div>
+        <div id="version-badge" class="version-badge">v0.1.0</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div id="loading-zone" class="content-zone">
+        <div class="status-indicator">
+          <div id="spinner" class="spinner"></div>
+          <svg id="check-icon" class="check-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </div>
+        <div id="status-label" class="status-label">Starting AIRI...</div>
+        <div class="progress-track">
+          <div id="progress-bar" class="progress-bar"></div>
+        </div>
+        <div id="progress-percent" class="progress-percent">0%</div>
+        <div id="sub-hint" class="sub-hint">Ready in a moment...</div>
+        <button id="btn-close-debug" class="btn-debug" style="display: none;">Close Splash (Debug)</button>
+      </div>
+
+      <div id="error-zone" class="error-zone">
+        <div id="error-msg" class="status-label" style="color: #f87171;">Startup issue detected</div>
+        <details>
+          <summary style="cursor: pointer; color: #a1a1aa;">Details</summary>
+          <div id="error-details" style="margin-top: 4px; max-height: 80px; overflow-y: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 10px;"></div>
+        </details>
+        <div class="btn-action-group">
+          <button id="btn-retry" class="btn-secondary">Retry</button>
+          <button id="btn-skip-avatar" class="btn-primary" style="display: none;">Continue without avatar</button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/splash.main.ts"></script>
+  </body>
+</html>

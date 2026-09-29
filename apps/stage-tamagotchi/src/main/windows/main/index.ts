@@ -14,10 +14,8 @@ import type { SettingsWindowManager } from '../settings'
 import type { WidgetsWindowManager } from '../widgets'
 
 import { dirname, resolve } from 'node:path'
-import { env } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { is } from '@electron-toolkit/utils'
 import { BrowserWindow, ipcMain, screen, shell } from 'electron'
 import { debounce, throttle } from 'es-toolkit'
 
@@ -113,12 +111,13 @@ export async function setupMainWindow(params: {
     window.webContents.send('eventa:event:electron:windows:main:config-changed', config)
   })
 
-  if (is.dev || env.MAIN_APP_DEBUG || env.APP_DEBUG) {
-    try {
-      window.webContents.openDevTools({ mode: 'detach' })
-    }
-    catch {}
-  }
+  // NOTICE: Disabled automatic DevTools on startup for Control Strip to avoid interfering with Splash debugging
+  // if (is.dev || env.MAIN_APP_DEBUG || env.APP_DEBUG) {
+  //   try {
+  //     window.webContents.openDevTools({ mode: 'detach' })
+  //   }
+  //   catch {}
+  // }
 
   function restoreBounds() {
     const mainWindow = getConfig().windows?.find((w: any) => w.title === 'AIRI' && w.tag === 'main')

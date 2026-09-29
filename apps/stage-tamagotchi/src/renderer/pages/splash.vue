@@ -107,8 +107,8 @@ watch(context, (ctx) => {
   void fetchSnapshot()
 }, { immediate: true })
 
-// NOTICE: Zero-click auto-close. Hold "Ready!" so the user perceives
-// completion, fade out, then let Main atomically reveal the windows.
+// NOTICE: Temporary debug change: when ready, notify Main to reveal the app windows,
+// but do NOT fade out or destroy the splash window so DevTools and metrics remain inspectable.
 watch(isReady, (ready) => {
   if (!ready || dismissRequested)
     return
@@ -117,13 +117,12 @@ watch(isReady, (ready) => {
     clearTimeout(watchdogTimer)
     watchdogTimer = undefined
   }
-  readyHoldTimer = setTimeout(() => {
-    exiting.value = true
-    exitTimer = setTimeout(() => {
-      void dismissSplash().catch(() => {})
-    }, 300)
-  }, 300)
+  void dismissSplash().catch(() => {})
 })
+
+function handleManualClose() {
+  window.close()
+}
 
 function resetWatchdog() {
   if (watchdogTimer) {
@@ -280,6 +279,14 @@ onUnmounted(() => {
         >
           {{ progress }}%
         </div>
+        <Button
+          v-if="isReady"
+          size="sm"
+          variant="secondary"
+          @click="handleManualClose"
+        >
+          Close Splash (Debug)
+        </Button>
       </div>
 
       <!-- Error recovery view -->

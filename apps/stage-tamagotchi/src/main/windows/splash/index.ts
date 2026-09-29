@@ -1,13 +1,15 @@
 import type { BrowserWindow } from 'electron'
 
 import { dirname, resolve } from 'node:path'
+import { env } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
+import { is } from '@electron-toolkit/utils'
 import { BrowserWindow as ElectronBrowserWindow, screen } from 'electron'
 
 import icon from '../../../../resources/icon.png?asset'
 
-import { baseUrl, load, withHashRoute } from '../../libs/electron/location'
+import { baseUrl, load } from '../../libs/electron/location'
 import { transparentWindowConfig } from '../shared/window'
 
 export interface SplashWindowManager {
@@ -18,8 +20,8 @@ export interface SplashWindowManager {
 }
 
 // NOTICE: The splash is intentionally dependency-free (no serverChannel/i18n).
-// It renders instantly from `index.html` pre-bootstrap CSS and only receives
-// `electronSplashStateChanged` broadcasts from the Main milestone relay.
+// It renders instantly from its own dedicated `splash.html` MPA entry point
+// and receives `electronSplashStateChanged` broadcasts from the Main milestone relay.
 export async function setupSplashWindowManager(): Promise<SplashWindowManager> {
   let initialX: number | undefined
   let initialY: number | undefined
@@ -57,14 +59,21 @@ export async function setupSplashWindowManager(): Promise<SplashWindowManager> {
 
   window.setMovable(true)
 
+  if (is.dev || env.MAIN_APP_DEBUG || env.APP_DEBUG) {
+    try {
+      window.webContents.openDevTools({ mode: 'detach' })
+    }
+    catch {}
+  }
+
   window.on('ready-to-show', () => {
     if (!window.isDestroyed())
       window.show()
   })
 
-  void load(window, withHashRoute(baseUrl(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'renderer')), '/splash'))
+  void load(window, baseUrl(resolve(dirname(fileURLToPath(import.meta.url)), '..', 'renderer'), 'splash.html'))
     .catch((err) => {
-      console.error('[@proj-airi/stage-tamagotchi] [Splash] Failed to load splash route:', err)
+      console.error('[@proj-airi/stage-tamagotchi] [Splash] Failed to load splash HTML:', err)
     })
 
   return {
