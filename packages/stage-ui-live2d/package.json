@@ -24,6 +24,7 @@
     "./constants/emotions": "./src/constants/emotions.ts",
     "./stores": "./src/stores/index.ts",
     "./stores/live2d": "./src/stores/live2d.ts",
+    "./utils/blend-math": "./src/utils/blend-math.ts",
     "./utils/eye-motions": "./src/utils/eye-motions.ts",
     "./utils/live2d-preview": "./src/utils/live2d-preview.ts",
     "./utils/live2d-zip-loader": "./src/utils/live2d-zip-loader.ts",

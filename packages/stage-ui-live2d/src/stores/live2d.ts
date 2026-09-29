@@ -8,6 +8,8 @@ import { useBroadcastChannel } from '@vueuse/core'
 import { defineStore } from 'pinia'
 import { computed, ref, shallowRef, watch } from 'vue'
 
+import { evaluateLive2dBlend } from '../utils/blend-math'
+
 type BroadcastChannelEvents
   = | BroadcastChannelEventShouldUpdateView
     | BroadcastChannelEventTriggerMotion
@@ -328,15 +330,7 @@ export const useLive2d = defineStore('live2d', () => {
             originalValues[id] = baseVal
 
             // Live2D Cubism blend mode evaluation: Add, Multiply, Overwrite
-            if (blend === 'Add') {
-              modelParameters.value[id] = baseVal + (rawVal * intensity)
-            }
-            else if (blend === 'Multiply') {
-              modelParameters.value[id] = baseVal * (rawVal * intensity)
-            }
-            else {
-              modelParameters.value[id] = rawVal * intensity
-            }
+            modelParameters.value[id] = evaluateLive2dBlend(baseVal, rawVal, intensity, blend)
           }
         }
 

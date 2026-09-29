@@ -38,6 +38,7 @@ import { buildAdapterPorts, Live2DRuntimeAdapter } from '../../../runtime/live2d
 import { DSL_INTIMACY_MAX, useDslIntimacyStore } from '../../../stores/dsl-intimacy'
 import { useLive2d } from '../../../stores/live2d'
 import { getLive2DMotionControlModelOffset, useLive2DMotionControl } from '../../../stores/motion-control'
+import { evaluateLive2dBlend } from '../../../utils/blend-math'
 import { parseCycleMotions as parseRawCycleMotions } from '../../../utils/cycle-motions'
 import { isMacOSJunk, setOnZipLoaded } from '../../../utils/live2d-zip-loader'
 import { OPFSCacheV2 } from '../../../utils/opfs-loader'
@@ -1313,15 +1314,7 @@ async function loadModel() {
                 const blend = param.Blend || param.blend || 'Overwrite'
                 if (id !== undefined && rawVal !== undefined) {
                   const baseVal = modelParameters.value[id] ?? 0
-                  if (blend === 'Add') {
-                    modelParameters.value[id] = baseVal + (rawVal * weight)
-                  }
-                  else if (blend === 'Multiply') {
-                    modelParameters.value[id] = baseVal * (rawVal * weight)
-                  }
-                  else {
-                    modelParameters.value[id] = rawVal * weight
-                  }
+                  modelParameters.value[id] = evaluateLive2dBlend(baseVal, rawVal, weight, blend)
                 }
               }
             }
@@ -1646,15 +1639,7 @@ watch(activeExpressions, (newExps, oldExps) => {
           const blend = param.Blend || param.blend || 'Overwrite'
           if (id !== undefined && rawVal !== undefined) {
             const baseVal = modelParameters.value[id] ?? 0
-            if (blend === 'Add') {
-              modelParameters.value[id] = baseVal + (rawVal * weight)
-            }
-            else if (blend === 'Multiply') {
-              modelParameters.value[id] = baseVal * (rawVal * weight)
-            }
-            else {
-              modelParameters.value[id] = rawVal * weight
-            }
+            modelParameters.value[id] = evaluateLive2dBlend(baseVal, rawVal, weight, blend)
           }
         }
       }
