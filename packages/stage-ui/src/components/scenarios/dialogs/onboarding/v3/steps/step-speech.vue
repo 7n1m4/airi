@@ -7,6 +7,7 @@ import { parseActor } from '../../../../../../composables/queues'
 import { stripMarkers, stripPacingEnvelopes } from '../../../../../../composables/response-categoriser'
 import { useLocalVoiceClone } from '../../../../../../composables/use-local-voice-clone'
 import { getStarterCharacter, STARTER_CHARACTERS } from '../../../../../../constants/prompts/character-defaults'
+import { STARTER_VOICE_CATALOG } from '../../../../../../constants/voices/starter-voice-catalog'
 import { getKokoroAdapter } from '../../../../../../libs/inference/adapters/kokoro'
 import { useSpeechStore } from '../../../../../../stores/modules/speech'
 import { useProvidersStore } from '../../../../../../stores/providers'
@@ -44,12 +45,15 @@ function normalizeProviderId(id: string) {
 }
 
 // 1. Initial State from Draft
+const starterChar = getStarterCharacter(draftStore.state.personaCardId)
+const defaultInitialVoice = starterChar?.defaultVoiceId || 'airi_relu'
+
 const selectedProvider = ref<string>(
   draftStore.state.ttsProvider
   || (draftStore.state.architecture === 'local' ? 'pocket' : 'pocket'),
 )
 const selectedModel = ref<string>(draftStore.state.ttsModel || 'english_2026-04')
-const selectedVoice = ref<string>(draftStore.state.ttsVoiceId || 'anna')
+const selectedVoice = ref<string>(draftStore.state.ttsVoiceId || defaultInitialVoice)
 const speed = ref<number>(draftStore.state.ttsRate ?? 1.0)
 const pitch = ref<number>(draftStore.state.ttsPitch ?? 1.0)
 
@@ -381,6 +385,7 @@ const availableVoices = computed(() => {
   // 2. Static fallbacks while dynamic catalog is loading
   if (normId === 'pocket-tts-local') {
     return [
+      ...STARTER_VOICE_CATALOG.map(v => ({ id: v.id, label: `★ ${v.name}` })),
       { id: 'anna', label: 'Anna (Female · Conversational)' },
       { id: 'eve', label: 'Eve (Female · Conversational)' },
       { id: 'jane', label: 'Jane (Female · Conversational)' },
@@ -404,6 +409,7 @@ const availableVoices = computed(() => {
   }
   if (normId === 'moss-nano-local') {
     return [
+      ...STARTER_VOICE_CATALOG.map(v => ({ id: v.id, label: `★ ${v.name}` })),
       { id: 'Trump', label: 'Trump (Preset)' },
       { id: 'LJS', label: 'LJ Speech (Female Preset)' },
     ]
@@ -436,9 +442,17 @@ watch(availableModels, (models) => {
 
 watch(availableVoices, (voices) => {
   if (voices.length > 0) {
-    if (!selectedVoice.value || !voices.some(v => v.id === selectedVoice.value)) {
+    const companionVoice = getStarterCharacter(draftStore.state.personaCardId)?.defaultVoiceId
+    const norm = normalizeProviderId(selectedProvider.value)
+    const isLocalZeroShot = ['pocket-tts-local', 'moss-nano-local'].includes(norm)
+
+    if (isLocalZeroShot && companionVoice && voices.some(v => v.id === companionVoice) && (!selectedVoice.value || selectedVoice.value === 'anna' || !voices.some(v => v.id === selectedVoice.value))) {
+      selectedVoice.value = companionVoice
+    }
+    else if (!selectedVoice.value || !voices.some(v => v.id === selectedVoice.value)) {
       selectedVoice.value = voices[0].id
     }
+
     if (!selectedUserVoice.value || !voices.some(v => v.id === selectedUserVoice.value)) {
       const alt = voices.find(v => v.id !== selectedVoice.value) || voices[0]
       selectedUserVoice.value = alt.id

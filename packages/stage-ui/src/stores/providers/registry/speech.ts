@@ -31,6 +31,11 @@ import {
   listVoices,
 } from 'unspeech'
 
+import {
+  getStarterVoiceArrayBuffer,
+  isStarterVoiceId,
+  STARTER_VOICE_CATALOG,
+} from '../../../constants/voices/starter-voice-catalog'
 import { getKokoroAdapter } from '../../../libs/inference/adapters/kokoro'
 import { getDefaultKokoroModel, getKokoroVoiceList, KOKORO_MODELS, kokoroModelsToModelInfo } from '../../../workers/kokoro/constants'
 import { models as elevenLabsModels } from '../elevenlabs/list-models'
@@ -488,31 +493,46 @@ export function createSpeechMetadata(t: ComposerTranslation): Record<string, Pro
                   let promptAudioWaveform: Float32Array | undefined
                   let promptAudioChannels: number | undefined
                   let promptAudioCodes: number[][] | undefined
-                  const builtinIds = ['Trump', 'LJS']
-                  if (!builtinIds.includes(voiceId)) {
-                    const localforage = (await import('localforage')).default
-                    const mossVoiceProfileBlobsStore = localforage.createInstance({
-                      name: 'voice-profile-blobs',
-                    })
-                    const mossVoiceProfilesStore = localforage.createInstance({
-                      name: 'moss-voice-profiles-metadata',
-                    })
-                    const metadata = await mossVoiceProfilesStore.getItem<any>(voiceId)
-                    promptAudioCodes = metadata?.promptAudioCodes
-                    console.log('[MOSS Provider] voiceId:', voiceId, 'cached codes:', !!promptAudioCodes)
-                    if (!promptAudioCodes) {
-                      const audioBlob = await mossVoiceProfileBlobsStore.getItem<Blob>(voiceId)
-                      console.log('[MOSS Provider] voiceId:', voiceId, 'found blob:', !!audioBlob)
-                      if (audioBlob) {
-                        const buffer = await audioBlob.arrayBuffer()
-                        const codec = adapter.codecConfig ?? { sample_rate: 16000, channels: 1 }
-                        promptAudioChannels = codec.channels
-                        promptAudioWaveform = await preprocessMossReferenceAudio(
-                          buffer,
-                          codec.sample_rate,
-                          codec.channels,
-                        )
-                        console.log('[MOSS Provider] conditioned planar length:', promptAudioWaveform.length, 'channels:', promptAudioChannels)
+                  if (isStarterVoiceId(voiceId)) {
+                    const rawBuf = await getStarterVoiceArrayBuffer(voiceId)
+                    if (rawBuf) {
+                      const codec = adapter.codecConfig ?? { sample_rate: 16000, channels: 1 }
+                      promptAudioChannels = codec.channels
+                      promptAudioWaveform = await preprocessMossReferenceAudio(
+                        rawBuf,
+                        codec.sample_rate,
+                        codec.channels,
+                      )
+                      console.log('[MOSS Provider] Loaded bundled starter voice:', voiceId, 'planar length:', promptAudioWaveform.length)
+                    }
+                  }
+                  else {
+                    const builtinIds = ['Trump', 'LJS']
+                    if (!builtinIds.includes(voiceId)) {
+                      const localforage = (await import('localforage')).default
+                      const mossVoiceProfileBlobsStore = localforage.createInstance({
+                        name: 'voice-profile-blobs',
+                      })
+                      const mossVoiceProfilesStore = localforage.createInstance({
+                        name: 'moss-voice-profiles-metadata',
+                      })
+                      const metadata = await mossVoiceProfilesStore.getItem<any>(voiceId)
+                      promptAudioCodes = metadata?.promptAudioCodes
+                      console.log('[MOSS Provider] voiceId:', voiceId, 'cached codes:', !!promptAudioCodes)
+                      if (!promptAudioCodes) {
+                        const audioBlob = await mossVoiceProfileBlobsStore.getItem<Blob>(voiceId)
+                        console.log('[MOSS Provider] voiceId:', voiceId, 'found blob:', !!audioBlob)
+                        if (audioBlob) {
+                          const buffer = await audioBlob.arrayBuffer()
+                          const codec = adapter.codecConfig ?? { sample_rate: 16000, channels: 1 }
+                          promptAudioChannels = codec.channels
+                          promptAudioWaveform = await preprocessMossReferenceAudio(
+                            buffer,
+                            codec.sample_rate,
+                            codec.channels,
+                          )
+                          console.log('[MOSS Provider] conditioned planar length:', promptAudioWaveform.length, 'channels:', promptAudioChannels)
+                        }
                       }
                     }
                   }
@@ -575,7 +595,16 @@ export function createSpeechMetadata(t: ComposerTranslation): Record<string, Pro
           })
         },
         listVoices: async (_config: Record<string, unknown>) => {
-          const builtin = [
+          const starterVoices: VoiceInfo[] = STARTER_VOICE_CATALOG.map(v => ({
+            id: v.id,
+            name: `★ ${v.name}`,
+            provider: 'moss-nano-local',
+            languages: [{ code: v.languageCode, title: v.languageTitle }],
+            gender: v.gender,
+            description: v.description,
+          }))
+
+          const builtin: VoiceInfo[] = [
             {
               id: 'Trump',
               name: 'EN Trump',
@@ -606,11 +635,11 @@ export function createSpeechMetadata(t: ComposerTranslation): Record<string, Pro
                 gender: 'unknown',
               })
             })
-            return [...builtin, ...customProfiles]
+            return [...starterVoices, ...builtin, ...customProfiles]
           }
           catch (e) {
             console.error('Failed to load custom voice profiles from IndexedDB:', e)
-            return builtin
+            return [...starterVoices, ...builtin]
           }
         },
       },
@@ -663,8 +692,15 @@ export function createSpeechMetadata(t: ComposerTranslation): Record<string, Pro
                   let predefinedVoiceName: string | undefined
 
                   if (voiceId) {
+                    if (isStarterVoiceId(voiceId)) {
+                      const rawBuf = await getStarterVoiceArrayBuffer(voiceId)
+                      if (rawBuf) {
+                        console.info('[PocketTTS Provider] Loaded bundled starter voice:', voiceId)
+                        promptAudioWaveform = await preprocessPocketReferenceAudio(rawBuf, 24000, 1)
+                      }
+                    }
                     // Built-in preset → predefined safetensors path (no localforage lookup)
-                    if ((POCKET_TTS_BUILTIN_PRESET_IDS as readonly string[]).includes(voiceId)) {
+                    else if ((POCKET_TTS_BUILTIN_PRESET_IDS as readonly string[]).includes(voiceId)) {
                       predefinedVoiceName = voiceId
                     }
                     else {
@@ -785,6 +821,15 @@ export function createSpeechMetadata(t: ComposerTranslation): Record<string, Pro
           })
         },
         listVoices: async (config: Record<string, unknown>) => {
+          const starterVoices: VoiceInfo[] = STARTER_VOICE_CATALOG.map(v => ({
+            id: v.id,
+            name: `★ ${v.name}`,
+            provider: 'pocket-tts-local',
+            languages: [{ code: v.languageCode, title: v.languageTitle }],
+            gender: v.gender,
+            description: v.description,
+          }))
+
           // Resolve the language bundle folder from the provider config (bare code
           // or bundle id) so built-in presets filter to the active language.
           const langFolder = normalizePocketLangFolder(
@@ -807,10 +852,10 @@ export function createSpeechMetadata(t: ComposerTranslation): Record<string, Pro
                 })
               }
             })
-            return [...builtin, ...customVoices]
+            return [...starterVoices, ...builtin, ...customVoices]
           }
           catch {
-            return builtin
+            return [...starterVoices, ...builtin]
           }
         },
       },

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import { getStarterCharacter } from '../../../../../constants/prompts/character-defaults'
+import { STARTER_VOICE_CATALOG } from '../../../../../constants/voices/starter-voice-catalog'
 import { getKokoroAdapter } from '../../../../../libs/inference/adapters/kokoro'
 import { WEB_LLM_MODELS } from '../../../../../libs/inference/constants'
 import { NativeAI } from '../../../../../libs/native-ai'
@@ -54,6 +55,7 @@ interface StarterCompanion {
   vesselModelId: string
   defaultKokoroVoice: string
   defaultPocketVoice: string
+  defaultMossVoice?: string
 }
 
 const starterCompanions: StarterCompanion[] = [
@@ -68,7 +70,8 @@ const starterCompanions: StarterCompanion[] = [
     personaCardId: 'default',
     vesselModelId: 'preset-live2d-2',
     defaultKokoroVoice: 'af_bella',
-    defaultPocketVoice: 'anna',
+    defaultPocketVoice: 'airi_relu',
+    defaultMossVoice: 'airi_relu',
   },
   {
     id: 'aria',
@@ -81,7 +84,8 @@ const starterCompanions: StarterCompanion[] = [
     personaCardId: 'aria',
     vesselModelId: 'preset-vrm-1',
     defaultKokoroVoice: 'af_sarah',
-    defaultPocketVoice: 'claire',
+    defaultPocketVoice: 'airi_aria',
+    defaultMossVoice: 'airi_aria',
   },
   {
     id: 'lupin',
@@ -94,7 +98,8 @@ const starterCompanions: StarterCompanion[] = [
     personaCardId: 'lupin',
     vesselModelId: 'preset-vrm-2',
     defaultKokoroVoice: 'af_nicole',
-    defaultPocketVoice: 'vera',
+    defaultPocketVoice: 'airi_lupin',
+    defaultMossVoice: 'airi_lupin',
   },
 ]
 
@@ -144,6 +149,8 @@ function getCompanionVoice(c: StarterCompanion, engine: string): string {
   const norm = normalizeSpeechProviderId(engine)
   if (norm === 'pocket-tts-local')
     return c.defaultPocketVoice
+  if (norm === 'moss-nano-local')
+    return c.defaultMossVoice || c.defaultPocketVoice
   return c.defaultKokoroVoice
 }
 
@@ -450,6 +457,7 @@ const availableTtsVoices = computed(() => {
   }
   if (normId === 'pocket-tts-local') {
     return [
+      ...STARTER_VOICE_CATALOG.map(v => ({ id: v.id, label: `★ ${v.name}` })),
       { id: 'anna', label: 'Anna (Warm & Conversational)' },
       { id: 'claire', label: 'Claire (Articulate & Clear)' },
       { id: 'vera', label: 'Vera (Deep & Conversational)' },
@@ -461,8 +469,9 @@ const availableTtsVoices = computed(() => {
   }
   if (normId === 'moss-nano-local') {
     return [
-      { id: 'default', label: 'Moss Standard' },
-      { id: 'expressive', label: 'Moss Expressive' },
+      ...STARTER_VOICE_CATALOG.map(v => ({ id: v.id, label: `★ ${v.name}` })),
+      { id: 'Trump', label: 'EN Trump' },
+      { id: 'LJS', label: 'EN LJS' },
     ]
   }
 

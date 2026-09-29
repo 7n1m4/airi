@@ -154,6 +154,8 @@ export interface StarterCharacterDefinition {
   defaultDisplayModelId?: string | null
   /** Default artistry prompt prefix for image generation (Only set for OG seeded characters) */
   artistryPromptPrefix?: string
+  /** Default starter voice ID for local zero-shot TTS cloning (e.g. 'airi_relu') */
+  defaultVoiceId?: string
 }
 
 export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
@@ -179,6 +181,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     isSeeded: true,
     defaultDisplayModelId: 'preset-live2d-2',
     artistryPromptPrefix: DEFAULT_ARTISTRY_RELU_PROMPT_PREFIX,
+    defaultVoiceId: 'airi_relu',
   },
   aria: {
     id: 'aria',
@@ -202,6 +205,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     isSeeded: true,
     defaultDisplayModelId: 'preset-vrm-1',
     artistryPromptPrefix: DEFAULT_ARTISTRY_ARIA_PROMPT_PREFIX,
+    defaultVoiceId: 'airi_aria',
   },
   lupin: {
     id: 'lupin',
@@ -225,6 +229,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     isSeeded: true,
     defaultDisplayModelId: 'preset-vrm-2',
     artistryPromptPrefix: DEFAULT_ARTISTRY_LUPIN_PROMPT_PREFIX,
+    defaultVoiceId: 'airi_lupin',
   },
   kira: {
     id: 'kira',
@@ -246,6 +251,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     ],
     isSeeded: false,
     defaultDisplayModelId: null,
+    defaultVoiceId: 'airi_kira',
   },
   rin: {
     id: 'rin',
@@ -267,6 +273,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     ],
     isSeeded: false,
     defaultDisplayModelId: null,
+    defaultVoiceId: 'airi_rin',
   },
   yuki: {
     id: 'yuki',
@@ -288,6 +295,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     ],
     isSeeded: false,
     defaultDisplayModelId: null,
+    defaultVoiceId: 'airi_yuki',
   },
   mio: {
     id: 'mio',
@@ -309,6 +317,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     ],
     isSeeded: false,
     defaultDisplayModelId: null,
+    defaultVoiceId: 'airi_mio',
   },
   hana: {
     id: 'hana',
@@ -330,6 +339,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     ],
     isSeeded: false,
     defaultDisplayModelId: null,
+    defaultVoiceId: 'airi_hana',
   },
 }
 
