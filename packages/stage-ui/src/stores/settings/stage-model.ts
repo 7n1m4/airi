@@ -113,7 +113,10 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
   async function performUpdateStageModel() {
     const selectedModelId = stageModelSelectedState.value
 
-    if (!selectedModelId) {
+    // NOTICE: Text-only companions resolve to `displayModelId === 'none'`.
+    // Bail out here so booting or switching to them never emits a spurious
+    // "Model not found (none)" toast from the lookup below.
+    if (!selectedModelId || selectedModelId === 'none') {
       replaceStageModelUrl(undefined)
       cleanupMmdTextures()
       stageModelSelectedDisplayModel.value = undefined

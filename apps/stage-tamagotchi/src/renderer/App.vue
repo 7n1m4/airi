@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { StartupMilestoneId, StartupMilestoneStatus } from '../shared/eventa'
+
 import { defineInvokeHandler } from '@moeru/eventa'
 import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import { themeColorFromValue, useThemeColor } from '@proj-airi/stage-layouts/composables/theme-color'
@@ -36,6 +38,7 @@ import ResizeHandler from './components/ResizeHandler.vue'
 
 import {
   electronGetServerChannelConfig,
+  electronGetStageDisabled,
   electronMcpApplyAndRestart,
   electronMcpCallTool,
   electronMcpGetConfig,
@@ -52,6 +55,9 @@ import {
   electronPluginUpdateCapability,
   electronSettingsNavigate,
   electronShowToastEvent,
+  electronSplashReportMilestone,
+  electronStageEnsure,
+  electronStageRelease,
   electronWindowSetTitle,
   i18nSetLocale,
   pluginProtocolListProviders,
@@ -142,6 +148,10 @@ const updateMcpConfig = useElectronEventaInvoke(electronMcpUpdateConfig)
 const applyAndRestartMcp = useElectronEventaInvoke(electronMcpApplyAndRestart)
 const setLocale = useElectronEventaInvoke(i18nSetLocale)
 const openOnboarding = useElectronEventaInvoke(electronOpenOnboarding)
+const reportMilestone = useElectronEventaInvoke(electronSplashReportMilestone)
+const ensureActorStage = useElectronEventaInvoke(electronStageEnsure)
+const releaseActorStage = useElectronEventaInvoke(electronStageRelease)
+const getStageDisabled = useElectronEventaInvoke(electronGetStageDisabled)
 
 // NOTICE: register plugin host bridge during setup to avoid race with pages using it in immediate watchers.
 pluginHostInspectorStore.setBridge({
@@ -189,6 +199,15 @@ const isMainWindow = computed(() => {
   return initialHash === '' || initialHash === '#/' || initialHash === '#'
 })
 
+// NOTICE: The splash window renders its own lightweight page (`splash.vue`)
+// and must skip the full boot sequence below. Milestone reporting stays
+// Control Strip-only so a single owner drives the Main relay.
+const isSplashWindow = computed(() => {
+  if (typeof window === 'undefined')
+    return false
+  return window.location.hash.startsWith('#/splash')
+})
+
 // NOTICE: Tier-2 deep standby (extended lock/suspend). The Inference Leader
 // (main window, the only renderer hosting physical WebGPU workers) evicts idle
 // background workers (STT/TTS/VLM), dropping resident VRAM toward baseline.
@@ -230,7 +249,124 @@ watch(context, (ctx) => {
   })
 }, { immediate: true })
 
+// NOTICE: Coordinated startup splash reporting. Each step reports
+// loading → ready/failed/skipped to Main, which rebroadcasts the aggregate
+// snapshot to the splash window. Reporting is Control Strip-only; every other
+// window still runs the underlying initialization for its own needs.
+async function reportStartupMilestone(id: StartupMilestoneId, status: StartupMilestoneStatus, error?: string) {
+  if (!isMainWindow.value)
+    return
+  try {
+    await reportMilestone({ id, status, error })
+  }
+  catch (err) {
+    console.warn(`[App] Failed to report startup milestone ${id}=${status}.`, err)
+  }
+}
+
+async function runCoreServicesStep() {
+  await reportStartupMilestone('core-services', 'loading')
+  try {
+    const serverChannelConfig = await getServerChannelConfig().catch((err: any) => {
+      console.error('[PipelineTTS:App] FAILED server channel config:', err)
+      return {} as any
+    })
+    serverChannelSettingsStore.websocketTlsConfig = serverChannelConfig.websocketTlsConfig
+    serverChannelSettingsStore.authToken = serverChannelConfig.authToken
+    serverChannelSettingsStore.hostname = serverChannelConfig.hostname
+
+    // Synchronize keys so the shared connection store reads the correct one immediately
+    if (serverChannelConfig.authToken) {
+      serverChannelStore.setAuthToken(serverChannelConfig.authToken)
+      localStorage.setItem('settings/connection/auth-token', serverChannelConfig.authToken)
+    }
+    await reportStartupMilestone('core-services', 'ready')
+    return serverChannelConfig
+  }
+  catch (err) {
+    await reportStartupMilestone('core-services', 'failed', err instanceof Error ? err.message : String(err))
+    return {} as any
+  }
+}
+
+async function runSyncEngineStep() {
+  await reportStartupMilestone('sync-engine', 'loading')
+  try {
+    await useSyncEngineStore().initializeFromLocalBackup()
+    await reportStartupMilestone('sync-engine', 'ready')
+  }
+  catch (err) {
+    await reportStartupMilestone('sync-engine', 'failed', err instanceof Error ? err.message : String(err))
+  }
+}
+
+async function runCharacterCardStep() {
+  await reportStartupMilestone('character-card', 'loading')
+  try {
+    await chatSessionStore.initialize()
+    await shortTermMemoryStore.load()
+    if (isMainWindow.value) {
+      cardStore.isModelSyncPrevented = false
+      await ensureYesterdayShortTermBlockForActiveCharacter()
+    }
+    await reportStartupMilestone('character-card', 'ready')
+  }
+  catch (err) {
+    await reportStartupMilestone('character-card', 'failed', err instanceof Error ? err.message : String(err))
+  }
+}
+
+async function runStageActorStep() {
+  await reportStartupMilestone('stage-actor', 'loading')
+  try {
+    const stageDisabled = await getStageDisabled().catch(() => false)
+    const displayModelId = activeCard.value?.extensions?.airi?.modules?.displayModelId
+      ?? (cardStore.activeCardId ? cardStore.getCardDisplayModelId(cardStore.activeCardId) : undefined)
+    if (!displayModelId || displayModelId === 'none' || stageDisabled) {
+      await releaseActorStage().catch((err: any) => console.warn('[App] Stage release failed.', err))
+      await reportStartupMilestone('stage-actor', 'skipped')
+      return
+    }
+    const ensured = await ensureActorStage().catch(() => ({ created: false }))
+    if (!ensured?.created) {
+      await reportStartupMilestone('stage-actor', 'skipped')
+      return
+    }
+    await settingsStore.initializeStageModel()
+    await reportStartupMilestone('stage-actor', 'ready')
+  }
+  catch (err) {
+    console.error('[PipelineTTS:App] FAILED stage actor init:', err)
+    await reportStartupMilestone('stage-actor', 'failed', err instanceof Error ? err.message : String(err))
+  }
+}
+
+// NOTICE: Splash recovery ("Retry") arrives over BroadcastChannel
+// (`airi:startup-retry`, posted by `splash.vue`). Re-run only the failed step;
+// the splash flips back to its progress view on the `loading` report.
+const STARTUP_RETRY_STEPS: Record<StartupMilestoneId, () => Promise<unknown>> = {
+  'core-services': () => runCoreServicesStep(),
+  'sync-engine': () => runSyncEngineStep(),
+  'character-card': () => runCharacterCardStep(),
+  'stage-actor': () => runStageActorStep(),
+}
+
+if (typeof BroadcastChannel !== 'undefined' && typeof window !== 'undefined') {
+  const startupRetryChannel = new BroadcastChannel('airi:startup-retry')
+  startupRetryChannel.onmessage = (event) => {
+    const id = (event.data as { id?: StartupMilestoneId } | null)?.id
+    if (!isMainWindow.value || !id || !(id in STARTUP_RETRY_STEPS))
+      return
+    void STARTUP_RETRY_STEPS[id]()
+  }
+  onUnmounted(() => startupRetryChannel.close())
+}
+
 onMounted(async () => {
+  // NOTICE: The splash window owns no boot work; its page is self-contained.
+  if (isSplashWindow.value)
+    return
+
   const startupAt = performance.now()
   const logStep = (label: string) => {
     console.info(`[PipelineTTS:App] ${label} (+${Math.round(performance.now() - startupAt)}ms)`)
@@ -240,20 +376,8 @@ onMounted(async () => {
 
   // Load server channel config at the very beginning so the token is correct before any WebSocket client initializes
   logStep('Requesting server channel config')
-  const serverChannelConfig = await getServerChannelConfig().catch((err: any) => {
-    console.error('[PipelineTTS:App] FAILED server channel config:', err)
-    return {} as any
-  })
+  const serverChannelConfig = await runCoreServicesStep()
   logStep('Received server channel config')
-  serverChannelSettingsStore.websocketTlsConfig = serverChannelConfig.websocketTlsConfig
-  serverChannelSettingsStore.authToken = serverChannelConfig.authToken
-  serverChannelSettingsStore.hostname = serverChannelConfig.hostname
-
-  // Synchronize keys so the shared connection store reads the correct one immediately
-  if (serverChannelConfig.authToken) {
-    serverChannelStore.setAuthToken(serverChannelConfig.authToken)
-    localStorage.setItem('settings/connection/auth-token', serverChannelConfig.authToken)
-  }
 
   // Safety net: if localStorage was wiped by an OOM crash or force-close, restore any
   // missing keys from the IndexedDB backup before any store reads their values.
@@ -261,7 +385,7 @@ onMounted(async () => {
   // If sync was enabled and the /Volumes share is mounted, a background full reconcile
   // will also run to pull back any IndexedDB-only data (airi-cards, chat sessions, etc.).
   logStep('Restoring missing settings from IndexedDB backup')
-  await useSyncEngineStore().initializeFromLocalBackup()
+  await runSyncEngineStep()
 
   // NOTICE: Infrastructure vs Service ordering.
   // We initialize the Context Bridge FIRST to ensure cross-window communication is established
@@ -283,20 +407,18 @@ onMounted(async () => {
   }
 
   logStep('Initializing chat session')
-  await chatSessionStore.initialize()
-  logStep('Loading short-term memory')
-  await shortTermMemoryStore.load()
-  if (isMainWindow.value) {
-    cardStore.isModelSyncPrevented = false
-    logStep('Checking yesterday short-term block')
-    await ensureYesterdayShortTermBlockForActiveCharacter()
+  await runCharacterCardStep()
+  logStep('Chat session initialized')
 
-    // NOTICE: Stage model rendering is exclusive to the
-    // primary transparent desktop Stage window. Secondary windows (Chat, Settings,
-    // Caption, Customizer) must NOT query 3D assets or decode textures at boot.
-    logStep('Initializing stage model')
-    await settingsStore.initializeStageModel().catch((err: any) => console.error('[PipelineTTS:App] FAILED stage model init:', err))
-    logStep('Stage model initialized')
+  // NOTICE: Stage model rendering is exclusive to the
+  // primary transparent desktop Stage window. Secondary windows (Chat, Settings,
+  // Caption, Customizer) must NOT query 3D assets or decode textures at boot.
+  // The Control Strip additionally coordinates lazy Actor Stage creation with
+  // Main (see runStageActorStep): text-only companions skip the stage entirely.
+  if (isMainWindow.value) {
+    logStep('Resolving stage actor')
+    await runStageActorStep()
+    logStep('Stage actor resolved')
   }
 
   logStep('Initializing server channel store')
@@ -357,12 +479,27 @@ watch(themeColorsHueDynamic, () => {
 }, { immediate: true })
 
 watch(
-  () => cardStore.activeCardId,
-  async (nextCardId, previousCardId) => {
-    if (!nextCardId || nextCardId === previousCardId || !isMainWindow.value)
+  () => [cardStore.activeCardId, activeCard.value?.extensions?.airi?.modules?.displayModelId] as const,
+  async ([nextCardId, nextModelId], prevValues) => {
+    if (!nextCardId || !isMainWindow.value)
       return
 
-    await ensureYesterdayShortTermBlockForActiveCharacter()
+    const [prevCardId] = prevValues ?? []
+
+    if (nextCardId !== prevCardId) {
+      await ensureYesterdayShortTermBlockForActiveCharacter()
+    }
+
+    if (prevValues !== undefined) {
+      const stageDisabled = await getStageDisabled().catch(() => false)
+      const displayModelId = nextModelId ?? cardStore.getCardDisplayModelId(nextCardId)
+      if (!displayModelId || displayModelId === 'none' || stageDisabled) {
+        await releaseActorStage().catch((err: any) => console.warn('[App] Stage release on card switch failed.', err))
+      }
+      else {
+        await ensureActorStage().catch((err: any) => console.warn('[App] Stage ensure on card switch failed.', err))
+      }
+    }
   },
 )
 
@@ -405,6 +542,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/about': 'AIRI - About',
   '/onboarding': 'AIRI - Onboarding',
   '/widgets': 'AIRI - Widgets',
+  '/splash': 'AIRI',
 }
 
 watch(

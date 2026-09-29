@@ -1108,10 +1108,14 @@ app.whenReady().then(async () => {
       // NOTICE: Caption restore is deferred until splash dismissal so the
       // caption cannot pop in before the coordinated reveal. The main window
       // no longer shows itself on `ready-to-show` (see `deferInitialShow`).
+      let backstopTimer: NodeJS.Timeout | undefined
+
       defineInvokeHandler(context, electronSplashDismiss, async () => {
         if (splashDismissed)
           return
         splashDismissed = true
+        if (backstopTimer)
+          clearTimeout(backstopTimer)
         if (!deps.mainWindow.isDestroyed())
           deps.mainWindow.show()
         deps.stageWindow.show()
@@ -1122,7 +1126,7 @@ app.whenReady().then(async () => {
       // NOTICE: Backstop for splash renderers that never dismiss (e.g. the
       // `#/splash` route is not yet implemented, or its renderer crashed).
       // Without this the deferred Control Strip would never appear.
-      setTimeout(() => {
+      backstopTimer = setTimeout(() => {
         if (splashDismissed)
           return
         console.warn('[@proj-airi/stage-tamagotchi] [Main] Splash did not dismiss in time, forcing coordinated reveal.')
