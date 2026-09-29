@@ -1,6 +1,6 @@
 # Proposal: TypeSafe Jev ("System 1") Decision Engine Integration
 
-> **Status**: Proposed Architecture & Evaluation RFC
+> **Status**: Proposed Architecture & Evaluation RFC (Active shipped implementations cataloged in [`docs/design-jev-integrations.md`](./design-jev-integrations.md))
 > **Target Subsystems**:
 > - `packages/stage-ui/src/composables/arcade/use-arcade-agent.ts` & Arcade Room Retro Games (`chat_arcade.vue`, `docs/proposal-generic-gaming-agent-runtime.md`, `docs/proposal-gaming-show-harness-copilot.md`)
 > - `packages/nan0-runtime/` & Living Cognition Pre-Processor (`docs/nan0/design-nan0-cognition-runtime.md`, `docs/nan0/shadow-boundary-specification.md`)

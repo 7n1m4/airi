@@ -107,6 +107,12 @@ flowchart TD
 *   **Constrained-Decoding Judgment**: RWKV-7 runs a constrained decoding pass (masking logits to force a strict output grammar: `PROMOTE <frame-ids> <salience-bucket>` | `NOTE` | `IGNORE`). This prevents small models from emitting invalid strings or arbitrary, uncalibrated scores.
 *   **Subconscious Persistence**: The hidden state vector is checkpointed to disk periodically, allowing the subconscious to survive restarts.
 
+### Stage 2 Alternative: TypeSafe Jev ("System 1") Cognitive Sentinel
+In addition to or in place of local RWKV-7, AIRI provides **TypeSafe Jev / Laya Local** as a high-speed non-autoregressive gate in [`orchestrator.ts`](../packages/stage-ui/src/stores/modules/vision/orchestrator.ts) (`gatingMode === 'system1_sentinel'`).
+- Evaluates multi-tripwire sentinel questions (e.g. build errors, notable events) using `"type": "noul"` over an entity-enriched Chrono-Log buffer.
+- Evaluates in ~100–150ms at $42/Btok (or free locally via Laya).
+- Detailed architecture, trigger policies, and code paths are documented in [`docs/design-jev-integrations.md`](./design-jev-integrations.md#32-domain-c-attention-ecology-programmable-visual-attention-gate).
+
 ---
 
 ## 5. Cleanroom Test Harness Architecture & Test Vector Seeding (`scripts/tests/attention-ecology-harness/`)

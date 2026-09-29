@@ -53,6 +53,11 @@ While Needle cannot be the 1st-Hop thought generator, it can serve auxiliary sub
 - **Toggle 4 Context Grounding:** Needle's extracted `active_topics` can be fed into the context that Nan0's Thought Engine consumes.
 - **Daydreaming Ribbon:** High-salience moments can continue to populate the visual memories marquee independently of whether Nan0 speaks or stays silent.
 
+### 2.3 Tier 2 Reflex Engine: TypeSafe Jev ("System 1") Shadow Boundary
+In production, Nan0's subconscious speech-act classification and emotional perturbation detection is augmented by **TypeSafe Jev** as an asynchronous Tier 2 shadow challenger inside the Telemetry-Only Shadow Boundary (`packages/stage-ui/src/stores/modules/nan0.ts`).
+- Operates non-autoregressively (~110–150ms) across Kyo's 12 canonical speech-act perturbation groups with distractor attractor baselines.
+- For complete architecture, schemas, and benchmark scorecards, see [`docs/design-jev-integrations.md`](../design-jev-integrations.md#33-domain-b-nan0-living-cognition-pre-processor--shadow-boundary).
+
 ---
 
 ### 3. The Modular Cognition UI Architecture (Option 1 Harmonized Layout)
