@@ -31,7 +31,6 @@ const statusLabel = document.getElementById('status-label')
 const progressBar = document.getElementById('progress-bar')
 const progressPercent = document.getElementById('progress-percent')
 const subHint = document.getElementById('sub-hint')
-const btnCloseDebug = document.getElementById('btn-close-debug')
 const errorZone = document.getElementById('error-zone')
 const errorMsg = document.getElementById('error-msg')
 const errorDetails = document.getElementById('error-details')
@@ -145,19 +144,22 @@ function render(snap: StartupSnapshot) {
     if (subHint)
       subHint.style.display = 'none'
 
-    // NOTICE: When ready, notify Main to reveal the app windows.
-    // For debugging we also provide a manual Close button so DevTools stay inspectable.
+    // NOTICE: Zero-click auto-close. Hold "Ready!" so the user perceives
+    // completion, fade out, then let Main atomically reveal the windows and destroy the splash.
     if (!dismissRequested) {
       dismissRequested = true
       if (watchdogTimer) {
         clearTimeout(watchdogTimer)
         watchdogTimer = undefined
       }
-      void dismissSplash?.().catch(() => {})
-    }
-
-    if (btnCloseDebug) {
-      btnCloseDebug.style.display = 'inline-block'
+      setTimeout(() => {
+        if (splashCard) {
+          splashCard.classList.add('exiting')
+        }
+        setTimeout(() => {
+          void dismissSplash?.().catch(() => {})
+        }, 300)
+      }, 350)
     }
   }
   else {
@@ -180,15 +182,6 @@ btnRetry?.addEventListener('click', async () => {
 btnSkipAvatar?.addEventListener('click', async () => {
   await reportMilestone?.({ id: 'stage-actor', status: 'skipped' }).catch(() => {})
   await releaseStage?.().catch(() => {})
-})
-
-btnCloseDebug?.addEventListener('click', () => {
-  if (splashCard) {
-    splashCard.classList.add('exiting')
-  }
-  setTimeout(() => {
-    window.close()
-  }, 300)
 })
 
 // Attach Eventa Listeners

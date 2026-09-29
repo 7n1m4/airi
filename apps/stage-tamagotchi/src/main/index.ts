@@ -1130,8 +1130,7 @@ app.whenReady().then(async () => {
           deps.mainWindow.show()
         deps.stageWindow.show()
         restoreCaption()
-        // NOTICE: Temporary debug change: do not destroy splash window so DevTools remain open
-        // deps.splashWindow.destroy()
+        deps.splashWindow.destroy()
       })
 
       // NOTICE: Backstop for splash renderers that never dismiss (e.g. the
@@ -1146,8 +1145,7 @@ app.whenReady().then(async () => {
           deps.mainWindow.show()
         deps.stageWindow.show()
         restoreCaption()
-        // NOTICE: Temporary debug change: do not destroy splash window so DevTools remain open
-        // deps.splashWindow.destroy()
+        deps.splashWindow.destroy()
       }, 30000)
 
       import('./libs/bootkit/lifecycle').then((m) => {

@@ -4,7 +4,6 @@ import { dirname, resolve } from 'node:path'
 import { env } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { is } from '@electron-toolkit/utils'
 import { BrowserWindow as ElectronBrowserWindow, screen } from 'electron'
 
 import icon from '../../../../resources/icon.png?asset'
@@ -59,7 +58,7 @@ export async function setupSplashWindowManager(): Promise<SplashWindowManager> {
 
   window.setMovable(true)
 
-  if (is.dev || env.MAIN_APP_DEBUG || env.APP_DEBUG) {
+  if (env.MAIN_APP_DEBUG || env.APP_DEBUG) {
     try {
       window.webContents.openDevTools({ mode: 'detach' })
     }
