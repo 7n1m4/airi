@@ -247,6 +247,22 @@ export default defineConfig({
 
     worker: {
       format: 'es',
+      plugins: () => [
+        {
+          name: 'sanitize-worker-modules',
+          enforce: 'pre',
+          transform(code: string, id: string) {
+            if (id.includes('@mlc-ai/web-llm')) {
+              return {
+                code: code
+                  .replaceAll('new Worker', 'createWorkerInstance')
+                  .replaceAll('import.meta.url', 'import_meta_url'),
+                map: null,
+              }
+            }
+          },
+        },
+      ],
       rollupOptions: {
         output: {
           inlineDynamicImports: false,
@@ -255,6 +271,20 @@ export default defineConfig({
     },
 
     plugins: [
+      {
+        name: 'sanitize-renderer-modules',
+        enforce: 'pre',
+        transform(code: string, id: string) {
+          if (id.includes('@mlc-ai/web-llm')) {
+            return {
+              code: code
+                .replaceAll('new Worker', 'createWorkerInstance')
+                .replaceAll('import.meta.url', 'import_meta_url'),
+              map: null,
+            }
+          }
+        },
+      },
       {
         name: 'force-node-crypto-shim',
         enforce: 'pre',

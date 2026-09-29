@@ -18,9 +18,9 @@ Under the hood, this release marks a monumental breakthrough in desktop resource
 - **Crisp Typography & Smooth Streaming**: Eliminated CSS 3D transform text blurring and streamlined message streaming by removing unnecessary token cloning overhead.
 
 #### AIRI Card Editor (Unified Configuration)
-- **Unified Staging Tab**: Integrated avatar vessel staging directly into the card configuration flow (moving the previous Studio tab into Staging) to preview, calibrate, and bind 3D/2D avatar models alongside multi-actor cast rosters and scene backgrounds.
-- **Presence Tab (formerly Modules)**: Renamed Modules to Presence, elevating avatar presence and stage behaviors into a unified workspace equipped with an explicit "None" option for text-only companions and inline LLM connectivity test probes.
-- **Generation Tab Thinking Presets**: Added thinking mode preset chips directly in generation settings, allowing creators to easily toggle or disable reasoning overhead and fine-tune thinking token limits.
+- **Unified Staging Tab**: Integrated avatar vessel staging directly into the card configuration flow (absorbing the previous Studio tab). Creators can now preview, calibrate, and bind 3D/2D avatar models, select **"None"** for text-only companions, manage multi-actor cast rosters, and pick visual scene backgrounds with direct image uploads—all in one place.
+- **Consolidated Generation Tab**: Moved the Consciousness (LLM) model picker directly to the head of the Generation tab alongside thinking mode preset chips (disabling reasoning overhead or fine-tuning thinking token budgets), system prompt templates, and sampling controls.
+- **Retirement of the Modules Tab**: Streamlined the card editor navigation by eliminating the legacy Modules tab, giving all visual avatar staging and AI cognition controls natural, dedicated homes in Staging and Generation.
 - **Cognition Tab Enhancements**: Sub-tab models and universe RAG++ memory segment with upgraded pill toggles and persistent search engine state.
 
 ### 🪟 Desktop Chat: Interactive Embedded Stage Viewport & 3D Visuals
