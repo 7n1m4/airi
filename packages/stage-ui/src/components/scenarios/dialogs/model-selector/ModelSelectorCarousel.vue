@@ -217,6 +217,7 @@ function getSlotStyle(offset: number) {
 
   return {
     transform: `translateX(calc(-50% + ${x}px)) scale(${scale})`,
+    transformOrigin: '50% 85%',
     left: '50%',
     opacity,
     zIndex,
@@ -301,7 +302,7 @@ onBeforeUnmount(() => {
 <template>
   <div
     ref="containerRef"
-    class="relative h-full min-h-[440px] w-full flex flex-col select-none justify-between overflow-hidden outline-none"
+    class="relative h-full min-h-0 w-full flex flex-col select-none justify-between overflow-hidden outline-none sm:min-h-[440px]"
     tabindex="0"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
@@ -324,9 +325,9 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- Active Stage View -->
-    <div v-else class="relative min-h-[440px] w-full flex flex-1 flex-col items-center justify-between pb-2 pt-1">
+    <div v-else class="relative min-h-0 w-full flex flex-1 flex-col items-center justify-between pb-1 pt-1 sm:min-h-[440px] sm:pb-2">
       <!-- Avatars Stage Canvas -->
-      <div class="relative min-h-[370px] w-full flex flex-1 items-center justify-center overflow-visible">
+      <div class="relative min-h-0 w-full flex flex-1 items-center justify-center overflow-visible sm:min-h-[370px]">
         <!-- Navigation Buttons: Left Chevron -->
         <button
           v-if="models.length > 1"
@@ -350,11 +351,11 @@ onBeforeUnmount(() => {
         </button>
 
         <!-- Dynamic Avatar Cards Layer -->
-        <div class="relative h-full min-h-[370px] w-full flex items-center justify-center">
+        <div class="relative h-full min-h-0 w-full flex items-center justify-center sm:min-h-[370px]">
           <div
             v-for="slot in visibleSlots"
             :key="slot.key"
-            class="absolute bottom-12 flex flex-col cursor-pointer items-center ease-out"
+            class="absolute bottom-11 top-1 flex flex-col cursor-pointer items-center justify-end ease-out sm:bottom-12 sm:top-2"
             :class="[
               isDragging ? 'transition-none' : 'transition-all duration-300',
             ]"
@@ -363,7 +364,7 @@ onBeforeUnmount(() => {
           >
             <!-- Avatar Silhouette Box -->
             <div
-              class="relative h-[45vh] max-h-[480px] min-h-[300px] w-52 flex flex-col items-center justify-end md:w-68 sm:w-60"
+              class="relative h-full max-h-[480px] w-52 flex flex-col items-center justify-end md:w-68 sm:w-60"
               :class="[
                 slot.offset === 0 ? 'hover:scale-102 transition-transform duration-200 cursor-pointer' : '',
               ]"
@@ -399,7 +400,7 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Floating Hero Caption Pill Anchored at Center Model's Feet (Click to pick) -->
-      <div v-if="centerModel" class="absolute bottom-2 left-1/2 z-40 flex flex-col items-center -translate-x-1/2">
+      <div v-if="centerModel" class="absolute bottom-1.5 left-1/2 z-40 flex flex-col items-center sm:bottom-2 -translate-x-1/2">
         <div
           class="flex cursor-pointer items-center gap-2.5 border border-neutral-200/80 rounded-full bg-white/95 px-4 py-1.5 shadow-lg backdrop-blur-md transition-all active:scale-98 dark:border-neutral-700/80 hover:border-primary-500/60 dark:bg-neutral-800/95"
           title="Click to select this model"

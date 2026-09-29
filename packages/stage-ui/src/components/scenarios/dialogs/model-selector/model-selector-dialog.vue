@@ -44,7 +44,10 @@ onMounted(() => screenSafeArea.update())
     </DrawerTrigger>
     <DrawerPortal v-if="showDialog">
       <DrawerOverlay class="fixed inset-0 z-[10000] bg-black/50 backdrop-blur-sm" />
-      <DrawerContent class="fixed bottom-0 left-0 right-0 z-[10000] mt-20 h-full max-h-[80%] flex flex-col rounded-t-2xl bg-neutral-50 px-4 pt-4 outline-none backdrop-blur-md sm:max-h-[75%] dark:bg-neutral-900/95" :style="{ paddingBottom: `${Math.max(Number.parseFloat(screenSafeArea.bottom.value.replace('px', '')), 24)}px` }">
+      <DrawerContent
+        class="fixed bottom-0 left-0 right-0 z-[10000] mt-16 h-full max-h-[90dvh] flex flex-col overflow-hidden rounded-t-2xl bg-neutral-50 px-4 pt-3 outline-none backdrop-blur-md sm:max-h-[75%] dark:bg-neutral-900/95"
+        :style="{ paddingBottom: `${Math.max(Number.parseFloat(screenSafeArea.bottom.value?.replace('px', '') || '0') || 0, 20)}px` }"
+      >
         <DrawerHandle />
         <ModelManager :selected-model="props.selectedModel" :initial-tab="props.initialTab" @close="showDialog = false" @pick="value => emits('pick', value)" />
       </DrawerContent>

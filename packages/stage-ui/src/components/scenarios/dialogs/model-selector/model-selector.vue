@@ -1018,8 +1018,8 @@ async function runAutoLinkCatalog() {
 </script>
 
 <template>
-  <div :class="['pt-4 sm:pt-0', 'gap-4 sm:gap-6', 'h-full flex flex-col']">
-    <div class="flex items-center">
+  <div :class="['pt-1 sm:pt-0', 'gap-2.5 sm:gap-4', 'h-full flex flex-col min-h-0']">
+    <div class="contents">
       <Live2DReportModal
         v-model:open="showReportModal"
         :report="validationReport"
@@ -1728,7 +1728,10 @@ async function runAutoLinkCatalog() {
       </div>
 
       <!-- Carousel Lineup View -->
-      <div v-if="viewMode === 'carousel'" class="h-[58vh] max-h-[660px] min-h-[460px] w-full flex flex-1 flex-col overflow-hidden md:min-h-[540px] sm:min-h-[500px]">
+      <div
+        v-if="viewMode === 'carousel'"
+        class="min-h-0 w-full flex flex-1 flex-col overflow-hidden md:min-h-[540px] sm:h-[58vh] sm:max-h-[660px] sm:min-h-[500px]"
+      >
         <ModelSelectorCarousel
           :models="filteredModels"
           :active-model-id="highlightDisplayModelCard"
