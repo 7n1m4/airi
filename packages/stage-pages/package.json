@@ -36,7 +36,6 @@
     "@proj-airi/stage-ui-mmd": "workspace:*",
     "@proj-airi/stage-ui-three": "workspace:*",
     "@proj-airi/ui": "workspace:*",
-    "@shopify/draggable": "catalog:",
     "@vueuse/core": "catalog:",
     "@vueuse/shared": "catalog:",
     "@xsai-ext/providers": "catalog:",

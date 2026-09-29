@@ -34,8 +34,7 @@
   },
   "dependencies": {
     "@moeru/std": "catalog:",
-    "@proj-airi/stream-kit": "workspace:^",
-    "clustr": "^1.0.2"
+    "@proj-airi/stream-kit": "workspace:^"
   },
   "devDependencies": {}
 }

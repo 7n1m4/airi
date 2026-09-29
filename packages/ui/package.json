@@ -26,7 +26,6 @@
   },
   "dependencies": {
     "@vueuse/core": "catalog:",
-    "floating-vue": "^5.2.2",
     "reka-ui": "^2.8.2",
     "vue": "catalog:"
   },

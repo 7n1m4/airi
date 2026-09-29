@@ -66,24 +66,15 @@ catalogs:
     '@nekopaw/tempora':
       specifier: 0.4.0-alpha.1
       version: 0.4.0-alpha.1
-    '@orama/orama':
-      specifier: ^3.1.18
-      version: 3.1.18
     '@pinia/testing':
       specifier: ^1.0.3
       version: 1.0.3
-    '@proj-airi/drizzle-duckdb-wasm':
-      specifier: ^0.4.29
-      version: 0.4.29
     '@proj-airi/iconify-meteocons':
       specifier: ^0.1.4
       version: 0.1.4
     '@proj-airi/unplugin-fetch':
       specifier: ^0.2.2
       version: 0.2.2
-    '@shopify/draggable':
-      specifier: ^1.2.1
-      version: 1.2.1
     '@types/audioworklet':
       specifier: ^0.0.96
       version: 0.0.96
@@ -118,9 +109,6 @@ catalogs:
       specifier: ^14.2.1
       version: 14.2.1
     '@xsai-ext/providers':
-      specifier: ^0.4.3
-      version: 0.4.3
-    '@xsai/embed':
       specifier: ^0.4.3
       version: 0.4.3
     '@xsai/generate-speech':
@@ -186,9 +174,6 @@ catalogs:
     drizzle-valibot:
       specifier: ^0.4.2
       version: 0.4.2
-    embla-carousel-vue:
-      specifier: ^9.0.0-rc01
-      version: 9.0.0-rc01
     es-toolkit:
       specifier: 1.43.0
       version: 1.43.0
@@ -745,9 +730,6 @@ importers:
       '@proj-airi/ccc':
         specifier: workspace:^
         version: link:../../packages/ccc
-      '@proj-airi/drizzle-duckdb-wasm':
-        specifier: 'catalog:'
-        version: 0.4.29(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8))
       '@proj-airi/font-cjkfonts-allseto':
         specifier: workspace:^
         version: link:../../packages/font-cjkfonts-allseto
@@ -937,9 +919,6 @@ importers:
       xsschema:
         specifier: 'catalog:'
         version: 0.4.0-beta.13(@valibot/to-json-schema@1.0.0-rc.0(valibot@1.2.0(typescript@5.9.3)))(zod-to-json-schema@3.25.1(zod@4.3.6))(zod@4.3.6)
-      yauzl:
-        specifier: ^3.2.0
-        version: 3.2.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1013,9 +992,6 @@ importers:
       '@types/three':
         specifier: ^0.183.1
         version: 0.183.1
-      '@types/yauzl':
-        specifier: ^2.10.3
-        version: 2.10.3
       '@unocss/reset':
         specifier: ^66.6.2
         version: 66.6.2
@@ -1094,9 +1070,6 @@ importers:
       '@proj-airi/ccc':
         specifier: workspace:^
         version: link:../../packages/ccc
-      '@proj-airi/drizzle-duckdb-wasm':
-        specifier: 'catalog:'
-        version: 0.4.29(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8))
       '@proj-airi/electron-eventa':
         specifier: workspace:^
         version: link:../../packages/electron-eventa
@@ -1446,9 +1419,6 @@ importers:
       '@types/three':
         specifier: ^0.183.1
         version: 0.183.1
-      '@types/yauzl':
-        specifier: ^2.10.3
-        version: 2.10.3
       '@vitejs/plugin-vue':
         specifier: ^6.0.4
         version: 6.0.4(vite@6.2.7(@types/node@24.10.14)(jiti@2.6.1)(less@4.5.1)(lightningcss@1.31.1)(terser@5.46.0)(tsx@4.21.0)(yaml@2.8.2))(vue@3.5.29(typescript@5.9.3))
@@ -1560,9 +1530,6 @@ importers:
       yaml:
         specifier: ^2.8.2
         version: 2.8.2
-      yauzl:
-        specifier: ^3.2.0
-        version: 3.2.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1590,9 +1557,6 @@ importers:
       '@proj-airi/ccc':
         specifier: workspace:^
         version: link:../../packages/ccc
-      '@proj-airi/drizzle-duckdb-wasm':
-        specifier: 'catalog:'
-        version: 0.4.29(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8))
       '@proj-airi/font-cjkfonts-allseto':
         specifier: workspace:^
         version: link:../../packages/font-cjkfonts-allseto
@@ -1650,57 +1614,12 @@ importers:
       '@xsai-ext/providers':
         specifier: 'catalog:'
         version: 0.4.3
-      '@xsai-transformers/embed':
-        specifier: ^0.0.11
-        version: 0.0.11(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))
       '@xsai/generate-speech':
         specifier: 'catalog:'
         version: 0.4.0-beta.13
-      '@xsai/generate-text':
-        specifier: 'catalog:'
-        version: 0.4.3
-      '@xsai/model':
-        specifier: 'catalog:'
-        version: 0.4.3
-      '@xsai/shared':
-        specifier: 'catalog:'
-        version: 0.4.0-beta.13
-      '@xsai/shared-chat':
-        specifier: 'catalog:'
-        version: 0.4.0-beta.13
-      '@xsai/stream-text':
-        specifier: 'catalog:'
-        version: 0.4.3
-      '@xsai/stream-transcription':
-        specifier: 0.4.0-beta.8
-        version: 0.4.0-beta.8
-      '@xsai/utils-chat':
-        specifier: 'catalog:'
-        version: 0.4.0-beta.13
-      animejs:
-        specifier: ^4.3.6
-        version: 4.3.6
-      better-auth:
-        specifier: 'catalog:'
-        version: 1.5.3(@better-auth/drizzle-adapter@1.5.3(@better-auth/core@1.5.3(@better-auth/utils@0.3.1)(@better-fetch/fetch@1.1.21)(@cloudflare/workers-types@4.20260702.1)(better-call@1.3.2(zod@4.3.6))(jose@6.1.3)(kysely@0.28.11)(nanostores@1.1.1))(@better-auth/utils@0.3.1)(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8)))(@cloudflare/workers-types@4.20260702.1)(@prisma/client@5.22.0)(better-sqlite3@12.5.0)(drizzle-kit@0.31.9)(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8))(pg@8.19.0)(react@19.2.3)(vitest@4.0.18)(vue@3.5.29(typescript@5.9.3))
-      colorjs.io:
-        specifier: ^0.6.1
-        version: 0.6.1
-      culori:
-        specifier: ^4.0.2
-        version: 4.0.2
-      date-fns:
-        specifier: ^4.1.0
-        version: 4.1.0
-      dompurify:
-        specifier: ^3.3.1
-        version: 3.3.1
       driver.js:
         specifier: ^1.4.0
         version: 1.4.0
-      drizzle-orm:
-        specifier: ^0.45.1
-        version: 0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8)
       gpuu:
         specifier: ^1.0.6
         version: 1.0.6
@@ -1788,9 +1707,6 @@ importers:
       xsschema:
         specifier: 'catalog:'
         version: 0.4.0-beta.13(@valibot/to-json-schema@1.0.0-rc.0(valibot@1.2.0(typescript@5.9.3)))(zod-to-json-schema@3.25.1(zod@4.3.6))(zod@4.3.6)
-      yauzl:
-        specifier: ^3.2.0
-        version: 3.2.0
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -1864,9 +1780,6 @@ importers:
       '@types/three':
         specifier: ^0.183.1
         version: 0.183.1
-      '@types/yauzl':
-        specifier: ^2.10.3
-        version: 2.10.3
       '@unocss/reset':
         specifier: ^66.6.2
         version: 66.6.2
@@ -1954,9 +1867,6 @@ importers:
       date-fns:
         specifier: ^4.1.0
         version: 4.1.0
-      embla-carousel-vue:
-        specifier: 'catalog:'
-        version: 9.0.0-rc01(vue@3.5.29(typescript@5.9.3))
       mark.js:
         specifier: ^8.11.1
         version: 8.11.1
@@ -1978,9 +1888,6 @@ importers:
       vue-i18n:
         specifier: ^11.2.8
         version: 11.2.8(vue@3.5.29(typescript@5.9.3))
-      vue-sonner:
-        specifier: ^2.0.9
-        version: 2.0.9(vue@3.5.29(typescript@5.9.3))
     devDependencies:
       '@iconify-json/lucide':
         specifier: ^1.2.94
@@ -2161,9 +2068,6 @@ importers:
       '@proj-airi/stream-kit':
         specifier: workspace:^
         version: link:../stream-kit
-      clustr:
-        specifier: ^1.0.2
-        version: 1.0.2
 
   packages/electron-eventa:
     dependencies:
@@ -2581,9 +2485,6 @@ importers:
       '@proj-airi/ui':
         specifier: workspace:*
         version: link:../ui
-      '@shopify/draggable':
-        specifier: 'catalog:'
-        version: 1.2.1
       '@vueuse/core':
         specifier: 'catalog:'
         version: 14.2.1(vue@3.5.29(typescript@5.9.3))
@@ -2754,9 +2655,6 @@ importers:
       '@moeru/eventa':
         specifier: 'catalog:'
         version: 1.0.0-beta.10(patch_hash=202582ad335e20eb2238183adf33edbbfca9fbf30bdc046a1ddf4db6e95467f7)(electron@40.8.0)(hono@4.11.3)
-      '@orama/orama':
-        specifier: 'catalog:'
-        version: 3.1.18
       '@pixi/core':
         specifier: ^6.5.10
         version: 6.5.10(@pixi/constants@6.5.10)(@pixi/extensions@6.5.10)(@pixi/math@6.5.10)(@pixi/runner@6.5.10)(@pixi/settings@6.5.10(@pixi/constants@6.5.10))(@pixi/ticker@6.5.10(@pixi/extensions@6.5.10)(@pixi/settings@6.5.10(@pixi/constants@6.5.10)))(@pixi/utils@6.5.10(@pixi/constants@6.5.10)(@pixi/settings@6.5.10(@pixi/constants@6.5.10)))
@@ -2775,9 +2673,6 @@ importers:
       '@proj-airi/core-character':
         specifier: workspace:^
         version: link:../core-character
-      '@proj-airi/drizzle-duckdb-wasm':
-        specifier: 'catalog:'
-        version: 0.4.29(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8))
       '@proj-airi/electron-screen-capture':
         specifier: workspace:^
         version: link:../electron-screen-capture
@@ -2829,15 +2724,9 @@ importers:
       '@proj-airi/ui':
         specifier: workspace:^
         version: link:../ui
-      '@ricky0123/vad-web':
-        specifier: ^0.0.30
-        version: 0.0.30
       '@shikijs/rehype':
         specifier: ^3.23.0
         version: 3.23.0
-      '@shopify/draggable':
-        specifier: 'catalog:'
-        version: 1.2.1
       '@vueuse/core':
         specifier: 'catalog:'
         version: 14.2.1(vue@3.5.29(typescript@5.9.3))
@@ -2850,15 +2739,9 @@ importers:
       '@xsai-ext/providers':
         specifier: 'catalog:'
         version: 0.4.3
-      '@xsai-transformers/embed':
-        specifier: ^0.0.11
-        version: 0.0.11(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))
       '@xsai-transformers/shared':
         specifier: ^0.0.11
         version: 0.0.11(electron@40.8.0)(h3@2.0.1-rc.14(crossws@0.4.4(srvx@0.11.8(patch_hash=c761d25a70e22a0925c88fe91a9dd1c3153dd341d8fd4f260166678156c4df2d))))
-      '@xsai/embed':
-        specifier: 'catalog:'
-        version: 0.4.3
       '@xsai/generate-speech':
         specifier: 'catalog:'
         version: 0.4.0-beta.13
@@ -2910,9 +2793,6 @@ importers:
       es-toolkit:
         specifier: 'catalog:'
         version: 1.43.0
-      gpuu:
-        specifier: ^1.0.6
-        version: 1.0.6
       hono:
         specifier: 'catalog:'
         version: 4.11.3
@@ -2973,9 +2853,6 @@ importers:
       shiki:
         specifier: ^3.23.0
         version: 3.23.0
-      splitpanes:
-        specifier: 'catalog:'
-        version: 4.0.4(vue@3.5.29(typescript@5.9.3))
       tesseract.js:
         specifier: ^7.0.0
         version: 7.0.0(encoding@0.1.13)
@@ -2985,9 +2862,6 @@ importers:
       unified:
         specifier: 'catalog:'
         version: 11.0.5
-      unist-builder:
-        specifier: ^4.0.0
-        version: 4.0.0
       unist-util-visit:
         specifier: ^5.1.0
         version: 5.1.0
@@ -3440,9 +3314,6 @@ importers:
       '@vueuse/core':
         specifier: 'catalog:'
         version: 14.2.1(vue@3.5.29(typescript@5.9.3))
-      floating-vue:
-        specifier: ^5.2.2
-        version: 5.2.2(@nuxt/kit@3.20.2(magicast@0.5.2))(vue@3.5.29(typescript@5.9.3))
       reka-ui:
         specifier: ^2.8.2
         version: 2.8.2(vue@3.5.29(typescript@5.9.3))
@@ -4666,9 +4537,6 @@ packages:
     resolution: {integrity: sha512-QxULHAm7cNu72w97JUNCBFODFaXpbDg+dP8b/oWFAZ2MTRppA3U00Y2L1HqaS4J6yBqxwa/Y3nMBaxVKbB/NsA==}
     engines: {node: '>=20.19.0'}
 
-  '@date-fns/tz@1.4.1':
-    resolution: {integrity: sha512-P5LUNhtbj6YfI3iJjw5EL9eUAG6OitD0W3fWQcpQjDRc/QIsL0tRNuO1PcDvPccWL1fSTXXdE1ds+l95DV/OFA==}
-
   '@date-fns/utc@2.1.1':
     resolution: {integrity: sha512-SlJDfG6RPeEX8wEVv6ZB3kak4MmbtyiI2qX/5zuKdordbrhB/iaJ58GVMZgJ6P1sJaM1gMgENFYYeg1JWrCFrA==}
 
@@ -4739,9 +4607,6 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
-
-  '@duckdb/duckdb-wasm@1.29.1-dev68.0':
-    resolution: {integrity: sha512-UttGAEDiCjSrn3anOlBwwrc+rDBY4jwyg+m9ZbNqazVWlanInQ8p6gZE1ZGDYp3Z0GG7fGSrkXs+bdT/mXSHEQ==}
 
   '@ecies/ciphers@0.2.5':
     resolution: {integrity: sha512-GalEZH4JgOMHYYcYmVqnFirFsjZHeoGMDt9IxEnM9F7GRUUyUksJ7Ou53L83WHJq3RWKD3AcBpo0iQh0oMpf8A==}
@@ -5694,9 +5559,6 @@ packages:
   '@floating-ui/core@1.7.3':
     resolution: {integrity: sha512-sGnvb5dmrJaKEZ+LDIpguvdX3bDlEllmv4/ClQ9awcmCZrlx5jQyyMWFM5kBI+EyNOCDDiKk8il0zeuX3Zlg/w==}
 
-  '@floating-ui/dom@1.1.1':
-    resolution: {integrity: sha512-TpIO93+DIujg3g7SykEAGZMDtbJRrmnYRCNYSjJlvIbGhBjRSNTLVbNeDQBrzy9qDgUbiWdc7KA0uZHZ2tJmiw==}
-
   '@floating-ui/dom@1.7.4':
     resolution: {integrity: sha512-OOchDgh4F2CchOX94cRVqhvy7b3AFb+/rQXyswmzmGakRfkMgoWVjfnLWkRirfLEfuD4ysVW16eXzwt3jHIzKA==}
 
@@ -6442,9 +6304,6 @@ packages:
       web-worker:
         optional: true
 
-  '@moeru/std@0.1.0-beta.1':
-    resolution: {integrity: sha512-ImfoMBchZP+F4aos2nFmlcipcgIhT+ZkUUVWB/bBHEqyB/w/nbI/xgA8a1ibJUtG7RcQnQH+SKom0r4/1xCWqA==}
-
   '@moeru/std@0.1.0-beta.17':
     resolution: {integrity: sha512-GyLDCKHiqXyO60Wn0+Hc7Tfo/GJQA3pV5FZGkzGhvJM7LQPZDB0tksuJV92LuRF1lG8x78B+8UfVFhVf8xXVfg==}
 
@@ -6840,10 +6699,6 @@ packages:
     engines: {node: ^18.19.0 || >=20.6.0}
     peerDependencies:
       '@opentelemetry/api': ^1.1.0
-
-  '@orama/orama@3.1.18':
-    resolution: {integrity: sha512-a61ljmRVVyG5MC/698C8/FfFDw5a8LOIvyOLW5fztgUXqUpc1jOfQzOitSCbge657OgXXThmY3Tk8fpiDb4UcA==}
-    engines: {node: '>= 20.0.0'}
 
   '@ota-meshi/ast-token-store@0.3.0':
     resolution: {integrity: sha512-XRO0zi2NIUKq2lUk3T1ecFSld1fMWRKE6naRFGkgkdeosx7IslyUKNv5Dcb5PJTja9tHJoFu0v/7yEpAkrkrTg==}
@@ -7532,28 +7387,10 @@ packages:
   '@proj-airi/chromatic@1.0.2':
     resolution: {integrity: sha512-pAZ7v26rS1ThbRpEM+M8DOzcmDO5OBiFdo0DY0XUK9pFRuCyChcY/KdIwqB8Ntinls2pZj9v1kUw24p6Gw/L2A==}
 
-  '@proj-airi/drizzle-duckdb-wasm@0.4.29':
-    resolution: {integrity: sha512-FaitVgjwJc0QWa/TKGiw7CahAK4zczRMb5Qvhpfz50eQXfvLxmGG6nHBn4uaAYQmQxwHGBU2rPr9/p0CkyFcLQ==}
-    peerDependencies:
-      drizzle-orm: '>=0.40.0'
-      web-worker: ^1.5.0
-    peerDependenciesMeta:
-      web-worker:
-        optional: true
-
   '@proj-airi/drizzle-orm-browser-migrator@0.1.6':
     resolution: {integrity: sha512-7A7Ay5vSLBer2P+Ydbrl9AktE7geIlh396zB/3a9odwI/1GT89Pljzvjz5SVxG0e17+wMOPLRKnTnCzukL1B9Q==}
     peerDependencies:
       drizzle-orm: '>=0.44.0'
-
-  '@proj-airi/duckdb-wasm@0.4.29':
-    resolution: {integrity: sha512-NWpUHLgzzvTftRYr1vHePHUFjt0LbYM6DbHHI0hI94Y0c+7QezNgIoYasWp9XhZS4dEBm3J2efiH2LqbMayNaA==}
-    peerDependencies:
-      drizzle-orm: '>=0.40.0'
-      web-worker: ^1.5.0
-    peerDependenciesMeta:
-      web-worker:
-        optional: true
 
   '@proj-airi/iconify-meteocons@0.1.4':
     resolution: {integrity: sha512-yliSwluedHb9KCYNuVzlLwSjAUVg5ufMJijqEaXTDrmenwndaIX1Bs3B4jDHQbcwR3hNvrLAlH70SSGCcBXUZA==}
@@ -7632,9 +7469,6 @@ packages:
 
   '@radix-ui/colors@3.0.0':
     resolution: {integrity: sha512-FUOsGBkHrYJwCSEtWRCIfQbZG7q1e6DgxCIOe1SUQzDe/7rXXeA47s8yCn6fuTNQAj1Zq4oTFi9Yjp3wzElcxg==}
-
-  '@ricky0123/vad-web@0.0.30':
-    resolution: {integrity: sha512-cJyYrh4YeeUBJcbR9Bic/bFDyB9qBkAepvpuWM3vLxnAi7bC3VHzf51UeNdT+OtY4D7MLAgV8iJMc4z41ZnaWg==}
 
   '@rive-app/canvas-lite@2.35.0':
     resolution: {integrity: sha512-WJ2JcIMlN7jV0YrapN7hByMahz46CT+5qcFLDqPga5WfJncOlrStuBCz0+DMkI1xlxnAdNelprKDLpfdZe7SeQ==}
@@ -8179,9 +8013,6 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@shopify/draggable@1.2.1':
-    resolution: {integrity: sha512-hYKhd99nl1mkO4ybA8i3rxvZgYS2A4Imcxpq7BoUu7h4LmFt997YxHLy8Mm5J7ST+G4DTQXqBsTx9mDid6piZg==}
-
   '@sindresorhus/base62@1.0.0':
     resolution: {integrity: sha512-TeheYy0ILzBEI/CO55CP6zJCSdSWeRtGnHy8U8dWSUH4I68iqTsy7HkMktR4xakThc9jotkPQUXT4ITdbV7cHA==}
     engines: {node: '>=18'}
@@ -8261,12 +8092,6 @@ packages:
 
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
-
-  '@types/command-line-args@5.2.3':
-    resolution: {integrity: sha512-uv0aG6R0Y8WHZLTamZwtfsDLVRnOa+n+n5rEvFWL5Na5gZ8V2Teab/duDPFzIIIhs9qizDpcavCusCLJZu62Kw==}
-
-  '@types/command-line-usage@5.0.4':
-    resolution: {integrity: sha512-BwR5KP3Es/CSht0xqBcUXS3qCAUVXwpRKsV2+arxeb65atasuXG9LykC9Ab10Cw3s2raH92ZqOeILaQbsB2ACg==}
 
   '@types/culori@4.0.1':
     resolution: {integrity: sha512-43M51r/22CjhbOXyGT361GZ9vncSVQ39u62x5eJdBQFviI8zWp2X5jzqg7k4M6PVgDQAClpy2bUe2dtwEgEDVQ==}
@@ -8369,9 +8194,6 @@ packages:
 
   '@types/node@18.19.130':
     resolution: {integrity: sha512-GRaXQx6jGfL8sKfaIDD6OupbIHBr9jv7Jnaml9tB7l4v068PAOXqfcujMMo5PhbIs6ggR1XODELqahT2R8v0fg==}
-
-  '@types/node@20.19.27':
-    resolution: {integrity: sha512-N2clP5pJhB2YnZJ3PIHFk5RkygRX5WO/5f0WC08tp0wd+sv0rsJk3MqWn3CbNmT2J505a5336jaQj4ph1AdMug==}
 
   '@types/node@22.19.12':
     resolution: {integrity: sha512-0QEp0aPJYSyf6RrTjDB7HlKgNMTY+V2C7ESTaVt6G9gQ0rPLzTGz7OF2NXTLR5vcy7HJEtIUsyWLsfX0kTqJBA==}
@@ -9452,14 +9274,6 @@ packages:
     resolution: {integrity: sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==}
     engines: {node: '>= 8'}
 
-  apache-arrow@17.0.0:
-    resolution: {integrity: sha512-X0p7auzdnGuhYMVKYINdQssS4EcKec9TCXyez/qtJt32DrIMGbzqiaMiQ0X6fQlQpw8Fl0Qygcv4dfRAr5Gu9Q==}
-    hasBin: true
-
-  apache-arrow@21.1.0:
-    resolution: {integrity: sha512-kQrYLxhC+NTVVZ4CCzGF6L/uPVOzJmD1T3XgbiUnP7oTeVFOFgEUu6IKNwCDkpFoBVqDKQivlX4RUFqqnWFlEA==}
-    hasBin: true
-
   app-builder-bin@5.0.0-alpha.12:
     resolution: {integrity: sha512-j87o0j6LqPL3QRr8yid6c+Tt5gC7xNfYo6uQIQkorAC6MpeayVMZrEDzKmJJ/Hlv7EnOQpaRm53k6ktDYZyB6w==}
 
@@ -9494,14 +9308,6 @@ packages:
   aria-hidden@1.2.6:
     resolution: {integrity: sha512-ik3ZgC9dY/lYVVM++OISsaYDeg1tb0VtP5uL3ouh1koGOaUMDPpbFIei4JkFimWUFPn90sbMNMXQAIVOlnYKJA==}
     engines: {node: '>=10'}
-
-  array-back@3.1.0:
-    resolution: {integrity: sha512-TkuxA4UCOvxuDK6NZYXCalszEzj+TLszyASooky+i742l9TqsOdYCMJJupxRic61hwquNtppB3hgcuq9SVSH1Q==}
-    engines: {node: '>=6'}
-
-  array-back@6.2.2:
-    resolution: {integrity: sha512-gUAZ7HPyb4SJczXAMUXMGAvI976JoK3qEx9v1FTmeYuJj0IBiaKttG1ydtGKdkfqWkIkouke7nG8ufGy77+Cvw==}
-    engines: {node: '>=12.17'}
 
   array-differ@4.0.0:
     resolution: {integrity: sha512-Q6VPTLMsmXZ47ENG3V+wQyZS1ZxXMxFyYzA+Z/GMrJ6yIutAIEf9wTyroTzmGjNfox9/h3GdGBCVh43GVFx4Uw==}
@@ -9962,10 +9768,6 @@ packages:
     resolution: {integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==}
     engines: {node: '>=18'}
 
-  chalk-template@0.4.0:
-    resolution: {integrity: sha512-/ghrgmhfY8RaSdeo43hNXxpoHAtxdbskUHjPpfqUWGttFgycUhYPGx3YZBCnUCvOa7Doivn1IZec3DEGFoMgLg==}
-    engines: {node: '>=12'}
-
   chalk@4.1.2:
     resolution: {integrity: sha512-oKnbhFyRIXpUuez8iBMmyEa4nbj4IOQyuhc/wy9kY7/WVPcwIO9VA668Pu8RkO7+0G76SLROeyw9CpQ061i4mA==}
     engines: {node: '>=10'}
@@ -10130,23 +9932,6 @@ packages:
 
   comma-separated-tokens@2.0.3:
     resolution: {integrity: sha512-Fu4hJdvzeylCfQPp9SGWidpzrMs7tTrlu6Vb8XGaRGck8QSNZJJp538Wrb60Lax4fPwR64ViY468OIUTbRlGZg==}
-
-  command-line-args@5.2.1:
-    resolution: {integrity: sha512-H4UfQhZyakIjC74I9d34fGYDwk3XpSr17QhEd0Q3I9Xq1CETHo4Hcuo87WyWHpAF1aSLjLRf5lD9ZGX2qStUvg==}
-    engines: {node: '>=4.0.0'}
-
-  command-line-args@6.0.1:
-    resolution: {integrity: sha512-Jr3eByUjqyK0qd8W0SGFW1nZwqCaNCtbXjRo2cRJC1OYxWl3MZ5t1US3jq+cO4sPavqgw4l9BMGX0CBe+trepg==}
-    engines: {node: '>=12.20'}
-    peerDependencies:
-      '@75lb/nature': latest
-    peerDependenciesMeta:
-      '@75lb/nature':
-        optional: true
-
-  command-line-usage@7.0.3:
-    resolution: {integrity: sha512-PqMLy5+YGwhMh1wS04mVG44oqDsgyLRSKJBdOo1bnYhMKBW65gZF1dRp2OZRhiTjgUHljy99qkO7bsctLaw35Q==}
-    engines: {node: '>=12.20.0'}
 
   commander@11.1.0:
     resolution: {integrity: sha512-yPVavfyCcRhmorC7rWlkHn15b4wDVgVmBA7kV4QVBsF7kv/9TKJAbAXVTxvTnwP8HHKjRCJDClKbciiYS7p0DQ==}
@@ -10861,19 +10646,6 @@ packages:
   email-addresses@3.1.0:
     resolution: {integrity: sha512-k0/r7GrWVL32kZlGwfPNgB2Y/mMXVTq/decgLczm/j34whdaspNrZO8CnXPf1laaHxI6ptUlsnAxN+UAPw+fzg==}
 
-  embla-carousel-reactive-utils@9.0.0-rc01:
-    resolution: {integrity: sha512-RnW0NMrL7wVAQb9jro+l96hLI2JairyFHS2Jv+fvXakveD/c5aD9aoNH94YRbTmi0G7PxrKSxydmCpTy5eFmrA==}
-    peerDependencies:
-      embla-carousel: 9.0.0-rc01
-
-  embla-carousel-vue@9.0.0-rc01:
-    resolution: {integrity: sha512-Fy3MeolfZXwDIUdfxtQ3Kb+4dfjV9kosXQ9ic+Lfj2wxxm2YZO/g2znZ1cbd71ES7WCXy0DsunufHIINFT18ow==}
-    peerDependencies:
-      vue: ^3.2.37
-
-  embla-carousel@9.0.0-rc01:
-    resolution: {integrity: sha512-4BTERU1gAXgg4Vl0m7hQ1GzePGLNNfM2j030ww8i9idiPXumyRUpaNUDfT2zx1Hv8um1Ew7QKBy/HdNPz8L30g==}
-
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
 
@@ -11454,19 +11226,6 @@ packages:
     resolution: {integrity: sha512-wXZV5emFEjrridIgED11OoUKLxiYjAcqot/NJdAkOhlJ+vGzwhOAfcG5OX1jP+S0PcjEn8bdMJv+g2jwQ3Onig==}
     engines: {node: '>=8'}
 
-  find-replace@3.0.0:
-    resolution: {integrity: sha512-6Tb2myMioCAgv5kfvP5/PkZZ/ntTpVK39fHY7WkWBgvbeE+VHd/tZuZ4mrC+bxh4cfOZeYKVPaJIZtZXV7GNCQ==}
-    engines: {node: '>=4.0.0'}
-
-  find-replace@5.0.2:
-    resolution: {integrity: sha512-Y45BAiE3mz2QsrN2fb5QEtO4qb44NcS7en/0y9PEVsg351HsLeVclP8QPMH79Le9sH3rs5RSwJu99W0WPZO43Q==}
-    engines: {node: '>=14'}
-    peerDependencies:
-      '@75lb/nature': latest
-    peerDependenciesMeta:
-      '@75lb/nature':
-        optional: true
-
   find-up-simple@1.0.1:
     resolution: {integrity: sha512-afd4O7zpqHeRyg4PfDQsXmlDe2PfdHtJt6Akt8jOWaApLOZk5JXs6VMR29lz03pRe9mpykrRCYIYxaJYcfpncQ==}
     engines: {node: '>=18'}
@@ -11488,23 +11247,11 @@ packages:
     resolution: {integrity: sha512-f7ccFPK3SXFHpx15UIGyRJ/FJQctuKZ0zVuN3frBo4HnK3cay9VEW0R6yPYFHC0AgqhukPzKjq22t5DmAyqGyw==}
     engines: {node: '>=16'}
 
-  flatbuffers@24.12.23:
-    resolution: {integrity: sha512-dLVCAISd5mhls514keQzmEG6QHmUUsNuWsb4tFafIUwvvgDjXhtfAYSKOzt5SWOy+qByV5pbsDZ+Vb7HUOBEdA==}
-
   flatbuffers@25.9.23:
     resolution: {integrity: sha512-MI1qs7Lo4Syw0EOzUl0xjs2lsoeqFku44KpngfIduHBYvzm8h2+7K8YMQh1JtVVVrUvhLpNwqVi4DERegUJhPQ==}
 
   flatted@3.3.3:
     resolution: {integrity: sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg==}
-
-  floating-vue@5.2.2:
-    resolution: {integrity: sha512-afW+h2CFafo+7Y9Lvw/xsqjaQlKLdJV7h1fCHfcYQ1C4SVMlu7OAekqWgu5d4SgvkBVU0pVpLlVsrSTBURFRkg==}
-    peerDependencies:
-      '@nuxt/kit': ^3.2.0
-      vue: ^3.2.0
-    peerDependenciesMeta:
-      '@nuxt/kit':
-        optional: true
 
   focus-trap@7.8.0:
     resolution: {integrity: sha512-/yNdlIkpWbM0ptxno3ONTuf+2g318kh2ez3KSeZN5dZ8YC6AAmgeWz+GasYYiBJPFaYcSAPeu4GfhUaChzIJXA==}
@@ -12395,10 +12142,6 @@ packages:
 
   json-bigint@1.0.0:
     resolution: {integrity: sha512-SiPv/8VpZuWbvLSMtTDU8hEfrZWg/mH/nV/b4o0CYbSxu1UIQPLdwKOCIyLQX+VIPO5vrLX3i8qtqFyhdPSUSQ==}
-
-  json-bignum@0.0.3:
-    resolution: {integrity: sha512-2WHyXj3OfHSgNyuzDbSxI1w2jgw5gkWSWhS7Qg4bWXx1nLk3jnbwfUeS0PSba3IzpTUWdHxBieELUzXRjQB2zg==}
-    engines: {node: '>=0.8'}
 
   json-buffer@3.0.1:
     resolution: {integrity: sha512-4bV5BfR2mqfQTJm+V5tPPdf+ZpuhiIvTuAB5g8kcrXOZpTT/QwwVRWBywX1ozr6lEuPdbHxwaJlm9G6mI2sfSQ==}
@@ -14786,10 +14529,6 @@ packages:
   tabbable@6.4.0:
     resolution: {integrity: sha512-05PUHKSNE8ou2dwIxTngl4EzcnsCDZGJ/iCLtDflR/SHB/ny14rXc+qU5P4mG9JkusiV7EivzY9Mhm55AzAvCg==}
 
-  table-layout@4.1.1:
-    resolution: {integrity: sha512-iK5/YhZxq5GO5z8wb0bY1317uDF3Zjpha0QFFLA8/trAoiLbQD0HUbMesEaxyzUgDxi2QlcbM8IvqOlEjgoXBA==}
-    engines: {node: '>=12.17'}
-
   tapable@2.3.0:
     resolution: {integrity: sha512-g9ljZiwki/LfxmQADO3dEY1CbpmXT5Hm2fJ+QaGKwSXUylMybePR7/67YW7jOrrvjEgL1Fmz5kzyAjWVWLlucg==}
     engines: {node: '>=6'}
@@ -15122,14 +14861,6 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  typical@4.0.0:
-    resolution: {integrity: sha512-VAH4IvQ7BDFYglMd7BPRDfLgxZZX4O4TFcRDA6EN5X7erNJJq+McIEp8np9aVtxrCJ6qx4GTYVfOWNjcqwZgRw==}
-    engines: {node: '>=8'}
-
-  typical@7.3.0:
-    resolution: {integrity: sha512-ya4mg/30vm+DOWfBg4YK3j2WD6TWtRkCbasOJr40CseYENzCUby/7rIvXA99JGsQHeNxLbnXdyLLxKSv3tauFw==}
-    engines: {node: '>=12.17'}
-
   uc.micro@2.1.0:
     resolution: {integrity: sha512-ARDJmphmdvUk6Glw7y9DQ2bFkKBHwQHLi2lsaH6PPmz/Ka9sFOBsBluozhDltWmnv9u/cF6Rt87znRTPV+yp/A==}
 
@@ -15221,9 +14952,6 @@ packages:
   unique-string@2.0.0:
     resolution: {integrity: sha512-uNaeirEPvpZWSgzwsPGtU2zVSTrn/8L5q/IexZmH0eH6SA73CmAA5U4GwORTxQAZs95TAXLNqeLoPPNO5gZfWg==}
     engines: {node: '>=8'}
-
-  unist-builder@4.0.0:
-    resolution: {integrity: sha512-wmRFnH+BLpZnTKpc5L7O67Kac89s9HMrtELpnNaE6TAobq5DTZZs5YaTQfAZBA9bFPECx2uVAPO31c+GVug8mg==}
 
   unist-util-find-after@5.0.0:
     resolution: {integrity: sha512-amQa0Ep2m6hE2g72AugUItjbuM8X8cGQnFoHk0pGfrFeT9GZhzN5SW8nRsiGKK7Aif4CrACPENkA6P/Lw6fHGQ==}
@@ -15778,11 +15506,6 @@ packages:
     peerDependencies:
       vue: ^2.7.0 || ^3.2.25
 
-  vue-resize@2.0.0-alpha.1:
-    resolution: {integrity: sha512-7+iqOueLU7uc9NrMfrzbG8hwMqchfVfSzpVlCMeJQe4pyibqyoifDNbKTZvwxZKDvGkB+PdFeKvnGZMoEb8esg==}
-    peerDependencies:
-      vue: ^3.0.0
-
   vue-router@4.6.4:
     resolution: {integrity: sha512-Hz9q5sa33Yhduglwz6g9skT8OBPii+4bFn88w6J+J4MfEo4KRRpmiNG/hHHkdbRFlLBOqxN8y8gf2Fb0MTUgVg==}
     peerDependencies:
@@ -15963,10 +15686,6 @@ packages:
   word-wrap@1.2.5:
     resolution: {integrity: sha512-BN22B5eaMMI9UMtjrGd5g5eCYPpCPDUy0FJXbYsaT5zYxjFOckS53SQDE3pWkVoWpHXVb3BrYcEN4Twa55B5cA==}
     engines: {node: '>=0.10.0'}
-
-  wordwrapjs@5.1.1:
-    resolution: {integrity: sha512-0yweIbkINJodk27gX9LBGMzyQdBDan3s/dEAiwBOj+Mf0PPyWL6/rikalkv8EeD0E8jm4o5RXEOrFTP3NXbhJg==}
-    engines: {node: '>=12.17'}
 
   workbox-background-sync@7.4.0:
     resolution: {integrity: sha512-8CB9OxKAgKZKyNMwfGZ1XESx89GryWTfI+V5yEj8sHjFH8MFelUwYXEyldEK6M6oKMmn807GoJFUEA1sC4XS9w==}
@@ -17598,8 +17317,6 @@ snapshots:
   '@csstools/css-tokenizer@4.0.0':
     optional: true
 
-  '@date-fns/tz@1.4.1': {}
-
   '@date-fns/utc@2.1.1': {}
 
   '@develar/schema-utils@2.6.5':
@@ -17708,10 +17425,6 @@ snapshots:
       which: 4.0.0
 
   '@drizzle-team/brocli@0.10.2': {}
-
-  '@duckdb/duckdb-wasm@1.29.1-dev68.0':
-    dependencies:
-      apache-arrow: 17.0.0
 
   '@ecies/ciphers@0.2.5(@noble/ciphers@1.3.0)':
     dependencies:
@@ -18379,10 +18092,6 @@ snapshots:
   '@floating-ui/core@1.7.3':
     dependencies:
       '@floating-ui/utils': 0.2.10
-
-  '@floating-ui/dom@1.1.1':
-    dependencies:
-      '@floating-ui/core': 1.7.3
 
   '@floating-ui/dom@1.7.4':
     dependencies:
@@ -19231,8 +18940,6 @@ snapshots:
       electron: 40.8.0
       hono: 4.11.3
 
-  '@moeru/std@0.1.0-beta.1': {}
-
   '@moeru/std@0.1.0-beta.17': {}
 
   '@moeru/three-mmd@0.1.0-beta.3(@types/three@0.183.1)(three@0.184.0)':
@@ -19705,8 +19412,6 @@ snapshots:
     dependencies:
       '@opentelemetry/api': 1.9.0
       '@opentelemetry/core': 2.6.0(@opentelemetry/api@1.9.0)
-
-  '@orama/orama@3.1.18': {}
 
   '@ota-meshi/ast-token-store@0.3.0': {}
 
@@ -20232,36 +19937,10 @@ snapshots:
     dependencies:
       culori: 4.0.2
 
-  '@proj-airi/drizzle-duckdb-wasm@0.4.29(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8))':
-    dependencies:
-      '@date-fns/tz': 1.4.1
-      '@duckdb/duckdb-wasm': 1.29.1-dev68.0
-      '@moeru/std': 0.1.0-beta.1
-      '@proj-airi/duckdb-wasm': 0.4.29(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8))
-      apache-arrow: 21.1.0
-      date-fns: 4.1.0
-      drizzle-orm: 0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8)
-      es-toolkit: 1.44.0
-    transitivePeerDependencies:
-      - '@75lb/nature'
-
   '@proj-airi/drizzle-orm-browser-migrator@0.1.6(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8))':
     dependencies:
       '@guiiai/logg': 1.2.11
       drizzle-orm: 0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8)
-
-  '@proj-airi/duckdb-wasm@0.4.29(drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8))':
-    dependencies:
-      '@date-fns/tz': 1.4.1
-      '@duckdb/duckdb-wasm': 1.29.1-dev68.0
-      '@moeru/std': 0.1.0-beta.1
-      apache-arrow: 21.1.0
-      date-fns: 4.1.0
-      defu: 6.1.4
-      drizzle-orm: 0.45.1(@cloudflare/workers-types@4.20260702.1)(@electric-sql/pglite@0.3.15)(@opentelemetry/api@1.9.0)(@prisma/client@5.22.0)(@types/pg@8.16.0)(better-sqlite3@12.5.0)(kysely@0.28.11)(pg@8.19.0)(postgres@3.4.8)
-      es-toolkit: 1.44.0
-    transitivePeerDependencies:
-      - '@75lb/nature'
 
   '@proj-airi/iconify-meteocons@0.1.4':
     dependencies:
@@ -20343,10 +20022,6 @@ snapshots:
       quansync: 1.0.0
 
   '@radix-ui/colors@3.0.0': {}
-
-  '@ricky0123/vad-web@0.0.30':
-    dependencies:
-      onnxruntime-web: 1.24.2
 
   '@rive-app/canvas-lite@2.35.0': {}
 
@@ -20718,8 +20393,6 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@shopify/draggable@1.2.1': {}
-
   '@sindresorhus/base62@1.0.0': {}
 
   '@sindresorhus/is@4.6.0': {}
@@ -20845,10 +20518,6 @@ snapshots:
       '@types/deep-eql': 4.0.2
       assertion-error: 2.0.1
 
-  '@types/command-line-args@5.2.3': {}
-
-  '@types/command-line-usage@5.0.4': {}
-
   '@types/culori@4.0.1': {}
 
   '@types/d3-color@3.1.3': {}
@@ -20949,10 +20618,6 @@ snapshots:
     dependencies:
       undici-types: 5.26.5
 
-  '@types/node@20.19.27':
-    dependencies:
-      undici-types: 6.21.0
-
   '@types/node@22.19.12':
     dependencies:
       undici-types: 6.21.0
@@ -21045,6 +20710,7 @@ snapshots:
   '@types/yauzl@2.10.3':
     dependencies:
       '@types/node': 24.10.14
+    optional: true
 
   '@typescript-eslint/eslint-plugin@8.51.0(@typescript-eslint/parser@8.51.0(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3))(eslint@9.39.3(jiti@2.6.1))(typescript@5.9.3)':
     dependencies:
@@ -22472,32 +22138,6 @@ snapshots:
       normalize-path: 3.0.0
       picomatch: 2.3.1
 
-  apache-arrow@17.0.0:
-    dependencies:
-      '@swc/helpers': 0.5.18
-      '@types/command-line-args': 5.2.3
-      '@types/command-line-usage': 5.0.4
-      '@types/node': 20.19.27
-      command-line-args: 5.2.1
-      command-line-usage: 7.0.3
-      flatbuffers: 24.12.23
-      json-bignum: 0.0.3
-      tslib: 2.8.1
-
-  apache-arrow@21.1.0:
-    dependencies:
-      '@swc/helpers': 0.5.18
-      '@types/command-line-args': 5.2.3
-      '@types/command-line-usage': 5.0.4
-      '@types/node': 24.10.14
-      command-line-args: 6.0.1
-      command-line-usage: 7.0.3
-      flatbuffers: 25.9.23
-      json-bignum: 0.0.3
-      tslib: 2.8.1
-    transitivePeerDependencies:
-      - '@75lb/nature'
-
   app-builder-bin@5.0.0-alpha.12: {}
 
   app-builder-lib@26.8.1(dmg-builder@26.8.1)(electron-builder-squirrel-windows@26.8.1):
@@ -22565,10 +22205,6 @@ snapshots:
   aria-hidden@1.2.6:
     dependencies:
       tslib: 2.8.1
-
-  array-back@3.1.0: {}
-
-  array-back@6.2.2: {}
 
   array-differ@4.0.0: {}
 
@@ -23053,10 +22689,6 @@ snapshots:
 
   chai@6.2.2: {}
 
-  chalk-template@0.4.0:
-    dependencies:
-      chalk: 4.1.2
-
   chalk@4.1.2:
     dependencies:
       ansi-styles: 4.3.0
@@ -23221,27 +22853,6 @@ snapshots:
       delayed-stream: 1.0.0
 
   comma-separated-tokens@2.0.3: {}
-
-  command-line-args@5.2.1:
-    dependencies:
-      array-back: 3.1.0
-      find-replace: 3.0.0
-      lodash.camelcase: 4.3.0
-      typical: 4.0.0
-
-  command-line-args@6.0.1:
-    dependencies:
-      array-back: 6.2.2
-      find-replace: 5.0.2
-      lodash.camelcase: 4.3.0
-      typical: 7.3.0
-
-  command-line-usage@7.0.3:
-    dependencies:
-      array-back: 6.2.2
-      chalk-template: 0.4.0
-      table-layout: 4.1.1
-      typical: 7.3.0
 
   commander@11.1.0: {}
 
@@ -23822,18 +23433,6 @@ snapshots:
       sax: 1.1.4
 
   email-addresses@3.1.0: {}
-
-  embla-carousel-reactive-utils@9.0.0-rc01(embla-carousel@9.0.0-rc01):
-    dependencies:
-      embla-carousel: 9.0.0-rc01
-
-  embla-carousel-vue@9.0.0-rc01(vue@3.5.29(typescript@5.9.3)):
-    dependencies:
-      embla-carousel: 9.0.0-rc01
-      embla-carousel-reactive-utils: 9.0.0-rc01(embla-carousel@9.0.0-rc01)
-      vue: 3.5.29(typescript@5.9.3)
-
-  embla-carousel@9.0.0-rc01: {}
 
   emoji-regex@10.6.0: {}
 
@@ -24642,12 +24241,6 @@ snapshots:
       make-dir: 3.1.0
       pkg-dir: 4.2.0
 
-  find-replace@3.0.0:
-    dependencies:
-      array-back: 3.1.0
-
-  find-replace@5.0.2: {}
-
   find-up-simple@1.0.1: {}
 
   find-up@4.1.0:
@@ -24673,19 +24266,9 @@ snapshots:
       flatted: 3.3.3
       keyv: 4.5.4
 
-  flatbuffers@24.12.23: {}
-
   flatbuffers@25.9.23: {}
 
   flatted@3.3.3: {}
-
-  floating-vue@5.2.2(@nuxt/kit@3.20.2(magicast@0.5.2))(vue@3.5.29(typescript@5.9.3)):
-    dependencies:
-      '@floating-ui/dom': 1.1.1
-      vue: 3.5.29(typescript@5.9.3)
-      vue-resize: 2.0.0-alpha.1(vue@3.5.29(typescript@5.9.3))
-    optionalDependencies:
-      '@nuxt/kit': 3.20.2(magicast@0.5.2)
 
   focus-trap@7.8.0:
     dependencies:
@@ -25690,8 +25273,6 @@ snapshots:
   json-bigint@1.0.0:
     dependencies:
       bignumber.js: 9.3.1
-
-  json-bignum@0.0.3: {}
 
   json-buffer@3.0.1: {}
 
@@ -28555,11 +28136,6 @@ snapshots:
 
   tabbable@6.4.0: {}
 
-  table-layout@4.1.1:
-    dependencies:
-      array-back: 6.2.2
-      wordwrapjs: 5.1.1
-
   tapable@2.3.0: {}
 
   tar-fs@2.1.4:
@@ -28968,10 +28544,6 @@ snapshots:
 
   typescript@5.9.3: {}
 
-  typical@4.0.0: {}
-
-  typical@7.3.0: {}
-
   uc.micro@2.1.0: {}
 
   ufo@1.6.3: {}
@@ -29085,10 +28657,6 @@ snapshots:
   unique-string@2.0.0:
     dependencies:
       crypto-random-string: 2.0.0
-
-  unist-builder@4.0.0:
-    dependencies:
-      '@types/unist': 3.0.3
 
   unist-util-find-after@5.0.0:
     dependencies:
@@ -29813,10 +29381,6 @@ snapshots:
       - vue-tsc
       - webpack
 
-  vue-resize@2.0.0-alpha.1(vue@3.5.29(typescript@5.9.3)):
-    dependencies:
-      vue: 3.5.29(typescript@5.9.3)
-
   vue-router@4.6.4(vue@3.5.29(typescript@5.9.3)):
     dependencies:
       '@vue/devtools-api': 6.6.4
@@ -30002,8 +29566,6 @@ snapshots:
   wlipsync@1.3.0: {}
 
   word-wrap@1.2.5: {}
-
-  wordwrapjs@5.1.1: {}
 
   workbox-background-sync@7.4.0:
     dependencies:

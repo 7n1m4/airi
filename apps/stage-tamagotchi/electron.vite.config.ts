@@ -172,8 +172,6 @@ export default defineConfig({
         '@proj-airi/stage-ui/*',
         '@proj-airi/stage-ui-three',
         '@proj-airi/stage-ui-three/*',
-        '@proj-airi/drizzle-duckdb-wasm',
-        '@proj-airi/drizzle-duckdb-wasm/*',
         '@proj-airi/electron-screen-capture',
 
         // wasm-bindgen package: esbuild's dep pre-bundle mangles the wasm glue
@@ -288,15 +286,12 @@ export default defineConfig({
       {
         name: 'force-node-crypto-shim',
         enforce: 'pre',
-        resolveId(id, importer) {
+        resolveId(id) {
           if (id === 'node:crypto' || id === 'crypto') {
             return resolve(join(import.meta.dirname, 'src', 'renderer', 'shims', 'node-crypto.ts'))
           }
           if (id.startsWith('node:') || ['process', 'module', 'path', 'fs'].includes(id)) {
             return '\0virtual:node-shim'
-          }
-          if (id.includes('-node.mjs') && (id.includes('duckdb-wasm') || importer?.includes('duckdb-wasm'))) {
-            return this.resolve(id.replace('-node.mjs', '-browser.mjs'), importer, { skipSelf: true })
           }
           return null
         },

@@ -49,12 +49,9 @@ catalog:
   '@moeru/eventa': ^1.0.0-beta.8
   '@moeru/std': 0.1.0-beta.17
   '@nekopaw/tempora': 0.4.0-alpha.1
-  '@orama/orama': ^3.1.18
   '@pinia/testing': ^1.0.3
-  '@proj-airi/drizzle-duckdb-wasm': ^0.4.29
   '@proj-airi/iconify-meteocons': ^0.1.4
   '@proj-airi/unplugin-fetch': ^0.2.2
-  '@shopify/draggable': ^1.2.1
   '@types/audioworklet': ^0.0.96
   '@types/d3-force': ^3.0.10
   '@types/d3-selection': ^3.0.11

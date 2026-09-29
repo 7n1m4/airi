@@ -43,7 +43,6 @@
     "@moeru/std": "catalog:",
     "@proj-airi/audio": "workspace:^",
     "@proj-airi/ccc": "workspace:^",
-    "@proj-airi/drizzle-duckdb-wasm": "catalog:",
     "@proj-airi/electron-eventa": "workspace:^",
     "@proj-airi/electron-screen-capture": "workspace:^",
     "@proj-airi/electron-vueuse": "workspace:^",
@@ -162,7 +161,6 @@
     "@types/nprogress": "^0.2.3",
     "@types/splitpanes": "catalog:",
     "@types/three": "^0.183.1",
-    "@types/yauzl": "^2.10.3",
     "@vitejs/plugin-vue": "^6.0.4",
     "@vue-macros/volar": "^3.1.2",
     "builder-util-runtime": "catalog:",
@@ -200,7 +198,6 @@
     "vue-tsc": "^3.1.8",
     "xsschema": "catalog:",
     "yaml": "^2.8.2",
-    "yauzl": "^3.2.0",
     "zod": "catalog:"
   },
   "build": {
