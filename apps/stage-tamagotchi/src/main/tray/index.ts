@@ -9,6 +9,7 @@ import type { ChatWindowManager } from '../windows/chat'
 import type { CustomizerWindowManager } from '../windows/customizer'
 import type { OnboardingWindowManager } from '../windows/onboarding'
 import type { SettingsWindowManager } from '../windows/settings'
+import type { ActorStageWindowManager } from '../windows/stage'
 import type { WidgetsWindowManager } from '../windows/widgets'
 
 import { effect } from 'alien-signals'
@@ -31,7 +32,7 @@ export function setupTray(params: {
   beatSyncBgWindow: BeatSyncWindowManager
   aboutWindow: () => Promise<BrowserWindow>
   chatWindow?: ChatWindowManager
-  stageWindow?: BrowserWindow | null
+  stageWindow?: ActorStageWindowManager | BrowserWindow | null
   customizerWindow: CustomizerWindowManager
   serverChannel: ServerChannel
   i18n: I18n
@@ -61,10 +62,27 @@ export function setupTray(params: {
         },
         {
           label: 'Toggle Character Stage',
+          // NOTICE: The stage is lazily managed (text-only companions have no
+          // window). Resolve the live window; spawn on demand when absent.
           enabled: Boolean(params.stageWindow),
           click: () => {
-            if (params.stageWindow && !params.stageWindow.isDestroyed()) {
-              toggleWindowShow(params.stageWindow)
+            const stageWindow = params.stageWindow
+            if (!stageWindow)
+              return
+            if (typeof (stageWindow as ActorStageWindowManager).getExistingWindow === 'function') {
+              const manager = stageWindow as ActorStageWindowManager
+              const existing = manager.getExistingWindow()
+              if (existing && !existing.isDestroyed()) {
+                toggleWindowShow(existing)
+              }
+              else {
+                void manager.ensureWindow().then(window => window?.show())
+              }
+              return
+            }
+            const window = stageWindow as BrowserWindow
+            if (!window.isDestroyed()) {
+              toggleWindowShow(window)
             }
           },
         },

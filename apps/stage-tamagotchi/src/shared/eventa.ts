@@ -46,6 +46,39 @@ export const electronSetIgnoreMouseEvents = defineInvokeEventa<void, boolean>('e
 export const electronStageToggleVisibility = defineInvokeEventa<void, boolean>('eventa:invoke:electron:windows:stage:toggle-visibility')
 export const electronStageSetAlwaysOnTop = defineInvokeEventa<void, boolean>('eventa:invoke:electron:windows:stage:set-always-on-top')
 export const electronGetStageDisabled = defineInvokeEventa<boolean>('eventa:invoke:electron:windows:stage:get-disabled')
+
+export type StartupMilestoneId = 'core-services' | 'sync-engine' | 'character-card' | 'stage-actor'
+export type StartupMilestoneStatus = 'queued' | 'loading' | 'ready' | 'skipped' | 'failed'
+
+export interface StartupMilestonePayload {
+  id: StartupMilestoneId
+  status: StartupMilestoneStatus
+  error?: string
+}
+
+export interface StartupResourceState {
+  id: StartupMilestoneId
+  status: StartupMilestoneStatus
+  error?: string
+}
+
+export interface StartupSnapshot {
+  resources: StartupResourceState[]
+  progress: number
+  ready: boolean
+  failed?: StartupResourceState
+}
+
+// Renderer (Control Strip or Actor Stage) reports a milestone update to Main.
+export const electronSplashReportMilestone = defineInvokeEventa<void, StartupMilestonePayload>('eventa:invoke:electron:splash:report-milestone')
+// Main broadcasts the aggregated startup snapshot to the Splash window.
+export const electronSplashStateChanged = defineEventa<StartupSnapshot>('eventa:event:electron:splash:state-changed')
+// Splash notifies Main that its exit fade completed and it can be destroyed.
+export const electronSplashDismiss = defineInvokeEventa<void>('eventa:invoke:electron:splash:dismiss')
+// Control Strip asks Main to create the Actor Stage window (avatar companion).
+export const electronStageEnsure = defineInvokeEventa<{ created: boolean }>('eventa:invoke:electron:stage:ensure')
+// Control Strip asks Main to release the Actor Stage window (text-only companion).
+export const electronStageRelease = defineInvokeEventa<void>('eventa:invoke:electron:stage:release')
 export const electronCustomizerToggleVisibility = defineInvokeEventa<void, boolean | { enabled?: boolean, group?: string } | undefined>('eventa:invoke:electron:windows:customizer:toggle-visibility')
 export const electronGetCustomizerWindowState = defineInvokeEventa<boolean>('eventa:invoke:electron:windows:customizer:get-state')
 export const electronEnsureBeatSync = defineInvokeEventa<void, void>('eventa:invoke:electron:beat-sync:ensure')

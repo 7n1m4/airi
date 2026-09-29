@@ -1,5 +1,12 @@
 import type { Rectangle } from 'electron'
 
+import type {
+  StartupMilestoneId,
+  StartupMilestoneStatus,
+  StartupResourceState,
+  StartupSnapshot,
+} from '../shared/eventa'
+
 import { dirname } from 'node:path'
 import { env, platform, stderr, stdout } from 'node:process'
 import { fileURLToPath } from 'node:url'
@@ -37,6 +44,11 @@ import {
   electronSetIgnoreMouseEvents,
   electronShowToast,
   electronShowToastEvent,
+  electronSplashDismiss,
+  electronSplashReportMilestone,
+  electronSplashStateChanged,
+  electronStageEnsure,
+  electronStageRelease,
   electronStageSetAlwaysOnTop,
   electronStageToggleVisibility,
 } from '../shared/eventa'
@@ -71,7 +83,8 @@ import { setupNoticeWindowManager } from './windows/notice'
 import { setupOnboardingWindowManager } from './windows/onboarding'
 import { setupSettingsWindowReusableFunc } from './windows/settings'
 import { ensureWindowInVisibleBounds } from './windows/shared/display'
-import { isStageDisabledByFlag, setStageVisibleState, setupActorStageWindow } from './windows/stage'
+import { setupSplashWindowManager } from './windows/splash'
+import { isStageDisabledByFlag, setStageVisibleState, setupActorStageWindowManager } from './windows/stage'
 import { setupWidgetsWindowManager } from './windows/widgets'
 
 // Guard BrowserWindow prototype methods against destroyed window objects to prevent "Object has been destroyed" exceptions
@@ -358,14 +371,23 @@ app.whenReady().then(async () => {
     build: ({ dependsOn }) => setupChatWindowReusableFunc(dependsOn),
   })
 
+  // NOTICE: The stage manager is cheap to construct (no BrowserWindow yet).
+  // The window itself is created lazily via `electronStageEnsure` once the
+  // Control Strip resolves the active card's `displayModelId` (Main has no
+  // IndexedDB access). Text-only companions never allocate it.
   const stageWindow = injeca.provide('windows:stage', {
     dependsOn: { appConfig, serverChannel, i18n },
-    build: async ({ dependsOn }) => setupActorStageWindow(dependsOn),
+    build: ({ dependsOn }) => setupActorStageWindowManager(dependsOn),
   })
+
+  // NOTICE: The splash shows immediately and owns the coordinated reveal.
+  // It is registered before the main window so it paints first.
+  const splashWindow = injeca.provide('windows:splash', () => setupSplashWindowManager())
 
   const mainWindow = injeca.provide('windows:main', {
     dependsOn: { settingsWindow, stageWindow, chatWindow, widgetsManager, noticeWindow, beatSync, autoUpdater, serverChannel, mcpStdioManager, i18n, onboardingWindowManager, appConfig },
-    build: async ({ dependsOn }) => setupMainWindow(dependsOn),
+    // NOTICE: Initial show is deferred until `electronSplashDismiss` fires.
+    build: async ({ dependsOn }) => setupMainWindow({ ...dependsOn, deferInitialShow: true }),
   })
 
   const captionWindow = injeca.provide('windows:caption', {
@@ -391,7 +413,7 @@ app.whenReady().then(async () => {
   })
 
   injeca.invoke({
-    dependsOn: { mainWindow, tray, serverChannel, pluginHost, mcpStdioManager, onboardingWindow: onboardingWindowManager, appConfig, i18n, captionWindow, stageWindow, chatWindow, customizerWindow, beatSync },
+    dependsOn: { mainWindow, tray, serverChannel, pluginHost, mcpStdioManager, onboardingWindow: onboardingWindowManager, appConfig, i18n, captionWindow, stageWindow, splashWindow, chatWindow, customizerWindow, beatSync },
     callback: (deps) => {
       const context = createContext(ipcMain).context
       createServerChannelService({ serverChannel: deps.serverChannel })
@@ -500,13 +522,12 @@ app.whenReady().then(async () => {
       defineInvokeHandler(context, electronStageToggleVisibility, async (enabled: boolean) => {
         console.log('[@proj-airi/stage-tamagotchi] [Main] Actor Stage visibility changed:', enabled)
         setStageVisibleState(enabled)
-        if (deps.stageWindow && !deps.stageWindow.isDestroyed()) {
-          if (enabled) {
-            deps.stageWindow.show()
-          }
-          else {
-            deps.stageWindow.hide()
-          }
+        if (enabled) {
+          const window = await deps.stageWindow.ensureWindow()
+          window?.show()
+        }
+        else {
+          deps.stageWindow.hide()
         }
         // NOTICE: Main process is the single owner of the stage→caption follow. The renderer
         // only sets `captionOpen` for bookkeeping; it does not separately toggle the caption.
@@ -518,14 +539,7 @@ app.whenReady().then(async () => {
       })
       defineInvokeHandler(context, electronStageSetAlwaysOnTop, async (flag) => {
         console.log('[@proj-airi/stage-tamagotchi] [Main] Actor Stage always-on-top changed:', flag)
-        if (deps.stageWindow && !deps.stageWindow.isDestroyed()) {
-          if (flag) {
-            deps.stageWindow.setAlwaysOnTop(true, 'screen-saver', 1)
-          }
-          else {
-            deps.stageWindow.setAlwaysOnTop(false)
-          }
-        }
+        deps.stageWindow.setAlwaysOnTop(flag)
         stageMateService.broadcast({
           type: 'control:always-on-top',
           data: { enabled: flag },
@@ -533,13 +547,62 @@ app.whenReady().then(async () => {
       })
       defineInvokeHandler(context, electronGetStageDisabled, async () => isStageDisabledByFlag())
 
+      // NOTICE: Coordinated startup splash relay (Main is the single authority).
+      // The milestone table lives here because Pinia stores are per-window memory
+      // and cannot be shared between the Splash and Control Strip renderers.
+      const STARTUP_MILESTONE_IDS: StartupMilestoneId[] = ['core-services', 'sync-engine', 'character-card', 'stage-actor']
+      const startupMilestones = new Map<StartupMilestoneId, StartupResourceState>(
+        STARTUP_MILESTONE_IDS.map(id => [id, { id, status: 'queued' as StartupMilestoneStatus }]),
+      )
+      let splashDismissed = false
+
+      function buildStartupSnapshot(): StartupSnapshot {
+        const resources = STARTUP_MILESTONE_IDS.map(id => ({ ...startupMilestones.get(id)! }))
+        const finished = resources.filter(r => r.status === 'ready' || r.status === 'skipped').length
+        return {
+          resources,
+          progress: Math.round((finished / resources.length) * 100),
+          ready: resources.length > 0 && resources.every(r => r.status === 'ready' || r.status === 'skipped'),
+          failed: resources.find(r => r.status === 'failed'),
+        }
+      }
+
+      function emitStartupSnapshot() {
+        const splashWin = deps.splashWindow.getWindow()
+        if (!splashWin || splashWin.isDestroyed())
+          return
+        const { context: splashContext, dispose } = createContext(ipcMain, splashWin)
+        splashContext.emit(electronSplashStateChanged, buildStartupSnapshot())
+        dispose()
+      }
+
+      defineInvokeHandler(context, electronSplashReportMilestone, async (payload) => {
+        if (!payload || !STARTUP_MILESTONE_IDS.includes(payload.id))
+          return
+        startupMilestones.set(payload.id, { id: payload.id, status: payload.status, error: payload.error })
+        emitStartupSnapshot()
+      })
+      defineInvokeHandler(context, electronStageEnsure, async () => {
+        const window = await deps.stageWindow.ensureWindow()
+        // Late ensures (card switches after the splash is gone) show immediately.
+        if (window && splashDismissed && !window.isDestroyed())
+          window.show()
+        return { created: !!window }
+      })
+      defineInvokeHandler(context, electronStageRelease, async () => {
+        // Full release: hide freezes the loops, destroy frees the Chromium
+        // renderer + GPU contexts (~200MB+) for text-only companions.
+        deps.stageWindow.hide()
+        deps.stageWindow.destroy()
+      })
+
       defineInvokeHandler(context, electronShowToast, async (payload) => {
         if (!payload)
           return
 
         let targetWin: BrowserWindow | null = deps.chatWindow.getExistingWindow() ?? null
         if (!targetWin || targetWin.isDestroyed() || !targetWin.isVisible()) {
-          targetWin = deps.stageWindow ?? null
+          targetWin = deps.stageWindow.getExistingWindow() ?? null
         }
         if (!targetWin || targetWin.isDestroyed() || !targetWin.isVisible()) {
           targetWin = deps.mainWindow
@@ -588,7 +651,7 @@ app.whenReady().then(async () => {
 
         let targetWin: BrowserWindow | null = null
         if (target === 'actor') {
-          targetWin = deps.stageWindow
+          targetWin = deps.stageWindow.getExistingWindow() ?? null
         }
         else if (target === 'chat') {
           targetWin = deps.chatWindow.getExistingWindow() ?? null
@@ -941,7 +1004,7 @@ app.whenReady().then(async () => {
         if (deps.mainWindow && !deps.mainWindow.isDestroyed()) {
           deps.mainWindow.setBounds(mainBounds)
         }
-        if (deps.stageWindow && !deps.stageWindow.isDestroyed()) {
+        if (deps.stageWindow.hasWindow()) {
           deps.stageWindow.setBounds(actorBounds)
         }
         const chatWin = deps.chatWindow.getExistingWindow()
@@ -1000,7 +1063,7 @@ app.whenReady().then(async () => {
       }
 
       ipcMain.handle('stage:capture-window', async () => {
-        if (deps.stageWindow && !deps.stageWindow.isDestroyed()) {
+        if (deps.stageWindow.hasWindow()) {
           if (!stageInitialized && !deps.stageWindow.isVisible()) {
             isCapturingStage = true
             try {
@@ -1013,23 +1076,22 @@ app.whenReady().then(async () => {
             }
             stageInitialized = true
           }
-          const image = await deps.stageWindow.webContents.capturePage()
-          return image.toPNG()
+          return await deps.stageWindow.capturePage()
         }
         return null
       })
 
       defineInvokeHandler(context, electronResetWindowPositions, handleResetWindowPositions)
 
-      if (deps.stageWindow && !deps.stageWindow.isDestroyed()) {
-        deps.stageWindow.on('show', () => {
-          stageInitialized = true
-          syncCaptionToStage(true, { captureInFlight: isCapturingStage })
-        })
-        deps.stageWindow.on('hide', () => syncCaptionToStage(false, { captureInFlight: isCapturingStage }))
-        deps.stageWindow.on('minimize', () => syncCaptionToStage(false, { captureInFlight: isCapturingStage }))
-        deps.stageWindow.on('restore', () => syncCaptionToStage(true, { captureInFlight: isCapturingStage }))
-      }
+      // NOTICE: Lifecycle subscriptions live on the manager, so they survive
+      // lazy destroy/recreate cycles without leaking per-window listeners.
+      deps.stageWindow.onLifecycle('show', () => {
+        stageInitialized = true
+        syncCaptionToStage(true, { captureInFlight: isCapturingStage })
+      })
+      deps.stageWindow.onLifecycle('hide', () => syncCaptionToStage(false, { captureInFlight: isCapturingStage }))
+      deps.stageWindow.onLifecycle('minimize', () => syncCaptionToStage(false, { captureInFlight: isCapturingStage }))
+      deps.stageWindow.onLifecycle('restore', () => syncCaptionToStage(true, { captureInFlight: isCapturingStage }))
 
       const restoreCaption = () => {
         // Restore to the renderer-authoritative state (exactly one push arrives at boot), else the
@@ -1043,12 +1105,34 @@ app.whenReady().then(async () => {
           void deps.captionWindow.toggleVisibility(false)
       }
 
-      if (deps.mainWindow.isVisible()) {
+      // NOTICE: Caption restore is deferred until splash dismissal so the
+      // caption cannot pop in before the coordinated reveal. The main window
+      // no longer shows itself on `ready-to-show` (see `deferInitialShow`).
+      defineInvokeHandler(context, electronSplashDismiss, async () => {
+        if (splashDismissed)
+          return
+        splashDismissed = true
+        if (!deps.mainWindow.isDestroyed())
+          deps.mainWindow.show()
+        deps.stageWindow.show()
         restoreCaption()
-      }
-      else {
-        deps.mainWindow.once('ready-to-show', restoreCaption)
-      }
+        deps.splashWindow.destroy()
+      })
+
+      // NOTICE: Backstop for splash renderers that never dismiss (e.g. the
+      // `#/splash` route is not yet implemented, or its renderer crashed).
+      // Without this the deferred Control Strip would never appear.
+      setTimeout(() => {
+        if (splashDismissed)
+          return
+        console.warn('[@proj-airi/stage-tamagotchi] [Main] Splash did not dismiss in time, forcing coordinated reveal.')
+        splashDismissed = true
+        if (!deps.mainWindow.isDestroyed())
+          deps.mainWindow.show()
+        deps.stageWindow.show()
+        restoreCaption()
+        deps.splashWindow.destroy()
+      }, 30000)
 
       import('./libs/bootkit/lifecycle').then((m) => {
         m.onAppBeforeQuit(async () => {

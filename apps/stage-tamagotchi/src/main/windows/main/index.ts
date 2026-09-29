@@ -40,6 +40,10 @@ export async function setupMainWindow(params: {
   i18n: I18n
   onboardingWindowManager: OnboardingWindowManager
   appConfig: Config<typeof globalAppConfigSchema>
+  // NOTICE: When the coordinated startup splash owns the reveal sequence,
+  // the initial `show()` is deferred until Main dismisses the splash after
+  // all milestones report ready/skipped. Otherwise windows pop in uncoordinated.
+  deferInitialShow?: boolean
 }) {
   const getConfig = (): InferOutput<typeof globalAppConfigSchema> => params.appConfig.get() ?? { language: 'en', windows: [], microphoneToggleHotkey: 'Scroll' }
   const updateConfig = (newData: InferOutput<typeof globalAppConfigSchema>) => params.appConfig.update(newData)
@@ -138,7 +142,12 @@ export async function setupMainWindow(params: {
 
   window.on('ready-to-show', () => {
     restoreBounds()
-    window.show()
+    // NOTICE: Initial show is deferred until the Splash window signals completion
+    // (`electronSplashDismiss`). Without deferral the Control Strip would pop in
+    // before coordinated milestones finish.
+    if (!params.deferInitialShow) {
+      window.show()
+    }
     // NOTICE: on some platforms/transparency settings, first bounds application might be ignored
     setTimeout(() => restoreBounds(), 500)
   })
