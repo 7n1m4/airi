@@ -1,3 +1,5 @@
 export * from './profiles'
 export * from './use-arcade-agent'
+export * from './use-canvas-2048'
+export * from './use-dos-engine'
 export * from './utils/grid-overlay'
