@@ -1,8 +1,8 @@
-# Proposal: Attention Ecology via Local WebGPU (RWKV-7) Gated Inference
+# Design Specification: Attention Ecology & Screen Watching via Local WebGPU / System-1 Gated Inference
 
-**Status:** Consolidated Draft · **Supersedes:** Legacy `proposal-attention-ecology-local-webgpu-guard.md` specifications
+**Status:** Consolidated Canonical Specification · **Supersedes:** Legacy `proposal-attention-ecology-local-webgpu-guard.md` specifications
 
-This proposal outlines the design, UI configuration, and backend execution flow for moving AIRI’s autonomous runtime from a reactive chat schedule to a continuous **Attention Ecology**. It leverages a local WebGPU-powered RWKV-7 model as a low-cost, real-time cognitive gatekeeper to filter environmental events (specifically visual/telemetry streams) before promoting them to the primary cloud-based consciousness layer.
+This document specifies the architecture, UI configuration, and backend execution flow for moving AIRI’s autonomous runtime from a reactive chat schedule to a continuous **Attention Ecology** and ambient **Screen Watching**. It leverages local WebGPU-powered models (aHash, CLIP, RWKV-7) and non-autoregressive System-1 sentinels (TypeSafe Jev / Laya) as low-cost, real-time cognitive gatekeepers to filter environmental visual events before promoting them to the primary cloud-based consciousness layer.
 
 ---
 

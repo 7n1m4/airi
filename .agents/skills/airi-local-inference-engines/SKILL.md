@@ -92,7 +92,7 @@ In Electron or multi-tab web, each BrowserWindow or tab possesses an isolated V8
 
 - [docs/design-local-whisper-stt.md](docs/design-local-whisper-stt.md) — Local Whisper Speech-to-Text (STT) architecture and unified WebGPU design.
 - [docs/proposal-built-in-llm-webgpu.md](docs/proposal-built-in-llm-webgpu.md) — WebGPU local inference harness specification.
-- [docs/proposal-attention-ecology-local-webgpu-guard.md](docs/proposal-attention-ecology-local-webgpu-guard.md) — Attention ecology local WebGPU salience guard.
+- [docs/design-attention-ecology-screen-watching.md](docs/design-attention-ecology-screen-watching.md) — Attention ecology & screen watching local WebGPU / System-1 salience guard.
 - [docs/proposal-toggle4-rework-and-rwkv-harness.md](docs/proposal-toggle4-rework-and-rwkv-harness.md) — Toggle4 rework and RWKV harness proposal.
 - [docs/project-rwkv-kimi.md](docs/project-rwkv-kimi.md) — RWKV Kimi project.
 - [docs/project-rwkv-cleanroom-harness-plan.md](docs/project-rwkv-cleanroom-harness-plan.md) — RWKV cleanroom harness plan.
@@ -102,4 +102,4 @@ In Electron or multi-tab web, each BrowserWindow or tab possesses an isolated V8
 
 ## Related Skills & References
 
-- **Key Documents**: [[design-local-whisper-stt]], [[proposal-built-in-llm-webgpu]], [[proposal-attention-ecology-local-webgpu-guard]], [[proposal-toggle4-rework-and-rwkv-harness]], [[project-rwkv-kimi]], [[project-rwkv-cleanroom-harness-plan]], [[proposal-moss-tts-nano-provider-unified-webgpu]], [[research-moss-tts-nano-report]], [[design-vram-eviction-and-standby-hibernation]]
+- **Key Documents**: [[design-local-whisper-stt]], [[proposal-built-in-llm-webgpu]], [[design-attention-ecology-screen-watching]], [[proposal-toggle4-rework-and-rwkv-harness]], [[project-rwkv-kimi]], [[project-rwkv-cleanroom-harness-plan]], [[proposal-moss-tts-nano-provider-unified-webgpu]], [[research-moss-tts-nano-report]], [[design-vram-eviction-and-standby-hibernation]]

@@ -174,6 +174,6 @@ The remaining unintegrated domains from the initial proposal are preserved in [`
 | :--- | :--- | :--- |
 | **System 1 Engine** | `stage-ui/stores/modules/system-one.ts` | [`proposal-jev-integration.md`](./proposal-jev-integration.md) |
 | **AnimaDex Wizard** | `stage-pages/.../AutoVoiceConfigModal.vue` | [`proposal-animadex-wizard.md`](./proposal-animadex-wizard.md) |
-| **Attention Ecology** | `stage-ui/stores/modules/vision/orchestrator.ts` | [`proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md), [`design-vision-system-support.md`](./design-vision-system-support.md) |
+| **Attention Ecology** | `stage-ui/stores/modules/vision/orchestrator.ts` | [`design-attention-ecology-screen-watching.md`](./design-attention-ecology-screen-watching.md), [`design-vision-system-support.md`](./design-vision-system-support.md) |
 | **Nan0 Cognition** | `stage-ui/stores/modules/nan0.ts`, `nan0-runtime/` | [`nan0/design-nan0-cognition-runtime.md`](./nan0/design-nan0-cognition-runtime.md), [`nan0/shadow-boundary-specification.md`](./nan0/shadow-boundary-specification.md) |
 | **Memory & Ledger** | `stage-ui/stores/memory-text-journal.ts`, `entity-ledger.ts` | [`design-subconscious-system1-inference-providers.md`](./design-subconscious-system1-inference-providers.md) |

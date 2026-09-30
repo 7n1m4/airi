@@ -555,7 +555,7 @@
 		{"id":"78cd99bed6bda0b3","x":2503,"y":23288,"width":400,"height":400,"type":"file","file":"docs/project-upstream-squat-candidates.md"},
 		{"id":"c85ac678c3a94751","x":2948,"y":23288,"width":400,"height":400,"type":"file","file":"docs/archive/project-upstream-sync-alpha15-alpha22.md"},
 		{"id":"cbabaa6a6f926e74","x":1613,"y":23733,"width":400,"height":400,"type":"file","file":"docs/proposal-animadex-wizard.md"},
-		{"id":"24409ee510f1011d","x":2058,"y":23733,"width":400,"height":400,"type":"file","file":"docs/proposal-attention-ecology-local-webgpu-guard.md"},
+		{"id":"24409ee510f1011d","x":2058,"y":23733,"width":400,"height":400,"type":"file","file":"docs/design-attention-ecology-screen-watching.md"},
 		{"id":"a6670975fa8b0b79","x":2503,"y":23733,"width":400,"height":400,"type":"file","file":"docs/proposal-broader-unicode-support.md"},
 		{"id":"64ea12a7c1b6f6fa","x":2948,"y":23733,"width":400,"height":400,"type":"file","file":"docs/proposal-built-in-llm-webgpu.md"},
 		{"id":"1472b303a0b69f79","x":3393,"y":23733,"width":400,"height":400,"type":"file","file":"docs/proposal-chatbox-revamp.md"},

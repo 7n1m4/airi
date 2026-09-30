@@ -139,7 +139,7 @@ The catalog contains 70 discoverable skills. Desktop chatbox and interaction pip
 
 #### 2.7 `airi-attention-ecology-vision`
 - **Target Domain**: Continuous Vision Perception & Attention Ecology Gate.
-- **Key Paths**: `docs/proposal-attention-ecology-local-webgpu-guard.md`, `docs/proposal-vision-witness.md`, `packages/stage-ui/src/stores/modules/vision/orchestrator.ts`.
+- **Key Paths**: `docs/design-attention-ecology-screen-watching.md`, `packages/stage-ui/src/stores/modules/screen-watcher.ts`, `packages/stage-ui/src/stores/modules/vision/orchestrator.ts`, `docs/proposal-vision-witness.md`.
 - **Content**: Cascaded Salience Gate (pHash → CLIP vision embedding & novelty scoring → WASM OCR / RWKV-7 gate → VLM forwarder), privacy app exclusion filters, push/pull cognitive mechanics, and Vibe Island integration.
 
 #### 2.8 `airi-model-customizer`

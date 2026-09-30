@@ -177,7 +177,7 @@ const mapping = {
     { path: 'docs/content/en/docs/showcase/07-producer-subsystem.md', note: 'Producer subsystem showcase.' },
   ],
   'airi-attention-ecology-vision': [
-    { path: 'docs/proposal-attention-ecology-local-webgpu-guard.md', note: 'Attention ecology local WebGPU salience guard spec.' },
+    { path: 'docs/design-attention-ecology-screen-watching.md', note: 'Attention ecology & screen watching local WebGPU / System-1 salience guard spec.' },
     { path: 'docs/proposal-vision-witness.md', note: 'Vision witness implementation plan and salience scoring harness.' },
     { path: 'docs/proposal-poc-attention-ecology-vibe-island.md', note: 'Vibe Island proof-of-concept design.' },
     { path: 'docs/design-vision-system-support.md', note: 'Vision system support design.' },
@@ -256,7 +256,7 @@ const mapping = {
   ],
   'airi-local-inference-engines': [
     { path: 'docs/proposal-built-in-llm-webgpu.md', note: 'WebGPU local inference harness specification.' },
-    { path: 'docs/proposal-attention-ecology-local-webgpu-guard.md', note: 'Attention ecology local WebGPU salience guard.' },
+    { path: 'docs/design-attention-ecology-screen-watching.md', note: 'Attention ecology & screen watching local WebGPU / System-1 salience guard.' },
     { path: 'docs/proposal-toggle4-rework-and-rwkv-harness.md', note: 'Toggle4 rework and RWKV harness proposal.' },
     { path: 'docs/project-rwkv-kimi.md', note: 'RWKV Kimi project.' },
     { path: 'docs/project-rwkv-cleanroom-harness-plan.md', note: 'RWKV cleanroom harness plan.' },

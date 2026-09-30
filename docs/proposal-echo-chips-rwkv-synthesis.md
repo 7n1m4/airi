@@ -9,7 +9,7 @@
 **Related Docs:**
 - [`project-rwkv-cleanroom-harness-plan.md`](./project-rwkv-cleanroom-harness-plan.md) — RWKV cleanroom CLI test harness & 6-phase roadmap.
 - [`proposal-toggle4-rework-and-rwkv-harness.md`](./proposal-toggle4-rework-and-rwkv-harness.md) — Real-time per-turn Toggle 4 topic tracking.
-- [`proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md) — Cascaded salience gating & subconscious perception loop.
+- [`design-attention-ecology-screen-watching.md`](./design-attention-ecology-screen-watching.md) — Cascaded salience gating & subconscious perception loop.
 
 ---
 

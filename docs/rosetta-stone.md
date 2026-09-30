@@ -235,6 +235,7 @@ These are serialized inside the AIRI card (`extensions.airi`) and travel with th
 | **Generation** | (card editor only) | `extensions.airi.generation` (maxTokens, temperature, topP, contextWidth, compaction) |
 | **Acting** | (card editor only) | `extensions.airi.acting` (modelExpressionPrompt, speechExpressionPrompt, idleAnimations) |
 | **Heartbeats / Proactivity** | `packages/stage-ui/src/stores/proactivity.ts` (runtime) | `extensions.airi.heartbeats` (interval, prompt, schedule) |
+| **Screen Watching** | `packages/stage-ui/src/stores/modules/screen-watcher.ts` (runtime) | `extensions.airi.screenWatching` (sourceId, interval, gatingMode, sentinel, interestTags; see `docs/design-attention-ecology-screen-watching.md`) |
 | **Short-Term Memory** | `packages/stage-ui/src/stores/memory-short-term.ts` (runtime) | `extensions.airi.shortTermMemory` (windowSize, tokenBudgetPerDay) |
 
 ### Standalone Modules

@@ -4,7 +4,7 @@
 > **Target Subsystems**:
 > - `packages/stage-ui/src/composables/arcade/use-arcade-agent.ts` & Arcade Room Retro Games (`chat_arcade.vue`, `docs/proposal-generic-gaming-agent-runtime.md`, `docs/proposal-gaming-show-harness-copilot.md`)
 > - `packages/nan0-runtime/` & Living Cognition Pre-Processor (`docs/nan0/design-nan0-cognition-runtime.md`, `docs/nan0/shadow-boundary-specification.md`)
-> - `packages/stage-ui/src/stores/proactivity.ts` & Attention Ecology Programmable Gate (`docs/proposal-prefix-cache-alignment.md`, `docs/proposal-attention-ecology-local-webgpu-guard.md`)
+> - `packages/stage-ui/src/stores/proactivity.ts` & Attention Ecology Programmable Gate (`docs/proposal-prefix-cache-alignment.md`, `docs/design-attention-ecology-screen-watching.md`)
 > - `packages/stage-ui/src/pages/characters/guided.vue` & AnimaDex Wizard Fast Voice Matching (`docs/proposal-animadex-wizard.md`)
 > - `packages/stage-ui/src/stores/speech.ts` & Real-Time Expression/Motion Dispatch (`docs/airi-acting-cue-act-tokens/SKILL.md`)
 > - `packages/stage-ui/src/stores/memory/` & Token Compaction / Pre-Summary Curation (`docs/design-subconscious-system1-inference-providers.md`)
@@ -189,7 +189,7 @@ Jev is an exact match for Nan0's **Pre-Processor Reflex Engine** operating insid
 ---
 
 ### Domain C: Attention Ecology & Programmable Visual Attention Gate
-*Relevant Docs: [`proposal-prefix-cache-alignment.md`](./proposal-prefix-cache-alignment.md), [`proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md), [`airi-attention-ecology-vision/SKILL.md`](../.agents/skills/airi-attention-ecology-vision/SKILL.md)*
+*Relevant Docs: [`proposal-prefix-cache-alignment.md`](./proposal-prefix-cache-alignment.md), [`design-attention-ecology-screen-watching.md`](./design-attention-ecology-screen-watching.md), [`airi-attention-ecology-vision/SKILL.md`](../.agents/skills/airi-attention-ecology-vision/SKILL.md)*
 
 #### 1. The Bottleneck: Static Tag Lists & Costly Full VLM Polling
 - **Rigid Predefined Tag Groups**: The legacy Cascaded Salience Gate attempted to map screen contents against static, hardcoded tag dictionaries (e.g. `"coding"`, `"gaming"`, `"reading"`). This approach is brittle, misses contextual nuances, fails on arbitrary user tasks, and requires tedious dictionary maintenance.

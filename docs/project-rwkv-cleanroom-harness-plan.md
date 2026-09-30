@@ -6,7 +6,7 @@
 **Related Docs & Authoritative References:**
 - [`proposal-built-in-llm-webgpu.md`](./proposal-built-in-llm-webgpu.md) — Built-in WebGPU RWKV architecture, OPFS caching, and state-file merge limitation notes.
 - [`proposal-toggle4-rework-and-rwkv-harness.md`](./proposal-toggle4-rework-and-rwkv-harness.md) — Toggle 4 ML topic extraction & vector state delta specification.
-- [`proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md) — Cascaded salience gating & subconscious RWKV perception loop.
+- [`design-attention-ecology-screen-watching.md`](./design-attention-ecology-screen-watching.md) — Cascaded salience gating & subconscious RWKV perception loop.
 - **HuggingFace State Repository:** [`shoumenchougou/RWKV-7-G1-RolePlay-State`](https://huggingface.co/shoumenchougou/RWKV-7-G1-RolePlay-State) ([Raw README.md](https://huggingface.co/shoumenchougou/RWKV-7-G1-RolePlay-State/raw/main/README.md))
 
 ---

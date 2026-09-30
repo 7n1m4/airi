@@ -1,7 +1,7 @@
 # Proposal: Generic Gaming Agent Runtime
 
 > **Status**: Implemented & Operational (Phase 1–3 Live in Main) · **Companion RFC**: [`docs/proposal-gaming-show-harness-copilot.md`](./proposal-gaming-show-harness-copilot.md) (Show Harness Action Protocol & Interpreter)
-> **Key References**: [`docs/proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md) (Stage 0 pHash Salience Gate), [`apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue`](../apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue) (Arcade Room Surface), [`packages/stage-ui/src/composables/arcade/use-arcade-agent.ts`](../packages/stage-ui/src/composables/arcade/use-arcade-agent.ts) (Production Turn Agent & Ghost Cursor), `packages/stage-ui/src/stores/providers/moondream` (Local WebGPU VLM)
+> **Key References**: [`docs/design-attention-ecology-screen-watching.md`](./design-attention-ecology-screen-watching.md) (Stage 0 pHash Salience Gate), [`apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue`](../apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue) (Arcade Room Surface), [`packages/stage-ui/src/composables/arcade/use-arcade-agent.ts`](../packages/stage-ui/src/composables/arcade/use-arcade-agent.ts) (Production Turn Agent & Ghost Cursor), `packages/stage-ui/src/stores/providers/moondream` (Local WebGPU VLM)
 
 A generic, cross-game agent harness and execution engine for AIRI that enables characters to autonomously play games, react in real time, and banter with the user through **interactive backseat gaming** — with zero Python sidecar dependencies.
 
@@ -488,7 +488,7 @@ Real-time games (like *Doom*) run at 35–60 FPS, while VLM inference takes 500m
 * **Stage LookAt**: The Live2D / VRM avatar's gaze can be dynamically routed to point toward the game widget location on the desktop screen, giving the visual appearance that she is actively looking at the monitor while playing.
 
 ### 6.5 The Game Salience & Settle Gate (Adapting Attention Ecology pHash)
-In continuous background screen perception ([`docs/proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md)), **Stage 0** utilizes low-cost perceptual hashing (`pHash`) to reject ~90% of identical ticks at microsecond cost before waking heavier models.
+In continuous background screen perception ([`docs/design-attention-ecology-screen-watching.md`](./design-attention-ecology-screen-watching.md)), **Stage 0** utilizes low-cost perceptual hashing (`pHash`) to reject ~90% of identical ticks at microsecond cost before waking heavier models.
 
 Gaming observation adapts this exact technology to the game canvas / viewport (`chat_arcade.vue`), but with a vital architectural distinction:
 * **Desktop watching has a static baseline**: In desktop mode, a user reading code or browsing stays still for seconds at a time; simple binary change detection (changed vs unchanged) suffices.
