@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  AcquiredGameKnowledge,
   ArcadeProvisioningConfig,
   CalibrationTelemetryTrace,
   CatalogGame,
@@ -28,6 +29,7 @@ import { toast } from 'vue-sonner'
 import ArcadeCalibrationView from './arcade/ArcadeCalibrationView.vue'
 import ArcadeHub from './arcade/ArcadeHub.vue'
 import ArcadeProvisioningSheet from './arcade/ArcadeProvisioningSheet.vue'
+import ArcadeStrategyReviewModal from './arcade/ArcadeStrategyReviewModal.vue'
 import ArcadeCatalogModal from './ArcadeCatalogModal.vue'
 import ArcadeTuningModal from './ArcadeTuningModal.vue'
 
@@ -253,7 +255,7 @@ async function mountDosGame(buffer: ArrayBuffer | ArrayBufferLike, gameTitle: st
 
   if (dosPlayerInstance) {
     try {
-      dosPlayerInstance.stop()
+      // dosPlayerInstance.stop()
     }
     catch {}
     dosPlayerInstance = null
@@ -272,6 +274,56 @@ async function mountDosGame(buffer: ArrayBuffer | ArrayBufferLike, gameTitle: st
     const zip = await JSZip.loadAsync(buffer as ArrayBuffer)
     const fileList = Object.keys(zip.files)
     console.info(`[Arcade] Bundle contains ${fileList.length} files:`, fileList.slice(0, 15))
+
+    const isTimingSensitive = (gameTitle || '').toLowerCase().includes('nibbles')
+      || (gameTitle || '').toLowerCase().includes('qbasic')
+      || (gameTitle || '').toLowerCase().includes('gorilla')
+      || fileList.some(f => /nibbles\.bas/i.test(f) || /gorilla\.bas/i.test(f))
+
+    let needsRegen = false
+
+    // Guard against CPU timing loop division-by-zero in QBasic programs (e.g. NIBBLES.BAS GetInputs subroutine)
+    const qbasicBasFiles = fileList.filter(f => /\.bas$/i.test(f))
+    for (const basKey of qbasicBasFiles) {
+      const basFile = zip.file(basKey)
+      if (basFile) {
+        let basText = await basFile.async('string')
+        if (basText.includes('stopTime# - startTime#') && !basText.includes('IF stopTime# <= startTime#')) {
+          const nl = basText.includes('\r\n') ? '\r\n' : '\n'
+          basText = basText.replace(
+            /speed\s*=\s*speed\s*\*\s*0?\.5\s*\/\s*\(\s*stopTime#\s*-\s*startTime#\s*\)/gi,
+            `IF stopTime# <= startTime# THEN stopTime# = startTime# + .055${nl}speed = speed * .5 / (stopTime# - startTime#)`,
+          )
+          zip.file(basKey, basText)
+          needsRegen = true
+          console.info(`[Arcade] Patched ${basKey} with zero-division timer guard`)
+        }
+
+        // Subscript out of range guard on SUB Set: restore missing sisterRow calculation if corrupted
+        if (basText.includes('SUB Set') && !basText.includes('sisterRow = row + arena(row, col).sister')) {
+          const nl = basText.includes('\r\n') ? '\r\n' : '\n'
+          basText = basText.replace(
+            /(topFlag\s*=\s*arena\(row,\s*col\)\.sister[^\r\n]*)/gi,
+            `$1${nl}        sisterRow = row + arena(row, col).sister`,
+          )
+          zip.file(basKey, basText)
+          needsRegen = true
+          console.info(`[Arcade] Restored missing sisterRow calculation in ${basKey}`)
+        }
+
+        // Defensive bounds guard for arena(sisterRow, col)
+        if (basText.includes('sisterColor = arena(sisterRow, col).acolor') && !basText.includes('IF sisterRow <= 0')) {
+          const nl = basText.includes('\r\n') ? '\r\n' : '\n'
+          basText = basText.replace(
+            /sisterColor\s*=\s*arena\(sisterRow,\s*col\)\.acolor/gi,
+            `IF sisterRow <= 0 OR sisterRow > 50 THEN sisterRow = row + arena(row, col).sister${nl}        sisterColor = arena(sisterRow, col).acolor`,
+          )
+          zip.file(basKey, basText)
+          needsRegen = true
+          console.info(`[Arcade] Added defensive boundary guard to ${basKey} SUB Set`)
+        }
+      }
+    }
 
     if (!zip.file('.jsdos/dosbox.conf')) {
       console.warn('[Arcade] .jsdos/dosbox.conf missing in bundle. Synthesizing config...')
@@ -357,7 +409,7 @@ memsize=32
 [cpu]
 core=auto
 cputype=auto
-cycles=max
+cycles=${isTimingSensitive ? 'fixed 3000' : 'max'}
 
 [mixer]
 nosound=false
@@ -381,42 +433,52 @@ c:
 ${autoexecLines}
 `
       zip.file('.jsdos/dosbox.conf', dosboxConf)
-      effectiveBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
-      console.info(`[Arcade] Synthesized .jsdos/dosbox.conf successfully! Ready bundle size: ${effectiveBuffer.byteLength} bytes`)
+      needsRegen = true
+      console.info(`[Arcade] Synthesized .jsdos/dosbox.conf successfully!`)
     }
     else {
       console.info('[Arcade] Bundle already contains .jsdos/dosbox.conf.')
       const confFile = zip.file('.jsdos/dosbox.conf')
       if (confFile) {
         let confText = await confFile.async('string')
-        let needsRegen = false
+        const originalConfText = confText
 
         // Clean up any previously mutated duplicate .bas in cached conf
         if (confText.includes('/run nibbles.bas NIBBLES.BAS')) {
           confText = confText.replace('/run nibbles.bas NIBBLES.BAS', 'NIBBLES.BAS')
-          needsRegen = true
+        }
+
+        // Clamp cycles to fixed 3000 for timing-sensitive games (e.g. QBasic speed calibration)
+        if (isTimingSensitive) {
+          if (/cycles\s*=\s*(?:max|auto)/i.test(confText)) {
+            confText = confText.replace(/cycles\s*=\s*(?:max|auto)/gi, 'cycles=fixed 3000')
+            console.info('[Arcade] Switched existing .jsdos/dosbox.conf to cycles=fixed 3000 for timing-sensitive game')
+          }
         }
 
         if (!isFpsGame.value) {
           if (confText.includes('autolock=true')) {
             confText = confText.replace(/autolock\s*=\s*true/g, 'autolock=false')
-            needsRegen = true
             console.info('[Arcade] Switched existing .jsdos/dosbox.conf to autolock=false for non-FPS game')
           }
         }
         else {
           if (confText.includes('autolock=false')) {
             confText = confText.replace(/autolock\s*=\s*false/g, 'autolock=true')
-            needsRegen = true
             console.info('[Arcade] Upgraded existing .jsdos/dosbox.conf to autolock=true for FPS game')
           }
         }
 
-        if (needsRegen) {
+        if (confText !== originalConfText) {
           zip.file('.jsdos/dosbox.conf', confText)
-          effectiveBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
+          needsRegen = true
         }
       }
+    }
+
+    if (needsRegen) {
+      effectiveBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
+      console.info(`[Arcade] Regenerated bundle with patches! Ready bundle size: ${effectiveBuffer.byteLength} bytes`)
     }
   }
   catch (err) {
@@ -577,7 +639,7 @@ function handleSelectPreset(presetId: string) {
   if (presetId === '2048') {
     if (dosPlayerInstance) {
       try {
-        dosPlayerInstance.stop()
+        // dosPlayerInstance.stop()
       }
       catch {}
       dosPlayerInstance = null
@@ -616,8 +678,10 @@ function handleCatalogLaunch(game: CatalogGame) {
 // --- Guided Studio Stage State ---
 const currentStage = ref<'hub' | 'calibration' | 'arena'>('hub')
 const isProvisioningOpen = ref(false)
+const isReviewOpen = ref(false)
 const selectedGameForProvisioning = ref<CatalogGame | null>(null)
 const activeProvisioningConfig = ref<ArcadeProvisioningConfig | null>(null)
+const latestCalibrationTrace = ref<CalibrationTelemetryTrace | null>(null)
 const pendingCustomFile = ref<File | null>(null)
 
 function handleSelectGameFromHub(game: any) {
@@ -692,7 +756,7 @@ function handleCancelCalibration() {
   currentStage.value = 'hub'
   if (dosPlayerInstance) {
     try {
-      dosPlayerInstance.stop()
+      // dosPlayerInstance.stop()
     }
     catch {}
     dosPlayerInstance = null
@@ -703,46 +767,90 @@ function handleCancelCalibration() {
 }
 
 async function handleCalibrationCompleted(trace: CalibrationTelemetryTrace) {
-  const game = selectedGameForProvisioning.value
-  const config = activeProvisioningConfig.value
+  latestCalibrationTrace.value = trace
+  isReviewOpen.value = true
+}
 
-  if (game && config) {
-    await arcadeKnowledgeStore.saveKnowledge({
-      gameId: game.identifier,
-      gameTitle: game.title,
-      acquiredAt: Date.now(),
-      lastPlayedAt: Date.now(),
-      motionArchitecture: trace.identifiedArchitecture,
-      recommendedSystem: game.classification?.recommended_system || 'system1_reflex',
-      gameplayPace: game.classification?.gameplay_pace || 'real_time_fast',
-      primaryGenre: game.classification?.primary_genre,
-      primaryController: game.classification?.primary_controller,
-      persona: config.companionPersona,
-      system1Engine: config.system1Engine,
-      system2Model: config.system2Model,
-      strategySummary: `Calibrated with motion entropy ${trace.motionEntropy.toFixed(2)}. ${trace.keyEvents.length} player keypresses recorded.`,
-      calibrationTrace: trace,
-      playCount: 1,
-    })
+function handleCloseReview() {
+  isReviewOpen.value = false
+  currentStage.value = 'hub'
+  if (dosPlayerInstance) {
+    try {
+      // dosPlayerInstance.stop()
+    }
+    catch {}
+    dosPlayerInstance = null
+    currentCommandInterface = null
   }
+  isGameReady.value = false
+  isDosEngineLoading.value = false
+}
 
-  toast.success('Calibration complete! Acquired game intelligence.')
+async function handleRecalibrateFromReview() {
+  isReviewOpen.value = false
+  const config = activeProvisioningConfig.value
+  if (config) {
+    await handleStartCalibration(config)
+  }
+}
+
+async function handleApproveStrategyReview(knowledge: AcquiredGameKnowledge) {
+  isReviewOpen.value = false
+  await arcadeKnowledgeStore.saveKnowledge(knowledge)
+  toast.success('Strategy approved! Acquired game intelligence.')
+
   currentStage.value = 'arena'
   await nextTick()
 
+  const game = selectedGameForProvisioning.value
   if (game) {
     if (game.identifier === '2048') {
       handleSelectPreset('2048')
     }
     else {
-      void launchDosGame({
-        identifier: game.identifier,
-        title: game.title,
-        bundleUrl: game.bundleUrl,
-        thumbnailUrl: game.thumbnailUrl,
-      })
+      // Do not stop or re-launch the game if it is already running
+      if (!dosPlayerInstance) {
+        void launchDosGame({
+          identifier: game.identifier,
+          title: game.title,
+          bundleUrl: game.bundleUrl,
+          thumbnailUrl: game.thumbnailUrl,
+        })
+      }
     }
+    void loadCustomPromptForGame(game.identifier)
   }
+}
+
+function openReviewForCurrentGame() {
+  const k = arcadeKnowledgeStore.getKnowledge(currentGameIdentifier.value)
+  if (!k)
+    return
+  selectedGameForProvisioning.value = {
+    identifier: k.gameId,
+    title: k.gameTitle,
+    classification: {
+      screen_motion_architecture: k.motionArchitecture,
+      recommended_system: k.recommendedSystem,
+      gameplay_pace: k.gameplayPace,
+      primary_genre: k.primaryGenre,
+      primary_controller: k.primaryController,
+    },
+  }
+  activeProvisioningConfig.value = {
+    system1Engine: k.system1Engine,
+    system2Model: k.system2Model || 'gemini-2.5-flash',
+    companionPersona: k.persona,
+  }
+  latestCalibrationTrace.value = k.calibrationTrace || {
+    timestamp: k.acquiredAt,
+    durationMs: 15000,
+    framesCaptured: 150,
+    keyEvents: [],
+    motionEntropy: 0.25,
+    identifiedArchitecture: k.motionArchitecture,
+  }
+  isReviewOpen.value = true
 }
 
 // Available Games for Selector (Preset Classics + Acquired Knowledge)
@@ -952,8 +1060,19 @@ async function loadCustomPromptForGame(gameId: string) {
       hasCustomPrompt.value = true
     }
     else {
-      arcadeAgent.customPromptAddendum.value = null
-      hasCustomPrompt.value = false
+      const acquired = arcadeKnowledgeStore.getKnowledge(gameId)
+      if (acquired) {
+        const knowledgePrompt = `[ACQUIRED GAME INTELLIGENCE - ${acquired.gameTitle}]
+Architecture: ${acquired.motionArchitecture} | Pace: ${acquired.gameplayPace} | Persona: ${acquired.persona}
+Strategy: ${acquired.strategySummary}
+${acquired.rulesAddendum ? `\nTactical Directives & Hazard Avoidance:\n${acquired.rulesAddendum}` : ''}`
+        arcadeAgent.customPromptAddendum.value = knowledgePrompt
+        hasCustomPrompt.value = true
+      }
+      else {
+        arcadeAgent.customPromptAddendum.value = null
+        hasCustomPrompt.value = false
+      }
     }
   }
   catch (err) {
@@ -2377,6 +2496,17 @@ onUnmounted(() => {
               <span v-if="hasCustomPrompt" class="size-1.5 rounded-full bg-amber-500" />
             </button>
 
+            <!-- Acquired Strategy Review Modal Trigger -->
+            <button
+              v-if="arcadeKnowledgeStore.hasKnowledge(currentGameIdentifier)"
+              class="shadow-2xs flex items-center gap-1.5 border border-primary-500/40 rounded-lg bg-primary-50/80 px-2.5 py-1.5 text-xs text-primary-700 font-medium transition-all active:scale-95 dark:border-primary-600/40 dark:bg-primary-950/40 hover:bg-primary-100 dark:text-primary-300"
+              title="View Acquired Strategy & Reflex Rules"
+              @click="openReviewForCurrentGame"
+            >
+              <div class="i-solar:shield-check-bold text-xs text-primary-500" />
+              <span>Strategy</span>
+            </button>
+
             <!-- Turn Memory Indicator (if turns have occurred) -->
             <div
               v-if="arcadeAgent.turnHistory.value.length > 0"
@@ -2656,6 +2786,17 @@ onUnmounted(() => {
       @close="isProvisioningOpen = false"
       @start-calibration="handleStartCalibration"
       @launch-direct="handleLaunchDirect"
+    />
+
+    <!-- STAGE 4: Post-Calibration Strategy Review Modal -->
+    <ArcadeStrategyReviewModal
+      :open="isReviewOpen"
+      :game="selectedGameForProvisioning"
+      :config="activeProvisioningConfig"
+      :trace="latestCalibrationTrace"
+      @close="handleCloseReview"
+      @recalibrate="handleRecalibrateFromReview"
+      @approve="handleApproveStrategyReview"
     />
 
     <!-- Retro Arcade Catalog Modal -->
