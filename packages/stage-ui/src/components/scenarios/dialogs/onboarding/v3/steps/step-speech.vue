@@ -84,8 +84,9 @@ const isHFTokenModalOpen = ref(false)
 
 function saveHfToken() {
   if (typeof localStorage !== 'undefined') {
-    if (hfTokenInput.value.trim()) {
-      localStorage.setItem('settings/connection/hf-token', hfTokenInput.value.trim())
+    const trimmed = hfTokenInput.value.trim()
+    if (trimmed) {
+      localStorage.setItem('settings/connection/hf-token', trimmed)
     }
     else {
       localStorage.removeItem('settings/connection/hf-token')
@@ -93,9 +94,64 @@ function saveHfToken() {
   }
 }
 
-function openHFTokenPage() {
+watch(hfTokenInput, (val) => {
+  if (typeof localStorage !== 'undefined') {
+    const trimmed = val.trim()
+    if (trimmed) {
+      localStorage.setItem('settings/connection/hf-token', trimmed)
+    }
+    else {
+      localStorage.removeItem('settings/connection/hf-token')
+    }
+  }
+})
+
+const hfTokenStatus = computed(() => {
+  const token = hfTokenInput.value.trim()
+  if (!token) {
+    return { state: 'empty', message: '', tip: '' }
+  }
+  if (token.startsWith('HF')) {
+    return {
+      state: 'error',
+      message: 'S3 Key detected (starts with "HF")',
+      tip: 'This looks like an S3 storage credential. Pocket-TTS requires a User Access Token starting with "hf_" from huggingface.co/settings/tokens.',
+    }
+  }
+  if (!token.startsWith('hf_')) {
+    return {
+      state: 'warning',
+      message: 'Token should start with "hf_"',
+      tip: 'Hugging Face User Access Tokens normally start with "hf_". Make sure you copied an access token, not a bucket key.',
+    }
+  }
+  if (token.length < 15) {
+    return {
+      state: 'warning',
+      message: 'Token is unusually short',
+      tip: 'Please check that the full token was pasted.',
+    }
+  }
+  return {
+    state: 'valid',
+    message: 'Valid token format',
+    tip: 'Ensure you clicked "Agree and access repository" on kyutai/pocket-tts.',
+  }
+})
+
+function selectStarterVoice(voiceId = 'airi_relu') {
+  selectedVoice.value = voiceId
   isHFTokenModalOpen.value = false
+  const match = STARTER_VOICE_CATALOG.find(v => v.id === voiceId)
+  toast.success(`Switched to "${match?.name || voiceId}". Offline starter voices do not need an HF token!`)
+}
+
+function openHFTokenPage() {
   window.open('https://huggingface.co/settings/tokens', '_blank')
+}
+
+function openHFGatePage() {
+  window.open('https://huggingface.co/kyutai/pocket-tts', '_blank')
 }
 
 // Local download state
@@ -232,7 +288,7 @@ const localEngines = [
     accent: 'text-emerald-500 dark:text-emerald-400',
     tag: 'RECOMMENDED · CPU',
     desc: 'Low-latency ~100M multilingual CPU engine with zero-shot voice synthesis.',
-    badges: ['🇺🇸 EN', '🇫🇷 FR', '🇪🇸 ES', '🇩🇪 DE', '🇮🇹 IT'],
+    badges: ['🇺🇸 EN', '🇫🇷 FR', '🇪🇸 ES', '🇩🇪 DE', '🇮🇹 IT', '🇯🇵 JP (★ Sakura)'],
   },
   {
     id: 'kokoro',
@@ -241,8 +297,8 @@ const localEngines = [
     icon: 'i-solar:heart-bold-duotone',
     accent: 'text-pink-500 dark:text-pink-400',
     tag: 'NEURAL AUDIO',
-    desc: 'High-quality 82M neural TTS with expressive multilingual voices.',
-    badges: ['🇺🇸 EN', '🇯🇵 JP', '🇨🇳 ZH', '🇪🇸 ES', '🇫🇷 FR'],
+    desc: 'High-quality 82M neural TTS with expressive English voices.',
+    badges: ['🇺🇸 EN (US)', '🇬🇧 EN (UK)'],
   },
   {
     id: 'moss',
@@ -988,23 +1044,49 @@ function handleContinue() {
             <div :class="[showHfTokenInput ? 'i-solar:alt-arrow-down-line-duotone' : 'i-solar:alt-arrow-right-line-duotone', 'w-4 h-4 text-neutral-400']" />
           </button>
 
-          <div v-if="showHfTokenInput" :class="['flex gap-2 pt-1']">
-            <input
-              v-model="hfTokenInput"
-              type="password"
-              placeholder="hf_..."
-              :class="['flex-1 px-3 py-1.5 rounded-xl text-xs font-mono bg-white dark:bg-neutral-900 border border-neutral-200/80 dark:border-white/10 text-neutral-900 dark:text-white outline-none focus:border-primary-500']"
-              @input="saveHfToken"
-            >
-            <a
-              href="https://huggingface.co/settings/tokens"
-              target="_blank"
-              rel="noopener noreferrer"
-              :class="['flex items-center self-center gap-1 px-2.5 py-1 text-xs text-primary-500 font-semibold hover:underline cursor-pointer']"
-            >
-              <span>Get Token</span>
-              <div :class="['i-solar:square-top-down-bold w-3.5 h-3.5']" />
-            </a>
+          <div v-if="showHfTokenInput" :class="['flex flex-col gap-2 pt-1']">
+            <div :class="['flex flex-wrap items-center gap-2']">
+              <input
+                v-model="hfTokenInput"
+                type="password"
+                placeholder="hf_..."
+                :class="[
+                  'flex-1 min-w-[200px] px-3 py-1.5 rounded-xl text-xs font-mono bg-white dark:bg-neutral-900 border outline-none transition',
+                  hfTokenStatus.state === 'error' ? 'border-red-400 dark:border-red-500/60 focus:border-red-500' : 'border-neutral-200/80 dark:border-white/10 text-neutral-900 dark:text-white focus:border-primary-500',
+                ]"
+                @input="saveHfToken"
+              >
+              <a
+                href="https://huggingface.co/kyutai/pocket-tts"
+                target="_blank"
+                rel="noopener noreferrer"
+                :class="['flex items-center gap-1 px-2.5 py-1 text-xs text-amber-600 dark:text-amber-400 font-semibold hover:underline cursor-pointer']"
+              >
+                <span>Accept Gate</span>
+                <div :class="['i-solar:square-top-down-bold w-3.5 h-3.5']" />
+              </a>
+              <a
+                href="https://huggingface.co/settings/tokens"
+                target="_blank"
+                rel="noopener noreferrer"
+                :class="['flex items-center gap-1 px-2.5 py-1 text-xs text-primary-500 font-semibold hover:underline cursor-pointer']"
+              >
+                <span>Get Token</span>
+                <div :class="['i-solar:square-top-down-bold w-3.5 h-3.5']" />
+              </a>
+            </div>
+
+            <!-- Validation message / warning -->
+            <div v-if="hfTokenStatus.message || hfTokenStatus.tip" :class="['text-[11px] leading-tight flex items-start gap-1', hfTokenStatus.state === 'error' ? 'text-red-500' : hfTokenStatus.state === 'warning' ? 'text-amber-500' : 'text-emerald-500']">
+              <div :class="[hfTokenStatus.state === 'error' ? 'i-solar:danger-triangle-bold' : hfTokenStatus.state === 'warning' ? 'i-solar:info-circle-bold' : 'i-solar:check-circle-bold', 'w-3.5 h-3.5 flex-shrink-0 mt-0.2']" />
+              <span>{{ hfTokenStatus.tip || hfTokenStatus.message }}</span>
+            </div>
+
+            <!-- Offline tip -->
+            <div :class="['text-[11px] text-neutral-500 dark:text-neutral-400 flex items-center gap-1.5 pt-0.5']">
+              <div :class="['i-solar:shield-check-bold-duotone w-3.5 h-3.5 text-emerald-500 flex-shrink-0']" />
+              <span>Tip: All <strong>★ Starter Voices</strong> (such as ★ Sakura and ★ ReLU) run 100% offline without needing any HF token.</span>
+            </div>
           </div>
         </div>
 
@@ -1578,7 +1660,7 @@ function handleContinue() {
         @click.stop.self="isHFTokenModalOpen = false"
       >
         <div
-          class="max-w-sm w-full border border-neutral-200/80 rounded-3xl bg-white p-6 shadow-2xl dark:border-neutral-800/80 dark:bg-neutral-900"
+          class="max-w-md w-full border border-neutral-200/80 rounded-3xl bg-white p-6 shadow-2xl dark:border-neutral-800/80 dark:bg-neutral-900"
           @pointerdown.stop
           @mousedown.stop
           @touchstart.stop
@@ -1600,37 +1682,93 @@ function handleContinue() {
           </div>
 
           <!-- Body -->
-          <p class="mb-5 text-sm text-neutral-600 leading-relaxed dark:text-neutral-300">
+          <p class="mb-4 text-sm text-neutral-600 leading-relaxed dark:text-neutral-300">
             The voice you selected (<span class="text-neutral-800 font-semibold dark:text-neutral-100">{{ selectedVoice }}</span>) is hosted on a gated Hugging Face repository.
             To use it, you need a free Hugging Face account, accept the model gate, and paste your access token below.
           </p>
 
+          <!-- Alternative: Free Offline Starter Voices -->
+          <div class="mb-4 border border-emerald-500/20 rounded-2xl bg-emerald-500/5 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+            <div class="flex items-center gap-2 text-xs text-emerald-700 font-semibold dark:text-emerald-300">
+              <div class="i-solar:shield-check-bold-duotone size-4 shrink-0 text-emerald-500" />
+              <span>Skip the token: Free offline starter voices</span>
+            </div>
+            <p class="mt-1 text-[11px] text-neutral-600 dark:text-neutral-400">
+              These voices run 100% locally with zero-shot cloning — no HF account or token needed:
+            </p>
+            <div class="mt-2 flex flex-wrap gap-1.5">
+              <button
+                type="button"
+                class="cursor-pointer border border-emerald-500/30 rounded-xl bg-white px-2.5 py-1 text-xs text-emerald-700 font-medium shadow-sm transition active:scale-95 hover:border-emerald-500 dark:bg-neutral-800 dark:text-emerald-300"
+                @click="selectStarterVoice('airi_relu')"
+              >
+                ★ ReLU (Empathetic)
+              </button>
+              <button
+                type="button"
+                class="cursor-pointer border border-emerald-500/30 rounded-xl bg-white px-2.5 py-1 text-xs text-emerald-700 font-medium shadow-sm transition active:scale-95 hover:border-emerald-500 dark:bg-neutral-800 dark:text-emerald-300"
+                @click="selectStarterVoice('airi_sakura')"
+              >
+                ★ Sakura (Japanese 🇯🇵)
+              </button>
+              <button
+                type="button"
+                class="cursor-pointer border border-emerald-500/30 rounded-xl bg-white px-2.5 py-1 text-xs text-emerald-700 font-medium shadow-sm transition active:scale-95 hover:border-emerald-500 dark:bg-neutral-800 dark:text-emerald-300"
+                @click="selectStarterVoice('airi_aria')"
+              >
+                ★ Dr. Aria
+              </button>
+            </div>
+          </div>
+
           <!-- Steps -->
-          <ol class="mb-5 text-xs text-neutral-500 space-y-2 dark:text-neutral-400">
+          <ol class="mb-4 text-xs text-neutral-500 space-y-2 dark:text-neutral-400">
             <li class="flex items-start gap-2">
               <span class="mt-0.5 size-4 flex shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-[10px] text-amber-600 font-bold dark:text-amber-400">1</span>
-              <span>Create a free account at <span class="text-neutral-700 font-semibold dark:text-neutral-200">huggingface.co</span></span>
+              <span>Create an account at <a href="https://huggingface.co" target="_blank" rel="noopener noreferrer" class="text-neutral-800 font-semibold underline dark:text-neutral-200">huggingface.co</a></span>
             </li>
             <li class="flex items-start gap-2">
               <span class="mt-0.5 size-4 flex shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-[10px] text-amber-600 font-bold dark:text-amber-400">2</span>
-              <span>Accept the gate at <span class="text-neutral-700 font-semibold dark:text-neutral-200">kyutai/pocket-tts</span></span>
+              <span>
+                Visit <a href="https://huggingface.co/kyutai/pocket-tts" target="_blank" rel="noopener noreferrer" class="text-amber-600 font-semibold underline dark:text-amber-400">kyutai/pocket-tts</a> and click <strong>"Agree and access repository"</strong>
+                <span class="block text-[10px] text-amber-600/80 dark:text-amber-400/80">⚠️ Required: Without accepting the gate, HF blocks access even with a valid token.</span>
+              </span>
             </li>
             <li class="flex items-start gap-2">
               <span class="mt-0.5 size-4 flex shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-[10px] text-amber-600 font-bold dark:text-amber-400">3</span>
-              <span>Generate a <span class="text-neutral-700 font-semibold dark:text-neutral-200">Read</span> token and paste it below</span>
+              <span>
+                Generate a <strong>User Access Token</strong> with <strong>Read</strong> role at <a href="https://huggingface.co/settings/tokens" target="_blank" rel="noopener noreferrer" class="text-neutral-800 font-semibold underline dark:text-neutral-200">huggingface.co/settings/tokens</a> (token starts with <code class="rounded bg-neutral-200/60 px-1 py-0.5 text-[10px] font-mono dark:bg-white/10">hf_</code>)
+              </span>
             </li>
           </ol>
 
           <!-- Quick Token Input inside Modal -->
           <div class="mb-5 flex flex-col gap-1.5">
-            <label class="text-[11px] text-neutral-600 font-semibold dark:text-neutral-300">Paste Token Here</label>
+            <div class="flex items-center justify-between">
+              <label class="text-[11px] text-neutral-600 font-semibold dark:text-neutral-300">Paste Token Here</label>
+              <span
+                v-if="hfTokenStatus.message"
+                :class="[
+                  'text-[10px] font-medium',
+                  hfTokenStatus.state === 'error' ? 'text-red-500' : hfTokenStatus.state === 'warning' ? 'text-amber-500' : 'text-emerald-500',
+                ]"
+              >
+                {{ hfTokenStatus.message }}
+              </span>
+            </div>
             <input
               v-model="hfTokenInput"
               type="password"
               placeholder="hf_..."
-              class="w-full border border-neutral-200 rounded-xl bg-neutral-100 px-3 py-2 text-xs text-neutral-900 font-mono outline-none dark:border-white/10 focus:border-primary-500 dark:bg-neutral-800 dark:text-white"
+              :class="[
+                'w-full border rounded-xl bg-neutral-100 px-3 py-2 text-xs font-mono outline-none dark:bg-neutral-800 dark:text-white transition',
+                hfTokenStatus.state === 'error' ? 'border-red-400 dark:border-red-500/60 focus:border-red-500' : 'border-neutral-200 dark:border-white/10 focus:border-primary-500',
+              ]"
               @input="saveHfToken"
             >
+            <p v-if="hfTokenStatus.tip" :class="['text-[11px] leading-tight', hfTokenStatus.state === 'error' ? 'text-red-500' : hfTokenStatus.state === 'warning' ? 'text-amber-500' : 'text-neutral-500 dark:text-neutral-400']">
+              {{ hfTokenStatus.tip }}
+            </p>
           </div>
 
           <!-- Actions -->
@@ -1639,14 +1777,23 @@ function handleContinue() {
               type="button"
               class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-2xl bg-amber-500 py-2.5 text-xs text-white font-semibold shadow-amber-500/25 shadow-md transition active:scale-95 hover:bg-amber-600"
               @pointerdown.stop
-              @click.stop="openHFTokenPage"
+              @click.stop="openHFGatePage"
             >
-              <div class="i-solar:key-bold-duotone size-3.5" />
-              <span>Get Token</span>
+              <div class="i-solar:shield-check-bold-duotone size-3.5" />
+              <span>1. Accept Gate</span>
             </button>
             <button
               type="button"
-              class="flex-1 cursor-pointer rounded-2xl bg-neutral-100 py-2.5 text-xs text-neutral-600 font-semibold transition active:scale-98 dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
+              class="flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-2xl bg-neutral-800 py-2.5 text-xs text-white font-semibold transition active:scale-95 dark:bg-neutral-700 hover:bg-neutral-700"
+              @pointerdown.stop
+              @click.stop="openHFTokenPage"
+            >
+              <div class="i-solar:key-bold-duotone size-3.5" />
+              <span>2. Get Token</span>
+            </button>
+            <button
+              type="button"
+              class="cursor-pointer rounded-2xl bg-neutral-100 px-4 py-2.5 text-xs text-neutral-600 font-semibold transition active:scale-98 dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
               @pointerdown.stop
               @click.stop="isHFTokenModalOpen = false"
             >

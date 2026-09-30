@@ -2,7 +2,7 @@
 import { isStageTamagotchi } from '@proj-airi/stage-shared'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { storeToRefs } from 'pinia'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
 interface QuickAccessItem {
@@ -15,6 +15,49 @@ interface QuickAccessItem {
 const router = useRouter()
 const cardStore = useAiriCardStore()
 const { activeCardId } = storeToRefs(cardStore)
+
+const isVoiceModalOpen = ref(false)
+
+const localVoiceEngines = [
+  {
+    id: 'pocket',
+    name: 'Pocket-TTS Local',
+    icon: 'i-solar:microphone-3-bold-duotone',
+    accent: 'text-emerald-500 dark:text-emerald-400',
+    tag: 'RECOMMENDED · CPU',
+    tagBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    desc: 'Low-latency ~100M multilingual CPU engine with zero-shot voice synthesis.',
+    badges: ['🇺🇸 EN', '🇫🇷 FR', '🇪🇸 ES', '🇩🇪 DE', '🇮🇹 IT', '🇯🇵 JP (★ Sakura)'],
+    to: '/settings/providers/speech/pocket-tts-local',
+  },
+  {
+    id: 'kokoro',
+    name: 'Kokoro Local TTS',
+    icon: 'i-solar:heart-bold-duotone',
+    accent: 'text-pink-500 dark:text-pink-400',
+    tag: 'NEURAL AUDIO',
+    tagBg: 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20',
+    desc: 'High-quality 82M neural TTS with expressive English voices.',
+    badges: ['🇺🇸 EN (US)', '🇬🇧 EN (UK)'],
+    to: '/settings/providers/speech/kokoro-local',
+  },
+  {
+    id: 'moss',
+    name: 'Moss-Nano Local',
+    icon: 'i-solar:bolt-bold-duotone',
+    accent: 'text-amber-500 dark:text-amber-400',
+    tag: 'ULTRA-FAST',
+    tagBg: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    desc: 'Tiny low-resource voice engine for instant speech on any hardware.',
+    badges: ['🇺🇸 EN', '🇨🇳 ZH'],
+    to: '/settings/providers/speech/moss-nano-local',
+  },
+]
+
+function selectEngine(to: string) {
+  isVoiceModalOpen.value = false
+  router.push(to)
+}
 
 // Row 1: Core Character & Services
 const row1Items = computed<QuickAccessItem[]>(() => [
@@ -98,6 +141,10 @@ function navigate(target: string | QuickAccessItem) {
       router.push({ path: '/settings/airi-card/edit', query: { id: targetId } })
       return
     }
+    if (target.id === 'local-voice') {
+      isVoiceModalOpen.value = true
+      return
+    }
     router.push(target.to)
     return
   }
@@ -151,7 +198,7 @@ function navigate(target: string | QuickAccessItem) {
           'hover:bg-primary-500/8 dark:hover:bg-primary-500/15',
           'hover:-translate-y-0.5 hover:shadow-sm',
         ]"
-        @click="navigate(item.to)"
+        @click="navigate(item)"
       >
         <div
           :class="[
@@ -168,5 +215,96 @@ function navigate(target: string | QuickAccessItem) {
         </span>
       </button>
     </div>
+
+    <!-- Local Voice Selection Modal -->
+    <Teleport to="body">
+      <div
+        v-if="isVoiceModalOpen"
+        class="pointer-events-auto fixed inset-0 z-[999999] flex animate-fadeIn items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        @pointerdown.stop
+        @mousedown.stop
+        @touchstart.stop
+        @click.stop.self="isVoiceModalOpen = false"
+      >
+        <div
+          class="max-w-3xl w-full flex flex-col gap-5 border border-neutral-200/80 rounded-3xl bg-white p-6 shadow-2xl dark:border-neutral-800/80 dark:bg-neutral-900"
+          @pointerdown.stop
+          @mousedown.stop
+          @touchstart.stop
+          @click.stop
+        >
+          <!-- Header -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="size-11 flex shrink-0 items-center justify-center rounded-2xl bg-primary-500/10 text-primary-500 dark:bg-primary-500/20">
+                <div class="i-solar:volume-loud-bold-duotone size-6" />
+              </div>
+              <div>
+                <h3 class="text-base text-neutral-900 font-bold dark:text-white">
+                  Local Voice Engines
+                </h3>
+                <p class="text-xs text-neutral-500 dark:text-neutral-400">
+                  Select an offline TTS engine to configure its models and voices
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="cursor-pointer rounded-xl p-2 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              @click="isVoiceModalOpen = false"
+            >
+              <div class="i-solar:close-circle-linear size-5" />
+            </button>
+          </div>
+
+          <!-- 3 Engine Hero Cards -->
+          <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+            <button
+              v-for="engine in localVoiceEngines"
+              :key="engine.id"
+              type="button"
+              :class="[
+                'group relative flex flex-col justify-between text-left rounded-2xl p-4.5 transition-all duration-200 cursor-pointer',
+                'border border-neutral-200/80 bg-neutral-50/70 dark:border-neutral-800 dark:bg-neutral-800/40',
+                'hover:border-primary-500/60 dark:hover:border-primary-400/60 hover:bg-white dark:hover:bg-neutral-800',
+                'hover:-translate-y-1 hover:shadow-lg',
+              ]"
+              @click="selectEngine(engine.to)"
+            >
+              <!-- Card Top: Icon & Tag -->
+              <div class="flex items-start justify-between gap-2">
+                <div :class="['size-10 flex shrink-0 items-center justify-center rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-700/60 shadow-xs transition-transform group-hover:scale-105', engine.accent]">
+                  <div :class="[engine.icon, 'size-5']" />
+                </div>
+                <span :class="['text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-md border uppercase', engine.tagBg]">
+                  {{ engine.tag }}
+                </span>
+              </div>
+
+              <!-- Card Content: Name & Description -->
+              <div class="mb-3 mt-3.5 flex flex-col gap-1">
+                <span class="text-sm text-neutral-900 font-bold transition-colors dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                  {{ engine.name }}
+                </span>
+                <p class="text-xs text-neutral-500 leading-relaxed dark:text-neutral-400">
+                  {{ engine.desc }}
+                </p>
+              </div>
+
+              <!-- Card Bottom: Language Badges -->
+              <div class="mt-auto flex flex-wrap gap-1 border-t border-neutral-200/60 pt-3 dark:border-neutral-700/40">
+                <span
+                  v-for="badge in engine.badges"
+                  :key="badge"
+                  class="rounded bg-neutral-200/60 px-1.5 py-0.5 text-[10px] text-neutral-600 font-mono dark:bg-white/5 dark:text-neutral-400"
+                >
+                  {{ badge }}
+                </span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
