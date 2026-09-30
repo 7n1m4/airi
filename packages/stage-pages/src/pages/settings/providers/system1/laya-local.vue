@@ -15,7 +15,7 @@ import {
 } from '@proj-airi/stage-ui/libs/inference'
 import { useSystemOneStore } from '@proj-airi/stage-ui/stores/modules/system-one'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { Button, Progress, Select } from '@proj-airi/ui'
+import { Button, FieldCheckbox, Progress, Select } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -25,6 +25,7 @@ const providersStore = useProvidersStore()
 const systemOneStore = useSystemOneStore()
 const router = useRouter()
 const { activeProvider } = storeToRefs(systemOneStore)
+const { providers } = storeToRefs(providersStore)
 
 // Provider metadata
 const providerMetadata = computed(() => providersStore.getProviderMetadata(providerId))
@@ -33,24 +34,46 @@ const providerConfig = computed(() => providersStore.getProviderConfig(providerI
 // Selected model
 const model = computed({
   get(): string {
-    return (providerConfig.value?.model as string) || 'tozp/laya-onnx'
+    return (providers.value[providerId]?.model as string)
+      || (providerConfig.value?.model as string)
+      || 'tozp/laya-onnx'
   },
   set(val: string) {
-    const config = providersStore.getProviderConfig(providerId)
-    if (config) {
-      config.model = val
+    if (!providers.value[providerId]) {
+      providers.value[providerId] = {}
+    }
+    providers.value[providerId].model = val
+    if (activeProvider.value === providerId) {
+      systemOneStore.activeModel = val
     }
     checkCache()
   },
 })
 
+// WebGPU Acceleration Toggle (defaults to false / CPU WASM)
+const enableWebGpu = computed({
+  get(): boolean {
+    return Boolean(
+      providers.value[providerId]?.enableWebGpu
+      ?? providerConfig.value?.enableWebGpu
+      ?? false,
+    )
+  },
+  set(val: boolean) {
+    if (!providers.value[providerId]) {
+      providers.value[providerId] = {}
+    }
+    providers.value[providerId].enableWebGpu = val
+  },
+})
+
 const modelOptions = [
   {
-    label: 'tozp/laya-onnx (INT8 Quantized, 424 MB - Recommended)',
+    label: 'tozp/laya-onnx (INT8 Quantized, 424 MB - CPU Recommended)',
     value: 'tozp/laya-onnx',
   },
   {
-    label: 'tozp/laya-onnx-fp16 (FP16 Full Precision, 843 MB - Desktop GPU)',
+    label: 'tozp/laya-onnx-fp16 (FP16 Full Precision, 843 MB - CPU)',
     value: 'tozp/laya-onnx-fp16',
   },
 ]
@@ -194,7 +217,9 @@ async function handleRunDiagnostic() {
     }
 
     const precision = model.value.includes('fp16') ? 'fp16' : 'int8'
-    const res = await runLayaSystemOne(parsedState, parsedQuestions, precision)
+    const res = await runLayaSystemOne(parsedState, parsedQuestions, precision, {
+      useWebGpu: enableWebGpu.value,
+    })
     diagnosticResult.value = res
     diagnosticLatency.value = res.latency_ms
     await checkCache()
@@ -283,6 +308,19 @@ watch(model, () => {
             :options="modelOptions"
             :disabled="isDownloading"
           />
+        </div>
+
+        <!-- WebGPU Acceleration Toggle -->
+        <div class="border-t border-neutral-100 pt-3 dark:border-neutral-800/60">
+          <FieldCheckbox
+            v-model="enableWebGpu"
+            label="Experimental WebGPU Acceleration"
+            description="Attempt to execute ONNX operators on WebGPU first, falling back to CPU WASM. Default: Off (CPU WASM)."
+          />
+          <p class="mt-1.5 text-[11px] text-neutral-400 dark:text-neutral-500">
+            <span class="text-primary-600 font-semibold dark:text-primary-400">Tip:</span>
+            WebGPU delivers the best speedup (~5x faster) when paired with the FP16 model. The INT8 model is optimized for CPU execution.
+          </p>
         </div>
 
         <!-- Download / Cache Actions -->
@@ -383,8 +421,10 @@ watch(model, () => {
           </div>
         </div>
 
-        <div class="flex items-center justify-between pt-1">
+        <div class="flex flex-col gap-2.5 pt-1 sm:flex-row sm:items-center sm:justify-between">
           <Button
+            size="sm"
+            class="px-4 py-2 text-xs"
             :disabled="isRunningDiagnostic"
             @click="handleRunDiagnostic"
           >
@@ -394,7 +434,7 @@ watch(model, () => {
           </Button>
 
           <span class="text-[11px] text-neutral-400">
-            Executes via onnxruntime-web WASM SIMD (Multi-threaded)
+            {{ enableWebGpu ? 'Executes via onnxruntime-web WebGPU (with WASM fallback)' : 'Executes via onnxruntime-web WASM SIMD (Multi-threaded CPU)' }}
           </span>
         </div>
 
@@ -405,11 +445,14 @@ watch(model, () => {
 
         <!-- Diagnostic Results Output -->
         <div v-if="diagnosticResult" class="border border-neutral-200 rounded-xl bg-neutral-50 p-4 space-y-3 dark:border-neutral-800 dark:bg-neutral-900/50">
-          <div class="flex items-center justify-between border-b border-neutral-200/60 pb-2 dark:border-neutral-800/60">
-            <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200/60 pb-2 dark:border-neutral-800/60">
+            <div class="flex flex-wrap items-center gap-2">
               <span class="text-xs text-neutral-700 font-bold dark:text-neutral-300">Classification Outputs:</span>
               <span class="rounded bg-neutral-200 px-2 py-0.5 text-[11px] text-neutral-600 font-mono dark:bg-neutral-800 dark:text-neutral-400">
                 Model: {{ diagnosticResult.model }}
+              </span>
+              <span class="border border-primary-500/20 rounded bg-primary-500/10 px-2 py-0.5 text-[11px] text-primary-600 font-bold font-mono dark:text-primary-400">
+                ⚡ {{ diagnosticResult.latency_ms ?? diagnosticLatency }} ms
               </span>
             </div>
             <span class="text-[11px] text-neutral-400 font-mono">

@@ -82,7 +82,7 @@ export {
   resetLayaSession,
   runLayaSystemOne,
 } from './laya-engine'
-export type { LayaDownloadProgress } from './laya-engine'
+export type { LayaDownloadProgress, LayaSessionOptions } from './laya-engine'
 export {
   classifyError,
   createRequestId,

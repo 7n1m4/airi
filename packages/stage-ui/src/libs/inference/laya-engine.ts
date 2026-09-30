@@ -253,9 +253,14 @@ function tempBucket(qtype: string, k: number): string {
 // In-memory active singleton session
 let activeSession: ort.InferenceSession | null = null
 let activeSessionPrecision: 'int8' | 'fp16' | null = null
+let activeSessionEp: 'wasm' | 'webgpu' | null = null
 let activeTokenizer: any = null
 let loadSessionPromise: Promise<ort.InferenceSession> | null = null
 let loadTokenizerPromise: Promise<any> | null = null
+
+export interface LayaSessionOptions {
+  useWebGpu?: boolean
+}
 
 // Serial async execution queue for ONNX Runtime WASM session.run
 let layaSessionRunLock: Promise<unknown> = Promise.resolve()
@@ -319,16 +324,26 @@ export async function resetLayaSession(): Promise<void> {
   }
   activeSession = null
   activeSessionPrecision = null
+  activeSessionEp = null
   loadSessionPromise = null
 }
 
 /**
  * Load the active Laya ONNX session from CacheStorage or network.
- * Guaranteed singleton promise ensures only one model is loaded/compiled into WASM at a time.
+ * Guaranteed singleton promise ensures only one model is loaded/compiled into WASM/WebGPU at a time.
  */
-export async function loadLayaSession(precision: 'int8' | 'fp16' = 'int8'): Promise<ort.InferenceSession> {
-  if (activeSession && activeSessionPrecision === precision)
+export async function loadLayaSession(
+  precision: 'int8' | 'fp16' = 'int8',
+  options?: LayaSessionOptions,
+): Promise<ort.InferenceSession> {
+  const targetEp: 'wasm' | 'webgpu' = options?.useWebGpu ? 'webgpu' : 'wasm'
+
+  if (activeSession && activeSessionPrecision === precision && activeSessionEp === targetEp)
     return activeSession
+
+  if (activeSession && (activeSessionPrecision !== precision || activeSessionEp !== targetEp)) {
+    await resetLayaSession()
+  }
 
   if (loadSessionPromise)
     return loadSessionPromise
@@ -373,17 +388,35 @@ export async function loadLayaSession(precision: 'int8' | 'fp16' = 'int8'): Prom
         buffer = await res.arrayBuffer()
       }
 
-      console.info(`[LayaEngine] Instantiating ONNX session for ${targetFile} (${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB, threads=${ort.env.wasm?.numThreads}, simd=${ort.env.wasm?.simd})...`)
+      const executionProviders: string[] = targetEp === 'webgpu' ? ['webgpu', 'wasm'] : ['wasm']
+      console.info(`[LayaEngine] Instantiating ONNX session for ${targetFile} (${(buffer.byteLength / 1024 / 1024).toFixed(1)} MB, providers=${executionProviders.join(',')}, threads=${ort.env.wasm?.numThreads}, simd=${ort.env.wasm?.simd})...`)
 
       const modelBytes = new Uint8Array(buffer)
 
-      activeSession = await ort.InferenceSession.create(modelBytes, {
-        executionProviders: ['wasm'],
-        graphOptimizationLevel: 'all',
-      })
-      activeSessionPrecision = precision
+      // NOTICE: In onnxruntime-web with FP16 models containing precision-free casts
+      // (like ModernBERT), Level 2+ graph optimization ('all'/'extended') triggers a
+      // bug in SimplifiedLayerNormFusion (graph_utils.cc:30 GetIndexFromName:
+      // InsertedPrecisionFreeCast_... not found). Using 'basic' skips the broken
+      // fusion pass while preserving basic graph optimizations.
+      const initialOptimizationLevel: 'basic' | 'all' = precision === 'fp16' ? 'basic' : 'all'
 
-      console.info(`[LayaEngine] ✅ ONNX session successfully created for ${targetFile}.`)
+      try {
+        activeSession = await ort.InferenceSession.create(modelBytes, {
+          executionProviders,
+          graphOptimizationLevel: initialOptimizationLevel,
+        })
+      }
+      catch (optErr) {
+        console.warn(`[LayaEngine] Failed to create session with providers=${executionProviders.join(',')} and graphOptimizationLevel='${initialOptimizationLevel}', falling back to 'disabled':`, optErr)
+        activeSession = await ort.InferenceSession.create(modelBytes, {
+          executionProviders,
+          graphOptimizationLevel: 'disabled',
+        })
+      }
+      activeSessionPrecision = precision
+      activeSessionEp = targetEp
+
+      console.info(`[LayaEngine] ✅ ONNX session successfully created for ${targetFile} (ep=${targetEp}).`)
       return activeSession
     }
     finally {
@@ -424,6 +457,7 @@ export async function runLayaSystemOne(
   state: any,
   questions: Record<string, any>,
   precision: 'int8' | 'fp16' = 'int8',
+  options?: LayaSessionOptions,
 ): Promise<{
   model: string
   answers: Record<string, any>
@@ -435,9 +469,10 @@ export async function runLayaSystemOne(
   if (qids.length === 0)
     throw new Error('runLayaSystemOne: at least one question is required')
 
-  console.info(`[LayaEngine] Step 1/4: Initializing ONNX session (${precision}) & tokenizer...`)
+  const epLabel = options?.useWebGpu ? 'webgpu+wasm' : 'wasm'
+  console.info(`[LayaEngine] Step 1/4: Initializing ONNX session (${precision}, ep=${epLabel}) & tokenizer...`)
   const [session, tokenizer] = await Promise.all([
-    loadLayaSession(precision),
+    loadLayaSession(precision, options),
     loadLayaTokenizer(),
   ])
 
@@ -598,7 +633,7 @@ export async function runLayaSystemOne(
   console.info(`[LayaEngine] ✅ Classification completed in ${latencyMs}ms (${nTokens} tokens).`)
 
   return {
-    model: `laya-${precision}`,
+    model: `laya-${precision}${options?.useWebGpu ? '-webgpu' : ''}`,
     answers,
     usage: { input_tokens: nTokens, output_tokens: 0 },
     latency_ms: latencyMs,

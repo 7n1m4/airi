@@ -187,12 +187,12 @@ export const useSystemOneStore = defineStore('system-one', () => {
       return [
         {
           id: 'tozp/laya-onnx',
-          name: 'Laya INT8 (424 MB, Recommended)',
+          name: 'Laya INT8 (424 MB, CPU Recommended)',
           description: 'On-device ModernBERT quantized INT8 sequence classifier',
         },
         {
           id: 'tozp/laya-onnx-fp16',
-          name: 'Laya FP16 (843 MB, Desktop GPU)',
+          name: 'Laya FP16 (843 MB, CPU)',
           description: 'On-device ModernBERT FP16 precision sequence classifier',
         },
       ]
