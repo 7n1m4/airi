@@ -64,7 +64,7 @@ defineExpose({
 <template>
   <div
     :class="[
-      'relative flex flex-1 items-center justify-center overflow-hidden',
+      'relative h-full w-full flex flex-1 items-center justify-center overflow-hidden',
     ]"
     @dragover.prevent
     @drop.prevent="(e) => emit('dropFiles', e)"
@@ -132,7 +132,7 @@ defineExpose({
     <div
       v-show="engine === 'jsdos'"
       :class="[
-        'relative h-full max-h-[580px] max-w-[780px] w-full',
+        'relative aspect-[4/3] h-full max-h-[580px] max-w-[780px] w-full min-h-[380px]',
         'flex items-center justify-center overflow-hidden',
         'border-4 border-neutral-800/80 rounded-2xl bg-black p-1 shadow-2xl',
       ]"
@@ -208,7 +208,7 @@ defineExpose({
       <!-- Live JS-DOS Mount Point -->
       <div
         :ref="setDosContainer"
-        class="h-full w-full cursor-crosshair overflow-hidden rounded-xl"
+        class="dos-canvas-wrapper h-full w-full cursor-crosshair overflow-hidden rounded-xl"
         @click="emit('dosClick')"
       />
 

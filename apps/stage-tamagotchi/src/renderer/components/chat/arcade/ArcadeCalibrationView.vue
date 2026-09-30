@@ -69,9 +69,12 @@ const secondsRemaining = computed(() => {
 function getActiveCanvas(): HTMLCanvasElement | null {
   if (props.engine === 'jsdos') {
     const container = viewportRef.value?.dosContainerEl as HTMLElement | null
-    return container?.querySelector('canvas') || null
+    return container?.querySelector('canvas')
+      || (document.querySelector('.dos-canvas-wrapper canvas') as HTMLCanvasElement | null)
+      || (document.querySelector('.emulator-canvas') as HTMLCanvasElement | null)
+      || (document.querySelector('canvas') as HTMLCanvasElement | null)
   }
-  return viewportRef.value?.canvasEl || null
+  return viewportRef.value?.canvasEl || (document.querySelector('canvas') as HTMLCanvasElement | null)
 }
 
 function handleStartCalibration() {
@@ -140,9 +143,10 @@ onMounted(() => {
     </div>
 
     <!-- 2. FULL VIEWPORT GAME CANVAS -->
-    <div class="relative flex flex-1 items-center justify-center overflow-hidden p-6 pt-20">
+    <div class="relative h-full w-full flex flex-1 flex-col items-center justify-center overflow-hidden p-6 pt-20">
       <ArcadeViewport
         ref="viewportRef"
+        class="h-full w-full flex-1"
         :engine="engine"
         :loading="loading"
         :loading-progress="loadingProgress"

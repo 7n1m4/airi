@@ -388,22 +388,33 @@ ${autoexecLines}
       console.info('[Arcade] Bundle already contains .jsdos/dosbox.conf.')
       const confFile = zip.file('.jsdos/dosbox.conf')
       if (confFile) {
-        const confText = await confFile.async('string')
+        let confText = await confFile.async('string')
+        let needsRegen = false
+
+        // Clean up any previously mutated duplicate .bas in cached conf
+        if (confText.includes('/run nibbles.bas NIBBLES.BAS')) {
+          confText = confText.replace('/run nibbles.bas NIBBLES.BAS', 'NIBBLES.BAS')
+          needsRegen = true
+        }
+
         if (!isFpsGame.value) {
           if (confText.includes('autolock=true')) {
-            const updatedConf = confText.replace(/autolock\s*=\s*true/g, 'autolock=false')
-            zip.file('.jsdos/dosbox.conf', updatedConf)
-            effectiveBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
+            confText = confText.replace(/autolock\s*=\s*true/g, 'autolock=false')
+            needsRegen = true
             console.info('[Arcade] Switched existing .jsdos/dosbox.conf to autolock=false for non-FPS game')
           }
         }
         else {
           if (confText.includes('autolock=false')) {
-            const updatedConf = confText.replace(/autolock\s*=\s*false/g, 'autolock=true')
-            zip.file('.jsdos/dosbox.conf', updatedConf)
-            effectiveBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
+            confText = confText.replace(/autolock\s*=\s*false/g, 'autolock=true')
+            needsRegen = true
             console.info('[Arcade] Upgraded existing .jsdos/dosbox.conf to autolock=true for FPS game')
           }
+        }
+
+        if (needsRegen) {
+          zip.file('.jsdos/dosbox.conf', confText)
+          effectiveBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'STORE' })
         }
       }
     }
@@ -415,7 +426,13 @@ ${autoexecLines}
   const blob = new Blob([effectiveBuffer as BlobPart], { type: 'application/zip' })
   const bundleUrl = URL.createObjectURL(blob)
 
-  dosPlayerInstance = Dos(dosContainerRef.value, {
+  const targetContainer = dosContainerRef.value
+    || (document.querySelector('.dos-canvas-wrapper') as HTMLDivElement | null)
+    || (document.querySelector('.cursor-crosshair') as HTMLDivElement | null)
+
+  console.info('[Arcade] Instantiating Dos player in container:', targetContainer)
+
+  dosPlayerInstance = Dos(targetContainer, {
     url: bundleUrl,
     pathPrefix: 'https://cdn.jsdelivr.net/npm/js-dos@8.4.1/dist/emulators/',
     theme: 'dark',
@@ -428,6 +445,7 @@ ${autoexecLines}
       urlToKey: async () => currentGameIdentifier.value,
     },
     onEvent: (event: string, ci: any) => {
+      console.info('[Arcade] Dos onEvent:', event)
       if (event === 'ci-ready') {
         currentCommandInterface = ci
         if (typeof window !== 'undefined') {
