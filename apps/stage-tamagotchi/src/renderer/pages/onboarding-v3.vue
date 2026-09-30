@@ -2,11 +2,15 @@
 import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import { OnboardingV3 } from '@proj-airi/stage-ui/components'
 import { useTheme } from '@proj-airi/ui'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 
 import { electronOnboardingClose, electronOpenChat, electronStageToggleVisibility } from '../../shared/eventa'
 
 const { isDark } = useTheme()
+
+onMounted(() => {
+  document.title = 'AIRI - Companion Wizard'
+})
 
 const bgClass = computed(() => isDark.value ? 'bg-[#0a0a12]' : 'bg-slate-50')
 
