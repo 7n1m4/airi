@@ -1,3 +1,5 @@
+import type { ModelInfo } from '../../types'
+
 import { createWorkersAI } from '@xsai-ext/providers/special/create'
 import { z } from 'zod'
 
@@ -83,6 +85,69 @@ export const providerCloudflareWorkersAI = defineProvider({
     }
 
     return baseAI
+  },
+  extraMethods: {
+    listModels: async () => ([
+      // Empirically verified Vision & Multimodal Models (Cloudflare Workers AI chat/completions compatible)
+      {
+        id: '@cf/meta/llama-4-scout-17b-16e-instruct',
+        name: 'Llama 4 Scout 17B (CF)',
+        provider: 'cloudflare-workers-ai',
+        description: 'Frontier 17B MoE (16 experts). Ultra-fast visual perception & high reasoning depth.',
+        contextLength: 131072,
+        capabilities: ['chat', 'vision'],
+      },
+      {
+        id: '@cf/mistralai/mistral-small-3.1-24b-instruct',
+        name: 'Mistral Small 3.1 24B (CF)',
+        provider: 'cloudflare-workers-ai',
+        description: 'Deep conversational wit, high reasoning intelligence & in-character visual banter.',
+        contextLength: 131072,
+        capabilities: ['chat', 'vision'],
+      },
+      {
+        id: '@cf/qwen/qwen3.8-27b',
+        name: 'Qwen 3.8 27B (CF)',
+        provider: 'cloudflare-workers-ai',
+        description: 'Alibaba Qwen visual reasoning with step-by-step visual chain-of-thought analysis.',
+        contextLength: 32768,
+        capabilities: ['chat', 'vision'],
+      },
+
+      // Popular Chat & Reasoning Models
+      {
+        id: '@cf/meta/llama-3.3-70b-instruct',
+        name: 'Meta LLaMA 3.3 70B',
+        provider: 'cloudflare-workers-ai',
+        description: 'Frontier capability, fast & versatile',
+        contextLength: 131072,
+        capabilities: ['chat'],
+      },
+      {
+        id: '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
+        name: 'DeepSeek R1 Distill 32B',
+        provider: 'cloudflare-workers-ai',
+        description: 'Deep chain-of-thought reasoning',
+        contextLength: 131072,
+        capabilities: ['chat'],
+      },
+      {
+        id: '@cf/zai-org/glm-4.7-flash',
+        name: 'GLM-4.7 Flash',
+        provider: 'cloudflare-workers-ai',
+        description: 'Fast thinking & bilingual dialogue',
+        contextLength: 131072,
+        capabilities: ['chat'],
+      },
+      {
+        id: '@cf/qwen/qwen2.5-7b-instruct',
+        name: 'Qwen 2.5 7B Instruct',
+        provider: 'cloudflare-workers-ai',
+        description: 'Snappy everyday conversationalist',
+        contextLength: 32768,
+        capabilities: ['chat'],
+      },
+    ] satisfies ModelInfo[]),
   },
   validationRequiredWhen: (config) => {
     return !!config.apiKey && !!config.accountId

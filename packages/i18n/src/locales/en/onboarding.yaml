@@ -90,16 +90,43 @@ steps:
         f2: Zero cloud telemetry or external network calls
         f3: Instant startup with local database
     cloud:
-      badge: Multi-Device Sync
+      badge: 10 GB Free + Cloud Sync
       title: Account Sign-In (Cloudflare)
-      description: Connect your account to sync companions, settings, and memory vaults
-        across devices with end-to-end encryption.
+      description: Connect your account to unlock 10 GB of free storage, daily edge
+        AI credits, and 24/7 companion presence across devices.
       selectedCta: Selected (Cloud-Backed)
       selectCta: Choose Cloud Sync
       features:
-        f1: Encrypted R2 cloud backups
-        f2: Seamless multi-device synchronization
-        f3: Automatic vault credential recovery
+        f1: 10 GB Free Cloud Storage
+        f2: Free Daily Edge AI Credits
+        f3: 24/7 Discord Cloud Relay
+        f4: Multi-Device Sync & 1-Click Restore
+        f5: Private CORS Proxy & Zero-Custody
+        storage:
+          title: 10 GB Free Cloud Storage
+          desc: Back up 3D models, custom backgrounds, and full memory vaults with zero egress fees.
+          howItWorks: Powered by user-owned Cloudflare R2 object storage.
+          whyItMatters: Generous free tier with plenty of room for dozens of VRM/Live2D models and years of chat history. Unlike AWS S3, downloading your assets is 100% free with $0 bandwidth fees.
+        ai:
+          title: Free Daily Edge AI Credits
+          desc: 10,000 free daily Neurons for DeepSeek, Qwen & Llama (no API key required).
+          howItWorks: Directly connects to Cloudflare Workers AI during Step 8 (Consciousness).
+          whyItMatters: Chat immediately with cutting-edge open models at the edge without needing an OpenAI subscription, paid credit card, or a high-end local gaming GPU.
+        relay:
+          title: 24/7 Discord Cloud Relay
+          desc: Keep your companion awake in your Discord server even when your PC is turned off.
+          howItWorks: Runs as a serverless Cloudflare Worker (@proj-airi/stage-edge) handling Discord interaction webhooks.
+          whyItMatters: Your companion stays alive 24/7 to chat in Discord, stores context in Edge KV, and syncs conversations back to your desktop when you reopen AIRI.
+        sync:
+          title: Multi-Device Sync & 1-Click Restore
+          desc: Seamlessly sync Desktop, Web, and Mobile; restore companions in one click.
+          howItWorks: Edge Key Vault (airi-edge-vault) securely tracks your active companion state.
+          whyItMatters: Reinstalling AIRI or moving to a new laptop/phone automatically brings back your companion, settings, and memories without manual key entry.
+        proxy:
+          title: Private CORS Proxy & Zero-Custody
+          desc: Access tricky local & remote AI APIs with 100% zero-custody data privacy.
+          howItWorks: Deploys a personal edge reverse proxy to bypass browser CORS headers for Web & Mobile stages.
+          whyItMatters: Everything runs in your personal Cloudflare account. AIRI operates zero intermediate servers and never reads, stores, or harvests your conversations.
     auth:
       connected: Connected to Cloudflare
       disconnect: Disconnect
@@ -397,6 +424,16 @@ steps:
     title: Visual Perception (Chat VLM)
     description: Enable your companion to inspect, understand, and react to images
       you send in chat.
+    tabs:
+      cloudflare: Cloudflare Edge
+      cloudflareBadge: 10k Free Daily
+      local: Local & Offline
+      localBadge: Air-Gapped
+      custom: Cloud Providers
+    cloudflare:
+      connected: 'Cloudflare Connected: 10,000 free Neurons/day active'
+      notConnected: Connect your Cloudflare account to use free edge vision with zero setup.
+      signIn: Sign In with Cloudflare
     engineTitle: Vision Analysis Model
     testImage: Test Visual Perception
     testPrompt: Upload an image to verify companion visual understanding.

@@ -169,15 +169,12 @@ else {
 
 // 5. Optional System-2 Extractor Synthesis (OpenCode Go)
 if (shouldSynthesize) {
-  await runSynthesisTest(traceData)
+  await runAgenticSynthesisLoop(traceData)
 }
 
-// 6. Optional System-1 Reflex Evaluation (TypeSafe Jev)
 if (shouldQueryJev) {
   await runJevReflexTest(stateHistory)
 }
-
-console.log('\n✅ Cleanroom Replay Complete.')
 
 // --- ASCII Grid Renderer ---
 function renderAsciiGrid(frame, state, grid80x40) {
@@ -228,134 +225,299 @@ function renderAsciiGrid(frame, state, grid80x40) {
   }
 }
 
-// --- System-2 Synthesis Routine ---
-async function runSynthesisTest(trace) {
+// --- System-2 Agentic Reflexion Synthesis Routine ---
+async function runAgenticSynthesisLoop(trace) {
   console.log('\n===============================================================')
-  console.log('🧠 Testing System-2 Extractor Synthesis (OpenCode Go)')
+  console.log('🧠 System-2 Agentic Synthesis Loop (Test-Time Reflexion)')
   console.log('===============================================================')
 
   const apiKey = env.OPENCODE_GO_API_KEY
   const baseUrl = env.OPENCODE_GO_BASE_URL || 'https://opencode.ai/zen/go/v1'
 
   if (!apiKey) {
-    console.warn('⚠️  OPENCODE_GO_API_KEY not found in .env, skipping live synthesis test.')
+    console.warn('⚠️  OPENCODE_GO_API_KEY not found in .env, skipping live synthesis loop.')
     return
   }
 
-  const sampleFrames = trace.frames.slice(0, 30).map(f => ({
-    t: f.t,
-    keys: f.keys,
-    addedCount: f.added?.length || 0,
-    removedCount: f.removed?.length || 0,
-  }))
+  const synthModel = getArg('--model', 'deepseek-v4-flash')
+  const maxTurns = Number.parseInt(getArg('--turns', '5'), 10)
+  const sessionId = crypto.randomUUID()
 
-  const prompt = `You are AIRI's Autonomous Gaming Subsystem.
-Synthesize a pure JavaScript state extractor function for this retro game:
-Game: "${trace.game}"
+  console.log(`🤖 Model: ${synthModel} | Max Turns: ${maxTurns} | Session: ${sessionId}`)
+
+  const initialPrompt = `You are AIRI's Autonomous Gaming Subsystem.
+Synthesize a pure JavaScript state extractor and evaluator for this retro game:
+Game: "${trace.game || 'Nibbles QBasic'}"
+Screen Architecture: fixed_single_screen
+Resolution: 80x40
 
 The runtime provides standard deterministic \`diffUtils\` primitives:
-- \`diffUtils.getClusters(points)\`: returns Array<{ x, y, size, bbox }>
-- \`diffUtils.trackTrajectories(prevClusters, currClusters)\`: returns clusters with dx, dy, heading
+- \`diffUtils.getClusters(points, distanceThreshold=2.5)\`: returns Array<{ x, y, size, bbox, pixels }> (Note: single-frame clusters default to heading: 'STATIONARY')
+- \`diffUtils.trackTrajectories(prevClusters, currClusters, maxMatchDistance=8)\`: returns tracked clusters with dx, dy, and dynamic heading ('UP'|'DOWN'|'LEFT'|'RIGHT'|'STATIONARY')
 - \`diffUtils.correlateInput(clusters, keys)\`: returns controllable player cluster or null
-- \`diffUtils.detectLossBurst(diff)\`: returns boolean true on game over
+- \`diffUtils.detectLossBurst(diff, burstThreshold=35)\`: returns boolean true on death/loss burst
 - \`diffUtils.euclidean(p1, p2)\`: returns distance number
 
-Write complete, fully-executable JavaScript with NO placeholder ellipses (...) or incomplete statements.
-Output ONLY the code block:
-\`\`\`javascript
-function extractGameState(prevGrid, currGrid, diff, diffUtils) {
-  const added = (diff && diff.added) || [];
-  const clusters = diffUtils.getClusters(added);
-  const player = diffUtils.correlateInput(clusters, (diff && diff.keys) || []);
-  const threats = clusters.filter(c => c !== player && c.size >= 2);
-  const targets = clusters.filter(c => c !== player && c.size === 1);
-  const isGameOver = diffUtils.detectLossBurst(diff);
-  return {
-    player: player ? { x: player.x, y: player.y, heading: player.heading || 'STATIONARY' } : null,
-    threats: threats.map(t => ({ x: t.x, y: t.y, size: t.size })),
-    targets: targets.map(tgt => ({ x: tgt.x, y: tgt.y })),
-    isGameOver
-  };
-}
-\`\`\``
+You MUST implement two top-level functions in pure JavaScript:
 
-  console.log('Sending request to OpenCode Go...')
-  const t0 = performance.now()
-  try {
-    const synthModel = getArg('--model', 'space-bunny-free')
+1. \`extractGameState(prevGrid, currGrid, diff, diffUtils)\`:
+   - Extracts semantic state:
+     {
+       controllableEntity: { x, y, heading: 'UP'|'DOWN'|'LEFT'|'RIGHT'|'STATIONARY' } | null,
+       threats: Array<{ x, y, size }>,
+       targets: Array<{ x, y }>,
+       isGameOver: boolean
+     }
+   - IMPORTANT FOR HEADING: diffUtils.getClusters() only groups spatial coordinates within the current frame. To give controllableEntity a dynamic heading, compute the motion vector (e.g. by comparing diff.added head centroid vs diff.removed tail centroid, or correlating consecutive positions).
+   - IMPORTANT FOR LOSS: Ignore or filter initial startup/intro frames (e.g. if diff.t < 2000) so clearing intro screens is not mistaken for a game-over crash.
 
-    const res = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'x-opencode-session': crypto.randomUUID(),
-      },
-      body: JSON.stringify({
-        model: synthModel,
-        messages: [
-          { role: 'user', content: prompt },
-        ],
-        temperature: 0.1,
-        max_tokens: 2500,
-      }),
-      signal: AbortSignal.timeout(45000),
-    })
+2. \`evaluateGameState(prevFrame, currFrame, telemetry, diffUtils)\`:
+   - Calls extractGameState(null, null, currFrame, diffUtils).
+   - Returns a directional key action string based on entity heading or target coordinates (e.g. 'up', 'down', 'left', 'right', or 'space').
 
-    if (!res.ok) {
-      console.error(`❌ Synthesis API returned HTTP ${res.status}: ${await res.text()}`)
+Output complete, valid, executable JavaScript with NO ellipses (...) or placeholder pseudo-code.
+Output ONLY the code block in \`\`\`javascript ... \`\`\`.`
+
+  const messages = [
+    { role: 'user', content: initialPrompt },
+  ]
+
+  let isVerified = false
+  let verifiedCode = null
+
+  for (let turn = 1; turn <= maxTurns; turn++) {
+    console.log(`\n--------------------------------------------------`)
+    console.log(`🔄 Turn ${turn} / ${maxTurns}: Requesting Code Synthesis from ${synthModel}...`)
+    console.log(`--------------------------------------------------`)
+
+    const t0 = performance.now()
+    let rawContent = ''
+    try {
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          'x-opencode-session': sessionId,
+        },
+        body: JSON.stringify({
+          model: synthModel,
+          messages,
+          temperature: 0.1,
+        }),
+        signal: AbortSignal.timeout(240000),
+      })
+
+      if (!res.ok) {
+        console.error(`❌ Synthesis API returned HTTP ${res.status}: ${await res.text()}`)
+        return
+      }
+
+      const data = await res.json()
+      const msg = data.choices?.[0]?.message || {}
+      rawContent = msg.content || ''
+    }
+    catch (err) {
+      console.error(`❌ Synthesis request failed: ${err.message}`)
       return
     }
 
-    const data = await res.json()
-    const msg = data.choices?.[0]?.message || {}
-    const fullText = `${msg.content || ''}\n${msg.reasoning_content || ''}`.trim()
-    const codeBlocks = [...fullText.matchAll(/```(?:javascript|js)?\s*([\s\S]*?)```/g)].map(m => m[1].trim())
-    let rawCode = codeBlocks.find(b => b.includes('function extractGameState'))
-    if (!rawCode) {
-      const fnMatch = fullText.match(/function\s+extractGameState\s*\([^)]*\)\s*\{[\s\S]*?\n\}/)
-      if (fnMatch)
-        rawCode = fnMatch[0]
-    }
+    const elapsed = Math.round(performance.now() - t0)
+    console.log(`⚡ Model responded in ${elapsed}ms`)
 
-    if (rawCode) {
-      console.log('\n📝 Synthesized Extractor Code:')
-      console.log('--------------------------------------------------')
-      console.log(rawCode)
-      console.log('--------------------------------------------------')
-
-      console.log('\n🧪 Testing Synthesized Function in Cleanroom Sandbox...')
-      try {
-        const fn = new Function('diffUtils', `${rawCode}; return extractGameState;`)(diffUtils)
-        let successCount = 0
-        let lossCaught = false
-
-        for (let i = 0; i < trace.frames.length; i++) {
-          const f = trace.frames[i]
-          const res = fn(null, null, f, diffUtils)
-          if (res && (res.player || res.controllableEntity || res.isGameOver !== undefined)) {
-            successCount++
-          }
-          if (res && res.isGameOver)
-            lossCaught = true
-        }
-
-        console.log(`✅ Sandbox Execution: ${successCount} / ${trace.frames.length} frames evaluated cleanly!`)
-        console.log(`💥 Game-Over Event Caught: ${lossCaught ? 'YES' : 'NO'}`)
-        console.log(`  Sample State at Frame #10:`, fn(null, null, trace.frames[10], diffUtils))
-      }
-      catch (execErr) {
-        console.error(`⚠️ Sandbox execution error:`, execErr.message)
+    // Extract code block strictly from msg.content
+    let candidateCode = ''
+    if (rawContent) {
+      const codeBlocks = [...rawContent.matchAll(/```(?:javascript|js)?\s*([\s\S]*?)```/g)].map(m => m[1].trim())
+      candidateCode = codeBlocks.find(b => b.includes('extractGameState')) || ''
+      if (!candidateCode) {
+        const fnMatch = rawContent.match(/function\s+extractGameState[\s\S]*?(?:function\s+evaluateGameState[\s\S]*?\}|\})/)
+        if (fnMatch)
+          candidateCode = fnMatch[0]
       }
     }
-    else {
-      console.log('⚠️ Could not extract function from response text. Full response:')
-      console.log(`${fullText.slice(0, 300)}...`)
+
+    if (!candidateCode) {
+      console.warn('⚠️ No code block found in response.')
+      messages.push({ role: 'assistant', content: rawContent })
+      messages.push({ role: 'user', content: 'Sandbox error: No JavaScript code block containing extractGameState was found. Please output your solution inside a ```javascript ... ``` code block.' })
+      continue
+    }
+
+    console.log(`\n📝 Candidate Code (Turn ${turn}):`)
+    console.log(candidateCode.slice(0, 350) + (candidateCode.length > 350 ? '\n... (truncated)' : ''))
+
+    // Run Sandbox Judge against actual recorded frames
+    console.log('\n⚖️  Running Automated Sandbox Judge against recorded frames...')
+    const testFrames = trace.frames.slice(0, 200)
+    const judgeResult = runSandboxJudge(candidateCode, testFrames, diffUtils)
+
+    console.log('Judge Report:')
+    console.log(`  1. Runtime Safety: ${judgeResult.safety.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.safety.reason}`}`)
+    console.log(`  2. Dynamic Heading: ${judgeResult.heading.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.heading.reason}`}`)
+    console.log(`  3. Action Diversity: ${judgeResult.actions.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.actions.reason}`}`)
+    console.log(`  4. Game-Over Consistency: ${judgeResult.loss.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.loss.reason}`}`)
+
+    if (judgeResult.passed) {
+      console.log(`\n🎉 ALL 4 SANDBOX JUDGE CRITERIA PASSED on Turn ${turn}!`)
+      console.log('✨ Verified mini-program synthesized successfully!')
+      isVerified = true
+      verifiedCode = candidateCode
+      break
+    }
+
+    // Build diagnostic feedback for next turn
+    const failures = []
+    if (!judgeResult.safety.passed)
+      failures.push(`Runtime Safety: ${judgeResult.safety.reason}`)
+    if (!judgeResult.heading.passed)
+      failures.push(`Dynamic Heading: ${judgeResult.heading.reason}`)
+    if (!judgeResult.actions.passed)
+      failures.push(`Action Diversity: ${judgeResult.actions.reason}`)
+    if (!judgeResult.loss.passed)
+      failures.push(`Game-Over Consistency: ${judgeResult.loss.reason}`)
+
+    const critique = `Automated Sandbox Judge Test on Turn ${turn} FAILED with ${failures.length} issue(s):
+${failures.map((f, i) => `${i + 1}. ${f}`).join('\n')}
+
+Please review these empirical failures, fix your logic, and output the updated complete code inside a \`\`\`javascript block.`
+
+    console.log(`\n💬 Sending Critique Feedback to Agent for Turn ${turn + 1}...`)
+    messages.push({ role: 'assistant', content: rawContent })
+    messages.push({ role: 'user', content: critique })
+  }
+
+  if (isVerified) {
+    console.log('\n===============================================================')
+    console.log('🏆 AGENTIC SYNTHESIS COMPLETE: VERIFIED CODE')
+    console.log('===============================================================')
+    console.log(verifiedCode)
+  }
+  else {
+    console.log('\n⚠️ Reached maximum turns without passing all judge criteria.')
+  }
+}
+
+// --- Automated Sandbox Judge ---
+function runSandboxJudge(code, frames, diffUtils) {
+  const result = {
+    passed: false,
+    safety: { passed: true, reason: '' },
+    heading: { passed: true, reason: '' },
+    actions: { passed: true, reason: '' },
+    loss: { passed: true, reason: '' },
+  }
+
+  // 1. Runtime Safety (compilation)
+  let extractFn = null
+  let evaluateFn = null
+  try {
+    const wrapped = `
+      ${code}
+      return {
+        extractGameState: typeof extractGameState !== 'undefined' ? extractGameState : null,
+        evaluateGameState: typeof evaluateGameState !== 'undefined' ? evaluateGameState : null,
+      };
+    `
+    const factory = new Function('diffUtils', wrapped)
+    const exports = factory(diffUtils)
+    extractFn = exports.extractGameState
+    evaluateFn = exports.evaluateGameState
+    if (!extractFn) {
+      result.safety = { passed: false, reason: 'extractGameState function was not defined.' }
+      return result
     }
   }
-  catch (err) {
-    console.error('❌ Synthesis failed:', err.message)
+  catch (compErr) {
+    result.safety = { passed: false, reason: `Syntax or compilation error: ${compErr.message}` }
+    return result
   }
+
+  // Frame execution
+  const frameStates = []
+  const frameActions = []
+  let execErrors = 0
+  let sampleError = ''
+  let prevFrame = null
+
+  for (let i = 0; i < frames.length; i++) {
+    const frame = frames[i]
+    try {
+      const state = extractFn(null, null, frame, diffUtils)
+      frameStates.push({ i, frame, state })
+      if (evaluateFn) {
+        const action = evaluateFn(prevFrame, frame, {}, diffUtils)
+        frameActions.push(action)
+      }
+    }
+    catch (err) {
+      execErrors++
+      if (!sampleError)
+        sampleError = `Frame #${i}: ${err.message}`
+    }
+    prevFrame = frame
+  }
+
+  if (execErrors > 0) {
+    result.safety = { passed: false, reason: `${execErrors} runtime exceptions thrown (e.g. ${sampleError})` }
+  }
+
+  // 2. Dynamic Heading
+  const headings = frameStates
+    .map(s => s.state?.controllableEntity?.heading || s.state?.player?.heading)
+    .filter(Boolean)
+  const uniqueHeadings = new Set(headings)
+
+  if (headings.length >= 5) {
+    if (uniqueHeadings.size <= 1) {
+      const onlyHeading = [...uniqueHeadings][0]
+      result.heading = {
+        passed: false,
+        reason: `Heading is permanently stuck on '${onlyHeading}' across all ${headings.length} frames. diffUtils.getClusters() does not provide velocity. Compute heading from diff deltas (added vs removed) or trackTrajectories.`,
+      }
+    }
+    else if (uniqueHeadings.has('STATIONARY') && uniqueHeadings.size === 1) {
+      result.heading = {
+        passed: false,
+        reason: `Heading is 100% 'STATIONARY'. You must calculate directional headings (UP, DOWN, LEFT, RIGHT).`,
+      }
+    }
+  }
+
+  // 3. Action Diversity
+  if (evaluateFn) {
+    const validActions = frameActions.filter(a => a && a !== 'none')
+    const uniqueActions = new Set(validActions)
+    if (validActions.length >= 5 && uniqueActions.size <= 1) {
+      const onlyAction = [...uniqueActions][0]
+      result.actions = {
+        passed: false,
+        reason: `evaluateGameState output only a single action ('${onlyAction}') across all ${validActions.length} frames. It must dynamically steer based on heading or targets.`,
+      }
+    }
+  }
+
+  // 4. Game-Over Consistency
+  const lossFrames = frameStates.filter(s => Boolean(s.state?.isGameOver)).map(s => s.i)
+  if (lossFrames.includes(0) || lossFrames.includes(1)) {
+    result.loss = {
+      passed: false,
+      reason: `isGameOver triggered immediately on initial startup/intro frame #${lossFrames[0]}. Intro screen clears must not be mistaken for game over.`,
+    }
+  }
+  else if (lossFrames.length > 0) {
+    const firstLoss = lossFrames[0]
+    const flapped = frameStates.find(s => s.i > firstLoss && !s.state?.isGameOver)
+    if (flapped) {
+      result.loss = {
+        passed: false,
+        reason: `isGameOver flapped: triggered at frame #${firstLoss}, but reverted to false at frame #${flapped.i}. Once game over occurs, it must remain true.`,
+      }
+    }
+  }
+
+  result.passed = result.safety.passed && result.heading.passed && result.actions.passed && result.loss.passed
+  return result
 }
 
 // --- System-1 Jev Reflex Routine ---
