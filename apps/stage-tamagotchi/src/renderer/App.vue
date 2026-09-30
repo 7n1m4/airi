@@ -603,7 +603,8 @@ const ROUTE_TITLES: Record<string, string> = {
   '/caption': 'AIRI - Captions',
   '/customizer': 'AIRI - Customizer',
   '/about': 'AIRI - About',
-  '/onboarding': 'AIRI - Onboarding',
+  '/onboarding': 'AIRI - Companion Wizard',
+  '/onboarding-v3': 'AIRI - Companion Wizard',
   '/widgets': 'AIRI - Widgets',
   '/splash': 'AIRI',
 }
