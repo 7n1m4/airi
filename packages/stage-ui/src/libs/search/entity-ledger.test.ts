@@ -201,6 +201,42 @@ describe('entityLedger', () => {
     expect(labels).not.toContain('Eeeep')
   })
 
+  it('peels leading grammatical words from sentence starters and prevents "And Kyo", "As NanO", "And Richard" from forming compound entities', async () => {
+    const { extractFragmentsFromText, extractTurnKnowledge } = await import('./ledger-priming')
+    const ledger = new EntityLedger()
+
+    const text = 'And Kyo, what do you think? As NanO pointed out earlier, we should proceed. User: And Richard agreed with us.'
+    const fragments = extractFragmentsFromText(text)
+
+    // Mentions must extract the real names, NOT the conjunction-polluted compounds
+    expect(fragments.mentions).toContain('Kyo')
+    expect(fragments.mentions).toContain('NanO')
+    expect(fragments.mentions).toContain('Richard')
+    expect(fragments.mentions).not.toContain('And Kyo')
+    expect(fragments.mentions).not.toContain('As NanO')
+    expect(fragments.mentions).not.toContain('And Richard')
+
+    extractTurnKnowledge(
+      text,
+      {
+        id: 'turn-peel-1',
+        speaker: 'User',
+        text,
+        timestamp: 1720000003000,
+      },
+      ledger,
+    )
+
+    const labels = Array.from(ledger.entities.values()).map(e => e.label)
+    expect(labels).toContain('Kyo')
+    expect(labels).toContain('NanO')
+    expect(labels).toContain('Richard')
+    expect(labels).toContain('User')
+    expect(labels).not.toContain('And Kyo')
+    expect(labels).not.toContain('As NanO')
+    expect(labels).not.toContain('And Richard')
+  })
+
   describe('pCL Contradiction Resolution & Invalidation', () => {
     it('creates new claims with isCurrent: true', () => {
       const ledger = new EntityLedger()
