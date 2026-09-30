@@ -84,7 +84,20 @@ export function shouldDegradeBackgroundWork(): boolean {
   return getMemoryPressureLevel() !== 'normal'
 }
 
+export function isMemorySentinelEnabled(): boolean {
+  try {
+    if (typeof localStorage !== 'undefined') {
+      return localStorage.getItem('settings/debug/enable-memory-sentinel') === 'true'
+    }
+  }
+  catch {}
+  return false
+}
+
 export function logMemoryProbe(tag: string = 'TICK', stats?: SubsystemStats): void {
+  if (!isMemorySentinelEnabled())
+    return
+
   try {
     const { jsHeapUsed, jsHeapTotal, jsHeapLimit, rssMB } = readMemoryMB()
 
@@ -111,7 +124,7 @@ export function logMemoryProbe(tag: string = 'TICK', stats?: SubsystemStats): vo
 }
 
 export function initMemorySentinel(intervalMs = 10000): void {
-  if (sentinelStarted)
+  if (sentinelStarted || !isMemorySentinelEnabled())
     return
   sentinelStarted = true
 

@@ -147,13 +147,11 @@ export const useProactivityStore = defineStore('proactivity', () => {
     isUpdatingSensors.value = true
 
     debug('[Proactivity] Starting updateSensors tick...')
-    console.time('[Proactivity] updateSensors')
     // Fallback for non-electron or missing invoker
     const now = new Date()
     locTime.value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
 
     if (!isElectron) {
-      console.timeEnd('[Proactivity] updateSensors')
       return
     }
 
@@ -251,7 +249,6 @@ export const useProactivityStore = defineStore('proactivity', () => {
       debug('[Proactivity] Failed to poll sensors for preview:', err)
     }
     finally {
-      console.timeEnd('[Proactivity] updateSensors')
       isUpdatingSensors.value = false
     }
   }
@@ -547,369 +544,363 @@ export const useProactivityStore = defineStore('proactivity', () => {
       return
     }
 
-    console.time('[Proactivity] evaluateHeartbeat')
+    if ((isHeartbeatEvaluating.value || (!options?.force && isPipeBusy.value)) && !options?.force) {
+      debug('[Proactivity] Evaluation already in progress or pipe is busy, skipping.')
+      return
+    }
+
+    debug('[Proactivity] Ticking evaluation loop...', { force: !!options?.force })
+
+    if (!activeCard.value) {
+      debug('[Proactivity] Aborted: No active card selected.', { activeCard: activeCard.value })
+      return
+    }
+
+    if (!options?.force && chatSession.isEnsuringSession) {
+      debug('[Proactivity] Aborted: Session switch in progress, deferring heartbeat.')
+      return
+    }
+
+    const now = new Date()
+
+    if (idleTimeSec.value === undefined && (config?.pauseWhenAfk ?? true)) {
+      await refreshIdleTimeOnly()
+    }
+
+    // NOTICE: Architectural Invariant - Heartbeats are an active-user companion check-in.
+    // They fire every `intervalMinutes` (wall-clock elapsed timer) while the user is actively working at their desk.
+    // Presence Gate (`pauseWhenAfk`): If the user is away (idle >= afkThresholdMinutes, default 5m),
+    // heartbeats pause so the AI does not talk to an empty room or waste credits.
+    // Heartbeats must NEVER require user inactivity/idle time (which deadlocks with pauseWhenAfk).
+    // Background idle processing belongs strictly to Dream State (`strictAfkGating`).
+    const gateResult = evaluateHeartbeatGating({
+      now: now.getTime(),
+      lastHeartbeatTime: lastHeartbeatTime.value,
+      intervalMinutes: config?.intervalMinutes ?? 5,
+      pauseWhenAfk: config?.pauseWhenAfk ?? true,
+      afkThresholdMinutes: config?.afkThresholdMinutes ?? 5,
+      currentIdleSec: idleTimeSec.value ?? 0,
+      isForce: options?.force,
+      schedule: config?.schedule,
+      respectSchedule: config?.respectSchedule ?? true,
+    })
+
+    if (!gateResult.allowed) {
+      debug(`[Proactivity] Aborted: ${gateResult.detail || gateResult.reason}`)
+      return
+    }
+
+    if (config?.injectIntoPrompt) {
+      if (isElectron && getIdleTimeInvoke) {
+        try {
+          await updateSensors()
+        }
+        catch (err) {
+          debug('[Proactivity] Failed to fetch OS sensors:', err)
+        }
+      }
+      else {
+        debug('[Proactivity] Skipping sensors: Browser environment or invokers missing.')
+      }
+    }
+
+    lastHeartbeatTime.value = now.getTime()
+    isHeartbeatEvaluating.value = true
+    logMemoryProbe('PROACTIVITY:START', { action: 'Proactive heartbeat evaluation triggered' })
+
     try {
-      if ((isHeartbeatEvaluating.value || (!options?.force && isPipeBusy.value)) && !options?.force) {
-        debug('[Proactivity] Evaluation already in progress or pipe is busy, skipping.')
-        return
+      const messages: { role: 'system' | 'user' | 'assistant', content: string }[] = []
+
+      if (airiCardStore.systemPrompt) {
+        messages.push({
+          role: 'system',
+          content: airiCardStore.systemPrompt,
+        })
       }
 
-      debug('[Proactivity] Ticking evaluation loop...', { force: !!options?.force })
+      const contextsSnapshot = chatContext.getContextsSnapshot()
+      const validModuleEntries = Object.entries(contextsSnapshot).map(([key, messages]) => {
+        const messageTexts = (Array.isArray(messages) ? messages : [messages])
+          .map(m => m && typeof m === 'object' && 'text' in m ? m.text : String(m))
+          .filter(t => t && t.trim() && !t.includes('No special expressions or props currently active') && !t.includes('No stickers are currently available') && !t.includes('Current Scene: Unknown Location'))
+        return [key, messageTexts] as const
+      }).filter(([_, texts]) => texts.length > 0)
 
-      if (!activeCard.value) {
-        debug('[Proactivity] Aborted: No active card selected.', { activeCard: activeCard.value })
-        return
+      if (validModuleEntries.length > 0) {
+        messages.push({
+          role: 'system',
+          content: `These are the contextual information retrieved or on-demand updated from other modules:\n${validModuleEntries.map(([key, texts]) => `Module ${key}:\n${texts.map(t => `- ${t}`).join('\n')}`).join('\n')}`,
+        })
       }
 
-      if (!options?.force && chatSession.isEnsuringSession) {
-        debug('[Proactivity] Aborted: Session switch in progress, deferring heartbeat.')
-        return
+      const sessionId = chatSession.activeSessionId
+      const sessionMessages = chatSession.sessionMessages[sessionId] || []
+
+      // NOTICE: Defensive character ownership check. The sessionMessages map holds every
+      // session ever loaded in memory (across all characters). Even after isEnsuringSession
+      // clears, a brief race or the RECOVERY BRIDGE loading candidate sessions could leave
+      // activeSessionId pointing at a session from a different character. We verify ownership
+      // via the session meta before injecting any messages, to prevent another character's
+      // conversation history (e.g. a previous roleplay session) from leaking into this
+      // character's proactive observation prompt.
+      const sessionMeta = chatSession.getSessionMeta(sessionId)
+      const sessionOwnerCharacterId = sessionMeta?.characterId
+      const currentCharacterId = activeCardId.value
+      if (sessionOwnerCharacterId && sessionOwnerCharacterId !== currentCharacterId) {
+        debug('[Proactivity] Session characterId mismatch — skipping history injection.', {
+          sessionId,
+          sessionOwnerCharacterId,
+          currentCharacterId,
+        })
+      }
+      else {
+        const usePrefixCacheFraming = config?.prefixCacheOptimized !== false
+        const historyToInject = usePrefixCacheFraming ? sessionMessages : sessionMessages.slice(-6)
+
+        for (const msg of historyToInject) {
+          if (msg.role === 'user' || msg.role === 'assistant') {
+            let msgContent = ''
+            if (typeof msg.content === 'string') {
+              msgContent = msg.content as string
+            }
+            else if (Array.isArray(msg.content)) {
+              msgContent = (msg.content as any[]).map((part: any) => {
+                if (typeof part === 'string')
+                  return part
+                if (part && typeof part === 'object' && 'text' in part)
+                  return String(part.text ?? '')
+                return ''
+              }).join('')
+            }
+            if (msgContent) {
+              messages.push({ role: msg.role as 'user' | 'assistant', content: msgContent })
+            }
+          }
+        }
       }
 
-      const now = new Date()
+      // 4. Ephemeral Tail Envelope (Strategy A: Volatile data at prompt tail)
+      const sensorPayloadRaw = config?.injectIntoPrompt ? sensorPayload.value : ''
+      const recentLedgerEvents = eventLogStore.getRecentEventsText(6)
+      const promptText = config?.prompt
 
-      if (idleTimeSec.value === undefined && (config?.pauseWhenAfk ?? true)) {
-        await refreshIdleTimeOnly()
-      }
-
-      // NOTICE: Architectural Invariant - Heartbeats are an active-user companion check-in.
-      // They fire every `intervalMinutes` (wall-clock elapsed timer) while the user is actively working at their desk.
-      // Presence Gate (`pauseWhenAfk`): If the user is away (idle >= afkThresholdMinutes, default 5m),
-      // heartbeats pause so the AI does not talk to an empty room or waste credits.
-      // Heartbeats must NEVER require user inactivity/idle time (which deadlocks with pauseWhenAfk).
-      // Background idle processing belongs strictly to Dream State (`strictAfkGating`).
-      const gateResult = evaluateHeartbeatGating({
-        now: now.getTime(),
-        lastHeartbeatTime: lastHeartbeatTime.value,
-        intervalMinutes: config?.intervalMinutes ?? 5,
-        pauseWhenAfk: config?.pauseWhenAfk ?? true,
-        afkThresholdMinutes: config?.afkThresholdMinutes ?? 5,
-        currentIdleSec: idleTimeSec.value ?? 0,
-        isForce: options?.force,
-        schedule: config?.schedule,
-        respectSchedule: config?.respectSchedule ?? true,
+      const tailDirective = formatProactiveTailEnvelope({
+        sensorPayloadRaw,
+        recentLedgerEvents,
+        promptText,
       })
 
-      if (!gateResult.allowed) {
-        debug(`[Proactivity] Aborted: ${gateResult.detail || gateResult.reason}`)
-        return
-      }
+      messages.push({ role: 'user', content: tailDirective })
 
-      if (config?.injectIntoPrompt) {
-        if (isElectron && getIdleTimeInvoke) {
-          try {
-            await updateSensors()
-          }
-          catch (err) {
-            debug('[Proactivity] Failed to fetch OS sensors:', err)
-          }
-        }
-        else {
-          debug('[Proactivity] Skipping sensors: Browser environment or invokers missing.')
-        }
-      }
+      const activeProviderId = consciousnessStore.activeProvider
+      const activeModel = consciousnessStore.activeModel
 
-      lastHeartbeatTime.value = now.getTime()
-      isHeartbeatEvaluating.value = true
-      logMemoryProbe('PROACTIVITY:START', { action: 'Proactive heartbeat evaluation triggered' })
-
-      try {
-        const messages: { role: 'system' | 'user' | 'assistant', content: string }[] = []
-
-        if (airiCardStore.systemPrompt) {
-          messages.push({
-            role: 'system',
-            content: airiCardStore.systemPrompt,
-          })
-        }
-
-        const contextsSnapshot = chatContext.getContextsSnapshot()
-        const validModuleEntries = Object.entries(contextsSnapshot).map(([key, messages]) => {
-          const messageTexts = (Array.isArray(messages) ? messages : [messages])
-            .map(m => m && typeof m === 'object' && 'text' in m ? m.text : String(m))
-            .filter(t => t && t.trim() && !t.includes('No special expressions or props currently active') && !t.includes('No stickers are currently available') && !t.includes('Current Scene: Unknown Location'))
-          return [key, messageTexts] as const
-        }).filter(([_, texts]) => texts.length > 0)
-
-        if (validModuleEntries.length > 0) {
-          messages.push({
-            role: 'system',
-            content: `These are the contextual information retrieved or on-demand updated from other modules:\n${validModuleEntries.map(([key, texts]) => `Module ${key}:\n${texts.map(t => `- ${t}`).join('\n')}`).join('\n')}`,
-          })
-        }
-
-        const sessionId = chatSession.activeSessionId
-        const sessionMessages = chatSession.sessionMessages[sessionId] || []
-
-        // NOTICE: Defensive character ownership check. The sessionMessages map holds every
-        // session ever loaded in memory (across all characters). Even after isEnsuringSession
-        // clears, a brief race or the RECOVERY BRIDGE loading candidate sessions could leave
-        // activeSessionId pointing at a session from a different character. We verify ownership
-        // via the session meta before injecting any messages, to prevent another character's
-        // conversation history (e.g. a previous roleplay session) from leaking into this
-        // character's proactive observation prompt.
-        const sessionMeta = chatSession.getSessionMeta(sessionId)
-        const sessionOwnerCharacterId = sessionMeta?.characterId
-        const currentCharacterId = activeCardId.value
-        if (sessionOwnerCharacterId && sessionOwnerCharacterId !== currentCharacterId) {
-          debug('[Proactivity] Session characterId mismatch — skipping history injection.', {
-            sessionId,
-            sessionOwnerCharacterId,
-            currentCharacterId,
-          })
-        }
-        else {
-          const usePrefixCacheFraming = config?.prefixCacheOptimized !== false
-          const historyToInject = usePrefixCacheFraming ? sessionMessages : sessionMessages.slice(-6)
-
-          for (const msg of historyToInject) {
-            if (msg.role === 'user' || msg.role === 'assistant') {
-              let msgContent = ''
-              if (typeof msg.content === 'string') {
-                msgContent = msg.content as string
-              }
-              else if (Array.isArray(msg.content)) {
-                msgContent = (msg.content as any[]).map((part: any) => {
-                  if (typeof part === 'string')
-                    return part
-                  if (part && typeof part === 'object' && 'text' in part)
-                    return String(part.text ?? '')
-                  return ''
-                }).join('')
-              }
-              if (msgContent) {
-                messages.push({ role: msg.role as 'user' | 'assistant', content: msgContent })
-              }
-            }
-          }
-        }
-
-        // 4. Ephemeral Tail Envelope (Strategy A: Volatile data at prompt tail)
-        const sensorPayloadRaw = config?.injectIntoPrompt ? sensorPayload.value : ''
-        const recentLedgerEvents = eventLogStore.getRecentEventsText(6)
-        const promptText = config?.prompt
-
-        const tailDirective = formatProactiveTailEnvelope({
-          sensorPayloadRaw,
-          recentLedgerEvents,
-          promptText,
-        })
-
-        messages.push({ role: 'user', content: tailDirective })
-
-        const activeProviderId = consciousnessStore.activeProvider
-        const activeModel = consciousnessStore.activeModel
-
-        if (!activeProviderId) {
-          debug('[Proactivity] Aborted: No active LLM provider found.')
-          await eventLogStore.appendEvent({
-            category: 'proactivity',
-            type: 'heartbeat_failed',
-            source: activeCard.value?.name || 'AIRI',
-            textSummary: 'Proactive heartbeat aborted: No active LLM provider selected.',
-            payload: { reason: 'no_active_provider' },
-          })
-          return
-        }
-
-        if (!options?.force && !providersStore.configuredProviders[activeProviderId]) {
-          debug(`[Proactivity] Aborted: Active LLM provider "${activeProviderId}" is not configured or offline.`)
-          await eventLogStore.appendEvent({
-            category: 'proactivity',
-            type: 'heartbeat_failed',
-            source: activeCard.value?.name || 'AIRI',
-            textSummary: `Proactive heartbeat aborted: Active LLM provider "${activeProviderId}" is not configured or offline.`,
-            payload: { provider: activeProviderId, reason: 'provider_unconfigured_or_offline' },
-          })
-          return
-        }
-
-        debug('[Proactivity] Resolving Provider Instance:', { activeProviderId, activeModel })
-        const activeProvider = await providersStore.getProviderInstance(activeProviderId) as any
-
-        if (!activeProvider) {
-          debug('[Proactivity] Aborted: Failed to instantiate LLM provider.', { activeProviderId })
-          await eventLogStore.appendEvent({
-            category: 'proactivity',
-            type: 'heartbeat_failed',
-            source: activeCard.value?.name || 'AIRI',
-            textSummary: `Proactive heartbeat aborted: Failed to instantiate LLM provider "${activeProviderId}".`,
-            payload: { provider: activeProviderId, reason: 'provider_instantiation_failed' },
-          })
-          return
-        }
-
-        // NOTICE: Uses the top-level resolveRegisteredTools function (also used by LiveSessionStore)
-        const resolvedTools = resolveRegisteredTools
-
-        const llmResponse = await llmStore.generate(activeModel, activeProvider, messages, {
-          tools: resolvedTools,
-          supportsTools: true,
-        })
-        const rawReply = llmResponse.text
-
-        // Record token usage for persistent tracking (handles string-typed usage fields safely)
-        liveSessionStore.recordInferenceUsage(llmResponse.usage)
-
-        debug(`[Proactivity] LLM Raw Response: "${rawReply}"`)
-
-        // NOTICE: `NO_REPLY` is a control sentinel for proactive heartbeats, not user-facing content.
-        // If the model returns it exactly, we must stop here so it never reaches chat history, stage
-        // replay, captions, or TTS.
-        if (isNoReplySentinel(rawReply)) {
-          debug('[Proactivity] AI decided to remain silent via NO_REPLY sentinel.')
-          await eventLogStore.appendEvent({
-            category: 'proactivity',
-            type: 'heartbeat_gated',
-            source: activeCard.value?.name || 'AIRI',
-            textSummary: 'Proactive heartbeat evaluated: silent (NO_REPLY)',
-            payload: {
-              provider: activeProviderId,
-              model: activeModel,
-              idleSec: idleTimeSec.value,
-            },
-          })
-          return
-        }
-
-        const composedMessageSnapshot = toRaw(chatSession.sessionMessages[sessionId] || [])
-
-        const rawStreamingContext: ChatStreamEventContext = {
-          message: { role: 'user', content: '[Heartbeat Check]', createdAt: Date.now(), id: nanoid() },
-          contexts: toRaw(chatContext.getContextsSnapshot()),
-          composedMessage: composedMessageSnapshot as any,
-        }
-
-        // Deep clone to ensure serializability for IPC (prevents DataCloneError)
-        const streamingContext = JSON.parse(JSON.stringify(rawStreamingContext))
-
-        const buildingMessage: StreamingAssistantMessage = {
-          role: 'assistant',
-          content: '',
-          slices: [],
-          tool_results: [],
-          createdAt: Date.now(),
-          id: nanoid(),
-        }
-
-        await chatOrchestrator.emitBeforeMessageComposedHooks('[Proactive Heartbeat]', streamingContext)
-
-        const categorizer = createStreamingCategorizer(activeProviderId)
-        let streamPosition = 0
-
-        const updateUI = () => {
-          if (sessionId === chatSession.activeSessionId) {
-            chatOrchestrator.streamingMessage = JSON.parse(JSON.stringify(buildingMessage))
-          }
-        }
-
-        const parser = useLlmmarkerParser({
-          onLiteral: async (literal) => {
-            categorizer.consume(literal)
-            const speechOnly = categorizer.filterToSpeech(literal, streamPosition)
-            streamPosition += literal.length
-
-            if (speechOnly.trim()) {
-              buildingMessage.content += speechOnly
-              await chatOrchestrator.emitTokenLiteralHooks(speechOnly, streamingContext)
-
-              const lastSlice = buildingMessage.slices.at(-1)
-              if (lastSlice?.type === 'text') {
-                lastSlice.text += speechOnly
-              }
-              else {
-                buildingMessage.slices.push({
-                  type: 'text',
-                  text: speechOnly,
-                })
-              }
-              updateUI()
-            }
-          },
-          onSpecial: async (special) => {
-            await chatOrchestrator.emitTokenSpecialHooks(special, streamingContext)
-          },
-          onEnd: (fullText) => {
-            const finalCategorization = categorizeResponse(fullText, activeProviderId)
-            buildingMessage.categorization = {
-              speech: finalCategorization.speech,
-              reasoning: finalCategorization.reasoning,
-            }
-            updateUI()
-          },
-        })
-
-        await parser.consume(rawReply || '')
-        await parser.end()
-
-        const trimmedReply = (buildingMessage.content as string).trim()
-
-        if (!trimmedReply) {
-          debug('[Proactivity] AI decided to remain silent.')
-          return
-        }
-
-        debug(`[Proactivity] Success! Injecting message into UI: ${trimmedReply}`)
-
-        await chatOrchestrator.emitStreamEndHooks(streamingContext)
-        await chatOrchestrator.emitAssistantResponseEndHooks(trimmedReply, streamingContext)
-
-        // Inscribe the proactive turn properly
-        chatSession.inscribeTurn(buildingMessage as any, sessionId)
-
-        if (sessionId === chatSession.activeSessionId) {
-          chatOrchestrator.streamingMessage = { role: 'assistant', content: '', slices: [], tool_results: [] }
-        }
-
-        await chatOrchestrator.emitAssistantMessageHooks(buildingMessage, trimmedReply, streamingContext)
-        await chatOrchestrator.emitChatTurnCompleteHooks({
-          output: buildingMessage,
-          outputText: trimmedReply,
-          toolCalls: [],
-        }, streamingContext)
-
-        await eventLogStore.appendEvent({
-          category: 'proactivity',
-          type: 'heartbeat_spoke',
-          source: activeCard.value?.name || 'AIRI',
-          textSummary: `${activeCard.value?.name || 'Character'} proactively spoke: "${trimmedReply.slice(0, 80)}${trimmedReply.length > 80 ? '...' : ''}"`,
-          payload: {
-            message: trimmedReply,
-            provider: activeProviderId,
-            model: activeModel,
-          },
-        })
-
-        // Piggyback vision capture onto the proactivity heartbeat when Live API is active.
-        // This eliminates the need for a separate vision polling loop — proactivity's AFK,
-        // schedule, and interval gates naturally protect vision from wasted captures.
-        if (liveSessionStore.isActive && visionStore.isWitnessEnabled) {
-          debug('[Proactivity] Live API active + Witness enabled → piggybacking vision capture.')
-          await visionStore.heartbeat({ force: true })
-        }
-      }
-      catch (err) {
-        console.error('[Proactivity] Error during heartbeat evaluation:', err)
-        const errorMsg = err instanceof Error ? err.message : String(err)
+      if (!activeProviderId) {
+        debug('[Proactivity] Aborted: No active LLM provider found.')
         await eventLogStore.appendEvent({
           category: 'proactivity',
           type: 'heartbeat_failed',
           source: activeCard.value?.name || 'AIRI',
-          textSummary: `Proactive heartbeat failed: ${errorMsg}`,
+          textSummary: 'Proactive heartbeat aborted: No active LLM provider selected.',
+          payload: { reason: 'no_active_provider' },
+        })
+        return
+      }
+
+      if (!options?.force && !providersStore.configuredProviders[activeProviderId]) {
+        debug(`[Proactivity] Aborted: Active LLM provider "${activeProviderId}" is not configured or offline.`)
+        await eventLogStore.appendEvent({
+          category: 'proactivity',
+          type: 'heartbeat_failed',
+          source: activeCard.value?.name || 'AIRI',
+          textSummary: `Proactive heartbeat aborted: Active LLM provider "${activeProviderId}" is not configured or offline.`,
+          payload: { provider: activeProviderId, reason: 'provider_unconfigured_or_offline' },
+        })
+        return
+      }
+
+      debug('[Proactivity] Resolving Provider Instance:', { activeProviderId, activeModel })
+      const activeProvider = await providersStore.getProviderInstance(activeProviderId) as any
+
+      if (!activeProvider) {
+        debug('[Proactivity] Aborted: Failed to instantiate LLM provider.', { activeProviderId })
+        await eventLogStore.appendEvent({
+          category: 'proactivity',
+          type: 'heartbeat_failed',
+          source: activeCard.value?.name || 'AIRI',
+          textSummary: `Proactive heartbeat aborted: Failed to instantiate LLM provider "${activeProviderId}".`,
+          payload: { provider: activeProviderId, reason: 'provider_instantiation_failed' },
+        })
+        return
+      }
+
+      // NOTICE: Uses the top-level resolveRegisteredTools function (also used by LiveSessionStore)
+      const resolvedTools = resolveRegisteredTools
+
+      const llmResponse = await llmStore.generate(activeModel, activeProvider, messages, {
+        tools: resolvedTools,
+        supportsTools: true,
+      })
+      const rawReply = llmResponse.text
+
+      // Record token usage for persistent tracking (handles string-typed usage fields safely)
+      liveSessionStore.recordInferenceUsage(llmResponse.usage)
+
+      debug(`[Proactivity] LLM Raw Response: "${rawReply}"`)
+
+      // NOTICE: `NO_REPLY` is a control sentinel for proactive heartbeats, not user-facing content.
+      // If the model returns it exactly, we must stop here so it never reaches chat history, stage
+      // replay, captions, or TTS.
+      if (isNoReplySentinel(rawReply)) {
+        debug('[Proactivity] AI decided to remain silent via NO_REPLY sentinel.')
+        await eventLogStore.appendEvent({
+          category: 'proactivity',
+          type: 'heartbeat_gated',
+          source: activeCard.value?.name || 'AIRI',
+          textSummary: 'Proactive heartbeat evaluated: silent (NO_REPLY)',
           payload: {
-            provider: consciousnessStore.activeProvider,
-            model: consciousnessStore.activeModel,
-            error: errorMsg,
+            provider: activeProviderId,
+            model: activeModel,
+            idleSec: idleTimeSec.value,
           },
         })
+        return
       }
-      finally {
-        isHeartbeatEvaluating.value = false
-        logMemoryProbe('PROACTIVITY:END', { action: 'Proactive heartbeat evaluation finished' })
+
+      const composedMessageSnapshot = toRaw(chatSession.sessionMessages[sessionId] || [])
+
+      const rawStreamingContext: ChatStreamEventContext = {
+        message: { role: 'user', content: '[Heartbeat Check]', createdAt: Date.now(), id: nanoid() },
+        contexts: toRaw(chatContext.getContextsSnapshot()),
+        composedMessage: composedMessageSnapshot as any,
+      }
+
+      // Deep clone to ensure serializability for IPC (prevents DataCloneError)
+      const streamingContext = JSON.parse(JSON.stringify(rawStreamingContext))
+
+      const buildingMessage: StreamingAssistantMessage = {
+        role: 'assistant',
+        content: '',
+        slices: [],
+        tool_results: [],
+        createdAt: Date.now(),
+        id: nanoid(),
+      }
+
+      await chatOrchestrator.emitBeforeMessageComposedHooks('[Proactive Heartbeat]', streamingContext)
+
+      const categorizer = createStreamingCategorizer(activeProviderId)
+      let streamPosition = 0
+
+      const updateUI = () => {
+        if (sessionId === chatSession.activeSessionId) {
+          chatOrchestrator.streamingMessage = JSON.parse(JSON.stringify(buildingMessage))
+        }
+      }
+
+      const parser = useLlmmarkerParser({
+        onLiteral: async (literal) => {
+          categorizer.consume(literal)
+          const speechOnly = categorizer.filterToSpeech(literal, streamPosition)
+          streamPosition += literal.length
+
+          if (speechOnly.trim()) {
+            buildingMessage.content += speechOnly
+            await chatOrchestrator.emitTokenLiteralHooks(speechOnly, streamingContext)
+
+            const lastSlice = buildingMessage.slices.at(-1)
+            if (lastSlice?.type === 'text') {
+              lastSlice.text += speechOnly
+            }
+            else {
+              buildingMessage.slices.push({
+                type: 'text',
+                text: speechOnly,
+              })
+            }
+            updateUI()
+          }
+        },
+        onSpecial: async (special) => {
+          await chatOrchestrator.emitTokenSpecialHooks(special, streamingContext)
+        },
+        onEnd: (fullText) => {
+          const finalCategorization = categorizeResponse(fullText, activeProviderId)
+          buildingMessage.categorization = {
+            speech: finalCategorization.speech,
+            reasoning: finalCategorization.reasoning,
+          }
+          updateUI()
+        },
+      })
+
+      await parser.consume(rawReply || '')
+      await parser.end()
+
+      const trimmedReply = (buildingMessage.content as string).trim()
+
+      if (!trimmedReply) {
+        debug('[Proactivity] AI decided to remain silent.')
+        return
+      }
+
+      debug(`[Proactivity] Success! Injecting message into UI: ${trimmedReply}`)
+
+      await chatOrchestrator.emitStreamEndHooks(streamingContext)
+      await chatOrchestrator.emitAssistantResponseEndHooks(trimmedReply, streamingContext)
+
+      // Inscribe the proactive turn properly
+      chatSession.inscribeTurn(buildingMessage as any, sessionId)
+
+      if (sessionId === chatSession.activeSessionId) {
+        chatOrchestrator.streamingMessage = { role: 'assistant', content: '', slices: [], tool_results: [] }
+      }
+
+      await chatOrchestrator.emitAssistantMessageHooks(buildingMessage, trimmedReply, streamingContext)
+      await chatOrchestrator.emitChatTurnCompleteHooks({
+        output: buildingMessage,
+        outputText: trimmedReply,
+        toolCalls: [],
+      }, streamingContext)
+
+      await eventLogStore.appendEvent({
+        category: 'proactivity',
+        type: 'heartbeat_spoke',
+        source: activeCard.value?.name || 'AIRI',
+        textSummary: `${activeCard.value?.name || 'Character'} proactively spoke: "${trimmedReply.slice(0, 80)}${trimmedReply.length > 80 ? '...' : ''}"`,
+        payload: {
+          message: trimmedReply,
+          provider: activeProviderId,
+          model: activeModel,
+        },
+      })
+
+      // Piggyback vision capture onto the proactivity heartbeat when Live API is active.
+      // This eliminates the need for a separate vision polling loop — proactivity's AFK,
+      // schedule, and interval gates naturally protect vision from wasted captures.
+      if (liveSessionStore.isActive && visionStore.isWitnessEnabled) {
+        debug('[Proactivity] Live API active + Witness enabled → piggybacking vision capture.')
+        await visionStore.heartbeat({ force: true })
       }
     }
+    catch (err) {
+      console.error('[Proactivity] Error during heartbeat evaluation:', err)
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      await eventLogStore.appendEvent({
+        category: 'proactivity',
+        type: 'heartbeat_failed',
+        source: activeCard.value?.name || 'AIRI',
+        textSummary: `Proactive heartbeat failed: ${errorMsg}`,
+        payload: {
+          provider: consciousnessStore.activeProvider,
+          model: consciousnessStore.activeModel,
+          error: errorMsg,
+        },
+      })
+    }
     finally {
-      console.timeEnd('[Proactivity] evaluateHeartbeat')
+      isHeartbeatEvaluating.value = false
+      logMemoryProbe('PROACTIVITY:END', { action: 'Proactive heartbeat evaluation finished' })
     }
   }
 
