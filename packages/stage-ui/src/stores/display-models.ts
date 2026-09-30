@@ -2094,29 +2094,31 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
                 }
               }
 
-              // 3. Raw Morph Target names (including numbered/hidden shape keys)
-              const meshes = gltf.meshes
-              if (Array.isArray(meshes)) {
-                meshes.forEach((mesh: any) => {
-                  if (mesh.primitives) {
-                    mesh.primitives.forEach((primitive: any) => {
-                      const targetNames = primitive.extras?.targetNames
-                      if (Array.isArray(targetNames)) {
-                        targetNames.forEach((tname: string) => {
-                          if (tname)
-                            expressions.push(tname)
-                        })
-                      }
-                    })
-                  }
-                  const meshTargetNames = mesh.extras?.targetNames
-                  if (Array.isArray(meshTargetNames)) {
-                    meshTargetNames.forEach((tname: string) => {
-                      if (tname)
-                        expressions.push(tname)
-                    })
-                  }
-                })
+              // 3. Raw Morph Target names (fallback for non-VRM glTF meshes without declared blendshape groups)
+              if (expressions.length === 0) {
+                const meshes = gltf.meshes
+                if (Array.isArray(meshes)) {
+                  meshes.forEach((mesh: any) => {
+                    if (mesh.primitives) {
+                      mesh.primitives.forEach((primitive: any) => {
+                        const targetNames = primitive.extras?.targetNames
+                        if (Array.isArray(targetNames)) {
+                          targetNames.forEach((tname: string) => {
+                            if (tname)
+                              expressions.push(tname)
+                          })
+                        }
+                      })
+                    }
+                    const meshTargetNames = mesh.extras?.targetNames
+                    if (Array.isArray(meshTargetNames)) {
+                      meshTargetNames.forEach((tname: string) => {
+                        if (tname)
+                          expressions.push(tname)
+                      })
+                    }
+                  })
+                }
               }
               break
             }

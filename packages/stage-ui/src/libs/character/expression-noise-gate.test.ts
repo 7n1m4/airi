@@ -79,6 +79,17 @@ describe('expression-noise-gate', () => {
       expect(classifyExpression('_eyeSquint+LowerUp_L')).toBe('procedural_eye')
       expect(classifyExpression('_mouthPress+DuckMouth')).toBe('procedural_eye')
     })
+
+    it('classifies VRoid internal component morphs (Fcl_*) as procedural_eye', () => {
+      expect(classifyExpression('Fcl_ALL_Angry')).toBe('procedural_eye')
+      expect(classifyExpression('Fcl_ALL_Fun')).toBe('procedural_eye')
+      expect(classifyExpression('Fcl_ALL_Joy')).toBe('procedural_eye')
+      expect(classifyExpression('Fcl_ALL_Sorrow')).toBe('procedural_eye')
+      expect(classifyExpression('Fcl_ALL_Surprised')).toBe('procedural_eye')
+      expect(classifyExpression('Fcl_BRW_Joy')).toBe('procedural_eye')
+      expect(classifyExpression('Fcl_EYE_Angry')).toBe('procedural_eye')
+      expect(classifyExpression('Fcl_MTH_SkinFung')).toBe('procedural_eye')
+    })
   })
 
   describe('classifyExpression - Neutral & Numeric Index Noise', () => {

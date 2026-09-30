@@ -150,7 +150,16 @@ async function loadModelCapabilities() {
     if (caps.expressions && caps.expressions.length > 0) {
       rawExpressions.value = caps.expressions
       const gateResult = filterCandidateExpressions(caps.expressions)
-      candidateExpressions.value = gateResult.candidates.length > 0 ? gateResult.candidates : caps.expressions
+      const candidates = gateResult.candidates.length > 0 ? [...gateResult.candidates] : [...caps.expressions]
+
+      // Keep single-eye winks (Blink_L / Blink_R) if present in raw expressions for Wink slot matching
+      for (const raw of caps.expressions) {
+        if (/^(blink_[lr]|wink_[lr]|eye_blink_[lr])$/i.test(raw) && !candidates.includes(raw)) {
+          candidates.push(raw)
+        }
+      }
+
+      candidateExpressions.value = candidates
     }
     else {
       // Fallback candidate vocabulary for uninstantiated or remote models
@@ -188,12 +197,50 @@ export interface CanonicalEmotionSlot {
 
 const CANONICAL_EMOTIONS: CanonicalEmotionSlot[] = [
   { id: 'smile', name: 'Smile', emoji: '😊', actToken: 'smile', matchRegex: /happy|joy|smile|fun|laugh|exp_01|f01/i },
-  { id: 'blush', name: 'Blush', emoji: '😳', actToken: 'blush', matchRegex: /relaxed|blush|dere|shy|exp_02|f02/i },
+  { id: 'blush', name: 'Blush', emoji: '😳', actToken: 'blush', matchRegex: /relaxed|blush|dere|shy|joy|exp_02|f02/i },
   { id: 'pout', name: 'Pout', emoji: '😠', actToken: 'pout', matchRegex: /angry|pout|rage|irritated|displeased|exp_03|f03/i },
   { id: 'surprise', name: 'Surprise', emoji: '😲', actToken: 'surprise', matchRegex: /surprised|surprise|shock|wide_eye|exp_04|f04/i },
   { id: 'wink', name: 'Wink', emoji: '😉', actToken: 'wink', matchRegex: /wink|blink_l|blink_r|wink_l|wink_r|exp_05|f05/i },
   { id: 'shy', name: 'Shy', emoji: '🙈', actToken: 'shy', matchRegex: /shy|sad|sorrow|troubled|down|cry|tear|exp_06|f06/i },
 ]
+
+// Built-in starter models hand-tuned semantic maps (100% verified working out of the box)
+const BUILTIN_MODEL_PRESETS: Record<string, Record<string, string>> = {
+  // Built-in VRM Avatars (VRoid standard blendshapes: Fun, Joy, Angry, Surprised, Blink_L, Sorrow)
+  'preset-vrm-1': {
+    smile: 'Fun',
+    blush: 'Joy',
+    pout: 'Angry',
+    surprise: 'Surprised',
+    wink: 'Blink_L',
+    shy: 'Sorrow',
+  },
+  'preset-vrm-2': {
+    smile: 'Fun',
+    blush: 'Joy',
+    pout: 'Angry',
+    surprise: 'Surprised',
+    wink: 'Blink_L',
+    shy: 'Sorrow',
+  },
+  // Built-in Live2D (Hiyori standard expression files)
+  'preset-live2d-1': {
+    smile: 'exp_01',
+    blush: 'exp_02',
+    pout: 'exp_03',
+    surprise: 'exp_04',
+    wink: 'exp_05',
+    shy: 'exp_06',
+  },
+  'preset-live2d-2': {
+    smile: 'exp_01',
+    blush: 'exp_02',
+    pout: 'exp_03',
+    surprise: 'exp_04',
+    wink: 'exp_05',
+    shy: 'exp_06',
+  },
+}
 
 // --- 4. Emotion Mappings & Draft State ---
 const expressionMappings = ref<Record<string, string>>({
@@ -280,16 +327,63 @@ const isGuidanceReady = computed(() => {
   return Boolean(actingDirectivesPrompt.value && actingDirectivesPrompt.value.trim().length > 0)
 })
 
-function runAutoCalibration() {
-  const candidates = candidateExpressions.value.length > 0 ? candidateExpressions.value : rawExpressions.value
-  const newMappings: Record<string, string> = { ...expressionMappings.value }
+function shouldAutoCalibrate(): boolean {
+  if (!isCalibrated.value || mappedSlotsCount.value < 4)
+    return true
 
+  const candidates = candidateExpressions.value.length > 0 ? candidateExpressions.value : rawExpressions.value
+  if (candidates.length === 0)
+    return false
+
+  // If any mapped slot references a blendshape that doesn't exist in candidates, auto-calibrate
   for (const slot of CANONICAL_EMOTIONS) {
+    const val = expressionMappings.value[slot.id]
+    if (val && !candidates.includes(val))
+      return true
+  }
+
+  return false
+}
+
+function runAutoCalibration(silent = false, force = false) {
+  const candidates = candidateExpressions.value.length > 0 ? candidateExpressions.value : rawExpressions.value
+  if (candidates.length === 0)
+    return
+
+  const newMappings: Record<string, string> = {}
+
+  // 1. Check if current model is one of the built-in presets
+  const preset = BUILTIN_MODEL_PRESETS[activeModelId.value]
+  if (preset) {
+    for (const slot of CANONICAL_EMOTIONS) {
+      const target = preset[slot.id]
+      if (target && (candidates.includes(target) || rawExpressions.value.includes(target))) {
+        newMappings[slot.id] = target
+      }
+    }
+  }
+
+  // 2. Map remaining slots via valid existing selections (if not force) or regex / unused candidates
+  for (const slot of CANONICAL_EMOTIONS) {
+    if (newMappings[slot.id])
+      continue
+
+    // Preserve valid existing mapping if not forced
+    if (!force) {
+      const existingVal = expressionMappings.value[slot.id]
+      if (existingVal && candidates.includes(existingVal)) {
+        newMappings[slot.id] = existingVal
+        continue
+      }
+    }
+
+    // Try regex match against candidates
     const match = candidates.find(c => slot.matchRegex.test(c))
     if (match) {
       newMappings[slot.id] = match
     }
-    else if (!newMappings[slot.id] && candidates.length > 0) {
+    else {
+      // Pick first unused candidate if available, else first candidate
       const unused = candidates.find(c => !Object.values(newMappings).includes(c))
       newMappings[slot.id] = unused || candidates[0]
     }
@@ -305,7 +399,9 @@ function runAutoCalibration() {
   }
 
   syncDraft()
-  toast.success('Auto-calibrated canonical expressions and generated acting directives!')
+  if (!silent) {
+    toast.success('Auto-calibrated canonical expressions and generated acting directives!')
+  }
 }
 
 // --- 6. Acting Directives Full-Span Modal ---
@@ -408,12 +504,18 @@ watch(activeModelId, async (newId) => {
     resetPreviewPosition()
     await initializeStageRenderer()
     await loadModelCapabilities()
+    if (shouldAutoCalibrate()) {
+      runAutoCalibration(true, true)
+    }
   }
 })
 
 onMounted(async () => {
   await initializeStageRenderer()
   await loadModelCapabilities()
+  if (shouldAutoCalibrate()) {
+    runAutoCalibration(true, true)
+  }
 })
 
 onBeforeUnmount(() => {
@@ -617,7 +719,7 @@ function handleContinue() {
                     ? 'border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200'
                     : 'bg-primary-600 hover:bg-primary-500 text-white shadow-primary-600/30',
                 ]"
-                @click="runAutoCalibration"
+                @click="() => runAutoCalibration(false, true)"
               >
                 <div :class="[isCalibrated ? 'i-solar:refresh-linear w-3.5 h-3.5' : 'i-solar:stars-line-bold-duotone w-3.5 h-3.5 text-cyan-200']" />
                 <span>{{ isCalibrated ? 'Recalibrate' : 'Auto-calibrate' }}</span>
@@ -683,6 +785,12 @@ function handleContinue() {
                 >
                   <option value="">
                     -- Unmapped --
+                  </option>
+                  <option
+                    v-if="expressionMappings[slot.id] && !(candidateExpressions.length > 0 ? candidateExpressions : rawExpressions).includes(expressionMappings[slot.id])"
+                    :value="expressionMappings[slot.id]"
+                  >
+                    {{ expressionMappings[slot.id] }}
                   </option>
                   <option
                     v-for="expr in (candidateExpressions.length > 0 ? candidateExpressions : rawExpressions)"
