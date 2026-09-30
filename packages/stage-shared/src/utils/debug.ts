@@ -1,6 +1,8 @@
 let debugEnabled = false
 
-if (typeof window !== 'undefined') {
+// NOTICE: histoire collection and SSR provide a JSDOM `window` without a
+// `localStorage` global, so guard both (bare `localStorage` would throw).
+if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
   debugEnabled = localStorage.getItem('debug') === 'true' || localStorage.getItem('DEBUG') === 'true'
 }
 else if (typeof process !== 'undefined') {

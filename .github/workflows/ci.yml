@@ -85,6 +85,10 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      # NOTICE: typecheck resolves workspace subpath exports from dist/
+      # (e.g. @proj-airi/plugin-protocol/types). --ignore-scripts skips the
+      # implicit postinstall build, so build explicitly first.
+      - run: pnpm run build:packages
       - run: pnpm run typecheck
 
   unit-test:
