@@ -11,6 +11,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import ChronologicalTimelineView from './components/ChronologicalTimelineView.vue'
 import ConstellationCanvas from './components/ConstellationCanvas.vue'
 import EntityDetailDrawer from './components/EntityDetailDrawer.vue'
+import KnowledgeGraphOverview from './components/KnowledgeGraphOverview.vue'
 import MindMapHeader from './components/MindMapHeader.vue'
 import MindMapZeroState from './components/MindMapZeroState.vue'
 import UniversalTimeScrubber from './components/UniversalTimeScrubber.vue'
@@ -25,7 +26,7 @@ const airiCardStore = useAiriCardStore()
 const { activeCardId } = storeToRefs(airiCardStore)
 
 // View State
-const viewMode = ref<'constellation' | 'timeline'>('constellation')
+const viewMode = ref<'overview' | 'constellation' | 'timeline'>('overview')
 const selectedEntityId = ref<string | null>(null)
 const selectedTurnId = ref<string | null>(null)
 const isDrawerOpen = ref(false)
@@ -235,8 +236,17 @@ onMounted(() => {
       <!-- Keep views alive across tab toggles -->
       <template v-else>
         <KeepAlive>
+          <div v-if="viewMode === 'overview'" class="h-full overflow-y-auto p-4 md:p-6">
+            <KnowledgeGraphOverview
+              :character-id="activeCardId"
+              :show-workspace-button="false"
+              @select-entity="handleSelectEntity"
+              @rebuild="handleRebuild"
+              @clear="handleClear"
+            />
+          </div>
           <ConstellationCanvas
-            v-if="viewMode === 'constellation'"
+            v-else-if="viewMode === 'constellation'"
             :nodes="graphNodes"
             :edges="graphEdges"
             :selected-entity-id="selectedEntityId"
@@ -244,7 +254,7 @@ onMounted(() => {
             @select-entity="handleSelectEntity"
           />
           <ChronologicalTimelineView
-            v-else
+            v-else-if="viewMode === 'timeline'"
             :entities="timelineEntities"
             :claims="timelineClaims"
             :sources="entityLedgerStore.sources"
@@ -272,7 +282,7 @@ onMounted(() => {
 
     <!-- Bottom Universal Time Scrubber -->
     <UniversalTimeScrubber
-      v-if="entityLedgerStore.entities.length > 0"
+      v-if="entityLedgerStore.entities.length > 0 && viewMode !== 'overview'"
       v-model="currentScrubTimestamp"
       :min-timestamp="minTimestamp"
       :max-timestamp="maxTimestamp"

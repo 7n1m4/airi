@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import type { EntityType } from '@proj-airi/stage-ui/libs/search/entity-ledger'
-
 import { MarkdownRenderer } from '@proj-airi/stage-ui/components'
 import { useAiriCardStore, useEntityLedgerStore, useTextJournalStore } from '@proj-airi/stage-ui/stores'
-import { Button, FieldInput, FieldSelect, Progress } from '@proj-airi/ui'
+import { Button, FieldInput, FieldSelect } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { RouterLink } from 'vue-router'
 import { toast } from 'vue-sonner'
 
+import KnowledgeGraphOverview from '../../knowledge-graph/components/KnowledgeGraphOverview.vue'
 import EntityDetailModal from './components/EntityDetailModal.vue'
 
 interface CharacterOption { value: string, label: string }
@@ -23,24 +22,14 @@ function formatTimestamp(timestamp: number) {
   })
 }
 
-const router = useRouter()
 const cardStore = useAiriCardStore()
 const textJournalStore = useTextJournalStore()
 const entityLedgerStore = useEntityLedgerStore()
-
-function navigateToWorkspaceMindMap() {
-  localStorage.setItem('airi:chat:left-panel-active', 'knowledge-graph')
-  router.push('/chat')
-}
 
 const { cards, activeCardId } = storeToRefs(cardStore)
 const { entries, loading, lastSearchTriage, lastSearchMode } = storeToRefs(textJournalStore)
 
 const activeTab = ref<'records' | 'graph'>('records')
-const graphSubTab = ref<'entities' | 'claims' | 'sources'>('entities')
-const entityTypeFilter = ref<EntityType | 'all'>('all')
-const entitySearchTerm = ref('')
-const claimSearchTerm = ref('')
 
 const selectedEntityId = ref<string | null>(null)
 const isEntityDetailOpen = ref(false)
@@ -95,24 +84,6 @@ const rerankerProviderLabel = computed(() => {
   if (prov === 'openrouter-ai' || prov === 'openrouter')
     return 'OpenRouter Jev Decisions'
   return prov
-})
-
-const filteredEntities = computed(() => {
-  return entityLedgerStore.activeLedger.queryEntities(
-    entityTypeFilter.value === 'all' ? undefined : entityTypeFilter.value,
-    entitySearchTerm.value,
-  )
-})
-
-const filteredClaims = computed(() => {
-  const q = claimSearchTerm.value.trim().toLowerCase()
-  if (!q)
-    return entityLedgerStore.claims
-  return entityLedgerStore.claims.filter(c =>
-    c.subject.toLowerCase().includes(q)
-    || c.predicate.toLowerCase().includes(q)
-    || c.object.toLowerCase().includes(q),
-  )
 })
 
 async function handleRebuildGraph() {
@@ -658,293 +629,14 @@ watch(characterOptions, (options) => {
         </div>
       </div>
 
-      <!-- 2. Graph Telemetry & Rebuild Controls -->
-      <section class="border border-neutral-200 rounded-[2.5rem] bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60">
-        <div class="flex flex-col gap-6">
-          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              <!-- Total Entities -->
-              <div class="border border-neutral-100 rounded-2xl bg-neutral-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-950/40">
-                <span class="block text-[10px] text-neutral-400 font-bold tracking-wider uppercase">Entities</span>
-                <span class="text-2xl text-neutral-800 font-bold dark:text-neutral-100">{{ entityLedgerStore.stats.entitiesCount }}</span>
-              </div>
-              <!-- Claims / Triples -->
-              <div class="border border-neutral-100 rounded-2xl bg-neutral-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-950/40">
-                <span class="block text-[10px] text-neutral-400 font-bold tracking-wider uppercase">Claims (S,P,O)</span>
-                <span class="text-2xl text-neutral-800 font-bold dark:text-neutral-100">{{ entityLedgerStore.stats.claimsCount }}</span>
-              </div>
-              <!-- Sources -->
-              <div class="border border-neutral-100 rounded-2xl bg-neutral-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-950/40">
-                <span class="block text-[10px] text-neutral-400 font-bold tracking-wider uppercase">Sources</span>
-                <span class="text-2xl text-neutral-800 font-bold dark:text-neutral-100">{{ entityLedgerStore.stats.sourcesCount }}</span>
-              </div>
-              <!-- Mentions -->
-              <div class="border border-neutral-100 rounded-2xl bg-neutral-50/70 p-4 dark:border-neutral-800 dark:bg-neutral-950/40">
-                <span class="block text-[10px] text-neutral-400 font-bold tracking-wider uppercase">Mentions</span>
-                <span class="text-2xl text-neutral-800 font-bold dark:text-neutral-100">{{ entityLedgerStore.stats.mentionsCount }}</span>
-              </div>
-            </div>
-
-            <!-- Action Buttons -->
-            <div class="flex items-center gap-3">
-              <Button
-                label="Open in Workspace"
-                icon="i-solar:square-top-down-bold-duotone"
-                variant="secondary"
-                @click="navigateToWorkspaceMindMap"
-              />
-              <Button
-                label="Rebuild Knowledge Graph"
-                icon="i-solar:bolt-bold-duotone"
-                variant="primary"
-                :disabled="entityLedgerStore.isPriming"
-                @click="handleRebuildGraph"
-              />
-              <Button
-                label="Clear Graph"
-                icon="i-solar:trash-bin-trash-bold-duotone"
-                variant="secondary"
-                :disabled="entityLedgerStore.isPriming"
-                @click="handleClearGraph"
-              />
-            </div>
-          </div>
-
-          <!-- Universe & Ingestion Breakdown Sub-banner -->
-          <div class="flex flex-wrap items-center justify-between gap-3 border-t border-neutral-100 pt-3 text-xs text-neutral-500 dark:border-neutral-800 dark:text-neutral-400">
-            <div class="flex flex-wrap items-center gap-x-4 gap-y-1">
-              <span class="flex items-center gap-1.5">
-                <span class="i-solar:planet-bold-duotone text-primary-500" />
-                <span>Universe: <strong>{{ entityLedgerStore.telemetry.universeId }}</strong></span>
-              </span>
-              <span>•</span>
-              <span>Sessions: <strong>{{ entityLedgerStore.telemetry.sessionsDiscovered }}</strong> <span v-if="entityLedgerStore.telemetry.canonicalSessionTitle !== 'None'" class="text-neutral-400">({{ entityLedgerStore.telemetry.canonicalSessionTurns }} canonical turns)</span></span>
-              <span>•</span>
-              <span>Raw Dialogue Turns: <strong>{{ entityLedgerStore.telemetry.deduplicatedTurnsIngested }}</strong> <span v-if="entityLedgerStore.telemetry.duplicatedForkTurnsSkipped > 0" class="text-neutral-400">({{ entityLedgerStore.telemetry.duplicatedForkTurnsSkipped }} fork duplicates skipped)</span></span>
-              <span>•</span>
-              <span>Journals: <strong>{{ entityLedgerStore.telemetry.journalEntriesIngested }}</strong></span>
-            </div>
-            <div v-if="entityLedgerStore.lastPrimedAt" class="text-[10px] text-neutral-400 font-mono">
-              Last Primed: {{ formatTimestamp(entityLedgerStore.lastPrimedAt) }}
-            </div>
-          </div>
-
-          <!-- Empty Ingestion Warning Banner if nothing found -->
-          <div
-            v-if="!entityLedgerStore.isPriming && entityLedgerStore.stats.entitiesCount === 0 && entityLedgerStore.telemetry.availableCharacterKeys.length > 0"
-            class="flex items-start gap-3 border border-amber-500/20 rounded-2xl bg-amber-500/5 p-4 text-xs text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
-          >
-            <div class="i-solar:info-circle-bold-duotone mt-0.5 flex-shrink-0 text-base text-amber-500" />
-            <div class="flex flex-col gap-1">
-              <span class="font-bold">No records found for character "{{ selectedCharacter }}" in universe "{{ entityLedgerStore.telemetry.universeId }}".</span>
-              <span>Available characters in local database: <code class="font-bold font-mono">{{ entityLedgerStore.telemetry.availableCharacterKeys.join(', ') }}</code>. Try selecting one from the character filter above.</span>
-            </div>
-          </div>
-
-          <!-- Progress Bar during Priming -->
-          <div v-if="entityLedgerStore.isPriming" class="flex flex-col gap-2 rounded-2xl bg-primary-500/5 p-4 dark:bg-primary-500/10">
-            <div class="flex items-center justify-between text-xs text-primary-700 dark:text-primary-300">
-              <span class="flex items-center gap-2">
-                <div class="i-solar:loading-bold animate-spin" />
-                {{ entityLedgerStore.primingStatusText }}
-              </span>
-              <span class="font-bold">{{ Math.round(entityLedgerStore.primingProgress * 100) }}%</span>
-            </div>
-            <Progress :progress="entityLedgerStore.primingProgress * 100" />
-          </div>
-        </div>
-      </section>
-
-      <!-- 3. Graph Explorer Tabs -->
-      <section class="flex flex-col gap-4">
-        <!-- Sub-Tabs Navigation -->
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-neutral-200/80 pb-3 dark:border-neutral-800">
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              :class="[
-                'px-4 py-1.5 text-xs font-semibold rounded-lg transition-all',
-                graphSubTab === 'entities'
-                  ? 'bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200',
-              ]"
-              @click="graphSubTab = 'entities'"
-            >
-              Entities ({{ filteredEntities.length }})
-            </button>
-            <button
-              type="button"
-              :class="[
-                'px-4 py-1.5 text-xs font-semibold rounded-lg transition-all',
-                graphSubTab === 'claims'
-                  ? 'bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200',
-              ]"
-              @click="graphSubTab = 'claims'"
-            >
-              Claims & Relations ({{ filteredClaims.length }})
-            </button>
-            <button
-              type="button"
-              :class="[
-                'px-4 py-1.5 text-xs font-semibold rounded-lg transition-all',
-                graphSubTab === 'sources'
-                  ? 'bg-neutral-800 text-white dark:bg-neutral-100 dark:text-neutral-900 shadow-sm'
-                  : 'text-neutral-500 hover:text-neutral-800 dark:text-neutral-400 dark:hover:text-neutral-200',
-              ]"
-              @click="graphSubTab = 'sources'"
-            >
-              Dialogue Sources ({{ entityLedgerStore.sources.length }})
-            </button>
-          </div>
-
-          <!-- Quick Filters based on active sub-tab -->
-          <div v-if="graphSubTab === 'entities'" class="flex items-center gap-2">
-            <input
-              v-model="entitySearchTerm"
-              type="text"
-              placeholder="Search entities..."
-              class="border border-neutral-200 rounded-xl bg-white px-3 py-1.5 text-xs shadow-sm dark:border-neutral-700 dark:bg-neutral-800"
-            >
-            <div class="flex items-center gap-1 overflow-x-auto py-1 text-[11px]">
-              <button
-                v-for="t in (['all', 'person', 'animal', 'place', 'organization', 'activity', 'concept', 'unknown'] as const)"
-                :key="t"
-                type="button"
-                :class="[
-                  'px-2.5 py-1 rounded-md capitalize transition-all whitespace-nowrap',
-                  entityTypeFilter === t
-                    ? 'bg-primary-500/10 text-primary-600 font-bold dark:text-primary-400'
-                    : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300',
-                ]"
-                @click="entityTypeFilter = t"
-              >
-                {{ t }}
-              </button>
-            </div>
-          </div>
-
-          <div v-else-if="graphSubTab === 'claims'" class="flex items-center gap-2">
-            <input
-              v-model="claimSearchTerm"
-              type="text"
-              placeholder="Filter claims by S, P, O..."
-              class="w-64 border border-neutral-200 rounded-xl bg-white px-3 py-1.5 text-xs shadow-sm dark:border-neutral-700 dark:bg-neutral-800"
-            >
-          </div>
-        </div>
-
-        <!-- Sub-Tab Content: Entities -->
-        <div v-if="graphSubTab === 'entities'">
-          <div v-if="filteredEntities.length === 0" class="border-2 border-neutral-200 rounded-[2rem] border-dashed p-10 text-center text-neutral-400 dark:border-neutral-800">
-            No entities found. Click <strong>"Rebuild Knowledge Graph"</strong> above to extract entities from conversation and journal history.
-          </div>
-          <div v-else class="grid grid-cols-1 gap-4 lg:grid-cols-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div
-              v-for="ent in filteredEntities"
-              :key="ent.entityId"
-              class="group cursor-pointer border border-neutral-200 rounded-2xl bg-white p-4 shadow-sm transition-all dark:border-neutral-800 hover:border-primary-500/50 dark:bg-neutral-900/60 hover:shadow-md"
-              @click="openEntityDetail(ent.entityId)"
-            >
-              <div class="flex items-start justify-between gap-2">
-                <span class="text-sm text-neutral-800 font-bold transition-colors dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400">
-                  {{ ent.label }}
-                </span>
-                <span
-                  class="rounded-md px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase"
-                  :class="[
-                    ent.type === 'person' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400'
-                    : ent.type === 'animal' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                      : ent.type === 'place' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                        : ent.type === 'organization' ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                          : ent.type === 'activity' ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                            : ent.type === 'concept' ? 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-                              : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400',
-                  ]"
-                >
-                  {{ ent.type }}
-                </span>
-              </div>
-              <div v-if="Object.keys(ent.attributes).filter(k => k !== 'systemOne').length > 0" class="mt-3 flex flex-wrap gap-1.5 border-t border-neutral-100 pt-2 dark:border-neutral-800">
-                <span
-                  v-for="(val, key) in ent.attributes"
-                  v-show="key !== 'systemOne'"
-                  :key="key"
-                  class="rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300"
-                >
-                  {{ key }}: <strong>{{ typeof val === 'object' ? JSON.stringify(val) : val }}</strong>
-                </span>
-              </div>
-              <div class="mt-2 flex items-center justify-between text-[10px] text-neutral-400">
-                <span>Mentions: {{ ent.mentions.size }}</span>
-                <span class="flex items-center gap-1 text-primary-500 font-semibold opacity-0 transition-opacity group-hover:opacity-100">
-                  <span>Inspect</span>
-                  <div class="i-solar:eye-bold-duotone text-xs" />
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sub-Tab Content: Claims -->
-        <div v-else-if="graphSubTab === 'claims'">
-          <div v-if="filteredClaims.length === 0" class="border-2 border-neutral-200 rounded-[2rem] border-dashed p-10 text-center text-neutral-400 dark:border-neutral-800">
-            No claims recorded yet. Click <strong>"Rebuild Knowledge Graph"</strong> to extract relational triples.
-          </div>
-          <div v-else class="flex flex-col gap-3">
-            <div
-              v-for="claim in filteredClaims"
-              :key="claim.claimId"
-              class="flex flex-wrap items-center justify-between gap-3 border border-neutral-200 rounded-2xl bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
-            >
-              <div class="flex items-center gap-2">
-                <span class="rounded-lg bg-sky-500/10 px-2.5 py-1 text-xs text-sky-600 font-bold dark:text-sky-400">
-                  {{ claim.subject }}
-                </span>
-                <span class="text-xs text-neutral-400 font-mono">➔</span>
-                <span class="rounded-lg bg-emerald-500/10 px-2.5 py-1 text-xs text-emerald-600 font-bold dark:text-emerald-400">
-                  {{ claim.predicate }}
-                </span>
-                <span class="text-xs text-neutral-400 font-mono">➔</span>
-                <span class="rounded-lg bg-purple-500/10 px-2.5 py-1 text-xs text-purple-600 font-bold dark:text-purple-400">
-                  {{ claim.object }}
-                </span>
-              </div>
-
-              <div class="flex items-center gap-2 text-xs">
-                <span v-if="claim.dateInfo?.formatted_label" class="rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 font-bold dark:text-amber-400">
-                  {{ claim.dateInfo.formatted_label }}
-                </span>
-                <span class="rounded-md bg-neutral-100 px-2 py-0.5 text-[10px] text-neutral-500 font-mono dark:bg-neutral-800 dark:text-neutral-400">
-                  Evidence: {{ claim.evidence.join(', ') }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Sub-Tab Content: Sources -->
-        <div v-else-if="graphSubTab === 'sources'">
-          <div v-if="entityLedgerStore.sources.length === 0" class="border-2 border-neutral-200 rounded-[2rem] border-dashed p-10 text-center text-neutral-400 dark:border-neutral-800">
-            No dialogue sources indexed. Click <strong>"Rebuild Knowledge Graph"</strong> above.
-          </div>
-          <div v-else class="flex flex-col gap-3">
-            <div
-              v-for="src in entityLedgerStore.sources"
-              :key="src.turnId"
-              class="border border-neutral-200 rounded-2xl bg-white p-4 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60"
-            >
-              <div class="mb-1 flex items-center justify-between text-xs">
-                <span class="text-neutral-700 font-bold dark:text-neutral-200">{{ src.speaker }}</span>
-                <span class="text-[10px] text-neutral-400 font-mono">{{ formatTimestamp(src.timestamp) }}</span>
-              </div>
-              <p class="text-xs text-neutral-600 leading-relaxed dark:text-neutral-300">
-                {{ src.text }}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <!-- 2. Knowledge Graph Overview (Decomposed Shared Component) -->
+      <KnowledgeGraphOverview
+        :character-id="selectedCharacter"
+        :show-workspace-button="true"
+        @select-entity="openEntityDetail"
+        @rebuild="handleRebuildGraph"
+        @clear="handleClearGraph"
+      />
     </div>
 
     <!-- Entity Detail Inspector Modal -->

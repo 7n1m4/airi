@@ -2,17 +2,18 @@
 import { useEntityLedgerStore } from '@proj-airi/stage-ui/stores/entity-ledger'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { Button } from '@proj-airi/ui'
+import { onClickOutside } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 
 const props = defineProps<{
-  viewMode: 'constellation' | 'timeline'
+  viewMode: 'overview' | 'constellation' | 'timeline'
   searchQuery: string
   selectedCategory: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'update:viewMode', mode: 'constellation' | 'timeline'): void
+  (e: 'update:viewMode', mode: 'overview' | 'constellation' | 'timeline'): void
   (e: 'update:searchQuery', query: string): void
   (e: 'update:selectedCategory', category: string): void
   (e: 'rebuild'): void
@@ -25,6 +26,12 @@ const airiCardStore = useAiriCardStore()
 const { activeCard, activeCardId } = storeToRefs(airiCardStore)
 
 const showSettingsMenu = ref(false)
+const settingsMenuRef = ref<HTMLElement | null>(null)
+onClickOutside(settingsMenuRef, () => {
+  showSettingsMenu.value = false
+})
+
+const hasGraph = computed(() => entityLedgerStore.entities.length > 0)
 
 const cognitionConfig = computed(() => {
   const airiExt = activeCard.value?.extensions?.airi as Record<string, any> | undefined
@@ -96,7 +103,18 @@ function toggleGroundingMemory() {
         <div class="ml-2 flex items-center border border-neutral-200/60 rounded-xl bg-neutral-100 p-0.5 text-xs dark:border-neutral-800/80 dark:bg-neutral-900">
           <button
             type="button"
-            class="flex items-center gap-1.5 rounded-lg px-3 py-1 font-semibold transition-all"
+            class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 font-semibold transition-all"
+            :class="viewMode === 'overview'
+              ? 'bg-white dark:bg-neutral-800 text-primary-600 dark:text-primary-400 shadow-xs'
+              : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'"
+            @click="emit('update:viewMode', 'overview')"
+          >
+            <div class="i-solar:widget-bold-duotone text-sm" />
+            <span>Overview</span>
+          </button>
+          <button
+            type="button"
+            class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 font-semibold transition-all"
             :class="viewMode === 'constellation'
               ? 'bg-white dark:bg-neutral-800 text-primary-600 dark:text-primary-400 shadow-xs'
               : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'"
@@ -107,7 +125,7 @@ function toggleGroundingMemory() {
           </button>
           <button
             type="button"
-            class="flex items-center gap-1.5 rounded-lg px-3 py-1 font-semibold transition-all"
+            class="flex cursor-pointer items-center gap-1.5 rounded-lg px-3 py-1 font-semibold transition-all"
             :class="viewMode === 'timeline'
               ? 'bg-white dark:bg-neutral-800 text-primary-600 dark:text-primary-400 shadow-xs'
               : 'text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200'"
@@ -122,6 +140,7 @@ function toggleGroundingMemory() {
       <!-- Right: Action Buttons & Overflow Menu -->
       <div class="flex items-center gap-2">
         <Button
+          v-if="!hasGraph"
           :label="entityLedgerStore.isPriming ? 'Synthesizing...' : 'Rebuild Graph'"
           :icon="entityLedgerStore.isPriming ? 'i-solar:restart-bold-duotone' : 'i-solar:bolt-bold-duotone'"
           variant="primary"
@@ -131,7 +150,7 @@ function toggleGroundingMemory() {
         />
 
         <!-- Settings Overflow Flyout -->
-        <div class="relative">
+        <div ref="settingsMenuRef" class="relative">
           <button
             type="button"
             class="border border-neutral-200/60 rounded-lg bg-white/70 p-1.5 text-neutral-600 transition dark:border-neutral-800/80 dark:bg-neutral-900/70 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
@@ -171,6 +190,17 @@ function toggleGroundingMemory() {
             <div class="my-1 border-t border-neutral-100 dark:border-neutral-800" />
 
             <button
+              v-if="hasGraph"
+              type="button"
+              class="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-neutral-700 transition hover:bg-neutral-100 dark:text-neutral-200 disabled:opacity-50 dark:hover:bg-neutral-800/60"
+              :disabled="entityLedgerStore.isPriming"
+              @click="emit('rebuild'); showSettingsMenu = false"
+            >
+              <div :class="entityLedgerStore.isPriming ? 'i-solar:restart-bold-duotone animate-spin text-sm text-primary-500' : 'i-solar:bolt-bold-duotone text-sm text-primary-500'" />
+              <span>{{ entityLedgerStore.isPriming ? 'Synthesizing...' : 'Rebuild Graph' }}</span>
+            </button>
+
+            <button
               type="button"
               class="w-full flex items-center gap-2 rounded-xl px-2.5 py-1.5 text-left text-rose-500 transition hover:bg-rose-500/10"
               @click="emit('clear'); showSettingsMenu = false"
@@ -183,8 +213,11 @@ function toggleGroundingMemory() {
       </div>
     </div>
 
-    <!-- Row 2: Search Input & Category Filters -->
-    <div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+    <!-- Row 2: Search Input & Category Filters (Constellation & Timeline) -->
+    <div
+      v-if="viewMode !== 'overview'"
+      class="flex flex-wrap items-center justify-between gap-3 pt-1"
+    >
       <!-- Search Input -->
       <div class="relative w-full sm:w-64">
         <div class="i-solar:magnifer-linear pointer-events-none absolute left-2.5 top-1/2 text-sm text-neutral-400 -translate-y-1/2" />
