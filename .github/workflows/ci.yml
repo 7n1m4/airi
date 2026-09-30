@@ -64,7 +64,10 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - run: pnpm rebuild electron
+      # NOTICE: the --filter is load-bearing. Bare `pnpm rebuild electron`
+      # from the root matches nothing and exits 0 silently (0.4s no-op);
+      # scoped to the declaring importer it runs electron's postinstall.
+      - run: pnpm --filter @proj-airi/stage-tamagotchi rebuild electron
       - run: pnpm run build:packages
 
       - name: Build App
@@ -106,7 +109,10 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      - run: pnpm rebuild electron
+      # NOTICE: the --filter is load-bearing. Bare `pnpm rebuild electron`
+      # from the root matches nothing and exits 0 silently (0.4s no-op);
+      # scoped to the declaring importer it runs electron's postinstall.
+      - run: pnpm --filter @proj-airi/stage-tamagotchi rebuild electron
       - run: pnpm run build:packages
       - run: pnpm run test:run
 
