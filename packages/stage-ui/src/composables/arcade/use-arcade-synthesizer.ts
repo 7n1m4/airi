@@ -10,6 +10,8 @@ import type {
 
 import { ref } from 'vue'
 
+import { diffUtils } from './utils/diff-utils'
+
 export interface StrategySpec {
   summary: string
   tactics: string[]
@@ -164,51 +166,28 @@ function evaluateGameState(prevFrame, currFrame, telemetry) {
  * AIRI Dynamic Game State Extractor: ${game.title}
  * Screen Architecture: ${arch}
  * Resolution: ${trace.resolution?.cols || 80}x${trace.resolution?.rows || 40}
+ * Standard Perceptual Primitives: diffUtils
  */
-function extractGameState(prevGrid, currGrid, diff) {
+function extractGameState(prevGrid, currGrid, diff, diffUtils) {
   const added = (diff && diff.added) || [];
-  const removed = (diff && diff.removed) || [];
-
-  // 1. Detect active controllable entity from moving pixel cluster
-  let entity = null;
-  if (added.length > 0) {
-    let sumX = 0, sumY = 0;
-    for (const [x, y] of added) {
-      sumX += x;
-      sumY += y;
-    }
-    const posX = Math.round(sumX / added.length);
-    const posY = Math.round(sumY / added.length);
-
-    // Compute heading vector from added vs removed centroids
-    let heading = 'UNKNOWN';
-    if (removed.length > 0) {
-      let rSumX = 0, rSumY = 0;
-      for (const [rx, ry] of removed) { rSumX += rx; rSumY += ry; }
-      const dx = posX - (rSumX / removed.length);
-      const dy = posY - (rSumY / removed.length);
-      if (Math.abs(dx) > Math.abs(dy)) {
-        heading = dx > 0 ? 'RIGHT' : 'LEFT';
-      } else if (Math.abs(dy) > 0) {
-        heading = dy > 0 ? 'DOWN' : 'UP';
-      }
-    }
-    entity = { x: posX, y: posY, heading };
-  }
-
-  // 2. Detect game-over signature (large multi-pixel surge or dialog box)
-  const isGameOver = added.length > 40;
+  const clusters = diffUtils ? diffUtils.getClusters(added) : [];
+  const player = diffUtils ? diffUtils.correlateInput(clusters, (diff && diff.keys) || []) : (clusters[0] || null);
+  const threats = clusters.filter(c => c !== player && c.size >= 2);
+  const targets = clusters.filter(c => c !== player && c.size === 1);
+  const isGameOver = diffUtils ? diffUtils.detectLossBurst(diff, 35) : (added.length > 40);
 
   return {
-    controllableEntity: entity,
-    changedPixelsCount: added.length + removed.length,
+    controllableEntity: player ? { x: player.x, y: player.y, heading: player.heading || 'STATIONARY' } : null,
+    threats: threats.map(t => ({ x: t.x, y: t.y, size: t.size })),
+    targets: targets.map(tgt => ({ x: tgt.x, y: tgt.y })),
+    changedPixelsCount: added.length,
     isGameOver,
     timestamp: diff ? diff.t : Date.now()
   };
 }
 
-function evaluateGameState(prevFrame, currFrame, telemetry) {
-  const state = extractGameState(null, null, currFrame);
+function evaluateGameState(prevFrame, currFrame, telemetry, diffUtils) {
+  const state = extractGameState(null, null, currFrame, diffUtils);
   if (state.isGameOver) return 'none';
   const heading = state.controllableEntity ? state.controllableEntity.heading : 'UNKNOWN';
   if (heading === 'RIGHT') return 'down';
@@ -239,13 +218,13 @@ function evaluateGameState(prevFrame, currFrame, telemetry) {
     try {
       // Evaluate sandboxed extractor and evaluate functions
       // eslint-disable-next-line no-new-func
-      const runner = new Function('prevGrid', 'currGrid', 'diff', `
+      const runner = new Function('prevGrid', 'currGrid', 'diff', 'diffUtils', `
         ${code}
         if (typeof extractGameState === 'function') {
-          return extractGameState(prevGrid, currGrid, diff);
+          return extractGameState(prevGrid, currGrid, diff, diffUtils);
         }
         if (typeof evaluateGameState === 'function') {
-          return evaluateGameState(prevGrid, currGrid, diff);
+          return evaluateGameState(prevGrid, currGrid, diff, diffUtils);
         }
         return { status: 'ok' };
       `)
@@ -260,7 +239,7 @@ function evaluateGameState(prevFrame, currFrame, telemetry) {
           removed: [[(9 + i) % 80, 20]] as Array<[number, number]>,
         }
 
-        const state = runner(null, null, mockDiff)
+        const state = runner(null, null, mockDiff, diffUtils)
         const latencyMs = Number((performance.now() - tickStart).toFixed(3))
 
         if (state) {

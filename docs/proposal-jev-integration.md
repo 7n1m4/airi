@@ -147,9 +147,13 @@ Its architecture establishes four crucial design patterns for AIRI's Arcade Room
    - Query: `"Did a clutch victory, fatal mistake, or sudden ambush just occur?"`
    - If probability > 0.85, game audio ducks via the WebAudio gain node and AIRI's speech runtime triggers contextual banter.
 6. **Cognitive Path Picker, Catalog Triage & Self-Synthesizing Mini Programs**:
-   - Canonical Architecture: [`docs/proposal-generic-gaming-agent-runtime.md`](./proposal-generic-gaming-agent-runtime.md) (Section 5.4).
+   - Canonical Architecture: [`docs/proposal-generic-gaming-agent-runtime.md`](./proposal-generic-gaming-agent-runtime.md) (Section 5.4 & 5.5).
    - **Catalog Batch Curation**: Jev batch-classifies the 8,900+ preservation catalog by tempo and input space, recommending Path A (System-2 VLM Strategy) vs Path B (System-1 Reflex).
-   - **Self-Synthesized State Interpreters**: System-2 compiles high-frequency human demonstration traces (`collector.start()`) into a pure JavaScript "Mini Program", allowing Jev to execute high-speed reflexes with adaptive lookahead latency compensation without needing internal RAM symbols.
+   - **The 2-Tier Perceptual Primitives & Semantic Extractor Architecture**:
+     - Solves multi-entity tracking (e.g. *Pac-Man* ghosts, *Nibbles* advancing head vs tail vs spawning numbers) without forcing the LLM to write raw computer vision loops or hardcoding per-game collectors.
+     - **Tier 1 (Platform SDK — `diffUtils`)**: Provides deterministic $<0.2\text{ms}$ spatial clustering (`getClusters`), temporal trajectory tracking (`trackTrajectories`), and input-motion correlation (`correlateInput`).
+     - **Tier 2 (System-2 Synthesizer)**: Compiles 15s human demonstration traces (`collector.start()`) into a concise, pure JavaScript state extractor (`extractGameState(prev, curr, diff, diffUtils)`), normalizing raw 80x40 pixel diffs into a clean semantic situation report (`player`, `threats`, `targets`, `isGameOver`).
+     - **Tier 3 (Jev System 1 Reflex Engine)**: Evaluates multi-threat avoidance queries in ~100ms via parallel discrete choice heads (`choice` over directional inputs with criteria evaluated against distance vectors to nearest threats and targets), achieving near-100% precision with zero frame stutter.
 
 ---
 

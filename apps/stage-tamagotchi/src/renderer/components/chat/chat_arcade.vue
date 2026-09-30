@@ -12,7 +12,7 @@ import JSZip from 'jszip'
 import localforage from 'localforage'
 
 import { ArcadeGhostCursor, ArcadeGridOverlay } from '@proj-airi/stage-ui/components'
-import { burnCoordinateGridToCanvas, burnCoordinateGridToDataUrl, useArcadeAgent } from '@proj-airi/stage-ui/composables'
+import { burnCoordinateGridToCanvas, burnCoordinateGridToDataUrl, diffUtils, useArcadeAgent } from '@proj-airi/stage-ui/composables'
 import { useCharacterStore } from '@proj-airi/stage-ui/stores/character'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
@@ -838,10 +838,10 @@ function handleStartLiveReflexTest(code: string) {
   try {
     // Compile extractor safely
     // eslint-disable-next-line no-new-func
-    const extractor = new Function('prevGrid', 'currGrid', 'diff', `
+    const extractor = new Function('prevGrid', 'currGrid', 'diff', 'diffUtils', `
       ${code}
-      if (typeof extractGameState === 'function') return extractGameState(prevGrid, currGrid, diff);
-      if (typeof evaluateGameState === 'function') return evaluateGameState(prevGrid, currGrid, diff);
+      if (typeof extractGameState === 'function') return extractGameState(prevGrid, currGrid, diff, diffUtils);
+      if (typeof evaluateGameState === 'function') return evaluateGameState(prevGrid, currGrid, diff, diffUtils);
       return null;
     `)
 
@@ -905,7 +905,7 @@ function handleStartLiveReflexTest(code: string) {
           removed: removed.length > 0 ? removed : undefined,
         }
 
-        const state = extractor(prevGrid, currentGrid, diff)
+        const state = extractor(prevGrid, currentGrid, diff, diffUtils)
         prevGrid = currentGrid
 
         if (state && state.isGameOver) {

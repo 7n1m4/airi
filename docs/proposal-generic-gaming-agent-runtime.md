@@ -296,38 +296,61 @@ Selecting any game tile opens a focused provisioning sheet before booting the em
 
 The System-2 LLM receives the recorded demonstration trace JSON and synthesizes an executable **Generic State Extractor (Mini-Program)**:
 
-1. **Unbiased, Generic Synthesis Mission**:
-   - The LLM prompt is intentionally **open-ended and non-prescriptive**—it does not supply biased assumptions or pre-baked entity names (like `playerHead`, `food`, or `tail`) that could contaminate generic extraction across disparate genres (shooters, mazes, paddles, puzzles).
-   - The LLM analyzes the real sequence of `{ t, keys, added, removed }`:
-     - Correlates user keypresses with moving pixel clusters to identify controllable entities and motion vectors.
-     - Distinguishes dynamic interactive elements from static arena boundaries.
-     - Identifies the visual signature that occurred when the user crashed (e.g. sudden dialog boxes, multi-pixel bursts, freeze).
-2. **The Mini-Program Contract (Pure JS State Extractor)**:
-   - The synthesized code is **not a hardcoded heuristic bot** (no cyclic modulo loops or hardcoded turn rules).
-   - It is a fast, sandboxed JavaScript state parser (`extractGameState`) running in $<1\text{ms}$:
-     ```javascript
-     /**
-      * Synthesized Game State Extractor
-      * Evaluates raw 80x40 grids/diffs into a structured semantic situation report.
-      */
-     function extractGameState(prevGrid, currGrid, diff) {
-       // Returns dynamic game state object:
-       // {
-       //   controllableEntity: { x, y, heading },
-       //   activeHazards: [...],
-       //   activeTargets: [...],
-       //   isGameOver: boolean
-       // }
-     }
-     ```
-3. **Review Dialog UI**:
-   - **Airi's Game Comprehension**: Natural-language summary of perceived mechanics, hazards, and tactical directives.
-   - **Synthesized Extractor Viewer**: Syntax-highlighted code block displaying the full `extractGameState` JavaScript implementation.
-   - **`[ 📋 Copy Extractor Code ]`**: One-click clipboard copy with toast confirmation for transparent inspection.
-   - **Execution Controls**:
-     - **`[ 60-Second Sandboxed Test ]`**: Launches an automated 60-second trial run where AIRI plays live using the synthesized extractor and Jev reflexes while you observe.
-     - **`[ ⏱️ Recalibrate (15s) ]`**: Discards trace and returns to Stage 3 to re-demonstrate without resetting the running game instance.
-     - **`[ ✅ Approve & Save Knowledge ]`**: Atomically persists the Mini-Program and strategy into IndexedDB (`local:arcade_knowledge:<game_id>`).
+#### 1. The Multi-Entity Tracking Challenge (e.g. *Pac-Man*, *Nibbles*, Arcade Action)
+When games feature multiple moving entities simultaneously (for instance, *Pac-Man* with 1 player, 4 ghosts, and static pellets, or *Nibbles* with advancing head, trailing tail segments, and randomly spawning target numbers), naive pixel analysis fails catastrophically:
+- **Failure Mode 1: Naive Centroid Blending**: Blending all `added` pixels into a single global `(sumX / N, sumY / N)` causes phantom averaging. If a pellet spawns on the far right while the player is on the left, the computed centroid teleports into empty space.
+- **Failure Mode 2: Forcing the LLM to Author Raw Computer Vision**: Prompting an LLM to generate 100+ lines of raw connected-components, 8-directional flood fills, and distance matrices in vanilla JS loops yields brittle, hallucinated code with high frame execution latency ($>5\text{ms}$) that misses 15–20 Hz reflex budgets.
+- **Failure Mode 3: Bespoke Hardcoded Collectors**: Hardcoding dedicated collectors per title (`nibblesExtractor.js`, `pacmanExtractor.js`) violates AIRI's core architectural principle of a universal, zero-Python gaming companion that learns *any* game from human demonstration.
+
+#### 2. The Breakthrough: The 2-Tier Architecture
+To solve this cleanly across all 2D retro titles, the runtime decouples perception into two coordinated tiers:
+1. **Tier 1: Standard Perceptual Primitives (Platform SDK — `diffUtils`)**:
+   - High-speed ($<0.2\text{ms}$), deterministic spatial clustering and temporal association algorithms provided directly inside the execution sandbox.
+   - Algorithms include connected-component cluster extraction (`getClusters`), frame-to-frame trajectory tracking (`trackTrajectories`), input-motion correlation (`correlateInput`), and loss burst detection (`detectLossBurst`).
+2. **Tier 2: Semantic Interpreter (Synthesized by LLM / System-2)**:
+   - The LLM does not write raw coordinate loops. It inspects the 15-second demonstration trace and outputs concise (25–40 lines), high-level semantic rules using `diffUtils`.
+   - The synthesized extractor:
+     - Identifies the **Controllable Entity (Player)** via correlation with keypresses.
+     - Identifies **Dynamic Hazards / Autonomous Threats** (e.g. ghosts, moving obstacles) from un-correlated moving clusters.
+     - Identifies **Static or Transient Targets** (e.g. pellets, food, items).
+     - Detects the **Game-Over Condition** via sudden multi-pixel bursts or canvas freezes.
+3. **Tier 3: Reflex Engine (Jev / System 1)**:
+   - Consumes the clean `SemanticGameState` at 15–20 Hz to evaluate discrete directional choice heads (`ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`) in ~100ms.
+
+#### 3. The Mini-Program Contract (Pure JS State Extractor)
+The synthesized code is **not a hardcoded heuristic bot** (no cyclic modulo loops or hardcoded turn rules). It is a sandboxed JavaScript state parser (`extractGameState`) running in $<1\text{ms}$:
+```javascript
+/**
+ * Synthesized Game State Extractor
+ * Evaluates raw 80x40 grids/diffs into a structured semantic situation report.
+ * @param {string[] | null} prevGrid - Previous 80x40 binary grid (or null)
+ * @param {string[] | null} currGrid - Current 80x40 binary grid (or null)
+ * @param {object} diff - { added: [x,y][], removed: [x,y][], t: number }
+ * @param {object} diffUtils - Standard Platform Perceptual Primitives SDK
+ */
+function extractGameState(prevGrid, currGrid, diff, diffUtils) {
+  const clusters = diffUtils.getClusters((diff && diff.added) || [])
+  const player = diffUtils.correlateInput(clusters, diff.keys) || clusters[0] || null
+  const threats = clusters.filter(c => c !== player && c.size >= 2)
+  const isGameOver = diffUtils.detectLossBurst(diff)
+
+  return {
+    player: player ? { x: player.x, y: player.y, heading: player.heading } : null,
+    threats: threats.map(t => ({ x: t.x, y: t.y, size: t.size })),
+    isGameOver,
+    timestamp: diff ? diff.t : Date.now()
+  }
+}
+```
+
+#### 4. Review Dialog UI
+- **Airi's Game Comprehension**: Natural-language summary of perceived mechanics, hazards, and tactical directives.
+- **Synthesized Extractor Viewer**: Syntax-highlighted code block displaying the full `extractGameState` JavaScript implementation.
+- **`[ 📋 Copy Extractor Code ]`**: One-click clipboard copy with toast confirmation for transparent inspection.
+- **Execution Controls**:
+  - **`[ 60-Second Sandboxed Test ]`**: Launches an automated 60-second trial run where AIRI plays live using the synthesized extractor and Jev reflexes while you observe.
+  - **`[ ⏱️ Recalibrate (15s) ]`**: Discards trace and returns to Stage 3 to re-demonstrate without resetting the running game instance.
+  - **`[ ✅ Approve & Save Knowledge ]`**: Atomically persists the Mini-Program and strategy into IndexedDB (`local:arcade_knowledge:<game_id>`).
 
 ---
 
@@ -526,6 +549,74 @@ Because game pacing varies drastically across titles, the Arcade Room settings d
 | **Real-Time / Fast Action** | *Doom*, *Wolfenstein 3D*, *Prince of Persia* | 150 ms | 22 (Filters camera bobbing, triggers on major visual shifts) | 800 ms | 3,500 ms |
 | **Narrative / Visual Novel** | Dating Sims, Interactive Fiction, RPG dialogue | 200 ms | 12 (Triggers on text advance or portrait sprite swap) | 1,000 ms | 8,000 ms |
 | **Custom Sliders** | Any custom or user-imported ROM | Slider (50–1000ms) | Slider (1–64 bits) | Slider (500–5000ms) | Slider (1–30s) |
+
+---
+
+### 6.6 Standard Perceptual Primitives & Multi-Entity Tracking (`diffUtils`)
+
+To guarantee deterministic, sub-millisecond execution and free the System-2 synthesizer from authoring error-prone pixel algorithms from scratch, the execution sandbox automatically provides the **`diffUtils` Perceptual Primitives SDK**.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    TIER 1 PLATFORM PERCEPTUAL PRIMITIVES                     │
+│                                                                              │
+│   Raw 80x40 Frame Diff { added, removed, keys, t }                           │
+│                          │                                                   │
+│   ┌──────────────────────┼────────────────────────────────────────┐          │
+│   ▼                      ▼                                        ▼          │
+│ diffUtils.getClusters()  diffUtils.trackTrajectories()  diffUtils.detectLoss()│
+│ • Fast spatial grid      • Frame-to-frame association   • Delta spike (>40)  │
+│ • Island centroid & bbox • Heading & velocity vectors   • Death screen flash │
+│   │                      │                                        │          │
+│   └──────────────────────┼────────────────────────────────────────┘          │
+│                          ▼                                                   │
+│               diffUtils.correlateInput()                                     │
+│               • Matches vector (dx, dy) with diff.keys                       │
+│               • Unambiguously resolves CONTROLLABLE PLAYER                   │
+│                          │                                                   │
+│                          ▼                                                   │
+│       [ Tier 2: Synthesized Semantic Interpreter (extractGameState) ]        │
+│       • player: { x, y, heading }                                            │
+│       • threats: [{ id, x, y, distance, heading }]                           │
+│       • targets: [{ x, y, distance }]                                        │
+│       • isGameOver: boolean                                                  │
+│                          │                                                   │
+│                          ▼                                                   │
+│       [ Tier 3: Jev / System 1 Discrete Reflex Choice Heads (~100ms) ]       │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Deterministic Primitives Specification:
+
+1. **`diffUtils.getClusters(points: [number, number][], distanceThreshold = 2): Cluster[]`**:
+   - Performs rapid spatial clustering using a 2D bucket hash table ($O(N)$ execution, $<0.15\text{ms}$ on 80x40 grids).
+   - Groups contiguous or adjacent pixel points into isolated visual islands.
+   - Returns:
+     ```typescript
+     interface Cluster {
+       x: number // Centroid X
+       y: number // Centroid Y
+       size: number // Pixel count
+       bbox: [number, number, number, number] // [minX, minY, maxX, maxY]
+       pixels: [number, number][]
+     }
+     ```
+
+2. **`diffUtils.trackTrajectories(prevClusters: Cluster[], currClusters: Cluster[], maxDistance = 6): TrackedEntity[]`**:
+   - Performs temporal tracking between $t-1$ and $t$ using minimal Euclidean distance pairing.
+   - Computes displacement $(\Delta x, \Delta y)$ and assigns discrete heading (`'UP'`, `'DOWN'`, `'LEFT'`, `'RIGHT'`, or `'STATIONARY'`).
+   - Prevents centroid teleportation and isolates separate entities moving simultaneously.
+
+3. **`diffUtils.correlateInput(clusters: Cluster[], keys: string[]): Cluster | null`**:
+   - Compares the motion vector of each active cluster against active directional keys in `keys` (`ArrowUp` $\to \Delta y < 0$, `ArrowDown` $\to \Delta y > 0$, `ArrowLeft` $\to \Delta x < 0$, `ArrowRight` $\to \Delta x > 0$).
+   - Returns the single cluster that responds to user input with highest Pearson/directional correlation. Unambiguously identifies the player avatar even when enemies or food spawn concurrently.
+
+4. **`diffUtils.detectLossBurst(diff: FrameDiff, burstThreshold = 40): boolean`**:
+   - Evaluates total pixel disturbance `added.length + removed.length`.
+   - In retro games, death triggers full-screen flashing, game-over popups, or complete board clearing that produces a massive spike relative to normal gameplay locomotion (e.g. 5–8 pixels/tick vs 40–120 pixels/tick).
+
+5. **`diffUtils.euclidean(p1: { x: number, y: number }, p2: { x: number, y: number }): number`**:
+   - Returns $\sqrt{(p_1.x - p_2.x)^2 + (p_1.y - p_2.y)^2}$ for distance sorting (e.g. distance to nearest threat or target).
 
 ---
 
