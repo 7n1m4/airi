@@ -97,7 +97,8 @@ jobs:
             libgbm1 \
             libasound2t64
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm rebuild electron
       - run: pnpm run build:packages
       - run: pnpm -F @proj-airi/stage-tamagotchi run build
 
@@ -170,7 +171,8 @@ jobs:
             libgbm1 \
             libasound2t64
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm rebuild electron
       - run: pnpm run build:packages
       - run: pnpm -F @proj-airi/stage-tamagotchi run build
 
