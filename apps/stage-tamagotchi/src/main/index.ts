@@ -85,7 +85,7 @@ import { setupOnboardingWindowManager } from './windows/onboarding'
 import { setupSettingsWindowReusableFunc } from './windows/settings'
 import { ensureWindowInVisibleBounds } from './windows/shared/display'
 import { setupSplashWindowManager } from './windows/splash'
-import { isStageDisabledByFlag, setStageVisibleState, setupActorStageWindowManager } from './windows/stage'
+import { getStageVisibleState, isStageDisabledByFlag, setStageVisibleState, setupActorStageWindowManager } from './windows/stage'
 import { setupWidgetsWindowManager } from './windows/widgets'
 
 // Guard BrowserWindow prototype methods against destroyed window objects to prevent "Object has been destroyed" exceptions
@@ -594,8 +594,11 @@ app.whenReady().then(async () => {
 
       defineInvokeHandler(context, electronStageEnsure, async () => {
         const window = await deps.stageWindow.ensureWindow()
-        // Late ensures (card switches after the splash is gone) show immediately.
-        if (window && splashDismissed && !window.isDestroyed())
+        // Late ensures (card switches after the splash is gone) show immediately,
+        // but only when the user intends the stage visible. Blindly showing here
+        // re-surfaces a hidden stage on every Control Strip reload (the stray
+        // `show` event then flips persisted `stageEnabled` false→true).
+        if (window && splashDismissed && getStageVisibleState() && !window.isDestroyed())
           window.show()
         return { created: !!window }
       })
@@ -1128,7 +1131,11 @@ app.whenReady().then(async () => {
           clearTimeout(backstopTimer)
         if (!deps.mainWindow.isDestroyed())
           deps.mainWindow.show()
-        deps.stageWindow.show()
+        // NOTICE: Only reveal the stage when the user intends it visible.
+        // An unconditional show resurrects a hidden stage on every boot and
+        // the stray `show` event flips persisted `stageEnabled` false→true.
+        if (getStageVisibleState())
+          deps.stageWindow.show()
         restoreCaption()
         deps.splashWindow.destroy()
       })
@@ -1143,7 +1150,8 @@ app.whenReady().then(async () => {
         splashDismissed = true
         if (!deps.mainWindow.isDestroyed())
           deps.mainWindow.show()
-        deps.stageWindow.show()
+        if (getStageVisibleState())
+          deps.stageWindow.show()
         restoreCaption()
         deps.splashWindow.destroy()
       }, 30000)

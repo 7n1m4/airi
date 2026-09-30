@@ -26,6 +26,7 @@ import { usePerfTracerBridgeStore } from '@proj-airi/stage-ui/stores/perf-tracer
 import { listProvidersForPluginHost, shouldPublishPluginHostCapabilities } from '@proj-airi/stage-ui/stores/plugin-host-capabilities'
 import { useProactivityStore } from '@proj-airi/stage-ui/stores/proactivity'
 import { useSettings } from '@proj-airi/stage-ui/stores/settings'
+import { useSettingsControlStrip } from '@proj-airi/stage-ui/stores/settings/control-strip'
 import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
 import { useTheme } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
@@ -71,6 +72,7 @@ const { isDark: dark } = useTheme()
 const i18n = useI18n()
 const contextBridgeStore = useContextBridgeStore()
 const settingsStore = useSettings()
+const controlStripStore = useSettingsControlStrip()
 const { language, themeColorsHue, themeColorsHueDynamic, themeColorsChromaMultiplier } = storeToRefs(settingsStore)
 const serverChannelSettingsStore = useServerChannelSettingsStore()
 const onboardingStore = useOnboardingStore()
@@ -354,6 +356,15 @@ async function waitForStageModelReady(timeoutMs = 15000): Promise<boolean> {
 async function runStageActorStep() {
   await reportStartupMilestone('stage-actor', 'loading')
   try {
+    // NOTICE: Honor a persisted hidden intent (Control Strip stage toggle).
+    // Re-running ensure + show on every Control Strip reload resurrects a
+    // hidden stage; the stray `show` event then flips persisted
+    // `stageEnabled` false→true. Skipped is terminal for the splash, and
+    // re-showing stays user-driven (strip toggle, tray, avatar card switch).
+    if (!controlStripStore.stageEnabled) {
+      await reportStartupMilestone('stage-actor', 'skipped')
+      return
+    }
     const stageDisabled = await getStageDisabled().catch(() => false)
     const displayModelId = activeCard.value?.extensions?.airi?.modules?.displayModelId
       ?? (cardStore.activeCardId ? cardStore.getCardDisplayModelId(cardStore.activeCardId) : undefined)

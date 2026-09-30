@@ -38,6 +38,14 @@ export function setStageVisibleState(visible: boolean) {
   isStageVisible = visible
 }
 
+// NOTICE: Renderer-driven show calls (splash dismiss, backstop, late ensure)
+// must consult this intent instead of showing unconditionally. Otherwise a
+// hidden stage pops back on every Control Strip reload, and the stray `show`
+// event flips persisted `stageEnabled` false→true as a side effect.
+export function getStageVisibleState(): boolean {
+  return isStageVisible
+}
+
 export type StageLifecycleEvent = 'show' | 'hide' | 'minimize' | 'restore'
 
 export interface ActorStageWindowManager {
