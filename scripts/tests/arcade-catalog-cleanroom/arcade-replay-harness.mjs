@@ -87,9 +87,34 @@ let playerTrackedCount = 0
 let detectedLossFrame = null
 const stateHistory = []
 
+// Initialize accumulated 80x40 game arena grid
+let accumulatedGrid = Array.from({ length: 40 }, () => new Array(80).fill('0'))
+if (frames[0] && frames[0].fullGrid) {
+  accumulatedGrid = frames[0].fullGrid.map(row => row.split(''))
+}
+
 for (let i = 0; i < framesToProcess.length; i++) {
   const frame = framesToProcess[i]
   const t0 = performance.now()
+
+  // Maintain accumulated active board state
+  if (frame.fullGrid) {
+    accumulatedGrid = frame.fullGrid.map(row => row.split(''))
+  }
+  else {
+    if (frame.removed) {
+      for (const [x, y] of frame.removed) {
+        if (y >= 0 && y < 40 && x >= 0 && x < 80)
+          accumulatedGrid[y][x] = '0'
+      }
+    }
+    if (frame.added) {
+      for (const [x, y] of frame.added) {
+        if (y >= 0 && y < 40 && x >= 0 && x < 80)
+          accumulatedGrid[y][x] = '1'
+      }
+    }
+  }
 
   // Tier 1: Platform Perceptual Primitives
   const addedPoints = frame.added || []
@@ -114,7 +139,7 @@ for (let i = 0; i < framesToProcess.length; i++) {
     frameIndex: i,
     t: frame.t,
     keys: frame.keys || [],
-    player: player ? { x: player.x, y: player.y, heading: player.heading, size: player.size } : null,
+    player: player ? { x: player.x, y: player.y, dx: player.dx, dy: player.dy, heading: player.heading, size: player.size } : null,
     threats: threats.map(t => ({ x: t.x, y: t.y, heading: t.heading, size: t.size })),
     targets: targets.map(tgt => ({ x: tgt.x, y: tgt.y })),
     isGameOver: isLoss,
@@ -125,7 +150,7 @@ for (let i = 0; i < framesToProcess.length; i++) {
 
   // Optional ASCII Render for key turning frames or loss frames
   if (shouldRender && (frame.keys?.length > 0 || isLoss || i % 25 === 0)) {
-    renderAsciiGrid(frame, semanticState)
+    renderAsciiGrid(frame, semanticState, accumulatedGrid)
   }
 }
 
@@ -155,38 +180,52 @@ if (shouldQueryJev) {
 console.log('\n✅ Cleanroom Replay Complete.')
 
 // --- ASCII Grid Renderer ---
-function renderAsciiGrid(frame, state) {
-  const cols = 40 // Downsampled width for terminal display
-  const rows = 15 // Downsampled height for terminal display
-  const grid = Array.from({ length: rows }, () => new Array(cols).fill('.'))
+function renderAsciiGrid(frame, state, grid80x40) {
+  const arrows = {
+    UP: '▲',
+    DOWN: '▼',
+    LEFT: '◀',
+    RIGHT: '▶',
+    STATIONARY: '●',
+  }
+  const headingArrow = arrows[state.player?.heading || 'STATIONARY'] || '●'
 
-  // Render player
+  console.log(`\nFrame #${state.frameIndex} [t=${state.t}ms] | Keys: [${state.keys.join(', ')}] | Heading: ${state.player?.heading || 'NONE'} ${headingArrow} | Loss: ${state.isGameOver ? '💥 CRASH' : 'NO'}`)
+  console.log(`┌${'─'.repeat(80)}┐`)
+
+  // Render 80x20 half-block terminal lines (packs 80x40 perfectly)
+  for (let y = 0; y < 40; y += 2) {
+    let line = ''
+    for (let x = 0; x < 80; x++) {
+      const isPlayerHead = state.player && Math.round(state.player.x) === x && (Math.round(state.player.y) === y || Math.round(state.player.y) === y + 1)
+      const isTarget = state.targets.some(t => Math.round(t.x) === x && (Math.round(t.y) === y || Math.round(t.y) === y + 1))
+
+      if (isPlayerHead) {
+        line += headingArrow
+      }
+      else if (isTarget) {
+        line += '★'
+      }
+      else {
+        const top = grid80x40[y] ? grid80x40[y][x] === '1' : false
+        const bottom = grid80x40[y + 1] ? grid80x40[y + 1][x] === '1' : false
+
+        if (top && bottom)
+          line += '█'
+        else if (top)
+          line += '▀'
+        else if (bottom)
+          line += '▄'
+        else
+          line += ' '
+      }
+    }
+    console.log(`│${line}│`)
+  }
+  console.log(`└${'─'.repeat(80)}┘`)
   if (state.player) {
-    const px = Math.min(cols - 1, Math.max(0, Math.floor(state.player.x * (cols / 80))))
-    const py = Math.min(rows - 1, Math.max(0, Math.floor(state.player.y * (rows / 40))))
-    grid[py][px] = 'P'
+    console.log(`📍 Player Head: (${state.player.x}, ${state.player.y}) | Vector: (${state.player.dx || 0}, ${state.player.dy || 0}) | Active Clusters: ${state.threats.length + 1}`)
   }
-
-  // Render threats
-  for (const th of state.threats) {
-    const tx = Math.min(cols - 1, Math.max(0, Math.floor(th.x * (cols / 80))))
-    const ty = Math.min(rows - 1, Math.max(0, Math.floor(th.y * (rows / 40))))
-    grid[ty][tx] = 'E'
-  }
-
-  // Render targets
-  for (const tgt of state.targets) {
-    const tgx = Math.min(cols - 1, Math.max(0, Math.floor(tgt.x * (cols / 80))))
-    const tgy = Math.min(rows - 1, Math.max(0, Math.floor(tgt.y * (rows / 40))))
-    grid[tgy][tgx] = 'T'
-  }
-
-  console.log(`\nFrame #${state.frameIndex} [t=${state.t}ms] Keys: [${state.keys.join(', ')}] Heading: ${state.player?.heading || 'NONE'} Loss: ${state.isGameOver ? '💥 CRASH' : 'NO'}`)
-  console.log(`┌${'─'.repeat(cols)}┐`)
-  for (const row of grid) {
-    console.log(`│${row.join('')}│`)
-  }
-  console.log(`└${'─'.repeat(cols)}┘`)
 }
 
 // --- System-2 Synthesis Routine ---
