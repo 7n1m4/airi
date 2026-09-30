@@ -822,6 +822,142 @@ async function handleApproveStrategyReview(knowledge: AcquiredGameKnowledge) {
   }
 }
 
+// 60-Second Live Reflex Test Runner
+const isLiveReflexRunning = ref(false)
+const liveTestElapsedSec = ref(0)
+let liveReflexTimer: ReturnType<typeof setInterval> | null = null
+
+function handleStartLiveReflexTest(code: string) {
+  if (isLiveReflexRunning.value)
+    return
+
+  isLiveReflexRunning.value = true
+  liveTestElapsedSec.value = 0
+  toast.info('Starting 60s Live Extractor & Reflex Test on active game!')
+
+  try {
+    // Compile extractor safely
+    // eslint-disable-next-line no-new-func
+    const extractor = new Function('prevGrid', 'currGrid', 'diff', `
+      ${code}
+      if (typeof extractGameState === 'function') return extractGameState(prevGrid, currGrid, diff);
+      if (typeof evaluateGameState === 'function') return evaluateGameState(prevGrid, currGrid, diff);
+      return null;
+    `)
+
+    let prevGrid: string[] | null = null
+    const diffWidth = 80
+    const diffHeight = 40
+    const offscreen = document.createElement('canvas')
+    offscreen.width = diffWidth
+    offscreen.height = diffHeight
+    const offCtx = offscreen.getContext('2d', { willReadFrequently: true })
+
+    const testStartTime = Date.now()
+
+    liveReflexTimer = setInterval(async () => {
+      liveTestElapsedSec.value = Math.floor((Date.now() - testStartTime) / 1000)
+
+      if (liveTestElapsedSec.value >= 60) {
+        handleStopLiveReflexTest('60s Test Duration Completed!')
+        return
+      }
+
+      const canvas = (dosContainerRef.value?.querySelector('canvas') as HTMLCanvasElement | null)
+        || canvasRef.value
+      if (!canvas || !offCtx)
+        return
+
+      try {
+        offCtx.drawImage(canvas, 0, 0, diffWidth, diffHeight)
+        const imgData = offCtx.getImageData(0, 0, diffWidth, diffHeight)
+        const data = imgData.data
+
+        const currentGrid: string[] = []
+        for (let r = 0; r < diffHeight; r++) {
+          let rowStr = ''
+          for (let c = 0; c < diffWidth; c++) {
+            const idx = (r * diffWidth + c) * 4
+            rowStr += (data[idx] + data[idx + 1] + data[idx + 2] > 40) ? '1' : '0'
+          }
+          currentGrid.push(rowStr)
+        }
+
+        const added: Array<[number, number]> = []
+        const removed: Array<[number, number]> = []
+
+        if (prevGrid) {
+          for (let r = 0; r < diffHeight; r++) {
+            if (prevGrid[r] === currentGrid[r])
+              continue
+            for (let c = 0; c < diffWidth; c++) {
+              if (prevGrid[r][c] === '0' && currentGrid[r][c] === '1')
+                added.push([c, r])
+              else if (prevGrid[r][c] === '1' && currentGrid[r][c] === '0')
+                removed.push([c, r])
+            }
+          }
+        }
+
+        const diff = {
+          t: Date.now() - testStartTime,
+          added: added.length > 0 ? added : undefined,
+          removed: removed.length > 0 ? removed : undefined,
+        }
+
+        const state = extractor(prevGrid, currentGrid, diff)
+        prevGrid = currentGrid
+
+        if (state && state.isGameOver) {
+          handleStopLiveReflexTest('Extractor detected Game Over! Test completed safely.')
+          return
+        }
+
+        if (typeof state === 'string' && ['up', 'down', 'left', 'right', 'space'].includes(state)) {
+          const keyMap: Record<string, string> = {
+            up: 'ArrowUp',
+            down: 'ArrowDown',
+            left: 'ArrowLeft',
+            right: 'ArrowRight',
+            space: ' ',
+          }
+          await executeKeyPress(keyMap[state] || state)
+        }
+        else if (state?.controllableEntity?.heading) {
+          const heading = state.controllableEntity.heading
+          const keyMap: Record<string, string> = {
+            UP: 'ArrowUp',
+            DOWN: 'ArrowDown',
+            LEFT: 'ArrowLeft',
+            RIGHT: 'ArrowRight',
+          }
+          if (keyMap[heading]) {
+            await executeKeyPress(keyMap[heading])
+          }
+        }
+      }
+      catch (err) {
+        console.warn('[Arcade] Live extractor tick error:', err)
+      }
+    }, 150)
+  }
+  catch (err: any) {
+    toast.error(`Failed to compile extractor: ${err.message}`)
+    handleStopLiveReflexTest()
+  }
+}
+
+function handleStopLiveReflexTest(reason?: string) {
+  if (liveReflexTimer) {
+    clearInterval(liveReflexTimer)
+    liveReflexTimer = null
+  }
+  isLiveReflexRunning.value = false
+  if (reason) {
+    toast.success(reason)
+  }
+}
+
 function openReviewForCurrentGame() {
   const k = arcadeKnowledgeStore.getKnowledge(currentGameIdentifier.value)
   if (!k)
@@ -2390,6 +2526,26 @@ onUnmounted(() => {
               :cursor-state="arcadeAgent.cursorState.value"
               :character-name="activeCard?.name || 'Airi'"
             />
+
+            <!-- 60s Live Reflex Test Floating HUD -->
+            <transition name="fade">
+              <div
+                v-if="isLiveReflexRunning"
+                class="pointer-events-auto absolute left-1/2 top-3 z-40 flex items-center gap-3 border border-sky-500/40 rounded-full bg-black/85 px-4 py-1.5 shadow-2xl backdrop-blur-md -translate-x-1/2"
+              >
+                <div class="h-2 w-2 animate-ping rounded-full bg-sky-400" />
+                <div class="flex items-center gap-1.5 text-xs text-white font-bold font-mono">
+                  <span>AIRI Playing (60s Test):</span>
+                  <span class="text-sky-400">{{ liveTestElapsedSec }}s / 60s</span>
+                </div>
+                <button
+                  class="border border-white/20 rounded-md bg-white/10 px-2 py-0.5 text-[10px] text-neutral-200 transition-all active:scale-95 hover:bg-white/20"
+                  @click="handleStopLiveReflexTest('Test stopped by player.')"
+                >
+                  Stop Test
+                </button>
+              </div>
+            </transition>
           </div>
         </div>
 
@@ -2796,6 +2952,7 @@ onUnmounted(() => {
       :trace="latestCalibrationTrace"
       @close="handleCloseReview"
       @recalibrate="handleRecalibrateFromReview"
+      @test-live="handleStartLiveReflexTest"
       @approve="handleApproveStrategyReview"
     />
 

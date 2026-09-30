@@ -277,37 +277,84 @@ Selecting any game tile opens a focused provisioning sheet before booting the em
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-1. **User Action**: The user clicks `[ Start Recording ]` (triggering `collector.start()`).
-2. **Trace Accumulation**: The user plays for 10–20 seconds. The collector samples:
-   - $80 \times 40$ binary grid deltas ($\Delta = \text{Frame}_t - \text{Frame}_{t-1}$) at 10 Hz.
-   - User keypresses (`ArrowUp`, `ArrowLeft`, `Space`).
-3. **Completion & Freezing**: When the timer finishes or death occurs, the canvas freezes, and a processing overlay appears:
-   *"AIRI is watching the replay... Analyzing motion vectors and compiling visual state machine..."*
+1. **User Action**: The user clicks `[ Start 15s Calibration ]` (triggering `collector.start()`).
+2. **Calibration Coaching & Deliberate Loss Protocol**:
+   - To learn both player locomotion and the visual signature of game-over, the companion instructs the user:
+     > *"Play normally for a few seconds so I can see how you move, then **intentionally crash or lose before the 15s timer runs out**! That way I learn your controls and the Game Over screen!"*
+   - **Early Loss Trigger**: If the user crashes before the 15s timer finishes (e.g. at 7s or 10s), they can click `[ 💥 I Crashed! (Finish Calibration) ]` or wait for the countdown to automatically freeze and finalize the trace.
+3. **Trace Accumulation ($80 \times 40$ Downsampling Schema)**:
+   - Captures an offscreen downsampled $80 \times 40$ binary grid stream at 10 Hz matching the canonical format of `personal_airi/game_frames.json`:
+     - **Frame 0**: Initial baseline `fullGrid: string[]` (40 rows of 80 `'0'`/`'1'` characters).
+     - **Frames $1 \dots N$**: Sparse diff packets `{ t: number, keys: string[], added: [col, row][], removed: [col, row][] }`.
+   - Records synchronous key events (`ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Space`) with millisecond timestamps to correlate inputs with pixel deltas.
+4. **Completion & Freezing**: When time expires or early loss is triggered, the game stays running/frozen, and a synthesis overlay appears:
+   *"AIRI is watching the replay... Correlating player inputs with pixel deltas and synthesizing game state extractor..."*
 
 ---
 
-### 5.5 Stage 4: Strategy Review & Knowledge Approval
+### 5.5 Stage 4: Strategy Review & Generic State Extractor Synthesis
 
-The System-2 LLM receives the recorded trace JSON and synthesizes an executable **Mini Program**:
+The System-2 LLM receives the recorded demonstration trace JSON and synthesizes an executable **Generic State Extractor (Mini-Program)**:
 
-1. **Automated Rule Extraction**:
-   - **Player Entity**: Identifies the leading delta pixel as the agent head.
-   - **Velocity Vector**: Computes $\vec{v} = \text{Head}_t - \text{Head}_{t-1}$ (`UP`, `DOWN`, `LEFT`, `RIGHT`).
-   - **Static Targets**: Detects single unpaired pixels appearing without movement (e.g. food numbers).
-   - **Loss Condition**: Detects sudden multi-pixel surges in fixed bounding boxes (e.g. death dialog modal).
-2. **Review Dialog**:
-   - Displays AIRI's natural language comprehension of the game rules.
-   - Previews the synthesized pure JavaScript parser and keybindings.
-3. **Execution Controls**:
-   - **`[ 60-Second Sandboxed Test ]`**: Launches an automated 60-second trial run where AIRI plays live under a strict watchdog ceiling while you observe.
-   - **`[ Re-Record ]`**: Discards trace and returns to Stage 3 if the initial demonstration was flawed.
-   - **`[ Approve & Save Knowledge ]`**: Atomically persists the Mini Program into IndexedDB (`local:arcade_knowledge:<game_id>`).
+1. **Unbiased, Generic Synthesis Mission**:
+   - The LLM prompt is intentionally **open-ended and non-prescriptive**—it does not supply biased assumptions or pre-baked entity names (like `playerHead`, `food`, or `tail`) that could contaminate generic extraction across disparate genres (shooters, mazes, paddles, puzzles).
+   - The LLM analyzes the real sequence of `{ t, keys, added, removed }`:
+     - Correlates user keypresses with moving pixel clusters to identify controllable entities and motion vectors.
+     - Distinguishes dynamic interactive elements from static arena boundaries.
+     - Identifies the visual signature that occurred when the user crashed (e.g. sudden dialog boxes, multi-pixel bursts, freeze).
+2. **The Mini-Program Contract (Pure JS State Extractor)**:
+   - The synthesized code is **not a hardcoded heuristic bot** (no cyclic modulo loops or hardcoded turn rules).
+   - It is a fast, sandboxed JavaScript state parser (`extractGameState`) running in $<1\text{ms}$:
+     ```javascript
+     /**
+      * Synthesized Game State Extractor
+      * Evaluates raw 80x40 grids/diffs into a structured semantic situation report.
+      */
+     function extractGameState(prevGrid, currGrid, diff) {
+       // Returns dynamic game state object:
+       // {
+       //   controllableEntity: { x, y, heading },
+       //   activeHazards: [...],
+       //   activeTargets: [...],
+       //   isGameOver: boolean
+       // }
+     }
+     ```
+3. **Review Dialog UI**:
+   - **Airi's Game Comprehension**: Natural-language summary of perceived mechanics, hazards, and tactical directives.
+   - **Synthesized Extractor Viewer**: Syntax-highlighted code block displaying the full `extractGameState` JavaScript implementation.
+   - **`[ 📋 Copy Extractor Code ]`**: One-click clipboard copy with toast confirmation for transparent inspection.
+   - **Execution Controls**:
+     - **`[ 60-Second Sandboxed Test ]`**: Launches an automated 60-second trial run where AIRI plays live using the synthesized extractor and Jev reflexes while you observe.
+     - **`[ ⏱️ Recalibrate (15s) ]`**: Discards trace and returns to Stage 3 to re-demonstrate without resetting the running game instance.
+     - **`[ ✅ Approve & Save Knowledge ]`**: Atomically persists the Mini-Program and strategy into IndexedDB (`local:arcade_knowledge:<game_id>`).
 
 ---
 
-### 5.6 Stage 5: The Classic Co-Pilot Arena (Game 65% + Backseat Chat 35%)
+### 5.6 Stage 5: The Classic Co-Pilot Arena & 60-Second Live Sandbox Test Run
 
-Once knowledge is approved (or when launching a mastered game), the room opens in its refined classic split layout:
+Once knowledge is approved (or during the 60-Second Sandboxed Test), the runtime executes the **Decoupled Eyes $\to$ Brain $\to$ Hands Pipeline**:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│               DECOUPLED REAL-TIME CO-PILOT PIPELINE                    │
+│                                                                        │
+│ 1. [Eyes] Live Canvas ──► 80x40 Downsampler ──► extractGameState()     │
+│    (Runs at 15–20 Hz in <1ms, yielding clean SemanticGameState)       │
+│                                                                        │
+│ 2. [Brain] Jev System 1 (or Laya Local WASM)                           │
+│    Evaluates discrete choices ('UP'|'DOWN'|'LEFT'|'RIGHT')             │
+│    in ~100ms (Jev Cloud) or ~15ms (Laya Local)                         │
+│                                                                        │
+│ 3. [Hands] JS-DOS Command Interface                                    │
+│    simulateKeyPress(chosenAction) dispatches keypress to game          │
+│                                                                        │
+│ 4. [Safety Watchdog]                                                   │
+│    Terminates if 60s expires or extractGameState.isGameOver === true   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+The Arena layout opens in its refined classic split layout:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
@@ -349,7 +396,7 @@ export interface AcquiredGameKnowledge {
   technologyTier: 'fixed_single_screen' | 'flip_screen_rooms' | 'smooth_scrolling_camera' | 'first_person_or_3d' | 'static_ui_or_turn_based'
   runtimeProvider: 'laya_local' | 'typesafe_jev' | 'vlm_faculty'
   persona: 'hype_cheerleader' | 'strategic_adviser' | 'detective_partner' | 'laidback_observer'
-  miniProgramSource: string // Evaluated sandboxed pure JS extractor
+  miniProgramSource: string // Evaluated sandboxed pure JS state extractor function (extractGameState)
   actionSpace: {
     instructions: string
     choices: Record<string, string>

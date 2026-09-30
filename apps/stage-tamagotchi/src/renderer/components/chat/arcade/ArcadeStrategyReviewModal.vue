@@ -10,6 +10,7 @@ import type {
 import { useArcadeSynthesizer } from '@proj-airi/stage-ui/composables'
 import { DialogContent, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { computed, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
 
 const props = defineProps<{
   open: boolean
@@ -21,6 +22,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'recalibrate'): void
+  (e: 'testLive', code: string): void
   (e: 'approve', knowledge: AcquiredGameKnowledge): void
 }>()
 
@@ -35,6 +37,23 @@ const {
 
 const strategy = ref<ReturnType<typeof synthesizeStrategy> | null>(null)
 const miniProgram = ref<MiniProgramDefinition | null>(null)
+const copiedCode = ref(false)
+
+async function copyExtractorCode() {
+  if (!miniProgram.value?.code)
+    return
+  try {
+    await navigator.clipboard.writeText(miniProgram.value.code)
+    copiedCode.value = true
+    setTimeout(() => {
+      copiedCode.value = false
+    }, 2000)
+    toast.success('State extractor code copied to clipboard!')
+  }
+  catch {
+    toast.error('Failed to copy code to clipboard.')
+  }
+}
 
 // Persona presentation mapping
 const PERSONA_INFO: Record<string, { label: string, icon: string, color: string }> = {
@@ -89,6 +108,7 @@ async function handleTestSandbox() {
   if (!miniProgram.value?.code)
     return
   await runSandboxTest(miniProgram.value.code, 60)
+  emit('testLive', miniProgram.value.code)
 }
 
 function handleApprove() {
@@ -278,7 +298,7 @@ function handleApprove() {
             </div>
           </div>
 
-          <!-- 3. System 1 Reflex Mini-Program (if synthesized) -->
+          <!-- 3. Dynamic State Extractor (if synthesized) -->
           <div
             v-if="miniProgram"
             :class="[
@@ -290,20 +310,32 @@ function handleApprove() {
               <div class="flex items-center gap-2">
                 <div class="i-solar:code-square-bold text-sm text-sky-500" />
                 <h4 class="text-xs text-neutral-900 font-bold tracking-wider uppercase dark:text-neutral-100">
-                  System 1 Reflex Mini-Program
+                  Dynamic Game State Extractor
                 </h4>
               </div>
-              <span class="border border-sky-500/30 rounded bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-600 font-bold font-mono dark:text-sky-400">
-                60Hz Reflex Loop
-              </span>
+
+              <div class="flex items-center gap-2">
+                <button
+                  class="shadow-2xs dark:hover:bg-neutral-750 flex items-center gap-1 border border-neutral-300 rounded-md bg-white px-2 py-1 text-[11px] text-neutral-600 font-semibold transition-all active:scale-95 dark:border-neutral-700 dark:bg-neutral-800 hover:bg-neutral-100 dark:text-neutral-300"
+                  title="Copy synthesized extractGameState function to clipboard"
+                  @click="copyExtractorCode"
+                >
+                  <div :class="copiedCode ? 'i-solar:check-circle-bold text-emerald-500' : 'i-solar:copy-bold text-neutral-500'" class="text-xs" />
+                  <span>{{ copiedCode ? 'Copied!' : 'Copy Code' }}</span>
+                </button>
+
+                <span class="border border-sky-500/30 rounded bg-sky-500/10 px-2 py-0.5 text-[10px] text-sky-600 font-bold font-mono dark:text-sky-400">
+                  Pure JS &bull; &lt;1ms
+                </span>
+              </div>
             </div>
 
             <p class="text-[11px] text-neutral-500 leading-normal dark:text-neutral-400">
-              Low-latency deterministic heuristic synthesized for this title. Evaluates every frame without cloud latency.
+              Evaluates 80&times;40 grid deltas to extract active entities, headings, hazards, and game-over state to feed Jev System 1.
             </p>
 
             <!-- Code block -->
-            <div class="max-h-40 overflow-y-auto rounded-lg bg-neutral-900 p-3 text-[11px] text-neutral-100 font-mono">
+            <div class="max-h-48 overflow-y-auto border border-neutral-800 rounded-lg bg-neutral-900 p-3 text-[11px] text-neutral-100 font-mono shadow-inner">
               <pre class="whitespace-pre-wrap">{{ miniProgram.code }}</pre>
             </div>
 
@@ -312,7 +344,7 @@ function handleApprove() {
               <button
                 :disabled="isTesting"
                 :class="[
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all shadow-sm',
                   'border border-sky-500/40 bg-sky-500/15 text-sky-600 hover:bg-sky-500/25 active:scale-95 dark:text-sky-300',
                   isTesting ? 'opacity-60 cursor-not-allowed' : '',
                 ]"
@@ -320,7 +352,7 @@ function handleApprove() {
               >
                 <div v-if="isTesting" class="i-solar:restart-bold animate-spin text-xs" />
                 <div v-else class="i-solar:play-bold text-xs" />
-                <span>{{ isTesting ? 'Running 60 Ticks...' : 'Test Mini-Program (60s)' }}</span>
+                <span>{{ isTesting ? 'Running 60 Ticks...' : 'Test Extractor (60s)' }}</span>
               </button>
 
               <!-- Test Result Readout -->

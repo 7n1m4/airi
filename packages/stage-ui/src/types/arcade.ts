@@ -150,6 +150,14 @@ export interface MiniProgramDefinition {
   targetColor?: string
 }
 
+export interface DemonstrationFrameDiff {
+  t: number
+  keys: string[]
+  fullGrid?: string[]
+  added?: Array<[number, number]>
+  removed?: Array<[number, number]>
+}
+
 export interface CalibrationTelemetryTrace {
   timestamp: number
   durationMs: number
@@ -161,6 +169,8 @@ export interface CalibrationTelemetryTrace {
   }>
   motionEntropy: number
   identifiedArchitecture: ScreenMotionArchitecture
+  resolution?: { cols: number, rows: number }
+  frames?: DemonstrationFrameDiff[]
 }
 
 export interface AcquiredGameKnowledge {

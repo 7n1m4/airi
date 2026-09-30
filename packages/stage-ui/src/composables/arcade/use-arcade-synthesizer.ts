@@ -134,13 +134,23 @@ export function useArcadeSynthesizer() {
     if (title.includes('2048')) {
       keys = ['ArrowLeft', 'ArrowDown', 'ArrowRight', 'ArrowUp']
       code = `/**
- * AIRI Reflex Mini-Program: 2048 Corner Anchoring Engine
- * Strategy: Bottom-Left Anchor Priority
+ * AIRI Dynamic Game State Extractor: 2048 Retro Canvas
+ * Strategy: Spatial Tile & Cluster Extraction
  */
+function extractGameState(prevGrid, currGrid, diff) {
+  const added = (diff && diff.added) || [];
+  const removed = (diff && diff.removed) || [];
+
+  return {
+    controllableEntity: { x: 0, y: 0, heading: 'CORNER_ANCHOR' },
+    changedPixelsCount: added.length + removed.length,
+    isGameOver: added.length === 0 && removed.length === 0 && (diff && diff.t > 15000),
+    timestamp: diff ? diff.t : Date.now()
+  };
+}
+
 function evaluateGameState(prevFrame, currFrame, telemetry) {
   const tick = telemetry ? telemetry.tick : 0;
-  
-  // Greedy corner sweep heuristic: Left -> Down -> Right -> Up
   const cycle = tick % 4;
   if (cycle === 0) return 'left';
   if (cycle === 1) return 'down';
@@ -148,46 +158,64 @@ function evaluateGameState(prevFrame, currFrame, telemetry) {
   return 'down';
 }`
     }
-    else if (title.includes('nibbles') || title.includes('snake')) {
-      code = `/**
- * AIRI Reflex Mini-Program: Nibbles Collision Avoidance
- * Architecture: Fixed Single Screen
- * Entropy: ${trace.motionEntropy.toFixed(2)}
- */
-function evaluateGameState(prevFrame, currFrame, telemetry) {
-  const delta = currFrame ? currFrame.motionDelta || 0 : 0;
-  const tick = telemetry ? telemetry.tick : 0;
-  
-  // Perimeter navigation loop with evasive reflexes
-  if (delta > 0.40) {
-    // Sharp hazard change detected - execute emergency lateral pivot
-    return tick % 2 === 0 ? 'up' : 'right';
-  }
-  
-  // Standard sweep
-  const phase = Math.floor(tick / 8) % 4;
-  if (phase === 0) return 'right';
-  if (phase === 1) return 'down';
-  if (phase === 2) return 'left';
-  return 'up';
-}`
-    }
     else {
-      // General single-screen reflex program
+      // Generic single-screen state extractor based on 80x40 grid deltas
       code = `/**
- * AIRI Reflex Mini-Program: ${game.title}
+ * AIRI Dynamic Game State Extractor: ${game.title}
  * Screen Architecture: ${arch}
+ * Resolution: ${trace.resolution?.cols || 80}x${trace.resolution?.rows || 40}
  */
-function evaluateGameState(prevFrame, currFrame, telemetry) {
-  const delta = currFrame ? currFrame.motionDelta || 0 : 0;
-  const tick = telemetry ? telemetry.tick : 0;
-  
-  // High motion variance response
-  if (delta > 0.35) {
-    return tick % 2 === 0 ? 'space' : 'none';
+function extractGameState(prevGrid, currGrid, diff) {
+  const added = (diff && diff.added) || [];
+  const removed = (diff && diff.removed) || [];
+
+  // 1. Detect active controllable entity from moving pixel cluster
+  let entity = null;
+  if (added.length > 0) {
+    let sumX = 0, sumY = 0;
+    for (const [x, y] of added) {
+      sumX += x;
+      sumY += y;
+    }
+    const posX = Math.round(sumX / added.length);
+    const posY = Math.round(sumY / added.length);
+
+    // Compute heading vector from added vs removed centroids
+    let heading = 'UNKNOWN';
+    if (removed.length > 0) {
+      let rSumX = 0, rSumY = 0;
+      for (const [rx, ry] of removed) { rSumX += rx; rSumY += ry; }
+      const dx = posX - (rSumX / removed.length);
+      const dy = posY - (rSumY / removed.length);
+      if (Math.abs(dx) > Math.abs(dy)) {
+        heading = dx > 0 ? 'RIGHT' : 'LEFT';
+      } else if (Math.abs(dy) > 0) {
+        heading = dy > 0 ? 'DOWN' : 'UP';
+      }
+    }
+    entity = { x: posX, y: posY, heading };
   }
-  
-  return 'none';
+
+  // 2. Detect game-over signature (large multi-pixel surge or dialog box)
+  const isGameOver = added.length > 40;
+
+  return {
+    controllableEntity: entity,
+    changedPixelsCount: added.length + removed.length,
+    isGameOver,
+    timestamp: diff ? diff.t : Date.now()
+  };
+}
+
+function evaluateGameState(prevFrame, currFrame, telemetry) {
+  const state = extractGameState(null, null, currFrame);
+  if (state.isGameOver) return 'none';
+  const heading = state.controllableEntity ? state.controllableEntity.heading : 'UNKNOWN';
+  if (heading === 'RIGHT') return 'down';
+  if (heading === 'DOWN') return 'left';
+  if (heading === 'LEFT') return 'up';
+  if (heading === 'UP') return 'right';
+  return 'space';
 }`
     }
 
@@ -209,39 +237,42 @@ function evaluateGameState(prevFrame, currFrame, telemetry) {
     const actionsEmitted: Array<{ tick: number, action: MiniProgramAction, latencyMs: number }> = []
 
     try {
-      // Wrap code in a sandboxed Function
-      // Signature: (prevFrame, currFrame, telemetry) => Action
+      // Evaluate sandboxed extractor and evaluate functions
       // eslint-disable-next-line no-new-func
-      const runner = new Function('prevFrame', 'currFrame', 'telemetry', `
+      const runner = new Function('prevGrid', 'currGrid', 'diff', `
         ${code}
-        return evaluateGameState(prevFrame, currFrame, telemetry);
+        if (typeof extractGameState === 'function') {
+          return extractGameState(prevGrid, currGrid, diff);
+        }
+        if (typeof evaluateGameState === 'function') {
+          return evaluateGameState(prevGrid, currGrid, diff);
+        }
+        return { status: 'ok' };
       `)
 
       let ticksExecuted = 0
-      let prevFrame: any = { motionDelta: 0.1 }
-      let currFrame: any = { motionDelta: 0.15 }
-
       for (let i = 0; i < ticks; i++) {
         const tickStart = performance.now()
-        // Simulate changing motion delta
-        const simulatedDelta = (Math.sin(i / 5) + 1) / 4 // 0.0 to 0.5
-        currFrame = { motionDelta: simulatedDelta }
+        // Simulate a moving pixel cluster in 80x40 coordinates
+        const mockDiff = {
+          t: i * 16,
+          added: [[(10 + i) % 80, 20], [(11 + i) % 80, 20]] as Array<[number, number]>,
+          removed: [[(9 + i) % 80, 20]] as Array<[number, number]>,
+        }
 
-        const action = runner(prevFrame, currFrame, { tick: i }) as MiniProgramAction
+        const state = runner(null, null, mockDiff)
         const latencyMs = Number((performance.now() - tickStart).toFixed(3))
 
-        if (action && action !== 'none') {
+        if (state) {
           actionsEmitted.push({
             tick: i,
-            action,
+            action: (state.controllableEntity?.heading?.toLowerCase() as MiniProgramAction) || 'up',
             latencyMs,
           })
         }
 
-        prevFrame = currFrame
         ticksExecuted++
 
-        // Yield slightly every 15 ticks to avoid blocking UI thread
         if (i % 15 === 0) {
           await new Promise(resolve => setTimeout(resolve, 0))
         }
@@ -334,6 +365,7 @@ function evaluateGameState(prevFrame, currFrame, telemetry) {
       durationMs: trace.durationMs,
       totalKeyEvents: trace.keyEvents.length,
       keyEventsSample: trace.keyEvents.slice(0, 15),
+      demonstrationFrames: trace.frames ? { total: trace.frames.length, sample: trace.frames.slice(0, 8) } : 'none',
     })
     console.groupEnd()
 

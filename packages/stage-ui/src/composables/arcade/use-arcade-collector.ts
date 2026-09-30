@@ -1,4 +1,8 @@
-import type { CalibrationTelemetryTrace, ScreenMotionArchitecture } from '../../types/arcade'
+import type {
+  CalibrationTelemetryTrace,
+  DemonstrationFrameDiff,
+  ScreenMotionArchitecture,
+} from '../../types/arcade'
 
 import { onUnmounted, ref } from 'vue'
 
@@ -10,16 +14,18 @@ export function useArcadeCollector() {
   const motionEntropy = ref(0)
   const identifiedArchitecture = ref<ScreenMotionArchitecture>('fixed_single_screen')
   const detectedAnchorBox = ref<{ minX: number, minY: number, maxX: number, maxY: number } | null>(null)
+  const recordedFrames = ref<DemonstrationFrameDiff[]>([])
 
   let samplingTimer: ReturnType<typeof setInterval> | null = null
   let startTime = 0
-  let previousFrameData: Uint8ClampedArray | null = null
+  let previousGrid: string[] | null = null
+  let pendingIntervalKeys: string[] = []
   let diffCountSum = 0
   let totalComparisons = 0
 
-  // Downscaled canvas for ultra-fast 10Hz pixel diffing
-  const diffWidth = 160
-  const diffHeight = 100
+  // 80x40 canonical downsampling grid matching game_frames.json
+  const diffWidth = 80
+  const diffHeight = 40
   let offscreenCanvas: HTMLCanvasElement | null = null
   let offscreenCtx: CanvasRenderingContext2D | null = null
 
@@ -43,6 +49,9 @@ export function useArcadeCollector() {
       timestamp: Date.now() - startTime,
       type: 'down',
     })
+    if (!pendingIntervalKeys.includes(e.key)) {
+      pendingIntervalKeys.push(e.key)
+    }
   }
 
   function handleKeyUp(e: KeyboardEvent) {
@@ -63,56 +72,105 @@ export function useArcadeCollector() {
     try {
       ctx.drawImage(canvas, 0, 0, diffWidth, diffHeight)
       const imgData = ctx.getImageData(0, 0, diffWidth, diffHeight)
-      const currentData = imgData.data
+      const data = imgData.data
 
       framesCaptured.value++
 
-      if (previousFrameData) {
-        let changedPixels = 0
-        let minX = diffWidth
-        let minY = diffHeight
-        let maxX = 0
-        let maxY = 0
-
-        const totalPixels = diffWidth * diffHeight
-        for (let i = 0; i < currentData.length; i += 4) {
-          const dr = Math.abs(currentData[i] - previousFrameData[i])
-          const dg = Math.abs(currentData[i + 1] - previousFrameData[i + 1])
-          const db = Math.abs(currentData[i + 2] - previousFrameData[i + 2])
-
-          // Threshold for noticeable visual difference
-          if (dr + dg + db > 40) {
-            changedPixels++
-            const pixelIndex = i / 4
-            const x = pixelIndex % diffWidth
-            const y = Math.floor(pixelIndex / diffWidth)
-            if (x < minX)
-              minX = x
-            if (y < minY)
-              minY = y
-            if (x > maxX)
-              maxX = x
-            if (y > maxY)
-              maxY = y
-          }
+      // Convert 80x40 pixels into binary bitstrings
+      const currentGrid: string[] = []
+      for (let r = 0; r < diffHeight; r++) {
+        let rowStr = ''
+        for (let c = 0; c < diffWidth; c++) {
+          const idx = (r * diffWidth + c) * 4
+          const lum = data[idx] + data[idx + 1] + data[idx + 2]
+          rowStr += lum > 40 ? '1' : '0'
         }
+        currentGrid.push(rowStr)
+      }
 
-        const deltaRatio = changedPixels / totalPixels
-        diffCountSum += deltaRatio
-        totalComparisons++
-        motionEntropy.value = Math.round((diffCountSum / totalComparisons) * 100) / 100
+      const intervalKeys = [...pendingIntervalKeys]
+      pendingIntervalKeys = []
 
-        if (changedPixels > 0 && maxX >= minX && maxY >= minY) {
-          detectedAnchorBox.value = {
-            minX: Math.round((minX / diffWidth) * 1000),
-            minY: Math.round((minY / diffHeight) * 1000),
-            maxX: Math.round((maxX / diffWidth) * 1000),
-            maxY: Math.round((maxY / diffHeight) * 1000),
+      // Initial baseline frame
+      if (previousGrid === null) {
+        recordedFrames.value.push({
+          t: elapsedMs.value,
+          keys: intervalKeys,
+          fullGrid: currentGrid,
+        })
+        previousGrid = currentGrid
+        return
+      }
+
+      // Compute sparse diffs
+      const added: Array<[number, number]> = []
+      const removed: Array<[number, number]> = []
+      let minX = diffWidth
+      let minY = diffHeight
+      let maxX = 0
+      let maxY = 0
+
+      for (let r = 0; r < diffHeight; r++) {
+        const prevRow = previousGrid[r]
+        const currRow = currentGrid[r]
+        if (prevRow === currRow)
+          continue
+
+        for (let c = 0; c < diffWidth; c++) {
+          const prevBit = prevRow[c]
+          const currBit = currRow[c]
+          if (prevBit === '0' && currBit === '1') {
+            added.push([c, r])
+            if (c < minX)
+              minX = c
+            if (r < minY)
+              minY = r
+            if (c > maxX)
+              maxX = c
+            if (r > maxY)
+              maxY = r
+          }
+          else if (prevBit === '1' && currBit === '0') {
+            removed.push([c, r])
+            if (c < minX)
+              minX = c
+            if (r < minY)
+              minY = r
+            if (c > maxX)
+              maxX = c
+            if (r > maxY)
+              maxY = r
           }
         }
       }
 
-      previousFrameData = new Uint8ClampedArray(currentData)
+      const changedPixels = added.length + removed.length
+      const totalPixels = diffWidth * diffHeight
+      const deltaRatio = changedPixels / totalPixels
+      diffCountSum += deltaRatio
+      totalComparisons++
+      motionEntropy.value = Math.round((diffCountSum / totalComparisons) * 100) / 100
+
+      if (changedPixels > 0 && maxX >= minX && maxY >= minY) {
+        detectedAnchorBox.value = {
+          minX: Math.round((minX / diffWidth) * 1000),
+          minY: Math.round((minY / diffHeight) * 1000),
+          maxX: Math.round((maxX / diffWidth) * 1000),
+          maxY: Math.round((maxY / diffHeight) * 1000),
+        }
+      }
+
+      // Record sparse diff frame if changes or keys occurred
+      if (added.length > 0 || removed.length > 0 || intervalKeys.length > 0) {
+        recordedFrames.value.push({
+          t: elapsedMs.value,
+          keys: intervalKeys,
+          added: added.length > 0 ? added : undefined,
+          removed: removed.length > 0 ? removed : undefined,
+        })
+      }
+
+      previousGrid = currentGrid
     }
     catch {
       // Canvas may be tainted or cross-origin
@@ -127,10 +185,12 @@ export function useArcadeCollector() {
     elapsedMs.value = 0
     framesCaptured.value = 0
     keyEvents.value = []
+    recordedFrames.value = []
+    pendingIntervalKeys = []
     diffCountSum = 0
     totalComparisons = 0
     motionEntropy.value = 0
-    previousFrameData = null
+    previousGrid = null
     detectedAnchorBox.value = null
     startTime = Date.now()
 
@@ -163,6 +223,8 @@ export function useArcadeCollector() {
         keyEvents: keyEvents.value,
         motionEntropy: motionEntropy.value,
         identifiedArchitecture: identifiedArchitecture.value,
+        resolution: { cols: diffWidth, rows: diffHeight },
+        frames: recordedFrames.value,
       }
     }
 
@@ -199,6 +261,8 @@ export function useArcadeCollector() {
       keyEvents: [...keyEvents.value],
       motionEntropy: motionEntropy.value,
       identifiedArchitecture: identifiedArchitecture.value,
+      resolution: { cols: diffWidth, rows: diffHeight },
+      frames: [...recordedFrames.value],
     }
   }
 
@@ -216,6 +280,7 @@ export function useArcadeCollector() {
     motionEntropy,
     identifiedArchitecture,
     detectedAnchorBox,
+    recordedFrames,
     start,
     stop,
   }

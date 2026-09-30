@@ -156,9 +156,9 @@ flowchart TD
 The remaining unintegrated domains from the initial proposal are preserved in [`docs/proposal-jev-integration.md`](./proposal-jev-integration.md) for future promotion:
 
 1. **Domain A: Arcade Room Retro Gaming, Catalog Triage & Self-Synthesizing Copilot**:
-   - Detailed Specification: [`proposal-generic-gaming-agent-runtime.md`](./proposal-generic-gaming-agent-runtime.md) (Section 5.4).
+   - Detailed Specification: [`proposal-generic-gaming-agent-runtime.md`](./proposal-generic-gaming-agent-runtime.md) (Sections 5.4–5.6).
    - **Catalog Triage**: Offline Jev classification over the 8,900+ DOS catalog recommending Path A (System-2 VLM Strategy) vs Path B (System-1 Reflex).
-   - **Two-Tier Semantic Experience**: System 2 compiles a sandboxed JavaScript "Mini Program" from human demonstration traces, commanding System 1 (Laya Local / Jev ~100ms) with adaptive lookahead latency compensation and dynamic chat standing orders.
+   - **Decoupled Two-Tier Semantic Engine**: System 2 analyzes a 15s demonstration trace (80×40 sparse grid diffs) to synthesize a pure JavaScript **State Extractor** (`extractGameState`), which runs at 20 Hz in $<1\text{ms}$ feeding structured situation reports into System 1 (Laya Local / Jev ~100ms) to evaluate discrete action choices (`'UP'`, `'DOWN'`, `'LEFT'`, `'RIGHT'`).
 2. **Domain F: Dual-Duty Ninja-Swap Interceptor**:
    - Single-pass merged Jev evaluation (~110ms) reconciling authoring-time whitelists with live sentence strides to simultaneously inject avatar blendshapes (`<|ACT:...|>`) and speech inflection tags (`[whisper]`, `[sigh]`) with 100% voice-face emotional synchronization.
 3. **Domain G: Memory Token Compaction & Pre-Summary Filter**:

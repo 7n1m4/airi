@@ -80,23 +80,39 @@ function getActiveCanvas(): HTMLCanvasElement | null {
 function handleStartCalibration() {
   collector.start(getActiveCanvas, calibrationDurationMs, (trace) => {
     isAnalyzing.value = true
-    analysisProgress.value = 'Clustering pixel deltas & detecting player anchor...'
+    analysisProgress.value = 'Correlating keypresses with moving pixel clusters...'
 
     setTimeout(() => {
-      analysisProgress.value = 'Synthesizing JavaScript Mini-Program...'
+      analysisProgress.value = 'Synthesizing generic Game State Extractor...'
       setTimeout(() => {
         isAnalyzing.value = false
         emit('completed', trace)
-      }, 1000)
-    }, 800)
+      }, 900)
+    }, 700)
   })
+}
+
+function handleEarlyCrash() {
+  if (!collector.isRecording.value)
+    return
+  const trace = collector.stop()
+  isAnalyzing.value = true
+  analysisProgress.value = 'Captured game-over signature & pixel deltas...'
+
+  setTimeout(() => {
+    analysisProgress.value = 'Synthesizing generic Game State Extractor...'
+    setTimeout(() => {
+      isAnalyzing.value = false
+      emit('completed', trace)
+    }, 900)
+  }, 700)
 }
 
 onMounted(() => {
   // Greet player with companion persona
   try {
     characterStore.emitTextOutput(
-      `Help me help you! Play ${props.game.title} for 15 seconds so I can observe how the game moves and learn its physics!`,
+      `Help me learn ${props.game.title}! Play normally for a few seconds to show me your moves, then intentionally crash or lose so I can learn both your controls and the Game Over screen!`,
     )
   }
   catch {}
@@ -126,8 +142,8 @@ onMounted(() => {
         <p class="text-xs text-neutral-200 leading-snug">
           {{
             collector.isRecording.value
-              ? 'Observing! Play normally—dodge hazards, score points, and show me how you move!'
-              : `Hit "Start 15s Calibration" below and play for 15 seconds so I can learn ${game.title}'s mechanics!`
+              ? 'Observing! Play normally for a few turns, then intentionally crash or lose before time expires so I can learn your Game Over screen!'
+              : `Hit "Start 15s Calibration" below, play normally for a few turns, and intentionally crash or lose so I can learn both controls and game-over conditions!`
           }}
         </p>
       </div>
@@ -218,41 +234,52 @@ onMounted(() => {
           <span>Start 15s Calibration</span>
         </button>
 
-        <!-- Radial Countdown Timer -->
-        <div v-else class="flex items-center gap-3">
-          <div class="relative h-10 w-10 flex items-center justify-center">
-            <svg class="h-10 w-10 -rotate-90">
-              <circle
-                class="text-neutral-800"
-                stroke-width="3"
-                stroke="currentColor"
-                fill="transparent"
-                :r="radius"
-                cx="20"
-                cy="20"
-              />
-              <circle
-                class="text-primary-500 transition-all duration-100 ease-linear"
-                stroke-width="3"
-                :stroke-dasharray="circumference"
-                :stroke-dashoffset="strokeDashoffset"
-                stroke-linecap="round"
-                stroke="currentColor"
-                fill="transparent"
-                :r="radius"
-                cx="20"
-                cy="20"
-              />
-            </svg>
-            <span class="absolute text-xs text-white font-bold font-mono">
-              {{ secondsRemaining }}
-            </span>
+        <!-- Radial Countdown Timer & Early Crash Button -->
+        <div v-else class="flex items-center gap-4">
+          <div class="flex items-center gap-3">
+            <div class="relative h-10 w-10 flex items-center justify-center">
+              <svg class="h-10 w-10 -rotate-90">
+                <circle
+                  class="text-neutral-800"
+                  stroke-width="3"
+                  stroke="currentColor"
+                  fill="transparent"
+                  :r="radius"
+                  cx="20"
+                  cy="20"
+                />
+                <circle
+                  class="text-primary-500 transition-all duration-100 ease-linear"
+                  stroke-width="3"
+                  :stroke-dasharray="circumference"
+                  :stroke-dashoffset="strokeDashoffset"
+                  stroke-linecap="round"
+                  stroke="currentColor"
+                  fill="transparent"
+                  :r="radius"
+                  cx="20"
+                  cy="20"
+                />
+              </svg>
+              <span class="absolute text-xs text-white font-bold font-mono">
+                {{ secondsRemaining }}
+              </span>
+            </div>
+
+            <div class="flex flex-col">
+              <span class="text-xs text-emerald-400 font-bold">Recording Motion...</span>
+              <span class="text-[10px] text-neutral-400">Crash or lose before 0s</span>
+            </div>
           </div>
 
-          <div class="flex flex-col">
-            <span class="text-xs text-emerald-400 font-bold">Recording Motion...</span>
-            <span class="text-[10px] text-neutral-400">Keep playing until time expires</span>
-          </div>
+          <button
+            class="flex items-center gap-1.5 border border-rose-500/40 rounded-xl bg-rose-500/15 px-3 py-1.5 text-xs text-rose-300 font-bold shadow-sm transition-all active:scale-95 hover:bg-rose-500/25"
+            title="I crashed or lost! Finalize calibration now without waiting."
+            @click="handleEarlyCrash"
+          >
+            <div class="i-solar:bomb-bold text-xs text-rose-400" />
+            <span>💥 I Crashed!</span>
+          </button>
         </div>
       </div>
 
