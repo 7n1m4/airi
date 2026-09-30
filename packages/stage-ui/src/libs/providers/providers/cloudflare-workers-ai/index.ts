@@ -32,7 +32,57 @@ export const providerCloudflareWorkersAI = defineProvider({
     }),
   }),
   createProvider(config) {
-    return createWorkersAI(config.apiKey, config.accountId)
+    const baseAI = createWorkersAI(config.apiKey, config.accountId) as any
+    const rawChat = baseAI.chat.bind(baseAI)
+
+    // Resilient Chat Provider with Transparent OAuth Token Auto-Refresh
+    baseAI.chat = (model: string) => {
+      const chatConfig = rawChat(model)
+      const originalFetch = chatConfig.fetch ?? globalThis.fetch
+
+      chatConfig.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+        let res = await originalFetch(input, init)
+
+        // If Cloudflare returns 401 Unauthorized, attempt transparent OAuth refresh & retry
+        if (res.status === 401) {
+          try {
+            const { useCloudflareStore } = await import('../../../../stores/modules/cloudflare')
+            const { useProvidersStore } = await import('../../../../stores/providers')
+            const cloudflareStore = useCloudflareStore()
+            const providersStore = useProvidersStore()
+
+            if (cloudflareStore.cfOAuthTokens?.refreshToken) {
+              console.warn('[CloudflareWorkersAI] 401 encountered, attempting transparent OAuth token refresh...')
+              const refreshed = await cloudflareStore.refreshOAuthTokens()
+              if (refreshed?.accessToken) {
+                // Update active credentials in memory & store
+                if (providersStore.providers['cloudflare-workers-ai']) {
+                  providersStore.providers['cloudflare-workers-ai'].apiKey = refreshed.accessToken
+                }
+
+                // Re-execute request with refreshed Authorization header
+                const updatedHeaders = new Headers(init?.headers || {})
+                updatedHeaders.set('Authorization', `Bearer ${refreshed.accessToken}`)
+
+                res = await originalFetch(input, {
+                  ...init,
+                  headers: updatedHeaders,
+                })
+              }
+            }
+          }
+          catch (refreshErr) {
+            console.error('[CloudflareWorkersAI] Resilient OAuth refresh failed:', refreshErr)
+          }
+        }
+
+        return res
+      }
+
+      return chatConfig
+    }
+
+    return baseAI
   },
   validationRequiredWhen: (config) => {
     return !!config.apiKey && !!config.accountId

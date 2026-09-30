@@ -844,35 +844,61 @@ export const useCloudflareStore = defineStore('cloudflare', () => {
       return null
     }
 
-    try {
-      const res = await fetch(TOKEN_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          grant_type: 'refresh_token',
-          client_id: CLOUDFLARE_OAUTH_CLIENT_ID,
-          refresh_token: cfOAuthTokens.value.refreshToken,
-        }).toString(),
-      })
+    const isViteDev = Boolean(
+      import.meta.env?.DEV
+        && !isElectron
+        && typeof window !== 'undefined'
+        && !(window as any)?.Capacitor?.isNativePlatform?.()
+        && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+        && window.location.port,
+    )
 
-      if (!res.ok) {
-        console.warn('[useCloudflareStore] Token refresh failed with status:', res.status)
-        return null
-      }
-
-      const tokenData = await res.json()
-      if (tokenData.access_token) {
-        cfOAuthTokens.value = {
-          accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token || cfOAuthTokens.value.refreshToken,
-          expiresIn: tokenData.expires_in,
-          accountId: cfOAuthTokens.value.accountId,
-        }
-        return cfOAuthTokens.value
-      }
+    const endpointsToTry: string[] = []
+    if (isElectron) {
+      endpointsToTry.push(TOKEN_ENDPOINT)
     }
-    catch (err) {
-      console.warn('[useCloudflareStore] Error refreshing OAuth tokens:', err)
+    else if (isViteDev) {
+      endpointsToTry.push('/api/cf-oauth-token')
+      endpointsToTry.push(TOKEN_ENDPOINT)
+    }
+    else {
+      if (cfSubdomain.value) {
+        endpointsToTry.push(`https://airi-cors-proxy.${cfSubdomain.value}.workers.dev/cors-proxy?url=${encodeURIComponent(TOKEN_ENDPOINT)}`)
+      }
+      endpointsToTry.push(`https://airi-cors-proxy.r1ch4rd.workers.dev/cors-proxy?url=${encodeURIComponent(TOKEN_ENDPOINT)}`)
+      endpointsToTry.push(TOKEN_ENDPOINT)
+    }
+
+    for (const endpoint of endpointsToTry) {
+      try {
+        const fetchRes: Response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            grant_type: 'refresh_token',
+            client_id: CLOUDFLARE_OAUTH_CLIENT_ID,
+            refresh_token: cfOAuthTokens.value.refreshToken,
+          }).toString(),
+        })
+
+        if (!fetchRes.ok) {
+          continue
+        }
+
+        const data: any = await fetchRes.json()
+        if (data.access_token) {
+          cfOAuthTokens.value = {
+            accessToken: data.access_token,
+            refreshToken: data.refresh_token || cfOAuthTokens.value.refreshToken,
+            expiresIn: data.expires_in,
+            accountId: cfOAuthTokens.value.accountId,
+          }
+          return cfOAuthTokens.value
+        }
+      }
+      catch (err) {
+        console.warn('[useCloudflareStore] Error refreshing OAuth tokens on endpoint:', endpoint, err)
+      }
     }
     return null
   }

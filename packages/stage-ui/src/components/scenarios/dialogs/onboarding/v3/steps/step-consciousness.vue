@@ -16,10 +16,12 @@ import CloudflareConnectDialog from '../../../cloudflare/CloudflareConnectDialog
 
 import { DEFAULT_WEB_LLM_FP32_MODEL, WEB_LLM_MODELS } from '../../../../../../libs/inference/constants'
 import { NativeAI } from '../../../../../../libs/native-ai'
+import { useAiriCardStore } from '../../../../../../stores/modules/airi-card'
 import { useCloudflareStore } from '../../../../../../stores/modules/cloudflare'
 import { useProvidersStore } from '../../../../../../stores/providers'
 import { DEFAULT_APPLE_CORE_AI_MODEL } from '../../../../../../stores/providers/apple-core-ai'
 import { BrainModelPicker } from '../../../../chat'
+import { resolvePersona } from '../composables/useStarterCardCommit'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
 const props = defineProps<{
@@ -93,16 +95,30 @@ const pollinationsPresets = [
   },
 ]
 
+function getCloudflareCredentials(): { apiKey: string, accountId: string } {
+  const apiKey = (cloudflareStore.activeAccessToken || cloudflareStore.cfApiToken || cloudflareStore.cfOAuthTokens?.accessToken || '').trim()
+  const accountId = (cloudflareStore.activeAccountId || cloudflareStore.cfAccountId || cloudflareStore.cfOAuthTokens?.accountId || '').trim()
+  return { apiKey, accountId }
+}
+
 function selectCloudflareModel(modelId: string) {
   selectedProviderId.value = 'cloudflare-workers-ai'
   selectedModelId.value = modelId
 
+  const { apiKey, accountId } = getCloudflareCredentials()
+
   if (!providersStore.providers['cloudflare-workers-ai']) {
     providersStore.providers['cloudflare-workers-ai'] = {}
   }
-  providersStore.providers['cloudflare-workers-ai'].apiKey = cloudflareStore.activeAccessToken
-  providersStore.providers['cloudflare-workers-ai'].accountId = cloudflareStore.activeAccountId
+  if (apiKey)
+    providersStore.providers['cloudflare-workers-ai'].apiKey = apiKey
+  if (accountId)
+    providersStore.providers['cloudflare-workers-ai'].accountId = accountId
+
   providersStore.markProviderAdded('cloudflare-workers-ai')
+  if (apiKey && accountId) {
+    void providersStore.validateProvider('cloudflare-workers-ai').catch(() => {})
+  }
   recordDraft()
 }
 
@@ -115,10 +131,30 @@ function selectPollinationsModel(modelId: string) {
 
 function handleCloudflareConnected() {
   isConnectModalOpen.value = false
-  if (cloudflareStore.activeAccountId && cloudflareStore.activeAccessToken) {
-    selectCloudflareModel('@cf/meta/llama-3.3-70b-instruct')
+  const { apiKey, accountId } = getCloudflareCredentials()
+  if (accountId && apiKey) {
+    selectCloudflareModel(selectedModelId.value || '@cf/meta/llama-3.3-70b-instruct')
   }
 }
+
+// Keep providersStore in sync if Cloudflare authenticates or changes accounts while on this step
+watch(isCloudflareConnected, (connected) => {
+  if (connected && selectedProviderId.value === 'cloudflare-workers-ai') {
+    const { apiKey, accountId } = getCloudflareCredentials()
+    if (!providersStore.providers['cloudflare-workers-ai']) {
+      providersStore.providers['cloudflare-workers-ai'] = {}
+    }
+    if (apiKey)
+      providersStore.providers['cloudflare-workers-ai'].apiKey = apiKey
+    if (accountId)
+      providersStore.providers['cloudflare-workers-ai'].accountId = accountId
+    providersStore.markProviderAdded('cloudflare-workers-ai')
+    if (apiKey && accountId) {
+      void providersStore.validateProvider('cloudflare-workers-ai').catch(() => {})
+    }
+    recordDraft()
+  }
+})
 
 const { allChatProvidersMetadata, configuredChatProvidersMetadata } = storeToRefs(providersStore)
 
@@ -500,13 +536,51 @@ function onSelectModelFromDropdown(e: Event) {
   }
 }
 
-// --- Live Connection Test Probe ---
+// --- Character Persona Context for Realistic Dialogue Simulation ---
+const cardStore = useAiriCardStore()
+const { activeCard } = storeToRefs(cardStore)
+
+const userName = computed(() => draft.state.userName?.trim() || 'Richy')
+const resolvedPersona = computed(() => resolvePersona(draft.state, userName.value))
+const characterName = computed(() => draft.state.companionName || resolvedPersona.value.name || activeCard.value?.name || 'Airi')
+
+const characterPersonaContext = computed(() => {
+  const p = resolvedPersona.value
+  const name = characterName.value
+  const desc = p.description
+    || (draft.state.customCharacterCardBundle as any)?.data?.description
+    || (draft.state.customCharacterTags?.length ? `Tags: ${draft.state.customCharacterTags.join(', ')}` : '')
+  const personality = p.personality
+    || (draft.state.customCharacterCardBundle as any)?.data?.personality
+  const scenario = p.scenario
+    || (draft.state.customCharacterProposal as any)?.scenario
+    || (draft.state.customCharacterCardBundle as any)?.data?.scenario
+
+  const parts: string[] = [`You are ${name}. Respond in-character concisely (1-2 sentences).`]
+
+  if (desc) {
+    parts.push(`[APPEARANCE & VISUAL IDENTITY]:\n${desc}`)
+  }
+  if (personality) {
+    parts.push(`[PERSONALITY & TRAITS]:\n${personality}`)
+  }
+  if (scenario) {
+    parts.push(`[CHARACTER LORE & SCENARIO]:\n${scenario}`)
+  }
+
+  return parts.join('\n\n')
+})
+
+// --- Live Connection Test & Dialogue Simulator ---
 type ProbeState = 'idle' | 'connecting' | 'inferencing' | 'verified' | 'error'
 const probeState = ref<ProbeState>('idle')
 const probeResponseMessage = ref('')
 const probeErrorMessage = ref('')
 const probeBenchmarkMs = ref<number | null>(draft.state.brainBenchmark?.latencyMs ?? null)
+const probeTokens = ref<number | null>(null)
+const probeSentences = ref<number | null>(null)
 const probeHasReasoning = ref<boolean>(draft.state.brainBenchmark?.hasReasoning ?? false)
+const testSimulationPrompt = ref('Say hello and introduce yourself!')
 
 async function testBrainConnection() {
   if (probeState.value === 'connecting' || probeState.value === 'inferencing' || !selectedProviderId.value || !selectedModelId.value.trim())
@@ -515,20 +589,27 @@ async function testBrainConnection() {
   probeState.value = 'connecting'
   probeErrorMessage.value = ''
   probeResponseMessage.value = ''
+  probeBenchmarkMs.value = null
+  probeTokens.value = null
+  probeSentences.value = null
 
   try {
     const providerInstance = await providersStore.getProviderInstance(selectedProviderId.value)
     if (!providerInstance || typeof (providerInstance as any).chat !== 'function') {
-      throw new Error(`Provider "${selectedProviderId.value}" does not expose chat completions.`)
+      throw new Error(`Provider "${selectedProviderId.value}" does not expose chat completions. Check credentials.`)
     }
 
     probeState.value = 'inferencing'
     const startTime = performance.now()
 
     const { generateText } = await import('@xsai/generate-text')
+    const userPromptText = testSimulationPrompt.value.trim() || 'Say hello and introduce yourself!'
     const result = await generateText({
       ...(providerInstance as any).chat(selectedModelId.value.trim()),
-      messages: [{ role: 'user', content: 'Say "Ready to assist!" in under 5 words.' }],
+      messages: [
+        { role: 'system', content: characterPersonaContext.value },
+        { role: 'user', content: userPromptText },
+      ],
     })
     const elapsedMs = Math.round(performance.now() - startTime)
     probeBenchmarkMs.value = elapsedMs
@@ -550,8 +631,14 @@ async function testBrainConnection() {
     probeHasReasoning.value = isReasoning
 
     if (result && result.text) {
+      const clean = result.text.trim()
       probeState.value = 'verified'
-      probeResponseMessage.value = result.text.trim()
+      probeResponseMessage.value = clean
+
+      const words = clean.split(/\s+/).filter(Boolean).length
+      probeTokens.value = Math.round(clean.length / 3.8) || words
+      const sentences = clean.split(/[.!?]+/).filter((s: string) => s.trim().length > 0).length
+      probeSentences.value = sentences
 
       draft.setBrainBenchmark({
         latencyMs: elapsedMs,
@@ -872,95 +959,6 @@ onBeforeUnmount(() => {
           <span class="flex-shrink-0 text-[11px] text-neutral-400">
             Available in Settings
           </span>
-        </div>
-
-        <!-- Live Connection Test Probe for Free Models -->
-        <div
-          v-if="(selectedProviderId === 'cloudflare-workers-ai' || selectedProviderId === 'pollinations') && selectedModelId"
-          class="flex flex-col gap-2.5 border border-neutral-200/60 rounded-xl bg-white/40 p-4 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40"
-        >
-          <div class="flex items-center justify-between gap-2">
-            <button
-              type="button"
-              :disabled="probeState === 'connecting' || probeState === 'inferencing' || !selectedModelId.trim()"
-              class="flex cursor-pointer items-center gap-2 border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-700 font-semibold shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 hover:bg-neutral-100 dark:text-neutral-300 disabled:opacity-50 dark:hover:bg-neutral-700"
-              @click="testBrainConnection"
-            >
-              <div v-if="probeState === 'connecting' || probeState === 'inferencing'" class="i-solar:restart-square-bold h-4 w-4 animate-spin text-primary-500" />
-              <div v-else class="i-solar:plain-bold-duotone h-4 w-4 text-primary-500" />
-              <span>{{ probeState === 'connecting' || probeState === 'inferencing' ? 'Testing…' : 'Test Brain Connection' }}</span>
-            </button>
-
-            <!-- Progress Dot & Status -->
-            <div class="flex items-center gap-1.5 text-xs font-semibold">
-              <template v-if="probeState === 'connecting'">
-                <span class="relative h-2.5 w-2.5 flex">
-                  <span class="absolute h-full w-full inline-flex animate-ping rounded-full bg-amber-400 opacity-75" />
-                  <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-amber-500" />
-                </span>
-                <span class="text-amber-600 dark:text-amber-400">Connecting…</span>
-              </template>
-
-              <template v-else-if="probeState === 'inferencing'">
-                <span class="relative h-2.5 w-2.5 flex">
-                  <span class="absolute h-full w-full inline-flex animate-ping rounded-full bg-yellow-400 opacity-75" />
-                  <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-yellow-500" />
-                </span>
-                <span class="text-yellow-600 dark:text-yellow-400">Inferencing…</span>
-              </template>
-
-              <template v-else-if="probeState === 'verified'">
-                <span class="relative h-2.5 w-2.5 flex">
-                  <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-emerald-500" />
-                </span>
-                <span class="text-[11px] text-emerald-600 font-mono dark:text-emerald-400">
-                  Verified{{ probeBenchmarkMs !== null ? ` (${probeBenchmarkMs}ms)` : '' }}
-                </span>
-              </template>
-
-              <template v-else-if="probeState === 'error'">
-                <span class="relative h-2.5 w-2.5 flex">
-                  <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-red-500" />
-                </span>
-                <span class="text-red-600 dark:text-red-400">Failed</span>
-              </template>
-            </div>
-          </div>
-
-          <!-- Verified Response Bubble & Telemetry Tag -->
-          <div
-            v-if="probeState === 'verified' && probeResponseMessage"
-            class="flex flex-col gap-1.5 rounded-lg bg-emerald-500/10 p-2.5 text-xs text-emerald-700 dark:text-emerald-300"
-          >
-            <div class="flex items-center justify-between gap-2">
-              <div class="min-w-0 flex items-center gap-2 truncate">
-                <div class="i-solar:chat-round-dots-bold-duotone h-4 w-4 flex-shrink-0 text-emerald-500" />
-                <span class="truncate italic">"{{ probeResponseMessage }}"</span>
-              </div>
-              <div class="flex shrink-0 items-center gap-1.5 text-[10px] font-mono">
-                <span v-if="probeBenchmarkMs !== null" class="rounded bg-emerald-500/20 px-1.5 py-0.5 text-emerald-700 font-bold dark:text-emerald-300">
-                  {{ probeBenchmarkMs }}ms TTFT
-                </span>
-                <span :class="['px-1.5 py-0.5 rounded font-bold', probeHasReasoning ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300']">
-                  {{ probeHasReasoning ? '🧠 Reasoning Model' : '⚡ Standard Stream' }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Error Details Banner -->
-          <div
-            v-else-if="probeState === 'error' && probeErrorMessage"
-            class="flex items-start gap-2 rounded-lg bg-red-500/10 p-2.5 text-xs text-red-600 dark:text-red-400"
-          >
-            <div class="i-solar:danger-triangle-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
-            <div class="min-w-0 flex-1">
-              <span class="font-bold">Test Failed:</span>
-              <p class="mt-0.5 break-all text-[11px] leading-snug">
-                {{ probeErrorMessage }}
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 
@@ -1410,92 +1408,104 @@ onBeforeUnmount(() => {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
 
-            <!-- Item 4: Live Connection Test Probe -->
-            <div class="flex flex-col gap-2.5 border-t border-neutral-200/50 pt-3 dark:border-neutral-800/50">
-              <div class="flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  :disabled="probeState === 'connecting' || probeState === 'inferencing' || !selectedModelId.trim()"
-                  class="flex cursor-pointer items-center gap-2 border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-700 font-semibold shadow-sm transition-all active:scale-95 disabled:cursor-not-allowed dark:border-neutral-700 dark:bg-neutral-800 hover:bg-neutral-100 dark:text-neutral-300 disabled:opacity-50 dark:hover:bg-neutral-700"
-                  @click="testBrainConnection"
-                >
-                  <div v-if="probeState === 'connecting' || probeState === 'inferencing'" class="i-solar:restart-square-bold h-4 w-4 animate-spin text-primary-500" />
-                  <div v-else class="i-solar:plain-bold-duotone h-4 w-4 text-primary-500" />
-                  <span>{{ probeState === 'connecting' || probeState === 'inferencing' ? 'Testing…' : 'Test Brain Connection' }}</span>
-                </button>
+      <!-- Universal Interactive Dialogue Simulator / Brain Verification (Active for ANY selected Model) -->
+      <div
+        v-if="selectedModelId && (selectedProviderId === 'web-llm' || selectedProviderId === 'apple-core-ai' || selectedChatProvider?.requiresCredentials === false || isProviderConfigured)"
+        class="animate-fadeIn border border-neutral-200/60 rounded-xl bg-white/40 p-4 backdrop-blur-md space-y-3 dark:border-neutral-800/80 dark:bg-neutral-900/40"
+      >
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="i-solar:play-circle-bold-duotone h-4.5 w-4.5 text-primary-500" />
+            <span class="text-xs text-neutral-800 font-bold tracking-wider uppercase dark:text-neutral-200">
+              Dialogue Simulator & Brain Verification
+            </span>
+          </div>
+          <span class="text-[10px] text-neutral-400 font-mono">
+            Testing: {{ selectedModelId }}
+          </span>
+        </div>
 
-                <!-- Progress Dot & Status -->
-                <div class="flex items-center gap-1.5 text-xs font-semibold">
-                  <template v-if="probeState === 'connecting'">
-                    <span class="relative h-2.5 w-2.5 flex">
-                      <span class="absolute h-full w-full inline-flex animate-ping rounded-full bg-amber-400 opacity-75" />
-                      <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-amber-500" />
-                    </span>
-                    <span class="text-amber-600 dark:text-amber-400">Connecting…</span>
-                  </template>
+        <p class="text-[11px] text-neutral-500 leading-relaxed dark:text-neutral-400">
+          Simulate a turn to verify your companion responds in-character, measures live latency, and confirms brain connectivity before proceeding.
+        </p>
 
-                  <template v-else-if="probeState === 'inferencing'">
-                    <span class="relative h-2.5 w-2.5 flex">
-                      <span class="absolute h-full w-full inline-flex animate-ping rounded-full bg-yellow-400 opacity-75" />
-                      <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-yellow-500" />
-                    </span>
-                    <span class="text-yellow-600 dark:text-yellow-400">Inferencing…</span>
-                  </template>
+        <!-- Prompt Input & Run Button -->
+        <div class="flex items-center gap-2">
+          <input
+            v-model="testSimulationPrompt"
+            type="text"
+            placeholder="Say hello and introduce yourself!"
+            :disabled="probeState === 'connecting' || probeState === 'inferencing'"
+            class="flex-1 border border-neutral-200 rounded-xl bg-white px-3 py-2 text-xs text-neutral-800 outline-none transition dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-neutral-100 disabled:opacity-50"
+            @keydown.enter="testBrainConnection"
+          >
+          <button
+            type="button"
+            :disabled="probeState === 'connecting' || probeState === 'inferencing' || !selectedModelId.trim()"
+            :class="[
+              'px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs cursor-pointer flex-shrink-0',
+              probeState === 'connecting' || probeState === 'inferencing'
+                ? 'bg-neutral-200 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed'
+                : 'bg-primary-600 hover:bg-primary-500 text-white shadow-primary-600/20 active:scale-95',
+            ]"
+            @click="testBrainConnection"
+          >
+            <div :class="[probeState === 'connecting' || probeState === 'inferencing' ? 'i-solar:refresh-circle-bold animate-spin h-3.5 w-3.5' : 'i-solar:play-bold h-3.5 w-3.5']" />
+            <span>{{ probeState === 'connecting' || probeState === 'inferencing' ? 'Testing…' : 'Simulate Turn' }}</span>
+          </button>
+        </div>
 
-                  <template v-else-if="probeState === 'verified'">
-                    <span class="relative h-2.5 w-2.5 flex">
-                      <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-emerald-500" />
-                    </span>
-                    <span class="text-[11px] text-emerald-600 font-mono dark:text-emerald-400">
-                      Verified{{ probeBenchmarkMs !== null ? ` (${probeBenchmarkMs}ms)` : '' }}
-                    </span>
-                  </template>
+        <!-- Progress Indicator -->
+        <div
+          v-if="probeState === 'connecting' || probeState === 'inferencing'"
+          class="flex items-center gap-2 py-1 text-xs text-neutral-400 italic"
+        >
+          <div class="i-solar:refresh-circle-bold h-4 w-4 animate-spin text-primary-500" />
+          <span>{{ probeState === 'connecting' ? 'Establishing provider connection…' : 'Generating in-character companion response…' }}</span>
+        </div>
 
-                  <template v-else-if="probeState === 'error'">
-                    <span class="relative h-2.5 w-2.5 flex">
-                      <span class="relative h-2.5 w-2.5 inline-flex rounded-full bg-red-500" />
-                    </span>
-                    <span class="text-red-600 dark:text-red-400">Failed</span>
-                  </template>
-                </div>
-              </div>
-
-              <!-- Verified Response Bubble & Telemetry Tag -->
-              <div
-                v-if="probeState === 'verified' && probeResponseMessage"
-                class="flex flex-col gap-1.5 rounded-lg bg-emerald-500/10 p-2.5 text-xs text-emerald-700 dark:text-emerald-300"
-              >
-                <div class="flex items-center justify-between gap-2">
-                  <div class="min-w-0 flex items-center gap-2 truncate">
-                    <div class="i-solar:chat-round-dots-bold-duotone h-4 w-4 flex-shrink-0 text-emerald-500" />
-                    <span class="truncate italic">"{{ probeResponseMessage }}"</span>
-                  </div>
-                  <div class="flex shrink-0 items-center gap-1.5 text-[10px] font-mono">
-                    <span v-if="probeBenchmarkMs !== null" class="rounded bg-emerald-500/20 px-1.5 py-0.5 text-emerald-700 font-bold dark:text-emerald-300">
-                      {{ probeBenchmarkMs }}ms TTFT
-                    </span>
-                    <span :class="['px-1.5 py-0.5 rounded font-bold', probeHasReasoning ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300']">
-                      {{ probeHasReasoning ? '🧠 Reasoning Model' : '⚡ Standard Stream' }}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Error Details Banner -->
-              <div
-                v-else-if="probeState === 'error' && probeErrorMessage"
-                class="flex items-start gap-2 rounded-lg bg-red-500/10 p-2.5 text-xs text-red-600 dark:text-red-400"
-              >
-                <div class="i-solar:danger-triangle-bold-duotone mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" />
-                <div class="min-w-0 flex-1">
-                  <span class="font-bold">Test Failed:</span>
-                  <p class="mt-0.5 break-all text-[11px] leading-snug">
-                    {{ probeErrorMessage }}
-                  </p>
-                </div>
-              </div>
+        <!-- Simulated Response Output Card -->
+        <div
+          v-if="probeState === 'verified' && probeResponseMessage"
+          class="flex flex-col animate-fadeIn gap-2 border border-emerald-500/20 rounded-xl bg-emerald-500/5 p-3.5 text-xs"
+        >
+          <div class="flex items-center justify-between border-b border-emerald-500/15 pb-2">
+            <div class="flex items-center gap-1.5 text-emerald-600 font-bold dark:text-emerald-400">
+              <span class="h-2 w-2 rounded-full bg-emerald-500" />
+              <span>Brain Active & Verified</span>
             </div>
+            <div class="flex items-center gap-2 text-[10px] font-mono">
+              <span v-if="probeBenchmarkMs !== null" class="rounded bg-emerald-500/15 px-2 py-0.5 text-emerald-700 font-bold dark:text-emerald-300">
+                ⏱️ {{ probeBenchmarkMs }}ms TTFT
+              </span>
+              <span v-if="probeTokens !== null" class="rounded bg-primary-500/15 px-2 py-0.5 text-primary-700 font-bold dark:text-primary-300">
+                📝 ~{{ probeTokens }} tokens
+              </span>
+              <span :class="['px-2 py-0.5 rounded font-bold', probeHasReasoning ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300']">
+                {{ probeHasReasoning ? '🧠 Reasoning CoT' : '⚡ Direct Stream' }}
+              </span>
+            </div>
+          </div>
+          <p class="select-text whitespace-pre-wrap text-neutral-800 leading-relaxed dark:text-neutral-200">
+            {{ probeResponseMessage }}
+          </p>
+        </div>
+
+        <!-- Error Details Banner -->
+        <div
+          v-else-if="probeState === 'error' && probeErrorMessage"
+          class="flex animate-fadeIn items-start gap-2.5 border border-red-500/20 rounded-xl bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-400"
+        >
+          <div class="i-solar:danger-triangle-bold-duotone mt-0.5 h-4.5 w-4.5 flex-shrink-0 text-red-500" />
+          <div class="min-w-0 flex-1">
+            <span class="font-bold">Brain Connection Failed:</span>
+            <p class="mt-0.5 break-all text-[11px] leading-snug">
+              {{ probeErrorMessage }}
+            </p>
           </div>
         </div>
       </div>

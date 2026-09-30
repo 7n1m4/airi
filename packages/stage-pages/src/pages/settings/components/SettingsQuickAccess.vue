@@ -100,7 +100,7 @@ const isIOS = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navig
 const row2Items = computed<QuickAccessItem[]>(() => [
   {
     id: 'audio-studio',
-    title: 'Audio Studio',
+    title: 'Voice Profiles',
     icon: 'i-solar:soundwave-bold-duotone',
     to: '/settings/providers/speech/virtual-audio-studio',
   },
