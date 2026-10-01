@@ -20,6 +20,10 @@ vi.mock('./modules/airi-card', () => {
     extensions: { airi: {} },
   }
   return {
+    // NOTICE: chat.ts imports the standalone buildSystemPrompt helper (2caefdcfa1).
+    // Keep this entry in sync with prompt-contracts.test.ts or ingest throws
+    // "[vitest] No buildSystemPrompt export" and `sending` never flips true.
+    buildSystemPrompt: (card: any) => card?.systemPrompt || '',
     useAiriCardStore: () => ({
       activeCard: ref(card),
       activeCardId: ref('card-airi'),
