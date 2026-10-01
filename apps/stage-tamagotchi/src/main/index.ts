@@ -198,6 +198,9 @@ if (isLinux) {
   // vulkan_enable_f16_on_nvidia allows WebLLM q4f16 models (such as Qwen 3.5)
   // to compile WGSL shaders without extension 'f16' is not allowed errors.
   app.commandLine.appendSwitch('enable-dawn-features', 'vulkan_enable_f16_on_nvidia')
+  if (!app.commandLine.hasSwitch('ozone-platform-hint') && !app.commandLine.hasSwitch('ozone-platform')) {
+    app.commandLine.appendSwitch('ozone-platform-hint', env.ELECTRON_OZONE_PLATFORM_HINT || 'auto')
+  }
 }
 
 if (forceHighPerformanceGpu) {

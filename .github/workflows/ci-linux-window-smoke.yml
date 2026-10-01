@@ -48,6 +48,7 @@ env:
   # Chromium's OS sandbox instead of chasing SUID errors that are unrelated
   # to the app-level `webPreferences.sandbox` setting used for the renderer.
   ELECTRON_DISABLE_SANDBOX: '1'
+  ELECTRON_OZONE_PLATFORM_HINT: 'auto'
   # Non-hidden on purpose: actions/upload-artifact skips hidden paths such
   # as `.temp/`, which left earlier failed runs without any artifact.
   SMOKE_REPORT_DIR: ${{ github.workspace }}/smoke-report
