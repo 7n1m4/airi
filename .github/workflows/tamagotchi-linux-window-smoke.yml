@@ -81,7 +81,7 @@ jobs:
           node-version: 26.7.0
           cache: pnpm
 
-      - name: Install Electron runtime + Xvfb dependencies
+      - name: Install Xvfb system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -102,6 +102,24 @@ jobs:
       # from the root matches nothing and exits 0 silently (0.4s no-op);
       # scoped to the declaring importer it runs electron's postinstall.
       - run: pnpm --filter @proj-airi/stage-tamagotchi rebuild electron
+
+      # Fail fast here (with the resolved package dir in the log) instead of
+      # minutes later inside the app build. ensure-electron.js self-heals via
+      # forced re-download when the binary is missing.
+      - name: Verify Electron binary
+        run: node apps/stage-tamagotchi/scripts/ensure-electron.js
+
+      # Console-only pre-build diagnostics: the artifact step below only runs
+      # after a successful build, so a failed build would otherwise leave no
+      # toolchain trace in the log.
+      - name: Record pre-build toolchain
+        run: |
+          echo "node: $(node --version)"
+          echo "pnpm: $(pnpm --version)"
+          echo "electron: $(node -p "require('./apps/stage-tamagotchi/node_modules/electron/package.json').version")"
+          echo "electron dist:"
+          ls apps/stage-tamagotchi/node_modules/electron/dist || echo "ELECTRON DIST MISSING"
+
       - run: pnpm run build:packages
       - run: pnpm -F @proj-airi/stage-tamagotchi run build
 
@@ -159,7 +177,7 @@ jobs:
           node-version: 26.7.0
           cache: pnpm
 
-      - name: Install Electron runtime + Weston dependencies
+      - name: Install Weston system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
@@ -179,6 +197,24 @@ jobs:
       # from the root matches nothing and exits 0 silently (0.4s no-op);
       # scoped to the declaring importer it runs electron's postinstall.
       - run: pnpm --filter @proj-airi/stage-tamagotchi rebuild electron
+
+      # Fail fast here (with the resolved package dir in the log) instead of
+      # minutes later inside the app build. ensure-electron.js self-heals via
+      # forced re-download when the binary is missing.
+      - name: Verify Electron binary
+        run: node apps/stage-tamagotchi/scripts/ensure-electron.js
+
+      # Console-only pre-build diagnostics: the artifact step below only runs
+      # after a successful build, so a failed build would otherwise leave no
+      # toolchain trace in the log.
+      - name: Record pre-build toolchain
+        run: |
+          echo "node: $(node --version)"
+          echo "pnpm: $(pnpm --version)"
+          echo "electron: $(node -p "require('./apps/stage-tamagotchi/node_modules/electron/package.json').version")"
+          echo "electron dist:"
+          ls apps/stage-tamagotchi/node_modules/electron/dist || echo "ELECTRON DIST MISSING"
+
       - run: pnpm run build:packages
       - run: pnpm -F @proj-airi/stage-tamagotchi run build
 

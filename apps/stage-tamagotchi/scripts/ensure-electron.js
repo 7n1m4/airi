@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import { execSync } from 'node:child_process'
 import { createRequire } from 'node:module'
+import { env } from 'node:process'
 
 const require = createRequire(import.meta.url)
 
@@ -97,12 +98,34 @@ function ensureElectron() {
 
   if (isElectronBroken(electronDir, distDir)) {
     console.warn('[AIRI] Electron binary runtime is missing or in uninstalled state.')
+    console.warn(`[AIRI] Electron package dir: ${electronDir} (platform binary: ${getPlatformPath()})`)
     console.warn('[AIRI] Triggering automatic repair via electron/install.js...')
 
     const installScript = path.join(electronDir, 'install.js')
     if (fs.existsSync(installScript)) {
+      // NOTICE: install.js short-circuits when dist/version + path.txt look
+      // valid, which can disagree with the actual binary on disk (partially
+      // restored installs, interrupted downloads). Since we already decided
+      // the runtime is broken, wipe the stale state first so the reinstall
+      // cannot skip, and bypass the @electron/get zip cache so a corrupt
+      // cached archive cannot reproduce the same broken state.
       try {
-        execSync(`node "${installScript}"`, { stdio: 'inherit' })
+        fs.rmSync(distDir, { recursive: true, force: true })
+      }
+      catch {
+        // Ignore removal errors; install.js will report real failures
+      }
+      try {
+        fs.unlinkSync(path.join(electronDir, 'path.txt'))
+      }
+      catch {
+        // Missing path.txt is fine; install.js recreates it
+      }
+      try {
+        execSync(`node "${installScript}"`, {
+          stdio: 'inherit',
+          env: { ...env, force_no_cache: 'true' },
+        })
       }
       catch (err) {
         console.warn('[AIRI] Electron install.js execution warning:', err.message)
