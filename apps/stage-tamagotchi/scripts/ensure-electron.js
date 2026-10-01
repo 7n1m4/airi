@@ -96,9 +96,26 @@ function ensureElectron() {
   const electronDir = path.dirname(electronPkgPath)
   const distDir = path.join(electronDir, 'dist')
 
+  // NOTICE: concise fs snapshot for CI forensics. install.js can exit 0
+  // without downloading (skip-env set, or its own staleness check passing
+  // while the binary is actually absent), which used to leave zero trace.
+  function snapshotDist(label) {
+    let detail
+    try {
+      const entries = fs.readdirSync(distDir)
+      detail = `${entries.length} entries: ${entries.slice(0, 12).join(', ')}${entries.length > 12 ? ', ...' : ''}`
+    }
+    catch (err) {
+      detail = `unreadable (${err.message})`
+    }
+    console.warn(`[AIRI] dist ${label}: ${detail}`)
+  }
+
   if (isElectronBroken(electronDir, distDir)) {
     console.warn('[AIRI] Electron binary runtime is missing or in uninstalled state.')
     console.warn(`[AIRI] Electron package dir: ${electronDir} (platform binary: ${getPlatformPath()})`)
+    console.warn(`[AIRI] env: ELECTRON_SKIP_BINARY_DOWNLOAD=${env.ELECTRON_SKIP_BINARY_DOWNLOAD ?? '<unset>'} ELECTRON_OVERRIDE_DIST_PATH=${env.ELECTRON_OVERRIDE_DIST_PATH ?? '<unset>'} npm_config_platform=${env.npm_config_platform ?? '<unset>'} npm_config_arch=${env.npm_config_arch ?? '<unset>'}`)
+    snapshotDist('before repair')
     console.warn('[AIRI] Triggering automatic repair via electron/install.js...')
 
     const installScript = path.join(electronDir, 'install.js')
@@ -111,9 +128,10 @@ function ensureElectron() {
       // cached archive cannot reproduce the same broken state.
       try {
         fs.rmSync(distDir, { recursive: true, force: true })
+        console.warn('[AIRI] Removed stale dist directory.')
       }
-      catch {
-        // Ignore removal errors; install.js will report real failures
+      catch (err) {
+        console.warn(`[AIRI] Failed to remove stale dist (repair continues anyway): ${err.message}`)
       }
       try {
         fs.unlinkSync(path.join(electronDir, 'path.txt'))
@@ -130,6 +148,7 @@ function ensureElectron() {
       catch (err) {
         console.warn('[AIRI] Electron install.js execution warning:', err.message)
       }
+      snapshotDist('after repair')
     }
 
     if (isElectronBroken(electronDir, distDir)) {
