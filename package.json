@@ -16,6 +16,7 @@
     "pnpm": ">=10.0.0"
   },
   "scripts": {
+    "ci:status": "node scripts/github/ci-status.mjs",
     "postinstall": "npx simple-git-hooks && pnpm run build:packages && node apps/stage-tamagotchi/scripts/ensure-electron.js",
     "dev": "pnpm -r -F @proj-airi/stage-web dev",
     "dev:docs": "pnpm -rF @proj-airi/docs run dev",
