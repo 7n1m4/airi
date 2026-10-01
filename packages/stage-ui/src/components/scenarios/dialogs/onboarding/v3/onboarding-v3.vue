@@ -56,8 +56,11 @@ const currentStepId = ref<OnboardingV3Step>('welcome')
 
 const activeSteps = computed<OnboardingV3StepDef[]>(() => {
   const modules = draftStore.state.modules
+  const isNoModel = draftStore.state.experienceArchetype === 'quiet' || !modules?.emotions
   return ONBOARDING_V3_STEPS
     .filter((step) => {
+      if (step.id === 'vessel')
+        return !isNoModel
       if (!step.moduleKey)
         return true
       return Boolean(modules[step.moduleKey])

@@ -132,14 +132,14 @@ export const ARCHETYPE_MODULE_PRESETS: Record<ExperienceArchetypeId, ModuleBundl
   'quiet': {
     hearing: false,
     speech: false,
-    thinking: true,
-    emotions: true,
+    thinking: false,
+    emotions: false,
     memory: true,
     vision: false,
     screen: false,
     proactivity: false,
     artistry: false,
-    tools: false,
+    tools: true,
   },
   'casual': {
     hearing: true,
@@ -338,17 +338,27 @@ export const useOnboardingV3Draft = defineStore('onboarding-v3-draft', () => {
     state.value.experienceArchetype = archetype
     state.value.modules = { ...ARCHETYPE_MODULE_PRESETS[archetype] }
 
-    if (archetype === 'copilot') {
-      state.value.screenWatcherEnabled = true
-      state.value.heartbeatsEnabled = false
-    }
-    else if (archetype === 'roommate' || archetype === 'swiss-army' || archetype === 'performer') {
-      state.value.screenWatcherEnabled = true
-      state.value.heartbeatsEnabled = true
-    }
-    else {
+    if (archetype === 'quiet') {
+      state.value.vesselDisplayModelId = ''
       state.value.screenWatcherEnabled = false
       state.value.heartbeatsEnabled = false
+    }
+    else {
+      if (!state.value.vesselDisplayModelId) {
+        state.value.vesselDisplayModelId = 'preset-live2d-2'
+      }
+      if (archetype === 'copilot') {
+        state.value.screenWatcherEnabled = true
+        state.value.heartbeatsEnabled = false
+      }
+      else if (archetype === 'roommate' || archetype === 'swiss-army' || archetype === 'performer') {
+        state.value.screenWatcherEnabled = true
+        state.value.heartbeatsEnabled = true
+      }
+      else {
+        state.value.screenWatcherEnabled = false
+        state.value.heartbeatsEnabled = false
+      }
     }
   }
 

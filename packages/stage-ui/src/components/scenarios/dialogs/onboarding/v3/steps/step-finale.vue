@@ -110,8 +110,11 @@ const presetLive2dPreview = new URL('../../../../../../assets/live2d/models/hiyo
 const presetVrmAvatarAPreview = new URL('../../../../../../assets/vrm/models/AvatarSample-A/preview.png', import.meta.url).href
 const presetVrmAvatarBPreview = new URL('../../../../../../assets/vrm/models/AvatarSample-B/preview.png', import.meta.url).href
 
-// --- 1. Vessel & Avatar Stage Resolution ---
-const activeModelId = computed(() => draft.state.vesselDisplayModelId || 'preset-live2d-2')
+const activeModelId = computed(() => {
+  if (draft.state.experienceArchetype === 'quiet' || draft.state.vesselDisplayModelId === '')
+    return ''
+  return draft.state.vesselDisplayModelId || 'preset-live2d-2'
+})
 
 const currentModel = computed(() => {
   const targetId = activeModelId.value

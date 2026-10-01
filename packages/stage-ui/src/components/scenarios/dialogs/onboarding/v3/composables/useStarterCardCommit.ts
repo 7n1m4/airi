@@ -533,7 +533,8 @@ export function compileCardPayload(
   resolvedPersona: ResolvedPersona,
   displayModels: any[] = [],
 ): any {
-  const activeModelId = draft.vesselDisplayModelId || 'preset-live2d-2'
+  const isNoModel = draft.experienceArchetype === 'quiet' || draft.vesselDisplayModelId === ''
+  const activeModelId = isNoModel ? '' : (draft.vesselDisplayModelId || 'preset-live2d-2')
 
   // If user used AI Character Creator or imported a card, preserve its assets and coalesce extensions.airi
   const rawTarget = draft.personaSource === 'creator'
@@ -710,7 +711,8 @@ export function useStarterCardCommit() {
     }
 
     // 4. Update Display Model Emotion Mappings
-    const activeModelId = draft.vesselDisplayModelId || 'preset-live2d-2'
+    const isNoModel = draft.experienceArchetype === 'quiet' || draft.vesselDisplayModelId === ''
+    const activeModelId = isNoModel ? '' : (draft.vesselDisplayModelId || 'preset-live2d-2')
     if (draft.expressionMappings && Object.keys(draft.expressionMappings).length > 0 && activeModelId) {
       try {
         await displayModelsStore.updateDisplayModelMappings(activeModelId, {
@@ -783,8 +785,9 @@ export function useStarterCardCommit() {
       if (unref(syncEngineStore.syncEnabled) && unref(syncEngineStore.selectiveSyncEnabled)) {
         const displayModelId = cardStore.getCardDisplayModelId(createdCardId)
           || payload.data?.extensions?.airi?.modules?.displayModelId
-          || draft.vesselDisplayModelId
-        syncEngineStore.addCardToSelectiveSync(createdCardId, displayModelId)
+        if (displayModelId) {
+          syncEngineStore.addCardToSelectiveSync(createdCardId, displayModelId)
+        }
       }
     }
     catch (err) {

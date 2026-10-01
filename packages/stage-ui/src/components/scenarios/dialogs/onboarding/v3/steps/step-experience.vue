@@ -15,6 +15,7 @@ import { useI18n } from 'vue-i18n'
 import {
   useOnboardingV3Draft,
 } from '../stores/useOnboardingV3Draft'
+import { ONBOARDING_V3_STEPS } from '../types'
 
 const props = defineProps<{
   onNext: () => void
@@ -148,7 +149,7 @@ const CAPABILITY_DETAILS: Record<string, CapabilityDetail> = {
 
 interface ArchetypeChip {
   label: string
-  icon: string
+  icon?: string
   color?: string
 }
 
@@ -188,15 +189,14 @@ function getArchetypeDescription(arch: ArchetypeCard): string {
 const archetypes: ArchetypeCard[] = [
   {
     id: 'quiet',
-    title: 'The Quiet Observer',
-    subtitle: 'Minimal silent companion',
-    description: 'Text, expressions and avatar emotions, thinking pacing, and long-term memory.',
+    title: 'The Minimalist',
+    subtitle: 'Text, memory & workspace tools',
+    description: 'Zero audio or avatar overhead. Fast keyboard chat, long-term memory, and local tools.',
     icon: 'i-solar:chat-round-line-bold',
     chips: [
-      { label: 'Text', icon: 'i-solar:document-text-bold', color: 'text-slate-300' },
-      { label: 'Emotions', icon: 'i-solar:heart-bold', color: 'text-pink-400' },
-      { label: 'Pacing', icon: 'i-solar:pulse-2-bold', color: 'text-amber-400' },
-      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
+      { label: 'Text' },
+      { label: 'Memory' },
+      { label: 'Tools' },
     ],
     colorTheme: {
       activeBorder: 'border-slate-400/80',
@@ -209,89 +209,17 @@ const archetypes: ArchetypeCard[] = [
     },
   },
   {
-    id: 'casual',
-    title: 'The Casual Companion',
-    subtitle: 'Everyday voice companion',
-    description: 'Live speech, natural voice, vision, expressive emotions, and memory.',
-    icon: 'i-solar:microphone-3-bold',
-    chips: [
-      { label: 'Hearing', icon: 'i-solar:microphone-bold', color: 'text-sky-400' },
-      { label: 'Voice', icon: 'i-solar:volume-loud-bold', color: 'text-indigo-400' },
-      { label: 'Pacing', icon: 'i-solar:pulse-2-bold', color: 'text-purple-400' },
-      { label: 'Emotions', icon: 'i-solar:heart-bold', color: 'text-pink-400' },
-      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
-      { label: 'Vision', icon: 'i-solar:eye-bold', color: 'text-sky-400' },
-    ],
-    colorTheme: {
-      activeBorder: 'border-purple-500',
-      activeRing: 'ring-1 ring-purple-500/50',
-      activeGlow: 'shadow-[0_0_30px_rgba(168,85,247,0.25)]',
-      activeBg: 'bg-purple-950/25',
-      iconBg: 'bg-purple-500/25',
-      iconColor: 'text-purple-300',
-      subtitleColor: 'text-purple-400',
-    },
-  },
-  {
-    id: 'muse',
-    title: 'The Creative Muse',
-    subtitle: 'Visual creative companion',
-    description: 'Spoken dialogue, image generation, chat vision, and expressive morphs.',
-    icon: 'i-solar:palette-round-bold',
-    chips: [
-      { label: 'Hearing', icon: 'i-solar:microphone-bold', color: 'text-sky-400' },
-      { label: 'Voice', icon: 'i-solar:volume-loud-bold', color: 'text-indigo-400' },
-      { label: 'Vision', icon: 'i-solar:eye-bold', color: 'text-sky-400' },
-      { label: 'Emotions', icon: 'i-solar:heart-bold', color: 'text-pink-400' },
-      { label: 'Visuals', icon: 'i-solar:gallery-bold', color: 'text-amber-400' },
-      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
-    ],
-    colorTheme: {
-      activeBorder: 'border-amber-500',
-      activeRing: 'ring-1 ring-amber-500/50',
-      activeGlow: 'shadow-[0_0_30px_rgba(245,158,11,0.25)]',
-      activeBg: 'bg-amber-950/25',
-      iconBg: 'bg-amber-500/25',
-      iconColor: 'text-amber-300',
-      subtitleColor: 'text-amber-400',
-    },
-  },
-  {
-    id: 'copilot',
-    title: 'The Executive Copilot',
-    subtitle: 'Desktop productivity companion',
-    description: 'Voice dialogue, screen awareness, local action tools, and web search.',
-    icon: 'i-solar:case-round-bold',
-    chips: [
-      { label: 'Hearing', icon: 'i-solar:microphone-bold', color: 'text-sky-400' },
-      { label: 'Voice', icon: 'i-solar:volume-loud-bold', color: 'text-indigo-400' },
-      { label: 'Vision', icon: 'i-solar:eye-bold', color: 'text-sky-400' },
-      { label: 'Tools', icon: 'i-solar:settings-minimalistic-bold', color: 'text-teal-400' },
-      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
-      { label: 'Pacing', icon: 'i-solar:pulse-2-bold', color: 'text-purple-400' },
-    ],
-    colorTheme: {
-      activeBorder: 'border-teal-500',
-      activeRing: 'ring-1 ring-teal-500/50',
-      activeGlow: 'shadow-[0_0_30px_rgba(20,184,166,0.25)]',
-      activeBg: 'bg-teal-950/25',
-      iconBg: 'bg-teal-500/25',
-      iconColor: 'text-teal-300',
-      subtitleColor: 'text-teal-400',
-    },
-  },
-  {
     id: 'roommate',
     title: 'The Ambient Roommate',
     subtitle: 'Passive presence companion',
     description: 'Ambient voice, heartbeats, sleep schedule, quiet hours, and awareness.',
     icon: 'i-solar:moon-sleep-bold',
     chips: [
-      { label: 'Hearing', icon: 'i-solar:microphone-bold', color: 'text-sky-400' },
-      { label: 'Voice', icon: 'i-solar:volume-loud-bold', color: 'text-indigo-400' },
-      { label: 'Presence', icon: 'i-solar:moon-bold', color: 'text-amber-300' },
-      { label: 'Pacing', icon: 'i-solar:pulse-2-bold', color: 'text-purple-400' },
-      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
+      { label: 'Hearing' },
+      { label: 'Voice' },
+      { label: 'Presence' },
+      { label: 'Pacing' },
+      { label: 'Memory' },
     ],
     colorTheme: {
       activeBorder: 'border-sky-500',
@@ -304,21 +232,93 @@ const archetypes: ArchetypeCard[] = [
     },
   },
   {
+    id: 'casual',
+    title: 'The Casual Companion',
+    subtitle: 'Everyday voice companion',
+    description: 'Live speech, natural voice, vision, expressive emotions, and memory.',
+    icon: 'i-solar:microphone-3-bold',
+    chips: [
+      { label: 'Hearing' },
+      { label: 'Voice' },
+      { label: 'Pacing' },
+      { label: 'Emotions' },
+      { label: 'Memory' },
+      { label: 'Vision' },
+    ],
+    colorTheme: {
+      activeBorder: 'border-purple-500',
+      activeRing: 'ring-1 ring-purple-500/50',
+      activeGlow: 'shadow-[0_0_30px_rgba(168,85,247,0.25)]',
+      activeBg: 'bg-purple-950/25',
+      iconBg: 'bg-purple-500/25',
+      iconColor: 'text-purple-300',
+      subtitleColor: 'text-purple-400',
+    },
+  },
+  {
+    id: 'copilot',
+    title: 'The Executive Copilot',
+    subtitle: 'Desktop productivity companion',
+    description: 'Voice dialogue, screen awareness, local action tools, and web search.',
+    icon: 'i-solar:case-round-bold',
+    chips: [
+      { label: 'Hearing' },
+      { label: 'Voice' },
+      { label: 'Vision' },
+      { label: 'Tools' },
+      { label: 'Memory' },
+      { label: 'Pacing' },
+    ],
+    colorTheme: {
+      activeBorder: 'border-teal-500',
+      activeRing: 'ring-1 ring-teal-500/50',
+      activeGlow: 'shadow-[0_0_30px_rgba(20,184,166,0.25)]',
+      activeBg: 'bg-teal-950/25',
+      iconBg: 'bg-teal-500/25',
+      iconColor: 'text-teal-300',
+      subtitleColor: 'text-teal-400',
+    },
+  },
+  {
+    id: 'muse',
+    title: 'The Creative Muse',
+    subtitle: 'Visual creative companion',
+    description: 'Spoken dialogue, image generation, chat vision, and expressive morphs.',
+    icon: 'i-solar:palette-round-bold',
+    chips: [
+      { label: 'Hearing' },
+      { label: 'Voice' },
+      { label: 'Vision' },
+      { label: 'Emotions' },
+      { label: 'Visuals' },
+      { label: 'Memory' },
+    ],
+    colorTheme: {
+      activeBorder: 'border-amber-500',
+      activeRing: 'ring-1 ring-amber-500/50',
+      activeGlow: 'shadow-[0_0_30px_rgba(245,158,11,0.25)]',
+      activeBg: 'bg-amber-950/25',
+      iconBg: 'bg-amber-500/25',
+      iconColor: 'text-amber-300',
+      subtitleColor: 'text-amber-400',
+    },
+  },
+  {
     id: 'swiss-army',
     title: 'The Swiss Army Companion',
     subtitle: 'Full-spectrum multimodal companion',
     description: 'Hearing voice, pacing, emotions, screen watching, artistry, tools, and memory.',
     icon: 'i-solar:stars-minimalistic-bold',
     chips: [
-      { label: 'Hearing', icon: 'i-solar:microphone-bold', color: 'text-sky-400' },
-      { label: 'Voice', icon: 'i-solar:volume-loud-bold', color: 'text-indigo-400' },
-      { label: 'Pacing', icon: 'i-solar:pulse-2-bold', color: 'text-purple-400' },
-      { label: 'Emotions', icon: 'i-solar:heart-bold', color: 'text-pink-400' },
-      { label: 'Vision', icon: 'i-solar:eye-bold', color: 'text-sky-400' },
-      { label: 'Presence', icon: 'i-solar:moon-bold', color: 'text-amber-300' },
-      { label: 'Visuals', icon: 'i-solar:gallery-bold', color: 'text-amber-400' },
-      { label: 'Tools', icon: 'i-solar:settings-minimalistic-bold', color: 'text-teal-400' },
-      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
+      { label: 'Hearing' },
+      { label: 'Voice' },
+      { label: 'Pacing' },
+      { label: 'Emotions' },
+      { label: 'Vision' },
+      { label: 'Presence' },
+      { label: 'Visuals' },
+      { label: 'Tools' },
+      { label: 'Memory' },
     ],
     colorTheme: {
       activeBorder: 'border-rose-500',
@@ -429,6 +429,19 @@ const activeModules = computed(() => {
   if (!modules)
     return []
   return moduleDefinitions.filter(m => Boolean(modules[m.key]))
+})
+
+const totalSteps = computed(() => {
+  const modules = draftStore.state?.modules
+  const archetype = draftStore.state?.experienceArchetype
+  const isNoModel = archetype === 'quiet' || !modules?.emotions
+  return ONBOARDING_V3_STEPS.filter((step) => {
+    if (step.id === 'vessel')
+      return !isNoModel
+    if (!step.moduleKey)
+      return true
+    return Boolean(modules?.[step.moduleKey])
+  }).length
 })
 
 function toggleModule(key: keyof ModuleBundleConfig) {
@@ -555,7 +568,7 @@ function resetToPresetDefaults() {
                     'hover:border-neutral-400 dark:hover:border-white/30 hover:bg-neutral-200/50 dark:hover:bg-white/10',
                   ]"
                 >
-                  <div :class="[chip.icon, 'text-xs shrink-0', chip.color || 'text-neutral-400']" />
+                  <div :class="[CAPABILITY_DETAILS[chip.label]?.icon || chip.icon, 'text-xs shrink-0', CAPABILITY_DETAILS[chip.label]?.color || chip.color || 'text-neutral-400']" />
                   <span>{{ chip.label }}</span>
                 </div>
               </TooltipTrigger>
@@ -632,7 +645,7 @@ function resetToPresetDefaults() {
             Reset to Preset
           </button>
           <span :class="['text-xs text-neutral-500 dark:text-neutral-400 font-medium']">
-            {{ activeModules.length }} enabled · {{ Math.max(0, 10 - activeModules.length) }} available
+            {{ activeModules.length }} enabled · {{ Math.max(0, 10 - activeModules.length) }} available · {{ totalSteps }} steps
           </span>
           <div
             :class="[
