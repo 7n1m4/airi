@@ -1,4 +1,4 @@
-# 🚀 AIRI Next Release Notes
+# 🚀 AIRI v0.9.36-stable.20261001 — Release Notes
 
 This release streamlines the canonical **Onboarding V3** journey down to 18 steps—introducing a live in-step LLM dialogue simulator, 100% offline neural starter voices, automated Hugging Face gate helpers, and a unified Proactivity & Screen Awareness console.
 
@@ -10,7 +10,7 @@ Alongside the onboarding polish, this update introduces a **Coordinated Startup 
 
 ### 🧭 Onboarding V3: Streamlined Steps & First-Run Enhancements
 * **Account & Architecture**: Added resilient Cloudflare OAuth auto-refresh to prevent unexpected session disconnects, alongside clearer architecture benefits for local air-gapped vs. cloud-synced companions.
-* **Experience Archetypes**: Refined the 6 companion archetype presets and balanced the module selection grid into a clean, symmetrical 5×2 layout with extensible plugin placeholders.
+* **Experience Archetypes**: Redesigned the 6 companion archetype cards with interactive capability chips and rich hover popovers detailing active features, alongside a balanced 5×2 module customization drawer with one-click preset resetting.
 * **Consciousness**: Added a built-in live Dialogue Simulator directly inside the step, letting you test multi-turn LLM reasoning, response latency, and conversational banter before proceeding.
 * **Speech**: Added one-click offline starter voice bypasses (ReLU, Sakura, Dr. Aria) requiring zero tokens, alongside HF token format validation and direct "Accept Gate" shortcuts for Pocket-TTS.
 * **Emotions**: Added an expression noise gate that filters out internal VRoid mesh rigging morphs (`Fcl_*`) to prevent face twitching, plus built-in starter presets (AvatarSample_A/B, Hiyori) with one-click force recalibration.
@@ -54,7 +54,7 @@ Alongside the onboarding polish, this update introduces a **Coordinated Startup 
 ### 🧠 Cognition, Memory & Cloud Models
 * **Reusable Mind Map Overview**: Extracted the Knowledge Graph dashboard into an interactive, reusable component (`KnowledgeGraphOverview.vue`) featuring relationship explorers, cluster metrics, and entity inspector cards.
 * **Precision Proper Noun Extraction**: Memory indexing now intelligently strips sentence-initial capitalization noise ("The", "A", "When", "Because"), keeping your companion's knowledge graph free of meaningless grammatical entities.
-* **Hardware-Accelerated Laya Engine (System 1)**: Resolved FP16 precision crashes and added a dedicated WebGPU hardware acceleration toggle with automatic CPU/WASM fallback for local System-1 classification.
+* **Hardware-Accelerated Laya Engine (System 1)**: Resolved FP16 precision crashes, added a dedicated WebGPU hardware acceleration toggle with automatic CPU/WASM fallback, and moved execution into a dedicated Web Worker to eliminate UI thread blocking during fast classification.
 * **Cloud Model Selector Auto-Tagging**: The model selection dialog now automatically tags capabilities (multimodal, tool-calling) and links cloud models directly to your active companion card, with responsive formatting tailored for mobile and narrow screens.
 
 ---
