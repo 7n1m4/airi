@@ -82,15 +82,42 @@ steps:
         f2: 클라우드 원격 측정 및 외부 통신 제로
         f3: 로컬 데이터베이스 기반 즉각 시작
     cloud:
-      badge: 다중 기기 동기화
+      badge: 10 GB 무료 + 클라우드 동기화
       title: 계정 로그인 (Cloudflare)
-      description: 계정을 연결하여 종단간 암호화를 통해 기기 간에 컴패니언, 설정, 기억 보관소를 동기화합니다.
+      description: 계정을 연결하여 10 GB 무료 저장 공간, 일일 엣지 AI 크레딧, 기기 전반의 24/7 컴패니언 상주를 활성화하세요.
       selectedCta: 선택됨 (클라우드 연동)
       selectCta: 클라우드 동기화 선택
       features:
-        f1: Cloudflare R2 암호화 백업
-        f2: 원활한 다중 기기 동기화
-        f3: Edge Vault 자격 증명 자동 복구
+        f1: 10 GB 무료 클라우드 저장 공간
+        f2: 일일 무료 엣지 AI 크레딧
+        f3: 24/7 Discord 클라우드 릴레이
+        f4: 다중 기기 동기화 및 1클릭 복구
+        f5: 비공개 CORS 프록시 및 제로 수탁 프라이버시
+        storage:
+          title: 10 GB 무료 클라우드 저장 공간
+          desc: 하향 전송 수수료 없이 3D 모델, 커스텀 배경, 전체 메모리 볼트를 백업합니다.
+          howItWorks: 사용자 소유의 Cloudflare R2 객체 스토리지를 기반으로 작동합니다.
+          whyItMatters: 수십 개의 VRM/Live2D 모델과 수년 치의 대화 기록을 보관할 수 있는 넉넉한 무료 공간을 제공합니다. AWS S3와 달리 자산 다운로드는 대역폭 요금 $0으로 100% 무료입니다.
+        ai:
+          title: 일일 무료 엣지 AI 크레딧
+          desc: DeepSeek, Qwen, Llama용 일일 10,000 무료 뉴런 제공(API 키 불필요).
+          howItWorks: 8단계(의식) 진행 중 Cloudflare Workers AI에 직접 연결됩니다.
+          whyItMatters: OpenAI 유료 구독, 신용카드 등록, 고사양 로컬 게이밍 GPU 없이도 엣지에서 최신 오픈 모델과 즉시 대화할 수 있습니다.
+        relay:
+          title: 24/7 Discord 클라우드 릴레이
+          desc: PC가 꺼져 있어도 Discord 서버에서 컴패니언이 항상 깨어 있도록 유지합니다.
+          howItWorks: Discord 인터랙션 웹훅을 처리하는 서버리스 Cloudflare Worker(@proj-airi/stage-edge)로 실행됩니다.
+          whyItMatters: 컴패니언이 24시간 내내 Discord에서 대화하고 Edge KV에 기억을 저장하며, AIRI를 다시 열었을 때 데스크톱으로 자동 동기화합니다.
+        sync:
+          title: 다중 기기 동기화 및 1클릭 복구
+          desc: 데스크톱, 웹, 모바일을 매끄럽게 동기화하고 한 번의 클릭으로 컴패니언을 복구하세요.
+          howItWorks: Edge Key Vault(airi-edge-vault)가 활성 컴패니언 상태를 안전하게 추적합니다.
+          whyItMatters: AIRI를 재설치하거나 새 노트북/휴대폰으로 변경해도 키를 수동으로 입력할 필요 없이 컴패니언, 설정, 기억이 자동으로 복원됩니다.
+        proxy:
+          title: 비공개 CORS 프록시 및 제로 수탁 프라이버시
+          desc: 100% 제로 수탁 데이터 프라이버시로 까다로운 로컬 및 원격 AI API에 접근합니다.
+          howItWorks: 웹 및 모바일 스테이지를 위해 브라우저 CORS 헤더를 우회하는 개인용 엣지 리버스 프록시를 배포합니다.
+          whyItMatters: 모든 것은 개인 Cloudflare 계정 내에서 실행됩니다. AIRI는 중간 서버를 두지 않으며 사용자의 대화를 결코 읽거나 저장하거나 수집하지 않습니다.
     auth:
       connected: Cloudflare 연결 완료
       disconnect: 연결 해제
@@ -360,6 +387,16 @@ steps:
     subtitle: 사진 이해 및 분석 (VLM)
     title: 시각 인식 (채팅 VLM)
     description: 채팅으로 보낸 사진, 스크린샷, 그림을 컴패니언이 보고 이해하며 감상을 나눌 수 있도록 합니다.
+    tabs:
+      cloudflare: Cloudflare 엣지
+      cloudflareBadge: 일일 10k 무료
+      local: 로컬 및 오프라인
+      localBadge: 물리적 격리
+      custom: 클라우드 제공업체
+    cloudflare:
+      connected: 'Cloudflare 연결됨: 일일 10,000 무료 뉴런 활성화'
+      notConnected: Cloudflare 계정을 연결하여 설정 없이 무료 엣지 비전을 사용하세요.
+      signIn: Cloudflare로 로그인
     engineTitle: 시각 인식 모델
     testImage: 시각 인식 테스트
     testPrompt: 이미지를 업로드하여 컴패니언의 시각 분석 능력을 확인하세요.

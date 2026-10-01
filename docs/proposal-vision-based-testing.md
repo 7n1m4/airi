@@ -114,7 +114,7 @@ apps/stage-tamagotchi/
   ├── scenarios/                         # Fork-owned visual test scenarios
   │   ├── control-strip.scenario.ts     # Pill, expanded dock, notch hit-testing
   │   ├── card-export-modal.scenario.ts # CardExportDialog 4-model selection grid
-  │   ├── onboarding-v3.scenario.ts     # 19-step sliding stepper & archetype pickers
+  │   ├── onboarding-v3.scenario.ts     # 18-step sliding stepper & archetype pickers
   │   └── memory-dashboard.scenario.ts  # STMM / Lifetime / Dreaming graphs
 ```
 

@@ -28,11 +28,11 @@ This document serves as the **canonical technical architecture specification**, 
 
 ---
 
-### 3. Master 19-Step Journey Topology
-## 3. Master 19-Step Journey Topology
+#### 3. Master 18-Step Journey Topology
+## 3. Master 18-Step Journey Topology
 
 ```
-[ 0. Welcome ] ──▶ [ 1. Appearance ] ──▶ [ 2. Triage ] ──▶ [ 3. Experience Archetypes ]
+[ 0. Welcome ] ──▶ [ 1. Triage ] ──▶ [ 2. Appearance ] ──▶ [ 3. Experience Archetypes ]
                                                                         │
    ┌────────────────────────────────────────────────────────────────────┘
    ▼
@@ -48,11 +48,11 @@ This document serves as the **canonical technical architecture specification**, 
                                                                              │
    ┌────────────────────────────────────────────────────────────────────────┘
    ▼
-[ 13. Screen (Desktop)* ] ──▶ [ 14. Proactivity (Schedule)* ] ──▶ [ 15. Artistry (Visuals)* ]
-                                                                            │
-   ┌───────────────────────────────────────────────────────────────────────┘
+[ 13. Proactivity & Screen* ] ──▶ [ 14. Artistry (Visuals)* ] ──▶ [ 15. Memory Hierarchy* ]
+                                                                             │
+   ┌─────────────────────────────────────────────────────────────────────────┘
    ▼
-[ 16. Memory Hierarchy* ] ──▶ [ 17. Automation & Tools* ] ──▶ [ 18. Stage Finale & Launch ]
+[ 16. Automation & Tools* ] ──▶ [ 17. Stage Finale & Launch ]
 ```
 *\* Denotes optional modular steps dynamically governed by the Experience Coordinator.*
 
@@ -64,19 +64,19 @@ The wizard does not force users through irrelevant steps. Selecting an Archetype
 
 | Archetype Preset | Badge & Tag | Active Modules | Steps Traversed | User Journey Experience |
 | :--- | :--- | :--- | :---: | :--- |
-| **The Quiet Observer** | `[⚡ Fastest · Minimalist]` | `thinking`, `emotions`, `memory` | **12 Steps**<br>*(Skips Audio, Vision, Screen, Proactivity, Artistry, Tools)* | Ultra-fast, lightweight text companion. Avatar emotes on stage, has inner thoughts and deep memory, with zero audio, vision, or system overhead. |
-| **The Casual Companion** | `[✨ Popular Choice]` | `hearing`, `speech`, `thinking`, `emotions`, `memory`, `vision` | **15 Steps**<br>*(Skips Screen, Proactivity, Artistry, Tools)* | The quintessential voice and visual companion. Natural speech (STT/TTS), chat photo perception (VLM), natural pacing, and long-term memory. |
-| **The Creative Muse** | `[🎨 Visual Focus]` | `speech`, `thinking`, `emotions`, `memory`, `vision`, `artistry` | **15 Steps**<br>*(Skips Hearing, Screen, Proactivity, Tools)* | Visual inspiration studio. Spoken voice, visual generation (Pollinations/ComfyUI), chat photo understanding, and expressive avatar morphs. |
-| **The Executive Copilot** | `[💼 Productivity]` | `hearing`, `speech`, `thinking`, `memory`, `screen`, `tools` | **15 Steps**<br>*(Skips Emotions, Vision, Proactivity, Artistry)* | Focused productivity. Voice dialogue, desktop display perception, active window history, local filesystem MCP tools, and live web search. |
-| **The Ambient Roommate** | `[🌙 Proactive Presence]` | `speech`, `thinking`, `emotions`, `memory`, `screen`, `proactivity` | **15 Steps**<br>*(Skips Hearing, Vision, Artistry, Tools)* | Living routine & presence. Spoken voice, ambient heartbeats, sleep schedule, quiet hours, and screen awareness. |
-| **The Swiss Army Companion** | `[🔥 Most Steps · All-In-One]` | **All 10 Modules Active** | **19 Steps**<br>*(Complete master journey)* | The flagship do-it-all: Voice STT/TTS, vision, screen watching, proactivity, artistry, tools & memory hierarchy. |
+| **The Quiet Observer** | `[⚡ Fastest · Minimalist]` | `thinking`, `emotions`, `memory` | **12 Steps**<br>*(Skips Audio, Vision, Proactivity, Artistry, Tools)* | Ultra-fast, lightweight text companion. Avatar emotes on stage, has inner thoughts and deep memory, with zero audio, vision, or system overhead. |
+| **The Casual Companion** | `[✨ Popular Choice]` | `hearing`, `speech`, `thinking`, `emotions`, `memory`, `vision` | **15 Steps**<br>*(Skips Proactivity, Artistry, Tools)* | The quintessential voice and visual companion. Natural speech (STT/TTS), chat photo perception (VLM), natural pacing, and long-term memory. |
+| **The Creative Muse** | `[🎨 Visual Focus]` | `speech`, `thinking`, `emotions`, `memory`, `vision`, `artistry` | **15 Steps**<br>*(Skips Hearing, Proactivity, Tools)* | Visual inspiration studio. Spoken voice, visual generation (Pollinations/ComfyUI), chat photo understanding, and expressive avatar morphs. |
+| **The Executive Copilot** | `[💼 Productivity]` | `hearing`, `speech`, `thinking`, `memory`, `tools` | **14 Steps**<br>*(Skips Emotions, Vision, Proactivity, Artistry)* | Focused productivity. Voice dialogue, desktop display perception, active window history, local filesystem MCP tools, and live web search. |
+| **The Ambient Roommate** | `[🌙 Proactive Presence]` | `speech`, `thinking`, `emotions`, `memory`, `proactivity` | **14 Steps**<br>*(Skips Hearing, Vision, Artistry, Tools)* | Living routine & presence. Spoken voice, ambient heartbeats, sleep schedule, quiet hours, and screen awareness. |
+| **The Swiss Army Companion** | `[🔥 Most Steps · All-In-One]` | **All 9 Optional Modules Active** | **18 Steps**<br>*(Complete master journey)* | The flagship do-it-all: Voice STT/TTS, vision, screen watching, proactivity, artistry, tools & memory hierarchy. |
 
 > [!NOTE]
-> The **12–19 step range** describes the 6 curated Archetype presets. Users who customize individual modules in the "Advanced: Customize Modules" drawer can prune all 10 optional modules, reaching a streamlined minimum configuration of **9 foundation steps** (Welcome, Appearance, Triage, Experience, Profile, Vessel, Persona, Consciousness, and Finale).
+> The **12–18 step range** describes the 6 curated Archetype presets. Users who customize individual modules in the "Advanced: Customize Modules" drawer can prune all 9 optional modules, reaching a streamlined minimum configuration of **9 foundation steps** (Welcome, Triage, Appearance, Experience, Profile, Vessel, Consciousness, Persona, and Finale).
 
 ---
 
-## 5. Detailed Per-Page Breakdown (All 19 Steps)
+## 5. Detailed Per-Page Breakdown (All 18 Steps)
 
 Below is the comprehensive field-by-field and control breakdown for every page in Onboarding V3.
 
@@ -89,22 +89,21 @@ Below is the comprehensive field-by-field and control breakdown for every page i
 │ 0  │ welcome            │ step-welcome.vue        │ Studio Introduction & Bubble  │
 │ 1  │ triage             │ step-triage.vue         │ Account Sign-In & Restore     │
 │ 2  │ appearance         │ step-appearance.vue     │ Language, Theme & 24 Colors   │
-│ 3  │ experience         │ step-experience.vue     │ 6 Archetypes & 10 Modules     │
+│ 3  │ experience         │ step-experience.vue     │ 6 Archetypes & Module Pruning │
 │ 4  │ profile            │ step-profile.vue        │ User Persona & Callout Name   │
 │ 5  │ vessel             │ step-vessel.vue         │ 3D Vessel Coverflow (Avatar)  │
-│ 6  │ persona            │ step-persona.vue        │ Character Card & Soul         │
-│ 7  │ hearing            │ step-hearing.vue        │ Mic, VAD & STT Engine         │
-│ 8  │ consciousness      │ step-consciousness.vue  │ LLM Reasoning Brain           │
+│ 6  │ consciousness      │ step-consciousness.vue  │ LLM Reasoning Brain           │
+│ 7  │ persona            │ step-persona.vue        │ Character Card & Soul         │
+│ 8  │ hearing            │ step-hearing.vue        │ Mic, VAD & STT Engine         │
 │ 9  │ speech             │ step-speech.vue         │ Neural TTS & Voice Timbre     │
 │ 10 │ thinking           │ step-thinking.vue       │ Pacing & Subconscious Asides  │
 │ 11 │ emotions           │ step-emotions.vue       │ 2-Pass ACT Expression Bridge  │
 │ 12 │ vision             │ step-vision.vue         │ Chat Photo & VLM 2-Hop Test   │
-│ 13 │ screen             │ step-screen.vue         │ Desktop Display Watching      │
-│ 14 │ proactivity        │ step-proactivity.vue    │ Schedule, Heartbeats & Probes │
-│ 15 │ artistry           │ step-artistry.vue       │ Pollinations/ComfyUI Visuals  │
-│ 16 │ memory             │ step-memory.vue         │ 4 Temporal Memory Quadrants   │
-│ 17 │ tools              │ step-tools.vue          │ Web Search & Desktop MCP      │
-│ 18 │ finale             │ step-finale.vue         │ Honesty Matrix & Stage Launch │
+│ 13 │ proactivity        │ step-proactivity.vue    │ Schedule, Heartbeats & Screen │
+│ 14 │ artistry           │ step-artistry.vue       │ Pollinations/ComfyUI Visuals  │
+│ 15 │ memory             │ step-memory.vue         │ 4 Temporal Memory Quadrants   │
+│ 16 │ tools              │ step-tools.vue          │ Web Search & Desktop MCP      │
+│ 17 │ finale             │ step-finale.vue         │ Honesty Matrix & Stage Launch │
 └────┴────────────────────┴─────────────────────────┴───────────────────────────────┘
 ```
 
@@ -266,24 +265,16 @@ Below is the comprehensive field-by-field and control breakdown for every page i
 
 ---
 
-### Step 12: Visual Artistry (`step-artistry.vue` - Optional)
-- **Image Generation Backend**:
-  - `Pollinations AI`: 100% free, zero configuration, zero API key requirement. Models: Flux, Turbo, Anime.
-  - `ComfyUI`: Local image generation node at `http://127.0.0.1:8188` using custom workflow JSON.
-  - `None`: Disables visual synthesis.
-- **Visual Style Prompt Box**:
-  - Auto-injected with physical descriptors from the selected vessel (hair color, eye shape, outfit).
-  - Preset style chips: `+ Ghibli`, `+ Cyberpunk`, `+ Makoto Shinkai`, `+ Cozy Cafe`, `+ Retro 90s Anime`.
-  - Non-disruptive modal preview button (`[🎨 Preview]`) rendering rapid offline SVG or API mockups.
-- **Autonomous Director**:
-  - Single master toggle enabling autonomous 2nd-LLM background painting and selfie synthesis during narrative climaxes.
-- **In-Character Generation Tool (`image_journal`)**:
-  - Dedicated toggle allowing the companion to actively call `image_journal` on request.
-  - **Decoupled Architecture**: Users can run the Director loop alone (keeping character prompt context pristine without tool schema pollution), enable the in-character tool alone, enable both, or disable both.
+### Step 12: Visual Perception (`step-vision.vue` - Optional)
+- **Chat Photo Understanding & VLM Integration**:
+  - `Cloudflare Workers AI`: Free edge vision models (Llama 4 Scout, Mistral Small 3.1, Qwen 3.8) with 10,000 free daily Neurons.
+  - `Local WebGPU`: On-device vision model options with zero network exposure.
+  - `Custom Cloud Providers`: BYOK connectivity for OpenAI, Gemini, and OpenRouter vision endpoints.
+- **Interactive Visual Test Pad**: Live photo upload and 2-hop visual interrogation testing perception latency and spatial accuracy.
 
 ---
 
-### Step 13: Sensory Perception & Proactivity (`step-sensory.vue` - Optional)
+### Step 13: Proactivity & Awareness (`step-proactivity.vue` - Optional)
 - **Visual Push (Screen Watching)**:
   - Master toggle with live `ACTIVE` / `DORMANT` status badge.
   - 4 Reaction Delivery Modes: `Voice & Bubble`, `Bubble Only`, `Voice Only`, `Muted`.
@@ -303,7 +294,24 @@ Below is the comprehensive field-by-field and control breakdown for every page i
 
 ---
 
-### Step 14: Memory Hierarchy (`step-memory.vue` - Optional)
+### Step 14: Visual Artistry (`step-artistry.vue` - Optional)
+- **Image Generation Backend**:
+  - `Pollinations AI`: 100% free, zero configuration, zero API key requirement. Models: Flux, Turbo, Anime.
+  - `ComfyUI`: Local image generation node at `http://127.0.0.1:8188` using custom workflow JSON.
+  - `None`: Disables visual synthesis.
+- **Visual Style Prompt Box**:
+  - Auto-injected with physical descriptors from the selected vessel (hair color, eye shape, outfit).
+  - Preset style chips: `+ Ghibli`, `+ Cyberpunk`, `+ Makoto Shinkai`, `+ Cozy Cafe`, `+ Retro 90s Anime`.
+  - Non-disruptive modal preview button (`[🎨 Preview]`) rendering rapid offline SVG or API mockups.
+- **Autonomous Director**:
+  - Single master toggle enabling autonomous 2nd-LLM background painting and selfie synthesis during narrative climaxes.
+- **In-Character Generation Tool (`image_journal`)**:
+  - Dedicated toggle allowing the companion to actively call `image_journal` on request.
+  - **Decoupled Architecture**: Users can run the Director loop alone (keeping character prompt context pristine without tool schema pollution), enable the in-character tool alone, enable both, or disable both.
+
+---
+
+### Step 15: Memory Hierarchy (`step-memory.vue` - Optional)
 - **The Four Temporal Memory Quadrants**:
   1. **Short-Term Memory (STMM) — *The Active Pulse***:
      - Master toggle: 24h nightly summarization into daily chunks injected into prompt context.
@@ -326,7 +334,7 @@ Below is the comprehensive field-by-field and control breakdown for every page i
 
 ---
 
-### Step 15: Automation & Tools (`step-tools.vue` - Optional)
+### Step 16: Automation & Tools (`step-tools.vue` - Optional)
 - **External Action Capability Packs**:
   1. **Web & Research Pack**:
      - Master toggle: `0-Key Real-Time Web Search` via `open-websearch`.
@@ -343,7 +351,7 @@ Below is the comprehensive field-by-field and control breakdown for every page i
 
 ---
 
-### Step 16: Stage Finale & Launch (`step-finale.vue` - Core)
+### Step 17: Stage Finale & Launch (`step-finale.vue` - Core)
 - **Pre-Flight Readiness Honesty Matrix (4 Pillars)**:
   - `🎙️ Audio Input`: Microphone detection and Web Audio VAD status.
   - `🧠 Reasoning Core`: LLM connectivity and WebGPU / API handshake verification.
@@ -371,25 +379,26 @@ packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/
 │   └── art-preview-modal.vue          # Non-disruptive visual style preview modal
 ├── steps/
 │   ├── step-welcome.vue               # Step 0: Welcome, companion bubble, Quick Start & Guided Setup CTAs
-│   ├── step-appearance.vue            # Step 1: Language (8 locales), theme mode, 24-color accent
-│   ├── step-triage.vue                # Step 2: Local-first vs Cloudflare sync
-│   ├── step-experience.vue            # Step 3: 4 Archetypes & dynamic module pruning coordinator
+│   ├── step-triage.vue                # Step 1: Local-first vs Cloudflare sync & account restore
+│   ├── step-appearance.vue            # Step 2: Language (8 locales), theme mode, 24-color accent
+│   ├── step-experience.vue            # Step 3: 6 Archetypes & dynamic module pruning coordinator
 │   ├── step-profile.vue               # Step 4: User name, honorific, narrative backstory
 │   ├── step-vessel.vue                # Step 5: Physical Vessel selection & 3D coverflow
 │   ├── step-consciousness.vue         # Step 6: WebGPU / Cloud LLM reasoning core
-│   ├── step-persona.vue               # Step 7: Character card & soul selection (Starter Cards, Hub, AI Character Creator)
+│   ├── step-persona.vue               # Step 7: Character card & soul selection (Starter Cards, Hub, AI Creator)
 │   ├── step-hearing.vue               # Step 8: Mic selection, VAD, and STT engine
 │   ├── step-speech.vue                # Step 9: Neural TTS provider & voice timbre
 │   ├── step-thinking.vue              # Step 10: Pacing presets & subconscious thinking asides
 │   ├── step-emotions.vue              # Step 11: 2-Pass ACT expression curation bridge
-│   ├── step-artistry.vue              # Step 12: Pollinations/ComfyUI, visual prompt & director
-│   ├── step-sensory.vue               # Step 13: Screen watching, quiet hours & full telemetry dump
-│   ├── step-memory.vue                # Step 14: 4 Temporal Memory Quadrants (STMM, LTMM, Lifetime, Dreams)
-│   ├── step-tools.vue                 # Step 15: Web search, Desktop MCP filesystem & 3D motions
-│   └── step-finale.vue                # Step 16: 4-pillar readiness honesty matrix & stage launch
+│   ├── step-vision.vue                # Step 12: Chat photo inspection & VLM 2-hop test
+│   ├── step-proactivity.vue           # Step 13: Schedule, heartbeats, screen watching & telemetry
+│   ├── step-artistry.vue              # Step 14: Pollinations/ComfyUI, visual prompt & director
+│   ├── step-memory.vue                # Step 15: 4 Temporal Memory Quadrants (STMM, LTMM, Lifetime, Dreams)
+│   ├── step-tools.vue                 # Step 16: Web search, Desktop MCP filesystem & 3D motions
+│   └── step-finale.vue                # Step 17: 4-pillar readiness honesty matrix & stage launch
 ├── stores/
-│   └── useOnboardingV3Draft.ts        # LocalStorage-persisted draft store via useLocalStorageManualReset (survives refreshes; zero dirty DB writes)
-└── types.ts                           # Canonical 17-step TypeScript definitions & module mappings
+│   └── useOnboardingV3Draft.ts        # LocalStorage-persisted draft store via useLocalStorageManualReset
+└── types.ts                           # Canonical 18-step TypeScript definitions & module mappings
 ```
 
 ---

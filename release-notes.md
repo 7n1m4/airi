@@ -1,50 +1,65 @@
-# 🚀 AIRI v0.9.35-stable.20260928 — Release Notes
+# 🚀 AIRI Next Release Notes
 
-This release introduces the complete **Single-Card ZIP Export & Import Ecosystem**, enabling creators to effortlessly package, share, and backup entire companions—including 3D/2D avatar vessels, custom textures, voices, and isolated memories—in a single portable file. Alongside card portability, this update brings a major overhaul to both the **AIRI Card Hub** and **AIRI Card Editor**, unifying avatar staging and configuration under one coherent roof, and debuts the brand new **Embedded Stage Avatar Viewport** directly into Desktop Chat.
+This release streamlines the canonical **Onboarding V3** journey down to 18 steps—introducing a live in-step LLM dialogue simulator, 100% offline neural starter voices, automated Hugging Face gate helpers, and a unified Proactivity & Screen Awareness console.
 
-Under the hood, this release marks a monumental breakthrough in desktop resource management with **Active VRAM Eviction & Deep Standby Hibernation**. Local inference runtimes now automatically unload from VRAM after 15 minutes of inactivity, bringing idle resource usage down to near-zero and eliminating desktop memory pressure during long sessions. Additionally, creators gain access to the **Cognitive Screen Sentinel** (enabling natural-language question gates for proactive vision), a dedicated **Nan0 Live Cognition Desktop Panel**, smarter **Departure & Return Awareness** that silences false idle boredom alerts when you step away, a resolved **Proactivity AFK Deadlock**, and native **Indonesian Language Support**.
+Alongside the onboarding polish, this update introduces a **Coordinated Startup Splash Screen** featuring a 3D levitating holographic card loader with synchronized background avatar mounting, adds **Free AI and Character Wizard 3-Way Modal Pickers** with a dedicated **Card Import Hub**, bundles an **Offline Starter Voice Catalog** with 18 zero-shot voices, hardens the **Autonomous Artistry Image Journal Tool**, implements **Live2D Parameter Blend Modes & Timed ACT Expression Cues**, expands the **AIRI Arcade Studio** with cleanroom replay telemetry, and brings hardware-accelerated **WebGPU support to System 1 Laya Cognition**.
 
 ---
 
 ## ✨ Product Updates
 
-### 🗃️ Character Cards: AIRI Card Hub & Unified Card Editor
+### 🧭 Onboarding V3: Streamlined Steps & First-Run Enhancements
+* **Account & Architecture**: Added resilient Cloudflare OAuth auto-refresh to prevent unexpected session disconnects, alongside clearer architecture benefits for local air-gapped vs. cloud-synced companions.
+* **Experience Archetypes**: Refined the 6 companion archetype presets and balanced the module selection grid into a clean, symmetrical 5×2 layout with extensible plugin placeholders.
+* **Consciousness**: Added a built-in live Dialogue Simulator directly inside the step, letting you test multi-turn LLM reasoning, response latency, and conversational banter before proceeding.
+* **Speech**: Added one-click offline starter voice bypasses (ReLU, Sakura, Dr. Aria) requiring zero tokens, alongside HF token format validation and direct "Accept Gate" shortcuts for Pocket-TTS.
+* **Emotions**: Added an expression noise gate that filters out internal VRoid mesh rigging morphs (`Fcl_*`) to prevent face twitching, plus built-in starter presets (AvatarSample_A/B, Hiyori) with one-click force recalibration.
+* **Vision**: Added verified Cloudflare Workers AI multimodal vision models (Llama 4 Scout 17B, Mistral Small 3.1 24B, Qwen 3.8 27B) with bidirectional strategy synchronization.
+* **Proactivity & Awareness**: Consolidated daily operating routines and desktop screen perception into a single unified step, streamlining the canonical onboarding flow from 19 to 18 steps.
 
-#### AIRI Card Hub (Everyone)
-- **Complete Single-Card ZIP Bundles**: You can now export and import individual characters as self-contained `.zip` archives containing all companion metadata, avatar models (VRM, Live2D, MMD, Spine), custom wardrobe textures, speech audio profiles, and isolated memory journals.
-- **Universal Format Compatibility**: Enhanced card export modal supporting Character Card V2 and V3 specifications, standalone JSON, and PNG images with embedded metadata chunks for broad compatibility across the companion ecosystem.
-- **Interactive Cover Art Selector & Live Preview**: Added a 3-column cover art picker with customizable crop aspect ratios, real-time dynamic query previews, and automatic monogram badge generation for text-only companion cards.
-- **Redesigned 5-Tab Card Inspector**: Overhauled the card inspect modal into five canonical tabs featuring comprehensive concept summaries, full specification sheets, and a unified avatar vessel selector.
-- **Crisp Typography & Smooth Streaming**: Eliminated CSS 3D transform text blurring and streamlined message streaming by removing unnecessary token cloning overhead.
+### 🎬 Coordinated Startup: Standalone Splash Screen & Boot Milestones
+* **Dedicated MPA Splash Screen**: Replaced the static loading screen with a standalone multi-page application splash screen (`splash.html`) that launches instantly upon desktop startup.
+* **3D Levitating Holographic Card Loader**: Rendered a perspective-depth 3D levitating card loader with dynamic metallic light glints and smooth floating keyframes while boot milestones load.
+* **Milestone-Driven Boot Lifecycle**: Communicates startup stages over IPC (`core` ➔ `models` ➔ `stage-ready` ➔ `ready`), giving real-time visual progress as background engines initialize.
+* **Synchronized Avatar Pre-Mounting**: The avatar vessel now mounts silently behind the splash screen, eliminating visual stutter, model pop-in, or T-pose flashes when entering the stage.
+* **Zero-Click Auto-Close**: Once both the runtime and the avatar stage report ready, the splash screen holds for 350ms and performs an elegant CSS fade-out exit before closing.
+* **Persistent Hidden Intent**: If you launch AIRI minimized or hidden, your companion respects that choice across splash dismissals without unexpectedly stealing focus.
 
-#### AIRI Card Editor (Unified Configuration)
-- **Unified Staging Tab**: Integrated avatar vessel staging directly into the card configuration flow (absorbing the previous Studio tab). Creators can now preview, calibrate, and bind 3D/2D avatar models, select **"None"** for text-only companions, manage multi-actor cast rosters, and pick visual scene backgrounds with direct image uploads—all in one place.
-- **Consolidated Generation Tab**: Moved the Consciousness (LLM) model picker directly to the head of the Generation tab alongside thinking mode preset chips (disabling reasoning overhead or fine-tuning thinking token budgets), system prompt templates, and sampling controls.
-- **Retirement of the Modules Tab**: Streamlined the card editor navigation by eliminating the legacy Modules tab, giving all visual avatar staging and AI cognition controls natural, dedicated homes in Staging and Generation.
-- **Cognition Tab Enhancements**: Sub-tab models and universe RAG++ memory segment with upgraded pill toggles and persistent search engine state.
+### ⚙️ Settings Quick Access & Dedicated Card Import Hub
+* **Character Wizard 3-Way Modal**: Clicking "Character Wizard" in Settings Quick Access now opens a 3-way modal directing you to the full 18-step Onboarding V3 wizard, the AnimaDex Cast Wizard, or the dedicated Card Import Hub.
+* **Dedicated Card Import Hub**: Introduced a full-screen landing page (`/settings/airi-card/import-hub`) for rapid drag-and-drop importing of Character Card V2/V3 PNGs, standalone JSONs, and complete single-card ZIP archives.
+* **Free AI 3-Way Modal**: Replaced the direct jump on "Free AI" with a curated 3-card modal letting you choose between the Free AI Hub (Cloud · 50+ Models), WebLLM Local / Apple Core AI (WebGPU / Apple Silicon · 100% Private), and Web-RWKV Local (RNN · Constant VRAM).
+* **Multi-Layer Indicator Badges**: Quick Access buttons now feature subtle layered badges in their top-right corners to visually highlight actions that open multi-option selection modals.
 
-### 🪟 Desktop Chat: Interactive Embedded Stage Viewport & 3D Visuals
-- **Embedded Stage Avatar Viewport**: You can now view and converse with your avatar companion directly inside the Desktop Chat window's right context panel. The embedded stage is fully interactive, synchronizes with global positioning, and expands on demand.
-- **3D Levitating Card Splash Loader**: Replaced the static launch screen with a smooth 3D levitating holographic card animation during application startup.
+### 🎨 Autonomous Artistry & Image Journal Tooling
+* **Resilient Parameter Resolution**: Hardened the `image_journal` tool to defensively accept any prompt key variant passed by diverse LLMs (`prompt`, `description`, `text`, `content`, `caption`, `query`) without failing.
+* **Automatic Action Inference & Prompt Injection**: The image journal tool automatically infers missing action names (defaulting to `create` or `apply`), while system prompts now dynamically inject artistry widget instructions whenever Artistry is active on the companion or globally.
 
-### ⚡ Resource Intelligence: Active VRAM Eviction & Deep Standby Hibernation
-- **Automated VRAM Eviction (15-Minute Inactivity TTL)**: Heavy local AI models (WebGPU runtimes, Whisper transcription, Moondream vision, and speech synthesizers) now automatically unload from GPU memory after 15 minutes of inactivity, freeing system memory for other desktop applications.
-- **Seamless Deep Standby Recovery**: When you resume chatting or interact with your companion, runtimes dynamically reload on demand without requiring an application restart.
-- **Zero-Allocation Attention Guard**: Eliminated memory accumulation and buffer churn in continuous screen perception, capping background capture resolutions to 1080p and ensuring stable, leak-free background vision.
-- **In-App Memory Sentinel & Telemetry**: Added runtime diagnostic monitors that track memory pressure, buffer recycling, and background texture eviction across multi-hour sessions.
+### 🎙️ Neural Voice Studio: Offline Starter Voices & Zero-Shot Local TTS
+* **18 Bundled Offline Starter Voices**: AIRI now ships with a complete offline starter voice library in `packages/stage-ui/src/assets/voices/`—including ReLU (Empathetic), Sakura (Japanese), Dr. Aria (Professional), Kira, Mio, Sebastian, and 12 other distinct vocal archetypes.
+* **Tokenless Zero-Shot Synthesis**: Enjoy expressive, local neural speech powered by Kokoro and Pocket-TTS with zero external network requests and no API keys required.
+* **Lightweight Local Voice Picker**: Added a quick 3-card engine picker modal in Settings for fast switching between Pocket-TTS, Kokoro, and Moss-Nano.
 
-### 🧠 Nan0 Cognition: Desktop Inspector Panel & Departure Intelligence
-- **Live Desktop Cognition Panel**: Open a dedicated real-time desktop inspector window to observe Nan0's subconscious thoughts, emotional salience, and cognitive reflexes live as conversations unfold.
-- **Smart Departure & Return Dynamics**: When you tell your companion you are stepping away, heading to work, or going to bed, AIRI gracefully acknowledges the departure and suppresses false "idle boredom" interruptions until you return.
-- **System 1 Cognition Upgrades**: Upgraded conversational continuity and relationship memory to pure System 1 intelligence, eliminating brittle keyword matching and lexical fallbacks.
-- **Dynamic User Identity Anchors**: Subconscious reasoning prompts now dynamically resolve your configured user identity, completely removing legacy placeholder names.
+### 💃 Avatar Staging: Live2D Blend Modes, Soft Loading & ACT Duration Cues
+* **Live2D Parameter Blend Modes**: Full mathematical support for Cubism Add, Multiply, and Overwrite parameter blending, ensuring complex layered expressions (blushing, sweat drops, lighting overlays) render faithfully without clipping.
+* **Soft Optional Asset Loader**: Third-party Live2D zip archives with missing `.exp3.json`, `.motion3.json`, physics, or pose definitions now load gracefully with synthetic fallback stubs instead of throwing uncaught loader errors.
+* **ACT Token Duration Cues**: The ACT parser now understands timed durations in seconds (e.g., `<|ACT:emotion="smile",duration="3"|>`), automatically managing facial expression reset timers across Live2D, VRM, and Stage-Mate Unity sidecars.
 
-### 👁️ Proactivity: Cognitive Screen Sentinel & AFK Deadlock Elimination
-- **Cognitive Screen Sentinel (Question-Based Semantic Gates)**: Instead of relying on rigid keyword lists or window tags (like "youtube" or "error"), the Screen Watcher can now be activated through natural-language questions. You can pose plain sentences as intelligent perception gates—such as *"Did the user hit a compiler error or failing test?"* or *"Did a notable, unexpected event happen on screen?"* AIRI's System 1 coprocessor continuously checks on-screen visual evidence against these questions in real time, only chiming in when a question is genuinely answered "yes."
-- **Decoupled Proactivity Heartbeats (AFK Deadlock Fix)**: Fixed an issue where proactivity suggestions would freeze when switching between active and idle tasks. Active-user heartbeats are now fully decoupled from idle detection gates, preventing AFK deadlocks.
-- **Auto-Healing Vision Lifecycle**: Resilient frame decoding that automatically recovers screen watchers after operating system sleep or display sleep events.
+### 🕹️ AIRI Arcade Studio: Cleanroom Replay Engine & CRT Calibration
+* **Full-Screen Arcade Hub**: Introduced a dedicated Arcade Hub with 6-facet catalog filtering, difficulty classification, and game bundle discovery.
+* **Cleanroom Replay Visualizer**: Upgraded replay tools with an accumulated game board visualizer and half-block character rendering.
+* **80×40 Grid Diff Collector**: High-frequency frame diff analysis that captures state changes and synthesizes strategy extractors automatically.
+* **Full 4:3 CRT Viewport**: Expanded calibration viewports to native 4:3 CRT framing with a 15-second calibration inspection view.
 
-### 🌐 Knowledge Graph, Voice Matching & Indonesian Localization
-- **Knowledge Graph Entity Normalization**: Intelligent entity folding that resolves name variations, honorifics, and character nicknames, preventing fragmented graph clusters in the Mind Map.
-- **AnimaDex Fast Voice Matching**: Sub-second System 1 acoustic voice matching pairing synthesized voices to companion archetypes.
-- **Indonesian Language Support & Upstream Contributions**: Added native Indonesian localization across onboarding steps, settings pages, and companion dialogs. Special thanks to upstream contributor **@kaisaaru** for PR [#2662](https://github.com/moeru-ai/airi/pull/2662), with shoutouts to **@chiba233** for PR [#2658](https://github.com/moeru-ai/airi/pull/2658) (screen box sizing) and **@gg582** for PR [#2519](https://github.com/moeru-ai/airi/pull/2519) (Linux CI testing)!
+### 🧠 Cognition, Memory & Cloud Models
+* **Reusable Mind Map Overview**: Extracted the Knowledge Graph dashboard into an interactive, reusable component (`KnowledgeGraphOverview.vue`) featuring relationship explorers, cluster metrics, and entity inspector cards.
+* **Precision Proper Noun Extraction**: Memory indexing now intelligently strips sentence-initial capitalization noise ("The", "A", "When", "Because"), keeping your companion's knowledge graph free of meaningless grammatical entities.
+* **Hardware-Accelerated Laya Engine (System 1)**: Resolved FP16 precision crashes and added a dedicated WebGPU hardware acceleration toggle with automatic CPU/WASM fallback for local System-1 classification.
+* **Cloud Model Selector Auto-Tagging**: The model selection dialog now automatically tags capabilities (multimodal, tool-calling) and links cloud models directly to your active companion card, with responsive formatting tailored for mobile and narrow screens.
+
+---
+
+## 🌐 Community & Upstream Radar
+* **Character-Owned Live2D Controls & Motion Hooks**: Sourced inspiration from upstream PR [#2458](https://github.com/moeru-ai/airi/pull/2458) by **@nekomeowww** into our Live2D parameter blending maths (Cubism Add/Multiply/Overwrite) and soft zip archive error resilience.
+* **Coordinated Splash Lifecycle**: Sourced concept ideas from upstream PR [#2698](https://github.com/moeru-ai/airi/pull/2698) by **@nekomeowww**, taking it further into our standalone multi-page application splash screen with milestone IPC and background avatar pre-mounting.
+* **AIRI Design System Conventions**: Aligned with the canonical design specification established by **@RainbowBird** in upstream PR [#2689](https://github.com/moeru-ai/airi/pull/2689), reinforcing chromatic hue standards and responsive component sizing across our desktop and mobile views.

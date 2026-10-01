@@ -83,16 +83,42 @@ steps:
         f2: Zero cloud telemetry or external network calls
         f3: Instant startup with local database
     cloud:
-      badge: Multi-Device Sync
-      title: Account Sign-In (Cloudflare)
-      description: Connect your account to sync companions, settings, and memory vaults
-        across devices with end-to-end encryption.
-      selectedCta: Selected (Cloud-Backed)
-      selectCta: Choose Cloud Sync
+      badge: 10 GB Gratis + Sinkronisasi Cloud
+      title: Masuk Akun (Cloudflare)
+      description: Hubungkan akun Anda untuk membuka 10 GB penyimpanan gratis, kredit harian AI edge, dan kehadiran pendamping 24/7 di semua perangkat.
+      selectedCta: Dipilih (Didukung Cloud)
+      selectCta: Pilih Sinkronisasi Cloud
       features:
-        f1: Encrypted R2 cloud backups
-        f2: Seamless multi-device synchronization
-        f3: Automatic vault credential recovery
+        f1: 10 GB Penyimpanan Cloud Gratis
+        f2: Kredit Harian AI Edge Gratis
+        f3: Relai Cloud Discord 24/7
+        f4: Sinkronisasi Multi-Perangkat & Pemulihan 1-Klik
+        f5: Proksi CORS Pribadi & Nol Penitipan Data
+        storage:
+          title: 10 GB Penyimpanan Cloud Gratis
+          desc: Cadangkan model 3D, latar belakang kustom, dan brankas memori penuh tanpa biaya transfer keluar.
+          howItWorks: Didukung oleh penyimpanan objek Cloudflare R2 milik pengguna.
+          whyItMatters: Tingkat gratis yang melimpah untuk puluhan model VRM/Live2D dan riwayat obrolan bertahun-tahun. Tidak seperti AWS S3, mengunduh aset Anda 100% gratis dengan biaya bandwidth $0.
+        ai:
+          title: Kredit Harian AI Edge Gratis
+          desc: 10.000 Neuron harian gratis untuk DeepSeek, Qwen & Llama (tanpa perlu kunci API).
+          howItWorks: Terhubung langsung ke Cloudflare Workers AI pada Langkah 8 (Kesadaran).
+          whyItMatters: Mengobrol langsung dengan model terbuka mutakhir di edge tanpa perlu langganan OpenAI, kartu kredit berbayar, atau GPU gaming lokal kelas atas.
+        relay:
+          title: Relai Cloud Discord 24/7
+          desc: Biarkan pendamping Anda tetap aktif di server Discord bahkan saat PC Anda dimatikan.
+          howItWorks: Berjalan sebagai Cloudflare Worker nirserver (@proj-airi/stage-edge) yang menangani webhook interaksi Discord.
+          whyItMatters: Pendamping Anda tetap siaga 24/7 untuk mengobrol di Discord, menyimpan konteks di Edge KV, dan menyinkronkan percakapan kembali ke desktop saat Anda membuka kembali AIRI.
+        sync:
+          title: Sinkronisasi Multi-Perangkat & Pemulihan 1-Klik
+          desc: Sinkronkan Desktop, Web, dan Seluler dengan mulus; pulihkan pendamping dalam satu klik.
+          howItWorks: Brankas Kunci Edge (airi-edge-vault) melacak status aktif pendamping Anda secara aman.
+          whyItMatters: Memasang ulang AIRI atau berpindah ke laptop/ponsel baru secara otomatis memulihkan pendamping, pengaturan, dan memori tanpa perlu memasukkan kunci secara manual.
+        proxy:
+          title: Proksi CORS Pribadi & Nol Penitipan Data
+          desc: Akses API AI lokal & jarak jauh yang kompleks dengan privasi data nol penitipan 100%.
+          howItWorks: Menerapkan proksi terbalik edge pribadi untuk melewati header CORS peramban bagi stage Web & Seluler.
+          whyItMatters: Semuanya berjalan di akun Cloudflare pribadi Anda. AIRI tidak mengoperasikan server perantara dan tidak pernah membaca, menyimpan, atau mengambil percakapan Anda.
     auth:
       connected: Connected to Cloudflare
       disconnect: Disconnect
@@ -384,15 +410,24 @@ steps:
       wink: Playful Wink
 
   vision:
-    label: Vision
-    subtitle: Chat Photo & Image Analysis
-    title: Visual Perception (Chat VLM)
-    description: Enable your companion to inspect, understand, and react to images
-      you send in chat.
-    engineTitle: Vision Analysis Model
-    testImage: Test Visual Perception
-    testPrompt: Upload an image to verify companion visual understanding.
-    perceptionAccuracy: Perception Latency & Accuracy
+    label: Penglihatan
+    subtitle: Foto Obrolan & Analisis Gambar
+    title: Persepsi Visual (Chat VLM)
+    description: Izinkan pendamping Anda memeriksa, memahami, dan bereaksi terhadap gambar yang Anda kirim dalam obrolan.
+    tabs:
+      cloudflare: Cloudflare Edge
+      cloudflareBadge: 10k Gratis Harian
+      local: Lokal & Luar Jaringan
+      localBadge: Terisolasi
+      custom: Penyedia Cloud
+    cloudflare:
+      connected: 'Cloudflare Terhubung: 10.000 Neuron gratis/hari aktif'
+      notConnected: Hubungkan akun Cloudflare Anda untuk menggunakan visi edge gratis tanpa konfigurasi.
+      signIn: Masuk dengan Cloudflare
+    engineTitle: Model Analisis Penglihatan
+    testImage: Uji Persepsi Visual
+    testPrompt: Unggah gambar untuk memverifikasi pemahaman visual pendamping.
+    perceptionAccuracy: Latensi & Akurasi Persepsi
 
   screen:
     label: Screen

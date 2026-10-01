@@ -1,7 +1,7 @@
 ---
 name: airi-onboarding-v2
 description: >-
-  [DEPRECATED] Legacy Onboarding V2 reference guide. Active canonical onboarding is airi-onboarding-v3 (19 semantic steps, Quick Start, sliding stepper, docs/design-onboarding-v3.md).
+  [DEPRECATED] Legacy Onboarding V2 reference guide. Active canonical onboarding is airi-onboarding-v3 (18 semantic steps, Quick Start, sliding stepper, docs/design-onboarding-v3.md).
 ---
 
 # AIRI Onboarding (V2 Architecture) [DEPRECATED]

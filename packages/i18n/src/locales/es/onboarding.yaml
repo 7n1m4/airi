@@ -93,16 +93,43 @@ steps:
         f2: Cero telemetría en la nube ni llamadas externas
         f3: Inicio instantáneo con base de datos local
     cloud:
-      badge: Sincronización Multidispositivo
+      badge: 10 GB Gratis + Sincronización en Nube
       title: Iniciar Sesión (Cloudflare)
-      description: Conecta tu cuenta para sincronizar acompañantes, ajustes y bóvedas de
-        memoria entre dispositivos con cifrado de extremo a extremo.
+      description: Conecta tu cuenta para desbloquear 10 GB de almacenamiento gratuito,
+        créditos diarios de IA en el borde y presencia 24/7 de tu acompañante en todos tus dispositivos.
       selectedCta: Seleccionado (Con Nube)
       selectCta: Elegir Sincronización en Nube
       features:
-        f1: Copias de seguridad cifradas en Cloudflare R2
-        f2: Sincronización fluida multidispositivo
-        f3: Recuperación automática de credenciales de bóveda
+        f1: 10 GB de Almacenamiento Gratuito en la Nube
+        f2: Créditos Diarios Gratuitos de IA en el Borde
+        f3: Retransmisión en la Nube de Discord 24/7
+        f4: Sincronización Multidispositivo y Restauración en 1 Clic
+        f5: Proxy CORS Privado y Cero Custodia
+        storage:
+          title: 10 GB de Almacenamiento Gratuito en la Nube
+          desc: Respalda modelos 3D, fondos personalizados y bóvedas completas de memoria sin costes de transferencia saliente.
+          howItWorks: Impulsado por el almacenamiento de objetos Cloudflare R2 propiedad del usuario.
+          whyItMatters: Nivel gratuito generoso con espacio suficiente para docenas de modelos VRM/Live2D y años de historial de chat. A diferencia de AWS S3, descargar tus recursos es 100% gratuito con $0 en cargos de ancho de banda.
+        ai:
+          title: Créditos Diarios Gratuitos de IA en el Borde
+          desc: 10.000 Neurons gratuitas al día para DeepSeek, Qwen y Llama (sin requerir clave de API).
+          howItWorks: Se conecta directamente con Cloudflare Workers AI durante el Paso 8 (Consciencia).
+          whyItMatters: Chatea de inmediato con modelos abiertos de vanguardia en el borde sin necesidad de una suscripción a OpenAI, tarjeta de crédito de pago o una GPU local para juegos de gama alta.
+        relay:
+          title: Retransmisión en la Nube de Discord 24/7
+          desc: Mantén a tu acompañante despierto en tu servidor de Discord incluso cuando tu PC esté apagado.
+          howItWorks: Se ejecuta como un Cloudflare Worker sin servidor (@proj-airi/stage-edge) gestionando los webhooks de interacción de Discord.
+          whyItMatters: Tu acompañante permanece activo las 24 horas para conversar en Discord, almacena el contexto en Edge KV y sincroniza las conversaciones de vuelta a tu escritorio cuando vuelves a abrir AIRI.
+        sync:
+          title: Sincronización Multidispositivo y Restauración en 1 Clic
+          desc: Sincroniza fluidamente Escritorio, Web y Móvil; restaura acompañantes con un solo clic.
+          howItWorks: Edge Key Vault (airi-edge-vault) rastrea de forma segura el estado activo de tu acompañante.
+          whyItMatters: Reinstalar AIRI o migrar a un nuevo portátil o teléfono recupera automáticamente tu acompañante, ajustes y recuerdos sin tener que introducir claves manualmente.
+        proxy:
+          title: Proxy CORS Privado y Cero Custodia
+          desc: Accede a APIs de IA locales y remotas complejas con privacidad de datos 100% cero custodia.
+          howItWorks: Despliega un proxy inverso perimetral personal para sortear los encabezados CORS del navegador en los escenarios Web y Móvil.
+          whyItMatters: Todo se ejecuta en tu cuenta personal de Cloudflare. AIRI no opera servidores intermediarios y nunca lee, almacena ni recopila tus conversaciones.
     auth:
       connected: Conectado a Cloudflare
       disconnect: Desconectar
@@ -406,6 +433,16 @@ steps:
     title: Percepción visual (VLM)
     description: Permite a tu acompañante observar, interpretar y reaccionar a las
       imágenes que envías al chat.
+    tabs:
+      cloudflare: Cloudflare Edge
+      cloudflareBadge: 10k Gratis al Día
+      local: Local y Fuera de Línea
+      localBadge: Aislado
+      custom: Proveedores en la Nube
+    cloudflare:
+      connected: 'Cloudflare Conectado: 10.000 Neurons gratuitas/día activas'
+      notConnected: Conecta tu cuenta de Cloudflare para usar visión en el borde gratuita sin configuración.
+      signIn: Iniciar sesión con Cloudflare
     engineTitle: Modelo de análisis visual
     testImage: Probar percepción visual
     testPrompt: Sube una imagen para comprobar la capacidad de comprensión visual

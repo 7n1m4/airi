@@ -182,9 +182,9 @@ The catalog contains 70 discoverable skills. Desktop chatbox and interaction pip
 ### 🟣 Phase 3: Module Systems, Cognition & Memory
 
 #### 3.1 `airi-onboarding-v3`
-- **Target Domain**: Canonical Onboarding V3 19-Step Architecture, Quick Start (60s), & Modular Pruning.
+- **Target Domain**: Canonical Onboarding V3 18-Step Architecture, Quick Start (60s), & Modular Pruning.
 - **Key Paths**: `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/`, `docs/design-onboarding-v3.md`, `docs/design-onboarding-v3-emotions.md`.
-- **Content**: Canonical 19-step semantic journey, Quick Start (60s) instant mode, 5-item sliding-window stepper, 6 curated Archetypes and dynamic module pruning, `useOnboardingV3Draft` isolation, and atomic starter-card commit. *(Note: Legacy `airi-onboarding-v2` under `v2/` is deprecated reference only).*
+- **Content**: Canonical 18-step semantic journey, Quick Start (60s) instant mode, 5-item sliding-window stepper, 6 curated Archetypes and dynamic module pruning, `useOnboardingV3Draft` isolation, and atomic starter-card commit. *(Note: Legacy `airi-onboarding-v2` under `v2/` is deprecated reference only).*
 
 #### 3.2 `airi-mcp-integration`
 - **Target Domain**: Model Context Protocol (MCP) Server Integration.
