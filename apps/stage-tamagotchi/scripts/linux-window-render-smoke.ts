@@ -81,6 +81,7 @@ const requiredWorkspaceBuildOutputs = [
   'packages/electron-screen-capture/dist/main.mjs',
   'packages/electron-vueuse/dist/main/index.mjs',
   'packages/server-runtime/dist/server.mjs',
+  'apps/stage-tamagotchi/out/main/index.js',
 ]
 
 async function ensureSmokePrerequisites() {

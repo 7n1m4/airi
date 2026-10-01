@@ -30,6 +30,7 @@ jobs:
     name: Build Test (${{ matrix.app_name }})
     if: ${{ !(github.event_name == 'pull_request' && startsWith(github.event.pull_request.head.label, 'moeru-ai:i18n/')) }}
     strategy:
+      fail-fast: false
       matrix:
         include:
           - app_name: stage-web
@@ -45,6 +46,8 @@ jobs:
             command: pnpm -F @proj-airi/ui-loading-screens run play:build
 
     runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=6144
     steps:
       - uses: actions/checkout@v6
 
