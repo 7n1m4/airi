@@ -184,7 +184,7 @@ watchEffect((onCleanup) => {
         <template v-if="isBetweenHalloweenAndHalfOfNovember(new Date())">
           <div class="bg-icon-pattern pointer-events-none absolute inset-0 z-0 opacity-10 dark:opacity-10" :style="{ '--bg-mask-icon-pattern': `url(${homeBackgroundPatternGhost})` }" />
         </template>
-        <template v-if="isBetweenChristmasAndHalfOfJanuary(new Date())">
+        <template v-else-if="isBetweenChristmasAndHalfOfJanuary(new Date())">
           <img :src="homeBackgroundChristmas20251224" class="pointer-events-none absolute inset-0 z-0 h-full w-full object-cover">
         </template>
         <template v-else>
