@@ -138,10 +138,17 @@ function removeNullValues(obj: any): any {
 function addCardPreviewNormalize(card: any) {
   const data = card.data || card
   let normalized: any
+  const normalizedVersion = (v: unknown): string => {
+    if (typeof v === 'string' && v.trim())
+      return v.trim()
+    if (typeof v === 'number' && !Number.isNaN(v))
+      return String(v)
+    return '1.0.0'
+  }
   if (card.format === 'airi-card' || card.systemPrompt !== undefined) {
     normalized = {
       ...card,
-      version: card.version || '1.0.0',
+      version: normalizedVersion(card.version),
       messageExample: typeof card.messageExample === 'string'
         ? parseStMessageExamples(card.messageExample)
         : card.messageExample,
@@ -150,7 +157,7 @@ function addCardPreviewNormalize(card: any) {
   else {
     normalized = {
       name: data.name || 'Imported Card',
-      version: data.character_version || '1.0.0',
+      version: normalizedVersion(data.character_version),
       description: data.description ?? '',
       notes: data.creator_notes ?? '',
       personality: data.personality ?? '',

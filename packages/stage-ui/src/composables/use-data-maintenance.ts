@@ -364,7 +364,9 @@ export function useDataMaintenance() {
     return removeNullValuesDeep({
       name: data.name || 'Imported Card',
       nickname: data.nickname || '',
-      version: data.character_version || '1.0.0',
+      version: (typeof (data.character_version || data.version) === 'string' && (data.character_version || data.version).trim())
+        ? (data.character_version || data.version).trim()
+        : (typeof (data.character_version || data.version) === 'number' ? String(data.character_version || data.version) : '1.0.0'),
       description: data.description ?? '',
       notes: data.creator_notes ?? '',
       personality: data.personality ?? '',

@@ -1193,9 +1193,12 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       debug('[AiriCard] Validation issues found during normalization:', validation.issues)
     }
 
-    const normalizeVersion = (version?: string | null) => {
-      const normalized = version?.trim()
-      return normalized || '1.0.0'
+    const normalizeVersion = (version?: unknown) => {
+      if (typeof version === 'string' && version.trim())
+        return version.trim()
+      if (typeof version === 'number' && !Number.isNaN(version))
+        return String(version)
+      return '1.0.0'
     }
     const normalizeRequiredText = (value: string | null | undefined, fallback: string) => {
       const normalized = value?.trim()

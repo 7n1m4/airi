@@ -49,7 +49,7 @@ const CAPABILITY_DETAILS: Record<string, CapabilityDetail> = {
     title: 'Voice',
     icon: 'i-solar:volume-loud-bold',
     color: 'text-indigo-400',
-    description: 'Lets your companion speak aloud with a natural, expressive synthesized voice.',
+    description: 'Lets your companion speak aloud with a natural, expressive voice.',
     bullets: [
       'Neural text-to-speech',
       'Voice, speed, and pitch controls',
@@ -63,8 +63,8 @@ const CAPABILITY_DETAILS: Record<string, CapabilityDetail> = {
     description: 'Keeps conversations flowing naturally while responses are being prepared.',
     bullets: [
       'Natural fillers and acknowledgements',
-      'Short spoken thinking cues',
-      'Preloaded audio for faster turn-taking',
+      'Brief transition phrases during longer responses',
+      'Faster, smoother conversational turn-taking',
     ],
   },
   Emotions: {
@@ -73,9 +73,9 @@ const CAPABILITY_DETAILS: Record<string, CapabilityDetail> = {
     color: 'text-pink-400',
     description: 'Turns conversational emotion into live avatar expressions and body language.',
     bullets: [
-      'Emotion-aware expression cues',
-      'Universal cues for all avatar models',
-      'Persistent mood and expression state',
+      'Facial expressions and emotion cues',
+      'Avatar gestures and body language',
+      'Mood that can carry across the conversation',
     ],
   },
   Memory: {
@@ -84,9 +84,9 @@ const CAPABILITY_DETAILS: Record<string, CapabilityDetail> = {
     color: 'text-cyan-400',
     description: 'Carries useful context across conversations so your companion can remember past interactions.',
     bullets: [
-      'Daily chat summaries for recent context',
-      'Character-authored journal with semantic search',
-      'Knowledge graph connecting people, places, and topics',
+      'Daily summaries of recent conversations',
+      'Searchable character-driven journal of important memories',
+      'Connections between people, places, and topics',
     ],
   },
   Vision: {
@@ -130,7 +130,7 @@ const CAPABILITY_DETAILS: Record<string, CapabilityDetail> = {
     bullets: [
       'Web search and page reading',
       'Local workspace access',
-      'MCP servers and custom tools',
+      'Connected services and custom tools',
     ],
   },
   Text: {
@@ -141,7 +141,7 @@ const CAPABILITY_DETAILS: Record<string, CapabilityDetail> = {
     bullets: [
       'Markdown and code formatting',
       'Streaming text responses',
-      'Quiet, low-overhead interaction',
+      'Ideal for quiet or text-only use',
     ],
   },
 }

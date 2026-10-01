@@ -995,16 +995,15 @@ async function saveCard(card: Card): Promise<boolean> {
     ? cardStore.getCard(props.cardId)?.extensions?.airi as AiriExtension | undefined
     : undefined
 
+  const normalizedVersion = (typeof rawCard.version === 'string' && rawCard.version.trim())
+    ? rawCard.version.trim()
+    : (typeof (rawCard as any).version === 'number' ? String((rawCard as any).version) : '1.0.0')
+  rawCard.version = normalizedVersion
+
   if (!((rawCard.name?.length ?? 0) > 0)) {
     // No name
     showError.value = true
     errorMessage.value = t('settings.pages.card.creation.errors.name')
-    return false
-  }
-  else if (!/^(?:\d+\.)+\d+$/.test(rawCard.version)) {
-    // Invalid version
-    showError.value = true
-    errorMessage.value = t('settings.pages.card.creation.errors.version')
     return false
   }
   else if (!((rawCard.description?.length ?? 0) > 0)) {
@@ -1529,7 +1528,13 @@ function initializeCard(): Card {
 
     // Return existing card data or defaults
     if (existingCard) {
-      return { ...toRaw(existingCard) }
+      const raw = toRaw(existingCard)
+      return {
+        ...raw,
+        version: (typeof raw.version === 'string' && raw.version.trim())
+          ? raw.version.trim()
+          : (typeof (raw as any).version === 'number' ? String((raw as any).version) : '1.0.0'),
+      }
     }
 
     return {

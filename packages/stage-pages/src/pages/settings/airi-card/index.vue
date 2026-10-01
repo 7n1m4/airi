@@ -624,11 +624,18 @@ function addCardPreviewNormalize(card: any) {
   const data = card.data || card
 
   let normalized: any
+  const normalizedVersion = (v: unknown): string => {
+    if (typeof v === 'string' && v.trim())
+      return v.trim()
+    if (typeof v === 'number' && !Number.isNaN(v))
+      return String(v)
+    return '1.0.0'
+  }
   // If it's already an AIRI card, we still want to ensure universal fields like messageExample are valid arrays
   if (card.format === 'airi-card' || card.systemPrompt !== undefined) {
     normalized = {
       ...card,
-      version: card.version || '1.0.0',
+      version: normalizedVersion(card.version),
       // If messageExample is a string (stale AIRI or raw ST), normalize it to AIRI format[][]
       messageExample: typeof card.messageExample === 'string'
         ? parseStMessageExamples(card.messageExample)
@@ -638,7 +645,7 @@ function addCardPreviewNormalize(card: any) {
   else {
     normalized = {
       name: data.name || 'Imported Card',
-      version: data.character_version || '1.0.0',
+      version: normalizedVersion(data.character_version),
       description: data.description ?? '',
       notes: data.creator_notes ?? '',
       personality: data.personality ?? '',
