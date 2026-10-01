@@ -86,7 +86,7 @@ const CAPABILITY_DETAILS: Record<string, CapabilityDetail> = {
     description: 'Carries useful context across conversations so your companion can remember past interactions.',
     bullets: [
       'Daily summaries of recent conversations',
-      'Searchable character-driven journal of important memories',
+      'Searchable journal of important memories',
       'Connections between people, places, and topics',
     ],
   },
@@ -105,9 +105,9 @@ const CAPABILITY_DETAILS: Record<string, CapabilityDetail> = {
     title: 'Presence',
     icon: 'i-solar:moon-bold',
     color: 'text-amber-300',
-    description: 'Gives your companion a daily rhythm and lets it interact without always waiting for a prompt.',
+    description: 'Lets your companion check in and react on its own instead of always waiting for you to start the conversation.',
     bullets: [
-      'Sleep and wake routines',
+      'Scheduled routines and timers',
       'Proactive casual check-ins',
       'Context-aware commentary on screen activity',
     ],
