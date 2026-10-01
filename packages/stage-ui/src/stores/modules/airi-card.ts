@@ -10,7 +10,7 @@ import { useSpine } from '@proj-airi/stage-ui-spine'
 import { useModelStore } from '@proj-airi/stage-ui-three'
 import { until, useBroadcastChannel } from '@vueuse/core'
 import { nanoid } from 'nanoid'
-import { defineStore, storeToRefs } from 'pinia'
+import { defineStore, getActivePinia, storeToRefs } from 'pinia'
 import { safeParse } from 'valibot'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -34,6 +34,7 @@ import { useDatingSimStore } from '../dating-sim'
 import { DisplayModelFormat, useDisplayModelsStore } from '../display-models'
 import { useShortTermMemoryStore } from '../memory-short-term'
 import { useSettingsStageModel } from '../settings/stage-model'
+import { useArtistryStore } from './artistry'
 import { useConsciousnessStore } from './consciousness'
 import { useSpeechStore } from './speech'
 
@@ -1519,9 +1520,20 @@ export function buildSystemPrompt(card: AiriCard | undefined) {
   const generation = card.extensions?.airi?.generation
   const isImageJournalAllowed = !generation?.known?.allowedTools || generation.known.allowedTools.includes('image_journal')
 
-  if (isImageJournalAllowed && artistry?.provider && artistry.provider !== 'none' && artistry.widgetInstruction && !artistry.autonomousEnabled) {
-    if (artistry.widgetInstruction && artistry.widgetInstruction.trim() !== '') {
-      components.push(artistry.widgetInstruction)
+  let globalArtistryConfigured = false
+  try {
+    if (getActivePinia()) {
+      const artistryStore = useArtistryStore()
+      globalArtistryConfigured = Boolean(artistryStore.configured && artistryStore.activeProvider && artistryStore.activeProvider !== 'none')
+    }
+  }
+  catch {}
+  const hasArtistryProvider = Boolean((artistry?.provider && artistry.provider !== 'none') || globalArtistryConfigured)
+
+  if (isImageJournalAllowed && hasArtistryProvider) {
+    const artistryInstruction = artistry?.widgetInstruction || DEFAULT_ARTISTRY_WIDGET_SPAWNING_PROMPT
+    if (artistryInstruction && artistryInstruction.trim() !== '') {
+      components.push(artistryInstruction)
     }
   }
 
