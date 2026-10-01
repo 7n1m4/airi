@@ -17,6 +17,7 @@ const cardStore = useAiriCardStore()
 const { activeCardId } = storeToRefs(cardStore)
 
 const isVoiceModalOpen = ref(false)
+const isFreeAiModalOpen = ref(false)
 
 const localVoiceEngines = [
   {
@@ -96,6 +97,49 @@ const row1Items = computed<QuickAccessItem[]>(() => [
 // Detection for iOS (iPad/iPhone/iPod)
 const isIOS = typeof navigator !== 'undefined' && (/iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
 
+const freeAiEngines = computed(() => [
+  {
+    id: 'free-hub',
+    name: 'Free AI Hub',
+    icon: 'i-solar:planet-3-bold-duotone',
+    accent: 'text-cyan-500 dark:text-cyan-400',
+    tag: 'CLOUD · 50+ MODELS',
+    tagBg: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+    desc: 'Curated zero-cost cloud LLMs with no setup or local hardware required.',
+    badges: ['⚡ High RPM', '☁️ Zero VRAM', '🆓 Free Forever'],
+    to: '/settings/providers/free-hub',
+  },
+  {
+    id: 'web-llm',
+    name: isIOS ? 'Apple Core AI' : 'WebLLM Local',
+    icon: isIOS ? 'i-solar:apple-bold' : 'i-solar:cpu-bolt-bold-duotone',
+    accent: 'text-emerald-500 dark:text-emerald-400',
+    tag: isIOS ? 'APPLE SILICON' : 'WEBGPU · OFFLINE',
+    tagBg: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    desc: isIOS
+      ? 'On-device Apple Foundation Models running privately on Apple Silicon.'
+      : 'Run open-weight models (Llama, Qwen, Gemma) in-browser with zero install.',
+    badges: ['🔒 100% Private', '💻 Local VRAM', '🔌 Air-Gapped'],
+    to: isIOS ? '/settings/providers/chat/apple-core-ai' : '/settings/providers/chat/web-llm',
+  },
+  {
+    id: 'web-rwkv',
+    name: 'Web-RWKV Local',
+    icon: 'i-solar:atom-bold-duotone',
+    accent: 'text-purple-500 dark:text-purple-400',
+    tag: 'RNN · LINEAR',
+    tagBg: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+    desc: 'Ultra-low VRAM linear attention RNN engine running locally on WebGPU.',
+    badges: ['🧠 Constant VRAM', '🚀 Fast Token Gen', '⚡ WebGPU'],
+    to: '/settings/providers/chat/web-rwkv',
+  },
+])
+
+function selectFreeAiEngine(to: string) {
+  isFreeAiModalOpen.value = false
+  router.push(to)
+}
+
 // Row 2: Audio & Discovery
 const row2Items = computed<QuickAccessItem[]>(() => [
   {
@@ -119,12 +163,10 @@ const row2Items = computed<QuickAccessItem[]>(() => [
     to: '/settings/providers/transcription/whisper-local',
   },
   {
-    id: 'local-free-ai',
-    title: 'Local Free AI',
+    id: 'free-ai',
+    title: 'Free AI',
     icon: 'i-solar:cpu-bolt-bold-duotone',
-    to: isIOS
-      ? '/settings/providers/chat/apple-core-ai'
-      : '/settings/providers/chat/web-llm',
+    to: '/settings/providers/free-hub',
   },
   {
     id: 'discover-models',
@@ -143,6 +185,10 @@ function navigate(target: string | QuickAccessItem) {
     }
     if (target.id === 'local-voice') {
       isVoiceModalOpen.value = true
+      return
+    }
+    if (target.id === 'free-ai') {
+      isFreeAiModalOpen.value = true
       return
     }
     router.push(target.to)
@@ -292,6 +338,97 @@ function navigate(target: string | QuickAccessItem) {
               </div>
 
               <!-- Card Bottom: Language Badges -->
+              <div class="mt-auto flex flex-wrap gap-1 border-t border-neutral-200/60 pt-3 dark:border-neutral-700/40">
+                <span
+                  v-for="badge in engine.badges"
+                  :key="badge"
+                  class="rounded bg-neutral-200/60 px-1.5 py-0.5 text-[10px] text-neutral-600 font-mono dark:bg-white/5 dark:text-neutral-400"
+                >
+                  {{ badge }}
+                </span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Free AI Selection Modal -->
+    <Teleport to="body">
+      <div
+        v-if="isFreeAiModalOpen"
+        class="pointer-events-auto fixed inset-0 z-[999999] flex animate-fadeIn items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        @pointerdown.stop
+        @mousedown.stop
+        @touchstart.stop
+        @click.stop.self="isFreeAiModalOpen = false"
+      >
+        <div
+          class="max-w-3xl w-full flex flex-col gap-5 border border-neutral-200/80 rounded-3xl bg-white p-6 shadow-2xl dark:border-neutral-800/80 dark:bg-neutral-900"
+          @pointerdown.stop
+          @mousedown.stop
+          @touchstart.stop
+          @click.stop
+        >
+          <!-- Header -->
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="size-11 flex shrink-0 items-center justify-center rounded-2xl bg-primary-500/10 text-primary-500 dark:bg-primary-500/20">
+                <div class="i-solar:cpu-bolt-bold-duotone size-6" />
+              </div>
+              <div>
+                <h3 class="text-base text-neutral-900 font-bold dark:text-white">
+                  Free AI Options
+                </h3>
+                <p class="text-xs text-neutral-500 dark:text-neutral-400">
+                  Select a zero-cost cloud hub or private local in-browser model engine
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="cursor-pointer rounded-xl p-2 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+              @click="isFreeAiModalOpen = false"
+            >
+              <div class="i-solar:close-circle-linear size-5" />
+            </button>
+          </div>
+
+          <!-- 3 Engine Hero Cards -->
+          <div class="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
+            <button
+              v-for="engine in freeAiEngines"
+              :key="engine.id"
+              type="button"
+              :class="[
+                'group relative flex flex-col justify-between text-left rounded-2xl p-4.5 transition-all duration-200 cursor-pointer',
+                'border border-neutral-200/80 bg-neutral-50/70 dark:border-neutral-800 dark:bg-neutral-800/40',
+                'hover:border-primary-500/60 dark:hover:border-primary-400/60 hover:bg-white dark:hover:bg-neutral-800',
+                'hover:-translate-y-1 hover:shadow-lg',
+              ]"
+              @click="selectFreeAiEngine(engine.to)"
+            >
+              <!-- Card Top: Icon & Tag -->
+              <div class="flex items-start justify-between gap-2">
+                <div :class="['size-10 flex shrink-0 items-center justify-center rounded-xl bg-white dark:bg-neutral-900 border border-neutral-200/60 dark:border-neutral-700/60 shadow-xs transition-transform group-hover:scale-105', engine.accent]">
+                  <div :class="[engine.icon, 'size-5']" />
+                </div>
+                <span :class="['text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-md border uppercase', engine.tagBg]">
+                  {{ engine.tag }}
+                </span>
+              </div>
+
+              <!-- Card Content: Name & Description -->
+              <div class="mb-3 mt-3.5 flex flex-col gap-1">
+                <span class="text-sm text-neutral-900 font-bold transition-colors dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                  {{ engine.name }}
+                </span>
+                <p class="text-xs text-neutral-500 leading-relaxed dark:text-neutral-400">
+                  {{ engine.desc }}
+                </p>
+              </div>
+
+              <!-- Card Bottom: Feature Badges -->
               <div class="mt-auto flex flex-wrap gap-1 border-t border-neutral-200/60 pt-3 dark:border-neutral-700/40">
                 <span
                   v-for="badge in engine.badges"
