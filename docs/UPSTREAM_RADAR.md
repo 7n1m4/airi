@@ -17,6 +17,208 @@
 
 <!-- RADAR_ENTRIES -->
 
+## [2026-10-01] Upstream Delta: `2444e92c..4b702bd6` (10 commits, 107 files, 20 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 10 commits (`4b702bd667`..`96ca8bbe7a`) across 107 files, alongside 20 PR updates (9 new PRs, 5 lifecycle changes, 6 discussion activity changes). Key themes: (1) **Apple Vision Provider (#2734 / `244360260a`)**: Merged native Apple Vision support on macOS with OCR and visual description wrapping for attached and tool images; (2) **Coordinated Splash & Loading Screens (#2698 / `3fd34c20c8`)**: Added `@proj-airi/ui-loading-screens` with unified `StartupScreen` and error recovery dialogs; (3) **Floating Chat Danmaku Style (#2704 / `07c63535f1`)**: Added a 4th floating chat style ("Message feed" / danmaku) with auto-folding composer and hover fade/click-through, plus bubble width blowout fixes; (4) **Wayland Window Interactivity (#2749 / `85d90ab067`)**: Fixed permanent click-through lockup on Linux Wayland by keeping the window interactive; (5) **Tool Replay Safety on Fallback (#2745 / `6a6dd46f9f`)**: Fixed critical bug where content-part array rejection retried a stream after a tool call had already begun; (6) **New PR Initiatives**: Cognitive runtime proposal (#2748 by @chiba233), centralized voice/audio lifecycles (#2743 by @nekomeowww), and Minecraft auth diagnostics (#2750).
+* **Discussion & Community Buzz**:
+  - 💬 **#2698: `feat(stage): add coordinated splash and loading screens` (+12 new comments, total 62)**: Heavy review velocity across desktop and mobile prior to merge.
+  - 💬 **#2519: `test(stage-tamagotchi): verify linux window rendering in CI` (+6 new comments, total 20)**: Active discussion on Linux CI testing and window harness stability.
+  - 💬 **#2717: `feat(debug-server): persist and query local OTLP traces` (+3 new comments, total 23)**: Steady engagement on local OpenTelemetry trace storage with DuckDB.
+  - 💬 **#2252: `docs(ui): add entrance animations and optimize performance across UI components` (+2 new comments, total 11)**: Review polish on UI animations.
+  - 💬 **#2708: `feat(hearing): add character wake words across clients` (+1 new comments, total 36)**: Sustained community interest in client-side character wake words.
+  - 👁️ **Watched PRs**:
+    - **#2634: `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain`** [Draft] (1 comment): Dormant; maintainers have not endorsed replacing native memory with an external daemon.
+    - **#2672: `refactor(stage-ui): bind conversations to window-local characters`** [Draft] (48 comments): Maintained high discussion velocity regarding window-local character selection and scoping.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2745 / Commit `6a6dd46f9f`: `fix(stage-ui): prevent tool replay during compatibility fallback` by @nekomeowww**: High-priority safety bug fix in `useLLM().stream`. Prevents duplicate tool invocations when content array errors trigger retry logic after a tool has already started execution. Clean, minimal, high-value port.
+  - ⭐ **PR #2749 / Commit `85d90ab067`: `fix(stage-tamagotchi): keep the stage window interactive on Wayland` by @gg582**: Important fix for Wayland users. Prevents permanent click-through unresponsiveness caused by unsupported Electron `forward` flag on Linux.
+  - ⭐ **PR #2704 (Bubble Width Constraint) / Commit `07c63535f1`: `min-w-0 max-w-full` for Chat Bubbles**: Simple CSS fix in `ChatActionMenu` preventing horizontal viewport overflow from long URLs or wide code blocks.
+  - 🔍 **PR #2698 / Commit `3fd34c20c8`: `@proj-airi/ui-loading-screens`**: Clean modular loading screen package; evaluate compatibility with our decoupled Actor Stage boot sequence.
+  - ⚪ **Auto-Reject / Do Not Port**:
+    - **Commit `1262237806` (PR #2719)**: Targets `controls-island`, which is deprecated and deleted in our fork in favor of the floating Control Strip.
+    - **Commit `244360260a` (PR #2734)**: Apple Vision provider makes intrusive modifications across `stores/chat.ts` and `stores/modules/airi-card.ts` designed for upstream's single-actor model; incompatible with our multi-actor and decoupled attention ecology vision engine.
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/stage-ui/src/stores/chat.ts` & `packages/stage-ui/src/stores/ai/chat-llm/llm.ts`**: Touched extensively by PR #2734 and #2745. Our fork has deeply customized multi-actor conversation pipelines, STMM/LTMM text journal hooks, and dreaming workers. Never auto-merge; isolate cherry-picks to the specific tool execution guard in `llm.ts`.
+  - ⚠️ **`packages/stage-ui/src/stores/modules/airi-card.ts`**: Modified by PR #2734 for vision model inheritance. Our fork has custom multi-actor character bindings and extensions.
+  - ⚠️ **`apps/stage-tamagotchi/src/main/windows/chat/floating.ts` & `InteractiveArea.vue`**: Upstream added danmaku mode in `07c63535f1`. Conflicts with our decoupled Control Strip and stage window architecture.
+
+### 📋 Upstream Commits
+- `4b702bd667` chore(i18n): update translations (#2747) [#2747](https://github.com/moeru-ai/airi/pull/2747) _(github-actions[bot], 2026-10-01)_
+- `85d90ab067` fix(stage-tamagotchi): keep the stage window interactive on Wayland (#2749) [#2749](https://github.com/moeru-ai/airi/pull/2749) _(이윤진(Lee Yunjin), 2026-10-01)_
+- `6dd036bec5` chore(nix): update assets hash (#2746) [#2746](https://github.com/moeru-ai/airi/pull/2746) _(Weathercold, 2026-09-30)_
+- `3fd34c20c8` feat(stage-*): add coordinated splash and loading screens (#2698) [#2698](https://github.com/moeru-ai/airi/pull/2698) _(Neko, 2026-10-01)_
+- `6a6dd46f9f` fix(stage-ui): prevent tool replay during compatibility fallback (#2745) [#2745](https://github.com/moeru-ai/airi/pull/2745) _(Neko, 2026-10-01)_
+- `1262237806` fix(stage-tamagotchi): align controls island placement (#2719) [#2719](https://github.com/moeru-ai/airi/pull/2719) _(Neko, 2026-10-01)_
+- `07c63535f1` feat(stage-tamagotchi): add a danmaku style to the floating chat (#2704) [#2704](https://github.com/moeru-ai/airi/pull/2704) _(蓝莓🫐, 2026-10-01)_
+- `da2bcbd46f` chore(nix): update pnpmDeps hash (#2737) [#2737](https://github.com/moeru-ai/airi/pull/2737) _(Weathercold, 2026-09-30)_
+- `244360260a` feat(stage-ui): add the Apple Vision provider (#2734) [#2734](https://github.com/moeru-ai/airi/pull/2734) _(蓝莓🫐, 2026-10-01)_
+- `96ca8bbe7a` docs(agents): forbid English placeholders in other locales (#2742) [#2742](https://github.com/moeru-ai/airi/pull/2742) _(Lulu, 2026-09-30)_
+
+### 🔬 Subsystem Breakdown
+#### Documentation & Scaffolding (`⚪ ignore`) — 2 file(s) (+32/-8)
+- `AGENTS.md` *(+1/-0)*
+- `packages/stage-ui/README.md` *(+31/-8)*
+
+#### Mobile & Web Platforms (`⚪ ignore / low-priority`) — 10 file(s) (+359/-123)
+- `apps/stage-pocket/index.html` *(+62/-1)*
+- `apps/stage-pocket/src/App.vue` *(+88/-56)*
+- `apps/stage-pocket/src/pages/index.vue` *(+19/-0)*
+- `apps/stage-pocket/uno.config.ts` *(+1/-3)*
+- `apps/stage-pocket/vite.config.ts` *(+6/-0)*
+- `apps/stage-web/index.html` *(+62/-1)*
+- `apps/stage-web/package.json` *(+1/-0)*
+- `apps/stage-web/src/App.vue` *(+95/-62)*
+- `apps/stage-web/src/pages/index.vue` *(+19/-0)*
+- `apps/stage-web/vite.config.ts` *(+6/-0)*
+
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 18 file(s) (+364/-49)
+- `apps/stage-tamagotchi/README.md` *(+5/-2)*
+- `apps/stage-tamagotchi/electron.vite.config.ts` *(+1/-0)*
+- `apps/stage-tamagotchi/package.json` *(+4/-1)*
+- `apps/stage-tamagotchi/src/main/index.ts` *(+7/-1)*
+- `apps/stage-tamagotchi/src/main/services/airi/apple-vision/index.ts` *(+67/-0)*
+- `apps/stage-tamagotchi/src/main/windows/chat/floating.ts` *(+27/-16)*
+- `apps/stage-tamagotchi/src/main/windows/chat/index.ts` *(+1/-1)*
+- `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.vue` *(+81/-2)*
+- `apps/stage-tamagotchi/src/renderer/components/chat-viewport-layout.vue` *(+18/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/chat-window/chat-window-style-menu.vue` *(+4/-2)*
+- `apps/stage-tamagotchi/src/renderer/composables/use-chat-floating-click-through.browser.test.ts` *(+18/-2)*
+- `apps/stage-tamagotchi/src/renderer/composables/use-chat-floating-click-through.ts` *(+62/-8)*
+- `apps/stage-tamagotchi/src/renderer/pages/chat-floating.vue` *(+24/-3)*
+- `apps/stage-tamagotchi/src/renderer/pages/devtools/vision.vue` *(+2/-3)*
+- `apps/stage-tamagotchi/src/renderer/pages/index.vue` *(+8/-1)*
+- `apps/stage-tamagotchi/src/renderer/utils/fade-on-hover.test.ts` *(+18/-0)*
+- `apps/stage-tamagotchi/src/renderer/utils/fade-on-hover.ts` *(+8/-1)*
+- `apps/stage-tamagotchi/src/shared/eventa/index.ts` *(+9/-6)*
+
+#### Deprecated Surfaces (Control Island) (`⚪ ignore / rejected in fork (decoupled into Control Strip)`) — 2 file(s) (+14/-14)
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/controls-island-root.test.ts` *(+11/-11)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/use-controls-island-placement.ts` *(+3/-3)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 47 file(s) (+1760/-54)
+- `nix/assets-hash.txt` *(+1/-1)*
+- `nix/pnpm-deps-hash.txt` *(+1/-1)*
+- `packages/provider-inference/src/types.ts` *(+16/-0)*
+- `packages/stage-ui-spine/src/components/scenes/Spine.vue` *(+15/-2)*
+- `packages/stage-ui-spine/src/components/scenes/spine/Model.vue` *(+1/-3)*
+- `packages/stage-ui/src/components/scenarios/chat/components/action-menu/index.vue` *(+1/-1)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history-layout.browser.test.ts` *(+41/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history.vue` *(+8/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-history-scroll.browser.test.ts` *(+28/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-history-scroll.ts` *(+22/-1)*
+- `packages/stage-ui/src/components/scenarios/dialogs/onboarding/onboarding-dialog.vue` *(+11/-5)*
+- `packages/stage-ui/src/components/scenarios/dialogs/onboarding/onboarding.browser.test.ts` *(+1/-1)*
+- `packages/stage-ui/src/components/scenarios/index.ts` *(+1/-0)*
+- `packages/stage-ui/src/components/scenarios/startup/startup-overlay.browser.test.ts` *(+223/-0)*
+- `packages/stage-ui/src/components/scenarios/startup/startup-overlay.vue` *(+72/-0)*
+- `packages/stage-ui/src/composables/use-startup-resource-timeout.test.ts` *(+44/-0)*
+- `packages/stage-ui/src/composables/use-startup-resource-timeout.ts` *(+20/-0)*
+- `packages/stage-ui/src/composables/vision/use-chat-vision.ts` *(+51/-0)*
+- `packages/stage-ui/src/composables/vision/use-vision-inference.test.ts` *(+100/-2)*
+- `packages/stage-ui/src/composables/vision/use-vision-inference.ts` *(+54/-9)*
+- `packages/stage-ui/src/composables/vision/use-vision-workloads.ts` *(+11/-1)*
+- `packages/stage-ui/src/composables/vision/vision-read-queue.ts` *(+66/-0)*
+- `packages/stage-ui/src/libs/providers/attributes.ts` *(+1/-0)*
+- `packages/stage-ui/src/libs/providers/providers/apple-vision/index.test.ts` *(+88/-0)*
+- `packages/stage-ui/src/libs/providers/providers/apple-vision/index.ts` *(+143/-0)*
+- `packages/stage-ui/src/libs/providers/providers/index.ts` *(+1/-0)*
+- `packages/stage-ui/src/libs/providers/providers/provider-definitions.test.ts` *(+1/-0)*
+- `packages/stage-ui/src/libs/providers/providers/registry.ts` *(+2/-0)*
+- `packages/stage-ui/src/stores/ai/chat-llm/llm.test.ts` *(+14/-0)*
+- `packages/stage-ui/src/stores/ai/chat-llm/llm.ts` *(+20/-3)*
+- `packages/stage-ui/src/stores/ai/chat-llm/tool-images.test.ts` *(+85/-0)*
+- `packages/stage-ui/src/stores/ai/chat-llm/tool-images.ts` *(+81/-0)*
+- `packages/stage-ui/src/stores/ai/chat-llm/tool-resolver.test.ts` *(+24/-0)*
+- `packages/stage-ui/src/stores/ai/chat-llm/tool-resolver.ts` *(+14/-1)*
+- `packages/stage-ui/src/stores/modules/airi-card-inheritance.browser.test.ts` *(+29/-0)*
+- `packages/stage-ui/src/stores/modules/airi-card.test.ts` *(+31/-0)*
+- `packages/stage-ui/src/stores/modules/airi-card.ts` *(+20/-0)*
+- `packages/stage-ui/src/stores/modules/vision/activity.browser.test.ts` *(+120/-0)*
+- `packages/stage-ui/src/stores/modules/vision/activity.ts` *(+105/-0)*
+- `packages/stage-ui/src/stores/modules/vision/index.ts` *(+1/-0)*
+- `packages/stage-ui/src/stores/modules/vision/processing-store.ts` *(+10/-16)*
+- `packages/stage-ui/src/stores/modules/vision/store.ts` *(+4/-0)*
+- `packages/stage-ui/src/stores/startup-resources.test.ts` *(+79/-0)*
+- `packages/stage-ui/src/stores/startup-resources.ts` *(+91/-0)*
+- `packages/stage-ui/uno.config.ts` *(+1/-4)*
+- `packages/stage-ui/vitest.config.ts` *(+3/-3)*
+- `pnpm-workspace.yaml` *(+4/-0)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 12 file(s) (+244/-1)
+- `packages/i18n/src/index.ts` *(+2/-0)*
+- `packages/i18n/src/locales/en/settings.yaml` *(+32/-0)*
+- `packages/i18n/src/locales/en/stage.yaml` *(+21/-0)*
+- `packages/i18n/src/locales/en/tamagotchi/stage.yaml` *(+4/-0)*
+- `packages/i18n/src/locales/es/base.yaml` *(+2/-0)*
+- `packages/i18n/src/locales/es/settings.yaml` *(+1/-1)*
+- `packages/i18n/src/locales/es/stage.yaml` *(+55/-0)*
+- `packages/i18n/src/locales/es/tamagotchi/settings.yaml` *(+53/-0)*
+- `packages/i18n/src/locales/zh-Hans/settings.yaml` *(+32/-0)*
+- `packages/i18n/src/locales/zh-Hans/stage.yaml` *(+20/-0)*
+- `packages/i18n/src/locales/zh-Hans/tamagotchi/stage.yaml` *(+4/-0)*
+- `packages/i18n/src/startup-fallback.ts` *(+18/-0)*
+
+#### Stage Layouts & Shells (`🔍 inspect`) — 1 file(s) (+6/-1)
+- `packages/stage-layouts/src/composables/useChatToolCallRerun.ts` *(+6/-1)*
+
+#### UI Primitives & Pages (`📦 import / inspect`) — 8 file(s) (+796/-39)
+- `packages/stage-pages/src/pages/settings/modules/vision.vue` *(+86/-32)*
+- `packages/stage-pages/src/pages/settings/providers/vision/apple-vision.vue` *(+60/-0)*
+- `packages/ui-loading-screens/README.md` *(+27/-4)*
+- `packages/ui-loading-screens/package.json` *(+4/-1)*
+- `packages/ui-loading-screens/src/components/index.ts` *(+1/-0)*
+- `packages/ui-loading-screens/src/components/startup-error-details.vue` *(+216/-0)*
+- `packages/ui-loading-screens/src/components/startup-screen.vue` *(+393/-0)*
+- `packages/ui/src/components/misc/progress.vue` *(+9/-2)*
+
+#### Root Build & Tooling (`🔍 inspect`) — 2 file(s) (+82/-3)
+- `packages/stage-ui/package.json` *(+2/-0)*
+- `pnpm-lock.yaml` *(+80/-3)*
+
+#### 3D, Live2D & Motion (`🔍 inspect`) — 1 file(s) (+13/-5)
+- `packages/stage-ui/src/components/scenes/Stage.vue` *(+13/-5)*
+
+#### Cognitive & Consciousness (`⚠️ hand-merge`) — 4 file(s) (+417/-61)
+- `packages/stage-ui/src/stores/chat.contract.test.ts` *(+267/-6)*
+- `packages/stage-ui/src/stores/chat.ts` *(+82/-17)*
+- `packages/stage-ui/src/stores/chat/image-projection.test.ts` *(+31/-25)*
+- `packages/stage-ui/src/stores/chat/image-projection.ts` *(+37/-13)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (9)
+- [#2748](https://github.com/moeru-ai/airi/pull/2748) `feat: add the cognitive runtime` by **@chiba233** *(Draft)* *(2 comments)*
+- [#2743](https://github.com/moeru-ai/airi/pull/2743) `refactor(voice): centralize audio and conversation lifecycles` by **@nekomeowww** *(2 comments)*
+- [#2750](https://github.com/moeru-ai/airi/pull/2750) `fix(minecraft): explain AIRI authentication failures` by **@Huyvux12** *(Draft)* *(0 comments)*
+- [#2747](https://github.com/moeru-ai/airi/pull/2747) `chore(i18n): update translations` by **@github-actions** *(4 comments)*
+- [#2749](https://github.com/moeru-ai/airi/pull/2749) `fix(stage-tamagotchi): keep the stage window interactive on Wayland` by **@gg582** *(2 comments)*
+- [#2746](https://github.com/moeru-ai/airi/pull/2746) `chore(nix): update assets hash` by **@Weathercold** *(2 comments)*
+- [#2745](https://github.com/moeru-ai/airi/pull/2745) `fix(stage-ui): prevent tool replay during compatibility fallback` by **@nekomeowww** *(2 comments)*
+- [#2744](https://github.com/moeru-ai/airi/pull/2744) `fix(stage-pages): group hearing auto-send settings` by **@nekomeowww** *(1 comments)*
+- [#2742](https://github.com/moeru-ai/airi/pull/2742) `docs(agents): forbid English placeholders in other locales` by **@lulu0119** *(2 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (5)
+- [#2734](https://github.com/moeru-ai/airi/pull/2734) `feat(stage-ui): add the Apple Vision provider` — `OPEN` ➔ `MERGED`
+- [#2704](https://github.com/moeru-ai/airi/pull/2704) `feat(stage-tamagotchi): add a danmaku style to the floating chat` — `OPEN` ➔ `MERGED`
+- [#2698](https://github.com/moeru-ai/airi/pull/2698) `feat(stage): add coordinated splash and loading screens` — `OPEN` ➔ `MERGED`
+- [#2719](https://github.com/moeru-ai/airi/pull/2719) `fix(stage-tamagotchi): align controls island placement` — `OPEN` ➔ `MERGED`
+- [#2737](https://github.com/moeru-ai/airi/pull/2737) `chore(nix): update pnpmDeps hash` — `OPEN` ➔ `MERGED`
+
+#### 💬 Discussion Activity (6)
+- [#2717](https://github.com/moeru-ai/airi/pull/2717) `feat(debug-server): persist and query local OTLP traces` — *+3 comments (20 ➔ 23 total)*
+- [#2519](https://github.com/moeru-ai/airi/pull/2519) `test(stage-tamagotchi): verify linux window rendering in CI` — *+6 comments (14 ➔ 20 total)*
+- [#2252](https://github.com/moeru-ai/airi/pull/2252) `docs(ui): add entrance animations and optimize performance across UI components` — *+2 comments (9 ➔ 11 total)*
+- [#2698](https://github.com/moeru-ai/airi/pull/2698) `feat(stage): add coordinated splash and loading screens` — *+12 comments (50 ➔ 62 total)*
+- [#2708](https://github.com/moeru-ai/airi/pull/2708) `feat(hearing): add character wake words across clients` — *+1 comments (35 ➔ 36 total)*
+- [#2719](https://github.com/moeru-ai/airi/pull/2719) `fix(stage-tamagotchi): align controls island placement` — *+1 comments (1 ➔ 2 total)*
+
+### 👁️ Watched PRs Monitor
+- [#2634](https://github.com/moeru-ai/airi/pull/2634) `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain` [Draft] — *(1 comments)*
+  - *Focus*: External Cortico daemon vs in-process native memory; track maintainer reaction to 2-process / web breakage
+- [#2672](https://github.com/moeru-ai/airi/pull/2672) `refactor(stage-ui): bind conversations to window-local characters` [Draft] — *(48 comments)*
+  - *Focus*: Window-local character selection, conversation scoping, standalone card profile page, shared CharacterCard
+
+---
 ## [2026-09-30] Upstream Delta: `b40e3e87..2444e92c` (11 commits, 68 files, 38 PR update(s))
 
 ### 🎯 Executive Highlights
