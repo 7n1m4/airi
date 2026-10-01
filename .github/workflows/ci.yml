@@ -64,10 +64,25 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      # NOTICE: the --filter is load-bearing. Bare `pnpm rebuild electron`
-      # from the root matches nothing and exits 0 silently (0.4s no-op);
-      # scoped to the declaring importer it runs electron's postinstall.
-      - run: pnpm --filter @proj-airi/stage-tamagotchi rebuild electron
+      - name: Provision Electron binary
+        if: matrix.app_name == 'stage-tamagotchi'
+        working-directory: ./apps/stage-tamagotchi
+        run: |
+          ELECTRON_DIR=$(node -p "require('node:path').dirname(require('node:module').createRequire(process.cwd() + '/package.json').resolve('electron/package.json'))")
+          ELECTRON_VERSION=$(node -p "require('${ELECTRON_DIR}/package.json').version")
+          case "$(uname -m)" in
+            x86_64) ELECTRON_ARCH=x64 ;;
+            aarch64|arm64) ELECTRON_ARCH=arm64 ;;
+            *) echo "Unsupported arch: $(uname -m)" >&2; exit 1 ;;
+          esac
+          ZIP="electron-v${ELECTRON_VERSION}-linux-${ELECTRON_ARCH}.zip"
+          curl -fSL --retry 3 "https://github.com/electron/electron/releases/download/v${ELECTRON_VERSION}/${ZIP}" -o "/tmp/${ZIP}"
+          curl -fSL --retry 3 "https://github.com/electron/electron/releases/download/v${ELECTRON_VERSION}/SHASUMS256.txt" -o /tmp/SHASUMS256.txt
+          (cd /tmp && grep "${ZIP}\$" SHASUMS256.txt | sha256sum -c -)
+          rm -rf "${ELECTRON_DIR}/dist" "${ELECTRON_DIR}/path.txt"
+          unzip -q -o "/tmp/${ZIP}" -d "${ELECTRON_DIR}/dist"
+          printf 'electron' > "${ELECTRON_DIR}/path.txt"
+          test -x "${ELECTRON_DIR}/dist/electron"
       - run: pnpm run build:packages
 
       - name: Build App
@@ -81,7 +96,7 @@ jobs:
       - uses: actions/checkout@v6
 
       # Node.js
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: lts/*
@@ -102,17 +117,31 @@ jobs:
       - uses: actions/checkout@v6
 
       # Node.js
-      - uses: pnpm/action-setup@v3
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v6
         with:
           node-version: lts/*
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      # NOTICE: the --filter is load-bearing. Bare `pnpm rebuild electron`
-      # from the root matches nothing and exits 0 silently (0.4s no-op);
-      # scoped to the declaring importer it runs electron's postinstall.
-      - run: pnpm --filter @proj-airi/stage-tamagotchi rebuild electron
+      - name: Provision Electron binary
+        working-directory: ./apps/stage-tamagotchi
+        run: |
+          ELECTRON_DIR=$(node -p "require('node:path').dirname(require('node:module').createRequire(process.cwd() + '/package.json').resolve('electron/package.json'))")
+          ELECTRON_VERSION=$(node -p "require('${ELECTRON_DIR}/package.json').version")
+          case "$(uname -m)" in
+            x86_64) ELECTRON_ARCH=x64 ;;
+            aarch64|arm64) ELECTRON_ARCH=arm64 ;;
+            *) echo "Unsupported arch: $(uname -m)" >&2; exit 1 ;;
+          esac
+          ZIP="electron-v${ELECTRON_VERSION}-linux-${ELECTRON_ARCH}.zip"
+          curl -fSL --retry 3 "https://github.com/electron/electron/releases/download/v${ELECTRON_VERSION}/${ZIP}" -o "/tmp/${ZIP}"
+          curl -fSL --retry 3 "https://github.com/electron/electron/releases/download/v${ELECTRON_VERSION}/SHASUMS256.txt" -o /tmp/SHASUMS256.txt
+          (cd /tmp && grep "${ZIP}\$" SHASUMS256.txt | sha256sum -c -)
+          rm -rf "${ELECTRON_DIR}/dist" "${ELECTRON_DIR}/path.txt"
+          unzip -q -o "/tmp/${ZIP}" -d "${ELECTRON_DIR}/dist"
+          printf 'electron' > "${ELECTRON_DIR}/path.txt"
+          test -x "${ELECTRON_DIR}/dist/electron"
       - run: pnpm run build:packages
       - run: pnpm run test:run
 
