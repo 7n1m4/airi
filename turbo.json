@@ -3,7 +3,11 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "out/**"]
+      // NOTICE: packages/i18n generates src/dist-lite/messages.mjs as a
+      // build side effect (consumed by stage-tamagotchi's electron-vite
+      // alias). It must be a declared output or turbo cache hits restore
+      // dist/ without it and the file is never regenerated -> ENOENT.
+      "outputs": ["dist/**", "out/**", "src/dist-lite/**"]
     }
   }
 }
