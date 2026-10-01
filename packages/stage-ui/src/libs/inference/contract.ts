@@ -496,6 +496,28 @@ export const pocketTtsGenerateEvent = defineInvokeEventa<PocketTtsGenerateChunk,
 export const pocketTtsUnloadEvent = defineInvokeEventa<void, undefined>('inference:pocket-tts:unload')
 
 // ---------------------------------------------------------------------------
+// Laya System-1 on-device classifier (ModernBERT ONNX, WASM/WebGPU)
+// ---------------------------------------------------------------------------
+
+export interface LayaDecideRequest {
+  state: string | Record<string, unknown>
+  questions: Record<string, any>
+  precision?: 'int8' | 'fp16'
+  useWebGpu?: boolean
+}
+
+export interface LayaDecideResult {
+  model: string
+  answers: Record<string, any>
+  usage: { input_tokens: number, output_tokens: number }
+  latency_ms: number
+}
+
+export const layaLoadEvent = defineInvokeEventa<LoadStreamItem, LoadModelRequest>('inference:laya:load')
+export const layaDecideEvent = defineInvokeEventa<LayaDecideResult, LayaDecideRequest>('inference:laya:decide')
+export const layaUnloadEvent = defineInvokeEventa<void, undefined>('inference:laya:unload')
+
+// ---------------------------------------------------------------------------
 // WebLLM (`@mlc-ai/web-llm`) WebGPU transformer
 // ---------------------------------------------------------------------------
 

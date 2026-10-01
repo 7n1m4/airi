@@ -1,5 +1,7 @@
 export { createLocalVisionAdapter } from './adapters/blip'
 export type { LocalVisionAdapter } from './adapters/blip'
+export { createLayaAdapter, getLayaAdapter } from './adapters/laya'
+export type { LayaAdapter, LayaDecideOptions, LayaPrecision } from './adapters/laya'
 export { createLocalMoondreamAdapter, getMoondreamAdapter } from './adapters/moondream'
 export type { LocalMoondreamAdapter } from './adapters/moondream'
 export { createNeedleClient, needleClient } from './adapters/needle-client'
@@ -81,6 +83,7 @@ export {
   loadLayaTokenizer,
   resetLayaSession,
   runLayaSystemOne,
+  terminateLayaWorker,
 } from './laya-engine'
 export type { LayaDownloadProgress, LayaSessionOptions } from './laya-engine'
 export {

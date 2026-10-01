@@ -28,6 +28,7 @@ export const MODEL_NAMES = {
   WD14: 'wd14',
   MOONDREAM: 'moondream2',
   ATTENTION_GUARD: 'attention-guard',
+  LAYA: 'laya',
 } as const
 
 /**
@@ -306,6 +307,11 @@ export const TIMEOUTS = {
   ATTENTION_GUARD_LOAD: 300_000,
   /** Attention Ecology Guard per-tick process timeout (unary cascade) */
   ATTENTION_GUARD_PROCESS: 120_000,
+
+  /** Laya System-1 model load timeout (424MB int8 / 843MB fp16 download + compile) */
+  LAYA_LOAD: 300_000,
+  /** Laya System-1 single decide timeout (batched session.run on WASM) */
+  LAYA_DECIDE: 15_000,
 } as const
 
 // ---------------------------------------------------------------------------
