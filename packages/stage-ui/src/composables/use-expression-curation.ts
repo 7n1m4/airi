@@ -82,10 +82,13 @@ export function useExpressionCuration() {
       characterName?: string
       personality?: string
       description?: string
+      /** Step-scoped override: when set, this provider/model is used instead of the global consciousness active pair. */
+      providerId?: string
+      model?: string
     },
   ): Promise<CurationResult | null> {
-    const providerId = consciousnessStore.activeProvider
-    const model = consciousnessStore.activeModel
+    const providerId = options?.providerId || consciousnessStore.activeProvider
+    const model = options?.model || consciousnessStore.activeModel
 
     if (!providerId || !model) {
       curationError.value = 'No active LLM provider or model configured. Please check your Consciousness settings.'

@@ -133,7 +133,7 @@ async function handleStudioSync(payload: EmotionStudioSyncPayload) {
       :persona-personality="activeCard?.personality"
       :persona-description="activeCard?.description"
       stage-update-reason="settings-models-emotions"
-      content-height-class="h-[calc(100dvh-380px)] min-h-[540px]"
+      content-height-class="min-h-[540px]"
       allow-model-switch
       @sync="handleStudioSync"
       @request-model="handleRequestModel"

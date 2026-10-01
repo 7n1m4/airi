@@ -54,7 +54,7 @@ function handleContinue() {
 </script>
 
 <template>
-  <div :class="['w-full max-w-5xl mx-auto flex flex-col justify-between flex-1 space-y-3.5 my-auto animate-fadeIn select-none']">
+  <div :class="['w-full max-w-5xl mx-auto flex flex-col gap-3.5 py-2 my-auto animate-fadeIn select-none']">
     <!-- Top Header -->
     <div>
       <div :class="['flex items-center gap-2 text-xs text-neutral-400 mb-0.5']">

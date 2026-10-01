@@ -4,7 +4,7 @@ import type { CuratedExpressionItem } from '../../../composables/use-expression-
 import { useLive2d } from '@proj-airi/stage-ui-live2d/stores'
 import { useMmd } from '@proj-airi/stage-ui-mmd'
 import { useSpine } from '@proj-airi/stage-ui-spine'
-import { useModelStore } from '@proj-airi/stage-ui-three'
+import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,
@@ -17,11 +17,13 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
 import RendererStage from '../../scenes/RendererStage.vue'
+import BrainModelPicker from '../chat/BrainModelPicker.vue'
 import ExpressionCurationModal from '../dialogs/ExpressionCurationModal.vue'
 
 import { useExpressionCuration } from '../../../composables/use-expression-curation'
 import { filterCandidateExpressions } from '../../../libs/character/expression-noise-gate'
 import { DisplayModelFormat, useDisplayModelsStore } from '../../../stores/display-models'
+import { useConsciousnessStore } from '../../../stores/modules/consciousness'
 import { useSettings } from '../../../stores/settings'
 
 export interface EmotionStudioSyncPayload {
@@ -56,7 +58,7 @@ const props = withDefaults(defineProps<{
   startGuided: true,
   demoModelId: 'preset-vrm-2',
   allowModelSwitch: false,
-  contentHeightClass: 'h-[450px]',
+  contentHeightClass: 'min-h-[450px]',
 })
 
 const emit = defineEmits<{
@@ -71,14 +73,20 @@ const { stageModelRenderer } = storeToRefs(settingsStore)
 
 const live2dStore = useLive2d()
 const modelStore = useModelStore()
+const customVrmAnimationsStore = useCustomVrmAnimationsStore()
 const mmdStore = useMmd()
 const spineStore = useSpine()
 
 const {
+  curateExpressions,
+  isCurating,
+  curationError,
   generateActingPrompt,
   generateDefaultActingPrompt,
   isGeneratingPrompt,
 } = useExpressionCuration()
+
+const consciousnessStore = useConsciousnessStore()
 
 // --- Local Asset Fallback Previews ---
 const presetLive2dPreview = new URL('../../../assets/live2d/models/hiyori/preview.png', import.meta.url).href
@@ -198,12 +206,16 @@ async function initializeStageRenderer() {
 // --- 2. Expressions Extraction & Noise Filtering ---
 const rawExpressions = ref<string[]>([])
 const candidateExpressions = ref<string[]>([])
+const rawMotions = ref<string[]>([])
 const isLoadingExpressions = ref(false)
 
 async function loadModelCapabilities() {
   isLoadingExpressions.value = true
   try {
     const caps = await displayModelsStore.getOrLoadModelCapabilities(props.modelId)
+    // Motions inventory by format: Live2D/Spine queried from the model file,
+    // MMD/VRM always ship built-in (+ custom) animation sets.
+    rawMotions.value = caps.motions && caps.motions.length > 0 ? [...caps.motions] : []
     if (caps.expressions && caps.expressions.length > 0) {
       rawExpressions.value = caps.expressions
       const gateResult = filterCandidateExpressions(caps.expressions)
@@ -220,6 +232,7 @@ async function loadModelCapabilities() {
     }
     else {
       // Fallback candidate vocabulary for uninstantiated or remote models
+      rawMotions.value = []
       if (modelType.value === 'live2d') {
         const fallbackLive2D = ['exp_01', 'exp_02', 'exp_03', 'exp_04', 'exp_05', 'exp_06', 'f01', 'f02', 'f03', 'f04', 'f05']
         rawExpressions.value = fallbackLive2D
@@ -237,6 +250,7 @@ async function loadModelCapabilities() {
     const fallback = ['happy', 'surprised', 'angry', 'relaxed', 'sad', 'neutral', 'blink', 'wink']
     rawExpressions.value = fallback
     candidateExpressions.value = fallback
+    rawMotions.value = []
   }
   finally {
     isLoadingExpressions.value = false
@@ -570,6 +584,111 @@ function emitSync() {
   })
 }
 
+// --- 10. Name step: stats, AI gate, curation trigger ---
+const curationItems = ref<CuratedExpressionItem[]>([])
+const curationDone = ref(false)
+
+const rawCount = computed(() => rawExpressions.value.length)
+const candidateCount = computed(() => candidateExpressions.value.length)
+const noiseCount = computed(() => Math.max(0, rawCount.value - candidateCount.value))
+// Body motions inventory: Live2D/Spine queried from the model file,
+// MMD/VRM always ship built-in (+ custom) animation sets.
+const motionCount = computed(() => {
+  const type = modelType.value
+  if (type === 'mmd') {
+    return (mmdStore.availableMotions?.length || 0) + (mmdStore.customMotions?.length || 0)
+  }
+  if (type === 'vrm') {
+    return customVrmAnimationsStore.animationOptions?.length || 0
+  }
+  return rawMotions.value.length
+})
+// Incompatible rig: nothing survived the noise filter, so there is nothing to
+// name. (Raw morphs may exist, but none are usable expressions.)
+const zeroExpressions = computed(() => candidateCount.value === 0)
+
+const directorLabel = computed(() => {
+  if (!directorProvider.value || !directorModel.value)
+    return ''
+  return `${directorProvider.value} · ${directorModelShort.value}`
+})
+
+const directorModelShort = computed(() => directorModel.value?.split('/').pop() || directorModel.value)
+
+// Step-scoped director override: snapshot of the global consciousness pair at
+// setup. Picking here never touches the global store — it only affects this step.
+const directorProvider = ref(consciousnessStore.activeProvider || '')
+const directorModel = ref(consciousnessStore.activeModel || '')
+
+const directorIsGlobal = computed(() => directorProvider.value === (consciousnessStore.activeProvider || '')
+  && directorModel.value === (consciousnessStore.activeModel || ''))
+
+function resetDirectorToGlobal() {
+  directorProvider.value = consciousnessStore.activeProvider || ''
+  directorModel.value = consciousnessStore.activeModel || ''
+}
+
+const canCurate = computed(() => candidateCount.value > 0 && Boolean(directorLabel.value) && !isCurating.value)
+
+async function handleNameTrigger() {
+  const items = candidateExpressions.value.map(key => ({
+    key,
+    currentLabel: expressionMappings.value[key] || key,
+    isCustomRenamed: Boolean(expressionMappings.value[key]) && expressionMappings.value[key] !== key,
+    isFavorite: false,
+    category: undefined as string | undefined,
+  }))
+
+  const result = await curateExpressions(
+    props.modelId,
+    modelType.value,
+    items,
+    {
+      characterName: props.companionName,
+      personality: props.personaPersonality,
+      description: props.personaDescription,
+      providerId: directorProvider.value || undefined,
+      model: directorModel.value || undefined,
+    },
+  )
+
+  if (result && Array.isArray(result.items)) {
+    curationItems.value = JSON.parse(JSON.stringify(result.items))
+    curationDone.value = true
+    toast.success(`Curated ${curationItems.value.filter(i => !i.shouldSkip).length} keepers out of ${curationItems.value.length}!`)
+  }
+}
+
+function resetCuration() {
+  curationItems.value = []
+  curationDone.value = false
+}
+
+// --- 11. Verify step: per-key test-fire + hide (whitelist shaping) ---
+const lastPreviewKey = ref('')
+
+const keeperCount = computed(() => curationItems.value.filter(i => !i.shouldSkip).length)
+
+function previewCurationItem(item: CuratedExpressionItem) {
+  // Same re-fire guarantee as the soundboard: bounce through neutral so every
+  // click visibly replays instead of no-op'ing on the current emotion.
+  if (lastPreviewKey.value === item.rawKey) {
+    triggerModelEmotion(modelType.value, 'neutral')
+    window.setTimeout(() => previewCurationItem(item), 350)
+    return
+  }
+  lastPreviewKey.value = item.rawKey
+  triggerModelEmotion(modelType.value, item.rawKey)
+  toast.success(`Previewing ${item.label || item.rawKey}`)
+}
+
+function toggleCurationSkip(item: CuratedExpressionItem) {
+  item.shouldSkip = !item.shouldSkip
+  if (item.shouldSkip && lastPreviewKey.value === item.rawKey) {
+    lastPreviewKey.value = ''
+  }
+}
+
 // --- 9. Guided Curation (dots breadcrumb; avatar column untouched) ---
 export type GuideStep = 'meet' | 'name' | 'verify' | 'remaps' | null
 
@@ -581,6 +700,13 @@ const GUIDE_ART = {
   watch: new URL('../../../assets/acting/guide-watch.png', import.meta.url).href,
   keep: new URL('../../../assets/acting/guide-keep.png', import.meta.url).href,
 }
+
+// Thumbs-up cheer art for the Name step header.
+const GUIDE_CHEER = new URL('../../../assets/acting/guide-cheer.png', import.meta.url).href
+
+// PLACEHOLDER for the Verify corner chibi (incoming): reuses the starry chibi
+// until the dedicated asset lands — swap this URL only.
+const GUIDE_VERIFY_ART = GUIDE_ART.hero
 
 const GUIDE_DOTS = [
   { id: 'meet', label: 'Meet' },
@@ -618,7 +744,7 @@ function handleMeetDemo() {
     toast.info('No surprise-like expression on this model — and that is exactly the point. No two models ship the same expressions.')
     isAdvancing.value = true
     window.setTimeout(() => {
-      guideStep.value = null
+      guideStep.value = 'name'
       isAdvancing.value = false
     }, 1600)
     return
@@ -628,9 +754,28 @@ function handleMeetDemo() {
   toast.success(`See that? ${key} works — that's a keeper! ✨`)
   isAdvancing.value = true
   window.setTimeout(() => {
-    guideStep.value = null
+    guideStep.value = 'name'
     isAdvancing.value = false
   }, 1600)
+}
+
+const GUIDE_ORDER: Exclude<GuideStep, null>[] = ['meet', 'name', 'verify', 'remaps']
+
+const guideStepIndex = computed(() => guideStep.value ? GUIDE_ORDER.indexOf(guideStep.value) : -1)
+
+// Per-step cockpit height: Name/Remaps get the tall workspace; Meet/Verify
+// stay compact (300px) with internal scroll. Full view falls back to the prop.
+const activeHeightClass = computed(() => {
+  if (guideStep.value === 'meet' || guideStep.value === 'verify')
+    return 'h-[300px]'
+  return props.contentHeightClass
+})
+
+function goGuideStep(step: Exclude<GuideStep, null>) {
+  // Dots allow revisiting visited steps; forward motion stays on Next buttons
+  if (GUIDE_ORDER.indexOf(step) <= guideStepIndex.value) {
+    guideStep.value = step
+  }
 }
 
 function handleMappingChange() {
@@ -640,6 +785,7 @@ function handleMappingChange() {
 watch(() => props.modelId, async (newId) => {
   if (newId) {
     resetPreviewPosition()
+    resetCuration()
     await initializeStageRenderer()
     await loadModelCapabilities()
     if (shouldAutoCalibrate()) {
@@ -663,9 +809,9 @@ onBeforeUnmount(() => {
 
 <template>
   <!-- Main 2-Column Dashboard Cockpit -->
-  <div :class="['grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch', contentHeightClass]">
+  <div :class="['grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch', activeHeightClass]">
     <!-- Left Column: Live Avatar Viewport Frame & Tactile Soundboard (5 cols) -->
-    <div :class="['md:col-span-5 flex flex-col gap-3 h-full']">
+    <div :class="['md:col-span-5 flex flex-col gap-3 h-full min-h-0 overflow-hidden']">
       <!-- Live Avatar Viewport Frame -->
       <div :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-gradient-to-b from-neutral-100/90 to-neutral-200/50 dark:from-neutral-900/90 dark:to-neutral-950/90 overflow-hidden relative shadow-sm flex flex-col items-center justify-between p-3 flex-1 min-h-0']">
         <!-- Top Badge: Model Format & Name -->
@@ -831,24 +977,29 @@ onBeforeUnmount(() => {
     <!-- Right Column: Unified Expression Mapping & Directives Hub (7 cols) -->
     <div :class="['md:col-span-7 flex flex-col gap-3 h-full']">
       <!-- Guided Curation: dots breadcrumb + step body (avatar column untouched) -->
-      <div v-if="guideStep === 'meet'" :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-neutral-900/60 p-4 shadow-sm flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto']">
+      <div v-if="guideStep === 'meet' || guideStep === 'name' || guideStep === 'verify'" :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-neutral-900/60 p-5 sm:p-6 shadow-sm flex-1 min-h-0 flex flex-col gap-5 overflow-y-auto']">
         <!-- Dots breadcrumb -->
         <div :class="['flex items-center justify-between shrink-0']">
           <div :class="['flex items-center gap-1.5']">
             <template v-for="(dot, i) in GUIDE_DOTS" :key="dot.id">
               <div :class="['flex items-center gap-1.5']">
-                <span
+                <button
+                  type="button"
+                  :disabled="i > guideStepIndex"
                   :class="[
-                    'w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center',
-                    dot.id === 'meet'
+                    'w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center transition-colors',
+                    dot.id === guideStep
                       ? 'bg-primary-600 text-white'
-                      : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400',
+                      : i < guideStepIndex
+                        ? 'bg-primary-500/20 text-primary-600 dark:text-primary-300 cursor-pointer'
+                        : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400',
                   ]"
-                  :title="dot.id === 'meet' ? dot.label : `${dot.label} (coming soon)`"
+                  :title="dot.label"
+                  @click="goGuideStep(dot.id)"
                 >
                   {{ i + 1 }}
-                </span>
-                <span :class="['text-[11px] font-medium', dot.id === 'meet' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-400 dark:text-neutral-500']">
+                </button>
+                <span :class="['text-[11px] font-medium', dot.id === guideStep ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-400 dark:text-neutral-500']">
                   {{ dot.label }}
                 </span>
               </div>
@@ -864,92 +1015,420 @@ onBeforeUnmount(() => {
           </button>
         </div>
 
-        <!-- Meet body -->
-        <div :class="['shrink-0 flex items-start justify-between gap-3']">
-          <div>
-            <h3 :class="['text-base font-bold text-neutral-900 dark:text-white flex items-center gap-1.5']">
-              <span>✨</span>
-              <span>Let's see what works!</span>
-            </h3>
-            <p :class="['mt-1 text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed']">
-              Every avatar ships a different set of facial expressions. Some work beautifully, some do nothing at all.
-            </p>
+        <template v-if="guideStep === 'meet'">
+          <!-- Meet body -->
+          <div :class="['shrink-0 flex items-start justify-between gap-3']">
+            <div>
+              <h3 :class="['text-base font-bold text-neutral-900 dark:text-white flex items-center gap-1.5']">
+                <span>✨</span>
+                <span>Let's see what works!</span>
+              </h3>
+              <p :class="['mt-1 text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed']">
+                Every avatar ships a different set of facial expressions. Some work beautifully, some do nothing at all.
+              </p>
+            </div>
+            <img
+              v-if="GUIDE_ART.hero"
+              :src="GUIDE_ART.hero"
+              alt=""
+              :class="['w-28 h-28 shrink-0 object-contain']"
+            >
           </div>
-          <img
-            v-if="GUIDE_ART.hero"
-            :src="GUIDE_ART.hero"
-            alt=""
-            :class="['w-28 h-28 shrink-0 object-contain']"
-          >
-        </div>
 
-        <!-- How-it-works trio -->
-        <div :class="['grid grid-cols-3 gap-2 shrink-0']">
-          <div :class="['rounded-xl border border-neutral-200/70 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/40 p-2.5 flex flex-col gap-1']">
-            <img v-if="GUIDE_ART.press" :src="GUIDE_ART.press" alt="" :class="['w-full h-24 object-contain rounded-lg']">
-            <span v-else :class="['text-lg']">😊</span>
-            <div :class="['text-[11px] font-bold text-neutral-800 dark:text-neutral-100']">
-              Press a candidate
+          <!-- How-it-works trio -->
+          <div :class="['grid grid-cols-3 gap-2 shrink-0']">
+            <div :class="['rounded-xl border border-neutral-200/70 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/40 p-2.5 flex flex-col gap-1']">
+              <img v-if="GUIDE_ART.press" :src="GUIDE_ART.press" alt="" :class="['w-full h-24 object-contain rounded-lg']">
+              <span v-else :class="['text-lg']">😊</span>
+              <div :class="['text-[11px] font-bold text-neutral-800 dark:text-neutral-100']">
+                Press a candidate
+              </div>
+              <div :class="['text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug']">
+                Tap an expression button to preview it on your avatar.
+              </div>
             </div>
-            <div :class="['text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug']">
-              Tap an expression button to preview it on your avatar.
+            <div :class="['rounded-xl border border-neutral-200/70 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/40 p-2.5 flex flex-col gap-1']">
+              <img v-if="GUIDE_ART.watch" :src="GUIDE_ART.watch" alt="" :class="['w-full h-24 object-contain rounded-lg']">
+              <span v-else :class="['text-lg']">👀</span>
+              <div :class="['text-[11px] font-bold text-neutral-800 dark:text-neutral-100']">
+                Watch the avatar
+              </div>
+              <div :class="['text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug']">
+                See how it looks and feels. Some will work great, others might do nothing.
+              </div>
+            </div>
+            <div :class="['rounded-xl border border-neutral-200/70 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/40 p-2.5 flex flex-col gap-1']">
+              <img v-if="GUIDE_ART.keep" :src="GUIDE_ART.keep" alt="" :class="['w-full h-24 object-contain rounded-lg']">
+              <div v-else :class="['flex items-center gap-1']">
+                <span :class="['px-1.5 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 text-[10px] font-bold']">✓ Keep</span>
+                <span :class="['px-1.5 py-0.5 rounded-lg bg-neutral-500/10 text-neutral-400 text-[10px] font-bold']">Hide</span>
+              </div>
+              <div :class="['text-[11px] font-bold text-neutral-800 dark:text-neutral-100']">
+                Keep what works
+              </div>
+              <div :class="['text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug']">
+                Survivors become the clean list your character learns from.
+              </div>
             </div>
           </div>
-          <div :class="['rounded-xl border border-neutral-200/70 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/40 p-2.5 flex flex-col gap-1']">
-            <img v-if="GUIDE_ART.watch" :src="GUIDE_ART.watch" alt="" :class="['w-full h-24 object-contain rounded-lg']">
-            <span v-else :class="['text-lg']">👀</span>
-            <div :class="['text-[11px] font-bold text-neutral-800 dark:text-neutral-100']">
-              Watch the avatar
-            </div>
-            <div :class="['text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug']">
-              See how it looks and feels. Some will work great, others might do nothing.
-            </div>
-          </div>
-          <div :class="['rounded-xl border border-neutral-200/70 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/40 p-2.5 flex flex-col gap-1']">
-            <img v-if="GUIDE_ART.keep" :src="GUIDE_ART.keep" alt="" :class="['w-full h-24 object-contain rounded-lg']">
-            <div v-else :class="['flex items-center gap-1']">
-              <span :class="['px-1.5 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 text-[10px] font-bold']">✓ Keep</span>
-              <span :class="['px-1.5 py-0.5 rounded-lg bg-neutral-500/10 text-neutral-400 text-[10px] font-bold']">Hide</span>
-            </div>
-            <div :class="['text-[11px] font-bold text-neutral-800 dark:text-neutral-100']">
-              Keep what works
-            </div>
-            <div :class="['text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug']">
-              Survivors become the clean list your character learns from.
-            </div>
-          </div>
-        </div>
 
-        <!-- Deterministic demo CTA -->
-        <div :class="['rounded-xl border border-primary-500/25 bg-primary-500/5 p-3 flex flex-col gap-2 shrink-0']">
-          <div :class="['text-[11px] text-neutral-600 dark:text-neutral-300 leading-relaxed']">
-            Try it now — press the button and watch her face:
-          </div>
-          <button
-            type="button"
-            :disabled="isAdvancing"
-            :class="['w-full py-2.5 rounded-xl bg-primary-500 hover:bg-primary-400 text-white text-sm font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60']"
-            @click="handleMeetDemo"
-          >
-            <span>{{ isAdvancing ? "Nice — that's a keeper! ✨" : '😲 Show me — try Surprise →' }}</span>
-          </button>
-          <div :class="['flex items-center justify-between gap-2']">
-            <div v-if="demoSurpriseKey" :class="['text-[10px] text-neutral-400 font-mono']">
-              anchor: {{ demoSurpriseKey }}
+          <!-- Deterministic demo CTA -->
+          <div :class="['rounded-xl border border-primary-500/25 bg-primary-500/5 p-3 flex flex-col gap-2 shrink-0']">
+            <div :class="['text-[11px] text-neutral-600 dark:text-neutral-300 leading-relaxed']">
+              Try it now — press the button and watch her face:
             </div>
             <button
-              v-if="allowModelSwitch && modelId !== demoModelId"
               type="button"
-              :class="['px-3 py-1.5 rounded-xl text-[11px] font-medium border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer']"
-              @click="requestDemoModel"
+              :disabled="isAdvancing"
+              :class="['w-full py-2.5 rounded-xl bg-primary-500 hover:bg-primary-400 text-white text-sm font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60']"
+              @click="handleMeetDemo"
             >
-              Load demo model (AvatarSample_B)
+              <span>{{ isAdvancing ? "Nice — that's a keeper! ✨" : '😲 Show me — try Surprise →' }}</span>
+            </button>
+            <div :class="['flex items-center justify-between gap-2']">
+              <div v-if="demoSurpriseKey" :class="['text-[10px] text-neutral-400 font-mono']">
+                anchor: {{ demoSurpriseKey }}
+              </div>
+              <button
+                v-if="allowModelSwitch && modelId !== demoModelId"
+                type="button"
+                :class="['px-3 py-1.5 rounded-xl text-[11px] font-medium border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer']"
+                @click="requestDemoModel"
+              >
+                Load demo model (AvatarSample_B)
+              </button>
+            </div>
+          </div>
+        </template>
+        <template v-else-if="guideStep === 'name'">
+          <!-- Name step: stats → AI gate → curation trigger -->
+          <div :class="['flex items-start justify-between gap-4 shrink-0']">
+            <div :class="['flex flex-col gap-2 py-2']">
+              <h3 :class="['text-2xl font-bold text-neutral-900 dark:text-white flex items-center gap-2']">
+                <span>🏷️</span>
+                <span>Name what survived</span>
+              </h3>
+              <p :class="['text-base text-neutral-500 dark:text-neutral-400 leading-relaxed']">
+                We'll scan {{ companionName }}'s avatar for facial expressions, filter out what doesn't work,
+                and give the rest clean names.
+              </p>
+            </div>
+            <img
+              v-if="GUIDE_CHEER"
+              :src="GUIDE_CHEER"
+              alt=""
+              :class="['w-36 h-36 shrink-0 object-contain']"
+            >
+          </div>
+
+          <!-- Detected Expressions card -->
+          <div :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-neutral-950/40 dark:bg-neutral-950/40 p-5 flex flex-col gap-4 shrink-0']">
+            <div :class="['text-sm font-bold text-neutral-800 dark:text-neutral-100']">
+              Detected Expressions in Your Model
+            </div>
+            <div :class="['grid grid-cols-3 gap-3']">
+              <div :class="['flex flex-col gap-1 border-r border-neutral-200/60 dark:border-white/5 pr-3']">
+                <span :class="['text-2xl']">😊</span>
+                <span :class="['text-4xl font-bold text-violet-400 font-mono']">{{ rawCount }}</span>
+                <span :class="['text-sm font-bold text-violet-300']">Total Facial Expressions</span>
+                <span :class="['text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed']">Everything the model exposes — including tracking shapes we may filter out.</span>
+              </div>
+              <div :class="['flex flex-col gap-1 border-r border-neutral-200/60 dark:border-white/5 pr-3']">
+                <span :class="['text-2xl']">✨</span>
+                <span :class="['text-4xl font-bold text-primary-400 font-mono']">{{ candidateCount }}</span>
+                <span :class="['text-sm font-bold text-primary-300']">Available Facial Expressions</span>
+                <span :class="['text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed']">Expressions that passed the first filter and are ready for AI review. <span :class="['text-neutral-400 dark:text-neutral-500']">({{ noiseCount }} filtered out.)</span></span>
+              </div>
+              <div :class="['flex flex-col gap-1']">
+                <span :class="['text-2xl']">🏃</span>
+                <span :class="['text-4xl font-bold text-sky-400 font-mono']">{{ motionCount }}</span>
+                <span :class="['text-sm font-bold text-sky-300']">Body Motions</span>
+                <span :class="['text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed']">Movements your character can perform, like nods, poses, waves, and dances.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Zero-expression early exit -->
+          <div v-if="zeroExpressions && !isLoadingExpressions" :class="['rounded-2xl border border-amber-500/40 bg-amber-500/10 p-5 flex flex-col gap-2 shrink-0']">
+            <div :class="['text-base font-bold text-amber-700 dark:text-amber-300']">
+              We couldn't find any facial expressions this model can activate 😔
+            </div>
+            <div :class="['text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed']">
+              You can continue setting up AIRI, but expression acting won't be available for this avatar.
+              Try another model, or skip ahead — everything else still works.
+            </div>
+          </div>
+
+          <!-- AI task section -->
+          <div v-else :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-neutral-950/40 dark:bg-neutral-950/40 p-5 flex flex-col gap-4 shrink-0']">
+            <div :class="['grid grid-cols-1 sm:grid-cols-5 gap-4']">
+              <div :class="['sm:col-span-3 flex flex-col gap-3']">
+                <div :class="['flex items-center gap-2.5']">
+                  <span :class="['text-2xl']">🧠</span>
+                  <div>
+                    <div :class="['text-base font-bold text-neutral-800 dark:text-neutral-100']">
+                      Choose the AI for this task
+                    </div>
+                    <div :class="['text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed']">
+                      A smarter model gives better names. This only affects this step — never your character's global brain.
+                    </div>
+                  </div>
+                </div>
+                <BrainModelPicker
+                  :provider="directorProvider"
+                  :model="directorModel"
+                  title="Step director"
+                  side="bottom"
+                  align="start"
+                  @update:provider="directorProvider = $event"
+                  @update:model="directorModel = $event"
+                >
+                  <template #trigger>
+                    <!-- NOTE: no @click here on purpose. PopoverTrigger as-child
+                      injects its own open/close pointer handling; an extra toggle
+                      would immediately shut what it just opened. -->
+                    <button
+                      type="button"
+                      :class="['w-full flex items-center gap-3 rounded-xl border border-neutral-200/70 dark:border-white/10 bg-white/60 dark:bg-neutral-800/60 px-4 min-h-[56px] py-2.5 text-left transition-colors cursor-pointer hover:border-primary-500/50']"
+                    >
+                      <span :class="['w-9 h-9 shrink-0 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white text-base font-bold flex items-center justify-center']">
+                        {{ (directorModelShort || directorProvider || '?').charAt(0).toUpperCase() }}
+                      </span>
+                      <span :class="['flex-1 min-w-0']">
+                        <span :class="['block text-sm font-bold text-neutral-800 dark:text-neutral-100 truncate']">
+                          {{ directorModelShort || 'Pick a model…' }}
+                        </span>
+                        <span :class="['block text-[11px] text-neutral-400 truncate']">
+                          {{ directorProvider || 'No provider' }}{{ directorIsGlobal ? ' (global)' : ' (this step only)' }}
+                        </span>
+                      </span>
+                      <span :class="['i-solar:alt-arrow-down-bold text-sm text-neutral-400 shrink-0']" />
+                    </button>
+                  </template>
+                </BrainModelPicker>
+                <button
+                  v-if="!directorIsGlobal && directorLabel"
+                  type="button"
+                  :class="['self-start text-[11px] text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 underline cursor-pointer']"
+                  @click="resetDirectorToGlobal"
+                >
+                  Back to global brain
+                </button>
+              </div>
+              <div :class="['sm:col-span-2 rounded-xl border border-neutral-200/60 dark:border-white/5 bg-neutral-50/60 dark:bg-neutral-800/30 p-4 flex flex-col items-center text-center gap-2 justify-center']">
+                <span :class="['text-3xl']">🤖</span>
+                <span :class="['text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed']">
+                  The director will quickly test each expression, watch how your avatar moves, and keep only the ones that work.
+                </span>
+              </div>
+            </div>
+            <div v-if="!curationDone && !directorLabel" :class="['text-xs font-semibold text-amber-600 dark:text-amber-400']">
+              Pick an AI above to enable scanning.
+            </div>
+            <div v-if="curationDone" :class="['flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-300 font-semibold']">
+              <span>✓ {{ curationItems.filter(i => !i.shouldSkip).length }} keepers named out of {{ curationItems.length }} — review them next.</span>
+            </div>
+            <button
+              v-if="!curationDone"
+              type="button"
+              :disabled="!canCurate"
+              :class="['w-full py-4 rounded-2xl bg-primary-500 hover:bg-primary-400 text-white text-base font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed']"
+              @click="handleNameTrigger"
+            >
+              <div v-if="isCurating" :class="['i-solar:refresh-linear w-5 h-5 animate-spin']" />
+              <span>{{ isCurating ? 'Asking the director…' : `✨ Start scanning my expressions (${candidateCount})` }}</span>
+            </button>
+            <div :class="['text-[11px] text-neutral-400 text-center']">
+              This usually takes a few moments. You'll review and rename everything next.
+            </div>
+            <div v-if="curationError" :class="['text-xs text-red-500 dark:text-red-400']">
+              {{ curationError }}
+            </div>
+          </div>
+
+          <div :class="['flex items-center justify-between shrink-0 pt-1']">
+            <button
+              type="button"
+              :class="['px-4 py-2 rounded-xl text-xs font-semibold text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer']"
+              @click="guideStep = 'meet'"
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              :disabled="zeroExpressions || (!curationDone)"
+              :class="['px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed']"
+              @click="guideStep = 'verify'"
+            >
+              Next →
             </button>
           </div>
-        </div>
+        </template>
+        <template v-else-if="guideStep === 'verify'">
+          <!-- Verify step: per-key test-fire + hide (whitelist shaping).
+            Edits here are local until Remaps compiles + persists them. -->
+          <div :class="['flex items-start justify-between gap-3 shrink-0']">
+            <div :class="['flex flex-col gap-1']">
+              <h3 :class="['text-base font-bold text-neutral-900 dark:text-white flex items-center gap-2']">
+                <span>🔍</span>
+                <span>Verify each keeper</span>
+                <span :class="['px-2 py-0.5 rounded-full bg-primary-500/15 text-primary-600 dark:text-primary-300 text-[10px] font-bold']">
+                  {{ keeperCount }} keepers
+                </span>
+              </h3>
+              <p :class="['text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed']">
+                Press play on each surviving expression and watch the avatar. If a key does nothing visible,
+                hide it with the eye control. Only verified keys become your character's whitelist.
+              </p>
+            </div>
+            <img
+              v-if="GUIDE_VERIFY_ART"
+              :src="GUIDE_VERIFY_ART"
+              alt=""
+              :class="['w-20 h-20 shrink-0 object-contain']"
+            >
+          </div>
+
+          <!-- Empty state: reached Verify without a Name pass -->
+          <div v-if="curationItems.length === 0" :class="['rounded-xl border border-neutral-200/70 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/40 p-3 flex flex-col gap-1 shrink-0']">
+            <div :class="['text-xs font-bold text-neutral-700 dark:text-neutral-200']">
+              Nothing to verify yet
+            </div>
+            <div :class="['text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed']">
+              Run the Name step's scan first — its keepers land in this list for test-firing.
+            </div>
+          </div>
+
+          <!-- Keeper table (ported from the curator modal's review pass) -->
+          <div v-else :class="['flex-1 min-h-[120px] overflow-y-auto border border-neutral-200/70 dark:border-white/5 rounded-xl bg-white dark:bg-neutral-900']">
+            <table :class="['w-full text-left text-xs']">
+              <thead :class="['sticky top-0 border-b border-neutral-200 bg-neutral-50 text-[10px] text-neutral-400 font-bold uppercase dark:border-neutral-800 dark:bg-neutral-800/90']">
+                <tr>
+                  <th :class="['px-3 py-2']">
+                    Raw Morph
+                  </th>
+                  <th :class="['px-3 py-2']">
+                    Display Label
+                  </th>
+                  <th :class="['px-3 py-2']">
+                    ACT Action Token
+                  </th>
+                  <th :class="['px-2 py-2 text-center']">
+                    Preview
+                  </th>
+                  <th :class="['px-2 py-2 text-center']">
+                    Hide
+                  </th>
+                </tr>
+              </thead>
+              <tbody :class="['divide-y divide-neutral-100 dark:divide-neutral-800']">
+                <tr
+                  v-for="item in curationItems"
+                  :key="item.rawKey"
+                  :class="[
+                    'transition-colors',
+                    item.shouldSkip
+                      ? 'opacity-40 bg-neutral-50 dark:bg-neutral-800/30'
+                      : lastPreviewKey === item.rawKey
+                        ? 'bg-primary-500/10'
+                        : 'hover:bg-neutral-50/80 dark:hover:bg-neutral-800/40',
+                  ]"
+                >
+                  <td :class="['px-3 py-2 text-[11px] text-neutral-500 font-mono dark:text-neutral-400']">
+                    <div :class="['max-w-[120px] truncate']" :title="item.rawKey">
+                      {{ item.rawKey }}
+                    </div>
+                    <span v-if="item.shouldSkip && item.skipReason" :class="['block text-[9px] text-amber-600 font-sans dark:text-amber-400']">
+                      {{ item.skipReason }}
+                    </span>
+                  </td>
+                  <td :class="['px-3 py-2']">
+                    <input
+                      v-model="item.label"
+                      :disabled="item.shouldSkip"
+                      :class="['w-full border border-neutral-200 rounded px-2 py-1 text-xs dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-neutral-100 focus:outline-none']"
+                    >
+                  </td>
+                  <td :class="['px-3 py-2 font-mono']">
+                    <input
+                      v-model="item.actToken"
+                      :disabled="item.shouldSkip"
+                      :class="['w-full border border-neutral-200 rounded px-2 py-1 text-xs text-primary-600 dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-primary-400 focus:outline-none']"
+                    >
+                  </td>
+                  <td :class="['px-2 py-2 text-center']">
+                    <button
+                      type="button"
+                      :disabled="item.shouldSkip"
+                      :class="['cursor-pointer rounded-full p-2 transition-colors disabled:opacity-30 disabled:cursor-not-allowed', lastPreviewKey === item.rawKey ? 'bg-primary-500 text-white' : 'text-neutral-400 hover:bg-primary-500/10 hover:text-primary-500 dark:text-neutral-500']"
+                      title="Preview on avatar"
+                      @click="previewCurationItem(item)"
+                    >
+                      <div :class="[lastPreviewKey === item.rawKey ? 'i-solar:pause-bold' : 'i-solar:play-bold', 'w-3.5 h-3.5']" />
+                    </button>
+                  </td>
+                  <td :class="['px-2 py-2 text-center']">
+                    <button
+                      type="button"
+                      :class="['cursor-pointer rounded p-1.5 transition-colors', item.shouldSkip ? 'text-amber-500 hover:bg-amber-500/10' : 'text-neutral-400 hover:bg-neutral-500/10 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300']"
+                      :title="item.shouldSkip ? 'Unhide' : 'Hide — does nothing visible'"
+                      @click="toggleCurationSkip(item)"
+                    >
+                      <div :class="[item.shouldSkip ? 'i-solar:eye-closed-bold' : 'i-solar:eye-bold', 'w-4 h-4']" />
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div :class="['flex items-center justify-between shrink-0 pt-1']">
+            <button
+              type="button"
+              :class="['px-4 py-2 rounded-xl text-xs font-semibold text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer']"
+              @click="guideStep = 'name'"
+            >
+              ← Back
+            </button>
+            <button
+              type="button"
+              :class="['px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer']"
+              @click="guideStep = 'remaps'"
+            >
+              Next →
+            </button>
+          </div>
+        </template>
       </div>
 
       <template v-else>
+        <!-- Dots breadcrumb (remaps leg) -->
+        <div v-if="guideStep === 'remaps'" :class="['flex items-center justify-between shrink-0 rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-neutral-900/60 px-4 py-2.5 shadow-sm']">
+          <div :class="['flex items-center gap-1.5']">
+            <template v-for="(dot, i) in GUIDE_DOTS" :key="dot.id">
+              <div :class="['flex items-center gap-1.5']">
+                <button
+                  type="button"
+                  :disabled="i > guideStepIndex"
+                  :class="[
+                    'w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center transition-colors',
+                    dot.id === guideStep
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-primary-500/20 text-primary-600 dark:text-primary-300 cursor-pointer',
+                  ]"
+                  :title="dot.label"
+                  @click="goGuideStep(dot.id)"
+                >
+                  {{ i + 1 }}
+                </button>
+                <span :class="['text-[11px] font-medium', dot.id === guideStep ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-400 dark:text-neutral-500']">
+                  {{ dot.label }}
+                </span>
+              </div>
+              <div v-if="i < GUIDE_DOTS.length - 1" :class="['w-3 h-px bg-neutral-200 dark:bg-neutral-700']" />
+            </template>
+          </div>
+          <span :class="['text-[10px] text-neutral-400']">Optional — bind keepers to the 6 preset cues, or finish.</span>
+        </div>
         <!-- Unified Card 1: Expression Mapping & Calibration -->
         <div :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-neutral-900/60 p-3.5 shadow-sm flex-1 min-h-0 flex flex-col']">
           <!-- Card Header: Title, Auto-Calibrate Sparkle Button, and Advanced Details -->
@@ -1135,6 +1614,23 @@ onBeforeUnmount(() => {
               <span>{{ isGuidanceReady ? 'Review / Edit' : 'Edit Guidance' }}</span>
               <div :class="['i-solar:alt-arrow-right-linear w-3.5 h-3.5']" />
             </div>
+          </button>
+        </div>
+        <!-- Remaps leg nav -->
+        <div v-if="guideStep === 'remaps'" :class="['flex items-center justify-between shrink-0 rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-neutral-900/60 px-4 py-2.5 shadow-sm']">
+          <button
+            type="button"
+            :class="['px-4 py-2 rounded-xl text-xs font-semibold text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer']"
+            @click="guideStep = 'verify'"
+          >
+            ← Back to Verify
+          </button>
+          <button
+            type="button"
+            :class="['px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer flex items-center gap-1.5']"
+            @click="skipGuide"
+          >
+            <span>Finish ✓</span>
           </button>
         </div>
       </template>
