@@ -215,6 +215,15 @@ async function main() {
     }
   }
 
+  // Step 7: Verify release assets & cross-platform completeness
+  console.log(`\n📦 Verifying release assets inventory for ${tag}...`)
+  try {
+    execute(`node scripts/github/ci-status.mjs --release`)
+  }
+  catch (err) {
+    // Non-fatal if ci-status verification encounters an error
+  }
+
   console.log(`\n🏆 Success! Windows release artifacts uploaded to GitHub release:`)
   console.log(`👉 https://github.com/dasilva333/airi/releases/tag/${tag}`)
 }

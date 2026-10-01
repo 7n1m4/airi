@@ -104,6 +104,10 @@ This executes `scripts/release/publish-mac.js`, which handles:
 - Packaging the `.dmg` into `apps/stage-tamagotchi/dist/`.
 - Verifying/creating the GitHub release `v[version]` on `dasilva333/airi` using `release-notes.md`.
 - Uploading the `.dmg` asset with `--clobber`.
+- **Dispatching Linux Desktop CI**: Automatically dispatches the `Release: Linux Desktop` workflow (`.github/workflows/release-linux-desktop.yml`) on GitHub Actions for tag `v[version]`.
+
+> [!TIP]
+> **Concurrent Cloud Compilation**: Building Linux packages (`.deb`, `.rpm`, and `.flatpak` across both `ubuntu-latest` x64 and `ubuntu-24.04-arm` arm64) takes ~25–28 minutes on GitHub Actions. Having `publish-mac.js` dispatch this workflow immediately allows GitHub Actions to crunch the Linux release packages in the cloud concurrently while you switch workstations to package Windows.
 
 ---
 

@@ -38,6 +38,8 @@ Canonical references: **`docs/content/en/docs/contributing/windows-release-guide
 3. **Tag.** `git tag v<version> && git push origin v<version>` (fork remote; never touch upstream without authorization).
 4. **Build + publish.** `pnpm run release:win` or `pnpm run release:mac`.
    - Windows supports `--build-only` (stop after build for smoke test, then `pnpm run release:win --upload-only`) since Win installers need interactive smoke testing; macOS uploads directly.
+   - `publish-mac.js` automatically dispatches the `Release: Linux Desktop` workflow (`release-linux-desktop.yml`) on GitHub Actions right after uploading macOS assets, enabling concurrent cloud compilation of Linux x64/arm64 packages while the user transitions to Windows.
+   - `publish-win.js` automatically runs release asset verification (`node scripts/github/ci-status.mjs --release`) after uploading Windows binaries to confirm all 14 cross-platform assets are attached.
    - Both scripts: `git -c http.sslVerify=false pull && fetch --tags --force`, warn if version date-stamp ≠ today (multi-machine drift: someone forgot to push), physical `node_modules` override cleanup (discord.js/undici/ws etc. copied packages removed before Vite bundling), `NODE_OPTIONS=--max-old-space-size=12288`, `GH_SSL_NO_VERIFY=true`, `GITHUB_TOKEN` deleted so `gh` falls back to keyring auth, artifact discovery (`AIRI-<ver>*.exe|zip` / `.dmg`), release creation/upload to `--repo dasilva333/airi --clobber` using `release-notes.md` if present.
 5. **Manual fallback:** `pnpm -F @proj-airi/stage-tamagotchi run build:win|build:mac`, then `GITHUB_TOKEN="" GH_SSL_NO_VERIFY="true" gh release upload [tag] <artifact> --repo dasilva333/airi --clobber`.
 

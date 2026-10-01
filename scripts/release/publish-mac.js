@@ -161,6 +161,18 @@ async function main() {
     }
   }
 
+  // Step 6: Dispatch Linux Desktop CI build on GitHub Actions
+  console.log(`\n🐧 Dispatching Linux desktop release workflow on GitHub Actions...`)
+  try {
+    execute(`gh workflow run release-linux-desktop.yml --repo dasilva333/airi -f tag=${tag}`)
+    console.log(`✅ Successfully dispatched Linux desktop build workflow (release-linux-desktop.yml) for tag ${tag}.`)
+    console.log(`ℹ️ GitHub Actions is now compiling Linux x64 and arm64 (.deb, .rpm, .flatpak) packages in parallel.`)
+  }
+  catch (err) {
+    console.warn(`⚠️ Warning: Failed to dispatch Linux desktop workflow automatically: ${err.message}`)
+    console.warn(`👉 You can dispatch it manually with: gh workflow run release-linux-desktop.yml --repo dasilva333/airi -f tag=${tag}`)
+  }
+
   console.log(`\n🏆 Success! All macOS artifacts uploaded to GitHub release:`)
   console.log(`👉 https://github.com/dasilva333/airi/releases/tag/${tag}`)
 }
