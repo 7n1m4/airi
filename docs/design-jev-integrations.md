@@ -92,7 +92,7 @@ flowchart TD
 
 ### 3.1 Domain E: AnimaDex Wizard Fast Voice Matching & Acoustic Assignment
 - **Primary Source**: [`packages/stage-pages/src/pages/settings/airi-card/components/AutoVoiceConfigModal.vue`](../packages/stage-pages/src/pages/settings/airi-card/components/AutoVoiceConfigModal.vue) (lines 350–435)
-- **Secondary Surfaces**: [`packages/stage-pages/src/pages/settings/airi-card/guided.vue`](../packages/stage-pages/src/pages/settings/airi-card/guided.vue), [`packages/stage-ui/src/stores/animadex-wizard.ts`](../packages/stage-ui/src/stores/animadex-wizard.ts)
+- **Secondary Surfaces**: [`packages/stage-ui/src/stores/animadex-wizard.ts`](../packages/stage-ui/src/stores/animadex-wizard.ts) (binding target, no Jev wiring). NOTE: [`packages/stage-pages/src/pages/settings/airi-card/guided.vue`](../packages/stage-pages/src/pages/settings/airi-card/guided.vue) `prefillRosterBindings()` is still localStorage + legacy LLM only with zero `systemOne`/Jev references — do not cite it as a Jev surface.
 - **Concrete Problem Solved**:
   - In the AnimaDex Guided Creation Wizard, selecting a multi-character cast requires assigning each character an installed voice profile and tuning speech acoustics (pitch, speed rate, idle motions).
   - Autoregressive LLM parsing caused 2,000ms–4,000ms UI freezes with frequent markdown preambles or invalid voice IDs.
@@ -108,7 +108,7 @@ flowchart TD
 ---
 
 ### 3.2 Domain C: Attention Ecology Programmable Visual Attention Gate
-- **Primary Source**: [`packages/stage-ui/src/stores/modules/vision/orchestrator.ts`](../packages/stage-ui/src/stores/modules/vision/orchestrator.ts) (lines 393–445)
+- **Primary Source**: [`packages/stage-ui/src/stores/modules/vision/orchestrator.ts`](../packages/stage-ui/src/stores/modules/vision/orchestrator.ts) (lines 393–445, `gatingMode === 'system1_sentinel'` block inline in `processCapture()` — no standalone `evaluateJevVisualAttentionGate()` function exists)
 - **Secondary Surfaces**: [`packages/stage-ui/src/stores/modules/vision.ts`](../packages/stage-ui/src/stores/modules/vision.ts), [`packages/stage-pages/src/pages/settings/airi-card/components/tabs/CardCreationTabProactivity.vue`](../packages/stage-pages/src/pages/settings/airi-card/components/tabs/CardCreationTabProactivity.vue)
 - **Concrete Problem Solved**:
   - Continuous desktop perception traditionally relied on either brittle hardcoded keyword tags (`"coding"`, `"reading"`) or expensive cloud VLM calls on every screen delta ($5–$15/Mtok, 2,000ms latency), which bankrupts API budgets.
@@ -139,8 +139,11 @@ flowchart TD
 
 ### 3.4 Hybrid Memory Triage & Search Reranking
 - **Primary Sources**:
-  - [`packages/stage-ui/src/stores/memory-text-journal.ts`](../packages/stage-ui/src/stores/memory-text-journal.ts) (lines 485–514)
-  - [`packages/stage-ui/src/stores/entity-ledger.ts`](../packages/stage-ui/src/stores/entity-ledger.ts) (lines 158–185, 382–415)
+  - Schemas & entrypoints: [`packages/stage-ui/src/stores/modules/system-one.ts`](../packages/stage-ui/src/stores/modules/system-one.ts) (`JEV_TRIAGE_SCHEMA`, `JEV_RERANK_CRITERIA`, `runTriage`/`runRerank`/`classifyEntities`)
+  - Execution: [`packages/stage-ui/src/libs/search/layered-memory.ts`](../packages/stage-ui/src/libs/search/layered-memory.ts) (calls `runTriage`/`runRerank` when `systemOneStore.configured`)
+  - Consumers:
+    - [`packages/stage-ui/src/stores/memory-text-journal.ts`](../packages/stage-ui/src/stores/memory-text-journal.ts) (lines 485–514, passes `systemOneStore` into `layeredMemory.search`)
+    - [`packages/stage-ui/src/stores/entity-ledger.ts`](../packages/stage-ui/src/stores/entity-ledger.ts) (lines 158–185, 382–415, via `classifyEntities`)
 - **Concrete Problem Solved**:
   - Natural language queries like *"When was the last time we visited Kyoto?"* or *"List all the books you recommended to me"* require fundamentally different retrieval strategies (temporal scan vs multi-session aggregation vs single-turn atomic lookup).
   - Passing all retrieved vector chunks directly to the LLM creates prompt bloat and pollutes reasoning with low-relevance snippets.
@@ -155,13 +158,18 @@ flowchart TD
 
 The remaining unintegrated domains from the initial proposal are preserved in [`docs/proposal-jev-integration.md`](./proposal-jev-integration.md) for future promotion:
 
-1. **Domain A: Arcade Room Retro Gaming, Catalog Triage & Self-Synthesizing Copilot**:
+1. **Domain A: Arcade Room Retro Gaming, Catalog Triage & Self-Synthesizing Copilot — IN DEVELOPMENT (PoC proven, runtime wiring open)**:
    - Detailed Specification: [`proposal-generic-gaming-agent-runtime.md`](./proposal-generic-gaming-agent-runtime.md) (Sections 5.4–5.6).
-   - **Catalog Triage**: Offline Jev classification over the 8,900+ DOS catalog recommending Path A (System-2 VLM Strategy) vs Path B (System-1 Reflex).
-   - **Decoupled Two-Tier Semantic Engine**: System 2 analyzes a 15s demonstration trace (80×40 sparse grid diffs) to synthesize a pure JavaScript **State Extractor** (`extractGameState`), which runs at 20 Hz in $<1\text{ms}$ feeding structured situation reports into System 1 (Laya Local / Jev ~100ms) to evaluate discrete action choices (`'UP'`, `'DOWN'`, `'LEFT'`, `'RIGHT'`).
-2. **Domain F: Dual-Duty Ninja-Swap Interceptor**:
+   - **Catalog Triage (DONE)**: Offline Jev classification over the full 8,924-game DOS catalog (`scripts/tests/arcade-catalog-cleanroom/classify-full.mjs` → `data/classified-full.json`; 3.74 min, $0.70; 3,627 `system1_reflex` / 4,408 `system2_strategy`) recommending Path A (System-2 VLM Strategy) vs Path B (System-1 Reflex).
+   - **Two-Tier Engine (PoC)**: `diffUtils` SDK + 80×40 collector + synthesizer + `arcade-replay-harness.mjs` (`--jev` reflex-verification flag) exist; early Snake PoC ate ~2 dots.
+   - **Runtime Wiring (OPEN)**: `packages/stage-ui/src/composables/arcade/use-arcade-agent.ts` has zero `useSystemOneStore`/Jev wiring (LLM + vision only); live surface is `apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue`.
+   - **Decoupled Two-Tier Semantic Engine (target)**: System 2 analyzes a 15s demonstration trace (80×40 sparse grid diffs) to synthesize a pure JavaScript **State Extractor** (`extractGameState`), which runs at 20 Hz in $<1\text{ms}$ feeding structured situation reports into System 1 (Laya Local / Jev ~100ms) to evaluate discrete action choices (`'UP'`, `'DOWN'`, `'LEFT'`, `'RIGHT'`).
+2. **Domain F: Dual-Duty Ninja-Swap Interceptor — NEXT UP (zero implementation)**:
+   - Standalone spec & refinement checklist: [`proposal-ninja-swap-interceptor.md`](./proposal-ninja-swap-interceptor.md).
+   - No `NinjaSwap` hits repo-wide; `ControlStripHost.vue` / `speech.ts` have no Jev/`useSystemOneStore` wiring (ACT cues exist without Jev).
    - Single-pass merged Jev evaluation (~110ms) reconciling authoring-time whitelists with live sentence strides to simultaneously inject avatar blendshapes (`<|ACT:...|>`) and speech inflection tags (`[whisper]`, `[sigh]`) with 100% voice-face emotional synchronization.
-3. **Domain G: Memory Token Compaction & Pre-Summary Filter**:
+3. **Domain G: Memory Token Compaction & Pre-Summary Filter — FUTURE IDEA (unspec'd)**:
+   - `packages/stage-ui/src/stores/chat/compaction.ts` is bucket-distill/STMM with zero `systemOne`/Jev linkage; existing salience (`stores/chat/salience.ts`) is RWKV-gated and disabled for release stability.
    - Curative pre-filter stripping routine conversational banter from raw chat transcripts before dispatching to daily/lifetime summarizer LLMs (~70% token savings).
 4. **Domain D: Toggle 4 (Recent Topics) Salience Rework**:
    - Discrete topic selection replacing the legacy 270-line stopword list.

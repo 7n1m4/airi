@@ -386,6 +386,9 @@ pages:
       description: Tired of the models you have? Looking to download some free cool
         new ones? Check out our curated catalog of avatars and marketplaces.
       action: Discover Avatars
+    emotions:
+      title: Emotion Calibration
+      description: Calibrate emotion mappings and acting directives for the active avatar.
   scene:
     title: Stage Backgrounds
     description: Customize virtual backdrops and stage wallpaper images for your characters.

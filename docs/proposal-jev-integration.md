@@ -812,21 +812,31 @@ console.log(`System 1 evaluated in ${systemOneStore.lastLatencyMs}ms`)
 - [x] **Phase 1: Isolated Cleanroom Benchmark (`scripts/tests/rwkv-harness/experiments/`)**
   - Executed 6 canonical scenarios (`jev-nan0-intent-cleanroom.py`): 6/6 climate, 5/6 intent, 5/6 suspicion.
   - Executed complete 43-case pragmatic shootout (`jev-nan0-pragmatic-benchmark.py`): **90.7% full-vector accuracy, 100% true spike recall, 2.6% false spike rate, 5.5s total wall time**.
-- [ ] **Phase 2: Gaming Show Harness & Arcade Room Retro Integration**
-  - Wire Jev's `Choice` primitive into `packages/stage-ui/src/composables/arcade/use-arcade-agent.ts` to drive real-time JS-DOS / ViZDoom actions at 10 Hz in `chat_arcade.vue`.
+- [ ] **Phase 2: Gaming Show Harness & Arcade Room Retro Integration — IN DEVELOPMENT (PoC proven, runtime wiring open)**
+  - PROVEN (offline PoC): full 8,924-game MS-DOS catalog triaged via Jev (`scripts/tests/arcade-catalog-cleanroom/classify-full.mjs` → `data/classified-full.json`, 3.74 min, $0.70; 3,627 `system1_reflex` / 4,408 `system2_strategy`); `diffUtils` SDK + 80×40 collector + synthesizer + replay harness with `--jev` reflex-verification flag exist; early Snake PoC (Jev ate ~2 dots).
+  - OPEN (runtime): `packages/stage-ui/src/composables/arcade/use-arcade-agent.ts` has zero `useSystemOneStore`/Jev wiring (LLM + vision only); live surface is `apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue` (not `packages/stage-ui/src/pages/chat_arcade.vue`).
+  - Wire Jev's `Choice` primitive into `use-arcade-agent.ts` to drive real-time JS-DOS / ViZDoom actions at 10 Hz in `chat_arcade.vue`.
   - Implement dynamic `standingOrders` backseat gaming voice/chat context injection and contextual audio banter ducking.
-- [ ] **Phase 3: Nan0 Pre-Processor Shadow Boundary Wire-Up**
-  - Wire Jev as asynchronous shadow challenger in `Nan0SubconsciousShadowEngine.ts` alongside synchronous `StrengthenedLexicalExtractor.ts`.
-- [ ] **Phase 4: Attention Ecology Programmable Visual Attention Gate**
-  - Connect `pHash` delta $\rightarrow$ local visual descriptor (OCR / micro-caption) $\rightarrow$ Jev natural language gate in `orchestrator.ts`.
-  - Add user-programmable natural language trigger prompt input to Settings > Vision.
-- [ ] **Phase 5: AnimaDex Wizard Fast Voice Matching & Acoustic Assignment**
-  - Implement Jev batched voice selection, pitch semitone offset, and rate multiplier prediction in `guided.vue` Step 1 $\rightarrow$ Step 2 transition (`prefillRosterBindings`).
-- [ ] **Phase 6: Dual-Duty Ninja-Swap Interceptor (Speech Tags + ACT Cues)**
+- [x] **Phase 3: Nan0 Pre-Processor Shadow Boundary Wire-Up — SHIPPED**
+  - Shipped in `packages/stage-ui/src/stores/modules/nan0.ts` (~lines 482–508, `systemOneProvider` via `systemOneStore.execute`). See `docs/design-jev-integrations.md` §3.3.
+  - Jev serves as asynchronous shadow challenger in `Nan0SubconsciousShadowEngine` alongside synchronous `StrengthenedLexicalExtractor.ts`.
+- [x] **Phase 4: Attention Ecology Programmable Visual Attention Gate — SHIPPED**
+  - Shipped inline in `packages/stage-ui/src/stores/modules/vision/orchestrator.ts` (~lines 394–444, `gatingMode === 'system1_sentinel'` block via `systemOneStore.execute`). No standalone `evaluateJevVisualAttentionGate()` function exists — gate is inline in `processCapture()`. See `docs/design-jev-integrations.md` §3.2.
+  - Connects `pHash` delta → local visual descriptor (OCR / micro-caption) → Jev natural language gate in `orchestrator.ts`.
+  - User-programmable natural language trigger prompt input lives in Settings > Vision / `CardCreationTabProactivity.vue`.
+- [x] **Phase 5: AnimaDex Wizard Fast Voice Matching & Acoustic Assignment — SHIPPED (relocated)**
+  - Shipped in `packages/stage-pages/src/pages/settings/airi-card/components/AutoVoiceConfigModal.vue` (~lines 350–456, `systemOneStore.execute` with `best_voice_id` / `pitch_modifier` / `speed_rate` / `idle_motion`). See `docs/design-jev-integrations.md` §3.1.
+  - NOT in `guided.vue` Step 1 → Step 2 `prefillRosterBindings()` — that path is still localStorage + legacy LLM only with zero `systemOne`/Jev references, and `packages/stage-ui/src/stores/animadex-wizard.ts` has no Jev wiring.
+- [ ] **Phase 6: Dual-Duty Ninja-Swap Interceptor (Speech Tags + ACT Cues) — NEXT UP**
+  - Standalone spec & refinement checklist: [`docs/proposal-ninja-swap-interceptor.md`](./proposal-ninja-swap-interceptor.md).
+  - Status (Oct 2026): zero implementation. No `NinjaSwap` hits repo-wide; `ControlStripHost.vue` / `speech.ts` have no Jev/`useSystemOneStore` wiring (ACT cues exist without Jev).
   - Implement Tier 1 Authoring-Time Persona Compiler in `CardCreationTabActing.vue` (using local Needle 2 / WASM) to reconcile natural language acting prompts with model blendshapes and speech provider expression capabilities into cached whitelists.
   - Implement Tier 2 Real-Time Sentence-Stride Interceptor in `ControlStripHost.vue` / `speech.ts`: batch single-pass Jev decision (~110ms), inject `<|ACT:...|>` visual cues, and prepend speech tags (e.g. `[whisper]`) to TTS synthesis payloads for 100% voice-face emotional synchronization.
-- [ ] **Phase 7: Memory Token Compaction & Pre-Summary Salience Curation**
+- [ ] **Phase 7: Memory Token Compaction & Pre-Summary Salience Curation — FUTURE IDEA (unspec'd)**
+  - Status (Oct 2026): pie-in-the-sky only. `packages/stage-ui/src/stores/chat/compaction.ts` is bucket-distill/STMM with zero `systemOne`/Jev linkage; existing salience (`stores/chat/salience.ts`) is RWKV-gated and disabled for release stability.
   - Implement Jev pre-summary salience filter in memory consolidation pipeline to strip routine banter and compress raw dialogue transcripts by ~70% before invoking System-2 summary LLMs.
+- [x] **Unphased (shipped outside roadmap): Hybrid Memory Triage & Search Reranking — SHIPPED**
+  - Shipped via `packages/stage-ui/src/stores/modules/system-one.ts` (`JEV_TRIAGE_SCHEMA`, `JEV_RERANK_CRITERIA`, `runTriage`/`runRerank`/`classifyEntities`), executed in `packages/stage-ui/src/libs/search/layered-memory.ts` and consumed by `memory-text-journal.ts` + `entity-ledger.ts`. See `docs/design-jev-integrations.md` §3.4.
 
 ---
 
