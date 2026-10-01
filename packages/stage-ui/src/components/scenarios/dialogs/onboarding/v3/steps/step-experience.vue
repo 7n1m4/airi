@@ -2,11 +2,17 @@
 import type { ExperienceArchetypeId, ModuleBundleConfig } from '../stores/useOnboardingV3Draft'
 
 import { Button } from '@proj-airi/ui'
+import {
+  TooltipContent,
+  TooltipPortal,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+} from 'reka-ui'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import {
-  ARCHETYPE_MODULE_PRESETS,
   useOnboardingV3Draft,
 } from '../stores/useOnboardingV3Draft'
 
@@ -19,32 +25,154 @@ const { t, te } = useI18n()
 const draftStore = useOnboardingV3Draft()
 const showAdvancedModules = ref(false)
 
+interface CapabilityDetail {
+  title: string
+  icon: string
+  color?: string
+  description: string
+  bullets: string[]
+}
+
+const CAPABILITY_DETAILS: Record<string, CapabilityDetail> = {
+  Hearing: {
+    title: 'Hearing',
+    icon: 'i-solar:microphone-bold',
+    color: 'text-sky-400',
+    description: 'Listens to your voice and turns speech into text for natural spoken conversation.',
+    bullets: [
+      'Real-time speech transcription',
+      'Voice activity / pause detection',
+      'Continuous listening or push-to-talk',
+    ],
+  },
+  Voice: {
+    title: 'Voice',
+    icon: 'i-solar:volume-loud-bold',
+    color: 'text-indigo-400',
+    description: 'Lets your companion speak aloud with a natural, expressive synthesized voice.',
+    bullets: [
+      'Neural text-to-speech',
+      'Voice, speed, and pitch controls',
+      'Captions and avatar lip-sync',
+    ],
+  },
+  Pacing: {
+    title: 'Pacing',
+    icon: 'i-solar:pulse-2-bold',
+    color: 'text-purple-400',
+    description: 'Keeps conversations flowing naturally while responses are being prepared.',
+    bullets: [
+      'Natural fillers and acknowledgements',
+      'Short spoken thinking cues',
+      'Preloaded audio for faster turn-taking',
+    ],
+  },
+  Emotions: {
+    title: 'Emotions',
+    icon: 'i-solar:heart-bold',
+    color: 'text-pink-400',
+    description: 'Turns conversational emotion into live avatar expressions and body language.',
+    bullets: [
+      'Emotion-aware expression cues',
+      'Universal cues for all avatar models',
+      'Persistent mood and expression state',
+    ],
+  },
+  Memory: {
+    title: 'Memory',
+    icon: 'i-solar:database-bold',
+    color: 'text-cyan-400',
+    description: 'Carries useful context across conversations so your companion can remember past interactions.',
+    bullets: [
+      'Daily chat summaries for recent context',
+      'Character-authored journal with semantic search',
+      'Knowledge graph connecting people, places, and topics',
+    ],
+  },
+  Vision: {
+    title: 'Vision',
+    icon: 'i-solar:eye-bold',
+    color: 'text-sky-400',
+    description: 'Lets your companion understand images, photos, and screenshots you share.',
+    bullets: [
+      'Image and scene understanding',
+      'Object, text, and detail recognition',
+      'Follow-up discussion about visual content',
+    ],
+  },
+  Presence: {
+    title: 'Presence',
+    icon: 'i-solar:moon-bold',
+    color: 'text-amber-300',
+    description: 'Gives your companion a daily rhythm and lets it interact without always waiting for a prompt.',
+    bullets: [
+      'Sleep and wake routines',
+      'Proactive casual check-ins',
+      'Context-aware commentary on screen activity',
+    ],
+  },
+  Visuals: {
+    title: 'Visuals',
+    icon: 'i-solar:gallery-bold',
+    color: 'text-amber-400',
+    description: 'Lets your companion create artwork and visual scenes as part of the conversation.',
+    bullets: [
+      'AI image generation',
+      'Visual-novel scenes and selfies',
+      'Illustrated memory journal',
+    ],
+  },
+  Tools: {
+    title: 'Tools',
+    icon: 'i-solar:settings-minimalistic-bold',
+    color: 'text-teal-400',
+    description: 'Lets your companion use external tools, browse information, and interact with your workspace.',
+    bullets: [
+      'Web search and page reading',
+      'Local workspace access',
+      'MCP servers and custom tools',
+    ],
+  },
+  Text: {
+    title: 'Text',
+    icon: 'i-solar:document-text-bold',
+    color: 'text-slate-300',
+    description: 'Provides a lightweight, keyboard-first way to chat without voice features.',
+    bullets: [
+      'Markdown and code formatting',
+      'Streaming text responses',
+      'Quiet, low-overhead interaction',
+    ],
+  },
+}
+
+interface ArchetypeChip {
+  label: string
+  icon: string
+  color?: string
+}
+
 interface ArchetypeCard {
   id: ExperienceArchetypeId
   title: string
-  badgeLabel?: string
   subtitle: string
   description: string
   icon: string
+  chips: ArchetypeChip[]
   colorTheme: {
     activeBorder: string
     activeRing: string
     activeGlow: string
-    badgeBg: string
-    badgeText: string
+    activeBg: string
     iconBg: string
     iconColor: string
+    subtitleColor: string
   }
 }
 
 function getArchetypeTitle(arch: ArchetypeCard): string {
   const key = `onboarding.steps.experience.archetypes.${arch.id}.title`
   return te(key) ? t(key) : arch.title
-}
-
-function getArchetypeBadge(arch: ArchetypeCard): string | undefined {
-  const key = `onboarding.steps.experience.archetypes.${arch.id}.badge`
-  return te(key) ? t(key) : arch.badgeLabel
 }
 
 function getArchetypeSubtitle(arch: ArchetypeCard): string {
@@ -61,103 +189,145 @@ const archetypes: ArchetypeCard[] = [
   {
     id: 'quiet',
     title: 'The Quiet Observer',
-    badgeLabel: '⚡ Fastest · Minimalist',
-    subtitle: 'Text, Expressions & Memory',
-    description: 'Zero audio overhead, avatar emotions, thinking pacing, and long-term memory.',
-    icon: 'i-solar:chat-round-line-bold-duotone',
+    subtitle: 'Minimal silent companion',
+    description: 'Text, expressions and avatar emotions, thinking pacing, and long-term memory.',
+    icon: 'i-solar:chat-round-line-bold',
+    chips: [
+      { label: 'Text', icon: 'i-solar:document-text-bold', color: 'text-slate-300' },
+      { label: 'Emotions', icon: 'i-solar:heart-bold', color: 'text-pink-400' },
+      { label: 'Pacing', icon: 'i-solar:pulse-2-bold', color: 'text-amber-400' },
+      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
+    ],
     colorTheme: {
-      activeBorder: 'border-slate-400 dark:border-slate-300',
-      activeRing: 'ring-slate-400/40',
-      activeGlow: 'shadow-slate-500/15',
-      badgeBg: 'bg-slate-500/20',
-      badgeText: 'text-slate-700 dark:text-slate-200',
-      iconBg: 'bg-slate-500/15 text-slate-600 dark:text-slate-300',
-      iconColor: 'text-slate-600 dark:text-slate-300',
+      activeBorder: 'border-slate-400/80',
+      activeRing: 'ring-1 ring-slate-400/50',
+      activeGlow: 'shadow-[0_0_24px_rgba(148,163,184,0.18)]',
+      activeBg: 'bg-slate-950/30',
+      iconBg: 'bg-slate-500/20',
+      iconColor: 'text-slate-300',
+      subtitleColor: 'text-slate-400',
     },
   },
   {
     id: 'casual',
     title: 'The Casual Companion',
-    badgeLabel: '✨ Popular Choice',
-    subtitle: 'Voice Dialogue & Vision',
-    description: 'Live speech transcription (STT), emotional voice (TTS), photo vision, natural pacing, and memory.',
-    icon: 'i-solar:microphone-3-bold-duotone',
+    subtitle: 'Everyday voice companion',
+    description: 'Live speech, natural voice, vision, expressive emotions, and memory.',
+    icon: 'i-solar:microphone-3-bold',
+    chips: [
+      { label: 'Hearing', icon: 'i-solar:microphone-bold', color: 'text-sky-400' },
+      { label: 'Voice', icon: 'i-solar:volume-loud-bold', color: 'text-indigo-400' },
+      { label: 'Pacing', icon: 'i-solar:pulse-2-bold', color: 'text-purple-400' },
+      { label: 'Emotions', icon: 'i-solar:heart-bold', color: 'text-pink-400' },
+      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
+      { label: 'Vision', icon: 'i-solar:eye-bold', color: 'text-sky-400' },
+    ],
     colorTheme: {
       activeBorder: 'border-purple-500',
-      activeRing: 'ring-purple-500/40',
-      activeGlow: 'shadow-purple-500/20',
-      badgeBg: 'bg-purple-500/20',
-      badgeText: 'text-purple-600 dark:text-purple-300',
-      iconBg: 'bg-purple-500/15 text-purple-500',
-      iconColor: 'text-purple-500',
+      activeRing: 'ring-1 ring-purple-500/50',
+      activeGlow: 'shadow-[0_0_30px_rgba(168,85,247,0.25)]',
+      activeBg: 'bg-purple-950/25',
+      iconBg: 'bg-purple-500/25',
+      iconColor: 'text-purple-300',
+      subtitleColor: 'text-purple-400',
     },
   },
   {
     id: 'muse',
     title: 'The Creative Muse',
-    badgeLabel: '🎨 Visual Focus',
-    subtitle: 'Voice, Vision & Artistry',
-    description: 'Spoken dialogue, image generation (Pollinations/ComfyUI), chat vision, and expressive morphs.',
-    icon: 'i-solar:palette-round-bold-duotone',
+    subtitle: 'Visual creative companion',
+    description: 'Spoken dialogue, image generation, chat vision, and expressive morphs.',
+    icon: 'i-solar:palette-round-bold',
+    chips: [
+      { label: 'Hearing', icon: 'i-solar:microphone-bold', color: 'text-sky-400' },
+      { label: 'Voice', icon: 'i-solar:volume-loud-bold', color: 'text-indigo-400' },
+      { label: 'Vision', icon: 'i-solar:eye-bold', color: 'text-sky-400' },
+      { label: 'Emotions', icon: 'i-solar:heart-bold', color: 'text-pink-400' },
+      { label: 'Visuals', icon: 'i-solar:gallery-bold', color: 'text-amber-400' },
+      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
+    ],
     colorTheme: {
       activeBorder: 'border-amber-500',
-      activeRing: 'ring-amber-500/40',
-      activeGlow: 'shadow-amber-500/20',
-      badgeBg: 'bg-amber-500/20',
-      badgeText: 'text-amber-600 dark:text-amber-300',
-      iconBg: 'bg-amber-500/15 text-amber-500',
-      iconColor: 'text-amber-500',
+      activeRing: 'ring-1 ring-amber-500/50',
+      activeGlow: 'shadow-[0_0_30px_rgba(245,158,11,0.25)]',
+      activeBg: 'bg-amber-950/25',
+      iconBg: 'bg-amber-500/25',
+      iconColor: 'text-amber-300',
+      subtitleColor: 'text-amber-400',
     },
   },
   {
     id: 'copilot',
     title: 'The Executive Copilot',
-    badgeLabel: '💼 Productivity',
-    subtitle: 'Voice, Screen & Action Tools',
-    description: 'Voice dialogue, proactive screen awareness, local filesystem action tools, and live web search.',
-    icon: 'i-solar:case-round-bold-duotone',
+    subtitle: 'Desktop productivity companion',
+    description: 'Voice dialogue, screen awareness, local action tools, and web search.',
+    icon: 'i-solar:case-round-bold',
+    chips: [
+      { label: 'Hearing', icon: 'i-solar:microphone-bold', color: 'text-sky-400' },
+      { label: 'Voice', icon: 'i-solar:volume-loud-bold', color: 'text-indigo-400' },
+      { label: 'Vision', icon: 'i-solar:eye-bold', color: 'text-sky-400' },
+      { label: 'Tools', icon: 'i-solar:settings-minimalistic-bold', color: 'text-teal-400' },
+      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
+      { label: 'Pacing', icon: 'i-solar:pulse-2-bold', color: 'text-purple-400' },
+    ],
     colorTheme: {
       activeBorder: 'border-teal-500',
-      activeRing: 'ring-teal-500/40',
-      activeGlow: 'shadow-teal-500/20',
-      badgeBg: 'bg-teal-500/20',
-      badgeText: 'text-teal-600 dark:text-teal-300',
-      iconBg: 'bg-teal-500/15 text-teal-500',
-      iconColor: 'text-teal-500',
+      activeRing: 'ring-1 ring-teal-500/50',
+      activeGlow: 'shadow-[0_0_30px_rgba(20,184,166,0.25)]',
+      activeBg: 'bg-teal-950/25',
+      iconBg: 'bg-teal-500/25',
+      iconColor: 'text-teal-300',
+      subtitleColor: 'text-teal-400',
     },
   },
   {
     id: 'roommate',
     title: 'The Ambient Roommate',
-    badgeLabel: '🌙 Proactive Presence',
-    subtitle: 'Living Routine & Presence',
-    description: 'Spoken voice, ambient heartbeats, sleep schedule, quiet hours, and screen awareness.',
-    icon: 'i-solar:moon-sleep-bold-duotone',
+    subtitle: 'Passive presence companion',
+    description: 'Ambient voice, heartbeats, sleep schedule, quiet hours, and awareness.',
+    icon: 'i-solar:moon-sleep-bold',
+    chips: [
+      { label: 'Hearing', icon: 'i-solar:microphone-bold', color: 'text-sky-400' },
+      { label: 'Voice', icon: 'i-solar:volume-loud-bold', color: 'text-indigo-400' },
+      { label: 'Presence', icon: 'i-solar:moon-bold', color: 'text-amber-300' },
+      { label: 'Pacing', icon: 'i-solar:pulse-2-bold', color: 'text-purple-400' },
+      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
+    ],
     colorTheme: {
-      activeBorder: 'border-indigo-500',
-      activeRing: 'ring-indigo-500/40',
-      activeGlow: 'shadow-indigo-500/20',
-      badgeBg: 'bg-indigo-500/20',
-      badgeText: 'text-indigo-600 dark:text-indigo-300',
-      iconBg: 'bg-indigo-500/15 text-indigo-500',
-      iconColor: 'text-indigo-500',
+      activeBorder: 'border-sky-500',
+      activeRing: 'ring-1 ring-sky-500/50',
+      activeGlow: 'shadow-[0_0_30px_rgba(14,165,233,0.25)]',
+      activeBg: 'bg-sky-950/25',
+      iconBg: 'bg-sky-500/25',
+      iconColor: 'text-sky-300',
+      subtitleColor: 'text-sky-400',
     },
   },
   {
     id: 'swiss-army',
     title: 'The Swiss Army Companion',
-    badgeLabel: '🔥 Most Steps · All-In-One',
-    subtitle: 'Full Autonomous Multimodal',
-    description: 'The flagship do-it-all: Voice STT/TTS, vision, proactive presence, visual novels, tools & memory.',
-    icon: 'i-solar:magic-stick-3-bold-duotone',
+    subtitle: 'Full-spectrum multimodal companion',
+    description: 'Hearing voice, pacing, emotions, screen watching, artistry, tools, and memory.',
+    icon: 'i-solar:stars-minimalistic-bold',
+    chips: [
+      { label: 'Hearing', icon: 'i-solar:microphone-bold', color: 'text-sky-400' },
+      { label: 'Voice', icon: 'i-solar:volume-loud-bold', color: 'text-indigo-400' },
+      { label: 'Pacing', icon: 'i-solar:pulse-2-bold', color: 'text-purple-400' },
+      { label: 'Emotions', icon: 'i-solar:heart-bold', color: 'text-pink-400' },
+      { label: 'Vision', icon: 'i-solar:eye-bold', color: 'text-sky-400' },
+      { label: 'Presence', icon: 'i-solar:moon-bold', color: 'text-amber-300' },
+      { label: 'Visuals', icon: 'i-solar:gallery-bold', color: 'text-amber-400' },
+      { label: 'Tools', icon: 'i-solar:settings-minimalistic-bold', color: 'text-teal-400' },
+      { label: 'Memory', icon: 'i-solar:database-bold', color: 'text-cyan-400' },
+    ],
     colorTheme: {
       activeBorder: 'border-rose-500',
-      activeRing: 'ring-rose-500/40',
-      activeGlow: 'shadow-rose-500/20',
-      badgeBg: 'bg-rose-500/20',
-      badgeText: 'text-rose-600 dark:text-rose-300',
-      iconBg: 'bg-rose-500/15 text-rose-500',
-      iconColor: 'text-rose-500',
+      activeRing: 'ring-1 ring-rose-500/50',
+      activeGlow: 'shadow-[0_0_30px_rgba(244,63,94,0.25)]',
+      activeBg: 'bg-rose-950/25',
+      iconBg: 'bg-rose-500/25',
+      iconColor: 'text-rose-300',
+      subtitleColor: 'text-rose-400',
     },
   },
 ]
@@ -191,15 +361,15 @@ interface ModuleDefinition {
 const moduleDefinitions: ModuleDefinition[] = [
   {
     key: 'hearing',
-    label: 'Voice Input (STT)',
-    shortLabel: 'STT',
+    label: 'Voice Input (Hearing)',
+    shortLabel: 'Hearing',
     description: 'Mic input & Whisper voice transcription',
     icon: 'i-solar:microphone-bold-duotone',
   },
   {
     key: 'speech',
-    label: 'Neural Voice (TTS)',
-    shortLabel: 'TTS',
+    label: 'Neural Voice',
+    shortLabel: 'Voice',
     description: 'Kokoro or Edge TTS spoken voice synthesis',
     icon: 'i-solar:volume-loud-bold-duotone',
   },
@@ -281,16 +451,9 @@ function resetToPresetDefaults() {
         :duration="350"
         :class="['text-center']"
       >
-        <div :class="['inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary-500/20 bg-primary-500/10 text-primary-400 text-xs font-semibold mb-1']">
-          <div :class="['i-solar:tuning-square-bold-duotone h-3.5 w-3.5']" />
-          <span>Step 4 of 16 · Interaction Archetype</span>
-        </div>
         <h1 :class="['text-2xl font-bold tracking-tight text-neutral-900 dark:text-white']">
           {{ t('onboarding.steps.experience.title') }}
         </h1>
-        <p :class="['text-xs text-neutral-500 dark:text-neutral-400 mt-0.5']">
-          {{ t('onboarding.steps.experience.description') }}
-        </p>
       </div>
 
       <!-- Compact Companion Speech Bubble -->
@@ -300,21 +463,21 @@ function resetToPresetDefaults() {
         :enter="{ opacity: 1, scale: 1 }"
         :duration="350"
         :delay="100"
-        :class="['max-w-xl w-full flex items-start gap-3 text-left']"
+        :class="['max-w-xl w-full flex items-center gap-3 text-left']"
       >
         <div
           :class="[
-            'h-8 w-8 flex flex-shrink-0 items-center justify-center border border-primary-500/30 rounded-full',
-            'bg-gradient-to-br from-primary-500/20 to-indigo-500/20 shadow-xs mt-0.5',
+            'h-9 w-9 flex flex-shrink-0 items-center justify-center rounded-full',
+            'border border-sky-500/40 bg-sky-950/40 shadow-[0_0_12px_rgba(56,189,248,0.25)]',
           ]"
         >
-          <div :class="['i-solar:emoji-funny-circle-bold-duotone h-5 w-5 text-primary-400']" />
+          <div :class="['i-solar:stars-minimalistic-bold h-4 w-4 text-sky-400']" />
         </div>
         <div
           :class="[
-            'relative flex-1 border border-primary-500/20 rounded-xl rounded-tl-xs px-4 py-2',
+            'relative flex-1 border border-sky-500/30 rounded-2xl px-4 py-2.5',
             'text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed backdrop-blur-md',
-            'bg-primary-500/5 dark:bg-primary-950/20 shadow-sm',
+            'bg-sky-950/20 shadow-sm',
           ]"
         >
           "Choose an archetype that fits your style. Whether you prefer a silent observer, voice companion, or full stage performer, every capability can be customized."
@@ -323,98 +486,117 @@ function resetToPresetDefaults() {
     </div>
 
     <!-- 6 Hero Archetype Cards Grid (3 Columns x 2 Rows) -->
-    <div
-      v-motion
-      :initial="{ opacity: 0, y: 10 }"
-      :enter="{ opacity: 1, y: 0 }"
-      :duration="400"
-      :delay="150"
-      :class="['grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 items-stretch']"
-    >
+    <TooltipProvider :delay-duration="150">
       <div
-        v-for="archetype in archetypes"
-        :key="archetype.id"
-        :class="[
-          'relative flex flex-col justify-between overflow-hidden rounded-2xl p-3.5 border-2 transition-all duration-200 cursor-pointer min-h-[195px]',
-          selectedArchetypeId === archetype.id
-            ? [
-              archetype.colorTheme.activeBorder,
-              'bg-gradient-to-b from-white/90 to-white/70 dark:from-neutral-900/90 dark:to-neutral-950/90',
-              archetype.colorTheme.activeGlow,
-              archetype.colorTheme.activeRing,
-              'shadow-lg ring-1 scale-[1.01] z-10',
-            ]
-            : 'border-neutral-200/80 dark:border-neutral-800 bg-white/60 dark:bg-neutral-900/50 hover:border-neutral-300 dark:hover:border-neutral-700 backdrop-blur-md',
-        ]"
-        @click="selectArchetype(archetype.id)"
+        v-motion
+        :initial="{ opacity: 0, y: 10 }"
+        :enter="{ opacity: 1, y: 0 }"
+        :duration="400"
+        :delay="150"
+        :class="['grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1 items-stretch']"
       >
-        <!-- Top Row: Icon + Selection Badge / Archetype Badge -->
-        <div>
-          <div :class="['flex items-start justify-between mb-2.5']">
-            <div
-              :class="[
-                'h-9 w-9 rounded-xl flex items-center justify-center transition-colors',
-                selectedArchetypeId === archetype.id
-                  ? archetype.colorTheme.iconBg
-                  : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400',
-              ]"
-            >
-              <div :class="[archetype.icon, 'text-lg']" />
+        <div
+          v-for="archetype in archetypes"
+          :key="archetype.id"
+          :class="[
+            'relative flex flex-col justify-between rounded-2xl p-4 transition-all duration-200 cursor-pointer min-h-[195px]',
+            selectedArchetypeId === archetype.id
+              ? [
+                archetype.colorTheme.activeBorder,
+                archetype.colorTheme.activeGlow,
+                archetype.colorTheme.activeRing,
+                archetype.colorTheme.activeBg,
+                'border-2 scale-[1.01] z-10',
+              ]
+              : 'border border-neutral-200/80 dark:border-white/[0.08] bg-white/70 dark:bg-[#121318]/90 hover:border-neutral-300 dark:hover:border-white/20 backdrop-blur-md',
+          ]"
+          @click="selectArchetype(archetype.id)"
+        >
+          <div>
+            <!-- Top Row: Icon + Title & Subtitle Horizontal -->
+            <div :class="['flex items-center gap-3.5 mb-2.5']">
+              <div
+                :class="[
+                  'h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 transition-colors',
+                  archetype.colorTheme.iconBg,
+                  archetype.colorTheme.iconColor,
+                ]"
+              >
+                <div :class="[archetype.icon, 'text-xl']" />
+              </div>
+
+              <div :class="['min-w-0 flex-1']">
+                <h2 :class="['text-sm font-bold text-neutral-900 dark:text-white leading-tight truncate']">
+                  {{ getArchetypeTitle(archetype) }}
+                </h2>
+                <p :class="['text-xs font-medium mt-0.5 leading-tight truncate', archetype.colorTheme.subtitleColor]">
+                  {{ getArchetypeSubtitle(archetype) }}
+                </p>
+              </div>
             </div>
 
-            <!-- Active Selected Badge OR Archetype Badge Label -->
-            <span
-              v-if="selectedArchetypeId === archetype.id"
-              :class="[
-                'px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide flex items-center gap-1 shadow-xs',
-                archetype.colorTheme.badgeBg,
-                archetype.colorTheme.badgeText,
-              ]"
-            >
-              <div :class="['i-solar:check-circle-bold text-xs']" />
-              <span>Selected Preset</span>
-            </span>
-            <span
-              v-else-if="getArchetypeBadge(archetype)"
-              :class="[
-                'px-2 py-0.5 rounded-full text-[10px] font-medium tracking-wide flex items-center gap-1',
-                'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200/60 dark:border-neutral-700/60',
-              ]"
-            >
-              {{ getArchetypeBadge(archetype) }}
-            </span>
+            <!-- Description -->
+            <p :class="['text-xs text-neutral-600 dark:text-neutral-400 mt-1 leading-relaxed']">
+              {{ getArchetypeDescription(archetype) }}
+            </p>
           </div>
 
-          <!-- Title & Subtitle -->
-          <h2 :class="['text-sm font-bold text-neutral-900 dark:text-white leading-snug']">
-            {{ getArchetypeTitle(archetype) }}
-          </h2>
-          <p :class="['text-[11px] font-semibold mt-0.5', archetype.colorTheme.badgeText]">
-            {{ getArchetypeSubtitle(archetype) }}
-          </p>
-
-          <!-- Description -->
-          <p :class="['text-[11px] text-neutral-600 dark:text-neutral-400 mt-1.5 leading-snug']">
-            {{ getArchetypeDescription(archetype) }}
-          </p>
-        </div>
-
-        <!-- Card Footer (Active Indicator bar) -->
-        <div :class="['pt-2.5 mt-2.5 border-t border-neutral-100 dark:border-neutral-800/80 flex items-center justify-between text-[11px]']">
-          <span :class="['text-neutral-500 dark:text-neutral-400 font-medium']">
-            {{ Object.values(ARCHETYPE_MODULE_PRESETS[archetype.id]).filter(Boolean).length }} Capabilities
-          </span>
-          <span
-            :class="[
-              'font-semibold transition-colors',
-              selectedArchetypeId === archetype.id ? archetype.colorTheme.badgeText : 'text-neutral-400',
-            ]"
-          >
-            {{ selectedArchetypeId === archetype.id ? 'Active' : 'Choose →' }}
-          </span>
+          <!-- Capability Chips Footer with Hover Popovers -->
+          <div :class="['flex flex-wrap gap-1.5 mt-3 pt-1']">
+            <TooltipRoot
+              v-for="chip in archetype.chips"
+              :key="chip.label"
+            >
+              <TooltipTrigger as-child>
+                <div
+                  :class="[
+                    'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium cursor-help transition-all',
+                    'border border-neutral-200/80 dark:border-white/10 bg-neutral-100/80 dark:bg-white/5 text-neutral-700 dark:text-neutral-300',
+                    'hover:border-neutral-400 dark:hover:border-white/30 hover:bg-neutral-200/50 dark:hover:bg-white/10',
+                  ]"
+                >
+                  <div :class="[chip.icon, 'text-xs shrink-0', chip.color || 'text-neutral-400']" />
+                  <span>{{ chip.label }}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipPortal>
+                <TooltipContent
+                  side="top"
+                  :side-offset="8"
+                  :collision-padding="12"
+                  :class="[
+                    'z-50 w-64 rounded-xl p-3 shadow-2xl backdrop-blur-xl',
+                    'bg-white/95 dark:bg-[#121620]/95 border border-neutral-200/80 dark:border-white/10',
+                    'text-neutral-800 dark:text-neutral-200 pointer-events-none select-none text-left',
+                    'animate-in fade-in-0 zoom-in-95 duration-150',
+                  ]"
+                >
+                  <div v-if="CAPABILITY_DETAILS[chip.label]">
+                    <div :class="['flex items-center gap-1.5 font-bold text-xs text-neutral-900 dark:text-white mb-1']">
+                      <div :class="[CAPABILITY_DETAILS[chip.label].icon, 'text-xs shrink-0', CAPABILITY_DETAILS[chip.label].color]" />
+                      <span>{{ CAPABILITY_DETAILS[chip.label].title }}</span>
+                    </div>
+                    <p :class="['text-[11px] text-neutral-600 dark:text-neutral-400 leading-snug mb-2']">
+                      {{ CAPABILITY_DETAILS[chip.label].description }}
+                    </p>
+                    <div :class="['space-y-1 pt-1.5 border-t border-neutral-100 dark:border-white/5 text-[10px] text-neutral-500 dark:text-neutral-300']">
+                      <div
+                        v-for="bullet in CAPABILITY_DETAILS[chip.label].bullets"
+                        :key="bullet"
+                        :class="['flex items-center gap-1.5 leading-tight']"
+                      >
+                        <div :class="['w-1 h-1 rounded-full bg-primary-500/80 dark:bg-primary-400/80 shrink-0']" />
+                        <span>{{ bullet }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </TooltipContent>
+              </TooltipPortal>
+            </TooltipRoot>
+          </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
 
     <!-- Collapsible Advanced: Customize Modules Drawer -->
     <div
@@ -424,53 +606,41 @@ function resetToPresetDefaults() {
       :duration="350"
       :delay="200"
       :class="[
-        'rounded-2xl border transition-all',
-        'border-neutral-200/80 bg-white/70 shadow-xs dark:border-neutral-800/80 dark:bg-neutral-900/60 backdrop-blur-md',
+        'rounded-2xl border transition-all mt-1',
+        'border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-[#0d1017]/90 shadow-xs hover:border-neutral-300 dark:hover:border-white/20 backdrop-blur-md',
       ]"
     >
       <!-- Drawer Header Bar (Clickable Toggle) -->
       <div
-        :class="['p-3 flex items-center justify-between cursor-pointer select-none']"
+        :class="['px-4 py-3 flex items-center justify-between cursor-pointer select-none']"
         @click="showAdvancedModules = !showAdvancedModules"
       >
-        <div :class="['flex items-center gap-2.5 flex-wrap min-w-0']">
-          <button
-            type="button"
-            :class="['flex items-center gap-1.5 text-xs font-semibold text-neutral-800 dark:text-neutral-200 hover:text-primary-500 transition-colors cursor-pointer']"
-          >
-            <div :class="['i-solar:settings-minimalistic-bold text-sm text-primary-500']" />
-            <span>{{ showAdvancedModules ? t('onboarding.steps.experience.hideModules') : t('onboarding.steps.experience.customizeModules') }}</span>
-            <span :class="['text-[11px] text-neutral-400 font-normal']">
-              ({{ activeModules.length }} Enabled)
-            </span>
-            <div
-              :class="[
-                'i-solar:alt-arrow-down-linear text-xs transition-transform duration-200 text-neutral-400',
-                showAdvancedModules ? 'rotate-180 text-primary-500' : '',
-              ]"
-            />
-          </button>
-
-          <!-- Quick Preview Tag Chips (Always visible when drawer is collapsed) -->
-          <div v-if="!showAdvancedModules" :class="['hidden sm:flex items-center gap-1.5 overflow-x-auto py-0.5']">
-            <span
-              v-for="mod in activeModules"
-              :key="mod.key"
-              :class="['px-2 py-0.5 rounded-md text-[10px] font-medium border border-neutral-200/80 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 whitespace-nowrap']"
-            >
-              {{ mod.shortLabel }}
-            </span>
-          </div>
+        <div :class="['flex items-center gap-2.5']">
+          <div :class="['i-solar:shield-check-bold text-sky-400 text-lg']" />
+          <span :class="['text-xs font-semibold text-neutral-900 dark:text-white']">
+            {{ t('onboarding.steps.experience.customizeModules') }}
+          </span>
         </div>
 
-        <button
-          v-if="showAdvancedModules"
-          type="button"
-          :class="['text-[11px] text-neutral-400 hover:text-primary-500 font-medium transition-colors cursor-pointer']"
-          @click.stop="resetToPresetDefaults"
-        >
-          Reset to Preset
-        </button>
+        <div :class="['flex items-center gap-3']">
+          <button
+            v-if="showAdvancedModules"
+            type="button"
+            :class="['text-[11px] text-neutral-400 hover:text-primary-500 font-medium transition-colors cursor-pointer mr-2']"
+            @click.stop="resetToPresetDefaults"
+          >
+            Reset to Preset
+          </button>
+          <span :class="['text-xs text-neutral-500 dark:text-neutral-400 font-medium']">
+            {{ activeModules.length }} enabled · {{ Math.max(0, 10 - activeModules.length) }} available
+          </span>
+          <div
+            :class="[
+              'i-solar:alt-arrow-down-linear text-xs transition-transform duration-200 text-neutral-400',
+              showAdvancedModules ? 'rotate-180 text-sky-400' : '',
+            ]"
+          />
+        </div>
       </div>
 
       <!-- Expanded Module Customization Grid -->
