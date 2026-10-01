@@ -11,6 +11,6 @@ onMounted(() => {
 
 <template>
   <div class="flex items-center justify-center p-8 text-xs text-neutral-400 font-mono">
-    Redirecting to Transcription Providers...
+    Redirecting to Hearing Providers...
   </div>
 </template>
