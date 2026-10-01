@@ -30,8 +30,14 @@ const initialDirectives = ref('')
 const isReady = ref(false)
 
 onMounted(async () => {
-  const modelId = queryModelId.value || cardModelId.value || 'preset-live2d-2'
+  await resolveModel(queryModelId.value || cardModelId.value || 'preset-live2d-2')
+})
+
+async function resolveModel(modelId: string) {
+  isReady.value = false
   resolvedModelId.value = modelId
+  initialMappings.value = {}
+  initialDirectives.value = ''
 
   try {
     const model = await displayModelsStore.getDisplayModel(modelId)
@@ -49,7 +55,11 @@ onMounted(async () => {
   }
 
   isReady.value = true
-})
+}
+
+function handleRequestModel(modelId: string) {
+  void resolveModel(modelId)
+}
 
 async function handleStudioSync(payload: EmotionStudioSyncPayload) {
   const modelId = resolvedModelId.value
@@ -67,7 +77,11 @@ async function handleStudioSync(payload: EmotionStudioSyncPayload) {
     console.warn('[EmotionsPage] Display model mappings update warning:', err)
   }
 
-  // Persist acting directives onto the active card
+  // Persist acting directives onto the active card — but only when viewing
+  // the card's own model (demo-model detours must not rewrite the card prompt)
+  if (modelId !== cardModelId.value) {
+    return
+  }
   if (activeCard.value && activeCardId.value) {
     try {
       const updatedCard = JSON.parse(JSON.stringify(activeCard.value))
@@ -119,7 +133,10 @@ async function handleStudioSync(payload: EmotionStudioSyncPayload) {
       :persona-personality="activeCard?.personality"
       :persona-description="activeCard?.description"
       stage-update-reason="settings-models-emotions"
+      content-height-class="h-[calc(100dvh-380px)] min-h-[540px]"
+      allow-model-switch
       @sync="handleStudioSync"
+      @request-model="handleRequestModel"
     />
   </div>
 </template>

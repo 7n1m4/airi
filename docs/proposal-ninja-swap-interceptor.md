@@ -98,6 +98,33 @@ The 4–5 Tier 1 surfaces are distinctively different processes — porting the 
 
 **Whitelist wiring in the unified shape**: `compiledWhitelists.whitelistedEmotions` derives deterministically from the 6 canonical mappings; motions + extra emotion tokens append when Advanced curation runs; speech-tag allowlist via the step-3 LLM sidecar (§2.1.3).
 
+#### 2.1.4 6-slot successor: semantic pipeline + guided curation (design in progress)
+
+The 6 static slots don't die — they become the *optional preset layer*. The successor pipeline:
+
+```text
+raw morph keys → noise gate → [pass] → semantic classification → semantic keys (the whitelist)
+                                                              ↘ (optional) preset-emotion mapping (6 fast-path cues for Tier 2)
+                              → [fail] → hidden / skipped
+```
+
+- **Stage 1 (deterministic, shipped)**: `filterCandidateExpressions` noise gate — already in `use-expression-curation` path via `loadModelCapabilities`.
+- **Stage 2 (new)**: classify passed keys into **semantic keys** (user-vetted: click each candidate, observe the avatar, keep/discard, name it). This ordered, vetted list IS the whitelist.
+- **Stage 3 (optional)**: bind semantic keys onto the 6 preset emotion slots (smile/blush/pout/surprise/wink/shy) as Tier-2 fast-path cues. Models with rich rigs skip this; sparse rigs lean on it.
+
+**Guided curation UX (dots breadcrumb, right column; avatar column untouched)**: the page's cognitive load is the real blocker — a new user sees mappings, tokens, directives with no idea what to click first. A lightweight dot-guided pass over the right column:
+
+1. **Meet** — greeting + concept in plain language (what an expression is, why models differ, what the end goal is: a clean list your character learns from). Demo-anchored: sets a known-working model (verified: AvatarSample_B / `preset-vrm-2`, only `Surprised` fires) and offers one deterministic button ("press Surprise, watch it work") with auto-advance + light fanfare on success. Skip exits to the full cockpit. No Continue pressure.
+2. **Name** — merged old-modal step 1 stats + step 2 review inline (no modal): candidate counts, then the per-key list with play + hide controls. Guidance-first: an explicit **button** (not auto-launch — the call costs provider budget/latency and the user must understand what just happened) labeled with what it does: takes all remaining keys, keeps the likely-working usable ones, gives them neat names.
+3. **Verify** — after the AI pass: explicit instruction to click play on each item and hide (eye icon) anything that doesn't visibly fire. Nothing advances until the user has vetted; the vetted list IS the whitelist.
+4. **Remaps (optional)** — the current 6-preset view as the final optional step: bind semantic keys onto preset slots, auto-templated prompt baked into state from the in-memory whitelist, with Enhance with AI as pure polish (persona-aligned usage guidance, e.g. grunge character told to use `happy` sparsely).
+
+The dots component lives in the studio so it renders identically embedded in onboarding (as the step body) and standalone (same component, settings chrome). Skip exits to the full un-guided cockpit.
+
+**Reliability caveat**: the Meet beat is only deterministic if the anchor key fires on demand. `Surprised` on AvatarSample_B has been observed not activating intermittently — health-check the anchor (test-fire silently, or confirm stage mounted) before presenting the "press to see it work" button, with a graceful fallback line if it fails rather than a dead demo.
+
+**Demo mode (proposed)**: hardcode the Meet/Try dots to a known-good model (VERIFIED by user: AvatarSample_B / `preset-vrm-2` — only `Surprised` fires; `BUILTIN_MODEL_PRESETS` claims of 6/6 working are aspirational for this rig) and script the narrative around one verified-working key ("click Surprise — see? now try the others — notice they don't all work: no two models ship the same expressions. Your job: find the ones that work and name them.").
+
 #### 2.1.2 Known UX defects in the current modal (`ExpressionCurationModal.vue`)
 
 1. **Footer ignores dark theme** (`ExpressionCurationModal.vue:524`): pairs `bg-neutral-50/80` with `dark:bg-neutral-850`. `neutral-850` is a non-standard shade (used 71× repo-wide, so presumably a custom Uno token in some app configs) — if the rendering surface's Uno build lacks the token, the dark class never generates and the light background wins. Fix: `dark:bg-neutral-900`, or prove `850` resolves in every consuming app's Uno config.

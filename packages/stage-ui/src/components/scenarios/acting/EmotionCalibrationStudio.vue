@@ -40,6 +40,10 @@ const props = withDefaults(defineProps<{
   personaDescription?: string
   autoCalibrateOnMount?: boolean
   stageUpdateReason?: string
+  startGuided?: boolean
+  demoModelId?: string
+  allowModelSwitch?: boolean
+  contentHeightClass?: string
 }>(), {
   initialMappings: () => ({}),
   initialDirectives: '',
@@ -49,11 +53,16 @@ const props = withDefaults(defineProps<{
   personaDescription: '',
   autoCalibrateOnMount: true,
   stageUpdateReason: 'emotion-studio',
+  startGuided: true,
+  demoModelId: 'preset-vrm-2',
+  allowModelSwitch: false,
+  contentHeightClass: 'h-[450px]',
 })
 
 const emit = defineEmits<{
   (e: 'sync', payload: EmotionStudioSyncPayload): void
   (e: 'applied'): void
+  (e: 'request-model', modelId: string): void
 }>()
 
 const settingsStore = useSettings()
@@ -129,6 +138,13 @@ const avatarPreviewUrl = computed(() => {
 
 // --- Stage Model Live Mounting ---
 const stageModelReady = ref(false)
+// Mirrors the RendererStage v-if below: false means the viewport is showing the
+// static fallback image and no preview can visibly fire in this window.
+const isLiveCanvas = computed(() => stageModelReady.value
+  && Boolean(stageModelRenderer.value)
+  && stageModelRenderer.value !== 'disabled'
+  && (settingsStore.stageModelSelected === props.modelId
+    || settingsStore.stageModelSelectedDisplayModel?.id === props.modelId))
 const isLoadingModel = ref(false)
 const stageState = ref<'pending' | 'loading' | 'mounted'>('pending')
 const previewXOffset = ref(0)
@@ -139,6 +155,27 @@ function resetPreviewPosition() {
   previewXOffset.value = 0
   previewYOffset.value = 0
   previewScale.value = 1
+  faceFramed.value = false
+}
+
+// Face-level framing preset (VRM): zoom in and lift the head into frame so
+// expression test-fires are visible. Starting values — tune live if the head
+// sits high/low on a given rig. Any manual drag keeps custom values.
+const faceFramed = ref(false)
+
+function toggleFaceFrame() {
+  if (faceFramed.value) {
+    resetPreviewPosition()
+    return
+  }
+  previewScale.value = 0.55
+  previewYOffset.value = -30
+  faceFramed.value = true
+}
+
+function handleViewportDrag() {
+  // Manual framing wins; preset no longer describes the view
+  faceFramed.value = false
 }
 
 async function initializeStageRenderer() {
@@ -281,6 +318,9 @@ const SOUNDBOARD_EMOTIONS = [
 ]
 
 function triggerModelEmotion(type: string, key: string) {
+  // Diagnostic: proves which driver a preview went to (check devtools when a click visibly does nothing)
+
+  console.info('[EmotionCalibrationStudio] trigger', { driver: type, key, liveCanvas: isLiveCanvas.value })
   try {
     if (type === 'live2d') {
       live2dStore.triggerEmotion(key, 1.0)
@@ -309,6 +349,16 @@ function triggerModelEmotion(type: string, key: string) {
 }
 
 function triggerPreview(emotionId: string) {
+  // Re-fire guarantee: the VRM driver no-ops a repeat of the current emotion,
+  // which makes rapid vetting clicks feel dead. Bounce through neutral first.
+  if (emotionId !== 'neutral' && activePlayingEmotion.value === emotionId) {
+    triggerModelEmotion(modelType.value, 'neutral')
+    activePlayingEmotion.value = 'neutral'
+    activePlayingBlendshape.value = 'neutral'
+    window.setTimeout(() => triggerPreview(emotionId), 350)
+    return
+  }
+
   activePlayingEmotion.value = emotionId
   if (emotionId === 'neutral') {
     activePlayingBlendshape.value = 'neutral'
@@ -520,6 +570,69 @@ function emitSync() {
   })
 }
 
+// --- 9. Guided Curation (dots breadcrumb; avatar column untouched) ---
+export type GuideStep = 'meet' | 'name' | 'verify' | 'remaps' | null
+
+// Guided artwork (see packages/stage-ui/src/assets/acting/). Cards fall back
+// to emoji only while a slot is empty.
+const GUIDE_ART = {
+  hero: new URL('../../../assets/acting/guide-hero.png', import.meta.url).href,
+  press: new URL('../../../assets/acting/guide-press.png', import.meta.url).href,
+  watch: new URL('../../../assets/acting/guide-watch.png', import.meta.url).href,
+  keep: new URL('../../../assets/acting/guide-keep.png', import.meta.url).href,
+}
+
+const GUIDE_DOTS = [
+  { id: 'meet', label: 'Meet' },
+  { id: 'name', label: 'Name' },
+  { id: 'verify', label: 'Verify' },
+  { id: 'remaps', label: 'Remaps' },
+] as const
+
+const guideStep = ref<GuideStep>(props.startGuided ? 'meet' : null)
+const isAdvancing = ref(false)
+
+function skipGuide() {
+  guideStep.value = null
+}
+
+function requestDemoModel() {
+  emit('request-model', props.demoModelId)
+}
+
+const demoSurpriseKey = computed(() => expressionMappings.value.surprise || '')
+
+function handleMeetDemo() {
+  if (isAdvancing.value) {
+    return
+  }
+
+  // Anchor health-check: ensure the surprise slot resolves before promising a deterministic demo
+  if (!expressionMappings.value.surprise) {
+    runAutoCalibration(true, false)
+  }
+
+  const key = expressionMappings.value.surprise
+  if (!key) {
+    // No surprise-like expression on this model — that IS the lesson
+    toast.info('No surprise-like expression on this model — and that is exactly the point. No two models ship the same expressions.')
+    isAdvancing.value = true
+    window.setTimeout(() => {
+      guideStep.value = null
+      isAdvancing.value = false
+    }, 1600)
+    return
+  }
+
+  triggerPreview('surprise')
+  toast.success(`See that? ${key} works — that's a keeper! ✨`)
+  isAdvancing.value = true
+  window.setTimeout(() => {
+    guideStep.value = null
+    isAdvancing.value = false
+  }, 1600)
+}
+
 function handleMappingChange() {
   emitSync()
 }
@@ -549,8 +662,8 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <!-- Main 2-Column Dashboard Cockpit (Fixed Natural Viewport Height) -->
-  <div :class="['grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch h-[450px]']">
+  <!-- Main 2-Column Dashboard Cockpit -->
+  <div :class="['grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch', contentHeightClass]">
     <!-- Left Column: Live Avatar Viewport Frame & Tactile Soundboard (5 cols) -->
     <div :class="['md:col-span-5 flex flex-col gap-3 h-full']">
       <!-- Live Avatar Viewport Frame -->
@@ -560,13 +673,40 @@ onBeforeUnmount(() => {
           <span :class="['px-2.5 py-0.8 rounded-full text-[10px] font-mono font-medium border border-neutral-200/80 dark:border-white/10 bg-white/80 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 backdrop-blur-sm shadow-xs']">
             {{ modelFormatLabel }}
           </span>
-          <span
-            v-if="isLoadingExpressions || isLoadingModel"
-            :class="['flex items-center gap-1 text-[10px] text-primary-500 font-medium animate-pulse']"
-          >
-            <div :class="['i-solar:refresh-linear w-3 h-3 animate-spin']" />
-            <span>{{ isLoadingModel ? 'Mounting Model...' : 'Scanning...' }}</span>
-          </span>
+          <div :class="['flex items-center gap-1.5']">
+            <span
+              :class="[
+                'px-2 py-0.8 rounded-full text-[10px] font-mono font-medium border backdrop-blur-sm shadow-xs',
+                isLiveCanvas
+                  ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
+                  : 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-300',
+              ]"
+              :title="isLiveCanvas ? 'Live canvas mounted — previews fire here' : 'Static fallback image — previews cannot visibly fire in this window'"
+            >
+              {{ isLiveCanvas ? '● LIVE' : '○ STATIC' }}
+            </span>
+            <button
+              v-if="modelType === 'vrm'"
+              type="button"
+              title="Frame at face level"
+              :class="[
+                'px-2 py-0.8 rounded-full text-[10px] font-mono font-medium border backdrop-blur-sm shadow-xs transition-colors cursor-pointer',
+                faceFramed
+                  ? 'border-primary-500 bg-primary-500/15 text-primary-600 dark:text-primary-300'
+                  : 'border-neutral-200/80 dark:border-white/10 bg-white/80 dark:bg-neutral-800/80 text-neutral-500 dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200',
+              ]"
+              @click="toggleFaceFrame"
+            >
+              {{ faceFramed ? '◉ Face' : '○ Face' }}
+            </button>
+            <span
+              v-if="isLoadingExpressions || isLoadingModel"
+              :class="['flex items-center gap-1 text-[10px] text-primary-500 font-medium animate-pulse']"
+            >
+              <div :class="['i-solar:refresh-linear w-3 h-3 animate-spin']" />
+              <span>{{ isLoadingModel ? 'Mounting Model...' : 'Scanning...' }}</span>
+            </span>
+          </div>
         </div>
 
         <!-- Live 3D/2D Avatar Model Viewport Surface -->
@@ -587,8 +727,8 @@ onBeforeUnmount(() => {
             :y-offset="previewYOffset"
             :scale="previewScale"
             :class="['absolute inset-0 h-full w-full z-0']"
-            @offset-change="({ x, y }) => { previewXOffset = x; previewYOffset = y }"
-            @scale-change="(s) => previewScale = s"
+            @offset-change="({ x, y }) => { previewXOffset = x; previewYOffset = y; handleViewportDrag() }"
+            @scale-change="(s) => { previewScale = s; handleViewportDrag() }"
           />
 
           <!-- Fallback Static Asset Preview while loading / unmounted -->
@@ -690,193 +830,314 @@ onBeforeUnmount(() => {
 
     <!-- Right Column: Unified Expression Mapping & Directives Hub (7 cols) -->
     <div :class="['md:col-span-7 flex flex-col gap-3 h-full']">
-      <!-- Unified Card 1: Expression Mapping & Calibration -->
-      <div :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-neutral-900/60 p-3.5 shadow-sm flex-1 min-h-0 flex flex-col']">
-        <!-- Card Header: Title, Auto-Calibrate Sparkle Button, and Advanced Details -->
-        <div :class="['flex items-start justify-between gap-2 mb-2 shrink-0']">
-          <div :class="['flex items-center gap-2']">
-            <div :class="['p-1.5 rounded-xl bg-primary-500/10 text-primary-500 shrink-0']">
-              <div :class="['i-solar:face-smile-bold-duotone w-4 h-4']" />
-            </div>
-            <div>
-              <h3 :class="['text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5']">
-                <span>Canonical Expression Mapping</span>
+      <!-- Guided Curation: dots breadcrumb + step body (avatar column untouched) -->
+      <div v-if="guideStep === 'meet'" :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-neutral-900/60 p-4 shadow-sm flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto']">
+        <!-- Dots breadcrumb -->
+        <div :class="['flex items-center justify-between shrink-0']">
+          <div :class="['flex items-center gap-1.5']">
+            <template v-for="(dot, i) in GUIDE_DOTS" :key="dot.id">
+              <div :class="['flex items-center gap-1.5']">
                 <span
-                  v-if="isCalibrated"
-                  :class="['px-1.5 py-0.2 rounded text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-medium']"
+                  :class="[
+                    'w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center',
+                    dot.id === 'meet'
+                      ? 'bg-primary-600 text-white'
+                      : 'bg-neutral-200 dark:bg-neutral-700 text-neutral-500 dark:text-neutral-400',
+                  ]"
+                  :title="dot.id === 'meet' ? dot.label : `${dot.label} (coming soon)`"
                 >
-                  Calibrated
+                  {{ i + 1 }}
                 </span>
-              </h3>
-              <p :class="['text-[11px] text-neutral-400']">
-                Assign model blendshapes to the 6 primary dialogue acting cues.
-              </p>
-            </div>
-          </div>
-
-          <div :class="['flex items-center gap-2 shrink-0']">
-            <!-- Auto-Calibrate Sparkle Button -->
-            <button
-              type="button"
-              :class="[
-                'px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer whitespace-nowrap',
-                isCalibrated
-                  ? 'border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200'
-                  : 'bg-primary-600 hover:bg-primary-500 text-white shadow-primary-600/30',
-              ]"
-              @click="() => runAutoCalibration(false, true)"
-            >
-              <div :class="[isCalibrated ? 'i-solar:refresh-linear w-3.5 h-3.5' : 'i-solar:stars-line-bold-duotone w-3.5 h-3.5 text-cyan-200']" />
-              <span>{{ isCalibrated ? 'Recalibrate' : 'Auto-calibrate' }}</span>
-            </button>
-
-            <!-- Advanced Details Link -->
-            <button
-              type="button"
-              :class="['text-[11px] font-medium text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-0.5 cursor-pointer ml-1']"
-              @click="isCurationModalOpen = true"
-            >
-              <span>Details</span>
-              <div :class="['i-solar:alt-arrow-right-linear w-3 h-3']" />
-            </button>
-          </div>
-        </div>
-
-        <!-- Compact Dual Readiness Strip (Saves vertical space) -->
-        <div :class="['flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-neutral-50/80 dark:bg-neutral-800/40 border border-neutral-200/60 dark:border-white/5 text-[11px] mb-2 shrink-0']">
-          <div :class="['flex items-center gap-1.5']">
-            <div :class="[mappedSlotsCount > 0 ? 'i-solar:check-circle-bold text-emerald-500' : 'i-solar:circle-linear text-neutral-400', 'w-3.5 h-3.5 shrink-0']" />
-            <span :class="['text-neutral-500 dark:text-neutral-400']">Model Expressions:</span>
-            <span :class="['font-mono font-semibold text-neutral-800 dark:text-neutral-200']">
-              {{ mappedSlotsCount }}/6 mapped
-            </span>
-          </div>
-
-          <div :class="['flex items-center gap-1.5']">
-            <div :class="[isGuidanceReady ? 'i-solar:check-circle-bold text-emerald-500' : 'i-solar:circle-linear text-neutral-400', 'w-3.5 h-3.5 shrink-0']" />
-            <span :class="['text-neutral-500 dark:text-neutral-400']">Behavior Guidance:</span>
-            <span :class="['font-mono font-semibold', isGuidanceReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-500']">
-              {{ isGuidanceReady ? 'ACT active' : 'Awaiting calibration' }}
-            </span>
-          </div>
-        </div>
-
-        <!-- Scrollable Canonical Expression Mapping Pane -->
-        <div :class="['flex-1 min-h-0 overflow-y-auto divide-y divide-neutral-200/60 dark:divide-white/5 border border-neutral-200/70 dark:border-white/5 rounded-xl bg-white dark:bg-neutral-900 pr-0.5']">
-          <div
-            v-for="slot in CANONICAL_EMOTIONS"
-            :key="slot.id"
-            :class="['px-3 py-1.5 flex items-center justify-between gap-2.5 text-xs hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors']"
-          >
-            <!-- Slot Badge & Token -->
-            <div :class="['flex items-center gap-2 min-w-[130px]']">
-              <span :class="['text-base']">{{ slot.emoji }}</span>
-              <div :class="['flex flex-col']">
-                <span :class="['font-semibold text-neutral-800 dark:text-neutral-200 text-xs']">
-                  {{ slot.name }}
-                </span>
-                <span :class="['text-[9px] font-mono text-neutral-400 dark:text-neutral-500']">
-                  &lt;|ACT:{{ slot.actToken }}|&gt;
+                <span :class="['text-[11px] font-medium', dot.id === 'meet' ? 'text-neutral-800 dark:text-neutral-100' : 'text-neutral-400 dark:text-neutral-500']">
+                  {{ dot.label }}
                 </span>
               </div>
-            </div>
-
-            <!-- Blendshape Selection Dropdown -->
-            <div :class="['flex-1 max-w-[210px]']">
-              <select
-                v-model="expressionMappings[slot.id]"
-                :class="['w-full text-xs py-1 px-2 rounded-lg border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 outline-none focus:border-primary-500 transition-colors cursor-pointer font-mono']"
-                @change="handleMappingChange"
-              >
-                <option value="">
-                  -- Unmapped --
-                </option>
-                <option
-                  v-if="expressionMappings[slot.id] && !(candidateExpressions.length > 0 ? candidateExpressions : rawExpressions).includes(expressionMappings[slot.id])"
-                  :value="expressionMappings[slot.id]"
-                >
-                  {{ expressionMappings[slot.id] }}
-                </option>
-                <option
-                  v-for="expr in (candidateExpressions.length > 0 ? candidateExpressions : rawExpressions)"
-                  :key="expr"
-                  :value="expr"
-                >
-                  {{ expr }}
-                </option>
-              </select>
-            </div>
-
-            <!-- Live Test Play Button -->
-            <button
-              type="button"
-              :disabled="!expressionMappings[slot.id]"
-              :class="[
-                'p-1.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center shrink-0',
-                expressionMappings[slot.id]
-                  ? 'text-neutral-600 dark:text-neutral-300 hover:bg-primary-500/10 hover:text-primary-500'
-                  : 'text-neutral-300 dark:text-neutral-700 cursor-not-allowed',
-              ]"
-              title="Test preview blendshape on stage"
-              @click="triggerPreview(slot.id)"
-            >
-              <div :class="['i-solar:play-bold w-3.5 h-3.5']" />
-            </button>
+              <div v-if="i < GUIDE_DOTS.length - 1" :class="['w-3 h-px bg-neutral-200 dark:bg-neutral-700']" />
+            </template>
           </div>
-        </div>
-      </div>
-
-      <!-- Card 2: Acting Directives Hub (Compact) -->
-      <div :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-neutral-900/60 p-3.5 shadow-sm shrink-0 flex flex-col gap-2']">
-        <div :class="['flex items-center justify-between']">
-          <div :class="['flex items-center gap-2']">
-            <div :class="['p-1.5 rounded-xl bg-primary-500/10 text-primary-500 shrink-0']">
-              <div :class="['i-solar:document-text-bold-duotone w-4 h-4']" />
-            </div>
-            <div>
-              <h3 :class="['text-sm font-bold text-neutral-900 dark:text-white']">
-                Acting Directives (ACT Tokens)
-              </h3>
-              <p :class="['text-[11px] text-neutral-400']">
-                Prompt directives instructing the LLM when to insert physical emotion cues.
-              </p>
-            </div>
-          </div>
-
-          <!-- AI Enhance Button (Only available when acting directives are configured) -->
           <button
-            v-if="isGuidanceReady"
             type="button"
-            :disabled="isGeneratingPrompt"
-            :class="['px-2.5 py-1 rounded-lg text-xs font-medium border border-primary-500/30 bg-primary-500/10 hover:bg-primary-500/20 text-primary-600 dark:text-primary-300 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50']"
-            @click="handleEnhanceWithAI"
+            :class="['text-[11px] font-medium text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200 transition-colors cursor-pointer']"
+            @click="skipGuide"
           >
-            <div :class="[isGeneratingPrompt ? 'i-solar:refresh-linear w-3 h-3 animate-spin' : 'i-solar:stars-line-bold-duotone w-3 h-3 text-primary-500']" />
-            <span>{{ isGeneratingPrompt ? 'Generating...' : 'Enhance with AI' }}</span>
+            Skip
           </button>
         </div>
 
-        <!-- Main Stateful Hub Button -->
-        <button
-          type="button"
-          :class="[
-            'w-full py-2 px-3.5 rounded-xl border text-xs font-semibold transition-all flex items-center justify-between cursor-pointer group shadow-sm',
-            isGuidanceReady
-              ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15'
-              : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15',
-          ]"
-          @click="openDirectivesModal"
-        >
-          <div :class="['flex items-center gap-2']">
-            <div :class="[isGuidanceReady ? 'i-solar:check-circle-bold text-emerald-500' : 'i-solar:danger-circle-bold text-amber-500', 'w-4 h-4']" />
-            <span>{{ isGuidanceReady ? 'Acting Directives Configured (Ready)' : 'Configure Acting Directives (Empty Draft)' }}</span>
+        <!-- Meet body -->
+        <div :class="['shrink-0 flex items-start justify-between gap-3']">
+          <div>
+            <h3 :class="['text-base font-bold text-neutral-900 dark:text-white flex items-center gap-1.5']">
+              <span>✨</span>
+              <span>Let's see what works!</span>
+            </h3>
+            <p :class="['mt-1 text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed']">
+              Every avatar ships a different set of facial expressions. Some work beautifully, some do nothing at all.
+            </p>
           </div>
-          <div :class="['flex items-center gap-1 text-[11px] opacity-80 group-hover:translate-x-0.5 transition-transform']">
-            <span>{{ isGuidanceReady ? 'Review / Edit' : 'Edit Guidance' }}</span>
-            <div :class="['i-solar:alt-arrow-right-linear w-3.5 h-3.5']" />
+          <img
+            v-if="GUIDE_ART.hero"
+            :src="GUIDE_ART.hero"
+            alt=""
+            :class="['w-28 h-28 shrink-0 object-contain']"
+          >
+        </div>
+
+        <!-- How-it-works trio -->
+        <div :class="['grid grid-cols-3 gap-2 shrink-0']">
+          <div :class="['rounded-xl border border-neutral-200/70 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/40 p-2.5 flex flex-col gap-1']">
+            <img v-if="GUIDE_ART.press" :src="GUIDE_ART.press" alt="" :class="['w-full h-24 object-contain rounded-lg']">
+            <span v-else :class="['text-lg']">😊</span>
+            <div :class="['text-[11px] font-bold text-neutral-800 dark:text-neutral-100']">
+              Press a candidate
+            </div>
+            <div :class="['text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug']">
+              Tap an expression button to preview it on your avatar.
+            </div>
           </div>
-        </button>
+          <div :class="['rounded-xl border border-neutral-200/70 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/40 p-2.5 flex flex-col gap-1']">
+            <img v-if="GUIDE_ART.watch" :src="GUIDE_ART.watch" alt="" :class="['w-full h-24 object-contain rounded-lg']">
+            <span v-else :class="['text-lg']">👀</span>
+            <div :class="['text-[11px] font-bold text-neutral-800 dark:text-neutral-100']">
+              Watch the avatar
+            </div>
+            <div :class="['text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug']">
+              See how it looks and feels. Some will work great, others might do nothing.
+            </div>
+          </div>
+          <div :class="['rounded-xl border border-neutral-200/70 dark:border-white/10 bg-neutral-50/60 dark:bg-neutral-800/40 p-2.5 flex flex-col gap-1']">
+            <img v-if="GUIDE_ART.keep" :src="GUIDE_ART.keep" alt="" :class="['w-full h-24 object-contain rounded-lg']">
+            <div v-else :class="['flex items-center gap-1']">
+              <span :class="['px-1.5 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-300 text-[10px] font-bold']">✓ Keep</span>
+              <span :class="['px-1.5 py-0.5 rounded-lg bg-neutral-500/10 text-neutral-400 text-[10px] font-bold']">Hide</span>
+            </div>
+            <div :class="['text-[11px] font-bold text-neutral-800 dark:text-neutral-100']">
+              Keep what works
+            </div>
+            <div :class="['text-[10px] text-neutral-500 dark:text-neutral-400 leading-snug']">
+              Survivors become the clean list your character learns from.
+            </div>
+          </div>
+        </div>
+
+        <!-- Deterministic demo CTA -->
+        <div :class="['rounded-xl border border-primary-500/25 bg-primary-500/5 p-3 flex flex-col gap-2 shrink-0']">
+          <div :class="['text-[11px] text-neutral-600 dark:text-neutral-300 leading-relaxed']">
+            Try it now — press the button and watch her face:
+          </div>
+          <button
+            type="button"
+            :disabled="isAdvancing"
+            :class="['w-full py-2.5 rounded-xl bg-primary-500 hover:bg-primary-400 text-white text-sm font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60']"
+            @click="handleMeetDemo"
+          >
+            <span>{{ isAdvancing ? "Nice — that's a keeper! ✨" : '😲 Show me — try Surprise →' }}</span>
+          </button>
+          <div :class="['flex items-center justify-between gap-2']">
+            <div v-if="demoSurpriseKey" :class="['text-[10px] text-neutral-400 font-mono']">
+              anchor: {{ demoSurpriseKey }}
+            </div>
+            <button
+              v-if="allowModelSwitch && modelId !== demoModelId"
+              type="button"
+              :class="['px-3 py-1.5 rounded-xl text-[11px] font-medium border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700 transition-colors cursor-pointer']"
+              @click="requestDemoModel"
+            >
+              Load demo model (AvatarSample_B)
+            </button>
+          </div>
+        </div>
       </div>
+
+      <template v-else>
+        <!-- Unified Card 1: Expression Mapping & Calibration -->
+        <div :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-neutral-900/60 p-3.5 shadow-sm flex-1 min-h-0 flex flex-col']">
+          <!-- Card Header: Title, Auto-Calibrate Sparkle Button, and Advanced Details -->
+          <div :class="['flex items-start justify-between gap-2 mb-2 shrink-0']">
+            <div :class="['flex items-center gap-2']">
+              <div :class="['p-1.5 rounded-xl bg-primary-500/10 text-primary-500 shrink-0']">
+                <div :class="['i-solar:face-smile-bold-duotone w-4 h-4']" />
+              </div>
+              <div>
+                <h3 :class="['text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5']">
+                  <span>Canonical Expression Mapping</span>
+                  <span
+                    v-if="isCalibrated"
+                    :class="['px-1.5 py-0.2 rounded text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 font-medium']"
+                  >
+                    Calibrated
+                  </span>
+                </h3>
+                <p :class="['text-[11px] text-neutral-400']">
+                  Assign model blendshapes to the 6 primary dialogue acting cues.
+                </p>
+              </div>
+            </div>
+
+            <div :class="['flex items-center gap-2 shrink-0']">
+              <!-- Auto-Calibrate Sparkle Button -->
+              <button
+                type="button"
+                :class="[
+                  'px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer whitespace-nowrap',
+                  isCalibrated
+                    ? 'border border-neutral-200 dark:border-white/10 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-neutral-700 dark:text-neutral-200'
+                    : 'bg-primary-600 hover:bg-primary-500 text-white shadow-primary-600/30',
+                ]"
+                @click="() => runAutoCalibration(false, true)"
+              >
+                <div :class="[isCalibrated ? 'i-solar:refresh-linear w-3.5 h-3.5' : 'i-solar:stars-line-bold-duotone w-3.5 h-3.5 text-cyan-200']" />
+                <span>{{ isCalibrated ? 'Recalibrate' : 'Auto-calibrate' }}</span>
+              </button>
+
+              <!-- Advanced Details Link -->
+              <button
+                type="button"
+                :class="['text-[11px] font-medium text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-0.5 cursor-pointer ml-1']"
+                @click="isCurationModalOpen = true"
+              >
+                <span>Details</span>
+                <div :class="['i-solar:alt-arrow-right-linear w-3 h-3']" />
+              </button>
+            </div>
+          </div>
+
+          <!-- Compact Dual Readiness Strip (Saves vertical space) -->
+          <div :class="['flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl bg-neutral-50/80 dark:bg-neutral-800/40 border border-neutral-200/60 dark:border-white/5 text-[11px] mb-2 shrink-0']">
+            <div :class="['flex items-center gap-1.5']">
+              <div :class="[mappedSlotsCount > 0 ? 'i-solar:check-circle-bold text-emerald-500' : 'i-solar:circle-linear text-neutral-400', 'w-3.5 h-3.5 shrink-0']" />
+              <span :class="['text-neutral-500 dark:text-neutral-400']">Model Expressions:</span>
+              <span :class="['font-mono font-semibold text-neutral-800 dark:text-neutral-200']">
+                {{ mappedSlotsCount }}/6 mapped
+              </span>
+            </div>
+
+            <div :class="['flex items-center gap-1.5']">
+              <div :class="[isGuidanceReady ? 'i-solar:check-circle-bold text-emerald-500' : 'i-solar:circle-linear text-neutral-400', 'w-3.5 h-3.5 shrink-0']" />
+              <span :class="['text-neutral-500 dark:text-neutral-400']">Behavior Guidance:</span>
+              <span :class="['font-mono font-semibold', isGuidanceReady ? 'text-emerald-600 dark:text-emerald-400' : 'text-neutral-500']">
+                {{ isGuidanceReady ? 'ACT active' : 'Awaiting calibration' }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Scrollable Canonical Expression Mapping Pane -->
+          <div :class="['flex-1 min-h-0 overflow-y-auto divide-y divide-neutral-200/60 dark:divide-white/5 border border-neutral-200/70 dark:border-white/5 rounded-xl bg-white dark:bg-neutral-900 pr-0.5']">
+            <div
+              v-for="slot in CANONICAL_EMOTIONS"
+              :key="slot.id"
+              :class="['px-3 py-1.5 flex items-center justify-between gap-2.5 text-xs hover:bg-neutral-50 dark:hover:bg-neutral-800/40 transition-colors']"
+            >
+              <!-- Slot Badge & Token -->
+              <div :class="['flex items-center gap-2 min-w-[130px]']">
+                <span :class="['text-base']">{{ slot.emoji }}</span>
+                <div :class="['flex flex-col']">
+                  <span :class="['font-semibold text-neutral-800 dark:text-neutral-200 text-xs']">
+                    {{ slot.name }}
+                  </span>
+                  <span :class="['text-[9px] font-mono text-neutral-400 dark:text-neutral-500']">
+                    &lt;|ACT:{{ slot.actToken }}|&gt;
+                  </span>
+                </div>
+              </div>
+
+              <!-- Blendshape Selection Dropdown -->
+              <div :class="['flex-1 max-w-[210px]']">
+                <select
+                  v-model="expressionMappings[slot.id]"
+                  :class="['w-full text-xs py-1 px-2 rounded-lg border border-neutral-200 dark:border-white/10 bg-neutral-50 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 outline-none focus:border-primary-500 transition-colors cursor-pointer font-mono']"
+                  @change="handleMappingChange"
+                >
+                  <option value="">
+                    -- Unmapped --
+                  </option>
+                  <option
+                    v-if="expressionMappings[slot.id] && !(candidateExpressions.length > 0 ? candidateExpressions : rawExpressions).includes(expressionMappings[slot.id])"
+                    :value="expressionMappings[slot.id]"
+                  >
+                    {{ expressionMappings[slot.id] }}
+                  </option>
+                  <option
+                    v-for="expr in (candidateExpressions.length > 0 ? candidateExpressions : rawExpressions)"
+                    :key="expr"
+                    :value="expr"
+                  >
+                    {{ expr }}
+                  </option>
+                </select>
+              </div>
+
+              <!-- Live Test Play Button -->
+              <button
+                type="button"
+                :disabled="!expressionMappings[slot.id]"
+                :class="[
+                  'p-1.5 rounded-lg transition-colors cursor-pointer flex items-center justify-center shrink-0',
+                  expressionMappings[slot.id]
+                    ? 'text-neutral-600 dark:text-neutral-300 hover:bg-primary-500/10 hover:text-primary-500'
+                    : 'text-neutral-300 dark:text-neutral-700 cursor-not-allowed',
+                ]"
+                title="Test preview blendshape on stage"
+                @click="triggerPreview(slot.id)"
+              >
+                <div :class="['i-solar:play-bold w-3.5 h-3.5']" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Acting Directives Hub (Compact) -->
+        <div :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-neutral-900/60 p-3.5 shadow-sm shrink-0 flex flex-col gap-2']">
+          <div :class="['flex items-center justify-between']">
+            <div :class="['flex items-center gap-2']">
+              <div :class="['p-1.5 rounded-xl bg-primary-500/10 text-primary-500 shrink-0']">
+                <div :class="['i-solar:document-text-bold-duotone w-4 h-4']" />
+              </div>
+              <div>
+                <h3 :class="['text-sm font-bold text-neutral-900 dark:text-white']">
+                  Acting Directives (ACT Tokens)
+                </h3>
+                <p :class="['text-[11px] text-neutral-400']">
+                  Prompt directives instructing the LLM when to insert physical emotion cues.
+                </p>
+              </div>
+            </div>
+
+            <!-- AI Enhance Button (Only available when acting directives are configured) -->
+            <button
+              v-if="isGuidanceReady"
+              type="button"
+              :disabled="isGeneratingPrompt"
+              :class="['px-2.5 py-1 rounded-lg text-xs font-medium border border-primary-500/30 bg-primary-500/10 hover:bg-primary-500/20 text-primary-600 dark:text-primary-300 transition-colors flex items-center gap-1 cursor-pointer disabled:opacity-50']"
+              @click="handleEnhanceWithAI"
+            >
+              <div :class="[isGeneratingPrompt ? 'i-solar:refresh-linear w-3 h-3 animate-spin' : 'i-solar:stars-line-bold-duotone w-3 h-3 text-primary-500']" />
+              <span>{{ isGeneratingPrompt ? 'Generating...' : 'Enhance with AI' }}</span>
+            </button>
+          </div>
+
+          <!-- Main Stateful Hub Button -->
+          <button
+            type="button"
+            :class="[
+              'w-full py-2 px-3.5 rounded-xl border text-xs font-semibold transition-all flex items-center justify-between cursor-pointer group shadow-sm',
+              isGuidanceReady
+                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/15'
+                : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 hover:bg-amber-500/15',
+            ]"
+            @click="openDirectivesModal"
+          >
+            <div :class="['flex items-center gap-2']">
+              <div :class="[isGuidanceReady ? 'i-solar:check-circle-bold text-emerald-500' : 'i-solar:danger-circle-bold text-amber-500', 'w-4 h-4']" />
+              <span>{{ isGuidanceReady ? 'Acting Directives Configured (Ready)' : 'Configure Acting Directives (Empty Draft)' }}</span>
+            </div>
+            <div :class="['flex items-center gap-1 text-[11px] opacity-80 group-hover:translate-x-0.5 transition-transform']">
+              <span>{{ isGuidanceReady ? 'Review / Edit' : 'Edit Guidance' }}</span>
+              <div :class="['i-solar:alt-arrow-right-linear w-3.5 h-3.5']" />
+            </div>
+          </button>
+        </div>
+      </template>
     </div>
   </div>
 
