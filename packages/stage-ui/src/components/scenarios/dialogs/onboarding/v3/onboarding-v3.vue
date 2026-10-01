@@ -17,7 +17,6 @@ import StepMemory from './steps/step-memory.vue'
 import StepPersona from './steps/step-persona.vue'
 import StepProactivity from './steps/step-proactivity.vue'
 import StepProfile from './steps/step-profile.vue'
-import StepScreen from './steps/step-screen.vue'
 import StepSensory from './steps/step-sensory.vue'
 import StepSpeech from './steps/step-speech.vue'
 import StepThinking from './steps/step-thinking.vue'
@@ -267,14 +266,7 @@ function handleSkip() {
         :on-previous="handlePrevious"
       />
 
-      <!-- Step 13: Screen (Desktop Screen Watching) -->
-      <StepScreen
-        v-else-if="currentStepId === 'screen'"
-        :on-next="handleNext"
-        :on-previous="handlePrevious"
-      />
-
-      <!-- Step 14: Proactivity (Daily Schedule & Heartbeats) -->
+      <!-- Step 13: Proactivity & Awareness (Schedule, Heartbeats & Screen) -->
       <StepProactivity
         v-else-if="currentStepId === 'proactivity'"
         :on-next="handleNext"

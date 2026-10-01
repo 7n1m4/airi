@@ -172,8 +172,8 @@ export const ARCHETYPE_MODULE_PRESETS: Record<ExperienceArchetypeId, ModuleBundl
     emotions: false,
     memory: true,
     vision: false,
-    screen: true,
-    proactivity: false,
+    screen: false,
+    proactivity: true,
     artistry: false,
     tools: true,
   },
@@ -184,7 +184,7 @@ export const ARCHETYPE_MODULE_PRESETS: Record<ExperienceArchetypeId, ModuleBundl
     emotions: true,
     memory: true,
     vision: false,
-    screen: true,
+    screen: false,
     proactivity: true,
     artistry: false,
     tools: false,
@@ -196,7 +196,7 @@ export const ARCHETYPE_MODULE_PRESETS: Record<ExperienceArchetypeId, ModuleBundl
     emotions: true,
     memory: true,
     vision: true,
-    screen: true,
+    screen: false,
     proactivity: true,
     artistry: true,
     tools: true,
@@ -208,7 +208,7 @@ export const ARCHETYPE_MODULE_PRESETS: Record<ExperienceArchetypeId, ModuleBundl
     emotions: true,
     memory: true,
     vision: true,
-    screen: true,
+    screen: false,
     proactivity: true,
     artistry: true,
     tools: true,
@@ -337,6 +337,19 @@ export const useOnboardingV3Draft = defineStore('onboarding-v3-draft', () => {
   function setExperienceArchetype(archetype: ExperienceArchetypeId) {
     state.value.experienceArchetype = archetype
     state.value.modules = { ...ARCHETYPE_MODULE_PRESETS[archetype] }
+
+    if (archetype === 'copilot') {
+      state.value.screenWatcherEnabled = true
+      state.value.heartbeatsEnabled = false
+    }
+    else if (archetype === 'roommate' || archetype === 'swiss-army' || archetype === 'performer') {
+      state.value.screenWatcherEnabled = true
+      state.value.heartbeatsEnabled = true
+    }
+    else {
+      state.value.screenWatcherEnabled = false
+      state.value.heartbeatsEnabled = false
+    }
   }
 
   function toggleModule(key: keyof ModuleBundleConfig, enabled?: boolean) {

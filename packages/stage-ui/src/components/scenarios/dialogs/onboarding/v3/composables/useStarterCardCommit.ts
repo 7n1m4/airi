@@ -445,7 +445,7 @@ export function populateAiriExtensions(
     }
   }
 
-  if (draft.modules?.screen ?? draft.modules?.sensory) {
+  if (draft.modules?.screen ?? draft.modules?.proactivity ?? draft.modules?.sensory) {
     airi.screenWatching = {
       enabled: Boolean(draft.screenWatcherEnabled),
       deliveryMode: draft.screenWatcherMode === 'voice-and-bubble' ? 'both' : draft.screenWatcherMode === 'bubble-only' ? 'bubble_only' : draft.screenWatcherMode === 'voice-only' ? 'tts_only' : 'off',

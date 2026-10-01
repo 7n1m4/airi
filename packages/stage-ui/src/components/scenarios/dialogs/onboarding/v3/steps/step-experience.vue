@@ -113,8 +113,8 @@ const archetypes: ArchetypeCard[] = [
     id: 'copilot',
     title: 'The Executive Copilot',
     badgeLabel: '💼 Productivity',
-    subtitle: 'Voice + Action Tools',
-    description: 'Voice dialogue, desktop screen watching, local filesystem action tools, and live web search.',
+    subtitle: 'Voice, Screen & Action Tools',
+    description: 'Voice dialogue, proactive screen awareness, local filesystem action tools, and live web search.',
     icon: 'i-solar:case-round-bold-duotone',
     colorTheme: {
       activeBorder: 'border-teal-500',
@@ -148,7 +148,7 @@ const archetypes: ArchetypeCard[] = [
     title: 'The Swiss Army Companion',
     badgeLabel: '🔥 Most Steps · All-In-One',
     subtitle: 'Full Autonomous Multimodal',
-    description: 'The flagship do-it-all: Voice STT/TTS, vision, screen watching, daily routine, visual novels, tools & memory.',
+    description: 'The flagship do-it-all: Voice STT/TTS, vision, proactive presence, visual novels, tools & memory.',
     icon: 'i-solar:magic-stick-3-bold-duotone',
     colorTheme: {
       activeBorder: 'border-rose-500',
@@ -232,18 +232,11 @@ const moduleDefinitions: ModuleDefinition[] = [
     icon: 'i-solar:camera-bold-duotone',
   },
   {
-    key: 'screen',
-    label: 'Screen Watching',
-    shortLabel: 'Screen',
-    description: 'Desktop display watching & OCR salience gate',
-    icon: 'i-solar:videocamera-record-bold-duotone',
-  },
-  {
     key: 'proactivity',
-    label: 'Daily Routine',
-    shortLabel: 'Routine',
-    description: 'Circadian rhythm, sleep hours & ambient check-ins',
-    icon: 'i-solar:heart-pulse-2-bold-duotone',
+    label: 'Proactive Presence',
+    shortLabel: 'Presence',
+    description: 'Schedule, ambient heartbeats & screen awareness',
+    icon: 'i-solar:radar-bold-duotone',
   },
   {
     key: 'artistry',
@@ -528,6 +521,31 @@ function resetToPresetDefaults() {
               </p>
             </div>
           </button>
+
+          <!-- 10th Slot: Extensible Plugins / Community Skills (Future Hook) -->
+          <div
+            :class="[
+              'flex items-start gap-2.5 p-2.5 rounded-xl border border-dashed border-neutral-300/70 dark:border-neutral-800 bg-neutral-50/20 dark:bg-neutral-950/20 text-neutral-400 select-none opacity-75',
+            ]"
+          >
+            <div :class="['h-7 w-7 rounded-lg flex items-center justify-center shrink-0 bg-neutral-200/50 dark:bg-neutral-800/50 text-neutral-400']">
+              <div :class="['i-solar:add-circle-bold-duotone text-sm']" />
+            </div>
+
+            <div :class="['min-w-0 flex-1']">
+              <div :class="['flex items-center justify-between gap-1']">
+                <span :class="['text-xs font-semibold text-neutral-500 dark:text-neutral-400 truncate']">
+                  Extensible Plugins
+                </span>
+                <span :class="['text-[9px] font-mono text-neutral-400 dark:text-neutral-500 uppercase tracking-wider']">
+                  Soon
+                </span>
+              </div>
+              <p :class="['text-[10px] text-neutral-400/80 mt-0.5 leading-snug line-clamp-2']">
+                Discord bot, community skills & triggers
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

@@ -44,12 +44,11 @@ export const ONBOARDING_V3_STEPS: OnboardingV3StepDef[] = [
   { id: 'thinking', label: 'Thinking', subtitle: 'Pacing & Subconscious Asides', index: 10, moduleKey: 'thinking' },
   { id: 'emotions', label: 'Emotions', subtitle: '2-Pass ACT Expression Bridge', index: 11, moduleKey: 'emotions' },
   { id: 'vision', label: 'Vision', subtitle: 'Chat Photo & Image Analysis', index: 12, moduleKey: 'vision' },
-  { id: 'screen', label: 'Screen', subtitle: 'Desktop Screen Watching', index: 13, moduleKey: 'screen' },
-  { id: 'proactivity', label: 'Proactivity', subtitle: 'Daily Schedule & Heartbeats', index: 14, moduleKey: 'proactivity' },
-  { id: 'artistry', label: 'Artistry', subtitle: 'Visuals & Autonomous Director', index: 15, moduleKey: 'artistry' },
-  { id: 'memory', label: 'Memory', subtitle: 'Cognitive Memory Hierarchy', index: 16, moduleKey: 'memory' },
-  { id: 'tools', label: 'Tools', subtitle: 'Automation & Desktop MCP', index: 17, moduleKey: 'tools' },
-  { id: 'finale', label: 'Stage Finale', subtitle: 'Pre-Flight Readiness & Launch', index: 18 },
+  { id: 'proactivity', label: 'Proactivity', subtitle: 'Schedule, Heartbeats & Screen', index: 13, moduleKey: 'proactivity' },
+  { id: 'artistry', label: 'Artistry', subtitle: 'Visuals & Autonomous Director', index: 14, moduleKey: 'artistry' },
+  { id: 'memory', label: 'Memory', subtitle: 'Cognitive Memory Hierarchy', index: 15, moduleKey: 'memory' },
+  { id: 'tools', label: 'Tools', subtitle: 'Automation & Desktop MCP', index: 16, moduleKey: 'tools' },
+  { id: 'finale', label: 'Stage Finale', subtitle: 'Pre-Flight Readiness & Launch', index: 17 },
 ]
 
 export function buildArtistryPromptFromPersona(charName?: string, tags?: string[], _series?: string): string {
