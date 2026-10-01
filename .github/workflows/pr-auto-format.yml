@@ -1,4 +1,4 @@
-name: autofix.ci
+name: PR Auto-Format
 
 permissions:
   contents: read
@@ -6,8 +6,6 @@ permissions:
 on:
   pull_request:
     branches: [main]
-  push:
-    branches: [crowdin]
 
 jobs:
   autofix:
@@ -20,15 +18,11 @@ jobs:
           node-version: lts/*
           cache: pnpm
 
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm run build:packages
       - run: pnpm prune && pnpm dedupe
       - run: pnpm run lint:fix
       - run: docker run -v `pwd`:`pwd` -w `pwd` ghcr.io/realm/swiftlint:latest --fix
         working-directory: ./apps/stage-pocket
-
-      # - name: AutoCorrect
-      #   uses: huacnlee/autocorrect-action@main
-      #   with:
-      #     args: --fix
 
       - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27

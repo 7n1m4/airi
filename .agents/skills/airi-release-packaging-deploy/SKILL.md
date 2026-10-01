@@ -12,13 +12,12 @@ Deployment surface map for shipping AIRI. Desktop releases are manual + script-a
 
 | Surface | App | Artifacts | Ship path |
 |---|---|---|---|
-| Windows | `stage-tamagotchi` | `AIRI-<ver>.exe` + `.zip` (portable) | Local: `pnpm run release:win` (fork `dasilva333/airi`) · CI: `release-tamagotchi.yml` |
-| macOS | `stage-tamagotchi` | `AIRI-<ver>.dmg` (arm64 + x64) | Local: `pnpm run release:mac` · CI: same workflow (notarized) |
-| Linux | `stage-tamagotchi` | `.deb`, `.rpm`, `.flatpak`, AppImage | CI only (`release-tamagotchi.yml`, incl. Flatpak via flathub SDK) |
+| Windows | `stage-tamagotchi` | `AIRI-<ver>.exe` + `.zip` (portable) | Local: `pnpm run release:win` (fork `dasilva333/airi`) |
+| macOS | `stage-tamagotchi` | `AIRI-<ver>.dmg` (arm64 + x64) | Local: `pnpm run release:mac` (notarized) |
+| Linux | `stage-tamagotchi` | `.deb`, `.rpm`, `.flatpak` (x64 + arm64) | CI only (`release-linux-desktop.yml`, incl. Flatpak via flathub SDK) |
 | Android | `stage-pocket` | `.apk` / `.aab` | Manual Capacitor + Gradle; no release automation exists |
 | iOS | `stage-pocket` | `.ipa` | Manual Capacitor + Xcode archive; no release automation exists |
-| Web | `stage-web` | `ghcr.io/<repo>` OCI image | `release-docker.yaml` on any tag push |
-| Docs | `docs/` (VitePress) | static site | `deploy-docs.yml` → GitHub Pages (`/airi/`) |
+| Web & Docs | `stage-web` / `docs` | static sites | `deploy-frontends.yml` → GitHub Pages (`/airi/` & `/airi/web-stage/`) |
 | Edge relay | `apps/stage-edge` | Cloudflare Worker (per-user) | Built into users' accounts via OAuth PKCE during onboarding; see `airi-cloud-relay-infrastructure` skill |
 | Stage-Mate | `apps/stage-mate` | Unity `StageMate.app/.exe` | See `airi-stage-mate-unity` skill (`build:win/linux/mac`) |
 
@@ -52,15 +51,13 @@ Canonical references: **`docs/content/en/docs/contributing/windows-release-guide
 - Notarization entitlements in `build/entitlements.mac.plist`; CI uses `CSC_CONTENT` + `APPLE_ID` secrets; local builds need the Apple Developer cert in keychain.
 - `electron-builder.config.ts` `extendInfo` must keep `NSMicrophoneUsageDescription` + `NSCameraUsageDescription`.
 
-## 3. Electron CI / CD (`.github/workflows/release-tamagotchi.yml`)
+## 3. Electron Linux CI / CD (`.github/workflows/release-linux-desktop.yml`)
 
-Triggers: `release: prereleased` (auto-publish), `workflow_dispatch` (manual, `build_only` / `artifacts_only` / `tag` / platform filter), nightly `schedule` (cron `0 0 * * *`).
+Triggers: `release: prereleased` (auto-publish), `workflow_dispatch` (manual, `build_only` / `artifacts_only` / `tag`), nightly `schedule` (cron `0 0 * * *`).
 
-Build matrix: `windows-latest` (x64 setup), `macos-15-intel` (x64) + `macos-26` (arm64, Xcode 26.2), `ubuntu-latest` (x64) + `ubuntu-24.04-arm` (arm64, deb/rpm + **flatpak** via `ai.moeru.airi.flatpak.yml` + flathub SDK).
+Build matrix: `ubuntu-latest` (x64: deb, rpm, Flatpak via flathub SDK), `ubuntu-24.04-arm` (arm64: deb, rpm, Flatpak). Windows and macOS desktop releases are built locally via `publish-win.js` and `publish-mac.js`.
 
-- Publish policy: `--publish=onTagOrDraft` for release events, `never` for build/artifacts-only runs; artifacts uploaded via `softprops/action-gh-release` including `latest.yml` / `latest-*.yml` auto-update feeds; `merge-mac-latest` job merges x64+arm64 `latest-mac.yml`.
-- **Windows signing:** SignPath signing requests on `moeru-ai/airi` only (`test-signing` policy, `ci-github-actions-artifacts-windows` config); on the fork this step is skipped by the repo guard.
-- **macOS signing:** base64-decoded `CSC_CONTENT` → `apple-developer-code-signing.p12`; notarization via `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID`.
+- Publish policy: `--publish=never` for electron-builder; artifacts renamed and uploaded via `softprops/action-gh-release` to the release tag.
 - Linux runners run `jlumbroso/free-disk-space` first (historic "No space left" archive failures).
 
 ## 4. Mobile: Android APK & iOS IPA (`apps/stage-pocket`)
@@ -93,51 +90,51 @@ Capacitor app (config `capacitor.config.ts`: appId `ai.moeru.airi-pocket`, appNa
 ### Mobile version discipline
 `stage-pocket` has its own semver in `package.json` (`0.9.1-stable.<date>`) but Android `versionCode` and iOS build numbers are managed separately — bump both whenever distributing a new build to the same channel.
 
-## 5. Web / Docker / Docs / GitHub Pages / Edge
+## 5. Web & Docs Frontends / GitHub Pages / Edge
 
-- **Docker:** `release-docker.yaml` → on any tag push or manual dispatch, builds `ghcr.io/<repo>` from `apps/stage-web/Dockerfile` for `linux/amd64,linux/arm64,linux/arm64/v8` with GHA cache. Tag scheme: semver from `v*` tags (`latest`, `X.Y.Z`, `X.Y`, `X` when not `v0.*`).
-- **Docs & Web Stage on GitHub Pages:** `.github/workflows/deploy-docs.yml` → on push to `main` touching `docs/**`, `apps/stage-web/**`, or `packages/**` (or manual `workflow_dispatch`):
-  - Builds Docs with `BASE_URL=/airi/` → `docs/.vitepress/dist`
-  - Builds Web Stage with `BASE_URL=/airi/web-stage/` → `apps/stage-web/dist`
-  - Bundles Web Stage into docs output (`docs/.vitepress/dist/web-stage`)
-  - Deploys static bundle to GitHub Pages: Docs at `https://<user>.github.io/airi/` and Web Stage at `https://<user>.github.io/airi/web-stage/`.
-  - Local verification script: `pnpm run build:pages` (full bundle) or `pnpm run build:web:pages` (`stage-web` only).
-  - Architecture & details in `docs/design-web-stage-pages-deployment.md`.
+- **Docker:** Retired and removed. Web Stage is deployed continuously alongside the documentation as static frontends on GitHub Pages.
+- **Docs & Web Stage on GitHub Pages:** `.github/workflows/deploy-frontends.yml` → on push to `main` touching `docs/**`, `apps/stage-web/**`, or `packages/**` (or manual `workflow_dispatch`):
+   - Builds Docs with `BASE_URL=/airi/` → `docs/.vitepress/dist`
+   - Builds Web Stage with `BASE_URL=/airi/web-stage/` → `apps/stage-web/dist`
+   - Bundles Web Stage into docs output (`docs/.vitepress/dist/web-stage`)
+   - Deploys static bundle to GitHub Pages: Docs at `https://<user>.github.io/airi/` and Web Stage at `https://<user>.github.io/airi/web-stage/`.
+   - Local verification script: `pnpm run build:pages` (full bundle) or `pnpm run build:web:pages` (`stage-web` only).
+   - Architecture & details in `docs/design-web-stage-pages-deployment.md`.
 - **Edge relay:** `apps/stage-edge` is NOT centrally deployed — each user provisions their own Cloudflare Worker + KV + R2 via OAuth PKCE during onboarding (CloudflareStageDeployer). See the `airi-cloud-relay-infrastructure` skill for maintainer-side flows.
 
-## 6. Common Pitfalls
+ ## 6. Common Pitfalls
 
-- **`node:crypto` externalization in renderer builds.** Symptom: `Module "node:crypto" has been externalized for browser compatibility`. Fix lives in `electron.vite.config.ts` browser aliases + `src/renderer/shims/node-crypto.ts` shim; DuckDB leaks `bundles/default-node` into renderer — intercepted via the `force-node-crypto-shim` resolveId plugin. Same vector for `process`/`module`/`path` leaks. (windows-release-guide §2.)
-- **Release date-stamp mismatch warning.** If publish scripts warn the version date differs from today, another machine/agent likely forgot to push — sync tags before re-running, don't override blindly.
-- **Invalid `GITHUB_TOKEN` env overrides keyring** causing 401s on `gh release create`; always clear it for release commands. `gh` needs `workflow` scope: `gh auth refresh -h github.com -s workflow`.
-- **Engines:** root requires Node `>=20.14.0 <28.0.0`, pnpm `>=10`. macOS guide documents past lockfile failures when Node outpaced the cap.
-- **Build-breaking strictness:** TS6133 unused imports fail the pre-build typecheck; broken Vue template end-tags fail with `unplugin-vue-named-template-pre` — run `pnpm run typecheck:web` to localize.
-- **Resilient asset downloads:** build-time font/model fetches should use `packages/stage-shared/src/ts/resilient.ts` retry wrapper to survive flaky networks.
-- **taskkill ban:** never kill `node.exe`/`electron.exe` en masse to unstuck builds; coordinate with the user instead (guide §5, CAUTION).
-- **Fork vs upstream asymmetry:** the release scripts target `dasilva333/airi`; SignPath signing and several CI guards only fire on `moeru-ai/airi`. Don't assume parity.
-- **Android/iOS release automation does not exist.** Any "release pocket" request means manual gradle/Xcode steps plus signing decisions — confirm with the user which channel (sideload/ad-hoc/store) before proceeding.
+ - **`node:crypto` externalization in renderer builds.** Symptom: `Module "node:crypto" has been externalized for browser compatibility`. Fix lives in `electron.vite.config.ts` browser aliases + `src/renderer/shims/node-crypto.ts` shim; DuckDB leaks `bundles/default-node` into renderer — intercepted via the `force-node-crypto-shim` resolveId plugin. Same vector for `process`/`module`/`path` leaks. (windows-release-guide §2.)
+ - **Release date-stamp mismatch warning.** If publish scripts warn the version date differs from today, another machine/agent likely forgot to push — sync tags before re-running, don't override blindly.
+ - **Invalid `GITHUB_TOKEN` env overrides keyring** causing 401s on `gh release create`; always clear it for release commands. `gh` needs `workflow` scope: `gh auth refresh -h github.com -s workflow`.
+ - **Engines:** root requires Node `>=20.14.0 <28.0.0`, pnpm `>=10`. macOS guide documents past lockfile failures when Node outpaced the cap.
+ - **Build-breaking strictness:** TS6133 unused imports fail the pre-build typecheck; broken Vue template end-tags fail with `unplugin-vue-named-template-pre` — run `pnpm run typecheck:web` to localize.
+ - **Resilient asset downloads:** build-time font/model fetches should use `packages/stage-shared/src/ts/resilient.ts` retry wrapper to survive flaky networks.
+ - **taskkill ban:** never kill `node.exe`/`electron.exe` en masse to unstuck builds; coordinate with the user instead (guide §5, CAUTION).
+ - **Fork vs upstream asymmetry:** the release scripts target `dasilva333/airi`; SignPath signing and several CI guards only fire on `moeru-ai/airi`. Don't assume parity.
+ - **Android/iOS release automation does not exist.** Any "release pocket" request means manual gradle/Xcode steps plus signing decisions — confirm with the user which channel (sideload/ad-hoc/store) before proceeding.
 
-## When to Use
+ ## When to Use
 
-- Running or troubleshooting `release:win` / `release:mac`, version stamping, tagging, release-note drafting.
-- Interpreting or fixing `release-tamagotchi.yml`, `release-docker.yaml`, or `deploy-docs.yml`.
-- Electron-builder config, signing/notarization, artifact naming (`artifacts-metadata.ts`, `rename-artifacts`).
-- Building stage-pocket APK/AAB/IPA, capacity/Capacitor sync problems, native-project git hygiene.
-- Any "why did the build fail" involving renderer Node-module leakage, disk space, or file locks.
+ - Running or troubleshooting `release:win` / `release:mac`, version stamping, tagging, release-note drafting.
+ - Interpreting or fixing `release-linux-desktop.yml` or `deploy-frontends.yml`.
+ - Electron-builder config, signing/notarization, artifact naming (`artifacts-metadata.ts`, `rename-artifacts`).
+ - Building stage-pocket APK/AAB/IPA, capacity/Capacitor sync problems, native-project git hygiene.
+ - Any "why did the build fail" involving renderer Node-module leakage, disk space, or file locks.
 
-## Verification
+ ## Verification
 
-- Desktop local release: the publish scripts re-verify tag/artifact existence themselves; a successful run ends with the GitHub release URL printed and the artifacts visible there.
-- Build-only validation without release: `pnpm run release:win --build-only` (smoke test window), or `pnpm -F @proj-airi/stage-tamagotchi run build:win|build:mac` for compile-level confidence. Typecheck/build per the `airi-codebase-verification` skill before any push.
-- Mobile: APK sanity = install on device/emulator (`adb install`); IPA = Xcode archive log + installed app run. No CI covers pocket yet — state this explicitly when asked to "reproduce CI" for mobile.
-- After any file modification: `git status` and report open/unstaged files verbatim.
+ - Desktop local release: the publish scripts re-verify tag/artifact existence themselves; a successful run ends with the GitHub release URL printed and the artifacts visible there.
+ - Build-only validation without release: `pnpm run release:win --build-only` (smoke test window), or `pnpm -F @proj-airi/stage-tamagotchi run build:win|build:mac` for compile-level confidence. Typecheck/build per the `airi-codebase-verification` skill before any push.
+ - Mobile: APK sanity = install on device/emulator (`adb install`); IPA = Xcode archive log + installed app run. No CI covers pocket yet — state this explicitly when asked to "reproduce CI" for mobile.
+ - After any file modification: `git status` and report open/unstaged files verbatim.
 
-### Authoritative Documents
+ ### Authoritative Documents
 
-- [docs/content/en/docs/contributing/windows-release-guide.md](docs/content/en/docs/contributing/windows-release-guide.md) — Windows stable-release workflow, lessons learned, WDAC/codesign action items, build-safety rules.
-- [docs/content/en/docs/contributing/macos-release-guide.md](docs/content/en/docs/contributing/macos-release-guide.md) — macOS release workflow, notarization/entitlements, troubleshooting.
-- [docs/delivery/AIRI-customer-deployment-guide.zh-CN.md](docs/delivery/AIRI-customer-deployment-guide.zh-CN.md) — customer-facing deployment guide (zh-CN).
-- `.github/workflows/release-tamagotchi.yml` · `.github/workflows/release-docker.yaml` · `.github/workflows/deploy-docs.yml` — automation surfaces described above.
+ - [docs/content/en/docs/contributing/windows-release-guide.md](docs/content/en/docs/contributing/windows-release-guide.md) — Windows stable-release workflow, lessons learned, WDAC/codesign action items, build-safety rules.
+ - [docs/content/en/docs/contributing/macos-release-guide.md](docs/content/en/docs/contributing/macos-release-guide.md) — macOS release workflow, notarization/entitlements, troubleshooting.
+ - [docs/delivery/AIRI-customer-deployment-guide.zh-CN.md](docs/delivery/AIRI-customer-deployment-guide.zh-CN.md) — customer-facing deployment guide (zh-CN).
+ - `.github/workflows/release-linux-desktop.yml` · `.github/workflows/deploy-frontends.yml` — automation surfaces described above.
 - [docs/rosetta-stone.md](docs/rosetta-stone.md) — repo layout & persistence references for anything release-adjacent.
 
 ## Related Skills & References
