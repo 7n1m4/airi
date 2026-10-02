@@ -666,6 +666,7 @@ function resetCuration() {
 
 // --- 11. Verify step: per-key test-fire + hide (whitelist shaping) ---
 const lastPreviewKey = ref('')
+let previewResetTimer: number | undefined
 
 const keeperCount = computed(() => curationItems.value.filter(i => !i.shouldSkip).length)
 
@@ -680,6 +681,14 @@ function previewCurationItem(item: CuratedExpressionItem) {
   lastPreviewKey.value = item.rawKey
   triggerModelEmotion(modelType.value, item.rawKey)
   toast.success(`Previewing ${item.label || item.rawKey}`)
+  // Release the playing state shortly after the driver's ~3s decay so the
+  // button falls back to ▶ instead of sticking on ⏸.
+  window.clearTimeout(previewResetTimer)
+  previewResetTimer = window.setTimeout(() => {
+    if (lastPreviewKey.value === item.rawKey) {
+      lastPreviewKey.value = ''
+    }
+  }, 3200)
 }
 
 function toggleCurationSkip(item: CuratedExpressionItem) {
@@ -695,18 +704,17 @@ export type GuideStep = 'meet' | 'name' | 'verify' | 'remaps' | null
 // Guided artwork (see packages/stage-ui/src/assets/acting/). Cards fall back
 // to emoji only while a slot is empty.
 const GUIDE_ART = {
-  hero: new URL('../../../assets/acting/guide-hero.png', import.meta.url).href,
-  press: new URL('../../../assets/acting/guide-press.png', import.meta.url).href,
-  watch: new URL('../../../assets/acting/guide-watch.png', import.meta.url).href,
-  keep: new URL('../../../assets/acting/guide-keep.png', import.meta.url).href,
+  hero: new URL('../../../assets/acting/guide-hero.avif', import.meta.url).href,
+  press: new URL('../../../assets/acting/guide-press.avif', import.meta.url).href,
+  watch: new URL('../../../assets/acting/guide-watch.avif', import.meta.url).href,
+  keep: new URL('../../../assets/acting/guide-keep.avif', import.meta.url).href,
 }
 
 // Thumbs-up cheer art for the Name step header.
-const GUIDE_CHEER = new URL('../../../assets/acting/guide-cheer.png', import.meta.url).href
+const GUIDE_CHEER = new URL('../../../assets/acting/guide-cheer.avif', import.meta.url).href
 
-// PLACEHOLDER for the Verify corner chibi (incoming): reuses the starry chibi
-// until the dedicated asset lands — swap this URL only.
-const GUIDE_VERIFY_ART = GUIDE_ART.hero
+// Detective chibi for the Verify step header.
+const GUIDE_VERIFY_ART = new URL('../../../assets/acting/guide-verify.avif', import.meta.url).href
 
 const GUIDE_DOTS = [
   { id: 'meet', label: 'Meet' },
@@ -761,15 +769,12 @@ function handleMeetDemo() {
 
 const GUIDE_ORDER: Exclude<GuideStep, null>[] = ['meet', 'name', 'verify', 'remaps']
 
-const guideStepIndex = computed(() => guideStep.value ? GUIDE_ORDER.indexOf(guideStep.value) : -1)
+// Compact avatar panel for the short guided legs (Meet/Verify): the viewport
+// caps at 300px so the footer stays glued to content instead of a stretched
+// full-body frame. Name/Remaps keep the tall frame.
+const viewportCapClass = computed(() => guideStep.value === 'meet' || guideStep.value === 'verify' ? 'max-h-[300px]' : '')
 
-// Per-step cockpit height: Name/Remaps get the tall workspace; Meet/Verify
-// stay compact (300px) with internal scroll. Full view falls back to the prop.
-const activeHeightClass = computed(() => {
-  if (guideStep.value === 'meet' || guideStep.value === 'verify')
-    return 'h-[300px]'
-  return props.contentHeightClass
-})
+const guideStepIndex = computed(() => guideStep.value ? GUIDE_ORDER.indexOf(guideStep.value) : -1)
 
 function goGuideStep(step: Exclude<GuideStep, null>) {
   // Dots allow revisiting visited steps; forward motion stays on Next buttons
@@ -809,11 +814,11 @@ onBeforeUnmount(() => {
 
 <template>
   <!-- Main 2-Column Dashboard Cockpit -->
-  <div :class="['grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch', activeHeightClass]">
+  <div :class="['grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch', contentHeightClass]">
     <!-- Left Column: Live Avatar Viewport Frame & Tactile Soundboard (5 cols) -->
     <div :class="['md:col-span-5 flex flex-col gap-3 h-full min-h-0 overflow-hidden']">
       <!-- Live Avatar Viewport Frame -->
-      <div :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-gradient-to-b from-neutral-100/90 to-neutral-200/50 dark:from-neutral-900/90 dark:to-neutral-950/90 overflow-hidden relative shadow-sm flex flex-col items-center justify-between p-3 flex-1 min-h-0']">
+      <div :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-gradient-to-b from-neutral-100/90 to-neutral-200/50 dark:from-neutral-900/90 dark:to-neutral-950/90 overflow-hidden relative shadow-sm flex flex-col items-center justify-between p-3 flex-1 min-h-0', viewportCapClass]">
         <!-- Top Badge: Model Format & Name -->
         <div :class="['w-full flex items-center justify-between z-10 shrink-0 pointer-events-auto']">
           <span :class="['px-2.5 py-0.8 rounded-full text-[10px] font-mono font-medium border border-neutral-200/80 dark:border-white/10 bg-white/80 dark:bg-neutral-800/80 text-neutral-700 dark:text-neutral-300 backdrop-blur-sm shadow-xs']">
@@ -1300,7 +1305,7 @@ onBeforeUnmount(() => {
           </div>
 
           <!-- Keeper table (ported from the curator modal's review pass) -->
-          <div v-else :class="['flex-1 min-h-[120px] overflow-y-auto border border-neutral-200/70 dark:border-white/5 rounded-xl bg-white dark:bg-neutral-900']">
+          <div v-else :class="['flex-none max-h-[420px] overflow-y-auto border border-neutral-200/70 dark:border-white/5 rounded-xl bg-white dark:bg-neutral-900']">
             <table :class="['w-full text-left text-xs']">
               <thead :class="['sticky top-0 border-b border-neutral-200 bg-neutral-50 text-[10px] text-neutral-400 font-bold uppercase dark:border-neutral-800 dark:bg-neutral-800/90']">
                 <tr>
@@ -1317,7 +1322,7 @@ onBeforeUnmount(() => {
                     Preview
                   </th>
                   <th :class="['px-2 py-2 text-center']">
-                    Hide
+                    Keep
                   </th>
                 </tr>
               </thead>
@@ -1370,16 +1375,27 @@ onBeforeUnmount(() => {
                   <td :class="['px-2 py-2 text-center']">
                     <button
                       type="button"
-                      :class="['cursor-pointer rounded p-1.5 transition-colors', item.shouldSkip ? 'text-amber-500 hover:bg-amber-500/10' : 'text-neutral-400 hover:bg-neutral-500/10 hover:text-neutral-600 dark:text-neutral-500 dark:hover:text-neutral-300']"
-                      :title="item.shouldSkip ? 'Unhide' : 'Hide — does nothing visible'"
+                      :class="[
+                        'w-7 h-7 rounded-full text-sm font-bold transition-colors cursor-pointer flex items-center justify-center mx-auto',
+                        item.shouldSkip
+                          ? 'bg-neutral-200 text-neutral-500 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-400 dark:hover:bg-neutral-600'
+                          : 'bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/25 dark:text-emerald-300',
+                      ]"
+                      :title="item.shouldSkip ? 'Hidden — click to keep' : 'Kept — click to hide'"
                       @click="toggleCurationSkip(item)"
                     >
-                      <div :class="[item.shouldSkip ? 'i-solar:eye-closed-bold' : 'i-solar:eye-bold', 'w-4 h-4']" />
+                      <span>{{ item.shouldSkip ? '✕' : '✓' }}</span>
                     </button>
                   </td>
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div :class="['flex items-start gap-2 rounded-xl border border-primary-500/25 bg-primary-500/5 px-3 py-2 shrink-0']">
+            <span :class="['text-sm']">💡</span>
+            <span :class="['text-[11px] text-neutral-600 dark:text-neutral-300 leading-relaxed']">
+              Once you're happy with what you want to keep, press <strong>Next</strong> — your keepers carry forward automatically.
+            </span>
           </div>
           <div :class="['flex items-center justify-between shrink-0 pt-1']">
             <button
@@ -1427,7 +1443,6 @@ onBeforeUnmount(() => {
               <div v-if="i < GUIDE_DOTS.length - 1" :class="['w-3 h-px bg-neutral-200 dark:bg-neutral-700']" />
             </template>
           </div>
-          <span :class="['text-[10px] text-neutral-400']">Optional — bind keepers to the 6 preset cues, or finish.</span>
         </div>
         <!-- Unified Card 1: Expression Mapping & Calibration -->
         <div :class="['rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/70 dark:bg-neutral-900/60 p-3.5 shadow-sm flex-1 min-h-0 flex flex-col']">
@@ -1448,7 +1463,7 @@ onBeforeUnmount(() => {
                   </span>
                 </h3>
                 <p :class="['text-[11px] text-neutral-400']">
-                  Assign model blendshapes to the 6 primary dialogue acting cues.
+                  Assign model blendshapes to dialogue acting cues.
                 </p>
               </div>
             </div>
