@@ -69,15 +69,18 @@ Forcing the primary conversational LLM (System 2) to generate both inline create
 
 #### Tier 1 surfaces inventory (5 entry points, one compiler)
 
-| # | Surface | Entry | Code anchor | State today |
-|---|---|---|---|---|
-| 1 | Manual entry (character config) | Acting tab text fields | `CardCreationTabActing.vue` (`actingModelExpression` / `actingSpeechExpression`) | Free-text only; needs the "fancy parse" background compile on edit |
-| 2 | Sparkle per-field generator (first-gen) | Sparkle glyph per field | `FieldAiGeneratorModal.vue` via `CardEditorForm.openSparkleGenerator` | Field-scoped LLM fill; acting-field sparkles should redirect to the unified curation route (§2.1.1) |
-| 3 | AI curated wizard | Settings > Models > Curate AI | `ModelCustomizer.vue` embeds `ExpressionCurationModal.vue` | 3-step modal (Scope → Review → Apply); has the three UX defects listed in §2.1.2 |
-| 4 | Onboarding emotions phase | Onboarding wizard | `step-emotions.vue` embeds `ExpressionCurationModal.vue` + auto-calibrate sparkle | Same modal, same defects, embedded context |
-| 5 | Rehearsal Room | Playground button (to be added) | `chat_rehearsal.vue` (presets fire ACT cues today; no curation entry) | No curation entry yet; should deep-link to the unified route |
+Button-level reference — where each entry lives today:
 
-`use-expression-curation.ts` (`curateExpressions` / `generateActingPrompt` / `previewOnStage` / `applyCuration`) is the shared logic behind surfaces 3–4 today.
+| # | Surface | Entry point (file:line) | Code anchor | State today |
+|---|---|---|---|---|
+| 1 | Manual entry (character config) | Acting tab text fields + sparkle glyphs — `packages/stage-pages/src/pages/settings/airi-card/components/tabs/CardCreationTabActing.vue` (`actingModelExpression` sparkle ~L618, `actingSpeechExpression` sparkle ~L740) | `CardCreationTabActing.vue` (`actingModelExpression` / `actingSpeechExpression`) | Free-text textarea stays as the permanent manual escape hatch (reverse-parse into whitelist pending) |
+| 2 | Sparkle per-field generator (first-gen) | Confirm dialog — `packages/stage-pages/src/pages/settings/airi-card/components/CardEditorForm.vue` (`openSparkleGenerator` ~L1692, confirm overlay below) | `FieldAiGeneratorModal.vue` via `CardEditorForm.openSparkleGenerator` | RETIRED for `actingModelExpression` (Oct 2026): sparkle click shows a confirm + routes to `settings/models/emotions` with `?model=` when known (other fields keep the modal) |
+| 3 | AI curated wizard | Auto-Curate banner button — `packages/stage-ui/src/components/scenarios/settings/model-settings/ModelCustomizer.vue` (`AI Expression Curation` banner ~L1237, confirm overlay) | Formerly embedded `ExpressionCurationModal.vue` (removed) | RETIRED (Oct 2026): button confirms, then in-window `router.push` to `settings/models/emotions?model=` — modal, import, and apply handler deleted |
+| 4 | Onboarding emotions phase | Onboarding wizard Emotions step — `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/steps/step-emotions.vue` (thin draft-bound wrapper) | `EmotionCalibrationStudio.vue` (shared component — fixes land once, benefit both) | LIVE: same studio, embedded context |
+| 5 | Rehearsal Room | Generate Acting Instructions button — `apps/stage-tamagotchi/src/renderer/components/chat/chat_rehearsal.vue` (button ~L694, confirm overlay at file end) | `electronOpenSettings` eventa → `settings/models/emotions?model=` in the Settings window | RETIRED (Oct 2026): `ModelPromptGeneratorModal` + its card-writing save path removed from rehearsal |
+| ★ | Unified studio (all roads lead here) | Hidden route — `packages/stage-pages/src/pages/settings/models/emotions.vue` (`settingsEntry: false`) | `packages/stage-ui/src/components/scenarios/acting/EmotionCalibrationStudio.vue` | LIVE: guided Meet → Name → Verify → Remaps + full cockpit; onboarding embeds the component |
+
+`use-expression-curation.ts` (`curateExpressions` / `generateActingPrompt` / `previewOnStage` / `applyCuration`) is the shared logic behind the studio's Name curation, Enhance pass, previews, and legacy apply paths.
 
 #### 2.1.1 Grand unification plan (agreed direction): decompose, don't port
 

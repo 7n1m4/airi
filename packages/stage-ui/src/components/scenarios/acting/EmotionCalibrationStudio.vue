@@ -1574,7 +1574,7 @@ onBeforeUnmount(() => {
           <div :class="['flex items-start justify-between gap-2 mb-2 shrink-0']">
             <div :class="['flex items-center gap-2']">
               <div :class="['p-1.5 rounded-xl bg-primary-500/10 text-primary-500 shrink-0']">
-                <div :class="['i-solar:face-smile-bold-duotone w-4 h-4']" />
+                <div :class="['i-solar:smile-circle-bold-duotone w-4 h-4']" />
               </div>
               <div>
                 <h3 :class="['text-sm font-bold text-neutral-900 dark:text-white flex items-center gap-1.5']">

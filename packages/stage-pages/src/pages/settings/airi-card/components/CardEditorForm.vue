@@ -28,6 +28,7 @@ import { storeToRefs } from 'pinia'
 import { DialogTitle } from 'reka-ui'
 import { computed, defineAsyncComponent, nextTick, onMounted, ref, toRaw, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 import TabLoadingPlaceholder from './TabLoadingPlaceholder.vue'
@@ -1635,6 +1636,20 @@ const generatorFieldId = ref('')
 const generatorFieldLabel = ref('')
 const generatorFieldValue = ref('')
 
+// Emotion Calibration redirect confirm (retires the Sparkle flow for
+// actingModelExpression in favor of the dedicated studio route)
+const showEmotionCalibrationConfirm = ref(false)
+const router = useRouter()
+
+function openEmotionCalibration() {
+  showEmotionCalibrationConfirm.value = false
+  const modelId = selectedDisplayModelId.value || defaultDisplayModelId.value
+  router.push({
+    path: '/settings/models/emotions',
+    query: modelId ? { model: modelId } : {},
+  })
+}
+
 // Image Tag Extractor Modal State
 const showTagExtractorModal = ref(false)
 const extractorModelId = computed(() => selectedDisplayModelId.value || defaultDisplayModelId.value)
@@ -1690,6 +1705,11 @@ const generatorActingContext = computed(() => {
 })
 
 function openSparkleGenerator(fieldId: string) {
+  // Retired: model-expression curation moved to the Emotion Calibration studio
+  if (fieldId === 'actingModelExpression') {
+    showEmotionCalibrationConfirm.value = true
+    return
+  }
   generatorFieldId.value = fieldId
   if (fieldId === 'description') {
     generatorFieldLabel.value = t('settings.pages.card.creation.description')
@@ -2122,6 +2142,49 @@ function handleGeneratorSave(newValue: string) {
         />
       </div>
     </template>
+  </div>
+
+  <!-- Emotion Calibration redirect confirm -->
+  <div
+    v-if="showEmotionCalibrationConfirm"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+    @click.self="showEmotionCalibrationConfirm = false"
+  >
+    <div class="max-w-md w-full flex flex-col gap-3 border border-neutral-200 rounded-2xl bg-white p-5 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
+      <div class="flex items-center gap-2.5">
+        <div class="h-9 w-9 flex shrink-0 items-center justify-center rounded-xl bg-primary-500/10 text-primary-500">
+          <div class="i-solar:smile-circle-bold-duotone text-lg" />
+        </div>
+        <div>
+          <div class="text-sm text-neutral-900 font-bold dark:text-neutral-100">
+            Curate expressions in Emotion Calibration?
+          </div>
+          <p class="text-[11px] text-neutral-400">
+            The per-field Sparkle writer for this field is retired.
+          </p>
+        </div>
+      </div>
+      <p class="text-xs text-neutral-500 leading-relaxed dark:text-neutral-400">
+        Model expressions now get the full studio: live avatar preview, AI naming, per-key verification,
+        and preset remaps. Your character's other fields stay exactly as they are.
+      </p>
+      <div class="flex items-center justify-end gap-2 pt-1">
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg px-3.5 py-2 text-xs text-neutral-500 font-medium dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+          @click="showEmotionCalibrationConfirm = false"
+        >
+          Not now
+        </button>
+        <button
+          type="button"
+          class="cursor-pointer rounded-lg bg-primary-600 px-4 py-2 text-xs text-white font-semibold shadow-sm transition-all hover:bg-primary-500"
+          @click="openEmotionCalibration"
+        >
+          Open Emotion Calibration →
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Sparkle AI Generator Modal -->

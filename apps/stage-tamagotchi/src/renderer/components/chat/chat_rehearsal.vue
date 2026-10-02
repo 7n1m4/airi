@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import { useCustomVrmAnimationsStore } from '@proj-airi/stage-ui-three'
-import { ModelCustomizer, ModelPromptGeneratorModal } from '@proj-airi/stage-ui/components/scenarios/settings/model-settings'
+import { ModelCustomizer } from '@proj-airi/stage-ui/components/scenarios/settings/model-settings'
 import { useLlmmarkerParser } from '@proj-airi/stage-ui/composables/llm-marker-parser'
 import { useAnimaDexWizardStore } from '@proj-airi/stage-ui/stores/animadex-wizard'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
@@ -19,6 +20,10 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
 import * as v from 'valibot'
+
+import { electronOpenSettings } from '../../../shared/eventa'
+
+const openSettings = useElectronEventaInvoke(electronOpenSettings)
 
 const airiCardStore = useAiriCardStore()
 const displayModelsStore = useDisplayModelsStore()
@@ -196,8 +201,21 @@ const isRehearsing = ref(false)
 const isGeneratingMotion = ref(false)
 const shouldDownloadBackup = ref(false)
 const isGeneratingAI = ref(false)
-const showPromptGenerator = ref(false)
 const aiSuggestions = ref<Array<{ title: string, dialogue: string }>>([])
+
+// Retired: acting-instruction generation moved to the Emotion Calibration
+// studio (settings window). The button below confirms, then opens it.
+const showEmotionCalibrationConfirm = ref(false)
+
+function openEmotionCalibration() {
+  showEmotionCalibrationConfirm.value = false
+  const modelId = activeModelId.value
+  void openSettings({
+    route: modelId ? `/settings/models/emotions?model=${modelId}` : '/settings/models/emotions',
+  }).catch((err: any) => {
+    console.error('Failed to open Emotion Calibration:', err)
+  })
+}
 
 const visibleEmotions = ref<string[]>([])
 const visibleMotions = ref<string[]>([])
@@ -518,31 +536,6 @@ const dynamicPresets = computed(() => {
   return presets
 })
 
-const activeEmotions = computed(() => visibleEmotions.value)
-
-const activeMotions = computed(() => visibleMotions.value)
-
-async function handlePromptSave(newValue: string) {
-  if (!activeCard.value || !activeCardId.value)
-    return
-
-  const currentActing = activeCard.value.extensions?.airi?.acting || {}
-
-  airiCardStore.updateCard(activeCardId.value, {
-    extensions: {
-      ...activeCard.value.extensions,
-      airi: {
-        ...activeCard.value.extensions.airi,
-        acting: {
-          ...currentActing,
-          modelExpressionPrompt: newValue,
-        },
-      },
-    },
-  })
-  toast.success('Acting instructions updated successfully on character card!')
-}
-
 // Click handler
 function selectModel(m: typeof onSetModels.value[0]) {
   selectedKey.value = m.key
@@ -693,7 +686,7 @@ function selectModel(m: typeof onSetModels.value[0]) {
 
               <button
                 class="flex cursor-pointer items-center gap-1 rounded bg-indigo-500/10 px-2.5 py-1 text-[10px] text-indigo-600 font-medium transition-all hover:bg-indigo-500/20 dark:text-indigo-400"
-                @click="showPromptGenerator = true"
+                @click="showEmotionCalibrationConfirm = true"
               >
                 <div class="i-ph:sparkle animate-pulse text-[10px]" />
                 Generate Acting Instructions
@@ -763,14 +756,43 @@ function selectModel(m: typeof onSetModels.value[0]) {
         />
       </div>
 
-      <!-- Prompt Instructions Generator Modal -->
-      <ModelPromptGeneratorModal
-        v-model="showPromptGenerator"
-        :active-emotions="activeEmotions"
-        :active-motions="activeMotions"
-        :on-set-models="onSetModels"
-        @save="handlePromptSave"
-      />
+      <!-- Emotion Calibration redirect confirm -->
+      <div
+        v-if="showEmotionCalibrationConfirm"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        @click.self="showEmotionCalibrationConfirm = false"
+      >
+        <div class="max-w-sm w-full flex flex-col gap-2.5 border border-neutral-200 rounded-2xl bg-white p-4 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
+          <div class="flex items-center gap-2">
+            <div class="h-8 w-8 flex shrink-0 items-center justify-center rounded-xl bg-primary-500/10 text-primary-500">
+              <div class="i-solar:smile-circle-bold-duotone text-base" />
+            </div>
+            <div class="text-xs text-neutral-900 font-bold dark:text-neutral-100">
+              Open Emotion Calibration?
+            </div>
+          </div>
+          <p class="text-[11px] text-neutral-500 leading-relaxed dark:text-neutral-400">
+            Acting instructions moved to the full studio in the Settings window — live preview, AI naming,
+            verification, and remaps for this model's expressions.
+          </p>
+          <div class="flex items-center justify-end gap-2 pt-0.5">
+            <button
+              type="button"
+              class="cursor-pointer rounded-lg px-3 py-1.5 text-[11px] text-neutral-500 font-medium dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+              @click="showEmotionCalibrationConfirm = false"
+            >
+              Not now
+            </button>
+            <button
+              type="button"
+              class="cursor-pointer rounded-lg bg-primary-600 px-3.5 py-1.5 text-[11px] text-white font-semibold shadow-sm transition-all hover:bg-primary-500"
+              @click="openEmotionCalibration"
+            >
+              Open in Settings →
+            </button>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>

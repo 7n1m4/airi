@@ -26,9 +26,9 @@ import {
   DropdownMenuTrigger,
 } from 'reka-ui'
 import { computed, ref, toRaw, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
-import ExpressionCurationModal from '../../dialogs/ExpressionCurationModal.vue'
 import ModelCustomizerSkeleton from './components/ModelCustomizerSkeleton.vue'
 import WardrobeMeshTreeNode from './components/WardrobeMeshTreeNode.vue'
 
@@ -623,18 +623,17 @@ const noiseFilteredCount = computed(() => {
   return rawExpressions.value.filter(e => e.expressionCategory && isTrackingNoise(e.expressionCategory)).length
 })
 
-const showCurationModal = ref(false)
+const showEmotionCalibrationConfirm = ref(false)
+const router = useRouter()
 
-async function onCurationApplied() {
-  if (!props.modelId)
-    return
-  const model = await displayModelsStore.getDisplayModel(props.modelId)
-  if (model) {
-    applyModelMappings(model)
-  }
-  const caps = await displayModelsStore.getOrLoadModelCapabilities(props.modelId)
-  cachedExpressions.value = caps.expressions
-  cachedMotions.value = caps.motions
+function openEmotionCalibration() {
+  showEmotionCalibrationConfirm.value = false
+  router.push({
+    path: '/settings/models/emotions',
+    query: props.modelId ? { model: props.modelId } : {},
+  }).catch((err) => {
+    console.error('[ModelCustomizer] Emotion Calibration navigation failed:', err)
+  })
 }
 
 // === Inline Wardrobe Builder State ===
@@ -1236,7 +1235,7 @@ function toggleMotionCycle(key: string) {
         <div class="mt-2.5 flex justify-end">
           <button
             class="cursor-pointer rounded-lg bg-primary-500 px-3.5 py-1.5 text-xs text-white font-semibold shadow-sm transition-all active:scale-95 hover:bg-primary-600"
-            @click="showCurationModal = true"
+            @click="showEmotionCalibrationConfirm = true"
           >
             <div class="inline-flex items-center gap-1.5">
               <div class="i-solar:magic-stick-3-bold text-sm" />
@@ -2301,6 +2300,49 @@ function toggleMotionCycle(key: string) {
       </div>
     </template>
 
+    <!-- Emotion Calibration redirect confirm -->
+    <div
+      v-if="showEmotionCalibrationConfirm"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      @click.self="showEmotionCalibrationConfirm = false"
+    >
+      <div class="max-w-md w-full flex flex-col gap-3 border border-neutral-200 rounded-2xl bg-white p-5 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
+        <div class="flex items-center gap-2.5">
+          <div class="h-9 w-9 flex shrink-0 items-center justify-center rounded-xl bg-primary-500/10 text-primary-500">
+            <div class="i-solar:smile-circle-bold-duotone text-lg" />
+          </div>
+          <div>
+            <div class="text-sm text-neutral-900 font-bold dark:text-neutral-100">
+              Curate expressions in Emotion Calibration?
+            </div>
+            <p class="text-[11px] text-neutral-400">
+              The in-place curation wizard is retired.
+            </p>
+          </div>
+        </div>
+        <p class="text-xs text-neutral-500 leading-relaxed dark:text-neutral-400">
+          Expression curation moved to the full Emotion Calibration page — guided setup, live avatar preview,
+          AI naming, per-key verification, and preset remaps for this model.
+        </p>
+        <div class="flex items-center justify-end gap-2 pt-1">
+          <button
+            type="button"
+            class="cursor-pointer rounded-lg px-3.5 py-2 text-xs text-neutral-500 font-medium dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+            @click="showEmotionCalibrationConfirm = false"
+          >
+            Not now
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer rounded-lg bg-primary-600 px-4 py-2 text-xs text-white font-semibold shadow-sm transition-all hover:bg-primary-500"
+            @click="openEmotionCalibration"
+          >
+            Open Emotion Calibration →
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- ACT Mapping Dialog -->
     <Teleport to="body">
       <Transition
@@ -2350,14 +2392,5 @@ function toggleMotionCycle(key: string) {
         </div>
       </Transition>
     </Teleport>
-    <!-- AI Expression Curation Modal (3-Step Wizard) -->
-    <ExpressionCurationModal
-      v-model="showCurationModal"
-      :model-id="props.modelId"
-      :model-format="modelType"
-      :visible-expressions="expressionsToRender"
-      :all-expressions="rawExpressions"
-      @applied="onCurationApplied"
-    />
   </div>
 </template>

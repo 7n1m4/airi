@@ -149,7 +149,7 @@ meta:
   titleKey: settings.pages.models.emotions.title
   subtitleKey: settings.pages.models.title
   descriptionKey: settings.pages.models.emotions.description
-  icon: i-solar:face-smile-bold-duotone
+  icon: i-solar:smile-circle-bold-duotone
   settingsEntry: false
   order: 5
   stageTransition:
