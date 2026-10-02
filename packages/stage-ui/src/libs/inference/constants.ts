@@ -298,13 +298,13 @@ export const TIMEOUTS = {
   /** Local vision model process timeout (absolute) */
   LOCAL_VISION_PROCESS: 90_000,
 
-  /** Local Moondream VLM model load timeout (absolute) */
-  LOCAL_VLM_LOAD: 300_000,
+  /** Local Moondream VLM model load timeout (absolute; multi-shard ~1.1GB download) */
+  LOCAL_VLM_LOAD: 3_600_000,
   /** Local Moondream VLM model process timeout (absolute) */
   LOCAL_VLM_PROCESS: 120_000,
 
-  /** Attention Ecology Guard model load timeout (CLIP + optional Moondream2) */
-  ATTENTION_GUARD_LOAD: 300_000,
+  /** Attention Ecology Guard model load timeout (CLIP + optional Moondream2 ~1.1GB download) */
+  ATTENTION_GUARD_LOAD: 3_600_000,
   /** Attention Ecology Guard per-tick process timeout (unary cascade) */
   ATTENTION_GUARD_PROCESS: 120_000,
 

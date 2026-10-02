@@ -605,6 +605,18 @@ async function isTransformersModelCached(modelId: string): Promise<boolean> {
   try {
     const cache = await caches.open(TRANSFORMERS_CACHE_NAME)
     const keys = await cache.keys()
+
+    // NOTICE: Moondream2 is a multi-shard VLM (~1.1GB). Merely checking if any URL
+    // contains 'moondream2' results in false positives when only small configs or
+    // partial shards were downloaded. We must verify all three essential ONNX weight shards.
+    if (modelId.includes('moondream2')) {
+      const requiredShards = ['decoder_model_merged', 'vision_encoder', 'embed_tokens']
+      const modelKeys = keys.filter(request => request.url.includes(modelId))
+      if (modelKeys.length === 0)
+        return false
+      return requiredShards.every(shard => modelKeys.some(req => req.url.includes(shard)))
+    }
+
     return keys.some(request => request.url.includes(modelId))
   }
   catch {
