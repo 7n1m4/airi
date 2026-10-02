@@ -17,6 +17,487 @@
 
 <!-- RADAR_ENTRIES -->
 
+## [2026-10-02] Upstream Delta: `4b702bd6..33870846` (12 commits, 353 files, 43 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus**: Upstream merged 12 commits (`33870846ad`..`671fbf0d33`) across 353 files, alongside 43 PR updates (17 new PRs, 9 lifecycle transitions, 17 discussion activity changes). Key developments include:
+  1. **Godot / Kirie Desktop Host Migration (PR #2739 / `671fbf0d33`)**: Merged the massive experimental `apps/stage-tamagotchi-kirie` (+31k LOC across 299 files), establishing a Godot 4.7.2 + .NET 10 + CEF host for the Vue renderer with its own migration roadmap and test harness.
+  2. **Provider Resilience & Transient Retry (PR #2724 / `33870846ad`)**: Merged automatic backoff retry (`[3s, 6s, 12s]` or `Retry-After`) for transient HTTP errors (408, 429, 5xx) in `core-agent` runtime, with strict guards (`consumerNotified`) preventing duplicate retries once stream tokens or tool calls have fired.
+  3. **Accessibility & Toggle Switch Fixes (PR #2740 / `9fdbd16408`)**: Swapped hidden checkboxes for `@proj-airi/ui` `Checkbox` primitive in `check-bar.vue`, fixing keyboard accessibility and flex-shrink label truncation.
+  4. **Desktop Tray-Only Mode & Dev Dock Scoping (PR #2700 / `8c9df2276f` & PR #2757 / `865f628b8c`)**: Added an optional tray-only mode (`app.dock.hide()` / `skipTaskbar: true`) to Stage Tamagotchi, and restricted Electron dev dock icon overrides to development runs only.
+  5. **New Upstream PR Initiatives**: Streamed voice transcript inlays with LLM rewriting (PR #2761 by @nekomeowww) and shared dropdown UI primitive (PR #2762 by @chiba233).
+* **Discussion & Community Buzz**:
+  - 💬 **#2541: `Telltworose/feat/drop in plugins` (+2 new comments, total 58)**: Continued high-volume debate surrounding drop-in plugin architecture.
+  - 💬 **#1889: `feat(chat): add stop button to cancel in-flight assistant generation` (49 comments)**: High interest and activity around canceling in-flight LLM assistant generations.
+  - 💬 **#2672: `refactor(stage-ui): bind conversations to window-local characters` (48 comments)**: Heavy architectural discussion around window-local character selection and conversation scoping.
+  - 💬 **#2644: `feat(api): add provider-cost Flux settlement` (+2 new comments, total 39)**: Active engagement on hosted API billing and settlement mechanics.
+  - 💬 **#2717: `feat(debug-server): persist and query local OTLP traces` (+4 new comments, total 27)**: Sustained traction on DuckDB-backed local OpenTelemetry trace storage.
+  - 💬 **#2250: `fix(discord): show live bot connection status` (13 comments)**: Community discussion around live Discord bot status indicators.
+  - 💬 **#2473: `feat(auth): add native email change flow` (+2 new comments, total 11)** & **#2552: `feat(stage) add bilingual subtitles` (+1 new comment, total 11)**.
+  - 💬 **#2748: `feat: add the cognitive runtime` (+3 new comments, total 5)**: Early momentum on new cognitive runtime proposal by @chiba233.
+  - 👁️ **Watched PRs Radar**:
+    - **#2634: `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI’s brain`** [Draft] (1 comment): Quiet; no maintainer endorsement for the external daemon approach.
+    - **#2672: `refactor(stage-ui): bind conversations to window-local characters`** [Draft] (48 comments): Maintained high discussion velocity regarding window decoupling.
+* **Cherry-Pick Candidates**:
+  - ⭐ **PR #2740 / Commit `9fdbd16408`: `fix(stage-ui): clarify animation toggle states` by @Codada**: Clean UI bugfix for `check-bar.vue`. Replaces invisible checkbox input with `@proj-airi/ui` `Checkbox`, adds proper keyboard toggle and label flex protection, and includes Vitest browser unit tests.
+  - ⭐ **PR #2700 / Commit `8c9df2276f`: `feat(stage-tamagotchi): add tray-only app icon setting` by @RainbowBird**: Useful desktop UX option allowing Stage Tamagotchi to run exclusively in the system tray without occupying dock/taskbar space.
+  - ⭐ **PR #2757 / Commit `865f628b8c`: `fix(stage-tamagotchi): set the dock icon only in dev runs` by @nekomeowww**: Ensures packaged release dock icons are not overwritten by dev asset overrides.
+  - 💡 **Design Pattern Port: Provider Transient Retry from PR #2724 (`33870846ad`)**: Port the `streamWithTransientRetry` logic (`transientRetryDelayMs`, exponential backoff `[3s, 6s, 12s]`, and `consumerNotified` safeguard) into `packages/stage-ui/src/stores/ai/chat-llm/llm.ts` to make LLM streaming resilient to temporary provider outages.
+  - 💡 **Design Pattern Port: Zod Nullable Union Flattening from PR #2756 (`8f887ab743`)**: Avoid nested `anyOf` schema rejections from strict LLM providers by using `z.union([...variants, z.null()])` rather than `.nullable()` on unions.
+  - 🔍 **PR #2762: `feat(ui): add shared dropdown menu` by @chiba233**: Track for potential adoption once merged to enrich `@proj-airi/ui` primitives.
+  - ⚪ **Auto-Reject / Do Not Port**:
+    - **PR #2739 / Commit `671fbf0d33` (`apps/stage-tamagotchi-kirie`)**: Massive Godot 4.7.2 + CEF migration workspace that re-introduces deprecated `controls-island`. Our fork relies on decoupled Electron + Control Strip + Unity companion (`apps/stage-mate`).
+    - **PR #2733 / Commit `7f750c88d0`**: Hosted cloud authentication and browser redirects for `server/apps/api`.
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`apps/stage-tamagotchi/src/main/index.ts` & window managers**: Touched by tray-only settings (PR #2700). Must be adapted to our decoupled `ControlStripHost` and `RendererStage` windows rather than upstream’s monolithic stage window.
+  - ⚠️ **`apps/stage-tamagotchi-kirie`**: Upstream now maintains a secondary Godot renderer host under `apps/stage-tamagotchi-kirie/src-web`. Never pull or mix components from this tree into our Electron surfaces.
+  - ⚠️ **`packages/core-agent`**: Upstream runtime additions in `packages/core-agent` (PR #2724, #2756) cannot be directly cherry-picked since our fork orchestrates LLMs in `packages/stage-ui/src/stores/ai/` and composables.
+
+### 📋 Upstream Commits
+- `33870846ad` feat(core-agent): retry temporary provider failures (#2724) [#2724](https://github.com/moeru-ai/airi/pull/2724) _(Muhammad Faiq, 2026-10-02)_
+- `be7abc318d` fix(ci): include service workspaces in typecheck (#2416) [#2416](https://github.com/moeru-ai/airi/pull/2416) _(huyua9, 2026-10-02)_
+- `9fdbd16408` fix(stage-ui): clarify animation toggle states (#2740) [#2740](https://github.com/moeru-ai/airi/pull/2740) _(Codada, 2026-10-02)_
+- `2f59a4c14f` test: include pipelines audio in root vitest projects (#2419) [#2419](https://github.com/moeru-ai/airi/pull/2419) _(huyua9, 2026-10-02)_
+- `056ab72642` docs(contributing): align GitHub setup guide with pinned tooling (#2588) [#2588](https://github.com/moeru-ai/airi/pull/2588) _(Codada, 2026-10-02)_
+- `1f4009dc33` fix(i18n): format Crowdin exports before publication (#2759) [#2759](https://github.com/moeru-ai/airi/pull/2759) _(Columbina, 2026-10-02)_
+- `7f750c88d0` fix(auth): return API and verification browser visits to AIRI (#2733) [#2733](https://github.com/moeru-ai/airi/pull/2733) _(RainbowBird, 2026-10-02)_
+- `8f887ab743` fix(core-agent): flatten nullable spark command destinations (#2756) [#2756](https://github.com/moeru-ai/airi/pull/2756) _(Columbina, 2026-10-01)_
+- `8c9df2276f` feat(stage-tamagotchi): add tray-only app icon setting (#2700) [#2700](https://github.com/moeru-ai/airi/pull/2700) _(RainbowBird, 2026-10-02)_
+- `865f628b8c` fix(stage-tamagotchi): set the dock icon only in dev runs (#2757) [#2757](https://github.com/moeru-ai/airi/pull/2757) _(Neko, 2026-10-02)_
+- `74ee76fbe3` chore(nix): update pnpmDeps hash (#2755) [#2755](https://github.com/moeru-ai/airi/pull/2755) _(Weathercold, 2026-10-02)_
+- `671fbf0d33` feat(tamagotchi): experimental kirie migration (#2739) [#2739](https://github.com/moeru-ai/airi/pull/2739) _(Doji, 2026-10-02)_
+
+### 🔬 Subsystem Breakdown
+#### Documentation & Scaffolding (`⚪ ignore`) — 6 file(s) (+80/-100)
+- `.agents/skills/stage-tamagotchi-godot-csharp/SKILL.md` *(+16/-13)*
+- `.github/CONTRIBUTING.md` *(+56/-86)*
+- `.github/workflows/crowdin-cron-sync.yml` *(+4/-0)*
+- `.github/workflows/deploy-cloudflare-auth-ui.yml` *(+1/-0)*
+- `.github/workflows/deploy-cloudflare-workers-dev-server.yml` *(+1/-0)*
+- `apps/ui-server-auth/README.md` *(+2/-1)*
+
+#### Mobile & Web Platforms (`⚪ ignore / low-priority`) — 2 file(s) (+20/-26)
+- `apps/stage-pocket/src/pages/settings/system/developer.vue` *(+10/-13)*
+- `apps/stage-web/src/pages/settings/system/developer.vue` *(+10/-13)*
+
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 299 file(s) (+31003/-33)
+- `apps/stage-tamagotchi-kirie/.gitignore` *(+17/-0)*
+- `apps/stage-tamagotchi-kirie/MIGRATION.md` *(+214/-0)*
+- `apps/stage-tamagotchi-kirie/README.md` *(+118/-0)*
+- `apps/stage-tamagotchi-kirie/StageTamagotchiKirie.csproj` *(+16/-0)*
+- `apps/stage-tamagotchi-kirie/docs/ablation-review.md` *(+154/-0)*
+- `apps/stage-tamagotchi-kirie/docs/host-architecture.md` *(+106/-0)*
+- `apps/stage-tamagotchi-kirie/docs/verification.md` *(+146/-0)*
+- `apps/stage-tamagotchi-kirie/icon.svg` *(+41/-0)*
+- `apps/stage-tamagotchi-kirie/icon.svg.import` *(+43/-0)*
+- `apps/stage-tamagotchi-kirie/kirie.config.ts` *(+190/-0)*
+- `apps/stage-tamagotchi-kirie/mise.toml` *(+5/-0)*
+- `apps/stage-tamagotchi-kirie/package.json` *(+185/-0)*
+- `apps/stage-tamagotchi-kirie/project.godot` *(+48/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/chat-window.tscn` *(+25/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/developer-window.tscn` *(+26/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/main.tscn` *(+17/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/notice-window.tscn` *(+25/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/onboarding-window.tscn` *(+27/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/AiriDesktopContracts.cs` *(+311/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/AiriDesktopContracts.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/ChatWindow.cs` *(+128/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/ChatWindow.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/ChatWindowManager.cs` *(+96/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/ChatWindowManager.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/DeveloperWindow.cs` *(+155/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/DeveloperWindow.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/Main.cs` *(+193/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/Main.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/NoticeWindow.cs` *(+237/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/NoticeWindow.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/NoticeWindowManager.cs` *(+105/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/NoticeWindowManager.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/OnboardingWindow.cs` *(+175/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/OnboardingWindow.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/OnboardingWindowManager.cs` *(+91/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/OnboardingWindowManager.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/RendererUrl.cs` *(+88/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/RendererUrl.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/SettingsWindow.cs` *(+174/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/SettingsWindow.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/SettingsWindowManager.cs` *(+122/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/SettingsWindowManager.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/SpotlightWindow.cs` *(+205/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/SpotlightWindow.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/assembly-info.cs` *(+3/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/assembly-info.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/auth-service.cs` *(+354/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/auth-service.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/cef-inspector-target.cs` *(+89/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/cef-inspector-target.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/current-display-snapshot-service.cs` *(+42/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/current-display-snapshot-service.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/desktop-window-sizing.cs` *(+138/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/desktop-window-sizing.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/developer-tools-service.cs` *(+182/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/developer-tools-service.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/loopback-auth-server.cs` *(+195/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/loopback-auth-server.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/main.gd.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/microphone-permission-service.cs` *(+433/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/microphone-permission-service.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/native-window-resize-controller.cs` *(+196/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/native-window-resize-controller.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/spotlight-host.cs` *(+260/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/spotlight-host.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/web-view-permission-handler.cs` *(+78/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/scripts/web-view-permission-handler.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/settings-window.tscn` *(+25/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/spotlight-window.tscn` *(+30/-0)*
+- `apps/stage-tamagotchi-kirie/src-godot/window-background.tscn` *(+11/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/beat-sync.html` *(+32/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/index.html` *(+25/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/public/assets/vrm/animations/idle_loop.vrma` *(+0/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/App.vue` *(+297/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/assets/videos/tutorial/tutorial-fade-on-hover.dark.mp4` *(+0/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/assets/videos/tutorial/tutorial-fade-on-hover.light.mp4` *(+0/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/beat-sync.html` *(+32/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/beat-sync.main.ts` *(+30/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/bridges/electron-auth-callback.test.ts` *(+71/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/bridges/electron-auth-callback.ts` *(+40/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/bridges/stage-three-runtime-trace.ts` *(+143/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/IconAnimation.vue` *(+84/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/InteractiveArea.browser.test.ts` *(+1047/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/InteractiveArea.vue` *(+467/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/Window/TitleBar.vue` *(+59/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/WindowRouterLink.vue` *(+12/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/WithScreenCapture.vue` *(+134/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/chat-image-attachment-preview.browser.test.ts` *(+32/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/chat-image-attachment-preview.vue` *(+32/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/chat-tool-renderers/journal-tool-call-block.vue` *(+191/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/chat-viewport-layout.browser.test.ts` *(+214/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/chat-viewport-layout.vue` *(+87/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/microphone-permission-prompt.vue` *(+73/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/resource-status-island/index.vue` *(+87/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/resource-status-island/loading-component-detail.vue` *(+3/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/resource-status-island/loading-component.vue` *(+36/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/resource-status-island/loading-modules.vue` *(+76/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/status-island/index.vue` *(+57/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/icon-animation.ts` *(+29/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/model-settings-runtime-owner.ts` *(+90/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/model-settings-runtime-snapshot.ts` *(+98/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/model-settings-runtime.browser.test.ts` *(+171/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/runtime.ts` *(+25/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/use-hearing-input-channel.test.ts` *(+82/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/use-hearing-input-channel.ts` *(+39/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/use-language.test.ts` *(+166/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/use-language.ts` *(+63/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/use-onboarding-authentication.test.ts` *(+87/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/use-onboarding-authentication.ts` *(+63/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/use-restore-scroll.ts` *(+37/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/use-vision-screen-capture.ts` *(+190/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/useCaptionItems.test.ts` *(+81/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/composables/useCaptionItems.ts` *(+133/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/features/live2d/system-audio-lipsync.ts` *(+325/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/app.ts` *(+19/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/auth.test.ts` *(+48/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/auth.ts` *(+37/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/auto-updater.ts` *(+24/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/chat.ts` *(+19/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/desktop-services.test.ts` *(+30/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/desktop-services.ts` *(+5/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/displays.test.ts` *(+55/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/displays.ts` *(+79/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/external-navigation.browser.test.ts` *(+72/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/external-navigation.ts` *(+61/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/global-shortcuts.test.ts` *(+123/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/global-shortcuts.ts` *(+161/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/index.ts` *(+22/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/locale.browser.test.ts` *(+38/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/locale.ts` *(+17/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/media-access.ts` *(+13/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/microphone-permission.test.ts` *(+91/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/microphone-permission.ts` *(+100/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/onboarding.test.ts` *(+37/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/onboarding.ts` *(+33/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/owner.ts` *(+57/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/pointer.ts` *(+176/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/screen-capture.ts` *(+26/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/spotlight.test.ts` *(+210/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/spotlight.ts` *(+152/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/window-actions.test.ts` *(+61/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/window-actions.ts` *(+23/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/window-lifecycle.test.ts` *(+61/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/host-context/window-lifecycle.ts` *(+61/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/index.html` *(+25/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/layouts/default.vue` *(+9/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/layouts/settings.vue` *(+91/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/layouts/stage.vue` *(+7/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/main.ts` *(+100/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/modules/i18n.ts` *(+22/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/about.vue` *(+497/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/caption.vue` *(+154/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/chat-page-shell.vue` *(+13/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/chat.browser.test.ts` *(+37/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/chat.vue` *(+79/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/dashboard/index.vue` *(+5/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/desktop-overlay-coordinates.test.ts` *(+120/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/desktop-overlay-coordinates.ts` *(+80/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/desktop-overlay-polling.test.ts` *(+539/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/desktop-overlay-polling.ts` *(+392/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/desktop-overlay.vue` *(+418/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/global-shortcut.vue` *(+386/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/index.vue` *(+13/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/live2d-motion.vue` *(+49/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/performance-visualizer.vue` *(+198/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/screen-capture.vue` *(+386/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/updater.vue` *(+112/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/use-electron-all-displays.vue` *(+149/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/use-electron-relative-mouse.vue` *(+83/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/use-magic-keys.vue` *(+10/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/use-window-mouse.vue` *(+22/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/vision.vue` *(+633/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/devtools/widgets-calling.vue` *(+421/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/editor/index.vue` *(+8/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/index.vue` *(+928/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/inlay/index.vue` *(+88/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/notice/fade-on-hover.vue` *(+256/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/notice/index.vue` *(+12/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/onboarding.vue` *(+73/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/account/index.vue` *(+37/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/connection/index.vue` *(+134/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/connection/server-channel-qr-card.vue` *(+209/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/data/components/desktop-folder-section.vue` *(+41/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/data/components/desktop-reset-section.vue` *(+73/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/data/index.vue` *(+46/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/index.vue` *(+81/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/models/godot-scene-input.ts` *(+37/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/models/godot-view-patch-queue.ts` *(+174/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/models/godot-view-session.ts` *(+43/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/models/index.vue` *(+433/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/modules/components/McpConnectionTestPanel.vue` *(+79/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/modules/components/McpJsonEditor.vue` *(+60/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/modules/components/McpServerForm.vue` *(+75/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/modules/mcp-config.test.ts` *(+115/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/modules/mcp-config.ts` *(+161/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/modules/mcp.vue` *(+527/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/system/developer.vue` *(+205/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/system/general.vue` *(+16/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/system/index.vue` *(+90/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/system/permissions.vue` *(+106/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/settings/system/window-shortcuts.vue` *(+156/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/spotlight.vue` *(+160/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/widgets.vue` *(+322/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/public/assets/vrm/animations/idle_loop.vrma` *(+0/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/controls-island.ts` *(+23/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/resources.ts` *(+166/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/settings/server-channel.test.ts` *(+139/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/settings/server-channel.ts` *(+87/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/stage-three-runtime-diagnostics.test.ts` *(+90/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/stage-three-runtime-diagnostics.ts` *(+491/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/stage-window-lifecycle.test.ts` *(+69/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/stage-window-lifecycle.ts` *(+57/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/built-in.test.ts` *(+51/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/built-in.ts` *(+52/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/builtin/image-journal.test.ts` *(+65/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/builtin/image-journal.ts` *(+238/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/builtin/weather-api.ts` *(+146/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/builtin/weather.test.ts` *(+101/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/builtin/weather.ts` *(+41/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/builtin/widgets.test.ts` *(+612/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/builtin/widgets.ts` *(+321/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/index.ts` *(+7/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/mcp.test.ts` *(+97/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/mcp.ts` *(+48/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/plugins.test.ts` *(+140/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/plugins.ts` *(+79/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/testing/strict-tool-schema.test.ts` *(+73/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/stores/tools/testing/strict-tool-schema.ts` *(+144/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/styles/main.css` *(+58/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/styles/transitions.css` *(+18/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/utils/create-object-url-from-bytes.ts` *(+17/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/utils/fade-on-hover.test.ts` *(+41/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/utils/fade-on-hover.ts` *(+28/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/utils/stage-three-transparency.ts` *(+15/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/utils/voice-input-lifecycle.test.ts` *(+85/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/utils/voice-input-lifecycle.ts` *(+85/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/utils/voice-input-suppression.test.ts` *(+44/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/utils/voice-input-suppression.ts` *(+42/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/utils/windows.ts` *(+5/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/artistry/components/Comfy.vue` *(+355/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/artistry/index.ts` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/components/extension-ui-host.vue` *(+259/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/components/iframe-request.test.ts` *(+176/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/components/iframe-request.ts` *(+122/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/components/index.ts` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/composables/use-bridge-spark.test.ts` *(+208/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/composables/use-bridge-spark.ts` *(+134/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/composables/use-extension-ui-for-module.ts` *(+166/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/composables/use-iframe-message-port.test.ts` *(+42/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/composables/use-iframe-message-port.ts` *(+199/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/host.ts` *(+47/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/index.ts` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/extension-ui/shared/eventa-runtime.test.ts` *(+169/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/map/components/Map.vue` *(+306/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/map/index.ts` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/weather/assets/README.md` *(+10/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/weather/assets/clear-day.svg` *(+13/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/weather/assets/clear-day.svg.import` *(+43/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/weather/components/Skeleton.vue` *(+75/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/weather/components/Weather.vue` *(+288/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/widgets/weather/index.ts` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/window-context.test.ts` *(+44/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/window-context.ts` *(+57/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/auth-config.ts` *(+9/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/desktop-overlay-heartbeat.ts` *(+5/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/desktop-overlay-live-window-smoke.test.ts` *(+53/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/desktop-overlay-live-window-smoke.ts` *(+24/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/eventa/index.ts` *(+551/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/eventa/plugin/assets.ts` *(+3/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/eventa/plugin/capabilities.ts` *(+45/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/eventa/plugin/domains.test.ts` *(+115/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/eventa/plugin/host.ts` *(+195/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/eventa/plugin/tools.ts` *(+107/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/eventa/widgets-gamelet-request.test.ts` *(+13/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/mcp-config.ts` *(+124/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/model-settings-runtime.ts` *(+42/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/spotlight-shortcut.ts` *(+7/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/utils/electron/display.ts` *(+42/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/shared/utils/electron/windows/window-size.ts` *(+52/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/tsconfig.json` *(+67/-0)*
+- `apps/stage-tamagotchi-kirie/tests/StageTamagotchiKirie.Tests/Program.cs` *(+410/-0)*
+- `apps/stage-tamagotchi-kirie/tests/StageTamagotchiKirie.Tests/Program.cs.uid` *(+1/-0)*
+- `apps/stage-tamagotchi-kirie/tests/StageTamagotchiKirie.Tests/StageTamagotchiKirie.Tests.csproj` *(+23/-0)*
+- `apps/stage-tamagotchi-kirie/uno.config.ts` *(+22/-0)*
+- `apps/stage-tamagotchi-kirie/vitest.config.ts` *(+37/-0)*
+- `apps/stage-tamagotchi/resources/icon-dev.png` *(+0/-0)*
+- `apps/stage-tamagotchi/src/main/configs/global.ts` *(+2/-1)*
+- `apps/stage-tamagotchi/src/main/index.ts` *(+7/-4)*
+- `apps/stage-tamagotchi/src/main/tray/index.ts` *(+16/-1)*
+- `apps/stage-tamagotchi/src/main/windows/caption/index.ts` *(+2/-1)*
+- `apps/stage-tamagotchi/src/main/windows/chat/floating.ts` *(+2/-1)*
+- `apps/stage-tamagotchi/src/main/windows/shared/app-icon.test.ts` *(+101/-0)*
+- `apps/stage-tamagotchi/src/main/windows/shared/app-icon.ts` *(+75/-0)*
+- `apps/stage-tamagotchi/src/main/windows/spotlight/index.ts` *(+2/-0)*
+- `apps/stage-tamagotchi/src/main/windows/widgets/index.ts` *(+2/-1)*
+- `apps/stage-tamagotchi/src/main/windows/widgets/lifecycle.test.ts` *(+2/-0)*
+- `apps/stage-tamagotchi/src/renderer/pages/settings/system/developer.vue` *(+15/-23)*
+- `apps/stage-tamagotchi/src/renderer/pages/settings/system/general.vue` *(+45/-1)*
+- `apps/stage-tamagotchi/src/shared/eventa/index.ts` *(+2/-0)*
+
+#### Deprecated Surfaces (Control Island) (`⚪ ignore / rejected in fork (decoupled into Control Strip)`) — 17 file(s) (+2509/-8)
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/control-button-tooltip.vue` *(+78/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/control-button.vue` *(+17/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/controls-island-auth-button.test.ts` *(+115/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/controls-island-auth-button.vue` *(+181/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/controls-island-fade-on-hover.vue` *(+86/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/controls-island-hearing-config.vue` *(+64/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/controls-island-overflow.browser.test.ts` *(+598/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/controls-island-profile-picker.vue` *(+39/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/controls-island-root.test.ts` *(+261/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/controls-island-root.vue` *(+135/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/controls-island-stop-speaking.test.ts` *(+90/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/controls-island-stop-speaking.vue` *(+44/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/index.vue` *(+532/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/indicator-mic-volume.vue` *(+81/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/use-controls-island-layout.ts` *(+89/-0)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/use-controls-island-placement.ts` *(+99/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/controls-island-hearing-config.vue` *(+0/-8)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 14 file(s) (+309/-88)
+- `apps/ui-server-auth/src/pages/verify-email.vue` *(+2/-4)*
+- `apps/ui-server-auth/vite-env.d.ts` *(+1/-0)*
+- `apps/ui-server-auth/vite.config.ts` *(+9/-2)*
+- `nix/pnpm-deps-hash.txt` *(+1/-1)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history-message-frame.vue` *(+9/-3)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history.browser.test.ts` *(+37/-0)*
+- `packages/stage-ui/src/components/scenarios/dialogs/audio-input/hearing-config-dialog.vue` *(+4/-3)*
+- `packages/stage-ui/src/components/scenarios/dialogs/audio-input/hearing-config.browser.test.ts` *(+80/-42)*
+- `packages/stage-ui/src/components/scenarios/dialogs/audio-input/hearing-config.vue` *(+36/-24)*
+- `packages/stage-ui/src/components/scenarios/settings/check-bar.browser.test.ts` *(+100/-0)*
+- `packages/stage-ui/src/components/scenarios/settings/check-bar.vue` *(+10/-8)*
+- `packages/stage-ui/vitest.config.ts` *(+11/-1)*
+- `pnpm-workspace.yaml` *(+8/-0)*
+- `vitest.config.ts` *(+1/-0)*
+
+#### Root Build & Tooling (`🔍 inspect`) — 2 file(s) (+770/-59)
+- `package.json` *(+1/-1)*
+- `pnpm-lock.yaml` *(+769/-58)*
+
+#### Core Agent Runtime (`🔍 inspect`) — 5 file(s) (+205/-4)
+- `packages/core-agent/README.md` *(+2/-0)*
+- `packages/core-agent/src/agents/spark-command/schema.ts` *(+2/-1)*
+- `packages/core-agent/src/agents/spark-command/tools.test.ts` *(+24/-0)*
+- `packages/core-agent/src/runtime/chat-completions.test.ts` *(+88/-1)*
+- `packages/core-agent/src/runtime/llm-service.ts` *(+89/-2)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 3 file(s) (+43/-1)
+- `packages/i18n/src/locales/en/tamagotchi/settings.yaml` *(+21/-0)*
+- `packages/i18n/src/locales/zh-Hans/settings.yaml` *(+1/-1)*
+- `packages/i18n/src/locales/zh-Hans/tamagotchi/settings.yaml` *(+21/-0)*
+
+#### Stage Layouts & Shells (`🔍 inspect`) — 2 file(s) (+1/-2)
+- `packages/stage-layouts/src/components/Layouts/mobile-settings-drawer.vue` *(+1/-1)*
+- `packages/stage-layouts/src/components/Widgets/ChatArea.vue` *(+0/-1)*
+
+#### Cloud Services, Billing & Auth (`⚪ ignore / rejected in fork (offline-first architecture)`) — 3 file(s) (+124/-14)
+- `server/apps/api/src/app.test.ts` *(+48/-1)*
+- `server/apps/api/src/app.ts` *(+18/-13)*
+- `server/docs/ai/adr/2026-09-30-api-root-browser-redirect.md` *(+58/-0)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (17)
+- [#2762](https://github.com/moeru-ai/airi/pull/2762) `feat(ui): add shared dropdown menu` by **@chiba233** *(2 comments)*
+- [#2761](https://github.com/moeru-ai/airi/pull/2761) `feat(stage-ui): stream voice transcripts in the inlay and rewrite them with a chat model` by **@nekomeowww** *(1 comments)*
+- [#2250](https://github.com/moeru-ai/airi/pull/2250) `fix(discord): show live bot connection status` by **@Zchary1106** *(13 comments)*
+- [#2131](https://github.com/moeru-ai/airi/pull/2131) `fix(stage-pages): add MiniMax Speech settings page` by **@Abhinoob1501** *(9 comments)*
+- [#1185](https://github.com/moeru-ai/airi/pull/1185) `feat(tamagotchi): Add model selection and custom Voice ID support for Alibaba Bailian` by **@liteshade** *(9 comments)*
+- [#1496](https://github.com/moeru-ai/airi/pull/1496) `airi with subtitle and translate` by **@mujiaoMJ** *(7 comments)*
+- [#2760](https://github.com/moeru-ai/airi/pull/2760) `fix(pipelines-audio): correct playback tests and isolate stale completions` by **@0xSelenicDove** *(2 comments)*
+- [#2137](https://github.com/moeru-ai/airi/pull/2137) `fix(docs): restore characters pages` by **@blottters** *(3 comments)*
+- [#2759](https://github.com/moeru-ai/airi/pull/2759) `fix(i18n): format Crowdin exports before publication` by **@0xSelenicDove** *(2 comments)*
+- [#2754](https://github.com/moeru-ai/airi/pull/2754) `chore(i18n): update translations` by **@github-actions** *(4 comments)*
+- [#2756](https://github.com/moeru-ai/airi/pull/2756) `fix(core-agent): flatten nullable spark command destinations` by **@0xSelenicDove** *(4 comments)*
+- [#2753](https://github.com/moeru-ai/airi/pull/2753) `fix(core-agent): keep tools after a schema or tool-call error` by **@ybai08** *(2 comments)*
+- [#2757](https://github.com/moeru-ai/airi/pull/2757) `fix(stage-tamagotchi): set the dock icon only in dev runs` by **@nekomeowww** *(2 comments)*
+- [#1889](https://github.com/moeru-ai/airi/pull/1889) `feat(chat): add stop button to cancel in-flight assistant generation` by **@felixtremblay** *(49 comments)*
+- [#1859](https://github.com/moeru-ai/airi/pull/1859) `fix(tamagotchi): include stream state in chat sync snapshots` by **@luyua9** *(1 comments)*
+- [#2298](https://github.com/moeru-ai/airi/pull/2298) `docs: fix broken star history chart` by **@Dessalines39394** *(2 comments)*
+- [#2755](https://github.com/moeru-ai/airi/pull/2755) `chore(nix): update pnpmDeps hash` by **@Weathercold** *(2 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (9)
+- [#2724](https://github.com/moeru-ai/airi/pull/2724) `feat(core-agent): retry temporary provider failures` — `OPEN` ➔ `MERGED`
+- [#2416](https://github.com/moeru-ai/airi/pull/2416) `fix(ci): include service workspaces in typecheck` — `OPEN` ➔ `MERGED`
+- [#2740](https://github.com/moeru-ai/airi/pull/2740) `fix(stage-ui): clarify animation toggle states` — `OPEN` ➔ `MERGED`
+- [#2419](https://github.com/moeru-ai/airi/pull/2419) `test: include pipelines audio in root vitest projects` — `OPEN` ➔ `MERGED`
+- [#2588](https://github.com/moeru-ai/airi/pull/2588) `docs(contributing): align GitHub setup guide with pinned tooling` — `OPEN` ➔ `MERGED`
+- [#2733](https://github.com/moeru-ai/airi/pull/2733) `fix(auth): return API and verification browser visits to AIRI` — `OPEN` ➔ `MERGED`
+- [#2700](https://github.com/moeru-ai/airi/pull/2700) `feat(stage-tamagotchi): add tray-only app icon setting` — `OPEN` ➔ `MERGED`
+- [#2739](https://github.com/moeru-ai/airi/pull/2739) `feat(tamagotchi): experimental kirie migration` — `OPEN` ➔ `MERGED`, `Draft` ➔ `Ready`
+- [#2651](https://github.com/moeru-ai/airi/pull/2651) `refactor(stage-ui): make voice input and ASR lifecycle explicit` — `OPEN` ➔ `CLOSED`
+
+#### 💬 Discussion Activity (17)
+- [#2748](https://github.com/moeru-ai/airi/pull/2748) `feat: add the cognitive runtime` — *+3 comments (2 ➔ 5 total)*
+- [#2724](https://github.com/moeru-ai/airi/pull/2724) `feat(core-agent): retry temporary provider failures` — *+3 comments (1 ➔ 4 total)*
+- [#2703](https://github.com/moeru-ai/airi/pull/2703) `fix(stage-pages): add the MiniMax Speech settings page` — *+1 comments (0 ➔ 1 total)*
+- [#2416](https://github.com/moeru-ai/airi/pull/2416) `fix(ci): include service workspaces in typecheck` — *+2 comments (2 ➔ 4 total)*
+- [#2419](https://github.com/moeru-ai/airi/pull/2419) `test: include pipelines audio in root vitest projects` — *+1 comments (1 ➔ 2 total)*
+- [#2679](https://github.com/moeru-ai/airi/pull/2679) `docs: update development setup guide` — *+1 comments (3 ➔ 4 total)*
+- [#2567](https://github.com/moeru-ai/airi/pull/2567) `feat(provider-inference): add AnonRouter chat provider` — *+1 comments (4 ➔ 5 total)*
+- [#2644](https://github.com/moeru-ai/airi/pull/2644) `feat(api): add provider-cost Flux settlement` — *+2 comments (37 ➔ 39 total)*
+- [#2741](https://github.com/moeru-ai/airi/pull/2741) `fix(stage-layouts): keep the stop action available between speech segments` — *+1 comments (1 ➔ 2 total)*
+- [#2524](https://github.com/moeru-ai/airi/pull/2524) `feat(provider-inference): refresh Volcengine coding-plan models from endpoint` — *+1 comments (10 ➔ 11 total)*
+- [#2733](https://github.com/moeru-ai/airi/pull/2733) `fix(auth): return API and verification browser visits to AIRI` — *+3 comments (5 ➔ 8 total)*
+- [#2473](https://github.com/moeru-ai/airi/pull/2473) `feat(auth): add native email change flow` — *+2 comments (9 ➔ 11 total)*
+- [#2552](https://github.com/moeru-ai/airi/pull/2552) `feat(stage)    add bilingual subtitles` — *+1 comments (10 ➔ 11 total)*
+- [#2541](https://github.com/moeru-ai/airi/pull/2541) `Telltworose/feat/drop in plugins` — *+2 comments (56 ➔ 58 total)*
+- [#2545](https://github.com/moeru-ai/airi/pull/2545) `refactor(stage-ui): share provider config snapshots and cover follower edits` — *+1 comments (1 ➔ 2 total)*
+- [#2739](https://github.com/moeru-ai/airi/pull/2739) `feat(tamagotchi): experimental kirie migration` — *+1 comments (2 ➔ 3 total)*
+- [#2717](https://github.com/moeru-ai/airi/pull/2717) `feat(debug-server): persist and query local OTLP traces` — *+4 comments (23 ➔ 27 total)*
+
+### 👁️ Watched PRs Monitor
+- [#2634](https://github.com/moeru-ai/airi/pull/2634) `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain` [Draft] — *(1 comments)*
+  - *Focus*: External Cortico daemon vs in-process native memory; track maintainer reaction to 2-process / web breakage
+- [#2672](https://github.com/moeru-ai/airi/pull/2672) `refactor(stage-ui): bind conversations to window-local characters` [Draft] — *(48 comments)*
+  - *Focus*: Window-local character selection, conversation scoping, standalone card profile page, shared CharacterCard
+
+---
 ## [2026-10-01] Upstream Delta: `2444e92c..4b702bd6` (10 commits, 107 files, 20 PR update(s))
 
 ### 🎯 Executive Highlights
