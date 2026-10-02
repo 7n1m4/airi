@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n'
 
 import EmotionCalibrationStudio from '../../../../acting/EmotionCalibrationStudio.vue'
 
+import { resolvePersona } from '../composables/useStarterCardCommit'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
 const props = defineProps<{
@@ -19,6 +20,33 @@ const draft = useOnboardingV3Draft()
 
 // --- Thin wrapper: draft owns persistence, studio owns the cockpit ---
 const activeModelId = computed(() => draft.state.vesselDisplayModelId || 'preset-live2d-2')
+
+// Character persona (never the user): AI-creator bundle first, then the
+// canonical cross-source resolver (import / starter preset / default).
+const bundleData = computed(() => {
+  const b = draft.state.customCharacterCardBundle as any
+  return b?.data || b
+})
+
+const characterPersona = computed(() => {
+  if (bundleData.value?.personality || bundleData.value?.description) {
+    return {
+      name: draft.state.companionName || bundleData.value?.name || 'Companion',
+      personality: bundleData.value?.personality || '',
+      description: bundleData.value?.description || '',
+      scenario: bundleData.value?.scenario || '',
+      systemPrompt: bundleData.value?.system_prompt || bundleData.value?.systemPrompt || '',
+    }
+  }
+  const resolved = resolvePersona(draft.state, draft.state.userName || 'Friend')
+  return {
+    name: resolved.nickname || resolved.name || 'Companion',
+    personality: resolved.personality || '',
+    description: resolved.description || '',
+    scenario: resolved.scenario || '',
+    systemPrompt: resolved.systemPrompt || '',
+  }
+})
 
 const lastSync = ref<EmotionStudioSyncPayload | null>(null)
 
@@ -74,9 +102,11 @@ function handleContinue() {
       :initial-mappings="draft.state.expressionMappings"
       :initial-directives="draft.state.actingModelExpressionPrompt"
       :initial-calibrated="draft.state.emotionsCurated"
-      :companion-name="draft.state.companionName"
-      :persona-personality="draft.state.userDescription"
-      :persona-description="draft.state.userPrompt"
+      :companion-name="characterPersona.name"
+      :persona-personality="characterPersona.personality"
+      :persona-description="characterPersona.description"
+      :persona-scenario="characterPersona.scenario"
+      :persona-system-prompt="characterPersona.systemPrompt"
       stage-update-reason="onboarding-v3-emotions"
       @sync="handleStudioSync"
     />

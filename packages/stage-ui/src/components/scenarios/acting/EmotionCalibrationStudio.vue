@@ -40,12 +40,15 @@ const props = withDefaults(defineProps<{
   companionName?: string
   personaPersonality?: string
   personaDescription?: string
+  personaScenario?: string
   autoCalibrateOnMount?: boolean
   stageUpdateReason?: string
   startGuided?: boolean
   demoModelId?: string
   allowModelSwitch?: boolean
   contentHeightClass?: string
+  /** Character voice source for Enhance: card systemPrompt on the route, '' in onboarding (persona fields stand in). */
+  personaSystemPrompt?: string
 }>(), {
   initialMappings: () => ({}),
   initialDirectives: '',
@@ -53,12 +56,14 @@ const props = withDefaults(defineProps<{
   companionName: 'Companion',
   personaPersonality: '',
   personaDescription: '',
+  personaScenario: '',
   autoCalibrateOnMount: true,
   stageUpdateReason: 'emotion-studio',
   startGuided: true,
   demoModelId: 'preset-vrm-2',
   allowModelSwitch: false,
   contentHeightClass: 'min-h-[450px]',
+  personaSystemPrompt: '',
 })
 
 const emit = defineEmits<{
@@ -492,6 +497,54 @@ function runAutoCalibration(silent = false, force = false) {
 const isDirectivesModalOpen = ref(false)
 const tempDirectivesText = ref('')
 
+// Live template: derives ONLY from currently mapped slots, so unmapped cues
+// (e.g. wink with nothing bound) are never taught. Re-rendered on mapping
+// changes and Remaps entry — unless the text went bespoke this session
+// (hand-saved or Enhanced), which locks it against accidental clobbering.
+// Anything else (including a pre-existing card prompt) is diverged text, so
+// mounting never touches it.
+const sessionBespoke = ref(false)
+const lastRenderedTemplate = ref('')
+
+const templatedDirectives = computed(() => {
+  return buildDefaultActingDirectives(templateTokens.value)
+})
+
+// Template vocabulary: the UNION of keeper actTokens (the verified per-morph
+// universe) and mapped preset slot tokens (the remap layer) — both are live
+// cues once bound (e.g. blush → Surprised means `blush` must be taught).
+// Falls back to mapped slot tokens outside the guided flow (no curation yet).
+const templateTokens = computed(() => {
+  const seen = new Set<string>()
+  const union: string[] = []
+  const push = (t: string | undefined | null) => {
+    const token = (t || '').trim()
+    if (token && !seen.has(token)) {
+      seen.add(token)
+      union.push(token)
+    }
+  }
+  if (curationDone.value) {
+    for (const i of curationItems.value) {
+      if (!i.shouldSkip) {
+        push(i.actToken)
+      }
+    }
+  }
+  for (const s of CANONICAL_EMOTIONS) {
+    if (expressionMappings.value[s.id]) {
+      push(s.actToken)
+    }
+  }
+  return union
+})
+
+function refreshTemplatedDirectives() {
+  actingDirectivesPrompt.value = templatedDirectives.value
+  lastRenderedTemplate.value = templatedDirectives.value
+  emitSync()
+}
+
 function openDirectivesModal() {
   tempDirectivesText.value = actingDirectivesPrompt.value.trim()
     || buildDefaultActingDirectives(CANONICAL_EMOTIONS.map(s => s.actToken))
@@ -500,6 +553,7 @@ function openDirectivesModal() {
 
 function saveDirectivesModal() {
   actingDirectivesPrompt.value = tempDirectivesText.value
+  sessionBespoke.value = true
   emitSync()
   isDirectivesModalOpen.value = false
   toast.success('Acting directives saved!')
@@ -515,23 +569,31 @@ async function handleEnhanceWithAI() {
   const companionName = props.companionName || 'Companion'
   toast.info('Generating character-tailored acting guidance...')
   try {
-    const curatedItems: CuratedExpressionItem[] = CANONICAL_EMOTIONS.map(s => ({
-      rawKey: expressionMappings.value[s.id] || s.id,
-      label: s.name,
-      actToken: s.actToken,
-      category: 'emotes',
-      shouldSkip: false,
-    }))
+    // Prefer the verified keeper whitelist; fall back to slot-derived items
+    // when Enhance runs outside the guided flow (no curation yet).
+    const keepers = curationItems.value.filter(i => !i.shouldSkip && i.actToken && i.actToken.trim())
+    const curatedItems: CuratedExpressionItem[] = keepers.length > 0
+      ? keepers.map(i => ({ ...i }))
+      : CANONICAL_EMOTIONS.map(s => ({
+          rawKey: expressionMappings.value[s.id] || s.id,
+          label: s.name,
+          actToken: s.actToken,
+          category: 'emotes',
+          shouldSkip: false,
+        }))
     const enhanced = await generateActingPrompt(
       {
         name: companionName,
         personality: props.personaPersonality || 'Warm, attentive, and expressive companion',
         description: props.personaDescription || '',
+        scenario: props.personaScenario || '',
+        systemPrompt: props.personaSystemPrompt || undefined,
       },
       curatedItems,
     )
     if (enhanced) {
       actingDirectivesPrompt.value = enhanced
+      sessionBespoke.value = true
       emitSync()
       toast.success('Enhanced acting guidance successfully generated!')
     }
@@ -540,6 +602,7 @@ async function handleEnhanceWithAI() {
     console.warn('[EmotionCalibrationStudio] AI enhancement fallback:', e)
     const validTokens = CANONICAL_EMOTIONS.map(s => s.actToken)
     actingDirectivesPrompt.value = buildDefaultActingDirectives(validTokens)
+    sessionBespoke.value = true
     emitSync()
     toast.success('Applied standard acting directives template.')
   }
@@ -647,6 +710,7 @@ async function handleNameTrigger() {
       characterName: props.companionName,
       personality: props.personaPersonality,
       description: props.personaDescription,
+      scenario: props.personaScenario,
       providerId: directorProvider.value || undefined,
       model: directorModel.value || undefined,
     },
@@ -662,6 +726,46 @@ async function handleNameTrigger() {
 function resetCuration() {
   curationItems.value = []
   curationDone.value = false
+  remapsAutoApplied.value = false
+}
+
+// --- 12. Remaps step: keeper-constrained dropdowns + one-shot auto-apply ---
+// Dropdown source: verified keeper rawKeys. Falls back to noise-filtered
+// candidates when Remaps is reached with zero keepers (all hidden / legacy).
+const remapOptions = computed(() => {
+  const keepers = curationItems.value.filter(i => !i.shouldSkip).map(i => i.rawKey)
+  if (curationDone.value && keepers.length > 0) {
+    return keepers
+  }
+  return candidateExpressions.value.length > 0 ? candidateExpressions.value : rawExpressions.value
+})
+
+const remapsAutoApplied = ref(false)
+
+function autoApplyKeepersToSlots() {
+  if (!curationDone.value || remapsAutoApplied.value) {
+    return
+  }
+  const keepers = curationItems.value.filter(i => !i.shouldSkip)
+  if (keepers.length === 0) {
+    return
+  }
+  let filled = 0
+  for (const slot of CANONICAL_EMOTIONS) {
+    if (expressionMappings.value[slot.id]) {
+      continue
+    }
+    const match = keepers.find(k => slot.matchRegex.test(k.actToken || '') || slot.matchRegex.test(k.label || '') || slot.matchRegex.test(k.rawKey))
+    if (match) {
+      expressionMappings.value[slot.id] = match.rawKey
+      filled += 1
+    }
+  }
+  remapsAutoApplied.value = true
+  if (filled > 0) {
+    emitSync()
+    toast.success(`Auto-mapped ${filled} keeper${filled === 1 ? '' : 's'} onto preset cues — adjust freely.`)
+  }
 }
 
 // --- 11. Verify step: per-key test-fire + hide (whitelist shaping) ---
@@ -782,6 +886,26 @@ function goGuideStep(step: Exclude<GuideStep, null>) {
     guideStep.value = step
   }
 }
+
+watch(guideStep, (step) => {
+  if (step === 'remaps') {
+    autoApplyKeepersToSlots()
+    // Re-render the template from post-apply mappings so Review/Edit shows
+    // exactly what the current dropdowns teach — unless the text went bespoke
+    // this session (hand-saved or Enhanced), which stays locked.
+    if (!sessionBespoke.value) {
+      refreshTemplatedDirectives()
+    }
+  }
+})
+
+watch(expressionMappings, () => {
+  // Only follow pristine template renders: any divergence (pre-existing card
+  // prompt, hand edit, Enhance output) means hands off.
+  if (!sessionBespoke.value && actingDirectivesPrompt.value === lastRenderedTemplate.value) {
+    refreshTemplatedDirectives()
+  }
+}, { deep: true })
 
 function handleMappingChange() {
   emitSync()
@@ -1469,8 +1593,9 @@ onBeforeUnmount(() => {
             </div>
 
             <div :class="['flex items-center gap-2 shrink-0']">
-              <!-- Auto-Calibrate Sparkle Button -->
+              <!-- Auto-Calibrate Sparkle Button (full view only — guided Remaps owns its slots) -->
               <button
+                v-if="guideStep === null"
                 type="button"
                 :class="[
                   'px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer whitespace-nowrap',
@@ -1484,8 +1609,9 @@ onBeforeUnmount(() => {
                 <span>{{ isCalibrated ? 'Recalibrate' : 'Auto-calibrate' }}</span>
               </button>
 
-              <!-- Advanced Details Link -->
+              <!-- Advanced Details Link (full view only — the table it opens is superseded by guided Verify) -->
               <button
+                v-if="guideStep === null"
                 type="button"
                 :class="['text-[11px] font-medium text-primary-600 dark:text-primary-400 hover:underline flex items-center gap-0.5 cursor-pointer ml-1']"
                 @click="isCurationModalOpen = true"
@@ -1546,13 +1672,13 @@ onBeforeUnmount(() => {
                     -- Unmapped --
                   </option>
                   <option
-                    v-if="expressionMappings[slot.id] && !(candidateExpressions.length > 0 ? candidateExpressions : rawExpressions).includes(expressionMappings[slot.id])"
+                    v-if="expressionMappings[slot.id] && !remapOptions.includes(expressionMappings[slot.id])"
                     :value="expressionMappings[slot.id]"
                   >
                     {{ expressionMappings[slot.id] }}
                   </option>
                   <option
-                    v-for="expr in (candidateExpressions.length > 0 ? candidateExpressions : rawExpressions)"
+                    v-for="expr in remapOptions"
                     :key="expr"
                     :value="expr"
                   >

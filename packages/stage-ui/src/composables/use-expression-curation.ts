@@ -82,6 +82,7 @@ export function useExpressionCuration() {
       characterName?: string
       personality?: string
       description?: string
+      scenario?: string
       /** Step-scoped override: when set, this provider/model is used instead of the global consciousness active pair. */
       providerId?: string
       model?: string
@@ -108,6 +109,7 @@ export function useExpressionCuration() {
       const charName = options?.characterName || activeCard.value?.name || 'Character'
       const charPersonality = options?.personality || activeCard.value?.personality || ''
       const charDescription = options?.description || activeCard.value?.description || ''
+      const charScenario = options?.scenario || (activeCard.value as any)?.scenario || ''
 
       const systemInstruction = `You are an expert anime avatar director and emotional acting coach for AI companions.
 Your task is to analyze a list of raw 3D/2D model blendshapes and curate them for emotional acting with the <|ACT:emotion="..."|> token system.
@@ -119,11 +121,13 @@ Directives:
 4. REJECTION GATE ("The Out"): If an item is clearly non-emotional procedural tracking noise (e.g. eye-look directions like "0.up", "1.down", partial eye/mouth bones like "10.中", speech mouth shapes, or basic tracking shapes), set "shouldSkip: true" and give a brief "skipReason".
 5. If the user already provided a custom renamed label, PRESERVE and respect their intent.
 6. Contextualize the emotion names and ACT tokens to fit the character persona provided below.
+7. The persona context below describes the CHARACTER being built. Never confuse it with the human user operating the software — appearance tags, wardrobe, and physical descriptions refer to the character's avatar and story, not the user.
 
-Character Persona Context:
+Character Persona Context (the CHARACTER being built — never the user):
 - Name: ${charName}
 ${charPersonality ? `- Personality: ${charPersonality}` : ''}
 ${charDescription ? `- Description: ${charDescription}` : ''}
+${charScenario ? `- Scenario: ${charScenario}` : ''}
 - Avatar Model Format: ${modelFormat.toUpperCase()}`
 
       const userPrompt = `Here is the candidate list of expressions to curate:
@@ -200,6 +204,14 @@ Return a structured JSON object containing the curated items array.`
       .map(([cat, tokens]) => `- ${cat.toUpperCase()}: ${tokens.map(t => `<|ACT:emotion="${t}"|>`).join(', ')}`)
       .join('\n')
 
+    // Structured whitelist: the machine truth behind the tokens (token → raw
+    // morph + display label). The model reasons over this, not over any
+    // previously rendered prose (which would be circular).
+    const whitelistText = activeItems
+      .filter(i => !i.shouldSkip && i.actToken && i.actToken.trim())
+      .map(i => `- "${i.actToken.trim()}" fires morph "${i.rawKey}" ("${i.label || i.rawKey}")`)
+      .join('\n')
+
     if (!providerId || !model) {
       return generateDefaultActingPrompt(validTokens)
     }
@@ -215,12 +227,14 @@ Return a structured JSON object containing the curated items array.`
       const charPersonality = characterContext.personality || activeCard.value?.personality || ''
       const charDescription = characterContext.description || activeCard.value?.description || ''
       const charScenario = characterContext.scenario || activeCard.value?.scenario || ''
+      const charSystemPrompt = characterContext.systemPrompt || ''
 
       const systemInstruction = `You are an expert AI actor manager. Help the user write a detailed directive instructing the character actor how to inject <|ACT:emotion="expression_name"|> tokens into their dialogue responses.
 - You MUST instruct the character to use the exact expression cues listed in the Acting Context.
 - You MUST instruct the character to strictly use the official Short Format syntax with quoted values and equal signs: \`<|ACT:emotion="expression_name"|>\`.
 - Instruct the character to place these tokens sparingly at natural emotional peaks in their dialogue (never overuse—insert only 1-2 per response).
 - Teach the character which expressions match their default demeanor versus rare emotional shifts, tailored to their personality (${charName}).
+- When a Character Voice section is provided, match its register, diction, and restraint: a dry sardonic voice uses cues sparingly and wryly, an effusive voice more freely. Persona judgment (e.g. telling a grunge character to use a happy cue only rarely) belongs in the directives.
 - Always end the instruction block with a clear, in-character usage dialogue example showing where the tokens should be placed in dialogue (e.g., "Dialogue before cue <|ACT:emotion=\\"token_name\\"|> dialogue after cue.").
 - Output ONLY the raw directive text. Do not wrap in conversational meta-commentary, introductory remarks, or markdown code fences unless formatting directives.`
 
@@ -229,9 +243,13 @@ Return a structured JSON object containing the curated items array.`
 ${charPersonality ? `- Personality: ${charPersonality}` : ''}
 ${charDescription ? `- Description: ${charDescription}` : ''}
 ${charScenario ? `- Scenario: ${charScenario}` : ''}
+${charSystemPrompt ? `\nCharacter Voice (system prompt — match this register):\n${charSystemPrompt}` : ''}
 
 Complete Curated Expression Tokens (${validTokens.length} total):
 ${categorizedTokenText}
+
+Verified Whitelist (token → avatar morph — reason over this, not over any prior prose):
+${whitelistText}
 
 Please draft the comprehensive Acting Directive instructing ${charName} how to use these exact tokens in character.`
 
@@ -383,9 +401,12 @@ Please draft the comprehensive Acting Directive instructing ${charName} how to u
 
   function generateDefaultActingPrompt(tokens: string[]): string {
     const tokenList = tokens.map(t => `<|ACT:emotion="${t}"|>`).join(', ')
+    // The example reuses a configured token (never a hardcoded one): citing an
+    // unmapped emotion here would teach the model it is available.
+    const exampleToken = tokens[0] || 'expression_name'
     return `Inject physical emotion cues sparingly using the official Short Format at key emotional moments:
 - Available expression cues: ${tokenList || 'None'}
-- Example: "I'm so happy to see you! <|ACT:emotion="happy"|> How has your day been?"
+- Example: "Hey, how are you? <|ACT:emotion="${exampleToken}"|>"
 - Place cues naturally at emotional peaks (1-2 per turn).`
   }
 

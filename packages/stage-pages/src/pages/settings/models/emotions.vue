@@ -132,6 +132,8 @@ async function handleStudioSync(payload: EmotionStudioSyncPayload) {
       :companion-name="activeCard?.name"
       :persona-personality="activeCard?.personality"
       :persona-description="activeCard?.description"
+      :persona-scenario="(activeCard as any)?.scenario"
+      :persona-system-prompt="activeCard?.systemPrompt"
       stage-update-reason="settings-models-emotions"
       content-height-class="min-h-[540px]"
       allow-model-switch

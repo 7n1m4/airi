@@ -1,6 +1,6 @@
 # Proposal: Dual-Duty Ninja-Swap Interceptor (Speech Tags + ACT Cues)
 
-> **Status**: Proposal — zero implementation (Oct 2026). No `NinjaSwap` hits repo-wide; `ControlStripHost.vue` / `speech.ts` have no Jev/`useSystemOneStore` wiring (ACT cues exist without Jev).
+> **Status**: Tier 1 in active build (Oct 2026) — `EmotionCalibrationStudio.vue` + hidden `settings/models/emotions` route + guided Meet/Name/Verify dots all shipped and vetted; Remaps + whitelist compile next. Tier 2 still proposal — zero implementation: no `NinjaSwap` hits repo-wide; `ControlStripHost.vue` / `speech.ts` have no Jev/`useSystemOneStore` wiring (ACT cues exist without Jev).
 > **Promoted from**: [`docs/proposal-jev-integration.md`](./proposal-jev-integration.md) Domain F (Phase 6 — NEXT UP) and [`docs/design-jev-integrations.md`](./design-jev-integrations.md) §4 Domain F.
 > **Related domain skill**: [`.agents/skills/airi-jev-decision-engine/SKILL.md`](../.agents/skills/airi-jev-decision-engine/SKILL.md)
 > **Adjacent docs (do not duplicate, integrate with)**:
@@ -135,7 +135,7 @@ The dots component lives in the studio so it renders identically embedded in onb
 
 #### 2.1.3 Compiling `compiledWhitelists` at the step-3 synthesis pass
 
-- **Emotions/motions: deterministic, no LLM needed.** `activeItems` already carries `actToken` + `category` + `shouldSkip` — the whitelist emotion/motion sets are a pure function of the non-skipped items. Zero extra cost, zero variance.
+- **Emotions/motions: deterministic, no LLM needed.** `activeItems` already carries `actToken` + `category` + `shouldSkip` — the whitelist emotion/motion sets are a pure function of the non-skipped items. Zero extra cost, zero variance. The rendered template lists the union of keeper actTokens and mapped preset slot tokens (both are live cues once bound — e.g. `blush → Surprised` means `blush` is taught alongside `stunned_start`).
 - **Speech tags: LLM-assisted.** Curation output contains no speech tags; the allowlist needs persona judgment (stoic → no `giggle`) intersected with provider capabilities (`expressionTags` plumbing already exists — see §4). Options: extend the step-3 prompt to return directives + a JSON sidecar, or a second small structured call reusing the same context.
 - **Scope note**: this solves the wizard path (surfaces 3–4) only. Manual acting-tab input (surface 1) still needs the debounced background "fancy parse" compile on edit — that is the Q3 shootout item.
 
@@ -154,6 +154,48 @@ The dots component lives in the studio so it renders identically embedded in onb
   }
   ```
 - **Cost**: runs offline once at authoring/import time (~300–800ms), zero real-time streaming impact.
+
+#### 2.1.5 Tier 1 execution: goals, data model, and build log
+
+**Goal.** Tier 1 exists to clean the data so Tier 2 never has to guess. Every avatar ships a private morph namespace (raw keys); every character needs a public cue vocabulary (ACT tokens). Tier 1's entire job is building a verified bridge between the two and caching it — first at the shared model level, then projected per character. Direction of travel: raw morphs → noise filter → semantic naming (Verify) → preset remaps → compiled whitelist → (Tier 2 consumes). Speech tags ride the same pipeline only after emotion + motion land.
+
+**Three alias layers (do not conflate).**
+1. **Display label** (`rawKey → human label`, e.g. `shocked → "Very Surprised"`): one label per raw key, display only. Stored on the display-model record (`emotionMappings[rawKey] = label`, cf. `applyCuration`).
+2. **ACT slot binding** (`rawKey → actSlot`, e.g. `shocked → surprised`): one slot per raw key, but unlimited raw keys per slot — the VRM runtime (`VRMModel.vue:1087`) inverts the map on load and fires every bound morph per slot. Many-to-one is native; no "second alias entry" is needed or possible at this layer.
+3. **ACT token vocabulary** (what the LLM may emit, e.g. `very_surprised`): the only layer where multiple names for one morph is meaningful — and today it exists only as prose inside the generated directives prompt, not as data. `compiledWhitelists` is that vocabulary made machine-readable (`actToken → rawKey`), and it is what Tier 2 will query.
+
+**Model-level vs character-level (locked).** Rig truth lives on the **display-model record** (emotion mappings, labels) so every card sharing an avatar reuses months of curation work. Taste lives on the **card** (`extensions.airi.acting`: directives prompt + `compiledWhitelists`), so a grunge card and a bubbly card on the same avatar whitelist different subsets. This split already exists in the codebase (model record vs card extension); the whitelist completes it — no migration.
+
+**The terminal field: `modelExpressionPrompt`.** Everything in Tier 1 serves exactly one runtime field:
+
+```ts
+interface ActingConfig {
+  modelExpressionPrompt: string // ← the whole game
+  speechExpressionPrompt: string
+  speechMannerismPrompt: string
+  idleAnimations?: string[]
+}
+```
+
+Today all 5 Tier 1 surfaces write `modelExpressionPrompt` in free prose — which is precisely why the whitelist has to exist: prose can't be queried, a structured list can. So the full pipeline ends here:
+
+```text
+customExpressions (model-level rig truth)
+  → curated (AI-named keepers)
+    → compiledWhitelist (per-character structured allowlist)
+      → templated (synthetic generic prompt derived from the whitelist)
+        → modelExpressionPrompt (overwritten — the runtime reads only this)
+```
+
+When the guided flow finishes, it overwrites the user's `modelExpressionPrompt` with the templated synthesis. No merge, no append — overwrite, because the whitelist is now the source of truth and the prompt is its rendering.
+
+**Endgame: one UI, one escape hatch.** Once this flow lands, every surface that writes `modelExpressionPrompt` gets pointed at it — the curated wizard, the Sparkle per-field generator (for acting fields), the onboarding emotions step (already the same component), the Rehearsal Room entry. Four of the five converge. The fifth — the raw textarea in the Acting tab — stays forever, because the user must retain full manual control. It just reverses direction: instead of writing the field directly, free text gets parsed *back* into `compiledWhitelists` (the Tier 1 "fancy parse" background compile), which then re-renders the prompt. Manual control is preserved; structured truth is preserved; they stay in sync through the whitelist, never around it.
+
+**Direction normalization (tracked follow-up, NOT in Remaps).** The commit path writes mappings as `slot → rawKey` while both runtimes read `rawKey → actSlot`, and curated display labels collide with slot bindings in the same record field. Flipping writers without migrating readers (ModelCustomizer display, commit, sync-engine) breaks faces — so Remaps ships persistence-identical, and the canonical-shape migration (separate label field + inverted writers + updated readers) gets its own pass with its own verification.
+
+**Build log (shipped).** Studio extraction + thin onboarding wrapper (no behavior change) → hidden `settings/models/emotions` route → guided dots scaffold (Meet → Name → Verify → Remaps, dots clickable backward, Skip/Finish to full cockpit) → Meet demo anchor (AvatarSample_B `Surprised`, health-checked) → Name stats/AI-gate/curation trigger with step-scoped `BrainModelPicker` override (`curateExpressions` accepts `providerId`/`model`) → motions inventory per format (Live2D/Spine from file, MMD/VRM built-in) → Verify keeper table with re-fire-safe previews + ✓/✕ Keep toggles → AVIF art (~96% smaller) → LIVE/STATIC badge + trigger diagnostics + neutral-bounce re-fire.
+
+**Next (in order).** Remaps per the agreed plan (keeper-constrained dropdowns, one-shot empty-slot auto-apply, no Recalibrate/Details in the guided leg, direction normalization) → `compiledWhitelists` bake + auto-templated `modelExpressionPrompt` overwrite → entry-point rewiring (ModelCustomizer, acting-tab sparkle, Rehearsal Room → route; modal retirement) → acting-tab textarea reverse-parse (free text → whitelist) → Tier 2 stride interceptor (§2.2).
 
 ### 2.2 Tier 2: real-time sentence-stride interceptor (~110ms ninja-swap)
 
