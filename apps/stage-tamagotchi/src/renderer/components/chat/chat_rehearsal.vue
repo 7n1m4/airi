@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import RendererStage from '@proj-airi/stage-ui/components/scenes/RendererStage.vue'
+
 import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import { useCustomVrmAnimationsStore } from '@proj-airi/stage-ui-three'
 import { ModelCustomizer } from '@proj-airi/stage-ui/components/scenarios/settings/model-settings'
@@ -54,6 +56,23 @@ onMounted(async () => {
 })
 
 const selectedKey = ref<string | null>(null)
+
+// Inline stage viewport (Phase A): local canvas so expression previews work
+// with the Stage window closed. Audio playback still routes to the stage host
+// (see playRehearsal gate below) — local speech hosting lands in Phase C.
+const inlineStageCollapsed = ref(false)
+const inlineStageXOffset = ref(0)
+const inlineStageYOffset = ref(0)
+const inlineStageScale = ref(1)
+
+function handleInlineStageOffsetChange(pos: { x: number, y: number }) {
+  inlineStageXOffset.value = pos.x
+  inlineStageYOffset.value = pos.y
+}
+
+function handleInlineStageScaleChange(scale: number) {
+  inlineStageScale.value = scale
+}
 
 function getModelPreviewUrl(modelId?: string) {
   if (!modelId)
@@ -573,20 +592,6 @@ function selectModel(m: typeof onSetModels.value[0]) {
       </p>
     </div>
 
-    <!-- Stage offline warning -->
-    <div
-      v-if="!stageEnabled"
-      class="mx-4 mb-2 border border-amber-200/50 rounded-xl bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:border-amber-900/50 dark:text-amber-400"
-    >
-      <div class="flex items-center gap-1 font-semibold">
-        <div class="i-solar:shield-warning-bold-duotone text-sm" />
-        Stage Window Offline
-      </div>
-      <p class="mt-0.5 text-[10px] leading-relaxed opacity-80">
-        Open the Stage window to preview expressions live.
-      </p>
-    </div>
-
     <!-- No card loaded -->
     <div v-if="!activeCardId" class="flex flex-1 flex-col items-center justify-center p-6 text-center">
       <div class="i-solar:user-id-bold-duotone mb-2 text-4xl text-neutral-300 dark:text-neutral-700" />
@@ -599,161 +604,202 @@ function selectModel(m: typeof onSetModels.value[0]) {
     </div>
 
     <template v-else>
-      <!-- Unified Model Selector Grid (5 columns) -->
-      <div class="shrink-0 px-4 pb-2">
-        <div v-if="onSetModels.length === 0" class="py-2 text-center text-[10px] text-neutral-400 italic">
-          No models bound to this card.
-        </div>
-        <div v-else class="grid grid-cols-5 gap-1.5">
-          <button
-            v-for="m in onSetModels"
-            :key="m.key"
-            class="group relative h-16 w-full flex flex-col justify-end overflow-hidden border rounded-xl transition-all duration-200"
-            :class="selectedModel?.key === m.key
-              ? 'border-primary-500 ring-2 ring-primary-500/20 shadow-md shadow-primary-500/10'
-              : 'border-neutral-200 dark:border-neutral-800 opacity-60 hover:opacity-90 hover:border-neutral-300 dark:hover:border-neutral-700'"
-            @click="selectModel(m)"
-          >
-            <!-- Avatar -->
-            <div class="absolute inset-0 bg-neutral-100 dark:bg-neutral-900">
-              <img
-                v-if="m.avatarUrl"
-                :src="m.avatarUrl"
-                class="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+      <!-- Two-column workspace: controls scroll left, stage pinned right -->
+      <div class="min-h-0 flex flex-1 flex-row gap-3 overflow-hidden px-4 pb-3">
+        <div class="min-w-0 flex-1 overflow-y-auto">
+          <!-- Unified Model Selector Grid (5 columns) -->
+          <div class="shrink-0 pb-2">
+            <div v-if="onSetModels.length === 0" class="py-2 text-center text-[10px] text-neutral-400 italic">
+              No models bound to this card.
+            </div>
+            <div v-else class="grid grid-cols-5 gap-1.5">
+              <button
+                v-for="m in onSetModels"
+                :key="m.key"
+                class="group relative h-16 w-full flex flex-col justify-end overflow-hidden border rounded-xl transition-all duration-200"
+                :class="selectedModel?.key === m.key
+                  ? 'border-primary-500 ring-2 ring-primary-500/20 shadow-md shadow-primary-500/10'
+                  : 'border-neutral-200 dark:border-neutral-800 opacity-60 hover:opacity-90 hover:border-neutral-300 dark:hover:border-neutral-700'"
+                @click="selectModel(m)"
               >
-              <div v-else class="h-full w-full flex items-center justify-center text-neutral-400 dark:text-neutral-600">
-                <div class="i-solar:user-bold-duotone text-xl" />
+                <!-- Avatar -->
+                <div class="absolute inset-0 bg-neutral-100 dark:bg-neutral-900">
+                  <img
+                    v-if="m.avatarUrl"
+                    :src="m.avatarUrl"
+                    class="h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-105"
+                  >
+                  <div v-else class="h-full w-full flex items-center justify-center text-neutral-400 dark:text-neutral-600">
+                    <div class="i-solar:user-bold-duotone text-xl" />
+                  </div>
+                </div>
+                <div class="absolute inset-0 from-black/80 via-black/20 to-transparent bg-gradient-to-t" />
+                <div class="relative z-10 px-1.5 pb-1.5">
+                  <span class="line-clamp-1 block text-[9px] text-white font-bold leading-tight drop-shadow">
+                    {{ m.name }}
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Divider -->
+          <div v-if="onSetModels.length > 0" class="mb-2 border-t border-neutral-100 dark:border-neutral-800/60" />
+
+          <!-- Sandbox Playground -->
+          <div class="shrink-0 pb-3">
+            <div class="border border-neutral-200 rounded-xl bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-950/20">
+              <div class="mb-2 flex items-center justify-between">
+                <span class="text-[10px] text-neutral-400 font-bold tracking-wider uppercase">Sandbox Playground</span>
+              </div>
+
+              <div class="border border-neutral-200 rounded-lg bg-white dark:border-neutral-800 dark:bg-neutral-900">
+                <textarea
+                  v-model="playgroundText"
+                  rows="2"
+                  class="w-full border-none bg-transparent p-2 text-xs dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-0"
+                  placeholder="e.g. <|ACT:emotion=&quot;happy&quot;|> Hello world!"
+                />
+              </div>
+
+              <div class="mt-2 flex flex-col gap-2">
+                <div class="flex flex-wrap items-center gap-2">
+                  <button
+                    class="flex cursor-pointer items-center gap-1 rounded bg-primary-500/10 px-2.5 py-1 text-[10px] text-primary-600 font-bold transition-all hover:bg-primary-500/20 dark:text-primary-400"
+                    :disabled="isRehearsing"
+                    @click="playRehearsal"
+                  >
+                    <div :class="isRehearsing ? 'i-solar:spinner-bold animate-spin text-[10px]' : 'i-solar:clapperboard-play-bold-duotone'" />
+                    Act
+                  </button>
+
+                  <button
+                    v-if="modelType === 'vrm'"
+                    class="flex cursor-pointer items-center gap-1 rounded bg-indigo-500/10 px-2.5 py-1 text-[10px] text-indigo-600 font-bold transition-all hover:bg-indigo-500/20 dark:text-indigo-400 disabled:opacity-50"
+                    :disabled="isGeneratingMotion"
+                    @click="createMotion"
+                  >
+                    <div :class="isGeneratingMotion ? 'i-solar:spinner-bold animate-spin text-[10px]' : 'i-solar:magic-stick-3-bold-duotone'" />
+                    Create Motion
+                  </button>
+
+                  <button
+                    class="flex cursor-pointer items-center gap-1 rounded bg-primary-500/10 px-2.5 py-1 text-[10px] text-primary-600 font-medium transition-all hover:bg-primary-500/20 dark:text-primary-400"
+                    :disabled="isGeneratingAI"
+                    @click="suggestDialogue"
+                  >
+                    <div :class="isGeneratingAI ? 'i-solar:spinner-bold animate-spin text-[10px]' : 'i-solar:magic-stick-3-bold-duotone'" />
+                    {{ isGeneratingAI ? 'Generating...' : 'Suggest Dialog' }}
+                  </button>
+
+                  <button
+                    class="flex cursor-pointer items-center gap-1 rounded bg-indigo-500/10 px-2.5 py-1 text-[10px] text-indigo-600 font-medium transition-all hover:bg-indigo-500/20 dark:text-indigo-400"
+                    @click="showEmotionCalibrationConfirm = true"
+                  >
+                    <div class="i-ph:sparkle animate-pulse text-[10px]" />
+                    Generate Acting Instructions
+                  </button>
+                </div>
+
+                <div v-if="modelType === 'vrm'" class="flex items-center gap-2 pl-0.5">
+                  <label class="flex cursor-pointer select-none items-center gap-1.5 py-0.5">
+                    <input
+                      v-model="shouldDownloadBackup"
+                      type="checkbox"
+                      class="h-3 w-3 border-neutral-300 rounded text-indigo-500 accent-indigo-500 focus:ring-indigo-500"
+                    >
+                    <span class="text-[9px] text-neutral-400 font-semibold dark:text-neutral-500">Download backup file to disk</span>
+                  </label>
+                </div>
+
+                <p class="text-[9px] text-neutral-400 leading-normal dark:text-neutral-500">
+                  Clicking this compiles all visible emotions, motions, and actor profiles into detailed markdown instructions that teach the AI how and when to emote. You can save these instructions directly to your character card's system settings.
+                </p>
+              </div>
+
+              <!-- presets & suggestions tray -->
+              <div class="flex flex-wrap gap-1 border-t border-neutral-100 pt-2 dark:border-neutral-800">
+                <!-- Dynamic Templates (Always Available) -->
+                <button
+                  v-for="p in dynamicPresets"
+                  :key="p.label"
+                  class="cursor-pointer border border-primary-200/50 rounded bg-primary-50/20 px-2 py-0.5 text-[9px] text-primary-600 font-bold transition-all dark:border-primary-900/40 dark:bg-primary-950/10 hover:bg-primary-500/10 dark:text-primary-400"
+                  @click="playgroundText = p.text"
+                >
+                  {{ p.label }}
+                </button>
+
+                <!-- LLM Suggestions -->
+                <button
+                  v-for="s in aiSuggestions"
+                  :key="s.title"
+                  class="cursor-pointer border border-neutral-200 rounded bg-white px-2 py-0.5 text-[9px] text-neutral-600 font-medium transition-all dark:border-neutral-800 dark:bg-neutral-900 hover:bg-neutral-50 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                  @click="playgroundText = s.dialogue"
+                >
+                  {{ s.title }}
+                </button>
               </div>
             </div>
-            <div class="absolute inset-0 from-black/80 via-black/20 to-transparent bg-gradient-to-t" />
-            <div class="relative z-10 px-1.5 pb-1.5">
-              <span class="line-clamp-1 block text-[9px] text-white font-bold leading-tight drop-shadow">
-                {{ m.name }}
-              </span>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      <!-- Divider -->
-      <div v-if="onSetModels.length > 0" class="mx-4 mb-2 border-t border-neutral-100 dark:border-neutral-800/60" />
-
-      <!-- Sandbox Playground -->
-      <div class="shrink-0 px-4 pb-3">
-        <div class="border border-neutral-200 rounded-xl bg-neutral-50/50 p-3 dark:border-neutral-800 dark:bg-neutral-950/20">
-          <div class="mb-2 flex items-center justify-between">
-            <span class="text-[10px] text-neutral-400 font-bold tracking-wider uppercase">Sandbox Playground</span>
           </div>
 
-          <div class="border border-neutral-200 rounded-lg bg-white dark:border-neutral-800 dark:bg-neutral-900">
-            <textarea
-              v-model="playgroundText"
-              rows="2"
-              class="w-full border-none bg-transparent p-2 text-xs dark:text-neutral-100 placeholder:text-neutral-400 focus:outline-none focus:ring-0"
-              placeholder="e.g. <|ACT:emotion=&quot;happy&quot;|> Hello world!"
-            />
-          </div>
-
-          <div class="mt-2 flex flex-col gap-2">
-            <div class="flex flex-wrap items-center gap-2">
-              <button
-                class="flex cursor-pointer items-center gap-1 rounded bg-primary-500/10 px-2.5 py-1 text-[10px] text-primary-600 font-bold transition-all hover:bg-primary-500/20 dark:text-primary-400"
-                :disabled="isRehearsing"
-                @click="playRehearsal"
-              >
-                <div :class="isRehearsing ? 'i-solar:spinner-bold animate-spin text-[10px]' : 'i-solar:clapperboard-play-bold-duotone'" />
-                Act
-              </button>
-
-              <button
-                v-if="modelType === 'vrm'"
-                class="flex cursor-pointer items-center gap-1 rounded bg-indigo-500/10 px-2.5 py-1 text-[10px] text-indigo-600 font-bold transition-all hover:bg-indigo-500/20 dark:text-indigo-400 disabled:opacity-50"
-                :disabled="isGeneratingMotion"
-                @click="createMotion"
-              >
-                <div :class="isGeneratingMotion ? 'i-solar:spinner-bold animate-spin text-[10px]' : 'i-solar:magic-stick-3-bold-duotone'" />
-                Create Motion
-              </button>
-
-              <button
-                class="flex cursor-pointer items-center gap-1 rounded bg-primary-500/10 px-2.5 py-1 text-[10px] text-primary-600 font-medium transition-all hover:bg-primary-500/20 dark:text-primary-400"
-                :disabled="isGeneratingAI"
-                @click="suggestDialogue"
-              >
-                <div :class="isGeneratingAI ? 'i-solar:spinner-bold animate-spin text-[10px]' : 'i-solar:magic-stick-3-bold-duotone'" />
-                {{ isGeneratingAI ? 'Generating...' : 'Suggest Dialog' }}
-              </button>
-
-              <button
-                class="flex cursor-pointer items-center gap-1 rounded bg-indigo-500/10 px-2.5 py-1 text-[10px] text-indigo-600 font-medium transition-all hover:bg-indigo-500/20 dark:text-indigo-400"
-                @click="showEmotionCalibrationConfirm = true"
-              >
-                <div class="i-ph:sparkle animate-pulse text-[10px]" />
-                Generate Acting Instructions
-              </button>
-            </div>
-
-            <div v-if="modelType === 'vrm'" class="flex items-center gap-2 pl-0.5">
-              <label class="flex cursor-pointer select-none items-center gap-1.5 py-0.5">
-                <input
-                  v-model="shouldDownloadBackup"
-                  type="checkbox"
-                  class="h-3 w-3 border-neutral-300 rounded text-indigo-500 accent-indigo-500 focus:ring-indigo-500"
-                >
-                <span class="text-[9px] text-neutral-400 font-semibold dark:text-neutral-500">Download backup file to disk</span>
-              </label>
-            </div>
-
-            <p class="text-[9px] text-neutral-400 leading-normal dark:text-neutral-500">
-              Clicking this compiles all visible emotions, motions, and actor profiles into detailed markdown instructions that teach the AI how and when to emote. You can save these instructions directly to your character card's system settings.
+          <!-- No model active -->
+          <div v-if="!activeModelId" class="flex flex-1 flex-col items-center justify-center p-6 text-center">
+            <div class="i-solar:link-broken-bold-duotone mb-2 text-4xl text-neutral-300 dark:text-neutral-700" />
+            <h4 class="text-sm text-neutral-700 font-semibold dark:text-neutral-300">
+              No Model Active
+            </h4>
+            <p class="mt-1 max-w-xs text-xs text-neutral-500">
+              Bind a model in Settings → Card → Studio.
             </p>
           </div>
 
-          <!-- presets & suggestions tray -->
-          <div class="flex flex-wrap gap-1 border-t border-neutral-100 pt-2 dark:border-neutral-800">
-            <!-- Dynamic Templates (Always Available) -->
-            <button
-              v-for="p in dynamicPresets"
-              :key="p.label"
-              class="cursor-pointer border border-primary-200/50 rounded bg-primary-50/20 px-2 py-0.5 text-[9px] text-primary-600 font-bold transition-all dark:border-primary-900/40 dark:bg-primary-950/10 hover:bg-primary-500/10 dark:text-primary-400"
-              @click="playgroundText = p.text"
-            >
-              {{ p.label }}
-            </button>
-
-            <!-- LLM Suggestions -->
-            <button
-              v-for="s in aiSuggestions"
-              :key="s.title"
-              class="cursor-pointer border border-neutral-200 rounded bg-white px-2 py-0.5 text-[9px] text-neutral-600 font-medium transition-all dark:border-neutral-800 dark:bg-neutral-900 hover:bg-neutral-50 dark:text-neutral-400 dark:hover:bg-neutral-800"
-              @click="playgroundText = s.dialogue"
-            >
-              {{ s.title }}
-            </button>
+          <!-- ModelCustomizer powered by active model -->
+          <div v-else class="flex flex-col pb-4">
+            <ModelCustomizer
+              :key="activeModelId"
+              :model-id="activeModelId"
+              :show-insert-actions="true"
+              @insert-token="handleInsertToken"
+              @update:visible-capabilities="handleVisibleCapabilitiesUpdate"
+            />
           </div>
         </div>
-      </div>
 
-      <!-- No model active -->
-      <div v-if="!activeModelId" class="flex flex-1 flex-col items-center justify-center p-6 text-center">
-        <div class="i-solar:link-broken-bold-duotone mb-2 text-4xl text-neutral-300 dark:text-neutral-700" />
-        <h4 class="text-sm text-neutral-700 font-semibold dark:text-neutral-300">
-          No Model Active
-        </h4>
-        <p class="mt-1 max-w-xs text-xs text-neutral-500">
-          Bind a model in Settings → Card → Studio.
-        </p>
-      </div>
-
-      <!-- ModelCustomizer powered by active model -->
-      <div v-else class="flex flex-1 flex-col overflow-hidden px-4 pb-4">
-        <ModelCustomizer
-          :key="activeModelId"
-          :model-id="activeModelId"
-          :show-insert-actions="true"
-          @insert-token="handleInsertToken"
-          @update:visible-capabilities="handleVisibleCapabilitiesUpdate"
-        />
+        <!-- Right column: pinned local stage -->
+        <div class="w-[280px] shrink-0 overflow-y-auto">
+          <div class="sticky top-0 flex flex-col gap-1.5">
+            <div class="flex items-center justify-between">
+              <span
+                :class="['flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase transition-colors',
+                         inlineStageCollapsed
+                           ? 'bg-neutral-100/50 text-neutral-400 dark:bg-neutral-800/50'
+                           : 'bg-primary-50/50 text-primary-500 dark:bg-primary-950/30 dark:text-primary-400']"
+                @click="inlineStageCollapsed = !inlineStageCollapsed"
+              >
+                Stage
+                <span :class="inlineStageCollapsed ? 'i-solar:eye-closed-linear' : 'i-solar:eye-linear'" class="text-xs" />
+              </span>
+            </div>
+            <div
+              v-if="!inlineStageCollapsed"
+              class="relative aspect-[3/4] w-full overflow-hidden border border-neutral-200/40 rounded-xl bg-transparent dark:border-neutral-800/40"
+            >
+              <RendererStage
+                :paused="inlineStageCollapsed"
+                :focus-at="{ x: 0, y: 0 }"
+                :x-offset="inlineStageXOffset"
+                :y-offset="inlineStageYOffset"
+                :scale="inlineStageScale"
+                :show-background="false"
+                :radial-menu-enabled="false"
+                :draggable="true"
+                class="absolute inset-0 h-full w-full"
+                @offset-change="handleInlineStageOffsetChange"
+                @scale-change="handleInlineStageScaleChange"
+              />
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Emotion Calibration redirect confirm -->
