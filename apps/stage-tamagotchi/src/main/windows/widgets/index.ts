@@ -19,6 +19,7 @@ import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs
 import { createConfig } from '../../libs/electron/persistence'
 import { createReusableWindow } from '../../libs/electron/window-manager'
 import { setupArtistryBridge } from '../../services/airi/widgets/artistry-bridge'
+import { showWindowOnAllWorkspaces } from '../shared/app-icon'
 import { spotlightLikeWindowConfig, transparentWindowConfig } from '../shared/window'
 import { setupWidgetsWindowInvokes } from './rpc/index.electron'
 
@@ -76,7 +77,7 @@ function createWidgetsWindow(options?: Electron.BrowserWindowConstructorOptions 
   // Keep on top like caption/main overlays
   window.setAlwaysOnTop(true, 'screen-saver', 1)
   window.setFullScreenable(false)
-  window.setVisibleOnAllWorkspaces(true)
+  showWindowOnAllWorkspaces(window)
   if (isMacOS)
     window.setWindowButtonVisibility(false)
 

@@ -402,6 +402,9 @@ export const i18nGetLocale = defineInvokeEventa<Locale>('eventa:invoke:electron:
 export const electronGetCorsBypassUrls = defineInvokeEventa<string[]>('eventa:invoke:electron:cors-bypass:get-urls')
 export const electronSetCorsBypassUrls = defineInvokeEventa<void, string[]>('eventa:invoke:electron:cors-bypass:set-urls')
 
+export const electronAppIconGet = defineInvokeEventa<boolean>('eventa:invoke:electron:app-icon:get')
+export const electronAppIconSet = defineInvokeEventa<boolean, boolean>('eventa:invoke:electron:app-icon:set')
+
 export { electron } from '@proj-airi/electron-eventa'
 
 export * from '@proj-airi/electron-eventa/electron-updater'

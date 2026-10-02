@@ -15,6 +15,7 @@ import icon from '../../../../resources/icon.png?asset'
 import { electronCustomizerToggleVisibility, electronGetCustomizerWindowState } from '../../../shared/eventa'
 import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
 import { createReusableWindow } from '../../libs/electron/window-manager'
+import { showWindowOnAllWorkspaces } from '../shared/app-icon'
 import { setupBaseWindowElectronInvokes, transparentWindowConfig } from '../shared/window'
 
 function createCustomizerWindow(options?: BrowserWindowConstructorOptions) {
@@ -35,7 +36,7 @@ function createCustomizerWindow(options?: BrowserWindowConstructorOptions) {
 
   window.setAlwaysOnTop(true, 'screen-saver', 2)
   window.setFullScreenable(false)
-  window.setVisibleOnAllWorkspaces(true)
+  showWindowOnAllWorkspaces(window)
   if (isMacOS) {
     window.setWindowButtonVisibility(false)
   }

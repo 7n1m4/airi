@@ -48,6 +48,12 @@ pages:
             name: PostgreSQL
             description: 对 PostgreSQL 数据库的读写访问权限。
   system:
+    general:
+      hide-app-icon:
+        title: 隐藏任务栏 / Dock 图标
+        description: 仅保留托盘图标，通过托盘菜单打开窗口或退出应用。修改立即生效。
+        load-error: 无法加载应用图标设置。
+        save-error: 无法更新应用图标设置。
     sections:
       section:
         window-shortcuts:

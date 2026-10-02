@@ -24,6 +24,7 @@ import { onAppBeforeQuit } from '../../libs/bootkit/lifecycle'
 import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
 import { createConfig } from '../../libs/electron/persistence'
 import { createReusableWindow } from '../../libs/electron/window-manager'
+import { showWindowOnAllWorkspaces } from '../shared/app-icon'
 import { mapForBreakpoints, resolutionBreakpoints, widthFrom } from '../shared/display'
 import { setupBaseWindowElectronInvokes, transparentWindowConfig } from '../shared/window'
 
@@ -181,7 +182,7 @@ function createCaptionWindow(options?: BrowserWindowConstructorOptions) {
   // https://stackoverflow.com/questions/39835282/set-browserwindow-always-on-top-even-other-app-is-in-fullscreen-electron-mac
   window.setAlwaysOnTop(true, 'screen-saver', 2)
   window.setFullScreenable(false)
-  window.setVisibleOnAllWorkspaces(true)
+  showWindowOnAllWorkspaces(window)
   if (isMacOS) {
     window.setWindowButtonVisibility(false)
   }

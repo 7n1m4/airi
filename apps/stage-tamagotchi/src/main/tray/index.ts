@@ -1,6 +1,7 @@
-import type { LocaleDetector } from '@intlify/core'
 import type { BrowserWindow } from 'electron'
 
+import type { globalAppConfigSchema } from '../configs/global'
+import type { Config } from '../libs/electron/persistence'
 import type { I18n } from '../libs/i18n'
 import type { ServerChannel } from '../services/airi/channel-server'
 import type { BeatSyncWindowManager } from '../windows/beat-sync'
@@ -12,6 +13,8 @@ import type { SettingsWindowManager } from '../windows/settings'
 import type { ActorStageWindowManager } from '../windows/stage'
 import type { WidgetsWindowManager } from '../windows/widgets'
 
+import { defineInvokeHandler } from '@moeru/eventa'
+import { createContext } from '@moeru/eventa/adapters/electron/main'
 import { effect } from 'alien-signals'
 import { app, ipcMain, Menu, nativeImage, Tray } from 'electron'
 import { debounce, once } from 'es-toolkit'
@@ -20,7 +23,9 @@ import { isMacOS } from 'std-env'
 import icon from '../../../resources/icon.png?asset'
 import macOSTrayIcon from '../../../resources/tray-icon-macos.png?asset'
 
+import { electronAppIconGet, electronAppIconSet } from '../../shared/eventa'
 import { onAppBeforeQuit } from '../libs/bootkit/lifecycle'
+import { AppIconVisibility } from '../windows/shared/app-icon'
 import { toggleWindowShow } from '../windows/shared/window'
 
 export function setupTray(params: {
@@ -36,6 +41,7 @@ export function setupTray(params: {
   customizerWindow: CustomizerWindowManager
   serverChannel: ServerChannel
   i18n: I18n
+  appConfig: Config<typeof globalAppConfigSchema>
   getConfig: () => any
   updateConfig: (config: any) => void
 }): void {
@@ -122,9 +128,17 @@ export function setupTray(params: {
     rebuildContextMenu()
 
     effect(() => {
-      const locale = params.i18n.locale as (() => string | LocaleDetector<any[]> | undefined)
+      const locale = params.i18n.locale as (() => string | undefined)
       locale()
       rebuildContextMenu()
+    })
+
+    const appIcon = new AppIconVisibility(params.appConfig)
+    const { context } = createContext(ipcMain)
+    defineInvokeHandler(context, electronAppIconGet, () => appIcon.hidden)
+    defineInvokeHandler(context, electronAppIconSet, async (payload) => {
+      await appIcon.setHidden(Boolean(payload))
+      return appIcon.hidden
     })
 
     appTray.setToolTip('Project AIRI')
