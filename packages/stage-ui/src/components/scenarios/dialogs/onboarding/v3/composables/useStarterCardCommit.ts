@@ -417,6 +417,9 @@ export function populateAiriExtensions(
     modelExpressionPrompt,
     speechExpressionPrompt: airi.acting?.speechExpressionPrompt || '',
     speechMannerismPrompt: airi.acting?.speechMannerismPrompt || '',
+    ...(draft.compiledWhitelist && Object.keys(draft.compiledWhitelist.emotions || {}).length > 0
+      ? { compiledWhitelist: JSON.parse(JSON.stringify(draft.compiledWhitelist)) }
+      : {}),
     pacing: {
       enabled: isSpeechEnabled && draft.pacingPreset !== 'disabled',
       pacingProfile: draft.pacingPreset === 'snappy' ? 'snappy' : draft.pacingPreset === 'deep' ? 'deep_cot' : 'balanced',

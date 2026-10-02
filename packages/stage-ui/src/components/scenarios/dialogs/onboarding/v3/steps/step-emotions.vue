@@ -56,6 +56,7 @@ function handleStudioSync(payload: EmotionStudioSyncPayload) {
     emotionsCurated: payload.emotionsCurated,
     expressionMappings: payload.expressionMappings,
     actingModelExpressionPrompt: payload.actingModelExpressionPrompt,
+    compiledWhitelist: payload.compiledWhitelist,
   })
 }
 
@@ -65,6 +66,7 @@ onBeforeUnmount(() => {
       emotionsCurated: lastSync.value.emotionsCurated,
       expressionMappings: lastSync.value.expressionMappings,
       actingModelExpressionPrompt: lastSync.value.actingModelExpressionPrompt,
+      compiledWhitelist: lastSync.value.compiledWhitelist,
     })
   }
 })
@@ -75,6 +77,7 @@ function handleContinue() {
       emotionsCurated: lastSync.value.emotionsCurated,
       expressionMappings: lastSync.value.expressionMappings,
       actingModelExpressionPrompt: lastSync.value.actingModelExpressionPrompt,
+      compiledWhitelist: lastSync.value.compiledWhitelist,
     })
   }
   props.onNext()
@@ -107,8 +110,10 @@ function handleContinue() {
       :persona-description="characterPersona.description"
       :persona-scenario="characterPersona.scenario"
       :persona-system-prompt="characterPersona.systemPrompt"
+      finish-context="onboarding"
       stage-update-reason="onboarding-v3-emotions"
       @sync="handleStudioSync"
+      @finish="handleContinue"
     />
 
     <!-- Bottom Navigation Bar -->

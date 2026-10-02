@@ -30,6 +30,16 @@ export interface EmotionStudioSyncPayload {
   emotionsCurated: boolean
   expressionMappings: Record<string, string>
   actingModelExpressionPrompt: string
+  compiledWhitelist: CompiledWhitelist
+}
+
+// The persisted union from both guided legs: every keeper actToken AND every
+// mapped preset slot token, each pointing at its raw morph. Either leg alone
+// is an incomplete vocabulary — template and classifier must read this,
+// never just one leg.
+export interface CompiledWhitelist {
+  version: 1
+  emotions: Record<string, { rawKey: string, label: string }>
 }
 
 const props = withDefaults(defineProps<{
@@ -49,6 +59,8 @@ const props = withDefaults(defineProps<{
   contentHeightClass?: string
   /** Character voice source for Enhance: card systemPrompt on the route, '' in onboarding (persona fields stand in). */
   personaSystemPrompt?: string
+  /** Finish handoff variant: onboarding advances the wizard, standalone lands back in the cockpit. */
+  finishContext?: 'standalone' | 'onboarding'
 }>(), {
   initialMappings: () => ({}),
   initialDirectives: '',
@@ -64,12 +76,14 @@ const props = withDefaults(defineProps<{
   allowModelSwitch: false,
   contentHeightClass: 'min-h-[450px]',
   personaSystemPrompt: '',
+  finishContext: 'standalone',
 })
 
 const emit = defineEmits<{
   (e: 'sync', payload: EmotionStudioSyncPayload): void
   (e: 'applied'): void
   (e: 'request-model', modelId: string): void
+  (e: 'finish'): void
 }>()
 
 const settingsStore = useSettings()
@@ -510,34 +524,9 @@ const templatedDirectives = computed(() => {
   return buildDefaultActingDirectives(templateTokens.value)
 })
 
-// Template vocabulary: the UNION of keeper actTokens (the verified per-morph
-// universe) and mapped preset slot tokens (the remap layer) — both are live
-// cues once bound (e.g. blush → Surprised means `blush` must be taught).
-// Falls back to mapped slot tokens outside the guided flow (no curation yet).
-const templateTokens = computed(() => {
-  const seen = new Set<string>()
-  const union: string[] = []
-  const push = (t: string | undefined | null) => {
-    const token = (t || '').trim()
-    if (token && !seen.has(token)) {
-      seen.add(token)
-      union.push(token)
-    }
-  }
-  if (curationDone.value) {
-    for (const i of curationItems.value) {
-      if (!i.shouldSkip) {
-        push(i.actToken)
-      }
-    }
-  }
-  for (const s of CANONICAL_EMOTIONS) {
-    if (expressionMappings.value[s.id]) {
-      push(s.actToken)
-    }
-  }
-  return union
-})
+// Template vocabulary: keys of the compiled whitelist (single source —
+// template and classifier can never disagree on the vocabulary again).
+const templateTokens = computed(() => Object.keys(buildCompiledWhitelist().emotions))
 
 function refreshTemplatedDirectives() {
   actingDirectivesPrompt.value = templatedDirectives.value
@@ -639,11 +628,29 @@ function handleAdvancedCurationApplied() {
 }
 
 // --- 8. State Synchronization (parent owns persistence) ---
+function buildCompiledWhitelist(): CompiledWhitelist {
+  const emotions: Record<string, { rawKey: string, label: string }> = {}
+  for (const item of curationItems.value) {
+    const token = (item.actToken || '').trim()
+    if (!item.shouldSkip && token && !emotions[token]) {
+      emotions[token] = { rawKey: item.rawKey, label: item.label || item.rawKey }
+    }
+  }
+  for (const slot of CANONICAL_EMOTIONS) {
+    const rawKey = expressionMappings.value[slot.id]
+    if (rawKey && !emotions[slot.actToken]) {
+      emotions[slot.actToken] = { rawKey, label: slot.name }
+    }
+  }
+  return { version: 1, emotions }
+}
+
 function emitSync() {
   emit('sync', {
     emotionsCurated: isCalibrated.value,
     expressionMappings: { ...expressionMappings.value },
     actingModelExpressionPrompt: actingDirectivesPrompt.value,
+    compiledWhitelist: buildCompiledWhitelist(),
   })
 }
 
@@ -873,12 +880,27 @@ function handleMeetDemo() {
 
 const GUIDE_ORDER: Exclude<GuideStep, null>[] = ['meet', 'name', 'verify', 'remaps']
 
-// Compact avatar panel for the short guided legs (Meet/Verify): the viewport
-// caps at 300px so the footer stays glued to content instead of a stretched
-// full-body frame. Name/Remaps keep the tall frame.
-const viewportCapClass = computed(() => guideStep.value === 'meet' || guideStep.value === 'verify' ? 'max-h-[300px]' : '')
+// Compact avatar panel for the Meet leg only: the viewport caps at 300px so
+// the footer stays glued to content instead of a stretched full-body frame.
+// Name/Verify/Remaps keep the tall frame (Verify matches Name's height).
+const viewportCapClass = computed(() => guideStep.value === 'meet' ? 'max-h-[300px]' : '')
 
 const guideStepIndex = computed(() => guideStep.value ? GUIDE_ORDER.indexOf(guideStep.value) : -1)
+
+// Finish celebration: warm handoff once the whitelist is real. Sync already
+// applied everything continuously — this is pure ceremony + tally.
+const showFinishModal = ref(false)
+const finishTally = computed(() => Object.keys(buildCompiledWhitelist().emotions).length)
+
+function handleFinish() {
+  showFinishModal.value = true
+}
+
+function confirmFinish() {
+  showFinishModal.value = false
+  skipGuide()
+  emit('finish')
+}
 
 function goGuideStep(step: Exclude<GuideStep, null>) {
   // Dots allow revisiting visited steps; forward motion stays on Next buttons
@@ -1769,7 +1791,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             :class="['px-5 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer flex items-center gap-1.5']"
-            @click="skipGuide"
+            @click="handleFinish"
           >
             <span>Finish ✓</span>
           </button>
@@ -1777,6 +1799,44 @@ onBeforeUnmount(() => {
       </template>
     </div>
   </div>
+
+  <!-- Finish celebration handoff -->
+  <DialogRoot :open="showFinishModal" @update:open="showFinishModal = $event">
+    <DialogPortal>
+      <DialogOverlay :class="['fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity']" />
+      <DialogContent
+        :class="['fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-sm flex flex-col items-center gap-3 border border-neutral-200 dark:border-neutral-800 rounded-2xl bg-white dark:bg-neutral-900 shadow-2xl -translate-x-1/2 -translate-y-1/2 focus:outline-none p-6 text-center']"
+      >
+        <img
+          :src="GUIDE_CHEER"
+          alt=""
+          :class="['w-28 h-28 object-contain']"
+        >
+        <div>
+          <DialogTitle :class="['text-base font-bold text-neutral-900 dark:text-white']">
+            {{ finishContext === 'onboarding' ? `Nice work — ${companionName}'s expressions are set! ✨` : `Looking good — ${companionName} is ready to act! ✨` }}
+          </DialogTitle>
+          <p :class="['mt-1 text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed']">
+            You collected <strong :class="['text-neutral-800 dark:text-neutral-100']">{{ finishTally }} expression{{ finishTally === 1 ? '' : 's' }}</strong>
+            ({{ keeperCount }} verified keeper{{ keeperCount === 1 ? '' : 's' }} + {{ mappedSlotsCount }} preset remap{{ mappedSlotsCount === 1 ? '' : 's' }}).
+            <template v-if="finishContext === 'onboarding'">
+              Saved to your companion draft — finish the rest of setup and you'll meet {{ companionName }} with a face that actually moves.
+            </template>
+            <template v-else>
+              Everything is already saved — go try talking to {{ companionName }} and watch the difference.
+            </template>
+          </p>
+        </div>
+        <button
+          type="button"
+          :class="['w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer']"
+          @click="confirmFinish"
+        >
+          {{ finishContext === 'onboarding' ? 'Continue setup →' : 'Start chatting →' }}
+        </button>
+      </DialogContent>
+    </DialogPortal>
+  </DialogRoot>
 
   <!-- Acting Directives Full-Span Drawer Modal -->
   <DialogRoot :open="isDirectivesModalOpen" @update:open="isDirectivesModalOpen = $event">

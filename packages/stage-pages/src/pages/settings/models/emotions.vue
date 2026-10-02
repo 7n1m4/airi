@@ -97,6 +97,9 @@ async function handleStudioSync(payload: EmotionStudioSyncPayload) {
         }
       }
       updatedCard.extensions.airi.acting.modelExpressionPrompt = payload.actingModelExpressionPrompt
+      if (payload.compiledWhitelist && Object.keys(payload.compiledWhitelist.emotions || {}).length > 0) {
+        updatedCard.extensions.airi.acting.compiledWhitelist = JSON.parse(JSON.stringify(payload.compiledWhitelist))
+      }
       await cardStore.updateCard(activeCardId.value, updatedCard)
     }
     catch (err) {

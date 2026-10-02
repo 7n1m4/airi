@@ -2,7 +2,10 @@
 import RendererStage from '@proj-airi/stage-ui/components/scenes/RendererStage.vue'
 
 import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { useCustomVrmAnimationsStore } from '@proj-airi/stage-ui-three'
+import { useLive2d } from '@proj-airi/stage-ui-live2d/stores'
+import { useMmd } from '@proj-airi/stage-ui-mmd'
+import { useSpine } from '@proj-airi/stage-ui-spine'
+import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
 import { ModelCustomizer } from '@proj-airi/stage-ui/components/scenarios/settings/model-settings'
 import { useLlmmarkerParser } from '@proj-airi/stage-ui/composables/llm-marker-parser'
 import { useAnimaDexWizardStore } from '@proj-airi/stage-ui/stores/animadex-wizard'
@@ -15,7 +18,6 @@ import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consci
 import { useSystemOneStore } from '@proj-airi/stage-ui/stores/modules/system-one'
 import { useTextToMotionStore } from '@proj-airi/stage-ui/stores/modules/text-to-motion'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { useSettingsControlStrip } from '@proj-airi/stage-ui/stores/settings/control-strip'
 import { useSpeechRuntimeStore } from '@proj-airi/stage-ui/stores/speech-runtime'
 import { useBroadcastChannel, useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -31,7 +33,6 @@ const openSettings = useElectronEventaInvoke(electronOpenSettings)
 const airiCardStore = useAiriCardStore()
 const displayModelsStore = useDisplayModelsStore()
 const wizardStore = useAnimaDexWizardStore()
-const controlStripStore = useSettingsControlStrip()
 const autonomousArtistryStore = useAutonomousArtistryStore()
 const llmStore = useLLM()
 const consciousnessStore = useConsciousnessStore()
@@ -40,10 +41,12 @@ const orchestrator = useChatOrchestratorStore()
 const customVrmAnimationsStore = useCustomVrmAnimationsStore()
 const speechRuntimeStore = useSpeechRuntimeStore()
 const systemOneStore = useSystemOneStore()
+const live2dStore = useLive2d()
+const vrmModelStore = useModelStore()
+const mmdRehearsalStore = useMmd()
+const spineRehearsalStore = useSpine()
 
 const { activeCard, activeCardId } = storeToRefs(airiCardStore)
-const { stageEnabled, stageMateEnabled } = storeToRefs(controlStripStore)
-const isStageOpen = computed(() => Boolean(stageEnabled.value || stageMateEnabled.value))
 const { activeProvider, activeModel } = storeToRefs(consciousnessStore)
 
 interface SpeakingState {
@@ -234,6 +237,177 @@ const systemOneBadge = computed(() => {
   return { label: `Jev · ${modelShort}`, tone: 'sky' as const }
 })
 
+// Phase C: stride simulator. Runs the Tier 2 path on rehearsal text in
+// parallel with normal playback: sentence-split → mirror-rule dispatch →
+// debug readout → local avatar actuation. Never blocks or alters playback.
+interface RehearsalStrideResult {
+  sentence: string
+  skippedPrefixed: boolean
+  emotion: string
+  confidence: number
+  latencyMs: number
+  budgetMs: number
+  status: 'applied' | 'dropped' | 'skipped-prefixed' | 'none' | 'error'
+  error?: string
+}
+
+const systemOneRuns = ref<RehearsalStrideResult[]>([])
+const systemOneRequestCount = ref(0)
+const systemOneRunning = ref(false)
+const showSystemOneReadout = ref(false)
+
+const ACT_TOKEN_RE = /<\|\s*(?:ACT|DELAY|ACTOR)[\s\S]*?\|\s*>/gi
+const WORDS_PER_MINUTE = 150
+
+function splitSentences(text: string): string[] {
+  const parts = text.replace(/\n+/g, ' ').match(/[^.?!]+[.?!]+|[^.?!]+$/g) || []
+  return parts.map(s => s.trim()).filter(Boolean)
+}
+
+async function resolveRehearsalEmotionOptions(modelId: string | null): Promise<{ options: string[], fallback: boolean }> {
+  // Source 1: the card's compiled whitelist (Verify keepers + Remap slots union).
+  const whitelist = (activeCard.value as any)?.extensions?.airi?.acting?.compiledWhitelist
+  const whitelisted = Object.keys(whitelist?.emotions || {})
+  if (whitelisted.length > 0) {
+    return { options: [...whitelisted, 'none'], fallback: false }
+  }
+  // Source 2: the display model's stored mappings.
+  if (modelId) {
+    try {
+      const model = await displayModelsStore.getDisplayModel(modelId)
+      const values = [...new Set(Object.values(model?.emotionMappings || {}).filter(Boolean) as string[])]
+      if (values.length > 0) {
+        return { options: [...values, 'none'], fallback: false }
+      }
+    }
+    catch (err) {
+      console.warn('[Rehearsal System1] Failed to load model vocabulary:', err)
+    }
+  }
+  return { options: ['smile', 'blush', 'pout', 'surprise', 'wink', 'shy', 'none'], fallback: true }
+}
+
+function triggerRehearsalEmotion(key: string) {
+  try {
+    const type = modelType.value
+    if (type === 'live2d') {
+      live2dStore.triggerEmotion(key, 1.0)
+    }
+    else if (type === 'vrm') {
+      vrmModelStore.triggerEmotion(key, 1.0)
+    }
+    else if (type === 'mmd') {
+      mmdRehearsalStore.previewExpression = key
+      setTimeout(() => {
+        if (mmdRehearsalStore.previewExpression === key) {
+          mmdRehearsalStore.previewExpression = null
+        }
+      }, 2000)
+    }
+    else if (type === 'spine') {
+      const match = key.match(/^(.+?)\s*\[(.+?)\]$/)
+      if (match) {
+        spineRehearsalStore.selectVariantAndSkin(match[1].trim(), match[2].trim())
+      }
+      else {
+        spineRehearsalStore.selectVariantAndSkin(key, 'default')
+      }
+    }
+  }
+  catch (err) {
+    console.error('[Rehearsal System1] Local trigger failed:', err)
+  }
+}
+
+// Single choke point for every Jev-originated cue in rehearsal. Phase E will
+// extend this with rawContent persistence exclusion; the readout + log already
+// carry provenance so nothing here can be mistaken for LLM output.
+function injectJevCue(sentence: string, emotion: string) {
+  console.info('[Rehearsal System1] inject (provenance=system_one_jev)', { sentence, emotion })
+  triggerRehearsalEmotion(emotion)
+}
+
+async function runSystemOneSimulation(text: string) {
+  if (!systemOneArmed.value || systemOneRunning.value) {
+    return
+  }
+  systemOneRunning.value = true
+  systemOneRuns.value = []
+  try {
+    const rawStrides = splitSentences(text)
+    if (rawStrides.length === 0) {
+      return
+    }
+    const cleanStrides = rawStrides.map(s => s.replace(ACT_TOKEN_RE, '').trim())
+    const { options: emotionOptions, fallback } = await resolveRehearsalEmotionOptions(activeModelId.value)
+    const persona = activeCard.value
+    const personaName = (persona as any)?.nickname || persona?.name || 'Character'
+    const personaPersonality = (persona as any)?.personality || ''
+    const personaDescription = (persona as any)?.description || ''
+    const personaDirectives = (persona as any)?.extensions?.airi?.acting?.modelExpressionPrompt || ''
+    const personaBlock = [
+      personaPersonality ? `Personality: ${personaPersonality}` : '',
+      personaDescription ? `Description: ${personaDescription}` : '',
+      personaDirectives ? `Acting directives (how and when this character invokes emotion cues): ${personaDirectives}` : '',
+    ].filter(Boolean).join('\n')
+
+    // Mirror rule: the simulator holds the complete text (remainder case), so
+    // all strides ride ONE batched execute() with per-sentence groups.
+    const questions: Record<string, any> = {}
+    cleanStrides.forEach((sentence, i) => {
+      if (!sentence) {
+        return
+      }
+      questions[`s${i}_emotion`] = {
+        type: 'choice',
+        instructions: `Select the avatar emotion cue from ${personaName}'s allowed cues that best matches this line. Select none if no cue fits.`,
+        criteria: Object.fromEntries(emotionOptions.map(o => [o, o === 'none' ? 'No cue fits this line.' : `Emotion cue: ${o}.`])),
+      }
+    })
+
+    const state = `Rehearsal line for ${personaName}:\n${personaBlock}\nLine: "${cleanStrides.join(' ')}"${fallback ? '\n(Vocabulary note: fallback canonical cues — model has no stored mappings)' : ''}`
+    const t0 = performance.now()
+    const res = await systemOneStore.execute(state, questions)
+    const latencyMs = Math.round(performance.now() - t0)
+    systemOneRequestCount.value += 1
+
+    rawStrides.forEach((raw, i) => {
+      const sentence = cleanStrides[i]
+      if (!sentence) {
+        return
+      }
+      if (ACT_TOKEN_RE.test(raw)) {
+        systemOneRuns.value.push({ sentence, skippedPrefixed: true, emotion: '', confidence: 0, latencyMs: 0, budgetMs: 0, status: 'skipped-prefixed' })
+        return
+      }
+      const ansEmotion = (res.answers as any)?.[`s${i}_emotion`] || {}
+      const emotion: string = ansEmotion.choice || 'none'
+      const confidence: number = typeof ansEmotion.confidence === 'number' ? ansEmotion.confidence : 0
+      const words = sentence.split(/\s+/).filter(Boolean).length
+      const budgetMs = Math.round((words / WORDS_PER_MINUTE) * 60000 * 0.9)
+      if (emotion === 'none') {
+        systemOneRuns.value.push({ sentence, skippedPrefixed: false, emotion, confidence, latencyMs, budgetMs, status: 'none' })
+        return
+      }
+      if (latencyMs > budgetMs) {
+        systemOneRuns.value.push({ sentence, skippedPrefixed: false, emotion, confidence, latencyMs, budgetMs, status: 'dropped' })
+        return
+      }
+      injectJevCue(sentence, emotion)
+      systemOneRuns.value.push({ sentence, skippedPrefixed: false, emotion, confidence, latencyMs, budgetMs, status: 'applied' })
+    })
+    showSystemOneReadout.value = true
+  }
+  catch (err: any) {
+    console.error('[Rehearsal System1] Simulation failed:', err)
+    systemOneRuns.value.push({ sentence: '', skippedPrefixed: false, emotion: '', confidence: 0, latencyMs: 0, budgetMs: 0, status: 'error', error: err?.message || String(err) })
+    showSystemOneReadout.value = true
+  }
+  finally {
+    systemOneRunning.value = false
+  }
+}
+
 // Sandbox states & methods
 const playgroundText = ref('<|ACT:emotion="happy"|> Hello world! Welcome to the Stage.')
 const isRehearsing = ref(false)
@@ -338,10 +512,6 @@ watch(() => speakingState.value?.nowSpeaking, (speaking) => {
 })
 
 async function playRehearsal() {
-  if (!isStageOpen.value) {
-    toast.error('Stage or Stage-Mate window must be open to orchestrate rehearsals.')
-    return
-  }
   if (isRehearsing.value)
     return
 
@@ -350,6 +520,10 @@ async function playRehearsal() {
     toast.error('Please enter acting dialogue or ACT tokens in the sandbox.')
     return
   }
+
+  // Tier 2 proving ground: classify + actuate in parallel with playback.
+  // Never blocks, never alters the audiovisual pipeline.
+  void runSystemOneSimulation(text)
 
   isRehearsing.value = true
 
@@ -761,6 +935,50 @@ function selectModel(m: typeof onSetModels.value[0]) {
                 <p class="text-[9px] text-neutral-400 leading-normal dark:text-neutral-500">
                   Clicking this compiles all visible emotions, motions, and actor profiles into detailed markdown instructions that teach the AI how and when to emote. You can save these instructions directly to your character card's system settings.
                 </p>
+              </div>
+
+              <!-- System1 stride readout (Tier 2 proving ground) -->
+              <div v-if="systemOneRunning || systemOneRuns.length > 0" class="mt-2 border border-neutral-200 rounded-lg bg-neutral-50/60 dark:border-neutral-800 dark:bg-neutral-900/40">
+                <button
+                  type="button"
+                  class="w-full flex cursor-pointer items-center justify-between px-2.5 py-1.5 text-left"
+                  @click="showSystemOneReadout = !showSystemOneReadout"
+                >
+                  <span class="text-[9px] text-neutral-500 font-bold tracking-wider uppercase dark:text-neutral-400">
+                    System1 strides · {{ systemOneRequestCount }} request{{ systemOneRequestCount === 1 ? '' : 's' }}
+                    <span v-if="systemOneRunning" class="text-primary-500">· classifying…</span>
+                  </span>
+                  <span :class="showSystemOneReadout ? 'i-solar:alt-arrow-up-bold' : 'i-solar:alt-arrow-down-bold'" class="text-[10px] text-neutral-400" />
+                </button>
+                <div v-if="showSystemOneReadout" class="max-h-44 overflow-y-auto border-t border-neutral-200/60 px-2.5 py-1.5 dark:border-neutral-800/60">
+                  <div
+                    v-for="(run, idx) in systemOneRuns"
+                    :key="idx"
+                    class="flex items-start justify-between gap-2 border-b border-neutral-100 py-1 text-[9px] last:border-0 dark:border-neutral-800/50"
+                  >
+                    <span class="min-w-0 flex-1 truncate text-neutral-600 dark:text-neutral-300" :title="run.sentence || run.error">
+                      {{ run.sentence || run.error || '—' }}
+                    </span>
+                    <span class="shrink-0 text-neutral-500 font-mono dark:text-neutral-400">
+                      <template v-if="run.status === 'applied'">{{ run.emotion }} {{ Math.round(run.confidence * 100) }}% · {{ run.latencyMs }}ms/{{ run.budgetMs }}ms</template>
+                      <template v-else-if="run.status === 'dropped'">dropped · {{ run.latencyMs }}ms&gt;{{ run.budgetMs }}ms</template>
+                      <template v-else-if="run.status === 'skipped-prefixed'">prefixed — skipped</template>
+                      <template v-else-if="run.status === 'none'">none</template>
+                      <template v-else>error</template>
+                    </span>
+                    <span
+                      :class="[
+                        'shrink-0 rounded-full px-1.5 py-px text-[8px] font-bold',
+                        run.status === 'applied' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : run.status === 'dropped' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                          : run.status === 'error' ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                            : 'bg-neutral-500/10 text-neutral-500 dark:text-neutral-400',
+                      ]"
+                    >
+                      {{ run.status }}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <!-- presets & suggestions tray -->

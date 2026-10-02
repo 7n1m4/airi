@@ -99,7 +99,7 @@ The 4–5 Tier 1 surfaces are distinctively different processes — porting the 
 
 **Retire the modal, keep its power feature.** `ExpressionCurationModal.vue`'s 3-step flow goes away as a wizard, but it does one thing the studio doesn't: full-catalog curation (scope select over 335 morphs, per-morph rename/skip). That survives as an **Advanced drawer/section on the studio page** (the current "Details >" affordance), not a separate flow. Entry buttons (ModelCustomizer "Curate AI", acting-tab sparkle, Rehearsal Room button) navigate to the route; onboarding embeds the component.
 
-**Whitelist wiring in the unified shape**: `compiledWhitelists.whitelistedEmotions` derives deterministically from the 6 canonical mappings; motions + extra emotion tokens append when Advanced curation runs; speech-tag allowlist via the step-3 LLM sidecar (§2.1.3).
+**Whitelist wiring in the unified shape**: `compiledWhitelist.emotions` (token → `{rawKey, label}`) derives deterministically from Verify keepers + mapped remap slots; motions append with their phase; speech-tag allowlist via the step-3 LLM sidecar (§2.1.3).
 
 #### 2.1.4 6-slot successor: semantic pipeline + guided curation (design in progress)
 
@@ -148,14 +148,17 @@ The dots component lives in the studio so it renders identically embedded in onb
   2. **Speech engine capabilities**: programmatic `expressionTags` — already plumbed today via `useActingCapabilities.ts` → `speechCapabilities.expressionTags`, provider registry `supportsExpressionTags`/`expressionTags` (`packages/stage-ui/src/stores/providers/registry/speech.ts`), and the `airi-audio-server.vue` capabilities page.
   3. **Author's natural-language prompts**: freeform expressive demeanor + constraints.
 - **Extraction task**: *"Given this character's acting guidelines, the model's mapped capabilities, and available TTS speech tags, extract the exact subset of emotion keys, motion keys, and speech tags this character is authorized to use."*
-- **Output (PROPOSED, does not exist yet — zero `compiledWhitelists` hits repo-wide)**: tight validated whitelist saved into card reactive extension state (`extensions.airi.acting.compiledWhitelists`):
+- **Output (SHIPPED Oct 2026 — shape supersedes the array sketch below)**: the union from both guided legs, persisted at `extensions.airi.acting.compiledWhitelist` (card-level; the `acting` schema is `looseObject`, so no migration):
   ```json
   {
-    "whitelistedEmotions": ["none", "deadpan", "glare", "smirk", "neutral"],
-    "whitelistedMotions": ["none", "idle_subtle", "arms_crossed", "head_turn_away"],
-    "whitelistedSpeechTags": ["none", "whisper", "sigh", "curious"]
+    "version": 1,
+    "emotions": {
+      "stunned_start": { "rawKey": "Surprised", "label": "Stunned Start" },
+      "blush": { "rawKey": "Surprised", "label": "Blush" }
+    }
   }
   ```
+  Verify keepers contribute their actTokens first; mapped preset slots add any token not already present. Template and classifier both read these keys — neither leg alone is ever the vocabulary. (The earlier `whitelistedEmotions[]` arrays sketch is superseded by this token→morph map; motions/speech arrays return with their phases.)
 - **Cost**: runs offline once at authoring/import time (~300–800ms), zero real-time streaming impact.
 
 #### 2.1.5 Tier 1 execution: goals, data model, and build log
@@ -237,9 +240,13 @@ When the guided flow finishes, it overwrites the user's `modelExpressionPrompt` 
       },
       "intensity": {
         "type": "score",
-        "instructions": "Score emotional intensity (0.0 = subtle, 1.0 = exaggerated).",
-        "min": 0.0,
-        "max": 1.0
+        "instructions": "Score the emotional intensity of this line.",
+        "criteria": [
+          "Flat, neutral delivery with no emotional charge.",
+          "Mild feeling — a hint of warmth, tension, or playfulness.",
+          "Strong feeling — clearly audible emotion driving the line.",
+          "Exaggerated, theatrical peak — maximum emotional charge."
+        ]
       }
     }
   }
@@ -267,7 +274,7 @@ When the guided flow finishes, it overwrites the user's `modelExpressionPrompt` 
 
 - **Phase A — Inline viewport (DONE Oct 2026).** Local `RendererStage` embedded in `chat_rehearsal.vue` (same collapsible pattern as the chat window right panel); stage-offline banner deleted. Expression previews actuate the embedded canvas with Stage closed. Full Act audio still routes to the stage host (gate kept) — local speech hosting lands in Phase C.
 - **Phase B — Experimental System1 toggle (DONE Oct 2026).** Persisted checkbox in the rehearsal sandbox (`rehearsal/system-one-enabled`), disabled with guidance when `systemOneStore.configured` is false; live provider badge (emerald `Laya local` / sky `Jev · <model>` / amber `Unconfigured`); `systemOneArmed` computed (opt-in AND configured) ready as Phase C's gate. The toggle never configures providers itself.
-- **Phase C — Stride simulator.** Act button runs the real path on rehearsal text: sentence-split → mirror-rule dispatch (solo vs batched) → debug readout showing request schema/state/response per stride → inject into the local avatar via the special-token queue. Includes: `none` out, pre-prefixed skip, 90%-WPM drop, provenance tagging. Verify (the DevTools protocol): mainWindow network shows SystemOne call(s) mirroring TTS dispatch shape; schema/state inspected; avatar actuates.
+- **Phase C — Stride simulator (DONE Oct 2026).** Act fires `runSystemOneSimulation` fire-and-forget alongside untouched playback: sentence-split → single batched `execute()` with per-sentence `s{i}_emotion` choice groups (model vocab + `none`) → collapsible readout (sentence, decision, confidence, latency/budget, status). Includes: `none` out, pre-prefixed skip, 90%-WPM drop, provenance tagging. v1 scope: `choice` only — `score` (intensity/motion) returns with the motions phase. Verify (the DevTools protocol): mainWindow network shows SystemOne call(s) mirroring TTS dispatch shape; schema/state inspected; avatar actuates.
 - **Phase D — Boundary-clock scheduling.** Multi-sentence remainder cues subscribe to the sentence-sync crossing signal (`ControlStripHost.vue:767-816`) instead of firing at chunk start; WPM timing stays fallback-only. Verify: face changes land on sentence boundaries in-sync with caption highlights.
 - **Phase E — Promotion.** The proven interceptor module wires into the live chat path; Rehearsal Room stays a permanent debug playground (cf. surface table footnote: eventual relocation under `settings/modules`). Verify: live dialogue actuates with zero prompt pollution; no doubles in `rawContent`.
 
@@ -282,7 +289,7 @@ When the guided flow finishes, it overwrites the user's `modelExpressionPrompt` 
 | Decision engine | `packages/stage-ui/src/stores/modules/system-one.ts` (`execute()`) | Tier 2 merged request entrypoint |
 | Runtime interception | `ControlStripHost.vue` / `speech.ts` vs `packages/pipelines-audio/src/speech-pipeline.ts` | Placement TBD — see §5 Q1 |
 | Marker actuation | ACT parser (`queues.ts` / `processMarkers()` per `design-act-token-expression-system.md`) | Injection target for `<\|ACT…\|>` output |
-| Whitelist storage | `extensions.airi.acting.compiledWhitelists` (PROPOSED) | New schema; update [`docs/data-catalog.md`](./data-catalog.md) when added |
+| Whitelist storage | `extensions.airi.acting.compiledWhitelist` (SHIPPED Oct 2026) | `{version, emotions: Record<token, {rawKey, label}>}` on the card; no schema migration (`looseObject`) |
 
 ---
 
