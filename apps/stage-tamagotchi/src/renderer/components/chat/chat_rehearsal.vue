@@ -12,11 +12,12 @@ import { useLLM } from '@proj-airi/stage-ui/stores/llm'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useAutonomousArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry-autonomous'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
+import { useSystemOneStore } from '@proj-airi/stage-ui/stores/modules/system-one'
 import { useTextToMotionStore } from '@proj-airi/stage-ui/stores/modules/text-to-motion'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { useSettingsControlStrip } from '@proj-airi/stage-ui/stores/settings/control-strip'
 import { useSpeechRuntimeStore } from '@proj-airi/stage-ui/stores/speech-runtime'
-import { useBroadcastChannel } from '@vueuse/core'
+import { useBroadcastChannel, useLocalStorage } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
@@ -38,6 +39,7 @@ const providersStore = useProvidersStore()
 const orchestrator = useChatOrchestratorStore()
 const customVrmAnimationsStore = useCustomVrmAnimationsStore()
 const speechRuntimeStore = useSpeechRuntimeStore()
+const systemOneStore = useSystemOneStore()
 
 const { activeCard, activeCardId } = storeToRefs(airiCardStore)
 const { stageEnabled, stageMateEnabled } = storeToRefs(controlStripStore)
@@ -212,6 +214,24 @@ const modelType = computed<'live2d' | 'vrm' | 'mmd' | 'spine' | 'unknown'>(() =>
   if (fmt === DisplayModelFormat.SpineZip)
     return 'spine'
   return 'unknown'
+})
+
+// Phase B: experimental System1 auto-cues (testing ground for Tier 2).
+// Armed only when the user opts in AND a System1 provider is configured
+// globally — the toggle never configures providers itself.
+const rehearsalSystemOneEnabled = useLocalStorage('rehearsal/system-one-enabled', false)
+
+const systemOneArmed = computed(() => rehearsalSystemOneEnabled.value && systemOneStore.configured)
+
+const systemOneBadge = computed(() => {
+  if (!systemOneStore.configured) {
+    return { label: 'Unconfigured', tone: 'amber' as const }
+  }
+  if (systemOneStore.activeProvider === 'laya-local') {
+    return { label: 'Laya local', tone: 'emerald' as const }
+  }
+  const modelShort = (systemOneStore.activeModel || '').split('/').pop() || systemOneStore.activeModel
+  return { label: `Jev · ${modelShort}`, tone: 'sky' as const }
 })
 
 // Sandbox states & methods
@@ -663,6 +683,32 @@ function selectModel(m: typeof onSetModels.value[0]) {
               </div>
 
               <div class="mt-2 flex flex-col gap-2">
+                <label
+                  class="flex select-none items-center gap-2 pl-0.5"
+                  :class="systemOneStore.configured ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'"
+                  :title="systemOneStore.configured ? 'Classify each sentence with System1 and auto-inject ACT cues (Tier 2 proving ground)' : 'Configure a System1 provider first (Settings → Providers → System1)'"
+                >
+                  <input
+                    v-model="rehearsalSystemOneEnabled"
+                    type="checkbox"
+                    :disabled="!systemOneStore.configured"
+                    class="h-3 w-3 border-neutral-300 rounded text-primary-600 accent-primary-600 disabled:cursor-not-allowed focus:ring-primary-500"
+                  >
+                  <span class="text-[9px] text-neutral-500 font-semibold dark:text-neutral-400">Experimental System1 auto-cues</span>
+                  <span
+                    :class="[
+                      'rounded-full px-1.5 py-px text-[8px] font-bold font-mono',
+                      systemOneBadge.tone === 'emerald' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                      : systemOneBadge.tone === 'sky' ? 'bg-sky-500/10 text-sky-600 dark:text-sky-400'
+                        : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+                    ]"
+                  >
+                    {{ systemOneBadge.label }}
+                  </span>
+                </label>
+                <p v-if="systemOneArmed" class="pl-0.5 text-[9px] text-neutral-400 dark:text-neutral-500">
+                  Armed — pressing Act will classify each sentence and auto-inject ACT cues.
+                </p>
                 <div class="flex flex-wrap items-center gap-2">
                   <button
                     class="flex cursor-pointer items-center gap-1 rounded bg-primary-500/10 px-2.5 py-1 text-[10px] text-primary-600 font-bold transition-all hover:bg-primary-500/20 dark:text-primary-400"
