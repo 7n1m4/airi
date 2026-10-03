@@ -33,6 +33,7 @@ const nativeAddonFilePatterns = {
   darwin: [
     '!**/node_modules/uiohook-napi/prebuilds/!(darwin-${arch}){,/**}',
     '!**/node_modules/electron-click-drag-plugin/build/Release/!(darwin-${arch}){,/**}',
+    '!**/node_modules/koffi/build/koffi/!(darwin_${arch}){,/**}',
   ],
   linux: [
     // uiohook-napi ships an x86-64 binary in its Linux ARM64 directory.
@@ -40,10 +41,12 @@ const nativeAddonFilePatterns = {
     '!**/node_modules/uiohook-napi/prebuilds/linux-arm64{,/**}',
     // Linux does not use electron-click-drag-plugin.
     '!**/node_modules/electron-click-drag-plugin/build/Release/{darwin-arm64,darwin-x64,linux-x64,win32-x64}{,/**}',
+    '!**/node_modules/koffi/build/koffi/!(linux_${arch}){,/**}',
   ],
   win32: [
     '!**/node_modules/uiohook-napi/prebuilds/!(win32-${arch}){,/**}',
     '!**/node_modules/electron-click-drag-plugin/build/Release/!(win32-${arch}){,/**}',
+    '!**/node_modules/koffi/build/koffi/!(win32_${arch}){,/**}',
   ],
 } as const
 
@@ -186,6 +189,15 @@ export default {
     // uiohook-napi loads the selected prebuild. Its bundled libuiohook C source is
     // only used to build that binary and does not participate in runtime loading.
     '!**/node_modules/uiohook-napi/libuiohook{,/**}',
+    // `node_modules/electron/dist/Electron.app` makes electron-builder deep-sign it and
+    // fails on non-code resources (for example `locale.pak`) with timestamp/signing errors.
+    '!**/node_modules/electron{,/**}',
+    // Vite bundles browser-only libraries into `out/renderer`. The main process has no runtime import.
+    '!**/node_modules/@huggingface{,/**}',
+    '!**/node_modules/three{,/**}',
+    // Koffi C++ source tree and docs are compile/dev assets only.
+    '!**/node_modules/koffi/src{,/**}',
+    '!**/node_modules/koffi/doc{,/**}',
     '**/node_modules/**/*',
     '!electron.vite.config.{js,ts,mjs,cjs}',
     '!vite.config.{js,ts,mjs,cjs}',
