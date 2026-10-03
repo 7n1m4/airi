@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Card } from '@proj-airi/ccc'
-import type { AiriExtension } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import type { AiriExtension, CharacterCueAllowlist } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import type { SpeechCapabilitiesInfo } from '@proj-airi/stage-ui/stores/providers'
 import type { ThinkingFillerPhrase } from '@proj-airi/stage-ui/types/pacing'
 
@@ -247,6 +247,10 @@ const selectedActingModelExpressionPrompt = ref<string>('')
 const selectedActingSpeechExpressionPrompt = ref<string>('')
 const selectedActingSpeechMannerismPrompt = ref<string>('')
 const selectedActingIdleAnimations = ref<string[]>([])
+const selectedActingCueAllowlist = ref<CharacterCueAllowlist | undefined>(undefined)
+const autoCuesEnabled = ref<boolean>(false)
+const autoCueExpressions = ref<boolean>(true)
+const autoCueMotions = ref<boolean>(false)
 
 // Conversational Pacing & Thinking Fillers State
 const pacingEnabled = ref<boolean>(false)
@@ -1125,6 +1129,10 @@ async function saveCard(card: Card): Promise<boolean> {
           idleAnimations: activeActorIdleOverride.value
             ? [...(existingAiriExt?.acting?.idleAnimations || [])]
             : [...(selectedActingIdleAnimations.value || [])],
+          cueAllowlist: selectedActingCueAllowlist.value ? JSON.parse(JSON.stringify(selectedActingCueAllowlist.value)) : undefined,
+          autoCuesEnabled: autoCuesEnabled.value,
+          autoCueExpressions: autoCueExpressions.value,
+          autoCueMotions: autoCueMotions.value,
           pacing: {
             ...existingAiriExt?.acting?.pacing,
             enabled: pacingEnabled.value,
@@ -1353,6 +1361,12 @@ function initializeCard(): Card {
     selectedActingModelExpressionPrompt.value = airiExt?.acting?.modelExpressionPrompt ?? DEFAULT_ACTING_MODEL_PROMPT
     selectedActingSpeechExpressionPrompt.value = airiExt?.acting?.speechExpressionPrompt ?? DEFAULT_ACTING_SPEECH_EXPRESSION_PROMPT
     selectedActingSpeechMannerismPrompt.value = airiExt?.acting?.speechMannerismPrompt ?? DEFAULT_ACTING_SPEECH_MANNERISM_PROMPT
+    selectedActingCueAllowlist.value = airiExt?.acting?.cueAllowlist
+      ? JSON.parse(JSON.stringify(airiExt.acting.cueAllowlist))
+      : (airiExt?.acting?.compiledWhitelist ? JSON.parse(JSON.stringify(airiExt.acting.compiledWhitelist)) : undefined)
+    autoCuesEnabled.value = airiExt?.acting?.autoCuesEnabled ?? false
+    autoCueExpressions.value = airiExt?.acting?.autoCueExpressions ?? true
+    autoCueMotions.value = airiExt?.acting?.autoCueMotions ?? false
     pacingEnabled.value = airiExt?.acting?.pacing?.enabled ?? false
     pacingArmMinMs.value = airiExt?.acting?.pacing?.armMinMs ?? 1200
     pacingArmMaxMs.value = airiExt?.acting?.pacing?.armMaxMs ?? 3500
@@ -1886,6 +1900,10 @@ function handleGeneratorSave(newValue: string) {
         v-model:selected-acting-speech-expression-prompt="selectedActingSpeechExpressionPrompt"
         v-model:selected-acting-speech-mannerism-prompt="selectedActingSpeechMannerismPrompt"
         v-model:selected-acting-idle-animations="selectedActingIdleAnimations"
+        v-model:selected-acting-cue-allowlist="selectedActingCueAllowlist"
+        v-model:auto-cues-enabled="autoCuesEnabled"
+        v-model:auto-cue-expressions="autoCueExpressions"
+        v-model:auto-cue-motions="autoCueMotions"
         v-model:pacing-enabled="pacingEnabled"
         v-model:pacing-arm-min-ms="pacingArmMinMs"
         v-model:pacing-arm-max-ms="pacingArmMaxMs"
@@ -1896,6 +1914,7 @@ function handleGeneratorSave(newValue: string) {
         v-model:pacing-fillers="pacingFillers"
         v-model:pacing-dynamic-asides-enabled="pacingDynamicAsidesEnabled"
         v-model:pacing-semantic-extractor-enabled="pacingSemanticExtractorEnabled"
+        :card-id="props.cardId"
         v-model:pacing-dynamic-after-ms="pacingDynamicAfterMs"
         v-model:pacing-candidate-ttl-ms="pacingCandidateTtlMs"
         v-model:pacing-max-filler-synthesis-budget-ms="pacingMaxFillerSynthesisBudgetMs"

@@ -1,6 +1,6 @@
 import type { Card, ccv3 } from '@proj-airi/ccc'
 
-import type { AiriCognition, AiriPacing } from '../../types/card.schema'
+import type { AiriCognition, AiriPacing, CharacterCueAllowlist } from '../../types/card.schema'
 import type { VoiceProfile } from '../providers'
 
 import { debug } from '@proj-airi/stage-shared'
@@ -84,12 +84,19 @@ export interface ShortTermMemoryConfig {
   tokenBudgetPerDay: number
 }
 
+export type { CharacterCueAllowlist } from '../../types/card.schema'
+
 export interface ActingConfig {
   modelExpressionPrompt: string
   speechExpressionPrompt: string
   speechMannerismPrompt: string
   idleAnimations?: string[]
   pacing?: AiriPacing
+  cueAllowlist?: CharacterCueAllowlist
+  autoCuesEnabled?: boolean
+  autoCueExpressions?: boolean
+  autoCueMotions?: boolean
+  compiledWhitelist?: CharacterCueAllowlist
 }
 
 export interface AiriOutfit {
@@ -986,7 +993,9 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       speechExpressionPrompt: DEFAULT_ACTING_SPEECH_EXPRESSION_PROMPT,
       speechMannerismPrompt: DEFAULT_ACTING_SPEECH_MANNERISM_PROMPT,
       idleAnimations: [],
-
+      autoCuesEnabled: false,
+      autoCueExpressions: true,
+      autoCueMotions: false,
     }
 
     // Return default if no extension exists
@@ -1121,6 +1130,10 @@ export const useAiriCardStore = defineStore('airi-card', () => {
         speechExpressionPrompt: existingExtension?.acting?.speechExpressionPrompt ?? defaultActing.speechExpressionPrompt,
         speechMannerismPrompt: existingExtension?.acting?.speechMannerismPrompt ?? defaultActing.speechMannerismPrompt,
         idleAnimations: existingExtension?.acting?.idleAnimations ?? defaultActing.idleAnimations,
+        cueAllowlist: existingExtension?.acting?.cueAllowlist ?? existingExtension?.acting?.compiledWhitelist,
+        autoCuesEnabled: existingExtension?.acting?.autoCuesEnabled ?? false,
+        autoCueExpressions: existingExtension?.acting?.autoCueExpressions ?? true,
+        autoCueMotions: existingExtension?.acting?.autoCueMotions ?? false,
       },
       outfits: existingExtension?.outfits ?? [],
       agents: existingExtension?.agents ?? {},

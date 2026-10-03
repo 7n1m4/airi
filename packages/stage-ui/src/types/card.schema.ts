@@ -250,6 +250,20 @@ export const AiriPacingSchema = object({
 export type AiriThinkingFiller = InferOutput<typeof AiriThinkingFillerSchema>
 export type AiriPacing = InferOutput<typeof AiriPacingSchema>
 
+export const CharacterCueAllowlistSchema = object({
+  version: literal(1),
+  emotions: optional(record(string(), object({
+    rawKey: string(),
+    label: string(),
+  }))),
+  motions: optional(record(string(), object({
+    rawKey: string(),
+    label: string(),
+  }))),
+})
+
+export type CharacterCueAllowlist = InferOutput<typeof CharacterCueAllowlistSchema>
+
 const AiriExtensionSchema = looseObject({
   modules: optional(AiriModulesSchema),
   cognition: optional(AiriCognitionSchema),
@@ -297,6 +311,11 @@ const AiriExtensionSchema = looseObject({
     speechMannerismPrompt: string(),
     idleAnimations: optional(array(string())),
     pacing: optional(AiriPacingSchema),
+    cueAllowlist: optional(CharacterCueAllowlistSchema),
+    autoCuesEnabled: optional(boolean()),
+    autoCueExpressions: optional(boolean()),
+    autoCueMotions: optional(boolean()),
+    compiledWhitelist: optional(CharacterCueAllowlistSchema),
   })),
   outfits: optional(array(AiriOutfitSchema)),
   artistry: optional(looseObject({

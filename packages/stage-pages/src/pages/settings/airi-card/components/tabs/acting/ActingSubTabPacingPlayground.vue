@@ -727,15 +727,15 @@ onMounted(() => {
     <!-- Top Action & Navigation Bar -->
     <div class="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-200/80 pb-4 dark:border-neutral-800">
       <div class="flex flex-wrap items-center gap-2">
-        <!-- Anchor Jump to Pacing Tab -->
+        <!-- Anchor Jump to Thinking Tab -->
         <button
           type="button"
           class="flex items-center gap-1.5 border border-primary-500/40 rounded-lg bg-primary-50/60 px-3 py-1.5 text-xs text-primary-700 font-medium transition-all dark:bg-primary-950/40 hover:bg-primary-100 dark:text-primary-300 dark:hover:bg-primary-900/60"
-          title="Jump to the card Pacing & Fillers settings"
+          title="Jump to the card Thinking & Asides settings"
           @click="emit('navigateToPacing')"
         >
           <span class="i-solar:settings-bold-duotone text-sm" />
-          <span>Card Pacing Settings</span>
+          <span>Card Thinking Settings</span>
         </button>
 
         <!-- Quick Presets -->
@@ -1065,7 +1065,7 @@ onMounted(() => {
         <!-- Empty state placeholder -->
         <div v-if="reasoningSpans.length === 0 && !directAnswerText" class="h-full flex flex-col items-center justify-center text-neutral-500 italic">
           <span class="i-solar:test-tube-minimalistic-bold-duotone mb-2 text-2xl text-neutral-600" />
-          <span>Click "Try It Now" to begin streaming live reasoning & watching pacing decisions...</span>
+          <span>Click "Try It Now" to begin streaming live reasoning & watching thinking decisions...</span>
         </div>
 
         <!-- Rendered Reasoning Spans (5-Stage Color Pipeline) -->
@@ -1192,7 +1192,7 @@ onMounted(() => {
             v-if="stateLedger.length === 0"
             class="py-4 text-center text-xs text-neutral-400 italic"
           >
-            No events recorded yet. Run a scenario to view pacing decisions.
+            No events recorded yet. Run a scenario to view thinking decisions.
           </div>
 
           <div

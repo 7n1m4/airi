@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { PrewarmProgressEvent } from '@proj-airi/stage-ui/libs/pacing'
 import type { SpeechCapabilitiesInfo } from '@proj-airi/stage-ui/stores/providers'
+import type { CharacterCueAllowlist } from '@proj-airi/stage-ui/types/card.schema'
 import type { PacingProfileId, ThinkingCategory, ThinkingFillerPhrase } from '@proj-airi/stage-ui/types/pacing'
 
 import { DEFAULT_THINK_ALOUD_PROMPT } from '@proj-airi/stage-ui/constants/prompts/character-defaults'
@@ -20,6 +21,7 @@ import {
 } from '@proj-airi/stage-ui/types/pacing'
 import { FieldInput } from '@proj-airi/ui'
 import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 
 import ActingSubTabPacingPlayground from './acting/ActingSubTabPacingPlayground.vue'
 
@@ -43,6 +45,7 @@ interface Props {
   selectedSpeechProvider?: string
   selectedSpeechModel?: string
   selectedSpeechVoiceId?: string
+  cardId?: string
 }
 
 const props = defineProps<Props>()
@@ -113,6 +116,74 @@ const selectedActingSpeechExpressionPrompt = defineModel<string>('selectedActing
 const selectedActingSpeechMannerismPrompt = defineModel<string>('selectedActingSpeechMannerismPrompt', { required: true })
 const selectedActingIdleAnimations = defineModel<string[]>('selectedActingIdleAnimations', { required: true })
 
+// Autonomous Cues (System-1 Interceptor) & Allowlist Models
+const selectedActingCueAllowlist = defineModel<CharacterCueAllowlist | undefined>('selectedActingCueAllowlist')
+const autoCuesEnabled = defineModel<boolean>('autoCuesEnabled', { default: false })
+const autoCueExpressions = defineModel<boolean>('autoCueExpressions', { default: true })
+const autoCueMotions = defineModel<boolean>('autoCueMotions', { default: false })
+
+const router = useRouter()
+
+function openEmotionCalibration() {
+  const modelId = props.selectedDisplayModelId || capabilities.activeModelId.value
+  router.push({
+    path: '/settings/models/emotions',
+    query: modelId ? { model: modelId } : {},
+  })
+}
+
+const allowlistEmotionsCount = computed(() => {
+  return Object.keys(selectedActingCueAllowlist.value?.emotions || {}).length
+})
+
+const allowlistMotionsCount = computed(() => {
+  return Object.keys(selectedActingCueAllowlist.value?.motions || {}).length
+})
+
+const hasCalibratedAllowlist = computed(() => {
+  return allowlistEmotionsCount.value > 0 || allowlistMotionsCount.value > 0
+})
+
+function syncPromptFromAllowlist() {
+  const allowlist = selectedActingCueAllowlist.value
+  const emotions = allowlist?.emotions ? Object.keys(allowlist.emotions) : []
+  const motions = allowlist?.motions ? Object.keys(allowlist.motions) : []
+
+  if (emotions.length === 0 && motions.length === 0) {
+    const usableEmotions = actingModelEmotionOptions.value
+    const usableMotions = actingModelMotionOptions.value
+    if (usableEmotions.length === 0 && usableMotions.length === 0)
+      return
+
+    let prompt = `## Character Acting & Expression Directives\nInstruct the character to place <|ACT:...|> tokens inline sparingly (1-2 per turn) at natural emotional peaks.\n`
+    if (usableEmotions.length > 0) {
+      prompt += `\n### Available Emotions\nUse <|ACT:emotion="NAME"|> with: ${usableEmotions.join(', ')}.\n`
+    }
+    if (usableMotions.length > 0) {
+      prompt += `\n### Available Motions\nUse <|ACT:motion="NAME"|> with: ${usableMotions.join(', ')}.\n`
+    }
+    selectedActingModelExpressionPrompt.value = prompt.trim()
+    return
+  }
+
+  let prompt = `## Character Acting & Expression Directives\nInstruct the character to place <|ACT:...|> tokens inline sparingly (1-2 per turn) at natural emotional peaks.\n`
+  if (emotions.length > 0) {
+    prompt += `\n### Calibrated Emotion Tokens\nUse <|ACT:emotion="NAME"|> where NAME is one of:\n`
+    for (const token of emotions) {
+      const details = allowlist!.emotions![token]
+      prompt += `- "${token}" (${details.label || token})\n`
+    }
+  }
+  if (motions.length > 0) {
+    prompt += `\n### Calibrated Motion Tokens\nUse <|ACT:motion="NAME"|> where NAME is one of:\n`
+    for (const token of motions) {
+      const details = allowlist!.motions![token]
+      prompt += `- "${token}" (${details.label || token})\n`
+    }
+  }
+  selectedActingModelExpressionPrompt.value = prompt.trim()
+}
+
 // Conversational Pacing Models
 const pacingEnabled = defineModel<boolean>('pacingEnabled', { default: false })
 const pacingArmMinMs = defineModel<number>('pacingArmMinMs', { default: 1200 })
@@ -140,10 +211,10 @@ type ActingSubTabId = 'expressions' | 'speech' | 'pacing' | 'playground'
 const activeSubTab = ref<ActingSubTabId>('expressions')
 
 const subTabs = [
-  { id: 'expressions' as const, label: 'Model Expressions', icon: 'i-solar:smile-circle-bold-duotone', desc: 'Emotions, motions, and idle loops' },
-  { id: 'speech' as const, label: 'Speech Tags', icon: 'i-solar:soundwave-bold-duotone', desc: 'Audio expressions & caption FX' },
-  { id: 'pacing' as const, label: 'Pacing & Fillers', icon: 'i-solar:hourglass-bold-duotone', desc: 'Thinking fillers, live asides & pacing' },
-  { id: 'playground' as const, label: 'Pacing Lab', icon: 'i-solar:test-tube-minimalistic-bold-duotone', desc: 'Live reasoning & pacing test harness' },
+  { id: 'expressions' as const, label: 'Cues', icon: 'i-solar:smile-circle-bold-duotone', desc: 'Avatar gestures, ACT directives, autonomous cues & kinetic loops' },
+  { id: 'speech' as const, label: 'Voice', icon: 'i-solar:soundwave-bold-duotone', desc: 'Voice acting, audio tags, vocal mannerisms & caption FX' },
+  { id: 'pacing' as const, label: 'Thinking', icon: 'i-solar:hourglass-bold-duotone', desc: 'Thinking fillers, live spoken asides & deliberation cadence' },
+  { id: 'playground' as const, label: 'Lab', icon: 'i-solar:test-tube-minimalistic-bold-duotone', desc: 'Interactive reasoning, latency & audio audition sandbox' },
 ]
 
 const THINK_ALOUD_TEMPLATE = DEFAULT_THINK_ALOUD_PROMPT
@@ -518,7 +589,7 @@ function resetThresholdsToDefaults() {
         Acting & Behavioral Performance
       </h3>
       <p class="text-xs text-neutral-500 dark:text-neutral-400">
-        Configure avatar expressions, speech tags, vocal mannerisms, and conversational pacing fillers.
+        Configure avatar cues, voice mannerisms, thinking pauses, and interactive performance simulation.
       </p>
     </div>
 
@@ -552,16 +623,133 @@ function resetThresholdsToDefaults() {
             <div class="flex items-center gap-2">
               <div class="i-solar:smile-circle-bold-duotone text-lg text-primary-500" />
               <h4 class="text-sm text-neutral-800 font-semibold dark:text-neutral-100">
-                Model Expressions & Kinetic Motions
+                Avatar Cues & Kinetic Performance
               </h4>
             </div>
             <p class="pl-6 text-xs text-neutral-500 dark:text-neutral-400">
-              Configure idle cycle animations, ACT emotion and motion prompt directives, and model kinetic capabilities.
+              Configure avatar gestures, ACT tokens, autonomous System-1 cues, and idle animation loops.
             </p>
           </div>
         </div>
 
         <div class="flex flex-col gap-6">
+          <!-- Autonomous Cues (System-1 Interceptor) Section -->
+          <div class="border border-neutral-200 rounded-xl bg-neutral-50/50 p-4 dark:border-neutral-700/70 dark:bg-neutral-950/30">
+            <div class="flex items-start justify-between gap-4">
+              <div class="flex flex-col gap-1">
+                <div class="flex items-center gap-2">
+                  <div class="i-solar:bolt-circle-bold-duotone text-lg text-primary-500" />
+                  <span class="text-sm text-neutral-800 font-semibold dark:text-neutral-100">
+                    Autonomous Cues (System-1 Interceptor)
+                  </span>
+                  <span
+                    class="rounded-full px-2 py-0.5 text-[10px] font-medium"
+                    :class="[
+                      autoCuesEnabled
+                        ? 'bg-primary-100 text-primary-800 dark:bg-primary-950/60 dark:text-primary-300'
+                        : 'bg-neutral-200/70 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400',
+                    ]"
+                  >
+                    {{ autoCuesEnabled ? 'Active' : 'Disabled' }}
+                  </span>
+                </div>
+                <p class="text-xs text-neutral-500 dark:text-neutral-400">
+                  Automatically makes your character more expressive by evaluating dialogue sentiment in real time, using their personality and acting directives to choose matching cues.
+                </p>
+              </div>
+
+              <!-- Master Switch Toggle -->
+              <label class="relative inline-flex shrink-0 cursor-pointer items-center">
+                <input
+                  v-model="autoCuesEnabled"
+                  type="checkbox"
+                  class="peer sr-only"
+                >
+                <div class="h-6 w-11 rounded-full bg-neutral-200 transition-colors after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:border-neutral-300 dark:border-neutral-600 after:rounded-full after:bg-white dark:bg-neutral-700 peer-checked:bg-primary-500 peer-focus:outline-none after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-focus:ring-primary-800" />
+              </label>
+            </div>
+
+            <!-- Auto-Cues Details -->
+            <div class="mt-4 flex flex-col gap-4 border-t border-neutral-200/60 pt-4 dark:border-neutral-800/60">
+              <!-- Context Chips Read by Classifier -->
+              <div class="flex flex-col gap-1.5">
+                <span class="text-[11px] text-neutral-500 font-medium tracking-wider uppercase dark:text-neutral-400">
+                  Character Details Considered
+                </span>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-2.5 py-1 text-xs text-neutral-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300">
+                    <span class="i-solar:user-speak-bold-duotone text-primary-500" />
+                    Personality
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-2.5 py-1 text-xs text-neutral-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300">
+                    <span class="i-solar:document-text-bold-duotone text-primary-500" />
+                    Description
+                  </span>
+                  <span class="inline-flex items-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-2.5 py-1 text-xs text-neutral-700 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300">
+                    <span class="i-solar:mask-happly-bold-duotone text-primary-500" />
+                    Acting Directives
+                  </span>
+                </div>
+              </div>
+
+              <!-- Granular Modality Checkboxes -->
+              <div class="flex flex-wrap items-center gap-6">
+                <label class="flex cursor-pointer items-center gap-2 text-xs text-neutral-700 dark:text-neutral-300">
+                  <input
+                    v-model="autoCueExpressions"
+                    type="checkbox"
+                    :disabled="!autoCuesEnabled"
+                    class="rounded text-primary-500 disabled:opacity-40 focus:ring-primary-400"
+                  >
+                  <span>Auto-cue Expressions</span>
+                </label>
+
+                <label class="flex cursor-pointer items-center gap-2 text-xs text-neutral-700 dark:text-neutral-300">
+                  <input
+                    v-model="autoCueMotions"
+                    type="checkbox"
+                    :disabled="!autoCuesEnabled"
+                    class="rounded text-primary-500 disabled:opacity-40 focus:ring-primary-400"
+                  >
+                  <span>Auto-cue Motions (Coming Soon)</span>
+                </label>
+              </div>
+
+              <!-- Allowlist Status & Calibration Link -->
+              <div class="flex items-center justify-between border border-neutral-200/80 rounded-lg bg-white/80 p-3 dark:border-neutral-800 dark:bg-neutral-900/60">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="h-8 w-8 flex items-center justify-center rounded-lg text-sm"
+                    :class="[
+                      hasCalibratedAllowlist
+                        ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+                        : 'bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400',
+                    ]"
+                  >
+                    <div :class="[hasCalibratedAllowlist ? 'i-solar:check-circle-bold-duotone' : 'i-solar:shield-warning-bold-duotone']" />
+                  </div>
+                  <div class="flex flex-col">
+                    <span class="text-xs text-neutral-800 font-medium dark:text-neutral-200">
+                      {{ hasCalibratedAllowlist ? 'Calibrated Cue Allowlist' : 'No Allowlist Calibrated' }}
+                    </span>
+                    <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      {{ hasCalibratedAllowlist ? `${allowlistEmotionsCount} expressions · ${allowlistMotionsCount} motions allowed` : 'Calibrate your model in Emotion Studio to map physical rig blendshapes to semantic cues' }}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  class="flex items-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-700 font-medium shadow-sm transition dark:border-neutral-700 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                  @click="openEmotionCalibration"
+                >
+                  <div class="i-solar:tuning-square-2-bold-duotone text-primary-500" />
+                  <span>{{ hasCalibratedAllowlist ? 'Recalibrate in Studio' : 'Launch Emotion Studio' }}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
           <!-- Idle Loop / Cycle Animations -->
           <div class="border border-neutral-200 rounded-xl bg-neutral-50/50 p-4 dark:border-neutral-700/70 dark:bg-neutral-950/30">
             <div class="mb-1 text-sm text-neutral-800 font-medium dark:text-neutral-200">
@@ -595,19 +783,30 @@ function resetThresholdsToDefaults() {
           <div class="border border-neutral-200 rounded-xl p-4 dark:border-neutral-700">
             <div class="max-w-full">
               <label class="flex flex-col gap-4">
-                <div>
-                  <div class="flex items-center gap-1 text-sm font-medium">
-                    ACT / Model Expressions & Capabilities
+                <div class="flex items-start justify-between gap-2">
+                  <div>
+                    <div class="flex items-center gap-1 text-sm font-medium">
+                      ACT Directives & Cue Capabilities
+                    </div>
+                    <div class="text-xs text-neutral-500 dark:text-neutral-400">
+                      Teach AIRI how to emit ACT tokens for avatar emotions, outfits, and kinetic motion cues.
+                    </div>
                   </div>
-                  <div class="text-xs text-neutral-500 dark:text-neutral-400">
-                    Teach AIRI how to emit ACT tokens for avatar emotions/outfits and motion cues.
-                  </div>
+                  <button
+                    type="button"
+                    class="flex items-center gap-1.5 border border-neutral-200 rounded-lg bg-neutral-50 px-2.5 py-1 text-xs text-neutral-700 shadow-sm transition dark:border-neutral-700 hover:border-primary-300 dark:bg-neutral-800 dark:text-neutral-300 hover:text-primary-600 dark:hover:text-primary-400"
+                    title="Format prompt instructions using calibrated allowlist or usable model capabilities"
+                    @click="syncPromptFromAllowlist"
+                  >
+                    <div class="i-solar:refresh-circle-bold-duotone text-primary-500" />
+                    <span>Sync with Capabilities</span>
+                  </button>
                 </div>
                 <div class="relative w-full">
                   <textarea
                     v-model="selectedActingModelExpressionPrompt"
                     rows="6"
-                    placeholder="ACT / Model Expressions"
+                    placeholder="ACT Cue Directives & Instructions"
                     class="focus:primary-300 dark:focus:primary-400/50 text-disabled:neutral-400 dark:text-disabled:neutral-600 cursor-disabled:not-allowed w-full border-2 border-neutral-100 rounded-lg border-solid bg-neutral-50 py-1.5 pl-2 pr-9 text-sm shadow-sm outline-none transition-all duration-200 ease-in-out dark:border-neutral-900 dark:bg-neutral-950 focus:bg-neutral-50 dark:focus:bg-neutral-900"
                   />
                   <button
@@ -624,10 +823,14 @@ function resetThresholdsToDefaults() {
             </div>
 
             <div class="mt-4 flex flex-col gap-4">
+              <!-- Quick Capability Reference Notice -->
+              <div class="text-[11px] text-neutral-400 font-medium">
+                Click any cue below to insert into prompt directives:
+              </div>
               <!-- Emotions & Outfits Section -->
               <div class="flex flex-col gap-2">
                 <div class="text-xs text-neutral-600 font-medium dark:text-neutral-300">
-                  🎨 Emotions & Outfits <span v-if="actingModelEmotionOptions.length">({{ actingModelEmotionOptions.length }})</span>
+                  🎨 Emotion & Outfit Cues <span v-if="actingModelEmotionOptions.length">({{ actingModelEmotionOptions.length }})</span>
                 </div>
                 <div v-if="actingModelEmotionOptions.length" class="flex flex-wrap gap-2">
                   <button
@@ -649,7 +852,7 @@ function resetThresholdsToDefaults() {
               <!-- Motions & Animations Section -->
               <div class="flex flex-col gap-2">
                 <div class="text-xs text-neutral-600 font-medium dark:text-neutral-300">
-                  🏃 Motions & Animations <span v-if="actingModelMotionOptions.length">({{ actingModelMotionOptions.length }})</span>
+                  🏃 Kinetic Motion Cues <span v-if="actingModelMotionOptions.length">({{ actingModelMotionOptions.length }})</span>
                 </div>
                 <div v-if="actingModelMotionOptions.length" class="flex flex-wrap gap-2">
                   <button
@@ -705,11 +908,11 @@ function resetThresholdsToDefaults() {
             <div class="flex items-center gap-2">
               <div class="i-solar:soundwave-bold-duotone text-lg text-primary-500" />
               <h4 class="text-sm text-neutral-800 font-semibold dark:text-neutral-100">
-                Speech Tags & Audio Expressions
+                Voice Acting & Audio Tags
               </h4>
             </div>
             <p class="pl-6 text-xs text-neutral-500 dark:text-neutral-400">
-              Teach AIRI how to use provider-side vocal tags and trigger head-tethered caption effects.
+              Teach AIRI how to use provider-side vocal tags, voice mannerisms, and head-tethered caption FX.
             </p>
           </div>
         </div>
@@ -719,7 +922,7 @@ function resetThresholdsToDefaults() {
             <label class="flex flex-col gap-4">
               <div>
                 <div class="flex items-center gap-1 text-sm font-medium">
-                  Speech Tags / Audio Expressions
+                  Vocal Tags & Speech Directives
                 </div>
                 <div class="text-xs text-neutral-500 dark:text-neutral-400">
                   Teach AIRI how to use provider-side vocal tags when the selected speech provider supports them.
@@ -729,7 +932,7 @@ function resetThresholdsToDefaults() {
                 <textarea
                   v-model="selectedActingSpeechExpressionPrompt"
                   rows="6"
-                  placeholder="Speech Tags / Audio Expressions"
+                  placeholder="Voice tags, vocal mannerisms & audio directives"
                   class="focus:primary-300 dark:focus:primary-400/50 text-disabled:neutral-400 dark:text-disabled:neutral-600 cursor-disabled:not-allowed w-full border-2 border-neutral-100 rounded-lg border-solid bg-neutral-50 py-1.5 pl-2 pr-9 text-sm shadow-sm outline-none transition-all duration-200 ease-in-out dark:border-neutral-900 dark:bg-neutral-950 focus:bg-neutral-50 dark:focus:bg-neutral-900"
                 />
                 <button
@@ -747,11 +950,11 @@ function resetThresholdsToDefaults() {
 
           <div class="mt-4 flex flex-col gap-3">
             <div class="text-xs text-neutral-500">
-              Speech tag helpers for provider
+              Voice tag helpers for provider
               <span class="text-neutral-700 font-medium dark:text-neutral-200">{{ selectedSpeechProviderLabel }}</span>
             </div>
             <div v-if="actingSpeechCapabilitiesLoading" class="text-xs text-neutral-400">
-              Loading speech capability helpers...
+              Loading voice capability helpers...
             </div>
             <div v-else-if="actingGroupedExpressionTags.length" class="flex flex-col gap-3">
               <div v-for="group in actingGroupedExpressionTags" :key="group.category" class="flex flex-col gap-2">
@@ -832,11 +1035,11 @@ function resetThresholdsToDefaults() {
                 class="h-4 w-4 border-gray-300 rounded text-primary-600 focus:ring-primary-500"
               >
               <label for="pacing-master-toggle" class="cursor-pointer text-sm text-neutral-800 font-semibold dark:text-neutral-100">
-                Conversational Pacing & Thinking Fillers
+                Thinking Fillers & Spoken Asides
               </label>
             </div>
             <p class="pl-6 text-xs text-neutral-500 dark:text-neutral-400">
-              Bridges network and reasoning latency by playing cached audio filler phrases ("Hmm...", "Let me check that...") and live spoken asides when model inference exceeds latency deadlines.
+              Bridges reasoning and network latency by playing cached audio fillers ("Hmm...", "Let me check that...") and live spoken asides while the model deliberates.
             </p>
           </div>
           <span
@@ -851,7 +1054,7 @@ function resetThresholdsToDefaults() {
           </span>
         </div>
 
-        <!-- Pacing Lab Interactive Test Banner -->
+        <!-- Thinking Lab Interactive Test Banner -->
         <div class="flex flex-wrap items-center justify-between gap-3 border border-primary-500/30 rounded-xl from-primary-500/10 via-primary-500/5 to-transparent bg-gradient-to-r p-3 dark:border-primary-500/20">
           <div class="flex items-center gap-2.5">
             <div class="h-8 w-8 flex items-center justify-center rounded-lg bg-primary-500/15 text-primary-600 dark:text-primary-400">
@@ -859,10 +1062,10 @@ function resetThresholdsToDefaults() {
             </div>
             <div>
               <div class="text-xs text-neutral-800 font-semibold dark:text-neutral-200">
-                Pacing Lab (Interactive Thinking & Fillers Playground)
+                Thinking Lab (Interactive Audition Sandbox)
               </div>
               <div class="text-[11px] text-neutral-500 dark:text-neutral-400">
-                Test multi-hop reasoning, live System 1 gating, and real-time audio playback in an interactive sandbox.
+                Test reasoning latency, live spoken asides, and audio playback in an interactive sandbox.
               </div>
             </div>
           </div>
@@ -871,7 +1074,7 @@ function resetThresholdsToDefaults() {
             class="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs text-white font-medium shadow-sm transition-all active:scale-98 hover:bg-primary-700"
             @click="activeSubTab = 'playground'"
           >
-            <span>Open Pacing Lab</span>
+            <span>Open Lab</span>
             <span class="i-solar:arrow-right-bold text-xs" />
           </button>
         </div>
@@ -882,7 +1085,7 @@ function resetThresholdsToDefaults() {
             <div class="flex items-center gap-2">
               <div class="i-solar:slider-vertical-bold-duotone text-base text-primary-500" />
               <h4 class="text-xs text-neutral-800 font-semibold tracking-wider uppercase dark:text-neutral-200">
-                Pacing Profile Presets
+                Thinking Profile Presets
               </h4>
             </div>
             <span
@@ -954,14 +1157,14 @@ function resetThresholdsToDefaults() {
           </div>
         </div>
 
-        <!-- Speech Style & Pacing Instructions Scratchpad -->
+        <!-- Speech Style & Thinking Instructions Scratchpad -->
         <div class="border border-neutral-200 rounded-xl bg-white p-4 shadow-sm dark:border-neutral-700 dark:bg-neutral-900/60">
           <div class="mb-3 flex flex-col gap-0.5">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <div class="i-solar:chat-round-dots-bold-duotone text-primary-500" />
                 <span class="text-xs text-neutral-800 font-semibold tracking-wider uppercase dark:text-neutral-200">
-                  Speech Style & Pacing Instructions
+                  Speech Style & Thinking Instructions
                 </span>
               </div>
             </div>
@@ -972,8 +1175,8 @@ function resetThresholdsToDefaults() {
 
           <FieldInput
             v-model="selectedActingSpeechMannerismPrompt"
-            label="Style & Pacing Prompt"
-            description="Injected into the character's system prompt to guide pacing, mannerisms, and spoken CoT asides."
+            label="Style & Thinking Prompt"
+            description="Injected into the character's system prompt to guide thinking pauses, mannerisms, and spoken CoT asides."
             :single-line="false"
           />
 
@@ -983,7 +1186,7 @@ function resetThresholdsToDefaults() {
             class="mt-2.5 flex items-center gap-2 border border-amber-200 rounded-lg bg-amber-50/80 px-3 py-2 text-xs text-amber-700 dark:border-amber-800/80 dark:bg-amber-950/40 dark:text-amber-300"
           >
             <div class="i-solar:danger-triangle-bold shrink-0 text-sm" />
-            <span>Dynamic live asides are enabled, but your style & pacing prompt does not include instructions for <code>&lt;think_aloud&gt;</code>. Click "Insert &lt;think_aloud&gt; CoT Template" below to add them.</span>
+            <span>Dynamic live asides are enabled, but your style & thinking prompt does not include instructions for <code>&lt;think_aloud&gt;</code>. Click "Insert &lt;think_aloud&gt; CoT Template" below to add them.</span>
           </div>
 
           <!-- Action Chips & Provider Mannerisms -->
@@ -1006,7 +1209,7 @@ function resetThresholdsToDefaults() {
                 @click="safeAppendMannerismPrompt(PACING_STYLE_TEMPLATE)"
               >
                 <span class="i-solar:magic-stick-3-bold text-xs" />
-                <span>Insert Conversational Pacing Template</span>
+                <span>Insert Conversational Thinking Template</span>
               </button>
               <button
                 v-for="item in actingMannerismOptions"
@@ -1284,7 +1487,7 @@ function resetThresholdsToDefaults() {
         <div class="flex flex-col gap-4">
           <div class="flex items-center justify-between">
             <span class="text-xs text-neutral-700 font-semibold tracking-wider uppercase dark:text-neutral-300">
-              Adaptive Latency & Pacing Thresholds
+              Adaptive Latency & Thinking Thresholds
             </span>
             <button
               type="button"
@@ -1694,7 +1897,7 @@ function resetThresholdsToDefaults() {
         <!-- Pacing & Proactivity / Thinking Model Tip -->
         <div class="flex items-start gap-2.5 border border-neutral-200/60 rounded-lg bg-neutral-50/60 p-3 text-xs text-neutral-500 dark:border-neutral-800/60 dark:bg-neutral-900/40 dark:text-neutral-400">
           <span class="i-solar:info-circle-bold-duotone mt-0.5 shrink-0 text-sm text-primary-500" />
-          <span><strong>Tip:</strong> If a reasoning model deliberates before deciding to remain silent (such as during quiet background proactivity evaluations or returning <code>NO_REPLY</code>), filler phrases allow the avatar to naturally think out loud. For complete silent stealth, disable pacing for that persona.</span>
+          <span><strong>Tip:</strong> If a reasoning model deliberates before deciding to remain silent (such as during quiet background proactivity evaluations or returning <code>NO_REPLY</code>), filler phrases allow the avatar to naturally think out loud. For complete silent stealth, disable thinking fillers for that persona.</span>
         </div>
       </div>
 
