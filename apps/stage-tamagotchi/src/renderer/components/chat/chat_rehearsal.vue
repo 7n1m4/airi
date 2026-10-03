@@ -8,6 +8,7 @@ import { useSpine } from '@proj-airi/stage-ui-spine'
 import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
 import { ModelCustomizer } from '@proj-airi/stage-ui/components/scenarios/settings/model-settings'
 import { useLlmmarkerParser } from '@proj-airi/stage-ui/composables/llm-marker-parser'
+import { getSpeechBusContext, speechSegmentPlaybackEvent } from '@proj-airi/stage-ui/libs/speech/playback-events'
 import { useAnimaDexWizardStore } from '@proj-airi/stage-ui/stores/animadex-wizard'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { DisplayModelFormat, useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
@@ -237,17 +238,18 @@ const systemOneBadge = computed(() => {
   return { label: `Jev · ${modelShort}`, tone: 'sky' as const }
 })
 
-// Phase C: stride simulator. Runs the Tier 2 path on rehearsal text in
-// parallel with normal playback: sentence-split → mirror-rule dispatch →
-// debug readout → local avatar actuation. Never blocks or alters playback.
+// Phase C: stride simulator. Table read judges the whole script at once;
+// dress rehearsal performs it line by line through the real pipeline.
+type RehearsalSimMode = 'table-read' | 'dress-rehearsal'
+const rehearsalSimMode = useLocalStorage<RehearsalSimMode>('rehearsal/system-one-mode', 'dress-rehearsal')
 interface RehearsalStrideResult {
   sentence: string
+  norm: string
   skippedPrefixed: boolean
   emotion: string
   confidence: number
   latencyMs: number
-  budgetMs: number
-  status: 'applied' | 'dropped' | 'skipped-prefixed' | 'none' | 'error'
+  status: 'held' | 'applied' | 'dropped' | 'skipped-prefixed' | 'none' | 'unmapped' | 'error'
   error?: string
 }
 
@@ -257,7 +259,63 @@ const systemOneRunning = ref(false)
 const showSystemOneReadout = ref(false)
 
 const ACT_TOKEN_RE = /<\|\s*(?:ACT|DELAY|ACTOR)[\s\S]*?\|\s*>/gi
-const WORDS_PER_MINUTE = 150
+
+function normalizeStrideText(text: string): string {
+  return text.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+// Hold-and-release: decided cues wait for their slice's audio play event.
+// playedNorms tracks slices the host already spoke — late decisions drop.
+const playedStrideNorms = ref<Set<string>>(new Set())
+
+function holdStrideCue(sentence: string, emotion: string, confidence: number, latencyMs: number) {
+  const norm = normalizeStrideText(sentence)
+  if (playedStrideNorms.value.has(norm)) {
+    systemOneRuns.value.push({ sentence, norm, skippedPrefixed: false, emotion, confidence, latencyMs, status: 'dropped' })
+    return
+  }
+  systemOneRuns.value.push({ sentence, norm, skippedPrefixed: false, emotion, confidence, latencyMs, status: 'held' })
+  console.info('[Rehearsal System1] held', { sentence: sentence.slice(0, 60), emotion, norm: norm.slice(0, 60) })
+}
+
+function releaseStrideCues(itemText: string) {
+  const norm = normalizeStrideText(itemText)
+  playedStrideNorms.value.add(norm)
+  const held = systemOneRuns.value.filter(r => r.status === 'held')
+  console.info('[Rehearsal System1] release attempt', { norm: norm.slice(0, 60), heldCount: held.length, heldNorms: held.map(r => r.norm.slice(0, 40)) })
+  const row = held.find(r => norm.includes(r.norm) || r.norm.includes(norm))
+  if (!row) {
+    console.info('[Rehearsal System1] playback without held cue', { text: itemText.slice(0, 80) })
+    return
+  }
+  console.info('[Rehearsal System1] release match', { sentence: row.sentence.slice(0, 60), emotion: row.emotion })
+  void injectJevCue(row.sentence, row.emotion).then((fired) => {
+    row.status = fired ? 'applied' : 'unmapped'
+  })
+}
+
+try {
+  console.info('[Rehearsal System1] subscribed to segment playback events')
+  getSpeechBusContext().on(speechSegmentPlaybackEvent, (evt: any) => {
+    const payload = evt?.body
+    console.info('[Rehearsal System1] playback event', {
+      intentId: payload?.intentId,
+      text: (payload?.text || '').slice(0, 80),
+    })
+    if (!payload || !payload.text) {
+      return
+    }
+    // NOTE: intent ids are minted fresh by the host pipeline, so the bus
+    // event never carries the rehearsal's remote intent id. Matching is by
+    // spoken words only — identical words deserve identical cues anyway, and
+    // held rows only exist during/after a run, so stray turns can't misfire
+    // against stale state.
+    releaseStrideCues(payload.text)
+  })
+}
+catch (err) {
+  console.warn('[Rehearsal System1] Playback subscription failed:', err)
+}
 
 function splitSentences(text: string): string[] {
   const parts = text.replace(/\n+/g, ' ').match(/[^.?!]+[.?!]+|[^.?!]+$/g) || []
@@ -268,7 +326,10 @@ async function resolveRehearsalEmotionOptions(modelId: string | null): Promise<{
   // Source 1: the card's compiled whitelist (Verify keepers + Remap slots union).
   const whitelist = (activeCard.value as any)?.extensions?.airi?.acting?.compiledWhitelist
   const whitelisted = Object.keys(whitelist?.emotions || {})
+  // DIAG: snapshot for DevTools inspection (window.__jevDebug.snapshot()).
+  stashJevSnapshot({ whitelist, whitelisted, modelId })
   if (whitelisted.length > 0) {
+    console.info('[Rehearsal System1] options', { source: 'whitelist', keys: whitelisted })
     return { options: [...whitelisted, 'none'], fallback: false }
   }
   // Source 2: the display model's stored mappings.
@@ -277,6 +338,7 @@ async function resolveRehearsalEmotionOptions(modelId: string | null): Promise<{
       const model = await displayModelsStore.getDisplayModel(modelId)
       const values = [...new Set(Object.values(model?.emotionMappings || {}).filter(Boolean) as string[])]
       if (values.length > 0) {
+        console.info('[Rehearsal System1] options', { source: 'record', keys: values })
         return { options: [...values, 'none'], fallback: false }
       }
     }
@@ -284,7 +346,26 @@ async function resolveRehearsalEmotionOptions(modelId: string | null): Promise<{
       console.warn('[Rehearsal System1] Failed to load model vocabulary:', err)
     }
   }
+  console.info('[Rehearsal System1] options', { source: 'canonical-fallback', keys: ['smile', 'blush', 'pout', 'surprise', 'wink', 'shy', 'none'] })
   return { options: ['smile', 'blush', 'pout', 'surprise', 'wink', 'shy', 'none'], fallback: true }
+}
+
+// DIAG: DevTools dump hook. Call window.__jevDebug.snapshot() in the chat
+// window console to inspect the exact whitelist/criteria state per run.
+function stashJevSnapshot(extra: Record<string, any>) {
+  try {
+    const card = activeCard.value as any
+    ;(window as any).__jevDebug = {
+      snapshot: () => JSON.parse(JSON.stringify({
+        cardName: card?.name,
+        cardId: activeCardId.value,
+        actingExtension: card?.extensions?.airi?.acting || null,
+        modelId: activeModelId.value,
+        ...extra,
+      })),
+    }
+  }
+  catch {}
 }
 
 function triggerRehearsalEmotion(key: string) {
@@ -319,12 +400,207 @@ function triggerRehearsalEmotion(key: string) {
   }
 }
 
-// Single choke point for every Jev-originated cue in rehearsal. Phase E will
-// extend this with rawContent persistence exclusion; the readout + log already
-// carry provenance so nothing here can be mistaken for LLM output.
-function injectJevCue(sentence: string, emotion: string) {
-  console.info('[Rehearsal System1] inject (provenance=system_one_jev)', { sentence, emotion })
-  triggerRehearsalEmotion(emotion)
+// DIAG (temporary proving-ground instrumentation — remove before Phase E):
+// reads the live driver weight for a morph key. Undefined = no live manager;
+// 0 after firing = the trigger did not move this morph.
+function readLiveWeight(key: string): number | undefined {
+  try {
+    const em = (window as any)?.expressionManager
+    if (!em || typeof em.getValue !== 'function') {
+      return undefined
+    }
+    return em.getValue(key)
+  }
+  catch {
+    return undefined
+  }
+}
+const rigExpressionsCache = ref<{ modelId: string, expressions: string[] } | null>(null)
+
+async function getRigExpressions(modelId: string | null): Promise<string[]> {
+  if (!modelId) {
+    return []
+  }
+  if (rigExpressionsCache.value?.modelId === modelId) {
+    return rigExpressionsCache.value.expressions
+  }
+  try {
+    const caps = await displayModelsStore.getOrLoadModelCapabilities(modelId)
+    const expressions = [...(caps.expressions || [])]
+    rigExpressionsCache.value = { modelId, expressions }
+    return expressions
+  }
+  catch (err) {
+    console.warn('[Rehearsal System1] Failed to load rig expressions:', err)
+    return []
+  }
+}
+
+// Live rig truth: the mounted driver's expression map. File-caps lists (335)
+// and live maps (207) are different universes — resolution trusts live first.
+function liveMorphKeys(): string[] {
+  try {
+    const map = (window as any)?.expressionManager?.expressionMap
+    if (map && typeof map === 'object') {
+      return Object.keys(map)
+    }
+  }
+  catch {}
+  return []
+}
+
+// Resolve a curated actToken to a rig-playable raw morph key. Order:
+// whitelist rawKey → token itself (both verified against the LIVE map when
+// one exists) → model-mapping cross-references → legacy caps trust fallback.
+// Returns null when nothing resolves (caller marks `unmapped`, never fired).
+async function resolveActToken(token: string, modelId: string | null): Promise<string | null> {
+  const whitelist = (activeCard.value as any)?.extensions?.airi?.acting?.compiledWhitelist
+  const whitelistedRaw = whitelist?.emotions?.[token]?.rawKey
+  const live = liveMorphKeys()
+  const t = Math.round(performance.now())
+  if (live.length > 0) {
+    const liveMatch = (name: string) => live.find(k => k === name || k.toLowerCase() === name.toLowerCase())
+    if (whitelistedRaw) {
+      const hit = liveMatch(whitelistedRaw)
+      console.info('[Rehearsal System1] resolve', { token, resolved: hit || null, via: 'whitelist-live', liveSize: live.length, t })
+      if (hit) {
+        return hit
+      }
+    }
+    const hit = liveMatch(token)
+    console.info('[Rehearsal System1] resolve', { token, resolved: hit || null, via: hit ? 'token-live' : 'unmapped-live', liveSize: live.length, t })
+    return hit || null
+  }
+  let rig: string[] = []
+  try {
+    rig = await getRigExpressions(modelId)
+  }
+  catch {}
+  const rigMatch = (name: string) => rig.find(r => r === name || r.toLowerCase() === name.toLowerCase())
+
+  if (whitelistedRaw) {
+    if (rig.length === 0) {
+      // DIAG: trust fallback — unverified. If rows say `applied` but nothing
+      // moves, this line is suspect #1.
+      console.info('[Rehearsal System1] resolve', { token, resolved: whitelistedRaw, via: 'whitelist-unverified', rigSize: 0, t: Math.round(performance.now()) })
+      return whitelistedRaw
+    }
+    const hit = rigMatch(whitelistedRaw)
+    if (hit) {
+      console.info('[Rehearsal System1] resolve', { token, resolved: hit, via: 'whitelist', rigSize: rig.length, t: Math.round(performance.now()) })
+      return hit
+    }
+  }
+  if (rig.length > 0) {
+    const hit = rigMatch(token)
+    if (hit) {
+      console.info('[Rehearsal System1] resolve', { token, resolved: hit, via: 'rig-token', rigSize: rig.length, t: Math.round(performance.now()) })
+      return hit
+    }
+  }
+  else if (token) {
+    console.info('[Rehearsal System1] resolve', { token, resolved: token, via: 'token-unverified', rigSize: 0, t: Math.round(performance.now()) })
+    return token
+  }
+  try {
+    const model = modelId ? await displayModelsStore.getDisplayModel(modelId) : null
+    const mappings = model?.emotionMappings || {}
+    for (const [raw, mapped] of Object.entries(mappings)) {
+      if (typeof mapped === 'string' && mapped.toLowerCase() === token.toLowerCase()) {
+        // DIAG: mapping-table hit (unverified against rig).
+        console.info('[Rehearsal System1] resolve', { token, resolved: raw, via: 'mappings-table', rigSize: rig.length, t: Math.round(performance.now()) })
+        return raw
+      }
+    }
+    if (typeof (mappings as any)[token] === 'string' && rig.length === 0) {
+      return (mappings as any)[token]
+    }
+  }
+  catch {}
+  return null
+}
+
+// Single choke point for every Jev-originated cue in rehearsal: resolves the
+// curated actToken to a rig-playable raw morph first. Returns the fired raw
+// key, or null when unresolvable (caller marks `unmapped` — never fired).
+// Phase E will extend this with rawContent persistence exclusion; the readout
+// + log already carry provenance so nothing here can be mistaken for LLM output.
+async function injectJevCue(sentence: string, emotion: string): Promise<string | null> {
+  const rawKey = await resolveActToken(emotion, activeModelId.value)
+  if (!rawKey) {
+    console.warn('[Rehearsal System1] unmapped cue — not fired (provenance=system_one_jev)', { sentence, emotion, t: Math.round(performance.now()) })
+    return null
+  }
+  // DIAG: weight before/after proves whether the driver actually moved.
+  const before = readLiveWeight(rawKey)
+  console.info('[Rehearsal System1] inject (provenance=system_one_jev)', { sentence, emotion, rawKey, weightBefore: before, t: Math.round(performance.now()) })
+  triggerRehearsalEmotion(rawKey)
+  window.setTimeout(() => {
+    console.info('[Rehearsal System1] inject-verify', { rawKey, weightBefore: before, weightAfter: readLiveWeight(rawKey), t: Math.round(performance.now()) })
+  }, 400)
+  return rawKey
+}
+
+function buildRehearsalPersona() {
+  const persona = activeCard.value
+  const name = (persona as any)?.nickname || persona?.name || 'Character'
+  const block = [
+    (persona as any)?.personality ? `Personality: ${(persona as any).personality}` : '',
+    (persona as any)?.description ? `Description: ${(persona as any).description}` : '',
+    (persona as any)?.extensions?.airi?.acting?.modelExpressionPrompt ? `Acting directives (how and when this character invokes emotion cues): ${(persona as any).extensions.airi.acting.modelExpressionPrompt}` : '',
+  ].filter(Boolean).join('\n')
+  return { name, block }
+}
+
+function buildEmotionCriteria(options: string[]) {
+  return Object.fromEntries(options.map(o => [o, o === 'none' ? 'No cue fits this line.' : `Emotion cue: ${o}.`]))
+}
+
+// Dress-rehearsal path: one solo request per completed stride, each judged on
+// its own sentence only (no sibling context) — the streaming-correct shape.
+async function dispatchSoloStride(sentence: string) {
+  const { name, block } = buildRehearsalPersona()
+  const { options } = await resolveRehearsalEmotionOptions(activeModelId.value)
+  const state = `Rehearsal line for ${name}:\n${block}\nLine: "${sentence}"`
+  const t0 = performance.now()
+  try {
+    const res = await systemOneStore.execute(state, {
+      emotion: {
+        type: 'choice',
+        instructions: `Select the avatar emotion cue from ${name}'s allowed cues that best matches this line. Select none if no cue fits.`,
+        criteria: buildEmotionCriteria(options),
+      },
+    })
+    const latencyMs = Math.round(performance.now() - t0)
+    systemOneRequestCount.value += 1
+    const ans = (res.answers as any)?.emotion || {}
+    const emotion: string = ans.choice || 'none'
+    const confidence: number = typeof ans.confidence === 'number' ? ans.confidence : 0
+    if (emotion === 'none') {
+      systemOneRuns.value.push({ sentence, norm: normalizeStrideText(sentence), skippedPrefixed: false, emotion, confidence, latencyMs, status: 'none' })
+      return
+    }
+    holdStrideCue(sentence, emotion, confidence, latencyMs)
+  }
+  catch (err: any) {
+    console.error('[Rehearsal System1] Solo stride failed:', err)
+    systemOneRuns.value.push({ sentence, norm: normalizeStrideText(sentence), skippedPrefixed: false, emotion: '', confidence: 0, latencyMs: 0, status: 'error', error: err?.message || String(err) })
+  }
+}
+
+function extractCompleteSentences(buffer: string): { complete: string[], rest: string } {
+  const complete: string[] = []
+  const re = /[^.?!]+[.?!]+["']?/g
+  let m: RegExpExecArray | null
+  let lastEnd = 0
+  while ((m = re.exec(buffer)) !== null) {
+    const s = m[0].trim()
+    if (s) {
+      complete.push(s)
+    }
+    lastEnd = re.lastIndex
+  }
+  return { complete, rest: buffer.slice(lastEnd) }
 }
 
 async function runSystemOneSimulation(text: string) {
@@ -333,6 +609,7 @@ async function runSystemOneSimulation(text: string) {
   }
   systemOneRunning.value = true
   systemOneRuns.value = []
+  systemOneRequestCount.value = 0
   try {
     const rawStrides = splitSentences(text)
     if (rawStrides.length === 0) {
@@ -377,30 +654,23 @@ async function runSystemOneSimulation(text: string) {
         return
       }
       if (ACT_TOKEN_RE.test(raw)) {
-        systemOneRuns.value.push({ sentence, skippedPrefixed: true, emotion: '', confidence: 0, latencyMs: 0, budgetMs: 0, status: 'skipped-prefixed' })
+        systemOneRuns.value.push({ sentence, norm: normalizeStrideText(sentence), skippedPrefixed: true, emotion: '', confidence: 0, latencyMs: 0, status: 'skipped-prefixed' })
         return
       }
       const ansEmotion = (res.answers as any)?.[`s${i}_emotion`] || {}
       const emotion: string = ansEmotion.choice || 'none'
       const confidence: number = typeof ansEmotion.confidence === 'number' ? ansEmotion.confidence : 0
-      const words = sentence.split(/\s+/).filter(Boolean).length
-      const budgetMs = Math.round((words / WORDS_PER_MINUTE) * 60000 * 0.9)
       if (emotion === 'none') {
-        systemOneRuns.value.push({ sentence, skippedPrefixed: false, emotion, confidence, latencyMs, budgetMs, status: 'none' })
+        systemOneRuns.value.push({ sentence, norm: normalizeStrideText(sentence), skippedPrefixed: false, emotion, confidence, latencyMs, status: 'none' })
         return
       }
-      if (latencyMs > budgetMs) {
-        systemOneRuns.value.push({ sentence, skippedPrefixed: false, emotion, confidence, latencyMs, budgetMs, status: 'dropped' })
-        return
-      }
-      injectJevCue(sentence, emotion)
-      systemOneRuns.value.push({ sentence, skippedPrefixed: false, emotion, confidence, latencyMs, budgetMs, status: 'applied' })
+      holdStrideCue(sentence, emotion, confidence, latencyMs)
     })
     showSystemOneReadout.value = true
   }
   catch (err: any) {
     console.error('[Rehearsal System1] Simulation failed:', err)
-    systemOneRuns.value.push({ sentence: '', skippedPrefixed: false, emotion: '', confidence: 0, latencyMs: 0, budgetMs: 0, status: 'error', error: err?.message || String(err) })
+    systemOneRuns.value.push({ sentence: '', norm: '', skippedPrefixed: false, emotion: '', confidence: 0, latencyMs: 0, status: 'error', error: err?.message || String(err) })
     showSystemOneReadout.value = true
   }
   finally {
@@ -521,9 +791,21 @@ async function playRehearsal() {
     return
   }
 
-  // Tier 2 proving ground: classify + actuate in parallel with playback.
-  // Never blocks, never alters the audiovisual pipeline.
-  void runSystemOneSimulation(text)
+  // Tier 2 proving ground: table read judges the whole script at once,
+  // dress rehearsal classifies line by line as the stream flows.
+  // Neither blocks nor alters the audiovisual pipeline.
+  const dressModeArmed = systemOneArmed.value && rehearsalSimMode.value === 'dress-rehearsal'
+  if (systemOneArmed.value) {
+    systemOneRuns.value = []
+    systemOneRequestCount.value = 0
+    systemOneRunning.value = true
+    showSystemOneReadout.value = true
+    playedStrideNorms.value = new Set()
+  }
+  if (!dressModeArmed) {
+    void runSystemOneSimulation(text)
+  }
+  let strideBuffer = ''
 
   isRehearsing.value = true
 
@@ -545,6 +827,7 @@ async function playRehearsal() {
       priority: 0,
       behavior: 'interrupt',
     })
+    console.info('[Rehearsal System1] Act pressed', { mode: rehearsalSimMode.value })
 
     // Start of response
     await orchestrator.emitBeforeSendHooks('', dummyContext as any)
@@ -564,6 +847,14 @@ async function playRehearsal() {
           console.info('[Rehearsal Playback] Emitting Literal Text:', literal)
           intent?.writeLiteral(literal)
           await orchestrator.emitTokenLiteralHooks(literal, dummyContext as any)
+          if (dressModeArmed) {
+            strideBuffer += literal
+            const { complete, rest } = extractCompleteSentences(strideBuffer)
+            strideBuffer = rest
+            for (const sentence of complete) {
+              void dispatchSoloStride(sentence)
+            }
+          }
         }
       },
       onSpecial: async (special) => {
@@ -577,6 +868,17 @@ async function playRehearsal() {
 
     await parser.consume(text)
     await parser.end()
+
+    if (dressModeArmed) {
+      // Final flush: the trailing fragment (no terminal punctuation) still
+      // gets its solo judgment; stragglers resolve into the readout.
+      const tail = strideBuffer.trim()
+      strideBuffer = ''
+      if (tail) {
+        void dispatchSoloStride(tail)
+      }
+      systemOneRunning.value = false
+    }
 
     intent.writeFlush()
     intent.end()
@@ -883,6 +1185,28 @@ function selectModel(m: typeof onSetModels.value[0]) {
                 <p v-if="systemOneArmed" class="pl-0.5 text-[9px] text-neutral-400 dark:text-neutral-500">
                   Armed — pressing Act will classify each sentence and auto-inject ACT cues.
                 </p>
+                <div class="flex items-center gap-1 pl-0.5" role="radiogroup" aria-label="Rehearsal style">
+                  <button
+                    type="button"
+                    role="radio"
+                    :aria-checked="rehearsalSimMode === 'table-read'"
+                    title="Judge the whole script at once, then show the scorecard"
+                    :class="['cursor-pointer rounded-lg px-2 py-1 text-[9px] font-semibold transition-colors', rehearsalSimMode === 'table-read' ? 'bg-primary-500/15 text-primary-600 dark:text-primary-300' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300']"
+                    @click="rehearsalSimMode = 'table-read'"
+                  >
+                    📖 Table read
+                  </button>
+                  <button
+                    type="button"
+                    role="radio"
+                    :aria-checked="rehearsalSimMode === 'dress-rehearsal'"
+                    title="Perform it line by line through the real pipeline as the text streams"
+                    :class="['cursor-pointer rounded-lg px-2 py-1 text-[9px] font-semibold transition-colors', rehearsalSimMode === 'dress-rehearsal' ? 'bg-primary-500/15 text-primary-600 dark:text-primary-300' : 'text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-300']"
+                    @click="rehearsalSimMode = 'dress-rehearsal'"
+                  >
+                    🎭 Dress rehearsal
+                  </button>
+                </div>
                 <div class="flex flex-wrap items-center gap-2">
                   <button
                     class="flex cursor-pointer items-center gap-1 rounded bg-primary-500/10 px-2.5 py-1 text-[10px] text-primary-600 font-bold transition-all hover:bg-primary-500/20 dark:text-primary-400"
@@ -960,9 +1284,11 @@ function selectModel(m: typeof onSetModels.value[0]) {
                       {{ run.sentence || run.error || '—' }}
                     </span>
                     <span class="shrink-0 text-neutral-500 font-mono dark:text-neutral-400">
-                      <template v-if="run.status === 'applied'">{{ run.emotion }} {{ Math.round(run.confidence * 100) }}% · {{ run.latencyMs }}ms/{{ run.budgetMs }}ms</template>
-                      <template v-else-if="run.status === 'dropped'">dropped · {{ run.latencyMs }}ms&gt;{{ run.budgetMs }}ms</template>
+                      <template v-if="run.status === 'applied'">{{ run.emotion }} {{ Math.round(run.confidence * 100) }}% · {{ run.latencyMs }}ms</template>
+                      <template v-else-if="run.status === 'dropped'">dropped · played bare</template>
                       <template v-else-if="run.status === 'skipped-prefixed'">prefixed — skipped</template>
+                      <template v-else-if="run.status === 'unmapped'">unmapped · no rig morph</template>
+                      <template v-else-if="run.status === 'held'">held · awaiting audio</template>
                       <template v-else-if="run.status === 'none'">none</template>
                       <template v-else>error</template>
                     </span>
@@ -971,8 +1297,9 @@ function selectModel(m: typeof onSetModels.value[0]) {
                         'shrink-0 rounded-full px-1.5 py-px text-[8px] font-bold',
                         run.status === 'applied' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                         : run.status === 'dropped' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
-                          : run.status === 'error' ? 'bg-red-500/10 text-red-600 dark:text-red-400'
-                            : 'bg-neutral-500/10 text-neutral-500 dark:text-neutral-400',
+                          : run.status === 'unmapped' ? 'bg-violet-500/10 text-violet-600 dark:text-violet-400'
+                            : run.status === 'error' ? 'bg-red-500/10 text-red-600 dark:text-red-400'
+                              : 'bg-neutral-500/10 text-neutral-500 dark:text-neutral-400',
                       ]"
                     >
                       {{ run.status }}
@@ -1057,6 +1384,7 @@ function selectModel(m: typeof onSetModels.value[0]) {
                 :show-background="false"
                 :radial-menu-enabled="false"
                 :draggable="true"
+                :mouth-open-size="speakingState?.mouthOpenSize || 0"
                 class="absolute inset-0 h-full w-full"
                 @offset-change="handleInlineStageOffsetChange"
                 @scale-change="handleInlineStageScaleChange"

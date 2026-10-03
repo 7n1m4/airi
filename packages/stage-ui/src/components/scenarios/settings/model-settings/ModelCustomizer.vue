@@ -616,6 +616,29 @@ const advancedTabHeaderTitle = computed(() => {
 const showHidden = ref(false)
 const hideTrackingNoise = ref(true)
 const filterRenamedOnly = ref(false)
+const curatedOnly = ref(true)
+
+// Curated filter: active card's compiled whitelist intersected with this
+// model's raw keys. ON by default when applicable (≥1 whitelisted rawKey
+// present on this rig); the tag hides entirely when no whitelist applies.
+const applicableWhitelistRawKeys = computed(() => {
+  const emotions = (activeCard.value as any)?.extensions?.airi?.acting?.compiledWhitelist?.emotions
+  if (!emotions || typeof emotions !== 'object') {
+    return [] as string[]
+  }
+  const modelKeys = new Set(rawExpressions.value.map(e => e.key))
+  const hits: string[] = []
+  for (const entry of Object.values(emotions) as Array<{ rawKey?: string }>) {
+    const rawKey = entry?.rawKey
+    if (rawKey && modelKeys.has(rawKey) && !hits.includes(rawKey)) {
+      hits.push(rawKey)
+    }
+  }
+  return hits
+})
+
+const curatedAvailable = computed(() => applicableWhitelistRawKeys.value.length > 0)
+const curatedActive = computed(() => curatedOnly.value && curatedAvailable.value)
 const editingKey = ref<string | null>(null)
 const editingValue = ref('')
 
@@ -884,6 +907,12 @@ const expressionsToRender = computed(() => {
   // Hidden Flag Filter
   if (!showHidden.value) {
     list = list.filter(e => e.isVisible)
+  }
+
+  // Curated Filter (active card whitelist ∩ this rig)
+  if (curatedActive.value) {
+    const allowed = new Set(applicableWhitelistRawKeys.value)
+    list = list.filter(e => allowed.has(e.key))
   }
 
   // Renamed Filter
@@ -1366,6 +1395,20 @@ function toggleMotionCycle(key: string) {
           Filters
         </span>
         <div class="flex items-center gap-1">
+          <button
+            v-if="activeTab === 'expressions' && curatedAvailable"
+            class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] transition-colors"
+            :class="curatedOnly
+              ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium'
+              : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'"
+            :title="curatedOnly ? 'Showing only expressions from the active card\u2019s curated whitelist' : 'Show the full morph list instead of just curated keepers'"
+            @click="curatedOnly = !curatedOnly"
+          >
+            <div class="inline-flex items-center gap-1">
+              <div :class="curatedOnly ? 'i-solar:check-circle-bold-duotone' : 'i-solar:circle-linear'" />
+              <span>{{ curatedOnly ? `Curated (${applicableWhitelistRawKeys.length})` : 'Curated' }}</span>
+            </div>
+          </button>
           <button
             v-if="activeTab === 'expressions' && noiseFilteredCount > 0"
             class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] transition-colors"

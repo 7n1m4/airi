@@ -31,6 +31,7 @@ import { categorizeResponse } from '../../composables/response-categoriser'
 import { useTurnPacing } from '../../composables/use-turn-pacing'
 import { llmInferenceEndToken } from '../../constants'
 import { EMOTION_EmotionMotionName_value, EmotionThinkMotionName } from '../../constants/emotions'
+import { getSpeechBusContext, speechSegmentPlaybackEvent } from '../../services/speech/bus'
 import { useAudioContext, useSpeakingStore } from '../../stores/audio'
 import { useChatOrchestratorStore } from '../../stores/chat'
 import { useChatSessionStore } from '../../stores/chat/session-store'
@@ -814,6 +815,23 @@ async function playFunction(item: Parameters<Parameters<typeof createPlaybackMan
         }
 
         sentenceSyncRafId = requestAnimationFrame(updateSentenceHighlight)
+      }
+
+      // Tier 2 proving ground: announce slice audio start so listeners (e.g.
+      // rehearsal room) can release held cues at the exact spoken moment.
+
+      console.info('[Stage:Playback] slice audio start', { intentId: item.intentId, segmentId: item.segmentId, text: (item.text || '').slice(0, 80) })
+      try {
+        getSpeechBusContext().emit(speechSegmentPlaybackEvent, {
+          originId: 'stage-host',
+          intentId: item.intentId,
+          streamId: item.streamId,
+          segmentId: item.segmentId,
+          text: item.text,
+        })
+      }
+      catch (err) {
+        debug('[Stage] Failed to broadcast segment playback:', err)
       }
 
       source.start(0)

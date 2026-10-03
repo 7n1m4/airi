@@ -91,6 +91,14 @@ const latestPacingMetrics = useLocalStorage<PacingMetrics | null>('airi:latest-p
 const { data: incomingPacingMetrics } = useBroadcastChannel<PacingMetrics, PacingMetrics>({ name: 'airi:pacing-telemetry' })
 const { data: incomingTurnUsage } = useBroadcastChannel<LatestTurnUsage, LatestTurnUsage>({ name: 'airi:usage-telemetry' })
 
+// Lipsync: listen to the hub's speaking-state broadcast (single analysis in
+// ControlStripHost, all canvases drive locally). No audio processing here.
+interface ChatSpeakingState {
+  mouthOpenSize: number
+  nowSpeaking: boolean
+}
+const { data: speakingState } = useBroadcastChannel<ChatSpeakingState, ChatSpeakingState>({ name: 'airi-speaking-state' })
+
 watch(incomingPacingMetrics, (metrics) => {
   if (metrics) {
     console.log('[Chat:Popover] Incoming pacing metrics telemetry:', metrics)
@@ -1961,6 +1969,7 @@ function selectSurface(surface: typeof activeSurface.value) {
                     :show-background="false"
                     :radial-menu-enabled="false"
                     :draggable="true"
+                    :mouth-open-size="speakingState?.mouthOpenSize || 0"
                     class="absolute inset-0 h-full w-full"
                     @offset-change="handleStageOffsetChange"
                     @scale-change="handleStageScaleChange"
