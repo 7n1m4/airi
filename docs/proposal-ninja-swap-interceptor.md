@@ -1,6 +1,7 @@
 # Proposal: Dual-Duty Ninja-Swap Interceptor (Speech Tags + ACT Cues)
 
-> **Status**: Tier 1 in active build (Oct 2026) — `EmotionCalibrationStudio.vue` + hidden `settings/models/emotions` route + guided Meet/Name/Verify dots all shipped and vetted; Remaps + whitelist compile next. Tier 2 still proposal — zero implementation: no `NinjaSwap` hits repo-wide; `ControlStripHost.vue` / `speech.ts` have no Jev/`useSystemOneStore` wiring (ACT cues exist without Jev).
+> **Status**: Tier 1 and Character Card Schema SHIPPED (Oct 2026) — `EmotionCalibrationStudio.vue` + `settings/models/emotions` route + guided Meet/Name/Verify dots shipped; canonical `expressionCapabilities` / `motionCapabilities` on `DisplayModelFile` shipped; `CharacterCueAllowlistSchema` (`cueAllowlist` with version 1, emotions & motions) shipped on `card.extensions.airi.acting`. Acting tab streamlined to 4 side-by-side hubs (`Cues`, `Voice`, `Thinking`, `Lab`) with the Autonomous Cues (System-1 Interceptor) UI live.
+> **Current Focus**: Tier 2 live chat integration — shared module extraction from Rehearsal Room into chat pipeline, enforcing the Evaporation Doctrine (zero history pollution), landing the pipe with emotions first before widening to motions.
 > **Promoted from**: [`docs/proposal-jev-integration.md`](./proposal-jev-integration.md) Domain F (Phase 6 — NEXT UP) and [`docs/design-jev-integrations.md`](./design-jev-integrations.md) §4 Domain F.
 > **Related domain skill**: [`.agents/skills/airi-jev-decision-engine/SKILL.md`](../.agents/skills/airi-jev-decision-engine/SKILL.md)
 > **Adjacent docs (do not duplicate, integrate with)**:
@@ -286,23 +287,44 @@ On the character card level:
 
 - **Phase A — Inline viewport (DONE Oct 2026).** Local `RendererStage` embedded in `chat_rehearsal.vue` (same collapsible pattern as the chat window right panel); stage-offline banner deleted. Expression previews actuate the embedded canvas with Stage closed. Full Act audio still routes to the stage host (gate kept) — local speech hosting lands in Phase C.
 - **Phase B — Experimental System1 toggle (DONE Oct 2026).** Persisted checkbox in the rehearsal sandbox (`rehearsal/system-one-enabled`), disabled with guidance when `systemOneStore.configured` is false; live provider badge (emerald `Laya local` / sky `Jev · <model>` / amber `Unconfigured`); `systemOneArmed` computed (opt-in AND configured) ready as Phase C's gate. The toggle never configures providers itself.
-- **Phase C — Stride simulator (DONE Oct 2026).** Act fires `runSystemOneSimulation` fire-and-forget alongside untouched playback: sentence-split → single batched `execute()` with per-sentence `s{i}_emotion` choice groups (model vocab + `none`) → collapsible readout (sentence, decision, confidence, latency/budget, status). Includes: `none` out, pre-prefixed skip, 90%-WPM drop, provenance tagging. v1 scope: `choice` only — `score` (intensity/motion) returns with the motions phase. Two sim modes share one readout: table read (whole script, one batched call — doubles as the shared-state-blanket contrast instrument) vs dress rehearsal (stride buffer on the `onLiteral` stream, one solo `execute()` per completed sentence with sentence-only state, trailing fragment flushed at stream end). `injectJevCue` resolves every decided token to a rig morph (card whitelist → token/rig match → model mappings) before firing; unresolvable tokens surface as `unmapped` rows instead of silent no-ops (which also starved the driver's reset timer — first-known-sticks explained). Verify (the DevTools protocol): mainWindow network shows SystemOne call(s) mirroring TTS dispatch shape; schema/state inspected; avatar actuates.
-- **Phase D — Boundary-clock scheduling.** Multi-sentence remainder cues subscribe to the sentence-sync crossing signal (`ControlStripHost.vue:767-816`) instead of firing at chunk start; WPM timing stays fallback-only. Verify: face changes land on sentence boundaries in-sync with caption highlights.
-- **Phase E — Promotion.** The proven interceptor module wires into the live chat path; Rehearsal Room stays a permanent debug playground (cf. surface table footnote: eventual relocation under `settings/modules`). Verify: live dialogue actuates with zero prompt pollution; history stays clean per the evaporation doctrine (§3.7).
+- **Phase C — Stride simulator in Rehearsal Room (DONE Oct 2026).** Proved the `decide → hold → release` mechanics. Act fires `runSystemOneSimulation` fire-and-forget alongside untouched playback: sentence-split → single batched `execute()` with per-sentence `s{i}_emotion` choice groups (model vocab + `none`) → collapsible readout (sentence, decision, confidence, latency/budget, status). Proved: `none` out, pre-prefixed skip, 90%-WPM drop, provenance tagging, morph resolver (`card whitelist → token/rig match → model mappings`).
+- **Phase D — Schema, Capability Model & Authoring UI (DONE Oct 2026).**
+  - **Capability model unified**: `DisplayModelFile` capability models replaced with clean `expressionCapabilities: ModelCapabilityItem[]` and `motionCapabilities: ModelCapabilityItem[]` (`{ rawKey, label, usable }`), eliminating legacy fragmented mapping arrays.
+  - **Character card schema**: `CharacterCueAllowlistSchema` (`{ version: 1, emotions, motions }`) and extension keys (`cueAllowlist`, `autoCuesEnabled`, `autoCueExpressions`, `autoCueMotions`) added to `card.schema.ts` and `airi-card.ts`.
+  - **Acting sub-tab streamlining**: Four side-by-side tabs (`Cues`, `Voice`, `Thinking`, `Lab`) fitting horizontally without wrapping.
+  - **Autonomous Cues (System-1 Interceptor) UI**: Embedded directly inside the `Cues` sub-tab with plain-language copy, `Character Details Considered` input badges, modality checkboxes, allowlist counters, and Emotion Studio link.
+- **Phase E — Shared Module Extraction & Evaporation Pipeline (ACTIVE - NEXT UP).**
+  - Decompose the stride buffer, hold-release map, and morph resolver from `chat_rehearsal.vue` into a reusable module (`useAutonomousCues.ts` in `packages/stage-ui/src/composables/` or `pipelines-audio`).
+  - Wire into live chat streaming (`ControlStripHost.vue` / chat orchestrator).
+  - Enforce the **Evaporation Doctrine**: injected cues flow strictly in-memory into the animation queue and evaporate; they must NEVER be saved to `rawContent` or conversation history database records.
+- **Phase F — Motion Widening & Sentence-Sync Boundary Clock.**
+  - Once live emotion injection is running stably in chat, widen the candidate pool to include motions from `cueAllowlist.motions`.
+  - Jev `score` returns map directly to motion intensity and gesture velocity.
+  - Multi-sentence remainder cues subscribe to the sentence-sync crossing signal (`ControlStripHost.vue:767-816`) instead of firing at chunk start; WPM timing stays fallback-only.
 
-### 3.6 Behavior configuration (locked direction — behavior, not providers)
+### 3.6 Behavior configuration & UX design (locked direction)
 
-Provider setup is solved (global System1 config); what remains is per-character behavior, living in the Acting tab (streamline the tab, no new page):
+Provider setup is solved (global System1 config); what remains is per-character behavior, living in the Acting tab:
 
-- **Location**: a new **Auto-Cues** segment inside the Model Expressions tab (`CardCreationTabActing.vue`), alongside the existing prompt fields — the tab gets streamlined for understandability rather than forked into a separate page.
-- **State fields**: hardcoded 3-way bundle (personality + description + acting directives) with visible badges/tip block naming the exact source fields, so users see what the classifier reads.
-- **Expressions vs motions**: two per-character checkboxes in the same segment (auto-cue expressions, auto-cue motions). Motions arrive in the widen-after phase; the checkbox reserves its seat now.
-- **Timing**: no user knob in v1 (event-driven onset is correct timing; offsets are desync dials). Recorded here so it isn't lost: revisit only on product evidence.
-- **Master switch**: per-character auto-cue enable, default OFF until curated. The Finish celebration modal is the conversion moment: on Finish, offer enable-now (with where-to-disable pointer) or leave-off — bridging the gap between "calibrated" and "live."
+- **Location**: Autonomous Cues segment housed directly inside the `Cues` sub-tab of `CardCreationTabActing.vue`, alongside ACT directives and allowlist controls.
+- **Plain Language Copy**: Speaks directly to character expressiveness rather than technical execution:
+  > *"Automatically makes your character more expressive by evaluating dialogue sentiment in real time, using their personality and acting directives to choose matching cues."*
+- **State fields ("Character Details Considered")**: Hardcoded 3-way input bundle (`Personality`, `Description`, `Acting Directives`) displayed as clean visible badges. No user sliders or token weights: exposing them invites users to degrade classifier accuracy. The badges make the classifier's inputs transparent without adding cognitive clutter or sliding-window jargon.
+- **Expressions vs motions**: Two per-character checkboxes in the same segment:
+  - `Auto-cue Expressions` (active)
+  - `Auto-cue Motions (Coming Soon)` (reserves its seat now; activates when Phase F lands)
+- **Timing knob policy**: **Strictly no user knob in v1.** Natural event-driven onset at sentence audio boundary is physically correct timing. Introducing an offset slider is just a desync dial. Documented here as an intentional product principle: revisit only if empirical telemetry or user feedback requests "more deliberate" vs "snappier" pacing.
+- **Master switch & conversion bridge**: Per-character master toggle (`autoCuesEnabled`, default OFF until curated). The **Finish celebration modal** at the end of Emotion Studio / Guided Flow is the primary conversion moment: on Finish, offer 1-click enable ("Enable Autonomous Cues now?") with a clear guidance callout showing where to toggle it in the Cues tab.
 
 ### 3.7 Integration order: land the pipe, widen it after
 
-Extraction (rehearsal-local stride/hold/release/resolve → shared module) → live chat wiring with evaporation → motions (inventory exists; curation UI + `score` return + trigger semantics + the reserved checkbox) → speech tags last. No phase widens the payload before the pipe carries the current one live.
+**Strategy: Integration first, motions second.**
+
+* **Why integration first:** The live chat execution pipeline (stride buffering → System-1 evaluation → evaporation → animation queue dispatch) is identical whether the payload contains 1 modality or 2. Landing motions first would require building curation UI, score plumbing, and trigger semantics for a payload that has nowhere to flow.
+* **Execution steps:**
+  1. **Land the pipe (Emotions only):** Extract the rehearsal mechanics into a shared composable, wire into the live chat token stream, enforce cue evaporation, and verify facial blendshapes fire in live chat turns.
+  2. **Widen the pipe (Motions):** Widen the System-1 request schema to include `act_motion` choices and `intensity` score. The `score` return slots naturally into motion velocity/intensity, and `cueAllowlist.motions` feeds the candidate pool. Flip `Auto-cue Motions (Coming Soon)` to active.
+  3. **Speech tags (Deferred):** Provider-side audio tags (`[whisper]`, `*sigh*`) ride after visual cues are fully validated.
 
 ---
 

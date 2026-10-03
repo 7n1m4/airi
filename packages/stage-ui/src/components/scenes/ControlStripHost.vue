@@ -28,6 +28,7 @@ import RendererStage from './RendererStage.vue'
 import { applyVoiceProfileEffects } from '../../composables/audio/audio-effects'
 import { parseActor, useSpecialTokenQueue } from '../../composables/queues'
 import { categorizeResponse } from '../../composables/response-categoriser'
+import { containsExplicitActToken, useAutonomousCues } from '../../composables/use-autonomous-cues'
 import { useTurnPacing } from '../../composables/use-turn-pacing'
 import { llmInferenceEndToken } from '../../constants'
 import { EMOTION_EmotionMotionName_value, EmotionThinkMotionName } from '../../constants/emotions'
@@ -441,6 +442,20 @@ function playSpecialToken(special: string) {
   debug('[Stage] Enqueueing special token:', special)
   specialTokenQueue.enqueue(special)
 }
+
+const autonomousCues = useAutonomousCues({
+  activeCard: computed(() => activeCard.value),
+  activeModelId: computed(() => (activeCard.value as any)?.extensions?.airi?.modules?.displayModelId || null),
+  expressionCapabilities: computed(() => {
+    const displayModelId = (activeCard.value as any)?.extensions?.airi?.modules?.displayModelId
+    const activeModel = displayModelId ? displayModelsStore.displayModels.find(m => m.id === displayModelId) : null
+    return activeModel?.expressionCapabilities || []
+  }),
+  actuateEmotion: (rawKey, meta) => {
+    debug('[Stage] Autonomous System-1 cue firing (evaporates):', { rawKey, meta })
+    playSpecialToken(`<|ACT:emotion="${rawKey}"|>`)
+  },
+})
 
 const modsServer = useModsServerChannelStore()
 
@@ -1652,6 +1667,7 @@ chatHookCleanups.push(onBeforeMessageComposed(async (_message, context) => {
 }))
 
 chatHookCleanups.push(onBeforeSend(async (message, context) => {
+  autonomousCues.reset()
   live2dStore.triggerMotion(EmotionThinkMotionName)
   currentMotion.value = { group: EmotionThinkMotionName }
   turnPacing.startTurn(context?.assistantMessageId || `turn-${Date.now()}`, context, message)
@@ -1674,6 +1690,9 @@ chatHookCleanups.push(onTokenLiteral(async (literal) => {
     return
   currentChatIntentReceivedLiteral.value = true
   intent.writeLiteral(literal)
+
+  // Stream literal deltas to autonomous sentence stride buffer
+  void autonomousCues.feedDelta(literal)
 }))
 
 chatHookCleanups.push(onTokenSpecial(async (special) => {
@@ -1683,6 +1702,10 @@ chatHookCleanups.push(onTokenSpecial(async (special) => {
   // debug('Stage received special token:', special)
   debug('[Stage] onTokenSpecial -> forwarding', { intentId: intent.intentId, special })
   intent.writeSpecial(special)
+
+  if (containsExplicitActToken(special)) {
+    autonomousCues.markExplicitActSeen()
+  }
 }))
 
 chatHookCleanups.push(onStreamEnd(async () => {
@@ -1691,6 +1714,9 @@ chatHookCleanups.push(onStreamEnd(async () => {
   if (intent)
     debug('[Stage] onStreamEnd -> flush intent', { intentId: intent.intentId })
   intent?.writeFlush()
+
+  // Flush trailing stride fragment at stream end
+  void autonomousCues.flush()
 }))
 
 chatHookCleanups.push(onAssistantResponseEnd(async (message) => {
@@ -1728,6 +1754,7 @@ chatHookCleanups.push(onAssistantResponseEnd(async (message) => {
 // orchestrator relies on currentChatIntentReceivedLiteral NOT being reset here — keeping
 // it prevents the fallback-speech path from speaking the partial message.
 chatHookCleanups.push(onGenerationStopped(async () => {
+  autonomousCues.reset()
   turnPacing.cancel('generation-stopped')
   debug('[Stage] onGenerationStopped -> cancelling speech intent, pipeline, and playback')
   currentChatIntent?.cancel('generation-stopped')

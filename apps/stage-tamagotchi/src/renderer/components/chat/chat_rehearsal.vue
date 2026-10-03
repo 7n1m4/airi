@@ -7,6 +7,12 @@ import { useMmd } from '@proj-airi/stage-ui-mmd'
 import { useSpine } from '@proj-airi/stage-ui-spine'
 import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
 import { ModelCustomizer } from '@proj-airi/stage-ui/components/scenarios/settings/model-settings'
+import {
+  buildPersonaContext,
+  createSentenceStrideBuffer,
+  resolveCueToken,
+  splitSentences,
+} from '@proj-airi/stage-ui/composables'
 import { useLlmmarkerParser } from '@proj-airi/stage-ui/composables/llm-marker-parser'
 import { getSpeechBusContext, speechSegmentPlaybackEvent } from '@proj-airi/stage-ui/libs/speech/playback-events'
 import { useAnimaDexWizardStore } from '@proj-airi/stage-ui/stores/animadex-wizard'
@@ -317,11 +323,6 @@ catch (err) {
   console.warn('[Rehearsal System1] Playback subscription failed:', err)
 }
 
-function splitSentences(text: string): string[] {
-  const parts = text.replace(/\n+/g, ' ').match(/[^.?!]+[.?!]+|[^.?!]+$/g) || []
-  return parts.map(s => s.trim()).filter(Boolean)
-}
-
 async function resolveRehearsalEmotionOptions(modelId: string | null): Promise<{ options: string[], fallback: boolean }> {
   // Source 1: the card's compiled whitelist (Verify keepers + Remap slots union).
   const whitelist = (activeCard.value as any)?.extensions?.airi?.acting?.cueAllowlist
@@ -451,75 +452,18 @@ function liveMorphKeys(): string[] {
 }
 
 // Resolve a curated actToken to a rig-playable raw morph key. Order:
-// whitelist rawKey → token itself (both verified against the LIVE map when
-// one exists) → model-mapping cross-references → legacy caps trust fallback.
-// Returns null when nothing resolves (caller marks `unmapped`, never fired).
+// Resolve a curated actToken to a rig-playable raw morph key using shared resolveCueToken.
 async function resolveActToken(token: string, modelId: string | null): Promise<string | null> {
-  const whitelist = (activeCard.value as any)?.extensions?.airi?.acting?.cueAllowlist
+  const allowlist = (activeCard.value as any)?.extensions?.airi?.acting?.cueAllowlist
     || (activeCard.value as any)?.extensions?.airi?.acting?.compiledWhitelist
-  const whitelistedRaw = whitelist?.emotions?.[token]?.rawKey
+  const model = modelId ? await displayModelsStore.getDisplayModel(modelId) : null
+  const caps = model?.expressionCapabilities || []
   const live = liveMorphKeys()
-  const t = Math.round(performance.now())
-  if (live.length > 0) {
-    const liveMatch = (name: string) => live.find(k => k === name || k.toLowerCase() === name.toLowerCase())
-    if (whitelistedRaw) {
-      const hit = liveMatch(whitelistedRaw)
-      console.info('[Rehearsal System1] resolve', { token, resolved: hit || null, via: 'whitelist-live', liveSize: live.length, t })
-      if (hit) {
-        return hit
-      }
-    }
-    const hit = liveMatch(token)
-    console.info('[Rehearsal System1] resolve', { token, resolved: hit || null, via: hit ? 'token-live' : 'unmapped-live', liveSize: live.length, t })
-    return hit || null
-  }
-  let rig: string[] = []
-  try {
-    rig = await getRigExpressions(modelId)
-  }
-  catch {}
-  const rigMatch = (name: string) => rig.find(r => r === name || r.toLowerCase() === name.toLowerCase())
-
-  if (whitelistedRaw) {
-    if (rig.length === 0) {
-      // DIAG: trust fallback — unverified. If rows say `applied` but nothing
-      // moves, this line is suspect #1.
-      console.info('[Rehearsal System1] resolve', { token, resolved: whitelistedRaw, via: 'whitelist-unverified', rigSize: 0, t: Math.round(performance.now()) })
-      return whitelistedRaw
-    }
-    const hit = rigMatch(whitelistedRaw)
-    if (hit) {
-      console.info('[Rehearsal System1] resolve', { token, resolved: hit, via: 'whitelist', rigSize: rig.length, t: Math.round(performance.now()) })
-      return hit
-    }
-  }
-  if (rig.length > 0) {
-    const hit = rigMatch(token)
-    if (hit) {
-      console.info('[Rehearsal System1] resolve', { token, resolved: hit, via: 'rig-token', rigSize: rig.length, t: Math.round(performance.now()) })
-      return hit
-    }
-  }
-  else if (token) {
-    console.info('[Rehearsal System1] resolve', { token, resolved: token, via: 'token-unverified', rigSize: 0, t: Math.round(performance.now()) })
-    return token
-  }
-  try {
-    const model = modelId ? await displayModelsStore.getDisplayModel(modelId) : null
-    const caps = model?.expressionCapabilities || []
-    for (const item of caps) {
-      if (item.label && item.label.toLowerCase() === token.toLowerCase()) {
-        console.info('[Rehearsal System1] resolve', { token, resolved: item.rawKey, via: 'capabilities-label', rigSize: rig.length, t: Math.round(performance.now()) })
-        return item.rawKey
-      }
-      if (item.rawKey.toLowerCase() === token.toLowerCase()) {
-        console.info('[Rehearsal System1] resolve', { token, resolved: item.rawKey, via: 'capabilities-raw', rigSize: rig.length, t: Math.round(performance.now()) })
-        return item.rawKey
-      }
-    }
-  }
-  catch {}
-  return null
+  const rig = live.length > 0 ? live : (await getRigExpressions(modelId).catch(() => []))
+  const resolved = resolveCueToken(token, { allowlist, capabilities: caps, rigExpressions: rig })
+  const rawKey = resolved?.rawKey || null
+  console.info('[Rehearsal System1] resolve', { token, resolved: rawKey, liveSize: live.length, rigSize: rig.length, t: Math.round(performance.now()) })
+  return rawKey
 }
 
 // Single choke point for every Jev-originated cue in rehearsal: resolves the
@@ -543,17 +487,6 @@ async function injectJevCue(sentence: string, emotion: string): Promise<string |
   return rawKey
 }
 
-function buildRehearsalPersona() {
-  const persona = activeCard.value
-  const name = (persona as any)?.nickname || persona?.name || 'Character'
-  const block = [
-    (persona as any)?.personality ? `Personality: ${(persona as any).personality}` : '',
-    (persona as any)?.description ? `Description: ${(persona as any).description}` : '',
-    (persona as any)?.extensions?.airi?.acting?.modelExpressionPrompt ? `Acting directives (how and when this character invokes emotion cues): ${(persona as any).extensions.airi.acting.modelExpressionPrompt}` : '',
-  ].filter(Boolean).join('\n')
-  return { name, block }
-}
-
 function buildEmotionCriteria(options: string[]) {
   return Object.fromEntries(options.map(o => [o, o === 'none' ? 'No cue fits this line.' : `Emotion cue: ${o}.`]))
 }
@@ -561,7 +494,7 @@ function buildEmotionCriteria(options: string[]) {
 // Dress-rehearsal path: one solo request per completed stride, each judged on
 // its own sentence only (no sibling context) — the streaming-correct shape.
 async function dispatchSoloStride(sentence: string) {
-  const { name, block } = buildRehearsalPersona()
+  const { name, block } = buildPersonaContext(activeCard.value)
   const { options } = await resolveRehearsalEmotionOptions(activeModelId.value)
   const state = `Rehearsal line for ${name}:\n${block}\nLine: "${sentence}"`
   const t0 = performance.now()
@@ -590,21 +523,6 @@ async function dispatchSoloStride(sentence: string) {
   }
 }
 
-function extractCompleteSentences(buffer: string): { complete: string[], rest: string } {
-  const complete: string[] = []
-  const re = /[^.?!]+[.?!]+["']?/g
-  let m: RegExpExecArray | null
-  let lastEnd = 0
-  while ((m = re.exec(buffer)) !== null) {
-    const s = m[0].trim()
-    if (s) {
-      complete.push(s)
-    }
-    lastEnd = re.lastIndex
-  }
-  return { complete, rest: buffer.slice(lastEnd) }
-}
-
 async function runSystemOneSimulation(text: string) {
   if (!systemOneArmed.value || systemOneRunning.value) {
     return
@@ -619,16 +537,7 @@ async function runSystemOneSimulation(text: string) {
     }
     const cleanStrides = rawStrides.map(s => s.replace(ACT_TOKEN_RE, '').trim())
     const { options: emotionOptions, fallback } = await resolveRehearsalEmotionOptions(activeModelId.value)
-    const persona = activeCard.value
-    const personaName = (persona as any)?.nickname || persona?.name || 'Character'
-    const personaPersonality = (persona as any)?.personality || ''
-    const personaDescription = (persona as any)?.description || ''
-    const personaDirectives = (persona as any)?.extensions?.airi?.acting?.modelExpressionPrompt || ''
-    const personaBlock = [
-      personaPersonality ? `Personality: ${personaPersonality}` : '',
-      personaDescription ? `Description: ${personaDescription}` : '',
-      personaDirectives ? `Acting directives (how and when this character invokes emotion cues): ${personaDirectives}` : '',
-    ].filter(Boolean).join('\n')
+    const { name: personaName, block: personaBlock } = buildPersonaContext(activeCard.value)
 
     // Mirror rule: the simulator holds the complete text (remainder case), so
     // all strides ride ONE batched execute() with per-sentence groups.
@@ -807,7 +716,7 @@ async function playRehearsal() {
   if (!dressModeArmed) {
     void runSystemOneSimulation(text)
   }
-  let strideBuffer = ''
+  const sentenceBuffer = createSentenceStrideBuffer()
 
   isRehearsing.value = true
 
@@ -850,9 +759,7 @@ async function playRehearsal() {
           intent?.writeLiteral(literal)
           await orchestrator.emitTokenLiteralHooks(literal, dummyContext as any)
           if (dressModeArmed) {
-            strideBuffer += literal
-            const { complete, rest } = extractCompleteSentences(strideBuffer)
-            strideBuffer = rest
+            const complete = sentenceBuffer.feed(literal)
             for (const sentence of complete) {
               void dispatchSoloStride(sentence)
             }
@@ -874,9 +781,8 @@ async function playRehearsal() {
     if (dressModeArmed) {
       // Final flush: the trailing fragment (no terminal punctuation) still
       // gets its solo judgment; stragglers resolve into the readout.
-      const tail = strideBuffer.trim()
-      strideBuffer = ''
-      if (tail) {
+      const flushed = sentenceBuffer.flush()
+      for (const tail of flushed) {
         void dispatchSoloStride(tail)
       }
       systemOneRunning.value = false
