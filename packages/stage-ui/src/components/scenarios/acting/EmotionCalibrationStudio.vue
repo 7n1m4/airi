@@ -21,25 +21,23 @@ import BrainModelPicker from '../chat/BrainModelPicker.vue'
 import ExpressionCurationModal from '../dialogs/ExpressionCurationModal.vue'
 
 import { useExpressionCuration } from '../../../composables/use-expression-curation'
-import { filterCandidateExpressions } from '../../../libs/character/expression-noise-gate'
 import { DisplayModelFormat, useDisplayModelsStore } from '../../../stores/display-models'
 import { useConsciousnessStore } from '../../../stores/modules/consciousness'
 import { useSettings } from '../../../stores/settings'
+
+export interface CueAllowlist {
+  version: 1
+  emotions: Record<string, { rawKey: string, label: string }>
+}
+
+export type CompiledWhitelist = CueAllowlist
 
 export interface EmotionStudioSyncPayload {
   emotionsCurated: boolean
   expressionMappings: Record<string, string>
   actingModelExpressionPrompt: string
-  compiledWhitelist: CompiledWhitelist
-}
-
-// The persisted union from both guided legs: every keeper actToken AND every
-// mapped preset slot token, each pointing at its raw morph. Either leg alone
-// is an incomplete vocabulary — template and classifier must read this,
-// never just one leg.
-export interface CompiledWhitelist {
-  version: 1
-  emotions: Record<string, { rawKey: string, label: string }>
+  cueAllowlist: CueAllowlist
+  compiledWhitelist: CueAllowlist
 }
 
 const props = withDefaults(defineProps<{
@@ -232,22 +230,13 @@ async function loadModelCapabilities() {
   isLoadingExpressions.value = true
   try {
     const caps = await displayModelsStore.getOrLoadModelCapabilities(props.modelId)
-    // Motions inventory by format: Live2D/Spine queried from the model file,
-    // MMD/VRM always ship built-in (+ custom) animation sets.
-    rawMotions.value = caps.motions && caps.motions.length > 0 ? [...caps.motions] : []
-    if (caps.expressions && caps.expressions.length > 0) {
-      rawExpressions.value = caps.expressions
-      const gateResult = filterCandidateExpressions(caps.expressions)
-      const candidates = gateResult.candidates.length > 0 ? [...gateResult.candidates] : [...caps.expressions]
-
-      // Keep single-eye winks (Blink_L / Blink_R) if present in raw expressions for Wink slot matching
-      for (const raw of caps.expressions) {
-        if (/^(blink_[lr]|wink_[lr]|eye_blink_[lr])$/i.test(raw) && !candidates.includes(raw)) {
-          candidates.push(raw)
-        }
-      }
-
-      candidateExpressions.value = candidates
+    const expCaps = caps.expressionCapabilities || []
+    const motCaps = caps.motionCapabilities || []
+    rawMotions.value = motCaps.length > 0 ? motCaps.map(m => m.rawKey) : []
+    if (expCaps.length > 0) {
+      rawExpressions.value = expCaps.map(e => e.rawKey)
+      const usable = expCaps.filter(e => e.usable).map(e => e.rawKey)
+      candidateExpressions.value = usable.length > 0 ? usable : expCaps.map(e => e.rawKey)
     }
     else {
       // Fallback candidate vocabulary for uninstantiated or remote models
@@ -646,11 +635,13 @@ function buildCompiledWhitelist(): CompiledWhitelist {
 }
 
 function emitSync() {
+  const allowlist = buildCompiledWhitelist()
   emit('sync', {
     emotionsCurated: isCalibrated.value,
     expressionMappings: { ...expressionMappings.value },
     actingModelExpressionPrompt: actingDirectivesPrompt.value,
-    compiledWhitelist: buildCompiledWhitelist(),
+    cueAllowlist: allowlist,
+    compiledWhitelist: allowlist,
   })
 }
 

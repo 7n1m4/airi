@@ -1,5 +1,7 @@
 import type { ChatProvider } from '@xsai-ext/providers/utils'
 
+import type { ModelCapabilityItem } from '../stores/display-models'
+
 import { useLive2d } from '@proj-airi/stage-ui-live2d/stores'
 import { useMmd } from '@proj-airi/stage-ui-mmd'
 import { useSpine } from '@proj-airi/stage-ui-spine'
@@ -339,33 +341,35 @@ Please draft the comprehensive Acting Directive instructing ${charName} how to u
         throw new Error(`Model ${modelId} not found in database.`)
       }
 
-      const newEmotionMappings = { ...model.emotionMappings }
-      const newHiddenExpressions = new Set(model.hiddenExpressions || [])
-
+      const expressionCapabilities: ModelCapabilityItem[] = [...(model.expressionCapabilities || [])]
       const validActTokens: string[] = []
 
       for (const item of items) {
+        let existing = expressionCapabilities.find(e => e.rawKey === item.rawKey)
+        if (!existing) {
+          existing = { rawKey: item.rawKey, label: item.label?.trim() || item.rawKey, usable: !item.shouldSkip }
+          expressionCapabilities.push(existing)
+        }
+
         if (item.shouldSkip) {
           if (options.autoHideSkipped) {
-            newHiddenExpressions.add(item.rawKey)
+            existing.usable = false
           }
         }
         else {
           if (item.label && item.label.trim()) {
-            newEmotionMappings[item.rawKey] = item.label.trim()
+            existing.label = item.label.trim()
           }
           if (item.actToken && item.actToken.trim()) {
             validActTokens.push(item.actToken.trim())
           }
-          // Make sure included ones are unhidden
-          newHiddenExpressions.delete(item.rawKey)
+          existing.usable = true
         }
       }
 
       // Update model record
-      await displayModelsStore.updateDisplayModelMappings(modelId, {
-        emotionMappings: newEmotionMappings,
-        hiddenExpressions: Array.from(newHiddenExpressions),
+      await displayModelsStore.updateDisplayModelCapabilities(modelId, {
+        expressionCapabilities,
       })
 
       // Update active card acting instructions if requested

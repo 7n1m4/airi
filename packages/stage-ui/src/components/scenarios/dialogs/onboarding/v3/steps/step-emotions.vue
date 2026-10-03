@@ -56,6 +56,7 @@ function handleStudioSync(payload: EmotionStudioSyncPayload) {
     emotionsCurated: payload.emotionsCurated,
     expressionMappings: payload.expressionMappings,
     actingModelExpressionPrompt: payload.actingModelExpressionPrompt,
+    cueAllowlist: payload.cueAllowlist,
     compiledWhitelist: payload.compiledWhitelist,
   })
 }
@@ -66,6 +67,7 @@ onBeforeUnmount(() => {
       emotionsCurated: lastSync.value.emotionsCurated,
       expressionMappings: lastSync.value.expressionMappings,
       actingModelExpressionPrompt: lastSync.value.actingModelExpressionPrompt,
+      cueAllowlist: lastSync.value.cueAllowlist,
       compiledWhitelist: lastSync.value.compiledWhitelist,
     })
   }
@@ -77,6 +79,7 @@ function handleContinue() {
       emotionsCurated: lastSync.value.emotionsCurated,
       expressionMappings: lastSync.value.expressionMappings,
       actingModelExpressionPrompt: lastSync.value.actingModelExpressionPrompt,
+      cueAllowlist: lastSync.value.cueAllowlist,
       compiledWhitelist: lastSync.value.compiledWhitelist,
     })
   }

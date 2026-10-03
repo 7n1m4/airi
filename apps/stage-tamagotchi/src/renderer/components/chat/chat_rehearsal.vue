@@ -324,7 +324,8 @@ function splitSentences(text: string): string[] {
 
 async function resolveRehearsalEmotionOptions(modelId: string | null): Promise<{ options: string[], fallback: boolean }> {
   // Source 1: the card's compiled whitelist (Verify keepers + Remap slots union).
-  const whitelist = (activeCard.value as any)?.extensions?.airi?.acting?.compiledWhitelist
+  const whitelist = (activeCard.value as any)?.extensions?.airi?.acting?.cueAllowlist
+    || (activeCard.value as any)?.extensions?.airi?.acting?.compiledWhitelist
   const whitelisted = Object.keys(whitelist?.emotions || {})
   // DIAG: snapshot for DevTools inspection (window.__jevDebug.snapshot()).
   stashJevSnapshot({ whitelist, whitelisted, modelId })
@@ -332,11 +333,11 @@ async function resolveRehearsalEmotionOptions(modelId: string | null): Promise<{
     console.info('[Rehearsal System1] options', { source: 'whitelist', keys: whitelisted })
     return { options: [...whitelisted, 'none'], fallback: false }
   }
-  // Source 2: the display model's stored mappings.
+  // Source 2: the display model's stored capabilities.
   if (modelId) {
     try {
       const model = await displayModelsStore.getDisplayModel(modelId)
-      const values = [...new Set(Object.values(model?.emotionMappings || {}).filter(Boolean) as string[])]
+      const values = [...new Set((model?.expressionCapabilities || []).filter(c => c.usable).map(c => c.label || c.rawKey))]
       if (values.length > 0) {
         console.info('[Rehearsal System1] options', { source: 'record', keys: values })
         return { options: [...values, 'none'], fallback: false }
@@ -426,7 +427,7 @@ async function getRigExpressions(modelId: string | null): Promise<string[]> {
   }
   try {
     const caps = await displayModelsStore.getOrLoadModelCapabilities(modelId)
-    const expressions = [...(caps.expressions || [])]
+    const expressions = (caps.expressionCapabilities || []).map(c => c.rawKey)
     rigExpressionsCache.value = { modelId, expressions }
     return expressions
   }
@@ -454,7 +455,8 @@ function liveMorphKeys(): string[] {
 // one exists) → model-mapping cross-references → legacy caps trust fallback.
 // Returns null when nothing resolves (caller marks `unmapped`, never fired).
 async function resolveActToken(token: string, modelId: string | null): Promise<string | null> {
-  const whitelist = (activeCard.value as any)?.extensions?.airi?.acting?.compiledWhitelist
+  const whitelist = (activeCard.value as any)?.extensions?.airi?.acting?.cueAllowlist
+    || (activeCard.value as any)?.extensions?.airi?.acting?.compiledWhitelist
   const whitelistedRaw = whitelist?.emotions?.[token]?.rawKey
   const live = liveMorphKeys()
   const t = Math.round(performance.now())
@@ -504,16 +506,16 @@ async function resolveActToken(token: string, modelId: string | null): Promise<s
   }
   try {
     const model = modelId ? await displayModelsStore.getDisplayModel(modelId) : null
-    const mappings = model?.emotionMappings || {}
-    for (const [raw, mapped] of Object.entries(mappings)) {
-      if (typeof mapped === 'string' && mapped.toLowerCase() === token.toLowerCase()) {
-        // DIAG: mapping-table hit (unverified against rig).
-        console.info('[Rehearsal System1] resolve', { token, resolved: raw, via: 'mappings-table', rigSize: rig.length, t: Math.round(performance.now()) })
-        return raw
+    const caps = model?.expressionCapabilities || []
+    for (const item of caps) {
+      if (item.label && item.label.toLowerCase() === token.toLowerCase()) {
+        console.info('[Rehearsal System1] resolve', { token, resolved: item.rawKey, via: 'capabilities-label', rigSize: rig.length, t: Math.round(performance.now()) })
+        return item.rawKey
       }
-    }
-    if (typeof (mappings as any)[token] === 'string' && rig.length === 0) {
-      return (mappings as any)[token]
+      if (item.rawKey.toLowerCase() === token.toLowerCase()) {
+        console.info('[Rehearsal System1] resolve', { token, resolved: item.rawKey, via: 'capabilities-raw', rigSize: rig.length, t: Math.round(performance.now()) })
+        return item.rawKey
+      }
     }
   }
   catch {}

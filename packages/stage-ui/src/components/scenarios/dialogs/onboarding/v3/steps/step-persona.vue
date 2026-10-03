@@ -976,8 +976,8 @@ async function generateStoryIdeas() {
           actingCapabilities = {
             format: '3D/2D',
             modelName: vesselName.value,
-            whitelistedExpressions: caps.expressions || [],
-            whitelistedMotions: caps.motions || [],
+            whitelistedExpressions: (caps.expressionCapabilities || []).filter(c => c.usable).map(c => c.label || c.rawKey),
+            whitelistedMotions: (caps.motionCapabilities || []).filter(c => c.usable).map(c => c.label || c.rawKey),
           }
         }
       }

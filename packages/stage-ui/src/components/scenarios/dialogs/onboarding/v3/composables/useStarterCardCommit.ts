@@ -417,9 +417,11 @@ export function populateAiriExtensions(
     modelExpressionPrompt,
     speechExpressionPrompt: airi.acting?.speechExpressionPrompt || '',
     speechMannerismPrompt: airi.acting?.speechMannerismPrompt || '',
-    ...(draft.compiledWhitelist && Object.keys(draft.compiledWhitelist.emotions || {}).length > 0
-      ? { compiledWhitelist: JSON.parse(JSON.stringify(draft.compiledWhitelist)) }
-      : {}),
+    ...((draft.cueAllowlist && Object.keys(draft.cueAllowlist.emotions || {}).length > 0)
+      ? { cueAllowlist: JSON.parse(JSON.stringify(draft.cueAllowlist)), compiledWhitelist: JSON.parse(JSON.stringify(draft.cueAllowlist)) }
+      : (draft.compiledWhitelist && Object.keys(draft.compiledWhitelist.emotions || {}).length > 0)
+          ? { cueAllowlist: JSON.parse(JSON.stringify(draft.compiledWhitelist)), compiledWhitelist: JSON.parse(JSON.stringify(draft.compiledWhitelist)) }
+          : {}),
     pacing: {
       enabled: isSpeechEnabled && draft.pacingPreset !== 'disabled',
       pacingProfile: draft.pacingPreset === 'snappy' ? 'snappy' : draft.pacingPreset === 'deep' ? 'deep_cot' : 'balanced',
@@ -713,17 +715,29 @@ export function useStarterCardCommit() {
       }
     }
 
-    // 4. Update Display Model Emotion Mappings
+    // 4. Update Display Model Capabilities
     const isNoModel = draft.experienceArchetype === 'quiet' || draft.vesselDisplayModelId === ''
     const activeModelId = isNoModel ? '' : (draft.vesselDisplayModelId || 'preset-live2d-2')
     if (draft.expressionMappings && Object.keys(draft.expressionMappings).length > 0 && activeModelId) {
       try {
-        await displayModelsStore.updateDisplayModelMappings(activeModelId, {
-          emotionMappings: draft.expressionMappings,
+        const model = await displayModelsStore.getDisplayModel(activeModelId)
+        const expressionCapabilities = [...(model?.expressionCapabilities || [])]
+        for (const [rawKey, label] of Object.entries(draft.expressionMappings)) {
+          const existing = expressionCapabilities.find(e => e.rawKey === rawKey)
+          if (existing) {
+            existing.label = label
+            existing.usable = true
+          }
+          else {
+            expressionCapabilities.push({ rawKey, label, usable: true })
+          }
+        }
+        await displayModelsStore.updateDisplayModelCapabilities(activeModelId, {
+          expressionCapabilities,
         })
       }
       catch (err) {
-        console.warn('[useStarterCardCommit] Display model mappings update warning:', err)
+        console.warn('[useStarterCardCommit] Display model capabilities update warning:', err)
       }
     }
 

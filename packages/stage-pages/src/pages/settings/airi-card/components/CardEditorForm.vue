@@ -598,114 +598,55 @@ const activeCardModel = computed(() => {
 
 const actingModelEmotionOptions = computed(() => {
   const activeModel = activeCardModel.value
-  if (activeModel?.expressions && activeModel.expressions.length > 0) {
-    const mappings = activeModel.emotionMappings || {}
-    const hidden = activeModel.hiddenExpressions || []
-    const mapped: string[] = []
-
-    for (const key of activeModel.expressions) {
-      if (hidden.includes(key))
-        continue
-      const customName = mappings[key]
-      if (customName && customName.trim()) {
-        mapped.push(customName.trim())
-      }
-      else {
-        mapped.push(key)
-      }
-    }
+  if (activeModel?.expressionCapabilities && activeModel.expressionCapabilities.length > 0) {
+    const mapped = activeModel.expressionCapabilities
+      .filter(c => c.usable)
+      .map(c => c.label || c.rawKey)
     return [...new Set(mapped)].sort((a, b) => a.localeCompare(b))
   }
 
   if (isLive2d.value) {
-    const mappings = activeModel?.emotionMappings || {}
-    const hidden = activeModel?.hiddenExpressions || []
-    const mapped = live2dExpressions.value
-      .filter(e => !hidden.includes(e.fileName) && !hidden.includes(e.name))
-      .map(e => mappings[e.fileName] || mappings[e.name] || e.name)
+    const mapped = live2dExpressions.value.map(e => e.name)
     return [...new Set(mapped)].sort((a, b) => a.localeCompare(b))
   }
 
   if (isMmd.value) {
-    const mappings = activeModel?.emotionMappings || mmdStore.morphMappings || {}
-    const hidden = activeModel?.hiddenExpressions || mmdStore.hiddenMorphs || []
-
-    const mapped: string[] = []
-    for (const m of mmdMorphs.value) {
-      if (hidden.includes(m))
-        continue
-      const mappedName = mappings[m]
-      mapped.push(mappedName || m)
-    }
+    const mapped = [...mmdMorphs.value]
     return [...new Set(mapped)].sort((a, b) => a.localeCompare(b))
   }
 
-  const mappings = activeModel?.emotionMappings || {}
-  const hidden = activeModel?.hiddenExpressions || []
-  const mapped = availableExpressions.value
-    .filter(e => !hidden.includes(e))
-    .map(e => mappings[e] || e)
+  const mapped = [...availableExpressions.value]
   return [...new Set(mapped)].sort((a, b) => a.localeCompare(b))
 })
 
 const actingIdleAnimationOptions = computed(() => {
   const activeModel = activeCardModel.value
-  const motionMappings = activeModel?.motionMappings || {}
-  const hiddenMotions = activeModel?.hiddenMotions || []
 
-  const normalize = (s: string) =>
-    s.split(/[\\/]/).pop()?.replace(/_File_\d+/gi, '').replace(/\.(motion3\.)?json$/i, '').replace(/^(motions?|expressions?)[_-]/i, '').toLowerCase() || s.toLowerCase()
-
-  function resolveMotionLabel(rawKey: string): { label: string, value: string } {
-    const cleanName = rawKey.split('/').pop()?.replace('.motion3.json', '').replace('.json', '') || rawKey
-    const rawNorm = normalize(rawKey)
-    let mappedName = motionMappings[rawKey]
-    if (!mappedName) {
-      for (const [mapKey, val] of Object.entries(motionMappings)) {
-        if (normalize(mapKey) === rawNorm) {
-          mappedName = val as string
-          break
-        }
-      }
-    }
-    const finalLabel = mappedName || cleanName
-    return { label: finalLabel, value: finalLabel }
-  }
-
-  if (activeModel?.motions && activeModel.motions.length > 0) {
-    const options: { label: string, value: string }[] = []
-    for (const key of activeModel.motions) {
-      if (hiddenMotions.includes(key))
-        continue
-      options.push(resolveMotionLabel(key))
-    }
+  if (activeModel?.motionCapabilities && activeModel.motionCapabilities.length > 0) {
+    const options = activeModel.motionCapabilities
+      .filter(m => m.usable)
+      .map(m => ({ label: m.label || m.rawKey, value: m.label || m.rawKey }))
     return options.sort((a, b) => a.label.localeCompare(b.label))
   }
 
   if (isLive2d.value) {
     const options: { label: string, value: string }[] = []
     live2dStore.availableMotions.forEach((m) => {
-      if (hiddenMotions.includes(m.fileName))
-        return
-      options.push(resolveMotionLabel(m.fileName))
+      const cleanName = m.fileName.split('/').pop()?.replace('.motion3.json', '').replace('.json', '') || m.fileName
+      options.push({ label: cleanName, value: cleanName })
     })
     return options.sort((a, b) => a.label.localeCompare(b.label))
   }
 
   if (isSpine.value) {
     return spineAnimations.value
-      .filter(a => !hiddenMotions.includes(a.name))
-      .map(a => resolveMotionLabel(a.name))
+      .map(a => ({ label: a.name, value: a.name }))
       .sort((a, b) => a.label.localeCompare(b.label))
   }
 
   if (isMmd.value) {
-    const builtIn = mmdMotions.value
-      .filter(m => !hiddenMotions.includes(m))
-      .map(m => resolveMotionLabel(m))
-    const custom = mmdCustomMotions.value
-      .filter(m => !hiddenMotions.includes(m.name) && (!m.id || !hiddenMotions.includes(m.id)))
-      .map(m => resolveMotionLabel(m.name))
+    const builtIn = mmdMotions.value.map(m => ({ label: m, value: m }))
+    const custom = mmdCustomMotions.value.map((m: any) => ({ label: m.name || m.id, value: m.name || m.id }))
     return [...builtIn, ...custom].sort((a, b) => a.label.localeCompare(b.label))
   }
 

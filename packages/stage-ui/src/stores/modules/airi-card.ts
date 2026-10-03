@@ -858,31 +858,29 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       const newModelId = extension.active_state?.displayModelId ?? extension.modules?.displayModelId
       const modelChanged = newModelId && newModelId !== stageModelStore.stageModelSelected
       if (selectedModel) {
-        if (selectedModel.format === DisplayModelFormat.Live2dZip) {
-          live2dStore.emotionMappings = selectedModel.emotionMappings || {}
-          if (selectedModel.favoriteExpressions && selectedModel.favoriteExpressions.length > 0) {
-            // Restore active expression presets from model's favorites
-            const fav = selectedModel.favoriteExpressions[0]
-            if (fav && live2dStore.availableExpressions.some(e => e.fileName === fav)) {
-              live2dStore.activeExpressions[fav] = 1
-            }
+        const emotionMap: Record<string, string> = {}
+        if (selectedModel.expressionCapabilities) {
+          for (const item of selectedModel.expressionCapabilities) {
+            if (item.label && item.label !== item.rawKey)
+              emotionMap[item.rawKey] = item.label
           }
+        }
+
+        if (selectedModel.format === DisplayModelFormat.Live2dZip) {
+          live2dStore.emotionMappings = emotionMap
           if (force || modelChanged) {
             live2dStore.shouldUpdateView()
           }
         }
         else if (selectedModel.format === DisplayModelFormat.VRM) {
-          vrmStore.emotionMappings = selectedModel.emotionMappings || {}
-          if (selectedModel.favoriteExpressions && selectedModel.favoriteExpressions.length > 0) {
-            vrmStore.favoriteExpression = selectedModel.favoriteExpressions[0] || ''
-          }
+          vrmStore.emotionMappings = emotionMap
           if (force || modelChanged) {
             vrmStore.shouldUpdateView()
           }
         }
         else if (selectedModel.format === DisplayModelFormat.PMXZip || selectedModel.format === DisplayModelFormat.PMD || selectedModel.format === DisplayModelFormat.PMXDirectory) {
           const mmdStore = await import('@proj-airi/stage-ui-mmd/stores/mmd').then(m => m.useMmd())
-          mmdStore.morphMappings = selectedModel.emotionMappings || {}
+          mmdStore.morphMappings = emotionMap
           if (force || modelChanged) {
             mmdStore.shouldUpdateView()
           }

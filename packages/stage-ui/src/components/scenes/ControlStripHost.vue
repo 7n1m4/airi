@@ -221,11 +221,25 @@ const activeModelMetadata = computed(() => {
 
 watch(activeModelMetadata, (model) => {
   if (model) {
-    live2dStore.motionMap = { ...model.motionMappings }
-    live2dStore.emotionMappings = { ...model.emotionMappings }
+    const motionMap: Record<string, string> = {}
+    if (model.motionCapabilities) {
+      for (const m of model.motionCapabilities) {
+        if (m.label)
+          motionMap[m.rawKey] = m.label
+      }
+    }
+    const emotionMap: Record<string, string> = {}
+    if (model.expressionCapabilities) {
+      for (const e of model.expressionCapabilities) {
+        if (e.label && e.label !== e.rawKey)
+          emotionMap[e.rawKey] = e.label
+      }
+    }
+    live2dStore.motionMap = motionMap
+    live2dStore.emotionMappings = emotionMap
     debug('[Stage Host] Synced active model mappings to live2dStore:', {
-      emotions: Object.keys(model.emotionMappings || {}).length,
-      motions: Object.keys(model.motionMappings || {}).length,
+      emotions: Object.keys(emotionMap).length,
+      motions: Object.keys(motionMap).length,
     })
   }
 }, { deep: true, immediate: true })
@@ -289,7 +303,7 @@ const emotionsQueue = createQueue<EmotionPayload>({
             // New fallback: try to find motion by name in availableMotions (Ground Truth)
             const displayModelId = (activeCard.value as any)?.extensions?.airi?.modules?.displayModelId
             const activeModel = displayModelId ? displayModelsStore.displayModels.find(m => m.id === displayModelId) : null
-            const motionMappings = activeModel?.motionMappings || {}
+            const motionCapabilities = activeModel?.motionCapabilities || []
 
             // Normalize helper for robust key matching across dynamic suffixes/directories
             const normalize = (s: string) =>
@@ -300,8 +314,7 @@ const emotionsQueue = createQueue<EmotionPayload>({
               emotionName,
               normEmotion,
               activeCardName: activeCard.value?.name,
-              motionMappingsKeys: Object.keys(motionMappings),
-              motionMappingsValues: Object.values(motionMappings),
+              motionCapabilitiesCount: motionCapabilities.length,
               availableMotions: live2dStore.availableMotions.map((m: any) => ({
                 motionName: m.motionName,
                 fileName: m.fileName,
@@ -313,10 +326,10 @@ const emotionsQueue = createQueue<EmotionPayload>({
               const cleanName = name.replace('.motion3.json', '').replace('.json', '')
 
               const mNorm = normalize(m.fileName)
-              let mappedName
-              for (const [mapKey, val] of Object.entries(motionMappings)) {
-                if (normalize(mapKey) === mNorm) {
-                  mappedName = val as string
+              let mappedName: string | undefined
+              for (const cap of motionCapabilities) {
+                if (normalize(cap.rawKey) === mNorm) {
+                  mappedName = cap.label
                   break
                 }
               }
@@ -340,7 +353,7 @@ const emotionsQueue = createQueue<EmotionPayload>({
                 availableExpressions: live2dStore.availableExpressions.map(e => ({ name: e.name, fileName: e.fileName })),
                 emotionMappings: live2dStore.emotionMappings,
                 availableMotions: live2dStore.availableMotions.map(m => m.fileName),
-                motionMappings,
+                motionCapabilitiesCount: motionCapabilities.length,
               })
             }
           }

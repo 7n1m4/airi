@@ -41,8 +41,13 @@ async function resolveModel(modelId: string) {
 
   try {
     const model = await displayModelsStore.getDisplayModel(modelId)
-    if (model?.emotionMappings) {
-      initialMappings.value = JSON.parse(JSON.stringify(model.emotionMappings))
+    if (model?.expressionCapabilities) {
+      const map: Record<string, string> = {}
+      for (const item of model.expressionCapabilities) {
+        if (item.label && item.label !== item.rawKey)
+          map[item.rawKey] = item.label
+      }
+      initialMappings.value = map
     }
   }
   catch (err) {
@@ -69,8 +74,20 @@ async function handleStudioSync(payload: EmotionStudioSyncPayload) {
 
   // Persist canonical mappings onto the display model record
   try {
-    await displayModelsStore.updateDisplayModelMappings(modelId, {
-      emotionMappings: payload.expressionMappings,
+    const model = await displayModelsStore.getDisplayModel(modelId)
+    const expressionCapabilities = [...(model?.expressionCapabilities || [])]
+    for (const [rawKey, label] of Object.entries(payload.expressionMappings)) {
+      const existing = expressionCapabilities.find(e => e.rawKey === rawKey)
+      if (existing) {
+        existing.label = label
+        existing.usable = true
+      }
+      else {
+        expressionCapabilities.push({ rawKey, label, usable: true })
+      }
+    }
+    await displayModelsStore.updateDisplayModelCapabilities(modelId, {
+      expressionCapabilities,
     })
   }
   catch (err) {
@@ -97,8 +114,10 @@ async function handleStudioSync(payload: EmotionStudioSyncPayload) {
         }
       }
       updatedCard.extensions.airi.acting.modelExpressionPrompt = payload.actingModelExpressionPrompt
-      if (payload.compiledWhitelist && Object.keys(payload.compiledWhitelist.emotions || {}).length > 0) {
-        updatedCard.extensions.airi.acting.compiledWhitelist = JSON.parse(JSON.stringify(payload.compiledWhitelist))
+      const allowlist = payload.cueAllowlist || payload.compiledWhitelist
+      if (allowlist && Object.keys(allowlist.emotions || {}).length > 0) {
+        updatedCard.extensions.airi.acting.cueAllowlist = JSON.parse(JSON.stringify(allowlist))
+        updatedCard.extensions.airi.acting.compiledWhitelist = JSON.parse(JSON.stringify(allowlist))
       }
       await cardStore.updateCard(activeCardId.value, updatedCard)
     }

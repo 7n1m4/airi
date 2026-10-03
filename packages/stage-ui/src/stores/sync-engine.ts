@@ -1,3 +1,5 @@
+import type { ModelCapabilityItem } from '../libs/character/model-capabilities'
+
 import localforage from 'localforage'
 
 import { debug } from '@proj-airi/stage-shared'
@@ -11,6 +13,33 @@ import { toast } from 'vue-sonner'
 import { storage, storageState } from '../database/storage'
 import { SERVER_URL } from '../libs/auth'
 import { extractAllowedSessionIds, mergeVoiceProfiles, shouldSkipMergeableKey } from './sync-engine-merge'
+
+function mergeCapabilityLists(
+  localList: ModelCapabilityItem[] = [],
+  remoteList: ModelCapabilityItem[] = [],
+): ModelCapabilityItem[] {
+  const map = new Map<string, ModelCapabilityItem>()
+  for (const item of remoteList) {
+    if (item?.rawKey)
+      map.set(item.rawKey, { ...item })
+  }
+  for (const item of localList) {
+    if (!item?.rawKey)
+      continue
+    const existing = map.get(item.rawKey)
+    if (existing) {
+      map.set(item.rawKey, {
+        rawKey: item.rawKey,
+        label: item.label || existing.label,
+        usable: item.usable ?? existing.usable,
+      })
+    }
+    else {
+      map.set(item.rawKey, { ...item })
+    }
+  }
+  return Array.from(map.values()).sort((a, b) => a.rawKey.localeCompare(b.rawKey))
+}
 
 export interface StorageClient {
   validate: () => Promise<{ success: boolean, error?: string }>
@@ -584,13 +613,9 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         nsfw: remoteModel.nsfw,
         groups: remoteModel.groups,
         tags: remoteModel.tags,
-        expressions: remoteModel.expressions,
-        motions: remoteModel.motions,
-        emotionMappings: remoteModel.emotionMappings,
-        motionMappings: remoteModel.motionMappings,
-        hiddenExpressions: remoteModel.hiddenExpressions,
-        hiddenMotions: remoteModel.hiddenMotions,
-        favoriteExpressions: remoteModel.favoriteExpressions,
+        expressionCapabilities: remoteModel.expressionCapabilities,
+        motionCapabilities: remoteModel.motionCapabilities,
+        vfxMappings: remoteModel.vfxMappings,
       }
 
       await localforage.setItem(id, entry)
@@ -890,13 +915,9 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
           nsfw?: boolean
           groups?: string[]
           tags?: string[]
-          expressions?: string[]
-          motions?: string[]
-          emotionMappings?: Record<string, string>
-          motionMappings?: Record<string, string>
-          hiddenExpressions?: string[]
-          hiddenMotions?: string[]
-          favoriteExpressions?: string[]
+          expressionCapabilities?: ModelCapabilityItem[]
+          motionCapabilities?: ModelCapabilityItem[]
+          vfxMappings?: Record<string, string[]>
         }>
         deleted?: string[]
       } = { models: {}, deleted: [] }
@@ -998,8 +1019,8 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             continue
           }
 
-          const hasExpressions = val.expressions && val.expressions.length > 0
-          const hasMotions = val.motions && val.motions.length > 0
+          const hasExpressions = val.expressionCapabilities && val.expressionCapabilities.length > 0
+          const hasMotions = val.motionCapabilities && val.motionCapabilities.length > 0
           if (!hasExpressions || !hasMotions) {
             debug(`[SyncEngine] Extracting missing capabilities for active model: ${id} (${val.name})`)
             const caps = await displayModelsStore.getOrLoadModelCapabilities(id)
@@ -1117,13 +1138,9 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             nsfw: entry.nsfw,
             groups: entry.groups,
             tags: entry.tags,
-            expressions: entry.expressions,
-            motions: entry.motions,
-            emotionMappings: entry.emotionMappings,
-            motionMappings: entry.motionMappings,
-            hiddenExpressions: entry.hiddenExpressions,
-            hiddenMotions: entry.hiddenMotions,
-            favoriteExpressions: entry.favoriteExpressions,
+            expressionCapabilities: entry.expressionCapabilities,
+            motionCapabilities: entry.motionCapabilities,
+            vfxMappings: entry.vfxMappings,
           }
           manifestModified = true
 
@@ -1203,79 +1220,24 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             localModified = true
           }
 
-          // 5. Merge expressions (union)
-          const localExpressions = localEntry.expressions || []
-          const remoteExpressions = remoteEntry.expressions || []
-          if (JSON.stringify(localExpressions) !== JSON.stringify(remoteExpressions)) {
-            const mergedExpressions = Array.from(new Set([...localExpressions, ...remoteExpressions]))
-            remoteEntry.expressions = mergedExpressions
-            localEntry.expressions = mergedExpressions
+          // 5. Merge expressionCapabilities
+          const localExprCaps = localEntry.expressionCapabilities || []
+          const remoteExprCaps = remoteEntry.expressionCapabilities || []
+          if (JSON.stringify(localExprCaps) !== JSON.stringify(remoteExprCaps)) {
+            const mergedExpressions = mergeCapabilityLists(localExprCaps, remoteExprCaps)
+            remoteEntry.expressionCapabilities = mergedExpressions
+            localEntry.expressionCapabilities = mergedExpressions
             manifestModified = true
             localModified = true
           }
 
-          // 6. Merge motions (union)
-          const localMotions = localEntry.motions || []
-          const remoteMotions = remoteEntry.motions || []
-          if (JSON.stringify(localMotions) !== JSON.stringify(remoteMotions)) {
-            const mergedMotions = Array.from(new Set([...localMotions, ...remoteMotions]))
-            remoteEntry.motions = mergedMotions
-            localEntry.motions = mergedMotions
-            manifestModified = true
-            localModified = true
-          }
-
-          // 7. Merge emotionMappings (map merge)
-          const localEmotionMappings = localEntry.emotionMappings || {}
-          const remoteEmotionMappings = remoteEntry.emotionMappings || {}
-          if (JSON.stringify(localEmotionMappings) !== JSON.stringify(remoteEmotionMappings)) {
-            const mergedEmotionMappings = { ...remoteEmotionMappings, ...localEmotionMappings }
-            remoteEntry.emotionMappings = mergedEmotionMappings
-            localEntry.emotionMappings = mergedEmotionMappings
-            manifestModified = true
-            localModified = true
-          }
-
-          // 8. Merge motionMappings (map merge)
-          const localMotionMappings = localEntry.motionMappings || {}
-          const remoteMotionMappings = remoteEntry.motionMappings || {}
-          if (JSON.stringify(localMotionMappings) !== JSON.stringify(remoteMotionMappings)) {
-            const mergedMotionMappings = { ...remoteMotionMappings, ...localMotionMappings }
-            remoteEntry.motionMappings = mergedMotionMappings
-            localEntry.motionMappings = mergedMotionMappings
-            manifestModified = true
-            localModified = true
-          }
-
-          // 9. Merge hiddenExpressions (union)
-          const localHiddenExpressions = localEntry.hiddenExpressions || []
-          const remoteHiddenExpressions = remoteEntry.hiddenExpressions || []
-          if (JSON.stringify(localHiddenExpressions) !== JSON.stringify(remoteHiddenExpressions)) {
-            const mergedHiddenExpressions = Array.from(new Set([...localHiddenExpressions, ...remoteHiddenExpressions]))
-            remoteEntry.hiddenExpressions = mergedHiddenExpressions
-            localEntry.hiddenExpressions = mergedHiddenExpressions
-            manifestModified = true
-            localModified = true
-          }
-
-          // 10. Merge hiddenMotions (union)
-          const localHiddenMotions = localEntry.hiddenMotions || []
-          const remoteHiddenMotions = remoteEntry.hiddenMotions || []
-          if (JSON.stringify(localHiddenMotions) !== JSON.stringify(remoteHiddenMotions)) {
-            const mergedHiddenMotions = Array.from(new Set([...localHiddenMotions, ...remoteHiddenMotions]))
-            remoteEntry.hiddenMotions = mergedHiddenMotions
-            localEntry.hiddenMotions = mergedHiddenMotions
-            manifestModified = true
-            localModified = true
-          }
-
-          // 11. Merge favoriteExpressions (union)
-          const localFavExpressions = localEntry.favoriteExpressions || []
-          const remoteFavExpressions = remoteEntry.favoriteExpressions || []
-          if (JSON.stringify(localFavExpressions) !== JSON.stringify(remoteFavExpressions)) {
-            const mergedFavExpressions = Array.from(new Set([...localFavExpressions, ...remoteFavExpressions]))
-            remoteEntry.favoriteExpressions = mergedFavExpressions
-            localEntry.favoriteExpressions = mergedFavExpressions
+          // 6. Merge motionCapabilities
+          const localMotionCaps = localEntry.motionCapabilities || []
+          const remoteMotionCaps = remoteEntry.motionCapabilities || []
+          if (JSON.stringify(localMotionCaps) !== JSON.stringify(remoteMotionCaps)) {
+            const mergedMotions = mergeCapabilityLists(localMotionCaps, remoteMotionCaps)
+            remoteEntry.motionCapabilities = mergedMotions
+            localEntry.motionCapabilities = mergedMotions
             manifestModified = true
             localModified = true
           }
@@ -1385,13 +1347,9 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
             nsfw: remoteModel.nsfw,
             groups: remoteModel.groups,
             tags: remoteModel.tags,
-            expressions: remoteModel.expressions,
-            motions: remoteModel.motions,
-            emotionMappings: remoteModel.emotionMappings,
-            motionMappings: remoteModel.motionMappings,
-            hiddenExpressions: remoteModel.hiddenExpressions,
-            hiddenMotions: remoteModel.hiddenMotions,
-            favoriteExpressions: remoteModel.favoriteExpressions,
+            expressionCapabilities: remoteModel.expressionCapabilities,
+            motionCapabilities: remoteModel.motionCapabilities,
+            vfxMappings: remoteModel.vfxMappings,
           }
 
           await localforage.setItem(id, entry)

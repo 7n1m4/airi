@@ -86,9 +86,11 @@ watch(selectedModelId, async (newId) => {
   const modelType = model.format.toLowerCase()
   const displayType = modelType.includes('live2d') ? 'live2d' : (modelType === 'vrm' ? 'vrm' : (modelType.includes('spine') ? 'spine' : 'mmd'))
 
-  caps.expressions.forEach((name) => {
-    list.push({ key: name, name, type: displayType })
-  })
+  for (const item of (caps.expressionCapabilities || [])) {
+    if (item.usable) {
+      list.push({ key: item.rawKey, name: item.label || item.rawKey, type: displayType })
+    }
+  }
   availableExpressions.value = list
 }, { immediate: true })
 

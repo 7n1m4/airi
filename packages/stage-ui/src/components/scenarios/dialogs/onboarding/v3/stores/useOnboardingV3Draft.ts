@@ -118,6 +118,7 @@ export interface OnboardingV3DraftState {
   emotionsCurated?: boolean
   expressionMappings?: Record<string, string>
   actingModelExpressionPrompt?: string
+  cueAllowlist?: { version: 1, emotions: Record<string, { rawKey: string, label: string }> }
   compiledWhitelist?: { version: 1, emotions: Record<string, { rawKey: string, label: string }> }
   previewStrength?: number
   brainBenchmark?: {
@@ -757,6 +758,7 @@ export const useOnboardingV3Draft = defineStore('onboarding-v3-draft', () => {
     expressionMappings?: Record<string, string>
     actingModelExpressionPrompt?: string
     previewStrength?: number
+    cueAllowlist?: { version: 1, emotions: Record<string, { rawKey: string, label: string }> }
     compiledWhitelist?: { version: 1, emotions: Record<string, { rawKey: string, label: string }> }
   }) {
     if (emotions.emotionsCurated !== undefined)
@@ -765,8 +767,14 @@ export const useOnboardingV3Draft = defineStore('onboarding-v3-draft', () => {
       state.value.expressionMappings = emotions.expressionMappings
     if (emotions.actingModelExpressionPrompt !== undefined)
       state.value.actingModelExpressionPrompt = emotions.actingModelExpressionPrompt
-    if (emotions.compiledWhitelist !== undefined)
+    if (emotions.cueAllowlist !== undefined) {
+      state.value.cueAllowlist = emotions.cueAllowlist
+      state.value.compiledWhitelist = emotions.cueAllowlist
+    }
+    else if (emotions.compiledWhitelist !== undefined) {
+      state.value.cueAllowlist = emotions.compiledWhitelist
       state.value.compiledWhitelist = emotions.compiledWhitelist
+    }
     if (emotions.previewStrength !== undefined)
       state.value.previewStrength = emotions.previewStrength
   }

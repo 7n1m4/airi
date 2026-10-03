@@ -201,7 +201,19 @@ When the guided flow finishes, it overwrites the user's `modelExpressionPrompt` 
 
 **Build log (shipped).** Studio extraction + thin onboarding wrapper (no behavior change) → hidden `settings/models/emotions` route → guided dots scaffold (Meet → Name → Verify → Remaps, dots clickable backward, Skip/Finish to full cockpit) → Meet demo anchor (AvatarSample_B `Surprised`, health-checked) → Name stats/AI-gate/curation trigger with step-scoped `BrainModelPicker` override (`curateExpressions` accepts `providerId`/`model`) → motions inventory per format (Live2D/Spine from file, MMD/VRM built-in) → Verify keeper table with re-fire-safe previews + ✓/✕ Keep toggles → AVIF art (~96% smaller) → LIVE/STATIC badge + trigger diagnostics + neutral-bounce re-fire.
 
-**Next (in order).** Remaps per the agreed plan (keeper-constrained dropdowns, one-shot empty-slot auto-apply, no Recalibrate/Details in the guided leg, direction normalization) → `compiledWhitelists` bake + auto-templated `modelExpressionPrompt` overwrite → entry-point rewiring (ModelCustomizer, acting-tab sparkle, Rehearsal Room → route; modal retirement) → acting-tab textarea reverse-parse (free text → whitelist) → Tier 2 stride interceptor (§2.2).
+**Next (in order).** Remaps per the agreed plan (keeper-constrained dropdowns, one-shot empty-slot auto-apply, no Recalibrate/Details in the guided leg, direction normalization) → `compiledWhitelist` bake + auto-templated `modelExpressionPrompt` overwrite → entry-point rewiring (ModelCustomizer, acting-tab sparkle, Rehearsal Room → route; modal retirement) → acting-tab textarea reverse-parse (free text → whitelist) → Tier 2 stride interceptor (§2.2).
+
+#### 2.1.6 Field cleanup: model vs character, raw → allowable (Canonical Spec: `docs/design-avatar-capabilities-architecture.md`)
+
+**Adopted Direction (Oct 2026).** The fragmented field zoo (`expressions`, `motions`, `emotionMappings`, `motionMappings`, `favoriteExpressions`, `hiddenExpressions`, `hiddenMotions`) is completely retired and replaced by two self-contained capability catalogs directly on `DisplayModelFile`:
+* `expressionCapabilities: ModelCapabilityItem[]` — `{ rawKey, label, usable }`
+* `motionCapabilities: ModelCapabilityItem[]` — `{ rawKey, label, usable }`
+
+See **[`docs/design-avatar-capabilities-architecture.md`](./design-avatar-capabilities-architecture.md)** for the complete canonical data contracts, 4-stage lifecycle, noise-gate ingestion rules, and monorepo touchlist.
+
+On the character card level:
+* `card.extensions.airi.acting.cueAllowlist`: `{ version: 1, emotions: Record<token, { rawKey, label }>, motions: Record<token, { rawKey, label }> }`
+* `card.extensions.airi.acting.modelExpressionPrompt`: The prompt derived from the allowlist.
 
 ### 2.2 Tier 2: real-time sentence-stride interceptor (~110ms ninja-swap)
 
@@ -267,7 +279,7 @@ When the guided flow finishes, it overwrites the user's `modelExpressionPrompt` 
 4. **Decoupled actuation**: Jev decides; existing queues execute. The interceptor never synthesizes audio or drives rigs directly.
 5. **Single merged request per stride**: batch `speech_tag` + `act_emotion` + `act_motion` (+ `intensity`) into one `execute()` call.
 6. **Mirror, don't freelance**: Jev request boundaries = TTS chunk boundaries (see §2.2 footnotes). Solo chunks get solo calls; flushed multi-sentence remainders get one batched call with per-sentence groups.
-7. **Provenance exclusion**: Jev-injected cues never enter `rawContent` persistence or the token stream — the model must not see our injections (doubling hazard). Tag injection provenance at the `onTokenSpecial`/queue layer.
+7. **Evaporation doctrine**: Jev-injected cues evaporate by design — never written to `rawContent`, never replayed, never re-read. There is no persistence to filter after the fact; the LLM must never follow our lead when it reads history on the next turn (doubling hazard). Tag injection provenance at the `onTokenSpecial`/queue layer so any future persistence path can distinguish origin.
 8. **Enter once**: injected tokens go through the special-token queue exactly once; never re-broadcast as fresh messages (cf. the existing double-execution trap).
 
 ## 3.5 Tier 2 game plan (phased — Rehearsal Room as proving ground)
@@ -276,7 +288,21 @@ When the guided flow finishes, it overwrites the user's `modelExpressionPrompt` 
 - **Phase B — Experimental System1 toggle (DONE Oct 2026).** Persisted checkbox in the rehearsal sandbox (`rehearsal/system-one-enabled`), disabled with guidance when `systemOneStore.configured` is false; live provider badge (emerald `Laya local` / sky `Jev · <model>` / amber `Unconfigured`); `systemOneArmed` computed (opt-in AND configured) ready as Phase C's gate. The toggle never configures providers itself.
 - **Phase C — Stride simulator (DONE Oct 2026).** Act fires `runSystemOneSimulation` fire-and-forget alongside untouched playback: sentence-split → single batched `execute()` with per-sentence `s{i}_emotion` choice groups (model vocab + `none`) → collapsible readout (sentence, decision, confidence, latency/budget, status). Includes: `none` out, pre-prefixed skip, 90%-WPM drop, provenance tagging. v1 scope: `choice` only — `score` (intensity/motion) returns with the motions phase. Two sim modes share one readout: table read (whole script, one batched call — doubles as the shared-state-blanket contrast instrument) vs dress rehearsal (stride buffer on the `onLiteral` stream, one solo `execute()` per completed sentence with sentence-only state, trailing fragment flushed at stream end). `injectJevCue` resolves every decided token to a rig morph (card whitelist → token/rig match → model mappings) before firing; unresolvable tokens surface as `unmapped` rows instead of silent no-ops (which also starved the driver's reset timer — first-known-sticks explained). Verify (the DevTools protocol): mainWindow network shows SystemOne call(s) mirroring TTS dispatch shape; schema/state inspected; avatar actuates.
 - **Phase D — Boundary-clock scheduling.** Multi-sentence remainder cues subscribe to the sentence-sync crossing signal (`ControlStripHost.vue:767-816`) instead of firing at chunk start; WPM timing stays fallback-only. Verify: face changes land on sentence boundaries in-sync with caption highlights.
-- **Phase E — Promotion.** The proven interceptor module wires into the live chat path; Rehearsal Room stays a permanent debug playground (cf. surface table footnote: eventual relocation under `settings/modules`). Verify: live dialogue actuates with zero prompt pollution; no doubles in `rawContent`.
+- **Phase E — Promotion.** The proven interceptor module wires into the live chat path; Rehearsal Room stays a permanent debug playground (cf. surface table footnote: eventual relocation under `settings/modules`). Verify: live dialogue actuates with zero prompt pollution; history stays clean per the evaporation doctrine (§3.7).
+
+### 3.6 Behavior configuration (locked direction — behavior, not providers)
+
+Provider setup is solved (global System1 config); what remains is per-character behavior, living in the Acting tab (streamline the tab, no new page):
+
+- **Location**: a new **Auto-Cues** segment inside the Model Expressions tab (`CardCreationTabActing.vue`), alongside the existing prompt fields — the tab gets streamlined for understandability rather than forked into a separate page.
+- **State fields**: hardcoded 3-way bundle (personality + description + acting directives) with visible badges/tip block naming the exact source fields, so users see what the classifier reads.
+- **Expressions vs motions**: two per-character checkboxes in the same segment (auto-cue expressions, auto-cue motions). Motions arrive in the widen-after phase; the checkbox reserves its seat now.
+- **Timing**: no user knob in v1 (event-driven onset is correct timing; offsets are desync dials). Recorded here so it isn't lost: revisit only on product evidence.
+- **Master switch**: per-character auto-cue enable, default OFF until curated. The Finish celebration modal is the conversion moment: on Finish, offer enable-now (with where-to-disable pointer) or leave-off — bridging the gap between "calibrated" and "live."
+
+### 3.7 Integration order: land the pipe, widen it after
+
+Extraction (rehearsal-local stride/hold/release/resolve → shared module) → live chat wiring with evaporation → motions (inventory exists; curation UI + `score` return + trigger semantics + the reserved checkbox) → speech tags last. No phase widens the payload before the pipe carries the current one live.
 
 ---
 
