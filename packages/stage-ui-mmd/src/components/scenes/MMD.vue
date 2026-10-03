@@ -17,6 +17,7 @@ import type { ResolvedMMDModel } from '../../utils/mmd-loader'
 
 import { errorMessageFrom } from '@moeru/std'
 import { Screen } from '@proj-airi/ui'
+import { defaultWindow, useElementBounding, useEventListener } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import {
   AmbientLight,
@@ -120,6 +121,8 @@ const allMotions = computed(() => [
 ])
 
 const canvasRef = ref<HTMLCanvasElement>()
+const canvasBounding = useElementBounding(canvasRef, { updateTiming: 'next-frame' })
+useEventListener(defaultWindow?.visualViewport, ['resize', 'scroll'], canvasBounding.update)
 
 // Imperative three.js objects (no reactivity — mutated in the render loop).
 let renderer: WebGLRenderer | undefined
@@ -196,11 +199,12 @@ function resolveGazeOffset(): GazeOffset | undefined {
   // mouse
   if (!props.cursorPosition || !canvasRef.value)
     return undefined
-  const rect = canvasRef.value.getBoundingClientRect()
-  if (rect.width === 0 || rect.height === 0)
+  const canvasWidth = canvasBounding.width.value || canvasRef.value.clientWidth || 0
+  const canvasHeight = canvasBounding.height.value || canvasRef.value.clientHeight || 0
+  if (canvasWidth === 0 || canvasHeight === 0)
     return undefined
-  const nx = ((props.cursorPosition.x - rect.left) / rect.width) * 2 - 1
-  const ny = ((props.cursorPosition.y - rect.top) / rect.height) * 2 - 1
+  const nx = ((props.cursorPosition.x - canvasBounding.left.value) / canvasWidth) * 2 - 1
+  const ny = ((props.cursorPosition.y - canvasBounding.top.value) / canvasHeight) * 2 - 1
   return { x: Math.max(-1, Math.min(1, nx)), y: Math.max(-1, Math.min(1, ny)) }
 }
 
@@ -891,20 +895,24 @@ defineExpose({
     const headTopPos = worldPos.clone().addScaledVector(headUp, 2.0)
     const ndc = headTopPos.project(camera)
 
-    const rect = canvasRef.value.getBoundingClientRect()
-    const screenX = ((ndc.x + 1) / 2) * rect.width
-    const screenY = ((-ndc.y + 1) / 2) * rect.height
+    // Convert NDC to pixel coordinates relative to the canvas
+    // NOTICE: Read cached bounding dimensions via useElementBounding instead of canvasRef.value.getBoundingClientRect()
+    // to avoid forcing synchronous reflows on every requestAnimationFrame tick (e.g. HeadTetheredCanvas2D).
+    const canvasWidth = canvasBounding.width.value || canvasRef.value.clientWidth || 500
+    const canvasHeight = canvasBounding.height.value || canvasRef.value.clientHeight || 500
+    const screenX = ((ndc.x + 1) / 2) * canvasWidth
+    const screenY = ((-ndc.y + 1) / 2) * canvasHeight
 
     // Calculate approximate screen model height (head to hips/center)
     const hipsBone = mesh.skeleton?.bones?.find(
       b => b.name === 'センター' || b.name === '下半身' || b.name.toLowerCase().includes('hip'),
     )
-    let modelHeightPx = rect.height * 0.5
+    let modelHeightPx = canvasHeight * 0.5
     if (hipsBone) {
       const hipsPos = new Vector3()
       hipsBone.getWorldPosition(hipsPos)
       const hipsNdc = hipsPos.clone().project(camera)
-      const hipsScreenY = ((-hipsNdc.y + 1) / 2) * rect.height
+      const hipsScreenY = ((-hipsNdc.y + 1) / 2) * canvasHeight
       modelHeightPx = Math.max(120, Math.abs(hipsScreenY - screenY) * 2.2)
     }
 

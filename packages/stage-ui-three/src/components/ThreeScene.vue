@@ -15,7 +15,7 @@ import type { Vec3 } from '../stores/model-store'
 
 import { Screen } from '@proj-airi/ui'
 import { TresCanvas } from '@tresjs/core'
-import { useElementBounding } from '@vueuse/core'
+import { defaultWindow, useElementBounding, useEventListener } from '@vueuse/core'
 import { formatHex } from 'culori'
 import { storeToRefs } from 'pinia'
 import {
@@ -73,7 +73,8 @@ const emit = defineEmits<{
 const componentState = defineModel<'pending' | 'loading' | 'mounted'>('state', { default: 'pending' })
 
 const sceneContainerRef = ref<HTMLDivElement>()
-const { width, height } = useElementBounding(sceneContainerRef)
+const { width, height, update: updateBounding } = useElementBounding(sceneContainerRef, { updateTiming: 'next-frame' })
+useEventListener(defaultWindow?.visualViewport, ['resize', 'scroll'], updateBounding)
 const modelStore = useModelStore()
 const {
   lastModelSrc,
@@ -466,19 +467,22 @@ defineExpose({
     const ndc = headTopPos.project(activeCam)
 
     // Convert NDC to pixel coordinates relative to the container element
-    const rect = container.getBoundingClientRect()
-    const screenX = ((ndc.x + 1) / 2) * rect.width
+    // NOTICE: Read cached bounding dimensions via useElementBounding instead of container.getBoundingClientRect()
+    // to avoid forcing synchronous reflows on every requestAnimationFrame tick (e.g. HeadTetheredCanvas2D).
+    const containerWidth = width.value || container.clientWidth || 500
+    const containerHeight = height.value || container.clientHeight || 500
+    const screenX = ((ndc.x + 1) / 2) * containerWidth
     // In Three.js NDC, +Y is up, but in screen-space canvas +Y is down
-    const screenY = ((-ndc.y + 1) / 2) * rect.height
+    const screenY = ((-ndc.y + 1) / 2) * containerHeight
 
     // Calculate approximate screen model height (head to hips projection)
     const hipsBone = activeVrm.humanoid?.getNormalizedBoneNode('hips')
-    let modelHeightPx = rect.height * 0.5
+    let modelHeightPx = containerHeight * 0.5
     if (hipsBone) {
       const hipsPos = new Vector3()
       hipsBone.getWorldPosition(hipsPos)
       const hipsNdc = hipsPos.clone().project(activeCam)
-      const hipsScreenY = ((-hipsNdc.y + 1) / 2) * rect.height
+      const hipsScreenY = ((-hipsNdc.y + 1) / 2) * containerHeight
       modelHeightPx = Math.max(120, Math.abs(hipsScreenY - screenY) * 2.2)
     }
 
