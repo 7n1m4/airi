@@ -26,12 +26,14 @@ import StepVessel from './steps/step-vessel.vue'
 import StepVision from './steps/step-vision.vue'
 import StepWelcome from './steps/step-welcome.vue'
 
+import { useOnboardingStore } from '../../../../../stores/onboarding'
 import { useOnboardingV3Draft } from './stores/useOnboardingV3Draft'
 import { ONBOARDING_V3_STEPS } from './types'
 
 const emit = defineEmits<{
   (e: 'close'): void
   (e: 'finish'): void
+  (e: 'skip'): void
 }>()
 
 const { t, te } = useI18n()
@@ -50,6 +52,7 @@ function getStepSubtitle(step?: OnboardingV3StepDef): string {
   return te(key) ? t(key) : step.subtitle
 }
 
+const onboardingStore = useOnboardingStore()
 const draftStore = useOnboardingV3Draft()
 const isQuickStartMode = ref(false)
 const currentStepId = ref<OnboardingV3Step>('welcome')
@@ -113,6 +116,15 @@ function handleSelectStep(index: number) {
 }
 
 function handleSkip() {
+  onboardingStore.markSetupSkipped()
+  emit('skip')
+  emit('close')
+}
+
+function handleClose() {
+  if (!onboardingStore.hasCompletedSetup) {
+    onboardingStore.markSetupSkipped()
+  }
   emit('close')
 }
 </script>
@@ -159,7 +171,7 @@ function handleSkip() {
           type="button"
           :class="['p-1 rounded-lg text-neutral-400 hover:text-neutral-800 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer']"
           :title="t('onboarding.shell.closeSetup')"
-          @click="emit('close')"
+          @click="handleClose"
         >
           <div :class="['i-solar:close-circle-bold w-5 h-5']" />
         </button>
