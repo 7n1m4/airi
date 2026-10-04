@@ -87,26 +87,6 @@ onMounted(() => {
       </div>
     </Section>
 
-    <!-- === Rendering / Frame Rate === -->
-    <Section
-      :title="t('settings.vrm.fps.title')"
-      icon="i-solar:speedometer-bold-duotone"
-      :class="[
-        'rounded-xl',
-        'bg-white/80 dark:bg-black/75',
-        'backdrop-blur-lg',
-      ]"
-      size="sm"
-      :expand="true"
-    >
-      <div :class="['flex', 'items-center', 'justify-between', 'gap-2', 'p-2']">
-        <div :class="['flex', 'flex-col', 'gap-1']">
-          <span :class="['text-xs', 'text-neutral-500', 'dark:text-neutral-400']">{{ t('settings.vrm.fps.description') }}</span>
-        </div>
-        <SelectTab v-model="maxFps" :options="fpsOptions" size="sm" :class="['w-48', 'shrink-0']" />
-      </div>
-    </Section>
-
     <ModelSceneSettings
       :store="modelStore"
       :positioning-store="positioningStore"
@@ -160,6 +140,15 @@ onMounted(() => {
               </template>
             </FieldRange>
           </div>
+        </div>
+
+        <!-- Frame Rate Limit -->
+        <div :class="['flex', 'items-center', 'justify-between', 'gap-4', 'mb-2', 'border-b', 'border-neutral-100', 'pb-4', 'dark:border-neutral-800']">
+          <div :class="['flex', 'flex-col', 'gap-1']">
+            <span :class="['text-sm', 'text-neutral-600', 'dark:text-neutral-400']">{{ t('settings.vrm.fps.title') }}</span>
+            <span :class="['text-xs', 'text-neutral-500', 'dark:text-neutral-400']">{{ t('settings.vrm.fps.description') }}</span>
+          </div>
+          <SelectTab v-model="maxFps" :options="fpsOptions" size="sm" :class="['w-48', 'shrink-0']" />
         </div>
 
         <div flex="~ col gap-2">

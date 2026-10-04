@@ -13,6 +13,7 @@ import type { DirectionalLight, Scene, SphericalHarmonics3, Texture, WebGLRender
 
 import type { Vec3 } from '../stores/model-store'
 
+import { computeDirectionalLightOrbit } from '@proj-airi/stage-shared'
 import { Screen } from '@proj-airi/ui'
 import { TresCanvas } from '@tresjs/core'
 import { defaultWindow, useElementBounding, useEventListener } from '@vueuse/core'
@@ -21,7 +22,6 @@ import { storeToRefs } from 'pinia'
 import {
   ACESFilmicToneMapping,
   Euler,
-  MathUtils,
   PerspectiveCamera,
   Quaternion,
   Vector3,
@@ -265,6 +265,7 @@ onMounted(() => {
   }
   unsubscribeTriggerEmotion = modelStore.onTriggerEmotion((name, intensity) => {
     const lower = name.toLowerCase()
+    console.info('[CueTrace] 7 ThreeScene onTriggerEmotion', { name, intensity, hasModelRef: Boolean(modelRef.value) })
     if (lower === 'fire' || lower === 'electric' || lower === 'magic' || lower === 'verdant') {
       auraController.value?.triggerAura(lower as any, 4.0)
     }
@@ -343,7 +344,10 @@ watch(
 
     try {
       // setup initial target of directional light
-      dirLight.parent?.add(dirLight.target)
+      const scene = dirLight.parent || tresCanvasRef.value?.scene.value
+      if (scene && !dirLight.target.parent) {
+        scene.add(dirLight.target)
+      }
       dirLight.target.position.set(
         directionalLightTarget.value.x,
         directionalLightTarget.value.y,
@@ -371,40 +375,32 @@ watch([sceneReady, modelLoaded], ([ready, loaded]) => {
   }
 }, { immediate: true })
 
-function updateDirLightTarget(newRotation: { x: number, y: number, z: number }) {
+function updateDirLightOrbit(newRotation: { x: number, y: number, z: number }) {
   const light = dirLightRef.value
-  if (!light)
-    return
+  const targetPoint = {
+    x: modelOrigin.value?.x || 0,
+    y: (modelOrigin.value?.y || 0) + (modelSize.value?.y ? modelSize.value.y * 0.6 : 1.0),
+    z: modelOrigin.value?.z || 0,
+  }
 
-  const { x: rx, y: ry, z: rz } = newRotation
-  const lightPosition = new Vector3(
-    directionalLightPosition.value.x,
-    directionalLightPosition.value.y,
-    directionalLightPosition.value.z,
-  )
-  const origin = new Vector3(0, 0, 0)
-  const euler = new Euler(
-    MathUtils.degToRad(rx),
-    MathUtils.degToRad(ry),
-    MathUtils.degToRad(rz),
-    'XYZ',
-  )
-  const initialForward = origin.clone().sub(lightPosition).normalize()
-  const newForward = initialForward.applyEuler(euler).normalize()
-  const distance = lightPosition.distanceTo(origin)
-  const target = lightPosition.clone().addScaledVector(newForward, distance)
+  const { position, target } = computeDirectionalLightOrbit(newRotation, {
+    target: targetPoint,
+    distance: 3.0,
+  })
 
-  light.target.position.copy(target)
+  directionalLightPosition.value = position
+  directionalLightTarget.value = target
 
-  light.target.updateMatrixWorld()
-
-  directionalLightTarget.value = { x: target.x, y: target.y, z: target.z }
-  // console.debug("directional Light target update!: ", directionalLightTarget.value)
+  if (light) {
+    light.position.set(position.x, position.y, position.z)
+    light.target.position.set(target.x, target.y, target.z)
+    light.target.updateMatrixWorld()
+  }
 }
 
 watch(directionalLightRotation, (newRotation) => {
-  updateDirLightTarget(newRotation)
-}, { deep: true })
+  updateDirLightOrbit(newRotation)
+}, { deep: true, immediate: true })
 
 defineExpose({
   setExpression: (expression: string, intensity = 1, resetMs?: number) => {

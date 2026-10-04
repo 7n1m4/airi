@@ -232,18 +232,18 @@ export const useMmd = defineStore('mmd', () => {
   const eyeHeight = useLocalStorageManualReset<number>('settings/mmd/eyeHeight', 0)
   const lookAtTarget = useLocalStorageManualReset<{ x: number, y: number, z: number }>('settings/mmd/lookAtTarget', { x: 0, y: 0, z: 0 })
 
-  const directionalLightPosition = useLocalStorageManualReset<{ x: number, y: number, z: number }>('settings/mmd/scenes/scene/directional-light/position', { x: 0, y: 0, z: -1 })
-  const directionalLightTarget = useLocalStorageManualReset<{ x: number, y: number, z: number }>('settings/mmd/scenes/scene/directional-light/target', { x: 0, y: 0, z: 0 })
-  const directionalLightRotation = useLocalStorageManualReset<{ x: number, y: number, z: number }>('settings/mmd/scenes/scene/directional-light/rotation', { x: 0, y: 0, z: 0 })
-  const directionalLightIntensity = useLocalStorageManualReset<number>('settings/mmd/scenes/scene/directional-light/intensity', 2.02)
-  const directionalLightColor = useLocalStorageManualReset<string>('settings/mmd/scenes/scene/directional-light/color', '#fffbf5')
+  const directionalLightPosition = useLocalStorageManualReset<{ x: number, y: number, z: number }>('settings/mmd/scenes/scene/directional-light/position', { x: 0, y: 1, z: 3 })
+  const directionalLightTarget = useLocalStorageManualReset<{ x: number, y: number, z: number }>('settings/mmd/scenes/scene/directional-light/target', { x: 0, y: 1, z: 0 })
+  const directionalLightRotation = useLocalStorageManualReset<{ x: number, y: number, z: number }>('settings/mmd/scenes/scene/directional-light/rotation', { x: -34, y: 0, z: 0 })
+  const directionalLightIntensity = useLocalStorageManualReset<number>('settings/mmd/scenes/scene/directional-light/intensity', 9.06)
+  const directionalLightColor = useLocalStorageManualReset<string>('settings/mmd/scenes/scene/directional-light/color', '#4a3413')
 
   const hemisphereSkyColor = useLocalStorageManualReset<string>('settings/mmd/scenes/scene/hemisphere-light/sky-color', '#FFFFFF')
   const hemisphereGroundColor = useLocalStorageManualReset<string>('settings/mmd/scenes/scene/hemisphere-light/ground-color', '#222222')
-  const hemisphereLightIntensity = useLocalStorageManualReset<number>('settings/mmd/scenes/scene/hemisphere-light/intensity', 0.4)
+  const hemisphereLightIntensity = useLocalStorageManualReset<number>('settings/mmd/scenes/scene/hemisphere-light/intensity', 1.55)
 
   const ambientLightColor = useLocalStorageManualReset<string>('settings/mmd/scenes/scene/ambient-light/color', '#FFFFFF')
-  const ambientLightIntensity = useLocalStorageManualReset<number>('settings/mmd/scenes/scene/ambient-light/intensity', 0.6)
+  const ambientLightIntensity = useLocalStorageManualReset<number>('settings/mmd/scenes/scene/ambient-light/intensity', 1.32)
 
   const envSelect = useLocalStorageManualReset<'hemisphere' | 'skyBox'>('settings/mmd/envEnabled', 'hemisphere')
   const skyBoxIntensity = useLocalStorageManualReset<number>('settings/mmd/skyBoxIntensity', 0.1)

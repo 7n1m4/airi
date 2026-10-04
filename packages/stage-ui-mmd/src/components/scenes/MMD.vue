@@ -16,6 +16,7 @@ import type { GazeOffset, MMDAnimationManager, MorphController } from '../../com
 import type { ResolvedMMDModel } from '../../utils/mmd-loader'
 
 import { errorMessageFrom } from '@moeru/std'
+import { computeDirectionalLightOrbit } from '@proj-airi/stage-shared'
 import { Screen } from '@proj-airi/ui'
 import { defaultWindow, useElementBounding, useEventListener } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -111,6 +112,10 @@ const {
   directionalColor,
   directionalIntensity,
   directionalPosition,
+  directionalLightRotation,
+  directionalLightTarget,
+  modelOrigin,
+  modelSize,
   albedoGlow,
   renderScale,
 } = storeToRefs(mmdStore)
@@ -364,7 +369,9 @@ function setupScene() {
   scene.add(ambientLight)
   directionalLight = new DirectionalLight(new Color(normalizeHex(directionalColor.value)), directionalIntensity.value)
   directionalLight.position.set(directionalPosition.value.x, directionalPosition.value.y, directionalPosition.value.z)
+  directionalLight.target.position.set(directionalLightTarget.value.x, directionalLightTarget.value.y, directionalLightTarget.value.z)
   scene.add(directionalLight)
+  scene.add(directionalLight.target)
 
   controls = new OrbitControls(camera, canvas)
   controls.enableDamping = true
@@ -850,6 +857,32 @@ watch([directionalColor, directionalIntensity], () => {
   directionalLight.color.set(normalizeHex(directionalColor.value))
   directionalLight.intensity = directionalIntensity.value
 })
+function updateMMDDirLightOrbit(newRotation: { x: number, y: number, z: number }) {
+  const targetPoint = {
+    x: modelOrigin.value?.x || 0,
+    y: (modelOrigin.value?.y || 0) + (modelSize.value?.y ? modelSize.value.y * 0.6 : 1.0),
+    z: modelOrigin.value?.z || 0,
+  }
+
+  const { position, target } = computeDirectionalLightOrbit(newRotation, {
+    target: targetPoint,
+    distance: 3.0,
+  })
+
+  directionalPosition.value = position
+  directionalLightTarget.value = target
+
+  if (directionalLight) {
+    directionalLight.position.set(position.x, position.y, position.z)
+    directionalLight.target.position.set(target.x, target.y, target.z)
+    directionalLight.target.updateMatrixWorld()
+  }
+}
+
+watch(directionalLightRotation, (newRotation) => {
+  updateMMDDirLightOrbit(newRotation)
+}, { deep: true, immediate: true })
+
 watch(directionalPosition, () => {
   directionalLight?.position.set(directionalPosition.value.x, directionalPosition.value.y, directionalPosition.value.z)
 }, { deep: true })
