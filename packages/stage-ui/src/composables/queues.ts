@@ -47,14 +47,14 @@ export function extractEmotions(payload: any): EmotionPayload[] {
       if (normalized) {
         const intensity = normalizeIntensity(payload.emotion.intensity)
         const duration = normalizeDuration(payload.emotion.duration) ?? globalDuration
-        results.push({ name: normalized, intensity, duration })
+        results.push({ name: normalized, intensity, duration, kind: 'emotion' })
       }
     }
   }
   else if (typeof payload?.emotion === 'string') {
     const normalized = normalizeEmotionName(payload.emotion)
     if (normalized) {
-      results.push({ name: normalized, intensity: 1, duration: globalDuration })
+      results.push({ name: normalized, intensity: 1, duration: globalDuration, kind: 'emotion' })
     }
   }
 
@@ -62,7 +62,7 @@ export function extractEmotions(payload: any): EmotionPayload[] {
   if (typeof payload?.motion === 'string') {
     const normalized = normalizeEmotionName(payload.motion)
     if (normalized && !results.some(r => r.name === normalized)) {
-      results.push({ name: normalized, intensity: 1, duration: globalDuration })
+      results.push({ name: normalized, intensity: 1, duration: globalDuration, kind: 'motion' })
     }
   }
 
@@ -71,7 +71,7 @@ export function extractEmotions(payload: any): EmotionPayload[] {
   if (typeof vfxVal === 'string') {
     const normalized = normalizeEmotionName(vfxVal)
     if (normalized && !results.some(r => r.name === normalized)) {
-      results.push({ name: normalized, intensity: 1, duration: globalDuration })
+      results.push({ name: normalized, intensity: 1, duration: globalDuration, kind: 'vfx' })
     }
   }
 
@@ -113,10 +113,16 @@ export function parseActEmotion(content: string) {
     const emotionMatch = /"?(?:emotion|motion|vfx|aura)"?\s*[:=]\s*(?:\{?[\s\S]*?"name"\s*[:=]\s*)?(?:"([^"]+)"|'([^']+)'|([^"}\s,]+))/gi
     let m
     while ((m = emotionMatch.exec(payloadText)) !== null) {
+      const tagText = m[0].trim().toLowerCase().replace(/^"/, '')
+      const kind: EmotionPayload['kind'] = tagText.startsWith('motion')
+        ? 'motion'
+        : (tagText.startsWith('vfx') || tagText.startsWith('aura'))
+            ? 'vfx'
+            : 'emotion'
       const name = m[1] || m[2] || m[3]
       const normalized = normalizeEmotionName(name)
       if (normalized && !emotions.some(e => e.name === normalized)) {
-        emotions.push({ name: normalized, intensity: parsedIntensity, duration: parsedDuration })
+        emotions.push({ name: normalized, intensity: parsedIntensity, duration: parsedDuration, kind })
       }
     }
   }

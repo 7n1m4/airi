@@ -54,4 +54,5 @@ export interface EmotionPayload {
   name: Emotion | string
   intensity: number
   duration?: number
+  kind?: 'emotion' | 'motion' | 'vfx'
 }

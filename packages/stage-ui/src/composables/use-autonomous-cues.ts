@@ -97,6 +97,15 @@ export function normalizeSentenceText(text: string): string {
 }
 
 /**
+ * Normalizes sentence or audio stride text for fuzzy cross-matching between
+ * System 1 decisions and spoken audio playback events. Strips ACT tokens, punctuation,
+ * collapses whitespace, and lowercases Unicode letters/numbers.
+ */
+export function normalizeStrideText(text: string): string {
+  return text.replace(ACT_TOKEN_PATTERN, '').toLowerCase().replace(/[^\p{L}\p{N} ]/gu, ' ').replace(/\s+/g, ' ').trim()
+}
+
+/**
  * Calculates theoretical spoken duration budget (90% of duration at target WPM).
  * Used to avoid firing late cues after speech has ended.
  */

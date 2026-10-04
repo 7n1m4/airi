@@ -72,7 +72,7 @@ describe('queues: ACT tokens & timing parsing invariants', () => {
       const result = parseActEmotion('Hello! <|ACT:emotion="happy"|> Nice to meet you.')
       expect(result.ok).toBe(true)
       expect(result.emotions).toEqual([
-        { name: 'happy', intensity: 1, duration: undefined },
+        { name: 'happy', intensity: 1, duration: undefined, kind: 'emotion' },
       ])
     })
 
@@ -80,7 +80,7 @@ describe('queues: ACT tokens & timing parsing invariants', () => {
       const result = parseActEmotion('Check this out: <|ACT:emotion="happy",duration="3"|>')
       expect(result.ok).toBe(true)
       expect(result.emotions).toEqual([
-        { name: 'happy', intensity: 1, duration: 3 },
+        { name: 'happy', intensity: 1, duration: 3, kind: 'emotion' },
       ])
     })
 
@@ -88,7 +88,7 @@ describe('queues: ACT tokens & timing parsing invariants', () => {
       const result = parseActEmotion('<|ACT:emotion="cheerful",intensity="0.8",duration="2.5"|>')
       expect(result.ok).toBe(true)
       expect(result.emotions).toEqual([
-        { name: 'cheerful', intensity: 0.8, duration: 2.5 },
+        { name: 'cheerful', intensity: 0.8, duration: 2.5, kind: 'emotion' },
       ])
     })
 
@@ -96,7 +96,7 @@ describe('queues: ACT tokens & timing parsing invariants', () => {
       const result = parseActEmotion('<|ACT:motion="wave",duration="4"|>')
       expect(result.ok).toBe(true)
       expect(result.emotions).toEqual([
-        { name: 'wave', intensity: 1, duration: 4 },
+        { name: 'wave', intensity: 1, duration: 4, kind: 'motion' },
       ])
     })
 
@@ -104,8 +104,8 @@ describe('queues: ACT tokens & timing parsing invariants', () => {
       const result = parseActEmotion('<|ACT:emotion="happy",motion="wave",duration="3"|>')
       expect(result.ok).toBe(true)
       expect(result.emotions).toHaveLength(2)
-      expect(result.emotions[0]).toEqual({ name: 'happy', intensity: 1, duration: 3 })
-      expect(result.emotions[1]).toEqual({ name: 'wave', intensity: 1, duration: 3 })
+      expect(result.emotions[0]).toEqual({ name: 'happy', intensity: 1, duration: 3, kind: 'emotion' })
+      expect(result.emotions[1]).toEqual({ name: 'wave', intensity: 1, duration: 3, kind: 'motion' })
     })
 
     it('parses immediate reset signals (neutral or duration="0")', () => {
@@ -115,14 +115,14 @@ describe('queues: ACT tokens & timing parsing invariants', () => {
 
       const zeroDurationResult = parseActEmotion('<|ACT:emotion="happy",duration="0"|>')
       expect(zeroDurationResult.ok).toBe(true)
-      expect(zeroDurationResult.emotions[0]).toEqual({ name: 'happy', intensity: 1, duration: 0 })
+      expect(zeroDurationResult.emotions[0]).toEqual({ name: 'happy', intensity: 1, duration: 0, kind: 'emotion' })
     })
 
     it('parses VFX aura tokens', () => {
       const result = parseActEmotion('<|ACT:vfx="fire",duration="4"|>')
       expect(result.ok).toBe(true)
       expect(result.emotions).toEqual([
-        { name: 'fire', intensity: 1, duration: 4 },
+        { name: 'fire', intensity: 1, duration: 4, kind: 'vfx' },
       ])
     })
 
@@ -130,7 +130,7 @@ describe('queues: ACT tokens & timing parsing invariants', () => {
       const result = parseActEmotion('<|ACT:emotion="cool",duration="2">')
       expect(result.ok).toBe(true)
       expect(result.emotions).toEqual([
-        { name: 'cool', intensity: 1, duration: 2 },
+        { name: 'cool', intensity: 1, duration: 2, kind: 'emotion' },
       ])
     })
 
@@ -153,8 +153,8 @@ describe('queues: ACT tokens & timing parsing invariants', () => {
       }
       const emotions = extractEmotions(payload)
       expect(emotions).toEqual([
-        { name: 'surprised', intensity: 0.7, duration: 3.5 },
-        { name: 'nod', intensity: 1, duration: undefined },
+        { name: 'surprised', intensity: 0.7, duration: 3.5, kind: 'emotion' },
+        { name: 'nod', intensity: 1, duration: undefined, kind: 'motion' },
       ])
     })
 
@@ -166,8 +166,8 @@ describe('queues: ACT tokens & timing parsing invariants', () => {
       }
       const emotions = extractEmotions(payload)
       expect(emotions).toEqual([
-        { name: 'happy', intensity: 1, duration: 4 },
-        { name: 'jump', intensity: 1, duration: 4 },
+        { name: 'happy', intensity: 1, duration: 4, kind: 'emotion' },
+        { name: 'jump', intensity: 1, duration: 4, kind: 'motion' },
       ])
     })
   })

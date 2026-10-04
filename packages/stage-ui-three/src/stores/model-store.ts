@@ -126,7 +126,6 @@ export const useModelStore = defineStore('modelStore', () => {
   }
 
   function triggerEmotion(name: string, intensity: number) {
-    console.info('[CueTrace] 6 modelStore.triggerEmotion', { name, intensity, listeners: triggerEmotionHooks.value.size })
     post({ type: 'trigger-emotion', name, intensity })
     triggerEmotionHooks.value.forEach(hook => hook(name, intensity))
   }

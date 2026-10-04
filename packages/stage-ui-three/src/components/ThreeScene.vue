@@ -265,7 +265,6 @@ onMounted(() => {
   }
   unsubscribeTriggerEmotion = modelStore.onTriggerEmotion((name, intensity) => {
     const lower = name.toLowerCase()
-    console.info('[CueTrace] 7 ThreeScene onTriggerEmotion', { name, intensity, hasModelRef: Boolean(modelRef.value) })
     if (lower === 'fire' || lower === 'electric' || lower === 'magic' || lower === 'verdant') {
       auraController.value?.triggerAura(lower as any, 4.0)
     }

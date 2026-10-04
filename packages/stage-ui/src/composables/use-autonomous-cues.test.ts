@@ -14,6 +14,7 @@ import {
   createSentenceStrideBuffer,
   isClassifiableSentence,
   normalizeSentenceText,
+  normalizeStrideText,
   resolveAllowedEmotionOptions,
   resolveCueToken,
   splitSentences,
@@ -139,6 +140,13 @@ describe('use-autonomous-cues', () => {
     it('normalizes sentence text by removing ACT tokens', () => {
       const text = '<|ACT:emotion="happy"|> Hello world!'
       expect(normalizeSentenceText(text)).toBe('Hello world!')
+    })
+
+    it('normalizes stride text across punctuation, ACT tokens, and Unicode scripts', () => {
+      expect(normalizeStrideText('Hmm~ let me count in my memories...')).toBe('hmm let me count in my memories')
+      expect(normalizeStrideText('<|ACT:emotion="happy"|> Hello world!')).toBe('hello world')
+      expect(normalizeStrideText('so that means… about six and a half months?')).toBe('so that means about six and a half months')
+      expect(normalizeStrideText('こんにちは！元気ですか？')).toBe('こんにちは 元気ですか')
     })
   })
 

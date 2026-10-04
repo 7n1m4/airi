@@ -28,7 +28,7 @@ import RendererStage from './RendererStage.vue'
 import { applyVoiceProfileEffects } from '../../composables/audio/audio-effects'
 import { parseActor, useSpecialTokenQueue } from '../../composables/queues'
 import { categorizeResponse } from '../../composables/response-categoriser'
-import { containsExplicitActToken, useAutonomousCues } from '../../composables/use-autonomous-cues'
+import { containsExplicitActToken, normalizeStrideText, useAutonomousCues } from '../../composables/use-autonomous-cues'
 import { useTurnPacing } from '../../composables/use-turn-pacing'
 import { llmInferenceEndToken } from '../../constants'
 import { EMOTION_EmotionMotionName_value, EmotionThinkMotionName } from '../../constants/emotions'
@@ -282,6 +282,15 @@ const emotionsQueue = createQueue<EmotionPayload>({
         if (matchedOption) {
           vrmStore.triggerMotion(matchedOption.value)
         }
+        else if (ctx.data.kind === 'motion' || (ctx.data.kind !== 'emotion' && (emotionName.includes(' ') || (emotionName.length > 15 && !['star_eyes', 'cat_mouth', 'small_x_eyes', 'arrow_eyes', 'shocked_eyes'].includes(emotionName))))) {
+          // NOTICE: Unmatched kinetic/motion cues (e.g. LLM-hallucinated motions like "wiggle ears", "presses paw to glass", "tilt head thoughtfully")
+          // must NEVER fall through to vrmStore.triggerEmotion — treating them as facial morphs causes ThreeScene warnings
+          // and prematurely clears active expression reset timeouts.
+          // FUTURE / ROADMAP: Candidate for deterministic dynamic motion generation via FlowMDM (packages/stage-ui/src/utils/flowmdm)
+          // and our Text-to-Motion pipeline (useTextToMotionStore / airi-generative-motion-vrma). When the LLM emits dynamic action
+          // cues ahead of our pre-baked library, FlowMDM diffusion or procedural keyframing could synthesize and inject the VRMA on the fly.
+          debug('[Stage] Unmatched VRM motion cue skipped (not an expression):', emotionName)
+        }
         else {
           vrmStore.triggerEmotion(emotionName, ctx.data.intensity)
         }
@@ -443,6 +452,48 @@ function playSpecialToken(special: string) {
   specialTokenQueue.enqueue(special)
 }
 
+interface HeldAutonomousCue {
+  id: string
+  sentence: string
+  norm: string
+  rawKey: string
+  token?: string
+  status: 'held' | 'applied' | 'dropped'
+  createdAt: number
+}
+
+const heldAutonomousCues = ref<HeldAutonomousCue[]>([])
+const playedStrideNorms = ref<Set<string>>(new Set())
+
+function resetHeldAutonomousCues() {
+  heldAutonomousCues.value = []
+  playedStrideNorms.value.clear()
+}
+
+function releaseAutonomousCue(text: string) {
+  if (!text?.trim())
+    return
+  const norm = normalizeStrideText(text)
+  if (!norm)
+    return
+  playedStrideNorms.value.add(norm)
+
+  const held = heldAutonomousCues.value.filter(c => c.status === 'held')
+  if (held.length === 0)
+    return
+
+  const match = held.find(c => c.norm && (norm.includes(c.norm) || c.norm.includes(norm)))
+  if (match) {
+    match.status = 'applied'
+    debug('[Stage] Released held Autonomous System-1 cue on speech start:', {
+      rawKey: match.rawKey,
+      sentence: match.sentence,
+      matchedText: text.slice(0, 60),
+    })
+    playSpecialToken(`<|ACT:emotion="${match.rawKey}"|>`)
+  }
+}
+
 const autonomousCues = useAutonomousCues({
   activeCard: computed(() => activeCard.value),
   activeModelId: computed(() => (activeCard.value as any)?.extensions?.airi?.modules?.displayModelId || null),
@@ -453,7 +504,36 @@ const autonomousCues = useAutonomousCues({
   }),
   actuateEmotion: (rawKey, meta) => {
     debug('[Stage] Autonomous System-1 cue firing (evaporates):', { rawKey, meta })
-    playSpecialToken(`<|ACT:emotion="${rawKey}"|>`)
+
+    // If speech provider is noop (silent / text-only) or playback suppressed, actuate immediately
+    if (activeSpeechProvider.value === 'speech-noop' || isPlaybackSuppressed.value) {
+      playSpecialToken(`<|ACT:emotion="${rawKey}"|>`)
+      return
+    }
+
+    const sentence = meta?.sentence || ''
+    const norm = normalizeStrideText(sentence)
+
+    if (norm && playedStrideNorms.value.has(norm)) {
+      if (nowSpeaking.value) {
+        debug('[Stage] Autonomous System-1 cue arrived during active speech: firing immediately:', { rawKey, sentence })
+        playSpecialToken(`<|ACT:emotion="${rawKey}"|>`)
+        return
+      }
+      debug('[Stage] Autonomous System-1 cue arrived after speech slice ended (dropped):', { rawKey, sentence })
+      return
+    }
+
+    heldAutonomousCues.value.push({
+      id: `cue-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      sentence,
+      norm,
+      rawKey,
+      token: meta?.token,
+      status: 'held',
+      createdAt: Date.now(),
+    })
+    debug('[Stage] Held Autonomous System-1 cue until speech playback:', { rawKey, sentence, norm })
   },
 })
 
@@ -828,6 +908,9 @@ async function playFunction(item: Parameters<Parameters<typeof createPlaybackMan
               isActive: true,
             })
 
+            // Sentence-Sync: release any held System-1 cue matching this sub-sentence boundary
+            releaseAutonomousCue(activeBoundary.text)
+
             try {
               postCaption({
                 type: 'caption-assistant',
@@ -862,12 +945,32 @@ async function playFunction(item: Parameters<Parameters<typeof createPlaybackMan
         debug('[Stage] Failed to broadcast segment playback:', err)
       }
 
+      // Release any held System-1 autonomous cue synchronized with this slice audio start
+      const firstSliceText = (item.boundaries && item.boundaries.length > 0)
+        ? item.boundaries[0].text
+        : item.text
+      if (firstSliceText) {
+        releaseAutonomousCue(firstSliceText)
+      }
+
       source.start(0)
     }
     catch {
       stopPlayback()
     }
   })
+}
+
+try {
+  getSpeechBusContext().on(speechSegmentPlaybackEvent, (evt: any) => {
+    const payload = evt?.body
+    if (payload?.originId !== 'stage-host' && payload?.text) {
+      releaseAutonomousCue(payload.text)
+    }
+  })
+}
+catch (err) {
+  debug('[Stage] Failed to register speechSegmentPlaybackEvent listener:', err)
 }
 
 const playbackManager = createPlaybackManager<AudioBuffer>({
@@ -1428,6 +1531,7 @@ speechPipeline.on('onIntentCancel', () => {
   discordStore.clearAudioTurn()
   rawAudioBuffers.clear()
   scheduledPlaybackEndTime = 0
+  resetHeldAutonomousCues()
 })
 
 // NOTICE: the speech runtime host must follow the Stage lifecycle. If a previous Stage instance
@@ -1668,6 +1772,7 @@ chatHookCleanups.push(onBeforeMessageComposed(async (_message, context) => {
 
 chatHookCleanups.push(onBeforeSend(async (message, context) => {
   autonomousCues.reset()
+  resetHeldAutonomousCues()
   live2dStore.triggerMotion(EmotionThinkMotionName)
   currentMotion.value = { group: EmotionThinkMotionName }
   turnPacing.startTurn(context?.assistantMessageId || `turn-${Date.now()}`, context, message)
@@ -1755,6 +1860,7 @@ chatHookCleanups.push(onAssistantResponseEnd(async (message) => {
 // it prevents the fallback-speech path from speaking the partial message.
 chatHookCleanups.push(onGenerationStopped(async () => {
   autonomousCues.reset()
+  resetHeldAutonomousCues()
   turnPacing.cancel('generation-stopped')
   debug('[Stage] onGenerationStopped -> cancelling speech intent, pipeline, and playback')
   currentChatIntent?.cancel('generation-stopped')
@@ -1790,6 +1896,7 @@ watch(activeSessionId, (newSessionId, oldSessionId) => {
     currentChatIntent = null
     speechPipeline.stopAll('session-switch')
     playbackManager.stopAll('session-switch')
+    resetHeldAutonomousCues()
     nowSpeaking.value = false
     mouthOpenSize.value = 0
     try {
