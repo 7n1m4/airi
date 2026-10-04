@@ -1,11 +1,20 @@
-import { describe, expect, it, vi } from 'vitest'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getDefinedProvider, listProviders } from '../../libs/providers'
+import { useProvidersStore } from '../providers'
 import {
   JEV_AFFECT_SCHEMA,
   JEV_RERANK_CRITERIA,
   JEV_TRIAGE_SCHEMA,
+  useSystemOneStore,
 } from './system-one'
+
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: (key: string) => key,
+  }),
+}))
 
 describe('system 1 coprocessor architecture', () => {
   describe('schemas and rubrics', () => {
@@ -147,6 +156,59 @@ describe('system 1 coprocessor architecture', () => {
     it('correctly maps attachment choices to numeric deltas', () => {
       expect(attMap.increase_one).toBe(1)
       expect(attMap.zero).toBe(0)
+    })
+  })
+
+  describe('token and usage tracking', () => {
+    beforeEach(() => {
+      setActivePinia(createPinia())
+    })
+
+    it('initializes token counters at 0 and tracks cloud vs local decisions', async () => {
+      const store = useSystemOneStore()
+      const providersStore = useProvidersStore()
+
+      expect(store.systemOneCloudTokens).toBe(0)
+      expect(store.systemOneLocalTokens).toBe(0)
+      expect(store.systemOneDecisionsCount).toBe(0)
+
+      // Mock cloud provider instance
+      const mockCloudSystemOne = vi.fn().mockResolvedValue({
+        answers: { cat: { choice: 'c1' } },
+        usage: { input_tokens: 42, output_tokens: 0 },
+      })
+      vi.spyOn(providersStore, 'getProviderInstance').mockResolvedValue({
+        systemOne: mockCloudSystemOne,
+      } as any)
+
+      store.activeProvider = 'openrouter-ai'
+      await store.execute('test prompt', { cat: { type: 'choice' } })
+
+      expect(store.systemOneCloudTokens).toBe(42)
+      expect(store.systemOneLocalTokens).toBe(0)
+      expect(store.systemOneDecisionsCount).toBe(1)
+
+      // Mock local provider instance
+      const mockLocalSystemOne = vi.fn().mockResolvedValue({
+        answers: { cat: { choice: 'c1' } },
+        usage: { input_tokens: 15, output_tokens: 0 },
+      })
+      vi.spyOn(providersStore, 'getProviderInstance').mockResolvedValue({
+        systemOne: mockLocalSystemOne,
+      } as any)
+
+      store.activeProvider = 'laya-local'
+      await store.execute('test prompt 2', { cat: { type: 'choice' } })
+
+      expect(store.systemOneCloudTokens).toBe(42)
+      expect(store.systemOneLocalTokens).toBe(15)
+      expect(store.systemOneDecisionsCount).toBe(2)
+
+      // Verify resetUsageStats clears counters
+      store.resetUsageStats()
+      expect(store.systemOneCloudTokens).toBe(0)
+      expect(store.systemOneLocalTokens).toBe(0)
+      expect(store.systemOneDecisionsCount).toBe(0)
     })
   })
 })

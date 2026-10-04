@@ -141,6 +141,9 @@ export const useSystemOneStore = defineStore('system-one', () => {
   // State
   const activeProvider = useLocalStorageManualReset<string>('settings/system-one/active-provider', 'openrouter-ai')
   const activeModel = useLocalStorageManualReset<string>('settings/system-one/active-model', 'typesafe/jev-1.13')
+  const systemOneCloudTokens = useLocalStorageManualReset<number>('settings/system-one/tokens-cloud', 0)
+  const systemOneLocalTokens = useLocalStorageManualReset<number>('settings/system-one/tokens-local', 0)
+  const systemOneDecisionsCount = useLocalStorageManualReset<number>('settings/system-one/decisions-count', 0)
   const isExecuting = ref<boolean>(false)
   const lastLatencyMs = ref<number | null>(null)
   const lastError = ref<string | null>(null)
@@ -224,6 +227,17 @@ export const useSystemOneStore = defineStore('system-one', () => {
       const res = await instance.systemOne(state, questions, model)
       options?.signal?.throwIfAborted?.()
       lastLatencyMs.value = Math.round(performance.now() - t0)
+
+      const rawTokens = Number(res?.usage?.input_tokens ?? (res?.usage as any)?.prompt_tokens ?? 0)
+      const inputTokens = Number.isFinite(rawTokens) && rawTokens > 0 ? rawTokens : 0
+      systemOneDecisionsCount.value++
+      if (providerId === 'laya-local') {
+        systemOneLocalTokens.value += inputTokens
+      }
+      else {
+        systemOneCloudTokens.value += inputTokens
+      }
+
       return res
     }
     catch (err: any) {
@@ -438,9 +452,18 @@ export const useSystemOneStore = defineStore('system-one', () => {
     return results
   }
 
+  function resetUsageStats() {
+    systemOneCloudTokens.value = 0
+    systemOneLocalTokens.value = 0
+    systemOneDecisionsCount.value = 0
+  }
+
   function resetState() {
     activeProvider.reset()
     activeModel.reset()
+    systemOneCloudTokens.reset()
+    systemOneLocalTokens.reset()
+    systemOneDecisionsCount.reset()
     lastError.value = null
     lastLatencyMs.value = null
   }
@@ -448,6 +471,9 @@ export const useSystemOneStore = defineStore('system-one', () => {
   return {
     activeProvider,
     activeModel,
+    systemOneCloudTokens,
+    systemOneLocalTokens,
+    systemOneDecisionsCount,
     isExecuting,
     lastLatencyMs,
     lastError,
@@ -459,6 +485,7 @@ export const useSystemOneStore = defineStore('system-one', () => {
     runAffect,
     classifyEntities,
     evaluateReasoningSalience,
+    resetUsageStats,
     resetState,
   }
 })
