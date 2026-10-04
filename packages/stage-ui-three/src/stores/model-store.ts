@@ -393,6 +393,7 @@ export const useModelStore = defineStore('modelStore', () => {
   // Rendering quality
   const renderScale = useLocalStorage('settings/stage-ui-three/renderScale', Math.min(window.devicePixelRatio, 2))
   const multisampling = useLocalStorage('settings/stage-ui-three/multisampling', 4)
+  const maxFps = useLocalStorage('settings/stage-ui-three/max-fps', 0)
 
   // environment related setting
   const envSelect = useLocalStorage('settings/stage-ui-three/envEnabled', 'hemisphere' as 'hemisphere' | 'skyBox')
@@ -433,6 +434,7 @@ export const useModelStore = defineStore('modelStore', () => {
     eyeHeight,
     renderScale,
     multisampling,
+    maxFps,
 
     envSelect,
     skyBoxSrc,

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useModelStore } from '@proj-airi/stage-ui-three'
-import { Button, Callout, Checkbox, FieldRange } from '@proj-airi/ui'
+import { Button, Callout, Checkbox, FieldRange, SelectTab } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -31,7 +31,14 @@ const positioningStore = usePositioningStore()
 const {
   modelSize,
   followSpeed,
+  maxFps,
 } = storeToRefs(modelStore)
+
+const fpsOptions = computed(() => [
+  { value: 0, label: t('settings.vrm.fps.options.unlimited') },
+  { value: 60, label: '60' },
+  { value: 30, label: '30' },
+])
 
 const mouseTrackingEnabled = computed({
   get: () => modelStore.trackingMode === 'mouse',
@@ -77,6 +84,26 @@ onMounted(() => {
       <div :class="settingsLockClass" class="min-w-0 w-full flex flex-col gap-4 overflow-hidden p-2">
         <VRMExpressions v-if="isReadyToHydrate" :model-id="modelId" />
         <ModelCustomizerSkeleton v-else />
+      </div>
+    </Section>
+
+    <!-- === Rendering / Frame Rate === -->
+    <Section
+      :title="t('settings.vrm.fps.title')"
+      icon="i-solar:speedometer-bold-duotone"
+      :class="[
+        'rounded-xl',
+        'bg-white/80 dark:bg-black/75',
+        'backdrop-blur-lg',
+      ]"
+      size="sm"
+      :expand="true"
+    >
+      <div :class="['flex', 'items-center', 'justify-between', 'gap-2', 'p-2']">
+        <div :class="['flex', 'flex-col', 'gap-1']">
+          <span :class="['text-xs', 'text-neutral-500', 'dark:text-neutral-400']">{{ t('settings.vrm.fps.description') }}</span>
+        </div>
+        <SelectTab v-model="maxFps" :options="fpsOptions" size="sm" :class="['w-48', 'shrink-0']" />
       </div>
     </Section>
 

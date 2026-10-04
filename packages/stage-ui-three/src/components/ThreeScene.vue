@@ -109,6 +109,7 @@ const {
   skyBoxSrc,
   skyBoxIntensity,
   renderScale,
+  maxFps,
 } = storeToRefs(modelStore)
 
 const computedModelOffset = computed(() => {
@@ -575,6 +576,7 @@ function handlePointerUp(event: PointerEvent) {
         :alpha="true"
         :antialias="true"
         :dpr="effectiveRenderScale"
+        :fps-limit="maxFps > 0 ? maxFps : Infinity"
         :width="width"
         :height="height"
         :tone-mapping="ACESFilmicToneMapping"
