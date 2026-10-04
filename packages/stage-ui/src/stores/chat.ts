@@ -1913,6 +1913,7 @@ Format your output as a raw thought log.`
           }
         }
         ;(buildingMessage as any).rawContent = rawFullText
+        console.info('[Chat:rawContent]', rawFullText)
         const currentMessages = chatSession.getSessionMessages(sessionId)
         chatSession.setSessionMessages(sessionId, [...currentMessages, toRaw(buildingMessage)])
 
@@ -2238,12 +2239,14 @@ Format your output as a raw thought log.`
     const partialText = typeof partialMessage.content === 'string' ? partialMessage.content.trim() : ''
     const hadContent = partialText.length > 0 || partialMessage.slices.length > 0
     if (hadContent) {
+      const rawText = handle.getRawText()
+      console.info('[Chat:rawContent] (aborted)', rawText)
       const currentMessages = chatSession.getSessionMessages(sessionId)
       chatSession.setSessionMessages(sessionId, [
         ...currentMessages,
         // NOTICE: keep rawContent (including orchestration tokens streamed so far) for the
         // same token-retention reason as the normal persist path.
-        { ...partialMessage, rawContent: handle.getRawText(), aborted: true } as any,
+        { ...partialMessage, rawContent: rawText, aborted: true } as any,
       ])
     }
 

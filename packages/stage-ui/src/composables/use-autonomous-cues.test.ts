@@ -12,6 +12,7 @@ import {
   calculateWpmBudgetMs,
   containsExplicitActToken,
   createSentenceStrideBuffer,
+  isClassifiableSentence,
   normalizeSentenceText,
   resolveAllowedEmotionOptions,
   resolveCueToken,
@@ -73,6 +74,16 @@ describe('use-autonomous-cues', () => {
       expect(buffer.flush()).toEqual([])
     })
 
+    it('discards trailing pure punctuation or noise fragments on flush()', () => {
+      const buffer = createSentenceStrideBuffer()
+      buffer.feed('Hello world! ~')
+      expect(buffer.flush()).toEqual([])
+
+      const buffer2 = createSentenceStrideBuffer()
+      buffer2.feed('First line. ...')
+      expect(buffer2.flush()).toEqual([])
+    })
+
     it('splitSentences helper slices entire text blocks cleanly', () => {
       const sentences = splitSentences('Hello there! Yes, you. What is your name?')
       expect(sentences).toEqual([
@@ -80,6 +91,39 @@ describe('use-autonomous-cues', () => {
         'Yes, you.',
         'What is your name?',
       ])
+    })
+  })
+
+  describe('isClassifiableSentence noise filtering', () => {
+    it('rejects pure punctuation and symbols', () => {
+      expect(isClassifiableSentence('~')).toBe(false)
+      expect(isClassifiableSentence('~ ~')).toBe(false)
+      expect(isClassifiableSentence('...')).toBe(false)
+      expect(isClassifiableSentence('!??')).toBe(false)
+      expect(isClassifiableSentence('✨')).toBe(false)
+      expect(isClassifiableSentence('')).toBe(false)
+      expect(isClassifiableSentence('   ')).toBe(false)
+    })
+
+    it('rejects short fragments below the 7-character or 2-word threshold', () => {
+      expect(isClassifiableSentence('Oh!')).toBe(false)
+      expect(isClassifiableSentence('Ooh~')).toBe(false)
+      expect(isClassifiableSentence('Yes.')).toBe(false)
+      expect(isClassifiableSentence('No.')).toBe(false)
+    })
+
+    it('accepts multi-word sentences meeting length and word count criteria', () => {
+      expect(isClassifiableSentence('Rainy days are just secret cuddle days wearing a grey disguise!')).toBe(true)
+      expect(isClassifiableSentence('What do you think about them?')).toBe(true)
+      expect(isClassifiableSentence('Hello there, how are you?')).toBe(true)
+      expect(isClassifiableSentence('I agree with that.')).toBe(true)
+    })
+
+    it('accepts CJK sentences with 3 or more characters even without spaces', () => {
+      expect(isClassifiableSentence('雨の日ですね')).toBe(true)
+      expect(isClassifiableSentence('今天天气真好')).toBe(true)
+      expect(isClassifiableSentence('안녕하세요')).toBe(true)
+      expect(isClassifiableSentence('好~')).toBe(false)
     })
   })
 
@@ -359,8 +403,8 @@ describe('use-autonomous-cues', () => {
 
       // Mock execute with artificial delay exceeding budget
       vi.spyOn(systemOneStore, 'execute').mockImplementationOnce(async () => {
-        // Short sentence 'No.' has 500ms budget; delay 600ms
-        await new Promise(resolve => setTimeout(resolve, 600))
+        // Sentence 'Go now.' has 720ms budget; delay 800ms
+        await new Promise(resolve => setTimeout(resolve, 800))
         return {
           answers: {
             emotion: { choice: 'happy', confidence: 0.9 },
@@ -370,8 +414,23 @@ describe('use-autonomous-cues', () => {
 
       const { evaluateSentenceStride } = useAutonomousCues({ activeCard: card, actuateEmotion })
 
-      const record = await evaluateSentenceStride('No.')
+      const record = await evaluateSentenceStride('Go now.')
       expect(record.status).toBe('budget-dropped')
+      expect(actuateEmotion).not.toHaveBeenCalled()
+    })
+
+    it('skips evaluation and records "skipped-noise" without invoking System 1 for short fragments or punctuation', async () => {
+      const card = createMockCard({ autoCuesEnabled: true })
+      const actuateEmotion = vi.fn()
+      const systemOneStore = useSystemOneStore()
+      systemOneStore.activeProvider = 'laya-local'
+      const executeSpy = vi.spyOn(systemOneStore, 'execute')
+
+      const { evaluateSentenceStride } = useAutonomousCues({ activeCard: card, actuateEmotion })
+
+      const record = await evaluateSentenceStride('~')
+      expect(record.status).toBe('skipped-noise')
+      expect(executeSpy).not.toHaveBeenCalled()
       expect(actuateEmotion).not.toHaveBeenCalled()
     })
 

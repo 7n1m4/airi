@@ -127,6 +127,10 @@ async function handleStudioSync(payload: EmotionStudioSyncPayload) {
     }
   }
 }
+
+function handleStudioFinish() {
+  toast.success('Emotion calibration complete!')
+}
 </script>
 
 <template>
@@ -161,6 +165,7 @@ async function handleStudioSync(payload: EmotionStudioSyncPayload) {
       allow-model-switch
       @sync="handleStudioSync"
       @request-model="handleRequestModel"
+      @finish="handleStudioFinish"
     />
   </div>
 </template>

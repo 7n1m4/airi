@@ -10,6 +10,7 @@ import { ModelCustomizer } from '@proj-airi/stage-ui/components/scenarios/settin
 import {
   buildPersonaContext,
   createSentenceStrideBuffer,
+  isClassifiableSentence,
   resolveCueToken,
   splitSentences,
 } from '@proj-airi/stage-ui/composables'
@@ -273,7 +274,7 @@ interface RehearsalStrideResult {
   emotion: string
   confidence: number
   latencyMs: number
-  status: 'held' | 'applied' | 'dropped' | 'skipped-prefixed' | 'none' | 'unmapped' | 'error'
+  status: 'held' | 'applied' | 'dropped' | 'skipped-prefixed' | 'skipped-noise' | 'none' | 'unmapped' | 'error'
   error?: string
 }
 
@@ -512,6 +513,20 @@ function buildEmotionCriteria(options: string[]) {
 // Dress-rehearsal path: one solo request per completed stride, each judged on
 // its own sentence only (no sibling context) — the streaming-correct shape.
 async function dispatchSoloStride(sentence: string) {
+  if (!isClassifiableSentence(sentence)) {
+    console.info('[Rehearsal System1] Skipping noise stride:', sentence)
+    systemOneRuns.value.push({
+      sentence,
+      norm: normalizeStrideText(sentence),
+      skippedPrefixed: false,
+      emotion: '',
+      confidence: 0,
+      latencyMs: 0,
+      status: 'skipped-noise',
+    })
+    return
+  }
+
   const { name, block } = buildPersonaContext(activeCard.value)
   const { options } = await resolveRehearsalEmotionOptions(activeModelId.value)
   const state = `Rehearsal line for ${name}:\n${block}\nLine: "${sentence}"`
@@ -553,7 +568,7 @@ async function runSystemOneSimulation(text: string) {
     if (rawStrides.length === 0) {
       return
     }
-    const cleanStrides = rawStrides.map(s => s.replace(ACT_TOKEN_RE, '').trim())
+    const cleanStrides = rawStrides.map(s => s.replace(ACT_TOKEN_RE, '').trim()).filter(isClassifiableSentence)
     const { options: emotionOptions, fallback } = await resolveRehearsalEmotionOptions(activeModelId.value)
     const { name: personaName, block: personaBlock } = buildPersonaContext(activeCard.value)
 
@@ -1285,6 +1300,7 @@ function selectModel(m: typeof onSetModels.value[0]) {
               :key="activeModelId"
               :model-id="activeModelId"
               :show-insert-actions="true"
+              :local-stage="true"
               @insert-token="handleInsertToken"
               @update:visible-capabilities="handleVisibleCapabilitiesUpdate"
             />

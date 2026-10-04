@@ -73,8 +73,7 @@ const modelStore = useModelStore() // VRM
 const customVrmAnimationsStore = useCustomVrmAnimationsStore()
 
 const { activeCard, activeCardId } = storeToRefs(airiCardStore)
-const { stageEnabled, stageMateEnabled } = storeToRefs(controlStripStore)
-const isStageOpen = computed(() => Boolean(props.localStage || stageEnabled.value || stageMateEnabled.value))
+const { stageMateEnabled } = storeToRefs(controlStripStore)
 
 // Resolve Model Format
 const currentModel = computed(() => {
@@ -788,10 +787,6 @@ watch([expressionsToRender, motionsToRender], () => {
 
 // Trigger Click-to-Effectuate on Stage
 function triggerExpressionEffect(key: string) {
-  if (!isStageOpen.value) {
-    toast.error('Stage or Stage-Mate window must be open to preview expressions.')
-    return
-  }
   if (modelType.value === 'live2d') {
     live2dStore.triggerEmotion(key, 1.0)
   }
@@ -828,10 +823,6 @@ function triggerExpressionEffect(key: string) {
 }
 
 function triggerMotionEffect(key: string) {
-  if (!isStageOpen.value) {
-    toast.error('Stage or Stage-Mate window must be open to preview motions.')
-    return
-  }
   if (modelType.value === 'live2d') {
     live2dStore.triggerMotion(key)
     const base = key.split(/[\\/]/).pop() || key
@@ -935,10 +926,6 @@ function resetVfxDefaults(vfxKey: string) {
 }
 
 function triggerVfxEffect(key: string) {
-  if (!isStageOpen.value) {
-    toast.error('Stage or Stage-Mate window must be open to preview VFX effects.')
-    return
-  }
   if (modelType.value === 'vrm') {
     modelStore.triggerVfx(key, 4.0)
     modelStore.triggerEmotion(key, 1.0)

@@ -22,7 +22,10 @@ import ExpressionCurationModal from '../dialogs/ExpressionCurationModal.vue'
 
 import { useExpressionCuration } from '../../../composables/use-expression-curation'
 import { DisplayModelFormat, useDisplayModelsStore } from '../../../stores/display-models'
+import { useAiriCardStore } from '../../../stores/modules/airi-card'
 import { useConsciousnessStore } from '../../../stores/modules/consciousness'
+import { useSystemOneStore } from '../../../stores/modules/system-one'
+import { useProvidersStore } from '../../../stores/providers'
 import { useSettings } from '../../../stores/settings'
 
 export interface CueAllowlist {
@@ -86,6 +89,10 @@ const emit = defineEmits<{
 
 const settingsStore = useSettings()
 const displayModelsStore = useDisplayModelsStore()
+const airiCardStore = useAiriCardStore()
+const systemOneStore = useSystemOneStore()
+const providersStore = useProvidersStore()
+const { activeCard, activeCardId } = storeToRefs(airiCardStore)
 const { stageModelRenderer } = storeToRefs(settingsStore)
 
 const live2dStore = useLive2d()
@@ -883,11 +890,75 @@ const guideStepIndex = computed(() => guideStep.value ? GUIDE_ORDER.indexOf(guid
 const showFinishModal = ref(false)
 const finishTally = computed(() => Object.keys(buildCompiledWhitelist().emotions).length)
 
+// Autonomous Cues Recommendation Pitch on Finish
+const enableAutoCues = ref(false)
+const showProviderPicker = ref(false)
+
+const isCardAutoCuesInitiallyEnabled = computed(() => {
+  return Boolean((activeCard.value as any)?.extensions?.airi?.acting?.autoCuesEnabled)
+})
+
+const shouldShowAutoCuesPitch = computed(() => {
+  return props.finishContext !== 'onboarding' && !isCardAutoCuesInitiallyEnabled.value
+})
+
+const isOpenRouterConfigured = computed(() => {
+  return Boolean(providersStore.configuredProviders['openrouter-ai'])
+})
+
+const systemOneProviderBadge = computed(() => {
+  if (systemOneStore.activeProvider === 'laya-local') {
+    return { label: 'On-Device Laya', tone: 'emerald' as const }
+  }
+  if (systemOneStore.activeProvider === 'openrouter-ai') {
+    return { label: 'OpenRouter Jev', tone: 'sky' as const }
+  }
+  return { label: systemOneStore.activeProvider || 'Default', tone: 'neutral' as const }
+})
+
+function selectSystemOneProvider(providerId: 'laya-local' | 'openrouter-ai') {
+  systemOneStore.activeProvider = providerId
+  if (providerId === 'openrouter-ai') {
+    systemOneStore.activeModel = 'typesafe/jev-1.13'
+  }
+  else if (providerId === 'laya-local') {
+    systemOneStore.activeModel = 'tozp/laya-onnx'
+  }
+}
+
+watch(enableAutoCues, (enabled) => {
+  if (enabled && !systemOneStore.configured) {
+    // Zero-friction: auto-select on-device Laya so System-1 is immediately armed without requiring an API key
+    selectSystemOneProvider('laya-local')
+  }
+})
+
 function handleFinish() {
   showFinishModal.value = true
 }
 
-function confirmFinish() {
+async function confirmFinish() {
+  if (shouldShowAutoCuesPitch.value && enableAutoCues.value && activeCard.value && activeCardId.value) {
+    try {
+      const currentCard = activeCard.value as any
+      const extensions = JSON.parse(JSON.stringify(currentCard.extensions || {}))
+      if (!extensions.airi)
+        extensions.airi = {}
+      if (!extensions.airi.acting)
+        extensions.airi.acting = {}
+      extensions.airi.acting.autoCuesEnabled = true
+
+      await airiCardStore.updateCard(activeCardId.value, {
+        ...currentCard,
+        extensions,
+      })
+      toast.success('Autonomous Cues enabled!')
+    }
+    catch (err) {
+      console.warn('[EmotionCalibrationStudio] Failed to save autoCuesEnabled on card:', err)
+    }
+  }
+
   showFinishModal.value = false
   skipGuide()
   emit('finish')
@@ -1796,12 +1867,15 @@ onBeforeUnmount(() => {
     <DialogPortal>
       <DialogOverlay :class="['fixed inset-0 z-50 bg-black/60 backdrop-blur-sm transition-opacity']" />
       <DialogContent
-        :class="['fixed left-1/2 top-1/2 z-50 w-[92vw] max-w-sm flex flex-col items-center gap-3 border border-neutral-200 dark:border-neutral-800 rounded-2xl bg-white dark:bg-neutral-900 shadow-2xl -translate-x-1/2 -translate-y-1/2 focus:outline-none p-6 text-center']"
+        :class="[
+          'fixed left-1/2 top-1/2 z-50 w-[92vw] flex flex-col items-center gap-3 border border-neutral-200 dark:border-neutral-800 rounded-2xl bg-white dark:bg-neutral-900 shadow-2xl -translate-x-1/2 -translate-y-1/2 focus:outline-none p-6 text-center max-h-[90vh] overflow-y-auto',
+          shouldShowAutoCuesPitch ? 'max-w-md' : 'max-w-sm',
+        ]"
       >
         <img
           :src="GUIDE_CHEER"
           alt=""
-          :class="['w-28 h-28 object-contain']"
+          :class="[shouldShowAutoCuesPitch && enableAutoCues ? 'w-20 h-20' : 'w-24 h-24', 'object-contain transition-all']"
         >
         <div>
           <DialogTitle :class="['text-base font-bold text-neutral-900 dark:text-white']">
@@ -1818,6 +1892,151 @@ onBeforeUnmount(() => {
             </template>
           </p>
         </div>
+
+        <!-- Autonomous Cues Recommendation Pitch (Shown when autoCues is not yet active on the character) -->
+        <div
+          v-if="shouldShowAutoCuesPitch"
+          :class="['w-full rounded-xl border border-neutral-200/90 dark:border-neutral-800 bg-neutral-50/80 dark:bg-neutral-800/50 p-3.5 text-left flex flex-col gap-2.5 transition-all']"
+        >
+          <!-- Header with Title & Toggle -->
+          <div :class="['flex items-start justify-between gap-3']">
+            <div :class="['flex items-start gap-2.5']">
+              <div :class="['w-8 h-8 rounded-lg bg-primary-500/15 text-primary-500 flex items-center justify-center shrink-0 mt-0.5']">
+                <div :class="['i-solar:bolt-circle-bold-duotone w-4.5 h-4.5']" />
+              </div>
+              <div :class="['flex flex-col']">
+                <div :class="['flex items-center gap-1.5 flex-wrap']">
+                  <span :class="['text-xs font-semibold text-neutral-900 dark:text-white']">
+                    Autonomous Cues
+                  </span>
+                  <span :class="['px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-primary-500/15 text-primary-600 dark:text-primary-300']">
+                    Recommended
+                  </span>
+                </div>
+                <p :class="['text-[11px] text-neutral-500 dark:text-neutral-400 mt-0.5 leading-snug']">
+                  Automatically triggers expressions in real time as dialogue streams, without relying on the AI model to type markers.
+                </p>
+              </div>
+            </div>
+
+            <!-- Toggle Switch (toggle pattern per UI convention) -->
+            <label :class="['relative inline-flex items-center cursor-pointer shrink-0 mt-1']">
+              <input
+                v-model="enableAutoCues"
+                type="checkbox"
+                :class="['sr-only peer']"
+              >
+              <div :class="['w-10 h-5.5 bg-neutral-200 dark:bg-neutral-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-empty after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-primary-600']" />
+            </label>
+          </div>
+
+          <!-- Expanded System-1 Provider Choice / Status when toggled ON -->
+          <div
+            v-if="enableAutoCues"
+            :class="['pt-2.5 border-t border-neutral-200/70 dark:border-neutral-700/60 flex flex-col gap-2 transition-all']"
+          >
+            <!-- Case 1: System-1 is already configured and user is not changing engine -->
+            <div
+              v-if="systemOneStore.configured && !showProviderPicker"
+              :class="['flex items-center justify-between text-[11px] text-emerald-600 dark:text-emerald-400 font-medium bg-emerald-500/10 rounded-lg px-2.5 py-1.5']"
+            >
+              <div :class="['flex items-center gap-1.5']">
+                <div :class="['i-solar:check-circle-bold w-3.5 h-3.5']" />
+                <span>System-1 Ready ({{ systemOneProviderBadge.label }})</span>
+              </div>
+              <button
+                type="button"
+                :class="['text-[10px] text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 underline cursor-pointer']"
+                @click="showProviderPicker = true"
+              >
+                Change engine
+              </button>
+            </div>
+
+            <!-- Case 2: System-1 is unconfigured OR user clicked 'Change engine' -->
+            <div
+              v-else
+              :class="['flex flex-col gap-1.5']"
+            >
+              <div :class="['flex items-center justify-between text-[11px] font-medium text-neutral-700 dark:text-neutral-300']">
+                <span>Select classification engine:</span>
+                <button
+                  v-if="systemOneStore.configured && showProviderPicker"
+                  type="button"
+                  :class="['text-[10px] text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 cursor-pointer']"
+                  @click="showProviderPicker = false"
+                >
+                  Done
+                </button>
+                <span v-else-if="!systemOneStore.configured" :class="['text-[10px] text-amber-500']">Setup required</span>
+              </div>
+
+              <div :class="['grid grid-cols-2 gap-2']">
+                <!-- Option 1: On-Device (Laya) -->
+                <button
+                  type="button"
+                  :class="[
+                    'p-2 rounded-lg border text-left flex flex-col gap-1 transition-all cursor-pointer',
+                    systemOneStore.activeProvider === 'laya-local'
+                      ? 'border-primary-500 bg-primary-500/10 ring-1 ring-primary-500 text-neutral-900 dark:text-white'
+                      : 'border-neutral-200 dark:border-neutral-700/80 bg-white dark:bg-neutral-900 hover:border-neutral-300 dark:hover:border-neutral-600 text-neutral-600 dark:text-neutral-300',
+                  ]"
+                  @click="selectSystemOneProvider('laya-local')"
+                >
+                  <div :class="['flex items-center justify-between']">
+                    <div :class="['flex items-center gap-1.5 text-xs font-semibold']">
+                      <div :class="['i-solar:laptop-minimalistic-bold-duotone text-primary-500 w-3.5 h-3.5']" />
+                      <span>On-Device</span>
+                    </div>
+                    <div v-if="systemOneStore.activeProvider === 'laya-local'" :class="['i-solar:check-circle-bold text-primary-500 text-xs']" />
+                  </div>
+                  <span :class="['text-[10px] text-emerald-600 dark:text-emerald-400 font-medium']">
+                    100% Offline · Free
+                  </span>
+                  <span :class="['text-[9px] text-neutral-400 leading-tight']">
+                    No API key needed
+                  </span>
+                </button>
+
+                <!-- Option 2: Cloud (OpenRouter) -->
+                <button
+                  type="button"
+                  :class="[
+                    'p-2 rounded-lg border text-left flex flex-col gap-1 transition-all cursor-pointer',
+                    systemOneStore.activeProvider === 'openrouter-ai'
+                      ? 'border-primary-500 bg-primary-500/10 ring-1 ring-primary-500 text-neutral-900 dark:text-white'
+                      : 'border-neutral-200 dark:border-neutral-700/80 bg-white dark:bg-neutral-900 hover:border-neutral-300 dark:hover:border-neutral-600 text-neutral-600 dark:text-neutral-300',
+                  ]"
+                  @click="selectSystemOneProvider('openrouter-ai')"
+                >
+                  <div :class="['flex items-center justify-between']">
+                    <div :class="['flex items-center gap-1.5 text-xs font-semibold']">
+                      <div :class="['i-solar:cloud-bold-duotone text-primary-500 w-3.5 h-3.5']" />
+                      <span>Cloud Jev</span>
+                    </div>
+                    <div v-if="systemOneStore.activeProvider === 'openrouter-ai'" :class="['i-solar:check-circle-bold text-primary-500 text-xs']" />
+                  </div>
+                  <span :class="['text-[10px] font-medium', isOpenRouterConfigured ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500']">
+                    {{ isOpenRouterConfigured ? 'Key Configured' : 'Needs Key' }}
+                  </span>
+                  <span :class="['text-[9px] text-neutral-400 leading-tight']">
+                    Via OpenRouter API
+                  </span>
+                </button>
+              </div>
+
+              <!-- Helper note if OpenRouter was selected but has no key -->
+              <p
+                v-if="systemOneStore.activeProvider === 'openrouter-ai' && !isOpenRouterConfigured"
+                :class="['text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5']"
+              >
+                <span :class="['i-solar:info-circle-bold w-3 h-3 shrink-0']" />
+                <span>You can add an OpenRouter key in Settings → Providers.</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
         <button
           type="button"
           :class="['w-full py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-sm font-semibold shadow-md shadow-primary-600/30 transition-all cursor-pointer']"

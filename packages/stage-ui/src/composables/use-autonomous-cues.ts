@@ -24,6 +24,7 @@ export type AutonomousCueRunStatus
   = | 'fired'
     | 'none'
     | 'skipped-prefixed'
+    | 'skipped-noise'
     | 'unmapped'
     | 'budget-dropped'
     | 'disabled'
@@ -55,6 +56,37 @@ export interface AutonomousCueContext {
  */
 export function containsExplicitActToken(text: string): boolean {
   return ACT_TOKEN_PATTERN.test(text)
+}
+
+/**
+ * Detects whether a sentence stride contains meaningful speech text worthy of System 1 evaluation.
+ * Filters out isolated punctuation (e.g. "~", "...", "!"), single short interjections, and noise fragments.
+ */
+export function isClassifiableSentence(text: string): boolean {
+  const clean = normalizeSentenceText(text).trim()
+  if (!clean) {
+    return false
+  }
+
+  // Must contain at least one letter or digit
+  if (!/[\p{L}\p{N}]/u.test(clean)) {
+    return false
+  }
+
+  // CJK scripts do not use spaces between words; 3+ CJK characters convey full phrases
+  const hasCjk = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(clean)
+  if (hasCjk) {
+    const cjkChars = clean.replace(/[^\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/gu, '')
+    return cjkChars.length >= 3
+  }
+
+  // For Latin / non-CJK scripts, require at least 7 characters total AND at least 2 alphanumeric words
+  if (clean.length < 7) {
+    return false
+  }
+
+  const words = clean.split(/\s+/).filter(w => /[\p{L}\p{N}]/u.test(w))
+  return words.length >= 2
 }
 
 /**
@@ -107,7 +139,7 @@ export function createSentenceStrideBuffer() {
   function flush(): string[] {
     const remaining = buffer.trim()
     buffer = ''
-    if (remaining.length > 0) {
+    if (remaining.length > 0 && isClassifiableSentence(remaining)) {
       return [remaining]
     }
     return []
@@ -292,6 +324,21 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
         latencyMs: 0,
         budgetMs,
         status: 'skipped-prefixed',
+      }
+      activeRuns.value.push(record)
+      return record
+    }
+
+    // Check noise filter: skip if sentence is not classifiable speech text
+    if (!isClassifiableSentence(cleanSentence)) {
+      const record: AutonomousCueRunRecord = {
+        sentence: cleanSentence,
+        token: '',
+        rawKey: null,
+        confidence: 0,
+        latencyMs: 0,
+        budgetMs,
+        status: 'skipped-noise',
       }
       activeRuns.value.push(record)
       return record
