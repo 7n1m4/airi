@@ -138,6 +138,41 @@ async function clearSingleOpfsModelCache(modelUrl: string): Promise<void> {
   }
 }
 
+/**
+ * Whether the single-slot Web-RWKV OPFS cache currently holds a checkpoint.
+ *
+ * The worker evicts the previous file whenever a new model finalizes, so the
+ * slot reflects "whatever was loaded last" — this is what the generic
+ * `web-rwkv` widget row reports instead of tracking any one model URL.
+ */
+export async function isWebRwkvSlotOccupied(): Promise<boolean> {
+  if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
+    return false
+  try {
+    const root = await navigator.storage.getDirectory()
+    let dir: FileSystemDirectoryHandle
+    try {
+      dir = await root.getDirectoryHandle(OPFS_DIR_NAME, { create: false })
+    }
+    catch {
+      return false
+    }
+    for await (const entry of dir.values()) {
+      if (entry.kind === 'file' && (entry.name.endsWith('.f16cache') || entry.name.endsWith('.prefabcache')))
+        return true
+    }
+    return false
+  }
+  catch {
+    return false
+  }
+}
+
+/** Clear the single-slot Web-RWKV OPFS cache (whatever checkpoint it holds). */
+export async function clearWebRwkvCache(): Promise<void> {
+  await clearOpfsCache()
+}
+
 async function isOpfsModelCached(modelUrl: string): Promise<boolean> {
   if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
     return false
@@ -151,13 +186,18 @@ async function isOpfsModelCached(modelUrl: string): Promise<boolean> {
       return false
     }
     const key = await cacheKeyForModel(modelUrl)
-    const fileName = `${key}.f16cache`
     try {
-      await dir.getFileHandle(fileName, { create: false })
+      await dir.getFileHandle(`${key}.f16cache`, { create: false })
       return true
     }
     catch {
-      return false
+      try {
+        await dir.getFileHandle(`${key}.prefabcache`, { create: false })
+        return true
+      }
+      catch {
+        return false
+      }
     }
   }
   catch {
@@ -256,6 +296,10 @@ export async function clearSingleModelCache(modelId: string): Promise<void> {
   }
   if (modelId.includes('laya')) {
     await clearLayaCache()
+    return
+  }
+  if (modelId === 'web-rwkv') {
+    await clearWebRwkvCache()
     return
   }
   if (modelId.startsWith('http')) {
@@ -591,6 +635,9 @@ export async function isModelCached(modelId: string): Promise<boolean> {
   }
   if (modelId.includes('laya')) {
     return isLayaModelCached()
+  }
+  if (modelId === 'web-rwkv') {
+    return isWebRwkvSlotOccupied()
   }
   if (modelId.startsWith('http')) {
     return isOpfsModelCached(modelId)

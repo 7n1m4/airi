@@ -3,7 +3,7 @@ import type { ChatProvider } from '@xsai-ext/providers/utils'
 import type { WebRwkvGenerateRequest } from '../../../libs/inference/contract'
 import type { ChatMessage } from './format'
 
-import { getWebRwkvAdapter } from '../../../libs/inference/adapters/web-rwkv'
+import { getWebRwkvAdapter, resolveWebRwkvQuantization } from '../../../libs/inference/adapters/web-rwkv'
 import { DEFAULT_WEB_RWKV_MODEL } from '../../../libs/inference/constants'
 import { buildRwkvPrompt, createThinkPrefixStripper, openAIChatChunk, openAIChatCompletion, SSE_DONE } from './format'
 
@@ -76,11 +76,13 @@ export function createWebRwkvChatProvider(config: WebRwkvProviderConfig = {}): C
         const adapter = await getWebRwkvAdapter()
         // Load-on-demand and reload when the selected model/vocab/quantization differs from
         // what's loaded (the adapter is a singleton shared across requests).
+        // G1 catalog models resolve quant to FP16 (quant kernels garble G1 output).
+        const effectiveQuantization = resolveWebRwkvQuantization(modelUrl, quantization)
         if (adapter.state !== 'ready'
           || adapter.manifest?.model !== modelUrl
           || adapter.manifest?.vocab !== (vocabUrl ?? '')
-          || adapter.manifest?.quantization !== quantization) {
-          await adapter.loadModel(modelUrl, vocabUrl, { quantization, signal: init?.signal ?? undefined })
+          || adapter.manifest?.quantization !== effectiveQuantization) {
+          await adapter.loadModel(modelUrl, vocabUrl, { quantization: effectiveQuantization, signal: init?.signal ?? undefined })
         }
 
         const request: WebRwkvGenerateRequest = {

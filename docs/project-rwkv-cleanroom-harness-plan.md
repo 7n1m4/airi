@@ -168,6 +168,20 @@ graph TD
 - **2026-08-24 Round-2 results (v2 prompt + v2 extractor + 2400-token budget, core ladder only, run `…T18-59-23-300Z`)**: **No improvement.** A-chat (0.9): single `setup()` ✓ (v2 rule worked) but the model spent all 2400 tokens inventing named brushes (`"snowy"`, `"shadow"`, `"marker88"`, plus a hallucinated 4th `false` arg to `brush.set`) — truncated before any geometry → true blank. A-completion (0.7): EOS after 56 tokens (`brush.set('2B','peach hibiscus')` — scene string as color) → true blank. **Round-1 pattern generalizes: the 1.5B g1d base loops on configuration instead of painting geometry; only round-1 attempt-1 (v1 prompt, temp 0.9) broke through on attempt-luck.** Verdict for the caption: base g1d-1.5b is at the *threshold* of viability — art is possible but not reliable; M2 (S0 trained on a verified-sketch corpus or small code-tuned checkpoint) remains the path to production quality.
 - **Smoke-track deliverable (kept)**: `reports/07-creative-code-canvas-2026-08-24T18-06-12-515Z/attempt-01-A-chat/reextract.png` — model-generated, 42% ink / 205 color buckets — awaiting your aesthetic review.
 
+---
+
+### Phase 8: 1.5B G1 Quantization Cleanroom Matrix & The Prefab Resolution — ✅ PASSED
+* **Canonical Design Doc**: Documented in [`docs/design-web-rwkv-quantization-architecture.md`](./design-web-rwkv-quantization-architecture.md).
+* **Investigation Focus**: Resolve the 1.5B G1 quantization degradation (multilingual salad / repetitive token loops on `Int8`/`NF4`) in `@cryscan/web-rwkv-wasm@0.10.20`.
+* **Empirical Findings**:
+  - **The WGSL Kernels Are Not Broken**: Both native Rust (`web-rwkv` 0.10.20) and browser `@cryscan/web-rwkv-wasm` execute `Int8`, `NF4`, and `SF4` with 100% coherence on Apple Silicon Metal.
+  - **The Failure Point**: The in-browser `from_reader` compute shader path (`quantize_mat_int8.wgsl`, `quantize_mat_nf4.wgsl`) corrupts weights during in-situ browser quantization due to synchronization / workgroup race conditions.
+  - **The Solution (`from_prefab`)**: Pre-quantizing models offline into CBOR `.prefab` files and deserializing via `Session.from_prefab()` completely bypasses in-browser shader quantization.
+  - **Measured Performance**:
+    - `from_prefab` Int8: **5.8s build**, **1.88 GB** (-34% bandwidth/VRAM), fluent coherent English.
+    - `from_prefab` NF4: **7.0s build**, **1.28 GB** (-55% bandwidth/VRAM), native `<think>` reasoning block.
+* **Architecture Directive**: Deliver quantized RWKV models as pre-baked `.prefab` files to achieve constant-VRAM, 5s boot times, and 50%+ download bandwidth savings without degraded output.
+
 ## Relevant Skills
 
 - [[airi-local-inference-engines]]

@@ -81,6 +81,7 @@ In Electron or multi-tab web, each BrowserWindow or tab possesses an isolated V8
 - **WebGPU Memory Leaks**: Failing to call `.destroy()` on `GPUBuffer` or ONNX `InferenceSession` objects during worker reload causes VRAM exhaustion and browser tab crashes.
 - **Worker Script Bundling**: Worker scripts must be bundled with Vite using `new Worker(new URL('...', import.meta.url), { type: 'module' })` to support cross-origin worker loading.
 - **Transformers.js AutoModel Class Gap**: `AutoModelForVision2Seq` in `@huggingface/transformers` does not support `moondream1` architecture directly (`Unsupported model type: moondream1`). It must be instantiated via direct class load: `Moondream1ForConditionalGeneration.from_pretrained(modelId, { dtype: { embed_tokens: 'fp32', vision_encoder: 'q8', decoder_model_merged: 'q4' } })`.
+- **Web-RWKV In-Browser Quantization (`from_reader` vs `from_prefab`)**: In-browser on-the-fly quantization (`quantize_mat_int8.wgsl`, `quantize_mat_nf4.wgsl` via `Session.from_reader()`) corrupts weights due to WebGPU buffer synchronization race conditions. The WGSL matrix multiplication kernels are healthy; deliver quantized models via pre-quantized CBOR `.prefab` files (`Session.from_prefab()`), saving 38%–58% download size and VRAM with 5s load times. See `docs/design-web-rwkv-quantization-architecture.md`.
 
 ## 5. Verification Workflows
 
@@ -92,6 +93,7 @@ In Electron or multi-tab web, each BrowserWindow or tab possesses an isolated V8
 
 - [docs/design-local-whisper-stt.md](docs/design-local-whisper-stt.md) — Local Whisper Speech-to-Text (STT) architecture and unified WebGPU design.
 - [docs/proposal-built-in-llm-webgpu.md](docs/proposal-built-in-llm-webgpu.md) — WebGPU local inference harness specification.
+- [docs/design-web-rwkv-quantization-architecture.md](docs/design-web-rwkv-quantization-architecture.md) — Web-RWKV local quantization architecture, empirical cleanroom matrix, and prefab distribution pipeline.
 - [docs/design-attention-ecology-screen-watching.md](docs/design-attention-ecology-screen-watching.md) — Attention ecology & screen watching local WebGPU / System-1 salience guard.
 - [docs/proposal-toggle4-rework-and-rwkv-harness.md](docs/proposal-toggle4-rework-and-rwkv-harness.md) — Toggle4 rework and RWKV harness proposal.
 - [docs/project-rwkv-kimi.md](docs/project-rwkv-kimi.md) — RWKV Kimi project.
@@ -102,4 +104,4 @@ In Electron or multi-tab web, each BrowserWindow or tab possesses an isolated V8
 
 ## Related Skills & References
 
-- **Key Documents**: [[design-local-whisper-stt]], [[proposal-built-in-llm-webgpu]], [[design-attention-ecology-screen-watching]], [[proposal-toggle4-rework-and-rwkv-harness]], [[project-rwkv-kimi]], [[project-rwkv-cleanroom-harness-plan]], [[proposal-moss-tts-nano-provider-unified-webgpu]], [[research-moss-tts-nano-report]], [[design-vram-eviction-and-standby-hibernation]]
+- **Key Documents**: [[design-local-whisper-stt]], [[proposal-built-in-llm-webgpu]], [[design-web-rwkv-quantization-architecture]], [[design-attention-ecology-screen-watching]], [[proposal-toggle4-rework-and-rwkv-harness]], [[project-rwkv-kimi]], [[project-rwkv-cleanroom-harness-plan]], [[proposal-moss-tts-nano-provider-unified-webgpu]], [[research-moss-tts-nano-report]], [[design-vram-eviction-and-standby-hibernation]]

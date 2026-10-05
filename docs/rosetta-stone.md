@@ -216,6 +216,14 @@ interface ProviderMetadata {
 - **Provider store**: `packages/stage-ui/src/stores/providers/moondream/index.ts` — `createMoondreamChatProvider` implementing `ChatProvider` with `/chat/completions` interception.
 - **Provider page**: `packages/stage-pages/src/pages/settings/providers/chat/moondream-local.vue`
 
+### Local LLM Reference (Web-RWKV)
+- **Worker**: `packages/stage-ui/src/workers/web-rwkv/worker.ts` — WebGPU RNN executor using `@cryscan/web-rwkv-wasm`.
+- **Adapter**: `packages/stage-ui/src/libs/inference/adapters/web-rwkv.ts` — manages OPFS cache, VRAM estimates, load tokens, and quantization resolution.
+- **Provider store**: `packages/stage-ui/src/stores/providers/web-rwkv/index.ts` — `createWebRwkvChatProvider` with single-slot model caching and streaming chat loops.
+- **Provider page**: `packages/stage-pages/src/pages/settings/providers/chat/web-rwkv.vue`
+- **Domain skill**: [`.agents/skills/airi-rwkv-webgpu-engine/SKILL.md`](../.agents/skills/airi-rwkv-webgpu-engine/SKILL.md)
+- **Quantization Architecture**: See [`docs/design-web-rwkv-quantization-architecture.md`](./design-web-rwkv-quantization-architecture.md). Always use `Session.from_prefab` for quantized models (Int8/NF4); `Session.from_reader` in-browser shader quantization corrupts weights.
+
 ---
 
 ## 7. Module System
@@ -620,6 +628,12 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 - **Presence Gate (`pauseWhenAfk`)**: The only presence gate on heartbeats is to prevent speaking to an empty desk (`idleTimeSec >= afkThresholdMinutes`, default 5m). When the user is away, heartbeats pause to conserve tokens and avoid talking to an empty room.
 - **The Inverted Inactivity Antipattern (Deadlock)**: Never require the user to be inactive/idle (`idleTimeSec >= interval`) to trigger a heartbeat. Requiring continuous inactivity prevents the AI from speaking while the user is using the PC, and mathematically deadlocks with `pauseWhenAfk` whenever `intervalMinutes > afkThresholdMinutes`.
 - **Dream State Is The Strict Inverse**: Background memory consolidation (`dreamState`) strictly requires the user to BE away (`strictAfkGating: true`, `idleTimeSec >= afkThresholdMinutes`). Never conflate Dream State's idle requirement with Heartbeats. Pure gating logic is centralized in `evaluateHeartbeatGating` (`proactivity-telemetry.ts`) and tested under `packages/stage-ui/src/stores/proactivity.test.ts`.
+
+### Web-RWKV In-Browser Quantization (`from_reader` vs `from_prefab`)
+
+- **The "Broken Kernel" Fallacy**: When testing quantized RWKV models in-browser, `Int8` and `NF4` via `Session.from_reader()` emit corrupted token salad. Do NOT conclude the WGSL quantization matrix-vector kernels are broken. The kernels run identically and cleanly in native Rust and in the browser.
+- **Root Cause**: The compute shader quantization pass (`quantize_mat_int8.wgsl` / `quantize_mat_nf4.wgsl`) executed on-the-fly during `Session.from_reader()` suffers from buffer synchronization / workgroup race issues inside browser WebGPU, corrupting weights during quantization.
+- **Canonical Remedy**: Deliver quantized models as pre-baked `.prefab` CBOR binaries loaded via `Session.from_prefab(bytes, SessionType.Chat)`. This bypasses in-browser quantization entirely, loads in ~5.8s, saves 38%–58% in download size and VRAM, and yields 100% coherent English with native `<think>` reasoning. Details in [`docs/design-web-rwkv-quantization-architecture.md`](./design-web-rwkv-quantization-architecture.md).
 
 ---
 

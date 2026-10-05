@@ -103,6 +103,10 @@ export interface WebRwkvModelInfo {
   downloadBytes: number
   vramMB: number
   layers: number
+  quantUrls?: {
+    nf4?: string
+    int8?: string
+  }
 }
 
 /**
@@ -131,6 +135,10 @@ export const WEB_RWKV_MODELS: readonly WebRwkvModelInfo[] = [
     downloadBytes: 902 * 1024 * 1024,
     vramMB: 1200,
     layers: 24,
+    quantUrls: {
+      nf4: 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/rwkv7-g1d-0.4b-nf4.prefab',
+      int8: 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/rwkv7-g1d-0.4b-int8.prefab',
+    },
   },
   {
     id: 'https://huggingface.co/DanielClough/rwkv7-g1-safetensors/resolve/main/rwkv7-g1d-1.5b-20260212-ctx8192.safetensors',
@@ -141,6 +149,10 @@ export const WEB_RWKV_MODELS: readonly WebRwkvModelInfo[] = [
     downloadBytes: 3055 * 1024 * 1024,
     vramMB: 3800,
     layers: 24,
+    quantUrls: {
+      nf4: 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/rwkv7-g1d-1.5b-nf4.prefab',
+      int8: 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/rwkv7-g1d-1.5b-int8.prefab',
+    },
   },
   {
     id: 'https://huggingface.co/DanielClough/rwkv7-g1-safetensors/resolve/main/rwkv7-g1d-2.9b-20260131-ctx8192.safetensors',

@@ -177,6 +177,11 @@ The catalog contains 70 discoverable skills. Desktop chatbox and interaction pip
 - **Key Paths**: `packages/stage-ui/src/libs/pacing/`, `packages/stage-ui/src/composables/use-turn-pacing.ts`.
 - **Content**: Turn/attempt accounting, category selection, prewarm/cache, bounded fallback synthesis, cancellation and answer handoff. Separates implemented policy from proposal text.
 
+#### 2.15 `airi-rwkv-webgpu-engine`
+- **Target Domain**: RWKV-7 G1 RNN model execution, `@cryscan/web-rwkv-wasm` runtime, `.prefab` CBOR quantization pipeline, offline weight conversion, OPFS caching, and cleanroom verification harness.
+- **Key Paths**: `packages/stage-ui/src/workers/web-rwkv/`, `packages/stage-ui/src/libs/inference/adapters/web-rwkv.ts`, `packages/stage-pages/src/pages/settings/providers/chat/web-rwkv.vue`, `scripts/tests/rwkv-harness/`, `docs/design-web-rwkv-quantization-architecture.md`, `docs/project-rwkv-cleanroom-harness-plan.md`.
+- **Content**: RWKV-7 G1 architecture, `Session.from_prefab` instant boot and zero-degradation offline CBOR quantization, single-slot OPFS model cache, Hugging Face prefab distribution (`dasilva333/rwkv7-g1-webgpu-prefabs`), and maintenance tools (`convert_safetensors.py`, `bake-prefab.sh`, `verify-prefab.mjs`).
+
 ---
 
 ### 🟣 Phase 3: Module Systems, Cognition & Memory
@@ -431,11 +436,11 @@ The catalog contains 70 discoverable skills. Desktop chatbox and interaction pip
 | Group | Discoverable skills |
 | --- | ---: |
 | Core plumbing and infrastructure | 9 |
-| Character, stage, motion and sensing | 14 |
+| Character, stage, motion and sensing | 15 |
 | Modules, cognition and memory | 23 |
 | Operational SOPs and research | 8 |
 | UI surfaces and adjacent services | 16 |
-| **Total** | **70** |
+| **Total** | **71** |
 
 The counts follow the catalog groups above, not a separate historical rollout table.
 

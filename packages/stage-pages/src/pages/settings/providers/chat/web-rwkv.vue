@@ -90,6 +90,10 @@ function selectModel(m: WebRwkvModelInfo) {
   showCustomModelInput.value = false
 }
 
+function selectQuantization(q: 'none' | 'nf4' | 'int8') {
+  quantization.value = q
+}
+
 function handleCustomModelChange(val: string) {
   customModelInput.value = val
   if (val.trim()) {
@@ -480,7 +484,7 @@ function copyOutput() {
                         ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/20 font-bold text-primary-700 dark:text-primary-300'
                         : 'border-neutral-200 dark:border-neutral-800 bg-white/40 dark:bg-neutral-900/40 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300',
                     ]"
-                    @click="quantization = 'none'"
+                    @click="selectQuantization('none')"
                   >
                     <div class="text-xs">
                       FP16
@@ -497,7 +501,7 @@ function copyOutput() {
                         ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/20 font-bold text-primary-700 dark:text-primary-300'
                         : 'border-neutral-200 dark:border-neutral-800 bg-white/40 dark:bg-neutral-900/40 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300',
                     ]"
-                    @click="quantization = 'nf4'"
+                    @click="selectQuantization('nf4')"
                   >
                     <div class="text-xs">
                       NF4
@@ -514,7 +518,7 @@ function copyOutput() {
                         ? 'border-primary-500 bg-primary-50/50 dark:bg-primary-950/20 font-bold text-primary-700 dark:text-primary-300'
                         : 'border-neutral-200 dark:border-neutral-800 bg-white/40 dark:bg-neutral-900/40 text-neutral-600 dark:text-neutral-400 hover:border-neutral-300',
                     ]"
-                    @click="quantization = 'int8'"
+                    @click="selectQuantization('int8')"
                   >
                     <div class="text-xs">
                       Int8
@@ -524,8 +528,8 @@ function copyOutput() {
                     </div>
                   </div>
                 </div>
-                <p class="text-[11px] text-neutral-400 leading-tight">
-                  NF4 (4-Bit Normalized Float) slashes memory consumption, allowing 1.5B and 2.9B to run seamlessly on 8GB machines.
+                <p class="text-[11px] text-neutral-500 leading-tight dark:text-neutral-400">
+                  NF4 / Int8 precision modes for catalog models load pre-quantized WebGPU prefabs instantly (~5.8s load, 50%+ download & VRAM savings).
                 </p>
               </div>
 

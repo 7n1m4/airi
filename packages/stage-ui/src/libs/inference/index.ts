@@ -14,6 +14,7 @@ export {
   clearNeedleCache,
   clearSingleModelCache,
   clearWebLlmCache,
+  clearWebRwkvCache,
   evictOtherWhisperModels,
   formatBytes,
   getLayaCacheSize,
@@ -24,6 +25,7 @@ export {
   isModelCached,
   isNeedleModelCached,
   isWebLlmModelCached,
+  isWebRwkvSlotOccupied,
   LAYA_CACHE_NAME,
 } from './cache-utils'
 export {
