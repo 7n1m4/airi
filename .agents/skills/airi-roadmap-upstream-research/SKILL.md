@@ -74,6 +74,18 @@ Maintain an active rolling monitor of high-impact upstream PRs during scheduled 
   - **Author**: `@luoling8192` | **State**: Open
   - **Focus**: Window-local character selection, conversation scoping, standalone card profile page, shared CharacterCard component.
   - **Monitoring Objective**: Track upstream maintainer implementation of window-local character selection and conversation scoping. Evaluate whether extracting a shared `CharacterCard` component offers value for our decoupled Control Strip and stage surfaces.
+- **PR #2541: `Telltworose/feat/drop in plugins` (MCP-first tool architecture)**
+  - **Author**: `@telltworose` | **State**: Open (Changes Requested)
+  - **Focus**: Community plugin loader. Author pivoted 180° away from in-process Node execution to MCP stdio child processes and card-level tool scoping (`extensions.airi.tools.allowed`) after `@dasilva333`'s comment.
+  - **Monitoring Objective**: Track author rebase against `main` and explanation to maintainer `@0xSelenicDove` regarding deleted loader files and merge conflicts.
+- **PR #2290: `feat(server): stream official ASR over WebSocket`**
+  - **Author**: `@luoling8192` | **State**: Open (Changes Requested)
+  - **Focus**: Upstream official ASR streaming transport. User `@dasilva333` advised OpenAI-compatible HTTP SSE (`stream: true`) to avoid per-utterance WS handshake latency and proxy friction.
+  - **Monitoring Objective**: Track author rebase and backend transport/billing accounting decisions.
+- **PR #2120: `refactor(stage-pages): rebuild AIRI Card editor`**
+  - **Author**: `@luoling8192` | **State**: Open (Changes Requested)
+  - **Focus**: Character card editor overhaul in `stage-pages`. User `@dasilva333` shared dedicated page/route architecture from fork.
+  - **Monitoring Objective**: Track dirty-draft browser unload protection and component decoupling.
 
 ## Upstream Radar vs. Cherry-Pick Triage SOP
 

@@ -58,6 +58,21 @@ const WATCHED_PRS = [
     title: 'refactor(stage-ui): bind conversations to window-local characters',
     focus: 'Window-local character selection, conversation scoping, standalone card profile page, shared CharacterCard',
   },
+  {
+    number: 2541,
+    title: 'feat(plugins): drop in plugins and MCP-first tool architecture',
+    focus: 'MCP stdio child processes & card-level tool scoping; track author rebase and explanation to maintainers regarding deleted in-process loader',
+  },
+  {
+    number: 2290,
+    title: 'feat(server): stream official ASR over WebSocket',
+    focus: 'Official ASR streaming over WebSocket vs OpenAI-compatible HTTP SSE; track rebase and backend transport decisions',
+  },
+  {
+    number: 2120,
+    title: 'refactor(stage-pages): rebuild AIRI Card editor',
+    focus: 'Card editor overhaul in stage-pages, dirty draft protection, route vs modal lifecycles',
+  },
 ]
 
 // 2. Subsystem Definitions & Selective-Sync Classification
