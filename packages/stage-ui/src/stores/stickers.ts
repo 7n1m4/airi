@@ -6,6 +6,7 @@ import { computed, ref } from 'vue'
 
 import * as Pinia from 'pinia'
 
+import { chatStickers } from '../assets/stickers'
 import { useAiriCardStore } from './modules/airi-card'
 
 export interface StickerMetadata {
@@ -61,6 +62,11 @@ export const useStickersStore = Pinia.defineStore('stickers', () => {
    * Get target sticker image as as Object URL
    */
   async function getStickerUrl(id: string): Promise<string | undefined> {
+    const builtin = chatStickers.find(s => s.id === id)
+    if (builtin) {
+      return builtin.src
+    }
+
     if (objectUrlCache.has(id)) {
       return objectUrlCache.get(id)
     }
@@ -137,9 +143,15 @@ export const useStickersStore = Pinia.defineStore('stickers', () => {
    * Spawn a sticker instance at coordinates (or center)
    */
   function spawnSticker(idOrLabel: string, options: { x?: number, y?: number, duration?: number } = {}) {
-    const sticker = currentLibrary.value.find(m => m.id === idOrLabel || m.label === idOrLabel)
+    const builtin = chatStickers.find(s => s.id === idOrLabel || s.description.toLowerCase() === idOrLabel.toLowerCase())
+    const sticker = builtin
+      ? { id: builtin.id, label: builtin.description }
+      : currentLibrary.value.find(m => m.id === idOrLabel || m.label === idOrLabel)
     if (!sticker) {
-      const errorMsg = `Sticker label "${idOrLabel}" not found in your library. Available labels: ${currentLibrary.value.map(s => s.label).join(', ')}`
+      const availableBuiltin = chatStickers.map(s => s.id).join(', ')
+      const availableCustom = currentLibrary.value.map(s => s.label).join(', ')
+      const allAvailable = [availableBuiltin, availableCustom].filter(Boolean).join(', ')
+      const errorMsg = `Sticker "${idOrLabel}" not found. Available stickers: ${allAvailable}`
       console.warn(`[StickersStore] ${errorMsg}`)
       return errorMsg
     }
@@ -232,5 +244,6 @@ export const useStickersStore = Pinia.defineStore('stickers', () => {
     updatePlacement,
     clearPlacements,
     clearLibrary,
+    chatStickers,
   }
 })

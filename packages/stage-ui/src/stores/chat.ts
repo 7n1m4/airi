@@ -74,6 +74,7 @@ import { useProactivityStore } from './proactivity'
 import { useProvidersStore } from './providers'
 import { useSettingsChat } from './settings/chat'
 import { useSettingsUserProfile } from './settings/user-profile'
+import { useStickersStore } from './stickers'
 
 export interface SendOptions {
   model?: string
@@ -1161,6 +1162,22 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
             const bridgeResult = await tryBridgeMarker(special)
             if (bridgeResult.bridged) {
               needsBridgedFollowUp = true
+              return
+            }
+
+            if (/^<\|STICKER\b/i.test(special)) {
+              const id = /^<\|STICKER\s+([\w-]+)\s*\|>$/i.exec(special)?.[1]
+              if (id) {
+                if (!buildingMessage.slices.some(s => s.type === 'sticker')) {
+                  buildingMessage.slices.push({ type: 'sticker', stickerId: id })
+                  updateUI()
+                }
+                try {
+                  const stickersStore = useStickersStore()
+                  stickersStore.spawnSticker(id)
+                }
+                catch {}
+              }
               return
             }
 

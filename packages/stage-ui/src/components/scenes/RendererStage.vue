@@ -20,6 +20,7 @@ import { useDatingSimStore } from '../../stores/dating-sim'
 import { useAiriCardStore } from '../../stores/modules'
 import { useSettings } from '../../stores/settings'
 import { useVHackStore } from '../../stores/vhack'
+import { StickerStack } from '../scenarios/stickers'
 
 const props = withDefaults(defineProps<{
   paused?: boolean
@@ -571,6 +572,7 @@ defineExpose({
       :scene-ref="stageModelRenderer === 'vrm' ? vrmViewerRef : stageModelRenderer === 'mmd' ? mmdViewerRef : spineViewerRef"
     />
     <DatingSimOverlay />
+    <StickerStack />
     <!-- Head-Tethered Radial Menu — 5 base stage controls floating above avatar across all 4 model types -->
     <HeadTetheredRadialMenu
       v-if="radialMenuEnabled"

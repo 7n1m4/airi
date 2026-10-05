@@ -100,6 +100,7 @@ function createLlmMarkerParser(options?: MarkerParserOptions) {
     if (
       upperPrefix.startsWith('<|ACT')
       || upperPrefix.startsWith('<|DELAY')
+      || upperPrefix.startsWith('<|STICKER')
       || upperPrefix.startsWith('<|LLM_')
     ) {
       return legacyCloseTagIndex

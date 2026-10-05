@@ -26,6 +26,7 @@ import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
 import ActingSubTabPacingPlayground from './acting/ActingSubTabPacingPlayground.vue'
+import ActingSubTabStickers from './acting/ActingSubTabStickers.vue'
 
 import { useActingCapabilities } from '../../composables/useActingCapabilities'
 
@@ -279,12 +280,13 @@ const pacingMaxSynthesisBudgetMs = defineModel<number>('pacingMaxSynthesisBudget
 const pacingProfile = defineModel<string>('pacingProfile', { default: 'balanced' })
 const pacingExperimentalOrganicPivots = defineModel<boolean>('pacingExperimentalOrganicPivots', { default: false })
 
-// Sub-Tab Navigation (Consolidated 4 Hubs)
-type ActingSubTabId = 'expressions' | 'speech' | 'pacing' | 'playground'
+// Sub-Tab Navigation (Consolidated 5 Hubs)
+type ActingSubTabId = 'expressions' | 'stickers' | 'speech' | 'pacing' | 'playground'
 const activeSubTab = ref<ActingSubTabId>('expressions')
 
 const subTabs = [
   { id: 'expressions' as const, label: 'Cues', icon: 'i-solar:smile-circle-bold-duotone', desc: 'Avatar gestures, ACT directives, autonomous cues & kinetic loops' },
+  { id: 'stickers' as const, label: 'Stickers', icon: 'i-solar:sticker-smile-circle-bold-duotone', desc: 'Chibi reaction stickers, in-chat visual slices & desktop stage slappers' },
   { id: 'speech' as const, label: 'Voice', icon: 'i-solar:soundwave-bold-duotone', desc: 'Voice acting, audio tags, vocal mannerisms & caption FX' },
   { id: 'pacing' as const, label: 'Thinking', icon: 'i-solar:hourglass-bold-duotone', desc: 'Thinking fillers, live spoken asides & deliberation cadence' },
   { id: 'playground' as const, label: 'Lab', icon: 'i-solar:test-tube-minimalistic-bold-duotone', desc: 'Interactive reasoning, latency & audio audition sandbox' },
@@ -984,7 +986,15 @@ function resetThresholdsToDefaults() {
       </div>
 
       <!-- ================================================================= -->
-      <!-- 1. SPEECH TAGS SUB-TAB                                            -->
+      <!-- 1. STICKERS SUB-TAB                                               -->
+      <!-- ================================================================= -->
+      <ActingSubTabStickers
+        v-else-if="activeSubTab === 'stickers'"
+        :card-id="props.cardId"
+      />
+
+      <!-- ================================================================= -->
+      <!-- 2. SPEECH TAGS SUB-TAB                                            -->
       <!-- ================================================================= -->
       <div v-else-if="activeSubTab === 'speech'" class="flex flex-col gap-6">
         <div class="flex items-center justify-between border-b border-neutral-100 pb-4 dark:border-neutral-800">

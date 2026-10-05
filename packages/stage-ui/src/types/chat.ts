@@ -22,7 +22,12 @@ export interface ChatSlicesToolCallResult {
   result?: string | CommonContentPart[]
 }
 
-export type ChatSlices = ChatSlicesText | ChatSlicesToolCall | ChatSlicesToolCallResult
+export interface ChatSlicesSticker {
+  type: 'sticker'
+  stickerId: string
+}
+
+export type ChatSlices = ChatSlicesText | ChatSlicesToolCall | ChatSlicesToolCallResult | ChatSlicesSticker
 
 export interface ChatAssistantMessage extends AssistantMessage {
   slices: ChatSlices[]

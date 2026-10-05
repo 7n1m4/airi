@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, useTemplateRef } from 'vue'
 import { toast } from 'vue-sonner'
 
+import ChatSticker from './components/sticker.vue'
 import JournalMomentModal from './JournalMomentModal.vue'
 import ChatResponsePart from './response-part.vue'
 import ChatToolCallBlock from './tool-call-block.vue'
@@ -696,6 +697,11 @@ const dynamicStyles = computed(() => {
                   class="mb-2"
                 />
                 <template v-else-if="slice.type === 'tool-call-result'" />
+                <ChatSticker
+                  v-else-if="slice.type === 'sticker'"
+                  :sticker-id="slice.stickerId"
+                  class="mb-2"
+                />
                 <template v-else-if="slice.type === 'text'">
                   <MarkdownRenderer
                     :content="slice.text"

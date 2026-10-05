@@ -4,6 +4,7 @@ import {
   createStreamingCategorizer,
   createThinkAloudExtractor,
   extractThinkAloudCues,
+  stripMarkers,
   stripPacingEnvelopes,
 } from './response-categoriser'
 
@@ -513,5 +514,19 @@ describe('think_aloud cue extraction and pacing envelope isolation', () => {
     categorizer.consumeReasoning('Second hop reasoning <think_aloud>Checking memory archives.</think_aloud> completed.')
     expect(cues).toHaveLength(2)
     expect(cues[1].text).toBe('Checking memory archives.')
+  })
+})
+
+describe('stripMarkers', () => {
+  it('should strip STICKER tokens in both standard and legacy close formats', () => {
+    const input = 'Yay! <|STICKER airi-happy|> That is awesome!<|STICKER airi-celebrate>'
+    const stripped = stripMarkers(input)
+    expect(stripped).toBe('Yay!  That is awesome!')
+  })
+
+  it('should strip ACT and DELAY tokens alongside STICKER tokens', () => {
+    const input = '<|ACT:emotion="happy"|>Hello! <|STICKER airi-affectionate|> How are you?<|DELAY:2|>'
+    const stripped = stripMarkers(input)
+    expect(stripped).toBe('Hello!  How are you?')
   })
 })
