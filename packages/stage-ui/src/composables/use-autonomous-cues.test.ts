@@ -12,6 +12,7 @@ import {
   calculateWpmBudgetMs,
   containsExplicitActToken,
   createSentenceStrideBuffer,
+  extractTokensFromPrompt,
   isClassifiableSentence,
   normalizeSentenceText,
   normalizeStrideText,
@@ -499,6 +500,163 @@ describe('use-autonomous-cues', () => {
       const record2 = await evaluateSentenceStride('Hello there!')
       expect(record2.status).toBe('fired')
       expect(actuateEmotion).toHaveBeenCalledTimes(1)
+    })
+
+    it('extracts dynamic emotional intensity score and clamps to [0.3, 1.0]', async () => {
+      const card = createMockCard({ autoCuesEnabled: true })
+      const actuateEmotion = vi.fn()
+      const systemOneStore = useSystemOneStore()
+      systemOneStore.activeProvider = 'laya-local'
+
+      // Mock return with explicit score question answer
+      vi.spyOn(systemOneStore, 'execute').mockResolvedValueOnce({
+        answers: {
+          emotion: { choice: 'happy', confidence: 0.95 },
+          intensity: { score: 0.72 },
+        },
+      } as any)
+
+      const { evaluateSentenceStride } = useAutonomousCues({ activeCard: card, actuateEmotion })
+
+      const sentence = 'That is wonderful news!'
+      const record = await evaluateSentenceStride(sentence)
+
+      expect(record.status).toBe('fired')
+      expect(record.intensity).toBe(0.72)
+      expect(actuateEmotion).toHaveBeenCalledWith('F_Happy', expect.objectContaining({
+        intensity: 0.72,
+      }))
+    })
+
+    it('clamps out-of-range emotional intensity to [0.3, 1.0]', async () => {
+      const card = createMockCard({ autoCuesEnabled: true })
+      const actuateEmotion = vi.fn()
+      const systemOneStore = useSystemOneStore()
+      systemOneStore.activeProvider = 'laya-local'
+
+      // Case 1: Overshoot (> 1.0)
+      vi.spyOn(systemOneStore, 'execute').mockResolvedValueOnce({
+        answers: {
+          emotion: { choice: 'happy', confidence: 0.9 },
+          intensity: { score: 1.8 },
+        },
+      } as any)
+
+      const { evaluateSentenceStride } = useAutonomousCues({ activeCard: card, actuateEmotion })
+      const recordHigh = await evaluateSentenceStride('Look at this incredible thing!')
+      expect(recordHigh.intensity).toBe(1.0)
+
+      // Case 2: Undershoot (< 0.3)
+      vi.spyOn(systemOneStore, 'execute').mockResolvedValueOnce({
+        answers: {
+          emotion: { choice: 'happy', confidence: 0.8 },
+          intensity: { score: 0.05 },
+        },
+      } as any)
+
+      const recordLow = await evaluateSentenceStride('Look at this subtle thing.')
+      expect(recordLow.intensity).toBe(0.3)
+    })
+  })
+
+  describe('extractTokensFromPrompt reverse extractor', () => {
+    const candidateTokens = [
+      'anger_hash',
+      'angry',
+      'arrow_eyes',
+      'cat_mouth',
+      'crying',
+      'gloomy',
+      'heart',
+      'heartbroken',
+      'music',
+      'question',
+      'shocked_eyes',
+      'sleepy',
+      'small_x_eyes',
+      'star_eyes',
+      'surprised',
+      'sweating',
+      'smile',
+      'blush',
+      'pout',
+      'wink',
+      'shy',
+    ]
+
+    it('returns empty array when prompt is empty or candidates are empty', () => {
+      expect(extractTokensFromPrompt('', candidateTokens)).toEqual([])
+      expect(extractTokensFromPrompt('Some prompt text', [])).toEqual([])
+    })
+
+    it('extracts tokens formatted inside official <|ACT:emotion="..."|> markers', () => {
+      const prompt = `Available expression cues: <|ACT:emotion="anger_hash"|>, <|ACT:emotion="angry"|>, <|ACT:emotion="smile"|>`
+      const extracted = extractTokensFromPrompt(prompt, candidateTokens)
+      expect(extracted).toEqual(['anger_hash', 'angry', 'smile'])
+    })
+
+    it('extracts tokens formatted as clean bullet points or lists', () => {
+      const prompt = `
+The available tokens are:
+- anger_hash
+- angry
+- smile
+- blush
+- cat_mouth
+`
+      const extracted = extractTokensFromPrompt(prompt, candidateTokens)
+      expect(extracted).toEqual(['anger_hash', 'angry', 'cat_mouth', 'smile', 'blush'])
+    })
+
+    it('extracts tokens wrapped in backticks, single quotes, double quotes, or brackets', () => {
+      const prompt = `
+Tokens:
+- \`smile\` (happy)
+- 'pout' (annoyed)
+- "cat_mouth" (playful)
+- [wink]
+`
+      const extracted = extractTokensFromPrompt(prompt, candidateTokens)
+      expect(extracted).toEqual(['cat_mouth', 'smile', 'pout', 'wink'])
+    })
+
+    it('extracts comma-separated tokens in prose', () => {
+      const prompt = `Inject physical emotion cues sparingly: anger_hash, angry, arrow_eyes, pout, and shy at emotional peaks.`
+      const extracted = extractTokensFromPrompt(prompt, candidateTokens)
+      expect(extracted).toEqual(['anger_hash', 'angry', 'arrow_eyes', 'pout', 'shy'])
+    })
+
+    it('rejects partial matches and substring false-positives', () => {
+      const prompt = `
+I caught a fishy smell in the air.
+Her thoughts were scattered across the floor.
+Please send me a facsimile of that document.
+`
+      // Candidate tokens include 'shy', 'cat', 'smile'
+      const candidates = ['shy', 'cat', 'smile']
+      const extracted = extractTokensFromPrompt(prompt, candidates)
+      expect(extracted).toEqual([])
+    })
+
+    it('does not match token prefix when suffix is an alphanumeric/underscore word character', () => {
+      const prompt = `Available token is only anger_hash.`
+      // Candidate list contains both 'anger' and 'anger_hash'
+      const candidates = ['anger', 'anger_hash']
+      const extracted = extractTokensFromPrompt(prompt, candidates)
+      // 'anger' must not match inside 'anger_hash'
+      expect(extracted).toEqual(['anger_hash'])
+    })
+
+    it('matches case-insensitively while preserving candidate token casing', () => {
+      const prompt = `Use SMILE and BLUSH when pleased.`
+      const extracted = extractTokensFromPrompt(prompt, ['smile', 'blush', 'pout'])
+      expect(extracted).toEqual(['smile', 'blush'])
+    })
+
+    it('deduplicates repeatedly mentioned tokens', () => {
+      const prompt = `Use smile when happy. Example: "Hi! <|ACT:emotion="smile"|>". Remember to use smile.`
+      const extracted = extractTokensFromPrompt(prompt, ['smile', 'blush'])
+      expect(extracted).toEqual(['smile'])
     })
   })
 })

@@ -458,8 +458,18 @@ interface HeldAutonomousCue {
   norm: string
   rawKey: string
   token?: string
+  intensity?: number
   status: 'held' | 'applied' | 'dropped'
   createdAt: number
+}
+
+function emitAutonomousSpecialToken(rawKey: string, intensity?: number) {
+  if (intensity !== undefined && intensity !== null) {
+    playSpecialToken(`<|ACT:{"emotion":{"name":"${rawKey}","intensity":${intensity}}}|>`)
+  }
+  else {
+    playSpecialToken(`<|ACT:emotion="${rawKey}"|>`)
+  }
 }
 
 const heldAutonomousCues = ref<HeldAutonomousCue[]>([])
@@ -487,10 +497,11 @@ function releaseAutonomousCue(text: string) {
     match.status = 'applied'
     debug('[Stage] Released held Autonomous System-1 cue on speech start:', {
       rawKey: match.rawKey,
+      intensity: match.intensity,
       sentence: match.sentence,
       matchedText: text.slice(0, 60),
     })
-    playSpecialToken(`<|ACT:emotion="${match.rawKey}"|>`)
+    emitAutonomousSpecialToken(match.rawKey, match.intensity)
   }
 }
 
@@ -507,7 +518,7 @@ const autonomousCues = useAutonomousCues({
 
     // If speech provider is noop (silent / text-only) or playback suppressed, actuate immediately
     if (activeSpeechProvider.value === 'speech-noop' || isPlaybackSuppressed.value) {
-      playSpecialToken(`<|ACT:emotion="${rawKey}"|>`)
+      emitAutonomousSpecialToken(rawKey, meta?.intensity)
       return
     }
 
@@ -516,8 +527,8 @@ const autonomousCues = useAutonomousCues({
 
     if (norm && playedStrideNorms.value.has(norm)) {
       if (nowSpeaking.value) {
-        debug('[Stage] Autonomous System-1 cue arrived during active speech: firing immediately:', { rawKey, sentence })
-        playSpecialToken(`<|ACT:emotion="${rawKey}"|>`)
+        debug('[Stage] Autonomous System-1 cue arrived during active speech: firing immediately:', { rawKey, intensity: meta?.intensity, sentence })
+        emitAutonomousSpecialToken(rawKey, meta?.intensity)
         return
       }
       debug('[Stage] Autonomous System-1 cue arrived after speech slice ended (dropped):', { rawKey, sentence })
@@ -530,10 +541,11 @@ const autonomousCues = useAutonomousCues({
       norm,
       rawKey,
       token: meta?.token,
+      intensity: meta?.intensity,
       status: 'held',
       createdAt: Date.now(),
     })
-    debug('[Stage] Held Autonomous System-1 cue until speech playback:', { rawKey, sentence, norm })
+    debug('[Stage] Held Autonomous System-1 cue until speech playback:', { rawKey, intensity: meta?.intensity, sentence, norm })
   },
 })
 

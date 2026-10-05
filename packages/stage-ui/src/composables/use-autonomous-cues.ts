@@ -15,6 +15,7 @@ export interface AutonomousCueMeta {
   rawKey: string
   sentence: string
   confidence: number
+  intensity?: number
   latencyMs: number
   budgetMs: number
   provenance: 'autonomous_system_one'
@@ -36,6 +37,7 @@ export interface AutonomousCueRunRecord {
   token: string
   rawKey: string | null
   confidence: number
+  intensity?: number
   latencyMs: number
   budgetMs: number
   status: AutonomousCueRunStatus
@@ -278,6 +280,38 @@ export function resolveAllowedEmotionOptions(
 }
 
 /**
+ * Scans a prompt document for occurrences of known candidate tokens.
+ * Matches are guarded by delimiter fences (whitespace, quotes, backticks, brackets, punctuation)
+ * to prevent substring false-positives (e.g. "shy" inside "fishy", "cat" inside "scattered").
+ * Returns an array of matched token strings, or an empty array if none are found.
+ */
+export function extractTokensFromPrompt(promptText: string, candidateTokens: string[]): string[] {
+  if (!promptText || !candidateTokens || candidateTokens.length === 0) {
+    return []
+  }
+
+  const matched: string[] = []
+  const fenceLeft = `(?:^|[\\s\`'"(\\[{<=:;,*\\-~/])`
+  const fenceRight = `(?=$|[\\s\`'")\\]}>,:;*\\-~!?./]|\\b)`
+
+  for (const candidate of candidateTokens) {
+    if (!candidate || typeof candidate !== 'string')
+      continue
+    const trimmed = candidate.trim()
+    if (!trimmed)
+      continue
+
+    const escaped = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`${fenceLeft}${escaped}${fenceRight}`, 'i')
+    if (regex.test(promptText)) {
+      matched.push(trimmed)
+    }
+  }
+
+  return Array.from(new Set(matched))
+}
+
+/**
  * Builds persona context string from the active character card.
  */
 export function buildPersonaContext(card?: Card | null): { name: string, block: string } {
@@ -405,6 +439,12 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
           emotionOptions.map(opt => [opt, opt === 'none' ? 'No cue fits this line.' : `Emotion cue: ${opt}.`]),
         ),
       },
+      intensity: {
+        type: 'score',
+        instructions: 'Score the emotional intensity of this line from 0.3 (subtle, understated) to 1.0 (peak, theatrical).',
+        min: 0.3,
+        max: 1.0,
+      },
     }
 
     isEvaluating.value = true
@@ -418,6 +458,13 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
       const token = answer.choice || 'none'
       const confidence = typeof answer.confidence === 'number' ? answer.confidence : 0
 
+      // Extract emotional intensity score (0.3 to 1.0)
+      const rawIntensity = (res.answers as any)?.intensity?.score ?? (res.answers as any)?.intensity
+      let intensity: number | undefined
+      if (typeof rawIntensity === 'number' && !Number.isNaN(rawIntensity)) {
+        intensity = Math.round(Math.min(1.0, Math.max(0.3, rawIntensity)) * 100) / 100
+      }
+
       // Budget check: dropped if latency exceeded 90% spoken duration
       if (latencyMs > budgetMs) {
         const record: AutonomousCueRunRecord = {
@@ -425,6 +472,7 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
           token,
           rawKey: null,
           confidence,
+          intensity,
           latencyMs,
           budgetMs,
           status: 'budget-dropped',
@@ -460,6 +508,7 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
           token,
           rawKey: null,
           confidence,
+          intensity,
           latencyMs,
           budgetMs,
           status: 'unmapped',
@@ -474,6 +523,7 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
         rawKey: resolved.rawKey,
         sentence: cleanSentence,
         confidence,
+        intensity,
         latencyMs,
         budgetMs,
         provenance: 'autonomous_system_one',
@@ -486,6 +536,7 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
         token,
         rawKey: resolved.rawKey,
         confidence,
+        intensity,
         latencyMs,
         budgetMs,
         status: 'fired',

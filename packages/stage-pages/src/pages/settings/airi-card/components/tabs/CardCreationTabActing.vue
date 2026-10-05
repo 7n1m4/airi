@@ -4,6 +4,7 @@ import type { SpeechCapabilitiesInfo } from '@proj-airi/stage-ui/stores/provider
 import type { CharacterCueAllowlist } from '@proj-airi/stage-ui/types/card.schema'
 import type { PacingProfileId, ThinkingCategory, ThinkingFillerPhrase } from '@proj-airi/stage-ui/types/pacing'
 
+import { extractTokensFromPrompt } from '@proj-airi/stage-ui/composables'
 import { DEFAULT_THINK_ALOUD_PROMPT } from '@proj-airi/stage-ui/constants/prompts/character-defaults'
 import { isNeedleModelCached, needleClient } from '@proj-airi/stage-ui/libs/inference'
 import {
@@ -22,6 +23,7 @@ import {
 import { FieldInput } from '@proj-airi/ui'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { toast } from 'vue-sonner'
 
 import ActingSubTabPacingPlayground from './acting/ActingSubTabPacingPlayground.vue'
 
@@ -163,6 +165,7 @@ function syncPromptFromAllowlist() {
       prompt += `\n### Available Motions\nUse <|ACT:motion="NAME"|> with: ${usableMotions.join(', ')}.\n`
     }
     selectedActingModelExpressionPrompt.value = prompt.trim()
+    toast.success('Generated directives template from model capabilities & allowlist')
     return
   }
 
@@ -182,6 +185,76 @@ function syncPromptFromAllowlist() {
     }
   }
   selectedActingModelExpressionPrompt.value = prompt.trim()
+  toast.success('Generated directives template from calibrated allowlist')
+}
+
+function syncAllowlistFromPrompt() {
+  const promptText = selectedActingModelExpressionPrompt.value || ''
+  if (!promptText.trim()) {
+    toast.warning('Acting Directives text is empty', {
+      description: 'Please write or paste your acting directives in the text area below before syncing.',
+    })
+    return
+  }
+
+  const candidatePool = [
+    ...actingModelEmotionOptions.value,
+    'happy',
+    'sad',
+    'angry',
+    'surprised',
+    'thinking',
+    'question',
+    'neutral',
+    'smile',
+    'blush',
+    'pout',
+    'wink',
+    'shy',
+    'gloomy',
+    'crying',
+    'shocked_eyes',
+    'cat_mouth',
+    'heart',
+    'heartbroken',
+    'music',
+    'sleepy',
+    'star_eyes',
+    'sweating',
+  ]
+  const uniqueCandidates = Array.from(new Set(candidatePool.filter(Boolean)))
+
+  const matchedTokens = extractTokensFromPrompt(promptText, uniqueCandidates)
+  if (matchedTokens.length === 0) {
+    toast.warning('No matching emotion cues found in Directives', {
+      description: 'None of the expressions from your active model or canonical list were found in the directives text.',
+    })
+    return
+  }
+
+  const currentAllowlist = selectedActingCueAllowlist.value || { version: 1 }
+  const emotions: Record<string, { rawKey: string, label: string }> = {
+    ...currentAllowlist.emotions,
+  }
+
+  for (const token of matchedTokens) {
+    emotions[token] = {
+      rawKey: token,
+      label: token,
+    }
+  }
+
+  selectedActingCueAllowlist.value = {
+    ...currentAllowlist,
+    version: 1,
+    emotions,
+  }
+
+  const preview = matchedTokens.slice(0, 6).join(', ')
+  const suffix = matchedTokens.length > 6 ? ` (+${matchedTokens.length - 6} more)` : ''
+  toast.success(`Synced ${matchedTokens.length} emotion cue${matchedTokens.length === 1 ? '' : 's'} from Directives`, {
+    description: `Added to Allowlist: ${preview}${suffix}`,
+  })
 }
 
 // Conversational Pacing Models
@@ -738,14 +811,25 @@ function resetThresholdsToDefaults() {
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  class="flex items-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-700 font-medium shadow-sm transition dark:border-neutral-700 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200 dark:hover:bg-neutral-700"
-                  @click="openEmotionCalibration"
-                >
-                  <div class="i-solar:tuning-square-2-bold-duotone text-primary-500" />
-                  <span>{{ hasCalibratedAllowlist ? 'Recalibrate in Studio' : 'Launch Emotion Studio' }}</span>
-                </button>
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="flex items-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-700 font-medium shadow-sm transition dark:border-neutral-700 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                    title="Scan prompt directives above for known cues and populate the allowlist"
+                    @click="syncAllowlistFromPrompt"
+                  >
+                    <div class="i-solar:magic-stick-3-bold-duotone text-primary-500" />
+                    <span>Sync from Directives</span>
+                  </button>
+                  <button
+                    type="button"
+                    class="flex items-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-700 font-medium shadow-sm transition dark:border-neutral-700 dark:bg-neutral-800 hover:bg-neutral-50 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                    @click="openEmotionCalibration"
+                  >
+                    <div class="i-solar:tuning-square-2-bold-duotone text-primary-500" />
+                    <span>{{ hasCalibratedAllowlist ? 'Recalibrate in Studio' : 'Launch Emotion Studio' }}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

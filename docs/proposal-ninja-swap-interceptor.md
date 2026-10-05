@@ -322,9 +322,14 @@ Provider setup is solved (global System1 config); what remains is per-character 
 
 * **Why integration first:** The live chat execution pipeline (stride buffering → System-1 evaluation → evaporation → animation queue dispatch) is identical whether the payload contains 1 modality or 2. Landing motions first would require building curation UI, score plumbing, and trigger semantics for a payload that has nowhere to flow.
 * **Execution steps:**
-  1. **Land the pipe (Emotions only):** Extract the rehearsal mechanics into a shared composable, wire into the live chat token stream, enforce cue evaporation, and verify facial blendshapes fire in live chat turns.
-  2. **Widen the pipe (Motions):** Widen the System-1 request schema to include `act_motion` choices and `intensity` score. The `score` return slots naturally into motion velocity/intensity, and `cueAllowlist.motions` feeds the candidate pool. Flip `Auto-cue Motions (Coming Soon)` to active.
-  3. **Speech tags (Deferred):** Provider-side audio tags (`[whisper]`, `*sigh*`) ride after visual cues are fully validated.
+  1. **Land the pipe (Emotions only — SHIPPED Oct 2026):** Extracted `useAutonomousCues` into shared composable, wired into live chat stream (`ControlStripHost.vue`), enforced cue evaporation, solved sentence-synchronized hold & release at audio playback onset, guarded VRM motion fallbacks, and verified facial blendshapes firing in live chat turns.
+  2. **Dynamic Intensity (SHIPPED / IN PROGRESS):** Widen System-1 request schema to include `intensity` score head (0.3 to 1.0) so expressions blend at natural proportional nuances instead of flat 1.0 intensity.
+  3. **Directives Reverse-Extractor (SHIPPED / IN PROGRESS):** Lightweight, deterministic allowlist compiler looping over the active model's usable `expressionCapabilities` and checking word containment in `modelExpressionPrompt` — populates `cueAllowlist.emotions` without requiring the full calibration wizard.
+  4. **Widen the pipe (Motions):** Widen the System-1 request schema to include `act_motion` choices and `intensity` score. The `score` return slots naturally into motion velocity/intensity, and `cueAllowlist.motions` feeds the candidate pool. Flip `Auto-cue Motions (Coming Soon)` to active.
+     - **Architectural Decision Point (Option A vs Option B):**
+       - **Option A (Unified Acting Studio):** Broaden `EmotionCalibrationStudio.vue` into a unified Acting Studio with an integrated Motions step alongside Expressions (`Meet` → `Expressions` → `Motions` → `Verify` → `Remaps` → `Finish`), keeping both modalities under one roof.
+       - **Option B (Dedicated Motion Studio):** Keep `EmotionCalibrationStudio.vue` focused on facial morphs, and build a dedicated Motion Calibration Studio specifically designed for skeletal animations, tactile triggers, and deep FlowMDM / VRMA library integration.
+  5. **Speech tags (Deferred):** Provider-side audio tags (`[whisper]`, `*sigh*`) ride after visual cues are fully validated.
 
 ---
 
