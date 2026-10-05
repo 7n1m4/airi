@@ -327,6 +327,8 @@ export interface WebRwkvLoadRequest {
   vocab?: string
   /** Optional Hugging Face Token for authenticating downloads. */
   hfToken?: string
+  /** Optional layer quantization: 'none' (FP16), 'nf4' (4-bit Normalized Float), 'int8' (8-bit integer). */
+  quantization?: 'none' | 'nf4' | 'int8'
 }
 
 /** Sampling + length parameters for one web-rwkv generation. */

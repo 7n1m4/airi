@@ -23,9 +23,8 @@ import { defaultPerfTracer } from '@proj-airi/stage-shared'
 import { Mutex } from 'async-mutex'
 
 import { removeInferenceStatus, updateInferenceStatus } from '../../../composables/use-inference-status'
-import { MODEL_NAMES, TIMEOUTS } from '../constants'
+import { MODEL_NAMES, TIMEOUTS, WEB_RWKV_MODELS } from '../constants'
 import { consumeLoadStream, createIdleTimeout, signalWithTimeout, webRwkvGenerateEvent, webRwkvLoadEvent, webRwkvStateDeltaEvent } from '../contract'
-import { MODEL_VRAM_ESTIMATES } from '../coordinator'
 import { GPU_PRIORITY } from '../gpu-executor'
 import { createGpuWorkerHost } from '../gpu-worker-host'
 import { InferenceAbortError, InferenceTimeoutError, throwIfAborted } from '../protocol'
@@ -46,7 +45,11 @@ export interface WebRwkvAdapter {
   loadModel: (
     model: string,
     vocab: string | undefined,
-    options?: { onProgress?: (p: ProgressPayload) => void, signal?: AbortSignal },
+    options?: {
+      quantization?: 'none' | 'nf4' | 'int8'
+      onProgress?: (p: ProgressPayload) => void
+      signal?: AbortSignal
+    },
   ) => Promise<void>
 
   /**
@@ -68,8 +71,8 @@ export interface WebRwkvAdapter {
   /** Current state. */
   readonly state: 'idle' | 'loading' | 'ready' | 'running' | 'error' | 'terminated'
 
-  /** Snapshot of the last successful load (model + vocab URLs), or null. */
-  readonly manifest: { model: string, vocab: string } | null
+  /** Snapshot of the last successful load (model + vocab URLs + quant mode), or null. */
+  readonly manifest: { model: string, vocab: string, quantization?: 'none' | 'nf4' | 'int8' } | null
 
   /** Number of WebGPU device-loss events observed by this adapter. */
   readonly deviceLossCount: number
@@ -98,13 +101,14 @@ type WebRwkvRpc = ReturnType<typeof createWebRwkvRpc>
 interface WebRwkvManifest {
   model: string
   vocab: string
+  quantization?: 'none' | 'nf4' | 'int8'
 }
 
 export function createWebRwkvAdapter(): WebRwkvAdapter {
   let lastManifest: WebRwkvManifest | null = null
   // The last successful load request, replayed by generate()'s load-on-demand
   // guard after a crash/restart left the worker bare.
-  let lastLoadConfig: { model: string, vocab: string | undefined } | null = null
+  let lastLoadConfig: { model: string, vocab: string | undefined, quantization?: 'none' | 'nf4' | 'int8' } | null = null
 
   const host = createGpuWorkerHost<WebRwkvRpc>({
     modelId: MODEL_NAMES.WEB_RWKV,
@@ -121,14 +125,18 @@ export function createWebRwkvAdapter(): WebRwkvAdapter {
   async function loadModel(
     model: string,
     vocab: string | undefined,
-    options?: { onProgress?: (p: ProgressPayload) => void, signal?: AbortSignal },
+    options?: {
+      quantization?: 'none' | 'nf4' | 'int8'
+      onProgress?: (p: ProgressPayload) => void
+      signal?: AbortSignal
+    },
   ): Promise<void> {
     throwIfAborted(options?.signal)
 
     return defaultPerfTracer.withMeasure('inference', 'web-rwkv-load-model', () => host.runExclusive(async () => {
       throwIfAborted(options?.signal)
       host.setPhase('loading')
-      console.info('[web-rwkv] loading model', { model, vocab })
+      console.info('[web-rwkv] loading model', { model, vocab, quantization: options?.quantization })
       updateInferenceStatus(MODEL_NAMES.WEB_RWKV, { state: 'downloading', device: 'webgpu' })
 
       const rpc = host.ensure()
@@ -138,7 +146,7 @@ export function createWebRwkvAdapter(): WebRwkvAdapter {
 
         const hfToken = typeof localStorage !== 'undefined' ? localStorage.getItem('settings/connection/hf-token') || undefined : undefined
         const stream = rpc.load(
-          { device: 'webgpu', model, vocab, hfToken },
+          { device: 'webgpu', model, vocab, hfToken, quantization: options?.quantization },
           { signal: AbortSignal.any([signalWithTimeout(options?.signal, LOAD_TIMEOUT), crashSignal]) },
         )
 
@@ -151,12 +159,19 @@ export function createWebRwkvAdapter(): WebRwkvAdapter {
           throw error
         })
 
-        host.allocate(MODEL_NAMES.WEB_RWKV, MODEL_VRAM_ESTIMATES[MODEL_NAMES.WEB_RWKV] ?? 512 * 1024 * 1024)
-        lastManifest = { model, vocab: vocab ?? '' }
-        lastLoadConfig = { model, vocab }
+        const known = WEB_RWKV_MODELS.find(m => m.id === model)
+        let vramMB = known?.vramMB ?? 512
+        if (options?.quantization === 'nf4')
+          vramMB = Math.round(vramMB * 0.4)
+        else if (options?.quantization === 'int8')
+          vramMB = Math.round(vramMB * 0.65)
+
+        host.allocate(MODEL_NAMES.WEB_RWKV, vramMB * 1024 * 1024)
+        lastManifest = { model, vocab: vocab ?? '', quantization: options?.quantization ?? 'none' }
+        lastLoadConfig = { model, vocab, quantization: options?.quantization }
 
         host.setPhase('ready')
-        console.info('[web-rwkv] model loaded', { model, vocab })
+        console.info('[web-rwkv] model loaded', { model, vocab, vramMB, quantization: options?.quantization })
         updateInferenceStatus(MODEL_NAMES.WEB_RWKV, { state: 'ready', device: 'webgpu' })
         host.recordSuccess()
       })
@@ -175,7 +190,7 @@ export function createWebRwkvAdapter(): WebRwkvAdapter {
     // Replay the last load before generating. Done before runExclusive — loadModel
     // takes the same host mutex, so calling it inside would deadlock.
     if (host.phase === 'idle' && lastLoadConfig)
-      await loadModel(lastLoadConfig.model, lastLoadConfig.vocab, { signal: options?.signal })
+      await loadModel(lastLoadConfig.model, lastLoadConfig.vocab, { quantization: lastLoadConfig.quantization, signal: options?.signal })
 
     const notReadyError = new Error('web-rwkv: model not loaded. Call loadModel() first.')
 

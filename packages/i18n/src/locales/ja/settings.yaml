@@ -1188,8 +1188,8 @@ pages:
           title: WebGPU 専用・ブラウザ内 LLM
         defaultsSection:
           annotation: 'キャラクターごとにこれらの設定をカスタマイズするには、キャラクターの「生成」タブに移動してください: •
-            入力フィールドを使用して温度、Top P、最大トークン数を変更します。 • 高度な JSON
-            テキストエリアにペナルティパラメータを入力します（例: {"presence_penalty": 0.5}）。'
+            入力フィールドを使用して温度、Top P、最大トークンを変更します。 • 詳細 JSON
+            テキストエリアにペナルティパラメータを入力します（例: "presence_penalty": 0.5）。'
           description: これらは web-rwkv で使用されるデフォルトのフォールバックパラメータです。
           field:
             count_penalty: 'カウントペナルティ Count Penalty (デフォルト: 0.4)'

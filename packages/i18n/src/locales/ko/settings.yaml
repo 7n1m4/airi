@@ -1178,8 +1178,8 @@ pages:
           title: WebGPU 전용 브라우저 내 LLM
         defaultsSection:
           annotation: "캐릭터에 대해 이러한 설정을 사용자 지정하려면 캐릭터의 '생성' 탭으로 이동하세요: • 입력 필드를 사용하여 온도,
-            Top P 및 최대 토큰을 수정합니다. • 고급 JSON 텍스트 영역에 페널티(예:
-            {\"presence_penalty\": 0.5})를 입력하여 수정합니다."
+            Top P 및 최대 토큰을 수정합니다. • 고급 JSON 텍스트 영역에 패널티(존재/개수/감쇠)를 입력하여 수정합니다(예:
+            \"presence_penalty\": 0.5)."
           description: 이것들은 web-rwkv에서 사용하는 기본 폴백 매개변수입니다.
           field:
             count_penalty: '빈도 페널티 Count Penalty (기본값: 0.4)'
@@ -1249,8 +1249,8 @@ pages:
           제스처를 합성합니다.
       cloud:
         title: 클라우드 동기화 및 백업?
-        description: 기기 간에 캐릭터 카드, 기억 보관소 및 설정을 안전하게 유지하세요. 데스크톱/NAS 백업에는 <b>로컬 파일 시스템</b>을
-          사용하거나 <b>S3 호환 스토리지</b>(Cloudflare R2, MinIO, AWS S3)를 사용하세요.
+        description: 기기 간에 캐릭터 카드, 기억 보관소 및 설정을 안전하게 유지하세요. 데스크톱/NAS 백업에는 <b>로컬 파일
+          시스템</b>을 사용하거나 <b>S3 호환 스토리지</b>(Cloudflare R2, MinIO, AWS S3)를 사용하세요.
     speech:
       app_local_audio:
         description: 음성 합성을 위한 로컬 오디오 출력 설정을 구성합니다.

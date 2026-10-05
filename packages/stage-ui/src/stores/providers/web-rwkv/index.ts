@@ -7,6 +7,8 @@ import { getWebRwkvAdapter } from '../../../libs/inference/adapters/web-rwkv'
 import { DEFAULT_WEB_RWKV_MODEL } from '../../../libs/inference/constants'
 import { buildRwkvPrompt, createThinkPrefixStripper, openAIChatChunk, openAIChatCompletion, SSE_DONE } from './format'
 
+export { buildRwkvPrompt, createThinkPrefixStripper } from './format'
+
 export interface WebRwkvProviderConfig {
   /** Model `.safetensors` URL. Defaults to {@link DEFAULT_WEB_RWKV_MODEL}. */
   model?: string
@@ -14,6 +16,8 @@ export interface WebRwkvProviderConfig {
   vocab?: string
   /** Enable RWKV-7 G1 reasoning prefill & prefix stripping. Defaults to true. */
   enableG1Prefill?: boolean
+  /** Quantization precision mode: 'none' (FP16), 'nf4', 'int8'. Defaults to 'none'. */
+  quantization?: 'none' | 'nf4' | 'int8'
 }
 
 // NucleusSampler penalty defaults matching the upstream web-rwkv-wasm usage
@@ -53,7 +57,8 @@ interface OpenAIChatBody {
 export function createWebRwkvChatProvider(config: WebRwkvProviderConfig = {}): ChatProvider {
   const defaultModelUrl = config.model || DEFAULT_WEB_RWKV_MODEL
   const vocabUrl = config.vocab || undefined
-  const enableG1Prefill = config.enableG1Prefill !== false
+  const enableG1Prefill = config.enableG1Prefill === true
+  const quantization = config.quantization ?? 'none'
 
   return {
     chat: (model: string) => ({
@@ -69,10 +74,13 @@ export function createWebRwkvChatProvider(config: WebRwkvProviderConfig = {}): C
         const prompt = buildRwkvPrompt(body.messages ?? [], { enableG1Prefill })
 
         const adapter = await getWebRwkvAdapter()
-        // Load-on-demand and reload when the selected model/vocab differs from
+        // Load-on-demand and reload when the selected model/vocab/quantization differs from
         // what's loaded (the adapter is a singleton shared across requests).
-        if (adapter.state !== 'ready' || adapter.manifest?.model !== modelUrl || adapter.manifest?.vocab !== (vocabUrl ?? '')) {
-          await adapter.loadModel(modelUrl, vocabUrl, { signal: init?.signal ?? undefined })
+        if (adapter.state !== 'ready'
+          || adapter.manifest?.model !== modelUrl
+          || adapter.manifest?.vocab !== (vocabUrl ?? '')
+          || adapter.manifest?.quantization !== quantization) {
+          await adapter.loadModel(modelUrl, vocabUrl, { quantization, signal: init?.signal ?? undefined })
         }
 
         const request: WebRwkvGenerateRequest = {

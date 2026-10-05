@@ -226,6 +226,22 @@ export async function createCacheWriter(key: string): Promise<ModelCacheWriter> 
         handle.flush()
         handle.close()
         console.info(`[web-rwkv:cache] cached ${entries.length} tensors (${cursor} bytes) for ${key.slice(0, 12)}…`)
+
+        // Single-slot eviction guarantee: clean up any other .f16cache files in OPFS so
+        // only the newly finalized model remains cached on disk.
+        try {
+          const dir = await openCacheDir(false)
+          const currentFileName = cacheFileName(key)
+          for await (const entry of (dir as any).values()) {
+            if (entry.kind === 'file' && entry.name.endsWith('.f16cache') && entry.name !== currentFileName) {
+              console.info(`[web-rwkv:cache] single-slot eviction: removing previous model cache ${entry.name}`)
+              await dir.removeEntry(entry.name)
+            }
+          }
+        }
+        catch (evictErr) {
+          console.warn('[web-rwkv:cache] single-slot eviction notice:', evictErr)
+        }
       }
       catch (error) {
         console.warn('[web-rwkv:cache] finalize failed; dropping partial cache file', error)

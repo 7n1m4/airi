@@ -94,17 +94,63 @@ export const WHISPER_MODELS: readonly WhisperModelInfo[] = [
 /** Default Whisper model id (matches {@link MODEL_IDS}.WHISPER). */
 export const DEFAULT_WHISPER_MODEL: string = 'onnx-community/whisper-large-v3-turbo'
 
+export interface WebRwkvModelInfo {
+  id: string
+  name: string
+  badge: string
+  params: string
+  description: string
+  downloadBytes: number
+  vramMB: number
+  layers: number
+}
+
 /**
  * Local web-rwkv (WebGPU RWKV) chat models. `id` is the model's `.safetensors`
  * URL in web-rwkv layout (RWKV-native tensor names). bf16/f32 weights are cast
  * to f16 at load (web-rwkv's loader only reads f16). Hosted on Hugging Face,
  * which supports HTTP Range so large models can stream tensor-by-tensor.
  */
-export const WEB_RWKV_MODELS = [
+export const WEB_RWKV_MODELS: readonly WebRwkvModelInfo[] = [
   {
     id: 'https://huggingface.co/DanielClough/rwkv7-g1-safetensors/resolve/main/rwkv7-g1d-0.1b-20260129-ctx8192.safetensors',
     name: 'RWKV-7 G1 0.1B (ctx8192)',
-    description: 'Tiny RWKV-7 "World" chat model (~190 MB). Downloads on first use; bf16→f16 at load.',
+    badge: 'Nano',
+    params: '0.1B',
+    description: 'Ultra-lightweight fallback. Minimal resource consumption (~382 MB DL · ~512 MB VRAM).',
+    downloadBytes: 382 * 1024 * 1024,
+    vramMB: 512,
+    layers: 12,
+  },
+  {
+    id: 'https://huggingface.co/DanielClough/rwkv7-g1-safetensors/resolve/main/rwkv7-g1d-0.4b-20260210-ctx8192.safetensors',
+    name: 'RWKV-7 G1 0.4B (ctx8192)',
+    badge: 'Small',
+    params: '0.4B',
+    description: 'Fast, balanced model for integrated GPUs and mobile hardware (~902 MB DL · ~1.2 GB VRAM).',
+    downloadBytes: 902 * 1024 * 1024,
+    vramMB: 1200,
+    layers: 24,
+  },
+  {
+    id: 'https://huggingface.co/DanielClough/rwkv7-g1-safetensors/resolve/main/rwkv7-g1d-1.5b-20260212-ctx8192.safetensors',
+    name: 'RWKV-7 G1 1.5B (ctx8192)',
+    badge: 'Sweet Spot',
+    params: '1.5B',
+    description: 'Recommended sweet spot for natural dialogue, roleplay, and creative writing (~3.06 GB DL · ~3.8 GB VRAM).',
+    downloadBytes: 3055 * 1024 * 1024,
+    vramMB: 3800,
+    layers: 24,
+  },
+  {
+    id: 'https://huggingface.co/DanielClough/rwkv7-g1-safetensors/resolve/main/rwkv7-g1d-2.9b-20260131-ctx8192.safetensors',
+    name: 'RWKV-7 G1 2.9B (ctx8192)',
+    badge: 'High-Capacity',
+    params: '2.9B',
+    description: 'Deep reasoning & rich vocabulary. High VRAM requirement; best paired with NF4 (~5.90 GB DL · ~7.5 GB VRAM).',
+    downloadBytes: 5896 * 1024 * 1024,
+    vramMB: 7500,
+    layers: 32,
   },
 ] as const
 
@@ -265,7 +311,7 @@ export const TIMEOUTS = {
   BG_REMOVAL_PROCESS: 60_000,
 
   /** web-rwkv model load timeout (absolute; download + bf16→f16 + shader compile) */
-  WEB_RWKV_LOAD: 300_000,
+  WEB_RWKV_LOAD: 900_000,
   /**
    * Time-to-first-token budget for web-rwkv generation, armed at stream start.
    * Covers prompt ingestion (a long chat history processed token-by-token) before

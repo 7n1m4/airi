@@ -256,9 +256,9 @@ pages:
         scenario: 'Error: A scenario is required.'
         systemprompt: 'Error: Please, provide a system prompt.'
         posthistoryinstructions: 'Error: Post history prompt is required.'
-      presence_info: Configure the visual, vocal, and cognitive presence for this character
-        (Avatar, Voice, Consciousness, and Scene). If not set, global defaults
-        will be used.
+      presence_info: Configure the visual, vocal, and cognitive presence for this
+        character (Avatar, Voice, Consciousness, and Scene). If not set, global
+        defaults will be used.
     modules: Modules
     name_asc: Name (A-Z)
     name_desc: Name (Z-A)
@@ -1285,7 +1285,7 @@ pages:
             Generation tab: • Modify Temperature, Top P, and Max Tokens using
             the input fields. • Modify penalties (Presence/Count/Decay) by
             entering them in the Advanced JSON textarea (e.g.,
-            {"presence_penalty": 0.5}).
+            "presence_penalty": 0.5).
       transcriptions:
         playground:
           title: Transcription Playground
@@ -1589,7 +1589,8 @@ voices: Voice
 vrm:
   fps:
     title: Frame rate limit
-    description: Limit VRM rendering in the stage and model preview. Lower limits reduce GPU use without changing animation speed.
+    description: Limit VRM rendering in the stage and model preview. Lower limits
+      reduce GPU use without changing animation speed.
     options:
       unlimited: Unlimited
   change-model:

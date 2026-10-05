@@ -68,6 +68,7 @@ interface LoadedModel {
   /** The model + vocab URLs this session was built from (to skip redundant reloads). */
   modelUrl: string
   vocabUrl: string
+  quantization: 'none' | 'nf4' | 'int8'
 }
 
 let loaded: LoadedModel | null = null
@@ -362,10 +363,11 @@ defineStreamInvokeHandler(context, webRwkvLoadEvent, toStreamHandler<WebRwkvLoad
   // A fully-qualified `payload.vocab` (e.g. a custom HF URL) is returned unchanged by `new URL`.
   // Removal condition: drop once Vite stops blob-wrapping module workers (or the worker is guaranteed a real URL).
   const vocabUrl = new URL(payload.vocab || bundledVocabUrl, import.meta.url).href
+  const quantMode: 'none' | 'nf4' | 'int8' = payload.quantization ?? 'none'
 
-  // Already loaded with the same model + vocab — nothing to do.
-  if (loaded && loaded.modelUrl === modelUrl && loaded.vocabUrl === vocabUrl) {
-    emit({ kind: 'ready', info: { device: 'webgpu', metadata: { model: modelUrl } } })
+  // Already loaded with the same model + vocab + quantization — nothing to do.
+  if (loaded && loaded.modelUrl === modelUrl && loaded.vocabUrl === vocabUrl && loaded.quantization === quantMode) {
+    emit({ kind: 'ready', info: { device: 'webgpu', metadata: { model: modelUrl, quantization: quantMode } } })
     return
   }
 
@@ -378,9 +380,15 @@ defineStreamInvokeHandler(context, webRwkvLoadEvent, toStreamHandler<WebRwkvLoad
   // persists the converted weights across reloads.
   const cacheKey = await cacheKeyForModel(modelUrl)
   let reader: TensorReader
-  const cached = await readCachedModel(cacheKey, p => new Tensor(p.name, Uint32Array.from(p.shape), exactBuffer(p.data)))
+  let numLayer = 0
+  const cached = await readCachedModel(cacheKey, (p) => {
+    const m = /^blocks\.(\d+)\./.exec(p.name)
+    if (m)
+      numLayer = Math.max(numLayer, Number(m[1]) + 1)
+    return new Tensor(p.name, Uint32Array.from(p.shape), exactBuffer(p.data))
+  })
   if (cached) {
-    console.info(`[web-rwkv:worker] loaded ${cached.length} weights from OPFS cache`)
+    console.info(`[web-rwkv:worker] loaded ${cached.length} weights from OPFS cache (detected ${numLayer} layers)`)
     emit({ kind: 'progress', payload: { phase: 'download', percent: 100, message: `Loaded weights from cache (${cached.length} tensors)` } })
     reader = new TensorReader(cached)
   }
@@ -403,12 +411,13 @@ defineStreamInvokeHandler(context, webRwkvLoadEvent, toStreamHandler<WebRwkvLoad
       }
       await cacheWriter.finalize()
       reader = built.reader
+      numLayer = built.numLayer
     }
     catch (error) {
       await cacheWriter.abort()
       throw error
     }
-    console.info(`[web-rwkv:worker] weights ready in ${Math.round(performance.now() - downloadStart)}ms`)
+    console.info(`[web-rwkv:worker] weights ready in ${Math.round(performance.now() - downloadStart)}ms (layers: ${numLayer})`)
   }
 
   if (signal?.aborted)
@@ -417,9 +426,16 @@ defineStreamInvokeHandler(context, webRwkvLoadEvent, toStreamHandler<WebRwkvLoad
   emit({ kind: 'progress', payload: { phase: 'compile', percent: -1, message: 'Building session (compiling WebGPU shaders)…' } })
   console.info('[web-rwkv:worker] building session (compiling WebGPU shaders)…')
   const compileStart = performance.now()
-  // quant args (Int8 / NF4 / SF4 layer counts) = 0 → full f16, matching the
-  // upstream default; quantization can be wired through later if needed.
-  const session = await Session.from_reader(reader, 0, 0, 0, SessionType.Chat)
+
+  let qInt8 = 0
+  let qNf4 = 0
+  if (quantMode === 'int8')
+    qInt8 = numLayer
+  else if (quantMode === 'nf4')
+    qNf4 = numLayer
+
+  console.info(`[web-rwkv:worker] session quant mode: ${quantMode} (int8=${qInt8}, nf4=${qNf4}, layers=${numLayer})`)
+  const session = await Session.from_reader(reader, qInt8, qNf4, 0, SessionType.Chat)
   console.info(`[web-rwkv:worker] session built in ${Math.round(performance.now() - compileStart)}ms`)
 
   console.info('[web-rwkv:worker] fetching vocab', vocabUrl)
@@ -430,10 +446,10 @@ defineStreamInvokeHandler(context, webRwkvLoadEvent, toStreamHandler<WebRwkvLoad
 
   // Replace any previously loaded model, freeing its GPU resources.
   loaded?.session.free()
-  loaded = { session, tokenizer, info: session.info(), modelUrl, vocabUrl }
+  loaded = { session, tokenizer, info: session.info(), modelUrl, vocabUrl, quantization: quantMode }
 
   console.info('[web-rwkv:worker] model ready')
-  emit({ kind: 'ready', info: { device: 'webgpu', metadata: { model: modelUrl } } })
+  emit({ kind: 'ready', info: { device: 'webgpu', metadata: { model: modelUrl, quantization: quantMode } } })
 }))
 
 /**
