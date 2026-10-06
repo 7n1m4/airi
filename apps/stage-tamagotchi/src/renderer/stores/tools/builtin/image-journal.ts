@@ -183,11 +183,10 @@ export async function executeCreateImageJournalEntry(params: {
       console.warn('[ImageJournalTool] Failed to stage artistry intrusion:', e)
     }
 
-    // Return structured result for UI rendering
+    // The gallery owns image bytes. Tool results carry only metadata for the model and UI.
     return JSON.stringify({
       message: `Image created in ${mode} mode${mode === 'bg' ? ' and set as background' : ''}.`,
       entryId,
-      imageUrl: artistryResult.imageUrl || artistryResult.base64,
       title,
       prompt,
       mode,
