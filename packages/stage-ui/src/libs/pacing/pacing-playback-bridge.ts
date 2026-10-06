@@ -221,7 +221,7 @@ export class PacingPlaybackBridge<TAudio = AudioBuffer> {
         return false
       }
       if (synthesized)
-        void saveThinkingAudio(params, rawBuffer, durationMs).catch(() => {})
+        await saveThinkingAudio(params, rawBuffer, durationMs).catch(() => {})
     }
     finally {
       if (this.activeAbortController === controller)

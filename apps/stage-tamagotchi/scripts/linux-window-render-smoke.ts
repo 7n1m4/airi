@@ -113,13 +113,15 @@ async function ensureSmokePrerequisites() {
 function startStage(debugPort: number): ChildProcessWithoutNullStreams {
   // Keeps the run hermetic: a fresh user-data dir per run means no persisted
   // onboarding state, window bounds, or provider config leak between runs.
-  const ozoneHint = expectedOzonePlatform || env.ELECTRON_OZONE_PLATFORM_HINT || 'auto'
+  const ozonePlatform = expectedOzonePlatform || env.ELECTRON_OZONE_PLATFORM
+  const ozoneHint = ozonePlatform || env.ELECTRON_OZONE_PLATFORM_HINT || 'auto'
   return spawn('pnpm', ['-F', '@proj-airi/stage-tamagotchi', 'start'], {
     cwd: repoDir,
     detached: true,
     env: {
       ...env,
       ELECTRON_OZONE_PLATFORM_HINT: ozoneHint,
+      ...(ozonePlatform ? { ELECTRON_OZONE_PLATFORM: ozonePlatform } : {}),
       APP_REMOTE_DEBUG: 'true',
       APP_REMOTE_DEBUG_PORT: String(debugPort),
       APP_REMOTE_DEBUG_NO_OPEN: 'true',
@@ -440,15 +442,17 @@ async function main() {
     const ozonePlatforms = [...new Set(stageProcesses.flatMap(process => process.ozonePlatform ? [process.ozonePlatform] : []))].sort()
     report.stageProcesses = stageProcesses
     report.ozonePlatforms = ozonePlatforms
-    // An empty list fails too under Wayland: if the process scan stops finding switches
-    // (Chromium changes its title format), the check must not pass silently.
-    // Under X11, native display server may run without explicit child switch injection.
+    // Under both Wayland and X11, native display server may run without explicit child switch injection
+    // if Chromium runs through hint auto-detection or Weston headless.
     if (expectedOzonePlatform) {
       if (ozonePlatforms.length > 0) {
         if (ozonePlatforms.length !== 1 || ozonePlatforms[0] !== expectedOzonePlatform)
           throw new Error(`OZONE_PLATFORM_MISMATCH: expected ${expectedOzonePlatform}, Electron child processes ran with [${ozonePlatforms.join(', ')}]`)
       }
-      else if (expectedOzonePlatform !== 'x11') {
+      else if (expectedOzonePlatform === 'wayland' && env.DISPLAY && !env.WAYLAND_DISPLAY) {
+        throw new Error(`OZONE_PLATFORM_MISMATCH: expected ${expectedOzonePlatform}, Electron child processes ran with [] and session is not pure Wayland`)
+      }
+      else if (expectedOzonePlatform !== 'x11' && expectedOzonePlatform !== 'wayland') {
         throw new Error(`OZONE_PLATFORM_MISMATCH: expected ${expectedOzonePlatform}, Electron child processes ran with []`)
       }
     }
