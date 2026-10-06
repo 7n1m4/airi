@@ -1,65 +1,60 @@
-# 🚀 AIRI v0.9.36-stable.20261001 — Release Notes
+# 🚀 AIRI v0.9.37-stable.20261006 — Release Notes
 
-This release streamlines the canonical **Onboarding V3** journey down to 18 steps—introducing a live in-step LLM dialogue simulator, 100% offline neural starter voices, automated Hugging Face gate helpers, and a unified Proactivity & Screen Awareness console.
+This release introduces the brand new **Emotion Calibration Studio** and **Rehearsal Room**—giving creators an interactive, guided 3-step environment (`Meet` ➔ `Name` ➔ `Verify`) to test, calibrate, and fine-tune avatar expressions with live face framing, diagnostic probes, and System-1 emotion classification. Alongside visual calibration, companions now feature **Streaming Autonomous Cues**, enabling dynamic facial expressions and body language that trigger organically during live LLM generation and stay perfectly synchronized with spoken audio playback.
 
-Alongside the onboarding polish, this update introduces a **Coordinated Startup Splash Screen** featuring a 3D levitating holographic card loader with synchronized background avatar mounting, adds **Free AI and Character Wizard 3-Way Modal Pickers** with a dedicated **Card Import Hub**, bundles an **Offline Starter Voice Catalog** with 18 zero-shot voices, hardens the **Autonomous Artistry Image Journal Tool**, implements **Live2D Parameter Blend Modes & Timed ACT Expression Cues**, expands the **AIRI Arcade Studio** with cleanroom replay telemetry, and brings hardware-accelerated **WebGPU support to System 1 Laya Cognition**.
+Under the hood, this update debuts a local **Chibi AIRI Emotion Sticker Library** with dual in-chat and on-stage viewport slapping, restores full offline `.prefab` layer quantization for the **Web-RWKV Engine** (supporting the latest RWKV-7 "Goose" G1 models on WebGPU), unlocks **Remote Streamable HTTP MCP Servers** with custom header authorization, adds a provider-level **Inference Token Telemetry Dashboard**, integrates a **Tray-Only Menu Bar Mode** for distraction-free presence, and eliminates layout thrashing during 3D avatar head tracking and gaze loops.
 
 ---
 
 ## ✨ Product Updates
 
-### 🧭 Onboarding V3: Streamlined Steps & First-Run Enhancements
-* **Account & Architecture**: Added resilient Cloudflare OAuth auto-refresh to prevent unexpected session disconnects, alongside clearer architecture benefits for local air-gapped vs. cloud-synced companions.
-* **Experience Archetypes**: Redesigned the 6 companion archetype cards with interactive capability chips and rich hover popovers detailing active features, alongside a balanced 5×2 module customization drawer with one-click preset resetting.
-* **Consciousness**: Added a built-in live Dialogue Simulator directly inside the step, letting you test multi-turn LLM reasoning, response latency, and conversational banter before proceeding.
-* **Speech**: Added one-click offline starter voice bypasses (ReLU, Sakura, Dr. Aria) requiring zero tokens, alongside HF token format validation and direct "Accept Gate" shortcuts for Pocket-TTS.
-* **Emotions**: Added an expression noise gate that filters out internal VRoid mesh rigging morphs (`Fcl_*`) to prevent face twitching, plus built-in starter presets (AvatarSample_A/B, Hiyori) with one-click force recalibration.
-* **Vision**: Added verified Cloudflare Workers AI multimodal vision models (Llama 4 Scout 17B, Mistral Small 3.1 24B, Qwen 3.8 27B) with bidirectional strategy synchronization.
-* **Proactivity & Awareness**: Consolidated daily operating routines and desktop screen perception into a single unified step, streamlining the canonical onboarding flow from 19 to 18 steps.
+### 🎭 Emotion Calibration Studio & Rehearsal Room
+* **Standalone Emotion Calibration Studio**: Introduced a dedicated calibration environment (`/settings/emotions/studio`) designed for fine-tuning facial expressions and body morphs with instant visual feedback.
+* **Guided 3-Step Calibration Pipeline**: Experience a stepped workflow (`Meet` ➔ `Name` ➔ `Verify`) featuring live avatar face framing, custom expression overrides, and a comprehensive verification table with reactive personality enhancements.
+* **Multi-Phase Rehearsal Room**: Rehearsal room featuring live inline stage previews, curated allowlist baking, and a dedicated System-1 classification toggle with real-time model provider badges.
+* **Dedicated Idling Behaviors**: Decomposed the Acting tab to add an independent Idling management panel for configuring idle animations, breathing cycles, and ambient stage presence.
 
-### 🎬 Coordinated Startup: Standalone Splash Screen & Boot Milestones
-* **Dedicated MPA Splash Screen**: Replaced the static loading screen with a standalone multi-page application splash screen (`splash.html`) that launches instantly upon desktop startup.
-* **3D Levitating Holographic Card Loader**: Rendered a perspective-depth 3D levitating card loader with dynamic metallic light glints and smooth floating keyframes while boot milestones load.
-* **Milestone-Driven Boot Lifecycle**: Communicates startup stages over IPC (`core` ➔ `models` ➔ `stage-ready` ➔ `ready`), giving real-time visual progress as background engines initialize.
-* **Synchronized Avatar Pre-Mounting**: The avatar vessel now mounts silently behind the splash screen, eliminating visual stutter, model pop-in, or T-pose flashes when entering the stage.
-* **Zero-Click Auto-Close**: Once both the runtime and the avatar stage report ready, the splash screen holds for 350ms and performs an elegant CSS fade-out exit before closing.
-* **Persistent Hidden Intent**: If you launch AIRI minimized or hidden, your companion respects that choice across splash dismissals without unexpectedly stealing focus.
+### 🎬 Autonomous Acting Cues & Audio Synchronization
+* **Live Streaming Autonomous Cues**: Expressions and gestures are now parsed and triggered in real-time as dialogue streams from the LLM, eliminating awkward pauses before your companion reacts.
+* **Audio-Synced Hold and Release**: Facial expressions and motion cues now hold naturally across spoken audio slices and release in cadence with TTS speech output instead of vanishing prematurely.
+* **Prompt Token Reverse-Extractor**: Dialogue text automatically infers dynamic emotional intensity and maps expressive nuances to avatar blendshapes without requiring explicit cue tags in system prompts.
+* **Unified Avatar Capabilities**: Consolidated fragmented avatar schemas into unified `expressionCapabilities` and `motionCapabilities` structures across Live2D, VRM, MMD, and Spine.
 
-### ⚙️ Settings Quick Access & Dedicated Card Import Hub
-* **Character Wizard 3-Way Modal**: Clicking "Character Wizard" in Settings Quick Access now opens a 3-way modal directing you to the full 18-step Onboarding V3 wizard, the AnimaDex Cast Wizard, or the dedicated Card Import Hub.
-* **Dedicated Card Import Hub**: Introduced a full-screen landing page (`/settings/airi-card/import-hub`) for rapid drag-and-drop importing of Character Card V2/V3 PNGs, standalone JSONs, and complete single-card ZIP archives.
-* **Free AI 3-Way Modal**: Replaced the direct jump on "Free AI" with a curated 3-card modal letting you choose between the Free AI Hub (Cloud · 50+ Models), WebLLM Local / Apple Core AI (WebGPU / Apple Silicon · 100% Private), and Web-RWKV Local (RNN · Constant VRAM).
-* **Multi-Layer Indicator Badges**: Quick Access buttons now feature subtle layered badges in their top-right corners to visually highlight actions that open multi-option selection modals.
+### 🖼️ Emotion Stickers & Dual Viewport Reactions
+* **12 Bundled Chibi AIRI Reaction Stickers**: Integrated a high-resolution chibi AIRI emotion sticker library into chat and stage rendering pipelines.
+* **Dual Viewport Reaction Slappers**: Emotion stickers dynamically render inline within chat response bubbles and slap onto the active 3D/2D Stage canvas for heightened visual personality.
+* **Configurable Reaction Frequency**: Added a dedicated Stickers panel in Character Card Acting settings to adjust sticker reaction density, destination targets, and audition previews.
 
-### 🎨 Autonomous Artistry & Image Journal Tooling
-* **Resilient Parameter Resolution**: Hardened the `image_journal` tool to defensively accept any prompt key variant passed by diverse LLMs (`prompt`, `description`, `text`, `content`, `caption`, `query`) without failing.
-* **Automatic Action Inference & Prompt Injection**: The image journal tool automatically infers missing action names (defaulting to `create` or `apply`), while system prompts now dynamically inject artistry widget instructions whenever Artistry is active on the companion or globally.
+### ⚡ Web-RWKV Engine: RWKV-7 "Goose" Architecture & Offline Prefabs
+* **RWKV-7 G1 Multi-Model Support**: Upgraded the local WebGPU inference engine to support the newest RWKV-7 "Goose" G1 model architectures with linear-time memory efficiency.
+* **Offline Prefab Quantization Pipeline**: Restored the CBOR `.prefab` quantization compiler with direct Hugging Face prefab downloads for instant, zero-setup local execution with minimal VRAM overhead.
+* **Local Inference Benchmark Playground**: Added an interactive benchmarking surface to measure tokens-per-second throughput and real-time GPU memory allocation across quantized layers.
 
-### 🎙️ Neural Voice Studio: Offline Starter Voices & Zero-Shot Local TTS
-* **18 Bundled Offline Starter Voices**: AIRI now ships with a complete offline starter voice library in `packages/stage-ui/src/assets/voices/`—including ReLU (Empathetic), Sakura (Japanese), Dr. Aria (Professional), Kira, Mio, Sebastian, and 12 other distinct vocal archetypes.
-* **Tokenless Zero-Shot Synthesis**: Enjoy expressive, local neural speech powered by Kokoro and Pocket-TTS with zero external network requests and no API keys required.
-* **Lightweight Local Voice Picker**: Added a quick 3-card engine picker modal in Settings for fast switching between Pocket-TTS, Kokoro, and Moss-Nano.
+### 🌐 Extensible Tooling: Remote Streamable HTTP MCP Servers
+* **Remote Streamable HTTP Transport**: Expanded the Model Context Protocol (MCP) beyond local stdio processes, enabling AIRI to connect directly to external MCP servers over streamable HTTP/HTTPS.
+* **Secure Remote Header Authentication**: Configure custom authorization headers (`Authorization: Bearer <token>`) per remote server to securely connect to private cloud-hosted or intranet MCP tool suites.
+* **Streamable Remote Badges**: The Settings MCP management dashboard now visually identifies remote HTTP endpoints and monitors live connection health.
 
-### 💃 Avatar Staging: Live2D Blend Modes, Soft Loading & ACT Duration Cues
-* **Live2D Parameter Blend Modes**: Full mathematical support for Cubism Add, Multiply, and Overwrite parameter blending, ensuring complex layered expressions (blushing, sweat drops, lighting overlays) render faithfully without clipping.
-* **Soft Optional Asset Loader**: Third-party Live2D zip archives with missing `.exp3.json`, `.motion3.json`, physics, or pose definitions now load gracefully with synthetic fallback stubs instead of throwing uncaught loader errors.
-* **ACT Token Duration Cues**: The ACT parser now understands timed durations in seconds (e.g., `<|ACT:emotion="smile",duration="3"|>`), automatically managing facial expression reset timers across Live2D, VRM, and Stage-Mate Unity sidecars.
+### 💃 3D Avatar Rendering, Performance & Lighting Polish
+* **Configurable VRM Frame Rate Limiter**: Added dedicated FPS clamping options (30 / 60 / uncapped) to drastically reduce GPU power draw and battery consumption during background operation.
+* **Zero-Thrashing Gaze & Head Tracking**: Replaced synchronous DOM layout queries with reactive element boundary listeners, eliminating animation micro-stutter during gaze tracking.
+* **Restored Lighting Orbit Controls**: Brought back orbital lighting manipulation for VRM and MMD avatars, complete with warm studio lighting defaults.
+* **Graceful Stage Cleanup**: Animation frame loops and canvas drag event listeners now cancel immediately upon unmounting, preventing memory leaks and background CPU cycles.
 
-### 🕹️ AIRI Arcade Studio: Cleanroom Replay Engine & CRT Calibration
-* **Full-Screen Arcade Hub**: Introduced a dedicated Arcade Hub with 6-facet catalog filtering, difficulty classification, and game bundle discovery.
-* **Cleanroom Replay Visualizer**: Upgraded replay tools with an accumulated game board visualizer and half-block character rendering.
-* **80×40 Grid Diff Collector**: High-frequency frame diff analysis that captures state changes and synthesizes strategy extractors automatically.
-* **Full 4:3 CRT Viewport**: Expanded calibration viewports to native 4:3 CRT framing with a 15-second calibration inspection view.
-
-### 🧠 Cognition, Memory & Cloud Models
-* **Reusable Mind Map Overview**: Extracted the Knowledge Graph dashboard into an interactive, reusable component (`KnowledgeGraphOverview.vue`) featuring relationship explorers, cluster metrics, and entity inspector cards.
-* **Precision Proper Noun Extraction**: Memory indexing now intelligently strips sentence-initial capitalization noise ("The", "A", "When", "Because"), keeping your companion's knowledge graph free of meaningless grammatical entities.
-* **Hardware-Accelerated Laya Engine (System 1)**: Resolved FP16 precision crashes, added a dedicated WebGPU hardware acceleration toggle with automatic CPU/WASM fallback, and moved execution into a dedicated Web Worker to eliminate UI thread blocking during fast classification.
-* **Cloud Model Selector Auto-Tagging**: The model selection dialog now automatically tags capabilities (multimodal, tool-calling) and links cloud models directly to your active companion card, with responsive formatting tailored for mobile and narrow screens.
+### 🧠 Cognition, Token Telemetry & Desktop Shell Polish
+* **Provider-Level Token Usage Dashboard**: The Usage Stats settings card now tracks and visualizes prompt, completion, and reasoning token consumption segmented by provider.
+* **Tray-Only Menu Bar Mode**: Added a setting to hide AIRI's application icon from the macOS Dock and Windows taskbar, allowing your companion to run entirely as a sleek menu-bar / system tray accessory.
+* **Prompt Token Bloat Protection**: Prevented heavy base64 image data payloads from leaking into text journal tool responses, keeping prompt contexts lean.
+* **Tilde Syntax Code Fences**: Upgraded the Markdown parser to render and syntax-highlight code blocks wrapped in `~~~` fences alongside standard triple backticks.
+* **Router Deadlock Elimination**: Resolved navigation locks when rapidly switching between settings tabs and accelerated card editor opening performance.
 
 ---
 
 ## 🌐 Community & Upstream Radar
-* **Character-Owned Live2D Controls & Motion Hooks**: Sourced inspiration from upstream PR [#2458](https://github.com/moeru-ai/airi/pull/2458) by **@nekomeowww** into our Live2D parameter blending maths (Cubism Add/Multiply/Overwrite) and soft zip archive error resilience.
-* **Coordinated Splash Lifecycle**: Sourced concept ideas from upstream PR [#2698](https://github.com/moeru-ai/airi/pull/2698) by **@nekomeowww**, taking it further into our standalone multi-page application splash screen with milestone IPC and background avatar pre-mounting.
-* **AIRI Design System Conventions**: Aligned with the canonical design specification established by **@RainbowBird** in upstream PR [#2689](https://github.com/moeru-ai/airi/pull/2689), reinforcing chromatic hue standards and responsive component sizing across our desktop and mobile views.
+* **Chibi Emotion Stickers**: Ported and adapted the chibi reaction sticker suite from upstream PR [#2714](https://github.com/moeru-ai/airi/pull/2714) by **@reverieach**, extending it with dual in-chat and on-stage viewport slapping.
+* **Remote MCP over Streamable HTTP**: Inspired by upstream PR [#2821](https://github.com/moeru-ai/airi/pull/2821) by **@clansty**, bringing remote HTTP/HTTPS streaming transports and header security to AIRI's MCP tool bridge.
+* **VRM Frame Rate Limiting & Layout Performance**: Adopted frame rate bounding and head-pose layout thrashing mitigations from upstream PRs [#2609](https://github.com/moeru-ai/airi/pull/2609) and [#2608](https://github.com/moeru-ai/airi/pull/2608) by **@Penluna**.
+* **Tray-Only Dock Presence & Animation Checkbars**: Sourced the tray-only app icon setting from upstream PR [#2700](https://github.com/moeru-ai/airi/pull/2700) and accessible toggle checkbars from [#2740](https://github.com/moeru-ai/airi/pull/2740) by **@Penluna**.
+* **TTS Grapheme Cluster Preservation**: Integrated speech audio chunking fixes from upstream PR [#2369](https://github.com/moeru-ai/airi/pull/2369) by **@nekomeowww** to ensure multi-code-unit symbols and emojis are pronounced faithfully without audio clipping.
+* **Journal Data Isolation & Tilde Highlighting**: Incorporated journal tool image data isolation from upstream PR [#2788](https://github.com/moeru-ai/airi/pull/2788) by **@nekomeowww** and tilde code block rendering from upstream PR [#2797](https://github.com/moeru-ai/airi/pull/2797) by **@starvingarc**.
+* **Desktop Process Resiliency**: Integrated module-level single-instance guards and file closure safety checks from upstream PRs [#2824](https://github.com/moeru-ai/airi/pull/2824) and [#2826](https://github.com/moeru-ai/airi/pull/2826) by **@bitxwolf**.
