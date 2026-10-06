@@ -857,6 +857,11 @@ function handleGuidedMode() {
   router.push('/settings/airi-card/guided')
 }
 
+function handleFoundryMode() {
+  isCreateModePromptOpen.value = false
+  router.push('/settings/airi-card/foundry')
+}
+
 function handleAdvancedMode() {
   isCreateModePromptOpen.value = false
   router.push('/settings/airi-card/edit')
@@ -1147,6 +1152,7 @@ function getDisplayModelId(id: string) {
     v-model="isCreateModePromptOpen"
     @wizard="handleWizardMode"
     @guided="handleGuidedMode"
+    @foundry="handleFoundryMode"
     @advanced="handleAdvancedMode"
   />
 

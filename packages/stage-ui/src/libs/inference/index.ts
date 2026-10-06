@@ -39,8 +39,9 @@ export {
   TIMEOUTS,
   WEB_LLM_MODELS,
   WEB_RWKV_MODELS,
+  WEB_RWKV_STATE_CARTRIDGES,
 } from './constants'
-export type { WebRwkvModelInfo } from './constants'
+export type { WebRwkvModelInfo, WebRwkvStateCartridgeInfo } from './constants'
 export { DEFAULT_LOCAL_VISION_MODEL, LOCAL_VISION_MODELS } from './constants'
 export {
   getGPUCoordinator,

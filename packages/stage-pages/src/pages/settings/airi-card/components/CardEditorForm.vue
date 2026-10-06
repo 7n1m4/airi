@@ -941,6 +941,13 @@ async function saveCard(card: Card): Promise<boolean> {
     ? cardStore.getCard(props.cardId)?.extensions?.airi as AiriExtension | undefined
     : undefined
 
+  const isStateCartridgeCard = Boolean(
+    (rawCard.extensions?.airi as any)?.rwkv?.stateCartridgeId
+    || (existingAiriExt as any)?.rwkv?.stateCartridgeId
+    || (rawCard.extensions?.airi as any)?.modules?.consciousness?.provider === 'web-rwkv'
+    || (existingAiriExt as any)?.modules?.consciousness?.provider === 'web-rwkv',
+  )
+
   const normalizedVersion = (typeof rawCard.version === 'string' && rawCard.version.trim())
     ? rawCard.version.trim()
     : (typeof (rawCard as any).version === 'number' ? String((rawCard as any).version) : '1.0.0')
@@ -970,13 +977,13 @@ async function saveCard(card: Card): Promise<boolean> {
     errorMessage.value = t('settings.pages.card.creation.errors.scenario')
     return false
   }
-  else if (!((rawCard.systemPrompt?.length ?? 0) > 0)) {
+  else if (!isStateCartridgeCard && !((rawCard.systemPrompt?.length ?? 0) > 0)) {
     // No sys prompt
     showError.value = true
     errorMessage.value = t('settings.pages.card.creation.errors.systemprompt')
     return false
   }
-  else if (!((rawCard.postHistoryInstructions?.length ?? 0) > 0)) {
+  else if (!isStateCartridgeCard && !((rawCard.postHistoryInstructions?.length ?? 0) > 0)) {
     // No post history prompt
     showError.value = true
     errorMessage.value = t('settings.pages.card.creation.errors.posthistoryinstructions')
@@ -1176,6 +1183,7 @@ async function saveCard(card: Card): Promise<boolean> {
         visual_assets: existingAiriExt?.visual_assets || {},
         active_concepts: existingAiriExt?.active_concepts || [],
         eternal_record: existingAiriExt?.eternal_record || { relational_milestones: [], lore_bits: [] },
+        rwkv: (rawCard.extensions?.airi as any)?.rwkv || existingAiriExt?.rwkv,
       } as AiriExtension,
     },
   }
@@ -1914,13 +1922,13 @@ function handleGeneratorSave(newValue: string) {
         v-model:pacing-fillers="pacingFillers"
         v-model:pacing-dynamic-asides-enabled="pacingDynamicAsidesEnabled"
         v-model:pacing-semantic-extractor-enabled="pacingSemanticExtractorEnabled"
-        :card-id="props.cardId"
         v-model:pacing-dynamic-after-ms="pacingDynamicAfterMs"
         v-model:pacing-candidate-ttl-ms="pacingCandidateTtlMs"
         v-model:pacing-max-filler-synthesis-budget-ms="pacingMaxFillerSynthesisBudgetMs"
         v-model:pacing-max-synthesis-budget-ms="pacingMaxSynthesisBudgetMs"
         v-model:pacing-profile="pacingProfile"
         v-model:pacing-experimental-organic-pivots="pacingExperimentalOrganicPivots"
+        :card-id="props.cardId"
         :acting-idle-animation-options="actingIdleAnimationOptions"
         :acting-model-emotion-options="actingModelEmotionOptions"
         :acting-model-motion-options="actingModelMotionOptions"

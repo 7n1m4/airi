@@ -377,6 +377,16 @@ const AiriExtensionSchema = looseObject({
     active_expressions: optional(record(string(), number())),
   })),
   voice_profiles: optional(array(record(string(), unknown()))),
+  rwkv: optional(looseObject({
+    stateCartridgeId: optional(string()),
+    stateCartridgeUrl: optional(string()),
+    archetype: optional(string()),
+    baseModel: optional(string()),
+    quantization: optional(string()),
+    recommendedTemperature: optional(number()),
+    recommendedTopP: optional(number()),
+    zeroPromptVerified: optional(boolean()),
+  })),
 })
 
 /**

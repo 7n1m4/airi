@@ -324,6 +324,16 @@ export interface AiriExtension {
     active_expressions?: Record<string, number>
   }
   voice_profiles?: VoiceProfile[]
+  rwkv?: {
+    stateCartridgeId?: string
+    stateCartridgeUrl?: string
+    archetype?: string
+    baseModel?: string
+    quantization?: string
+    recommendedTemperature?: number
+    recommendedTopP?: number
+    zeroPromptVerified?: boolean
+  }
 }
 
 export interface AiriCard extends Card {

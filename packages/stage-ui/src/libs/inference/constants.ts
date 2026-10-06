@@ -166,6 +166,55 @@ export const WEB_RWKV_MODELS: readonly WebRwkvModelInfo[] = [
   },
 ] as const
 
+export interface WebRwkvStateCartridgeInfo {
+  id: string
+  name: string
+  archetype: 'mori' | 'glyph' | 'wired'
+  description: string
+  stateUrls: {
+    '0.4b'?: string
+    '1.5b'?: string
+    '2.9b'?: string
+  }
+}
+
+/**
+ * Curated Zero-Prompt Persona Foundry state cartridges.
+ * Hosted on Hugging Face CDN under dasilva333/rwkv7-g1-webgpu-prefabs/states/.
+ */
+export const WEB_RWKV_STATE_CARTRIDGES: readonly WebRwkvStateCartridgeInfo[] = [
+  {
+    id: 'cartridge-mori-v1',
+    name: 'Mori (Forest Guardian)',
+    archetype: 'mori',
+    description: 'Stoic woodland presence with crystalline 80-character brevity and zero machine leakage.',
+    stateUrls: {
+      '0.4b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/mori.state',
+      '1.5b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/mori.state',
+    },
+  },
+  {
+    id: 'cartridge-glyph-v1',
+    name: 'Glyph (Kaomoji Gremlin)',
+    archetype: 'glyph',
+    description: 'Playful companion speaking in rich multi-byte Unicode Kaomojis and affectionate banter.',
+    stateUrls: {
+      '0.4b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/glyph.state',
+      '1.5b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/glyph.state',
+    },
+  },
+  {
+    id: 'cartridge-wired-v1',
+    name: 'Protocol: Wired (Digital Solitude)',
+    archetype: 'wired',
+    description: 'Introspective electronic ghost exploring human connection across the Wired.',
+    stateUrls: {
+      '0.4b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/wired.state',
+      '1.5b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/wired.state',
+    },
+  },
+] as const
+
 /** Default web-rwkv model URL. */
 export const DEFAULT_WEB_RWKV_MODEL: string = WEB_RWKV_MODELS[0].id
 

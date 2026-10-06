@@ -152,63 +152,74 @@ We introduce a **Fourth Creation Tile**:
 
 ## 4. The 4-Step Persona Foundry Guided Experience
 
-When clicking the **RWKV Persona Foundry** tile, the user enters a focused 4-step wizard:
+When clicking the **Persona Foundry** tile, the user enters a progressive, step-by-step wizard (`currentStep: 1 | 2 | 3 | 4`):
 
 ```mermaid
 flowchart LR
-    S1["Step 1: Soul Ingestion Source\n(Select Mori-v3 Chat or Exemplars)"] -->
-    S2["Step 2: In-Browser State Baking\n(WebGPU window.__rwkvMakeState)"] -->
-    S3["Step 3: Zero-Bloat Auto-Config\n(Lock Prefab & Strip Tools)"] -->
-    S4["Step 4: Split-View Calibration\n(Live Chat Verification & Save)"]
+    S1["Step 1: Source & Archetype\n(Trifecta Presets vs Existing Chat)"] -->
+    S2["Step 2: Golden Turns Inspection\n(Mannerisms, Benchmarks & Corpa)"] -->
+    S3["Step 3: RWKV Engine Playground\n(0.1B-2.9B Quants & Taste-Test)"] -->
+    S4["Step 4: Identity, Avatar & Voice\n(ModelSelectorDialog & Voice Widget)"]
 ```
 
-### Step 1: Soul Ingestion Source
-The user chooses where to extract the character's behavior:
-- **Option A: "Distill from Existing Companion Chat" (The Mori Path)**:
-  - Dropdown surfaces existing character sessions (e.g. `Mori-v3`).
-  - The user can select the session and preview the transcript.
-  - An intelligent turn selector filters out tool errors, leaving only pristine User $\rightarrow$ Assistant interactions.
-- **Option B: "Import Golden Transcript / Markdown"**:
-  - Drag-and-drop a `.jsonl` or `.txt` file containing exemplar dialogue.
-- **Option C: "Curated Archetype Seed"**:
-  - Choose pre-baked personality archetypes (Taciturn Specialist, Cyberpunk Hacker, Tsundere Rival).
+### Step 1: Source & Archetype Selection
+The user chooses between:
+- **Curated Archetype Trifecta**:
+  - **Mori** (*Stoic Forest Guardian*): Emerald badge, 83.8-char brevity, calm presence, zero prompt leaks.
+  - **Glyph** (*Unicode Kaomoji Gremlin*): Purple badge, playful banter, multi-byte Japanese Kaomojis (`(╯°□°)╯︵ ┻━┻`), zero prompt.
+  - **Protocol: Wired** (*Cyberspace Mystic*): Amber badge, detached reflections on wetware, cooling fans, and substrate persistence.
+- **Distill Existing Companion**:
+  - Select any character card from the local library to extract dialogue blocks from authentic interaction history.
 
-### Step 2: In-Browser State Baking (~3–5 Seconds)
-- The UI binds to the cleanroom WebGPU worker host (`worker.ts` / `runner.js`).
-- The transcript is tokenized and fed into the active RWKV-7 model (1.5B or 2.9B NF4 Prefab) via `session.run()` in **ingest-only mode** (zero sampling overhead).
-- The worker executes `await session.back(snapshot)` to freeze the recurrent state vector ($h_0$).
-- The state cartridge is stored locally as an ArrayBuffer (`mori-v3.state`, ~12 MB).
+### Step 2: Golden Turns & Dialogue Inspection
+- **For Curated Archetypes**:
+  - Displays verified mannerisms (e.g., Glyph's Kaomojis and double table-flips; Mori's strict 80-char stillness; Wired's thermal & wetware monologues).
+  - Shows empirical cleanroom benchmark metrics (TTFT latency, brevity score, tested probe samples).
+- **For Existing Companions**:
+  - Surfaces available session timelines.
+  - Interactive turn depth selector: **Quick Sample (15T)** vs **Deep Conditioning (50T)** vs **Full History (All Available Turns — Recommended)**.
+  - Previews the sanitized single-actor dialogue blocks before baking.
 
-### Step 3: Zero-Bloat Auto-Configuration
-The wizard automatically configures the generated card with the verified empirical invariants:
-- **System Prompt**: Enveloped with `[TOKEN_OUTPUT_LIMITS: 269]` and concise persona description.
-- **Generation Settings**:
-  - `generation.provider = 'web-rwkv'`
-  - `generation.model = 'rwkv7-g1d-1.5b'` (or LittleLearner 5B)
-  - `generation.known.maxTokens = 269`
-  - `generation.known.reasoningFallback = true`
-  - `generation.known.allowedTools = []` (zero tool overhead)
-  - `generation.compaction = { strategy: 'none', minKeepTurns: 15 }`
-- **Acting & Speech**:
-  - `acting.modelExpressionPrompt = '-'`
-  - `acting.speechExpressionPrompt = '-'`
-  - `acting.autoCuesEnabled = false`
-  - `acting.pacing.enabled = false`
-  - `speech.voice_profiles[0].ust = { enabled: true, mode: 'mute', customStripChars: '*_[]()<>\'\"', stripEmojis: true }`
-- **Memory & Ledger**:
-  - `shortTermMemory = { enabled: true, windowSize: 3, tokenBudgetPerDay: 1000 }`
-  - `eventLedger = { enabled: true, sampleDepth: 6 }`
-  - `groundingEnabled = false`, `heartbeats.enabled = false`, `screenWatching.enabled = false`, `dreamState.enabled = false`
-- **State Slice**:
-  - `rwkv = { stateCartridge: '<cartridgeId>', stateLen: 608256, sourceSessionId: '<sessionId>' }`
+### Step 3: Decomposed RWKV Engine Playground & Interactive Taste-Test
+Step 3 decomposes the advanced inference capabilities from our `web-rwkv.vue` provider and cleanroom harness into an interactive taste-test:
+- **Model Size Grid**: 4 selectable model tiers:
+  - **0.1B**: Nano fallback (382 MB).
+  - **0.4B**: Ultra-lightweight for mobile/integrated GPUs (437 MB NF4).
+  - **1.5B (Recommended)**: Optimal balance of roleplay depth and speed (1.28 GB NF4 / 1.88 GB Int8).
+  - **2.9B**: Deep philosophical capacity and reasoning (~2.5 GB NF4).
+- **Quantization Selector**: Toggle between **NF4** (fastest/smallest), **Int8** (balanced), and **FP16** with cache-detection badges.
+- **Interactive Hyperparameter Tuning**: Sliders for **Temperature** (`0.1`–`2.0`) and **Top-P** (`0.1`–`1.0`) pre-calibrated to the archetype.
+- **In-Wizard Live Taste-Test Session**:
+  - A real-time input box allowing the user to send test prompts (e.g. *"Mori, wake up."* or *"What do you think of this workspace?"*).
+  - Streams generation output in real time so the user can see how the candidate model and quantization respond with the persona *before* committing the card.
 
-### Step 4: Split-View Calibration & Test Probe
-Before committing the card to the local library:
-- A live split-pane testbed opens with the freshly baked state cartridge mounted.
-- The user inputs 2–3 calibration prompts (e.g., *"Mori, wake up."*, *"Did you review the log files?"*).
-- The WebGPU engine answers in real time (~20ms TTFT).
-- The user verifies that Mori's replies are brief, cold, and in-character.
-- Clicking **"Forge Character Card"** saves the card and packages the state cartridge into the local repository.
+### Step 4: Identity, Avatar Sheet & Voice Configuration
+Before saving the card into the local library:
+- **Identity Fields**: Editable Name (prefilled, e.g. "glyph-v2") and Nickname.
+- **Avatar Selection Sheet**: Reuses `ModelSelectorDialog` (from Staging / `@proj-airi/stage-ui/components/scenarios/dialogs/model-selector`) to open the standard 3D VRM / Live2D / 2D avatar picker modal without reinventing the wheel.
+- **Voice Selection Widget**: A compact dropdown right alongside the avatar selector pulling from installed TTS voice profiles (`useSpeechStore`).
+- **Zero-Bloat Invariant Verification**: Checklist confirming Zero Git Leakage, Null System Prompt, and Constant $O(1)$ Memory.
+- **Commit Action**: **"Forge Character Card"** commits the card to `useAiriCardStore`, writing `extensions.airi.rwkv` and navigating to the card inspector.
+
+---
+
+### 4.1 Schema Contract & Card Editor Validation Exemption
+
+We introduce an authoritative, typed domain slice under `extensions.airi.rwkv`:
+```ts
+interface AiriRwkvExtension {
+  stateCartridgeId: string // e.g. "cartridge-glyph-v1" or custom distilled ID
+  archetype?: 'mori' | 'glyph' | 'wired' | 'custom'
+  baseModel: string // e.g. "rwkv7-g1d-1.5b"
+  quantization?: 'nf4' | 'int8' | 'none'
+  recommendedTemperature?: number
+  recommendedTopP?: number
+  zeroPromptVerified: boolean // true = exempt from system prompt
+}
+```
+
+#### CardEditorForm Validation Exemption
+In [`CardEditorForm.vue`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-pages/src/pages/settings/airi-card/components/CardEditorForm.vue), cards possessing `extensions.airi.rwkv.stateCartridgeId` or utilizing `web-rwkv` are explicitly exempt from the legacy requirement that `systemPrompt` and `postHistoryInstructions` must be non-empty strings. For state cartridge cards, empty system prompts are first-class and required to prevent persona dilution.
 
 ---
 
@@ -419,4 +430,43 @@ graph TD
   - Execute `session.load(stateCartridgeBuffer)` on companion activation and utilize `session.back()` to preserve persona equilibrium across turns.
 - **Phase 4 (Community Export & Packaging)**:
   - Bundle `.state` cartridges inside character export archives or standalone download payloads.
+
+---
+
+## 8. Distribution Architecture: Hugging Face CDN & Decoupled Storage
+
+To protect git history from binary bloat and keep Electron desktop installers lightweight, character state cartridges follow a strict **decoupled distribution contract**:
+
+### 8.1 The Lightweight-vs-Heavy Separation
+1. **Lightweight Persona Definitions (<5 KB)**:
+   - Shipped directly within the AIRI codebase / UI wizard (`foundry.vue`).
+   - Includes archetype descriptions, tags, sample greetings, avatar recommendations, temperature/top-p tuning, and zero-prompt metadata.
+2. **Heavy Recurrent State Tensors (~1.5 MB – 6.1 MB)**:
+   - Hosted remotely on Hugging Face CDN under the existing pre-quantized prefabs repository: [`dasilva333/rwkv7-g1-webgpu-prefabs`](https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs).
+   - Structured under a clean `states/` hierarchy partitioned by model parameter tier:
+     ```text
+     dasilva333/rwkv7-g1-webgpu-prefabs/
+     ├── rwkv7-g1d-0.4b-nf4.prefab
+     ├── rwkv7-g1d-0.4b-int8.prefab
+     ├── rwkv7-g1d-1.5b-nf4.prefab
+     ├── rwkv7-g1d-1.5b-int8.prefab
+     └── states/
+         ├── 0.4b/
+         │   ├── mori.state
+         │   ├── glyph.state
+         │   └── wired.state
+         └── 1.5b/
+             ├── mori.state
+             ├── glyph.state
+             └── wired.state
+     ```
+
+### 8.2 Canonical Endpoint Resolution
+The state cartridge catalog in `packages/stage-ui/src/libs/inference/constants.ts` defines canonical URLs:
+- `https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/mori.state`
+- `https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/mori.state`
+- `https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/glyph.state`
+- `https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/wired.state`
+
+When a card is forged in the Persona Foundry, its `extensions.airi.rwkv.stateCartridgeUrl` is populated. On first companion activation, the Web-RWKV worker streams the binary tensor via HTTP Range request directly into local OPFS / IndexedDB cache, providing instant local WebGPU execution with zero application payload bloat.
 
