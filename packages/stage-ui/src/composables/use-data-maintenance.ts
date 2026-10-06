@@ -16,9 +16,10 @@ import { safeParse } from 'valibot'
 import { chatSessionsRepo } from '../database/repos/chat-sessions.repo'
 import { echoChipsRepo } from '../database/repos/echo-chips.repo'
 import { lifetimeMemoryRepo } from '../database/repos/lifetime-memory.repo'
-import { storageState } from '../database/storage'
+import { storage, storageState } from '../database/storage'
 import { useBackgroundStore } from '../stores/background'
 import { useChatOrchestratorStore } from '../stores/chat'
+import { CHAT_STREAM_CHANNEL_NAME } from '../stores/chat/constants'
 import { useChatSessionStore } from '../stores/chat/session-store'
 import { useDisplayModelsStore } from '../stores/display-models'
 import { useMcpStore } from '../stores/mcp'
@@ -49,6 +50,14 @@ export interface CardZipImportResult {
   importedVoiceCount: number
   importedSessionCount: number
   warnings: string[]
+}
+
+export interface ScrubReport {
+  sessionsScanned: number
+  imagesExtracted: number
+  beforeBytes: number
+  afterBytes: number
+  bytesSaved: number
 }
 
 export function useDataMaintenance() {
@@ -1344,6 +1353,241 @@ export function useDataMaintenance() {
     }
   }
 
+  async function calculateChatSessionsByteSize(): Promise<number> {
+    const rawKeys = await storage.getKeys('local')
+    const sessionKeys = rawKeys.filter((k: string) => {
+      const normalized = k.startsWith('local:airi-local:')
+        ? `local:${k.substring('local:airi-local:'.length).replace(/:/g, '/')}`
+        : k.startsWith('local:')
+          ? `local:${k.substring('local:'.length).replace(/:/g, '/')}`
+          : k
+      return normalized.startsWith('local:chat/sessions/')
+    })
+
+    let totalBytes = 0
+    for (const key of sessionKeys) {
+      const normalized = key.startsWith('local:airi-local:')
+        ? `local:${key.substring('local:airi-local:'.length).replace(/:/g, '/')}`
+        : key.startsWith('local:')
+          ? `local:${key.substring('local:'.length).replace(/:/g, '/')}`
+          : key
+      const sessionId = normalized.substring('local:chat/sessions/'.length)
+      if (!sessionId)
+        continue
+      const record = await chatSessionsRepo.getSession(sessionId)
+      if (record) {
+        totalBytes += new TextEncoder().encode(JSON.stringify(record)).length
+      }
+    }
+    return totalBytes
+  }
+
+  function dataUrlToBlob(dataUrl: string): Blob {
+    const [header, base64Data] = dataUrl.split(',')
+    const mimeMatch = header.match(/:(.*?);/)
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/png'
+    const binary = atob(base64Data)
+    const array = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) {
+      array[i] = binary.charCodeAt(i)
+    }
+    return new Blob([array], { type: mimeType })
+  }
+
+  async function scrubAndResolveSessionMedia(options?: {
+    onProgress?: (progress: { current: number, total: number }) => void
+  }): Promise<ScrubReport> {
+    const rawKeys = await storage.getKeys('local')
+    const sessionKeys = rawKeys.filter((k: string) => {
+      const normalized = k.startsWith('local:airi-local:')
+        ? `local:${k.substring('local:airi-local:'.length).replace(/:/g, '/')}`
+        : k.startsWith('local:')
+          ? `local:${k.substring('local:'.length).replace(/:/g, '/')}`
+          : k
+      return normalized.startsWith('local:chat/sessions/')
+    })
+
+    const sessionIds = sessionKeys.map((k: string) => {
+      const normalized = k.startsWith('local:airi-local:')
+        ? `local:${k.substring('local:airi-local:'.length).replace(/:/g, '/')}`
+        : k.startsWith('local:')
+          ? `local:${k.substring('local:'.length).replace(/:/g, '/')}`
+          : k
+      return normalized.substring('local:chat/sessions/'.length)
+    }).filter(Boolean)
+
+    let totalBeforeBytes = 0
+    let totalAfterBytes = 0
+    let totalImagesExtracted = 0
+    let sessionsScanned = 0
+
+    const totalCount = sessionIds.length
+    const encoder = new TextEncoder()
+
+    for (let i = 0; i < sessionIds.length; i++) {
+      const sessionId = sessionIds[i]
+      options?.onProgress?.({ current: i + 1, total: totalCount })
+
+      const record = await chatSessionsRepo.getSession(sessionId)
+      if (!record || !record.messages)
+        continue
+
+      sessionsScanned++
+      const beforeStr = JSON.stringify(record)
+      totalBeforeBytes += encoder.encode(beforeStr).length
+
+      let sessionModified = false
+      const characterId = record.meta?.characterId || null
+      const universeId = record.meta?.universeId || 'global'
+
+      for (const msg of record.messages as any[]) {
+        // 1. Scrub leaked image payloads in tool_results
+        if (Array.isArray(msg.tool_results)) {
+          for (const tr of msg.tool_results) {
+            if (!tr || !tr.result)
+              continue
+
+            let parsed: any = null
+            if (typeof tr.result === 'string') {
+              try {
+                parsed = JSON.parse(tr.result)
+              }
+              catch {}
+            }
+            else if (typeof tr.result === 'object') {
+              parsed = tr.result
+            }
+
+            if (parsed && typeof parsed === 'object') {
+              let changedParsed = false
+
+              // Check if parsed tool result contains inline image base64 / dataUrl
+              const inlineData = parsed.imageUrl || parsed.base64 || parsed.dataUrl
+              if (typeof inlineData === 'string' && (inlineData.startsWith('data:image/') || inlineData.length > 500)) {
+                let entryId = parsed.entryId
+                if (!entryId) {
+                  try {
+                    const blob = inlineData.startsWith('data:image/')
+                      ? dataUrlToBlob(inlineData)
+                      : new Blob([new Uint8Array(atob(inlineData).split('').map(c => c.charCodeAt(0)))], { type: 'image/png' })
+                    const title = parsed.title || 'Scrubbed Journal Artwork'
+                    const prompt = parsed.prompt || ''
+                    entryId = await backgroundStore.addBackground('journal', blob, title, prompt, characterId, undefined, universeId, sessionId)
+                    totalImagesExtracted++
+                  }
+                  catch (e) {
+                    console.error('[ScrubHistory] Failed to extract image from tool result:', e)
+                  }
+                }
+
+                if (parsed.imageUrl) {
+                  delete parsed.imageUrl
+                  changedParsed = true
+                }
+                if (parsed.base64) {
+                  delete parsed.base64
+                  changedParsed = true
+                }
+                if (parsed.dataUrl) {
+                  delete parsed.dataUrl
+                  changedParsed = true
+                }
+                if (entryId) {
+                  parsed.entryId = entryId
+                  parsed.scrubbed = true
+                  changedParsed = true
+                }
+              }
+
+              if (changedParsed) {
+                tr.result = typeof tr.result === 'string' ? JSON.stringify(parsed) : parsed
+                sessionModified = true
+              }
+            }
+          }
+        }
+
+        // 2. Scrub inline base64 images in content and rawContent
+        const dataUrlRegex = /data:image\/[\w.+-]+;base64,[A-Za-z0-9+/=]+/g
+
+        if (typeof msg.content === 'string' && dataUrlRegex.test(msg.content)) {
+          dataUrlRegex.lastIndex = 0
+          const matches = msg.content.match(dataUrlRegex) || []
+          for (const match of matches) {
+            try {
+              const blob = dataUrlToBlob(match)
+              const entryId = await backgroundStore.addBackground(
+                'journal',
+                blob,
+                'Scrubbed Inline Image',
+                undefined,
+                characterId,
+                undefined,
+                universeId,
+                sessionId,
+              )
+              totalImagesExtracted++
+              msg.content = msg.content.replace(match, `local:background:${entryId}`)
+              sessionModified = true
+            }
+            catch (e) {
+              console.error('[ScrubHistory] Failed to extract inline content image:', e)
+            }
+          }
+        }
+
+        if (typeof msg.rawContent === 'string' && dataUrlRegex.test(msg.rawContent)) {
+          dataUrlRegex.lastIndex = 0
+          const matches = msg.rawContent.match(dataUrlRegex) || []
+          for (const match of matches) {
+            try {
+              const blob = dataUrlToBlob(match)
+              const entryId = await backgroundStore.addBackground(
+                'journal',
+                blob,
+                'Scrubbed Inline Image',
+                undefined,
+                characterId,
+                undefined,
+                universeId,
+                sessionId,
+              )
+              totalImagesExtracted++
+              msg.rawContent = msg.rawContent.replace(match, `local:background:${entryId}`)
+              sessionModified = true
+            }
+            catch (e) {
+              console.error('[ScrubHistory] Failed to extract inline rawContent image:', e)
+            }
+          }
+        }
+      }
+
+      if (sessionModified) {
+        await chatSessionsRepo.saveSession(sessionId, record)
+        try {
+          if (typeof BroadcastChannel !== 'undefined') {
+            const channel = new BroadcastChannel(CHAT_STREAM_CHANNEL_NAME)
+            channel.postMessage({ type: 'session-refreshed', sessionId })
+            channel.close()
+          }
+        }
+        catch {}
+      }
+
+      const afterStr = JSON.stringify(record)
+      totalAfterBytes += encoder.encode(afterStr).length
+    }
+
+    return {
+      sessionsScanned,
+      imagesExtracted: totalImagesExtracted,
+      beforeBytes: totalBeforeBytes,
+      afterBytes: totalAfterBytes,
+      bytesSaved: Math.max(0, totalBeforeBytes - totalAfterBytes),
+    }
+  }
+
   return {
     deleteAllModels,
     resetProvidersSettings,
@@ -1365,6 +1609,8 @@ export function useDataMaintenance() {
     nukeOrphanedGroups,
     restoreOrphanedGroups,
     getVaultStats,
+    calculateChatSessionsByteSize,
+    scrubAndResolveSessionMedia,
     exportDataVaultArchive,
     importCardZipPackage,
     inspectVaultImport,
