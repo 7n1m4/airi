@@ -39,8 +39,11 @@ const { selectiveSyncEnabled } = storeToRefs(syncEngineStore)
 const route = useRoute()
 const router = useRouter()
 
-// Card sync filter & tracking
-const cardSyncFilter = ref<'all' | 'synced'>('all')
+// Card sync filter & tracking (defaults to 'synced' if selective sync is enabled, else 'all')
+const cardSyncFilter = ref<'all' | 'synced'>(selectiveSyncEnabled.value ? 'synced' : 'all')
+watch(selectiveSyncEnabled, (enabled) => {
+  cardSyncFilter.value = enabled ? 'synced' : 'all'
+})
 const syncingCardIds = ref<Set<string>>(new Set())
 
 // Sync and activate confirmation
