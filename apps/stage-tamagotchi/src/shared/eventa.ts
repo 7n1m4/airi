@@ -233,8 +233,35 @@ export interface ElectronMcpStdioServerConfig {
   enabled?: boolean
 }
 
-export interface ElectronMcpStdioConfigFile {
-  mcpServers: Record<string, ElectronMcpStdioServerConfig>
+/**
+ * One remote MCP server that AIRI reaches over streamable HTTP.
+ *
+ * Use when:
+ * - A server runs outside this machine and AIRI talks to it by URL
+ *
+ * Expects:
+ * - `url` is an absolute `http` or `https` endpoint
+ * - `headers` carries whatever the server expects, usually an `Authorization` entry
+ */
+export interface ElectronMcpHttpServerConfig {
+  url: string
+  headers?: Record<string, string>
+  enabled?: boolean
+}
+
+/**
+ * Configuration of one MCP server.
+ *
+ * The transport follows from the fields that are present: `command` starts a
+ * child process over stdio, `url` reaches a remote server over streamable HTTP.
+ */
+export type ElectronMcpServerConfig = ElectronMcpStdioServerConfig | ElectronMcpHttpServerConfig
+
+// Backwards compatibility alias
+export type ElectronMcpStdioConfigFile = ElectronMcpConfigFile
+
+export interface ElectronMcpConfigFile {
+  mcpServers: Record<string, ElectronMcpServerConfig>
 }
 
 export interface ElectronMcpStdioApplyResult {
@@ -244,20 +271,46 @@ export interface ElectronMcpStdioApplyResult {
   skipped: Array<{ name: string, reason: string }>
 }
 
-export interface ElectronMcpStdioServerRuntimeStatus {
-  name: string
-  state: 'running' | 'stopped' | 'error'
-  command: string
-  args: string[]
-  pid: number | null
-  lastError?: string
-}
+export type ElectronMcpApplyResult = ElectronMcpStdioApplyResult
 
-export interface ElectronMcpStdioRuntimeStatus {
+/**
+ * Runtime state of one MCP server, narrowed by the transport that carries it.
+ *
+ * A stdio server reports the process it spawned. An HTTP server reports the
+ * endpoint it talks to and has no process to report.
+ */
+export type ElectronMcpServerRuntimeStatus
+  = | {
+    name: string
+    state: 'running' | 'stopped' | 'error'
+    transport?: 'stdio'
+    command: string
+    args: string[]
+    pid: number | null
+    lastError?: string
+  }
+  | {
+    name: string
+    state: 'running' | 'stopped' | 'error'
+    transport: 'http'
+    url: string
+    lastError?: string
+    command?: never
+    args?: never
+    pid?: null
+  }
+
+// Backwards compatibility alias
+export type ElectronMcpStdioServerRuntimeStatus = ElectronMcpServerRuntimeStatus
+
+export interface ElectronMcpRuntimeStatus {
   path: string
-  servers: ElectronMcpStdioServerRuntimeStatus[]
+  servers: ElectronMcpServerRuntimeStatus[]
   updatedAt: number
 }
+
+// Backwards compatibility alias
+export type ElectronMcpStdioRuntimeStatus = ElectronMcpRuntimeStatus
 
 export interface ElectronMcpToolDescriptor {
   serverName: string
