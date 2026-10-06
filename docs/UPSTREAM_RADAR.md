@@ -20,6 +20,183 @@
 
 <!-- RADAR_ENTRIES -->
 
+## [2026-10-06] Upstream Delta: `edbbcf53..881ec784` (9 commits, 61 files, 33 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus & Key Merges**: Upstream merged 9 commits (edbbcf5384..881ec784fd) alongside 33 PR updates (19 new/unbaselined PRs, 8 lifecycle transitions, 6 discussion updates). The primary momentum centers on audio pipeline decoupling, LLM context window protection, and hosted cloud platform expansions:
+  1. **Audio Pipeline Subscriptions (PR #2769 / Commit `91953f0380` by @nekomeowww)**: Major architectural overhaul (+2416/-8 across 30 files) decoupling browser audio adapters (`@proj-airi/audio`) from capture intervals/playback groups (`@proj-airi/pipelines-audio`), enabling shared audio sources via reactive subscriptions.
+  2. **Context Window Protection (PR #2788 / Commit `c291c10f68` by @cheesemori)**: Stopped returning heavy base64 image data in the `image_journal` tool return payload, eliminating LLM context window bloat and runaway token costs by carrying only metadata/`entryId` and letting the UI resolve image bytes via `backgroundStore`.
+  3. **UI Polish & Markdown Fixes**: Fixed tilde (`~~~`) code fence Shiki highlighting (PR #2797 / Commit `2416064d70`), fixed floating chat mode switch drag bounds and pointer capture leaks (PR #2812 / Commit `1d44ed3c2f`), and animated card editor routes in `stage-web` (PR #2811 / Commit `0a1ada35dd`).
+  4. **Hosted Cloud & Commercial Platform Expansion**: Continues rapid convergence toward commercial hosted infrastructure: merged Flux sign-in spinner polish (PR #2807 / Commit `881ec784fd`), opened PR #2817 (27 comments) for field-level cloud card synchronization with backend quotas, opened PR #2813 for RevenueCat subscription/pack billing, PR #2829 for remote experimental feature controls via admin dashboard, and PR #2828 for `/v1/responses` gateway preference.
+  5. **Desktop Shell Stability Wave by @bitxwolf**: A wave of Electron fixes opened for review: PR #2819 (preserve config on update channel switch), PR #2824 (move tray `once()` guard to module level), PR #2826 (guarantee `isFileClosed` in `finally`), PR #2827 (structured logger on startup failure), and PR #2820 (`errorMessageFrom`).
+* **Discussion & Community Buzz**:
+  - 💬 **#2817: `feat(api,stage-ui): synchronize character cards by field` (27 comments)**: Intense discussion regarding remote cloud sync protocol, account card limits (200-card quota), and field-level merge resolution with hosted database.
+  - 💬 **#2552: `add bilingual subtitles` (+7 new comments, 24 total)**: Active velocity; author @phx3334 addressed 4 review issues and requested maintainer re-review from @0xSelenicDove for bracketed subtitle parsing.
+  - 💬 **#979: `Feat/dock mode` (+3 new comments, 17 total, Draft ➔ Ready)**: Upstream dock mode PR moved from draft to ready for review with active review discussion.
+  - 💬 **#2818: `fix(stage-ui): enforce required OpenRouter reasoning` (+4 comments)**: Enforcing mandatory reasoning in OpenRouter catalog to prevent request rejections when effort: none is sent.
+  - 💬 **#2821: `feat(stage-tamagotchi): support remote MCP servers over streamable HTTP` (+2 comments)**: Introducing StreamableHTTPClientTransport to connect to remote MCP endpoints via HTTP/HTTPS.
+  - 👁️ **Watched PRs Radar**:
+    - **#2634: `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain`** [Draft] (1 comment): Quiet; maintainers still haven't triaged the 2-process daemon requirement.
+    - **#2672: `refactor(stage-ui): bind conversations to window-local characters`** [Draft] (48 comments): Steady discussion.
+    - **#2541: `feat(plugins): drop in plugins and MCP-first tool architecture`** [Open] (59 comments): Awaiting maintainer rebase review.
+    - **#2290: `feat(server): stream official ASR over WebSocket`** [Open] (59 comments): Changes requested; awaiting transport decision.
+    - **#2120: `refactor(stage-pages): rebuild AIRI Card editor`** [Open] (41 comments): Changes requested.
+    - 🔄 **Lifecycle Note**: PR #1534 (`auto hide controls island`) was permanently closed upstream.
+* **Cherry-Pick Candidates**:
+  - ✅ **PORTED [dasilva333/airi Commit `800aa8b09c`]: PR #2797 / Commit `2416064d70`: `fix(stage-ui): highlight tilde code fences` by @starvingarc**: High value, minimal diff, zero divergence risk. One-line regex fix in `packages/stage-ui/src/composables/markdown.ts` and `markdown-renderer.vue` to ensure code blocks using `~~~` are properly highlighted.
+  - ✅ **PORTED [dasilva333/airi Commit `4bbc72b987`]: PR #2788 / Commit `c291c10f68`: `fix(stage-tamagotchi): keep image data out of journal tool results` by @cheesemori**: High value optimization. In `apps/stage-tamagotchi/src/renderer/stores/tools/builtin/image-journal.ts`, prevents returning base64/URL image data in the LLM tool result JSON, referencing `entryId` instead so image bytes don't pollute the LLM conversation context.
+  - ✅ **PORTED [dasilva333/airi Commit `496ec45227`]: PR #2826: `fix(tamagotchi): set isFileClosed in finally block so flag is always set on close` by @bitxwolf**: Clean stability fix in `apps/stage-tamagotchi/src/main/app/file-logger.ts` ensuring file logger closed state is always marked even if handle close throws.
+  - ✅ **PORTED [dasilva333/airi Commit `bf97ca614a`]: PR #2824: `fix(tamagotchi): move once() wrapper to module level so guard actually works` by @bitxwolf**: Idempotency fix in `apps/stage-tamagotchi/src/main/tray/index.ts` moving `setupTrayOnce` to module level so repeated tray initialization calls are safely guarded.
+  - 💡 **PR #2821: `feat(stage-tamagotchi): support remote MCP servers over streamable HTTP` by @clansty** (Squat Target): Expands MCP configuration to support remote HTTP/HTTPS streaming endpoints with custom headers alongside local stdio commands.
+  - 💡 **PR #2818: `fix(stage-ui): enforce required OpenRouter reasoning` by @nayounsang** (Reference): Good reference for handling OpenRouter models that fail when reasoning effort is disabled.
+  - ⚪ **Auto-Reject / Do Not Port**:
+    - **PR #2817**: Cloud character card field synchronization to hosted backend. Violates local-first architecture (we use local persistence + BYOS).
+    - **PR #2813 & PR #2807**: RevenueCat subscription billing & Flux pricing/spinner. Violates offline-first / zero-account architecture.
+    - **PR #2828**: `/v1/responses` gateway preference. This fork connects directly to providers and local runtimes.
+    - **PR #2829**: Remote experimentation and admin dashboard telemetry flags.
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/stage-ui/src/components/scenarios/chat/components/history.vue`**: PR #2825 touches chat history layout and timestamp separators. In `dasilva333/airi`, `history.vue` is heavily customized with virtualized rendering, custom frames, and multi-actor item handling. Do not merge directly.
+  - ⚠️ **`packages/stage-ui/src/stores/modules/consciousness.ts` & `provider.ts`**: PR #2818 touches reasoning controls. Our fork has deep customizations for System-1 Jev gating, actor manifestation, and prompt building.
+  - ⚠️ **`apps/stage-tamagotchi` Desktop Shell**: PR #2812 and #2819-#2827 touch Electron main process window management, tray setup, and config persistence. Our architecture cleanly separates the Actor Stage (`windows/stage`) from the Control Strip (`windows/main`) using `injeca`.
+
+### 📋 Upstream Commits
+- `881ec784fd` fix(stage-pages): keep the Flux spinner until sign-in leaves the page (#2807) [#2807](https://github.com/moeru-ai/airi/pull/2807) _(RainbowBird, 2026-10-06)_
+- `91953f0380` feat(pipelines-audio,audio): share audio sources through subscriptions (#2769) [#2769](https://github.com/moeru-ai/airi/pull/2769) _(Neko, 2026-10-06)_
+- `34576c19f6` chore(nix): update pnpmDeps hash (#2810) [#2810](https://github.com/moeru-ai/airi/pull/2810) _(Weathercold, 2026-10-05)_
+- `2416064d70` fix(stage-ui): highlight tilde code fences (#2797) [#2797](https://github.com/moeru-ai/airi/pull/2797) _(wyx, 2026-10-06)_
+- `c291c10f68` fix(stage-tamagotchi): keep image data out of journal tool results (#2788) [#2788](https://github.com/moeru-ai/airi/pull/2788) _(cheesemori, 2026-10-05)_
+- `b2c17e6c2a` chore(skills): add the enforce-rules-for-i18n skill (#2805) [#2805](https://github.com/moeru-ai/airi/pull/2805) _(蓝莓🫐, 2026-10-05)_
+- `7b6a340761` fix(ci): preserve labels and correct PR review reconciliation (#2808) [#2808](https://github.com/moeru-ai/airi/pull/2808) _(Columbina, 2026-10-05)_
+- `0a1ada35dd` feat(stage-web): animate AIRI card editor routes (#2811) [#2811](https://github.com/moeru-ai/airi/pull/2811) _(凌莞~(=^▽^=), 2026-10-06)_
+- `1d44ed3c2f` fix(stage-tamagotchi): fix the floating chat mode switch and its growth during a drag (#2812) [#2812](https://github.com/moeru-ai/airi/pull/2812) _(蓝莓🫐, 2026-10-05)_
+
+### 🔬 Subsystem Breakdown
+#### Documentation & Scaffolding (`⚪ ignore`) — 10 file(s) (+328/-9)
+- `.agents/skills/enforce-rules-for-i18n/SKILL.md` *(+109/-0)*
+- `.github/labeling.md` *(+10/-2)*
+- `.github/labels.yml` *(+15/-0)*
+- `.github/scripts/check-locales.ts` *(+7/-1)*
+- `.github/scripts/pr-review-labels.test.ts` *(+46/-1)*
+- `.github/workflows/pr-review-labels.yml` *(+6/-3)*
+- `.github/workflows/sync-labels.yml` *(+1/-0)*
+- `AGENTS.md` *(+1/-0)*
+- `packages/audio/README.md` *(+76/-0)*
+- `packages/pipelines-audio/README.md` *(+57/-2)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 35 file(s) (+2591/-12)
+- `.agents/skills/enforce-rules-for-i18n/agents/openai.yaml` *(+4/-0)*
+- `.agents/skills/enforce-rules-for-i18n/scripts/apply-review.mjs` *(+114/-0)*
+- `.agents/skills/enforce-rules-for-i18n/scripts/pending-review.mjs` *(+128/-0)*
+- `nix/pnpm-deps-hash.txt` *(+1/-1)*
+- `packages/audio/src/browser.browser.test.ts` *(+107/-0)*
+- `packages/audio/src/browser/audio-output.ts` *(+153/-0)*
+- `packages/audio/src/browser/capture.worklet.ts` *(+29/-0)*
+- `packages/audio/src/browser/index.ts` *(+3/-0)*
+- `packages/audio/src/browser/media-stream.ts` *(+24/-0)*
+- `packages/audio/src/browser/playback.ts` *(+19/-0)*
+- `packages/audio/src/browser/sources.ts` *(+130/-0)*
+- `packages/audio/src/encoding/index.ts` *(+2/-0)*
+- `packages/audio/src/encoding/media-file.test.ts` *(+63/-0)*
+- `packages/audio/src/encoding/media-file.ts` *(+149/-0)*
+- `packages/audio/src/encoding/pcm-stream.test.ts` *(+34/-0)*
+- `packages/audio/src/encoding/pcm-stream.ts` *(+130/-0)*
+- `packages/audio/tsdown.config.ts` *(+3/-0)*
+- `packages/audio/vitest.config.ts` *(+11/-1)*
+- `packages/pipelines-audio/src/audio-input.test.ts` *(+339/-0)*
+- `packages/pipelines-audio/src/audio-input.ts` *(+330/-0)*
+- `packages/pipelines-audio/src/capture.ts` *(+113/-0)*
+- `packages/pipelines-audio/src/index.ts` *(+5/-0)*
+- `packages/pipelines-audio/src/observe.ts` *(+212/-0)*
+- `packages/pipelines-audio/src/playback.test.ts` *(+88/-0)*
+- `packages/pipelines-audio/src/playback.ts` *(+227/-0)*
+- `packages/pipelines-audio/src/scope.ts` *(+74/-0)*
+- `packages/pipelines-audio/src/speech-pipeline.ts` *(+1/-0)*
+- `packages/pipelines-audio/src/stream.ts` *(+13/-3)*
+- `packages/pipelines-audio/src/types.ts` *(+2/-0)*
+- `packages/stage-ui/src/components/markdown/markdown-renderer.browser.test.ts` *(+13/-0)*
+- `packages/stage-ui/src/components/markdown/markdown-renderer.vue` *(+1/-1)*
+- `packages/stage-ui/src/composables/markdown.test.ts` *(+13/-0)*
+- `packages/stage-ui/src/composables/markdown.ts` *(+1/-1)*
+- `packages/stage-ui/src/libs/auth.test.ts` *(+34/-0)*
+- `packages/stage-ui/src/libs/auth.ts` *(+21/-5)*
+
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 8 file(s) (+146/-50)
+- `apps/stage-tamagotchi/src/main/windows/chat/floating.ts` *(+40/-17)*
+- `apps/stage-tamagotchi/src/main/windows/chat/mode-switch.ts` *(+3/-2)*
+- `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.browser.test.ts` *(+29/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.vue` *(+18/-10)*
+- `apps/stage-tamagotchi/src/renderer/components/chat-tool-renderers/journal-tool-call-block.vue` *(+11/-4)*
+- `apps/stage-tamagotchi/src/renderer/pages/chat-floating.vue` *(+39/-11)*
+- `apps/stage-tamagotchi/src/renderer/stores/tools/builtin/image-journal.ts` *(+1/-2)*
+- `apps/stage-tamagotchi/src/shared/eventa/index.ts` *(+5/-4)*
+
+#### Mobile & Web Platforms (`⚪ ignore / low-priority`) — 2 file(s) (+88/-6)
+- `apps/stage-web/src/App.vue` *(+30/-6)*
+- `apps/stage-web/src/styles/transitions.css` *(+58/-0)*
+
+#### Root Build & Tooling (`🔍 inspect`) — 3 file(s) (+22/-2)
+- `packages/audio/package.json` *(+8/-1)*
+- `packages/pipelines-audio/package.json` *(+2/-1)*
+- `pnpm-lock.yaml` *(+12/-0)*
+
+#### UI Primitives & Pages (`📦 import / inspect`) — 3 file(s) (+10/-6)
+- `packages/stage-pages/src/pages/settings/airi-card/[cardId]/edit.vue` *(+2/-2)*
+- `packages/stage-pages/src/pages/settings/airi-card/new.vue` *(+2/-2)*
+- `packages/stage-pages/src/pages/settings/flux.vue` *(+6/-2)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (19)
+- [#2820](https://github.com/moeru-ai/airi/pull/2820) `fix(tamagotchi): replace getErrorMessage wrapper with errorMessageFrom from @moeru/std` by **@bitxwolf** *(2 comments)*
+- [#2828](https://github.com/moeru-ai/airi/pull/2828) `feat(chat): prefer Responses with protocol fallback` by **@luoling8192** *(3 comments)*
+- [#2829](https://github.com/moeru-ai/airi/pull/2829) `feat(settings): add experimental feature controls` by **@luoling8192** *(2 comments)*
+- [#2825](https://github.com/moeru-ai/airi/pull/2825) `feat(chat): add readable message times and simplify sender labels` by **@luoling8192** *(2 comments)*
+- [#2827](https://github.com/moeru-ai/airi/pull/2827) `fix(stage-tamagotchi): use structured logger instead of console.error for startup failure` by **@bitxwolf** *(2 comments)*
+- [#2813](https://github.com/moeru-ai/airi/pull/2813) `feat(api,stage-ui): bill subscriptions and Flux packs through RevenueCat` by **@lulu0119** *(Draft)* *(1 comments)*
+- [#2824](https://github.com/moeru-ai/airi/pull/2824) `fix(tamagotchi): move once() wrapper to module level so guard actually works` by **@bitxwolf** *(2 comments)*
+- [#2819](https://github.com/moeru-ai/airi/pull/2819) `fix(tamagotchi): preserve existing config when updating update channel` by **@bitxwolf** *(2 comments)*
+- [#2826](https://github.com/moeru-ai/airi/pull/2826) `fix(tamagotchi): set isFileClosed in finally block so flag is always set on close` by **@bitxwolf** *(2 comments)*
+- [#2807](https://github.com/moeru-ai/airi/pull/2807) `fix(stage-pages): keep the Flux spinner until sign-in leaves the page` by **@luoling8192** *(1 comments)*
+- [#2823](https://github.com/moeru-ai/airi/pull/2823) `fix(stage-ui): broadcast spark commands from the LLM tool again` by **@clansty** *(2 comments)*
+- [#2822](https://github.com/moeru-ai/airi/pull/2822) `feat(provider-inference,vite-plugin-sherpaw): serve sherpaw model artifacts from a mirror` by **@clansty** *(2 comments)*
+- [#2817](https://github.com/moeru-ai/airi/pull/2817) `feat(api,stage-ui): synchronize character cards by field` by **@luoling8192** *(27 comments)*
+- [#2821](https://github.com/moeru-ai/airi/pull/2821) `feat(stage-tamagotchi): support remote MCP servers over streamable HTTP` by **@clansty** *(2 comments)*
+- [#2818](https://github.com/moeru-ai/airi/pull/2818) `fix(stage-ui): enforce required OpenRouter reasoning` by **@nayounsang** *(4 comments)*
+- [#2815](https://github.com/moeru-ai/airi/pull/2815) `fix(stage-web): limit service worker precache to app shell` by **@lorenzozanee** *(1 comments)*
+- [#2797](https://github.com/moeru-ai/airi/pull/2797) `fix(stage-ui): highlight tilde code fences` by **@starvingarc** *(1 comments)*
+- [#2805](https://github.com/moeru-ai/airi/pull/2805) `chore(skills): add the enforce-rules-for-i18n skill` by **@chiba233** *(1 comments)*
+- [#2812](https://github.com/moeru-ai/airi/pull/2812) `fix(stage-tamagotchi): fix the floating chat mode switch and its growth during a drag` by **@chiba233** *(1 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (8)
+- [#1534](https://github.com/moeru-ai/airi/pull/1534) `Add feature: auto hide controls island` — `OPEN` ➔ `CLOSED`
+- [#979](https://github.com/moeru-ai/airi/pull/979) `Feat/dock mode` — `Draft` ➔ `Ready`
+- [#2809](https://github.com/moeru-ai/airi/pull/2809) `feat(stage-tamagotchi): hide read messages in the danmaku feed` — `Draft` ➔ `Ready`
+- [#2769](https://github.com/moeru-ai/airi/pull/2769) `feat(pipelines-audio,audio): share audio sources through subscriptions` — `OPEN` ➔ `MERGED`
+- [#2810](https://github.com/moeru-ai/airi/pull/2810) `chore(nix): update pnpmDeps hash` — `OPEN` ➔ `MERGED`
+- [#2788](https://github.com/moeru-ai/airi/pull/2788) `fix(stage-tamagotchi): keep image data out of journal tool results` — `OPEN` ➔ `MERGED`
+- [#2808](https://github.com/moeru-ai/airi/pull/2808) `fix(ci): preserve labels and correct PR review reconciliation` — `OPEN` ➔ `MERGED`
+- [#2811](https://github.com/moeru-ai/airi/pull/2811) `feat(stage-web): animate AIRI card editor routes` — `OPEN` ➔ `MERGED`
+
+#### 💬 Discussion Activity (6)
+- [#2590](https://github.com/moeru-ai/airi/pull/2590) `feat(provider): add display names for v2 Provider connections` — *+1 comments (7 ➔ 8 total)*
+- [#2552](https://github.com/moeru-ai/airi/pull/2552) ` add bilingual subtitles` — *+7 comments (17 ➔ 24 total)*
+- [#979](https://github.com/moeru-ai/airi/pull/979) `Feat/dock mode` — *+3 comments (14 ➔ 17 total)*
+- [#2802](https://github.com/moeru-ai/airi/pull/2802) `chore(i18n): update translations` — *+1 comments (3 ➔ 4 total)*
+- [#2679](https://github.com/moeru-ai/airi/pull/2679) `docs: update development setup guide` — *+1 comments (4 ➔ 5 total)*
+- [#2770](https://github.com/moeru-ai/airi/pull/2770) `feat(core-agent): add the voice controller, transcripts, and plugins` — *+1 comments (1 ➔ 2 total)*
+
+### 👁️ Watched PRs Monitor
+- [#2634](https://github.com/moeru-ai/airi/pull/2634) `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain` [Draft] — *(1 comments)*
+  - *Focus*: External Cortico daemon vs in-process native memory; track maintainer reaction to 2-process / web breakage
+- [#2672](https://github.com/moeru-ai/airi/pull/2672) `refactor(stage-ui): bind conversations to window-local characters` [Draft] — *(48 comments)*
+  - *Focus*: Window-local character selection, conversation scoping, standalone card profile page, shared CharacterCard
+- [#2541](https://github.com/moeru-ai/airi/pull/2541) `Telltworose/feat/drop in plugins` [OPEN] — *(59 comments)*
+  - *Focus*: MCP stdio child processes & card-level tool scoping; track author rebase and explanation to maintainers regarding deleted in-process loader
+- [#2290](https://github.com/moeru-ai/airi/pull/2290) `feat(server): stream official ASR over WebSocket` [OPEN] — *(59 comments)*
+  - *Focus*: Official ASR streaming over WebSocket vs OpenAI-compatible HTTP SSE; track rebase and backend transport decisions
+- [#2120](https://github.com/moeru-ai/airi/pull/2120) `refactor(stage-pages): rebuild AIRI Card editor` [OPEN] — *(41 comments)*
+  - *Focus*: Card editor overhaul in stage-pages, dirty draft protection, route vs modal lifecycles
+
+---
 ## [2026-10-05] Upstream Delta: `87230a0d..edbbcf53` (15 commits, 95 files, 35 PR update(s))
 
 ### 🎯 Executive Highlights
