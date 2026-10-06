@@ -179,8 +179,8 @@ The catalog contains 70 discoverable skills. Desktop chatbox and interaction pip
 
 #### 2.15 `airi-rwkv-webgpu-engine`
 - **Target Domain**: RWKV-7 G1 RNN model execution, `@cryscan/web-rwkv-wasm` runtime, `.prefab` CBOR quantization pipeline, offline weight conversion, OPFS caching, and cleanroom verification harness.
-- **Key Paths**: `packages/stage-ui/src/workers/web-rwkv/`, `packages/stage-ui/src/libs/inference/adapters/web-rwkv.ts`, `packages/stage-pages/src/pages/settings/providers/chat/web-rwkv.vue`, `scripts/tests/rwkv-harness/`, `docs/design-web-rwkv-quantization-architecture.md`, `docs/project-rwkv-cleanroom-harness-plan.md`.
-- **Content**: RWKV-7 G1 architecture, `Session.from_prefab` instant boot and zero-degradation offline CBOR quantization, single-slot OPFS model cache, Hugging Face prefab distribution (`dasilva333/rwkv7-g1-webgpu-prefabs`), and maintenance tools (`convert_safetensors.py`, `bake-prefab.sh`, `verify-prefab.mjs`).
+- **Key Paths**: `packages/stage-ui/src/workers/web-rwkv/`, `packages/stage-ui/src/libs/inference/adapters/web-rwkv.ts`, `packages/stage-pages/src/pages/settings/providers/chat/web-rwkv.vue`, `scripts/tests/rwkv-harness/`, `docs/design-web-rwkv-quantization-architecture.md`, `docs/design-rwkv-persona-foundry-and-state-cartridges.md`, `docs/project-rwkv-cleanroom-harness-plan.md`.
+- **Content**: RWKV-7 G1 architecture, `Session.from_prefab` instant boot and zero-degradation offline CBOR quantization, single-slot OPFS model cache, Hugging Face prefab distribution (`dasilva333/rwkv7-g1-webgpu-prefabs`), maintenance tools (`convert_safetensors.py`, `bake-prefab.sh`, `verify-prefab.mjs`), and the RWKV Persona Foundry state distillation architecture.
 
 ---
 

@@ -6,6 +6,7 @@
 **Related Documents:**
 - [`docs/project-rwkv-cleanroom-harness-plan.md`](./project-rwkv-cleanroom-harness-plan.md) — RWKV harness experiment tracking & Phase 0–8 matrix.
 - [`docs/proposal-built-in-llm-webgpu.md`](./proposal-built-in-llm-webgpu.md) — WebGPU local inference architecture and harness specification.
+- [`docs/design-rwkv-persona-foundry-and-state-cartridges.md`](./design-rwkv-persona-foundry-and-state-cartridges.md) — RWKV Persona Foundry wizard, state distillation & Zero-Bloat Invariants.
 - [`docs/rosetta-stone.md`](./rosetta-stone.md) — Section 6 (Inference protocol) & Section 16 (Failure modes).
 
 ---

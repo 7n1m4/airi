@@ -8,6 +8,8 @@ This integration is paired with a progressive refactor of local providers to use
 1. **Unified Streaming Protocol:** Enables all local WebGPU-based model providers (LLM, TTS, STT) to leverage structured, low-overhead streaming.
 2. **GPU Load/Inference Queuing:** Implements a strict inference queuing and coordination mechanism to prevent simultaneous WebGPU execution pipelines from running concurrently, which can easily exceed hardware resource limits and crash the GPU driver (Device Loss).
 
+> **Advanced Evolution (Oct 2026)**: See [`design-rwkv-persona-foundry-and-state-cartridges.md`](./design-rwkv-persona-foundry-and-state-cartridges.md) for character state distillation, the Zero-Bloat Invariants, and the RWKV Persona Foundry wizard.
+
 ---
 
 ## The Vision: 5 Built-in Local ML Models
