@@ -4,7 +4,6 @@ import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
 
 import { normalizeSearchText } from '@proj-airi/stage-shared'
 import { Alert } from '@proj-airi/stage-ui/components'
-import { useDataMaintenance } from '@proj-airi/stage-ui/composables/use-data-maintenance'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
 import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
@@ -22,8 +21,6 @@ import { toast } from 'vue-sonner'
 
 import CardListItem from './components/CardListItem.vue'
 
-import { useCardExport } from './composables/use-card-export'
-
 const CardDetailDialog = defineAsyncComponent(() => import('./components/CardDetailDialog.vue'))
 const CardExportDialog = defineAsyncComponent(() => import('./components/CardExportDialog.vue'))
 const CardImportWizard = defineAsyncComponent(() => import('./components/CardImportWizard.vue'))
@@ -38,8 +35,6 @@ const speechStore = useSpeechStore()
 const { addCard, removeCard } = cardStore
 const { cards, activeCardId, cardsLoading } = storeToRefs(cardStore)
 const { selectiveSyncEnabled } = storeToRefs(syncEngineStore)
-const { getCardWithExportedBackground } = useCardExport()
-const { importCardZipPackage } = useDataMaintenance()
 
 const route = useRoute()
 const router = useRouter()
@@ -62,6 +57,8 @@ const exportTargetCard = ref<AiriCard | null>(null)
 const exportTargetCardId = ref<string>('')
 
 async function handleOpenExport(cardId: string) {
+  const { useCardExport } = await import('./composables/use-card-export')
+  const { getCardWithExportedBackground } = useCardExport()
   const card = await getCardWithExportedBackground(cardId)
   if (!card)
     return
@@ -189,9 +186,13 @@ onMounted(() => {
   window.addEventListener('dragover', onDragOver)
   window.addEventListener('dragleave', onDragLeave)
   window.addEventListener('drop', onDrop)
+
+  // Fast mount: schedule progressive card rendering after the initial frame
+  startProgressiveCardRendering()
 })
 
 onUnmounted(() => {
+  stopProgressiveCardRendering()
   toast.dismiss('character-config-opening')
   removeIpcListener()
   window.removeEventListener('dragover', onDragOver)
@@ -465,6 +466,8 @@ watch(inputFiles, async (newFiles) => {
   try {
     if (file.name.toLowerCase().endsWith('.zip')) {
       try {
+        const { useDataMaintenance } = await import('@proj-airi/stage-ui/composables/use-data-maintenance')
+        const { importCardZipPackage } = useDataMaintenance()
         const result = await importCardZipPackage(file)
         selectedCardId.value = result.cardId
         isCardDialogOpen.value = true
@@ -735,6 +738,70 @@ const sortedFilteredCards = computed<CardItem[]>(() => {
   return sorted
 })
 
+// Progressive rendering: initial frame renders a fast viewport-friendly batch (8 cards)
+// so the route transition finishes immediately, then increments until all cards are mounted.
+const INITIAL_RENDER_COUNT = 8
+const BATCH_INCREMENT = 8
+const renderedCardLimit = ref(INITIAL_RENDER_COUNT)
+let progressiveTimer: any = null
+
+function startProgressiveCardRendering() {
+  renderedCardLimit.value = INITIAL_RENDER_COUNT
+  const step = () => {
+    if (renderedCardLimit.value < sortedFilteredCards.value.length) {
+      renderedCardLimit.value = Math.min(
+        renderedCardLimit.value + BATCH_INCREMENT,
+        sortedFilteredCards.value.length,
+      )
+      if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+        progressiveTimer = requestAnimationFrame(step)
+      }
+      else {
+        progressiveTimer = setTimeout(step, 50)
+      }
+    }
+    else {
+      progressiveTimer = null
+    }
+  }
+
+  if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+    progressiveTimer = requestAnimationFrame(step)
+  }
+  else {
+    progressiveTimer = setTimeout(step, 50)
+  }
+}
+
+function stopProgressiveCardRendering() {
+  if (progressiveTimer !== null) {
+    if (typeof window !== 'undefined' && 'cancelAnimationFrame' in window) {
+      cancelAnimationFrame(progressiveTimer)
+    }
+    else {
+      clearTimeout(progressiveTimer)
+    }
+    progressiveTimer = null
+  }
+}
+
+// Watch filtered cards changes (e.g. search filter typing) to reset or top-up visible limits
+watch(
+  () => sortedFilteredCards.value.length,
+  (len) => {
+    if (len <= INITIAL_RENDER_COUNT) {
+      renderedCardLimit.value = len
+    }
+    else if (renderedCardLimit.value < len && !progressiveTimer) {
+      startProgressiveCardRendering()
+    }
+  },
+)
+
+const visibleCards = computed<CardItem[]>(() => {
+  return sortedFilteredCards.value.slice(0, renderedCardLimit.value)
+})
+
 // Delete confirmation
 const showDeleteConfirm = ref(false)
 const cardToDelete = ref<string | null>(null)
@@ -981,7 +1048,7 @@ function getDisplayModelId(id: string) {
       <!-- Card Items -->
       <template v-else-if="cards.size > 0">
         <CardListItem
-          v-for="item in sortedFilteredCards"
+          v-for="item in visibleCards"
           :id="item.id"
           :key="item.id"
           :name="item.name"
@@ -1001,6 +1068,24 @@ function getDisplayModelId(id: string) {
           @edit="handleEditCard(item.id)"
           @export="handleOpenExport(item.id)"
         />
+
+        <!-- Progressive shimmer placeholders while remaining cards mount -->
+        <template v-if="renderedCardLimit < sortedFilteredCards.length">
+          <div
+            v-for="i in Math.min(4, sortedFilteredCards.length - renderedCardLimit)"
+            :key="`progressive-skeleton-${i}`"
+            class="relative h-[280px] flex flex-col animate-pulse overflow-hidden border-2 border-neutral-100 rounded-xl bg-neutral-200/40 dark:border-neutral-800/25 dark:bg-neutral-800/40"
+          >
+            <div class="aspect-square w-full bg-neutral-300/40 dark:bg-neutral-700/40" />
+            <div class="flex flex-1 flex-col justify-between p-3">
+              <div class="h-4 w-3/4 rounded bg-neutral-300/50 dark:bg-neutral-700/50" />
+              <div class="flex items-center justify-between">
+                <div class="h-3 w-1/4 rounded bg-neutral-300/40 dark:bg-neutral-700/40" />
+                <div class="h-3 w-1/3 rounded bg-neutral-300/40 dark:bg-neutral-700/40" />
+              </div>
+            </div>
+          </div>
+        </template>
       </template>
 
       <!-- No cards message -->

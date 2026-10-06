@@ -119,9 +119,22 @@ watch(
         dynamicBackground.value = colorCache.get(previewUrl) || null
       }
       else {
-        void extractComplementaryColors(previewUrl).then((colors) => {
-          dynamicBackground.value = colors
-        })
+        // Defer canvas color extraction to idle frames so initial mount/navigation does not hitch
+        const scheduleColorExtract = () => {
+          if (typeof document !== 'undefined' && document.hidden)
+            return
+          void extractComplementaryColors(previewUrl).then((colors) => {
+            if (colors) {
+              dynamicBackground.value = colors
+            }
+          })
+        }
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(scheduleColorExtract, { timeout: 3000 })
+        }
+        else {
+          setTimeout(scheduleColorExtract, 250)
+        }
       }
     }
     else {
