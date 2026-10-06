@@ -23,22 +23,6 @@ This document tracks all active pending items, architectural roadmaps, and featu
     *   Build injection engine parsing and generation rules for Mode A (markers), Mode B (multi-actor tags), and Mode C (single-to-multi conversion).
     *   Support Step 4 review interface with choices for "Apply to Current Card (with Backup)" and "Create as New Card".
 
-### Character Card Universal Import/Export & Package Compatibility Bridge
-*References: [design-character-card-import-export.md](../../../../design-character-card-import-export.md) | [design-airi-card.md](../../../../design-airi-card.md)*
-*   **Durable Full-Fidelity AIRI JSON Format**:
-    *   Preserve complete base card metadata, greetings, system prompts, post-history instructions, and all `extensions.airi` data slices (`modules`, `artistry`, `acting`, `heartbeats`, `generation`) without data loss.
-    *   Support auto-versioned JSON wrapper (`{ "format": "airi-card", "version": 1, "card": { ... } }`) with deterministic duplicate renaming (`Lain (2)`, `Lain (3)`).
-*   **Ecosystem CCv2 / SillyTavern PNG Metadata Interoperability**:
-    *   Embed `chara_card_v2` base64 UTF-8 JSON inside PNG `tEXt` chunks under the `chara` keyword for cross-ecosystem card sharing.
-    *   Dual export visual modes: Raw Preview PNG vs Styled Framed Composition (`card-export-frame.png` 925x1436 canvas, portrait inner box `[65, 79, 831, 1295]`).
-    *   Refined export render pipeline reflecting customized outfit variants, active expressions, and character-specific portrait framing.
-*   **ZIP Package Spec v2 Manifest & Multi-Model Layout**: Implement clean asset package structure (`cover.png`, `background.png`, `models/`, `voices/`) replacing inline base64 bloat while supporting multi-model arrays (base 3D VRM + secondary Live2D outfits + manifestations).
-*   **Card Package Export & Import Modal UX (`CardDetailDialog.vue` & `CardCreationDialog.vue`)**:
-    *   Provide full format controls: AIRI Extended ZIP v2, Upstream Main Compatible ZIP v1, SillyTavern CCv2 PNG, Standalone AIRI JSON.
-    *   Asset inclusion checkboxes and auto-generated `README.md` with model redistribution licensing notices.
-    *   Unified global import tile with clear format guidance and auto-defaulting for missing AIRI-specific extension fields.
-*   **Bidirectional Import Pipeline**: Seamlessly import upstream `moeru-ai/airi` Version 1 single-model packages, fork Version 2 multi-model archives, SillyTavern PNG `tEXt` chunks, and CCv2/CCv3 JSON files.
-
 ---
 
 ## Local Runtimes & Desktop Automation
@@ -52,15 +36,6 @@ This document tracks all active pending items, architectural roadmaps, and featu
 *Reference: [proposal-local-inference-edge0-minicpm.md](../../../../../proposal-local-inference-edge0-minicpm.md)*
 *   **Tier 1: MiniCPM-5 2B (In-Browser Web Worker / WebLLM & ONNX Web)**: 100% in-browser WebGPU worker runtime (~1.2–1.5 GB VRAM in 4-bit, zero sidecar, zero native build requirements) serving as an instant offline starter brain with state-of-the-art reasoning and strict JSON tool compliance across web and desktop.
 *   **Tier 2: Edge0 Dynamic MoE Expert Streaming (Electron Native Runtime — Zero Python Sidecar)**: Enables running 35B MoE models (e.g. Qwen 2.5 32B MoE) in sub-3 GB RAM by streaming only active expert tensors dynamically via kernel `mmap` with INT4 quantization and Recover-LoRA. Implemented strictly as an Electron-only native C++/Node N-API addon, explicitly rejecting any Python sidecar processes.
-
-### iOS Native Multimodal Neural Inference Suite (Apple Core AI & Capacitor)
-*Reference: [design-ios-core-ai-native-inference.md](../../../../../design-ios-core-ai-native-inference.md)*
-*   **Gemma 4 Baseline & Multimodal Expansion**: Building on the working Gemma 4 on-device LLM implementation, expand native Apple Neural Engine (ANE) and Metal GPU acceleration via `@proj-airi/cap-native-ai` for other modalities:
-    *   **Consciousness**: Qwen 2.5 (0.5B/1.5B), Llama 3.2 (1B/3B), Ministral 3B, RWKV-7.
-    *   **Vision & Perception**: WD14 WaifuDiffusion Tagger, CLIP (ViT-B/32), BLIP scene captioning, MODNet.
-    *   **Generative Motion**: On-device FlowMDM diffusion denoiser UNet (<350ms on ANE).
-    *   **Audio & Hearing**: Local Whisper STT & Kokoro TTS.
-*   **Out-of-Process Sandbox Streaming**: Stream `.aimodel` bundles directly to `Documents/CoreAI/models/` via native Swift `URLSessionDownloadDelegate` with one-time `.aimodelc` hardware specialization, completely bypassing WebKit memory limits.
 
 ### Generative Code-Painting Dual-Engine (`p5.brush` & RWKV-7)
 *References: [proposal-generative-code-painting-rwkv-webllm.md](../../../../../proposal-generative-code-painting-rwkv-webllm.md) | [project-rwkv-cleanroom-harness-plan.md](../../../../../project-rwkv-cleanroom-harness-plan.md)*
@@ -85,26 +60,11 @@ This document tracks all active pending items, architectural roadmaps, and featu
 
 ## Consciousness & Cognitive Pipeline
 
-### Conversational Pacing, Dynamic Thinking Fillers & Post-CoT Text Velocity
-*Reference: [proposal-conversational-pacing-thinking-fillers.md](../../../../../proposal-conversational-pacing-thinking-fillers.md)*
-*   **Pillar A — Dynamic Thinking Fillers & CoT Audio Cue Interception**:
-    *   Zero-bloat IndexedDB audio cache (`local:audio:thinking-cache/{voiceId}`) synthesized dynamically via active TTS with 0ms replay overhead.
-    *   Personality Thinking Bundles (Tsundere, Kuudere, Yandere, Genki, Custom) configured in Character Card Acting Tab.
-    *   Cascaded timing state machine masking high Time-to-First-Token (TTFT) and reasoning pauses during DeepSeek R1 / OpenAI o1/o3 thinking turns.
-*   **Pillar B — Post-CoT Expressive Text Pacing & Hesitation**:
-    *   Chatbox text velocity modulation, simulated human retyping/backspacing, emotional pauses, and non-verbal avatar reaction hooks.
-
 ### TypeSafe Jev System-1 Cognitive Engine & Multi-Subsystem Wiring
 *Reference: [proposal-jev-integration.md](../../../../../proposal-jev-integration.md)*
-*   **Programmable Visual Attention Gate (Attention Ecology)**:
-    *   Streamline screen perception into a 3-stage pipeline: `pHash` delta check $\rightarrow$ local visual descriptor (WASM OCR / micro-captioner) $\rightarrow$ sub-150ms Jev Natural Language Gate, replacing rigid predefined tag groups.
-    *   Expose a user-programmable natural language trigger prompt directly in Settings > Vision (e.g. *"Did a compiler error occur?"*, *"Is the user shopping for headphones?"*), waking the primary LLM only when confidence threshold is met.
 *   **Streaming Speech-to-Motion & Expression Classifier**:
     *   Evaluate streaming sentence strides in real time (~110–140ms) via Jev `choice` and `score` primitives during TTS pre-synthesis.
     *   Dynamically dispatch Live2D/VRM/Stage-Mate facial expressions (`smug`, `flustered`, `tender`) and ACT motion triggers (`nod`, `lean_forward`, `tilt`) with zero inline XML token generation overhead in the primary LLM.
-*   **AnimaDex Wizard Fast Voice Matching & Acoustic Assignment [SHIPPED]**:
-    *   Completed via `AutoVoiceConfigModal.vue` utilizing System 1 (`typesafe-ai`, `openrouter-ai`, or `laya-local`) for concurrent categorical voice matching, pitch tuning, speed rate selection, and bound model idle motion assignment with seamless LLM fallback.
-    *   Resolves cast voice profiles in ~400ms without freezing the UI or suffering LLM markdown formatting failures.
 *   **Memory Token Compaction & Pre-Summary Salience Curation**:
     *   Pre-filter raw multi-turn conversation logs before invoking heavy System-2 daily/lifetime summarizers.
     *   Strip routine banter and transient small-talk, compacting transcript token volume by ~70% and isolating high-salience biographical anchors and emotional milestones.
@@ -152,13 +112,11 @@ This document tracks all active pending items, architectural roadmaps, and featu
 *   **STT Pre-Transcription Chooser**: Choice dialog upon attaching audio to run local Whisper pre-transcription before sending.
 *   **Smart Video Frame Sampling & Tiled Contact Sheets**: Frontend Canvas/WebCodecs frame extraction and contact sheet tile generation.
 
-### Tri-Model Generative DJ & Music Engine (YuE2, Suno v6, MiniMax)
+### Generative DJ & Music Engine: Character Proactive Tools & Banter
 *Reference: [proposal-comfyui-generative-music-dj-engine.md](../../../../../proposal-comfyui-generative-music-dj-engine.md)*
-*   **Tri-Model Generative Matrix**: Equip the character with two local generation options and one remote option:
-    *   **Local Option 1 — MiniMax Music 3.0 (via ComfyUI)**: High-fidelity neural audio workflow for dedicated GPU rigs.
-    *   **Local Option 2 — YuE 2 (Score-First Local)**: On-device generation (<8 GB VRAM) utilizing symbolic score planning (composing melody, chords, rhythm, and song structure before audio diffusion, enabling structural editing and minor-key covers).
-    *   **Remote Option 1 — Suno v6 (Cloud API)**: Fast, zero-local-VRAM cloud fallback with stem isolation, microediting single lyrics, and tiered creativity (V6, V6 Wild, V6 Mini).
-*   **Dynamic Voice Ducking & DJ Banter**: Automated 20% volume attenuation during character TTS speech with automatic recovery, supporting radio-style spoken intros/outros and status-anchored proactivity.
+*   *(Note: Core Sound Studio frontend & local backend shipped in `chat_music.vue` via YuE-2 & MiniMax Music 3.0)*
+*   **Character Proactive Music Tools**: Equip the companion with first-class LLM tools (`compose_track`, `queue_music`, `suggest_playlist`) allowing characters to autonomously initiate, generate, and collaborate on music tracks during conversation.
+*   **Dynamic Voice Ducking & DJ Banter**: Automated volume attenuation during character TTS speech with automatic recovery, supporting radio-style spoken intros/outros and status-anchored proactivity.
 
 ---
 
@@ -184,13 +142,6 @@ This document tracks all active pending items, architectural roadmaps, and featu
     *   **Spine 2D**: Map emoji anchors to skeletal animation tracks and skin states via `spineStore`.
 *   **Inline Popover Binding & Direct Dispatch**: Interactive in-popover search and reassignment sheet saving directly into `displayModel.emotionMappings[emotionKey]` with auto-reset decay timers back to neutral.
 
-### Model Expression Noise Gate & Sparkle AI Curation (Live2D & Spine Expansion)
-*Reference: [design-expression-noise-gate-and-llm-curation.md](../../../../../design-expression-noise-gate-and-llm-curation.md)*
-*   **Live2D & Spine Noise Gate Adaptation**: Following the completed VRM Tier 1 deterministic classifier (~99.5% accuracy across 907 models), adapt the noise gate to 2D runtimes:
-    *   **Live2D**: Filter tracking physics channels (`ParamAngleX/Y/Z`, `ParamEyeBallX/Y`, `ParamMouthOpenY` visemes, breath loops) while isolating `.exp3.json` expressive targets and motion group triggers.
-    *   **Spine 2D**: Filter mechanical bone IK tracks and base skins while surfacing expressive facial attachments and pose states.
-*   **Sparkle AI 3-Step Curation Wizard for 2D Models**: Enable the `"✨ Auto-Curate (AI)"` wizard in `ModelCustomizer.vue` for Live2D and Spine models, translating foreign parameter names (Japanese/Chinese/cryptic DCC tags) into clean `<|ACT:emotion="..."|>` tokens and compiling acting system prompt directives into `displayModel.emotionMappings` and `AiriExtension.acting.modelExpressionPrompt`.
-
 ### Dynamic Item & Scene Manifestation (TRELLIS & Fire3D)
 *Reference: [proposal-trellis-dynamic-item-manifestation.md](../../../../../proposal-trellis-dynamic-item-manifestation.md)*
 *   **Tier 1: Actor Item Manifestation (TRELLIS)**: Implement LLM tool calls (`create_stage_item`, `list_stage_items`, `equip_stage_item`), ComfyUI TRELLIS 3D websocket pipeline (.glb mesh output), and skeletal bone socket mounting for personal accessories.
@@ -210,9 +161,13 @@ This document tracks all active pending items, architectural roadmaps, and featu
 *References: [design-vhack-studio.md](../../../../../design-vhack-studio.md) | [design-model-customizer.md](../../../../../design-model-customizer.md)*
 *   **Multi-Model Reskin & ModelCustomizer Extension**: Dynamic reskinning editor building on ModelCustomizer unified model handling across VRM (3D), Live2D (2D), MMD/PMX, and Spine.
 
-### Sticker System Specification (Anchored Pseudo-Stickers)
+### Unified Sticker System: In-Chat Slices & Desktop Screen Spawning (Dormant)
 *Reference: [project-stickers-system-spec.md](../../../../../project-stickers-system-spec.md)*
-*   **Anchored Pseudo-Stickers**: Render pseudo-stickers as absolute-positioned DOM elements within existing app containers (ActorStage Window, ControlStrip/Island, Chat bubbles) with rotation jitter, spring scale, and holographic sheen.
+*   *Status: Dormant / Revised Specification (Oct 2026)*
+*   **Dual-Modal Manifestation & Acting Tab Integration**:
+    *   **In-Chat Emotion Slices**: Inline chibi stickers nested within assistant messages via `<|STICKER <id>|>`, stripped before TTS audio synthesis.
+    *   **Desktop Stage / Screen Slapping**: Ephemeral stickers spawned directly onto the screen or stage viewport (`sticker-stack.vue` / `sticker-widget.vue`) with rotation jitter, spring spawn dynamics, holographic sheen tilt, and automatic decay.
+    *   **Acting Tab Authoring**: Anchored within the character card Acting Tab rather than legacy modules.
 
 ### Pluggable Integration Architecture
 *References: [proposal-twitch-plugin.md](../../../../../proposal-twitch-plugin.md) | [proposal-destiny2-plugin.md](../../../../../proposal-destiny2-plugin.md) | [proposal-gaming-show-harness-copilot.md](../../../../../proposal-gaming-show-harness-copilot.md) | [feat-discord-revamp.md](../../../../../feat-discord-revamp.md)*
@@ -220,4 +175,3 @@ This document tracks all active pending items, architectural roadmaps, and featu
 *   **Twitch Chat Plugin (`airi-plugin-twitch-chat`)**: Inbound live stream chat context ingest reacting to chats, subs, raids, and channel points.
 *   **WIP Plugin Stubs**: Complete stubs for Bilibili Live Stream Ingest (`airi-plugin-bilibili-laplace`) and Home Assistant Event Ingest (`airi-plugin-homeassistant`).
 *   **Destiny 2 Proactive Speech Plugin**: Real-time Bungie API game event polling and a local ONNX/WebGPU screen-capture OCR pipeline (`PP-OCRv6_tiny_rec_onnx`) for live PVP/PVE HUD analysis (cleanroom OCR verified).
-*   **Discord & Gemini Live Voice Transcription Sync**: Capture and ingest both user and assistant transcription events from the Gemini Live WebSocket stream back into active message history logs to ensure full parity with spoken voice sessions.

@@ -39,6 +39,7 @@ Focuses on immersion, transparency, and reducing the "black box" nature of AI in
 - **Dynamic Workspace Window Titles** *(new)*: Desktop Electron window titles update reactively with the active character soul and workspace mode (e.g. `AIRI - Lain [Director's Monitor]`).
 - **Generation Stats Popover** *(new)*: Per-turn generation statistics (tokens, timing, output-limit controls) surfaced inline on messages, so cost/length behavior is inspectable without devtools.
 - **Pre-Flight Grounding Panel** *(new)*: The four context blocks injected on every send — `[ENVIRONMENTAL AWARENESS]`, `[GROUNDED LONG-TERM MEMORIES]`, `[RECENT TOPICS]`, `[VISUAL STATE BOARD]` — are composed and previewable *before* the prompt leaves the machine, making "what does she actually see?" a first-class UI question.
+- **Conversational Pacing & Dynamic Thinking Fillers** *(new)*: Full multi-phase turn pacing coordinator (`useTurnPacing`, `turn-pacing-coordinator.ts`) with prewarming, zero-bloat IndexedDB audio caching (`local:audio:thinking-cache/{voiceId}`), personality thinking bundles (Tsundere, Kuudere, Yandere, Genki, Custom), and speech playback bridging to eliminate awkward silence and mask high TTFT during DeepSeek R1 / o1 / o3 reasoning turns.
 - **Unified Event Ledger** *(new)*: A workspace-wide audit stream (`stores/event-log.ts`, spec `docs/project-unified-eventlog.md`) that records live user ingestion, assistant responses, voice STT, tool results, and text/image-journal writes — a replayable paper trail decoupled from the chat transcript.
 
 ### Desktop Stage (Control Island & UI)
@@ -75,6 +76,7 @@ A full-featured card creation, configuration, and portability layer.
 - **Background Bundling on Export**: The character's currently active background/scene is exported **with the card**, so anyone who imports it gets the background automatically applied.
 - **SillyTavern PNG Import/Export**: Full `chara_card_v2` compatibility, allowing users to **import existing community cards** and export AIRI cards as shareable PNGs with embedded metadata and a framed portrait preview.
 - **Dynamic Card Export Snapshots**: Session-aware snapshot system that captures **active outfits and expressions** in real-time for export previews.
+- **Single-Card ZIP Package v1 & Extended v2 Interop** *(new)*: Full packaging export and import bridge supporting both upstream `moeru-ai/airi` v1 and fork extended v2 ZIP packages with clean multi-asset directory layouts (`cover.png`, `background.png`, `models/`, `voices/`, and optional memory bundles), replacing base64 serialization bloat.
 - **Duplicate Handling**: Automatic rename-on-import (`Lain`, `Lain (2)`, `Lain (3)`) prevents accidental overwrites.
 - **Model Assignment & Self-Healing** *(new)*: `ModelAssignmentModal` lets users bind display models to cards explicitly, with display-model self-healing for corrupted/orphaned metadata and lazy catalog loading so multi-megabyte binaries load on demand.
 - **Visual Memory Review** *(new)*: generated-content review modals for approving what the character remembers from visual captures before it lands in memory.
@@ -92,6 +94,7 @@ A structured pipeline that maps AI dialogue tokens into real-time VRM/Live2D exp
 - **Smooth Transitions**: All emotion changes use a lerp-based blending system — when one emotion activates, all others fade to zero simultaneously over a configurable `blendDuration`.
 - **Live2D Emotion Parity**: Extended the ACT pipeline to Live2D models, including a **"Stable Baseline Manager"** that flushes pending resets on new triggers, ensuring the model never gets stuck in an emotional state during rapid interaction.
 - **Additive Live2D Motion Blending** *(new)*: live motions layer additively over the idle instead of hard-cutting it, and motion groups dispatch into the DSL VM during `setMotion` playback.
+- **Expression Noise Gate, Sparkle AI & Ninja-Swap Persona Compiler** *(new)*: Deterministic 1,300+ line expression noise gate (`expression-noise-gate.ts`, `ca06f844a8`) paired with `ExpressionCurationModal.vue` and the Dual-Duty Ninja-Swap architecture (`proposal-ninja-swap-interceptor.md`). Features `EmotionCalibrationStudio.vue`, `DisplayModelFile` canonical capability indexes (`expressionCapabilities`, `motionCapabilities`), card schema allowlists (`cueAllowlist`), and the Acting tab 4-subtab layout (`Cues`, `Voice`, `Thinking`, `Lab`) to filter mechanical jitter and compile persona-grounded cues.
 
 ---
 
@@ -197,6 +200,7 @@ Custom provider integrations not present in the upstream project.
     - **MOSS-TTS-Nano**: Local low-resource TTS with an optimized voice-cloning pipeline and `prompt_audio_codes` caching.
     - **Whisper WebGPU STT** (`whisper-local`): VRAM specs, single-tenant cache enforcement, and VRAM reclaim on model switch.
 - **Monolithic Provider Store Restructuring** *(new)*: The provider registry is decomposed into modular registry/store/lifecycle families supporting **multiple configured instances per provider**, with instance-aware credential gating, generic default base URLs, reactive model browsing, and composite instance key resolution.
+- **Sound Studio Generative Music Workspace (YuE-2 & MiniMax Music 3)** *(new)*: In-app music co-creation studio (`apps/stage-tamagotchi/src/renderer/components/chat/chat_music.vue`) interfacing with local `airi-audio-server` backend. Supports score-first symbolic composition via YuE-2, high-fidelity neural audio diffusion via MiniMax Music 3.0, customizable style presets (Synthwave, Lo-Fi, City Pop, etc.), lyric structure markup tags, CoT score modes, and integrated track playback.
 
 ---
 
@@ -225,6 +229,7 @@ Upstream shipped Discord as a detached sidecar process with limited, text-only f
     - **Full Tool Calls**: LLM-driven tools (journal create/search, artistry) execute natively and render as premium results in Discord responses instead of raw JSON dumps; inline artistry images return as native attachments.
 - **Generation 3 — Cloud Relay ("Vercel for Characters")**: when you close the desktop app entirely, the character keeps talking on Discord. A stateless **Cloudflare Worker** hosted on **your own Cloudflare account** answers interaction webhooks, reads the live character prompt + rolling conversation from **Cloudflare KV**, calls your LLM, and replies — 24/7, zero-custody, no AIRI backend. The desktop client acts as the control plane and even *deploys* this Worker for you via Cloudflare OAuth, then can switch execution between the local gateway and the edge. Full architecture, deployment flow, and the BYOS/Edge-Vault sync story live in **§19 Cloud Relay & Zero-Custody Sync**.
 - **Cloud Relay Execution Handover** *(discord-side detail)*: deploying a relay switches `executionMode` to `remote` and pauses the local Discord gateway (so a single bot token isn't contends for by two listeners). The right-panel memory-review modal lets you inspect the Worker's KV conversation log and hand execution back to local, with relay instances tracked per-character.
+- **Discord & Gemini Live Voice Transcription Sync** *(new)*: Full parity between spoken voice channels and chat transcripts via pure JS bidirectional audio bridging (`d0762c3216`, `8d0c89b5ad`). Both user voice STT and character assistant voice transcriptions from active Gemini Live WebSocket calls are automatically captured and ingested into active conversation history logs.
 - **Mission Control Settings** (`Settings → Modules → Discord`): live gateway status + ping, guild/VC presence table, scrollable event stream, force identity-sync + test/restart buttons, granular toggles, and **DMs disabled by default** for security.
 
 ---
@@ -342,6 +347,7 @@ Running AIRI is no longer desktop-only. The core experience (`packages/stage-ui`
 - **Mobile Native Stage**: an overhauled mobile stage with a **story timeline switcher** in the header, pure-Vue popovers, an ambient floating-hearts layer, and a theme-aware frosted Control Strip. A full-screen **Control Strip customizer** supports edge-notch docking and drag positioning, unconstrained on mobile.
 - **Mobile Landscape**: dedicated layout support so the experience holds up when the device rotates (with an updated mobile revamp architecture spec).
 - **Native Unity Companion**: `apps/stage-mate` — a standalone Unity/VRM desktop-pet window that renders the character outside the Electron surface (see §20).
+- **iOS Native Neural Inference Suite (Apple Core AI & Capacitor)** *(new)*: Native Apple Neural Engine (ANE) and Metal GPU acceleration for on-device local models on iOS via `@proj-airi/cap-native-ai`, complete with dedicated settings in `apple-core-ai.vue`, testbed in `core-ai-lab.vue`, and out-of-process `.aimodel`/`.aimodelc` sandbox streaming bypassing WebKit memory caps.
 - **Cross-Platform Fixes**: iOS Web Speech API streaming fixes, web-settings back navigation and STT error alerts, and a catalogue of documented mobile lessons (Vue `<Transition>` scoped-CSS opacity lockups, KeepAlive name matching) hardened the shared codebase without leaking regressions between platforms.
 
 ---
