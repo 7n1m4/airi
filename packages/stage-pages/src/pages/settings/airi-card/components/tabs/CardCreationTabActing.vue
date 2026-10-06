@@ -166,7 +166,7 @@ function applyPacingProfile(profileId: 'snappy' | 'balanced' | 'deep_cot') {
 </script>
 
 <template>
-  <div class="tab-content ml-auto mr-auto w-95%">
+  <div class="tab-content ml-auto mr-auto w-full">
     <!-- Header Summary -->
     <div class="mb-4">
       <h3 class="text-sm text-neutral-800 font-semibold dark:text-neutral-100">
@@ -178,20 +178,20 @@ function applyPacingProfile(profileId: 'snappy' | 'balanced' | 'deep_cot') {
     </div>
 
     <!-- Sub-Navigation Segmented Pill Bar -->
-    <div class="mb-5 flex flex-wrap items-center gap-1.5 border border-neutral-200 rounded-xl bg-neutral-100/70 p-1.5 dark:border-neutral-800 dark:bg-neutral-900/60">
+    <div class="mb-5 flex flex-wrap items-center gap-1 border border-neutral-200 rounded-xl bg-neutral-100/70 p-1 dark:border-neutral-800 dark:bg-neutral-900/60">
       <button
         v-for="tab in subTabs"
         :key="tab.id"
         type="button"
         :class="[
-          'flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150',
+          'flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-medium transition-all duration-150',
           activeSubTab === tab.id
             ? 'bg-white dark:bg-neutral-800 text-primary-600 dark:text-primary-400 shadow-sm border border-neutral-200/80 dark:border-neutral-700'
             : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50',
         ]"
         @click="activeSubTab = tab.id"
       >
-        <span :class="[tab.icon, 'text-base']" />
+        <span :class="[tab.icon, 'text-sm shrink-0']" />
         <span class="font-medium">{{ tab.label }}</span>
       </button>
     </div>

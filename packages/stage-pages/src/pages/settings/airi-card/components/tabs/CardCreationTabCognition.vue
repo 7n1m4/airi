@@ -236,107 +236,105 @@ function handleApplyQuestionnaire(config: {
 </script>
 
 <template>
-  <div class="tab-content ml-auto mr-auto w-95%">
-    <p class="mb-4 text-sm text-neutral-500 dark:text-neutral-400">
+  <div class="tab-content ml-auto mr-auto w-full flex flex-col gap-5">
+    <p class="text-sm text-neutral-500 dark:text-neutral-400">
       Configure the cognitive routing pipeline, emotional dynamics, pragmatic trigger receptors, and interactive simulation.
     </p>
 
-    <div class="ml-auto mr-auto w-90% flex flex-col gap-5">
-      <!-- 5-Segment Sub-Navigation Bar (Option 1) -->
-      <div class="flex flex-wrap items-center gap-1.5 border border-neutral-200 rounded-xl bg-neutral-100/70 p-1.5 dark:border-neutral-800 dark:bg-neutral-900/60">
-        <button
-          v-for="tab in subTabs"
-          :key="tab.id"
-          type="button"
-          :class="[
-            'flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-all duration-150',
-            activeSubTab === tab.id
-              ? 'bg-white dark:bg-neutral-800 text-primary-600 dark:text-primary-400 shadow-sm border border-neutral-200/80 dark:border-neutral-700'
-              : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50',
-          ]"
-          @click="activeSubTab = tab.id"
+    <!-- 5-Segment Sub-Navigation Bar (Option 1) -->
+    <div class="flex flex-wrap items-center gap-1 border border-neutral-200 rounded-xl bg-neutral-100/70 p-1 dark:border-neutral-800 dark:bg-neutral-900/60">
+      <button
+        v-for="tab in subTabs"
+        :key="tab.id"
+        type="button"
+        :class="[
+          'flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-1.5 text-xs font-medium transition-all duration-150',
+          activeSubTab === tab.id
+            ? 'bg-white dark:bg-neutral-800 text-primary-600 dark:text-primary-400 shadow-sm border border-neutral-200/80 dark:border-neutral-700'
+            : 'text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-neutral-200 hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50',
+        ]"
+        @click="activeSubTab = tab.id"
+      >
+        <span :class="[tab.icon, 'text-sm shrink-0']" />
+        <span class="font-medium">{{ tab.label }}</span>
+        <span
+          v-if="tab.id === 'playground'"
+          class="rounded bg-primary-500/10 px-1 py-0.2 text-[9px] text-primary-600 font-bold dark:text-primary-300"
         >
-          <span :class="[tab.icon, 'text-base']" />
-          <span class="font-medium">{{ tab.label }}</span>
-          <span
-            v-if="tab.id === 'playground'"
-            class="rounded bg-primary-500/10 px-1 py-0.2 text-[9px] text-primary-600 font-bold dark:text-primary-300"
-          >
-            LAB
-          </span>
-        </button>
-      </div>
-
-      <!-- Segment 1: Playground (Interactive Mind & Memory Lab) -->
-      <CognitionSubTabPlayground
-        v-if="activeSubTab === 'playground'"
-        @apply-questionnaire="handleApplyQuestionnaire"
-      />
-
-      <!-- Segment 2: Routing (Two-Hop Pipeline Plumbing) -->
-      <CognitionSubTabRouting
-        v-else-if="activeSubTab === 'routing'"
-        v-model:cognitive-pipeline-enabled="cognitivePipelineEnabled"
-        v-model:first-hop-processor="firstHopProcessor"
-        v-model:selected-first-hop-provider="selectedFirstHopProvider"
-        v-model:selected-first-hop-model="selectedFirstHopModel"
-        v-model:selected-consciousness-provider="selectedConsciousnessProvider"
-        v-model:selected-consciousness-model="selectedConsciousnessModel"
-        :consciousness-provider-options="consciousnessProviderOptions"
-        :consciousness-model-options="consciousnessModelOptions"
-        :first-hop-model-options="firstHopModelOptions"
-        :default-consciousness-model-placeholder="defaultConsciousnessModelPlaceholder"
-        :default-first-hop-model-placeholder="defaultFirstHopModelPlaceholder"
-        @navigate-to-lab="activeSubTab = 'playground'"
-        @navigate-to-memory="activeSubTab = 'memory'"
-      />
-
-      <!-- Segment 3: Affect (Emotional Biology, Decay & Continuity) -->
-      <CognitionSubTabAffect
-        v-else-if="activeSubTab === 'affect'"
-        v-model:selected-mood-preset="selectedMoodPreset"
-        v-model:baseline-suspicion="baselineSuspicion"
-        v-model:baseline-attachment="baselineAttachment"
-        v-model:baseline-pride="baselinePride"
-        v-model:suspicion-sensitivity="suspicionSensitivity"
-        v-model:irritation-half-life-minutes="irritationHalfLifeMinutes"
-        v-model:metabolic-rest-enabled="metabolicRestEnabled"
-        v-model:companion-anchor-override="companionAnchorOverride"
-        v-model:grievance-tracking-enabled="grievanceTrackingEnabled"
-        v-model:grievance-threshold="grievanceThreshold"
-        v-model:daily-forgiveness-rate="dailyForgivenessRate"
-        v-model:silence-threshold="silenceThreshold"
-        :cognitive-pipeline-enabled="cognitivePipelineEnabled"
-        :first-hop-processor="firstHopProcessor"
-        @navigate-to-routing="activeSubTab = 'routing'"
-      />
-
-      <!-- Segment 4: Triggers (The True 12 Pragmatic Invariants) -->
-      <CognitionSubTabTriggers
-        v-else-if="activeSubTab === 'triggers'"
-        v-model:tier1-local-reflex-enabled="tier1LocalReflexEnabled"
-        v-model:tier2-jev-challenger-enabled="tier2JevChallengerEnabled"
-        v-model:trigger-groups="triggerGroups"
-        :cognitive-pipeline-enabled="cognitivePipelineEnabled"
-        :first-hop-processor="firstHopProcessor"
-        @navigate-to-routing="activeSubTab = 'routing'"
-      />
-
-      <!-- Segment 5: Memory (Universe RAG++ Epistemic Engine) -->
-      <CognitionSubTabMemory
-        v-else-if="activeSubTab === 'memory'"
-        v-model:universe-rag-grounding-enabled="universeRagGroundingEnabled"
-        v-model:precision-reranker-enabled="precisionRerankerEnabled"
-        v-model:selected-reranker-provider="selectedRerankerProvider"
-        v-model:system2-escalation-enabled="system2EscalationEnabled"
-        v-model:deep-memory-reasoning-model="deepMemoryReasoningModel"
-        v-model:evidence-limit="evidenceLimit"
-        v-model:memory-relevance-threshold="memoryRelevanceThreshold"
-        v-model:turn1-anaphora-enabled="turn1AnaphoraEnabled"
-        v-model:timeline-date-priority-enabled="timelineDatePriorityEnabled"
-        :first-hop-model-options="firstHopModelOptions"
-        :default-consciousness-model-placeholder="defaultConsciousnessModelPlaceholder"
-      />
+          LAB
+        </span>
+      </button>
     </div>
+
+    <!-- Segment 1: Playground (Interactive Mind & Memory Lab) -->
+    <CognitionSubTabPlayground
+      v-if="activeSubTab === 'playground'"
+      @apply-questionnaire="handleApplyQuestionnaire"
+    />
+
+    <!-- Segment 2: Routing (Two-Hop Pipeline Plumbing) -->
+    <CognitionSubTabRouting
+      v-else-if="activeSubTab === 'routing'"
+      v-model:cognitive-pipeline-enabled="cognitivePipelineEnabled"
+      v-model:first-hop-processor="firstHopProcessor"
+      v-model:selected-first-hop-provider="selectedFirstHopProvider"
+      v-model:selected-first-hop-model="selectedFirstHopModel"
+      v-model:selected-consciousness-provider="selectedConsciousnessProvider"
+      v-model:selected-consciousness-model="selectedConsciousnessModel"
+      :consciousness-provider-options="consciousnessProviderOptions"
+      :consciousness-model-options="consciousnessModelOptions"
+      :first-hop-model-options="firstHopModelOptions"
+      :default-consciousness-model-placeholder="defaultConsciousnessModelPlaceholder"
+      :default-first-hop-model-placeholder="defaultFirstHopModelPlaceholder"
+      @navigate-to-lab="activeSubTab = 'playground'"
+      @navigate-to-memory="activeSubTab = 'memory'"
+    />
+
+    <!-- Segment 3: Affect (Emotional Biology, Decay & Continuity) -->
+    <CognitionSubTabAffect
+      v-else-if="activeSubTab === 'affect'"
+      v-model:selected-mood-preset="selectedMoodPreset"
+      v-model:baseline-suspicion="baselineSuspicion"
+      v-model:baseline-attachment="baselineAttachment"
+      v-model:baseline-pride="baselinePride"
+      v-model:suspicion-sensitivity="suspicionSensitivity"
+      v-model:irritation-half-life-minutes="irritationHalfLifeMinutes"
+      v-model:metabolic-rest-enabled="metabolicRestEnabled"
+      v-model:companion-anchor-override="companionAnchorOverride"
+      v-model:grievance-tracking-enabled="grievanceTrackingEnabled"
+      v-model:grievance-threshold="grievanceThreshold"
+      v-model:daily-forgiveness-rate="dailyForgivenessRate"
+      v-model:silence-threshold="silenceThreshold"
+      :cognitive-pipeline-enabled="cognitivePipelineEnabled"
+      :first-hop-processor="firstHopProcessor"
+      @navigate-to-routing="activeSubTab = 'routing'"
+    />
+
+    <!-- Segment 4: Triggers (The True 12 Pragmatic Invariants) -->
+    <CognitionSubTabTriggers
+      v-else-if="activeSubTab === 'triggers'"
+      v-model:tier1-local-reflex-enabled="tier1LocalReflexEnabled"
+      v-model:tier2-jev-challenger-enabled="tier2JevChallengerEnabled"
+      v-model:trigger-groups="triggerGroups"
+      :cognitive-pipeline-enabled="cognitivePipelineEnabled"
+      :first-hop-processor="firstHopProcessor"
+      @navigate-to-routing="activeSubTab = 'routing'"
+    />
+
+    <!-- Segment 5: Memory (Universe RAG++ Epistemic Engine) -->
+    <CognitionSubTabMemory
+      v-else-if="activeSubTab === 'memory'"
+      v-model:universe-rag-grounding-enabled="universeRagGroundingEnabled"
+      v-model:precision-reranker-enabled="precisionRerankerEnabled"
+      v-model:selected-reranker-provider="selectedRerankerProvider"
+      v-model:system2-escalation-enabled="system2EscalationEnabled"
+      v-model:deep-memory-reasoning-model="deepMemoryReasoningModel"
+      v-model:evidence-limit="evidenceLimit"
+      v-model:memory-relevance-threshold="memoryRelevanceThreshold"
+      v-model:turn1-anaphora-enabled="turn1AnaphoraEnabled"
+      v-model:timeline-date-priority-enabled="timelineDatePriorityEnabled"
+      :first-hop-model-options="firstHopModelOptions"
+      :default-consciousness-model-placeholder="defaultConsciousnessModelPlaceholder"
+    />
   </div>
 </template>
