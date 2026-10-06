@@ -1,7 +1,5 @@
 import type { Buffer } from 'node:buffer'
 
-import type { HookInput } from '@anthropic-ai/claude-code'
-
 import { argv, exit, stdin } from 'node:process'
 
 import debug from 'debug'
@@ -12,6 +10,12 @@ import { cac } from 'cac'
 
 import { name, version } from '../package.json'
 import { resolveComma, toArray } from './utils/general'
+
+export interface HookInput {
+  hook_event_name?: string
+  prompt?: string
+  [key: string]: unknown
+}
 
 interface Options {
   config?: string
@@ -67,7 +71,7 @@ cli
 
     const hookEvent = JSON.parse(stdinInput) as HookInput
 
-    if (hookEvent.hook_event_name === 'UserPromptSubmit') {
+    if (hookEvent.hook_event_name === 'UserPromptSubmit' && hookEvent.prompt) {
       const channelServer = new Client({ name: 'proj-airi:plugin-claude-code', autoConnect: false })
       await channelServer.connect()
 
