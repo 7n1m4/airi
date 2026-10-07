@@ -249,10 +249,23 @@ export function createWebRwkvAdapter(): WebRwkvAdapter {
       try {
         await host.runOnGpu(MODEL_NAMES.WEB_RWKV, GPU_PRIORITY.LLM_GENERATE, options?.signal, async ({ slot, crashSignal }) => {
           const signals = [idle.signal, crashSignal]
-          if (options?.signal)
-            signals.push(options.signal)
+          const sanitizedRequest: WebRwkvGenerateRequest = {
+            prompt: String(request.prompt),
+            maxTokens: request.maxTokens,
+            temperature: request.temperature,
+            topP: request.topP,
+            presencePenalty: request.presencePenalty,
+            countPenalty: request.countPenalty,
+            penaltyDecay: request.penaltyDecay,
+            stateCartridgeId: request.stateCartridgeId,
+            stateCartridgeUrl: request.stateCartridgeUrl,
+            forceRecondition: request.forceRecondition,
+            conditioningTexts: request.conditioningTexts
+              ? Array.from(request.conditioningTexts).map(t => String(t))
+              : undefined,
+          }
           const stream = host.rpc!.generate(
-            request,
+            sanitizedRequest,
             { signal: AbortSignal.any(signals) },
           )
           for await (const chunk of stream) {

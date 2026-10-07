@@ -428,3 +428,113 @@ export async function writeCachedPrefab(key: string, data: Uint8Array): Promise<
     console.warn('[web-rwkv:cache] failed to write cached prefab', error)
   }
 }
+
+const STATES_DIR = 'states'
+
+async function openStatesDir(create: boolean): Promise<FileSystemDirectoryHandle | null> {
+  if (!opfsAvailable())
+    return null
+  try {
+    const root = await navigator.storage.getDirectory()
+    const rwkvDir = await root.getDirectoryHandle(CACHE_DIR, { create })
+    return await rwkvDir.getDirectoryHandle(STATES_DIR, { create })
+  }
+  catch {
+    return null
+  }
+}
+
+function stateCacheFileName(cartridgeKey: string): string {
+  const safe = cartridgeKey.replace(/[^\w.-]/g, '_')
+  return `${safe}.statecache`
+}
+
+/**
+ * Read a cached Float32Array recurrent state from OPFS.
+ */
+export async function readCachedState(cartridgeKey: string): Promise<Float32Array | null> {
+  if (!opfsAvailable())
+    return null
+
+  let handle: SyncAccessHandle | null = null
+  try {
+    const dir = await openStatesDir(false)
+    if (!dir)
+      return null
+    const fileName = stateCacheFileName(cartridgeKey)
+    const fileHandle = await dir.getFileHandle(fileName, { create: false }) as FileHandleWithSync
+    if (typeof fileHandle.createSyncAccessHandle !== 'function')
+      return null
+
+    handle = await fileHandle.createSyncAccessHandle()
+    const size = handle.getSize()
+    if (size === 0 || size % 4 !== 0) {
+      handle.close()
+      return null
+    }
+
+    const byteBuffer = new ArrayBuffer(size)
+    const bytesRead = handle.read(new Uint8Array(byteBuffer), { at: 0 })
+    handle.close()
+    handle = null
+
+    if (bytesRead !== size)
+      return null
+
+    return new Float32Array(byteBuffer)
+  }
+  catch {
+    try {
+      handle?.close()
+    }
+    catch {}
+    return null
+  }
+}
+
+/**
+ * Persist a raw Float32Array recurrent state into OPFS under states/.
+ */
+export async function writeCachedState(cartridgeKey: string, data: Float32Array): Promise<void> {
+  if (!opfsAvailable())
+    return
+
+  try {
+    const dir = await openStatesDir(true)
+    if (!dir)
+      return
+    const fileName = stateCacheFileName(cartridgeKey)
+    const fileHandle = await dir.getFileHandle(fileName, { create: true }) as FileHandleWithSync
+    if (typeof fileHandle.createSyncAccessHandle !== 'function')
+      return
+
+    const handle = await fileHandle.createSyncAccessHandle()
+    handle.truncate(0)
+    const uint8View = new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+    handle.write(uint8View, { at: 0 })
+    handle.flush()
+    handle.close()
+    console.info(`[web-rwkv:cache] cached state cartridge (${data.byteLength} bytes) for ${cartridgeKey}`)
+  }
+  catch (error) {
+    console.warn(`[web-rwkv:cache] failed to write cached state for ${cartridgeKey}:`, error)
+  }
+}
+
+/**
+ * Check if a state cartridge exists in OPFS.
+ */
+export async function isStateCached(cartridgeKey: string): Promise<boolean> {
+  if (!opfsAvailable())
+    return false
+  try {
+    const dir = await openStatesDir(false)
+    if (!dir)
+      return false
+    await dir.getFileHandle(stateCacheFileName(cartridgeKey), { create: false })
+    return true
+  }
+  catch {
+    return false
+  }
+}

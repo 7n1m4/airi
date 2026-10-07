@@ -1,4 +1,4 @@
-import { cacheKeyForModel } from '../../workers/web-rwkv/cache'
+import { cacheKeyForModel, isStateCached } from '../../workers/web-rwkv/cache'
 import { NativeAI } from '../native-ai'
 
 // The cache name used by transformers.js / ONNX runtime
@@ -685,3 +685,5 @@ export function formatBytes(bytes: number): string {
 
   return `${value.toFixed(i > 0 ? 1 : 0)} ${units[i]}`
 }
+
+export { isStateCached }

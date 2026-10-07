@@ -5,6 +5,7 @@ import type { ChatMessage } from './format'
 
 import { getWebRwkvAdapter, resolveWebRwkvQuantization } from '../../../libs/inference/adapters/web-rwkv'
 import { DEFAULT_WEB_RWKV_MODEL } from '../../../libs/inference/constants'
+import { useAiriCardStore } from '../../modules/airi-card'
 import { buildRwkvPrompt, createThinkPrefixStripper, openAIChatChunk, openAIChatCompletion, SSE_DONE } from './format'
 
 export { buildRwkvPrompt, createThinkPrefixStripper } from './format'
@@ -85,6 +86,21 @@ export function createWebRwkvChatProvider(config: WebRwkvProviderConfig = {}): C
           await adapter.loadModel(modelUrl, vocabUrl, { quantization: effectiveQuantization, signal: init?.signal ?? undefined })
         }
 
+        let stateCartridgeId: string | undefined
+        let stateCartridgeUrl: string | undefined
+
+        try {
+          const cardStore = useAiriCardStore()
+          const rwkvConfig = (cardStore.activeCard as any)?.extensions?.airi?.rwkv
+          if (rwkvConfig?.stateCartridgeId) {
+            stateCartridgeId = rwkvConfig.stateCartridgeId
+            stateCartridgeUrl = rwkvConfig.stateCartridgeUrl
+          }
+        }
+        catch {
+          // Outside active Pinia scope fallback
+        }
+
         const request: WebRwkvGenerateRequest = {
           prompt,
           maxTokens: body.max_tokens ?? DEFAULT_MAX_TOKENS,
@@ -93,6 +109,8 @@ export function createWebRwkvChatProvider(config: WebRwkvProviderConfig = {}): C
           presencePenalty: body.presence_penalty ?? DEFAULT_PRESENCE_PENALTY,
           countPenalty: DEFAULT_COUNT_PENALTY,
           penaltyDecay: DEFAULT_PENALTY_DECAY,
+          stateCartridgeId,
+          stateCartridgeUrl,
         }
 
         const id = `chatcmpl-${Date.now()}`

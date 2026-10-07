@@ -48,7 +48,7 @@ import {
   webRwkvStateDeltaEvent,
   webRwkvUnloadEvent,
 } from '../../libs/inference/contract'
-import { cacheKeyForModel, createCacheWriter, readCachedModel, readCachedPrefab, writeCachedPrefab } from './cache'
+import { cacheKeyForModel, createCacheWriter, readCachedModel, readCachedPrefab, readCachedState, writeCachedPrefab, writeCachedState } from './cache'
 import { countRwkvLayers, orientAdapterMatrix, readSafetensorsHeader, toF16Bytes } from './safetensors'
 import { createStopScanner } from './stop'
 
@@ -554,10 +554,74 @@ defineStreamInvokeHandler(context, webRwkvGenerateEvent, toStreamHandler<WebRwkv
   // `<think></think`.
   console.info('[web-rwkv:worker] prompt', { prompt: payload.prompt, length: payload.prompt.length })
 
-  // Reset the recurrent state to zeros so each request is stateless — the
-  // provider sends the full chat history every call (OpenAI semantics), so we
-  // must not carry state across generations.
-  session.load(new Float32Array(session.state_len()))
+  // Recurrent state loading & conditioning logic:
+  // 1. If stateCartridgeId is supplied and not forceRecondition, load from OPFS cache.
+  // 2. If not cached, attempt download from stateCartridgeUrl and cache to OPFS.
+  // 3. If still not loaded and conditioningTexts are supplied, condition in-situ, snapshot h0, and cache to OPFS.
+  // 4. Otherwise, reset state to zeros for conventional stateless turn generation.
+  let stateLoaded = false
+  const stateLen = session.state_len()
+
+  if (payload.stateCartridgeId && !payload.forceRecondition) {
+    const cachedState = await readCachedState(payload.stateCartridgeId)
+    if (cachedState && cachedState.length === stateLen) {
+      session.load(cachedState)
+      stateLoaded = true
+      console.info(`[web-rwkv:worker] loaded OPFS cached state cartridge: ${payload.stateCartridgeId}`)
+    }
+  }
+
+  if (!stateLoaded && payload.stateCartridgeUrl && payload.stateCartridgeId && !payload.forceRecondition) {
+    try {
+      console.info(`[web-rwkv:worker] downloading state cartridge from: ${payload.stateCartridgeUrl}`)
+      const resp = await fetch(payload.stateCartridgeUrl, { signal })
+      if (resp.ok) {
+        const ab = await resp.arrayBuffer()
+        if (ab.byteLength === stateLen * 4) {
+          const fetchedState = new Float32Array(ab)
+          session.load(fetchedState)
+          stateLoaded = true
+          await writeCachedState(payload.stateCartridgeId, fetchedState)
+          console.info(`[web-rwkv:worker] state cartridge downloaded and cached in OPFS: ${payload.stateCartridgeId}`)
+        }
+        else {
+          console.warn(`[web-rwkv:worker] state cartridge size mismatch: expected ${stateLen * 4} bytes, got ${ab.byteLength}`)
+        }
+      }
+    }
+    catch (fetchErr) {
+      console.warn('[web-rwkv:worker] failed to fetch state cartridge from URL:', fetchErr)
+    }
+  }
+
+  if (!stateLoaded && payload.conditioningTexts && payload.conditioningTexts.length > 0) {
+    console.info(`[web-rwkv:worker] synthesizing state cartridge in-situ from ${payload.conditioningTexts.length} conditioning blocks...`)
+    session.load(new Float32Array(stateLen))
+    const enc = new TextEncoder()
+    const scratch = new Float32Array(info.num_vocab)
+    for (const text of payload.conditioningTexts) {
+      const condTokens = tokenizer.encode(enc.encode(text))
+      if (condTokens.length > 0) {
+        await session.run(condTokens, scratch)
+      }
+    }
+    stateLoaded = true
+    if (payload.stateCartridgeId) {
+      try {
+        const snapshot = new Float32Array(stateLen)
+        await session.back(snapshot)
+        await writeCachedState(payload.stateCartridgeId, snapshot)
+        console.info(`[web-rwkv:worker] in-situ conditioning completed and cached in OPFS: ${payload.stateCartridgeId}`)
+      }
+      catch (snapshotErr) {
+        console.warn('[web-rwkv:worker] failed to snapshot in-situ state:', snapshotErr)
+      }
+    }
+  }
+
+  if (!stateLoaded) {
+    session.load(new Float32Array(stateLen))
+  }
 
   const sampler = new NucleusSampler(
     info,

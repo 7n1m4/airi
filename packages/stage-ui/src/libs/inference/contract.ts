@@ -347,6 +347,14 @@ export interface WebRwkvGenerateRequest {
   countPenalty: number
   /** Penalty decay (NucleusSampler). */
   penaltyDecay: number
+  /** Optional state cartridge ID (e.g. 'cartridge-glyph-1.5b-v1'). */
+  stateCartridgeId?: string
+  /** Optional remote state cartridge URL to download on demand if not cached in OPFS. */
+  stateCartridgeUrl?: string
+  /** Optional conditioning dialogue blocks to feed into the recurrent state (in-situ distillation). */
+  conditioningTexts?: string[]
+  /** Force re-conditioning even if cartridge is cached in OPFS. */
+  forceRecondition?: boolean
 }
 
 /** One streamed chunk of decoded text from web-rwkv generation. */

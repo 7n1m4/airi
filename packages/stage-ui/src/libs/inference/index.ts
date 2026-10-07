@@ -24,6 +24,7 @@ export {
   isLayaModelCached,
   isModelCached,
   isNeedleModelCached,
+  isStateCached,
   isWebLlmModelCached,
   isWebRwkvSlotOccupied,
   LAYA_CACHE_NAME,

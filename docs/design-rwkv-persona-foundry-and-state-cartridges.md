@@ -461,12 +461,71 @@ To protect git history from binary bloat and keep Electron desktop installers li
              └── wired.state
      ```
 
-### 8.2 Canonical Endpoint Resolution
-The state cartridge catalog in `packages/stage-ui/src/libs/inference/constants.ts` defines canonical URLs:
-- `https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/mori.state`
-- `https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/mori.state`
-- `https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/glyph.state`
-- `https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/wired.state`
+### 8.2 Canonical Endpoint Resolution & Model-Tier Matrix
+Because RWKV-7 recurrent state dimensions are mathematically determined by the model's layer count, attention heads, and head dimensions:
+$$\text{state\_len} = \text{layers} \times \text{heads} \times (\text{head\_size} \times \text{head\_size})$$
 
-When a card is forged in the Persona Foundry, its `extensions.airi.rwkv.stateCartridgeUrl` is populated. On first companion activation, the Web-RWKV worker streams the binary tensor via HTTP Range request directly into local OPFS / IndexedDB cache, providing instant local WebGPU execution with zero application payload bloat.
+A state cartridge is **strictly model-tier specific**:
+- **0.1B**: 12 layers × 12 heads × 64 × 64 = 589,824 floats (~2.36 MB)
+- **0.4B**: 24 layers × 16 heads × 64 × 64 = 1,572,864 floats (~6.29 MB)
+- **1.5B**: 24 layers × 32 heads × 64 × 64 = 3,145,728 floats (~12.58 MB / FP16 6.1 MB)
+- **2.9B**: 32 layers × 40 heads × 64 × 64 = 5,242,880 floats (~20.97 MB / FP16 10.4 MB)
+
+Loading a 1.5B state vector into a 0.4B session triggers an instant WebGPU buffer assertion fault. Therefore, every cartridge identifier, Hugging Face CDN endpoint, and local cache key **must explicitly encode the model parameter tier**:
+
+```text
+cartridge-{archetype}-{model-tier}-v1
+```
+
+Canonical Hugging Face CDN layout on `dasilva333/rwkv7-g1-webgpu-prefabs`:
+- `states/0.4b/mori.state` & `states/1.5b/mori.state`
+- `states/0.4b/glyph.state` & `states/1.5b/glyph.state`
+- `states/0.4b/wired.state` & `states/1.5b/wired.state`
+
+---
+
+## 9. Comprehensive Storage Architecture: Model-Scoped OPFS & Pinia Index
+
+### 9.1 Storage Tier Allocation & Disqualification Matrix
+
+| Persistence Layer | Technology | Allocation | Invariant & Rationale |
+| :--- | :--- | :--- | :--- |
+| **`OPFS` (Origin Private File System)** | `navigator.storage.getDirectory()` | **Primary Runtime Engine** | Worker-native `FileSystemSyncAccessHandle`. Stores raw `.statecache` binaries directly inside the Web Worker thread for zero-latency `session.load()` without crossing `postMessage`. |
+| **`Pinia` Store (`useRwkvStateCartridgeStore`)** | Pinia Reactive Index | **Metadata Index Only** | Strictly obeys `airi-binary-safety`. Holds lightweight descriptors (id, name, archetype, model tier, byte size, cached status, download progress). **Raw Float32Array buffers are never placed in Vue reactive state**. |
+| **`localforage` (`rwkv-state-cartridges`)** | IndexedDB Instance | **User Import / Export / Backup** | Dedicated IndexedDB store used when users export character cards with embedded state cartridges or import external `.state` files via drag-and-drop. |
+| **`unstorage` (`storage.ts: local:*`)** | Default IndexedDB Base | ❌ **Strictly Disqualified** | Hooked into the `outbox:` queue for remote cloud sync. Multi-megabyte binary state vectors would attempt JSON serialization and flood sync transport. |
+| **`localStorage`** | Web Storage API | ❌ **Strictly Banned** | 5 MB synchronous string quota; will throw `QuotaExceededError` and block the main UI thread. |
+
+### 9.2 OPFS Directory & Key Structure
+Inside the Web Worker OPFS root:
+```text
+OPFS Root/
+└── web-rwkv/
+    ├── rwkv7-g1d-0.4b-nf4.prefabcache            <-- Base model weights
+    ├── rwkv7-g1d-1.5b-nf4.prefabcache            <-- Base model weights
+    └── states/
+        ├── cartridge-mori-0.4b-v1.statecache      <-- HF preset (0.4B)
+        ├── cartridge-mori-1.5b-v1.statecache      <-- HF preset (1.5B)
+        ├── cartridge-glyph-0.4b-v1.statecache     <-- HF preset (0.4B)
+        ├── cartridge-glyph-1.5b-v1.statecache     <-- HF preset (1.5B)
+        ├── cartridge-wired-0.4b-v1.statecache     <-- HF preset (0.4B)
+        ├── cartridge-wired-1.5b-v1.statecache     <-- HF preset (1.5B)
+        └── custom-{cardId}-{modelTier}-{hash}.statecache <-- Distilled from companion chat
+```
+
+### 9.3 Unified Ingestion Flow: HF Remote vs Local Distillation
+Whether a cartridge is fetched from Hugging Face or distilled from user chat history, it resolves into the exact same on-disk and in-memory representation:
+1. **Remote Hugging Face Presets**:
+   - On card activation or taste-test, the worker checks if `states/cartridge-{archetype}-{tier}-v1.statecache` exists in OPFS.
+   - If missing, it fetches the binary via HTTP Range request from `dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/{tier}/{archetype}.state`, streams it directly to OPFS, and executes `session.load(buffer)`.
+2. **Local Companion Distillation**:
+   - The user selects an existing companion card and session timeline in Step 1 & 2 of the Persona Foundry.
+   - The worker boots the selected base model, runs the sanitized dialogue blocks through `session.run()` without sampling, snapshots the recurrent hidden state with `session.back(snapshot)`, and saves the resulting `Float32Array` directly to `states/custom-{cardId}-{tier}-{timestamp}.statecache`.
+
+### 9.4 In-Wizard Live Taste-Test Execution Contract
+To resolve the vanilla base model leakage observed during Step 3 probing:
+1. When the user selects an archetype (e.g. Glyph) and parameter tier (e.g. 1.5B):
+   - If the pre-baked `.statecache` is present in OPFS or downloadable from HF, `session.load(stateBuffer)` is invoked immediately.
+   - If testing offline or before HF upload, the worker performs **dynamic in-situ conditioning**: it encodes the archetype's golden turns and executes `session.run()` to prefill $h_0$ before sampling the probe prompt.
+2. The `session.load(new Float32Array(session.state_len()))` zeroing instruction in `worker.ts` is strictly gated to require `if (!payload.stateCartridgeId && !payload.stateBuffer)` so conditioned states remain permanently in equilibrium.
 

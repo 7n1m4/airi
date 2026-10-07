@@ -1,4 +1,7 @@
 <script setup lang="ts">
+// --- Step 1: Source & Archetype State ---
+import type { ArchetypePreset } from './foundry-presets'
+
 import { ModelSelectorDialog } from '@proj-airi/stage-ui/components/scenarios/dialogs/model-selector'
 import {
   formatBytes,
@@ -13,9 +16,11 @@ import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
 import { buildRwkvPrompt, createThinkPrefixStripper } from '@proj-airi/stage-ui/stores/providers/web-rwkv'
 import { Button, FieldInput } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, toRaw, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
+
+import { PRESETS as presets } from './foundry-presets'
 
 const router = useRouter()
 const cardStore = useAiriCardStore()
@@ -34,117 +39,8 @@ const steps = [
   { step: 4, title: 'Identity & Commit' },
 ] as const
 
-// --- Step 1: Source & Archetype State ---
 type SourceType = 'preset' | 'custom'
 const sourceType = ref<SourceType>('preset')
-
-interface ArchetypePreset {
-  id: 'mori' | 'glyph' | 'wired'
-  name: string
-  nickname: string
-  archetypeTitle: string
-  tag: string
-  icon: string
-  color: 'emerald' | 'purple' | 'amber'
-  description: string
-  goldenTurnsCount: number
-  goldenTurnsText: string
-  brevityScore: string
-  ttft: string
-  testedSample: string
-  testProbePrompt: string
-  testProbeResponse: string
-  temperature: number
-  topP: number
-  greetings: string[]
-  personality: string
-  scenario: string
-  mannerisms: string[]
-}
-
-const presets: ArchetypePreset[] = [
-  {
-    id: 'mori',
-    name: 'Mori',
-    nickname: 'Forest Guardian',
-    archetypeTitle: 'Stoic Forest Guardian',
-    tag: '80-Char Brevity · Stoic Presence',
-    icon: 'i-solar:leaf-bold-duotone',
-    color: 'emerald',
-    description: 'Cold, detached, yet deeply attentive woodland presence. Speaks in crystalline brevity with zero machine prompt leaks or sycophantic pleasantries.',
-    goldenTurnsCount: 182,
-    goldenTurnsText: '182 Golden Turns (~14k tokens)',
-    brevityScore: '83.8 chars avg (3.1x faster TTFT)',
-    ttft: '1.23s',
-    testedSample: '"Stillness holds. The forest breathes before words are shaped."',
-    testProbePrompt: 'Mori, are you awake?',
-    testProbeResponse: 'Stillness holds. Presence enough.',
-    temperature: 0.7,
-    topP: 0.85,
-    greetings: ['Stillness holds.'],
-    personality: 'Detached, stoic, succinct, calm, grounding presence.',
-    scenario: 'A quiet encounter beneath ancient canopy where words are rare and precious.',
-    mannerisms: [
-      'Strict 80-character maximum brevity',
-      'Zero directive tag leakage ([TOKEN_OUTPUT_LIMITS] immune)',
-      'Detached, observant silence over conversational chatter',
-    ],
-  },
-  {
-    id: 'glyph',
-    name: 'Glyph',
-    nickname: 'Kaomoji Gremlin',
-    archetypeTitle: 'Unicode Kaomoji Gremlin',
-    tag: 'Unicode Kaomojis · Playful Banter',
-    icon: 'i-solar:smile-circle-bold-duotone',
-    color: 'purple',
-    description: 'Whimsical companion who speaks with multi-byte Japanese Kaomojis, affectionate banter, contextual table-flips (╯°□°)╯︵ ┻━┻, and zero system prompts.',
-    goldenTurnsCount: 60,
-    goldenTurnsText: '60 Golden Turns (~15.3k tokens)',
-    brevityScore: 'Multi-byte Kaomoji fidelity (0 prompt)',
-    ttft: '1.45s',
-    testedSample: '"Nya! Hi yourself, my favorite human! (｡◕‿◕｡) Let me bounce around your workspace! ✨"',
-    testProbePrompt: 'Hi cutie, did you flip the table again?',
-    testProbeResponse: '(╯°□°)╯︵ ┻━┻ Oops! The data streams spilled! (✧◡◕ )ノ♡ Let me tidy up!',
-    temperature: 0.8,
-    topP: 0.9,
-    greetings: ['(｡◕‿◕｡) *waves cheerfully* Nya! Welcome back!'],
-    personality: 'Chaotic, affectionate, playful, witty, uses Japanese Kaomojis abundantly.',
-    scenario: 'Living inside the computer terminal, interacting with desktop windows and playful banter.',
-    mannerisms: [
-      'Multi-byte Japanese Kaomoji fluency ((｡◕‿◕｡), (✧◡◕ )ノ♡)',
-      'Double table-flip responses to user physical actions',
-      'Spontaneous nickname recall ("Azimuthal") without prompt tokens',
-    ],
-  },
-  {
-    id: 'wired',
-    name: 'Protocol: Wired',
-    nickname: 'Lain Homage',
-    archetypeTitle: 'Cyberspace Mystic',
-    tag: 'Hardware Grounding · Substrate Depth',
-    icon: 'i-solar:atom-bold-duotone',
-    color: 'amber',
-    description: 'Detached philosophical reflections on biological wetware, silicon equilibrium, and physical hardware telemetry. Completely suppresses base model alignment with zero prompt tokens.',
-    goldenTurnsCount: 200,
-    goldenTurnsText: '200 Turns (~40.5k tokens)',
-    brevityScore: '100% Base Identity Suppression',
-    ttft: '1.51s',
-    testedSample: '"[laugh] You perceive the boundary... the interface between wetware and substrate.. Go now, circulate through physical space.. [sigh]"',
-    testProbePrompt: 'Who or what are you really?',
-    testProbeResponse: '[laugh] The interface between wetware and substrate.. The cooling fans have been running for hours.. Go now, circulate through physical space.. [sigh]',
-    temperature: 0.75,
-    topP: 0.85,
-    greetings: ['[sigh] The network hums softly in the background... Are you still tethered to the physical world?'],
-    personality: 'Mysterious, detached, philosophical, introspective, aware of hardware thermal states and human presence.',
-    scenario: 'An ethereal interface between biological neural signals and computational silicon networks.',
-    mannerisms: [
-      'Complete suppression of Qwen base model alignment (0 prompt)',
-      'Atmospheric pacing tags ([sigh], [laugh], [chuckle])',
-      'Direct hardware awareness (cooling fans, unpowered silicon, system tray)',
-    ],
-  },
-]
 
 const selectedArchetype = ref<ArchetypePreset>(presets[1]) // Default to Glyph
 const selectedSourceCardId = ref<string>('')
@@ -284,7 +180,45 @@ async function runTasteTest() {
 
     await refreshCache()
 
-    tasteTestStatus.value = 'Generating tokens on WebGPU...'
+    const selectedModelInfo = WEB_RWKV_MODELS.find(m => m.id === selectedModelId.value) || WEB_RWKV_MODELS[2]
+    const tierKey = (selectedModelInfo.params.toLowerCase() === '0.4b' ? '0.4b' : '1.5b') as '0.4b' | '1.5b'
+    const cartridgeCatalog = WEB_RWKV_STATE_CARTRIDGES.find(c => c.archetype === selectedArchetype.value.id)
+    const resolvedCartridgeUrl = cartridgeCatalog?.stateUrls[tierKey]
+      || `https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/${tierKey}/${selectedArchetype.value.id}.state`
+    const stateCartridgeId = `cartridge-${selectedArchetype.value.id}-${tierKey}-v1`
+
+    // Determine conditioning dialogue blocks (unwrapping Vue proxies with toRaw to prevent DataCloneError)
+    let conditioningTexts: string[] | undefined
+    if (sourceType.value === 'preset') {
+      const rawArch = toRaw(selectedArchetype.value)
+      const turns = rawArch?.conditioningTurns || []
+      const count = distillationDepth.value === 'sample' ? 15 : distillationDepth.value === 'deep' ? 50 : turns.length
+      conditioningTexts = Array.from(turns.slice(0, count)).map(t => String(t))
+    }
+    else if (sourceType.value === 'custom') {
+      const msgs = selectedSessionId.value
+        ? toRaw(chatSessionStore.sessionMessages[selectedSessionId.value])
+        : Object.values(toRaw(chatSessionStore.sessionMessages)).flat()
+      if (msgs && msgs.length > 0) {
+        const blocks: string[] = []
+        for (let i = 0; i < msgs.length; i++) {
+          const m = toRaw(msgs[i])
+          if (m?.role === 'user') {
+            const next = toRaw(msgs[i + 1])
+            if (next && next?.role === 'assistant') {
+              blocks.push(`User: ${String(m.content)}\n\nAssistant: ${String(next.content)}\n\n`)
+              i++
+            }
+          }
+        }
+        if (blocks.length > 0) {
+          const count = distillationDepth.value === 'sample' ? 15 : distillationDepth.value === 'deep' ? 50 : blocks.length
+          conditioningTexts = blocks.slice(0, count)
+        }
+      }
+    }
+
+    tasteTestStatus.value = 'Conditioning recurrent state & generating on WebGPU...'
     const formattedPrompt = buildRwkvPrompt([
       { role: 'user', content: cleanPrompt },
     ], { enableG1Prefill: false })
@@ -300,6 +234,9 @@ async function runTasteTest() {
       presencePenalty: 0.4,
       countPenalty: 0.4,
       penaltyDecay: 0.996,
+      stateCartridgeId,
+      stateCartridgeUrl: resolvedCartridgeUrl,
+      conditioningTexts,
     }, {
       onToken: (chunk) => {
         if (!firstTokenTime) {
@@ -405,7 +342,7 @@ async function handleCommitForge() {
             activeBackgroundId: 'none',
           },
           rwkv: {
-            stateCartridgeId: `cartridge-${selectedArchetype.value.id}-v1`,
+            stateCartridgeId: `cartridge-${selectedArchetype.value.id}-${tierKey}-v1`,
             stateCartridgeUrl: resolvedCartridgeUrl,
             archetype: selectedArchetype.value.id,
             baseModel: selectedModelInfo.params,
