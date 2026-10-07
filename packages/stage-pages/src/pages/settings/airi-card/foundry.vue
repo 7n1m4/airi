@@ -308,6 +308,28 @@ const tasteTestMetrics = ref<{
 })
 let tasteTestAbortController: AbortController | null = null
 
+// Recurrent state caching and priming tracking
+const forceReconditionNext = ref<boolean>(false)
+const conditionedCartridges = ref<Set<string>>(new Set())
+
+const currentCartridgeId = computed(() => {
+  const selectedModelInfo = WEB_RWKV_MODELS.find(m => m.id === selectedModelId.value) || WEB_RWKV_MODELS[2]
+  const tierKey = (selectedModelInfo.params.toLowerCase() === '0.4b' ? '0.4b' : '1.5b') as '0.4b' | '1.5b'
+  if (sourceType.value === 'custom') {
+    return `cartridge-custom-${selectedSourceCardId.value}-${tierKey}-${distillationDepth.value}-v1`
+  }
+  return `cartridge-${selectedArchetype.value.id}-${tierKey}-v1`
+})
+
+const isCurrentCartridgePrimed = computed(() => {
+  return conditionedCartridges.value.has(currentCartridgeId.value)
+})
+
+function handleForceRecondition() {
+  forceReconditionNext.value = true
+  toast.info('Next test probe will re-synthesize recurrent state from scratch.')
+}
+
 // --- Step 4: Identity, Avatar & Voice State ---
 const cardName = ref<string>('Glyph')
 const cardNickname = ref<string>('Kaomoji Gremlin')
@@ -476,31 +498,32 @@ async function runTasteTest() {
 
     await refreshCache()
 
-    const selectedModelInfo = WEB_RWKV_MODELS.find(m => m.id === selectedModelId.value) || WEB_RWKV_MODELS[2]
-    const tierKey = (selectedModelInfo.params.toLowerCase() === '0.4b' ? '0.4b' : '1.5b') as '0.4b' | '1.5b'
     const isCustom = sourceType.value === 'custom'
-
-    let stateCartridgeId: string
+    const stateCartridgeId = currentCartridgeId.value
     let resolvedCartridgeUrl: string | undefined
 
-    if (isCustom) {
-      stateCartridgeId = `cartridge-custom-${selectedSourceCardId.value}-${tierKey}-v1`
-      resolvedCartridgeUrl = undefined
-    }
-    else {
+    if (!isCustom) {
+      const selectedModelInfo = WEB_RWKV_MODELS.find(m => m.id === selectedModelId.value) || WEB_RWKV_MODELS[2]
+      const tierKey = (selectedModelInfo.params.toLowerCase() === '0.4b' ? '0.4b' : '1.5b') as '0.4b' | '1.5b'
       const cartridgeCatalog = WEB_RWKV_STATE_CARTRIDGES.find(c => c.archetype === selectedArchetype.value.id)
       resolvedCartridgeUrl = cartridgeCatalog?.stateUrls[tierKey]
         || `https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/${tierKey}/${selectedArchetype.value.id}.state`
-      stateCartridgeId = `cartridge-${selectedArchetype.value.id}-${tierKey}-v1`
     }
+
+    const shouldForceRecondition = forceReconditionNext.value
+    forceReconditionNext.value = false // reset flag
 
     tasteTestStatus.value = 'Preparing dialogue conditioning turns...'
     const conditioningTexts = await resolveConditioningTexts()
 
     const condTurnsCount = conditioningTexts?.length || 0
-    tasteTestStatus.value = condTurnsCount > 100
-      ? `Conditioning recurrent state in-situ (${condTurnsCount} turns, ~1.5–2 min on initial run)...`
-      : 'Conditioning recurrent state & generating on WebGPU...'
+    const isAlreadyPrimed = conditionedCartridges.value.has(stateCartridgeId)
+
+    tasteTestStatus.value = (isAlreadyPrimed && !shouldForceRecondition)
+      ? 'Loading primed recurrent state from OPFS cache (instant)...'
+      : (condTurnsCount > 100
+          ? `Conditioning recurrent state in-situ (${condTurnsCount} turns, ~1.5–2 min on initial run)...`
+          : 'Conditioning recurrent state & generating on WebGPU...')
     const formattedPrompt = buildRwkvPrompt([
       { role: 'user', content: cleanPrompt },
     ], { enableG1Prefill: false })
@@ -519,7 +542,7 @@ async function runTasteTest() {
       stateCartridgeId,
       stateCartridgeUrl: resolvedCartridgeUrl,
       conditioningTexts,
-      forceRecondition: isCustom,
+      forceRecondition: shouldForceRecondition,
     }, {
       onToken: (chunk) => {
         if (!firstTokenTime) {
@@ -540,6 +563,7 @@ async function runTasteTest() {
       signal,
     })
 
+    conditionedCartridges.value.add(stateCartridgeId)
     tasteTestStatus.value = 'Completed'
   }
   catch (err: any) {
@@ -616,7 +640,7 @@ async function handleCommitForge() {
       const sourceCard = rawSource ? toRaw(rawSource) : undefined
       const sourceModules = sourceCard?.extensions?.airi?.modules || (sourceCard as any)?.data?.extensions?.airi?.modules
 
-      stateCartridgeId = `cartridge-custom-${selectedSourceCardId.value}-${tierKey}-v1`
+      stateCartridgeId = currentCartridgeId.value
       resolvedCartridgeUrl = undefined
       archetype = 'custom'
       description = sourceCard?.description || (sourceCard as any)?.data?.description || ''
@@ -630,7 +654,7 @@ async function handleCommitForge() {
       const cartridgeCatalog = WEB_RWKV_STATE_CARTRIDGES.find(c => c.archetype === selectedArchetype.value.id)
       resolvedCartridgeUrl = cartridgeCatalog?.stateUrls[tierKey]
         || `https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/${selectedModelInfo.params.toLowerCase()}/${selectedArchetype.value.id}.state`
-      stateCartridgeId = `cartridge-${selectedArchetype.value.id}-${tierKey}-v1`
+      stateCartridgeId = currentCartridgeId.value
       archetype = selectedArchetype.value.id
       description = selectedArchetype.value.description
       personality = selectedArchetype.value.personality
@@ -1525,6 +1549,22 @@ async function handleCommitForge() {
           >
             Cancel
           </Button>
+        </div>
+
+        <!-- Primed State Indicator & Re-synthesize Trigger -->
+        <div v-if="sourceType === 'custom' && isCurrentCartridgePrimed" class="flex items-center justify-between px-1 text-[11px]">
+          <span class="flex items-center gap-1.5 text-emerald-600 font-semibold dark:text-emerald-400">
+            <div class="i-solar:check-circle-bold text-xs" />
+            <span>Recurrent state primed in OPFS (instant boot active)</span>
+          </span>
+          <button
+            type="button"
+            class="text-[10px] text-neutral-500 font-medium underline dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-200"
+            :disabled="isTasteTesting"
+            @click="handleForceRecondition"
+          >
+            Force Re-synthesize
+          </button>
         </div>
 
         <!-- Download & Status Indicator -->
