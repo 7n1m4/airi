@@ -53,7 +53,7 @@ Use it for:
 
 Two flavors (spec in [`docs/design-airi-card.md`](./design-airi-card.md) §6):
 - **v1 Upstream (`moeru-ai` standard)**: `manifest.json` (`format: 'airi-character-card'`, `version: 1`) + CCv3 `card.json` + single `models/body-model.<ext>`. No memories, no voices, no background — upstream whitelist only.
-- **v2 Extended (fork)**: `manifest.json` (`format: 'airi-card-package'`, `version: 2`) + `card.json` + `cover.png` + `background.png` + `models/` + `voices/` + `memories/chat_sessions.json` + `README.md`. Fork-only: intentionally fails upstream validation until a v2 importer ships.
+- **v2 Extended (fork)**: `manifest.json` (`format: 'airi-card-package'`, `version: 2`) + `card.json` + `cover.png` + `background.png` + `models/` + `voices/` + `states/character.state` (RWKV-7 recurrent state cartridge) + `memories/chat_sessions.json` + `README.md`. Fork-only: intentionally fails upstream validation until a v2 importer ships.
 
 ---
 
@@ -253,7 +253,7 @@ This is the current intended split:
 
 ### Current UI Behavior (updated 2026-09-28 — the old JSON/PNG-only menu description below was stale)
 
-- Per-card export is `CardExportDialog.vue` (`packages/stage-pages/src/pages/settings/airi-card/components/`): three segments — ZIP Package (flavors v2 Extended / v1 Standard, asset toggles + live archive-tree preview), Portable PNG, Raw JSON. PNG/JSON are wired via `use-card-export.ts`; ZIP generation (`exportCardZip`) is UI-rendered but unwired.
+- Per-card export is `CardExportDialog.vue` (`packages/stage-pages/src/pages/settings/airi-card/components/`): three segments — ZIP Package (flavors v2 Extended / v1 Standard, asset toggles for models/background/voices/memories/RWKV-state + live archive-tree preview), Portable PNG, Raw JSON. PNG/JSON are wired via `use-card-export.ts`; ZIP generation (`exportCardZip`) is UI-rendered but unwired.
 - Import tile supports AIRI JSON and `chara_card_v2` / SillyTavern-style PNG (`parseImportedCard` / `parsePngCharaPayload` in `index.vue`).
 - Bulk export/import already exists under `Settings -> Data` and is **not** later-phase:
   - **Data Vault** (`data/index.vue:379-401` → `ExportVaultModal.vue` / `ImportVaultModal.vue` → `useDataMaintenance().exportDataVaultArchive()` → `createDataVaultArchive()` in `packages/stage-ui/src/utils/data-vault/archive.ts`, JSZip): selective ZIP across domains `characters` / `chat-sessions` / `memory` / `providers` / `settings` / `backgrounds`.

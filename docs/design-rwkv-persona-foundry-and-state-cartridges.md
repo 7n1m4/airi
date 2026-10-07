@@ -529,3 +529,72 @@ To resolve the vanilla base model leakage observed during Step 3 probing:
    - If testing offline or before HF upload, the worker performs **dynamic in-situ conditioning**: it encodes the archetype's golden turns and executes `session.run()` to prefill $h_0$ before sampling the probe prompt.
 2. The `session.load(new Float32Array(session.state_len()))` zeroing instruction in `worker.ts` is strictly gated to require `if (!payload.stateCartridgeId && !payload.stateBuffer)` so conditioned states remain permanently in equilibrium.
 
+---
+
+## 10. Pending Roadmap & Action Items: In-Browser Companion Distillation Pipeline
+
+While the WebGPU in-situ conditioning engine is fully operational inside `@cryscan/web-rwkv-wasm` (`worker.ts:597-626`), the **"Distill Existing Companion"** workflow in the Persona Foundry UI (`foundry.vue`) requires the following implementation passes before production activation:
+
+### 10.1 Cartridge Identifier Isolation & Remote URL Guard
+- **Root Cause**: When `sourceType === 'custom'`, `stateCartridgeId` and `resolvedCartridgeUrl` currently resolve against `selectedArchetype.value.id` (falling back to a curated preset such as `glyph` or `sylvia`). The worker detects the valid preset URL, fetches the remote `.state` file from Hugging Face, sets `stateLoaded = true`, and completely bypasses the custom dialogue turns.
+- **Specification**:
+  - For `sourceType === 'custom'`, enforce a strictly isolated cartridge ID:
+    ```ts
+    stateCartridgeId = `cartridge-custom-${selectedSourceCardId.value}-${tierKey}-${Date.now()}`
+    ```
+  - Ensure `resolvedCartridgeUrl` is explicitly set to `undefined`.
+  - Pass `forceRecondition: true` during taste-test and card initialization so the worker always synthesizes from the character's chat history instead of looking for external CDN weights.
+
+### 10.2 Client-Side Turn Sanitization & Quality Filtering (Porting Cleanroom Pipeline)
+- **Root Cause**: The cleanroom Sylvia benchmark attained zero-prompt coherence by classifying 62,000 candidate turns across 5 quality dimensions, stripping sycophantic boilerplates, removing system prompt leaks, and injecting structured `[mood: ...]` markers before distilling the top 500 turns. In contrast, `foundry.vue:198-219` currently performs a naive linear pairing of consecutive `user` and `assistant` messages from raw session store history.
+- **Specification**:
+  - Implement a client-side turn sanitization pipeline prior to WebGPU submission:
+    1. Strip reasoning and thinking tokens (`<think>...</think>`, unclosed tags).
+    2. Filter out raw system message intrusions, tool execution blocks, and UI command artifacts.
+    3. Exclude degenerate or empty turns (e.g. timeout notices, interrupted stream chunks).
+    4. Normalize whitespace and CRLF line endings.
+    5. Format strictly into canonical single-actor dialogue blocks:
+       ```text
+       User: <sanitized user text>\n\nAssistant: <sanitized companion response>\n\n
+       ```
+  - *Future Enhancement / Simulation*: Add an interactive "Train Your Own Companion" playground with dataset sliders (turn count, quality threshold, temperature) allowing users to adjust distillation depth dynamically.
+
+### 10.3 Card Persona Inheritance on Forge Commit
+- **Root Cause**: In `foundry.vue:325-350` (`handleCommitForge`), `newCard.description`, `newCard.personality`, and `newCard.scenario` are copied unconditionally from `selectedArchetype.value` (the curated preset) rather than inheriting the source companion's actual card identity.
+- **Specification**:
+  - In `handleCommitForge`, when `sourceType === 'custom'`:
+    - Lookup the source companion card: `const sourceCard = cards.value.get(selectedSourceCardId.value)`.
+    - Inherit persona fields:
+      ```ts
+      description: sourceCard?.description || '',
+      personality: sourceCard?.personality || '',
+      scenario: sourceCard?.scenario || '',
+      ```
+    - Set `archetype: 'custom'` and preserve the custom cartridge bindings.
+
+### 10.4 Binary State Cartridge Export & ZIP Bundle Integration
+- **Root Cause**: When in-situ conditioning finishes, the worker saves the $h_0$ tensor (`Float32Array(3,244,032)`) exclusively to the browser's Origin Private File System (`writeCachedState`). There is currently no UI mechanism for users to export or download their companion's 12 MB `.state` cartridge.
+- **Specification**:
+  - Expose an export bridge via `web-rwkv` adapter: `exportStateCartridge(cartridgeId: string): Promise<Blob>`.
+  - **Standalone Action**: Add an "Export State Cartridge (.state)" action button in Step 4 and the Companion Card Editor triggering a direct browser file download (e.g. `AIRI-<CompanionName>-1.5B.state`).
+  - **ZIP Package Modal Integration (`CardExportDialog.vue`)**:
+    - As defined in [`docs/design-airi-card.md`](./design-airi-card.md) §6 and [`docs/design-character-card-import-export.md`](./design-character-card-import-export.md) §3, integrate the cartridge into the **AIRI Package Spec v2 ZIP bundle**.
+    - Add an **"Include RWKV-7 State Cartridge (.state)"** checklist toggle in the ZIP Package segment of `CardExportDialog.vue` (auto-detected when `card.extensions?.airi?.rwkv?.stateCartridgeId` is present in OPFS).
+    - Bundle the binary into the zip under `states/character.state` and register in `manifest.json`:
+      ```json
+      "resources": {
+        "states": {
+          "rwkv": {
+            "path": "states/character.state",
+            "cartridgeId": "cartridge-sylvia-1.5b-v1",
+            "modelTier": "1.5b",
+            "zeroPromptVerified": true
+          }
+        }
+      }
+      ```
+    - Show the file in the live archive-tree preview (`states/character.state (~12.5 MB)`).
+    - On ZIP import, the extraction pipeline extracts `states/*.state`, writes the binary directly into OPFS, and registers the cartridge ID so the imported companion has immediate zero-prompt inference capabilities.
+
+
+

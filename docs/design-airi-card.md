@@ -386,11 +386,15 @@ my-character-card.zip
 │   └── casual_outfit.zip    # Secondary Live2D outfit / manifestation
 ├── voices/
 │   └── custom_voice.json    # Embedded virtual-audio-studio profile (from localStorage settings/speech/voice-profiles, deduped)
+├── states/                  # (Optional; Added 2026-10-07) RWKV-7 Recurrent State Cartridge
+│   └── character.state      # Raw Float32Array h0 tensor (~6 MB FP16 / ~12.5 MB FP32) for instant zero-prompt roleplay
 └── memories/                # (Optional; LOCKED 2026-09-28: full pillars, export-only, 1 GB zip cap)
     ├── chat_sessions.json   # Full session records (meta + messages), NOT index metas
     └── memory.json          # airi-memory:v2 shape filtered to character: STMM + LTMM + lifetime (per universe) + echo
 ```
 > NOTICE: `memories/` was missing from this spec but `CardExportDialog.vue` already previews `memories/chat_sessions.json` when `includeMemories` is on. Spec updated to match UI plus locked scope (all five memory sources, export-only, v2 importer §7 must tolerate absence for older zips).
+>
+> NOTICE (2026-10-07): `states/` defines the portable distribution container for local WebGPU RWKV-7 recurrent state cartridges. Bundling `character.state` allows zero-download, instant zero-prompt companionship when sharing cards between devices.
 
 ### 6.2 Spec v2 `manifest.json` Definition
 
@@ -414,6 +418,14 @@ my-character-card.zip
     "voiceProfiles": [
       { "id": "voice-1", "path": "voices/custom_voice.json" }
     ],
+    "states": {
+      "rwkv": {
+        "path": "states/character.state",
+        "cartridgeId": "cartridge-sylvia-1.5b-v1",
+        "modelTier": "1.5b",
+        "zeroPromptVerified": true
+      }
+    },
     "memories": {
       "chatSessions": { "path": "memories/chat_sessions.json" },
       "memory": { "path": "memories/memory.json" }
@@ -426,8 +438,9 @@ my-character-card.zip
 
 - **No Base64 Bloat**: Cover images and background photos are written as clean binary files (`cover.png`, `background.png`) rather than bloated inline base64 strings inside JSON metadata. Concretely: strip `preferredBackgroundDataUrl` / inline `voice_profiles` bloat from `card.json` before `exportToJSON()`; emit binaries separately (v1 strips them entirely per upstream whitelist).
 - **Multi-Model Manifest Array**: Supports mapping multiple models per card (e.g., base VRM model + alternative Live2D outfits + manifestation models).
+- **State Cartridge Packaging**: If the character possesses a bound or in-situ conditioned RWKV recurrent state, the binary tensor is extracted from OPFS and packaged as `states/character.state`. At ~12.5 MB (1.5B) or ~6.3 MB (0.4B), it comfortably fits within the 1 GB package cap while offering instant offline roleplay.
 - **Archiver (2026-09-28 audit)**: use **`jszip`** (`jszip: catalog` in `stage-ui` + `stage-pages` package.json; already used by `display-models.ts`, `utils/data-vault/archive.ts`). `fflate` is transitive-only — do not add it. `JSZip.generateAsync({ type: 'blob' })` + existing `downloadBlob()` helper in `use-card-export.ts`.
-- **Asset wiring**: model via `getDisplayModel()` (no `getDisplayModelFile()` exists); background via `backgroundStore.entries.get(id).blob`; voices via `speechStore.savedVoiceProfiles` filtered to `virtual-audio-studio` refs from `modules.speech` + `visual_assets.*.speech`; cover via `composeCardExportPng(activeCoverImageUrl)` (dialog 4-tier: selfie → model preview → author icon → letter monogram).
+- **Asset wiring**: model via `getDisplayModel()` (no `getDisplayModelFile()` exists); background via `backgroundStore.entries.get(id).blob`; voices via `speechStore.savedVoiceProfiles` filtered to `virtual-audio-studio` refs from `modules.speech` + `visual_assets.*.speech`; state via `readCachedState(cartridgeId)`; cover via `composeCardExportPng(activeCoverImageUrl)` (dialog 4-tier: selfie → model preview → author icon → letter monogram).
 - **v2 compatibility warning**: `format: "airi-card-package"` intentionally fails upstream `literal('airi-character-card')` validation — v2 is fork-only until a v2 importer ships. v1 MUST stay parseable as clean CCv3 (only base persona + primary model).
 
 ### 6.4 Export Configuration Modal UX (Option B — implemented as `CardExportDialog.vue`)
