@@ -20,6 +20,376 @@
 
 <!-- RADAR_ENTRIES -->
 
+## [2026-10-07] Upstream Delta: `881ec784..8772fbb2` (11 commits, 235 files, 34 PR update(s))
+
+### 🎯 Executive Highlights
+* **Upstream Focus & Key Merges**: Upstream merged 11 commits (`881ec784`..`8772fbb2`) alongside 34 PR updates (21 new PRs, 8 lifecycle transitions, 5 discussion updates). The primary momentum centers on a monolithic voice pipeline migration, cloud database card synchronization, and chat UI readability:
+  1. **Voice Pipeline Unification (PR #2772 / Commit `8772fbb222` & PR #2770 / Commit `ac13190a75` by @nekomeowww)**: Massive 127-file refactor (+4454/-9827 lines) overhauling client voice handling. Migrated voice controller, speech input lifecycle, transcription buffering, and plugins into `@proj-airi/core-agent`, gutting legacy `hearing.ts` (959 lines removed) in favor of modular `packages/stage-ui/src/stores/voice.ts`, `voice-controls.ts`, and `voice-messages.ts`.
+  2. **Field-Level Cloud Card Synchronization (PR #2817 / Commit `3848d155f9` by @luoling8192)**: Added Drizzle migration `0031_character_cards.sql` and `server/apps/api` field-sync endpoints paired with client-side `document-sync` client and `airi-card.ts` synchronization. Follow-up bugfixes immediately merged in Commit `60d73ccd52` (PR #2840, JSONB string formatting) and opened in PR #2850 by @nekomeowww to repair field sync defects.
+  3. **Chat Readability & Relative Timestamps (PR #2825 / Commit `b123c71487` by @luoling8192)**: Added `history-time-separator.vue`, human-readable relative message timestamps, and simplified sender labels in chat history & sessions drawer.
+  4. **Experimental Feature Controls (PR #2829 / Commit `09b5eda980` by @luoling8192)**: Introduced client-side `feature-flags.ts` store, composables, and an experimental features settings page under system settings.
+  5. **Mobile Composer Voice Input (PR #2832 / Commit `94fa5d7cc5` by @luoling8192)**: Moved voice input controls into `MobileInteractiveArea.vue` in `packages/stage-layouts`.
+  6. **Server Tracing Simplification (PR #2798 / Commit `aeadd9226a` by @luoling8192)**: Stripped out Langfuse remote telemetry export in favor of lightweight in-tree request logs.
+* **Discussion & Community Buzz**:
+  - 💬 **#2817: `feat(api,stage-ui): synchronize character cards by field` (+4 comments, 31 total, Merged)**: High discussion volume surrounding field sync conflict resolution, schema boundaries, and immediate regressions that prompted PR #2850.
+  - 💬 **#2850: `fix(api,stage-ui): correct character card sync defects from #2817` (4 comments, Open)**: Immediate maintainer triage by @nekomeowww addressing character card field sync bugs.
+  - 💬 **#1107: `fix(providers): use native ElevenLabs API to avoid unspeech proxy 401` (+1 comment, 13 total)**: Persistent community discussion on bypassing intermediate unspeech proxy issues.
+  - 💬 **#2802: `chore(i18n): update translations` (+2 comments, 6 total, Merged)**: Translation updates and sync discussions.
+  - 💬 **#2773: `feat(stage-tamagotchi): show voice drafts in a composer-style inlay` (+1 comment, 2 total)**: Discussion on displaying streaming speech drafts in desktop composer.
+  - 👁️ **Watched PRs Radar**:
+    - **#2634: `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain`** [Draft] (1 comment): Dormant. Maintainers still have not triaged the 2-process daemon requirement or Web/Mobile parity concerns.
+    - **#2672: `refactor(stage-ui): bind conversations to window-local characters`** [Draft] (48 comments): High discussion volume exploring conversation scoping per window and extracting shared `CharacterCard` components.
+    - **#2541: `Telltworose/feat/drop in plugins` (MCP-first architecture)** [Open] (59 comments): Awaiting maintainer rebase review.
+    - **#2290: `feat(server): stream official ASR over WebSocket`** [Open] (59 comments): Changes requested; transport selection pending.
+    - **#2120: `refactor(stage-pages): rebuild AIRI Card editor`** [Open] (41 comments): Changes requested; dirty-draft route design under review.
+* **Cherry-Pick Candidates**:
+  - 💎 **PR #2846 / Commit `39a397458c`: `fix(i18n): quote the label of the agree sticker` by @chiba233**: High value, zero risk. Quotes `'Yes'` in `packages/i18n/src/locales/en/settings.yaml` to prevent YAML 1.1 translation extractors (Crowdin/PyYAML) from coercing the string to boolean `True`.
+  - 💎 **PR #2845: `test(stage-ui): pin the clock in sessions drawer time label tests` by @Anandb71**: High value test-hygiene fix. Pins Vitest fake timer clock to local midday (`2026-01-15T12:00:00`) in `sessions-drawer.browser.test.ts` to prevent test failures when executed before 04:00 AM due to `intlFormatDistance` day rollover.
+  - 💡 **PR #2842: `feat(provider-inference): add Opper provider` by @Felixkw12**: Clean, self-contained provider addition for Opper AI (`https://api.opper.ai/v3/compat`). Low risk if Opper provider support is desired.
+  - ⚪ **Auto-Reject / Do Not Port**:
+    - **PR #2817 / PR #2840 / PR #2850**: Hosted cloud card field synchronization to `server/apps/api`. Violates our local-first / BYOS privacy architecture.
+    - **PR #2843**: System theme option touches deprecated `controls-island` surfaces.
+    - **PR #2838**: Hosted API speech execution bridge. Violates client-direct inference model.
+    - **PR #2831**: Analytics tracking client switches.
+    - **PR #2829**: Remote experimental feature dashboard flags.
+* **Divergence / Collision Warnings**:
+  - ⚠️ **`packages/stage-ui/src/stores/modules/hearing.ts` & Voice Pipeline (PR #2772 / Commit `8772fbb222`)**: Upstream removed 9,800+ lines across audio and hearing stores in favor of `@proj-airi/core-agent`. In `dasilva333/airi`, audio/speech is specialized with local WebGPU/WASM inference, conversational pacing, and multi-actor speech intents. Do not attempt direct Git merge.
+  - ⚠️ **`packages/stage-ui/src/stores/modules/airi-card.ts` (PR #2817 / Commit `3848d155f9`)**: Upstream added remote document-sync reconciliation hooks. In our fork, `airi-card.ts` is strictly local unstorage/IndexedDB with multi-actor AnimaDex schemas.
+  - ⚠️ **`packages/stage-ui/src/components/scenarios/chat/components/history.vue` (PR #2825 / Commit `b123c71487`)**: Upstream modified chat history layout for date separators. Our fork features virtualized rendering, custom frames, and multi-actor routing.
+
+### 📋 Upstream Commits
+- `8772fbb222` refactor(stage-ui): move voice features onto the shared voice pipeline (#2772) [#2772](https://github.com/moeru-ai/airi/pull/2772) _(Neko, 2026-10-07)_
+- `82225c9747` chore(i18n): update translations (#2802) [#2802](https://github.com/moeru-ai/airi/pull/2802) _(github-actions[bot], 2026-10-07)_
+- `39a397458c` fix(i18n): quote the label of the agree sticker (#2846) [#2846](https://github.com/moeru-ai/airi/pull/2846) _(蓝莓🫐, 2026-10-07)_
+- `60d73ccd52` fix(api): return jsonb strings as stored in character card fields (#2840) [#2840](https://github.com/moeru-ai/airi/pull/2840) _(RainbowBird, 2026-10-07)_
+- `ac13190a75` feat(core-agent): add the voice controller, transcripts, and plugins (#2770) [#2770](https://github.com/moeru-ai/airi/pull/2770) _(Neko, 2026-10-07)_
+- `3848d155f9` feat(api,stage-ui): synchronize character cards by field (#2817) [#2817](https://github.com/moeru-ai/airi/pull/2817) _(RainbowBird, 2026-10-07)_
+- `633ff104cb` chore(nix): update pnpmDeps hash (#2834) [#2834](https://github.com/moeru-ai/airi/pull/2834) _(Weathercold, 2026-10-06)_
+- `aeadd9226a` refactor(api): replace Langfuse export with request logs (#2798) [#2798](https://github.com/moeru-ai/airi/pull/2798) _(RainbowBird, 2026-10-07)_
+- `94fa5d7cc5` feat(stage-layouts): move voice input to the mobile composer (#2832) [#2832](https://github.com/moeru-ai/airi/pull/2832) _(RainbowBird, 2026-10-07)_
+- `09b5eda980` feat(settings): add experimental feature controls (#2829) [#2829](https://github.com/moeru-ai/airi/pull/2829) _(RainbowBird, 2026-10-06)_
+- `b123c71487` feat(chat): add readable message times and simplify sender labels (#2825) [#2825](https://github.com/moeru-ai/airi/pull/2825) _(RainbowBird, 2026-10-06)_
+
+### 🔬 Subsystem Breakdown
+#### Mobile & Web Platforms (`⚪ ignore / low-priority`) — 4 file(s) (+38/-290)
+- `apps/stage-pocket/src/pages/index.vue` *(+9/-137)*
+- `apps/stage-pocket/src/pages/settings/system/index.vue` *(+10/-7)*
+- `apps/stage-web/src/pages/index.vue` *(+9/-139)*
+- `apps/stage-web/src/pages/settings/system/index.vue` *(+10/-7)*
+
+#### Electron Desktop Shell (`⚠️ hand-merge`) — 7 file(s) (+59/-958)
+- `apps/stage-tamagotchi-kirie/package.json` *(+0/-1)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/App.vue` *(+0/-1)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/InteractiveArea.vue` *(+3/-4)*
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/pages/index.vue` *(+18/-470)*
+- `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.browser.test.ts` *(+11/-5)*
+- `apps/stage-tamagotchi/src/renderer/pages/index.vue` *(+17/-470)*
+- `apps/stage-tamagotchi/src/renderer/pages/settings/system/index.vue` *(+10/-7)*
+
+#### Deprecated Surfaces (Control Island) (`⚪ ignore / rejected in fork (decoupled into Control Strip)`) — 2 file(s) (+6/-0)
+- `apps/stage-tamagotchi-kirie/src-web/src/renderer/components/stage-islands/controls-island/controls-island-overflow.browser.test.ts` *(+3/-0)*
+- `apps/stage-tamagotchi/src/renderer/components/stage-islands/controls-island/controls-island-overflow.browser.test.ts` *(+3/-0)*
+
+#### Other / Uncategorized (`🔍 inspect`) — 116 file(s) (+6147/-6197)
+- `nix/pnpm-deps-hash.txt` *(+1/-1)*
+- `packages/audio/src/audio-context/index.ts` *(+0/-318)*
+- `packages/audio/src/audio-context/processor.worklet.ts` *(+0/-162)*
+- `packages/audio/tsdown.config.ts` *(+0/-4)*
+- `packages/pipelines-audio/src/index.ts` *(+0/-1)*
+- `packages/pipelines-audio/src/transcript-buffer.test.ts` *(+0/-169)*
+- `packages/pipelines-audio/src/transcript-buffer.ts` *(+0/-125)*
+- `packages/provider-inference/src/model-catalog.test.ts` *(+9/-0)*
+- `packages/provider-inference/src/model-catalog.ts` *(+13/-10)*
+- `packages/provider-inference/src/providers/local/browser-web-speech-api/index.browser.test.ts` *(+33/-5)*
+- `packages/provider-inference/src/providers/local/browser-web-speech-api/provider.ts` *(+175/-438)*
+- `packages/provider-inference/src/types.ts` *(+3/-1)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history-layout.browser.test.ts` *(+26/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history-time-separator.browser.test.ts` *(+84/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history-time-separator.vue` *(+58/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/history.vue` *(+72/-47)*
+- `packages/stage-ui/src/components/scenarios/chat/components/sessions-dialog.browser.test.ts` *(+6/-6)*
+- `packages/stage-ui/src/components/scenarios/chat/components/sessions-drawer.browser.test.ts` *(+60/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/sessions-drawer.vue` *(+19/-31)*
+- `packages/stage-ui/src/components/scenarios/chat/components/sessions-list.vue` *(+3/-3)*
+- `packages/stage-ui/src/components/scenarios/chat/components/user-item.vue` *(+10/-6)*
+- `packages/stage-ui/src/components/scenarios/chat/components/voice-drafts.vue` *(+82/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/voice-message-controls.browser.test.ts` *(+79/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/voice-message-controls.vue` *(+124/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/components/voice-message-preview.vue` *(+38/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-chat-images.ts` *(+1/-1)*
+- `packages/stage-ui/src/components/scenarios/chat/composables/use-voice-input.ts` *(+47/-0)*
+- `packages/stage-ui/src/components/scenarios/chat/index.ts` *(+3/-0)*
+- `packages/stage-ui/src/components/scenarios/dialogs/audio-input/hearing-config.browser.test.ts` *(+3/-2)*
+- `packages/stage-ui/src/components/scenarios/providers/transcription-playground.vue` *(+114/-164)*
+- `packages/stage-ui/src/components/scenarios/status/hearing-status.vue` *(+12/-12)*
+- `packages/stage-ui/src/composables/audio/audio-device.test.ts` *(+0/-78)*
+- `packages/stage-ui/src/composables/audio/audio-device.ts` *(+89/-118)*
+- `packages/stage-ui/src/composables/audio/audio-recorder.test.ts` *(+0/-173)*
+- `packages/stage-ui/src/composables/audio/audio-recorder.ts` *(+0/-130)*
+- `packages/stage-ui/src/composables/audio/index.ts` *(+0/-2)*
+- `packages/stage-ui/src/composables/audio/voice-controller.ts` *(+55/-0)*
+- `packages/stage-ui/src/composables/audio/voice-input-session.test.ts` *(+0/-425)*
+- `packages/stage-ui/src/composables/audio/voice-input-session.ts` *(+0/-623)*
+- `packages/stage-ui/src/composables/audio/voice-input-vad-startup.test.ts` *(+0/-49)*
+- `packages/stage-ui/src/composables/audio/voice-input-vad-startup.ts` *(+0/-39)*
+- `packages/stage-ui/src/composables/cloud.browser.test.ts` *(+49/-0)*
+- `packages/stage-ui/src/composables/cloud.ts` *(+14/-0)*
+- `packages/stage-ui/src/composables/speech-output-trace.test.ts` *(+79/-0)*
+- `packages/stage-ui/src/composables/speech-output-trace.ts` *(+147/-0)*
+- `packages/stage-ui/src/composables/use-io-trace-bridge.ts` *(+0/-105)*
+- `packages/stage-ui/src/composables/vision/use-vision-inference.ts` *(+7/-5)*
+- `packages/stage-ui/src/composables/voice-drafts.browser.test.ts` *(+68/-0)*
+- `packages/stage-ui/src/composables/voice-drafts.ts` *(+119/-0)*
+- `packages/stage-ui/src/database/repos/document-sync.repo.ts` *(+17/-0)*
+- `packages/stage-ui/src/libs/{auth.test.ts => auth.browser.test.ts}` *(+7/-1)*
+- `packages/stage-ui/src/libs/character-card-sync/card-fields.test.ts` *(+100/-0)*
+- `packages/stage-ui/src/libs/character-card-sync/card-fields.ts` *(+120/-0)*
+- `packages/stage-ui/src/libs/character-card-sync/index.ts` *(+1/-0)*
+- `packages/stage-ui/src/libs/chat-sync/wire-message.ts` *(+3/-0)*
+- `packages/stage-ui/src/libs/document-sync/client.test.ts` *(+67/-0)*
+- `packages/stage-ui/src/libs/document-sync/client.ts` *(+153/-0)*
+- `packages/stage-ui/src/libs/document-sync/index.ts` *(+8/-0)*
+- `packages/stage-ui/src/libs/document-sync/reconcile.test.ts` *(+268/-0)*
+- `packages/stage-ui/src/libs/document-sync/reconcile.ts` *(+252/-0)*
+- `packages/stage-ui/src/libs/document-sync/synchronize.test.ts` *(+219/-0)*
+- `packages/stage-ui/src/libs/document-sync/synchronize.ts` *(+158/-0)*
+- `packages/stage-ui/src/libs/feature-flags.test.ts` *(+64/-0)*
+- `packages/stage-ui/src/libs/feature-flags.ts` *(+59/-0)*
+- `packages/stage-ui/src/libs/index.ts` *(+0/-1)*
+- `packages/stage-ui/src/libs/providers/providers/official/index.ts` *(+1/-3)*
+- `packages/stage-ui/src/libs/providers/transcription-types.ts` *(+8/-0)*
+- `packages/stage-ui/src/libs/speech/streaming-pipeline.ts` *(+83/-24)*
+- `packages/stage-ui/src/libs/speech/tts-session.test.ts` *(+0/-339)*
+- `packages/stage-ui/src/libs/speech/tts-session.ts` *(+0/-322)*
+- `packages/stage-ui/src/libs/voice/voice-activity-plugin.test.ts` *(+114/-0)*
+- `packages/stage-ui/src/libs/voice/voice-activity-plugin.ts` *(+102/-0)*
+- `packages/stage-ui/src/libs/voice/voice-message.test.ts` *(+52/-0)*
+- `packages/stage-ui/src/libs/voice/voice-message.ts` *(+119/-0)*
+- `packages/stage-ui/src/services/speech/bus.ts` *(+81/-41)*
+- `packages/stage-ui/src/services/speech/pipeline-runtime.ts` *(+0/-279)*
+- `packages/stage-ui/src/services/speech/speech-client.test.ts` *(+49/-0)*
+- `packages/stage-ui/src/services/speech/speech-client.ts` *(+87/-0)*
+- `packages/stage-ui/src/stores/character.test.ts` *(+18/-21)*
+- `packages/stage-ui/src/stores/character/index.ts` *(+18/-28)*
+- `packages/stage-ui/src/stores/feature-flags.ts` *(+114/-0)*
+- `packages/stage-ui/src/stores/mods/api/context-bridge.contract.browser.test.ts` *(+17/-0)*
+- `packages/stage-ui/src/stores/mods/api/context-bridge.ts` *(+16/-0)*
+- `packages/stage-ui/src/stores/mods/api/context-channel.ts` *(+11/-0)*
+- `packages/stage-ui/src/stores/modules/airi-card-sync.browser.test.ts` *(+380/-0)*
+- `packages/stage-ui/src/stores/modules/airi-card.test.ts` *(+106/-0)*
+- `packages/stage-ui/src/stores/modules/airi-card.ts` *(+421/-38)*
+- `packages/stage-ui/src/stores/modules/artistry-autonomous.ts` *(+32/-23)*
+- `packages/stage-ui/src/stores/modules/hearing-status.browser.test.ts` *(+15/-87)*
+- `packages/stage-ui/src/stores/modules/hearing.ts` *(+87/-872)*
+- `packages/stage-ui/src/stores/modules/speech.ts` *(+53/-1)*
+- `packages/stage-ui/src/stores/modules/streaming-transcription-consumers.test.ts` *(+0/-79)*
+- `packages/stage-ui/src/stores/modules/streaming-transcription-consumers.ts` *(+0/-68)*
+- `packages/stage-ui/src/stores/settings/audio-device.browser.test.ts` *(+102/-0)*
+- `packages/stage-ui/src/stores/settings/audio-device.test.ts` *(+0/-234)*
+- `packages/stage-ui/src/stores/settings/audio-device.ts` *(+77/-160)*
+- `packages/stage-ui/src/stores/speech-output-control.browser.test.ts` *(+42/-19)*
+- `packages/stage-ui/src/stores/speech-output-control.test.ts` *(+0/-122)*
+- `packages/stage-ui/src/stores/speech-output-control.ts` *(+35/-59)*
+- `packages/stage-ui/src/stores/speech-runtime.ts` *(+0/-30)*
+- `packages/stage-ui/src/stores/voice-controls.ts` *(+66/-0)*
+- `packages/stage-ui/src/stores/voice-messages.ts` *(+87/-0)*
+- `packages/stage-ui/src/stores/voice.ts` *(+376/-0)*
+- `packages/stage-ui/src/types/chat-session.ts` *(+9/-0)*
+- `packages/stage-ui/src/workers/vad/silero-vad.ts` *(+63/-0)*
+- `packages/stage-ui/vitest.config.ts` *(+1/-1)*
+- `packages/testing-audio/cases/apple-speech/case.audio.electron.test.ts` *(+3/-3)*
+- `packages/testing-audio/cases/long-leading-silence/case.audio.test.ts` *(+8/-6)*
+- `packages/testing-audio/cases/shared/configurations/module-hearing.ts` *(+13/-9)*
+- `packages/testing-audio/cases/shared/interactions/chat.ts` *(+11/-5)*
+- `packages/testing-audio/cases/single-utterance-pipeline/case.audio.test.ts` *(+2/-0)*
+- `packages/testing-audio/cases/two-utterance-streaming/case.audio.test.ts` *(+20/-32)*
+- `packages/testing-audio/src/expect-extend.test.ts` *(+29/-16)*
+- `packages/testing-audio/src/expect-extend.ts` *(+16/-16)*
+- `packages/testing-audio/src/setup/session.ts` *(+5/-2)*
+- `pnpm-workspace.yaml` *(+0/-3)*
+
+#### Root Build & Tooling (`🔍 inspect`) — 4 file(s) (+7/-74)
+- `packages/audio/package.json` *(+0/-8)*
+- `packages/provider-inference/package.json` *(+1/-0)*
+- `packages/stage-ui/package.json` *(+0/-1)*
+- `pnpm-lock.yaml` *(+6/-65)*
+
+#### Core Agent Runtime (`🔍 inspect`) — 24 file(s) (+3442/-17)
+- `packages/core-agent/README.md` *(+95/-0)*
+- `packages/core-agent/src/index.ts` *(+1/-0)*
+- `packages/core-agent/src/testing/audio.ts` *(+36/-0)*
+- `packages/core-agent/src/utils/error-message.ts` *(+0/-17)*
+- `packages/core-agent/src/utils/error.ts` *(+17/-0)*
+- `packages/core-agent/src/voice/controller.test.ts` *(+467/-0)*
+- `packages/core-agent/src/voice/controller.ts` *(+285/-0)*
+- `packages/core-agent/src/voice/index.ts` *(+41/-0)*
+- `packages/core-agent/src/voice/input/attempt-types.ts` *(+24/-0)*
+- `packages/core-agent/src/voice/input/attempt.ts` *(+383/-0)*
+- `packages/core-agent/src/voice/input/end-detection.test.ts` *(+60/-0)*
+- `packages/core-agent/src/voice/input/end-detection.ts` *(+23/-0)*
+- `packages/core-agent/src/voice/input/snapshot.ts` *(+35/-0)*
+- `packages/core-agent/src/voice/input/speech-input.ts` *(+174/-0)*
+- `packages/core-agent/src/voice/input/submission.ts` *(+35/-0)*
+- `packages/core-agent/src/voice/input/transcript.ts` *(+223/-0)*
+- `packages/core-agent/src/voice/interruption.ts` *(+18/-0)*
+- `packages/core-agent/src/voice/output/response.test.ts` *(+274/-0)*
+- `packages/core-agent/src/voice/output/response.ts` *(+358/-0)*
+- `packages/core-agent/src/voice/plugins/input-plugins.ts` *(+429/-0)*
+- `packages/core-agent/src/voice/plugins/registry.ts` *(+263/-0)*
+- `packages/core-agent/src/voice/plugins/task-lifetime.ts` *(+45/-0)*
+- `packages/core-agent/src/voice/plugins/types.ts` *(+146/-0)*
+- `packages/core-agent/src/voice/turn.ts` *(+10/-0)*
+
+#### Localization (i18n) (`📦 import (additive only)`) — 10 file(s) (+281/-75)
+- `packages/i18n/src/locales/en/settings.yaml` *(+81/-1)*
+- `packages/i18n/src/locales/en/stage.yaml` *(+28/-0)*
+- `packages/i18n/src/locales/es/settings.yaml` *(+11/-13)*
+- `packages/i18n/src/locales/fr/settings.yaml` *(+11/-13)*
+- `packages/i18n/src/locales/ja/settings.yaml` *(+4/-4)*
+- `packages/i18n/src/locales/ko/settings.yaml` *(+11/-13)*
+- `packages/i18n/src/locales/vi/settings.yaml` *(+4/-4)*
+- `packages/i18n/src/locales/zh-Hans/settings.yaml` *(+92/-14)*
+- `packages/i18n/src/locales/zh-Hans/stage.yaml` *(+28/-0)*
+- `packages/i18n/src/locales/zh-Hant/settings.yaml` *(+11/-13)*
+
+#### Documentation & Scaffolding (`⚪ ignore`) — 3 file(s) (+125/-17)
+- `packages/pipelines-audio/README.md` *(+1/-17)*
+- `packages/stage-ui/README.md` *(+53/-0)*
+- `packages/stage-ui/src/libs/document-sync/README.md` *(+71/-0)*
+
+#### Stage Layouts & Shells (`🔍 inspect`) — 10 file(s) (+211/-1299)
+- `packages/stage-layouts/src/components/Layouts/MobileInteractiveArea.vue` *(+51/-15)*
+- `packages/stage-layouts/src/components/Layouts/mobile-settings-drawer.vue` *(+3/-29)*
+- `packages/stage-layouts/src/components/Widgets/ChatArea.vue` *(+5/-11)*
+- `packages/stage-layouts/src/composables/use-chat-interruption.test.ts` *(+119/-336)*
+- `packages/stage-layouts/src/composables/use-chat-interruption.ts` *(+20/-49)*
+- `packages/stage-layouts/src/composables/use-transcriptions.test.ts` *(+0/-459)*
+- `packages/stage-layouts/src/composables/use-transcriptions.ts` *(+0/-233)*
+- `packages/stage-layouts/src/composables/useStopSpeakingButton.test.ts` *(+0/-159)*
+- `packages/stage-layouts/src/composables/useStopSpeakingButton.ts` *(+9/-8)*
+- `packages/stage-layouts/vitest.config.ts` *(+4/-0)*
+
+#### UI Primitives & Pages (`📦 import / inspect`) — 12 file(s) (+861/-337)
+- `packages/stage-pages/package.json` *(+1/-0)*
+- `packages/stage-pages/src/components/settings-experimental-features.vue` *(+56/-0)*
+- `packages/stage-pages/src/pages/settings/airi-card/components/CardDetailDialog.browser.test.ts` *(+106/-0)*
+- `packages/stage-pages/src/pages/settings/airi-card/components/CardDetailDialog.vue` *(+211/-4)*
+- `packages/stage-pages/src/pages/settings/airi-card/components/CardListItem.browser.test.ts` *(+50/-0)*
+- `packages/stage-pages/src/pages/settings/airi-card/components/CardListItem.vue` *(+22/-1)*
+- `packages/stage-pages/src/pages/settings/airi-card/components/RestoreVersionDialog.vue` *(+74/-0)*
+- `packages/stage-pages/src/pages/settings/airi-card/composables/relative-time.ts` *(+28/-0)*
+- `packages/stage-pages/src/pages/settings/airi-card/index.vue` *(+155/-3)*
+- `packages/stage-pages/src/pages/settings/modules/hearing.vue` *(+106/-150)*
+- `packages/stage-pages/src/pages/settings/providers/transcription/browser-web-speech-api.vue` *(+35/-179)*
+- `packages/stage-pages/src/pages/settings/system/experimental.vue` *(+17/-0)*
+
+#### 3D, Live2D & Motion (`🔍 inspect`) — 1 file(s) (+71/-499)
+- `packages/stage-ui/src/components/scenes/Stage.vue` *(+71/-499)*
+
+#### Audio & Speech Pipeline (`🔍 inspect`) — 4 file(s) (+248/-205)
+- `packages/stage-ui/src/libs/audio/hearing-transcriber.test.ts` *(+119/-0)*
+- `packages/stage-ui/src/libs/audio/hearing-transcriber.ts` *(+129/-0)*
+- `packages/stage-ui/src/libs/audio/vad-streaming-session.test.ts` *(+0/-98)*
+- `packages/stage-ui/src/libs/audio/vad-streaming-session.ts` *(+0/-107)*
+
+#### Cognitive & Consciousness (`⚠️ hand-merge`) — 5 file(s) (+405/-186)
+- `packages/stage-ui/src/stores/chat.contract.test.ts` *(+37/-2)*
+- `packages/stage-ui/src/stores/chat.ts` *(+131/-13)*
+- `packages/stage-ui/src/stores/chat/{session-store.test.ts => session-store-lifecycle.browser.test.ts}` *(+69/-103)*
+- `packages/stage-ui/src/stores/chat/session-store.browser.test.ts` *(+114/-64)*
+- `packages/stage-ui/src/stores/chat/session-store.ts` *(+54/-4)*
+
+#### Provider & Model Integrations (`📦 import / inspect`) — 1 file(s) (+4/-0)
+- `packages/stage-ui/src/stores/providers/provider.ts` *(+4/-0)*
+
+#### Cloud Services, Billing & Auth (`⚪ ignore / rejected in fork (offline-first architecture)`) — 32 file(s) (+5957/-842)
+- `server/apps/api/README.md` *(+1/-2)*
+- `server/apps/api/drizzle/0031_character_cards.sql` *(+21/-0)*
+- `server/apps/api/drizzle/meta/0031_snapshot.json` *(+4027/-0)*
+- `server/apps/api/drizzle/meta/_journal.json` *(+7/-0)*
+- `server/apps/api/instrumentation.ts` *(+17/-103)*
+- `server/apps/api/package.json` *(+0/-2)*
+- `server/apps/api/src/app.test.ts` *(+1/-0)*
+- `server/apps/api/src/app.ts` *(+18/-1)*
+- `server/apps/api/src/libs/json-value.ts` *(+15/-0)*
+- `server/apps/api/src/routes/character-cards/index.ts` *(+48/-0)*
+- `server/apps/api/src/routes/character-cards/route.test.ts` *(+144/-0)*
+- `server/apps/api/src/routes/openai/v1/index.ts` *(+3/-6)*
+- `server/apps/api/src/routes/openai/v1/operations/chat-completions/index.ts` *(+1/-42)*
+- `server/apps/api/src/routes/openai/v1/operations/responses/index.ts` *(+0/-13)*
+- `server/apps/api/src/routes/openai/v1/operations/speech-generation/index.ts` *(+0/-1)*
+- `server/apps/api/src/routes/openai/v1/route.test.ts` *(+5/-17)*
+- `server/apps/api/src/routes/openai/v1/types.ts` *(+0/-14)*
+- `server/apps/api/src/schemas/character-cards.ts` *(+54/-0)*
+- `server/apps/api/src/schemas/index.ts` *(+1/-0)*
+- `server/apps/api/src/services/domain/character-cards.test.ts` *(+83/-0)*
+- `server/apps/api/src/services/domain/character-cards.ts` *(+109/-0)*
+- `server/apps/api/src/services/domain/field-sync/index.ts` *(+5/-0)*
+- `server/apps/api/src/services/domain/field-sync/request.ts` *(+104/-0)*
+- `server/apps/api/src/services/domain/field-sync/store.test.ts` *(+416/-0)*
+- `server/apps/api/src/services/domain/field-sync/store.ts` *(+459/-0)*
+- `server/apps/api/src/services/domain/field-sync/tables.ts` *(+66/-0)*
+- `server/apps/api/src/services/domain/llm-tracing/index.test.ts` *(+0/-265)*
+- `server/apps/api/src/services/domain/llm-tracing/index.ts` *(+0/-356)*
+- `server/apps/api/src/services/domain/openai-speech/index.ts` *(+0/-20)*
+- `server/apps/api/src/utils/error.ts` *(+7/-0)*
+- `server/docs/ai/adr/2026-10-05-admin-agent-traces.md` *(+127/-0)*
+- `server/docs/ai/adr/2026-10-06-document-sync.md` *(+218/-0)*
+
+### 📬 Upstream PR Radar
+#### 🆕 New PRs Opened (21)
+- [#2850](https://github.com/moeru-ai/airi/pull/2850) `fix(api,stage-ui): correct character card sync defects from #2817` by **@nekomeowww** *(4 comments)*
+- [#2848](https://github.com/moeru-ai/airi/pull/2848) `chore(nix): update pnpmDeps hash` by **@Weathercold** *(2 comments)*
+- [#1324](https://github.com/moeru-ai/airi/pull/1324) `fix(server-runtime): preserve explicit empty route destinations` by **@Gujiassh** *(4 comments)*
+- [#1309](https://github.com/moeru-ai/airi/pull/1309) `fix(stage-ui): flip canvas pixel reads on Y axis` by **@Gujiassh** *(4 comments)*
+- [#1179](https://github.com/moeru-ai/airi/pull/1179) `fix(telegram-bot): guard malformed structured messages` by **@Gujiassh** *(4 comments)*
+- [#1323](https://github.com/moeru-ai/airi/pull/1323) `fix(plugin-sdk): preserve absolute plugin entrypoints` by **@Gujiassh** *(3 comments)*
+- [#1305](https://github.com/moeru-ai/airi/pull/1305) `fix(plugin-sdk): trim negotiated compatibility versions` by **@Gujiassh** *(3 comments)*
+- [#2033](https://github.com/moeru-ai/airi/pull/2033) `fix(stage-ui): recover stale stage model selection` by **@Gujiassh** *(1 comments)*
+- [#1322](https://github.com/moeru-ai/airi/pull/1322) `fix(stage-ui): keep nested reasoning out of speech` by **@Gujiassh** *(2 comments)*
+- [#1304](https://github.com/moeru-ai/airi/pull/1304) `fix(stage-ui): skip optimistic updates before apply` by **@Gujiassh** *(4 comments)*
+- [#2045](https://github.com/moeru-ai/airi/pull/2045) `fix(stage-pages): add local provider WIP routes` by **@Gujiassh** *(1 comments)*
+- [#2846](https://github.com/moeru-ai/airi/pull/2846) `fix(i18n): quote the label of the agree sticker` by **@chiba233** *(1 comments)*
+- [#2845](https://github.com/moeru-ai/airi/pull/2845) `test(stage-ui): pin the clock in sessions drawer time label tests` by **@Anandb71** *(2 comments)*
+- [#2833](https://github.com/moeru-ai/airi/pull/2833) `test(stage-ui): isolate provider cache test from network` by **@starvingarc** *(2 comments)*
+- [#2843](https://github.com/moeru-ai/airi/pull/2843) `feat(ui,stage-layouts,stage-tamagotchi): add a system theme option` by **@chiba233** *(2 comments)*
+- [#2842](https://github.com/moeru-ai/airi/pull/2842) `feat(provider-inference): add Opper provider` by **@Felixkw12** *(0 comments)*
+- [#2840](https://github.com/moeru-ai/airi/pull/2840) `fix(api): return jsonb strings as stored in character card fields` by **@luoling8192** *(2 comments)*
+- [#2838](https://github.com/moeru-ai/airi/pull/2838) `feat(provider-inference): share speech execution with the hosted API` by **@luoling8192** *(2 comments)*
+- [#2834](https://github.com/moeru-ai/airi/pull/2834) `chore(nix): update pnpmDeps hash` by **@Weathercold** *(2 comments)*
+- [#2832](https://github.com/moeru-ai/airi/pull/2832) `feat(stage-layouts): move voice input to the mobile composer` by **@luoling8192** *(2 comments)*
+- [#2831](https://github.com/moeru-ai/airi/pull/2831) `feat(analytics): track switch interactions across clients` by **@luoling8192** *(2 comments)*
+
+#### 🔄 PR Status & Lifecycle Changes (8)
+- [#2772](https://github.com/moeru-ai/airi/pull/2772) `refactor(stage-ui): move voice features onto the shared voice pipeline` — `OPEN` ➔ `MERGED`
+- [#2802](https://github.com/moeru-ai/airi/pull/2802) `chore(i18n): update translations` — `OPEN` ➔ `MERGED`
+- [#2770](https://github.com/moeru-ai/airi/pull/2770) `feat(core-agent): add the voice controller, transcripts, and plugins` — `OPEN` ➔ `MERGED`
+- [#2127](https://github.com/moeru-ai/airi/pull/2127) `fix(electron): persist desktop window bounds` — `OPEN` ➔ `CLOSED`
+- [#2817](https://github.com/moeru-ai/airi/pull/2817) `feat(api,stage-ui): synchronize character cards by field` — `OPEN` ➔ `MERGED`
+- [#2798](https://github.com/moeru-ai/airi/pull/2798) `refactor(api): replace Langfuse export with request logs` — `OPEN` ➔ `MERGED`
+- [#2829](https://github.com/moeru-ai/airi/pull/2829) `feat(settings): add experimental feature controls` — `OPEN` ➔ `MERGED`
+- [#2825](https://github.com/moeru-ai/airi/pull/2825) `feat(chat): add readable message times and simplify sender labels` — `OPEN` ➔ `MERGED`
+
+#### 💬 Discussion Activity (5)
+- [#2773](https://github.com/moeru-ai/airi/pull/2773) `feat(stage-tamagotchi): show voice drafts in a composer-style inlay` — *+1 comments (1 ➔ 2 total)*
+- [#2772](https://github.com/moeru-ai/airi/pull/2772) `refactor(stage-ui): move voice features onto the shared voice pipeline` — *+1 comments (1 ➔ 2 total)*
+- [#2802](https://github.com/moeru-ai/airi/pull/2802) `chore(i18n): update translations` — *+2 comments (4 ➔ 6 total)*
+- [#1107](https://github.com/moeru-ai/airi/pull/1107) `fix(providers): use native ElevenLabs API to avoid unspeech proxy 401` — *+1 comments (12 ➔ 13 total)*
+- [#2817](https://github.com/moeru-ai/airi/pull/2817) `feat(api,stage-ui): synchronize character cards by field` — *+4 comments (27 ➔ 31 total)*
+
+### 👁️ Watched PRs Monitor
+- [#2634](https://github.com/moeru-ai/airi/pull/2634) `[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain` [Draft] — *(1 comments)*
+  - *Focus*: External Cortico daemon vs in-process native memory; track maintainer reaction to 2-process / web breakage
+- [#2672](https://github.com/moeru-ai/airi/pull/2672) `refactor(stage-ui): bind conversations to window-local characters` [Draft] — *(48 comments)*
+  - *Focus*: Window-local character selection, conversation scoping, standalone card profile page, shared CharacterCard
+- [#2541](https://github.com/moeru-ai/airi/pull/2541) `Telltworose/feat/drop in plugins` [OPEN] — *(59 comments)*
+  - *Focus*: MCP stdio child processes & card-level tool scoping; track author rebase and explanation to maintainers regarding deleted in-process loader
+- [#2290](https://github.com/moeru-ai/airi/pull/2290) `feat(server): stream official ASR over WebSocket` [OPEN] — *(59 comments)*
+  - *Focus*: Official ASR streaming over WebSocket vs OpenAI-compatible HTTP SSE; track rebase and backend transport decisions
+- [#2120](https://github.com/moeru-ai/airi/pull/2120) `refactor(stage-pages): rebuild AIRI Card editor` [OPEN] — *(41 comments)*
+  - *Focus*: Card editor overhaul in stage-pages, dirty draft protection, route vs modal lifecycles
+
+---
 ## [2026-10-06] Upstream Delta: `edbbcf53..881ec784` (9 commits, 61 files, 33 PR update(s))
 
 ### 🎯 Executive Highlights

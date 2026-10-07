@@ -1130,6 +1130,9 @@ pages:
       openpaths:
         description: openpaths.io
         title: OpenPaths
+      opper:
+        description: opper.ai
+        title: Opper
       pocket-tts-local:
         description: 使用 Kyutai Pocket TTS 的本地低延迟多语言 CPU 文本转语音引擎。
         title: Pocket TTS (Kyutai 本地)

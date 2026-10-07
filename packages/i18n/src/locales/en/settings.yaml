@@ -115,7 +115,7 @@ live2d:
     title: Scale And Position
     scale: Scale
     x: X
-    y: Y
+    y: 'Y'
   switch-to-vrm:
     title: Switch to 3D Avatar?
     change-to-vrm: Click here to switch to the 3D avatar setting (VRM)
@@ -347,7 +347,7 @@ pages:
         reset: Reset desktop data
     confirmations:
       tooltip: Are you sure?
-      yes: Yes
+      yes: 'Yes'
     status:
       exported: Chat sessions exported.
       imported: Chat sessions imported.
@@ -1392,6 +1392,9 @@ pages:
       openpaths:
         title: OpenPaths
         description: openpaths.io
+      opper:
+        title: Opper
+        description: opper.ai
       atlascloud:
         title: Atlas Cloud
         description: api.atlascloud.ai
