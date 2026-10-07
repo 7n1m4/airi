@@ -124,6 +124,9 @@ interface ActingConfig {
   modelExpressionPrompt: string
   speechExpressionPrompt: string
   speechMannerismPrompt: string
+  stickerDirectivesPrompt?: string
+  activeStickerIds?: string[]
+  stickerWidgetsEnabled?: boolean
   idleAnimations?: string[]
 }
 ```
