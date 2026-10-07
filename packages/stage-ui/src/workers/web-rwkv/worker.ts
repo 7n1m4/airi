@@ -599,10 +599,16 @@ defineStreamInvokeHandler(context, webRwkvGenerateEvent, toStreamHandler<WebRwkv
     session.load(new Float32Array(stateLen))
     const enc = new TextEncoder()
     const scratch = new Float32Array(info.num_vocab)
-    for (const text of payload.conditioningTexts) {
+    for (let i = 0; i < payload.conditioningTexts.length; i++) {
+      if (signal?.aborted)
+        throw new DOMException('Aborted', 'AbortError')
+      const text = payload.conditioningTexts[i]
       const condTokens = tokenizer.encode(enc.encode(text))
       if (condTokens.length > 0) {
         await session.run(condTokens, scratch)
+      }
+      if ((i + 1) % 50 === 0 || i + 1 === payload.conditioningTexts.length) {
+        console.info(`[web-rwkv:worker] in-situ conditioning progress: ${i + 1}/${payload.conditioningTexts.length} blocks`)
       }
     }
     stateLoaded = true

@@ -42,7 +42,7 @@ const steps = [
 type SourceType = 'preset' | 'custom'
 const sourceType = ref<SourceType>('preset')
 
-const selectedArchetype = ref<ArchetypePreset>(presets[1]) // Default to Glyph
+const selectedArchetype = ref<ArchetypePreset>(presets.find(p => p.id === 'glyph') || presets[0]) // Default to Glyph
 const selectedSourceCardId = ref<string>('')
 const selectedSessionId = ref<string>('')
 const distillationDepth = ref<'sample' | 'deep' | 'full'>('full')
@@ -218,7 +218,10 @@ async function runTasteTest() {
       }
     }
 
-    tasteTestStatus.value = 'Conditioning recurrent state & generating on WebGPU...'
+    const condTurnsCount = conditioningTexts?.length || 0
+    tasteTestStatus.value = condTurnsCount > 100
+      ? `Conditioning recurrent state in-situ (${condTurnsCount} turns, ~1.5–2 min on initial run)...`
+      : 'Conditioning recurrent state & generating on WebGPU...'
     const formattedPrompt = buildRwkvPrompt([
       { role: 'user', content: cleanPrompt },
     ], { enableG1Prefill: false })
@@ -475,7 +478,7 @@ async function handleCommitForge() {
       </div>
 
       <!-- Presets Grid -->
-      <div v-if="sourceType === 'preset'" class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+      <div v-if="sourceType === 'preset'" class="grid grid-cols-1 gap-4 lg:grid-cols-4 sm:grid-cols-2">
         <div
           v-for="preset in presets"
           :key="preset.id"
@@ -487,7 +490,9 @@ async function handleCommitForge() {
                 ? 'border-emerald-500 ring-2 ring-emerald-500/30 bg-emerald-500/5'
                 : preset.color === 'purple'
                   ? 'border-purple-500 ring-2 ring-purple-500/30 bg-purple-500/5'
-                  : 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/5'
+                  : preset.color === 'rose'
+                    ? 'border-rose-500 ring-2 ring-rose-500/30 bg-rose-500/5'
+                    : 'border-amber-500 ring-2 ring-amber-500/30 bg-amber-500/5'
               : 'border-neutral-200/80 dark:border-neutral-800/80 hover:border-neutral-400',
           ]"
           @click="selectedArchetype = preset"
@@ -501,7 +506,9 @@ async function handleCommitForge() {
                     ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
                     : preset.color === 'purple'
                       ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400'
-                      : 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
+                      : preset.color === 'rose'
+                        ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                        : 'bg-amber-500/15 text-amber-600 dark:text-amber-400',
                 ]"
               >
                 <div :class="preset.icon" />
@@ -513,7 +520,9 @@ async function handleCommitForge() {
                     ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
                     : preset.color === 'purple'
                       ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300'
-                      : 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
+                      : preset.color === 'rose'
+                        ? 'bg-rose-500/15 text-rose-700 dark:text-rose-300'
+                        : 'bg-amber-500/15 text-amber-700 dark:text-amber-300',
                 ]"
               >
                 {{ preset.tag }}
@@ -961,7 +970,7 @@ async function handleCommitForge() {
           <FieldInput
             v-model="cardName"
             label="Companion Name"
-            placeholder="e.g. Glyph, Mori"
+            placeholder="e.g. Glyph, Mori, Sylvia"
             :required="true"
           />
 

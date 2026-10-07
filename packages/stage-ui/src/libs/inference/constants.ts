@@ -169,7 +169,7 @@ export const WEB_RWKV_MODELS: readonly WebRwkvModelInfo[] = [
 export interface WebRwkvStateCartridgeInfo {
   id: string
   name: string
-  archetype: 'mori' | 'glyph' | 'wired'
+  archetype: 'glyph' | 'mori' | 'wired' | 'sylvia'
   description: string
   stateUrls: {
     '0.4b'?: string
@@ -184,16 +184,6 @@ export interface WebRwkvStateCartridgeInfo {
  */
 export const WEB_RWKV_STATE_CARTRIDGES: readonly WebRwkvStateCartridgeInfo[] = [
   {
-    id: 'cartridge-mori-v1',
-    name: 'Mori (Forest Guardian)',
-    archetype: 'mori',
-    description: 'Stoic woodland presence with crystalline 80-character brevity and zero machine leakage.',
-    stateUrls: {
-      '0.4b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/mori.state',
-      '1.5b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/mori.state',
-    },
-  },
-  {
     id: 'cartridge-glyph-v1',
     name: 'Glyph (Kaomoji Gremlin)',
     archetype: 'glyph',
@@ -204,6 +194,16 @@ export const WEB_RWKV_STATE_CARTRIDGES: readonly WebRwkvStateCartridgeInfo[] = [
     },
   },
   {
+    id: 'cartridge-mori-v1',
+    name: 'Mori (Forest Guardian)',
+    archetype: 'mori',
+    description: 'Stoic woodland presence with crystalline 80-character brevity and zero machine leakage.',
+    stateUrls: {
+      '0.4b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/mori.state',
+      '1.5b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/mori.state',
+    },
+  },
+  {
     id: 'cartridge-wired-v1',
     name: 'Protocol: Wired (Digital Solitude)',
     archetype: 'wired',
@@ -211,6 +211,16 @@ export const WEB_RWKV_STATE_CARTRIDGES: readonly WebRwkvStateCartridgeInfo[] = [
     stateUrls: {
       '0.4b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/wired.state',
       '1.5b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/wired.state',
+    },
+  },
+  {
+    id: 'cartridge-sylvia-v1',
+    name: 'Sylvia (AI VTuber & Savage Wit)',
+    archetype: 'sylvia',
+    description: 'Unhinged chaotic deadpan AI streamer who roasts her creator, mocks chat, and emits [mood: smug] prefixes.',
+    stateUrls: {
+      '0.4b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/sylvia.state',
+      '1.5b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/sylvia.state',
     },
   },
 ] as const
@@ -378,7 +388,7 @@ export const TIMEOUTS = {
    * Covers prompt ingestion (a long chat history processed token-by-token) before
    * the first output token, so a working-but-slow prefill is not mistaken for a wedge.
    */
-  WEB_RWKV_GENERATE_FIRST_CHUNK: 60_000,
+  WEB_RWKV_GENERATE_FIRST_CHUNK: 120_000,
   /**
    * Inter-token inactivity budget for web-rwkv generation, used after the first
    * token proves the worker alive. RWKV streams tokens steadily, so a mid-stream

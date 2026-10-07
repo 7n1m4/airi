@@ -245,7 +245,15 @@ export function createWebRwkvAdapter(): WebRwkvAdapter {
       let text = ''
       // Two-tier inactivity timeout: a generous first-token budget (prompt
       // ingestion) then a tighter inter-token gap once the worker has proven alive.
-      const idle = createIdleTimeout(GENERATE_FIRST_CHUNK_TIMEOUT, GENERATE_IDLE_TIMEOUT)
+      // If in-situ recurrent state conditioning is requested (e.g. 500 turns / ~30k tokens
+      // synthesized on the GPU during cold start), allocate proportional prefill headroom
+      // (1.5s per conditioning block, min 300s) so the worker is not presumed wedged.
+      const condBlocks = request.conditioningTexts?.length ?? 0
+      const conditioningTimeBudget = condBlocks > 0
+        ? Math.max(condBlocks * 1_500, 300_000)
+        : 0
+      const firstChunkTimeout = GENERATE_FIRST_CHUNK_TIMEOUT + conditioningTimeBudget
+      const idle = createIdleTimeout(firstChunkTimeout, GENERATE_IDLE_TIMEOUT)
       try {
         await host.runOnGpu(MODEL_NAMES.WEB_RWKV, GPU_PRIORITY.LLM_GENERATE, options?.signal, async ({ slot, crashSignal }) => {
           const signals = [idle.signal, crashSignal]

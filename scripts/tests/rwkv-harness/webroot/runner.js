@@ -25,7 +25,7 @@ let __engine = null
  * bridge (they are multi-MB Float32Arrays) — only their names do. Built by
  * `__rwkvMakeState` (corpus-conditioning) and consumed via `opts.stateName`.
  */
-const __states = {}
+const __states = (window.__states = window.__states || {})
 
 async function fetchRange(url, start, end) {
   const res = await fetch(url, { headers: { Range: `bytes=${start}-${end}` }, cache: 'no-store' })
