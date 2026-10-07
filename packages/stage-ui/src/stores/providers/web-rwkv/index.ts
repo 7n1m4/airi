@@ -110,8 +110,11 @@ export function createWebRwkvChatProvider(config: WebRwkvProviderConfig = {}): C
             recommendedTemp = rwkvConfig.recommendedTemperature
             recommendedTopP = rwkvConfig.recommendedTopP
 
-            // Fallback in-situ synthesis corpus from catalog presets if state is unbaked
-            if (rwkvConfig.archetype) {
+            // Fallback in-situ synthesis corpus from card conditioningTurns or catalog presets
+            if (rwkvConfig.conditioningTurns && Array.isArray(rwkvConfig.conditioningTurns) && rwkvConfig.conditioningTurns.length > 0) {
+              conditioningTexts = rwkvConfig.conditioningTurns
+            }
+            else if (rwkvConfig.archetype && rwkvConfig.archetype !== 'custom') {
               const preset = PRESETS.find(p => p.id === rwkvConfig.archetype)
               if (preset?.conditioningTurns) {
                 conditioningTexts = preset.conditioningTurns

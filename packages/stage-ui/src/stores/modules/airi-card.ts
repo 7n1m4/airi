@@ -338,6 +338,7 @@ export interface AiriExtension {
     recommendedTemperature?: number
     recommendedTopP?: number
     zeroPromptVerified?: boolean
+    conditioningTurns?: string[]
   }
 }
 

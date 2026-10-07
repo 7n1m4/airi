@@ -389,6 +389,7 @@ const AiriExtensionSchema = looseObject({
     recommendedTemperature: optional(number()),
     recommendedTopP: optional(number()),
     zeroPromptVerified: optional(boolean()),
+    conditioningTurns: optional(array(string())),
   })),
 })
 
