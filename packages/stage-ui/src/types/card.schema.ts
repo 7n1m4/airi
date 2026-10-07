@@ -316,6 +316,9 @@ const AiriExtensionSchema = looseObject({
     autoCueExpressions: optional(boolean()),
     autoCueMotions: optional(boolean()),
     compiledWhitelist: optional(CharacterCueAllowlistSchema),
+    stickerDirectivesPrompt: optional(string()),
+    activeStickerIds: optional(array(string())),
+    stickerWidgetsEnabled: optional(boolean()),
   })),
   outfits: optional(array(AiriOutfitSchema)),
   artistry: optional(looseObject({

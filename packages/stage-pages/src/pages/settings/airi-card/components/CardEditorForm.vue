@@ -9,8 +9,20 @@ import { useMmd } from '@proj-airi/stage-ui-mmd'
 import { useSpine } from '@proj-airi/stage-ui-spine'
 import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
 import { animations } from '@proj-airi/stage-ui-three/assets/vrm'
+import { chatStickers } from '@proj-airi/stage-ui/assets/stickers'
 import { DEFAULT_ARTISTRY_WIDGET_INSTRUCTION } from '@proj-airi/stage-ui/constants/prompts/artistry-instruction'
-import { DEFAULT_ACTING_MODEL_EXPRESSION_PROMPT, DEFAULT_ACTING_SPEECH_EXPRESSION_PROMPT, DEFAULT_ACTING_SPEECH_MANNERISM_PROMPT, DEFAULT_ARTISTRY_INTRUSION_PROMPT, DEFAULT_DREAM_INTRUSION_PROMPT, DEFAULT_HEARTBEATS_PROMPT, DEFAULT_JOURNAL_INTRUSION_PROMPT, DEFAULT_POST_HISTORY_INSTRUCTIONS, DEFAULT_TEXT_JOURNAL_WIDGET_INSTRUCTION } from '@proj-airi/stage-ui/constants/prompts/character-defaults'
+import {
+  DEFAULT_ACTING_MODEL_EXPRESSION_PROMPT,
+  DEFAULT_ACTING_SPEECH_EXPRESSION_PROMPT,
+  DEFAULT_ACTING_SPEECH_MANNERISM_PROMPT,
+  DEFAULT_ACTING_STICKER_DIRECTIVES_PROMPT,
+  DEFAULT_ARTISTRY_INTRUSION_PROMPT,
+  DEFAULT_DREAM_INTRUSION_PROMPT,
+  DEFAULT_HEARTBEATS_PROMPT,
+  DEFAULT_JOURNAL_INTRUSION_PROMPT,
+  DEFAULT_POST_HISTORY_INSTRUCTIONS,
+  DEFAULT_TEXT_JOURNAL_WIDGET_INSTRUCTION,
+} from '@proj-airi/stage-ui/constants/prompts/character-defaults'
 import { useBackgroundStore } from '@proj-airi/stage-ui/stores/background'
 import { DisplayModelFormat, useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { ensureMcpServersForAllowedTools } from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
@@ -251,6 +263,9 @@ const selectedActingCueAllowlist = ref<CharacterCueAllowlist | undefined>(undefi
 const autoCuesEnabled = ref<boolean>(false)
 const autoCueExpressions = ref<boolean>(true)
 const autoCueMotions = ref<boolean>(false)
+const selectedActingStickerDirectivesPrompt = ref<string>('')
+const selectedActingActiveStickerIds = ref<string[]>([])
+const selectedActingStickerWidgetsEnabled = ref<boolean>(false)
 
 // Conversational Pacing & Thinking Fillers State
 const pacingEnabled = ref<boolean>(false)
@@ -1163,6 +1178,9 @@ async function saveCard(card: Card): Promise<boolean> {
               enabled: f.enabled !== false,
             })),
           },
+          stickerDirectivesPrompt: selectedActingStickerDirectivesPrompt.value,
+          activeStickerIds: [...selectedActingActiveStickerIds.value],
+          stickerWidgetsEnabled: selectedActingStickerWidgetsEnabled.value,
         },
         generation: {
           ...existingAiriExt?.generation,
@@ -1369,6 +1387,9 @@ function initializeCard(): Card {
     selectedActingModelExpressionPrompt.value = airiExt?.acting?.modelExpressionPrompt ?? DEFAULT_ACTING_MODEL_PROMPT
     selectedActingSpeechExpressionPrompt.value = airiExt?.acting?.speechExpressionPrompt ?? DEFAULT_ACTING_SPEECH_EXPRESSION_PROMPT
     selectedActingSpeechMannerismPrompt.value = airiExt?.acting?.speechMannerismPrompt ?? DEFAULT_ACTING_SPEECH_MANNERISM_PROMPT
+    selectedActingStickerDirectivesPrompt.value = airiExt?.acting?.stickerDirectivesPrompt ?? DEFAULT_ACTING_STICKER_DIRECTIVES_PROMPT
+    selectedActingActiveStickerIds.value = airiExt?.acting?.activeStickerIds ?? chatStickers.map(s => s.id)
+    selectedActingStickerWidgetsEnabled.value = airiExt?.acting?.stickerWidgetsEnabled ?? false
     selectedActingCueAllowlist.value = airiExt?.acting?.cueAllowlist
       ? JSON.parse(JSON.stringify(airiExt.acting.cueAllowlist))
       : (airiExt?.acting?.compiledWhitelist ? JSON.parse(JSON.stringify(airiExt.acting.compiledWhitelist)) : undefined)
@@ -1706,6 +1727,10 @@ function openSparkleGenerator(fieldId: string) {
     generatorFieldLabel.value = 'Speech Tags / Audio Expressions'
     generatorFieldValue.value = selectedActingSpeechExpressionPrompt.value
   }
+  else if (fieldId === 'actingStickerDirectives') {
+    generatorFieldLabel.value = 'Sticker Directives & Desktop Slappers'
+    generatorFieldValue.value = selectedActingStickerDirectivesPrompt.value
+  }
   else if (fieldId === 'artistryPromptPrefix') {
     generatorFieldLabel.value = 'Artistry Prompt Default Prefix'
     generatorFieldValue.value = selectedArtistryPromptPrefix.value
@@ -1744,6 +1769,9 @@ function handleGeneratorSave(newValue: string) {
   }
   else if (generatorFieldId.value === 'actingSpeechExpression') {
     selectedActingSpeechExpressionPrompt.value = newValue
+  }
+  else if (generatorFieldId.value === 'actingStickerDirectives') {
+    selectedActingStickerDirectivesPrompt.value = newValue
   }
   else if (generatorFieldId.value === 'artistryPromptPrefix') {
     selectedArtistryPromptPrefix.value = newValue
@@ -1928,6 +1956,9 @@ function handleGeneratorSave(newValue: string) {
         v-model:pacing-max-synthesis-budget-ms="pacingMaxSynthesisBudgetMs"
         v-model:pacing-profile="pacingProfile"
         v-model:pacing-experimental-organic-pivots="pacingExperimentalOrganicPivots"
+        v-model:selected-acting-sticker-directives-prompt="selectedActingStickerDirectivesPrompt"
+        v-model:selected-acting-sticker-widgets-enabled="selectedActingStickerWidgetsEnabled"
+        v-model:selected-acting-active-sticker-ids="selectedActingActiveStickerIds"
         :card-id="props.cardId"
         :acting-idle-animation-options="actingIdleAnimationOptions"
         :acting-model-emotion-options="actingModelEmotionOptions"

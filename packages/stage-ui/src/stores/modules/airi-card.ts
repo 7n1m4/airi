@@ -15,10 +15,12 @@ import { safeParse } from 'valibot'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { chatStickers } from '../../assets/stickers'
 import {
   DEFAULT_ACTING_MODEL_EXPRESSION_PROMPT,
   DEFAULT_ACTING_SPEECH_EXPRESSION_PROMPT,
   DEFAULT_ACTING_SPEECH_MANNERISM_PROMPT,
+  DEFAULT_ACTING_STICKER_DIRECTIVES_PROMPT,
   DEFAULT_ARTISTRY_WIDGET_SPAWNING_PROMPT,
   DEFAULT_HEARTBEATS_PROMPT,
   DEFAULT_POST_HISTORY_INSTRUCTIONS,
@@ -97,6 +99,9 @@ export interface ActingConfig {
   autoCueExpressions?: boolean
   autoCueMotions?: boolean
   compiledWhitelist?: CharacterCueAllowlist
+  stickerDirectivesPrompt?: string
+  activeStickerIds?: string[]
+  stickerWidgetsEnabled?: boolean
 }
 
 export interface AiriOutfit {
@@ -1006,6 +1011,9 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       autoCuesEnabled: false,
       autoCueExpressions: true,
       autoCueMotions: false,
+      stickerDirectivesPrompt: DEFAULT_ACTING_STICKER_DIRECTIVES_PROMPT,
+      activeStickerIds: chatStickers.map(s => s.id),
+      stickerWidgetsEnabled: false,
     }
 
     // Return default if no extension exists
@@ -1144,6 +1152,9 @@ export const useAiriCardStore = defineStore('airi-card', () => {
         autoCuesEnabled: existingExtension?.acting?.autoCuesEnabled ?? false,
         autoCueExpressions: existingExtension?.acting?.autoCueExpressions ?? true,
         autoCueMotions: existingExtension?.acting?.autoCueMotions ?? false,
+        stickerDirectivesPrompt: existingExtension?.acting?.stickerDirectivesPrompt ?? defaultActing.stickerDirectivesPrompt,
+        activeStickerIds: existingExtension?.acting?.activeStickerIds ?? defaultActing.activeStickerIds,
+        stickerWidgetsEnabled: existingExtension?.acting?.stickerWidgetsEnabled ?? defaultActing.stickerWidgetsEnabled,
       },
       outfits: existingExtension?.outfits ?? [],
       agents: existingExtension?.agents ?? {},
@@ -1537,6 +1548,9 @@ export function buildSystemPrompt(card: AiriCard | undefined) {
     }
     if (acting.speechMannerismPrompt && acting.speechMannerismPrompt.trim() !== '') {
       components.push(acting.speechMannerismPrompt)
+    }
+    if (acting.stickerDirectivesPrompt && acting.stickerDirectivesPrompt.trim() !== '') {
+      components.push(acting.stickerDirectivesPrompt)
     }
   }
 

@@ -132,6 +132,11 @@ const pacingMaxSynthesisBudgetMs = defineModel<number>('pacingMaxSynthesisBudget
 const pacingProfile = defineModel<string>('pacingProfile', { default: 'balanced' })
 const pacingExperimentalOrganicPivots = defineModel<boolean>('pacingExperimentalOrganicPivots', { default: false })
 
+// Sticker Directives & Desktop Slappers Models
+const selectedActingStickerDirectivesPrompt = defineModel<string>('selectedActingStickerDirectivesPrompt', { default: '' })
+const selectedActingStickerWidgetsEnabled = defineModel<boolean>('selectedActingStickerWidgetsEnabled', { default: false })
+const selectedActingActiveStickerIds = defineModel<string[]>('selectedActingActiveStickerIds', { default: () => [] })
+
 // Sub-Tab Navigation (6 Hubs with separate Idling segment)
 type ActingSubTabId = 'expressions' | 'idling' | 'speech' | 'pacing' | 'stickers' | 'playground'
 const activeSubTab = ref<ActingSubTabId>('expressions')
@@ -270,7 +275,11 @@ function applyPacingProfile(profileId: 'snappy' | 'balanced' | 'deep_cot') {
       <!-- 4. STICKERS SUB-TAB -->
       <ActingSubTabStickers
         v-else-if="activeSubTab === 'stickers'"
+        v-model:sticker-directives-prompt="selectedActingStickerDirectivesPrompt"
+        v-model:sticker-widgets-enabled="selectedActingStickerWidgetsEnabled"
+        v-model:active-sticker-ids="selectedActingActiveStickerIds"
         :card-id="props.cardId"
+        @sparkle-click="(fieldId) => emit('sparkle-click', fieldId)"
       />
 
       <!-- 5. LAB (PLAYGROUND) SUB-TAB -->

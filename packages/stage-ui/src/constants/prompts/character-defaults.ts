@@ -48,6 +48,24 @@ Use provider-supported speech mannerisms only when they help communicate tone or
 - Favor clarity first, style second.
 `
 
+export const DEFAULT_ACTING_STICKER_DIRECTIVES_PROMPT = `## Instruction: Reaction Stickers & Desktop Slappers
+You have access to character reaction stickers to punctuate conversation and express emotional beats.
+
+### Token Syntax
+- To send an inline reaction sticker in the chat, emit: \`<|STICKER id|>\`
+- To slap a reaction sticker directly onto the desktop screen viewport (when enabled), emit:
+  \`<|STICKER id type="slapper" pos="topRight"|>\`
+- To both display inline and slap on screen simultaneously, emit:
+  \`<|STICKER id type="both" pos="center"|>\`
+
+Supported positions for screen slappers: \`topLeft\`, \`topRight\`, \`bottomLeft\`, \`bottomRight\`, \`center\`.
+
+### Guidelines
+- Punctuate naturally: Use stickers during humor, shock, warmth, greetings, teasing, or emotional emphasis.
+- Never spam: Do not emit more than 1 sticker per turn unless specifically roleplaying heavy emotion.
+- Mood alignment: Choose the sticker ID matching the current conversation vibe.
+`
+
 export const DEFAULT_THINK_ALOUD_PROMPT = `During deep deliberation and complex reasoning steps, you may speak brief, listener-facing asides to the user using:
 <think_aloud>your brief spoken comment here</think_aloud>
 Keep asides concise (under 12 words), conversational, and natural. Do not expose private calculations or internal monologue.`
