@@ -89,20 +89,20 @@ async function loadEmbeddingModel(): Promise<void> {
   }
 
   isModelLoading = true
-  updateInferenceStatus('bge-small-en', { state: 'downloading', device: 'webgpu' })
+  updateInferenceStatus('embeddinggemma-2', { state: 'downloading', device: 'webgpu' })
 
-  modelLoadPromise = getGpuExecutor().run('bge-small-en', GPU_PRIORITY.BG_REMOVAL_LOAD + 1, async () => {
+  modelLoadPromise = getGpuExecutor().run('embeddinggemma-2', GPU_PRIORITY.BG_REMOVAL_LOAD + 1, async () => {
     try {
       await callWorker('load-model')
 
-      // Track VRAM allocation (~100 MB footprint)
-      getGPUCoordinator().requestAllocation('bge-small-en', 100 * 1024 * 1024)
+      // Track VRAM allocation (~185 MB footprint: 270M text backbone in q4)
+      getGPUCoordinator().requestAllocation('embeddinggemma-2', 185 * 1024 * 1024)
 
       isModelLoaded = true
-      updateInferenceStatus('bge-small-en', { state: 'ready', device: 'webgpu' })
+      updateInferenceStatus('embeddinggemma-2', { state: 'ready', device: 'webgpu' })
     }
     catch (error) {
-      updateInferenceStatus('bge-small-en', { state: 'error' })
+      updateInferenceStatus('embeddinggemma-2', { state: 'error' })
       throw error
     }
     finally {

@@ -90,13 +90,26 @@ function resolveMemoryLayer(kind: string): MemoryLayer {
   return 'raw'
 }
 
+export interface SearchIndexState {
+  stale: boolean
+  reason?: string
+}
+
 export const layeredMemory = {
   lastTriage: null as TriageDecision | null,
   lastSearchMode: 'baseline' as 'pass11' | 'baseline',
+  lastIndexState: null as SearchIndexState | null,
 
-  async init() {
+  async init(): Promise<SearchIndexState> {
     const snapshot = await indexStorage.getItem('snapshot')
-    await searchWorker.init(snapshot)
+    const res = await searchWorker.init(snapshot)
+    // NOTICE: the worker strips embeddings from incompatible snapshots
+    // (legacy/headerless BGE generations) and reports stale here. Vector
+    // scores then drop to 0 and BM25 serves queries while the background
+    // backfill (memory-text-journal backgroundIndexAll) re-embeds through
+    // indexDocuments — chat turns never block on migration.
+    this.lastIndexState = { stale: res?.stale === true, reason: res?.reason }
+    return this.lastIndexState
   },
 
   async persist() {
@@ -300,7 +313,7 @@ export const layeredMemory = {
     }
 
     // 5. Candidate Retrieval from Search Web Worker (Vector + BM25)
-    // NOTICE: cap sub-query fan-out — each sub-query is a full bge ONNX
+    // NOTICE: cap sub-query fan-out — each sub-query is a full EmbeddingGemma ONNX
     // embedding + hybrid score; unbounded decomposition multiplies WebGPU
     // work per chat turn and was a direct swap-pressure multiplier.
     const subQueries = decomposeQuery(query, triage).slice(0, MAX_SUB_QUERIES)

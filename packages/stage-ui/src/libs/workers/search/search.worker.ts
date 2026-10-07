@@ -1,4 +1,18 @@
-import { env, pipeline } from '@huggingface/transformers'
+import type { SearchIndexSnapshotHeader } from '../../search/embedding-format'
+
+import { AutoConfig, AutoModel, AutoTokenizer, env } from '@huggingface/transformers'
+
+import {
+  buildSnapshotHeader,
+  EMBEDDING_DIM,
+  EMBEDDING_DTYPE,
+  EMBEDDING_MODEL_ID,
+  formatDocumentForEmbedding,
+  formatQueryForEmbedding,
+  isSnapshotCompatible,
+  l2Normalize,
+
+} from '../../search/embedding-format'
 
 // Suppress noisy ONNX Runtime warnings
 env.backends.onnx.logLevel = 'error'
@@ -8,6 +22,10 @@ interface SearchDocument {
   characterId?: string
   what?: string
   fact?: string
+  // NOTICE: title feeds the `title:` slot of the EmbeddingGemma document
+  // prefix (§7 catalog: real journal titles, synthetic date/role titles).
+  // BM25 keeps using the raw fact/what text — never the prefixed string.
+  title?: string
   kind: string
   source: string
   timestamp: string
@@ -27,15 +45,16 @@ interface ExtractedDateHook {
 }
 
 interface SearchSnapshot {
+  header?: SearchIndexSnapshotHeader
   documents: SearchDocument[]
 }
 
-let embedder: any = null
+let embedderModel: any = null
+let embedderTokenizer: any = null
 let documents = new Map<string, SearchDocument>()
 let averageDocumentLength = 0
 let documentFrequency = new Map<string, number>()
 
-const MODEL_ID = 'Xenova/bge-small-en-v1.5'
 const STOPWORDS = new Set([
   'a',
   'an',
@@ -111,28 +130,69 @@ const STOPWORDS = new Set([
   'user',
 ])
 
+async function loadEmbedderStack(device: 'webgpu' | 'wasm') {
+  // NOTICE: text-only backbone — strip the 109MB vision + 189MB audio
+  // encoders before load so only the 270M text tower ships (175MB in q4).
+  const config = await AutoConfig.from_pretrained(EMBEDDING_MODEL_ID)
+  const mutableConfig = config as unknown as Record<string, unknown>
+  mutableConfig.vision_config = null
+  mutableConfig.audio_config = null
+  const [model, tokenizer] = await Promise.all([
+    AutoModel.from_pretrained(EMBEDDING_MODEL_ID, {
+      config,
+      device,
+      dtype: EMBEDDING_DTYPE,
+    }),
+    AutoTokenizer.from_pretrained(EMBEDDING_MODEL_ID),
+  ])
+  return { model, tokenizer }
+}
+
 async function getEmbedder() {
-  if (!embedder) {
+  if (!embedderModel || !embedderTokenizer) {
     try {
-      embedder = await pipeline('feature-extraction', MODEL_ID, {
-        device: 'webgpu',
-      })
+      const stack = await loadEmbedderStack('webgpu')
+      embedderModel = stack.model
+      embedderTokenizer = stack.tokenizer
     }
     catch (e) {
-      console.warn('search.worker: WebGPU pipeline failed, falling back to wasm/cpu:', e)
-      embedder = await pipeline('feature-extraction', MODEL_ID, {
-        device: 'wasm',
-      })
+      console.warn('search.worker: WebGPU embedder failed, falling back to wasm/cpu:', e)
+      const stack = await loadEmbedderStack('wasm')
+      embedderModel = stack.model
+      embedderTokenizer = stack.tokenizer
     }
   }
-  return embedder
+  return { model: embedderModel, tokenizer: embedderTokenizer }
 }
 
 async function getVector(text: string) {
-  const extractor = await getEmbedder()
-  const output = await extractor(text, { pooling: 'mean', normalize: true })
+  const { model, tokenizer } = await getEmbedder()
+  const inputs = await tokenizer(text, { padding: true, truncation: true })
+  const output = await model(inputs)
   try {
-    return Array.from(output.data as number[])
+    const lastHidden = output.last_hidden_state
+    const dims = lastHidden.dims as number[]
+    const seqLen = dims[1]
+    const hiddenSize = dims[2]
+    const hiddenData = lastHidden.data as ArrayLike<number>
+    const maskData = inputs.attention_mask?.data as ArrayLike<number> | undefined
+    // NOTICE: mean-pool over the sequence dim with the attention mask, then
+    // MRL-truncate to EMBEDDING_DIM. Slicing breaks unit length, so the
+    // truncated vector MUST be L2 re-normalized before storage/scoring.
+    const pooled = new Array<number>(hiddenSize).fill(0)
+    let weightTotal = 0
+    for (let s = 0; s < seqLen; s++) {
+      const weight = maskData ? Number(maskData[s]) : 1
+      if (!weight)
+        continue
+      weightTotal += weight
+      const offset = s * hiddenSize
+      for (let h = 0; h < hiddenSize; h++)
+        pooled[h] += Number(hiddenData[offset + h]) * weight
+    }
+    const divisor = weightTotal || 1
+    const truncated = pooled.slice(0, EMBEDDING_DIM).map(v => v / divisor)
+    return l2Normalize(truncated)
   }
   finally {
     if (typeof (output as any)?.dispose === 'function') {
@@ -143,6 +203,10 @@ async function getVector(text: string) {
 
 function getDocumentContent(document: SearchDocument) {
   return document.fact || document.what || ''
+}
+
+function getDocumentEmbeddingText(document: SearchDocument) {
+  return formatDocumentForEmbedding(document.kind, document.title, getDocumentContent(document))
 }
 
 function tokenize(input: string) {
@@ -351,10 +415,16 @@ function upsertDocument(document: SearchDocument) {
   documents.set(document.id, document)
 }
 
-function hydrateDocuments(nextDocuments: SearchDocument[] = []) {
+function hydrateDocuments(nextDocuments: SearchDocument[] = [], options?: { stripEmbeddings?: boolean }) {
   documents = new Map()
-  for (const document of nextDocuments)
-    upsertDocument(document)
+  for (const document of nextDocuments) {
+    // NOTICE: never mutate the incoming snapshot objects — shallow-copy when
+    // dropping stale vectors so the persisted IndexedDB record stays intact.
+    if (options?.stripEmbeddings && document.embedding?.length)
+      upsertDocument({ ...document, embedding: undefined, tokens: undefined, tokenFreqs: undefined })
+    else
+      upsertDocument(document)
+  }
 
   rebuildKeywordStats()
 }
@@ -363,8 +433,12 @@ function normalizeSnapshot(snapshot: any): SearchSnapshot | null {
   if (!snapshot)
     return null
 
-  if (Array.isArray(snapshot.documents))
-    return snapshot as SearchSnapshot
+  if (Array.isArray(snapshot.documents)) {
+    const header = snapshot.header && typeof snapshot.header === 'object'
+      ? snapshot.header as SearchIndexSnapshotHeader
+      : undefined
+    return { header, documents: snapshot.documents as SearchDocument[] }
+  }
 
   if (Array.isArray(snapshot)) {
     return { documents: snapshot }
@@ -382,8 +456,18 @@ globalThis.addEventListener('message', async (e) => {
     switch (type) {
       case 'init': {
         const normalizedSnapshot = normalizeSnapshot(payload?.snapshot)
-        hydrateDocuments(normalizedSnapshot?.documents)
-        globalThis.postMessage({ id, type: 'ready' })
+        const compatible = isSnapshotCompatible(normalizedSnapshot?.header)
+        // NOTICE: legacy/headerless snapshots carry 384d BGE vectors (or
+        // none). Hydrate documents for BM25 but drop stale embeddings so
+        // cosine math never mixes geometries; the backfill re-embeds through
+        // the index handler below.
+        hydrateDocuments(normalizedSnapshot?.documents, { stripEmbeddings: !compatible })
+        globalThis.postMessage({
+          id,
+          type: 'ready',
+          stale: !compatible,
+          reason: compatible ? undefined : 'incompatible-or-missing snapshot header',
+        })
         break
       }
 
@@ -398,15 +482,23 @@ globalThis.addEventListener('message', async (e) => {
         let indexedCount = 0
 
         for (const document of nextDocuments as SearchDocument[]) {
-          let embedding = document.embedding
+          // NOTICE: only trust a supplied embedding when it matches the
+          // active geometry — forwarded per-entry vectors from a previous
+          // model generation are silently dropped and re-embedded.
+          let embedding = (document.embedding?.length === EMBEDDING_DIM)
+            ? document.embedding
+            : undefined
 
           if (!embedding?.length) {
+            const embeddingText = getDocumentEmbeddingText(document)
             const existing = documents.get(document.id)
-            if (existing && existing.embedding?.length && getDocumentContent(existing) === getDocumentContent(document)) {
+            if (existing
+              && existing.embedding?.length === EMBEDDING_DIM
+              && getDocumentEmbeddingText(existing) === embeddingText) {
               embedding = existing.embedding
             }
             else {
-              embedding = await getVector(getDocumentContent(document))
+              embedding = await getVector(embeddingText)
               // Throttled batching: yield to event loop every 5 neural embeddings to allow GC and keep thread responsive
               if (indexedCount > 0 && indexedCount % 5 === 0) {
                 await new Promise(resolve => setTimeout(resolve, 20))
@@ -428,9 +520,13 @@ globalThis.addEventListener('message', async (e) => {
 
       case 'search': {
         const { query, limit = 10, characterId, temporalHooks, vector } = payload
-        const queryVector = (Array.isArray(vector) && vector.length > 0)
+        // NOTICE: the asymmetric query prefix applies to the embedding path
+        // ONLY — getKeywordCandidates below keeps the raw query so prefix
+        // tokens never pollute BM25 IDF. Reused sub-query vectors are
+        // dim-gated so a stale-generation vector can never sneak through.
+        const queryVector = (Array.isArray(vector) && vector.length === EMBEDDING_DIM)
           ? vector
-          : await getVector(query)
+          : await getVector(formatQueryForEmbedding(query))
         const candidateLimit = Math.max(limit * 5, 20)
 
         const vectorHits = getVectorCandidates(queryVector, candidateLimit, characterId)
@@ -449,7 +545,7 @@ globalThis.addEventListener('message', async (e) => {
         ])
 
         // NOTICE: never ship document embedding arrays back over postMessage — each
-        // 384-dim number[] cloned per candidate per search is MBs of structured-
+        // 256-dim number[] cloned per candidate per search is MBs of structured-
         // clone traffic and compressor/swap pressure. We return queryVector so
         // multi-plan sub-queries can reuse it across calls without re-running WebGPU embeddings.
         const results = {
@@ -478,6 +574,7 @@ globalThis.addEventListener('message', async (e) => {
         // lowest-value embedding set (re-embedded lazily on next index cycle),
         // and full float64 JSON arrays bloat swap/compressor with MBs of text.
         const snapshot: SearchSnapshot = {
+          header: buildSnapshotHeader(),
           documents: [...documents.values()].map((doc) => {
             const { tokens, tokenFreqs, embedding, ...persistedDoc } = doc
             if (doc.kind === 'raw_turn' || !embedding?.length)

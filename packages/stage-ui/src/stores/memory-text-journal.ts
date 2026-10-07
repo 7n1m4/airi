@@ -179,9 +179,16 @@ export const useTextJournalStore = defineStore('text-journal', () => {
         const currentUniverseId = activeSessionMeta?.universeId || 'global'
 
         // 1. LTMM
+        // NOTICE: forward the real journal title — the worker formats
+        // `title: ... | text: ...` and `title: none` is never used here
+        // (design §7 D1). The 'Journal Entry' placeholder default backfills
+        // from the content head so every vector keeps a title signal.
         const ltmm = entries.value.filter(e => e.characterId === cardId && (e.universeId || 'global') === currentUniverseId).map(e => ({
           id: e.id,
           characterId: cardId,
+          title: (e.title && e.title.trim() && e.title !== 'Journal Entry')
+            ? e.title
+            : e.content.slice(0, 40),
           fact: e.content,
           kind: 'ltmm_entry',
           timestamp: new Date(e.createdAt).toISOString(),
@@ -196,6 +203,9 @@ export const useTextJournalStore = defineStore('text-journal', () => {
           stmm = stmmRaw.filter(b => b.characterId === cardId && (b.universeId || 'global') === currentUniverseId).map(b => ({
             id: b.id,
             characterId: cardId,
+            // NOTICE: synthetic date title — STMM blocks have no title
+            // field; the date is the load-bearing discriminator (§7 D2).
+            title: b.characterName ? `Daily recap ${b.date} — ${b.characterName}` : `Daily recap ${b.date}`,
             fact: b.summary,
             kind: 'stmm_block',
             timestamp: b.date,
@@ -208,7 +218,7 @@ export const useTextJournalStore = defineStore('text-journal', () => {
 
         // 3. Raw (Deduplicated recent corpus — bounded to protect WebGPU/swap).
         // NOTICE: indexing the entire lifetime chat corpus forces hundreds of
-        // sequential bge-small-en ONNX embeddings and pins them in worker RAM.
+        // sequential EmbeddingGemma ONNX embeddings and pins them in worker RAM.
         // Cap to the most recent sessions/turns; older turns remain in IndexedDB.
         const MAX_INDEX_SESSIONS = 8
         const MAX_RAW_DOCS = 250
@@ -237,12 +247,16 @@ export const useTextJournalStore = defineStore('text-journal', () => {
                     const text = extractTextContent(m.content).trim()
                     if (text.length > 10) {
                       if (!uniqueRaw.has(text)) {
+                        const turnDate = new Date(m.createdAt || Date.now()).toISOString()
                         uniqueRaw.set(text, {
                           id: m.id,
                           characterId: cardId,
+                          // NOTICE: synthetic role+date title disambiguates
+                          // repeat one-liners across sessions (§7 D3).
+                          title: `Chat ${m.role} turn — ${turnDate.slice(0, 10)} ${String(s.sessionId).slice(0, 8)}`,
                           fact: text,
                           kind: 'raw_turn',
-                          timestamp: new Date(m.createdAt || Date.now()).toISOString(),
+                          timestamp: turnDate,
                           source: `chat:${s.sessionId}`,
                         })
                       }
@@ -265,6 +279,9 @@ export const useTextJournalStore = defineStore('text-journal', () => {
           echoes = echoRaw.filter(c => c.characterId === cardId && (c.universeId || 'global') === currentUniverseId).map(c => ({
             id: c.id,
             characterId: cardId,
+            // NOTICE: synthetic type+date title for the 2–5 word chip
+            // bursts (§7 D4).
+            title: `${c.type} chip ${c.date}`,
             fact: c.content,
             kind: 'echo_chip',
             timestamp: new Date(c.createdAt || Date.now()).toISOString(),
@@ -280,9 +297,13 @@ export const useTextJournalStore = defineStore('text-journal', () => {
         try {
           const lifetimeRaw = await lifetimeMemoryRepo.getByCharacter(cardId, currentUniverseId)
           if (lifetimeRaw) {
+            const consumedDay = (lifetimeRaw.metadata as { lastConsumedDay?: string } | undefined)?.lastConsumedDay
             lifetime.push({
               id: lifetimeRaw.id,
               characterId: cardId,
+              // NOTICE: synthetic thread title keyed on the incremental
+              // watermark so re-distills stay distinguishable (§7 D5).
+              title: consumedDay ? `Eternal thread through ${consumedDay}` : 'Eternal thread',
               fact: lifetimeRaw.distilledContent,
               kind: 'lifetime_entry',
               timestamp: new Date(lifetimeRaw.updatedAt || Date.now()).toISOString(),
@@ -452,7 +473,7 @@ export const useTextJournalStore = defineStore('text-journal', () => {
 
   // NOTICE: single-flight search coalescing — a nan0 turn fans out to chat-tier
   // RAG + Nan0 memoryRetriever for the same query; without dedup each fires its
-  // own bge-small-en ONNX embedding + Jev triage/rerank, doubling WebGPU pressure.
+  // own EmbeddingGemma ONNX embedding + Jev triage/rerank, doubling WebGPU pressure.
   const inFlightSearches = new Map<string, Promise<(TextJournalEntry & { kind: string, score?: number })[]>>()
 
   async function searchEntries(input: {

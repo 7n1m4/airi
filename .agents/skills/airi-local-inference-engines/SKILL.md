@@ -1,7 +1,7 @@
 ---
 name: airi-local-inference-engines
 description: >-
-  Load/debug local WebGPU/WASM inference workers: Kokoro, Whisper, WebLLM, Web-RWKV, Moondream, worker protocols, model load queues, GpuResourceCoordinator, VRAM pressure. Provider definitions use airi-provider-core-registry.
+  Load/debug local WebGPU/WASM inference workers: Kokoro, Whisper, WebLLM, Web-RWKV, Moondream, embeddings search worker, Laya System-1, worker protocols, model load queues, GpuResourceCoordinator, VRAM pressure. Provider definitions use airi-provider-core-registry; retrieval semantics use airi-memory-retrieval-engine; decision policy uses airi-jev-decision-engine.
 ---
 
 # AIRI Local Inference Engines (WebGPU & WASM)
@@ -16,7 +16,11 @@ AIRI executes local neural models directly in the browser via dedicated Web Work
 - **WebLLM Worker**: Local LLM text generation (`packages/stage-ui/src/workers/web-llm/`).
 - **Web-RWKV Worker**: Local RWKV-7 RNN model execution (`packages/stage-ui/src/workers/web-rwkv/`).
 - **Moondream VLM Worker**: Local 1.6B vision-language model inference (`packages/stage-ui/src/workers/moondream/`, adapter at `packages/stage-ui/src/libs/inference/adapters/moondream.ts`, provider `moondream-local`).
+- **Search Embedding Worker**: Local text-embedding engine behind memory retrieval (`packages/stage-ui/src/libs/workers/search/search.worker.ts`, loader at `packages/stage-ui/src/libs/workers/search/index.ts`). Currently `Xenova/bge-small-en-v1.5` via `pipeline('feature-extraction')`; migrating to the EmbeddingGemma 2 text backbone — see `docs/design-embedding-provider-support.md`.
+- **Laya System-1 Worker**: Local non-autoregressive decision engine behind the `laya-local` System-1 provider (`packages/stage-ui/src/workers/laya/worker.ts`: ModernBERT ONNX via `onnxruntime-web`, `tozp/laya-onnx` int8 424MB / fp16 843MB, WASM/WebGPU EPs, Cache Storage `laya-cache`). The standard-pattern citizen: `createGpuWorkerHost` + `runOnGpu` + VRAM estimates (see adapter below).
 - **Apple Core AI Bridge**: Hardware-accelerated speculative dialogue and on-device vision via Apple Neural Engine (ANE) and Metal (`NativeAI` bridge).
+
+> **Ownership boundary:** this skill owns worker model loading, VRAM allocation, device fallback, and load serialization — including the embedding worker and the Laya worker. Ranking, memory layers, candidate fusion, and query analysis belong to `airi-memory-retrieval-engine`; triage/rerank policy and the OpenRouter Decisions path belong to `airi-jev-decision-engine`; prefix formatting and embedding cache invalidation live at the worker boundary per `docs/design-embedding-provider-support.md` §7–§8.
 
 VRAM budget accounting, WebGPU hardware feature detection, memory pressure telemetry, and worker load queues are coordinated by `GpuResourceCoordinator`.
 
@@ -35,10 +39,13 @@ VRAM budget accounting, WebGPU hardware feature detection, memory pressure telem
 - `packages/stage-ui/src/workers/web-llm/` — WebLLM (TVM WebGPU) worker implementation.
 - `packages/stage-ui/src/workers/web-rwkv/` — Web-RWKV WebGPU worker implementation.
 - `packages/stage-ui/src/workers/moondream/` — Moondream2 (`Xenova/moondream2`) WebGPU/WASM VLM worker (`Moondream1ForConditionalGeneration`). Adapter at `packages/stage-ui/src/libs/inference/adapters/moondream.ts`, chat provider with `/chat/completions` interception at `packages/stage-ui/src/stores/providers/moondream/index.ts`.
+- `packages/stage-ui/src/libs/workers/search/` — Search embedding worker (`search.worker.ts`: ONNX embedder, in-memory embedding + BM25 caches, `MAX_WORKER_DOCUMENTS = 600` FIFO cap) and loader (`index.ts`: serialized load via `getGpuExecutor().run()` at `GPU_PRIORITY.BG_REMOVAL_LOAD + 1`, VRAM allocation via `getGPUCoordinator().requestAllocation()` — ~100MB BGE-small, ~185MB post-migration — `updateInferenceStatus` keys). **Exception path**: predates `createGpuWorkerHost` — raw `Worker` + `callWorker` RPC with AbortSignal, so no OOM circuit breaker or TTL unload; memory is bounded by the FIFO doc cap plus coordinator-level LRU eviction.
+- `packages/stage-ui/src/workers/laya/worker.ts` — Laya System-1 ONNX worker (direct `onnxruntime-web` session, int8/fp16 precision switch, threaded-WASM config with SAB-gated `numThreads`, Eventa `inference:laya:*` contract in `libs/inference/contract.ts`). Adapter at `packages/stage-ui/src/libs/inference/adapters/laya.ts` (the reference `createGpuWorkerHost` integration: `runOnGpu` with `GPU_PRIORITY.LAYA_LOAD` / `LAYA_DECIDE`, `TIMEOUTS.LAYA_LOAD/DECIDE`, `MODEL_VRAM_ESTIMATES`, `updateInferenceStatus`); facade at `packages/stage-ui/src/libs/inference/laya-engine.ts`; selected via the `laya-local` provider in `stores/modules/system-one.ts`. Decision policy itself belongs to `airi-jev-decision-engine`.
 
 ### Related Specs
 - `docs/design-local-whisper-stt.md` — Comprehensive design doc for Local Whisper STT engine, Eventa worker, GPU queuing, and single-tenant cache.
 - `docs/proposal-built-in-llm-webgpu.md` — Technical proposal and harness specification for WebGPU local inference.
+- `docs/design-embedding-provider-support.md` — Embedding backend migration (BGE-small → EmbeddingGemma 2): §7 prefix catalog, §8 exhaustive BGE-mark checklist.
 
 ## 3. Core SOPs & Guidelines
 
@@ -82,10 +89,12 @@ In Electron or multi-tab web, each BrowserWindow or tab possesses an isolated V8
 - **Worker Script Bundling**: Worker scripts must be bundled with Vite using `new Worker(new URL('...', import.meta.url), { type: 'module' })` to support cross-origin worker loading.
 - **Transformers.js AutoModel Class Gap**: `AutoModelForVision2Seq` in `@huggingface/transformers` does not support `moondream1` architecture directly (`Unsupported model type: moondream1`). It must be instantiated via direct class load: `Moondream1ForConditionalGeneration.from_pretrained(modelId, { dtype: { embed_tokens: 'fp32', vision_encoder: 'q8', decoder_model_merged: 'q4' } })`.
 - **Web-RWKV In-Browser Quantization (`from_reader` vs `from_prefab`)**: In-browser on-the-fly quantization (`quantize_mat_int8.wgsl`, `quantize_mat_nf4.wgsl` via `Session.from_reader()`) corrupts weights due to WebGPU buffer synchronization race conditions. The WGSL matrix multiplication kernels are healthy; deliver quantized models via pre-quantized CBOR `.prefab` files (`Session.from_prefab()`), saving 38%–58% download size and VRAM with 5s load times. See `docs/design-web-rwkv-quantization-architecture.md`.
+- **Embedding Model Swaps Invalidate Cached Vectors**: 384d BGE vectors vs 256d Gemma vectors silently score 0 on dimension mismatch — both `cosineSimilarity` copies (`search.worker.ts`, `hybrid-scorer.ts`) `return 0`, never throw. Gate reuse on the snapshot header + prefix version and never trust stored `entry.embedding` across a model change. Full mark list in `docs/design-embedding-provider-support.md` §8.
 
 ## 5. Verification Workflows
 
 - **Inference Suite Tests**: `pnpm -F @proj-airi/stage-ui test run src/libs/inference/`
+- **Search Worker Tests** (mocked worker, dim-agnostic): `pnpm -F @proj-airi/stage-ui test run src/libs/search/`
 - **Typecheck**: `pnpm -F @proj-airi/stage-ui typecheck`
 - **Hardware Check**: Test WebGPU availability in DevTools console via `navigator.gpu.requestAdapter()`.
 
@@ -101,7 +110,8 @@ In Electron or multi-tab web, each BrowserWindow or tab possesses an isolated V8
 - [docs/proposal-moss-tts-nano-provider-unified-webgpu.md](docs/proposal-moss-tts-nano-provider-unified-webgpu.md) — MOSS TTS nano provider unified WebGPU proposal.
 - [docs/research-moss-tts-nano-report.md](docs/research-moss-tts-nano-report.md) — MOSS TTS nano research report.
 - [docs/design-vram-eviction-and-standby-hibernation.md](docs/design-vram-eviction-and-standby-hibernation.md) — VRAM eviction, LRU pressure reclamation, and multi-tier standby hibernation specification.
+- [docs/design-embedding-provider-support.md](docs/design-embedding-provider-support.md) — Embedding backend migration: provider taxonomy, EmbeddingGemma 2 q4 baseline, prefix catalog, BGE-mark checklist.
 
 ## Related Skills & References
 
-- **Key Documents**: [[design-local-whisper-stt]], [[proposal-built-in-llm-webgpu]], [[design-web-rwkv-quantization-architecture]], [[design-attention-ecology-screen-watching]], [[proposal-toggle4-rework-and-rwkv-harness]], [[project-rwkv-kimi]], [[project-rwkv-cleanroom-harness-plan]], [[proposal-moss-tts-nano-provider-unified-webgpu]], [[research-moss-tts-nano-report]], [[design-vram-eviction-and-standby-hibernation]]
+- **Key Documents**: [[design-local-whisper-stt]], [[proposal-built-in-llm-webgpu]], [[design-web-rwkv-quantization-architecture]], [[design-attention-ecology-screen-watching]], [[proposal-toggle4-rework-and-rwkv-harness]], [[project-rwkv-kimi]], [[project-rwkv-cleanroom-harness-plan]], [[proposal-moss-tts-nano-provider-unified-webgpu]], [[research-moss-tts-nano-report]], [[design-vram-eviction-and-standby-hibernation]], [[design-embedding-provider-support]]
