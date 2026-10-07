@@ -1290,10 +1290,13 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           return ''
         }
 
-        // Ensure that newMessages always starts with the active character's canonical system prompt.
-        const rawSystemPrompt = unref(airiCardStore.systemPrompt)
-        const effectiveSystemPrompt = (typeof rawSystemPrompt === 'string' && rawSystemPrompt.trim() ? rawSystemPrompt.trim() : '')
-          || buildSystemPrompt(activeCard.value)
+        // Ensure that newMessages always starts with the active character's canonical system prompt (unless zero-prompt cartridge).
+        const isZeroPromptCartridge = activeCard.value?.extensions?.airi?.rwkv?.zeroPromptVerified === true
+        const rawSystemPrompt = isZeroPromptCartridge ? '' : unref(airiCardStore.systemPrompt)
+        const effectiveSystemPrompt = isZeroPromptCartridge
+          ? ''
+          : ((typeof rawSystemPrompt === 'string' && rawSystemPrompt.trim() ? rawSystemPrompt.trim() : '')
+            || buildSystemPrompt(activeCard.value))
         const firstMsgContent = newMessages.length > 0 ? getMsgStringContent(newMessages[0].content) : ''
         const hasPersonaSystemMessage = newMessages.length > 0
           && newMessages[0].role === 'system'
@@ -1301,7 +1304,11 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           && !firstMsgContent.startsWith('[ENVIRONMENTAL AWARENESS]')
           && !firstMsgContent.includes('[CONTEXT_AWARENESS]')
 
-        if (!hasPersonaSystemMessage) {
+        if (isZeroPromptCartridge && hasPersonaSystemMessage) {
+          // Drop stale persona system message if switching to zero-prompt cartridge
+          newMessages.shift()
+        }
+        else if (!hasPersonaSystemMessage) {
           if (effectiveSystemPrompt) {
             newMessages.unshift({
               role: 'system',
@@ -1676,8 +1683,8 @@ Format your output as a raw thought log.`
 
         debug(`[ChatDebug] Model: ${effectiveModel}, Provider: ${effectiveProviderId}, Vision Supported: ${isVisionSupported}`)
 
-        // NOTICE: Strict runtime safety check ensuring persona system prompt is never omitted or misplaced
-        if (import.meta.env.DEV) {
+        // NOTICE: Strict runtime safety check ensuring persona system prompt is never omitted or misplaced (exempting zero-prompt cartridges)
+        if (import.meta.env.DEV && !isZeroPromptCartridge) {
           if (newMessages.length === 0 || newMessages[0].role !== 'system') {
             console.error('[CRITICAL] Prompt invariant violated: messages[0] must be role: "system"', newMessages)
             throw new Error('Prompt invariant violated: persona system message missing from messages[0]')

@@ -59,11 +59,13 @@ function messageText(content: ChatMessage['content']): string {
  * After:
  * - `"User: Hi\n\nAssistant: <think></think"`
  */
-export function buildRwkvPrompt(messages: ChatMessage[], options?: { enableG1Prefill?: boolean }): string {
+export function buildRwkvPrompt(messages: ChatMessage[], options?: { enableG1Prefill?: boolean, zeroPrompt?: boolean }): string {
   const parts: string[] = []
   for (const message of messages) {
     const text = cleanTurn(messageText(message.content))
     if (message.role === 'system') {
+      if (options?.zeroPrompt)
+        continue
       if (text)
         parts.push(`System: ${text}`)
     }
@@ -82,8 +84,9 @@ export function buildRwkvPrompt(messages: ChatMessage[], options?: { enableG1Pre
   // chain-of-thought and replies directly. The trailing `>` is intentionally
   // omitted (the prompt ends at `</think`); the model emits it as its first output
   // token, which createThinkPrefixStripper() drops from the response.
-  // https://huggingface.co/DanielClough/rwkv7-g1-safetensors (BlinkDL RWKV-7 G1)
-  if (options?.enableG1Prefill !== false) {
+  // Zero-prompt recurrent state cartridges should omit fake-think prefill to preserve
+  // direct persona emission and avoid token fragment leaks.
+  if (options?.enableG1Prefill !== false && !options?.zeroPrompt) {
     parts.push('Assistant: <think></think')
   }
   else {

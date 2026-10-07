@@ -49,6 +49,8 @@ export {
   getGpuExecutor,
   MODEL_VRAM_ESTIMATES,
 } from './coordinator'
+export { PRESETS } from './foundry-presets'
+export type { ArchetypePreset } from './foundry-presets'
 export {
   createGpuExecutor,
   GPU_PRIORITY,

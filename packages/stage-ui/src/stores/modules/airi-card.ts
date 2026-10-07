@@ -1511,6 +1511,10 @@ export function buildSystemPrompt(card: AiriCard | undefined) {
   if (!card)
     return ''
 
+  // Zero-prompt recurrent state cartridges bake persona and mannerisms into h0 weights
+  if (card.extensions?.airi?.rwkv?.zeroPromptVerified)
+    return ''
+
   let isDatingSimActive = false
   let story: any = null
   let premise = ''

@@ -3,8 +3,8 @@ import type { ChatProvider } from '@xsai-ext/providers/utils'
 import type { WebRwkvGenerateRequest } from '../../../libs/inference/contract'
 import type { ChatMessage } from './format'
 
+import { DEFAULT_WEB_RWKV_MODEL, PRESETS, WEB_RWKV_MODELS } from '../../../libs/inference'
 import { getWebRwkvAdapter, resolveWebRwkvQuantization } from '../../../libs/inference/adapters/web-rwkv'
-import { DEFAULT_WEB_RWKV_MODEL } from '../../../libs/inference/constants'
 import { useAiriCardStore } from '../../modules/airi-card'
 import { buildRwkvPrompt, createThinkPrefixStripper, openAIChatChunk, openAIChatCompletion, SSE_DONE } from './format'
 
@@ -69,10 +69,17 @@ export function createWebRwkvChatProvider(config: WebRwkvProviderConfig = {}): C
       fetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
         const body = (init?.body && typeof init.body === 'string' ? JSON.parse(init.body) : {}) as OpenAIChatBody
         let modelUrl = body.model || model || defaultModelUrl
-        if (modelUrl === 'https' || !modelUrl.startsWith('http')) {
+
+        // Resolve shorthand model parameters (e.g. '1.5B', '0.4B') against catalog
+        const matchedCatalogModel = WEB_RWKV_MODELS.find(m =>
+          m.id === modelUrl || m.params.toLowerCase() === modelUrl.toLowerCase(),
+        )
+        if (matchedCatalogModel) {
+          modelUrl = matchedCatalogModel.id
+        }
+        else if (modelUrl === 'https' || !modelUrl.startsWith('http')) {
           modelUrl = defaultModelUrl
         }
-        const prompt = buildRwkvPrompt(body.messages ?? [], { enableG1Prefill })
 
         const adapter = await getWebRwkvAdapter()
         // Load-on-demand and reload when the selected model/vocab/quantization differs from
@@ -88,6 +95,10 @@ export function createWebRwkvChatProvider(config: WebRwkvProviderConfig = {}): C
 
         let stateCartridgeId: string | undefined
         let stateCartridgeUrl: string | undefined
+        let conditioningTexts: string[] | undefined
+        let isZeroPrompt = false
+        let recommendedTemp: number | undefined
+        let recommendedTopP: number | undefined
 
         try {
           const cardStore = useAiriCardStore()
@@ -95,22 +106,39 @@ export function createWebRwkvChatProvider(config: WebRwkvProviderConfig = {}): C
           if (rwkvConfig?.stateCartridgeId) {
             stateCartridgeId = rwkvConfig.stateCartridgeId
             stateCartridgeUrl = rwkvConfig.stateCartridgeUrl
+            isZeroPrompt = rwkvConfig.zeroPromptVerified === true
+            recommendedTemp = rwkvConfig.recommendedTemperature
+            recommendedTopP = rwkvConfig.recommendedTopP
+
+            // Fallback in-situ synthesis corpus from catalog presets if state is unbaked
+            if (rwkvConfig.archetype) {
+              const preset = PRESETS.find(p => p.id === rwkvConfig.archetype)
+              if (preset?.conditioningTurns) {
+                conditioningTexts = preset.conditioningTurns
+              }
+            }
           }
         }
         catch {
           // Outside active Pinia scope fallback
         }
 
+        const prompt = buildRwkvPrompt(body.messages ?? [], {
+          enableG1Prefill: enableG1Prefill && !isZeroPrompt,
+          zeroPrompt: isZeroPrompt,
+        })
+
         const request: WebRwkvGenerateRequest = {
           prompt,
           maxTokens: body.max_tokens ?? DEFAULT_MAX_TOKENS,
-          temperature: body.temperature ?? 1.0,
-          topP: body.top_p ?? 0.5,
+          temperature: body.temperature ?? recommendedTemp ?? 1.0,
+          topP: body.top_p ?? recommendedTopP ?? 0.5,
           presencePenalty: body.presence_penalty ?? DEFAULT_PRESENCE_PENALTY,
           countPenalty: DEFAULT_COUNT_PENALTY,
           penaltyDecay: DEFAULT_PENALTY_DECAY,
           stateCartridgeId,
           stateCartridgeUrl,
+          conditioningTexts,
         }
 
         const id = `chatcmpl-${Date.now()}`

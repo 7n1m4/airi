@@ -334,7 +334,7 @@ async function handleCommitForge() {
           modules: {
             consciousness: {
               provider: 'web-rwkv',
-              model: selectedModelInfo.params,
+              model: selectedModelInfo.id,
             },
             speech: {
               provider: selectedVoiceId.value ? 'kokoro' : 'none',

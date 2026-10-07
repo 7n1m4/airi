@@ -32,6 +32,14 @@ describe('buildRwkvPrompt', () => {
     ])
     expect(prompt).toBe('User: multi\n\nAssistant: <think></think')
   })
+
+  it('strips all system prompts and omits fake-think prefill when zeroPrompt is true', () => {
+    const prompt = buildRwkvPrompt([
+      { role: 'system', content: 'You are an AI assistant.' },
+      { role: 'user', content: 'How are you?' },
+    ], { zeroPrompt: true })
+    expect(prompt).toBe('User: How are you?\n\nAssistant:')
+  })
 })
 
 describe('createThinkPrefixStripper', () => {
