@@ -1166,7 +1166,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
             }
 
             if (/^<\|STICKER\b/i.test(special)) {
-              const id = /^<\|STICKER\s+([\w-]+)\s*\|>$/i.exec(special)?.[1]
+              const id = /^<\|STICKER\s+([\w-]+)/i.exec(special)?.[1]
               if (id) {
                 if (!buildingMessage.slices.some(s => s.type === 'sticker')) {
                   buildingMessage.slices.push({ type: 'sticker', stickerId: id })

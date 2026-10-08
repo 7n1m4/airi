@@ -7,6 +7,7 @@ import {
   captureActorToken,
   createActorSliceState,
   hydrateLegacyActorSlices,
+  hydrateStickerSlices,
 } from './chat-actor-slices'
 
 function createToolSlice(id = 'tool-1'): ChatSlices {
@@ -154,5 +155,48 @@ describe('legacy actor slice hydration', () => {
     ]
 
     expect(hydrateLegacyActorSlices(slices, '<|ACTOR:first|>Different raw text.')).toBe(slices)
+  })
+})
+
+describe('hydrateStickerSlices', () => {
+  it('returns original slices when rawContent has no sticker tokens', () => {
+    const slices: ChatSlices[] = [{ type: 'text', text: 'Hello world' }]
+    expect(hydrateStickerSlices(slices, 'Hello world')).toBe(slices)
+  })
+
+  it('returns original slices when rawContent is undefined', () => {
+    const slices: ChatSlices[] = [{ type: 'text', text: 'Hello' }]
+    expect(hydrateStickerSlices(slices)).toBe(slices)
+  })
+
+  it('returns original slices when sticker already exists in slices', () => {
+    const slices: ChatSlices[] = [
+      { type: 'text', text: 'Look at this:' },
+      { type: 'sticker', stickerId: 'airi-happy' },
+    ]
+    expect(hydrateStickerSlices(slices, 'Look at this:\n\n<|STICKER airi-happy|>')).toBe(slices)
+  })
+
+  it('hydrates sticker slice for empty slices array', () => {
+    const slices: ChatSlices[] = []
+    const raw = '<|STICKER airi-happy|>'
+    expect(hydrateStickerSlices(slices, raw)).toEqual([
+      { type: 'sticker', stickerId: 'airi-happy' },
+    ])
+  })
+
+  it('inserts missing sticker slice between text slices based on rawContent position', () => {
+    const slices: ChatSlices[] = [
+      { type: 'text', text: 'Before sticker text.' },
+      { type: 'text', text: 'After sticker text.' },
+    ]
+    const raw = 'Before sticker text.\n\n<|STICKER airi-happy|>\n\nAfter sticker text.'
+    const result = hydrateStickerSlices(slices, raw)
+
+    expect(result).toEqual([
+      { type: 'text', text: 'Before sticker text.' },
+      { type: 'sticker', stickerId: 'airi-happy' },
+      { type: 'text', text: 'After sticker text.' },
+    ])
   })
 })

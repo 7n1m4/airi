@@ -15,7 +15,7 @@ import { useChatSessionStore } from '../../../stores/chat/session-store'
 import { useTextJournalStore } from '../../../stores/memory-text-journal'
 import { useAiriCardStore } from '../../../stores/modules/airi-card'
 import { useConsciousnessStore } from '../../../stores/modules/consciousness'
-import { hydrateLegacyActorSlices, isValidActorId } from '../../../utils/chat-actor-slices'
+import { hydrateLegacyActorSlices, hydrateStickerSlices, isValidActorId } from '../../../utils/chat-actor-slices'
 import { MarkdownRenderer } from '../../markdown'
 import { ChatActionMenu } from './components/action-menu'
 import { getChatHistoryItemCopyText } from './utils'
@@ -48,7 +48,7 @@ const formattedTime = computed(() => {
   return new Date(props.message.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
 })
 
-const slices = computed(() => props.message.slices || [])
+const slices = computed(() => hydrateStickerSlices(props.message.slices || [], props.message.rawContent))
 const toolResults = computed(() => props.message.tool_results || [])
 const actorAwareSlices = computed(() => hydrateLegacyActorSlices(slices.value, props.message.rawContent))
 
@@ -542,6 +542,11 @@ const resolvedSlices = computed(() => {
     }
 
     if (slice.type === 'tool-call-result') {
+      continue
+    }
+
+    if (slice.type === 'sticker') {
+      rs.push({ ...slice })
       continue
     }
 

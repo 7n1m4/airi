@@ -1,23 +1,28 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { chatStickers } from '../../../../assets/stickers'
 import { useStickersStore } from '../../../../stores/stickers'
 
 const props = defineProps<{ stickerId: string }>()
 const stickersStore = useStickersStore()
-const imgUrl = ref<string>('')
 
 const stickerInfo = computed(() => {
   return chatStickers.find(s => s.id === props.stickerId)
 })
 
-onMounted(async () => {
-  const url = await stickersStore.getStickerUrl(props.stickerId)
+const imgUrl = ref<string>(stickerInfo.value?.src || '')
+
+watch(() => props.stickerId, async (id) => {
+  if (stickerInfo.value?.src) {
+    imgUrl.value = stickerInfo.value.src
+    return
+  }
+  const url = await stickersStore.getStickerUrl(id)
   if (url) {
     imgUrl.value = url
   }
-})
+}, { immediate: true })
 </script>
 
 <template>

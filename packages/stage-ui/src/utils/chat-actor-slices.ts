@@ -200,3 +200,63 @@ export function hydrateLegacyActorSlices(slices: ChatSlices[], rawContent?: stri
 
   return hydrated
 }
+
+/**
+ * Reconstructs sticker slices from rawContent for messages where sticker slices
+ * were not explicitly persisted or were lost during serialization.
+ */
+export function hydrateStickerSlices(slices: ChatSlices[], rawContent?: string): ChatSlices[] {
+  if (!rawContent)
+    return slices
+
+  const STICKER_REGEX = /<\|STICKER\s+([\w-]+)/gi
+  const matches = [...rawContent.matchAll(STICKER_REGEX)]
+  if (matches.length === 0)
+    return slices
+
+  const existingIds = new Set(
+    slices.filter(s => s.type === 'sticker').map(s => s.stickerId),
+  )
+
+  const missingMatches = matches.filter(m => !existingIds.has(m[1]))
+  if (missingMatches.length === 0)
+    return slices
+
+  const result = [...slices]
+
+  for (const match of missingMatches) {
+    const stickerId = match[1]
+    const stickerSlice: ChatSlices = { type: 'sticker', stickerId }
+
+    if (result.length === 0) {
+      result.push(stickerSlice)
+      continue
+    }
+
+    const stickerIndex = match.index ?? -1
+    if (stickerIndex >= 0) {
+      const rawBefore = rawContent.slice(0, stickerIndex).replace(/<\|[\s\S]*?\|>/g, '').trim()
+      let accumulated = ''
+      let inserted = false
+      for (let i = 0; i < result.length; i++) {
+        const slice = result[i]
+        if (slice.type === 'text') {
+          accumulated += slice.text.trim()
+          if (accumulated.length >= rawBefore.length && rawBefore.length > 0) {
+            result.splice(i + 1, 0, stickerSlice)
+            inserted = true
+            break
+          }
+        }
+      }
+      if (!inserted) {
+        result.push(stickerSlice)
+      }
+    }
+    else {
+      result.push(stickerSlice)
+    }
+  }
+
+  return result
+}

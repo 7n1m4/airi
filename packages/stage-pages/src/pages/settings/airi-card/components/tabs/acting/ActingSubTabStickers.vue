@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { chatStickers } from '@proj-airi/stage-ui/assets/stickers'
-import { useStickersStore } from '@proj-airi/stage-ui/stores/stickers'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { toast } from 'vue-sonner'
 
 interface Props {
@@ -15,30 +14,51 @@ const emit = defineEmits<{
 }>()
 
 const stickerDirectivesPrompt = defineModel<string>('stickerDirectivesPrompt', { default: '' })
-const stickerWidgetsEnabled = defineModel<boolean>('stickerWidgetsEnabled', { default: false })
+defineModel<boolean>('stickerWidgetsEnabled', { default: false })
 const activeStickerIds = defineModel<string[]>('activeStickerIds', { default: () => [] })
 
-const stickersStore = useStickersStore()
+const isCatalogDirty = ref(false)
 
-// If activeStickerIds is empty, initialize to all bundled stickers
-const effectiveActiveIds = computed<string[]>({
+// Initialize if undefined/null (preserve empty array [] when all are intentionally unchecked)
+if (activeStickerIds.value === undefined || activeStickerIds.value === null) {
+  activeStickerIds.value = chatStickers.map(s => s.id)
+}
+
+const isStickersEnabled = computed({
   get: () => {
-    if (!activeStickerIds.value || activeStickerIds.value.length === 0) {
-      return chatStickers.map(s => s.id)
-    }
-    return activeStickerIds.value
+    const hasActive = (activeStickerIds.value?.length ?? 0) > 0
+    const hasPrompt = (stickerDirectivesPrompt.value?.trim().length ?? 0) > 0
+    return hasActive || hasPrompt
   },
-  set: (val) => {
-    activeStickerIds.value = val
+  set: (val: boolean) => {
+    if (val) {
+      enableStickersFeature()
+    }
+    else {
+      disableStickersFeature()
+    }
   },
 })
 
+function enableStickersFeature() {
+  activeStickerIds.value = chatStickers.map(s => s.id)
+  syncDirectivesFromCatalog()
+  toast.success('Enabled reaction stickers!')
+}
+
+function disableStickersFeature() {
+  activeStickerIds.value = []
+  stickerDirectivesPrompt.value = ''
+  isCatalogDirty.value = false
+  toast.info('Disabled reaction stickers (directives cleared).')
+}
+
 function isStickerActive(id: string) {
-  return effectiveActiveIds.value.includes(id)
+  return activeStickerIds.value?.includes(id) ?? false
 }
 
 function toggleStickerActive(id: string) {
-  const current = [...effectiveActiveIds.value]
+  const current = activeStickerIds.value ? [...activeStickerIds.value] : []
   const idx = current.indexOf(id)
   if (idx >= 0) {
     current.splice(idx, 1)
@@ -46,14 +66,22 @@ function toggleStickerActive(id: string) {
   else {
     current.push(id)
   }
-  effectiveActiveIds.value = current
+  activeStickerIds.value = current
+  isCatalogDirty.value = true
+}
+
+function selectAllStickers() {
+  activeStickerIds.value = chatStickers.map(s => s.id)
+  isCatalogDirty.value = true
+}
+
+function uncheckAllStickers() {
+  activeStickerIds.value = []
+  isCatalogDirty.value = true
 }
 
 function handleInsertStickerToken(stickerId: string) {
-  // Generate token based on whether desktop screen slappers are enabled
-  const token = stickerWidgetsEnabled.value
-    ? `<|STICKER ${stickerId} type="both" pos="topRight"|>`
-    : `<|STICKER ${stickerId}|>`
+  const token = `<|STICKER ${stickerId}|>`
 
   const current = stickerDirectivesPrompt.value || ''
   if (current.includes(stickerId)) {
@@ -69,44 +97,40 @@ function handleInsertStickerToken(stickerId: string) {
 function syncDirectivesFromCatalog() {
   const activeList = chatStickers.filter(s => isStickerActive(s.id))
   if (activeList.length === 0) {
-    toast.warning('No active stickers selected to sync.')
+    stickerDirectivesPrompt.value = ''
+    isCatalogDirty.value = false
+    toast.info('Cleared sticker directives (no active stickers selected).')
     return
   }
 
-  let prompt = `## Instruction: Reaction Stickers & Desktop Slappers\nYou have access to character reaction stickers to punctuate conversation and express emotional beats.\n\n### Token Syntax\n- To send an inline reaction sticker in the chat, emit: \`<|STICKER id|>\`\n`
+  let prompt = `## Instruction: Reaction Stickers
+You have access to character reaction stickers to punctuate conversation and express emotional beats.
 
-  if (stickerWidgetsEnabled.value) {
-    prompt += `- To slap a reaction sticker directly onto the desktop screen viewport, emit:\n  \`<|STICKER id type="slapper" pos="topRight"|>\`\n- To both display inline and slap on screen simultaneously, emit:\n  \`<|STICKER id type="both" pos="center"|>\`\n\nSupported positions for screen slappers: \`topLeft\`, \`topRight\`, \`bottomLeft\`, \`bottomRight\`, \`center\`.\n\n`
-  }
-  else {
-    prompt += `\n`
-  }
+### Token Syntax
+- To send an inline reaction sticker in the chat, emit: \`<|STICKER id|>\`
 
-  prompt += `### Active Character Sticker Catalog\nUse ONLY the following sticker IDs matching appropriate conversational moments:\n`
+### Active Character Sticker Catalog
+Use ONLY the following sticker IDs matching appropriate conversational moments:
+`
   for (const s of activeList) {
     prompt += `- \`${s.id}\`: ${s.description} (emotions: ${s.emotions.join(', ')})\n`
   }
 
-  prompt += `\n### Guidelines\n- Punctuate naturally: Use stickers during humor, shock, warmth, greetings, teasing, or emotional emphasis.\n- Never spam: Do not emit more than 1 sticker per turn unless specifically roleplaying heavy emotion.\n- Mood alignment: Choose the sticker ID matching the current conversation vibe.\n`
+  prompt += `\n### Guidelines
+- Punctuate naturally: Use stickers during humor, shock, warmth, greetings, teasing, or emotional emphasis.
+- Never spam: Do not emit more than 1 sticker per turn unless specifically roleplaying heavy emotion.
+- Mood alignment: Choose the sticker ID matching the current conversation vibe.
+`
 
   stickerDirectivesPrompt.value = prompt
+  isCatalogDirty.value = false
   toast.success(`Synced directives from ${activeList.length} active stickers!`)
-}
-
-function testSlapSticker(stickerId: string, label: string) {
-  const result = stickersStore.spawnSticker(stickerId)
-  if (typeof result === 'object') {
-    toast.success(`Slapped "${label}" on screen!`)
-  }
-  else {
-    toast.error(String(result))
-  }
 }
 </script>
 
 <template>
   <div class="flex flex-col gap-6">
-    <!-- Header Card -->
+    <!-- Header Card with Feature Enable Toggle -->
     <div class="border border-primary-500/20 rounded-2xl bg-primary-500/5 p-5">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-3">
@@ -115,29 +139,29 @@ function testSlapSticker(stickerId: string, label: string) {
           </div>
           <div>
             <h3 class="text-base text-neutral-800 font-semibold dark:text-neutral-100">
-              Chibi Reaction Stickers & Desktop Slappers
+              Chibi Reaction Stickers
             </h3>
             <p class="text-xs text-neutral-500 dark:text-neutral-400">
-              Configure emotional stickers. Directives are frozen in the system prompt for prefix-cache stability. The character emits <code class="rounded bg-neutral-200/50 px-1 py-0.5 text-primary-600 dark:bg-neutral-800/50 dark:text-primary-400">&lt;|STICKER &lt;id&gt;|&gt;</code> tokens in replies.
+              Configure character reaction stickers. Directives are frozen in the system prompt for prefix-cache stability. The character emits <code class="rounded bg-neutral-200/50 px-1 py-0.5 text-primary-600 dark:bg-neutral-800/50 dark:text-primary-400">&lt;|STICKER &lt;id&gt;|&gt;</code> tokens in chat replies.
             </p>
           </div>
         </div>
       </div>
 
-      <!-- Feature Toggle: Screen Slappers -->
+      <!-- Feature Toggle: Enable / Disable Reaction Stickers -->
       <div class="mt-4 border-t border-primary-500/10 pt-4">
         <label class="flex cursor-pointer items-center justify-between gap-4">
           <div class="flex flex-col gap-0.5">
             <span class="text-xs text-neutral-800 font-semibold dark:text-neutral-200">
-              Include Stickers as Desktop Screen Slappers
+              Enable Reaction Stickers
             </span>
             <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
-              When enabled, character can slap physics-driven chibi stickers directly onto your desktop stage alongside chat bubbles.
+              When disabled, clears all sticker prompt directives and deselects the catalog. When enabled, selects all stickers and generates active directives.
             </span>
           </div>
           <div class="relative inline-flex shrink-0 cursor-pointer items-center">
             <input
-              v-model="stickerWidgetsEnabled"
+              v-model="isStickersEnabled"
               type="checkbox"
               class="peer sr-only"
             >
@@ -162,12 +186,23 @@ function testSlapSticker(stickerId: string, label: string) {
             </div>
             <button
               type="button"
-              class="flex items-center gap-1.5 rounded-lg bg-primary-500/10 px-2.5 py-1 text-xs text-primary-600 font-medium transition-colors hover:bg-primary-500 dark:text-primary-400 hover:text-white dark:hover:bg-primary-500 dark:hover:text-white"
-              title="Generate directives from currently active catalog stickers"
+              class="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all"
+              :class="[
+                isCatalogDirty
+                  ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/40 ring-2 ring-primary-400 ring-offset-1 dark:ring-offset-neutral-900 animate-pulse hover:bg-primary-600'
+                  : 'bg-primary-500/10 text-primary-600 hover:bg-primary-500 hover:text-white dark:text-primary-400 dark:hover:bg-primary-500 dark:hover:text-white',
+              ]"
+              :title="isCatalogDirty ? 'Sticker roster has changed — click to sync directives' : 'Generate directives from currently active catalog stickers'"
               @click="syncDirectivesFromCatalog"
             >
-              <div class="i-solar:restart-bold text-xs" />
+              <div class="i-solar:restart-bold text-xs" :class="{ 'animate-spin': isCatalogDirty }" />
               <span>Sync from Catalog</span>
+              <span
+                v-if="isCatalogDirty"
+                class="ml-0.5 rounded bg-white/20 px-1 py-0.2 text-[10px] text-white font-semibold tracking-wider uppercase"
+              >
+                Needs Sync
+              </span>
             </button>
           </div>
 
@@ -201,16 +236,26 @@ function testSlapSticker(stickerId: string, label: string) {
             <span class="text-xs text-neutral-400 font-normal">({{ chatStickers.length }} built-in stickers)</span>
           </h4>
           <span class="text-xs text-neutral-500 dark:text-neutral-400">
-            • Click sticker card to insert token into prompt • Checkbox toggles catalog roster
+            • Click image to toggle active status • Insert Token adds to prompt
           </span>
         </div>
-        <button
-          class="flex items-center gap-1 text-xs text-primary-500 hover:underline"
-          @click="stickersStore.clearPlacements()"
-        >
-          <div class="i-solar:trash-bin-trash-bold text-xs" />
-          <span>Clear Screen Slaps</span>
-        </button>
+        <div class="flex items-center gap-2 text-xs">
+          <button
+            type="button"
+            class="rounded px-2 py-0.5 text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            @click="selectAllStickers"
+          >
+            Select All
+          </button>
+          <span class="text-neutral-300 dark:text-neutral-600">|</span>
+          <button
+            type="button"
+            class="rounded px-2 py-0.5 text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
+            @click="uncheckAllStickers"
+          >
+            Uncheck All
+          </button>
+        </div>
       </div>
 
       <div class="grid grid-cols-2 gap-3 lg:grid-cols-6 md:grid-cols-4 sm:grid-cols-3">
@@ -235,12 +280,12 @@ function testSlapSticker(stickerId: string, label: string) {
             >
           </div>
 
-          <!-- Clickable Image for Token Insertion -->
+          <!-- Clickable Image for Toggling Active Status -->
           <button
             type="button"
             class="h-20 w-20 flex cursor-pointer items-center justify-center overflow-hidden border-none bg-transparent"
-            title="Click to insert sticker token into directives"
-            @click="handleInsertStickerToken(sticker.id)"
+            title="Click image to toggle active status"
+            @click="toggleStickerActive(sticker.id)"
           >
             <img
               :src="sticker.src"
@@ -258,21 +303,14 @@ function testSlapSticker(stickerId: string, label: string) {
             </div>
           </div>
 
-          <div class="mt-2 w-full flex items-center gap-1.5">
+          <div class="mt-2 w-full flex items-center">
             <button
               class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-neutral-100 py-1 text-[11px] text-neutral-600 font-medium transition-colors dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
               title="Insert token into prompt"
               @click="handleInsertStickerToken(sticker.id)"
             >
               <div class="i-solar:add-circle-bold text-xs" />
-              <span>Insert</span>
-            </button>
-            <button
-              class="flex items-center justify-center rounded-lg bg-primary-500/10 px-2 py-1 text-[11px] text-primary-600 font-medium transition-colors hover:bg-primary-500 dark:text-primary-400 hover:text-white dark:hover:bg-primary-500 dark:hover:text-white"
-              title="Test Slap on screen"
-              @click="testSlapSticker(sticker.id, sticker.description)"
-            >
-              <div class="i-solar:fire-bold text-xs" />
+              <span>Insert Token</span>
             </button>
           </div>
         </div>
