@@ -96,14 +96,14 @@ export function normalizeCanonicalEntityLabel(rawLabel: string): CanonicalEntity
 
   // 2. Strip Japanese honorific suffixes with arbitrary vowel repetitions (e.g. -chan, -chaaaan, -sama, -saaaan, -kuuuun, -senseeei)
   // Hyphenated/underscored suffix: e.g. "Nords-sama", "Evil-chaaaan", "Neuro-chaaaan", "Hiyori-sama", "Neko-sama"
-  const hyphenHonorificRegex = /^(.*?)(?:[-_]+)(?:c+h+a+n+|s+a+m+a+|s+a+n+|k+u+n+|s+e+n+[ps]+a+i+|s+e+n+s+e+i+|d+o+n+o+|t+a+n+)$/i
+  const hyphenHonorificRegex = /^(.*?)[-_]+(?:c+h+a+n+|s+a+m+a+|s+a+n+|k+u+n+|s+e+n+[ps]+a+i+|s+e+n+s+e+i+|d+o+n+o+|t+a+n+)$/i
   const hyphenMatch = cleaned.match(hyphenHonorificRegex)
   if (hyphenMatch && hyphenMatch[1] && hyphenMatch[1].trim().length >= 2) {
     cleaned = hyphenMatch[1].trim()
   }
   else {
     // CamelCase suffix: e.g. "AiriChan", "NordsSama"
-    const camelHonorificRegex = /^(.*?[a-z]{2})(?:C+h+a+n+|S+a+m+a+|S+a+n+|K+u+n+|S+e+n+[ps]+a+i+|S+e+n+s+e+i+|D+o+n+o+|T+a+a*n+)$/
+    const camelHonorificRegex = /^(.*?[a-z]{2})(?:C+h+a+n+|S+a+m+a+|S+a+n+|K+u+n+|S+e+n+[ps]+a+i+|S+e+n+s+e+i+|D+o+n+o+|T+a+n+)$/
     const camelMatch = cleaned.match(camelHonorificRegex)
     if (camelMatch && camelMatch[1] && camelMatch[1].trim().length >= 2) {
       cleaned = camelMatch[1].trim()
