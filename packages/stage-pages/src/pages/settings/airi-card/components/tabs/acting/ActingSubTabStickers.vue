@@ -1,7 +1,14 @@
 <script setup lang="ts">
+import type { CardCustomSticker } from '@proj-airi/stage-ui/types/card.schema'
+
 import { chatStickers } from '@proj-airi/stage-ui/assets/stickers'
-import { computed, ref } from 'vue'
+import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { useStickersStore } from '@proj-airi/stage-ui/stores/stickers'
+import { Button } from '@proj-airi/ui'
+import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
+
+import CardStickerAddModal from './components/CardStickerAddModal.vue'
 
 interface Props {
   cardId?: string
@@ -18,10 +25,80 @@ defineModel<boolean>('stickerWidgetsEnabled', { default: false })
 const activeStickerIds = defineModel<string[]>('activeStickerIds', { default: () => [] })
 
 const isCatalogDirty = ref(false)
+const showAddModal = ref(false)
+
+const cardStore = useAiriCardStore()
+const stickersStore = useStickersStore()
+
+const card = computed(() => {
+  if (props.cardId) {
+    return cardStore.getCard(props.cardId) || cardStore.activeCard
+  }
+  return cardStore.activeCard
+})
+
+const cardCustomStickers = computed<Record<string, CardCustomSticker>>(() => {
+  return card.value?.extensions?.airi?.stickers || {}
+})
+
+const customStickersList = computed(() => Object.values(cardCustomStickers.value))
+
+// Map to store cached object URLs for custom stickers
+const customStickerUrls = ref<Record<string, string>>({})
+
+async function loadCustomStickerUrls() {
+  for (const s of customStickersList.value) {
+    if (!customStickerUrls.value[s.id]) {
+      const url = await stickersStore.getStickerUrl(s.id)
+      if (url) {
+        customStickerUrls.value[s.id] = url
+      }
+    }
+  }
+}
+
+watch(customStickersList, () => {
+  loadCustomStickerUrls()
+}, { immediate: true, deep: true })
+
+export interface CatalogItem {
+  id: string
+  label: string
+  description: string
+  emotions: readonly string[] | string[]
+  isCustom: boolean
+  src?: string
+}
+
+const builtInCatalog = computed<CatalogItem[]>(() => {
+  return chatStickers.map(s => ({
+    id: s.id,
+    label: s.description,
+    description: s.description,
+    emotions: s.emotions,
+    isCustom: false,
+    src: s.src,
+  }))
+})
+
+const customCatalog = computed<CatalogItem[]>(() => {
+  return customStickersList.value.map(s => ({
+    id: s.id,
+    label: s.label,
+    description: s.description,
+    emotions: s.emotions,
+    isCustom: true,
+    src: customStickerUrls.value[s.id],
+  }))
+})
+
+const combinedCatalog = computed<CatalogItem[]>(() => {
+  return [...builtInCatalog.value, ...customCatalog.value]
+})
 
 // Initialize if undefined/null (preserve empty array [] when all are intentionally unchecked)
 if (activeStickerIds.value === undefined || activeStickerIds.value === null) {
-  activeStickerIds.value = chatStickers.map(s => s.id)
+  activeStickerIds.value = combinedCatalog.value.map(s => s.id)
 }
 
 const isStickersEnabled = computed({
@@ -41,7 +118,7 @@ const isStickersEnabled = computed({
 })
 
 function enableStickersFeature() {
-  activeStickerIds.value = chatStickers.map(s => s.id)
+  activeStickerIds.value = combinedCatalog.value.map(s => s.id)
   syncDirectivesFromCatalog()
   toast.success('Enabled reaction stickers!')
 }
@@ -71,7 +148,7 @@ function toggleStickerActive(id: string) {
 }
 
 function selectAllStickers() {
-  activeStickerIds.value = chatStickers.map(s => s.id)
+  activeStickerIds.value = combinedCatalog.value.map(s => s.id)
   isCatalogDirty.value = true
 }
 
@@ -94,8 +171,62 @@ function handleInsertStickerToken(stickerId: string) {
   toast.success(`Inserted ${token} into directives`)
 }
 
+async function handleCustomStickerCreated(newSticker: CardCustomSticker) {
+  const targetCardId = props.cardId || cardStore.activeCardId
+  if (targetCardId && card.value) {
+    const existingStickers = { ...card.value.extensions?.airi?.stickers }
+    existingStickers[newSticker.id] = newSticker
+
+    cardStore.updateCard(targetCardId, {
+      extensions: {
+        ...card.value.extensions,
+        airi: {
+          ...card.value.extensions?.airi,
+          stickers: existingStickers,
+        },
+      },
+    } as any)
+  }
+
+  const url = await stickersStore.getStickerUrl(newSticker.id)
+  if (url) {
+    customStickerUrls.value[newSticker.id] = url
+  }
+
+  if (!activeStickerIds.value.includes(newSticker.id)) {
+    activeStickerIds.value = [...activeStickerIds.value, newSticker.id]
+  }
+
+  isCatalogDirty.value = true
+}
+
+async function handleDeleteCustomSticker(id: string) {
+  await stickersStore.deleteSticker(id)
+
+  const targetCardId = props.cardId || cardStore.activeCardId
+  if (targetCardId && card.value) {
+    const existingStickers = { ...card.value.extensions?.airi?.stickers }
+    delete existingStickers[id]
+
+    cardStore.updateCard(targetCardId, {
+      extensions: {
+        ...card.value.extensions,
+        airi: {
+          ...card.value.extensions?.airi,
+          stickers: existingStickers,
+        },
+      },
+    } as any)
+  }
+
+  activeStickerIds.value = activeStickerIds.value.filter(sId => sId !== id)
+  delete customStickerUrls.value[id]
+  isCatalogDirty.value = true
+  toast.success(`Deleted sticker "${id}"`)
+}
+
 function syncDirectivesFromCatalog() {
-  const activeList = chatStickers.filter(s => isStickerActive(s.id))
+  const activeList = combinedCatalog.value.filter(s => isStickerActive(s.id))
   if (activeList.length === 0) {
     stickerDirectivesPrompt.value = ''
     isCatalogDirty.value = false
@@ -233,13 +364,23 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
         <div class="flex items-center gap-2">
           <h4 class="flex items-center gap-2 text-sm text-neutral-800 font-semibold dark:text-neutral-200">
             <span>Sticker Catalog</span>
-            <span class="text-xs text-neutral-400 font-normal">({{ chatStickers.length }} built-in stickers)</span>
+            <span class="text-xs text-neutral-400 font-normal">({{ combinedCatalog.length }} stickers{{ customStickersList.length > 0 ? `, ${customStickersList.length} custom` : '' }})</span>
           </h4>
           <span class="text-xs text-neutral-500 dark:text-neutral-400">
             • Click image to toggle active status • Insert Token adds to prompt
           </span>
         </div>
         <div class="flex items-center gap-2 text-xs">
+          <Button
+            variant="secondary"
+            size="sm"
+            class="h-7 gap-1.5 text-xs"
+            @click="showAddModal = true"
+          >
+            <div class="i-solar:add-circle-bold text-sm text-primary-500" />
+            <span>Add Custom Sticker</span>
+          </Button>
+          <span class="text-neutral-300 dark:text-neutral-600">|</span>
           <button
             type="button"
             class="rounded px-2 py-0.5 text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 hover:text-neutral-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-200"
@@ -260,7 +401,7 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
 
       <div class="grid grid-cols-2 gap-3 lg:grid-cols-6 md:grid-cols-4 sm:grid-cols-3">
         <div
-          v-for="sticker in chatStickers"
+          v-for="sticker in combinedCatalog"
           :key="sticker.id"
           class="group relative flex flex-col items-center justify-between border rounded-xl bg-white/60 p-3 text-center transition-all dark:bg-neutral-900/60 hover:shadow-md"
           :class="[
@@ -269,8 +410,27 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
               : 'border-neutral-200 dark:border-neutral-800 opacity-60 hover:opacity-100',
           ]"
         >
-          <!-- Active Checkbox in top right -->
-          <div class="absolute right-2 top-2 z-10">
+          <!-- Custom Badge in top left -->
+          <div class="absolute left-2 top-2 z-10 flex items-center gap-1">
+            <span
+              v-if="sticker.isCustom"
+              class="rounded bg-primary-500/10 px-1.5 py-0.5 text-[9px] text-primary-600 font-semibold tracking-wider uppercase dark:text-primary-400"
+            >
+              Custom
+            </span>
+          </div>
+
+          <!-- Active Checkbox and Delete Button in top right -->
+          <div class="absolute right-2 top-2 z-10 flex items-center gap-1">
+            <button
+              v-if="sticker.isCustom"
+              type="button"
+              class="h-5 w-5 flex items-center justify-center rounded text-neutral-400 opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-500 group-hover:opacity-100"
+              title="Delete custom sticker"
+              @click.stop="handleDeleteCustomSticker(sticker.id)"
+            >
+              <div class="i-solar:trash-bin-trash-bold text-xs" />
+            </button>
             <input
               type="checkbox"
               :checked="isStickerActive(sticker.id)"
@@ -288,15 +448,22 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
             @click="toggleStickerActive(sticker.id)"
           >
             <img
+              v-if="sticker.src"
               :src="sticker.src"
               :alt="sticker.description"
               class="max-h-full max-w-full object-contain transition-transform group-hover:scale-110"
             >
+            <div
+              v-else
+              class="h-full w-full flex items-center justify-center rounded-lg bg-neutral-100 text-neutral-400 dark:bg-neutral-800"
+            >
+              <div class="i-solar:gallery-bold text-2xl" />
+            </div>
           </button>
 
           <div class="mt-2 w-full">
             <div class="truncate text-xs text-neutral-700 font-semibold dark:text-neutral-200">
-              {{ sticker.description }}
+              {{ sticker.label || sticker.description }}
             </div>
             <div class="truncate text-[10px] text-neutral-400 font-mono">
               {{ sticker.id }}
@@ -305,6 +472,7 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
 
           <div class="mt-2 w-full flex items-center">
             <button
+              type="button"
               class="flex flex-1 items-center justify-center gap-1 rounded-lg bg-neutral-100 py-1 text-[11px] text-neutral-600 font-medium transition-colors dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
               title="Insert token into prompt"
               @click="handleInsertStickerToken(sticker.id)"
@@ -316,5 +484,13 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
         </div>
       </div>
     </div>
+
+    <!-- Add Custom Sticker Modal -->
+    <CardStickerAddModal
+      v-model="showAddModal"
+      :card-id="props.cardId"
+      :existing-ids="combinedCatalog.map(s => s.id)"
+      @created="handleCustomStickerCreated"
+    />
   </div>
 </template>

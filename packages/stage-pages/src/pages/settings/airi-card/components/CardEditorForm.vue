@@ -1202,6 +1202,7 @@ async function saveCard(card: Card): Promise<boolean> {
         active_concepts: existingAiriExt?.active_concepts || [],
         eternal_record: existingAiriExt?.eternal_record || { relational_milestones: [], lore_bits: [] },
         rwkv: (rawCard.extensions?.airi as any)?.rwkv || existingAiriExt?.rwkv,
+        stickers: existingAiriExt?.stickers || (rawCard.extensions?.airi as any)?.stickers || {},
       } as AiriExtension,
     },
   }

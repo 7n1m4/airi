@@ -264,6 +264,17 @@ export const CharacterCueAllowlistSchema = object({
 
 export type CharacterCueAllowlist = InferOutput<typeof CharacterCueAllowlistSchema>
 
+export const CardCustomStickerSchema = looseObject({
+  id: string(),
+  label: string(),
+  description: string(),
+  emotions: array(string()),
+  createdAt: number(),
+  dataUrl: optional(string()),
+})
+
+export type CardCustomSticker = InferOutput<typeof CardCustomStickerSchema>
+
 const AiriExtensionSchema = looseObject({
   modules: optional(AiriModulesSchema),
   cognition: optional(AiriCognitionSchema),
@@ -320,6 +331,7 @@ const AiriExtensionSchema = looseObject({
     activeStickerIds: optional(array(string())),
     stickerWidgetsEnabled: optional(boolean()),
   })),
+  stickers: optional(record(string(), CardCustomStickerSchema)),
   outfits: optional(array(AiriOutfitSchema)),
   artistry: optional(looseObject({
     provider: optional(string()),

@@ -1,6 +1,8 @@
 import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import type { CardCustomSticker } from '@proj-airi/stage-ui/types/card.schema'
 
 import JSZip from 'jszip'
+import localforage from 'localforage'
 
 import { exportToJSON } from '@proj-airi/ccc'
 import { useDataMaintenance } from '@proj-airi/stage-ui/composables/use-data-maintenance'
@@ -151,6 +153,34 @@ export function useCardExport() {
         card.extensions.airi = {} as any
       }
       card.extensions.airi.voice_profiles = profiles
+    }
+
+    // Pack custom stickers localforage blobs into dataUrls for export portability
+    const stickers = card.extensions?.airi?.stickers
+    if (stickers && Object.keys(stickers).length > 0) {
+      const enrichedStickers: Record<string, CardCustomSticker> = {}
+      for (const [id, meta] of Object.entries(stickers)) {
+        enrichedStickers[id] = { ...meta }
+        try {
+          const blob = await localforage.getItem<Blob>(`sticker-data-${id}`)
+          if (blob) {
+            const dataUrl = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader()
+              reader.onload = () => resolve(reader.result as string)
+              reader.onerror = reject
+              reader.readAsDataURL(blob)
+            })
+            enrichedStickers[id].dataUrl = dataUrl
+          }
+        }
+        catch (err) {
+          console.warn(`[useCardExport] Failed to serialize sticker blob for "${id}":`, err)
+        }
+      }
+      if (!card.extensions.airi) {
+        card.extensions.airi = {} as any
+      }
+      card.extensions.airi.stickers = enrichedStickers
     }
 
     const activeBackgroundId = card.extensions?.airi?.modules?.activeBackgroundId

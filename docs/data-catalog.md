@@ -753,7 +753,7 @@ interface StickerPlacement {
 }
 ```
 
-Metadata is stored in localStorage under `stickers/library-v2`; binary data is in localforage under `sticker-data-{id}`.
+Metadata is stored per-card in `card.extensions.airi.stickers` (and globally in localStorage under `stickers/library-v2` for the standalone library); binary image blobs are persisted in localforage under `sticker-data-{id}`.
 
 ### 3.4 Custom VRM Animations
 

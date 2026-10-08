@@ -2,13 +2,26 @@
 import { computed, ref, watch } from 'vue'
 
 import { chatStickers } from '../../../../assets/stickers'
+import { useAiriCardStore } from '../../../../stores/modules/airi-card'
 import { useStickersStore } from '../../../../stores/stickers'
 
 const props = defineProps<{ stickerId: string }>()
 const stickersStore = useStickersStore()
+const airiCardStore = useAiriCardStore()
 
 const stickerInfo = computed(() => {
   return chatStickers.find(s => s.id === props.stickerId)
+})
+
+const displayLabel = computed(() => {
+  if (stickerInfo.value?.description) {
+    return stickerInfo.value.description
+  }
+  const custom = airiCardStore.activeCard?.extensions?.airi?.stickers?.[props.stickerId]
+  if (custom?.label) {
+    return custom.label
+  }
+  return props.stickerId
 })
 
 const imgUrl = ref<string>(stickerInfo.value?.src || '')
@@ -30,13 +43,13 @@ watch(() => props.stickerId, async (id) => {
     <img
       v-if="imgUrl"
       :src="imgUrl"
-      :alt="stickerInfo?.description || stickerId"
+      :alt="displayLabel"
       width="160"
       height="160"
       :class="['size-36 max-w-full rounded-lg object-contain drop-shadow-sm transition-transform hover:scale-105']"
     >
     <span v-else :class="['text-xs text-neutral-400 dark:text-neutral-500 italic']">
-      [Sticker: {{ stickerInfo?.description || stickerId }}]
+      [Sticker: {{ displayLabel }}]
     </span>
   </div>
 </template>

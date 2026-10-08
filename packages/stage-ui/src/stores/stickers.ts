@@ -88,15 +88,17 @@ export const useStickersStore = Pinia.defineStore('stickers', () => {
   /**
    * Upload and register a new sticker
    */
-  async function addSticker(file: File, label?: string, characterId?: string) {
+  async function addSticker(file: File | Blob, label?: string, characterId?: string, customId?: string) {
     const airiCardStore = useAiriCardStore()
-    const id = nanoid()
+    const id = customId || nanoid()
+    const originalName = (file as File).name || `${id}.png`
+    const mimeType = file.type || 'image/png'
     const metadata: StickerMetadata = {
       id,
-      label: label || file.name.replace(/\.[^/.]+$/, ''), // remove extension
+      label: label || originalName.replace(/\.[^/.]+$/, ''), // remove extension
       addedAt: Date.now(),
-      originalName: file.name,
-      mimeType: file.type,
+      originalName,
+      mimeType,
       characterId: characterId || airiCardStore.activeCardId,
     }
 
@@ -105,7 +107,13 @@ export const useStickersStore = Pinia.defineStore('stickers', () => {
       await localforage.setItem(`sticker-data-${id}`, file)
 
       // Update metadata list
-      libraryMetadata.value.push(metadata)
+      const existingIdx = libraryMetadata.value.findIndex(m => m.id === id)
+      if (existingIdx >= 0) {
+        libraryMetadata.value[existingIdx] = metadata
+      }
+      else {
+        libraryMetadata.value.push(metadata)
+      }
 
       return id
     }

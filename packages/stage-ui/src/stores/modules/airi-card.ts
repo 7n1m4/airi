@@ -1,6 +1,6 @@
 import type { Card, ccv3 } from '@proj-airi/ccc'
 
-import type { AiriCognition, AiriPacing, CharacterCueAllowlist } from '../../types/card.schema'
+import type { AiriCognition, AiriPacing, CardCustomSticker, CharacterCueAllowlist } from '../../types/card.schema'
 import type { VoiceProfile } from '../providers'
 
 import { debug } from '@proj-airi/stage-shared'
@@ -36,6 +36,7 @@ import { useDatingSimStore } from '../dating-sim'
 import { DisplayModelFormat, useDisplayModelsStore } from '../display-models'
 import { useShortTermMemoryStore } from '../memory-short-term'
 import { useSettingsStageModel } from '../settings/stage-model'
+import { useStickersStore } from '../stickers'
 import { useArtistryStore } from './artistry'
 import { useConsciousnessStore } from './consciousness'
 import { useSpeechStore } from './speech'
@@ -259,6 +260,7 @@ export interface AiriExtension {
   generation?: CharacterGenerationConfig
 
   acting?: ActingConfig
+  stickers?: Record<string, CardCustomSticker>
 
   outfits?: AiriOutfit[]
 
@@ -505,6 +507,24 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     }
   }
 
+  function stripEmbeddedStickersData(extension: AiriExtension): AiriExtension {
+    if (!extension.stickers)
+      return extension
+
+    const cleanedStickers: Record<string, CardCustomSticker> = {}
+    for (const [k, v] of Object.entries(extension.stickers)) {
+      if (!v)
+        continue
+      const { dataUrl, ...rest } = v
+      cleanedStickers[k] = rest
+    }
+
+    return {
+      ...extension,
+      stickers: cleanedStickers,
+    }
+  }
+
   function compactCard(card: AiriCard | Card | ccv3.CharacterCardV3) {
     return newAiriCard(card)
   }
@@ -534,6 +554,24 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       }
       catch (err) {
         console.error('[AiriCard] Failed to import embedded background', err)
+      }
+    }
+
+    // Extract embedded custom stickers into localforage and stickers store
+    if (ext?.stickers) {
+      const stickersStore = useStickersStore()
+      for (const [sId, stickerMeta] of Object.entries(ext.stickers)) {
+        if (stickerMeta && stickerMeta.dataUrl) {
+          try {
+            const res = await fetch(stickerMeta.dataUrl)
+            const blob = await res.blob()
+            await stickersStore.addSticker(blob, stickerMeta.label, newCardId, stickerMeta.id)
+            delete stickerMeta.dataUrl
+          }
+          catch (err) {
+            console.error(`[AiriCard] Failed to unpack custom sticker "${sId}":`, err)
+          }
+        }
       }
     }
 
@@ -1276,7 +1314,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
         tags: ccv3Card.data.tags ?? [],
         extensions: {
           ...ccv3Card.data.extensions,
-          airi: stripEmbeddedBackgroundData(resolveAiriExtension(ccv3Card)),
+          airi: stripEmbeddedStickersData(stripEmbeddedBackgroundData(resolveAiriExtension(ccv3Card))),
         },
         updatedAt: (ccv3Card as any).updatedAt || (ccv3Card.data as any).updatedAt,
         createdAt: (ccv3Card as any).createdAt || (ccv3Card.data as any).createdAt,
@@ -1299,7 +1337,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       ...cardData, // Spread remaining properties (tags, etc.)
       extensions: {
         ...cardData.extensions,
-        airi: stripEmbeddedBackgroundData(resolveAiriExtension(card)),
+        airi: stripEmbeddedStickersData(stripEmbeddedBackgroundData(resolveAiriExtension(card))),
       },
     }
   }

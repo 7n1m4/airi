@@ -38,12 +38,25 @@ Furthermore, upstream made stickers global to the client settings rather than sc
 
 ---
 
+
 ## 2. Data Contracts & Schema Architecture
 
-### 2.1 Extension Schema: `AiriExtension.acting`
+### 2.1 Extension Schema: `AiriExtension.acting` & `AiriExtension.stickers`
 In `packages/stage-ui/src/types/card.schema.ts` and `docs/data-catalog.md`:
 
 ```typescript
+export interface CardCustomSticker {
+  id: string
+  label: string
+  description: string
+  emotions: string[]
+  createdAt: number
+  /**
+   * Optional base64 data URL populated during card export for full offline portability.
+   */
+  dataUrl?: string
+}
+
 export interface ActingConfig {
   modelExpressionPrompt: string
   speechExpressionPrompt: string
@@ -70,7 +83,36 @@ export interface ActingConfig {
 }
 ```
 
-### 2.2 System Prompt Assembly (`buildCharacterSystemPrompt`)
+On `AiriCardExtension` (`card.extensions.airi`):
+```typescript
+export interface AiriCardExtension {
+  // ...
+  acting?: ActingConfig
+  /**
+   * Character-owned custom sticker manifest dictionary keyed by token slug id.
+   */
+  stickers?: Record<string, CardCustomSticker>
+}
+```
+
+### 2.2 Persistence Layer Architecture: The "Lazy B" Strategy
+
+To balance lightweight card sizes, fast runtime performance, and card portability:
+
+1. **Runtime Execution (Local-First IndexedDB Blobs)**:
+   - When a user uploads a sticker PNG/WebP, the binary `File`/`Blob` is stored directly in `localforage` under key `sticker-data-${id}`.
+   - Bypasses Vue reactive proxies and `JSON.stringify` to guarantee binary safety (per `airi-binary-safety`).
+   - `getStickerUrl(id)` in `useStickersStore` resolves URLs:
+     1. Static built-ins (`packages/stage-ui/src/assets/stickers/`).
+     2. `localforage.getItem<Blob>('sticker-data-${id}')` -> `URL.createObjectURL(blob)` (cached in-memory).
+2. **Card Manifest Record**:
+   - The card stores metadata (ID slug, display label, prompt description, emotions) in `card.extensions.airi.stickers[id]`.
+   - The card does **not** store bloated base64 strings during regular local editing, keeping memory and database queries fast.
+3. **Card Export / Import Portability**:
+   - **Export (`use-card-export.ts`)**: Reads blobs for all `card.extensions.airi.stickers` from `localforage`, converts them to base64 Data URLs on the exported payload, ensuring exported cards carry all custom reaction stickers.
+   - **Import (`CardImportWizard.vue` / import handler)**: Decodes any embedded sticker `dataUrl`s and writes them into `localforage.setItem('sticker-data-${id}', blob)`.
+
+### 2.3 System Prompt Assembly (`buildCharacterSystemPrompt`)
 In `packages/stage-ui/src/stores/modules/airi-card.ts`:
 ```typescript
 const acting = card.extensions?.airi?.acting
@@ -169,12 +211,13 @@ The Stickers sub-tab in `CardCreationTabActing.vue` is refactored from unhooked 
 ```
 
 ### UI Interactions:
-1. **Stickers as Desktop Widgets Checkbox**:
-   - When unchecked: Clicking a catalog sticker inserts `<|STICKER id|>`.
-   - When checked: Clicking a catalog sticker inserts `<|STICKER id type="both" pos="topRight"|>`.
-   - Syncing the catalog template includes prompt instructions explaining how to target `slapper` or `both` modalities.
-2. **Sync Directives from Catalog**:
-   Automatically formats and populates `stickerDirectivesPrompt` using the active character catalog and appropriate tone guidelines.
+1. **Sync Directives from Catalog**:
+   Automatically formats and populates `stickerDirectivesPrompt` using the active character catalog (both built-in and character-owned custom stickers) and appropriate tone guidelines.
+2. **Add Custom Sticker (`CardStickerAddModal.vue`)**:
+   - Allows uploading local PNG/WebP files.
+   - Enforces unique semantic slug token IDs (e.g. `columbina-scheming`).
+   - Captures label, description, and emotions for prompt synthesis.
+   - Saves binary directly to `localforage` and metadata to `card.extensions.airi.stickers`.
 3. **AI Sparkle Integration**:
    Uses `@sparkle-click="emit('sparkle-click', 'actingStickerDirectives')"` to allow LLM refinement of sticker behavior and personality tone.
 
@@ -182,8 +225,10 @@ The Stickers sub-tab in `CardCreationTabActing.vue` is refactored from unhooked 
 
 ## 5. Phased Roadmap
 
-| Phase | Scope | Deliverables |
-| :--- | :--- | :--- |
-| **Phase 1** | **Prefix-Safe Core & Card Schema** | 1. Add `stickerDirectivesPrompt` & `activeStickerIds` to `card.schema.ts` and `AiriExtension`.<br>2. Wire `stickerDirectivesPrompt` into `buildCharacterSystemPrompt` (frozen prefix).<br>3. Overhaul `ActingSubTabStickers.vue` with prompt textarea, sync button, and catalog insertion pills.<br>4. Preserve in-chat `<ChatSticker />` slice rendering in `assistant-item.vue`. |
-| **Phase 2** | **Multi-Modal Slapper Routing** | 1. Extend token parser regex to support `type="slapper\|both"` and `pos="..."`.<br>2. Wire Stage Viewport overlay in `RendererStage.vue` / `ControlStripHost.vue` to dispatch screen slaps with physics and decay.<br>3. Add quadrant positioning resolution (`topLeft`, `topRight`, etc.). |
-| **Phase 3** | **Library Management & Custom Assets** | 1. Port custom asset import and IndexedDB persistence for user-uploaded PNG/WebP sticker packs.<br>2. Provide image downscaling and validation. |
+| Phase | Scope | Deliverables | Status |
+| :--- | :--- | :--- | :--- |
+| **Phase 1** | **Prefix-Safe Core & Card Schema** | 1. Add `stickerDirectivesPrompt` & `activeStickerIds` to `card.schema.ts` and `AiriExtension`.<br>2. Wire `stickerDirectivesPrompt` into `buildCharacterSystemPrompt` (frozen prefix).<br>3. Overhaul `ActingSubTabStickers.vue` with prompt textarea, sync button, and catalog insertion pills.<br>4. Preserve in-chat `<ChatSticker />` slice rendering in `assistant-item.vue`. | **Shipped** |
+| **Phase 1.5** | **Custom Sticker Upload ("Lazy B" Persistence)** | 1. Add `CardCustomSticker` schema to `extensions.airi.stickers`.<br>2. Build `CardStickerAddModal.vue` with image dropzone, slug validation, and metadata inputs.<br>3. Store binary in `localforage.setItem('sticker-data-${id}', file)`.<br>4. Integrate custom stickers into merged catalog view and "Sync from Catalog" prompt builder.<br>5. Support card export packaging and import extraction for portable sticker sharing. | **In Progress** |
+| **Phase 2** | **Multi-Modal Slapper Routing** | 1. Extend token parser regex to support `type="slapper\|both"` and `pos="..."`.<br>2. Wire Stage Viewport overlay in `RendererStage.vue` / `ControlStripHost.vue` to dispatch screen slaps with physics and decay.<br>3. Add quadrant positioning resolution (`topLeft`, `topRight`, etc.). | Planned |
+| **Phase 3** | **Sticker Forge (Generative AI Synthesis)** | 1. Connect Artistry / Pollinations / ComfyUI pipeline to generate sticker variations on the fly.<br>2. Prompt recipe builder (LINE sticker / chibi die-cut vector styling). | Planned |
+
