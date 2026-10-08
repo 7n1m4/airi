@@ -261,6 +261,12 @@ const llmModel = computed({
   },
   set: val => draftStore.setConsciousness({ model: val }),
 })
+const apiKey = computed({
+  get: () => draftStore.state.llmApiKey || '',
+  set: (val) => {
+    draftStore.setConsciousness({ apiKey: val })
+  },
+})
 
 const showApiKey = ref(false)
 
