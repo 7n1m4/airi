@@ -11,7 +11,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "build": "vite build",
+    "build": "NODE_OPTIONS=\"--max-old-space-size=12288\" vite build",
     "build:ios": "tsx scripts/build-ipa.ts",
     "build:ipa": "tsx scripts/build-ipa.ts",
     "release:ios": "tsx scripts/build-ipa.ts --upload",

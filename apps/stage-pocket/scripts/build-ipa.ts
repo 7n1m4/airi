@@ -49,7 +49,8 @@ console.info(`[build:ipa] Staging iOS IPA build for version: ${version}`)
 
 // 1. Build web bundle & sync capacitor iOS
 console.info('[build:ipa] Step 1/4: Building web bundle & syncing Capacitor iOS...')
-execSync('pnpm run build && pnpm exec cap sync ios', { cwd: pocketDir, stdio: 'inherit' })
+const buildEnv = { ...process.env, NODE_OPTIONS: '--max-old-space-size=12288' }
+execSync('pnpm run build && pnpm exec cap sync ios', { cwd: pocketDir, env: buildEnv, stdio: 'inherit' })
 patchSpmPackageForCoreAI()
 
 // 2. Clean previous build archives
