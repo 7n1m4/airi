@@ -2,7 +2,7 @@ import type { DisplayModel } from '../display-models'
 
 import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
 import { refManualReset, useEventListener } from '@vueuse/core'
-import { defineStore } from 'pinia'
+import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
@@ -10,6 +10,11 @@ import { DisplayModelFormat, useDisplayModelsStore } from '../display-models'
 
 export type StageModelRenderer = 'live2d' | 'vrm' | 'spine' | 'mmd' | 'disabled' | undefined
 export type GunslingerStance = 'off' | 'cat' | 'blk' | 'gray'
+
+// HMR epoch (Strategy C): bumped by the single dispose ledger at the bottom of
+// this module. Guards the selection watcher below against double model loads
+// from a superseded generation. See docs/project-hmr-resilience-architecture.md.
+let stageModelEpoch = 0
 
 export const useSettingsStageModel = defineStore('settings-stage-model', () => {
   const displayModelsStore = useDisplayModelsStore()
@@ -108,7 +113,10 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
   async function performUpdateStageModel() {
     const selectedModelId = stageModelSelectedState.value
 
-    if (!selectedModelId) {
+    // NOTICE: Text-only companions resolve to `displayModelId === 'none'`.
+    // Bail out here so booting or switching to them never emits a spurious
+    // "Model not found (none)" toast from the lookup below.
+    if (!selectedModelId || selectedModelId === 'none') {
       replaceStageModelUrl(undefined)
       cleanupMmdTextures()
       stageModelSelectedDisplayModel.value = undefined
@@ -361,21 +369,31 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
     }
   }
 
-  if (typeof window !== 'undefined' && (window as any).electron?.ipcRenderer) {
-    ;(window as any).electron.ipcRenderer.on('stage-mate:model-position-changed', async (_event: any, data: any) => {
-      if (data?.modelId) {
-        try {
-          const { usePositioningStore } = await import('./positioning')
-          const positioningStore = usePositioningStore()
-          positioningStore.setPosition(data.modelId, {
-            x: data.x,
-            y: data.y,
-            scale: data.scale ?? 1,
-          })
-        }
-        catch {}
+  // Named (not inline) so the HMR dispose ledger below can remove exactly this
+  // listener. An inline arrow would be unremovable, duplicating positioning
+  // writes on every reload of this module.
+  const handleStageMatePositionChanged = async (_event: any, data: any) => {
+    if (data?.modelId) {
+      try {
+        const { usePositioningStore } = await import('./positioning')
+        const positioningStore = usePositioningStore()
+        positioningStore.setPosition(data.modelId, {
+          x: data.x,
+          y: data.y,
+          scale: data.scale ?? 1,
+        })
       }
-    })
+      catch {}
+    }
+  }
+
+  if (typeof window !== 'undefined' && (window as any).electron?.ipcRenderer) {
+    ;(window as any).electron.ipcRenderer.on('stage-mate:model-position-changed', handleStageMatePositionChanged)
+    // Stash on shared hot.data so the dispose ledger below removes exactly
+    // this generation's listener (setup-scope closures are otherwise unreachable).
+    const hotData = import.meta.hot?.data as { stageMatePositionHandler?: typeof handleStageMatePositionChanged } | undefined
+    if (hotData)
+      hotData.stageMatePositionHandler = handleStageMatePositionChanged
   }
 
   useEventListener('unload', () => {
@@ -383,7 +401,12 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
     cleanupMmdTextures()
   })
 
+  // Epoch-guarded: a superseded generation's watcher must not fire heavy
+  // model reloads (IndexedDB fetch + blob URL churn) after HMR re-evaluation.
+  const setupEpoch = stageModelEpoch
   watch(stageModelSelectedState, (_newValue, _oldValue) => {
+    if (setupEpoch !== stageModelEpoch)
+      return
     void updateStageModel('manual selection')
   })
 
@@ -420,3 +443,28 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
     resetState,
   }
 })
+
+// NOT a Phase-0B-pure store despite the briefing: this module owns an
+// ipcRenderer listener, Blob URLs, and ImageBitmaps, so a bare accept would
+// duplicate native listeners per reload. Accept + single dispose ledger
+// (Strategy E) + epoch guard (Strategy C) instead — the 0C-lite the source
+// requires. Blob/ImageBitmap refs transfer via Pinia state patching; the
+// unload listener is idempotent. No-op in production (import.meta.hot is undefined).
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useSettingsStageModel, import.meta.hot))
+
+  import.meta.hot.dispose(() => {
+    stageModelEpoch++
+    try {
+      const ipc = (typeof window !== 'undefined' ? (window as any).electron?.ipcRenderer : undefined) as
+        | { removeListener: (channel: string, listener: (...args: any[]) => void) => void }
+        | undefined
+      const stashed = (import.meta.hot?.data as { stageMatePositionHandler?: (...args: any[]) => void } | undefined)?.stageMatePositionHandler
+      if (typeof ipc?.removeListener === 'function' && stashed)
+        ipc.removeListener('stage-mate:model-position-changed', stashed)
+    }
+    catch (err) {
+      console.warn('[StageModel:HMR] Listener removal during HMR dispose failed:', err)
+    }
+  })
+}

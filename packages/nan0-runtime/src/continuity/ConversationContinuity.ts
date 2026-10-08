@@ -281,22 +281,6 @@ export function decayContinuityState(state: Nan0ContinuityState, at: number): Na
   return normalizeContinuityState({ schemaVersion: 1, threads })
 }
 
-function isAnaphoricFollowup(text: string): boolean {
-  return /\b(it|that|this|those|they|them|he|she|there|then|earlier|before|continue|why|how so|what next)\b/i.test(text)
-}
-
-function isGreeting(text: string): boolean {
-  return /^(hello|hi|hey|yo|i'?m back|back again|nan0)\b/i.test(text.trim())
-}
-
-function isExplicitShift(text: string): boolean {
-  return /\b(new topic|switch(?:ing)? topics?|unrelated|different question|instead)\b/i.test(text)
-}
-
-function isExplicitResume(text: string): boolean {
-  return /\b(return(?:ing)? to|back to|resume)\b/i.test(text)
-}
-
 function overlapScore(labels: string[], queryTerms: string[]): number {
   if (!labels.length || !queryTerms.length)
     return 0
@@ -315,33 +299,70 @@ function selectThread(
   actorId: string,
   text: string,
   at: number,
+  systemOneAnswers?: import('../types').Nan0JevSystemOneAnswers,
 ): Nan0ConversationThread | undefined {
   const candidates = eligibleThreads(state, actorId)
   const terms = continuityTopicLabels(text)
-  if (isExplicitShift(text) && !isExplicitResume(text))
+  const continuityChoice = systemOneAnswers?.thread_continuity_triage?.choice
+
+  // 1. Explicit topic shift or new topic: Jev recognized a new thread or new topic
+  if (continuityChoice === 'explicit_topic_shift' || continuityChoice === 'none_or_new_topic') {
     return undefined
-  const scored = candidates
-    .map(thread => ({ thread, score: overlapScore(thread.topicLabels, terms) }))
-    .filter(item => item.score > 0)
-    .sort((a, b) => b.score - a.score
-      || b.thread.activation - a.thread.activation
-      || b.thread.lastActiveAt - a.thread.lastActiveAt)
+  }
 
-  if (scored[0])
-    return scored[0].thread
-
+  // 2. Continuation or anaphoric follow-up: prioritize active current thread
   const currentId = state.activeThreadByActorId[actorId]
   const current = currentId ? candidates.find(thread => thread.threadId === currentId) : undefined
-  if (current && !isExplicitShift(text)) {
-    if (!terms.length || isAnaphoricFollowup(text))
+  if (continuityChoice === 'continuation_or_followup') {
+    if (current)
       return current
   }
 
-  if (isGreeting(text)) {
+  // 3. Resumed topic: Jev recognized the user is referencing or resuming an earlier thread
+  if (continuityChoice === 'resumed_topic') {
+    const scored = candidates
+      .map(thread => ({ thread, score: overlapScore(thread.topicLabels, terms) }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score
+        || b.thread.activation - a.thread.activation
+        || b.thread.lastActiveAt - a.thread.lastActiveAt)
+    if (scored[0])
+      return scored[0].thread
+
+    const dormant = candidates
+      .filter(thread => thread.status === 'dormant')
+      .sort((a, b) => b.lastActiveAt - a.lastActiveAt)[0]
+    if (dormant)
+      return dormant
+  }
+
+  // 4. Greeting or check-in: return most recent candidate thread within greeting window
+  if (continuityChoice === 'greeting_or_checkin') {
     return candidates
       .filter(thread => at - thread.lastActiveAt <= CONTINUITY_GREETING_RESUME_WINDOW_MS)
       .sort((a, b) => b.lastActiveAt - a.lastActiveAt)[0]
   }
+
+  // 5. Fallback for unclassified / offline paths
+  if (current && !terms.length) {
+    return current
+  }
+
+  if (!continuityChoice) {
+    const scored = candidates
+      .map(thread => ({ thread, score: overlapScore(thread.topicLabels, terms) }))
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score
+        || b.thread.activation - a.thread.activation
+        || b.thread.lastActiveAt - a.thread.lastActiveAt)
+
+    if (scored[0])
+      return scored[0].thread
+
+    if (current)
+      return current
+  }
+
   return undefined
 }
 
@@ -393,6 +414,7 @@ export function attachPreparedTurnToContinuity(
     inputEvent: Nan0TimelineEvent
     text: string
     at: number
+    systemOneAnswers?: import('../types').Nan0JevSystemOneAnswers
   },
 ): { continuity: Nan0ContinuityState, thread: Nan0ConversationThread, resumed: boolean } {
   let continuity = decayContinuityState(original, input.at)
@@ -400,7 +422,7 @@ export function attachPreparedTurnToContinuity(
   if (duplicate)
     return { continuity, thread: duplicate, resumed: false }
 
-  const matched = selectThread(continuity, input.turn.inputActorId, input.text, input.at)
+  const matched = selectThread(continuity, input.turn.inputActorId, input.text, input.at, input.systemOneAnswers)
   if (!matched) {
     const priorId = continuity.activeThreadByActorId[input.turn.inputActorId]
     continuity = normalizeContinuityState({

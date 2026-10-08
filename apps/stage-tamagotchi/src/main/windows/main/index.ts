@@ -14,10 +14,8 @@ import type { SettingsWindowManager } from '../settings'
 import type { WidgetsWindowManager } from '../widgets'
 
 import { dirname, resolve } from 'node:path'
-import { env } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { is } from '@electron-toolkit/utils'
 import { BrowserWindow, ipcMain, screen, shell } from 'electron'
 import { debounce, throttle } from 'es-toolkit'
 
@@ -40,6 +38,10 @@ export async function setupMainWindow(params: {
   i18n: I18n
   onboardingWindowManager: OnboardingWindowManager
   appConfig: Config<typeof globalAppConfigSchema>
+  // NOTICE: When the coordinated startup splash owns the reveal sequence,
+  // the initial `show()` is deferred until Main dismisses the splash after
+  // all milestones report ready/skipped. Otherwise windows pop in uncoordinated.
+  deferInitialShow?: boolean
 }) {
   const getConfig = (): InferOutput<typeof globalAppConfigSchema> => params.appConfig.get() ?? { language: 'en', windows: [], microphoneToggleHotkey: 'Scroll' }
   const updateConfig = (newData: InferOutput<typeof globalAppConfigSchema>) => params.appConfig.update(newData)
@@ -109,12 +111,13 @@ export async function setupMainWindow(params: {
     window.webContents.send('eventa:event:electron:windows:main:config-changed', config)
   })
 
-  if (is.dev || env.MAIN_APP_DEBUG || env.APP_DEBUG) {
-    try {
-      window.webContents.openDevTools({ mode: 'detach' })
-    }
-    catch {}
-  }
+  // NOTICE: Disabled automatic DevTools on startup for Control Strip to avoid interfering with Splash debugging
+  // if (is.dev || env.MAIN_APP_DEBUG || env.APP_DEBUG) {
+  //   try {
+  //     window.webContents.openDevTools({ mode: 'detach' })
+  //   }
+  //   catch {}
+  // }
 
   function restoreBounds() {
     const mainWindow = getConfig().windows?.find((w: any) => w.title === 'AIRI' && w.tag === 'main')
@@ -138,7 +141,12 @@ export async function setupMainWindow(params: {
 
   window.on('ready-to-show', () => {
     restoreBounds()
-    window.show()
+    // NOTICE: Initial show is deferred until the Splash window signals completion
+    // (`electronSplashDismiss`). Without deferral the Control Strip would pop in
+    // before coordinated milestones finish.
+    if (!params.deferInitialShow) {
+      window.show()
+    }
     // NOTICE: on some platforms/transparency settings, first bounds application might be ignored
     setTimeout(() => restoreBounds(), 500)
   })

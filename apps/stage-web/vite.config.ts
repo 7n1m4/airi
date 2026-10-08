@@ -210,8 +210,6 @@ export default defineConfig({
     exclude: [
       // Internal Packages
       '@proj-airi/stage-ui/*',
-      '@proj-airi/drizzle-duckdb-wasm',
-      '@proj-airi/drizzle-duckdb-wasm/*',
 
       // wasm-bindgen package: esbuild's dep pre-bundle mangles the wasm glue
       // (Firefox: NS_ERROR_CORRUPTED_CONTENT on the optimized module), which

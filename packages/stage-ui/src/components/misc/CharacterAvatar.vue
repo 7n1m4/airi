@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { DisplayModelFormat, useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
+import { useIntersectionObserver } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 
 import {
@@ -71,17 +72,42 @@ const portraitInfo = computed(() => {
 const portrait = computed(() => portraitInfo.value.url)
 const portraitSource = computed(() => portraitInfo.value.source)
 
+// Viewport gating: offscreen grid cards must not inflate zips or decode images.
+// IntersectionObserver does not deliver while the document is hidden, so this
+// single gate covers both the offscreen-grid and background-tab cases. Falls
+// back to visible when the API is unavailable.
+const avatarRoot = ref<HTMLElement | null>(null)
+const isInView = ref(typeof window === 'undefined' || !('IntersectionObserver' in window))
+useIntersectionObserver(avatarRoot, ([entry]) => {
+  if (entry?.isIntersecting)
+    isInView.value = true
+})
+
+// Tracks which model id this instance already resolved so scroll-out/in and
+// prop churn cannot retrigger extraction.
+const resolvedForId = ref<string | null>(null)
+
 // Non-blocking background watcher:
 // - Extracts complementary colors from cache/canvas asynchronously
 // - For zip models without authorIcon, lazily triggers a single background extract
 watch(
-  () => props.displayModelId,
-  (id) => {
+  () => [props.displayModelId, isInView.value] as const,
+  ([id, visible]) => {
     if (!id) {
       dynamicBackground.value = null
       lazyExtractedIcon.value = null
+      resolvedForId.value = null
       return
     }
+
+    // Not yet on screen (or tab hidden): wait for the observer instead of
+    // joining the hub-open extraction stampede.
+    if (!visible || (typeof document !== 'undefined' && document.hidden))
+      return
+
+    if (resolvedForId.value === id)
+      return
+    resolvedForId.value = id
 
     const model = displayModelsStore.displayModels.find(m => m.id === id)
     if (!model)
@@ -93,9 +119,22 @@ watch(
         dynamicBackground.value = colorCache.get(previewUrl) || null
       }
       else {
-        void extractComplementaryColors(previewUrl).then((colors) => {
-          dynamicBackground.value = colors
-        })
+        // Defer canvas color extraction to idle frames so initial mount/navigation does not hitch
+        const scheduleColorExtract = () => {
+          if (typeof document !== 'undefined' && document.hidden)
+            return
+          void extractComplementaryColors(previewUrl).then((colors) => {
+            if (colors) {
+              dynamicBackground.value = colors
+            }
+          })
+        }
+        if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(scheduleColorExtract, { timeout: 3000 })
+        }
+        else {
+          setTimeout(scheduleColorExtract, 250)
+        }
       }
     }
     else {
@@ -105,6 +144,9 @@ watch(
     // Lazy migration for legacy models without authorIcon: defer to idle time to avoid blocking initial render
     if (!model.authorIcon && (model.format === DisplayModelFormat.Live2dZip || model.format === DisplayModelFormat.SpineZip || model.format === DisplayModelFormat.PMXZip)) {
       const scheduleExtraction = () => {
+        // Re-check visibility at fire time: a hidden tab must not inflate zips.
+        if (typeof document !== 'undefined' && document.hidden)
+          return
         void extractModelIcon(id).then((url) => {
           if (url) {
             lazyExtractedIcon.value = url
@@ -162,6 +204,7 @@ function cardInitialColor(name: string) {
 
 <template>
   <div
+    ref="avatarRoot"
     :class="[
       'relative flex items-center justify-center select-none overflow-hidden shrink-0 transition-all duration-300',
       shape === 'circle' ? 'rounded-full' : shape === 'rounded' ? 'rounded-xl' : 'rounded-none',

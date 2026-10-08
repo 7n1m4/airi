@@ -8,6 +8,14 @@ import { useConsciousnessStore } from '../modules/consciousness'
 import { useProvidersStore } from '../providers'
 import { useChatSessionStore } from './session-store'
 
+// Strategy C (HMR Async Epoch Guard): module-scope epoch bumped by the single
+// dispose ledger at the bottom of this module. executeCompaction performs
+// archive-session creation, per-bucket LLM distillations, STMM persists, and a
+// session-timeline rewrite across many awaits — a superseded generation must
+// abort before any of those writes land on live state. See
+// docs/project-hmr-resilience-architecture.md Strategies C & E.
+let compactionEpoch = 0
+
 export const useCompactionStore = defineStore('chat-compaction', () => {
   const chatSession = useChatSessionStore()
   const shortTermMemory = useShortTermMemoryStore()
@@ -79,6 +87,10 @@ export const useCompactionStore = defineStore('chat-compaction', () => {
    * Executes background forking and trims history, applying the chosen strategy.
    */
   async function executeCompaction(sessionId: string) {
+    // Captured before the first await; every write below re-checks it.
+    const runEpoch = compactionEpoch
+    const isStale = () => runEpoch !== compactionEpoch
+
     const card = activeCard.value
     if (!card)
       return
@@ -106,6 +118,12 @@ export const useCompactionStore = defineStore('chat-compaction', () => {
         title: archiveTitle,
       })
 
+      if (isStale()) {
+        debug('[Compaction] Aborting orphaned compaction after HMR reload (post-archive).')
+        toast.dismiss(toastId)
+        return
+      }
+
       // 2. Split messages into to-preserve and to-compact
       // Keep system messages (role === 'system') plus the last N turns
       const systemMessages = originalMessages.filter(m => m.role === 'system')
@@ -124,6 +142,12 @@ export const useCompactionStore = defineStore('chat-compaction', () => {
         const providerId = card.extensions?.airi?.modules?.consciousness?.provider || consciousnessStore.activeProvider
         const modelId = card.extensions?.airi?.modules?.consciousness?.model || consciousnessStore.activeModel
         const provider = await providersStore.getProviderInstance<any>(providerId!)
+
+        if (isStale()) {
+          debug('[Compaction] Aborting orphaned compaction after HMR reload (post-provider).')
+          toast.dismiss(toastId)
+          return
+        }
 
         if (provider && modelId) {
           // Window-bounded gap filling:
@@ -159,6 +183,14 @@ export const useCompactionStore = defineStore('chat-compaction', () => {
           const newBlocks = []
 
           for (const dateKey of sortedDates) {
+            // Per-bucket LLM distillation: abort between buckets so a reload
+            // mid-loop cannot persist stale summaries.
+            if (isStale()) {
+              debug('[Compaction] Aborting orphaned compaction after HMR reload (mid-distill).')
+              toast.dismiss(toastId)
+              return
+            }
+
             const bucket = buckets.get(dateKey)!
             const isToday = dateKey === todayDateStr
 
@@ -178,6 +210,12 @@ export const useCompactionStore = defineStore('chat-compaction', () => {
             }
           }
 
+          if (isStale()) {
+            debug('[Compaction] Aborting orphaned compaction after HMR reload (pre-persist).')
+            toast.dismiss(toastId)
+            return
+          }
+
           if (newBlocks.length > 0) {
             const existingBlocks = [...shortTermMemory.blocks]
             for (const nextBlock of newBlocks) {
@@ -192,6 +230,12 @@ export const useCompactionStore = defineStore('chat-compaction', () => {
             await shortTermMemory.persist(existingBlocks)
           }
         }
+      }
+
+      if (isStale()) {
+        debug('[Compaction] Aborting orphaned compaction after HMR reload (pre-rewrite).')
+        toast.dismiss(toastId)
+        return
       }
 
       // 4. Update the active session with the compacted timeline
@@ -210,3 +254,14 @@ export const useCompactionStore = defineStore('chat-compaction', () => {
     executeCompaction,
   }
 })
+
+// Strategy E: exactly ONE import.meta.hot.dispose() per module (Vite silently
+// overwrites multiples). Bumps the epoch so orphaned compactions abort at
+// their next checkpoint instead of writing archive sessions, STMM blocks, or
+// timeline rewrites from a dead generation. No timers/channels to drain here.
+// No-op in production (import.meta.hot is undefined).
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    compactionEpoch++
+  })
+}

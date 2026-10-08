@@ -1076,36 +1076,9 @@ watch([() => modelStore.activeExpressions, modelLoaded], ([active, loaded]) => {
     }
   }
   vrm.value.expressionManager.update()
-}, { deep: true })
-
-// === ACT Emotion Mapping Sync ===
-// Injects user-configured VRM expression → ACT emotion mappings
-// into the emote system (Layer 3: ACT Mapping).
-// Also watches modelLoaded so mappings are applied on boot.
-watch([() => modelStore.emotionMappings, modelLoaded], ([mappings, loaded]) => {
-  if (!loaded || !vrmEmote.value || !vrm.value?.expressionManager)
-    return
-
-  // For each mapping: emotionMappings[vrmExpressionName] = actEmotionSlot
-  // e.g., { "anger": "angry" } means the ACT "angry" emotion should fire VRM "anger"
-  // We invert the map: for each ACT slot, collect the VRM expressions mapped to it
-  const actToVrm = new Map<string, { name: string, value: number }[]>()
-  for (const [vrmName, actSlot] of Object.entries(mappings)) {
-    if (!actSlot)
-      continue
-    if (!actToVrm.has(actSlot))
-      actToVrm.set(actSlot, [])
-    actToVrm.get(actSlot)!.push({ name: vrmName, value: 1.0 })
-  }
-
-  // Register/update each ACT emotion with the user's mapped expressions
-  for (const [actSlot, expressions] of actToVrm) {
-    vrmEmote.value.addEmotionState(actSlot, {
-      expression: expressions,
-      blendDuration: 0.3,
-    })
-  }
-}, { deep: true })
+  // NOTICE: shallow watch only — the store always replaces activeExpressions
+  // via spread, so deep traversal only multiplies fires under broadcast storms.
+})
 </script>
 
 <template>

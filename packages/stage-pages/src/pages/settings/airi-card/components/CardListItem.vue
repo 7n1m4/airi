@@ -4,7 +4,6 @@
 <script setup lang="ts">
 import { CharacterAvatar, CursorFloating } from '@proj-airi/stage-ui/components'
 import { useBroadcastChannel } from '@vueuse/core'
-import { DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuRoot, DropdownMenuTrigger } from 'reka-ui'
 import { ref } from 'vue'
 import { toast } from 'vue-sonner'
 
@@ -15,8 +14,7 @@ const emit = defineEmits<{
   (e: 'activate'): void
   (e: 'delete'): void
   (e: 'edit'): void
-  (e: 'exportJson'): void
-  (e: 'exportPng'): void
+  (e: 'export'): void
   (e: 'sync'): void
 }>()
 
@@ -76,7 +74,7 @@ function handleSelfieClick() {
   <CursorFloating
     :class="[
       'relative h-[280px] flex flex-col cursor-pointer overflow-hidden rounded-xl transition-all ease-in-out duration-400',
-      'group perspective-1000',
+      'group',
       isSelected
         ? 'border-2 border-primary-400 dark:border-primary-600'
         : 'border-2 border-neutral-100 dark:border-neutral-800/25',
@@ -140,7 +138,7 @@ function handleSelfieClick() {
       <div
         :class="[
           'dark:bg-neutral-900 backface-hidden rotate-y-180 absolute inset-0 flex flex-col overflow-hidden rounded-xl bg-white shadow-xl border-2',
-          'border-primary-500/20 dark:border-primary-400/10',
+          'border-primary-500/20 dark:border-primary-400/10 antialiased',
         ]"
       >
         <!-- Card content -->
@@ -195,18 +193,18 @@ function handleSelfieClick() {
             ]"
           >
             <div>v{{ version }}</div>
-            <div :class="['flex items-center gap-1.5']">
-              <div :class="['flex items-center gap-0.5']">
+            <div :class="['flex items-center gap-2']">
+              <div :class="['flex items-center gap-1']">
                 <div
                   i-lucide:ghost
-                  :class="['text-xs']"
+                  :class="['text-sm']"
                 />
                 <span>{{ consciousnessModel }}</span>
               </div>
-              <div :class="['flex items-center gap-0.5']">
+              <div :class="['flex items-center gap-1']">
                 <div
                   i-lucide:mic
-                  :class="['text-xs']"
+                  :class="['text-sm']"
                 />
                 <span>{{ voiceModel }}</span>
               </div>
@@ -231,51 +229,22 @@ function handleSelfieClick() {
       >
         <div
           i-solar:pen-2-bold-duotone
-          :class="['text-sm']"
+          :class="['text-base']"
         />
       </button>
 
-      <DropdownMenuRoot>
-        <DropdownMenuTrigger
-          :class="[
-            'rounded-lg p-1.5 text-neutral-500 transition-colors dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700/50',
-          ]"
-          title="Export card"
-          @click.stop
-        >
-          <div
-            i-solar:export-bold-duotone
-            :class="['text-sm']"
-          />
-        </DropdownMenuTrigger>
-        <DropdownMenuPortal>
-          <DropdownMenuContent
-            :class="[
-              'z-10000 min-w-28 border border-neutral-200 rounded-lg bg-white p-1 text-sm text-neutral-800 shadow-xl outline-none dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-200',
-            ]"
-            align="end"
-            side="bottom"
-            :side-offset="6"
-          >
-            <DropdownMenuItem
-              :class="[
-                'cursor-pointer rounded-md px-3 py-2 outline-none data-[highlighted]:bg-neutral-100 dark:data-[highlighted]:bg-neutral-800',
-              ]"
-              @click.stop="emit('exportJson')"
-            >
-              Export JSON
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              :class="[
-                'cursor-pointer rounded-md px-3 py-2 outline-none data-[highlighted]:bg-neutral-100 dark:data-[highlighted]:bg-neutral-800',
-              ]"
-              @click.stop="emit('exportPng')"
-            >
-              Export PNG
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenuPortal>
-      </DropdownMenuRoot>
+      <button
+        :class="[
+          'rounded-lg p-1.5 text-neutral-500 transition-colors dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700/50',
+        ]"
+        title="Export card"
+        @click.stop="emit('export')"
+      >
+        <div
+          i-solar:export-bold-duotone
+          :class="['text-base']"
+        />
+      </button>
 
       <button
         :class="['rounded-lg p-1.5 transition-colors hover:bg-neutral-200 dark:hover:bg-neutral-700/50']"
@@ -287,8 +256,8 @@ function handleSelfieClick() {
             isActive
               ? 'i-solar:camera-bold-duotone text-neutral-500 dark:text-neutral-400'
               : 'i-solar:camera-linear text-neutral-300 dark:text-neutral-600',
+            'text-base',
           ]"
-          class="text-sm"
         />
       </button>
 
@@ -302,6 +271,7 @@ function handleSelfieClick() {
             isActive
               ? 'i-solar:check-circle-bold-duotone text-primary-500 dark:text-primary-400'
               : 'i-solar:play-circle-broken text-neutral-500 dark:text-neutral-400',
+            'text-base',
           ]"
         />
       </button>
@@ -326,19 +296,19 @@ function handleSelfieClick() {
       >
         <div
           v-if="syncStatus === 'syncing'"
-          class="i-solar:restart-circle-bold-duotone animate-spin text-sm text-primary-500 dark:text-primary-400"
+          class="i-solar:restart-circle-bold-duotone animate-spin text-base text-primary-500 dark:text-primary-400"
         />
         <div
           v-else-if="syncStatus === 'cloud-only'"
-          class="i-solar:cloud-download-bold-duotone text-sm text-amber-500 dark:text-amber-400"
+          class="i-solar:cloud-download-bold-duotone text-base text-amber-500 dark:text-amber-400"
         />
         <div
           v-else-if="syncStatus === 'partial'"
-          class="i-solar:cloud-upload-bold-duotone text-sm text-amber-500/80 dark:text-amber-400/80"
+          class="i-solar:cloud-upload-bold-duotone text-base text-amber-500/80 dark:text-amber-400/80"
         />
         <div
           v-else
-          class="i-solar:bolt-bold-duotone text-sm text-emerald-500/70 dark:text-emerald-400/70"
+          class="i-solar:bolt-bold-duotone text-base text-emerald-500/70 dark:text-emerald-400/70"
         />
       </button>
 
@@ -349,7 +319,7 @@ function handleSelfieClick() {
       >
         <div
           i-solar:trash-bin-trash-linear
-          :class="['text-neutral-500 dark:text-neutral-400']"
+          :class="['text-base text-neutral-500 dark:text-neutral-400']"
         />
       </button>
     </div>

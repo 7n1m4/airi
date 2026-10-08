@@ -1,0 +1,4 @@
+# Ignore raw data downloads and bulk inference caches
+data/
+results/
+*.cache.json

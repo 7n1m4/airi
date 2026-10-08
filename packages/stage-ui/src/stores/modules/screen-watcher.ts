@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, onUnmounted, ref, toRaw, watch } from 'vue'
 
+import { logMemoryProbe } from '../../utils/memory-sentinel'
 import { useChatOrchestratorStore } from '../chat'
 import { useChatSessionStore } from '../chat/session-store'
 import { useEventLogStore } from '../event-log'
@@ -18,11 +19,35 @@ import { useSpeechStore } from './speech'
 import { useVisionStore } from './vision'
 import { ATTENTION_GUARD_WORKLOAD_ID, useVisionOrchestratorStore } from './vision/orchestrator'
 
+let cachedStageMateSendCaption: ((payload: any) => Promise<any>) | null = null
+async function getStageMateSendCaption() {
+  if (!cachedStageMateSendCaption) {
+    try {
+      const { useElectronEventaInvoke } = await import('@proj-airi/electron-vueuse')
+      const { electronStageMateSendCaption } = await import('@proj-airi/stage-shared')
+      cachedStageMateSendCaption = useElectronEventaInvoke(electronStageMateSendCaption)
+    }
+    catch (err) {
+      console.warn('[ScreenWatcher:Reaction] Failed to initialize Stage-Mate invoke:', err)
+      return null
+    }
+  }
+  return cachedStageMateSendCaption
+}
+
 export interface VisualObservationItem {
   timestamp: number
   summary: string
   matchedInterests?: string[]
 }
+
+// Strategy C (HMR Async Epoch Guard): module-scope epoch bumped by the dispose
+// handler below. Orphaned in-flight ticks from a superseded HMR generation see
+// the mismatch after their awaits and abort before dispatching observations.
+// NOTE: on HMR re-evaluation this binding resets for the NEW generation while
+// old tick closures keep referencing the OLD binding — which is exactly what
+// makes the stale check work.
+let watcherEpoch = 0
 
 export const useScreenWatcherStore = defineStore('screen-watcher', () => {
   const airiCardStore = useAiriCardStore()
@@ -136,6 +161,32 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     return chunks.filter(c => c.length > 0)
   }
 
+  /**
+   * Decodes a PNG data URL to raw bytes (exact-size ArrayBuffer) in chunks so
+   * multi-MB frames don't blow the call stack. The buffer is transferred —
+   * not cloned — to the attention-guard worker, neutering this side's copy.
+   */
+  function dataUrlToBytes(dataUrl: string): ArrayBuffer | undefined {
+    try {
+      const comma = dataUrl.indexOf(',')
+      const base64 = comma >= 0 ? dataUrl.slice(comma + 1) : dataUrl
+      if (!base64)
+        return undefined
+      const binary = atob(base64)
+      const len = binary.length
+      const out = new Uint8Array(len)
+      const CHUNK = 0x8000
+      for (let offset = 0; offset < len; offset += CHUNK) {
+        const end = Math.min(offset + CHUNK, len)
+        for (let i = offset; i < end; i++) out[i] = binary.charCodeAt(i)
+      }
+      return out.buffer
+    }
+    catch {
+      return undefined
+    }
+  }
+
   function formatObservationTimeline(items: VisualObservationItem[]): string {
     if (!items || items.length === 0)
       return 'No recent visual observations recorded.'
@@ -154,6 +205,10 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
   async function dispatchPromotedReaction(events: VisualObservationItem[] | string, config: ScreenWatchingConfig) {
     const deliveryMode = config.deliveryMode ?? 'both'
+    logMemoryProbe('SCREEN_WATCHER:REACTION_START', {
+      action: 'Dispatching promoted screen reaction',
+      extra: { deliveryMode, itemCount: typeof events === 'string' ? 1 : events.length },
+    })
     console.log(`[ScreenWatcher:Reaction] 🎙️ Dispatching real-time reaction (deliveryMode="${deliveryMode}")...`)
 
     if (deliveryMode === 'off') {
@@ -257,22 +312,23 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
         // 1. Direct Stage-Mate Unity sidecar hook
         try {
-          const { useElectronEventaInvoke } = await import('@proj-airi/electron-vueuse')
-          const { electronStageMateSendCaption } = await import('@proj-airi/stage-shared')
-          const sendCaption = useElectronEventaInvoke(electronStageMateSendCaption)
-          await sendCaption({
-            text: chunkText,
-            isActive: true,
-            speaker: activeCard.value?.name || 'assistant',
-          })
+          const sendCaption = await getStageMateSendCaption()
+          if (sendCaption) {
+            await sendCaption({
+              text: chunkText,
+              isActive: true,
+              speaker: activeCard.value?.name || 'assistant',
+            })
+          }
         }
         catch (err) {
           console.warn('[ScreenWatcher:Reaction] Failed to invoke Stage-Mate send-caption:', err)
         }
 
         // 2. BroadcastChannel to caption overlay / head-tether plank
+        let bc: BroadcastChannel | null = null
         try {
-          const bc = new BroadcastChannel('airi-caption-overlay')
+          bc = new BroadcastChannel('airi-caption-overlay')
           bc.postMessage({
             type: 'caption-assistant',
             segments: [
@@ -288,6 +344,12 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         catch (err) {
           console.warn('[ScreenWatcher:Reaction] Failed to broadcast caption overlay:', err)
         }
+        finally {
+          try {
+            bc?.close()
+          }
+          catch {}
+        }
 
         // Wait comfortable reading speed before advancing (final chunk lingers indefinitely!)
         if (!isFinalChunk) {
@@ -299,6 +361,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
   }
 
   async function captureAndProcess(): Promise<void> {
+    const tickEpoch = watcherEpoch
     if (isCapturing.value) {
       console.log('[ScreenWatcher:Tick] ⏳ Previous capture still in progress, skipping overlapping tick.')
       return
@@ -309,47 +372,48 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       return
     }
 
-    // Gate 1. Operating Schedule / Bedtime: defer if outside active hours
-    if (config.respectSchedule ?? true) {
-      const schedule = activeCard.value?.extensions?.airi?.heartbeats?.schedule
-      if (schedule?.start && schedule?.end) {
-        const isAwake = isWithinSchedule(schedule.start, schedule.end)
-        if (!isAwake) {
-          console.log(`[ScreenWatcher:Tick] ⏸️ Skipped: Outside operating schedule (${schedule.start} - ${schedule.end}) — character is asleep.`)
+    // Acquire lock synchronously at the very entry BEFORE any async awaiting to prevent concurrent overlapping captures
+    isCapturing.value = true
+
+    try {
+      // Gate 1. Operating Schedule / Bedtime: defer if outside active hours
+      if (config.respectSchedule ?? true) {
+        const schedule = activeCard.value?.extensions?.airi?.heartbeats?.schedule
+        if (schedule?.start && schedule?.end) {
+          const isAwake = isWithinSchedule(schedule.start, schedule.end)
+          if (!isAwake) {
+            console.log(`[ScreenWatcher:Tick] ⏸️ Skipped: Outside operating schedule (${schedule.start} - ${schedule.end}) — character is asleep.`)
+            return
+          }
+        }
+      }
+
+      // Gate 2. User Presence Safeguard: pause if user is away from computer (AFK)
+      const pauseWhenAfk = config.pauseWhenAfk ?? activeCard.value?.extensions?.airi?.heartbeats?.pauseWhenAfk ?? true
+      if (pauseWhenAfk) {
+        if (proactivityStore.idleTimeSec === undefined) {
+          await proactivityStore.refreshIdleTimeOnly()
+        }
+        const afkLimitMinutes = config.afkThresholdMinutes ?? activeCard.value?.extensions?.airi?.heartbeats?.afkThresholdMinutes ?? 5
+        const afkLimitSec = afkLimitMinutes * 60
+        const currentIdleSec = proactivityStore.idleTimeSec ?? 0
+        if (currentIdleSec >= afkLimitSec) {
+          console.log(`[ScreenWatcher:Tick] ⏸️ Skipped: User is away / AFK (${Math.floor(currentIdleSec / 60)}m ${currentIdleSec % 60}s idle, limit ${afkLimitMinutes}m).`)
           return
         }
       }
-    }
 
-    // Gate 2. User Presence Safeguard: pause if user is away from computer (AFK)
-    const pauseWhenAfk = config.pauseWhenAfk ?? activeCard.value?.extensions?.airi?.heartbeats?.pauseWhenAfk ?? true
-    if (pauseWhenAfk) {
-      if (proactivityStore.idleTimeSec === undefined) {
-        await proactivityStore.refreshIdleTimeOnly()
-      }
-      const afkLimitMinutes = config.afkThresholdMinutes ?? activeCard.value?.extensions?.airi?.heartbeats?.afkThresholdMinutes ?? 5
-      const afkLimitSec = afkLimitMinutes * 60
-      const currentIdleSec = proactivityStore.idleTimeSec ?? 0
-      if (currentIdleSec >= afkLimitSec) {
-        console.log(`[ScreenWatcher:Tick] ⏸️ Skipped: User is away / AFK (${Math.floor(currentIdleSec / 60)}m ${currentIdleSec % 60}s idle, limit ${afkLimitMinutes}m).`)
+      // Gate 3. Busy Pipe Safeguard: defer if user or assistant is active (Hard Mutex)
+      const isSpeaking = Boolean(chatOrchestrator.sending)
+        || Boolean(chatOrchestrator.activeSpokenText)
+        || Boolean(chatOrchestrator.isUserTyping)
+        || liveSessionStore.isActive
+      if (isSpeaking) {
+        console.log('[ScreenWatcher:Tick] ⏸️ Skipped: Busy Pipe (user or character is speaking/typing).')
         return
       }
-    }
 
-    // Gate 3. Busy Pipe Safeguard: defer if user or assistant is active (Hard Mutex)
-    const isSpeaking = Boolean(chatOrchestrator.sending)
-      || Boolean(chatOrchestrator.activeSpokenText)
-      || Boolean(chatOrchestrator.isUserTyping)
-      || liveSessionStore.isActive
-    if (isSpeaking) {
-      console.log('[ScreenWatcher:Tick] ⏸️ Skipped: Busy Pipe (user or character is speaking/typing).')
-      return
-    }
-
-    isCapturing.value = true
-    lastError.value = null
-
-    try {
+      lastError.value = null
       // Capture at the display's native resolution so glyph height stays high
       // enough for accurate OCR. The `downscalePercent` card setting is applied
       // relative to the display's real size (not a 720p baseline) and only acts
@@ -387,14 +451,30 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         : `${width}×${height} (${downscale}% of native)`
       console.log(`[ScreenWatcher:Tick] 📸 Capturing screen frame #${captureCount.value + 1} (${resLabel}, source="${sourceId}")...`)
 
-      const snapshot = await visionStore.captureSnapshot(
-        useNative ? { native: true } : { downscalePercent: downscale },
-      )
-      if (!snapshot?.dataUrl) {
+      let snapshot: any
+      try {
+        snapshot = await visionStore.captureSnapshot(
+          useNative ? { native: true } : { downscalePercent: downscale },
+        )
+      }
+      catch (captureErr: any) {
+        lastError.value = captureErr?.message || String(captureErr)
+        console.warn('[ScreenWatcher:Tick] ⚠️ Screen snapshot capture threw error:', lastError.value)
+        return
+      }
+
+      if (!snapshot?.dataUrl || snapshot.dataUrl.length < 1000) {
         lastError.value = snapshot?.error === 'permission_denied'
           ? 'Screen capture permission denied.'
-          : 'Capture returned no frame.'
-        console.warn('[ScreenWatcher:Tick] ⚠️ Capture returned no frame:', lastError.value)
+          : 'Capture returned no valid frame.'
+        console.warn('[ScreenWatcher:Tick] ⚠️ Capture returned no valid frame:', lastError.value)
+        return
+      }
+
+      // Strategy C: orphaned HMR-generation tick — drop the frame, act on nothing.
+      if (tickEpoch !== watcherEpoch) {
+        console.log('[ScreenWatcher:Tick] 🛑 Aborting orphaned tick after HMR reload (post-capture).')
+        snapshot.dataUrl = ''
         return
       }
 
@@ -404,9 +484,14 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       const rawTags = config.interestTags ? toRaw(config.interestTags) : []
       const cleanTags = Array.isArray(rawTags) ? Array.from(rawTags).map(t => String(t)) : []
 
+      let dataUrl: string | undefined = snapshot.dataUrl
+      // NOTICE: decode once for the zero-copy worker handoff; the transfer
+      // neuters this side's buffer, so slow CLIP/OCR ticks hold ~1 native copy.
+      let pngBytes: ArrayBuffer | undefined = dataUrlToBytes(dataUrl!)
       const tickStart = performance.now()
       const processed = await visionOrchestrator.processCapture({
-        dataUrl: snapshot.dataUrl,
+        dataUrl: dataUrl!,
+        pngBytes,
         width,
         height,
         sourceId,
@@ -415,7 +500,28 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         enableVlm: isMoondream,
         vlmTier: config.vlmTier || (config.enableVlm ? 'moondream' : 'lightweight'),
         timestamp: snapshot.timestamp || Date.now(),
+        gatingMode: config.gatingMode || 'trigger_tags',
+        sentinelProvider: config.sentinelProvider || 'laya-local',
+        sentinelModel: config.sentinelModel,
+        sentinelQuestions: config.sentinelQuestions ? toRaw(config.sentinelQuestions) : undefined,
+        sentinelPolicy: config.sentinelPolicy || 'any',
+        sentinelThreshold: config.sentinelThreshold ?? 0.75,
+        sentinelEvidenceEnabled: config.sentinelEvidenceEnabled ?? true,
+        activeWindow: proactivityStore.activeWinStr,
       })
+      // NOTICE: Immediately release large base64 screen capture frame to reclaim V8 heap / PartitionAlloc memory
+      // (pngBytes was neutered by the transfer when the worker path used it).
+      dataUrl = undefined
+      pngBytes = undefined
+      snapshot.dataUrl = ''
+
+      // Strategy C: orphaned HMR-generation tick — release refs above, then
+      // abort before promotions, buffer writes, or telemetry.
+      if (tickEpoch !== watcherEpoch) {
+        console.log('[ScreenWatcher:Tick] 🛑 Aborting orphaned tick after HMR reload (post-process).')
+        return
+      }
+
       lastLatencyMs.value = Math.round(performance.now() - tickStart)
       lastDecision.value = processed?.decision || 'UNKNOWN'
       const logSummary = processed?.summary ? ` | summary="${processed.summary.replace(/\n/g, ' ')}"` : ''
@@ -511,18 +617,27 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
   function startWatcher(): void {
     if (timerHandle) {
-      stopWatcher()
+      clearInterval(timerHandle)
+      timerHandle = null
     }
 
     const intervalMs = activeConfig.value?.captureIntervalMs || 2000
     console.log(`[ScreenWatcher:Lifecycle] 🟢 Starting ambient screen watcher (interval=${intervalMs}ms)...`)
 
-    // Warm guard worker before first tick if using attention guard
+    // Warm guard worker before first tick if using attention guard and currently within schedule
     if (!activeConfig.value?.workload || activeConfig.value.workload === 'attention-guard') {
-      const isMoondream = activeConfig.value?.vlmTier === 'moondream' || (Boolean(activeConfig.value?.enableVlm) && activeConfig.value?.vlmTier !== 'external')
-      void visionOrchestrator.ensureGuardLoaded({ enableVlm: isMoondream })
-        .then(() => console.log('[ScreenWatcher:Init] 🚀 Attention Ecology Guard ready.'))
-        .catch((err: any) => console.warn('[ScreenWatcher:Init] Guard pre-warm in progress or failed:', err))
+      const schedule = activeCard.value?.extensions?.airi?.heartbeats?.schedule
+      const respectSchedule = activeConfig.value?.respectSchedule ?? true
+      const isAwake = !respectSchedule || !schedule?.start || !schedule?.end || isWithinSchedule(schedule.start, schedule.end)
+      if (isAwake) {
+        const isMoondream = activeConfig.value?.vlmTier === 'moondream' || (Boolean(activeConfig.value?.enableVlm) && activeConfig.value?.vlmTier !== 'external')
+        void visionOrchestrator.ensureGuardLoaded({ enableVlm: isMoondream })
+          .then(() => console.log('[ScreenWatcher:Init] 🚀 Attention Ecology Guard ready.'))
+          .catch((err: any) => console.warn('[ScreenWatcher:Init] Guard pre-warm in progress or failed:', err))
+      }
+      else {
+        console.log('[ScreenWatcher:Init] 🌙 Character is currently asleep; deferring Attention Guard model pre-warm until awake.')
+      }
     }
 
     isRunning.value = true
@@ -531,13 +646,19 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     }, intervalMs)
   }
 
-  function stopWatcher(): void {
+  function pauseWatcher(): void {
     if (timerHandle) {
-      console.log('[ScreenWatcher:Lifecycle] 🔴 Stopping ambient screen watcher.')
+      console.log('[ScreenWatcher:Lifecycle] ⏸️ Pausing ambient screen watcher timer.')
       clearInterval(timerHandle)
       timerHandle = null
     }
     isRunning.value = false
+  }
+
+  function stopWatcher(): void {
+    pauseWatcher()
+    console.log('[ScreenWatcher:Lifecycle] 🔴 Teardown ambient screen watcher and vision worker.')
+    visionOrchestrator.terminate()
   }
 
   function isPrimaryHostWindow(): boolean {
@@ -547,9 +668,32 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     return hash === '' || hash === '#/' || hash === '#'
   }
 
+  let previousCardId: string | null = null
+  let previousWatcherConfigSignature: string = ''
+
+  // NOTICE: config writes land as several successive reactive updates (cardId
+  // first, then resolved config fields). Without coalescing, each one tears
+  // down (terminate() = cold worker + full model/shader reload) and restarts
+  // the guard — a reload storm from a single card switch or toggle flap.
+  const RESTART_DEBOUNCE_MS = 500
+  let restartDebounce: ReturnType<typeof setTimeout> | null = null
+
+  function scheduleRestart(cardChanged: boolean): void {
+    if (restartDebounce)
+      clearTimeout(restartDebounce)
+    restartDebounce = setTimeout(() => {
+      restartDebounce = null
+      // If the card switched completely, perform a clean teardown first so the new card gets a fresh state
+      if (cardChanged) {
+        stopWatcher()
+      }
+      restartWatcher()
+    }, RESTART_DEBOUNCE_MS)
+  }
+
   function restartWatcher(): void {
     if (!isPrimaryHostWindow()) {
-      stopWatcher()
+      pauseWatcher()
       return
     }
 
@@ -561,7 +705,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     }
   }
 
-  // React to card changes or screenWatching configuration toggles
+  // React to card changes or screenWatching configuration toggles with a stable value-equality guard
   watch(
     () => [
       activeCardId.value,
@@ -573,18 +717,66 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       activeCard.value?.extensions?.airi?.heartbeats?.schedule?.start,
       activeCard.value?.extensions?.airi?.heartbeats?.schedule?.end,
     ],
-    ([cardId, enabled, _interval, enableVlm, vlmTier, respectSchedule, start, end]) => {
+    ([cardId, enabled, interval, enableVlm, vlmTier, respectSchedule, start, end]) => {
       if (!isPrimaryHostWindow())
         return
-      console.log('[ScreenWatcher:Watch] Card / config changed:', { cardId, enabled, enableVlm, vlmTier, respectSchedule, start, end })
-      restartWatcher()
+
+      const nextSignature = JSON.stringify({
+        cardId,
+        enabled: Boolean(enabled),
+        interval: interval || 2000,
+        enableVlm: Boolean(enableVlm),
+        vlmTier: vlmTier || 'lightweight',
+        respectSchedule: respectSchedule ?? true,
+        start: start || '',
+        end: end || '',
+      })
+
+      // Skip redundant re-evaluations if the actual screen watcher values have not changed
+      if (nextSignature === previousWatcherConfigSignature) {
+        return
+      }
+
+      const cardChanged = previousCardId !== null && previousCardId !== cardId
+      previousCardId = cardId ? String(cardId) : null
+      previousWatcherConfigSignature = nextSignature
+
+      console.log('[ScreenWatcher:Watch] Screen watcher config changed:', { cardId, enabled, enableVlm, vlmTier, respectSchedule, start, end, cardChanged })
+
+      scheduleRestart(cardChanged)
     },
     { immediate: true },
   )
 
   onUnmounted(() => {
+    if (restartDebounce) {
+      clearTimeout(restartDebounce)
+      restartDebounce = null
+    }
     stopWatcher()
   })
+
+  // Strategy E (Single Combined Teardown Ledger): exactly ONE dispose callback
+  // per module (Vite overwrites multiples). Without this, HMR re-evaluation
+  // orphans the capture setInterval + restart debounce + guard worker, and
+  // each reload multiplies 1080p capture ticks into Tesseract/Moondream.
+  // No-op in production/test (import.meta.hot is undefined).
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      // Strategy C first: stale in-flight ticks abort at their next epoch check.
+      watcherEpoch++
+      if (restartDebounce) {
+        clearTimeout(restartDebounce)
+        restartDebounce = null
+      }
+      try {
+        stopWatcher()
+      }
+      catch (err) {
+        console.warn('[ScreenWatcher:HMR] Teardown during HMR dispose failed:', err)
+      }
+    })
+  }
 
   // Diagnostic Hook for console inspection
   if (typeof window !== 'undefined') {

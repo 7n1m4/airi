@@ -26,16 +26,36 @@ git push origin v0.9.1-stable.20260520
 
 ### Step 4: Build & Publish (Automated Utility)
 
-To make the build, lock check, and asset upload process deterministic and safe, a unified release script is provided. It handles pulling upstream, resolving tag references, checking for file locks on `app.asar`, compiling the package, and uploading to the correct GitHub release.
+To make the build, lock check, and asset upload process deterministic and safe, a unified release script is provided. It handles pulling git updates, resolving tag references, checking for file locks on `app.asar`, compiling the package, uploading to the correct GitHub release, and verifying cross-platform release inventory.
 
 Simply run:
 ```bash
 pnpm run release:win
 ```
+*(Or use `--build-only` to compile and smoke test locally first, followed by `pnpm run release:win --upload-only`.)*
 
 ---
 
-### Step 5: Manual Alternative / Verification
+### Step 5: Release Verification & Cross-Platform Inventory (Gatekeeping)
+
+The Windows agent acts as the final gatekeeper for the release. Once the Windows assets are uploaded, `publish-win.js` automatically runs the release asset inventory verification. You can also run it directly:
+
+```bash
+pnpm run ci:status --release
+```
+
+Because the Mac agent dispatches the GitHub Actions `Release: Linux Desktop` workflow immediately after publishing macOS/iOS assets, by the time the Windows build and smoke test finish, the cloud Linux builds should be ready or completing. Verify that all 14 release assets are attached:
+- **macOS**: `arm64.dmg` and `arm64-mac.zip`
+- **iOS**: `AIRI-[version]-ios.ipa`
+- **Android**: `AIRI-[version]-pocket.apk`
+- **Windows**: `windows-x64-setup.exe` and portable `windows-x64.zip`
+- **Linux x64**: `.deb`, `.rpm`, `.flatpak`
+- **Linux arm64**: `.deb`, `.rpm`, `.flatpak`
+- **Metadata**: `latest-linux.yml` and `latest-linux-arm64.yml`
+
+---
+
+### Step 6: Manual Alternative / Verification
 
 If you prefer or need to run individual steps manually:
 

@@ -10,6 +10,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { normalizePendingIntention } from '../intentions/Nan0PendingIntentions'
 import { InMemoryStateStore } from '../persistence/InMemoryStateStore'
 import { ControllableNan0Clock } from '../temporal/Nan0Clock'
+import { createMockSystemOneProvider } from '../test-utils/mock-system-one'
 import { Nan0Kernel } from './Nan0Kernel'
 
 function modelThought(decision: 'SPEAK' | 'SILENCE' | 'WAIT' | 'ACT', overrides: Record<string, unknown> = {}): string {
@@ -119,6 +120,7 @@ function harness(input: {
     createId: () => `auto-${++id}`,
     privateThoughtTimeoutMs: input.timeout ?? 100,
     capabilityDefinitions: input.capabilities,
+    systemOneProvider: createMockSystemOneProvider(),
   })
   return { kernel, store, clock, requests, calls: () => calls }
 }

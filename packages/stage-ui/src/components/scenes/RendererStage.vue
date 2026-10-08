@@ -20,6 +20,7 @@ import { useDatingSimStore } from '../../stores/dating-sim'
 import { useAiriCardStore } from '../../stores/modules'
 import { useSettings } from '../../stores/settings'
 import { useVHackStore } from '../../stores/vhack'
+import { StickerStack } from '../scenarios/stickers'
 
 const props = withDefaults(defineProps<{
   paused?: boolean
@@ -111,7 +112,7 @@ const { resolveActiveIdleAnimations } = useIdleAnimations()
 const live2dActiveModelId = computed(() => stageModelRenderer.value === 'live2d' ? stageModelSelected.value : undefined)
 useLive2DStageAmbientMotion({ modelId: live2dActiveModelId })
 
-const { post: postStageModelReady } = useBroadcastChannel<string, string>({ name: 'airi-stage-model-ready' })
+const { data: stageModelQuery, post: postStageModelReady } = useBroadcastChannel<string, string>({ name: 'airi-stage-model-ready' })
 watch(componentState, (state) => {
   debug('[RendererStage] componentState changed:', state)
   if (state === 'mounted') {
@@ -119,6 +120,13 @@ watch(componentState, (state) => {
     postStageModelReady('ready')
   }
 }, { immediate: true })
+
+watch(stageModelQuery, (msg) => {
+  if (msg === 'query' && componentState.value === 'mounted') {
+    debug('[RendererStage] Model is already mounted, responding to ready query')
+    postStageModelReady('ready')
+  }
+})
 
 watch(() => activeCard.value?.extensions?.airi?.active_concepts, async (newConcepts) => {
   debug('[RendererStage] Active concepts changed:', newConcepts)
@@ -447,7 +455,7 @@ defineExpose({
       v-if="stageModelRenderer === 'live2d'"
       ref="live2dSceneRef"
       v-model:state="componentState"
-      :class="['min-w-50% <lg:full min-h-100 sm:100', 'h-full w-full flex-1']"
+      :class="['min-w-50% <lg:full', 'h-full w-full flex-1']"
       :model-src="stageModelSelectedUrl"
       :model-id="stageModelSelected"
       :model-file="stageModelSelectedFile"
@@ -485,7 +493,7 @@ defineExpose({
       :idle-animations="resolvedIdleAnimations"
       :idle-cycle-enabled="props.vrmEffectiveIdleCycleEnabled"
       :render-scale-override="isWindowResizing ? reducedRenderScale : undefined"
-      :class="['min-w-50% <lg:full min-h-100 sm:100', 'h-full w-full flex-1']"
+      :class="['min-w-50% <lg:full', 'h-full w-full flex-1']"
       :paused="paused"
       :show-axes="false"
       :current-audio-source="currentAudioSource"
@@ -506,7 +514,7 @@ defineExpose({
       v-model:state="componentState"
       :model-src="stageModelSelectedUrl"
       :model-id="stageModelSelected"
-      :class="['min-w-50% <lg:full min-h-100 sm:100', 'h-full w-full flex-1']"
+      :class="['min-w-50% <lg:full', 'h-full w-full flex-1']"
       :paused="paused"
       :interaction-mode="vrmStore.interactionMode === 'tactile' ? 'tactile' : 'orbit'"
       :x-offset="xOffset"
@@ -528,7 +536,7 @@ defineExpose({
       v-slot
       ref="mmdViewerRef"
       v-model:state="componentState"
-      :class="['min-w-50% <lg:full min-h-100 sm:100', 'h-full w-full flex-1']"
+      :class="['min-w-50% <lg:full', 'h-full w-full flex-1']"
       :model-src="stageModelSelectedUrl"
       :paused="paused"
       :mouth-open-size="mouthOpenSize"
@@ -564,6 +572,7 @@ defineExpose({
       :scene-ref="stageModelRenderer === 'vrm' ? vrmViewerRef : stageModelRenderer === 'mmd' ? mmdViewerRef : spineViewerRef"
     />
     <DatingSimOverlay />
+    <StickerStack />
     <!-- Head-Tethered Radial Menu — 5 base stage controls floating above avatar across all 4 model types -->
     <HeadTetheredRadialMenu
       v-if="radialMenuEnabled"

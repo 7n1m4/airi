@@ -1,6 +1,6 @@
 import type { Card, ccv3 } from '@proj-airi/ccc'
 
-import type { AiriCognition, AiriPacing } from '../../types/card.schema'
+import type { AiriCognition, AiriPacing, CardCustomSticker, CharacterCueAllowlist } from '../../types/card.schema'
 import type { VoiceProfile } from '../providers'
 
 import { debug } from '@proj-airi/stage-shared'
@@ -10,15 +10,17 @@ import { useSpine } from '@proj-airi/stage-ui-spine'
 import { useModelStore } from '@proj-airi/stage-ui-three'
 import { until, useBroadcastChannel } from '@vueuse/core'
 import { nanoid } from 'nanoid'
-import { defineStore, storeToRefs } from 'pinia'
+import { defineStore, getActivePinia, storeToRefs } from 'pinia'
 import { safeParse } from 'valibot'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { chatStickers } from '../../assets/stickers'
 import {
   DEFAULT_ACTING_MODEL_EXPRESSION_PROMPT,
   DEFAULT_ACTING_SPEECH_EXPRESSION_PROMPT,
   DEFAULT_ACTING_SPEECH_MANNERISM_PROMPT,
+  DEFAULT_ACTING_STICKER_DIRECTIVES_PROMPT,
   DEFAULT_ARTISTRY_WIDGET_SPAWNING_PROMPT,
   DEFAULT_HEARTBEATS_PROMPT,
   DEFAULT_POST_HISTORY_INSTRUCTIONS,
@@ -34,6 +36,8 @@ import { useDatingSimStore } from '../dating-sim'
 import { DisplayModelFormat, useDisplayModelsStore } from '../display-models'
 import { useShortTermMemoryStore } from '../memory-short-term'
 import { useSettingsStageModel } from '../settings/stage-model'
+import { useStickersStore } from '../stickers'
+import { useArtistryStore } from './artistry'
 import { useConsciousnessStore } from './consciousness'
 import { useSpeechStore } from './speech'
 
@@ -72,6 +76,8 @@ export interface DreamStateConfig {
   injectDreamContext?: boolean
   pendingDreamChips?: string[]
   pendingDreamTimestamp?: number
+  pendingDreamMood?: string
+  journalWorthyThreshold?: number
   dreamIntrusionPrompt?: string
 }
 
@@ -81,12 +87,22 @@ export interface ShortTermMemoryConfig {
   tokenBudgetPerDay: number
 }
 
+export type { CharacterCueAllowlist } from '../../types/card.schema'
+
 export interface ActingConfig {
   modelExpressionPrompt: string
   speechExpressionPrompt: string
   speechMannerismPrompt: string
   idleAnimations?: string[]
   pacing?: AiriPacing
+  cueAllowlist?: CharacterCueAllowlist
+  autoCuesEnabled?: boolean
+  autoCueExpressions?: boolean
+  autoCueMotions?: boolean
+  compiledWhitelist?: CharacterCueAllowlist
+  stickerDirectivesPrompt?: string
+  activeStickerIds?: string[]
+  stickerWidgetsEnabled?: boolean
 }
 
 export interface AiriOutfit {
@@ -124,6 +140,13 @@ export interface CharacterGenerationConfig {
   }
 }
 
+export interface SentinelQuestionConfig {
+  id: string
+  text: string
+  enabled: boolean
+  threshold?: number
+}
+
 export interface ScreenWatchingConfig {
   enabled: boolean
   deliveryMode?: 'both' | 'bubble_only' | 'tts_only' | 'off'
@@ -142,6 +165,13 @@ export interface ScreenWatchingConfig {
   respectSchedule?: boolean
   pauseWhenAfk?: boolean
   afkThresholdMinutes?: number
+  gatingMode?: 'trigger_tags' | 'system1_sentinel'
+  sentinelProvider?: 'laya-local' | 'typesafe-ai' | 'openrouter-ai'
+  sentinelModel?: string
+  sentinelQuestions?: SentinelQuestionConfig[]
+  sentinelPolicy?: 'any' | 'all'
+  sentinelThreshold?: number
+  sentinelEvidenceEnabled?: boolean
 }
 
 export interface EventLedgerConfig {
@@ -230,6 +260,7 @@ export interface AiriExtension {
   generation?: CharacterGenerationConfig
 
   acting?: ActingConfig
+  stickers?: Record<string, CardCustomSticker>
 
   outfits?: AiriOutfit[]
 
@@ -300,6 +331,17 @@ export interface AiriExtension {
     active_expressions?: Record<string, number>
   }
   voice_profiles?: VoiceProfile[]
+  rwkv?: {
+    stateCartridgeId?: string
+    stateCartridgeUrl?: string
+    archetype?: string
+    baseModel?: string
+    quantization?: string
+    recommendedTemperature?: number
+    recommendedTopP?: number
+    zeroPromptVerified?: boolean
+    conditioningTurns?: string[]
+  }
 }
 
 export interface AiriCard extends Card {
@@ -370,6 +412,11 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     try {
       const raw = await storage.getItemRaw<[string, AiriCard][]>('local:airi-cards')
       if (raw && Array.isArray(raw)) {
+        for (const [, card] of raw) {
+          if (card.extensions?.airi?.salienceGateEnabled) {
+            card.extensions.airi.salienceGateEnabled = false
+          }
+        }
         cards.value = new Map(raw)
       }
     }
@@ -460,6 +507,24 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     }
   }
 
+  function stripEmbeddedStickersData(extension: AiriExtension): AiriExtension {
+    if (!extension.stickers)
+      return extension
+
+    const cleanedStickers: Record<string, CardCustomSticker> = {}
+    for (const [k, v] of Object.entries(extension.stickers)) {
+      if (!v)
+        continue
+      const { dataUrl, ...rest } = v
+      cleanedStickers[k] = rest
+    }
+
+    return {
+      ...extension,
+      stickers: cleanedStickers,
+    }
+  }
+
   function compactCard(card: AiriCard | Card | ccv3.CharacterCardV3) {
     return newAiriCard(card)
   }
@@ -489,6 +554,24 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       }
       catch (err) {
         console.error('[AiriCard] Failed to import embedded background', err)
+      }
+    }
+
+    // Extract embedded custom stickers into localforage and stickers store
+    if (ext?.stickers) {
+      const stickersStore = useStickersStore()
+      for (const [sId, stickerMeta] of Object.entries(ext.stickers)) {
+        if (stickerMeta && stickerMeta.dataUrl) {
+          try {
+            const res = await fetch(stickerMeta.dataUrl)
+            const blob = await res.blob()
+            await stickersStore.addSticker(blob, stickerMeta.label, newCardId, stickerMeta.id)
+            delete stickerMeta.dataUrl
+          }
+          catch (err) {
+            console.error(`[AiriCard] Failed to unpack custom sticker "${sId}":`, err)
+          }
+        }
       }
     }
 
@@ -686,17 +769,8 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       return
     }
 
-    const current = card.extensions?.airi?.salienceGateEnabled ?? false
-    debug('[AiriCard] toggleSalienceGate:', { id, current, next: !current })
-    updateCard(id, {
-      extensions: {
-        ...card.extensions,
-        airi: {
-          ...card.extensions?.airi,
-          salienceGateEnabled: !current,
-        },
-      },
-    } as any)
+    // NOTICE: Force-disabled for release stability to prevent WebGPU/WASM memory runaway
+    debug('[AiriCard] toggleSalienceGate: disabled for release stability', id)
   }
 
   const setAutonomousArtistry = async (id: string, enabled: boolean) => {
@@ -845,31 +919,29 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       const newModelId = extension.active_state?.displayModelId ?? extension.modules?.displayModelId
       const modelChanged = newModelId && newModelId !== stageModelStore.stageModelSelected
       if (selectedModel) {
-        if (selectedModel.format === DisplayModelFormat.Live2dZip) {
-          live2dStore.emotionMappings = selectedModel.emotionMappings || {}
-          if (selectedModel.favoriteExpressions && selectedModel.favoriteExpressions.length > 0) {
-            // Restore active expression presets from model's favorites
-            const fav = selectedModel.favoriteExpressions[0]
-            if (fav && live2dStore.availableExpressions.some(e => e.fileName === fav)) {
-              live2dStore.activeExpressions[fav] = 1
-            }
+        const emotionMap: Record<string, string> = {}
+        if (selectedModel.expressionCapabilities) {
+          for (const item of selectedModel.expressionCapabilities) {
+            if (item.label && item.label !== item.rawKey)
+              emotionMap[item.rawKey] = item.label
           }
+        }
+
+        if (selectedModel.format === DisplayModelFormat.Live2dZip) {
+          live2dStore.emotionMappings = emotionMap
           if (force || modelChanged) {
             live2dStore.shouldUpdateView()
           }
         }
         else if (selectedModel.format === DisplayModelFormat.VRM) {
-          vrmStore.emotionMappings = selectedModel.emotionMappings || {}
-          if (selectedModel.favoriteExpressions && selectedModel.favoriteExpressions.length > 0) {
-            vrmStore.favoriteExpression = selectedModel.favoriteExpressions[0] || ''
-          }
+          vrmStore.emotionMappings = emotionMap
           if (force || modelChanged) {
             vrmStore.shouldUpdateView()
           }
         }
         else if (selectedModel.format === DisplayModelFormat.PMXZip || selectedModel.format === DisplayModelFormat.PMD || selectedModel.format === DisplayModelFormat.PMXDirectory) {
           const mmdStore = await import('@proj-airi/stage-ui-mmd/stores/mmd').then(m => m.useMmd())
-          mmdStore.morphMappings = selectedModel.emotionMappings || {}
+          mmdStore.morphMappings = emotionMap
           if (force || modelChanged) {
             mmdStore.shouldUpdateView()
           }
@@ -975,7 +1047,12 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       speechExpressionPrompt: DEFAULT_ACTING_SPEECH_EXPRESSION_PROMPT,
       speechMannerismPrompt: DEFAULT_ACTING_SPEECH_MANNERISM_PROMPT,
       idleAnimations: [],
-
+      autoCuesEnabled: false,
+      autoCueExpressions: true,
+      autoCueMotions: false,
+      stickerDirectivesPrompt: DEFAULT_ACTING_STICKER_DIRECTIVES_PROMPT,
+      activeStickerIds: chatStickers.map(s => s.id),
+      stickerWidgetsEnabled: false,
     }
 
     // Return default if no extension exists
@@ -1110,6 +1187,13 @@ export const useAiriCardStore = defineStore('airi-card', () => {
         speechExpressionPrompt: existingExtension?.acting?.speechExpressionPrompt ?? defaultActing.speechExpressionPrompt,
         speechMannerismPrompt: existingExtension?.acting?.speechMannerismPrompt ?? defaultActing.speechMannerismPrompt,
         idleAnimations: existingExtension?.acting?.idleAnimations ?? defaultActing.idleAnimations,
+        cueAllowlist: existingExtension?.acting?.cueAllowlist ?? existingExtension?.acting?.compiledWhitelist,
+        autoCuesEnabled: existingExtension?.acting?.autoCuesEnabled ?? false,
+        autoCueExpressions: existingExtension?.acting?.autoCueExpressions ?? true,
+        autoCueMotions: existingExtension?.acting?.autoCueMotions ?? false,
+        stickerDirectivesPrompt: existingExtension?.acting?.stickerDirectivesPrompt ?? defaultActing.stickerDirectivesPrompt,
+        activeStickerIds: existingExtension?.acting?.activeStickerIds ?? defaultActing.activeStickerIds,
+        stickerWidgetsEnabled: existingExtension?.acting?.stickerWidgetsEnabled ?? defaultActing.stickerWidgetsEnabled,
       },
       outfits: existingExtension?.outfits ?? [],
       agents: existingExtension?.agents ?? {},
@@ -1180,9 +1264,12 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       debug('[AiriCard] Validation issues found during normalization:', validation.issues)
     }
 
-    const normalizeVersion = (version?: string | null) => {
-      const normalized = version?.trim()
-      return normalized || '1.0.0'
+    const normalizeVersion = (version?: unknown) => {
+      if (typeof version === 'string' && version.trim())
+        return version.trim()
+      if (typeof version === 'number' && !Number.isNaN(version))
+        return String(version)
+      return '1.0.0'
     }
     const normalizeRequiredText = (value: string | null | undefined, fallback: string) => {
       const normalized = value?.trim()
@@ -1227,7 +1314,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
         tags: ccv3Card.data.tags ?? [],
         extensions: {
           ...ccv3Card.data.extensions,
-          airi: stripEmbeddedBackgroundData(resolveAiriExtension(ccv3Card)),
+          airi: stripEmbeddedStickersData(stripEmbeddedBackgroundData(resolveAiriExtension(ccv3Card))),
         },
         updatedAt: (ccv3Card as any).updatedAt || (ccv3Card.data as any).updatedAt,
         createdAt: (ccv3Card as any).createdAt || (ccv3Card.data as any).createdAt,
@@ -1250,7 +1337,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       ...cardData, // Spread remaining properties (tags, etc.)
       extensions: {
         ...cardData.extensions,
-        airi: stripEmbeddedBackgroundData(resolveAiriExtension(card)),
+        airi: stripEmbeddedStickersData(stripEmbeddedBackgroundData(resolveAiriExtension(card))),
       },
     }
   }
@@ -1463,6 +1550,10 @@ export function buildSystemPrompt(card: AiriCard | undefined) {
   if (!card)
     return ''
 
+  // Zero-prompt recurrent state cartridges bake persona and mannerisms into h0 weights
+  if (card.extensions?.airi?.rwkv?.zeroPromptVerified)
+    return ''
+
   let isDatingSimActive = false
   let story: any = null
   let premise = ''
@@ -1501,15 +1592,29 @@ export function buildSystemPrompt(card: AiriCard | undefined) {
     if (acting.speechMannerismPrompt && acting.speechMannerismPrompt.trim() !== '') {
       components.push(acting.speechMannerismPrompt)
     }
+    if (acting.stickerDirectivesPrompt && acting.stickerDirectivesPrompt.trim() !== '') {
+      components.push(acting.stickerDirectivesPrompt)
+    }
   }
 
   const artistry = card.extensions?.airi?.artistry
   const generation = card.extensions?.airi?.generation
   const isImageJournalAllowed = !generation?.known?.allowedTools || generation.known.allowedTools.includes('image_journal')
 
-  if (isImageJournalAllowed && artistry?.provider && artistry.provider !== 'none' && artistry.widgetInstruction && !artistry.autonomousEnabled) {
-    if (artistry.widgetInstruction && artistry.widgetInstruction.trim() !== '') {
-      components.push(artistry.widgetInstruction)
+  let globalArtistryConfigured = false
+  try {
+    if (getActivePinia()) {
+      const artistryStore = useArtistryStore()
+      globalArtistryConfigured = Boolean(artistryStore.configured && artistryStore.activeProvider && artistryStore.activeProvider !== 'none')
+    }
+  }
+  catch {}
+  const hasArtistryProvider = Boolean((artistry?.provider && artistry.provider !== 'none') || globalArtistryConfigured)
+
+  if (isImageJournalAllowed && hasArtistryProvider) {
+    const artistryInstruction = artistry?.widgetInstruction || DEFAULT_ARTISTRY_WIDGET_SPAWNING_PROMPT
+    if (artistryInstruction && artistryInstruction.trim() !== '') {
+      components.push(artistryInstruction)
     }
   }
 

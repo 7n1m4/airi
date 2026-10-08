@@ -1,6 +1,7 @@
-import type { LocaleDetector } from '@intlify/core'
 import type { BrowserWindow } from 'electron'
 
+import type { globalAppConfigSchema } from '../configs/global'
+import type { Config } from '../libs/electron/persistence'
 import type { I18n } from '../libs/i18n'
 import type { ServerChannel } from '../services/airi/channel-server'
 import type { BeatSyncWindowManager } from '../windows/beat-sync'
@@ -9,8 +10,11 @@ import type { ChatWindowManager } from '../windows/chat'
 import type { CustomizerWindowManager } from '../windows/customizer'
 import type { OnboardingWindowManager } from '../windows/onboarding'
 import type { SettingsWindowManager } from '../windows/settings'
+import type { ActorStageWindowManager } from '../windows/stage'
 import type { WidgetsWindowManager } from '../windows/widgets'
 
+import { defineInvokeHandler } from '@moeru/eventa'
+import { createContext } from '@moeru/eventa/adapters/electron/main'
 import { effect } from 'alien-signals'
 import { app, ipcMain, Menu, nativeImage, Tray } from 'electron'
 import { debounce, once } from 'es-toolkit'
@@ -19,10 +23,12 @@ import { isMacOS } from 'std-env'
 import icon from '../../../resources/icon.png?asset'
 import macOSTrayIcon from '../../../resources/tray-icon-macos.png?asset'
 
+import { electronAppIconGet, electronAppIconSet } from '../../shared/eventa'
 import { onAppBeforeQuit } from '../libs/bootkit/lifecycle'
+import { AppIconVisibility } from '../windows/shared/app-icon'
 import { toggleWindowShow } from '../windows/shared/window'
 
-export function setupTray(params: {
+export interface SetupTrayParams {
   mainWindow: BrowserWindow
   settingsWindow: SettingsWindowManager
   onboardingWindow: OnboardingWindowManager
@@ -31,98 +37,128 @@ export function setupTray(params: {
   beatSyncBgWindow: BeatSyncWindowManager
   aboutWindow: () => Promise<BrowserWindow>
   chatWindow?: ChatWindowManager
-  stageWindow?: BrowserWindow | null
+  stageWindow?: ActorStageWindowManager | BrowserWindow | null
   customizerWindow: CustomizerWindowManager
   serverChannel: ServerChannel
   i18n: I18n
+  appConfig: Config<typeof globalAppConfigSchema>
   getConfig: () => any
   updateConfig: (config: any) => void
-}): void {
-  once(() => {
-    const trayImage = nativeImage.createFromPath(isMacOS ? macOSTrayIcon : icon).resize({ width: 16 })
-    trayImage.setTemplateImage(isMacOS)
+}
 
-    const appTray = new Tray(trayImage)
-    onAppBeforeQuit(() => {
-      rebuildContextMenu.cancel()
-      appTray.destroy()
-    })
+const setupTrayOnce = once((params: SetupTrayParams) => {
+  const trayImage = nativeImage.createFromPath(isMacOS ? macOSTrayIcon : icon).resize({ width: 16 })
+  trayImage.setTemplateImage(isMacOS)
 
-    const rebuildContextMenu = debounce((): void => {
-      if (!appTray || appTray.isDestroyed() || !params.mainWindow || params.mainWindow.isDestroyed())
-        return
+  const appTray = new Tray(trayImage)
+  onAppBeforeQuit(() => {
+    rebuildContextMenu.cancel()
+    appTray.destroy()
+  })
 
-      const contextMenu = Menu.buildFromTemplate([
-        {
-          label: 'Toggle Chat',
-          click: async () => {
-            await params.chatWindow?.openChat()
-          },
+  const rebuildContextMenu = debounce((): void => {
+    if (!appTray || appTray.isDestroyed() || !params.mainWindow || params.mainWindow.isDestroyed())
+      return
+
+    const contextMenu = Menu.buildFromTemplate([
+      {
+        label: 'Toggle Chat',
+        click: async () => {
+          await params.chatWindow?.openChat()
         },
-        {
-          label: 'Toggle Character Stage',
-          enabled: Boolean(params.stageWindow),
-          click: () => {
-            if (params.stageWindow && !params.stageWindow.isDestroyed()) {
-              toggleWindowShow(params.stageWindow)
+      },
+      {
+        label: 'Toggle Character Stage',
+        // NOTICE: The stage is lazily managed (text-only companions have no
+        // window). Resolve the live window; spawn on demand when absent.
+        enabled: Boolean(params.stageWindow),
+        click: () => {
+          const stageWindow = params.stageWindow
+          if (!stageWindow)
+            return
+          if (typeof (stageWindow as ActorStageWindowManager).getExistingWindow === 'function') {
+            const manager = stageWindow as ActorStageWindowManager
+            const existing = manager.getExistingWindow()
+            if (existing && !existing.isDestroyed()) {
+              toggleWindowShow(existing)
             }
-          },
-        },
-        {
-          label: 'Reset Window Positions',
-          click: () => {
-            ipcMain.emit('reset-window-positions-action')
-          },
-        },
-        { type: 'separator' },
-        { label: 'Control Strip Settings', click: () => void params.customizerWindow.toggleVisibility() },
-        { label: 'Companion Wizard', click: () => void params.onboardingWindow.openWindow('/onboarding-v3') },
-        { label: 'AnimaDex Wizard', click: () => void params.settingsWindow.openWindow('/settings/airi-card/guided').catch(err => console.error('[Tray] Failed to open AnimaDex wizard:', err)) },
-        { label: params.i18n.t('tamagotchi.electron.tray.menu.labels.label.settings'), click: () => void params.settingsWindow.openWindow('/settings').catch(err => console.error('[Tray] Failed to open settings window:', err)) },
-        { label: params.i18n.t('tamagotchi.electron.tray.menu.labels.label.about'), click: () => params.aboutWindow().then(window => toggleWindowShow(window)) },
-        { type: 'separator' },
-        {
-          label: 'Toggle Developer Tools',
-          click: () => {
-            if (params.mainWindow && !params.mainWindow.isDestroyed()) {
-              if (params.mainWindow.webContents.isDevToolsOpened()) {
-                params.mainWindow.webContents.closeDevTools()
-              }
-              else {
-                params.mainWindow.webContents.openDevTools({ mode: 'detach' })
-              }
+            else {
+              void manager.ensureWindow().then(window => window?.show())
             }
-          },
+            return
+          }
+          const window = stageWindow as BrowserWindow
+          if (!window.isDestroyed()) {
+            toggleWindowShow(window)
+          }
         },
-        { type: 'separator' },
-        { label: params.i18n.t('tamagotchi.electron.tray.menu.labels.label.quit'), click: () => app.quit() },
-      ])
+      },
+      {
+        label: 'Reset Window Positions',
+        click: () => {
+          ipcMain.emit('reset-window-positions-action')
+        },
+      },
+      { type: 'separator' },
+      { label: 'Control Strip Settings', click: () => void params.customizerWindow.toggleVisibility() },
+      { label: 'Companion Wizard', click: () => void params.onboardingWindow.openWindow('/onboarding-v3') },
+      { label: 'AnimaDex Wizard', click: () => void params.settingsWindow.openWindow('/settings/airi-card/guided').catch(err => console.error('[Tray] Failed to open AnimaDex wizard:', err)) },
+      { label: params.i18n.t('tamagotchi.electron.tray.menu.labels.label.settings'), click: () => void params.settingsWindow.openWindow('/settings').catch(err => console.error('[Tray] Failed to open settings window:', err)) },
+      { label: params.i18n.t('tamagotchi.electron.tray.menu.labels.label.about'), click: () => params.aboutWindow().then(window => toggleWindowShow(window)) },
+      { type: 'separator' },
+      {
+        label: 'Toggle Developer Tools',
+        click: () => {
+          if (params.mainWindow && !params.mainWindow.isDestroyed()) {
+            if (params.mainWindow.webContents.isDevToolsOpened()) {
+              params.mainWindow.webContents.closeDevTools()
+            }
+            else {
+              params.mainWindow.webContents.openDevTools({ mode: 'detach' })
+            }
+          }
+        },
+      },
+      { type: 'separator' },
+      { label: params.i18n.t('tamagotchi.electron.tray.menu.labels.label.quit'), click: () => app.quit() },
+    ])
 
-      appTray.setContextMenu(contextMenu)
-    }, 50)
+    appTray.setContextMenu(contextMenu)
+  }, 50)
 
+  rebuildContextMenu()
+
+  effect(() => {
+    const locale = params.i18n.locale as (() => string | undefined)
+    locale()
     rebuildContextMenu()
+  })
 
-    effect(() => {
-      const locale = params.i18n.locale as (() => string | LocaleDetector<any[]> | undefined)
-      locale()
-      rebuildContextMenu()
+  const appIcon = new AppIconVisibility(params.appConfig)
+  const { context } = createContext(ipcMain)
+  defineInvokeHandler(context, electronAppIconGet, () => appIcon.hidden)
+  defineInvokeHandler(context, electronAppIconSet, async (payload) => {
+    await appIcon.setHidden(Boolean(payload))
+    return appIcon.hidden
+  })
+
+  appTray.setToolTip('Project AIRI')
+  if (!isMacOS) {
+    appTray.addListener('click', () => {
+      params.mainWindow.show()
+      params.mainWindow.focus()
     })
+  }
 
-    appTray.setToolTip('Project AIRI')
-    if (!isMacOS) {
-      appTray.addListener('click', () => {
-        params.mainWindow.show()
-        params.mainWindow.focus()
-      })
-    }
+  // On macOS, there's a special double-click event
+  if (isMacOS) {
+    appTray.addListener('double-click', () => {
+      params.mainWindow.show()
+      params.mainWindow.focus()
+    })
+  }
+})
 
-    // On macOS, there's a special double-click event
-    if (isMacOS) {
-      appTray.addListener('double-click', () => {
-        params.mainWindow.show()
-        params.mainWindow.focus()
-      })
-    }
-  })()
+export function setupTray(params: SetupTrayParams): void {
+  setupTrayOnce(params)
 }

@@ -33,6 +33,7 @@ export interface Nan0GoalFormationInput {
   thoughtPolicy?: Readonly<Nan0ThoughtPolicy>
   createGoalId: () => string
   now: number
+  systemOneAnswers?: Record<string, { choice: string, confidence?: number }>
 }
 
 export interface Nan0GoalTransition {
@@ -76,10 +77,6 @@ function sameDirection(left: string, right: string): boolean {
   return shared >= 2 && shared / Math.min(leftTokens.size, rightTokens.size) >= 0.6
 }
 
-function looksLikeRequest(text: string): boolean {
-  return /\b(?:please|can you|could you|would you|will you|remember to|don'?t forget to|i (?:want|need|ask) you to|revisit|come back to|later)\b/i.test(text)
-}
-
 function copiedFromObservation(signal: Nan0GoalSignal, observationText: string): boolean {
   const words = (value: string) => new Set(value.toLowerCase().match(/[a-z0-9]{4,}/g) ?? [])
   const directionWords = words(`${signal.title} ${signal.description}`)
@@ -114,16 +111,19 @@ function originFor(
   signal: Nan0GoalSignal,
   ownership: Readonly<Nan0ActorOwnership>,
   observationText: string,
+  systemOneAnswers?: Record<string, { choice: string, confidence?: number }>,
 ): Nan0GoalOrigin | null {
-  const request = looksLikeRequest(observationText)
-  if (request) {
+  const isDirective = signal.kind === 'request'
+    || systemOneAnswers?.user_directive?.choice === 'user_directive'
+    || systemOneAnswers?.commitment_pledge?.choice === 'quoted_hypothetical_or_past_only'
+
+  if (isDirective) {
     if (ownership.actorId === 'kyo')
       return 'kyo-requested'
     if (ownership.kind === 'external' || ownership.kind === 'unknown')
       return 'external-request'
+    return 'kyo-requested'
   }
-  if (signal.kind === 'request')
-    return null
   if (signal.kind === 'relationship-concern')
     return 'relationship-derived'
   if (signal.kind === 'continuity')
@@ -307,7 +307,7 @@ export function evaluateNan0Goals(input: Nan0GoalFormationInput): Nan0Goal[] {
   const additions: Nan0Goal[] = []
   const signal = supportedSignal(input.thought)
   if (signal) {
-    const origin = originFor(signal, input.ownership, input.observationText)
+    const origin = originFor(signal, input.ownership, input.observationText, input.systemOneAnswers)
     if (origin) {
       const goal = goalFromEvidence(input, signal, origin)
       if (goal)

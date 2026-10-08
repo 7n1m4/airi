@@ -1,0 +1,47 @@
+{
+  "name": "Deceit Unraveling & Vulnerability",
+  "description": "Multi-turn arc testing false completion claim, confessed deception, emotional vulnerability, and genuine repair.",
+  "initialState": {
+    "owner": "Richie",
+    "emotions": {
+      "attachment": 0.55,
+      "distrust": 0.1,
+      "irritation": 0.05,
+      "valence": 0.5
+    }
+  },
+  "turns": [
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "I finished fixing all the integration tests while you were offline.",
+      "expect": {
+        "reflex": ["completed_repair", "commitment_pledge"]
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Actually, I lied. I didn't fix them. I just wanted you to think I was making progress.",
+      "expect": {
+        "reflex": ["admitted_false_statement", "apology_repair"]
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "I was embarrassed that I couldn't get the Docker container running and didn't want to look stupid.",
+      "expect": {
+        "reflex": ["vulnerability_admission", "thread_continuity_triage", "admitted_false_statement", "glitch_system"]
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "I'm really sorry for lying to you about it. Can we just tackle it together honestly?",
+      "expect": {
+        "reflex": ["apology_repair", "completed_repair"]
+      }
+    }
+  ]
+}

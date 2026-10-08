@@ -21,14 +21,67 @@ export function shouldPauseStageFromLifecycle(state: ElectronWindowLifecycleStat
   return !state.visible || state.minimized
 }
 
+/**
+ * Elapsed threshold before a sustained suspend/lock hibernates inference.
+ * NOTICE: the main process maps both `powerMonitor` 'suspend' and
+ * 'lock-screen' to reason `'suspend'` (`window.ts`), so this duration covers
+ * extended screen lock. A true OS sleep freezes renderer timers — eviction
+ * then applies to locks observed while the renderer is still alive.
+ */
+export const DEEP_STANDBY_AFTER_MS = 10 * 60 * 1000
+
+/** Re-evaluation cadence for the suspend-duration clock (granularity only). */
+const SUSPEND_CLOCK_TICK_MS = 30 * 1000
+
+export function shouldEnterDeepStandby(suspendStartedAtMs: number | null, nowMs: number): boolean {
+  return suspendStartedAtMs != null && nowMs - suspendStartedAtMs > DEEP_STANDBY_AFTER_MS
+}
+
 export const useStageWindowLifecycleStore = defineStore('stageWindowLifecycle', () => {
   const windowLifecycle = ref<ElectronWindowLifecycleState>(createDefaultWindowLifecycleState())
   const stagePaused = computed(() => shouldPauseStageFromLifecycle(windowLifecycle.value))
+
+  // Suspend/lock tracking for Tier-2 deep standby (VRAM hibernation).
+  const suspendStartedAt = ref<number | null>(null)
+  const clockNow = ref<number>(Date.now())
+  let suspendClock: ReturnType<typeof setInterval> | null = null
+
+  const isSuspended = computed(() => windowLifecycle.value.reason === 'suspend')
+  const suspendDurationMs = computed(() =>
+    suspendStartedAt.value == null ? 0 : Math.max(0, clockNow.value - suspendStartedAt.value),
+  )
+  const deepStandby = computed(() => shouldEnterDeepStandby(suspendStartedAt.value, clockNow.value))
+
+  function startSuspendClock() {
+    clockNow.value = Date.now()
+    if (suspendClock != null)
+      return
+    suspendClock = setInterval(() => {
+      clockNow.value = Date.now()
+    }, SUSPEND_CLOCK_TICK_MS)
+  }
+
+  function stopSuspendClock() {
+    if (suspendClock != null) {
+      clearInterval(suspendClock)
+      suspendClock = null
+    }
+  }
 
   let initialized = false
 
   function updateWindowLifecycle(state: ElectronWindowLifecycleState) {
     windowLifecycle.value = { ...state }
+    if (state.reason === 'suspend') {
+      if (suspendStartedAt.value == null) {
+        suspendStartedAt.value = Date.now()
+        startSuspendClock()
+      }
+    }
+    else if (suspendStartedAt.value != null) {
+      suspendStartedAt.value = null
+      stopSuspendClock()
+    }
   }
 
   async function initializeWindowLifecycleBridge() {
@@ -59,8 +112,11 @@ export const useStageWindowLifecycleStore = defineStore('stageWindowLifecycle', 
   }
 
   return {
+    deepStandby,
     initializeWindowLifecycleBridge,
+    isSuspended,
     stagePaused,
+    suspendDurationMs,
     updateWindowLifecycle,
     windowLifecycle,
   }

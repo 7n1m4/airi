@@ -293,8 +293,8 @@ describe('chat orchestrator prompt & grounding contracts (P1-P4, Intrusions)', (
     expect(typeof primaryUserMsg.content === 'string' || !primaryUserMsg.content.some((part: any) => part.type === 'image_url')).toBe(true)
   })
 
-  // P4: Grounding order preservation across all 8 sources
-  it('p4: preserves deterministic order of all 8 grounding blocks (VLM -> Env -> STMM -> LTMM -> RAG -> Topics -> Scratchpad -> Salience)', async () => {
+  // P4: Grounding order preservation across all 7 active sources
+  it('p4: preserves deterministic order of all 7 grounding blocks (VLM -> Env -> STMM -> LTMM -> RAG -> Topics -> Scratchpad), salience force-disabled', async () => {
     const chatStore = useChatOrchestratorStore(pinia)
     const chatSession = useChatSessionStore(pinia)
     const llmStore = useLLM(pinia)
@@ -355,16 +355,20 @@ describe('chat orchestrator prompt & grounding contracts (P1-P4, Intrusions)', (
     expect(idx2).toBeGreaterThan(-1)
     expect(idx3).toBeGreaterThan(-1)
     expect(idx4).toBeGreaterThan(-1)
-    expect(idx5).toBeGreaterThan(-1)
+    // NOTICE: salienceGateEnabled is true on the card, yet no [SALIENCE
+    // TELEMETRY] block is emitted: production force-disables the RWKV
+    // salience gate for release stability (5fdec1456b, chat.ts "5. Salience
+    // Gate injection"). This assertion pins that decision; if salience is
+    // ever re-enabled, restore the 8-block sequence assertions here.
+    expect(idx5).toBe(-1)
 
-    // Assert exact 8-part sequence preservation: 0 < 1 < 1.5 < 1.6 < 2 < 3 < 4 < 5
+    // Assert exact 7-part sequence preservation: 0 < 1 < 1.5 < 1.6 < 2 < 3 < 4
     expect(idx0).toBeLessThan(idx1)
     expect(idx1).toBeLessThan(idx15)
     expect(idx15).toBeLessThan(idx16)
     expect(idx16).toBeLessThan(idx2)
     expect(idx2).toBeLessThan(idx3)
     expect(idx3).toBeLessThan(idx4)
-    expect(idx4).toBeLessThan(idx5)
   })
 
   // Intrusions: Staging consumption & clearing

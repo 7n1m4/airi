@@ -15,10 +15,8 @@
  * surface) and reads the same grounding-extension flag added in airi-card.ts.
  */
 
-import { defineStore, storeToRefs } from 'pinia'
+import { acceptHMRUpdate, defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-
-import { useAiriCardStore } from '../modules/airi-card'
 
 interface SalienceTurnMetrics {
   /** L9/L10/L11 per-layer cosine deltas (state split 12 × slice if tiny fallback handled upstream). */
@@ -37,14 +35,9 @@ interface SalienceTurnMetrics {
  */
 const FALLBACK_CONTROL_MEAN = [0.1308, 0.0777, 0.0419] as const
 
-/** The salience config in the card extension — persisted/toggled there. */
-const SALIENCE_FLAG_KEY = 'salienceGateEnabled' as const
-
 export const useChatSalienceStore = defineStore('chat-salience', () => {
-  const cardStore = useAiriCardStore()
-  const { activeCard } = storeToRefs(cardStore)
-
-  const enabled = computed(() => activeCard.value?.extensions?.airi?.[SALIENCE_FLAG_KEY] ?? false)
+  // NOTICE: Salience Gate (RWKV) is force-disabled for release stability to prevent WebGPU/WASM memory thrashing
+  const enabled = computed(() => false)
 
   /** Turn metrics history (most recent last); sized 24. */
   const history = ref<SalienceTurnMetrics[]>([])
@@ -68,14 +61,8 @@ export const useChatSalienceStore = defineStore('chat-salience', () => {
   const SALIENCE_MULTIPLIER = 1.5
 
   async function probeTurn(turnText: string): Promise<SalienceTurnMetrics | null> {
-    if (!enabled.value) {
-      console.log('[SalienceGate] probeTurn skipped: salienceGateEnabled is false on active card')
-      return null
-    }
-    if (!turnText || !turnText.trim()) {
-      console.log('[SalienceGate] probeTurn skipped: turn text is empty')
-      return null
-    }
+    // Short-circuit: WebGPU RWKV salience probe is disabled for release stability
+    return null
 
     // Call the real WebGPU worker over the Eventa bridge (Phase-6 contract).
     const { getWebRwkvAdapter } = await import('../../libs/inference/adapters/web-rwkv')
@@ -165,3 +152,12 @@ export const useChatSalienceStore = defineStore('chat-salience', () => {
     reset,
   }
 })
+
+// Pinia HMR accept boundary. Deliberately NO epoch guard: probeTurn
+// short-circuits (returns null) before its first await while the RWKV gate is
+// force-disabled, so there is no live async work to abandon — refs transfer
+// via state patching. If the gate is re-enabled, add a Strategy-C epoch check
+// after the adapter awaits. No-op in production (import.meta.hot is undefined).
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useChatSalienceStore, import.meta.hot))
+}

@@ -334,4 +334,52 @@ describe('useLlmmarkerParser', async () => {
 
     expect(endText).toBe(fullText)
   })
+
+  it('should parse STICKER tokens in standard format', async () => {
+    const fullText = 'Here is a sticker: <|STICKER airi-happy|> Have a great day!'
+    const collectedLiterals: string[] = []
+    const collectedSpecials: string[] = []
+
+    const parser = useLlmmarkerParser({
+      onLiteral(literal) {
+        collectedLiterals.push(literal)
+      },
+      onSpecial(special) {
+        collectedSpecials.push(special)
+      },
+    })
+
+    for (const char of fullText) {
+      await parser.consume(char)
+    }
+
+    await parser.end()
+
+    expect(collectedLiterals.join('')).toBe('Here is a sticker:  Have a great day!')
+    expect(collectedSpecials).toEqual(['<|STICKER airi-happy|>'])
+  })
+
+  it('should parse STICKER tokens with legacy close bracket and normalize to |>', async () => {
+    const fullText = 'Check this out <|STICKER airi-celebrate> woohoo!'
+    const collectedLiterals: string[] = []
+    const collectedSpecials: string[] = []
+
+    const parser = useLlmmarkerParser({
+      onLiteral(literal) {
+        collectedLiterals.push(literal)
+      },
+      onSpecial(special) {
+        collectedSpecials.push(special)
+      },
+    })
+
+    for (const char of fullText) {
+      await parser.consume(char)
+    }
+
+    await parser.end()
+
+    expect(collectedLiterals.join('')).toBe('Check this out  woohoo!')
+    expect(collectedSpecials).toEqual(['<|STICKER airi-celebrate|>'])
+  })
 })

@@ -155,6 +155,7 @@ describe('providers converters', () => {
           { id: 'deepseek-v4-flash-vision-exp', name: 'DeepSeek Vision' },
           { id: 'deepseek-v4-flash', name: 'DeepSeek Flash' },
           { id: 'gpt-4o', name: 'GPT-4o' },
+          { id: '@cf/meta/llama-4-scout-17b-16e-instruct', name: 'Llama 4 Scout 17B (CF)', capabilities: ['chat', 'vision'] },
         ],
       },
       createProvider: () => ({}) as any,
@@ -166,9 +167,12 @@ describe('providers converters', () => {
     const visionModel = models?.find(m => m.id === 'deepseek-v4-flash-vision-exp')
     const chatModel = models?.find(m => m.id === 'deepseek-v4-flash')
     const gpt4oModel = models?.find(m => m.id === 'gpt-4o')
+    const scoutModel = models?.find(m => m.id === '@cf/meta/llama-4-scout-17b-16e-instruct')
 
     expect(visionModel?.capabilities).toContain('vision')
     expect(gpt4oModel?.capabilities).toContain('vision')
     expect(chatModel?.capabilities).not.toContain('vision')
+    expect(scoutModel?.capabilities).toContain('vision')
+    expect(scoutModel?.capabilities).toContain('chat')
   })
 })

@@ -41,27 +41,37 @@ export const localEngineMetadata: Record<string, ProviderMetadata> = {
     defaultOptions: () => ({
       model: DEFAULT_WEB_RWKV_MODEL,
       vocab: '',
-      enableG1Prefill: true,
+      enableG1Prefill: false,
+      quantization: 'none',
     }),
     createProvider: async config => createWebRwkvChatProvider({
       model: (config.model as string) || undefined,
       vocab: (config.vocab as string) || undefined,
-      enableG1Prefill: config.enableG1Prefill !== false,
+      enableG1Prefill: config.enableG1Prefill === true,
+      quantization: (config.quantization as 'none' | 'nf4' | 'int8') || 'none',
     }),
     capabilities: {
-      // The model id is its safetensors URL; the configured override (or the
-      // default) is the single selectable model.
       listModels: async (config) => {
-        const url = (config.model as string) || DEFAULT_WEB_RWKV_MODEL
-        const known = WEB_RWKV_MODELS.find(m => m.id === url)
-        return [{
-          id: url,
-          name: known?.name ?? 'RWKV (custom URL)',
+        const models = WEB_RWKV_MODELS.map(m => ({
+          id: m.id,
+          name: m.name,
           provider: 'web-rwkv',
-          description: known?.description ?? 'Custom web-rwkv model URL.',
-          contextLength: 0,
+          description: `${m.badge} · ${m.description}`,
+          contextLength: 8192,
           deprecated: false,
-        }]
+        }))
+        const url = (config.model as string) || DEFAULT_WEB_RWKV_MODEL
+        if (!WEB_RWKV_MODELS.some(m => m.id === url)) {
+          models.push({
+            id: url,
+            name: 'RWKV (custom URL)',
+            provider: 'web-rwkv',
+            description: 'Custom web-rwkv model URL.',
+            contextLength: 8192,
+            deprecated: false,
+          })
+        }
+        return models
       },
     },
     validators: {

@@ -1,4 +1,4 @@
-import { cacheKeyForModel } from '../../workers/web-rwkv/cache'
+import { cacheKeyForModel, isStateCached } from '../../workers/web-rwkv/cache'
 import { NativeAI } from '../native-ai'
 
 // The cache name used by transformers.js / ONNX runtime
@@ -138,6 +138,41 @@ async function clearSingleOpfsModelCache(modelUrl: string): Promise<void> {
   }
 }
 
+/**
+ * Whether the single-slot Web-RWKV OPFS cache currently holds a checkpoint.
+ *
+ * The worker evicts the previous file whenever a new model finalizes, so the
+ * slot reflects "whatever was loaded last" — this is what the generic
+ * `web-rwkv` widget row reports instead of tracking any one model URL.
+ */
+export async function isWebRwkvSlotOccupied(): Promise<boolean> {
+  if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
+    return false
+  try {
+    const root = await navigator.storage.getDirectory()
+    let dir: FileSystemDirectoryHandle
+    try {
+      dir = await root.getDirectoryHandle(OPFS_DIR_NAME, { create: false })
+    }
+    catch {
+      return false
+    }
+    for await (const entry of dir.values()) {
+      if (entry.kind === 'file' && (entry.name.endsWith('.f16cache') || entry.name.endsWith('.prefabcache')))
+        return true
+    }
+    return false
+  }
+  catch {
+    return false
+  }
+}
+
+/** Clear the single-slot Web-RWKV OPFS cache (whatever checkpoint it holds). */
+export async function clearWebRwkvCache(): Promise<void> {
+  await clearOpfsCache()
+}
+
 async function isOpfsModelCached(modelUrl: string): Promise<boolean> {
   if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
     return false
@@ -151,13 +186,18 @@ async function isOpfsModelCached(modelUrl: string): Promise<boolean> {
       return false
     }
     const key = await cacheKeyForModel(modelUrl)
-    const fileName = `${key}.f16cache`
     try {
-      await dir.getFileHandle(fileName, { create: false })
+      await dir.getFileHandle(`${key}.f16cache`, { create: false })
       return true
     }
     catch {
-      return false
+      try {
+        await dir.getFileHandle(`${key}.prefabcache`, { create: false })
+        return true
+      }
+      catch {
+        return false
+      }
     }
   }
   catch {
@@ -256,6 +296,10 @@ export async function clearSingleModelCache(modelId: string): Promise<void> {
   }
   if (modelId.includes('laya')) {
     await clearLayaCache()
+    return
+  }
+  if (modelId === 'web-rwkv') {
+    await clearWebRwkvCache()
     return
   }
   if (modelId.startsWith('http')) {
@@ -592,6 +636,9 @@ export async function isModelCached(modelId: string): Promise<boolean> {
   if (modelId.includes('laya')) {
     return isLayaModelCached()
   }
+  if (modelId === 'web-rwkv') {
+    return isWebRwkvSlotOccupied()
+  }
   if (modelId.startsWith('http')) {
     return isOpfsModelCached(modelId)
   }
@@ -605,6 +652,18 @@ async function isTransformersModelCached(modelId: string): Promise<boolean> {
   try {
     const cache = await caches.open(TRANSFORMERS_CACHE_NAME)
     const keys = await cache.keys()
+
+    // NOTICE: Moondream2 is a multi-shard VLM (~1.1GB). Merely checking if any URL
+    // contains 'moondream2' results in false positives when only small configs or
+    // partial shards were downloaded. We must verify all three essential ONNX weight shards.
+    if (modelId.includes('moondream2')) {
+      const requiredShards = ['decoder_model_merged', 'vision_encoder', 'embed_tokens']
+      const modelKeys = keys.filter(request => request.url.includes(modelId))
+      if (modelKeys.length === 0)
+        return false
+      return requiredShards.every(shard => modelKeys.some(req => req.url.includes(shard)))
+    }
+
     return keys.some(request => request.url.includes(modelId))
   }
   catch {
@@ -626,3 +685,5 @@ export function formatBytes(bytes: number): string {
 
   return `${value.toFixed(i > 0 ? 1 : 0)} ${units[i]}`
 }
+
+export { isStateCached }

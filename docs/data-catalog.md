@@ -124,6 +124,9 @@ interface ActingConfig {
   modelExpressionPrompt: string
   speechExpressionPrompt: string
   speechMannerismPrompt: string
+  stickerDirectivesPrompt?: string
+  activeStickerIds?: string[]
+  stickerWidgetsEnabled?: boolean
   idleAnimations?: string[]
 }
 ```
@@ -750,7 +753,7 @@ interface StickerPlacement {
 }
 ```
 
-Metadata is stored in localStorage under `stickers/library-v2`; binary data is in localforage under `sticker-data-{id}`.
+Metadata is stored per-card in `card.extensions.airi.stickers` (and globally in localStorage under `stickers/library-v2` for the standalone library); binary image blobs are persisted in localforage under `sticker-data-{id}`.
 
 ### 3.4 Custom VRM Animations
 
@@ -1156,6 +1159,11 @@ Persisted Three.js scene state — camera rig, model transform, lighting, and sk
 | `settings/gemini/inference-tokens` | `number` (all-time inference tokens, full context + output) | `stores/modules/live-session.ts` |
 | `settings/gemini/inference-prompt-tokens` | `number` (all-time inference prompt/input tokens) | `stores/modules/live-session.ts` |
 | `settings/gemini/inference-completion-tokens` | `number` (all-time inference completion/output tokens) | `stores/modules/live-session.ts` |
+| `settings/system-one/active-provider` | `string` (default `'openrouter-ai'`) | `stores/modules/system-one.ts` |
+| `settings/system-one/active-model` | `string` (default `'typesafe/jev-1.13'`) | `stores/modules/system-one.ts` |
+| `settings/system-one/tokens-cloud` | `number` (all-time System 1 cloud tokens: OpenRouter / TypeSafe) | `stores/modules/system-one.ts` |
+| `settings/system-one/tokens-local` | `number` (all-time System 1 local tokens: Laya) | `stores/modules/system-one.ts` |
+| `settings/system-one/decisions-count` | `number` (all-time System 1 decisions executed) | `stores/modules/system-one.ts` |
 | `airi:context-width-map` | `string` (JSON) | `packages/stage-pages/.../CardCreationTabGeneration.vue` |
 | `airi-chatbox-draft` | `string` | `apps/stage-tamagotchi/.../InteractiveArea.vue` |
 | `settings/system/update-checker` | `DesktopUpdateCache` (JSON string) | `packages/stage-pages/.../use-desktop-release-checker.ts` |

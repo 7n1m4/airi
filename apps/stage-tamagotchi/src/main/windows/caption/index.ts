@@ -5,6 +5,7 @@ import type { globalAppConfigSchema } from '../../configs/global'
 import type { Config } from '../../libs/electron/persistence'
 import type { I18n } from '../../libs/i18n'
 import type { ServerChannel } from '../../services/airi/channel-server'
+import type { ActorStageWindowManager } from '../stage'
 
 import { createHash } from 'node:crypto'
 import { join, resolve } from 'node:path'
@@ -23,6 +24,7 @@ import { onAppBeforeQuit } from '../../libs/bootkit/lifecycle'
 import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
 import { createConfig } from '../../libs/electron/persistence'
 import { createReusableWindow } from '../../libs/electron/window-manager'
+import { showWindowOnAllWorkspaces } from '../shared/app-icon'
 import { mapForBreakpoints, resolutionBreakpoints, widthFrom } from '../shared/display'
 import { setupBaseWindowElectronInvokes, transparentWindowConfig } from '../shared/window'
 
@@ -67,9 +69,21 @@ function clampBoundsWithinRect(bounds: Rectangle, rect: Rectangle): Rectangle {
   return { x, y, width: bounds.width, height: bounds.height }
 }
 
-function computeInitialCaptionBounds(params: { stageWindow?: BrowserWindow | null, captionOptions?: Partial<Rectangle> }): Rectangle {
-  const mainBounds = (params.stageWindow && !params.stageWindow.isDestroyed())
-    ? params.stageWindow.getBounds()
+// NOTICE: The stage window may be lazily created after boot (text-only
+// companions bypass it, avatar companions resolve post-splash). Always resolve
+// the live window through the manager instead of caching a snapshot.
+function resolveStageWindow(stageWindow?: BrowserWindow | ActorStageWindowManager | null): BrowserWindow | null {
+  if (!stageWindow)
+    return null
+  if (typeof (stageWindow as ActorStageWindowManager).getExistingWindow === 'function')
+    return (stageWindow as ActorStageWindowManager).getExistingWindow() ?? null
+  return stageWindow as BrowserWindow
+}
+
+function computeInitialCaptionBounds(params: { stageWindow?: BrowserWindow | ActorStageWindowManager | null, captionOptions?: Partial<Rectangle> }): Rectangle {
+  const stageWindow = resolveStageWindow(params.stageWindow)
+  const mainBounds = (stageWindow && !stageWindow.isDestroyed())
+    ? stageWindow.getBounds()
     : { x: 0, y: 0, width: 450, height: 600 }
 
   let mainX = mainBounds.x
@@ -168,7 +182,7 @@ function createCaptionWindow(options?: BrowserWindowConstructorOptions) {
   // https://stackoverflow.com/questions/39835282/set-browserwindow-always-on-top-even-other-app-is-in-fullscreen-electron-mac
   window.setAlwaysOnTop(true, 'screen-saver', 2)
   window.setFullScreenable(false)
-  window.setVisibleOnAllWorkspaces(true)
+  showWindowOnAllWorkspaces(window)
   if (isMacOS) {
     window.setWindowButtonVisibility(false)
   }
@@ -188,7 +202,7 @@ function createCaptionWindow(options?: BrowserWindowConstructorOptions) {
 
 export function setupCaptionWindowManager(params: {
   mainWindow: BrowserWindow
-  stageWindow?: BrowserWindow | null
+  stageWindow?: BrowserWindow | ActorStageWindowManager | null
   serverChannel: ServerChannel
   i18n: I18n
   appConfig: Config<typeof globalAppConfigSchema>
@@ -214,13 +228,18 @@ export function setupCaptionWindowManager(params: {
   // Keep references to listeners so we can detach when toggling
   let detachMainMoveListener: (() => void) | undefined
 
+  // NOTICE: Resolve the live stage window on every read. The manager returns
+  // the current window (or undefined across lazy create/destroy cycles).
+  const getStageWindow = () => resolveStageWindow(params.stageWindow)
+
   // Note: when following window, we compute and persist the current relative offset
   // and start following without docking, so no immediate reposition is needed here.
 
   function computeRelativeOffset(win: BrowserWindow): { dx: number, dy: number } {
     const caption = win.getBounds()
-    const main = (params.stageWindow && !params.stageWindow.isDestroyed())
-      ? params.stageWindow.getBounds()
+    const stageWindow = getStageWindow()
+    const main = (stageWindow && !stageWindow.isDestroyed())
+      ? stageWindow.getBounds()
       : { x: 0, y: 0, width: 450, height: 600 }
     let dx = caption.x - main.x
     let dy = caption.y - main.y
@@ -232,8 +251,9 @@ export function setupCaptionWindowManager(params: {
   }
 
   function calculateDockingBounds(win: BrowserWindow, dock?: 'top' | 'bottom'): Rectangle {
-    const main = (params.stageWindow && !params.stageWindow.isDestroyed())
-      ? params.stageWindow.getBounds()
+    const stageWindow = getStageWindow()
+    const main = (stageWindow && !stageWindow.isDestroyed())
+      ? stageWindow.getBounds()
       : { x: 0, y: 0, width: 450, height: 600 }
     const b = win.getBounds()
 
@@ -410,7 +430,8 @@ export function setupCaptionWindowManager(params: {
     updateConfig(cfgToSave)
 
     const syncNow = () => {
-      if (win.isDestroyed() || !params.stageWindow || params.stageWindow.isDestroyed())
+      const stageWindow = getStageWindow()
+      if (win.isDestroyed() || !stageWindow || stageWindow.isDestroyed())
         return
 
       const config = params.appConfig.get()
@@ -424,8 +445,9 @@ export function setupCaptionWindowManager(params: {
         const stored = getConfig()?.matrices[matrixHash]?.relativeToMain ?? initialOffset
         let dx = stored?.dx
         let dy = stored?.dy
-        const main = (params.stageWindow && !params.stageWindow.isDestroyed())
-          ? params.stageWindow.getBounds()
+        const stageWindow = getStageWindow()
+        const main = (stageWindow && !stageWindow.isDestroyed())
+          ? stageWindow.getBounds()
           : { x: 0, y: 0, width: 450, height: 600 }
         const b = win.getBounds()
 
@@ -503,16 +525,19 @@ export function setupCaptionWindowManager(params: {
       onMainChange()
     }
     onMainChange()
-    if (params.stageWindow && !params.stageWindow.isDestroyed()) {
-      params.stageWindow.on('move', onMainChange)
-      params.stageWindow.on('resize', onMainChange)
+    // NOTICE: Capture the attached window so detach targets the same instance
+    // even if the stage is destroyed/recreated while follow is active.
+    const attachedStage = getStageWindow()
+    if (attachedStage && !attachedStage.isDestroyed()) {
+      attachedStage.on('move', onMainChange)
+      attachedStage.on('resize', onMainChange)
     }
     detachMainMoveListener = () => {
       moveThrottled.cancel()
       settleDebounced.cancel()
-      if (params.stageWindow && !params.stageWindow.isDestroyed()) {
-        params.stageWindow.removeListener('move', onMainChange)
-        params.stageWindow.removeListener('resize', onMainChange)
+      if (attachedStage && !attachedStage.isDestroyed()) {
+        attachedStage.removeListener('move', onMainChange)
+        attachedStage.removeListener('resize', onMainChange)
       }
       triggerMoveInternal = undefined
     }
@@ -542,6 +567,16 @@ export function setupCaptionWindowManager(params: {
       }
       catch {}
     }
+  }
+
+  // NOTICE: When the stage is lazily created after boot while position follow
+  // is active, re-attach follow to the new window instance.
+  const stageManager = params.stageWindow as ActorStageWindowManager | undefined
+  if (stageManager && typeof stageManager.onWindowCreated === 'function') {
+    stageManager.onWindowCreated(() => {
+      if (followStagePosition && currentWindow && !currentWindow.isDestroyed())
+        followStageWindow(currentWindow)
+    })
   }
 
   const reusable = createReusableWindow(async () => {
@@ -665,16 +700,18 @@ export function setupCaptionWindowManager(params: {
 
   async function setFollowStagePosition(shouldFollow: boolean) {
     followStagePosition = shouldFollow
-    const window = await reusable.getWindow()
-    if (followStagePosition) {
-      const rel = computeRelativeOffset(window)
-      const cfg = getConfig() ?? { followStagePosition, followStageVisibility, matrices: {} }
-      cfg.matrices[matrixHash] = { ...cfg.matrices[matrixHash], relativeToMain: rel }
-      updateConfig(cfg)
-      followStageWindow(window)
-    }
-    else {
-      detachFromMain()
+    if (reusable.hasWindow()) {
+      const window = await reusable.getWindow()
+      if (followStagePosition) {
+        const rel = computeRelativeOffset(window)
+        const cfg = getConfig() ?? { followStagePosition, followStageVisibility, matrices: {} }
+        cfg.matrices[matrixHash] = { ...cfg.matrices[matrixHash], relativeToMain: rel }
+        updateConfig(cfg)
+        followStageWindow(window)
+      }
+      else {
+        detachFromMain()
+      }
     }
 
     const config = getConfig() ?? { followStagePosition, followStageVisibility, matrices: {} }
@@ -710,6 +747,8 @@ export function setupCaptionWindowManager(params: {
   }
 
   async function resetToSide() {
+    if (!reusable.hasWindow())
+      return
     const window = await reusable.getWindow()
     lastProgrammaticMoveAt = Date.now()
     const initialBounds = computeInitialCaptionBounds({ stageWindow: params.stageWindow })
@@ -732,7 +771,9 @@ export function setupCaptionWindowManager(params: {
     if (enabled === undefined) {
       if (isVisible()) {
         setCaptionVisibleState(false)
-        currentWindow?.hide()
+        if (currentWindow && !currentWindow.isDestroyed()) {
+          currentWindow.destroy()
+        }
       }
       else {
         setCaptionVisibleState(true)
@@ -757,7 +798,9 @@ export function setupCaptionWindowManager(params: {
     }
     else {
       setCaptionVisibleState(false)
-      currentWindow?.hide()
+      if (currentWindow && !currentWindow.isDestroyed()) {
+        currentWindow.destroy()
+      }
     }
   }
 
@@ -769,6 +812,8 @@ export function setupCaptionWindowManager(params: {
   }
 
   async function triggerMove(forcedDock?: 'top' | 'bottom') {
+    if (!reusable.hasWindow())
+      return
     const window = await reusable.getWindow()
     if (window.isDestroyed())
       return
@@ -791,6 +836,7 @@ export function setupCaptionWindowManager(params: {
 
   return {
     getWindow,
+    hasWindow: reusable.hasWindow,
     setFollowStagePosition,
     setFollowStageVisibility,
     getIsFollowingStagePosition,

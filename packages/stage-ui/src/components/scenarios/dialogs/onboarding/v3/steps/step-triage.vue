@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { Button } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
+import {
+  TooltipArrow,
+  TooltipContent,
+  TooltipPortal,
+  TooltipProvider,
+  TooltipRoot,
+  TooltipTrigger,
+} from 'reka-ui'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
@@ -50,6 +58,49 @@ const selectedPath = computed<'local' | 'cloud'>({
     draftStore.setArchitecture(val)
   },
 })
+
+const cloudFeatures = computed(() => [
+  {
+    key: 'storage',
+    icon: 'i-solar:cloud-storage-bold-duotone',
+    title: t('onboarding.steps.triage.cloud.features.storage.title', '10 GB Free Cloud Storage'),
+    summary: t('onboarding.steps.triage.cloud.features.storage.desc', 'Back up 3D models, custom backgrounds, and full memory vaults with zero egress fees.'),
+    howItWorks: t('onboarding.steps.triage.cloud.features.storage.howItWorks', 'Powered by user-owned Cloudflare R2 object storage.'),
+    whyItMatters: t('onboarding.steps.triage.cloud.features.storage.whyItMatters', 'Generous free tier with plenty of room for dozens of VRM/Live2D models and years of chat history. Unlike AWS S3, downloading your assets is 100% free with $0 bandwidth fees.'),
+  },
+  {
+    key: 'ai',
+    icon: 'i-solar:cpu-bolt-bold-duotone',
+    title: t('onboarding.steps.triage.cloud.features.ai.title', 'Free Daily Edge AI Credits'),
+    summary: t('onboarding.steps.triage.cloud.features.ai.desc', '10,000 free daily Neurons for DeepSeek, Qwen & Llama (no API key required).'),
+    howItWorks: t('onboarding.steps.triage.cloud.features.ai.howItWorks', 'Directly connects to Cloudflare Workers AI during Step 8 (Consciousness).'),
+    whyItMatters: t('onboarding.steps.triage.cloud.features.ai.whyItMatters', 'Chat immediately with cutting-edge open models at the edge without needing an OpenAI subscription, paid credit card, or a high-end local gaming GPU.'),
+  },
+  {
+    key: 'relay',
+    icon: 'i-solar:chat-round-dots-bold-duotone',
+    title: t('onboarding.steps.triage.cloud.features.relay.title', '24/7 Discord Cloud Relay'),
+    summary: t('onboarding.steps.triage.cloud.features.relay.desc', 'Keep your companion awake in your Discord server even when your PC is turned off.'),
+    howItWorks: t('onboarding.steps.triage.cloud.features.relay.howItWorks', 'Runs as a serverless Cloudflare Worker (@proj-airi/stage-edge) handling Discord interaction webhooks.'),
+    whyItMatters: t('onboarding.steps.triage.cloud.features.relay.whyItMatters', 'Your companion stays alive 24/7 to chat in Discord, stores context in Edge KV, and syncs conversations back to your desktop when you reopen AIRI.'),
+  },
+  {
+    key: 'sync',
+    icon: 'i-solar:devices-bold-duotone',
+    title: t('onboarding.steps.triage.cloud.features.sync.title', 'Multi-Device Sync & 1-Click Restore'),
+    summary: t('onboarding.steps.triage.cloud.features.sync.desc', 'Seamlessly sync Desktop, Web, and Mobile; restore companions in one click.'),
+    howItWorks: t('onboarding.steps.triage.cloud.features.sync.howItWorks', 'Edge Key Vault (airi-edge-vault) securely tracks your active companion state.'),
+    whyItMatters: t('onboarding.steps.triage.cloud.features.sync.whyItMatters', 'Reinstalling AIRI or moving to a new laptop/phone automatically brings back your companion, settings, and memories without manual key entry.'),
+  },
+  {
+    key: 'proxy',
+    icon: 'i-solar:shield-check-bold-duotone',
+    title: t('onboarding.steps.triage.cloud.features.proxy.title', 'Private CORS Proxy & Zero-Custody'),
+    summary: t('onboarding.steps.triage.cloud.features.proxy.desc', 'Access tricky local & remote AI APIs with 100% zero-custody data privacy.'),
+    howItWorks: t('onboarding.steps.triage.cloud.features.proxy.howItWorks', 'Deploys a personal edge reverse proxy to bypass browser CORS headers for Web & Mobile stages.'),
+    whyItMatters: t('onboarding.steps.triage.cloud.features.proxy.whyItMatters', 'Everything runs in your personal Cloudflare account. AIRI operates zero intermediate servers and never reads, stores, or harvests your conversations.'),
+  },
+])
 
 // Auto-switch to cloud and probe catalog if user is authenticated
 watch(isAuthenticated, async (authed) => {
@@ -487,10 +538,98 @@ async function handleRestoreAndBuildAnother() {
             </div>
           </div>
 
-          <!-- Unauthenticated Sign-in Module -->
+          <!-- 5 Feature Bullets with Hover Popovers (Always Visible) -->
+          <TooltipProvider :delay-duration="100">
+            <div :class="['space-y-1 pt-2 border-t border-neutral-100 dark:border-neutral-800/80 text-xs']">
+              <div
+                v-for="feature in cloudFeatures"
+                :key="feature.key"
+                :class="['w-full']"
+              >
+                <TooltipRoot>
+                  <TooltipTrigger as-child>
+                    <div
+                      :class="[
+                        'group flex items-start gap-2 p-1.5 -mx-1 rounded-lg transition-all cursor-help',
+                        'hover:bg-primary-500/10 dark:hover:bg-primary-400/10',
+                      ]"
+                    >
+                      <div :class="[feature.icon, 'text-primary-500 shrink-0 h-4 w-4 mt-0.5 group-hover:scale-110 transition-transform']" />
+                      <div :class="['flex-1 min-w-0 text-[11px] leading-tight']">
+                        <span :class="['font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors']">
+                          {{ feature.title }}:
+                        </span>
+                        <span :class="['text-neutral-600 dark:text-neutral-400 ml-1']">
+                          {{ feature.summary }}
+                        </span>
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipPortal>
+                    <TooltipContent
+                      side="right"
+                      :side-offset="12"
+                      :collision-padding="16"
+                      :class="[
+                        'z-50 max-w-xs sm:max-w-sm rounded-xl p-3.5 shadow-2xl text-xs backdrop-blur-xl',
+                        'bg-white/95 dark:bg-neutral-900/95 border border-primary-500/30 text-neutral-800 dark:text-neutral-200',
+                        'animate-in fade-in-0 zoom-in-95 duration-150',
+                      ]"
+                    >
+                      <div :class="['flex items-center gap-2 pb-2 mb-2 border-b border-neutral-200/80 dark:border-neutral-800']">
+                        <div :class="[feature.icon, 'text-primary-500 text-base shrink-0']" />
+                        <span :class="['font-bold text-neutral-900 dark:text-white text-xs']">
+                          {{ feature.title }}
+                        </span>
+                      </div>
+                      <div :class="['space-y-2 text-[11px] leading-relaxed']">
+                        <div>
+                          <span :class="['font-semibold text-primary-600 dark:text-primary-400']">How it works: </span>
+                          <span :class="['text-neutral-600 dark:text-neutral-300']">{{ feature.howItWorks }}</span>
+                        </div>
+                        <div>
+                          <span :class="['font-semibold text-emerald-600 dark:text-emerald-400']">Why it matters: </span>
+                          <span :class="['text-neutral-600 dark:text-neutral-300']">{{ feature.whyItMatters }}</span>
+                        </div>
+                      </div>
+                      <TooltipArrow :class="['fill-white dark:fill-neutral-900 stroke-primary-500/30']" />
+                    </TooltipContent>
+                  </TooltipPortal>
+                </TooltipRoot>
+              </div>
+            </div>
+          </TooltipProvider>
+        </div>
+
+        <!-- Bottom Action CTA / Auth Module Area -->
+        <div :class="['pt-3 mt-3 border-t border-neutral-100 dark:border-neutral-800/80']">
+          <!-- State A: Card is NOT selected -->
           <div
-            v-else-if="selectedPath === 'cloud'"
-            :class="['pt-2 border-t border-neutral-100 dark:border-neutral-800/80 space-y-2.5']"
+            v-if="selectedPath !== 'cloud'"
+            :class="[
+              'w-full py-2.5 rounded-xl text-xs font-semibold text-center transition-all flex items-center justify-center gap-2',
+              'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700',
+            ]"
+          >
+            <span>{{ t('onboarding.steps.triage.cloud.selectCta') }}</span>
+          </div>
+
+          <!-- State B: Card IS selected AND already Authenticated -->
+          <div
+            v-else-if="isAuthenticated"
+            :class="[
+              'w-full py-2.5 rounded-xl text-xs font-semibold text-center transition-all flex items-center justify-center gap-2',
+              'bg-emerald-600 text-white shadow-md shadow-emerald-600/25',
+            ]"
+          >
+            <div :class="['i-solar:check-circle-bold text-sm']" />
+            <span>{{ t('onboarding.steps.triage.cloud.selectedCta') }}</span>
+          </div>
+
+          <!-- State C: Card IS selected BUT NOT Authenticated (Docked Auth Form) -->
+          <div
+            v-else
+            :class="['space-y-2']"
             @click.stop
           >
             <!-- Tabs: 1-Click vs API Token -->
@@ -527,7 +666,7 @@ async function handleRestoreAndBuildAnother() {
                 type="button"
                 :disabled="isAuthenticating"
                 :class="[
-                  'w-full flex items-center justify-center gap-2 py-2 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer',
+                  'w-full flex items-center justify-center gap-2 py-2.5 rounded-xl bg-primary-600 hover:bg-primary-500 text-white text-xs font-semibold shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer',
                 ]"
                 @click="handleStartOAuth"
               >
@@ -536,7 +675,7 @@ async function handleRestoreAndBuildAnother() {
                 <span>{{ isAuthenticating ? t('onboarding.steps.triage.auth.verifying') : t('onboarding.steps.triage.auth.oauthButton') }}</span>
               </button>
               <p :class="['text-[10px] text-neutral-400 text-center leading-tight']">
-                Opens your default browser for PKCE authorization & Edge Vault pairing.
+                Opens your browser for PKCE authorization & Edge Vault pairing.
               </p>
             </div>
 
@@ -567,38 +706,6 @@ async function handleRestoreAndBuildAnother() {
                 Requires Workers KV and R2 read/write permissions.
               </p>
             </div>
-          </div>
-
-          <!-- Feature Bullets (When not showing auth form or unselected) -->
-          <div v-else :class="['space-y-2 pt-1 border-t border-neutral-100 dark:border-neutral-800/80 text-xs']">
-            <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
-              <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>{{ t('onboarding.steps.triage.cloud.features.f1') }}</span>
-            </div>
-            <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
-              <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>{{ t('onboarding.steps.triage.cloud.features.f2') }}</span>
-            </div>
-            <div :class="['flex items-center gap-2 text-neutral-700 dark:text-neutral-300']">
-              <div :class="['i-solar:check-circle-bold text-sm text-primary-500 shrink-0']" />
-              <span>{{ t('onboarding.steps.triage.cloud.features.f3') }}</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Bottom Action CTA -->
-        <div :class="['pt-4 mt-4 border-t border-neutral-100 dark:border-neutral-800/80']">
-          <div
-            :class="[
-              'w-full py-2.5 rounded-xl text-xs font-semibold text-center transition-all flex items-center justify-center gap-2',
-              selectedPath === 'cloud'
-                ? isAuthenticated
-                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
-                  : 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
-                : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-700',
-            ]"
-          >
-            <span>{{ selectedPath === 'cloud' ? (isAuthenticated ? t('onboarding.steps.triage.cloud.selectedCta') : t('onboarding.steps.triage.cloud.selectedCta')) : t('onboarding.steps.triage.cloud.selectCta') }}</span>
           </div>
         </div>
       </div>

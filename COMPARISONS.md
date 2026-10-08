@@ -29,13 +29,13 @@
 | :--- | :---: | :---: | :---: | :---: | :---: | :--- |
 | **AITuberKit** | ◐ WebSocket event abort | ◐ External Server / Cloud | ❌ | ❌ | **10** (VOICEVOX, Aivis, Style-Bert, GSVI, ElevenLabs, OpenAI, Azure, Google, Cartesia) | Local Server Daemon + Cloud API |
 | **Amica** | ✅ Silero VAD with abort | ◐ Cloud API Only (ElevenLabs) | ❌ | ❌ | **6 (+1 RVC)** (ElevenLabs, OpenAI, Coqui, Piper, Kokoro, SpeechT5 + RVC filter) | Cloud API + Local Conversion Filter |
-| **dasilva333/airi** (This Fork) | ✅ Silero VAD + token flush | ✅ Built-in In-Engine Studio | ✅ Kokoro, Pocket-TTS, MOSS | ✅ Thinking fillers & asides | **23** (Kokoro, Pocket, MOSS, ElevenLabs, Polly, Azure, vLLM, CosyVoice, Gemini, Grok, etc.) | In-Process WebGPU/WASM + Local Server + Cloud |
+| **dasilva333/airi** (This Fork) | ✅ Silero VAD + token flush | ✅ In-Process Reference Cloning (Pocket, MOSS) | ✅ Kokoro, Pocket-TTS, MOSS | ✅ Thinking fillers & asides | **23** (Kokoro, Pocket, MOSS, ElevenLabs, Polly, Azure, vLLM, CosyVoice, Gemini, Grok, etc.) | In-Process WebGPU/WASM + Local Server + Cloud |
 | **Komorebi** | ◐ Sequential turn queue | ❌ (Fixed Models) | ❌ | ❌ | **2** (Piper ONNX offline, GPT-SoVITS HTTP client) | Local In-Process Engine (Fixed) |
 | **NekoGPT** | ◐ Sequential turn queue | ◐ External Server / Cloud | ❌ | ❌ | **10** (Piper, Kokoro, S2Cpp, OmniVoice, Fish, ElevenLabs, Fish Cloud, Azure, Google, Web Speech) | Local Server Daemon + Cloud API |
 | **Open-LLM-VTuber** | ◐ WebSocket VAD interrupt | ◐ External Server / Cloud | ❌ | ❌ | **19** (Azure, Bark, Edge, pyttsx3, CosyVoice 1/2, Melo, XTTS, GPT-SoVITS, Coqui, Fish, MiniMax, Piper, etc.) | Local Server Daemon + Cloud API |
 | **Project N.E.K.O.** | ◐ Async break | ◐ External Server / Cloud | ❌ | ❌ | **11** (GPT-SoVITS v3, vLLM-Omni, MiniMax, ElevenLabs, CosyVoice, MIMO, Doubao, Gemini, Grok, StepFun) | Local Server Daemon + Cloud API |
 | **Soul of Waifu** | ◐ Python VAD thread | ❌ (Requires RVC Filter) | ❌ | ❌ | **2 (+1 RVC)** (Edge-TTS, Coqui TTS + RVC v2 post-processing filter) | Local Conversion Filter + Cloud TTS |
-| **Upstream AIRI** | ✅ Real-time VAD interrupt | ❌ (Fixed Models) | ✅ Kokoro-WebGPU | ❌ | **8** (Web Speech, Kokoro, OpenAI, ElevenLabs, Azure, VOICEVOX, AivisSpeech, OpenAI-compatible) | In-Process WebGPU (Fixed) + Cloud |
+| **Upstream AIRI** | ✅ Real-time VAD interrupt | ❌ (Fixed Models) | ✅ Kokoro-WebGPU | ❌ | **14** (Web Speech, Kokoro, OpenAI, ElevenLabs, Azure, VOICEVOX, Aivis, Gemini, Apple Speech, Aliyun NLS, etc.) | In-Process WebGPU (Fixed) + Cloud |
 | **Utsuwa** | ❌ (Push-to-talk default) | ◐ External Server (OmniVoice) | ❌ | ❌ | **4** (ElevenLabs, OpenAI TTS, local-tts localhost HTTP, OmniVoice local proxy) | Local Server Daemon + Cloud API |
 | **VPet** | ❌ (Batch audio playback) | ❌ (Fixed SAPI Models) | ❌ | ❌ | **2 (+RVC Plugins)** (Windows SAPI, Edge-TTS + community modded plugins) | Native OS Engine + Modded Plugins |
 
@@ -49,13 +49,13 @@
 | :--- | :---: | :--- | :---: | :---: | :---: | :--- |
 | **AITuberKit** | ❌ (External Dify UI) | Flat context window / external Dify | ◐ Random chatter loop | ❌ | ❌ Single turn | User-managed local browser storage |
 | **Amica** | ❌ (Browser storage inspector) | Flat sliding context window | ◐ Idle secondary gesture timer | ❌ (Manual webcam) | ❌ Single turn | User-managed IndexedDB storage |
-| **dasilva333/airi** (This Fork) | ✅ Dedicated 4-Quadrant Hub | 4-Tier Hierarchy (STMM + LTMM + Lifetime + Echoes) | ✅ Ambient proactivity (`NO_REPLY`) | ✅ Cascaded Salience Gating (OCR/VLM) | ✅ 10-Step Auditable Loop + MCP | BYOS (User S3 / Cloudflare R2 / KV Sync) |
+| **dasilva333/airi** (This Fork) | ✅ Dedicated 4-Quadrant Hub | 4-Tier Hierarchy (STMM + LTMM + Lifetime + Echoes) | ✅ Ambient proactivity (`NO_REPLY`, nan0 heartbeat) | ✅ Cascaded Salience Gating (OCR/VLM) | ✅ Bounded Tool Loop (maxSteps: 10) + text_journal & MCP | BYOS (User S3 / Cloudflare R2 / KV Sync, Zero Accounts) |
 | **Komorebi** | ❌ | Single-tier SQLite FTS5 store | ◐ `proactive.rs` topic initiator | ✅ `xcap` window/desktop capture | ✅ Rust `tool_loop.rs` + `enigo` automation | 100% Local SQLite files |
 | **NekoGPT** | ❌ | 2-Phase SQLite cache with worker sync | ❌ | ❌ | ✅ 4-Step bounded tool loop | Local SQLite databases |
 | **Open-LLM-VTuber** | ❌ | Letta (MemGPT) archival daemon | ❌ | ◐ BrowserBase automated browsing | ◐ Supported (Subject to schema bugs) | Local SQLite / Letta daemon state |
 | **Project N.E.K.O.** | ✅ Web `/memory` CRUD Table | 5-Layer Cognitive Model (Working, Recent, Facts, etc.) | ◐ Timer-based proactive interrupt | ✅ Desktop screen capture + OCR/VLM | ✅ ZeroMQ agent daemon + computer use | Local SQLite databases (`time_indexed.db`) |
 | **Soul of Waifu** | ❌ | Single-tier ChromaDB vector store | ❌ | ❌ | ❌ Single turn | Local ChromaDB vector storage |
-| **Upstream AIRI** | ❌ | In-progress daily summaries | ❌ | ❌ | ◐ Basic tool loop | Local IndexedDB storage |
+| **Upstream AIRI** | ❌ | In-progress daily summaries | ◐ Post-turn AA / Timer | ❌ | ✅ Computer-use MCP service | Account-based cloud sync (remote DB replica) |
 | **Utsuwa** | ❌ | Single-tier local vector store | ❌ | ❌ | ❌ Single turn | Manual JSON file import / export |
 | **VPet** | ❌ (Save file editing) | Rolling JSON / Tamagotchi state (.lps) | ◐ Tamagotchi hunger/stat alerts | ❌ | ❌ Single turn | Steam Cloud save sync |
 
@@ -69,13 +69,13 @@
 | :--- | :--- | :---: | :---: | :---: | :--- |
 | **AITuberKit** | VRM 0.0/1.0, Live2D, MotionPNGTuber | ❌ | ❌ | ❌ | Next.js Web / Custom Source-Available (v2.0+) |
 | **Amica** | 3D VRM (0.0 / 1.0) | ❌ | ❌ | ❌ | MIT Open Source · Web / Tauri |
-| **dasilva333/airi** (This Fork) | VRM 0.0/1.0, Live2D, Spine 2D, MMD | ✅ (`<\|ACTOR\|>` tokens) | ✅ Text-to-VRMA Diffusion | ✅ V-HACK / God Mode / Texture Forge | MIT Open Source · Electron Desktop / Web |
+| **dasilva333/airi** (This Fork) | VRM 0.0/1.0, Live2D, Spine 2D, MMD, Unity Stage-Mate C# | ✅ (`<\|ACTOR\|>` tokens) | ✅ Text-to-VRMA Diffusion | ✅ V-HACK Avatar Studio (Mesh & AI Textures) | MIT Open Source · Electron Desktop / Web |
 | **Komorebi** | Live2D Cubism | ❌ | ❌ | ❌ | Open Source · Tauri 2 / Rust Desktop |
 | **NekoGPT** | Live2D Cubism | ❌ | ❌ | ❌ | Commercial Steam Product (`Shinobu`) |
 | **Open-LLM-VTuber** | Live2D, VRM | ❌ | ❌ | ❌ | MIT Open Source · Python Backend + Web/Desktop Client |
 | **Project N.E.K.O.** | VRM, Live2D, MMD | ❌ | ❌ | ❌ | Free-to-Play Steam Product + Python Core |
 | **Soul of Waifu** | Live2D, VRM | ❌ | ❌ | ❌ | Open Source · Bundled RAR Release |
-| **Upstream AIRI** | VRM 0.0/1.0, Live2D | ❌ | ❌ | ❌ | MIT Open Source · Electron Desktop / Web |
+| **Upstream AIRI** | VRM 0.0/1.0, Live2D, Spine, MMD, Tachie / PNGTuber, Godot VRM 0.x | ❌ | ❌ | ❌ | MIT Open Source · Electron Desktop / Web |
 | **Utsuwa** | 3D VRM (0.0 / 1.0) | ❌ | ❌ | ❌ | GNU AGPL-3.0 · Tauri Desktop / Web |
 | **VPet** | Win32 Sprites, GIF, Spine | ❌ | ❌ | ❌ | Open Source · Steam Workshop Ecosystem |
 
@@ -98,7 +98,7 @@ Every companion in this ecosystem was built to solve a specific problem. Underst
 ### 🎭 Project N.E.K.O.
 - **Where it shines:** Desktop OS task automation and database transparency. Features an active web-based CRUD table for direct inspection, search, and deletion of live SQLite memory rows, alongside an agent server for real-time computer use and desktop screen perception.
 - **Architectural trade-off:** Requires coordinating a multi-process stack (Steam client, Python environment, background brokers, and local GPT-SoVITS daemons), with voice conditioning dependent on external server processes.
-- **How AIRI Approaches This:** While N.E.K.O. provides a web table over raw SQLite rows, AIRI provides **4 dedicated CRUD management hubs** across each temporal tier (Daily Summaries, Sacred Journal, Lifetime Artifacts, Echoes) with live reactive token telemetry. For desktop perception, AIRI deploys a **Cascaded Salience Gate** (lightweight OCR vs. Moondream2 VLM caching) to sample frames only on meaningful display changes rather than continuous raw frame ingestion, backed by an auditable 10-step desktop automation loop.
+- **How AIRI Approaches This:** While N.E.K.O. provides a web table over raw SQLite rows, AIRI provides **4 dedicated CRUD management hubs** across each temporal tier (Daily Summaries, Sacred Journal, Lifetime Artifacts, Echoes) with live reactive token telemetry. For desktop perception, AIRI deploys a **Cascaded Salience Gate** (lightweight OCR vs. Moondream2 VLM caching) to sample frames only on meaningful display changes rather than continuous raw frame ingestion, backed by a bounded tool-calling loop (`maxSteps: 10`) featuring native `text_journal` semantic RAG, toggleable `image_journal` context management, and per-character MCP tool visibility scoping.
 
 ### 🎙️ Open-LLM-VTuber
 - **Where it shines:** Unmatched speech-provider breadth. Integrates 19 distinct individual synthesis engines (spanning CosyVoice, MeloTTS, Sherpa-ONNX, XTTS-v2, and Cartesia), making it the premier multi-engine voice testbed for VTuber streaming setups.
@@ -128,15 +128,18 @@ Every companion in this ecosystem was built to solve a specific problem. Underst
 ### 🌸 Soul of Waifu
 - **Where it shines:** Turnkey bundled neural voice conversion. Ships with an integrated RVC v2 pipeline, allowing users to apply custom voice timbre transfer across diverse models without manual audio routing.
 - **Architectural trade-off:** Conversational flow is limited to single-turn request loops, and voice customization relies on post-processing audio conversion passes that add latency rather than direct speech parameter control.
-- **How AIRI Approaches This:** Soul of Waifu uses an external RVC model to resynthesize voice timbre; AIRI integrates an in-engine **DSP Audio Studio** that applies real-time formant shifting, pitch adjustment, parametric EQ, speed, and spatial effects across *all* integrated speech providers—paired with one-click AI voice tailoring that automatically tunes preset parameters to match the character's exact personality.
+- **How AIRI Approaches This:** Soul of Waifu uses an external RVC model to resynthesize voice timbre; AIRI integrates an in-engine **Audio Effects Studio** that applies real-time modular presets—Cathedral reverberation, Robotic droid comb filtering, ASMR warmth, Retro radio filters, stereo spatial panning, and playback speed/pitch tuning across *all* integrated speech providers—paired with hot-reloaded phonetic string substitution for names and jargon.
 
 ### 🌱 Upstream AIRI (`moeru-ai/airi`)
-- **Where it shines:** Turnkey setup convenience. Upstream makes it effortless to get started: users can enter a payment card via Stripe to access pre-configured hosted cloud models, bypassing the friction of sourcing API keys, picking models, or configuring compatible providers across all 5 senses.
-- **Architectural trade-off:** Steers toward a centralized hosted subscription model with prepaid credit proxies, routing chat and vision through an opaque auto-gateway where the operator chooses the underlying model.
-- **How AIRI Approaches This:** Upstream optimizes for commercial cloud convenience; this fork optimizes for **user-first sovereignty with portable profiles**. AIRI provides support for all 5 senses (chat, vision, speech, transcription, and motion) as local, offline-capable models—paired with a free-tier catalog initiative for setup convenience without cloud lock-in or subscription paywalls.
+- **Where it shines:** Turnkey commercial setup convenience, diverse embodiment (VRM, Live2D, Spine, MMD, Tachie / PNGTuber, Godot VRM 0.x sidecar), and computer-use MCP automation. Users can enter a payment card via Stripe to access pre-configured hosted cloud models, bypassing the friction of sourcing API keys.
+- **Architectural trade-off:** Steers toward a centralized hosted subscription model with prepaid credit proxies and account-based cloud sync, moving away from offline-first local custody toward hosted infrastructure.
+- **How AIRI Approaches This:** Upstream optimizes for commercial cloud convenience; this fork optimizes for **user-first sovereignty and local execution with portable profiles**. AIRI provides support for all 5 senses as local, offline-capable models, paired with:
+  - **Live Free-Tier Catalog**: Built-in catalog with quick-add providers, inline connection testing, and model discovery without cloud subscriptions.
+  - **Root Launcher Accessibility**: Bundled root `.bat` and `.sh` convenience launchers so non-technical users can `git clone` and launch immediately with one click.
+  - **BYOS Sovereignty**: Zero online accounts; backup and sync directly to user-owned S3, Cloudflare R2, or KV storage.
 
 ### 💫 AIRI (`dasilva333/airi`)
-- **Where it shines:** Deep multimodal integration and user-first custody. Features 3 in-process WebGPU/WASM neural speech engines running offline without background server daemons, a built-in reference voice cloning studio, 4-tier temporal memory (daily episodic summaries, immutable narrative journal, lifetime relational thread, and subconscious echo chips), an Autonomous Visual Director, and in-engine avatar customization.
+- **Where it shines:** Deep multimodal integration, user-first custody, and zero-friction accessibility. Features 3 in-process WebGPU/WASM neural speech engines running offline without background server daemons, reference voice cloning, 4-tier temporal memory (`text_journal` semantic RAG + System 1 nan0 consciousness + Lifetime artifacts + Echoes), context-toggleable `image_journal` (preventing prompt pollution), per-character MCP tool scoping, an Autonomous Visual Director, the Stage-Mate Unity companion with tactile window physics, and bundled one-click root launchers.
 - **Trade-off:** The sheer breadth of the runtime creates a steeper initial learning curve and higher configuration surface than single-purpose desktop pets or web-only viewers.
 
 ---

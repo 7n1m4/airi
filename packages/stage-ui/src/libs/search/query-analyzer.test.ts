@@ -148,4 +148,65 @@ describe('query-analyzer', () => {
       expect(q1.choice).toBe('c4_literal')
     })
   })
+
+  describe('decomposeQuery', () => {
+    it('decomposes bridge query with "X for the room where I found Y"', async () => {
+      const { decomposeQuery } = await import('./query-analyzer')
+      const sub = decomposeQuery('What was the door code for the room where I found the expired sardines?')
+      expect(sub.length).toBeGreaterThanOrEqual(2)
+      expect(sub.some(s => s.toLowerCase().includes('expired sardines'))).toBe(true)
+      expect(sub.some(s => s.toLowerCase().includes('door code'))).toBe(true)
+    })
+
+    it('decomposes multi-entity query with "two different X, and which Y"', async () => {
+      const { decomposeQuery } = await import('./query-analyzer')
+      const sub = decomposeQuery('What were the two different access pin codes I used at NERV, and which door did each one unlock?')
+      expect(sub.length).toBeGreaterThanOrEqual(2)
+      expect(sub.some(s => s.toLowerCase().includes('pin code') || s.toLowerCase().includes('access'))).toBe(true)
+      expect(sub.some(s => s.toLowerCase().includes('door') || s.toLowerCase().includes('unlock'))).toBe(true)
+    })
+
+    it('decomposes temporal sequence query with "before or after"', async () => {
+      const { decomposeQuery } = await import('./query-analyzer')
+      const sub = decomposeQuery('Did we sneak into the cafeteria storage before or after the ramen contest where I hid the pork belly?')
+      expect(sub.length).toBeGreaterThanOrEqual(2)
+      expect(sub.some(s => s.toLowerCase().includes('cafeteria storage'))).toBe(true)
+      expect(sub.some(s => s.toLowerCase().includes('ramen contest') || s.toLowerCase().includes('pork belly'))).toBe(true)
+    })
+
+    it('decomposes identity question with "Who or what is X and when"', async () => {
+      const { decomposeQuery } = await import('./query-analyzer')
+      const sub = decomposeQuery('Who or what is \'Asukee\', and when did I first introduce her to you?')
+      expect(sub.some(s => s.toLowerCase().includes('asukee'))).toBe(true)
+    })
+
+    it('skips decomposition when triage marks query as single_atomic with low decomposition need', async () => {
+      const { decomposeQuery } = await import('./query-analyzer')
+      const sub = decomposeQuery('What color is your plugsuit?', {
+        category: 4,
+        choice: 'c4_literal',
+        confidence: 0.9,
+        temporalSubtype: 'none',
+        searchScope: 'single_session',
+        conjunctionStructure: 'single_atomic',
+        requiresDecomposition: 0.05,
+      })
+      expect(sub).toEqual(['What color is your plugsuit?'])
+    })
+
+    it('populates conjunctionStructure and requiresDecomposition in heuristicTriage', async () => {
+      const { heuristicTriage } = await import('./query-analyzer')
+      const t1 = heuristicTriage('What was the door code for the room where I found the expired sardines?')
+      expect(t1.conjunctionStructure).toBe('bridge_relational')
+      expect(t1.requiresDecomposition).toBeGreaterThanOrEqual(0.7)
+
+      const t2 = heuristicTriage('Did we sneak into cafeteria before or after ramen contest?')
+      expect(t2.conjunctionStructure).toBe('temporal_comparison')
+      expect(t2.requiresDecomposition).toBeGreaterThanOrEqual(0.8)
+
+      const t3 = heuristicTriage('What color is your plugsuit?')
+      expect(t3.conjunctionStructure).toBe('single_atomic')
+      expect(t3.requiresDecomposition).toBeLessThanOrEqual(0.2)
+    })
+  })
 })

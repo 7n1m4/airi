@@ -95,4 +95,15 @@ export const MODEL_VRAM_ESTIMATES: Record<string, number> = {
 
   // MOSS TTS Nano (fp32 weights + split ONNX graphs + OPFS blobs)
   'moss-tts-nano': 400 * 1024 * 1024, // ~400 MB
+
+  // Laya System-1 ModernBERT ONNX — WASM heap backing, freed by worker terminate
+  'laya-int8': 500 * 1024 * 1024, // ~500 MB (424MB weights + arena)
+  'laya-fp16': 1000 * 1024 * 1024, // ~1 GB (843MB weights + arena)
+}
+
+// Phase 0D: this module owns WebGPU device allocators and VRAM priority
+// queues — native memory that cannot be hot-swapped. Force a clean window
+// reload instead of re-evaluating allocators mid-session. No-op in production.
+if (import.meta.hot) {
+  import.meta.hot.invalidate('WebGPU coordinator HMR hard reload')
 }

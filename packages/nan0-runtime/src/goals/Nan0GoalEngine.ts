@@ -257,6 +257,10 @@ export function evaluateEmotionDrivenGoalFormation(input: {
   return { goals, formed, committed, progressed: [], stalled: [], abandoned: [], internalObservations: [] }
 }
 
+function hasNegation(text: string): boolean {
+  return /\b(?:not|no|haven't|didn't|never|cannot|failed|won't)\b/i.test(text)
+}
+
 function directionTerms(goal: Readonly<Nan0Goal>): Set<string> {
   return new Set(`${goal.title} ${goal.description} ${goal.motivation}`.toLowerCase().match(/[a-z0-9]{5,}/g) ?? [])
 }
@@ -269,7 +273,7 @@ export function updateGoalProgressFromObservation(input: {
   const text = typeof input.observation.content === 'string' ? input.observation.content.toLowerCase() : ''
   const progressed: Nan0Goal[] = []
   const goals = input.goals.map((goal) => {
-    if (goal.status !== 'active' || !text)
+    if (goal.status !== 'active' || !text || hasNegation(text))
       return normalizeNan0Goal(goal)
     const terms = directionTerms(goal)
     const overlap = [...terms].filter(term => text.includes(term)).length

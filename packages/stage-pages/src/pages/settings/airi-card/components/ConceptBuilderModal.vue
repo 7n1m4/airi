@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { StageBackgroundDialogPicker } from '@proj-airi/stage-ui/components/scenarios/dialogs/stage-background-picker'
 import { useIdleAnimations } from '@proj-airi/stage-ui/composables'
 import { useBackgroundStore } from '@proj-airi/stage-ui/stores/background'
 import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
@@ -85,9 +86,11 @@ watch(selectedModelId, async (newId) => {
   const modelType = model.format.toLowerCase()
   const displayType = modelType.includes('live2d') ? 'live2d' : (modelType === 'vrm' ? 'vrm' : (modelType.includes('spine') ? 'spine' : 'mmd'))
 
-  caps.expressions.forEach((name) => {
-    list.push({ key: name, name, type: displayType })
-  })
+  for (const item of (caps.expressionCapabilities || [])) {
+    if (item.usable) {
+      list.push({ key: item.rawKey, name: item.label || item.rawKey, type: displayType })
+    }
+  }
   availableExpressions.value = list
 }, { immediate: true })
 
@@ -191,6 +194,7 @@ const showVoiceCreator = ref(false)
 
 // Scene Overrides
 const selectedBackgroundId = ref<string>('inherit')
+const scenePickerOpen = ref(false)
 
 // Director status (determines if Scene tab is functional)
 const isDirectorActive = computed(() => {
@@ -963,36 +967,92 @@ function handleClone() {
             </div>
 
             <!-- Background Selector -->
-            <div class="flex flex-col gap-2" :class="{ 'pointer-events-none opacity-40': isDirectorActive }">
-              <label class="text-sm text-neutral-700 font-bold dark:text-neutral-300">Stage Background</label>
+            <div class="flex flex-col gap-3" :class="{ 'pointer-events-none opacity-40': isDirectorActive }">
+              <div class="flex items-center justify-between">
+                <label class="text-sm text-neutral-700 font-bold dark:text-neutral-300">Stage Background Override</label>
+                <div class="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon="i-solar:gallery-wide-linear"
+                    label="Open Scene Gallery"
+                    @click="scenePickerOpen = true"
+                  />
+                  <Button
+                    v-if="selectedBackgroundId !== 'inherit'"
+                    size="sm"
+                    variant="ghost"
+                    icon="i-solar:restart-linear"
+                    label="Reset to Inherit"
+                    @click="selectedBackgroundId = 'inherit'"
+                  />
+                </div>
+              </div>
+
               <Select v-model="selectedBackgroundId" :options="backgroundOptions" />
               <p class="text-[10px] text-neutral-500 italic">
-                Choose a background from your gallery. Add more via the Image Gallery.
+                Choose a background from your gallery or click "Open Scene Gallery" to visually browse and preview.
               </p>
-            </div>
 
-            <!-- Background Preview -->
-            <div v-if="selectedBackgroundId !== 'inherit'" class="mt-2">
-              <div
-                v-if="backgroundStore.getBackgroundUrl(selectedBackgroundId)"
-                class="overflow-hidden border border-neutral-200 rounded-xl shadow-sm dark:border-neutral-700"
-              >
-                <img
-                  :src="backgroundStore.getBackgroundUrl(selectedBackgroundId)!"
-                  :alt="backgroundOptions.find(o => o.value === selectedBackgroundId)?.label || 'Preview'"
-                  class="h-40 w-full object-cover"
+              <!-- Background Preview -->
+              <div v-if="selectedBackgroundId !== 'inherit'" class="mt-1">
+                <div
+                  v-if="backgroundStore.getBackgroundUrl(selectedBackgroundId)"
+                  class="group relative h-48 overflow-hidden border border-neutral-200 rounded-xl shadow-sm dark:border-neutral-700"
                 >
-                <div class="bg-neutral-50/80 px-3 py-2 dark:bg-black/30">
-                  <p class="truncate text-[10px] text-neutral-500 font-medium">
-                    {{ backgroundOptions.find(o => o.value === selectedBackgroundId)?.label }}
+                  <img
+                    :src="backgroundStore.getBackgroundUrl(selectedBackgroundId)!"
+                    :alt="backgroundOptions.find(o => o.value === selectedBackgroundId)?.label || 'Preview'"
+                    class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  >
+                  <div class="absolute bottom-0 left-0 right-0 flex items-center justify-between bg-black/60 px-3 py-2 backdrop-blur-sm">
+                    <p class="truncate text-xs text-white/90 font-medium">
+                      {{ backgroundOptions.find(o => o.value === selectedBackgroundId)?.label }}
+                    </p>
+                    <button
+                      type="button"
+                      class="flex items-center gap-1 rounded bg-white/20 px-2 py-1 text-[10px] text-white hover:bg-white/30"
+                      @click="scenePickerOpen = true"
+                    >
+                      <div class="i-solar:pen-linear text-xs" />
+                      Change
+                    </button>
+                  </div>
+                </div>
+                <div v-else class="border border-neutral-200 rounded-xl border-dashed bg-neutral-50/50 p-6 text-center dark:border-neutral-700 dark:bg-black/20">
+                  <div class="i-solar:gallery-broken mx-auto mb-2 text-2xl text-neutral-300" />
+                  <p class="text-xs text-neutral-400">
+                    Preview unavailable — background may still be loading.
                   </p>
                 </div>
               </div>
-              <div v-else class="border border-neutral-200 rounded-xl border-dashed bg-neutral-50/50 p-6 text-center dark:border-neutral-700 dark:bg-black/20">
-                <div class="i-solar:gallery-broken mx-auto mb-2 text-2xl text-neutral-300" />
-                <p class="text-xs text-neutral-400">
-                  Preview unavailable — background may still be loading.
-                </p>
+
+              <!-- Inherit Indicator Card -->
+              <div
+                v-else
+                class="flex cursor-pointer items-center justify-between border border-neutral-200 rounded-xl border-dashed bg-neutral-50/50 p-4 transition-colors dark:border-neutral-800 dark:bg-neutral-900/30 hover:bg-neutral-100/50 dark:hover:bg-neutral-800/30"
+                @click="scenePickerOpen = true"
+              >
+                <div class="flex items-center gap-3">
+                  <div class="h-10 w-10 flex items-center justify-center rounded-lg bg-neutral-200 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400">
+                    <div class="i-solar:restart-bold-duotone text-xl" />
+                  </div>
+                  <div>
+                    <div class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
+                      Inherit Default Stage Scene
+                    </div>
+                    <div class="text-[10px] text-neutral-400">
+                      No override assigned. Uses the character's base stage background.
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  label="Select Override"
+                  icon="i-solar:gallery-linear"
+                  @click.stop="scenePickerOpen = true"
+                />
               </div>
             </div>
           </div>
@@ -1044,5 +1104,17 @@ function handleClone() {
       selectedSpeechModel = payload.baseModel
       selectedSpeechVoiceId = payload.baseVoice
     }"
+  />
+
+  <!-- Stage Background Dialog Picker -->
+  <StageBackgroundDialogPicker
+    v-model="scenePickerOpen"
+    v-model:selected-id="selectedBackgroundId"
+    allow-inherit
+    :auto-apply="false"
+    close-on-pick
+    title="Select Concept Stage Scene"
+    subtitle="Choose an override background scene for this concept manifestation."
+    @pick="selectedBackgroundId = $event"
   />
 </template>

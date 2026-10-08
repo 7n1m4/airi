@@ -18,14 +18,41 @@ export interface McpCallToolResult {
   isError?: boolean
 }
 
-export interface McpServerRuntimeStatus {
-  name: string
-  state: 'running' | 'stopped' | 'error'
-  command: string
-  args: string[]
-  pid: number | null
-  lastError?: string
+export interface McpHttpServerConfig {
+  url: string
+  headers?: Record<string, string>
+  enabled?: boolean
 }
+
+export type McpServerConfig = McpStdioServerConfig | McpHttpServerConfig
+
+export interface McpConfigFile {
+  mcpServers: Record<string, McpServerConfig>
+}
+
+// Backwards compatibility alias
+export type McpStdioConfigFile = McpConfigFile
+
+export type McpServerRuntimeStatus
+  = | {
+    name: string
+    state: 'running' | 'stopped' | 'error'
+    transport?: 'stdio'
+    command: string
+    args: string[]
+    pid: number | null
+    lastError?: string
+  }
+  | {
+    name: string
+    state: 'running' | 'stopped' | 'error'
+    transport: 'http'
+    url: string
+    lastError?: string
+    command?: never
+    args?: never
+    pid?: null
+  }
 
 export interface McpRuntimeStatus {
   path: string
@@ -39,10 +66,6 @@ export interface McpStdioServerConfig {
   env?: Record<string, string>
   cwd?: string
   enabled?: boolean
-}
-
-export interface McpStdioConfigFile {
-  mcpServers: Record<string, McpStdioServerConfig>
 }
 
 export interface McpToolBridge {
@@ -80,6 +103,7 @@ export async function ensureMcpServersForAllowedTools(allowedTools: string[] | u
           env: {
             DEFAULT_SEARCH_ENGINE: 'duckduckgo',
             SEARCH_MODE: 'auto',
+            MODE: 'stdio',
           },
           enabled: true,
         }
@@ -87,13 +111,15 @@ export async function ensureMcpServersForAllowedTools(allowedTools: string[] | u
       }
       else {
         const existing = servers['open-websearch']
-        const currentEnv = existing.env || {}
+        const currentEnv = ('env' in existing ? existing.env : undefined) || {}
         if (existing.enabled === false || !currentEnv.DEFAULT_SEARCH_ENGINE) {
           servers['open-websearch'] = {
             ...existing,
+            command: 'command' in existing ? existing.command : 'npx',
             env: {
               DEFAULT_SEARCH_ENGINE: 'duckduckgo',
               SEARCH_MODE: 'auto',
+              MODE: 'stdio',
               ...currentEnv,
             },
             enabled: true,

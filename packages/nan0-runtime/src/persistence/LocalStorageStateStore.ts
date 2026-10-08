@@ -89,13 +89,13 @@ export function mergeNan0States(
       internalObservations: normalizeInternalObservationQueue(candidate.internalObservations),
       heartbeat: normalizeHeartbeatRuntimeState(candidate.heartbeat),
       cognitionPolicy: normalizeCognitionPolicyIdentity(candidate.cognitionPolicy, candidate.createdAt),
-      thoughts: mergeNan0Thoughts([], candidate.thoughts),
-      decisions: mergeNan0Decisions([], candidate.decisions),
+      thoughts: mergeNan0Thoughts([], candidate.thoughts).slice(-50),
+      decisions: mergeNan0Decisions([], candidate.decisions).slice(-50),
       goals: mergeNan0Goals([], candidate.goals),
       pendingIntentions: normalizePendingIntentionState(candidate.pendingIntentions, candidate.createdAt),
-      computations: mergeComputationAttempts([], candidate.computations),
+      computations: mergeComputationAttempts([], candidate.computations).slice(-50),
       actionIntents: mergeActionIntents([], candidate.actionIntents),
-      turns: normalizeConversationTurns(candidate.turns),
+      turns: normalizeConversationTurns(candidate.turns).slice(-50),
       timeline: normalizeTimelineState(candidate.timeline),
       temporal: normalizeTemporalState(candidate.temporal, clock, candidate.createdAt),
       continuity: normalizeContinuityState(candidate.continuity),
@@ -103,6 +103,10 @@ export function mergeNan0States(
     }
   }
 
+  // NOTICE: memories were the one unbounded array in kernel state (thoughts/
+  // decisions/turns are sliced to 50). Cap to the most recent 200 so
+  // localStorage JSON + structuredClone per turn cannot grow with lifetime use.
+  const MAX_PERSISTED_MEMORIES = 200
   const memories = [...persisted.memories]
   const persistedMemoryIds = new Set(memories.map(memory => memory.id))
   for (const memory of candidate.memories) {
@@ -111,6 +115,8 @@ export function mergeNan0States(
       persistedMemoryIds.add(memory.id)
     }
   }
+  while (memories.length > MAX_PERSISTED_MEMORIES)
+    memories.shift()
 
   return {
     ...candidate,
@@ -141,13 +147,13 @@ export function mergeNan0States(
       },
     },
     memories,
-    thoughts: mergeNan0Thoughts(persisted.thoughts, candidate.thoughts),
-    decisions: mergeNan0Decisions(persisted.decisions, candidate.decisions),
+    thoughts: mergeNan0Thoughts(persisted.thoughts, candidate.thoughts).slice(-50),
+    decisions: mergeNan0Decisions(persisted.decisions, candidate.decisions).slice(-50),
     goals: mergeNan0Goals(persisted.goals, candidate.goals),
     pendingIntentions: mergePendingIntentionStates(persisted.pendingIntentions, candidate.pendingIntentions, Math.min(persisted.createdAt, candidate.createdAt)),
-    computations: mergeComputationAttempts(persisted.computations, candidate.computations),
+    computations: mergeComputationAttempts(persisted.computations, candidate.computations).slice(-50),
     actionIntents: mergeActionIntents(persisted.actionIntents, candidate.actionIntents),
-    turns: mergeConversationTurns(persisted.turns, candidate.turns),
+    turns: mergeConversationTurns(persisted.turns, candidate.turns).slice(-50),
     timeline: mergeTimelineStates(persisted.timeline, candidate.timeline),
     temporal: mergeTemporalStates(persisted.temporal, candidate.temporal, clock, Math.min(persisted.createdAt, candidate.createdAt)),
     continuity: mergeContinuityStates(persisted.continuity, candidate.continuity),
@@ -161,6 +167,8 @@ export function mergeNan0States(
 export class LocalStorageStateStore implements Nan0StateStore {
   private readonly storage: Nan0StorageLike | undefined
   private readonly clock: Nan0Clock
+  private lastRawString: string | null = null
+  private cachedParsedState: Nan0KernelState | null = null
 
   constructor(
     private readonly key = 'nan0/kernel-state/v1',
@@ -172,8 +180,15 @@ export class LocalStorageStateStore implements Nan0StateStore {
 
   async load(): Promise<Nan0KernelState | null> {
     const raw = this.storage?.getItem(this.key)
-    if (!raw)
+    if (!raw) {
+      this.lastRawString = null
+      this.cachedParsedState = null
       return null
+    }
+
+    if (raw === this.lastRawString && this.cachedParsedState) {
+      return structuredClone(this.cachedParsedState)
+    }
 
     const parsed = JSON.parse(raw) as Nan0KernelState
     if (parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2)
@@ -192,13 +207,13 @@ export class LocalStorageStateStore implements Nan0StateStore {
       internalObservations: normalizeInternalObservationQueue(parsed.internalObservations),
       heartbeat: normalizeHeartbeatRuntimeState(parsed.heartbeat),
       cognitionPolicy: normalizeCognitionPolicyIdentity(parsed.cognitionPolicy, parsed.createdAt),
-      thoughts: mergeNan0Thoughts([], parsed.thoughts),
-      decisions: mergeNan0Decisions([], parsed.decisions),
+      thoughts: mergeNan0Thoughts([], parsed.thoughts).slice(-50),
+      decisions: mergeNan0Decisions([], parsed.decisions).slice(-50),
       goals: mergeNan0Goals([], parsed.goals),
       pendingIntentions: normalizePendingIntentionState(parsed.pendingIntentions, parsed.createdAt),
-      computations: mergeComputationAttempts([], parsed.computations),
+      computations: mergeComputationAttempts([], parsed.computations).slice(-50),
       actionIntents: mergeActionIntents([], parsed.actionIntents),
-      turns: normalizeConversationTurns(parsed.turns),
+      turns: normalizeConversationTurns(parsed.turns).slice(-50),
       timeline: parsed.timeline
         ? normalizeTimelineState(parsed.timeline)
         : createEmptyTimelineState(),
@@ -210,6 +225,10 @@ export class LocalStorageStateStore implements Nan0StateStore {
         ? normalizeRelationshipState(parsed.relationships, parsed.createdAt)
         : createEmptyRelationshipState(parsed.createdAt),
     }
+
+    this.lastRawString = raw
+    this.cachedParsedState = state
+
     this.options.diagnostic?.('state.load', {
       revision: state.revision,
       memoryCount: state.memories.length,
@@ -228,7 +247,7 @@ export class LocalStorageStateStore implements Nan0StateStore {
       temporalEventCount: state.temporal.engine.events.length,
       clockAdjustmentCount: state.temporal.detectedClockAdjustments.length,
     })
-    return state
+    return structuredClone(state)
   }
 
   async save(state: Nan0KernelState): Promise<Nan0KernelState> {
@@ -237,7 +256,10 @@ export class LocalStorageStateStore implements Nan0StateStore {
 
     const before = await this.load()
     const merged = mergeNan0States(before, state, this.clock)
-    this.storage.setItem(this.key, JSON.stringify(merged))
+    const serialized = JSON.stringify(merged)
+    this.lastRawString = serialized
+    this.cachedParsedState = merged
+    this.storage.setItem(this.key, serialized)
     this.options.diagnostic?.('state.save', {
       previousRevision: before?.revision ?? 0,
       revision: merged.revision,

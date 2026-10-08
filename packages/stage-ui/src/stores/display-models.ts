@@ -1,5 +1,6 @@
 import type { MmdTextureFile } from '@proj-airi/stage-ui-mmd/utils/mmd-zip-extractor'
 
+import type { ModelCapabilityItem } from '../libs/character/model-capabilities'
 import type { AiriOutfit } from './modules/airi-card'
 
 import JSZip from 'jszip'
@@ -14,11 +15,12 @@ import { detectSpineVersionFromBinary, detectSpineVersionFromJson } from '@proj-
 import { loadVrmModelPreview as generateVrmPreview } from '@proj-airi/stage-ui-three/utils/vrm-preview'
 import { until, useBroadcastChannel } from '@vueuse/core'
 import { nanoid } from 'nanoid'
-import { defineStore } from 'pinia'
+import { acceptHMRUpdate, defineStore } from 'pinia'
 import { isProxy, ref, shallowRef, toRaw, triggerRef, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
 import { storage } from '../database/storage'
+import { buildExpressionCapabilities, buildMotionCapabilities } from '../libs/character/model-capabilities'
 import { convertSpineSkeleton } from '../utils/spine-converter/converter'
 
 import '@proj-airi/stage-ui-live2d/utils/live2d-zip-loader'
@@ -34,6 +36,8 @@ export enum DisplayModelFormat {
   PMD = 'pmd',
 }
 
+export type { ModelCapabilityItem } from '../libs/character/model-capabilities'
+
 export interface DisplayModelCloud {
   id: string
   format: DisplayModelFormat
@@ -45,14 +49,9 @@ export interface DisplayModelCloud {
   nsfw?: boolean
   groups?: string[]
   tags?: string[]
-  expressions?: string[]
-  motions?: string[]
-  emotionMappings?: Record<string, string>
-  motionMappings?: Record<string, string>
+  expressionCapabilities?: ModelCapabilityItem[]
+  motionCapabilities?: ModelCapabilityItem[]
   vfxMappings?: Record<string, string[]>
-  hiddenExpressions?: string[]
-  hiddenMotions?: string[]
-  favoriteExpressions?: string[]
   outfits?: AiriOutfit[]
   _searchKey?: string
 }
@@ -84,14 +83,9 @@ export interface DisplayModelFile {
   nsfw?: boolean
   groups?: string[]
   tags?: string[]
-  expressions?: string[]
-  motions?: string[]
-  emotionMappings?: Record<string, string>
-  motionMappings?: Record<string, string>
+  expressionCapabilities?: ModelCapabilityItem[]
+  motionCapabilities?: ModelCapabilityItem[]
   vfxMappings?: Record<string, string[]>
-  hiddenExpressions?: string[]
-  hiddenMotions?: string[]
-  favoriteExpressions?: string[]
   outfits?: AiriOutfit[]
   _searchKey?: string
 }
@@ -108,14 +102,9 @@ export interface DisplayModelURL {
   nsfw?: boolean
   groups?: string[]
   tags?: string[]
-  expressions?: string[]
-  motions?: string[]
-  emotionMappings?: Record<string, string>
-  motionMappings?: Record<string, string>
+  expressionCapabilities?: ModelCapabilityItem[]
+  motionCapabilities?: ModelCapabilityItem[]
   vfxMappings?: Record<string, string[]>
-  hiddenExpressions?: string[]
-  hiddenMotions?: string[]
-  favoriteExpressions?: string[]
   outfits?: AiriOutfit[]
   _searchKey?: string
 }
@@ -173,6 +162,11 @@ function tryRewrapModelFile(file: any, preferredName?: string): File | undefined
   return undefined
 }
 
+// HMR epoch (Strategy C): bumped by the single dispose ledger at the bottom of
+// this module. Guards the sync-signal watcher against double IndexedDB
+// reloads from a superseded generation.
+let displayModelsEpoch = 0
+
 export const useDisplayModelsStore = defineStore('display-models', () => {
   const displayModels = shallowRef<DisplayModel[]>([])
   const displayModelsFromIndexedDBLoading = ref(false)
@@ -207,14 +201,35 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     }
   })()
 
-  const { data: modelsSyncSignal, post: broadcastModelsSync } = useBroadcastChannel({ name: 'airi:display-models-sync' })
+  const { data: modelsSyncSignal, post: broadcastModelsSync, close: closeModelsSyncChannel } = useBroadcastChannel({ name: 'airi:display-models-sync' })
 
+  // Epoch-guarded: a superseded generation's watcher must not fire duplicate
+  // IndexedDB catalog reloads after HMR re-evaluation.
+  const setupEpoch = displayModelsEpoch
   watch(modelsSyncSignal, (val) => {
     if (val) {
+      if (setupEpoch !== displayModelsEpoch)
+        return
       debug('[DisplayModels] Received display models sync signal, reloading from IndexedDB...')
       void loadDisplayModelsFromIndexedDB(true)
     }
   })
+
+  // Single teardown ledger (Strategy E — exactly ONE dispose per module): the
+  // sync BroadcastChannel is the multiplying native here (eager IndexedDB
+  // reloads and image-decode helpers are idempotent). Combined with the accept
+  // boundary below since this module is NOT effect-free. No-op in production.
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      displayModelsEpoch++
+      try {
+        closeModelsSyncChannel()
+      }
+      catch (err) {
+        debug('[DisplayModels:HMR] Channel close during HMR dispose failed:', err)
+      }
+    })
+  }
 
   async function compressPreviewDataUrl(dataUrl?: string, maxDim = 768, quality = 0.85): Promise<string | undefined> {
     if (!dataUrl || !dataUrl.startsWith('data:image/') || dataUrl.length < 50000) {
@@ -263,38 +278,81 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     })
   }
 
-  async function syncMetadataCacheFromMemory() {
+  // Single-flight metadata sync. Previously this Promise.all'd an Image+canvas
+  // decode for EVERY model on every sync (fired on each catalog load, mapping
+  // update, import, and delete) — an unbounded parallel native burst that
+  // rebooted machines via compressor/swap exhaustion. Now: strictly sequential
+  // passes (max 1 decode in flight), coalesced so overlapping triggers collapse
+  // into one trailing run with no lost updates.
+  let syncInFlight: Promise<void> | null = null
+  let syncDirty = false
+
+  async function syncMetadataCacheFromMemory(): Promise<void> {
+    if (syncInFlight) {
+      syncDirty = true
+      return syncInFlight
+    }
+    const task = (async () => {
+      try {
+        do {
+          syncDirty = false
+          await runMetadataSyncPass()
+        } while (syncDirty)
+      }
+      finally {
+        syncInFlight = null
+      }
+    })()
+    syncInFlight = task
+    return task
+  }
+
+  // Idle-deferred fire-and-forget sync for post-mutation refreshes (load,
+  // delete, capability scan). Awaited callers keep calling
+  // syncMetadataCacheFromMemory() directly. Skipped while hidden; the next
+  // visible trigger covers it since every pass reads live store state.
+  function scheduleMetadataSync(): void {
+    if (typeof document !== 'undefined' && document.hidden)
+      return
+    const run = () => {
+      void syncMetadataCacheFromMemory().catch((err) => {
+        console.error('[DisplayModels] Deferred metadata sync failed:', err)
+      })
+    }
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(run, { timeout: 2000 })
+    }
+    else {
+      setTimeout(run, 30)
+    }
+  }
+
+  async function runMetadataSyncPass(): Promise<void> {
     try {
       const rawModels = toRaw(displayModels.value)
-      const metaList = await Promise.all(rawModels
-        .filter(m => m.id.startsWith('display-model-'))
-        .map(async (m) => {
-          const rawM = toRaw(m)
-          const compressedPreview = await compressPreviewDataUrl(rawM.previewImage)
-          const compressedAuthorIcon = rawM.authorIcon ? await compressPreviewDataUrl(rawM.authorIcon, 256, 0.9) : undefined
-          return {
-            id: rawM.id,
-            format: rawM.format,
-            type: 'file' as const,
-            file: undefined,
-            name: rawM.name,
-            importedAt: rawM.importedAt || Date.now(),
-            authorIcon: compressedAuthorIcon,
-            previewImage: compressedPreview,
-            nsfw: rawM.nsfw,
-            groups: rawM.groups,
-            tags: rawM.tags,
-            expressions: rawM.expressions,
-            motions: rawM.motions,
-            emotionMappings: rawM.emotionMappings ? JSON.parse(JSON.stringify(rawM.emotionMappings)) : undefined,
-            motionMappings: rawM.motionMappings ? JSON.parse(JSON.stringify(rawM.motionMappings)) : undefined,
-            vfxMappings: rawM.vfxMappings ? JSON.parse(JSON.stringify(rawM.vfxMappings)) : undefined,
-            hiddenExpressions: rawM.hiddenExpressions ? [...rawM.hiddenExpressions] : undefined,
-            hiddenMotions: rawM.hiddenMotions ? [...rawM.hiddenMotions] : undefined,
-            favoriteExpressions: rawM.favoriteExpressions ? [...rawM.favoriteExpressions] : undefined,
-            outfits: rawM.outfits ? JSON.parse(JSON.stringify(rawM.outfits)) : undefined,
-          }
-        }))
+      const metaList = []
+      for (const m of rawModels.filter(m => m.id.startsWith('display-model-'))) {
+        const rawM = toRaw(m)
+        const compressedPreview = await compressPreviewDataUrl(rawM.previewImage)
+        const compressedAuthorIcon = rawM.authorIcon ? await compressPreviewDataUrl(rawM.authorIcon, 256, 0.9) : undefined
+        metaList.push({
+          id: rawM.id,
+          format: rawM.format,
+          type: 'file' as const,
+          file: undefined,
+          name: rawM.name,
+          importedAt: rawM.importedAt || Date.now(),
+          authorIcon: compressedAuthorIcon,
+          previewImage: compressedPreview,
+          nsfw: rawM.nsfw,
+          groups: rawM.groups,
+          tags: rawM.tags,
+          expressionCapabilities: rawM.expressionCapabilities ? JSON.parse(JSON.stringify(rawM.expressionCapabilities)) : undefined,
+          motionCapabilities: rawM.motionCapabilities ? JSON.parse(JSON.stringify(rawM.motionCapabilities)) : undefined,
+          vfxMappings: rawM.vfxMappings ? JSON.parse(JSON.stringify(rawM.vfxMappings)) : undefined,
+          outfits: rawM.outfits ? JSON.parse(JSON.stringify(rawM.outfits)) : undefined,
+        })
+      }
       await storage.setItemRaw('local:display-models/metadata-cache', JSON.parse(JSON.stringify(metaList)))
     }
     catch (e) {
@@ -328,7 +386,8 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
       }
 
       const cachedKeySet = new Set(cachedMetadata.map((m: any) => m.id))
-      const isCacheValid = modelKeys.length === cachedMetadata.length && modelKeys.every(k => cachedKeySet.has(k))
+      const hasLegacyFormat = cachedMetadata.some((m: any) => 'expressions' in m || 'emotionMappings' in m || 'hiddenExpressions' in m)
+      const isCacheValid = !hasLegacyFormat && modelKeys.length === cachedMetadata.length && modelKeys.every(k => cachedKeySet.has(k))
 
       if (isCacheValid && cachedMetadata.length > 0) {
         console.log(`[DisplayModels:IDBScan] Metadata cache HIT! Serving ${cachedMetadata.length} user models in < 1ms.`)
@@ -344,7 +403,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         const updatedCache: any[] = []
         for (const key of modelKeys) {
           const existing = cachedMetadata.find((m: any) => m.id === key)
-          if (existing) {
+          if (existing && !hasLegacyFormat) {
             if (!existing.authorIcon) {
               const val = await localforage.getItem<any>(key)
               if (val?.authorIcon) {
@@ -376,14 +435,10 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
                 nsfw: val.nsfw,
                 groups: val.groups,
                 tags: val.tags,
-                expressions: val.expressions,
-                motions: val.motions,
-                emotionMappings: val.emotionMappings,
-                motionMappings: val.motionMappings,
+                expressionCapabilities: val.expressionCapabilities,
+                motionCapabilities: val.motionCapabilities,
                 vfxMappings: val.vfxMappings,
-                hiddenExpressions: val.hiddenExpressions,
-                hiddenMotions: val.hiddenMotions,
-                favoriteExpressions: val.favoriteExpressions,
+                outfits: val.outfits,
               }
               updatedCache.push(itemMeta)
               models.push({
@@ -404,7 +459,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     }
 
     displayModels.value = models.sort((a, b) => b.importedAt - a.importedAt)
-    void syncMetadataCacheFromMemory()
+    scheduleMetadataSync()
     if (!silent)
       displayModelsFromIndexedDBLoading.value = false
     debug(`[DisplayModels:IDBScan] loadDisplayModelsFromIndexedDB finished in ${(performance.now() - startTime).toFixed(2)} ms. Total models loaded into store: ${displayModels.value.length}`)
@@ -1352,15 +1407,12 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     }
   }
 
-  async function updateDisplayModelMappings(
+  async function updateDisplayModelCapabilities(
     id: string,
-    mappings: {
-      emotionMappings?: Record<string, string>
-      motionMappings?: Record<string, string>
+    capabilities: {
+      expressionCapabilities?: ModelCapabilityItem[]
+      motionCapabilities?: ModelCapabilityItem[]
       vfxMappings?: Record<string, string[]>
-      hiddenExpressions?: string[]
-      hiddenMotions?: string[]
-      favoriteExpressions?: string[]
       outfits?: AiriOutfit[]
     },
   ) {
@@ -1372,20 +1424,14 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     if (!displayModel)
       return
 
-    if (mappings.emotionMappings)
-      displayModel.emotionMappings = JSON.parse(JSON.stringify(mappings.emotionMappings))
-    if (mappings.motionMappings)
-      displayModel.motionMappings = JSON.parse(JSON.stringify(mappings.motionMappings))
-    if (mappings.vfxMappings)
-      displayModel.vfxMappings = JSON.parse(JSON.stringify(mappings.vfxMappings))
-    if (mappings.hiddenExpressions)
-      displayModel.hiddenExpressions = [...mappings.hiddenExpressions]
-    if (mappings.hiddenMotions)
-      displayModel.hiddenMotions = [...mappings.hiddenMotions]
-    if (mappings.favoriteExpressions)
-      displayModel.favoriteExpressions = [...mappings.favoriteExpressions]
-    if (mappings.outfits)
-      displayModel.outfits = JSON.parse(JSON.stringify(mappings.outfits))
+    if (capabilities.expressionCapabilities)
+      displayModel.expressionCapabilities = JSON.parse(JSON.stringify(capabilities.expressionCapabilities))
+    if (capabilities.motionCapabilities)
+      displayModel.motionCapabilities = JSON.parse(JSON.stringify(capabilities.motionCapabilities))
+    if (capabilities.vfxMappings)
+      displayModel.vfxMappings = JSON.parse(JSON.stringify(capabilities.vfxMappings))
+    if (capabilities.outfits)
+      displayModel.outfits = JSON.parse(JSON.stringify(capabilities.outfits))
 
     // Invalidate binary LRU cache so subsequent getDisplayModel fetches fresh data
     displayModelCache.delete(id)
@@ -1394,20 +1440,14 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     const index = displayModels.value.findIndex(m => m.id === id)
     if (index !== -1) {
       const target = displayModels.value[index]
-      if (mappings.emotionMappings)
-        target.emotionMappings = JSON.parse(JSON.stringify(mappings.emotionMappings))
-      if (mappings.motionMappings)
-        target.motionMappings = JSON.parse(JSON.stringify(mappings.motionMappings))
-      if (mappings.vfxMappings)
-        target.vfxMappings = JSON.parse(JSON.stringify(mappings.vfxMappings))
-      if (mappings.hiddenExpressions)
-        target.hiddenExpressions = [...mappings.hiddenExpressions]
-      if (mappings.hiddenMotions)
-        target.hiddenMotions = [...mappings.hiddenMotions]
-      if (mappings.favoriteExpressions)
-        target.favoriteExpressions = [...mappings.favoriteExpressions]
-      if (mappings.outfits)
-        target.outfits = JSON.parse(JSON.stringify(mappings.outfits))
+      if (capabilities.expressionCapabilities)
+        target.expressionCapabilities = JSON.parse(JSON.stringify(capabilities.expressionCapabilities))
+      if (capabilities.motionCapabilities)
+        target.motionCapabilities = JSON.parse(JSON.stringify(capabilities.motionCapabilities))
+      if (capabilities.vfxMappings)
+        target.vfxMappings = JSON.parse(JSON.stringify(capabilities.vfxMappings))
+      if (capabilities.outfits)
+        target.outfits = JSON.parse(JSON.stringify(capabilities.outfits))
       triggerRef(displayModels)
     }
     else if (id.startsWith('display-model-')) {
@@ -1425,14 +1465,9 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         nsfw: displayModel.nsfw,
         groups: displayModel.groups ? [...displayModel.groups] : undefined,
         tags: displayModel.tags ? [...displayModel.tags] : undefined,
-        expressions: displayModel.expressions ? [...displayModel.expressions] : undefined,
-        motions: displayModel.motions ? [...displayModel.motions] : undefined,
-        emotionMappings: displayModel.emotionMappings ? JSON.parse(JSON.stringify(displayModel.emotionMappings)) : undefined,
-        motionMappings: displayModel.motionMappings ? JSON.parse(JSON.stringify(displayModel.motionMappings)) : undefined,
+        expressionCapabilities: displayModel.expressionCapabilities ? JSON.parse(JSON.stringify(displayModel.expressionCapabilities)) : undefined,
+        motionCapabilities: displayModel.motionCapabilities ? JSON.parse(JSON.stringify(displayModel.motionCapabilities)) : undefined,
         vfxMappings: displayModel.vfxMappings ? JSON.parse(JSON.stringify(displayModel.vfxMappings)) : undefined,
-        hiddenExpressions: displayModel.hiddenExpressions ? [...displayModel.hiddenExpressions] : undefined,
-        hiddenMotions: displayModel.hiddenMotions ? [...displayModel.hiddenMotions] : undefined,
-        favoriteExpressions: displayModel.favoriteExpressions ? [...displayModel.favoriteExpressions] : undefined,
         outfits: displayModel.outfits ? JSON.parse(JSON.stringify(displayModel.outfits)) : undefined,
         _searchKey: `${displayModel.name || ''} ${Array.isArray(displayModel.tags) ? displayModel.tags.join(' ') : ''} ${Array.isArray(displayModel.groups) ? displayModel.groups.join(' ') : ''}`.toLowerCase(),
       }
@@ -1456,18 +1491,13 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         nsfw: rawModel.nsfw,
         groups: rawModel.groups ? [...rawModel.groups] : undefined,
         tags: rawModel.tags ? [...rawModel.tags] : undefined,
-        expressions: rawModel.expressions ? [...rawModel.expressions] : undefined,
-        motions: rawModel.motions ? [...rawModel.motions] : undefined,
-        emotionMappings: rawModel.emotionMappings ? JSON.parse(JSON.stringify(rawModel.emotionMappings)) : undefined,
-        motionMappings: rawModel.motionMappings ? JSON.parse(JSON.stringify(rawModel.motionMappings)) : undefined,
+        expressionCapabilities: rawModel.expressionCapabilities ? JSON.parse(JSON.stringify(rawModel.expressionCapabilities)) : undefined,
+        motionCapabilities: rawModel.motionCapabilities ? JSON.parse(JSON.stringify(rawModel.motionCapabilities)) : undefined,
         vfxMappings: rawModel.vfxMappings ? JSON.parse(JSON.stringify(rawModel.vfxMappings)) : undefined,
-        hiddenExpressions: rawModel.hiddenExpressions ? [...rawModel.hiddenExpressions] : undefined,
-        hiddenMotions: rawModel.hiddenMotions ? [...rawModel.hiddenMotions] : undefined,
-        favoriteExpressions: rawModel.favoriteExpressions ? [...rawModel.favoriteExpressions] : undefined,
         outfits: rawModel.outfits ? JSON.parse(JSON.stringify(rawModel.outfits)) : undefined,
         _searchKey: rawModel._searchKey,
       }
-      console.log('[DisplayModels:updateDisplayModelMappings] Accountable write to IndexedDB:', {
+      console.log('[DisplayModels:updateDisplayModelCapabilities] Accountable write to IndexedDB:', {
         id,
         isFileInstance: targetFile instanceof File || targetFile instanceof Blob,
         fileType: typeof targetFile,
@@ -1478,6 +1508,9 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
       broadcastModelsSync(Date.now())
     }
   }
+
+  // Alias for backward compatibility while migrating call sites
+  const updateDisplayModelMappings = updateDisplayModelCapabilities
 
   async function regenerateDisplayModelPreview(id: string): Promise<string | undefined> {
     await until(displayModelsFromIndexedDBLoading).toBe(false)
@@ -1597,32 +1630,38 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     // Track deletion for sync propagation
     await storage.setItemRaw(`local:sync-metadata/deleted-models/${id}`, true)
     displayModels.value = displayModels.value.filter(model => model.id !== id)
-    void syncMetadataCacheFromMemory()
+    scheduleMetadataSync()
     broadcastModelsSync(Date.now())
   }
 
-  async function fetchRemoteDisplayModelsCatalog() {
+  async function fetchRemoteDisplayModelsCatalog(providerOverride?: string) {
     debug('[DisplayModels] fetchRemoteDisplayModelsCatalog: Starting fetch from remote sync client...')
     remoteCatalogLoading.value = true
     try {
       const { useSyncEngineStore } = await import('./sync-engine')
       const syncStore = useSyncEngineStore()
-      debug('[DisplayModels] fetchRemoteDisplayModelsCatalog: Sync engine store loaded. Active provider:', syncStore.activeProvider)
-      const res = await syncStore.fetchRemoteDisplayModelsManifest()
+      const targetProvider = providerOverride || syncStore.activeProvider
+      debug('[DisplayModels] fetchRemoteDisplayModelsCatalog: Sync engine store loaded. Target provider:', targetProvider)
+      const res = await syncStore.fetchRemoteDisplayModelsManifest(targetProvider)
       if (res && res.success) {
         remoteModelsCatalog.value = (res.models || []).map((m: any) => ({
           ...m,
           type: 'cloud',
         }))
-        debug(`[DisplayModels] fetchRemoteDisplayModelsCatalog: Successfully fetched ${remoteModelsCatalog.value.length} remote models. Saving to local storage cache...`)
-        await storage.setItemRaw('local:sync-metadata/remote-catalog-cache', JSON.parse(JSON.stringify(remoteModelsCatalog.value)))
+        debug(`[DisplayModels] fetchRemoteDisplayModelsCatalog: Successfully fetched ${remoteModelsCatalog.value.length} remote models.`)
+        if (!providerOverride || providerOverride === syncStore.activeProvider) {
+          await storage.setItemRaw('local:sync-metadata/remote-catalog-cache', JSON.parse(JSON.stringify(remoteModelsCatalog.value)))
+        }
+        return { success: true, count: remoteModelsCatalog.value.length }
       }
       else {
         debug('[DisplayModels] fetchRemoteDisplayModelsCatalog: Sync store returned unsuccessful response:', res)
+        return { success: false, error: res?.error || 'Failed to fetch remote catalog' }
       }
     }
-    catch (e) {
+    catch (e: any) {
       console.error('[DisplayModels] Failed to fetch remote models catalog:', e)
+      return { success: false, error: e?.message || String(e) }
     }
     finally {
       remoteCatalogLoading.value = false
@@ -1851,7 +1890,10 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     broadcastModelsSync(Date.now())
   }
 
-  async function getOrLoadModelCapabilities(id: string): Promise<{ expressions: string[], motions: string[] }> {
+  async function getOrLoadModelCapabilities(id: string): Promise<{
+    expressionCapabilities: ModelCapabilityItem[]
+    motionCapabilities: ModelCapabilityItem[]
+  }> {
     await until(displayModelsFromIndexedDBLoading).toBe(false)
     if (displayModels.value.length === 0) {
       await loadDisplayModelsFromIndexedDB()
@@ -1864,15 +1906,16 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         model = modelFromFile
       }
       else {
-        return { expressions: [], motions: [] }
+        return { expressionCapabilities: [], motionCapabilities: [] }
       }
     }
 
-    const isSpine = model.format === DisplayModelFormat.SpineZip
-    const hasLegacySpineCache = isSpine && model.expressions && model.expressions.length > 0 && !model.expressions.some(e => e.includes('['))
-
-    if (!hasLegacySpineCache && ((model as any).capabilitiesLoaded || (model.expressions && model.expressions.length > 0) || (model.motions && model.motions.length > 0))) {
-      return { expressions: model.expressions || [], motions: model.motions || [] }
+    // Cache hit: If model already has new capability arrays loaded, return them immediately
+    if (model.expressionCapabilities && model.motionCapabilities) {
+      return {
+        expressionCapabilities: model.expressionCapabilities,
+        motionCapabilities: model.motionCapabilities,
+      }
     }
 
     let file: File | Blob | null = null
@@ -1893,7 +1936,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     }
 
     if (!file) {
-      return { expressions: [], motions: [] }
+      return { expressionCapabilities: [], motionCapabilities: [] }
     }
 
     const expressions: string[] = []
@@ -2014,29 +2057,31 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
                 }
               }
 
-              // 3. Raw Morph Target names (including numbered/hidden shape keys)
-              const meshes = gltf.meshes
-              if (Array.isArray(meshes)) {
-                meshes.forEach((mesh: any) => {
-                  if (mesh.primitives) {
-                    mesh.primitives.forEach((primitive: any) => {
-                      const targetNames = primitive.extras?.targetNames
-                      if (Array.isArray(targetNames)) {
-                        targetNames.forEach((tname: string) => {
-                          if (tname)
-                            expressions.push(tname)
-                        })
-                      }
-                    })
-                  }
-                  const meshTargetNames = mesh.extras?.targetNames
-                  if (Array.isArray(meshTargetNames)) {
-                    meshTargetNames.forEach((tname: string) => {
-                      if (tname)
-                        expressions.push(tname)
-                    })
-                  }
-                })
+              // 3. Raw Morph Target names (fallback for non-VRM glTF meshes without declared blendshape groups)
+              if (expressions.length === 0) {
+                const meshes = gltf.meshes
+                if (Array.isArray(meshes)) {
+                  meshes.forEach((mesh: any) => {
+                    if (mesh.primitives) {
+                      mesh.primitives.forEach((primitive: any) => {
+                        const targetNames = primitive.extras?.targetNames
+                        if (Array.isArray(targetNames)) {
+                          targetNames.forEach((tname: string) => {
+                            if (tname)
+                              expressions.push(tname)
+                          })
+                        }
+                      })
+                    }
+                    const meshTargetNames = mesh.extras?.targetNames
+                    if (Array.isArray(meshTargetNames)) {
+                      meshTargetNames.forEach((tname: string) => {
+                        if (tname)
+                          expressions.push(tname)
+                      })
+                    }
+                  })
+                }
               }
               break
             }
@@ -2243,30 +2288,51 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
       console.error('[DisplayModels] Error extracting capabilities:', e)
     }
 
-    model.expressions = [...new Set(expressions)].sort((a, b) => a.localeCompare(b))
-    model.motions = [...new Set(motions)].sort((a, b) => a.localeCompare(b))
+    const isVrm = model.format === DisplayModelFormat.VRM
+    const expressionCapabilities = buildExpressionCapabilities(expressions, isVrm)
+    const motionCapabilities = buildMotionCapabilities(motions)
+
+    model.expressionCapabilities = expressionCapabilities
+    model.motionCapabilities = motionCapabilities
+
+    // Update in-memory reactive store list if present
+    const storeModel = displayModels.value.find(m => m.id === id)
+    if (storeModel) {
+      storeModel.expressionCapabilities = expressionCapabilities
+      storeModel.motionCapabilities = motionCapabilities
+      triggerRef(displayModels)
+    }
 
     // Save to IndexedDB, loading the full DisplayModelFile first to avoid erasing the file property
     if (model.type === 'file') {
       const fullModel = await localforage.getItem<any>(id)
       if (fullModel) {
         const rawFullModel = toRaw(fullModel)
-        const cleanModel = {
+        const cleanModel: any = {
           ...rawFullModel,
-          expressions: [...model.expressions],
-          motions: [...model.motions],
+          expressionCapabilities: [...expressionCapabilities],
+          motionCapabilities: [...motionCapabilities],
           ...('file' in rawFullModel ? { file: toRaw(rawFullModel.file) } : {}),
         }
+
+        // Clean out legacy keys if present
+        delete cleanModel.expressions
+        delete cleanModel.motions
+        delete cleanModel.emotionMappings
+        delete cleanModel.motionMappings
+        delete cleanModel.hiddenExpressions
+        delete cleanModel.hiddenMotions
+        delete cleanModel.favoriteExpressions
 
         await localforage.setItem(id, cleanModel)
       }
       displayModelCache.delete(id)
-      void syncMetadataCacheFromMemory()
+      scheduleMetadataSync()
     }
 
     (model as any).capabilitiesLoaded = true
 
-    return { expressions: model.expressions, motions: model.motions }
+    return { expressionCapabilities, motionCapabilities }
   }
 
   return {
@@ -2283,6 +2349,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     renameDisplayModel,
     updateDisplayModelMeta,
     updateDisplayModelTags,
+    updateDisplayModelCapabilities,
     updateDisplayModelMappings,
     regenerateDisplayModelPreview,
     removeDisplayModel,
@@ -2299,3 +2366,10 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     syncMetadataCacheFromMemory,
   }
 })
+
+// Pinia HMR accept boundary. Ref/blob state (File handles, preview URLs)
+// transfers by reference via state patching; the sync channel above is closed
+// by the dispose ledger so reloads cannot duplicate it. No-op in production.
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useDisplayModelsStore, import.meta.hot))
+}

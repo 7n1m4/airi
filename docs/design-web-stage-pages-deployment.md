@@ -38,12 +38,12 @@ When published:
 
 ---
 
-## 3. GitHub Actions Workflow (`.github/workflows/deploy-docs.yml`)
+## 3. GitHub Actions Workflow (`.github/workflows/deploy-frontends.yml`)
 
 The workflow triggers on pushes to `main` touching `docs/**`, `apps/stage-web/**`, `packages/**`, or manually via `workflow_dispatch`.
 
 ```yaml
-name: Deploy Docs & Web Stage to GitHub Pages
+name: Deploy: Frontends (Docs & Web Stage)
 
 on:
   push:
@@ -52,7 +52,7 @@ on:
       - 'docs/**'
       - 'apps/stage-web/**'
       - 'packages/**'
-      - '.github/workflows/deploy-docs.yml'
+      - '.github/workflows/deploy-frontends.yml'
   workflow_dispatch:
 ```
 
@@ -86,7 +86,7 @@ pnpm -F @proj-airi/stage-web run build:pages
 
 ### Triggering Manual CI Deployment
 ```bash
-gh workflow run deploy-docs.yml --repo dasilva333/airi
+gh workflow run deploy-frontends.yml --repo dasilva333/airi
 ```
 
 ---

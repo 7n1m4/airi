@@ -1,7 +1,7 @@
 {
   "name": "@proj-airi/stage-pocket",
   "type": "module",
-  "version": "0.9.33-stable.20260919",
+  "version": "0.9.37-stable.20261008",
   "private": true,
   "description": "LLM powered virtual character",
   "author": {
@@ -11,7 +11,7 @@
   },
   "license": "MIT",
   "scripts": {
-    "build": "vite build",
+    "build": "NODE_OPTIONS=\"--max-old-space-size=12288\" vite build",
     "build:ios": "tsx scripts/build-ipa.ts",
     "build:ipa": "tsx scripts/build-ipa.ts",
     "release:ios": "tsx scripts/build-ipa.ts --upload",
@@ -39,7 +39,6 @@
     "@moeru/std": "catalog:",
     "@proj-airi/audio": "workspace:^",
     "@proj-airi/ccc": "workspace:^",
-    "@proj-airi/drizzle-duckdb-wasm": "catalog:",
     "@proj-airi/font-cjkfonts-allseto": "workspace:^",
     "@proj-airi/font-xiaolai": "workspace:^",
     "@proj-airi/i18n": "workspace:^",
@@ -103,7 +102,6 @@
     "vue-sonner": "catalog:",
     "workbox-window": "^7.4.0",
     "xsschema": "catalog:",
-    "yauzl": "^3.2.0",
     "zod": "catalog:"
   },
   "devDependencies": {
@@ -130,7 +128,6 @@
     "@types/nprogress": "^0.2.3",
     "@types/splitpanes": "catalog:",
     "@types/three": "^0.183.1",
-    "@types/yauzl": "^2.10.3",
     "@unocss/reset": "^66.6.2",
     "@vitejs/plugin-vue": "^6.0.4",
     "@vue-macros/volar": "^3.1.2",

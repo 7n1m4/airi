@@ -18,6 +18,7 @@ import type { Browser, Page } from 'puppeteer-core'
 
 import type { ServedDir } from './server.js'
 
+import fs from 'node:fs'
 import path from 'node:path'
 
 import puppeteer from 'puppeteer-core'
@@ -119,7 +120,11 @@ export class RwkvWebGpuBridge {
     if (this.bootInfo)
       return this.bootInfo
     const log = onProgress ?? (() => {})
-    const webroot = this.opts.webroot ?? path.resolve(process.cwd(), 'webroot')
+    const defaultWebroot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../webroot')
+    const webroot = this.opts.webroot
+      ?? (fs.existsSync(path.resolve(process.cwd(), 'webroot'))
+        ? path.resolve(process.cwd(), 'webroot')
+        : defaultWebroot)
     const modelFile = path.resolve(this.opts.modelFilePath)
 
     this.server = await startStaticServer(webroot, { 'model.safetensors': modelFile })

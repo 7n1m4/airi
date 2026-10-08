@@ -31,6 +31,7 @@ tmp/
 # Audio binaries
 *.pcm
 *.wav
+!packages/stage-ui/src/assets/voices/*.wav
 *.ogg
 *.mp3
 
@@ -89,6 +90,7 @@ components.d.ts
 # Code generation
 **/vscode-airi/src/generated/
 **/vscode-airi/LICENSE
+apps/stage-edge/src/bundle-code.ts
 
 # Make it easy for devenv users to override their local environment.
 # See: https://github.com/moeru-ai/airi/pull/110#discussion_r2024378953
@@ -111,9 +113,25 @@ stats.html
 stats-*.json
 web-ext.config.ts
 
-# Data
+# Data & Databases
 .postgres
 twitter-session.json
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+apps/server/.airi-db/
+.airi-db/
+
+# Scratch, patches & logs
+*.patch
+!patches/*.patch
+*.diff
+git_log_*.txt
+story-build-log.txt
+temp_check.txt
+fixed_data.txt
+tmp_*
 
 # Symlinks created by nix build
 result*

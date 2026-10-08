@@ -48,7 +48,7 @@ import {
   webRwkvStateDeltaEvent,
   webRwkvUnloadEvent,
 } from '../../libs/inference/contract'
-import { cacheKeyForModel, createCacheWriter, readCachedModel } from './cache'
+import { cacheKeyForModel, createCacheWriter, readCachedModel, readCachedPrefab, readCachedState, writeCachedPrefab, writeCachedState } from './cache'
 import { countRwkvLayers, orientAdapterMatrix, readSafetensorsHeader, toF16Bytes } from './safetensors'
 import { createStopScanner } from './stop'
 
@@ -68,6 +68,7 @@ interface LoadedModel {
   /** The model + vocab URLs this session was built from (to skip redundant reloads). */
   modelUrl: string
   vocabUrl: string
+  quantization: 'none' | 'nf4' | 'int8'
 }
 
 let loaded: LoadedModel | null = null
@@ -362,10 +363,11 @@ defineStreamInvokeHandler(context, webRwkvLoadEvent, toStreamHandler<WebRwkvLoad
   // A fully-qualified `payload.vocab` (e.g. a custom HF URL) is returned unchanged by `new URL`.
   // Removal condition: drop once Vite stops blob-wrapping module workers (or the worker is guaranteed a real URL).
   const vocabUrl = new URL(payload.vocab || bundledVocabUrl, import.meta.url).href
+  const quantMode: 'none' | 'nf4' | 'int8' = payload.quantization ?? 'none'
 
-  // Already loaded with the same model + vocab — nothing to do.
-  if (loaded && loaded.modelUrl === modelUrl && loaded.vocabUrl === vocabUrl) {
-    emit({ kind: 'ready', info: { device: 'webgpu', metadata: { model: modelUrl } } })
+  // Already loaded with the same model + vocab + quantization — nothing to do.
+  if (loaded && loaded.modelUrl === modelUrl && loaded.vocabUrl === vocabUrl && loaded.quantization === quantMode) {
+    emit({ kind: 'ready', info: { device: 'webgpu', metadata: { model: modelUrl, quantization: quantMode } } })
     return
   }
 
@@ -376,51 +378,134 @@ defineStreamInvokeHandler(context, webRwkvLoadEvent, toStreamHandler<WebRwkvLoad
   // URL): a hit skips both the download and the f16 cast. The in-memory `loaded`
   // guard above already short-circuits repeat loads within a session; this
   // persists the converted weights across reloads.
+  const isPrefab = modelUrl.includes('.prefab')
   const cacheKey = await cacheKeyForModel(modelUrl)
-  let reader: TensorReader
-  const cached = await readCachedModel(cacheKey, p => new Tensor(p.name, Uint32Array.from(p.shape), exactBuffer(p.data)))
-  if (cached) {
-    console.info(`[web-rwkv:worker] loaded ${cached.length} weights from OPFS cache`)
-    emit({ kind: 'progress', payload: { phase: 'download', percent: 100, message: `Loaded weights from cache (${cached.length} tensors)` } })
-    reader = new TensorReader(cached)
+
+  let session: SessionInstance
+
+  if (isPrefab) {
+    let prefabBytes = await readCachedPrefab(cacheKey)
+    if (prefabBytes) {
+      console.info(`[web-rwkv:worker] loaded prefab from OPFS cache (${prefabBytes.byteLength} bytes)`)
+      emit({ kind: 'progress', payload: { phase: 'download', percent: 100, message: `Loaded prefab from cache (${Math.round(prefabBytes.byteLength / (1024 * 1024))} MB)` } })
+    }
+    else {
+      console.info('[web-rwkv:worker] downloading prefab', modelUrl)
+      emit({ kind: 'progress', payload: { phase: 'download', percent: -1, message: 'Downloading pre-quantized prefab model…' } })
+      const downloadStart = performance.now()
+      const headers: Record<string, string> = {}
+      const isHfHubUrl = modelUrl.includes('huggingface.co') && !modelUrl.includes('cdn.hf.co')
+      if (payload.hfToken && isHfHubUrl) {
+        headers.Authorization = `Bearer ${payload.hfToken}`
+      }
+      const res = await fetch(modelUrl, { headers, signal, cache: 'no-store' })
+      if (!res.ok)
+        throw new Error(`web-rwkv: failed to fetch prefab ${modelUrl} -> HTTP ${res.status}`)
+
+      const contentLength = Number(res.headers.get('content-length') || 0)
+      if (res.body && contentLength > 0) {
+        const reader = res.body.getReader()
+        const chunks: Uint8Array[] = []
+        let received = 0
+        while (true) {
+          if (signal?.aborted)
+            throw new DOMException('Aborted', 'AbortError')
+          const { done, value } = await reader.read()
+          if (done)
+            break
+          if (value) {
+            chunks.push(value)
+            received += value.byteLength
+            const pct = Math.round((received / contentLength) * 100)
+            if (pct % 10 === 0)
+              emit({ kind: 'progress', payload: { phase: 'download', percent: pct, message: `Downloading prefab: ${Math.round(received / (1024 * 1024))} / ${Math.round(contentLength / (1024 * 1024))} MB (${pct}%)` } })
+          }
+        }
+        prefabBytes = new Uint8Array(received)
+        let pos = 0
+        for (const chunk of chunks) {
+          prefabBytes.set(chunk, pos)
+          pos += chunk.byteLength
+        }
+      }
+      else {
+        prefabBytes = new Uint8Array(await res.arrayBuffer())
+      }
+
+      if (signal?.aborted)
+        return
+
+      await writeCachedPrefab(cacheKey, prefabBytes)
+      console.info(`[web-rwkv:worker] prefab downloaded in ${Math.round(performance.now() - downloadStart)}ms (${prefabBytes.byteLength} bytes)`)
+    }
+
+    if (signal?.aborted)
+      return
+
+    emit({ kind: 'progress', payload: { phase: 'compile', percent: -1, message: 'Deserializing prefab into WebGPU buffers…' } })
+    console.info('[web-rwkv:worker] loading session from prefab…')
+    const compileStart = performance.now()
+    session = await Session.from_prefab(prefabBytes, SessionType.Chat)
+    console.info(`[web-rwkv:worker] prefab session built in ${Math.round(performance.now() - compileStart)}ms`)
   }
   else {
-    console.info('[web-rwkv:worker] wasm ready; downloading + converting weights', modelUrl)
-    emit({ kind: 'progress', payload: { phase: 'download', percent: -1, message: 'Downloading + converting model weights…' } })
-    const downloadStart = performance.now()
-    // Stream the converted weights through to OPFS as they download, so the next
-    // load hits the cache. Best-effort: abort discards a partial file on failure.
-    const cacheWriter = await createCacheWriter(cacheKey)
-    try {
-      const built = await buildReader(modelUrl, (done, total) => {
-        if (done === 1 || done === total || done % 25 === 0)
-          console.info(`[web-rwkv:worker] weights ${done}/${total} (${Math.round((done / total) * 100)}%)`)
-        emit({ kind: 'progress', payload: { phase: 'download', percent: Math.round((done / total) * 100), message: `Preparing weights ${done}/${total}` } })
-      }, signal, cacheWriter, payload.hfToken)
-      if (signal?.aborted) {
-        await cacheWriter.abort()
-        return
+    let reader: TensorReader
+    let numLayer = 0
+    const cached = await readCachedModel(cacheKey, (p) => {
+      const m = /^blocks\.(\d+)\./.exec(p.name)
+      if (m)
+        numLayer = Math.max(numLayer, Number(m[1]) + 1)
+      return new Tensor(p.name, Uint32Array.from(p.shape), exactBuffer(p.data))
+    })
+    if (cached) {
+      console.info(`[web-rwkv:worker] loaded ${cached.length} weights from OPFS cache (detected ${numLayer} layers)`)
+      emit({ kind: 'progress', payload: { phase: 'download', percent: 100, message: `Loaded weights from cache (${cached.length} tensors)` } })
+      reader = new TensorReader(cached)
+    }
+    else {
+      console.info('[web-rwkv:worker] wasm ready; downloading + converting weights', modelUrl)
+      emit({ kind: 'progress', payload: { phase: 'download', percent: -1, message: 'Downloading + converting model weights…' } })
+      const downloadStart = performance.now()
+      const cacheWriter = await createCacheWriter(cacheKey)
+      try {
+        const built = await buildReader(modelUrl, (done, total) => {
+          if (done === 1 || done === total || done % 25 === 0)
+            console.info(`[web-rwkv:worker] weights ${done}/${total} (${Math.round((done / total) * 100)}%)`)
+          emit({ kind: 'progress', payload: { phase: 'download', percent: Math.round((done / total) * 100), message: `Preparing weights ${done}/${total}` } })
+        }, signal, cacheWriter, payload.hfToken)
+        if (signal?.aborted) {
+          await cacheWriter.abort()
+          return
+        }
+        await cacheWriter.finalize()
+        reader = built.reader
+        numLayer = built.numLayer
       }
-      await cacheWriter.finalize()
-      reader = built.reader
+      catch (error) {
+        await cacheWriter.abort()
+        throw error
+      }
+      console.info(`[web-rwkv:worker] weights ready in ${Math.round(performance.now() - downloadStart)}ms (layers: ${numLayer})`)
     }
-    catch (error) {
-      await cacheWriter.abort()
-      throw error
-    }
-    console.info(`[web-rwkv:worker] weights ready in ${Math.round(performance.now() - downloadStart)}ms`)
+
+    if (signal?.aborted)
+      return
+
+    emit({ kind: 'progress', payload: { phase: 'compile', percent: -1, message: 'Building session (compiling WebGPU shaders)…' } })
+    console.info('[web-rwkv:worker] building session (compiling WebGPU shaders)…')
+    const compileStart = performance.now()
+
+    let qInt8 = 0
+    let qNf4 = 0
+    if (quantMode === 'int8')
+      qInt8 = numLayer
+    else if (quantMode === 'nf4')
+      qNf4 = numLayer
+
+    console.info(`[web-rwkv:worker] session quant mode: ${quantMode} (int8=${qInt8}, nf4=${qNf4}, layers=${numLayer})`)
+    session = await Session.from_reader(reader, qInt8, qNf4, 0, SessionType.Chat)
+    console.info(`[web-rwkv:worker] session built in ${Math.round(performance.now() - compileStart)}ms`)
   }
-
-  if (signal?.aborted)
-    return
-
-  emit({ kind: 'progress', payload: { phase: 'compile', percent: -1, message: 'Building session (compiling WebGPU shaders)…' } })
-  console.info('[web-rwkv:worker] building session (compiling WebGPU shaders)…')
-  const compileStart = performance.now()
-  // quant args (Int8 / NF4 / SF4 layer counts) = 0 → full f16, matching the
-  // upstream default; quantization can be wired through later if needed.
-  const session = await Session.from_reader(reader, 0, 0, 0, SessionType.Chat)
-  console.info(`[web-rwkv:worker] session built in ${Math.round(performance.now() - compileStart)}ms`)
 
   console.info('[web-rwkv:worker] fetching vocab', vocabUrl)
   const vocabRes = await fetch(vocabUrl, { signal })
@@ -430,10 +515,10 @@ defineStreamInvokeHandler(context, webRwkvLoadEvent, toStreamHandler<WebRwkvLoad
 
   // Replace any previously loaded model, freeing its GPU resources.
   loaded?.session.free()
-  loaded = { session, tokenizer, info: session.info(), modelUrl, vocabUrl }
+  loaded = { session, tokenizer, info: session.info(), modelUrl, vocabUrl, quantization: quantMode }
 
   console.info('[web-rwkv:worker] model ready')
-  emit({ kind: 'ready', info: { device: 'webgpu', metadata: { model: modelUrl } } })
+  emit({ kind: 'ready', info: { device: 'webgpu', metadata: { model: modelUrl, quantization: quantMode } } })
 }))
 
 /**
@@ -469,10 +554,80 @@ defineStreamInvokeHandler(context, webRwkvGenerateEvent, toStreamHandler<WebRwkv
   // `<think></think`.
   console.info('[web-rwkv:worker] prompt', { prompt: payload.prompt, length: payload.prompt.length })
 
-  // Reset the recurrent state to zeros so each request is stateless — the
-  // provider sends the full chat history every call (OpenAI semantics), so we
-  // must not carry state across generations.
-  session.load(new Float32Array(session.state_len()))
+  // Recurrent state loading & conditioning logic:
+  // 1. If stateCartridgeId is supplied and not forceRecondition, load from OPFS cache.
+  // 2. If not cached, attempt download from stateCartridgeUrl and cache to OPFS.
+  // 3. If still not loaded and conditioningTexts are supplied, condition in-situ, snapshot h0, and cache to OPFS.
+  // 4. Otherwise, reset state to zeros for conventional stateless turn generation.
+  let stateLoaded = false
+  const stateLen = session.state_len()
+
+  if (payload.stateCartridgeId && !payload.forceRecondition) {
+    const cachedState = await readCachedState(payload.stateCartridgeId)
+    if (cachedState && cachedState.length === stateLen) {
+      session.load(cachedState)
+      stateLoaded = true
+      console.info(`[web-rwkv:worker] loaded OPFS cached state cartridge: ${payload.stateCartridgeId}`)
+    }
+  }
+
+  if (!stateLoaded && payload.stateCartridgeUrl && payload.stateCartridgeId && !payload.forceRecondition) {
+    try {
+      console.info(`[web-rwkv:worker] downloading state cartridge from: ${payload.stateCartridgeUrl}`)
+      const resp = await fetch(payload.stateCartridgeUrl, { signal })
+      if (resp.ok) {
+        const ab = await resp.arrayBuffer()
+        if (ab.byteLength === stateLen * 4) {
+          const fetchedState = new Float32Array(ab)
+          session.load(fetchedState)
+          stateLoaded = true
+          await writeCachedState(payload.stateCartridgeId, fetchedState)
+          console.info(`[web-rwkv:worker] state cartridge downloaded and cached in OPFS: ${payload.stateCartridgeId}`)
+        }
+        else {
+          console.warn(`[web-rwkv:worker] state cartridge size mismatch: expected ${stateLen * 4} bytes, got ${ab.byteLength}`)
+        }
+      }
+    }
+    catch (fetchErr) {
+      console.warn('[web-rwkv:worker] failed to fetch state cartridge from URL:', fetchErr)
+    }
+  }
+
+  if (!stateLoaded && payload.conditioningTexts && payload.conditioningTexts.length > 0) {
+    console.info(`[web-rwkv:worker] synthesizing state cartridge in-situ from ${payload.conditioningTexts.length} conditioning blocks...`)
+    session.load(new Float32Array(stateLen))
+    const enc = new TextEncoder()
+    const scratch = new Float32Array(info.num_vocab)
+    for (let i = 0; i < payload.conditioningTexts.length; i++) {
+      if (signal?.aborted)
+        throw new DOMException('Aborted', 'AbortError')
+      const text = payload.conditioningTexts[i]
+      const condTokens = tokenizer.encode(enc.encode(text))
+      if (condTokens.length > 0) {
+        await session.run(condTokens, scratch)
+      }
+      if ((i + 1) % 50 === 0 || i + 1 === payload.conditioningTexts.length) {
+        console.info(`[web-rwkv:worker] in-situ conditioning progress: ${i + 1}/${payload.conditioningTexts.length} blocks`)
+      }
+    }
+    stateLoaded = true
+    if (payload.stateCartridgeId) {
+      try {
+        const snapshot = new Float32Array(stateLen)
+        await session.back(snapshot)
+        await writeCachedState(payload.stateCartridgeId, snapshot)
+        console.info(`[web-rwkv:worker] in-situ conditioning completed and cached in OPFS: ${payload.stateCartridgeId}`)
+      }
+      catch (snapshotErr) {
+        console.warn('[web-rwkv:worker] failed to snapshot in-situ state:', snapshotErr)
+      }
+    }
+  }
+
+  if (!stateLoaded) {
+    session.load(new Float32Array(stateLen))
+  }
 
   const sampler = new NucleusSampler(
     info,

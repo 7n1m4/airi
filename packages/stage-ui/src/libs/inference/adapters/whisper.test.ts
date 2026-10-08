@@ -66,6 +66,9 @@ vi.mock('../coordinator', () => ({
     release: vi.fn(),
     touch: vi.fn(),
     recordDeviceLoss,
+    registerEvictable: vi.fn(() => () => {}),
+    evictModel: vi.fn(() => false),
+    evictInactive: vi.fn(() => [] as string[]),
   }),
   getGpuExecutor: () => ({
     run: runMock,

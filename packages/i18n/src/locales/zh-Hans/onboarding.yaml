@@ -79,15 +79,42 @@ steps:
         f2: 零云端遥测与外部网络请求
         f3: 基于本地数据库极速秒开
     cloud:
-      badge: 多设备同步
+      badge: 10 GB 免费空间 + 云端同步
       title: 账号登录 (Cloudflare)
-      description: 连接您的账号，通过端到端加密跨设备无缝同步伴侣、配置与记忆库。
+      description: 连接您的 Cloudflare 账号，解锁 10 GB 免费云存储、每日边缘 AI 额度，以及全天候跨设备伴侣陪伴。
       selectedCta: 已选择 (云端备份)
       selectCta: 选择云端同步
       features:
-        f1: Cloudflare R2 加密云端备份
-        f2: 顺畅的多设备实时同步
-        f3: Edge Vault 凭据自动恢复
+        f1: 10 GB 免费云存储空间
+        f2: 每日免费边缘 AI 算力
+        f3: 24/7 Discord 云端接力
+        f4: 多设备同步与一键恢复
+        f5: 私有 CORS 代理与零托管隐私
+        storage:
+          title: 10 GB 免费云存储空间
+          desc: 完整备份 3D 模型、自定义背景与记忆库，且无下载流量费用。
+          howItWorks: 基于用户拥有的 Cloudflare R2 对象存储技术。
+          whyItMatters: 永久免费空间充裕，容纳数十个 VRM/Live2D 模型与数年对话历史。与 AWS S3 不同，下载资产 100% 免收出网流量费。
+        ai:
+          title: 每日免费边缘 AI 算力
+          desc: 每日 10,000 免费 Neurons 额度，支持 DeepSeek、Qwen 与 Llama（无需 API 密钥）。
+          howItWorks: 在步骤 8（意识）中自动直连 Cloudflare Workers AI。
+          whyItMatters: 无需 OpenAI 付费订阅、绑定信用卡或高端本地显卡，即可在边缘直接畅聊前沿开源大模型。
+        relay:
+          title: 24/7 Discord 云端接力
+          desc: 即使电脑关机或休眠，伴侣也能在你的专属 Discord 服务器中保持清醒。
+          howItWorks: 作为无服务器 Cloudflare Worker (@proj-airi/stage-edge) 运行并处理 Discord 交互 Webhook。
+          whyItMatters: 伴侣全天候响应 Discord 消息并在边缘保存记忆，当你再次打开电脑时自动回传同步。
+        sync:
+          title: 多设备同步与一键恢复
+          desc: 顺畅同步桌面端、Web 端与移动端；随时一键完整恢复伴侣。
+          howItWorks: 通过 Edge Key Vault (airi-edge-vault) 安全保持伴侣最新活跃状态。
+          whyItMatters: 重装 AIRI 或更换新设备时，无需重新配置密钥即可秒速恢复伴侣、设定与所有记忆。
+        proxy:
+          title: 私有 CORS 代理与零托管隐私
+          desc: 安全访问复杂的本地与远程 AI API，100% 零数据截留。
+          howItWorks: 自动部署个人边缘反向代理，为 Web 与移动端绕过浏览器 CORS 跨域限制。
+          whyItMatters: 所有数据只存在于你自己的 Cloudflare 账号中，AIRI 没有任何中转服务器，绝不窥探或采集你的对话。
     auth:
       connected: 已连接至 Cloudflare
       disconnect: 断开连接
@@ -354,6 +381,16 @@ steps:
     subtitle: 聊天识图与分析 (VLM)
     title: 视觉感知 (多模态识图)
     description: 让伴侣能够看懂你在聊天中发送的照片、截图与艺术画作并给出真实反馈。
+    tabs:
+      cloudflare: Cloudflare 边缘
+      cloudflareBadge: 每日 10k 免费额度
+      local: 本地离线
+      localBadge: 物理隔离
+      custom: 云端供应商
+    cloudflare:
+      connected: '已连接至 Cloudflare：每日 10,000 免费 Neurons 算力已激活'
+      notConnected: 连接您的 Cloudflare 账号，即可零配置使用免费边缘视觉识别。
+      signIn: 使用 Cloudflare 登录
     engineTitle: 视觉理解模型
     testImage: 测试图像感知
     testPrompt: 上传一张照片以验证伴侣的视觉图像分析能力。

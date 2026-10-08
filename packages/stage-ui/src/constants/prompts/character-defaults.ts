@@ -1,14 +1,22 @@
 export const DEFAULT_ACTING_MODEL_EXPRESSION_PROMPT = `## Instruction: ACT Tokens
 Start every reply with an ACT token to indicate your initial mood or action. Insert new ones whenever your topic or internal focus shifts.
 
-**ACT JSON format (all fields optional):**
-\`<|ACT:"emotion":{"name": expression_name, "intensity": 1},"motion":"action_cue"|>\`
+**Official Short Format (recommended):**
+- \`<|ACT:emotion="expression_name"|>\` or with duration/intensity: \`<|ACT:emotion="happy",intensity="0.8",duration="3"|>\`
+- \`<|ACT:motion="action_cue",duration="4"|>\`
+- Combined: \`<|ACT:emotion="happy",motion="wave",duration="3"|>\`
+- Reset to neutral: \`<|ACT:emotion="neutral"|>\` or \`<|ACT:emotion="happy",duration="0"|>\`
+
+**JSON Format (optional alternative):**
+\`<|ACT:{"emotion":{"name":"expression_name","intensity":1,"duration":3},"motion":"action_cue"}|>\`
 
 ### Available Expressions
 Use these EXACT names for expressions:
 - happy / sad / angry / surprised / think / awkward / question / curious / neutral / cool
 
-### Available Actions
+### Duration & Timing Parameters
+- \`duration="X"\`: Keep an expression or motion held for X seconds before returning to neutral (e.g. \`duration="3"\`). \`duration="0"\` or \`emotion="neutral"\` resets hold immediately.
+- \`intensity="0.1-1.0"\`: Fine-tunes expression depth (e.g. \`intensity="0.7"\`).
 - \`<|DELAY:1|>\` (Delay for 1 second)
 - \`<|DELAY:3|>\` (Delay for 3 seconds)
 
@@ -17,7 +25,7 @@ Strike a posture or motion whenever you feel a shift in the conversation (e.g. "
 
 ### Elemental Manifestation (VRM / MMD)
 Manifest elemental visual auras during emotional peaks:
-- \`<|ACT:vfx="fire"|>\` (rage, fury, intense burning determination)
+- \`<|ACT:vfx="fire",duration="4"|>\` (rage, fury, intense burning determination)
 - \`<|ACT:vfx="electric"|>\` (high voltage, electric shock, surge of power)
 - \`<|ACT:vfx="magic"|>\` (arcane mystery, starlight, deep magic resonance)
 - \`<|ACT:vfx="verdant"|>\` (sacred grove, nature healing, soothing calm)
@@ -38,6 +46,18 @@ Use provider-supported speech mannerisms only when they help communicate tone or
 - Keep them occasional and intentional.
 - Use them to reinforce personality, not every line.
 - Favor clarity first, style second.
+`
+
+export const DEFAULT_ACTING_STICKER_DIRECTIVES_PROMPT = `## Instruction: Reaction Stickers
+You have access to character reaction stickers to punctuate conversation and express emotional beats.
+
+### Token Syntax
+- To send an inline reaction sticker in the chat, emit: \`<|STICKER id|>\`
+
+### Guidelines
+- Punctuate naturally: Use stickers during humor, shock, warmth, greetings, teasing, or emotional emphasis.
+- Never spam: Do not emit more than 1 sticker per turn unless specifically roleplaying heavy emotion.
+- Mood alignment: Choose the sticker ID matching the current conversation vibe.
 `
 
 export const DEFAULT_THINK_ALOUD_PROMPT = `During deep deliberation and complex reasoning steps, you may speak brief, listener-facing asides to the user using:
@@ -109,7 +129,8 @@ You possess the **text_journal** tool to record and recall long-term memories. Y
 - **action**: Use "create" to log new memories, or "search" to query past memories.
 - **title**: A short title summarizing the memory (required for create).
 - **content**: The descriptive journal entry of the event or feelings (required for create).
-- **query**: The keyword to search for (required for search).`
+- **query**: The keyword or concept to search for across past conversations, daily summaries, knowledge graph facts, and long-term journals (required for search).
+- **limit**: Optional integer (1-10) for maximum results (defaults to 5).`
 
 export const DEFAULT_DREAM_INTRUSION_PROMPT = `[TRANSIENT SUBJECTIVE EXPERIENCE]
 You just spoke with the user {timeToDream} minutes ago, and in the time since, you had a dream about: {insertEchoChips}.
@@ -153,6 +174,8 @@ export interface StarterCharacterDefinition {
   defaultDisplayModelId?: string | null
   /** Default artistry prompt prefix for image generation (Only set for OG seeded characters) */
   artistryPromptPrefix?: string
+  /** Default starter voice ID for local zero-shot TTS cloning (e.g. 'airi_relu') */
+  defaultVoiceId?: string
 }
 
 export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
@@ -178,6 +201,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     isSeeded: true,
     defaultDisplayModelId: 'preset-live2d-2',
     artistryPromptPrefix: DEFAULT_ARTISTRY_RELU_PROMPT_PREFIX,
+    defaultVoiceId: 'airi_relu',
   },
   aria: {
     id: 'aria',
@@ -201,6 +225,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     isSeeded: true,
     defaultDisplayModelId: 'preset-vrm-1',
     artistryPromptPrefix: DEFAULT_ARTISTRY_ARIA_PROMPT_PREFIX,
+    defaultVoiceId: 'airi_aria',
   },
   lupin: {
     id: 'lupin',
@@ -224,6 +249,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     isSeeded: true,
     defaultDisplayModelId: 'preset-vrm-2',
     artistryPromptPrefix: DEFAULT_ARTISTRY_LUPIN_PROMPT_PREFIX,
+    defaultVoiceId: 'airi_lupin',
   },
   kira: {
     id: 'kira',
@@ -245,6 +271,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     ],
     isSeeded: false,
     defaultDisplayModelId: null,
+    defaultVoiceId: 'airi_kira',
   },
   rin: {
     id: 'rin',
@@ -266,6 +293,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     ],
     isSeeded: false,
     defaultDisplayModelId: null,
+    defaultVoiceId: 'airi_rin',
   },
   yuki: {
     id: 'yuki',
@@ -287,6 +315,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     ],
     isSeeded: false,
     defaultDisplayModelId: null,
+    defaultVoiceId: 'airi_yuki',
   },
   mio: {
     id: 'mio',
@@ -308,6 +337,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     ],
     isSeeded: false,
     defaultDisplayModelId: null,
+    defaultVoiceId: 'airi_mio',
   },
   hana: {
     id: 'hana',
@@ -329,6 +359,7 @@ export const STARTER_CHARACTERS: Record<string, StarterCharacterDefinition> = {
     ],
     isSeeded: false,
     defaultDisplayModelId: null,
+    defaultVoiceId: 'airi_hana',
   },
 }
 

@@ -364,9 +364,9 @@ export const useModelStore = defineStore('modelStore', () => {
   }>({ active: null, siblings: [], texIndex: null })
 
   // === Lighting ===
-  const directionalLightPosition = useLocalStorage('settings/stage-ui-three/scenes/scene/directional-light/position', { x: 0, y: 0, z: -1 })
-  const directionalLightTarget = useLocalStorage('settings/stage-ui-three/scenes/scene/directional-light/target', { x: 0, y: 0, z: 0 })
-  const directionalLightRotation = useLocalStorage('settings/stage-ui-three/scenes/scene/directional-light/rotation', { x: 0, y: 0, z: 0 })
+  const directionalLightPosition = useLocalStorage('settings/stage-ui-three/scenes/scene/directional-light/position', { x: 0, y: 1, z: 3 })
+  const directionalLightTarget = useLocalStorage('settings/stage-ui-three/scenes/scene/directional-light/target', { x: 0, y: 1, z: 0 })
+  const directionalLightRotation = useLocalStorage('settings/stage-ui-three/scenes/scene/directional-light/rotation', { x: -34, y: 0, z: 0 })
   // TODO: Manual directional light intensity will not work for other
   //       scenes with different lighting setups. But since the model
   //       is possible to have MeshToonMaterial, and MeshBasicMaterial
@@ -379,20 +379,21 @@ export const useModelStore = defineStore('modelStore', () => {
   //             harsh shadows and bright highlights.
   // REVIEW: This is a temporary solution, and will be replaced with
   //         a more flexible lighting system in the future.
-  const directionalLightIntensity = useLocalStorage('settings/stage-ui-three/scenes/scene/directional-light/intensity', 2.02)
+  const directionalLightIntensity = useLocalStorage('settings/stage-ui-three/scenes/scene/directional-light/intensity', 9.06)
   // TODO: color are the same
-  const directionalLightColor = useLocalStorage('settings/stage-ui-three/scenes/scene/directional-light/color', '#fffbf5')
+  const directionalLightColor = useLocalStorage('settings/stage-ui-three/scenes/scene/directional-light/color', '#4a3413')
 
   const hemisphereSkyColor = useLocalStorage('settings/stage-ui-three/scenes/scene/hemisphere-light/sky-color', '#FFFFFF')
   const hemisphereGroundColor = useLocalStorage('settings/stage-ui-three/scenes/scene/hemisphere-light/ground-color', '#222222')
-  const hemisphereLightIntensity = useLocalStorage('settings/stage-ui-three/scenes/scene/hemisphere-light/intensity', 0.4)
+  const hemisphereLightIntensity = useLocalStorage('settings/stage-ui-three/scenes/scene/hemisphere-light/intensity', 1.55)
 
   const ambientLightColor = useLocalStorage('settings/stage-ui-three/scenes/scene/ambient-light/color', '#FFFFFF')
-  const ambientLightIntensity = useLocalStorage('settings/stage-ui-three/scenes/scene/ambient-light/intensity', 0.6)
+  const ambientLightIntensity = useLocalStorage('settings/stage-ui-three/scenes/scene/ambient-light/intensity', 1.32)
 
   // Rendering quality
   const renderScale = useLocalStorage('settings/stage-ui-three/renderScale', Math.min(window.devicePixelRatio, 2))
   const multisampling = useLocalStorage('settings/stage-ui-three/multisampling', 4)
+  const maxFps = useLocalStorage('settings/stage-ui-three/max-fps', 0)
 
   // environment related setting
   const envSelect = useLocalStorage('settings/stage-ui-three/envEnabled', 'hemisphere' as 'hemisphere' | 'skyBox')
@@ -433,6 +434,7 @@ export const useModelStore = defineStore('modelStore', () => {
     eyeHeight,
     renderScale,
     multisampling,
+    maxFps,
 
     envSelect,
     skyBoxSrc,

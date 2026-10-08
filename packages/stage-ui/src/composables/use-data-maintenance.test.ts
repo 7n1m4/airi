@@ -10,6 +10,8 @@ const {
   mockChatIndex,
   mockSTMMBlocks,
   mockLTMMEntries,
+  mockStorage,
+  mockBackgroundStore,
 } = vi.hoisted(() => {
   return {
     mockChatSessionsRepo: {
@@ -36,8 +38,23 @@ const {
     },
     mockSTMMBlocks: { value: [] as any[] },
     mockLTMMEntries: { value: [] as any[] },
+    mockStorage: {
+      getKeys: vi.fn(async (): Promise<string[]> => []),
+      getItemRaw: vi.fn(),
+      setItemRaw: vi.fn(),
+      removeItem: vi.fn(),
+    },
+    mockBackgroundStore: {
+      entries: new Map(),
+      addBackground: vi.fn(async () => 'bg-mock-entry-id'),
+    },
   }
 })
+
+vi.mock('../database/storage', () => ({
+  storage: mockStorage,
+  storageState: { isImportingRemoteData: false },
+}))
 
 vi.mock('../database/repos/chat-sessions.repo', () => ({
   chatSessionsRepo: mockChatSessionsRepo,
@@ -95,10 +112,7 @@ vi.mock('../stores/memory-text-journal', () => ({
 }))
 
 vi.mock('../stores/background', () => ({
-  useBackgroundStore: () => ({
-    entries: new Map(),
-    addBackground: vi.fn(),
-  }),
+  useBackgroundStore: () => mockBackgroundStore,
 }))
 
 vi.mock('../stores/chat', () => ({
@@ -441,6 +455,108 @@ describe('useDataMaintenance characterization tests', () => {
         { id: 'ltmm-keep', characterId: 'valid-char', text: 'Keep this' },
       ])
       expect(mockLifetimeMemoryRepo.delete).toHaveBeenCalledWith('orphan-junk', 'global')
+    })
+  })
+
+  describe('chat session media scrubbing (scrubAndResolveSessionMedia)', () => {
+    it('calculates total byte size across all chat sessions', async () => {
+      mockStorage.getKeys.mockResolvedValueOnce(['local:chat/sessions/s1', 'local:chat/sessions/s2'])
+      mockChatSessionsRepo.getSession.mockImplementation(async (id: string) => {
+        if (id === 's1')
+          return { meta: { sessionId: 's1' }, messages: [{ role: 'user', content: 'hello' }] }
+        if (id === 's2')
+          return { meta: { sessionId: 's2' }, messages: [{ role: 'user', content: 'world' }] }
+        return null
+      })
+
+      const { calculateChatSessionsByteSize } = useDataMaintenance()
+      const totalBytes = await calculateChatSessionsByteSize()
+      expect(totalBytes).toBeGreaterThan(0)
+    })
+
+    it('extracts leaked tool_results image base64, adds to backgroundStore, and leaves metadata only', async () => {
+      const sampleBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+      const sessionWithLeakedToolResult = {
+        meta: {
+          sessionId: 'sess-media-1',
+          characterId: 'char-1',
+          universeId: 'u-1',
+        },
+        messages: [
+          {
+            role: 'assistant',
+            content: 'Here is your painting!',
+            tool_results: [
+              {
+                id: 'call-1',
+                result: JSON.stringify({
+                  imageUrl: sampleBase64,
+                  prompt: 'a tranquil lake at dawn',
+                  title: 'Dawn Lake',
+                }),
+              },
+            ],
+          },
+        ],
+      }
+
+      mockStorage.getKeys.mockResolvedValueOnce(['local:chat/sessions/sess-media-1'])
+      mockChatSessionsRepo.getSession.mockResolvedValueOnce(sessionWithLeakedToolResult)
+
+      const { scrubAndResolveSessionMedia } = useDataMaintenance()
+      const report = await scrubAndResolveSessionMedia()
+
+      expect(report.sessionsScanned).toBe(1)
+      expect(report.imagesExtracted).toBe(1)
+      expect(report.bytesSaved).toBeGreaterThan(0)
+      expect(mockBackgroundStore.addBackground).toHaveBeenCalledWith(
+        'journal',
+        expect.any(Blob),
+        'Dawn Lake',
+        'a tranquil lake at dawn',
+        'char-1',
+        undefined,
+        'u-1',
+        'sess-media-1',
+      )
+
+      expect(mockChatSessionsRepo.saveSession).toHaveBeenCalledTimes(1)
+      const savedRecord = mockChatSessionsRepo.saveSession.mock.calls[0][1]
+      const savedResult = JSON.parse(savedRecord.messages[0].tool_results[0].result)
+      expect(savedResult.imageUrl).toBeUndefined()
+      expect(savedResult.entryId).toBe('bg-mock-entry-id')
+      expect(savedResult.scrubbed).toBe(true)
+    })
+
+    it('extracts inline data:image base64 from content and rawContent and replaces with local:background:<entryId>', async () => {
+      const sampleBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+      const sessionWithInlineContent = {
+        meta: {
+          sessionId: 'sess-media-2',
+          characterId: 'char-2',
+        },
+        messages: [
+          {
+            role: 'user',
+            content: `Look at this photo: ![](${sampleBase64})`,
+            rawContent: `Raw prompt with ${sampleBase64}`,
+          },
+        ],
+      }
+
+      mockStorage.getKeys.mockResolvedValueOnce(['local:chat/sessions/sess-media-2'])
+      mockChatSessionsRepo.getSession.mockResolvedValueOnce(sessionWithInlineContent)
+
+      const { scrubAndResolveSessionMedia } = useDataMaintenance()
+      const report = await scrubAndResolveSessionMedia()
+
+      expect(report.sessionsScanned).toBe(1)
+      expect(report.imagesExtracted).toBe(2)
+      expect(report.bytesSaved).toBeGreaterThan(0)
+
+      const savedRecord = mockChatSessionsRepo.saveSession.mock.calls[0][1]
+      expect(savedRecord.messages[0].content).toBe('Look at this photo: ![](local:background:bg-mock-entry-id)')
+      expect(savedRecord.messages[0].rawContent).toBe('Raw prompt with local:background:bg-mock-entry-id')
     })
   })
 })

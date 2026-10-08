@@ -26,6 +26,7 @@ export const globalAppConfigSchema = object({
   }))),
   microphoneToggleHotkey: optional(picklist(['Scroll', 'Caps', 'Num']), 'Scroll'),
   corsBypassUrls: optional(array(string())),
+  hideAppIcon: optional(boolean()),
 })
 
 export function createGlobalAppConfig() {
@@ -34,6 +35,7 @@ export function createGlobalAppConfig() {
       language: 'en',
       windows: [],
       microphoneToggleHotkey: 'Scroll',
+      hideAppIcon: true,
       corsBypassUrls: [
         'https://api.typesafe.ai/*',
         'https://api.deepgram.com/*',

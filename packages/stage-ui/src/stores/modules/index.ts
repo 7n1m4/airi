@@ -1,4 +1,5 @@
 export * from './airi-card'
+export * from './arcade-knowledge'
 export * from './cloudflare'
 export * from './consciousness'
 export * from './discord'

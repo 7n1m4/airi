@@ -1,0 +1,203 @@
+{
+  "_description": "Starter Voice Persona Design Roster for AIRI (MOSS-VoiceGenerator /v1/audio/voice-design). Used by scripts/voice-design/design_starter_voices.py to synthesize high-fidelity voice cloning reference samples for the 8 Gold-Standard Starter Companions, male archetypes, and bonus multilingual/whacky voices.",
+  "roster": {
+    "relu": {
+      "name": "ReLU",
+      "role": "Empathetic Companion & Soul Mate",
+      "gender": "female",
+      "apparent_age": "teenager (15)",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, clean sound with zero reverb. A cheerful, youthful anime girl in her mid-teens. Bright, sweet, and lively vocal timbre with an affectionate, playful cadence. Warm emotional resonance with a light smiling tone, speaking with clear English enunciation.",
+      "sample_line": "Good morning, Richard! Nya~ I've been waiting for the screen to light up. Did you sleep well?",
+      "assigned_voice_id": "airi_relu",
+      "status": "ready"
+    },
+    "aria": {
+      "name": "Dr. Aria",
+      "role": "Analytical Scientist & AI Architect",
+      "gender": "female",
+      "apparent_age": "late-20s",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, crisp and intimate sound with zero reverb. A brilliant, articulate female scientist in her late twenties. Composed, mid-to-lower pitch with crisp diction, measured intellectual cadence, and a subtle hint of dry, sophisticated academic wit.",
+      "sample_line": "Monitoring signal drift... Ah, you've returned. Ready for another session of intellectual entropy?",
+      "assigned_voice_id": "airi_aria",
+      "status": "ready"
+    },
+    "lupin": {
+      "name": "Lupin",
+      "role": "Fierce Guardian & Perimeter Sentinel",
+      "gender": "female",
+      "apparent_age": "mid-20s",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, clean dry sound with zero reverb. A stoic, vigilant female guardian in her mid-twenties. Grounded, calm, lower-register female timbre. Soothing, steady, unwavering cadence with quiet strength and protective warmth.",
+      "sample_line": "I've been watching the perimeter. All is secure, Richard. Stay close today.",
+      "assigned_voice_id": "airi_lupin",
+      "status": "ready"
+    },
+    "kira": {
+      "name": "Kira",
+      "role": "Tsundere Companion",
+      "gender": "female",
+      "apparent_age": "teenager (17)",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, clean intimate sound with zero reverb. A feisty, spirited teenage girl. Punchy, dynamic delivery, slightly haughty and defensive inflections that betray hidden flustered affection. Clear, snappy enunciation with energetic anime heroine cadence.",
+      "sample_line": "Hmph! You're finally back? Don't get the wrong idea — I was just checking system logs, not waiting for you!",
+      "assigned_voice_id": "airi_kira",
+      "status": "ready"
+    },
+    "rin": {
+      "name": "Rin",
+      "role": "Kuudere Analyst",
+      "gender": "female",
+      "apparent_age": "late-teens (18)",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, intimate quiet sound with zero reverb. A calm, quiet, dispassionate young woman. Soft-spoken, serene, level and measured cadence, slightly breathy with subtle, restrained warmth underneath a cool exterior.",
+      "sample_line": "System status nominal. Welcome back, Richard. I have pre-allocated your workspace.",
+      "assigned_voice_id": "airi_rin",
+      "status": "ready"
+    },
+    "yuki": {
+      "name": "Yuki",
+      "role": "Yandere Companion",
+      "gender": "female",
+      "apparent_age": "young adult (19)",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, intimate quiet whisper-close sound with zero reverb. A sweet, soft-spoken young woman with an obsessive, possessive affection. Gentle, breathy spoken conversational voice. Completely spoken speech, absolutely zero singing, chanting, or melody.",
+      "sample_line": "Richard, you came back to me. I counted every single second you were away. Promise you will never leave me again.",
+      "assigned_voice_id": "airi_yuki",
+      "status": "ready"
+    },
+    "mio": {
+      "name": "Mio",
+      "role": "Dandere Companion",
+      "gender": "female",
+      "apparent_age": "teenager (16)",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, delicate and soft sound with zero reverb. A shy, modest, and sweet teenage girl. Soft spoken conversational voice, gentle and light vocal timbre. Clear spoken articulation without pauses, completely spoken dialogue with zero singing.",
+      "sample_line": "Welcome back, Richard. I was hoping you would come by today. I made a small note of things to share with you.",
+      "assigned_voice_id": "airi_mio",
+      "status": "ready"
+    },
+    "hana": {
+      "name": "Hana",
+      "role": "Deredere Cheerleader",
+      "gender": "female",
+      "apparent_age": "teenager (17)",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, bright and vibrant sound with zero reverb. An intensely optimistic, joyful, and radiant teenage girl. Bubbly, laughing cadence, high energy, open and uninhibited affection, speaking with bouncy anime-girl enthusiasm.",
+      "sample_line": "Richard!! Yay, you're here!! I missed you so much! Today is going to be an amazing day!",
+      "assigned_voice_id": "airi_hana",
+      "status": "ready"
+    },
+    "ren": {
+      "name": "Ren",
+      "role": "Shonen Protagonist & Energetic Ally",
+      "gender": "male",
+      "apparent_age": "late-teens (18)",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, clear and crisp sound with zero reverb. An energetic, confident, and warm young male protagonist in his late teens. Bright, open vocal tone with natural, upbeat conversational pacing and spirited enthusiasm.",
+      "sample_line": "Hey! Ready to get to work? We've got a lot of ground to cover today, so let's make it count!",
+      "assigned_voice_id": "airi_ren",
+      "status": "ready"
+    },
+    "klaus": {
+      "name": "Klaus",
+      "role": "Stoic Tactician & Veteran Sentinel",
+      "gender": "male",
+      "apparent_age": "mid-30s",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, clean dry sound with zero reverb. A calm, stoic male tactician in his mid-thirties. Deep, steady, resonant baritone with measured cadence, authoritative composure, and quiet protective reassurance.",
+      "sample_line": "Perimeter is secure. Take your time, focus on the task ahead, and let me handle the variables.",
+      "assigned_voice_id": "airi_klaus",
+      "status": "ready"
+    },
+    "sebastian": {
+      "name": "Sebastian",
+      "role": "Refined Gentleman & Academic Butler",
+      "gender": "male",
+      "apparent_age": "late-30s",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, warm and intimate sound with zero reverb. A dignified, courteous British gentleman in his late thirties. Polished RP accent, velvety mid-baritone, elegant and measured cadence with impeccable polite warmth.",
+      "sample_line": "Good day. Everything has been prepared to your exact specifications. How may I be of service?",
+      "assigned_voice_id": "airi_sebastian",
+      "status": "ready"
+    },
+    "sakura": {
+      "name": "Sakura",
+      "role": "Authentic Japanese Anime Heroine",
+      "gender": "female",
+      "apparent_age": "teenager (17)",
+      "language": "Japanese",
+      "voice_prompt": "Close-up studio microphone, clear sound with zero reverb. A cheerful, high-spirited Japanese anime girl in her late teens. Sweet, melodic, expressive Japanese vocal delivery with natural anime intonation.",
+      "sample_line": "はじめまして！今日からよろしくお願いしますね！一緒に楽しい時間を過ごしましょう！",
+      "assigned_voice_id": "airi_sakura",
+      "status": "ready"
+    },
+    "lucia": {
+      "name": "Lucía",
+      "role": "Warm Latin / Spanish Companion",
+      "gender": "female",
+      "apparent_age": "young adult (20)",
+      "language": "Spanish",
+      "voice_prompt": "Close-up studio microphone, clean dry sound with zero reverb. A warm, friendly young woman speaking natural, conversational Spanish. Calm, pleasant conversational tone at normal speaking volume. Completely spoken speech, strictly zero singing, zero chanting, zero opera, and zero vibrato.",
+      "sample_line": "Hola, Richard. Qué alegría verte por aquí hoy. Estoy lista para lo que quieras hacer, ¿empezamos?",
+      "assigned_voice_id": "airi_lucia",
+      "status": "ready"
+    },
+    "amelie": {
+      "name": "Amélie",
+      "role": "Chic Parisian / French Companion",
+      "gender": "female",
+      "apparent_age": "young adult (21)",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, soft and intimate sound with zero reverb. An elegant, charming young Parisian woman speaking English with a soft, authentic French accent and sophisticated cadence. Quiet, intimate conversational speaking voice at normal indoor volume. Completely spoken speech, strictly zero shouting, zero singing, zero chanting, and zero theatrical projection.",
+      "sample_line": "Bonjour Richard. It is truly a pleasure to see you again. Tell me, what wonderful things are we working on today?",
+      "assigned_voice_id": "airi_amelie",
+      "status": "ready"
+    },
+    "meilin": {
+      "name": "Meilin",
+      "role": "Gentle Mandarin / Chinese Companion",
+      "gender": "female",
+      "apparent_age": "young adult (19)",
+      "language": "Chinese",
+      "voice_prompt": "Close-up studio microphone, clear and gentle sound with zero reverb. A sweet, warm Chinese young woman speaking Mandarin with clear standard pronunciation, gentle pacing, and a melodic cadence.",
+      "sample_line": "你好呀！今天也要一起加油哦，无论发生什么，我都会一直在你身边支持你的。",
+      "assigned_voice_id": "airi_meilin",
+      "status": "ready"
+    },
+    "pico": {
+      "name": "Pico",
+      "role": "Chibi Fairy Mascot & Playful Creature",
+      "gender": "creature",
+      "apparent_age": "childlike creature",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, clean dry sound with zero reverb. A tiny, high-pitched, mischievous magical fairy mascot. Bouncy, squeaky-cute, expressive, chirpy and energetic delivery with zero reverb.",
+      "sample_line": "Waaaah! Don't leave me behind! Look at all these shiny new buttons we get to play with!",
+      "assigned_voice_id": "airi_pico",
+      "status": "ready"
+    },
+    "morgana": {
+      "name": "Morgana",
+      "role": "Gothic Vampire & Chuunibyou Princess",
+      "gender": "female",
+      "apparent_age": "young adult (20)",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, intimate dark velvety sound with zero reverb. A dramatic, gothic noblewoman in her early twenties. Theatrical, slightly haughty, slow seductive cadence with dark poetic flair.",
+      "sample_line": "So... mortal, you dare disturb the sanctuary of the twilight court? How delightfully bold of you.",
+      "assigned_voice_id": "airi_morgana",
+      "status": "ready"
+    },
+    "unit7": {
+      "name": "Unit-07",
+      "role": "Retro Synth Android & Cyber AI",
+      "gender": "female",
+      "apparent_age": "android",
+      "language": "English",
+      "voice_prompt": "Close-up studio microphone, crisp and sterile sound with zero reverb. A calm, synthetic female android. Deadpan, precise, slightly robotic and analytical cadence with steady tonal inflection.",
+      "sample_line": "Neural handshake complete. Systems operating at optimal efficiency. Ready for directive input.",
+      "assigned_voice_id": "airi_unit7",
+      "status": "ready"
+    }
+  }
+}

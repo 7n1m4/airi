@@ -71,15 +71,26 @@ export const useVisionStore = defineStore('vision', () => {
     return primaryDisplaySize.value
   }
 
+  // NOTICE: permission state changes only via OS Settings (app restart to take
+  // effect), so per-tick IPC checks double channel traffic on the 2-5s loop
+  // for no benefit. Cache for 60s; captureSnapshot is the only caller.
+  const PERMISSION_CACHE_TTL_MS = 60_000
+  let cachedPermission: string | null = null
+  let cachedPermissionAt = 0
+
   /**
    * Checks if the app has screen recording permissions on macOS.
    * Returns 'granted' on non-macOS platforms.
    */
   async function checkPermissions() {
+    if (cachedPermission && Date.now() - cachedPermissionAt < PERMISSION_CACHE_TTL_MS)
+      return cachedPermission
     try {
       // In renderer, we use the IPC handler to check via systemPreferences
       const status = await checkPermissionInvoke()
       console.log('[Vision Store] macOS Screen Capture Permission Status:', status)
+      cachedPermission = status
+      cachedPermissionAt = Date.now()
       return status
     }
     catch (err) {
@@ -151,7 +162,12 @@ export const useVisionStore = defineStore('vision', () => {
     status.value = 'capturing'
 
     try {
-      const result = await captureSnapshot({ width: 1280, height: 720 }) as any
+      // NOTICE: the witness copy is persisted into chat history as a base64
+      // turn attachment and then cloned on every future stream delta — a
+      // 1280x720 PNG per heartbeat compounds into the exact blowup that took
+      // machines down. 640x360 is plenty for scene commentary; the OCR-grade
+      // native capture path (screen-watcher) is untouched.
+      const result = await captureSnapshot({ width: 640, height: 360 }) as any
 
       if (result?.error === 'permission_denied') {
         console.error('[Vision Store] Heartbeat: Screen capture failed due to permissions.')

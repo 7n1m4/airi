@@ -81,6 +81,10 @@ const CASUAL_SYNONYMS: { pattern: RegExp, expansion: string }[] = [
     pattern: /\bprogramming\s+competition\b/i,
     expansion: 'programming competition online contest hackathon coding',
   },
+  {
+    pattern: /\b(?:pin|door|access)\s+codes?\b/i,
+    expansion: 'pin code door code access code unlock digits',
+  },
 ]
 
 const STOPWORDS = new Set([
@@ -375,6 +379,9 @@ export interface TriageDecision {
   probabilities?: Record<string, number>
   temporalSubtype: string
   searchScope: string
+  conjunctionStructure?: string
+  conjunctionConfidence?: number
+  requiresDecomposition?: number
   method?: string
   latencyMs?: number | null
 }
@@ -385,6 +392,27 @@ export interface TriageDecision {
  */
 export function heuristicTriage(query: string): TriageDecision {
   const norm = query.toLowerCase()
+
+  // Detect conjunction structure and decomposition requirement heuristically
+  let conjunctionStructure = 'single_atomic'
+  let requiresDecomposition = 0.1
+
+  if (/\b(?:before or after|after or before|between\s+(?:\S.*|[\t\v\f \xA0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF])\s+and\s+|how many days apart)\b/i.test(norm)) {
+    conjunctionStructure = 'temporal_comparison'
+    requiresDecomposition = 0.92
+  }
+  else if (/\b(?:where (?:i|we) (?:found|went|saw|got)|(?:for the|of the|in the)\s+(?:\S.*?|[\t\v\f \xA0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF])\s+where)\b/i.test(norm)) {
+    conjunctionStructure = 'bridge_relational'
+    requiresDecomposition = 0.85
+  }
+  else if (/\b(?:two different|all the|both|which door did each|each one)\b/i.test(norm)) {
+    conjunctionStructure = 'multi_entity_plural'
+    requiresDecomposition = 0.88
+  }
+  else if (/who or what is/i.test(norm)) {
+    conjunctionStructure = 'identity_temporal'
+    requiresDecomposition = 0.70
+  }
 
   // 1. Temporal cues (C2)
   if (
@@ -399,6 +427,8 @@ export function heuristicTriage(query: string): TriageDecision {
       confidence: 0.8,
       temporalSubtype: isDuration ? 'duration' : 'calendar_date',
       searchScope: 'single_session',
+      conjunctionStructure,
+      requiresDecomposition,
       method: 'heuristic_regex_temporal',
     }
   }
@@ -407,6 +437,8 @@ export function heuristicTriage(query: string): TriageDecision {
   if (
     /\b(both|and .* (?:also|as well)|between|connection|relationship|all the things|list|how many|all of the|every|total|count)\b/i.test(norm)
     || /\b(different (?:places|jobs|events|pets|animals|games|books|movies|friends))\b/i.test(norm)
+    || conjunctionStructure === 'bridge_relational'
+    || conjunctionStructure === 'multi_entity_plural'
   ) {
     return {
       category: 1,
@@ -414,6 +446,8 @@ export function heuristicTriage(query: string): TriageDecision {
       confidence: 0.75,
       temporalSubtype: 'none',
       searchScope: 'multi_session',
+      conjunctionStructure,
+      requiresDecomposition: Math.max(requiresDecomposition, 0.8),
       method: 'heuristic_regex_multihop',
     }
   }
@@ -428,6 +462,8 @@ export function heuristicTriage(query: string): TriageDecision {
       confidence: 0.7,
       temporalSubtype: 'none',
       searchScope: 'single_session',
+      conjunctionStructure,
+      requiresDecomposition,
       method: 'heuristic_regex_detective',
     }
   }
@@ -439,6 +475,93 @@ export function heuristicTriage(query: string): TriageDecision {
     confidence: 0.85,
     temporalSubtype: 'none',
     searchScope: 'single_session',
+    conjunctionStructure,
+    requiresDecomposition,
     method: 'heuristic_literal_default',
   }
+}
+
+/**
+ * Decomposes complex multi-hop (C1) and temporal (C2) queries into targeted sub-queries.
+ * Allows multi-pass candidate retrieval so disparate clues from separate sessions/messages
+ * are both represented in the candidate pool.
+ */
+export function decomposeQuery(query: string, triage?: TriageDecision): string[] {
+  const norm = query.trim()
+  const subQueries = new Set<string>()
+
+  // Always keep the original query as one anchor
+  subQueries.add(norm)
+
+  // If Jev or heuristic triage indicates this is a pure single atomic query without decomposition:
+  if (triage && triage.conjunctionStructure === 'single_atomic' && (triage.requiresDecomposition ?? 0) < 0.25) {
+    return Array.from(subQueries)
+  }
+
+  // 1. Relational Conjunction Split: "before or after", "and which", "where I found", "between X and Y"
+  if (
+    (triage?.conjunctionStructure === 'temporal_comparison' || triage?.conjunctionStructure === 'bridge_relational')
+    || /\b(?:before or after|after or before|and which|where (?:i|we) (?:found|went|saw|got)|between\s+(?:\S.*|[\t\v\f \xA0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF])\s+and\s+)/i.test(norm)
+  ) {
+    const parts = norm.split(/\b(?:before or after|after or before|and which|where (?:i|we) (?:found|went|saw|got))\b/i)
+    if (parts.length >= 2) {
+      for (const p of parts) {
+        const cleaned = p.replace(/^(?:did we|what was the|can you tell me|how many days apart were they\??|\?|,)/gi, '').trim()
+        if (cleaned.length > 3) {
+          subQueries.add(cleaned)
+        }
+      }
+    }
+  }
+
+  // 2. Multi-Hop Bridge: "X for the Y where Z"
+  const bridgeMatch = norm.match(/(?:what was the|what is the|tell me the)\s+(.+?)\s+(?:for the|of the|in the)\s+(.+?)\s+where\s+(?:i|we)\s+(.+)/i)
+  if (bridgeMatch) {
+    const [, targetAttr, intermediateEntity, sourceFact] = bridgeMatch
+    subQueries.add(sourceFact.replace(/[?.,]/g, '').trim())
+    subQueries.add(`${targetAttr} ${intermediateEntity}`.replace(/[?.,]/g, '').trim())
+  }
+
+  // 3. Multi-Entity / Plural questions: "two different X", "all the X", "both X and Y"
+  if (
+    triage?.conjunctionStructure === 'multi_entity_plural'
+    || /\b(?:two different|all the|both)\b/i.test(norm)
+  ) {
+    const cleanQuestion = norm.replace(/\b(?:what were the|what are the|can you list|tell me)\b/i, '').trim()
+    const andParts = cleanQuestion.split(/\b(?:,\s*and\s*which|and which|\band\b)\b/i)
+    if (andParts.length >= 2) {
+      for (const ap of andParts) {
+        const cleaned = ap.replace(/[?.,]/g, '').trim()
+        if (cleaned.length > 3) {
+          subQueries.add(cleaned)
+        }
+      }
+    }
+  }
+
+  // 4. "Who or what is 'X' and when did Y"
+  if (
+    triage?.conjunctionStructure === 'identity_temporal'
+    || /who or what is/i.test(norm)
+  ) {
+    const whoOrWhatMatch = norm.match(/who or what is ['"]?([^'",?]+)['"]?\s*(?:,|and|\?)\s*(?:when did (?:i|we) (.+))?/i)
+    if (whoOrWhatMatch) {
+      const [, entityName, introduceAction] = whoOrWhatMatch
+      subQueries.add(entityName.trim())
+      if (introduceAction) {
+        subQueries.add(`${entityName} ${introduceAction}`.replace(/[?.,]/g, '').trim())
+      }
+      else {
+        subQueries.add(`${entityName} introduce`)
+      }
+    }
+  }
+
+  // 5. Code & Access variants: "pin code", "door code", "access code"
+  if (/\b(?:pin|door|access)\s+codes?\b/i.test(norm)) {
+    subQueries.add('pin code')
+    subQueries.add('door code')
+  }
+
+  return Array.from(subQueries)
 }

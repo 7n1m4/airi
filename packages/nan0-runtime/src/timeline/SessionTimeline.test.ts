@@ -9,6 +9,7 @@ import { InMemoryStateStore } from '../persistence/InMemoryStateStore'
 import { createEmptyRelationshipState } from '../relationship/RelationshipMemory'
 import { ControllableNan0Clock } from '../temporal/Nan0Clock'
 import { createEmptyTemporalState } from '../temporal/Nan0Temporal'
+import { createMockSystemOneProvider } from '../test-utils/mock-system-one'
 import { createEmptyTimelineState } from './SessionTimeline'
 
 const reasoningClient: Nan0ReasoningClient = {
@@ -35,6 +36,7 @@ function createKernel(
       reasoningClient: client,
       clock,
       createId: () => `${prefix}-${++nextId}`,
+      systemOneProvider: createMockSystemOneProvider(),
     }),
   }
 }

@@ -1170,7 +1170,7 @@ pages:
           title: 純 WebGPU 瀏覽器內 LLM
         defaultsSection:
           annotation: '若要為特定角色自訂這些設定，請前往角色的「生成」分頁：• 使用輸入欄位修改溫度、Top P 與最大 Token 數。• 透過在進階
-            JSON 文字方塊中輸入懲罰參數（例如 {"presence_penalty": 0.5}）。'
+            JSON 文字方塊中輸入懲罰參數（例如 "presence_penalty": 0.5）。'
           description: 這些是 web-rwkv 使用的預設備用參數。
           field:
             count_penalty: '詞頻懲罰 Count Penalty (預設: 0.4)'

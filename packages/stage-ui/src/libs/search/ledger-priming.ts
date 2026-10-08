@@ -1,5 +1,218 @@
 import type { EntityLedger, EntityType } from './entity-ledger'
 
+import { normalizeCanonicalEntityLabel } from './entity-ledger'
+
+export const CONVERSATIONAL_STOPWORDS = new Set([
+  // Pronouns, Demonstratives, Quantifiers
+  'they',
+  'them',
+  'their',
+  'theirs',
+  'themselves',
+  'this',
+  'that',
+  'these',
+  'those',
+  'what',
+  'which',
+  'who',
+  'whom',
+  'whose',
+  'where',
+  'when',
+  'why',
+  'how',
+  'someone',
+  'somebody',
+  'something',
+  'anyone',
+  'anybody',
+  'anything',
+  'everyone',
+  'everybody',
+  'everything',
+  'nobody',
+  'nothing',
+  'some',
+  'many',
+  'more',
+  'most',
+  'such',
+  'other',
+  'another',
+  'each',
+  'every',
+  'both',
+  'either',
+  'neither',
+
+  // Modals, Auxiliaries, Common Verbs
+  'could',
+  'would',
+  'should',
+  'might',
+  'must',
+  'have',
+  'having',
+  'been',
+  'will',
+  'shall',
+  'were',
+  'does',
+  'doing',
+  'being',
+  'make',
+  'making',
+  'bring',
+  'bringing',
+
+  // Common Conversational Adverbs, Connectives & Starters
+  'maybe',
+  'perhaps',
+  'actually',
+  'obviously',
+  'definitely',
+  'probably',
+  'now',
+  'then',
+  'here',
+  'there',
+  'before',
+  'after',
+  'today',
+  'tonight',
+  'tomorrow',
+  'yesterday',
+  'again',
+  'always',
+  'never',
+  'sometimes',
+  'usually',
+  'often',
+  'also',
+  'very',
+  'much',
+  'well',
+  'just',
+  'only',
+  'still',
+  'even',
+  'already',
+  'almost',
+  'enough',
+  'really',
+  'anyway',
+  'anyways',
+  'meanwhile',
+  'instead',
+  'however',
+  'because',
+  'since',
+  'though',
+  'although',
+
+  // Interjections, Onomatopoeia & Conversational Fillers
+  'hey',
+  'hello',
+  'yeah',
+  'yep',
+  'nope',
+  'okay',
+  'ok',
+  'whoa',
+  'wow',
+  'kyaa',
+  'kyaaa',
+  'eeeeep',
+  'eeep',
+  'wahhh',
+  'wahh',
+  'ahhh',
+  'ahhhh',
+  'haha',
+  'hahaha',
+  'ehehe',
+  'oops',
+  'phew',
+  'gosh',
+  'damn',
+  'wait',
+  'look',
+  'listen',
+  'please',
+  'thanks',
+  'thank',
+  'sorry',
+  'bye',
+  'goodnight',
+  'goodbye',
+])
+
+export const LEADING_GRAMMATICAL_WORDS = new Set([
+  // Coordinating conjunctions
+  'and',
+  'or',
+  'but',
+  'so',
+  'yet',
+  'nor',
+  // Subordinating conjunctions
+  'as',
+  'if',
+  'though',
+  'although',
+  'while',
+  'because',
+  'since',
+  'unless',
+  'until',
+  'once',
+  // Common prepositions
+  'with',
+  'at',
+  'by',
+  'from',
+  'to',
+  'in',
+  'on',
+  'about',
+  'into',
+  'like',
+  'through',
+  'over',
+  'under',
+  'between',
+  'after',
+  'before',
+  'for',
+  'of',
+  'per',
+  'via',
+  // Articles & demonstratives
+  'the',
+  'a',
+  'an',
+  'this',
+  'that',
+  'these',
+  'those',
+])
+
+export function isConversationalArtifactOrNoise(token: string): boolean {
+  const norm = token.trim().toLowerCase()
+  if (!norm || norm.length <= 2)
+    return true
+  if (CONVERSATIONAL_STOPWORDS.has(norm) || LEADING_GRAMMATICAL_WORDS.has(norm))
+    return true
+  // Single repeated character vocalizations (e.g. "ahhhhh", "eeeeep", "wahhh")
+  if (/^([a-z])\1{2,}$/i.test(norm))
+    return true
+  // Common anime vocalization patterns (e.g. "kyaa+", "ee+p+", "wa+h+", "ah+h*")
+  if (/^(?:ah+|eh+|oh+|ha+|e{2,}p+|wa+h+|kya+h*)$/i.test(norm))
+    return true
+  return false
+}
+
 export interface DialogueTurn {
   id: string
   speaker: string
@@ -113,7 +326,7 @@ export function extractFragmentsFromText(text: string): ExtractedFragments {
   for (const fm of frameMatches) {
     if (fm[1]) {
       const cleanSpan = fm[1].replace(/^[^\w']+|[^\w']+$/g, '').trim()
-      if (cleanSpan.length > 2 && !mentions.includes(cleanSpan)) {
+      if (cleanSpan.length > 2 && !isConversationalArtifactOrNoise(cleanSpan) && !mentions.includes(cleanSpan)) {
         mentions.push(cleanSpan)
       }
     }
@@ -122,8 +335,34 @@ export function extractFragmentsFromText(text: string): ExtractedFragments {
   // 3. Multi-word or Hyphenated Proper Nouns (e.g. "Pen-Pen", "Tokyo-3", "The Witcher 3")
   const compoundMatches = text.matchAll(/\b([A-Z][a-zA-Z0-9]+(?:[- ][A-Z0-9][a-zA-Z0-9]+)+)\b/g)
   for (const cm of compoundMatches) {
-    if (cm[1] && !mentions.includes(cm[1])) {
-      mentions.push(cm[1])
+    if (!cm[1])
+      continue
+
+    let cleanSpan = cm[1]
+    const matchIndex = cm.index ?? 0
+    const trimmedPreceding = text.slice(0, matchIndex).replace(/[\s"“'‘`]+$/, '')
+    const isSentenceStart = trimmedPreceding.length === 0
+      || /[.?!;…\n\r—–]$/.test(trimmedPreceding)
+      || trimmedPreceding.endsWith(':')
+
+    // If the compound proper noun is at the start of a sentence or dialogue clause,
+    // peel off leading grammatical function words capitalized purely due to orthographic position.
+    if (isSentenceStart) {
+      while (cleanSpan.includes(' ')) {
+        const spaceIdx = cleanSpan.indexOf(' ')
+        const first = cleanSpan.slice(0, spaceIdx)
+        const firstLower = first.toLowerCase()
+        if (LEADING_GRAMMATICAL_WORDS.has(firstLower) || CONVERSATIONAL_STOPWORDS.has(firstLower)) {
+          cleanSpan = cleanSpan.slice(spaceIdx + 1).trim()
+        }
+        else {
+          break
+        }
+      }
+    }
+
+    if (cleanSpan.length > 2 && !isConversationalArtifactOrNoise(cleanSpan) && !mentions.includes(cleanSpan)) {
+      mentions.push(cleanSpan)
     }
   }
 
@@ -150,6 +389,10 @@ export function extractFragmentsFromText(text: string): ExtractedFragments {
 
       // Reject single letters or contraction remnants
       if (clean.length <= 2 || /^[a-z]{1,2}$/i.test(clean))
+        continue
+
+      // Reject conversational stopwords, function words, and onomatopoeia
+      if (isConversationalArtifactOrNoise(clean))
         continue
 
       // Capitalized candidate
@@ -196,11 +439,18 @@ export function collectUniqueCandidateMentions(
 
     const fragments = extractFragmentsFromText(text)
     for (const m of fragments.mentions) {
-      const key = m.toLowerCase()
-      if (!seen.has(key)) {
-        seen.add(key)
+      if (isConversationalArtifactOrNoise(m))
+        continue
+
+      const resolution = normalizeCanonicalEntityLabel(m)
+      const canonicalKey = resolution.normalizedKey || m.toLowerCase()
+      if (isConversationalArtifactOrNoise(canonicalKey))
+        continue
+
+      if (!seen.has(canonicalKey)) {
+        seen.add(canonicalKey)
         proposals.push({
-          mention: m,
+          mention: resolution.canonical || m,
           context: text.length > 180 ? `${text.slice(0, 180)}...` : text,
         })
       }
@@ -215,11 +465,18 @@ export function collectUniqueCandidateMentions(
         continue
       const fragments = extractFragmentsFromText(text)
       for (const m of fragments.mentions) {
-        const key = m.toLowerCase()
-        if (!seen.has(key)) {
-          seen.add(key)
+        if (isConversationalArtifactOrNoise(m))
+          continue
+
+        const resolution = normalizeCanonicalEntityLabel(m)
+        const canonicalKey = resolution.normalizedKey || m.toLowerCase()
+        if (isConversationalArtifactOrNoise(canonicalKey))
+          continue
+
+        if (!seen.has(canonicalKey)) {
+          seen.add(canonicalKey)
           proposals.push({
-            mention: m,
+            mention: resolution.canonical || m,
             context: text.length > 180 ? `${text.slice(0, 180)}...` : text,
           })
         }
@@ -267,7 +524,19 @@ export function extractTurnKnowledge(
 
   // 4. Bind Entities strictly via System 1 Classification
   for (const m of extraction.mentions) {
-    const audit = classificationMap?.get(m) || classificationMap?.get(m.toLowerCase())
+    if (isConversationalArtifactOrNoise(m))
+      continue
+
+    const resolution = normalizeCanonicalEntityLabel(m)
+    const canonicalKey = resolution.normalizedKey || m.toLowerCase()
+    if (isConversationalArtifactOrNoise(canonicalKey))
+      continue
+
+    const audit = classificationMap?.get(m)
+      || classificationMap?.get(m.toLowerCase())
+      || classificationMap?.get(resolution.canonical)
+      || classificationMap?.get(canonicalKey)
+
     const classified = typeof audit === 'object' && audit !== null && 'choice' in audit ? audit.choice : audit
 
     // If System 1 classified this as conversational noise or syntax, drop it completely!
@@ -279,7 +548,7 @@ export function extractTurnKnowledge(
     if (classified && classified !== 'unknown') {
       type = classified
     }
-    else if (m === turn.speaker || m.toLowerCase() === 'user') {
+    else if (m === turn.speaker || canonicalKey === (turn.speaker || '').toLowerCase() || canonicalKey === 'user') {
       type = 'person'
     }
     else {

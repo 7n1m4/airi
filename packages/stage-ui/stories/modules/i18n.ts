@@ -22,7 +22,9 @@ const languageRemap: Record<string, string> = {
 }
 
 function getLocale() {
-  let language = localStorage.getItem('settings/language')
+  // NOTICE: stories are also collected in Node (histoire build) where
+  // localStorage does not exist. Fall back to 'en' there.
+  let language = typeof localStorage !== 'undefined' ? localStorage.getItem('settings/language') : null
   const languages = Object.keys(messages!)
 
   if (languageRemap[language || 'en'] != null) {

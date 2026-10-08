@@ -19,6 +19,7 @@ import catalogUrl from '../../../../../public/assets/animadex-catalog.json?url'
 import Live2DReportModal from './Live2DReportModal.vue'
 import ModelSelectorCarousel from './ModelSelectorCarousel.vue'
 
+import { storage } from '../../../../database/storage'
 import { DisplayModelFormat, useDisplayModelsStore } from '../../../../stores/display-models'
 import { useProvidersStore } from '../../../../stores/providers'
 import { useSyncEngineStore } from '../../../../stores/sync-engine'
@@ -41,6 +42,16 @@ const mmdStore = useMmd()
 const providersStore = useProvidersStore()
 const syncStore = useSyncEngineStore()
 const { displayModelsFromIndexedDBLoading, displayModels, remoteModelsCatalog, remoteCatalogLoading } = storeToRefs(displayModelStore)
+
+// Cloud Tab Source Selector (local peek state - does not alter global activeProvider)
+const selectedSourceProvider = ref<string>(syncStore.activeProvider || 's3')
+const isCustomSourceSelected = ref(false)
+
+watch(() => syncStore.activeProvider, (newVal) => {
+  if (!isCustomSourceSelected.value && newVal) {
+    selectedSourceProvider.value = newVal
+  }
+})
 
 const mapFormatRenderer: Record<DisplayModelFormat, string> = {
   [DisplayModelFormat.Live2dZip]: 'Live2D',
@@ -171,7 +182,7 @@ watch(() => props.initialTab, (newTab) => {
 
 watch(currentTab, (newTab) => {
   if (newTab === 'cloud' && remoteModelsCatalog.value.length === 0) {
-    void displayModelStore.fetchRemoteDisplayModelsCatalog()
+    void displayModelStore.fetchRemoteDisplayModelsCatalog(selectedSourceProvider.value)
   }
 })
 
@@ -549,7 +560,7 @@ async function loadRemotePreview(id: string) {
     return
   loadingPreviews.value[id] = true
   try {
-    const readRes = await syncStore.readRemoteFile(`assets/models/${id}-preview.png`, 'base64')
+    const readRes = await syncStore.readRemoteFile(`assets/models/${id}-preview.png`, 'base64', selectedSourceProvider.value)
     if (readRes.success && readRes.content) {
       remotePreviews.value[id] = `data:image/png;base64,${readRes.content}`
     }
@@ -644,7 +655,7 @@ const downloadingModelId = ref<string | null>(null)
 async function downloadAndPickModel(model: any) {
   downloadingModelId.value = model.id
   try {
-    const res = await syncStore.downloadSpecificModel(model.id)
+    const res = await syncStore.downloadSpecificModel(model.id, selectedSourceProvider.value)
     if (res.success) {
       toast.success(`Model ${model.name} downloaded successfully!`)
       const localModel = displayModelStore.displayModels.find(m => m.id === model.id)
@@ -667,6 +678,30 @@ async function downloadAndPickModel(model: any) {
   }
   finally {
     downloadingModelId.value = null
+  }
+}
+
+async function handleSourceProviderChange() {
+  isCustomSourceSelected.value = true
+  remotePreviews.value = {}
+  loadingPreviews.value = {}
+  failedPreviews.value = {}
+  remoteModelsCatalog.value = []
+
+  const res = await displayModelStore.fetchRemoteDisplayModelsCatalog(selectedSourceProvider.value)
+  if (res && !res.success) {
+    toast.error(`Failed to load catalog from ${selectedSourceProvider.value === 's3' ? 'S3' : 'Local FS'}: ${res.error || 'Unknown error'}`)
+  }
+}
+
+async function handleRefreshCloudCatalog() {
+  remotePreviews.value = {}
+  loadingPreviews.value = {}
+  failedPreviews.value = {}
+
+  const res = await displayModelStore.fetchRemoteDisplayModelsCatalog(selectedSourceProvider.value)
+  if (res && !res.success) {
+    toast.error(`Failed to refresh catalog from ${selectedSourceProvider.value === 's3' ? 'S3' : 'Local FS'}: ${res.error || 'Unknown error'}`)
   }
 }
 
@@ -849,16 +884,26 @@ const TAG_BLOCKLIST = new Set([
   'hand on own hip',
 ])
 
+const isTagging = ref(false)
+const taggingMode = ref<'fill-in' | 'reindex' | null>(null)
+
 async function testTagModel(mode: 'reindex' | 'fill-in' = 'reindex') {
-  let modelsToTag = displayModels.value.filter(m => m.previewImage)
+  if (isTagging.value)
+    return
+
+  const isCloud = currentTab.value === 'cloud'
+  let modelsToTag = isCloud
+    ? remoteModelsCatalog.value.filter((m: any) => m.hasPreview || m.previewImage || remotePreviews.value[m.id])
+    : displayModels.value.filter(m => m.previewImage)
+
   if (mode === 'fill-in') {
     modelsToTag = modelsToTag.filter(m => !m.tags || m.tags.length === 0)
   }
 
   if (modelsToTag.length === 0) {
     if (mode === 'fill-in') {
-      const toastId = toast.loading('All models already tagged. Re-evaluating model-to-character bindings...')
-      await runAutoLinkCatalog()
+      const toastId = toast.loading(isCloud ? 'All cloud models already tagged. Re-evaluating character bindings...' : 'All local models already tagged. Re-evaluating model-to-character bindings...')
+      await runAutoLinkCatalog(isCloud ? remoteModelsCatalog.value : displayModels.value)
       toast.success('Model-to-character bindings successfully re-evaluated!', { id: toastId })
     }
     else {
@@ -867,9 +912,11 @@ async function testTagModel(mode: 'reindex' | 'fill-in' = 'reindex') {
     return
   }
 
-  const toastId = toast.loading('Starting Image Tagging process...')
+  isTagging.value = true
+  taggingMode.value = mode
+  const toastId = toast.loading(`Starting Image Tagging process (${isCloud ? 'Cloud' : 'Local'})...`)
   // eslint-disable-next-line no-console
-  console.log(`[Model Selector] Starting batch auto-tagging (${mode}) on models:`, modelsToTag)
+  console.log(`[Model Selector] Starting batch auto-tagging (${mode}, isCloud=${isCloud}) on models:`, modelsToTag)
 
   const providerId = 'blip-local'
   try {
@@ -891,22 +938,76 @@ async function testTagModel(mode: 'reindex' | 'fill-in' = 'reindex') {
     toast('Loading Vision Model (WebGPU)...', { id: toastId })
     await providerInstance.loadModel()
 
+    let remoteManifest: { models: Record<string, any>, deleted?: string[] } = { models: {} }
+    if (isCloud) {
+      const manifestRes = await syncStore.readRemoteFile('assets/models/manifest.json', 'utf-8', selectedSourceProvider.value)
+      if (manifestRes.success && manifestRes.content) {
+        try {
+          remoteManifest = JSON.parse(manifestRes.content)
+          if (!remoteManifest.models)
+            remoteManifest.models = {}
+        }
+        catch (e) {
+          console.warn('[Model Selector] Failed to parse remote manifest for tagging:', e)
+        }
+      }
+    }
+
     let count = 0
+    let successfulTagsCount = 0
     for (const model of modelsToTag) {
       toast(`Processing ${count + 1}/${modelsToTag.length} models: ${model.name}`, { id: toastId })
 
       try {
+        let previewSrc = model.previewImage || remotePreviews.value[model.id]
+        if (!previewSrc && isCloud) {
+          const readRes = await syncStore.readRemoteFile(`assets/models/${model.id}-preview.png`, 'base64', selectedSourceProvider.value)
+          if (readRes.success && readRes.content) {
+            previewSrc = `data:image/png;base64,${readRes.content}`
+            remotePreviews.value[model.id] = previewSrc
+          }
+        }
+
+        if (!previewSrc) {
+          console.warn(`[Model Selector] Skipping ${model.name}: no preview image found`)
+          count++
+          continue
+        }
+
         // eslint-disable-next-line no-console
         console.log(`[Model Selector] Captioning model preview image for: ${model.name}`)
-        const tagsResult = await providerInstance.captionImage(model.previewImage!)
+        const tagsResult = await providerInstance.captionImage(previewSrc)
 
         const tagsArray = tagsResult
           .split(',')
           .map((t: string) => t.trim().toLowerCase())
           .filter((t: string) => t && !TAG_BLOCKLIST.has(t))
 
-        await displayModelStore.updateDisplayModelTags(model.id, tagsArray)
+        if (isCloud) {
+          model.tags = tagsArray
+          if (remoteManifest.models[model.id]) {
+            remoteManifest.models[model.id].tags = tagsArray
+          }
+          else {
+            remoteManifest.models[model.id] = {
+              name: model.name,
+              format: model.format,
+              hasPreview: true,
+              tags: tagsArray,
+            }
+          }
 
+          // Persist batch every 10 models to prevent losing progress
+          if (successfulTagsCount > 0 && successfulTagsCount % 10 === 0) {
+            await syncStore.writeRemoteFile('assets/models/manifest.json', JSON.stringify(remoteManifest, null, 2), 'utf-8', selectedSourceProvider.value)
+            await storage.setItemRaw('local:sync-metadata/remote-catalog-cache', JSON.parse(JSON.stringify(remoteModelsCatalog.value)))
+          }
+        }
+        else {
+          await displayModelStore.updateDisplayModelTags(model.id, tagsArray)
+        }
+
+        successfulTagsCount++
         // eslint-disable-next-line no-console
         console.log(`[Model Selector] SUCCESS! Generated Tags for ${model.name}:`, tagsArray)
       }
@@ -916,29 +1017,28 @@ async function testTagModel(mode: 'reindex' | 'fill-in' = 'reindex') {
       count++
     }
 
-    const exportedDataset = displayModels.value.map(m => ({
-      id: m.id,
-      name: m.name,
-      format: m.format,
-      tags: m.tags || [],
-    }))
-
-    // eslint-disable-next-line no-console
-    console.log('[Model Selector] ALL MODELS TAGGED! Exported Dataset:', exportedDataset)
+    if (isCloud && successfulTagsCount > 0) {
+      await syncStore.writeRemoteFile('assets/models/manifest.json', JSON.stringify(remoteManifest, null, 2), 'utf-8', selectedSourceProvider.value)
+      await storage.setItemRaw('local:sync-metadata/remote-catalog-cache', JSON.parse(JSON.stringify(remoteModelsCatalog.value)))
+    }
 
     // Trigger Auto-linking logic on completed catalog matching
     toast('Auto-linking models to AnimaDex catalog...', { id: toastId })
-    await runAutoLinkCatalog()
+    await runAutoLinkCatalog(isCloud ? remoteModelsCatalog.value : displayModels.value, isCloud ? remoteManifest : undefined)
 
-    toast.success('All Models Tagged & Auto-Linked!', { id: toastId })
+    toast.success(`Successfully tagged ${successfulTagsCount} models & auto-linked!`, { id: toastId })
   }
   catch (error) {
     console.error('[Model Selector] Auto-tagging batch failed:', error)
     toast.error(`Tagging failed: ${error instanceof Error ? error.message : String(error)}`, { id: toastId })
   }
+  finally {
+    isTagging.value = false
+    taggingMode.value = null
+  }
 }
 
-async function runAutoLinkCatalog() {
+async function runAutoLinkCatalog(targetModels?: any[], remoteManifest?: any) {
   try {
     const res = await fetch(catalogUrl)
     const data = await res.json()
@@ -954,8 +1054,26 @@ async function runAutoLinkCatalog() {
     let linkCount = 0
     let groupUpdateCount = 0
 
-    for (const model of displayModels.value) {
-      const mTags = new Set(model.tags?.map(t => t.trim().toLowerCase()) || [])
+    const isCloud = currentTab.value === 'cloud'
+    const modelsToLink = targetModels || (isCloud ? remoteModelsCatalog.value : displayModels.value)
+
+    let manifestToUpdate = remoteManifest
+    if (isCloud && !manifestToUpdate) {
+      const manifestRes = await syncStore.readRemoteFile('assets/models/manifest.json', 'utf-8', selectedSourceProvider.value)
+      if (manifestRes.success && manifestRes.content) {
+        try {
+          manifestToUpdate = JSON.parse(manifestRes.content)
+          if (!manifestToUpdate.models)
+            manifestToUpdate.models = {}
+        }
+        catch (e) {
+          console.warn('[Model Selector] Failed to parse remote manifest for autolinking:', e)
+        }
+      }
+    }
+
+    for (const model of modelsToLink) {
+      const mTags = new Set(model.tags?.map((t: string) => t.trim().toLowerCase()) || [])
       if (mTags.size === 0)
         continue
 
@@ -998,13 +1116,26 @@ async function runAutoLinkCatalog() {
           const currentGroups = model.groups || []
           if (!currentGroups.includes(seriesName)) {
             const updatedGroups = [...currentGroups, seriesName]
+            model.groups = updatedGroups
+            if (isCloud) {
+              if (manifestToUpdate?.models?.[model.id]) {
+                manifestToUpdate.models[model.id].groups = updatedGroups
+              }
+            }
+            else {
+              await displayModelStore.updateDisplayModelMeta(model.id, { groups: updatedGroups })
+            }
             // eslint-disable-next-line no-console
             console.log(`[Auto-Link Debug] Upserting group "${seriesName}" to Model ${model.id} (current: ${currentGroups.join(', ')})`)
-            await displayModelStore.updateDisplayModelMeta(model.id, { groups: updatedGroups })
             groupUpdateCount++
           }
         }
       }
+    }
+
+    if (isCloud && manifestToUpdate && groupUpdateCount > 0) {
+      await syncStore.writeRemoteFile('assets/models/manifest.json', JSON.stringify(manifestToUpdate, null, 2), 'utf-8', selectedSourceProvider.value)
+      await storage.setItemRaw('local:sync-metadata/remote-catalog-cache', JSON.parse(JSON.stringify(remoteModelsCatalog.value)))
     }
 
     localStorage.setItem('settings/airi-card/character-bindings', JSON.stringify(bindings))
@@ -1018,8 +1149,8 @@ async function runAutoLinkCatalog() {
 </script>
 
 <template>
-  <div :class="['pt-4 sm:pt-0', 'gap-4 sm:gap-6', 'h-full flex flex-col']">
-    <div class="flex items-center">
+  <div :class="['pt-1 sm:pt-0', 'gap-2.5 sm:gap-4', 'h-full flex flex-col min-h-0']">
+    <div class="contents">
       <Live2DReportModal
         v-model:open="showReportModal"
         :report="validationReport"
@@ -1656,16 +1787,20 @@ async function runAutoLinkCatalog() {
               <div class="mt-2.5 flex items-center justify-between border-t border-neutral-100 pt-2 dark:border-neutral-800">
                 <div class="flex gap-1.5">
                   <button
-                    class="rounded bg-neutral-100 px-1.5 py-0.5 text-[9px] text-neutral-600 font-bold transition-colors dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                    class="flex items-center gap-1 rounded bg-neutral-100 px-1.5 py-0.5 text-[9px] text-neutral-600 font-bold transition-colors dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 disabled:opacity-50 dark:hover:bg-neutral-700"
+                    :disabled="isTagging"
                     @click="testTagModel('fill-in')"
                   >
-                    Fill In
+                    <span v-if="isTagging && taggingMode === 'fill-in'" class="i-solar:refresh-bold inline-block animate-spin text-[10px]" />
+                    <span>Fill In</span>
                   </button>
                   <button
-                    class="rounded bg-neutral-100 px-1.5 py-0.5 text-[9px] text-neutral-600 font-bold transition-colors dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
+                    class="flex items-center gap-1 rounded bg-neutral-100 px-1.5 py-0.5 text-[9px] text-neutral-600 font-bold transition-colors dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 disabled:opacity-50 dark:hover:bg-neutral-700"
+                    :disabled="isTagging"
                     @click="testTagModel('reindex')"
                   >
-                    Reindex
+                    <span v-if="isTagging && taggingMode === 'reindex'" class="i-solar:refresh-bold inline-block animate-spin text-[10px]" />
+                    <span>Reindex</span>
                   </button>
                 </div>
                 <button
@@ -1684,10 +1819,12 @@ async function runAutoLinkCatalog() {
         <!-- Uninitialized Tag Button -->
         <button
           v-else
-          class="h-[32px] flex items-center justify-center gap-1.5 border border-transparent rounded-lg bg-neutral-100 px-3 py-1 text-xs text-neutral-600 font-semibold outline-none transition-all dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
+          class="h-[32px] flex items-center justify-center gap-1.5 border border-transparent rounded-lg bg-neutral-100 px-3 py-1 text-xs text-neutral-600 font-semibold outline-none transition-all dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 disabled:opacity-50 dark:hover:bg-neutral-700"
+          :disabled="isTagging"
           @click="testTagModel('reindex')"
         >
-          <div class="i-solar:tag-bold-duotone text-xs" />
+          <div v-if="isTagging" class="i-solar:refresh-bold animate-spin text-xs" />
+          <div v-else class="i-solar:tag-bold-duotone text-xs" />
           <span>Tag</span>
         </button>
 
@@ -1713,11 +1850,28 @@ async function runAutoLinkCatalog() {
           class="h-[32px] flex items-center justify-center gap-1.5 border border-transparent rounded-lg bg-neutral-100 px-3 py-1 text-xs text-neutral-600 font-semibold outline-none transition-all dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
           :disabled="remoteCatalogLoading"
           title="Refresh Cloud Catalog"
-          @click="displayModelStore.fetchRemoteCatalog()"
+          @click="handleRefreshCloudCatalog"
         >
           <div :class="['i-solar:refresh-bold text-xs', remoteCatalogLoading ? 'animate-spin' : '']" />
           <span>Refresh</span>
         </button>
+
+        <!-- Cloud Storage Source Selector (Peek Other Adapter) -->
+        <select
+          v-if="currentTab === 'cloud'"
+          v-model="selectedSourceProvider"
+          class="h-[32px] cursor-pointer border border-transparent rounded-lg bg-neutral-100 px-2.5 py-1 text-xs text-neutral-600 font-semibold outline-none transition-all dark:bg-neutral-800 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700"
+          :disabled="remoteCatalogLoading"
+          title="Cloud Source Adapter"
+          @change="handleSourceProviderChange"
+        >
+          <option value="s3">
+            S3 Cloud
+          </option>
+          <option value="local-fs">
+            Local FS
+          </option>
+        </select>
       </div>
 
       <div v-if="currentTab === 'library' && displayModelsFromIndexedDBLoading" class="py-6 text-center text-sm text-neutral-400">
@@ -1728,7 +1882,10 @@ async function runAutoLinkCatalog() {
       </div>
 
       <!-- Carousel Lineup View -->
-      <div v-if="viewMode === 'carousel'" class="h-[58vh] max-h-[660px] min-h-[460px] w-full flex flex-1 flex-col overflow-hidden md:min-h-[540px] sm:min-h-[500px]">
+      <div
+        v-if="viewMode === 'carousel'"
+        class="min-h-0 w-full flex flex-1 flex-col overflow-hidden md:min-h-[540px] sm:h-[58vh] sm:max-h-[660px] sm:min-h-[500px]"
+      >
         <ModelSelectorCarousel
           :models="filteredModels"
           :active-model-id="highlightDisplayModelCard"

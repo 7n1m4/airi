@@ -470,7 +470,7 @@ async function runSimulation() {
             </div>
           </template>
 
-          <template v-else-if="providerModels.length > 0">
+          <template v-else-if="filteredModels.length > 0">
             <RadioCardManySelect
               v-model="activeModel"
               v-model:search-query="modelSearchQuery"
@@ -486,6 +486,26 @@ async function runSimulation() {
               collapse-button-text="Show less"
               @update:custom-value="updateCustomModelName"
             />
+          </template>
+
+          <template v-else-if="providerModels.length > 0 && !isLoadingActiveProviderModels">
+            <Alert type="warning">
+              <template #title>
+                No vision models detected
+              </template>
+              <template #content>
+                The provider returned models, but none were detected with vision capabilities. You can specify a multimodal model ID manually.
+              </template>
+            </Alert>
+            <div class="mt-2">
+              <label class="mb-1 block text-xs text-neutral-700 font-medium dark:text-neutral-300">Model ID (Manual)</label>
+              <input
+                v-model="activeModel"
+                type="text"
+                class="w-full border border-neutral-300 rounded-lg bg-white px-3 py-1.5 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                placeholder="e.g. gpt-4o-mini"
+              >
+            </div>
           </template>
         </div>
 

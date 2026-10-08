@@ -1,7 +1,7 @@
 # Proposal: Generic Gaming Agent Runtime
 
 > **Status**: Implemented & Operational (Phase 1–3 Live in Main) · **Companion RFC**: [`docs/proposal-gaming-show-harness-copilot.md`](./proposal-gaming-show-harness-copilot.md) (Show Harness Action Protocol & Interpreter)
-> **Key References**: [`docs/proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md) (Stage 0 pHash Salience Gate), [`apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue`](../apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue) (Arcade Room Surface), [`packages/stage-ui/src/composables/arcade/use-arcade-agent.ts`](../packages/stage-ui/src/composables/arcade/use-arcade-agent.ts) (Production Turn Agent & Ghost Cursor), `packages/stage-ui/src/stores/providers/moondream` (Local WebGPU VLM)
+> **Key References**: [`docs/design-attention-ecology-screen-watching.md`](./design-attention-ecology-screen-watching.md) (Stage 0 pHash Salience Gate), [`apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue`](../apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue) (Arcade Room Surface), [`packages/stage-ui/src/composables/arcade/use-arcade-agent.ts`](../packages/stage-ui/src/composables/arcade/use-arcade-agent.ts) (Production Turn Agent & Ghost Cursor), `packages/stage-ui/src/stores/providers/moondream` (Local WebGPU VLM)
 
 A generic, cross-game agent harness and execution engine for AIRI that enables characters to autonomously play games, react in real time, and banter with the user through **interactive backseat gaming** — with zero Python sidecar dependencies.
 
@@ -150,46 +150,284 @@ Following the architecture documented in `airi-desktop-chatbox` (`references/wor
 * **Label**: `'Arcade Room'`
 * **Icon**: `'i-solar:gamepad-bold-duotone'`
 * **Code-Split Component**: `chat_arcade.vue` registered via `defineAsyncComponent` in `apps/stage-tamagotchi/src/renderer/pages/chat.vue`.
-* **Right Panel Behavior**: In `chat.vue`, `showRightPanel` is explicitly restricted to `activeSurface === 'messages'`. Selecting `'Arcade Room'` reclaims the entire window canvas width, giving optimal real estate for the game and chat split.
+* **Right Panel Behavior**: Reclaims the entire window canvas width, giving optimal real estate for the guided 5-stage setup studio and gameplay arena.
 
-### 5.2 Side-by-Side Layout Wireframe
+### 5.1 Architecture Transformation: The 5-Stage Guided Studio Lifecycle
+
+The legacy Arcade Room immediately dropped users into an unconfigured split window (65% game canvas, 35% chat panel) running a static preset, forcing catalog browsing into a cramped modal.
+
+The upgraded architecture **scraps the premature split layout in favor of a Guided 5-Stage Lifecycle**:
+
+```mermaid
+stateDiagram-v2
+    [*] --> Stage1_Hub: Enter Arcade Room
+
+    state Stage1_Hub {
+        Full_Catalog_Grid: Full-screen Browse & Search (8,924 titles)
+        Faceted_Filters: Engine (S1/S2) • Technology Tiers (Fixed/Scroll/3D) • Genre • Controller
+        Knowledge_Dropdown: "Acquired Game Knowledge" library selector
+    }
+
+    Stage1_Hub --> Stage2_Config: User Selects Game
+
+    state Stage2_Config {
+        Engine_Pick: Recommended Engine Badge (System 1 Reflex vs System 2 Strategy)
+        Cost_Warnings: Tip & Cost Warning Callouts
+        S1_Provider: System 1 Backend (Laya Local ONNX $0 vs TypeSafe Jev Cloud)
+        S2_VLM_Provider: System 2 VLM Override
+        Persona_Select: Recommended Companion Persona (Pre-selected, editable)
+    }
+
+    Stage2_Config --> Stage3_Calibration: If New Game (No Knowledge)
+    Stage2_Config --> Stage5_ClassicArena: If Game Knowledge Already Acquired
+
+    state Stage3_Calibration {
+        Full_Viewport: Game Canvas 100% width (No Chat Sidebar yet!)
+        Airi_SpeechBubble: "Help me help you! Hit Start and play one quick 15s round!"
+        Countdown_Timer: 15s Timer & [Start Recording] Button
+        Buffer_Overlay: "Analyzing gameplay motion vectors & compiling state machine..."
+    }
+
+    Stage3_Calibration --> Stage4_Review: Recording Finished / Death Detected
+
+    state Stage4_Review {
+        Strategy_Summary: Airi explains her understanding of the rules & death conditions
+        Mini_Program_Spec: Synthesized actions & keybindings preview
+        Review_Actions: [Test 60s Trial Run] • [Re-Record] • [Approve & Save Knowledge]
+    }
+
+    Stage4_Review --> Stage5_ClassicArena: User Approves Knowledge
+
+    state Stage5_ClassicArena {
+        Game_Viewport: 65% Width Canvas running at full speed
+        Backseat_Chat: 35% Width Live Reactions & Persona Banter
+        Reflex_Driver: High-speed Laya/Jev loop driving keys in real time
+    }
+```
+
+---
+
+### 5.2 Stage 1: The Full-Screen Arcade Hub (Discovery & Curation)
+
+The default landing surface for Arcade Room is no longer an active game, but a **Full-Screen Discovery Hub**:
+
+1. **Top Header & Knowledge Selector**:
+   - Upgraded game selector on the top-left: switches from raw presets to the **"Acquired Game Knowledge" Library**, displaying games AIRI has already mastered with a `Mastered ✓` badge.
+   - Global Search input searching titles and publishers across the catalog.
+2. **Faceted Filter Tabs (Powered by the 8,924 Batch Jev Triage Dataset)**:
+   - **Cognitive Route**: `[All (8,924)]` | `[⚡ System 1 Reflex (3,627)]` | `[🧠 System 2 Strategy (4,408)]` | `[📖 Interactive Fiction (384)]`
+   - **Screen Motion Architecture**: `[Fixed Single Screen (2,720)]` | `[Scrolling 2D (1,485)]` | `[Flip-Screen (1,186)]` | `[3D Raycast (1,065)]`
+   - **Primary Genre**: `[Action]` `[Platformer]` `[Strategy]` `[RPG]` `[Shooter]` `[Puzzle]` `[Racing]`
+   - **Controller Interface**: `[Gamepad / Arrows]` `[Mouse Pointer]` `[Keyboard Typing]`
+3. **Tip & Cost Architecture Callouts**:
+   - > [!TIP]
+     > **System 1 Reflex Titles (Fixed Single Screen)**: Support automated self-synthesizing state interpreters and run locally at $0.00 cost with 15ms latency via on-device Laya ONNX.
+   - > [!WARNING]
+     > **System 2 Strategy Titles**: Depend on visual multimodal LLM reasoning on settled frames and consume vision tokens per move.
+
+---
+
+### 5.3 Stage 2: The Pre-Flight Provisioning Cockpit
+
+Selecting any game tile opens a focused provisioning sheet before booting the emulator:
+
+1. **Engine Recommendation**:
+   - Automatically highlights the triaged route (e.g. `⚡ System 1 High-Speed Reflex` for *Nibbles*, `🧠 System 2 Strategy` for *SimCity*) with an override switch.
+2. **Dedicated Gaming Inference Overrides**:
+   - **System 1 Decision Engine**:
+     - `Laya Local (On-Device WASM/ONNX)`: **15ms latency, $0.00 Free** *(Recommended default for gaming loops to avoid cloud latency and costs)*.
+     - `TypeSafe Jev (Cloud Alpha)`: **100ms latency, $42/Btok**.
+   - **System 2 Vision Model**: Inherits from Global Faculty Defaults (`facultyDefaultsStore.resolveFaculty('vision')`), with single-click dropdown override (e.g. Moondream WebGPU vs Gemini Flash Lite).
+3. **Companion Backseat Persona**:
+   - Pre-selects the recommended roleplay dynamic from our triage dataset:
+     - `hype_cheerleader`: Energetic, screaming at near-misses (*Doom*, *Wolfenstein*).
+     - `strategic_adviser`: Calculating budgets and territory (*SimCity*, *Civilization*).
+     - `detective_partner`: Investigating story clues and inventory (*Monkey Island*, *Zork*).
+     - `laidback_observer`: Relaxed retro commentary (*Nibbles*, *Pac-Man*).
+   - Allows full user customization before launch.
+4. **Knowledge Gateway**:
+   - If Game Knowledge exists in IndexedDB: shows **[ Launch Classic Game ]**.
+   - If title is uncalibrated: shows **[ Learn to Play (15s Setup) ]**.
+
+---
+
+### 5.4 Stage 3: The Distraction-Free Calibration Stage
+
+**The chat sidebar is completely hidden during calibration.** The game canvas occupies 100% of the viewport to maximize focus:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│ [≡] AIRI - Chat Window [Arcade Room]                                                      [⚙] [_][□][X]│
+│ [≡] AIRI Arcade Studio — Calibration Mode                                                 [✕ Exit Setup]│
+├────────────────────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                                        │
+│       ┌────────────────────────────────────────────────────────────────────────────────────────┐       │
+│       │ 🌸 AIRI: "Help me help you! Hit Start and play for 15s so I can learn how it moves!"   │       │
+│       └────────────────────────────────────────────────────────────────────────────────────────┘       │
+│                                                                                                        │
+│                             ┌──────────────────────────────────────────┐                               │
+│                             │                                          │                               │
+│                             │          FULL-SCREEN GAME CANVAS         │                               │
+│                             │             (QBasic Nibbles)             │                               │
+│                             │                                          │                               │
+│                             │                                          │                               │
+│                             └──────────────────────────────────────────┘                               │
+│                                                                                                        │
+│                              [ 🔴 START RECORDING ]   [ ⏱️ 15s Timer ]                                 │
+│                                                                                                        │
+└────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+1. **User Action**: The user clicks `[ Start 15s Calibration ]` (triggering `collector.start()`).
+2. **Calibration Coaching & Deliberate Loss Protocol**:
+   - To learn both player locomotion and the visual signature of game-over, the companion instructs the user:
+     > *"Play normally for a few seconds so I can see how you move, then **intentionally crash or lose before the 15s timer runs out**! That way I learn your controls and the Game Over screen!"*
+   - **Early Loss Trigger**: If the user crashes before the 15s timer finishes (e.g. at 7s or 10s), they can click `[ 💥 I Crashed! (Finish Calibration) ]` or wait for the countdown to automatically freeze and finalize the trace.
+3. **Trace Accumulation ($80 \times 40$ Downsampling Schema)**:
+   - Captures an offscreen downsampled $80 \times 40$ binary grid stream at 10 Hz matching the canonical format of `personal_airi/game_frames.json`:
+     - **Frame 0**: Initial baseline `fullGrid: string[]` (40 rows of 80 `'0'`/`'1'` characters).
+     - **Frames $1 \dots N$**: Sparse diff packets `{ t: number, keys: string[], added: [col, row][], removed: [col, row][] }`.
+   - Records synchronous key events (`ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`, `Space`) with millisecond timestamps to correlate inputs with pixel deltas.
+4. **Completion & Freezing**: When time expires or early loss is triggered, the game stays running/frozen, and a synthesis overlay appears:
+   *"AIRI is watching the replay... Correlating player inputs with pixel deltas and synthesizing game state extractor..."*
+
+---
+
+### 5.5 Stage 4: Strategy Review & Generic State Extractor Synthesis
+
+The System-2 LLM receives the recorded demonstration trace JSON and synthesizes an executable **Generic State Extractor (Mini-Program)**:
+
+#### 1. The Multi-Entity Tracking Challenge (e.g. *Pac-Man*, *Nibbles*, Arcade Action)
+When games feature multiple moving entities simultaneously (for instance, *Pac-Man* with 1 player, 4 ghosts, and static pellets, or *Nibbles* with advancing head, trailing tail segments, and randomly spawning target numbers), naive pixel analysis fails catastrophically:
+- **Failure Mode 1: Naive Centroid Blending**: Blending all `added` pixels into a single global `(sumX / N, sumY / N)` causes phantom averaging. If a pellet spawns on the far right while the player is on the left, the computed centroid teleports into empty space.
+- **Failure Mode 2: Forcing the LLM to Author Raw Computer Vision**: Prompting an LLM to generate 100+ lines of raw connected-components, 8-directional flood fills, and distance matrices in vanilla JS loops yields brittle, hallucinated code with high frame execution latency ($>5\text{ms}$) that misses 15–20 Hz reflex budgets.
+- **Failure Mode 3: Bespoke Hardcoded Collectors**: Hardcoding dedicated collectors per title (`nibblesExtractor.js`, `pacmanExtractor.js`) violates AIRI's core architectural principle of a universal, zero-Python gaming companion that learns *any* game from human demonstration.
+
+#### 2. The Breakthrough: The 2-Tier Architecture
+To solve this cleanly across all 2D retro titles, the runtime decouples perception into two coordinated tiers:
+1. **Tier 1: Standard Perceptual Primitives (Platform SDK — `diffUtils`)**:
+   - High-speed ($<0.2\text{ms}$), deterministic spatial clustering and temporal association algorithms provided directly inside the execution sandbox.
+   - Algorithms include connected-component cluster extraction (`getClusters`), frame-to-frame trajectory tracking (`trackTrajectories`), input-motion correlation (`correlateInput`), and loss burst detection (`detectLossBurst`).
+2. **Tier 2: Semantic Interpreter (Synthesized by LLM / System-2)**:
+   - The LLM does not write raw coordinate loops. It inspects the 15-second demonstration trace and outputs concise (25–40 lines), high-level semantic rules using `diffUtils`.
+   - The synthesized extractor:
+     - Identifies the **Controllable Entity (Player)** via correlation with keypresses.
+     - Identifies **Dynamic Hazards / Autonomous Threats** (e.g. ghosts, moving obstacles) from un-correlated moving clusters.
+     - Identifies **Static or Transient Targets** (e.g. pellets, food, items).
+     - Detects the **Game-Over Condition** via sudden multi-pixel bursts or canvas freezes.
+3. **Tier 3: Reflex Engine (Jev / System 1)**:
+   - Consumes the clean `SemanticGameState` at 15–20 Hz to evaluate discrete directional choice heads (`ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`) in ~100ms.
+
+#### 3. The Mini-Program Contract (Pure JS State Extractor)
+The synthesized code is **not a hardcoded heuristic bot** (no cyclic modulo loops or hardcoded turn rules). It is a sandboxed JavaScript state parser (`extractGameState`) running in $<1\text{ms}$:
+```javascript
+/**
+ * Synthesized Game State Extractor
+ * Evaluates raw 80x40 grids/diffs into a structured semantic situation report.
+ * @param {string[] | null} prevGrid - Previous 80x40 binary grid (or null)
+ * @param {string[] | null} currGrid - Current 80x40 binary grid (or null)
+ * @param {object} diff - { added: [x,y][], removed: [x,y][], t: number }
+ * @param {object} diffUtils - Standard Platform Perceptual Primitives SDK
+ */
+function extractGameState(prevGrid, currGrid, diff, diffUtils) {
+  const clusters = diffUtils.getClusters((diff && diff.added) || [])
+  const player = diffUtils.correlateInput(clusters, diff.keys) || clusters[0] || null
+  const threats = clusters.filter(c => c !== player && c.size >= 2)
+  const isGameOver = diffUtils.detectLossBurst(diff)
+
+  return {
+    player: player ? { x: player.x, y: player.y, heading: player.heading } : null,
+    threats: threats.map(t => ({ x: t.x, y: t.y, size: t.size })),
+    isGameOver,
+    timestamp: diff ? diff.t : Date.now()
+  }
+}
+```
+
+#### 4. Review Dialog UI
+- **Airi's Game Comprehension**: Natural-language summary of perceived mechanics, hazards, and tactical directives.
+- **Synthesized Extractor Viewer**: Syntax-highlighted code block displaying the full `extractGameState` JavaScript implementation.
+- **`[ 📋 Copy Extractor Code ]`**: One-click clipboard copy with toast confirmation for transparent inspection.
+- **Execution Controls**:
+  - **`[ 60-Second Sandboxed Test ]`**: Launches an automated 60-second trial run where AIRI plays live using the synthesized extractor and Jev reflexes while you observe.
+  - **`[ ⏱️ Recalibrate (15s) ]`**: Discards trace and returns to Stage 3 to re-demonstrate without resetting the running game instance.
+  - **`[ ✅ Approve & Save Knowledge ]`**: Atomically persists the Mini-Program and strategy into IndexedDB (`local:arcade_knowledge:<game_id>`).
+
+---
+
+### 5.6 Stage 5: The Classic Co-Pilot Arena & 60-Second Live Sandbox Test Run
+
+Once knowledge is approved (or during the 60-Second Sandboxed Test), the runtime executes the **Decoupled Eyes $\to$ Brain $\to$ Hands Pipeline**:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│               DECOUPLED REAL-TIME CO-PILOT PIPELINE                    │
+│                                                                        │
+│ 1. [Eyes] Live Canvas ──► 80x40 Downsampler ──► extractGameState()     │
+│    (Runs at 15–20 Hz in <1ms, yielding clean SemanticGameState)       │
+│                                                                        │
+│ 2. [Brain] Jev System 1 (or Laya Local WASM)                           │
+│    Evaluates discrete choices ('UP'|'DOWN'|'LEFT'|'RIGHT')             │
+│    in ~100ms (Jev Cloud) or ~15ms (Laya Local)                         │
+│                                                                        │
+│ 3. [Hands] JS-DOS Command Interface                                    │
+│    simulateKeyPress(chosenAction) dispatches keypress to game          │
+│                                                                        │
+│ 4. [Safety Watchdog]                                                   │
+│    Terminates if 60s expires or extractGameState.isGameOver === true   │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+The Arena layout opens in its refined classic split layout:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ [≡] AIRI - Chat Window [Arcade Room: QBasic Nibbles] [Mastered ✓]                         [⚙] [_][□][X]│
 ├─────────────────┬────────────────────────────────────────────────────┬─────────────────────────────────┤
 │  WORKSPACE      │             GAME VIEWPORT (65% Width)              │    BACKSEAT CHAT (35% Width)    │
 │                 │ ┌────────────────────────────────────────────────┐ │ ┌─────────────────────────────┐ │
-│ 💬 Chat View    │ │                                                │ │ │ 🌸 AIRI                     │ │
-│ 📹 Director     │ │              JS-DOS / RETRO CANVAS             │ │ │ "Alright, let's see what    │ │
-│ 📖 World Bible  │ │             (Doom / Civ I / 2048)              │ │ │ this game is all about!"    │ │
+│ 💬 Chat View    │ │                                                │ │ │ 🌸 AIRI [Laidback Observer]   │ │
+│ 📹 Director     │ │              JS-DOS / RETRO CANVAS             │ │ │ "Alright, let's grab that    │ │
+│ 📖 World Bible  │ │                 (QBasic Nibbles)               │ │ │ number 3 before the wall!"  │ │
 │ 🎨 Studio       │ │                                                │ │ │ <|ACT:emotion="smug"|>      │ │
 │ 📁 Media        │ │                    [ 4:3 ]                     │ │ ├─────────────────────────────┤ │
 │ 🧬 Thread       │ │                                                │ │ │ 👤 You                      │ │
-│ 📜 Event Ledger │ │                                                │ │ │ "Watch out behind you,      │ │
-│ 📝 Notes        │ │                                                │ │ │ there's an explosive barrel"│ │
-│ 🎬 Rehearsal    │ ├────────────────────────────────────────────────┤ │ ├─────────────────────────────┤ │
-│ 🕹️ Arcade Room  │ │ [Preset: Doom Shareware ▼] [Restart] [Savestate]│ │ │ 🌸 AIRI                     │ │
-│                 │ │ Mode: [● AI Playing] [○ You Play] [🔊 ────○──] │ │ │ "Wait, where?! Don't yell   │ │
-│ ─────────────── │ └────────────────────────────────────────────────┘ │ │ at me, I'm aiming!"         │ │
-│ ⚙️ Settings     │   Tips: Use [Space] to pause; LLM plays in bursts.  │ │ <|ACT:emotion="panicked"|>    │ │
-│                 │                                                    │ ├─────────────────────────────┤ │
-│                 │                                                    │ │ [ Backseat advice...      ] │ │
-│                 │                                                    │ │ [Careful!] [Shoot!] [Heal!] │ │
+│ 📜 Event Ledger │ │                                                │ │ │ "Watch out behind you!"     │ │
+│ 📝 Notes        │ │                                                │ │ ├─────────────────────────────┤ │
+│ 🎬 Rehearsal    │ ├────────────────────────────────────────────────┤ │ │ 🌸 AIRI                     │ │
+│ 🕹️ Arcade Room  │ │ [Engine: Laya Local $0 (15ms)] [Knowledge: ✓]   │ │ │ "I see it! Turning down!"   │ │
+│                 │ │ Mode: [● AI Playing] [○ You Play] [🔊 ────○──] │ │ │ <|ACT:emotion="excited"|>   │ │
+│ ─────────────── │ └────────────────────────────────────────────────┘ │ ├─────────────────────────────┤ │
+│ ⚙️ Settings     │   Reflex loop running at 15 Hz via Laya WASM.     │ │ [ Backseat advice...      ] │ │
 │                 │                                                    │ └─────────────────────────────┘ │
 └─────────────────┴────────────────────────────────────────────────────┴─────────────────────────────────┘
 ```
 
-### 5.3 Dual Play Modes
-The Arcade Room supports two interactive modes selectable via a toggle:
-1. **AI Autopilot (Agent Plays, User Backseats)**:
-   * The cognitive harness reads the canvas, selects discrete actions, and sends synthetic inputs.
-   * The user types or speaks backseat tips into the minimal chatbox.
-   * AIRI debates, panics, or listens, streaming dialogue into the chat transcript and TTS runtime.
-2. **Co-Pilot / Spectate (User Plays, Agent Backseats You)**:
-   * The user clicks into the game canvas and plays directly using standard keyboard/mouse controls.
-   * The cognitive harness runs in spectator mode (sampling frames every 3–5 seconds or on major state shifts via lightweight OCR).
-   * AIRI acts as your live personal gaming companion, cheering your victories, gasping at near-misses, and roasting your deaths!
+- **Motor Reflex Loop**: The compiled Mini Program runs at 15–20 Hz in the background, extracting state in $<1\text{ms}$ and querying Laya Local / Jev.
+- **Backseat Chat Stream**: AIRI provides continuous verbal personality banter, emotional cues (`<|ACT:emotion="..."|>`), and responds dynamically to user text or voice advice injected into her state payload.
+
+---
+
+### 5.7 The Acquired Game Knowledge Index & Registry
+
+Acquired game knowledge profiles are persisted under `local:arcade_knowledge:<game_identifier>` with the following schema:
+
+```typescript
+export interface AcquiredGameKnowledge {
+  gameId: string
+  title: string
+  engine: 'system1_reflex' | 'system2_strategy' | 'system2_narrative'
+  technologyTier: 'fixed_single_screen' | 'flip_screen_rooms' | 'smooth_scrolling_camera' | 'first_person_or_3d' | 'static_ui_or_turn_based'
+  runtimeProvider: 'laya_local' | 'typesafe_jev' | 'vlm_faculty'
+  persona: 'hype_cheerleader' | 'strategic_adviser' | 'detective_partner' | 'laidback_observer'
+  miniProgramSource: string // Evaluated sandboxed pure JS state extractor function (extractGameState)
+  actionSpace: {
+    instructions: string
+    choices: Record<string, string>
+    keyMapping: Record<string, string>
+  }
+  learnedAt: number
+}
+```
 
 ---
 
@@ -250,7 +488,7 @@ Real-time games (like *Doom*) run at 35–60 FPS, while VLM inference takes 500m
 * **Stage LookAt**: The Live2D / VRM avatar's gaze can be dynamically routed to point toward the game widget location on the desktop screen, giving the visual appearance that she is actively looking at the monitor while playing.
 
 ### 6.5 The Game Salience & Settle Gate (Adapting Attention Ecology pHash)
-In continuous background screen perception ([`docs/proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md)), **Stage 0** utilizes low-cost perceptual hashing (`pHash`) to reject ~90% of identical ticks at microsecond cost before waking heavier models.
+In continuous background screen perception ([`docs/design-attention-ecology-screen-watching.md`](./design-attention-ecology-screen-watching.md)), **Stage 0** utilizes low-cost perceptual hashing (`pHash`) to reject ~90% of identical ticks at microsecond cost before waking heavier models.
 
 Gaming observation adapts this exact technology to the game canvas / viewport (`chat_arcade.vue`), but with a vital architectural distinction:
 * **Desktop watching has a static baseline**: In desktop mode, a user reading code or browsing stays still for seconds at a time; simple binary change detection (changed vs unchanged) suffices.
@@ -311,6 +549,74 @@ Because game pacing varies drastically across titles, the Arcade Room settings d
 | **Real-Time / Fast Action** | *Doom*, *Wolfenstein 3D*, *Prince of Persia* | 150 ms | 22 (Filters camera bobbing, triggers on major visual shifts) | 800 ms | 3,500 ms |
 | **Narrative / Visual Novel** | Dating Sims, Interactive Fiction, RPG dialogue | 200 ms | 12 (Triggers on text advance or portrait sprite swap) | 1,000 ms | 8,000 ms |
 | **Custom Sliders** | Any custom or user-imported ROM | Slider (50–1000ms) | Slider (1–64 bits) | Slider (500–5000ms) | Slider (1–30s) |
+
+---
+
+### 6.6 Standard Perceptual Primitives & Multi-Entity Tracking (`diffUtils`)
+
+To guarantee deterministic, sub-millisecond execution and free the System-2 synthesizer from authoring error-prone pixel algorithms from scratch, the execution sandbox automatically provides the **`diffUtils` Perceptual Primitives SDK**.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                    TIER 1 PLATFORM PERCEPTUAL PRIMITIVES                     │
+│                                                                              │
+│   Raw 80x40 Frame Diff { added, removed, keys, t }                           │
+│                          │                                                   │
+│   ┌──────────────────────┼────────────────────────────────────────┐          │
+│   ▼                      ▼                                        ▼          │
+│ diffUtils.getClusters()  diffUtils.trackTrajectories()  diffUtils.detectLoss()│
+│ • Fast spatial grid      • Frame-to-frame association   • Delta spike (>40)  │
+│ • Island centroid & bbox • Heading & velocity vectors   • Death screen flash │
+│   │                      │                                        │          │
+│   └──────────────────────┼────────────────────────────────────────┘          │
+│                          ▼                                                   │
+│               diffUtils.correlateInput()                                     │
+│               • Matches vector (dx, dy) with diff.keys                       │
+│               • Unambiguously resolves CONTROLLABLE PLAYER                   │
+│                          │                                                   │
+│                          ▼                                                   │
+│       [ Tier 2: Synthesized Semantic Interpreter (extractGameState) ]        │
+│       • player: { x, y, heading }                                            │
+│       • threats: [{ id, x, y, distance, heading }]                           │
+│       • targets: [{ x, y, distance }]                                        │
+│       • isGameOver: boolean                                                  │
+│                          │                                                   │
+│                          ▼                                                   │
+│       [ Tier 3: Jev / System 1 Discrete Reflex Choice Heads (~100ms) ]       │
+└──────────────────────────────────────────────────────────────────────────────┘
+```
+
+#### Deterministic Primitives Specification:
+
+1. **`diffUtils.getClusters(points: [number, number][], distanceThreshold = 2): Cluster[]`**:
+   - Performs rapid spatial clustering using a 2D bucket hash table ($O(N)$ execution, $<0.15\text{ms}$ on 80x40 grids).
+   - Groups contiguous or adjacent pixel points into isolated visual islands.
+   - Returns:
+     ```typescript
+     interface Cluster {
+       x: number // Centroid X
+       y: number // Centroid Y
+       size: number // Pixel count
+       bbox: [number, number, number, number] // [minX, minY, maxX, maxY]
+       pixels: [number, number][]
+     }
+     ```
+
+2. **`diffUtils.trackTrajectories(prevClusters: Cluster[], currClusters: Cluster[], maxDistance = 6): TrackedEntity[]`**:
+   - Performs temporal tracking between $t-1$ and $t$ using minimal Euclidean distance pairing.
+   - Computes displacement $(\Delta x, \Delta y)$ and assigns discrete heading (`'UP'`, `'DOWN'`, `'LEFT'`, `'RIGHT'`, or `'STATIONARY'`).
+   - Prevents centroid teleportation and isolates separate entities moving simultaneously.
+
+3. **`diffUtils.correlateInput(clusters: Cluster[], keys: string[]): Cluster | null`**:
+   - Compares the motion vector of each active cluster against active directional keys in `keys` (`ArrowUp` $\to \Delta y < 0$, `ArrowDown` $\to \Delta y > 0$, `ArrowLeft` $\to \Delta x < 0$, `ArrowRight` $\to \Delta x > 0$).
+   - Returns the single cluster that responds to user input with highest Pearson/directional correlation. Unambiguously identifies the player avatar even when enemies or food spawn concurrently.
+
+4. **`diffUtils.detectLossBurst(diff: FrameDiff, burstThreshold = 40): boolean`**:
+   - Evaluates total pixel disturbance `added.length + removed.length`.
+   - In retro games, death triggers full-screen flashing, game-over popups, or complete board clearing that produces a massive spike relative to normal gameplay locomotion (e.g. 5–8 pixels/tick vs 40–120 pixels/tick).
+
+5. **`diffUtils.euclidean(p1: { x: number, y: number }, p2: { x: number, y: number }): number`**:
+   - Returns $\sqrt{(p_1.x - p_2.x)^2 + (p_1.y - p_2.y)^2}$ for distance sorting (e.g. distance to nearest threat or target).
 
 ---
 

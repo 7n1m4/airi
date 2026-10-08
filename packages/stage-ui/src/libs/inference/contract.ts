@@ -327,6 +327,8 @@ export interface WebRwkvLoadRequest {
   vocab?: string
   /** Optional Hugging Face Token for authenticating downloads. */
   hfToken?: string
+  /** Optional layer quantization: 'none' (FP16), 'nf4' (4-bit Normalized Float), 'int8' (8-bit integer). */
+  quantization?: 'none' | 'nf4' | 'int8'
 }
 
 /** Sampling + length parameters for one web-rwkv generation. */
@@ -345,6 +347,14 @@ export interface WebRwkvGenerateRequest {
   countPenalty: number
   /** Penalty decay (NucleusSampler). */
   penaltyDecay: number
+  /** Optional state cartridge ID (e.g. 'cartridge-glyph-1.5b-v1'). */
+  stateCartridgeId?: string
+  /** Optional remote state cartridge URL to download on demand if not cached in OPFS. */
+  stateCartridgeUrl?: string
+  /** Optional conditioning dialogue blocks to feed into the recurrent state (in-situ distillation). */
+  conditioningTexts?: string[]
+  /** Force re-conditioning even if cartridge is cached in OPFS. */
+  forceRecondition?: boolean
 }
 
 /** One streamed chunk of decoded text from web-rwkv generation. */
@@ -496,6 +506,28 @@ export const pocketTtsGenerateEvent = defineInvokeEventa<PocketTtsGenerateChunk,
 export const pocketTtsUnloadEvent = defineInvokeEventa<void, undefined>('inference:pocket-tts:unload')
 
 // ---------------------------------------------------------------------------
+// Laya System-1 on-device classifier (ModernBERT ONNX, WASM/WebGPU)
+// ---------------------------------------------------------------------------
+
+export interface LayaDecideRequest {
+  state: string | Record<string, unknown>
+  questions: Record<string, any>
+  precision?: 'int8' | 'fp16'
+  useWebGpu?: boolean
+}
+
+export interface LayaDecideResult {
+  model: string
+  answers: Record<string, any>
+  usage: { input_tokens: number, output_tokens: number }
+  latency_ms: number
+}
+
+export const layaLoadEvent = defineInvokeEventa<LoadStreamItem, LoadModelRequest>('inference:laya:load')
+export const layaDecideEvent = defineInvokeEventa<LayaDecideResult, LayaDecideRequest>('inference:laya:decide')
+export const layaUnloadEvent = defineInvokeEventa<void, undefined>('inference:laya:unload')
+
+// ---------------------------------------------------------------------------
 // WebLLM (`@mlc-ai/web-llm`) WebGPU transformer
 // ---------------------------------------------------------------------------
 
@@ -525,13 +557,24 @@ export interface AttentionGuardStageMs {
 }
 
 export interface AttentionGuardProcessRequest {
-  /** Base64/URL-encoded screen capture frame (PNG/JPEG). */
-  dataUrl: string
+  /** Base64/URL-encoded screen capture frame (PNG/JPEG). Omitted when pngBytes is transferred. */
+  dataUrl?: string
+  /**
+   * Raw PNG/JPEG bytes, zero-copy transferred (not cloned) to the worker.
+   * Preferred over dataUrl: kills the worker-side structured-clone copy plus
+   * the fetch()/Response allocation hop in the decode path.
+   */
+  pngBytes?: ArrayBuffer
   /** Capture width after the orchestrator's downscale (stable across ticks). */
   width: number
   height: number
   /** User/Character interest keywords (e.g. ['AIRI', 'chat_window', 'chrome', 'destiny']). */
   interestTags?: string[]
+  /**
+   * Memory-pressure hint: worker runs the cheap OCR path (downscale-only to
+   * 1280px, never upscale). Set by the orchestrator from the memory sentinel.
+   */
+  degraded?: boolean
 }
 
 export type AttentionGuardDecision = 'BASELINE' | 'IGNORE' | 'NOTE' | 'PROMOTE'
@@ -551,6 +594,7 @@ export interface AttentionGuardProcessResult {
   /** Stage-3 [Visual Event] summary block (attached on PROMOTE). */
   summary?: string
   caption?: string | null
+  ocrSnippet?: string | null
   vlmStatus?: 'ok' | 'degraded' | 'error'
   stageMs: AttentionGuardStageMs
 }

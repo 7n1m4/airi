@@ -49,7 +49,10 @@ watch(activeProvider, (newProv) => {
     activeModel.value = 'jev-latest'
   }
   else if (newProv === 'laya-local') {
-    activeModel.value = 'tozp/laya-onnx'
+    const configuredModel = providersStore.getProviderConfig('laya-local')?.model as string | undefined
+    if (activeModel.value !== 'tozp/laya-onnx' && activeModel.value !== 'tozp/laya-onnx-fp16') {
+      activeModel.value = configuredModel || 'tozp/laya-onnx'
+    }
   }
 })
 

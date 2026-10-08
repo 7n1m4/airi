@@ -24,7 +24,7 @@
 - **Added Zero-Shot CLIP Tag Decoding**: Computes instant zero-shot CLIP label classification (`classifyZeroShot`) in $<1\text{ms}$ during Stage 1.
 - **Compact Event Stream Timeline**: Redesigned dashboard ingestion box into a compact 5-event timeline stream (`eventStream`) displaying 12-hour AM/PM timestamps, padded active window names, and 2-line wrapped return-arrow VLM captions (`└─►`).
 - **Persisted JSONL Logs**: Appends every promoted event payload to `scripts/tests/attention-ecology-harness/promoted-events.jsonl`.
-- **Documented Spec**: Added Section 14 to `docs/proposal-attention-ecology-local-webgpu-guard.md`.
+- **Documented Spec**: Added Section 14 to `docs/design-attention-ecology-screen-watching.md`.
 
 ---
 

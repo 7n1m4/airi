@@ -3,7 +3,7 @@
 > **Status**: Proposed RFC · **Companion RFC**: [`docs/proposal-generic-gaming-agent-runtime.md`](./proposal-generic-gaming-agent-runtime.md) (Generic Gaming Agent Runtime & Arcade Room Architecture)
 > **Document**: `docs/proposal-gaming-show-harness-copilot.md`
 > **Target Audience**: Gaming Plugin Authors, Vision-Language Engineers, Proactivity Developers
-> **Key References**: [`docs/proposal-generic-gaming-agent-runtime.md`](./proposal-generic-gaming-agent-runtime.md), [`docs/proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md) (Stage 0 pHash Salience Gate), `apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue` (Arcade Room Surface), `packages/stage-ui/src/stores/providers/moondream` (Local WebGPU VLM), `docs/proposal-destiny2-plugin.md`, `docs/design-plugin-architecture.md`, `packages/stage-ui/src/stores/proactivity.ts`
+> **Key References**: [`docs/proposal-generic-gaming-agent-runtime.md`](./proposal-generic-gaming-agent-runtime.md), [`docs/design-attention-ecology-screen-watching.md`](./design-attention-ecology-screen-watching.md) (Stage 0 pHash Salience Gate), `apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue` (Arcade Room Surface), `packages/stage-ui/src/stores/providers/moondream` (Local WebGPU VLM), `docs/proposal-destiny2-plugin.md`, `docs/design-plugin-architecture.md`, `packages/stage-ui/src/stores/proactivity.ts`
 
 ---
 
@@ -151,7 +151,7 @@ Beyond gaming, Show Harness provides a safe, low-friction solution to the proble
 ```
 
 ### 5.1 Adapting Attention Ecology: The Stage 0 Game Salience & Settle Gate
-In Project AIRI's background perception architecture ([`docs/proposal-attention-ecology-local-webgpu-guard.md`](./proposal-attention-ecology-local-webgpu-guard.md)), **Stage 0** uses perceptual hashing (`pHash`) to reject ~90% of desktop ticks at microsecond cost before triggering heavier models.
+In Project AIRI's background perception architecture ([`docs/design-attention-ecology-screen-watching.md`](./design-attention-ecology-screen-watching.md)), **Stage 0** uses perceptual hashing (`pHash`) to reject ~90% of desktop ticks at microsecond cost before triggering heavier models.
 
 Gaming observation adopts this exact pHash change-detection engine, but solves a distinct challenge:
 * **The Screen-Watching Difference**: Desktop screen-watching relies on a static baseline (idle user = static screen). In gaming, the viewport is almost never static due to 3D camera sway, particle effects, character idling, and running animations.

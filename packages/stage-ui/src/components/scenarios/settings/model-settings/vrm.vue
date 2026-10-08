@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useModelStore } from '@proj-airi/stage-ui-three'
-import { Button, Callout, Checkbox, FieldRange } from '@proj-airi/ui'
+import { Button, Callout, Checkbox, FieldRange, SelectTab } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -31,7 +31,14 @@ const positioningStore = usePositioningStore()
 const {
   modelSize,
   followSpeed,
+  maxFps,
 } = storeToRefs(modelStore)
+
+const fpsOptions = computed(() => [
+  { value: 0, label: t('settings.vrm.fps.options.unlimited') },
+  { value: 60, label: '60' },
+  { value: 30, label: '30' },
+])
 
 const mouseTrackingEnabled = computed({
   get: () => modelStore.trackingMode === 'mouse',
@@ -133,6 +140,15 @@ onMounted(() => {
               </template>
             </FieldRange>
           </div>
+        </div>
+
+        <!-- Frame Rate Limit -->
+        <div :class="['flex', 'items-center', 'justify-between', 'gap-4', 'mb-2', 'border-b', 'border-neutral-100', 'pb-4', 'dark:border-neutral-800']">
+          <div :class="['flex', 'flex-col', 'gap-1']">
+            <span :class="['text-sm', 'text-neutral-600', 'dark:text-neutral-400']">{{ t('settings.vrm.fps.title') }}</span>
+            <span :class="['text-xs', 'text-neutral-500', 'dark:text-neutral-400']">{{ t('settings.vrm.fps.description') }}</span>
+          </div>
+          <SelectTab v-model="maxFps" :options="fpsOptions" size="sm" :class="['w-48', 'shrink-0']" />
         </div>
 
         <div flex="~ col gap-2">

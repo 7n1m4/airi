@@ -1,7 +1,7 @@
 ---
 name: airi-onboarding-v3
 description: >-
-  Build/debug canonical first-run Onboarding V3: 19 semantic steps, Quick Start (60s), 5-item sliding stepper, archetype presets, dynamic module pruning, draft store, starter card atomic commit, and Electron/Web/Pocket window routing. Deprecates legacy V2.
+  Build/debug canonical first-run Onboarding V3: 18 semantic steps, Quick Start (60s), 5-item sliding stepper, archetype presets, dynamic module pruning, draft store, starter card atomic commit, and Electron/Web/Pocket window routing. Deprecates legacy V2.
 ---
 
 # AIRI Onboarding (Canonical V3 Architecture)
@@ -51,10 +51,10 @@ Directory: `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/`
 
 ---
 
-## 3. The 19-Step Journey Topology
+## 3. The 18-Step Journey Topology
 
 ```
-[ 0. Welcome ] ──▶ [ 1. Appearance ] ──▶ [ 2. Triage ] ──▶ [ 3. Experience Archetypes ]
+[ 0. Welcome ] ──▶ [ 1. Triage ] ──▶ [ 2. Appearance ] ──▶ [ 3. Experience Archetypes ]
                                                                         │
    ┌────────────────────────────────────────────────────────────────────┘
    ▼
@@ -70,11 +70,11 @@ Directory: `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/`
                                                                              │
    ┌────────────────────────────────────────────────────────────────────────┘
    ▼
-[ 13. Screen (Desktop)* ] ──▶ [ 14. Proactivity (Schedule)* ] ──▶ [ 15. Artistry (Visuals)* ]
-                                                                            │
-   ┌───────────────────────────────────────────────────────────────────────┘
+[ 13. Proactivity & Screen* ] ──▶ [ 14. Artistry (Visuals)* ] ──▶ [ 15. Memory Hierarchy* ]
+                                                                             │
+   ┌─────────────────────────────────────────────────────────────────────────┘
    ▼
-[ 16. Memory Hierarchy* ] ──▶ [ 17. Automation & Tools* ] ──▶ [ 18. Stage Finale & Launch ]
+[ 16. Automation & Tools* ] ──▶ [ 17. Stage Finale & Launch ]
 ```
 *\* Denotes optional modular steps dynamically governed by the selected Experience Archetype.*
 
@@ -87,22 +87,21 @@ Directory: `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/`
 | 0 | `welcome` | `step-welcome.vue` | Welcome quote, brand visual, `Quick Start (60s)` vs `Guided Setup` toggle, and tray dismissal. |
 | 1 | `triage` | `step-triage.vue` | Account Sign-In (Cloudflare Zero-Trust PKCE) vs Local Air-Gapped Companion; cloud companion restore. |
 | 2 | `appearance` | `step-appearance.vue` | Display language (8 locales), Dark/Light theme mode, 24-color accent palette. |
-| 3 | `experience` | `step-experience.vue` | 6 Archetype Presets (*Casual Companion*, *Quiet Observer*, *Creative Muse*, *Executive Copilot*, *Ambient Roommate*, *Swiss Army*) & 10-module pruning. |
+| 3 | `experience` | `step-experience.vue` | 6 Archetype Presets (*Casual Companion*, *Quiet Observer*, *Creative Muse*, *Executive Copilot*, *Ambient Roommate*, *Swiss Army*) & 9-module pruning. |
 | 4 | `profile` | `step-profile.vue` | User persona, callout name, user preferences. |
 | 5 | `vessel` | `step-vessel.vue` | Unified 3D Vessel Coverflow (Live2D, VRM, MMD, Spine) with instant preview. |
-| 6 | `persona` | `step-persona.vue` | Character card & soul selection (`STARTER_CHARACTERS`, SillyTavern imports). |
-| 7 | `hearing` | `step-hearing.vue` | Microphone capture, VAD threshold, STT engine (Whisper WebGPU / Web Speech). |
-| 8 | `consciousness` | `step-consciousness.vue` | LLM mind (WebLLM WebGPU or 77+ Cloud providers). |
+| 6 | `consciousness` | `step-consciousness.vue` | LLM mind (WebLLM WebGPU or 77+ Cloud providers). |
+| 7 | `persona` | `step-persona.vue` | Character card & soul selection (`STARTER_CHARACTERS`, SillyTavern imports). |
+| 8 | `hearing` | `step-hearing.vue` | Microphone capture, VAD threshold, STT engine (Whisper WebGPU / Web Speech). |
 | 9 | `speech` | `step-speech.vue` | Neural TTS (Kokoro WebGPU, Cloud TTS, ElevenLabs) with pitch/rate controls. |
 | 10 | `thinking` | `step-thinking.vue` | Conversational pacing presets (*Snappy*, *Balanced*, *Deep CoT*) & subconscious asides. |
 | 11 | `emotions` | `step-emotions.vue` | 2-pass ACT Expression Bridge (normalizing morphs to `<\|ACT:*\|>` tokens). |
 | 12 | `vision` | `step-vision.vue` | Chat photo & VLM 2-hop visual test. |
-| 13 | `screen` | `step-screen.vue` | Desktop display perception & 4 delivery modes (`Voice & Bubble`, `Bubble Only`, etc.). |
-| 14 | `proactivity` | `step-proactivity.vue` | Autonomous heartbeats, attention gate, quiet hours schedule. |
-| 15 | `artistry` | `step-artistry.vue` | Visual generation (Pollinations AI free tier or ComfyUI Bring-Your-Own-Workflow). |
-| 16 | `memory` | `step-memory.vue` | 4 Temporal Memory Quadrants (STMM daily summaries, Sacred Journal LTMM, Lifetime Thread, Echo Chips). |
-| 17 | `tools` | `step-tools.vue` | External tools (0-Key Web Search, Desktop Filesystem MCP, 3D Motion Generator). |
-| 18 | `finale` | `step-finale.vue` | Pre-Flight Honesty Matrix & seamless Turn 0 greeting launch into Stage. |
+| 13 | `proactivity` | `step-proactivity.vue` | Schedule, ambient heartbeats, quiet hours, and desktop display perception. |
+| 14 | `artistry` | `step-artistry.vue` | Visual generation (Pollinations AI free tier or ComfyUI Bring-Your-Own-Workflow). |
+| 15 | `memory` | `step-memory.vue` | 4 Temporal Memory Quadrants (STMM daily summaries, Sacred Journal LTMM, Lifetime Thread, Echo Chips). |
+| 16 | `tools` | `step-tools.vue` | External tools (0-Key Web Search, Desktop Filesystem MCP, 3D Motion Generator). |
+| 17 | `finale` | `step-finale.vue` | Pre-Flight Honesty Matrix & seamless Turn 0 greeting launch into Stage. |
 
 ---
 
@@ -111,4 +110,4 @@ Directory: `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/`
 1. **Draft Isolation**: Steps write strictly into `useOnboardingV3Draft`. No production stores (`airi-card`, `consciousness`, `hearing`, `speech`) are mutated until the finale step (`step-finale.vue`) executes atomic synthesis.
 2. **Dynamic Step Pruning**: Never hardcode numeric step indices. Step traversal is computed reactively from `activeSteps` based on `draftStore.state.modules`.
 3. **Sliding Breadcrumb Stepper**: Header navigation displays a maximum 5-item sliding window around the active step, preventing horizontal scrollbars and layout shifts.
-4. **Quick Start (60s)**: Always maintain the fast path in `quick-start.vue` so users who desire instant setup can start talking to an avatar immediately without navigating all 19 modular chapters.
+4. **Quick Start (60s)**: Always maintain the fast path in `quick-start.vue` so users who desire instant setup can start talking to an avatar immediately without navigating all 18 modular chapters.

@@ -1277,10 +1277,10 @@ pages:
           title: LLM en el navegador solo con WebGPU
         defaultsSection:
           annotation: 'Para personalizar estos ajustes para un personaje, ve a la pestaña
-            Generación del personaje: • Modifica Temperatura, Top P y Tokens
-            máximos usando los campos de entrada. • Modifica las penalizaciones
-            (Presencia/Frecuencia/Decaimiento) ingresándolas en el área de texto
-            JSON Avanzado (ej. {"presence_penalty": 0.5}).'
+            Generación del personaje: • Modifica la temperatura, Top P y los
+            tokens máximos usando los campos de entrada. • Modifica las
+            penalizaciones (Presencia/Recuento/Decaimiento) ingresándolas en el
+            área de texto JSON Avanzado (ej. "presence_penalty": 0.5).'
           description: Estos son los parámetros predeterminados utilizados por web-rwkv.
           field:
             count_penalty: 'Penalización por frecuencia (Por defecto: 0.4)'
@@ -1357,8 +1357,8 @@ pages:
         title: ¿Ver el mundo?
       motion:
         title: ¿Gestos y cinética 3D?
-        description: Sintetiza movimientos y gestos de personajes VRM en 3D en tiempo real
-          en el dispositivo usando difusión generativa <b>FlowMDM (WebGPU
+        description: Sintetiza movimientos y gestos de personajes VRM en 3D en tiempo
+          real en el dispositivo usando difusión generativa <b>FlowMDM (WebGPU
           local)</b>.
       cloud:
         title: ¿Sincronización en la nube y copias de seguridad?

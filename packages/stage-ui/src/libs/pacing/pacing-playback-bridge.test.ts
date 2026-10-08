@@ -5,10 +5,11 @@ import type { ThinkingAudioFingerprintParams } from './pacing-cache'
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import * as pacingCache from './pacing-cache'
 import { clearThinkingAudioCache, getThinkingAudio, saveThinkingAudio } from './pacing-cache'
 import { PacingPlaybackBridge, resolveFillerCandidate } from './pacing-playback-bridge'
 import { TurnPacingCoordinator } from './turn-pacing-coordinator'
+
+import * as pacingCache from './pacing-cache'
 
 class VirtualClock implements Clock {
   public currentTime = 0
@@ -591,13 +592,15 @@ describe('resolveFillerCandidate', () => {
   })
 })
 
-
 describe('pacing preparation recovery', () => {
   const voiceParams = { provider: 'test', model: 'tts', voiceId: 'voice', text: 'Hmm...' }
   const bytes = new Uint8Array([1, 2, 3]).buffer
 
   beforeEach(async () => { await clearThinkingAudioCache() })
-  afterEach(() => { vi.restoreAllMocks() })
+  afterEach(async () => {
+    await clearThinkingAudioCache()
+    vi.restoreAllMocks()
+  })
 
   function setup(options: {
     synthesizeAudio?: (text: string, signal: AbortSignal) => Promise<ArrayBuffer>
@@ -606,8 +609,11 @@ describe('pacing preparation recovery', () => {
     const clock = new VirtualClock()
     const playback = { schedule: vi.fn(), stopByIntent: vi.fn() }
     const coordinator = new TurnPacingCoordinator({
-      turnId: 'recovery', generation: 1, providerKey: 'test',
-      policy: { ...defaultPolicy, maxFillersPerTurn: 3, maxSynthesisBudgetMs: 600 }, clock,
+      turnId: 'recovery',
+      generation: 1,
+      providerKey: 'test',
+      policy: { ...defaultPolicy, maxFillersPerTurn: 3, maxSynthesisBudgetMs: 600 },
+      clock,
       onCancelFiller: reason => bridge.cancelFiller(reason),
     })
     const bridge = new PacingPlaybackBridge({ coordinator, playback, voiceParams, clock, ...options })
@@ -623,8 +629,13 @@ describe('pacing preparation recovery', () => {
       await saveThinkingAudio(voiceParams, bytes, 1000)
     clock.advance(5000)
     const candidate: AsideCandidate = {
-      cueId: 'retry', turn: { turnId: 'recovery', generation: 1 }, source: 'explicit',
-      text: 'Hmm...', phraseKey: 'hmm', collectedAtMs: 0, expiresAtMs: 30000,
+      cueId: 'retry',
+      turn: { turnId: 'recovery', generation: 1 },
+      source: 'explicit',
+      text: 'Hmm...',
+      phraseKey: 'hmm',
+      collectedAtMs: 0,
+      expiresAtMs: 30000,
     }
     const success = kind === 'cached'
       ? await bridge.handleFillerArmed()
@@ -655,7 +666,7 @@ describe('pacing preparation recovery', () => {
 
   it('does not start synthesis after an answer arrives during cache lookup', async () => {
     let resolveLookup!: (value: null) => void
-    vi.spyOn(pacingCache, 'getThinkingAudio').mockImplementationOnce(() => new Promise(resolve => { resolveLookup = resolve }))
+    vi.spyOn(pacingCache, 'getThinkingAudio').mockImplementationOnce(() => new Promise((resolve) => { resolveLookup = resolve }))
     const synthesizeAudio = vi.fn(async () => bytes)
     const { coordinator, bridge, playback } = setup({ synthesizeAudio })
     const preparing = bridge.handleFillerArmed()
@@ -690,7 +701,7 @@ describe('pacing preparation recovery', () => {
     const { coordinator, bridge, playback } = setup({
       synthesizeAudio: async (_text, value) => {
         signal = value
-        return new Promise(resolve => { finish = resolve })
+        return new Promise((resolve) => { finish = resolve })
       },
     })
     const preparing = bridge.handleFillerArmed()
@@ -727,8 +738,13 @@ describe('pacing preparation recovery', () => {
   it('settles canceled dynamic synthesis even if the provider ignores abort', async () => {
     const { coordinator, bridge, playback } = setup({ synthesizeAudio: () => new Promise(() => {}) })
     const preparing = bridge.handleDynamicAsideArmed({
-      cueId: 'pending', turn: { turnId: 'recovery', generation: 1 }, source: 'explicit',
-      text: 'Hmm...', phraseKey: 'hmm', collectedAtMs: 0, expiresAtMs: 30000,
+      cueId: 'pending',
+      turn: { turnId: 'recovery', generation: 1 },
+      source: 'explicit',
+      text: 'Hmm...',
+      phraseKey: 'hmm',
+      collectedAtMs: 0,
+      expiresAtMs: 30000,
     })
     coordinator.onInferenceEvent({ type: 'answer', text: 'Done', at: 2000 })
     expect(await preparing).toBe(false)
@@ -739,12 +755,19 @@ describe('pacing preparation recovery', () => {
   it('stops the real playback intent on turn cancellation', async () => {
     const clock = new VirtualClock()
     const coordinator = new TurnPacingCoordinator({
-      turnId: 'intent-test', generation: 1, providerKey: 'test', policy: defaultPolicy, clock,
+      turnId: 'intent-test',
+      generation: 1,
+      providerKey: 'test',
+      policy: defaultPolicy,
+      clock,
       onCancelFiller: reason => bridge.cancelFiller(reason),
     })
     const playback = { schedule: vi.fn(), stopByIntent: vi.fn() }
     const bridge = new PacingPlaybackBridge({
-      coordinator, playback, voiceParams, clock,
+      coordinator,
+      playback,
+      voiceParams,
+      clock,
       getIntentContext: () => ({ intentId: 'real-chat-intent', streamId: 'real-chat-stream' }),
     })
     await saveThinkingAudio(voiceParams, bytes, 1000)
@@ -754,5 +777,4 @@ describe('pacing preparation recovery', () => {
     coordinator.cancel('user-interrupted')
     expect(playback.stopByIntent).toHaveBeenCalledExactlyOnceWith('real-chat-intent', 'user-interrupted')
   })
-
 })

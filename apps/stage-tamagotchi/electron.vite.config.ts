@@ -149,6 +149,7 @@ export default defineConfig({
         input: {
           'main': resolve(join(import.meta.dirname, 'src', 'renderer', 'index.html')),
           'beat-sync': resolve(join(import.meta.dirname, 'src', 'renderer', 'beat-sync.html')),
+          'splash': resolve(join(import.meta.dirname, 'src', 'renderer', 'splash.html')),
         },
       },
     },
@@ -172,8 +173,6 @@ export default defineConfig({
         '@proj-airi/stage-ui/*',
         '@proj-airi/stage-ui-three',
         '@proj-airi/stage-ui-three/*',
-        '@proj-airi/drizzle-duckdb-wasm',
-        '@proj-airi/drizzle-duckdb-wasm/*',
         '@proj-airi/electron-screen-capture',
 
         // wasm-bindgen package: esbuild's dep pre-bundle mangles the wasm glue
@@ -247,6 +246,22 @@ export default defineConfig({
 
     worker: {
       format: 'es',
+      plugins: () => [
+        {
+          name: 'sanitize-worker-modules',
+          enforce: 'pre',
+          transform(code: string, id: string) {
+            if (id.includes('@mlc-ai/web-llm')) {
+              return {
+                code: code
+                  .replaceAll('new Worker', 'createWorkerInstance')
+                  .replaceAll('import.meta.url', 'import_meta_url'),
+                map: null,
+              }
+            }
+          },
+        },
+      ],
       rollupOptions: {
         output: {
           inlineDynamicImports: false,
@@ -256,17 +271,28 @@ export default defineConfig({
 
     plugins: [
       {
+        name: 'sanitize-renderer-modules',
+        enforce: 'pre',
+        transform(code: string, id: string) {
+          if (id.includes('@mlc-ai/web-llm')) {
+            return {
+              code: code
+                .replaceAll('new Worker', 'createWorkerInstance')
+                .replaceAll('import.meta.url', 'import_meta_url'),
+              map: null,
+            }
+          }
+        },
+      },
+      {
         name: 'force-node-crypto-shim',
         enforce: 'pre',
-        resolveId(id, importer) {
+        resolveId(id) {
           if (id === 'node:crypto' || id === 'crypto') {
             return resolve(join(import.meta.dirname, 'src', 'renderer', 'shims', 'node-crypto.ts'))
           }
           if (id.startsWith('node:') || ['process', 'module', 'path', 'fs'].includes(id)) {
             return '\0virtual:node-shim'
-          }
-          if (id.includes('-node.mjs') && (id.includes('duckdb-wasm') || importer?.includes('duckdb-wasm'))) {
-            return this.resolve(id.replace('-node.mjs', '-browser.mjs'), importer, { skipSelf: true })
           }
           return null
         },

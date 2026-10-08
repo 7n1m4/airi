@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, useTemplateRef } from 'vue'
 import { toast } from 'vue-sonner'
 
+import ChatSticker from './components/sticker.vue'
 import JournalMomentModal from './JournalMomentModal.vue'
 import ChatResponsePart from './response-part.vue'
 import ChatToolCallBlock from './tool-call-block.vue'
@@ -14,7 +15,7 @@ import { useChatSessionStore } from '../../../stores/chat/session-store'
 import { useTextJournalStore } from '../../../stores/memory-text-journal'
 import { useAiriCardStore } from '../../../stores/modules/airi-card'
 import { useConsciousnessStore } from '../../../stores/modules/consciousness'
-import { hydrateLegacyActorSlices, isValidActorId } from '../../../utils/chat-actor-slices'
+import { hydrateLegacyActorSlices, hydrateStickerSlices, isValidActorId } from '../../../utils/chat-actor-slices'
 import { MarkdownRenderer } from '../../markdown'
 import { ChatActionMenu } from './components/action-menu'
 import { getChatHistoryItemCopyText } from './utils'
@@ -47,7 +48,7 @@ const formattedTime = computed(() => {
   return new Date(props.message.createdAt).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true })
 })
 
-const slices = computed(() => props.message.slices || [])
+const slices = computed(() => hydrateStickerSlices(props.message.slices || [], props.message.rawContent))
 const toolResults = computed(() => props.message.tool_results || [])
 const actorAwareSlices = computed(() => hydrateLegacyActorSlices(slices.value, props.message.rawContent))
 
@@ -544,6 +545,11 @@ const resolvedSlices = computed(() => {
       continue
     }
 
+    if (slice.type === 'sticker') {
+      rs.push({ ...slice })
+      continue
+    }
+
     if ((slice as any).type === 'reasoning') {
       // Typically skipped, reasoning can be styled separately or omitted
     }
@@ -696,6 +702,11 @@ const dynamicStyles = computed(() => {
                   class="mb-2"
                 />
                 <template v-else-if="slice.type === 'tool-call-result'" />
+                <ChatSticker
+                  v-else-if="slice.type === 'sticker'"
+                  :sticker-id="slice.stickerId"
+                  class="mb-2"
+                />
                 <template v-else-if="slice.type === 'text'">
                   <MarkdownRenderer
                     :content="slice.text"

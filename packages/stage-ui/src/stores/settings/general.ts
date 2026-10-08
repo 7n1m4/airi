@@ -1,7 +1,7 @@
 import messages from '@proj-airi/i18n/locales'
 
 import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
-import { defineStore } from 'pinia'
+import { acceptHMRUpdate, defineStore } from 'pinia'
 import { onMounted } from 'vue'
 
 const languageRemap: Record<string, string> = {
@@ -71,3 +71,10 @@ export const useSettingsGeneral = defineStore('settings-general', () => {
     resetState,
   }
 })
+
+// Phase 0B: pure localStorage-backed state, no timers/channels/handles — safe
+// for direct Pinia HMR patching. No dispose ledger needed (nothing to tear
+// down). No-op in production (import.meta.hot is undefined).
+if (import.meta.hot) {
+  import.meta.hot.accept(acceptHMRUpdate(useSettingsGeneral, import.meta.hot))
+}

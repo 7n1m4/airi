@@ -16,7 +16,9 @@ import type { GazeOffset, MMDAnimationManager, MorphController } from '../../com
 import type { ResolvedMMDModel } from '../../utils/mmd-loader'
 
 import { errorMessageFrom } from '@moeru/std'
+import { computeDirectionalLightOrbit } from '@proj-airi/stage-shared'
 import { Screen } from '@proj-airi/ui'
+import { defaultWindow, useElementBounding, useEventListener } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import {
   AmbientLight,
@@ -53,6 +55,7 @@ import {
 import { Emotion, EMOTION_VALUES } from '../../constants/emotions'
 import { useMMD } from '../../stores/mmd'
 import { loadMMDModelFromSource } from '../../utils/mmd-loader'
+import { parseMmdCycleAnimations, resolveBuiltinMmdAnimationUrl } from '../../utils/mmd-motion-resolver'
 
 const props = withDefaults(defineProps<{
   modelSrc?: string
@@ -109,6 +112,10 @@ const {
   directionalColor,
   directionalIntensity,
   directionalPosition,
+  directionalLightRotation,
+  directionalLightTarget,
+  modelOrigin,
+  modelSize,
   albedoGlow,
   renderScale,
 } = storeToRefs(mmdStore)
@@ -119,6 +126,8 @@ const allMotions = computed(() => [
 ])
 
 const canvasRef = ref<HTMLCanvasElement>()
+const canvasBounding = useElementBounding(canvasRef, { updateTiming: 'next-frame' })
+useEventListener(defaultWindow?.visualViewport, ['resize', 'scroll'], canvasBounding.update)
 
 // Imperative three.js objects (no reactivity — mutated in the render loop).
 let renderer: WebGLRenderer | undefined
@@ -195,11 +204,12 @@ function resolveGazeOffset(): GazeOffset | undefined {
   // mouse
   if (!props.cursorPosition || !canvasRef.value)
     return undefined
-  const rect = canvasRef.value.getBoundingClientRect()
-  if (rect.width === 0 || rect.height === 0)
+  const canvasWidth = canvasBounding.width.value || canvasRef.value.clientWidth || 0
+  const canvasHeight = canvasBounding.height.value || canvasRef.value.clientHeight || 0
+  if (canvasWidth === 0 || canvasHeight === 0)
     return undefined
-  const nx = ((props.cursorPosition.x - rect.left) / rect.width) * 2 - 1
-  const ny = ((props.cursorPosition.y - rect.top) / rect.height) * 2 - 1
+  const nx = ((props.cursorPosition.x - canvasBounding.left.value) / canvasWidth) * 2 - 1
+  const ny = ((props.cursorPosition.y - canvasBounding.top.value) / canvasHeight) * 2 - 1
   return { x: Math.max(-1, Math.min(1, nx)), y: Math.max(-1, Math.min(1, ny)) }
 }
 
@@ -359,7 +369,9 @@ function setupScene() {
   scene.add(ambientLight)
   directionalLight = new DirectionalLight(new Color(normalizeHex(directionalColor.value)), directionalIntensity.value)
   directionalLight.position.set(directionalPosition.value.x, directionalPosition.value.y, directionalPosition.value.z)
+  directionalLight.target.position.set(directionalLightTarget.value.x, directionalLightTarget.value.y, directionalLightTarget.value.z)
   scene.add(directionalLight)
+  scene.add(directionalLight.target)
 
   controls = new OrbitControls(camera, canvas)
   controls.enableDamping = true
@@ -486,19 +498,6 @@ function disposeModel() {
   resolved = undefined
   activePreviewMorph = undefined
   activeFinishedListener = undefined
-  mmdStore.isModelLoaded = false
-}
-
-/**
- * Returns the MMD-relevant names from the card's `idleAnimations` prop,
- * stripping foreign prefixes (live2d:, spine:) that don't apply here.
- */
-function parseMmdCycleAnimations(): string[] {
-  if (!props.idleAnimations || props.idleAnimations.length === 0)
-    return []
-  return props.idleAnimations.filter(
-    key => !key.startsWith('live2d:') && !key.startsWith('spine:'),
-  )
 }
 
 /**
@@ -519,7 +518,7 @@ function applyIdleCycle(): void {
     activeFinishedListener = undefined
   }
 
-  const cycle = parseMmdCycleAnimations().filter(name => registeredMotions.has(name))
+  const cycle = parseMmdCycleAnimations(props.idleAnimations).filter(name => registeredMotions.has(name))
 
   if (cycle.length === 0) {
     // No card-level cycle — honour the store's single idle motion.
@@ -543,7 +542,7 @@ function applyIdleCycle(): void {
   function playNext(avoidName?: string): void {
     if (!animation || !mixer)
       return
-    const current = parseMmdCycleAnimations().filter(name => registeredMotions.has(name))
+    const current = parseMmdCycleAnimations(props.idleAnimations).filter(name => registeredMotions.has(name))
     if (current.length === 0)
       return
 
@@ -609,7 +608,7 @@ async function syncMotions() {
         isBlob = true
       }
       else {
-        url = `/assets/mmd/animations/${descriptor.name}`
+        url = resolveBuiltinMmdAnimationUrl(descriptor.name)
       }
 
       const clip = await loadMMDAnimationClip(loaderCtx.loader, url, mesh)
@@ -858,6 +857,32 @@ watch([directionalColor, directionalIntensity], () => {
   directionalLight.color.set(normalizeHex(directionalColor.value))
   directionalLight.intensity = directionalIntensity.value
 })
+function updateMMDDirLightOrbit(newRotation: { x: number, y: number, z: number }) {
+  const targetPoint = {
+    x: modelOrigin.value?.x || 0,
+    y: (modelOrigin.value?.y || 0) + (modelSize.value?.y ? modelSize.value.y * 0.6 : 1.0),
+    z: modelOrigin.value?.z || 0,
+  }
+
+  const { position, target } = computeDirectionalLightOrbit(newRotation, {
+    target: targetPoint,
+    distance: 3.0,
+  })
+
+  directionalPosition.value = position
+  directionalLightTarget.value = target
+
+  if (directionalLight) {
+    directionalLight.position.set(position.x, position.y, position.z)
+    directionalLight.target.position.set(target.x, target.y, target.z)
+    directionalLight.target.updateMatrixWorld()
+  }
+}
+
+watch(directionalLightRotation, (newRotation) => {
+  updateMMDDirLightOrbit(newRotation)
+}, { deep: true, immediate: true })
+
 watch(directionalPosition, () => {
   directionalLight?.position.set(directionalPosition.value.x, directionalPosition.value.y, directionalPosition.value.z)
 }, { deep: true })
@@ -903,20 +928,24 @@ defineExpose({
     const headTopPos = worldPos.clone().addScaledVector(headUp, 2.0)
     const ndc = headTopPos.project(camera)
 
-    const rect = canvasRef.value.getBoundingClientRect()
-    const screenX = ((ndc.x + 1) / 2) * rect.width
-    const screenY = ((-ndc.y + 1) / 2) * rect.height
+    // Convert NDC to pixel coordinates relative to the canvas
+    // NOTICE: Read cached bounding dimensions via useElementBounding instead of canvasRef.value.getBoundingClientRect()
+    // to avoid forcing synchronous reflows on every requestAnimationFrame tick (e.g. HeadTetheredCanvas2D).
+    const canvasWidth = canvasBounding.width.value || canvasRef.value.clientWidth || 500
+    const canvasHeight = canvasBounding.height.value || canvasRef.value.clientHeight || 500
+    const screenX = ((ndc.x + 1) / 2) * canvasWidth
+    const screenY = ((-ndc.y + 1) / 2) * canvasHeight
 
     // Calculate approximate screen model height (head to hips/center)
     const hipsBone = mesh.skeleton?.bones?.find(
       b => b.name === 'センター' || b.name === '下半身' || b.name.toLowerCase().includes('hip'),
     )
-    let modelHeightPx = rect.height * 0.5
+    let modelHeightPx = canvasHeight * 0.5
     if (hipsBone) {
       const hipsPos = new Vector3()
       hipsBone.getWorldPosition(hipsPos)
       const hipsNdc = hipsPos.clone().project(camera)
-      const hipsScreenY = ((-hipsNdc.y + 1) / 2) * rect.height
+      const hipsScreenY = ((-hipsNdc.y + 1) / 2) * canvasHeight
       modelHeightPx = Math.max(120, Math.abs(hipsScreenY - screenY) * 2.2)
     }
 

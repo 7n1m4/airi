@@ -319,7 +319,7 @@ const { isNearAnyBorder: isAroundWindowBorder } = useElectronMouseAroundWindowBo
 const isAroundWindowBorderFor250Ms = refDebounced(isAroundWindowBorder, 250)
 
 const stageState = ref<'pending' | 'loading' | 'mounted'>('pending')
-const { post: broadcastModelReady } = useBroadcastChannel<string, string>({ name: 'airi-stage-model-ready' })
+const { data: stageModelQuery, post: broadcastModelReady } = useBroadcastChannel<string, string>({ name: 'airi-stage-model-ready' })
 
 watch(stageState, (val) => {
   console.log('[Actor Window] stageState changed:', val)
@@ -327,6 +327,12 @@ watch(stageState, (val) => {
     broadcastModelReady('ready')
   }
 }, { immediate: true })
+
+watch(stageModelQuery, (msg) => {
+  if (msg === 'query' && stageState.value === 'mounted') {
+    broadcastModelReady('ready')
+  }
+})
 
 // --- Magic Wand Suggestions State & Logic ---
 const whisperDockRef = ref<any>(null)

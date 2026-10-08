@@ -38,3 +38,14 @@ profile-switcher:
   save-as-new: Save as New Profile
   manage: Manage Profiles
 waiting: 等待中
+startup:
+  milestones:
+    core_services: 正在初始化核心系统服务...
+    sync_engine: 正在从本地存储恢复状态...
+    character_card: 正在加载角色人格...
+    stage_actor: 正在准备虚拟形象着色器与纹理...
+    stage_actor_skipped: 纯文本伙伴已激活（已跳过舞台）
+  ready: 就绪！
+  timeout: 启动已超时（10 秒）。
+  continue-without-model: 无虚拟形象继续
+  retry: 重试

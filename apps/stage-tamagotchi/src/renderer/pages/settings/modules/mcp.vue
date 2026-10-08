@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { ElectronMcpStdioConfigFile, ElectronMcpStdioRuntimeStatus, ElectronMcpToolDescriptor } from '../../../../shared/eventa'
+import type {
+  ElectronMcpConfigFile,
+  ElectronMcpRuntimeStatus,
+  ElectronMcpServerConfig,
+  ElectronMcpToolDescriptor,
+} from '../../../../shared/eventa'
 
 import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import { tryGetMcpToolBridge } from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
@@ -28,9 +33,9 @@ const selectDirectories = useElectronEventaInvoke(electronSelectDirectories)
 // UI State
 const currentTab = ref<'manage' | 'discover'>('manage')
 const isBusy = ref(false)
-const status = ref<ElectronMcpStdioRuntimeStatus>()
+const status = ref<ElectronMcpRuntimeStatus>()
 const tools = ref<ElectronMcpToolDescriptor[]>([])
-const config = ref<ElectronMcpStdioConfigFile>()
+const config = ref<ElectronMcpConfigFile>()
 const lastActionMessage = ref('')
 const errorMessage = ref('')
 
@@ -90,21 +95,27 @@ function isFilesystemServer(serverName: string): boolean {
   const s = config.value?.mcpServers[serverName] || status.value?.servers.find(srv => srv.name === serverName)
   if (!s)
     return serverName.toLowerCase().includes('filesystem')
-  const args = s.args || []
-  return serverName.toLowerCase().includes('filesystem') || args.some(a => a.includes('server-filesystem'))
+  if ('command' in s) {
+    const args = s.args || []
+    return serverName.toLowerCase().includes('filesystem') || args.some(a => a.includes('server-filesystem'))
+  }
+  return false
 }
 
 function isOpenWebSearchServer(serverName: string): boolean {
   const s = config.value?.mcpServers[serverName] || status.value?.servers.find(srv => srv.name === serverName)
   if (!s)
     return serverName.toLowerCase().includes('open-websearch') || serverName.toLowerCase().includes('open web search')
-  const args = s.args || []
-  return serverName.toLowerCase().includes('open-websearch') || args.some(a => a.includes('open-websearch'))
+  if ('command' in s) {
+    const args = s.args || []
+    return serverName.toLowerCase().includes('open-websearch') || args.some(a => a.includes('open-websearch'))
+  }
+  return false
 }
 
 function getFilesystemPaths(serverName: string): string[] {
   const s = config.value?.mcpServers[serverName]
-  if (!s || !s.args)
+  if (!s || !('args' in s) || !s.args)
     return []
   // Paths are args that don't start with '-' and aren't package names
   return s.args.filter(arg => !arg.startsWith('-') && !arg.includes('@modelcontextprotocol/server-filesystem') && !arg.includes('server-filesystem'))
@@ -121,7 +132,7 @@ async function handleAddDirectory(serverName: string) {
       return
 
     const currentConfig = config.value?.mcpServers[serverName]
-    if (!currentConfig)
+    if (!currentConfig || !('command' in currentConfig))
       return
 
     const existingArgs = currentConfig.args || ['-y', '@modelcontextprotocol/server-filesystem']
@@ -156,7 +167,7 @@ async function handleRemoveDirectory(serverName: string, pathToRemove: string) {
   errorMessage.value = ''
   try {
     const currentConfig = config.value?.mcpServers[serverName]
-    if (!currentConfig || !currentConfig.args)
+    if (!currentConfig || !('command' in currentConfig) || !currentConfig.args)
       return
 
     const newArgs = currentConfig.args.filter(a => a !== pathToRemove)
@@ -186,7 +197,7 @@ async function handleAddPresetDirectory(serverName: string, presetSuffix: string
   errorMessage.value = ''
   try {
     const currentConfig = config.value?.mcpServers[serverName]
-    if (!currentConfig)
+    if (!currentConfig || !('command' in currentConfig))
       return
 
     // Resolve sensible home directory path prefix
@@ -467,12 +478,26 @@ function getInstallState(server: RegistryServer): {
     return { canInstall: true, label: 'Install' }
   }
 
-  // Remote-only servers (no local executable package)
+  // Check for streamable-http remote endpoint
+  const streamableRemote = server.remotes?.find(r => r.type === 'streamable-http')
+  if (streamableRemote && (!server.packages || server.packages.length === 0)) {
+    const requiredHeaders = streamableRemote.headers?.filter(h => h.isRequired).map(h => h.name) || []
+    if (requiredHeaders.length > 0) {
+      return {
+        canInstall: false,
+        label: 'Config Required',
+        reason: `Remote server requires headers/tokens: ${requiredHeaders.join(', ')}. Configure manually in Edit JSON.`,
+      }
+    }
+    return { canInstall: true, label: 'Connect' }
+  }
+
+  // Remote-only servers (SSE or other non-streamable transports)
   if ((!server.packages || server.packages.length === 0) && server.remotes && server.remotes.length > 0) {
     return {
       canInstall: false,
       label: 'Remote Only',
-      reason: 'This server is hosted as a remote HTTP/SSE service and cannot be launched as a local stdio process.',
+      reason: 'This server is hosted as a remote SSE service. Only Streamable HTTP remote servers are currently supported.',
     }
   }
 
@@ -545,13 +570,29 @@ async function handleInstall(server: RegistryServer) {
     let args: string[] = ['-y']
     let env: Record<string, string> | undefined
 
+    let serverConfig: ElectronMcpServerConfig
+
+    const streamableRemote = server.remotes?.find(r => r.type === 'streamable-http')
+    if (streamableRemote && (!server.packages || server.packages.length === 0)) {
+      serverConfig = {
+        url: streamableRemote.url,
+        enabled: true,
+      }
+    }
     // Specialized 0-key Web Search preset
-    if (isOpenWebSearchPreset(server)) {
+    else if (isOpenWebSearchPreset(server)) {
       slug = 'open-websearch'
       args = ['-y', 'open-websearch@latest']
       env = {
         DEFAULT_SEARCH_ENGINE: 'duckduckgo',
         SEARCH_MODE: 'auto',
+        MODE: 'stdio',
+      }
+      serverConfig = {
+        command,
+        args,
+        env,
+        enabled: true,
       }
     }
     // Specialized Official Filesystem MCP preset
@@ -565,6 +606,11 @@ async function handleInstall(server: RegistryServer) {
         `${home}/Downloads`,
         `${home}/Desktop`,
       ]
+      serverConfig = {
+        command,
+        args,
+        enabled: true,
+      }
     }
     else if (primaryPkg) {
       const pkgId = primaryPkg.identifier || server.package_name || slug
@@ -598,20 +644,27 @@ async function handleInstall(server: RegistryServer) {
           }
         }
       }
+
+      serverConfig = {
+        command,
+        args,
+        ...(env ? { env } : {}),
+        enabled: true,
+      }
     }
     else {
       args.push(slug)
+      serverConfig = {
+        command,
+        args,
+        enabled: true,
+      }
     }
 
     await updateConfig({
       mcpServers: {
         ...config.value?.mcpServers,
-        [slug]: {
-          command,
-          args,
-          ...(env ? { env } : {}),
-          enabled: true,
-        },
+        [slug]: serverConfig,
       },
     })
 
@@ -793,7 +846,7 @@ onMounted(async () => {
               <div class="flex items-center gap-4">
                 <div class="flex flex-col items-end opacity-40 transition-opacity group-hover:opacity-100">
                   <span class="text-[10px] leading-none font-mono tabular-nums">
-                    PID: {{ server.pid || 'N/A' }}
+                    {{ server.transport === 'http' ? 'REMOTE' : `PID: ${server.pid || 'N/A'}` }}
                   </span>
                   <span class="mt-1 text-[10px] leading-none font-mono tabular-nums">
                     {{ toolsByServer[server.name]?.length || 0 }} TOOLS
@@ -814,6 +867,17 @@ onMounted(async () => {
             <Transition name="expand">
               <div v-if="expandedServers.has(server.name)" class="border-t border-black/5 dark:border-white/5">
                 <div class="flex flex-col gap-4 p-4">
+                  <!-- Remote HTTP Server Badge -->
+                  <div
+                    v-if="server.transport === 'http'"
+                    class="flex items-center gap-2 border border-purple-500/20 rounded-xl bg-purple-500/10 p-3 text-xs text-purple-600 dark:text-purple-400"
+                  >
+                    <div i-ph:broadcast-bold class="shrink-0 text-base" />
+                    <div>
+                      <strong>Streamable HTTP Remote:</strong> Connected to remote endpoint <code>{{ server.url }}</code>.
+                    </div>
+                  </div>
+
                   <!-- Open WebSearch Special Badge -->
                   <div
                     v-if="isOpenWebSearchServer(server.name)"
@@ -890,11 +954,13 @@ onMounted(async () => {
                     </div>
                   </div>
 
-                  <!-- Command info -->
+                  <!-- Command / Target info -->
                   <div class="flex flex-col gap-1.5 rounded-lg bg-black/5 p-3 dark:bg-white/5">
-                    <span class="text-[10px] text-neutral-400 font-bold tracking-wider uppercase">Launch Command</span>
+                    <span class="text-[10px] text-neutral-400 font-bold tracking-wider uppercase">
+                      {{ server.transport === 'http' ? 'Remote Endpoint' : 'Launch Command' }}
+                    </span>
                     <code class="break-all text-xs opacity-70">
-                      {{ server.command }} {{ server.args.join(' ') }}
+                      {{ server.transport === 'http' ? server.url : `${server.command} ${server.args?.join(' ') || ''}`.trim() }}
                     </code>
                   </div>
 

@@ -18,6 +18,7 @@ import { useRouter } from 'vue-router'
 
 import ExportVaultModal from './components/ExportVaultModal.vue'
 import ImportVaultModal from './components/ImportVaultModal.vue'
+import ScrubHistoryModal from './components/ScrubHistoryModal.vue'
 
 const { t } = useI18n()
 const router = useRouter()
@@ -55,7 +56,12 @@ const isDesktop = computed(() => isStageTamagotchi())
 
 const isExportVaultOpen = ref(false)
 const isImportVaultOpen = ref(false)
+const isScrubModalOpen = ref(false)
 const showLegacyTools = ref(false)
+
+function onScrubComplete(report: any) {
+  setStatus(`Successfully scrubbed ${report.sessionsScanned} session(s) and saved ${(report.bytesSaved / 1024).toFixed(1)} KB!`, 'success')
+}
 
 async function onVaultImported() {
   setStatus(t('settings.pages.data.status.imported'))
@@ -502,6 +508,35 @@ async function executeAdvancedRestore() {
           <div class="mt-0.5 truncate text-xs text-neutral-800 font-semibold dark:text-neutral-200">
             {{ formattedLastSyncTime }}
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session Media Optimization & Scrub Card -->
+    <div class="border-2 border-emerald-500/20 rounded-2xl bg-emerald-500/5 p-6 shadow-sm dark:border-emerald-500/30 dark:bg-emerald-500/10">
+      <div class="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 flex items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-300">
+            <div class="i-solar:magic-stick-3-bold-duotone size-6" />
+          </div>
+          <div>
+            <div class="text-xl text-neutral-900 font-bold dark:text-white">
+              Session Media Optimization & Scrub
+            </div>
+            <p class="mt-0.5 text-sm text-neutral-600 dark:text-neutral-400">
+              Extract inline base64 image strings and leaked tool payloads from your chat history into persistent local storage, preventing LLM token blowup and keeping sessions lightweight.
+            </p>
+          </div>
+        </div>
+        <div class="flex shrink-0">
+          <Button
+            variant="secondary"
+            class="flex items-center gap-2 border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10 dark:text-emerald-300"
+            @click="isScrubModalOpen = true"
+          >
+            <div class="i-solar:magic-stick-3-bold size-4 text-emerald-500" />
+            <span>Clean & Resolve History</span>
+          </Button>
         </div>
       </div>
     </div>
@@ -1060,6 +1095,9 @@ async function executeAdvancedRestore() {
 
   <!-- Universal Import Vault Modal -->
   <ImportVaultModal v-model="isImportVaultOpen" @imported="onVaultImported" />
+
+  <!-- Scrub History Modal -->
+  <ScrubHistoryModal v-model="isScrubModalOpen" @scrub-complete="onScrubComplete" />
 </template>
 
 <route lang="yaml">

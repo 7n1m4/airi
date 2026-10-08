@@ -3,11 +3,11 @@ import type { Live2dCapabilities } from '@proj-airi/stage-ui-live2d'
 import type { DiscoveredMeshNode } from '@proj-airi/stage-ui-three'
 
 import type { ExpressionCategory } from '../../../../libs/character/expression-noise-gate'
+import type { ModelCapabilityItem } from '../../../../stores/display-models'
 import type { AiriOutfit } from '../../../../stores/modules/airi-card'
 
 import {
   introspectLive2dManifest,
-  lookupLexicon,
   useDslIntimacyStore,
   useLive2d,
   useLive2dTranslator,
@@ -26,13 +26,13 @@ import {
   DropdownMenuTrigger,
 } from 'reka-ui'
 import { computed, ref, toRaw, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
-import ExpressionCurationModal from '../../dialogs/ExpressionCurationModal.vue'
 import ModelCustomizerSkeleton from './components/ModelCustomizerSkeleton.vue'
 import WardrobeMeshTreeNode from './components/WardrobeMeshTreeNode.vue'
 
-import { classifyExpression, isTrackingNoise } from '../../../../libs/character/expression-noise-gate'
+import { classifyExpression } from '../../../../libs/character/expression-noise-gate'
 import { DEFAULT_VFX_MAPPINGS, DisplayModelFormat, useDisplayModelsStore } from '../../../../stores/display-models'
 import { useAiriCardStore } from '../../../../stores/modules/airi-card'
 import { useSettingsControlStrip } from '../../../../stores/settings/control-strip'
@@ -73,8 +73,7 @@ const modelStore = useModelStore() // VRM
 const customVrmAnimationsStore = useCustomVrmAnimationsStore()
 
 const { activeCard, activeCardId } = storeToRefs(airiCardStore)
-const { stageEnabled, stageMateEnabled } = storeToRefs(controlStripStore)
-const isStageOpen = computed(() => Boolean(props.localStage || stageEnabled.value || stageMateEnabled.value))
+const { stageMateEnabled } = storeToRefs(controlStripStore)
 
 // Resolve Model Format
 const currentModel = computed(() => {
@@ -204,9 +203,7 @@ interface UnifiedExpression {
   key: string
   displayName: string
   isActive: boolean
-  actMapping?: string
-  isFavorite: boolean
-  isVisible: boolean
+  usable: boolean
   category?: string
   expressionCategory?: ExpressionCategory
 }
@@ -215,19 +212,16 @@ interface UnifiedMotion {
   key: string
   displayName: string
   isActive: boolean
+  usable: boolean
   group: string
   duration: number
   hasSound: boolean
   isInIdleCycle: boolean
-  isVisible: boolean
 }
 
-// Local mappings state
-const emotionMappings = ref<Record<string, string>>({})
-const favoriteExpressions = ref<string[]>([])
-const hiddenExpressions = ref<string[]>([])
-const motionMappings = ref<Record<string, string>>({})
-const hiddenMotions = ref<string[]>([])
+// Local capability state
+const expressionCapabilities = ref<ModelCapabilityItem[]>([])
+const motionCapabilities = ref<ModelCapabilityItem[]>([])
 const vfxMappings = ref<Record<string, string[]>>({
   fire: [...DEFAULT_VFX_MAPPINGS.fire],
   electric: [...DEFAULT_VFX_MAPPINGS.electric],
@@ -241,21 +235,18 @@ const newKeywordInputs = ref<Record<string, string>>({
   verdant: '',
 })
 
-// Raw capability lists sourced from getOrLoadModelCapabilities
-// These are model-file-level, not renderer-runtime — works even when model is off-stage
-const cachedExpressions = ref<string[]>([])
-const cachedMotions = ref<string[]>([])
 const capabilitiesLoading = ref(false)
 const modelOutfits = ref<AiriOutfit[]>([])
 
 function applyModelMappings(model?: any) {
   if (!model)
     return
-  emotionMappings.value = { ...model.emotionMappings }
-  favoriteExpressions.value = [...(model.favoriteExpressions || [])]
-  hiddenExpressions.value = [...(model.hiddenExpressions || [])]
-  motionMappings.value = { ...model.motionMappings }
-  hiddenMotions.value = [...(model.hiddenMotions || [])]
+  if (model.expressionCapabilities) {
+    expressionCapabilities.value = JSON.parse(JSON.stringify(model.expressionCapabilities))
+  }
+  if (model.motionCapabilities) {
+    motionCapabilities.value = JSON.parse(JSON.stringify(model.motionCapabilities))
+  }
   modelOutfits.value = [...(model.outfits || [])]
   if (model.vfxMappings) {
     vfxMappings.value = JSON.parse(JSON.stringify(model.vfxMappings))
@@ -265,8 +256,17 @@ function applyModelMappings(model?: any) {
   }
 
   // Sync to store for stage window cross-process triggers
-  live2dStore.motionMap = { ...motionMappings.value }
-  live2dStore.emotionMappings = { ...emotionMappings.value }
+  const motionMap: Record<string, string> = {}
+  for (const m of motionCapabilities.value) {
+    motionMap[m.rawKey] = m.label
+  }
+  live2dStore.motionMap = motionMap
+
+  const emotionMap: Record<string, string> = {}
+  for (const e of expressionCapabilities.value) {
+    emotionMap[e.rawKey] = e.label
+  }
+  live2dStore.emotionMappings = emotionMap
 }
 
 // React when currentModel in store updates (e.g. from IndexedDB or background sync)
@@ -296,10 +296,8 @@ watch(() => props.modelId, async (newId) => {
   console.log(`[ModelCustomizer] modelId changed → ${newId}`, {
     found: !!model,
     format: model?.format,
-    cachedExpressions: model?.expressions?.length ?? 'none',
-    cachedMotions: model?.motions?.length ?? 'none',
-    emotionMappings: model?.emotionMappings,
-    motionMappings: model?.motionMappings,
+    expressionCapabilities: model?.expressionCapabilities?.length ?? 'none',
+    motionCapabilities: model?.motionCapabilities?.length ?? 'none',
   })
 
   if (model) {
@@ -307,21 +305,20 @@ watch(() => props.modelId, async (newId) => {
   }
 
   // Resolve expression + motion lists via the store resolver.
-  // Returns cache hit immediately, otherwise parses raw file and writes back to IndexedDB.
   capabilitiesLoading.value = true
   try {
     const caps = await displayModelsStore.getOrLoadModelCapabilities(newId)
-    cachedExpressions.value = caps.expressions
-    cachedMotions.value = caps.motions
+    expressionCapabilities.value = JSON.parse(JSON.stringify(caps.expressionCapabilities || []))
+    motionCapabilities.value = JSON.parse(JSON.stringify(caps.motionCapabilities || []))
     console.log(`[ModelCustomizer] capabilities resolved for ${newId}:`, {
-      expressions: caps.expressions,
-      motions: caps.motions,
+      expressions: caps.expressionCapabilities?.length,
+      motions: caps.motionCapabilities?.length,
     })
   }
   catch (e) {
     console.error(`[ModelCustomizer] Failed to load capabilities for ${newId}:`, e)
-    cachedExpressions.value = []
-    cachedMotions.value = []
+    expressionCapabilities.value = []
+    motionCapabilities.value = []
   }
   finally {
     capabilitiesLoading.value = false
@@ -329,56 +326,25 @@ watch(() => props.modelId, async (newId) => {
 }, { immediate: true })
 
 async function saveMetadata() {
-  await displayModelsStore.updateDisplayModelMappings(props.modelId, {
-    emotionMappings: { ...emotionMappings.value },
-    favoriteExpressions: [...favoriteExpressions.value],
-    hiddenExpressions: [...hiddenExpressions.value],
-    motionMappings: { ...motionMappings.value },
-    hiddenMotions: [...hiddenMotions.value],
+  await displayModelsStore.updateDisplayModelCapabilities(props.modelId, {
+    expressionCapabilities: expressionCapabilities.value,
+    motionCapabilities: motionCapabilities.value,
+    vfxMappings: vfxMappings.value,
     outfits: [...modelOutfits.value],
   })
 
   // Sync to store for stage window cross-process triggers
-  live2dStore.motionMap = { ...motionMappings.value }
-  live2dStore.emotionMappings = { ...emotionMappings.value }
-}
-
-function normalizeVrmKey(key: string): string {
-  // Strip prefixes
-  const prefixes = [
-    /^Face\.M_F00_000_00_Fcl_ALL_/i,
-    /^Face\.M_F00_000_00_Fcl_/i,
-    /^Face\.M_F00_000_00_/i,
-    /^Fcl_ALL_/i,
-    /^Fcl_BRW_/i,
-    /^Fcl_/i,
-    /^vrc\.v_/i,
-    /^vrc_/i,
-    /^vrc\./i,
-    /^INA-/i,
-    /^ARKit_BS\./i,
-    /^ARKit_/i,
-  ]
-  let clean = key
-  for (const p of prefixes) {
-    clean = clean.replace(p, '')
+  const motionMap: Record<string, string> = {}
+  for (const m of motionCapabilities.value) {
+    motionMap[m.rawKey] = m.label
   }
+  live2dStore.motionMap = motionMap
 
-  // Split camelCase
-  clean = clean.replace(/(?<=[a-z])(?=[A-Z])/g, ' ')
-  clean = clean.replace(/(?<=[A-Z])(?=[A-Z][a-z])/g, ' ')
-
-  // Replace delimiters with spaces
-  clean = clean.replace(/[_\-.]/g, ' ')
-
-  // Title Case
-  clean = clean.split(/\s+/).map((word) => {
-    if (!word)
-      return ''
-    return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-  }).join(' ').trim()
-
-  return clean || key
+  const emotionMap: Record<string, string> = {}
+  for (const e of expressionCapabilities.value) {
+    emotionMap[e.rawKey] = e.label
+  }
+  live2dStore.emotionMappings = emotionMap
 }
 
 // Expression/motion lists driven by getOrLoadModelCapabilities (not live renderer stores).
@@ -389,80 +355,33 @@ const rawExpressions = computed<UnifiedExpression[]>(() => {
   if (mType === 'unknown' || capabilitiesLoading.value)
     return []
 
-  const mappings = emotionMappings.value
-  const favorites = favoriteExpressions.value
-  const hidden = hiddenExpressions.value
-  const keys = cachedExpressions.value
-
-  if (mType === 'live2d') {
-    return keys.map((key) => {
-      const base = key.split(/[\\/]/).pop() || key
-      const cleanBase = base.replace(/\.(exp3|json)$/i, '')
-      const lexiconMatch = lookupLexicon(cleanBase) || lookupLexicon(base)
-      const trans = live2dTranslator.resolve(cleanBase).main
-      const resolvedDefault = lexiconMatch || (trans !== cleanBase ? trans : null) || cleanBase
-
-      return {
-        key,
-        displayName: mappings[key] || resolvedDefault,
-        isActive: !!live2dStore.activeExpressions[key],
-        actMapping: mappings[key],
-        isFavorite: favorites.includes(key),
-        isVisible: !hidden.includes(key),
-        expressionCategory: classifyExpression(mappings[key] || resolvedDefault),
-      }
-    })
-  }
-  if (mType === 'vrm') {
-    return keys.map(key => ({
-      key,
-      displayName: mappings[key] || normalizeVrmKey(key),
-      isActive: false,
-      actMapping: mappings[key],
-      isFavorite: favorites.includes(key),
-      isVisible: !hidden.includes(key),
-      category: key === key.toUpperCase() ? 'preset' : 'custom',
-      expressionCategory: classifyExpression(key),
-    }))
-  }
-  if (mType === 'mmd') {
-    return keys.map(key => ({
-      key,
-      displayName: mappings[key] || key,
-      isActive: mmdStore.previewExpression === key,
-      actMapping: mappings[key],
-      isFavorite: favorites.includes(key),
-      isVisible: !hidden.includes(key),
-      expressionCategory: classifyExpression(key),
-    }))
-  }
-  if (mType === 'spine') {
-    const activeVar = spineStore.currentVariant
-    const activeSkin = spineStore.currentSkin
-
-    return keys.map((key) => {
-      const match = key.match(/^(.+?)\s*\[(.+?)\]$/)
-      let active = false
+  return expressionCapabilities.value.map((item) => {
+    let isActive = false
+    if (mType === 'live2d') {
+      isActive = !!live2dStore.activeExpressions[item.rawKey]
+    }
+    else if (mType === 'mmd') {
+      isActive = mmdStore.previewExpression === item.rawKey
+    }
+    else if (mType === 'spine') {
+      const match = item.rawKey.match(/^(.+?)\s*\[(.+?)\]$/)
       if (match) {
-        const variant = match[1].trim()
-        const skin = match[2].trim()
-        active = activeVar === variant && activeSkin === skin
+        isActive = spineStore.currentVariant === match[1].trim() && spineStore.currentSkin === match[2].trim()
       }
       else {
-        active = activeVar === key
+        isActive = spineStore.currentVariant === item.rawKey
       }
-      return {
-        key,
-        displayName: mappings[key] || key,
-        isActive: active,
-        actMapping: mappings[key],
-        isFavorite: favorites.includes(key),
-        isVisible: !hidden.includes(key),
-        expressionCategory: classifyExpression(key),
-      }
-    })
-  }
-  return []
+    }
+
+    return {
+      key: item.rawKey,
+      displayName: item.label,
+      isActive,
+      usable: item.usable,
+      category: item.rawKey === item.rawKey.toUpperCase() ? 'preset' : 'custom',
+      expressionCategory: classifyExpression(item.label || item.rawKey),
+    }
+  })
 })
 
 const rawMotions = computed<UnifiedMotion[]>(() => {
@@ -471,117 +390,73 @@ const rawMotions = computed<UnifiedMotion[]>(() => {
   if (mType === 'unknown' || capabilitiesLoading.value)
     return []
 
-  const mappings = motionMappings.value
-  const hidden = hiddenMotions.value
   const idleCycles = card?.extensions?.airi?.acting?.idleAnimations || []
-  const keys = cachedMotions.value
 
-  if (mType === 'live2d') {
-    return keys.map((key) => {
-      const mappedName = mappings[key]
-      const base = key.split(/[\\/]/).pop() || key
-      const cleanBase = base.replace(/\.(motion3|mtn|json)$/i, '')
-
-      // Match against introspected reactions (cutscene dialogues or sound references)
-      const cutscene = live2dCaps.value.reactions.find((c: any) =>
-        c.group === key || (c.sound && (c.sound.includes(base) || base.includes(c.sound.split(/[\\/]/).pop() || ''))),
-      )
-      const available = live2dStore.availableMotions.find((m: any) =>
-        m.fileName === key || m.motionName === key || m.fileName?.endsWith(base),
-      )
-
-      const hasSound = Boolean(cutscene?.sound || available?.sound)
-      let defaultDisplayName = cleanBase
-
-      if (cutscene?.text) {
-        const translatedText = live2dTranslator.resolve(cutscene.text).main
-        defaultDisplayName = `"${translatedText}"`
-      }
-      else {
-        const lexiconMatch = lookupLexicon(cleanBase) || lookupLexicon(base)
-        if (lexiconMatch) {
-          defaultDisplayName = lexiconMatch
-        }
-        else {
-          const trans = live2dTranslator.resolve(cleanBase).main
-          if (trans !== cleanBase)
-            defaultDisplayName = trans
-        }
-      }
-
-      // If still looks like an auto-generated unpacked name: "Motions_A10_1_File_0"
-      // format it to readable: "A10 #2"
-      const unpackMatch = defaultDisplayName.match(/^Motions_([A-Z0-9]+)_(\d+)_File_(\d+)$/i)
-      if (unpackMatch) {
-        defaultDisplayName = `${unpackMatch[1]} #${Number(unpackMatch[2]) + 1}`
-      }
-
-      return {
-        key,
-        displayName: mappedName || defaultDisplayName,
-        isActive: live2dStore.currentMotion?.group === key,
-        group: cutscene?.group || 'Motions',
-        duration: 3.0,
-        hasSound,
-        isInIdleCycle: idleCycles.includes(`live2d:${key}`),
-        isVisible: !hidden.includes(key),
-      }
-    })
-  }
-  if (mType === 'mmd') {
-    const builtinItems = (mmdStore.availableMotions || []).map(key => ({
-      key,
-      displayName: mappings[key] || key.replace(/\.vmd$/i, '').replace(/_/g, ' '),
-      isActive: mmdStore.currentMotion === key,
-      group: 'Built-in Animations',
-      duration: 5.0,
-      hasSound: false,
-      isInIdleCycle: idleCycles.includes(`mmd:${key}`),
-      isVisible: !hidden.includes(key),
-    }))
-
-    const customItems = (mmdStore.customMotions || []).map((item) => {
-      const key = item.id || item.name
-      const name = item.name || key
-      return {
-        key,
-        displayName: mappings[key] || name,
-        isActive: mmdStore.currentMotion === key || mmdStore.currentMotion === name,
-        group: 'Custom Animations',
-        duration: 5.0,
-        hasSound: false,
-        isInIdleCycle: idleCycles.includes(`mmd:${key}`) || idleCycles.includes(`mmd:${name}`),
-        isVisible: !hidden.includes(key),
-      }
-    })
-
-    return [...builtinItems, ...customItems]
-  }
-  if (mType === 'spine') {
-    return keys.map(key => ({
-      key,
-      displayName: mappings[key] || key,
-      isActive: false,
-      group: 'Animations',
-      duration: 1.0,
-      hasSound: false,
-      isInIdleCycle: idleCycles.includes(`spine:${key}`),
-      isVisible: !hidden.includes(key),
-    }))
-  }
   if (mType === 'vrm') {
-    return customVrmAnimationsStore.animationOptions.map(option => ({
+    const vrmItems = customVrmAnimationsStore.animationOptions.map(option => ({
       key: option.value,
       displayName: option.label,
       isActive: modelStore.vrmIdleAnimation === option.value,
+      usable: true,
       group: option.value.startsWith('custom-vrma:') ? 'Custom Animations' : 'Built-in Animations',
       duration: 3.0,
       hasSound: false,
       isInIdleCycle: idleCycles.includes(option.value),
-      isVisible: !hidden.includes(option.value),
     }))
+    const capKeys = new Set(vrmItems.map(i => i.key))
+    for (const item of motionCapabilities.value) {
+      if (!capKeys.has(item.rawKey)) {
+        vrmItems.push({
+          key: item.rawKey,
+          displayName: item.label,
+          isActive: false,
+          usable: item.usable,
+          group: 'Custom Animations',
+          duration: 3.0,
+          hasSound: false,
+          isInIdleCycle: idleCycles.includes(item.rawKey),
+        })
+      }
+    }
+    return vrmItems
   }
-  return []
+
+  return motionCapabilities.value.map((item) => {
+    let isActive = false
+    let group = 'Motions'
+    let hasSound = false
+
+    if (mType === 'live2d') {
+      isActive = live2dStore.currentMotion?.group === item.rawKey
+      const cutscene = live2dCaps.value.reactions.find((c: any) =>
+        c.group === item.rawKey || (c.sound && (c.sound.includes(item.rawKey) || item.rawKey.includes(c.sound.split(/[\\/]/).pop() || ''))),
+      )
+      const available = live2dStore.availableMotions.find((m: any) =>
+        m.fileName === item.rawKey || m.motionName === item.rawKey,
+      )
+      hasSound = Boolean(cutscene?.sound || available?.sound)
+      group = cutscene?.group || 'Motions'
+    }
+    else if (mType === 'mmd') {
+      isActive = mmdStore.currentMotion === item.rawKey
+      group = item.rawKey.endsWith('.vmd') ? 'Built-in Animations' : 'Custom Animations'
+    }
+    else if (mType === 'spine') {
+      group = 'Animations'
+    }
+
+    const prefix = `${mType}:${item.rawKey}`
+    return {
+      key: item.rawKey,
+      displayName: item.label,
+      isActive,
+      usable: item.usable,
+      group,
+      duration: 3.0,
+      hasSound,
+      isInIdleCycle: idleCycles.includes(prefix) || idleCycles.includes(item.rawKey),
+    }
+  })
 })
 
 // Filter states
@@ -613,28 +488,28 @@ const advancedTabHeaderTitle = computed(() => {
     default: return 'Advanced Features'
   }
 })
-const showHidden = ref(false)
-const hideTrackingNoise = ref(true)
+const usableFilter = ref<'usable' | 'all'>('usable')
 const filterRenamedOnly = ref(false)
+
+const usableExpressionsCount = computed(() => rawExpressions.value.filter(e => e.usable).length)
+const allExpressionsCount = computed(() => rawExpressions.value.length)
+const usableMotionsCount = computed(() => rawMotions.value.filter(m => m.usable).length)
+const allMotionsCount = computed(() => rawMotions.value.length)
+
 const editingKey = ref<string | null>(null)
 const editingValue = ref('')
 
-const noiseFilteredCount = computed(() => {
-  return rawExpressions.value.filter(e => e.expressionCategory && isTrackingNoise(e.expressionCategory)).length
-})
+const showEmotionCalibrationConfirm = ref(false)
+const router = useRouter()
 
-const showCurationModal = ref(false)
-
-async function onCurationApplied() {
-  if (!props.modelId)
-    return
-  const model = await displayModelsStore.getDisplayModel(props.modelId)
-  if (model) {
-    applyModelMappings(model)
-  }
-  const caps = await displayModelsStore.getOrLoadModelCapabilities(props.modelId)
-  cachedExpressions.value = caps.expressions
-  cachedMotions.value = caps.motions
+function openEmotionCalibration() {
+  showEmotionCalibrationConfirm.value = false
+  router.push({
+    path: '/settings/models/emotions',
+    query: props.modelId ? { model: props.modelId } : {},
+  }).catch((err) => {
+    console.error('[ModelCustomizer] Emotion Calibration navigation failed:', err)
+  })
 }
 
 // === Inline Wardrobe Builder State ===
@@ -877,14 +752,8 @@ function toggleSlotVisibility(slot: AiriOutfit) {
 const expressionsToRender = computed(() => {
   let list = rawExpressions.value
 
-  // Noise Gate: Filter low-level ARKit, visemes, procedural eye/gaze/blinks, and neutral noise
-  if (hideTrackingNoise.value) {
-    list = list.filter(e => !e.expressionCategory || !isTrackingNoise(e.expressionCategory))
-  }
-
-  // Hidden Flag Filter
-  if (!showHidden.value) {
-    list = list.filter(e => e.isVisible)
+  if (usableFilter.value === 'usable') {
+    list = list.filter(e => e.usable)
   }
 
   // Renamed Filter
@@ -898,7 +767,7 @@ const expressionsToRender = computed(() => {
 const motionsToRender = computed(() => {
   const groups: Record<string, UnifiedMotion[]> = {}
   for (const m of rawMotions.value) {
-    if (!showHidden.value && !m.isVisible)
+    if (usableFilter.value === 'usable' && !m.usable)
       continue
     if (filterRenamedOnly.value && m.displayName === m.key)
       continue
@@ -911,17 +780,13 @@ const motionsToRender = computed(() => {
 
 watch([expressionsToRender, motionsToRender], () => {
   emit('update:visible-capabilities', {
-    emotions: expressionsToRender.value.map(e => e.displayName),
-    motions: Object.values(motionsToRender.value).flat().map(m => m.displayName),
+    emotions: rawExpressions.value.filter(e => e.usable).map(e => e.displayName),
+    motions: rawMotions.value.filter(m => m.usable).map(m => m.displayName),
   })
 }, { deep: true, immediate: true })
 
 // Trigger Click-to-Effectuate on Stage
 function triggerExpressionEffect(key: string) {
-  if (!isStageOpen.value) {
-    toast.error('Stage or Stage-Mate window must be open to preview expressions.')
-    return
-  }
   if (modelType.value === 'live2d') {
     live2dStore.triggerEmotion(key, 1.0)
   }
@@ -958,10 +823,6 @@ function triggerExpressionEffect(key: string) {
 }
 
 function triggerMotionEffect(key: string) {
-  if (!isStageOpen.value) {
-    toast.error('Stage or Stage-Mate window must be open to preview motions.')
-    return
-  }
   if (modelType.value === 'live2d') {
     live2dStore.triggerMotion(key)
     const base = key.split(/[\\/]/).pop() || key
@@ -1065,10 +926,6 @@ function resetVfxDefaults(vfxKey: string) {
 }
 
 function triggerVfxEffect(key: string) {
-  if (!isStageOpen.value) {
-    toast.error('Stage or Stage-Mate window must be open to preview VFX effects.')
-    return
-  }
   if (modelType.value === 'vrm') {
     modelStore.triggerVfx(key, 4.0)
     modelStore.triggerEmotion(key, 1.0)
@@ -1117,21 +974,20 @@ function startEditing(key: string, currentDisplayName: string) {
 }
 
 async function saveEdits(key: string) {
+  if (editingKey.value === null)
+    return
+
   const newValue = editingValue.value.trim()
   if (activeTab.value === 'expressions') {
-    if (!newValue) {
-      delete emotionMappings.value[key]
-    }
-    else {
-      emotionMappings.value[key] = newValue
+    const item = expressionCapabilities.value.find(e => e.rawKey === key)
+    if (item) {
+      item.label = newValue || item.rawKey
     }
   }
-  else {
-    if (!newValue) {
-      delete motionMappings.value[key]
-    }
-    else {
-      motionMappings.value[key] = newValue
+  else if (activeTab.value === 'motions') {
+    const item = motionCapabilities.value.find(m => m.rawKey === key)
+    if (item) {
+      item.label = newValue || item.rawKey
     }
   }
 
@@ -1141,40 +997,21 @@ async function saveEdits(key: string) {
   toast.success('Label updated.')
 }
 
-async function toggleVisibility(key: string) {
-  const list = activeTab.value === 'expressions' ? hiddenExpressions : hiddenMotions
-  if (list.value.includes(key)) {
-    list.value = list.value.filter(k => k !== key)
+async function toggleUsable(key: string) {
+  if (activeTab.value === 'expressions') {
+    const item = expressionCapabilities.value.find(e => e.rawKey === key)
+    if (item) {
+      item.usable = !item.usable
+      await saveMetadata()
+    }
   }
-  else {
-    list.value.push(key)
+  else if (activeTab.value === 'motions') {
+    const item = motionCapabilities.value.find(m => m.rawKey === key)
+    if (item) {
+      item.usable = !item.usable
+      await saveMetadata()
+    }
   }
-  await saveMetadata()
-}
-
-async function toggleFavorite(key: string) {
-  if (favoriteExpressions.value.includes(key)) {
-    favoriteExpressions.value = favoriteExpressions.value.filter(k => k !== key)
-  }
-  else {
-    favoriteExpressions.value.push(key)
-  }
-  await saveMetadata()
-}
-
-// ACT Mapping Dialog
-const ACT_MAPPING_TARGET = ref<string | null>(null)
-function openActMapping(key: string) {
-  ACT_MAPPING_TARGET.value = key
-}
-
-async function assignActMapping(emotion: string) {
-  if (!ACT_MAPPING_TARGET.value)
-    return
-  emotionMappings.value[ACT_MAPPING_TARGET.value] = emotion
-  await saveMetadata()
-  ACT_MAPPING_TARGET.value = null
-  toast.success(`Mapped expression to ACT:${emotion}`)
 }
 
 // Loop / Cycle Toggle for Cards
@@ -1236,7 +1073,7 @@ function toggleMotionCycle(key: string) {
         <div class="mt-2.5 flex justify-end">
           <button
             class="cursor-pointer rounded-lg bg-primary-500 px-3.5 py-1.5 text-xs text-white font-semibold shadow-sm transition-all active:scale-95 hover:bg-primary-600"
-            @click="showCurationModal = true"
+            @click="showEmotionCalibrationConfirm = true"
           >
             <div class="inline-flex items-center gap-1.5">
               <div class="i-solar:magic-stick-3-bold text-sm" />
@@ -1256,7 +1093,7 @@ function toggleMotionCycle(key: string) {
               : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'"
             @click="activeTab = 'expressions'"
           >
-            Emotions ({{ expressionsToRender.length }}{{ hideTrackingNoise && noiseFilteredCount > 0 ? ` / ${rawExpressions.length}` : '' }})
+            Emotions ({{ usableExpressionsCount }} / {{ allExpressionsCount }})
           </button>
           <button
             v-if="rawMotions.length > 0"
@@ -1266,7 +1103,7 @@ function toggleMotionCycle(key: string) {
               : 'text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300'"
             @click="activeTab = 'motions'"
           >
-            Motions ({{ rawMotions.length }})
+            Motions ({{ usableMotionsCount }} / {{ allMotionsCount }})
           </button>
           <button
             v-if="modelType === 'vrm'"
@@ -1367,37 +1204,42 @@ function toggleMotionCycle(key: string) {
           Filters
         </span>
         <div class="flex items-center gap-1">
+          <!-- Usable Only (Default) -->
           <button
-            v-if="activeTab === 'expressions' && noiseFilteredCount > 0"
             class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] transition-colors"
-            :class="hideTrackingNoise
+            :class="usableFilter === 'usable'
               ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium'
               : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'"
-            :title="hideTrackingNoise ? 'Showing clean expressive morphs only (tracking & visemes hidden)' : 'Showing all blendshapes including tracking noise'"
-            @click="hideTrackingNoise = !hideTrackingNoise"
+            title="Showing usable capabilities only"
+            @click="usableFilter = 'usable'"
           >
             <div class="inline-flex items-center gap-1">
-              <div :class="hideTrackingNoise ? 'i-solar:shield-check-bold-duotone' : 'i-solar:shield-cross-bold-duotone'" />
-              <span>{{ hideTrackingNoise ? `Noise Filtered (${noiseFilteredCount})` : 'Show Raw Noise' }}</span>
+              <div :class="usableFilter === 'usable' ? 'i-solar:check-circle-bold-duotone' : 'i-solar:circle-linear'" />
+              <span>Usable ({{ activeTab === 'expressions' ? usableExpressionsCount : usableMotionsCount }})</span>
             </div>
           </button>
+          <!-- Show All -->
           <button
             class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] transition-colors"
-            :class="showHidden
-              ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
+            :class="usableFilter === 'all'
+              ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium'
               : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'"
-            @click="showHidden = !showHidden"
+            title="Show all capabilities (including disabled/noise)"
+            @click="usableFilter = 'all'"
           >
-            {{ showHidden ? 'Show All' : 'Show Hidden' }}
+            <div class="inline-flex items-center gap-1">
+              <span>All ({{ activeTab === 'expressions' ? allExpressionsCount : allMotionsCount }})</span>
+            </div>
           </button>
+          <!-- Renamed Only -->
           <button
             class="cursor-pointer rounded-md px-2 py-0.5 text-[10px] transition-colors"
             :class="filterRenamedOnly
-              ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400'
+              ? 'bg-primary-500/10 text-primary-600 dark:text-primary-400 font-medium'
               : 'bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-700'"
             @click="filterRenamedOnly = !filterRenamedOnly"
           >
-            {{ filterRenamedOnly ? 'Renamed Only' : 'All' }}
+            {{ filterRenamedOnly ? 'Renamed Only' : 'Filter Renamed' }}
           </button>
         </div>
       </div>
@@ -1481,13 +1323,7 @@ function toggleMotionCycle(key: string) {
                   </template>
                   <template v-else>
                     <div class="min-w-0 flex flex-1 items-center gap-1 text-sm text-neutral-900 font-medium dark:text-neutral-100">
-                      <span v-if="exp.isFavorite" class="shrink-0" title="Favorite">⭐</span>
                       <span class="min-w-0 flex-1 truncate">{{ exp.displayName }}</span>
-                      <span
-                        v-if="exp.actMapping"
-                        class="ml-1 shrink-0 rounded bg-primary-100 px-1 text-[10px] opacity-60 dark:bg-primary-900"
-                        :title="`ACT: ${exp.actMapping}`"
-                      >{{ exp.actMapping }}</span>
                     </div>
                   </template>
                   <span class="block truncate text-[10px] text-neutral-400">{{ exp.key }}</span>
@@ -1505,29 +1341,6 @@ function toggleMotionCycle(key: string) {
                 >
                   <div class="i-solar:document-add-bold-duotone text-sm" />
                 </button>
-                <!-- ACT Mapping -->
-                <button
-                  v-if="props.showInsertActions"
-                  class="cursor-pointer rounded p-1 transition-colors"
-                  :class="exp.actMapping
-                    ? 'text-primary-500 hover:text-primary-600 bg-primary-500/10'
-                    : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:bg-neutral-700'"
-                  title="Map to ACT emotion"
-                  @click.stop="openActMapping(exp.key)"
-                >
-                  <div class="i-solar:magic-stick-3-bold-duotone text-sm" />
-                </button>
-                <!-- Favorite -->
-                <button
-                  class="cursor-pointer rounded p-1 transition-colors"
-                  :class="exp.isFavorite
-                    ? 'text-amber-500 hover:text-amber-600 bg-amber-500/10'
-                    : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:bg-neutral-700'"
-                  title="Favorite Toggle"
-                  @click.stop="toggleFavorite(exp.key)"
-                >
-                  <div :class="exp.isFavorite ? 'i-solar:star-bold-duotone' : 'i-solar:star-linear'" class="text-sm" />
-                </button>
                 <!-- Rename -->
                 <button
                   class="cursor-pointer rounded p-1 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:bg-neutral-700"
@@ -1536,13 +1349,16 @@ function toggleMotionCycle(key: string) {
                 >
                   <div class="i-solar:pen-bold-duotone text-sm" />
                 </button>
-                <!-- Visibility -->
+                <!-- Usable Toggle -->
                 <button
-                  class="cursor-pointer rounded p-1 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:bg-neutral-700"
-                  title="Visibility Toggle"
-                  @click.stop="toggleVisibility(exp.key)"
+                  class="cursor-pointer rounded p-1 transition-colors"
+                  :class="exp.usable
+                    ? 'text-primary-500 hover:text-primary-600 bg-primary-500/10'
+                    : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:bg-neutral-700'"
+                  :title="exp.usable ? 'Usable (Click to disable)' : 'Disabled (Click to enable)'"
+                  @click.stop="toggleUsable(exp.key)"
                 >
-                  <div :class="!exp.isVisible ? 'i-solar:eye-closed-bold-duotone' : 'i-solar:eye-bold-duotone'" class="text-sm" />
+                  <div :class="exp.usable ? 'i-solar:check-circle-bold-duotone' : 'i-solar:close-circle-line-duotone'" class="text-sm" />
                 </button>
               </div>
             </div>
@@ -1651,13 +1467,16 @@ function toggleMotionCycle(key: string) {
                   >
                     <div class="i-solar:pen-bold-duotone text-sm" />
                   </button>
-                  <!-- Visibility -->
+                  <!-- Usable Toggle -->
                   <button
-                    class="cursor-pointer rounded p-1 text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:hover:bg-neutral-700"
-                    title="Visibility Toggle"
-                    @click.stop="toggleVisibility(mot.key)"
+                    class="cursor-pointer rounded p-1 transition-colors"
+                    :class="mot.usable
+                      ? 'text-primary-500 hover:text-primary-600 bg-primary-500/10'
+                      : 'text-neutral-400 hover:text-neutral-600 dark:text-neutral-500 dark:hover:bg-neutral-700'"
+                    :title="mot.usable ? 'Usable (Click to disable)' : 'Disabled (Click to enable)'"
+                    @click.stop="toggleUsable(mot.key)"
                   >
-                    <div :class="!mot.isVisible ? 'i-solar:eye-closed-bold-duotone' : 'i-solar:eye-bold-duotone'" class="text-sm" />
+                    <div :class="mot.usable ? 'i-solar:check-circle-bold-duotone' : 'i-solar:close-circle-line-duotone'" class="text-sm" />
                   </button>
                 </div>
               </div>
@@ -2291,9 +2110,9 @@ function toggleMotionCycle(key: string) {
               </div>
             </div>
             <div class="flex items-start gap-1.5">
-              <div class="i-solar:eye-bold-duotone shrink-0 text-sm text-neutral-400" />
+              <div class="i-solar:check-circle-bold-duotone shrink-0 text-sm text-primary-500" />
               <div>
-                <span class="text-neutral-600 font-bold dark:text-neutral-400">Hide Key:</span> Removes dead or unused asset keys from the main view to keep lists clean.
+                <span class="text-neutral-600 font-bold dark:text-neutral-400">Usable Toggle:</span> Enables or disables capabilities for AI generation, direct controls, and rehearsals.
               </div>
             </div>
           </div>
@@ -2301,63 +2120,47 @@ function toggleMotionCycle(key: string) {
       </div>
     </template>
 
-    <!-- ACT Mapping Dialog -->
-    <Teleport to="body">
-      <Transition
-        enter-active-class="transition-opacity duration-150"
-        enter-from-class="opacity-0"
-        enter-to-class="opacity-100"
-        leave-active-class="transition-opacity duration-150"
-        leave-from-class="opacity-100"
-        leave-to-class="opacity-0"
-      >
-        <div
-          v-if="ACT_MAPPING_TARGET"
-          class="fixed inset-0 z-9999 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          @click.self="ACT_MAPPING_TARGET = null"
-        >
-          <div class="w-72 border border-neutral-200 rounded-xl border-solid bg-white p-4 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900">
-            <div class="mb-3 text-center">
-              <div class="text-sm text-neutral-700 font-medium dark:text-neutral-200">
-                Map to ACT Emotion
-              </div>
-              <div class="mt-1 block truncate rounded-md bg-neutral-100 px-3 py-1 text-xs text-primary-500 font-mono dark:bg-neutral-800">
-                {{ ACT_MAPPING_TARGET }}
-              </div>
+    <!-- Emotion Calibration redirect confirm -->
+    <div
+      v-if="showEmotionCalibrationConfirm"
+      class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+      @click.self="showEmotionCalibrationConfirm = false"
+    >
+      <div class="max-w-md w-full flex flex-col gap-3 border border-neutral-200 rounded-2xl bg-white p-5 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900">
+        <div class="flex items-center gap-2.5">
+          <div class="h-9 w-9 flex shrink-0 items-center justify-center rounded-xl bg-primary-500/10 text-primary-500">
+            <div class="i-solar:smile-circle-bold-duotone text-lg" />
+          </div>
+          <div>
+            <div class="text-sm text-neutral-900 font-bold dark:text-neutral-100">
+              Curate expressions in Emotion Calibration?
             </div>
-            <div class="grid grid-cols-2 gap-2">
-              <button
-                v-for="emotion in ['happy', 'sad', 'angry', 'surprised', 'neutral', 'think', 'cool']"
-                :key="emotion"
-                class="cursor-pointer border rounded-lg border-solid px-3 py-2 text-sm transition-all"
-                :class="rawExpressions.find(e => e.key === ACT_MAPPING_TARGET)?.actMapping === emotion
-                  ? 'bg-primary-500/20 border-primary-400 text-primary-600 dark:text-primary-300 font-medium'
-                  : 'bg-neutral-50 dark:bg-neutral-800 border-neutral-200 dark:border-neutral-700 text-neutral-600 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-700'"
-                @click="assignActMapping(emotion)"
-              >
-                {{ emotion }}
-              </button>
-            </div>
-            <div class="mt-3 flex gap-2">
-              <button
-                class="flex-1 cursor-pointer border border-neutral-200 rounded-lg border-solid bg-neutral-50 px-3 py-1.5 text-xs text-neutral-600 transition-colors dark:border-neutral-700 dark:bg-neutral-800 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-700"
-                @click="ACT_MAPPING_TARGET = null"
-              >
-                Cancel
-              </button>
-            </div>
+            <p class="text-[11px] text-neutral-400">
+              The in-place curation wizard is retired.
+            </p>
           </div>
         </div>
-      </Transition>
-    </Teleport>
-    <!-- AI Expression Curation Modal (3-Step Wizard) -->
-    <ExpressionCurationModal
-      v-model="showCurationModal"
-      :model-id="props.modelId"
-      :model-format="modelType"
-      :visible-expressions="expressionsToRender"
-      :all-expressions="rawExpressions"
-      @applied="onCurationApplied"
-    />
+        <p class="text-xs text-neutral-500 leading-relaxed dark:text-neutral-400">
+          Expression curation moved to the full Emotion Calibration page — guided setup, live avatar preview,
+          AI naming, per-key verification, and preset remaps for this model.
+        </p>
+        <div class="flex items-center justify-end gap-2 pt-1">
+          <button
+            type="button"
+            class="cursor-pointer rounded-lg px-3.5 py-2 text-xs text-neutral-500 font-medium dark:text-neutral-400 hover:text-neutral-800 dark:hover:text-neutral-200"
+            @click="showEmotionCalibrationConfirm = false"
+          >
+            Not now
+          </button>
+          <button
+            type="button"
+            class="cursor-pointer rounded-lg bg-primary-600 px-4 py-2 text-xs text-white font-semibold shadow-sm transition-all hover:bg-primary-500"
+            @click="openEmotionCalibration"
+          >
+            Open Emotion Calibration →
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>

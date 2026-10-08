@@ -28,6 +28,7 @@ export const MODEL_NAMES = {
   WD14: 'wd14',
   MOONDREAM: 'moondream2',
   ATTENTION_GUARD: 'attention-guard',
+  LAYA: 'laya',
 } as const
 
 /**
@@ -93,17 +94,134 @@ export const WHISPER_MODELS: readonly WhisperModelInfo[] = [
 /** Default Whisper model id (matches {@link MODEL_IDS}.WHISPER). */
 export const DEFAULT_WHISPER_MODEL: string = 'onnx-community/whisper-large-v3-turbo'
 
+export interface WebRwkvModelInfo {
+  id: string
+  name: string
+  badge: string
+  params: string
+  description: string
+  downloadBytes: number
+  vramMB: number
+  layers: number
+  quantUrls?: {
+    nf4?: string
+    int8?: string
+  }
+}
+
 /**
  * Local web-rwkv (WebGPU RWKV) chat models. `id` is the model's `.safetensors`
  * URL in web-rwkv layout (RWKV-native tensor names). bf16/f32 weights are cast
  * to f16 at load (web-rwkv's loader only reads f16). Hosted on Hugging Face,
  * which supports HTTP Range so large models can stream tensor-by-tensor.
  */
-export const WEB_RWKV_MODELS = [
+export const WEB_RWKV_MODELS: readonly WebRwkvModelInfo[] = [
   {
     id: 'https://huggingface.co/DanielClough/rwkv7-g1-safetensors/resolve/main/rwkv7-g1d-0.1b-20260129-ctx8192.safetensors',
     name: 'RWKV-7 G1 0.1B (ctx8192)',
-    description: 'Tiny RWKV-7 "World" chat model (~190 MB). Downloads on first use; bf16→f16 at load.',
+    badge: 'Nano',
+    params: '0.1B',
+    description: 'Ultra-lightweight fallback. Minimal resource consumption (~382 MB DL · ~512 MB VRAM).',
+    downloadBytes: 382 * 1024 * 1024,
+    vramMB: 512,
+    layers: 12,
+  },
+  {
+    id: 'https://huggingface.co/DanielClough/rwkv7-g1-safetensors/resolve/main/rwkv7-g1d-0.4b-20260210-ctx8192.safetensors',
+    name: 'RWKV-7 G1 0.4B (ctx8192)',
+    badge: 'Small',
+    params: '0.4B',
+    description: 'Fast, balanced model for integrated GPUs and mobile hardware (~902 MB DL · ~1.2 GB VRAM).',
+    downloadBytes: 902 * 1024 * 1024,
+    vramMB: 1200,
+    layers: 24,
+    quantUrls: {
+      nf4: 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/rwkv7-g1d-0.4b-nf4.prefab',
+      int8: 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/rwkv7-g1d-0.4b-int8.prefab',
+    },
+  },
+  {
+    id: 'https://huggingface.co/DanielClough/rwkv7-g1-safetensors/resolve/main/rwkv7-g1d-1.5b-20260212-ctx8192.safetensors',
+    name: 'RWKV-7 G1 1.5B (ctx8192)',
+    badge: 'Sweet Spot',
+    params: '1.5B',
+    description: 'Recommended sweet spot for natural dialogue, roleplay, and creative writing (~3.06 GB DL · ~3.8 GB VRAM).',
+    downloadBytes: 3055 * 1024 * 1024,
+    vramMB: 3800,
+    layers: 24,
+    quantUrls: {
+      nf4: 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/rwkv7-g1d-1.5b-nf4.prefab',
+      int8: 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/rwkv7-g1d-1.5b-int8.prefab',
+    },
+  },
+  {
+    id: 'https://huggingface.co/DanielClough/rwkv7-g1-safetensors/resolve/main/rwkv7-g1d-2.9b-20260131-ctx8192.safetensors',
+    name: 'RWKV-7 G1 2.9B (ctx8192)',
+    badge: 'High-Capacity',
+    params: '2.9B',
+    description: 'Deep reasoning & rich vocabulary. High VRAM requirement; best paired with NF4 (~5.90 GB DL · ~7.5 GB VRAM).',
+    downloadBytes: 5896 * 1024 * 1024,
+    vramMB: 7500,
+    layers: 32,
+  },
+] as const
+
+export interface WebRwkvStateCartridgeInfo {
+  id: string
+  name: string
+  archetype: 'glyph' | 'mori' | 'wired' | 'sylvia'
+  description: string
+  stateUrls: {
+    '0.4b'?: string
+    '1.5b'?: string
+    '2.9b'?: string
+  }
+}
+
+/**
+ * Curated Zero-Prompt Persona Foundry state cartridges.
+ * Hosted on Hugging Face CDN under dasilva333/rwkv7-g1-webgpu-prefabs/states/.
+ */
+export const WEB_RWKV_STATE_CARTRIDGES: readonly WebRwkvStateCartridgeInfo[] = [
+  {
+    id: 'cartridge-glyph-v1',
+    name: 'Glyph (Kaomoji Gremlin)',
+    archetype: 'glyph',
+    description: 'Playful companion speaking in rich multi-byte Unicode Kaomojis and affectionate banter.',
+    stateUrls: {
+      '0.4b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/glyph.state',
+      '1.5b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/glyph.state',
+    },
+  },
+  {
+    id: 'cartridge-mori-v1',
+    name: 'Mori (Forest Guardian)',
+    archetype: 'mori',
+    description: 'Stoic woodland presence with crystalline 80-character brevity and zero machine leakage.',
+    stateUrls: {
+      '0.4b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/mori.state',
+      '1.5b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/mori.state',
+    },
+  },
+  {
+    id: 'cartridge-wired-v1',
+    name: 'Protocol: Wired (Digital Solitude)',
+    archetype: 'wired',
+    description: 'Introspective electronic ghost exploring human connection across the Wired.',
+    stateUrls: {
+      '0.4b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/wired.state',
+      '1.5b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/wired.state',
+    },
+  },
+  {
+    id: 'cartridge-sylvia-v1',
+    name: 'Sylvia (AI VTuber & Savage Wit)',
+    archetype: 'sylvia',
+    description: 'Unhinged chaotic deadpan AI streamer who roasts her creator, mocks chat, and emits [mood: smug] prefixes.',
+    stateUrls: {
+      '0.4b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/0.4b/sylvia.state',
+      '1.5b': 'https://huggingface.co/dasilva333/rwkv7-g1-webgpu-prefabs/resolve/main/states/1.5b/sylvia.state',
+    },
   },
 ] as const
 
@@ -264,13 +382,13 @@ export const TIMEOUTS = {
   BG_REMOVAL_PROCESS: 60_000,
 
   /** web-rwkv model load timeout (absolute; download + bf16→f16 + shader compile) */
-  WEB_RWKV_LOAD: 300_000,
+  WEB_RWKV_LOAD: 900_000,
   /**
    * Time-to-first-token budget for web-rwkv generation, armed at stream start.
    * Covers prompt ingestion (a long chat history processed token-by-token) before
    * the first output token, so a working-but-slow prefill is not mistaken for a wedge.
    */
-  WEB_RWKV_GENERATE_FIRST_CHUNK: 60_000,
+  WEB_RWKV_GENERATE_FIRST_CHUNK: 120_000,
   /**
    * Inter-token inactivity budget for web-rwkv generation, used after the first
    * token proves the worker alive. RWKV streams tokens steadily, so a mid-stream
@@ -297,15 +415,20 @@ export const TIMEOUTS = {
   /** Local vision model process timeout (absolute) */
   LOCAL_VISION_PROCESS: 90_000,
 
-  /** Local Moondream VLM model load timeout (absolute) */
-  LOCAL_VLM_LOAD: 300_000,
+  /** Local Moondream VLM model load timeout (absolute; multi-shard ~1.1GB download) */
+  LOCAL_VLM_LOAD: 3_600_000,
   /** Local Moondream VLM model process timeout (absolute) */
   LOCAL_VLM_PROCESS: 120_000,
 
-  /** Attention Ecology Guard model load timeout (CLIP + optional Moondream2) */
-  ATTENTION_GUARD_LOAD: 300_000,
+  /** Attention Ecology Guard model load timeout (CLIP + optional Moondream2 ~1.1GB download) */
+  ATTENTION_GUARD_LOAD: 3_600_000,
   /** Attention Ecology Guard per-tick process timeout (unary cascade) */
   ATTENTION_GUARD_PROCESS: 120_000,
+
+  /** Laya System-1 model load timeout (424MB int8 / 843MB fp16 download + compile) */
+  LAYA_LOAD: 300_000,
+  /** Laya System-1 single decide timeout (batched session.run on WASM) */
+  LAYA_DECIDE: 15_000,
 } as const
 
 // ---------------------------------------------------------------------------

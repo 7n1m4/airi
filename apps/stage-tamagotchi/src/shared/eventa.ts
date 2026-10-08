@@ -46,6 +46,41 @@ export const electronSetIgnoreMouseEvents = defineInvokeEventa<void, boolean>('e
 export const electronStageToggleVisibility = defineInvokeEventa<void, boolean>('eventa:invoke:electron:windows:stage:toggle-visibility')
 export const electronStageSetAlwaysOnTop = defineInvokeEventa<void, boolean>('eventa:invoke:electron:windows:stage:set-always-on-top')
 export const electronGetStageDisabled = defineInvokeEventa<boolean>('eventa:invoke:electron:windows:stage:get-disabled')
+
+export type StartupMilestoneId = 'core-services' | 'sync-engine' | 'character-card' | 'stage-actor'
+export type StartupMilestoneStatus = 'queued' | 'loading' | 'ready' | 'skipped' | 'failed'
+
+export interface StartupMilestonePayload {
+  id: StartupMilestoneId
+  status: StartupMilestoneStatus
+  error?: string
+}
+
+export interface StartupResourceState {
+  id: StartupMilestoneId
+  status: StartupMilestoneStatus
+  error?: string
+}
+
+export interface StartupSnapshot {
+  resources: StartupResourceState[]
+  progress: number
+  ready: boolean
+  failed?: StartupResourceState
+}
+
+// Renderer (Control Strip or Actor Stage) reports a milestone update to Main.
+export const electronSplashReportMilestone = defineInvokeEventa<void, StartupMilestonePayload>('eventa:invoke:electron:splash:report-milestone')
+// Splash window queries Main for the current aggregated startup snapshot.
+export const electronSplashGetSnapshot = defineInvokeEventa<StartupSnapshot, void>('eventa:invoke:electron:splash:get-snapshot')
+// Main broadcasts the aggregated startup snapshot to the Splash window.
+export const electronSplashStateChanged = defineEventa<StartupSnapshot>('eventa:event:electron:splash:state-changed')
+// Splash notifies Main that its exit fade completed and it can be destroyed.
+export const electronSplashDismiss = defineInvokeEventa<void>('eventa:invoke:electron:splash:dismiss')
+// Control Strip asks Main to create the Actor Stage window (avatar companion).
+export const electronStageEnsure = defineInvokeEventa<{ created: boolean }>('eventa:invoke:electron:stage:ensure')
+// Control Strip asks Main to release the Actor Stage window (text-only companion).
+export const electronStageRelease = defineInvokeEventa<void>('eventa:invoke:electron:stage:release')
 export const electronCustomizerToggleVisibility = defineInvokeEventa<void, boolean | { enabled?: boolean, group?: string } | undefined>('eventa:invoke:electron:windows:customizer:toggle-visibility')
 export const electronGetCustomizerWindowState = defineInvokeEventa<boolean>('eventa:invoke:electron:windows:customizer:get-state')
 export const electronEnsureBeatSync = defineInvokeEventa<void, void>('eventa:invoke:electron:beat-sync:ensure')
@@ -198,8 +233,35 @@ export interface ElectronMcpStdioServerConfig {
   enabled?: boolean
 }
 
-export interface ElectronMcpStdioConfigFile {
-  mcpServers: Record<string, ElectronMcpStdioServerConfig>
+/**
+ * One remote MCP server that AIRI reaches over streamable HTTP.
+ *
+ * Use when:
+ * - A server runs outside this machine and AIRI talks to it by URL
+ *
+ * Expects:
+ * - `url` is an absolute `http` or `https` endpoint
+ * - `headers` carries whatever the server expects, usually an `Authorization` entry
+ */
+export interface ElectronMcpHttpServerConfig {
+  url: string
+  headers?: Record<string, string>
+  enabled?: boolean
+}
+
+/**
+ * Configuration of one MCP server.
+ *
+ * The transport follows from the fields that are present: `command` starts a
+ * child process over stdio, `url` reaches a remote server over streamable HTTP.
+ */
+export type ElectronMcpServerConfig = ElectronMcpStdioServerConfig | ElectronMcpHttpServerConfig
+
+// Backwards compatibility alias
+export type ElectronMcpStdioConfigFile = ElectronMcpConfigFile
+
+export interface ElectronMcpConfigFile {
+  mcpServers: Record<string, ElectronMcpServerConfig>
 }
 
 export interface ElectronMcpStdioApplyResult {
@@ -209,20 +271,46 @@ export interface ElectronMcpStdioApplyResult {
   skipped: Array<{ name: string, reason: string }>
 }
 
-export interface ElectronMcpStdioServerRuntimeStatus {
-  name: string
-  state: 'running' | 'stopped' | 'error'
-  command: string
-  args: string[]
-  pid: number | null
-  lastError?: string
-}
+export type ElectronMcpApplyResult = ElectronMcpStdioApplyResult
 
-export interface ElectronMcpStdioRuntimeStatus {
+/**
+ * Runtime state of one MCP server, narrowed by the transport that carries it.
+ *
+ * A stdio server reports the process it spawned. An HTTP server reports the
+ * endpoint it talks to and has no process to report.
+ */
+export type ElectronMcpServerRuntimeStatus
+  = | {
+    name: string
+    state: 'running' | 'stopped' | 'error'
+    transport?: 'stdio'
+    command: string
+    args: string[]
+    pid: number | null
+    lastError?: string
+  }
+  | {
+    name: string
+    state: 'running' | 'stopped' | 'error'
+    transport: 'http'
+    url: string
+    lastError?: string
+    command?: never
+    args?: never
+    pid?: null
+  }
+
+// Backwards compatibility alias
+export type ElectronMcpStdioServerRuntimeStatus = ElectronMcpServerRuntimeStatus
+
+export interface ElectronMcpRuntimeStatus {
   path: string
-  servers: ElectronMcpStdioServerRuntimeStatus[]
+  servers: ElectronMcpServerRuntimeStatus[]
   updatedAt: number
 }
+
+// Backwards compatibility alias
+export type ElectronMcpStdioRuntimeStatus = ElectronMcpRuntimeStatus
 
 export interface ElectronMcpToolDescriptor {
   serverName: string
@@ -366,6 +454,9 @@ export const i18nGetLocale = defineInvokeEventa<Locale>('eventa:invoke:electron:
 
 export const electronGetCorsBypassUrls = defineInvokeEventa<string[]>('eventa:invoke:electron:cors-bypass:get-urls')
 export const electronSetCorsBypassUrls = defineInvokeEventa<void, string[]>('eventa:invoke:electron:cors-bypass:set-urls')
+
+export const electronAppIconGet = defineInvokeEventa<boolean>('eventa:invoke:electron:app-icon:get')
+export const electronAppIconSet = defineInvokeEventa<boolean, boolean>('eventa:invoke:electron:app-icon:set')
 
 export { electron } from '@proj-airi/electron-eventa'
 

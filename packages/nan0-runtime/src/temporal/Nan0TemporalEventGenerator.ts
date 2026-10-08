@@ -79,6 +79,7 @@ export function createEmptyTemporalTrackingState(): Nan0TemporalTrackingState {
     lastExternalInputAt: null,
     lastRhythmCheckAt: null,
     lastReflectionAt: null,
+    departureAcknowledged: false,
   }
 }
 
@@ -170,6 +171,7 @@ export function normalizeTemporalTrackingState(
     lastExternalInputAt: Number.isFinite(value?.lastExternalInputAt) ? Number(value?.lastExternalInputAt) : null,
     lastRhythmCheckAt: Number.isFinite(value?.lastRhythmCheckAt) ? Number(value?.lastRhythmCheckAt) : null,
     lastReflectionAt: Number.isFinite(value?.lastReflectionAt) ? Number(value?.lastReflectionAt) : null,
+    departureAcknowledged: Boolean(value?.departureAcknowledged),
   }
 }
 
@@ -233,6 +235,7 @@ export function mergeTemporalTrackingStates(
     lastExternalInputAt: Math.max(left.lastExternalInputAt ?? 0, right.lastExternalInputAt ?? 0) || null,
     lastRhythmCheckAt: Math.max(left.lastRhythmCheckAt ?? 0, right.lastRhythmCheckAt ?? 0) || null,
     lastReflectionAt: Math.max(left.lastReflectionAt ?? 0, right.lastReflectionAt ?? 0) || null,
+    departureAcknowledged: right.departureAcknowledged ?? left.departureAcknowledged ?? false,
   })
 }
 
@@ -254,16 +257,86 @@ export function computeLivedDuration(input: {
   return objective * Math.min(1.8, Math.max(0.6, multiplier))
 }
 
-function explicitReturnPromise(text: string, at: number): { description: string, dueAt: number } | null {
-  const matched = text.match(/\b(?:i promise\s+)?i(?:'ll| will)\s+(?:be back|return)\s+in\s+(\d{1,4})\s*(seconds?|minutes?|hours?)\b/i)
+function explicitReturnPromise(
+  text: string,
+  at: number,
+  systemOneAnswers?: Record<string, { choice: string, confidence?: number }>,
+): { description: string, dueAt: number } | null {
+  // 1. Language-agnostic System 1 classification has priority if provided
+  const returnScope = systemOneAnswers?.temporal_return_scope?.choice
+  if (returnScope && returnScope !== 'none' && returnScope !== 'unspecified_away') {
+    let durationMs = 15 * 60_000
+    switch (returnScope) {
+      case 'immediate_minutes':
+        durationMs = 3 * 60_000
+        break
+      case 'short_break':
+        durationMs = 30 * 60_000
+        break
+      case 'extended_hours':
+        durationMs = 2 * 3_600_000
+        break
+      case 'next_day_or_more':
+        durationMs = 24 * 3_600_000
+        break
+    }
+
+    // If explicit fine-grained numbers or units are detected in text, refine the duration
+    const numMatch = text.match(/\b(?:in\s+)?(\d{1,4})\s*(seconds?|minutes?|hours?|[smh])\b/i)
+    if (numMatch && numMatch[1] && numMatch[2]) {
+      const amount = Number(numMatch[1])
+      const unit = numMatch[2].toLowerCase()
+      const unitMs = unit.startsWith('s') ? 1_000 : unit.startsWith('m') ? 60_000 : 3_600_000
+      const parsedMs = amount * unitMs
+      if (Number.isFinite(parsedMs) && parsedMs >= 5_000 && parsedMs <= 7 * DAY_MS) {
+        durationMs = parsedMs
+      }
+    }
+    else if (/half\s+an?\s*minute/i.test(text)) {
+      durationMs = 30_000
+    }
+    else if (/half\s+an?\s*hour/i.test(text)) {
+      durationMs = 30 * 60_000
+    }
+    else if (/an?\s*hour/i.test(text)) {
+      durationMs = 60 * 60_000
+    }
+    else if (/an?\s*minute/i.test(text)) {
+      durationMs = 60_000
+    }
+
+    return { description: bounded(text, 200), dueAt: at + durationMs }
+  }
+
+  // 2. Offline / regex floor when System 1 is unavailable
+  const matched = text.match(/\b(?:in\s+)?(\d{1,4})\s*(seconds?|minutes?|hours?|[smh])\b/i)
+    || text.match(/\b(?:an?|half\s+an?)\s*(hour|minute)s?\b/i)
   if (!matched)
     return null
-  const amount = Number(matched[1])
-  const unitMs = matched[2].toLowerCase().startsWith('second') ? 1_000 : matched[2].toLowerCase().startsWith('minute') ? 60_000 : 3_600_000
-  const durationMs = amount * unitMs
+
+  let durationMs = 15 * 60_000
+  if (/half\s+an?\s*minute/i.test(matched[0])) {
+    durationMs = 30_000
+  }
+  else if (/half\s+an?\s*hour/i.test(matched[0])) {
+    durationMs = 30 * 60_000
+  }
+  else if (/an?\s*hour/i.test(matched[0])) {
+    durationMs = 60 * 60_000
+  }
+  else if (/an?\s*minute/i.test(matched[0])) {
+    durationMs = 60_000
+  }
+  else if (matched[1] && matched[2]) {
+    const amount = Number(matched[1])
+    const unit = matched[2].toLowerCase()
+    const unitMs = unit.startsWith('s') ? 1_000 : unit.startsWith('m') ? 60_000 : 3_600_000
+    durationMs = amount * unitMs
+  }
+
   if (!Number.isFinite(durationMs) || durationMs < 5_000 || durationMs > 7 * DAY_MS)
     return null
-  return { description: bounded(matched[0], 200), dueAt: at + durationMs }
+  return { description: bounded(text, 200), dueAt: at + durationMs }
 }
 
 function promiseBreakAt(promise: Readonly<Nan0TrackedPromise>): number {
@@ -389,6 +462,7 @@ export function recordLivedTemporalObservation(input: {
   previousKyoInteractionAt: number | null
   clock: Nan0Clock
   createId: () => string
+  systemOneAnswers?: Record<string, { choice: string, confidence?: number }>
 }): Nan0LivedTemporalEvaluation {
   let engine: Nan0TemporalEngineState = { ...input.engine, lived: normalizeTemporalTrackingState(input.engine.lived) }
   const created: Nan0LivedTemporalCandidate[] = []
@@ -414,8 +488,16 @@ export function recordLivedTemporalObservation(input: {
   }
 
   lived = normalizeTemporalTrackingState(engine.lived)
+  const isAbsenceReturn = Boolean(input.previousKyoInteractionAt && at - input.previousKyoInteractionAt >= 30_000)
+  const hasTaskEvidence = Boolean(
+    input.observation.metadata?.taskCompletion
+    || (input.observation.metadata?.trustedObservations as any[])?.some((obs: any) => obs.status === 'completed' && obs.matchesRecordedCommitment !== false),
+  )
+
   const promises = lived.trackedPromises.map((promise) => {
     if (promise.status !== 'active' || at <= promise.madeAt)
+      return promise
+    if (!isAbsenceReturn && !hasTaskEvidence)
       return promise
     const fulfilled = { ...promise, status: 'fulfilled' as const, fulfilledAt: at }
     const evidenceKey = `promise-kept:${promise.promiseId}`
@@ -427,10 +509,19 @@ export function recordLivedTemporalObservation(input: {
     })
     return fulfilled
   })
-  lived = { ...normalizeTemporalTrackingState(engine.lived), trackedPromises: promises, lastExternalInputAt: at, crossedIdleThresholdIds: [] }
+  const returnScope = input.systemOneAnswers?.temporal_return_scope?.choice
+  const departureAcknowledged = returnScope === 'unspecified_away'
+  lived = { ...normalizeTemporalTrackingState(engine.lived), trackedPromises: promises, lastExternalInputAt: at, crossedIdleThresholdIds: [], departureAcknowledged }
   lived = updateRhythm(lived, input.observation, input.clock, at)
   const text = typeof input.observation.content === 'string' ? input.observation.content : ''
-  const promise = explicitReturnPromise(text, at)
+  const hasCommitment = input.systemOneAnswers
+    ? (input.systemOneAnswers.commitment_pledge?.choice === 'direct_future_commitment'
+      || input.systemOneAnswers.commitment_pledge?.choice === 'conditional_commitment'
+      || (input.systemOneAnswers.temporal_return_scope?.choice
+        && input.systemOneAnswers.temporal_return_scope?.choice !== 'none'
+        && input.systemOneAnswers.temporal_return_scope?.choice !== 'unspecified_away'))
+    : false
+  const promise = hasCommitment ? explicitReturnPromise(text, at, input.systemOneAnswers) : null
   if (promise && !lived.trackedPromises.some(item => item.sourceObservationId === input.observation.id)) {
     lived.trackedPromises.push({ promiseId: `promise_${input.createId()}`, actorId: 'kyo', description: promise.description, madeAt: at, dueAt: promise.dueAt, sourceObservationId: input.observation.id, sourceMemoryId: null, status: 'active', fulfilledAt: null, brokenAt: null, crossedThresholdIds: [] })
   }
@@ -557,7 +648,7 @@ export function evaluateLivedTemporalEvents(input: {
 
   lived = normalizeTemporalTrackingState(engine.lived)
   const lastInput = lived.lastExternalInputAt
-  if (lastInput != null) {
+  if (lastInput != null && !lived.departureAcknowledged) {
     const objective = Math.max(0, at - lastInput)
     const waiting = lived.waitingStates.some(item => item.status === 'active') || lived.trackedPromises.some(item => item.status === 'active')
     const livedDuration = computeLivedDuration({ objectiveDurationMs: objective, emotionalState: input.emotionalState, focused: input.focused, waiting })
@@ -620,7 +711,7 @@ export function evaluateLivedTemporalEvents(input: {
   lived = normalizeTemporalTrackingState(engine.lived)
   engine = { ...engine, revision: engine.revision + 1, lastEvaluationAt: at, lived: { ...lived, revision: lived.revision + 1, lastRhythmCheckAt: at } }
   const future = [
-    ...(lived.lastExternalInputAt == null ? [] : IDLE_THRESHOLDS.filter(item => !lived.crossedIdleThresholdIds.includes(item.id)).map(item => lived.lastExternalInputAt! + item.durationMs)),
+    ...(lived.lastExternalInputAt == null || lived.departureAcknowledged ? [] : IDLE_THRESHOLDS.filter(item => !lived.crossedIdleThresholdIds.includes(item.id)).map(item => lived.lastExternalInputAt! + item.durationMs)),
     ...lived.trackedPromises.filter(item => item.status === 'active').map(item => item.crossedThresholdIds.includes('overdue') ? promiseBreakAt(item) : item.dueAt),
     ...lived.waitingStates.filter(item => item.status === 'active').map(item => item.expectedAt),
     ...lived.detectedRhythms.filter(item => item.isActive).map(item => item.expectedNextAt + 6 * 60 * 60_000),

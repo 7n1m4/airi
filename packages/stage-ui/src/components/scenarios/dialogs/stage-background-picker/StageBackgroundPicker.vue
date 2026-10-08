@@ -4,15 +4,33 @@ import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { computed, ref } from 'vue'
 
 const props = withDefaults(defineProps<{
-  cardId: string
+  cardId?: string
   gridMaxHeightClass?: string
+  allowInherit?: boolean
+  autoApply?: boolean
+  title?: string
+  subtitle?: string
 }>(), {
   gridMaxHeightClass: 'max-h-[60vh]',
+  allowInherit: false,
+  autoApply: true,
+  title: 'Gallery View',
+  subtitle: 'History of images generated and stage scenes.',
 })
+
+const emit = defineEmits<{
+  (e: 'pick', id: string): void
+  (e: 'update:modelValue', id: string): void
+  (e: 'update:selectedId', id: string): void
+}>()
+
+const modelValue = defineModel<string>({ required: false })
+const selectedIdModel = defineModel<string>('selectedId', { required: false })
 
 const cardStore = useAiriCardStore()
 const backgroundStore = useBackgroundStore()
 const isRefreshingGallery = ref(false)
+const localSelectedId = ref<string>()
 
 // Get selected card data
 const selectedCard = computed(() => {
@@ -21,27 +39,51 @@ const selectedCard = computed(() => {
   return cardStore.getCard(props.cardId)
 })
 
-// All available backgrounds for this card (builtin + journal)
+// All available backgrounds for this card (builtin + shared scenes + character journal images)
 const allBackgrounds = computed(() => {
-  return backgroundStore.getCharacterBackgrounds(props.cardId)
+  if (props.cardId) {
+    return backgroundStore.getCharacterBackgrounds(props.cardId)
+  }
+  return backgroundStore.availableBackgrounds || []
 })
 
 // Current background ID
-const activeBackgroundId = computed({
-  get: () => selectedCard.value?.extensions?.airi?.modules?.activeBackgroundId || 'none',
+const activeBackgroundId = computed<string>({
+  get: () => {
+    if (selectedIdModel.value !== undefined)
+      return selectedIdModel.value
+    if (modelValue.value !== undefined)
+      return modelValue.value
+    if (localSelectedId.value !== undefined)
+      return localSelectedId.value
+    return selectedCard.value?.extensions?.airi?.modules?.activeBackgroundId || 'none'
+  },
   set: async (val: string) => {
-    if (!selectedCard.value)
-      return
-    const extension = JSON.parse(JSON.stringify(selectedCard.value.extensions))
-    if (!extension.airi.modules)
-      extension.airi.modules = {}
+    localSelectedId.value = val
+    if (selectedIdModel.value !== undefined) {
+      selectedIdModel.value = val
+    }
+    if (modelValue.value !== undefined) {
+      modelValue.value = val
+    }
+    emit('pick', val)
+    emit('update:modelValue', val)
+    emit('update:selectedId', val)
 
-    extension.airi.modules.activeBackgroundId = val
+    if (props.autoApply && props.cardId && selectedCard.value) {
+      const extension = JSON.parse(JSON.stringify(selectedCard.value.extensions || {}))
+      if (!extension.airi)
+        extension.airi = {}
+      if (!extension.airi.modules)
+        extension.airi.modules = {}
 
-    cardStore.updateCard(props.cardId, {
-      ...selectedCard.value,
-      extensions: extension,
-    })
+      extension.airi.modules.activeBackgroundId = val
+
+      await cardStore.updateCard(props.cardId, {
+        ...selectedCard.value,
+        extensions: extension,
+      })
+    }
   },
 })
 
@@ -62,6 +104,23 @@ async function handleRefreshGallery() {
   }
   finally {
     isRefreshingGallery.value = false
+  }
+}
+
+async function handleFileUpload(event: Event) {
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file)
+    return
+  try {
+    const newId = await backgroundStore.addBackground('scene', file, file.name.replace(/\.[^/.]+$/, ''), undefined, props.cardId || null)
+    handleSetAsBackground(newId)
+  }
+  catch (err) {
+    console.error('Failed to add background:', err)
+  }
+  finally {
+    target.value = ''
   }
 }
 
@@ -96,13 +155,31 @@ function handlePreviewEntry(id: string, title: string) {
     <div class="flex items-center justify-between border-b border-neutral-100 pb-4 dark:border-neutral-700/50">
       <div class="flex flex-col gap-1">
         <h3 class="text-sm text-neutral-900 font-semibold dark:text-neutral-100">
-          Gallery View
+          {{ title }}
         </h3>
         <p class="text-xs text-neutral-500 dark:text-neutral-400">
-          History of images generated.
+          {{ subtitle }}
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
+        <!-- Inherit / No Override Button -->
+        <button
+          v-if="allowInherit"
+          class="h-8 flex items-center gap-1.5 border rounded-lg px-3 text-xs font-semibold transition-all active:scale-95"
+          :class="[
+            activeBackgroundId === 'inherit'
+              ? 'border-primary-500 bg-primary-50 text-primary-600 dark:bg-primary-900/20 dark:text-primary-400'
+              : 'border-neutral-200 bg-neutral-50 text-neutral-500 dark:border-neutral-800 dark:bg-neutral-900 hover:border-primary-300 hover:text-primary-500',
+          ]"
+          @click="handleSetAsBackground('inherit')"
+        >
+          <div
+            class="text-sm"
+            :class="activeBackgroundId === 'inherit' ? 'i-solar:restart-bold' : 'i-solar:restart-linear'"
+          />
+          <span>Inherit Default</span>
+        </button>
+
         <!-- Clear / None Background Button -->
         <button
           class="h-8 flex items-center gap-1.5 border rounded-lg px-3 text-xs font-semibold transition-all active:scale-95"
@@ -119,6 +196,21 @@ function handlePreviewEntry(id: string, title: string) {
           />
           <span>None</span>
         </button>
+
+        <!-- Upload Button -->
+        <label
+          class="dark:hover:bg-neutral-850 h-8 flex cursor-pointer items-center gap-1.5 border border-neutral-200 rounded-lg bg-neutral-50 px-3 text-xs text-neutral-500 font-semibold transition-all active:scale-95 dark:border-neutral-800 dark:bg-neutral-900 hover:bg-neutral-100 hover:text-neutral-700 dark:hover:text-neutral-200"
+          title="Upload new background"
+        >
+          <input
+            type="file"
+            accept="image/*"
+            class="hidden"
+            @change="handleFileUpload"
+          >
+          <div class="i-solar:upload-linear text-xs" />
+          <span>Upload</span>
+        </label>
 
         <!-- Refresh Button -->
         <button
@@ -137,16 +229,28 @@ function handlePreviewEntry(id: string, title: string) {
 
     <!-- Grid -->
     <div :class="['grid grid-cols-2 gap-3 overflow-y-auto pr-2 scrollbar-none lg:grid-cols-4 md:grid-cols-3', gridMaxHeightClass]">
+      <!-- Empty state -->
+      <div v-if="allBackgrounds.length === 0" class="col-span-full flex flex-col items-center justify-center py-12 text-center text-neutral-400">
+        <div class="i-solar:gallery-broken mb-2 text-4xl" />
+        <p class="text-xs">
+          No background images found in gallery.
+        </p>
+        <p class="mt-1 text-[10px] text-neutral-500">
+          Upload a background image or generate one via Artistry to populate your gallery.
+        </p>
+      </div>
+
       <!-- Background Items -->
       <div
         v-for="entry in allBackgrounds"
         :key="entry.id"
-        class="group relative h-36 overflow-hidden border-2 rounded-xl bg-neutral-100 transition-all sm:aspect-square sm:h-auto active:scale-95 dark:bg-neutral-900"
+        class="group relative h-36 cursor-pointer overflow-hidden border-2 rounded-xl bg-neutral-100 transition-all sm:aspect-square sm:h-auto active:scale-95 dark:bg-neutral-900"
         :class="[
           activeBackgroundId === entry.id
             ? 'border-primary-500 ring-2 ring-primary-500/20'
             : 'border-neutral-200 dark:border-neutral-800 hover:border-primary-300',
         ]"
+        @click="handleSetAsBackground(entry.id)"
       >
         <img
           :src="backgroundStore.getBackgroundUrl(entry.id) ?? undefined"
@@ -159,23 +263,23 @@ function handlePreviewEntry(id: string, title: string) {
           <button
             class="flex items-center gap-1 rounded-full px-3 py-1.5 text-[10px] text-white font-bold backdrop-blur-md transition-all active:scale-95"
             :class="activeBackgroundId === entry.id ? 'bg-primary-500 hover:bg-primary-600' : 'bg-white/20 hover:bg-white/30'"
-            @click="handleSetAsBackground(entry.id)"
+            @click.stop="handleSetAsBackground(entry.id)"
           >
             <div :class="activeBackgroundId === entry.id ? 'i-solar:pin-bold' : 'i-solar:pin-linear'" />
             {{ activeBackgroundId === entry.id ? 'ACTIVE' : 'SELECT' }}
           </button>
-          <div class="flex gap-2">
+          <div class="flex gap-2" @click.stop>
             <button
               class="h-8 w-8 flex items-center justify-center rounded-full bg-neutral-500/80 text-white backdrop-blur-md transition-all active:scale-95 hover:bg-neutral-600"
               title="Preview"
-              @click="handlePreviewEntry(entry.id, entry.title)"
+              @click.stop="handlePreviewEntry(entry.id, entry.title)"
             >
               <div class="i-solar:eye-linear text-sm" />
             </button>
             <button
               class="h-8 w-8 flex items-center justify-center rounded-full bg-blue-500/80 text-white backdrop-blur-md transition-all active:scale-95 hover:bg-blue-500"
               title="Download"
-              @click="handleDownloadEntry(entry.id, entry.title)"
+              @click.stop="handleDownloadEntry(entry.id, entry.title)"
             >
               <div class="i-solar:download-square-linear text-sm" />
             </button>
@@ -183,7 +287,7 @@ function handlePreviewEntry(id: string, title: string) {
               v-if="entry.type !== 'builtin'"
               class="h-8 w-8 flex items-center justify-center rounded-full bg-red-500/80 text-white backdrop-blur-md transition-all active:scale-95 hover:bg-red-500"
               title="Delete"
-              @click="handleDeleteEntry(entry.id)"
+              @click.stop="handleDeleteEntry(entry.id)"
             >
               <div class="i-solar:trash-bin-trash-linear text-sm" />
             </button>
@@ -203,7 +307,7 @@ function handlePreviewEntry(id: string, title: string) {
       <!-- Image Preview Overlay -->
       <div
         v-if="previewImageUrl"
-        class="fixed inset-0 z-[10000] flex flex-col items-center justify-center bg-black/95 p-4 transition-all duration-300"
+        class="fixed inset-0 z-[10020] flex flex-col items-center justify-center bg-black/95 p-4 transition-all duration-300"
         @click="previewImageUrl = null"
       >
         <!-- Close Button -->

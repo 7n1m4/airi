@@ -14,6 +14,13 @@ import { defineConfig } from 'vite'
 
 // For Histoire
 export default defineConfig({
+  // NOTICE: Vite 6 defaults worker.format to 'iife', which Rollup rejects
+  // for code-splitting worker bundles (web-llm/vad/search workers). The app
+  // configs (stage-tamagotchi, stage-web) already force 'es'; mirror that
+  // here so `story:build` can bundle `?worker` imports.
+  worker: {
+    format: 'es',
+  },
   resolve: {
     alias: {
       '@proj-airi/i18n': resolve(join(import.meta.dirname, '..', '..', 'packages', 'i18n', 'src')),

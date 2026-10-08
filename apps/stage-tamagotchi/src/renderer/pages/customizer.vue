@@ -4,6 +4,7 @@ import { estimateTokens } from '@proj-airi/stage-shared'
 import { CUSTOMIZER_CATALOG } from '@proj-airi/stage-ui/constants/control-customizer'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useLiveSessionStore } from '@proj-airi/stage-ui/stores/modules/live-session'
+import { useSystemOneStore } from '@proj-airi/stage-ui/stores/modules/system-one'
 import { useSettings, useSettingsAudioDevice, useSettingsControlStrip, useSettingsStageModel } from '@proj-airi/stage-ui/stores/settings'
 import { useSettingsControlsIsland } from '@proj-airi/stage-ui/stores/settings/controls-island'
 import { useBroadcastChannel, useColorMode } from '@vueuse/core'
@@ -20,6 +21,7 @@ const stageModelSettings = useSettingsStageModel()
 const controlStripStore = useSettingsControlStrip()
 const settingsAudioDeviceStore = useSettingsAudioDevice()
 const liveSessionStore = useLiveSessionStore()
+const systemOneStore = useSystemOneStore()
 const controlsIslandStore = useSettingsControlsIsland()
 
 const { buttons, backgroundTint } = storeToRefs(controlStripStore)
@@ -372,6 +374,7 @@ function resetStats() {
   liveSessionStore.inferenceTokens = 0
   liveSessionStore.inferencePromptTokens = 0
   liveSessionStore.inferenceCompletionTokens = 0
+  systemOneStore.resetUsageStats()
 }
 
 onMounted(() => {
@@ -1002,18 +1005,21 @@ onMounted(() => {
                   </div>
                 </div>
 
-                <!-- Card 3: Total Combined Tokens -->
+                <!-- Card 3: System 1 Tokens -->
                 <div class="flex flex-col justify-between border border-white/5 rounded-2xl bg-white/5 p-4 dark:bg-neutral-900/40">
                   <div class="flex items-center justify-between">
-                    <span class="text-[10px] text-neutral-400 font-semibold tracking-wider uppercase">Total Tokens</span>
-                    <span class="i-solar:calculator-linear text-base text-purple-400" />
+                    <span class="text-[10px] text-neutral-400 font-semibold tracking-wider uppercase">System 1 Tokens</span>
+                    <span class="i-solar:bolt-linear text-base text-amber-400" />
                   </div>
                   <div class="mt-4">
                     <span class="text-2xl text-neutral-100 font-bold tracking-tight">
-                      {{ Number(liveSessionStore.totalTokens || 0).toLocaleString() }}
+                      {{ Number(systemOneStore.systemOneCloudTokens || 0).toLocaleString() }}
                     </span>
                     <p class="mt-1 text-[9px] text-neutral-500">
-                      Combined token usage
+                      Cognitive decisions input tokens (OpenRouter / TypeSafe)
+                    </p>
+                    <p class="mt-0.5 text-[9px] text-neutral-600 font-mono">
+                      {{ Number(systemOneStore.systemOneLocalTokens || 0).toLocaleString() }} local (free) · {{ Number(systemOneStore.systemOneDecisionsCount || 0).toLocaleString() }} decisions
                     </p>
                   </div>
                 </div>

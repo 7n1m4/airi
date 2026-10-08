@@ -14,7 +14,7 @@ In AIRI, your 3D avatar does not simply repeat the same static idle loop. Throug
 AIRI uses a dual-engine motion architecture:
 
 ```
-[ LLM Turn / User Command ] 
+[ LLM Turn / User Command ]
               │
               ├──► Built-in Presets (11+ VRMA animations: waving, thinking, jumping, dancing)
               │
@@ -25,12 +25,16 @@ AIRI uses a dual-engine motion architecture:
 
 ---
 
-## 2. ACT Motion Tokens
+## 2. ACT Motion & Emotion Tokens
 
 When chatting, your character's LLM can embed kinetic performance markers:
 - `<|ACT:motion="wave"|>`: Triggers a friendly greeting wave.
-- `<|ACT:motion="think"|>`: Puts hand to chin thoughtfully during deep answers.
-- `<|ACT:motion="shy_fidget"|>`: Shifts feet and looks away during romantic or awkward moments.
+- `<|ACT:motion="think",duration="4"|>`: Puts hand to chin thoughtfully during deep answers for 4 seconds.
+- `<|ACT:emotion="happy",intensity="0.8",duration="3"|>`: Triggers a warm smile held for 3 seconds before smoothly returning to neutral.
+- `<|ACT:emotion="happy",motion="wave",duration="3"|>`: Combines expression and motion cues in a single tag.
+- `<|ACT:emotion="neutral"|>` or `duration="0"`: Immediately releases any active expression hold.
+- `<|DELAY:2|>`: Inserts a 2-second pause in speech.
+- `<|ACT:vfx="fire",duration="4"|>`: Manifests elemental visual auras during emotional peaks.
 
 These tokens are automatically intercepted by the parser and dispatched to the avatar renderer, blending smoothly with the current speech audio.
 

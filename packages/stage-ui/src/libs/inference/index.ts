@@ -1,5 +1,7 @@
 export { createLocalVisionAdapter } from './adapters/blip'
 export type { LocalVisionAdapter } from './adapters/blip'
+export { createLayaAdapter, getLayaAdapter } from './adapters/laya'
+export type { LayaAdapter, LayaDecideOptions, LayaPrecision } from './adapters/laya'
 export { createLocalMoondreamAdapter, getMoondreamAdapter } from './adapters/moondream'
 export type { LocalMoondreamAdapter } from './adapters/moondream'
 export { createNeedleClient, needleClient } from './adapters/needle-client'
@@ -12,6 +14,7 @@ export {
   clearNeedleCache,
   clearSingleModelCache,
   clearWebLlmCache,
+  clearWebRwkvCache,
   evictOtherWhisperModels,
   formatBytes,
   getLayaCacheSize,
@@ -21,7 +24,9 @@ export {
   isLayaModelCached,
   isModelCached,
   isNeedleModelCached,
+  isStateCached,
   isWebLlmModelCached,
+  isWebRwkvSlotOccupied,
   LAYA_CACHE_NAME,
 } from './cache-utils'
 export {
@@ -35,13 +40,17 @@ export {
   TIMEOUTS,
   WEB_LLM_MODELS,
   WEB_RWKV_MODELS,
+  WEB_RWKV_STATE_CARTRIDGES,
 } from './constants'
+export type { WebRwkvModelInfo, WebRwkvStateCartridgeInfo } from './constants'
 export { DEFAULT_LOCAL_VISION_MODEL, LOCAL_VISION_MODELS } from './constants'
 export {
   getGPUCoordinator,
   getGpuExecutor,
   MODEL_VRAM_ESTIMATES,
 } from './coordinator'
+export { PRESETS } from './foundry-presets'
+export type { ArchetypePreset } from './foundry-presets'
 export {
   createGpuExecutor,
   GPU_PRIORITY,
@@ -54,12 +63,14 @@ export {
 } from './gpu-resource-coordinator'
 export type {
   AllocationToken,
+  EvictionHandler,
   GPUResourceCoordinator,
   GPUResourceUsage,
   MemoryPressureLevel,
 } from './gpu-resource-coordinator'
 export {
   createGpuWorkerHost,
+  DEFAULT_INACTIVITY_TTL_MS,
 } from './gpu-worker-host'
 export type {
   GpuWork,
@@ -79,8 +90,9 @@ export {
   loadLayaTokenizer,
   resetLayaSession,
   runLayaSystemOne,
+  terminateLayaWorker,
 } from './laya-engine'
-export type { LayaDownloadProgress } from './laya-engine'
+export type { LayaDownloadProgress, LayaSessionOptions } from './laya-engine'
 export {
   classifyError,
   createRequestId,

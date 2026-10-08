@@ -570,7 +570,7 @@
       "monthlyTokenBudget": "~18-45M",
       "contextWindow": 131072,
       "enabled": true,
-      "supportsVision": false,
+      "supportsVision": true,
       "supportsTools": true,
       "quirks": [
         {
@@ -3545,6 +3545,12 @@
           "title": "Key is account_id:token",
           "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
           "severity": "info"
+        },
+        {
+          "slug": "cloudflare-moondream-binary-only",
+          "title": "OpenAI chat/completions base64 unsupported",
+          "body": "Cloudflare Workers AI OpenAI chat/completions endpoint rejects base64 data URLs for Moondream 3.1 with code 5006 type mismatch; requires raw byte array via native /ai/run.",
+          "severity": "warning"
         }
       ],
       "premiumSince": "2026-07-19T18:44:22.000Z"

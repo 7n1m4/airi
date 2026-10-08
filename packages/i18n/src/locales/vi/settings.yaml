@@ -1228,9 +1228,9 @@ pages:
         defaultsSection:
           annotation: 'Để tùy chỉnh các cài đặt này cho nhân vật, hãy chuyển đến tab Tạo
             của nhân vật: • Sửa đổi Nhiệt độ, Top P và Số lượng token tối đa
-            bằng các trường nhập liệu. • Điều chỉnh hình phạt
-            (Presence/Count/Decay) bằng cách nhập vào vùng văn bản JSON nâng cao
-            (ví dụ: {"presence_penalty": 0.5}).'
+            bằng các trường nhập liệu. • Sửa đổi hình phạt (Hiện diện/Đếm/Suy
+            giảm) bằng cách nhập chúng vào vùng văn bản JSON nâng cao (ví dụ:
+            "presence_penalty": 0.5).'
           description: Đây là các thông số dự phòng mặc định được sử dụng bởi web-rwkv.
           field:
             count_penalty: 'Hình phạt tần suất Count Penalty (Mặc định: 0.4)'
@@ -1314,9 +1314,9 @@ pages:
           bộ)</b>.
       cloud:
         title: Đồng bộ hóa đám mây & Sao lưu?
-        description: Giữ an toàn cho thẻ, kho lưu trữ ký ức và cài đặt trên các thiết bị.
-          Sử dụng <b>Hệ thống tệp cục bộ</b> để sao lưu máy tính/NAS hoặc <b>Bộ
-          nhớ tương thích S3</b> (Cloudflare R2, MinIO, AWS S3).
+        description: Giữ an toàn cho thẻ, kho lưu trữ ký ức và cài đặt trên các thiết
+          bị. Sử dụng <b>Hệ thống tệp cục bộ</b> để sao lưu máy tính/NAS hoặc
+          <b>Bộ nhớ tương thích S3</b> (Cloudflare R2, MinIO, AWS S3).
     speech:
       app_local_audio:
         description: Cấu hình cài đặt đầu ra âm thanh cục bộ để tổng hợp giọng nói.

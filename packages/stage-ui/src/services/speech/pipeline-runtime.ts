@@ -26,6 +26,12 @@ export interface SpeechPipelineRuntime {
   registerHost: (pipeline: ReturnType<typeof createSpeechPipeline<AudioBuffer>>) => Promise<void>
   unregisterHost: (pipeline?: ReturnType<typeof createSpeechPipeline<AudioBuffer>>) => Promise<void>
   isHost: () => boolean
+  /**
+   * Cancels every tracked remote intent (cross-window speech echoes). Local
+   * intents stay owned by their chat/pacing flow. Used on teardown (HMR
+   * module dispose, unmount) so zombie generations cannot keep speaking.
+   */
+  cancelAllIntents: (reason?: string) => void
   dispose: () => Promise<void>
 }
 
@@ -280,7 +286,18 @@ export function createSpeechPipelineRuntime(): SpeechPipelineRuntime {
     return hostReady && !!hostPipeline
   }
 
+  function cancelAllIntents(reason = 'runtime-teardown') {
+    for (const intent of remoteIntentMap.values()) {
+      try {
+        intent.cancel(reason)
+      }
+      catch {}
+    }
+    remoteIntentMap.clear()
+  }
+
   async function dispose() {
+    cancelAllIntents('runtime-dispose')
     await unregisterHost()
   }
 
@@ -289,6 +306,7 @@ export function createSpeechPipelineRuntime(): SpeechPipelineRuntime {
     registerHost,
     unregisterHost,
     isHost,
+    cancelAllIntents,
     dispose,
   }
 }

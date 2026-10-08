@@ -1,0 +1,31 @@
+{
+  "name": "@proj-airi/airi-plugin-claude-code",
+  "type": "module",
+  "version": "0.9.0-alpha.15",
+  "private": true,
+  "description": "Claude Code CLI hook bridge for AIRI Channel Server",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dasilva333/airi.git",
+    "directory": "integrations/claude-code/airi-plugin-claude-code"
+  },
+  "bin": {
+    "airi-plugin-claude-code": "./dist/run.mjs"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsx ./src/run.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@guiiai/logg": "catalog:",
+    "@proj-airi/server-sdk": "workspace:*",
+    "cac": "^6.7.14",
+    "debug": "^4.4.3"
+  },
+  "devDependencies": {
+    "@anthropic-ai/claude-code": "^2.1.59",
+    "tsx": "^4.21.0"
+  }
+}

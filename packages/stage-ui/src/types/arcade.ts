@@ -81,3 +81,137 @@ export interface ArcadeProfile {
   matchGame: (titleOrId: string) => boolean
   systemPromptAddendum: string
 }
+
+// ==========================================
+// 5-Stage Guided Studio Architecture Types
+// ==========================================
+
+export type ArcadeStudioStage = 'hub' | 'provisioning' | 'calibration' | 'review' | 'arena'
+
+export type ScreenMotionArchitecture
+  = | 'fixed_single_screen'
+    | 'flip_screen_rooms'
+    | 'smooth_scrolling_camera'
+    | 'first_person_or_3d'
+    | 'static_ui_or_turn_based'
+
+export type RecommendedSystem
+  = | 'system1_reflex'
+    | 'system2_strategy'
+    | 'system2_narrative'
+    | 'unsupported_utility'
+
+export type GameplayPace
+  = | 'turn_based'
+    | 'real_time_calm'
+    | 'real_time_fast'
+    | 'real_time_intense'
+
+export type PrimaryController
+  = | 'keyboard_only'
+    | 'mouse_only'
+    | 'hybrid_keyboard_mouse'
+    | 'gamepad_compatible'
+
+export type CompanionPersonaPreset
+  = | 'hype_coach'
+    | 'strategic_advisor'
+    | 'zen_co_pilot'
+    | 'snarky_backseater'
+    | 'methodical_tactician'
+
+export type System1EngineChoice = 'laya_local' | 'jev_cloud' | 'disabled'
+
+export interface ArcadeProvisioningConfig {
+  system1Engine: System1EngineChoice
+  system2Model: string
+  companionPersona: CompanionPersonaPreset
+  commentaryVerbosity?: 'quiet' | 'balanced' | 'chatty'
+}
+
+// Mini-Program Synthesizer Spec
+export type MiniProgramAction = 'up' | 'down' | 'left' | 'right' | 'space' | 'enter' | 'none'
+
+export interface MiniProgramDefinition {
+  id: string
+  gameId: string
+  version: number
+  code: string // Complete executable JS body: `function evaluateGameState(prevFrame, currFrame, telemetry): Action`
+  inputSpec: {
+    keys: string[]
+    intervalMs: number
+  }
+  detectedGrid?: {
+    rows: number
+    cols: number
+    cellSize: number
+  }
+  playerColor?: string
+  targetColor?: string
+}
+
+export interface DemonstrationFrameDiff {
+  t: number
+  keys: string[]
+  fullGrid?: string[]
+  added?: Array<[number, number]>
+  removed?: Array<[number, number]>
+}
+
+export interface CalibrationTelemetryTrace {
+  timestamp: number
+  durationMs: number
+  framesCaptured: number
+  keyEvents: Array<{
+    key: string
+    timestamp: number
+    type: 'down' | 'up'
+  }>
+  motionEntropy: number
+  identifiedArchitecture: ScreenMotionArchitecture
+  resolution?: { cols: number, rows: number }
+  frames?: DemonstrationFrameDiff[]
+}
+
+export interface AcquiredGameKnowledge {
+  gameId: string
+  gameTitle: string
+  acquiredAt: number
+  lastPlayedAt: number
+  motionArchitecture: ScreenMotionArchitecture
+  recommendedSystem: RecommendedSystem
+  gameplayPace: GameplayPace
+  primaryGenre?: string
+  primaryController?: PrimaryController
+  persona: CompanionPersonaPreset
+  system1Engine: System1EngineChoice
+  system2Model?: string
+  strategySummary: string
+  rulesAddendum?: string
+  miniProgram?: MiniProgramDefinition
+  calibrationTrace?: CalibrationTelemetryTrace
+  playCount: number
+  highScore?: number
+}
+
+export interface CatalogGameClassification {
+  recommended_system?: RecommendedSystem
+  screen_motion_architecture?: ScreenMotionArchitecture
+  gameplay_pace?: GameplayPace
+  primary_genre?: string
+  primary_controller?: PrimaryController
+  companion_role?: string
+}
+
+export interface CatalogGame {
+  identifier: string
+  title: string
+  year?: number | string
+  downloads?: number
+  description?: string
+  thumbnailUrl?: string
+  bundleUrl?: string
+  isCached?: boolean
+  hasAcquiredKnowledge?: boolean
+  classification?: CatalogGameClassification
+}

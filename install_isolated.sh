@@ -7,6 +7,9 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$REPO_ROOT"
 
+# Prevent onnxruntime-node from attempting broken CUDA binary downloads on Linux
+export ONNXRUNTIME_NODE_INSTALL_CUDA=skip
+
 ISOLATED_DATA_DIR="${AIRI_ISOLATED_DATA_DIR:-$HOME/.config/ai.moeru.airi.dasilva333}"
 DEFAULT_PORT="${AIRI_ISOLATED_PORT:-5174}"
 APP_ID="ai.moeru.airi.dasilva333"

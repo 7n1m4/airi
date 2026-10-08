@@ -1,7 +1,7 @@
 {
   "name": "@proj-airi/stage-tamagotchi",
   "type": "module",
-  "version": "0.9.33-stable.20260919",
+  "version": "0.9.37-stable.20261008",
   "private": true,
   "description": "LLM powered virtual character",
   "author": {
@@ -18,22 +18,23 @@
     "typecheck": "pnpm run typecheck:node && pnpm run typecheck:web",
     "app:dev": "pnpm run dev",
     "app:build": "pnpm run build",
-    "start": "electron-vite preview",
+    "start": "electron-vite preview --skipBuild",
     "dev": "node scripts/ensure-electron.js && ELECTRON_RUN_AS_NODE= electron-vite dev",
     "build": "node scripts/ensure-electron.js && pnpm run typecheck && node --stack-size=16384 --max-old-space-size=12288 ../../node_modules/electron-vite/bin/electron-vite.js build",
     "postinstall": "electron-builder install-app-deps",
     "build:unpack": "CSC_IDENTITY_AUTO_DISCOVERY=false pnpm run build && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --dir",
     "build:win": "pnpm -F @proj-airi/stage-mate run build:win && pnpm run build && tsx scripts/copy-deps.ts && electron-builder --win && tsx scripts/package-win-zip.ts",
-    "build:mac": "NODE_OPTIONS=\"--max-old-space-size=12288\" CSC_IDENTITY_AUTO_DISCOVERY=false pnpm run build && NODE_OPTIONS=\"--max-old-space-size=12288\" CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg zip",
+    "build:mac": "NODE_OPTIONS=\"--max-old-space-size=12288\" CSC_IDENTITY_AUTO_DISCOVERY=false pnpm run build && NODE_OPTIONS=\"--max-old-space-size=12288\" CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac dmg && NODE_OPTIONS=\"--max-old-space-size=12288\" CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac zip",
     "build:linux": "pnpm run build && electron-builder --linux",
     "build:deb": "pnpm run build && electron-builder --linux deb",
     "build:rpm": "pnpm run build && electron-builder --linux rpm",
     "build:flatpak": "pnpm run build:unpack && flatpak-builder --user --install-deps-from=flathub ./flatpak ai.moeru.airi.dasilva333.flatpak.yml --force-clean",
-    "start:linux": "ELECTRON_RUN_AS_NODE= ELECTRON_DISABLE_SANDBOX=1 electron-vite preview",
+    "start:linux": "ELECTRON_RUN_AS_NODE= ELECTRON_DISABLE_SANDBOX=1 electron-vite preview --skipBuild",
     "dev:linux": "node scripts/ensure-electron.js && ELECTRON_RUN_AS_NODE= ELECTRON_DISABLE_SANDBOX=1 electron-vite dev",
     "rename-artifacts": "mkdir -p bundle && tsx scripts/rename-artifacts.ts",
     "merge-latest-mac": "tsx scripts/merge-latest-mac.ts",
-    "artifacts-metadata": "tsx scripts/artifacts-metadata.ts"
+    "artifacts-metadata": "tsx scripts/artifacts-metadata.ts",
+    "smoke:linux-window-render": "NODE_OPTIONS='--experimental-websocket' tsx scripts/linux-window-render-smoke.ts"
   },
   "dependencies": {
     "@discordjs/voice": "^0.19.0",
@@ -42,7 +43,6 @@
     "@moeru/std": "catalog:",
     "@proj-airi/audio": "workspace:^",
     "@proj-airi/ccc": "workspace:^",
-    "@proj-airi/drizzle-duckdb-wasm": "catalog:",
     "@proj-airi/electron-eventa": "workspace:^",
     "@proj-airi/electron-screen-capture": "workspace:^",
     "@proj-airi/electron-vueuse": "workspace:^",
@@ -161,7 +161,6 @@
     "@types/nprogress": "^0.2.3",
     "@types/splitpanes": "catalog:",
     "@types/three": "^0.183.1",
-    "@types/yauzl": "^2.10.3",
     "@vitejs/plugin-vue": "^6.0.4",
     "@vue-macros/volar": "^3.1.2",
     "builder-util-runtime": "catalog:",
@@ -199,7 +198,6 @@
     "vue-tsc": "^3.1.8",
     "xsschema": "catalog:",
     "yaml": "^2.8.2",
-    "yauzl": "^3.2.0",
     "zod": "catalog:"
   },
   "build": {

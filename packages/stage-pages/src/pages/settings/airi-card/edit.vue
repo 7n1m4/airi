@@ -10,6 +10,9 @@ const router = useRouter()
 const cardId = computed(() => {
   return (route.query.id as string) || (route.query.cardId as string) || undefined
 })
+const initialTab = computed(() => {
+  return (route.query.tab as string) || undefined
+})
 
 function handleCancel() {
   if (window.history.length > 1) {
@@ -29,10 +32,10 @@ function handleSave() {
   }
 }
 
-function handleStudio(targetCardId: string) {
+function handleReview(targetCardId: string) {
   router.push({
     path: '/settings/airi-card',
-    query: { cardId: targetCardId, tab: 'studio' },
+    query: { cardId: targetCardId },
   })
 }
 </script>
@@ -41,10 +44,11 @@ function handleStudio(targetCardId: string) {
   <div class="mx-auto max-w-5xl w-full pb-20 pt-1">
     <CardEditorForm
       :card-id="cardId"
+      :initial-tab="initialTab"
       mode="page"
       @cancel="handleCancel"
       @save="handleSave"
-      @studio="handleStudio"
+      @review="handleReview"
     />
   </div>
 </template>

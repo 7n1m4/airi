@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { isApplePlatform } from '@proj-airi/stage-shared'
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
 import { getStarterCharacter } from '../../../../../constants/prompts/character-defaults'
+import { STARTER_VOICE_CATALOG } from '../../../../../constants/voices/starter-voice-catalog'
 import { getKokoroAdapter } from '../../../../../libs/inference/adapters/kokoro'
 import { WEB_LLM_MODELS } from '../../../../../libs/inference/constants'
 import { NativeAI } from '../../../../../libs/native-ai'
@@ -54,6 +55,7 @@ interface StarterCompanion {
   vesselModelId: string
   defaultKokoroVoice: string
   defaultPocketVoice: string
+  defaultMossVoice?: string
 }
 
 const starterCompanions: StarterCompanion[] = [
@@ -68,7 +70,8 @@ const starterCompanions: StarterCompanion[] = [
     personaCardId: 'default',
     vesselModelId: 'preset-live2d-2',
     defaultKokoroVoice: 'af_bella',
-    defaultPocketVoice: 'anna',
+    defaultPocketVoice: 'airi_relu',
+    defaultMossVoice: 'airi_relu',
   },
   {
     id: 'aria',
@@ -81,7 +84,8 @@ const starterCompanions: StarterCompanion[] = [
     personaCardId: 'aria',
     vesselModelId: 'preset-vrm-1',
     defaultKokoroVoice: 'af_sarah',
-    defaultPocketVoice: 'claire',
+    defaultPocketVoice: 'airi_aria',
+    defaultMossVoice: 'airi_aria',
   },
   {
     id: 'lupin',
@@ -94,7 +98,8 @@ const starterCompanions: StarterCompanion[] = [
     personaCardId: 'lupin',
     vesselModelId: 'preset-vrm-2',
     defaultKokoroVoice: 'af_nicole',
-    defaultPocketVoice: 'vera',
+    defaultPocketVoice: 'airi_lupin',
+    defaultMossVoice: 'airi_lupin',
   },
 ]
 
@@ -144,6 +149,8 @@ function getCompanionVoice(c: StarterCompanion, engine: string): string {
   const norm = normalizeSpeechProviderId(engine)
   if (norm === 'pocket-tts-local')
     return c.defaultPocketVoice
+  if (norm === 'moss-nano-local')
+    return c.defaultMossVoice || c.defaultPocketVoice
   return c.defaultKokoroVoice
 }
 
@@ -259,21 +266,23 @@ const showApiKey = ref(false)
 
 // Benchmark & Connection Test State
 const isTestingConnection = ref(false)
-const connectionStatus = ref<'idle' | 'testing' | 'connected'>('connected')
+const connectionStatus = ref<'idle' | 'testing' | 'connected' | 'error'>('idle')
 const benchmarkDurationMs = ref<number | null>(null)
 const benchmarkElapsedSeconds = ref('0.0s')
 let benchmarkTimer: ReturnType<typeof setInterval> | null = null
 
-const calibratedPacing = computed(() => {
-  if (benchmarkDurationMs.value === null) {
-    const preset = draftStore.state.pacingPreset || 'balanced'
-    return {
-      preset,
-      label: preset === 'snappy' ? 'Snappy' : preset === 'deep' ? 'Deep CoT' : 'Balanced',
-      icon: preset === 'snappy' ? '⚡' : preset === 'deep' ? '🧠' : '⚖️',
-      ttft: '1.2s TTFT',
-    }
+// Reset connection status if provider, model, or API key changes
+watch([llmProvider, apiKey, llmModel], () => {
+  if (connectionStatus.value !== 'testing') {
+    connectionStatus.value = 'idle'
+    benchmarkDurationMs.value = null
   }
+})
+
+const calibratedPacing = computed(() => {
+  if (benchmarkDurationMs.value === null)
+    return null
+
   const ms = benchmarkDurationMs.value
   const ttft = ms < 1000 ? `${Math.round(ms)}ms TTFT` : `${(ms / 1000).toFixed(1)}s TTFT`
   if (ms < 800) {
@@ -285,9 +294,16 @@ const calibratedPacing = computed(() => {
   return { preset: 'balanced' as const, label: 'Balanced', icon: '⚖️', ttft }
 })
 
-function testConnection() {
+async function testConnection() {
   if (isTestingConnection.value)
     return
+
+  if (!isLocalLlmProvider.value && !apiKey.value.trim()) {
+    toast.error('Please enter an API key before testing connection.')
+    connectionStatus.value = 'idle'
+    return
+  }
+
   isTestingConnection.value = true
   connectionStatus.value = 'testing'
   const startTime = performance.now()
@@ -298,25 +314,52 @@ function testConnection() {
     benchmarkElapsedSeconds.value = `${(diff / 1000).toFixed(1)}s`
   }, 50)
 
-  // Calibrated simulation / ping response matching the selected provider
-  const simDuration = isLocalLlmProvider.value
-    ? 480 + Math.random() * 220
-    : 1150 + Math.random() * 450
+  try {
+    if (apiKey.value.trim()) {
+      providersStore.providers[llmProvider.value] = {
+        ...providersStore.providers[llmProvider.value],
+        apiKey: apiKey.value.trim(),
+      }
+      providersStore.markProviderAdded(llmProvider.value)
+    }
 
-  setTimeout(() => {
+    const providerInstance = await providersStore.getProviderInstance(llmProvider.value)
+    if (!providerInstance || typeof (providerInstance as any).chat !== 'function') {
+      throw new Error(`Provider "${llmProvider.value}" does not expose chat completions.`)
+    }
+
+    const { generateText } = await import('@xsai/generate-text')
+    const modelToTest = llmModel.value || 'default'
+    const result = await generateText({
+      ...(providerInstance as any).chat(modelToTest),
+      messages: [{ role: 'user', content: 'Say "Ready" in one word.' }],
+    })
+
+    if (!result?.text) {
+      throw new Error('Empty response received from LLM.')
+    }
+
+    const elapsed = Math.round(performance.now() - startTime)
+    benchmarkDurationMs.value = elapsed
+    connectionStatus.value = 'connected'
+
+    // Auto-calibrate draftStore pacingPreset based on measured latency
+    const recommendedPreset = elapsed < 800 ? 'snappy' : elapsed > 2500 ? 'deep' : 'balanced'
+    draftStore.setThinking({ pacingPreset: recommendedPreset })
+    toast.success(`Connected! (${elapsed < 1000 ? `${elapsed}ms` : `${(elapsed / 1000).toFixed(1)}s`} TTFT)`)
+  }
+  catch (err: any) {
+    console.error('[QuickStart] Connection test failed:', err)
+    connectionStatus.value = 'error'
+    toast.error(err?.message || 'Connection test failed. Check API key, model ID, and network.')
+  }
+  finally {
     if (benchmarkTimer) {
       clearInterval(benchmarkTimer)
       benchmarkTimer = null
     }
-    const elapsed = performance.now() - startTime
-    benchmarkDurationMs.value = elapsed
     isTestingConnection.value = false
-    connectionStatus.value = 'connected'
-
-    // Auto-calibrate draftStore pacingPreset under the hood
-    const recommendedPreset = elapsed < 800 ? 'snappy' : elapsed > 2500 ? 'deep' : 'balanced'
-    draftStore.setThinking({ pacingPreset: recommendedPreset })
-  }, simDuration)
+  }
 }
 
 // ==========================================
@@ -423,6 +466,7 @@ const availableTtsVoices = computed(() => {
   }
   if (normId === 'pocket-tts-local') {
     return [
+      ...STARTER_VOICE_CATALOG.map(v => ({ id: v.id, label: `★ ${v.name}` })),
       { id: 'anna', label: 'Anna (Warm & Conversational)' },
       { id: 'claire', label: 'Claire (Articulate & Clear)' },
       { id: 'vera', label: 'Vera (Deep & Conversational)' },
@@ -434,8 +478,9 @@ const availableTtsVoices = computed(() => {
   }
   if (normId === 'moss-nano-local') {
     return [
-      { id: 'default', label: 'Moss Standard' },
-      { id: 'expressive', label: 'Moss Expressive' },
+      ...STARTER_VOICE_CATALOG.map(v => ({ id: v.id, label: `★ ${v.name}` })),
+      { id: 'Trump', label: 'EN Trump' },
+      { id: 'LJS', label: 'EN LJS' },
     ]
   }
 
@@ -860,10 +905,11 @@ async function handleStartChatting() {
     draftStore.state.modules.tools = true
     draftStore.state.mcpWebSearchEnabled = isWebSearchEnabled.value
     draftStore.state.mcpFilesystemEnabled = isFilesystemMcpEnabled.value
-    draftStore.state.pacingPreset = calibratedPacing.value.preset
-    draftStore.state.subconsciousAsides = calibratedPacing.value.preset !== 'disabled'
-    draftStore.state.subconsciousTier1 = calibratedPacing.value.preset !== 'disabled'
-    draftStore.state.subconsciousTier2 = calibratedPacing.value.preset !== 'disabled'
+    const preset = calibratedPacing.value?.preset || draftStore.state.pacingPreset || 'balanced'
+    draftStore.state.pacingPreset = preset
+    draftStore.state.subconsciousAsides = true
+    draftStore.state.subconsciousTier1 = true
+    draftStore.state.subconsciousTier2 = true
 
     try {
       await commitStarterCompanion(draftStore.state)
@@ -1028,19 +1074,43 @@ async function handleStartChatting() {
           </button>
 
           <div :class="['flex items-center gap-2']">
-            <!-- Calibrated Pacing Badge inside Brain Section -->
+            <!-- Calibrated Pacing Badge inside Brain Section (Only when calibrated and connected) -->
             <div
-              v-if="connectionStatus === 'connected'"
+              v-if="connectionStatus === 'connected' && calibratedPacing"
               :class="['inline-flex items-center gap-1 px-2 py-0.5 rounded-lg border border-cyan-500/20 bg-cyan-500/10 text-cyan-500 dark:text-cyan-400 text-[10px] font-mono font-medium shadow-xs']"
             >
               <span>{{ calibratedPacing.icon }}</span>
               <span>Calibrated: {{ calibratedPacing.label }} ({{ calibratedPacing.ttft }})</span>
             </div>
 
-            <!-- Connected Dot Indicator -->
-            <div :class="['flex items-center gap-1.5 text-[11px] font-medium text-emerald-500 dark:text-emerald-400 font-mono']">
+            <!-- Status Indicator -->
+            <div
+              v-if="connectionStatus === 'connected'"
+              :class="['flex items-center gap-1.5 text-[11px] font-medium text-emerald-500 dark:text-emerald-400 font-mono']"
+            >
               <span :class="['w-2 h-2 rounded-full bg-emerald-500']" />
               <span>Connected</span>
+            </div>
+            <div
+              v-else-if="connectionStatus === 'error'"
+              :class="['flex items-center gap-1.5 text-[11px] font-medium text-rose-500 dark:text-rose-400 font-mono']"
+            >
+              <span :class="['w-2 h-2 rounded-full bg-rose-500']" />
+              <span>Failed</span>
+            </div>
+            <div
+              v-else-if="!isLocalLlmProvider && !apiKey.trim()"
+              :class="['flex items-center gap-1.5 text-[11px] font-medium text-neutral-400 font-mono']"
+            >
+              <span :class="['w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600']" />
+              <span>Key required</span>
+            </div>
+            <div
+              v-else
+              :class="['flex items-center gap-1.5 text-[11px] font-medium text-neutral-400 font-mono']"
+            >
+              <span :class="['w-2 h-2 rounded-full bg-neutral-300 dark:bg-neutral-600']" />
+              <span>Not tested</span>
             </div>
           </div>
         </div>
@@ -1142,7 +1212,7 @@ async function handleStartChatting() {
               type="checkbox"
               :class="['sr-only peer']"
             >
-            <div :class="['w-10 h-5.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\'\'] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-cyan-500']" />
+            <div :class="['w-10 h-5.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-empty after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-cyan-500']" />
           </label>
         </div>
 
@@ -1259,7 +1329,7 @@ async function handleStartChatting() {
               type="checkbox"
               :class="['sr-only peer']"
             >
-            <div :class="['w-10 h-5.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\'\'] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-cyan-500']" />
+            <div :class="['w-10 h-5.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-empty after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-cyan-500']" />
           </label>
         </div>
 
@@ -1368,7 +1438,7 @@ async function handleStartChatting() {
             type="checkbox"
             :class="['sr-only peer']"
           >
-          <div :class="['w-8 h-4.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\'\'] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-cyan-500']" />
+          <div :class="['w-8 h-4.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-empty after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-cyan-500']" />
         </label>
       </div>
 
@@ -1389,7 +1459,7 @@ async function handleStartChatting() {
             type="checkbox"
             :class="['sr-only peer']"
           >
-          <div :class="['w-8 h-4.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\'\'] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-cyan-500']" />
+          <div :class="['w-8 h-4.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-empty after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-cyan-500']" />
         </label>
       </div>
 
@@ -1410,7 +1480,7 @@ async function handleStartChatting() {
             type="checkbox"
             :class="['sr-only peer']"
           >
-          <div :class="['w-8 h-4.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\'\'] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-cyan-500']" />
+          <div :class="['w-8 h-4.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-empty after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-cyan-500']" />
         </label>
       </div>
 
@@ -1431,7 +1501,7 @@ async function handleStartChatting() {
             type="checkbox"
             :class="['sr-only peer']"
           >
-          <div :class="['w-8 h-4.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[\'\'] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-cyan-500']" />
+          <div :class="['w-8 h-4.5 bg-neutral-200 dark:bg-neutral-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-empty after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3.5 after:w-3.5 after:transition-all peer-checked:bg-cyan-500']" />
         </label>
       </div>
     </div>

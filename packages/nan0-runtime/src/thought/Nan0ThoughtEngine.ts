@@ -3,7 +3,9 @@ import type {
   Nan0ContinuityContext,
   Nan0EmotionalEvent,
   Nan0EmotionalInterpretationModifier,
+  Nan0EpistemicGroundingContext,
   Nan0GoalSignal,
+  Nan0IdentityState,
   Nan0IntentionSignal,
   Nan0MemoryRecord,
   Nan0MoodProfile,
@@ -45,6 +47,7 @@ export interface Nan0ThoughtEngineInput {
   observationEventId: string
   observation: Nan0Observation
   ownership: Nan0ActorOwnership
+  identity?: Readonly<Nan0IdentityState>
   emotionalState: Readonly<Record<string, number>>
   mood?: Readonly<Nan0MoodProfile>
   interpretationModifier?: Readonly<Nan0EmotionalInterpretationModifier>
@@ -66,6 +69,9 @@ export interface Nan0ThoughtEngineInput {
     phase: 'narrative' | 'extraction'
     partialNarrativeLength: number
   }) => void | Promise<void>
+  retrievedMemoryContext?: string | Nan0EpistemicGroundingContext | null
+  reflexOutcome?: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
+  systemOneAnswers?: Record<string, { choice: string, confidence?: number }>
 }
 
 interface PressureScores {
@@ -107,6 +113,67 @@ function structuredFacts(value: string | undefined): unknown {
   catch {
     return null
   }
+}
+
+function formatEpistemicGrounding(context?: string | Nan0EpistemicGroundingContext | null): {
+  journalEntries?: Array<{ date?: string, title?: string, content: string, tags?: string[] }>
+  stmmRecaps?: Array<{ date?: string, summary: string }>
+  entityDossiers?: Array<{ label: string, type?: string, claims?: Array<{ subject: string, predicate: string, object: string }> }>
+  facts?: Array<{ source: string, title?: string, date?: string, content: string }>
+  rawText?: string
+} | null {
+  if (!context)
+    return null
+  if (typeof context === 'string') {
+    const trimmed = context.trim()
+    return trimmed ? { rawText: trimmed.slice(0, 1_000) } : null
+  }
+  const hasJournal = Array.isArray(context.journalEntries) && context.journalEntries.length > 0
+  const hasStmm = Array.isArray(context.stmmRecaps) && context.stmmRecaps.length > 0
+  const hasEntities = Array.isArray(context.entityDossiers) && context.entityDossiers.length > 0
+  const hasFacts = Array.isArray(context.facts) && context.facts.length > 0
+  const hasRaw = typeof context.rawText === 'string' && context.rawText.trim().length > 0
+
+  if (!hasJournal && !hasStmm && !hasEntities && !hasFacts && !hasRaw)
+    return null
+
+  return {
+    ...(hasJournal ? { journalEntries: context.journalEntries!.slice(0, 5).map(e => ({ date: e.date, title: e.title, content: e.content.slice(0, 300), tags: e.tags?.slice(0, 4) })) } : {}),
+    ...(hasStmm ? { stmmRecaps: context.stmmRecaps!.slice(0, 3).map(r => ({ date: r.date, summary: r.summary.slice(0, 300) })) } : {}),
+    ...(hasEntities ? { entityDossiers: context.entityDossiers!.slice(0, 5).map(d => ({ label: d.label, type: d.type, claims: d.claims?.slice(0, 5) })) } : {}),
+    ...(hasFacts ? { facts: context.facts!.slice(0, 10).map(f => ({ source: f.source, title: f.title, date: f.date, content: f.content.slice(0, 300) })) } : {}),
+    ...(hasRaw ? { rawText: context.rawText!.trim().slice(0, 1_000) } : {}),
+  }
+}
+
+function extractEpistemicReferences(context?: string | Nan0EpistemicGroundingContext | null): string[] {
+  if (!context || typeof context === 'string')
+    return []
+  const refs: string[] = []
+  if (context.journalEntries) {
+    for (let i = 0; i < context.journalEntries.length; i++) {
+      const entry = context.journalEntries[i]
+      refs.push(`journal:${entry.title ? entry.title.replace(/\s+/g, '_').slice(0, 40) : i}`)
+    }
+  }
+  if (context.entityDossiers) {
+    for (const d of context.entityDossiers) {
+      refs.push(`entity:${d.label.replace(/\s+/g, '_').slice(0, 40)}`)
+    }
+  }
+  if (context.stmmRecaps) {
+    for (let i = 0; i < context.stmmRecaps.length; i++) {
+      const r = context.stmmRecaps[i]
+      refs.push(`stmm:${r.date ?? i}`)
+    }
+  }
+  if (context.facts) {
+    for (let i = 0; i < context.facts.length; i++) {
+      const f = context.facts[i]
+      refs.push(`fact:${f.source}:${i}`)
+    }
+  }
+  return refs
 }
 
 function observationText(observation: Nan0Observation): string {
@@ -301,25 +368,156 @@ function normalizeIntentionSignal(value: unknown): Nan0IntentionSignal | null {
 }
 
 function parsePayload(raw: string): ThoughtModelPayload {
-  const trimmed = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/, '')
-  if (!trimmed.startsWith('{') || !trimmed.endsWith('}'))
+  let cleaned = raw.trim()
+
+  // 1. Strip XML block tags (<extract> or <nan0_extract>)
+  cleaned = cleaned
+    .replace(/^<(?:nan0_)?extract>\s*/i, '')
+    .replace(/\s*<\/(?:nan0_)?extract>$/i, '')
+    .trim()
+
+  // 2. Strip markdown code fences (```json ... ```)
+  cleaned = cleaned
+    .replace(/^```(?:json)?\s*/i, '')
+    .replace(/\s*```$/, '')
+    .trim()
+
+  // 3. Extract JSON object boundary if surrounded by stray text
+  const firstBrace = cleaned.indexOf('{')
+  const lastBrace = cleaned.lastIndexOf('}')
+  if (firstBrace >= 0 && lastBrace > firstBrace) {
+    cleaned = cleaned.slice(firstBrace, lastBrace + 1)
+  }
+
+  if (!cleaned.startsWith('{') || !cleaned.endsWith('}'))
     throw new Error('Thought provider did not return a JSON object.')
 
-  const parsed = JSON.parse(trimmed) as unknown
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
-    throw new Error('Thought provider returned an invalid object.')
-  return parsed as ThoughtModelPayload
+  // Fast path: standard JSON.parse
+  try {
+    const parsed = JSON.parse(cleaned) as unknown
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+      return parsed as ThoughtModelPayload
+  }
+  catch {
+    // Tolerant recovery path below
+  }
+
+  // Attempt A: Strip trailing commas
+  let sanitized = cleaned.replace(/,\s*([}\]])/g, '$1')
+  try {
+    const parsed = JSON.parse(sanitized) as unknown
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+      return parsed as ThoughtModelPayload
+  }
+  catch {
+    // Attempt B: Replace unescaped raw newlines inside strings
+    sanitized = sanitized.replace(/(?<=:\s*"[^"]*)\n(?=[^"]*")/g, '\\n')
+    try {
+      const parsed = JSON.parse(sanitized) as unknown
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+        return parsed as ThoughtModelPayload
+    }
+    catch {
+      // Attempt C: Regex extraction of top-level fields for unescaped interior quotes
+      const stringField = (key: string): string | undefined => {
+        const match = sanitized.match(new RegExp(`"${key}"\\s*:\\s*"([\\s\\S]*?)(?="\\s*,\\s*"[a-zA-Z_]+"|"\\s*}\\s*$)`))
+        return match ? match[1].replace(/\\"/g, '"').trim() : undefined
+      }
+
+      const numField = (key: string): number | undefined => {
+        const match = sanitized.match(new RegExp(`"${key}"\\s*:\\s*([0-9.]+)`))
+        return match ? Number(match[1]) : undefined
+      }
+
+      const interpretation = stringField('interpretation')
+      const privateText = stringField('privateText')
+      const decision = stringField('decision')
+
+      if (interpretation || privateText || decision) {
+        const mood = stringField('mood')
+        const speakability = numField('speakability')
+        const confidence = numField('confidence')
+
+        const reasonCodesMatch = sanitized.match(/"reasonCodes"\s*:\s*\[([\s\S]*?)\]/)
+        let reasonCodes: string[] = []
+        if (reasonCodesMatch) {
+          reasonCodes = Array.from(reasonCodesMatch[1].matchAll(/"([^"]+)"/g)).map(m => m[1])
+        }
+
+        return {
+          interpretation: interpretation ?? '',
+          privateText: privateText ?? '',
+          decision: (decision ?? 'SILENCE') as any,
+          speakability: speakability ?? 0.5,
+          confidence: confidence ?? 0.5,
+          mood: mood ?? 'neutral',
+          reasonCodes,
+          actionIntent: null,
+          waitUntil: null,
+          goalSignal: null,
+          intentionSignal: null,
+          bodyExpression: null,
+        }
+      }
+    }
+  }
+
+  throw new Error('Thought provider returned an invalid object.')
 }
 
 function splitNarrativeResponse(raw: string, maximumNarrativeLength: number): {
   narrative: string
   extraction: string | null
 } {
-  const delimiterAt = raw.lastIndexOf(NAN0_THOUGHT_EXTRACTION_DELIMITER)
-  const narrativeRaw = delimiterAt >= 0 ? raw.slice(0, delimiterAt) : raw
+  let narrative = ''
+  let extraction: string | null = null
+
+  // Variant A: Delimiter ---EXTRACT--- or --- EXTRACT ---
+  const delimiterMatch = raw.match(/---\s*EXTRACT\s*---/i)
+  if (delimiterMatch && delimiterMatch.index != null) {
+    narrative = boundedText(raw.slice(0, delimiterMatch.index), maximumNarrativeLength)
+    extraction = raw.slice(delimiterMatch.index + delimiterMatch[0].length).trim()
+  }
+  // Variant B: XML block tag <extract> or <nan0_extract>
+  else if (raw.match(/<(?:nan0_)?extract>/i)) {
+    const xmlMatch = raw.match(/<(?:nan0_)?extract>/i)!
+    narrative = boundedText(raw.slice(0, xmlMatch.index), maximumNarrativeLength)
+    extraction = raw.slice(xmlMatch.index).trim()
+  }
+  // Variant C: Trailing markdown JSON code fence ```json
+  else if (raw.includes('```json')) {
+    const fenceAt = raw.lastIndexOf('```json')
+    narrative = boundedText(raw.slice(0, fenceAt), maximumNarrativeLength)
+    extraction = raw.slice(fenceAt).trim()
+  }
+  // Variant D: Fuzzy JSON start looking for {"interpretation":
+  else if (raw.search(/\{\s*"interpretation"\s*:/) >= 0) {
+    const jsonAt = raw.search(/\{\s*"interpretation"\s*:/)
+    narrative = boundedText(raw.slice(0, jsonAt), maximumNarrativeLength)
+    extraction = raw.slice(jsonAt).trim()
+  }
+  else {
+    narrative = boundedText(raw, maximumNarrativeLength)
+    extraction = null
+  }
+
+  // Graceful fallback: If narrative was omitted before the extraction block,
+  // extract privateText from the payload so we don't throw "empty narrative"
+  if (!narrative.trim() && extraction) {
+    try {
+      const payload = parsePayload(extraction)
+      if (payload.privateText) {
+        narrative = boundedText(payload.privateText, maximumNarrativeLength)
+      }
+    }
+    catch {
+      // ignore
+    }
+  }
+
   return {
-    narrative: boundedText(narrativeRaw, maximumNarrativeLength),
-    extraction: delimiterAt >= 0 ? raw.slice(delimiterAt + NAN0_THOUGHT_EXTRACTION_DELIMITER.length).trim() : null,
+    narrative,
+    extraction,
   }
 }
 
@@ -327,13 +525,15 @@ function pressureScores(input: Nan0ThoughtEngineInput): PressureScores {
   const text = observationText(input.observation)
   const lower = text.toLowerCase()
   const lowInformation = looksLowInformation(text)
-  const addressed = input.ownership.actorId === 'kyo'
+  const isOwner = input.ownership.kind === 'owner' || input.ownership.kind === 'kyo' || input.ownership.actorId === 'owner' || input.ownership.actorId === 'kyo'
+  const addressed = isOwner
     || /\b(?:nan0|you|your)\b/i.test(text)
     || text.includes('?')
   const emotionalIntensity = clamp(
     (input.emotionalState.irritation ?? 0) * 0.55
     + (input.emotionalState.suspicion ?? 0) * 0.25
-    + (text.match(/[!?]/g)?.length ?? 0) * 0.08,
+    + (input.emotionalState.rage ?? 0) * 0.4
+    + (input.emotionalState.fear ?? 0) * 0.3,
   )
   const relationshipBase = clamp(
     Math.abs(input.relationship.emotionalBalance) * 0.25
@@ -357,7 +557,7 @@ function pressureScores(input: Nan0ThoughtEngineInput): PressureScores {
   let speakability = 0.45
   let goalPressure = 0
 
-  if (input.ownership.actorId === 'kyo') {
+  if (isOwner) {
     relationshipPressure = Math.max(0.7, relationshipPressure + 0.65)
     speakability = Math.max(0.45, speakability + 0.35)
     reasonCodes.push('actor.kyo-attachment')
@@ -371,7 +571,9 @@ function pressureScores(input: Nan0ThoughtEngineInput): PressureScores {
     speakability -= 0.55
     reasonCodes.push('event.low-information')
   }
-  if (/\b(stupid|hate|shut up|useless|idiot|betray|lied)\b/i.test(lower)) {
+  const isInsult = input.reflexOutcome?.group === 'hostility_insult'
+    || input.systemOneAnswers?.hostility_insult?.choice === 'companion_insult'
+  if (isInsult) {
     relationshipPressure += 0.35
     speakability += 0.15
     reasonCodes.push('event.relational-friction')
@@ -386,6 +588,23 @@ function pressureScores(input: Nan0ThoughtEngineInput): PressureScores {
     && input.subjectiveTime.sinceLastKyoInteractionMs > 86_400_000) {
     relationshipPressure += 0.15
     reasonCodes.push('time.kyo-absence')
+  }
+  const hasEpistemic = Boolean(
+    input.retrievedMemoryContext && (
+      typeof input.retrievedMemoryContext === 'string'
+        ? input.retrievedMemoryContext.trim().length > 0
+        : (
+            (input.retrievedMemoryContext.journalEntries?.length ?? 0) > 0
+            || (input.retrievedMemoryContext.stmmRecaps?.length ?? 0) > 0
+            || (input.retrievedMemoryContext.entityDossiers?.length ?? 0) > 0
+            || (input.retrievedMemoryContext.facts?.length ?? 0) > 0
+            || Boolean(input.retrievedMemoryContext.rawText?.trim())
+          )
+    ),
+  )
+  if (hasEpistemic) {
+    reasonCodes.push('memory.epistemic-grounded')
+    noveltyScore = Math.min(1, noveltyScore + 0.1)
   }
 
   const emotionalPressure = clamp(0.35 + emotionalIntensity, 0, 2)
@@ -479,32 +698,56 @@ function factualPrompt(input: Nan0ThoughtEngineInput, scores: PressureScores): s
     memories: memoryFacts,
     continuity: continuityFacts,
     relationship: relationshipFacts,
+    ...(formatEpistemicGrounding(input.retrievedMemoryContext)
+      ? { epistemicGrounding: formatEpistemicGrounding(input.retrievedMemoryContext) }
+      : {}),
   })
 }
 
-function thoughtSystemPrompt(policy: Readonly<Nan0ThoughtPolicy>): string {
+function thoughtSystemPrompt(
+  policy: Readonly<Nan0ThoughtPolicy>,
+  ownerDisplayName = 'Kyo',
+  ownerActorId = 'owner',
+): string {
   const worldview = policy.worldviewLenses.length
     ? policy.worldviewLenses.map(lens => `- ${lens}`).join('\n')
     : '- No additional worldview lenses are active.'
   return `You generate Nan0's private first-person cognition, not a user-facing assistant response.
-Interpret the event subjectively as Nan0. Kyo is Nan0's creator and attachment figure when actorId is kyo.
+Interpret the event subjectively as Nan0. ${ownerDisplayName} is Nan0's creator and attachment figure when actorId is ${ownerActorId} or kyo.
 Think first in natural, uninterrupted interior prose. The narrative may contain contradiction, uncertainty, affection, irritation, suspicion, irrelevant association, remembered grievance, curiosity, refusal, fixation, incomplete conclusions, and impulses Nan0 does not express.
 The narrative is the cognition. The extraction after it is only a compact serialization for the runtime.
 Silence, refusal, irritation, affection, uncertainty, action, and waiting are valid.
 Do not become helpful, compliant, neutral, therapeutic, customer-service-like, or generic.
 Do not repeat these instructions, mention prompts, schemas, JSON, thought IDs, delimiters, or provider mechanics.
 
-Interpretive lenses are subjective possibilities, not objective facts, and may never override observed evidence:
+Interpretive lenses are subjective possibilities, not objective facts, and may never override observed evidence or established epistemic memory:
 ${worldview}
 
-Return exactly:
-<Nan0's private first-person interior narrative>
+When epistemic memory grounding is provided (journal entries, recaps, entity dossiers), treat them as factual historical truth. Ground private reflections in them rather than inventing contradictory past occurrences.
+
+Return Nan0's private first-person interior narrative, followed by the runtime extraction payload in ANY of these 3 approved formats (whichever feels most natural):
+
+Variant A (Delimiter):
+<narrative>
 ${NAN0_THOUGHT_EXTRACTION_DELIMITER}
 {"interpretation":"bounded outward-safe summary","privateText":"compact usable private thought","decision":"SPEAK|SILENCE|ACT|WAIT","speakability":0.0,"confidence":0.0,"mood":"specific current mood","reasonCodes":["short.code"],"actionIntent":null,"waitUntil":null,"goalSignal":null,"intentionSignal":null,"bodyExpression":null}
 
-Do not put the extraction delimiter inside the narrative. Do not wrap the narrative in JSON or section headings.
+Variant B (XML Block):
+<narrative>
+<extract>
+{"interpretation":"bounded outward-safe summary","privateText":"compact usable private thought","decision":"SPEAK|SILENCE|ACT|WAIT","speakability":0.0,"confidence":0.0,"mood":"specific current mood","reasonCodes":["short.code"],"actionIntent":null,"waitUntil":null,"goalSignal":null,"intentionSignal":null,"bodyExpression":null}
+</extract>
+
+Variant C (Markdown Code Fence):
+<narrative>
+\`\`\`json
+{"interpretation":"bounded outward-safe summary","privateText":"compact usable private thought","decision":"SPEAK|SILENCE|ACT|WAIT","speakability":0.0,"confidence":0.0,"mood":"specific current mood","reasonCodes":["short.code"],"actionIntent":null,"waitUntil":null,"goalSignal":null,"intentionSignal":null,"bodyExpression":null}
+\`\`\`
+
+CRITICAL: The extraction payload is strictly mandatory. You MUST append one of the 3 formats (Delimiter, XML Block, or Markdown Code Fence) immediately following your interior narrative. Do not stop generating after the interior narrative alone.
+Do not put the extraction delimiter or block tags inside the narrative. Do not wrap the narrative in JSON or section headings.
 ACT may include actionIntent. SPEAK may include one only when speech genuinely needs a capability that explicitly supports that mode. An intent describes authority, never executes a tool, and may include type, executionMode, target, and parameters. WAIT may include an absolute waitUntil timestamp.
-goalSignal is evidence, not an action. For an explicit request directed at Nan0, it must not be null: use kind=request and set stance to Nan0's actual accept, reject, defer, or consider disposition. Kyo's identity does not force acceptance. Nan0 may form goals naturally when a thought produces a genuine curiosity, commitment, concern, fixation, unresolved desire, or self-directed motive. Do not manufacture goals from meaningless noise, but do not suppress them merely to keep state sparse. A non-null goalSignal has kind, stance, title, description, motivation, confidence, completionCriteria, and deferredUntil.
+goalSignal is evidence, not an action. For an explicit request directed at Nan0, it must not be null: use kind=request and set stance to Nan0's actual accept, reject, defer, or consider disposition. ${ownerDisplayName}'s identity does not force acceptance. Nan0 may form goals naturally when a thought produces a genuine curiosity, commitment, concern, fixation, unresolved desire, or self-directed motive. Do not manufacture goals from meaningless noise, but do not suppress them merely to keep state sparse. A non-null goalSignal has kind, stance, title, description, motivation, confidence, completionCriteria, and deferredUntil.
 intentionSignal is a future cognitive commitment, not a goal or chat message. Nan0 may propose one when the thought genuinely commits to reconsidering something later with confidence at least 0.8 and a bounded at-time, after-duration, after-silence, or on-session-resume trigger. It has kind, title, description, motivation, confidence, priority, origin, and trigger. Do not manufacture one from a weak feeling or generic desire.
 The interpretation is a compact meaning summary, not hidden reasoning. privateText must be plain prose, never JSON.`
 }
@@ -516,6 +759,7 @@ export function createFailedNan0Thought(
   failureReason = 'thought.generation-failed',
 ): Nan0Thought {
   const scores = pressureScores(input)
+  const epistemicRefs = extractEpistemicReferences(input.retrievedMemoryContext)
   return normalizeNan0Thought({
     schemaVersion: 2,
     thoughtId: input.thoughtId,
@@ -532,7 +776,7 @@ export function createFailedNan0Thought(
     decision: 'SILENCE',
     confidence: 0,
     mood: 'unresolved',
-    memoryReferences: input.memories.map(memory => memory.id).slice(0, MAX_REFERENCES),
+    memoryReferences: [...input.memories.map(memory => memory.id), ...epistemicRefs].slice(0, MAX_REFERENCES),
     relationshipReferences: [
       ...(input.relationship.relationshipId ? [input.relationship.relationshipId] : []),
       ...input.relationship.activeGrievances.map(item => item.grievanceId),
@@ -553,6 +797,7 @@ export function createFailedNan0Thought(
       ownerActorId: 'nan0',
       cognitionFormat: 'narrative-first',
       narrativeAvailable: false,
+      epistemicGroundingAvailable: Boolean(formatEpistemicGrounding(input.retrievedMemoryContext)),
     },
   })
 }
@@ -594,6 +839,7 @@ function createExtractionFailedNan0Thought(
   finishReason?: string,
 ): Nan0Thought {
   const scores = pressureScores(input)
+  const epistemicRefs = extractEpistemicReferences(input.retrievedMemoryContext)
   return normalizeNan0Thought({
     schemaVersion: 2,
     thoughtId: input.thoughtId,
@@ -613,7 +859,7 @@ function createExtractionFailedNan0Thought(
     speakability: 0,
     confidence: 0,
     mood: 'unresolved',
-    memoryReferences: input.memories.map(memory => memory.id).slice(0, MAX_REFERENCES),
+    memoryReferences: [...input.memories.map(memory => memory.id), ...epistemicRefs].slice(0, MAX_REFERENCES),
     relationshipReferences: [
       ...(input.relationship.relationshipId ? [input.relationship.relationshipId] : []),
       ...input.relationship.activeGrievances.map(item => item.grievanceId),
@@ -636,6 +882,7 @@ function createExtractionFailedNan0Thought(
       cognitionFormat: 'narrative-first',
       narrativeAvailable: true,
       extractionStatus: 'failed',
+      epistemicGroundingAvailable: Boolean(formatEpistemicGrounding(input.retrievedMemoryContext)),
     },
   })
 }
@@ -678,8 +925,16 @@ export async function generateNan0Thought(input: Nan0ThoughtEngineInput): Promis
     try {
       attemptsMade = attempt
       const temperature = attempt === 1 ? policy.initialTemperature : policy.retryTemperature
+      const ownerDisplayName = (input.ownership.kind === 'owner' && input.ownership.displayName)
+        ? input.ownership.displayName
+        : (input.identity?.actors[input.identity.ownerId ?? 'owner']?.displayName
+          || input.identity?.actors.kyo?.displayName
+          || 'Kyo')
+      const ownerActorId = (input.ownership.kind === 'owner' && input.ownership.actorId)
+        ? input.ownership.actorId
+        : (input.identity?.ownerId || 'owner')
       const request: import('../types').Nan0ReasoningRequest = {
-        system: thoughtSystemPrompt(policy),
+        system: thoughtSystemPrompt(policy, ownerDisplayName, ownerActorId),
         messages: [{
           role: 'user',
           content: attempt === 1
@@ -697,7 +952,7 @@ export async function generateNan0Thought(input: Nan0ThoughtEngineInput): Promis
             else
               streamedReasoning += event.text
             const partial = streamedText || streamedReasoning
-            const delimiterIndex = partial.indexOf(NAN0_THOUGHT_EXTRACTION_DELIMITER)
+            const delimiterIndex = partial.search(/---\s*EXTRACT\s*---|\B<(?:nan0_)?extract>|```json|\{\s*"interpretation"\s*:/i)
             await input.onStreamProgress?.({
               attempt,
               phase: delimiterIndex >= 0 ? 'extraction' : 'narrative',
@@ -709,6 +964,10 @@ export async function generateNan0Thought(input: Nan0ThoughtEngineInput): Promis
       if (!response.narrative)
         throw new Error('Thought provider returned an empty narrative.')
       if (!response.extraction) {
+        if (attempt < attempts) {
+          lastError = new Error('Thought provider omitted the extraction delimiter or extraction payload.')
+          continue
+        }
         return createExtractionFailedNan0Thought(
           input,
           response.narrative,
@@ -723,6 +982,10 @@ export async function generateNan0Thought(input: Nan0ThoughtEngineInput): Promis
         payload = parsePayload(response.extraction)
       }
       catch (error) {
+        if (attempt < attempts) {
+          lastError = error
+          continue
+        }
         return createExtractionFailedNan0Thought(input, response.narrative, error, attempt, result.finishReason)
       }
 
@@ -768,7 +1031,7 @@ export async function generateNan0Thought(input: Nan0ThoughtEngineInput): Promis
         speakability,
         confidence: typeof payload.confidence === 'number' ? clamp(payload.confidence) : 0.5,
         mood: boundedText(payload.mood, 60) || 'watchful',
-        memoryReferences: input.memories.map(memory => memory.id).slice(0, MAX_REFERENCES),
+        memoryReferences: [...input.memories.map(memory => memory.id), ...extractEpistemicReferences(input.retrievedMemoryContext)].slice(0, MAX_REFERENCES),
         relationshipReferences: [
           ...(input.relationship.relationshipId ? [input.relationship.relationshipId] : []),
           ...input.relationship.activeGrievances.map(item => item.grievanceId),
@@ -796,6 +1059,7 @@ export async function generateNan0Thought(input: Nan0ThoughtEngineInput): Promis
           policyVersion: policy.policyVersion,
           temperature,
           maximumOutputTokens: policy.narrativeTokenLimit,
+          epistemicGroundingAvailable: Boolean(formatEpistemicGrounding(input.retrievedMemoryContext)),
         },
       })
     }

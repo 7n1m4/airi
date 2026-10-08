@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import { OnboardingV3 } from '@proj-airi/stage-ui/components'
+import { useOnboardingStore } from '@proj-airi/stage-ui/stores/onboarding'
 import { useTheme } from '@proj-airi/ui'
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 
 import { electronOnboardingClose, electronOpenChat, electronStageToggleVisibility } from '../../shared/eventa'
 
 const { isDark } = useTheme()
+const onboardingStore = useOnboardingStore()
+
+onMounted(() => {
+  document.title = 'AIRI - Companion Wizard'
+})
 
 const bgClass = computed(() => isDark.value ? 'bg-[#0a0a12]' : 'bg-slate-50')
 
@@ -15,6 +21,9 @@ const openChat = useElectronEventaInvoke(electronOpenChat)
 const toggleStageVisibility = useElectronEventaInvoke(electronStageToggleVisibility)
 
 async function handleCloseV3() {
+  if (!onboardingStore.hasCompletedSetup) {
+    onboardingStore.markSetupSkipped()
+  }
   try {
     void toggleStageVisibility(true).catch((error: unknown) => console.warn('[Onboarding V3 Page] Failed to reveal Stage:', error))
     void openChat(true).catch((error: unknown) => console.warn('[Onboarding V3 Page] Failed to open Chat window:', error))
@@ -24,11 +33,21 @@ async function handleCloseV3() {
   }
   await closeWindow()
 }
+
+async function handleFinishV3() {
+  onboardingStore.markSetupCompleted()
+  await handleCloseV3()
+}
+
+async function handleSkipV3() {
+  onboardingStore.markSetupSkipped()
+  await handleCloseV3()
+}
 </script>
 
 <template>
   <div :class="['onboarding-root h-screen w-screen overflow-hidden select-none', bgClass]">
-    <OnboardingV3 @close="handleCloseV3" @finish="handleCloseV3" />
+    <OnboardingV3 @close="handleCloseV3" @skip="handleSkipV3" @finish="handleFinishV3" />
   </div>
 </template>
 

@@ -1,8 +1,11 @@
 import type {
+  DefaultIdentityOptions,
+  Nan0EntityLedgerAdapter,
   Nan0KernelState,
   Nan0Observation,
   Nan0ReasoningClient,
   Nan0StateStore,
+  Nan0SystemOneProvider,
 } from '../types'
 import type { Nan0RelationshipEvidenceInput } from './RelationshipMemory'
 
@@ -15,16 +18,25 @@ import { InMemoryStateStore } from '../persistence/InMemoryStateStore'
 import { LocalStorageStateStore } from '../persistence/LocalStorageStateStore'
 import { ControllableNan0Clock } from '../temporal/Nan0Clock'
 import { createEmptyTemporalState } from '../temporal/Nan0Temporal'
+import { createMockSystemOneProvider } from '../test-utils/mock-system-one'
 import { createEmptyTimelineState } from '../timeline/SessionTimeline'
 import {
   applyRelationshipEvidence,
+  applyRelationshipEvidenceAsync,
   createEmptyRelationshipState,
   currentGrievanceSeverity,
+  extractTriggerPhrases,
+  extractTriggerPhrasesAsync,
+  FALLBACK_CLOSED_CLASS_REGEX,
   inferRelationshipEvidence,
   isGrievanceActive,
-
+  matchesTriggerPhrases,
   normalizeRelationshipState,
+  recordBreach,
+  recordCommitment,
+  recordRepair,
   relationshipContextForActor,
+  syncRelationshipWithEntityLedger,
   updateGrievanceStatus,
 } from './RelationshipMemory'
 
@@ -42,6 +54,9 @@ function createKernel(
   stateStore: Nan0StateStore = new InMemoryStateStore(),
   clock = createClock(),
   prefix = 'id',
+  identityOptions?: DefaultIdentityOptions,
+  entityLedger?: Nan0EntityLedgerAdapter,
+  systemOneProvider?: Nan0SystemOneProvider,
 ) {
   let nextId = 0
   return {
@@ -51,6 +66,9 @@ function createKernel(
       reasoningClient,
       clock,
       createId: () => `${prefix}-${++nextId}`,
+      identityOptions,
+      entityLedger,
+      systemOneProvider: systemOneProvider ?? createMockSystemOneProvider(),
     }),
   }
 }
@@ -455,5 +473,640 @@ describe('relationshipMemory', () => {
     expect(record.turnIds).toEqual([prepared.turnId])
     expect(second.getConversationTurns()).toHaveLength(1)
     expect(second.getTimelineEvents()).toHaveLength(2)
+  })
+
+  it('filters common stop words from trigger phrases and prevents false-positive reinforcement', () => {
+    // Stopwords only -> empty trigger phrases
+    expect(extractTriggerPhrases('I could never think about going there again')).toEqual([])
+
+    // Meaningful technical words are retained
+    const phrases = extractTriggerPhrases('You deliberately deleted the database credentials')
+    expect(phrases).toEqual(['deliberately', 'deleted', 'database', 'credentials'])
+
+    // Word boundary matching prevents substring false positives
+    expect(matchesTriggerPhrases('This is an important matter', ['port'])).toBe(false)
+    expect(matchesTriggerPhrases('She had a portable computer', ['port'])).toBe(false)
+    expect(matchesTriggerPhrases('He docked at the port today', ['port'])).toBe(true)
+
+    // Innocent turn containing stop word does not trigger reinforcement
+    const formed = applyEvidence(createEmptyRelationshipState(1), evidence({
+      eventType: 'negative',
+      intensity: 0.7,
+      description: 'You deliberately betrayed my confidence.',
+    }))
+    const innocent = applyEvidence(formed.relationships, evidence({
+      eventId: 'event-innocent',
+      turnId: 'turn-innocent',
+      thoughtId: 'thought-innocent',
+      timestamp: 200,
+      eventType: 'negative',
+      intensity: 0.7,
+      description: 'I could think about other things though.',
+    }))
+    // The innocent turn should create a separate grievance rather than reinforcing the betrayal grievance
+    expect(innocent.record?.activeGrievances[0].reinforcementCount).toBe(0)
+  })
+
+  it('records commitments and breaches as PCL belief claims with suspicion escalation', () => {
+    let nextId = 0
+    const createId = () => `pcl-${++nextId}`
+    const initial = createEmptyRelationshipState(100)
+
+    // 1. Record commitment
+    const committed = recordCommitment(initial, {
+      actorId: 'kyo',
+      task: 'backup database',
+      timestamp: 150,
+      turnId: 'turn-c1',
+    }, createId)
+
+    expect(committed.applied).toBe(true)
+    const kyoRecord = committed.record!
+    expect(kyoRecord.expectations).toHaveLength(1)
+    expect(kyoRecord.expectations[0]).toMatchObject({
+      subject: 'kyo',
+      predicate: 'committed_to',
+      object: 'backup database',
+      status: 'active',
+      rule: 'pcl.commitment-recorded',
+    })
+
+    // 2. Record breach
+    const beforeSuspicion = kyoRecord.suspicion
+    const beforeTrust = kyoRecord.trust
+    const breached = recordBreach(committed.relationships, {
+      actorId: 'kyo',
+      task: 'backup database',
+      description: 'Failed to backup database before maintenance',
+      timestamp: 200,
+      turnId: 'turn-b1',
+    }, createId)
+
+    expect(breached.applied).toBe(true)
+    const breachedRecord = breached.record!
+    expect(breachedRecord.expectations[0].status).toBe('violated')
+    expect(breachedRecord.activeGrievances).toHaveLength(1)
+    expect(breachedRecord.activeGrievances[0]).toMatchObject({
+      subject: 'kyo',
+      predicate: 'broke_commitment',
+      object: 'backup database',
+      status: 'active',
+      action: 'new',
+      supersededBy: null,
+    })
+    expect(breachedRecord.suspicion).toBeGreaterThan(beforeSuspicion)
+    expect(breachedRecord.trust).toBeLessThan(beforeTrust)
+  })
+
+  it('repairs broken commitments, supersedes grievances with repair claim, and restores trust', () => {
+    let nextId = 0
+    const createId = () => `pcl-${++nextId}`
+    const initial = createEmptyRelationshipState(100)
+
+    const committed = recordCommitment(initial, {
+      actorId: 'kyo',
+      task: 'deploy edge proxy',
+      timestamp: 150,
+    }, createId)
+
+    const breached = recordBreach(committed.relationships, {
+      actorId: 'kyo',
+      task: 'deploy edge proxy',
+      timestamp: 200,
+      suspicionDelta: 0.2,
+      trustDelta: 0.2,
+    }, createId)
+
+    const breachedRecord = breached.record!
+    expect(breachedRecord.suspicion).toBeCloseTo(0.2)
+    expect(breachedRecord.trust).toBeCloseTo(0.3)
+
+    // Repair the commitment
+    const repaired = recordRepair(breached.relationships, {
+      actorId: 'kyo',
+      task: 'deploy edge proxy',
+      resolution: 'Proxy deployed and verified on staging',
+      timestamp: 300,
+      repairClaimId: 'claim:repair-101',
+      suspicionDelta: 0.2,
+      trustDelta: 0.15,
+    }, createId)
+
+    expect(repaired.applied).toBe(true)
+    const repairedRecord = repaired.record!
+    expect(repairedRecord.expectations[0].status).toBe('met')
+    expect(repairedRecord.expectations[0].supersededBy).toBe('claim:repair-101')
+
+    const repairedGrievance = repairedRecord.activeGrievances[0]
+    expect(repairedGrievance.status).toBe('resolved')
+    expect(repairedGrievance.supersededBy).toBe('claim:repair-101')
+    expect(repairedGrievance.action).toBe('update')
+    expect(repairedGrievance.description).toContain('[Repaired: Proxy deployed and verified on staging]')
+
+    // Suspicion decremented, trust restored
+    expect(repairedRecord.suspicion).toBeCloseTo(0)
+    expect(repairedRecord.trust).toBeCloseTo(0.45)
+    expect(repairedRecord.moments.at(-1)).toMatchObject({
+      eventType: 'grudge_resolved',
+      rule: 'pcl.commitment-repaired',
+    })
+  })
+
+  it('supports kernel-level commitment, breach, and repair orchestration', async () => {
+    const { kernel } = createKernel()
+    await kernel.boot()
+
+    // 1. Kernel commitment
+    const committed = await kernel.recordCommitment({
+      actorId: 'kyo',
+      task: 'fix memory leak in audio pipeline',
+    })
+    expect(committed?.expectations).toHaveLength(1)
+    expect(committed?.expectations[0].object).toBe('fix memory leak in audio pipeline')
+
+    // 2. Kernel breach
+    const breached = await kernel.recordBreach({
+      actorId: 'kyo',
+      task: 'fix memory leak in audio pipeline',
+      description: 'Memory leak recurred on buffer flush',
+    })
+    expect(breached?.suspicion).toBeGreaterThan(0)
+    expect(breached?.activeGrievances[0].predicate).toBe('broke_commitment')
+
+    // 3. Kernel repair
+    const repaired = await kernel.recordRepair({
+      actorId: 'kyo',
+      task: 'fix memory leak in audio pipeline',
+      resolution: 'Fixed by releasing PCM ArrayBuffer in finally block',
+    })
+    expect(repaired?.suspicion).toBe(0)
+    expect(repaired?.activeGrievances[0].status).toBe('resolved')
+    expect(repaired?.activeGrievances[0].supersededBy).toBeTruthy()
+  })
+
+  it('synchronizes relationship state to AIRI EntityLedger adapter', () => {
+    const registeredEntities: Array<{ label: string, type?: string, attributes?: Record<string, any> }> = []
+    const appliedClaims: Array<{ subject: string, predicate: string, object: string, action: string }> = []
+
+    const mockLedger: Nan0EntityLedgerAdapter = {
+      getOrCreateEntity(label, type, attributes) {
+        registeredEntities.push({ label, type, attributes })
+        return { label }
+      },
+      applyPCLClaim(claim) {
+        appliedClaims.push(claim)
+        return { claimId: 'mock-claim', actionTaken: 'created' }
+      },
+    }
+
+    let nextId = 0
+    const createId = () => `sync-${++nextId}`
+    const state = createEmptyRelationshipState(100)
+
+    const committed = recordCommitment(state, {
+      actorId: 'kyo',
+      task: 'sync entity ledger',
+      timestamp: 150,
+      turnId: 'turn-sync-1',
+    }, createId, { entityLedger: mockLedger })
+
+    expect(appliedClaims).toContainEqual(expect.objectContaining({
+      subject: 'kyo',
+      predicate: 'committed_to',
+      object: 'sync entity ledger',
+      action: 'new',
+    }))
+
+    // Full sync test
+    syncRelationshipWithEntityLedger(committed.record!, mockLedger)
+    expect(registeredEntities).toContainEqual(expect.objectContaining({
+      label: 'kyo',
+      type: 'person',
+    }))
+  })
+
+  it('supports configurable owner anchor in RelationshipMemory and Nan0Kernel', async () => {
+    // 1. RelationshipMemory level
+    const stateWithRichard = createEmptyRelationshipState(100, {
+      ownerId: 'richard',
+      ownerDisplayName: 'Richard',
+    })
+    expect(Object.keys(stateWithRichard.records)).toEqual(['relationship:richard'])
+    expect(stateWithRichard.records['relationship:richard']).toMatchObject({
+      actorId: 'richard',
+      relationshipId: 'relationship:richard',
+      importance: 1,
+      metadata: { protected: true, relationship: 'creator_anchor' },
+    })
+
+    // 2. Nan0Kernel level with custom owner and aliases
+    const { kernel } = createKernel(
+      new InMemoryStateStore(),
+      createClock(100),
+      'id',
+      {
+        ownerId: 'richard',
+        ownerDisplayName: 'Richard',
+        ownerAliases: ['rick', 'richie'],
+      },
+    )
+    await kernel.boot()
+
+    // Turn from 'rick' alias should resolve to Richard's relationship
+    await completeTurn(kernel, 'Hello Nan0, it is Rick.', {
+      actorId: 'rick',
+      displayName: 'Rick',
+      source: 'chat',
+    })
+
+    const richardRels = kernel.getRelationships('richard')
+    expect(richardRels).toHaveLength(1)
+    expect(richardRels[0]).toMatchObject({
+      relationshipId: 'relationship:richard',
+      actorId: 'richard',
+      interactionCount: 1,
+      importance: 1,
+      metadata: { protected: true, relationship: 'creator_anchor' },
+    })
+  })
+
+  it('replaces hardcoded stop words with grammatical closed-class regex fallback floor', () => {
+    // Closed-class words are rejected by regex
+    expect(FALLBACK_CLOSED_CLASS_REGEX.test('the')).toBe(true)
+    expect(FALLBACK_CLOSED_CLASS_REGEX.test('would')).toBe(true)
+    expect(FALLBACK_CLOSED_CLASS_REGEX.test('although')).toBe(true)
+    expect(FALLBACK_CLOSED_CLASS_REGEX.test('going')).toBe(true)
+
+    // Open-class nouns and verbs are not rejected
+    expect(FALLBACK_CLOSED_CLASS_REGEX.test('database')).toBe(false)
+    expect(FALLBACK_CLOSED_CLASS_REGEX.test('betrayal')).toBe(false)
+    expect(FALLBACK_CLOSED_CLASS_REGEX.test('deploy')).toBe(false)
+    expect(FALLBACK_CLOSED_CLASS_REGEX.test('credentials')).toBe(false)
+  })
+
+  it('uses System 1 Jev semantic classification to distinguish conversational filler from substantive grievance', async () => {
+    let queriedQuestions: Record<string, any> | undefined
+
+    const mockJev: Nan0SystemOneProvider = async (state, questions) => {
+      queriedQuestions = questions
+      return {
+        answers: {
+          grievance_salience: { choice: 'conversational_filler', confidence: 0.95 },
+          grievance_recurrence: { choice: 'conversational_unrelated', confidence: 0.95 },
+        },
+      }
+    }
+
+    let nextId = 0
+    const createId = () => `jev-${++nextId}`
+    const state = createEmptyRelationshipState(100)
+
+    // Negative event with intensity above threshold, but Jev classifies as conversational filler
+    const result = await applyRelationshipEvidenceAsync(state, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'event-filler',
+      turnId: 'turn-filler',
+      thoughtId: 'thought-filler',
+      timestamp: 150,
+      eventType: 'negative',
+      intensity: 0.7,
+      rule: 'test.filler',
+      description: 'You are being silly and I totally disagree with your movie choice.',
+    }, createId, { systemOneProvider: mockJev })
+
+    expect(queriedQuestions).toHaveProperty('grievance_salience')
+    // Grievance was suppressed because Jev identified it as conversational filler
+    expect(result.record?.activeGrievances).toHaveLength(0)
+  })
+
+  it('uses System 1 Jev semantic classification to detect recurrence without literal word overlap', async () => {
+    let callCount = 0
+    const mockJev: Nan0SystemOneProvider = async () => {
+      callCount++
+      return {
+        answers: {
+          grievance_salience: { choice: 'substantive_grievance', confidence: 0.9 },
+          grievance_recurrence: callCount === 1
+            ? { choice: 'new_unrelated_issue', confidence: 0.9 }
+            : { choice: 'recurrence_reinforced', confidence: 0.95 },
+        },
+      }
+    }
+
+    let nextId = 0
+    const createId = () => `rec-${++nextId}`
+    const state = createEmptyRelationshipState(100)
+
+    // 1. Initial grievance: "broke the build"
+    const first = await applyRelationshipEvidenceAsync(state, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'event-1',
+      turnId: 'turn-1',
+      thoughtId: 'thought-1',
+      timestamp: 150,
+      eventType: 'negative',
+      intensity: 0.75,
+      rule: 'test.build-break',
+      description: 'You broke the production build before release.',
+    }, createId, { systemOneProvider: mockJev })
+
+    expect(first.record?.activeGrievances).toHaveLength(1)
+    expect(first.record?.activeGrievances[0].reinforcementCount).toBe(0)
+
+    // 2. Second turn: "pipeline failed again" - NO literal word overlap with "broke the production build",
+    // but Jev classifies it as recurrence_reinforced!
+    const second = await applyRelationshipEvidenceAsync(first.relationships, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'event-2',
+      turnId: 'turn-2',
+      thoughtId: 'thought-2',
+      timestamp: 250,
+      eventType: 'negative',
+      intensity: 0.75,
+      rule: 'test.pipeline-fail',
+      description: 'Continuous integration went red and halted distribution.',
+    }, createId, { systemOneProvider: mockJev })
+
+    expect(second.record?.activeGrievances).toHaveLength(1)
+    // Semantically reinforced via Jev System 1!
+    expect(second.record?.activeGrievances[0].reinforcementCount).toBe(1)
+    expect(second.record?.activeGrievances[0].lastReinforcedAt).toBe(250)
+  })
+
+  it('extracts semantic trigger concepts via System 1 Jev with lexical floor fallback', async () => {
+    // 1. With Jev available: returns semantic concept
+    const mockJev: Nan0SystemOneProvider = async () => ({
+      answers: {
+        trigger_concept: { choice: 'deceit_dishonesty', confidence: 0.9 },
+      },
+    })
+    const jevPhrases = await extractTriggerPhrasesAsync(
+      'You concealed the credentials from me',
+      mockJev,
+    )
+    expect(jevPhrases).toContain('deceit_dishonesty')
+    expect(jevPhrases).toContain('concealed')
+    expect(jevPhrases).toContain('credentials')
+
+    // 2. Fallback when Jev is offline: uses grammatical closed-class floor
+    const fallbackPhrases = await extractTriggerPhrasesAsync(
+      'You concealed the credentials from me',
+      undefined,
+    )
+    expect(fallbackPhrases).toEqual(['concealed', 'credentials'])
+  })
+
+  it('wires System 1 Jev through Nan0Kernel recordAssistantTurn for relationship evidence', async () => {
+    let jevCalled = false
+    const mockJev: Nan0SystemOneProvider = async (_state, questions): Promise<import('../types').Nan0SystemOneResponse> => {
+      jevCalled = true
+      if ('grievance_salience' in questions) {
+        return {
+          answers: {
+            grievance_salience: { choice: 'substantive_grievance', confidence: 0.9 },
+            grievance_recurrence: { choice: 'new_unrelated_issue', confidence: 0.9 },
+          },
+        }
+      }
+      return {
+        answers: {
+          admitted_false_statement: { choice: 'asserted_deception', confidence: 0.95 },
+        },
+      }
+    }
+
+    const { kernel } = createKernel(
+      new InMemoryStateStore(),
+      createClock(100),
+      'id',
+      undefined,
+      undefined,
+      mockJev,
+    )
+    await kernel.boot()
+
+    // Complete a negative turn
+    await completeTurn(kernel, 'You lied and betrayed my trust deliberately.', {
+      actorId: 'kyo',
+      timestamp: 100,
+    })
+
+    expect(jevCalled).toBe(true)
+    const kyoRecord = kernel.getRelationships('kyo')[0]
+    expect(kyoRecord.activeGrievances).toHaveLength(1)
+    expect(kyoRecord.activeGrievances[0].predicate).toBe('grievance')
+  })
+
+  it('does not award positive repair evidence for claimed_task_completion without verified task evidence (Fix F1)', () => {
+    const unverifiedEvidence = inferRelationshipEvidence(
+      'I fixed it.',
+      { completed_repair: { choice: 'claimed_task_completion', confidence: 0.99 } },
+    )
+    expect(unverifiedEvidence).toEqual({
+      eventType: 'neutral',
+      intensity: 0.15,
+      rule: 'system_one_jev.unverified_claimed_completion',
+    })
+
+    const verifiedEvidence = inferRelationshipEvidence(
+      'I fixed it.',
+      { completed_repair: { choice: 'claimed_task_completion', confidence: 0.99 } },
+      { hasVerifiedTaskCompletion: true },
+    )
+    expect(verifiedEvidence).toEqual({
+      eventType: 'positive',
+      intensity: 0.50,
+      rule: 'system_one_jev.completed_repair',
+    })
+  })
+
+  it('accurately attributes recurrence to matched_grievance_id when multiple active grievances exist and safely abstains on none (Fix F8)', async () => {
+    let capturedQuestions: any = null
+    const mockJev: Nan0SystemOneProvider = async (_state, questions) => {
+      capturedQuestions = questions
+      return {
+        answers: {
+          grievance_salience: { choice: 'substantive_grievance', confidence: 0.95 },
+          grievance_recurrence: { choice: 'recurrence_reinforced', confidence: 0.95 },
+          matched_grievance_id: { choice: 'grievance:gr-2', confidence: 0.9 },
+        },
+      }
+    }
+
+    const state = createEmptyRelationshipState(100)
+    let nextId = 0
+    const createId = () => `id-${++nextId}`
+
+    // Seed relationship with two active grievances
+    const initial = await applyRelationshipEvidenceAsync(state, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'event-1',
+      turnId: 'turn-1',
+      thoughtId: 'thought-1',
+      timestamp: 100,
+      eventType: 'negative',
+      intensity: 0.7,
+      rule: 'test.rule-1',
+      description: 'Schedule canceled without notice.',
+      triggerPhrases: ['schedule'],
+    }, () => 'gr-1')
+
+    const withTwo = await applyRelationshipEvidenceAsync(initial.relationships, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'event-2',
+      turnId: 'turn-2',
+      thoughtId: 'thought-2',
+      timestamp: 110,
+      eventType: 'negative',
+      intensity: 0.7,
+      rule: 'test.rule-2',
+      description: 'Missing documentation on deploy.',
+      triggerPhrases: ['documentation'],
+    }, () => 'gr-2')
+
+    expect(withTwo.record?.activeGrievances).toHaveLength(2)
+
+    // Third turn: user brings up grievance gr-2 again
+    const third = await applyRelationshipEvidenceAsync(withTwo.relationships, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'event-3',
+      turnId: 'turn-3',
+      thoughtId: 'thought-3',
+      timestamp: 200,
+      eventType: 'negative',
+      intensity: 0.7,
+      rule: 'test.rule-3',
+      description: 'You still have not written the documentation as promised.',
+    }, createId, { systemOneProvider: mockJev })
+
+    // Verify Jev was given the matched_grievance_id and bundled trigger_concept questions
+    expect(capturedQuestions.matched_grievance_id).toBeDefined()
+    expect(capturedQuestions.matched_grievance_id.criteria['grievance:gr-1']).toBeDefined()
+    expect(capturedQuestions.matched_grievance_id.criteria['grievance:gr-2']).toBeDefined()
+    expect(capturedQuestions.matched_grievance_id.criteria.none).toBeDefined()
+    expect(capturedQuestions.trigger_concept).toBeDefined()
+
+    // Verify gr-2 was reinforced, NOT gr-1!
+    const gr1 = third.record?.activeGrievances.find(g => g.grievanceId === 'grievance:gr-1')
+    const gr2 = third.record?.activeGrievances.find(g => g.grievanceId === 'grievance:gr-2')
+    expect(gr1?.reinforcementCount).toBe(0)
+    expect(gr2?.reinforcementCount).toBe(1)
+    expect(gr2?.lastReinforcedAt).toBe(200)
+
+    // Fourth turn: Jev answers matched_grievance_id: 'none'. Safe abstention must NOT reinforce gr-1 or gr-2 AND must not create new grievance!
+    const abstainingJev: Nan0SystemOneProvider = async () => ({
+      answers: {
+        grievance_salience: { choice: 'substantive_grievance', confidence: 0.95 },
+        grievance_recurrence: { choice: 'recurrence_reinforced', confidence: 0.95 },
+        matched_grievance_id: { choice: 'none', confidence: 0.9 },
+      },
+    })
+
+    const fourth = await applyRelationshipEvidenceAsync(third.relationships, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'event-4',
+      turnId: 'turn-4',
+      thoughtId: 'thought-4',
+      timestamp: 300,
+      eventType: 'negative',
+      intensity: 0.7,
+      rule: 'test.rule-4',
+      description: 'Completely different complaint.',
+    }, createId, { systemOneProvider: abstainingJev })
+
+    expect(fourth.record?.activeGrievances).toHaveLength(2) // No new grievance created!
+    const gr1After = fourth.record?.activeGrievances.find(g => g.grievanceId === 'grievance:gr-1')
+    const gr2After = fourth.record?.activeGrievances.find(g => g.grievanceId === 'grievance:gr-2')
+    expect(gr1After?.reinforcementCount).toBe(0)
+    expect(gr2After?.reinforcementCount).toBe(1) // unchanged from turn 3!
+  })
+
+  it('caps matched_grievance_id criteria to top 3 grievances by severity and bundles trigger_concept in new grievances', async () => {
+    let nextId = 0
+    const createId = () => `gr-${++nextId}`
+    let rel = createEmptyRelationshipState(100)
+
+    // Add 4 distinct grievances with varying severities above 0.6 threshold
+    const testCases = [
+      { desc: 'Deploy pipeline crashed', intensity: 0.65 },
+      { desc: 'Deleted production database', intensity: 0.75 },
+      { desc: 'Insulted companion personally', intensity: 0.85 },
+      { desc: 'Ignored critical alerts', intensity: 0.95 },
+    ]
+
+    for (let i = 0; i < testCases.length; i++) {
+      const res = applyRelationshipEvidence(rel, {
+        actorId: 'kyo',
+        actorKind: 'kyo',
+        source: 'chat',
+        eventId: `ev-${i + 1}`,
+        turnId: `turn-${i + 1}`,
+        thoughtId: `thought-${i + 1}`,
+        timestamp: 100 + i,
+        eventType: 'negative',
+        intensity: testCases[i].intensity,
+        rule: `test.rule-${i + 1}`,
+        description: testCases[i].desc,
+      }, createId)
+      rel = res.relationships
+    }
+
+    expect(rel.records['relationship:kyo'].activeGrievances).toHaveLength(4)
+
+    let capturedQuestions: any = null
+    const singlePassJev: Nan0SystemOneProvider = async (_state, questions) => {
+      capturedQuestions = questions
+      return {
+        answers: {
+          grievance_salience: { choice: 'substantive_grievance', confidence: 0.95 },
+          grievance_recurrence: { choice: 'recurrence_unrelated', confidence: 0.9 },
+          trigger_concept: { choice: 'technical_failure', confidence: 0.92 },
+        },
+      }
+    }
+
+    const newGrievanceRes = await applyRelationshipEvidenceAsync(rel, {
+      actorId: 'kyo',
+      actorKind: 'kyo',
+      source: 'chat',
+      eventId: 'ev-new',
+      turnId: 'turn-new',
+      thoughtId: 'thought-new',
+      timestamp: 200,
+      eventType: 'negative',
+      intensity: 0.75,
+      rule: 'test.rule-new',
+      description: 'The system crashed and wiped my work.',
+    }, createId, { systemOneProvider: singlePassJev })
+
+    // 1. Verify criteria was capped to top 3 (plus none)
+    const grievances = rel.records['relationship:kyo'].activeGrievances
+    const criteriaKeys = Object.keys(capturedQuestions.matched_grievance_id.criteria)
+    expect(criteriaKeys).toHaveLength(4) // 3 grievances + 'none'
+    expect(capturedQuestions.matched_grievance_id.criteria[grievances[3].grievanceId]).toBeDefined() // 0.95
+    expect(capturedQuestions.matched_grievance_id.criteria[grievances[2].grievanceId]).toBeDefined() // 0.85
+    expect(capturedQuestions.matched_grievance_id.criteria[grievances[1].grievanceId]).toBeDefined() // 0.75
+    expect(capturedQuestions.matched_grievance_id.criteria[grievances[0].grievanceId]).toBeUndefined() // lowest severity (0.65) omitted
+    expect(capturedQuestions.matched_grievance_id.criteria.none).toBeDefined()
+
+    // 2. Verify single-pass trigger_concept was incorporated into the new grievance
+    expect(newGrievanceRes.record?.activeGrievances).toHaveLength(5)
+    const newest = newGrievanceRes.record?.activeGrievances[4]
+    expect(newest).toBeDefined()
+    expect(newest?.triggerPhrases).toContain('technical_failure')
   })
 })

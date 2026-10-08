@@ -10,6 +10,10 @@ const layaLocalConfigSchema = z.object({
     .string('Model')
     .optional()
     .default('tozp/laya-onnx'),
+  enableWebGpu: z
+    .boolean()
+    .optional()
+    .default(false),
 })
 
 type LayaLocalConfig = z.input<typeof layaLocalConfigSchema>
@@ -31,7 +35,9 @@ export const providerLayaLocal = defineProvider<LayaLocalConfig>({
       systemOne: async (state: string | object, questions: Record<string, any>, model?: string): Promise<System1Response> => {
         const targetModel = model || config?.model || 'tozp/laya-onnx'
         const precision = targetModel.includes('fp16') ? 'fp16' : 'int8'
-        const res = await runLayaSystemOne(state, questions, precision)
+        const res = await runLayaSystemOne(state, questions, precision, {
+          useWebGpu: Boolean(config?.enableWebGpu),
+        })
         return {
           answers: res.answers,
           usage: res.usage,
@@ -66,13 +72,13 @@ export const providerLayaLocal = defineProvider<LayaLocalConfig>({
       return [
         {
           id: 'tozp/laya-onnx',
-          name: 'Laya INT8 (424 MB, Recommended)',
+          name: 'Laya INT8 (424 MB, CPU Recommended)',
           provider: 'laya-local',
           description: 'On-device ModernBERT quantized INT8 sequence classifier',
         },
         {
           id: 'tozp/laya-onnx-fp16',
-          name: 'Laya FP16 (843 MB, Desktop GPU)',
+          name: 'Laya FP16 (843 MB, CPU)',
           provider: 'laya-local',
           description: 'On-device ModernBERT FP16 precision sequence classifier',
         },

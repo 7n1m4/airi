@@ -152,6 +152,8 @@ const AiriDreamStateSchema = object({
   dreamIntrusionPrompt: optional(string()),
   pendingDreamChips: optional(array(string())),
   pendingDreamTimestamp: optional(number()),
+  pendingDreamMood: optional(string()),
+  journalWorthyThreshold: optional(number()),
 })
 
 const AiriTextJournalSchema = object({
@@ -248,6 +250,31 @@ export const AiriPacingSchema = object({
 export type AiriThinkingFiller = InferOutput<typeof AiriThinkingFillerSchema>
 export type AiriPacing = InferOutput<typeof AiriPacingSchema>
 
+export const CharacterCueAllowlistSchema = object({
+  version: literal(1),
+  emotions: optional(record(string(), object({
+    rawKey: string(),
+    label: string(),
+  }))),
+  motions: optional(record(string(), object({
+    rawKey: string(),
+    label: string(),
+  }))),
+})
+
+export type CharacterCueAllowlist = InferOutput<typeof CharacterCueAllowlistSchema>
+
+export const CardCustomStickerSchema = looseObject({
+  id: string(),
+  label: string(),
+  description: string(),
+  emotions: array(string()),
+  createdAt: number(),
+  dataUrl: optional(string()),
+})
+
+export type CardCustomSticker = InferOutput<typeof CardCustomStickerSchema>
+
 const AiriExtensionSchema = looseObject({
   modules: optional(AiriModulesSchema),
   cognition: optional(AiriCognitionSchema),
@@ -295,7 +322,16 @@ const AiriExtensionSchema = looseObject({
     speechMannerismPrompt: string(),
     idleAnimations: optional(array(string())),
     pacing: optional(AiriPacingSchema),
+    cueAllowlist: optional(CharacterCueAllowlistSchema),
+    autoCuesEnabled: optional(boolean()),
+    autoCueExpressions: optional(boolean()),
+    autoCueMotions: optional(boolean()),
+    compiledWhitelist: optional(CharacterCueAllowlistSchema),
+    stickerDirectivesPrompt: optional(string()),
+    activeStickerIds: optional(array(string())),
+    stickerWidgetsEnabled: optional(boolean()),
   })),
+  stickers: optional(record(string(), CardCustomStickerSchema)),
   outfits: optional(array(AiriOutfitSchema)),
   artistry: optional(looseObject({
     provider: optional(string()),
@@ -356,6 +392,17 @@ const AiriExtensionSchema = looseObject({
     active_expressions: optional(record(string(), number())),
   })),
   voice_profiles: optional(array(record(string(), unknown()))),
+  rwkv: optional(looseObject({
+    stateCartridgeId: optional(string()),
+    stateCartridgeUrl: optional(string()),
+    archetype: optional(string()),
+    baseModel: optional(string()),
+    quantization: optional(string()),
+    recommendedTemperature: optional(number()),
+    recommendedTopP: optional(number()),
+    zeroPromptVerified: optional(boolean()),
+    conditioningTurns: optional(array(string())),
+  })),
 })
 
 /**

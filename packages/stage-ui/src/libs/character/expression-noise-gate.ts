@@ -1095,16 +1095,14 @@ export function classifyExpression(rawName: string): ExpressionCategory {
     .trim()
 
   // VRoid Studio root mesh naming convention: Face.M_F00_..._Fcl_...
+  // All internal fcl_* morphs are raw sub-mesh shape keys, not top-level VRM expressions.
   if (/fcl_/i.test(stripped)) {
     const fclPart = stripped.substring(stripped.search(/fcl_/i)).toLowerCase()
     if (/^fcl_.*_neutral/i.test(fclPart) || fclPart === 'fcl_mth_neutral')
       return 'neutral'
     if (/^fcl_mth_[aiueo]$/i.test(fclPart))
       return 'viseme'
-    if (/^fcl_(eye|mth|ha|brw|all)_(close|highlight|iris|natural|spread|down|large|small|up|hide|short|fung|extra|left|right|eyes_up|eyes_down|eyes_left|eyes_right)/i.test(fclPart))
-      return 'procedural_eye'
-    if (/^fcl_(all|brw|eye|mth)_(joy|angry|sorrow|fun|surprised)/i.test(fclPart))
-      return 'emote'
+    return 'procedural_eye'
   }
 
   // Japanese Game Engine [M_Face] tags (e.g. Mouth_23_0(TalkA_A_S)[M_Face])
@@ -1154,6 +1152,11 @@ export function classifyExpression(rawName: string): ExpressionCategory {
   // 4. VRoid & Custom Viseme Morphs
   if (/^fcl_mth_[aiueo]$/i.test(normalized) || /^([aiueo]|[a-z0-9]+-[aiueo]|v_[aiueo]|ah|[fm]|mth_[aiueom]|mth_mu)[-_]?(big|small|\d*)$/i.test(cleanName) || VISEME_SET.has(cleanName) || VISEME_SET.has(normalized)) {
     return 'viseme'
+  }
+
+  // 4.5 VRoid & Sub-Mesh Internal Component Morphs (Fcl_ALL_*, Fcl_BRW_*, Fcl_EYE_*, Fcl_MTH_*, Fcl_HA_*)
+  if (/^fcl_(all|brw|eye|mth|ha)[-_]/i.test(normalized) || /^fcl_/i.test(normalized) || /^cf_[mj]_[a-z0-9]+/i.test(normalized)) {
+    return 'procedural_eye'
   }
 
   // 5. Extended Rig Bone Transform Morphs (EX_move, EX_rotate, EX_stretch, etc.)

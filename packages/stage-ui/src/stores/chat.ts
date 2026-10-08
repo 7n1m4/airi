@@ -1,3 +1,4 @@
+import type { Nan0Observation, Nan0PreparedTurn } from '@proj-airi/nan0-runtime'
 import type { WebSocketEventInputs } from '@proj-airi/server-sdk'
 import type { ChatProvider } from '@xsai-ext/providers/utils'
 import type { CommonContentPart, Message, ToolMessage } from '@xsai/shared-chat'
@@ -24,11 +25,11 @@ import { createDatetimeContext, createEternalRecordContext, createExpressionsCon
 import { useChatContextStore } from './chat/context-store'
 import { formatChatError } from './chat/error-formatter'
 import {
+  budgetGroundingMessages,
   formatDirectorScratchpadBlock,
   formatEnvironmentalBlock,
   formatLifetimeMemoryBlock,
   formatRecentTopicsBlock,
-  formatSalienceTelemetryBlock,
   formatSemanticMemoriesBlock,
   formatShortTermMemoryBlock,
   formatVlmBlock,
@@ -57,7 +58,6 @@ import {
   formatDreamPrompt,
   formatJournalPrompt,
 } from './chat/intrusions'
-import { useChatSalienceStore } from './chat/salience'
 import { useChatSessionStore } from './chat/session-store'
 import { useChatStreamStore } from './chat/stream-store'
 import { parseBridgeArguments, recognizeToolMarker, tryParseLenientJson } from './chat/tool-bridge'
@@ -73,6 +73,8 @@ import { useVisionStore } from './modules/vision'
 import { useProactivityStore } from './proactivity'
 import { useProvidersStore } from './providers'
 import { useSettingsChat } from './settings/chat'
+import { useSettingsUserProfile } from './settings/user-profile'
+import { useStickersStore } from './stickers'
 
 export interface SendOptions {
   model?: string
@@ -111,6 +113,8 @@ interface QueuedSend {
   generation: number
   sessionId: string
   cancelled?: boolean
+  /** HMR epoch at enqueue time; reloads reject stale queued sends. */
+  hmrEpoch?: number
   deferred: {
     resolve: () => void
     reject: (error: unknown) => void
@@ -138,6 +142,32 @@ interface ActiveSendHandle {
   getRawText: () => string
 }
 const activeSendHandles = new Map<string, ActiveSendHandle>()
+
+// Strategy C (HMR Async Epoch Guard): module-scope epoch bumped by the single
+// dispose handler below. Orphaned performSend loops from a superseded HMR
+// generation abort at their next shouldAbort() check instead of double-driving
+// speech/captions/history. Old closures read the OLD binding (bumped on
+// dispose); fresh generations start at 0. See
+// docs/project-hmr-resilience-architecture.md Strategies C & E.
+let chatEpoch = 0
+
+// Strategy E: exactly ONE import.meta.hot.dispose() per module (Vite silently
+// overwrites multiples). Bumps the epoch and aborts live HTTP streams so
+// orphaned generations cannot hang or duplicate turns. Queued (not yet
+// started) sends are rejected by their hmrEpoch stamp in the queue handler.
+// No-op in production/test (import.meta.hot is undefined).
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    chatEpoch++
+    for (const handle of activeSendHandles.values()) {
+      try {
+        handle.controller?.abort(new Error('[HMR] chat store re-evaluated during stream'))
+      }
+      catch {}
+    }
+    activeSendHandles.clear()
+  })
+}
 
 export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
   const llmStore = useLLM()
@@ -346,6 +376,12 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           return
         }
 
+        // Strategy C: queued under a superseded HMR generation — never start.
+        if (data.hmrEpoch !== undefined && data.hmrEpoch !== chatEpoch) {
+          deferred.reject(new Error('[HMR] Chat store re-evaluated before send could start'))
+          return
+        }
+
         try {
           await performSend(sendingMessage, options, generation, sessionId)
           deferred.resolve()
@@ -385,6 +421,10 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
 
     if (!options.triggerOnly && !sendingMessage && !finalAttachments.length)
       return
+
+    // Strategy C: captured before the first await; every shouldAbort() check
+    // below (and the stream loop) treats an epoch mismatch as a stop.
+    const sendEpoch = chatEpoch
 
     await chatSession.loadSession?.(sessionId)
     chatSession.ensureSession(sessionId)
@@ -569,7 +609,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
     }
 
     const isStaleGeneration = () => chatSession.getSessionGeneration(sessionId) !== generation
-    const shouldAbort = () => isStaleGeneration()
+    const shouldAbort = () => isStaleGeneration() || sendEpoch !== chatEpoch
     if (shouldAbort())
       return
 
@@ -624,6 +664,8 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
     let effectiveProviderId = typeof options.chatProvider === 'string'
       ? options.chatProvider
       : activeProvider.value
+
+    let activeNan0PreparedTurn: Nan0PreparedTurn | null = null
 
     try {
       sending.value = true
@@ -710,6 +752,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
       // --- Grounding Injection ---
       // If grounding/sensors or memory is enabled, we sync and inject context payloads as system messages.
       const groundingMessages: any[] = []
+      let retrievedSemanticMemories: any[] = []
 
       // 0. VLM Image Analysis (Forward Mode)
       // Injected unconditionally when a VLM forward hop produced a result — no toggle required.
@@ -742,9 +785,11 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
       }
 
       // 2. RAG Universe Memory Injection
+      const cognitionSearch = activeCard.value?.extensions?.airi?.cognition?.searchEngine
       const isUniverseRagEnabled = activeCard.value?.extensions?.airi?.groundingMemoryEnabled
         || activeCard.value?.extensions?.airi?.universeRag?.enabled
         || activeCard.value?.extensions?.airi?.firstHopProcessor === 'universe_rag'
+        || cognitionSearch?.universeRagEnabled
 
       if (isUniverseRagEnabled && !options.triggerOnly && typeof sendingMessage === 'string' && sendingMessage.trim().length > 3) {
         chatLog('Grounding Memory active. Fetching semantic query matches with conversational anaphora...')
@@ -768,16 +813,20 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           }
 
           const textJournalStore = useTextJournalStore()
+          const searchEngineConfig = activeCard.value?.extensions?.airi?.cognition?.searchEngine
           const results = await textJournalStore.searchEntries({
             query: sendingMessage,
-            limit: 3,
+            limit: searchEngineConfig?.evidenceLimit ?? 6,
             characterId: activeCardId.value,
             previousTurn: previousTurnText,
-            anaphoraEnabled: true,
+            anaphoraEnabled: searchEngineConfig?.anaphoraEnabled ?? true,
           })
-          const minScore = activeCard.value?.extensions?.airi?.universeRag?.minScore ?? 0.25
+          const minScore = searchEngineConfig?.relevanceThreshold
+            ?? activeCard.value?.extensions?.airi?.universeRag?.minScore
+            ?? 0.25
           const filteredResults = results.filter(r => (r.score === undefined || r.score >= minScore))
           if (filteredResults && filteredResults.length > 0) {
+            retrievedSemanticMemories = filteredResults
             groundingMessages.push(formatSemanticMemoriesBlock(filteredResults))
             chatLog('Grounding Memory payload injected into inference step.')
           }
@@ -811,40 +860,20 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
         }
       }
 
-      // 5. Salience Gate injection (Phase 6): probe the L9–L11 Δh of the turn's text and inject
-      //    a [Saliency Telemetry] system block whenever the gate is enabled and the turn wasn't
-      //    produced by trigger-only flow (voice notes/images count; empty trigger runs skip).
-      const salienceText = options.triggerOnly
-        ? null
-        : (typeof sendingMessage === 'string' && sendingMessage.trim().length > 0
-            ? sendingMessage
-            : null)
-      if (activeCard.value?.extensions?.airi?.salienceGateEnabled && salienceText) {
-        try {
-          const salienceStore = useChatSalienceStore()
-          const metrics = await salienceStore.probeTurn(salienceText)
-          if (metrics && (metrics.hot || metrics.lateLayerMean > metrics.controlMean * 1.1)) {
-            const layerReport = metrics.lateLayerDeltas.map((d, i) => `L${9 + i}=${d.toFixed(3)}`).join(' ')
-            groundingMessages.push(formatSalienceTelemetryBlock(metrics))
-            chatLog(`[salience] injected turn metrics: ${layerReport} hot=${metrics.hot}`)
-          }
-        }
-        catch (err) {
-          // Never block sending on a gate failure.
-          console.error('[ChatStore] Salience gate probe failed:', err)
-        }
-      }
+      // 5. Salience Gate injection: force-disabled for release stability to prevent WebGPU/WASM thrashing
+      // const salienceText = ... (disabled)
 
       // Splice them into the message list!
-      if (groundingMessages.length > 0) {
+      const budgetedGroundingMessages = budgetGroundingMessages(groundingMessages, 7000, 2500)
+      if (budgetedGroundingMessages.length > 0) {
         if (options.triggerOnly) {
           const nextInferenceMessages = [...sessionMessagesForSend]
-          nextInferenceMessages.splice(sessionMessagesForSend.length - 1, 0, ...groundingMessages)
+          nextInferenceMessages.splice(sessionMessagesForSend.length - 1, 0, ...budgetedGroundingMessages)
           inferenceMessages = nextInferenceMessages
         }
         else {
           const nextInferenceMessages = [...sessionMessagesForSend, inferenceUserMessage]
-          nextInferenceMessages.splice(sessionMessagesForSend.length, 0, ...groundingMessages)
+          nextInferenceMessages.splice(sessionMessagesForSend.length, 0, ...budgetedGroundingMessages)
           inferenceMessages = nextInferenceMessages
         }
       }
@@ -911,7 +940,8 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           const cardFallback = activeCard.value?.extensions?.airi?.generation?.known?.reasoningFallback
           const current = categorizer.getCurrent()
           if (current) {
-            const finalSpeech = current.speech || (cardFallback !== false && current.reasoning ? current.reasoning : '')
+            const hasToolCalls = buildingMessage.slices.some(s => s.type === 'tool-call') || needsBridgedFollowUp
+            const finalSpeech = current.speech || (cardFallback !== false && !hasToolCalls && current.reasoning ? current.reasoning : '')
             const existingCategorization = (buildingMessage as any).categorization || {}
             const finalReasoning = current.reasoning && existingCategorization.reasoning && !existingCategorization.reasoning.includes(current.reasoning)
               ? `${existingCategorization.reasoning}\n\n${current.reasoning}`
@@ -1135,6 +1165,22 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
               return
             }
 
+            if (/^<\|STICKER\b/i.test(special)) {
+              const id = /^<\|STICKER\s+([\w-]+)/i.exec(special)?.[1]
+              if (id) {
+                if (!buildingMessage.slices.some(s => s.type === 'sticker')) {
+                  buildingMessage.slices.push({ type: 'sticker', stickerId: id })
+                  updateUI()
+                }
+                try {
+                  const stickersStore = useStickersStore()
+                  stickersStore.spawnSticker(id)
+                }
+                catch {}
+              }
+              return
+            }
+
             captureActorToken(actorSliceState, special)
             await hooks.emitTokenSpecialHooks(special, streamingMessageContext)
           },
@@ -1244,10 +1290,13 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           return ''
         }
 
-        // Ensure that newMessages always starts with the active character's canonical system prompt.
-        const rawSystemPrompt = unref(airiCardStore.systemPrompt)
-        const effectiveSystemPrompt = (typeof rawSystemPrompt === 'string' && rawSystemPrompt.trim() ? rawSystemPrompt.trim() : '')
-          || buildSystemPrompt(activeCard.value)
+        // Ensure that newMessages always starts with the active character's canonical system prompt (unless zero-prompt cartridge).
+        const isZeroPromptCartridge = activeCard.value?.extensions?.airi?.rwkv?.zeroPromptVerified === true
+        const rawSystemPrompt = isZeroPromptCartridge ? '' : unref(airiCardStore.systemPrompt)
+        const effectiveSystemPrompt = isZeroPromptCartridge
+          ? ''
+          : ((typeof rawSystemPrompt === 'string' && rawSystemPrompt.trim() ? rawSystemPrompt.trim() : '')
+            || buildSystemPrompt(activeCard.value))
         const firstMsgContent = newMessages.length > 0 ? getMsgStringContent(newMessages[0].content) : ''
         const hasPersonaSystemMessage = newMessages.length > 0
           && newMessages[0].role === 'system'
@@ -1255,7 +1304,11 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           && !firstMsgContent.startsWith('[ENVIRONMENTAL AWARENESS]')
           && !firstMsgContent.includes('[CONTEXT_AWARENESS]')
 
-        if (!hasPersonaSystemMessage) {
+        if (isZeroPromptCartridge && hasPersonaSystemMessage) {
+          // Drop stale persona system message if switching to zero-prompt cartridge
+          newMessages.shift()
+        }
+        else if (!hasPersonaSystemMessage) {
           if (effectiveSystemPrompt) {
             newMessages.unshift({
               role: 'system',
@@ -1327,6 +1380,7 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
           injectDreamContext: dreamState?.injectDreamContext,
           pendingDreamChips: dreamState?.pendingDreamChips,
           pendingDreamTimestamp: dreamState?.pendingDreamTimestamp,
+          pendingDreamMood: dreamState?.pendingDreamMood,
           template: dreamState?.dreamIntrusionPrompt,
           nowMs: now,
         })
@@ -1416,11 +1470,14 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
         }
 
         // Evaluate Decoupled Two-Hop Cognition Pipeline
-        const cognitionConfig = (activeCard.value?.extensions?.airi as any)?.modules?.cognition
-        if (cognitionConfig?.enabled && bridgedSteps === 1) {
-          const firstHopProviderId = cognitionConfig.provider
-          const firstHopModelId = cognitionConfig.model
-          const processorMode = cognitionConfig.processor || 'none'
+        const airiExt = activeCard.value?.extensions?.airi as any
+        const cognitionConfig = airiExt?.modules?.cognition ?? airiExt?.cognition
+        const isCognitionEnabled = cognitionConfig?.enabled
+          ?? (airiExt?.firstHopProcessor === 'nan0' || airiExt?.firstHopProcessor === 'local_nan0')
+        if (isCognitionEnabled && bridgedSteps === 1) {
+          const firstHopProviderId = cognitionConfig?.provider || effectiveProviderId
+          const firstHopModelId = cognitionConfig?.model || effectiveModel
+          const processorMode = cognitionConfig?.processor || cognitionConfig?.firstHopProcessor || airiExt?.firstHopProcessor || 'none'
 
           if (firstHopProviderId && firstHopModelId) {
             chatLog('[Cognition] Executing 1st-Hop pre-pass thoughts...', {
@@ -1430,102 +1487,153 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
             })
 
             try {
-              const firstHopProvider = await providersStore.getProviderInstance(firstHopProviderId)
               const firstHopConfig = providersStore.getProviderConfig(firstHopProviderId)
               const headers = { ...(firstHopConfig?.headers as Record<string, string> | undefined) }
               if (firstHopProviderId === 'opencode-go' && sessionId && !headers['x-opencode-session']) {
                 headers['x-opencode-session'] = sessionId
               }
 
-              // Build the output guidance instructions for the 1st-Hop LLM
-              let firstHopSystemPrompt = ''
-              if (processorMode === 'local_nan0') {
-                // Kyo's local rules engine instructions (System Prompt for Nan0 private thoughts)
-                firstHopSystemPrompt = `[COGNITIVE PROCESSOR: NAN0 LOCAL]
-You are the inner thoughts, attention processor, and emotional monologue generator for the character.
-Generate a thought log matching the strict Nan0 token-delimited formatting schema:
-[ATTENTION] score
-[EMOTION] state
-[MONOLOGUE]
-Your subconscious monologue.
-[DECISION] SPEAK or SILENCE`
+              if (processorMode === 'local_nan0' || processorMode === 'nan0') {
+                const nan0Store = useNan0Store()
+                const userContentStr = typeof sendingMessage === 'string'
+                  ? sendingMessage
+                  : (inferenceUserMessage ? getMsgStringContent(inferenceUserMessage.content) : '')
+
+                const userProfileStore = useSettingsUserProfile()
+                const cardAnchor = (activeCard.value as any)?.extensions?.airi?.cognition?.affect?.companionAnchorOverride?.trim()
+                const globalName = userProfileStore.name?.trim()
+                const effectiveOwnerName = cardAnchor || globalName || 'User'
+
+                const observation: Nan0Observation = {
+                  id: `obs_${nanoid()}`,
+                  source: 'chat',
+                  actorId: 'owner',
+                  displayName: effectiveOwnerName,
+                  sessionId,
+                  timestamp: sendingCreatedAt || Date.now(),
+                  content: userContentStr,
+                  metadata: {
+                    sessionId,
+                    messageId: userMessageId,
+                    cardId: (activeCard.value as any)?.id || activeCardId.value,
+                    pendingDreamMood: dreamState?.pendingDreamMood,
+                  },
+                }
+
+                const mappedFacts = retrievedSemanticMemories.map(res => ({
+                  source: (res as any).isKgClaim ? 'entity_ledger' as const : (res as any).kind === 'stmm_summary' ? 'stmm' as const : 'journal' as const,
+                  title: res.title,
+                  content: res.content,
+                  relevance: res.score,
+                  subject: (res as any).subject,
+                  predicate: (res as any).predicate,
+                  object: (res as any).object,
+                  date: res.createdAt ? new Date(res.createdAt).toISOString() : undefined,
+                }))
+
+                const prepared = await nan0Store.prepareTurn(
+                  observation,
+                  {
+                    autonomous: false,
+                    // If Universe RAG / grounding search ran during turn ingestion, pass the resulting
+                    // facts (even if empty, i.e. facts: []) so Nan0Kernel does not fire a second duplicate search.
+                    retrievedMemoryContext: isUniverseRagEnabled
+                      ? { facts: mappedFacts }
+                      : (mappedFacts.length > 0 ? { facts: mappedFacts } : undefined),
+                  },
+                  {
+                    providerId: firstHopProviderId,
+                    modelId: firstHopModelId,
+                    headers,
+                  },
+                )
+                activeNan0PreparedTurn = prepared
+
+                // Executive Decision Gate: SILENCE or Suppressed
+                if (prepared.decision.finalDecision === 'SILENCE' || !prepared.decision.allowed) {
+                  chatLog('[Cognition] Nan0 executive decision: SILENCE. Suppressing vocal response.', {
+                    reason: prepared.decision.suppressionReason || prepared.decision.reasonCodes.join(', '),
+                  })
+                  rollbackIntrusions(turnLeaseId)
+
+                  await nan0Store.recordSilenceDecision({
+                    turnId: prepared.turnId,
+                    thoughtId: prepared.thoughtId,
+                    decisionId: prepared.decision.decisionId,
+                    reason: prepared.decision.suppressionReason || 'Nan0 chose silence.',
+                    timestamp: Date.now(),
+                  })
+
+                  if (!isStaleGeneration()) {
+                    const currentMessages = chatSession.getSessionMessages(sessionId)
+                    chatSession.setSessionMessages(sessionId, [
+                      ...currentMessages,
+                      {
+                        ...toRaw(buildingMessage),
+                        role: 'assistant',
+                        content: 'NO_REPLY',
+                        rawContent: 'NO_REPLY',
+                        slices: [],
+                      } as any,
+                    ])
+                  }
+
+                  if (isForegroundSession()) {
+                    streamingMessage.value = { role: 'assistant', content: '', slices: [], tool_results: [] }
+                  }
+                  await hooks.emitStreamEndHooks(streamingMessageContext)
+                  return
+                }
+
+                // Executive Decision Gate: SPEAK
+                if (prepared.systemContext?.trim()) {
+                  const systemIdx = newMessages.findIndex(m => m.role === 'system')
+                  const insertIdx = systemIdx >= 0 ? systemIdx + 1 : 0
+                  newMessages.splice(insertIdx, 0, {
+                    role: 'system',
+                    content: prepared.systemContext.trim(),
+                  })
+                }
               }
               else {
                 // Pass-through proxy/default instructions
-                firstHopSystemPrompt = cognitionConfig.outputGuidance || `[COGNITIVE PROCESSOR]
+                const firstHopProvider = await providersStore.getProviderInstance(firstHopProviderId)
+                const firstHopSystemPrompt = cognitionConfig.outputGuidance || `[COGNITIVE PROCESSOR]
 You are the inner thoughts, attention processor, and emotional monologue generator for the character.
 Analyze the conversation history and the latest user message. Generate a concise inner monologue detailing your emotional state, attention highlights, memories to fetch, and immediate conversational directives.
 Format your output as a raw thought log.`
-              }
 
-              const firstHopMessages = [
-                { role: 'system', content: firstHopSystemPrompt },
-                ...newMessages.filter(m => m.role !== 'system'),
-              ]
-
-              const nan0Store = useNan0Store()
-              if (processorMode === 'local_nan0') {
-                nan0Store.setProcessing(true)
-              }
-
-              const firstHopResponse = await llmStore.generate(
-                firstHopModelId,
-                firstHopProvider as any,
-                firstHopMessages as Message[],
-                {
-                  headers,
-                  temperature: 0.7,
-                },
-              )
-
-              const rawOutput = firstHopResponse.text || ''
-              useLiveSessionStore().recordInferenceUsage(firstHopResponse.usage)
-              chatLog('[Cognition] Raw 1st-Hop output:', rawOutput)
-
-              let monologueText = ''
-              if (processorMode === 'local_nan0') {
-                nan0Store.setProcessing(false)
-                // Parse rawOutput matching the strict token format ([EMOTION], [ATTENTION], [MONOLOGUE], [DECISION]).
-                const monologueMatch = rawOutput.match(/\[MONOLOGUE\]\s*([\s\S]*?)(?:\[DECISION\]|$)/i)
-                monologueText = monologueMatch ? monologueMatch[1].trim() : rawOutput
-                nan0Store.setInnerMonologue(monologueText)
-
-                const decisionMatch = rawOutput.match(/\[DECISION\]\s*(SPEAK|SILENCE)/i)
-                if (decisionMatch) {
-                  const decisionVal = decisionMatch[1].toUpperCase() as 'SPEAK' | 'SILENCE'
-                  nan0Store.setExecutiveState(decisionVal, decisionVal === 'SILENCE' ? 'Demands Silence' : 'Vocal Dialogue')
-                }
-
-                const emotionMatch = rawOutput.match(/\[EMOTION\]\s*([^\n\r]+)/i)
-                if (emotionMatch) {
-                  const pairs = emotionMatch[1].split(/[,;]/)
-                  for (const pair of pairs) {
-                    const [k, v] = pair.split(':').map(s => s.trim().toLowerCase())
-                    const num = Number.parseFloat(v)
-                    if (k && !Number.isNaN(num)) {
-                      nan0Store.updateEmotion(k, num)
-                    }
-                  }
-                }
-              }
-              else {
-                // Pass-through: Treat the entire output as the monologue
-                monologueText = rawOutput
-              }
-
-              if (monologueText.trim()) {
-                // Inject the monologue as a system instruction before sending to 2nd LLM
-                const system = newMessages.slice(0, 1)
-                const afterSystem = newMessages.slice(1)
-
-                newMessages = [
-                  ...system,
-                  {
-                    role: 'system',
-                    content: `[INTERNAL MONOLOGUE & ATTENTION DIRECTIVE]\n${monologueText.trim()}`,
-                  },
-                  ...afterSystem,
+                const firstHopMessages = [
+                  { role: 'system', content: firstHopSystemPrompt },
+                  ...newMessages.filter(m => m.role !== 'system'),
                 ]
+
+                const firstHopResponse = await llmStore.generate(
+                  firstHopModelId,
+                  firstHopProvider as any,
+                  firstHopMessages as Message[],
+                  {
+                    headers,
+                    temperature: 0.7,
+                  },
+                )
+
+                const rawOutput = firstHopResponse.text || ''
+                useLiveSessionStore().recordInferenceUsage(firstHopResponse.usage)
+                chatLog('[Cognition] Raw 1st-Hop output:', rawOutput)
+
+                if (rawOutput.trim()) {
+                  const system = newMessages.slice(0, 1)
+                  const afterSystem = newMessages.slice(1)
+                  newMessages = [
+                    ...system,
+                    {
+                      role: 'system',
+                      content: `[INTERNAL MONOLOGUE & ATTENTION DIRECTIVE]\n${rawOutput.trim()}`,
+                    },
+                    ...afterSystem,
+                  ]
+                }
               }
             }
             catch (err) {
@@ -1575,8 +1683,8 @@ Format your output as a raw thought log.`
 
         debug(`[ChatDebug] Model: ${effectiveModel}, Provider: ${effectiveProviderId}, Vision Supported: ${isVisionSupported}`)
 
-        // NOTICE: Strict runtime safety check ensuring persona system prompt is never omitted or misplaced
-        if (import.meta.env.DEV) {
+        // NOTICE: Strict runtime safety check ensuring persona system prompt is never omitted or misplaced (exempting zero-prompt cartridges)
+        if (import.meta.env.DEV && !isZeroPromptCartridge) {
           if (newMessages.length === 0 || newMessages[0].role !== 'system') {
             console.error('[CRITICAL] Prompt invariant violated: messages[0] must be role: "system"', newMessages)
             throw new Error('Prompt invariant violated: persona system message missing from messages[0]')
@@ -1757,7 +1865,8 @@ Format your output as a raw thought log.`
 
       // Turn loop ended
       const cardFallback = activeCard.value?.extensions?.airi?.generation?.known?.reasoningFallback
-      const fallbackActive = cardFallback !== false
+      const hasTurnToolCalls = buildingMessage.slices.some(s => s.type === 'tool-call') || needsBridgedFollowUp
+      const fallbackActive = cardFallback !== false && !hasTurnToolCalls
       const speechText = typeof buildingMessage.content === 'string' ? buildingMessage.content : ''
       if (!speechText.trim() && (buildingMessage as any).categorization?.reasoning?.trim() && fallbackActive) {
         const fallbackText = (buildingMessage as any).categorization.reasoning
@@ -1828,11 +1937,25 @@ Format your output as a raw thought log.`
           }
         }
         ;(buildingMessage as any).rawContent = rawFullText
+        console.info('[Chat:rawContent]', rawFullText)
         const currentMessages = chatSession.getSessionMessages(sessionId)
         chatSession.setSessionMessages(sessionId, [...currentMessages, toRaw(buildingMessage)])
 
         // Commit leased intrusions upon successful message persistence
         commitIntrusions(turnLeaseId)
+
+        if (activeNan0PreparedTurn) {
+          void useNan0Store().recordAssistantTurn({
+            turnId: activeNan0PreparedTurn.turnId,
+            thoughtId: activeNan0PreparedTurn.thoughtId,
+            decisionId: activeNan0PreparedTurn.decision.decisionId,
+            content: typeof buildingMessage.content === 'string' ? buildingMessage.content : '',
+            rawContent: rawFullText,
+            timestamp: Date.now(),
+          }).catch((err) => {
+            console.error('[Cognition] Failed to record Nan0 assistant turn:', err)
+          })
+        }
 
         if (hasDreamLease && activeCard.value) {
           const currentDreamState = activeCard.value.extensions?.airi?.dreamState
@@ -1900,6 +2023,17 @@ Format your output as a raw thought log.`
       }
     }
     catch (error: any) {
+      if (activeNan0PreparedTurn) {
+        void useNan0Store().failTurn({
+          turnId: activeNan0PreparedTurn.turnId,
+          thoughtId: activeNan0PreparedTurn.thoughtId,
+          error: error instanceof Error ? error.message : String(error || 'Turn generation aborted'),
+          timestamp: Date.now(),
+        }).catch((err) => {
+          console.error('[Cognition] Failed to record Nan0 turn failure:', err)
+        })
+      }
+
       // User-initiated stop: stopCurrentGeneration() already bumped the session generation and
       // aborted the stream controller, persisted the partial reply (if hadContent), and emitted the finalize hooks.
       // Exit cleanly — no error bubble, no rethrow (a rethrow would reject the queued send's promise
@@ -2045,6 +2179,7 @@ Format your output as a raw thought log.`
         options,
         generation,
         sessionId,
+        hmrEpoch: chatEpoch,
         deferred: { resolve, reject },
       })
     })
@@ -2128,12 +2263,14 @@ Format your output as a raw thought log.`
     const partialText = typeof partialMessage.content === 'string' ? partialMessage.content.trim() : ''
     const hadContent = partialText.length > 0 || partialMessage.slices.length > 0
     if (hadContent) {
+      const rawText = handle.getRawText()
+      console.info('[Chat:rawContent] (aborted)', rawText)
       const currentMessages = chatSession.getSessionMessages(sessionId)
       chatSession.setSessionMessages(sessionId, [
         ...currentMessages,
         // NOTICE: keep rawContent (including orchestration tokens streamed so far) for the
         // same token-retention reason as the normal persist path.
-        { ...partialMessage, rawContent: handle.getRawText(), aborted: true } as any,
+        { ...partialMessage, rawContent: rawText, aborted: true } as any,
       ])
     }
 

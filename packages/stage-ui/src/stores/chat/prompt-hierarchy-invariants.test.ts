@@ -500,7 +500,7 @@ describe('chat prompt hierarchy and message ordering invariants', () => {
       expect(capturedMessages[1].content).toContain('[INSPECTIVE ARTWORK AWARENESS]')
       expect(capturedMessages[1].content).toContain('Futuristic floating city in sunset')
 
-      // Invariant 4: Grounding blocks deterministic order (0 < 1 < 1.5 < 1.6 < 2 < 3 < 4 < 5)
+      // Invariant 4: Grounding blocks deterministic order (0 < 1 < 1.5 < 1.6 < 2 < 3 < 4; salience force-disabled, see below)
       const idxVlm = capturedMessages.findIndex((m: any) => m.content?.includes('[IMAGE ANALYSIS]'))
       const idxEnv = capturedMessages.findIndex((m: any, i: number) => i > idxVlm && m.content?.includes('[ENVIRONMENTAL AWARENESS]'))
       const idxStmm = capturedMessages.findIndex((m: any) => m.content?.includes('[DAILY MEMORY CONTINUITY]'))
@@ -517,7 +517,12 @@ describe('chat prompt hierarchy and message ordering invariants', () => {
       expect(idxRag).toBeGreaterThan(idxLtmm)
       expect(idxTopics).toBeGreaterThan(idxRag)
       expect(idxScratch).toBeGreaterThan(idxTopics)
-      expect(idxSalience).toBeGreaterThan(idxScratch)
+      // NOTICE: salienceGateEnabled is true on the card, yet no [SALIENCE
+      // TELEMETRY] block is emitted: production force-disables the RWKV
+      // salience gate for release stability (5fdec1456b, chat.ts "5. Salience
+      // Gate injection"). This assertion pins that decision; if salience is
+      // ever re-enabled, restore `expect(idxSalience).toBeGreaterThan(idxScratch)`.
+      expect(idxSalience).toBe(-1)
 
       // Invariant 5: User message is placed after all grounding and contains original prompt
       const userMsg = capturedMessages[capturedMessages.length - 1]

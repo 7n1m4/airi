@@ -3,9 +3,12 @@ import type { ChatProvider } from '@xsai-ext/providers/utils'
 import type { WebRwkvGenerateRequest } from '../../../libs/inference/contract'
 import type { ChatMessage } from './format'
 
-import { getWebRwkvAdapter } from '../../../libs/inference/adapters/web-rwkv'
-import { DEFAULT_WEB_RWKV_MODEL } from '../../../libs/inference/constants'
+import { DEFAULT_WEB_RWKV_MODEL, PRESETS, WEB_RWKV_MODELS } from '../../../libs/inference'
+import { getWebRwkvAdapter, resolveWebRwkvQuantization } from '../../../libs/inference/adapters/web-rwkv'
+import { useAiriCardStore } from '../../modules/airi-card'
 import { buildRwkvPrompt, createThinkPrefixStripper, openAIChatChunk, openAIChatCompletion, SSE_DONE } from './format'
+
+export { buildRwkvPrompt, createThinkPrefixStripper } from './format'
 
 export interface WebRwkvProviderConfig {
   /** Model `.safetensors` URL. Defaults to {@link DEFAULT_WEB_RWKV_MODEL}. */
@@ -14,6 +17,8 @@ export interface WebRwkvProviderConfig {
   vocab?: string
   /** Enable RWKV-7 G1 reasoning prefill & prefix stripping. Defaults to true. */
   enableG1Prefill?: boolean
+  /** Quantization precision mode: 'none' (FP16), 'nf4', 'int8'. Defaults to 'none'. */
+  quantization?: 'none' | 'nf4' | 'int8'
 }
 
 // NucleusSampler penalty defaults matching the upstream web-rwkv-wasm usage
@@ -53,7 +58,8 @@ interface OpenAIChatBody {
 export function createWebRwkvChatProvider(config: WebRwkvProviderConfig = {}): ChatProvider {
   const defaultModelUrl = config.model || DEFAULT_WEB_RWKV_MODEL
   const vocabUrl = config.vocab || undefined
-  const enableG1Prefill = config.enableG1Prefill !== false
+  const enableG1Prefill = config.enableG1Prefill === true
+  const quantization = config.quantization ?? 'none'
 
   return {
     chat: (model: string) => ({
@@ -63,26 +69,79 @@ export function createWebRwkvChatProvider(config: WebRwkvProviderConfig = {}): C
       fetch: async (_input: RequestInfo | URL, init?: RequestInit) => {
         const body = (init?.body && typeof init.body === 'string' ? JSON.parse(init.body) : {}) as OpenAIChatBody
         let modelUrl = body.model || model || defaultModelUrl
-        if (modelUrl === 'https' || !modelUrl.startsWith('http')) {
+
+        // Resolve shorthand model parameters (e.g. '1.5B', '0.4B') against catalog
+        const matchedCatalogModel = WEB_RWKV_MODELS.find(m =>
+          m.id === modelUrl || m.params.toLowerCase() === modelUrl.toLowerCase(),
+        )
+        if (matchedCatalogModel) {
+          modelUrl = matchedCatalogModel.id
+        }
+        else if (modelUrl === 'https' || !modelUrl.startsWith('http')) {
           modelUrl = defaultModelUrl
         }
-        const prompt = buildRwkvPrompt(body.messages ?? [], { enableG1Prefill })
 
         const adapter = await getWebRwkvAdapter()
-        // Load-on-demand and reload when the selected model/vocab differs from
+        // Load-on-demand and reload when the selected model/vocab/quantization differs from
         // what's loaded (the adapter is a singleton shared across requests).
-        if (adapter.state !== 'ready' || adapter.manifest?.model !== modelUrl || adapter.manifest?.vocab !== (vocabUrl ?? '')) {
-          await adapter.loadModel(modelUrl, vocabUrl, { signal: init?.signal ?? undefined })
+        // G1 catalog models resolve quant to FP16 (quant kernels garble G1 output).
+        const effectiveQuantization = resolveWebRwkvQuantization(modelUrl, quantization)
+        if (adapter.state !== 'ready'
+          || adapter.manifest?.model !== modelUrl
+          || adapter.manifest?.vocab !== (vocabUrl ?? '')
+          || adapter.manifest?.quantization !== effectiveQuantization) {
+          await adapter.loadModel(modelUrl, vocabUrl, { quantization: effectiveQuantization, signal: init?.signal ?? undefined })
         }
+
+        let stateCartridgeId: string | undefined
+        let stateCartridgeUrl: string | undefined
+        let conditioningTexts: string[] | undefined
+        let isZeroPrompt = false
+        let recommendedTemp: number | undefined
+        let recommendedTopP: number | undefined
+
+        try {
+          const cardStore = useAiriCardStore()
+          const rwkvConfig = (cardStore.activeCard as any)?.extensions?.airi?.rwkv
+          if (rwkvConfig?.stateCartridgeId) {
+            stateCartridgeId = rwkvConfig.stateCartridgeId
+            stateCartridgeUrl = rwkvConfig.stateCartridgeUrl
+            isZeroPrompt = rwkvConfig.zeroPromptVerified === true
+            recommendedTemp = rwkvConfig.recommendedTemperature
+            recommendedTopP = rwkvConfig.recommendedTopP
+
+            // Fallback in-situ synthesis corpus from card conditioningTurns or catalog presets
+            if (rwkvConfig.conditioningTurns && Array.isArray(rwkvConfig.conditioningTurns) && rwkvConfig.conditioningTurns.length > 0) {
+              conditioningTexts = rwkvConfig.conditioningTurns
+            }
+            else if (rwkvConfig.archetype && rwkvConfig.archetype !== 'custom') {
+              const preset = PRESETS.find(p => p.id === rwkvConfig.archetype)
+              if (preset?.conditioningTurns) {
+                conditioningTexts = preset.conditioningTurns
+              }
+            }
+          }
+        }
+        catch {
+          // Outside active Pinia scope fallback
+        }
+
+        const prompt = buildRwkvPrompt(body.messages ?? [], {
+          enableG1Prefill: enableG1Prefill && !isZeroPrompt,
+          zeroPrompt: isZeroPrompt,
+        })
 
         const request: WebRwkvGenerateRequest = {
           prompt,
           maxTokens: body.max_tokens ?? DEFAULT_MAX_TOKENS,
-          temperature: body.temperature ?? 1.0,
-          topP: body.top_p ?? 0.5,
+          temperature: body.temperature ?? recommendedTemp ?? 1.0,
+          topP: body.top_p ?? recommendedTopP ?? 0.5,
           presencePenalty: body.presence_penalty ?? DEFAULT_PRESENCE_PENALTY,
           countPenalty: DEFAULT_COUNT_PENALTY,
           penaltyDecay: DEFAULT_PENALTY_DECAY,
+          stateCartridgeId,
+          stateCartridgeUrl,
+          conditioningTexts,
         }
 
         const id = `chatcmpl-${Date.now()}`

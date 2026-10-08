@@ -589,6 +589,147 @@ During empirical cross-format implementation across all four avatar renderers, t
 
 Both paradigms offer distinct visual appeal: 2D formats deliver kinetic, tactile interplay, while 3D formats deliver spatial precision.
 
+---
+
+## 10. Upstream Synthesis: Best-of-Both-Worlds Specification (Post-PR #2657 Analysis)
+
+Following the upstream merge of **PR #2657: `feat(stage-ui): show a dynamic presence bubble beside the character`** (commit `d3a51672b0ac`, authored by `@chiba233`), both upstream (`moeru-ai/airi`) and this fork (`dasilva333/airi`) now possess fully realized yet divergent solutions for in-scene avatar speech and presence bubbles.
+
+This section establishes the technical synthesis: combining the mathematical and physical strengths of upstream's presence bubble with the rendering performance, community model resilience, and dialogue/speech features of our fork.
+
+### 10.1 Upstream Architectural Breakdown & File Registry
+
+Upstream PR #2657 introduced the following core modules in `moeru-ai/airi`:
+
+| Upstream Path | Subsystem / Responsibility | Key Architectural Patterns & Primitives |
+| :--- | :--- | :--- |
+| `packages/stage-shared/src/presence-bubble/advance.ts` | **Shared Policy Engine (`PresenceBubbleAdvancer`)** | Central stateful coordinator governing palette freshening, placement modes, content resolution, and delta ticks across all renderers. |
+| `packages/stage-shared/src/presence-bubble/follow.ts` | **Inertial Spring Physics (`PresenceBubbleFollower`)** | 2nd-order critically-damped spring-mass damper (`stiffness: 170`, `damping: 20`) with sub-step integration (`maxStepMs = 1000/120`) and stall catch-up bounding (`maxCatchUpMs = 100`). Contains `smoothTowards` exponential smoother. |
+| `packages/stage-shared/src/presence-bubble/painter.ts` | **Perimeter Vector Painter (`PresenceBubblePainter`)** | Arc-length parameterized boundary tracing around a rounded rectangle. The tail is a seamless deformation of the perimeter edge aiming at head coordinates from any angle (360°). |
+| `packages/stage-shared/src/presence-bubble/placement.ts` | **Placement & Hysteresis (`choosePresenceBubbleMode`)** | Resolves candidate placement (`left`, `right`, `above`) against the settled head box with a sticky hysteresis band to eliminate side-flipping flicker. |
+| `packages/stage-shared/src/presence-bubble/content.ts` | **State Precedence (`resolvePresenceBubbleContent`)** | Prioritizes `thinking` (8-phase quantized dot cycle) over `unread` count badge. |
+| `packages/stage-shared/src/presence-bubble/clock.ts` | **Frame Delta Deduplication (`createPresenceFrameClock`)** | Prevents double-advancing the spring when ticker callbacks and window resize events interleave within the same frame. |
+| `packages/stage-ui-live2d/src/composables/live2d/head-anchor.ts` | **Physical Perturbation Probing (`Live2DHeadSource`)** | Steps Cubism physics (`physics.evaluate`) with `ParamAngleX/Y/Z` at extrema and measures every drawable bound to isolate movers (`movedShare = 0.2`). |
+| `packages/stage-ui-live2d/src/components/scenes/live2d/presence-bubble.vue` | **Pixi Live2D Adapter** | In-scene `PIXI.Sprite` drawing via `baseTexture.resource.update()`. |
+| `packages/stage-ui-three/src/components/presence-bubble.vue` | **Three.js VRM Adapter** | In-scene `Three.Sprite` with `CanvasTexture`, `sizeAttenuation = false`, unprojecting screen coordinates to 3D world space at head depth plane. |
+| `packages/stage-ui-three/src/components/presence-bubble-palette.ts` | **Palette Inject Key (`presenceBubblePaletteKey`)** | Vue injection context passing theme palette from DOM into Tres/Three canvas. |
+| `packages/stage-ui/src/stores/presence-bubble.ts` | **Presence Store (`useSettingsPresenceBubble`)** | Cross-window synchronized developer overrides for testing thinking/unread states. |
+| `docs/ai/adr/2026-09-24-presence-bubble-in-canvas.md` | **Architecture Decision Record** | Upstream ADR documenting the rationale for drawing in-canvas rather than DOM overlays under `settings/live2d/max-fps`. |
+
+---
+
+### 10.2 Empirical Comparison: Strengths & Deficiencies
+
+```
+                        ┌────────────────────────────────────────────────────────┐
+                        │        Comparative Subsystem Analysis                  │
+┌───────────────────────┼─────────────────────────────────┬──────────────────────┴─────────────────┐
+│ Feature               │ Fork Implementation (dasilva333)│ Upstream Implementation (PR #2657)     │
+├───────────────────────┼─────────────────────────────────┼────────────────────────────────────────┤
+│ Primary Role          │ Sentence-Sync TTS Dialogue      │ Thinking indicator & unread badge      │
+│ Physics & Motion      │ 2.5D Perspective Skew & Squash  │ Critically Damped Spring Follower      │
+│ Live2D Head Anchor    │ 6-alias table + 50%/18% fallback│ Perturbation probe (strict standard ID)│
+│ Three.js VRM Surface  │ Screen-Space 2D Canvas Overlay  │ In-scene Sprite with Texture Uploads   │
+│ Tail Vector Geometry  │ Fixed bottom / wagging tail     │ 360° Perimeter Arc-Length Tail         │
+│ Spoken Text Support   │ Full Sentence-Sync + Micro-Pacer│ None (Explicitly deferred)             │
+│ Lifecycle             │ Persists last spoken line       │ Disappears immediately on turn end     │
+└───────────────────────┴─────────────────────────────────┴────────────────────────────────────────┘
+```
+
+#### Detailed Tradeoff Analysis:
+1. **Motion Mechanics**:
+   - *Fork*: Uses `poseToCaptionTransform` to compute non-uniform 2.5D skew and squash (`scaleX = 1 - flatten`, `skewX = x * 0.10`) matching head tilt. Visually striking for anime/manga aesthetic, but lacks mass or inertial lag.
+   - *Upstream*: Uses `PresenceBubbleFollower` with a true 2nd-order damped harmonic oscillator. The bubble feels physically tethered with realistic weight and lag, but remains strictly axis-aligned without perspective skew.
+2. **Live2D Anchor Resilience**:
+   - *Fork*: Scans `PARAM_ID_ALIASES` across multiple Cubism authoring standards (`ParamAngleX`, `PARAM_ANGLE_X`, `ParamHeadAngleX`, `FaceAngleX`, `AngleX`) and provides a reliable `(50%, 18%)` geometric fallback. Never fails to render.
+   - *Upstream*: Only probes `ParamAngleX/Y/Z`. If an unrigged or non-standard community model is loaded, the probe returns `undefined` and upstream **completely disables the bubble**.
+3. **VRM / Three.js Rendering Pipeline**:
+   - *Fork*: Projects 3D head bone coordinates to screen space and draws on a native 2D canvas overlay (`HeadTetheredCanvas2D.vue`). **Zero GPU texture allocation, zero upload pipeline overhead**.
+   - *Upstream*: Re-uploads the HTML5 canvas to the GPU as a `CanvasTexture` on every animation tick (8 uploads per 1.1s cycle) to drive a 3D `SpriteMaterial`. While it natively sorts within 3D depth, it incurs needless GPU bus pressure on low-power devices.
+4. **Tail Morphology**:
+   - *Fork*: Pre-baked bottom tail with sentiment-based wagging. Cannot naturally re-orient if the bubble is forced above or to the side of the head.
+   - *Upstream*: Sophisticated arc-length perimeter trace where the tail base is seamlessly interpolated into the rounded rectangle boundary, cleanly pointing at the head from any candidate side (`left`, `right`, `above`).
+
+---
+
+### 10.3 The Ideal Synthesis Specification (Best of Both Worlds)
+
+To achieve the ultimate in-scene speech and presence experience, our next-generation architecture fuses the best of both designs into a unified pipeline:
+
+```text
+                                  LIFECYCLE & INPUT SIGNALS
+┌─────────────────────────────────┐   ┌─────────────────────────────────┐   ┌───────────────────────────────┐
+│     chatSending (Thinking)      │   │ airi-caption-overlay (Speaking) │   │     Unread Messages Badge     │
+└────────────────┬────────────────┘   └────────────────┬────────────────┘   └───────────────┬───────────────┘
+                 │                                     │                                    │
+                 └───────────────────────────┬─────────┴────────────────────────────────────┘
+                                             │
+                                             ▼
+                             ┌───────────────────────────────┐
+                             │ Precedence & Lifecycle Engine │
+                             │  1. Speaking (Highest)        │
+                             │  2. Thinking (Middle)         │
+                             │  3. Decay / Persistent (Low)  │
+                             │  4. Unread Badge (Fallback)   │
+                             └───────────────┬───────────────┘
+                                             │
+                       ┌─────────────────────┴─────────────────────┐
+                       ▼                                           ▼
+       ┌───────────────────────────────┐           ┌───────────────────────────────┐
+       │     Hybrid Anchor Engine      │           │     Hybrid Physics Engine     │
+       │  • Tier 1: Perturbation Probe │           │  • Position: Damped Spring    │
+       │  • Tier 2: Param Alias Table  │           │    (upstream PresenceFollower)│
+       │  • Tier 3: 50%/18% Fallback   │           │  • Angle/Skew: 2.5D Faux-3D   │
+       │  • 3D: Head Bone + Offset     │           │    (fork poseToCaptionTransf) │
+       └───────────────┬───────────────┘           └───────────────┬───────────────┘
+                       │                                           │
+                       └─────────────────────┬─────────────────────┘
+                                             │
+                                             ▼
+                             ┌───────────────────────────────┐
+                             │ Composite Vector Painter (2D) │
+                             │  • Upstream Arc-Length Tail   │
+                             │  • Fork Sentiment Morphology  │
+                             │  • Clause Micro-Pacer (≤80ch) │
+                             └───────────────┬───────────────┘
+                                             │
+                       ┌─────────────────────┴─────────────────────┐
+                       ▼                                           ▼
+       ┌───────────────────────────────┐           ┌───────────────────────────────┐
+       │    Live2D & Spine Surface     │           │       VRM & MMD Surface       │
+       │   In-Stage PIXI/Spine Child   │           │ Screen-Space 2D Canvas Overlay│
+       │   (Direct Canvas/Texture)     │           │ (Zero GPU Upload Overhead)    │
+       └───────────────────────────────┘           └───────────────────────────────┘
+```
+
+#### Key Pillars of the Synthesized Pipeline:
+
+1. **Hybrid Dual-Engine Physics (Spring Inertia + Perspective Skew)**:
+   - **Positioning**: Use upstream's `PresenceBubbleFollower` with sub-stepped numerical integration (`stiffness = 170`, `damping = 20`) to calculate anchor translation `(x, y)`. This gives the bubble physical inertia, lag, and settling behavior during rapid head movements.
+   - **Rotation & Deformation**: Pass the normalized pose snapshot into the fork's `poseToCaptionTransform` to compute non-uniform 2.5D perspective skew (`skewX`, `skewY`, `scaleX`, `scaleY`, `rotation`).
+   - **Result**: The bubble moves with physical mass *and* twists in 3D perspective as the avatar glances around.
+
+2. **Resilient 3-Tier Head Anchor Resolution**:
+   - **Tier 1 (Upstream Perturbation)**: On model load, probe `ParamAngleX/Y/Z` through Cubism physics to discover exact drawable bounding boxes.
+   - **Tier 2 (Fork Alias Table)**: If the perturbation probe discovers 0 moving drawables (common in community and non-standard models), query `PARAM_ID_ALIASES` across the 6 common alternate parameter names.
+   - **Tier 3 (Fork Bounding Box Fallback)**: If no parameters match, fall back to normalized model bounding box coordinates `(head ≈ 50%, 18%)`.
+   - **Result**: 100% compatibility across both standard SDK samples and arbitrary community Live2D models.
+
+3. **Composite Painter (Arc-Length Tail + Sentiment Morphology)**:
+   - Adopt upstream's continuous perimeter arc-length trace so the tail can emerge smoothly from any border (`left`, `right`, `above`).
+   - Retain the fork's sentiment morphology engine (`caption-sentiment.ts`), allowing the body path to modulate between `standard-rounded`, `jagged-starburst` (anger/tsundere), and `scalloped-cloud` (pondering/inner monologue).
+
+4. **Zero-Upload Screen-Space Canvas2D for 3D Runtimes**:
+   - Maintain the fork's `HeadTetheredCanvas2D.vue` overlay approach for VRM and MMD: project `vrm.humanoid.getNormalizedBoneNode('head')` through `camera.project()` and render directly to a lightweight 2D canvas overlay.
+   - Avoids upstream's expensive per-tick WebGL `CanvasTexture` GPU uploads while keeping full visual parity.
+
+5. **Complete Four-State Precedence & Decay Lifecycle**:
+   - **State 1: Thinking Dots (`kind: 'thinking'`)**: Active when `chatSending == true` before speech tokens arrive. Displays upstream's 8-phase quantized thinking dots.
+   - **State 2: Spoken Dialogue (`kind: 'speech'`)**: Takes immediate precedence when `airi-caption-overlay` publishes active TTS sentence chunks. Displays micro-paced text (≤80 chars) with sentiment styling.
+   - **State 3: Soft Decay (Configurable 3–5s Timer)**: When speech completes, the bubble holds the completed line for a reading delay, then smoothly fades/scales down via spring damping, rather than either vanishing instantly (upstream flaw) or sticking forever (fork limitation).
+   - **State 4: Unread Message Badge (`kind: 'unread'`)**: When chat is closed and new background messages arrive, collapses into upstream's compact accent badge (`99+`).
+
 ## Relevant Skills
 
 - [[airi-caption-subsystem]]
+

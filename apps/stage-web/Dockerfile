@@ -2,6 +2,12 @@ FROM node:24-trixie AS build-stage
 
 WORKDIR /app
 
+# NOTICE: stage-web bundles all of stage-ui (three.js, transformers, shiki…).
+# Node's default heap OOMs here ("Ineffective mark-compacts near heap limit").
+# Desktop/CI builds use --max-old-space-size=12288; Docker builders share one
+# ~16GB runner across parallel platform images, so cap at 8GB instead.
+ENV NODE_OPTIONS="--max-old-space-size=8192"
+
 RUN apt update && apt install -y ca-certificates curl
 RUN update-ca-certificates
 RUN apt update && apt install -y build-essential python3 python3-setuptools curl

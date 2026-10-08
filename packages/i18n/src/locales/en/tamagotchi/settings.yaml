@@ -50,6 +50,12 @@ pages:
             name: PostgreSQL
             description: Read and write access to PostgreSQL databases.
   system:
+    general:
+      hide-app-icon:
+        title: Hide taskbar / Dock icon
+        description: Keep AIRI in the tray only. Use the tray menu to open windows or quit. Changes apply immediately.
+        load-error: Failed to load the app icon setting.
+        save-error: Failed to update the app icon setting.
     dock-mode:
       title: Window Dock Mode
       description: Dock the window to another application window.

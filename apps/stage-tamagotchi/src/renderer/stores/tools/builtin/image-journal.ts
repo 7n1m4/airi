@@ -9,6 +9,7 @@ import {
   useAiriCardStore,
   useArtistryStore,
   useBackgroundStore,
+  useChatSessionStore,
 } from '@proj-airi/stage-ui/stores'
 import { tool } from '@xsai/tool'
 import { z } from 'zod'
@@ -29,41 +30,84 @@ const { context } = createContext(getIpcRenderer())
 const generateHeadless = defineInvoke(context, artistryGenerateHeadless)
 const addWidget = defineInvoke(context, widgetsAdd)
 
-const imageJournalParams = z.object({
-  action: z.enum(['create', 'apply']).describe('Choose "create" to generate a new image, or "apply" to use an existing one.'),
-  prompt: z.string().nullable().describe('Description for the image (required for "create").'),
-  title: z.string().nullable().describe('Label for the entry (optional).'),
-  query: z.string().nullable().describe('Search term for existing images (required for "apply").'),
-  mode: z.enum(['inline', 'widget', 'bg', 'bg_widget']).nullable().describe('Display mode: "inline" (in chat), "widget" (overlay), "bg" (environment), or "bg_widget" (both). Defaults to character preference.'),
+export const imageJournalParams = z.object({
+  action: z.enum(['create', 'apply']).nullish().describe('Choose "create" to generate a new image, or "apply" to use an existing one. Defaults to "create".'),
+  prompt: z.string().nullish().describe('Visual description of the image to generate (required when creating).'),
+  description: z.string().nullish().describe('Alias for prompt.'),
+  text: z.string().nullish().describe('Alias for prompt.'),
+  content: z.string().nullish().describe('Alias for prompt.'),
+  query: z.string().nullish().describe('Search term when applying an existing image, or prompt when creating.'),
+  title: z.string().nullish().describe('Label or title for the image entry (optional).'),
+  mode: z.enum(['inline', 'widget', 'bg', 'bg_widget']).nullish().describe('Display mode: "inline" (in chat), "widget" (overlay), "bg" (environment), or "bg_widget" (both). Defaults to character preference.'),
 })
 
-async function executeCreateImageJournalEntry(params: { prompt?: string, title?: string, mode?: 'inline' | 'widget' | 'bg' | 'bg_widget' }) {
-  if (!params.prompt?.trim())
-    throw new Error('prompt is required for image_journal.create')
-
-  const backgroundStore = useBackgroundStore()
-  const cardStore = useAiriCardStore()
-  const activeCard = cardStore.activeCard
-  const globalArtistryConfig = getArtistryConfig()
-
-  const cardArtistry = activeCard?.extensions?.airi?.artistry
-  const artistryConfig = {
-    provider: cardArtistry?.provider || globalArtistryConfig.provider,
-    model: cardArtistry?.model || globalArtistryConfig.model,
-    promptPrefix: cardArtistry?.promptPrefix || globalArtistryConfig.promptPrefix,
-    options: cardArtistry?.options || globalArtistryConfig.options,
-    Globals: globalArtistryConfig.Globals,
-  }
-
-  const title = params.title || `Generation ${new Date().toLocaleString()}`
-
-  // Resolve mode: explicit param > character fallback > global default (inline)
-  const spawnMode = activeCard?.extensions?.airi?.artistry?.spawnMode
-  const mode = params.mode || spawnMode || 'inline'
-
+function tryGetLastUserMessage(): string | undefined {
   try {
+    const chatSession = useChatSessionStore()
+    const currentSessionId = chatSession.activeSessionId
+    if (!currentSessionId)
+      return undefined
+    const messages = chatSession.getSessionMessages(currentSessionId) || []
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i]
+      if (msg.role === 'user') {
+        const text = typeof msg.content === 'string'
+          ? msg.content
+          : Array.isArray(msg.content)
+            ? msg.content.map((p: any) => p?.text || '').join(' ')
+            : ''
+        const cleaned = text.trim()
+        if (cleaned)
+          return cleaned
+      }
+    }
+  }
+  catch {
+    return undefined
+  }
+  return undefined
+}
+
+export async function executeCreateImageJournalEntry(params: {
+  prompt?: string
+  title?: string
+  mode?: 'inline' | 'widget' | 'bg' | 'bg_widget'
+}) {
+  try {
+    let prompt = params.prompt?.trim()
+    if (!prompt) {
+      const fallback = tryGetLastUserMessage()
+      if (fallback) {
+        console.warn('[ImageJournalTool] prompt was missing in tool call, falling back to last user message:', fallback)
+        prompt = fallback
+      }
+    }
+
+    if (!prompt)
+      return 'Error: prompt is required for image_journal.create. Please provide a description of the image.'
+
+    const backgroundStore = useBackgroundStore()
+    const cardStore = useAiriCardStore()
+    const activeCard = cardStore.activeCard
+    const globalArtistryConfig = getArtistryConfig()
+
+    const cardArtistry = activeCard?.extensions?.airi?.artistry
+    const artistryConfig = {
+      provider: cardArtistry?.provider || globalArtistryConfig.provider,
+      model: cardArtistry?.model || globalArtistryConfig.model,
+      promptPrefix: cardArtistry?.promptPrefix || globalArtistryConfig.promptPrefix,
+      options: cardArtistry?.options || globalArtistryConfig.options,
+      Globals: globalArtistryConfig.Globals,
+    }
+
+    const title = params.title || `Generation ${new Date().toLocaleString()}`
+
+    // Resolve mode: explicit param > character fallback > global default (inline)
+    const spawnMode = activeCard?.extensions?.airi?.artistry?.spawnMode
+    const mode = params.mode || spawnMode || 'inline'
+
     const artistryResult = await generateHeadless({
-      prompt: artistryConfig.promptPrefix ? `${artistryConfig.promptPrefix} ${params.prompt}` : params.prompt as string,
+      prompt: artistryConfig.promptPrefix ? `${artistryConfig.promptPrefix} ${prompt}` : prompt,
       model: artistryConfig.model as string,
       provider: artistryConfig.provider as string,
       options: JSON.parse(JSON.stringify(artistryConfig.options || {})),
@@ -87,7 +131,7 @@ async function executeCreateImageJournalEntry(params: { prompt?: string, title?:
       blob = await response.blob()
     }
 
-    const entryId = await backgroundStore.addBackground('journal', blob, title, params.prompt, cardStore.activeCardId)
+    const entryId = await backgroundStore.addBackground('journal', blob, title, prompt, cardStore.activeCardId)
 
     // Handle Application Logic based on Mode
     if (mode === 'bg' || mode === 'bg_widget') {
@@ -115,7 +159,7 @@ async function executeCreateImageJournalEntry(params: { prompt?: string, title?:
             status: 'done',
             entryId,
             imageUrl: artistryResult.imageUrl || artistryResult.base64,
-            prompt: params.prompt as string,
+            prompt,
             title,
             _skipIngestion: true,
           },
@@ -131,7 +175,7 @@ async function executeCreateImageJournalEntry(params: { prompt?: string, title?:
     // Stage the generated image prompt for Artistry Intrusion
     try {
       stageArtistryIntrusion({
-        prompt: params.prompt as string,
+        prompt,
         timestamp: Date.now(),
       })
     }
@@ -139,13 +183,12 @@ async function executeCreateImageJournalEntry(params: { prompt?: string, title?:
       console.warn('[ImageJournalTool] Failed to stage artistry intrusion:', e)
     }
 
-    // Return structured result for UI rendering
+    // The gallery owns image bytes. Tool results carry only metadata for the model and UI.
     return JSON.stringify({
       message: `Image created in ${mode} mode${mode === 'bg' ? ' and set as background' : ''}.`,
       entryId,
-      imageUrl: artistryResult.imageUrl || artistryResult.base64,
       title,
-      prompt: params.prompt,
+      prompt,
       mode,
     })
   }
@@ -155,14 +198,14 @@ async function executeCreateImageJournalEntry(params: { prompt?: string, title?:
   }
 }
 
-async function executeSetAsBackground(params: { query?: string }) {
-  if (!params.query?.trim())
+export async function executeSetAsBackground(params: { query?: string, prompt?: string, title?: string }) {
+  const query = (params.query?.trim() || params.prompt?.trim() || params.title?.trim() || '').toLowerCase()
+  if (!query)
     return 'Error: query is required for image_journal.apply. Provide a title or ID to search for.'
 
   const backgroundStore = useBackgroundStore()
   const cardStore = useAiriCardStore()
   const cardId = cardStore.activeCardId
-  const query = params.query.toLowerCase().trim()
 
   const entries = Array.from(backgroundStore.entries.values())
     .filter(e => e.characterId === null || e.characterId === cardId)
@@ -196,16 +239,59 @@ async function executeSetAsBackground(params: { query?: string }) {
   }
 
   const available = entries.filter(e => e.type === 'journal').map(e => e.title).slice(0, 10)
-  return `No match for "${params.query}".${available.length > 0 ? ` Try: ${available.join(', ')}` : ''}`
+  return `No match for "${query}".${available.length > 0 ? ` Try: ${available.join(', ')}` : ''}`
 }
 
-async function executeImageJournalAction(params: any) {
+export async function executeImageJournalAction(params: any) {
+  const rawParams = params || {}
+  const action = rawParams.action
+    ? String(rawParams.action).toLowerCase().trim()
+    : undefined
+
+  // Defensive fallback for prompt across all possible keys
+  const promptCandidate = (
+    rawParams.prompt
+    ?? rawParams.description
+    ?? rawParams.text
+    ?? rawParams.content
+    ?? rawParams.image_prompt
+    ?? rawParams.caption
+    ?? rawParams.input
+    // If action is create or undefined, query can be used as prompt
+    ?? (action !== 'apply' && action !== 'set_as_background' ? rawParams.query : undefined)
+    ?? rawParams.title
+  )
+
+  const resolvedPrompt = typeof promptCandidate === 'string'
+    ? promptCandidate.trim()
+    : (promptCandidate ? String(promptCandidate).trim() : '')
+
+  const resolvedQuery = typeof rawParams.query === 'string'
+    ? rawParams.query.trim()
+    : typeof rawParams.prompt === 'string'
+      ? rawParams.prompt.trim()
+      : typeof rawParams.title === 'string'
+        ? rawParams.title.trim()
+        : ''
+
+  // Determine effective action: if not specified or unrecognized, default to 'create' if prompt exists, or 'apply' if query exists
+  let effectiveAction = action
+  if (!effectiveAction || (effectiveAction !== 'create' && effectiveAction !== 'apply' && effectiveAction !== 'set_as_background')) {
+    if (resolvedPrompt)
+      effectiveAction = 'create'
+    else if (resolvedQuery)
+      effectiveAction = 'apply'
+    else
+      effectiveAction = 'create'
+  }
+
   const normalizedParams = {
-    ...params,
-    prompt: params.prompt ?? undefined,
-    title: params.title ?? undefined,
-    query: params.query ?? undefined,
-    mode: params.mode ?? undefined,
+    ...rawParams,
+    action: effectiveAction,
+    prompt: resolvedPrompt || undefined,
+    title: rawParams.title ? String(rawParams.title).trim() : undefined,
+    query: resolvedQuery || undefined,
+    mode: rawParams.mode ?? undefined,
   }
 
   if (normalizedParams.action === 'create')

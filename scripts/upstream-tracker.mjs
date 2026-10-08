@@ -54,14 +54,24 @@ const WATCHED_PRS = [
     focus: 'External Cortico daemon vs in-process native memory; track maintainer reaction to 2-process / web breakage',
   },
   {
-    number: 2550,
-    title: 'feat(hearing): add bundled Sherpaw speech recognition',
-    focus: 'Offline Sherpaw STT model packaging (Paraformer/Zipformer) via tsdown and Vite plugin',
+    number: 2672,
+    title: 'refactor(stage-ui): bind conversations to window-local characters',
+    focus: 'Window-local character selection, conversation scoping, standalone card profile page, shared CharacterCard',
   },
   {
-    number: 2641,
-    title: 'feat(stage-ui): show chat image analysis status',
-    focus: 'Accessible live status indicator for text-only models undergoing vision pre-processing',
+    number: 2541,
+    title: 'feat(plugins): drop in plugins and MCP-first tool architecture',
+    focus: 'MCP stdio child processes & card-level tool scoping; track author rebase and explanation to maintainers regarding deleted in-process loader',
+  },
+  {
+    number: 2290,
+    title: 'feat(server): stream official ASR over WebSocket',
+    focus: 'Official ASR streaming over WebSocket vs OpenAI-compatible HTTP SSE; track rebase and backend transport decisions',
+  },
+  {
+    number: 2120,
+    title: 'refactor(stage-pages): rebuild AIRI Card editor',
+    focus: 'Card editor overhaul in stage-pages, dirty draft protection, route vs modal lifecycles',
   },
 ]
 
@@ -691,8 +701,7 @@ function ensureRadarLogHeader() {
 | PR | Title | Author | State | Priority / Rationale | Tracking Directives & Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | [#2634](https://github.com/moeru-ai/airi/pull/2634) | \`[WIP] feat(cortico-bridge): embed Cortico persona core as AIRI's brain\` | \`@peachoolong-uwu\` | \`Draft\` (0 comments) | 🔴 **High Alert** (Radical divergence) | Proposes external Cortico daemon (\`ws://localhost:6122\`) replacing native memory. **Directive**: Monitor maintainer reaction to 2-process requirement & Web/Mobile breakage. Hold off on comments until maintainers triage. |
-| [#2550](https://github.com/moeru-ai/airi/pull/2550) | \`feat(hearing): add bundled Sherpaw speech recognition\` | \`@luoling8192\` | \`Open\` (15 comments) | 🟡 **Evaluation** (Offline STT) | Offline Sherpaw STT model packaging (Paraformer/Zipformer) via tsdown and Vite plugin. **Directive**: Monitor packaging structure for local speech pipeline. |
-| [#2641](https://github.com/moeru-ai/airi/pull/2641) | \`feat(stage-ui): show chat image analysis status\` | \`@luoling8192\` | \`Open\` (1 comments) | 🟢 **Cherry-Pick Watch** (UI Polish) | Accessible live status indicator for text-only models undergoing vision analysis. **Directive**: Cherry-pick once merged upstream. |
+| [#2672](https://github.com/moeru-ai/airi/pull/2672) | \`refactor(stage-ui): bind conversations to window-local characters\` | \`@luoling8192\` | \`Open\` (20 comments) | 🟡 **Architectural Interest** (Window decoupling) | Decouples character definition from window selection, scopes conversations to window-local character, adds standalone profile page and shared CharacterCard. **Directive**: Track decoupling pattern across windows and evaluate shared CharacterCard component. |
 
 ---
 

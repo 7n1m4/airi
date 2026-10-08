@@ -2,7 +2,7 @@
 import { Button } from '@proj-airi/ui'
 import { computed, onMounted, ref } from 'vue'
 
-import { clearModelCache, clearSingleModelCache, DEFAULT_WEB_RWKV_MODEL, formatBytes, getModelCacheSize, isModelCached } from '../../../libs/inference'
+import { clearModelCache, clearSingleModelCache, formatBytes, getModelCacheSize, isModelCached } from '../../../libs/inference'
 
 export type ModelCategory = 'all' | 'llm' | 'audio' | 'vision' | 'misc'
 
@@ -35,13 +35,16 @@ const knownModels: KnownModelItem[] = [
     icon: 'i-solar:cpu-bolt-bold-duotone',
     description: 'Ultra-fast on-device dialogue with speculative draft verification on Apple Neural Engine',
   },
+  // Single-slot RWKV entry: the OPFS cache holds whichever checkpoint was
+  // loaded last (new loads evict the previous file on finalize), so the
+  // widget tracks slot occupancy — not any one model URL.
   {
-    id: DEFAULT_WEB_RWKV_MODEL,
-    name: 'RWKV-7 "Goose" (Web-RWKV)',
+    id: 'web-rwkv',
+    name: 'RWKV (Web-RWKV)',
     category: 'llm',
     runtime: 'Browser OPFS',
     icon: 'i-solar:chat-round-line-bold-duotone',
-    description: 'Zero-KV-cache linear attention neural network',
+    description: 'Single-slot cache · holds the last-loaded checkpoint',
   },
   {
     id: 'web-llm',

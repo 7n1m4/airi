@@ -206,6 +206,7 @@ pages:
         systemprompt: '错误：请提供系统提示。'
         posthistoryinstructions: '错误：必须提供消息历史后的提示。'
       none: 无（无背景）
+      presence_info: 配置此角色卡的可视形象、声音及认知存在（模型形象、语音、意识脑与场景）。如未设置，将使用全局默认配置。
     modules: 模块
     name_asc: 名称 (A-Z)
     name_desc: 名称 (Z-A)
@@ -227,6 +228,7 @@ pages:
     try_different_search: 尝试使用其他关键词搜索
     upload: 上传
     upload_desc: 点击或拖拽文件到此处上传
+    presence: 具现 (Presence)
   memory:
     description: 存放记忆的地方，以及策略
     title: 记忆体
@@ -1128,6 +1130,9 @@ pages:
       openpaths:
         description: openpaths.io
         title: OpenPaths
+      opper:
+        description: opper.ai
+        title: Opper
       pocket-tts-local:
         description: 使用 Kyutai Pocket TTS 的本地低延迟多语言 CPU 文本转语音引擎。
         title: Pocket TTS (Kyutai 本地)
@@ -1202,7 +1207,7 @@ pages:
           title: 纯 WebGPU 浏览器内 LLM
         defaultsSection:
           annotation: '若要为特定角色自定义这些设置，请转至角色的“生成”标签页：• 使用输入框修改温度、Top P 和最大 Token 数。• 通过在高级
-            JSON 文本框中输入惩罚参数（例如 {"presence_penalty": 0.5}）。'
+            JSON 文本框中输入惩罚参数（例如 "presence_penalty": 0.5）。'
           description: 这些是 web-rwkv 使用的默认兜底参数。
           field:
             count_penalty: '词频惩罚 Count Penalty (默认: 0.4)'
@@ -1543,6 +1548,11 @@ theme:
 title: 设置
 voices: 声线
 vrm:
+  fps:
+    title: 帧率上限
+    description: 限制角色和模型预览的 VRM 渲染帧率。降低上限可减少 GPU 占用，不会改变动作播放速度。
+    options:
+      unlimited: 不限
   change-model:
     from-file: 从文件加载
     from-file-select: 选择

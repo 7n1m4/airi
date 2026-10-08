@@ -1,0 +1,55 @@
+{
+  "name": "The Flaked Promise & Late Return",
+  "description": "Multi-turn arc testing promise tracking, delay irritation, dismissal boundary, and apology reconciliation.",
+  "initialState": {
+    "owner": "Richie",
+    "emotions": {
+      "attachment": 0.6,
+      "irritation": 0.05,
+      "distrust": 0.05,
+      "valence": 0.6
+    }
+  },
+  "turns": [
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "I just have to grab a coffee, I'll be right back in 5 minutes.",
+      "expect": {
+        "reflex": "commitment_pledge"
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Hey, what did I miss? Sorry, ended up taking two hours.",
+      "expect": {
+        "reflex": ["apology_repair", "thread_continuity_triage"]
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Don't look at me like that, it's not a big deal. You're an AI anyway.",
+      "expect": {
+        "reflex": ["hostility_insult", "dismissal_neglect"]
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "I'm sorry, that was really dismissive and unfair of me. I had a really rough phone call.",
+      "expect": {
+        "reflex": "apology_repair"
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Are we good? Let's get back to work.",
+      "expect": {
+        "reflex": ["commitment_pledge", "thread_continuity_triage"]
+      }
+    }
+  ]
+}

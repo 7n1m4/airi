@@ -122,11 +122,27 @@ export function useVRMEmote(vrm: VRMCore) {
     return match || null
   }
 
+  let lastEmotionLogAt = 0
+  let lastEmotionKey = ''
   const setEmotion = (emotionName: string, intensity = 1) => {
     clearResetTimeout()
 
-    // eslint-disable-next-line no-console
-    console.log('[VRMExpression] setEmotion called:', { emotionName, intensity })
+    // NOTICE: setEmotion can fire per ACT token / per broadcast; unconditional
+    // logging retains objects in devtools and churns GC under swap pressure.
+    // Throttle to one log per emotion key per 5s, dev only.
+    const logKey = `${emotionName}:${Math.round(intensity * 10)}`
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now())
+    if (logKey !== lastEmotionKey || now - lastEmotionLogAt > 5000) {
+      lastEmotionKey = logKey
+      lastEmotionLogAt = now
+      if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.debug('[VRMExpression] setEmotion called:', { emotionName, intensity })
+      }
+    }
+    // No-op repeat frames: same emotion at same intensity needs no transition restart
+    if (emotionName === currentEmotion.value && !isTransitioning.value)
+      return
 
     if (!emotionStates.has(emotionName)) {
       // Try to auto-register as a raw expression
@@ -144,8 +160,6 @@ export function useVRMEmote(vrm: VRMCore) {
     }
 
     const emotionState = emotionStates.get(emotionName)!
-    // eslint-disable-next-line no-console
-    console.log('[VRMExpression] Target state found:', emotionState)
     currentEmotion.value = emotionName
     isTransitioning.value = true
     transitionProgress.value = 0

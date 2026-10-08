@@ -4,13 +4,10 @@ import type { AiriCard } from '@proj-airi/stage-ui/stores/modules/airi-card'
 
 import { normalizeSearchText } from '@proj-airi/stage-shared'
 import { Alert } from '@proj-airi/stage-ui/components'
-import { useBackgroundStore } from '@proj-airi/stage-ui/stores/background'
-import { DisplayModelFormat, useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useArtistryStore } from '@proj-airi/stage-ui/stores/modules/artistry'
 import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
 import { useOnboardingStore } from '@proj-airi/stage-ui/stores/onboarding'
-import { useSettingsStageModel } from '@proj-airi/stage-ui/stores/settings/stage-model'
 import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
 import { AiriCardSchema } from '@proj-airi/stage-ui/types'
 import { Button, InputFile } from '@proj-airi/ui'
@@ -22,10 +19,10 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
-import cardExportFrameUrl from './card-export-frame.png?url'
 import CardListItem from './components/CardListItem.vue'
 
 const CardDetailDialog = defineAsyncComponent(() => import('./components/CardDetailDialog.vue'))
+const CardExportDialog = defineAsyncComponent(() => import('./components/CardExportDialog.vue'))
 const CardImportWizard = defineAsyncComponent(() => import('./components/CardImportWizard.vue'))
 const CreateModeSelectorDialog = defineAsyncComponent(() => import('./components/CreateModeSelectorDialog.vue'))
 const DeleteCardDialog = defineAsyncComponent(() => import('./components/DeleteCardDialog.vue'))
@@ -33,21 +30,20 @@ const SyncCardDialog = defineAsyncComponent(() => import('./components/SyncCardD
 
 const { t } = useI18n()
 const cardStore = useAiriCardStore()
-const displayModelsStore = useDisplayModelsStore()
 const syncEngineStore = useSyncEngineStore()
+const speechStore = useSpeechStore()
 const { addCard, removeCard } = cardStore
 const { cards, activeCardId, cardsLoading } = storeToRefs(cardStore)
 const { selectiveSyncEnabled } = storeToRefs(syncEngineStore)
-const stageModelStore = useSettingsStageModel()
-const backgroundStore = useBackgroundStore()
-const speechStore = useSpeechStore()
-const { stageModelSelected } = storeToRefs(stageModelStore)
 
 const route = useRoute()
 const router = useRouter()
 
-// Card sync filter & tracking
-const cardSyncFilter = ref<'all' | 'synced'>('all')
+// Card sync filter & tracking (defaults to 'synced' if selective sync is enabled, else 'all')
+const cardSyncFilter = ref<'all' | 'synced'>(selectiveSyncEnabled.value ? 'synced' : 'all')
+watch(selectiveSyncEnabled, (enabled) => {
+  cardSyncFilter.value = enabled ? 'synced' : 'all'
+})
 const syncingCardIds = ref<Set<string>>(new Set())
 
 // Sync and activate confirmation
@@ -59,6 +55,20 @@ const selectedCardId = ref<string>('')
 // Dialog state
 const isCardDialogOpen = ref(false)
 const isCreateModePromptOpen = ref(false)
+const isExportDialogOpen = ref(false)
+const exportTargetCard = ref<AiriCard | null>(null)
+const exportTargetCardId = ref<string>('')
+
+async function handleOpenExport(cardId: string) {
+  const { useCardExport } = await import('./composables/use-card-export')
+  const { getCardWithExportedBackground } = useCardExport()
+  const card = await getCardWithExportedBackground(cardId)
+  if (!card)
+    return
+  exportTargetCardId.value = cardId
+  exportTargetCard.value = card
+  isExportDialogOpen.value = true
+}
 
 function getCardSyncStatus(cardId: string): 'synced' | 'cloud-only' | 'partial' | 'syncing' {
   if (syncingCardIds.value.has(cardId)) {
@@ -179,9 +189,13 @@ onMounted(() => {
   window.addEventListener('dragover', onDragOver)
   window.addEventListener('dragleave', onDragLeave)
   window.addEventListener('drop', onDrop)
+
+  // Fast mount: schedule progressive card rendering after the initial frame
+  startProgressiveCardRendering()
 })
 
 onUnmounted(() => {
+  stopProgressiveCardRendering()
   toast.dismiss('character-config-opening')
   removeIpcListener()
   window.removeEventListener('dragover', onDragOver)
@@ -352,14 +366,6 @@ interface CardItem {
 }
 
 type ImportedCardPayload = Card | ccv3.CharacterCardV3
-const CARD_EXPORT_FRAME = {
-  width: 925,
-  height: 1436,
-  innerX: 65,
-  innerY: 79,
-  innerWidth: 831,
-  innerHeight: 1295,
-} as const
 
 function base64ToUtf8(input: string) {
   return decodeURIComponent(escape(atob(input)))
@@ -461,6 +467,39 @@ watch(inputFiles, async (newFiles) => {
     return
 
   try {
+    if (file.name.toLowerCase().endsWith('.zip')) {
+      try {
+        const { useDataMaintenance } = await import('@proj-airi/stage-ui/composables/use-data-maintenance')
+        const { importCardZipPackage } = useDataMaintenance()
+        const result = await importCardZipPackage(file)
+        selectedCardId.value = result.cardId
+        isCardDialogOpen.value = true
+
+        const bits = [`${result.flavor === 'v1' ? 'Upstream' : 'Extended'} package imported`]
+        if (result.importedModelIds.length > 0)
+          bits.push('display model')
+        if (result.importedBackgroundId)
+          bits.push('background')
+        if (result.importedVoiceCount > 0)
+          bits.push(`${result.importedVoiceCount} voice(s)`)
+        if (result.importedSessionCount > 0)
+          bits.push(`${result.importedSessionCount} session(s)`)
+        toast.success(`Card imported successfully (${bits.join(', ')})`)
+        if (result.warnings.length > 0) {
+          toast.warning('Some package assets were skipped', {
+            description: result.warnings.join('; '),
+          })
+        }
+      }
+      catch (error) {
+        console.error('[AiriCard] Error importing ZIP package:', error)
+        toast.error('Error importing ZIP package', {
+          description: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
+      return
+    }
+
     let importedCard: ImportedCardPayload
 
     if (file.name.toLowerCase().endsWith('.png')) {
@@ -591,11 +630,18 @@ function addCardPreviewNormalize(card: any) {
   const data = card.data || card
 
   let normalized: any
+  const normalizedVersion = (v: unknown): string => {
+    if (typeof v === 'string' && v.trim())
+      return v.trim()
+    if (typeof v === 'number' && !Number.isNaN(v))
+      return String(v)
+    return '1.0.0'
+  }
   // If it's already an AIRI card, we still want to ensure universal fields like messageExample are valid arrays
   if (card.format === 'airi-card' || card.systemPrompt !== undefined) {
     normalized = {
       ...card,
-      version: card.version || '1.0.0',
+      version: normalizedVersion(card.version),
       // If messageExample is a string (stale AIRI or raw ST), normalize it to AIRI format[][]
       messageExample: typeof card.messageExample === 'string'
         ? parseStMessageExamples(card.messageExample)
@@ -605,7 +651,7 @@ function addCardPreviewNormalize(card: any) {
   else {
     normalized = {
       name: data.name || 'Imported Card',
-      version: data.character_version || '1.0.0',
+      version: normalizedVersion(data.character_version),
       description: data.description ?? '',
       notes: data.creator_notes ?? '',
       personality: data.personality ?? '',
@@ -695,6 +741,70 @@ const sortedFilteredCards = computed<CardItem[]>(() => {
   return sorted
 })
 
+// Progressive rendering: initial frame renders a fast viewport-friendly batch (8 cards)
+// so the route transition finishes immediately, then increments until all cards are mounted.
+const INITIAL_RENDER_COUNT = 8
+const BATCH_INCREMENT = 8
+const renderedCardLimit = ref(INITIAL_RENDER_COUNT)
+let progressiveTimer: any = null
+
+function startProgressiveCardRendering() {
+  renderedCardLimit.value = INITIAL_RENDER_COUNT
+  const step = () => {
+    if (renderedCardLimit.value < sortedFilteredCards.value.length) {
+      renderedCardLimit.value = Math.min(
+        renderedCardLimit.value + BATCH_INCREMENT,
+        sortedFilteredCards.value.length,
+      )
+      if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+        progressiveTimer = requestAnimationFrame(step)
+      }
+      else {
+        progressiveTimer = setTimeout(step, 50)
+      }
+    }
+    else {
+      progressiveTimer = null
+    }
+  }
+
+  if (typeof window !== 'undefined' && 'requestAnimationFrame' in window) {
+    progressiveTimer = requestAnimationFrame(step)
+  }
+  else {
+    progressiveTimer = setTimeout(step, 50)
+  }
+}
+
+function stopProgressiveCardRendering() {
+  if (progressiveTimer !== null) {
+    if (typeof window !== 'undefined' && 'cancelAnimationFrame' in window) {
+      cancelAnimationFrame(progressiveTimer)
+    }
+    else {
+      clearTimeout(progressiveTimer)
+    }
+    progressiveTimer = null
+  }
+}
+
+// Watch filtered cards changes (e.g. search filter typing) to reset or top-up visible limits
+watch(
+  () => sortedFilteredCards.value.length,
+  (len) => {
+    if (len <= INITIAL_RENDER_COUNT) {
+      renderedCardLimit.value = len
+    }
+    else if (renderedCardLimit.value < len && !progressiveTimer) {
+      startProgressiveCardRendering()
+    }
+  },
+)
+
+const visibleCards = computed<CardItem[]>(() => {
+  return sortedFilteredCards.value.slice(0, renderedCardLimit.value)
+})
+
 // Delete confirmation
 const showDeleteConfirm = ref(false)
 const cardToDelete = ref<string | null>(null)
@@ -747,381 +857,14 @@ function handleGuidedMode() {
   router.push('/settings/airi-card/guided')
 }
 
+function handleFoundryMode() {
+  isCreateModePromptOpen.value = false
+  router.push('/settings/airi-card/foundry')
+}
+
 function handleAdvancedMode() {
   isCreateModePromptOpen.value = false
   router.push('/settings/airi-card/edit')
-}
-
-async function exportCard(cardId: string) {
-  const card = await getCardWithExportedBackground(cardId)
-  if (!card) {
-    console.error(`Card with id ${cardId} not found`)
-    return
-  }
-
-  const payload = {
-    format: 'airi-card',
-    version: 1,
-    card,
-  }
-
-  const blob = new Blob([`${JSON.stringify(payload, null, 2)}\n`], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  const safeName = (card.name || 'airi-card')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-
-  anchor.href = url
-  anchor.download = `${safeName || 'airi-card'}.json`
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
-  URL.revokeObjectURL(url)
-}
-
-function buildCharaCardV2(card: AiriCard) {
-  const exportedExtensions = {
-    ...card.extensions,
-    airi: {
-      ...card.extensions?.airi,
-      sillytavernCompatibilityProbe: {
-        exportedBy: 'Project AIRI',
-        probe: 'extensions-airi-ok',
-        version: 1,
-      },
-    },
-  }
-
-  return {
-    spec: 'chara_card_v2',
-    spec_version: '2.0',
-    data: {
-      name: card.name || '',
-      description: card.description || '',
-      personality: card.personality || '',
-      scenario: card.scenario || '',
-      first_mes: card.greetings?.[0] || '',
-      mes_example: Array.isArray(card.messageExample)
-        ? card.messageExample
-            .map(example => Array.isArray(example) ? example.join('\n') : String(example))
-            .join('\n<START>\n')
-        : '',
-      creator_notes: card.notes || '',
-      system_prompt: card.systemPrompt || '',
-      post_history_instructions: card.postHistoryInstructions || '',
-      alternate_greetings: card.greetings?.slice(1) || [],
-      tags: card.tags || [],
-      creator: card.creator || '',
-      character_version: card.version || '',
-      extensions: exportedExtensions,
-      x_airi_probe: 'top-level-data-ok',
-    },
-  }
-}
-
-async function getCardWithExportedBackground(cardId: string): Promise<AiriCard | undefined> {
-  const originalCard = cardStore.getCard(cardId)
-  if (!originalCard)
-    return undefined
-
-  // Clone to avoid modifying the reactive store card directly
-  const card = JSON.parse(JSON.stringify(originalCard)) as AiriCard
-
-  // Collect and append voice profiles referencing virtual-audio-studio
-  const voiceIds = new Set<string>()
-  const speechConfig = card.extensions?.airi?.modules?.speech
-  if (speechConfig && speechConfig.provider === 'virtual-audio-studio' && speechConfig.voice_id) {
-    voiceIds.add(speechConfig.voice_id)
-  }
-  const assets = card.extensions?.airi?.visual_assets
-  if (assets) {
-    for (const key of Object.keys(assets)) {
-      const concept = assets[key] as any
-      if (concept.speech && concept.speech.provider === 'virtual-audio-studio' && concept.speech.voice_id) {
-        voiceIds.add(concept.speech.voice_id)
-      }
-    }
-  }
-
-  const profiles: any[] = []
-  for (const id of voiceIds) {
-    const profile = speechStore.savedVoiceProfiles.find(p => p.id === id)
-    if (profile) {
-      profiles.push(JSON.parse(JSON.stringify(profile)))
-    }
-  }
-
-  if (profiles.length > 0) {
-    if (!card.extensions.airi) {
-      card.extensions.airi = {} as any
-    }
-    card.extensions.airi.voice_profiles = profiles
-  }
-
-  const activeBackgroundId = card.extensions?.airi?.modules?.activeBackgroundId
-
-  if (!activeBackgroundId || activeBackgroundId === 'none')
-    return card
-
-  const exportBackground = backgroundStore.entries.get(activeBackgroundId)
-
-  if (!exportBackground)
-    return card
-
-  return new Promise((resolve) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      resolve({
-        ...card,
-        extensions: {
-          ...card.extensions,
-          airi: {
-            ...card.extensions?.airi,
-            modules: {
-              ...card.extensions?.airi?.modules,
-              activeBackgroundId,
-              // Export these for backwards compatibility with chara_card_v2 format standards
-              preferredBackgroundId: activeBackgroundId,
-              preferredBackgroundName: exportBackground.title || exportBackground.id,
-              preferredBackgroundDataUrl: e.target?.result as string,
-            },
-          },
-        },
-      } as any)
-    }
-    reader.onerror = () => resolve(card)
-    reader.readAsDataURL(exportBackground.blob)
-  })
-}
-
-function utf8ToBase64(input: string) {
-  return btoa(unescape(encodeURIComponent(input)))
-}
-
-function createCrc32Table() {
-  const table = new Uint32Array(256)
-  for (let i = 0; i < 256; i += 1) {
-    let c = i
-    for (let j = 0; j < 8; j += 1) {
-      c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1)
-    }
-    table[i] = c >>> 0
-  }
-  return table
-}
-
-const crc32Table = createCrc32Table()
-
-function crc32(data: Uint8Array) {
-  let crc = 0xFFFFFFFF
-  for (let i = 0; i < data.length; i += 1) {
-    crc = crc32Table[(crc ^ data[i]) & 0xFF] ^ (crc >>> 8)
-  }
-  return (crc ^ 0xFFFFFFFF) >>> 0
-}
-
-function concatUint8Arrays(parts: Uint8Array[]) {
-  const total = parts.reduce((sum, part) => sum + part.length, 0)
-  const output = new Uint8Array(total)
-  let offset = 0
-  for (const part of parts) {
-    output.set(part, offset)
-    offset += part.length
-  }
-  return output
-}
-
-function uint32ToBytes(value: number) {
-  return new Uint8Array([
-    (value >>> 24) & 0xFF,
-    (value >>> 16) & 0xFF,
-    (value >>> 8) & 0xFF,
-    value & 0xFF,
-  ])
-}
-
-function createPngTextChunk(keyword: string, text: string) {
-  const typeBytes = new TextEncoder().encode('tEXt')
-  const dataBytes = new TextEncoder().encode(`${keyword}\0${text}`)
-  const crcBytes = uint32ToBytes(crc32(concatUint8Arrays([typeBytes, dataBytes])))
-
-  return concatUint8Arrays([
-    uint32ToBytes(dataBytes.length),
-    typeBytes,
-    dataBytes,
-    crcBytes,
-  ])
-}
-
-function injectPngTextChunk(pngBytes: Uint8Array, keyword: string, text: string) {
-  const iendOffset = pngBytes.lastIndexOf(73) // 'I'
-  if (iendOffset < 12)
-    throw new Error('Invalid PNG payload')
-
-  let insertOffset = -1
-  for (let offset = 8; offset < pngBytes.length - 8;) {
-    const length = (
-      (pngBytes[offset] << 24)
-      | (pngBytes[offset + 1] << 16)
-      | (pngBytes[offset + 2] << 8)
-      | pngBytes[offset + 3]
-    ) >>> 0
-    const type = String.fromCharCode(
-      pngBytes[offset + 4],
-      pngBytes[offset + 5],
-      pngBytes[offset + 6],
-      pngBytes[offset + 7],
-    )
-    if (type === 'IEND') {
-      insertOffset = offset
-      break
-    }
-    offset += 12 + length
-  }
-
-  if (insertOffset === -1)
-    throw new Error('PNG is missing IEND chunk')
-
-  const chunk = createPngTextChunk(keyword, text)
-  return concatUint8Arrays([
-    pngBytes.slice(0, insertOffset),
-    chunk,
-    pngBytes.slice(insertOffset),
-  ])
-}
-
-function loadImageElement(src: string) {
-  return new Promise<HTMLImageElement>((resolve, reject) => {
-    const image = new Image()
-    image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error(`Failed to load image: ${src}`))
-    image.src = src
-  })
-}
-
-async function composeCardExportPng(previewImage: string) {
-  const [preview, frame] = await Promise.all([
-    loadImageElement(previewImage),
-    loadImageElement(cardExportFrameUrl),
-  ])
-
-  const canvas = document.createElement('canvas')
-  canvas.width = CARD_EXPORT_FRAME.width
-  canvas.height = CARD_EXPORT_FRAME.height
-
-  const context = canvas.getContext('2d')
-  if (!context)
-    throw new Error('Failed to create export canvas')
-
-  // Fit the preview to the portrait window width, anchor to the top, and crop any bottom overflow.
-  const scale = CARD_EXPORT_FRAME.innerWidth / preview.naturalWidth
-  const drawWidth = CARD_EXPORT_FRAME.innerWidth
-  const drawHeight = preview.naturalHeight * scale
-
-  context.save()
-  context.beginPath()
-  context.rect(
-    CARD_EXPORT_FRAME.innerX,
-    CARD_EXPORT_FRAME.innerY,
-    CARD_EXPORT_FRAME.innerWidth,
-    CARD_EXPORT_FRAME.innerHeight,
-  )
-  context.clip()
-  context.drawImage(
-    preview,
-    CARD_EXPORT_FRAME.innerX,
-    CARD_EXPORT_FRAME.innerY,
-    drawWidth,
-    drawHeight,
-  )
-  context.restore()
-
-  context.drawImage(frame, 0, 0, CARD_EXPORT_FRAME.width, CARD_EXPORT_FRAME.height)
-
-  const blob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob((value) => {
-      if (value)
-        resolve(value)
-      else
-        reject(new Error('Failed to encode composed PNG'))
-    }, 'image/png')
-  })
-
-  return new Uint8Array(await blob.arrayBuffer())
-}
-
-async function exportCardPng(cardId: string) {
-  const card = await getCardWithExportedBackground(cardId)
-  if (!card) {
-    console.error(`Card with id ${cardId} not found`)
-    return
-  }
-
-  const displayModelId = cardStore.getCardDisplayModelId(cardId)
-  await displayModelsStore.loadDisplayModelsFromIndexedDB()
-  const previewModel = displayModelId ? await displayModelsStore.getDisplayModel(displayModelId) : null
-  if (!previewModel)
-    return
-
-  let previewImage = previewModel.previewImage
-
-  // If this model is currently active on stage, take a "Live Snapshot" to reflect outfits/expressions
-  // We use stageModelSelected from useSettingsStageModel to check for active model
-  if (displayModelId === stageModelSelected.value) {
-    try {
-      const modelInput = previewModel.type === 'file' ? previewModel.file : (previewModel as any).url
-
-      if (previewModel.format === DisplayModelFormat.VRM) {
-        const [{ loadVrmModelPreview }, { useModelStore }] = await Promise.all([
-          import('@proj-airi/stage-ui-three/utils/vrm-preview'),
-          import('@proj-airi/stage-ui-three'),
-        ])
-        const modelStore = useModelStore()
-        const liveSnapshot = await loadVrmModelPreview(modelInput, modelStore.activeExpressions)
-        if (liveSnapshot)
-          previewImage = liveSnapshot
-      }
-      else if (previewModel.format === DisplayModelFormat.Live2dZip) {
-        const [{ loadLive2DModelPreview }, { useModelStore }] = await Promise.all([
-          import('@proj-airi/stage-ui-live2d/utils/live2d-preview'),
-          import('@proj-airi/stage-ui-three'),
-        ])
-        const modelStore = useModelStore()
-        const liveSnapshot = await loadLive2DModelPreview(modelInput, modelStore.activeExpressions)
-        if (liveSnapshot)
-          previewImage = liveSnapshot
-      }
-    }
-    catch (err) {
-      console.warn('Failed to take live snapshot for card export, falling back to stale preview:', err)
-    }
-  }
-
-  if (!previewImage) {
-    console.error('No preview image available for card PNG export')
-    return
-  }
-
-  const pngBytes = await composeCardExportPng(previewImage)
-  const metadata = utf8ToBase64(JSON.stringify(buildCharaCardV2(card)))
-  const encodedPng = injectPngTextChunk(pngBytes, 'chara', metadata)
-
-  const blob = new Blob([encodedPng], { type: 'image/png' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  const safeName = (card.name || 'airi-card')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-
-  anchor.href = url
-  anchor.download = `${safeName || 'airi-card'}.png`
-  document.body.appendChild(anchor)
-  anchor.click()
-  document.body.removeChild(anchor)
-  URL.revokeObjectURL(url)
 }
 
 // Card version number
@@ -1269,7 +1012,7 @@ function getDisplayModelId(id: string) {
 
     <!-- Toggleable Upload Area -->
     <div v-if="isUploadZoneOpen" class="w-full">
-      <InputFile v-model="inputFiles" accept="*.json,*.png" class="w-full">
+      <InputFile v-model="inputFiles" accept="*.json,*.png,*.zip" class="w-full">
         <template #default="{ isDragging }">
           <div
             :class="[
@@ -1313,7 +1056,7 @@ function getDisplayModelId(id: string) {
       <!-- Card Items -->
       <template v-else-if="cards.size > 0">
         <CardListItem
-          v-for="item in sortedFilteredCards"
+          v-for="item in visibleCards"
           :id="item.id"
           :key="item.id"
           :name="item.name"
@@ -1331,9 +1074,26 @@ function getDisplayModelId(id: string) {
           @sync="handleCardSync(item.id)"
           @delete="confirmDelete(item.id)"
           @edit="handleEditCard(item.id)"
-          @export-json="exportCard(item.id)"
-          @export-png="exportCardPng(item.id)"
+          @export="handleOpenExport(item.id)"
         />
+
+        <!-- Progressive shimmer placeholders while remaining cards mount -->
+        <template v-if="renderedCardLimit < sortedFilteredCards.length">
+          <div
+            v-for="i in Math.min(4, sortedFilteredCards.length - renderedCardLimit)"
+            :key="`progressive-skeleton-${i}`"
+            class="relative h-[280px] flex flex-col animate-pulse overflow-hidden border-2 border-neutral-100 rounded-xl bg-neutral-200/40 dark:border-neutral-800/25 dark:bg-neutral-800/40"
+          >
+            <div class="aspect-square w-full bg-neutral-300/40 dark:bg-neutral-700/40" />
+            <div class="flex flex-1 flex-col justify-between p-3">
+              <div class="h-4 w-3/4 rounded bg-neutral-300/50 dark:bg-neutral-700/50" />
+              <div class="flex items-center justify-between">
+                <div class="h-3 w-1/4 rounded bg-neutral-300/40 dark:bg-neutral-700/40" />
+                <div class="h-3 w-1/3 rounded bg-neutral-300/40 dark:bg-neutral-700/40" />
+              </div>
+            </div>
+          </div>
+        </template>
       </template>
 
       <!-- No cards message -->
@@ -1392,6 +1152,7 @@ function getDisplayModelId(id: string) {
     v-model="isCreateModePromptOpen"
     @wizard="handleWizardMode"
     @guided="handleGuidedMode"
+    @foundry="handleFoundryMode"
     @advanced="handleAdvancedMode"
   />
 
@@ -1401,6 +1162,14 @@ function getDisplayModelId(id: string) {
     v-model="isImportWizardOpen"
     :card-data="importedCardData"
     @imported="handleSelectCard"
+  />
+
+  <!-- Card export dialog (mock preview) -->
+  <CardExportDialog
+    v-if="isExportDialogOpen"
+    v-model="isExportDialogOpen"
+    :card-id="exportTargetCardId"
+    :card="exportTargetCard"
   />
 
   <!-- Card browser slide-over webview drawer (Only renders if running in Electron) -->

@@ -38,7 +38,23 @@ export const useChatSessionStore = defineStore('chat-session', () => {
 
   // NOTICE: This BroadcastChannel reuses the same channel as context-bridge to notify
   // other windows (e.g. chatbox) that session data changed and they should reload from DB.
-  const { post: broadcastStreamEvent, data: incomingSessionUpdate } = useBroadcastChannel<ChatStreamEvent, ChatStreamEvent>({ name: CHAT_STREAM_CHANNEL_NAME })
+  const { post: broadcastStreamEvent, data: incomingSessionUpdate, close: closeStreamChannel } = useBroadcastChannel<ChatStreamEvent, ChatStreamEvent>({ name: CHAT_STREAM_CHANNEL_NAME })
+
+  // Strategy E (single teardown ledger — exactly ONE dispose per module):
+  // without this, HMR re-evaluation duplicates the channel instance and every
+  // session update is handled twice (double reloads/persists). Watches stay on
+  // the Pinia effect scope (full 0C); the channel is the multiplying native.
+  // No-op in production/test (import.meta.hot is undefined).
+  if (import.meta.hot) {
+    import.meta.hot.dispose(() => {
+      try {
+        closeStreamChannel()
+      }
+      catch (err) {
+        debug('[ChatSession:HMR] BroadcastChannel close during HMR dispose failed:', err)
+      }
+    })
+  }
 
   const isMainWindow = !isStageTamagotchi()
     || (typeof window !== 'undefined' && (window.location.hash === '' || window.location.hash === '#/' || window.location.hash === '#'))

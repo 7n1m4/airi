@@ -6,26 +6,30 @@ import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import { resolveAtmosphereComponent } from '@proj-airi/stage-layouts/components/Backgrounds'
 import { estimateTokens, formatTokenCount } from '@proj-airi/stage-shared'
 import { ChatBrainPopover, ChatMemoryPopover, ChatSessionModal } from '@proj-airi/stage-ui/components'
+import { RendererStage } from '@proj-airi/stage-ui/components/scenes'
 import { useBackgroundStore } from '@proj-airi/stage-ui/stores/background'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
 import { useChatSessionStore } from '@proj-airi/stage-ui/stores/chat/session-store'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useLiveSessionStore } from '@proj-airi/stage-ui/stores/modules/live-session'
+import { useSettings } from '@proj-airi/stage-ui/stores/settings'
+import { usePositioningStore } from '@proj-airi/stage-ui/stores/settings/positioning'
 import { useBroadcastChannel, useLocalStorage, useWindowSize } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
-import { computed, defineAsyncComponent, markRaw, nextTick, onUnmounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, markRaw, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import LogoDark from '../../../../../packages/stage-layouts/src/assets/logo-dark.svg'
 import ChatNan0CognitionPanel from '../components/chat/ChatNan0CognitionPanel.vue'
 import ChatWorkspaceCoordinator from '../components/chat/ChatWorkspaceCoordinator.vue'
 
-import { electronApplySizePreset, electronOpenSettings } from '../../shared/eventa'
+import { electronApplySizePreset, electronOpenSettings, electronStageToggleVisibility } from '../../shared/eventa'
 
 // Code-split workspace sub-surfaces to eliminate heavy initial bundle evaluation
 const chat_arcade = defineAsyncComponent(() => import('../components/chat/chat_arcade.vue'))
 const chat_director = defineAsyncComponent(() => import('../components/chat/chat_director.vue'))
 const chat_event_log = defineAsyncComponent(() => import('../components/chat/chat_event_log.vue'))
+const chat_knowledge_graph = defineAsyncComponent(() => import('../components/chat/chat_knowledge_graph.vue'))
 const chat_lifetime = defineAsyncComponent(() => import('../components/chat/chat_lifetime.vue'))
 const chat_media = defineAsyncComponent(() => import('../components/chat/chat_media.vue'))
 const chat_messages = defineAsyncComponent(() => import('../components/chat/chat_messages.vue'))
@@ -87,6 +91,14 @@ const latestPacingMetrics = useLocalStorage<PacingMetrics | null>('airi:latest-p
 const { data: incomingPacingMetrics } = useBroadcastChannel<PacingMetrics, PacingMetrics>({ name: 'airi:pacing-telemetry' })
 const { data: incomingTurnUsage } = useBroadcastChannel<LatestTurnUsage, LatestTurnUsage>({ name: 'airi:usage-telemetry' })
 
+// Lipsync: listen to the hub's speaking-state broadcast (single analysis in
+// ControlStripHost, all canvases drive locally). No audio processing here.
+interface ChatSpeakingState {
+  mouthOpenSize: number
+  nowSpeaking: boolean
+}
+const { data: speakingState } = useBroadcastChannel<ChatSpeakingState, ChatSpeakingState>({ name: 'airi-speaking-state' })
+
 watch(incomingPacingMetrics, (metrics) => {
   if (metrics) {
     console.log('[Chat:Popover] Incoming pacing metrics telemetry:', metrics)
@@ -133,20 +145,76 @@ const rightPanelMemoriesCollapsed = useLocalStorage('airi:chat:rp-memories-colla
 const rightPanelCurrentSceneCollapsed = useLocalStorage('airi:chat:rp-current-scene-collapsed', false)
 const rightPanelMediaCollapsed = useLocalStorage('airi:chat:rp-media-collapsed', false)
 const rightPanelNan0Collapsed = useLocalStorage('airi:chat:rp-nan0-collapsed', false)
+const toggleStageVisibility = useElectronEventaInvoke(electronStageToggleVisibility)
+const rightPanelStageCollapsed = useLocalStorage('airi:chat:rp-stage-collapsed', true)
+
+const settingsStore = useSettings()
+const positioningStore = usePositioningStore()
+const { stageModelRenderer, stageModelSelected } = storeToRefs(settingsStore)
+
+const stageScale = computed(() => {
+  return positioningStore.getPosition(stageModelSelected.value).scale
+})
+
+const stageXOffset = computed(() => {
+  return positioningStore.getPosition(stageModelSelected.value).x
+})
+
+const stageYOffset = computed(() => {
+  const y = positioningStore.getPosition(stageModelSelected.value).y
+  if (stageModelRenderer.value === 'live2d') {
+    return -y
+  }
+  return y
+})
+
+function handleStageScaleChange(newScale: number) {
+  const key = stageModelSelected.value
+  const current = positioningStore.getPosition(key)
+  positioningStore.setPosition(key, { ...current, scale: newScale })
+}
+
+function handleStageOffsetChange(offset: { x: number, y: number }) {
+  const key = stageModelSelected.value
+  const current = positioningStore.getPosition(key)
+  positioningStore.setPosition(key, {
+    ...current,
+    x: offset.x,
+    y: stageModelRenderer.value === 'live2d' ? -offset.y : offset.y,
+  })
+}
+
+function toggleRightPanelStage() {
+  rightPanelStageCollapsed.value = !rightPanelStageCollapsed.value
+  void toggleStageVisibility(!!rightPanelStageCollapsed.value)
+}
+
+onMounted(() => {
+  if (!rightPanelStageCollapsed.value) {
+    void toggleStageVisibility(false)
+  }
+})
+
+onUnmounted(() => {
+  if (!rightPanelStageCollapsed.value) {
+    void toggleStageVisibility(true)
+  }
+})
 
 // Nan0 Cognition Pipeline Seam
 const isNan0Active = computed(() => {
   const airiExt = activeCard.value?.extensions?.airi as any
   const cognition = airiExt?.modules?.cognition ?? airiExt?.cognition
-  if (!cognition?.enabled)
+  const processor = cognition?.processor ?? cognition?.firstHopProcessor ?? airiExt?.firstHopProcessor
+  const enabled = cognition?.enabled ?? (processor === 'local_nan0' || processor === 'nan0')
+  if (!enabled)
     return false
-  const processor = cognition.processor ?? cognition.firstHopProcessor
   return processor === 'local_nan0' || processor === 'nan0'
 })
 
 // Left Panel Routing States
 const isLeftPanelOpen = useLocalStorage('airi:chat:left-panel-open', true)
-const activeSurface = useLocalStorage<'messages' | 'director' | 'world' | 'characters' | 'media' | 'archives' | 'rehearsal' | 'event-log' | 'arcade' | 'music'>('airi:chat:left-panel-active', 'messages')
+const activeSurface = useLocalStorage<'messages' | 'director' | 'world' | 'characters' | 'media' | 'archives' | 'rehearsal' | 'event-log' | 'arcade' | 'music' | 'knowledge-graph'>('airi:chat:left-panel-active', 'messages')
 
 // Guard removed legacy surfaces
 if ((activeSurface.value as string) === 'notes') {
@@ -164,6 +232,7 @@ const SURFACE_LABELS: Record<string, string> = {
   'rehearsal': 'Rehearsal Room',
   'arcade': 'Arcade Room',
   'music': 'Sound Studio',
+  'knowledge-graph': 'Mind Map',
 }
 
 const SURFACE_ICONS: Record<string, string> = {
@@ -177,6 +246,7 @@ const SURFACE_ICONS: Record<string, string> = {
   'rehearsal': 'i-solar:clapperboard-text-bold-duotone',
   'arcade': 'i-solar:gamepad-bold-duotone',
   'music': 'i-solar:music-notes-bold-duotone',
+  'knowledge-graph': 'i-solar:share-circle-bold-duotone',
 }
 
 const NAV_SECTIONS = [
@@ -203,6 +273,7 @@ const NAV_SECTIONS = [
     items: [
       { id: 'archives', label: 'Eternal Thread', icon: 'i-solar:dna-bold-duotone' },
       { id: 'event-log', label: 'Production Log', icon: 'i-solar:document-text-bold-duotone' },
+      { id: 'knowledge-graph', label: 'Mind Map', icon: 'i-solar:share-circle-bold-duotone' },
     ],
   },
 ] as const
@@ -293,6 +364,10 @@ async function coordinateSurfaceLoad(surface: string) {
       await chatSessionStore.initialize()
     }
   }
+  else if (surface === 'knowledge-graph') {
+    coordinatorProgress.value = 40
+    coordinatorStatus.value = 'Loading knowledge graph & entity ledger...'
+  }
 
   // Begin smooth simulated progress tweening from 60% towards 95% over the course of chunk fetching & mounting
   startProgressTween(60, 95, 10000)
@@ -302,7 +377,7 @@ async function coordinateSurfaceLoad(surface: string) {
   await nextTick()
   await new Promise(r => requestAnimationFrame(r))
 
-  if (surface === 'messages') {
+  if (surface === 'messages' || surface === 'knowledge-graph') {
     if (!isSurfaceSignaledReady && !interactiveAreaRef.value) {
       await new Promise<void>((resolve) => {
         let resolved = false
@@ -318,7 +393,7 @@ async function coordinateSurfaceLoad(surface: string) {
         // Bounded deadlock guard: 12s safety timeout to accommodate cold dev module compilation
         setTimeout(() => {
           if (!resolved) {
-            console.warn('[Chat:Coordinator] Surface ready timed out after 12s; proceeding with fallback.')
+            console.warn(`[Chat:Coordinator] Surface ${surface} ready timed out after 12s; proceeding with fallback.`)
             done()
           }
         }, 12000)
@@ -384,6 +459,7 @@ const activeSurfaceComponent = computed(() => {
     'event-log': chat_event_log,
     'arcade': chat_arcade,
     'music': chat_music,
+    'knowledge-graph': chat_knowledge_graph,
   }
   return markRaw(map[activeSurface.value] || chat_messages)
 })
@@ -409,22 +485,7 @@ function handleToggleGroundingDirectorScratchpad() {
 }
 
 async function handleToggleSalienceGate() {
-  if (!activeCardId.value)
-    return
-  await airiCardStore.toggleSalienceGate(activeCardId.value)
-  const isEnabled = !!activeCard.value?.extensions?.airi?.salienceGateEnabled
-  if (isEnabled) {
-    const { getWebRwkvAdapter, DEFAULT_WEB_RWKV_MODEL } = await import('@proj-airi/stage-ui/libs/inference')
-    const { useProvidersStore } = await import('@proj-airi/stage-ui/stores/providers')
-    const adapter = await getWebRwkvAdapter()
-    if (adapter.state === 'idle') {
-      const providersStore = useProvidersStore()
-      const config = providersStore.getProviderConfig('web-rwkv')
-      const modelUrl = (config?.model as string) || DEFAULT_WEB_RWKV_MODEL
-      const vocab = (config?.vocab as string) || undefined
-      void adapter.loadModel(modelUrl, vocab).catch((err: unknown) => console.error('[SalienceGate] Error loading web-rwkv model on toggle:', err))
-    }
-  }
+  // NOTICE: Force-disabled for release stability to prevent WebGPU/WASM memory runaway
 }
 
 const hasTextJournal = computed(() => {
@@ -629,19 +690,73 @@ const activeTimelineTag = computed(() => {
 // --- Generation Stats Popover & Token Output Limits ---
 const isStatsPopoverOpen = ref(false)
 
-const PROSE_PRESETS: Record<number, string> = {
-  80: 'Respond in extremely short, single-sentence replies. Keep your output direct, concise, and absolute.',
-  120: 'Respond in concise replies, typically one or two sentences. Avoid unnecessary detail.',
-  200: 'Respond in moderate, conversational paragraphs (approx. 2-3 sentences). Keep it natural and punchy.',
-  350: 'Respond in detailed paragraphs (approx. 1-2 short paragraphs). Provide depth but stay focused.',
-  600: 'Respond in descriptive, long-form paragraphs (up to 2 paragraphs of rich context and detail).',
+interface ProseBracket {
+  min: number
+  max: number
+  defaultTokens: number
+  label: string
+  sublabel: string
+  directive: string
+}
+
+const PROSE_BRACKETS: ProseBracket[] = [
+  {
+    min: 60,
+    max: 90,
+    defaultTokens: 75,
+    label: '60–90t',
+    sublabel: '1 short sent',
+    directive: 'Respond in an extremely short, single-sentence reply (approx. 5–12 words). Keep your output direct, concise, and absolute without second thoughts or follow-up questions.',
+  },
+  {
+    min: 91,
+    max: 160,
+    defaultTokens: 125,
+    label: '91–160t',
+    sublabel: '2 sentences',
+    directive: 'Respond in exactly two conversational sentences (approx. 20–35 words total). Deliver a complete thought in the first sentence, and a natural reaction or follow-up in the second.',
+  },
+  {
+    min: 161,
+    max: 280,
+    defaultTokens: 220,
+    label: '161–280t',
+    sublabel: '1 paragraph',
+    directive: 'Respond in a single cohesive paragraph of 3 to 4 sentences (approx. 50–80 words). Provide clear context and depth, but keep everything unified in one single paragraph without line breaks.',
+  },
+  {
+    min: 281,
+    max: 450,
+    defaultTokens: 360,
+    label: '281–450t',
+    sublabel: '2 paragraphs',
+    directive: 'Respond in two descriptive paragraphs separated by a line break (approx. 90–140 words total). Use the first paragraph to address the core subject, and the second paragraph to expand with rich nuance, background detail, or creative commentary.',
+  },
+]
+
+function resolveProsePreset(tokens: number): string {
+  const bracket = PROSE_BRACKETS.find(b => tokens >= b.min && tokens <= b.max)
+  if (bracket)
+    return bracket.directive
+  if (tokens > 450)
+    return PROSE_BRACKETS[3].directive
+  return PROSE_BRACKETS[0].directive
+}
+
+function resolveProseBracket(tokens: number): ProseBracket {
+  const bracket = PROSE_BRACKETS.find(b => tokens >= b.min && tokens <= b.max)
+  if (bracket)
+    return bracket
+  if (tokens > 450)
+    return PROSE_BRACKETS[3]
+  return PROSE_BRACKETS[0]
 }
 
 const LIMITS_REGEX = /\[TOKEN_OUTPUT_LIMITS:\s*(\d+)\][\s\S]*?- STYLE INSTRUCTION:\s*([\s\S]*?)\[\/TOKEN_OUTPUT_LIMITS\]\n*/
 
 const popoverOverrideEnabled = ref(false)
 const popoverContextWidth = ref<number | undefined>(undefined)
-const popoverMaxTokens = ref<number>(200)
+const popoverMaxTokens = ref<number>(220)
 const popoverCustomProse = ref('')
 const isProseEditing = ref(false)
 
@@ -652,7 +767,7 @@ function loadPopoverState() {
   const airiExt = activeCard.value.extensions?.airi
   popoverOverrideEnabled.value = airiExt?.generation?.enabled ?? false
   popoverContextWidth.value = airiExt?.generation?.known?.contextWidth
-  popoverMaxTokens.value = airiExt?.generation?.known?.maxTokens ?? 200
+  popoverMaxTokens.value = airiExt?.generation?.known?.maxTokens ?? 220
 
   const parsed = parseTokenLimits(activeCard.value.systemPrompt || '')
   if (parsed) {
@@ -660,7 +775,7 @@ function loadPopoverState() {
     popoverCustomProse.value = parsed.prose
   }
   else {
-    popoverCustomProse.value = PROSE_PRESETS[popoverMaxTokens.value] || PROSE_PRESETS[200]
+    popoverCustomProse.value = resolveProsePreset(popoverMaxTokens.value)
   }
 }
 
@@ -737,10 +852,16 @@ function handleContextPresetClick(width: number) {
 }
 
 function handleTokensSliderChange() {
-  const matchingPreset = PROSE_PRESETS[popoverMaxTokens.value]
-  if (matchingPreset) {
-    popoverCustomProse.value = matchingPreset
+  if (!isProseEditing.value) {
+    popoverCustomProse.value = resolveProsePreset(popoverMaxTokens.value)
   }
+  saveCardGenerationSettings()
+}
+
+function handleSnapToBracket(bracket: ProseBracket) {
+  popoverMaxTokens.value = bracket.defaultTokens
+  popoverCustomProse.value = bracket.directive
+  isProseEditing.value = false
   saveCardGenerationSettings()
 }
 
@@ -751,8 +872,8 @@ function handleResetToDefaults() {
   const airiExt = activeCard.value.extensions?.airi
   const cleanedPrompt = stripTokenLimitsFromPrompt(activeCard.value.systemPrompt || '')
 
-  popoverMaxTokens.value = 200
-  popoverCustomProse.value = PROSE_PRESETS[200]
+  popoverMaxTokens.value = 220
+  popoverCustomProse.value = resolveProsePreset(220)
   isProseEditing.value = false
   popoverOverrideEnabled.value = false
 
@@ -1159,24 +1280,34 @@ function selectSurface(surface: typeof activeSurface.value) {
                   <!-- Token Limits Slider -->
                   <div class="flex flex-col gap-1.5">
                     <div class="flex items-center justify-between text-[10px]">
-                      <span class="text-neutral-400 font-bold tracking-tight uppercase">Response Token Limit</span>
+                      <div class="flex items-center gap-1.5">
+                        <span class="text-neutral-400 font-bold tracking-tight uppercase">Response Token Limit</span>
+                        <span class="rounded bg-primary-500/10 px-1.5 py-0.2 text-[9px] text-primary-600 font-medium dark:text-primary-400">
+                          {{ resolveProseBracket(popoverMaxTokens).sublabel }}
+                        </span>
+                      </div>
                       <span class="text-primary-500 font-bold dark:text-primary-400">{{ popoverMaxTokens }} tokens</span>
                     </div>
                     <input
                       v-model.number="popoverMaxTokens"
                       type="range"
-                      min="80"
-                      max="600"
-                      step="1"
+                      min="60"
+                      max="450"
+                      step="5"
                       class="h-1 w-full cursor-pointer appearance-none rounded-lg bg-neutral-200 accent-primary-500 dark:bg-neutral-800"
                       @input="handleTokensSliderChange"
                     >
                     <div class="flex justify-between px-0.5 text-[8px] text-neutral-400 font-bold">
-                      <span>80t</span>
-                      <span>120t</span>
-                      <span>200t</span>
-                      <span>350t</span>
-                      <span>600t</span>
+                      <button
+                        v-for="b in PROSE_BRACKETS"
+                        :key="b.label"
+                        type="button"
+                        class="cursor-pointer transition hover:text-primary-500"
+                        :class="{ 'text-primary-600 dark:text-primary-400 font-extrabold': popoverMaxTokens >= b.min && popoverMaxTokens <= b.max }"
+                        @click="handleSnapToBracket(b)"
+                      >
+                        {{ b.label }}
+                      </button>
                     </div>
                   </div>
 
@@ -1528,7 +1659,9 @@ function selectSurface(surface: typeof activeSurface.value) {
                 </div>
 
                 <!-- Toggle: Salience Gating (RWKV 0.1B) -->
+                <!-- Salience Gating: Hidden for release stability -->
                 <div
+                  v-if="false"
                   class="w-full flex cursor-pointer items-center justify-between rounded-xl px-3 py-2 transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"
                   @click="handleToggleSalienceGate"
                 >
@@ -1809,6 +1942,41 @@ function selectSurface(surface: typeof activeSurface.value) {
           >
             <!-- Panel Body -->
             <div class="flex flex-col gap-4 p-4">
+              <!-- Stage Section (Right at the Top) -->
+              <div class="flex flex-col gap-2">
+                <div class="flex items-center justify-between">
+                  <span
+                    :class="['flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase transition-colors',
+                             rightPanelStageCollapsed
+                               ? 'bg-neutral-100/50 text-neutral-400 dark:bg-neutral-800/50'
+                               : 'bg-primary-50/50 text-primary-500 dark:bg-primary-950/30 dark:text-primary-400']"
+                    @click="toggleRightPanelStage"
+                  >
+                    Stage
+                    <span :class="rightPanelStageCollapsed ? 'i-solar:eye-closed-linear' : 'i-solar:eye-linear'" class="text-xs" />
+                  </span>
+                </div>
+                <div
+                  v-if="!rightPanelStageCollapsed"
+                  class="relative aspect-[3/4] w-full overflow-hidden border border-neutral-200/40 rounded-xl bg-transparent dark:border-neutral-800/40"
+                >
+                  <RendererStage
+                    :paused="rightPanelStageCollapsed"
+                    :focus-at="{ x: 0, y: 0 }"
+                    :x-offset="stageXOffset"
+                    :y-offset="stageYOffset"
+                    :scale="stageScale"
+                    :show-background="false"
+                    :radial-menu-enabled="false"
+                    :draggable="true"
+                    :mouth-open-size="speakingState?.mouthOpenSize || 0"
+                    class="absolute inset-0 h-full w-full"
+                    @offset-change="handleStageOffsetChange"
+                    @scale-change="handleStageScaleChange"
+                  />
+                </div>
+              </div>
+
               <!-- Nan0 Cognition Section (Conditionally Mounted) -->
               <div v-if="isNan0Active" class="flex flex-col gap-2">
                 <div class="flex items-center justify-between">

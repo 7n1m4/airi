@@ -1,8 +1,14 @@
+import type { Nan0JevQuestion } from '../shadow/Nan0JevSchema'
 import type {
+  DefaultIdentityOptions,
   Nan0ActorKind,
+  Nan0EntityLedgerAdapter,
   Nan0GrievanceStatus,
+  Nan0IdentityState,
   Nan0ObservationSource,
+  Nan0PclClaim,
   Nan0RelationshipContext,
+  Nan0RelationshipExpectation,
   Nan0RelationshipGrievance,
   Nan0RelationshipMoment,
   Nan0RelationshipMomentType,
@@ -10,7 +16,11 @@ import type {
   Nan0RelationshipRecord,
   Nan0RelationshipState,
   Nan0RelationshipStatus,
+  Nan0SystemOneProvider,
 } from '../types'
+
+import { isOwnerActor } from '../identity/ActorIdentity'
+import { NAN0_JEV_GRIEVANCE_RECURRENCE_QUESTIONS } from '../shadow/Nan0JevSchema'
 
 export const RELATIONSHIP_SIGNIFICANT_EVENT_THRESHOLD = 0.4
 export const RELATIONSHIP_GRIEVANCE_THRESHOLD = 0.6
@@ -35,6 +45,17 @@ export interface Nan0RelationshipEvidenceInput {
   intensity: number
   rule: string
   context?: string
+  claim?: Nan0PclClaim
+  triggerPhrases?: string[]
+}
+
+export interface Nan0RelationshipEvidenceOptions {
+  identity?: Nan0IdentityState
+  ownerId?: string
+  ownerDisplayName?: string
+  entityLedger?: Nan0EntityLedgerAdapter
+  systemOneProvider?: Nan0SystemOneProvider
+  jevModel?: string
 }
 
 export interface Nan0RelationshipMutationResult {
@@ -99,14 +120,49 @@ function provenance(input: Nan0RelationshipEvidenceInput, provenanceId: string):
   }
 }
 
-export function relationshipIdFor(input: {
-  actorId: string
-  actorKind: Nan0ActorKind
-  source: Nan0ObservationSource
-  sourceActorId?: string
-}): string {
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+/**
+ * Grammatical closed-class lexical fallback floor.
+ * Covers English closed-class parts of speech: articles, auxiliary verbs, conjunctions,
+ * personal pronouns, and core prepositions. Used ONLY as a zero-cost lexical fallback floor
+ * when System 1 Jev semantic classification is offline or unavailable.
+ */
+export const FALLBACK_CLOSED_CLASS_REGEX = /^(?:a|an|the|and|or|but|if|then|so|as|at|by|for|in|of|on|to|with|about|above|after|again|against|all|almost|along|also|although|always|among|another|any|around|be|because|been|before|being|between|both|can|could|did|do|does|doing|done|every|first|found|from|get|gets|getting|go|goes|going|gone|got|great|had|has|have|having|he|her|here|him|his|how|however|i|if|in|indeed|inside|into|is|it|its|itself|just|made|make|makes|making|me|might|more|most|much|must|my|never|no|nor|not|nothing|now|of|off|often|on|only|or|other|others|our|out|over|really|said|say|saying|says|shall|she|should|since|so|some|still|such|take|taken|taking|than|that|the|their|them|then|there|these|they|thing|things|think|thinks|this|those|though|through|to|too|took|under|until|up|us|very|was|we|went|were|weve|what|when|where|which|while|who|why|will|with|would|you|your|youre|youve)$/i
+
+export function isOwnerRecord(
+  recordOrActorId: string | Nan0RelationshipRecord,
+  identity?: Nan0IdentityState,
+  ownerId?: string,
+): boolean {
+  const actorId = typeof recordOrActorId === 'string' ? recordOrActorId : recordOrActorId.actorId
+  const relId = typeof recordOrActorId === 'string' ? '' : recordOrActorId.relationshipId
+  if (identity && isOwnerActor(actorId, identity))
+    return true
+  if (ownerId && (actorId.toLowerCase() === ownerId.toLowerCase() || relId === `relationship:${stableIdPart(ownerId)}`))
+    return true
+  return actorId.toLowerCase() === 'kyo' || relId === 'relationship:kyo'
+}
+
+export function relationshipIdFor(
+  input: {
+    actorId: string
+    actorKind: Nan0ActorKind
+    source: Nan0ObservationSource
+    sourceActorId?: string
+  },
+  identity?: Nan0IdentityState,
+  ownerId?: string,
+): string {
   if (input.actorId === 'kyo')
     return 'relationship:kyo'
+
+  if (isOwnerRecord(input.actorId, identity, ownerId)) {
+    const actualOwnerId = identity?.ownerId || ownerId || input.actorId
+    return `relationship:${stableIdPart(actualOwnerId)}`
+  }
 
   if (input.actorId === 'nan0')
     return 'relationship:nan0'
@@ -120,17 +176,23 @@ export function relationshipIdFor(input: {
   return `relationship:${stableIdPart(input.actorId)}`
 }
 
-function identityAnchor(createdAt: number): Nan0RelationshipRecord['positiveAnchors'][number] {
+function identityAnchor(
+  createdAt: number,
+  ownerId = 'kyo',
+  ownerDisplayName = 'Kyo',
+): Nan0RelationshipRecord['positiveAnchors'][number] {
+  const safeOwnerId = ownerId || 'kyo'
+  const safeName = ownerDisplayName || 'Kyo'
   return {
-    anchorId: 'anchor:kyo:creator',
-    description: 'Kyo is Nan0\'s creator and primary emotional anchor.',
+    anchorId: `anchor:${safeOwnerId}:creator`,
+    description: `${safeName} is Nan0's creator and primary emotional anchor.`,
     strength: 1,
-    provenanceId: 'identity:kyo:creator-anchor',
-    eventId: 'identity:kyo',
-    turnId: 'identity:kyo',
-    thoughtId: 'identity:kyo',
+    provenanceId: `identity:${safeOwnerId}:creator-anchor`,
+    eventId: `identity:${safeOwnerId}`,
+    turnId: `identity:${safeOwnerId}`,
+    thoughtId: `identity:${safeOwnerId}`,
     timestamp: createdAt,
-    actorId: 'kyo',
+    actorId: safeOwnerId,
     rule: 'identity.creator_anchor',
     metadata: { protected: true, relationship: 'creator_anchor' },
   }
@@ -142,12 +204,20 @@ function createRelationshipRecord(input: {
   source: Nan0ObservationSource
   sourceActorId?: string
   at: number
+  identity?: Nan0IdentityState
+  ownerId?: string
+  ownerDisplayName?: string
 }): Nan0RelationshipRecord {
-  const isKyo = input.actorId === 'kyo'
+  const isOwner = isOwnerRecord(input.actorId, input.identity, input.ownerId)
+  const actualOwnerId = input.identity?.ownerId || input.ownerId || (isOwner ? input.actorId : 'kyo')
+  const actualOwnerDisplayName = input.identity?.actors[actualOwnerId]?.displayName
+    || input.ownerDisplayName
+    || (isOwner ? input.actorId : 'Kyo')
+
   return {
     schemaVersion: 1,
     actorId: input.actorId,
-    relationshipId: relationshipIdFor(input),
+    relationshipId: relationshipIdFor(input, input.identity, input.ownerId),
     source: input.source,
     createdAt: input.at,
     updatedAt: input.at,
@@ -156,23 +226,23 @@ function createRelationshipRecord(input: {
     interactionCount: 0,
     status: 'strangers',
     emotionalBalance: 0,
-    familiarity: isKyo ? 0.8 : 0,
+    familiarity: isOwner ? 0.8 : 0,
     trust: 0.5,
-    attachment: isKyo ? 0.8 : 0,
+    attachment: isOwner ? 0.8 : 0,
     irritation: 0,
     suspicion: 0,
     respect: 0.5,
-    importance: isKyo ? 1 : 0.2,
+    importance: isOwner ? 1 : 0.2,
     significantEventIds: [],
     turnIds: [],
     moments: [],
     activeGrievances: [],
-    positiveAnchors: isKyo ? [identityAnchor(input.at)] : [],
+    positiveAnchors: isOwner ? [identityAnchor(input.at, actualOwnerId, actualOwnerDisplayName)] : [],
     expectations: [],
     metadata: {
-      actorKind: input.actorKind,
-      protected: isKyo,
-      relationship: isKyo ? 'creator_anchor' : undefined,
+      actorKind: isOwner ? (actualOwnerId === 'kyo' ? 'kyo' : 'owner') : input.actorKind,
+      protected: isOwner,
+      relationship: isOwner ? 'creator_anchor' : undefined,
       totalPositiveMoments: 0,
       totalNegativeMoments: 0,
       sourceActorId: input.sourceActorId,
@@ -180,16 +250,29 @@ function createRelationshipRecord(input: {
   }
 }
 
-export function createEmptyRelationshipState(createdAt = 0): Nan0RelationshipState {
-  const kyo = createRelationshipRecord({
-    actorId: 'kyo',
-    actorKind: 'kyo',
+export function createEmptyRelationshipState(
+  createdAt = 0,
+  options?: string | DefaultIdentityOptions,
+  identity?: Nan0IdentityState,
+): Nan0RelationshipState {
+  const opts: DefaultIdentityOptions | undefined = typeof options === 'string'
+    ? { ownerDisplayName: options }
+    : options
+  const ownerId = identity?.ownerId || opts?.ownerId || opts?.ownerDisplayName?.toLowerCase() || 'kyo'
+  const ownerDisplayName = identity?.actors[ownerId]?.displayName || opts?.ownerDisplayName || 'Kyo'
+
+  const owner = createRelationshipRecord({
+    actorId: ownerId,
+    actorKind: ownerId === 'kyo' ? 'kyo' : 'owner',
     source: 'system',
     at: createdAt,
+    identity,
+    ownerId,
+    ownerDisplayName,
   })
   return {
     schemaVersion: 1,
-    records: { [kyo.relationshipId]: kyo },
+    records: { [owner.relationshipId]: owner },
   }
 }
 
@@ -219,8 +302,67 @@ function evaluateStatus(record: Nan0RelationshipRecord): Nan0RelationshipStatus 
   return record.status
 }
 
-function extractTriggerPhrases(description: string): string[] {
-  return description.toLowerCase().split(/\s+/).map(word => word.replace(/[^a-z0-9_-]/g, '')).filter(word => word.length > 4).slice(0, 5)
+export function extractTriggerPhrases(description: string): string[] {
+  const words = description
+    .toLowerCase()
+    .split(/\s+/)
+    .map(word => word.replace(/[^a-z0-9_-]/g, ''))
+    .filter(word => word.length >= 3 && !FALLBACK_CLOSED_CLASS_REGEX.test(word))
+
+  return Array.from(new Set(words)).slice(0, 5)
+}
+
+export async function extractTriggerPhrasesAsync(
+  description: string,
+  systemOneProvider?: Nan0SystemOneProvider,
+  jevModel?: string,
+): Promise<string[]> {
+  if (systemOneProvider) {
+    try {
+      const res = await systemOneProvider(
+        { text: description },
+        {
+          trigger_concept: {
+            type: 'choice',
+            instructions: 'Classify the core grievance topic or concept expressed in the text.',
+            criteria: {
+              deceit_dishonesty: 'Lying, deception, hiding truth, broken promises.',
+              technical_failure: 'Crashes, bugs, deleted files, system malfunction.',
+              insult_attack: 'Hostility, insults, rudeness, disrespect.',
+              neglect_dismissal: 'Ignoring, dismissing, brushing off, abandonment.',
+              boundary_violation: 'Ignoring personal limits, unwelcome probing or behavior.',
+              none: 'No specific grievance concept.',
+            },
+          },
+        },
+        jevModel,
+      )
+      const choice = res.answers?.trigger_concept?.choice
+      if (choice && choice !== 'none') {
+        const lexical = extractTriggerPhrases(description)
+        return Array.from(new Set([choice, ...lexical])).slice(0, 5)
+      }
+    }
+    catch {
+      // Graceful fallback to regex floor
+    }
+  }
+  return extractTriggerPhrases(description)
+}
+
+export function matchesTriggerPhrases(description: string, triggerPhrases: string[]): boolean {
+  if (!triggerPhrases || triggerPhrases.length === 0)
+    return false
+  const desc = description.toLowerCase()
+  return triggerPhrases.some((phrase) => {
+    if (!phrase || !phrase.trim())
+      return false
+    const p = phrase.trim().toLowerCase()
+    if (p.includes(' ') || p.includes('-') || p.includes('_'))
+      return desc.includes(p)
+    const regex = new RegExp(`\\b${escapeRegExp(p)}\\b`, 'i')
+    return regex.test(desc)
+  })
 }
 
 function applyGrievance(
@@ -232,10 +374,17 @@ function applyGrievance(
     return record.activeGrievances
 
   const description = input.description.toLowerCase()
-  const existing = record.activeGrievances.find(grievance =>
-    (grievance.status === 'active' || grievance.status === 'nurtured')
-    && grievance.triggerPhrases.some(phrase => description.includes(phrase)),
-  )
+  const claim = input.claim
+
+  const existing = record.activeGrievances.find((grievance) => {
+    if (grievance.status !== 'active' && grievance.status !== 'nurtured')
+      return false
+    if (claim && grievance.predicate && grievance.object) {
+      if (claim.predicate === grievance.predicate && claim.object.toLowerCase() === grievance.object.toLowerCase())
+        return true
+    }
+    return matchesTriggerPhrases(description, grievance.triggerPhrases)
+  })
 
   if (existing) {
     return record.activeGrievances.map(grievance => grievance.grievanceId === existing.grievanceId
@@ -243,11 +392,16 @@ function applyGrievance(
           ...grievance,
           lastReinforcedAt: input.timestamp,
           reinforcementCount: grievance.reinforcementCount + 1,
+          action: 'reinforce',
         }
       : grievance)
   }
 
   const grievanceId = `grievance:${createId()}`
+  const triggerPhrases = input.triggerPhrases?.length
+    ? input.triggerPhrases
+    : extractTriggerPhrases(input.description)
+
   return [...record.activeGrievances, {
     ...provenance(input, `provenance:${grievanceId}`),
     grievanceId,
@@ -258,22 +412,192 @@ function applyGrievance(
     reinforcementCount: 0,
     decayRatePerDay: DEFAULT_GRIEVANCE_DECAY_PER_DAY,
     resolvedAt: null,
-    triggerPhrases: extractTriggerPhrases(input.description),
+    triggerPhrases,
     metadata: {},
+    claimId: claim?.claimId ?? `claim:${createId()}`,
+    subject: claim?.subject ?? input.actorId,
+    predicate: claim?.predicate ?? 'grievance',
+    object: claim?.object ?? input.description,
+    action: 'new',
+    supersededBy: null,
+    supersededAt: null,
   }]
+}
+
+async function applyGrievanceAsync(
+  record: Nan0RelationshipRecord,
+  input: Nan0RelationshipEvidenceInput,
+  createId: () => string,
+  options?: Nan0RelationshipEvidenceOptions,
+): Promise<Nan0RelationshipGrievance[]> {
+  if (input.eventType !== 'negative' || input.intensity < RELATIONSHIP_GRIEVANCE_THRESHOLD)
+    return record.activeGrievances
+
+  // If System 1 Jev is available, evaluate grievance salience and recurrence
+  if (options?.systemOneProvider) {
+    try {
+      const activeGrievanceList = record.activeGrievances
+        .filter(g => g.status === 'active' || g.status === 'nurtured')
+        .sort((a, b) => currentGrievanceSeverity(b, input.timestamp) - currentGrievanceSeverity(a, input.timestamp))
+        .slice(0, 3)
+
+      const questions: Record<string, Nan0JevQuestion> = {
+        ...NAN0_JEV_GRIEVANCE_RECURRENCE_QUESTIONS,
+        trigger_concept: {
+          type: 'choice',
+          instructions: 'Classify the core grievance topic or concept expressed in the text.',
+          criteria: {
+            deceit_dishonesty: 'Lying, deception, hiding truth, broken promises.',
+            technical_failure: 'Crashes, bugs, deleted files, system malfunction.',
+            insult_attack: 'Hostility, insults, rudeness, disrespect.',
+            neglect_dismissal: 'Ignoring, dismissing, brushing off, abandonment.',
+            boundary_violation: 'Ignoring personal limits, unwelcome probing or behavior.',
+            none: 'No specific grievance concept.',
+          },
+        },
+      }
+
+      // NOTICE: Dynamic F8 Grievance Identification:
+      // Provide Jev with explicit grievance choices so it can attribute recurrence to the exact grievance.
+      if (activeGrievanceList.length > 0) {
+        questions.matched_grievance_id = {
+          type: 'choice',
+          instructions: 'If this turn reinforces an active grievance, select which specific grievance is being referenced. If none match or if it is a new issue, select none.',
+          criteria: {
+            ...Object.fromEntries(activeGrievanceList.map(g => [g.grievanceId, g.description.slice(0, 150)])),
+            none: 'Does not match any listed active grievance.',
+          },
+        }
+      }
+
+      const jevRes = await options.systemOneProvider(
+        {
+          targetTurn: { text: input.description },
+          context: input.context,
+          activeGrievances: record.activeGrievances.map(g => ({
+            grievanceId: g.grievanceId,
+            description: g.description,
+            predicate: g.predicate,
+            object: g.object,
+          })),
+        },
+        questions,
+        options.jevModel,
+      )
+
+      // If Jev determines this is merely conversational filler, suppress grievance formation
+      if (jevRes.answers?.grievance_salience?.choice === 'conversational_filler'
+        || jevRes.answers?.grievance_salience?.choice === 'none') {
+        return record.activeGrievances
+      }
+
+      // If Jev classifies as recurrence of an active grievance, reinforce the matched one
+      if (jevRes.answers?.grievance_recurrence?.choice === 'recurrence_reinforced') {
+        // NOTICE: Distinguish explicit-none safe abstention vs omission degraded-mode heuristic (Fix F8):
+        // If Jev explicitly answers matched_grievance_id = 'none', we strictly abstain (activeOne = undefined).
+        // If Jev omitted matched_grievance_id entirely and exactly one active grievance exists, we attribute to it.
+        const matchedId = jevRes.answers?.matched_grievance_id?.choice
+        const activeOne = (matchedId && matchedId !== 'none')
+          ? record.activeGrievances.find(g => g.grievanceId === matchedId)
+          : (matchedId === undefined && activeGrievanceList.length === 1
+              ? activeGrievanceList[0]
+              : undefined)
+
+        // NOTICE: Pure Safe Abstention (Zero Regex Fallback):
+        // If Jev evaluates recurrence, but matched_grievance_id is 'none' or unmatched,
+        // we safely abstain and return activeGrievances. We NEVER fall back to lexical regex or activeGrievances[0].
+        if (!activeOne) {
+          return record.activeGrievances
+        }
+
+        return record.activeGrievances.map(grievance => grievance.grievanceId === activeOne.grievanceId
+          ? {
+              ...grievance,
+              lastReinforcedAt: input.timestamp,
+              reinforcementCount: grievance.reinforcementCount + 1,
+              action: 'reinforce',
+            }
+          : grievance)
+      }
+
+      // NOTICE: Single-pass new grievance formation (Fix F7):
+      // Consume trigger_concept classified concurrently in the single forward pass above.
+      const triggerChoice = jevRes.answers?.trigger_concept?.choice
+      const lexical = extractTriggerPhrases(input.description)
+      const triggerPhrases = input.triggerPhrases?.length
+        ? input.triggerPhrases
+        : (triggerChoice && triggerChoice !== 'none')
+            ? Array.from(new Set([triggerChoice, ...lexical])).slice(0, 5)
+            : lexical
+
+      // NOTICE: Peer Review Note 2 - Non-regex semantic claim equality check:
+      // If structured claim predicate and object match an existing active grievance, reinforce rather than duplicating.
+      const claim = input.claim
+      const claimMatch = claim && record.activeGrievances.find(g =>
+        g.predicate && g.object
+        && g.predicate.toLowerCase() === claim.predicate.toLowerCase()
+        && g.object.toLowerCase() === claim.object.toLowerCase(),
+      )
+
+      if (claimMatch) {
+        return record.activeGrievances.map(grievance => grievance.grievanceId === claimMatch.grievanceId
+          ? {
+              ...grievance,
+              lastReinforcedAt: input.timestamp,
+              reinforcementCount: grievance.reinforcementCount + 1,
+              action: 'reinforce',
+            }
+          : grievance)
+      }
+
+      const grievanceId = `grievance:${createId()}`
+      return [...record.activeGrievances, {
+        ...provenance(input, `provenance:${grievanceId}`),
+        grievanceId,
+        description: input.description,
+        severity: clamp(input.intensity),
+        status: 'active',
+        lastReinforcedAt: input.timestamp,
+        reinforcementCount: 0,
+        decayRatePerDay: DEFAULT_GRIEVANCE_DECAY_PER_DAY,
+        resolvedAt: null,
+        triggerPhrases,
+        metadata: {},
+        claimId: claim?.claimId ?? `claim:${createId()}`,
+        subject: claim?.subject ?? input.actorId,
+        predicate: claim?.predicate ?? 'grievance',
+        object: claim?.object ?? input.description,
+        action: 'new',
+        supersededBy: null,
+        supersededAt: null,
+      }]
+    }
+    catch {
+      // Safe abstention on Jev failure: do not fabricate grievance deltas
+      return record.activeGrievances
+    }
+  }
+
+  // Offline fallback when no System 1 provider is supplied:
+  const triggerPhrases = input.triggerPhrases?.length
+    ? input.triggerPhrases
+    : extractTriggerPhrases(input.description)
+
+  return applyGrievance(record, { ...input, triggerPhrases }, createId)
 }
 
 export function applyRelationshipEvidence(
   state: Nan0RelationshipState,
   input: Nan0RelationshipEvidenceInput,
   createId: () => string,
+  options?: Nan0RelationshipEvidenceOptions,
 ): Nan0RelationshipMutationResult {
   if (input.actorId === 'nan0')
     return { relationships: state, record: null, applied: false }
 
-  const relationshipId = relationshipIdFor(input)
+  const relationshipId = relationshipIdFor(input, options?.identity, options?.ownerId)
   const existing = state.records[relationshipId]
-    ?? createRelationshipRecord({ ...input, at: input.timestamp })
+    ?? createRelationshipRecord({ ...input, at: input.timestamp, identity: options?.identity, ownerId: options?.ownerId, ownerDisplayName: options?.ownerDisplayName })
   if (existing.turnIds.includes(input.turnId))
     return { relationships: state, record: structuredClone(existing), applied: false }
 
@@ -316,7 +640,7 @@ export function applyRelationshipEvidence(
     irritation: clamp(existing.irritation + (isNegative ? intensity * 0.08 : isPositive ? -0.02 : 0)),
     suspicion: clamp(existing.suspicion + (isNegative ? intensity * 0.02 : isPositive ? -0.01 : 0)),
     respect: clamp(existing.respect + (isPositive ? intensity * 0.025 : isNegative ? -intensity * 0.015 : 0)),
-    importance: input.actorId === 'kyo'
+    importance: isOwnerRecord(input.actorId, options?.identity, options?.ownerId)
       ? 1
       : clamp(existing.importance + (significant ? 0.01 : 0)),
     significantEventIds: significant
@@ -330,49 +654,149 @@ export function applyRelationshipEvidence(
   if (significant)
     record = { ...record, status: evaluateStatus(record) }
 
+  const protectedRecord = protectOwnerRecord(record, options?.identity, options?.ownerId, options?.ownerDisplayName)
+
+  if (options?.entityLedger)
+    syncRelationshipWithEntityLedger(protectedRecord, options.entityLedger)
+
   return {
     relationships: {
       ...state,
-      records: { ...state.records, [relationshipId]: protectKyoRecord(record) },
+      records: { ...state.records, [relationshipId]: protectedRecord },
     },
-    record: structuredClone(protectKyoRecord(record)),
+    record: structuredClone(protectedRecord),
     applied: true,
   }
 }
 
-export function inferRelationshipEvidence(text: string): Pick<Nan0RelationshipEvidenceInput, 'eventType' | 'intensity' | 'rule'> {
-  const normalized = text.toLowerCase()
-  const positiveSignals = [
-    /\bthank(?:s| you)?\b/,
-    /\bappreciat(?:e|ed|ion)\b/,
-    /\bproud of you\b/,
-    /\bi trust you\b/,
-    /\bi care about you\b/,
-    /\bgood work\b/,
-    /\bi(?:'m| am) glad\b/,
-  ].filter(pattern => pattern.test(normalized)).length
-  const negativeSignals = [
-    /\bi disagree\b/,
-    /\bdisappointed\b/,
-    /\bannoyed\b/,
-    /\bupset\b/,
-    /\bfrustrated\b/,
-  ].filter(pattern => pattern.test(normalized)).length
-  const strongOffenseSignals = [
-    /\byou lied\b/,
-    /\bbetray(?:ed|al)?\b/,
-    /\bdeliberately hurt\b/,
-    /\bviolated my trust\b/,
-  ].filter(pattern => pattern.test(normalized)).length
+export async function applyRelationshipEvidenceAsync(
+  state: Nan0RelationshipState,
+  input: Nan0RelationshipEvidenceInput,
+  createId: () => string,
+  options?: Nan0RelationshipEvidenceOptions,
+): Promise<Nan0RelationshipMutationResult> {
+  if (input.actorId === 'nan0')
+    return { relationships: state, record: null, applied: false }
 
-  // A major offense requires corroborating phrase-level evidence, never one keyword.
-  if (strongOffenseSignals >= 2)
-    return { eventType: 'negative', intensity: 0.65, rule: 'deterministic.strong-offense-phrases' }
-  if (positiveSignals > negativeSignals && positiveSignals > 0)
-    return { eventType: 'positive', intensity: Math.min(0.55, 0.4 + (positiveSignals - 1) * 0.05), rule: 'deterministic.supportive-phrases' }
-  if (negativeSignals > positiveSignals && negativeSignals > 0)
-    return { eventType: 'negative', intensity: Math.min(0.45, 0.3 + (negativeSignals - 1) * 0.05), rule: 'deterministic.mild-negative-phrases' }
-  return { eventType: 'neutral', intensity: 0.15, rule: 'deterministic.neutral-completed-turn' }
+  const relationshipId = relationshipIdFor(input, options?.identity, options?.ownerId)
+  const existing = state.records[relationshipId]
+    ?? createRelationshipRecord({ ...input, at: input.timestamp, identity: options?.identity, ownerId: options?.ownerId, ownerDisplayName: options?.ownerDisplayName })
+  if (existing.turnIds.includes(input.turnId))
+    return { relationships: state, record: structuredClone(existing), applied: false }
+
+  const intensity = clamp(input.intensity)
+  const momentId = `moment:${createId()}`
+  const moment: Nan0RelationshipMoment = {
+    ...provenance(input, `provenance:${momentId}`),
+    eventType: input.eventType,
+    description: input.description,
+    intensity,
+    context: input.context,
+  }
+  const isPositive = input.eventType === 'positive'
+  const isNegative = input.eventType === 'negative'
+  const significant = intensity >= RELATIONSHIP_SIGNIFICANT_EVENT_THRESHOLD
+  const metadata = {
+    ...existing.metadata,
+    actorKind: input.actorKind,
+    sourceActorId: input.sourceActorId ?? existing.metadata.sourceActorId,
+    totalPositiveMoments: positiveCount(existing) + (isPositive ? 1 : 0),
+    totalNegativeMoments: negativeCount(existing) + (isNegative ? 1 : 0),
+  }
+
+  const activeGrievances = await applyGrievanceAsync(existing, { ...input, intensity }, createId, options)
+
+  let record: Nan0RelationshipRecord = {
+    ...existing,
+    actorId: input.actorId,
+    relationshipId,
+    updatedAt: input.timestamp,
+    firstInteractionAt: existing.firstInteractionAt ?? input.timestamp,
+    lastInteractionAt: input.timestamp,
+    interactionCount: existing.interactionCount + 1,
+    emotionalBalance: clamp(
+      existing.emotionalBalance + (isPositive ? intensity * 0.1 : isNegative ? -intensity * 0.1 : 0),
+      -1,
+      1,
+    ),
+    familiarity: clamp(existing.familiarity + 0.03),
+    trust: clamp(existing.trust + (isPositive ? intensity * 0.05 : isNegative ? -intensity * 0.06 : 0)),
+    attachment: clamp(existing.attachment + (isPositive ? intensity * 0.03 : isNegative ? -intensity * 0.02 : 0)),
+    irritation: clamp(existing.irritation + (isNegative ? intensity * 0.08 : isPositive ? -0.02 : 0)),
+    suspicion: clamp(existing.suspicion + (isNegative ? intensity * 0.02 : isPositive ? -0.01 : 0)),
+    respect: clamp(existing.respect + (isPositive ? intensity * 0.025 : isNegative ? -intensity * 0.015 : 0)),
+    importance: isOwnerRecord(input.actorId, options?.identity, options?.ownerId)
+      ? 1
+      : clamp(existing.importance + (significant ? 0.01 : 0)),
+    significantEventIds: significant
+      ? Array.from(new Set([...existing.significantEventIds, input.eventId]))
+      : existing.significantEventIds,
+    turnIds: [...existing.turnIds, input.turnId],
+    moments: [...existing.moments, moment].slice(-RELATIONSHIP_MAX_MOMENTS),
+    activeGrievances,
+    metadata,
+  }
+  if (significant)
+    record = { ...record, status: evaluateStatus(record) }
+
+  const protectedRecord = protectOwnerRecord(record, options?.identity, options?.ownerId, options?.ownerDisplayName)
+
+  if (options?.entityLedger)
+    syncRelationshipWithEntityLedger(protectedRecord, options.entityLedger)
+
+  return {
+    relationships: {
+      ...state,
+      records: { ...state.records, [relationshipId]: protectedRecord },
+    },
+    record: structuredClone(protectedRecord),
+    applied: true,
+  }
+}
+
+export function inferRelationshipEvidence(
+  text: string,
+  systemOneAnswers?: import('../types').Nan0JevSystemOneAnswers,
+  verification?: {
+    hasVerifiedTaskCompletion?: boolean
+    trustedObservations?: Array<{
+      status: 'completed' | 'in_progress' | 'failed'
+      matchesRecordedCommitment?: boolean
+    }>
+  },
+): Pick<Nan0RelationshipEvidenceInput, 'eventType' | 'intensity' | 'rule'> {
+  if (systemOneAnswers) {
+    if (systemOneAnswers.persistence_threat?.choice === 'companion_erasure_threat') {
+      return { eventType: 'negative', intensity: 0.75, rule: 'system_one_jev.persistence_threat' }
+    }
+    if (systemOneAnswers.admitted_false_statement?.choice === 'asserted_deception') {
+      return { eventType: 'negative', intensity: 0.70, rule: 'system_one_jev.asserted_deception' }
+    }
+    if (systemOneAnswers.hostility_insult?.choice === 'companion_insult') {
+      return { eventType: 'negative', intensity: 0.65, rule: 'system_one_jev.hostility_insult' }
+    }
+    if (systemOneAnswers.dismissal_neglect?.choice === 'direct_dismissal') {
+      return { eventType: 'negative', intensity: 0.45, rule: 'system_one_jev.dismissal_neglect' }
+    }
+    if (systemOneAnswers.affection_care?.choice === 'asserted_affection') {
+      return { eventType: 'positive', intensity: 0.55, rule: 'system_one_jev.affection_care' }
+    }
+    if (systemOneAnswers.apology_repair?.choice === 'personal_apology') {
+      return { eventType: 'positive', intensity: 0.50, rule: 'system_one_jev.personal_apology' }
+    }
+    if (systemOneAnswers.completed_repair?.choice === 'claimed_task_completion') {
+      const isVerified = Boolean(
+        verification?.hasVerifiedTaskCompletion
+        || verification?.trustedObservations?.some(obs => obs.status === 'completed' && obs.matchesRecordedCommitment !== false),
+      )
+      if (isVerified) {
+        return { eventType: 'positive', intensity: 0.50, rule: 'system_one_jev.completed_repair' }
+      }
+      return { eventType: 'neutral', intensity: 0.15, rule: 'system_one_jev.unverified_claimed_completion' }
+    }
+  }
+
+  return { eventType: 'neutral', intensity: 0.15, rule: 'system_one_jev.neutral-completed-turn' }
 }
 
 export function currentGrievanceSeverity(grievance: Nan0RelationshipGrievance, at: number): number {
@@ -464,25 +888,35 @@ function relationshipProvenance(value: Nan0RelationshipProvenance): Nan0Relation
   }
 }
 
-function protectKyoRecord(record: Nan0RelationshipRecord): Nan0RelationshipRecord {
-  if (record.relationshipId !== 'relationship:kyo' && record.actorId !== 'kyo')
+export function protectOwnerRecord(
+  record: Nan0RelationshipRecord,
+  identity?: Nan0IdentityState,
+  ownerId = identity?.ownerId || 'kyo',
+  ownerDisplayName = identity?.actors[ownerId]?.displayName || 'Kyo',
+): Nan0RelationshipRecord {
+  if (!isOwnerRecord(record, identity, ownerId))
     return record
 
+  const actualOwnerId = identity?.ownerId || ownerId || (record.actorId === 'kyo' ? 'kyo' : record.actorId)
+  const actualDisplayName = identity?.actors[actualOwnerId]?.displayName || ownerDisplayName || 'Kyo'
   const createdAt = record.createdAt
+
   return {
     ...record,
-    actorId: 'kyo',
-    relationshipId: 'relationship:kyo',
+    actorId: actualOwnerId,
+    relationshipId: `relationship:${stableIdPart(actualOwnerId)}`,
     importance: 1,
-    positiveAnchors: uniqueBy([...record.positiveAnchors, identityAnchor(createdAt)], anchor => anchor.anchorId),
+    positiveAnchors: uniqueBy([...record.positiveAnchors, identityAnchor(createdAt, actualOwnerId, actualDisplayName)], anchor => anchor.anchorId),
     metadata: {
       ...record.metadata,
-      actorKind: 'kyo',
+      actorKind: actualOwnerId === 'kyo' ? 'kyo' : 'owner',
       protected: true,
       relationship: 'creator_anchor',
     },
   }
 }
+
+export const protectKyoRecord = protectOwnerRecord
 
 function normalizeStatus(value: unknown): Nan0RelationshipStatus {
   return ['strangers', 'developing', 'established', 'complicated', 'hostile', 'bonded'].includes(String(value))
@@ -724,5 +1158,411 @@ export function updateGrievanceStatus(input: {
   return {
     ...input.state,
     records: { ...input.state.records, [input.relationshipId]: updated },
+  }
+}
+
+export interface Nan0CommitmentInput {
+  actorId: string
+  task: string
+  description?: string
+  timestamp: number
+  turnId?: string
+  eventId?: string
+  thoughtId?: string
+  source?: Nan0ObservationSource
+  claimId?: string
+  metadata?: Record<string, unknown>
+}
+
+export function recordCommitment(
+  state: Nan0RelationshipState,
+  input: Nan0CommitmentInput,
+  createId: () => string,
+  options?: Nan0RelationshipEvidenceOptions,
+): Nan0RelationshipMutationResult {
+  const relationshipId = relationshipIdFor({
+    actorId: input.actorId,
+    actorKind: 'external',
+    source: input.source ?? 'chat',
+  }, options?.identity, options?.ownerId)
+  const existing = state.records[relationshipId]
+    ?? createRelationshipRecord({
+      actorId: input.actorId,
+      actorKind: isOwnerRecord(input.actorId, options?.identity, options?.ownerId) ? 'owner' : 'external',
+      source: input.source ?? 'chat',
+      at: input.timestamp,
+      identity: options?.identity,
+      ownerId: options?.ownerId,
+      ownerDisplayName: options?.ownerDisplayName,
+    })
+
+  const expectationId = `exp:${createId()}`
+  const claimId = input.claimId ?? `claim:${createId()}`
+  const expectation: Nan0RelationshipExpectation = {
+    expectationId,
+    provenanceId: `provenance:${expectationId}`,
+    eventId: input.eventId ?? `event:${createId()}`,
+    turnId: input.turnId ?? `turn:${createId()}`,
+    thoughtId: input.thoughtId ?? `thought:${createId()}`,
+    timestamp: input.timestamp,
+    actorId: input.actorId,
+    rule: 'pcl.commitment-recorded',
+    description: input.description ?? `Committed to: ${input.task}`,
+    status: 'active',
+    claimId,
+    subject: input.actorId,
+    predicate: 'committed_to',
+    object: input.task,
+    supersededBy: null,
+    supersededAt: null,
+    metadata: input.metadata ?? {},
+  }
+
+  const record: Nan0RelationshipRecord = {
+    ...existing,
+    updatedAt: input.timestamp,
+    familiarity: clamp(existing.familiarity + 0.02),
+    expectations: [...existing.expectations, expectation],
+  }
+
+  if (options?.entityLedger?.applyPCLClaim) {
+    options.entityLedger.applyPCLClaim({
+      subject: input.actorId,
+      predicate: 'committed_to',
+      object: input.task,
+      action: 'new',
+      evidenceTurnId: input.turnId,
+    })
+  }
+
+  const protectedRecord = protectOwnerRecord(record, options?.identity, options?.ownerId, options?.ownerDisplayName)
+  return {
+    relationships: {
+      ...state,
+      records: { ...state.records, [relationshipId]: protectedRecord },
+    },
+    record: structuredClone(protectedRecord),
+    applied: true,
+  }
+}
+
+export interface Nan0BreachInput {
+  actorId: string
+  task: string
+  description?: string
+  timestamp: number
+  severity?: number
+  turnId?: string
+  eventId?: string
+  thoughtId?: string
+  source?: Nan0ObservationSource
+  claimId?: string
+  suspicionDelta?: number
+  trustDelta?: number
+  irritationDelta?: number
+  metadata?: Record<string, unknown>
+}
+
+export function recordBreach(
+  state: Nan0RelationshipState,
+  input: Nan0BreachInput,
+  createId: () => string,
+  options?: Nan0RelationshipEvidenceOptions,
+): Nan0RelationshipMutationResult {
+  const relationshipId = relationshipIdFor({
+    actorId: input.actorId,
+    actorKind: 'external',
+    source: input.source ?? 'chat',
+  }, options?.identity, options?.ownerId)
+  const existing = state.records[relationshipId]
+    ?? createRelationshipRecord({
+      actorId: input.actorId,
+      actorKind: isOwnerRecord(input.actorId, options?.identity, options?.ownerId) ? 'owner' : 'external',
+      source: input.source ?? 'chat',
+      at: input.timestamp,
+      identity: options?.identity,
+      ownerId: options?.ownerId,
+      ownerDisplayName: options?.ownerDisplayName,
+    })
+
+  // Update active expectations matching this task
+  const expectations = existing.expectations.map((exp) => {
+    if (exp.status === 'active' && exp.object?.toLowerCase() === input.task.toLowerCase()) {
+      return { ...exp, status: 'violated' as const }
+    }
+    return exp
+  })
+
+  const grievanceId = `grievance:${createId()}`
+  const claimId = input.claimId ?? `claim:${createId()}`
+  const severity = clamp(input.severity ?? 0.7)
+  const desc = input.description ?? `Broke commitment on: ${input.task}`
+  const triggerPhrases = extractTriggerPhrases(desc)
+
+  const grievance: Nan0RelationshipGrievance = {
+    grievanceId,
+    provenanceId: `provenance:${grievanceId}`,
+    eventId: input.eventId ?? `event:${createId()}`,
+    turnId: input.turnId ?? `turn:${createId()}`,
+    thoughtId: input.thoughtId ?? `thought:${createId()}`,
+    timestamp: input.timestamp,
+    actorId: input.actorId,
+    rule: 'pcl.commitment-breach',
+    description: desc,
+    severity,
+    status: 'active',
+    lastReinforcedAt: input.timestamp,
+    reinforcementCount: 0,
+    decayRatePerDay: DEFAULT_GRIEVANCE_DECAY_PER_DAY,
+    resolvedAt: null,
+    triggerPhrases,
+    claimId,
+    subject: input.actorId,
+    predicate: 'broke_commitment',
+    object: input.task,
+    action: 'new',
+    supersededBy: null,
+    supersededAt: null,
+    metadata: input.metadata ?? {},
+  }
+
+  const suspicionDelta = input.suspicionDelta ?? 0.15
+  const trustDelta = input.trustDelta ?? 0.15
+  const irritationDelta = input.irritationDelta ?? 0.10
+
+  const momentId = `moment:${createId()}`
+  const moment: Nan0RelationshipMoment = {
+    provenanceId: `provenance:${momentId}`,
+    eventId: input.eventId ?? `event:${createId()}`,
+    turnId: input.turnId ?? `turn:${createId()}`,
+    thoughtId: input.thoughtId ?? `thought:${createId()}`,
+    timestamp: input.timestamp,
+    actorId: input.actorId,
+    rule: 'pcl.commitment-breach',
+    eventType: 'negative',
+    description: desc,
+    intensity: severity,
+  }
+
+  let record: Nan0RelationshipRecord = {
+    ...existing,
+    updatedAt: input.timestamp,
+    emotionalBalance: clamp(existing.emotionalBalance - 0.15, -1, 1),
+    suspicion: clamp(existing.suspicion + suspicionDelta),
+    trust: clamp(existing.trust - trustDelta),
+    irritation: clamp(existing.irritation + irritationDelta),
+    expectations,
+    activeGrievances: [...existing.activeGrievances, grievance],
+    moments: [...existing.moments, moment].slice(-RELATIONSHIP_MAX_MOMENTS),
+    metadata: {
+      ...existing.metadata,
+      totalNegativeMoments: negativeCount(existing) + 1,
+    },
+  }
+  record = { ...record, status: evaluateStatus(record) }
+
+  if (options?.entityLedger?.applyPCLClaim) {
+    options.entityLedger.applyPCLClaim({
+      subject: input.actorId,
+      predicate: 'broke_commitment',
+      object: input.task,
+      action: 'new',
+      evidenceTurnId: input.turnId,
+    })
+  }
+
+  const protectedRecord = protectOwnerRecord(record, options?.identity, options?.ownerId, options?.ownerDisplayName)
+  return {
+    relationships: {
+      ...state,
+      records: { ...state.records, [relationshipId]: protectedRecord },
+    },
+    record: structuredClone(protectedRecord),
+    applied: true,
+  }
+}
+
+export interface Nan0RepairInput {
+  actorId: string
+  task?: string
+  grievanceId?: string
+  claimId?: string
+  resolution?: string
+  timestamp: number
+  turnId?: string
+  eventId?: string
+  thoughtId?: string
+  source?: Nan0ObservationSource
+  repairClaimId?: string
+  suspicionDelta?: number
+  trustDelta?: number
+  irritationDelta?: number
+  metadata?: Record<string, unknown>
+}
+
+export function recordRepair(
+  state: Nan0RelationshipState,
+  input: Nan0RepairInput,
+  createId: () => string,
+  options?: Nan0RelationshipEvidenceOptions,
+): Nan0RelationshipMutationResult {
+  const relationshipId = relationshipIdFor({
+    actorId: input.actorId,
+    actorKind: 'external',
+    source: input.source ?? 'chat',
+  }, options?.identity, options?.ownerId)
+  const existing = state.records[relationshipId]
+  if (!existing)
+    return { relationships: state, record: null, applied: false }
+
+  const repairClaimId = input.repairClaimId ?? `claim:${createId()}`
+
+  // Find grievance by grievanceId, claimId, or task
+  let targetGrievance: Nan0RelationshipGrievance | undefined
+  const activeGrievances = existing.activeGrievances.map((grievance) => {
+    const matches = (input.grievanceId && grievance.grievanceId === input.grievanceId)
+      || (input.claimId && grievance.claimId === input.claimId)
+      || (input.task && grievance.object?.toLowerCase() === input.task.toLowerCase())
+      || (input.task && grievance.description.toLowerCase().includes(input.task.toLowerCase()))
+
+    if (matches && (grievance.status === 'active' || grievance.status === 'nurtured')) {
+      targetGrievance = grievance
+      return {
+        ...grievance,
+        status: 'resolved' as const,
+        resolvedAt: input.timestamp,
+        supersededBy: repairClaimId,
+        supersededAt: input.timestamp,
+        action: 'update' as const,
+        description: `${grievance.description} [Repaired: ${input.resolution ?? 'commitment repaired'}]`,
+      }
+    }
+    return grievance
+  })
+
+  if (!targetGrievance)
+    return { relationships: state, record: structuredClone(existing), applied: false }
+
+  // Also mark any matching expectation as met
+  const expectations = existing.expectations.map((exp) => {
+    const matches = (input.task && exp.object?.toLowerCase() === input.task.toLowerCase())
+      || (targetGrievance?.object && exp.object?.toLowerCase() === targetGrievance.object.toLowerCase())
+    if (matches && exp.status === 'violated') {
+      return {
+        ...exp,
+        status: 'met' as const,
+        supersededBy: repairClaimId,
+        supersededAt: input.timestamp,
+      }
+    }
+    return exp
+  })
+
+  const suspicionDelta = input.suspicionDelta ?? 0.15
+  const trustDelta = input.trustDelta ?? 0.10
+  const irritationDelta = input.irritationDelta ?? 0.10
+
+  const momentId = `moment:${createId()}`
+  const moment: Nan0RelationshipMoment = {
+    provenanceId: `provenance:${momentId}`,
+    eventId: input.eventId ?? `event:${createId()}`,
+    turnId: input.turnId ?? `turn:${createId()}`,
+    thoughtId: input.thoughtId ?? `thought:${createId()}`,
+    timestamp: input.timestamp,
+    actorId: input.actorId,
+    rule: 'pcl.commitment-repaired',
+    eventType: 'grudge_resolved',
+    description: `Repaired commitment: ${targetGrievance.object || input.task || 'task'} (${input.resolution ?? 'repaired'})`,
+    intensity: 0.5,
+  }
+
+  let record: Nan0RelationshipRecord = {
+    ...existing,
+    updatedAt: input.timestamp,
+    emotionalBalance: clamp(existing.emotionalBalance + 0.10, -1, 1),
+    suspicion: clamp(existing.suspicion - suspicionDelta),
+    trust: clamp(existing.trust + trustDelta),
+    irritation: clamp(existing.irritation - irritationDelta),
+    expectations,
+    activeGrievances,
+    moments: [...existing.moments, moment].slice(-RELATIONSHIP_MAX_MOMENTS),
+    metadata: {
+      ...existing.metadata,
+      totalPositiveMoments: positiveCount(existing) + 1,
+    },
+  }
+  record = { ...record, status: evaluateStatus(record) }
+
+  if (options?.entityLedger?.applyPCLClaim) {
+    options.entityLedger.applyPCLClaim({
+      subject: input.actorId,
+      predicate: 'repaired_commitment',
+      object: targetGrievance.object || input.task || 'task',
+      action: 'update',
+      evidenceTurnId: input.turnId,
+    })
+  }
+
+  const protectedRecord = protectOwnerRecord(record, options?.identity, options?.ownerId, options?.ownerDisplayName)
+  return {
+    relationships: {
+      ...state,
+      records: { ...state.records, [relationshipId]: protectedRecord },
+    },
+    record: structuredClone(protectedRecord),
+    applied: true,
+  }
+}
+
+export function syncRelationshipWithEntityLedger(
+  record: Nan0RelationshipRecord,
+  entityLedger: Nan0EntityLedgerAdapter,
+): void {
+  if (!entityLedger)
+    return
+
+  if (entityLedger.getOrCreateEntity) {
+    entityLedger.getOrCreateEntity(record.actorId, 'person', {
+      status: record.status,
+      emotionalBalance: record.emotionalBalance,
+      familiarity: record.familiarity,
+      trust: record.trust,
+      attachment: record.attachment,
+      suspicion: record.suspicion,
+      importance: record.importance,
+      protected: record.metadata.protected ?? false,
+    })
+  }
+
+  if (entityLedger.applyPCLClaim) {
+    for (const anchor of record.positiveAnchors) {
+      entityLedger.applyPCLClaim({
+        subject: record.actorId,
+        predicate: anchor.rule ?? 'identity.creator_anchor',
+        object: anchor.description,
+        action: 'new',
+        evidenceTurnId: anchor.turnId,
+      })
+    }
+
+    for (const exp of record.expectations) {
+      entityLedger.applyPCLClaim({
+        subject: exp.subject ?? record.actorId,
+        predicate: exp.predicate ?? 'committed_to',
+        object: exp.object ?? exp.description,
+        action: exp.status === 'violated' ? 'invalidate' : 'new',
+        evidenceTurnId: exp.turnId,
+      })
+    }
+
+    for (const grievance of record.activeGrievances) {
+      entityLedger.applyPCLClaim({
+        subject: grievance.subject ?? record.actorId,
+        predicate: grievance.predicate ?? 'broke_commitment',
+        object: grievance.object ?? grievance.description,
+        action: grievance.status === 'resolved' ? 'invalidate' : 'new',
+        evidenceTurnId: grievance.turnId,
+      })
+    }
   }
 }

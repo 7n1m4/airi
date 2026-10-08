@@ -74,7 +74,7 @@ export interface Nan0InternalObservationQueueState {
   records: Nan0InternalObservationRecord[]
 }
 
-export type Nan0ActorKind = 'kyo' | 'nan0' | 'external' | 'unknown'
+export type Nan0ActorKind = 'owner' | 'kyo' | 'nan0' | 'external' | 'unknown'
 
 export interface Nan0ExternalIdentity {
   source: string
@@ -91,9 +91,17 @@ export interface Nan0ActorIdentity {
   externalIdentities: Record<string, Nan0ExternalIdentity>
 }
 
+export interface DefaultIdentityOptions {
+  ownerId?: string
+  ownerDisplayName?: string
+  ownerAliases?: string[]
+  ownerPronouns?: string[]
+}
+
 export interface Nan0IdentityState {
   actors: Record<string, Nan0ActorIdentity>
   aliases: Record<string, string>
+  ownerId?: string
 }
 
 export interface Nan0ActorOwnership {
@@ -984,6 +992,7 @@ export interface Nan0TemporalTrackingState {
   lastExternalInputAt: number | null
   lastRhythmCheckAt: number | null
   lastReflectionAt: number | null
+  departureAcknowledged?: boolean
 }
 
 export interface Nan0TemporalSleepCompatibilityState {
@@ -1183,6 +1192,31 @@ export interface Nan0RelationshipMoment extends Nan0RelationshipProvenance {
   context?: string
 }
 
+export interface Nan0PclClaim {
+  claimId?: string
+  subject: string
+  predicate: string
+  object: string
+  action?: 'new' | 'reinforce' | 'update' | 'invalidate'
+  evidenceTurnId?: string
+  date?: string
+  supersededBy?: string | null
+  supersededAt?: number | null
+}
+
+export interface Nan0EntityLedgerAdapter {
+  getOrCreateEntity?: (label: string, type?: string, attributes?: Record<string, any>) => unknown
+  applyPCLClaim?: (claim: {
+    subject: string
+    predicate: string
+    object: string
+    action: 'new' | 'reinforce' | 'update' | 'invalidate'
+    date?: string
+    evidenceTurnId?: string
+  }) => { claimId: string, actionTaken: string }
+  queryClaims?: (subject?: string, predicate?: string, currentOnly?: boolean) => unknown[]
+}
+
 export interface Nan0RelationshipGrievance extends Nan0RelationshipProvenance {
   grievanceId: string
   description: string
@@ -1194,6 +1228,13 @@ export interface Nan0RelationshipGrievance extends Nan0RelationshipProvenance {
   resolvedAt: number | null
   triggerPhrases: string[]
   metadata: Record<string, unknown>
+  claimId?: string
+  subject?: string
+  predicate?: string
+  object?: string
+  action?: 'new' | 'reinforce' | 'update' | 'invalidate'
+  supersededBy?: string | null
+  supersededAt?: number | null
 }
 
 export interface Nan0RelationshipAnchor extends Nan0RelationshipProvenance {
@@ -1208,6 +1249,12 @@ export interface Nan0RelationshipExpectation extends Nan0RelationshipProvenance 
   description: string
   status: 'active' | 'met' | 'violated' | 'retired'
   metadata: Record<string, unknown>
+  claimId?: string
+  subject?: string
+  predicate?: string
+  object?: string
+  supersededBy?: string | null
+  supersededAt?: number | null
 }
 
 export interface Nan0RelationshipRecord {
@@ -1410,7 +1457,49 @@ export interface Nan0KernelDependencies {
   thoughtPolicy?: Nan0ThoughtPolicy
   diagnostic?: (event: Nan0DiagnosticEvent) => void
   observatory?: Nan0KernelObservatory
+  identityOptions?: DefaultIdentityOptions
+  entityLedger?: Nan0EntityLedgerAdapter
+  systemOneProvider?: import('./shadow/Nan0ShadowTypes').Nan0SystemOneProvider
+  jevModel?: string
+  memoryRetriever?: (query: string, actorId?: string, limit?: number) => Promise<string | Nan0EpistemicGroundingContext | null> | string | Nan0EpistemicGroundingContext | null
 }
+
+export interface Nan0EpistemicFact {
+  source: 'journal' | 'stmm' | 'entity_ledger' | 'retrieval' | 'custom'
+  title?: string
+  date?: string
+  content: string
+  relevance?: number
+  subject?: string
+  predicate?: string
+  object?: string
+}
+
+export interface Nan0EpistemicGroundingContext {
+  facts?: Nan0EpistemicFact[]
+  journalEntries?: Array<{
+    date?: string
+    title?: string
+    content: string
+    tags?: string[]
+  }>
+  stmmRecaps?: Array<{
+    date?: string
+    summary: string
+  }>
+  entityDossiers?: Array<{
+    label: string
+    type?: string
+    claims?: Array<{ subject: string, predicate: string, object: string }>
+  }>
+  rawText?: string
+}
+
+export type {
+  Nan0JevSystemOneAnswers,
+  Nan0SystemOneProvider,
+  Nan0SystemOneResponse,
+} from './shadow/Nan0ShadowTypes'
 
 export interface Nan0HostBindings {
   subscribeObservations: (

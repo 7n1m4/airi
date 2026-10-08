@@ -51,6 +51,19 @@ export interface DeviceLossMetrics {
   lastEvent: DeviceLossEvent | null
 }
 
+/**
+ * Unload handler an adapter registers so the coordinator can actively evict
+ * its model under critical VRAM pressure or deep standby. `isActive` must
+ * report true while the model is executing inference or holding a GPU slot —
+ * eviction never interrupts live work (fail-closed when uncertain).
+ */
+export interface EvictionHandler {
+  /** Best-effort unload; may be async. The coordinator releases the token regardless. */
+  unload: () => void | Promise<void>
+  /** True while eviction is unsafe (executing inference / holding a GPU slot). */
+  isActive?: () => boolean
+}
+
 export interface GPUResourceCoordinator {
   /**
    * Request an allocation for a model.
@@ -94,6 +107,26 @@ export interface GPUResourceCoordinator {
    * Returns an unsubscribe function.
    */
   onDeviceLoss: (handler: (event: DeviceLossEvent) => void) => () => void
+
+  /**
+   * Register an unload handler so critical pressure or deep standby can
+   * actively evict this model. Replaces any prior handler for `modelId`.
+   * Returns an unregister function.
+   */
+  registerEvictable: (modelId: string, handler: EvictionHandler) => () => void
+
+  /**
+   * Evict one model: skip when it has no allocation, no handler, or its
+   * `isActive()` reports live work. Otherwise invoke `unload()` best-effort
+   * and release its allocation token. Returns true when evicted.
+   */
+  evictModel: (modelId: string) => boolean
+
+  /**
+   * Evict every registered inactive model. Used for deep standby hibernation.
+   * Returns the evicted model IDs in eviction order.
+   */
+  evictInactive: () => string[]
 }
 
 // ---------------------------------------------------------------------------
@@ -113,6 +146,7 @@ export function createGPUResourceCoordinator(
 ): GPUResourceCoordinator {
   const budget = estimatedVRAM > 0 ? estimatedVRAM * BUDGET_SAFETY_FACTOR : Number.POSITIVE_INFINITY
   const allocations = new Map<string, AllocationToken>()
+  const evictables = new Map<string, EvictionHandler>()
   const pressureHandlers = new Set<(level: MemoryPressureLevel) => void>()
   const deviceLossHandlers = new Set<(event: DeviceLossEvent) => void>()
   const deviceLossByModel = new Map<string, number>()
@@ -134,10 +168,38 @@ export function createGPUResourceCoordinator(
     if (ratio >= CRITICAL_THRESHOLD) {
       for (const handler of pressureHandlers)
         handler('critical')
+      evictLeastRecentlyUsedInactive()
     }
     else if (ratio >= WARNING_THRESHOLD) {
       for (const handler of pressureHandlers)
         handler('warning')
+    }
+  }
+
+  // NOTICE: Active OOM mitigation. Telemetry alone never reclaimed VRAM —
+  // Chromium holds WebGPU buffers until the worker unloads the model — so a
+  // critical event also evicts the oldest registered inactive model. One per
+  // event: repeated allocations re-trigger pressure and evict progressively.
+  // Models without a handler (or reporting live work) are skipped.
+  function evictLeastRecentlyUsedInactive(): void {
+    const ordered = Array.from(allocations.values()).sort((a, b) => a.lastUsedAt - b.lastUsedAt)
+    for (const token of ordered) {
+      const handler = evictables.get(token.modelId)
+      if (!handler)
+        continue
+      let active = false
+      try {
+        active = handler.isActive?.() ?? false
+      }
+      catch {
+        continue
+      }
+      if (active)
+        continue
+      if (evictModel(token.modelId)) {
+        console.warn(`[GPUCoordinator] Critical VRAM pressure — evicted LRU model: ${token.modelId}`)
+        return
+      }
     }
   }
 
@@ -215,6 +277,48 @@ export function createGPUResourceCoordinator(
     return () => deviceLossHandlers.delete(handler)
   }
 
+  function registerEvictable(modelId: string, handler: EvictionHandler): () => void {
+    evictables.set(modelId, handler)
+    return () => {
+      if (evictables.get(modelId) === handler)
+        evictables.delete(modelId)
+    }
+  }
+
+  function evictModel(modelId: string): boolean {
+    const token = allocations.get(modelId)
+    const handler = evictables.get(modelId)
+    if (!token || !handler)
+      return false
+    try {
+      if (handler.isActive?.())
+        return false
+    }
+    catch {
+      // NOTICE: Fail closed — when activity state is uncertain, never evict.
+      return false
+    }
+    try {
+      const result = handler.unload()
+      if (result instanceof Promise)
+        result.catch(error => console.warn(`[GPUCoordinator] Background eviction of ${modelId} failed:`, error))
+    }
+    catch (error) {
+      console.warn(`[GPUCoordinator] Background eviction of ${modelId} failed:`, error)
+    }
+    allocations.delete(modelId)
+    return true
+  }
+
+  function evictInactive(): string[] {
+    const evicted: string[] = []
+    for (const modelId of Array.from(evictables.keys())) {
+      if (evictModel(modelId))
+        evicted.push(modelId)
+    }
+    return evicted
+  }
+
   return {
     requestAllocation,
     release,
@@ -225,5 +329,8 @@ export function createGPUResourceCoordinator(
     recordDeviceLoss,
     getDeviceLossMetrics,
     onDeviceLoss,
+    registerEvictable,
+    evictModel,
+    evictInactive,
   }
 }

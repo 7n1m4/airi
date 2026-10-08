@@ -19,8 +19,11 @@ export function useIdleAnimations() {
     const format = model.format.toLowerCase()
 
     if (format.includes('live2d') || format.includes('spine')) {
-      const motions = model.motions || []
-      return motions.map(m => m.split('/').pop() || m).sort((a, b) => (a || '').localeCompare(b || ''))
+      const motions = model.motionCapabilities || []
+      return motions
+        .filter(m => m.usable)
+        .map(m => m.rawKey.split('/').pop() || m.rawKey)
+        .sort((a, b) => (a || '').localeCompare(b || ''))
     }
 
     if (format.includes('vrm')) {
@@ -34,7 +37,7 @@ export function useIdleAnimations() {
       return [...builtIn, ...custom].sort((a, b) => (a || '').localeCompare(b || ''))
     }
 
-    return model.motions || []
+    return (model.motionCapabilities || []).filter(m => m.usable).map(m => m.rawKey)
   }
 
   // Active actor idleAnimations override resolver

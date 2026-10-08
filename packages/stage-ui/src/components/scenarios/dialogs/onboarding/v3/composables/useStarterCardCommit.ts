@@ -417,6 +417,11 @@ export function populateAiriExtensions(
     modelExpressionPrompt,
     speechExpressionPrompt: airi.acting?.speechExpressionPrompt || '',
     speechMannerismPrompt: airi.acting?.speechMannerismPrompt || '',
+    ...((draft.cueAllowlist && Object.keys(draft.cueAllowlist.emotions || {}).length > 0)
+      ? { cueAllowlist: JSON.parse(JSON.stringify(draft.cueAllowlist)), compiledWhitelist: JSON.parse(JSON.stringify(draft.cueAllowlist)) }
+      : (draft.compiledWhitelist && Object.keys(draft.compiledWhitelist.emotions || {}).length > 0)
+          ? { cueAllowlist: JSON.parse(JSON.stringify(draft.compiledWhitelist)), compiledWhitelist: JSON.parse(JSON.stringify(draft.compiledWhitelist)) }
+          : {}),
     pacing: {
       enabled: isSpeechEnabled && draft.pacingPreset !== 'disabled',
       pacingProfile: draft.pacingPreset === 'snappy' ? 'snappy' : draft.pacingPreset === 'deep' ? 'deep_cot' : 'balanced',
@@ -445,7 +450,7 @@ export function populateAiriExtensions(
     }
   }
 
-  if (draft.modules?.screen ?? draft.modules?.sensory) {
+  if (draft.modules?.screen ?? draft.modules?.proactivity ?? draft.modules?.sensory) {
     airi.screenWatching = {
       enabled: Boolean(draft.screenWatcherEnabled),
       deliveryMode: draft.screenWatcherMode === 'voice-and-bubble' ? 'both' : draft.screenWatcherMode === 'bubble-only' ? 'bubble_only' : draft.screenWatcherMode === 'voice-only' ? 'tts_only' : 'off',
@@ -533,7 +538,8 @@ export function compileCardPayload(
   resolvedPersona: ResolvedPersona,
   displayModels: any[] = [],
 ): any {
-  const activeModelId = draft.vesselDisplayModelId || 'preset-live2d-2'
+  const isNoModel = draft.experienceArchetype === 'quiet' || draft.vesselDisplayModelId === ''
+  const activeModelId = isNoModel ? '' : (draft.vesselDisplayModelId || 'preset-live2d-2')
 
   // If user used AI Character Creator or imported a card, preserve its assets and coalesce extensions.airi
   const rawTarget = draft.personaSource === 'creator'
@@ -709,16 +715,29 @@ export function useStarterCardCommit() {
       }
     }
 
-    // 4. Update Display Model Emotion Mappings
-    const activeModelId = draft.vesselDisplayModelId || 'preset-live2d-2'
+    // 4. Update Display Model Capabilities
+    const isNoModel = draft.experienceArchetype === 'quiet' || draft.vesselDisplayModelId === ''
+    const activeModelId = isNoModel ? '' : (draft.vesselDisplayModelId || 'preset-live2d-2')
     if (draft.expressionMappings && Object.keys(draft.expressionMappings).length > 0 && activeModelId) {
       try {
-        await displayModelsStore.updateDisplayModelMappings(activeModelId, {
-          emotionMappings: draft.expressionMappings,
+        const model = await displayModelsStore.getDisplayModel(activeModelId)
+        const expressionCapabilities = [...(model?.expressionCapabilities || [])]
+        for (const [rawKey, label] of Object.entries(draft.expressionMappings)) {
+          const existing = expressionCapabilities.find(e => e.rawKey === rawKey)
+          if (existing) {
+            existing.label = label
+            existing.usable = true
+          }
+          else {
+            expressionCapabilities.push({ rawKey, label, usable: true })
+          }
+        }
+        await displayModelsStore.updateDisplayModelCapabilities(activeModelId, {
+          expressionCapabilities,
         })
       }
       catch (err) {
-        console.warn('[useStarterCardCommit] Display model mappings update warning:', err)
+        console.warn('[useStarterCardCommit] Display model capabilities update warning:', err)
       }
     }
 
@@ -783,8 +802,9 @@ export function useStarterCardCommit() {
       if (unref(syncEngineStore.syncEnabled) && unref(syncEngineStore.selectiveSyncEnabled)) {
         const displayModelId = cardStore.getCardDisplayModelId(createdCardId)
           || payload.data?.extensions?.airi?.modules?.displayModelId
-          || draft.vesselDisplayModelId
-        syncEngineStore.addCardToSelectiveSync(createdCardId, displayModelId)
+        if (displayModelId) {
+          syncEngineStore.addCardToSelectiveSync(createdCardId, displayModelId)
+        }
       }
     }
     catch (err) {

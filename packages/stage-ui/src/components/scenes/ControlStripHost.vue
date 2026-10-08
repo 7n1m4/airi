@@ -28,9 +28,11 @@ import RendererStage from './RendererStage.vue'
 import { applyVoiceProfileEffects } from '../../composables/audio/audio-effects'
 import { parseActor, useSpecialTokenQueue } from '../../composables/queues'
 import { categorizeResponse } from '../../composables/response-categoriser'
+import { containsExplicitActToken, normalizeStrideText, useAutonomousCues } from '../../composables/use-autonomous-cues'
 import { useTurnPacing } from '../../composables/use-turn-pacing'
 import { llmInferenceEndToken } from '../../constants'
 import { EMOTION_EmotionMotionName_value, EmotionThinkMotionName } from '../../constants/emotions'
+import { getSpeechBusContext, speechSegmentPlaybackEvent } from '../../services/speech/bus'
 import { useAudioContext, useSpeakingStore } from '../../stores/audio'
 import { useChatOrchestratorStore } from '../../stores/chat'
 import { useChatSessionStore } from '../../stores/chat/session-store'
@@ -47,6 +49,7 @@ import { useSettingsControlStrip } from '../../stores/settings/control-strip'
 import { useSettingsUserProfile } from '../../stores/settings/user-profile'
 import { useSpeechRuntimeStore } from '../../stores/speech-runtime'
 import { useVHackStore } from '../../stores/vhack'
+import { logMemoryProbe } from '../../utils/memory-sentinel'
 import { StageWidgetsContainer } from '../widgets'
 
 withDefaults(defineProps<{
@@ -219,11 +222,25 @@ const activeModelMetadata = computed(() => {
 
 watch(activeModelMetadata, (model) => {
   if (model) {
-    live2dStore.motionMap = { ...model.motionMappings }
-    live2dStore.emotionMappings = { ...model.emotionMappings }
+    const motionMap: Record<string, string> = {}
+    if (model.motionCapabilities) {
+      for (const m of model.motionCapabilities) {
+        if (m.label)
+          motionMap[m.rawKey] = m.label
+      }
+    }
+    const emotionMap: Record<string, string> = {}
+    if (model.expressionCapabilities) {
+      for (const e of model.expressionCapabilities) {
+        if (e.label && e.label !== e.rawKey)
+          emotionMap[e.rawKey] = e.label
+      }
+    }
+    live2dStore.motionMap = motionMap
+    live2dStore.emotionMappings = emotionMap
     debug('[Stage Host] Synced active model mappings to live2dStore:', {
-      emotions: Object.keys(model.emotionMappings || {}).length,
-      motions: Object.keys(model.motionMappings || {}).length,
+      emotions: Object.keys(emotionMap).length,
+      motions: Object.keys(motionMap).length,
     })
   }
 }, { deep: true, immediate: true })
@@ -238,21 +255,22 @@ const emotionsQueue = createQueue<EmotionPayload>({
     async (ctx) => {
       const emotionName = ctx.data.name
       const intensity = ctx.data.intensity
+      const duration = ctx.data.duration
 
       // Forward ACT emotion cues to Stage-Mate sidecar if enabled
       if (stageMateEnabled.value && isElectron.value) {
         import('@proj-airi/electron-vueuse').then(({ useElectronEventaInvoke }) => {
           import('@proj-airi/stage-shared').then(({ electronStageMateTriggerExpression }) => {
             const triggerExpr = useElectronEventaInvoke(electronStageMateTriggerExpression)
-            triggerExpr({ name: emotionName, weight: intensity, durationMs: 2500 })
+            triggerExpr({ name: emotionName, weight: intensity, durationMs: (duration ?? 2.5) * 1000 })
           })
         }).catch(() => {})
       }
 
       if (stageModelRenderer.value === 'vrm') {
-        debug('[Stage] VRM emotion/motion processing (standalone window active):', { name: emotionName, intensity: ctx.data.intensity })
+        debug('[Stage] VRM emotion/motion processing (standalone window active):', { name: emotionName, intensity: ctx.data.intensity, duration })
         if (emotionName === 'fire' || emotionName === 'electric' || emotionName === 'magic' || emotionName === 'verdant') {
-          vrmStore.triggerVfx(emotionName, 4.0)
+          vrmStore.triggerVfx(emotionName, duration ?? 4.0)
         }
 
         const matchedOption = customVrmAnimationsStore.animationOptions.find(opt =>
@@ -264,6 +282,15 @@ const emotionsQueue = createQueue<EmotionPayload>({
         if (matchedOption) {
           vrmStore.triggerMotion(matchedOption.value)
         }
+        else if (ctx.data.kind === 'motion' || (ctx.data.kind !== 'emotion' && (emotionName.includes(' ') || (emotionName.length > 15 && !['star_eyes', 'cat_mouth', 'small_x_eyes', 'arrow_eyes', 'shocked_eyes'].includes(emotionName))))) {
+          // NOTICE: Unmatched kinetic/motion cues (e.g. LLM-hallucinated motions like "wiggle ears", "presses paw to glass", "tilt head thoughtfully")
+          // must NEVER fall through to vrmStore.triggerEmotion — treating them as facial morphs causes ThreeScene warnings
+          // and prematurely clears active expression reset timeouts.
+          // FUTURE / ROADMAP: Candidate for deterministic dynamic motion generation via FlowMDM (packages/stage-ui/src/utils/flowmdm)
+          // and our Text-to-Motion pipeline (useTextToMotionStore / airi-generative-motion-vrma). When the LLM emits dynamic action
+          // cues ahead of our pre-baked library, FlowMDM diffusion or procedural keyframing could synthesize and inject the VRMA on the fly.
+          debug('[Stage] Unmatched VRM motion cue skipped (not an expression):', emotionName)
+        }
         else {
           vrmStore.triggerEmotion(emotionName, ctx.data.intensity)
         }
@@ -271,10 +298,10 @@ const emotionsQueue = createQueue<EmotionPayload>({
       else if (stageModelRenderer.value === 'live2d') {
         const emotionName = ctx.data.name
         const intensity = ctx.data.intensity
-        debug('[Stage] Live2D emotion processing:', { name: emotionName, intensity })
+        debug('[Stage] Live2D emotion processing:', { name: emotionName, intensity, duration })
 
         // Delegate to store (handles mappings, name-matched fallbacks, and robust resets)
-        const triggered = live2dStore.triggerEmotion(emotionName, intensity)
+        const triggered = live2dStore.triggerEmotion(emotionName, intensity, duration)
         if (!triggered) {
           // Final fallback: try motion mapping
           const motionGroup = (EMOTION_EmotionMotionName_value as any)[emotionName]
@@ -286,7 +313,7 @@ const emotionsQueue = createQueue<EmotionPayload>({
             // New fallback: try to find motion by name in availableMotions (Ground Truth)
             const displayModelId = (activeCard.value as any)?.extensions?.airi?.modules?.displayModelId
             const activeModel = displayModelId ? displayModelsStore.displayModels.find(m => m.id === displayModelId) : null
-            const motionMappings = activeModel?.motionMappings || {}
+            const motionCapabilities = activeModel?.motionCapabilities || []
 
             // Normalize helper for robust key matching across dynamic suffixes/directories
             const normalize = (s: string) =>
@@ -297,8 +324,7 @@ const emotionsQueue = createQueue<EmotionPayload>({
               emotionName,
               normEmotion,
               activeCardName: activeCard.value?.name,
-              motionMappingsKeys: Object.keys(motionMappings),
-              motionMappingsValues: Object.values(motionMappings),
+              motionCapabilitiesCount: motionCapabilities.length,
               availableMotions: live2dStore.availableMotions.map((m: any) => ({
                 motionName: m.motionName,
                 fileName: m.fileName,
@@ -310,10 +336,10 @@ const emotionsQueue = createQueue<EmotionPayload>({
               const cleanName = name.replace('.motion3.json', '').replace('.json', '')
 
               const mNorm = normalize(m.fileName)
-              let mappedName
-              for (const [mapKey, val] of Object.entries(motionMappings)) {
-                if (normalize(mapKey) === mNorm) {
-                  mappedName = val as string
+              let mappedName: string | undefined
+              for (const cap of motionCapabilities) {
+                if (normalize(cap.rawKey) === mNorm) {
+                  mappedName = cap.label
                   break
                 }
               }
@@ -337,7 +363,7 @@ const emotionsQueue = createQueue<EmotionPayload>({
                 availableExpressions: live2dStore.availableExpressions.map(e => ({ name: e.name, fileName: e.fileName })),
                 emotionMappings: live2dStore.emotionMappings,
                 availableMotions: live2dStore.availableMotions.map(m => m.fileName),
-                motionMappings,
+                motionCapabilitiesCount: motionCapabilities.length,
               })
             }
           }
@@ -425,6 +451,103 @@ function playSpecialToken(special: string) {
   debug('[Stage] Enqueueing special token:', special)
   specialTokenQueue.enqueue(special)
 }
+
+interface HeldAutonomousCue {
+  id: string
+  sentence: string
+  norm: string
+  rawKey: string
+  token?: string
+  intensity?: number
+  status: 'held' | 'applied' | 'dropped'
+  createdAt: number
+}
+
+function emitAutonomousSpecialToken(rawKey: string, intensity?: number) {
+  if (intensity !== undefined && intensity !== null) {
+    playSpecialToken(`<|ACT:{"emotion":{"name":"${rawKey}","intensity":${intensity}}}|>`)
+  }
+  else {
+    playSpecialToken(`<|ACT:emotion="${rawKey}"|>`)
+  }
+}
+
+const heldAutonomousCues = ref<HeldAutonomousCue[]>([])
+const playedStrideNorms = ref<Set<string>>(new Set())
+
+function resetHeldAutonomousCues() {
+  heldAutonomousCues.value = []
+  playedStrideNorms.value.clear()
+}
+
+function releaseAutonomousCue(text: string) {
+  if (!text?.trim())
+    return
+  const norm = normalizeStrideText(text)
+  if (!norm)
+    return
+  playedStrideNorms.value.add(norm)
+
+  const held = heldAutonomousCues.value.filter(c => c.status === 'held')
+  if (held.length === 0)
+    return
+
+  const match = held.find(c => c.norm && (norm.includes(c.norm) || c.norm.includes(norm)))
+  if (match) {
+    match.status = 'applied'
+    debug('[Stage] Released held Autonomous System-1 cue on speech start:', {
+      rawKey: match.rawKey,
+      intensity: match.intensity,
+      sentence: match.sentence,
+      matchedText: text.slice(0, 60),
+    })
+    emitAutonomousSpecialToken(match.rawKey, match.intensity)
+  }
+}
+
+const autonomousCues = useAutonomousCues({
+  activeCard: computed(() => activeCard.value),
+  activeModelId: computed(() => (activeCard.value as any)?.extensions?.airi?.modules?.displayModelId || null),
+  expressionCapabilities: computed(() => {
+    const displayModelId = (activeCard.value as any)?.extensions?.airi?.modules?.displayModelId
+    const activeModel = displayModelId ? displayModelsStore.displayModels.find(m => m.id === displayModelId) : null
+    return activeModel?.expressionCapabilities || []
+  }),
+  actuateEmotion: (rawKey, meta) => {
+    debug('[Stage] Autonomous System-1 cue firing (evaporates):', { rawKey, meta })
+
+    // If speech provider is noop (silent / text-only) or playback suppressed, actuate immediately
+    if (activeSpeechProvider.value === 'speech-noop' || isPlaybackSuppressed.value) {
+      emitAutonomousSpecialToken(rawKey, meta?.intensity)
+      return
+    }
+
+    const sentence = meta?.sentence || ''
+    const norm = normalizeStrideText(sentence)
+
+    if (norm && playedStrideNorms.value.has(norm)) {
+      if (nowSpeaking.value) {
+        debug('[Stage] Autonomous System-1 cue arrived during active speech: firing immediately:', { rawKey, intensity: meta?.intensity, sentence })
+        emitAutonomousSpecialToken(rawKey, meta?.intensity)
+        return
+      }
+      debug('[Stage] Autonomous System-1 cue arrived after speech slice ended (dropped):', { rawKey, sentence })
+      return
+    }
+
+    heldAutonomousCues.value.push({
+      id: `cue-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      sentence,
+      norm,
+      rawKey,
+      token: meta?.token,
+      intensity: meta?.intensity,
+      status: 'held',
+      createdAt: Date.now(),
+    })
+    debug('[Stage] Held Autonomous System-1 cue until speech playback:', { rawKey, intensity: meta?.intensity, sentence, norm })
+  },
+})
 
 const modsServer = useModsServerChannelStore()
 
@@ -797,6 +920,9 @@ async function playFunction(item: Parameters<Parameters<typeof createPlaybackMan
               isActive: true,
             })
 
+            // Sentence-Sync: release any held System-1 cue matching this sub-sentence boundary
+            releaseAutonomousCue(activeBoundary.text)
+
             try {
               postCaption({
                 type: 'caption-assistant',
@@ -814,12 +940,49 @@ async function playFunction(item: Parameters<Parameters<typeof createPlaybackMan
         sentenceSyncRafId = requestAnimationFrame(updateSentenceHighlight)
       }
 
+      // Tier 2 proving ground: announce slice audio start so listeners (e.g.
+      // rehearsal room) can release held cues at the exact spoken moment.
+
+      console.info('[Stage:Playback] slice audio start', { intentId: item.intentId, segmentId: item.segmentId, text: (item.text || '').slice(0, 80) })
+      try {
+        getSpeechBusContext().emit(speechSegmentPlaybackEvent, {
+          originId: 'stage-host',
+          intentId: item.intentId,
+          streamId: item.streamId,
+          segmentId: item.segmentId,
+          text: item.text,
+        })
+      }
+      catch (err) {
+        debug('[Stage] Failed to broadcast segment playback:', err)
+      }
+
+      // Release any held System-1 autonomous cue synchronized with this slice audio start
+      const firstSliceText = (item.boundaries && item.boundaries.length > 0)
+        ? item.boundaries[0].text
+        : item.text
+      if (firstSliceText) {
+        releaseAutonomousCue(firstSliceText)
+      }
+
       source.start(0)
     }
     catch {
       stopPlayback()
     }
   })
+}
+
+try {
+  getSpeechBusContext().on(speechSegmentPlaybackEvent, (evt: any) => {
+    const payload = evt?.body
+    if (payload?.originId !== 'stage-host' && payload?.text) {
+      releaseAutonomousCue(payload.text)
+    }
+  })
+}
+catch (err) {
+  debug('[Stage] Failed to register speechSegmentPlaybackEvent listener:', err)
 }
 
 const playbackManager = createPlaybackManager<AudioBuffer>({
@@ -1136,7 +1299,18 @@ async function generateSpeechBuffered(request: TtsRequest, signal: AbortSignal):
     // Save it temporarily in the map to maintain exact sequence ordering
     rawAudioBuffers.set(request.segmentId, res.slice(0))
 
+    logMemoryProbe('TTS:DECODE_START', {
+      action: 'Decoding synthesized TTS chunk',
+      extra: { bytes: res.byteLength, provider: targetProviderId, model },
+    })
+
     const audioBuffer = await audioContext.decodeAudioData(res)
+
+    logMemoryProbe('TTS:DECODE_DONE', {
+      action: 'Decoded synthesized TTS chunk',
+      extra: { durationSec: audioBuffer.duration, sampleRate: audioBuffer.sampleRate },
+    })
+
     return audioBuffer
   }
   catch {
@@ -1369,6 +1543,7 @@ speechPipeline.on('onIntentCancel', () => {
   discordStore.clearAudioTurn()
   rawAudioBuffers.clear()
   scheduledPlaybackEndTime = 0
+  resetHeldAutonomousCues()
 })
 
 // NOTICE: the speech runtime host must follow the Stage lifecycle. If a previous Stage instance
@@ -1608,6 +1783,8 @@ chatHookCleanups.push(onBeforeMessageComposed(async (_message, context) => {
 }))
 
 chatHookCleanups.push(onBeforeSend(async (message, context) => {
+  autonomousCues.reset()
+  resetHeldAutonomousCues()
   live2dStore.triggerMotion(EmotionThinkMotionName)
   currentMotion.value = { group: EmotionThinkMotionName }
   turnPacing.startTurn(context?.assistantMessageId || `turn-${Date.now()}`, context, message)
@@ -1630,6 +1807,9 @@ chatHookCleanups.push(onTokenLiteral(async (literal) => {
     return
   currentChatIntentReceivedLiteral.value = true
   intent.writeLiteral(literal)
+
+  // Stream literal deltas to autonomous sentence stride buffer
+  void autonomousCues.feedDelta(literal)
 }))
 
 chatHookCleanups.push(onTokenSpecial(async (special) => {
@@ -1639,6 +1819,10 @@ chatHookCleanups.push(onTokenSpecial(async (special) => {
   // debug('Stage received special token:', special)
   debug('[Stage] onTokenSpecial -> forwarding', { intentId: intent.intentId, special })
   intent.writeSpecial(special)
+
+  if (containsExplicitActToken(special)) {
+    autonomousCues.markExplicitActSeen()
+  }
 }))
 
 chatHookCleanups.push(onStreamEnd(async () => {
@@ -1647,6 +1831,9 @@ chatHookCleanups.push(onStreamEnd(async () => {
   if (intent)
     debug('[Stage] onStreamEnd -> flush intent', { intentId: intent.intentId })
   intent?.writeFlush()
+
+  // Flush trailing stride fragment at stream end
+  void autonomousCues.flush()
 }))
 
 chatHookCleanups.push(onAssistantResponseEnd(async (message) => {
@@ -1684,6 +1871,8 @@ chatHookCleanups.push(onAssistantResponseEnd(async (message) => {
 // orchestrator relies on currentChatIntentReceivedLiteral NOT being reset here — keeping
 // it prevents the fallback-speech path from speaking the partial message.
 chatHookCleanups.push(onGenerationStopped(async () => {
+  autonomousCues.reset()
+  resetHeldAutonomousCues()
   turnPacing.cancel('generation-stopped')
   debug('[Stage] onGenerationStopped -> cancelling speech intent, pipeline, and playback')
   currentChatIntent?.cancel('generation-stopped')
@@ -1719,6 +1908,7 @@ watch(activeSessionId, (newSessionId, oldSessionId) => {
     currentChatIntent = null
     speechPipeline.stopAll('session-switch')
     playbackManager.stopAll('session-switch')
+    resetHeldAutonomousCues()
     nowSpeaking.value = false
     mouthOpenSize.value = 0
     try {

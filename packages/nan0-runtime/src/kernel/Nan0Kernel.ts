@@ -1,13 +1,23 @@
 import type { Nan0HeartbeatTerminalResult } from '../diagnostics/Nan0KernelObservatory'
 import type {
+  Nan0BreachInput,
+  Nan0CommitmentInput,
+  Nan0RepairInput,
+} from '../relationship/RelationshipMemory'
+import type { Nan0SystemOneTurnState } from '../shadow/Nan0ShadowTypes'
+import type {
   LegacyNan0Export,
   Nan0ActionAuthority,
   Nan0ActionIntentRecord,
+  Nan0ActorOwnership,
   Nan0ContinuityContext,
   Nan0ContinuityThreadStatus,
   Nan0ConversationTurn,
   Nan0DecisionRecord,
   Nan0EmotionalEvent,
+  Nan0EmotionalHistory,
+  Nan0EmotionalVector,
+  Nan0EpistemicGroundingContext,
   Nan0Expression,
   Nan0Goal,
   Nan0GoalStatus,
@@ -19,6 +29,7 @@ import type {
   Nan0ObservationSource,
   Nan0PendingIntention,
   Nan0RelationshipContext,
+  Nan0RelationshipRecord,
   Nan0TemporalEvent,
   Nan0TemporalState,
   Nan0Thought,
@@ -60,6 +71,7 @@ import {
   emotionalInterpretationModifier,
   normalizeEmotionalHistory,
   normalizeEmotionalVector,
+  perturbEmotionsFromJev,
   perturbEmotionsFromObservation,
 } from '../emotional/Nan0EmotionalDynamics'
 import {
@@ -75,7 +87,7 @@ import {
   createEmptyHeartbeatRuntimeState,
   normalizeHeartbeatRuntimeState,
 } from '../heartbeat/Nan0HeartbeatEngine'
-import { createDefaultIdentityState, hydrateIdentityState, nan0Ownership, normalizeActorId, normalizeMemoryOwnership, resolveObservationOwnership } from '../identity/ActorIdentity'
+import { createDefaultIdentityState, hydrateIdentityState, isOwnerActor, nan0Ownership, normalizeActorId, normalizeMemoryOwnership, resolveObservationOwnership } from '../identity/ActorIdentity'
 import {
   beginIntentionEvaluation,
   createEmptyPendingIntentionState,
@@ -97,12 +109,17 @@ import {
   processAttendedObservation,
 } from '../prediction/Nan0PredictionEngine'
 import {
-  applyRelationshipEvidence,
+  applyRelationshipEvidenceAsync,
   createEmptyRelationshipState,
   inferRelationshipEvidence,
   normalizeRelationshipState,
+  recordBreach,
+  recordCommitment,
+  recordRepair,
   relationshipContextForActor,
 } from '../relationship/RelationshipMemory'
+import { NAN0_JEV_QUESTIONS } from '../shadow/Nan0JevSchema'
+import { formatSystemOnePromptState } from '../shadow/Nan0ShadowTypes'
 import { SystemNan0Clock } from '../temporal/Nan0Clock'
 import {
   createEmptyTemporalState,
@@ -152,6 +169,13 @@ export interface Nan0PreparedTurn {
   systemContext: string
   recalledMemories: Nan0MemoryRecord[]
   actionAuthority: Nan0ActionAuthority | null
+  epistemicGrounding?: string | Nan0EpistemicGroundingContext | null
+  reflexOutcome?: {
+    group: string
+    choice: string
+    confidence?: number
+    source: 'system_one_jev' | 'local_reflex'
+  } | null
 }
 
 export interface Nan0AutonomyEvaluationResult {
@@ -202,20 +226,25 @@ export interface Nan0MetabolismEvaluationResult {
   }
 }
 
-interface Nan0PrepareTurnOptions {
+export interface Nan0PrepareTurnOptions {
   intention?: Nan0PendingIntention
   temporalEvent?: Nan0TemporalEvent
   autonomous?: boolean
   hostReady?: boolean
   internalObservation?: Nan0InternalObservationRecord
   heartbeatTickId?: string
+  retrievedMemoryContext?: string | Nan0EpistemicGroundingContext | null
+  tier2JevChallengerEnabled?: boolean
+  jevTimeoutMs?: number
 }
 
 function defaultInitialState(
   now: number,
   clock: import('../types').Nan0Clock,
   thoughtPolicy = NAN0_DEFAULT_THOUGHT_POLICY,
+  identityOptions?: import('../types').DefaultIdentityOptions,
 ): Nan0KernelState {
+  const identity = createDefaultIdentityState(identityOptions)
   return {
     schemaVersion: 2,
     revision: 0,
@@ -232,7 +261,7 @@ function defaultInitialState(
     heartbeat: createEmptyHeartbeatRuntimeState(),
     cognitionPolicy: cognitionPolicyIdentity(thoughtPolicy, now),
     runtimeMetadata: {},
-    identity: createDefaultIdentityState(),
+    identity,
     memories: [],
     thoughts: [],
     decisions: [],
@@ -244,7 +273,7 @@ function defaultInitialState(
     timeline: createEmptyTimelineState(),
     temporal: createEmptyTemporalState(clock, now),
     continuity: createEmptyContinuityState(),
-    relationships: createEmptyRelationshipState(now),
+    relationships: createEmptyRelationshipState(now, identityOptions, identity),
   }
 }
 
@@ -305,7 +334,7 @@ export class Nan0Kernel {
     this.processId = dependencies.processId ?? crypto.randomUUID()
     this.capabilities = new Nan0CapabilityRegistry(dependencies.capabilityDefinitions)
     this.state = dependencies.createInitialState?.()
-      ?? defaultInitialState(this.now(), this.clock, dependencies.thoughtPolicy)
+      ?? defaultInitialState(this.now(), this.clock, dependencies.thoughtPolicy, dependencies.identityOptions)
   }
 
   get isBooted(): boolean {
@@ -342,7 +371,7 @@ export class Nan0Kernel {
         ...heartbeat,
         revision: heartbeat.revision + 1,
         lastExternalInputAt: Math.max(heartbeat.lastExternalInputAt ?? 0, at),
-        lastKyoInteractionAt: actorId === 'kyo' ? Math.max(heartbeat.lastKyoInteractionAt ?? 0, at) : heartbeat.lastKyoInteractionAt,
+        lastKyoInteractionAt: isOwnerActor(actorId, this.state.identity) ? Math.max(heartbeat.lastKyoInteractionAt ?? 0, at) : heartbeat.lastKyoInteractionAt,
         consecutiveSilentTicks: 0,
         pressureScore: 0,
         presence: 'thinking',
@@ -368,7 +397,7 @@ export class Nan0Kernel {
     if (persistedState)
       this.state = persistedState
 
-    let identity = hydrateIdentityState(this.state.identity)
+    let identity = hydrateIdentityState(this.state.identity, this.dependencies.identityOptions)
     const memories = this.state.memories.map((memory) => {
       const normalized = normalizeMemoryOwnership(memory, identity)
       identity = normalized.identity
@@ -591,12 +620,47 @@ export class Nan0Kernel {
     this.diagnostic('prepareTurn.start', {
       ...diagnosticContext,
       thoughtId,
-      observationId: observation.id,
+      observationId: canonicalObservation.id,
       actorId: ownership.actorId,
       memoryCount: this.state.memories.length,
     })
-    const emotionalEvents = this.updateEmotionalStateForObservation(canonicalObservation)
-    if (ownership.actorId === 'kyo') {
+    if (!isInternalObservation && text.length > 0 && !this.dependencies.systemOneProvider) {
+      throw new Error('Nan0Kernel: System 1 provider is required to process observations. Please configure a System 1 provider.')
+    }
+
+    const recalledMemories = text
+      ? this.retrieveRelevantMemories(text, ownership.actorId, 10)
+      : []
+
+    let retrievedMemoryContext: string | Nan0EpistemicGroundingContext | null = null
+    if (options.retrievedMemoryContext !== undefined) {
+      retrievedMemoryContext = options.retrievedMemoryContext
+    }
+    else if (this.dependencies.memoryRetriever && text) {
+      try {
+        retrievedMemoryContext = await this.dependencies.memoryRetriever(text, ownership.actorId, 5)
+      }
+      catch (error) {
+        this.diagnostic('memoryRetriever.failed', {
+          ...diagnosticContext,
+          error: error instanceof Error ? error.message : String(error),
+        })
+        retrievedMemoryContext = null
+      }
+    }
+
+    const hasSystemOne = !isInternalObservation
+      && Boolean(this.dependencies.systemOneProvider)
+      && text.length > 0
+      && options?.tier2JevChallengerEnabled !== false
+
+    const { emotionalEvents, reflexOutcome, answers: systemOneAnswers } = hasSystemOne
+      ? await this.updateEmotionalStateForObservationAsync(canonicalObservation, options, {
+          ownership,
+          retrievedMemoryContext,
+        })
+      : this.updateEmotionalStateForObservationSync(canonicalObservation)
+    if (isOwnerActor(ownership.actorId, this.state.identity)) {
       const trackedPromiseIds = new Set(normalizeTemporalTrackingState(this.state.temporal.engine.lived).trackedPromises.map(promise => promise.promiseId))
       const lived = recordLivedTemporalObservation({
         engine: this.state.temporal.engine,
@@ -604,6 +668,7 @@ export class Nan0Kernel {
         previousKyoInteractionAt: this.state.temporal.lastKyoInteractionAt,
         clock: this.clock,
         createId: this.createId,
+        systemOneAnswers,
       })
       this.state = { ...this.state, temporal: { ...this.state.temporal, engine: lived.engine } }
       for (const promise of normalizeTemporalTrackingState(lived.engine.lived).trackedPromises.filter(item => !trackedPromiseIds.has(item.promiseId))) {
@@ -715,10 +780,6 @@ export class Nan0Kernel {
       this.syncGoalTemporalConditions()
     }
 
-    const recalledMemories = text
-      ? this.retrieveRelevantMemories(text, ownership.actorId, 10)
-      : []
-
     const userEvent: Nan0MemoryRecord = {
       id: this.createId(),
       kind: 'event',
@@ -794,6 +855,7 @@ export class Nan0Kernel {
         temporalEventId: canonicalObservation.metadata.temporalEventId,
         evaluationId: canonicalObservation.metadata.evaluationId,
         autonomous: isInternalObservation,
+        systemOneAnswers,
       },
     }
 
@@ -803,6 +865,7 @@ export class Nan0Kernel {
       inputEvent: inputTimelineEvent.event,
       text,
       at: canonicalObservation.timestamp,
+      systemOneAnswers,
     })
     const turn: Nan0ConversationTurn = {
       ...preparedTurn,
@@ -833,7 +896,7 @@ export class Nan0Kernel {
       .map(relationshipId => Object.values(this.state.relationships.records).find(record => record.relationshipId === relationshipId))
       .find(Boolean)
     const relationshipActorId = intentionRelationship?.actorId
-      ?? (options.intention?.originActorId === 'kyo' ? 'kyo' : ownership.actorId)
+      ?? (isOwnerActor(options.intention?.originActorId, this.state.identity) ? (this.state.identity.ownerId ?? 'kyo') : ownership.actorId)
     const relationshipActor = this.state.identity.actors[relationshipActorId]
     const relationshipContext = relationshipContextForActor(this.state.relationships, {
       actorId: relationshipActorId,
@@ -854,14 +917,14 @@ export class Nan0Kernel {
             ...heartbeatPresence,
             revision: heartbeatPresence.revision + 1,
             lastExternalInputAt: canonicalObservation.timestamp,
-            lastKyoInteractionAt: ownership.actorId === 'kyo'
+            lastKyoInteractionAt: isOwnerActor(ownership.actorId, identity)
               ? canonicalObservation.timestamp
               : heartbeatPresence.lastKyoInteractionAt,
             consecutiveSilentTicks: 0,
             pressureScore: 0,
             presence: 'thinking',
           },
-      temporal: ownership.actorId === 'kyo'
+      temporal: isOwnerActor(ownership.actorId, identity)
         ? {
             ...recordTemporalActivity(this.state.temporal, {
               clock: this.clock,
@@ -884,7 +947,7 @@ export class Nan0Kernel {
       updatedAt: this.now(),
     }
 
-    if (ownership.actorId === 'kyo') {
+    if (isOwnerActor(ownership.actorId, identity)) {
       const absence = this.state.temporal.engine.absence
       this.diagnostic('temporal.absence.started', {
         ...diagnosticContext,
@@ -964,15 +1027,16 @@ export class Nan0Kernel {
       observationEventId: inputTimelineEvent.event.eventId,
       observation: canonicalObservation,
       ownership,
+      identity: this.state.identity,
       emotionalState: structuredClone(this.state.emotionalState),
       mood: deriveMood(this.state.emotionalState),
-      interpretationModifier: emotionalInterpretationModifier(this.state.emotionalState, text, ownership.actorId),
+      interpretationModifier: emotionalInterpretationModifier(this.state.emotionalState, text, ownership.actorId, this.state.identity, systemOneAnswers),
       recentEmotionalEvents: normalizeEmotionalHistory(this.state.emotionalHistory, this.state.createdAt).events.slice(-6),
       attentionContext: composeAttentionContext(this.state.attention!, this.state.internalObservations!),
       predictionContext: composePredictionContext(this.state.prediction!, canonicalObservation.timestamp),
       goalMetabolismContext: composeGoalMetabolismContext(this.state.goals, canonicalObservation.timestamp),
       temporalContext: composeLivedTemporalContext(this.state.temporal.engine, canonicalObservation.timestamp),
-      subjectiveTime: subjectiveTime(this.state.timeline, canonicalObservation.timestamp, sessionId),
+      subjectiveTime: subjectiveTime(this.state.timeline, canonicalObservation.timestamp, sessionId, this.state.identity?.ownerId),
       memories: structuredClone(recalledMemories),
       continuity: structuredClone(continuityContext),
       relationship: structuredClone(relationshipContext),
@@ -980,9 +1044,12 @@ export class Nan0Kernel {
       createdAt: this.now(),
       policy: thoughtPolicy,
       signal: controller.signal,
+      retrievedMemoryContext,
+      reflexOutcome,
+      systemOneAnswers,
       onStreamProgress: async (progress: { attempt: number, phase: 'narrative' | 'extraction', partialNarrativeLength: number }) => {
         const phaseChanged = progress.phase !== persistedProgressPhase
-        if (!phaseChanged && progress.partialNarrativeLength - persistedProgressLength < 128)
+        if (!phaseChanged && progress.partialNarrativeLength - persistedProgressLength < 512)
           return
         const progressAt = this.now()
         const streamingComputation = {
@@ -1158,6 +1225,7 @@ export class Nan0Kernel {
       },
       decisionId: `decision_${this.createId()}`,
       createdAt: this.now(),
+      identity: this.state.identity,
       additionalConstraints: options.autonomous
         ? [
             { code: 'autonomy.provenance-valid', passed: Boolean(options.intention || options.temporalEvent || options.internalObservation), hard: true },
@@ -1201,6 +1269,7 @@ export class Nan0Kernel {
       thoughtPolicy,
       createGoalId: this.createId,
       now: this.now(),
+      systemOneAnswers,
     })
     const linkedGoal = goals.find(goal => goal.supportingThoughtIds.includes(thoughtId)) ?? null
     const pendingIntentions = formPendingIntentions({
@@ -1311,8 +1380,10 @@ export class Nan0Kernel {
       decision,
       recalledMemories,
       actionAuthority,
+      epistemicGrounding: retrievedMemoryContext,
+      reflexOutcome,
       systemContext: decision.finalDecision === 'SPEAK' && decision.allowed
-        ? this.composeNan0Context(thought, decision, ownership, recalledMemories, continuityContext, relationshipContext)
+        ? this.composeNan0Context(thought, decision, ownership, recalledMemories, continuityContext, relationshipContext, retrievedMemoryContext)
         : '',
     }
   }
@@ -1444,9 +1515,16 @@ export class Nan0Kernel {
     const inputMemory = this.state.memories.find(item => item.id === turn.inputContentReference)
     const inputEvent = this.state.timeline.events.find(item => item.eventId === turn.inputEventId)
     const inputOwnership = turn.metadata.ownership as import('../types').Nan0ActorOwnership | undefined
-    const relationshipEvidence = inferRelationshipEvidence(inputMemory?.content ?? '')
+    const relationshipEvidence = inferRelationshipEvidence(
+      inputMemory?.content ?? '',
+      turn.metadata.systemOneAnswers as import('../types').Nan0JevSystemOneAnswers | undefined,
+      {
+        hasVerifiedTaskCompletion: Boolean(turn.metadata.hasVerifiedTaskCompletion),
+        trustedObservations: turn.metadata.trustedObservations as any,
+      },
+    )
     const relationshipResult = inputEvent
-      ? applyRelationshipEvidence(this.state.relationships, {
+      ? await applyRelationshipEvidenceAsync(this.state.relationships, {
           actorId: turn.inputActorId,
           actorKind: inputOwnership?.kind ?? this.state.identity.actors[turn.inputActorId]?.kind ?? 'unknown',
           source: turn.source,
@@ -1460,7 +1538,12 @@ export class Nan0Kernel {
           rule: relationshipEvidence.rule,
           description: (inputMemory?.content ?? '').slice(0, 280),
           context: `Completed Nan0 turn with output event ${outputTimelineEvent.event.eventId}.`,
-        }, this.createId)
+        }, this.createId, {
+          identity: this.state.identity,
+          entityLedger: this.dependencies.entityLedger,
+          systemOneProvider: this.dependencies.systemOneProvider,
+          jevModel: this.dependencies.jevModel,
+        })
       : { relationships: this.state.relationships, record: null, applied: false }
     const intentionId = typeof turn.metadata.intentionId === 'string' ? turn.metadata.intentionId : null
     const pendingIntentions = intentionId
@@ -2607,6 +2690,60 @@ export class Nan0Kernel {
       .map(record => structuredClone(record))
   }
 
+  async recordCommitment(input: Omit<Nan0CommitmentInput, 'timestamp'> & { timestamp?: number }): Promise<Nan0RelationshipRecord | null> {
+    this.assertBooted()
+    const at = input.timestamp ?? this.now()
+    const result = recordCommitment(this.state.relationships, { ...input, timestamp: at }, this.createId, {
+      identity: this.state.identity,
+      entityLedger: this.dependencies.entityLedger,
+    })
+    if (result.applied && result.record) {
+      this.state = {
+        ...this.state,
+        relationships: result.relationships,
+        updatedAt: at,
+      }
+      this.state = await this.dependencies.stateStore.save(this.state)
+    }
+    return result.record
+  }
+
+  async recordBreach(input: Omit<Nan0BreachInput, 'timestamp'> & { timestamp?: number }): Promise<Nan0RelationshipRecord | null> {
+    this.assertBooted()
+    const at = input.timestamp ?? this.now()
+    const result = recordBreach(this.state.relationships, { ...input, timestamp: at }, this.createId, {
+      identity: this.state.identity,
+      entityLedger: this.dependencies.entityLedger,
+    })
+    if (result.applied && result.record) {
+      this.state = {
+        ...this.state,
+        relationships: result.relationships,
+        updatedAt: at,
+      }
+      this.state = await this.dependencies.stateStore.save(this.state)
+    }
+    return result.record
+  }
+
+  async recordRepair(input: Omit<Nan0RepairInput, 'timestamp'> & { timestamp?: number }): Promise<Nan0RelationshipRecord | null> {
+    this.assertBooted()
+    const at = input.timestamp ?? this.now()
+    const result = recordRepair(this.state.relationships, { ...input, timestamp: at }, this.createId, {
+      identity: this.state.identity,
+      entityLedger: this.dependencies.entityLedger,
+    })
+    if (result.applied && result.record) {
+      this.state = {
+        ...this.state,
+        relationships: result.relationships,
+        updatedAt: at,
+      }
+      this.state = await this.dependencies.stateStore.save(this.state)
+    }
+    return result.record
+  }
+
   getThoughts(filter: { sessionId?: string, actorId?: string } = {}): Nan0Thought[] {
     return this.state.thoughts
       .filter(thought => !filter.sessionId || thought.sessionId === filter.sessionId)
@@ -2891,10 +3028,53 @@ export class Nan0Kernel {
     memories: Nan0MemoryRecord[],
     continuity: Nan0ContinuityContext,
     relationship: Nan0RelationshipContext,
+    epistemicGrounding?: string | Nan0EpistemicGroundingContext | null,
   ): string {
     const emotionalState = Object.entries(this.state.emotionalState)
       .map(([key, value]) => `${key}=${value.toFixed(2)}`)
       .join(', ')
+
+    let epistemicSection = ''
+    if (epistemicGrounding) {
+      if (typeof epistemicGrounding === 'string' && epistemicGrounding.trim()) {
+        epistemicSection = `\nEPISTEMIC MEMORY GROUNDING\n${epistemicGrounding.trim()}\n`
+      }
+      else if (typeof epistemicGrounding === 'object') {
+        const parts: string[] = []
+        if (epistemicGrounding.journalEntries?.length) {
+          parts.push('SACRED JOURNAL (LTMM):')
+          for (const entry of epistemicGrounding.journalEntries) {
+            const header = [entry.date, entry.title].filter(Boolean).join(' - ')
+            parts.push(`- ${header ? `[${header}] ` : ''}${entry.content}`)
+          }
+        }
+        if (epistemicGrounding.stmmRecaps?.length) {
+          parts.push('DAILY RECAPS (STMM):')
+          for (const recap of epistemicGrounding.stmmRecaps) {
+            parts.push(`- ${recap.date ? `[${recap.date}] ` : ''}${recap.summary}`)
+          }
+        }
+        if (epistemicGrounding.entityDossiers?.length) {
+          parts.push('ENTITY DOSSIERS:')
+          for (const dossier of epistemicGrounding.entityDossiers) {
+            const claimsStr = dossier.claims?.map(c => `(${c.subject})-[${c.predicate}]->(${c.object})`).join('; ')
+            parts.push(`- ${dossier.label}${dossier.type ? ` (${dossier.type})` : ''}: ${claimsStr || 'known entity'}`)
+          }
+        }
+        if (epistemicGrounding.facts?.length) {
+          parts.push('FACTS:')
+          for (const fact of epistemicGrounding.facts) {
+            parts.push(`- [${fact.source}] ${fact.content}`)
+          }
+        }
+        if (epistemicGrounding.rawText?.trim()) {
+          parts.push(epistemicGrounding.rawText.trim())
+        }
+        if (parts.length > 0) {
+          epistemicSection = `\nEPISTEMIC MEMORY GROUNDING\n${parts.join('\n')}\n`
+        }
+      }
+    }
 
     const memoryText = memories.length > 0
       ? memories.map((memory) => {
@@ -3001,24 +3181,25 @@ ${relationshipAnchors}
 ${relationshipGrievances}
 - recent_moments:
 ${relationshipMoments}
-
+${epistemicSection}
 OUTPUT RULE
 Respond only with Nan0's outward expression. Do not output JSON, labels, analysis, or the thought_id.`
   }
 
-  private updateEmotionalStateForObservation(observation: Nan0Observation): Nan0EmotionalEvent[] {
-    const decayed = decayEmotions({
-      vector: this.state.emotionalState,
-      history: normalizeEmotionalHistory(this.state.emotionalHistory, this.state.createdAt),
-      at: observation.timestamp,
-    })
-    const perturbed = perturbEmotionsFromObservation({
-      vector: decayed.vector,
-      history: decayed.history,
-      observation,
-      createId: this.createId,
-      at: observation.timestamp,
-    })
+  private applyPerturbedEmotions(
+    observation: Nan0Observation,
+    decayed: { vector: Nan0EmotionalVector, history: Nan0EmotionalHistory, changed: boolean },
+    perturbed: {
+      vector: Nan0EmotionalVector
+      history: Nan0EmotionalHistory
+      events: Nan0EmotionalEvent[]
+      primaryReflex?: { group: string, choice: string, confidence?: number }
+    },
+    reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null,
+  ): {
+    emotionalEvents: Nan0EmotionalEvent[]
+    reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
+  } {
     const mood = deriveMood(perturbed.vector)
     const previousMood = normalizeEmotionalHistory(this.state.emotionalHistory, this.state.createdAt).lastComputedMood
     this.state = {
@@ -3050,7 +3231,194 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
     }
     if (mood.primary !== previousMood)
       this.diagnostic('emotion.mood.changed', { previousMood, mood: mood.primary, at: observation.timestamp })
-    return perturbed.events
+    return { emotionalEvents: perturbed.events, reflexOutcome }
+  }
+
+  private updateEmotionalStateForObservationSync(
+    observation: Nan0Observation,
+  ): {
+    emotionalEvents: Nan0EmotionalEvent[]
+    reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
+    answers?: Record<string, { choice: string, confidence?: number, probabilities?: Record<string, number> }>
+  } {
+    const decayed = decayEmotions({
+      vector: this.state.emotionalState,
+      history: normalizeEmotionalHistory(this.state.emotionalHistory, this.state.createdAt),
+      at: observation.timestamp,
+    })
+    const localPerturbed = observation.source.startsWith('internal:')
+      ? perturbEmotionsFromObservation({
+          vector: decayed.vector,
+          history: decayed.history,
+          observation,
+          identity: this.state.identity,
+          createId: this.createId,
+          at: observation.timestamp,
+        })
+      : {
+          vector: decayed.vector,
+          history: decayed.history,
+          events: [],
+        }
+    const reflexOutcome = localPerturbed.events.length > 0
+      ? {
+          group: localPerturbed.events[0].cause,
+          choice: localPerturbed.events[0].targetEmotion,
+          source: 'local_reflex' as const,
+        }
+      : null
+    return this.applyPerturbedEmotions(observation, decayed, localPerturbed, reflexOutcome)
+  }
+
+  private async updateEmotionalStateForObservationAsync(
+    observation: Nan0Observation,
+    options?: Nan0PrepareTurnOptions,
+    context?: {
+      ownership?: Nan0ActorOwnership
+      retrievedMemoryContext?: string | Nan0EpistemicGroundingContext | null
+    },
+  ): Promise<{
+    emotionalEvents: Nan0EmotionalEvent[]
+    reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null
+    answers?: Record<string, { choice: string, confidence?: number, probabilities?: Record<string, number> }>
+  }> {
+    const decayed = decayEmotions({
+      vector: this.state.emotionalState,
+      history: normalizeEmotionalHistory(this.state.emotionalHistory, this.state.createdAt),
+      at: observation.timestamp,
+    })
+    const text = observationText(observation).trim()
+    let perturbed: {
+      vector: Nan0EmotionalVector
+      history: Nan0EmotionalHistory
+      events: Nan0EmotionalEvent[]
+      primaryReflex?: { group: string, choice: string, confidence?: number }
+    }
+    let reflexOutcome: { group: string, choice: string, confidence?: number, source: 'system_one_jev' | 'local_reflex' } | null = null
+    let answers: Record<string, { choice: string, confidence?: number, probabilities?: Record<string, number> }> | undefined
+
+    // Assemble rich context state for System 1
+    const recentHistory: Array<{ speaker: string, text: string }> = []
+    const byMemory = new Map(this.state.memories.map(m => [m.id, m]))
+    for (const turn of this.state.turns.slice(-4)) {
+      if (turn.inputContentReference) {
+        const mem = byMemory.get(turn.inputContentReference)
+        if (mem?.content) {
+          recentHistory.push({ speaker: turn.inputActorId || 'user', text: mem.content })
+        }
+      }
+      if (turn.outputContentReference) {
+        const mem = byMemory.get(turn.outputContentReference)
+        if (mem?.content) {
+          recentHistory.push({ speaker: turn.outputActorId || 'assistant', text: mem.content })
+        }
+      }
+    }
+
+    const evidenceStrings: string[] = []
+    const retrieved = context?.retrievedMemoryContext
+    if (typeof retrieved === 'string' && retrieved.trim()) {
+      evidenceStrings.push(retrieved.trim())
+    }
+    else if (typeof retrieved === 'object' && retrieved) {
+      if (retrieved.facts) {
+        for (const fact of retrieved.facts) {
+          evidenceStrings.push(`[${fact.source}] ${fact.content}${fact.relevance !== undefined ? ` (relevance: ${fact.relevance})` : ''}`)
+        }
+      }
+      if (retrieved.journalEntries) {
+        for (const entry of retrieved.journalEntries) {
+          evidenceStrings.push(`[journal] ${entry.title ? `${entry.title}: ` : ''}${entry.content}`)
+        }
+      }
+      if (retrieved.stmmRecaps) {
+        for (const recap of retrieved.stmmRecaps) {
+          evidenceStrings.push(`[stmm] ${recap.summary}`)
+        }
+      }
+    }
+
+    const activeCommitments: string[] = normalizeTemporalTrackingState(this.state.temporal.engine.lived).trackedPromises.filter(p => p.status === 'active').map(p => `Promise #${p.promiseId}: "${p.description}" (due: ${new Date(p.dueAt).toISOString()})`)
+
+    const activeGrievances: string[] = Object.values(this.state.relationships.records)
+      .flatMap(r => r.activeGrievances || [])
+      .filter(g => g.status === 'active' || g.status === 'nurtured')
+      .map(g => `Grievance #${g.grievanceId}: "${g.description}" (severity: ${g.severity})`)
+
+    const speaker = context?.ownership && isOwnerActor(context.ownership.actorId, this.state.identity)
+      ? (this.state.identity.actors[this.state.identity.ownerId ?? 'kyo']?.displayName || 'kyo')
+      : (context?.ownership?.actorId || observation.actorId || 'user')
+
+    const turnState: Nan0SystemOneTurnState = {
+      target_turn: { speaker, text },
+      recent_history: recentHistory.slice(-4),
+      retrieved_evidence: evidenceStrings,
+      active_commitments: activeCommitments,
+      active_grievances: activeGrievances,
+    }
+
+    const systemOnePayload = Object.assign(turnState, {
+      toPromptString: () => formatSystemOnePromptState(turnState),
+      toString: () => formatSystemOnePromptState(turnState),
+    })
+
+    try {
+      const timeoutMs = options?.jevTimeoutMs ?? 1500
+      const jevPromise = this.dependencies.systemOneProvider!(
+        systemOnePayload,
+        NAN0_JEV_QUESTIONS,
+        this.dependencies.jevModel,
+      )
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('System 1 Jev evaluation timed out')), timeoutMs),
+      )
+      const jevResult = await Promise.race([jevPromise, timeoutPromise])
+
+      if (jevResult?.answers && Object.keys(jevResult.answers).length > 0) {
+        answers = jevResult.answers
+        perturbed = perturbEmotionsFromJev({
+          vector: decayed.vector,
+          history: decayed.history,
+          observation,
+          answers: jevResult.answers,
+          identity: this.state.identity,
+          createId: this.createId,
+          at: observation.timestamp,
+        })
+        reflexOutcome = perturbed.primaryReflex
+          ? {
+              ...perturbed.primaryReflex,
+              source: 'system_one_jev',
+            }
+          : null
+
+        this.diagnostic('system_one.jev.executed', {
+          observationId: observation.id,
+          latencyMs: jevResult.latencyMs,
+          answersCount: Object.keys(jevResult.answers).length,
+          primaryReflex: reflexOutcome,
+        })
+      }
+      else {
+        throw new Error('System 1 Jev returned empty answers')
+      }
+    }
+    catch (error) {
+      this.diagnostic('system_one.jev.fallback_abstention', {
+        reason: error instanceof Error ? error.message : String(error),
+        observationId: observation.id,
+      })
+      // Safe abstention on provider failure/timeout: retain decay, apply NO regex perturbation deltas
+      perturbed = {
+        vector: decayed.vector,
+        history: decayed.history,
+        events: [],
+      }
+      reflexOutcome = null
+    }
+
+    const applied = this.applyPerturbedEmotions(observation, decayed, perturbed, reflexOutcome)
+    return { ...applied, answers }
   }
 
   private applyEmotionalConsequence(
@@ -3084,6 +3452,15 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
         this.diagnostic('emotion.perturbed', { eventId: event.eventId, targetEmotion: event.targetEmotion, delta: event.delta, cause: event.cause, sourceId: event.sourceId })
     }
     return applied.events
+  }
+
+  public applyEmotionalImpact(
+    impact: Readonly<Record<string, number>>,
+    cause = 'external-perturbation',
+    sourceId = 'host',
+    at = this.now(),
+  ): Nan0EmotionalEvent[] {
+    return this.applyEmotionalConsequence(impact, cause, sourceId, at)
   }
 
   private enqueueMetabolismObservation(
@@ -3181,10 +3558,10 @@ Respond only with Nan0's outward expression. Do not output JSON, labels, analysi
     }
   }
 
-  private estimateEmotionalWeight(content: string): number {
-    const punctuation = (content.match(/[!?]/g) ?? []).length
-    const intensityWords = (content.match(/\b(hate|love|angry|afraid|happy|furious|sorry|proud)\b/gi) ?? []).length
-    return clamp((punctuation * 0.08) + (intensityWords * 0.15), 0, 1)
+  private estimateEmotionalWeight(content: string, confidence = 0.3): number {
+    const arousal = this.state.emotionalState?.arousal ?? 0.3
+    const importance = clamp((arousal * 0.5) + (confidence * 0.5), 0.1, 1)
+    return importance
   }
 
   private retrieveRelevantMemories(

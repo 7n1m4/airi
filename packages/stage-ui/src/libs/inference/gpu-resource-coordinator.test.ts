@@ -92,6 +92,95 @@ describe('gpuResourceCoordinator', () => {
     expect(handler).not.toHaveBeenCalled()
   })
 
+  describe('eviction registry', () => {
+    const MB = 1024 * 1024
+
+    it('auto-evicts the LRU inactive model on critical pressure', () => {
+      const coordinator = createGPUResourceCoordinator(VRAM)
+      const unloadA = vi.fn()
+      const unloadB = vi.fn()
+
+      coordinator.requestAllocation('a', 400 * MB)
+      coordinator.registerEvictable('a', { unload: unloadA })
+      coordinator.registerEvictable('b', { unload: unloadB })
+      // Total 800 MB ≥ 95% of the ~716.8 MB budget → critical → evict LRU ('a').
+      coordinator.requestAllocation('b', 400 * MB)
+
+      expect(unloadA).toHaveBeenCalledTimes(1)
+      expect(unloadB).not.toHaveBeenCalled()
+      expect(coordinator.getUsage().models).toEqual(['b'])
+      expect(coordinator.getUsage().allocated).toBe(400 * MB)
+    })
+
+    it('skips models reporting live work and evicts the next LRU', () => {
+      const coordinator = createGPUResourceCoordinator(VRAM)
+      const unloadActive = vi.fn()
+      const unloadIdle = vi.fn()
+
+      coordinator.requestAllocation('active', 400 * MB)
+      coordinator.registerEvictable('active', { unload: unloadActive, isActive: () => true })
+      coordinator.registerEvictable('idle', { unload: unloadIdle, isActive: () => false })
+      coordinator.requestAllocation('idle', 400 * MB)
+
+      expect(unloadActive).not.toHaveBeenCalled()
+      expect(unloadIdle).toHaveBeenCalledTimes(1)
+      expect(coordinator.getUsage().models).toEqual(['active'])
+    })
+
+    it('evictModel fails closed without allocation, handler, or on uncertain activity', () => {
+      const coordinator = createGPUResourceCoordinator(VRAM)
+      const unloadGhost = vi.fn()
+      const unloadActive = vi.fn()
+
+      coordinator.registerEvictable('ghost', { unload: unloadGhost })
+      expect(coordinator.evictModel('ghost')).toBe(false)
+      expect(unloadGhost).not.toHaveBeenCalled()
+
+      expect(coordinator.evictModel('unknown')).toBe(false)
+
+      coordinator.requestAllocation('busy', 100 * MB)
+      coordinator.registerEvictable('busy', { unload: unloadActive, isActive: () => true })
+      expect(coordinator.evictModel('busy')).toBe(false)
+      expect(unloadActive).not.toHaveBeenCalled()
+
+      coordinator.registerEvictable('flaky', {
+        unload: vi.fn(),
+        isActive: () => { throw new Error('uncertain') },
+      })
+      coordinator.requestAllocation('flaky', 100 * MB)
+      expect(coordinator.evictModel('flaky')).toBe(false)
+    })
+
+    it('evictInactive reclaims every idle model for deep standby', () => {
+      const coordinator = createGPUResourceCoordinator(VRAM)
+      const unloadA = vi.fn()
+      const unloadB = vi.fn()
+
+      coordinator.requestAllocation('a', 200 * MB)
+      coordinator.requestAllocation('b', 200 * MB)
+      coordinator.registerEvictable('a', { unload: unloadA })
+      coordinator.registerEvictable('b', { unload: unloadB })
+
+      expect(coordinator.evictInactive()).toEqual(['a', 'b'])
+      expect(unloadA).toHaveBeenCalledTimes(1)
+      expect(unloadB).toHaveBeenCalledTimes(1)
+      expect(coordinator.getUsage().allocated).toBe(0)
+    })
+
+    it('unregister removes the handler so later eviction is impossible', () => {
+      const coordinator = createGPUResourceCoordinator(VRAM)
+      const unload = vi.fn()
+
+      coordinator.requestAllocation('a', 100 * MB)
+      const unregister = coordinator.registerEvictable('a', { unload })
+      unregister()
+
+      expect(coordinator.evictModel('a')).toBe(false)
+      expect(unload).not.toHaveBeenCalled()
+      expect(coordinator.evictInactive()).toEqual([])
+    })
+  })
+
   describe('device loss telemetry', () => {
     it('should start with zero device-loss metrics', () => {
       const coordinator = createGPUResourceCoordinator(VRAM)

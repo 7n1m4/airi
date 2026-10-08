@@ -1,10 +1,11 @@
-import type { Nan0KernelState, Nan0Observation, Nan0ReasoningClient } from '../types'
+import type { Nan0KernelState, Nan0Observation, Nan0ReasoningClient, Nan0SystemOneProvider } from '../types'
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import { Nan0Kernel } from '../kernel/Nan0Kernel'
 import { InMemoryStateStore } from '../persistence/InMemoryStateStore'
 import { ControllableNan0Clock } from '../temporal/Nan0Clock'
+import { createMockSystemOneProvider } from '../test-utils/mock-system-one'
 import {
   CONTINUITY_DORMANT_AFTER_MS,
   CONTINUITY_MAX_CONTEXT_THREADS,
@@ -26,6 +27,7 @@ function createKernel(
   store = new InMemoryStateStore(),
   clock = createClock(),
   prefix = 'continuity',
+  systemOneProvider?: Nan0SystemOneProvider,
 ) {
   let nextId = 0
   return {
@@ -36,6 +38,7 @@ function createKernel(
       reasoningClient,
       clock,
       createId: () => `${prefix}-${++nextId}`,
+      systemOneProvider: systemOneProvider ?? createMockSystemOneProvider(),
     }),
   }
 }
@@ -311,5 +314,24 @@ describe('conversation continuity', () => {
 
     expect(second.threadId).toBe(first.threadId)
     expect(kernel.getContinuityThreads()[0].turnIds).toHaveLength(2)
+  })
+
+  it('creates a new thread for none_or_new_topic even if single word overlaps an older thread (Fix F5)', async () => {
+    const mockJev = vi.fn<Nan0SystemOneProvider>(async () => {
+      return {
+        answers: {
+          thread_continuity_triage: { choice: 'none_or_new_topic', confidence: 0.95 },
+        },
+      }
+    })
+    const { kernel, clock } = createKernel(new InMemoryStateStore(), createClock(100), 'id', mockJev)
+    await kernel.boot()
+
+    const first = await completeTurn(kernel, clock, 'Discuss bank loan interest.', 100, 'Bank interest discussed.')
+    const second = await kernel.prepareTurn(observation('Photograph the river bank wildlife.', 200))
+
+    // Because Jev classified second as none_or_new_topic, it should NOT merge threads due to "bank" overlap!
+    expect(second.threadId).not.toBe(first.threadId)
+    expect(kernel.getContinuityThreads()).toHaveLength(2)
   })
 })

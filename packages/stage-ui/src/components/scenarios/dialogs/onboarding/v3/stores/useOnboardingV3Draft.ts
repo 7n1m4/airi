@@ -118,6 +118,8 @@ export interface OnboardingV3DraftState {
   emotionsCurated?: boolean
   expressionMappings?: Record<string, string>
   actingModelExpressionPrompt?: string
+  cueAllowlist?: { version: 1, emotions: Record<string, { rawKey: string, label: string }> }
+  compiledWhitelist?: { version: 1, emotions: Record<string, { rawKey: string, label: string }> }
   previewStrength?: number
   brainBenchmark?: {
     latencyMs?: number
@@ -132,14 +134,14 @@ export const ARCHETYPE_MODULE_PRESETS: Record<ExperienceArchetypeId, ModuleBundl
   'quiet': {
     hearing: false,
     speech: false,
-    thinking: true,
-    emotions: true,
+    thinking: false,
+    emotions: false,
     memory: true,
     vision: false,
     screen: false,
     proactivity: false,
     artistry: false,
-    tools: false,
+    tools: true,
   },
   'casual': {
     hearing: true,
@@ -172,8 +174,8 @@ export const ARCHETYPE_MODULE_PRESETS: Record<ExperienceArchetypeId, ModuleBundl
     emotions: false,
     memory: true,
     vision: false,
-    screen: true,
-    proactivity: false,
+    screen: false,
+    proactivity: true,
     artistry: false,
     tools: true,
   },
@@ -184,7 +186,7 @@ export const ARCHETYPE_MODULE_PRESETS: Record<ExperienceArchetypeId, ModuleBundl
     emotions: true,
     memory: true,
     vision: false,
-    screen: true,
+    screen: false,
     proactivity: true,
     artistry: false,
     tools: false,
@@ -196,7 +198,7 @@ export const ARCHETYPE_MODULE_PRESETS: Record<ExperienceArchetypeId, ModuleBundl
     emotions: true,
     memory: true,
     vision: true,
-    screen: true,
+    screen: false,
     proactivity: true,
     artistry: true,
     tools: true,
@@ -208,7 +210,7 @@ export const ARCHETYPE_MODULE_PRESETS: Record<ExperienceArchetypeId, ModuleBundl
     emotions: true,
     memory: true,
     vision: true,
-    screen: true,
+    screen: false,
     proactivity: true,
     artistry: true,
     tools: true,
@@ -337,6 +339,29 @@ export const useOnboardingV3Draft = defineStore('onboarding-v3-draft', () => {
   function setExperienceArchetype(archetype: ExperienceArchetypeId) {
     state.value.experienceArchetype = archetype
     state.value.modules = { ...ARCHETYPE_MODULE_PRESETS[archetype] }
+
+    if (archetype === 'quiet') {
+      state.value.vesselDisplayModelId = ''
+      state.value.screenWatcherEnabled = false
+      state.value.heartbeatsEnabled = false
+    }
+    else {
+      if (!state.value.vesselDisplayModelId) {
+        state.value.vesselDisplayModelId = 'preset-live2d-2'
+      }
+      if (archetype === 'copilot') {
+        state.value.screenWatcherEnabled = true
+        state.value.heartbeatsEnabled = false
+      }
+      else if (archetype === 'roommate' || archetype === 'swiss-army' || archetype === 'performer') {
+        state.value.screenWatcherEnabled = true
+        state.value.heartbeatsEnabled = true
+      }
+      else {
+        state.value.screenWatcherEnabled = false
+        state.value.heartbeatsEnabled = false
+      }
+    }
   }
 
   function toggleModule(key: keyof ModuleBundleConfig, enabled?: boolean) {
@@ -733,6 +758,8 @@ export const useOnboardingV3Draft = defineStore('onboarding-v3-draft', () => {
     expressionMappings?: Record<string, string>
     actingModelExpressionPrompt?: string
     previewStrength?: number
+    cueAllowlist?: { version: 1, emotions: Record<string, { rawKey: string, label: string }> }
+    compiledWhitelist?: { version: 1, emotions: Record<string, { rawKey: string, label: string }> }
   }) {
     if (emotions.emotionsCurated !== undefined)
       state.value.emotionsCurated = emotions.emotionsCurated
@@ -740,6 +767,14 @@ export const useOnboardingV3Draft = defineStore('onboarding-v3-draft', () => {
       state.value.expressionMappings = emotions.expressionMappings
     if (emotions.actingModelExpressionPrompt !== undefined)
       state.value.actingModelExpressionPrompt = emotions.actingModelExpressionPrompt
+    if (emotions.cueAllowlist !== undefined) {
+      state.value.cueAllowlist = emotions.cueAllowlist
+      state.value.compiledWhitelist = emotions.cueAllowlist
+    }
+    else if (emotions.compiledWhitelist !== undefined) {
+      state.value.cueAllowlist = emotions.compiledWhitelist
+      state.value.compiledWhitelist = emotions.compiledWhitelist
+    }
     if (emotions.previewStrength !== undefined)
       state.value.previewStrength = emotions.previewStrength
   }

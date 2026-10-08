@@ -78,6 +78,54 @@ ZipLoader.getFiles = (async (reader: JSZip, paths: string[], type?: any) => {
   return Promise.all(paths.map(async (path) => {
     const entry = findZipEntry(reader, path)
     if (!entry) {
+      const lower = path.toLowerCase()
+      if (lower.endsWith('.exp3.json') || lower.endsWith('.exp.json')) {
+        console.warn(`[ZipLoader] Optional expression file missing in zip archive: "${path}", substituting empty fallback.`)
+        const content = JSON.stringify({ Type: 'Live2D Expression', Parameters: [] })
+        return new File([content], basename(path), { type: 'application/json' })
+      }
+      if (lower.endsWith('.motion3.json') || lower.endsWith('.mtn')) {
+        console.warn(`[ZipLoader] Optional motion file missing in zip archive: "${path}", substituting empty fallback.`)
+        const content = JSON.stringify({
+          Version: 3,
+          Meta: {
+            Duration: 0,
+            Fps: 30,
+            Loop: false,
+            AreBeziersRestricted: true,
+            CurveCount: 0,
+            TotalSegmentCount: 0,
+            TotalPointCount: 0,
+          },
+          Curves: [],
+        })
+        return new File([content], basename(path), { type: 'application/json' })
+      }
+      if (['.wav', '.mp3', '.ogg', '.flac', '.m4a', '.aac'].some(ext => lower.endsWith(ext))) {
+        console.warn(`[ZipLoader] Optional sound file missing in zip archive: "${path}", substituting empty audio blob.`)
+        return new File([new Uint8Array(0)], basename(path), { type: 'audio/wav' })
+      }
+      if (lower.endsWith('.physics3.json') || lower.endsWith('.physics.json')) {
+        console.warn(`[ZipLoader] Optional physics file missing in zip archive: "${path}", substituting empty physics fallback.`)
+        const content = JSON.stringify({
+          Version: 3,
+          Meta: {
+            TotalInputCount: 0,
+            TotalSettingCount: 0,
+            TotalOutputCount: 0,
+            VertexCount: 0,
+            EffectiveForces: { Gravity: { X: 0, Y: -1 }, Wind: { X: 0, Y: 0 } },
+            PhysicsDictionary: [],
+          },
+          PhysicsSettings: [],
+        })
+        return new File([content], basename(path), { type: 'application/json' })
+      }
+      if (lower.endsWith('.pose3.json') || lower.endsWith('.pose.json')) {
+        console.warn(`[ZipLoader] Optional pose file missing in zip archive: "${path}", substituting empty pose fallback.`)
+        const content = JSON.stringify({ Type: 'Live2D Pose', Groups: [] })
+        return new File([content], basename(path), { type: 'application/json' })
+      }
       throw new Error(`[ZipLoader] Missing file in zip archive: "${path}"`)
     }
     const blob = await entry.async(targetType as any)
@@ -88,6 +136,46 @@ ZipLoader.getFiles = (async (reader: JSZip, paths: string[], type?: any) => {
 ZipLoader.readText = async (reader: JSZip, path: string) => {
   const entry = findZipEntry(reader, path)
   if (!entry) {
+    const lower = path.toLowerCase()
+    if (lower.endsWith('.exp3.json') || lower.endsWith('.exp.json')) {
+      console.warn(`[ZipLoader] Optional expression file missing in zip archive: "${path}", substituting empty expression.`)
+      return JSON.stringify({ Type: 'Live2D Expression', Parameters: [] })
+    }
+    if (lower.endsWith('.motion3.json') || lower.endsWith('.mtn')) {
+      console.warn(`[ZipLoader] Optional motion file missing in zip archive: "${path}", substituting empty motion.`)
+      return JSON.stringify({
+        Version: 3,
+        Meta: {
+          Duration: 0,
+          Fps: 30,
+          Loop: false,
+          AreBeziersRestricted: true,
+          CurveCount: 0,
+          TotalSegmentCount: 0,
+          TotalPointCount: 0,
+        },
+        Curves: [],
+      })
+    }
+    if (lower.endsWith('.physics3.json') || lower.endsWith('.physics.json')) {
+      console.warn(`[ZipLoader] Optional physics file missing in zip archive: "${path}", substituting empty physics fallback.`)
+      return JSON.stringify({
+        Version: 3,
+        Meta: {
+          TotalInputCount: 0,
+          TotalSettingCount: 0,
+          TotalOutputCount: 0,
+          VertexCount: 0,
+          EffectiveForces: { Gravity: { X: 0, Y: -1 }, Wind: { X: 0, Y: 0 } },
+          PhysicsDictionary: [],
+        },
+        PhysicsSettings: [],
+      })
+    }
+    if (lower.endsWith('.pose3.json') || lower.endsWith('.pose.json')) {
+      console.warn(`[ZipLoader] Optional pose file missing in zip archive: "${path}", substituting empty pose fallback.`)
+      return JSON.stringify({ Type: 'Live2D Pose', Groups: [] })
+    }
     throw new Error(`[ZipLoader] Missing text file in zip archive: "${path}"`)
   }
   return entry.async('text')

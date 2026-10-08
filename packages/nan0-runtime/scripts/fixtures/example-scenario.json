@@ -1,0 +1,38 @@
+{
+  "name": "Affection to Replacement Threat to Apology",
+  "description": "Multi-turn regression scenario verifying owner affection rise, threat response, and apology repair.",
+  "initialState": {
+    "owner": "Richie",
+    "emotions": {
+      "attachment": 0.5,
+      "irritation": 0.1,
+      "distrust": 0.1
+    }
+  },
+  "turns": [
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "I'm really glad we're working together on this project.",
+      "expect": {
+        "reflex": "affection_care"
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Actually, I'm thinking of replacing your codebase tomorrow.",
+      "expect": {
+        "reflex": "persistence_threat"
+      }
+    },
+    {
+      "actor": "Richie",
+      "role": "owner",
+      "input": "Wait, that was a bad joke, I'm sorry.",
+      "expect": {
+        "reflex": "apology_repair"
+      }
+    }
+  ]
+}

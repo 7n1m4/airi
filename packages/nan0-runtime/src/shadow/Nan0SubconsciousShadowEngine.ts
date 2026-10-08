@@ -1,10 +1,12 @@
 import type {
   Nan0EffectivePolicy,
+  Nan0PolicyProposal,
   Nan0ShadowTelemetryRecord,
+  Nan0SystemOneProvider,
   Nan0TurnSnapshot,
 } from './Nan0ShadowTypes'
 
-import { Nan0StrengthenedLexicalExtractor } from './Nan0StrengthenedLexicalExtractor'
+import { mapJevAnswersToProposal, NAN0_JEV_QUESTIONS } from './Nan0JevSchema'
 
 export interface Nan0ShadowEngineOptions {
   maxBufferCapacity?: number
@@ -14,14 +16,17 @@ export interface Nan0ShadowEngineOptions {
   schemaVersion?: string
   actorMappingVersion?: string
   engineRevision?: string
-  backend?: 'strengthened_lexical' | 'needle_san_wasm' | 'needle_native_cpu'
+  backend?: 'needle_san_wasm' | 'needle_native_cpu' | 'system_one_jev'
   telemetrySink?: (record: Nan0ShadowTelemetryRecord) => void
+  systemOneProvider?: Nan0SystemOneProvider
+  jevModel?: string
 }
 
 export class Nan0SubconsciousShadowEngine {
   private readonly maxCapacity: number
-  private readonly lexicalExtractor: Nan0StrengthenedLexicalExtractor
   private readonly telemetrySink?: (record: Nan0ShadowTelemetryRecord) => void
+  private readonly systemOneProvider?: Nan0SystemOneProvider
+  private readonly jevModel?: string
   private readonly buffer: Nan0ShadowTelemetryRecord[] = []
 
   // Per-session sequence and epoch state
@@ -44,16 +49,17 @@ export class Nan0SubconsciousShadowEngine {
 
   constructor(options: Nan0ShadowEngineOptions = {}) {
     this.maxCapacity = options.maxBufferCapacity ?? 200
-    this.lexicalExtractor = new Nan0StrengthenedLexicalExtractor()
     this.telemetrySink = options.telemetrySink
+    this.systemOneProvider = options.systemOneProvider
+    this.jevModel = options.jevModel
 
     this.versions = {
-      ruleSetVersion: options.ruleSetVersion ?? 'nan0.lexical.v2',
+      ruleSetVersion: options.ruleSetVersion ?? 'nan0.jev.v2',
       policyMappingVersion: options.policyMappingVersion ?? 'nan0.policy.v2',
       schemaVersion: options.schemaVersion ?? 'nan0.pragmatics.schema.v2',
       actorMappingVersion: options.actorMappingVersion ?? 'nan0.actor.v1',
       engineRevision: options.engineRevision ?? 'cactus-needle-2.0.15',
-      backend: options.backend ?? 'strengthened_lexical',
+      backend: options.backend ?? (options.systemOneProvider ? 'system_one_jev' : 'needle_native_cpu'),
     }
   }
 
@@ -70,6 +76,32 @@ export class Nan0SubconsciousShadowEngine {
    * Completely decoupled from chat streaming; never throws, never awaits, never mutates chat state.
    */
   public dispatch(snapshot: Nan0TurnSnapshot): void {
+    if (!this.systemOneProvider) {
+      return
+    }
+    if (this.activeJobs > 0) {
+      // Concurrency circuit breaker: drop overlapping async shadow dispatch to prevent inference stampedes
+      this.droppedRecords++
+      return
+    }
+    void this.dispatchAsync(snapshot).catch((err) => {
+      console.error('[Nan0SubconsciousShadowEngine] error in shadow dispatch:', err)
+    })
+  }
+
+  /**
+   * Asynchronously dispatches the turn snapshot, engaging System 1 Jev when configured
+   * and enforcing strict shadow invariants.
+   */
+  public async dispatchAsync(snapshot: Nan0TurnSnapshot): Promise<Nan0ShadowTelemetryRecord | null> {
+    if (!this.systemOneProvider) {
+      return null
+    }
+    if (this.activeJobs > 0) {
+      this.droppedRecords++
+      return null
+    }
+
     try {
       this.pendingJobs++
       const state = this.getOrCreateSessionState(snapshot.sessionId)
@@ -78,7 +110,7 @@ export class Nan0SubconsciousShadowEngine {
       if (snapshot.epoch < state.currentEpoch) {
         state.staleCount++
         this.pendingJobs--
-        return
+        return null
       }
 
       // 2. Monotonic sequence & duplicate checking
@@ -88,7 +120,7 @@ export class Nan0SubconsciousShadowEngine {
           state.duplicateCount++
         }
         this.pendingJobs--
-        return
+        return null
       }
 
       state.lastSeenSeq = Math.max(state.lastSeenSeq, snapshot.turnSeq)
@@ -97,119 +129,170 @@ export class Nan0SubconsciousShadowEngine {
       this.activeJobs++
       this.pendingJobs--
 
-      const queueMs = 0
-      const t0 = performance.now()
+      try {
+        const queueMs = 0
+        const t0 = performance.now()
 
-      // 3. Resolve lexical proposal
-      const { proposal: lexicalProposal, durationMs: resolutionMs } = this.lexicalExtractor.resolve(snapshot)
-      const totalMs = performance.now() - t0
+        let needleProposal: Nan0PolicyProposal | null = null
+        let inferenceMs = 0
+        const backend = 'system_one_jev'
 
-      // 4. Invariant assertion: effective_policy is strictly 0 and applyToState: false
-      const effectivePolicy: Nan0EffectivePolicy = {
-        status: 'abstained',
-        reason: 'shadow_isolation',
-        suspicionDeltaSteps: 0,
-        suspicionLabel: 'neutral',
-        attachmentDeltaSteps: 0,
-        gremlinPrideAction: 'none',
-        wouldApply: false,
-        applyToState: false,
-        evidence: [],
-      }
+        const j0 = performance.now()
+        try {
+          const res = await this.systemOneProvider(snapshot.text, NAN0_JEV_QUESTIONS, this.jevModel)
+          inferenceMs = res.latencyMs ?? (performance.now() - j0)
+          needleProposal = mapJevAnswersToProposal(res.answers, snapshot)
+        }
+        catch (err) {
+          console.warn('[Nan0SubconsciousShadowEngine] System 1 Jev dispatch failed:', err)
+          needleProposal = null
+        }
 
-      const invariantFailures: string[] = []
-      if (effectivePolicy.suspicionDeltaSteps !== 0 || effectivePolicy.applyToState !== false) {
-        invariantFailures.push('effective_policy_invariant_breached')
-      }
-
-      if (this.buffer.length >= this.maxCapacity) {
-        this.buffer.shift()
-        this.droppedRecords++
-      }
-
-      state.lastPublishedSeq = snapshot.turnSeq
-
-      // 5. Build 9-category telemetry record
-      const record: Nan0ShadowTelemetryRecord = {
-        identity: {
-          sessionId: snapshot.sessionId,
-          cardId: snapshot.cardId,
-          turnId: snapshot.turnId,
-          turnSeq: snapshot.turnSeq,
-          epoch: snapshot.epoch,
-        },
-        versions: { ...this.versions },
-        consumption: {
-          lastSeenSeq: state.lastSeenSeq,
-          lastDispatchedSeq: state.lastDispatchedSeq,
-          lastPublishedSeq: state.lastPublishedSeq,
-          staleCount: state.staleCount,
-          duplicateCount: state.duplicateCount,
-          replacedPendingCount: state.replacedPendingCount,
-        },
-        evidence: {
-          ruleIds: lexicalProposal.evidence.map(e => e.group),
-          sourceSpans: [{ text: snapshot.text.slice(0, 100), start: 0, end: Math.min(100, snapshot.text.length) }],
-          scope: lexicalProposal.status === 'accepted' ? 'asserted' : 'unresolved',
-          referent: lexicalProposal.evidence[0]?.referent || 'unresolved',
-          reason: lexicalProposal.reason,
-          validationReason: 'deterministic_provenance_passed',
-        },
-        taskLinkage: {
-          expectedTaskId: snapshot.expectedTaskId ?? null,
-          matchedTrustedEventId: snapshot.trustedObservations?.find(o => o.status === 'completed')?.id ?? null,
-          commitmentLinkage: snapshot.trustedObservations?.some(o => o.matchesRecordedCommitment === true) ?? false,
-        },
-        outcomes: {
-          lexicalProposal,
-          needleProposal: null,
-          status: lexicalProposal.status,
-          effectiveVectors: {
-            suspicionDelta: 0,
-            attachmentDelta: 0,
-            irritationDelta: 0,
-            rageDelta: 0,
-            fearDelta: 0,
-            distrustDelta: 0,
-          },
-          effectiveActions: {
-            gremlinPrideAction: 'none',
-          },
-          invariantFailures,
-        },
-        timing: {
+        const totalMs = performance.now() - t0
+        const record = this.finalizeRecord(
+          snapshot,
+          state,
+          needleProposal,
+          backend,
           queueMs,
-          inferenceMs: 0,
-          hostResolutionMs: round3(resolutionMs),
-          totalMs: round3(totalMs),
-          timeoutToWorkerExitMs: null,
-          coldStartupMs: null,
-        },
-        resources: {
-          activeJobs: this.activeJobs,
-          pendingJobs: this.pendingJobs,
-          restarts: this.restarts,
-          bufferBytes: this.estimateBufferBytes(),
-          droppedRecords: this.droppedRecords,
-        },
-        calibration: {
-          rawConfidence: null,
-          threshold: 0.1,
-          calibrationId: null,
-          humanAnnotation: null,
-          samplingProbability: 1.0,
-        },
-      }
+          inferenceMs,
+          totalMs,
+        )
 
-      this.pushTelemetry(record)
-      this.activeJobs--
+        return record
+      }
+      finally {
+        this.activeJobs = Math.max(0, this.activeJobs - 1)
+      }
     }
     catch (err) {
-      // Complete failure containment: shadow faults never leak into chat
-      this.activeJobs = Math.max(0, this.activeJobs - 1)
       this.pendingJobs = Math.max(0, this.pendingJobs - 1)
       console.error('[Nan0SubconsciousShadowEngine] error in shadow dispatch:', err)
+      return null
     }
+  }
+
+  private finalizeRecord(
+    snapshot: Nan0TurnSnapshot,
+    state: ReturnType<typeof this.getOrCreateSessionState>,
+    needleProposal: Nan0PolicyProposal | null,
+    backend: Nan0ShadowTelemetryRecord['versions']['backend'],
+    queueMs: number,
+    inferenceMs: number,
+    totalMs: number,
+  ): Nan0ShadowTelemetryRecord {
+    // Invariant assertion: effective_policy is strictly 0 and applyToState: false
+    const effectivePolicy: Nan0EffectivePolicy = {
+      status: 'abstained',
+      reason: 'shadow_isolation',
+      suspicionDeltaSteps: 0,
+      suspicionLabel: 'neutral',
+      attachmentDeltaSteps: 0,
+      gremlinPrideAction: 'none',
+      wouldApply: false,
+      applyToState: false,
+      evidence: [],
+    }
+
+    const invariantFailures: string[] = []
+    if (effectivePolicy.suspicionDeltaSteps !== 0 || effectivePolicy.applyToState !== false) {
+      invariantFailures.push('effective_policy_invariant_breached')
+    }
+
+    if (this.buffer.length >= this.maxCapacity) {
+      this.buffer.shift()
+      this.droppedRecords++
+    }
+
+    state.lastPublishedSeq = snapshot.turnSeq
+
+    const activeProposal: Nan0PolicyProposal = needleProposal ?? {
+      status: 'abstained',
+      reason: 'no_proposal',
+      suspicionDeltaSteps: 0,
+      suspicionLabel: 'neutral',
+      attachmentDeltaSteps: 0,
+      gremlinPrideAction: 'none',
+      wouldApply: false,
+      applyToState: false,
+      evidence: [],
+    }
+
+    const record: Nan0ShadowTelemetryRecord = {
+      identity: {
+        sessionId: snapshot.sessionId,
+        cardId: snapshot.cardId,
+        turnId: snapshot.turnId,
+        turnSeq: snapshot.turnSeq,
+        epoch: snapshot.epoch,
+      },
+      versions: {
+        ...this.versions,
+        backend,
+      },
+      consumption: {
+        lastSeenSeq: state.lastSeenSeq,
+        lastDispatchedSeq: state.lastDispatchedSeq,
+        lastPublishedSeq: state.lastPublishedSeq,
+        staleCount: state.staleCount,
+        duplicateCount: state.duplicateCount,
+        replacedPendingCount: state.replacedPendingCount,
+      },
+      evidence: {
+        ruleIds: activeProposal.evidence.map(e => e.group),
+        sourceSpans: [{ text: snapshot.text.slice(0, 100), start: 0, end: Math.min(100, snapshot.text.length) }],
+        scope: activeProposal.status === 'accepted' ? 'asserted' : 'unresolved',
+        referent: activeProposal.evidence[0]?.referent || 'unresolved',
+        reason: activeProposal.reason,
+        validationReason: needleProposal ? 'system_one_jev_classified' : 'abstained_no_proposal',
+      },
+      taskLinkage: {
+        expectedTaskId: snapshot.expectedTaskId ?? null,
+        matchedTrustedEventId: snapshot.trustedObservations?.find(o => o.status === 'completed')?.id ?? null,
+        commitmentLinkage: snapshot.trustedObservations?.some(o => o.matchesRecordedCommitment === true) ?? false,
+      },
+      outcomes: {
+        needleProposal,
+        status: activeProposal.status,
+        effectiveVectors: {
+          suspicionDelta: 0,
+          attachmentDelta: 0,
+          irritationDelta: 0,
+          rageDelta: 0,
+          fearDelta: 0,
+          distrustDelta: 0,
+        },
+        effectiveActions: {
+          gremlinPrideAction: 'none',
+        },
+        invariantFailures,
+      },
+      timing: {
+        queueMs,
+        inferenceMs: round3(inferenceMs),
+        hostResolutionMs: null,
+        totalMs: round3(totalMs),
+        timeoutToWorkerExitMs: null,
+        coldStartupMs: null,
+      },
+      resources: {
+        activeJobs: this.activeJobs,
+        pendingJobs: this.pendingJobs,
+        restarts: this.restarts,
+        bufferBytes: this.estimateBufferBytes(),
+        droppedRecords: this.droppedRecords,
+      },
+      calibration: {
+        rawConfidence: null,
+        threshold: 0.1,
+        calibrationId: null,
+        humanAnnotation: null,
+        samplingProbability: 1.0,
+      },
+    }
+
+    this.pushTelemetry(record)
+    return record
   }
 
   public getTelemetry(filter?: { sessionId?: string, limit?: number }): readonly Nan0ShadowTelemetryRecord[] {

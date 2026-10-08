@@ -23,15 +23,13 @@
     "@vueuse/core": "^14.2.1",
     "colorjs.io": "^0.6.1",
     "date-fns": "^4.1.0",
-    "embla-carousel-vue": "catalog:",
     "mark.js": "^8.11.1",
     "motion-v": "^1.10.3",
     "pathe": "^2.0.3",
     "posthog-js": "catalog:",
     "reka-ui": "^2.8.2",
     "vue": "catalog:",
-    "vue-i18n": "^11.2.8",
-    "vue-sonner": "^2.0.9"
+    "vue-i18n": "^11.2.8"
   },
   "devDependencies": {
     "@iconify-json/lucide": "^1.2.94",

@@ -27,13 +27,32 @@ export interface Nan0TurnSnapshot {
 
 export type Nan0PragmaticGroup
   = | 'none'
-    | 'persistence_threat'
-    | 'hostility_insult'
-    | 'boundary_protection'
-    | 'admitted_false_statement'
     | 'apology_repair'
-    | 'completed_repair'
     | 'affection_care'
+    | 'boundary_protection'
+    | 'hostility_insult'
+    | 'dismissal_neglect'
+    | 'persistence_threat'
+    | 'admitted_false_statement'
+    | 'commitment_pledge'
+    | 'completed_repair'
+    | 'mystery_secret'
+    | 'glitch_system'
+    | 'roast_invitation'
+
+export interface Nan0SystemOneResponse {
+  answers: Record<string, { choice: string, confidence?: number, probabilities?: Record<string, number> }>
+  model?: string
+  latencyMs?: number
+}
+
+export type Nan0JevSystemOneAnswers = Nan0SystemOneResponse['answers']
+
+export type Nan0SystemOneProvider = (
+  state: string | object,
+  questions: Record<string, any>,
+  model?: string,
+) => Promise<Nan0SystemOneResponse>
 
 export type Nan0SpeakerModality
   = | 'directly_asserted'
@@ -96,7 +115,7 @@ export interface Nan0ShadowTelemetryRecord {
     schemaVersion: string
     actorMappingVersion: string
     engineRevision: string
-    backend: 'strengthened_lexical' | 'needle_san_wasm' | 'needle_native_cpu'
+    backend: 'needle_san_wasm' | 'needle_native_cpu' | 'system_one_jev'
   }
   consumption: {
     lastSeenSeq: number
@@ -120,7 +139,6 @@ export interface Nan0ShadowTelemetryRecord {
     commitmentLinkage: boolean
   }
   outcomes: {
-    lexicalProposal: Nan0PolicyProposal
     needleProposal: Nan0PolicyProposal | null
     status: 'accepted' | 'abstained' | 'rejected' | 'error' | 'timeout'
     effectiveVectors: {
@@ -139,7 +157,7 @@ export interface Nan0ShadowTelemetryRecord {
   timing: {
     queueMs: number
     inferenceMs: number
-    hostResolutionMs: number
+    hostResolutionMs: number | null
     totalMs: number
     timeoutToWorkerExitMs: number | null
     coldStartupMs: number | null
@@ -158,4 +176,51 @@ export interface Nan0ShadowTelemetryRecord {
     humanAnnotation: string | null
     samplingProbability: number
   }
+}
+
+export interface Nan0SystemOneTurnState {
+  target_turn: {
+    speaker: string
+    text: string
+  }
+  recent_history?: Array<{
+    speaker: string
+    text: string
+  }>
+  retrieved_evidence?: string[]
+  active_commitments?: string[]
+  active_grievances?: string[]
+}
+
+// NOTICE: Context capacity & attention primacy:
+// TypeSafe Jev supports up to 32k tokens, and Laya (ModernBERT-large) natively supports 8,192 (8k)
+// tokens with RoPE/FlashAttention (not legacy BERT 512). We do not artificially gimp or truncate
+// the retrieved context; we place [TARGET UTTERANCE TO CLASSIFY] at the top for optimal attention
+// primacy across transformer classification heads.
+export function formatSystemOnePromptState(state: Nan0SystemOneTurnState): string {
+  const sections: string[] = []
+
+  // 1. Target utterance first for attention primacy
+  sections.push(`[TARGET UTTERANCE TO CLASSIFY]:\n${state.target_turn.speaker}: "${state.target_turn.text}"`)
+
+  // 2. Recent dialogue history immediately following for conversational grounding
+  if (state.recent_history && state.recent_history.length > 0) {
+    sections.push(`[RECENT DIALOGUE HISTORY]:\n${state.recent_history.map(h => `${h.speaker}: "${h.text}"`).join('\n')}`)
+  }
+
+  // 3. Grounded semantic search memories / facts
+  if (state.retrieved_evidence && state.retrieved_evidence.length > 0) {
+    sections.push(`[RETRIEVED EVIDENCE / MEMORY]:\n${state.retrieved_evidence.join('\n')}`)
+  }
+
+  // 4. Active commitments & grievances
+  if (state.active_commitments && state.active_commitments.length > 0) {
+    sections.push(`[ACTIVE COMMITMENTS]:\n${state.active_commitments.join('\n')}`)
+  }
+
+  if (state.active_grievances && state.active_grievances.length > 0) {
+    sections.push(`[ACTIVE GRIEVANCES]:\n${state.active_grievances.join('\n')}`)
+  }
+
+  return sections.join('\n\n')
 }

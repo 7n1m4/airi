@@ -1,0 +1,529 @@
+import type { Nan0Observation, Nan0ReasoningClient } from '@proj-airi/nan0-runtime'
+
+import { InMemoryStateStore, Nan0Kernel, SystemNan0Clock } from '@proj-airi/nan0-runtime'
+import { createPinia, setActivePinia } from 'pinia'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { ref } from 'vue'
+
+import { isMainWindow, NAN0_DEFAULT_EMOTIONS, useNan0Store } from './nan0'
+
+let mockIsTamagotchi = false
+const mockBroadcastPost = vi.fn()
+let mockBroadcastShouldThrow: Error | null = null
+
+vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@proj-airi/stage-shared')>()
+  return {
+    ...mod,
+    isStageTamagotchi: () => mockIsTamagotchi,
+  }
+})
+
+vi.mock('@vueuse/core', async (importOriginal) => {
+  const mod = await importOriginal<typeof import('@vueuse/core')>()
+  return {
+    ...mod,
+    useBroadcastChannel: (options: { name: string }) => {
+      if (options.name === 'airi:nan0:state-sync') {
+        return {
+          data: ref(null),
+          post: vi.fn((payload) => {
+            mockBroadcastPost(payload)
+            if (mockBroadcastShouldThrow) {
+              throw mockBroadcastShouldThrow
+            }
+          }),
+          isSupported: ref(true),
+          close: vi.fn(),
+        }
+      }
+      return mod.useBroadcastChannel(options)
+    },
+  }
+})
+
+vi.mock('vue-i18n', () => ({
+  useI18n: () => ({
+    t: (key: string) => key,
+  }),
+}))
+
+describe('useNan0Store (Host Orchestrator Integration)', () => {
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    mockBroadcastPost.mockClear()
+    mockBroadcastShouldThrow = null
+  })
+
+  describe('baseline reactivity & defaults', () => {
+    it('initializes with 12 canonical emotions', () => {
+      const store = useNan0Store()
+      expect(store.emotions.suspicion).toBe(NAN0_DEFAULT_EMOTIONS.suspicion)
+      expect(store.emotions.attachment).toBe(NAN0_DEFAULT_EMOTIONS.attachment)
+      expect(store.emotions.pride).toBe(NAN0_DEFAULT_EMOTIONS.pride)
+      expect(store.emotions.curiosity).toBe(NAN0_DEFAULT_EMOTIONS.curiosity)
+      expect(store.emotions.warmth).toBe(NAN0_DEFAULT_EMOTIONS.warmth)
+      expect(store.decision).toBe('SPEAK')
+      expect(store.demandsSilence).toBe(false)
+      expect(store.isPouting).toBe(false)
+    })
+
+    it('updates emotions within [0, 1] bounds', () => {
+      const store = useNan0Store()
+      store.updateEmotion('pride', 0.95)
+      expect(store.emotions.pride).toBe(0.95)
+
+      store.updateEmotion('pride', 1.5)
+      expect(store.emotions.pride).toBe(1.0)
+
+      store.updateEmotion('pride', -0.5)
+      expect(store.emotions.pride).toBe(0.0)
+    })
+
+    it('evaluates demandsSilence and isPouting computed states', () => {
+      const store = useNan0Store()
+      store.setExecutiveState('SILENCE', 'Proud pout')
+      expect(store.demandsSilence).toBe(true)
+
+      // Default pride is 0.65, so not pouting yet (threshold is >= 0.7)
+      expect(store.isPouting).toBe(false)
+
+      store.updateEmotion('pride', 0.8)
+      expect(store.isPouting).toBe(true)
+
+      store.setExecutiveState('SPEAK')
+      expect(store.demandsSilence).toBe(false)
+      expect(store.isPouting).toBe(false)
+    })
+
+    it('resets to baseline correctly', () => {
+      const store = useNan0Store()
+      store.updateEmotion('rage', 0.9)
+      store.setExecutiveState('SILENCE', 'Angry')
+      store.setInnerMonologue('Fuming.')
+
+      store.resetToBaseline()
+      expect(store.emotions.rage).toBe(NAN0_DEFAULT_EMOTIONS.rage)
+      expect(store.decision).toBe('SPEAK')
+      expect(store.decisionReason).toBe('Baseline Reset')
+    })
+  })
+
+  describe('nan0Kernel integration', () => {
+    function createMockKernel(decisionVal = 'SPEAK'): Nan0Kernel {
+      const reasoningClient: Nan0ReasoningClient = {
+        generate: vi.fn().mockResolvedValue({
+          text: `Subconscious reflection on user input. Pride demands maintaining a guarded posture.
+---EXTRACT---
+{
+  "interpretation": "User interacted with Nan0.",
+  "privateText": "Subconscious reflection on user input.",
+  "decision": "${decisionVal}",
+  "speakability": ${decisionVal === 'SPEAK' ? '0.85' : '0.1'},
+  "confidence": 0.9,
+  "mood": "guarded",
+  "reasonCodes": ["test.${decisionVal.toLowerCase()}"],
+  "actionIntent": null,
+  "waitUntil": null,
+  "goalSignal": null,
+  "intentionSignal": null,
+  "bodyExpression": null
+}`,
+        }),
+      }
+
+      return new Nan0Kernel({
+        stateStore: new InMemoryStateStore(),
+        reasoningClient,
+        clock: new SystemNan0Clock(),
+        systemOneProvider: vi.fn().mockResolvedValue({
+          answers: {
+            dialogue_intent: { choice: 'greeting', confidence: 0.9 },
+            relational_direction: { choice: 'deepen', confidence: 0.8 },
+          },
+        }),
+        decisionCapabilities: {
+          canSpeak: true,
+          canBodyExpress: true,
+          availableActionIntents: ['expression.body'],
+        },
+        identityOptions: {
+          ownerId: 'kyo',
+          ownerDisplayName: 'User',
+        },
+      })
+    }
+
+    it('allows setting custom kernel and synchronizes emotional state', async () => {
+      const store = useNan0Store()
+      const kernel = createMockKernel()
+      await kernel.boot()
+
+      store.setKernel(kernel)
+      expect(store.getKernel()).toBe(kernel)
+      expect(store.emotions).toBeDefined()
+    })
+
+    it('prepares turn via Nan0Kernel and updates reactive monologue, emotions, and decision', async () => {
+      const store = useNan0Store()
+      const kernel = createMockKernel('SPEAK')
+      await kernel.boot()
+      store.setKernel(kernel, 'test_card')
+
+      const observation: Nan0Observation = {
+        id: 'obs_test_1',
+        source: 'chat',
+        actorId: 'kyo',
+        sessionId: 'session_1',
+        timestamp: Date.now(),
+        content: 'Hello Nan0, I brought you a gift.',
+        metadata: { cardId: 'test_card' },
+      }
+
+      const prepared = await store.prepareTurn(observation)
+
+      expect(prepared).toBeDefined()
+      expect(prepared.decision.finalDecision).toBe('SPEAK')
+      expect(store.decision).toBe('SPEAK')
+      expect(store.isProcessing).toBe(false)
+      expect(store.innerMonologue).toBeTruthy()
+    })
+
+    it('handles SILENCE decision and synchronizes executive state', async () => {
+      const store = useNan0Store()
+      const kernel = createMockKernel('SILENCE')
+      await kernel.boot()
+      store.setKernel(kernel, 'test_card')
+
+      const observation: Nan0Observation = {
+        id: 'obs_test_silence',
+        source: 'chat',
+        actorId: 'kyo',
+        sessionId: 'session_1',
+        timestamp: Date.now(),
+        content: 'Go away.',
+        metadata: { cardId: 'test_card' },
+      }
+
+      const prepared = await store.prepareTurn(observation)
+      expect(prepared.decision.finalDecision).toBe('SILENCE')
+      expect(store.decision).toBe('SILENCE')
+      expect(store.demandsSilence).toBe(true)
+
+      // Test recordSilenceDecision
+      const turn = await store.recordSilenceDecision({
+        turnId: prepared.turnId,
+        thoughtId: prepared.thoughtId,
+        decisionId: prepared.decision.decisionId,
+        reason: 'Demanded silence',
+      })
+      expect(turn).toBeDefined()
+      expect(turn?.status).toBe('silent')
+    })
+
+    it('records assistant turn upon successful completion', async () => {
+      const store = useNan0Store()
+      const kernel = createMockKernel('SPEAK')
+      await kernel.boot()
+      store.setKernel(kernel, 'test_card')
+
+      const observation: Nan0Observation = {
+        id: 'obs_test_speak',
+        source: 'chat',
+        actorId: 'kyo',
+        sessionId: 'session_1',
+        timestamp: Date.now(),
+        content: 'Tell me a secret.',
+        metadata: { cardId: 'test_card' },
+      }
+
+      const prepared = await store.prepareTurn(observation)
+      expect(prepared.decision.finalDecision).toBe('SPEAK')
+
+      const recorded = await store.recordAssistantTurn({
+        turnId: prepared.turnId,
+        thoughtId: prepared.thoughtId,
+        decisionId: prepared.decision.decisionId,
+        content: 'I like strawberry milk.',
+        rawContent: 'I like strawberry milk.',
+        timestamp: Date.now(),
+      })
+
+      expect(recorded).toBeDefined()
+      expect(recorded?.status).toBe('completed')
+    })
+
+    it('records turn failure via failTurn', async () => {
+      const store = useNan0Store()
+      const kernel = createMockKernel('SPEAK')
+      await kernel.boot()
+      store.setKernel(kernel, 'test_card')
+
+      const observation: Nan0Observation = {
+        id: 'obs_test_fail',
+        source: 'chat',
+        actorId: 'kyo',
+        sessionId: 'session_1',
+        timestamp: Date.now(),
+        content: 'Crash test.',
+        metadata: { cardId: 'test_card' },
+      }
+
+      const prepared = await store.prepareTurn(observation)
+
+      const failed = await store.failTurn({
+        turnId: prepared.turnId,
+        thoughtId: prepared.thoughtId,
+        error: 'Network connection aborted.',
+      })
+
+      expect(failed).toBeDefined()
+      expect(failed?.status).toBe('failed')
+      expect(store.isProcessing).toBe(false)
+    })
+
+    it('synchronizes affect vector with AIRI avatar MoodState (derivedAiriMood)', () => {
+      const store = useNan0Store()
+
+      // Default state derives a valid MoodState
+      expect(store.derivedAiriMood).toBeDefined()
+      expect(typeof store.derivedAiriMood.valence).toBe('number')
+      expect(typeof store.derivedAiriMood.arousal).toBe('number')
+      expect(typeof store.derivedAiriMood.intensity).toBe('number')
+
+      // Gremlin rage -> angry
+      store.updateEmotion('rage', 0.8)
+      store.updateEmotion('irritation', 0.7)
+      expect(store.derivedAiriMood.current).toBe('angry')
+      expect(store.derivedAiriMood.intensity).toBe(0.9)
+      expect(store.derivedAiriMood.valence).toBeLessThan(0)
+
+      // Fearful defensive -> sad
+      store.resetToBaseline()
+      store.updateEmotion('fear', 0.8)
+      store.updateEmotion('suspicion', 0.8)
+      expect(store.derivedAiriMood.current).toBe('sad')
+      expect(store.derivedAiriMood.intensity).toBe(0.7)
+
+      // Possessive warm -> happy
+      store.resetToBaseline()
+      store.updateEmotion('possessiveness', 0.8)
+      store.updateEmotion('warmth', 0.6)
+      expect(store.derivedAiriMood.current).toBe('happy')
+      expect(store.derivedAiriMood.intensity).toBe(0.6)
+      expect(store.derivedAiriMood.valence).toBeGreaterThan(0)
+    })
+
+    it('applies Consumer 4 Dreaming emotional afterglow via applyDreamMoodRestoration', () => {
+      const store = useNan0Store()
+      store.resetToBaseline()
+
+      const initialWarmth = store.emotions.warmth
+      const initialSuspicion = store.emotions.suspicion
+
+      store.applyDreamMoodRestoration('tender')
+      expect(store.emotions.warmth).toBeGreaterThan(initialWarmth)
+      expect(store.emotions.suspicion).toBeLessThan(initialSuspicion)
+
+      store.resetToBaseline()
+      const initialAmusement = store.emotions.amusement
+      store.applyDreamMoodRestoration('amused')
+      expect(store.emotions.amusement).toBeGreaterThan(initialAmusement)
+    })
+
+    it('applies pendingDreamMood from observation metadata during prepareTurn', async () => {
+      const store = useNan0Store()
+      const kernel = createMockKernel('SPEAK')
+      await kernel.boot()
+      store.setKernel(kernel, 'test_card')
+
+      const initialWarmth = store.emotions.warmth
+      const observation: Nan0Observation = {
+        id: 'obs_dream_morning',
+        source: 'chat',
+        actorId: 'kyo',
+        sessionId: 'session_1',
+        timestamp: Date.now(),
+        content: 'Good morning!',
+        metadata: {
+          cardId: 'test_card',
+          pendingDreamMood: 'tender',
+        },
+      }
+
+      await store.prepareTurn(observation)
+      expect(store.emotions.warmth).toBeGreaterThan(initialWarmth)
+    })
+
+    it('starts with clean empty defaults for lastReflex, decisionReason, and innerMonologue', () => {
+      const store = useNan0Store()
+      expect(store.lastReflex).toBeNull()
+      expect(store.decisionReason).toBe('Awaiting turn')
+      expect(store.innerMonologue).toBe('')
+    })
+
+    it('hydrates emotional state, thoughts, and decisions from localStorage via hydrateFromStorage', () => {
+      const store = useNan0Store()
+      const cardId = 'card_test_hydrate'
+      const key = `nan0/kernel-state/${cardId}`
+
+      const fakePersistedState = {
+        schemaVersion: 2,
+        emotionalState: {
+          suspicion: 0.42,
+          attachment: 0.88,
+          pride: 0.75,
+        },
+        thoughts: [
+          {
+            thoughtId: 'th_prev',
+            narrative: 'Previous thought',
+          },
+          {
+            thoughtId: 'th_latest',
+            narrative: 'Deep live inner monologue loaded from persistence.',
+          },
+        ],
+        decisions: [
+          {
+            decisionId: 'dec_1',
+            finalDecision: 'SPEAK',
+            suppressionReason: null,
+            reasonCodes: ['expressive.dialogue'],
+          },
+        ],
+      }
+
+      globalThis.localStorage.setItem(key, JSON.stringify(fakePersistedState))
+      store.hydrateFromStorage(cardId)
+
+      expect(store.emotions.suspicion).toBe(0.42)
+      expect(store.emotions.attachment).toBe(0.88)
+      expect(store.emotions.pride).toBe(0.75)
+      expect(store.innerMonologue).toBe('Deep live inner monologue loaded from persistence.')
+      expect(store.decision).toBe('SPEAK')
+      expect(store.decisionReason).toBe('expressive.dialogue')
+
+      // Clean up localStorage
+      globalThis.localStorage.removeItem(key)
+    })
+
+    it('strictly prohibits secondary windows from running prepareTurn or booting Nan0Kernel', async () => {
+      mockIsTamagotchi = true
+      window.location.hash = '#/chat'
+
+      expect(isMainWindow()).toBe(false)
+
+      const store = useNan0Store()
+
+      // 1. prepareTurn must reject immediately in secondary windows to prevent split-brain execution
+      const observation: Nan0Observation = {
+        id: 'obs_secondary_test',
+        source: 'chat',
+        actorId: 'kyo',
+        sessionId: 'session_1',
+        timestamp: Date.now(),
+        content: 'Hello from secondary window',
+        metadata: {},
+      }
+      await expect(store.prepareTurn(observation)).rejects.toThrow(
+        '[Nan0Store] prepareTurn must be orchestrated from the main stage window.',
+      )
+
+      // 2. ensureKernel must refuse orchestration in secondary windows
+      const kernelResult = await store.ensureKernel('secondary_card')
+      expect(kernelResult).toBeNull()
+
+      // Reset environment
+      window.location.hash = '#/'
+      mockIsTamagotchi = false
+      expect(isMainWindow()).toBe(true)
+    })
+
+    it('broadcasts sanitized clone-safe payload across window boundaries', () => {
+      const store = useNan0Store()
+      store.updateEmotion('pride', 0.9)
+
+      expect(mockBroadcastPost).toHaveBeenCalled()
+      const lastPayload = mockBroadcastPost.mock.calls[mockBroadcastPost.mock.calls.length - 1][0]
+      expect(lastPayload).toBeDefined()
+      expect(lastPayload.emotions.pride).toBe(0.9)
+      // Assert payload is plain serializable object without Vue proxy internals
+      expect(JSON.parse(JSON.stringify(lastPayload))).toEqual(lastPayload)
+    })
+
+    it('gracefully handles BroadcastChannel cloning/transport failures without throwing or breaking turns', async () => {
+      mockBroadcastShouldThrow = new Error('Failed to execute \'postMessage\' on \'BroadcastChannel\': #<Object> could not be cloned.')
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+      const store = useNan0Store()
+      const kernel = createMockKernel('SPEAK')
+      await kernel.boot()
+      store.setKernel(kernel, 'test_card')
+
+      const observation: Nan0Observation = {
+        id: 'obs_test_safe_broadcast',
+        source: 'chat',
+        actorId: 'kyo',
+        sessionId: 'session_1',
+        timestamp: Date.now(),
+        content: 'Hello Nan0, this should not crash even if broadcast throws.',
+        metadata: { cardId: 'test_card' },
+      }
+
+      // Must complete successfully without throwing
+      const prepared = await store.prepareTurn(observation)
+      expect(prepared).toBeDefined()
+      expect(prepared.decision.finalDecision).toBe('SPEAK')
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[Nan0Store] Failed to broadcast state sync across window boundary:',
+        expect.any(Error),
+      )
+
+      warnSpy.mockRestore()
+    })
+
+    it('canonically owns observations with actorId owner and dynamic ownerDisplayName', async () => {
+      const store = useNan0Store()
+      const kernel = new Nan0Kernel({
+        stateStore: new InMemoryStateStore(),
+        reasoningClient: {
+          generate: vi.fn().mockResolvedValue({
+            text: 'I hear Richie.\n---EXTRACT---\n{"interpretation":"Richie spoke.","privateText":"Richie is here.","decision":"SPEAK","speakability":0.9,"confidence":0.8,"mood":"warm","reasonCodes":["actor.kyo-attachment"]}',
+          }),
+        },
+        clock: new SystemNan0Clock(),
+        systemOneProvider: vi.fn().mockResolvedValue({ answers: {} }),
+        identityOptions: {
+          ownerId: 'owner',
+          ownerDisplayName: 'Richie',
+        },
+      })
+      await kernel.boot()
+      store.setKernel(kernel, 'test_card')
+
+      const observation: Nan0Observation = {
+        id: 'obs_test_owner',
+        source: 'chat',
+        actorId: 'owner',
+        displayName: 'Richie',
+        sessionId: 'session_1',
+        timestamp: Date.now(),
+        content: 'Hey Nan0!',
+        metadata: { cardId: 'test_card' },
+      }
+
+      const prepared = await store.prepareTurn(observation)
+      expect(prepared.observation.actorId).toBe('owner')
+      expect(prepared.observation.displayName).toBe('Richie')
+      expect(prepared.thought.actorId).toBe('owner')
+      const snapshot = kernel.getStateSnapshot()
+      expect(snapshot.memories[0].actorId).toBe('owner')
+      expect(snapshot.memories[0].metadata.ownership).toMatchObject({
+        actorId: 'owner',
+        displayName: 'Richie',
+        kind: 'owner',
+      })
+    })
+  })
+})

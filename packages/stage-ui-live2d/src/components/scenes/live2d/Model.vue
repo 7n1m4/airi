@@ -38,6 +38,8 @@ import { buildAdapterPorts, Live2DRuntimeAdapter } from '../../../runtime/live2d
 import { DSL_INTIMACY_MAX, useDslIntimacyStore } from '../../../stores/dsl-intimacy'
 import { useLive2d } from '../../../stores/live2d'
 import { getLive2DMotionControlModelOffset, useLive2DMotionControl } from '../../../stores/motion-control'
+import { evaluateLive2dBlend } from '../../../utils/blend-math'
+import { parseCycleMotions as parseRawCycleMotions } from '../../../utils/cycle-motions'
 import { isMacOSJunk, setOnZipLoaded } from '../../../utils/live2d-zip-loader'
 import { OPFSCacheV2 } from '../../../utils/opfs-loader'
 import { extractArtMeshColorsFromVTube, listVTubeColorRelatedKeys } from '../../../utils/vtube-artmesh-colors'
@@ -245,16 +247,10 @@ function getSelectedRuntimeMotion() {
 }
 
 function parseCycleMotions(idleAnimations: string[] | undefined) {
-  return idleAnimations
-    ?.filter(k => k.startsWith('live2d:'))
-    .map((k) => {
-      const [_, group, indexStr] = k.split(':')
-      return {
-        group,
-        index: Number.parseInt(indexStr),
-      }
-    })
-    .filter(m => m.group && !Number.isNaN(m.index)) || []
+  const motionsList = (availableMotions && availableMotions.value && availableMotions.value.length > 0)
+    ? availableMotions.value
+    : (live2dStore?.availableMotions ?? [])
+  return parseRawCycleMotions(idleAnimations, motionsList)
 }
 
 function getRouteHash() {
@@ -1314,9 +1310,11 @@ async function loadModel() {
             if (expEntry?.data?.Parameters) {
               for (const param of expEntry.data.Parameters) {
                 const id = param.Id || param.id
-                const value = param.Value ?? param.value
-                if (id !== undefined && value !== undefined) {
-                  modelParameters.value[id] = value
+                const rawVal = param.Value ?? param.value
+                const blend = param.Blend || param.blend || 'Overwrite'
+                if (id !== undefined && rawVal !== undefined) {
+                  const baseVal = modelParameters.value[id] ?? 0
+                  modelParameters.value[id] = evaluateLive2dBlend(baseVal, rawVal, weight, blend)
                 }
               }
             }
@@ -1637,9 +1635,11 @@ watch(activeExpressions, (newExps, oldExps) => {
       if (expEntry?.data?.Parameters) {
         for (const param of expEntry.data.Parameters) {
           const id = param.Id || param.id
-          const value = param.Value ?? param.value
-          if (id !== undefined && value !== undefined) {
-            modelParameters.value[id] = value
+          const rawVal = param.Value ?? param.value
+          const blend = param.Blend || param.blend || 'Overwrite'
+          if (id !== undefined && rawVal !== undefined) {
+            const baseVal = modelParameters.value[id] ?? 0
+            modelParameters.value[id] = evaluateLive2dBlend(baseVal, rawVal, weight, blend)
           }
         }
       }

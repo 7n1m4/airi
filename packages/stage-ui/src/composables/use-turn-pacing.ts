@@ -277,6 +277,11 @@ export function useTurnPacing(options: UseTurnPacingOptions) {
     return coordinator
   }
 
+  // Retained reasoning window for CoT pivot extraction. The needle probe only
+  // ever reads the trailing 600 chars — retaining the whole turn's thinking
+  // here is pure GC/compressor pressure with no consumer.
+  const MAX_REASONING_BUFFER_CHARS = 4096
+
   function onReasoningChunk(chunk: string) {
     if (!activeCoordinator)
       return
@@ -289,6 +294,8 @@ export function useTurnPacing(options: UseTurnPacingOptions) {
 
     // Task 3: Background extraction on streaming CoT reasoning buffer ahead of interval tick
     activeReasoningBuffer += chunk
+    if (activeReasoningBuffer.length > MAX_REASONING_BUFFER_CHARS)
+      activeReasoningBuffer = activeReasoningBuffer.slice(-MAX_REASONING_BUFFER_CHARS)
     const now = Date.now()
     if (
       activeCoordinator

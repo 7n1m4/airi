@@ -54,7 +54,7 @@ The five groups below organize navigation. Historical “Phase” labels do not 
 
 ## 3. Domain skill catalog
 
-The catalog contains 66 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
+The catalog contains 70 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
 
 ### 🟢 Phase 1: Core Plumbing & Infrastructure
 
@@ -99,9 +99,9 @@ The catalog contains 66 discoverable skills. Desktop chatbox and interaction pip
 - **Content**: The unstorage interceptor + outbox queue architecture, LWW vs mergeable-key vs manifest reconciliation rules, voice-profile reconciliation with quota gates, Google Drive AppData bootstrap + Edge Vault credential recovery, loop prevention (`isImportingRemoteData`), anti-contraction safeguard, and selective restore (metadata required, heavy blobs opt-in). Peer skill: `airi-cloud-relay-infrastructure` (edge relay side).
 
 #### 1.9 `airi-desktop-lifecycle-power-throttling`
-- **Target Domain**: Electron Window Lifecycle & OS Power Throttling (`powerMonitor`, `stagePaused`, Render Loop Freezing).
-- **Key Paths**: `apps/stage-tamagotchi/src/main/services/electron/window.ts`, `apps/stage-tamagotchi/src/shared/eventa.ts`, `apps/stage-tamagotchi/src/renderer/stores/stage-window-lifecycle.ts`, `apps/stage-tamagotchi/src/renderer/pages/index.vue`, `packages/stage-ui/src/components/scenes/ControlStripHost.vue`.
-- **Content**: Native Electron window state changes (`show`/`hide`/`minimize`/`restore`/`focus`/`blur`) and `powerMonitor` hooks (`suspend`/`resume`/`lock-screen`/`unlock-screen`), `ElectronWindowLifecycleState` eventa bridge, `stagePaused` state calculation, and automatic freezing of 3D/2D avatar render loops to eliminate CPU/battery drain during screen lock and OS sleep.
+- **Target Domain**: Electron Window Lifecycle & OS Power Throttling (`powerMonitor`, `stagePaused`, Render Loop Freezing, Multi-Tier Deep Standby & VRAM Hibernation).
+- **Key Paths**: `apps/stage-tamagotchi/src/main/services/electron/window.ts`, `apps/stage-tamagotchi/src/shared/eventa.ts`, `apps/stage-tamagotchi/src/renderer/stores/stage-window-lifecycle.ts`, `apps/stage-tamagotchi/src/renderer/pages/index.vue`, `packages/stage-ui/src/components/scenes/ControlStripHost.vue`, `docs/design-vram-eviction-and-standby-hibernation.md`.
+- **Content**: Native Electron window state changes (`show`/`hide`/`minimize`/`restore`/`focus`/`blur`) and `powerMonitor` hooks (`suspend`/`resume`/`lock-screen`/`unlock-screen`), `ElectronWindowLifecycleState` eventa bridge, `stagePaused` state calculation, Tier 1 instant render loop freezing (3D/2D animation loops paused), Tier 2 Deep Standby VRAM hibernation (unmounting idle neural inference workers when screen locked > 10m or OS suspended, reclaiming 3–4GB VRAM), and sub-2s transparent re-hydration.
 
 ---
 
@@ -118,9 +118,9 @@ The catalog contains 66 discoverable skills. Desktop chatbox and interaction pip
 - **Content**: Physical synthesis and transcription, VoiceProfile resolution, UST transformations, empty-input handling, format/decode/device failures, permission and stream cleanup. Speech intents belong to airi-speech-runtime; filler preparation belongs to airi-conversational-pacing.
 
 #### 2.3 `airi-local-inference-engines`
-- **Target Domain**: Local WebGPU & WASM Inference (Kokoro TTS, Whisper STT, WebLLM, Web-RWKV, Moondream VLM).
-- **Key Paths**: `packages/stage-ui/src/libs/inference/` (protocol/coordinator/`gpu-resource-coordinator`, `adapters/`), `packages/stage-ui/src/workers/kokoro/`, `packages/stage-ui/src/workers/moondream/`, `packages/stage-ui/src/libs/workers/worker.ts`. Note: WebLLM/Web-RWKV/Moondream run as workers under `packages/stage-ui/src/workers/`.
-- **Content**: Message protocol (`load-model`, `run-inference`, `progress`), serialized load queues, `GpuResourceCoordinator` VRAM pressure telemetry, and WebGPU detection.
+- **Target Domain**: Local WebGPU & WASM Inference (Kokoro TTS, Whisper STT, WebLLM, Web-RWKV, Moondream VLM, Embeddings search worker, Laya System-1, Automated VRAM Eviction & Standby Hibernation).
+- **Key Paths**: `packages/stage-ui/src/libs/inference/` (protocol/coordinator/`gpu-resource-coordinator`, `gpu-worker-host`, `adapters/` incl. `adapters/laya.ts`, `laya-engine.ts`), `packages/stage-ui/src/workers/kokoro/`, `packages/stage-ui/src/workers/moondream/`, `packages/stage-ui/src/workers/laya/`, `packages/stage-ui/src/libs/workers/worker.ts`, `packages/stage-ui/src/libs/workers/search/` (embedding worker + loader), `docs/design-vram-eviction-and-standby-hibernation.md`, `docs/design-embedding-provider-support.md`. Note: WebLLM/Web-RWKV/Moondream/Laya run as workers under `packages/stage-ui/src/workers/`.
+- **Content**: Message protocol (`load-model`, `run-inference`, `progress`), serialized load queues, `GpuResourceCoordinator` VRAM budget accounting and active LRU eviction under memory pressure (`CRITICAL_THRESHOLD = 0.95`), `createGpuWorkerHost` 15m inactivity TTL unloads, manifest retention for sub-2s re-hydration, and WebGPU detection.
 
 #### 2.4 `airi-stage-ui-surfaces`
 - **Target Domain**: Cross-app Control Strip (desktop Electron pill + `mode="mobile"` integration in stage-web/stage-pocket), floating Electron window overlays, `ControlStripHost.vue`/`WidgetStage`, `RendererStage.vue`, control islands, and the action-dispatch / button-catalog layer.
@@ -139,7 +139,7 @@ The catalog contains 66 discoverable skills. Desktop chatbox and interaction pip
 
 #### 2.7 `airi-attention-ecology-vision`
 - **Target Domain**: Continuous Vision Perception & Attention Ecology Gate.
-- **Key Paths**: `docs/proposal-attention-ecology-local-webgpu-guard.md`, `docs/proposal-vision-witness.md`, `packages/stage-ui/src/stores/modules/vision/orchestrator.ts`.
+- **Key Paths**: `docs/design-attention-ecology-screen-watching.md`, `packages/stage-ui/src/stores/modules/screen-watcher.ts`, `packages/stage-ui/src/stores/modules/vision/orchestrator.ts`, `docs/proposal-vision-witness.md`.
 - **Content**: Cascaded Salience Gate (pHash → CLIP vision embedding & novelty scoring → WASM OCR / RWKV-7 gate → VLM forwarder), privacy app exclusion filters, push/pull cognitive mechanics, and Vibe Island integration.
 
 #### 2.8 `airi-model-customizer`
@@ -177,14 +177,19 @@ The catalog contains 66 discoverable skills. Desktop chatbox and interaction pip
 - **Key Paths**: `packages/stage-ui/src/libs/pacing/`, `packages/stage-ui/src/composables/use-turn-pacing.ts`.
 - **Content**: Turn/attempt accounting, category selection, prewarm/cache, bounded fallback synthesis, cancellation and answer handoff. Separates implemented policy from proposal text.
 
+#### 2.15 `airi-rwkv-webgpu-engine`
+- **Target Domain**: RWKV-7 G1 RNN model execution, `@cryscan/web-rwkv-wasm` runtime, `.prefab` CBOR quantization pipeline, offline weight conversion, OPFS caching, and cleanroom verification harness.
+- **Key Paths**: `packages/stage-ui/src/workers/web-rwkv/`, `packages/stage-ui/src/libs/inference/adapters/web-rwkv.ts`, `packages/stage-pages/src/pages/settings/providers/chat/web-rwkv.vue`, `scripts/tests/rwkv-harness/`, `docs/design-web-rwkv-quantization-architecture.md`, `docs/design-rwkv-persona-foundry-and-state-cartridges.md`, `docs/project-rwkv-cleanroom-harness-plan.md`.
+- **Content**: RWKV-7 G1 architecture, `Session.from_prefab` instant boot and zero-degradation offline CBOR quantization, single-slot OPFS model cache, Hugging Face prefab distribution (`dasilva333/rwkv7-g1-webgpu-prefabs`), maintenance tools (`convert_safetensors.py`, `bake-prefab.sh`, `verify-prefab.mjs`), and the RWKV Persona Foundry state distillation architecture.
+
 ---
 
 ### 🟣 Phase 3: Module Systems, Cognition & Memory
 
 #### 3.1 `airi-onboarding-v3`
-- **Target Domain**: Canonical Onboarding V3 19-Step Architecture, Quick Start (60s), & Modular Pruning.
+- **Target Domain**: Canonical Onboarding V3 18-Step Architecture, Quick Start (60s), & Modular Pruning.
 - **Key Paths**: `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/`, `docs/design-onboarding-v3.md`, `docs/design-onboarding-v3-emotions.md`.
-- **Content**: Canonical 19-step semantic journey, Quick Start (60s) instant mode, 5-item sliding-window stepper, 6 curated Archetypes and dynamic module pruning, `useOnboardingV3Draft` isolation, and atomic starter-card commit. *(Note: Legacy `airi-onboarding-v2` under `v2/` is deprecated reference only).*
+- **Content**: Canonical 18-step semantic journey, Quick Start (60s) instant mode, 5-item sliding-window stepper, 6 curated Archetypes and dynamic module pruning, `useOnboardingV3Draft` isolation, and atomic starter-card commit. *(Note: Legacy `airi-onboarding-v2` under `v2/` is deprecated reference only).*
 
 #### 3.2 `airi-mcp-integration`
 - **Target Domain**: Model Context Protocol (MCP) Server Integration.
@@ -291,6 +296,11 @@ The catalog contains 66 discoverable skills. Desktop chatbox and interaction pip
 - **Key Paths**: `packages/stage-ui/src/stores/modules/artistry-autonomous.ts`, `docs/content/en/docs/manual/config/studio.md`.
 - **Content**: Base/Layer stack resolution, Setups A/B/C ownership, actor manifestations, pure speech override resolution, scratchpad/note persistence, and asynchronous target identity. Image transport stays in artistry widgets.
 
+#### 3.23 `airi-jev-decision-engine`
+- **Target Domain**: TypeSafe Jev System-1 Decision Engine & Discrete Classification Coprocessor.
+- **Key Paths**: `packages/stage-ui/src/stores/modules/system-one.ts`, `packages/stage-ui/src/stores/modules/system-one.test.ts`, `docs/proposal-jev-integration.md`, `packages/stage-ui/src/stores/modules/vision/orchestrator.ts`, `packages/stage-pages/src/pages/settings/airi-card/guided.vue`.
+- **Content**: Sub-150ms parallel non-autoregressive decision network ($42/Btok); OpenRouter Decisions API transport (`POST /api/alpha/decisions`, `"type": "noul"` compatibility contract); `useSystemOneStore` Pinia architecture; question schemas (zero-shot memory triage, candidate reranking, affect & suspicion reflex, entity classification); and multi-domain coprocessor wiring: Attention Ecology Programmable Visual Attention Gate (Domain C), AnimaDex fast voice matching & pitch/speed tuning (Domain E), streaming speech-to-motion expression gating (Domain F), memory token compaction & pre-summary curation (Domain G), and Arcade Room retro gaming co-pilot (Domain A). Peer skills: `airi-attention-ecology-vision`, `airi-animadex-wizard`, `airi-acting-cue-act-tokens`, `airi-memory-short-term`.
+
 ---
 
 ### 🟡 Phase 4: Operational SOPs & Upstream Research
@@ -323,7 +333,17 @@ The catalog contains 66 discoverable skills. Desktop chatbox and interaction pip
 #### 4.6 `airi-release-packaging-deploy`
 - **Target Domain**: Shipping AIRI artifacts and deploying services — stable releases, electron-builder packaging, CI matrix, mobile packaging, Docker/docs deploys, edge-worker deploys.
 - **Key Paths**: `release-tamagotchi.yml`, `apps/stage-tamagotchi/` (electron-builder config, `release:win`/`release:mac`), `apps/stage-pocket/` (Capacitor), `apps/stage-web/` (Docker/Pages), `apps/stage-edge/` (Cloudflare).
-- **Content**: Version stamping/git-tag/notes workflow, SignPath code signing + Apple notarization (CSC_CONTENT/APPLE_ID), `latest*.yml` auto-update feeds, Android APK + iOS IPA via Capacitor, ghcr.io Docker images, GitHub Pages docs deployment, Cloudflare worker deploys, and gh CLI release-upload auth quirks.
+- **Content**: Version stamping/git-tag/notes workflow, user-centric release note voice ("You can now...", audience breakdown, footnote commit tracing), SignPath code signing + Apple notarization (CSC_CONTENT/APPLE_ID), `latest*.yml` auto-update feeds, Android APK + iOS IPA via Capacitor, ghcr.io Docker images, GitHub Pages docs deployment, Cloudflare worker deploys, and gh CLI release-upload auth quirks.
+
+#### 4.7 `airi-code-testing-hygiene`
+- **Target Domain**: TypeScript Reactive Safety, Deep Module Cohesion, Fallback Precedence, Vitest Bug Reproduction & Import Boundary Hygiene.
+- **Key Paths**: `.agents/skills/airi-code-testing-hygiene/SKILL.md`, `packages/*/src/**/*.ts`, `packages/*/src/**/*.test.ts`, `docs/project-testing-parity.md`.
+- **Content**: Eliminating inline object/array fallback references (`?? {}`, `?? []`) in reactive getters/computed/watchers/stores, deep-module boundaries over shallow pass-through file shuffling, strict `??` vs `||` precedence, mandatory failing regression tests with `Issue #` naming and `// ROOT CAUSE:` comment blocks before bug patching, prohibiting test-only import hacks (`as unknown as`) to hide circular dependencies, Vue testing and reactivity invariants (never mock Pinia/core stores, headless async `nextTick` / microtask settling, `shallowRef` for heavy engine instances, `storeToRefs` destructuring guard), and Vue SFC hygiene (script→template→style order, split triggers, thin views, typed props/emits).
+
+#### 4.8 `airi-infra-library-references`
+- **Target Domain**: Generic library lookups (UnoCSS, tsdown, pnpm, VueUse) and translation-friendly docs prose — task-selected references with fork vetoes.
+- **Key Paths**: `.agents/skills/airi-infra-library-references/SKILL.md`, `references/` (`unocss.md`, `tsdown.md`, `pnpm.md`, `vueuse.md`, `prose.md`), `uno.config.ts`, `packages/ui/`.
+- **Content**: Router loading one reference per task; UnoCSS grouped class arrays with attributify banned, `useDark({ disableTransition: false })`, ManualReset storage semantics for Control Strip layouts, Chromatic-over-hex theming, scoped pnpm workspace commands, tsdown external/dep rules, and prose limits with user-centric release framing. Domain behavior stays in peer skills.
 
 ---
 
@@ -404,18 +424,23 @@ The catalog contains 66 discoverable skills. Desktop chatbox and interaction pip
 - **Key Paths**: `docs/shared-sidebar.ts`, `docs/.vitepress/config.ts`, `docs/content/en/`, `docs/content/ja/`, `docs/content/zh-Hans/`.
 - **Content**: VitePress documentation setup, `shared-sidebar.ts` single-source-of-truth syncing across web and in-app viewers, multi-locale synchronization, Markdown frontmatter standards, asset resolution rules, and strict separation between technical root docs (`docs/*.md`) and public user-facing guides (`docs/content/`).
 
+#### 5.16 `airi-ui-design-conventions`
+- **Target Domain**: AIRI UI Design Conventions, Component Selection Matrix, UnoCSS Readably Grouped Arrays, Chromatic Dynamic Theming & Palette Roles, Theme Switching Surfaces, Motion & Accessibility.
+- **Key Paths**: `.agents/skills/airi-ui-design-conventions/SKILL.md`, `packages/ui/`, `uno.config.ts`, `packages/stage-ui/src/stores/settings/theme.ts`, `packages/stage-ui/src/components/widgets/SettingsThemeHeaderWidget.vue`, `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/steps/step-appearance.vue`.
+- **Content**: Component hierarchy across `@proj-airi/ui` primitives (`BasicButton`, `Button`, `GhostButton`, `IconButton`, `OverlayButton`, `FieldInput`, `Input`, `FieldCheckbox`, `Select`, `BottomDrawer`), UnoCSS multi-line class array binding conventions, Chromatic `--chromatic-hue` dynamic theming vs. static neutral surfaces, the 4 canonical theme-switching surfaces (Onboarding V3 24-color spectrum, Settings General dark-mode toggle, Settings Header widget, Control Strip `'theme-mode'` action), shape/radii/spacing standards (8px, 12px, 32px drawers, -10°/10° parallelogram skew), motion timings (200ms/250ms/500ms, `AnimatedContent`), and the component discrepancy audit.
+
 ---
 
 ## 4. Inventory and routing review
 
 | Group | Discoverable skills |
 | --- | ---: |
-| Core plumbing and infrastructure | 8 |
-| Character, stage, motion and sensing | 14 |
-| Modules, cognition and memory | 22 |
-| Operational SOPs and research | 6 |
-| UI surfaces and adjacent services | 15 |
-| **Total** | **65** |
+| Core plumbing and infrastructure | 9 |
+| Character, stage, motion and sensing | 15 |
+| Modules, cognition and memory | 23 |
+| Operational SOPs and research | 8 |
+| UI surfaces and adjacent services | 16 |
+| **Total** | **71** |
 
 The counts follow the catalog groups above, not a separate historical rollout table.
 

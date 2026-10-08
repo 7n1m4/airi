@@ -226,6 +226,22 @@ export async function createCacheWriter(key: string): Promise<ModelCacheWriter> 
         handle.flush()
         handle.close()
         console.info(`[web-rwkv:cache] cached ${entries.length} tensors (${cursor} bytes) for ${key.slice(0, 12)}…`)
+
+        // Single-slot eviction guarantee: clean up any other .f16cache files in OPFS so
+        // only the newly finalized model remains cached on disk.
+        try {
+          const dir = await openCacheDir(false)
+          const currentFileName = cacheFileName(key)
+          for await (const entry of (dir as any).values()) {
+            if (entry.kind === 'file' && entry.name.endsWith('.f16cache') && entry.name !== currentFileName) {
+              console.info(`[web-rwkv:cache] single-slot eviction: removing previous model cache ${entry.name}`)
+              await dir.removeEntry(entry.name)
+            }
+          }
+        }
+        catch (evictErr) {
+          console.warn('[web-rwkv:cache] single-slot eviction notice:', evictErr)
+        }
       }
       catch (error) {
         console.warn('[web-rwkv:cache] finalize failed; dropping partial cache file', error)
@@ -322,5 +338,203 @@ export async function readCachedModel<T>(key: string, mapTensor: (tensor: Cached
     }
     catch {}
     return null
+  }
+}
+
+/** Cache filename for a raw prefab binary. */
+function prefabCacheFileName(key: string): string {
+  return `${key}.prefabcache`
+}
+
+/**
+ * Read a cached raw .prefab binary from OPFS.
+ */
+export async function readCachedPrefab(key: string): Promise<Uint8Array | null> {
+  if (!opfsAvailable())
+    return null
+
+  let dir: FileSystemDirectoryHandle
+  let fileHandle: FileHandleWithSync
+  try {
+    dir = await openCacheDir(false)
+    fileHandle = await dir.getFileHandle(prefabCacheFileName(key)) as FileHandleWithSync
+  }
+  catch {
+    console.info(`[web-rwkv:cache] miss for prefab ${key.slice(0, 12)}… (no cached file yet)`)
+    return null
+  }
+
+  let handle: SyncAccessHandle | undefined
+  try {
+    handle = await fileHandle.createSyncAccessHandle()
+    const size = handle.getSize()
+    if (size <= 0)
+      throw new Error('web-rwkv cache: empty prefab cache file')
+    const data = new Uint8Array(size)
+    handle.read(data, { at: 0 })
+    handle.close()
+    console.info(`[web-rwkv:cache] hit for prefab ${key.slice(0, 12)}… (${size} bytes)`)
+    return data
+  }
+  catch (error) {
+    try {
+      handle?.close()
+    }
+    catch {}
+    console.warn('[web-rwkv:cache] cached prefab file unusable; dropping and re-downloading', error)
+    try {
+      await dir.removeEntry(prefabCacheFileName(key))
+    }
+    catch {}
+    return null
+  }
+}
+
+/**
+ * Persist a raw .prefab binary into OPFS with single-slot eviction guarantee.
+ */
+export async function writeCachedPrefab(key: string, data: Uint8Array): Promise<void> {
+  if (!opfsAvailable())
+    return
+
+  try {
+    const dir = await openCacheDir(true)
+    const fileName = prefabCacheFileName(key)
+    const fileHandle = await dir.getFileHandle(fileName, { create: true }) as FileHandleWithSync
+    if (typeof fileHandle.createSyncAccessHandle !== 'function')
+      return
+
+    const handle = await fileHandle.createSyncAccessHandle()
+    handle.truncate(0)
+    handle.write(data, { at: 0 })
+    handle.flush()
+    handle.close()
+    console.info(`[web-rwkv:cache] cached prefab (${data.byteLength} bytes) for ${key.slice(0, 12)}…`)
+
+    // Single-slot eviction: remove any other .f16cache or .prefabcache files
+    try {
+      for await (const entry of (dir as any).values()) {
+        if (entry.kind === 'file' && (entry.name.endsWith('.f16cache') || entry.name.endsWith('.prefabcache')) && entry.name !== fileName) {
+          console.info(`[web-rwkv:cache] single-slot eviction: removing previous cache ${entry.name}`)
+          await dir.removeEntry(entry.name)
+        }
+      }
+    }
+    catch (evictErr) {
+      console.warn('[web-rwkv:cache] single-slot eviction notice:', evictErr)
+    }
+  }
+  catch (error) {
+    console.warn('[web-rwkv:cache] failed to write cached prefab', error)
+  }
+}
+
+const STATES_DIR = 'states'
+
+async function openStatesDir(create: boolean): Promise<FileSystemDirectoryHandle | null> {
+  if (!opfsAvailable())
+    return null
+  try {
+    const root = await navigator.storage.getDirectory()
+    const rwkvDir = await root.getDirectoryHandle(CACHE_DIR, { create })
+    return await rwkvDir.getDirectoryHandle(STATES_DIR, { create })
+  }
+  catch {
+    return null
+  }
+}
+
+function stateCacheFileName(cartridgeKey: string): string {
+  const safe = cartridgeKey.replace(/[^\w.-]/g, '_')
+  return `${safe}.statecache`
+}
+
+/**
+ * Read a cached Float32Array recurrent state from OPFS.
+ */
+export async function readCachedState(cartridgeKey: string): Promise<Float32Array | null> {
+  if (!opfsAvailable())
+    return null
+
+  let handle: SyncAccessHandle | null = null
+  try {
+    const dir = await openStatesDir(false)
+    if (!dir)
+      return null
+    const fileName = stateCacheFileName(cartridgeKey)
+    const fileHandle = await dir.getFileHandle(fileName, { create: false }) as FileHandleWithSync
+    if (typeof fileHandle.createSyncAccessHandle !== 'function')
+      return null
+
+    handle = await fileHandle.createSyncAccessHandle()
+    const size = handle.getSize()
+    if (size === 0 || size % 4 !== 0) {
+      handle.close()
+      return null
+    }
+
+    const byteBuffer = new ArrayBuffer(size)
+    const bytesRead = handle.read(new Uint8Array(byteBuffer), { at: 0 })
+    handle.close()
+    handle = null
+
+    if (bytesRead !== size)
+      return null
+
+    return new Float32Array(byteBuffer)
+  }
+  catch {
+    try {
+      handle?.close()
+    }
+    catch {}
+    return null
+  }
+}
+
+/**
+ * Persist a raw Float32Array recurrent state into OPFS under states/.
+ */
+export async function writeCachedState(cartridgeKey: string, data: Float32Array): Promise<void> {
+  if (!opfsAvailable())
+    return
+
+  try {
+    const dir = await openStatesDir(true)
+    if (!dir)
+      return
+    const fileName = stateCacheFileName(cartridgeKey)
+    const fileHandle = await dir.getFileHandle(fileName, { create: true }) as FileHandleWithSync
+    if (typeof fileHandle.createSyncAccessHandle !== 'function')
+      return
+
+    const handle = await fileHandle.createSyncAccessHandle()
+    handle.truncate(0)
+    const uint8View = new Uint8Array(data.buffer, data.byteOffset, data.byteLength)
+    handle.write(uint8View, { at: 0 })
+    handle.flush()
+    handle.close()
+    console.info(`[web-rwkv:cache] cached state cartridge (${data.byteLength} bytes) for ${cartridgeKey}`)
+  }
+  catch (error) {
+    console.warn(`[web-rwkv:cache] failed to write cached state for ${cartridgeKey}:`, error)
+  }
+}
+
+/**
+ * Check if a state cartridge exists in OPFS.
+ */
+export async function isStateCached(cartridgeKey: string): Promise<boolean> {
+  if (!opfsAvailable())
+    return false
+  try {
+    const dir = await openStatesDir(false)
+    if (!dir)
+      return false
+    await dir.getFileHandle(stateCacheFileName(cartridgeKey), { create: false })
+    return true
+  }
+  catch {
+    return false
   }
 }

@@ -34,6 +34,21 @@ export const JEV_TRIAGE_SCHEMA = {
       multi_session: 'Requires gathering, listing, or comparing entities across multiple separate sessions (e.g. list of all games played, all countries visited, all books recommended).',
     },
   },
+  conjunction_structure: {
+    type: 'choice',
+    instructions: 'Identify the primary syntactic/logical relationship connecting concepts in this user query.',
+    criteria: {
+      bridge_relational: 'Bridge query: One entity/fact specifies the location or item to look up before finding the target attribute (e.g. "where I found X", "room with Y").',
+      temporal_comparison: 'Temporal comparison: Compares the relative timing, sequence, or duration between two separate events (e.g. before/after, days apart).',
+      multi_entity_plural: 'Multi-entity aggregation: Inquires about multiple distinct instances (e.g. two codes, all items, each door).',
+      identity_temporal: 'Identity and introduction: Asks who or what an entity is and when a milestone or introduction occurred.',
+      single_atomic: 'Single atomic lookup: Can be satisfied by a single fact without logical composition.',
+    },
+  },
+  requires_decomposition: {
+    type: 'noul',
+    instructions: 'Does answering this query require retrieving two or more distinct pieces of evidence from separate events, locations, or dates?',
+  },
 }
 
 export const JEV_RERANK_CRITERIA = [
@@ -74,15 +89,26 @@ export const JEV_AFFECT_SCHEMA = {
 export const JEV_ENTITY_CLASSIFIER_SCHEMA = {
   entity_type: {
     type: 'choice',
-    instructions: 'Classify the referent of the target mention in this dialogue context. If it is conversational syntax, a reaction, filler, or not a genuine entity/concept, select conversational_artifact.',
+    instructions: 'Classify the referent of the target mention in this dialogue context. If it is conversational syntax, a reaction, filler, pronoun, common verb/adverb, or not a genuine entity/concept, select conversational_artifact.',
     criteria: {
-      person: 'A named human being, friend, family member, or character (e.g. Asuka, Shinji, John, User).',
+      person: 'A named human being, friend, family member, or character (e.g. Asuka, Shinji, John, User, Nords, Airi).',
       animal: 'A pet, animal species, or pet name (e.g. penguin, Pen-Pen, dog, cat, Max, rabbit).',
       place: 'A city, country, venue, or geographic location (e.g. Tokyo-3, Germany, Stamford).',
       organization: 'An organization, agency, rescue, military branch, or company (e.g. NERV, WILLE, NASA).',
       activity: 'A game, sport, hobby, academic subject, or project (e.g. CS:GO, Apex Legends, Trigonometry).',
       concept: 'An abstract idea, philosophical concept, key lore element, or topic (e.g. Human Instrumentality, AT Field).',
-      conversational_artifact: 'Grammar words, sentence starters, conversational reactions, adverbs, or non-entity phrases (e.g. Obviously, Which, Deal, Goodnight, Disappear).',
+      conversational_artifact: 'Grammar words, pronouns (e.g. They, Now, Then, Why, Before, Them), sentence starters, conversational reactions/fillers (e.g. Hey, Well, Obviously, Which, Deal, Maybe, Could, Goodnight), vocalizations (e.g. Kyaa, Eeeep, Wahhh, Ahhhh), or non-entity phrases.',
+    },
+  },
+}
+
+export const JEV_COT_SALIENCE_SCHEMA = {
+  salience: {
+    type: 'choice',
+    instructions: 'Analyze this internal Chain-of-Thought reasoning snippet from an AI model. Does it contain a genuine conversational turning point (a human-like realization, breakthrough, or hesitation) that should be vocalized aloud?',
+    criteria: {
+      salient_event: 'Yes: contains an explicit, natural-language conversational realization, breakthrough, or hesitation (e.g. "Wait no", "Oh I see", "Aha, that makes sense", "Hold on"). Must be genuine human conversational phrasing, NOT code or equations.',
+      routine_computation: 'No: standard step-by-step math, LaTeX equations, code syntax, variable definitions (e.g. struct fields, pointers), technical quotes, or continuous drafting with no conversational shift.',
     },
   },
 }
@@ -115,13 +141,16 @@ export const useSystemOneStore = defineStore('system-one', () => {
   // State
   const activeProvider = useLocalStorageManualReset<string>('settings/system-one/active-provider', 'openrouter-ai')
   const activeModel = useLocalStorageManualReset<string>('settings/system-one/active-model', 'typesafe/jev-1.13')
+  const systemOneCloudTokens = useLocalStorageManualReset<number>('settings/system-one/tokens-cloud', 0)
+  const systemOneLocalTokens = useLocalStorageManualReset<number>('settings/system-one/tokens-local', 0)
+  const systemOneDecisionsCount = useLocalStorageManualReset<number>('settings/system-one/decisions-count', 0)
   const isExecuting = ref<boolean>(false)
   const lastLatencyMs = ref<number | null>(null)
   const lastError = ref<string | null>(null)
 
   // Computed
   const configured = computed(() => {
-    if (!activeProvider.value)
+    if (!activeProvider.value || activeProvider.value === 'none')
       return false
     if (activeProvider.value === 'laya-local')
       return true
@@ -161,12 +190,12 @@ export const useSystemOneStore = defineStore('system-one', () => {
       return [
         {
           id: 'tozp/laya-onnx',
-          name: 'Laya INT8 (424 MB, Recommended)',
+          name: 'Laya INT8 (424 MB, CPU Recommended)',
           description: 'On-device ModernBERT quantized INT8 sequence classifier',
         },
         {
           id: 'tozp/laya-onnx-fp16',
-          name: 'Laya FP16 (843 MB, Desktop GPU)',
+          name: 'Laya FP16 (843 MB, CPU)',
           description: 'On-device ModernBERT FP16 precision sequence classifier',
         },
       ]
@@ -178,7 +207,10 @@ export const useSystemOneStore = defineStore('system-one', () => {
     state: string | object,
     questions: Record<string, any>,
     modelOverride?: string,
+    options?: { signal?: AbortSignal },
   ): Promise<System1Response> {
+    if (options?.signal?.aborted)
+      throw new DOMException('Aborted', 'AbortError')
     isExecuting.value = true
     lastError.value = null
     const t0 = performance.now()
@@ -193,7 +225,19 @@ export const useSystemOneStore = defineStore('system-one', () => {
 
       const model = modelOverride || activeModel.value || 'typesafe/jev-1.13'
       const res = await instance.systemOne(state, questions, model)
+      options?.signal?.throwIfAborted?.()
       lastLatencyMs.value = Math.round(performance.now() - t0)
+
+      const rawTokens = Number(res?.usage?.input_tokens ?? (res?.usage as any)?.prompt_tokens ?? 0)
+      const inputTokens = Number.isFinite(rawTokens) && rawTokens > 0 ? rawTokens : 0
+      systemOneDecisionsCount.value++
+      if (providerId === 'laya-local') {
+        systemOneLocalTokens.value += inputTokens
+      }
+      else {
+        systemOneCloudTokens.value += inputTokens
+      }
+
       return res
     }
     catch (err: any) {
@@ -206,11 +250,13 @@ export const useSystemOneStore = defineStore('system-one', () => {
     }
   }
 
-  async function runTriage(query: string) {
-    const res = await execute(`Query to classify: ${query}`, JEV_TRIAGE_SCHEMA)
+  async function runTriage(query: string, options?: { signal?: AbortSignal }) {
+    const res = await execute(`Query to classify: ${query}`, JEV_TRIAGE_SCHEMA, undefined, options)
     const ansCat = res.answers?.category || {}
     const ansTemp = res.answers?.temporal_subtype || {}
     const ansScope = res.answers?.search_scope || {}
+    const ansConj = res.answers?.conjunction_structure || {}
+    const ansDecomp = res.answers?.requires_decomposition || {}
 
     const choice = ansCat.choice || 'c4_literal'
     const map: Record<string, number> = {
@@ -227,14 +273,35 @@ export const useSystemOneStore = defineStore('system-one', () => {
       probabilities: ansCat.probabilities || {},
       temporalSubtype: ansTemp.choice || 'none',
       searchScope: ansScope.choice || 'single_session',
+      conjunctionStructure: ansConj.choice || 'single_atomic',
+      conjunctionConfidence: ansConj.confidence ?? 0.8,
+      requiresDecomposition: ansDecomp.noul ?? 0.0,
       latencyMs: lastLatencyMs.value,
     }
   }
 
-  async function runRerank(query: string, candidates: CandidateItem[]) {
-    const pool = candidates.slice(0, 10)
+  async function evaluateReasoningSalience(snippet: string) {
+    const res = await execute(`Reasoning snippet to evaluate: ${snippet}`, JEV_COT_SALIENCE_SCHEMA)
+    const ans = res.answers?.salience || {}
+    const isSalient = ans.choice === 'salient_event'
+    const confidence = typeof ans.confidence === 'number' ? ans.confidence : (isSalient ? 0.85 : 0.2)
+    return {
+      isSalient,
+      choice: ans.choice || 'routine_computation',
+      confidence,
+      probabilities: ans.probabilities || {},
+      latencyMs: lastLatencyMs.value,
+    }
+  }
+
+  async function runRerank(query: string, candidates: CandidateItem[], options?: { signal?: AbortSignal }) {
+    // NOTICE: cap the rerank pool — each candidate becomes a Jev question in
+    // one request; 10-way reranks on every chat turn stall local Laya.
+    const pool = candidates.slice(0, 6)
     if (pool.length === 0)
       return { rankedCandidates: [], latencyMs: 0 }
+    if (options?.signal?.aborted)
+      throw new DOMException('Aborted', 'AbortError')
 
     const questions: Record<string, any> = {}
     for (let idx = 0; idx < pool.length; idx++) {
@@ -247,7 +314,7 @@ export const useSystemOneStore = defineStore('system-one', () => {
       }
     }
 
-    const res = await execute(`Question to answer: ${query}`, questions)
+    const res = await execute(`Question to answer: ${query}`, questions, undefined, options)
     const answers = res.answers || {}
 
     const ranked: RankedCandidateItem[] = pool.map((cand, idx) => {
@@ -385,9 +452,18 @@ export const useSystemOneStore = defineStore('system-one', () => {
     return results
   }
 
+  function resetUsageStats() {
+    systemOneCloudTokens.value = 0
+    systemOneLocalTokens.value = 0
+    systemOneDecisionsCount.value = 0
+  }
+
   function resetState() {
     activeProvider.reset()
     activeModel.reset()
+    systemOneCloudTokens.reset()
+    systemOneLocalTokens.reset()
+    systemOneDecisionsCount.reset()
     lastError.value = null
     lastLatencyMs.value = null
   }
@@ -395,6 +471,9 @@ export const useSystemOneStore = defineStore('system-one', () => {
   return {
     activeProvider,
     activeModel,
+    systemOneCloudTokens,
+    systemOneLocalTokens,
+    systemOneDecisionsCount,
     isExecuting,
     lastLatencyMs,
     lastError,
@@ -405,6 +484,8 @@ export const useSystemOneStore = defineStore('system-one', () => {
     runRerank,
     runAffect,
     classifyEntities,
+    evaluateReasoningSalience,
+    resetUsageStats,
     resetState,
   }
 })

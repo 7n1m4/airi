@@ -95,7 +95,7 @@ function buildConfigValidationResult(plan: ProviderValidationPlan) {
 
 function mapModelsToMetadataModels(providerId: string, models: any[]) {
   return models.map((model: any) => {
-    const capabilities: string[] = []
+    const capabilities: string[] = Array.isArray(model.capabilities) ? [...model.capabilities] : []
 
     // Strict VLM detection based on explicit modalities (OpenRouter/Standard format)
     const inputModalities = model.input_modalities || model.architecture?.input_modalities || []
@@ -108,13 +108,17 @@ function mapModelsToMetadataModels(providerId: string, models: any[]) {
     const nameLower = (model.name || model.display_name || '').toLowerCase()
     const matchesVisionPattern = /vision|image|\bvl\b|-vl|_vl|omni|\b4o\b|\b4\.5\b|pixtral|llava|internvl|florence|moondream|cogvlm|minicpm|gemini-1\.5|gemini-2|gemini-3|claude-3|claude-4/i.test(`${idLower} ${nameLower}`)
 
-    const isVision = hasVisionModality || (model.capabilities?.vision === true) || matchesVisionPattern
+    const hasExplicitVisionCapability = Array.isArray(model.capabilities)
+      ? model.capabilities.includes('vision')
+      : model.capabilities?.vision === true
+
+    const isVision = hasVisionModality || hasExplicitVisionCapability || matchesVisionPattern
 
     if (typeof localStorage !== 'undefined' && localStorage.getItem('airi:debug') === '1') {
       console.log(`[VLM Check] ${model.id}: input=[${inputModalities.join(', ')}] output=[${outputModalities.join(', ')}] modality=${model.architecture?.modality} isVision=${isVision}`)
     }
 
-    if (isVision) {
+    if (isVision && !capabilities.includes('vision')) {
       capabilities.push('vision')
     }
 
@@ -123,7 +127,7 @@ function mapModelsToMetadataModels(providerId: string, models: any[]) {
       name: model.name || model.display_name || model.id,
       provider: providerId,
       description: model.description || '',
-      contextLength: model.context_length || 0,
+      contextLength: model.context_length || model.contextLength || 0,
       capabilities,
       deprecated: false,
     }

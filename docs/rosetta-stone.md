@@ -216,6 +216,14 @@ interface ProviderMetadata {
 - **Provider store**: `packages/stage-ui/src/stores/providers/moondream/index.ts` — `createMoondreamChatProvider` implementing `ChatProvider` with `/chat/completions` interception.
 - **Provider page**: `packages/stage-pages/src/pages/settings/providers/chat/moondream-local.vue`
 
+### Local LLM Reference (Web-RWKV)
+- **Worker**: `packages/stage-ui/src/workers/web-rwkv/worker.ts` — WebGPU RNN executor using `@cryscan/web-rwkv-wasm`.
+- **Adapter**: `packages/stage-ui/src/libs/inference/adapters/web-rwkv.ts` — manages OPFS cache, VRAM estimates, load tokens, and quantization resolution.
+- **Provider store**: `packages/stage-ui/src/stores/providers/web-rwkv/index.ts` — `createWebRwkvChatProvider` with single-slot model caching and streaming chat loops.
+- **Provider page**: `packages/stage-pages/src/pages/settings/providers/chat/web-rwkv.vue`
+- **Domain skill**: [`.agents/skills/airi-rwkv-webgpu-engine/SKILL.md`](../.agents/skills/airi-rwkv-webgpu-engine/SKILL.md)
+- **Quantization Architecture**: See [`docs/design-web-rwkv-quantization-architecture.md`](./design-web-rwkv-quantization-architecture.md). Always use `Session.from_prefab` for quantized models (Int8/NF4); `Session.from_reader` in-browser shader quantization corrupts weights.
+
 ---
 
 ## 7. Module System
@@ -235,6 +243,7 @@ These are serialized inside the AIRI card (`extensions.airi`) and travel with th
 | **Generation** | (card editor only) | `extensions.airi.generation` (maxTokens, temperature, topP, contextWidth, compaction) |
 | **Acting** | (card editor only) | `extensions.airi.acting` (modelExpressionPrompt, speechExpressionPrompt, idleAnimations) |
 | **Heartbeats / Proactivity** | `packages/stage-ui/src/stores/proactivity.ts` (runtime) | `extensions.airi.heartbeats` (interval, prompt, schedule) |
+| **Screen Watching** | `packages/stage-ui/src/stores/modules/screen-watcher.ts` (runtime) | `extensions.airi.screenWatching` (sourceId, interval, gatingMode, sentinel, interestTags; see `docs/design-attention-ecology-screen-watching.md`) |
 | **Short-Term Memory** | `packages/stage-ui/src/stores/memory-short-term.ts` (runtime) | `extensions.airi.shortTermMemory` (windowSize, tokenBudgetPerDay) |
 
 ### Standalone Modules
@@ -249,6 +258,7 @@ These use `localStorage` for settings and are **not** serialized inside the AIRI
 | **Live Session (Gemini)** | `packages/stage-ui/src/stores/modules/live-session.ts` | `notice/gemini.vue` | `settings/gemini/*` |
 | **Artistry Autonomous** | `packages/stage-ui/src/stores/modules/artistry-autonomous.ts` | — | in-memory (director notes in IndexedDB) |
 | **Gaming: Factorio** | `packages/stage-ui/src/stores/modules/gaming-factorio.ts` | — | `settings/factorio/*` |
+| **System 1 (Jev / Laya)** | `packages/stage-ui/src/stores/modules/system-one.ts` | `modules/system-one.vue` | `settings/system-one/*` (fast non-autoregressive discrete decisions; see `docs/design-jev-integrations.md`) |
 
 ### Module Wiring Pattern
 Each module typically follows:
@@ -447,6 +457,8 @@ A game layer on top of the Actor Stage with deep Live2D integration. Implements 
 Cross-window communication relies on named `BroadcastChannel` instances. This is the **canonical registry** — the source of truth is the code (`grep -r "BroadcastChannel" packages apps`), not this table; keep both in sync when adding a channel.
 
 > ⚠️ **Two API styles coexist.** Most channels use VueUse `useBroadcastChannel({ name })`; two use the raw `new BroadcastChannel(...)` constructor (`airi::beat-sync`, `dating-sim-sync`). **Naming is inconsistent** — three conventions are in use: `airi-kebab`, `airi:snake`, and the odd `airi::beat-sync` (double colon). Match the exact existing string when adding a sender or receiver; do not "normalize."
+>
+> **Ownership rules** (no `pinia-plugin-synced` in this fork): single persistence owner per namespace (`isMainWindow()` leader writes, secondaries `hydrateFromStorage()` + live deltas), follower-only secondaries, watchers never re-emit snapshots. Full SOPs in `airi-broadcast-channels` §2.5–2.7.
 
 | Channel Name | Publisher / Domain | Purpose |
 | :--- | :--- | :--- |
@@ -478,6 +490,7 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 | `airi::beat-sync` | `stage-shared/src/beat-sync/eventa.ts` | **(raw `new BroadcastChannel`, note `::`)** Audio beat detection & lip-sync amplitude relay across processes/windows |
 | `dating-sim-sync` | `stores/dating-sim.ts` | **(raw `new BroadcastChannel`)** Dating-sim game-state sync across windows; a dedicated `live2d-dsl-bridge` channel relays DSL motion commands |
 | `airi:inference:web-llm` | `stage-ui/src/libs/inference/adapters/web-llm-channel.ts` | Single-owner WebLLM coordinator (leader election over BroadcastChannel, preventing multi-window VRAM duplication) |
+| `airi:nan0:state-sync` | `stage-ui/src/stores/modules/nan0.ts` | Single-owner Nan0 cognition state sync (Main Stage Window leader broadcasts emotional vectors, reflex badges, and executive decisions to secondary windows like Chatbox) |
 
 ---
 
@@ -517,13 +530,15 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 | `packages/stream-kit/` | Streaming utilities |
 | `packages/electron-eventa/` | Electron Eventa bindings |
 | `packages/font-*` | Font packages (allseto, departure-mono, xiaolai) |
-| `apps/stage-tamagotchi` | Electron app (main + renderer) |
-| `apps/stage-web` | Web app (hosted at `/airi/web-stage/` on GitHub Pages via `.github/workflows/deploy-docs.yml`; build with `pnpm run build:web:pages`) |
-| `.github/workflows/deploy-docs.yml` | GitHub Pages CI deploy workflow (builds Docs to `/airi/` root and Web Stage to `/airi/web-stage/`; local build via `pnpm run build:pages`) |
+| `apps/stage-tamagotchi` | Electron app (main + renderer). Desktop stage: fully self-contained in-process runtime. |
+| `apps/stage-web` | Web app (hosted at `/airi/web-stage/` on GitHub Pages via `.github/workflows/deploy-frontends.yml`; build with `pnpm run build:web:pages`). Web stage: relies on `apps/server` as its backend service. |
+| `apps/stage-pocket` | Mobile app (Capacitor iOS/Android). Pocket stage: hosted natively by Capacitor. |
+| `apps/server` | Dedicated backend service for the Web Stage (`apps/stage-web`) topology (WebSocket channel server, API proxy, storage). Required for web-stage deployments. |
+| `.github/workflows/deploy-frontends.yml` | Frontends CI deploy workflow (builds Docs to `/airi/` root and Web Stage to `/airi/web-stage/`; local build via `pnpm run build:pages`) |
 | `docs/design-web-stage-pages-deployment.md` | Web Stage GitHub Pages deployment architecture & surface reference |
 | `apps/stage-tamagotchi/src/main/services/airi/` | Main process services (discord, widgets, MCP) |
 | `scripts/` | Utility scripts (`yaml-manager.js`, `pr_summary.sh`) |
-| `crates/` | Legacy Tauri desktop app (current desktop is Electron — ignore) |
+| `crates/` | ❌ Removed (formerly legacy Tauri desktop app; superseded by Electron `apps/stage-tamagotchi`) |
 | `docs/` | Proposal docs, reference sheets, how-to guides |
 | `docs/content/en/docs/` | In-app manual content (vitepress) |
 | `scripts/motion-export/` | ONNX texture-export lineage (`compile_onnx.py`, `inspect_sampler.py`, `test_onnx_parity.py`) |
@@ -600,7 +615,25 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 - **Key Mitigation Rules**: (1) Exactly ONE `import.meta.hot.dispose()` callback per module to prevent Vite `disposeMap` overwrites; (2) `hmrEpoch` checks post-await in streaming loops; (3) Controlled accept callbacks for ABI invalidation before store patching; (4) Repository-relative links and `pnpm -F @proj-airi/stage-tamagotchi dev` execution.
 - **Canonical Reference**: Full technical architecture, remedies, and mitigation strategies are documented in [`docs/project-hmr-resilience-architecture.md`](./project-hmr-resilience-architecture.md).
 
+### Multi-Window Single-Leader Cognition (Nan0 & Stage Architecture)
 
+- **Single-Owner Invariant**: `Nan0Kernel` is strictly owned, instantiated, and executed by the **Main Window (`#/`)**, where `isMainWindow()` is `true`. Secondary windows (such as Desktop Chatbox `#/chat` and Actor Stage `#/actor`) are UI display mirrors.
+- **Why Secondary Windows Must NOT Run Nan0Kernel**: Instantiating a second kernel or running `prepareTurn()` in secondary windows creates split-brain state, duplicate System 1 shadow inference, double emotional decay, and competing `localStorage` writes.
+- **Enforcement & Guard**: `ensureKernel()` and `prepareTurn()` explicitly enforce `if (!isMainWindow()) throw/warn`. Secondary windows hydrate on mount/card change via `hydrateFromStorage()` and receive live streaming state over `BroadcastChannel('airi:nan0:state-sync')`.
+- **Regression Protection**: Tested under `packages/stage-ui/src/stores/modules/nan0.test.ts` ("strictly prohibits secondary windows from running prepareTurn or booting Nan0Kernel").
+
+### Proactive Heartbeats vs. Dream State Gating Invariants
+
+- **Heartbeats Are For Active Users**: Heartbeats represent an active desktop companion checking in periodically (`now - lastHeartbeatTime >= intervalMs`).
+- **Presence Gate (`pauseWhenAfk`)**: The only presence gate on heartbeats is to prevent speaking to an empty desk (`idleTimeSec >= afkThresholdMinutes`, default 5m). When the user is away, heartbeats pause to conserve tokens and avoid talking to an empty room.
+- **The Inverted Inactivity Antipattern (Deadlock)**: Never require the user to be inactive/idle (`idleTimeSec >= interval`) to trigger a heartbeat. Requiring continuous inactivity prevents the AI from speaking while the user is using the PC, and mathematically deadlocks with `pauseWhenAfk` whenever `intervalMinutes > afkThresholdMinutes`.
+- **Dream State Is The Strict Inverse**: Background memory consolidation (`dreamState`) strictly requires the user to BE away (`strictAfkGating: true`, `idleTimeSec >= afkThresholdMinutes`). Never conflate Dream State's idle requirement with Heartbeats. Pure gating logic is centralized in `evaluateHeartbeatGating` (`proactivity-telemetry.ts`) and tested under `packages/stage-ui/src/stores/proactivity.test.ts`.
+
+### Web-RWKV In-Browser Quantization (`from_reader` vs `from_prefab`)
+
+- **The "Broken Kernel" Fallacy**: When testing quantized RWKV models in-browser, `Int8` and `NF4` via `Session.from_reader()` emit corrupted token salad. Do NOT conclude the WGSL quantization matrix-vector kernels are broken. The kernels run identically and cleanly in native Rust and in the browser.
+- **Root Cause**: The compute shader quantization pass (`quantize_mat_int8.wgsl` / `quantize_mat_nf4.wgsl`) executed on-the-fly during `Session.from_reader()` suffers from buffer synchronization / workgroup race issues inside browser WebGPU, corrupting weights during quantization.
+- **Canonical Remedy**: Deliver quantized models as pre-baked `.prefab` CBOR binaries loaded via `Session.from_prefab(bytes, SessionType.Chat)`. This bypasses in-browser quantization entirely, loads in ~5.8s, saves 38%–58% in download size and VRAM, and yields 100% coherent English with native `<think>` reasoning. Details in [`docs/design-web-rwkv-quantization-architecture.md`](./design-web-rwkv-quantization-architecture.md).
 
 ---
 
@@ -633,12 +666,16 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 - [[airi-caption-subsystem]]
 - [[airi-character-rendering]]
 - [[airi-codebase-verification]]
+- [[airi-code-testing-hygiene]]
 - [[airi-data-persistence]]
 - [[airi-dating-sim-engine]]
 - [[airi-desktop-chatbox]]
+- [[airi-desktop-lifecycle-power-throttling]]
+- [[airi-infra-library-references]]
 - [[airi-interaction-pipelines]]
 - [[airi-ipc-eventa]]
 - [[airi-llm-dispatch-gateway]]
+- [[airi-local-inference-engines]]
 - [[airi-mcp-integration]]
 - [[airi-memory-retrieval-engine]]
 - [[airi-memory-systems]]

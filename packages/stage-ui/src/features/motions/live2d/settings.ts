@@ -48,9 +48,9 @@ export const useLive2DMotionMagicSettings = defineStore('settings-live2d-motion-
     enabledModels.reset()
     speechDynamicsEnabled.reset()
     intensity.reset()
-    profileId.value = defaultLive2DMotionMagicProfileId
-    skipMouthOpen.value = true
-    forceViewTarget.value = true
+    profileId.reset()
+    skipMouthOpen.reset()
+    forceViewTarget.reset()
   }
 
   return {

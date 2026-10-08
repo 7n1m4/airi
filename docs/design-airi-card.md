@@ -25,7 +25,7 @@ AIRI cards extend the community standard **Character Card Spec V2 / V3** (from `
 | **Card Schema & Types** | [`packages/stage-ui/src/types/card.schema.ts`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-ui/src/types/card.schema.ts) | Valibot runtime schema (`AiriCardSchema`) |
 | **Data Catalog Doc** | [`docs/data-catalog.md`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/docs/data-catalog.md) | Storage layer reference detailing `AiriCard` and `AiriExtension` |
 | **Download Interceptor** | [`apps/stage-tamagotchi/src/main/index.ts`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/apps/stage-tamagotchi/src/main/index.ts) | Electron main process interceptor for webview card downloads |
-| **Upstream Import/Export Service** | `packages/stage-ui/src/services/airi-card-import-export.ts` | Upstream `moeru-ai/airi:main` ZIP package service |
+| **Upstream Import/Export Service** | Upstream-only `packages/stage-ui/src/services/airi-card-import-export.ts` (PR #1998, **not present in this fork** — only `services/speech/*` exists locally) | Upstream `moeru-ai/airi:main` ZIP package service. All `FORMAT` / `manifestSchema` / `sanitizeAiri` / `cardFromCharacterCard` / `MODEL_EXT` / `AiriCardPackageError` symbols below are upstream-claimed, zero local matches. Do not fetch `upstream` remote without explicit user authorization (fork safety). |
 
 ---
 
@@ -158,7 +158,8 @@ During export (`getCardWithExportedBackground`), referenced virtual voice profil
 
 ## 4. Upstream Main Architecture (`moeru-ai/airi:main`)
 
-Upstream main (`moeru-ai/airi:main` PR #1998, commit `5aa44aedd`) introduced a **ZIP archive package format** (`.zip`) implemented in `packages/stage-ui/src/services/airi-card-import-export.ts`.
+Upstream main (`moeru-ai/airi:main` PR #1998, commit `5aa44aedd`) introduced a **ZIP archive package format** (`.zip`) implemented in upstream-only `packages/stage-ui/src/services/airi-card-import-export.ts`.
+> NOTICE: That service file does **not** exist in this fork (`packages/stage-ui/src/services/*` only contains `speech/*`). Section 4 documents upstream behavior from the PR description for export-compatibility targeting only. Source wins over this doc where they disagree.
 
 ### 4.1 ZIP Archive Format & `manifest.json` v1
 
@@ -173,9 +174,10 @@ card-package.zip/
 ```
 
 #### Upstream `manifest.json` (Version 1):
+> CORRECTION (2026-09-28 audit): the `format` below was previously mis-copied as `"airi-card-package"`. Upstream validates `literal('airi-character-card')` (see §4.3) — v1 exports MUST use `"airi-character-card"`.
 ```json
 {
-  "format": "airi-card-package",
+  "format": "airi-character-card",
   "version": 1,
   "createdAt": "2026-07-27T00:00:00.000Z",
   "card": {
@@ -192,9 +194,28 @@ card-package.zip/
 }
 ```
 
-### 4.2 CCv3 `card.json` Structure
+### 4.2 CCv3 `card.json` Structure & Codec (`@proj-airi/ccc`)
 
-Upstream exports `card.json` adhering strictly to **Character Card Spec V3 (CCv3)** via `@proj-airi/ccc`:
+Upstream exports `card.json` adhering strictly to **Character Card Spec V3 (CCv3)** using the `@proj-airi/ccc` codec.
+
+> CORRECTION (2026-09-28 audit): the codec file is **not** `characterCardV3.ts`. Local entry points are `packages/ccc/src/export/json.ts` (`exportToJSON(card): CharacterCardV3`), types in `packages/ccc/src/export/types/character_card_v3.ts`, re-exported via `packages/ccc/src/export/index.ts` (`export type * as ccv3`). ZIP `card.json` MUST be built with `exportToJSON()`, not hand-rolled (current `use-card-export.ts` only has `buildCharaCardV2` for PNG/CCv2).
+
+In upstream's implementation (upstream-claimed, unverified locally — no local `manifestSchema`/envelope validator found):
+- **Envelope Validation**: Validates `spec: 'chara_card_v3'` and numeric regex for `spec_version` (`/^\d+(?:\.\d+)*$/`), classifying versions into `older`, `current`, or `newer`.
+- **Open Unknown Field Preservation**: Uses Valibot `objectWithRest({}, unknown())` on all envelopes, entries, and extension schemas. When reading and round-tripping cards, unknown fields from other frontends (e.g. SillyTavern, Chub, Agnai) or future spec versions are preserved without silent truncation.
+- **CCv3 Standard Assets Array (`assets: Asset[]`)**: Declares standard assets accompanying the card:
+  ```typescript
+  export interface Asset {
+    type: string // e.g. 'icon', 'expression', 'outfit', 'audio'
+    uri: string // e.g. 'ccdefault:', relative path, or data URI
+    name: string // asset identifier
+    ext: string // file extension (png, vrm, wav, etc.)
+  }
+  ```
+- **Embedded Character Book / Lorebook (`character_book: CharacterBook`)**:
+  Supports standard World Info entries with keys, secondary keys, content, priority, insertion order, selective matching, and position flags (`before_char` / `after_char`).
+- **Standard Community Extensions (`extensions`)**:
+  Carries `depth_prompt` (`depth`, `prompt`, `role`), `fav`, `talkativeness`, and `world` alongside `extensions.airi`.
 
 ```json
 {
@@ -207,14 +228,36 @@ Upstream exports `card.json` adhering strictly to **Character Card Spec V3 (CCv3
     "scenario": "...",
     "first_mes": "Hello!",
     "alternate_greetings": [],
+    "group_only_greetings": [],
     "mes_example": "",
     "creator_notes": "",
+    "creator_notes_multilingual": {},
     "system_prompt": "...",
     "post_history_instructions": "...",
     "tags": [],
     "creator": "",
     "character_version": "1.0.0",
+    "source": [],
+    "creation_date": 1700000000,
+    "modification_date": 1700000100,
+    "assets": [
+      {
+        "type": "icon",
+        "uri": "ccdefault:",
+        "name": "main",
+        "ext": "png"
+      }
+    ],
+    "character_book": {
+      "name": "World Lore",
+      "entries": []
+    },
     "extensions": {
+      "depth_prompt": {
+        "depth": 4,
+        "prompt": "",
+        "role": "system"
+      },
       "airi": {
         "modules": {
           "consciousness": { "provider": "openai", "model": "gpt-4o" },
@@ -227,22 +270,85 @@ Upstream exports `card.json` adhering strictly to **Character Card Spec V3 (CCv3
 }
 ```
 
-### 4.3 Single Display Model Packaging
+### 4.3 Upstream Import Handler Nuances & Validation Rules
 
-When exporting, upstream queries `displayModelsStore`, fetches the local file or URL blob for `displayModelId`, and writes it into `models/body-model.<ext>`. On import, it reads the binary array buffer and registers it in `displayModelsStore.addDisplayModel()`.
+When upstream imports a character package via `importAiriCardPackage({ file, displayModelsStore })`, it executes a strict multi-step validation sequence. Any violation throws an `AiriCardPackageError` (`code: 'missing-file' | 'invalid-file'`):
 
-### 4.4 Security & Whitelist Sanitization (`sanitizeAiri`)
+1. **Exact Manifest Format String (`format: "airi-character-card"`)**:
+   - ⚠️ **Critical Discrepancy**: Upstream's manifest format constant is:
+     ```typescript
+     const FORMAT = 'airi-character-card' // NOT 'airi-card-package'
+     const VERSION = 1
+     const CARD_PATH = 'card.json'
+     const MANIFEST_PATH = 'manifest.json'
+     ```
+   - In `manifestSchema`, `format` is validated using `literal('airi-character-card')`. If the manifest specifies `"airi-card-package"`, upstream's `readJsonFile(zip, MANIFEST_PATH, manifestSchema)` will fail Valibot parsing and reject the zip with `invalid-file`.
+   - Therefore, when exporting for upstream compatibility, `manifest.json` **MUST** declare `"format": "airi-character-card"`.
 
-Upstream enforces a strict security whitelist (`sanitizeAiri()`). When importing a card package, it **intentionally strips**:
-- Custom extensions outside the hardcoded whitelist.
-- Agent prompts (`agents`).
-- Acting prompts (`acting`).
-- Dream state & heartbeat parameters.
-- Machine-local file paths and references.
+2. **Card Specification & Version Constraints**:
+   - `manifest.card.path` must strictly be `"card.json"`.
+   - `manifest.card.spec` must strictly be `"chara_card_v3"`.
+   - In `card.json`:
+     - `spec` must be strictly `literal('chara_card_v3')`.
+     - `spec_version` must be strictly `literal('3.0')`.
+
+3. **Display Model Whitelist & Binary Paths**:
+   - `resources.displayModel.path` must point to an existing entry in the ZIP (typically `models/body-model.<ext>`).
+   - `resources.displayModel.format` is validated against a strict picklist of four **format literals** (not file extensions):
+     ```typescript
+     picklist(['live2d-zip', 'spine-zip', 'tachie-zip', 'vrm'])
+     ```
+   - > CORRECTION (2026-09-28 audit): `CardExportDialog.vue:displayModelInfo` currently maps Live2D/Spine to a generic `upstreamFilename: body-model.zip`. That is wrong for v1 — it MUST emit `body-model.<ext>` with matching literal `live2d-zip` / `spine-zip` (`vrm` → `body-model.vrm`). Never emit `tachie-zip` (unsupported in this fork, no `DisplayModelFormat` member).
+   - `resources.displayModel.name` is the original model file name (e.g. `nan0.vrm`).
+   - Upstream imports the model by reading the binary ArrayBuffer, instantiating `new File([data], resource.name)`, and calling `await displayModelsStore.addDisplayModel(resource.format, file)` (local signature: `addDisplayModel(format: DisplayModelFormat, file: File)`).
+   - The resulting newly generated store ID is injected as the character's `displayModelId`.
+
+4. **Sanitization & Whitelist Stripping (`sanitizeAiri`)**:
+   - Upstream deliberately passes the imported card through `cardFromCharacterCard(cardJson, displayModelId)` and `sanitizeAiri()`.
+   - **Allowed in upstream**:
+     - `name`, `nickname`, `version` (defaults to `'1.0.0'`), `description`, `personality`, `scenario`, `first_mes`, `alternate_greetings`, `creator_notes`, `system_prompt`, `post_history_instructions`.
+     - `modules.consciousness`: `{ provider, model }`
+     - `modules.vision`: `{ provider, model }`
+     - `modules.speech`: `{ provider, model, voice_id }`
+     - `modules.displayModelId`: The newly imported model ID.
+     - `modules.artistry`: `{ provider, model, promptPrefix, widgetInstruction, spawnMode, options, autonomousEnabled, autonomousThreshold }`
+   - **Stripped upon import into upstream**:
+     - `acting` (acting cues, expression prompts, mannerisms).
+     - `agents` (custom subagent configurations).
+     - `outfits` (modular outfit variants).
+     - `voice_profiles` (bundled custom virtual voice profiles).
+     - `visual_assets` and `active_concepts`.
+     - `cognition`, `dreamState`, `shortTermMemory`, `screenWatching`, and `eventLedger`.
+     - Scene background bindings (`activeBackgroundId`).
+   - *Implication for our export generator*: When exporting in `moeru-ai Standard (v1)` mode, we should match upstream's clean schema directly. When exporting in `dasilva333 Extended (v2)` mode, we retain all advanced blocks inside `extensions.airi`, while ensuring the root `card.json` still remains valid CCv3 so upstream can still parse the base persona cleanly.
+
+### 4.4 Model Storage Formats & Engine Compatibility (VRM, Live2D, Spine, MMD, Tachie)
+
+In accordance with [`docs/data-catalog.md`](./data-catalog.md) (§3.2) and `packages/stage-ui/src/stores/display-models.ts`, models are stored and handled as follows:
+
+1. **Storage Mechanics in `dasilva333/airi`**:
+   - **Persistence**: Model records are stored in IndexedDB via `localforage` under keys `display-model-{nanoid}` (loader filters out `*-textures` suffix keys; in-memory `displayModelCache` holds max 3 + `MODEL_ID_ALIASES` + builtin presets).
+   - **Retrieval API (2026-09-28 audit)**: there is **no** `getDisplayModelFile()`. Call `await loadDisplayModelsFromIndexedDB()` then `await getDisplayModel(id)` (returns `DisplayModelFile | DisplayModelURL | DisplayModelCloud | preset`) plus `getDisplayModelTextures(id)` for MMD. Handle the union: `type === 'file'` → `toRaw(model.file)` (binary safety: never `JSON.stringify` a `File`/`Blob` proxy); `type === 'url'` → `fetch(url)`; `Cloud`/preset → skip bundling. `tryRewrapModelFile()` may re-wrap stored blobs into `File`.
+   - **Binary format**:
+     - **VRM** (`DisplayModelFormat.VRM`): Single `.vrm` binary `File` object stored directly.
+     - **Live2D** (`DisplayModelFormat.Live2dZip`): A single `.zip` file containing `model3.json`, `.moc3`, textures, motions, and physics.
+     - **Spine 2D** (`DisplayModelFormat.SpineZip`): A single `.zip` file containing `.skel` / `.json`, `.atlas`, and texture `.png`s.
+     - **MMD** (`DisplayModelFormat.PMXZip` / `PMXDirectory`): **Split storage architecture**. The root model file (`.pmx`) is stored under `display-model-{nanoid}`, while all texture files (`MmdTextureFile[]`) are separated and persisted under a secondary IndexedDB key `${id}-textures` (see `addDisplayModelWithTextures`, `getDisplayModelTextures`).
+
+2. **Why MMD (`pmx-zip`) is Excluded from Card Export Packaging**:
+   - In upstream `moeru-ai/airi:main`, MMD is **not supported at all** in their export/import service (`MODEL_EXT` only defines `vrm`, `live2d-zip`, `spine-zip`, and `tachie-zip`).
+   - In our fork, MMD models were decomposed upon initial import into separate IndexedDB keys (`${id}` for the PMX binary and `${id}-textures` for an array of individual texture files).
+   - Rebuilding an MMD archive requires dynamically stitching the PMX and arbitrary loose texture files back into a single valid zip on export. Because of this complexity and lack of upstream parity, MMD export is currently unsupported. If a character is bound to an MMD model, the exporter warns that MMD bundling is disabled and exports only the character card metadata and other assets.
+
+3. **Explicit Clarification: No Tachie in `dasilva333/airi`**:
+   - Upstream includes `tachie-zip` in `MODEL_EXT` (a legacy visual-novel sprite format).
+   - **`dasilva333/airi` does NOT support Tachie**. Our avatar manifestation architecture focuses exclusively on the four supported engines (VRM, Live2D, Spine, and MMD) plus the Unity C# companion (`apps/stage-mate`).
+   - **Agent Invariant**: Never attempt to wire, parse, or export `tachie-zip` models in this fork.
 
 ### 4.5 Upstream UI/UX Constraints
 
-- **No Export Options / Modal**: Exporting in `CardDetailDialog.vue` triggers `exportAiriCardPackage()` instantly with no user choices.
+- **No Export Options / Modal**: Upstream exporting in `CardDetailDialog.vue` triggers `exportAiriCardPackage()` instantly with no user choices.
+- > CORRECTION (2026-09-28 audit): local `CardDetailDialog.vue` has **no** ZIP export — its only model reference is `manifestation.modelId` (:238). ZIP/PNG/JSON export UI lives in `CardExportDialog.vue` (zip/png/json segments; ZIP button currently a placeholder toast, PNG/JSON wired via `use-card-export.ts`).
 - **No Opt-Out Mechanism**: Users cannot opt out of including the display model if it exists locally.
 - **No Copyright Warning**: Offers no licensing or redistribution prompts for restricted 3D/2D models.
 
@@ -252,13 +358,13 @@ Upstream enforces a strict security whitelist (`sanitizeAiri()`). When importing
 
 | Feature / Dimension | Upstream (`moeru-ai/airi:main`) | Current Fork (`dasilva333/airi`) |
 | :--- | :--- | :--- |
-| **Package Extension** | `.zip` | `.png` (SillyTavern V2) / `.json` (AIRI v1) |
-| **Display Model Support** | Bundles 1 local display model binary | Live stage canvas snapshot frame rendering |
-| **Multi-Model Support** | Single model (`displayModelId`) only | Multi-model capable (visual assets, outfits, manifestations) |
-| **Extension Data** | Whitelist sanitized (strips custom fields) | Full schema preservation via Valibot |
-| **Voice Profiles** | Basic provider/model strings | Embeds virtual voice profiles into package |
+| **Package Extension** | `.zip` | `.png` (SillyTavern V2) / `.json` (AIRI v1) / `.zip` (in progress — `CardExportDialog.vue` ZIP tab renders, `exportCardZip` not yet wired) |
+| **Display Model Support** | Bundles 1 local display model binary | Live stage canvas snapshot frame rendering + ZIP bundling (VRM/Live2D/Spine; MMD excluded) |
+| **Multi-Model Support** | Single model (`displayModelId`) only | Multi-model capable (visual assets, outfits, manifestations; v2 manifest `displayModels[]`) |
+| **Extension Data** | Whitelist sanitized (strips custom fields) | Full schema preservation via Valibot (v2); sanitized CCv3 for v1 |
+| **Voice Profiles** | Basic provider/model strings | Embeds virtual voice profiles into package (`voices/*.json`, localStorage `settings/speech/voice-profiles` source) |
 | **Webview Interception** | File picker only (`.zip`) | Electron main process `will-download` interceptor |
-| **Export UI UX** | Single instant action button | Popover actions (PNG / JSON) |
+| **Export UI UX** | Single instant action button | `CardExportDialog.vue` modal (ZIP/PNG/JSON segments, flavor + asset toggles + live file-tree preview) |
 
 ---
 
@@ -271,16 +377,24 @@ To achieve full upstream interoperability while supporting your fork's multi-mod
 ```
 my-character-card.zip
 ├── manifest.json            # Version 2 package manifest with multi-model array
-├── card.json                # CCv3 card metadata (clean references, no inline base64 blobs)
-├── cover.png                # Framed card cover image
-├── background.png           # (Optional) Scene background image
+├── card.json                # CCv3 card metadata via exportToJSON() (clean references, no inline base64 blobs)
+├── cover.png                # Framed card cover image (via composeCardExportPng())
+├── background.png           # (Optional) Scene background image (backgroundStore blob; builtin URLs must be fetch-to-blob first)
 ├── README.md                # (Optional) Character info, model credits, & fork compatibility
 ├── models/
-│   ├── base_model.vrm       # Primary display model
+│   ├── base_model.vrm       # Primary display model (vrm | live2d-zip | spine-zip only; MMD/tachie excluded)
 │   └── casual_outfit.zip    # Secondary Live2D outfit / manifestation
-└── voices/
-    └── custom_voice.json    # Embedded virtual-audio-studio profile
+├── voices/
+│   └── custom_voice.json    # Embedded virtual-audio-studio profile (from localStorage settings/speech/voice-profiles, deduped)
+├── states/                  # (Optional; Added 2026-10-07) RWKV-7 Recurrent State Cartridge
+│   └── character.state      # Raw Float32Array h0 tensor (~6 MB FP16 / ~12.5 MB FP32) for instant zero-prompt roleplay
+└── memories/                # (Optional; LOCKED 2026-09-28: full pillars, export-only, 1 GB zip cap)
+    ├── chat_sessions.json   # Full session records (meta + messages), NOT index metas
+    └── memory.json          # airi-memory:v2 shape filtered to character: STMM + LTMM + lifetime (per universe) + echo
 ```
+> NOTICE: `memories/` was missing from this spec but `CardExportDialog.vue` already previews `memories/chat_sessions.json` when `includeMemories` is on. Spec updated to match UI plus locked scope (all five memory sources, export-only, v2 importer §7 must tolerate absence for older zips).
+>
+> NOTICE (2026-10-07): `states/` defines the portable distribution container for local WebGPU RWKV-7 recurrent state cartridges. Bundling `character.state` allows zero-download, instant zero-prompt companionship when sharing cards between devices.
 
 ### 6.2 Spec v2 `manifest.json` Definition
 
@@ -303,19 +417,35 @@ my-character-card.zip
     ],
     "voiceProfiles": [
       { "id": "voice-1", "path": "voices/custom_voice.json" }
-    ]
+    ],
+    "states": {
+      "rwkv": {
+        "path": "states/character.state",
+        "cartridgeId": "cartridge-sylvia-1.5b-v1",
+        "modelTier": "1.5b",
+        "zeroPromptVerified": true
+      }
+    },
+    "memories": {
+      "chatSessions": { "path": "memories/chat_sessions.json" },
+      "memory": { "path": "memories/memory.json" }
+    }
   }
 }
 ```
 
 ### 6.3 Multi-Model & Clean Asset Bundling
 
-- **No Base64 Bloat**: Cover images and background photos are written as clean binary files (`cover.png`, `background.png`) rather than bloated inline base64 strings inside JSON metadata.
+- **No Base64 Bloat**: Cover images and background photos are written as clean binary files (`cover.png`, `background.png`) rather than bloated inline base64 strings inside JSON metadata. Concretely: strip `preferredBackgroundDataUrl` / inline `voice_profiles` bloat from `card.json` before `exportToJSON()`; emit binaries separately (v1 strips them entirely per upstream whitelist).
 - **Multi-Model Manifest Array**: Supports mapping multiple models per card (e.g., base VRM model + alternative Live2D outfits + manifestation models).
+- **State Cartridge Packaging**: If the character possesses a bound or in-situ conditioned RWKV recurrent state, the binary tensor is extracted from OPFS and packaged as `states/character.state`. At ~12.5 MB (1.5B) or ~6.3 MB (0.4B), it comfortably fits within the 1 GB package cap while offering instant offline roleplay.
+- **Archiver (2026-09-28 audit)**: use **`jszip`** (`jszip: catalog` in `stage-ui` + `stage-pages` package.json; already used by `display-models.ts`, `utils/data-vault/archive.ts`). `fflate` is transitive-only — do not add it. `JSZip.generateAsync({ type: 'blob' })` + existing `downloadBlob()` helper in `use-card-export.ts`.
+- **Asset wiring**: model via `getDisplayModel()` (no `getDisplayModelFile()` exists); background via `backgroundStore.entries.get(id).blob`; voices via `speechStore.savedVoiceProfiles` filtered to `virtual-audio-studio` refs from `modules.speech` + `visual_assets.*.speech`; state via `readCachedState(cartridgeId)`; cover via `composeCardExportPng(activeCoverImageUrl)` (dialog 4-tier: selfie → model preview → author icon → letter monogram).
+- **v2 compatibility warning**: `format: "airi-card-package"` intentionally fails upstream `literal('airi-character-card')` validation — v2 is fork-only until a v2 importer ships. v1 MUST stay parseable as clean CCv3 (only base persona + primary model).
 
-### 6.4 Export Configuration Modal UX (Option B)
+### 6.4 Export Configuration Modal UX (Option B — implemented as `CardExportDialog.vue`)
 
-Instead of instant unconfigurable export, opening Export launches a **Card Package Export Modal** offering full control:
+Implemented (ZIP tab renders; ZIP generation pending `exportCardZip`): flavor `v2 Extended` / `v1 Standard`, toggles `includeModels` / `includeBackground` / `includeVoiceProfiles` / `includeCoverFrame` / `includeMemories` / `generateReadme`, live archive-structure preview, cover-art 4-tier picker, compatibility chips. Original mock below for history:
 
 ```
 +-------------------------------------------------------------+
@@ -366,9 +496,9 @@ This character card package was created using AIRI.
 
 ---
 
-## 7. Import Pipeline Backwards & Forwards Compatibility
+## 7. Import Pipeline Backwards & Forwards Compatibility (PROPOSAL — no ZIP inspector exists locally yet)
 
-To maintain complete compatibility across all versions:
+To maintain complete compatibility across all versions (all ZIP rows below are unimplemented; PNG/JSON rows exist):
 
 1. **File Picker Input**: `<InputFile accept=".zip,.json,.png">`.
 2. **ZIP Inspector**:

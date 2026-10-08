@@ -64,7 +64,7 @@ The complete implementation catalog lives in the [feature report](https://dasilv
 | **Account-backed portable provider vault**³ | ✅ (Cloudflare R2/KV) | ❌ |
 | **Direct provider & model selection**⁴ | ✅ (Full User Custody) | ◐ (Chat/Vision locked to `Auto`) |
 | **Prepaid proprietary inference proxy**⁵ | ❌ (Direct Vendor APIs) | ✅ (Stripe / Flux Credits) |
-| **Guided free-tier catalog & preset templates**⁶ | ✅ (Planned / In Design) | ❌ |
+| **Guided free-tier catalog & preset templates**⁶ | ✅ (Live: Quick-Add & Inline Testing) | ❌ |
 | [**Interactive Live2D scripts, choices, and discoverable gimmicks**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/live2d-runtime/src/dsl/interpreter.ts) | ✅ | ❌ |
 | [**Live2D motion recording and keyframe timeline editing**](https://github.com/moeru-ai/airi/blob/42e3e9e8573d3159d40e637fa11a21e13398ebda/packages/stage-ui/src/features/devtools/motion/live2d/devtools.vue) | ❌ | ✅ |
 | [**Generate reusable VRM animations from text**](https://github.com/dasilva333/airi/blob/fc46a6e5643db37445e1541bd735ccd9ce6bb34e/packages/stage-ui/src/stores/modules/text-to-motion.ts) | ✅ | ❌ |
@@ -159,7 +159,7 @@ An AI companion interacts with your most personal thoughts, daily habits, emotio
 ## Download
 
 <p float="left" align="center">
-  <a href="https://github.com/dasilva333/airi/releases/download/v0.9.33-stable.20260919/airi-dasilva333-0.9.33-stable.20260919-windows-x64-setup.exe">
+  <a href="https://github.com/dasilva333/airi/releases/download/v0.9.37-stable.20261008/airi-dasilva333-0.9.37-stable.20261008-windows-x64-setup.exe">
     <picture>
       <source
         width="33%"
@@ -174,7 +174,7 @@ An AI companion interacts with your most personal thoughts, daily habits, emotio
       <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.windows.light.en-US.avif" alt="Download AIRI for Windows" />
     </picture>
   </a>
-  <a href="https://github.com/dasilva333/airi/releases/download/v0.9.33-stable.20260919/airi-dasilva333-0.9.33-stable.20260919-darwin-arm64.dmg">
+  <a href="https://github.com/dasilva333/airi/releases/download/v0.9.37-stable.20261008/airi-dasilva333-0.9.37-stable.20261008-darwin-arm64.dmg">
     <picture>
       <source
         width="33%"
@@ -207,7 +207,7 @@ An AI companion interacts with your most personal thoughts, daily habits, emotio
 </p>
 
 <p float="left" align="center">
-  <a href="https://github.com/dasilva333/airi/releases/download/v0.9.33-stable.20260919/AIRI-0.9.33-stable.20260919-android.apk">
+  <a href="https://github.com/dasilva333/airi/releases/download/v0.9.37-stable.20261008/AIRI-0.9.37-stable.20261008-android.apk">
     <picture>
       <source
         width="33%"
@@ -222,7 +222,7 @@ An AI companion interacts with your most personal thoughts, daily habits, emotio
       <img width="33%" src="./docs/content/public/assets/download-buttons/download-buttons.mobile.light.en-US.avif" alt="Download AIRI for Android" />
     </picture>
   </a>
-  <a href="https://github.com/dasilva333/airi/releases/download/v0.9.33-stable.20260919/AIRI-0.9.33-stable.20260919-ios.ipa">
+  <a href="https://github.com/dasilva333/airi/releases/download/v0.9.37-stable.20261008/AIRI-0.9.37-stable.20261008-ios.ipa">
     <picture>
       <source
         width="33%"

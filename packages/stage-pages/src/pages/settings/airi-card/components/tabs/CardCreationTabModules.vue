@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { DisplayModel } from '@proj-airi/stage-ui/stores/display-models'
 
-import { BrainModelPicker } from '@proj-airi/stage-ui/components/scenarios/chat'
 import { ModelSelectorDialog } from '@proj-airi/stage-ui/components/scenarios/dialogs/model-selector'
 import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
@@ -12,29 +11,22 @@ import { useI18n } from 'vue-i18n'
 import VoiceCreatorModal from '../VoiceCreatorModal.vue'
 
 const props = defineProps<{
-  consciousnessProviderOptions: { value: string, label: string }[]
-  consciousnessModelOptions: { value: string, label: string }[]
   speechProviderOptions: { value: string, label: string }[]
   speechModelOptions: { value: string, label: string }[]
   speechVoiceOptions: { value: string, label: string }[]
   displayModelOptions: { value: string, label: string }[]
   sceneOptions: { value: string, label: string }[]
-  consciousnessProviderPlaceholder: string
-  defaultConsciousnessModelPlaceholder: string
   speechProviderPlaceholder: string
   defaultSpeechModelPlaceholder: string
   defaultSpeechVoiceIdPlaceholder: string
   defaultDisplayModelIdPlaceholder: string
-  consciousnessProviderActive: boolean
   speechProviderActive: boolean
   hasVisualAssets?: boolean
 }>()
 
 const emit = defineEmits<{
-  (e: 'studio'): void
+  (e: 'staging'): void
 }>()
-const selectedConsciousnessProvider = defineModel<string>('selectedConsciousnessProvider', { required: true })
-const selectedConsciousnessModel = defineModel<string>('selectedConsciousnessModel', { required: true })
 const selectedSpeechProvider = defineModel<string>('selectedSpeechProvider', { required: true })
 const selectedSpeechModel = defineModel<string>('selectedSpeechModel', { required: true })
 const selectedSpeechVoiceId = defineModel<string>('selectedSpeechVoiceId', { required: true })
@@ -92,28 +84,90 @@ function handleSaveVoice(payload: { baseProvider: string, baseModel: string, bas
 <template>
   <div class="tab-content ml-auto mr-auto w-95%">
     <p class="mb-3">
-      {{ t('settings.pages.card.creation.modules_info') }}
+      {{ t('settings.pages.card.creation.presence_info', t('settings.pages.card.creation.modules_info')) }}
     </p>
 
     <div :class="['grid', 'grid-cols-1', 'sm:grid-cols-2', 'gap-4', 'ml-auto', 'mr-auto', 'w-90%']">
-      <!-- Row 1 Left: Consciousness (LLM) -->
-      <div :class="['flex', 'flex-col', 'gap-2']">
+      <!-- Row 1: Models / Avatar (Span 2 - Top Headline Anchor) -->
+      <div :class="['flex', 'flex-col', 'gap-2', 'sm:col-span-2']">
         <label :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']">
-          <div i-lucide:brain />
-          Consciousness (LLM)
+          <div i-solar:user-circle-bold-duotone />
+          Models / Avatar
         </label>
-        <BrainModelPicker
-          v-model:provider="selectedConsciousnessProvider"
-          v-model:model="selectedConsciousnessModel"
-          variant="button"
-          title="Select Consciousness LLM"
-          side="bottom"
-          class="w-full"
+
+        <div
+          class="flex items-center justify-between border border-neutral-200 rounded-xl bg-neutral-50/50 p-2.5 dark:border-neutral-800 dark:bg-neutral-900/30"
+        >
+          <div class="flex items-center gap-3 overflow-hidden">
+            <!-- Preview Image -->
+            <div class="h-12 w-12 flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-950">
+              <img
+                v-if="selectedModel?.previewImage"
+                :src="selectedModel.previewImage"
+                class="h-full w-full object-cover"
+              >
+              <div v-else class="i-solar:gallery-bold text-xl text-neutral-300 dark:text-neutral-700" />
+            </div>
+
+            <!-- Model Info -->
+            <div class="min-w-0 flex flex-col">
+              <span class="truncate text-xs text-neutral-700 font-bold dark:text-neutral-200">
+                {{ selectedDisplayModelId === 'none' ? 'None (Text-Only Companion)' : (selectedModel?.name || 'Inherit Default') }}
+              </span>
+              <span
+                v-if="selectedDisplayModelId === 'none'"
+                class="mt-0.5 self-start rounded bg-neutral-500/10 px-1.5 py-0.2 text-[8px] text-neutral-600 font-bold uppercase dark:bg-neutral-800 dark:text-neutral-400"
+              >
+                Text-Only
+              </span>
+              <span
+                v-else-if="selectedModel"
+                class="mt-0.5 self-start rounded bg-primary-500/10 px-1.5 py-0.2 text-[8px] text-primary-500 font-bold uppercase"
+              >
+                {{ formatLabel }}
+              </span>
+              <span
+                v-else
+                class="mt-0.5 self-start rounded bg-neutral-200/50 px-1.5 py-0.2 text-[8px] text-neutral-500 font-bold uppercase dark:bg-neutral-800"
+              >
+                Default
+              </span>
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-1.5">
+            <button
+              v-if="selectedDisplayModelId && selectedDisplayModelId !== 'none'"
+              type="button"
+              class="h-8 flex items-center justify-center gap-1 border border-neutral-200 rounded-lg bg-neutral-100/60 px-2 text-xs text-neutral-600 font-medium transition-all dark:border-neutral-800 dark:bg-neutral-900/60 hover:bg-neutral-200/60 dark:text-neutral-400 dark:hover:bg-neutral-800"
+              title="Set to None (Text-Only Companion)"
+              @click="selectedDisplayModelId = 'none'"
+            >
+              <div class="i-solar:close-circle-linear text-xs" />
+              <span>None</span>
+            </button>
+            <button
+              type="button"
+              class="h-8 flex items-center justify-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-3 text-xs text-neutral-700 font-semibold shadow-sm transition-all dark:border-neutral-800 dark:bg-neutral-900 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              @click="modelSelectorOpen = true"
+            >
+              <div class="i-solar:gallery-send-bold-duotone text-xs" />
+              <span>{{ selectedDisplayModelId ? 'Change Avatar' : 'Select Avatar' }}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Model Selector Dialog Component -->
+        <ModelSelectorDialog
+          v-model:show="modelSelectorOpen"
+          :selected-model="selectedModel"
+          @pick="(model) => selectedDisplayModelId = model?.id || ''"
         />
       </div>
 
-      <!-- Row 1 Right: Voice / Speech Button -->
-      <div :class="['flex', 'flex-col', 'gap-2']">
+      <!-- Row 2: Voice / Speech Button (Span 2) -->
+      <div :class="['flex', 'flex-col', 'gap-2', 'sm:col-span-2']">
         <label :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']">
           <div i-lucide:music />
           Voice / Speech
@@ -145,77 +199,17 @@ function handleSaveVoice(payload: { baseProvider: string, baseModel: string, bas
         <div class="flex items-start gap-2">
           <div class="i-solar:info-circle-bold-duotone mt-0.5 shrink-0 text-base text-amber-600 dark:text-amber-400" />
           <p>
-            This card contains Studio actor concepts (<code class="rounded bg-amber-500/20 px-1 py-0.5 text-[11px] font-mono">visual_assets</code>), so voices are managed dynamically per actor rather than globally. This field serves as a base display / fallback value. To configure an actor's voice, open <strong>Studio</strong>, click the <strong>Edit</strong> button on the target actor in the <strong>Concept Registry</strong>, switch to the <strong>Speech</strong> tab, and assign their voice there.
+            This card contains Staging actor concepts (<code class="rounded bg-amber-500/20 px-1 py-0.5 text-[11px] font-mono">visual_assets</code>), so voices are managed dynamically per actor rather than globally. This field serves as a base display / fallback value. To configure an actor's voice, open <strong>Staging</strong>, click the <strong>Edit</strong> button on the target actor in the <strong>Concept Registry</strong>, switch to the <strong>Speech</strong> tab, and assign their voice there.
           </p>
         </div>
         <button
           type="button"
           class="ml-6 inline-flex items-center self-start gap-1.5 text-[11px] text-amber-700 font-bold dark:text-amber-300 hover:underline"
-          @click="emit('studio')"
+          @click="emit('staging')"
         >
           <div class="i-solar:clapperboard-play-bold-duotone text-xs" />
-          <span>Configure actor voices in Studio &rarr;</span>
+          <span>Configure actor voices in Staging &rarr;</span>
         </button>
-      </div>
-
-      <!-- Row 2: Models / Avatar (Span 2) -->
-      <div :class="['flex', 'flex-col', 'gap-2', 'sm:col-span-2']">
-        <label :class="['flex', 'flex-row', 'items-center', 'gap-2', 'text-sm', 'text-neutral-500', 'dark:text-neutral-400']">
-          <div i-solar:user-circle-bold-duotone />
-          Models / Avatar
-        </label>
-
-        <div
-          class="flex items-center justify-between border border-neutral-200 rounded-xl bg-neutral-50/50 p-2.5 dark:border-neutral-800 dark:bg-neutral-900/30"
-        >
-          <div class="flex items-center gap-3 overflow-hidden">
-            <!-- Preview Image -->
-            <div class="h-12 w-12 flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-neutral-100 dark:bg-neutral-950">
-              <img
-                v-if="selectedModel?.previewImage"
-                :src="selectedModel.previewImage"
-                class="h-full w-full object-cover"
-              >
-              <div v-else class="i-solar:gallery-bold text-xl text-neutral-300 dark:text-neutral-700" />
-            </div>
-
-            <!-- Model Info -->
-            <div class="min-w-0 flex flex-col">
-              <span class="truncate text-xs text-neutral-700 font-bold dark:text-neutral-200">
-                {{ selectedModel?.name || 'Inherit Default' }}
-              </span>
-              <span
-                v-if="selectedModel"
-                class="mt-0.5 self-start rounded bg-primary-500/10 px-1.5 py-0.2 text-[8px] text-primary-500 font-bold uppercase"
-              >
-                {{ formatLabel }}
-              </span>
-              <span
-                v-else
-                class="mt-0.5 self-start rounded bg-neutral-200/50 px-1.5 py-0.2 text-[8px] text-neutral-500 font-bold uppercase dark:bg-neutral-800"
-              >
-                Default
-              </span>
-            </div>
-          </div>
-
-          <!-- Select Trigger Button -->
-          <button
-            type="button"
-            class="h-8 flex items-center justify-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-3 text-xs text-neutral-700 font-semibold shadow-sm transition-all dark:border-neutral-800 dark:bg-neutral-900 hover:bg-neutral-50 dark:text-neutral-300 dark:hover:bg-neutral-800"
-            @click="modelSelectorOpen = true"
-          >
-            <div class="i-solar:gallery-send-bold-duotone text-xs" />
-            <span>Select Avatar</span>
-          </button>
-        </div>
-
-        <!-- Model Selector Dialog Component -->
-        <ModelSelectorDialog
-          v-model:show="modelSelectorOpen"
-          :selected-model="selectedModel"
-          @pick="(model) => selectedDisplayModelId = model?.id || ''"
-        />
       </div>
 
       <!-- Row 3: Preferred Background (Span 2) -->

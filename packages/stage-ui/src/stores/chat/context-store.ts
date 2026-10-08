@@ -6,8 +6,27 @@ import { readonly, ref, toRaw } from 'vue'
 
 import { getEventSourceKey } from '../../utils/event-source'
 
+interface ChatContextHotData {
+  activeContextsMap?: Map<string, ContextMessage[]>
+}
+
+function getHotData(): ChatContextHotData | undefined {
+  if (!import.meta.hot)
+    return undefined
+  const data = import.meta.hot.data as { chatContext?: ChatContextHotData }
+  data.chatContext ??= {}
+  return data.chatContext
+}
+
 export const useChatContextStore = defineStore('chat-context', () => {
-  let currentActiveContexts = new Map<string, ContextMessage[]>()
+  // hot.data preservation: this closure-local Map is the authoritative
+  // registry but is NOT part of Pinia $state, so stock HMR patching would
+  // drop it while keeping the stale reactive mirror. Adopt the preserved Map
+  // (mutated in place, so the stash stays live) or start fresh.
+  const hotData = getHotData()
+  let currentActiveContexts = hotData?.activeContextsMap ?? new Map<string, ContextMessage[]>()
+  if (hotData)
+    hotData.activeContextsMap = currentActiveContexts
 
   const activeContextsMirror = ref<Record<string, ContextMessage[]>>({})
   const activeContexts = readonly(activeContextsMirror)
@@ -47,6 +66,9 @@ export const useChatContextStore = defineStore('chat-context', () => {
 
   function resetContexts() {
     currentActiveContexts = new Map<string, ContextMessage[]>()
+    // Re-point the stash: resetContexts reassigns (not mutates) the registry.
+    if (hotData)
+      hotData.activeContextsMap = currentActiveContexts
     syncRegistrySnapshot()
   }
 

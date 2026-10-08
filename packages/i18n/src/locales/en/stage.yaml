@@ -8,9 +8,9 @@ chat:
       message). Please check your max token budget to ensure the LLM has enough
       room to generate a displayed response.
   reasoning: Reasoning
-  reasoning_only: The model only generated a reasoning response (chain of thought message).
-    Please check your max token budget to ensure the LLM has enough room to
-    generate a displayed response.
+  reasoning_only: The model only generated a reasoning response (chain of thought
+    message). Please check your max token budget to ensure the LLM has enough
+    room to generate a displayed response.
 message: Say something...
 operations:
   load-models: Load Models
@@ -42,3 +42,14 @@ profile-switcher:
   save-as-new: Save as New Profile
   manage: Manage Profiles
 waiting: Waiting
+startup:
+  milestones:
+    core_services: Initializing core system services...
+    sync_engine: Restoring local state and storage...
+    character_card: Loading character persona...
+    stage_actor: Preparing avatar shaders & textures...
+    stage_actor_skipped: Text-only companion active (stage bypassed)
+  ready: Ready!
+  timeout: Startup timed out after 10 seconds.
+  continue-without-model: Continue without avatar
+  retry: Retry

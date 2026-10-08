@@ -32,6 +32,9 @@ const props = defineProps<{
   onNext: () => void
   onPrevious: () => void
 }>()
+const presetLive2dPreview = new URL('../../../../../../assets/live2d/models/hiyori/preview.png', import.meta.url).href
+const presetVrmAvatarAPreview = new URL('../../../../../../assets/vrm/models/AvatarSample-A/preview.png', import.meta.url).href
+const presetVrmAvatarBPreview = new URL('../../../../../../assets/vrm/models/AvatarSample-B/preview.png', import.meta.url).href
 
 const { t } = useI18n()
 
@@ -973,8 +976,8 @@ async function generateStoryIdeas() {
           actingCapabilities = {
             format: '3D/2D',
             modelName: vesselName.value,
-            whitelistedExpressions: caps.expressions || [],
-            whitelistedMotions: caps.motions || [],
+            whitelistedExpressions: (caps.expressionCapabilities || []).filter(c => c.usable).map(c => c.label || c.rawKey),
+            whitelistedMotions: (caps.motionCapabilities || []).filter(c => c.usable).map(c => c.label || c.rawKey),
           }
         }
       }
@@ -1044,6 +1047,40 @@ const vesselName = computed(() => {
     return `${custom.name || custom.id} (Custom)`
   return id
 })
+
+const vesselPreviewUrl = computed(() => {
+  const id = draft.state.vesselDisplayModelId
+  if (!id || id === 'preset-live2d-2')
+    return presetLive2dPreview
+  if (id === 'preset-vrm-2')
+    return presetVrmAvatarBPreview
+  if (id === 'preset-vrm-1')
+    return presetVrmAvatarAPreview
+
+  const spotlight = SPOTLIGHT_MODELS.find(m => m.id === id)
+  if (spotlight?.previewUrl)
+    return spotlight.previewUrl
+
+  const custom = displayModelsStore.displayModels.find(m => m.id === id)
+  if (custom) {
+    if ('previewImage' in custom && custom.previewImage)
+      return custom.previewImage
+    if ('authorIcon' in custom && custom.authorIcon)
+      return custom.authorIcon
+  }
+
+  return ''
+})
+
+function useVesselPreviewAsAvatar() {
+  if (!vesselPreviewUrl.value) {
+    toast.error('No preview image available for current vessel')
+    return
+  }
+  customAvatar.value = vesselPreviewUrl.value
+  syncCreatorDraft()
+  toast.success(`Applied preview image from ${vesselName.value}!`)
+}
 
 const activePersonaLabel = computed(() => {
   if (activeTab.value === 'creator' || draft.state.personaSource === 'creator') {
@@ -1491,60 +1528,79 @@ onBeforeUnmount(() => {
 
           <!-- Mode A: Custom Image Upload & Metadata -->
           <div v-if="identityMode === 'custom'" :class="['flex flex-col sm:flex-row items-start gap-4 pt-1']">
-            <!-- Avatar Dropzone / Preview -->
-            <div
-              :class="[
-                'relative w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-2 border-dashed flex-shrink-0 flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden',
-                customAvatar
-                  ? 'border-primary-500/50 bg-primary-500/5'
-                  : 'border-neutral-300 dark:border-neutral-700 hover:border-primary-500 bg-neutral-50 dark:bg-neutral-800/50',
-              ]"
-              @click="triggerAvatarFilePicker"
-              @dragover.prevent
-              @drop.prevent="handleAvatarDrop"
-            >
-              <img
-                v-if="customAvatar"
-                :src="customAvatar"
-                alt="Avatar Preview"
-                class="h-full w-full object-cover"
-              >
-              <div v-else :class="['flex flex-col items-center justify-center p-2 text-center text-neutral-400 dark:text-neutral-500']">
-                <div :class="['i-solar:cloud-upload-bold-duotone h-8 w-8 mb-1 text-primary-500/70']" />
-                <span :class="['text-[11px] font-semibold text-neutral-600 dark:text-neutral-300']">Upload Photo</span>
-                <span :class="['text-[9px] text-neutral-400']">PNG, JPG, WebP</span>
-              </div>
-
-              <!-- Hover Overlay to Change or Remove -->
+            <!-- Avatar Dropzone / Preview & From Vessel Control -->
+            <div :class="['w-28 sm:w-32 flex-shrink-0 flex flex-col gap-2']">
+              <!-- Top Box: Dropzone or Preview -->
               <div
-                v-if="customAvatar"
-                :class="['absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-semibold gap-1.5 backdrop-blur-2xs p-1']"
+                :class="[
+                  'relative rounded-2xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all overflow-hidden',
+                  customAvatar
+                    ? 'w-28 h-28 sm:w-32 sm:h-32 border-primary-500/50 bg-primary-500/5'
+                    : 'w-full h-15 sm:h-16 border-neutral-300 dark:border-neutral-700 hover:border-primary-500 bg-neutral-50 dark:bg-neutral-800/50',
+                ]"
+                @click="triggerAvatarFilePicker"
+                @dragover.prevent
+                @drop.prevent="handleAvatarDrop"
               >
-                <button
-                  type="button"
-                  :class="['flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/20 hover:bg-white/30 transition-colors cursor-pointer w-20 justify-center']"
-                  @click.stop="triggerAvatarFilePicker"
+                <img
+                  v-if="customAvatar"
+                  :src="customAvatar"
+                  alt="Avatar Preview"
+                  class="h-full w-full object-cover"
                 >
-                  <div :class="['i-solar:restart-bold-duotone h-3.5 w-3.5']" />
-                  <span>Change</span>
-                </button>
-                <button
-                  type="button"
-                  :class="['flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/85 hover:bg-rose-600 transition-colors cursor-pointer text-white w-20 justify-center shadow-xs']"
-                  @click.stop="removeAvatarImage"
+                <div v-else :class="['flex flex-col items-center justify-center p-1.5 text-center leading-tight']">
+                  <span :class="['text-[11px] font-semibold text-neutral-600 dark:text-neutral-300']">Upload Photo</span>
+                  <span :class="['text-[9px] text-neutral-400 mt-0.5']">PNG, JPG, WebP</span>
+                </div>
+
+                <!-- Hover Overlay to Change or Remove -->
+                <div
+                  v-if="customAvatar"
+                  :class="['absolute inset-0 bg-black/50 opacity-0 hover:opacity-100 transition-opacity flex flex-col items-center justify-center text-white text-[10px] font-semibold gap-1.5 backdrop-blur-2xs p-1']"
                 >
-                  <div :class="['i-solar:trash-bin-trash-bold-duotone h-3.5 w-3.5']" />
-                  <span>Remove</span>
-                </button>
+                  <button
+                    type="button"
+                    :class="['flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/20 hover:bg-white/30 transition-colors cursor-pointer w-20 justify-center']"
+                    @click.stop="triggerAvatarFilePicker"
+                  >
+                    <div :class="['i-solar:restart-bold-duotone h-3.5 w-3.5']" />
+                    <span>Change</span>
+                  </button>
+                  <button
+                    type="button"
+                    :class="['flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-500/85 hover:bg-rose-600 transition-colors cursor-pointer text-white w-20 justify-center shadow-xs']"
+                    @click.stop="removeAvatarImage"
+                  >
+                    <div :class="['i-solar:trash-bin-trash-bold-duotone h-3.5 w-3.5']" />
+                    <span>Remove</span>
+                  </button>
+                </div>
+
+                <input
+                  ref="avatarFileInput"
+                  type="file"
+                  accept="image/png, image/jpeg, image/webp, image/gif"
+                  class="hidden"
+                  @change="handleAvatarFileSelected"
+                >
               </div>
 
-              <input
-                ref="avatarFileInput"
-                type="file"
-                accept="image/png, image/jpeg, image/webp, image/gif"
-                class="hidden"
-                @change="handleAvatarFileSelected"
+              <!-- Bottom Button: From Vessel -->
+              <button
+                type="button"
+                :disabled="!vesselPreviewUrl"
+                :title="vesselPreviewUrl ? `Apply thumbnail from ${vesselName}` : 'No vessel thumbnail available'"
+                :class="[
+                  'w-full flex items-center justify-center gap-1.5 py-1.5 px-2 rounded-xl text-[11px] font-semibold transition-all border shadow-2xs',
+                  vesselPreviewUrl
+                    ? 'cursor-pointer border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 text-neutral-700 dark:text-neutral-200 hover:border-primary-500 hover:text-primary-600 dark:hover:text-primary-400 active:scale-97'
+                    : 'opacity-40 cursor-not-allowed border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-800/40 text-neutral-400',
+                ]"
+                @click="useVesselPreviewAsAvatar"
               >
+                <div :class="['i-solar:user-rounded-bold-duotone h-3.5 w-3.5 text-primary-500']" />
+                <span>From Vessel</span>
+              </button>
             </div>
 
             <!-- Identity Metadata (Name, Series, Tags) -->

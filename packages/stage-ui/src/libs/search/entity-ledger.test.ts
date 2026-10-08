@@ -158,4 +158,242 @@ describe('entityLedger', () => {
     expect(labels).not.toContain('Obviously')
     expect(labels).not.toContain('Goodnight')
   })
+
+  it('filters out conversational stopwords, pronouns, and onomatopoeia even without System 1', async () => {
+    const { extractFragmentsFromText, extractTurnKnowledge } = await import('./ledger-priming')
+    const ledger = new EntityLedger()
+
+    // Test text loaded with typical dialogue noise: "Hey", "They", "Now", "Kyaa", "Eeeep", "Maybe", "Could"
+    const text = 'Hey! They could bring snacks now. Maybe Asuka and Shinji want some? Kyaa! Eeeep!'
+    const fragments = extractFragmentsFromText(text)
+
+    expect(fragments.mentions).toContain('Asuka')
+    expect(fragments.mentions).toContain('Shinji')
+    expect(fragments.mentions).not.toContain('Hey')
+    expect(fragments.mentions).not.toContain('They')
+    expect(fragments.mentions).not.toContain('Now')
+    expect(fragments.mentions).not.toContain('Maybe')
+    expect(fragments.mentions).not.toContain('Could')
+    expect(fragments.mentions).not.toContain('Kyaa')
+    expect(fragments.mentions).not.toContain('Eeeep')
+
+    extractTurnKnowledge(
+      text,
+      {
+        id: 'turn-stopword-1',
+        speaker: 'User',
+        text,
+        timestamp: 1720000002000,
+      },
+      ledger,
+    )
+
+    const labels = Array.from(ledger.entities.values()).map(e => e.label)
+    expect(labels).toContain('Asuka')
+    expect(labels).toContain('Shinji')
+    expect(labels).toContain('User')
+    expect(labels).not.toContain('Hey')
+    expect(labels).not.toContain('They')
+    expect(labels).not.toContain('Now')
+    expect(labels).not.toContain('Maybe')
+    expect(labels).not.toContain('Could')
+    expect(labels).not.toContain('Kyaa')
+    expect(labels).not.toContain('Eeeep')
+  })
+
+  it('peels leading grammatical words from sentence starters and prevents "And Kyo", "As NanO", "And Richard" from forming compound entities', async () => {
+    const { extractFragmentsFromText, extractTurnKnowledge } = await import('./ledger-priming')
+    const ledger = new EntityLedger()
+
+    const text = 'And Kyo, what do you think? As NanO pointed out earlier, we should proceed. User: And Richard agreed with us.'
+    const fragments = extractFragmentsFromText(text)
+
+    // Mentions must extract the real names, NOT the conjunction-polluted compounds
+    expect(fragments.mentions).toContain('Kyo')
+    expect(fragments.mentions).toContain('NanO')
+    expect(fragments.mentions).toContain('Richard')
+    expect(fragments.mentions).not.toContain('And Kyo')
+    expect(fragments.mentions).not.toContain('As NanO')
+    expect(fragments.mentions).not.toContain('And Richard')
+
+    extractTurnKnowledge(
+      text,
+      {
+        id: 'turn-peel-1',
+        speaker: 'User',
+        text,
+        timestamp: 1720000003000,
+      },
+      ledger,
+    )
+
+    const labels = Array.from(ledger.entities.values()).map(e => e.label)
+    expect(labels).toContain('Kyo')
+    expect(labels).toContain('NanO')
+    expect(labels).toContain('Richard')
+    expect(labels).toContain('User')
+    expect(labels).not.toContain('And Kyo')
+    expect(labels).not.toContain('As NanO')
+    expect(labels).not.toContain('And Richard')
+  })
+
+  describe('pCL Contradiction Resolution & Invalidation', () => {
+    it('creates new claims with isCurrent: true', () => {
+      const ledger = new EntityLedger()
+      const res = ledger.applyPCLClaim({
+        subject: 'Sam',
+        predicate: 'likes',
+        object: 'pickles',
+        action: 'new',
+      })
+
+      expect(res.actionTaken).toBe('created')
+      const claims = ledger.queryClaims('Sam', 'likes', true)
+      expect(claims).toHaveLength(1)
+      expect(claims[0].object).toBe('pickles')
+      expect(claims[0].qualifiers?.isCurrent).toBe(true)
+    })
+
+    it('reinforces existing claims by incrementing reinforcement count', () => {
+      const ledger = new EntityLedger()
+      ledger.applyPCLClaim({
+        subject: 'Sam',
+        predicate: 'likes',
+        object: 'pickles',
+        action: 'new',
+      })
+
+      const res = ledger.applyPCLClaim({
+        subject: 'Sam',
+        predicate: 'likes',
+        object: 'pickles',
+        action: 'reinforce',
+        evidenceTurnId: 'turn-99',
+      })
+
+      expect(res.actionTaken).toBe('reinforced')
+      const claims = ledger.queryClaims('Sam', 'likes', true)
+      expect(claims).toHaveLength(1)
+      expect(claims[0].qualifiers?.reinforcementCount).toBe(2)
+      expect(claims[0].evidence).toContain('turn-99')
+    })
+
+    it('updates beliefs by superseding prior claims (Predict-Calibrate-Learn)', () => {
+      const ledger = new EntityLedger()
+      // Initial belief: Sam likes pickles
+      const initial = ledger.applyPCLClaim({
+        subject: 'Sam',
+        predicate: 'likes',
+        object: 'pickles',
+        action: 'new',
+      })
+
+      // Evolving truth / Contradiction: Sam now hates pickles (or prefers olives)
+      const updateRes = ledger.applyPCLClaim({
+        subject: 'Sam',
+        predicate: 'likes',
+        object: 'olives',
+        action: 'update',
+      })
+
+      expect(updateRes.actionTaken).toBe('updated')
+
+      // Query only current beliefs
+      const currentClaims = ledger.queryClaims('Sam', 'likes', true)
+      expect(currentClaims).toHaveLength(1)
+      expect(currentClaims[0].object).toBe('olives')
+      expect(currentClaims[0].qualifiers?.isCurrent).toBe(true)
+
+      // Query all claims (historical audit trail)
+      const allClaims = ledger.queryClaims('Sam', 'likes', false)
+      expect(allClaims).toHaveLength(2)
+
+      const oldClaim = allClaims.find(c => c.claimId === initial.claimId)
+      expect(oldClaim?.qualifiers?.isCurrent).toBe(false)
+      expect(oldClaim?.qualifiers?.supersededBy).toBe(updateRes.claimId)
+    })
+
+    it('invalidates claims without erasing historical provenance', () => {
+      const ledger = new EntityLedger()
+      ledger.applyPCLClaim({
+        subject: 'Alice',
+        predicate: 'lives_in',
+        object: 'Paris',
+        action: 'new',
+      })
+
+      const invRes = ledger.applyPCLClaim({
+        subject: 'Alice',
+        predicate: 'lives_in',
+        object: 'Paris',
+        action: 'invalidate',
+      })
+
+      expect(invRes.actionTaken).toBe('invalidated')
+
+      // Active beliefs: empty
+      expect(ledger.queryClaims('Alice', 'lives_in', true)).toHaveLength(0)
+
+      // Historical beliefs: preserved with isCurrent: false
+      const history = ledger.queryClaims('Alice', 'lives_in', false)
+      expect(history).toHaveLength(1)
+      expect(history[0].qualifiers?.isCurrent).toBe(false)
+      expect(history[0].qualifiers?.invalidatedAt).toBeDefined()
+    })
+  })
+
+  describe('canonical Entity Resolution & Honorific Folding', () => {
+    it('folds Japanese honorifics with arbitrary vowel elongation into canonical entity', () => {
+      const ledger = new EntityLedger()
+      const nords = ledger.getOrCreateEntity('Nords', 'person')
+      expect(nords.label).toBe('Nords')
+
+      // -sama
+      const nordsSama = ledger.getOrCreateEntity('Nords-sama')
+      expect(nordsSama.entityId).toBe(nords.entityId)
+
+      // -saaaaan (elongated vowels)
+      const nordsSaaan = ledger.getOrCreateEntity('Nords-saaaaan')
+      expect(nordsSaaan.entityId).toBe(nords.entityId)
+
+      // -chaaaan
+      const evil = ledger.getOrCreateEntity('Evil', 'person')
+      const evilChaaaaan = ledger.getOrCreateEntity('Evil-chaaaan')
+      expect(evilChaaaaan.entityId).toBe(evil.entityId)
+
+      // -kuuuun
+      const shinji = ledger.getOrCreateEntity('Shinji', 'person')
+      const shinjiKun = ledger.getOrCreateEntity('Shinji-kuuuun')
+      expect(shinjiKun.entityId).toBe(shinji.entityId)
+    })
+
+    it('collapses leading single-letter stutter repetitions', () => {
+      const ledger = new EntityLedger()
+      const nords = ledger.getOrCreateEntity('Nords', 'person')
+
+      // N-Nords
+      const stutterNords = ledger.getOrCreateEntity('N-Nords')
+      expect(stutterNords.entityId).toBe(nords.entityId)
+
+      // Multi-stutter + honorific: N-N-Nords-sama
+      const multiStutterHonorific = ledger.getOrCreateEntity('N-N-Nords-sama')
+      expect(multiStutterHonorific.entityId).toBe(nords.entityId)
+
+      // T-Teio
+      const teio = ledger.getOrCreateEntity('T-Teio-chaaaan', 'person')
+      expect(teio.label).toBe('Teio')
+
+      const teioPlain = ledger.getOrCreateEntity('Teio')
+      expect(teioPlain.entityId).toBe(teio.entityId)
+    })
+
+    it('preserves non-stutter hyphenated names and short names', () => {
+      const ledger = new EntityLedger()
+      const xmen = ledger.getOrCreateEntity('X-Men', 'organization')
+      expect(xmen.label).toBe('X-Men')
+
+      const spiderMan = ledger.getOrCreateEntity('Spider-Man', 'person')
+      expect(spiderMan.label).toBe('Spider-Man')
+    })
+  })
 })

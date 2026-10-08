@@ -1273,10 +1273,10 @@ pages:
           title: LLM dans le navigateur WebGPU uniquement
         defaultsSection:
           annotation: 'Pour personnaliser ces paramètres pour un personnage, accédez à son
-            onglet Génération : • Modifiez la température, le Top P et le nombre
-            maximal de jetons avec les champs de saisie. • Modifiez les
-            pénalités (Présence/Nombre/Décroissance) en les saisissant dans la
-            zone de texte JSON avancé (ex : {"presence_penalty": 0.5}).'
+            onglet Génération : • Modifiez la température, Top P et Max Tokens à
+            l''aide des champs de saisie. • Modifiez les pénalités
+            (Présence/Compte/Décroissance) en les saisissant dans la zone de
+            texte JSON avancé (ex : "presence_penalty": 0.5).'
           description: Ce sont les paramètres de repli utilisés par web-rwkv.
           field:
             count_penalty: "Pénalité d'occurrence Count Penalty (Par défaut : 0.4)"
@@ -1361,9 +1361,9 @@ pages:
           (WebGPU local)</b>.
       cloud:
         title: Synchronisation cloud et sauvegardes ?
-        description: Gardez vos cartes, archives de mémoire et paramètres en sécurité sur
-          tous vos appareils. Utilisez le <b>Système de fichiers local</b> pour
-          les sauvegardes bureau/NAS ou le <b>Stockage compatible S3</b>
+        description: Gardez vos cartes, archives de mémoire et paramètres en sécurité
+          sur tous vos appareils. Utilisez le <b>Système de fichiers local</b>
+          pour les sauvegardes bureau/NAS ou le <b>Stockage compatible S3</b>
           (Cloudflare R2, MinIO, AWS S3).
     speech:
       app_local_audio:

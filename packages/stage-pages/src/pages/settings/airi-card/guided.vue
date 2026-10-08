@@ -594,8 +594,8 @@ async function handleGenerate(guidance = '') {
         actingCapabilities = {
           format: formatName,
           modelName: boundModel.name,
-          whitelistedExpressions: caps.expressions,
-          whitelistedMotions: caps.motions,
+          whitelistedExpressions: (caps.expressionCapabilities || []).filter(c => c.usable).map(c => c.label || c.rawKey),
+          whitelistedMotions: (caps.motionCapabilities || []).filter(c => c.usable).map(c => c.label || c.rawKey),
         }
       }
 

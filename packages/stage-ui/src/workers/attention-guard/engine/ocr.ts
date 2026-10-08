@@ -30,6 +30,14 @@ export const OCR_ERROR_PATTERN_MIN = 2
 export const OCR_INTEREST_KEYWORD_MIN = 1
 
 let workerPromise: Promise<Worker> | null = null
+let ocrRecognizeCount = 0
+const OCR_RECYCLE_INTERVAL = 50
+const OCR_TIMEOUT_MS = 5000
+
+let scratchOcrSrcCanvas: OffscreenCanvas | null = null
+let scratchOcrSrcCtx: OffscreenCanvasRenderingContext2D | null = null
+let scratchOcrOutCanvas: OffscreenCanvas | null = null
+let scratchOcrOutCtx: OffscreenCanvasRenderingContext2D | null = null
 
 export async function getWorker(): Promise<Worker> {
   if (!workerPromise) {
@@ -40,9 +48,24 @@ export async function getWorker(): Promise<Worker> {
 
 export async function disposeOcrEngine(): Promise<void> {
   if (workerPromise) {
-    const worker = await workerPromise
-    await worker.terminate()
+    try {
+      const worker = await workerPromise
+      await worker.terminate()
+    }
+    catch {}
     workerPromise = null
+  }
+  if (scratchOcrSrcCanvas) {
+    scratchOcrSrcCanvas.width = 0
+    scratchOcrSrcCanvas.height = 0
+    scratchOcrSrcCanvas = null
+    scratchOcrSrcCtx = null
+  }
+  if (scratchOcrOutCanvas) {
+    scratchOcrOutCanvas.width = 0
+    scratchOcrOutCanvas.height = 0
+    scratchOcrOutCanvas = null
+    scratchOcrOutCtx = null
   }
 }
 
@@ -52,6 +75,12 @@ const OCR_UPSCALE_FACTOR = 2
 const OCR_UPSCALE_MIN_EDGE = 1200
 /** Largest edge handed to tesseract. Full-frame/native crops are downscaled to this so OCR stays legible AND tractable. */
 const OCR_MAX_INPUT_EDGE = 2560
+/**
+ * Degraded-mode ceiling (memory-pressure path): never upscale, only shrink to
+ * this edge. Error-pattern/keyword matching survives coarse glyphs; the WASM
+ * heap and per-tick Blink buffers do not survive full-res upscaled OCR.
+ */
+const OCR_DEGRADED_MAX_EDGE = 1280
 
 /**
  * Grayscale + 1%/99% percentile contrast stretch so glyph edges are crisp.
@@ -115,20 +144,35 @@ function stretchContrast(image: ImageData): ImageData {
  *   - small crop      -> 2x upscale (capped) so glyphs clear the floor
  *   - in-sweet-spot   -> keep 1x
  * then stretch contrast with smooth interpolation before `worker.recognize()`.
+ *
+ * Degraded mode (memory pressure): downscale-only to `OCR_DEGRADED_MAX_EDGE`,
+ * never upscale. Coarse glyphs still match error patterns/keywords while the
+ * WASM heap and per-tick Blink buffers stay a fraction of full-res cost.
  */
-async function prepareOcrInput(imageData: ImageData): Promise<ImageData | Blob> {
+async function prepareOcrInput(imageData: ImageData, degraded = false): Promise<{ targetInput: ImageData | Blob, dispose: () => void }> {
   if (typeof OffscreenCanvas === 'undefined')
-    return imageData
+    return { targetInput: imageData, dispose: () => {} }
 
-  const srcCanvas = new OffscreenCanvas(imageData.width, imageData.height)
-  const srcCtx = srcCanvas.getContext('2d')
-  if (!srcCtx)
-    return imageData
-  srcCtx.putImageData(imageData, 0, 0)
+  if (!scratchOcrSrcCanvas) {
+    scratchOcrSrcCanvas = new OffscreenCanvas(imageData.width, imageData.height)
+    scratchOcrSrcCtx = scratchOcrSrcCanvas.getContext('2d')
+  }
+  else {
+    scratchOcrSrcCanvas.width = imageData.width
+    scratchOcrSrcCanvas.height = imageData.height
+  }
+
+  if (!scratchOcrSrcCtx)
+    return { targetInput: imageData, dispose: () => {} }
+  scratchOcrSrcCtx.putImageData(imageData, 0, 0)
 
   const maxEdge = Math.max(imageData.width, imageData.height)
   let scale: number
-  if (maxEdge > OCR_MAX_INPUT_EDGE) {
+  if (degraded) {
+    // Downscale-only: shrink oversized crops, leave small crops at 1x.
+    scale = maxEdge > OCR_DEGRADED_MAX_EDGE ? OCR_DEGRADED_MAX_EDGE / maxEdge : 1
+  }
+  else if (maxEdge > OCR_MAX_INPUT_EDGE) {
     // Full-frame / oversized crop: shrink to the tesseract sweet spot.
     scale = OCR_MAX_INPUT_EDGE / maxEdge
   }
@@ -142,46 +186,98 @@ async function prepareOcrInput(imageData: ImageData): Promise<ImageData | Blob> 
 
   const outWidth = Math.max(1, Math.round(imageData.width * scale))
   const outHeight = Math.max(1, Math.round(imageData.height * scale))
-  const outCanvas = new OffscreenCanvas(outWidth, outHeight)
-  const outCtx = outCanvas.getContext('2d')
-  if (!outCtx)
-    return imageData
 
-  outCtx.imageSmoothingEnabled = true
+  if (!scratchOcrOutCanvas) {
+    scratchOcrOutCanvas = new OffscreenCanvas(outWidth, outHeight)
+    scratchOcrOutCtx = scratchOcrOutCanvas.getContext('2d')
+  }
+  else {
+    scratchOcrOutCanvas.width = outWidth
+    scratchOcrOutCanvas.height = outHeight
+  }
+
+  if (!scratchOcrOutCtx) {
+    if (scratchOcrSrcCanvas) {
+      scratchOcrSrcCanvas.width = 0
+      scratchOcrSrcCanvas.height = 0
+    }
+    return { targetInput: imageData, dispose: () => {} }
+  }
+
+  scratchOcrOutCtx.imageSmoothingEnabled = true
   try {
-    ;(outCtx as any).imageSmoothingQuality = 'high'
+    ;(scratchOcrOutCtx as any).imageSmoothingQuality = 'high'
   }
   catch {}
-  outCtx.drawImage(srcCanvas, 0, 0, outWidth, outHeight)
+  scratchOcrOutCtx.drawImage(scratchOcrSrcCanvas, 0, 0, outWidth, outHeight)
+
+  // srcCanvas is no longer needed; release backing texture immediately
+  scratchOcrSrcCanvas.width = 0
+  scratchOcrSrcCanvas.height = 0
 
   try {
-    const conditioned = stretchContrast(outCtx.getImageData(0, 0, outWidth, outHeight))
-    outCtx.putImageData(conditioned, 0, 0)
+    const conditioned = stretchContrast(scratchOcrOutCtx.getImageData(0, 0, outWidth, outHeight))
+    scratchOcrOutCtx.putImageData(conditioned, 0, 0)
   }
   catch {}
 
   // Blob is a valid tesseract `ImageLike`; avoids an extra ArrayBuffer hop.
-  return outCanvas.convertToBlob({ type: 'image/png' })
+  const blob = await scratchOcrOutCanvas.convertToBlob({ type: 'image/png' })
+
+  const dispose = () => {
+    if (scratchOcrOutCanvas) {
+      scratchOcrOutCanvas.width = 0
+      scratchOcrOutCanvas.height = 0
+    }
+  }
+
+  return { targetInput: blob, dispose }
 }
 
 /** OCR of a delta-region crop (ImageData). Returns raw text + wall-clock ms. */
-export async function ocrImageData(imageData: ImageData): Promise<{ text: string, ocrMs: number }> {
+export async function ocrImageData(imageData: ImageData, options?: { degraded?: boolean }): Promise<{ text: string, ocrMs: number }> {
   const started = performance.now()
   if (!imageData || imageData.width <= 0 || imageData.height <= 0) {
     return { text: '', ocrMs: 0 }
   }
 
+  let cleanup: (() => void) | null = null
   try {
+    ocrRecognizeCount++
+    if (ocrRecognizeCount >= OCR_RECYCLE_INTERVAL) {
+      console.log(`[Attention Guard OCR] ♻️ Periodic recycle (${ocrRecognizeCount} recognitions): releasing Tesseract WASM heap`)
+      await disposeOcrEngine()
+      ocrRecognizeCount = 0
+    }
+
     const worker = await getWorker()
-    const targetInput = await prepareOcrInput(imageData)
-    // NOTICE: tesseract's `ImageLike` type omits `ImageData`, and the raw
-    // ImageData fallback is only hit when OffscreenCanvas is unavailable.
-    const { data: { text } } = await worker.recognize(targetInput as any)
+    const { targetInput, dispose } = await prepareOcrInput(imageData, options?.degraded)
+    cleanup = dispose
+
+    // Add 5s timeout race to prevent indefinite hang on complex frames
+    const recognizePromise = worker.recognize(targetInput as any)
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`Tesseract recognition timed out after ${OCR_TIMEOUT_MS}ms`)), OCR_TIMEOUT_MS)
+    })
+
+    const { data: { text } } = await Promise.race([recognizePromise, timeoutPromise])
     return { text: text || '', ocrMs: performance.now() - started }
   }
-  catch (err) {
-    console.warn('[Attention Guard OCR] OCR failed on delta crop:', err)
+  catch (err: any) {
+    console.warn('[Attention Guard OCR] OCR failed on delta crop:', err?.message || err)
+    if (err?.message?.includes('timed out')) {
+      await disposeOcrEngine().catch(() => {})
+      ocrRecognizeCount = 0
+    }
     return { text: '', ocrMs: performance.now() - started }
+  }
+  finally {
+    if (cleanup) {
+      try {
+        cleanup()
+      }
+      catch {}
+    }
   }
 }
 

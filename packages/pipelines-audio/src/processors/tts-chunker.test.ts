@@ -162,4 +162,48 @@ describe('tts-chunker', () => {
     const limitChunk = chunks.find(c => c.reason === 'limit')
     expect(limitChunk).toBeDefined()
   })
+
+  describe('chunkTtsInput grapheme preservation', () => {
+    async function collectChunkText(input: string) {
+      const chunks: string[] = []
+      for await (const chunk of chunkTtsInput(input))
+        chunks.push(chunk.text)
+      return chunks
+    }
+
+    // ROOT CAUSE:
+    //
+    // CRLF is one grapheme cluster, but the hard punctuation set contains
+    // only separate CR and LF characters. Normalize CRLF before matching
+    // punctuation so Windows line endings end the chunk.
+    // https://github.com/moeru-ai/airi/pull/2414
+    it('treats CRLF as a hard chunk boundary (Issue #2366)', async () => {
+      expect(await collectChunkText('abc\r\ndef')).toEqual(['abc', 'def'])
+    })
+
+    // ROOT CAUSE:
+    //
+    // `readGraphemeClusters` returns multi-code-unit grapheme strings.
+    // The old `value.length > 1` guard discarded them.
+    //
+    // We fixed this by preserving each returned cluster.
+    // This keeps Thai combining marks intact.
+    //
+    // https://github.com/moeru-ai/airi/issues/2366
+    it('preserves Thai combining clusters while chunking (Issue #2366)', async () => {
+      const input = 'ดึกป่านนี้แล้วยังจะหาเรื่องกินอีกนะคะเนี่ย!'
+
+      const chunks = await collectChunkText(input)
+
+      expect(chunks.join('')).toBe(input)
+    })
+
+    it('preserves emoji grapheme clusters while chunking', async () => {
+      const input = '👩‍💻👍🏽!'
+
+      const chunks = await collectChunkText(input)
+
+      expect(chunks.join('')).toBe(input)
+    })
+  })
 })

@@ -175,8 +175,8 @@ const providerBlocksConfig = [
   {
     id: 'transcription',
     icon: 'i-solar:microphone-3-bold-duotone',
-    title: 'Transcription',
-    description: 'Transcription (speech-to-text) model providers. e.g. Whisper.cpp, OpenAI, Azure Speech.',
+    title: 'Hearing',
+    description: 'Hearing (speech-to-text) model providers. e.g. Whisper.cpp, OpenAI, Azure Speech.',
     providersRef: allAudioTranscriptionProvidersMetadata,
   },
   {

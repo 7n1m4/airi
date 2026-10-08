@@ -48,6 +48,9 @@ const { context } = createContext()
 
 interface GuardState {
   prevGray: GrayBuffer | null
+  currentGray: GrayBuffer | null
+  scratchGray32: Uint8Array
+  scratchCurHash: Uint8Array
   prevHash: Uint8Array | null
   centroid: Float32Array | null
   accepted: Float32Array[]
@@ -57,6 +60,9 @@ interface GuardState {
 
 const state: GuardState = {
   prevGray: null,
+  currentGray: null,
+  scratchGray32: new Uint8Array(32 * 32),
+  scratchCurHash: new Uint8Array(1024),
   prevHash: null,
   centroid: null,
   accepted: [],
@@ -79,6 +85,7 @@ async function detectWebGPUInWorker(): Promise<boolean> {
 
 function resetTickState(): void {
   state.prevGray = null
+  state.currentGray = null
   state.prevHash = null
   state.centroid = null
   state.accepted = []
@@ -120,6 +127,53 @@ function cropToImageData(raw: Uint8Array, fullWidth: number, channels: number, b
     console.warn('[attention-guard:worker] cropToImageData failed:', err)
     return null
   }
+}
+
+let scratchDecodeCanvas: OffscreenCanvas | null = null
+let scratchDecodeCtx: OffscreenCanvasRenderingContext2D | null = null
+
+/**
+ * Decodes raw PNG/JPEG bytes into a RawImage using a single reused OffscreenCanvas
+ * and explicit ImageBitmap.close() to eliminate Blink Tag 14 / GPU texture accumulation.
+ * The Blob wraps the buffer without copying; callers should transfer (not clone)
+ * the bytes here so only one native copy ever exists per tick.
+ */
+async function decodeBytesToRawImage(pngBytes: ArrayBuffer): Promise<RawImage> {
+  const blob = new Blob([pngBytes], { type: 'image/png' })
+  const bitmap = await createImageBitmap(blob)
+  try {
+    const { width, height } = bitmap
+    if (!scratchDecodeCanvas) {
+      scratchDecodeCanvas = new OffscreenCanvas(width, height)
+      scratchDecodeCtx = scratchDecodeCanvas.getContext('2d', { willReadFrequently: true })
+    }
+    else if (scratchDecodeCanvas.width !== width || scratchDecodeCanvas.height !== height) {
+      scratchDecodeCanvas.width = width
+      scratchDecodeCanvas.height = height
+      scratchDecodeCtx = scratchDecodeCanvas.getContext('2d', { willReadFrequently: true })
+    }
+
+    if (!scratchDecodeCtx) {
+      throw new Error('Failed to acquire 2D context on scratch OffscreenCanvas')
+    }
+
+    scratchDecodeCtx.drawImage(bitmap, 0, 0)
+    const imgData = scratchDecodeCtx.getImageData(0, 0, width, height)
+    return new RawImage(imgData.data, width, height, 4)
+  }
+  finally {
+    bitmap.close()
+  }
+}
+
+/**
+ * Legacy data-URL decode path (fetch hop). Kept for callers without transferred
+ * bytes; strictly worse (Response + Blob allocations per tick) — prefer pngBytes.
+ */
+async function decodeDataUrlToRawImage(dataUrl: string): Promise<RawImage> {
+  const response = await fetch(dataUrl)
+  const blob = await response.blob()
+  return decodeBytesToRawImage(await blob.arrayBuffer())
 }
 
 defineStreamInvokeHandler(context, attentionGuardLoadEvent, toStreamHandler<any, any>(async ({ payload, emit }) => {
@@ -199,17 +253,45 @@ defineStreamInvokeHandler(context, attentionGuardLoadEvent, toStreamHandler<any,
   }
 }))
 
-defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, interestTags }) => {
+defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, pngBytes, interestTags, degraded }) => {
   const stageMs = { stage0Ms: 0, stage1Ms: 0, stage2Ms: 0, stage3Ms: 0 }
+  let rawImage: RawImage | null = null
 
   try {
     // -- decode + Stage 0 perceptual hash -------------------------------------
-    const rawImage = await RawImage.fromURL(dataUrl)
+    try {
+      // NOTICE: transferred bytes are preferred — the sender's buffer is neutered
+      // on transfer, so no second native copy exists during slow CLIP/OCR ticks.
+      rawImage = pngBytes && pngBytes.byteLength > 0
+        ? await decodeBytesToRawImage(pngBytes)
+        : await decodeDataUrlToRawImage(dataUrl || '')
+    }
+    catch (decodeErr: any) {
+      console.warn('[attention-guard:worker] Invalid capture frame skipped (could not decode):', decodeErr?.message || decodeErr)
+      return {
+        decision: 'IGNORE',
+        stage0Delta: 0,
+        novelty: 0,
+        ocrErrorPatternHits: 0,
+        ocrErrorPatterns: [],
+        interestKeywordHits: 0,
+        interestKeywords: [],
+        stageMs,
+      } satisfies AttentionGuardProcessResult
+    }
+
     const raw = rawImage.data as Uint8Array
     const channels = rawImage.channels
-    const gray = toGray(raw, rawImage.width, rawImage.height, channels)
-    const gray32 = boxResizeGray(gray, 32, 32)
-    const { bits: curHash } = computeAHash(gray32)
+
+    // Ping-pong buffer reuse: write into currentGray, reusing allocated Uint8Array
+    state.currentGray = toGray(raw, rawImage.width, rawImage.height, channels, state.currentGray)
+    const gray = state.currentGray
+
+    // Reuse preallocated 32x32 luma buffer
+    const gray32 = boxResizeGray(gray, 32, 32, state.scratchGray32)
+
+    // Reuse preallocated 1024-bit hash buffer
+    const { bits: curHash } = computeAHash(gray32, state.scratchCurHash)
 
     if (state.prevHash === null) {
       // First tick: seed the baseline work centroid v0.
@@ -218,8 +300,11 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
       stageMs.stage1Ms = performance.now() - t1
       state.centroid = embedding
       state.accepted = [embedding]
-      state.prevGray = gray
-      state.prevHash = curHash
+
+      // Clone current into prev for the initial baseline
+      state.prevGray = { width: gray.width, height: gray.height, data: new Uint8Array(gray.data) }
+      state.prevHash = new Uint8Array(curHash)
+
       return {
         decision: 'BASELINE',
         stage0Delta: 0,
@@ -239,8 +324,12 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
 
     if (normDistance < STAGE0_HAMMING_MIN) {
       // Static tick: 0-cost drop before any neural model.
-      state.prevGray = gray
-      state.prevHash = curHash
+      // Swap current into prev without allocating new memory
+      const temp = state.prevGray
+      state.prevGray = state.currentGray
+      state.currentGray = temp
+      state.prevHash.set(curHash)
+
       return {
         decision: 'IGNORE',
         stage0Delta: normDistance,
@@ -266,17 +355,22 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
     let ocrText = ''
     const bbox = state.prevGray ? computeDeltaBBox(state.prevGray, gray) : null
     if (bbox) {
-      const crop = cropToImageData(raw, rawImage.width, channels, bbox)
+      let crop: ImageData | null = cropToImageData(raw, rawImage.width, channels, bbox)
       if (crop) {
-        const { text } = await ocrImageData(crop)
-        ocrText = text
-        ocrErrorPatterns = matchPatterns(text, DEFAULT_ERROR_PATTERNS)
-        ocrInterestTags = matchInterestTags(text, interestTags)
+        try {
+          const { text } = await ocrImageData(crop, degraded ? { degraded: true } : undefined)
+          ocrText = text
+          ocrErrorPatterns = matchPatterns(text, DEFAULT_ERROR_PATTERNS)
+          ocrInterestTags = matchInterestTags(text, interestTags)
 
-        const preview = ocrText.trim().replace(/\s+/g, ' ').slice(0, 100)
-        const frameArea = rawImage.width * rawImage.height
-        const fullFrameTag = bbox.width * bbox.height >= frameArea * 0.5 ? '[FULL-FRAME] ' : ''
-        console.log(`[attention-guard:worker] ${fullFrameTag}OCR bbox=(${bbox.left},${bbox.top},${bbox.width}×${bbox.height}) | chars=${ocrText.length} | preview="${preview}" | interestTargets=[${interestTags?.join(', ') || ''}] | interestHits=${ocrInterestTags.length} ([${ocrInterestTags.join(', ')}])`)
+          const preview = ocrText.trim().replace(/\s+/g, ' ').slice(0, 100)
+          const frameArea = rawImage.width * rawImage.height
+          const fullFrameTag = bbox.width * bbox.height >= frameArea * 0.5 ? '[FULL-FRAME] ' : ''
+          console.log(`[attention-guard:worker] ${fullFrameTag}OCR bbox=(${bbox.left},${bbox.top},${bbox.width}×${bbox.height}) | chars=${ocrText.length} | preview="${preview}" | interestTargets=[${interestTags?.join(', ') || ''}] | interestHits=${ocrInterestTags.length} ([${ocrInterestTags.join(', ')}])`)
+        }
+        finally {
+          crop = null
+        }
       }
     }
     stageMs.stage2Ms = performance.now() - t2
@@ -286,35 +380,43 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
     const isInterestMatch = ocrInterestTags.length >= OCR_INTEREST_KEYWORD_MIN
     const promote = isErrorCascade || isInterestMatch
 
-    // Update rolling state. NOTE-level frames join the centroid (routine drift
-    // becomes the new "normal"); event frames never shift it.
-    state.prevGray = gray
-    state.prevHash = curHash
+    // Update rolling state via zero-allocation buffer swap.
+    const temp = state.prevGray
+    state.prevGray = state.currentGray
+    state.currentGray = temp
+    state.prevHash.set(curHash)
 
-    // -- Stage 3: summary for promoted frames ---------------------------------
+    // -- Stage 3: semantic forwarder & summary synthesis --------------------
     let summary: string | undefined
     let caption: string | null = null
     let vlmStatus: 'ok' | 'degraded' | 'error' | undefined
-    if (promote) {
-      const t3 = performance.now()
-      const zeroShot = await classifyZeroShot(embedding, state.device)
-      const snippet = extractRelevantSnippet(ocrText, ocrErrorPatterns, ocrInterestTags)
-      const window = activeWindowLabel(zeroShot.topLabel)
-      const theme = themeFromGray(gray32)
+    const snippet = extractRelevantSnippet(ocrText, ocrErrorPatterns, ocrInterestTags)
 
+    if (promote) {
       if (state.enableVlm) {
-        const captionResult = await generateCaption(rawImage, state.device)
-        if (captionResult) {
-          caption = captionResult.caption
-          vlmStatus = 'ok'
+        try {
+          const captionResult = await generateCaption(rawImage, state.device)
+          if (captionResult) {
+            caption = captionResult.caption
+            vlmStatus = 'ok'
+          }
+          else {
+            vlmStatus = 'error'
+          }
         }
-        else {
+        catch (vlmErr: any) {
+          console.warn('[attention-guard:worker] generateCaption error caught:', vlmErr?.message || vlmErr)
           vlmStatus = 'error'
         }
       }
       else {
         vlmStatus = 'degraded'
       }
+
+      const t3 = performance.now()
+      const zeroShot = await classifyZeroShot(embedding, state.device)
+      const window = activeWindowLabel(zeroShot.topLabel)
+      const theme = themeFromGray(gray32)
 
       summary = buildSummary({
         window,
@@ -326,6 +428,7 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
       stageMs.stage3Ms = performance.now() - t3
     }
     else {
+      vlmStatus = state.enableVlm ? 'ok' : 'degraded'
       state.accepted.push(embedding)
       if (state.accepted.length > 50) {
         state.accepted.shift()
@@ -333,7 +436,7 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
       state.centroid = centroidOf(state.accepted)
     }
 
-    return {
+    const result: AttentionGuardProcessResult = {
       decision: promote ? 'PROMOTE' : 'NOTE',
       stage0Delta: normDistance,
       novelty,
@@ -343,9 +446,12 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
       interestKeywords: ocrInterestTags,
       summary,
       caption,
+      ocrSnippet: snippet || undefined,
       vlmStatus,
       stageMs,
-    } satisfies AttentionGuardProcessResult
+    }
+
+    return result
   }
   catch (err: any) {
     console.error('[attention-guard:worker] Process tick error:', err)
@@ -360,6 +466,10 @@ defineInvokeHandler(context, attentionGuardProcessEvent, async ({ dataUrl, inter
       stageMs,
     } satisfies AttentionGuardProcessResult
   }
+  finally {
+    // Explicitly release 20MB RawImage Uint8Array reference so it can be GC'd immediately
+    rawImage = null
+  }
 })
 
 defineInvokeHandler(context, attentionGuardUnloadEvent, () => {
@@ -367,5 +477,11 @@ defineInvokeHandler(context, attentionGuardUnloadEvent, () => {
   void disposeTextEncoder()
   void disposeOcrEngine()
   void disposeVlmForwarder()
+  if (scratchDecodeCanvas) {
+    scratchDecodeCanvas.width = 0
+    scratchDecodeCanvas.height = 0
+    scratchDecodeCanvas = null
+    scratchDecodeCtx = null
+  }
   resetTickState()
 })
