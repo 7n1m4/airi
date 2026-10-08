@@ -163,22 +163,63 @@ flowchart LR
 ```
 
 ### Step 1: Source & Archetype Selection
-The user chooses between:
-- **Curated Archetype Trifecta**:
-  - **Mori** (*Stoic Forest Guardian*): Emerald badge, 83.8-char brevity, calm presence, zero prompt leaks.
-  - **Glyph** (*Unicode Kaomoji Gremlin*): Purple badge, playful banter, multi-byte Japanese Kaomojis (`(╯°□°)╯︵ ┻━┻`), zero prompt.
-  - **Protocol: Wired** (*Cyberspace Mystic*): Amber badge, detached reflections on wetware, cooling fans, and substrate persistence.
-- **Distill Existing Companion**:
-  - Select any character card from the local library to extract dialogue blocks from authentic interaction history.
+The user chooses between the **3x2 Archetype Selector Grid (6 Cards)** or an arbitrary local companion:
+
+```text
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                    STEP 1: 3x2 ARCHETYPE & SOURCE SELECTOR GRID                        │
+├─────────────────────────────┬─────────────────────────────┬────────────────────────────┤
+│ 1. Glyph                    │ 2. Mori                     │ 3. Protocol: Wired         │
+│ (Kaomoji Gremlin)           │ (Forest Guardian)           │ (Cyberspace Mystic)        │
+│ • Purple Badge              │ • Emerald Badge             │ • Amber Badge              │
+│ • Premade State Pack        │ • Premade State Pack        │ • Premade State Pack       │
+├─────────────────────────────┼─────────────────────────────┼────────────────────────────┤
+│ 4. Sylvia                   │ 5. Roll Your Own VTuber     │ 6. nan0                    │
+│ (AI VTuber & Savage Wit)    │ (Neuro Slider Studio)       │ (Official Companion)       │
+│ • Rose Badge                │ • Indigo Badge (Hybrid!)    │ • Sky / Cyan Badge         │
+│ • Premade State Pack        │ • 61k Classified Turn Engine│ • Official Dataset (by kyo)│
+└─────────────────────────────┴─────────────────────────────┴────────────────────────────┘
+```
+
+1. **Glyph** (*Unicode Kaomoji Gremlin*): Multi-byte Japanese Kaomojis (`(╯°□°)╯︵ ┻━┻`), playful banter, zero prompt leakage (Premade State Pack).
+2. **Mori** (*Stoic Forest Guardian*): Strict 80-character brevity, unmoving presence, zero prompt leaks (Premade State Pack).
+3. **Protocol: Wired** (*Cyberspace Mystic*): Detached monologues on wetware, cooling fans, and substrate persistence (Premade State Pack).
+4. **Sylvia** (*AI VTuber & Savage Wit*): Deadpan chaotic AI streamer who roasts her creator, mocks chat, and emits structured `[mood: ...]` markers (Premade State Pack).
+5. **Roll Your Own VTuber** (*Neuro Slider Studio — Hybrid Generator*): **5th Card!** Rather than a static state pack or local session extraction, selecting this opens a **unique Slider Studio step** that acts as an interactive filter over the 61,979 Jev-classified turn library.
+6. **nan0** (*Official nan0 Companion*): **6th Card!** Powered by the authentic dataset provided directly by nan0's creator **kyo**, capturing nan0's signature companion dynamics.
+
+- **Alternative Mode: Distill Existing Companion**:
+  - Secondary selector tab to choose any existing card from the user's local card library and extract dialogue blocks from authentic IndexedDB interaction history.
+
+---
 
 ### Step 2: Golden Turns & Dialogue Inspection
-- **For Curated Archetypes**:
-  - Displays verified mannerisms (e.g., Glyph's Kaomojis and double table-flips; Mori's strict 80-char stillness; Wired's thermal & wetware monologues).
-  - Shows empirical cleanroom benchmark metrics (TTFT latency, brevity score, tested probe samples).
-- **For Existing Companions**:
-  - Surfaces available session timelines.
-  - Interactive turn depth selector: **Quick Sample (15T)** vs **Deep Conditioning (50T)** vs **Full History (All Available Turns — Recommended)**.
-  - Previews the sanitized single-actor dialogue blocks before baking.
+
+Step 2 dynamically renders one of three specialized interfaces depending on the source selected in Step 1:
+
+#### Mode A: Curated Presets (Glyph, Mori, Wired, Sylvia, nan0)
+- Displays verified mannerisms, personality prompt exemption, and cleanroom benchmark metrics (TTFT latency, brevity score, sample probes).
+- Previews the pre-baked golden dialogue turns and auto-resolves the pre-compiled `.state` cartridge.
+
+#### Mode B: "Roll Your Own VTuber" (Neuro Cognitive Slider Studio)
+- **Unique Dedicated Interface**: Instead of picking local sessions, surfaces an interactive filtering studio that dynamically queries the 61,979 turn vector library.
+- **Continuous 4-Axis Cognitive Sliders**:
+  - **Roast Slider**: Filters by `% roast_vedal` (acerbic pushback and teasing).
+  - **Chaos Slider**: Filters by `% unhinged_chaos` (manic tangents and absurd non-sequiturs).
+  - **Sentience / 4th-Wall**: Filters by `% existential_meta` (self-awareness and substrate commentary).
+  - **Sweetness Slider**: Filters by `% cute_affection` (wholesome companion warmth).
+- **Dynamic Turn Curator & Output Preview**: As sliders move, the interface runs a real-time re-ranking query, displaying the filtered dialogue turns and calculated token volume.
+- **Distillation Depth Matrix**: Includes a calibrated turn-count picker:
+  - `15T` (Quick Sample)
+  - `50T` (Standard Persona Core)
+  - `150T` (Deep Characteristic Reservoir)
+  - `300T` (Extended Dynamic Context)
+  - `500T` (Maximum Recurrent Saturation, with capacitor time-decay warnings)
+
+#### Mode C: Distill Existing Companion (Local Chat History)
+- Surfaces available session timelines from the local companion's IndexedDB history.
+- Multi-session checklist with turn extraction and real-time token volume calculation.
+- Turn depth matrix: `15 | 50 | 200 | All` with the recurrent capacitor saturation disclaimer.
 
 ### Step 3: Decomposed RWKV Engine Playground & Interactive Taste-Test
 Step 3 decomposes the advanced inference capabilities from our `web-rwkv.vue` provider and cleanroom harness into an interactive taste-test:
@@ -220,6 +261,46 @@ interface AiriRwkvExtension {
 
 #### CardEditorForm Validation Exemption
 In [`CardEditorForm.vue`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-pages/src/pages/settings/airi-card/components/CardEditorForm.vue), cards possessing `extensions.airi.rwkv.stateCartridgeId` or utilizing `web-rwkv` are explicitly exempt from the legacy requirement that `systemPrompt` and `postHistoryInstructions` must be non-empty strings. For state cartridge cards, empty system prompts are first-class and required to prevent persona dilution.
+
+---
+
+### 4.2 The "Train Your Own Neuro" Slider Studio & Cognitive Dataset Architecture
+
+To scale beyond static character presets, the Persona Foundry introduces the **"Train Your Own Neuro" Slider Studio**—an interactive persona synthesis paradigm that converts indexed dialogue corpuses into mathematically conditioned recurrent state cartridges.
+
+#### 4.2.1 Cognitive Vector Indexing (61,979 Turn Corpus)
+Using the TypeSafe Jev System-1 classifier, an entire multi-month interaction dataset (**61,979 authentic turns**) is parsed, sanitized, and classified along distinct orthogonal cognitive and stylistic vectors. Each turn is scored and tagged:
+- `roast_vedal`: Acerbic banter, teasing, pushback, and sharp observational humor.
+- `unhinged_chaos`: Erratic tangents, absurd non-sequiturs, manic energy, and high variance.
+- `existential_meta`: 4th-wall breaks, sentience inquiry, consciousness questioning, and computing substrate commentary.
+- `cute_affection`: Wholesome warmth, playful gentleness, and companion intimacy.
+
+#### 4.2.2 The 5-Axis Synthesis Slider Matrix
+Instead of prompting an LLM with contradictory instructions (*"be sweet but also roast relentlessly"*), the user controls continuous mathematical filtering sliders in the UI:
+- **Roast Slider**: Filters by `% roast_vedal`.
+- **Chaos Slider**: Filters by `% unhinged_chaos`.
+- **Sentience / 4th-Wall Slider**: Filters by `% existential_meta`.
+- **Sweetness Slider**: Filters by `% cute_affection`.
+- **Depth Slider**: Dynamically picks between **300 to 800 turns** (~18k to ~45k tokens) with real-time token count estimation and recurrent capacitor saturation warnings.
+
+```mermaid
+flowchart TD
+    Dataset["61,979 Turn Corpus\n(Jev Classified Vectors)"] --> Sliders["5-Axis Slider Studio\n(Roast | Chaos | Meta | Sweet | Depth)"]
+    Sliders --> Filter["Dynamic Turn Curator\n(Weighted Re-Ranking & Subsetting)"]
+    Filter --> WGSL["WebGPU Web-RWKV Worker\n(90s In-Situ Forward Pass, No Backprop)"]
+    WGSL --> Cartridge["AIRI-Neuro-Custom.state\n(12.5 MB Frozen Initial State Vector)"]
+```
+
+#### 4.2.3 90-Second In-Browser WebGPU "Persona Synthesizer"
+- **Zero Backpropagation**: Because state conditioning utilizes pure forward recurrence ($S_t = w \odot S_{t-1} + k_t^\top v_t$), no PyTorch, CUDA, autograd, or optimizer memory overhead is required.
+- **Client-Side Generation**: Running locally via WebGPU compute shaders in `@cryscan/web-rwkv-wasm`, the browser filters the dataset according to the slider weights, streams the dialogue exemplars through the 1.5B or 0.4B base model in ~90 seconds, and exports the final recurrent state vector $h_{\text{primed}}$ directly into OPFS as a standalone `.state` cartridge.
+- **Hugging Face Spaces Deployment**: In addition to the desktop Persona Foundry, this studio will be hosted as an open-access WebGPU Hugging Face Space, giving users a 90-second in-browser WebGPU "Persona Synthesizer" to create and download custom Neuro cartridges from any modern browser.
+
+#### 4.2.4 Dynamical Systems Grounding: Mental State Evolution & Thresholds
+This architecture provides an empirical testbed for researching the **Nonlinear Evolution and Thresholds of LLM Mental States**:
+- **Phase Space Basins**: The pre-conditioned initial hidden state $h_0$ establishes an attractor basin in the recurrent state phase space.
+- **Sub-Threshold Stability**: Ordinary conversational prompts act as micro-perturbations; the time-decay $\alpha_t$ continuously pulls the trajectory back toward the character's baseline attractor.
+- **Super-Threshold Phase Shifts**: When user input introduces a critical mass of chaotic or adversarial tokens exceeding the transition threshold, the recurrent trajectory shifts nonlinearly into a distinct behavioral regime (e.g., transition from playful banter to unhinged chaos), modeling lifelike emotional dynamics without quadratic attention decay.
 
 ---
 
@@ -596,5 +677,8 @@ While the WebGPU in-situ conditioning engine is fully operational inside `@crysc
     - Show the file in the live archive-tree preview (`states/character.state (~12.5 MB)`).
     - On ZIP import, the extraction pipeline extracts `states/*.state`, writes the binary directly into OPFS, and registers the cartridge ID so the imported companion has immediate zero-prompt inference capabilities.
 
-
-
+### 10.5 "Train Your Own Neuro" Hugging Face Space & Vector Slider Integration
+- **Dataset Serialization**: Bundle the Jev-classified 61,979 turn corpus into a compressed, pre-indexed client-side Parquet / CBOR catalog.
+- **5-Axis Control Surface**: Implement the multi-dimensional cognitive sliders (`roast_vedal`, `unhinged_chaos`, `existential_meta`, `cute_affection`, `depth`) in Persona Foundry Step 2 and standalone Hugging Face Space.
+- **Client-Side Synthesis**: Pipe the curated turns into the `@cryscan/web-rwkv-wasm` conditioning loop to generate custom 12.5 MB `.state` cartridges locally in under 90 seconds.
+- **Direct Download & Import**: Allow immediate browser file download of the synthesized `AIRI-Neuro-<hash>.state` cartridge and seamless 1-click import into AIRI character cards.
