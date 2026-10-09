@@ -1,3 +1,5 @@
+import type { ChatProvider } from '@xsai-ext/providers/utils'
+
 import { describe, expect, it } from 'vitest'
 import { parse } from 'zod/v4/core'
 
@@ -35,7 +37,7 @@ describe('providerKilo', () => {
       baseUrl: 'https://api.kilo.ai/api/gateway/v1',
     })
 
-    expect(provider.chat('kilo-auto')).toMatchObject({
+    expect((provider as ChatProvider).chat('kilo-auto')).toMatchObject({
       apiKey: '',
       baseURL: 'https://api.kilo.ai/api/gateway/v1',
       model: 'kilo-auto',
@@ -49,6 +51,6 @@ describe('providerKilo', () => {
 
   it('has keyless provider configuration', () => {
     expect(providerKilo.requiresCredentials).toBe(false)
-    expect(providerKilo.business().pricing).toBe('free')
+    expect(providerKilo.business!({ t: translate }).pricing).toBe('free')
   })
 })

@@ -30,9 +30,9 @@ describe('settings Topology Model & Validator', () => {
 
     expect(result.valid).toBe(true)
     expect(result.errors).toEqual([])
-    expect(result.nodeCount).toBe(29) // 1 root + 10 areas + 14 modules + 4 system
-    expect(result.edgeCount).toBe(28) // 10 root-area + 14 module children + 4 system children
-    expect(result.leafCount).toBe(26) // 8 leaf areas + 14 module leaves + 4 system leaves
+    expect(result.nodeCount).toBe(27) // 1 root + 10 areas + 12 modules + 4 system
+    expect(result.edgeCount).toBe(26) // 10 root-area + 12 module children + 4 system children
+    expect(result.leafCount).toBe(24) // 8 leaf areas + 12 module leaves + 4 system leaves
     expect(result.maxDepth).toBe(2) // Height of 2
   })
 

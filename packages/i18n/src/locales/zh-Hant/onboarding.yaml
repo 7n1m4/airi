@@ -51,6 +51,17 @@ steps:
       badge: 本地優先
       action: 本地繼續
     stepBadge: 架構分流 · 步驟 {current} / {total}
+    companionGreeting: 歡迎使用 AIRI！選擇你想要如何設定你的舞台。你可以 100% 本地離線運行，或登入以跨裝置同步。
+    local:
+      badge: 本地優先
+      title: 本地伴侶 (離線安全)
+      description: 100% 離線私密。所有角色卡、記憶與狀態均儲存於本機資料庫，絕不產生任何雲端遙測數據。
+      selectedCta: 已選擇 (離線安全)
+      selectCta: 選擇本地模式
+      features:
+        f1: 100% 離線本機儲存
+        f2: 零雲端遙測或外部網路呼叫
+        f3: 使用本地資料庫快速啟動
 
   appearance:
     label: 外觀
