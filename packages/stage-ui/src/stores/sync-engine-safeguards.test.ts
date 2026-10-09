@@ -107,7 +107,7 @@ describe('sync-engine-safeguards', () => {
   describe('s3StorageClient.listFiles XML parsing and ETag extraction', () => {
     it('parses S3/R2 XML response, extracts ETags (stripping quotes), and normalizes mtime/size', async () => {
       const s3Client = new S3StorageClient(
-        'https://mock-account.r2.cloudflarestorage.com',
+        'https://mock-account.s3.amazonaws.com',
         'airi-sync',
         'auto',
         'mock-key',

@@ -101,11 +101,6 @@ export const discordServiceStop = defineInvokeEventa<DiscordServiceStatus>(
   'eventa:invoke:electron:discord:stop',
 )
 
-/** Trigger native Cloudflare OAuth PKCE login flow. */
-export const discordServiceCloudflareOAuth = defineInvokeEventa<{ accessToken: string, refreshToken: string, expiresIn: number, accountId?: string }>(
-  'eventa:invoke:electron:discord:cf-oauth',
-)
-
 /** Poll the current service status (connection, ping, guilds). */
 export const discordServiceGetStatus = defineInvokeEventa<DiscordServiceStatus>(
   'eventa:invoke:electron:discord:get-status',
@@ -150,127 +145,6 @@ export const discordServiceSummon = defineInvokeEventa<{ success: boolean, chann
 export const discordServiceLeave = defineInvokeEventa<{ success: boolean, error?: string }, { guildId?: string } | void>(
   'eventa:invoke:electron:discord:leave',
 )
-
-export interface CloudRelayDeployPayload {
-  apiToken: string
-  accountId: string
-  scriptName: string
-  characterPrompt: string
-  characterName?: string
-  llmBaseUrl?: string
-  llmApiKey: string
-  llmModel?: string
-  discordBotToken?: string
-  memoryMode?: 'fixed' | 'unlimited'
-  initialHistory?: Array<{ role: string, content: string }>
-  targetSubdomain?: string
-}
-
-export interface CloudRelayDeployResult {
-  success: boolean
-  workerUrl?: string
-  namespaceId?: string
-  error?: string
-}
-
-export const discordServiceDeployCloudRelay = defineInvokeEventa<CloudRelayDeployResult, CloudRelayDeployPayload>(
-  'eventa:invoke:electron:discord:deploy-cloud-relay',
-)
-
-export interface CloudflareSubdomainPayload {
-  apiToken: string
-  accountId: string
-}
-
-export interface CloudflareSetSubdomainPayload extends CloudflareSubdomainPayload {
-  subdomain: string
-}
-
-export const discordServiceGetCloudflareSubdomain = defineInvokeEventa<{ success: boolean, subdomain: string | null, error?: string }, CloudflareSubdomainPayload>(
-  'eventa:invoke:electron:discord:get-cloudflare-subdomain',
-)
-
-export const discordServiceSetCloudflareSubdomain = defineInvokeEventa<{ success: boolean, subdomain?: string, error?: string }, CloudflareSetSubdomainPayload>(
-  'eventa:invoke:electron:discord:set-cloudflare-subdomain',
-)
-
-export interface CloudRelayFetchMemoriesPayload {
-  apiToken: string
-  accountId: string
-  namespaceId: string
-  key?: string
-}
-
-export interface CloudRelayFetchMemoriesResult {
-  success: boolean
-  key: string
-  value?: any
-  error?: string
-}
-
-export const discordServiceFetchCloudRelayMemories = defineInvokeEventa<CloudRelayFetchMemoriesResult, CloudRelayFetchMemoriesPayload>(
-  'eventa:invoke:electron:discord:fetch-cloud-relay-memories',
-)
-
-export interface DiscordOutboundImage {
-  channelId: string
-  content?: string
-  base64: string
-  filename?: string
-}
-
-/** Send an image (base64) from the assistant to a Discord channel. */
-export const discordServiceSendImage = defineInvokeEventa<void, DiscordOutboundImage>(
-  'eventa:invoke:electron:discord:send-image',
-)
-
-export interface CloudflareSaveEdgeVaultPayload {
-  apiToken: string
-  accountId: string
-  vaultData: Record<string, any>
-}
-
-export interface CloudflareSaveEdgeVaultResult {
-  success: boolean
-  namespaceId?: string
-  error?: string
-}
-
-export interface CloudflareFetchEdgeVaultPayload {
-  apiToken: string
-  accountId: string
-}
-
-export interface CloudflareFetchEdgeVaultResult {
-  success: boolean
-  vaultData?: Record<string, any>
-  error?: string
-}
-
-export const cloudflareServiceSaveEdgeVault = defineInvokeEventa<CloudflareSaveEdgeVaultResult, CloudflareSaveEdgeVaultPayload>(
-  'eventa:invoke:electron:cloudflare:save-edge-vault',
-)
-
-export const cloudflareServiceFetchEdgeVault = defineInvokeEventa<CloudflareFetchEdgeVaultResult, CloudflareFetchEdgeVaultPayload>(
-  'eventa:invoke:electron:cloudflare:fetch-edge-vault',
-)
-
-export interface CloudflareDeployCorsProxyPayload {
-  apiToken: string
-  accountId: string
-  targetSubdomain?: string
-}
-
-export interface CloudflareDeployCorsProxyResult {
-  success: boolean
-  workerUrl?: string
-  error?: string
-}
-
-export const cloudflareServiceDeployCorsProxy = defineInvokeEventa<CloudflareDeployCorsProxyResult, CloudflareDeployCorsProxyPayload>(
-  'eventa:invoke:electron:cloudflare:deploy-cors-proxy',
-)
-
 // ── Event Contracts (Main → Renderer, push-based) ──────────────────────────────
 
 /** Emitted when the service connection state changes. */
@@ -291,4 +165,16 @@ export const discordServiceInboundMessage = defineEventa<DiscordInboundMessage>(
 /** Emitted when a slash command interaction is triggered. */
 export const discordServiceInteraction = defineEventa<DiscordInteractionPayload>(
   'eventa:event:electron:discord:interaction',
+)
+/** Payload for sending an image (base64) from the assistant to a Discord channel. */
+export interface DiscordOutboundImage {
+  channelId: string
+  base64: string
+  filename?: string
+  content?: string
+}
+
+/** Send an image (base64) from the assistant to a Discord channel. */
+export const discordServiceSendImage = defineInvokeEventa<void, DiscordOutboundImage>(
+  'eventa:invoke:electron:discord:send-image',
 )

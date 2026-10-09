@@ -464,15 +464,8 @@ export * from '@proj-airi/electron-eventa/electron-updater'
 
 export { artistryGenerateHeadless } from '@proj-airi/stage-shared'
 export {
-  cloudflareServiceDeployCorsProxy,
-  cloudflareServiceFetchEdgeVault,
-  cloudflareServiceSaveEdgeVault,
-  discordServiceCloudflareOAuth,
-  discordServiceDeployCloudRelay,
   discordServiceEventLog,
-  discordServiceFetchCloudRelayMemories,
   discordServiceForceSync,
-  discordServiceGetCloudflareSubdomain,
   discordServiceGetStatus,
   discordServiceInboundMessage,
   discordServiceInteraction,
@@ -481,7 +474,6 @@ export {
   discordServiceReplyInteraction,
   discordServiceSendMessage,
   discordServiceSendTyping,
-  discordServiceSetCloudflareSubdomain,
   discordServiceSimulateEvent,
   discordServiceStart,
   discordServiceStatusChanged,

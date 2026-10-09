@@ -3,12 +3,10 @@ import { useMmd } from '@proj-airi/stage-ui-mmd'
 import { useCustomVrmAnimationsStore } from '@proj-airi/stage-ui-three'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
-import { toast } from 'vue-sonner'
 
 import { useBackgroundStore } from '../../../stores/background'
 import { useDisplayModelsStore } from '../../../stores/display-models'
 import { useAiriCardStore } from '../../../stores/modules/airi-card'
-import { useCloudflareStore } from '../../../stores/modules/cloudflare'
 import { useSyncEngineStore } from '../../../stores/sync-engine'
 
 interface Props {
@@ -29,36 +27,12 @@ interface Emits {
 }
 
 const syncStore = useSyncEngineStore()
-const cloudflareStore = useCloudflareStore()
+
 const cardStore = useAiriCardStore()
 const backgroundStore = useBackgroundStore()
 const displayModelsStore = useDisplayModelsStore()
 const mmdStore = useMmd()
 const customVrmAnimationsStore = useCustomVrmAnimationsStore()
-
-const isRestoringVault = ref(false)
-
-async function handleRestoreVaultAndRetry() {
-  if (isRestoringVault.value)
-    return
-  isRestoringVault.value = true
-  try {
-    const res = await cloudflareStore.autoRestoreEdgeVault()
-    if (res.success) {
-      toast.success(`Restored S3/R2 credentials (Bucket: ${res.bucket || syncStore.s3Bucket})`)
-      await fetchRemoteCatalogData()
-    }
-    else {
-      toast.error(res.error || 'No S3 credentials found in Cloudflare Edge Vault')
-    }
-  }
-  catch (e: any) {
-    toast.error(e?.message || 'Failed to restore credentials from Edge Vault')
-  }
-  finally {
-    isRestoringVault.value = false
-  }
-}
 
 const {
   selectiveSyncEnabled,
@@ -126,9 +100,6 @@ async function fetchRemoteCatalogData() {
   isLoadingRemote.value = true
   remoteLoadError.value = ''
   try {
-    if (syncStore.activeProvider === 's3' && !syncStore.s3Bucket && cloudflareStore.isAuthenticated) {
-      await cloudflareStore.autoRestoreEdgeVault()
-    }
     const res = await syncStore.fetchRemoteSyncManifestCatalog()
     if (res && res.success) {
       const cardsMap = new Map()
@@ -855,16 +826,6 @@ defineExpose({
           {{ remoteLoadError }}
         </div>
         <div class="mt-2 flex flex-wrap items-center justify-center gap-2">
-          <button
-            v-if="cloudflareStore.isAuthenticated"
-            :disabled="isRestoringVault"
-            class="flex items-center gap-1.5 rounded-lg bg-amber-500/15 px-3.5 py-1.5 text-xs text-amber-600 font-bold transition-colors dark:bg-amber-500/20 hover:bg-amber-500/25 dark:text-amber-300 disabled:opacity-50 dark:hover:bg-amber-500/30"
-            @click="handleRestoreVaultAndRetry"
-          >
-            <div v-if="isRestoringVault" class="i-solar:restart-circle-bold-duotone animate-spin text-xs" />
-            <div v-else class="i-solar:cloud-download-bold-duotone text-xs" />
-            <span>{{ isRestoringVault ? 'Restoring...' : 'Restore from Cloudflare Vault' }}</span>
-          </button>
           <button
             class="rounded-lg bg-rose-500/10 px-3.5 py-1.5 text-xs text-rose-600 font-bold transition-colors dark:bg-rose-500/20 hover:bg-rose-500/25 dark:text-rose-300 dark:hover:bg-rose-500/30"
             @click="fetchRemoteCatalogData"

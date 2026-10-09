@@ -3,10 +3,7 @@ import type { DiscordCommandDefinition, DiscordEventLogEntry, DiscordInboundMess
 import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import {
   debug,
-  discordServiceDeployCloudRelay,
-  discordServiceFetchCloudRelayMemories,
   discordServiceForceSync,
-  discordServiceGetCloudflareSubdomain,
   discordServiceGetStatus,
   discordServiceLeave,
   discordServiceRegisterCommands,
@@ -14,7 +11,6 @@ import {
   discordServiceSendImage,
   discordServiceSendMessage,
   discordServiceSendTyping,
-  discordServiceSetCloudflareSubdomain,
   discordServiceSimulateEvent,
   discordServiceStart,
   discordServiceStop,
@@ -25,7 +21,7 @@ import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
 import { useLive2d } from '@proj-airi/stage-ui-live2d'
 import { useModelStore } from '@proj-airi/stage-ui-three'
 import { useBroadcastChannel } from '@vueuse/core'
-import { defineStore, storeToRefs } from 'pinia'
+import { defineStore } from 'pinia'
 import { computed, onMounted, onUnmounted, ref, toRaw, watch } from 'vue'
 
 import { stripMarkers } from '../../composables/response-categoriser'
@@ -36,7 +32,6 @@ import { useSettings } from '../settings'
 import { useAiriCardStore } from './airi-card'
 import { useArtistryStore } from './artistry'
 import { useAutonomousArtistryStore } from './artistry-autonomous'
-import { useCloudflareStore } from './cloudflare'
 import { useConsciousnessStore } from './consciousness'
 import {
   formatDiscordInboundMessage,
@@ -267,11 +262,6 @@ export const useDiscordStore = defineStore('discord', () => {
   const ownerUsername = useLocalStorageManualReset<string>('settings/discord/ownerUsername', '')
   const ownerUserId = useLocalStorageManualReset<string>('settings/discord/ownerUserId', '')
 
-  // Cloud Relay persisted state & instances
-  const cloudflareStore = useCloudflareStore()
-  const { cfAccountId, cfApiToken, cfOAuthTokens } = storeToRefs(cloudflareStore)
-  const cloudRelayInstances = useLocalStorageManualReset<Record<string, { scriptName: string, workerUrl: string, namespaceId: string, memoryMode: 'fixed' | 'unlimited', deployedAt: number, cardId: string, sessionId: string }>>('settings/discord/cloudRelayInstances', {})
-
   const lastRegisteredVersion = useLocalStorageManualReset<number>('settings/discord/lastRegisteredVersion', 0)
   const chatMode = useLocalStorageManualReset<'followup' | 'steer' | 'collect'>('settings/discord/chatMode', 'followup')
   const voiceMode = useLocalStorageManualReset<'puppet' | 'voicenote' | 'none'>('settings/discord/voiceMode', 'puppet')
@@ -328,9 +318,6 @@ export const useDiscordStore = defineStore('discord', () => {
   const invokeStop = isElectron ? useElectronEventaInvoke(discordServiceStop) : null
   const invokeGetStatus = isElectron ? useElectronEventaInvoke(discordServiceGetStatus) : null
 
-  async function authenticateWithCloudflare() {
-    return await cloudflareStore.authenticateWithCloudflare()
-  }
   const invokeForceSync = isElectron ? useElectronEventaInvoke(discordServiceForceSync) : null
   const invokeSimulate = isElectron ? useElectronEventaInvoke(discordServiceSimulateEvent) : null
   const invokeSendMessage = isElectron ? useElectronEventaInvoke(discordServiceSendMessage) : null
@@ -340,124 +327,6 @@ export const useDiscordStore = defineStore('discord', () => {
   const invokeSendImage = isElectron ? useElectronEventaInvoke(discordServiceSendImage) : null
   const invokeSummon = isElectron ? useElectronEventaInvoke(discordServiceSummon) : null
   const invokeLeave = isElectron ? useElectronEventaInvoke(discordServiceLeave) : null
-  const invokeDeployCloudRelay = isElectron ? useElectronEventaInvoke(discordServiceDeployCloudRelay) : null
-  const invokeFetchCloudRelayMemories = isElectron ? useElectronEventaInvoke(discordServiceFetchCloudRelayMemories) : null
-  const invokeGetCloudflareSubdomain = isElectron ? useElectronEventaInvoke(discordServiceGetCloudflareSubdomain) : null
-  const invokeSetCloudflareSubdomain = isElectron ? useElectronEventaInvoke(discordServiceSetCloudflareSubdomain) : null
-
-  async function getCloudflareSubdomain(): Promise<string | null> {
-    const apiToken = cfApiToken.value || cfOAuthTokens.value?.accessToken || ''
-    const accountId = cfAccountId.value || cfOAuthTokens.value?.accountId || ''
-    if (!apiToken || !invokeGetCloudflareSubdomain)
-      return null
-    const res = await invokeGetCloudflareSubdomain({ apiToken, accountId })
-    return res.success ? res.subdomain : null
-  }
-
-  async function setCloudflareSubdomain(subdomain: string): Promise<string> {
-    const apiToken = cfApiToken.value || cfOAuthTokens.value?.accessToken || ''
-    const accountId = cfAccountId.value || cfOAuthTokens.value?.accountId || ''
-    if (!apiToken)
-      throw new Error('Cloudflare API token missing.')
-    if (!invokeSetCloudflareSubdomain)
-      throw new Error('Subdomain registration unavailable in non-Electron environment.')
-    const res = await invokeSetCloudflareSubdomain({ apiToken, accountId, subdomain })
-    if (!res.success || !res.subdomain) {
-      throw new Error(res.error || 'Subdomain registration failed.')
-    }
-    return res.subdomain
-  }
-
-  async function deployCloudRelay(payload: {
-    scriptName: string
-    characterPrompt: string
-    characterName?: string
-    llmBaseUrl?: string
-    llmApiKey: string
-    llmModel?: string
-    memoryMode?: 'fixed' | 'unlimited'
-    cardId: string
-    sessionId: string
-    initialHistory?: Array<{ role: string, content: string }>
-    targetSubdomain?: string
-  }) {
-    const apiToken = cfApiToken.value || cfOAuthTokens.value?.accessToken || ''
-    const accountId = cfAccountId.value || cfOAuthTokens.value?.accountId || ''
-
-    if (!apiToken) {
-      throw new Error('Cloudflare API Token missing. Please authenticate first.')
-    }
-
-    if (!invokeDeployCloudRelay) {
-      throw new Error('Cloud Relay deployment unavailable in non-Electron environment')
-    }
-
-    const res = await invokeDeployCloudRelay({
-      apiToken,
-      accountId,
-      scriptName: payload.scriptName,
-      characterPrompt: payload.characterPrompt,
-      characterName: payload.characterName,
-      llmBaseUrl: payload.llmBaseUrl,
-      llmApiKey: payload.llmApiKey,
-      llmModel: payload.llmModel,
-      discordBotToken: token.value,
-      memoryMode: payload.memoryMode,
-      initialHistory: payload.initialHistory,
-      targetSubdomain: payload.targetSubdomain,
-    })
-
-    if (!res?.success || !res.workerUrl) {
-      throw new Error(res?.error || 'Worker deployment failed on Cloudflare Edge')
-    }
-
-    cloudRelayInstances.value = {
-      ...cloudRelayInstances.value,
-      [payload.scriptName]: {
-        scriptName: payload.scriptName,
-        workerUrl: res.workerUrl,
-        namespaceId: res.namespaceId || '',
-        memoryMode: payload.memoryMode || 'unlimited',
-        deployedAt: Date.now(),
-        cardId: payload.cardId,
-        sessionId: payload.sessionId,
-      },
-    }
-
-    // Switch execution mode to Cloud Relay & pause local Gateway to prevent bot token contention
-    executionMode.value = 'remote'
-    if (isConnected.value || isConnecting.value) {
-      stopService()
-    }
-
-    return res
-  }
-
-  async function fetchCloudRelayMemories(namespaceId: string, key = 'context/rolling') {
-    const apiToken = cfApiToken.value || cfOAuthTokens.value?.accessToken || ''
-    const accountId = cfAccountId.value || cfOAuthTokens.value?.accountId || ''
-
-    if (!apiToken) {
-      throw new Error('Cloudflare API Token missing. Please authenticate first.')
-    }
-
-    if (!invokeFetchCloudRelayMemories) {
-      throw new Error('Cloud Relay memory fetch unavailable in non-Electron environment')
-    }
-
-    const res = await invokeFetchCloudRelayMemories({
-      apiToken,
-      accountId,
-      namespaceId,
-      key,
-    })
-
-    if (!res?.success) {
-      throw new Error(res?.error || `Failed to fetch KV key "${key}" from Cloudflare Edge`)
-    }
-
-    return res.value
-  }
 
   // ── Routing Cache ──────────────────────────────────────────────────────────
   const lastChannelId = ref<string | null>(null)
@@ -2367,10 +2236,6 @@ export const useDiscordStore = defineStore('discord', () => {
     executionMode,
     ownerUsername,
     ownerUserId,
-    cfAccountId,
-    cfApiToken,
-    cfOAuthTokens,
-    cloudRelayInstances,
     chatMode,
     voiceMode,
     voiceCall,
@@ -2386,11 +2251,6 @@ export const useDiscordStore = defineStore('discord', () => {
     // Actions
     startService,
     stopService,
-    authenticateWithCloudflare,
-    getCloudflareSubdomain,
-    setCloudflareSubdomain,
-    deployCloudRelay,
-    fetchCloudRelayMemories,
     refreshStatus,
     forceCardSync,
     simulateEvent,
