@@ -56,7 +56,7 @@ async function handleValidate() {
         S3-Compatible Cloud Storage
       </h2>
       <div class="text-neutral-400 dark:text-neutral-500">
-        Configure synchronization to Cloudflare R2, Amazon S3, Backblaze B2, or self-hosted MinIO.
+        Configure synchronization to Amazon S3, Backblaze B2, or self-hosted MinIO.
       </div>
     </div>
 
@@ -64,8 +64,8 @@ async function handleValidate() {
       <FieldInput
         v-model="s3Endpoint"
         label="Endpoint URL"
-        description="The base endpoint URL of your S3 provider (e.g. https://<accountid>.r2.cloudflarestorage.com or https://s3.amazonaws.com)."
-        placeholder="https://<accountid>.r2.cloudflarestorage.com"
+        description="The base endpoint URL of your S3 provider (e.g. https://s3.amazonaws.com)."
+        placeholder="https://s3.amazonaws.com"
       />
 
       <FieldInput

@@ -3008,8 +3008,6 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
       return true
     if (key.startsWith('settings/sync/'))
       return true
-    if (key.startsWith('settings/cloudflare/'))
-      return true
     if (key === 'settings/discord/enabled')
       return true
     if (perDeviceAppearance.value && (key.startsWith('settings/theme/') || key === 'settings/general/language'))
@@ -3329,10 +3327,6 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
         'settings/sync/s3-access-key-id',
         'settings/sync/s3-secret-access-key',
         'settings/discord/enabled',
-        'settings/cloudflare/cfOAuthTokens',
-        'settings/cloudflare/cfAccountId',
-        'settings/cloudflare/cfApiToken',
-        'settings/cloudflare/cfSubdomain',
         'airi-onboarding-state',
       ]
       const lsKeys = []

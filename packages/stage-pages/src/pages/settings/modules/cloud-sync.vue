@@ -3,7 +3,6 @@ import SelectiveSyncPanel from '@proj-airi/stage-ui/components/scenarios/provide
 
 import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useCloudflareStore } from '@proj-airi/stage-ui/stores/modules/cloudflare'
 import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
 import { storeToRefs } from 'pinia'
 import {
@@ -20,10 +19,8 @@ import { toast } from 'vue-sonner'
 
 const router = useRouter()
 const syncStore = useSyncEngineStore()
-const cloudflareStore = useCloudflareStore()
 const cardStore = useAiriCardStore()
 const displayModelsStore = useDisplayModelsStore()
-const isRestoringVault = ref(false)
 
 // Prune Models states
 const isPruneDialogOpen = ref(false)
@@ -95,27 +92,6 @@ async function handleExecutePrune() {
   }
   finally {
     isPruning.value = false
-  }
-}
-
-async function handleRestoreFromVault() {
-  if (isRestoringVault.value)
-    return
-  isRestoringVault.value = true
-  try {
-    const res = await cloudflareStore.autoRestoreEdgeVault()
-    if (res.success) {
-      toast.success(`Restored S3/R2 credentials from Edge Vault (Bucket: ${res.bucket || syncStore.s3Bucket})`)
-    }
-    else {
-      toast.error(res.error || 'No S3 credentials found in Cloudflare Edge Vault')
-    }
-  }
-  catch (e: any) {
-    toast.error(e?.message || 'Failed to restore credentials from Edge Vault')
-  }
-  finally {
-    isRestoringVault.value = false
   }
 }
 
@@ -376,23 +352,6 @@ function isMergeable(key: string): boolean {
             {{ isSyncing ? 'Syncing...' : (selectiveSyncEnabled ? 'Sync Selected' : 'Sync Full') }}
           </button>
         </div>
-      </div>
-
-      <div v-if="cloudflareStore.isAuthenticated" class="flex flex-row items-center border-t border-neutral-200 pt-4 dark:border-neutral-800">
-        <div class="size-10 flex items-center justify-center rounded-full bg-cyan-500/10 text-cyan-500">
-          <div class="i-solar:cloud-download-bold-duotone text-xl" :class="{ 'animate-spin': isRestoringVault }" />
-        </div>
-        <div class="ml-3 flex flex-col">
-          <span class="text-neutral-700 font-semibold dark:text-neutral-300">Restore from Cloudflare Vault</span>
-          <span class="text-xs text-neutral-400 dark:text-neutral-500">Pull S3/R2 storage credentials from your linked Cloudflare Edge Vault into this session.</span>
-        </div>
-        <button
-          class="ml-auto rounded-xl bg-cyan-600 px-5 py-2.5 text-sm text-white font-semibold transition-colors duration-200 hover:bg-cyan-700 disabled:opacity-50 focus:outline-none"
-          :disabled="isRestoringVault || isSyncing"
-          @click="handleRestoreFromVault"
-        >
-          {{ isRestoringVault ? 'Restoring...' : 'Restore Vault' }}
-        </button>
       </div>
 
       <div class="flex flex-row items-center border-t border-neutral-200 pt-4 dark:border-neutral-800">

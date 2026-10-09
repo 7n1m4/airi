@@ -8,7 +8,6 @@ import { useI18n } from 'vue-i18n'
 
 import { useProvidersStore } from '../../../../stores/providers'
 import { Alert } from '../../../misc'
-import { ProviderAccountIdInput } from '../../../scenarios/providers'
 
 interface Props {
   selectedProviderId: string
@@ -80,7 +79,7 @@ const needsBaseUrl = computed(() => {
   // Amazon Bedrock doesn't need a base URL (it's derived from region)
   if (isAmazonBedrock.value)
     return false
-  return props.selectedProvider.id !== 'cloudflare-workers-ai'
+  return true
 })
 
 const canProceed = computed(() => {
@@ -125,8 +124,6 @@ async function validateConfiguration() {
         config.apiKey = apiKey.value.trim()
       if (needsBaseUrl.value)
         config.baseUrl = baseUrl.value.trim()
-      if (props.selectedProvider.id === 'cloudflare-workers-ai')
-        config.accountId = accountId.value.trim()
     }
 
     // Validate using provider's validator
@@ -279,11 +276,6 @@ initializeForm()
               label="Base URL"
               description="Enter the base URL for the provider's API."
             />
-          </div>
-
-          <!-- Account ID for Cloudflare -->
-          <div v-if="props.selectedProvider.id === 'cloudflare-workers-ai'">
-            <ProviderAccountIdInput v-model="accountId" />
           </div>
         </template>
       </div>

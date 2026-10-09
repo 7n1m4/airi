@@ -51,22 +51,6 @@ steps:
         オフライン＆プライベート。すべてのキャラクターカード、記憶、ステータスはローカルデータベースにのみ保存され、クラウドテレメトリは一切送信されません。
       badge: オフライン優先
       action: ローカルで続ける
-    cloudOption:
-      title: アカウントサインイン (Cloudflare)
-      description: アカウントを連携し、エンドツーエンドの暗号化でデバイス間のパートナー、設定、記憶保管庫を同期します。
-      badge: マルチデバイス同期
-      connect: Cloudflare でサインイン
-      connected: Cloudflare に接続済み
-      accountPrefix: 'アカウント ID:'
-    restore:
-      foundCompanions: Cloudflare R2 に {count} 体のパートナーが見つかりました
-      restoreAndLaunch: 復元してステージを起動 (~30秒)
-      restoreAndBuild: 復元して別のコンパニオンを作成
-      syncing: リモートパートナーを復元中...
-      bannerTitle: リモートバックアップを検出
-      bannerDesc: Cloudflare R2 保管庫に {count} 体のコンパニオンが見つかりました。
-      restoring: コンパニオンを復元中...
-      restoreAll: 復元してステージを起動
     stepBadge: アーキテクチャトリアージ · ステップ {current} / {total}
     companionGreeting: AIRI
       へようこそ！ステージのセットアップ方法を選択してください。完全ローカル・オフラインで動作させることも、アカウントにサインインして複数デバイス間で同期することも可能です。
@@ -80,52 +64,6 @@ steps:
         f1: 端末内完全オフライン保存
         f2: クラウドテレメトリ・外部通信ゼロ
         f3: ローカルDBによる超高速起動
-    cloud:
-      badge: 10 GB 無料 + クラウド同期
-      title: アカウントサインイン (Cloudflare)
-      description: アカウントを接続して、10 GB の無料ストレージ、毎日のエッジ AI クレジット、複数デバイス間での 24/7 コンパニオン常駐を有効にします。
-      selectedCta: 選択中 (クラウド連携)
-      selectCta: クラウド同期を選択
-      features:
-        f1: 10 GB 無料クラウドストレージ
-        f2: 毎日の無料エッジ AI クレジット
-        f3: 24/7 Discord クラウドリレー
-        f4: 複数デバイス同期＆1クリック復元
-        f5: プライベート CORS プロキシ＆ゼロカストディ
-        storage:
-          title: 10 GB 無料クラウドストレージ
-          desc: 3Dモデル、カスタム背景、完全な記憶保管庫を下り転送手数料ゼロでバックアップします。
-          howItWorks: ユーザー所有の Cloudflare R2 オブジェクトストレージを活用しています。
-          whyItMatters: 数十の VRM/Live2D モデルや数年分のチャット履歴を保存できる十分な無料枠を提供します。AWS S3 と異なり、アセットのダウンロードは帯域料金 $0 で 100% 無料です。
-        ai:
-          title: 毎日の無料エッジ AI クレジット
-          desc: DeepSeek、Qwen、Llama 用に毎日 10,000 ニューロンを無料提供（API キー不要）。
-          howItWorks: ステップ 8（意識）で Cloudflare Workers AI に直接接続します。
-          whyItMatters: OpenAI の有料サブスクやクレジットカード、高価なローカルゲーミング GPU がなくても、最先端のオープンモデルとエッジで即座に会話できます。
-        relay:
-          title: 24/7 Discord クラウドリレー
-          desc: PC の電源を切っても、Discord サーバーでコンパニオンが常時アクティブに待機します。
-          howItWorks: サーバーレスの Cloudflare Worker (@proj-airi/stage-edge) として動作し、Discord インタラクション Webhook を処理します。
-          whyItMatters: コンパニオンが 24 時間体制でチャットに応答し、Edge KV に記憶を蓄積、AIRI を再起動した際にデスクトップへ自動同期します。
-        sync:
-          title: 複数デバイス同期＆1クリック復元
-          desc: デスクトップ、Web、モバイルをシームレスに同期。ワンクリックでコンパニオンを復元できます。
-          howItWorks: Edge Key Vault (airi-edge-vault) がアクティブなコンパニオン状態を安全に保持します。
-          whyItMatters: AIRI の再インストールや新しいノート PC / スマートフォンへの移行時も、手動でキーを入力することなくコンパニオン、設定、記憶を自動復元します。
-        proxy:
-          title: プライベート CORS プロキシ＆ゼロカストディ
-          desc: 完全なゼロカストディのデータプライバシーで、複雑なローカルおよびリモート AI API にアクセスします。
-          howItWorks: 個人用エッジリバースプロキシをデプロイし、Web およびモバイルステージ向けのブラウザ CORS 制限を回避します。
-          whyItMatters: すべてが個人の Cloudflare アカウント内で動作します。AIRI は中間サーバーを介さず、会話を盗み見たり保存したりすることは一切ありません。
-    auth:
-      connected: Cloudflare に接続完了
-      disconnect: 接続解除
-      autoTab: 1クリックブラウザ認証
-      tokenTab: API トークン
-      verifying: 確認中...
-      oauthButton: Cloudflare でサインイン
-      tokenPlaceholder: Cloudflare API トークンを入力...
-      verifyToken: トークンを接続
 
   appearance:
     label: 外観
@@ -383,15 +321,9 @@ steps:
     title: 視覚認識 (チャット VLM)
     description: チャットに送信された写真、スクリーンショット、イラストをパートナーが見て理解できるようにします。
     tabs:
-      cloudflare: Cloudflare Edge
-      cloudflareBadge: 毎日 10k 無料
       local: ローカル＆オフライン
       localBadge: 完全隔離
       custom: クラウドプロバイダー
-    cloudflare:
-      connected: 'Cloudflare 接続完了: 毎日 10,000 無料ニューロン有効'
-      notConnected: Cloudflare アカウントを接続すると、セットアップ不要で無料のエッジビジョンを利用できます。
-      signIn: Cloudflare でサインイン
     engineTitle: 画像認識モデル
     testImage: 画像認識のテスト
     testPrompt: 画像をアップロードして、パートナーが正しく認識できるかテストします。

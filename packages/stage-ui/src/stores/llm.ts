@@ -234,7 +234,6 @@ const TOOLS_RELATED_ERROR_PATTERNS: RegExp[] = [
   /tool use with function calling is unsupported/i, // Google Generative AI
   /tool_use_failed/i, // Groq
   /does not support function.?calling/i, // Anthropic
-  /tools?\s+(is|are)\s+not\s+supported/i, // Cloudflare Workers AI
 ]
 
 export function isToolRelatedError(err: unknown): boolean {

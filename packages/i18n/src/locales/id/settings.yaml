@@ -1133,17 +1133,6 @@ pages:
             part4: pembatasan yang tidak selaras dengan SDK OpenAI, saat ini tidak memungkinkan untuk menggunakan penyedia ini secara langsung di peramban.
             part5: Jika Anda perlu menggunakan penyedia ini, Anda memerlukan backend proxy khusus seperti Fungsi Serverless yang berjalan di
             part6: atau layanan bypass CORS untuk melewati pembatasan CORS.
-      cloudflare-workers-ai:
-        description: cloudflare.com
-        fields:
-          field:
-            account-id:
-              description: ID Akun Cloudflare
-              label: ID Akun
-              placeholder: ID Akun Cloudflare Anda
-            api-key:
-              placeholder: Masukkan Kunci API Cloudflare
-        title: Cloudflare Workers AI
       common:
         status:
           validating: Memvalidasi

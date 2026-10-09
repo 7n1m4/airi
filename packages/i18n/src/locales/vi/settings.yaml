@@ -799,17 +799,6 @@ pages:
               Nếu cần dùng, bạn phải có proxy backend riêng như Serverless
               Function
             part6: hoặc dịch vụ bypass CORS để vượt hạn chế.
-      cloudflare-workers-ai:
-        description: AI on the Edge - 10k free Neurons/day across many models
-        fields:
-          field:
-            account-id:
-              description: ID tài khoản Cloudflare
-              label: ID Tài khoản
-              placeholder: ID tài khoản Cloudflare của bạn
-            api-key:
-              placeholder: Nhập khóa API cho Cloudflare
-        title: Cloudflare Workers AI
       common:
         status:
           validating: Đang xác thực
@@ -1316,7 +1305,7 @@ pages:
         title: Đồng bộ hóa đám mây & Sao lưu?
         description: Giữ an toàn cho thẻ, kho lưu trữ ký ức và cài đặt trên các thiết
           bị. Sử dụng <b>Hệ thống tệp cục bộ</b> để sao lưu máy tính/NAS hoặc
-          <b>Bộ nhớ tương thích S3</b> (Cloudflare R2, MinIO, AWS S3).
+          <b>Bộ nhớ tương thích S3</b> (MinIO, AWS S3).
     speech:
       app_local_audio:
         description: Cấu hình cài đặt đầu ra âm thanh cục bộ để tổng hợp giọng nói.

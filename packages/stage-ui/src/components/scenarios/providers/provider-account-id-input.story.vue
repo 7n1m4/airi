@@ -24,7 +24,7 @@ const filledAccountId = ref('1234567890abcdef1234567890abcdef')
       <div>
         <ProviderAccountIdInput
           v-model="emptyAccountId"
-          placeholder="Your Cloudflare Account ID"
+          placeholder="Your Account ID"
         />
       </div>
     </Variant>
@@ -36,7 +36,7 @@ const filledAccountId = ref('1234567890abcdef1234567890abcdef')
       <div>
         <ProviderAccountIdInput
           v-model="filledAccountId"
-          placeholder="Your Cloudflare Account ID"
+          placeholder="Your Account ID"
         />
       </div>
     </Variant>
@@ -48,9 +48,9 @@ const filledAccountId = ref('1234567890abcdef1234567890abcdef')
       <div>
         <ProviderAccountIdInput
           v-model="emptyAccountId"
-          label="Cloudflare Account ID"
-          description="The ID of your Cloudflare account"
-          placeholder="Your Cloudflare Account ID"
+          label="Account ID"
+          description="The ID of your provider account"
+          placeholder="Your Account ID"
         />
       </div>
     </Variant>
@@ -63,7 +63,7 @@ const filledAccountId = ref('1234567890abcdef1234567890abcdef')
         <ProviderAccountIdInput
           v-model="emptyAccountId"
           :required="false"
-          placeholder="Your Cloudflare Account ID"
+          placeholder="Your Account ID"
         />
       </div>
     </Variant>

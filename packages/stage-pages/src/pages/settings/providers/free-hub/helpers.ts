@@ -21,8 +21,6 @@ export function resolveProviderId(platform: string, modality?: string): string {
   }
 
   switch (p) {
-    case 'cloudflare':
-      return 'cloudflare-workers-ai'
     case 'github':
       return 'github-models'
     case 'lmstudio':

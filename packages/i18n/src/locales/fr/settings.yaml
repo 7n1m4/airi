@@ -836,17 +836,6 @@ pages:
               Si vous devez utiliser ce fournisseur, vous aurez besoin d’un
               proxy backend dédié comme une fonction serverless
             part6: ou des services contournant le CORS pour éviter les restrictions CORS.
-      cloudflare-workers-ai:
-        description: AI on the Edge - 10k free Neurons/day across many models
-        fields:
-          field:
-            account-id:
-              description: ID de compte Cloudflare
-              label: ID de compte
-              placeholder: Votre ID de compte Cloudflare
-            api-key:
-              placeholder: Saisir la clé API Cloudflare
-        title: Cloudflare Workers AI
       common:
         status:
           validating: Validation en cours
@@ -1364,7 +1353,7 @@ pages:
         description: Gardez vos cartes, archives de mémoire et paramètres en sécurité
           sur tous vos appareils. Utilisez le <b>Système de fichiers local</b>
           pour les sauvegardes bureau/NAS ou le <b>Stockage compatible S3</b>
-          (Cloudflare R2, MinIO, AWS S3).
+          (MinIO, AWS S3).
     speech:
       app_local_audio:
         description: Configurer les paramètres de sortie audio locale pour la synthèse

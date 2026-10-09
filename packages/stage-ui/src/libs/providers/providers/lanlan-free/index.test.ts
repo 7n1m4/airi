@@ -1,3 +1,5 @@
+import type { ChatProvider } from '@xsai-ext/providers/utils'
+
 import { describe, expect, it } from 'vitest'
 import { parse } from 'zod/v4/core'
 
@@ -35,7 +37,7 @@ describe('providerLanlanFree', () => {
       baseUrl: 'https://www.lanlan.tech/text/v1/',
     })
 
-    expect(provider.chat('free-model')).toMatchObject({
+    expect((provider as ChatProvider).chat('free-model')).toMatchObject({
       apiKey: 'free-access',
       baseURL: 'https://www.lanlan.tech/text/v1/',
       model: 'free-model',
@@ -49,11 +51,13 @@ describe('providerLanlanFree', () => {
 
   it('has keyless provider configuration', () => {
     expect(providerLanlanFree.requiresCredentials).toBe(false)
-    expect(providerLanlanFree.business().pricing).toBe('free')
+    expect(providerLanlanFree.business!({ t: translate }).pricing).toBe('free')
   })
 
   it('lists default model via extraMethods', async () => {
-    const models = await providerLanlanFree.extraMethods?.listModels?.()
+    const config = { apiKey: 'free-access', baseUrl: 'https://www.lanlan.tech/text/v1/' }
+    const provider = await providerLanlanFree.createProvider(config)
+    const models = await providerLanlanFree.extraMethods?.listModels?.(config, provider)
     expect(models).toEqual([
       {
         id: 'free-model',

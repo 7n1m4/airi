@@ -768,17 +768,6 @@ pages:
             part5: >-
               如果您確實需要使用此提供者，則需要一個專用的代理後端，例如在
             part6: 上運行的 Serverless Function，或者一些繞過 CORS 的服務，以繞過 CORS 限制。
-      cloudflare-workers-ai:
-        description: AI on the Edge - 10k free Neurons/day across many models
-        fields:
-          field:
-            account-id:
-              description: Cloudflare 帳戶 ID
-              label: Cloudflare Account ID
-              placeholder: 請輸入 Cloudflare Account ID
-            api-key:
-              placeholder: 請輸入 Cloudflare Workers AI 的 API Key
-        title: Workers AI
       common:
         status:
           validating: 正在驗證設定
@@ -1240,7 +1229,7 @@ pages:
       cloud:
         title: 雲端同步與備份？
         description: 跨裝置安全保存您的角色卡、記憶檔案和設定。桌面端/NAS 備份可使用<b>本機檔案系統</b>，或使用 <b>S3 相容儲存</b>
-          (Cloudflare R2, MinIO, AWS S3)。
+          (MinIO, AWS S3)。
     speech:
       app_local_audio:
         description: 設定語音合成的本機音訊輸出選項。

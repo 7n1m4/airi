@@ -24,7 +24,7 @@ g.CSS = undefined
 // window (no localStorage), while globalThis.BroadcastChannel is Node's
 // native implementation. Module-scope `localStorage.getItem` calls and raw
 // `new BroadcastChannel` usages (screen-watcher, web-llm-channel, beat-sync,
-// speech bus, dating-sim, cloudflare) then crash collection: the former with
+// speech bus, dating-sim) then crash collection: the former with
 // "Cannot read properties of undefined", the latter fatally with
 // ERR_INVALID_ARG_TYPE when a post crosses worker realms into a foreign
 // MessageEvent. Static collection needs neither, so stub them here.

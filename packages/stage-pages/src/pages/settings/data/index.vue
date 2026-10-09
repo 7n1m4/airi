@@ -2,7 +2,6 @@
 import { isStageTamagotchi } from '@proj-airi/stage-shared'
 import { useDataMaintenance } from '@proj-airi/stage-ui/composables/use-data-maintenance'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useCloudflareStore } from '@proj-airi/stage-ui/stores/modules/cloudflare'
 import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
 import { Button, DoubleCheckButton } from '@proj-airi/ui'
 import {
@@ -44,7 +43,6 @@ const {
 } = useDataMaintenance()
 
 const syncEngineStore = useSyncEngineStore()
-const cloudflareStore = useCloudflareStore()
 const airiCardStore = useAiriCardStore()
 
 const statusMessage = ref('')
@@ -429,7 +427,7 @@ async function executeAdvancedRestore() {
               </span>
             </div>
             <p class="mt-0.5 text-sm text-neutral-600 dark:text-neutral-400">
-              Modern continuous replication to your personal Cloudflare R2, S3 bucket, or local network share.
+              Modern continuous replication to your personal S3-compatible bucket or local network share.
             </p>
           </div>
         </div>
@@ -470,7 +468,7 @@ async function executeAdvancedRestore() {
           <div class="i-solar:shield-check-bold mt-0.5 shrink-0 text-base text-sky-500" />
           <div>
             <span class="text-sky-700 font-semibold dark:text-sky-300">Zero-Custody Automatic Replication:</span>
-            Cloud Sync continuously mirrors your conversations, companions, daily memory summaries, and settings to storage you control (Cloudflare R2, AWS S3, or Local Share). We never see or hold custody of your data — client-side encrypted and 100% user-owned.
+            Cloud Sync continuously mirrors your conversations, companions, daily memory summaries, and settings to storage you control (AWS S3, S3-compatible buckets, or Local Share). We never see or hold custody of your data — client-side encrypted and 100% user-owned.
           </div>
         </div>
         <div class="flex items-start gap-2 border-t border-sky-500/15 pt-2 dark:border-sky-500/25">
@@ -483,22 +481,13 @@ async function executeAdvancedRestore() {
       </div>
 
       <!-- Status Metadata Strip -->
-      <div class="grid grid-cols-1 mt-4 gap-3 sm:grid-cols-3">
+      <div class="grid grid-cols-1 mt-4 gap-3 sm:grid-cols-2">
         <div class="rounded-lg bg-neutral-100/70 p-2.5 dark:bg-neutral-800/50">
           <div class="text-[11px] text-neutral-500 font-medium tracking-wider uppercase dark:text-neutral-400">
             Active Target
           </div>
           <div class="mt-0.5 truncate text-xs text-neutral-800 font-semibold dark:text-neutral-200">
             {{ formattedBackupLocation }}
-          </div>
-        </div>
-        <div class="rounded-lg bg-neutral-100/70 p-2.5 dark:bg-neutral-800/50">
-          <div class="text-[11px] text-neutral-500 font-medium tracking-wider uppercase dark:text-neutral-400">
-            Cloudflare Edge Hub
-          </div>
-          <div class="mt-0.5 flex items-center gap-1.5 text-xs text-neutral-800 font-semibold dark:text-neutral-200">
-            <span :class="['h-2 w-2 rounded-full', cloudflareStore.isAuthenticated ? 'bg-emerald-500' : 'bg-neutral-400']" />
-            <span class="truncate">{{ cloudflareStore.isAuthenticated ? (cloudflareStore.cfAccountId ? `${cloudflareStore.cfAccountId.slice(0, 12)}...` : 'Authenticated') : 'Not Linked' }}</span>
           </div>
         </div>
         <div class="rounded-lg bg-neutral-100/70 p-2.5 dark:bg-neutral-800/50">

@@ -57,23 +57,6 @@ steps:
         chỉ lưu trong cơ sở dữ liệu trên máy bạn mà không gửi dữ liệu ra ngoài.
       badge: Ưu tiên nội bộ
       action: Tiếp tục trên máy
-    cloudOption:
-      title: Đăng nhập tài khoản (Cloudflare)
-      description: Kết nối tài khoản để đồng bộ bạn đồng hành, cài đặt và kho lưu trữ
-        ký ức giữa các thiết bị với mã hóa đầu cuối.
-      badge: Đồng bộ đa thiết bị
-      connect: Đăng nhập với Cloudflare
-      connected: Đã kết nối Cloudflare
-      accountPrefix: 'ID tài khoản:'
-    restore:
-      foundCompanions: 'Tìm thấy {count} bạn đồng hành trên Cloudflare R2'
-      restoreAndLaunch: Khôi phục & Khởi chạy sân khấu (~30 giây)
-      restoreAndBuild: Khôi phục & Tạo bạn đồng hành khác
-      syncing: Đang khôi phục dữ liệu từ xa...
-      bannerTitle: Tìm thấy bản sao lưu từ xa
-      bannerDesc: Tìm thấy {count} bạn đồng hành trong kho Cloudflare R2 của bạn.
-      restoring: Đang khôi phục bạn đồng hành...
-      restoreAll: Khôi phục & Khởi chạy sân khấu
     stepBadge: Phân loại kiến trúc · Bước {current} / {total}
     companionGreeting: Chào mừng bạn đến với AIRI! Hãy chọn cách bạn muốn thiết lập sân khấu của
       mình. Bạn có thể chạy hoàn toàn cục bộ ngoại tuyến hoặc đăng nhập để đồng
@@ -89,52 +72,6 @@ steps:
         f1: Lưu trữ 100% ngoại tuyến trên thiết bị
         f2: Không có dữ liệu đo từ xa hoặc kết nối ngoài
         f3: Khởi động tức thì với cơ sở dữ liệu cục bộ
-    cloud:
-      badge: 10 GB Miễn phí + Đồng bộ Đám mây
-      title: Đăng nhập tài khoản (Cloudflare)
-      description: Kết nối tài khoản của bạn để mở khóa 10 GB dung lượng lưu trữ miễn phí, tín dụng AI edge hàng ngày và sự hiện diện 24/7 của bạn đồng hành trên các thiết bị.
-      selectedCta: Đã chọn (Đám mây)
-      selectCta: Chọn đồng bộ đám mây
-      features:
-        f1: 10 GB lưu trữ đám mây miễn phí
-        f2: Tín dụng Edge AI miễn phí hàng ngày
-        f3: Tiếp sức đám mây Discord 24/7
-        f4: Đồng bộ đa thiết bị & Khôi phục 1 lần nhấp
-        f5: Proxy CORS riêng tư & Không lưu giữ dữ liệu
-        storage:
-          title: 10 GB lưu trữ đám mây miễn phí
-          desc: Sao lưu mô hình 3D, hình nền tùy chỉnh và toàn bộ kho lưu trữ ký ức mà không mất phí truyền tải ra ngoài.
-          howItWorks: Được hỗ trợ bởi bộ lưu trữ đối tượng Cloudflare R2 thuộc sở hữu của người dùng.
-          whyItMatters: Gói miễn phí hào phóng với không gian đủ cho hàng chục mô hình VRM/Live2D và nhiều năm lịch sử trò chuyện. Không giống như AWS S3, tải xuống tài nguyên là 100% miễn phí với $0 phí băng thông.
-        ai:
-          title: Tín dụng Edge AI miễn phí hàng ngày
-          desc: 10.000 Neurons miễn phí mỗi ngày cho DeepSeek, Qwen & Llama (không yêu cầu khóa API).
-          howItWorks: Kết nối trực tiếp với Cloudflare Workers AI trong Bước 8 (Ý thức).
-          whyItMatters: Trò chuyện ngay với các mô hình nguồn mở tiên tiến ở rìa mạng mà không cần đăng ký OpenAI trả phí, thẻ tín dụng hoặc card đồ họa chơi game đắt đỏ.
-        relay:
-          title: Tiếp sức đám mây Discord 24/7
-          desc: Giữ cho bạn đồng hành luôn thức trên máy chủ Discord ngay cả khi máy tính của bạn đã tắt.
-          howItWorks: Chạy dưới dạng Cloudflare Worker không máy chủ (@proj-airi/stage-edge) xử lý webhook tương tác Discord.
-          whyItMatters: Bạn đồng hành luôn sẵn sàng 24/7 để trò chuyện trên Discord, lưu trữ ngữ cảnh trong Edge KV và đồng bộ các cuộc trò chuyện về máy tính khi bạn mở lại AIRI.
-        sync:
-          title: Đồng bộ đa thiết bị & Khôi phục 1 lần nhấp
-          desc: Đồng bộ hóa liền mạch Máy tính, Web và Di động; khôi phục bạn đồng hành chỉ bằng một cú nhấp chuột.
-          howItWorks: Kho khóa Edge Key Vault (airi-edge-vault) theo dõi an toàn trạng thái hoạt động của bạn đồng hành.
-          whyItMatters: Cài đặt lại AIRI hoặc chuyển sang máy tính xách tay/điện thoại mới sẽ tự động khôi phục bạn đồng hành, cài đặt và ký ức mà không cần nhập khóa thủ công.
-        proxy:
-          title: Proxy CORS riêng tư & Không lưu giữ dữ liệu
-          desc: Truy cập các API AI cục bộ & từ xa phức tạp với quyền riêng tư dữ liệu không lưu giữ 100%.
-          howItWorks: Triển khai proxy ngược biên cá nhân để vượt qua tiêu đề CORS của trình duyệt cho các phiên bản Web & Di động.
-          whyItMatters: Mọi thứ đều chạy trong tài khoản Cloudflare cá nhân của bạn. AIRI không vận hành máy chủ trung gian và không bao giờ đọc, lưu trữ hoặc thu thập các cuộc trò chuyện của bạn.
-    auth:
-      connected: Đã kết nối với Cloudflare
-      disconnect: Ngắt kết nối
-      autoTab: Trình duyệt 1 lần nhấp
-      tokenTab: Mã thông báo API
-      verifying: Đang xác minh...
-      oauthButton: Đăng nhập bằng Cloudflare
-      tokenPlaceholder: Dán mã thông báo API Cloudflare...
-      verifyToken: Kết nối mã
 
   appearance:
     label: Giao diện
@@ -429,15 +366,9 @@ steps:
     description: Giúp bạn đồng hành có thể nhìn, thấu hiểu và phản hồi lại những bức
       ảnh bạn gửi trong khung chat.
     tabs:
-      cloudflare: Cloudflare Edge
-      cloudflareBadge: 10k Miễn phí/Ngày
       local: Cục bộ & Ngoại tuyến
       localBadge: Biệt lập
       custom: Nhà cung cấp Đám mây
-    cloudflare:
-      connected: 'Cloudflare Đã kết nối: 10.000 Neurons miễn phí/ngày đang hoạt động'
-      notConnected: Kết nối tài khoản Cloudflare của bạn để sử dụng thị giác edge miễn phí mà không cần thiết lập.
-      signIn: Đăng nhập bằng Cloudflare
     engineTitle: Mô hình phân tích thị giác
     testImage: Thử nhận diện hình ảnh
     testPrompt: Tải lên một hình ảnh để kiểm tra khả năng thấu hiểu hình ảnh của bạn

@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import type { FreeAICatalogModel } from '@proj-airi/stage-ui/stores/providers/free-ai-catalog'
 
-import { CloudflareConnectDialog } from '@proj-airi/stage-ui/components'
 import { useFreeAICatalogStore } from '@proj-airi/stage-ui/stores'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useCloudflareStore } from '@proj-airi/stage-ui/stores/modules/cloudflare'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
 import { useHearingStore } from '@proj-airi/stage-ui/stores/modules/hearing'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
@@ -18,7 +16,6 @@ import { resolveProviderId } from './helpers'
 
 const router = useRouter()
 const catalogStore = useFreeAICatalogStore()
-const cloudflareStore = useCloudflareStore()
 const providersStore = useProvidersStore()
 const consciousnessStore = useConsciousnessStore()
 const hearingStore = useHearingStore()
@@ -51,8 +48,6 @@ const customBaseUrl = ref('')
 const showApiKey = ref(false)
 const showReasoning = ref(false)
 const isTesting = ref(false)
-const isReauthorizing = ref(false)
-const isConnectModalOpen = ref(false)
 const isSaving = ref(false)
 const isActivating = ref(false)
 const filterConfiguredOnly = ref(false)
@@ -84,19 +79,8 @@ interface TestResult {
 const testResult = ref<TestResult | null>(null)
 
 function resolvePlatformBaseUrl(rawUrl: string): string {
-  if (!rawUrl)
-    return ''
-  if (selectedModelDetail.value?.platform.toLowerCase() === 'cloudflare' && cloudflareStore.activeAccountId) {
-    return rawUrl.replace(/\{account_id\}/gi, cloudflareStore.activeAccountId)
-  }
   return rawUrl
 }
-
-const isUsingCloudflareOAuth = computed(() => {
-  if (!selectedModelDetail.value || selectedModelDetail.value.platform.toLowerCase() !== 'cloudflare')
-    return false
-  return !savedApiKeys.value.cloudflare && Boolean(cloudflareStore.activeAccessToken)
-})
 
 // Current model's API key
 const currentApiKey = computed({
@@ -107,8 +91,6 @@ const currentApiKey = computed({
     const saved = savedApiKeys.value[platform]
     if (saved !== undefined && saved !== '')
       return saved
-    if (platform === 'cloudflare' && cloudflareStore.activeAccessToken)
-      return cloudflareStore.activeAccessToken
     return ''
   },
   set: (val: string) => {
@@ -117,10 +99,6 @@ const currentApiKey = computed({
     savedApiKeys.value[selectedModelDetail.value.platform.toLowerCase()] = val
   },
 })
-
-function clearManualCloudflareKey() {
-  delete savedApiKeys.value.cloudflare
-}
 
 const targetProviderId = computed(() => {
   if (!selectedModelDetail.value)
@@ -163,20 +141,10 @@ function getTargetProviderConfig(pid: string) {
   const rawBase = customBaseUrl.value.trim() || selectedModelDetail.value?.platformBaseUrl || ''
   const baseUrl = resolvePlatformBaseUrl(rawBase).replace(/\/+$/, '')
 
-  if (pid === 'cloudflare-workers-ai') {
-    return {
-      apiKey: key || cloudflareStore.activeAccessToken,
-      accountId: cloudflareStore.activeAccountId,
-    }
-  }
-
   if (pid === 'openai-compatible-audio-transcription') {
-    const isCloudflare = selectedModelDetail.value?.platform.toLowerCase() === 'cloudflare'
     return {
-      apiKey: key || (isCloudflare ? cloudflareStore.activeAccessToken : ''),
-      baseUrl: baseUrl || (isCloudflare
-        ? `https://api.cloudflare.com/client/v4/accounts/${cloudflareStore.activeAccountId}/ai/v1`
-        : ''),
+      apiKey: key,
+      baseUrl,
     }
   }
 
@@ -210,11 +178,6 @@ async function handleSaveProvider(): Promise<boolean> {
 
   const pid = targetProviderId.value
   const config = getTargetProviderConfig(pid)
-
-  if (pid === 'cloudflare-workers-ai' && (!config.apiKey || !config.accountId)) {
-    toast.error('Cloudflare Workers AI requires both Account ID and API Key/OAuth Token.')
-    return false
-  }
 
   isSaving.value = true
   try {
@@ -304,9 +267,9 @@ async function handleUseAsActiveModel() {
   }
 }
 
-// Sync customBaseUrl whenever selected model or cloudflare account changes
+// Sync customBaseUrl whenever selected model changes
 watch(
-  [() => selectedModelDetail.value?.id, () => cloudflareStore.activeAccountId],
+  [() => selectedModelDetail.value?.id],
   () => {
     if (selectedModelDetail.value) {
       customBaseUrl.value = resolvePlatformBaseUrl(selectedModelDetail.value.platformBaseUrl || '')
@@ -320,30 +283,6 @@ watch(
 function resetBaseUrl() {
   if (selectedModelDetail.value) {
     customBaseUrl.value = resolvePlatformBaseUrl(selectedModelDetail.value.platformBaseUrl || '')
-  }
-}
-
-async function handleCloudflareConnect() {
-  isConnectModalOpen.value = true
-}
-
-async function handleCloudflareReauth() {
-  isReauthorizing.value = true
-  try {
-    const tokens = await cloudflareStore.authenticateWithCloudflare()
-    if (tokens?.accessToken) {
-      toast.success('Successfully authorized Cloudflare with Workers AI scopes!')
-      clearManualCloudflareKey()
-      if (selectedModelDetail.value) {
-        customBaseUrl.value = resolvePlatformBaseUrl(selectedModelDetail.value.platformBaseUrl || '')
-      }
-    }
-  }
-  catch (err: any) {
-    toast.error(err?.message || 'Failed to authorize Cloudflare')
-  }
-  finally {
-    isReauthorizing.value = false
   }
 }
 
@@ -367,10 +306,7 @@ async function runTestProbe() {
   showReasoning.value = false
   const startTime = performance.now()
 
-  let rawBase = customBaseUrl.value.trim() || selectedModelDetail.value.platformBaseUrl || ''
-  if (selectedModelDetail.value.platform.toLowerCase() === 'cloudflare' && cloudflareStore.activeAccountId) {
-    rawBase = rawBase.replace(/\{account_id\}/gi, cloudflareStore.activeAccountId)
-  }
+  const rawBase = customBaseUrl.value.trim() || selectedModelDetail.value.platformBaseUrl || ''
   const baseUrl = rawBase.replace(/\/+$/, '')
 
   if (baseUrl.includes('{account_id}')) {
@@ -378,7 +314,7 @@ async function runTestProbe() {
       success: false,
       status: 400,
       latencyMs: 0,
-      error: 'Missing Cloudflare Account ID. Please connect your Cloudflare account or replace {account_id} in the Base URL.',
+      error: 'Missing Account ID. Please replace {account_id} in the Base URL with your provider account ID.',
     }
     isTesting.value = false
     return
@@ -406,29 +342,11 @@ async function runTestProbe() {
       temperature: 0.2,
     }
 
-    let res = await fetch(endpoint, {
+    const res = await fetch(endpoint, {
       method: 'POST',
       headers,
       body: JSON.stringify(payload),
     })
-
-    // If 401 on Cloudflare and OAuth session is active, attempt a transparent token refresh & retry
-    if (res.status === 401 && selectedModelDetail.value.platform.toLowerCase() === 'cloudflare' && cloudflareStore.cfOAuthTokens?.refreshToken) {
-      try {
-        const refreshed = await cloudflareStore.refreshOAuthTokens()
-        if (refreshed?.accessToken) {
-          headers.Authorization = `Bearer ${refreshed.accessToken}`
-          res = await fetch(endpoint, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify(payload),
-          })
-        }
-      }
-      catch (refreshErr) {
-        console.warn('[FreeHub] Cloudflare token refresh failed:', refreshErr)
-      }
-    }
 
     const latencyMs = Math.round(performance.now() - startTime)
     const data = await res.json().catch(() => null)
@@ -1219,70 +1137,6 @@ function handleResetFilters() {
                   Send a lightweight probe prompt directly to this model endpoint to verify keys, response latency, and reasoning capability.
                 </p>
 
-                <!-- Cloudflare OAuth Integration Status Card -->
-                <div
-                  v-if="selectedModelDetail.platform.toLowerCase() === 'cloudflare'"
-                  class="flex flex-col gap-2 border border-amber-500/30 rounded-xl bg-amber-500/10 p-3 text-xs dark:border-amber-500/25 dark:bg-amber-500/10"
-                >
-                  <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-1.5 text-amber-900 font-semibold dark:text-amber-200">
-                      <div class="i-solar:shield-network-bold-duotone text-base text-amber-500" />
-                      <span>Cloudflare Workers AI</span>
-                    </div>
-                    <span
-                      v-if="cloudflareStore.isAuthenticated"
-                      class="flex items-center gap-1 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] text-emerald-700 font-bold dark:text-emerald-300"
-                    >
-                      <span class="size-1.5 animate-pulse rounded-full bg-emerald-500" />
-                      Connected
-                    </span>
-                    <span
-                      v-else
-                      class="rounded-full bg-neutral-200/60 px-2 py-0.5 text-[10px] text-neutral-600 font-medium dark:bg-neutral-800 dark:text-neutral-400"
-                    >
-                      Not Connected
-                    </span>
-                  </div>
-
-                  <div v-if="cloudflareStore.isAuthenticated" class="flex flex-col gap-1.5 text-[11px] text-neutral-600 dark:text-neutral-300">
-                    <div class="flex items-center justify-between font-mono">
-                      <span class="text-neutral-500">Account ID:</span>
-                      <span class="text-neutral-800 font-bold dark:text-neutral-200">{{ cloudflareStore.activeAccountId || 'Unknown' }}</span>
-                    </div>
-                    <p class="text-[11px] text-neutral-500 leading-relaxed dark:text-neutral-400">
-                      Auto-injected into endpoint URL and API Key field. If your session was created before AI scopes were added, click re-authorize to grant <code>ai:read</code>.
-                    </p>
-                    <div class="mt-0.5 flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        :disabled="isReauthorizing"
-                        class="shadow-xs flex items-center gap-1 border border-amber-500/40 rounded-lg bg-white/80 px-2.5 py-1 text-[11px] text-amber-900 font-semibold dark:border-amber-500/30 dark:bg-neutral-800 hover:bg-white dark:text-amber-200 dark:hover:bg-neutral-700"
-                        @click="handleCloudflareReauth"
-                      >
-                        <div v-if="isReauthorizing" class="i-solar:spinner-linear animate-spin text-xs" />
-                        <div v-else class="i-solar:restart-bold text-xs" />
-                        <span>{{ isReauthorizing ? 'Re-authorizing...' : 'Re-authorize with AI Scopes' }}</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  <div v-else class="flex flex-col gap-2 text-[11px] text-neutral-600 dark:text-neutral-300">
-                    <p class="text-neutral-500 leading-relaxed dark:text-neutral-400">
-                      Connect your Cloudflare account to automatically fill your Account ID and OAuth access token with Workers AI permissions.
-                    </p>
-                    <button
-                      type="button"
-                      :disabled="isReauthorizing"
-                      class="w-fit flex items-center gap-1.5 rounded-lg bg-amber-600 px-3 py-1.5 text-xs text-white font-semibold shadow-sm hover:bg-amber-500"
-                      @click="handleCloudflareConnect"
-                    >
-                      <div v-if="isReauthorizing" class="i-solar:spinner-linear animate-spin text-xs" />
-                      <div v-else class="i-solar:shield-keyhole-bold-duotone text-xs" />
-                      <span>{{ isReauthorizing ? 'Connecting...' : 'Connect Cloudflare Account' }}</span>
-                    </button>
-                  </div>
-                </div>
-
                 <!-- Base URL Input -->
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center justify-between text-[11px] text-neutral-500">
@@ -1308,27 +1162,13 @@ function handleResetFilters() {
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center justify-between text-[11px] text-neutral-500">
                     <span>API Key</span>
-                    <span v-if="isUsingCloudflareOAuth" class="text-[10px] text-emerald-600 font-medium dark:text-emerald-400">
-                      Auto-filled from Cloudflare OAuth
-                    </span>
-                    <span v-else-if="selectedModelDetail.platform.toLowerCase() === 'cloudflare' && savedApiKeys.cloudflare" class="flex items-center gap-1 text-[10px]">
-                      <span class="text-neutral-400">Manual override</span>
-                      <button
-                        v-if="cloudflareStore.activeAccessToken"
-                        type="button"
-                        class="text-primary-600 dark:text-primary-400 hover:underline"
-                        @click="clearManualCloudflareKey"
-                      >
-                        (Use OAuth)
-                      </button>
-                    </span>
-                    <span v-else class="text-[10px] text-neutral-400">Saved locally for {{ selectedModelDetail.platformDisplayName }}</span>
+                    <span v-if="currentApiKey" class="text-[10px] text-neutral-400">Saved locally for {{ selectedModelDetail.platformDisplayName }}</span>
                   </div>
                   <div class="relative flex items-center">
                     <input
                       v-model="currentApiKey"
                       :type="showApiKey ? 'text' : 'password'"
-                      :placeholder="isUsingCloudflareOAuth ? 'Auto-filled from Cloudflare OAuth session' : 'Paste API key (optional for open endpoints)...'"
+                      placeholder="Paste API key (optional for open endpoints)..."
                       class="w-full border border-neutral-200 rounded-lg bg-white py-1.5 pl-3 pr-16 text-xs font-mono transition-all dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 focus:outline-none"
                       @keydown.enter="runTestProbe"
                     >
@@ -1437,10 +1277,7 @@ function handleResetFilters() {
                   <!-- Error Details -->
                   <div v-if="testResult.error" class="flex flex-col gap-1 text-[11px]">
                     <span class="font-semibold">{{ testResult.error }}</span>
-                    <span v-if="testResult.status === 401 && selectedModelDetail.platform.toLowerCase() === 'cloudflare'" class="text-amber-700 dark:text-amber-300">
-                      Tip: Authentication error. Your OAuth token may be missing the <code>ai:read</code> scope. Click "Re-authorize with AI Scopes" above to refresh permissions.
-                    </span>
-                    <span v-else-if="testResult.status === 401" class="text-neutral-500 dark:text-neutral-400">
+                    <span v-if="testResult.status === 401" class="text-neutral-500 dark:text-neutral-400">
                       Tip: Ensure your API key is correct and has active free tier quota.
                     </span>
                     <span v-else-if="testResult.status === 429" class="text-neutral-500 dark:text-neutral-400">
@@ -1645,9 +1482,6 @@ function handleResetFilters() {
         </div>
       </div>
     </Teleport>
-
-    <!-- Cloudflare Connect Modal Dialog -->
-    <CloudflareConnectDialog v-model="isConnectModalOpen" />
   </div>
 </template>
 

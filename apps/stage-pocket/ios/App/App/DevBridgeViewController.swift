@@ -41,7 +41,7 @@ extension DevBridgeViewController: WKNavigationDelegate {
             initialAppUrl = url
         }
 
-        // Native OAuth 2.0 PKCE Callback Interceptor for Cloudflare Wrangler
+        // Native OAuth 2.0 PKCE Callback Interceptor
         if (url.host == "localhost" || url.host == "127.0.0.1"), url.port == 8976, url.path == "/oauth/callback" {
             print("[DevBridge] Intercepted OAuth Callback URL on port 8976!")
             let components = URLComponents(url: url, resolvingAgainstBaseURL: false)

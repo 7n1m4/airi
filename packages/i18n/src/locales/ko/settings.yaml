@@ -773,17 +773,6 @@ pages:
             part5: >-
               이 공급자를 사용해야 하는 경우 서버리스 기능과 같은 전용 프록시 백엔드가 필요합니다
             part6: 또는 일부 CORS 우회 서비스를 통해 CORS 제한을 우회할 수 있습니다.
-      cloudflare-workers-ai:
-        description: AI on the Edge - 10k free Neurons/day across many models
-        fields:
-          field:
-            account-id:
-              description: Cloudflare 계정 ID
-              label: 계정 ID
-              placeholder: 당신의 Cloudflare 계정 ID
-            api-key:
-              placeholder: Cloudflare API 키 입력
-        title: Cloudflare Workers AI
       common:
         status:
           validating: 검증 중
@@ -1250,7 +1239,7 @@ pages:
       cloud:
         title: 클라우드 동기화 및 백업?
         description: 기기 간에 캐릭터 카드, 기억 보관소 및 설정을 안전하게 유지하세요. 데스크톱/NAS 백업에는 <b>로컬 파일
-          시스템</b>을 사용하거나 <b>S3 호환 스토리지</b>(Cloudflare R2, MinIO, AWS S3)를 사용하세요.
+          시스템</b>을 사용하거나 <b>S3 호환 스토리지</b>(MinIO, AWS S3)를 사용하세요.
     speech:
       app_local_audio:
         description: 음성 합성을 위한 로컬 오디오 출력 설정을 구성합니다.
