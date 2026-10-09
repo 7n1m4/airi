@@ -5,7 +5,6 @@ export default defineConfig({
     projects: [
       'apps/server',
       'apps/stage-tamagotchi',
-      'apps/stage-edge',
       'packages/stage-ui',
       'packages/stage-pages',
       'packages/stage-shared',

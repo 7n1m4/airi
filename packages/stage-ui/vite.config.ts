@@ -71,7 +71,7 @@ export default defineConfig({
     // dist/assets/XiaolaiSC-Regular-SNWuh554.ttf                           22,183.94 kB
     // dist/assets/cjkFonts_allseto_v1.11-ByBdljxl.ttf                      31,337.14 kB
     //
-    // they are too large to be able to put into deployments like Cloudflare Workers or Pages,
+    // they are too large to be able to put into typical edge deployments,
     // we need to upload them to external storage and use renderBuiltUrl to rewrite their URLs.
     ...((!env.S3_ENDPOINT || !env.S3_ACCESS_KEY_ID || !env.S3_SECRET_ACCESS_KEY)
       ? []

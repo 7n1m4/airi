@@ -15,7 +15,7 @@ const isSyncing = ref(false)
 async function handleSyncSelected(_checkedIds: string[]) {
   isSyncing.value = true
   try {
-    toast.info('Starting companion restoration from Cloudflare R2...')
+    toast.info('Starting companion restoration from cloud storage...')
     await syncStore.triggerSync()
     toast.success('Successfully restored companion data!')
     gate?.requestNext?.()

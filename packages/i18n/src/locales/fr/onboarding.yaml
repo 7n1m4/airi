@@ -61,23 +61,6 @@ steps:
         télémétrie cloud.
       badge: Priorité locale
       action: Continuer en local
-    cloudOption:
-      title: Connexion au compte (Cloudflare)
-      description: Connectez votre compte pour synchroniser vos compagnons, réglages
-        et mémoires entre vos appareils avec un chiffrement de bout en bout.
-      badge: Synchronisation multi-appareils
-      connect: Se connecter avec Cloudflare
-      connected: Connecté à Cloudflare
-      accountPrefix: 'Identifiant du compte :'
-    restore:
-      foundCompanions: '{count} compagnon(s) trouvé(s) sur Cloudflare R2'
-      restoreAndLaunch: Restaurer et lancer la scène (~30s)
-      restoreAndBuild: Restaurer et Créer un Autre Compagnon
-      syncing: Restauration des compagnons distants...
-      bannerTitle: Sauvegardes Distantes Trouvées
-      bannerDesc: '{count} compagnon(s) trouvé(s) dans votre coffre Cloudflare R2.'
-      restoring: Restauration des compagnons...
-      restoreAll: Restaurer et Lancer la Scène
     stepBadge: Triage de l'Architecture · Étape {current} sur {total}
     companionGreeting: Bienvenue sur AIRI ! Choisissez la méthode de configuration de votre
       scène. Vous pouvez fonctionner à 100% en local hors ligne, ou vous
@@ -93,53 +76,6 @@ steps:
         f1: Stockage 100% hors ligne sur l'appareil
         f2: Zéro télémétrie cloud ni requêtes externes
         f3: Démarrage instantané avec base locale
-    cloud:
-      badge: 10 Go Gratuits + Sync Cloud
-      title: Connexion Cloudflare
-      description: Connectez votre compte pour débloquer 10 Go de stockage gratuit, des crédits IA edge quotidiens et une présence 24/7 de votre compagnon sur tous vos appareils.
-      selectedCta: Sélectionné (Cloud)
-      selectCta: Choisir la Synchronisation Cloud
-      features:
-        f1: 10 Go de Stockage Cloud Gratuit
-        f2: Crédits IA Edge Quotidiens Gratuits
-        f3: Relais Cloud Discord 24/7
-        f4: Synchronisation Multi-Appareils et Restauration en 1 Clic
-        f5: Proxy CORS Privé et Zéro Rétention
-        storage:
-          title: 10 Go de Stockage Cloud Gratuit
-          desc: Sauvegardez modèles 3D, arrière-plans personnalisés et coffres de mémoire sans aucun frais de transfert sortant.
-          howItWorks: Propulsé par le stockage d'objets Cloudflare R2 détenu par l'utilisateur.
-          whyItMatters: Forfait gratuit généreux suffisant pour des dizaines de modèles VRM/Live2D et des années d'historique de chat. Contrairement à AWS S3, le téléchargement de vos ressources est 100% gratuit sans frais de bande passante.
-        ai:
-          title: Crédits IA Edge Quotidiens Gratuits
-          desc: 10 000 Neurons quotidiens gratuits pour DeepSeek, Qwen et Llama (sans clé API requise).
-          howItWorks: Se connecte directement à Cloudflare Workers AI lors de l'Étape 8 (Conscience).
-          whyItMatters: Échangez immédiatement avec des modèles ouverts de pointe à la périphérie sans abonnement payant à OpenAI, carte bancaire ou GPU de jeu local haut de gamme.
-        relay:
-          title: Relais Cloud Discord 24/7
-          desc: Gardez votre compagnon éveillé sur votre serveur Discord même lorsque votre PC est éteint.
-          howItWorks: Fonctionne comme un Cloudflare Worker sans serveur (@proj-airi/stage-edge) gérant les webhooks d'interaction Discord.
-          whyItMatters: Votre compagnon reste disponible 24/7 pour discuter sur Discord, stocke le contexte dans Edge KV et synchronise les conversations sur votre bureau à la réouverture d'AIRI.
-        sync:
-          title: Synchronisation Multi-Appareils et Restauration en 1 Clic
-          desc: Synchronisez harmonieusement Bureau, Web et Mobile ; restaurez vos compagnons en un clic.
-          howItWorks: Le coffre de clés Edge (airi-edge-vault) enregistre en toute sécurité l'état actif de votre compagnon.
-          whyItMatters: Réinstaller AIRI ou changer d'appareil rétablit automatiquement votre compagnon, vos paramètres et vos souvenirs sans saisie manuelle de clés.
-        proxy:
-          title: Proxy CORS Privé et Zéro Rétention
-          desc: Accédez aux API IA locales et distantes complexes avec une confidentialité totale à zéro garde.
-          howItWorks: Déploie un proxy inverse edge personnel pour contourner les en-têtes CORS du navigateur pour les scènes Web et Mobile.
-          whyItMatters: Tout fonctionne sur votre compte Cloudflare personnel. AIRI n'exploite aucun serveur intermédiaire et ne lit, ne stocke ni ne collecte jamais vos conversations.
-    auth:
-      connected: Connecté à Cloudflare
-      disconnect: Déconnecter
-      autoTab: Navigateur en 1 Clic
-      tokenTab: Jeton API
-      verifying: Vérification...
-      oauthButton: Se connecter avec Cloudflare
-      tokenPlaceholder: Collez votre jeton API Cloudflare...
-      verifyToken: Connecter le Jeton
-
   appearance:
     label: Apparence
     subtitle: Langue, thème et accent
@@ -435,15 +371,9 @@ steps:
     description: Permettez à votre compagnon d'examiner, comprendre et commenter les
       images que vous envoyez dans le chat.
     tabs:
-      cloudflare: Cloudflare Edge
-      cloudflareBadge: 10k Gratuits / Jour
       local: Local et Hors Ligne
       localBadge: Isolé
       custom: Fournisseurs Cloud
-    cloudflare:
-      connected: 'Cloudflare Connecté : 10 000 Neurons gratuits/jour actifs'
-      notConnected: Connectez votre compte Cloudflare pour profiter d'une vision edge gratuite sans configuration.
-      signIn: Se connecter avec Cloudflare
     engineTitle: Modèle d'analyse visuelle
     testImage: Tester la perception visuelle
     testPrompt: Téléversez une image pour vérifier la compréhension visuelle de

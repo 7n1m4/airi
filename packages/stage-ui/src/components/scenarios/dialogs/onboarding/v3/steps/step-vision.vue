@@ -3,11 +3,9 @@ import { Button } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { toast } from 'vue-sonner'
 
 import { useLLM } from '../../../../../../stores/llm'
 import { useAiriCardStore } from '../../../../../../stores/modules/airi-card'
-import { useCloudflareStore } from '../../../../../../stores/modules/cloudflare'
 import { useConsciousnessStore } from '../../../../../../stores/modules/consciousness'
 import { useVisionStore } from '../../../../../../stores/modules/vision'
 import { useProvidersStore } from '../../../../../../stores/providers'
@@ -27,7 +25,6 @@ const visionStore = useVisionStore()
 const consciousnessStore = useConsciousnessStore()
 const cardStore = useAiriCardStore()
 const llmStore = useLLM()
-const cloudflareStore = useCloudflareStore()
 
 const { persistedVisionProvidersMetadata } = storeToRefs(providersStore)
 const { activeCard } = storeToRefs(cardStore)
@@ -35,10 +32,8 @@ const {
   providerModels,
   isLoadingActiveProviderModels,
 } = storeToRefs(visionStore)
-const { cfOAuthTokens, cfAccountId, isAuthenticated: isCloudflareAuthenticated } = storeToRefs(cloudflareStore)
-const cloudflareAccountId = computed(() => cloudflareStore.activeAccountId || cfAccountId.value || cfOAuthTokens.value?.accountId || '')
 
-const activeTab = ref<'cloudflare' | 'local' | 'custom'>('cloudflare')
+const activeTab = ref<'local' | 'custom'>('local')
 
 const localProviderIds = new Set(['moondream-local', 'blip-local', 'ollama', 'lm-studio'])
 
@@ -50,99 +45,14 @@ const localVisionProviders = computed(() => {
 
 const customVisionProviders = computed(() => {
   return persistedVisionProvidersMetadata.value.filter(p =>
-    p.id !== 'cloudflare-workers-ai'
-    && !localProviderIds.has(p.id)
+    !localProviderIds.has(p.id)
     && p.deployment !== 'local',
   )
 })
 
-const cloudflareVisionPresets = [
-  {
-    id: '@cf/meta/llama-4-scout-17b-16e-instruct',
-    name: 'Llama 4 Scout 17B (CF)',
-    type: 'Natively Multimodal MoE',
-    description: 'Frontier 17B MoE (16 experts). Ultra-fast visual perception & high reasoning depth.',
-    badge: 'Flagship MoE · Speed: 11/11',
-    badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
-    recommendedStrategy: 'forward' as const,
-    strategyLabel: 'Forward to Brain (2-HOP)',
-    icon: 'i-solar:eye-scan-bold-duotone',
-    context: '131k',
-  },
-  {
-    id: '@cf/mistralai/mistral-small-3.1-24b-instruct',
-    name: 'Mistral Small 3.1 24B (CF)',
-    type: 'Multi-Modal LLM',
-    description: 'Deep conversational wit, high reasoning intelligence & in-character visual banter.',
-    badge: 'Rank #20 Intel · 128k',
-    badgeColor: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30',
-    recommendedStrategy: 'direct' as const,
-    strategyLabel: 'Direct VLM Stand-in (1-HOP)',
-    icon: 'i-solar:chat-round-line-duotone',
-    context: '128k',
-  },
-  {
-    id: '@cf/qwen/qwen3.8-27b',
-    name: 'Qwen 3.8 27B (CF)',
-    type: 'Multimodal Reasoning',
-    description: 'Alibaba Qwen visual reasoning with step-by-step visual chain-of-thought analysis.',
-    badge: '27B · Visual CoT',
-    badgeColor: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
-    recommendedStrategy: 'forward' as const,
-    strategyLabel: 'Forward to Brain (2-HOP)',
-    icon: 'i-solar:bolt-bold-duotone',
-    context: '32k',
-  },
-]
-
-function getCloudflareCredentials(): { apiKey: string, accountId: string } {
-  const apiKey = (cloudflareStore.activeAccessToken || cloudflareStore.cfApiToken || cloudflareStore.cfOAuthTokens?.accessToken || '').trim()
-  const accountId = (cloudflareStore.activeAccountId || cloudflareStore.cfAccountId || cloudflareStore.cfOAuthTokens?.accountId || '').trim()
-  return { apiKey, accountId }
-}
-
-function selectCloudflareVisionModel(modelId: string) {
-  activeProvider.value = 'cloudflare-workers-ai'
-  activeModel.value = modelId
-
-  const { apiKey, accountId } = getCloudflareCredentials()
-  if (!providersStore.providers['cloudflare-workers-ai']) {
-    providersStore.providers['cloudflare-workers-ai'] = {}
-  }
-  if (apiKey)
-    providersStore.providers['cloudflare-workers-ai'].apiKey = apiKey
-  if (accountId)
-    providersStore.providers['cloudflare-workers-ai'].accountId = accountId
-  providersStore.markProviderAdded('cloudflare-workers-ai')
-
-  const preset = cloudflareVisionPresets.find(p => p.id === modelId)
-  if (preset) {
-    strategy.value = preset.recommendedStrategy
-  }
-  syncDraft()
-}
-
-async function handleStartCloudflareAuth() {
-  try {
-    await cloudflareStore.authenticateWithCloudflare()
-    toast.success('Successfully connected to Cloudflare!')
-    selectCloudflareVisionModel(activeModel.value || cloudflareVisionPresets[0].id)
-  }
-  catch (err: any) {
-    toast.error(err?.message || 'Cloudflare authentication failed')
-  }
-}
-
-function setTab(tab: 'cloudflare' | 'local' | 'custom') {
+function setTab(tab: 'local' | 'custom') {
   activeTab.value = tab
-  if (tab === 'cloudflare') {
-    activeProvider.value = 'cloudflare-workers-ai'
-    const targetModel = cloudflareVisionPresets.some(p => p.id === activeModel.value)
-      ? activeModel.value
-      : (strategy.value === 'forward' ? cloudflareVisionPresets[0].id : cloudflareVisionPresets[1].id)
-    selectCloudflareVisionModel(targetModel)
-  }
-  else if (tab === 'local') {
+  if (tab === 'local') {
     if (!localVisionProviders.value.some(p => p.id === activeProvider.value)) {
       const defaultLocal = localVisionProviders.value[0]?.id || 'moondream-local'
       activeProvider.value = defaultLocal
@@ -278,9 +188,6 @@ watch(activeProvider, async (provider) => {
     syncDraft()
     return
   }
-  if (provider === 'cloudflare-workers-ai') {
-    return
-  }
   await syncOrAdoptModel(provider)
 }, { immediate: true })
 
@@ -288,38 +195,20 @@ watch(activeModel, () => {
   syncDraft()
 })
 
-watch(strategy, (newStrategy) => {
-  if (activeTab.value === 'cloudflare' && activeProvider.value === 'cloudflare-workers-ai') {
-    if (newStrategy === 'forward' && activeModel.value === '@cf/mistralai/mistral-small-3.1-24b-instruct') {
-      selectCloudflareVisionModel('@cf/meta/llama-4-scout-17b-16e-instruct')
-    }
-    else if (newStrategy === 'direct' && activeModel.value !== '@cf/mistralai/mistral-small-3.1-24b-instruct') {
-      selectCloudflareVisionModel('@cf/mistralai/mistral-small-3.1-24b-instruct')
-    }
-  }
+watch(strategy, () => {
   syncDraft()
 })
 
 onMounted(() => {
-  const isCloudArchitecture = draftStore.state.architecture === 'cloud' || isCloudflareAuthenticated.value
   const existingProvider = draftStore.state.visionProvider || visionStore.activeProvider
 
   if (existingProvider) {
-    if (existingProvider === 'cloudflare-workers-ai') {
-      activeTab.value = 'cloudflare'
-      if (!activeModel.value || !cloudflareVisionPresets.some(p => p.id === activeModel.value)) {
-        selectCloudflareVisionModel(strategy.value === 'forward' ? cloudflareVisionPresets[0].id : cloudflareVisionPresets[1].id)
-      }
-    }
-    else if (localProviderIds.has(existingProvider) || providersStore.getProviderMetadata(existingProvider)?.deployment === 'local') {
+    if (localProviderIds.has(existingProvider) || providersStore.getProviderMetadata(existingProvider)?.deployment === 'local') {
       activeTab.value = 'local'
     }
     else {
       activeTab.value = 'custom'
     }
-  }
-  else if (isCloudArchitecture) {
-    setTab('cloudflare')
   }
   else {
     setTab('local')
@@ -577,25 +466,8 @@ async function runSimulation() {
     <div :class="['grid grid-cols-1 lg:grid-cols-12 gap-5 items-start']">
       <!-- Left Column (7 cols): Vision Provider, Model, and Strategy Configuration -->
       <div :class="['lg:col-span-7 flex flex-col gap-4']">
-        <!-- 3-Tier Segmented Tab Bar -->
+        <!-- 2-Tier Segmented Tab Bar -->
         <div :class="['flex items-center gap-1 rounded-xl bg-neutral-200/50 dark:bg-neutral-800/50 p-1 backdrop-blur-md']">
-          <button
-            type="button"
-            :class="[
-              'flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-              activeTab === 'cloudflare'
-                ? 'bg-white text-primary-600 shadow-xs dark:bg-neutral-900 dark:text-primary-400'
-                : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200',
-            ]"
-            @click="setTab('cloudflare')"
-          >
-            <div :class="['i-simple-icons:cloudflare text-[#F38020] text-sm']" />
-            <span>{{ t('onboarding.steps.vision.tabs.cloudflare', 'Cloudflare Edge') }}</span>
-            <span :class="['hidden sm:inline-block rounded-full bg-amber-500/10 dark:bg-amber-500/20 px-1.5 py-0.2 text-[9px] font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20']">
-              {{ t('onboarding.steps.vision.tabs.cloudflareBadge', '10k Free Daily') }}
-            </span>
-          </button>
-
           <button
             type="button"
             :class="[
@@ -628,118 +500,8 @@ async function runSimulation() {
           </button>
         </div>
 
-        <!-- TAB 1: CLOUDFLARE EDGE (Curated 3-Model Vision Hub) -->
-        <div v-if="activeTab === 'cloudflare'" :class="['flex flex-col gap-3']">
-          <!-- Connection Status Banner -->
-          <div
-            v-if="isCloudflareAuthenticated"
-            :class="['flex items-center justify-between p-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10 text-xs']"
-          >
-            <div :class="['flex items-center gap-2 min-w-0']">
-              <span :class="['w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0']" />
-              <span :class="['text-emerald-700 dark:text-emerald-300 font-medium truncate']">
-                {{ t('onboarding.steps.vision.cloudflare.connected', 'Cloudflare Connected: 10,000 free Neurons/day active') }}
-              </span>
-            </div>
-            <span v-if="cloudflareAccountId" :class="['text-[10px] font-mono text-neutral-400 shrink-0 ml-2 hidden sm:inline']">
-              {{ cloudflareAccountId.slice(0, 8) }}...
-            </span>
-          </div>
-
-          <div
-            v-else
-            :class="['flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/5 dark:bg-amber-500/10 text-xs']"
-          >
-            <div :class="['flex items-center gap-2.5']">
-              <div :class="['i-simple-icons:cloudflare text-[#F38020] text-base shrink-0']" />
-              <p :class="['text-amber-800 dark:text-amber-300 leading-snug']">
-                {{ t('onboarding.steps.vision.cloudflare.notConnected', 'Connect your Cloudflare account to use free edge vision with zero setup.') }}
-              </p>
-            </div>
-            <Button
-              variant="primary"
-              size="sm"
-              :class="['shrink-0 flex items-center gap-1.5 rounded-xl font-semibold cursor-pointer text-xs']"
-              @click="handleStartCloudflareAuth"
-            >
-              <div :class="['i-simple-icons:cloudflare text-xs']" />
-              <span>{{ t('onboarding.steps.vision.cloudflare.signIn', 'Sign In with Cloudflare') }}</span>
-            </Button>
-          </div>
-
-          <!-- 3 Curated Model Cards -->
-          <div :class="['flex flex-col gap-2.5']">
-            <button
-              v-for="preset in cloudflareVisionPresets"
-              :key="preset.id"
-              type="button"
-              :class="[
-                'p-3.5 rounded-2xl border text-left flex items-start gap-3 transition-all cursor-pointer relative',
-                activeProvider === 'cloudflare-workers-ai' && activeModel === preset.id
-                  ? 'border-primary-500 bg-primary-500/10 ring-1 ring-primary-500/30 shadow-xs'
-                  : 'border-neutral-200/80 dark:border-neutral-800 bg-white/60 dark:bg-white/[0.02] hover:border-neutral-300 dark:hover:border-neutral-700',
-              ]"
-              @click="selectCloudflareVisionModel(preset.id)"
-            >
-              <!-- Icon -->
-              <div
-                :class="[
-                  'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 transition-colors',
-                  activeProvider === 'cloudflare-workers-ai' && activeModel === preset.id
-                    ? 'bg-primary-500/20 text-primary-500'
-                    : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500',
-                ]"
-              >
-                <div :class="[preset.icon, 'text-lg']" />
-              </div>
-
-              <!-- Content -->
-              <div :class="['flex-1 min-w-0 flex flex-col gap-1']">
-                <div :class="['flex items-center justify-between gap-2']">
-                  <div :class="['flex items-center gap-2 min-w-0']">
-                    <span :class="['text-xs font-bold text-neutral-900 dark:text-white truncate']">
-                      {{ preset.name }}
-                    </span>
-                    <span :class="['text-[10px] font-mono px-1.5 py-0.2 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-500 font-semibold shrink-0']">
-                      {{ preset.context }}
-                    </span>
-                  </div>
-
-                  <span :class="['text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0', preset.badgeColor]">
-                    {{ preset.badge }}
-                  </span>
-                </div>
-
-                <p :class="['text-[11px] text-neutral-500 dark:text-neutral-400 leading-snug']">
-                  {{ preset.description }}
-                </p>
-
-                <!-- Recommendation / Strategy Badge -->
-                <div :class="['flex items-center gap-1.5 mt-0.5']">
-                  <span :class="['text-[10px] text-neutral-400 font-medium']">Auto-sets Strategy:</span>
-                  <span
-                    :class="[
-                      'text-[10px] font-semibold font-mono px-1.5 py-0.2 rounded',
-                      preset.recommendedStrategy === 'forward'
-                        ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400'
-                        : 'bg-primary-500/10 text-primary-600 dark:text-primary-400',
-                    ]"
-                  >
-                    {{ preset.strategyLabel }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Selected Radio Circle Indicator -->
-              <div :class="['w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-1', activeProvider === 'cloudflare-workers-ai' && activeModel === preset.id ? 'border-primary-500 bg-primary-500' : 'border-neutral-300 dark:border-neutral-700']">
-                <div v-if="activeProvider === 'cloudflare-workers-ai' && activeModel === preset.id" :class="['w-1.5 h-1.5 rounded-full bg-white']" />
-              </div>
-            </button>
-          </div>
-        </div>
-
-        <!-- TAB 2: LOCAL & OFFLINE PROVIDERS -->
-        <div v-else-if="activeTab === 'local'" :class="['flex flex-col gap-3 p-4.5 rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] shadow-xs backdrop-blur-md']">
+        <!-- TAB 1: LOCAL & OFFLINE PROVIDERS -->
+        <div v-if="activeTab === 'local'" :class="['flex flex-col gap-3 p-4.5 rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] shadow-xs backdrop-blur-md']">
           <div :class="['flex items-center justify-between']">
             <label :class="['text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2']">
               <div :class="['i-solar:cpu-bolt-bold-duotone text-emerald-500 text-sm']" />
@@ -772,7 +534,7 @@ async function runSimulation() {
           </div>
         </div>
 
-        <!-- TAB 3: CUSTOM CLOUD PROVIDERS -->
+        <!-- TAB 2: CUSTOM CLOUD PROVIDERS -->
         <div v-else-if="activeTab === 'custom'" :class="['flex flex-col gap-3 p-4.5 rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] shadow-xs backdrop-blur-md']">
           <div :class="['flex items-center justify-between']">
             <label :class="['text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2']">
@@ -807,7 +569,7 @@ async function runSimulation() {
         </div>
 
         <!-- Model Selection Card (For Local and Custom Cloud Providers) -->
-        <div v-if="activeTab !== 'cloudflare' && activeProvider" :class="['flex flex-col gap-3 p-4.5 rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] shadow-xs backdrop-blur-md animate-fadeIn']">
+        <div v-if="activeProvider" :class="['flex flex-col gap-3 p-4.5 rounded-2xl border border-neutral-200/80 dark:border-white/10 bg-white/60 dark:bg-white/[0.02] shadow-xs backdrop-blur-md animate-fadeIn']">
           <div :class="['flex items-center justify-between']">
             <label :class="['text-xs font-bold text-neutral-900 dark:text-white flex items-center gap-2']">
               <div :class="['i-solar:layers-minimalistic-bold text-primary-500 text-sm']" />

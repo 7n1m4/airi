@@ -14,7 +14,6 @@ import Step4Persona from './steps/step-4-persona.vue'
 import Step5Vessel from './steps/step-5-vessel.vue'
 import Step6Speech from './steps/step-6-speech.vue'
 import Step7Calibration from './steps/step-7-calibration.vue'
-import StepCloudInfrastructure from './steps/step-cloud-infrastructure.vue'
 import StepCloudRestore from './steps/step-cloud-restore.vue'
 
 import { useOnboardingStore } from '../../../../../stores/onboarding'
@@ -61,7 +60,6 @@ const STEPS = computed<V2StepDef[]>(() => {
     return [
       { id: 'welcome', label: 'Welcome', ownNav: true },
       { id: 'triage', label: 'Your Path' },
-      { id: 'cloud-infrastructure', label: 'Edge Services' },
       { id: 'cloud-restore', label: 'Cloud Restore' },
       { id: 'hearing', label: 'Hearing' },
       { id: 'consciousness', label: 'Consciousness' },
@@ -221,10 +219,6 @@ function handleFinish() {
         :on-next="requestNextStep"
         :on-previous="requestPreviousStep"
         :on-select-path="handleSelectPath"
-      />
-      <StepCloudInfrastructure
-        v-else-if="currentId === 'cloud-infrastructure'"
-        key="cloud-infrastructure"
       />
       <StepCloudRestore
         v-else-if="currentId === 'cloud-restore'"

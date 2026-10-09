@@ -173,7 +173,6 @@ const SUBSYSTEM_RULES = [
     patterns: [
       /apps\/stage-pocket/,
       /apps\/stage-web/,
-      /apps\/stage-edge/,
     ],
   },
   {

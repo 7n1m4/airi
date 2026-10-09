@@ -12,12 +12,9 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { toast } from 'vue-sonner'
 
-import CloudflareConnectDialog from '../../../cloudflare/CloudflareConnectDialog.vue'
-
 import { DEFAULT_WEB_LLM_FP32_MODEL, WEB_LLM_MODELS } from '../../../../../../libs/inference/constants'
 import { NativeAI } from '../../../../../../libs/native-ai'
 import { useAiriCardStore } from '../../../../../../stores/modules/airi-card'
-import { useCloudflareStore } from '../../../../../../stores/modules/cloudflare'
 import { useProvidersStore } from '../../../../../../stores/providers'
 import { DEFAULT_APPLE_CORE_AI_MODEL } from '../../../../../../stores/providers/apple-core-ai'
 import { BrainModelPicker } from '../../../../chat'
@@ -37,124 +34,12 @@ const { t } = useI18n()
 
 // --- Stores & Draft ---
 const providersStore = useProvidersStore()
-const cloudflareStore = useCloudflareStore()
 const draft = useOnboardingV3Draft()
 
 const selectedProviderId = ref(draft.state.llmProvider ?? '')
 const selectedModelId = ref(draft.state.llmModel ?? '')
 
-const isConnectModalOpen = ref(false)
-const activeTab = ref<'free' | 'local' | 'custom'>('free')
-
-const isCloudflareConnected = computed(() => {
-  return Boolean(cloudflareStore.activeAccountId && cloudflareStore.activeAccessToken)
-})
-
-const cloudflarePresets = [
-  {
-    id: '@cf/meta/llama-3.3-70b-instruct',
-    name: 'Meta LLaMA 3.3 70B',
-    description: 'Frontier capability, fast & versatile',
-    badge: 'Frontier',
-  },
-  {
-    id: '@cf/deepseek-ai/deepseek-r1-distill-qwen-32b',
-    name: 'DeepSeek R1 Distill 32B',
-    description: 'Deep chain-of-thought reasoning',
-    badge: 'Reasoning',
-  },
-  {
-    id: '@cf/zai-org/glm-4.7-flash',
-    name: 'GLM-4.7 Flash',
-    description: 'Fast thinking & bilingual dialogue',
-    badge: 'Fast CoT',
-  },
-  {
-    id: '@cf/qwen/qwen2.5-7b-instruct',
-    name: 'Qwen 2.5 7B Instruct',
-    description: 'Snappy everyday conversationalist',
-    badge: 'Snappy',
-  },
-]
-
-const pollinationsPresets = [
-  {
-    id: 'openai',
-    name: 'GPT-4o Mini (Pollinations)',
-    description: 'Standard smart conversationalist',
-  },
-  {
-    id: 'deepseek',
-    name: 'DeepSeek V3 (Pollinations)',
-    description: 'High-intelligence open weights',
-  },
-  {
-    id: 'mistral',
-    name: 'Mistral Small (Pollinations)',
-    description: 'Snappy reasoning & instruction following',
-  },
-]
-
-function getCloudflareCredentials(): { apiKey: string, accountId: string } {
-  const apiKey = (cloudflareStore.activeAccessToken || cloudflareStore.cfApiToken || cloudflareStore.cfOAuthTokens?.accessToken || '').trim()
-  const accountId = (cloudflareStore.activeAccountId || cloudflareStore.cfAccountId || cloudflareStore.cfOAuthTokens?.accountId || '').trim()
-  return { apiKey, accountId }
-}
-
-function selectCloudflareModel(modelId: string) {
-  selectedProviderId.value = 'cloudflare-workers-ai'
-  selectedModelId.value = modelId
-
-  const { apiKey, accountId } = getCloudflareCredentials()
-
-  if (!providersStore.providers['cloudflare-workers-ai']) {
-    providersStore.providers['cloudflare-workers-ai'] = {}
-  }
-  if (apiKey)
-    providersStore.providers['cloudflare-workers-ai'].apiKey = apiKey
-  if (accountId)
-    providersStore.providers['cloudflare-workers-ai'].accountId = accountId
-
-  providersStore.markProviderAdded('cloudflare-workers-ai')
-  if (apiKey && accountId) {
-    void providersStore.validateProvider('cloudflare-workers-ai').catch(() => {})
-  }
-  recordDraft()
-}
-
-function selectPollinationsModel(modelId: string) {
-  selectedProviderId.value = 'pollinations'
-  selectedModelId.value = modelId
-  providersStore.markProviderAdded('pollinations')
-  recordDraft()
-}
-
-function handleCloudflareConnected() {
-  isConnectModalOpen.value = false
-  const { apiKey, accountId } = getCloudflareCredentials()
-  if (accountId && apiKey) {
-    selectCloudflareModel(selectedModelId.value || '@cf/meta/llama-3.3-70b-instruct')
-  }
-}
-
-// Keep providersStore in sync if Cloudflare authenticates or changes accounts while on this step
-watch(isCloudflareConnected, (connected) => {
-  if (connected && selectedProviderId.value === 'cloudflare-workers-ai') {
-    const { apiKey, accountId } = getCloudflareCredentials()
-    if (!providersStore.providers['cloudflare-workers-ai']) {
-      providersStore.providers['cloudflare-workers-ai'] = {}
-    }
-    if (apiKey)
-      providersStore.providers['cloudflare-workers-ai'].apiKey = apiKey
-    if (accountId)
-      providersStore.providers['cloudflare-workers-ai'].accountId = accountId
-    providersStore.markProviderAdded('cloudflare-workers-ai')
-    if (apiKey && accountId) {
-      void providersStore.validateProvider('cloudflare-workers-ai').catch(() => {})
-    }
-    recordDraft()
-  }
-})
+const activeTab = ref<'local' | 'custom'>('local')
 
 const { allChatProvidersMetadata, configuredChatProvidersMetadata } = storeToRefs(providersStore)
 
@@ -184,20 +69,13 @@ onMounted(async () => {
   if (selectedProviderId.value === 'web-llm' || selectedProviderId.value === 'apple-core-ai') {
     activeTab.value = 'local'
   }
-  else if (selectedProviderId.value && selectedProviderId.value !== 'cloudflare-workers-ai' && selectedProviderId.value !== 'pollinations') {
+  else if (selectedProviderId.value) {
     activeTab.value = 'custom'
-  }
-  else {
-    activeTab.value = 'free'
-  }
-
-  if (!selectedModelId.value && isCloudflareConnected.value) {
-    selectCloudflareModel('@cf/meta/llama-3.3-70b-instruct')
   }
 
   if (isIOSNative.value) {
     await checkCoreAiResident()
-    if (!selectedProviderId.value && !isCloudflareConnected.value) {
+    if (!selectedProviderId.value) {
       selectCoreAiModel()
     }
   }
@@ -776,23 +654,8 @@ onBeforeUnmount(() => {
         />
       </div>
 
-      <!-- 3-Tier Brain Selector Tabs -->
+      <!-- 2-Tier Brain Selector Tabs -->
       <div class="flex items-center gap-1 rounded-xl bg-neutral-200/50 p-1 backdrop-blur-md dark:bg-neutral-800/50">
-        <button
-          type="button"
-          :class="[
-            'flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-xs font-semibold transition-all cursor-pointer',
-            activeTab === 'free'
-              ? 'bg-white text-primary-600 shadow-sm dark:bg-neutral-900 dark:text-primary-400'
-              : 'text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200',
-          ]"
-          @click="activeTab = 'free'"
-        >
-          <div class="i-solar:cloud-bold-duotone h-4 w-4" />
-          <span>Free Cloud AI</span>
-          <span class="rounded-full bg-amber-500/10 px-1.5 py-0.2 text-[9px] text-amber-600 font-bold hidden sm:inline-block dark:text-amber-400">Zero Setup</span>
-        </button>
-
         <button
           type="button"
           :class="[
@@ -823,146 +686,7 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <!-- TAB 1: FREE CLOUD AI (Zero Setup / Recommended) -->
-      <div v-if="activeTab === 'free'" class="flex flex-col gap-4">
-        <!-- Cloudflare Workers AI Card -->
-        <div class="flex flex-col gap-3 border border-neutral-200/60 rounded-xl bg-white/40 p-4 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="i-simple-icons:cloudflare h-4.5 w-4.5 text-[#F38020]" />
-              <span class="text-xs text-neutral-700 font-bold tracking-wider uppercase dark:text-neutral-300">Cloudflare Workers AI</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span v-if="isCloudflareConnected" class="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 font-bold dark:text-emerald-400">
-                <span class="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Connected
-              </span>
-              <span v-else class="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 font-bold dark:text-amber-400">
-                Zero-Trust OAuth
-              </span>
-            </div>
-          </div>
-
-          <!-- Connected State: 4 Model Presets Grid -->
-          <template v-if="isCloudflareConnected">
-            <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <button
-                v-for="preset in cloudflarePresets"
-                :key="preset.id"
-                type="button"
-                :class="[
-                  'relative flex items-start gap-3 border-2 rounded-xl p-3 text-left transition-all duration-200 cursor-pointer',
-                  selectedProviderId === 'cloudflare-workers-ai' && selectedModelId === preset.id
-                    ? 'border-primary-500 bg-primary-500/5 shadow-md shadow-primary-500/10 dark:border-primary-400'
-                    : 'border-neutral-200/60 bg-white/50 dark:border-neutral-800/80 dark:bg-neutral-900/50 hover:border-primary-500/40',
-                ]"
-                @click="selectCloudflareModel(preset.id)"
-              >
-                <div
-                  :class="[
-                    'h-9 w-9 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5',
-                    selectedProviderId === 'cloudflare-workers-ai' && selectedModelId === preset.id
-                      ? 'bg-primary-500/15 text-primary-500'
-                      : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500',
-                  ]"
-                >
-                  <div class="i-solar:bolt-bold-duotone h-5 w-5" />
-                </div>
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center justify-between gap-1">
-                    <span class="truncate text-xs text-neutral-800 font-bold dark:text-neutral-100">{{ preset.name }}</span>
-                    <span class="flex-shrink-0 rounded bg-primary-500/10 px-1.5 py-0.2 text-[9px] text-primary-600 font-bold dark:text-primary-400">
-                      {{ preset.badge }}
-                    </span>
-                  </div>
-                  <p class="line-clamp-1 mt-0.5 text-[11px] text-neutral-500 dark:text-neutral-400">
-                    {{ preset.description }}
-                  </p>
-                </div>
-              </button>
-            </div>
-
-            <!-- Connected Account footer hint -->
-            <div class="flex items-center justify-between pt-1 text-[11px] text-neutral-400">
-              <span class="truncate">Account: <span class="text-neutral-600 font-mono dark:text-neutral-300">{{ cloudflareStore.activeAccountId }}</span></span>
-              <button
-                type="button"
-                class="cursor-pointer text-primary-500 hover:underline"
-                @click="isConnectModalOpen = true"
-              >
-                Switch Account
-              </button>
-            </div>
-          </template>
-
-          <!-- Disconnected State: Connect Button -->
-          <template v-else>
-            <div class="flex flex-col gap-3 border border-amber-500/20 rounded-xl bg-amber-500/5 p-3.5">
-              <p class="text-xs text-neutral-600 leading-relaxed dark:text-neutral-300">
-                Connect your Cloudflare account to unlock high-speed LLaMA 3.3 70B, DeepSeek R1 32B, and GLM 4.7 Flash with generous free daily limits.
-              </p>
-              <div class="flex items-center gap-2">
-                <Button
-                  variant="primary"
-                  class="h-[34px] flex cursor-pointer items-center gap-1.5 px-4 text-xs font-medium"
-                  @click="isConnectModalOpen = true"
-                >
-                  <div class="i-simple-icons:cloudflare text-sm" />
-                  <span>Connect Cloudflare Account</span>
-                </Button>
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- Pollinations AI Card -->
-        <div class="flex flex-col gap-3 border border-neutral-200/60 rounded-xl bg-white/40 p-4 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-900/40">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <div class="i-solar:magic-stick-3-bold-duotone h-4.5 w-4.5 text-purple-500" />
-              <span class="text-xs text-neutral-700 font-bold tracking-wider uppercase dark:text-neutral-300">Pollinations AI</span>
-            </div>
-            <span class="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-600 font-bold dark:text-emerald-400">
-              100% Free · No Sign-in
-            </span>
-          </div>
-
-          <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <button
-              v-for="preset in pollinationsPresets"
-              :key="preset.id"
-              type="button"
-              :class="[
-                'relative flex flex-col gap-1 border-2 rounded-xl p-3 text-left transition-all duration-200 cursor-pointer',
-                selectedProviderId === 'pollinations' && selectedModelId === preset.id
-                  ? 'border-primary-500 bg-primary-500/5 shadow-md shadow-primary-500/10 dark:border-primary-400'
-                  : 'border-neutral-200/60 bg-white/50 dark:border-neutral-800/80 dark:bg-neutral-900/50 hover:border-primary-500/40',
-              ]"
-              @click="selectPollinationsModel(preset.id)"
-            >
-              <span class="truncate text-xs text-neutral-800 font-bold dark:text-neutral-100">{{ preset.name }}</span>
-              <p class="line-clamp-2 text-[11px] text-neutral-500 dark:text-neutral-400">
-                {{ preset.description }}
-              </p>
-            </button>
-          </div>
-        </div>
-
-        <!-- Free AI Hub Notice Banner -->
-        <div class="flex items-center justify-between gap-3 border border-neutral-200/50 rounded-xl bg-neutral-100/70 p-3.5 text-xs dark:border-neutral-700/50 dark:bg-neutral-800/50">
-          <div class="min-w-0 flex items-center gap-2.5">
-            <div class="i-solar:stars-line-bold-duotone h-4.5 w-4.5 flex-shrink-0 text-amber-500" />
-            <span class="truncate text-neutral-600 dark:text-neutral-300">
-              Want more free models? Explore <strong>370+ free endpoints</strong> in the Free AI Hub.
-            </span>
-          </div>
-          <span class="flex-shrink-0 text-[11px] text-neutral-400">
-            Available in Settings
-          </span>
-        </div>
-      </div>
-
-      <!-- TAB 2: LOCAL ON-DEVICE (Offline) -->
+      <!-- TAB 1: LOCAL ON-DEVICE (Offline) -->
       <div v-if="activeTab === 'local'" class="flex flex-col gap-4">
         <!-- Apple Core AI Local Engine (iOS Native) -->
         <div
@@ -1226,7 +950,7 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <!-- TAB 3: CUSTOM API KEY -->
+      <!-- TAB 2: CUSTOM API KEY -->
       <div v-if="activeTab === 'custom'" class="flex flex-col gap-4">
         <!-- Cloud / Local Provider Matrix -->
         <div :class="['p-4 rounded-xl', 'bg-white/40 dark:bg-neutral-900/40', 'border border-neutral-200/60 dark:border-neutral-800/80', 'backdrop-blur-md', 'flex flex-col gap-3']">
@@ -1604,12 +1328,6 @@ onBeforeUnmount(() => {
         </div>
       </div>
     </div>
-
-    <!-- Cloudflare Connect Dialog -->
-    <CloudflareConnectDialog
-      v-model="isConnectModalOpen"
-      @connected="handleCloudflareConnected"
-    />
   </div>
 </template>
 

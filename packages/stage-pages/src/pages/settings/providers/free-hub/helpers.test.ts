@@ -14,7 +14,6 @@ describe('free AI Hub provider resolution', () => {
   })
 
   it('resolves dedicated native cloud providers correctly', () => {
-    expect(resolveProviderId('cloudflare')).toBe('cloudflare-workers-ai')
     expect(resolveProviderId('github')).toBe('github-models')
     expect(resolveProviderId('lmstudio')).toBe('lm-studio')
     expect(resolveProviderId('groq')).toBe('groq')

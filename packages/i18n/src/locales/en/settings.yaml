@@ -99,7 +99,7 @@ settings:
         description: Use <b>Google Gemini</b> for powerful and free cloud-based vision. For local vision, <b>Ollama</b> with VLMs works well.
       storage:
         title: Need Storage?
-        description: Configure <b>S3-Compatible Storage</b> (Cloudflare R2, MinIO, AWS S3).
+        description: Configure <b>S3-Compatible Storage</b> (MinIO, AWS S3).
     provider:
       openai:
         title: OpenAI
@@ -205,9 +205,6 @@ settings:
       azure-ai-foundry:
         description: Azure AI Foundry - Unified AI platform
         title: Azure AI Foundry
-      cloudflare-workers-ai:
-        description: Cloudflare Workers AI - Edge inference, free tier
-        title: Cloudflare Workers AI
       n1n:
         description: N1N - Aggregated model gateway
         title: N1N

@@ -841,17 +841,6 @@ pages:
               dedicado como una Función Serverless ejecutándose en
             part6: o algunos servicios de bypass de CORS para evitar las restricciones de
               CORS.
-      cloudflare-workers-ai:
-        description: AI on the Edge - 10k free Neurons/day across many models
-        fields:
-          field:
-            account-id:
-              description: ID de Cuenta de Cloudflare
-              label: ID de Cuenta
-              placeholder: Tu ID de Cuenta de Cloudflare
-            api-key:
-              placeholder: Ingresa la Clave API de Cloudflare
-        title: Cloudflare Workers AI
       common:
         status:
           validating: Validando
@@ -1365,7 +1354,7 @@ pages:
         description: Mantén tus tarjetas, archivos de memoria y configuraciones seguras
           entre dispositivos. Usa el <b>Sistema de archivos local</b> para
           copias en escritorio/NAS o <b>Almacenamiento compatible con S3</b>
-          (Cloudflare R2, MinIO, AWS S3).
+          (MinIO, AWS S3).
     cache:
       title: Caché de modelos
       subtitle: Pesos neuronales en el dispositivo

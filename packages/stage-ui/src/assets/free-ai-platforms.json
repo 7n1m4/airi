@@ -120,17 +120,6 @@
     "timeoutMs": null,
     "note": "shared daily free requests"
   },
-  "cloudflare": {
-    "id": "cloudflare",
-    "name": "Cloudflare Workers AI",
-    "baseUrl": "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1",
-    "signupUrl": "https://dash.cloudflare.com",
-    "keyless": false,
-    "validateUrl": null,
-    "extraHeaders": null,
-    "timeoutMs": null,
-    "note": null
-  },
   "cohere": {
     "id": "cohere",
     "name": "Cohere",

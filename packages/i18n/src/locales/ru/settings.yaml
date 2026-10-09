@@ -807,17 +807,6 @@ pages:
               Если провайдер необходим, нужен выделенный прокси-бэкенд
               (например, Serverless Function)
             part6: или сервисы обхода CORS для снятия ограничений CORS.
-      cloudflare-workers-ai:
-        description: AI on the Edge - 10k free Neurons/day across many models
-        fields:
-          field:
-            account-id:
-              description: ID аккаунта Cloudflare
-              label: Account ID
-              placeholder: Ваш Cloudflare Account ID
-            api-key:
-              placeholder: Введите Cloudflare API Key
-        title: Cloudflare Workers AI
       common:
         status:
           validating: Validating
@@ -1323,8 +1312,7 @@ pages:
         title: Облачная синхронизация и резервные копии?
         description: Сохраняйте ваши карты, архивы памяти и настройки в безопасности на
           всех устройствах. Используйте <b>локальную файловую систему</b> для
-          ПК/NAS или <b>S3-совместимое хранилище</b> (Cloudflare R2, MinIO, AWS
-          S3).
+          ПК/NAS или <b>S3-совместимое хранилище</b> (MinIO, AWS S3).
     speech:
       app_local_audio:
         description: Настройка параметров локального вывода звука для синтеза речи.

@@ -3,11 +3,10 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      // NOTICE: packages/i18n generates src/dist-lite/messages.mjs and
-      // apps/stage-edge generates src/bundle-code.ts as build side effects
-      // (consumed by stage-tamagotchi electron-vite). They must be declared
-      // outputs or turbo cache hits restore dist/ without them -> ENOENT.
-      "outputs": ["dist/**", "out/**", "src/dist-lite/**", "src/bundle-code.ts"]
+      // NOTICE: packages/i18n generates src/dist-lite/messages.mjs
+      // (consumed by stage-tamagotchi electron-vite). It must be declared
+      // an output or turbo cache hits restore dist/ without it -> ENOENT.
+      "outputs": ["dist/**", "out/**", "src/dist-lite/**"]
     }
   }
 }

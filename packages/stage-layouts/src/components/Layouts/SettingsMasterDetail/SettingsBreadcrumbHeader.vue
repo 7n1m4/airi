@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { isStageWeb } from '@proj-airi/stage-shared'
-import { CloudflareAccountHeaderWidget, SettingsSearchBar, SettingsThemeHeaderWidget } from '@proj-airi/stage-ui/components'
+import { SettingsSearchBar, SettingsThemeHeaderWidget } from '@proj-airi/stage-ui/components'
 import { useGetNativeAppModal } from '@proj-airi/stage-ui/composables'
 import { buildSettingsCatalogTopology, resolvePathFromRoute } from '@proj-airi/stage-ui/constants'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
@@ -174,9 +174,6 @@ function handleBackClick() {
         <div class="i-solar:devices-bold-duotone text-sm text-primary-500" />
         <span class="text-[11px] hidden md:inline">Get App</span>
       </button>
-
-      <!-- Cloudflare & Edge Account Indicator Widget -->
-      <CloudflareAccountHeaderWidget shrink-0 />
 
       <!-- Color Palette & Theme Mode Header Widget -->
       <SettingsThemeHeaderWidget shrink-0 />

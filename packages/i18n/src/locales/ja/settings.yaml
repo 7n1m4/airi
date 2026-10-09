@@ -782,17 +782,6 @@ pages:
             part5: >-
               このプロバイダーを使用する必要がある場合は、 Serverless Function で実行される専用のプロキシバックエンド、
             part6: またはCORS制限をバイパスするためのCORSバイパスサービスが必要です。
-      cloudflare-workers-ai:
-        description: AI on the Edge - 10k free Neurons/day across many models
-        fields:
-          field:
-            account-id:
-              description: CloudflareアカウントID
-              label: アカウントID
-              placeholder: あなたのCloudflareアカウントID
-            api-key:
-              placeholder: Cloudflare APIキーを入力
-        title: Cloudflare Workers AI
       common:
         status:
           validating: 検証中
@@ -1262,8 +1251,8 @@ pages:
           VRMキャラクターのモーションとジェスチャーを合成します。
       cloud:
         title: クラウド同期とバックアップ？
-        description: カード、記憶アーカイブ、設定をデバイス間で安全に保ちます。デスクトップ/NASバックアップには<b>ローカルファイルシステム</b>を、または<b>S3互換ストレージ</b>（Cloudflare
-          R2、MinIO、AWS S3）を使用します。
+        description: カード、記憶アーカイブ、設定をデバイス間で安全に保ちます。デスクトップ/NASバックアップには<b>ローカルファイルシステム</b>を、または<b>S3互換ストレージ</b>（MinIO、AWS
+          S3）を使用します。
     speech:
       app_local_audio:
         description: 音声合成用のローカル音声出力設定を構成します。

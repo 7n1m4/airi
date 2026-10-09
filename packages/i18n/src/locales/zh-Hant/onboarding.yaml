@@ -50,80 +50,7 @@ steps:
       description: 100% 離線私密。所有角色卡、記憶與狀態均儲存於本機資料庫，絕不產生任何雲端遙測數據。
       badge: 本地優先
       action: 本地繼續
-    cloudOption:
-      title: 帳戶登入 (Cloudflare)
-      description: 連接你的帳戶，透過端到端加密在各裝置間無縫同步伴侶、設定與記憶金庫。
-      badge: 多端同步
-      connect: 使用 Cloudflare 登入
-      connected: 已連接 Cloudflare
-      accountPrefix: '帳戶 ID:'
-    restore:
-      foundCompanions: 在 Cloudflare R2 中發現 {count} 個伴侶備份
-      restoreAndLaunch: 復原並啟動舞台 (~30秒)
-      restoreAndBuild: 還原並建立新夥伴
-      syncing: 正在復原雲端伴侶...
-      bannerTitle: 發現雲端備份
-      bannerDesc: 在您的 Cloudflare R2 保管庫中發現了 {count} 個夥伴檔案。
-      restoring: 正在還原夥伴...
-      restoreAll: 還原並啟動舞台
     stepBadge: 架構分流 · 步驟 {current} / {total}
-    companionGreeting: 歡迎來到 AIRI！請選擇舞台的運作架構。您可以完全在本機離線運作，也可以登入帳號以實現跨裝置同步。
-    local:
-      badge: 離線優先
-      title: 本機夥伴 (完全隔離)
-      description: 100% 離線與隱私保護。所有角色卡、記憶與狀態均保存在本機資料庫中，絕無雲端遙測通訊。
-      selectedCta: 已選擇 (離線模式)
-      selectCta: 選擇本機模式
-      features:
-        f1: 裝置內 100% 離線儲存
-        f2: 零雲端遙測與外部網路請求
-        f3: 基於本機資料庫極速秒開
-    cloud:
-      badge: 10 GB 免費 + 雲端同步
-      title: 帳號登入 (Cloudflare)
-      description: 連接您的帳號以解鎖 10 GB 免費儲存空間、每日邊緣 AI 額度，以及跨裝置 24/7 伴侶在線。
-      selectedCta: 已選擇 (雲端備份)
-      selectCta: 選擇雲端同步
-      features:
-        f1: 10 GB 免費雲端儲存空間
-        f2: 每日免費邊緣 AI 額度
-        f3: 24/7 Discord 雲端接力
-        f4: 多裝置同步與一鍵復原
-        f5: 私有 CORS 代理與零託管隱私
-        storage:
-          title: 10 GB 免費雲端儲存空間
-          desc: 完整備份 3D 模型、自訂背景與記憶庫，且無下載流量費用。
-          howItWorks: 基於使用者擁有的 Cloudflare R2 物件儲存技術。
-          whyItMatters: 永久免費空間充裕，容納數十個 VRM/Live2D 模型與數年對話歷史。與 AWS S3 不同，下載資產 100% 免收出網流量費。
-        ai:
-          title: 每日免費邊緣 AI 額度
-          desc: 每日 10,000 免費 Neurons 額度，支援 DeepSeek、Qwen 與 Llama（無需 API 金鑰）。
-          howItWorks: 在步驟 8（意識）中自動直連 Cloudflare Workers AI。
-          whyItMatters: 無需 OpenAI 付費訂閱、綁定信用卡或高階本機顯示卡，即可在邊緣直接暢聊前沿開源大模型。
-        relay:
-          title: 24/7 Discord 雲端接力
-          desc: 即使電腦關機或休眠，伴侶也能在你的專屬 Discord 伺服器中保持清醒。
-          howItWorks: 作為無伺服器 Cloudflare Worker (@proj-airi/stage-edge) 運行並處理 Discord 互動 Webhook。
-          whyItMatters: 伴侶全天候回應 Discord 訊息並在邊緣保存記憶，當你再次打開電腦時自動回傳同步。
-        sync:
-          title: 多裝置同步與一鍵復原
-          desc: 順暢同步桌面端、Web 端與行動端；隨時一鍵完整復原伴侶。
-          howItWorks: 透過 Edge Key Vault (airi-edge-vault) 安全保持伴侶最新活躍狀態。
-          whyItMatters: 重裝 AIRI 或更換新設備時，無需重新設定金鑰即可秒速復原伴侶、設定與所有記憶。
-        proxy:
-          title: 私有 CORS 代理與零託管隱私
-          desc: 安全存取複雜的本機與遠端 AI API，100% 零資料截留。
-          howItWorks: 自動部署個人邊緣反向代理，為 Web 與行動端繞過瀏覽器 CORS 跨域限制。
-          whyItMatters: 所有資料只存在於你自己的 Cloudflare 帳號中，AIRI 沒有任何中轉伺服器，絕不窺探或收集你的對話。
-    auth:
-      connected: 已連線至 Cloudflare
-      disconnect: 中斷連線
-      autoTab: 一鍵瀏覽器授權
-      tokenTab: API 權杖
-      verifying: 驗證中...
-      oauthButton: 使用 Cloudflare 登入
-      tokenPlaceholder: 貼上您的 Cloudflare API 權杖...
-      verifyToken: 連接權杖
 
   appearance:
     label: 外觀
@@ -381,15 +308,9 @@ steps:
     title: 視覺感知 (多模態識圖)
     description: 讓伴侶能夠看懂你在聊天中發送的照片、螢幕截圖與藝術畫作並給出真實反饋。
     tabs:
-      cloudflare: Cloudflare 邊緣
-      cloudflareBadge: 每日 10k 免費額度
       local: 本地離線
       localBadge: 物理隔離
       custom: 雲端供應商
-    cloudflare:
-      connected: '已連線至 Cloudflare：每日 10,000 免費 Neurons 算力已啟用'
-      notConnected: 連接您的 Cloudflare 帳號，即可零設定使用免費邊緣視覺識別。
-      signIn: 使用 Cloudflare 登入
     engineTitle: 視覺理解模型
     testImage: 測試圖像感知
     testPrompt: 上傳一張照片以驗證伴侶的視覺圖像分析能力。

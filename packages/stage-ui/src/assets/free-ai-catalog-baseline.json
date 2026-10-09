@@ -30,18 +30,6 @@
       "name": "BazaarLink"
     },
     {
-      "id": "cloudflare",
-      "name": "Cloudflare Workers AI"
-    },
-    {
-      "id": "cohere",
-      "name": "Cohere"
-    },
-    {
-      "id": "google",
-      "name": "Google AI Studio"
-    },
-    {
       "id": "groq",
       "name": "Groq"
     },
@@ -267,39 +255,6 @@
       ]
     },
     {
-      "platform": "cloudflare",
-      "modelId": "@cf/openai/gpt-oss-120b",
-      "displayName": "GPT-OSS 120B (CF)",
-      "intelligenceRank": 6,
-      "speedRank": 11,
-      "sizeLabel": "Large",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~18-45M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": true,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        },
-        {
-          "slug": "reasoning-token-room",
-          "title": "Needs token room",
-          "body": "This route can spend hidden reasoning tokens before visible output. Avoid tiny max_tokens values or the request can finish by length with empty content.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
       "platform": "groq",
       "modelId": "groq/compound",
       "displayName": "Compound (Groq)",
@@ -393,33 +348,6 @@
       ]
     },
     {
-      "platform": "cloudflare",
-      "modelId": "@cf/qwen/qwen3-30b-a3b-fp8",
-      "displayName": "Qwen3 30B-A3B fp8 (CF)",
-      "intelligenceRank": 7,
-      "speedRank": 11,
-      "sizeLabel": "Medium",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~18-45M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": true,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
       "platform": "openrouter",
       "modelId": "nvidia/nemotron-3-ultra-550b-a55b:free",
       "displayName": "Nemotron 3 Ultra 550B (free, slow)",
@@ -447,87 +375,6 @@
       ]
     },
     {
-      "platform": "cloudflare",
-      "modelId": "@cf/deepseek-ai/deepseek-r1-distill-qwen-32b",
-      "displayName": "DeepSeek R1 Distill Qwen 32B (CF)",
-      "intelligenceRank": 9,
-      "speedRank": 11,
-      "sizeLabel": "Medium",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~3-5M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": true,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/nvidia/nemotron-3-120b-a12b",
-      "displayName": "Nemotron 3 120B (CF)",
-      "intelligenceRank": 9,
-      "speedRank": 11,
-      "sizeLabel": "Large",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~5-10M",
-      "contextWindow": 262144,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/zai-org/glm-4.7-flash",
-      "displayName": "GLM-4.7 Flash (CF)",
-      "intelligenceRank": 10,
-      "speedRank": 11,
-      "sizeLabel": "Large",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~18-45M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": true,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
       "platform": "google",
       "modelId": "gemini-3-flash-preview",
       "displayName": "Gemini 3 Flash Preview",
@@ -550,33 +397,6 @@
           "slug": "gemini-thinking-token-room",
           "title": "Thinking tokens use output cap",
           "body": "Gemini Flash can spend hidden thinking tokens inside maxOutputTokens. Avoid tiny max_tokens values or set thinkingBudget to 0 when provider support is available.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/meta/llama-4-scout-17b-16e-instruct",
-      "displayName": "Llama 4 Scout (CF)",
-      "intelligenceRank": 12,
-      "speedRank": 11,
-      "sizeLabel": "Medium",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~18-45M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": true,
-      "supportsTools": true,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
           "severity": "info"
         }
       ]
@@ -654,33 +474,6 @@
       "supportsVision": false,
       "supportsTools": true,
       "quirks": []
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/meta/llama-3.3-70b-instruct-fp8-fast",
-      "displayName": "Llama 3.3 70B fp8-fast (CF)",
-      "intelligenceRank": 17,
-      "speedRank": 11,
-      "sizeLabel": "Medium",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~18-45M",
-      "contextWindow": 24000,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": true,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
     },
     {
       "platform": "ovh",
@@ -794,39 +587,6 @@
       "supportsVision": false,
       "supportsTools": true,
       "quirks": []
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/openai/gpt-oss-20b",
-      "displayName": "GPT-OSS 20B (CF)",
-      "intelligenceRank": 18,
-      "speedRank": 11,
-      "sizeLabel": "Medium",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~18-45M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": true,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        },
-        {
-          "slug": "reasoning-token-room",
-          "title": "Needs token room",
-          "body": "This route can spend hidden reasoning tokens before visible output. Avoid tiny max_tokens values or the request can finish by length with empty content.",
-          "severity": "info"
-        }
-      ]
     },
     {
       "platform": "zhipu",
@@ -1018,33 +778,6 @@
           "slug": "zhipu-shared-key",
           "title": "Works with existing Zhipu key",
           "body": "glm-4.6v-flash is listed Free on Z.AI and answers 200 with the existing bigmodel.cn key; vision and structured tool calls both live-verified.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/google/gemma-4-26b-a4b-it",
-      "displayName": "Gemma 4 26B-A4B it (CF)",
-      "intelligenceRank": 22,
-      "speedRank": 11,
-      "sizeLabel": "Large",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 262144,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
           "severity": "info"
         }
       ]
@@ -1338,33 +1071,6 @@
       "quirks": []
     },
     {
-      "platform": "cloudflare",
-      "modelId": "@cf/ibm-granite/granite-4.0-h-micro",
-      "displayName": "Granite 4.0 H Micro (CF)",
-      "intelligenceRank": 29,
-      "speedRank": 11,
-      "sizeLabel": "Small",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~5-10M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
       "platform": "cohere",
       "modelId": "command-a-plus-05-2026",
       "displayName": "Command A+ (05-2026)",
@@ -1430,189 +1136,6 @@
           "body": "Reka's FAQ now says to add credits before making requests, and a $0 balance returns P001 Insufficient Balance. Accounts that still hold credit keep working: reka-flash-3 and reka-edge-2603 answered 200 on September 17, 2026. The old reka-flash id returns 404 \"Unknown chat model\" and is disabled."
         }
       ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/black-forest-labs/flux-1-schnell",
-      "displayName": "FLUX.1 [schnell]",
-      "modality": "image",
-      "intelligenceRank": 203,
-      "speedRank": 203,
-      "sizeLabel": "12B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "mediaNote": "Shared 10k neurons/day",
-      "quirks": []
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/stabilityai/stable-diffusion-xl-base-1.0",
-      "displayName": "Stable Diffusion XL",
-      "modality": "image",
-      "intelligenceRank": 204,
-      "speedRank": 204,
-      "sizeLabel": "SDXL",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "mediaNote": "Shared 10k neurons/day",
-      "quirks": []
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/black-forest-labs/flux-2-klein-9b",
-      "displayName": "FLUX.2 [klein] 9B",
-      "modality": "image",
-      "intelligenceRank": 205,
-      "speedRank": 205,
-      "sizeLabel": "9B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "requestStyle": "multipart",
-      "mediaNote": "Workers AI free allocation · resets daily",
-      "quirks": [],
-      "premiumSince": "2026-08-18T15:51:00.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/black-forest-labs/flux-2-klein-4b",
-      "displayName": "FLUX.2 [klein] 4B",
-      "modality": "image",
-      "intelligenceRank": 206,
-      "speedRank": 206,
-      "sizeLabel": "4B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "requestStyle": "multipart",
-      "mediaNote": "Workers AI free allocation · resets daily",
-      "quirks": [],
-      "premiumSince": "2026-08-18T15:51:00.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/myshell-ai/melotts",
-      "displayName": "MeloTTS",
-      "modality": "audio",
-      "intelligenceRank": 211,
-      "speedRank": 211,
-      "sizeLabel": "Small",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "mediaNote": "MP3 output - multilingual",
-      "quirks": []
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/deepgram/aura-1",
-      "displayName": "Deepgram Aura 1 (Cloudflare Workers AI)",
-      "modality": "audio",
-      "intelligenceRank": 212,
-      "speedRank": 212,
-      "sizeLabel": "TTS",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "mediaNote": "MP3 output - English - shared 10k neurons/day",
-      "quirks": [],
-      "premiumSince": "2026-08-18T11:02:42.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/deepgram/aura-2-en",
-      "displayName": "Deepgram Aura 2 English (Cloudflare Workers AI)",
-      "modality": "audio",
-      "intelligenceRank": 212,
-      "speedRank": 212,
-      "sizeLabel": "TTS",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "mediaNote": "MP3 output - English - shared 10k neurons/day",
-      "quirks": [],
-      "premiumSince": "2026-08-18T11:02:42.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/deepgram/aura-2-es",
-      "displayName": "Deepgram Aura 2 Spanish (Cloudflare Workers AI)",
-      "modality": "audio",
-      "intelligenceRank": 212,
-      "speedRank": 212,
-      "sizeLabel": "TTS",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "mediaNote": "MP3 output - Spanish - shared 10k neurons/day",
-      "quirks": [],
-      "premiumSince": "2026-08-18T11:02:42.000Z"
     },
     {
       "platform": "google",
@@ -3048,222 +2571,6 @@
       ]
     },
     {
-      "platform": "cloudflare",
-      "modelId": "@cf/qwen/qwen2.5-coder-32b-instruct",
-      "displayName": "Qwen2.5 Coder 32B (CF)",
-      "intelligenceRank": 15,
-      "speedRank": 7,
-      "sizeLabel": "Large",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 32768,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": true,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/qwen/qwq-32b",
-      "displayName": "QwQ 32B (CF)",
-      "intelligenceRank": 12,
-      "speedRank": 6,
-      "sizeLabel": "Large",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": true,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/mistralai/mistral-small-3.1-24b-instruct",
-      "displayName": "Mistral Small 3.1 24B (CF)",
-      "intelligenceRank": 20,
-      "speedRank": 7,
-      "sizeLabel": "Medium",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": true,
-      "supportsTools": true,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/meta/llama-3.2-11b-vision-instruct",
-      "displayName": "Llama 3.2 11B Vision (CF)",
-      "intelligenceRank": 30,
-      "speedRank": 7,
-      "sizeLabel": "Small",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": true,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/meta/llama-3.1-8b-instruct-fp8",
-      "displayName": "Llama 3.1 8B (CF)",
-      "intelligenceRank": 40,
-      "speedRank": 8,
-      "sizeLabel": "8B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": true,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/meta/llama-3.2-3b-instruct",
-      "displayName": "Llama 3.2 3B (CF)",
-      "intelligenceRank": 60,
-      "speedRank": 9,
-      "sizeLabel": "3B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/aisingapore/gemma-sea-lion-v4-27b-it",
-      "displayName": "Gemma SEA-LION v4 27B (CF)",
-      "intelligenceRank": 30,
-      "speedRank": 6,
-      "sizeLabel": "Large",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/meta/llama-guard-3-8b",
-      "displayName": "Llama Guard 3 8B (CF)",
-      "intelligenceRank": 200,
-      "speedRank": 8,
-      "sizeLabel": "8B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ]
-    },
-    {
       "platform": "groq",
       "modelId": "whisper-large-v3-turbo",
       "displayName": "Whisper Large v3 Turbo (Groq)",
@@ -3491,68 +2798,6 @@
       "supportsVision": true,
       "supportsTools": false,
       "quirks": [],
-      "premiumSince": "2026-07-19T18:44:22.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/meta/llama-3.2-1b-instruct",
-      "displayName": "Llama 3.2 1B Instruct (CF)",
-      "intelligenceRank": 70,
-      "speedRank": 11,
-      "sizeLabel": "1B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 131072,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ],
-      "premiumSince": "2026-07-19T18:44:22.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/moondream/moondream3.1-9B-A2B",
-      "displayName": "Moondream 3.1 9B A2B (CF)",
-      "intelligenceRank": 35,
-      "speedRank": 11,
-      "sizeLabel": "9B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 32768,
-      "enabled": true,
-      "supportsVision": true,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        },
-        {
-          "slug": "cloudflare-moondream-binary-only",
-          "title": "OpenAI chat/completions base64 unsupported",
-          "body": "Cloudflare Workers AI OpenAI chat/completions endpoint rejects base64 data URLs for Moondream 3.1 with code 5006 type mismatch; requires raw byte array via native /ai/run.",
-          "severity": "warning"
-        }
-      ],
       "premiumSince": "2026-07-19T18:44:22.000Z"
     },
     {
@@ -5466,118 +4711,6 @@
       "supportsVision": true,
       "supportsTools": false,
       "quirks": [],
-      "premiumSince": "2026-08-05T15:29:52.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/google/gemma-2b-it-lora",
-      "displayName": "Gemma 2B IT LoRA (CF)",
-      "intelligenceRank": 78,
-      "speedRank": 10,
-      "sizeLabel": "2B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 8192,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ],
-      "premiumSince": "2026-08-05T15:29:52.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/mistral/mistral-7b-instruct-v0.2-lora",
-      "displayName": "Mistral 7B Instruct v0.2 LoRA (CF)",
-      "intelligenceRank": 66,
-      "speedRank": 9,
-      "sizeLabel": "7B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 32768,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ],
-      "premiumSince": "2026-08-05T15:29:52.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/meta-llama/llama-2-7b-chat-hf-lora",
-      "displayName": "Llama 2 7B Chat LoRA (CF)",
-      "intelligenceRank": 76,
-      "speedRank": 9,
-      "sizeLabel": "7B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 8192,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ],
-      "premiumSince": "2026-08-05T15:29:52.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/google/gemma-7b-it-lora",
-      "displayName": "Gemma 7B IT LoRA (CF)",
-      "intelligenceRank": 70,
-      "speedRank": 8,
-      "sizeLabel": "7B",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "~10-20M",
-      "contextWindow": 8192,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "quirks": [
-        {
-          "slug": "cloudflare-key-format",
-          "title": "Key is account_id:token",
-          "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-          "severity": "info"
-        }
-      ],
       "premiumSince": "2026-08-05T15:29:52.000Z"
     },
     {
@@ -7741,52 +6874,6 @@
       "premiumSince": "2026-08-14T16:57:07.000Z"
     },
     {
-      "platform": "cloudflare",
-      "modelId": "@cf/bytedance/stable-diffusion-xl-lightning",
-      "displayName": "Stable Diffusion XL Lightning",
-      "modality": "image",
-      "intelligenceRank": 207,
-      "speedRank": 207,
-      "sizeLabel": "SDXL",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "mediaNote": "Shared 10k neurons/day",
-      "quirks": [],
-      "premiumSince": "2026-08-14T16:57:07.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/lykon/dreamshaper-8-lcm",
-      "displayName": "DreamShaper 8 LCM",
-      "modality": "image",
-      "intelligenceRank": 208,
-      "speedRank": 208,
-      "sizeLabel": "SDXL",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "mediaNote": "Shared 10k neurons/day",
-      "quirks": [],
-      "premiumSince": "2026-08-14T16:57:07.000Z"
-    },
-    {
       "platform": "google",
       "modelId": "gemini-3.7-flash",
       "displayName": "Gemini 3.7 Flash",
@@ -9441,76 +8528,6 @@
       "premiumSince": "2026-08-18T09:38:10.000Z"
     },
     {
-      "platform": "cloudflare",
-      "modelId": "@cf/black-forest-labs/flux-2-dev",
-      "displayName": "FLUX.2 Dev",
-      "modality": "image",
-      "intelligenceRank": 209,
-      "speedRank": 209,
-      "sizeLabel": "Image",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "requestStyle": "multipart",
-      "mediaNote": "Workers AI free allocation · resets daily",
-      "quirks": [],
-      "premiumSince": "2026-08-18T15:51:00.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/leonardo/lucid-origin",
-      "displayName": "Lucid Origin",
-      "modality": "image",
-      "intelligenceRank": 210,
-      "speedRank": 210,
-      "sizeLabel": "Image",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "mediaNote": "Workers AI free allocation · resets daily",
-      "quirks": [],
-      "premiumSince": "2026-08-18T15:51:00.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/leonardo/phoenix-1.0",
-      "displayName": "Phoenix 1.0",
-      "modality": "image",
-      "intelligenceRank": 211,
-      "speedRank": 211,
-      "sizeLabel": "Image",
-      "limits": {
-        "rpm": null,
-        "rpd": null,
-        "tpm": null,
-        "tpd": null
-      },
-      "monthlyTokenBudget": "",
-      "contextWindow": null,
-      "enabled": true,
-      "supportsVision": false,
-      "supportsTools": false,
-      "mediaNote": "Workers AI free allocation · resets daily",
-      "quirks": [],
-      "premiumSince": "2026-08-18T15:51:00.000Z"
-    },
-    {
       "platform": "nvidia",
       "modelId": "black-forest-labs/flux.1-dev",
       "displayName": "FLUX.1 Dev",
@@ -9558,18 +8575,6 @@
     }
   ],
   "quirks": [
-    {
-      "slug": "cloudflare-key-format",
-      "title": "Key is account_id:token",
-      "body": "Cloudflare Workers AI authenticates with a combined credential in the form \"account_id:token\", not a bare token.",
-      "severity": "info",
-      "targets": [
-        {
-          "platform": "cloudflare",
-          "modelGlob": null
-        }
-      ]
-    },
     {
       "slug": "keyless-anonymous",
       "title": "No API key required",
@@ -9627,10 +8632,6 @@
         {
           "platform": "kilo",
           "modelGlob": "poolside/laguna-xs-2.1:free"
-        },
-        {
-          "platform": "cloudflare",
-          "modelGlob": "@cf/openai/gpt-oss-*"
         },
         {
           "platform": "ovh",
@@ -10450,18 +9451,6 @@
     },
     {
       "family": "bge-m3",
-      "platform": "cloudflare",
-      "modelId": "@cf/baai/bge-m3",
-      "displayName": "BGE-M3",
-      "dimensions": 1024,
-      "maxInputTokens": 8192,
-      "priority": 1,
-      "enabled": true,
-      "quotaLabel": "10K neurons/day (shared)",
-      "premiumSince": "2026-07-19T18:44:22.000Z"
-    },
-    {
-      "family": "bge-m3",
       "platform": "huggingface",
       "modelId": "BAAI/bge-m3",
       "displayName": "BGE-M3 (HF)",
@@ -10470,30 +9459,6 @@
       "priority": 3,
       "enabled": true,
       "quotaLabel": "$0.10/mo credits",
-      "premiumSince": "2026-07-19T18:44:22.000Z"
-    },
-    {
-      "family": "embeddinggemma-300m",
-      "platform": "cloudflare",
-      "modelId": "@cf/google/embeddinggemma-300m",
-      "displayName": "EmbeddingGemma 300M",
-      "dimensions": 768,
-      "maxInputTokens": 2048,
-      "priority": 1,
-      "enabled": true,
-      "quotaLabel": "10K neurons/day (shared)",
-      "premiumSince": "2026-07-19T18:44:22.000Z"
-    },
-    {
-      "family": "qwen3-embedding-0.6b",
-      "platform": "cloudflare",
-      "modelId": "@cf/qwen/qwen3-embedding-0.6b",
-      "displayName": "Qwen3 Embedding 0.6B",
-      "dimensions": 1024,
-      "maxInputTokens": 8192,
-      "priority": 1,
-      "enabled": true,
-      "quotaLabel": "10K neurons/day (shared)",
       "premiumSince": "2026-07-19T18:44:22.000Z"
     },
     {
@@ -10543,54 +9508,6 @@
       "enabled": true,
       "quotaLabel": "~40 rpm",
       "premiumSince": "2026-07-23T22:58:14.000Z"
-    },
-    {
-      "family": "plamo-embedding-1b",
-      "platform": "cloudflare",
-      "modelId": "@cf/pfnet/plamo-embedding-1b",
-      "displayName": "PLaMo Embedding 1B (CF)",
-      "dimensions": 2048,
-      "maxInputTokens": 4096,
-      "priority": 1,
-      "quotaLabel": "10K neurons/day (shared)",
-      "enabled": true,
-      "premiumSince": "2026-08-05T15:29:52.000Z"
-    },
-    {
-      "family": "bge-small-en-v1.5",
-      "platform": "cloudflare",
-      "modelId": "@cf/baai/bge-small-en-v1.5",
-      "displayName": "BGE Small EN v1.5 (CF)",
-      "dimensions": 384,
-      "maxInputTokens": 512,
-      "priority": 1,
-      "quotaLabel": "10K neurons/day (shared)",
-      "enabled": true,
-      "premiumSince": "2026-08-05T15:29:52.000Z"
-    },
-    {
-      "family": "bge-base-en-v1.5",
-      "platform": "cloudflare",
-      "modelId": "@cf/baai/bge-base-en-v1.5",
-      "displayName": "BGE Base EN v1.5 (CF)",
-      "dimensions": 768,
-      "maxInputTokens": 512,
-      "priority": 1,
-      "quotaLabel": "10K neurons/day (shared)",
-      "enabled": true,
-      "premiumSince": "2026-08-05T15:29:52.000Z"
-    },
-    {
-      "family": "bge-large-en-v1.5",
-      "platform": "cloudflare",
-      "modelId": "@cf/baai/bge-large-en-v1.5",
-      "displayName": "BGE Large EN v1.5 (CF)",
-      "dimensions": 1024,
-      "maxInputTokens": 512,
-      "priority": 1,
-      "quotaLabel": "10K neurons/day (shared)",
-      "enabled": true,
-      "premiumSince": "2026-08-05T15:29:52.000Z"
     },
     {
       "family": "embed-english-v3.0",
@@ -10851,53 +9768,6 @@
       "enabled": true,
       "maxBytes": 26214400,
       "quotaLabel": "free tier - 25 MB uploads"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/openai/whisper-large-v3-turbo",
-      "displayName": "Whisper Large v3 Turbo (Cloudflare Workers AI)",
-      "priority": 2,
-      "enabled": true,
-      "subtitleFormats": [
-        "vtt"
-      ],
-      "requestStyle": "json",
-      "quotaLabel": "Workers AI free allocation"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/openai/whisper",
-      "displayName": "Whisper (Cloudflare Workers AI)",
-      "priority": 3,
-      "enabled": true,
-      "subtitleFormats": [
-        "vtt"
-      ],
-      "requestStyle": "binary",
-      "quotaLabel": "Workers AI free allocation"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/openai/whisper-tiny-en",
-      "displayName": "Whisper Tiny English (Cloudflare Workers AI)",
-      "priority": 5,
-      "subtitleFormats": [
-        "vtt"
-      ],
-      "requestStyle": "binary",
-      "quotaLabel": "Workers AI free allocation",
-      "enabled": true,
-      "premiumSince": "2026-08-05T15:29:52.000Z"
-    },
-    {
-      "platform": "cloudflare",
-      "modelId": "@cf/deepgram/nova-3",
-      "displayName": "Deepgram Nova-3 (Cloudflare Workers AI)",
-      "priority": 4,
-      "requestStyle": "binary",
-      "quotaLabel": "Workers AI free allocation",
-      "enabled": true,
-      "premiumSince": "2026-08-05T15:29:52.000Z"
     },
     {
       "platform": "cohere",

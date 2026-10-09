@@ -54,145 +54,6 @@ function resilient(plugin: any) {
   return plugin
 }
 
-/**
- * Spawns a local loopback callback server on port 8976 during Vite dev
- * so that Cloudflare OAuth PKCE redirects succeed and message the web client.
- */
-function cloudflareOAuthBridgePlugin() {
-  let server: any = null
-  return {
-    name: 'vite-plugin-cloudflare-oauth-bridge',
-    configureServer() {
-      import('node:http').then(({ createServer }) => {
-        if (server)
-          return
-        server = createServer((req, res) => {
-          const url = new URL(req.url || '/', 'http://localhost:8976')
-          if (url.pathname === '/oauth/callback') {
-            const code = url.searchParams.get('code')
-            const state = url.searchParams.get('state')
-            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
-            res.end(`
-              <!DOCTYPE html>
-              <html>
-              <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>Cloudflare Authorization</title>
-                <style>
-                  body {
-                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                    text-align: center;
-                    padding: 40px 20px;
-                    background: #0f172a;
-                    color: #f8fafc;
-                    margin: 0;
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    min-height: 80vh;
-                  }
-                  .card {
-                    background: rgba(30, 41, 59, 0.8);
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 16px;
-                    padding: 32px 24px;
-                    max-width: 400px;
-                    box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-                  }
-                  .btn {
-                    display: inline-block;
-                    margin-top: 20px;
-                    padding: 12px 28px;
-                    background: #0284c7;
-                    color: white;
-                    text-decoration: none;
-                    font-weight: 600;
-                    border-radius: 8px;
-                    cursor: pointer;
-                    border: none;
-                    font-size: 1rem;
-                  }
-                  .countdown {
-                    color: #38bdf8;
-                    font-weight: bold;
-                    font-size: 1.1rem;
-                  }
-                </style>
-              </head>
-              <body>
-                <div class="card">
-                  <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
-                  <h2 style="margin: 0 0 8px 0; color: #38bdf8;">Authorization Successful</h2>
-                  <p style="color: #94a3b8; margin: 0 0 16px 0;">Returning to AIRI...</p>
-                  <p style="font-size: 0.9rem; color: #cbd5e1;">Window will close automatically in <span class="countdown" id="timer">5</span>s</p>
-                  <button class="btn" id="closeBtn" onclick="closeOrReturn()">Return to AIRI</button>
-                </div>
-                <script>
-                  const code = ${JSON.stringify(code)};
-                  const state = ${JSON.stringify(state)};
-
-                  // Broadcast credentials to app
-                  try {
-                    if (window.opener) {
-                      window.opener.postMessage({ type: 'CLOUDFLARE_OAUTH_CODE', code, state }, '*');
-                      window.opener.postMessage({ type: 'CLOUDFLARE_AUTH_CALLBACK', code, state }, '*');
-                    }
-                    if (typeof BroadcastChannel !== 'undefined') {
-                      new BroadcastChannel('airi_cf_oauth_channel').postMessage({ type: 'CLOUDFLARE_OAUTH_CODE', code, state });
-                    }
-                    localStorage.setItem('airi_cf_oauth_callback', JSON.stringify({ code, state, timestamp: Date.now() }));
-                  } catch (e) {}
-
-                  function closeOrReturn() {
-                    try { window.close(); } catch (e) {}
-                    if (window.history.length > 1) {
-                      window.history.back();
-                    } else {
-                      window.location.href = '/';
-                    }
-                  }
-
-                  let remaining = 5;
-                  const timerEl = document.getElementById('timer');
-                  const interval = setInterval(() => {
-                    remaining--;
-                    if (timerEl) timerEl.textContent = remaining;
-                    if (remaining <= 0) {
-                      clearInterval(interval);
-                      closeOrReturn();
-                    }
-                  }, 1000);
-                </script>
-              </body>
-              </html>
-            `)
-          }
-          else {
-            res.writeHead(404)
-            res.end('Not Found')
-          }
-        })
-        server.on('error', (err: any) => {
-          if (err.code !== 'EADDRINUSE') {
-            console.warn('[CloudflareOAuthBridge] Server error:', err.message)
-          }
-        })
-        server.listen(8976, '127.0.0.1', () => {
-          console.info('✓ Cloudflare OAuth Bridge listening on http://localhost:8976/oauth/callback')
-        })
-      })
-    },
-    closeBundle() {
-      if (server) {
-        server.close()
-        server = null
-      }
-    },
-  }
-}
-
 const stageUIAssetsRoot = resolve(join(import.meta.dirname, '..', '..', 'packages', 'stage-ui', 'src', 'assets'))
 const sharedCacheDir = resolve(join(import.meta.dirname, '..', '..', '.cache'))
 
@@ -255,16 +116,6 @@ export default defineConfig({
       strict: false,
     },
     proxy: {
-      '/api/cf-oauth-token': {
-        target: 'https://dash.cloudflare.com',
-        changeOrigin: true,
-        rewrite: () => '/oauth2/token',
-      },
-      '/api/cloudflare': {
-        target: 'https://api.cloudflare.com/client/v4',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/api\/cloudflare/, ''),
-      },
       '/cors-proxy': {
         target: 'https://airi-cors-proxy.r1ch4rd.workers.dev',
         changeOrigin: true,
@@ -329,8 +180,6 @@ export default defineConfig({
         resolve(import.meta.dirname, '..', '..', 'packages', 'stage-layouts', 'src', 'layouts'),
       ],
     }),
-
-    cloudflareOAuthBridgePlugin(),
 
     // https://github.com/antfu/unocss
     // see uno.config.ts for config
@@ -445,7 +294,7 @@ export default defineConfig({
     // dist/assets/duckdb-eh-BJOC5S4x.wasm                                  32,604.02 kB │ gzip: 7,133.37 kB
     // dist/assets/duckdb-mvp-8HYqhb4i.wasm                                 37,345.64 kB │ gzip: 8,099.69 kB
     //
-    // they are too large to be able to put into deployments like Cloudflare Workers or Pages,
+    // they are too large to be able to put into typical edge deployments,
     // we need to upload them to external storage and use renderBuiltUrl to rewrite their URLs.
     ...((!env.S3_ENDPOINT || !env.S3_ACCESS_KEY_ID || !env.S3_SECRET_ACCESS_KEY)
       ? []

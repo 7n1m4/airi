@@ -68,15 +68,4 @@ function pruneCache() {
   console.log(`[Turbo Cache Pruner] Pruned ${deletedCount} files. New cache size: ${(currentSize / (1024 * 1024 * 1024)).toFixed(2)} GB`)
 }
 
-function ensureEdgeBundleStub() {
-  const edgeBundleCodePath = path.resolve('apps/stage-edge/src/bundle-code.ts')
-  if (!fs.existsSync(edgeBundleCodePath)) {
-    try {
-      fs.writeFileSync(edgeBundleCodePath, 'export const BUNDLED_WORKER_SCRIPT = \'\';\n')
-    }
-    catch {}
-  }
-}
-
 pruneCache()
-ensureEdgeBundleStub()
