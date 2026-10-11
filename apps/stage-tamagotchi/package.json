@@ -39,6 +39,9 @@
   "dependencies": {
     "@discordjs/voice": "^0.19.0",
     "@guiiai/logg": "catalog:",
+    "@libp2p/crypto": "^5.1.23",
+    "@libp2p/interface": "^2.11.0",
+    "@libp2p/peer-id": "^5.1.9",
     "@moeru/eventa": "catalog:",
     "@moeru/std": "catalog:",
     "@proj-airi/audio": "workspace:^",

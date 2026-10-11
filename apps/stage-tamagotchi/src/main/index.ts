@@ -61,6 +61,7 @@ import { emitAppBeforeQuit, emitAppReady, emitAppWindowAllClosed } from './libs/
 import { setElectronMainDirname } from './libs/electron/location'
 import { flushAllConfigs } from './libs/electron/persistence'
 import { createI18n } from './libs/i18n'
+import { createLibp2pService, setupLibp2pService } from './services/airi/libp2p'
 import { createServerChannelService, setupServerChannel } from './services/airi/channel-server'
 import { setupDiscordService } from './services/airi/discord'
 import { createI18nService } from './services/airi/i18n'
@@ -387,6 +388,11 @@ app.whenReady().then(async () => {
     build: async () => setupMcpStdioManager(),
   })
 
+  const libp2p = injeca.provide('modules:libp2p', {
+    dependsOn: { lifecycle },
+    build: async ({ dependsOn }) => setupLibp2pService(dependsOn),
+  })
+
   const pluginHost = injeca.provide('modules:plugin-host', {
     dependsOn: { serverChannel },
     build: () => setupPluginHost(),
@@ -465,7 +471,7 @@ app.whenReady().then(async () => {
   })
 
   injeca.invoke({
-    dependsOn: { mainWindow, tray, serverChannel, pluginHost, mcpStdioManager, onboardingWindow: onboardingWindowManager, appConfig, i18n, captionWindow, stageWindow, splashWindow, chatWindow, customizerWindow, beatSync },
+    dependsOn: { mainWindow, tray, serverChannel, pluginHost, mcpStdioManager, onboardingWindow: onboardingWindowManager, appConfig, i18n, captionWindow, stageWindow, splashWindow, chatWindow, customizerWindow, beatSync, libp2p },
     callback: (deps) => {
       createServerChannelService({ serverChannel: deps.serverChannel })
       createMcpServersService({ context, manager: deps.mcpStdioManager })
@@ -473,6 +479,7 @@ app.whenReady().then(async () => {
       createMicToggleService({ context, window: deps.mainWindow })
       createVisionService({ context })
       const stageMateService = createStageMateService({ appConfig: deps.appConfig })
+      createLibp2pService({ context })
       const sensorsServicePromise = createSensorsService({ context })
       setupDiscordService()
       const defaultBypassUrls = DEFAULT_CORS_BYPASS_URLS
