@@ -9,6 +9,16 @@ export type Libp2pTransportKind
     | 'webrtc'
     | 'webtransport'
 
+/**
+ * A GossipSub topic name. Typed as a plain string rather than a template-literal
+ * or valibot schema: this package shares the type only, and the enum of
+ * configured topics is user-editable, so there is no finite set to constrain to
+ * at the type level. The real bound is main's config schema, which must bound
+ * the element count; a topic the renderer invents that the schema rejects would
+ * otherwise invalidate the whole file. Keep this in sync with the schema.
+ */
+export type Libp2pTopic = string
+
 /** One remote AIRI instance known to the local libp2p node. */
 export interface Libp2pPeerInfo {
   /** Libp2p PeerId string (e.g. `12D3Koo...`). */
@@ -55,6 +65,11 @@ export interface Libp2pServiceStatus {
 /**
  * Configuration of the local libp2p node, persisted via `createConfig`.
  * Applying it restarts the node if it is running.
+ *
+ * This is the shared validation contract of `libp2p-config.json`: main persists
+ * the object it is given, so a field absent here can only reach the file as an
+ * untyped key that the config schema then rejects. Keep it closed — a renderer
+ * that needs a new setting asks for the field to be added here.
  */
 export interface Libp2pServiceConfig {
   /** Whether the libp2p service should start automatically on app launch. */
@@ -64,7 +79,18 @@ export interface Libp2pServiceConfig {
   /** Extra multiaddrs to dial at startup (LAN or relay peers). */
   bootstrapPeers: string[]
   /** GossipSub topics to subscribe to for sync traffic. */
-  topics: string[]
+  topics: Libp2pTopic[]
+  /** Whether this node may publish and apply mesh sync traffic to paired peers. */
+  meshSyncEnabled?: boolean
+  /** Sync categories advertised to trusted peers; empty disables mesh sync. */
+  meshSyncTargets?: string[]
+  /**
+   * Deduplicated union of `topics` and the pairing topics, computed by main and
+   * enforced at the gossipsub layer so a remote peer cannot push a subscription
+   * for a topic this node never subscribed to. Optional because it is derived,
+   * not set by the renderer.
+   */
+  allowedTopics?: string[]
 }
 
 /** Public identity of this node; the private key never crosses IPC. */
