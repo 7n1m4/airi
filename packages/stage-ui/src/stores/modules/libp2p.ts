@@ -2,12 +2,18 @@ import type { Libp2pPeerInfo, Libp2pServiceConfig, Libp2pServiceStatus, MeshIden
 
 import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import {
+  electronMeshIdentityChanged,
   electronMeshIdentityGenerate,
   electronMeshIdentityGet,
   electronMeshIdentitySetName,
+  libp2pMessageReceived,
+  libp2pPeerDiscovered,
+  libp2pPeerJoined,
+  libp2pPeerLeft,
   libp2pServiceAcceptPairing,
   libp2pServiceApplyConfig,
   libp2pServiceCreatePairing,
+  libp2pServiceEventLog,
   libp2pServiceGetConfig,
   libp2pServiceGetStatus,
   libp2pServiceListPairedDevices,
@@ -17,13 +23,13 @@ import {
   libp2pServicePublish,
   libp2pServiceRemovePairedDevice,
   libp2pServiceStart,
+  libp2pServiceStatusChanged,
   libp2pServiceStop,
   libp2pServiceUpdatePairedDeviceAlias,
 } from '@proj-airi/stage-shared'
 import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
-import { useBroadcastChannel } from '@vueuse/core'
 import { defineStore } from 'pinia'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 
 // ── Persisted Config ──────────────────────────────────────────────────────────
 
@@ -407,36 +413,24 @@ onMounted(() => {
   if (!isElectron)
     return
 
-  // Set up broadcast channel listeners
-  const unsubStatus = useBroadcastChannel<Libp2pServiceStatus>({ name: 'airi:libp2p:status-changed' })
-  unsubStatus.onmessage = e => handleStatusChanged(e.data)
-
-  const unsubPeerJoined = useBroadcastChannel<Libp2pPeerInfo>({ name: 'airi:libp2p:peer-joined' })
-  unsubPeerJoined.onmessage = e => handlePeerJoined(e.data)
-
-  const unsubPeerLeft = useBroadcastChannel<{ id: string }>({ name: 'airi:libp2p:peer-left' })
-  unsubPeerLeft.onmessage = e => handlePeerLeft(e.data)
-
-  const unsubPeerDiscovered = useBroadcastChannel<Libp2pPeerInfo>({ name: 'airi:libp2p:peer-discovered' })
-  unsubPeerDiscovered.onmessage = e => handlePeerDiscovered(e.data)
-
-  const unsubMessage = useBroadcastChannel<{ topic: string, from: string, data: string }>({ name: 'airi:libp2p:message-received' })
-  unsubMessage.onmessage = e => handleMessageReceived(e.data)
-
-  const unsubIdentity = useBroadcastChannel<MeshIdentityInfo>({ name: 'airi:libp2p:identity:changed' })
-  unsubIdentity.onmessage = e => handleIdentityChanged(e.data)
-
-  const unsubPairedDevices = useBroadcastChannel<{ type: 'paired-devices-changed', payload: PairedDevice[] }>({ name: 'airi:libp2p:events' })
-  unsubPairedDevices.onmessage = (e) => {
-    if (e.data?.type === 'paired-devices-changed')
-      handlePairedDevicesChanged(e.data.payload)
+  // The libp2p main service pushes events through transient per-window eventa
+  // contexts, so the subscription set is identical whether the context already
+  // resolved or arrives after mount.
+  const bindEvents = (ctx: typeof eventaContext.value) => {
+    if (!ctx)
+      return
+    ctx.on(libp2pServiceStatusChanged, event => handleStatusChanged(event.body!))
+    ctx.on(libp2pPeerJoined, event => handlePeerJoined(event.body!))
+    ctx.on(libp2pPeerLeft, event => handlePeerLeft(event.body!))
+    ctx.on(libp2pPeerDiscovered, event => handlePeerDiscovered(event.body!))
+    ctx.on(libp2pMessageReceived, event => handleMessageReceived(event.body!))
+    ctx.on(electronMeshIdentityChanged, event => handleIdentityChanged(event.body!))
+    ctx.on(libp2pServiceEventLog, event => addEventLog(event.body!.level, event.body!.message))
+    ctx.on(libp2pServicePairedDevicesChanged, event => handlePairedDevicesChanged(event.body ?? []))
   }
 
-  // The libp2p main service pushes this over the raw `webContents.send` path, so
-  // additionally listen on the eventa context, which only exists in Electron.
-  if (eventaContext.value) {
-    eventaContext.value.on(libp2pServicePairedDevicesChanged, event => handlePairedDevicesChanged(event.body ?? []))
-  }
+  bindEvents(eventaContext.value)
+  watch(eventaContext, bindEvents)
 
   // Initial load
   loadConfig()
@@ -444,10 +438,6 @@ onMounted(() => {
   refreshPeers()
   refreshIdentity()
   refreshPairedDevices()
-})
-
-onUnmounted(() => {
-  // BroadcastChannel cleanup is automatic
 })
 
 export const useLibp2pStore = defineStore('libp2p', () => ({

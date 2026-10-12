@@ -3,7 +3,7 @@ import type { Identify } from '@libp2p/identify'
 import type { PeerId, PeerInfo, PubSub } from '@libp2p/interface'
 import type { KadDHT } from '@libp2p/kad-dht'
 import type { Ping } from '@libp2p/ping'
-import type { createContext } from '@moeru/eventa/adapters/electron/main'
+import type { Eventa } from '@moeru/eventa'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { Lifecycle } from 'injeca'
 import type { InferOutput } from 'valibot'
@@ -27,25 +27,34 @@ import { webRTC } from '@libp2p/webrtc'
 import { webSockets } from '@libp2p/websockets'
 import { webTransport } from '@libp2p/webtransport'
 import { defineInvokeHandler } from '@moeru/eventa'
+import { createContext } from '@moeru/eventa/adapters/electron/main'
 import {
+  electronMeshIdentityChanged,
   electronMeshIdentityGenerate,
   electronMeshIdentityGet,
   electronMeshIdentitySetName,
+  libp2pMessageReceived,
+  libp2pPeerDiscovered,
+  libp2pPeerJoined,
+  libp2pPeerLeft,
   libp2pServiceAcceptPairing,
   libp2pServiceApplyConfig,
   libp2pServiceCreatePairing,
+  libp2pServiceEventLog,
   libp2pServiceGetConfig,
   libp2pServiceGetStatus,
   libp2pServiceListPairedDevices,
   libp2pServiceListPeers,
+  libp2pServicePairedDevicesChanged,
   libp2pServicePing,
   libp2pServicePublish,
   libp2pServiceRemovePairedDevice,
   libp2pServiceStart,
+  libp2pServiceStatusChanged,
   libp2pServiceStop,
   libp2pServiceUpdatePairedDeviceAlias,
 } from '@proj-airi/stage-shared/libp2p'
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import { createLibp2p } from 'libp2p'
 import { array, boolean, object, picklist, string } from 'valibot'
 
@@ -64,15 +73,25 @@ import {
   updatePairedDeviceAlias,
 } from './pairing'
 
-// Event channel names for main → renderer push events
-const LIBP2P_STATUS_CHANGED_CHANNEL = 'eventa:event:electron:libp2p:status-changed'
-const LIBP2P_PEER_JOINED_CHANNEL = 'eventa:event:electron:libp2p:peer-joined'
-const LIBP2P_PEER_LEFT_CHANNEL = 'eventa:event:electron:libp2p:peer-left'
-const LIBP2P_PEER_DISCOVERED_CHANNEL = 'eventa:event:electron:libp2p:peer-discovered'
-const LIBP2P_MESSAGE_RECEIVED_CHANNEL = 'eventa:event:electron:libp2p:message-received'
-const LIBP2P_IDENTITY_CHANGED_CHANNEL = 'eventa:event:electron:libp2p:identity:changed'
-const LIBP2P_EVENT_LOG_CHANNEL = 'eventa:event:electron:libp2p:event-log'
-const LIBP2P_PAIRED_DEVICES_CHANGED_CHANNEL = 'eventa:event:electron:libp2p:paired-devices-changed'
+// ── Main → Renderer Push ──────────────────────────────────────────────────────
+// eventa's electron renderer adapter only binds `ipcRenderer.on('eventa-message')`,
+// so a bare `webContents.send()` on a custom channel name reaches nothing. Pushes
+// therefore have to go through a transient eventa context bound to each window.
+
+function emitToAllWindows<P>(contract: Eventa<P>, payload: P) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (win.isDestroyed() || win.webContents.isDestroyed())
+      continue
+    try {
+      const { context: winContext, dispose } = createContext(ipcMain, win)
+      winContext.emit(contract, payload)
+      dispose()
+    }
+    catch {
+      // Ignore
+    }
+  }
+}
 
 const log = useLogg('libp2p-service').useGlobalConfig()
 
@@ -199,46 +218,16 @@ function buildStatus(): {
 }
 
 function broadcastStatus() {
-  const status = buildStatus()
-  for (const win of BrowserWindow.getAllWindows()) {
-    try {
-      if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-        win.webContents.send(LIBP2P_STATUS_CHANGED_CHANNEL, status)
-      }
-    }
-    catch {
-      // Ignore
-    }
-  }
+  emitToAllWindows(libp2pServiceStatusChanged, buildStatus())
 }
 
 function broadcastEventLog(level: 'debug' | 'info' | 'warn' | 'error', message: string) {
-  const entry = { level, message, timestamp: Date.now() }
-  for (const win of BrowserWindow.getAllWindows()) {
-    try {
-      if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-        win.webContents.send(LIBP2P_EVENT_LOG_CHANNEL, entry)
-      }
-    }
-    catch {
-      // Ignore
-    }
-  }
+  emitToAllWindows(libp2pServiceEventLog, { level, message, timestamp: Date.now() })
 }
 
 /** Push the paired-device list to the renderer after any pairing mutation. */
 async function broadcastPairedDevices() {
-  const devices = await listPairedDevices()
-  for (const win of BrowserWindow.getAllWindows()) {
-    try {
-      if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-        win.webContents.send(LIBP2P_PAIRED_DEVICES_CHANGED_CHANNEL, devices)
-      }
-    }
-    catch {
-      // Ignore
-    }
-  }
+  emitToAllWindows(libp2pServicePairedDevicesChanged, await listPairedDevices())
 }
 
 /**
@@ -399,37 +388,18 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
     const msg = evt.detail
     if (msg.from !== peerId.toString()) {
       // Broadcast to renderer
-      const message = {
+      emitToAllWindows(libp2pMessageReceived, {
         topic: msg.topic,
         from: msg.from,
         data: Buffer.from(msg.data).toString('base64'),
-      }
-      for (const win of BrowserWindow.getAllWindows()) {
-        try {
-          if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-            win.webContents.send(LIBP2P_MESSAGE_RECEIVED_CHANNEL, message)
-          }
-        }
-        catch {
-          // Ignore
-        }
-      }
+      })
 
       // Also emit peer discovered event
-      for (const win of BrowserWindow.getAllWindows()) {
-        try {
-          if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-            win.webContents.send(LIBP2P_PEER_DISCOVERED_CHANNEL, {
-              id: msg.from,
-              addresses: [],
-              connected: false,
-            })
-          }
-        }
-        catch {
-          // Ignore
-        }
-      }
+      emitToAllWindows(libp2pPeerDiscovered, {
+        id: msg.from,
+        addresses: [],
+        connected: false,
+      })
     }
   })
 
@@ -495,35 +465,16 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
   // Track peer connections
   node.addEventListener('peer:connect', (evt: CustomEvent) => {
     const peer = evt.detail
-    const peerInfo = {
+    emitToAllWindows(libp2pPeerJoined, {
       id: peer.toString(),
       addresses: peer.multiaddrs.map((ma: Multiaddr) => ma.toString()),
       connected: true,
-    }
-    for (const win of BrowserWindow.getAllWindows()) {
-      try {
-        if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-          win.webContents.send(LIBP2P_PEER_JOINED_CHANNEL, peerInfo)
-        }
-      }
-      catch {
-        // Ignore
-      }
-    }
+    })
   })
 
   node.addEventListener('peer:disconnect', (evt: CustomEvent) => {
     const peer = evt.detail
-    for (const win of BrowserWindow.getAllWindows()) {
-      try {
-        if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-          win.webContents.send(LIBP2P_PEER_LEFT_CHANNEL, { id: peer.toString() })
-        }
-      }
-      catch {
-        // Ignore
-      }
-    }
+    emitToAllWindows(libp2pPeerLeft, { id: peer.toString() })
   })
 
   return {
@@ -774,32 +725,14 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
   // Identity Generate
   defineInvokeHandler(context, electronMeshIdentityGenerate, async () => {
     const identity = await regenerateIdentity()
-    for (const win of BrowserWindow.getAllWindows()) {
-      try {
-        if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-          win.webContents.send(LIBP2P_IDENTITY_CHANGED_CHANNEL, identity)
-        }
-      }
-      catch {
-        // Ignore
-      }
-    }
+    emitToAllWindows(electronMeshIdentityChanged, identity)
     return identity
   })
 
   // Identity Set Name
   defineInvokeHandler(context, electronMeshIdentitySetName, async ({ name }) => {
     const identity = await setIdentityName(name)
-    for (const win of BrowserWindow.getAllWindows()) {
-      try {
-        if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-          win.webContents.send(LIBP2P_IDENTITY_CHANGED_CHANNEL, identity)
-        }
-      }
-      catch {
-        // Ignore
-      }
-    }
+    emitToAllWindows(electronMeshIdentityChanged, identity)
     return identity
   })
 
