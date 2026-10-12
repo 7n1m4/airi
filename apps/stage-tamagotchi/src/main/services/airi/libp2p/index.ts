@@ -25,7 +25,6 @@ import { mplex } from '@libp2p/mplex'
 import { peerIdFromString } from '@libp2p/peer-id'
 import { ping } from '@libp2p/ping'
 import { tcp } from '@libp2p/tcp'
-import { webRTC } from '@libp2p/webrtc'
 import { webSockets } from '@libp2p/websockets'
 import { webTransport } from '@libp2p/webtransport'
 import { defineInvokeHandler } from '@moeru/eventa'
@@ -465,6 +464,14 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
     transports.push(webSockets())
   }
   if (config.transports.includes('webrtc')) {
+    // Static import cannot work here: `@libp2p/webrtc` re-exports
+    // `@ipshipyard/node-datachannel/polyfill`, whose module scope requires the
+    // `node_datachannel.node` addon built by a post-install script. Under
+    // `--ignore-scripts` (CI) that addon is absent, so a static import throws
+    // during main-process module resolution — before `createLibp2pNode` and
+    // its error handling — crashing the app with no window ever created.
+    // Deferring keeps that a recoverable, reported node-start failure.
+    const { webRTC } = await import('@libp2p/webrtc')
     transports.push(webRTC())
   }
   if (config.transports.includes('webtransport')) {
