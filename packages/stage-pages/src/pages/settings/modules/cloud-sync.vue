@@ -3,8 +3,8 @@ import SelectiveSyncPanel from '@proj-airi/stage-ui/components/scenarios/provide
 
 import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
 import { useLibp2pStore } from '@proj-airi/stage-ui/stores/modules/libp2p'
+import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
 import { FieldCheckbox } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import {
@@ -15,6 +15,7 @@ import {
   DialogRoot,
   DialogTitle,
 } from 'reka-ui'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
@@ -76,7 +77,7 @@ function toggleAllPruneCandidates() {
     selectedPruneIds.value.clear()
   }
   else {
-    selectedPruneIds.value = new Set(pruneCandidates.value.map(m => m.id))
+    selectedPruneIds.value = new Set(pruneCandidates.value.map((m: { id: string }) => m.id))
   }
 }
 
@@ -85,7 +86,7 @@ async function handleExecutePrune() {
     return
   isPruning.value = true
   try {
-    const idsToPrune = Array.from(selectedPruneIds.value)
+    const idsToPrune = [...selectedPruneIds.value]
     const { prunedCount, freedBytes } = await displayModelsStore.pruneLocalModels(idsToPrune)
     isPruneDialogOpen.value = false
     toast.success(`Pruned ${prunedCount} unlinked models (${formatSize(freedBytes)} freed). Cloud backups preserved!`)
@@ -206,7 +207,7 @@ function isMergeable(key: string): boolean {
 
       <div class="flex items-center justify-between">
         <span class="font-medium">{{ t('settings.pages.modules.local-sync.enableMeshSync') }}</span>
-        <FieldCheckbox v-model="libp2pStore.meshSyncEnabled" />
+        <FieldCheckbox v-model="libp2pStore.meshSyncEnabled" @update:model-value="void libp2pStore.applyConfig()" />
       </div>
 
       <div v-if="libp2pStore.meshSyncEnabled" class="flex flex-col gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
@@ -223,6 +224,7 @@ function isMergeable(key: string): boolean {
               if (val) arr.push(target)
               else arr.splice(arr.indexOf(target), 1)
               libp2pStore.meshSyncTargets = arr
+              void libp2pStore.applyConfig()
             }"
           >
             <template #label>{{ t(`settings.pages.modules.local-sync.${target}`) }}</template>

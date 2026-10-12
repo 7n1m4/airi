@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { Libp2pTransportKind } from '@proj-airi/stage-shared/libp2p'
+
 import { useLibp2pStore } from '@proj-airi/stage-ui/stores/modules/libp2p'
 import { Button, DoubleCheckButton, FieldCheckbox, FieldInput, FieldSelect, FieldTextArea, QRCode } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
@@ -14,11 +16,16 @@ import {
   TabsRoot,
   TabsTrigger,
 } from 'reka-ui'
-import { computed, reactive, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { toast } from 'vue-sonner'
 
 const { t } = useI18n()
 const libp2pStore = useLibp2pStore()
+const isDev = import.meta.env.DEV
+
+/** Transports the main-process config schema accepts; mDNS is a discovery, not a transport. */
+const transportKinds: Libp2pTransportKind[] = ['tcp', 'websockets', 'webrtc', 'webtransport']
 
 const {
   enabled,
@@ -37,10 +44,14 @@ const {
   isRunning,
 } = storeToRefs(libp2pStore)
 
+const topicOptions = computed(() => topics.value.map(topic => ({ label: topic, value: topic })))
+
 const activeTab = ref<'node' | 'peers' | 'sync' | 'dev'>('node')
 const isPairingDialogOpen = ref(false)
 const newBootstrapPeer = ref('')
 const newTopic = ref('')
+const testPublishTopic = ref('')
+const testPublishData = ref('')
 
 // ── Pairing dialog state ──────────────────────────────────────────────────────
 
@@ -56,12 +67,15 @@ const aliasDrafts = reactive<Record<string, string>>({})
 const connectedPeers = computed(() => peers.value.filter(p => p.connected))
 const discoveredPeers = computed(() => peers.value.filter(p => !p.connected))
 
-function handleStartStop() {
-  if (isRunning.value) {
-    libp2pStore.stopService()
+function handleStartStop(next: boolean) {
+  if (!next && isPairingDialogOpen.value)
+    handleClosePairing()
+
+  if (next) {
+    libp2pStore.startService()
   }
   else {
-    libp2pStore.startService()
+    libp2pStore.stopService()
   }
 }
 
@@ -211,6 +225,17 @@ function handleRefresh() {
   libp2pStore.refreshPeers()
 }
 
+/** Base64 of a UTF-8 string; `btoa` alone mangles non-Latin-1 code points. */
+function encodeUtf8ToBase64(input: string): string {
+  return btoa(unescape(encodeURIComponent(input)))
+}
+
+async function handleTestPublish() {
+  if (!testPublishTopic.value)
+    return
+  await libp2pStore.publishMessage(testPublishTopic.value, encodeUtf8ToBase64(testPublishData.value))
+}
+
 function formatTimestamp(ts: number): string {
   const d = new Date(ts)
   return `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}:${d.getSeconds().toString().padStart(2, '0')}`
@@ -234,6 +259,15 @@ function getLogColor(level: string): string {
     default: return '#22c55e'
   }
 }
+
+onMounted(() => {
+  void handleRefresh()
+})
+
+onBeforeUnmount(() => {
+  if (isPairingDialogOpen.value)
+    handleClosePairing()
+})
 </script>
 
 <template>
@@ -357,7 +391,7 @@ function getLogColor(level: string): string {
         <TabsTrigger value="sync">
           {{ t('settings.modules.libp2p.tabSync') }}
         </TabsTrigger>
-        <TabsTrigger value="dev">
+        <TabsTrigger v-if="isDev" value="dev">
           {{ t('settings.modules.libp2p.tabDev') }}
         </TabsTrigger>
       </TabsList>
@@ -372,20 +406,20 @@ function getLogColor(level: string): string {
             </p>
             <div class="flex flex-wrap gap-2">
               <FieldCheckbox
-                v-for="t in ['tcp', 'websockets', 'webrtc', 'webtransport', 'mdns']"
-                :id="`transport-${t}`"
-                :key="t"
-                :model-value="transports.includes(t)"
+                v-for="transport in transportKinds"
+                :id="`transport-${transport}`"
+                :key="transport"
+                :model-value="transports.includes(transport)"
                 @update:model-value="(val) => {
-                  const arr = [...transports.value]
-                  if (val) arr.push(t)
-                  else arr.splice(arr.indexOf(t), 1)
-                  transports.value = arr
+                  const arr = [...transports]
+                  if (val) arr.push(transport)
+                  else arr.splice(arr.indexOf(transport), 1)
+                  transports = arr
                   libp2pStore.applyConfig()
                 }"
               >
                 <template #label>
-                  {{ t.toUpperCase() }}
+                  {{ t(`settings.modules.libp2p.${transport}`) }}
                 </template>
               </FieldCheckbox>
             </div>
@@ -598,7 +632,7 @@ function getLogColor(level: string): string {
                   {{ t('settings.modules.libp2p.meshSyncDesc') }}
                 </p>
               </div>
-              <FieldCheckbox v-model="meshSyncEnabled" />
+              <FieldCheckbox v-model="meshSyncEnabled" @update:model-value="void libp2pStore.applyConfig()" />
             </div>
 
             <div v-if="meshSyncEnabled" class="flex flex-col gap-4 border-t border-neutral-200 pt-4 dark:border-neutral-800">
@@ -613,10 +647,11 @@ function getLogColor(level: string): string {
                     :key="target"
                     :model-value="meshSyncTargets.includes(target)"
                     @update:model-value="(val) => {
-                      const arr = [...meshSyncTargets.value]
+                      const arr = [...meshSyncTargets]
                       if (val) arr.push(target)
                       else arr.splice(arr.indexOf(target), 1)
-                      meshSyncTargets.value = arr
+                      meshSyncTargets = arr
+                      libp2pStore.applyConfig()
                     }"
                   >
                     <template #label>
@@ -643,14 +678,14 @@ function getLogColor(level: string): string {
       </TabsContent>
 
       <!-- Dev Console Tab -->
-      <TabsContent value="dev">
+      <TabsContent v-if="isDev" value="dev">
         <div class="flex flex-col gap-6">
           <div class="flex flex-col gap-4 rounded-xl bg-neutral-100 p-4 dark:bg-[rgba(0,0,0,0.3)]">
             <div class="flex items-center justify-between">
               <p class="font-medium">
                 {{ t('settings.modules.libp2p.eventLog') }}
               </p>
-              <Button variant="ghost" size="sm" @click="() => eventLog.value = []">
+              <Button variant="ghost" size="sm" @click="() => eventLog = []">
                 {{ t('settings.modules.libp2p.clear') }}
               </Button>
             </div>
@@ -677,9 +712,9 @@ function getLogColor(level: string): string {
               {{ t('settings.modules.libp2p.testPublish') }}
             </p>
             <div class="flex flex-col gap-2">
-              <FieldSelect v-model="testPublishTopic" :options="topics" :placeholder="t('settings.modules.libp2p.selectTopic')" />
-              <FieldTextArea v-model="testPublishData" :placeholder="t('settings.modules.libp2p.messageData')" rows="3" />
-              <Button variant="primary" :disabled="!isRunning || !testPublishTopic" @click="() => libp2pStore.publishMessage(testPublishTopic, btoa(testPublishData))">
+              <FieldSelect v-model="testPublishTopic" :options="topicOptions" :label="t('settings.modules.libp2p.selectTopic')" />
+              <FieldTextArea v-model="testPublishData" :placeholder="t('settings.modules.libp2p.messageData')" :rows="3" />
+              <Button variant="primary" :disabled="!isRunning || !testPublishTopic" @click="handleTestPublish">
                 {{ t('settings.modules.libp2p.publish') }}
               </Button>
             </div>
