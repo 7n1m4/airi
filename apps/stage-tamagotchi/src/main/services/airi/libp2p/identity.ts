@@ -42,16 +42,11 @@ export async function generateIdentity(name: string = 'AIRI Node'): Promise<Mesh
   await ensureSetup()
   const privateKey = await generateKeyPair('Ed25519')
 
-  // NOTICE: `@libp2p/crypto@5.1.23` resolves its key types against
-  // `@libp2p/interface@3.3.0` + `multiformats@14` while
-  // `@libp2p/peer-id@5.1.9` resolves against `@libp2p/interface@2.11.0` +
-  // `multiformats@13`. The key interfaces are structurally identical but
-  // nominally distinct (`MultihashDigest` / `CID` are imported from different
-  // multiformats majors), so a key object produced here cannot be passed to
-  // `peerIdFromPrivateKey` without failing overload resolution. Deriving the
-  // PeerId from the public key's base58btc multihash string instead keeps the
-  // seam version-agnostic while producing the identical PeerId, as
-  // `peerIdFromPrivateKey` is itself just `peerIdFromPublicKey`.
+  // NOTICE: `@libp2p/crypto` and `@libp2p/peer-id` both resolve their key types
+  // against `@libp2p/interface@2.11.0` + `multiformats@13`, and
+  // `peerIdFromPrivateKey` is itself just `peerIdFromPublicKey`, so deriving the
+  // PeerId from the public key's base58btc multihash string produces the
+  // identical PeerId.
   const privateKeyBytes = privateKey.raw
   const peerId = peerIdFromString(privateKey.publicKey.toString())
 

@@ -1,6 +1,6 @@
 import type { Lifecycle } from 'injeca'
 import type { Multiaddr } from '@multiformats/multiaddr'
-import type { PeerId } from '@libp2p/interface'
+import type { PeerId, PubSub } from '@libp2p/interface'
 
 import { BrowserWindow } from 'electron'
 
@@ -8,16 +8,16 @@ import { createLibp2p } from 'libp2p'
 import { tcp } from '@libp2p/tcp'
 import { webSockets } from '@libp2p/websockets'
 import { webRTC } from '@libp2p/webrtc'
-import { webtransport } from '@libp2p/webtransport'
-import { kadDHT } from '@libp2p/kad-dht'
-import { gossipsub } from '@libp2p/gossipsub'
-import { noise } from '@libp2p/noise'
+import { webTransport } from '@libp2p/webtransport'
+import { kadDHT, type KadDHT } from '@libp2p/kad-dht'
+import { gossipsub, type GossipsubEvents } from '@chainsafe/libp2p-gossipsub'
+import { noise } from '@chainsafe/libp2p-noise'
 import { mplex } from '@libp2p/mplex'
-import { yamux } from '@libp2p/yamux'
+import { yamux } from '@chainsafe/libp2p-yamux'
 import { mdns } from '@libp2p/mdns'
 import { autoNAT } from '@libp2p/autonat'
-import { identify } from '@libp2p/identify'
-import { ping } from '@libp2p/ping'
+import { identify, type Identify } from '@libp2p/identify'
+import { ping, type Ping } from '@libp2p/ping'
 import { privateKeyFromRaw } from '@libp2p/crypto/keys'
 import { peerIdFromString } from '@libp2p/peer-id'
 import { createConfig } from '../../../libs/electron/persistence'
@@ -152,28 +152,38 @@ function broadcastEventLog(level: 'debug' | 'info' | 'warn' | 'error', message: 
 }
 
 async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Array): Promise<Libp2pNode> {
-  // NOTICE: `@libp2p/crypto@5.1.23` resolves its key types against
-  // `@libp2p/interface@3.3.0` + `multiformats@14`, while `@libp2p/peer-id@5.1.9`
-  // resolves against `@libp2p/interface@2.11.0` + `multiformats@13`, so the key
-  // produced by `privateKeyFromRaw` cannot be passed to `peerIdFromPrivateKey`
-  // directly. Round-tripping through the public key's base58btc multihash
-  // string keeps the seam version-agnostic and yields the identical PeerId.
-  const peerId = peerIdFromString(privateKeyFromRaw(privateKey).publicKey.toString())
+  // NOTICE: `@libp2p/crypto` and `@libp2p/peer-id` both resolve their key types
+  // against `@libp2p/interface@2.11.0` + `multiformats@13`, and
+  // `peerIdFromPrivateKey` is itself just `peerIdFromPublicKey`, so deriving the
+  // PeerId from the public key's base58btc multihash string produces the
+  // identical PeerId.
+  const pk = privateKeyFromRaw(privateKey)
+  const peerId = peerIdFromString(pk.publicKey.toString())
   currentPeerId = peerId
 
   const transports = []
   if (config.transports.includes('tcp')) transports.push(tcp())
   if (config.transports.includes('websockets')) transports.push(webSockets())
   if (config.transports.includes('webrtc')) transports.push(webRTC())
-  if (config.transports.includes('webtransport')) transports.push(webtransport())
+  if (config.transports.includes('webtransport')) transports.push(webTransport())
 
-  // mDNS provides LAN peer discovery and is always enabled alongside TCP
-  if (config.transports.includes('tcp')) {
-    transports.push(mdns())
-  }
+  // NOTICE: mDNS is not pushed onto `transports` - `mdns()` returns a
+  // `PeerDiscovery`, not a `Transport`, and LAN discovery is already wired via
+  // `peerDiscovery` below.
 
-  const node = await createLibp2p({
-    peerId,
+  // NOTICE: every service used in `services` below must be declared in this
+  // generic - it drives both `ServiceFactoryMap` (so extra keys error) and
+  // `node.services`, so an omitted key is an excess-property error. The KadDHT
+  // service declares `ping: Ping` in its own components, hence `ping` here;
+  // `@libp2p/autonat` does not export its service type, so it stays `unknown`.
+  const node = await createLibp2p<{
+    dht: KadDHT
+    pubsub: PubSub<GossipsubEvents>
+    identify: Identify
+    autoNAT: unknown
+    ping: Ping
+  }>({
+    privateKey: pk,
     addresses: {
       listen: [
         '/ip4/0.0.0.0/tcp/0',
@@ -181,7 +191,7 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
       ],
     },
     transports,
-    connectionEncryption: [noise()],
+    connectionEncrypters: [noise()],
     streamMuxers: [yamux(), mplex()],
     peerDiscovery: [
       mdns({ interval: 30000 }),
@@ -198,7 +208,6 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
     },
     connectionManager: {
       maxConnections: 100,
-      minConnections: 10,
     },
   })
 
@@ -207,43 +216,46 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
     node.services.pubsub.subscribe(topic)
   }
 
-  // Set up message handlers
-  for (const topic of config.topics) {
-    for await (const msg of node.services.pubsub.subscribe(topic)) {
-      if (msg.from !== peerId.toString()) {
-        // Broadcast to renderer
-        const message = {
-          topic: msg.topic,
-          from: msg.from,
-          data: Buffer.from(msg.data).toString('base64'),
-        }
-        for (const win of BrowserWindow.getAllWindows()) {
-          try {
-            if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-              win.webContents.send(LIBP2P_MESSAGE_RECEIVED_CHANNEL, message)
-            }
-          } catch {
-            // Ignore
+  // Set up message handlers.
+  // NOTICE: `subscribe()` returns `void` in the libp2p v2 API, so messages are
+  // delivered as `message` events on the router instead of an async iterable.
+  // Since `emitSelf` is enabled, our own published messages are echoed back, so
+  // the `from` guard below is what prevents an echo loop.
+  node.services.pubsub.addEventListener('message', (evt: CustomEvent) => {
+    const msg = evt.detail
+    if (msg.from !== peerId.toString()) {
+      // Broadcast to renderer
+      const message = {
+        topic: msg.topic,
+        from: msg.from,
+        data: Buffer.from(msg.data).toString('base64'),
+      }
+      for (const win of BrowserWindow.getAllWindows()) {
+        try {
+          if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
+            win.webContents.send(LIBP2P_MESSAGE_RECEIVED_CHANNEL, message)
           }
+        } catch {
+          // Ignore
         }
+      }
 
-        // Also emit peer discovered event
-        for (const win of BrowserWindow.getAllWindows()) {
-          try {
-            if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
-              win.webContents.send(LIBP2P_PEER_DISCOVERED_CHANNEL, {
-                id: msg.from,
-                addresses: [],
-                connected: false,
-              })
-            }
-          } catch {
-            // Ignore
+      // Also emit peer discovered event
+      for (const win of BrowserWindow.getAllWindows()) {
+        try {
+          if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
+            win.webContents.send(LIBP2P_PEER_DISCOVERED_CHANNEL, {
+              id: msg.from,
+              addresses: [],
+              connected: false,
+            })
           }
+        } catch {
+          // Ignore
         }
       }
     }
-  }
+  })
 
   // Track peer connections
   node.addEventListener('peer:connect', (evt: CustomEvent) => {
@@ -293,11 +305,18 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
     },
     getPeers() {
       const peers = node.getPeers()
-      return peers.map((p: PeerId) => ({
-        id: p.toString(),
-        addresses: node.getPeerAddresses(p).map((ma: Multiaddr) => ma.toString()),
-        connected: node.isConnected(p),
-      }))
+      return peers.map((p: PeerId) => {
+        // NOTICE: the libp2p v2 node API does not expose per-peer multiaddrs -
+        // `PeerId` carries no addresses and `node.getPeerAddresses()` does not
+        // exist, while `peerStore.get()` is async and cannot be awaited here.
+        // Connectivity is derived from the open connections instead.
+        const connected = node.getConnections(p).length > 0
+        return {
+          id: p.toString(),
+          addresses: [],
+          connected,
+        }
+      })
     },
     async publish(topic: string, data: Uint8Array) {
       await node.services.pubsub.publish(topic, data)
