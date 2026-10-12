@@ -53,11 +53,11 @@ catalog:
   '@libp2p/autonat': 2.0.38
   '@libp2p/crypto': 5.1.8
   '@libp2p/identify': 3.0.39
-  '@libp2p/interface': ^2.11.0
+  '@libp2p/interface': 2.11.0
   '@libp2p/kad-dht': 15.1.11
   '@libp2p/mdns': 11.0.47
   '@libp2p/mplex': 11.0.47
-  '@libp2p/peer-id': ^5.1.9
+  '@libp2p/peer-id': 5.1.9
   '@libp2p/ping': 2.0.37
   '@libp2p/tcp': 10.1.19
   '@libp2p/webrtc': 5.2.24
@@ -67,6 +67,8 @@ catalog:
   '@moeru/eslint-config': 0.1.0-beta.15
   '@moeru/eventa': ^1.0.0-beta.8
   '@moeru/std': 0.1.0-beta.17
+  '@multiformats/dns': 1.0.12
+  '@multiformats/multiaddr': 12.5.1
   '@nekopaw/tempora': 0.4.0-alpha.1
   '@pinia/testing': ^1.0.3
   '@proj-airi/iconify-meteocons': ^0.1.4

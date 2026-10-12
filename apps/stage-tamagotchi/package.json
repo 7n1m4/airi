@@ -57,6 +57,7 @@
     "@libp2p/webtransport": "catalog:",
     "@moeru/eventa": "catalog:",
     "@moeru/std": "catalog:",
+    "@multiformats/multiaddr": "catalog:",
     "@proj-airi/audio": "workspace:^",
     "@proj-airi/ccc": "workspace:^",
     "@proj-airi/electron-eventa": "workspace:^",

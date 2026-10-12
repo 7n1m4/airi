@@ -67,7 +67,7 @@ catalogs:
       specifier: 3.0.39
       version: 3.0.39
     '@libp2p/interface':
-      specifier: ^2.11.0
+      specifier: 2.11.0
       version: 2.11.0
     '@libp2p/kad-dht':
       specifier: 15.1.11
@@ -79,7 +79,7 @@ catalogs:
       specifier: 11.0.47
       version: 11.0.47
     '@libp2p/peer-id':
-      specifier: ^5.1.9
+      specifier: 5.1.9
       version: 5.1.9
     '@libp2p/ping':
       specifier: 2.0.37
@@ -108,6 +108,9 @@ catalogs:
     '@moeru/std':
       specifier: 0.1.0-beta.17
       version: 0.1.0-beta.17
+    '@multiformats/multiaddr':
+      specifier: 12.5.1
+      version: 12.5.1
     '@nekopaw/tempora':
       specifier: 0.4.0-alpha.1
       version: 0.4.0-alpha.1
@@ -367,6 +370,9 @@ catalogs:
       version: 0.1.11
 
 overrides:
+  '@libp2p/crypto': 5.1.8
+  '@libp2p/record': 4.0.12
+  '@multiformats/dns': 1.0.12
   array-flatten: npm:@nolyfill/array-flatten@^1.0.44
   axios: npm:feaxios@^0.0.23
   is-core-module: npm:@nolyfill/is-core-module@^1.0.39
@@ -377,9 +383,6 @@ overrides:
   side-channel: npm:@nolyfill/side-channel@^1.0.44
   string.prototype.matchall: npm:@nolyfill/string.prototype.matchall@^1.0.44
   vite: ~6.2.5
-  '@libp2p/crypto': 5.1.8
-  '@multiformats/dns': 1.0.12
-  '@libp2p/record': 4.0.12
 
 packageExtensionsChecksum: sha256-UCFi+cr2PGQ7+Ux3cl4NB/aqHL2xwGcHHm2PMjek+0g=
 
@@ -1135,6 +1138,9 @@ importers:
       '@moeru/std':
         specifier: 'catalog:'
         version: 0.1.0-beta.17
+      '@multiformats/multiaddr':
+        specifier: 'catalog:'
+        version: 12.5.1
       '@proj-airi/audio':
         specifier: workspace:^
         version: link:../../packages/audio
