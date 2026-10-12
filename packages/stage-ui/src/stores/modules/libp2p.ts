@@ -1,4 +1,4 @@
-import type { Libp2pPeerInfo, Libp2pServiceConfig, Libp2pServiceStatus, MeshIdentityInfo, PairedDevice } from '@proj-airi/stage-shared/libp2p'
+import type { Libp2pPeerInfo, Libp2pServiceConfig, Libp2pServiceStatus, Libp2pTransportKind, MeshIdentityInfo, PairedDevice } from '@proj-airi/stage-shared/libp2p'
 
 import { useElectronEventaContext, useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import {
@@ -34,7 +34,22 @@ import { computed, onMounted, ref, watch } from 'vue'
 // ── Persisted Config ──────────────────────────────────────────────────────────
 
 const enabled = useLocalStorageManualReset<boolean>('settings/libp2p/enabled', false)
-const transports = useLocalStorageManualReset<string[]>('settings/libp2p/transports', ['tcp', 'websockets', 'mdns'])
+
+// Mirrors `Libp2pTransportKind`; mDNS is not a transport. A build that persisted
+// the untyped ref also persisted `'mdns'` inside this list. mDNS never enabled
+// anything - the main service registers it unconditionally through
+// `peerDiscovery` - while its config schema is `array(picklist([...]))`.
+// Forwarding an invalid member makes `safeParse` reject the whole config file
+// and auto-heal it back to defaults, discarding `enabled`, `bootstrapPeers` and
+// `topics`, so stale members are dropped on read instead of being sent on.
+const LIBP2P_TRANSPORT_KINDS: readonly string[] = ['tcp', 'websockets', 'webrtc', 'webtransport']
+
+const transports = useLocalStorageManualReset<Libp2pTransportKind[]>('settings/libp2p/transports', ['tcp', 'websockets'])
+
+const staleTransports = transports.value.filter(kind => !LIBP2P_TRANSPORT_KINDS.includes(kind))
+if (staleTransports.length > 0)
+  transports.value = transports.value.filter(kind => LIBP2P_TRANSPORT_KINDS.includes(kind))
+
 const bootstrapPeers = useLocalStorageManualReset<string[]>('settings/libp2p/bootstrapPeers', [])
 const topics = useLocalStorageManualReset<string[]>('settings/libp2p/topics', ['airi/presence', 'airi/memory', 'airi/vault', 'airi/companion'])
 const nodeName = useLocalStorageManualReset<string>('settings/libp2p/nodeName', 'AIRI Node')
