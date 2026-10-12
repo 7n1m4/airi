@@ -1,13 +1,48 @@
-import { generateKeyPair } from '@libp2p/crypto/keys'
-import { peerIdFromString } from '@libp2p/peer-id'
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto'
-import { safeStorage } from 'electron'
-import { createConfig, type ConfigDiagnostics } from '../../../libs/electron/persistence'
-import * as v from 'valibot'
 import type { MeshIdentityInfo } from '@proj-airi/stage-shared/libp2p'
+
+import type { ConfigDiagnostics } from '../../../libs/electron/persistence'
+
+import { Buffer } from 'node:buffer'
+import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto'
+
+import { generateKeyPair, privateKeyFromRaw } from '@libp2p/crypto/keys'
+import { peerIdFromString } from '@libp2p/peer-id'
+import { safeStorage } from 'electron'
+
+import * as v from 'valibot'
+
+import { createConfig } from '../../../libs/electron/persistence'
 
 const IDENTITY_NAMESPACE = 'libp2p-identity'
 const IDENTITY_FILENAME = 'libp2p-identity.json'
+
+/**
+ * KDF parameters for the password-encrypted export bundle.
+ *
+ * NOTICE: explicit `maxmem` is required because Node's default `maxmem`
+ * (32 MiB) is smaller than the memory scrypt allocates for N=32768, which
+ * makes `scryptSync` throw `ERR_CRYPTO_INVALID_SCRYPT_PARAMS` at export time.
+ * Reference: https://nodejs.org/api/crypto.html#cryptoscryptsyncpassword-salt-keylen-options
+ */
+const SCRYPT_PARAMS = { N: 32768, r: 8, p: 1, maxmem: 64 * 1024 * 1024 } as const
+
+/** Key length in bytes for AES-256-GCM. */
+const KEY_LENGTH = 32
+/** Salt length in bytes for scrypt. */
+const SALT_LENGTH = 16
+/** IV length in bytes for AES-256-GCM. */
+const IV_LENGTH = 12
+/** Auth tag length in bytes for AES-256-GCM. */
+const AUTH_TAG_LENGTH = 16
+
+/** Minimum accepted length of an export/import passphrase. */
+const MIN_PASSPHRASE_LENGTH = 8
+
+/** Current export bundle format version; bumped whenever the envelope changes. */
+const EXPORT_ENVELOPE_VERSION = 2
+
+/** KDF identifier recorded in the bundle envelope. */
+const SCRYPT_PARAMS_NAME = 'scrypt'
 
 /**
  * Schema for the persisted identity config.
@@ -24,6 +59,91 @@ const IdentityConfigSchema = v.object({
 
 type IdentityConfig = v.InferOutput<typeof IdentityConfigSchema>
 
+/**
+ * Schema of the cleartext export envelope. Parsed before any key derivation, so
+ * a bundle from an unsupported format never reaches the KDF: an unknown
+ * `version` or mismatched KDF parameters are rejected here.
+ */
+const IdentityEnvelopeSchema = v.object({
+  version: v.literal(EXPORT_ENVELOPE_VERSION),
+  kdf: v.object({
+    name: v.literal(SCRYPT_PARAMS_NAME),
+    N: v.literal(SCRYPT_PARAMS.N),
+    r: v.literal(SCRYPT_PARAMS.r),
+    p: v.literal(SCRYPT_PARAMS.p),
+  }),
+  /** Base64 salt/IV/tag sizes this export used, recorded for forward compat. */
+  saltLength: v.number(),
+  ivLength: v.number(),
+  authTagLength: v.number(),
+  /** Base64 `salt.iv.authTag.ciphertext` payload. */
+  payload: v.string(),
+})
+
+/**
+ * Schema of the decrypted export bundle. Validated before the bundle is
+ * trusted or re-persisted, so a malformed `createdAt`/`peerId`/`name` cannot
+ * become trusted identity metadata.
+ */
+const IdentityBundleSchema = v.object({
+  peerId: v.string(),
+  publicKey: v.pipe(v.string(), v.base64()),
+  /** Base64 of the raw private key. */
+  privateKey: v.pipe(v.string(), v.base64()),
+  name: v.string(),
+  createdAt: v.number(),
+})
+
+type IdentityBundle = v.InferOutput<typeof IdentityBundleSchema>
+
+/**
+ * Thrown when the OS keychain is unavailable, so an identity cannot be sealed
+ * with `safeStorage`. No key material is ever carried by this error.
+ */
+export class KeychainUnavailableError extends Error {
+  constructor(message = 'OS keychain is unavailable, so the libp2p identity cannot be sealed') {
+    super(message)
+    this.name = 'KeychainUnavailableError'
+  }
+}
+
+/**
+ * Thrown when a stored identity exists but its encrypted private key could not
+ * be read (corrupt entry, locked or rotated keychain). Distinguishable from an
+ * absent identity, which is reported as `null` by the readers instead.
+ */
+export class IdentityDecryptError extends Error {
+  peerId: string
+
+  // NOTICE: only the PeerId is carried — never the ciphertext or plaintext key
+  // — so log plumbing cannot leak the private key.
+  constructor(peerId: string, options?: ErrorOptions) {
+    super(`Failed to decrypt the stored private key for libp2p identity ${peerId}`, options)
+    this.name = 'IdentityDecryptError'
+    this.peerId = peerId
+  }
+}
+
+/** Thrown when an export/import passphrase fails the shared minimum policy. */
+export class InvalidPassphraseError extends Error {
+  constructor(message = `Passphrase must be at least ${MIN_PASSPHRASE_LENGTH} characters and must not be blank`) {
+    super(message)
+    this.name = 'InvalidPassphraseError'
+  }
+}
+
+/**
+ * Thrown when an export bundle is structurally unusable: it is rejected before
+ * any decryption is attempted, so a bundle carrying an unknown version is never
+ * fed to a keychain or KDF.
+ */
+export class IdentityBundleFormatError extends Error {
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options)
+    this.name = 'IdentityBundleFormatError'
+  }
+}
+
 const config = createConfig(IDENTITY_NAMESPACE, IDENTITY_FILENAME, IdentityConfigSchema)
 
 let setupPromise: Promise<ConfigDiagnostics<IdentityConfig>> | undefined
@@ -31,6 +151,38 @@ let setupPromise: Promise<ConfigDiagnostics<IdentityConfig>> | undefined
 function ensureSetup(): Promise<ConfigDiagnostics<IdentityConfig>> {
   setupPromise ??= Promise.resolve(config.setup())
   return setupPromise
+}
+
+function assertKeychainAvailable(context: string): void {
+  if (!safeStorage.isEncryptionAvailable()) {
+    throw new KeychainUnavailableError(`OS keychain is unavailable (${context}), so the libp2p identity private key cannot be sealed`)
+  }
+}
+
+function encryptWithKeychain(plaintext: string, context: string): string {
+  assertKeychainAvailable(context)
+  return safeStorage.encryptString(plaintext).toString('base64')
+}
+
+function decryptWithKeychain(encryptedBase64: string, peerId: string, context: string): string {
+  assertKeychainAvailable(context)
+  try {
+    return safeStorage.decryptString(Buffer.from(encryptedBase64, 'base64'))
+  }
+  catch (cause) {
+    throw new IdentityDecryptError(peerId, { cause })
+  }
+}
+
+/**
+ * Apply the shared passphrase policy: never blank, never whitespace-only, never
+ * shorter than the minimum length. Applied on both export and import so the two
+ * sides cannot diverge.
+ */
+function assertPassphraseAllowed(password: string): void {
+  if (password.length === 0 || password.trim().length === 0 || password.length < MIN_PASSPHRASE_LENGTH) {
+    throw new InvalidPassphraseError()
+  }
 }
 
 /**
@@ -52,7 +204,7 @@ export async function generateIdentity(name: string = 'AIRI Node'): Promise<Mesh
 
   // Encrypt private key with the OS keychain (safeStorage)
   const privateKeyBase64 = Buffer.from(privateKeyBytes).toString('base64')
-  const encryptedPrivateKey = safeStorage.encryptString(privateKeyBase64).toString('base64')
+  const encryptedPrivateKey = encryptWithKeychain(privateKeyBase64, 'generating a libp2p identity')
 
   // Persist identity (private key only in OS-keychain-encrypted form)
   const createdAt = Date.now()
@@ -75,15 +227,21 @@ export async function generateIdentity(name: string = 'AIRI Node'): Promise<Mesh
 
 /**
  * Load the existing identity from config and safeStorage.
- * Returns null if no identity exists.
+ *
+ * Returns `null` when no identity is stored at all. Throws `IdentityDecryptError`
+ * when an identity exists but its private key cannot be read.
  */
 export async function loadIdentity(): Promise<MeshIdentityInfo | null> {
   await ensureSetup()
   const cfg = config.get()
-  if (!cfg) return null
+  if (!cfg)
+    return null
 
-  // Private key missing - identity is corrupted
-  if (!cfg.encryptedPrivateKey) return null
+  // An entry without an encrypted private key is genuinely absent, not unreadable
+  if (!cfg.encryptedPrivateKey)
+    return null
+
+  decryptWithKeychain(cfg.encryptedPrivateKey, cfg.peerId, 'loading the libp2p identity')
 
   return {
     peerId: cfg.peerId,
@@ -99,15 +257,19 @@ export async function loadIdentity(): Promise<MeshIdentityInfo | null> {
 export async function getOrCreateIdentity(defaultName: string = 'AIRI Node'): Promise<MeshIdentityInfo> {
   await ensureSetup()
   const existing = await loadIdentity()
-  if (existing) return existing
+  if (existing)
+    return existing
   return generateIdentity(defaultName)
 }
+
 // NOTICE: Export bundles are encrypted with a user-supplied password using
 // scrypt-derived AES-256-GCM. Format is salt.iv.authTag.ciphertext, all base64.
 function encryptWithPassword(plaintext: string, password: string): string {
-  const salt = randomBytes(16)
-  const iv = randomBytes(12)
-  const key = scryptSync(password, salt, 32)
+  assertPassphraseAllowed(password)
+
+  const salt = randomBytes(SALT_LENGTH)
+  const iv = randomBytes(IV_LENGTH)
+  const key = scryptSync(password, salt, KEY_LENGTH, SCRYPT_PARAMS)
   const cipher = createCipheriv('aes-256-gcm', key, iv)
   const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()])
   const authTag = cipher.getAuthTag()
@@ -115,13 +277,15 @@ function encryptWithPassword(plaintext: string, password: string): string {
 }
 
 function decryptWithPassword(payload: string, password: string): string {
+  assertPassphraseAllowed(password)
+
   const parts = payload.split('.')
   if (parts.length !== 4) {
-    throw new Error('Malformed encrypted identity export bundle')
+    throw new IdentityBundleFormatError('Malformed encrypted identity export bundle')
   }
 
   const [saltB64, ivB64, authTagB64, ciphertextB64] = parts
-  const key = scryptSync(password, Buffer.from(saltB64, 'base64'), 32)
+  const key = scryptSync(password, Buffer.from(saltB64, 'base64'), KEY_LENGTH, SCRYPT_PARAMS)
   const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(ivB64, 'base64'))
   decipher.setAuthTag(Buffer.from(authTagB64, 'base64'))
   const plaintext = Buffer.concat([decipher.update(Buffer.from(ciphertextB64, 'base64')), decipher.final()])
@@ -135,23 +299,37 @@ function decryptWithPassword(payload: string, password: string): string {
  */
 export async function exportIdentity(password: string): Promise<string> {
   await ensureSetup()
+  assertPassphraseAllowed(password)
+
   const cfg = config.get()
-  if (!cfg) throw new Error('No identity to export')
+  if (!cfg?.encryptedPrivateKey)
+    throw new Error('No identity to export')
 
-  const privateKeyBase64 = safeStorage.decryptString(Buffer.from(cfg.encryptedPrivateKey, 'base64'))
+  const privateKeyBase64 = decryptWithKeychain(cfg.encryptedPrivateKey, cfg.peerId, 'exporting the libp2p identity')
 
-  // Create export bundle
-  const bundle = {
-    peerId: cfg.peerId,
-    publicKey: cfg.publicKey,
-    privateKey: privateKeyBase64,
-    name: cfg.name,
-    createdAt: cfg.createdAt,
-    version: 1,
+  // The KDF parameters and record sizes travel in a cleartext envelope so an
+  // incompatible bundle format is rejected before any key derivation runs.
+  const envelope = {
+    version: EXPORT_ENVELOPE_VERSION,
+    kdf: {
+      name: SCRYPT_PARAMS_NAME,
+      N: SCRYPT_PARAMS.N,
+      r: SCRYPT_PARAMS.r,
+      p: SCRYPT_PARAMS.p,
+    },
+    saltLength: SALT_LENGTH,
+    ivLength: IV_LENGTH,
+    authTagLength: AUTH_TAG_LENGTH,
+    payload: encryptWithPassword(JSON.stringify({
+      peerId: cfg.peerId,
+      publicKey: cfg.publicKey,
+      privateKey: privateKeyBase64,
+      name: cfg.name,
+      createdAt: cfg.createdAt,
+    }), password),
   }
 
-  // Encrypt with user password (AES-256-GCM via scrypt)
-  return encryptWithPassword(JSON.stringify(bundle), password)
+  return JSON.stringify(envelope)
 }
 
 /**
@@ -160,21 +338,13 @@ export async function exportIdentity(password: string): Promise<string> {
  */
 export async function importIdentity(bundleJson: string, password: string): Promise<MeshIdentityInfo> {
   await ensureSetup()
-  const bundle = JSON.parse(decryptWithPassword(bundleJson, password)) as {
-    peerId: string
-    publicKey: string
-    privateKey: string
-    name: string
-    createdAt: number
-    version: number
-  }
+  assertPassphraseAllowed(password)
 
-  if (bundle.version !== 1) {
-    throw new Error(`Unsupported identity export version: ${bundle.version}`)
-  }
+  const payload = readExportEnvelope(bundleJson)
+  const bundle = parseImportBundle(decryptWithPassword(payload, password))
 
   // Persist identity with OS-keychain-encrypted private key
-  const encryptedPrivateKey = safeStorage.encryptString(bundle.privateKey).toString('base64')
+  const encryptedPrivateKey = encryptWithKeychain(bundle.privateKey, 'importing a libp2p identity')
   const identity: IdentityConfig = {
     peerId: bundle.peerId,
     publicKey: bundle.publicKey,
@@ -193,12 +363,59 @@ export async function importIdentity(bundleJson: string, password: string): Prom
 }
 
 /**
+ * Parse the cleartext export envelope, rejecting a bundle whose recorded
+ * parameters this build does not implement. Runs before `decryptWithPassword`,
+ * so an incompatible bundle never reaches the KDF.
+ */
+function readExportEnvelope(bundleJson: string): string {
+  let decoded: unknown
+  try {
+    decoded = JSON.parse(bundleJson)
+  }
+  catch (cause) {
+    throw new IdentityBundleFormatError('Malformed identity export bundle', { cause })
+  }
+
+  const parsed = v.safeParse(IdentityEnvelopeSchema, decoded)
+  if (!parsed.success) {
+    throw new IdentityBundleFormatError(`Unsupported identity export bundle: ${v.summarize(parsed.issues)}`)
+  }
+
+  return parsed.output.payload
+}
+
+/**
+ * Validate a decrypted export bundle against `IdentityBundleSchema`, so a
+ * malformed `createdAt`/`peerId`/`name` cannot be persisted as trusted identity
+ * metadata.
+ */
+function parseImportBundle(decrypted: string): IdentityBundle {
+  let decoded: unknown
+  try {
+    decoded = JSON.parse(decrypted)
+  }
+  catch (cause) {
+    throw new IdentityBundleFormatError('Unsupported state or unable to authenticate data', { cause })
+  }
+
+  const parsed = v.safeParse(IdentityBundleSchema, decoded)
+  if (!parsed.success) {
+    throw new IdentityBundleFormatError(`Malformed identity export bundle: ${v.summarize(parsed.issues)}`)
+  }
+
+  return parsed.output
+}
+
+/**
  * Update the display name of the current identity.
  */
 export async function setIdentityName(name: string): Promise<MeshIdentityInfo> {
   await ensureSetup()
   const cfg = config.get()
-  if (!cfg) throw new Error('No identity to rename')
+  if (!cfg?.encryptedPrivateKey)
+    throw new Error('No identity to rename')
+
+  decryptWithKeychain(cfg.encryptedPrivateKey, cfg.peerId, 'renaming the libp2p identity')
 
   const updated: IdentityConfig = { ...cfg, name }
   config.update(updated)
@@ -223,20 +440,17 @@ export async function regenerateIdentity(name: string = 'AIRI Node'): Promise<Me
 
 /**
  * Get the private key for libp2p node initialization.
- * Returns the raw Uint8Array private key.
+ * Returns the raw Uint8Array private key, or `null` when no identity exists.
  * Only use this in the main process when starting the libp2p node.
  */
 export async function getPrivateKey(): Promise<Uint8Array | null> {
   await ensureSetup()
-  try {
-    const cfg = config.get()
-    if (!cfg?.encryptedPrivateKey) return null
-    const privateKeyBase64 = safeStorage.decryptString(Buffer.from(cfg.encryptedPrivateKey, 'base64'))
-    return Buffer.from(privateKeyBase64, 'base64')
-  }
-  catch {
+  const cfg = config.get()
+  if (!cfg?.encryptedPrivateKey)
     return null
-  }
+
+  const privateKeyBase64 = decryptWithKeychain(cfg.encryptedPrivateKey, cfg.peerId, 'reading the libp2p identity private key')
+  return Buffer.from(privateKeyBase64, 'base64')
 }
 
 /**
@@ -245,7 +459,32 @@ export async function getPrivateKey(): Promise<Uint8Array | null> {
 export async function hasIdentity(): Promise<boolean> {
   await ensureSetup()
   const cfg = config.get()
-  if (!cfg) return false
+  if (!cfg)
+    return false
 
   return Boolean(cfg.encryptedPrivateKey)
+}
+
+/**
+ * Assert that a raw Ed25519 private key derives the PeerId it is claimed to
+ * belong to.
+ *
+ * NOTICE: the PeerId is derived from the key with the era-2 construction
+ * (`@libp2p/crypto/keys#privateKeyFromRaw` then `publicKey.toString()`), matching
+ * `generateIdentity`'s workaround for `@libp2p/interface@2.11.0` +
+ * `multiformats@13` type skew, rather than by comparing raw bytes.
+ */
+export async function assertIdentityMatchesKey(privateKey: Uint8Array, expectedPeerId: string): Promise<void> {
+  let derived: string
+  try {
+    const key = privateKeyFromRaw(privateKey)
+    derived = peerIdFromString(key.publicKey.toString()).toString()
+  }
+  catch (cause) {
+    throw new IdentityBundleFormatError('Failed to derive a PeerId from the supplied private key', { cause })
+  }
+
+  if (derived !== expectedPeerId) {
+    throw new IdentityBundleFormatError(`Private key does not match the expected PeerId ${expectedPeerId}`)
+  }
 }

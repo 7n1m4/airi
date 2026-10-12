@@ -1,12 +1,14 @@
-import type { GossipsubEvents } from '@chainsafe/libp2p-gossipsub'
+import type { GossipsubEvents, GossipsubMessage } from '@chainsafe/libp2p-gossipsub'
 import type { Identify } from '@libp2p/identify'
-import type { PeerId, PeerInfo, PubSub } from '@libp2p/interface'
+import type { Message, PeerId, PeerInfo, PubSub } from '@libp2p/interface'
 import type { KadDHT } from '@libp2p/kad-dht'
 import type { Ping } from '@libp2p/ping'
 import type { Eventa } from '@moeru/eventa'
 import type { Multiaddr } from '@multiformats/multiaddr'
 import type { Lifecycle } from 'injeca'
 import type { InferOutput } from 'valibot'
+
+import type { ParsedPairingInvitation } from './pairing'
 
 import { Buffer } from 'node:buffer'
 
@@ -56,18 +58,21 @@ import {
 } from '@proj-airi/stage-shared/libp2p'
 import { BrowserWindow, ipcMain } from 'electron'
 import { createLibp2p } from 'libp2p'
-import { array, boolean, object, picklist, string } from 'valibot'
+import { array, boolean, maxLength, object, optional, picklist, pipe, safeParse, string } from 'valibot'
 
 import { createConfig } from '../../../libs/electron/persistence'
 import { getOrCreateIdentity, getPrivateKey, hasIdentity, regenerateIdentity, setIdentityName } from './identity'
 import {
-  acceptMagicCode,
   acceptPairingInvitation,
   createPairingInvitation,
+  findDiscoveredInviteByMagicCode,
+  handlePairingAccepted,
   listPairedDevices,
+  PAIRING_ACCEPTED_TOPIC,
   parsePairingInvitation,
   publishPairingRequest,
   recordPairingRequest,
+  registerPendingAcceptedConfirmation,
   rememberDiscoveredInvite,
   removePairedDevice,
   updatePairedDeviceAlias,
@@ -78,6 +83,8 @@ import {
 // so a bare `webContents.send()` on a custom channel name reaches nothing. Pushes
 // therefore have to go through a transient eventa context bound to each window.
 
+const log = useLogg('libp2p-service').useGlobalConfig()
+
 function emitToAllWindows<P>(contract: Eventa<P>, payload: P) {
   for (const win of BrowserWindow.getAllWindows()) {
     if (win.isDestroyed() || win.webContents.isDestroyed())
@@ -87,13 +94,14 @@ function emitToAllWindows<P>(contract: Eventa<P>, payload: P) {
       winContext.emit(contract, payload)
       dispose()
     }
-    catch {
-      // Ignore
+    catch (err) {
+      // A window torn down between the iteration and the emit, or a payload the
+      // structured-clone boundary rejects, must not take the caller down, but a
+      // real serialization failure is a renderer-sync bug and has to be visible.
+      log.withError(err).debug(`Failed to emit ${contract.id} to a window`)
     }
   }
 }
-
-const log = useLogg('libp2p-service').useGlobalConfig()
 
 // ── Pairing Topics ────────────────────────────────────────────────────────────
 // `airi/pairing/invites` carries the inviter's invitation minus its token, so a
@@ -104,41 +112,115 @@ const log = useLogg('libp2p-service').useGlobalConfig()
 // with it.
 const PAIRING_INVITES_TOPIC = 'airi/pairing/invites'
 const PAIRING_REQUESTS_TOPIC = 'airi/pairing/requests'
-const PAIRING_TOPICS: string[] = [PAIRING_INVITES_TOPIC, PAIRING_REQUESTS_TOPIC]
+const PAIRING_TOPICS: string[] = [PAIRING_INVITES_TOPIC, PAIRING_REQUESTS_TOPIC, PAIRING_ACCEPTED_TOPIC]
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
+// NOTICE: the persisted `discovery.mdns` flag is gated here at the point of
+// use rather than validated up front, because
+// `packages/stage-shared/src/libp2p.ts` does not yet declare a `discovery`
+// field on `Libp2pServiceConfig` (the mesh-sync and `allowedTopics` fields
+// below were since added there), so the flag is enforced locally through this
+// schema shape and cannot reach the renderer contract.
+//
+// A renderer patch carrying an unknown key never persists: valibot's `object()`
+// strips unknown keys and returns `success: true`, so `mergeConfigPatch` below
+// parses them away silently. That is the security-relevant property here — an
+// unrecognised field cannot widen the config — but it means a typo also vanishes
+// without an error, which is why the patch is matched against the local schema
+// instead of the rendered contract and the shared contract above stays needed.
+//
+// NOTICE: `topics` is length-bounded so a corrupt or hand-edited config cannot
+// inflate the subscription set (and therefore the mesh/heartbeat state) without
+// limit. The three pairing topics are always allowed on top of this budget.
+// NOTICE: `allowedTopics` is deliberately `undefined` when absent rather than
+// `[]`: an empty array is a real operator choice that pairs with nothing, while
+// a missing key must not read as a reset signal. `createLibp2pNode` unions
+// whatever is here into the allow-list, so the default cannot narrow it either.
+const MAX_CONFIGURED_TOPICS = 32
+
+/**
+ * NOTICE: the three mesh-sync keys mirror the now-optional fields on
+ * `Libp2pServiceConfig` in `packages/stage-shared/src/libp2p.ts`. Without them
+ * here a renderer patch carrying them fails `safeParse`, which triggers
+ * `createConfig`'s auto-heal: that rewrites the persisted file with the schema
+ * default*, discarding `enabled`, `bootstrapPeers` and `topics` on disk.
+ *
+ * They are `optional` rather than required so a config file written before they
+ * existed still parses, and so the default below supplies them rather than the
+ * stored record having to.
+ */
 const Libp2pServiceConfigSchema = object({
   enabled: boolean(),
   transports: array(picklist(['tcp', 'websockets', 'webrtc', 'webtransport'])),
   bootstrapPeers: array(string()),
-  topics: array(string()),
+  topics: pipe(array(string()), maxLength(MAX_CONFIGURED_TOPICS)),
+  discovery: object({ mdns: boolean() }),
+  /**
+   * Whether generated memories donate themselves to the public mesh. This node
+   * decides that on its own; it is not derived from any peer's advertisement,
+   * and a `false` here is the safe default.
+   */
+  meshSyncEnabled: optional(boolean()),
+  /** Multiaddrs of the peers this node syncs its memory tables with. */
+  meshSyncTargets: optional(array(string())),
+  /**
+   * Named locally by the operator to widen the topic allow-list. It is *not*
+   * authoritative: `createLibp2pNode` recomputes the gossipsub allow-list from
+   * the configured topics plus the pairing topics, so a malicious or corrupt
+   * value here can add topics but never remove the pairing ones.
+   */
+  allowedTopics: optional(array(string())),
 })
 
 type Libp2pServiceConfig = InferOutput<typeof Libp2pServiceConfigSchema>
+
+/**
+ * The factories `createLibp2p` accepts for `transports` / `peerDiscovery`. Both
+ * option types are internal to `libp2p` (`Libp2pInit` is not exported), so they
+ * are read back off the options parameter so an element pushed from a factory
+ * call site is checked against the real shape instead of collapsing to `any[]`.
+ */
+type Libp2pInit = NonNullable<Parameters<typeof createLibp2p>[0]>
+type TransportFactory = NonNullable<Libp2pInit['transports']>[number]
+type PeerDiscoveryFactory = NonNullable<Libp2pInit['peerDiscovery']>[number]
 
 // ── Pairing Node Interfaces ───────────────────────────────────────────────────
 // `pairing.ts` never touches the libp2p node itself; it gets only the three
 // narrow shapes below, and `createLibp2pNode` returns one more wrapper (typed
 // `Libp2pNode`) built on the same underlying node for the invoke handlers.
+/**
+ * The node's own `pubsub.publish` resolves with a `PublishResult`, not `void`,
+ * so the publisher contract accepts any resolution and discards it.
+ */
 interface Libp2pNodePublisher {
-  publish: (topic: string, data: Uint8Array) => Promise<void>
+  publish: (topic: string, data: Uint8Array) => Promise<unknown>
 }
 
 interface Libp2pNodeDialer {
   dialMultiaddrs: (multiaddrs: Multiaddr[]) => Promise<void>
 }
 
+/**
+ * The slice of a live libp2p node the pairing handler needs: the peer store for
+ * addresses, the open connections as a fallback, and the pubsub publisher that
+ * completes a pairing on the accepter's side.
+ */
 interface Libp2pNodeAddresses {
   peerStore: { get: (peerId: PeerId) => Promise<{ addresses: Array<{ multiaddr: Multiaddr }> }> }
   getConnections: (peerId: PeerId) => Array<{ remoteAddr: Multiaddr }>
+  services: {
+    pubsub: {
+      publish: (topic: string, data: Uint8Array) => Promise<unknown>
+    }
+  }
 }
 
 interface Libp2pNode {
   start: () => Promise<void>
   stop: () => Promise<void>
   getMultiaddrs: () => string[]
-  getPeers: () => Array<{ id: string, addresses: string[], connected: boolean }>
+  getPeers: () => Promise<Array<{ id: string, addresses: string[], connected: boolean }>>
   publish: (topic: string, data: Uint8Array) => Promise<void>
   /**
    * Dial a peer by its PeerId string, connecting it if it is not already
@@ -171,6 +253,16 @@ const Libp2pServiceConfigDefault: Libp2pServiceConfig = {
   transports: ['tcp', 'websockets'],
   bootstrapPeers: [],
   topics: ['airi/presence', 'airi/memory', 'airi/vault', 'airi/companion'],
+  // mDNS is the only thing that makes two AIRI instances on a LAN find each
+  // other, so it stays on by default to preserve the previous behaviour.
+  discovery: { mdns: true },
+  // Opt-in: donating memories to the mesh is not something a fresh install does
+  // on its own, so it starts off and targets nothing.
+  meshSyncEnabled: false,
+  meshSyncTargets: [],
+  // Left unset: the operator-facing list is additive only, and the effective
+  // allow-list is recomputed server-side from `topics` + the pairing topics.
+  allowedTopics: undefined,
 }
 
 const libp2pConfigStore = createConfig(
@@ -183,7 +275,45 @@ const libp2pConfigStore = createConfig(
 )
 
 async function loadConfig(): Promise<Libp2pServiceConfig> {
-  return libp2pConfigStore.get() ?? Libp2pServiceConfigDefault
+  // NOTICE: `optional()` makes a config written before the mesh-sync fields
+  // exist still parse, so `libp2pConfigStore.setup()` stores it verbatim and the
+  // keys are simply absent rather than defaulted. Merging the default over the
+  // loaded record keeps `config.meshSync*` defined, which is what stops the
+  // auto-heal wipe from discarding `enabled`/`bootstrapPeers`/`topics` on the
+  // first renderer patch after an upgrade.
+  return { ...Libp2pServiceConfigDefault, ...(await libp2pConfigStore.get()) }
+}
+
+/**
+ * Merge a renderer patch over the stored config and validate the result against
+ * the schema, so the picklist/array guarantees hold on the write path too.
+ * A patch that cannot start is rejected here rather than persisted and thrown at
+ * the next boot. Only keys the schema knows are merged, so a renderer that grew
+ * a field ahead of the shared contract cannot silently widen the config.
+ */
+function mergeConfigPatch(base: Libp2pServiceConfig, patch: Partial<Libp2pServiceConfig>): Libp2pServiceConfig {
+  const merged: Record<string, unknown> = { ...base }
+  for (const key of Object.keys(patch) as Array<keyof Libp2pServiceConfig>) {
+    const value = patch[key]
+    if (value !== undefined) {
+      merged[key] = value
+    }
+  }
+  // A patch that drops a whole section (e.g. `discovery: undefined` from an
+  // older renderer) still has to merge onto a complete base, so known-missing
+  // sections are filled from the default instead of failing validation.
+  for (const [key, fallback] of Object.entries(Libp2pServiceConfigDefault)) {
+    if (merged[key] === undefined) {
+      merged[key] = fallback
+    }
+  }
+
+  const parsed = safeParse(Libp2pServiceConfigSchema, merged)
+  if (!parsed.success) {
+    throw new Error(`Invalid libp2p config patch: ${parsed.issues.map(issue => issue.message).join(', ')}`)
+  }
+
+  return parsed.output
 }
 
 // ── libp2p Node Management ────────────────────────────────────────────────────
@@ -192,14 +322,14 @@ let libp2pNode: Libp2pNode | null = null
 let currentPeerId: PeerId | null = null
 let currentConfig: Libp2pServiceConfig | null = null
 
-function buildStatus(): {
+async function buildStatus(): Promise<{
   running: boolean
   peerId?: string
   listenAddresses: string[]
   connections: number
   startedAt?: number
   error?: string
-} {
+}> {
   if (!libp2pNode || !currentPeerId) {
     return {
       running: false,
@@ -213,12 +343,12 @@ function buildStatus(): {
     running: true,
     peerId: currentPeerId.toString(),
     listenAddresses: libp2pNode.getMultiaddrs(),
-    connections: libp2pNode.getPeers().filter(p => p.connected).length,
+    connections: (await libp2pNode.getPeers()).filter(p => p.connected).length,
   }
 }
 
-function broadcastStatus() {
-  emitToAllWindows(libp2pServiceStatusChanged, buildStatus())
+async function broadcastStatus() {
+  emitToAllWindows(libp2pServiceStatusChanged, await buildStatus())
 }
 
 function broadcastEventLog(level: 'debug' | 'info' | 'warn' | 'error', message: string) {
@@ -281,29 +411,41 @@ async function getPeerAddresses(node: Libp2pNodeAddresses, peerId: PeerId): Prom
  * connect) with the open connections as a fallback. The token is what authorises
  * the pairing — it is the invitation this node issued and not spent — so an
  * unknown or consumed token records nothing.
- *
- * Exported for the throwaway wire-path harness in `/tmp/pairing-main/`, which
- * drives the inviter through the real handler instead of a local reimplementation.
  */
-export async function handlePairingRequest(node: Libp2pNodeAddresses, payload: unknown, sender: string) {
-  if (typeof payload !== 'object' || payload === null) {
-    return
-  }
-  const { token } = payload as { token?: unknown }
-  if (typeof token !== 'string') {
-    return
-  }
+async function handlePairingRequest(node: Libp2pNodeAddresses, payload: unknown, sender: string) {
+  // NOTICE: `peerIdFromString` throws on a malformed `sender`, and the enclosing
+  // `gossipsub:message` listener is invoked synchronously by main-event with no
+  // try/catch, so it has to sit inside this block to stay a caught failure.
+  try {
+    if (typeof payload !== 'object' || payload === null) {
+      return
+    }
+    const { token } = payload as { token?: unknown }
+    if (typeof token !== 'string') {
+      return
+    }
 
-  const senderPeerId = peerIdFromString(sender)
-  const multiaddrs = await getPeerAddresses(node, senderPeerId)
+    const senderPeerId = peerIdFromString(sender)
+    const multiaddrs = await getPeerAddresses(node, senderPeerId)
 
-  const device = await recordPairingRequest(token, sender, multiaddrs)
-  if (!device) {
-    return
+    // NOTICE: the publisher is what completes the pairing on the accepter's
+    // side: `recordPairingRequest` publishes the inviter's confirmation on
+    // `airi/pairing/accepted` itself, which is what flips the accepter's record
+    // to `trusted: true`. Without one the device is still recorded here, but the
+    // accepter's record stays at `trusted: false` forever with no error anywhere
+    // on either side — which is why this argument must not be dropped.
+    const device = await recordPairingRequest(token, sender, multiaddrs, undefined, sender, publisherFor(node.services.pubsub))
+    if (!device) {
+      return
+    }
+
+    await broadcastPairedDevices()
+    broadcastEventLog('info', `Paired with ${sender} (${device.device.alias})`)
   }
-
-  await broadcastPairedDevices()
-  broadcastEventLog('info', `Paired with ${sender} (${device.alias})`)
+  catch {
+    // A malformed or already-consumed request is not fatal: the inviter logs
+    // nothing and simply does not record the peer.
+  }
 }
 
 async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Array): Promise<Libp2pNode> {
@@ -314,9 +456,8 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
   // identical PeerId.
   const pk = privateKeyFromRaw(privateKey)
   const peerId = peerIdFromString(pk.publicKey.toString())
-  currentPeerId = peerId
 
-  const transports = []
+  const transports: TransportFactory[] = []
   if (config.transports.includes('tcp')) {
     transports.push(tcp())
   }
@@ -331,8 +472,47 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
   }
 
   // NOTICE: mDNS is not pushed onto `transports` - `mdns()` returns a
-  // `PeerDiscovery`, not a `Transport`, and LAN discovery is already wired via
+  // `PeerDiscovery`, not a `Transport`, and LAN discovery is wired via
   // `peerDiscovery` below.
+
+  // NOTICE: listen addresses are derived from the enabled transports instead of
+  // being hard-coded. `DefaultTransportManager.listen()` matches each address
+  // against each transport's `listenFilter`: WebRTC only matches `webrtc`-suffixed
+  // multiaddrs and `@libp2p/webtransport`'s returns `[]` unconditionally (dial
+  // only in Node), so a `/tcp/0` entry left in place with those transports
+  // selected makes every listen attempt fail and `listen()` throw
+  // `UnsupportedListenAddressesError`. An empty array is valid: the node then
+  // runs for outbound connects only.
+  const listenAddresses: string[] = []
+  if (config.transports.includes('tcp')) {
+    listenAddresses.push('/ip4/0.0.0.0/tcp/0')
+  }
+  if (config.transports.includes('websockets')) {
+    listenAddresses.push('/ip4/0.0.0.0/tcp/0/ws')
+  }
+
+  const peerDiscovery: PeerDiscoveryFactory[] = []
+  if (config.discovery.mdns) {
+    peerDiscovery.push(mdns({ interval: 30000 }))
+  }
+
+  // Deduplicated topic allow-list: gossipsub's `allowedTopics` drops inbound
+  // subscriptions and messages on any other topic, so the mesh only ever caches
+  // what this node was configured to care about. The pairing topics are always
+  // allowed because the wire protocol needs them.
+  //
+  // NOTICE: the persisted `config.allowedTopics` is an operator-authored
+  // *widening* only. It is unioned in here and can never remove a configured or
+  // pairing topic, so a renderer (or a hand-edited file) cannot narrow the
+  // allow-list to suppress the pairing topics this node depends on. Since the
+  // value reaching gossipsub is recomputed rather than copied, a patch cannot
+  // install an arbitrary subscription set of its own either.
+  const topicUnion = [...config.topics, ...PAIRING_TOPICS, ...(config.allowedTopics ?? [])]
+  // The cap counts each source once: the configured topics, the always-allowed
+  // pairing topics, and the operator widening. It is not doubled, so the
+  // subscription set cannot grow past the budget the schema already bounds.
+  const allowedTopics = topicUnion.filter((topic, index) => topicUnion.indexOf(topic) === index)
+    .slice(0, MAX_CONFIGURED_TOPICS + PAIRING_TOPICS.length)
 
   // NOTICE: every service used in `services` below must be declared in this
   // generic - it drives both `ServiceFactoryMap` (so extra keys error) and
@@ -348,22 +528,18 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
   }>({
     privateKey: pk,
     addresses: {
-      listen: [
-        '/ip4/0.0.0.0/tcp/0',
-        '/ip4/0.0.0.0/tcp/0/ws',
-      ],
+      listen: listenAddresses,
     },
     transports,
     connectionEncrypters: [noise()],
     streamMuxers: [yamux(), mplex()],
-    peerDiscovery: [
-      mdns({ interval: 30000 }),
-    ],
+    peerDiscovery,
     services: {
       dht: kadDHT({ clientMode: true }),
       pubsub: gossipsub({
         allowPublishToZeroTopicPeers: true,
         emitSelf: true,
+        allowedTopics,
       }),
       identify: identify(),
       autoNAT: autoNAT(),
@@ -374,8 +550,11 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
     },
   })
 
-  // Subscribe to topics
-  for (const topic of [...config.topics, ...PAIRING_TOPICS]) {
+  // Only published once the node exists, so a failed create cannot leave a bogus
+  // PeerId behind for `buildStatus()` to report.
+  currentPeerId = peerId
+
+  for (const topic of allowedTopics) {
     node.services.pubsub.subscribe(topic)
   }
 
@@ -383,24 +562,32 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
   // NOTICE: `subscribe()` returns `void` in the libp2p v2 API, so messages are
   // delivered as `message` events on the router instead of an async iterable.
   // Since `emitSelf` is enabled, our own published messages are echoed back, so
-  // the `from` guard below is what prevents an echo loop.
-  node.services.pubsub.addEventListener('message', (evt: CustomEvent) => {
+  // the `from` guard below is what prevents an echo loop. `from` is a `PeerId`
+  // on a signed message and absent on an unsigned one.
+  node.services.pubsub.addEventListener('message', (evt: CustomEvent<Message>) => {
     const msg = evt.detail
-    if (msg.from !== peerId.toString()) {
-      // Broadcast to renderer
-      emitToAllWindows(libp2pMessageReceived, {
-        topic: msg.topic,
-        from: msg.from,
-        data: Buffer.from(msg.data).toString('base64'),
-      })
-
-      // Also emit peer discovered event
-      emitToAllWindows(libp2pPeerDiscovered, {
-        id: msg.from,
-        addresses: [],
-        connected: false,
-      })
+    // NOTICE: `from` is a `PeerId` on a signed message and absent on an unsigned
+    // one, and the renderer contract declares it a `string` (the store calls
+    // `msg.from.slice(0, 12)`), so the object must never cross as-is. The string
+    // form is also what makes the self-echo guard below actually fire.
+    const from = msg.type === 'signed' ? msg.from.toString() : undefined
+    if (from === undefined || from === peerId.toString()) {
+      return
     }
+
+    // Broadcast to renderer
+    emitToAllWindows(libp2pMessageReceived, {
+      topic: msg.topic,
+      from,
+      data: Buffer.from(msg.data).toString('base64'),
+    })
+
+    // Also emit peer discovered event
+    emitToAllWindows(libp2pPeerDiscovered, {
+      id: from,
+      addresses: [],
+      connected: false,
+    })
   })
 
   // Pairing wire protocol.
@@ -413,13 +600,10 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
   // an unsigned publish path is the same PeerId but not the connection we can
   // read addresses off. This listener also runs for our own publications
   // (`emitSelf`), so every pairing handler is written to be a no-op on self.
-  node.services.pubsub.addEventListener('gossipsub:message', (evt: CustomEvent) => {
-    const { propagationSource, msg } = evt.detail as { propagationSource?: PeerId, msg?: { topic?: string, data?: Uint8Array } }
-    const topic = msg?.topic
-    if (topic !== PAIRING_INVITES_TOPIC && topic !== PAIRING_REQUESTS_TOPIC) {
-      return
-    }
-    if (!propagationSource) {
+  node.services.pubsub.addEventListener('gossipsub:message', (evt: CustomEvent<GossipsubMessage>) => {
+    const { propagationSource, msg } = evt.detail
+    const topic = msg.topic
+    if (topic !== PAIRING_INVITES_TOPIC && topic !== PAIRING_REQUESTS_TOPIC && topic !== PAIRING_ACCEPTED_TOPIC) {
       return
     }
 
@@ -429,15 +613,26 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
     }
 
     try {
-      const payload = Buffer.from(msg?.data ?? []).toString('utf-8')
+      const payload = Buffer.from(msg.data ?? []).toString('utf-8')
       if (topic === PAIRING_INVITES_TOPIC) {
         rememberDiscoveredInvite(JSON.parse(payload))
       }
-      else {
-        void handlePairingRequest(node, JSON.parse(payload), sender).catch(() => {
-          // A malformed or already-consumed request is not fatal: the inviter
-          // logs nothing and simply does not record the peer.
+      else if (topic === PAIRING_ACCEPTED_TOPIC) {
+        // Accepter side: the inviter confirmed the token this node spent, which
+        // is the only thing that flips the recorded device to trusted.
+        void handlePairingAccepted(JSON.parse(payload), peerId.toString()).then((device) => {
+          if (device !== null) {
+            void broadcastPairedDevices()
+          }
+        }, () => {
+          // A malformed confirmation is ignored.
         })
+      }
+      else {
+        // The listener is synchronous (main-event invokes it without awaiting),
+        // so the awaitable handler is fired off here; it swallows its own
+        // rejections, including a malformed sender.
+        void handlePairingRequest(node, JSON.parse(payload), sender)
       }
     }
     catch {
@@ -451,29 +646,43 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
   // no longer exists. Without the dial below, two AIRI instances on the same LAN
   // see each other via mDNS but never form a connection, so the GossipSub mesh
   // never forms, `publish()` only self-echoes via `emitSelf` and ping fails.
+  //
+  // NOTICE: mDNS emits `peer:discovery` once per interval per peer (and again on
+  // `peer:update`), so dialing unconditionally fills the dial queue — default
+  // `maxParallelDials: 100`, `maxDialQueueLength: 500` — with a fresh entry for
+  // every failing peer. Dials are therefore tracked per PeerId, and dropped again
+  // on `peer:disconnect` so a peer that comes back can be re-dialled.
+  const dialedPeers = new Set<string>()
   node.addEventListener('peer:discovery', (evt: CustomEvent<PeerInfo>) => {
     const peer = evt.detail
-    if (peer.multiaddrs.length > 0) {
-      void node.dial(peer.multiaddrs).catch(() => {
-        // The peer may be going offline, or the discovered addresses may be
-        // unreachable from this interface; discovery retries on the next mDNS
-        // interval, so a swallowed dial failure is expected and harmless.
-      })
+    const peerIdStr = peer.id.toString()
+    if (peer.multiaddrs.length === 0 || dialedPeers.has(peerIdStr)) {
+      return
     }
+    dialedPeers.add(peerIdStr)
+
+    void node.dial(peer.multiaddrs).catch((err: unknown) => {
+      // A peer going offline, or an unreachable interface, is expected on a LAN
+      // and is retried on the next mDNS interval, but the failure has to be
+      // visible instead of swallowed to be diagnosable at all.
+      dialedPeers.delete(peerIdStr)
+      log.withError(err).debug(`Failed to dial discovered peer ${peerIdStr}`)
+    })
   })
 
-  // Track peer connections
-  node.addEventListener('peer:connect', (evt: CustomEvent) => {
+  node.addEventListener('peer:connect', (evt: CustomEvent<PeerId>) => {
     const peer = evt.detail
+    dialedPeers.add(peer.toString())
     emitToAllWindows(libp2pPeerJoined, {
       id: peer.toString(),
-      addresses: peer.multiaddrs.map((ma: Multiaddr) => ma.toString()),
+      addresses: [],
       connected: true,
     })
   })
 
-  node.addEventListener('peer:disconnect', (evt: CustomEvent) => {
+  node.addEventListener('peer:disconnect', (evt: CustomEvent<PeerId>) => {
     const peer = evt.detail
+    dialedPeers.delete(peer.toString())
     emitToAllWindows(libp2pPeerLeft, { id: peer.toString() })
   })
 
@@ -491,20 +700,17 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
     getMultiaddrs() {
       return node.getMultiaddrs().map((ma: Multiaddr) => ma.toString())
     },
-    getPeers() {
+    async getPeers() {
       const peers = node.getPeers()
-      return peers.map((p: PeerId) => {
-        // NOTICE: the libp2p v2 node API does not expose per-peer multiaddrs -
-        // `PeerId` carries no addresses and `node.getPeerAddresses()` does not
-        // exist, while `peerStore.get()` is async and cannot be awaited here.
-        // Connectivity is derived from the open connections instead.
-        const connected = node.getConnections(p).length > 0
-        return {
-          id: p.toString(),
-          addresses: [],
-          connected,
-        }
-      })
+      // NOTICE: `PeerId` carries no addresses, `peerStore.get()` is async and the
+      // node API is sync, so the open connections are the only synchronous source
+      // of per-peer multiaddrs; the peer store stays authoritative where it can
+      // be awaited (the `libp2pPeerDiscovered` and pairing paths).
+      return Promise.all(peers.map(async p => ({
+        id: p.toString(),
+        addresses: await getPeerAddresses(node, p),
+        connected: node.getConnections(p).length > 0,
+      })))
     },
     async publish(topic: string, data: Uint8Array) {
       await node.services.pubsub.publish(topic, data)
@@ -547,6 +753,12 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
 // ── Lifecycle Integration ──────────────────────────────────────────────────────
 
 export async function setupLibp2pService(params: { lifecycle: Lifecycle }) {
+  // NOTICE: `loadConfig()` reads the in-memory map, which is only populated by
+  // `libp2pConfigStore.setup()`'s synchronous disk read. Without this, a real
+  // boot ignores the persisted file entirely (silently reverting to the
+  // default, which auto-heal can then overwrite), so it must run first — the
+  // other AIRI services call `.setup()` from their own setup functions too.
+  libp2pConfigStore.setup()
   const config = await loadConfig()
   currentConfig = config
 
@@ -559,7 +771,13 @@ export async function setupLibp2pService(params: { lifecycle: Lifecycle }) {
       }
       catch (err) {
         log.withError(err).error('Failed to start libp2p node')
-        broadcastEventLog('error', `Failed to start libp2p: ${err}`)
+        broadcastEventLog('error', `Failed to start libp2p: ${err instanceof Error ? err.message : String(err)}`)
+        // `createLibp2pNode` only throws after the underlying `node.start()`
+        // already failed and stopped its internals, so the half-built node is
+        // not usable: dropping the reference keeps `buildStatus()` honest and
+        // stops a later stop/start pair from touching a dead node.
+        libp2pNode = null
+        currentPeerId = null
       }
     }
     else {
@@ -569,8 +787,12 @@ export async function setupLibp2pService(params: { lifecycle: Lifecycle }) {
 
   params.lifecycle.appHooks.onStop(async () => {
     if (libp2pNode) {
-      libp2pNode.stop().catch((err: unknown) => log.withError(err).error('Error stopping libp2p'))
+      await libp2pNode.stop().then(() => {
+        libp2pNode = null
+        currentPeerId = null
+      }, (err: unknown) => log.withError(err).error('Error stopping libp2p'))
     }
+    libp2pConfigStore.flush()
   })
 }
 
@@ -581,16 +803,25 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
 
   // Start
   defineInvokeHandler(context, libp2pServiceStart, async (cfg: Partial<Libp2pServiceConfig>) => {
-    const config = await loadConfig()
-    const newConfig = { ...config, ...cfg }
+    let newConfig: Libp2pServiceConfig
+    try {
+      newConfig = mergeConfigPatch(await loadConfig(), cfg)
+    }
+    catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      broadcastEventLog('error', message)
+      throw new Error(message)
+    }
 
     if (libp2pNode) {
-      await libp2pNode.stop()
+      await libp2pNode.stop().catch((err: unknown) => log.withError(err).error('Error stopping libp2p'))
       libp2pNode = null
+      currentPeerId = null
     }
 
     currentConfig = newConfig
-    await libp2pConfigStore.update(newConfig)
+    libp2pConfigStore.update(newConfig)
+    libp2pConfigStore.flush()
 
     if (newConfig.enabled) {
       const privateKey = await getPrivateKey()
@@ -600,7 +831,9 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
           await libp2pNode.start()
         }
         catch (err) {
-          broadcastEventLog('error', `Failed to start libp2p: ${err}`)
+          broadcastEventLog('error', `Failed to start libp2p: ${err instanceof Error ? err.message : String(err)}`)
+          libp2pNode = null
+          currentPeerId = null
           throw err
         }
       }
@@ -609,7 +842,7 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
       }
     }
 
-    return buildStatus()
+    return await buildStatus()
   })
 
   // Stop
@@ -619,12 +852,12 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
       libp2pNode = null
       currentPeerId = null
     }
-    return buildStatus()
+    return await buildStatus()
   })
 
   // Get Status
   defineInvokeHandler(context, libp2pServiceGetStatus, async () => {
-    return buildStatus()
+    return await buildStatus()
   })
 
   // List Peers
@@ -632,7 +865,7 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
     if (!libp2pNode) {
       return []
     }
-    return libp2pNode.getPeers()
+    return await libp2pNode.getPeers()
   })
 
   // Get Config
@@ -642,15 +875,25 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
 
   // Apply Config
   defineInvokeHandler(context, libp2pServiceApplyConfig, async (patch: Partial<Libp2pServiceConfig>) => {
-    const config = await loadConfig()
-    const newConfig = { ...config, ...patch }
-    currentConfig = newConfig
-    await libp2pConfigStore.update(newConfig)
+    let newConfig: Libp2pServiceConfig
+    try {
+      newConfig = mergeConfigPatch(await loadConfig(), patch)
+    }
+    catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      broadcastEventLog('error', message)
+      throw new Error(message)
+    }
 
     if (libp2pNode) {
-      await libp2pNode.stop()
+      await libp2pNode.stop().catch((err: unknown) => log.withError(err).error('Error stopping libp2p'))
       libp2pNode = null
+      currentPeerId = null
     }
+
+    currentConfig = newConfig
+    libp2pConfigStore.update(newConfig)
+    libp2pConfigStore.flush()
 
     if (newConfig.enabled) {
       const privateKey = await getPrivateKey()
@@ -660,7 +903,9 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
           await libp2pNode.start()
         }
         catch (err) {
-          broadcastEventLog('error', `Failed to start libp2p: ${err}`)
+          broadcastEventLog('error', `Failed to start libp2p: ${err instanceof Error ? err.message : String(err)}`)
+          libp2pNode = null
+          currentPeerId = null
           throw err
         }
       }
@@ -703,7 +948,7 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
         }
       }
 
-      return { latencyMs: 0, error: String(err) }
+      return { latencyMs: 0, error: err instanceof Error ? err.message : String(err) }
     }
   })
 
@@ -743,12 +988,17 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
     }
 
     // The invite's addresses have to be ones a peer can actually dial, so the
-    // unspecified host (`0.0.0.0`) the listener bound is dropped in favour of
-    // the concrete loopback/LAN addresses that carry the `/p2p/<peerId>` suffix.
-    const multiaddrs = libp2pNode.getMultiaddrs().filter(addr => !addr.startsWith('/ip4/0.0.0.0/'))
+    // unspecified hosts the listeners bound (`0.0.0.0` and `::`) are dropped in
+    // favour of the concrete loopback/LAN addresses that carry the
+    // `/p2p/<peerId>` suffix. WebRTC and WebTransport are dial-only here, so they
+    // never produce a listen address in the first place (see `listenAddresses`
+    // above) and only contribute addresses from `identify`-observed connections.
+    const multiaddrs = libp2pNode.getMultiaddrs().filter(addr => addr.includes('/p2p/')
+      && !addr.startsWith('/ip4/0.0.0.0/')
+      && !addr.startsWith('/ip6/::/'))
     const peerId = libp2pNode.getPeerId()
 
-    const { qrCode, magicCode, invitation } = await createPairingInvitation(multiaddrs, peerId, name || 'AIRI Node', ttlMinutes, publisherFor(libp2pNode))
+    const { qrCode, magicCode, invitation } = await createPairingInvitation(multiaddrs, peerId, name || 'AIRI Node', ttlMinutes ?? 30, publisherFor(libp2pNode))
 
     broadcastEventLog('info', `Pairing invitation created, magic code ${magicCode}`)
 
@@ -765,20 +1015,36 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
     const dialer = dialerFor(libp2pNode)
 
     // A QR payload carries the invitation inline; anything else is a bare magic
-    // code, which only names an invitation and has to be resolved from the wire
-    // (or from an invite this node itself issued).
-    const parsed = parsePairingInvitation(input)
-    const result = parsed
-      ? await acceptPairingInvitation(parsed, localPeerId, alias, dialer)
-      : await acceptMagicCode(input.trim(), localPeerId, alias, dialer)
+    // code, which only names an invitation that must be resolved from
+    // `airi/pairing/invites` discovery (or from an invite this node itself
+    // issued). A discovered invite carries no token, so it is passed with an
+    // empty one and `acceptPairingInvitation` refuses it as not authorising.
+    let parsed: ParsedPairingInvitation | null
+    if (input.startsWith('airi-pair://')) {
+      parsed = parsePairingInvitation(input)
+    }
+    else {
+      const discovered = findDiscoveredInviteByMagicCode(input.trim())
+      parsed = discovered ? { ...discovered, token: '' } : null
+    }
+
+    if (!parsed) {
+      return { error: 'Not a pairing QR payload, and no matching invitation was discovered on the mesh — provide the QR payload or enter the code while the inviter is broadcasting' }
+    }
+
+    const result = await acceptPairingInvitation(parsed, localPeerId, alias, dialer)
 
     if ('error' in result) {
       return result
     }
 
+    // Register before publishing the request so an `accepted` confirmation that
+    // races back cannot be rejected for having no pending entry.
+    registerPendingAcceptedConfirmation(result.peerId, result.token)
+
     // The accepter only knows the token it was given; the inviter is the one
     // that issued it, so the request is what turns the dial into a pair.
-    await publishPairingRequest(result.token, publisherFor(libp2pNode))
+    await publishPairingRequest(result.token, result.peerId, publisherFor(libp2pNode))
     await broadcastPairedDevices()
 
     return { peerId: result.peerId, alias: result.alias }
