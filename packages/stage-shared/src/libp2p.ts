@@ -21,6 +21,22 @@ export interface Libp2pPeerInfo {
   name?: string
 }
 
+/** A remote AIRI instance this node has exchanged pairing credentials with. */
+export interface PairedDevice {
+  /** Libp2p PeerId string (e.g. `12D3Koo...`) of the paired remote. */
+  peerId: string
+  /** User-facing label for the paired device; editable from the settings page. */
+  alias: string
+  /** Multiaddrs known for the paired device, used to dial it. */
+  multiaddrs: string[]
+  /** `Date.now()` of the moment the pairing was accepted. */
+  pairedAt: number
+  /** `Date.now()` of the last time the paired device was seen, updated by main. */
+  lastSeen: number
+  /** Whether the paired device is trusted for mesh sync. */
+  trusted: boolean
+}
+
 /** Runtime snapshot of the libp2p node in the main process. */
 export interface Libp2pServiceStatus {
   running: boolean
@@ -136,6 +152,44 @@ export const electronMeshIdentitySetName = defineInvokeEventa<MeshIdentityInfo, 
   'eventa:invoke:electron:libp2p:identity:set-name',
 )
 
+/**
+ * Create a pairing invitation for this device, returning a QR payload containing
+ * an `airi-pair://` URI plus the human-readable magic code equivalent.
+ */
+export const libp2pServiceCreatePairing = defineInvokeEventa<
+  { qrCode: string, magicCode: string, expiresAt: string },
+  { ttlMinutes?: number, name?: string }
+>(
+  'eventa:invoke:electron:libp2p:pair:create',
+)
+
+/**
+ * Accept a pairing from a remote device. `input` is the raw user input: either
+ * the `airi-pair://` QR payload or the bare magic code, discriminated by the
+ * main-process handler.
+ */
+export const libp2pServiceAcceptPairing = defineInvokeEventa<
+  { peerId: string, alias: string } | { error: string },
+  { input: string, alias?: string }
+>(
+  'eventa:invoke:electron:libp2p:pair:accept',
+)
+
+/** List every device this node has paired with. */
+export const libp2pServiceListPairedDevices = defineInvokeEventa<PairedDevice[]>(
+  'eventa:invoke:electron:libp2p:list-paired-devices',
+)
+
+/** Forget a paired device; returns whether it existed. */
+export const libp2pServiceRemovePairedDevice = defineInvokeEventa<boolean, string>(
+  'eventa:invoke:electron:libp2p:remove-paired-device',
+)
+
+/** Rename a paired device; returns whether it existed. */
+export const libp2pServiceUpdatePairedDeviceAlias = defineInvokeEventa<boolean, [peerId: string, alias: string]>(
+  'eventa:invoke:electron:libp2p:update-paired-device-alias',
+)
+
 // ── Event Contracts (Main → Renderer, push-based) ──────────────────────────────
 
 /** Emitted when the node starts, stops, or changes listen addresses. */
@@ -171,4 +225,9 @@ export const electronMeshIdentityChanged = defineEventa<MeshIdentityInfo>(
 /** Raw event log entries for the Developer Console. */
 export const libp2pServiceEventLog = defineEventa<Libp2pEventLogEntry>(
   'eventa:event:electron:libp2p:event-log',
+)
+
+/** Emitted whenever a pairing is accepted, removed, or renamed. */
+export const libp2pServicePairedDevicesChanged = defineEventa<PairedDevice[]>(
+  'eventa:event:electron:libp2p:paired-devices-changed',
 )

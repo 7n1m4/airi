@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@vueuse/core": "catalog:",
+    "qrcode-generator": "catalog:",
     "reka-ui": "^2.8.2",
     "vue": "catalog:"
   },
