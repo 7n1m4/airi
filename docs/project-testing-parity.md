@@ -23,11 +23,11 @@
 
 | Package / Workspace | Test Suites (Files) | Total Tests | Primary Subsystem Focus |
 |---|:---:|:---:|---|
-| [`packages/stage-ui`](../packages/stage-ui) | 78 | 916 | Arcade, Chat, Pacing, WebGPU Workers, BYOS Sync, Providers, Live2D, Memory, Artistry, Proactivity, MCP, Cloudflare OAuth, Gemini Live Bidi, Chat Input Bridge, Audio Device Routing |
+| [`packages/stage-ui`](../packages/stage-ui) | 79 | 922 | Arcade, Chat, Pacing, WebGPU Workers, BYOS Sync, Providers, Live2D, Memory, Artistry, Proactivity, MCP, Cloudflare OAuth, Gemini Live Bidi, Chat Input Bridge, Audio Device Routing, Local Mesh Renderer Store |
 | [`packages/nan0-runtime`](../packages/nan0-runtime) | 24 | 301 | Nan0 Cognition Runtime, Thought Engine, Emotional Dynamics, Goal & Prediction Systems |
 | [`packages/live2d-runtime`](../packages/live2d-runtime) | 5 | 79 | Live2D Scripting DSL VM, Command Parser, Selector, Template, VarStore |
 | [`packages/stage-pages`](../packages/stage-pages) | 2 | 34 | Settings Topology & Devtools Context Flow Formatters |
-| [`apps/stage-tamagotchi`](../apps/stage-tamagotchi) | 6 | 32 | Desktop Multi-Window, Display Bounds, Location, Widgets, Airi Plugins |
+| [`apps/stage-tamagotchi`](../apps/stage-tamagotchi) | 11 | 71 | Desktop Multi-Window, Display Bounds, Location, Widgets, Airi Plugins, Local Mesh (libp2p) Identity / Pairing / Transport / Config |
 | [`apps/server`](../apps/server) | 4 | 29 | Server Character & Provider API Endpoints / Services |
 | [`packages/pipelines-audio`](../packages/pipelines-audio) | 4 | 27 | Audio Speech Pipeline, Lead Coordinator, Pause Aligner, TTS Chunker |
 | [`apps/stage-edge`](../apps/stage-edge) | 4 | 24 | Cloud Relay Edge Worker, Discord Ed25519, KV Rolling Memory, Discord ACL Matrix |
@@ -36,7 +36,7 @@
 | [`packages/plugin-sdk`](../packages/plugin-sdk) | 1 | 22 | Plugin SDK Host Core Lifecycle |
 | [`packages/server-runtime`](../packages/server-runtime) | 1 | 9 | Server Route Middleware |
 | [`packages/i18n`](../packages/i18n) | 1 | 3 | Canonical Locales Discovery, Base YAML Syntax/Duplicates, Onboarding V3 100% Parity Assertion |
-| **Monorepo Vitest Baseline** | **135 Suites** | **1,526 Tests** | **Automated Zero-Failure Headless Test Baseline** |
+| **Monorepo Vitest Baseline** | **138 Suites** | **1,561 Tests** | **Automated Zero-Failure Headless Test Baseline** |
 
 *(Note: 4 additional test files across `@proj-airi/stage-ui` and `@proj-airi/live2d-runtime` contain 8 tests conditional on external models or live API keys, yielding 114 total test files cataloged and audited).*
 
@@ -240,6 +240,15 @@
 | **Remote Debug CDP Client** | [`apps/stage-tamagotchi/scripts/lib/remote-debug.test.ts`](../apps/stage-tamagotchi/scripts/lib/remote-debug.test.ts) | 4 | Node / EventEmitter Mocks | Blocking in CI | Chrome DevTools Protocol client connection, WebSocket event piping, evaluate command execution, and error handling. | Protocol mock unit tests. |
 | **Startup Milestone Resources** | [`packages/stage-ui/src/stores/startup-resources.test.ts`](../packages/stage-ui/src/stores/startup-resources.test.ts) | 16 | Node / Pinia | Blocking in CI | Milestone register/start/complete/skip/fail transitions, 4-milestone progress arithmetic, skipped stage-actor counting as finished, recovery from failed via skip (continue-without-avatar), restart from failed on retry, duplicate ID validation, async run runner, and reset. | Headless Pinia store test; does not mount Electron windows or IPC. |
 | **Arcade Acquired Knowledge** | [`packages/stage-ui/src/stores/modules/arcade-knowledge.test.ts`](../packages/stage-ui/src/stores/modules/arcade-knowledge.test.ts) | 5 | Node / Pinia | Blocking in CI | Arcade knowledge profile persistence, play session tracking, high score updates, deletion, and JSON export/import. | Headless Pinia store test with mock storage. |
+| **Local Mesh Renderer Store Actions** | [`packages/stage-ui/src/stores/modules/libp2p.test.ts`](../packages/stage-ui/src/stores/modules/libp2p.test.ts) | 6 | Node / Pinia | Blocking in CI | The local-mesh action surface actually reaching main: the invoker is called on success and `enabled` is committed only then, a rejected action is visible through `lastError` rather than failing silently, the `pending` guard blocks a double start, the transport list reaching main is sanitised, an identical-content echo from main is a no-op, and a real change is applied exactly once. | Headless Pinia store test. The **only** mock is `@proj-airi/electron-vueuse` (the seam turning an eventa descriptor into a callable); `window` and `RUNTIME_ENVIRONMENT` are primed before module evaluation so `isElectronWindow()` sees a renderer. Does not mount a real Electron BrowserWindow. |
+
+#### Local Mesh (libp2p) Identity, Pairing, Transport & Config (`apps/stage-tamagotchi`)
+| Invariant / Subsystem | Test Path | Tests | Runner / Env | CI Inclusion | What Assertions Directly Establish | Coverage Boundary & Known Limits |
+|---|---|:---:|:---:|:---:|---|---|
+| **Identity & Keychain** | [`apps/stage-tamagotchi/src/main/services/airi/libp2p/identity.test.ts`](../apps/stage-tamagotchi/src/main/services/airi/libp2p/identity.test.ts) | 11 | Node / Electron Mocks | Blocking in CI | Refuses to persist a private key when `safeStorage` encryption is unavailable (nothing written, zero encrypt calls); a failed decrypt does not mint a replacement identity; absent identity is reported as `null` rather than as a decrypt failure; the private key never appears in an error or in the returned info; passphrase-gated scrypt AES-256-GCM export/import envelope; an **incompatible** envelope is rejected *before* key derivation; the minimum passphrase policy holds on both export and import; an imported key is re-encrypted under the local keychain. | Mocks `electron` (`safeStorage`) and the `createConfig` store — both platform boundaries. Does not touch a real OS keychain or write a config file. |
+| **Pairing Trust Flow** | [`apps/stage-tamagotchi/src/main/services/airi/libp2p/pairing-trust-flow.test.ts`](../apps/stage-tamagotchi/src/main/services/airi/libp2p/pairing-trust-flow.test.ts) | 7 | Node / Real libp2p Nodes | Blocking in CI | Real in-process libp2p nodes on localhost TCP with real gossipsub: a token replayed after the real pairing completed is rejected; a request re-published by a third node is rejected because the asserted sender disagrees with the **propagation source**; a bystander re-publishing a confirmation cannot mark an unpaired device; tokens are single-use and claimed synchronously (so two concurrent requests cannot both spend one); a request is honoured only from the peer it arrived from; invitation expiry is enforced on both sides; the token never appears on the wire. | Assertions cross a real gossipsub topic, so the propagation-source binding is measured rather than assumed. `node_datachannel` / `@libp2p/webrtc` cannot load under `--ignore-scripts`, so every node is TCP-only and `@libp2p/webrtc` is never exercised. |
+| **Transport & Listen Derivation** | [`apps/stage-tamagotchi/src/main/services/airi/libp2p/transports.test.ts`](../apps/stage-tamagotchi/src/main/services/airi/libp2p/transports.test.ts) | 8 | Node / Real libp2p Nodes | Blocking in CI | tcp-only and websockets-only configurations leave real listen addresses; webrtc-only and webtransport-only configurations still start instead of throwing `UnsupportedListenAddressesError`; the default selection listens on both; mDNS is never pushed onto the transport array or the listen list; importing the service module does not require `node_datachannel`. | Real nodes are built exactly as the service builds them. The webtransport-only case builds a node with an **empty transport list** — the actual regression condition — because `@libp2p/webtransport` is not resolvable here, so `webTransport()` itself is never instantiated. |
+| **Config Lifecycle** | [`apps/stage-tamagotchi/src/main/services/airi/libp2p/config-lifecycle.test.ts`](../apps/stage-tamagotchi/src/main/services/airi/libp2p/config-lifecycle.test.ts) | 3 | Node / Electron Mocks | Blocking in CI | `setupLibp2pService` calls the store's `setup()` before `loadConfig()`, so a real boot does not silently revert to the default; defaults are merged **over** the loaded record rather than replacing it, so mesh-sync fields stay defined; the shipped defaults apply when no record exists. | `@moeru/eventa` is mocked to capture the handlers `index.ts` registers, so the tests call the real handler bodies. `electron` and `createConfig` are mocked as persistence boundaries. The `transports` sanitisation itself lives in the renderer store and is asserted by the suite above. |
 
 #### UI Composables, Shared Utilities & Devtools
 | Invariant / Subsystem | Test Path | Tests | Runner / Env | CI Inclusion | What Assertions Directly Establish | Coverage Boundary & Known Limits |
@@ -371,6 +380,19 @@ pnpm vitest run packages/stage-ui/src/libs/pacing/turn-pacing-coordinator.test.t
 pnpm run test:dsl          # Live2D DSL interpreter scenario harness
 pnpm run test:attention    # Attention Ecology vision/perception harness
 ```
+
+> [!IMPORTANT]
+> **Runner caveat on this box: `npx vitest` hangs and must not be used.** Any command routed through `npx` receives `SIGTTOU` and exits **148** with an empty log, which reads as a hung or silently-failing runner. This is a property of the local terminal/session, not of the repo or of Vitest. Use the binary directly:
+> ```bash
+> # From the repository root
+> node node_modules/vitest/vitest.mjs run
+> node node_modules/vitest/vitest.mjs run --root apps/stage-tamagotchi src/main/services/airi/libp2p/
+> node node_modules/vitest/vitest.mjs run --root packages/stage-ui src/stores/modules/libp2p.test.ts
+> ```
+> Same caveat for `tsc` in this environment: invoke it via `node <repo>/node_modules/typescript/bin/tsc` under `setsid … < /dev/null` rather than through `npx`, or the run is killed before it reports.
+
+> [!NOTE]
+> **Audit drift currently listed by `scripts/audit-test-catalog.mjs` and deliberately not reconciled here.** The auditor reports 6 dead links (three cataloged files that no longer exist: `cloudflare-auth`, `cloudflare-persistence`, and four under `apps/stage-edge`) and 21 active-but-uncataloged suites. None of these were introduced by the local-mesh workstream, and several belong to suites owned by a concurrent workstream — `agentic/*`, `presence`, and the `agentic-os` settings page — which has not finished landing. Cataloging someone else's not-yet-stable suites would put a second workstream's in-flight file paths into the canonical inventory before their owners sign off. Each of the five local-mesh suites in this section *is* fully cataloged, so the auditor's local-mesh findings are zero.
 
 ### 4.2 Automated Catalog Freshness Audit
 Whenever adding or moving a test suite, run the catalog auditor to verify link integrity and check for untracked tests:

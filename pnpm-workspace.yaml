@@ -10,6 +10,9 @@ packages:
   - '!**/dist/**'
   - '!apps/stage-mate/mate-engine/**'
 overrides:
+  '@libp2p/crypto': 5.1.8
+  '@libp2p/record': 4.0.12
+  '@multiformats/dns': 1.0.12
   array-flatten: npm:@nolyfill/array-flatten@^1.0.44
   axios: npm:feaxios@^0.0.23
   is-core-module: npm:@nolyfill/is-core-module@^1.0.39
@@ -34,6 +37,9 @@ catalog:
   '@capacitor/core': ^8.1.0
   '@capacitor/ios': ^8.1.0
   '@capacitor/local-notifications': ^8.0.1
+  '@chainsafe/libp2p-gossipsub': 14.1.2
+  '@chainsafe/libp2p-noise': 16.1.5
+  '@chainsafe/libp2p-yamux': 7.0.4
   '@cryscan/web-rwkv-wasm': ^0.10.20
   '@electric-sql/pglite': ^0.3.15
   '@electron-toolkit/preload': ^3.0.2
@@ -44,10 +50,25 @@ catalog:
   '@iconify-json/logos': ^1.2.10
   '@iconify-json/tabler': ^1.2.27
   '@intlify/core': ^11.2.8
+  '@libp2p/autonat': 2.0.38
+  '@libp2p/crypto': 5.1.8
+  '@libp2p/identify': 3.0.39
+  '@libp2p/interface': 2.11.0
+  '@libp2p/kad-dht': 15.1.11
+  '@libp2p/mdns': 11.0.47
+  '@libp2p/mplex': 11.0.47
+  '@libp2p/peer-id': 5.1.9
+  '@libp2p/ping': 2.0.37
+  '@libp2p/tcp': 10.1.19
+  '@libp2p/webrtc': 5.2.24
+  '@libp2p/websockets': 9.2.19
+  '@libp2p/webtransport': 5.0.51
   '@modelcontextprotocol/sdk': ^1.27.1
   '@moeru/eslint-config': 0.1.0-beta.15
   '@moeru/eventa': ^1.0.0-beta.8
   '@moeru/std': 0.1.0-beta.17
+  '@multiformats/dns': 1.0.12
+  '@multiformats/multiaddr': 12.5.1
   '@nekopaw/tempora': 0.4.0-alpha.1
   '@pinia/testing': ^1.0.3
   '@proj-airi/iconify-meteocons': ^0.1.4
@@ -100,6 +121,7 @@ catalog:
   jsdom: ^30.0.1
   jszip: ^3.10.1
   knip: ^5.85.0
+  libp2p: 2.10.0
   loudness: ^0.4.2
   mkcert: ^3.2.0
   nano-staged: ^0.9.0
@@ -108,6 +130,7 @@ catalog:
   pinia: ^3.0.4
   posthog-js: 1.306.1
   puppeteer-core: ^25.5.0
+  qrcode-generator: 2.0.4
   rehype-stringify: ^10.0.1
   reka-ui: ^2.8.2
   remark-breaks: ^4.0.0

@@ -22,6 +22,8 @@
     "./composables": "./src/composables/index.ts",
     "./shortcuts": "./src/shortcuts.ts",
     "./utils/*": "./src/utils/*.ts",
+    "./libp2p": "./src/libp2p.ts",
+    "./agentic": "./src/agentic.ts",
     "./webgpu": "./src/webgpu/index.ts"
   },
   "scripts": {

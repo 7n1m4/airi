@@ -80,23 +80,35 @@ settings:
     explained:
       chat: Text generation model providers. e.g. OpenRouter, OpenAI, Ollama.
       speech: Speech (text-to-speech) model providers. e.g. ElevenLabs, Azure Speech.
-      transcription: Transcription (speech-to-text) model providers. e.g. Whisper.cpp, OpenAI, Azure Speech
+      transcription: Transcription (speech-to-text) model providers. e.g. Whisper.cpp,
+        OpenAI, Azure Speech
     onboarding:
       chat:
         title: New to Chat?
-        description: For a quick start, try <b>LanLan Free</b> (Zero-setup, no key needed), <b>Kilo</b> (Coding-optimized free gateway), or <b>Google Gemini</b> (Free Cloud) or <b>OpenRouter</b> (Unified Cloud). If you prefer privacy and have a GPU, use <b>Ollama</b> or <b>LM Studio</b> for a local experience.
+        description: For a quick start, try <b>LanLan Free</b> (Zero-setup, no key
+          needed), <b>Kilo</b> (Coding-optimized free gateway), or <b>Google
+          Gemini</b> (Free Cloud) or <b>OpenRouter</b> (Unified Cloud). If you
+          prefer privacy and have a GPU, use <b>Ollama</b> or <b>LM Studio</b>
+          for a local experience.
       speech:
         title: Need a Voice?
-        description: Try <b>Deepgram</b> or <b>Azure Speech</b> for high-quality cloud voices with free tiers. For a completely local and free solution, use the <b>Web Speech API</b> or <b>Kokoro TTS</b>.
+        description: Try <b>Deepgram</b> or <b>Azure Speech</b> for high-quality cloud
+          voices with free tiers. For a completely local and free solution, use
+          the <b>Web Speech API</b> or <b>Kokoro TTS</b>.
       transcription:
         title: Voice-to-Text?
-        description: We recommend <b>Deepgram STT</b> for blazing fast cloud transcription. For local use, <b>Web Speech API</b> (Browser) or <b>Local Whisper</b> are excellent free choices.
+        description: We recommend <b>Deepgram STT</b> for blazing fast cloud
+          transcription. For local use, <b>Web Speech API</b> (Browser) or
+          <b>Local Whisper</b> are excellent free choices.
       artistry:
         title: Generate Art?
-        description: The standard for local AI art is <b>ComfyUI</b>. If you prefer cloud-based generation, <b>Replicate</b> offers a wide variety of models with pay-as-you-go pricing.
+        description: The standard for local AI art is <b>ComfyUI</b>. If you prefer
+          cloud-based generation, <b>Replicate</b> offers a wide variety of
+          models with pay-as-you-go pricing.
       vision:
         title: See the World?
-        description: Use <b>Google Gemini</b> for powerful and free cloud-based vision. For local vision, <b>Ollama</b> with VLMs works well.
+        description: Use <b>Google Gemini</b> for powerful and free cloud-based vision.
+          For local vision, <b>Ollama</b> with VLMs works well.
       storage:
         title: Need Storage?
         description: Configure <b>S3-Compatible Storage</b> (MinIO, AWS S3).
@@ -141,10 +153,12 @@ settings:
         description: Local Desktop GUI - Serve any GGUF model locally
         title: LM Studio
       vllm:
-        description: High-Efficiency Serving - Industry standard for high-throughput local model serving and self-hosting
+        description: High-Efficiency Serving - Industry standard for high-throughput
+          local model serving and self-hosting
         title: vLLM
       volcengine:
-        description: Emotional Expression - Cutting-edge ByteDance speech tech for natural interactions
+        description: Emotional Expression - Cutting-edge ByteDance speech tech for
+          natural interactions
         fields:
           field:
             appId:
@@ -220,3 +234,230 @@ settings:
       laya-local:
         description: Laya Local - Local model runner
         title: Laya Local
+  pages:
+    modules:
+      agentic-os:
+        title: 'Agentic OS'
+        description: 'Presence-driven autonomous companion behaviour, memory-driven
+          proactive action, and OS automation hooks'
+      libp2p:
+        title: 'Local Mesh (libp2p)'
+        description: 'Peer-to-peer mesh networking, device pairing, and decentralized
+          data sync'
+      local-sync:
+        title: 'Local Sync'
+        description: 'Peer-to-peer mesh sync via libp2p, plus local filesystem BYOS
+          persistence'
+        meshSync: 'Mesh Sync'
+        enableMeshSync: 'Enable libp2p Mesh Sync'
+        enableMeshSyncDesc: 'Sync memory, vault credentials, and companion cards
+          directly with other AIRI instances on your local network'
+        syncTargets: 'Sync Targets'
+        memory: 'Memory (STMM / LTMM / Event Ledger)'
+        vault: 'Vault (BYOS credentials)'
+        companions: 'Companions (character cards)'
+        conflictResolution: 'Conflict Resolution'
+        lastWriterWins: 'Last-writer-wins'
+        vectorClocks: 'Vector clocks'
+        syncNow: 'Sync Now'
+        lastSync: 'Last sync'
+  modules:
+    libp2p:
+      title: 'Local Mesh (libp2p)'
+      description: 'Peer-to-peer mesh networking, device pairing, and decentralized
+        data sync'
+      nodeStatus: 'Node Status'
+      running: 'Running'
+      stopped: 'Stopped'
+      enableMesh: 'Enable Local Mesh'
+      enableMeshDesc: 'Start the libp2p node to discover and sync with other AIRI
+        instances on your network'
+      peerId: 'Peer ID'
+      copy: 'Copy'
+      nodeName: 'Node Name'
+      nodeNamePlaceholder: 'AIRI Node'
+      save: 'Save'
+      listenAddresses: 'Listen Addresses'
+      connections: 'Connections'
+      activeConnections: 'active connections'
+      refresh: 'Refresh'
+      noIdentity: 'No identity generated yet'
+      generateIdentity: 'Generate Identity'
+      identityGenerated: 'Identity generated'
+      nameUpdated: 'Node name updated'
+      copiedPeerId: 'Peer ID copied'
+      copiedName: 'Node name copied'
+      tabNode: 'Node'
+      tabPeers: 'Peers'
+      tabSync: 'Sync'
+      tabDev: 'Developer'
+      transports: 'Transports'
+      tcp: 'TCP'
+      websockets: 'WebSockets'
+      webrtc: 'WebRTC'
+      webtransport: 'WebTransport'
+      bootstrapPeers: 'Bootstrap Peers'
+      addBootstrapPeer: 'Add bootstrap peer'
+      topics: 'Topics'
+      addTopic: 'Add topic'
+      connectedPeers: 'Connected Peers'
+      noConnectedPeers: 'No connected peers'
+      discoveredPeers: 'Discovered Peers'
+      pairNewDevice: 'Pair New Device'
+      ping: 'Ping'
+      meshSync: 'Local Mesh Sync'
+      meshSyncDesc: 'Sync memory, vault credentials, and companion cards with paired
+        AIRI instances'
+      syncTargets: 'Sync Targets'
+      memory: 'Memory (STMM / LTMM / Event Ledger)'
+      vault: 'Vault (BYOS credentials)'
+      companions: 'Companions (character cards)'
+      triggerMemorySync: 'Sync Memory'
+      triggerVaultSync: 'Sync Vault'
+      triggerCompanionSync: 'Sync Companions'
+      eventLog: 'Event Log'
+      clear: 'Clear'
+      noEvents: 'No events yet'
+      testPublish: 'Test Publish'
+      selectTopic: 'Select topic'
+      messageData: 'Message data'
+      publish: 'Publish'
+      pairingInvitation: 'Pairing Invitation'
+      pairingDesc: 'Scan this QR code with another AIRI instance, or share the code below.'
+      close: 'Close'
+      notElectron: 'Local Mesh requires the AIRI desktop app'
+      noIdentityOrAddresses: 'Node must be running with an identity to pair'
+      noPeers: 'No peers discovered yet'
+      actions: 'Actions'
+      startNode: 'Start Node'
+      stopNode: 'Stop Node'
+      conflictResolution: 'Conflict Resolution'
+      lastWriterWins: 'Last-writer-wins'
+      vectorClocks: 'Vector clocks'
+      pairingFailed: 'Pairing Failed'
+      add: 'Add'
+      noBootstrapPeers: 'No bootstrap peers configured'
+      bootstrapPeerPlaceholder: 'Enter a multiaddr'
+      topicPlaceholder: 'Enter a topic name'
+      magicCode: 'Pairing Code'
+      magicCodeDesc: 'Share this code with another AIRI instance to pair'
+      pairedDevices: 'Paired Devices'
+      noPairedDevices: 'No paired devices yet'
+      pairedAt: 'Paired'
+      aliasPlaceholder: 'Display name for this device'
+      confirmRemove: 'Remove'
+      cancel: 'Cancel'
+      acceptPairing: 'Accept a Pairing'
+      accepting: 'Accepting...'
+      pairingInputRequired: 'Paste the pairing code or scan a QR payload first'
+      pairingInputPlaceholder: 'airi-pair://... or pairing code'
+      pairingAliasPlaceholder: 'Optional name for the device you are pairing with'
+      pairingAccepted: 'Pairing accepted'
+      pairingAliasUpdated: 'Device name updated'
+      pairingDeviceRemoved: 'Device removed'
+      pairingCodeCopied: 'Pairing code copied'
+      expiresAt: 'Expires'
+      regeneratePairing: 'Regenerate'
+    agentic-os:
+      title: 'Agentic OS'
+      description: 'Autonomous companion behaviour driven by presence detection,
+        memory, and the System-1 decision engine'
+      autonomousMode: 'Autonomous Behaviour'
+      autonomousModeDesc: 'Choose when AIRI is allowed to act on its own memory
+        without you speaking first. Unlike proactive heartbeats, which check in while
+        you are at your desk, an autonomous cycle acts when the machine is considered
+        unattended.'
+      modeDisabled: 'Disabled'
+      modeDisabledDesc: 'AIRI never acts autonomously. Heartbeats and manual chat
+        work as usual.'
+      modeWhenAway: 'When away'
+      modeWhenAwayDesc: 'AIRI runs an autonomous cycle only when presence is derived
+        as away — extended idle with no interaction.'
+      modeAlways: 'Always'
+      modeAlwaysDesc: 'AIRI runs an autonomous cycle whenever the cooldown elapses,
+        including while you are present. Use with care: this is the interruption-heavy
+        mode.'
+      cooldown: 'Cooldown between cycles'
+      cooldownDesc: 'Minimum minutes between autonomous cycles. Range 5–30 minutes;
+        the default 15 keeps the behaviour calm.'
+      cooldownMinutes: '%{n} minutes'
+      runNow: 'Run one cycle now'
+      running: 'Running…'
+      presence: 'Presence'
+      presenceDesc: 'Derived from the same OS idle-time polling heartbeats use —
+        no second sensor loop. The companion acts only in the modes above.'
+      presenceActive: 'Active — you are interacting'
+      presenceIdle: 'Idle — quiet input, machine still attended'
+      presenceAway: 'Away — extended idle, unattended'
+      presenceScreenLocked: 'Screen locked'
+      presenceSleep: 'Sleeping'
+      derivableStates: 'Derived states'
+      unavailableStates: 'Not derivable on this system'
+      screenLockedUnavailable: 'Screen-lock state is not exposed to the renderer,
+        so it is never reported. The desktop main process does observe powerMonitor
+        lock events, but only to hide windows — no contract forwards it here.'
+      sleepUnavailable: 'Sleep/wake state is not exposed to the renderer, so it
+        is never reported. A genuine suspend freezes renderer timers, and no contract
+        forwards a resume event here.'
+      httpEndpoint: 'OS automation endpoint'
+      httpEndpointDesc: 'A loopback HTTP endpoint a local automation tool (Home
+        Assistant, cron, a script) can call to read presence or ask for one autonomous
+        cycle. Bound to 127.0.0.1 only — never to the LAN — and requires a bearer
+        token, so it is reachable only by a process on this machine that you configured.'
+      enableHttpEndpoint: 'Enable HTTP endpoint'
+      authToken: 'Bearer token'
+      authTokenDesc: 'Generated on first enable and never shown again after you
+        copy it. Send it as Authorization: Bearer <token>.'
+      rotateToken: 'Rotate token'
+      tokenRotated: 'Token rotated'
+      tokenCopied: 'Token copied'
+      endpointNotRunning: 'Endpoint is not running'
+      endpointAddress: 'Endpoint address'
+      token: 'Token'
+      presenceState: 'Presence state'
+      lastCycle: 'Last cycle'
+      never: 'Never'
+      decisionEngine: 'Decision engine'
+      decisionEngineConfigured: 'System-1 engine configured — autonomous choices
+        are made by the model.'
+      decisionEngineUnconfigured: 'System-1 engine not configured — autonomous
+        choices fall back to the local ranking policy.'
+      rankingPolicy: 'Ranking policy'
+      rankingPolicyDesc: 'How intentions read from your memory are ordered. Pillar
+        provenance 0.10–0.45, recency 0–0.25 (72h half-life), deadline pressure up
+        to 0.40, relationship intensity up to 0.30, then a 0.5^n multiplier per
+        duplicate kind so one theme cannot monopolise every cycle. Ties break by
+        newest memory, then by id.'
+      autonomousLog: 'Autonomous log'
+      autonomousLogDesc: 'Every autonomous action is recorded in the Event Ledger
+        with autonomous: true. Undo is not offered automatically — review what AIRI
+        did and carry on from there.'
+      noAutonomousEvents: 'No autonomous actions yet'
+      undoLast: 'Review last decision'
+      consent: 'Companion sharing consent'
+      consentDesc: 'Friend invitation shares a character card plus a bounded memory
+        snapshot. Sharing is off until you grant consent.'
+      consentNotGranted: 'Consent not granted'
+      consentGranted: 'Sharing enabled'
+      shareScope: 'Share scope'
+      scopeCardOnly: 'Card only (default)'
+      scopeCardAndEchoChips: 'Card and echo chips'
+      scopeCardAndLifetime: 'Card and lifetime archive'
+      grantConsent: 'Grant consent'
+      revokeConsent: 'Revoke consent'
+      consentGrantedToast: 'Companion sharing enabled'
+      consentRevokedToast: 'Companion sharing disabled'
+      guestBoundary: 'Guest boundary'
+      sharedCard: 'Shared card'
+      scopeChipsEffect: 'The guest sees your character card and up to 20 of your
+        echo chips — the distilled mood and memory chips this companion built.
+        Your lifetime archive stays private.'
+      scopeLifetimeEffect: 'The guest sees your card, echo chips, and the distilled
+        relational summary. Your raw conversation history is never included.'
+      guestBoundaryDesc: 'A visiting companion reads exactly the scope the host
+        consented to — there is no "read more" request to grant or refuse. The lifetime
+        summary is the distilled relational essence only, never the raw archive.'
+      shareNow: 'Share companion now'
+      shared: 'Companion shared'
+      shareFailed: 'Sharing failed'
+      meshNotRunning: 'Local mesh is not running'

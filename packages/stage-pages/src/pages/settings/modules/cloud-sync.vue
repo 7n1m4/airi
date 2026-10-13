@@ -3,7 +3,9 @@ import SelectiveSyncPanel from '@proj-airi/stage-ui/components/scenarios/provide
 
 import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { useLibp2pStore } from '@proj-airi/stage-ui/stores/modules/libp2p'
 import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
+import { FieldCheckbox } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,
@@ -14,6 +16,7 @@ import {
   DialogTitle,
 } from 'reka-ui'
 import { computed, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
@@ -21,6 +24,8 @@ const router = useRouter()
 const syncStore = useSyncEngineStore()
 const cardStore = useAiriCardStore()
 const displayModelsStore = useDisplayModelsStore()
+const { t } = useI18n()
+const libp2pStore = useLibp2pStore()
 
 // Prune Models states
 const isPruneDialogOpen = ref(false)
@@ -72,7 +77,7 @@ function toggleAllPruneCandidates() {
     selectedPruneIds.value.clear()
   }
   else {
-    selectedPruneIds.value = new Set(pruneCandidates.value.map(m => m.id))
+    selectedPruneIds.value = new Set(pruneCandidates.value.map((m: { id: string }) => m.id))
   }
 }
 
@@ -81,7 +86,7 @@ async function handleExecutePrune() {
     return
   isPruning.value = true
   try {
-    const idsToPrune = Array.from(selectedPruneIds.value)
+    const idsToPrune = [...selectedPruneIds.value]
     const { prunedCount, freedBytes } = await displayModelsStore.pruneLocalModels(idsToPrune)
     isPruneDialogOpen.value = false
     toast.success(`Pruned ${prunedCount} unlinked models (${formatSize(freedBytes)} freed). Cloud backups preserved!`)
@@ -187,10 +192,50 @@ function isMergeable(key: string): boolean {
 
 <template>
   <div class="flex flex-col gap-6">
+    <div
+      v-if="libp2pStore.isElectron"
+      class="h-fit w-full flex flex-col gap-4 rounded-xl bg-neutral-100 p-4 dark:bg-[rgba(0,0,0,0.3)]"
+    >
+      <div>
+        <h2 class="text-lg text-neutral-500 md:text-2xl dark:text-neutral-400">
+          {{ t('settings.pages.modules.local-sync.meshSync') }}
+        </h2>
+        <p class="text-sm text-neutral-600 dark:text-neutral-400">
+          {{ t('settings.pages.modules.local-sync.enableMeshSyncDesc') }}
+        </p>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <span class="font-medium">{{ t('settings.pages.modules.local-sync.enableMeshSync') }}</span>
+        <FieldCheckbox v-model="libp2pStore.meshSyncEnabled" @update:model-value="void libp2pStore.applyConfig()" />
+      </div>
+
+      <div v-if="libp2pStore.meshSyncEnabled" class="flex flex-col gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
+        <span class="font-medium">{{ t('settings.pages.modules.local-sync.syncTargets') }}</span>
+        <label
+          v-for="target in ['memory', 'vault', 'companions']"
+          :key="target"
+          class="flex items-center gap-2"
+        >
+          <FieldCheckbox
+            :model-value="libp2pStore.meshSyncTargets.includes(target)"
+            @update:model-value="(val) => {
+              const arr = [...libp2pStore.meshSyncTargets]
+              if (val) arr.push(target)
+              else arr.splice(arr.indexOf(target), 1)
+              libp2pStore.meshSyncTargets = arr
+              void libp2pStore.applyConfig()
+            }"
+          >
+            <template #label>{{ t(`settings.pages.modules.local-sync.${target}`) }}</template>
+          </FieldCheckbox>
+        </label>
+      </div>
+    </div>
     <div class="h-fit w-full flex flex-col gap-4 rounded-xl bg-neutral-100 p-4 dark:bg-[rgba(0,0,0,0.3)]">
       <div>
         <h2 class="text-lg text-neutral-500 md:text-2xl dark:text-neutral-400">
-          Cloud Sync Settings
+          Local Sync Settings
         </h2>
         <div class="text-neutral-400 dark:text-neutral-500">
           Configure how and when your databases, character cards, memory segments, and media assets are synchronized.
@@ -663,7 +708,7 @@ function isMergeable(key: string): boolean {
 <route lang="yaml">
 meta:
   layout: settings
-  titleKey: settings.pages.modules.cloud-sync.title
+  titleKey: settings.pages.modules.local-sync.title
   subtitleKey: settings.title
   stageTransition:
     name: slide
