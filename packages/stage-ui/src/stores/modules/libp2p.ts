@@ -494,9 +494,10 @@ async function loadConfig() {
 }
 
 async function startService() {
-  if (!invokeStart)
+  if (!invokeStart) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
-  return
+    return
+  }
   if (pending.value.start)
     return
 
@@ -535,9 +536,10 @@ async function startService() {
 }
 
 async function stopService() {
-  if (!invokeStop)
+  if (!invokeStop) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
-  return
+    return
+  }
   if (pending.value.stop)
     return
 
@@ -560,9 +562,10 @@ async function stopService() {
 }
 
 async function applyConfig() {
-  if (!invokeApplyConfig)
+  if (!invokeApplyConfig) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
-  return
+    return
+  }
 
   const patch: Partial<Libp2pServiceConfig> = {
     enabled: enabled.value,
@@ -636,9 +639,10 @@ async function pingPeer(peerId: string) {
 }
 
 async function publishMessage(topic: string, data: string) {
-  if (!invokePublish)
+  if (!invokePublish) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
-  return
+    return
+  }
 
   try {
     await invokePublish({ topic, data })
@@ -650,9 +654,10 @@ async function publishMessage(topic: string, data: string) {
 }
 
 async function generateIdentity() {
-  if (!invokeIdentityGenerate)
+  if (!invokeIdentityGenerate) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
-  return
+    return
+  }
   // Minting is destructive: two racing calls would each write a keypair, and the
   // loser would overwrite the winner's identity.
   if (pending.value.generateIdentity)
@@ -677,9 +682,10 @@ async function generateIdentity() {
 }
 
 async function setNodeName(name: string) {
-  if (!invokeIdentitySetName)
+  if (!invokeIdentitySetName) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
-  return
+    return
+  }
   if (pending.value.setNodeName)
     return
 
@@ -728,9 +734,10 @@ async function copyNodeName() {
 }
 
 async function createPairing(ttlMinutes?: number, name?: string) {
-  if (!invokeCreatePairing)
+  if (!invokeCreatePairing) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
-  return
+    return
+  }
   if (pending.value.createPairing)
     return
 
@@ -756,9 +763,10 @@ function clearPairing() {
 }
 
 async function acceptPairing(input: string, alias?: string) {
-  if (!invokeAcceptPairing)
+  if (!invokeAcceptPairing) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
-  return
+    return
+  }
   if (pending.value.acceptPairing)
     return { error: 'A pairing is already being accepted' }
 
@@ -811,9 +819,10 @@ async function refreshPairedDevices() {
 }
 
 async function removePairedDevice(peerId: string) {
-  if (!invokeRemovePairedDevice)
+  if (!invokeRemovePairedDevice) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
-  return
+    return
+  }
   if (pending.value.removePairedDevice)
     return
 
@@ -835,9 +844,10 @@ async function removePairedDevice(peerId: string) {
 }
 
 async function updatePairedDeviceAlias(peerId: string, alias: string) {
-  if (!invokeUpdatePairedDeviceAlias)
+  if (!invokeUpdatePairedDeviceAlias) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
-  return
+    return
+  }
   if (pending.value.updatePairedDeviceAlias)
     return
 
