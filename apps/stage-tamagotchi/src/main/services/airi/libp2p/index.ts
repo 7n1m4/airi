@@ -321,6 +321,33 @@ let libp2pNode: Libp2pNode | null = null
 let currentPeerId: PeerId | null = null
 let currentConfig: Libp2pServiceConfig | null = null
 
+/**
+ * The narrow publisher surface other AIRI services may use to talk to the mesh.
+ *
+ * NOTICE: this exists so the friendship-mesh service
+ * (`services/airi/agentic/companion.ts`) can publish `airi/companion` shares
+ * without importing this module's private node state, and without any service
+ * being able to start or stop the node. `null` means the node is not running,
+ * which every caller must treat as "mesh unavailable" rather than an error.
+ */
+export interface Libp2pMeshPublisher {
+  /** Publish bytes to an already-allow-listed gossipsub topic. */
+  publish: (topic: string, data: Uint8Array) => Promise<void>
+  /** This node's peer id, used as the share's author. */
+  getPeerId: () => string
+}
+
+/** The current mesh publisher, or `null` when the node is down. */
+export function getLibp2pMeshPublisher(): Libp2pMeshPublisher | null {
+  if (!libp2pNode)
+    return null
+  const node = libp2pNode
+  return {
+    publish: (topic, data) => node.publish(topic, data),
+    getPeerId: () => node.getPeerId(),
+  }
+}
+
 async function buildStatus(): Promise<{
   running: boolean
   peerId?: string

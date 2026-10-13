@@ -399,6 +399,23 @@ export const SETTINGS_CATALOG_ITEMS: CatalogNodeItem[] = [
     kind: 'page',
   },
 
+  {
+    id: 'mod-agentic-os',
+    label: 'Agentic OS',
+    shortLabel: 'Agentic',
+    titleKey: 'settings.pages.modules.agentic-os.title',
+    descriptionKey: 'settings.pages.modules.agentic-os.description',
+    description: 'Presence-driven autonomous companion behaviour, memory-driven proactive action, and OS automation hooks',
+    glyph: '機',
+    clusterGroup: 'BRIDGES & SYNC 網',
+    route: '/settings/modules/agentic-os',
+    icon: 'i-solar:cpu-bolt-bold-duotone',
+    order: 7.5,
+    parentId: 'area-modules',
+    kind: 'page',
+    desktopOnly: true,
+  },
+
   // Cluster: BRIDGES & SYNC 網
   {
     id: 'mod-cloud-sync',

@@ -61,10 +61,11 @@ import { emitAppBeforeQuit, emitAppReady, emitAppWindowAllClosed } from './libs/
 import { setElectronMainDirname } from './libs/electron/location'
 import { flushAllConfigs } from './libs/electron/persistence'
 import { createI18n } from './libs/i18n'
-import { createLibp2pService, setupLibp2pService } from './services/airi/libp2p'
+import { createAgenticService, setupAgenticService } from './services/airi/agentic'
 import { createServerChannelService, setupServerChannel } from './services/airi/channel-server'
 import { setupDiscordService } from './services/airi/discord'
 import { createI18nService } from './services/airi/i18n'
+import { createLibp2pService, setupLibp2pService } from './services/airi/libp2p'
 import { createMcpServersService, setupMcpStdioManager } from './services/airi/mcp-servers'
 import { setupPluginHost } from './services/airi/plugins'
 import { createMicToggleService } from './services/airi/shortcuts/mic-toggle'
@@ -393,6 +394,11 @@ app.whenReady().then(async () => {
     build: async ({ dependsOn }) => setupLibp2pService(dependsOn),
   })
 
+  const agenticOs = injeca.provide('modules:agentic-os', {
+    dependsOn: { lifecycle },
+    build: async ({ dependsOn }) => setupAgenticService(dependsOn),
+  })
+
   const pluginHost = injeca.provide('modules:plugin-host', {
     dependsOn: { serverChannel },
     build: () => setupPluginHost(),
@@ -471,7 +477,7 @@ app.whenReady().then(async () => {
   })
 
   injeca.invoke({
-    dependsOn: { mainWindow, tray, serverChannel, pluginHost, mcpStdioManager, onboardingWindow: onboardingWindowManager, appConfig, i18n, captionWindow, stageWindow, splashWindow, chatWindow, customizerWindow, beatSync, libp2p },
+    dependsOn: { mainWindow, tray, serverChannel, pluginHost, mcpStdioManager, onboardingWindow: onboardingWindowManager, appConfig, i18n, captionWindow, stageWindow, splashWindow, chatWindow, customizerWindow, beatSync, libp2p, agenticOs },
     callback: (deps) => {
       createServerChannelService({ serverChannel: deps.serverChannel })
       createMcpServersService({ context, manager: deps.mcpStdioManager })
@@ -480,6 +486,7 @@ app.whenReady().then(async () => {
       createVisionService({ context })
       const stageMateService = createStageMateService({ appConfig: deps.appConfig })
       createLibp2pService({ context })
+      createAgenticService({ context })
       const sensorsServicePromise = createSensorsService({ context })
       setupDiscordService()
       const defaultBypassUrls = DEFAULT_CORS_BYPASS_URLS

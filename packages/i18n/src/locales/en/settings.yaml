@@ -236,6 +236,10 @@ settings:
         title: Laya Local
   pages:
     modules:
+      agentic-os:
+        title: 'Agentic OS'
+        description: 'Presence-driven autonomous companion behaviour, memory-driven
+          proactive action, and OS automation hooks'
       libp2p:
         title: 'Local Mesh (libp2p)'
         description: 'Peer-to-peer mesh networking, device pairing, and decentralized
@@ -354,3 +358,106 @@ settings:
       pairingCodeCopied: 'Pairing code copied'
       expiresAt: 'Expires'
       regeneratePairing: 'Regenerate'
+    agentic-os:
+      title: 'Agentic OS'
+      description: 'Autonomous companion behaviour driven by presence detection,
+        memory, and the System-1 decision engine'
+      autonomousMode: 'Autonomous Behaviour'
+      autonomousModeDesc: 'Choose when AIRI is allowed to act on its own memory
+        without you speaking first. Unlike proactive heartbeats, which check in while
+        you are at your desk, an autonomous cycle acts when the machine is considered
+        unattended.'
+      modeDisabled: 'Disabled'
+      modeDisabledDesc: 'AIRI never acts autonomously. Heartbeats and manual chat
+        work as usual.'
+      modeWhenAway: 'When away'
+      modeWhenAwayDesc: 'AIRI runs an autonomous cycle only when presence is derived
+        as away — extended idle with no interaction.'
+      modeAlways: 'Always'
+      modeAlwaysDesc: 'AIRI runs an autonomous cycle whenever the cooldown elapses,
+        including while you are present. Use with care: this is the interruption-heavy
+        mode.'
+      cooldown: 'Cooldown between cycles'
+      cooldownDesc: 'Minimum minutes between autonomous cycles. Range 5–30 minutes;
+        the default 15 keeps the behaviour calm.'
+      cooldownMinutes: '%{n} minutes'
+      runNow: 'Run one cycle now'
+      running: 'Running…'
+      presence: 'Presence'
+      presenceDesc: 'Derived from the same OS idle-time polling heartbeats use —
+        no second sensor loop. The companion acts only in the modes above.'
+      presenceActive: 'Active — you are interacting'
+      presenceIdle: 'Idle — quiet input, machine still attended'
+      presenceAway: 'Away — extended idle, unattended'
+      presenceScreenLocked: 'Screen locked'
+      presenceSleep: 'Sleeping'
+      derivableStates: 'Derived states'
+      unavailableStates: 'Not derivable on this system'
+      screenLockedUnavailable: 'Screen-lock state is not exposed to the renderer,
+        so it is never reported. The desktop main process does observe powerMonitor
+        lock events, but only to hide windows — no contract forwards it here.'
+      sleepUnavailable: 'Sleep/wake state is not exposed to the renderer, so it
+        is never reported. A genuine suspend freezes renderer timers, and no contract
+        forwards a resume event here.'
+      httpEndpoint: 'OS automation endpoint'
+      httpEndpointDesc: 'A loopback HTTP endpoint a local automation tool (Home
+        Assistant, cron, a script) can call to read presence or ask for one autonomous
+        cycle. Bound to 127.0.0.1 only — never to the LAN — and requires a bearer
+        token, so it is reachable only by a process on this machine that you configured.'
+      enableHttpEndpoint: 'Enable HTTP endpoint'
+      authToken: 'Bearer token'
+      authTokenDesc: 'Generated on first enable and never shown again after you
+        copy it. Send it as Authorization: Bearer <token>.'
+      rotateToken: 'Rotate token'
+      tokenRotated: 'Token rotated'
+      tokenCopied: 'Token copied'
+      endpointNotRunning: 'Endpoint is not running'
+      endpointAddress: 'Endpoint address'
+      token: 'Token'
+      presenceState: 'Presence state'
+      lastCycle: 'Last cycle'
+      never: 'Never'
+      decisionEngine: 'Decision engine'
+      decisionEngineConfigured: 'System-1 engine configured — autonomous choices
+        are made by the model.'
+      decisionEngineUnconfigured: 'System-1 engine not configured — autonomous
+        choices fall back to the local ranking policy.'
+      rankingPolicy: 'Ranking policy'
+      rankingPolicyDesc: 'How intentions read from your memory are ordered. Pillar
+        provenance 0.10–0.45, recency 0–0.25 (72h half-life), deadline pressure up
+        to 0.40, relationship intensity up to 0.30, then a 0.5^n multiplier per
+        duplicate kind so one theme cannot monopolise every cycle. Ties break by
+        newest memory, then by id.'
+      autonomousLog: 'Autonomous log'
+      autonomousLogDesc: 'Every autonomous action is recorded in the Event Ledger
+        with autonomous: true. Undo is not offered automatically — review what AIRI
+        did and carry on from there.'
+      noAutonomousEvents: 'No autonomous actions yet'
+      undoLast: 'Review last decision'
+      consent: 'Companion sharing consent'
+      consentDesc: 'Friend invitation shares a character card plus a bounded memory
+        snapshot. Sharing is off until you grant consent.'
+      consentNotGranted: 'Consent not granted'
+      consentGranted: 'Sharing enabled'
+      shareScope: 'Share scope'
+      scopeCardOnly: 'Card only (default)'
+      scopeCardAndEchoChips: 'Card and echo chips'
+      scopeCardAndLifetime: 'Card and lifetime archive'
+      grantConsent: 'Grant consent'
+      revokeConsent: 'Revoke consent'
+      consentGrantedToast: 'Companion sharing enabled'
+      consentRevokedToast: 'Companion sharing disabled'
+      guestBoundary: 'Guest boundary'
+      sharedCard: 'Shared card'
+      scopeChipsEffect: 'The guest sees your character card and up to 20 of your
+        echo chips — the distilled mood and memory chips this companion built.
+        Your lifetime archive stays private.'
+      scopeLifetimeEffect: 'The guest sees your card, echo chips, and the distilled
+        relational summary. Your raw conversation history is never included.'
+      guestBoundaryDesc: 'A visiting companion reads exactly the scope the host
+        consented to — there is no "read more" request to grant or refuse. The lifetime
+        summary is the distilled relational essence only, never the raw archive.'
+      shareNow: 'Share companion now'
+      shared: 'Companion shared'
+      shareFailed: 'Sharing failed'
+      meshNotRunning: 'Local mesh is not running'

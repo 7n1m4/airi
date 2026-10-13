@@ -3,7 +3,15 @@ import { computed, ref } from 'vue'
 
 import { storage } from '../database/storage'
 
-export type EventCategory = 'vision' | 'tools' | 'chat' | 'proactivity' | 'memory' | 'stage' | 'discord'
+/**
+ * Event categories for the ledger.
+ *
+ * `agentic` carries the autonomous-cycle records produced by
+ * `stores/agentic.ts`. Its entries always set `autonomous: true` in their
+ * payload so the "Autonomous log" UI and any consumer can tell a
+ * companion-initiated turn apart from a user- or heartbeat-initiated one.
+ */
+export type EventCategory = 'vision' | 'tools' | 'chat' | 'proactivity' | 'memory' | 'stage' | 'discord' | 'agentic'
 
 export interface AiriSystemEvent<T = Record<string, unknown>> {
   id: string
@@ -13,6 +21,12 @@ export interface AiriSystemEvent<T = Record<string, unknown>> {
   type: string
   source: string
   textSummary: string
+  /**
+   * True when the event was produced by the autonomous cycle rather than by a
+   * user turn, a heartbeat, or a module. Set from the payload's `autonomous`
+   * flag so it is queryable without re-reading the payload object.
+   */
+  autonomous?: boolean
   payload?: T
   inspectable?: boolean
 }
@@ -61,6 +75,12 @@ export const useEventLogStore = defineStore('event-log', () => {
     type: string
     source: string
     textSummary: string
+    /**
+     * Marks the event as produced by the autonomous cycle. The flag is hoisted
+     * onto the entry itself so the autonomous log can filter without knowing
+     * the payload shape.
+     */
+    autonomous?: boolean
     payload?: Record<string, unknown>
     inspectable?: boolean
   }): Promise<AiriSystemEvent> {
@@ -76,6 +96,7 @@ export const useEventLogStore = defineStore('event-log', () => {
       type: input.type,
       source: input.source,
       textSummary: input.textSummary,
+      autonomous: input.autonomous ?? input.payload?.autonomous === true,
       payload: input.payload,
       inspectable: input.inspectable ?? Boolean(input.payload && Object.keys(input.payload).length > 0),
     }
@@ -112,6 +133,9 @@ export const useEventLogStore = defineStore('event-log', () => {
     })
   })
 
+  /** Every event the autonomous cycle produced, newest first. */
+  const autonomousEvents = computed(() => events.value.filter(evt => evt.autonomous === true))
+
   function getRecentEventsText(count = 6): string {
     const recent = events.value.slice(0, count)
     if (recent.length === 0) {
@@ -136,6 +160,7 @@ export const useEventLogStore = defineStore('event-log', () => {
     isPaused,
     isInitialized,
     filteredEvents,
+    autonomousEvents,
     init,
     appendEvent,
     clearLog,
