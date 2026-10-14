@@ -1,9 +1,12 @@
 import type { AutonomousMode } from '@proj-airi/stage-shared/agentic'
 
+import type { AiriCard } from './modules/airi-card'
+
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DEFAULT_COOLDOWN_MINUTES, MAX_COOLDOWN_MINUTES, MIN_COOLDOWN_MINUTES, useAgenticStore } from './agentic'
+import { useAiriCardStore } from './modules/airi-card'
 import { usePresenceStore } from './presence'
 
 // The repo's established pattern for renderer store tests: the electron bridge
@@ -42,6 +45,24 @@ describe('agentic gate precedence', () => {
     presence.presence.state = state as typeof presence.presence.state
     presence.presence.reason = 'test'
     presence.presence.updatedAt = Date.now()
+  }
+
+  /**
+   * Seed the idle signal the nap derivation reads, and enable nap on the active
+   * card, so the companion is actually resting rather than merely configured to.
+   */
+  function enableNapping(idleSec: number) {
+    const cardStore = useAiriCardStore()
+    cardStore.cards.set('nap-card', {
+      id: 'nap-card',
+      name: 'Nap test',
+      extensions: { airi: { nap: { enabled: true } } },
+    } as unknown as AiriCard)
+    cardStore.activeCardId = 'nap-card'
+
+    const presence = usePresenceStore()
+    presence.addSignalProvider({ id: 'nap-test', readIdleSec: () => idleSec })
+    presence.writeIdleTimeSec(idleSec)
   }
 
   function agentic(mode: AutonomousMode) {
@@ -150,6 +171,57 @@ describe('agentic gate precedence', () => {
     const seconds = Number(result.reason?.replace('cooldown:', '').replace('s', ''))
     expect(Number.isNaN(seconds)).toBe(false)
     expect(seconds).toBeGreaterThan(0)
+  })
+
+  it('refuses a scheduled cycle while napping, even when presence is away', () => {
+    // A resting companion produces no cycle at all. Nap is checked before the
+    // cycle's own presence/cooldown logic, so this holds regardless of how
+    // favourable the other signals are (`away` + elapsed cooldown here).
+    setPresence('away')
+    const store = agentic('when-away')
+
+    enableNapping(600)
+
+    const presence = usePresenceStore()
+    expect(presence.afk).toBe(true)
+    expect(store.napState).toBe('napping')
+    expect(store.gate('scheduled')).toEqual({ allowed: false, reason: 'napping' })
+  })
+
+  it('reports napping rather than presence, because nap is checked first', () => {
+    // The precedence is the contract: `napping` must never be masked by, or
+    // masked by, the other reasons. When both would refuse, nap is the answer.
+    setPresence('idle')
+    const store = agentic('when-away')
+
+    enableNapping(600)
+
+    expect(store.gate('scheduled').reason).toBe('napping')
+  })
+
+  it('lets manual and http bypass nap, as they bypass presence and cooldown', () => {
+    // An explicit request is not an interruption, and a resting companion is
+    // still allowed to answer one.
+    setPresence('away')
+    const store = agentic('when-away')
+
+    enableNapping(600)
+
+    expect(store.gate('manual').allowed).toBe(true)
+    expect(store.gate('http').allowed).toBe(true)
+  })
+
+  it('still refuses manual and http while napping when the mode is disabled', () => {
+    // Mode is checked before nap, and mode is checked before every trigger.
+    setPresence('away')
+    const store = agentic('disabled')
+
+    enableNapping(600)
+
+    expect(store.napState).toBe('napping')
+    expect(store.gate('scheduled').reason).toBe('mode-disabled')
+    expect(store.gate('manual').reason).toBe('mode-disabled')
+    expect(store.gate('http').reason).toBe('mode-disabled')
   })
 })
 
