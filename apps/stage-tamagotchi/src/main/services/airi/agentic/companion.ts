@@ -12,6 +12,7 @@ import type { InferOutput } from 'valibot'
 import type { AgenticInvokeContext } from './index'
 
 import { Buffer } from 'node:buffer'
+import { randomBytes } from 'node:crypto'
 
 import { useLogg } from '@guiiai/logg'
 import { defineInvokeEventa, defineInvokeHandler } from '@moeru/eventa'
@@ -21,17 +22,22 @@ import {
   companionConsentChanged,
   companionServiceGetConsent,
   companionServiceHost,
+  companionServiceNapChatConsent,
+  companionServiceNapChatConsumeNonce,
+  companionServiceNapChatDecideProposal,
   companionServiceRecordObservedShare,
   companionServiceSetConsent,
   companionServiceShare,
   companionServiceVisit,
   companionShareReceived,
+  NAP_CHAT_EXPIRY_MS,
 } from '@proj-airi/stage-shared/agentic'
 import { BrowserWindow, ipcMain } from 'electron'
 import { boolean, number, object, optional, picklist } from 'valibot'
 
 import { createConfig } from '../../../libs/electron/persistence'
 import { getLibp2pMeshPublisher } from '../libp2p'
+import { listPairedDevices } from '../libp2p/pairing'
 
 const log = useLogg('agentic-companion').useGlobalConfig()
 
@@ -219,6 +225,123 @@ function observeShare(share: CompanionShareCard): void {
   }
 }
 
+// ── Nap-chat negotiation ─────────────────────────────────────────────────────
+//
+// NOTICE: nothing in this section opens, advances or closes a session — that is
+// Phase 3. What lives here is only the part of the *contract* that needs a
+// permission or a nonce, both of which are decided in the process that owns the
+// publisher: main reads the paired-device record the pairing flow wrote, and
+// main mints the nonce a peer's `accept` has to echo.
+
+/**
+ * Pending nonces this node minted for nap-chat proposals it has published.
+ *
+ * The nonce is minted by the *publisher* of a proposal and echoed by the peer's
+ * `accept`, so an entry here is a live authorisation to open exactly one
+ * session: a bystander that harvests an `accept` off the topic, or forges one
+ * for a proposal it never saw, cannot name a nonce this node did not mint. The
+ * cap bounds a peer that keeps a node minting; the age prune bounds one that
+ * keeps a nonce outstanding without ever echoing it.
+ */
+const MAX_PENDING_NAP_CHAT_NONCES = 64
+const pendingNapChatNonces = new Map<string, { peerId: string, sessionId: string, at: number }>()
+
+/** Drop nonces older than a session's silence bound, so a stall frees them. */
+function prunePendingNapChatNonces(): void {
+  const now = Date.now()
+  for (const [nonce, entry] of pendingNapChatNonces) {
+    if (now - entry.at > NAP_CHAT_EXPIRY_MS) {
+      pendingNapChatNonces.delete(nonce)
+    }
+  }
+}
+
+/** Evict oldest-inserted nonces until the map is back within its cap. */
+function capPendingNapChatNonces(): void {
+  while (pendingNapChatNonces.size > MAX_PENDING_NAP_CHAT_NONCES) {
+    const oldest = pendingNapChatNonces.keys().next()
+    if (oldest.done)
+      break
+    pendingNapChatNonces.delete(oldest.value)
+  }
+}
+
+/** Mint the nonce a peer's `accept` must echo for the proposal about to be sent. */
+export function mintNapChatNonce(peerId: string, sessionId: string): string {
+  prunePendingNapChatNonces()
+  // 128 bits of CSPRNG, base64url so the value survives JSON unchanged — the
+  // same shape the pairing token generator uses, for the same reason.
+  const nonce = randomBytes(16).toString('base64url')
+  pendingNapChatNonces.set(nonce, { peerId, sessionId, at: Date.now() })
+  capPendingNapChatNonces()
+  return nonce
+}
+
+/**
+ * Whether an inbound `accept` carries a nonce this node actually minted for that
+ * peer, consuming it so one nonce opens at most one session.
+ *
+ * `sessionId` is optional because the wire message carries both the nonce and
+ * the session id it belongs to; when given, the pair must match the mint
+ * together, so a nonce replayed under a different session id is a refusal.
+ * Returns `false` for a nonce this node never minted, or one already spent.
+ */
+export function consumeNapChatNonce(nonce: string, peerId: string, sessionId?: string): boolean {
+  const entry = pendingNapChatNonces.get(nonce)
+  if (entry === undefined)
+    return false
+  // Claimed before any further check, so a replayed message cannot observe the
+  // entry as still live.
+  pendingNapChatNonces.delete(nonce)
+  if (entry.peerId !== peerId)
+    return false
+  if (sessionId !== undefined && entry.sessionId !== sessionId)
+    return false
+  return true
+}
+
+/**
+ * This node's nap-chat consent for one peer, read from the paired-device record
+ * the pairing flow wrote.
+ *
+ * NOTICE: main is the only process that can answer, because main owns the only
+ * copy of that record; a renderer-side copy of the grant would be a second
+ * source of truth for a permission, which is exactly what single-entry-point
+ * pairing avoids. A peer with no record at all is a refusal, never a default
+ * grant, so "never paired" and "paired without the grant" answer identically.
+ */
+export async function napChatConsentFor(peerId: string): Promise<{ granted: boolean, reason?: string }> {
+  const device = (await listPairedDevices()).find(d => d.peerId === peerId)
+  if (device === undefined) {
+    return { granted: false, reason: 'not-paired' }
+  }
+  if (device.napChatGranted !== true) {
+    return { granted: false, reason: 'nap-chat-consent-not-granted' }
+  }
+  return { granted: true }
+}
+
+/**
+ * Decide whether this node may invite `peerId` into a nap-chat session, minting
+ * the nonce the peer's `accept` must echo when it may.
+ *
+ * NOTICE: a refusal sends *nothing*, and in particular no `decline` — a decline
+ * would confirm to the peer that this node is alive and listening, which is the
+ * one thing a gate must not spend. The reason exists for this node's own log and
+ * for the ledger, not for the wire.
+ */
+export async function decideNapChatProposal(peerId: string, sessionId: string): Promise<{
+  proposal: boolean
+  nonce?: string
+  reason?: string
+}> {
+  const consent = await napChatConsentFor(peerId)
+  if (!consent.granted) {
+    return { proposal: false, reason: consent.reason }
+  }
+  return { proposal: true, nonce: mintNapChatNonce(peerId, sessionId) }
+}
+
 // ── Publishing ────────────────────────────────────────────────────────────────
 
 /**
@@ -295,6 +418,29 @@ export async function createCompanionService(params: { context: AgenticInvokeCon
     observeShare(share)
     emitToAllWindows(companionShareReceived, share)
     return { recorded: true }
+  })
+
+  defineInvokeHandler(context, companionServiceNapChatConsent, async (input: { peerId: string }): Promise<{ granted: boolean, reason?: string }> => {
+    return napChatConsentFor(input.peerId)
+  })
+
+  // The proposal decision is the minting path, so it is main-side for the same
+  // reason the consent read is: main owns the only `listPairedDevices` record a
+  // renderer would otherwise have to copy. A refusal returns `{ proposal: false }`
+  // and sends nothing on the wire — see `decideNapChatProposal`'s NOTICE.
+  defineInvokeHandler(context, companionServiceNapChatDecideProposal, async (input: {
+    peerId: string
+    sessionId: string
+  }): Promise<{ proposal: boolean, nonce?: string, reason?: string }> => {
+    return decideNapChatProposal(input.peerId, input.sessionId)
+  })
+
+  defineInvokeHandler(context, companionServiceNapChatConsumeNonce, async (input: {
+    nonce: string
+    peerId: string
+    sessionId?: string
+  }): Promise<{ accepted: boolean }> => {
+    return { accepted: consumeNapChatNonce(input.nonce, input.peerId, input.sessionId) }
   })
 
   defineInvokeHandler(context, companionServiceShare, async (card: CompanionShareInput): Promise<{

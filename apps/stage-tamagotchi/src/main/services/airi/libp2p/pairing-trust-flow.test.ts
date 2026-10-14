@@ -14,6 +14,7 @@ import {
   vi,
 } from 'vitest'
 
+import { napChatConsentFor } from '../agentic/companion'
 import {
   acceptPairingInvitation,
   createPairingInvitation,
@@ -899,4 +900,134 @@ describe('pairing trust flow over real libp2p nodes', () => {
       await stopNodes(inviter, accepter)
     }
   }, 60_000)
+
+  /**
+   * The nap-chat grant, run over real nodes.
+   *
+   * NOTICE (root cause this guards): the grant lives on the paired-device record
+   * the pairing flow writes, and both halves of that flow have to carry it —
+   * the inviter, which is the only node that can answer a later consent read
+   * with a grant, and the accepter, which is the only node that decides for
+   * itself. A grant in one place and not the other would leave a pairing that
+   * looks consented on one side while the other refuses, which is a session that
+   * silently never opens.
+   *
+   * This is a *negative control* in both directions: no grant means the record
+   * exists but answers `granted: false`, and a grant means it answers `true`.
+   * The design's "no grant ⇒ no proposal" falls out of the first case, because a
+   * proposal is only ever sent after the consent read.
+   */
+  it('records the nap-chat grant the pairing flow carried, on both sides', async () => {
+    const inviter = await createTestNode()
+    const accepter = await createTestNode()
+
+    try {
+      await accepter.node.dial(inviter.node.getMultiaddrs())
+      await settleMesh(inviter, accepter)
+
+      // The pairing dialog's grant travels with the invitation the inviter
+      // issues, so an invitation created without one records nothing granted.
+      const { qrCode } = await createPairingInvitation(
+        inviter.node.getMultiaddrs().map(a => a.toString()),
+        inviter.peerId,
+        'Inviter Node',
+        30,
+        publisher(inviter),
+        true,
+      )
+      const invitation = parsePairingInvitation(qrCode)!
+
+      requireAccepted(await acceptPairingInvitation(invitation, accepter.peerId, undefined, dialer(accepter), true))
+      registerPendingAcceptedConfirmation(inviter.peerId, invitation.token)
+      await publishPairingRequest(invitation.token, accepter.peerId, publisher(accepter))
+
+      const requestOnWire = await waitForMessage(
+        inviter,
+        (topic, payload) => topic === PAIRING_REQUESTS_TOPIC && payload.includes(invitation.token),
+      )
+      const requestPayload = JSON.parse(requestOnWire) as Record<string, unknown>
+      const recorded = await recordPairingRequest(
+        readWireToken(requestPayload),
+        String(requestPayload.senderPeerId),
+        ['/ip4/127.0.0.1/tcp/1'],
+        undefined,
+        accepter.peerId,
+        publisher(inviter),
+      )
+      expect(recorded).not.toBeNull()
+
+      // ROOT CAUSE:
+      //
+      // The grant is only useful if the record the pairing flow wrote actually
+      // answers the consent read. Without the field surviving the merge onto
+      // both sides' records, a pairing that carries the grant would still read
+      // as unconsented and no proposal would ever be sent — the feature would
+      // look enabled while being unreachable.
+      //
+      // FIXED BY: the record carries `napChatGranted` from the pairing flow, and
+      // monotone merge preservation keeps it on the merged record.
+      const devices = await listPairedDevices()
+      expect(devices).toHaveLength(2)
+      expect(devices.every(d => d.napChatGranted === true)).toBe(true)
+
+      expect(await napChatConsentFor(accepter.peerId)).toEqual({ granted: true })
+      expect(await napChatConsentFor(inviter.peerId)).toEqual({ granted: true })
+    }
+    finally {
+      await stopNodes(inviter, accepter)
+    }
+  }, 60_000)
+
+  /**
+   * The other half of the consent gate: an invitation issued **without** the
+   * grant records a pairing that can never be invited.
+   *
+   * NOTICE: this is not a refusal to pair — a pairing without the grant is a
+   * perfectly ordinary pairing, which is the point. What is refused is every
+   * nap-chat proposal that would follow, because the consent read answers
+   * `granted: false` for a peer whose record carries no grant. A peer paired
+   * before the field existed answers the same, because absence reads as refusal
+   * rather than as a default permission.
+   */
+  it('records no grant when the pairing flow did not carry one, and consent refuses', async () => {
+    const inviter = await createTestNode()
+    const accepter = await createTestNode()
+
+    try {
+      await accepter.node.dial(inviter.node.getMultiaddrs())
+      await settleMesh(inviter, accepter)
+
+      const { qrCode } = await createPairingInvitation(
+        inviter.node.getMultiaddrs().map(a => a.toString()),
+        inviter.peerId,
+        'Inviter Node',
+        30,
+        publisher(inviter),
+      )
+      const invitation = parsePairingInvitation(qrCode)!
+
+      // An accepter that never passed the grant records its record without one.
+      requireAccepted(await acceptPairingInvitation(invitation, accepter.peerId, undefined, dialer(accepter)))
+
+      const consent = await napChatConsentFor(inviter.peerId)
+      expect(consent.granted).toBe(false)
+      expect(consent.reason).toBe('nap-chat-consent-not-granted')
+    }
+    finally {
+      await stopNodes(inviter, accepter)
+    }
+  }, 60_000)
+
+  /**
+   * A peer this node never paired with refuses, with a reason that says so.
+   *
+   * NOTICE: distinct from "paired but not granted" because the caller's log and
+   * ledger need to tell an unknown peer from a known one that declined. What is
+   * identical is the answer, which is what keeps the default direction deny.
+   */
+  it('refuses consent for a peer it never paired with', async () => {
+    const consent = await napChatConsentFor('12D3KooWneverPaired')
+    expect(consent.granted).toBe(false)
+    expect(consent.reason).toBe('not-paired')
+  })
 })

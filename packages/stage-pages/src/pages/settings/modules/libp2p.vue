@@ -42,6 +42,7 @@ const {
   pairedDevices,
   pairing,
   isRunning,
+  pending,
 } = storeToRefs(libp2pStore)
 
 const topicOptions = computed(() => topics.value.map(topic => ({ label: topic, value: topic })))
@@ -60,6 +61,19 @@ const pairingInput = ref('')
 const pairingAlias = ref('')
 const isAcceptingPairing = ref(false)
 const isCreatingPairing = ref(false)
+
+/**
+ * The nap-chat consent, decided once per pairing and never re-asked.
+ *
+ * It lives on the page, above the create-pairing buttons, because the create
+ * action is what mints the invitation the consent has to ride on — the pairing
+ * dialog does not exist yet at that moment. Unchecked is the default and it is a
+ * *refusal*, not a deferral: an untouched page carries `false` so declining means
+ * the pairing simply does not happen. The dialog's copy is bound to this same
+ * ref, so the acceptor answers the same control, and it is reset on dialog close
+ * so a later pairing starts from a clean unchecked state.
+ */
+const napChatGranted = ref(false)
 
 /** In-progress alias edits, keyed by peerId; absent key means "unchanged". */
 const aliasDrafts = reactive<Record<string, string>>({})
@@ -107,8 +121,18 @@ async function handleCreatePairing() {
 
   isCreatingPairing.value = true
   try {
-    await libp2pStore.createPairing(30, identity.value.name)
-    isPairingDialogOpen.value = true
+    const result = await libp2pStore.createPairing(30, identity.value.name, napChatGranted.value)
+    // A refusal (`napChatGranted: false`) and a failed create both come back as
+    // non-successes, and only the first carries a reason: the dialog opens on the
+    // invitation alone, so opening it here would show the previous invitation.
+    if (result && 'error' in result) {
+      toast.error(`${t('settings.modules.libp2p.pairingFailed')}: ${result.error}`)
+      return
+    }
+    if (!result)
+      return
+
+    openPairingDialog()
   }
   catch (err) {
     console.error('[Libp2pPage] Failed to create pairing:', err)
@@ -128,7 +152,7 @@ async function handleAcceptPairing() {
 
   isAcceptingPairing.value = true
   try {
-    const result = await libp2pStore.acceptPairing(input, pairingAlias.value.trim() || undefined)
+    const result = await libp2pStore.acceptPairing(input, pairingAlias.value.trim() || undefined, napChatGranted.value)
     if ('error' in result) {
       toast.error(`${t('settings.modules.libp2p.pairingFailed')}: ${result.error}`)
       return
@@ -151,6 +175,19 @@ async function handleAcceptPairing() {
 function handleClosePairing() {
   libp2pStore.clearPairing()
   isPairingDialogOpen.value = false
+  napChatGranted.value = false
+}
+
+/**
+ * Open the dialog on the invitation just minted.
+ *
+ * The consent is NOT reset here: it was already given when the invitation was
+ * created, and `handleCreatePairing` passed it into the QR that is now on screen.
+ * Resetting on open would present a control whose answer no longer matches the
+ * invitation the user is looking at.
+ */
+function openPairingDialog() {
+  isPairingDialogOpen.value = true
 }
 
 /** Discard the expired/used invitation and mint a fresh one. */
@@ -496,10 +533,17 @@ onBeforeUnmount(() => {
               <p class="font-medium">
                 {{ t('settings.modules.libp2p.connectedPeers') }} ({{ connectedPeers.length }})
               </p>
-              <Button variant="primary" :disabled="!isRunning || !identity" @click="handleCreatePairing">
+              <Button variant="primary" :disabled="!isRunning || !identity || pending.createPairing" @click="handleCreatePairing">
                 {{ t('settings.modules.libp2p.pairNewDevice') }}
               </Button>
             </div>
+
+            <!-- Consent for the invitation the button above mints, so it is answerable before it is issued. -->
+            <FieldCheckbox
+              v-model="napChatGranted"
+              :label="t('settings.modules.libp2p.napChatGrantLabel')"
+              :description="t('settings.modules.libp2p.napChatGrantDesc')"
+            />
 
             <div v-if="connectedPeers.length" class="flex flex-col gap-2">
               <div
@@ -558,10 +602,17 @@ onBeforeUnmount(() => {
               <p class="font-medium">
                 {{ t('settings.modules.libp2p.pairedDevices') }} ({{ pairedDevices.length }})
               </p>
-              <Button variant="secondary" size="sm" :loading="isCreatingPairing" :disabled="!isRunning || !identity" @click="handleCreatePairing">
+              <Button variant="secondary" size="sm" :loading="isCreatingPairing" :disabled="!isRunning || !identity || pending.createPairing" @click="handleCreatePairing">
                 {{ t('settings.modules.libp2p.pairNewDevice') }}
               </Button>
             </div>
+
+            <!-- Same ref as the consent above the peers' button: the grant must be answerable before either button mints an invitation. -->
+            <FieldCheckbox
+              v-model="napChatGranted"
+              :label="t('settings.modules.libp2p.napChatGrantLabel')"
+              :description="t('settings.modules.libp2p.napChatGrantDesc')"
+            />
 
             <div v-if="pairedDevices.length" class="flex flex-col gap-2">
               <div

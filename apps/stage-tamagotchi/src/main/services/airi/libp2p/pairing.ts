@@ -73,6 +73,10 @@ const PairedDeviceSchema = strictObject({
   pairedAt: number(),
   lastSeen: number(),
   trusted: boolean(),
+  // Absent means not granted: a record written before this field existed, or one
+  // whose pairing never carried the grant, must read as a refusal. A default of
+  // `true` here would turn every legacy record into a permission nobody gave.
+  napChatGranted: optional(boolean()),
 })
 
 type PairedDevice = InferOutput<typeof PairedDeviceSchema>
@@ -95,6 +99,18 @@ interface PairingInvitation {
   token: string
   name: string
   expiresAt: number
+  /**
+   * Whether the inviter's pairing flow carried the nap-chat grant, which is
+   * what the peer this invitation pairs with will be recorded as.
+   *
+   * NOTICE: this lives on the *inviter's own* invitation record, not on the wire
+   * — `publishPairingInvite` still publishes exactly the token-free `DiscoveredInvite`
+   * fields, so a grant cannot be asserted by a peer that discovered the invite.
+   * It is read back when the accepter's request arrives, because the request
+   * names only a token: the invitation behind that token is the only record of
+   * what the user chose when the QR was created.
+   */
+  napChatGranted?: boolean
 }
 
 const PairingInvitationSchema = strictObject({
@@ -103,6 +119,8 @@ const PairingInvitationSchema = strictObject({
   token: pipe(string(), minLength(1), maxLength(MAX_TOKEN_LENGTH)),
   name: pipe(string(), maxLength(MAX_ALIAS_LENGTH)),
   expiresAt: pipe(number(), finite()),
+  // Absent on a legacy invitation, which is the same as not granted.
+  napChatGranted: optional(boolean()),
 })
 
 /**
@@ -392,6 +410,13 @@ async function writePairedDevices(devices: PairedDevice[]): Promise<void> {
  * confirmed it, and an empty address list never overwrites a real one. Re-pair
  * used to spread the new record over the old, which re-trusted a device the
  * user had untrusted and dropped a working address list.
+ *
+ * `napChatGranted` follows the same monotone rule as `trusted`: a grant once
+ * made survives a record merge that carries none (an out-of-order confirmation,
+ * or a merge driven by a code path that never had the flag to hand). It can only
+ * be set going *up*, never cleared, so a "re-sync" of an existing record cannot
+ * drop a permission the user gave — and it cannot be acquired here either, since
+ * only the pairing flow passes a value that would raise it.
  */
 function mergePairedDevice(existing: PairedDevice, incoming: PairedDevice, trustConfirmed: boolean): PairedDevice {
   return {
@@ -401,6 +426,7 @@ function mergePairedDevice(existing: PairedDevice, incoming: PairedDevice, trust
     pairedAt: existing.pairedAt,
     lastSeen: incoming.lastSeen,
     trusted: existing.trusted || trustConfirmed,
+    napChatGranted: existing.napChatGranted === true || incoming.napChatGranted === true,
   }
 }
 
@@ -677,6 +703,13 @@ async function publishPairingAccepted(
  * `airi/pairing/invites` and resolved by `findDiscoveredInviteByMagicCode`,
  * carries no token, and can show a peer what to scan but never pair with it.
  * The token that authorises the pairing only leaves this node as the QR payload.
+ *
+ * `napChatGranted` is the nap-chat consent the user chose in the pairing dialog
+ * for the device this invitation will pair with. It is remembered only on the
+ * invitation this node holds (never published — see `publishPairingInvite`), and
+ * it lands on the peer's `PairedDevice` record when that peer's request arrives,
+ * because a request carries nothing but a token. Omitting it records the peer
+ * without the grant, which is the same as refusing it.
  */
 export async function createPairingInvitation(
   localMultiaddrs: string[],
@@ -684,6 +717,7 @@ export async function createPairingInvitation(
   name: string,
   ttlMinutes: number,
   publisher: PairingPublisher,
+  napChatGranted?: boolean,
 ): Promise<{ invitation: PairingInvitation, qrCode: string, magicCode: string }> {
   const token = generatePairingToken()
   const magicCode = generateMagicCode()
@@ -695,6 +729,10 @@ export async function createPairingInvitation(
     token,
     name,
     expiresAt,
+    // The grant is remembered only on this node's invitation record. A peer that
+    // accepts the invitation is recorded with exactly this choice, because the
+    // pairing request it later sends names only a token and carries nothing else.
+    ...(napChatGranted !== undefined ? { napChatGranted } : {}),
   }
 
   issuePairingToken(token, invitation)
@@ -748,12 +786,19 @@ async function dialWithinTimeout(node: PairingDialer, multiaddrs: string[]): Pro
  * to `true` is `handlePairingAccepted`, driven by the inviter's explicit
  * confirmation on `airi/pairing/accepted`, keyed by the token registered through
  * `registerPendingAcceptedConfirmation`.
+ *
+ * `napChatGranted` is this node's own half of the nap-chat consent, chosen in
+ * the pairing dialog alongside the alias. Omitting it records the device without
+ * the grant, which is the default-deny direction; the caller is
+ * `libp2pServiceAcceptPairing`, which refuses to reach this function at all when
+ * the dialog refused.
  */
 export async function acceptPairingInvitation(
   parsed: ParsedPairingInvitation,
   localPeerId: string,
   alias: string | undefined,
   node: PairingDialer,
+  napChatGranted?: boolean,
 ): Promise<AcceptPairingResult> {
   if (parsed.token.length === 0) {
     return { error: 'This pairing invitation carries no token, so it cannot be accepted. A QR payload is required.' }
@@ -798,6 +843,10 @@ export async function acceptPairingInvitation(
     pairedAt: Date.now(),
     lastSeen: Date.now(),
     trusted: false,
+    // The accepter's own choice, made in the same dialog that produced the QR it
+    // scanned, so it is recorded on this side from the caller rather than read
+    // back from anything the other device sent.
+    ...(napChatGranted !== undefined ? { napChatGranted } : {}),
   }, false)
 
   return { peerId: parsed.peerId, alias: resolvedAlias, multiaddrs: parsed.multiaddrs, token: parsed.token }
@@ -970,6 +1019,9 @@ export async function recordPairingRequest(
       pairedAt: Date.now(),
       lastSeen: Date.now(),
       trusted: true,
+      // The inviter's own choice for this pairing, read back off the invitation
+      // the consumed token resolves to — the only place it was ever written.
+      ...(invitation.napChatGranted !== undefined ? { napChatGranted: invitation.napChatGranted } : {}),
     }
 
     await addPairedDevice(device, true)

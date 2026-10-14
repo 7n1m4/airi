@@ -2,7 +2,7 @@ import type { CompanionConsent, CompanionShareCard, CompanionShareScope } from '
 
 import { describe, expect, it } from 'vitest'
 
-import { narrowerScope, packGuestAccess } from './companion'
+import { consumeNapChatNonce, decideNapChatProposal, mintNapChatNonce, narrowerScope, packGuestAccess } from './companion'
 
 /**
  * The share a host publishes to `airi/companion`, exactly as
@@ -157,5 +157,94 @@ describe('consent gating of a publish', () => {
 
     expect(result.shared).toBe(true)
     expect(result.scope).toBe('card-and-echo-chips')
+  })
+})
+
+/**
+ * The nap-chat consent gate, exercised as the decision `companion.ts` makes
+ * before a proposal is published.
+ *
+ * NOTICE (root cause this guards): a nap-chat proposal is the only thing that
+ * reaches another device, and it is reachable only through the pairing record
+ * the pairing flow wrote. A peer that record does not name is a refusal, and a
+ * record without the grant is the same refusal — so a peer that was never
+ * paired, and a peer paired before the grant field existed, answer identically.
+ * The default direction is deny: an absent grant must never read as a
+ * permission, which is the same discipline the share gate's `!granted` holds.
+ *
+ * The peer ids below are deliberately never written into the paired-device
+ * store, because that is the case being pinned: "no record" and "record without
+ * the grant" must both refuse. The record-writing half lives in the pairing
+ * suite, which runs real nodes.
+ */
+describe('nap-chat consent gating of a proposal', () => {
+  /** One peer id this node has never paired with. */
+  const peerId = '12D3KooWpeer'
+
+  it('refuses to propose at all when the peer is not paired', async () => {
+    const decision = await decideNapChatProposal(peerId, 'session-1')
+
+    expect(decision.proposal).toBe(false)
+    expect(decision.reason).toBe('not-paired')
+    // The critical part: no nonce is minted, so there is nothing for a peer's
+    // accept to echo and no session can open through this decision.
+    expect(decision.nonce).toBeUndefined()
+  })
+})
+
+/**
+ * The nonce as an authorisation rather than an echo.
+ *
+ * An `accept` is what opens a session, and the only thing that makes it an
+ * authorisation is that it names a nonce this node minted for that peer. So a
+ * bystander that harvests an `accept` off `airi/companion.chat` and replays it,
+ * or composes one for a proposal it never saw, must be refused — and refused
+ * even when it names a *real* nonce belonging to a different peer, because a
+ * nonce binds to the peer it was minted for.
+ */
+describe('nap-chat nonce authorisation', () => {
+  const peerId = '12D3KooWpeer'
+  const otherPeerId = '12D3KooWother'
+
+  it('accepts the nonce the node minted, for the peer it was minted for', () => {
+    const nonce = mintNapChatNonce(peerId, 'session-1')
+
+    expect(consumeNapChatNonce(nonce, peerId)).toBe(true)
+  })
+
+  /**
+   * NOTICE: one nonce opens at most one session. Without consumption the same
+   * nonce could authorise a second session against the same peer, and the
+   * proposal's bounds (turn cap, duration) would be negotiated twice off one
+   * authorisation.
+   */
+  it('refuses a nonce that was already spent', () => {
+    const nonce = mintNapChatNonce(peerId, 'session-1')
+
+    expect(consumeNapChatNonce(nonce, peerId)).toBe(true)
+    expect(consumeNapChatNonce(nonce, peerId)).toBe(false)
+  })
+
+  it('refuses a nonce minted for one peer when another peer echoes it', () => {
+    const nonce = mintNapChatNonce(peerId, 'session-1')
+
+    expect(consumeNapChatNonce(nonce, otherPeerId)).toBe(false)
+  })
+
+  it('refuses a nonce replayed under a different session id', () => {
+    const nonce = mintNapChatNonce(peerId, 'session-1')
+
+    expect(consumeNapChatNonce(nonce, peerId, 'session-2')).toBe(false)
+    // The refusal is fail-closed: the nonce is claimed before its session is
+    // checked, so a wrong-session replay burns it rather than staying usable.
+    // A one-shot nonce that survived a mismatched replay could be retried until
+    // it matched, and the guard would then be a timing oracle rather than a
+    // binding.
+    expect(consumeNapChatNonce(nonce, peerId, 'session-1')).toBe(false)
+  })
+
+  it('refuses a nonce this node never minted, however plausible it looks', () => {
+    expect(consumeNapChatNonce('a-nonce-someone-else-made-up', peerId)).toBe(false)
+    expect(consumeNapChatNonce('', peerId)).toBe(false)
   })
 })
