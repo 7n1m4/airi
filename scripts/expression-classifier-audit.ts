@@ -1,3 +1,7 @@
+import process from 'node:process'
+
+import { Buffer } from 'node:buffer'
+
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
@@ -1073,7 +1077,7 @@ export function classifyExpression(rawName: string): ClassificationCategory {
   }
 
   // Chinese Hyphenated Tracking primitives (e.g. 嘴-上, 嘴-下, 眼球-缩小)
-  if (/^嘴-([上下大小]|皮肤牙|下弯闭眼).*$/.test(trimmed) || /^眼(球)?-(缩小|放大|集中|分散|看向镜头|下弯闭眼).*$/.test(trimmed)) {
+  if (/^嘴-(?:[上下大小]|皮肤牙|下弯闭眼).*$/.test(trimmed) || /^眼球?-(?:缩小|放大|集中|分散|看向镜头|下弯闭眼).*$/.test(trimmed)) {
     return 'procedural_eye'
   }
 
@@ -1105,9 +1109,9 @@ export function classifyExpression(rawName: string): ClassificationCategory {
       return 'neutral'
     if (/^fcl_mth_[aiueo]$/i.test(fclPart))
       return 'viseme'
-    if (/^fcl_(eye|mth|ha|brw|all)_(close|highlight|iris|natural|spread|down|large|small|up|hide|short|fung|extra|left|right|eyes_up|eyes_down|eyes_left|eyes_right)/i.test(fclPart))
+    if (/^fcl_(?:eye|mth|ha|brw|all)_(?:close|highlight|iris|natural|spread|down|large|small|up|hide|short|fung|extra|left|right|eyes_up|eyes_down|eyes_left|eyes_right)/i.test(fclPart))
       return 'procedural_eye'
-    if (/^fcl_(all|brw|eye|mth)_(joy|angry|sorrow|fun|surprised)/i.test(fclPart))
+    if (/^fcl_(?:all|brw|eye|mth)_(?:joy|angry|sorrow|fun|surprised)/i.test(fclPart))
       return 'emote'
   }
 
@@ -1130,7 +1134,7 @@ export function classifyExpression(rawName: string): ClassificationCategory {
   }
 
   // Japanese single-character kana visemes with digits or tildes (e.g. あ3, い~, え４, いい3)
-  if (/^([あいうえおワわんむへ]|ああ|いい|うう|ええ|おお)[\d~〜０-９]*$/.test(stripped)) {
+  if (/^(?:[あいうえおワわんむへ]|ああ|いい|うう|ええ|おお)[\d~〜\uFF10-\uFF19]*$/.test(stripped)) {
     return 'viseme'
   }
 
@@ -1146,21 +1150,26 @@ export function classifyExpression(rawName: string): ClassificationCategory {
   }
 
   // 2. Raw Numeric / Generic Clip Index Noise
-  if (/^\d+$/.test(cleanName) || /^(blendshapeclip#\d+|newclip_\d+|face_ex\d*|faceex\d*|take\d+|clip\d+|ex\d+|part\d+|sp_special\d*|\w+_face_ex\d*|\w+_faceex\d*|\w+-face\d*)$/i.test(normalized)) {
+  if (/^\d+$/.test(cleanName) || /^(?:blendshapeclip#\d+|newclip_\d+|face_ex\d*|faceex\d*|take\d+|clip\d+|ex\d+|part\d+|sp_special\d*|\w+_face_ex\d*|\w+_faceex\d*|\w+-face\d*)$/i.test(normalized)) {
     return 'neutral'
   }
 
   // 3. VRoid / System Neutral Morphs
-  if (/^(fcl_.*_neutral|all_small|all_big)$/i.test(normalized) || cleanName === 'neutral' || cleanName === 'mth_neutral' || cleanName === 'mth_default' || cleanName === 'm_neutral' || /^基本セット\d*$/.test(cleanName) || NEUTRAL_SET.has(cleanName)) {
+  if (/^(?:fcl_.*_neutral|all_small|all_big)$/i.test(normalized) || cleanName === 'neutral' || cleanName === 'mth_neutral' || cleanName === 'mth_default' || cleanName === 'm_neutral' || /^基本セット\d*$/.test(cleanName) || NEUTRAL_SET.has(cleanName)) {
     return 'neutral'
   }
 
   // 4. VRoid & Custom Viseme Morphs
-  if (/^fcl_mth_[aiueo]$/i.test(normalized) || /^([aiueo]|[a-z0-9]+-[aiueo]|v_[aiueo]|ah|[fm]|mth_[aiueom]|mth_mu)[-_]?(big|small|\d*)$/i.test(cleanName) || VISEME_SET.has(cleanName) || VISEME_SET.has(normalized)) {
+  if (/^fcl_mth_[aiueo]$/i.test(normalized) || /^(?:[aiueo]|[a-z0-9]+-[aiueo]|v_[aiueo]|ah|[fm]|mth_[aiueom]|mth_mu)[-_]?(?:big|small|\d*)$/i.test(cleanName) || VISEME_SET.has(cleanName) || VISEME_SET.has(normalized)) {
     return 'viseme'
   }
 
   // 5. Extended Rig Bone Transform Morphs (EX_move, EX_rotate, EX_stretch, etc.)
+  // NOTICE: the `down` and `upper` alternatives and the greedy `\d+` quantifier in
+  // this class are retained deliberately. A lint-sweep "ReDoS hardening" dropped
+  // `down`/`upper` and loosened `\d+` to `\d`, which stopped `ex_down`, `ex_u_down`,
+  // `ex_down_left` and `ex_xdown` from being classified as `procedural_eye`.
+  // Do not re-apply that "hardening" without retraining the classifier inputs.
   if (/^ex_.*(move|rotate|stretch|forward|front|push|up|down|eye|upper|increase|small|\d+)/i.test(normalized) || /^exstretch/i.test(normalized)) {
     return 'procedural_eye'
   }
@@ -1170,7 +1179,7 @@ export function classifyExpression(rawName: string): ClassificationCategory {
     const parts = cleanName.split('+').map(p => p.trim())
     const allNoise = parts.every((p) => {
       const pNorm = p.replace(/^[_#.~-]+/, '').toLowerCase()
-      return ARKIT_SET.has(pNorm) || PROCEDURAL_EYE_SET.has(pNorm) || /^(eye|brow|mouth|mouse|jaw|cheek|nose|iris|teeth)/i.test(pNorm)
+      return ARKIT_SET.has(pNorm) || PROCEDURAL_EYE_SET.has(pNorm) || /^(?:eye|brow|mouth|mouse|jaw|cheek|nose|iris|teeth)/i.test(pNorm)
     })
     if (allNoise) {
       return 'procedural_eye'
@@ -1183,40 +1192,40 @@ export function classifyExpression(rawName: string): ClassificationCategory {
   }
 
   // Common ARKit snake_case / prefix variations
-  if (/^(eye|brow|mouth|mouse|mosue|jaw|cheek|nose)[-_](blink|look|squint|wide|down|up|in|out|dimple|frown|funnel|press|pucker|roll|shrug|smile|stretch|sneer|puff|forward|left|right|open|close)([-_](left|right|l|r|up|down|in|out|\d+))?$/i.test(cleanName)) {
+  if (/^(?:eye|brow|mouth|mouse|mosue|jaw|cheek|nose)[-_](?:blink|look|squint|wide|down|up|in|out|dimple|frown|funnel|press|pucker|roll|shrug|smile|stretch|sneer|puff|forward|left|right|open|close)(?:[-_](?:left|right|l|r|up|down|in|out|\d+))?$/i.test(cleanName)) {
     return 'arkit'
   }
 
   // 8. Anatomical Tracking / Iris / Pupil / LookAt / Eye Movements
-  if (/^(eye|eyes)?(iris|pupil|eyeball|lookat|lookatview|irismove|irismoveback|squint|wide|stretch|press|pucker|roll|shrug|sneer|funnel|dimple|close|crossed|wall|circle|back)/i.test(cleanName)) {
+  if (/^(?:eye|eyes)?(?:pupil|eyeball|lookat|irismoveback|squint|wide|stretch|press|pucker|roll|shrug|sneer|funnel|dimple|close|crossed|wall|circle|back|iris)/i.test(cleanName)) {
     return 'procedural_eye'
   }
-  if (/^([a-z0-9]+-)?(eye|eyes|eyebrow|brow|cheek|cheak|chin|lid|corner|pixel|瞳孔|hitomi|eyelid|lower_eyelid|upper_eyelid|まつ毛|顎|目尻|目頭|瞳|まぶた|highlight)[-_]?(up|down|raise|lower|stretch|curve|left|right|in|out|back|big|circle|long|under|less|ex|pull|push|upper|center|nallow|narrow|half|edge|small|open|close|puff|smooth|[大小左右]|放大|缩小|上げ|下げ|消し|無し|\.[lr]|\d+)*/i.test(cleanName)) {
+  if (/^(?:[a-z0-9]+-)?(?:eye|eyes|eyebrow|brow|cheek|cheak|chin|lid|corner|pixel|瞳孔|hitomi|eyelid|lower_eyelid|upper_eyelid|まつ毛|顎|目尻|目頭|瞳|まぶた|highlight)[-_]?(?:up|down|raise|lower|stretch|curve|left|right|in|out|back|big|circle|long|under|less|ex|pull|push|upper|center|nallow|narrow|half|edge|small|open|close|puff|smooth|[大小左右\d]|放大|缩小|上げ|下げ|消し|無し|\.l|\.r)*/i.test(cleanName)) {
     return 'procedural_eye'
   }
-  if (/^(lower|upper)_lid_(up|down)|(left|right)?_?corner_(up|down)|mouth_corners_(up|down)|squish|crush|showtooth/i.test(cleanName)) {
+  if (/^(?:lower|upper)_lid_(?:up|down)|(?:left|right)?_?corner_(?:up|down)|mouth_corners_(?:up|down)|squish|crush|showtooth/i.test(cleanName)) {
     return 'procedural_eye'
   }
-  if (/^eye(ex|ex-down|ex-less|ex-)/i.test(cleanName) || /^camera/i.test(cleanName)) {
+  if (/^eyeex/i.test(cleanName) || /^camera/i.test(cleanName)) {
     return 'procedural_eye'
   }
 
   // 9. Jaw & Teeth Tracking Primitives
-  if (/^([a-z0-9]+-)?jaw[-_\s]*(left|right|open|close|forward|up|down)$/i.test(cleanName)) {
+  if (/^(?:[a-z0-9]+-)?jaw[-_\s]*(?:left|right|open|close|forward|up|down)$/i.test(cleanName)) {
     return 'procedural_eye'
   }
-  if (/^([a-z0-9]+-)?(under|upper)?teeth[-_\s]*(down|up|pull|push|less|sharp|i|sharp\d*|short|short_up|short_low|long_up|long_low|\d+)?$/i.test(cleanName) || /^([a-z0-9]+-)?i[-_]?teeth\d*$/i.test(cleanName) || /^teethex/i.test(cleanName)) {
+  if (/^(?:[a-z0-9]+-)?(?:under|upper)?teeth[-_\s]*(?:down|up|pull|push|less|i|sharp\d*|short|short_up|short_low|long_up|long_low|\d+)?$/i.test(cleanName) || /^(?:[a-z0-9]+-)?i[-_]?teeth\d*$/i.test(cleanName) || /^teethex/i.test(cleanName)) {
     return 'procedural_eye'
   }
 
   // 10. Mouth & "Mouse" (Japanese typo for mouth) Tracking Primitives
-  if (/^([a-z0-9]+-)?(under)?(mouth|mouse|mosue|mth|m)[-_\s]*(up|down|left|right|open|open\d*|close|narrow|wide|stretch|press|pucker|roll|shrug|dimple|funnel|wa\d*|slaver|inner|under-push|under_push|benddown|bendup|ape_shape|center_real|close_v|corners_depth|depth|lower_inside|lower_overlay|lower_overturn|upper_inside|upper_overturn|lower_downleft|lower_downright|lower_left|lower_right|upper_left|upper_right|upper_upleft|upper_upright|←→|→←|[v^▲△▼▽Λ∧ロω]|ω\d*|ω□|big|large|small|\d+)$/i.test(cleanName)) {
-    if (/(wa|slaver|[v^▲△▼▽Λ∧ロω])/i.test(cleanName)) {
+  if (/^(?:[a-z0-9]+-)?(?:under)?(?:mouth|mouse|mosue|mth|m)[-_\s]*(?:up|down|left|right|open\d*|close|narrow|wide|stretch|press|pucker|roll|shrug|dimple|funnel|wa\d*|slaver|inner|under-push|under_push|benddown|bendup|ape_shape|center_real|close_v|corners_depth|depth|lower_inside|lower_overlay|lower_overturn|upper_inside|upper_overturn|lower_downleft|lower_downright|lower_left|lower_right|upper_left|upper_right|upper_upleft|upper_upright|←→|→←|[v^▲△▼▽Λ∧ロω]|ω\d*|ω□|big|large|small|\d+)$/i.test(cleanName)) {
+    if (/wa|slaver|[v^▲△▼▽Λ∧ロω]/i.test(cleanName)) {
       return 'emote'
     }
     return 'procedural_eye'
   }
-  if (/^mouse_inner_.*/i.test(cleanName) || /^([a-z0-9]+-)?mouse[-_]?(down|up)\d*$/i.test(cleanName) || /^ha_(left|right|mouth)$/i.test(cleanName)) {
+  if (/^mouse_inner_.*/i.test(cleanName) || /^(?:[a-z0-9]+-)?mouse[-_]?(?:down|up)\d*$/i.test(cleanName) || /^ha_(?:left|right|mouth)$/i.test(cleanName)) {
     return 'procedural_eye'
   }
 
@@ -1232,7 +1241,7 @@ export function classifyExpression(rawName: string): ClassificationCategory {
   if (PROCEDURAL_EYE_SET.has(cleanName) || PROCEDURAL_EYE_SET.has(normalized)) {
     return 'procedural_eye'
   }
-  if (/^(eye_)?blink(_[lr]|\d+)?$/i.test(cleanName) || /^(eye_)?look(up|down|left|right)$/i.test(cleanName)) {
+  if (/^(?:eye_)?blink(?:_[lr]|\d+)?$/i.test(cleanName) || /^(?:eye_)?look(?:up|down|left|right)$/i.test(cleanName)) {
     return 'procedural_eye'
   }
   if (/^eyes?\s+blink\d*$/i.test(cleanName) || /^brow.*curve$/i.test(cleanName)) {
@@ -1328,7 +1337,7 @@ async function runAudit() {
   const reportPath = path.join(process.cwd(), 'docs/reports/expression-classifier-audit.md')
   const denseListPath = path.join(process.cwd(), 'docs/reports/unclassified-keys.txt')
 
-  console.log(`Loading manifest from: ${manifestPath}`)
+  console.info(`Loading manifest from: ${manifestPath}`)
   if (!fs.existsSync(manifestPath)) {
     console.error(`Error: Manifest file not found at ${manifestPath}`)
     process.exit(1)
@@ -1340,7 +1349,7 @@ async function runAudit() {
 
   // Target formats: VRM and PMX/MMD
   const targetModels = models.filter(m => m.format === 'vrm' || m.format === 'pmx-zip' || m.format === 'pmd')
-  console.log(`Found ${targetModels.length} target models (VRM / PMX) out of ${models.length} total models.`)
+  console.info(`Found ${targetModels.length} target models (VRM / PMX) out of ${models.length} total models.`)
 
   let modelsWithManifestExpressions = 0
   let modelsFellBackToBinary = 0
@@ -1421,7 +1430,7 @@ async function runAudit() {
       }
     }
   }
-  console.log('')
+  console.info('')
 
   const totalExpressions = allExpressionsFound.length
   const totalNoise = statsByCategory.arkit + statsByCategory.viseme + statsByCategory.procedural_eye + statsByCategory.neutral
@@ -1515,16 +1524,16 @@ ${sortedUnclassified.length > 100 ? `\n*... and ${sortedUnclassified.length - 10
 `
 
   fs.writeFileSync(reportPath, markdownContent, 'utf8')
-  console.log(`\nAudit complete!`)
-  console.log(`  Report: ${reportPath}`)
-  console.log(`  Dense list: ${denseListPath}`)
-  console.log(`Summary:`)
-  console.log(`  Total Models: ${targetModels.length}`)
-  console.log(`  Total Expressions: ${totalExpressions}`)
-  console.log(`  Noise Filtered: ${totalNoise} (${noisePercent}%)`)
-  console.log(`  Emotes: ${statsByCategory.emote} (${emotePercent}%)`)
-  console.log(`  Wardrobe: ${statsByCategory.wardrobe} (${wardrobePercent}%)`)
-  console.log(`  Unclassified Leakage: ${statsByCategory.unclassified} (${unclassifiedPercent}%)`)
+  console.info(`\nAudit complete!`)
+  console.info(`  Report: ${reportPath}`)
+  console.info(`  Dense list: ${denseListPath}`)
+  console.info(`Summary:`)
+  console.info(`  Total Models: ${targetModels.length}`)
+  console.info(`  Total Expressions: ${totalExpressions}`)
+  console.info(`  Noise Filtered: ${totalNoise} (${noisePercent}%)`)
+  console.info(`  Emotes: ${statsByCategory.emote} (${emotePercent}%)`)
+  console.info(`  Wardrobe: ${statsByCategory.wardrobe} (${wardrobePercent}%)`)
+  console.info(`  Unclassified Leakage: ${statsByCategory.unclassified} (${unclassifiedPercent}%)`)
 }
 
 runAudit().catch((err) => {

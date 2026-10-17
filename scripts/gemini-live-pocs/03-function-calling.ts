@@ -1,8 +1,16 @@
+import process from 'node:process'
+
+import { existsSync } from 'node:fs'
+
 import WebSocket from 'ws'
 
-import * as dotenv from 'dotenv'
-
-dotenv.config()
+// NOTICE: `.env` loading comes from core `process.loadEnvFile` (Node >= 20.12,
+// guaranteed by the repo's `engines`) instead of `dotenv`, which the
+// depend/ban-dependencies rule rejects and which was never a declared
+// dependency of this workspace. A missing local `.env` is tolerated to fall
+// back to the caller's environment, matching siblings 01 and 02.
+if (existsSync('.env'))
+  process.loadEnvFile()
 
 // USE THE STABLE AQ KEY
 const PRIMARY_API_KEY = process.env.GEMINI_API_KEY || ''
@@ -10,15 +18,15 @@ const MODEL = 'models/gemini-3.1-flash-live-preview'
 const API_VERSION = 'v1alpha'
 
 async function main() {
-  console.log('--- Tools POC: Isolated Clean Room ---')
+  console.info('--- Tools POC: Isolated Clean Room ---')
 
   const endpoint = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.${API_VERSION}.GenerativeService.BidiGenerateContent?key=${PRIMARY_API_KEY}`
-  console.debug('Connecting to endpoint...')
+  console.info('Connecting to endpoint...')
 
   const ws = new WebSocket(endpoint)
 
   ws.on('open', () => {
-    console.debug('WebSocket connected!')
+    console.info('WebSocket connected!')
 
     const setupMessage = {
       setup: {
@@ -46,7 +54,7 @@ async function main() {
       },
     }
 
-    console.debug('Sending setup message (Fixed Tools schema)...')
+    console.info('Sending setup message (Fixed Tools schema)...')
     ws.send(JSON.stringify(setupMessage))
   })
 
@@ -55,7 +63,7 @@ async function main() {
       const response = JSON.parse(data.toString())
 
       if (response.setupComplete) {
-        console.debug('--- Setup complete! ---')
+        console.info('--- Setup complete! ---')
 
         // TRY THE OFFICIAL clientContent format for text turns
         const clientMessage = {
@@ -68,22 +76,22 @@ async function main() {
             turnComplete: true,
           },
         }
-        console.log('Sending query via clientContent: "What is the secret word?"')
+        console.info('Sending query via clientContent: "What is the secret word?"')
         ws.send(JSON.stringify(clientMessage))
       }
 
       if (response.serverContent) {
-        console.log('\n[SERVER CONTENT RECEIVED]:', JSON.stringify(response.serverContent, null, 2))
+        console.info('\n[SERVER CONTENT RECEIVED]:', JSON.stringify(response.serverContent, null, 2))
 
         const content = response.serverContent
         if (content.modelTurn?.parts) {
           content.modelTurn.parts.forEach((p: any) => {
             if (p.text)
-              console.log('\n[ASSISTANT]:', p.text)
+              console.info('\n[ASSISTANT]:', p.text)
 
             const call = p.functionCall || p.function_call
             if (call) {
-              console.log('\n>>> TOOL CALLED:', call.name, 'with ID:', call.id)
+              console.info('\n>>> TOOL CALLED:', call.name, 'with ID:', call.id)
 
               const toolResponse = {
                 toolResponse: {
@@ -94,7 +102,7 @@ async function main() {
                   }],
                 },
               }
-              console.log('Sending Tool Response: "blue flamingo"')
+              console.info('Sending Tool Response: "blue flamingo"')
               ws.send(JSON.stringify(toolResponse))
             }
           })
@@ -116,7 +124,7 @@ async function main() {
   })
 
   ws.on('close', (code, reason) => {
-    console.debug(`\nWebSocket closed [${code}]:`, reason.toString())
+    console.info(`\nWebSocket closed [${code}]:`, reason.toString())
   })
 }
 
