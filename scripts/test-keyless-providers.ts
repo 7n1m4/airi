@@ -3,6 +3,14 @@
 import { writeFileSync } from 'node:fs'
 import { listProviders } from '../packages/stage-ui/src/libs/providers/index.ts'
 
+type ProviderDef = {
+  id: string
+  requiresCredentials?: unknown
+  business?: (ctx: { t: (k: string) => string }) => { deployment?: string } | undefined
+  createProviderConfig?: (ctx: { t: (k: string) => string }) => { parse: (x: unknown) => unknown }
+  extraMethods?: { listModels?: () => Promise<Array<{ id: string, description?: string }>> }
+}
+
 const DRY_RUN = process.argv.includes('--dry-run')
 
 const LOCAL_ENV = {
@@ -20,7 +28,7 @@ function normalizeBase(url: string) {
   return url.endsWith('/') ? url : `${url}/`
 }
 
-function isLocal(provider: unknown) {
+function isLocal(provider: ProviderDef) {
   try {
     const biz = provider.business?.({ t: (k: string) => k })
     if (biz?.deployment === 'local') return true
@@ -28,15 +36,18 @@ function isLocal(provider: unknown) {
   return provider.id === 'ollama' || provider.id === 'lm-studio' || provider.id === 'laya-local'
 }
 
-function isNonChatModel(model: unknown) {
+function isNonChatModel(model: { id?: string, description?: string }) {
   const text = `${model?.id ?? ''} ${model?.description ?? ''}`.toLowerCase()
   return /content-safety|moderation|classifier/.test(text)
 }
 
-async function defaultConfig(provider: unknown) {
+async function defaultConfig(provider: ProviderDef): Promise<{ baseUrl?: string, apiKey?: string }> {
   try {
-    const schema = provider.createProviderConfig({ t: (k: string) => k })
-    return schema.parse({})
+    const create = provider.createProviderConfig
+    if (!create) return {}
+    const schema = create({ t: (k: string) => k })
+    const parsed = schema.parse({})
+    return (parsed && typeof parsed === 'object') ? (parsed as { baseUrl?: string, apiKey?: string }) : {}
   } catch (e) {
     return {}
   }
@@ -48,7 +59,10 @@ async function fetchModels(baseUrl: string) {
   if (!res.ok) throw new Error(`models ${res.status}`)
   const data = await res.json()
   const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
-  return list.map((m: unknown) => ({ id: m.id || m.name || m.model, name: m.name || m.id }))
+  return list.map((m: unknown) => {
+    const o = m as { id?: string, name?: string, model?: string }
+    return { id: o.id || o.name || o.model, name: o.name || o.id }
+  })
 }
 
 async function getJwt(baseUrl: string) {
@@ -65,21 +79,21 @@ async function getJwt(baseUrl: string) {
   return data.jwt
 }
 
-async function smokeOne(provider: unknown, model: unknown, config: unknown) {
-  const baseUrl = normalizeBase(config.baseUrl)
+async function smokeOne(provider: ProviderDef, model: { id: string, description?: string }, config: { baseUrl?: string, apiKey?: string }) {
+  const baseUrl = normalizeBase(config.baseUrl ?? '')
   const apiKey = (config.apiKey ?? '').toString()
   const id = provider.id
 
   let url: string
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  let body: unknown
+  let body: Record<string, unknown>
 
   if (id === 'mimo') {
     let jwt
     try {
       jwt = await getJwt(baseUrl.replace(/\/$/, ''))
     } catch (e: unknown) {
-      return { status: 0, result: 'pass', reason: `bootstrap-fail treated transient: ${e.message}` }
+      return { status: 0, result: 'pass', reason: `bootstrap-fail treated transient: ${e instanceof Error ? e.message : String(e)}` }
     }
     url = `${baseUrl.replace(/\/$/, '')}/api/free-ai/openai/chat`
     headers.Authorization = `Bearer ${jwt}`
@@ -87,7 +101,7 @@ async function smokeOne(provider: unknown, model: unknown, config: unknown) {
     headers['User-Agent'] = 'Mozilla/5.0'
     const messages = [{ role: 'user', content: 'hi' }]
     const marker = 'You are MiMoCode, an interactive CLI tool that helps users with software engineering tasks.'
-    if (!messages.some((m: unknown) => m.role === 'system' && m.content === marker)) {
+    if (!messages.some((m: unknown) => (m as { role?: string, content?: string }).role === 'system' && (m as { role?: string, content?: string }).content === marker)) {
       messages.unshift({ role: 'system', content: marker })
     }
     body = { model: 'mimo-auto', messages, max_tokens: 1 }
@@ -128,12 +142,12 @@ async function smokeOne(provider: unknown, model: unknown, config: unknown) {
     return { status, result, reason }
   } catch (e: unknown) {
     clearTimeout(timer)
-    return { status: 0, result: 'pass', reason: `network/timeout: ${e.message}` }
+    return { status: 0, result: 'pass', reason: `network/timeout: ${e instanceof Error ? e.message : String(e)}` }
   }
 }
 
 async function main() {
-  const providers = listProviders().filter((p: unknown) => keylessOrOptionalKey(p.requiresCredentials))
+  const providers = (listProviders() as unknown as ProviderDef[]).filter((p) => keylessOrOptionalKey(p.requiresCredentials))
 
   const rows: unknown[] = []
   const results: unknown[] = []
@@ -161,14 +175,14 @@ async function main() {
       try {
         models = await provider.extraMethods.listModels()
       } catch (e: unknown) {
-        console.warn(`${provider.id} listModels failed: ${e.message}`)
+        console.warn(`${provider.id} listModels failed: ${e instanceof Error ? e.message : String(e)}`)
       }
     }
     if (!models || models.length === 0) {
       try {
-        models = await fetchModels(config.baseUrl)
+        models = await fetchModels(config.baseUrl ?? '')
       } catch (e: unknown) {
-        console.warn(`${provider.id} models fetch failed: ${e.message}`)
+        console.warn(`${provider.id} models fetch failed: ${e instanceof Error ? e.message : String(e)}`)
       }
     }
     if (!models || models.length === 0) {
@@ -178,7 +192,7 @@ async function main() {
     }
 
     // filter non-chat models
-    const filtered = models.filter((m: unknown) => !isNonChatModel(m))
+    const filtered = models.filter((m: unknown) => !isNonChatModel(m as { id?: string, description?: string }))
     const excluded = models.length - filtered.length
     if (excluded > 0) console.log(`EXCLUDE ${provider.id}: ${excluded} non-chat model(s)`)
     models = filtered
@@ -190,18 +204,20 @@ async function main() {
 
     if (DRY_RUN) {
       for (const m of models) {
-        console.log(`DRY ${provider.id} :: ${m.id}`)
+        const mm = m as { id?: string }
+        console.log(`DRY ${provider.id} :: ${mm.id}`)
       }
       continue
     }
 
     for (const model of models) {
-      const r = await smokeOne(provider, model, config)
-      const row = { provider: provider.id, model: model.id, status: r.status, result: r.result, reason: r.reason }
+      const m = model as { id: string, description?: string }
+      const r = await smokeOne(provider, m, config)
+      const row = { provider: provider.id, model: m.id, status: r.status, result: r.result, reason: r.reason }
       results.push(row)
       rows.push(row)
       if (r.result === 'fail') failures++
-      console.log(`${r.result.toUpperCase()} ${provider.id}/${model.id} status=${r.status} ${r.reason}`)
+      console.log(`${r.result.toUpperCase()} ${provider.id}/${m.id} status=${r.status} ${r.reason}`)
     }
   }
 
@@ -210,7 +226,8 @@ async function main() {
     console.log('| Provider | Model | Status | Result | Reason |')
     console.log('|---|---|---|---|---|')
     for (const r of rows) {
-      console.log(`| ${r.provider} | ${r.model} | ${r.status} | ${r.result} | ${r.reason} |`)
+      const row = r as { provider: string, model: string, status: number, result: string, reason: string }
+      console.log(`| ${row.provider} | ${row.model} | ${row.status} | ${row.result} | ${row.reason} |`)
     }
     console.log(`\nFailures: ${failures}, Skipped: ${skipped}`)
     writeFileSync('keyless-providers-report.json', JSON.stringify(results, null, 2))
@@ -222,6 +239,6 @@ async function main() {
 }
 
 main().catch((e) => {
-  console.error(e)
+  console.error(e instanceof Error ? e.message : String(e))
   process.exit(2)
 })
