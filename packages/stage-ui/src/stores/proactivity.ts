@@ -37,6 +37,7 @@ import { useAiriCardStore } from './modules/airi-card'
 import { useConsciousnessStore } from './modules/consciousness'
 import { useLiveSessionStore } from './modules/live-session'
 import { useVisionStore } from './modules/vision'
+import { usePresenceStore } from './presence'
 import {
   checkIsPipeBusy,
   evaluateHeartbeatGating,
@@ -68,8 +69,17 @@ export const useProactivityStore = defineStore('proactivity', () => {
   const visionStore = useVisionStore()
   const echoesStore = useEchoesStore()
   const eventLogStore = useEventLogStore()
+  // Presence owns the idle signal; proactivity reads it and feeds it via
+  // `presence.writeIdleTimeSec()`. See docs/design-user-presence.md §3.
+  const presence = usePresenceStore()
 
   debug('[Proactivity] Proactivity Store initialized.')
+
+  const lastHeartbeatTime = ref<number>(Date.now())
+  const isDreamStateEvaluating = ref(false)
+  const isUpdatingSensors = ref(false)
+  const isHeartbeatEvaluating = ref(false)
+  let heartbeatInterval: any = null
 
   const isPipeBusy = computed(() => {
     return checkIsPipeBusy({
@@ -92,12 +102,6 @@ export const useProactivityStore = defineStore('proactivity', () => {
     }
   }
 
-  const lastHeartbeatTime = ref<number>(Date.now())
-  const isDreamStateEvaluating = ref(false)
-  const isUpdatingSensors = ref(false)
-  const isHeartbeatEvaluating = ref(false)
-  let heartbeatInterval: any = null
-
   const isElectron = typeof window !== 'undefined' && !!(window as any).electron
   const getIdleTimeInvoke = isElectron ? useElectronEventaInvoke(sensorsGetIdleTime) : null
   const getActiveWindowInvoke = isElectron ? useElectronEventaInvoke(sensorsGetActiveWindow) : null
@@ -107,7 +111,13 @@ export const useProactivityStore = defineStore('proactivity', () => {
   const getVolumeLevelInvoke = isElectron ? useElectronEventaInvoke(sensorsGetVolumeLevel) : null
   const setTrackingEnabledInvoke = isElectron ? useElectronEventaInvoke(sensorsSetTrackingEnabled) : null
 
-  const idleTimeSec = ref<number | undefined>(undefined)
+  /**
+   * Raw idle seconds, read through the presence store — the single owner of the
+   * signal. This is a read-only view: presence's provider path and
+   * `presence.writeIdleTimeSec()` are the only writers (see
+   * docs/design-user-presence.md §3).
+   */
+  const idleTimeSec = computed(() => presence.rawIdleTimeSec)
   const activeWinStr = ref('')
   const winHistory = ref<ActiveWindowEntry[]>([])
   const sysLoad = ref<SystemLoadAverages | null>(null)
@@ -168,7 +178,17 @@ export const useProactivityStore = defineStore('proactivity', () => {
 
     try {
       // Parallelize all OS sensor probes to reduce total latency to the slowest single call.
-      const probes = [
+      // Typed per probe so `Promise.allSettled` narrows each result's payload;
+      // the previous `as any` reads hid genuine probe-shape mismatches.
+      const probes: [
+        Promise<unknown>,
+        Promise<number | undefined>,
+        Promise<{ title: string } | null | undefined>,
+        Promise<ActiveWindowEntry[]>,
+        Promise<SystemLoadAverages | null>,
+        Promise<string | undefined>,
+        Promise<number | undefined>,
+      ] = [
         // Only trigger load if not already initialized or loading
         timePromise('textJournalStore.load', textJournalStore.load()),
         timePromise('getIdleTime', getIdleTimeInvoke ? getIdleTimeInvoke() : Promise.resolve(undefined)),
@@ -197,25 +217,28 @@ export const useProactivityStore = defineStore('proactivity', () => {
       }
 
       // Map settled results back to reactive state
-      if (idleMsResult.status === 'fulfilled' && (idleMsResult as any).value !== undefined) {
-        idleTimeSec.value = Math.floor((idleMsResult as any).value / 1000)
+      if (idleMsResult.status === 'fulfilled' && idleMsResult.value !== undefined) {
+        // NOTICE: the presence store is the single writer of the raw idle
+        // signal (see docs/design-user-presence.md §3); the proactivity sensor
+        // loop feeds it via that store's API rather than owning its own copy.
+        presence.writeIdleTimeSec(Math.floor(idleMsResult.value / 1000))
 
         debug(`[Proactivity] Sensor tick -> Idle: ${idleTimeSec.value}s`)
       }
       if (activeWinResult.status === 'fulfilled') {
-        activeWinStr.value = (activeWinResult as any).value?.title || ''
+        activeWinStr.value = activeWinResult.value?.title || ''
       }
       if (winHistoryResult.status === 'fulfilled') {
-        winHistory.value = (winHistoryResult as any).value || []
+        winHistory.value = winHistoryResult.value || []
       }
       if (sysLoadResult.status === 'fulfilled') {
-        sysLoad.value = (sysLoadResult as any).value
+        sysLoad.value = sysLoadResult.value
       }
-      if (locTimeResult.status === 'fulfilled' && (locTimeResult as any).value) {
-        locTime.value = (locTimeResult as any).value
+      if (locTimeResult.status === 'fulfilled' && locTimeResult.value) {
+        locTime.value = locTimeResult.value
       }
       if (volLevelResult.status === 'fulfilled') {
-        volLevel.value = (volLevelResult as any).value
+        volLevel.value = volLevelResult.value
       }
 
       // Single-pass optimization for usage metrics
@@ -253,18 +276,15 @@ export const useProactivityStore = defineStore('proactivity', () => {
     }
   }
 
+  /**
+   * Refresh the raw idle reading.
+   *
+   * Delegates to the presence store, which is the single writer of the signal:
+   * the read goes through the registered `PresenceSignalProvider`s, so this
+   * function no longer probes the Electron bridge itself.
+   */
   async function refreshIdleTimeOnly() {
-    if (!isElectron || !getIdleTimeInvoke)
-      return
-
-    try {
-      const idleMs = await getIdleTimeInvoke()
-      if (idleMs !== undefined)
-        idleTimeSec.value = Math.floor(idleMs / 1000)
-    }
-    catch (err) {
-      debug('[Proactivity] Failed to poll idle time:', err)
-    }
+    await presence.refreshIdleTimeOnce()
   }
 
   const isProactivityLoopNeeded = computed(() => {
@@ -421,13 +441,19 @@ export const useProactivityStore = defineStore('proactivity', () => {
     }
 
     if (config.strictAfkGating) {
-      if (idleTimeSec.value === undefined)
-        await refreshIdleTimeOnly()
-      else
-        await refreshIdleTimeOnly()
+      // Both branches always refresh, so the reading is fresh regardless of
+      // whether a previous probe happened; kept as-is so behavior matches.
+      await refreshIdleTimeOnly()
 
-      const afkThresholdSec = (config.afkThresholdMinutes || 5) * 60
-      if (!options?.force && (idleTimeSec.value ?? 0) < afkThresholdSec) {
+      // NOTICE: Dream State keeps its OWN threshold, distinct from the
+      // heartbeat gate's. `dreamState.afkThresholdMinutes` is required
+      // (`card.schema.ts:146`) while `heartbeats.afkThresholdMinutes` is
+      // optional and defaults to 5 (`:137`) — two separate config fields, so
+      // each feature must gate on its own. `isUserAway(minutes)` applies the
+      // same `|| 5` fallback the previous inline expression
+      // `(config.afkThresholdMinutes || 5) * 60` used, so the comparison is
+      // identical in threshold, clamp and sign.
+      if (!options?.force && !presence.isUserAway(config.afkThresholdMinutes)) {
         return
       }
     }
@@ -578,7 +604,9 @@ export const useProactivityStore = defineStore('proactivity', () => {
       lastHeartbeatTime: lastHeartbeatTime.value,
       intervalMinutes: config?.intervalMinutes ?? 5,
       pauseWhenAfk: config?.pauseWhenAfk ?? true,
-      afkThresholdMinutes: config?.afkThresholdMinutes ?? 5,
+      // Presence resolves the threshold from the active card's heartbeats
+      // config, so the gate and the presence snapshot agree on "AFK".
+      afkThresholdMinutes: presence.afkThresholdMinutes,
       currentIdleSec: idleTimeSec.value ?? 0,
       isForce: options?.force,
       schedule: config?.schedule,

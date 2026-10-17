@@ -14,6 +14,8 @@ import {
   vi,
 } from 'vitest'
 
+import { napChatConsentFor } from '../agentic/companion'
+import { setupLibp2pService } from './index'
 import {
   acceptPairingInvitation,
   createPairingInvitation,
@@ -25,6 +27,7 @@ import {
   recordPairingRequest,
   registerPendingAcceptedConfirmation,
   rememberDiscoveredInvite,
+  setupPairedDevices,
 } from './pairing'
 
 /**
@@ -47,6 +50,12 @@ import {
  * topic, so a bystander can re-publish anything it observes; the protocol must
  * survive exactly that. Every "attacker" below is a real node running the same
  * code, and its PeerId is a real PeerId.
+ *
+ * A second suite in this file covers the persistence half without any mesh: a
+ * paired-device grant has to survive a restart, which is purely a question of
+ * whether the store's in-memory map was ever populated from disk. Its mock
+ * models each `createConfig` store separately, because the whole failure mode is
+ * one store being hydrated and another not.
  */
 
 /** The three topics `index.ts` subscribes to and allows. */
@@ -234,8 +243,56 @@ function waitForMessage(
  */
 const MESH_SETTLE_MS = 1500
 
-/** The paired-device list `pairing.ts` persists; one mock for the file. */
-const pairedDevices = { records: [] as Array<Record<string, unknown>> }
+/**
+ * The `createConfig` stores the mock hands out, keyed by namespace.
+ *
+ * A mock with one shared store for every namespace would let
+ * `libp2pConfigStore.setup()` satisfy `getPairedDevices()`'s read, which is
+ * precisely the wiring this suite has to catch: the two stores live in
+ * different `persistenceMap` entries and must not share one. Each entry below
+ * is a faithful miniature of the real thing (`persistence.ts`):
+ *
+ *  - `setup()` is the synchronous disk read, and it is the *only* thing that
+ *    moves `persisted` into `map`;
+ *  - `get()` reads `map`, so a store that was never set up reads nothing;
+ *  - `update()` writes `map` and schedules the debounced disk write.
+ */
+/** A miniature of one real `createConfig` store, per file. */
+interface StubStore {
+  name: string
+  /** The in-memory map. `undefined` until `setup()` reads the disk. */
+  map: { devices: Array<Record<string, unknown>> } | undefined
+  /** What the previous boot left in this store's file. */
+  persisted: { devices: Array<Record<string, unknown>> }
+  /** The last value written to the in-memory map, i.e. the flush payload. */
+  lastUpdate: { devices: Array<Record<string, unknown>> } | undefined
+  setupCalls: number
+  flushCalls: number
+}
+
+const stores = vi.hoisted(() => {
+  function store(name: string): StubStore {
+    return {
+      name,
+      map: undefined,
+      persisted: { devices: [] },
+      lastUpdate: undefined,
+      setupCalls: 0,
+      flushCalls: 0,
+    }
+  }
+
+  return {
+    libp2pConfig: store('libp2p'),
+    /**
+     * NOTICE: `devices` is the paired-device list, so the schema `pairing.ts`
+     * validates (`PairedDevicesSchema`) is what a record must be shaped like.
+     */
+    pairedDevices: store('paired'),
+  }
+})
+
+type MockStore = Omit<StubStore, 'name'>
 
 vi.mock('electron', () => ({
   app: { getPath: () => '/tmp/airi-libp2p-pairing-test' },
@@ -249,13 +306,33 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('../../../libs/electron/persistence', () => ({
-  createConfig: () => ({
-    setup: () => ({ status: 'ok', path: '/tmp/airi-libp2p-pairing-test' }),
-    get: () => ({ devices: pairedDevices.records }),
-    update: (value: { devices: Array<Record<string, unknown>> }) => { pairedDevices.records = value.devices },
-    flush: () => {},
-    getDiagnostics: () => undefined,
-  }),
+  createConfig: (_namespace: string, filename: string) => {
+    // Two different files, therefore two different stores, exactly as the real
+    // registry keys them (`paired-devices.json` is `pairing.ts`'s file; the
+    // libp2p service's own config file is the other one).
+    const stub: MockStore = filename === 'paired-devices.json'
+      ? stores.pairedDevices
+      : stores.libp2pConfig
+
+    return {
+      setup: (): { status: 'ok', path: '/tmp/airi-libp2p-pairing-test' } => {
+        stub.setupCalls++
+        // The synchronous disk read: the map is populated from disk, or left
+        // untouched when there is no file (the real store then falls back to the
+        // schema default, which is what an unhydrated read sees).
+        if (stub.map === undefined && stub.persisted !== undefined)
+          stub.map = stub.persisted
+        return { status: 'ok', path: '/tmp/airi-libp2p-pairing-test' }
+      },
+      get: () => stub.map,
+      update: (value: { devices: Array<Record<string, unknown>> }) => {
+        stub.map = value
+        stub.lastUpdate = value
+      },
+      flush: () => { stub.flushCalls++ },
+      getDiagnostics: () => undefined,
+    }
+  },
 }))
 
 /** Bind a node as the publisher side of a pairing. */
@@ -348,9 +425,20 @@ async function stopNodes(...nodes: TestNode[]): Promise<void> {
  * Reset the paired-device store between tests. The store is one mock instance
  * for the whole file and `listPairedDevices` reads it synchronously, so without
  * a reset every test asserts against the previous test's devices.
+ *
+ * `undefined` models the state a fresh process is in before `setup()` has run
+ * its synchronous disk read, which is what the persistence suite depends on.
  */
 beforeEach(() => {
-  pairedDevices.records = []
+  // The paired-device store is one mock instance for the whole file and
+  // `listPairedDevices` reads it synchronously, so without a reset every test
+  // sees the previous test's devices. `map: undefined` is the state a fresh
+  // process is in before `setup()` has read the disk.
+  stores.pairedDevices.map = undefined
+  stores.pairedDevices.persisted = { devices: [] }
+  stores.pairedDevices.lastUpdate = undefined
+  stores.pairedDevices.setupCalls = 0
+  stores.pairedDevices.flushCalls = 0
 })
 
 describe('pairing trust flow over real libp2p nodes', () => {
@@ -899,4 +987,228 @@ describe('pairing trust flow over real libp2p nodes', () => {
       await stopNodes(inviter, accepter)
     }
   }, 60_000)
+
+  /**
+   * The nap-chat grant, run over real nodes.
+   *
+   * NOTICE (root cause this guards): the grant lives on the paired-device record
+   * the pairing flow writes, and both halves of that flow have to carry it —
+   * the inviter, which is the only node that can answer a later consent read
+   * with a grant, and the accepter, which is the only node that decides for
+   * itself. A grant in one place and not the other would leave a pairing that
+   * looks consented on one side while the other refuses, which is a session that
+   * silently never opens.
+   *
+   * This is a *negative control* in both directions: no grant means the record
+   * exists but answers `granted: false`, and a grant means it answers `true`.
+   * The design's "no grant ⇒ no proposal" falls out of the first case, because a
+   * proposal is only ever sent after the consent read.
+   */
+  it('records the nap-chat grant the pairing flow carried, on both sides', async () => {
+    const inviter = await createTestNode()
+    const accepter = await createTestNode()
+
+    try {
+      await accepter.node.dial(inviter.node.getMultiaddrs())
+      await settleMesh(inviter, accepter)
+
+      // The pairing dialog's grant travels with the invitation the inviter
+      // issues, so an invitation created without one records nothing granted.
+      const { qrCode } = await createPairingInvitation(
+        inviter.node.getMultiaddrs().map(a => a.toString()),
+        inviter.peerId,
+        'Inviter Node',
+        30,
+        publisher(inviter),
+        true,
+      )
+      const invitation = parsePairingInvitation(qrCode)!
+
+      requireAccepted(await acceptPairingInvitation(invitation, accepter.peerId, undefined, dialer(accepter), true))
+      registerPendingAcceptedConfirmation(inviter.peerId, invitation.token)
+      await publishPairingRequest(invitation.token, accepter.peerId, publisher(accepter))
+
+      const requestOnWire = await waitForMessage(
+        inviter,
+        (topic, payload) => topic === PAIRING_REQUESTS_TOPIC && payload.includes(invitation.token),
+      )
+      const requestPayload = JSON.parse(requestOnWire) as Record<string, unknown>
+      const recorded = await recordPairingRequest(
+        readWireToken(requestPayload),
+        String(requestPayload.senderPeerId),
+        ['/ip4/127.0.0.1/tcp/1'],
+        undefined,
+        accepter.peerId,
+        publisher(inviter),
+      )
+      expect(recorded).not.toBeNull()
+
+      // ROOT CAUSE:
+      //
+      // The grant is only useful if the record the pairing flow wrote actually
+      // answers the consent read. Without the field surviving the merge onto
+      // both sides' records, a pairing that carries the grant would still read
+      // as unconsented and no proposal would ever be sent — the feature would
+      // look enabled while being unreachable.
+      //
+      // FIXED BY: the record carries `napChatGranted` from the pairing flow, and
+      // monotone merge preservation keeps it on the merged record.
+      const devices = await listPairedDevices()
+      expect(devices).toHaveLength(2)
+      expect(devices.every(d => d.napChatGranted === true)).toBe(true)
+
+      expect(await napChatConsentFor(accepter.peerId)).toEqual({ granted: true })
+      expect(await napChatConsentFor(inviter.peerId)).toEqual({ granted: true })
+    }
+    finally {
+      await stopNodes(inviter, accepter)
+    }
+  }, 60_000)
+
+  /**
+   * The other half of the consent gate: an invitation issued **without** the
+   * grant records a pairing that can never be invited.
+   *
+   * NOTICE: this is not a refusal to pair — a pairing without the grant is a
+   * perfectly ordinary pairing, which is the point. What is refused is every
+   * nap-chat proposal that would follow, because the consent read answers
+   * `granted: false` for a peer whose record carries no grant. A peer paired
+   * before the field existed answers the same, because absence reads as refusal
+   * rather than as a default permission.
+   */
+  it('records no grant when the pairing flow did not carry one, and consent refuses', async () => {
+    const inviter = await createTestNode()
+    const accepter = await createTestNode()
+
+    try {
+      await accepter.node.dial(inviter.node.getMultiaddrs())
+      await settleMesh(inviter, accepter)
+
+      const { qrCode } = await createPairingInvitation(
+        inviter.node.getMultiaddrs().map(a => a.toString()),
+        inviter.peerId,
+        'Inviter Node',
+        30,
+        publisher(inviter),
+      )
+      const invitation = parsePairingInvitation(qrCode)!
+
+      // An accepter that never passed the grant records its record without one.
+      requireAccepted(await acceptPairingInvitation(invitation, accepter.peerId, undefined, dialer(accepter)))
+
+      const consent = await napChatConsentFor(inviter.peerId)
+      expect(consent.granted).toBe(false)
+      expect(consent.reason).toBe('nap-chat-consent-not-granted')
+    }
+    finally {
+      await stopNodes(inviter, accepter)
+    }
+  }, 60_000)
+
+  /**
+   * A peer this node never paired with refuses, with a reason that says so.
+   *
+   * NOTICE: distinct from "paired but not granted" because the caller's log and
+   * ledger need to tell an unknown peer from a known one that declined. What is
+   * identical is the answer, which is what keeps the default direction deny.
+   */
+  it('refuses consent for a peer it never paired with', async () => {
+    const consent = await napChatConsentFor('12D3KooWneverPaired')
+    expect(consent.granted).toBe(false)
+    expect(consent.reason).toBe('not-paired')
+  })
 })
+
+/**
+ * Paired-device persistence across a restart.
+ *
+ * ROOT CAUSE this guards: `pairedDevicesStore` is a `createConfig` store, and
+ * `createConfig`'s in-memory map is populated *only* by `setup()`'s synchronous
+ * disk read. `getPairedDevices()` reads that map, so a boot that never calls
+ * `setupPairedDevices()` sees `[]` for every peer: `napChatConsentFor` answers
+ * `not-paired`, the grant the user gave is silently dead after a reboot, and the
+ * first `addPairedDevice` writes a one-element list over the persisted file it
+ * never read. The same failure mode is documented at `consentStore.setup()`
+ * (`agentic/companion.ts`) and `libp2pConfigStore.setup()` (`libp2p/index.ts`).
+ *
+ * NOTICE: these tests assert the observable outcome, not the call. Asserting
+ * `setupCalls > 0` would be a wiring echo that passes whenever *any* store's
+ * `setup()` runs — and the libp2p config store's `setup()` is called
+ * immediately before the paired-device one in the same function, which is
+ * exactly why a shared-mock test never caught this. Instead the mock models
+ * each store separately (`stores`, above): the paired-device store's map is
+ * only ever filled by its own `setup()`, so `setupLibp2pService` cannot pass
+ * these tests on `libp2pConfigStore.setup()`'s disk read.
+ */
+describe('paired-device persistence across a restart', () => {
+  /** A record the app wrote before the simulated restart. */
+  function grantedDevice() {
+    return {
+      peerId: '12D3KooWpersistedPeer',
+      alias: 'Persisted Device',
+      multiaddrs: ['/ip4/127.0.0.1/tcp/4001'],
+      pairedAt: 1_700_000_000_000,
+      lastSeen: 1_700_000_000_000,
+      trusted: true,
+      napChatGranted: true,
+    }
+  }
+
+  /**
+   * A fresh process. The store's in-memory map is empty, because nothing has
+   * read the disk yet, and the file the previous boot left is on disk.
+   */
+  function freshBoot(devices: Array<Record<string, unknown>>) {
+    stores.pairedDevices.map = undefined
+    stores.pairedDevices.persisted = { devices }
+    stores.pairedDevices.lastUpdate = undefined
+    stores.pairedDevices.setupCalls = 0
+  }
+
+  it('reads nothing until the store hydrates, so a record on disk is invisible', async () => {
+    // The negative control for the two tests below, and the failure mode itself:
+    // a boot that never hydrates answers `not-paired` for a peer whose grant is
+    // on disk right now, and a subsequent write would clobber the list.
+    freshBoot([grantedDevice()])
+
+    expect(await listPairedDevices()).toEqual([])
+    expect(await napChatConsentFor('12D3KooWpersistedPeer')).toEqual({
+      granted: false,
+      reason: 'not-paired',
+    })
+  })
+
+  it('answers consent from the record the previous boot persisted', async () => {
+    freshBoot([grantedDevice()])
+
+    // The store hydrates, exactly as `createConfig`'s `setup()` reads the
+    // persisted file into the in-memory map.
+    setupPairedDevices()
+
+    expect(await listPairedDevices()).toEqual([grantedDevice()])
+    expect(await napChatConsentFor('12D3KooWpersistedPeer')).toEqual({ granted: true })
+  })
+
+  it('hydrates the store from `setupLibp2pService`, so a device written before a restart is readable after', async () => {
+    // The previous boot paired this device, which is what put the record on
+    // disk. The simulated restart then starts with nothing in memory.
+    freshBoot([grantedDevice()])
+
+    await setupLibp2pService({ lifecycle: lifecycleStub() })
+
+    // The observable outcome, not the call: the record survived the restart and
+    // the consent read answers from it.
+    expect(await listPairedDevices()).toEqual([grantedDevice()])
+    expect(await napChatConsentFor('12D3KooWpersistedPeer')).toEqual({ granted: true })
+  })
+})
+
+/** The lifecycle object `setupLibp2pService` stores its stop hook on. */
+function lifecycleStub() {
+  return {
+    appHooks: {
+      onStart: (_fn: () => void | Promise<void>) => {},
+      onStop: (_fn: () => void | Promise<void>) => {},
+    },
+  }
+}

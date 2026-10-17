@@ -1,5 +1,5 @@
 import { defineEventa, defineInvokeEventa } from '@moeru/eventa'
-import { number, object, optional, picklist, safeParse, string } from 'valibot'
+import { integer, literal, maxLength, maxValue, minLength, minValue, number, object, optional, picklist, pipe, safeParse, strictObject, string, variant } from 'valibot'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -42,6 +42,30 @@ export interface PresenceSignalReport {
   availability: PresenceStateAvailability
 }
 
+/**
+ * What a presence signal provider can contribute to the normalized snapshot.
+ *
+ * Field priority, highest first: `sleep` and `lock` describe the machine's
+ * state authoritatively, so they win over any input-derived reading. `idleSec`
+ * is the input-quiet signal and is resolved from the providers registered on
+ * the presence store; `undefined` means "this provider cannot answer", so a
+ * registered provider that stays silent never forces the quiet state back to
+ * `active`.
+ *
+ * `readIdleSec` may be async: a native or IPC-backed provider has no way to
+ * answer synchronously, so the store always awaits.
+ */
+export interface PresenceSignalProvider {
+  /** Stable identifier used by logs and tests. */
+  readonly id: string
+  /** Seconds the relevant input source has been quiet, or `undefined` when this provider cannot answer. */
+  readIdleSec: () => number | undefined | Promise<number | undefined>
+  /** Current screen-lock reading, or `undefined` when this provider cannot answer. */
+  readLockState?: () => 'locked' | 'unlocked' | undefined
+  /** Current sleep/wake reading, or `undefined` when this provider cannot answer. */
+  readSleepState?: () => 'awake' | 'asleep' | undefined
+}
+
 /** The full presence snapshot the Agentic OS cycle gates on. */
 export interface PresenceSnapshot {
   state: PresenceState
@@ -61,6 +85,37 @@ export interface PresenceSnapshot {
  *   guardrails pass, including while the user is present.
  */
 export type AutonomousMode = 'disabled' | 'when-away' | 'always'
+
+/**
+ * The companion's rest state.
+ *
+ * Nap is a *rest* state, not an action: it is derived from the canonical
+ * presence source and the chat pipeline's busy state, and it deliberately does
+ * not depend on `autonomousMode` (see
+ * `docs/design-agentic-os-nap-chat.md` §3). A companion in `disabled`
+ * autonomous mode can still nap — only the autonomous *cycle* needs the mode.
+ *
+ * - `active` — the user is around, or a chat pipeline is mid-sentence.
+ * - `napping` — the user is away (per the presence source's AFK signal) and
+ *   nothing is being spoken, so the companion is resting and only the dream
+ *   consolidation may keep running.
+ */
+export type CompanionNapState = 'active' | 'napping'
+
+/**
+ * The card-extension config for nap, read from `extensions.airi.nap`.
+ *
+ * NOTICE: there is deliberately **no** `napAfterMinutes` here. The nap floor is
+ * whatever the canonical presence source's resolved AFK threshold says
+ * (`docs/design-user-presence.md` §2), so a second copy of that number in the
+ * card config would be two thresholds that can drift. `enabled` is the only
+ * number-free decision this feature owns: whether the companion is allowed to
+ * rest at all.
+ */
+export interface CompanionNapConfig {
+  /** Whether the companion may nap at all. */
+  enabled: boolean
+}
 
 /** A candidate intention produced by the memory scan. */
 export type IntentionKind
@@ -356,6 +411,29 @@ export interface CompanionGuestAccess {
  */
 export const COMPANION_TOPIC = 'airi/companion'
 
+/**
+ * The GossipSub topic a nap-chat session is negotiated on.
+ *
+ * A separate topic from `airi/companion`, and not smuggled onto it: a share is
+ * a broadcast of a card snapshot, while nap-chat is a directed two-party
+ * session of proposals, accepts, declines, turns and closes. Reusing one topic
+ * with two schemas would make every receiver try both parses on every payload,
+ * and publishing a session on the share topic would put companion-to-companion
+ * chatter in front of every peer on the LAN. Named here, rather than as a
+ * literal at each callsite, because both processes must agree on it and a third
+ * copy of the string would drift.
+ */
+export const NAP_CHAT_TOPIC = 'airi/companion.chat'
+
+/**
+ * Protocol tag every nap-chat message carries.
+ *
+ * Versioned so a future wire change can refuse the old messages instead of
+ * parsing them under rules the sender did not use, which is what the
+ * `protocol: 'airi.nap-chat/1'` literal in the schema enforces.
+ */
+export const NAP_CHAT_PROTOCOL = 'airi.nap-chat/1'
+
 // ── Wire payload ──────────────────────────────────────────────────────────────
 //
 // NOTICE: a share carries the card and the consented *scope*, never the memory
@@ -426,7 +504,299 @@ export function parseCompanionShare(payload: unknown): CompanionShareCard | null
   }
 }
 
+// ── Nap-chat wire payload ────────────────────────────────────────────────────
+//
+// NOTICE: none of these shapes carries a memory field. There is no echo-chip
+// list, no journal entry, no lifetime `distilledContent` and no session text
+// anywhere in the schema, and each member is a `strictObject` so a peer cannot
+// widen the shape to smuggle one in: an unknown key is a rejection, not a
+// silently dropped field. A nap-chat turn carries only the text the companion
+// chose to say. That is the structural half of §5's leak boundary; the other
+// halves (prompt window, peer text as input rather than instruction) live in
+// the renderer's session handling.
+
+/** The common envelope every nap-chat message carries. */
+interface NapChatEnvelope {
+  /** Which negotiation step this message is. */
+  kind: NapChatMessageKind
+  /** Always `airi.nap-chat/1`, so a future version cannot be parsed as this one. */
+  protocol: typeof NAP_CHAT_PROTOCOL
+  /** This node's PeerId, read at send time. */
+  from: string
+  /** The PeerId the message is addressed to. */
+  to: string
+  /** Identifies the session this message belongs to. */
+  sessionId: string
+  /** `Date.now()` when the message was sent. */
+  at: number
+}
+
+/**
+ * Invite a paired peer into a nap-chat session, carrying the bounds both sides
+ * must agree on before the first turn is generated.
+ */
+export interface NapChatProposalMessage extends NapChatEnvelope {
+  kind: 'proposal'
+  /** Maximum number of turns in the session, counted across both sides. */
+  turnCap: number
+  /** Wall-clock budget for the session in ms. */
+  durationMs: number
+  /**
+   * The nonce the *acceptor* minted for this session. An `accept` must echo it
+   * exactly, which is what makes the accept an authorization rather than an
+   * echo: a third party replaying or forging a proposal cannot produce a nonce
+   * the acceptor does not hold.
+   */
+  nonce: string
+}
+
+/**
+ * Accept an invitation, echoing the nonce the acceptor minted.
+ *
+ * There is no reply at all when the gate refuses (the model is not local or
+ * known-free, or the peer is not paired with the grant) — a decline would
+ * confirm the node is alive, which is exactly what the design refuses to spend.
+ */
+export interface NapChatAcceptMessage extends NapChatEnvelope {
+  kind: 'accept'
+  /** The proposal's nonce, echoed verbatim. */
+  nonce: string
+}
+
+/** Decline an invitation. Only sent when the peer wishes to be seen refusing. */
+export interface NapChatDeclineMessage extends NapChatEnvelope {
+  kind: 'decline'
+  /** Why the invitation was refused, for the proposer's log. */
+  reason: string
+}
+
+/** One turn of the conversation: the text the companion chose to say. */
+export interface NapChatTurnMessage extends NapChatEnvelope {
+  kind: 'turn'
+  /** Monotonic per-session turn index; the peer's parity decides who speaks next. */
+  seq: number
+  /** The spoken text. Bounded so a peer cannot flood the topic. */
+  text: string
+}
+
+/** End the session, from either side. */
+export interface NapChatCloseMessage extends NapChatEnvelope {
+  kind: 'close'
+  /** Why the session ended. */
+  reason: string
+}
+
+/** Any nap-chat negotiation message, discriminated by `kind`. */
+export type NapChatMessage
+  = | NapChatProposalMessage
+    | NapChatAcceptMessage
+    | NapChatDeclineMessage
+    | NapChatTurnMessage
+    | NapChatCloseMessage
+
+/** The negotiation steps, in roughly the order a session moves through them. */
+export type NapChatMessageKind = 'proposal' | 'accept' | 'decline' | 'turn' | 'close'
+
+/**
+ * Bounds shared by the schema below and the parser above it.
+ *
+ * `MAX_TURN_CAP` is the largest cap a proposal may announce: a peer is free to
+ * propose fewer than the default, never more, so a hostile proposal cannot
+ * widen the session past the design's 6-turn POC bound. `DEFAULT_*` are what
+ * this node proposes and defaults to when checking someone else's.
+ */
+export const NAP_CHAT_MAX_TURN_CAP = 6
+export const NAP_CHAT_DEFAULT_DURATION_MS = 10 * 60 * 1000
+/**
+ * A session with no `turn` for this long is closed locally, so a half-dead peer
+ * cannot wedge the other side; it doubles as the staleness bound on `at`.
+ */
+export const NAP_CHAT_EXPIRY_MS = 3 * 60 * 1000
+/** Bounded identically to `MAX_PEER_ID_LENGTH` in main's pairing module. */
+const MAX_NAP_CHAT_ID_LENGTH = 128
+/** Bounded so one turn cannot flood the topic. */
+const MAX_NAP_CHAT_TEXT_LENGTH = 4000
+
+/** A bounded `from` / `to` / `sessionId` field. */
+const napChatIdSchema = pipe(string(), minLength(1), maxLength(MAX_NAP_CHAT_ID_LENGTH))
+/** A bounded nonce: minted locally, echoed by the acceptor, 1:1 per session. */
+const napChatNonceSchema = pipe(string(), minLength(1), maxLength(MAX_NAP_CHAT_ID_LENGTH))
+
+/**
+ * Wire schema for the five nap-chat shapes.
+ *
+ * NOTICE: `variant('kind', …)` rather than one `union` because `decline` and
+ * `close` are otherwise field-identical — a union would accept either under
+ * whichever member it tried first, and `kind` is what tells them apart. Each
+ * member is a `strictObject`, so the "a peer cannot widen the shape" property
+ * above holds per shape rather than only in aggregate.
+ */
+export const NapChatWireSchema = variant('kind', [
+  strictObject({
+    kind: literal('proposal'),
+    protocol: literal(NAP_CHAT_PROTOCOL),
+    from: napChatIdSchema,
+    to: napChatIdSchema,
+    sessionId: napChatIdSchema,
+    at: number(),
+    turnCap: pipe(number(), integer(), minValue(1), maxValue(NAP_CHAT_MAX_TURN_CAP)),
+    durationMs: pipe(number(), integer(), minValue(1000), maxValue(24 * 60 * 60 * 1000)),
+    nonce: napChatNonceSchema,
+  }),
+  strictObject({
+    kind: literal('accept'),
+    protocol: literal(NAP_CHAT_PROTOCOL),
+    from: napChatIdSchema,
+    to: napChatIdSchema,
+    sessionId: napChatIdSchema,
+    at: number(),
+    nonce: napChatNonceSchema,
+  }),
+  strictObject({
+    kind: literal('decline'),
+    protocol: literal(NAP_CHAT_PROTOCOL),
+    from: napChatIdSchema,
+    to: napChatIdSchema,
+    sessionId: napChatIdSchema,
+    at: number(),
+    reason: pipe(string(), minLength(1), maxLength(MAX_NAP_CHAT_TEXT_LENGTH)),
+  }),
+  strictObject({
+    kind: literal('turn'),
+    protocol: literal(NAP_CHAT_PROTOCOL),
+    from: napChatIdSchema,
+    to: napChatIdSchema,
+    sessionId: napChatIdSchema,
+    at: number(),
+    seq: pipe(number(), integer(), minValue(0)),
+    text: pipe(string(), minLength(1), maxLength(MAX_NAP_CHAT_TEXT_LENGTH)),
+  }),
+  strictObject({
+    kind: literal('close'),
+    protocol: literal(NAP_CHAT_PROTOCOL),
+    from: napChatIdSchema,
+    to: napChatIdSchema,
+    sessionId: napChatIdSchema,
+    at: number(),
+    reason: pipe(string(), minLength(1), maxLength(MAX_NAP_CHAT_TEXT_LENGTH)),
+  }),
+])
+
+/** Options for `parseNapChatMessage`, all with design-backed defaults. */
+export interface ParseNapChatOptions {
+  /** `Date.now()` for the staleness check; injectable so a test is not wall-clock. */
+  now?: number
+  /** How old a message may be before it is stale. Defaults to `NAP_CHAT_EXPIRY_MS`. */
+  maxAgeMs?: number
+  /** The largest `seq` a `turn` may carry, 0-based. Defaults to `NAP_CHAT_MAX_TURN_CAP - 1`. */
+  maxSeq?: number
+}
+
+/**
+ * Validate one nap-chat message off the wire, or return `null` when it is
+ * malformed, stale or out of bounds.
+ *
+ * NOTICE: this lives in the shared package for the same reason
+ * `parseCompanionShare` does — the renderer parses what `airi/companion.chat`
+ * delivers to it and main validates what it mints, and two copies of the schema
+ * would be the kind of drift that leaves a mesh looking connected while
+ * nothing round-trips. The staleness and turn-cap checks live here rather than
+ * at each callsite for the same reason: they are properties of the *message*,
+ * so both processes must apply them identically.
+ */
+export function parseNapChatMessage(payload: unknown, options?: ParseNapChatOptions): NapChatMessage | null {
+  if (!payload || typeof payload !== 'object')
+    return null
+
+  const parsed = safeParse(NapChatWireSchema, payload as Record<string, unknown>)
+  if (!parsed.success)
+    return null
+
+  const message = parsed.output as NapChatMessage
+  if (!Number.isFinite(message.at))
+    return null
+
+  // A message is checked against the bounds the *session* agreed to, so the cap
+  // is a parameter rather than the schema's own maximum. A proposal announces a
+  // narrower cap than the design's ceiling and every later turn is checked
+  // against that announced value, not the ceiling.
+  const maxAgeMs = options?.maxAgeMs ?? NAP_CHAT_EXPIRY_MS
+  const now = options?.now ?? Date.now()
+  const age = now - message.at
+  if (age > maxAgeMs)
+    return null
+  // Future skew is a rejection, not a clamp: a peer that stamps `at` far ahead
+  // of the local clock would otherwise keep its messages alive for that offset.
+  if (age < 0)
+    return null
+
+  if (message.kind === 'turn') {
+    const maxSeq = options?.maxSeq ?? NAP_CHAT_MAX_TURN_CAP - 1
+    if (message.seq > maxSeq)
+      return null
+  }
+
+  return message
+}
+
+/** Whether a message is the proposal for `sessionId`, addressed to this node. */
+export function isNapChatProposalFor(message: NapChatMessage, localPeerId: string): message is NapChatProposalMessage {
+  return message.kind === 'proposal' && message.to === localPeerId
+}
+
 // ── Invoke Contracts (share / visit / host) ───────────────────────────────────
+
+/**
+ * Nap-chat consent of this node for one paired peer, read from main.
+ *
+ * Main is the only process that reads the paired-device record, so it is the
+ * only process that can answer: a renderer that held its own copy of the grant
+ * would be a second source of truth for a permission, which is the thing the
+ * pairing flow exists to make single-sourced. `granted: false` is the answer for
+ * a peer that has no record at all, so an absent grant can never look like a
+ * permission.
+ */
+export const companionServiceNapChatConsent = defineInvokeEventa<
+  { granted: boolean, reason?: string },
+  { peerId: string }
+>(
+  'eventa:invoke:electron:agentic:companion:nap-chat-consent',
+)
+
+/**
+ * Decide whether this node may invite `peerId` into a nap-chat session, minting
+ * the nonce the peer's `accept` must echo when it may.
+ *
+ * NOTICE: minting happens in main because main owns the only record the gate
+ * reads — `listPairedDevices`, written by the pairing flow — so a renderer-held
+ * copy would be a second source of truth for the same permission. This contract
+ * is the renderer's only route to `decideNapChatProposal`, exactly as
+ * `companionServiceNapChatConsent` is its only route to `napChatConsentFor`; the
+ * reason string is for the caller's log and the ledger, never for the wire.
+ */
+export const companionServiceNapChatDecideProposal = defineInvokeEventa<
+  { proposal: boolean, nonce?: string, reason?: string },
+  { peerId: string, sessionId: string }
+>(
+  'eventa:invoke:electron:agentic:companion:nap-chat-decide-proposal',
+)
+
+/**
+ * Consume the nonce an inbound `accept` echoed, opening the session only when
+ * this node minted it for that peer and that session.
+ *
+ * NOTICE: the consumption is main-side for the same single-source-of-truth
+ * reason the mint is — a nonce map the renderer held could be refilled by a
+ * renderer bug and a forged accept would then look authorized. `consumeNapChatNonce`
+ * claims the entry before any check, so a replayed accept observes it as already
+ * spent; that fail-closed direction is the same one the pairing gate takes.
+ */
+export const companionServiceNapChatConsumeNonce = defineInvokeEventa<
+  { accepted: boolean },
+  { nonce: string, peerId: string, sessionId?: string }
+>(
+  'eventa:invoke:electron:agentic:companion:nap-chat-consume-nonce',
+)
 
 /**
  * Share this companion with the mesh; the host must have granted consent.

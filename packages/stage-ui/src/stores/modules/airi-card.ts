@@ -81,6 +81,19 @@ export interface DreamStateConfig {
   dreamIntrusionPrompt?: string
 }
 
+/**
+ * Nap config (`extensions.airi.nap`).
+ *
+ * NOTICE: there is deliberately **no** threshold field. The nap floor is the
+ * canonical presence source's resolved AFK threshold
+ * (`docs/design-user-presence.md` §2), because a second copy of that number
+ * here would be two thresholds that can drift.
+ */
+export interface NapConfig {
+  /** Whether the companion may nap at all. */
+  enabled: boolean
+}
+
 export interface ShortTermMemoryConfig {
   enabled?: boolean
   windowSize: number
@@ -275,6 +288,11 @@ export interface AiriExtension {
 
   heartbeats?: HeartbeatConfig
   dreamState?: DreamStateConfig
+  /**
+   * Nap config. No threshold field of its own: the nap floor is the shared
+   * presence AFK threshold, on purpose.
+   */
+  nap?: NapConfig
   shortTermMemory?: ShortTermMemoryConfig
   screenWatching?: ScreenWatchingConfig
   eventLedger?: EventLedgerConfig
@@ -614,11 +632,13 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       updatedAt: Date.now(),
     }
 
-    console.log('[AiriCard Store] 💾 updateCard persisting card:', {
+    // NOTICE: `console.info` (not `console.log`) because eslint's no-console only
+    // allows warn/error/info. Kept unconditional: it is the observable evidence
+    // that an update was accepted and persisted.
+    console.info('[AiriCard Store] updateCard persisting card:', {
       id,
       name: (updatedCard as any).name || (updatedCard as any).data?.name,
       speechModule: (updatedCard as any).extensions?.airi?.modules?.speech || (updatedCard as any).data?.extensions?.airi?.modules?.speech,
-      fullUpdatedCard: JSON.parse(JSON.stringify(updatedCard)),
     })
 
     const nextCards = new Map(cards.value)
@@ -905,7 +925,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
           }
         }
       }
-      catch (e) {
+      catch {
         // Spine store might not be loaded in non-stage contexts
       }
 
@@ -1018,6 +1038,10 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       tokenBudgetPerDay: 1000,
     }
 
+    const defaultNap: NapConfig = {
+      enabled: false,
+    }
+
     const defaultArtistry = {
       widgetInstruction: DEFAULT_ARTISTRY_WIDGET_SPAWNING_PROMPT,
       spawnMode: 'bg' as const,
@@ -1063,6 +1087,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
         agents: {},
         heartbeats: defaultHeartbeats,
         dreamState: defaultDreamState,
+        nap: defaultNap,
         shortTermMemory: defaultShortTermMemory,
         artistry: defaultArtistry,
         generation: defaultGeneration,
@@ -1232,6 +1257,13 @@ export const useAiriCardStore = defineStore('airi-card', () => {
         lastProcessedAt: existingExtension?.dreamState?.lastProcessedAt ?? defaultDreamState.lastProcessedAt,
         dailyRunDate: existingExtension?.dreamState?.dailyRunDate ?? defaultDreamState.dailyRunDate,
         dailyRunCount: existingExtension?.dreamState?.dailyRunCount ?? defaultDreamState.dailyRunCount,
+      },
+      nap: {
+        // NOTICE: a card that predates the field must keep its current
+        // behaviour — an absent `nap` means "no explicit preference", which the
+        // derivation reads as disabled rather than silently resting. Only a card
+        // whose author never wrote `nap` at all gets the off-by-default value.
+        enabled: existingExtension?.nap?.enabled ?? defaultNap.enabled,
       },
       shortTermMemory: {
         enabled: existingExtension?.shortTermMemory?.enabled ?? defaultShortTermMemory.enabled,
@@ -1566,7 +1598,7 @@ export function buildSystemPrompt(card: AiriCard | undefined) {
       premise = datingSimStore.customPremise || story.premise || ''
     }
   }
-  catch (e) {
+  catch {
     // Ignore store initialization exceptions outside of Pinia
   }
 

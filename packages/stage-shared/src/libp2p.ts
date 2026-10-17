@@ -45,6 +45,18 @@ export interface PairedDevice {
   lastSeen: number
   /** Whether the paired device is trusted for mesh sync. */
   trusted: boolean
+  /**
+   * Whether the user granted this peer permission for nap-chat, decided once
+   * during pairing.
+   *
+   * NOTICE: absent means *not granted*, and that is the safe direction — a
+   * record written before this flag existed, or a record that never went
+   * through the pairing dialog's grant, must read as a refusal rather than as a
+   * silent permission. The pairing flow is the only writer, so a paired node
+   * cannot acquire the grant later by asking; a user who changes their mind
+   * unpairs and re-pairs.
+   */
+  napChatGranted?: boolean
 }
 
 /** Runtime snapshot of the libp2p node in the main process. */
@@ -181,10 +193,21 @@ export const electronMeshIdentitySetName = defineInvokeEventa<MeshIdentityInfo, 
 /**
  * Create a pairing invitation for this device, returning a QR payload containing
  * an `airi-pair://` URI plus the human-readable magic code equivalent.
+ *
+ * NOTICE: the error member is in-band for the same reason the accept contract's
+ * is — a nap-chat grant the user declined refuses the pairing, and a contract
+ * that can only answer success would force the renderer to guess why the
+ * dialog never opened.
+ *
+ * `napChatGranted` stays *optional* so an older peer, or a peer built before
+ * the grant existed, pairs exactly as before and simply records no grant. The
+ * renderer store nonetheless always transmits a boolean: an omitted decision
+ * would cross IPC as an explicit `undefined`, and a caller with no user intent
+ * to report must send the refusal rather than leave the field absent.
  */
 export const libp2pServiceCreatePairing = defineInvokeEventa<
-  { qrCode: string, magicCode: string, expiresAt: string },
-  { ttlMinutes?: number, name?: string }
+  { qrCode: string, magicCode: string, expiresAt: string } | { error: string },
+  { ttlMinutes?: number, name?: string, napChatGranted?: boolean }
 >(
   'eventa:invoke:electron:libp2p:pair:create',
 )
@@ -193,10 +216,18 @@ export const libp2pServiceCreatePairing = defineInvokeEventa<
  * Accept a pairing from a remote device. `input` is the raw user input: either
  * the `airi-pair://` QR payload or the bare magic code, discriminated by the
  * main-process handler.
+ *
+ * NOTICE: `napChatGranted` is this node's own half of the nap-chat consent,
+ * chosen in the pairing dialog beside the alias. An explicit `false` refuses the
+ * pairing outright, before the invitation is dialled or a record is written —
+ * the design's "don't want it → don't pair". The field stays *optional* so an
+ * older peer pairs exactly as before with no grant recorded; the renderer store
+ * always sends a boolean, so the omitted case is an old peer, never a peer whose
+ * user was never asked.
  */
 export const libp2pServiceAcceptPairing = defineInvokeEventa<
   { peerId: string, alias: string } | { error: string },
-  { input: string, alias?: string }
+  { input: string, alias?: string, napChatGranted?: boolean }
 >(
   'eventa:invoke:electron:libp2p:pair:accept',
 )

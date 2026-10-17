@@ -59,22 +59,22 @@ Concept-to-file-path index for rapid context retrieval. Use this to find where a
 
 | Concept | Path |
 | :--- | :--- |
-| **Control Strip (Main Window)** | `apps/stage-tamagotchi/src/main/windows/main/index.ts` (Electron) | `packages/stage-ui/src/components/scenarios/layout/ControlStrip.vue` (UI) |
-| **Actor Stage (Floating Island)** | `apps/stage-tamagotchi/src/main/windows/stage/index.ts` (Electron) | `packages/stage-ui/src/components/scenes/RendererStage.vue` (UI) |
-| **Chatbox Window** | `apps/stage-tamagotchi/src/main/windows/chat/index.ts` (Electron) | `apps/stage-tamagotchi/src/renderer/pages/chat.vue` (UI) \| `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.vue` (Host) |
+| **Control Strip (Main Window)** \| `apps/stage-tamagotchi/src/main/windows/main/index.ts` (Electron) \| `packages/stage-ui/src/components/scenarios/layout/ControlStrip.vue` (UI) |
+| **Actor Stage (Floating Island)** \| `apps/stage-tamagotchi/src/main/windows/stage/index.ts` (Electron) \| `packages/stage-ui/src/components/scenes/RendererStage.vue` (UI) |
+| **Chatbox Window** \| `apps/stage-tamagotchi/src/main/windows/chat/index.ts` (Electron) \| `apps/stage-tamagotchi/src/renderer/pages/chat.vue` (UI) \| `apps/stage-tamagotchi/src/renderer/components/InteractiveArea.vue` (Host) |
 | **Control Island (Original)** | ❌ **DEPRECATED / REMOVED** — `stage-islands/controls-island/` removed in `e10223f2e`. Replaced by `ControlStripHost.vue` (scenes) + `controls-island` settings store. |
 | **Gemini Control Island** | ❌ **DEPRECATED / REMOVED** — `gemini-controls.vue` removed in `e10223f2e`. Gemini Bidi session moved to `packages/stage-ui/src/stores/modules/live-session.ts` + `pages/notice/gemini.vue` panel. |
 | **Whisperbox (Input)** | `packages/stage-ui/src/components/scenarios/chat/WhisperDock.vue` |
 | **Resource Island** | `apps/stage-tamagotchi/src/renderer/components/stage-islands/resource-status-island/index.vue` |
 | **VRM Character** | `packages/stage-ui-three/src/components/Model/VRMModel.vue` |
-| **Live2D Character** | `packages/stage-ui-live2d/src/components/scenes/live2d/Canvas.vue` | `packages/stage-ui-live2d/src/components/scenes/live2d/Model.vue` (renderer + DSL VM adapter; exposes `getDslState`/`dispatchDsl`/`selectDslChoice`) |
+| **Live2D Character** \| `packages/stage-ui-live2d/src/components/scenes/live2d/Canvas.vue` \| `packages/stage-ui-live2d/src/components/scenes/live2d/Model.vue` (renderer + DSL VM adapter; exposes `getDslState`/`dispatchDsl`/`selectDslChoice`) |
 | **Live2D DSL Playground** | `apps/stage-web/src/pages/playground/live2d.vue` (plan §4 — sandboxed `/playground/live2d`; intimacy keyed `__playground__/<name>`) |
-| **Spine Character** | `packages/stage-ui-spine/src/components/scenes/Spine.vue` | `packages/stage-ui-spine/src/components/scenes/spine/Model.vue` | Spec: [`docs/design-spine-model.md`](./design-spine-model.md) |
-| **MMD Character** | `packages/stage-ui-mmd/src/components/scenes/MMD.vue` | `packages/stage-ui-mmd/src/components/scenes/mmd/Model.vue` |
-| **Gemini Panel** | `apps/stage-tamagotchi/src/renderer/pages/notice/gemini.vue` (UI) | `packages/stage-ui/src/stores/modules/live-session.ts` (Bidi WebSocket) |
+| **Spine Character** \| `packages/stage-ui-spine/src/components/scenes/Spine.vue` \| `packages/stage-ui-spine/src/components/scenes/spine/Model.vue` \| Spec: [`docs/design-spine-model.md`](./design-spine-model.md) |
+| **MMD Character** \| `packages/stage-ui-mmd/src/components/scenes/MMD.vue` \| `packages/stage-ui-mmd/src/components/scenes/mmd/Model.vue` |
+| **Gemini Panel** \| `apps/stage-tamagotchi/src/renderer/pages/notice/gemini.vue` (UI) \| `packages/stage-ui/src/stores/modules/live-session.ts` (Bidi WebSocket) |
 | **System Tray** | `apps/stage-tamagotchi/src/main/tray/index.ts` |
-| **Caption Overlay** | `apps/stage-tamagotchi/src/renderer/pages/caption.vue` (UI) | `apps/stage-tamagotchi/src/main/windows/caption/` (Manager) |
-| **Widgets Host** | `apps/stage-tamagotchi/src/renderer/pages/widgets.vue` | `apps/stage-tamagotchi/src/main/windows/widgets/index.ts` (Manager) |
+| **Caption Overlay** \| `apps/stage-tamagotchi/src/renderer/pages/caption.vue` (UI) \| `apps/stage-tamagotchi/src/main/windows/caption/` (Manager) |
+| **Widgets Host** \| `apps/stage-tamagotchi/src/renderer/pages/widgets.vue` \| `apps/stage-tamagotchi/src/main/windows/widgets/index.ts` (Manager) |
 | **Stage-Mate (Unity Companion)** | `apps/stage-mate/` (Sidecar Runtime) \| `apps/stage-tamagotchi/src/main/services/airi/stage-mate/index.ts` (Service) \| Spec: [`docs/project-gunslinger-sidecar-mod.md`](./project-gunslinger-sidecar-mod.md) |
 | **Onboarding V3 (Canonical)** | `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/onboarding-v3.vue` (UI) \| `apps/stage-tamagotchi/src/renderer/pages/onboarding-v3.vue` (Page `/onboarding-v3`) \| `apps/stage-tamagotchi/src/main/windows/onboarding/index.ts` (Electron Window) \| Spec: [`docs/design-onboarding-v3.md`](./design-onboarding-v3.md). *(V2 under `v2/` is deprecated reference)* |
 
@@ -93,7 +93,7 @@ Concept-to-file-path index for rapid context retrieval. Use this to find where a
 | — Artistry Tab | `.../tabs/CardCreationTabArtistry.vue` |
 | — Modules Tab | `.../tabs/CardCreationTabModules.vue` |
 | — Proactivity Tab | `.../tabs/CardCreationTabProactivity.vue` |
-| **Vision Settings** | `packages/stage-pages/src/pages/settings/modules/vision.vue` | `visionStore` |
+| **Vision Settings** \| `packages/stage-pages/src/pages/settings/modules/vision.vue` \| `visionStore` |
 | **Module Settings Pages** | `packages/stage-pages/src/pages/settings/modules/` |
 | **Provider Config Pages** | `packages/stage-pages/src/pages/settings/providers/` |
 | **Docs Viewer Sidebar** | `apps/stage-tamagotchi/src/renderer/constants/docs-sidebar.ts` |
@@ -314,7 +314,7 @@ Each module typically follows:
 ## 8. Audio Pipeline
 
 ### TTS Flow (Output)
-```
+```text
 LLM output text → VoiceProfile (effects + UST transforms) → SpeechProvider.speech().fetch() → Worker inference → PCM → WAV → Playback
 ```
 
@@ -325,7 +325,7 @@ Implementation guides: [speech runtime](../.agents/skills/airi-speech-runtime/SK
 `libs/pacing/turn-pacing-coordinator.ts` keeps retry diagnostics (`cacheMissReason` / `cacheMissError`) separate from terminal `cutoffReason`; setting the latter on a recoverable miss prevents the playback bridge from admitting subsequent fillers. In `use-turn-pacing.ts`, coordinator cancellation callbacks stop bridge preparation/playback without recursively canceling the turn. `pacing-playback-bridge.ts` checks cancellation after cache lookup and decode, and persists fallback bytes only after successful decoding and duration validation. `maxFillerSynthesisBudgetMs` independently budgets uncached phrases, so saved `maxSynthesisBudgetMs` values only constrain dynamic asides. Keep the synthesis budget defaults and bounds aligned across `types/pacing.ts`, `types/card.schema.ts`, and the card editor.
 
 ### STT Flow (Input)
-```
+```text
 Microphone → VadDetector → AudioBuffer → STTProvider inference → text → chatOrchestrator.ingest
 ```
 
@@ -351,7 +351,7 @@ Microphone → VadDetector → AudioBuffer → STTProvider inference → text �
 | **Text-to-Motion design** | [`design-text-to-motion.md`](./design-text-to-motion.md) (supercedes `proposal-text-to-vrma-system.md`) |
 | **Audio pipelines (transcribe)** | `packages/audio-pipelines-transcribe/` — audio transcription pipeline implementations |
 | **Audio pipelines (general)** | `packages/pipelines-audio/` — general audio pipeline utilities |
-| **Model drivers** | `packages/model-driver-lipsync/` (lipsync) | `packages/model-driver-mediapipe/` (face/body tracking) |
+| **Model drivers** | `packages/model-driver-lipsync/` (lipsync) \| `packages/model-driver-mediapipe/` (face/body tracking) |
 
 ---
 
@@ -414,18 +414,18 @@ Implementation guide: [Director orchestration](../.agents/skills/airi-director-o
 | **ACT Pipeline (Execution)** | `packages/stage-ui-three/src/composables/vrm/expression.ts` |
 | **Artistry / ComfyUI** | `apps/stage-tamagotchi/src/main/services/airi/widgets/providers/comfyui.ts` |
 | **Artistry Bridge** | `apps/stage-tamagotchi/src/main/services/airi/widgets/artistry-bridge.ts` |
-| **Scene / Background Layer** | `packages/stage-ui/src/components/scenes/RendererStage.vue` (Layer) | `packages/stage-pages/src/pages/settings/scene/index.vue` (UI) |
+| **Scene / Background Layer** \| `packages/stage-ui/src/components/scenes/RendererStage.vue` (Layer) \| `packages/stage-pages/src/pages/settings/scene/index.vue` (UI) |
 | **Background Picker Dialog** | `packages/stage-ui/src/components/scenarios/dialogs/stage-background-picker/StageBackgroundPicker.vue` |
 | **Image Journal Store** | `packages/stage-ui/src/stores/background.ts` |
 | **Stage Style / Gallery** | `packages/stage-pages/src/pages/settings/scene/index.vue` |
 | **Model Position / Lights** | `packages/stage-ui/src/components/scenarios/settings/model-settings/vrm.vue` |
-| **Control Island State** | `packages/stage-ui/src/stores/settings/controls-island.ts` (Shared) | `apps/stage-tamagotchi/src/renderer/stores/controls-island.ts` (Renderer) |
-| **VRM Animations** | `packages/stage-ui-three/src/assets/vrm/animations/index.ts` (Assets) | `packages/stage-ui-three/src/stores/model-store.ts` (State) |
+| **Control Island State** \| `packages/stage-ui/src/stores/settings/controls-island.ts` (Shared) \| `apps/stage-tamagotchi/src/renderer/stores/controls-island.ts` (Renderer) |
+| **VRM Animations** \| `packages/stage-ui-three/src/assets/vrm/animations/index.ts` (Assets) \| `packages/stage-ui-three/src/stores/model-store.ts` (State) |
 | **Custom VRM Animations** | `packages/stage-ui-three/src/stores/custom-vrm-animations.ts` |
 | **Spine Store** | `packages/stage-ui-spine/src/stores/spine.ts` — model loading, animation state |
 | **MMD Store** | `packages/stage-ui-mmd/src/stores/mmd.ts` — model loading, animation state |
 | **Character Artistry DNA** | `packages/stage-ui/src/constants/prompts/character-defaults.ts` |
-| **STT / Microphone** | `apps/stage-tamagotchi/src/renderer/pages/index.vue` (Tamagotchi) | `apps/stage-web/src/pages/index.vue` (Web) |
+| **STT / Microphone** \| `apps/stage-tamagotchi/src/renderer/pages/index.vue` (Tamagotchi) \| `apps/stage-web/src/pages/index.vue` (Web) |
 | **Gemini Live (Bidi WebSocket)** | `packages/stage-ui/src/stores/modules/live-session.ts` |
 | **LLM Meta-Tools** | `apps/stage-tamagotchi/src/renderer/stores/tools/builtin/` |
 | **Multi-Step Tool Gating** | `packages/stage-ui/src/stores/llm.ts` — `maxSteps: 10` |
@@ -726,3 +726,12 @@ Cross-window communication relies on named `BroadcastChannel` instances. This is
 - [[airi-stage-mate-unity]]
 - [[airi-stage-ui-surfaces]]
 - [[airi-tool-registry-builtin-tools]]
+
+### Repo-Wide Lint Sweeps: The Regex Rule That Must Not Be Applied
+
+- **Never rewrite a regex to satisfy `regexp/no-super-linear-backtracking`, `regexp/no-misleading-capturing-group`, `regexp/optimal-quantifier-concatenation`, `regexp/no-dupe-disjunctions` or `regexp/no-unused-capturing-group` without reading the surrounding test that pins behaviour.** A sweep that treated these as safe autofixes damaged two benchmark scripts and broke them silently — lint-clean, wrong. The two cases:
+  - `scripts/tests/locomo-benchmark/span-reader.mjs` — the activity capture was made eager, which lost spans on newline inputs (`'i like playing chess\nand more'` returned `[]` instead of `['playing chess']`) and displaced the ranked candidate (correct answer moved from rank 0 to 1 and 2).
+  - `scripts/expression-classifier-audit.ts` — `down`/`upper` were dropped from the alternation and `\d+` loosened to `\d`, so `ex_down`, `ex_u_down`, `ex_down_left` and `ex_xdown` stopped classifying as `procedural_eye`.
+- **Verification that the rule is a false positive here**: both sites parse bounded data, not attacker input. `airi-card.ts` parses spine keys from `Object.keys()` of a card extension's expression map; `span-reader.mjs` parses benchmark evidence passages. Measured worst case with a 40 KB hostile input is 0.056 ms and 0.036 ms respectively — linear, not the polynomial blow-up the rule warns about. That is why `eslint.config.js` disables them globally rather than per-file, and why the comment there names the alternatives so a future sweep does not "helpfully" re-apply them.
+- **Sweep collateral to check in every file**: `const all = …filter(x => x.usable).length` collapsing into the identical `const usable = …filter(x => x.usable).length` above it (silently breaks any "used / total" display); `lastIndexOf('[')` parsing replacing a regex (mis-parses nested brackets rather than rejecting them); deleted `describe` blocks and individual `expect(...)` assertions (the most dangerous class — a green suite with less coverage); `console.log`→`console.info` and `catch(e)`→`catch` are safe and mechanical; and event renames MUST be applied to both the `defineEmits` type and every listener/emit site, or the failure is silent at runtime.
+- **Generated bundles are not source**: `packages/stage-ui/src/utils/spine-converter/SpineSkeletonDataConverter.js` (emscripten `Module(moduleArg = {})` prelude), `packages/stage-ui/src/workers/moss/tokenizer_sandbox.js` (`__esm`/`__defProp` prelude), `packages/stage-ui/src/workers/moss/browser_onnx_runtime.js`, and `packages/i18n/src/dist-lite/**` (gitignored build output) are machine-written and are exempted in `eslint.config.js`. Hand-linting them produces thousands of errors describing the generator's choices.

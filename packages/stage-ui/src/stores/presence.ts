@@ -1,12 +1,11 @@
-import type { PresenceSnapshot, PresenceState, PresenceStateAvailability } from '@proj-airi/stage-shared/agentic'
+import type { PresenceSignalProvider, PresenceSnapshot, PresenceState, PresenceStateAvailability } from '@proj-airi/stage-shared/agentic'
 
 import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
 import { isElectronWindow, sensorsGetIdleTime } from '@proj-airi/stage-shared'
 import { defineStore, storeToRefs } from 'pinia'
-import { computed, onScopeDispose, ref, shallowRef, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 import { useAiriCardStore } from './modules/airi-card'
-import { useProactivityStore } from './proactivity'
 
 /**
  * Idle seconds past which the user is still considered present, just quiet.
@@ -42,30 +41,6 @@ const EMPTY_STATE_AVAILABILITY: Readonly<PresenceStateAvailability> = Object.fre
   'screen-locked': 'unavailable',
   'sleep': 'unavailable',
 })
-
-/**
- * Whether this build can read a lock-state or sleep/wake signal at all.
- *
- * Honesty note for the report: on the desktop app the main process *does* have
- * `powerMonitor.on('lock-screen')` and `powerMonitor.on('suspend')` — see
- * `apps/stage-tamagotchi/src/main/services/electron/window.ts:72-80` — but they
- * are consumed locally to hide/restore windows and are **not** forwarded to the
- * renderer as a queryable state. No invoke contract asking "is the screen
- * locked?" exists in `packages/stage-shared`, so the renderer genuinely cannot
- * observe either signal today. The presence store therefore reports both
- * states as `unavailable` instead of synthesising them from idle time.
- */
-function detectSignalAvailability(): PresenceStateAvailability {
-  const wireLockSignal = false
-  const wireSleepSignal = false
-  return {
-    'active': 'derivable',
-    'idle': 'derivable',
-    'away': 'derivable',
-    'screen-locked': wireLockSignal ? 'derivable' : 'unavailable',
-    'sleep': wireSleepSignal ? 'derivable' : 'unavailable',
-  }
-}
 
 /**
  * Derive the presence state from the signals that exist.
@@ -150,34 +125,141 @@ export function resolveAfkThresholdMinutes(
   return typeof configured === 'number' && configured > 0 ? configured : DEFAULT_AFK_THRESHOLD_MINUTES
 }
 
+/**
+ * Whether this build can read a lock-state or sleep/wake signal at all.
+ *
+ * Honesty note: on the desktop app the main process *does* have
+ * `powerMonitor.on('lock-screen')` and `powerMonitor.on('suspend')` — see
+ * `apps/stage-tamagotchi/src/main/services/electron/window.ts` — but they are
+ * consumed locally to hide/restore windows and are **not** forwarded to the
+ * renderer as a queryable state. No invoke contract asking "is the screen
+ * locked?" exists in `packages/stage-shared`, so the renderer genuinely cannot
+ * observe either signal today. `screen-locked` therefore stays `unavailable`
+ * until a `PresenceSignalProvider` that answers the lock/sleep question is
+ * registered — at which point this store needs no further change.
+ */
+function resolveSignalAvailability(providers: readonly PresenceSignalProvider[]): PresenceStateAvailability {
+  return {
+    'active': 'derivable',
+    'idle': 'derivable',
+    'away': 'derivable',
+    'screen-locked': providers.some(provider => provider.readLockState !== undefined) ? 'derivable' : 'unavailable',
+    'sleep': providers.some(provider => provider.readSleepState !== undefined) ? 'derivable' : 'unavailable',
+  }
+}
+
+export type PresenceStore = ReturnType<typeof usePresenceStore>
+
 export const usePresenceStore = defineStore('presence', () => {
-  const proactivity = useProactivityStore()
   const airiCardStore = useAiriCardStore()
   const { activeCard } = storeToRefs(airiCardStore)
 
   const isElectron = computed(() => typeof window !== 'undefined' && isElectronWindow(window))
 
   /**
-   * Lock/sleep signals, if a future invoke contract exposes them. Today there
-   * is none, so these stay `null` and the derived state never claims
-   * `screen-locked` or `sleep`.
+   * The raw presence signal this build can read: OS-level input idle, in
+   * seconds. `undefined` means nothing has been read yet.
+   *
+   * This store is the sole owner of the value. Everything that produces a
+   * reading — the provider read, the proactivity sensor loop, an on-demand
+   * refresh — goes through `writeIdleTimeSec()`, so "how many places can
+   * change presence what" has exactly one answer, and no consumer has to know
+   * whether the value came from a probe or from a fresh IPC call.
    */
-  const lockSignal = shallowRef<'locked' | 'unlocked' | null>(null)
-  const sleepSignal = shallowRef<'awake' | 'asleep' | null>(null)
-
-  const availability = computed(() => detectSignalAvailability())
+  const rawIdleTimeSec = ref<number | undefined>(undefined)
 
   /**
-   * NOTICE: this store deliberately adds **no polling of its own**. The
-   * proactivity store already runs a single `useIntervalFn(updateSensors, 10000)`
-   * that keeps `idleTimeSec`, `winHistory`, `locTime` and friends current, and
-   * gates that loop on `isProactivityLoopNeeded`. Presence is a *derived read*
-   * of those refs: adding a second timer here would both duplicate the IPC
-   * probes and let the two loops disagree about when the user left.
+   * Pluggable signal sources. See `PresenceSignalProvider` in
+   * `packages/stage-shared/src/agentic.ts` and `docs/design-user-presence.md`.
+   *
+   * Immutable updates, so the recompute watch reacts to add/remove.
    */
-  const afkThresholdMinutes = computed(() => resolveAfkThresholdMinutes(activeCard.value?.extensions))
+  const signalProviders = ref<readonly PresenceSignalProvider[]>([])
 
-  const idleTimeSec = computed(() => proactivity.idleTimeSec ?? null)
+  function addSignalProvider(provider: PresenceSignalProvider) {
+    if (signalProviders.value.some(registered => registered.id === provider.id))
+      return
+    signalProviders.value = [...signalProviders.value, provider]
+  }
+
+  function removeSignalProvider(id: string) {
+    signalProviders.value = signalProviders.value.filter(registered => registered.id !== id)
+  }
+
+  /**
+   * The single write path for the raw idle signal.
+   *
+   * `undefined` means "no reading was obtained" and is ignored, so a probe
+   * that fails or a provider that cannot answer leaves the last known value in
+   * place rather than silently resetting presence to `active`.
+   */
+  function writeIdleTimeSec(idleTimeSec: number | undefined) {
+    if (idleTimeSec === undefined)
+      return
+    rawIdleTimeSec.value = idleTimeSec
+  }
+
+  /**
+   * Resolve the idle reading across every registered provider, without
+   * writing anything.
+   *
+   * The largest reading wins: a larger reading means "quiet for longer", which
+   * is the safe direction. A window-scoped provider that stops reporting while
+   * the app is backgrounded must not make the companion believe the user is
+   * present when the OS idle counter says otherwise.
+   *
+   * NOTICE: a provider that throws is treated as "cannot answer", but rejection
+   * is preserved when *no* provider produced a usable value, so callers keep
+   * seeing the failure (the proactivity sensor loop records a failed probe, and
+   * `refreshIdleTimeOnce` logs it) instead of silently returning `undefined`.
+   */
+  async function readIdleTimeOnce(): Promise<number | undefined> {
+    const settled = await Promise.allSettled(signalProviders.value.map(async provider => provider.readIdleSec()))
+    const failures = settled.filter((result): result is PromiseRejectedResult => result.status === 'rejected')
+    const readings = settled.filter((result): result is PromiseFulfilledResult<number | undefined> => result.status === 'fulfilled')
+    const usable = readings
+      .map(result => result.value)
+      .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+
+    if (usable.length === 0 && failures.length > 0)
+      throw failures[0].reason
+
+    return usable.length > 0 ? Math.floor(Math.max(...usable)) : undefined
+  }
+
+  /** Read the registered providers and store the result. One fresh reading. */
+  async function refreshIdleTimeOnce() {
+    try {
+      writeIdleTimeSec(await readIdleTimeOnce())
+    }
+    catch (err) {
+      console.warn('[PresenceStore] Failed to refresh idle time:', err)
+    }
+  }
+
+  const afkThresholdMinutes = computed(() => resolveAfkThresholdMinutes(activeCard.value?.extensions))
+  const afkThresholdSec = computed(() => afkThresholdMinutes.value * 60)
+
+  /** Lock/sleep readings, contributed by any provider that can answer them. */
+  const lockSignal = computed<'locked' | 'unlocked' | null>(() => {
+    for (const provider of signalProviders.value) {
+      const state = provider.readLockState?.()
+      if (state !== undefined)
+        return state
+    }
+    return null
+  })
+
+  const sleepSignal = computed<'awake' | 'asleep' | null>(() => {
+    for (const provider of signalProviders.value) {
+      const state = provider.readSleepState?.()
+      if (state !== undefined)
+        return state
+    }
+    return null
+  })
+
+  const availability = computed(() => resolveSignalAvailability(signalProviders.value))
 
   const presence = ref<PresenceSnapshot>({
     state: 'active',
@@ -193,12 +275,12 @@ export const usePresenceStore = defineStore('presence', () => {
   })
 
   /**
-   * Recompute the snapshot from the current proactivity sensor refs. The
-   * lock/sleep signal reads are inlined because both are permanently `null`
-   * today; when a contract exposes them, this is the one place that changes.
+   * Recompute the snapshot from the resolved signals. Adding, removing or
+   * changing a provider is the only way a new signal enters presence, and it
+   * needs no change here: this is the single place signals become a state.
    */
   function recompute() {
-    const idle = proactivity.idleTimeSec ?? null
+    const idle = rawIdleTimeSec.value ?? null
     const derived = derivePresenceState({
       idleTimeSec: idle,
       afkThresholdMinutes: afkThresholdMinutes.value,
@@ -220,11 +302,17 @@ export const usePresenceStore = defineStore('presence', () => {
     }
   }
 
-  // The proactivity loop writes `idleTimeSec` at most every 10s; recomputing on
-  // each change keeps the snapshot fresh without a timer of our own.
-  watch([idleTimeSec, afkThresholdMinutes, lockSignal, sleepSignal], () => {
+  // A fresh reading lands on `rawIdleTimeSec` at most every 10s (proactivity's
+  // loop) or on demand; recomputing on each change keeps the snapshot fresh
+  // without a timer of our own. Presence deliberately adds no polling of its
+  // own: a second schedule would duplicate the IPC probes and let two loops
+  // disagree about when the user left.
+  // `flush: 'sync'` — a consumer that reads the snapshot immediately after it
+  // writes a reading (e.g. `evaluateDreamState` reading `presence.afk` straight
+  // after a refresh) must observe the fresh state, not the pre-flush one.
+  watch([rawIdleTimeSec, afkThresholdMinutes, signalProviders, lockSignal, sleepSignal], () => {
     recompute()
-  }, { immediate: true })
+  }, { immediate: true, flush: 'sync' })
 
   /**
    * The states this build can actually distinguish. Used by the settings UI and
@@ -248,40 +336,82 @@ export const usePresenceStore = defineStore('presence', () => {
   const isUserPresent = computed(() => presence.value.state === 'active')
 
   /**
-   * Single idle-only probe, used when the proactivity loop is paused (heartbeats
-   * disabled and grounding off) but an autonomous cycle still needs one fresh
-   * reading. It reuses the *same* invoke contract the 10s loop uses; it does not
-   * create a second polling schedule.
+   * Whether the user is away from the desk, per the resolved AFK threshold.
+   *
+   * This is the heartbeat's `pauseWhenAfk` predicate, so it resolves the
+   * threshold the same way `heartbeats.afkThresholdMinutes` does. `false` when
+   * no reading exists — an unavailable probe must not assert the user is gone.
    */
-  const invokeGetIdleTime = isElectron.value ? useElectronEventaInvoke(sensorsGetIdleTime) : null
+  const afk = computed(() => rawIdleTimeSec.value !== undefined && rawIdleTimeSec.value >= afkThresholdSec.value)
 
-  async function refreshIdleTimeOnce() {
-    if (!invokeGetIdleTime)
-      return
-    try {
-      const idleMs = await invokeGetIdleTime()
-      if (idleMs !== undefined)
-        proactivity.idleTimeSec = Math.floor(idleMs / 1000)
-    }
-    catch (err) {
-      console.warn('[PresenceStore] Failed to refresh idle time:', err)
-    }
+  /**
+   * The canonical AFK predicate, parameterizable per consumer.
+   *
+   * `isUserAway()` uses presence's own default threshold (`heartbeats.
+   * afkThresholdMinutes`), which is what the heartbeat gate reads.
+   *
+   * `isUserAway(minutes)` asks against a caller-supplied threshold, so a
+   * feature with its own config — Dream State's own *required*
+   * `afkThresholdMinutes` (`card.schema.ts:146`), distinct from heartbeats'
+   * optional one (`card.schema.ts:137`) — keeps its own threshold while still
+   * reading the single canonical idle signal instead of probing the OS itself.
+   *
+   * The `|| 5` fallback matches the expression Dream State used inline
+   * (`(config.afkThresholdMinutes || 5) * 60`) exactly: an unset, zero or NaN
+   * value falls back to the 5-minute default rather than clamping to 1.
+   * Returns `false` when no reading exists.
+   */
+  function isUserAway(thresholdMinutes?: number): boolean {
+    const idle = rawIdleTimeSec.value
+    if (idle === undefined)
+      return false
+
+    const thresholdSec = thresholdMinutes === undefined
+      ? afkThresholdSec.value
+      : (thresholdMinutes || DEFAULT_AFK_THRESHOLD_MINUTES) * 60
+
+    return idle >= thresholdSec
   }
 
-  onScopeDispose(() => {
-    lockSignal.value = null
-    sleepSignal.value = null
-  })
+  /**
+   * The only presence signal provider registered at runtime today: the OS
+   * input-idle counter, read over the `sensorsGetIdleTime` invoke contract.
+   *
+   * In-app window input, global native hooks and a lock/sleep contract are the
+   * same three lines of registration, and need no consumer change — see
+   * `docs/design-user-presence.md` §5.
+   */
+  if (isElectron.value) {
+    const invokeGetIdleTime = useElectronEventaInvoke(sensorsGetIdleTime)
+    addSignalProvider({
+      id: 'os-idle-time',
+      readIdleSec: async () => {
+        const idleMs = await invokeGetIdleTime()
+        return typeof idleMs === 'number' && Number.isFinite(idleMs) ? idleMs / 1000 : undefined
+      },
+    })
+  }
 
   return {
     presence,
     presenceState: computed(() => presence.value.state),
-    idleTimeSec,
+    rawIdleTimeSec,
+    /** Canonical idle read for consumers: `null` when nothing has been read. */
+    idleTimeSec: computed(() => rawIdleTimeSec.value ?? null),
+    signalProviders: computed(() => signalProviders.value),
     afkThresholdMinutes,
+    afkThresholdSec,
+    afk,
+    isUserAway,
+    availability,
     derivableStates,
     isAway,
     isUserPresent,
-    recompute,
+    addSignalProvider,
+    removeSignalProvider,
+    readIdleTimeOnce,
+    writeIdleTimeSec,
     refreshIdleTimeOnce,
+    recompute,
   }
 })

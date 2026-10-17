@@ -156,6 +156,19 @@ const AiriDreamStateSchema = object({
   journalWorthyThreshold: optional(number()),
 })
 
+/**
+ * Nap config (`extensions.airi.nap`).
+ *
+ * NOTICE: there is deliberately **no** threshold field. The nap floor is the
+ * canonical presence source's resolved AFK threshold
+ * (`docs/design-user-presence.md` §2), because a second copy of that number
+ * here would be two thresholds that can drift. `enabled` is the only decision
+ * this feature owns.
+ */
+const AiriNapSchema = looseObject({
+  enabled: optional(boolean()),
+})
+
 const AiriTextJournalSchema = object({
   widgetInstruction: optional(string()),
   injectJournalContext: optional(boolean()),
@@ -280,6 +293,7 @@ const AiriExtensionSchema = looseObject({
   cognition: optional(AiriCognitionSchema),
   heartbeats: optional(AiriHeartbeatSchema),
   dreamState: optional(AiriDreamStateSchema),
+  nap: optional(AiriNapSchema),
   shortTermMemory: optional(AiriShortTermMemorySchema),
   screenWatching: optional(AiriScreenWatchingSchema),
   textJournal: optional(AiriTextJournalSchema),

@@ -38,9 +38,7 @@ function detectPlatform(updateInfo: UpdateInfo): Platform {
     urls.push(updateInfo.path)
   }
 
-  // eslint-disable-next-line regexp/no-unused-capturing-group
   const hasArm64 = urls.some(url => /(^|[-_/])arm64([-.]|$)/i.test(url))
-  // eslint-disable-next-line regexp/no-unused-capturing-group
   const hasX64FromName = urls.some(url => /(^|[-_/])x64([-.]|$)/i.test(url))
   const hasMacZip = urls.some(url => /-mac\.zip$/i.test(url) && !/arm64/i.test(url))
   const hasX64 = hasX64FromName || hasMacZip
