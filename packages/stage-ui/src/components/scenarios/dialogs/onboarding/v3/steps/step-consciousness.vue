@@ -60,6 +60,7 @@ const isLoadingActiveProviderModels = computed(() => providersStore.isLoadingMod
 // --- Hardware Detection (WebLLM needs WebGPU) ---
 const webgpuSupported = ref(false)
 const fp16Supported = ref(true)
+const selectedLlmModel = ref<string>(draft.state.llmModel || WEB_LLM_MODELS[0].id)
 
 const availableWebLlmModels = computed(() => {
   return fp16Supported.value ? WEB_LLM_MODELS : WEB_LLM_MODELS.filter(m => !m.fp16)
@@ -174,7 +175,6 @@ const downloadState = ref<DownloadState>('idle')
 const downloadProgress = ref(0)
 const downloadStatusText = ref('')
 const downloadAbort = ref<AbortController>()
-const selectedLlmModel = ref<string>(draft.state.llmModel || WEB_LLM_MODELS[0].id)
 
 const isWebLlmSelected = computed(() => selectedProviderId.value === 'web-llm')
 
@@ -257,6 +257,12 @@ async function startWebLlmDownload() {
     }
   }
 }
+
+// --- Live Connection Test & Dialogue Simulator ---
+type ProbeState = 'idle' | 'connecting' | 'inferencing' | 'verified' | 'error'
+const probeState = ref<ProbeState>('idle')
+const probeResponseMessage = ref('')
+const probeErrorMessage = ref('')
 
 // --- Provider Selection & Inline Configuration State ---
 const apiKeyInput = ref('')
@@ -449,11 +455,6 @@ const characterPersonaContext = computed(() => {
   return parts.join('\n\n')
 })
 
-// --- Live Connection Test & Dialogue Simulator ---
-type ProbeState = 'idle' | 'connecting' | 'inferencing' | 'verified' | 'error'
-const probeState = ref<ProbeState>('idle')
-const probeResponseMessage = ref('')
-const probeErrorMessage = ref('')
 const probeBenchmarkMs = ref<number | null>(draft.state.brainBenchmark?.latencyMs ?? null)
 const probeTokens = ref<number | null>(null)
 const probeSentences = ref<number | null>(null)
@@ -504,7 +505,7 @@ async function testBrainConnection() {
     )
     const textHasThinkTag = result.text ? result.text.includes('<think>') : false
     const modelLower = selectedModelId.value.trim().toLowerCase()
-    const isKnownReasoning = /(r1|qwq|o1|o3|o4|reason|thinking|kimi-k1\.5)/i.test(modelLower)
+    const isKnownReasoning = /r1|qwq|o1|o3|o4|reason|thinking|kimi-k1\.5/i.test(modelLower)
     const isReasoning = !!rawReasoning || reasoningTokens > 0 || textHasThinkTag || isKnownReasoning
     probeHasReasoning.value = isReasoning
 

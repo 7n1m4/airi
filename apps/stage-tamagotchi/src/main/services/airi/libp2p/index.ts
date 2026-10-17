@@ -74,6 +74,7 @@ import {
   registerPendingAcceptedConfirmation,
   rememberDiscoveredInvite,
   removePairedDevice,
+  setupPairedDevices,
   updatePairedDeviceAlias,
 } from './pairing'
 
@@ -251,7 +252,7 @@ const Libp2pServiceConfigDefault: Libp2pServiceConfig = {
   enabled: false,
   transports: ['tcp', 'websockets'],
   bootstrapPeers: [],
-  topics: ['airi/presence', 'airi/memory', 'airi/vault', 'airi/companion'],
+  topics: ['airi/presence', 'airi/memory', 'airi/vault', 'airi/companion', 'airi/companion.chat'],
   // mDNS is the only thing that makes two AIRI instances on a LAN find each
   // other, so it stays on by default to preserve the previous behaviour.
   discovery: { mdns: true },
@@ -793,6 +794,26 @@ export async function setupLibp2pService(params: { lifecycle: Lifecycle }) {
   // default, which auto-heal can then overwrite), so it must run first — the
   // other AIRI services call `.setup()` from their own setup functions too.
   libp2pConfigStore.setup()
+  // NOTICE: the paired-device store is populated by the same synchronous disk
+  // read and nothing else. `getPairedDevices()` reads that in-memory map and
+  // returns `[]` when it is empty, so without this call a fresh boot sees zero
+  // paired devices and `napChatConsentFor` answers `not-paired` for every peer —
+  // the grant the user gave survives the reboot only if this runs. The first
+  // `addPairedDevice` after such a boot would also write a one-element list over
+  // the persisted file it never read.
+  //
+  // Placement is deliberate: this is the first statement of the setup function,
+  // before `getPrivateKey()` and `createLibp2pNode()`, so no libp2p node exists
+  // yet and therefore no `gossipsub:message` listener can have fired. The only
+  // paths that call `getPairedDevices()` before this point would be a renderer
+  // invoking `libp2pServiceListPairedDevices` or another service calling
+  // `listPairedDevices()` during app construction — `createLibp2pService` (which
+  // registers those handlers) is only invoked from the `injeca.invoke` block in
+  // `main/index.ts`, whose `dependsOn` includes this very `modules:libp2p`
+  // provider, so injeca resolves this setup first. Same ordering reason
+  // `agentic/index.ts` calls `agenticConfigStore.setup()` before starting its
+  // HTTP endpoint.
+  setupPairedDevices()
   const config = await loadConfig()
   currentConfig = config
 
@@ -1016,7 +1037,7 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
   })
 
   // Pairing: create
-  defineInvokeHandler(context, libp2pServiceCreatePairing, async ({ ttlMinutes, name }: { ttlMinutes?: number, name?: string } = {}) => {
+  defineInvokeHandler(context, libp2pServiceCreatePairing, async ({ ttlMinutes, name, napChatGranted }: { ttlMinutes?: number, name?: string, napChatGranted?: boolean } = {}) => {
     if (!libp2pNode) {
       throw new Error('libp2p node not running')
     }
@@ -1032,7 +1053,17 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
       && !addr.startsWith('/ip6/::/'))
     const peerId = libp2pNode.getPeerId()
 
-    const { qrCode, magicCode, invitation } = await createPairingInvitation(multiaddrs, peerId, name || 'AIRI Node', ttlMinutes ?? 30, publisherFor(libp2pNode))
+    // NOTICE: an explicitly-refused grant is answered *here*, before
+    // `createPairingInvitation` issues anything. Refusal is the user declining
+    // the nap-chat permission for the device being paired with, and it must not
+    // persist a record that later reads as granted — `null`/absent stays
+    // backwards compatible, so an existing caller that never passes the field
+    // still pairs exactly as before, with no grant recorded.
+    if (napChatGranted === false) {
+      return { error: 'Nap-chat consent was declined, so this pairing did not happen. Pair again if you change your mind.' }
+    }
+
+    const { qrCode, magicCode, invitation } = await createPairingInvitation(multiaddrs, peerId, name || 'AIRI Node', ttlMinutes ?? 30, publisherFor(libp2pNode), napChatGranted)
 
     broadcastEventLog('info', `Pairing invitation created, magic code ${magicCode}`)
 
@@ -1040,13 +1071,25 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
   })
 
   // Pairing: accept
-  defineInvokeHandler(context, libp2pServiceAcceptPairing, async ({ input, alias }: { input: string, alias?: string }) => {
+  defineInvokeHandler(context, libp2pServiceAcceptPairing, async ({ input, alias, napChatGranted }: { input: string, alias?: string, napChatGranted?: boolean }) => {
     if (!libp2pNode) {
       throw new Error('libp2p node not running')
     }
 
     const localPeerId = libp2pNode.getPeerId()
     const dialer = dialerFor(libp2pNode)
+
+    // NOTICE: an explicitly-refused grant is answered *here*, before the
+    // invitation is even resolved or dialled. Refusal must stop before
+    // `addPairedDevice` is reached — a record that exists but carries no grant
+    // would still leave a paired-device row behind, and the design's rule is
+    // "don't want it → don't pair". Absent means the pairing dialog has not
+    // surfaced the grant yet, which is a walk-back compatible with an older
+    // renderer; the record is then written without a grant, which reads as a
+    // refusal anyway.
+    if (napChatGranted === false) {
+      return { error: 'Nap-chat consent was declined, so this pairing did not happen. Pair again if you change your mind.' }
+    }
 
     // A QR payload carries the invitation inline; anything else is a bare magic
     // code, which only names an invitation that must be resolved from
@@ -1066,7 +1109,7 @@ export async function createLibp2pService(params: { context: ReturnType<typeof c
       return { error: 'Not a pairing QR payload, and no matching invitation was discovered on the mesh — provide the QR payload or enter the code while the inviter is broadcasting' }
     }
 
-    const result = await acceptPairingInvitation(parsed, localPeerId, alias, dialer)
+    const result = await acceptPairingInvitation(parsed, localPeerId, alias, dialer, napChatGranted)
 
     if ('error' in result) {
       return result

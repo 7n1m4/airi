@@ -210,6 +210,14 @@ export function extractCandidateSpans(text, question = '') {
 
   // 4. Activity, Hobby, & Noun Phrases
   // Extract noun chunks following action or preference markers
+  // NOTICE: this regex keeps the lazy-quantifier capture with a `\s+` stop
+  // deliberately. A lint-sweep "ReDoS hardening" rewrite to an eager capture with
+  // a `[ \t]+` stop changed match semantics: candidate spans then ran through
+  // coordinating conjunctions to end-of-string (displacing the correct short
+  // answer by one rank) and total capture loss on inputs containing a newline,
+  // because `[ \t]+` rejects the newline that `\s+` accepted. A
+  // semantically-equivalent linear-time rewrite (if ReDoS resistance is wanted)
+  // is a separate task; do not substitute it for this form.
   const activityRegex = /\b(?:play|playing|pursue|pursuing|pursued|love|loves|loved|like|likes|liked|collect|collects|collected|practice|practicing|practiced|work\s+on|working\s+on|worked\s+on|enjoy|enjoying|enjoyed|topping\s+is|favorite\s+is|eat|eating|favorite\s+\w+\s+is)\s+([\w+#/\s]{2,40}?)(?=[,.;!?]|\s+(?:when|because|since|and|but|with|for|to)\b|$)/gi
   while ((match = activityRegex.exec(clean)) !== null) {
     let act = match[1].trim()
@@ -296,7 +304,7 @@ export function extractCandidateSpans(text, question = '') {
  * @param {string} question
  * @param {string} contextText - Raw evidence dialogue turn(s)
  * @param {string[]} candidateSpans
- * @returns {Promise<{ status: 'found' | 'abstain' | 'error', answer: string|null, confidence: number, choice: string }>}
+ * @returns {Promise<{ status: 'found' | 'abstain' | 'error', answer: string|null, confidence: number, choice: string }>} Jev selection outcome with the chosen span, or an abstain/error result.
  */
 export async function selectAnswerSpanWithJev(jev, question, contextText, candidateSpans = []) {
   if (!jev || !question || !contextText) {

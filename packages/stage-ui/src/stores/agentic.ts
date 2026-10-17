@@ -3,6 +3,7 @@ import type {
   AutonomousDecisionRecord,
   AutonomousMode,
   AutonomousTrigger,
+  CompanionNapState,
   ScoredIntention,
 } from '@proj-airi/stage-shared/agentic'
 
@@ -33,6 +34,8 @@ import { useConsciousnessStore } from './modules/consciousness'
 import { useSpeechStore } from './modules/speech'
 import { useSystemOneStore } from './modules/system-one'
 import { usePresenceStore } from './presence'
+import { useProactivityStore } from './proactivity'
+import { checkIsPipeBusy } from './proactivity-telemetry'
 import { useProvidersStore } from './providers'
 
 /**
@@ -50,8 +53,9 @@ import { useProvidersStore } from './providers'
  * same sensors and write the same Event Log, but share no scheduling state.
  *
  * The one thing they deliberately share is the 10s sensor poll: the presence
- * store derives from `proactivity.idleTimeSec` rather than starting a second
- * timer (see `stores/presence.ts`).
+ * store is the single owner of the raw idle signal and the proactivity loop
+ * feeds it via `presence.writeIdleTimeSec()`, rather than either side starting
+ * a second timer (see `stores/presence.ts` and `docs/design-user-presence.md`).
  */
 
 /** Default cooldown between cycles, in minutes (mid of the ticket's 5–30m range). */
@@ -253,6 +257,67 @@ export const useAgenticStore = defineStore('agentic', () => {
   const presence = usePresenceStore()
   const systemOneStore = useSystemOneStore()
   const airiCardStore = useAiriCardStore()
+  const chatOrchestratorStore = useChatOrchestratorStore()
+  const proactivityStore = useProactivityStore()
+
+  // ── Nap state ──────────────────────────────────────────────────────────────
+  //
+  // NOTICE: nap is *derived*, never timed. It reads the canonical presence
+  // source's AFK predicate and the chat pipeline's busy state, and the only
+  // timer involved is the proactivity loop's existing 10s tick — the ref is
+  // recomputed by the `watch` below. There is deliberately no second timer and
+  // no copied threshold: the nap floor is whatever presence resolves AFK to
+  // (see `docs/design-agentic-os-nap-chat.md` §3, Decision 1).
+  //
+  // Nap is NOT gated on `autonomousMode`. A companion in `disabled` autonomous
+  // mode can still nap, because napping is a rest state rather than an action;
+  // only the autonomous cycle needs the mode. That separation is what keeps the
+  // companion from performing at an empty desk.
+
+  /** Whether the active card allows the companion to nap. */
+  const napEnabled = computed(() => Boolean(airiCardStore.activeCard?.extensions?.airi?.nap?.enabled))
+
+  /**
+   * A companion mid-sentence does not nap, so the pipe must be quiet too. The
+   * predicate is the same `checkIsPipeBusy` the heartbeat and dream gates read,
+   * so the two features cannot disagree about what "busy" means.
+   *
+   * NOTICE: `isDreamStateEvaluating` is deliberately passed as `false` even
+   * though `checkIsPipeBusy` includes it. That flag exists to stop a *spoken*
+   * turn from overlapping a dream evaluation, but dream consolidation is one of
+   * the two things nap *does* (§3, "what it does while napping" — "it keeps
+   * dreaming"), so treating it as busy would make napping and dreaming mutually
+   * exclusive. It would also make `napState` fall back to `active` for the whole
+   * duration of a consolidation, which is a window in which a `scheduled` cycle
+   * could fire from a resting companion.
+   */
+  const isChatPipeBusy = computed(() => checkIsPipeBusy({
+    sending: Boolean(chatOrchestratorStore.sending),
+    activeSpokenText: chatOrchestratorStore.activeSpokenText,
+    isHeartbeatEvaluating: proactivityStore.isHeartbeatEvaluating,
+    isDreamStateEvaluating: false,
+    isUserTyping: Boolean(chatOrchestratorStore.isUserTyping),
+  }))
+
+  const napState = ref<CompanionNapState>('active')
+
+  // NOTICE: the presence write that flips `afk` happens in the proactivity loop;
+  // recomputing with `flush: 'sync'` (the same choice `stores/presence.ts` makes
+  // for its own recompute) means a consumer that reads `napState` in the same
+  // tick as the signal that changed it sees the new value, instead of a ref that
+  // lags one scheduler flush behind and lets a cycle slip through while the
+  // companion is napping. `immediate` performs the initial derivation rather
+  // than requiring a first transition to occur.
+  watch(
+    [napEnabled, () => presence.afk, isChatPipeBusy],
+    ([enabled, afk, busy]) => {
+      napState.value = (enabled && afk && !busy) ? 'napping' : 'active'
+    },
+    { immediate: true, flush: 'sync' },
+  )
+
+  /** True while the companion is resting. Used by the cycle's gate. */
+  const isNapping = computed(() => napState.value === 'napping')
 
   // ── Persisted configuration ────────────────────────────────────────────────
   //
@@ -308,6 +373,12 @@ export const useAgenticStore = defineStore('agentic', () => {
    * explicit request is not an interruption. This is also what makes the HTTP
    * endpoint safe to expose on loopback at all — see
    * `apps/stage-tamagotchi/src/main/services/airi/agentic/index.ts`.
+   *
+   * Nap is checked before the cycle's own presence/cooldown logic: a companion
+   * that is resting produces no cycle at all. It sits *after* the mode check and
+   * after the explicit-trigger bypass, so precedence for the non-napping cases
+   * stays exactly `mode → presence → cooldown`, and `manual`/`http` keep
+   * bypassing both presence and cooldown.
    */
   function gate(trigger: AutonomousTrigger): { allowed: boolean, reason?: string } {
     const mode = autonomousMode.value
@@ -316,6 +387,9 @@ export const useAgenticStore = defineStore('agentic', () => {
 
     if (trigger !== 'scheduled')
       return { allowed: true }
+
+    if (isNapping.value)
+      return { allowed: false, reason: 'napping' }
 
     if (!shouldRunForPresence(mode, presence.presenceState))
       return { allowed: false, reason: `presence:${presence.presenceState}` }
@@ -839,6 +913,8 @@ export const useAgenticStore = defineStore('agentic', () => {
     lastDecision,
     cooldownRemainingMs,
     gate,
+    napState,
+    isNapping,
     scanMemories,
     selectViaJev,
     executeIntention,

@@ -123,7 +123,6 @@ function cleanupExportTarget(raw) {
 
 function resolveParentDir(pkgDir, rawTarget) {
   const target = cleanupExportTarget(rawTarget)
-  // eslint-disable-next-line regexp/no-unused-capturing-group
   if (!target || /^(https?:|npm:|node:|data:)/.test(target))
     return null
 

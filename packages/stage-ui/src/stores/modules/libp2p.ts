@@ -86,7 +86,7 @@ if (staleTransports.length > 0)
   transports.value = transports.value.filter(kind => LIBP2P_TRANSPORT_KINDS.includes(kind))
 
 const bootstrapPeers = useLocalStorageManualReset<string[]>('settings/libp2p/bootstrapPeers', [])
-const topics = useLocalStorageManualReset<string[]>('settings/libp2p/topics', ['airi/presence', 'airi/memory', 'airi/vault', 'airi/companion'])
+const topics = useLocalStorageManualReset<string[]>('settings/libp2p/topics', ['airi/presence', 'airi/memory', 'airi/vault', 'airi/companion', 'airi/companion.chat'])
 const nodeName = useLocalStorageManualReset<string>('settings/libp2p/nodeName', 'AIRI Node')
 const meshSyncEnabled = useLocalStorageManualReset<boolean>('settings/libp2p/meshSyncEnabled', false)
 // Deliberately empty, to match main's `Libp2pServiceConfigDefault`: these refs are
@@ -304,6 +304,12 @@ const PairedDeviceSchema = v.object({
   pairedAt: v.number(),
   lastSeen: v.number(),
   trusted: v.boolean(),
+  // The nap-chat consent the pairing flow recorded, mirrored from main's
+  // `PairedDeviceSchema`. NOTICE: it must be declared here or valibot's
+  // `object` drops it on arrival and the renderer reads every paired device as
+  // a refusal, so a grant the user granted in the pairing dialog is invisible
+  // on the list pushed back through `libp2pServicePairedDevicesChanged`.
+  napChatGranted: v.optional(v.boolean()),
 })
 
 function dropMalformed(contract: string, body: unknown) {
@@ -733,7 +739,20 @@ async function copyNodeName() {
   }
 }
 
-async function createPairing(ttlMinutes?: number, name?: string) {
+/**
+ * Create a pairing invitation.
+ *
+ * NOTICE: `napChatGranted` is the user's nap-chat decision for the device being
+ * paired with, and it is *this node's* own half of the consent — the other half
+ * is the accepter's. An explicit `false` makes main refuse the pairing
+ * outright, and so does an omitted one: the transmitted payload always carries
+ * a boolean, so a call site with no user intent (an automatic or re-pair flow)
+ * can never leave the field absent and rely on main guessing. Main, not this
+ * store, is the process that decides what the grant means, because the
+ * paired-device record is the thing the consent read consults and only main
+ * writes it.
+ */
+async function createPairing(ttlMinutes?: number, name?: string, napChatGranted = false) {
   if (!invokeCreatePairing) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
     return
@@ -744,7 +763,18 @@ async function createPairing(ttlMinutes?: number, name?: string) {
   setPending('createPairing', true)
   lastError.value = null
   try {
-    const invitation = await invokeCreatePairing({ ttlMinutes, name })
+    const invitation = await invokeCreatePairing({ ttlMinutes, name, napChatGranted })
+    // The same in-band `error` discriminant the accept path uses: a declined
+    // nap-chat grant refuses the pairing from main, and the dialog has to say so
+    // rather than leaving the operator watching an invitation that will not
+    // open. Main cannot reject instead, because a throw would also drop the
+    // context the log line carries.
+    if (invitation && typeof invitation === 'object' && 'error' in invitation && typeof invitation.error === 'string') {
+      const rejected: { error: string } = { error: invitation.error }
+      addEventLog('warn', `Pairing rejected: ${rejected.error}`)
+      return rejected
+    }
+
     // The invitation is what keeps the pairing dialog open; the main process
     // clears the underlying secret once the TTL elapses.
     pairing.value = invitation
@@ -762,7 +792,20 @@ function clearPairing() {
   pairing.value = null
 }
 
-async function acceptPairing(input: string, alias?: string) {
+/**
+ * Accept a pairing.
+ *
+ * NOTICE: `napChatGranted` is this node's own nap-chat decision for the inviter,
+ * chosen beside the alias in the pairing dialog. An explicit `false` stops the
+ * pairing in main before any dial or record is written, per the design's
+ * "don't want it → don't pair", and so does an omitted one — the transmitted
+ * payload always carries a boolean, so a call site with no user intent (an
+ * automatic or re-pair flow) cannot leave the field absent and rely on main
+ * guessing. The store forwards it and nothing more — the decision's meaning
+ * lives on the record only main writes, so a renderer that interpreted it
+ * locally would be a second source of truth for a permission.
+ */
+async function acceptPairing(input: string, alias?: string, napChatGranted = false) {
   if (!invokeAcceptPairing) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
     return
@@ -773,7 +816,7 @@ async function acceptPairing(input: string, alias?: string) {
   setPending('acceptPairing', true)
   lastError.value = null
   try {
-    const result = await invokeAcceptPairing({ input, alias })
+    const result = await invokeAcceptPairing({ input, alias, napChatGranted })
     // The main process discriminates success from failure in-band via an
     // `error` discriminant, because it cannot reject a failed pairing without
     // also losing the senders' context.

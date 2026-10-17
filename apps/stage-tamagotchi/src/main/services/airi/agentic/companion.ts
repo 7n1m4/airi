@@ -12,6 +12,7 @@ import type { InferOutput } from 'valibot'
 import type { AgenticInvokeContext } from './index'
 
 import { Buffer } from 'node:buffer'
+import { randomBytes } from 'node:crypto'
 
 import { useLogg } from '@guiiai/logg'
 import { defineInvokeEventa, defineInvokeHandler } from '@moeru/eventa'
@@ -21,17 +22,22 @@ import {
   companionConsentChanged,
   companionServiceGetConsent,
   companionServiceHost,
+  companionServiceNapChatConsent,
+  companionServiceNapChatConsumeNonce,
+  companionServiceNapChatDecideProposal,
   companionServiceRecordObservedShare,
   companionServiceSetConsent,
   companionServiceShare,
   companionServiceVisit,
   companionShareReceived,
+  NAP_CHAT_EXPIRY_MS,
 } from '@proj-airi/stage-shared/agentic'
 import { BrowserWindow, ipcMain } from 'electron'
 import { boolean, number, object, optional, picklist } from 'valibot'
 
 import { createConfig } from '../../../libs/electron/persistence'
 import { getLibp2pMeshPublisher } from '../libp2p'
+import { listPairedDevices } from '../libp2p/pairing'
 
 const log = useLogg('agentic-companion').useGlobalConfig()
 
@@ -219,6 +225,284 @@ function observeShare(share: CompanionShareCard): void {
   }
 }
 
+// ── Nap-chat negotiation ─────────────────────────────────────────────────────
+//
+// NOTICE: nothing in this section opens, advances or closes a session — that is
+// Phase 3. What lives here is only the part of the *contract* that needs a
+// permission or a nonce, both of which are decided in the process that owns the
+// publisher: main reads the paired-device record the pairing flow wrote, and
+// main mints the nonce a peer's `accept` has to echo.
+
+/**
+ * Pending nonces this node minted for nap-chat proposals it has published.
+ *
+ * The nonce is minted by the *publisher* of a proposal and echoed by the peer's
+ * `accept`, so an entry here is a live authorisation to open exactly one
+ * session: a bystander that harvests an `accept` off the topic, or forges one
+ * for a proposal it never saw, cannot name a nonce this node did not mint. The
+ * cap bounds a peer that keeps a node minting; the age prune bounds one that
+ * keeps a nonce outstanding without ever echoing it.
+ */
+export const MAX_PENDING_NAP_CHAT_NONCES = 64
+const pendingNapChatNonces = new Map<string, { peerId: string, sessionId: string, at: number, spent?: boolean }>()
+
+/** Drop nonces older than a session's silence bound, so a stall frees them. */
+function prunePendingNapChatNonces(): void {
+  const now = Date.now()
+  for (const [nonce, entry] of pendingNapChatNonces) {
+    if (now - entry.at > NAP_CHAT_EXPIRY_MS) {
+      pendingNapChatNonces.delete(nonce)
+    }
+  }
+}
+
+/**
+ * Re-insert a live entry so it moves to the newest position.
+ *
+ * `Map` iteration is insertion-ordered and `set` on an existing key does *not*
+ * move it, so touching an entry requires the explicit delete-then-reinsert.
+ * Without this the eviction below is oldest-*minted*, which is not the same as
+ * oldest-*in-flight*: one long-lived peer plus a stream of proposals it never
+ * answers would evict the live authorisation and look like the peer went quiet.
+ */
+function touchNapChatNonce(nonce: string, entry: { peerId: string, sessionId: string, at: number }): void {
+  pendingNapChatNonces.delete(nonce)
+  pendingNapChatNonces.set(nonce, entry)
+}
+
+/**
+ * Evict least-recently-used nonces until the map is back within its cap.
+ *
+ * The `size > 1` floor is deliberate: the mint that is about to be inserted
+ * must not evict the single in-flight nonce already outstanding, so a node with
+ * one live session never loses its only authorisation to make room for the next
+ * proposal it is publishing.
+ */
+function capPendingNapChatNonces(): void {
+  while (pendingNapChatNonces.size > MAX_PENDING_NAP_CHAT_NONCES && pendingNapChatNonces.size > 1) {
+    const oldest = pendingNapChatNonces.keys().next()
+    if (oldest.done)
+      break
+    pendingNapChatNonces.delete(oldest.value)
+  }
+}
+
+/**
+ * Forget every pending authorisation, so none outlive the node that minted them.
+ *
+ * NOTICE: a nonce is a permission this node granted, so it must not survive
+ * whatever shutting down means. The prune above is age-bounded and therefore
+ * never fires for a node that shut down inside the window, which is exactly the
+ * case that matters: every outstanding accept the peer may still be about to
+ * send refers to a mint that no longer has a bound process behind it.
+ */
+export function clearPendingNapChatNonces(): void {
+  pendingNapChatNonces.clear()
+}
+
+/** Mint the nonce a peer's `accept` must echo for the proposal about to be sent. */
+export function mintNapChatNonce(peerId: string, sessionId: string): string {
+  prunePendingNapChatNonces()
+  // 128 bits of CSPRNG, base64url so the value survives JSON unchanged — the
+  // same shape the pairing token generator uses, for the same reason.
+  const nonce = randomBytes(16).toString('base64url')
+  pendingNapChatNonces.set(nonce, { peerId, sessionId, at: Date.now() })
+  capPendingNapChatNonces()
+  return nonce
+}
+
+/**
+ * The ways an inbound `accept` can resolve, which the caller must tell apart.
+ *
+ * They matter because they mean opposite things for a session this node already
+ * holds. `accepted` and `already-consumed` both answer "yes, this accept is
+ * authorised": the second is a re-sent accept, which is idempotent rather than a
+ * second authorisation, and answering it as a refusal is what used to tear down
+ * a live session over gossip re-delivery. `wrong-peer` is the peer being wrong —
+ * the nonce is real and live, so refusing the *message* must not burn the
+ * authorisation a legitimate accept is still entitled to. `malformed` is the
+ * message being forged or non-existent, which is the case a one-shot
+ * authorisation must not survive.
+ */
+export type NapChatNonceOutcome = 'accepted' | 'already-consumed' | 'malformed' | 'wrong-peer'
+
+/**
+ * Whether an inbound `accept` carries a nonce this node actually minted for that
+ * peer and that session, consuming it so one nonce opens at most one session.
+ *
+ * NOTICE: validation runs *before* the entry is claimed, which inverts the old
+ * order and is the whole fix. A nonce was previously deleted before its peer,
+ * session and age were checked, so a legitimate re-sent accept arrived at an
+ * entry that no longer existed and was refused — and the renderer then nulled a
+ * live session because of it. Deleting only on a full match keeps the fail-
+ * closed direction (a replayed accept still cannot open a *second* session)
+ * without punishing the one case that is not an attack.
+ *
+ * `sessionId` is required: the accept payload carries the session id beside the
+ * nonce it echoes, so a nonce valid for one session is never an authorisation
+ * for another. An absent one is a caller bug and reads as a mismatch rather
+ * than as "bind to whatever".
+ */
+export function consumeNapChatNonce(nonce: string, peerId: string, sessionId: string): NapChatNonceOutcome {
+  // Reaped first, so a node that stopped minting still answers an expired entry
+  // as expired instead of holding it for the life of the process.
+  prunePendingNapChatNonces()
+
+  const entry = pendingNapChatNonces.get(nonce)
+  if (entry === undefined)
+    return 'malformed'
+
+  // Every attempt that finds the entry re-inserts it, so eviction order follows
+  // use rather than mint order — see `touchNapChatNonce`.
+  touchNapChatNonce(nonce, entry)
+
+  if (entry.spent === true) {
+    return entry.peerId === peerId && entry.sessionId === sessionId
+      ? 'already-consumed'
+      : 'wrong-peer'
+  }
+
+  if (entry.peerId !== peerId)
+    return 'wrong-peer'
+
+  if (sessionId.length === 0 || entry.sessionId !== sessionId)
+    return 'wrong-peer'
+
+  // Claimed last, and only on a full match. The entry is kept — marked spent
+  // rather than deleted — so a re-sent accept is answerable as the same
+  // authorisation instead of as an unknown nonce. The age prune reaps it with
+  // the rest of the map, so it is not a leak.
+  entry.spent = true
+  return 'accepted'
+}
+
+/**
+ * This node's nap-chat consent for one peer, read from the paired-device record
+ * the pairing flow wrote.
+ *
+ * NOTICE: `listPairedDevices()` is the only route to that record, and main is
+ * where it is bound — a renderer-side copy of the grant would be a second source
+ * of truth for a permission, which is exactly what single-entry-point pairing
+ * avoids. Note what main actually holds: the store is only populated once its
+ * `setup()` has run, and `pairedDevicesStore.setup()` currently has no caller at
+ * all, so until that is wired every peer here answers "not paired". That fails
+ * closed, which is the safe direction, but it also means the grant is only ever
+ * reachable after the setup path exists — do not read a refusal as "the user
+ * revoked it".
+ *
+ * A peer with no record at all is a refusal, never a default grant, so "never
+ * paired" and "paired without the grant" answer differently only in the reason
+ * string, and identically in the answer.
+ */
+export async function napChatConsentFor(peerId: string): Promise<{ granted: boolean, reason?: string }> {
+  const device = (await listPairedDevices()).find(d => d.peerId === peerId)
+  if (device === undefined) {
+    return { granted: false, reason: 'not-paired' }
+  }
+  if (device.napChatGranted !== true) {
+    return { granted: false, reason: 'nap-chat-consent-not-granted' }
+  }
+  return { granted: true }
+}
+
+/**
+ * Decide whether this node may invite `peerId` into a nap-chat session, minting
+ * the nonce the peer's `accept` must echo when it may.
+ *
+ * NOTICE: a refusal sends *nothing*, and in particular no `decline` — a decline
+ * would confirm to the peer that this node is alive and listening, which is the
+ * one thing a gate must not spend. The reason exists for this node's own log and
+ * for the ledger, not for the wire.
+ */
+export async function decideNapChatProposal(peerId: string, sessionId: string): Promise<{
+  proposal: boolean
+  nonce?: string
+  reason?: string
+}> {
+  const consent = await napChatConsentFor(peerId)
+  if (!consent.granted) {
+    return { proposal: false, reason: consent.reason }
+  }
+  return { proposal: true, nonce: mintNapChatNonce(peerId, sessionId) }
+}
+
+// ── Session recap ─────────────────────────────────────────────────────────────
+
+/**
+ * One turn of a closed session, as the composing side knows it.
+ *
+ * `role` is a *local* label, never the peer's claim about itself: the composer
+ * decides which side said what, and a peer's own text is quoted as what the
+ * other companion said. Nothing here is a memory field, so a recap composed
+ * from these cannot carry a chip, a journal entry or a lifetime artifact — the
+ * same leak boundary the wire schema holds (§5).
+ */
+export interface NapChatRecapTurn {
+  /** Which side spoke. */
+  role: 'Local' | 'Peer'
+  /** The text that side said, exactly as this node recorded it. */
+  text: string
+}
+
+/**
+ * The largest recap the journal entry and the spoken turn may carry.
+ *
+ * Bounded by the shared schema's own text bound (`MAX_NAP_CHAT_TEXT_LENGTH`
+ * in `stage-shared/src/agentic.ts`), so a recap main composes is always a
+ * valid `reason`/`text` payload as well as a journal body. Capping here rather
+ * than at the callsite is what stops three close paths drifting apart.
+ */
+export const MAX_NAP_CHAT_RECAP_CHARS = 4000
+
+/**
+ * Compose a session's recap from its turn history, deterministically.
+ *
+ * Main owns this function and nothing else about the recap: the turn text only
+ * ever exists in the renderer, so the content cannot originate here. What main
+ * owns is the *shape*, so that a `completed` close, a `stalled` close and a
+ * model-gate record all describe a session the same way instead of each
+ * inventing a format.
+ *
+ * Markdown bullet list, one bullet per turn, in session order, with the local
+ * side first wherever this node spoke first. The cap is applied to the whole
+ * composed string, never to individual turns, so a truncated bullet is a whole
+ * bullet that was dropped rather than a half sentence — and the count of turns
+ * that made it in is the honest signal that the session continued past what is
+ * quoted.
+ *
+ * NOTICE: no `Date.now()` and no DOM, so this is pure and testable from main.
+ * It is a deterministic function of its input, which is what makes the journal
+ * text and the spoken text the same string by construction rather than by two
+ * call sites agreeing to be careful.
+ *
+ * NOTICE: an empty turn list returns `''` rather than throwing. That is the
+ * "a session that closed before it said anything" case — a `model-gate` refusal
+ * most of all — and the honest recap for it is no recap, not a claim that
+ * something was discussed.
+ */
+export function composeSessionRecap(turns: readonly NapChatRecapTurn[]): string {
+  if (turns.length === 0)
+    return ''
+
+  const bullets: string[] = []
+  let used = 0
+  for (const turn of turns) {
+    const text = turn.text.trim()
+    if (text.length === 0)
+      continue
+
+    const bullet = `- **${turn.role}:** ${text}`
+    // The separator before each bullet after the first counts toward the cap.
+    const cost = bullet.length + (bullets.length === 0 ? 0 : 1)
+    if (used + cost > MAX_NAP_CHAT_RECAP_CHARS)
+      break
+    used += cost
+    bullets.push(bullet)
+  }
+
+  return bullets.join('\n')
+}
+
 // ── Publishing ────────────────────────────────────────────────────────────────
 
 /**
@@ -295,6 +579,44 @@ export async function createCompanionService(params: { context: AgenticInvokeCon
     observeShare(share)
     emitToAllWindows(companionShareReceived, share)
     return { recorded: true }
+  })
+
+  defineInvokeHandler(context, companionServiceNapChatConsent, async (input: { peerId: string }): Promise<{ granted: boolean, reason?: string }> => {
+    return napChatConsentFor(input.peerId)
+  })
+
+  // The proposal decision is the minting path, so it is main-side for the same
+  // reason the consent read is: main owns the only `listPairedDevices` record a
+  // renderer would otherwise have to copy. A refusal returns `{ proposal: false }`
+  // and sends nothing on the wire — see `decideNapChatProposal`'s NOTICE.
+  defineInvokeHandler(context, companionServiceNapChatDecideProposal, async (input: {
+    peerId: string
+    sessionId: string
+  }): Promise<{ proposal: boolean, nonce?: string, reason?: string }> => {
+    return decideNapChatProposal(input.peerId, input.sessionId)
+  })
+
+  defineInvokeHandler(context, companionServiceNapChatConsumeNonce, async (input: {
+    nonce: string
+    peerId: string
+    sessionId?: string
+  }): Promise<{ accepted: boolean }> => {
+    // NOTICE: the invoke contract in `stage-shared` keeps `sessionId` optional
+    // because older renderers send it absent, so it cannot be required here
+    // without touching that file. The *consuming* boundary requires it instead:
+    // an absent session id is passed down as a mismatch rather than as "bind to
+    // whatever session is open", which is what stops a nonce valid for one
+    // session from opening another.
+    //
+    // `accepted`/`already-consumed` answer true; `wrong-peer`/`malformed`
+    // answer false. The first pair and the second mean opposite things to a
+    // caller holding a live session — a re-sent accept is idempotent, while a
+    // wrong-peer echo is a real nonce presented by the wrong node — but the
+    // contract's return shape is a single boolean, so the distinction is carried
+    // by the nonce's stay-alive behaviour rather than by the answer: the wrong
+    // peer's attempt burns nothing, so the legitimate accept still works.
+    const outcome = consumeNapChatNonce(input.nonce, input.peerId, input.sessionId ?? '')
+    return { accepted: outcome === 'accepted' || outcome === 'already-consumed' }
   })
 
   defineInvokeHandler(context, companionServiceShare, async (card: CompanionShareInput): Promise<{

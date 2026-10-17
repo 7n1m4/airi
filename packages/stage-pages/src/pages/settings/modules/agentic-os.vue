@@ -4,6 +4,7 @@ import type { AutonomousDecisionRecord, AutonomousMode, CompanionShareScope } fr
 import { MAX_COOLDOWN_MINUTES, MIN_COOLDOWN_MINUTES, useAgenticStore } from '@proj-airi/stage-ui/stores/agentic'
 import { COMPANION_SCOPES, useCompanionStore } from '@proj-airi/stage-ui/stores/companion'
 import { useEventLogStore } from '@proj-airi/stage-ui/stores/event-log'
+import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { usePresenceStore } from '@proj-airi/stage-ui/stores/presence'
 import { Button, FieldCheckbox, FieldRange } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
@@ -78,6 +79,81 @@ const presenceLabelKeys: Record<string, string> = {
   'away': 'settings.modules.agentic-os.presenceAway',
   'screen-locked': 'settings.modules.agentic-os.presenceScreenLocked',
   'sleep': 'settings.modules.agentic-os.presenceSleep',
+}
+
+// ── Nap ─────────────────────────────────────────────────────────────────────
+//
+// Nap is a per-companion card setting (`extensions.airi.nap.enabled`), because
+// whether a companion rests is a character trait rather than an OS-wide policy
+// — the same reason `respectSchedule` lives on the card. It is **not** gated on
+// `autonomousMode`: a companion in `disabled` autonomous mode can still nap.
+
+/** Range offered for the shared AFK threshold, which nap inherits as its floor. */
+const NAP_THRESHOLD_MIN_MINUTES = 1
+const NAP_THRESHOLD_MAX_MINUTES = 60
+
+const airiCardStore = useAiriCardStore()
+
+const napEnabled = computed(() => Boolean(airiCardStore.activeCard?.extensions?.airi?.nap?.enabled))
+
+/**
+ * The nap floor, shown read-only.
+ *
+ * Nap owns no threshold of its own — it inherits the presence source's resolved
+ * AFK threshold (`heartbeats.afkThresholdMinutes`, default 5 minutes), so the
+ * number on screen is the number that is actually in force. Editing it here
+ * would move the *heartbeat's* threshold, which is not what the user asked for.
+ */
+const afkThresholdMinutes = computed(() => presenceStore.afkThresholdMinutes)
+
+async function handleToggleNap(next: boolean) {
+  const cardId = airiCardStore.activeCardId
+  const card = airiCardStore.activeCard
+  if (!card || !cardId)
+    return
+
+  await airiCardStore.updateCard(cardId, {
+    extensions: {
+      ...card.extensions,
+      airi: {
+        ...card.extensions?.airi,
+        nap: { enabled: next },
+      },
+    },
+  })
+}
+
+/**
+ * Move the shared AFK threshold, which is the nap floor.
+ *
+ * This writes `heartbeats.afkThresholdMinutes` because that is the one number
+ * presence resolves and nap inherits — see `resolveAfkThresholdMinutes`. It is
+ * exposed here as the nap's threshold rather than a second field precisely so
+ * the heartbeat and the nap cannot drift apart. The label on the range makes
+ * the inheritance explicit, so a reader knows why there is no separate field.
+ */
+async function handleAfkThresholdChange(next: number | undefined) {
+  if (next == null)
+    return
+
+  const clamped = Math.min(NAP_THRESHOLD_MAX_MINUTES, Math.max(NAP_THRESHOLD_MIN_MINUTES, Math.round(next)))
+  const cardId = airiCardStore.activeCardId
+  const card = airiCardStore.activeCard
+  if (!card || !cardId)
+    return
+
+  await airiCardStore.updateCard(cardId, {
+    extensions: {
+      ...card.extensions,
+      airi: {
+        ...card.extensions?.airi,
+        heartbeats: {
+          ...card.extensions?.airi?.heartbeats,
+          afkThresholdMinutes: clamped,
+        },
+      },
+    },
+  })
 }
 
 const isRunningCycle = computed(() => agenticStore.isCycleRunning)
@@ -271,6 +347,57 @@ onMounted(() => {
           </ul>
         </div>
       </div>
+    </div>
+
+    <!-- Nap -->
+    <div class="flex flex-col gap-4 rounded-xl bg-neutral-100 p-4 dark:bg-[rgba(0,0,0,0.3)]">
+      <h3 class="text-lg font-semibold">
+        {{ t('settings.modules.agentic-os.nap') }}
+      </h3>
+      <p class="text-sm text-neutral-600 dark:text-neutral-400">
+        {{ t('settings.modules.agentic-os.napDesc') }}
+      </p>
+
+      <div class="flex items-center justify-between border-t border-neutral-200 pt-4 dark:border-neutral-800">
+        <div>
+          <p class="font-medium">
+            {{ t('settings.modules.agentic-os.napEnable') }}
+          </p>
+          <p class="text-sm text-neutral-600 dark:text-neutral-400">
+            {{ t('settings.modules.agentic-os.napEnableDesc') }}
+          </p>
+        </div>
+        <FieldCheckbox
+          :model-value="napEnabled"
+          @update:model-value="handleToggleNap"
+        />
+      </div>
+
+      <div v-if="napEnabled" class="flex flex-col gap-2 border-t border-neutral-200 pt-4 dark:border-neutral-800">
+        <p class="font-medium">
+          {{ t('settings.modules.agentic-os.napThreshold') }}
+        </p>
+        <div class="flex items-center gap-3">
+          <FieldRange
+            :model-value="afkThresholdMinutes"
+            :min="NAP_THRESHOLD_MIN_MINUTES"
+            :max="NAP_THRESHOLD_MAX_MINUTES"
+            :step="1"
+            class="flex-1"
+            @update:model-value="handleAfkThresholdChange"
+          />
+          <span class="w-20 text-right text-sm">
+            {{ t('settings.modules.agentic-os.napThresholdMinutes', { n: afkThresholdMinutes }) }}
+          </span>
+        </div>
+        <p class="text-sm text-neutral-600 dark:text-neutral-400">
+          {{ t('settings.modules.agentic-os.napThresholdInherited') }}
+        </p>
+      </div>
+
+      <p class="text-sm text-neutral-600 dark:text-neutral-400">
+        {{ t('settings.modules.agentic-os.napIndependentOfAutonomousMode') }}
+      </p>
     </div>
 
     <!-- Decision engine -->

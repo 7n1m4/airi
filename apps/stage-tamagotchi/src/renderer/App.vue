@@ -21,6 +21,7 @@ import { useContextBridgeStore } from '@proj-airi/stage-ui/stores/mods/api/conte
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useDiscordStore } from '@proj-airi/stage-ui/stores/modules/discord'
 import { useScreenWatcherStore } from '@proj-airi/stage-ui/stores/modules/screen-watcher'
+import { useNapChatStore } from '@proj-airi/stage-ui/stores/nap-chat'
 import { useOnboardingStore } from '@proj-airi/stage-ui/stores/onboarding'
 import { usePerfTracerBridgeStore } from '@proj-airi/stage-ui/stores/perf-tracer-bridge'
 import { listProvidersForPluginHost, shouldPublishPluginHostCapabilities } from '@proj-airi/stage-ui/stores/plugin-host-capabilities'
@@ -96,6 +97,10 @@ const proactivityStore = useProactivityStore()
 const screenWatcherStore = useScreenWatcherStore()
 const stageWindowLifecycleStore = useStageWindowLifecycleStore()
 void stageWindowLifecycleStore.initializeWindowLifecycleBridge()
+// Arms the presence → `active` edge that surfaces the most recent nap-chat
+// recap (design §7). Instantiated once per window; the store itself only watches
+// in the main window.
+useNapChatStore()
 
 async function seedTextJournalEntryFromWindow() {
   await textJournalStore.load()
