@@ -315,7 +315,7 @@ To provide a complete vision of AIRI's modular architecture, **all planned capab
 | `sensory` | Extended | Toggleable | Sentinel Companion | Prompts OS permission & enables AFK telemetry loops |
 | `generative_motion` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Coming Soon]`. Tooltip: "FlowMDM WebGPU procedural text-to-motion". |
 | `memory_matrix` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Coming Soon]`. Tooltip: "Lifetime Sacred Journal & DRMM dreaming consolidation". |
-| `rehearsal_room` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Coming Soon]`. Tooltip: "<|ACT:...|> live emotion and motion cue testing sandbox". |
+| `rehearsal_room` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Coming Soon]`. Tooltip: "<code>\|ACT:...\|</code> live emotion and motion cue testing sandbox". |
 | `dating_sim` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Coming Soon]`. Tooltip: "Branching visual novel HUD, intimacy tracking, and scene sets". |
 | `multi_window` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Coming Soon]`. Tooltip: "Detached desktop chat bubble and transparent stage overlay". |
 | `cloud_relay_bot` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Coming Soon]`. Tooltip: "Cloudflare Edge Worker for 24/7 Discord bot and multi-device sync". |

@@ -81,10 +81,14 @@ This is followed immediately by a concise 2-sentence persona definition and a sh
 #### Invariant 3: Zero Tool Schemas (`allowedTools: []`)
 Small models (0.4B–1.5B–5B) cannot reliably maintain the syntactic separation between conversational turns and JSON function calling schemas without degrading into pseudo-JSON hallucination. Tools are strictly empty:
 ```json
-"known": {
-  "reasoningFallback": true,
-  "allowedTools": [],
-  "maxTokens": 269
+{
+  "generation": {
+    "known": {
+      "reasoningFallback": true,
+      "allowedTools": [],
+      "maxTokens": 269
+    }
+  }
 }
 ```
 
@@ -647,9 +651,9 @@ While the WebGPU in-situ conditioning engine is fully operational inside `@crysc
     - Lookup the source companion card: `const sourceCard = cards.value.get(selectedSourceCardId.value)`.
     - Inherit persona fields:
       ```ts
-      description: sourceCard?.description || '',
-      personality: sourceCard?.personality || '',
-      scenario: sourceCard?.scenario || '',
+      description = sourceCard?.description || ''
+      personality = sourceCard?.personality || ''
+      scenario = sourceCard?.scenario || ''
       ```
     - Set `archetype: 'custom'` and preserve the custom cartridge bindings.
 
@@ -663,13 +667,15 @@ While the WebGPU in-situ conditioning engine is fully operational inside `@crysc
     - Add an **"Include RWKV-7 State Cartridge (.state)"** checklist toggle in the ZIP Package segment of `CardExportDialog.vue` (auto-detected when `card.extensions?.airi?.rwkv?.stateCartridgeId` is present in OPFS).
     - Bundle the binary into the zip under `states/character.state` and register in `manifest.json`:
       ```json
-      "resources": {
-        "states": {
-          "rwkv": {
-            "path": "states/character.state",
-            "cartridgeId": "cartridge-sylvia-1.5b-v1",
-            "modelTier": "1.5b",
-            "zeroPromptVerified": true
+      {
+        "resources": {
+          "states": {
+            "rwkv": {
+              "path": "states/character.state",
+              "cartridgeId": "cartridge-sylvia-1.5b-v1",
+              "modelTier": "1.5b",
+              "zeroPromptVerified": true
+            }
           }
         }
       }

@@ -384,9 +384,7 @@ When the user confirms their cast selection, the Step 1 $\rightarrow$ Step 2 tra
 
 ```typescript
 // packages/stage-pages/src/pages/settings/airi-card/guided.vue
-import { useAnimaDexWizardStore } from '@proj-airi/stage-ui/stores'
-import { useSpeechStore } from '@proj-airi/stage-ui/stores'
-import { useSystemOneStore } from '@proj-airi/stage-ui/stores'
+import { useAnimaDexWizardStore, useSpeechStore, useSystemOneStore } from '@proj-airi/stage-ui/stores'
 
 export async function autoMatchCharacterVoiceWithJev(character: CharacterItem) {
   const wizardStore = useAnimaDexWizardStore()
@@ -691,7 +689,7 @@ Because **OpenRouter already natively hosts `typesafe/jev-1.13` (and `typesafe/j
   1. **Direct TypeSafe Transport**: For enterprise users connecting directly to `https://api.typesafe.ai/` with dedicated capacity.
   2. **OpenRouter Decisions Transport**: Universal route using the existing `openrouter` provider account.
 
-```typescript
+```jsonc
 // OpenRouter Alpha Decisions Request Signature:
 // POST https://openrouter.ai/api/alpha/decisions
 // Authorization: Bearer $OPENROUTER_API_KEY
@@ -790,7 +788,7 @@ const tiltProbability = res.answers?.is_tilt_risk?.noul // 0.0 - 1.0 probability
 const urgency = res.answers?.intervention_urgency?.score // 0.0 - 1.0 scalar
 
 // Read round-trip latency
-console.log(`System 1 evaluated in ${systemOneStore.lastLatencyMs}ms`)
+console.info(`System 1 evaluated in ${systemOneStore.lastLatencyMs}ms`)
 ```
 
 ---

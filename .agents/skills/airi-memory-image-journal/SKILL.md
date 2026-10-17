@@ -15,7 +15,7 @@ Durable, append-only image history for AI-generated art. **Two completely separa
 
 | Attribute | Value |
 | :--- | :--- |
-| Store | `packages/stage-ui/src/stores/background.ts` — `BackgroundEntry` (:16) `type: 'builtin' | 'scene' | 'journal' | 'selfie'` |
+| Store | `packages/stage-ui/src/stores/background.ts` — `BackgroundEntry` (:16) `type: 'builtin' \| 'scene' \| 'journal' \| 'selfie'` |
 | Persistence | `localforage` (separate IndexedDB, NOT the unstorage `local:*` layer) |
 | Key pattern | `bg-{nanoid}` (current), `builtin:{id}`, legacy `image-journal-{nanoid}` migrated at load (background.ts :109-122) |
 | Sync | `reconcileBackgrounds()` — metadata JSON + raw PNG under `assets/backgrounds/{id}.json` / `.png` (`docs/data-catalog.md` §3.1) |

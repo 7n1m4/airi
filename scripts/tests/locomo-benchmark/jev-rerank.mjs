@@ -18,7 +18,7 @@ export const JEV_RERANK_CRITERIA = [
  * @param {string} question
  * @param {Array<{ id: string, text: string, rawText?: string, score?: number, refDiaId?: string }>} candidates
  * @param {number} [maxCandidates=10]
- * @returns {Promise<Array<{ id: string, text: string, rawText?: string, originalScore: number, jevScore: number, finalScore: number, refDiaId?: string }>>}
+ * @returns {Promise<Array<{ id: string, text: string, rawText?: string, originalScore: number, jevScore: number, finalScore: number, refDiaId?: string }>>} Candidates scored by one batched System-1 pass (`finalScore = 0.7 * normalized jevScore + 0.3 * originalScore`), sorted descending; falls back to the original scores when the batch request fails.
  */
 export async function jevRerankCandidates(jev, question, candidates, maxCandidates = 10) {
   const pool = candidates.slice(0, maxCandidates)

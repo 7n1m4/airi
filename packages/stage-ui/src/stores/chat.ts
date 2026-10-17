@@ -1,7 +1,7 @@
 import type { Nan0Observation, Nan0PreparedTurn } from '@proj-airi/nan0-runtime'
 import type { WebSocketEventInputs } from '@proj-airi/server-sdk'
 import type { ChatProvider } from '@xsai-ext/providers/utils'
-import type { CommonContentPart, Message, ToolMessage } from '@xsai/shared-chat'
+import type { CommonContentPart, CompletionToolCall, Message, ToolMessage } from '@xsai/shared-chat'
 
 import type { ChatAssistantMessage, ChatSlices, ChatStreamEventContext } from '../types/chat'
 import type { PacingMetrics } from '../types/pacing'
@@ -227,6 +227,9 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
     postComposerState({ isTyping: typing })
   }
 
+  const sending = ref(false)
+  const pendingQueuedSends = ref<QueuedSend[]>([])
+
   const activeSpokenText = ref('')
   const activeSpokenColor = ref('')
 
@@ -359,9 +362,6 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
       chatStream.resetStream()
     }
   }, { flush: 'sync' })
-
-  const sending = ref(false)
-  const pendingQueuedSends = ref<QueuedSend[]>([])
 
   const sendQueue = createQueue<QueuedSend>({
     handlers: [
@@ -927,6 +927,105 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
       let streamPosition = 0
       const actorSliceState = createActorSliceState()
 
+      let turnSpeechContent = ''
+      let turnRawContent = ''
+      const bridgedTurnsHistory: { content: string, rawContent?: string, tool_calls?: CompletionToolCall[], tool_results: ChatAssistantMessage['tool_results'] }[] = []
+
+      const toolCallQueue = createQueue<ChatSlices>({
+        handlers: [
+          async (ctx) => {
+            if (shouldAbort())
+              return
+
+            if (ctx.data.type === 'tool-call') {
+              ;(buildingMessage.slices as any).push({
+                ...ctx.data,
+                state: 'executing',
+              })
+              updateUI()
+
+              // Manuel execution for bridged tool calls
+              if ((ctx.data as any).bridged) {
+                const toolCall = (ctx.data as any).toolCall
+                const resolvedTools = typeof options.tools === 'function' ? await options.tools() : options.tools
+                const tool = resolvedTools?.find(t => (t.function?.name || (t as any).name) === toolCall.function.name)
+
+                if (tool && (tool as any).execute) {
+                  chatLog(`Manually executing bridged tool: ${toolCall.function.name}`)
+                  try {
+                    const parsedArgs = tryParseLenientJson(toolCall.function.arguments)
+                    const result = await (tool as any).execute(parsedArgs)
+                    toolCallQueue.enqueue({
+                      type: 'tool-call-result',
+                      id: toolCall.id,
+                      result: (typeof result === 'string' ? result : JSON.stringify(result)) as any,
+                    })
+                  }
+                  catch (err) {
+                    console.error(`[ChatDebug] Bridged tool execution failed: ${toolCall.function.name}`, err)
+                    toolCallQueue.enqueue({
+                      type: 'tool-call-result',
+                      id: toolCall.id,
+                      result: `Execution failed: ${err instanceof Error ? err.message : String(err)}`,
+                    })
+                  }
+                }
+                else {
+                  debug(`[ChatDebug] Tool not found or not executable: ${toolCall.function.name}`)
+                  toolCallQueue.enqueue({
+                    type: 'tool-call-result',
+                    id: toolCall.id,
+                    result: `Error: Tool "${toolCall.function.name}" not found or not executable.`,
+                  })
+                }
+              }
+
+              return
+            }
+
+            if (ctx.data.type === 'tool-call-result') {
+              const resultData = ctx.data as any
+              buildingMessage.tool_results.push(resultData)
+
+              const slice = buildingMessage.slices.find((s: any) => {
+                if (s.type !== 'tool-call')
+                  return false
+                const tc = s.toolCall as any
+                return tc.id === resultData.id || tc.toolCallId === resultData.id
+              })
+              if (slice && slice.type === 'tool-call') {
+                const isError = ctx.data.result?.toString().toLowerCase().includes('failed') || ctx.data.result?.toString().toLowerCase().includes('error:')
+                slice.state = isError ? 'error' : 'done'
+                slice.result = ctx.data.result
+
+                // Log tool execution to Event Ledger
+                const toolName = (slice.toolCall as any)?.function?.name || (slice.toolCall as any)?.name || 'tool'
+                const rawResultStr = typeof ctx.data.result === 'string' ? ctx.data.result : JSON.stringify(ctx.data.result || '')
+                const resultSnippet = rawResultStr.slice(0, 60)
+                const textSummary = isError
+                  ? `Failed ${toolName} — Error: ${resultSnippet}${rawResultStr.length > 60 ? '...' : ''}`
+                  : `Executed ${toolName} — Result: ${resultSnippet}${rawResultStr.length > 60 ? '...' : ''}`
+
+                void eventLogStore.appendEvent({
+                  category: 'tools',
+                  type: isError ? 'tool-failed' : 'tool-executed',
+                  source: activeCard.value?.name || 'AIRI',
+                  textSummary,
+                  payload: {
+                    id: resultData.id,
+                    toolName,
+                    state: slice.state,
+                  },
+                  inspectable: true,
+                })
+              }
+
+              updateUI()
+            }
+          },
+        ],
+      })
+
       const createLiteralInterceptor = () => createLlmJsonInterceptor({
         onText: async (text) => {
           if (shouldAbort())
@@ -1026,105 +1125,6 @@ export const useChatOrchestratorStore = defineStore('chat-orchestrator', () => {
         }
         return { matchedText, bridged: false }
       }
-
-      const toolCallQueue = createQueue<ChatSlices>({
-        handlers: [
-          async (ctx) => {
-            if (shouldAbort())
-              return
-
-            if (ctx.data.type === 'tool-call') {
-              ;(buildingMessage.slices as any).push({
-                ...ctx.data,
-                state: 'executing',
-              })
-              updateUI()
-
-              // Manuel execution for bridged tool calls
-              if ((ctx.data as any).bridged) {
-                const toolCall = (ctx.data as any).toolCall
-                const resolvedTools = typeof options.tools === 'function' ? await options.tools() : options.tools
-                const tool = resolvedTools?.find(t => (t.function?.name || (t as any).name) === toolCall.function.name)
-
-                if (tool && (tool as any).execute) {
-                  chatLog(`Manually executing bridged tool: ${toolCall.function.name}`)
-                  try {
-                    const parsedArgs = tryParseLenientJson(toolCall.function.arguments)
-                    const result = await (tool as any).execute(parsedArgs)
-                    toolCallQueue.enqueue({
-                      type: 'tool-call-result',
-                      id: toolCall.id,
-                      result: (typeof result === 'string' ? result : JSON.stringify(result)) as any,
-                    })
-                  }
-                  catch (err) {
-                    console.error(`[ChatDebug] Bridged tool execution failed: ${toolCall.function.name}`, err)
-                    toolCallQueue.enqueue({
-                      type: 'tool-call-result',
-                      id: toolCall.id,
-                      result: `Execution failed: ${err instanceof Error ? err.message : String(err)}`,
-                    })
-                  }
-                }
-                else {
-                  debug(`[ChatDebug] Tool not found or not executable: ${toolCall.function.name}`)
-                  toolCallQueue.enqueue({
-                    type: 'tool-call-result',
-                    id: toolCall.id,
-                    result: `Error: Tool "${toolCall.function.name}" not found or not executable.`,
-                  })
-                }
-              }
-
-              return
-            }
-
-            if (ctx.data.type === 'tool-call-result') {
-              const resultData = ctx.data as any
-              buildingMessage.tool_results.push(resultData)
-
-              const slice = buildingMessage.slices.find((s: any) => {
-                if (s.type !== 'tool-call')
-                  return false
-                const tc = s.toolCall as any
-                return tc.id === resultData.id || tc.toolCallId === resultData.id
-              })
-              if (slice && slice.type === 'tool-call') {
-                const isError = ctx.data.result?.toString().toLowerCase().includes('failed') || ctx.data.result?.toString().toLowerCase().includes('error:')
-                slice.state = isError ? 'error' : 'done'
-                slice.result = ctx.data.result
-
-                // Log tool execution to Event Ledger
-                const toolName = (slice.toolCall as any)?.function?.name || (slice.toolCall as any)?.name || 'tool'
-                const rawResultStr = typeof ctx.data.result === 'string' ? ctx.data.result : JSON.stringify(ctx.data.result || '')
-                const resultSnippet = rawResultStr.slice(0, 60)
-                const textSummary = isError
-                  ? `Failed ${toolName} — Error: ${resultSnippet}${rawResultStr.length > 60 ? '...' : ''}`
-                  : `Executed ${toolName} — Result: ${resultSnippet}${rawResultStr.length > 60 ? '...' : ''}`
-
-                void eventLogStore.appendEvent({
-                  category: 'tools',
-                  type: isError ? 'tool-failed' : 'tool-executed',
-                  source: activeCard.value?.name || 'AIRI',
-                  textSummary,
-                  payload: {
-                    id: resultData.id,
-                    toolName,
-                    state: slice.state,
-                  },
-                  inspectable: true,
-                })
-              }
-
-              updateUI()
-            }
-          },
-        ],
-      })
-
-      let turnSpeechContent = ''
-      let turnRawContent = ''
-      const bridgedTurnsHistory: { content: string, rawContent?: string, tool_calls?: any[], tool_results: any[] }[] = []
 
       while (bridgedSteps < 5) {
         bridgedSteps++
@@ -1788,7 +1788,7 @@ Format your output as a raw thought log.`
                 break
               case 'usage': {
                 chatLog('[Chat:Usage] usage report received from LLM stream:', event.usage)
-                console.log('[Chat:Usage] received usage report:', event.usage)
+                console.info('[Chat:Usage] received usage report:', event.usage)
                 const liveSession = useLiveSessionStore()
                 liveSession.recordInferenceUsage(event.usage)
                 break

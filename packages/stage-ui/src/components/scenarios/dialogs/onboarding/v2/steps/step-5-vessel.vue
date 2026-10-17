@@ -20,12 +20,6 @@ const isModelSelectorOpen = ref(false)
 
 const customModelsCount = computed(() => displayModelsStore.displayModels.length)
 
-function handleModelPick(model: any) {
-  if (model?.id) {
-    selectedBody.value = model.id
-  }
-}
-
 const presetLive2dPreview = new URL('../../../../../../assets/live2d/models/hiyori/preview.png', import.meta.url).href
 const presetVrmAvatarAPreview = new URL('../../../../../../assets/vrm/models/AvatarSample-A/preview.png', import.meta.url).href
 const presetVrmAvatarBPreview = new URL('../../../../../../assets/vrm/models/AvatarSample-B/preview.png', import.meta.url).href
@@ -41,6 +35,12 @@ if (!draftStore.state.vessel.displayModelId) {
 watch(selectedBody, (val) => {
   draftStore.setVessel({ displayModelId: val })
 })
+
+function handleModelPick(model: any) {
+  if (model?.id) {
+    selectedBody.value = model.id
+  }
+}
 
 const starterBodies = [
   { id: 'preset-live2d-2', name: 'Hiyori (Free)', format: 'Live2D', preview: presetLive2dPreview },

@@ -11,7 +11,7 @@ safeEnv.GH_SSL_NO_VERIFY = 'true'
 delete safeEnv.NODE_OPTIONS
 
 function execute(cmd, options = {}) {
-  console.log(`\n🤖 Running: ${cmd}`)
+  console.info(`\n🤖 Running: ${cmd}`)
   return execSync(cmd, { env: safeEnv, stdio: 'inherit', ...options })
 }
 
@@ -31,22 +31,21 @@ async function main() {
   const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
   const version = pkg.version
   const tag = `v${version}`
-  console.log(`📦 Resolved target release version: ${version} (tag: ${tag})`)
+  console.info(`📦 Resolved target release version: ${version} (tag: ${tag})`)
 
   // Step 1: Pull and fetch tags from git
-  console.log('🔄 Syncing local repository with remote...')
+  console.info('🔄 Syncing local repository with remote...')
   try {
     execute('git -c http.sslVerify=false pull')
     execute('git -c http.sslVerify=false fetch --tags --force')
   }
-  catch (error) {
+  catch {
     console.warn('⚠️ Warning: Git sync failed. Proceeding with local repository state.')
   }
 
   // Re-read package.json after git sync in case remote main was updated
   const updatedPkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
   const currentVersion = updatedPkg.version
-  const currentTag = `v${currentVersion}`
 
   // Check for date stamp mismatch with today's date
   const now = new Date()
@@ -81,12 +80,12 @@ async function main() {
 
     for (const targetPath of filesToCheck) {
       if (fs.existsSync(targetPath)) {
-        console.log(`🔍 Checking for active file locks on: ${targetPath}`)
+        console.info(`🔍 Checking for active file locks on: ${targetPath}`)
         try {
           // Attempt to open with read-write access to verify no running process or editor handle is holding the file
           const fd = fs.openSync(targetPath, 'r+')
           fs.closeSync(fd)
-          console.log(`✅ ${path.basename(targetPath)} is not locked.`)
+          console.info(`✅ ${path.basename(targetPath)} is not locked.`)
         }
         catch (err) {
           if (['EBUSY', 'EACCES', 'EPERM'].includes(err.code) || err.code) {
@@ -100,7 +99,7 @@ async function main() {
     }
 
     // Step 3: Remove leftover physical copy-deps folders in stage-tamagotchi to prevent Vite V8 memory crashes (3221225477)
-    console.log(`\n🧹 Cleaning physical node_modules overrides before Vite bundling...`)
+    console.info(`\n🧹 Cleaning physical node_modules overrides before Vite bundling...`)
     const copiedPackages = [
       '@discordjs/voice',
       'discord.js',
@@ -118,9 +117,9 @@ async function main() {
       if (fs.existsSync(pkgPath) && !fs.lstatSync(pkgPath).isSymbolicLink()) {
         try {
           fs.rmSync(pkgPath, { recursive: true, force: true })
-          console.log(`  - Cleaned physical override: ${pkg}`)
+          console.info(`  - Cleaned physical override: ${pkg}`)
         }
-        catch (e) {
+        catch {
           // ignore
         }
       }
@@ -128,7 +127,7 @@ async function main() {
 
     // Step 4: Clean stale dist/win-unpacked before packaging
     if (fs.existsSync(distWinUnpacked)) {
-      console.log(`🧹 Cleaning previous unpacked directory: ${distWinUnpacked}`)
+      console.info(`🧹 Cleaning previous unpacked directory: ${distWinUnpacked}`)
       try {
         fs.rmSync(distWinUnpacked, { recursive: true, force: true })
       }
@@ -138,11 +137,11 @@ async function main() {
     }
 
     // Step 5: Run the build:win script
-    console.log(`\n🔨 Compiling Windows Setup executable and portable ZIP...`)
+    console.info(`\n🔨 Compiling Windows Setup executable and portable ZIP...`)
     try {
       execute('pnpm -F @proj-airi/stage-tamagotchi run build:win')
     }
-    catch (error) {
+    catch {
       console.error('❌ Build execution failed.')
       process.exit(1)
     }
@@ -160,32 +159,32 @@ async function main() {
 
   if (releaseArtifacts.length === 0) {
     console.error(`\n❌ Error: Could not find generated release artifacts matching "(airi-dasilva333|AIRI)*${version}*.(exe|zip)" in ${distDir}`)
-    console.log('Available files in dist:', files)
+    console.info('Available files in dist:', files)
     process.exit(1)
   }
 
   const artifactPaths = releaseArtifacts.map(f => path.join('apps', 'stage-tamagotchi', 'dist', f))
-  console.log(`\n🎉 Found ${artifactPaths.length} release artifact(s):`)
-  artifactPaths.forEach(p => console.log(`  - ${p}`))
+  console.info(`\n🎉 Found ${artifactPaths.length} release artifact(s):`)
+  artifactPaths.forEach(p => console.info(`  - ${p}`))
 
   if (isBuildOnly) {
-    console.log(`\n✅ Build complete! Release binaries ready for smoke test:`)
-    artifactPaths.forEach(p => console.log(`👉 ${p}`))
-    console.log(`\nWhen smoke testing is complete and approved, run:`)
-    console.log(`👉 pnpm run release:win --upload-only`)
+    console.info(`\n✅ Build complete! Release binaries ready for smoke test:`)
+    artifactPaths.forEach(p => console.info(`👉 ${p}`))
+    console.info(`\nWhen smoke testing is complete and approved, run:`)
+    console.info(`👉 pnpm run release:win --upload-only`)
     return
   }
 
   // Step 5: Check if GitHub release already exists, if not, create it
-  console.log(`\n🌐 Checking if GitHub release ${tag} exists...`)
+  console.info(`\n🌐 Checking if GitHub release ${tag} exists...`)
   let releaseExists = false
   try {
     execute(`gh release view ${tag} --repo dasilva333/airi`, { stdio: 'ignore' })
     releaseExists = true
-    console.log(`✅ Release ${tag} already exists on GitHub.`)
+    console.info(`✅ Release ${tag} already exists on GitHub.`)
   }
-  catch (err) {
-    console.log(`ℹ️ Release ${tag} does not exist. Creating new release draft...`)
+  catch {
+    console.info(`ℹ️ Release ${tag} does not exist. Creating new release draft...`)
   }
 
   if (!releaseExists) {
@@ -194,7 +193,7 @@ async function main() {
       : ''
     try {
       execute(`gh release create ${tag} --repo dasilva333/airi --title "AIRI ${tag}"${notesFileOpt}`)
-      console.log(`✅ Release ${tag} successfully created.`)
+      console.info(`✅ Release ${tag} successfully created.`)
     }
     catch (err) {
       console.error(`❌ Failed to create GitHub release ${tag}. Error:`, err.message)
@@ -204,10 +203,10 @@ async function main() {
 
   // Step 6: Upload the binaries (.exe & .zip)
   for (const artifactPath of artifactPaths) {
-    console.log(`\n🚀 Uploading ${path.basename(artifactPath)} to release ${tag}...`)
+    console.info(`\n🚀 Uploading ${path.basename(artifactPath)} to release ${tag}...`)
     try {
       execute(`gh release upload ${tag} "${artifactPath}" --repo dasilva333/airi --clobber`)
-      console.log(`✅ Uploaded ${path.basename(artifactPath)}`)
+      console.info(`✅ Uploaded ${path.basename(artifactPath)}`)
     }
     catch (err) {
       console.error(`❌ Failed to upload ${path.basename(artifactPath)}. Error:`, err.message)
@@ -216,16 +215,16 @@ async function main() {
   }
 
   // Step 7: Verify release assets & cross-platform completeness
-  console.log(`\n📦 Verifying release assets inventory for ${tag}...`)
+  console.info(`\n📦 Verifying release assets inventory for ${tag}...`)
   try {
     execute(`node scripts/github/ci-status.mjs --release`)
   }
-  catch (err) {
+  catch {
     // Non-fatal if ci-status verification encounters an error
   }
 
-  console.log(`\n🏆 Success! Windows release artifacts uploaded to GitHub release:`)
-  console.log(`👉 https://github.com/dasilva333/airi/releases/tag/${tag}`)
+  console.info(`\n🏆 Success! Windows release artifacts uploaded to GitHub release:`)
+  console.info(`👉 https://github.com/dasilva333/airi/releases/tag/${tag}`)
 }
 
 main().catch((err) => {

@@ -10,6 +10,7 @@
  */
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import puppeteer from 'puppeteer-core'
 
@@ -33,7 +34,7 @@ if (!runDir || !fs.existsSync(runDir)) {
   console.error(`run dir not found: ${runDir || '(none)'}`)
   process.exit(1)
 }
-console.log(`Reprocessing run dir: ${runDir}\n`)
+console.info(`Reprocessing run dir: ${runDir}\n`)
 
 const attempts = fs.readdirSync(runDir)
   .filter(d => d.startsWith('attempt-') && fs.existsSync(path.join(runDir, d, 'raw.txt')))
@@ -54,7 +55,7 @@ for (const name of attempts) {
   const raw = fs.readFileSync(path.join(dir, 'raw.txt'), 'utf8')
   const sketch = extractSketch(raw)
   if (!sketch) {
-    console.log(`${name}: no extractable sketch`)
+    console.info(`${name}: no extractable sketch`)
     summary.push({ attempt: name, extracted: false })
     continue
   }
@@ -66,18 +67,18 @@ for (const name of attempts) {
     outcome = await renderer.render({ code: sketch, size: CANVAS_SIZE, timeoutMs: 45_000 })
   }
   catch (err) {
-    console.log(`${name}: first render failed (${String(err).slice(0, 120)}); re-opening render page and retrying`)
+    console.info(`${name}: first render failed (${String(err).slice(0, 120)}); re-opening render page and retrying`)
     await renderer.open(server.baseUrl)
     outcome = await renderer.render({ code: sketch, size: CANVAS_SIZE, timeoutMs: 45_000 })
   }
   fs.writeFileSync(path.join(dir, 'reextract-outcome.json'), JSON.stringify({ ...outcome, dataUrl: outcome.dataUrl ? `<png ${outcome.dataUrl.length} chars>` : null }, null, 2))
   if (outcome.dataUrl)
     renderer.savePng(path.join(dir, 'reextract.png'), outcome.dataUrl)
-  console.log(`${name}: extracted ${sketch.length} chars -> ok=${outcome.ok} blank=${outcome.blank} ink=${(outcome.inkCoverage * 100).toFixed(1)}% colors=${outcome.uniqueColors} frames=${outcome.framesRendered} err=${outcome.error ?? outcome.sketchError ?? 'none'}`)
+  console.info(`${name}: extracted ${sketch.length} chars -> ok=${outcome.ok} blank=${outcome.blank} ink=${(outcome.inkCoverage * 100).toFixed(1)}% colors=${outcome.uniqueColors} frames=${outcome.framesRendered} err=${outcome.error ?? outcome.sketchError ?? 'none'}`)
   summary.push({ attempt: name, extracted: true, sketchChars: sketch.length, ok: outcome.ok, blank: outcome.blank, inkCoverage: outcome.inkCoverage, uniqueColors: outcome.uniqueColors, framesRendered: outcome.framesRendered, error: outcome.error, sketchError: outcome.sketchError })
 }
 
 fs.writeFileSync(path.join(runDir, 'reprocess-summary.json'), JSON.stringify({ generatedAt: new Date().toISOString(), tool: 'reprocess-07-renders', attempts: summary }, null, 2))
 await browser.close()
 await server.close()
-console.log(`\n✓ summary: ${path.join(runDir, 'reprocess-summary.json')}`)
+console.info(`\n✓ summary: ${path.join(runDir, 'reprocess-summary.json')}`)

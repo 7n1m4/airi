@@ -63,16 +63,6 @@ const activeEngineTab = ref<'local' | 'cloud'>(
     : 'cloud',
 )
 
-// Auto-switch provider when switching between Local and Cloud tabs
-watch(activeEngineTab, (tab) => {
-  if (tab === 'cloud' && isLocalProvider.value) {
-    selectedProvider.value = cloudProviders.value[0]?.id || 'elevenlabs'
-  }
-  else if (tab === 'local' && !isLocalProvider.value) {
-    selectedProvider.value = 'pocket'
-  }
-})
-
 // API credentials
 const showApiKey = ref(false)
 const apiKeyInput = ref('')
@@ -233,42 +223,6 @@ async function processAudioClone(file: File) {
   }
 }
 
-const isSelectedVoiceCloned = computed(() => {
-  const currentVoiceId = activeVoiceTab.value === 'user' ? selectedUserVoice.value : selectedVoice.value
-  if (!currentVoiceId)
-    return false
-  if (currentVoiceId.startsWith('voice-profile-') || currentVoiceId.startsWith('pocket_clone_') || currentVoiceId.startsWith('moss_clone_'))
-    return true
-  const v = providerVoices.value.find((item: any) => item.id === currentVoiceId)
-  return (v as any)?.type === 'cloned' || (v as any)?.description?.includes('Cloned')
-})
-
-async function handleDeleteCurrentClonedVoice() {
-  const currentVoiceId = activeVoiceTab.value === 'user' ? selectedUserVoice.value : selectedVoice.value
-  if (!isSelectedVoiceCloned.value)
-    return
-
-  const normId = normalizeProviderId(selectedProvider.value)
-  try {
-    await removeClonedVoice(currentVoiceId)
-    await speechStore.loadVoicesForProvider(normId)
-    if (activeVoiceTab.value === 'user') {
-      if (selectedUserVoice.value === currentVoiceId) {
-        selectedUserVoice.value = availableVoices.value[0]?.id || ''
-      }
-    }
-    else {
-      if (selectedVoice.value === currentVoiceId) {
-        selectedVoice.value = availableVoices.value[0]?.id || ''
-      }
-    }
-    toast.success('Cloned voice deleted')
-  }
-  catch (err: any) {
-    toast.error(err?.message || 'Failed to delete cloned voice')
-  }
-}
-
 const isLocalProvider = computed(() => {
   const norm = normalizeProviderId(selectedProvider.value)
   return ['kokoro-local', 'pocket-tts-local', 'moss-nano-local'].includes(norm)
@@ -388,6 +342,16 @@ const activeProviderDisplayName = computed(() => {
 const activeConsoleUrl = computed(() => {
   const match = cloudProviders.value.find(p => p.id === selectedProvider.value)
   return match?.consoleUrl || ''
+})
+
+// Auto-switch provider when switching between Local and Cloud tabs
+watch(activeEngineTab, (tab) => {
+  if (tab === 'cloud' && isLocalProvider.value) {
+    selectedProvider.value = cloudProviders.value[0]?.id || 'elevenlabs'
+  }
+  else if (tab === 'local' && !isLocalProvider.value) {
+    selectedProvider.value = 'pocket'
+  }
 })
 
 // 3. Models & Voices Resolution
@@ -515,6 +479,42 @@ watch(availableVoices, (voices) => {
     }
   }
 }, { immediate: true })
+
+const isSelectedVoiceCloned = computed(() => {
+  const currentVoiceId = activeVoiceTab.value === 'user' ? selectedUserVoice.value : selectedVoice.value
+  if (!currentVoiceId)
+    return false
+  if (currentVoiceId.startsWith('voice-profile-') || currentVoiceId.startsWith('pocket_clone_') || currentVoiceId.startsWith('moss_clone_'))
+    return true
+  const v = providerVoices.value.find((item: any) => item.id === currentVoiceId)
+  return (v as any)?.type === 'cloned' || (v as any)?.description?.includes('Cloned')
+})
+
+async function handleDeleteCurrentClonedVoice() {
+  const currentVoiceId = activeVoiceTab.value === 'user' ? selectedUserVoice.value : selectedVoice.value
+  if (!isSelectedVoiceCloned.value)
+    return
+
+  const normId = normalizeProviderId(selectedProvider.value)
+  try {
+    await removeClonedVoice(currentVoiceId)
+    await speechStore.loadVoicesForProvider(normId)
+    if (activeVoiceTab.value === 'user') {
+      if (selectedUserVoice.value === currentVoiceId) {
+        selectedUserVoice.value = availableVoices.value[0]?.id || ''
+      }
+    }
+    else {
+      if (selectedVoice.value === currentVoiceId) {
+        selectedVoice.value = availableVoices.value[0]?.id || ''
+      }
+    }
+    toast.success('Cloned voice deleted')
+  }
+  catch (err: any) {
+    toast.error(err?.message || 'Failed to delete cloned voice')
+  }
+}
 
 // Synchronize speech settings reactively with transient onboarding draft store
 watch([selectedProvider, selectedModel, selectedVoice, pitch, speed], ([prov, mod, voi, p, s]) => {

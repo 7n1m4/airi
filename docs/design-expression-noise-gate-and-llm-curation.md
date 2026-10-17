@@ -22,7 +22,7 @@ When users import 3D and 2D avatar models (VRM, PMX/MMD, Live2D, Spine) into AIR
 
 Instead of hardcoding models into fixed, proprietary emotional buckets, AIRI employs an open, two-tiered pipeline:
 
-```
+```text
                       Raw Model Avatar (VRM / PMX / Live2D / Spine)
                          (50 - 150+ Raw Blendshapes / Morphs)
                                      │
@@ -90,7 +90,7 @@ Benchmarked against all **907 VRM & PMX models** in the asset library, the Tier 
 
 Leveraging AIRI's established **Sparkle AI** pattern (consistent with `FieldAiGeneratorModal.vue` and the Rehearsal Room), the curation workflow operates as an intuitive 3-step guided modal triggered via the `"✨ Auto-Curate (AI)"` action banner in `<ModelCustomizer />`.
 
-```
+```text
  ┌────────────────────────────────────────────────────────────────────────┐
  │ ✨ Auto-Curate Model Expressions & Acting Directives                   │
  ├────────────────────────────────────────────────────────────────────────┤

@@ -51,7 +51,7 @@ Model binary assets (GLB/VRM, moc3 ZIP, Spine json/atlas, PMX/VMD) are cached an
 - `packages/stage-ui/src/components/scenarios/settings/model-settings/ModelCustomizer.vue` — Universal model capabilities explorer component used across settings panels and rehearsal sandboxes:
   - Lists raw model blend shapes / expressions and animations / motions directly from indexed metadata (`displayModelsStore`).
   - Triggers transient previews on row clicks (`triggerExpressionEffect`, `triggerMotionEffect`).
-  - Emits `@insert-token` when `showInsertActions=true` (for appending `<|ACT:...|>` or motion tokens to textareas).
+  - Emits `@insertToken` when `showInsertActions=true` (for appending `<|ACT:...|>` or motion tokens to textareas).
   - Toggles favorites, visibility, and idle animation cycle inclusion.
 - `packages/stage-ui/src/components/scenarios/settings/model-settings/`
   - `index.vue` — Main Model Settings container. Hosts the stage preview viewport and mounts the format settings panel for `stageModelSelected` (the previewed model). Passes `:model-id="stageModelSelected"` down to child panels.
@@ -76,7 +76,7 @@ Model binary assets (GLB/VRM, moc3 ZIP, Spine json/atlas, PMX/VMD) are cached an
 
 Expressions can be activated via three distinct pathways:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           1. Interactive UI Preview                         │
 │  ModelCustomizer.vue (Row Click)                                            │

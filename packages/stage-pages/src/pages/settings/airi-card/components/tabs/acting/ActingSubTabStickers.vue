@@ -17,7 +17,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'sparkle-click', fieldId: string): void
+  (e: 'sparkleClick', fieldId: string): void
 }>()
 
 const stickerDirectivesPrompt = defineModel<string>('stickerDirectivesPrompt', { default: '' })
@@ -349,7 +349,7 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
               style="position: absolute; top: 8px; right: 8px; z-index: 50; display: flex; height: 32px; width: 32px; align-items: center; justify-content: center; border-radius: 8px; border: none; cursor: pointer; background: transparent;"
               class="text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-primary-500 dark:hover:bg-neutral-800 dark:hover:text-primary-400"
               title="Optimize with AI"
-              @click.prevent="emit('sparkle-click', 'actingStickerDirectives')"
+              @click.prevent="emit('sparkleClick', 'actingStickerDirectives')"
             >
               <span class="i-ph:sparkle animate-pulse text-lg" style="display: inline-block; width: 1.2em; height: 1.2em;" />
             </button>

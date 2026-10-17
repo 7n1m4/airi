@@ -3,10 +3,12 @@ import type { ChildProcess } from 'node:child_process'
 import type { globalAppConfigSchema } from '../../../configs/global'
 import type { Config } from '../../../libs/electron/persistence'
 
-import { spawn } from 'node:child_process'
+import process, { env, platform } from 'node:process'
+
+import { Buffer } from 'node:buffer'
+import { execSync, spawn } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { env, platform } from 'node:process'
 
 import koffi from 'koffi'
 
@@ -402,7 +404,6 @@ export function createStageMateService(params?: {
 
     if (platform === 'darwin') {
       try {
-        const { execSync } = require('node:child_process')
         execSync('killall -9 StageMate MateEngineX 2>/dev/null || true')
       }
       catch {}
@@ -626,9 +627,15 @@ export function createStageMateService(params?: {
     return cachedDisplayBounds ?? { width: 1920, height: 1080 }
   }
 
-  screen.on('display-metrics-changed', () => { cachedDisplayBounds = null })
-  screen.on('display-added', () => { cachedDisplayBounds = null })
-  screen.on('display-removed', () => { cachedDisplayBounds = null })
+  screen.on('display-metrics-changed', () => {
+    cachedDisplayBounds = null
+  })
+  screen.on('display-added', () => {
+    cachedDisplayBounds = null
+  })
+  screen.on('display-removed', () => {
+    cachedDisplayBounds = null
+  })
 
   function startMouseTelemetry() {
     if (mouseTicker)

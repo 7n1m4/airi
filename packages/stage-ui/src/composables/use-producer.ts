@@ -299,8 +299,8 @@ export function useProducer() {
 
                 return JSON.parse(`"${rawProcessed}"`)
               }
-              catch (e) {
-                // Fallback: simple replacements if JSON.parse fails
+              // Fallback: simple replacements if JSON.parse fails
+              catch {
                 return str
                   .replace(/\\n/g, '\n')
                   .replace(/\\r/g, '\r')

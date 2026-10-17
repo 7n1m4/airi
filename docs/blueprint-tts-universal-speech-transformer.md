@@ -53,22 +53,26 @@ The following rules can be independently toggled by the user:
     3. **Narrative (Asterisks/Brackets)**:
         - If `Mute`: `input.replace(/\*.*?\*/g, '')`
         - If `Flatten`: `input.replace(/\*/g, '')`
-    4. **Emoticon/Emoji Cleanup**:
+  4. **Emoticon/Emoji Cleanup**:
         - **Kaomojis**: Strip sequences using "Healer" pattern matchers.
         - **Emojis**: Strip standard pictographs.
-    5. **Tilde Replacement**: `input.replace(/~/g, replacement)`.
-    6. **Alphanumeric Guard**: Check `/[a-z0-9]/i.test(finalText)`.
+  5. **Tilde Replacement**: `input.replace(/~/g, replacement)`.
+  6. **Alphanumeric Guard**: Check `/[a-z0-9]/i.test(finalText)`.
+
+- **Guard**: the transformation must not drop the entire utterance — when nothing speakable survives (empty text, no alphanumeric characters), the speech action must skip the TTS dispatch instead of sending a blank request. Expressing the guard as a predicate keeps the caller's control flow straightforward (the caller simply does not dispatch when the predicate is false):
+  ```typescript
+  function resolveSpeechInput(input: string, transformerSettings: TransformerSettings) {
+    const transformedInput = transformTextForSpeech(input, transformerSettings)
+    const isSpeakable = !transformerSettings.alphanumericGuard || hasAlphaChars(transformedInput)
+
+    return { transformedInput, isSpeakable }
+  }
+  ```
 
 ### C. Execution Hook (The "Mythical Hook")
-- **File**: [packages/stage-ui/src/stores/modules/speech.ts](file:///c:/Users/h4rdc/Documents/Github/airi-rebase-scratch/packages/stage-ui/src/stores/modules/speech.ts)
+- **File**: [packages/stage-ui/src/stores/modules/speech.ts](file:///c:/Users/h4rdc/Documents/Github/airi/airi-rebase-scratch/packages/stage-ui/src/stores/modules/speech.ts)
 - **Method**: `async function speech(...)`
-- **Integration**: The very first line of the `speech` action will now be:
-  ```typescript
-  const transformedInput = transformTextForSpeech(input, transformerSettings)
-  if (transformerSettings.alphanumericGuard && !hasAlphaChars(transformedInput))
-    return
-  // ... proceed to generateSpeech with transformedInput
-  ```
+- **Integration**: The very first statements of the `speech` action call `resolveSpeechInput` and bail out of the dispatch when `isSpeakable` is false; every downstream `generateSpeech` call then consumes `transformedInput`, so no other call site needs to know about the transformers.
 
 ### D. UI Implementation
 - **File**: [packages/stage-pages/src/pages/settings/modules/speech.vue](file:///c:/Users/h4rdc/Documents/Github/airi-rebase-scratch/packages/stage-pages/src/pages/settings/modules/speech.vue)

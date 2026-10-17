@@ -55,7 +55,10 @@ export function useElectronWindowResize() {
         }
       }
 
-      const handleMouseUp = () => {
+      // NOTICE: handleMouseUp is a function declaration rather than a const so the
+      // mutual removeEventListener reference with handleMouseMove stays valid under
+      // ts/no-use-before-define, which does not flag function declarations.
+      function handleMouseUp(): void {
         isResizing = false
         emitResizeState(false)
         document.removeEventListener('mousemove', handleMouseMove)

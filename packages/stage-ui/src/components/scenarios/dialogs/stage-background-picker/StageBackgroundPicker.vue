@@ -91,10 +91,17 @@ function handleSetAsBackground(id: string) {
   activeBackgroundId.value = id
 }
 
-async function handleDeleteEntry(id: string) {
-  if (confirm('Are you sure you want to delete this image?')) {
-    await backgroundStore.removeBackground(id)
+// NOTICE: native `confirm()` is banned by the no-alert lint rule and blocks rendering,
+// so deletion is confirmed inline with a second click within the entry overlay instead.
+const pendingDeleteId = ref<string | null>(null)
+
+function handleDeleteEntry(id: string) {
+  if (pendingDeleteId.value === id) {
+    pendingDeleteId.value = null
+    void backgroundStore.removeBackground(id)
+    return
   }
+  pendingDeleteId.value = id
 }
 
 async function handleRefreshGallery() {
@@ -285,11 +292,14 @@ function handlePreviewEntry(id: string, title: string) {
             </button>
             <button
               v-if="entry.type !== 'builtin'"
-              class="h-8 w-8 flex items-center justify-center rounded-full bg-red-500/80 text-white backdrop-blur-md transition-all active:scale-95 hover:bg-red-500"
-              title="Delete"
+              class="h-8 w-8 flex items-center justify-center rounded-full text-white backdrop-blur-md transition-all active:scale-95"
+              :class="pendingDeleteId === entry.id ? 'bg-red-600 w-auto px-2 text-[10px] font-bold hover:bg-red-700' : 'bg-red-500/80 hover:bg-red-500'"
+              :title="pendingDeleteId === entry.id ? 'Click again to confirm deletion' : 'Delete'"
               @click.stop="handleDeleteEntry(entry.id)"
+              @mouseleave="pendingDeleteId = null"
             >
               <div class="i-solar:trash-bin-trash-linear text-sm" />
+              <span v-if="pendingDeleteId === entry.id">Confirm?</span>
             </button>
           </div>
         </div>

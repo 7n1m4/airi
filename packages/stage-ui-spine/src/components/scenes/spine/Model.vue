@@ -309,7 +309,7 @@ async function loadModel() {
     if (!detectedVersion)
       detectedVersion = '4.2'
     const spine = await loadSpineRuntime(detectedVersion)
-    console.log(`[Spine] Detected skeleton version: ${detectedVersion}`)
+    debug(`[Spine] Detected skeleton version: ${detectedVersion}`)
 
     if (isUnmounted) {
       assetCleanup?.()
@@ -321,7 +321,7 @@ async function loadModel() {
     // Inspect actual texture dimensions to see if they've been resized from the atlas size.
     const actualDimensions: Record<string, { width: number, height: number }> = {}
     if (blobUrls) {
-      const isTexture = (p: string) => /\.(png|jpg|jpeg|webp)$/i.test(p)
+      const isTexture = (p: string) => /\.(?:png|jpg|jpeg|webp)$/i.test(p)
       await Promise.all(Object.entries(blobUrls).map(([path, url]) => {
         if (!isTexture(path))
           return Promise.resolve()
@@ -368,7 +368,7 @@ async function loadModel() {
           try {
             if (canvas.value) {
               const rect = canvas.value.getBoundingClientRect()
-              console.log('[Spine] Canvas BBox on load:', {
+              debug('[Spine] Canvas BBox on load:', {
                 width: rect.width,
                 height: rect.height,
                 top: rect.top,
@@ -395,7 +395,7 @@ async function loadModel() {
                 const sf = model0Data?.options?.scale_factor
                 if (typeof sf === 'number' && sf > 0) {
                   model0ScaleFactor = sf
-                  console.log(`[Spine] model0 scale_factor=${sf}`)
+                  debug(`[Spine] model0 scale_factor=${sf}`)
                 }
               }
               catch (e) {
@@ -407,7 +407,7 @@ async function loadModel() {
 
             const talkAnim = skeletonData.animations.find(a => a.name === 'talk_start' || a.name.includes('talk'))
             if (talkAnim) {
-              console.log('[Spine Debug] talk_start timelines:', talkAnim.timelines.map((t: any) => {
+              debug('[Spine Debug] talk_start timelines:', talkAnim.timelines.map((t: any) => {
                 const type = t.constructor ? t.constructor.name : 'Unknown'
                 const bone = t.boneIndex !== undefined ? skeletonData.bones[t.boneIndex]?.name : undefined
                 const slot = t.slotIndex !== undefined ? skeletonData.slots[t.slotIndex]?.name : undefined
@@ -415,7 +415,7 @@ async function loadModel() {
               }))
             }
 
-            console.log('[Spine Debug] Loaded bones:', skeleton.bones.map(b => b.data.name))
+            debug('[Spine Debug] Loaded bones:', skeleton.bones.map(b => b.data.name))
             skeleton.setToSetupPose()
             applyTransformFromStore()
 
@@ -529,7 +529,7 @@ async function loadModel() {
                   tracks.push({ track: i, anim: t.animation?.name, time: t.trackTime.toFixed(2), loop: t.loop, alpha: t.alpha })
                 }
               }
-              console.log(`[Spine Eye Diagnostic - ${reason}]`, {
+              debug(`[Spine Eye Diagnostic - ${reason}]`, {
                 skin: skeleton.skin?.name,
                 tracks,
                 eyeSlots: eyeSlots.map(s => ({ slot: s.data.name, attachment: s.attachment?.name })),
@@ -588,9 +588,9 @@ async function loadModel() {
           if (!loggedBBoxThisLoad && canvas.value) {
             loggedBBoxThisLoad = true
             const rect = canvas.value.getBoundingClientRect()
-            console.log('[Spine Debug] Stage/Canvas CSS BBox:', { width: rect.width, height: rect.height, left: rect.left, top: rect.top })
-            console.log('[Spine Debug] Canvas Internal Buffer:', { width: canvas.value.width, height: canvas.value.height })
-            console.log('[Spine Debug] Skeleton Origin:', { x: skeleton.x, y: skeleton.y, scaleX: skeleton.scaleX, scaleY: skeleton.scaleY })
+            debug('[Spine Debug] Stage/Canvas CSS BBox:', { width: rect.width, height: rect.height, left: rect.left, top: rect.top })
+            debug('[Spine Debug] Canvas Internal Buffer:', { width: canvas.value.width, height: canvas.value.height })
+            debug('[Spine Debug] Skeleton Origin:', { x: skeleton.x, y: skeleton.y, scaleX: skeleton.scaleX, scaleY: skeleton.scaleY })
 
             for (const area of model0HitAreas) {
               const bone = skeleton.findBone(area.id || area.name)
@@ -778,8 +778,7 @@ function applyTransformFromStore() {
   skeleton.scaleY = effectiveScale
 
   // [Spine:Origin] Diagnostic — remove once positioning is confirmed correct.
-  console.group('[Spine:Origin] applyTransformFromStore')
-  console.table({
+  debug('[Spine:Origin] applyTransformFromStore', {
     'canvas.width': w,
     'canvas.height': h,
     'model0ScaleFactor': model0ScaleFactor,
@@ -797,8 +796,7 @@ function applyTransformFromStore() {
     'props.xOffset': props.xOffset,
     'props.yOffset': props.yOffset,
   })
-  console.log('[Spine:Origin] Bones (first 5 world positions after setToSetupPose):', skeleton.bones.slice(0, 5).map(b => ({ name: b.data.name, worldX: b.worldX.toFixed(1), worldY: b.worldY.toFixed(1) })))
-  console.groupEnd()
+  debug('[Spine:Origin] Bones (first 5 world positions after setToSetupPose):', skeleton.bones.slice(0, 5).map(b => ({ name: b.data.name, worldX: b.worldX.toFixed(1), worldY: b.worldY.toFixed(1) })))
 }
 
 function applyCurrentAnimation() {
@@ -1012,10 +1010,10 @@ watch(() => props.interactionMode, (newMode) => {
 
   if (newMode === 'tactile') {
     attachTactileListeners()
-    console.log('[Spine] Tactile mode enabled, added listeners')
+    debug('[Spine] Tactile mode enabled, added listeners')
   }
   else {
-    console.log('[Spine] Tactile mode disabled, removed listeners')
+    debug('[Spine] Tactile mode disabled, removed listeners')
   }
 })
 

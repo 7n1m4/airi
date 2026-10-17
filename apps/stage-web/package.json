@@ -15,7 +15,7 @@
     "dev": "vite --host",
     "lint": "eslint .",
     "preview": "vite preview",
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "NODE_OPTIONS=\"--max-old-space-size=12288\" vue-tsc --noEmit"
   },
   "dependencies": {
     "@date-fns/utc": "^2.1.1",
@@ -57,7 +57,7 @@
     "onnxruntime-web": "^1.24.2",
     "pinia": "catalog:",
     "rehype-stringify": "catalog:",
-    "reka-ui": "^2.8.2",
+    "reka-ui": "catalog:",
     "remark-parse": "catalog:",
     "remark-rehype": "catalog:",
     "shiki": "^3.23.0",

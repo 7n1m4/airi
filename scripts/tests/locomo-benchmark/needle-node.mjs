@@ -83,7 +83,7 @@ export class NeedleNode {
    * Extract mentions and claims from a target passage using Needle WASM with span validation.
    * @param {string} passage - Full passage (e.g. 3-turn window)
    * @param {string} targetText - The specific target turn text
-   * @returns {{ mentions: string[], temporal_phrase: string|null, claims: any[], rawOutput?: any }}
+   * @returns {{ mentions: string[], temporal_phrase: string|null, claims: any[], rawOutput?: any }} Validated fragments, or the heuristic fallback when the model emits no usable tool call
    */
   extractFragments(passage, targetText = passage) {
     if (!this.isInitialized) {
@@ -93,7 +93,7 @@ export class NeedleNode {
     this.cfuncs.needle_reset()
 
     const prompt = `Dialogue Context:\n${passage}\n\nTask: Extract mentions, temporal phrases, and claims from the target passage using extract_memory_fragments.`
-    const compRet = this.cfuncs.needle_complete(prompt, 192, this.outPtr, this.outCap)
+    this.cfuncs.needle_complete(prompt, 192, this.outPtr, this.outCap)
     const outStr = this.Module.UTF8ToString(this.outPtr)
 
     let parsed = null
@@ -124,7 +124,7 @@ export class NeedleNode {
    * Complete a general query using Needle as an SLM answer head.
    * @param {string} prompt
    * @param {number} maxTokens
-   * @returns {string}
+   * @returns {string} The reasoning or text field from the model output, or the raw string when it is not JSON
    */
   complete(prompt, maxTokens = 64) {
     this.cfuncs.needle_reset()

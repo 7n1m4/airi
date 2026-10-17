@@ -73,7 +73,7 @@ The mobile experience lives in the same `ControlStrip.vue`; every behavioral for
 | --- | --- | --- |
 | Buttons | `activeButtons` filters out `desktopOnly` catalog items | `ControlStrip.vue:204-214` |
 | Orientation | Strictly vertical — `toggleOrientation()` no-ops | `:1217-1220` |
-| Edge docking | `dockedEdge` only `'left' | 'right'` in practice; container pinned `top: 50%` centered on the docked edge (`left: 0` / `right: 0`) | `containerStyle` computed `:1057+` |
+| Edge docking | `dockedEdge` only ever `'left'` or `'right'` in practice; container pinned `top: 50%` centered on the docked edge (`left: 0` / `right: 0`) | `containerStyle` computed `:1057+` |
 | Drag handle | `onDragStart` toggles `collapsed` (no window dragging on mobile) | `:1057+` |
 | Popovers | Placement is dock-relative: `dockedEdge === 'left' ? 'right' : 'left'` | `popoverPlacement` `:683-684` |
 | Panels | Emoji/expression/wardrobe grids keep `variant="mobile"` touch sizing | `docs/project-mobile-revamp.md` §3 |

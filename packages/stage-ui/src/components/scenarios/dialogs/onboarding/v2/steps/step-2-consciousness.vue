@@ -17,6 +17,7 @@ import ProviderPickerGrid from '../components/provider-picker-grid.vue'
 import { DEFAULT_WEB_LLM_FP32_MODEL, WEB_LLM_MODELS } from '../../../../../../libs/inference/constants'
 import { NativeAI } from '../../../../../../libs/native-ai'
 import { useProvidersStore } from '../../../../../../stores/providers'
+import { isKeylessProvider, isOptionalKeyProvider, keylessOrOptionalKey } from '../../../../../../libs/providers/types'
 import { DEFAULT_APPLE_CORE_AI_MODEL } from '../../../../../../stores/providers/apple-core-ai'
 import { BrainModelPicker } from '../../../../chat'
 import { useOnboardingV2Draft } from '../draft-store'
@@ -72,6 +73,16 @@ const fp16Supported = ref(true)
 const availableWebLlmModels = computed(() => {
   return fp16Supported.value ? WEB_LLM_MODELS : WEB_LLM_MODELS.filter(m => !m.fp16)
 })
+
+// --- WebLLM in-context download (Desktop/Web) ---
+type DownloadState = 'idle' | 'downloading' | 'ready' | 'error'
+const downloadState = ref<DownloadState>('idle')
+const downloadProgress = ref(0)
+const downloadStatusText = ref('')
+const downloadAbort = ref<AbortController>()
+const selectedLlmModel = ref<string>(draft.state.consciousness.model || WEB_LLM_MODELS[0].id)
+
+const isWebLlmSelected = computed(() => selectedProviderId.value === 'web-llm')
 
 onMounted(async () => {
   if (isIOSNative.value) {
@@ -169,16 +180,6 @@ async function startCoreAiDownload() {
   }
 }
 
-// --- WebLLM in-context download (Desktop/Web) ---
-type DownloadState = 'idle' | 'downloading' | 'ready' | 'error'
-const downloadState = ref<DownloadState>('idle')
-const downloadProgress = ref(0)
-const downloadStatusText = ref('')
-const downloadAbort = ref<AbortController>()
-const selectedLlmModel = ref<string>(draft.state.consciousness.model || WEB_LLM_MODELS[0].id)
-
-const isWebLlmSelected = computed(() => selectedProviderId.value === 'web-llm')
-
 async function checkModelResident() {
   if (!isWebLlmSelected.value)
     return
@@ -275,7 +276,7 @@ const selectedChatProvider = computed<ProviderMetadata | null>(() => {
 const isProviderConfigured = computed(() => {
   if (!selectedChatProvider.value)
     return false
-  if (selectedChatProvider.value.requiresCredentials === false)
+  if (keylessOrOptionalKey(selectedChatProvider.value.requiresCredentials))
     return true
   return configuredChatProvidersMetadata.value.some(p => p.id === selectedChatProvider.value!.id)
 })
@@ -283,9 +284,16 @@ const isProviderConfigured = computed(() => {
 const inlineConfigProvider = computed(() => {
   if (!selectedChatProvider.value)
     return null
-  if (selectedChatProvider.value.requiresCredentials === false)
+  const provider = selectedChatProvider.value
+  if (isKeylessProvider(provider.requiresCredentials))
     return null
-  return isProviderConfigured.value ? null : selectedChatProvider.value
+  // NOTICE: an optional-key provider is `isProviderConfigured` the moment it is
+  // selected (it is marked added for keyless use), so asking that computed
+  // would hide the key field forever. Gate on an actually typed key instead.
+  const savedKey = (providersStore.providers[provider.id]?.apiKey as string | undefined)?.trim()
+  if (isOptionalKeyProvider(provider.requiresCredentials))
+    return savedKey ? null : provider
+  return isProviderConfigured.value ? null : provider
 })
 
 const actionTargetRef = ref<HTMLElement | null>(null)
@@ -313,6 +321,12 @@ function getApiKeyPlaceholder(providerId: string): string {
   return map[providerId] || 'Enter API Key'
 }
 
+// --- Live Connection Test Probe with 4 States: idle -> connecting -> inferencing -> verified/error ---
+type ProbeState = 'idle' | 'connecting' | 'inferencing' | 'verified' | 'error'
+const probeState = ref<ProbeState>('idle')
+const probeResponseMessage = ref('')
+const probeErrorMessage = ref('')
+
 function onSelectProvider(provider: ProviderMetadata) {
   selectedProviderId.value = provider.id
   selectedModelId.value = ''
@@ -339,8 +353,8 @@ function onSelectProvider(provider: ProviderMetadata) {
   }
 
   // Zero-credential or pre-configured providers query live models immediately
-  if (provider.requiresCredentials === false || isProviderConfigured.value) {
-    if (provider.requiresCredentials === false) {
+  if (keylessOrOptionalKey(provider.requiresCredentials) || isProviderConfigured.value) {
+    if (keylessOrOptionalKey(provider.requiresCredentials)) {
       providersStore.markProviderAdded(provider.id)
     }
     void fetchLiveModels()
@@ -415,12 +429,6 @@ function onSelectModelFromDropdown(e: Event) {
     recordDraft()
   }
 }
-
-// --- Live Connection Test Probe with 4 States: idle -> connecting -> inferencing -> verified/error ---
-type ProbeState = 'idle' | 'connecting' | 'inferencing' | 'verified' | 'error'
-const probeState = ref<ProbeState>('idle')
-const probeResponseMessage = ref('')
-const probeErrorMessage = ref('')
 
 async function testBrainConnection() {
   if (probeState.value === 'connecting' || probeState.value === 'inferencing' || !selectedProviderId.value || !selectedModelId.value.trim())
@@ -940,7 +948,7 @@ watch(verified, (v) => {
 
       <!-- The 4-Item Model Section: Text Input, Dropdown, Get Models Trigger, Rich Probe -->
       <div
-        v-if="!isWebLlmSelected && !isCoreAiSelected && selectedProviderId && (isProviderConfigured || selectedChatProvider?.requiresCredentials === false)"
+        v-if="!isWebLlmSelected && !isCoreAiSelected && selectedProviderId && (isProviderConfigured || keylessOrOptionalKey(selectedChatProvider?.requiresCredentials))"
         :class="['p-4 rounded-xl', 'bg-white/40 dark:bg-neutral-900/40', 'border border-neutral-200/60 dark:border-neutral-800/80', 'backdrop-blur-md space-y-4']"
       >
         <!-- Section Header -->

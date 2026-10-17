@@ -7,6 +7,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { CANVAS_SIZE, P5_BRUSH_API_REFERENCE } from '../engine/canvas-prompts.js'
 import { CanvasRenderer } from '../engine/canvas-renderer.js'
@@ -46,7 +47,7 @@ ${SCAFFOLD_HEADER}`
 }
 
 async function main() {
-  console.log('=== Phase 15: Evaluating RWKV-7 S0 State Cartridge V2 in WebGPU ===\n')
+  console.info('=== Phase 15: Evaluating RWKV-7 S0 State Cartridge V2 in WebGPU ===\n')
 
   const modelPath = await ensureModelCached(PHASE7_MODEL_URL_1_5B)
   const evalDir = path.resolve(process.cwd(), 'reports/s0-v2-eval')
@@ -55,8 +56,8 @@ async function main() {
   const bridge = new RwkvWebGpuBridge({ modelFilePath: modelPath })
 
   try {
-    await bridge.boot(m => console.log(`[engine] ${m}`))
-    console.log(`✓ WebGPU Engine booted: state_len=${bridge.info.stateLen}\n`)
+    await bridge.boot(m => console.info(`[engine] ${m}`))
+    console.info(`✓ WebGPU Engine booted: state_len=${bridge.info.stateLen}\n`)
 
     // Load verified Corpus V2 and condition S0 cartridge
     const corpusPath = path.resolve(process.cwd(), 'datasets/p5-watercolor-corpus-v2.jsonl')
@@ -69,24 +70,24 @@ async function main() {
     const STATE_NAME = 'p5-watercolor-s0-v2'
     const ts0 = Date.now()
     const stateInfo = await bridge.makeState({ name: STATE_NAME, texts: conditioningTexts })
-    console.log(`✓ Ingested S0 state cartridge "${STATE_NAME}" (${stateInfo.fedTokens} tokens in ${((Date.now() - ts0) / 1000).toFixed(1)}s)\n`)
+    console.info(`✓ Ingested S0 state cartridge "${STATE_NAME}" (${stateInfo.fedTokens} tokens in ${((Date.now() - ts0) / 1000).toFixed(1)}s)\n`)
 
     const renderer = new CanvasRenderer(await bridge.newPage())
     await renderer.open(bridge.baseUrl)
-    console.log('✓ CanvasRenderer tab ready\n')
+    console.info('✓ CanvasRenderer tab ready\n')
 
     const evalEntries: Array<Record<string, unknown>> = []
 
     for (let i = 0; i < EVAL_PROMPTS.length; i++) {
       const sc = EVAL_PROMPTS[i]
-      console.log(`\n======================================================`)
-      console.log(`[${i + 1}/${EVAL_PROMPTS.length}] Painting: "${sc.title}" (${sc.id})`)
-      console.log(`======================================================`)
+      console.info(`\n======================================================`)
+      console.info(`[${i + 1}/${EVAL_PROMPTS.length}] Painting: "${sc.title}" (${sc.id})`)
+      console.info(`======================================================`)
 
       const prompt = buildEvalPrompt(sc.prompt)
       const t0 = Date.now()
 
-      console.log(`  Generating sketch code with S0 state "${STATE_NAME}"...`)
+      console.info(`  Generating sketch code with S0 state "${STATE_NAME}"...`)
       const genResult = await bridge.generateCode({
         prompt,
         maxTokens: 800,
@@ -98,7 +99,7 @@ async function main() {
         stopSeqs: ['\n```\n', '```\n', '\n```'],
       })
       const genMs = Date.now() - t0
-      console.log(`  ✓ Generated ${genResult.completionTokens} tok in ${(genMs / 1000).toFixed(1)}s (${(genResult.completionTokens / (genMs / 1000)).toFixed(1)} tok/s)`)
+      console.info(`  ✓ Generated ${genResult.completionTokens} tok in ${(genMs / 1000).toFixed(1)}s (${(genResult.completionTokens / (genMs / 1000)).toFixed(1)} tok/s)`)
 
       // Clean & balance sketch
       let rawCode = genResult.raw.replace(/```[\w-]*/g, '').replace(/```/g, '').trim()
@@ -113,7 +114,7 @@ async function main() {
       const repaired = repairTruncatedProgram(fullCode) || fullCode
 
       // Render on WebGL canvas
-      console.log('  Rendering on WebGL canvas...')
+      console.info('  Rendering on WebGL canvas...')
       let outcome
       try {
         outcome = await renderer.render({
@@ -124,17 +125,17 @@ async function main() {
         })
       }
       catch (err: any) {
-        console.log(`  ✗ Render error: ${err.message}`)
+        console.info(`  ✗ Render error: ${err.message}`)
         continue
       }
 
       if (outcome.dataUrl && !outcome.blank) {
         const outPng = path.join(evalDir, `${sc.id}.png`)
         renderer.savePng(outPng, outcome.dataUrl)
-        console.log(`  ✓ SUCCESS -> Saved ${outPng} (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors}, structure: ${outcome.structureScore?.toFixed(3) ?? 'N/A'})`)
+        console.info(`  ✓ SUCCESS -> Saved ${outPng} (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors}, structure: ${outcome.structureScore?.toFixed(3) ?? 'N/A'})`)
       }
       else {
-        console.log(`  ✗ Blank canvas or error: ${outcome.error || outcome.sketchError}`)
+        console.info(`  ✗ Blank canvas or error: ${outcome.error || outcome.sketchError}`)
       }
 
       evalEntries.push({
@@ -153,10 +154,10 @@ async function main() {
 
     const summaryPath = path.join(evalDir, 'eval-summary.json')
     fs.writeFileSync(summaryPath, JSON.stringify({ entries: evalEntries }, null, 2))
-    console.log(`\n======================================================`)
-    console.log(`✓ S0 Cartridge V2 Evaluation Complete!`)
-    console.log(`✓ Results saved to: ${evalDir}`)
-    console.log(`======================================================\n`)
+    console.info(`\n======================================================`)
+    console.info(`✓ S0 Cartridge V2 Evaluation Complete!`)
+    console.info(`✓ Results saved to: ${evalDir}`)
+    console.info(`======================================================\n`)
   }
   finally {
     await bridge.dispose()

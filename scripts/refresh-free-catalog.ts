@@ -14,6 +14,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
@@ -46,7 +47,7 @@ interface CatalogPayload {
 }
 
 async function main() {
-  console.log(`🌐 Fetching latest Free AI Catalog snapshot from ${REMOTE_FEED_URL}...`)
+  console.info(`🌐 Fetching latest Free AI Catalog snapshot from ${REMOTE_FEED_URL}...`)
 
   const response = await fetch(REMOTE_FEED_URL, {
     headers: {
@@ -75,30 +76,30 @@ async function main() {
     try {
       oldCatalog = JSON.parse(fs.readFileSync(CATALOG_FILE, 'utf8'))
     }
-    catch (err) {
+    catch {
       console.warn('⚠️ Could not parse existing baseline catalog, will overwrite.')
     }
   }
 
-  console.log('\n📊 Catalog Comparison:')
-  console.log(`   Old Version: ${oldCatalog?.version || 'none'}`)
-  console.log(`   New Version: ${newCatalog.version} (Generated: ${newCatalog.generatedAt || 'unknown'})`)
-  console.log(`   Chat/Vision Models: ${oldCatalog?.models?.length ?? 0} -> ${newCatalog.models.length}`)
-  console.log(`   Transcription (STT): ${oldCatalog?.transcriptionModels?.length ?? 0} -> ${newCatalog.transcriptionModels?.length ?? 0}`)
-  console.log(`   Embeddings: ${oldCatalog?.embeddings?.length ?? 0} -> ${newCatalog.embeddings?.length ?? 0}`)
-  console.log(`   Quirks/Advisories: ${oldCatalog?.quirks?.length ?? 0} -> ${newCatalog.quirks?.length ?? 0}`)
+  console.info('\n📊 Catalog Comparison:')
+  console.info(`   Old Version: ${oldCatalog?.version || 'none'}`)
+  console.info(`   New Version: ${newCatalog.version} (Generated: ${newCatalog.generatedAt || 'unknown'})`)
+  console.info(`   Chat/Vision Models: ${oldCatalog?.models?.length ?? 0} -> ${newCatalog.models.length}`)
+  console.info(`   Transcription (STT): ${oldCatalog?.transcriptionModels?.length ?? 0} -> ${newCatalog.transcriptionModels?.length ?? 0}`)
+  console.info(`   Embeddings: ${oldCatalog?.embeddings?.length ?? 0} -> ${newCatalog.embeddings?.length ?? 0}`)
+  console.info(`   Quirks/Advisories: ${oldCatalog?.quirks?.length ?? 0} -> ${newCatalog.quirks?.length ?? 0}`)
 
   // Identify new models
   if (oldCatalog?.models) {
     const oldModelSet = new Set(oldCatalog.models.map(m => `${m.platform}:${m.modelId}`))
     const addedModels = newCatalog.models.filter(m => !oldModelSet.has(`${m.platform}:${m.modelId}`))
     if (addedModels.length > 0) {
-      console.log(`\n✨ Found ${addedModels.length} newly cataloged models:`)
+      console.info(`\n✨ Found ${addedModels.length} newly cataloged models:`)
       for (const m of addedModels.slice(0, 10)) {
-        console.log(`   + [${m.platform}] ${m.displayName} (${m.modelId})`)
+        console.info(`   + [${m.platform}] ${m.displayName} (${m.modelId})`)
       }
       if (addedModels.length > 10) {
-        console.log(`   ... and ${addedModels.length - 10} more`)
+        console.info(`   ... and ${addedModels.length - 10} more`)
       }
     }
   }
@@ -107,7 +108,7 @@ async function main() {
   fs.mkdirSync(path.dirname(CATALOG_FILE), { recursive: true })
   fs.writeFileSync(CATALOG_FILE, `${JSON.stringify(newCatalog, null, 2)}\n`, 'utf8')
 
-  console.log(`\n✅ Successfully updated ${CATALOG_FILE}`)
+  console.info(`\n✅ Successfully updated ${CATALOG_FILE}`)
 }
 
 main().catch((err) => {

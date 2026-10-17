@@ -21,7 +21,7 @@ Rather than acting as a simple file wrapper, the auditor acts as a diagnostic to
 
 The tool runs in headless Electron mode, setting the app's `userData` directory to `@proj-airi/stage-tamagotchi` so it accesses the exact IndexedDBLevelDB container used by the desktop app:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        Electron Audit Container                        │
 │                                                                        │
@@ -67,7 +67,7 @@ When executing `npx electron scripts/audit_backup_sync.mjs /Volumes/AIRI-Backup-
 
 To ensure high-performance local rendering while maintaining long-term cloud storage efficiency, AIRI uses **Option B (Archive Compression)** for background image management:
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────────────────┐
 │                          LOCAL SYSTEM (Vite / Renderer)                   │
 │                                                                           │
@@ -111,7 +111,8 @@ npx electron scripts/audit_backup_sync.mjs /Volumes/AIRI-Backup-Share
 ```
 
 Progress is reported live in stdout:
-```
+
+```text
 Extracting full local IndexedDB & Localforage data catalog...
 [Progress] Opening IndexedDB keyval-store...
 [Progress] Scanning 4654 keys in keyval-store...

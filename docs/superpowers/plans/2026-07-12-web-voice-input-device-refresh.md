@@ -10,7 +10,7 @@
 
 ---
 
-### Task 1: Refresh granted microphone devices
+## Task 1: Refresh granted microphone devices
 
 **Files:**
 - Create: `packages/stage-ui/src/stores/audio.test.ts`

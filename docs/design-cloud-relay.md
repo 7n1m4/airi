@@ -44,7 +44,7 @@ The model is analogous to **Vercel for character instances**: author locally, de
 
 Cloudflare Workers use the **HTTP Interactions model** rather than a long-running WebSocket. The flow is:
 
-```
+```text
 User sends message (Discord slash command, future web chat, etc.)
         ↓
 Discord / frontend POSTs to the Worker's registered callback URL (/discord)
@@ -67,7 +67,7 @@ This is entirely **serverless and stateless per-invocation**. The Worker holds n
 
 Since Workers are stateless, all character memory is externalized to **Cloudflare KV** (`memory/kv.ts`):
 
-```
+```text
 KV namespace: airi-kv-<characterName>
   ├── ping                   → Baseline diagnostic key ("pong")
   ├── context/rolling        → Recent N messages (sliding window or unlimited history)
@@ -105,7 +105,7 @@ The Worker is designed to be **connector-agnostic**:
 
 The Discord module UI (`packages/stage-pages/src/pages/settings/modules/messaging-discord.vue` and `packages/stage-ui/src/components/modules/MessagingDiscord.vue`) is structured into a unified **3-Tab Navigation Bar**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │ 💬 Discord Integration & Cloud Control Plane                                    │
 ├───────────────────────────┬───────────────────────────┬─────────────────────────┤
@@ -133,7 +133,7 @@ The Discord module UI (`packages/stage-pages/src/pages/settings/modules/messagin
 
 Deployment sequence (triggered by **[🚀 Deploy Character to Cloudflare Edge]** button in Tab 2):
 
-```
+```text
 1. Step 1: Session Selector Modal → User selects target timeline session (Active GUI, existing timeline, or dedicated new relay session).
 2. Step 2: "Review & Inspect Details" Modal:
    - Summary Banner: Displays character name, target session name, memory mode, and target Discord servers list.
@@ -259,7 +259,7 @@ To assess multi-hosting options for users who want continuous channel listening 
 
 Rather than forcing users to micromanage manual `/togglebot` commands, the system uses **Organic Wake-on-First-Turn**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │             Organic /chat Wake-on-First-Turn & 15m Idle Timeout             │
 ├─────────────────────────────────────────────────────────────────────────────┤

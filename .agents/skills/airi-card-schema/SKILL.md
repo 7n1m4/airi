@@ -9,7 +9,7 @@ This skill defines workflows and architecture for managing character cards in AI
 
 AIRI extends the standard Character Card specification with the `AiriExtension` schema (`extensions.airi`), which houses configurations for Consciousness (LLMs), Speech (TTS), Manifestations (2D/3D avatars), Behavioral Systems (Heartbeats, Dream State), and Visual Assets.
 
-# Key Code Paths
+## Key Code Paths
 
 ### 1. Data Schema & Types
 - `packages/stage-ui/src/types/card.schema.ts`: Defines the strict runtime Valibot schemas (`AiriCardSchema`, `AiriExtensionSchema`).
@@ -24,7 +24,7 @@ AIRI extends the standard Character Card specification with the `AiriExtension` 
 - `packages/stage-pages/src/pages/settings/airi-card/index.vue`: Main UI for managing cards and triggering exports.
 - `apps/stage-tamagotchi/src/main/index.ts`: Electron main process interceptor that listens for webview `.png` and `.json` downloads to launch the card import wizard.
 
-# Core Standard Operating Procedures (SOPs)
+## Core Standard Operating Procedures (SOPs)
 
 ### 1. Adding or Modifying Card Schema Properties
 When extending `AiriExtension` with new fields (e.g., a new proactivity system):
@@ -51,12 +51,12 @@ AIRI maintains an advanced fork of the upstream (`moeru-ai/airi:main`).
 - Our fork proposes a `v2` ZIP manifest accommodating multiple models and assets (cover images, backgrounds, voices) without inlining base64.
 - You MUST maintain compatibility with upstream imports by defaulting missing fields.
 
-# Known Pitfalls & Gotchas
+## Known Pitfalls & Gotchas
 - **`QuotaExceededError` (Local Storage):** A common failure if attempting to sync cards to `localStorage`. `local:airi-cards` in IndexedDB is mandatory.
 - **Valibot Strictness:** Ensure `looseObject()` is used where other third-party frontends (like SillyTavern) might inject unexpected keys. Use `safeParse()` in parsers to gracefully reject malformed payloads without crashing the app.
 - **Concept Stack Rendering Desync:** When changing physical models (`displayModelId`), the `syncCardState` in `airi-card.ts` has guards around `isModelSyncPrevented`. Do not blindly `force` model swaps during TTS speech execution.
 
-# Verification Steps
+## Verification Steps
 1. Typecheck the repository (`pnpm -F stage-ui typecheck`) after modifying `card.schema.ts` or `airi-card.ts`.
 2. Generate a valid card payload using `safeParse(AiriCardSchema, myPayload)` to ensure your Valibot changes align with your TypeScript interfaces.
 3. Validate PNG generation using an online CRC32 validator if making modifications to the PNG chunking logic.

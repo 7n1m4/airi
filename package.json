@@ -51,6 +51,7 @@
     "test:locomo": "node --test scripts/tests/locomo-benchmark/evaluator-parity.test.mjs",
     "test:nan0": "tsx packages/nan0-runtime/scripts/nan0-cli.ts",
     "test:mcp-registry": "tsx scripts/tests/test-mcp-registry-health.ts",
+    "test:keyless-providers": "tsx scripts/test-keyless-providers.ts",
     "test:catalog:audit": "node scripts/audit-test-catalog.mjs",
     "free-ai:sync-platforms": "tsx scripts/sync-free-ai-platforms.ts",
     "i18n:audit": "node scripts/audit-i18n.mjs",

@@ -197,7 +197,7 @@ The function should be pure (no AudioContext needed — operates directly on `Fl
 | **Store in localforage metadata** | `packages/stage-ui/src/stores/sync-engine.ts` | Extend `MossVoiceProfile` metadata to include `promptAudioCodes: number[][]` | `sync-engine.ts:1772` (store name is `moss-voice-profiles-metadata`) |
 
 **Cache key design:**
-```
+```text
 cacheKey = SHA256(
   waveformSamples.length
   + waveformSamples.slice(0,26)  // header sample
@@ -212,16 +212,17 @@ cacheKey = SHA256(
 ```typescript
 // In adapters/moss.ts generate():
 const cacheKey = await computeReferenceAudioCacheKey(promptAudioWaveform, options)
-let promptAudioCodes = await getCachedPromptAudioCodes(cacheKey)
-if (!promptAudioCodes) {
-  // Fall through to worker encode
-  const stream = rpc.generate(...)  // worker returns codes in response metadata
-  // After stream completes:
-  await cachePromptAudioCodes(cacheKey, returnedCodes)
-} else {
+const cachedPromptAudioCodes = await getCachedPromptAudioCodes(cacheKey)
+if (cachedPromptAudioCodes) {
   // Pass cached codes directly to worker instead of waveform
-  const stream = rpc.generate({ ...options, cachedPromptAudioCodes: promptAudioCodes })
+  const stream = rpc.generate({ ...options, promptAudioCodes: cachedPromptAudioCodes })
+  return stream
 }
+
+// Fall through to worker encode; the worker returns freshly encoded codes in response metadata
+const stream = rpc.generate(options)
+// After stream completes:
+await cachePromptAudioCodes(cacheKey, freshlyEncodedCodes)
 ```
 
 ### 3.3 — Sample-rate/channel matching via `AudioContext.decodeAudioData()`

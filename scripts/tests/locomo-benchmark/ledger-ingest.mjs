@@ -19,19 +19,19 @@ import { parseLoCoMoDateTime, resolveTemporalExpression } from './temporal-resol
  * @param {import('./needle-node.mjs').NeedleNode} needle
  * @param {import('@receptron/laya').Laya} [laya]
  * @param {object} [opts]
- * @returns {Promise<EntityLedger>}
+ * @returns {Promise<EntityLedger>} ledger populated with entities, claims, and events, plus a cache on disk when `opts.cachePath` is set
  */
 export async function ingestDatasetIntoLedger(locomoDataset, needle, laya = null, opts = {}) {
   const cachePath = opts.cachePath || null
 
   // If cache exists and not forcing re-ingest, load from disk
   if (cachePath && fs.existsSync(cachePath) && !opts.forceReingest) {
-    console.log(`[LedgerIngest] Loading cached Entity Ledger from ${cachePath}...`)
+    console.info(`[LedgerIngest] Loading cached Entity Ledger from ${cachePath}...`)
     const raw = fs.readFileSync(cachePath, 'utf8')
     return EntityLedger.fromJSON(JSON.parse(raw))
   }
 
-  console.log('[LedgerIngest] Starting turn-by-turn ingestion into Entity Ledger...')
+  console.info('[LedgerIngest] Starting turn-by-turn ingestion into Entity Ledger...')
   const ledger = new EntityLedger()
 
   const conversation = locomoDataset.conversation || {}
@@ -48,7 +48,7 @@ export async function ingestDatasetIntoLedger(locomoDataset, needle, laya = null
   for (const sk of sessionKeys) {
     totalTurns += (conversation[sk] || []).length
   }
-  console.log(`[LedgerIngest] Total sessions: ${sessionKeys.length}, Total raw turns: ${totalTurns}`)
+  console.info(`[LedgerIngest] Total sessions: ${sessionKeys.length}, Total raw turns: ${totalTurns}`)
 
   const t0 = performance.now()
   let processed = 0
@@ -211,14 +211,14 @@ export async function ingestDatasetIntoLedger(locomoDataset, needle, laya = null
       processed++
       if (processed % 100 === 0 || processed === totalTurns) {
         const pct = Math.round((processed / totalTurns) * 100)
-        console.log(`[LedgerIngest] Ingested ${processed}/${totalTurns} turns (${pct}%)...`)
+        console.info(`[LedgerIngest] Ingested ${processed}/${totalTurns} turns (${pct}%)...`)
       }
     }
   }
 
   const elapsed = (performance.now() - t0) / 1000
-  console.log(`[LedgerIngest] Completed ingestion of ${processed} turns in ${elapsed.toFixed(1)}s!`)
-  console.log(`[LedgerIngest] Ledger entities: ${ledger.entities.size}, claims: ${ledger.claims.size}`)
+  console.info(`[LedgerIngest] Completed ingestion of ${processed} turns in ${elapsed.toFixed(1)}s!`)
+  console.info(`[LedgerIngest] Ledger entities: ${ledger.entities.size}, claims: ${ledger.claims.size}`)
 
   // Cache to disk if path provided
   if (cachePath) {
@@ -226,7 +226,7 @@ export async function ingestDatasetIntoLedger(locomoDataset, needle, laya = null
     if (!fs.existsSync(dir))
       fs.mkdirSync(dir, { recursive: true })
     fs.writeFileSync(cachePath, JSON.stringify(ledger.toJSON(), null, 2))
-    console.log(`[LedgerIngest] Saved Entity Ledger cache to ${cachePath}`)
+    console.info(`[LedgerIngest] Saved Entity Ledger cache to ${cachePath}`)
   }
 
   return ledger

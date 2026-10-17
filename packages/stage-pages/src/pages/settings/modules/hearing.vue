@@ -99,9 +99,9 @@ const isFetched = ref(false)
 
 onMounted(async () => {
   if (isElectron) {
-    console.log('[Hearing Page] Mounting, fetching hotkey from main process...')
+    console.info('[Hearing Page] Mounting, fetching hotkey from main process...')
     const hotkey = await getMicToggleHotkeyInvoke?.()
-    console.log('[Hearing Page] Fetched hotkey from main:', hotkey)
+    console.info('[Hearing Page] Fetched hotkey from main:', hotkey)
     if (hotkey) {
       selectedHotkey.value = hotkey as MicToggleHotkey
     }
@@ -113,14 +113,14 @@ onMounted(async () => {
 })
 
 watch(selectedHotkey, async (newHotkey, oldHotkey) => {
-  console.log('[Hearing Page] selectedHotkey watch triggered:', oldHotkey, '->', newHotkey)
+  console.info('[Hearing Page] selectedHotkey watch triggered:', oldHotkey, '->', newHotkey)
   // Only save if we've already performed the initial fetch and it's a real change
   if (isElectron && isFetched.value && newHotkey !== oldHotkey) {
-    console.log('[Hearing Page] User changed hotkey, saving to main process:', newHotkey)
+    console.info('[Hearing Page] User changed hotkey, saving to main process:', newHotkey)
     await setMicToggleHotkeyInvoke?.(newHotkey)
   }
   else {
-    console.log('[Hearing Page] Watch skipped save (initialization or no change)')
+    console.info('[Hearing Page] Watch skipped save (initialization or no change)')
   }
 })
 

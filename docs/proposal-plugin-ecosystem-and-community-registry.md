@@ -26,7 +26,7 @@ Following the cleanup of legacy dormant stubs (`airi-plugin-bilibili-laplace`, `
 
 To avoid past design conflations, AIRI plugins are categorized into three explicit runtime tiers:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                  PROJECT AIRI CLIENT                                   │
 │                                                                                        │
@@ -135,7 +135,7 @@ To seed the ecosystem and validate the hook bus, the following four functional c
 
 Rather than burying extensions under disparate menus, Settings will feature a top-level **"Add-ons & Plugins"** module alongside **"AI Providers"** and **"Modules"**:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │  Settings > Add-ons & Plugins                                                          │
 ├────────────────────────────────────────────────────────────────────────────────────────┤

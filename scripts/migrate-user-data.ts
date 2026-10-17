@@ -3,6 +3,15 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 
+/**
+ * NOTICE: eslint's no-console only allows `warn`/`error`/`info`. This migration
+ * tool's entire output is user-facing prose, so all log lines route through
+ * `console.info` here via a single helper.
+ */
+function log(...args: unknown[]) {
+  console.info(...args)
+}
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024)
     return `${bytes} B`
@@ -96,14 +105,14 @@ function runMigration() {
     process.exit(1)
   }
 
-  console.log('========================================================')
-  console.log(' AIRI Fork - User Data Instant Migration Tool')
-  console.log('========================================================')
-  console.log(`Target Isolated Directory: ${targetDir}`)
+  log('========================================================')
+  log(' AIRI Fork - User Data Instant Migration Tool')
+  log('========================================================')
+  log(`Target Isolated Directory: ${targetDir}`)
 
   if (fs.existsSync(targetDir) && directoryContainsUserData(targetDir)) {
-    console.log(`\n✓ Target directory already exists and contains active user data.`)
-    console.log(`  No migration needed. Your fork profile is already isolated!`)
+    log(`\n✓ Target directory already exists and contains active user data.`)
+    log(`  No migration needed. Your fork profile is already isolated!`)
     return
   }
 
@@ -121,17 +130,17 @@ function runMigration() {
     .sort((a, b) => b.mtime - a.mtime)
 
   if (validCandidates.length === 0) {
-    console.log('\nNotice: No existing legacy AIRI data directory found to migrate.')
-    console.log('A fresh isolated profile will be created automatically on first launch.')
+    log('\nNotice: No existing legacy AIRI data directory found to migrate.')
+    log('A fresh isolated profile will be created automatically on first launch.')
     return
   }
 
   const selectedSource = validCandidates[0].path
   const profileSize = calculateDirectorySize(selectedSource)
 
-  console.log(`\nDetected active profile: ${selectedSource}`)
-  console.log(`Profile Size:           ${formatBytes(profileSize)}`)
-  console.log(`Operation:              Atomic Move (0 bytes extra disk space, 0 ms copy time)`)
+  log(`\nDetected active profile: ${selectedSource}`)
+  log(`Profile Size:           ${formatBytes(profileSize)}`)
+  log(`Operation:              Atomic Move (0 bytes extra disk space, 0 ms copy time)`)
 
   try {
     // If target directory exists but is empty, remove it before renaming
@@ -162,13 +171,13 @@ function runMigration() {
       ),
     )
 
-    console.log('\n========================================================')
-    console.log(' Migration Successful!')
-    console.log(` - Source: ${selectedSource} -> [MOVED]`)
-    console.log(` - Target: ${targetDir}`)
-    console.log(` - Data:   ${formatBytes(profileSize)} preserved without duplication`)
-    console.log(' - Status: Isolated and ready for AIRI (dasilva333)!')
-    console.log('========================================================')
+    log('\n========================================================')
+    log(' Migration Successful!')
+    log(` - Source: ${selectedSource} -> [MOVED]`)
+    log(` - Target: ${targetDir}`)
+    log(` - Data:   ${formatBytes(profileSize)} preserved without duplication`)
+    log(' - Status: Isolated and ready for AIRI (dasilva333)!')
+    log('========================================================')
   }
   catch (err) {
     console.error('\n[Error] Failed to atomically move directory:', err)

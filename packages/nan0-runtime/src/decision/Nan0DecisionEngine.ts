@@ -56,9 +56,9 @@ function privateThoughtViolation(privateText: string): string | null {
     return 'private-thought.json-like'
   if (/nan0 kernel context|system prompt|thought[_ -]?id|<\|(?:actor|act|delay):/i.test(privateText))
     return 'private-thought.prompt-leakage'
-  if (/\b(as an ai|how can i help|i(?:'| a)m here to assist|let me know if you need)\b/i.test(privateText))
+  if (/\b(?:as an ai|how can i help|i(?:'| a)m here to assist|let me know if you need)\b/i.test(privateText))
     return 'private-thought.generic-assistant'
-  if (/\b(schema|json object|assistant response|user request)\s*:/i.test(privateText))
+  if (/\b(?:schema|json object|assistant response|user request)\s*:/i.test(privateText))
     return 'private-thought.transport-debris'
   return null
 }
@@ -179,7 +179,7 @@ function emotionalDecisionOverride(
 function moodMismatch(thought: Readonly<Nan0Thought>): Record<string, unknown> | null {
   const mood = thought.mood.trim().toLowerCase()
   const emotion = thought.emotionalSnapshot ?? {}
-  if (/\b(calm|quiet|content|peaceful)\b/.test(mood)
+  if (/\b(?:calm|quiet|content|peaceful)\b/.test(mood)
     && Math.max(finite(emotion.irritation), finite(emotion.offense)) >= 0.75) {
     return {
       claimedMood: thought.mood,

@@ -1,6 +1,8 @@
 import type { createContext } from '@moeru/eventa/adapters/electron/main'
 import type { BrowserWindow } from 'electron'
 
+import process from 'node:process'
+
 import { exec } from 'node:child_process'
 
 import { useLogg } from '@guiiai/logg'

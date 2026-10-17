@@ -22,7 +22,7 @@
 ### 1.1 The Lost "Out-of-the-Box" Experience
 AIRI's modular architecture grew to support multi-instance providers, card portability (`extensions.airi.*`), multiple windows (Electron, Web, Pocket), and granular settings. However, this flexibility led to configuration fragmentation across three separate layers:
 
-```
+```text
 Tier 1: Character Card (`extensions.airi.*`)   → Highest precedence (portable soul)
 Tier 2: Standalone Modules (`settings/*`)      → Fragmented per-domain settings
 Tier 3: Provider Catalog (`local:providers`)   → Raw API keys & local model caches
@@ -139,7 +139,7 @@ The fallback controls are integrated into two complementary locations:
 ### 4.1 Primary Hub: `Settings > Modules` (Option A)
 The passive explainer box (`modules/index.vue:63-95`) is completely replaced by the **Global Faculties & Fallback Matrix**:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ 🌐 SYSTEM FACULTIES & GLOBAL FALLBACKS                                    [ Reset to Factory Safe ]│
 │ Configure default engines used when cards inherit settings or when a primary provider fails.     │

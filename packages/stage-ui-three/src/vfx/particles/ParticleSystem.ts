@@ -17,6 +17,186 @@ import { sharedUniforms } from '../core/FrameUniforms'
 import { commonGLSL } from '../shaders/common.glsl'
 import { noiseGLSL } from '../shaders/noise.glsl'
 
+const PARTICLE_VERTEX = /* glsl */ `
+  uniform float uTime;
+  uniform vec3  uGravity;
+  uniform float uDrag;
+  uniform float uTurbulence;
+  uniform float uTurbFrequency;
+  uniform float uTurbSpeed;
+  uniform float uSwirl;
+  uniform float uSwirlExpand;
+  uniform float uSpeedScale;
+  uniform float uSizeScale;
+  uniform float uLifeScale;
+  uniform float uEndSize;
+  uniform float uSizeIn;
+  uniform float uStretch;
+
+  attribute vec3  aStart;
+  attribute vec3  aOrigin;
+  attribute vec3  aVelocity;
+  attribute vec3  aColor;
+  attribute float aSpawn;
+  attribute float aLife;
+  attribute float aSize;
+  attribute float aSeed;
+  attribute float aSpin;
+
+  varying vec2  vUv;
+  varying float vT;
+  varying float vSeed;
+  varying vec3  vTint;
+  varying float vViewZ;
+  varying vec3  vNormalish;
+
+  ${noiseGLSL}
+
+  void main() {
+    vUv = uv;
+    vSeed = aSeed;
+    vTint = aColor;
+
+    float life = aLife * uLifeScale;
+    float age = uTime - aSpawn;
+    float t = age / max(life, 1e-4);
+    vT = t;
+
+    if (age < 0.0 || t > 1.0) {
+      gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+      return;
+    }
+
+    vec3 vel = aVelocity * uSpeedScale;
+    float k = max(uDrag, 1e-3);
+    float travel = (1.0 - exp(-k * age)) / k;
+    vec3 pos = aStart + vel * travel + 0.5 * uGravity * age * age;
+
+    #ifdef USE_SWIRL
+      vec3 anchor = aOrigin + vel * travel;
+      vec3 rel = aStart - aOrigin;
+      float ang = uSwirl * age + aSeed * 6.2831;
+      float c = cos(ang), s = sin(ang);
+      vec3 rotated = vec3(rel.x * c - rel.z * s, rel.y, rel.x * s + rel.z * c);
+      rotated *= 1.0 + uSwirlExpand * t;
+      pos = anchor + rotated + vec3(0.0, 0.5 * uGravity.y * age * age, 0.0);
+    #endif
+
+    #ifdef USE_CURL
+      pos += curlNoise(aStart * uTurbFrequency + vec3(0.0, uTime * uTurbSpeed, 0.0) + aSeed * 4.0)
+             * uTurbulence * age;
+    #else
+      vec3 wobble = vec3(
+        sin(age * 3.1 + aSeed * 41.0),
+        cos(age * 2.3 + aSeed * 17.0),
+        sin(age * 2.7 + aSeed * 73.0)
+      );
+      pos += wobble * uTurbulence * age * 0.55;
+    #endif
+
+    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+    vViewZ = mvPosition.z;
+
+    float grow = smoothstep(0.0, max(uSizeIn, 1e-3), t);
+    float size = aSize * uSizeScale * mix(1.0, uEndSize, t) * grow;
+    vec2 corner = position.xy * size;
+
+    #ifdef USE_STRETCH
+      vec3 velView = (modelViewMatrix * vec4(vel, 0.0)).xyz;
+      vec2 dir = normalize(velView.xy + vec2(1e-5));
+      vec2 perp = vec2(-dir.y, dir.x);
+      float stretch = 1.0 + uStretch * length(vel);
+      corner = dir * (position.y * size * stretch) + perp * (position.x * size);
+      vNormalish = vec3(dir, 0.0);
+    #else
+      float rot = aSpin * age + aSeed * 6.2831;
+      corner = rot2(rot) * corner;
+      vNormalish = normalize(vec3(position.xy, 0.75));
+    #endif
+
+    mvPosition.xy += corner;
+    gl_Position = projectionMatrix * mvPosition;
+  }
+`
+
+const PARTICLE_FRAGMENT = /* glsl */ `
+  uniform float uTime;
+  uniform float uOpacity;
+  uniform float uGlow;
+  uniform float uFadeIn;
+  uniform float uFadeOut;
+  uniform float uSoftFade;
+  uniform float uSoftness;
+  uniform vec3  uColor0;
+  uniform vec3  uColor1;
+  uniform vec3  uColor2;
+  uniform vec3  uColor3;
+  uniform vec3  uLightDir;
+  uniform vec2  uResolution;
+  uniform sampler2D uSceneDepth;
+  uniform float uCameraNear;
+  uniform float uCameraFar;
+  uniform float uGlobalGlow;
+
+  varying vec2  vUv;
+  varying float vT;
+  varying float vSeed;
+  varying vec3  vTint;
+  varying float vViewZ;
+  varying vec3  vNormalish;
+
+  ${noiseGLSL}
+  ${commonGLSL}
+
+  float shapeMask(vec2 uv) {
+    vec2 c = (uv - 0.5) * 2.0;
+    float d = length(c);
+
+    #if SHAPE == 0                       // SOFT
+      return smoothstep(1.0, 0.0, d);
+    #elif SHAPE == 1                     // SMOKE
+      float n = fbm3(vec3(c * 1.6, vSeed * 21.0 + uTime * 0.25));
+      return smoothstep(1.0, 0.05, d + n * 0.42) * 0.9;
+    #elif SHAPE == 2                     // STREAK
+      float core = smoothstep(1.0, 0.0, abs(c.x) * 3.4);
+      float len = smoothstep(1.0, 0.0, abs(c.y));
+      return core * len;
+    #elif SHAPE == 3                     // LEAF
+      float w = max(0.0, 1.0 - c.y * c.y);
+      float body = smoothstep(w * 0.62, w * 0.30, abs(c.x));
+      float vein = smoothstep(0.06, 0.0, abs(c.x)) * 0.35;
+      return clamp(body - vein * 0.4, 0.0, 1.0);
+    #elif SHAPE == 4                     // CHIP
+      float ang = atan(c.y, c.x);
+      float r = 0.62 + 0.24 * sin(ang * 5.0 + vSeed * 30.0) + 0.1 * sin(ang * 9.0 - vSeed * 11.0);
+      return smoothstep(r, r - 0.14, d);
+    #else                                // RING
+      return smoothstep(0.14, 0.0, abs(d - 0.82));
+    #endif
+  }
+
+  void main() {
+    if (vT < 0.0 || vT > 1.0) discard;
+
+    float mask = shapeMask(vUv);
+    if (mask <= 0.004) discard;
+
+    float fade = smoothstep(0.0, max(uFadeIn, 1e-3), vT) *
+                 (1.0 - smoothstep(clamp(uFadeOut, 0.0, 0.999), 1.0, vT));
+    float alpha = mask * fade * uOpacity;
+
+    vec3 color = gradient4(uColor0, uColor1, uColor2, uColor3, vT) * vTint;
+
+    #ifdef USE_LIT
+      float ndl = dot(normalize(vNormalish), uLightDir) * 0.5 + 0.5;
+      color *= mix(0.45, 1.25, ndl);
+    #endif
+
+    color *= uGlow * uGlobalGlow;
+    gl_FragColor = vec4(color, alpha);
+  }
+`
+
 /** Fragment silhouettes. 100% procedural — no sprite textures. */
 export const ParticleShape = {
   SOFT: 0, // round, feathered — embers, droplets, dust
@@ -333,183 +513,3 @@ export class ParticleSystem {
     this.material.dispose()
   }
 }
-
-const PARTICLE_VERTEX = /* glsl */ `
-  uniform float uTime;
-  uniform vec3  uGravity;
-  uniform float uDrag;
-  uniform float uTurbulence;
-  uniform float uTurbFrequency;
-  uniform float uTurbSpeed;
-  uniform float uSwirl;
-  uniform float uSwirlExpand;
-  uniform float uSpeedScale;
-  uniform float uSizeScale;
-  uniform float uLifeScale;
-  uniform float uEndSize;
-  uniform float uSizeIn;
-  uniform float uStretch;
-
-  attribute vec3  aStart;
-  attribute vec3  aOrigin;
-  attribute vec3  aVelocity;
-  attribute vec3  aColor;
-  attribute float aSpawn;
-  attribute float aLife;
-  attribute float aSize;
-  attribute float aSeed;
-  attribute float aSpin;
-
-  varying vec2  vUv;
-  varying float vT;
-  varying float vSeed;
-  varying vec3  vTint;
-  varying float vViewZ;
-  varying vec3  vNormalish;
-
-  ${noiseGLSL}
-
-  void main() {
-    vUv = uv;
-    vSeed = aSeed;
-    vTint = aColor;
-
-    float life = aLife * uLifeScale;
-    float age = uTime - aSpawn;
-    float t = age / max(life, 1e-4);
-    vT = t;
-
-    if (age < 0.0 || t > 1.0) {
-      gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
-      return;
-    }
-
-    vec3 vel = aVelocity * uSpeedScale;
-    float k = max(uDrag, 1e-3);
-    float travel = (1.0 - exp(-k * age)) / k;
-    vec3 pos = aStart + vel * travel + 0.5 * uGravity * age * age;
-
-    #ifdef USE_SWIRL
-      vec3 anchor = aOrigin + vel * travel;
-      vec3 rel = aStart - aOrigin;
-      float ang = uSwirl * age + aSeed * 6.2831;
-      float c = cos(ang), s = sin(ang);
-      vec3 rotated = vec3(rel.x * c - rel.z * s, rel.y, rel.x * s + rel.z * c);
-      rotated *= 1.0 + uSwirlExpand * t;
-      pos = anchor + rotated + vec3(0.0, 0.5 * uGravity.y * age * age, 0.0);
-    #endif
-
-    #ifdef USE_CURL
-      pos += curlNoise(aStart * uTurbFrequency + vec3(0.0, uTime * uTurbSpeed, 0.0) + aSeed * 4.0)
-             * uTurbulence * age;
-    #else
-      vec3 wobble = vec3(
-        sin(age * 3.1 + aSeed * 41.0),
-        cos(age * 2.3 + aSeed * 17.0),
-        sin(age * 2.7 + aSeed * 73.0)
-      );
-      pos += wobble * uTurbulence * age * 0.55;
-    #endif
-
-    vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-    vViewZ = mvPosition.z;
-
-    float grow = smoothstep(0.0, max(uSizeIn, 1e-3), t);
-    float size = aSize * uSizeScale * mix(1.0, uEndSize, t) * grow;
-    vec2 corner = position.xy * size;
-
-    #ifdef USE_STRETCH
-      vec3 velView = (modelViewMatrix * vec4(vel, 0.0)).xyz;
-      vec2 dir = normalize(velView.xy + vec2(1e-5));
-      vec2 perp = vec2(-dir.y, dir.x);
-      float stretch = 1.0 + uStretch * length(vel);
-      corner = dir * (position.y * size * stretch) + perp * (position.x * size);
-      vNormalish = vec3(dir, 0.0);
-    #else
-      float rot = aSpin * age + aSeed * 6.2831;
-      corner = rot2(rot) * corner;
-      vNormalish = normalize(vec3(position.xy, 0.75));
-    #endif
-
-    mvPosition.xy += corner;
-    gl_Position = projectionMatrix * mvPosition;
-  }
-`
-
-const PARTICLE_FRAGMENT = /* glsl */ `
-  uniform float uTime;
-  uniform float uOpacity;
-  uniform float uGlow;
-  uniform float uFadeIn;
-  uniform float uFadeOut;
-  uniform float uSoftFade;
-  uniform float uSoftness;
-  uniform vec3  uColor0;
-  uniform vec3  uColor1;
-  uniform vec3  uColor2;
-  uniform vec3  uColor3;
-  uniform vec3  uLightDir;
-  uniform vec2  uResolution;
-  uniform sampler2D uSceneDepth;
-  uniform float uCameraNear;
-  uniform float uCameraFar;
-  uniform float uGlobalGlow;
-
-  varying vec2  vUv;
-  varying float vT;
-  varying float vSeed;
-  varying vec3  vTint;
-  varying float vViewZ;
-  varying vec3  vNormalish;
-
-  ${noiseGLSL}
-  ${commonGLSL}
-
-  float shapeMask(vec2 uv) {
-    vec2 c = (uv - 0.5) * 2.0;
-    float d = length(c);
-
-    #if SHAPE == 0                       // SOFT
-      return smoothstep(1.0, 0.0, d);
-    #elif SHAPE == 1                     // SMOKE
-      float n = fbm3(vec3(c * 1.6, vSeed * 21.0 + uTime * 0.25));
-      return smoothstep(1.0, 0.05, d + n * 0.42) * 0.9;
-    #elif SHAPE == 2                     // STREAK
-      float core = smoothstep(1.0, 0.0, abs(c.x) * 3.4);
-      float len = smoothstep(1.0, 0.0, abs(c.y));
-      return core * len;
-    #elif SHAPE == 3                     // LEAF
-      float w = max(0.0, 1.0 - c.y * c.y);
-      float body = smoothstep(w * 0.62, w * 0.30, abs(c.x));
-      float vein = smoothstep(0.06, 0.0, abs(c.x)) * 0.35;
-      return clamp(body - vein * 0.4, 0.0, 1.0);
-    #elif SHAPE == 4                     // CHIP
-      float ang = atan(c.y, c.x);
-      float r = 0.62 + 0.24 * sin(ang * 5.0 + vSeed * 30.0) + 0.1 * sin(ang * 9.0 - vSeed * 11.0);
-      return smoothstep(r, r - 0.14, d);
-    #else                                // RING
-      return smoothstep(0.14, 0.0, abs(d - 0.82));
-    #endif
-  }
-
-  void main() {
-    if (vT < 0.0 || vT > 1.0) discard;
-
-    float mask = shapeMask(vUv);
-    if (mask <= 0.004) discard;
-
-    float fade = smoothstep(0.0, max(uFadeIn, 1e-3), vT) *
-                 (1.0 - smoothstep(clamp(uFadeOut, 0.0, 0.999), 1.0, vT));
-    float alpha = mask * fade * uOpacity;
-
-    vec3 color = gradient4(uColor0, uColor1, uColor2, uColor3, vT) * vTint;
-
-    #ifdef USE_LIT
-      float ndl = dot(normalize(vNormalish), uLightDir) * 0.5 + 0.5;
-      color *= mix(0.45, 1.25, ndl);
-    #endif
-
-    color *= uGlow * uGlobalGlow;
-    gl_FragColor = vec4(color, alpha);
-  }
-`

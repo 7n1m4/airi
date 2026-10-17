@@ -137,16 +137,18 @@ export default defineConfig({
   },
 
   plugins: [
-    ...isEnvTruthy(process.env.VITE_USE_MKCERT ?? '') ? [mkcert((() => {
-      // Workaround: plugin's bundled downloader has a feaxios bug, prefer system mkcert
-      const command = process.platform === 'win32' ? 'where' : 'which'
-      try {
-        const out = execSync(`${command} mkcert`, { stdio: 'pipe' }).toString().trim().split(/\r?\n/)[0]
-        execSync(`"${out}" -CAROOT`, { stdio: 'pipe' })
-        return { mkcertPath: out }
-      }
-      catch { return {} }
-    })())] : [],
+    ...(isEnvTruthy(process.env.VITE_USE_MKCERT ?? '')
+      ? [mkcert((() => {
+          // Workaround: plugin's bundled downloader has a feaxios bug, prefer system mkcert
+          const command = process.platform === 'win32' ? 'where' : 'which'
+          try {
+            const out = execSync(`${command} mkcert`, { stdio: 'pipe' }).toString().trim().split(/\r?\n/)[0]
+            execSync(`"${out}" -CAROOT`, { stdio: 'pipe' })
+            return { mkcertPath: out }
+          }
+          catch { return {} }
+        })())]
+      : []),
 
     Info(),
 

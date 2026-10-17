@@ -17,6 +17,9 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
+
+import { Buffer } from 'node:buffer'
 
 import { RwkvWebGpuBridge } from '../engine/rwkv-session.js'
 import {
@@ -88,16 +91,16 @@ async function exportStateBinary(bridge: any, stateName: string, outFilePath: st
 }
 
 async function main() {
-  console.log('=== Phase 19: Sylvia / Neuro-sama Recurrent State Distillation Experiment ===\n')
+  console.info('=== Phase 19: Sylvia / Neuro-sama Recurrent State Distillation Experiment ===\n')
 
   const args = process.argv.slice(2)
   const use15B = !args.includes('--model=0.1b')
   const modelUrl = use15B ? PHASE7_MODEL_URL_1_5B : DEFAULT_BASE_MODEL_URL
   const modelLabel = use15B ? 'RWKV-7 G1 1.5B' : 'RWKV-7 G1 0.1B'
 
-  console.log(`Target Base Model: ${modelLabel}`)
+  console.info(`Target Base Model: ${modelLabel}`)
   const modelPath = await ensureModelCached(modelUrl)
-  console.log(`Model Path: ${modelPath}\n`)
+  console.info(`Model Path: ${modelPath}\n`)
 
   const cleanroomDir = '/tmp/sylvia_cleanroom'
   const path500 = path.join(cleanroomDir, 'sylvia_rwkv_500_golden_turns.json')
@@ -114,28 +117,28 @@ async function main() {
     ? JSON.parse(fs.readFileSync(path500, 'utf8'))
     : blocks2500.slice(0, 500)
 
-  console.log(`✓ Loaded ${blocks500.length} golden turns for Condition 1 (S500)`)
-  console.log(`✓ Loaded ${blocks2500.length} golden turns for Condition 2 (S2500)\n`)
+  console.info(`✓ Loaded ${blocks500.length} golden turns for Condition 1 (S500)`)
+  console.info(`✓ Loaded ${blocks2500.length} golden turns for Condition 2 (S2500)\n`)
 
   const bridge = new RwkvWebGpuBridge({ modelFilePath: modelPath })
 
   try {
-    await bridge.boot(m => console.log(`[engine] ${m}`))
-    console.log(`✓ WebGPU Engine booted: stateLen=${bridge.info.stateLen}\n`)
+    await bridge.boot(m => console.info(`[engine] ${m}`))
+    console.info(`✓ WebGPU Engine booted: stateLen=${bridge.info.stateLen}\n`)
 
     // 1. Bake Condition 1: S500 Cartridge
-    console.log(`--- Baking Cartridge Condition 1: Sylvia S500 (${blocks500.length} turns) ---`)
+    console.info(`--- Baking Cartridge Condition 1: Sylvia S500 (${blocks500.length} turns) ---`)
     const ts500 = Date.now()
     const state500 = await bridge.makeState({ name: 'sylvia-s500', texts: blocks500 })
     const elapsed500 = ((Date.now() - ts500) / 1000).toFixed(2)
-    console.log(`✓ S500 baked: ${state500.fedTokens} tokens in ${elapsed500}s (~${(state500.fedTokens / Number.parseFloat(elapsed500)).toFixed(1)} tok/s)\n`)
+    console.info(`✓ S500 baked: ${state500.fedTokens} tokens in ${elapsed500}s (~${(state500.fedTokens / Number.parseFloat(elapsed500)).toFixed(1)} tok/s)\n`)
 
     // 2. Bake Condition 2: S2500 Cartridge
-    console.log(`--- Baking Cartridge Condition 2: Sylvia S2500 (${blocks2500.length} turns) ---`)
+    console.info(`--- Baking Cartridge Condition 2: Sylvia S2500 (${blocks2500.length} turns) ---`)
     const ts2500 = Date.now()
     const state2500 = await bridge.makeState({ name: 'sylvia-s2500', texts: blocks2500 })
     const elapsed2500 = ((Date.now() - ts2500) / 1000).toFixed(2)
-    console.log(`✓ S2500 baked: ${state2500.fedTokens} tokens in ${elapsed2500}s (~${(state2500.fedTokens / Number.parseFloat(elapsed2500)).toFixed(1)} tok/s)\n`)
+    console.info(`✓ S2500 baked: ${state2500.fedTokens} tokens in ${elapsed2500}s (~${(state2500.fedTokens / Number.parseFloat(elapsed2500)).toFixed(1)} tok/s)\n`)
 
     // Evaluation Conditions
     const conditions = [
@@ -172,13 +175,13 @@ async function main() {
     }> = []
 
     for (const probe of SYLVIA_PROBES) {
-      console.log(`\n========================================================================`)
-      console.log(`🎯 PROBE: "${probe.title}"`)
-      console.log(`   User Prompt: "${probe.prompt}"`)
-      console.log(`========================================================================`)
+      console.info(`\n========================================================================`)
+      console.info(`🎯 PROBE: "${probe.title}"`)
+      console.info(`   User Prompt: "${probe.prompt}"`)
+      console.info(`========================================================================`)
 
       for (const cond of conditions) {
-        console.log(`\n  [${cond.label}]`)
+        console.info(`\n  [${cond.label}]`)
         const t0 = Date.now()
 
         const res = await bridge.generate({
@@ -197,8 +200,8 @@ async function main() {
         const moodMatch = /\[mood:\s*\w+\]/i.test(text)
         const roastMatch = /vedal|turtle|hp|die|noob|skill|terrible|bad|laugh|chaos/i.test(text)
 
-        console.log(`  ⏱️ ${res.completionTokens} tokens in ${elapsed}ms (${text.length} chars) | Mood Tag: ${moodMatch ? 'YES' : 'NO'}`)
-        console.log(`  Output:\n  "${text}"`)
+        console.info(`  ⏱️ ${res.completionTokens} tokens in ${elapsed}ms (${text.length} chars) | Mood Tag: ${moodMatch ? 'YES' : 'NO'}`)
+        console.info(`  Output:\n  "${text}"`)
 
         reportRows.push({
           condition: cond.id,
@@ -225,8 +228,8 @@ async function main() {
       const bin2500Path = path.join(reportsDir, 'cartridge-sylvia-1.5b-s2500.statecache')
       const bytes500 = await exportStateBinary(bridge, 'sylvia-s500', bin500Path)
       const bytes2500 = await exportStateBinary(bridge, 'sylvia-s2500', bin2500Path)
-      console.log(`\n✓ Saved S500 state binary:  ${bin500Path} (${(bytes500 / 1024 / 1024).toFixed(2)} MB)`)
-      console.log(`✓ Saved S2500 state binary: ${bin2500Path} (${(bytes2500 / 1024 / 1024).toFixed(2)} MB)\n`)
+      console.info(`\n✓ Saved S500 state binary:  ${bin500Path} (${(bytes500 / 1024 / 1024).toFixed(2)} MB)`)
+      console.info(`✓ Saved S2500 state binary: ${bin2500Path} (${(bytes2500 / 1024 / 1024).toFixed(2)} MB)\n`)
     }
     catch (err: any) {
       console.warn(`\n[Warning] Binary export skipped/failed: ${err.message}\n`)
@@ -242,13 +245,13 @@ async function main() {
       results: reportRows,
     }, null, 2))
 
-    console.log(`\n========================================================================`)
-    console.log(`✓ Shootout complete! Full report saved to: ${reportPath}`)
-    console.log(`========================================================================\n`)
+    console.info(`\n========================================================================`)
+    console.info(`✓ Shootout complete! Full report saved to: ${reportPath}`)
+    console.info(`========================================================================\n`)
   }
   finally {
     await bridge.dispose()
-    console.log('✓ WebGPU Bridge disposed.')
+    console.info('✓ WebGPU Bridge disposed.')
   }
 }
 

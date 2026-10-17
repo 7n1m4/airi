@@ -1,4 +1,7 @@
+import process from 'node:process'
+
 import { readFile } from 'node:fs/promises'
+import { inspect } from 'node:util'
 
 import { useLlmmarkerParser } from './llm-marker-parser'
 import { categorizeResponse } from './response-categoriser'
@@ -44,24 +47,24 @@ async function main() {
       specials.push(special)
     },
     onEnd: async (fullText) => {
-      console.log('=== Full Text ===')
-      console.log(fullText)
-      console.log()
-      console.log('=== Categorized Speech ===')
-      console.log(categorizeResponse(fullText).speech)
-      console.log()
+      console.info('=== Full Text ===')
+      console.info(fullText)
+      console.info()
+      console.info('=== Categorized Speech ===')
+      console.info(categorizeResponse(fullText).speech)
+      console.info()
     },
   })
 
   await parser.consume(input)
   await parser.end()
 
-  console.log('=== Special Tokens ===')
-  console.dir(specials, { depth: null })
-  console.log()
+  console.info('=== Special Tokens ===')
+  console.info(inspect(specials, { depth: null }))
+  console.info()
 
-  console.log('=== Literal Chunks ===')
-  console.dir(literals, { depth: null })
+  console.info('=== Literal Chunks ===')
+  console.info(inspect(literals, { depth: null }))
 }
 
 void main().catch((error) => {

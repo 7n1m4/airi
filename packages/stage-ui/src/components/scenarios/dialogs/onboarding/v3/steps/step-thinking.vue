@@ -65,9 +65,15 @@ const currentModelId = computed(() => draftStore.state.llmModel || '')
 const benchmarkLatency = computed(() => draftStore.state.brainBenchmark?.latencyMs ?? null)
 const hasBenchmarkReasoning = computed(() => draftStore.state.brainBenchmark?.hasReasoning ?? false)
 
+// 1. Pacing Profile Presets State (declared first: read by the reasoning-model detectors below)
+type PacingSelection = 'disabled' | 'snappy' | 'balanced' | 'deep'
+const selectedProfile = ref<PacingSelection>(
+  draftStore.state.pacingPreset || 'balanced',
+)
+
 const isKnownReasoningModel = computed(() => {
   const m = currentModelId.value.toLowerCase()
-  return /(r1|qwq|o1|o3|reason|thinking|kimi-k1\.5)/i.test(m)
+  return /r1|qwq|o1|o3|reason|thinking|kimi-k1\.5/i.test(m)
 })
 
 const isReasoningModel = computed(() => {
@@ -120,7 +126,7 @@ async function runBenchmarkProbe() {
     )
     const textHasThinkTag = result.text ? result.text.includes('<think>') : false
     const modelLower = modelId.toLowerCase()
-    const isKnownReasoning = /(r1|qwq|o1|o3|o4|reason|thinking|kimi-k1\.5)/i.test(modelLower)
+    const isKnownReasoning = /r1|qwq|o1|o3|o4|reason|thinking|kimi-k1\.5/i.test(modelLower)
     const isReasoning = !!rawReasoning || reasoningTokens > 0 || textHasThinkTag || isKnownReasoning
 
     draftStore.setBrainBenchmark({
@@ -145,12 +151,6 @@ async function runBenchmarkProbe() {
     isProbingBenchmark.value = false
   }
 }
-
-// 1. Pacing Profile Presets State
-type PacingSelection = 'disabled' | 'snappy' | 'balanced' | 'deep'
-const selectedProfile = ref<PacingSelection>(
-  draftStore.state.pacingPreset || 'balanced',
-)
 
 // 2. 3-Tier Cascade State
 const tier1Enabled = ref<boolean>(draftStore.state.subconsciousTier1 ?? true)

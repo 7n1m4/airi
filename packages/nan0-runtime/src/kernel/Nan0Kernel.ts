@@ -2802,7 +2802,7 @@ export class Nan0Kernel {
 
     const prepared = await this.prepareTurn(observation)
     const text = observationText(observation).trim()
-    if (!text || prepared.decision.finalDecision === 'WAIT' && prepared.thought.status === 'failed')
+    if (!text || (prepared.decision.finalDecision === 'WAIT' && prepared.thought.status === 'failed'))
       return
 
     if (prepared.decision.finalDecision !== 'SPEAK') {

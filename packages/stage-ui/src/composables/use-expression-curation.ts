@@ -308,9 +308,15 @@ Please draft the comprehensive Acting Directive instructing ${charName} how to u
         }, 2000)
       }
       else if (modelType === 'spine') {
-        const match = rawKey.match(/^(.+?)\s*\[(.+?)\]$/)
-        if (match) {
-          spineStore.selectVariantAndSkin(match[1].trim(), match[2].trim())
+        // NOTICE: parse the `Variant [Skin]` form by index instead of a regex; a
+        // `(.+?)\s*\[(.+?)\]` pattern is vulnerable to super-linear backtracking.
+        const bracketStart = rawKey.indexOf('[')
+        const bracketEnd = rawKey.lastIndexOf(']')
+        const hasVariantAndSkin = bracketStart > 0 && bracketEnd > bracketStart + 1 && bracketEnd === rawKey.length - 1
+        if (hasVariantAndSkin) {
+          const variant = rawKey.slice(0, bracketStart).trim()
+          const skin = rawKey.slice(bracketStart + 1, bracketEnd).trim()
+          spineStore.selectVariantAndSkin(variant, skin)
         }
         else {
           spineStore.selectVariantAndSkin(rawKey, 'default')

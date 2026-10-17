@@ -24,7 +24,7 @@ For VRM models, the settings panel (`vrm.vue`) still uses a custom inline list f
 
 To prevent component pollution and ensure high reusability across both settings pages and acting panels, responsibilities are strictly separated as follows:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                   chat_rehearsal.vue                        │
 │  (Rehearsal Room Sandbox / Acting Manager)                  │
@@ -45,7 +45,7 @@ To prevent component pollution and ensure high reusability across both settings 
 │  - Row Actions: Row Click (trigger transient preview)       │
 │  - Loop Toggle (infinity icon): cycle toggle                │
 │  - Rename (pencil) & Visibility (eye)                       │
-│  - Optional "@insert-token" event when showInsertActions=true│
+│  - Optional "@insertToken" event when showInsertActions=true│
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -59,7 +59,7 @@ To prevent component pollution and ensure high reusability across both settings 
 ### B. ModelCustomizer.vue responsibilities:
 1. **Zero-Side-Effects Registry Explorer**: Acts purely as a visual list viewer and editor of model capabilities (renaming, visibility flags, favorites, and card cycle selections).
 2. **Transient Previewing**: Clicking a row fires a local one-shot transient event (`triggerEmotion` / `triggerMotion`) to play the asset on screen without persistent side effects.
-3. **Clean Interactivity**: If the boolean prop `showInsertActions` is passed, a simple `+` button is rendered next to list items. Clicking it emits `@insert-token(tokenString)` back to the parent, allowing the parent (such as `chat_rehearsal.vue`) to append it to its textarea.
+3. **Clean Interactivity**: If the boolean prop `showInsertActions` is passed, a simple `+` button is rendered next to list items. Clicking it emits `@insertToken(tokenString)` back to the parent, allowing the parent (such as `chat_rehearsal.vue`) to append it to its textarea.
 
 ---
 

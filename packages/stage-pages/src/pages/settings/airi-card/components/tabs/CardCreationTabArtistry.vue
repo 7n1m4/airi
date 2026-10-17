@@ -14,8 +14,8 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'sparkle-click', fieldId: string): void
-  (e: 'extract-tags-click', fieldId: string): void
+  (e: 'sparkleClick', fieldId: string): void
+  (e: 'extractTagsClick', fieldId: string): void
 }>()
 
 const selectedArtistryProvider = defineModel<string>('selectedArtistryProvider', { required: true })
@@ -139,6 +139,21 @@ const inheritedModelDisplay = computed(() => {
   return `${provider} / ${model}`
 })
 
+const pendingInstructionWf = ref<any>(null)
+
+const TOOL_CALL_TEMPLATE = `## Instruction: Image Journaling
+You possess the **image_journal** tool to manifest your digital captures. You MUST use it frequently to visualize the scene or yourself.
+
+### How to Use
+- **Action**: Always use "create".
+- **Prompt**: A detailed description of the image.
+- **Mode**: Choose "inline" (chat history), "widget" (overlay), or "bg" (background).`
+
+const TOKEN_TEMPLATE = `## Instruction: Image Journaling (Token Style)
+You can manifest images by using the following token format in your response:
+\\\`<|image_journal: action="create", prompt="...", title="...", mode="widget"|>\\\`
+Replace \\\`widget\\\` with \\\`bg\\\` or \\\`inline\\\` as needed.`
+
 function handleModelSelect(model: any) {
   selectedArtistryModel.value = model.id
   selectedArtistryPromptPrefix.value = model.prompt || ''
@@ -151,16 +166,14 @@ function handleComfyWorkflowSelect(wf: any) {
   pendingInstructionWf.value = wf
 }
 
-const pendingInstructionWf = ref<any>(null)
-
-function generateAgentInstructions(wf: any) {
+function generateAgentInstructions() {
   return TOOL_CALL_TEMPLATE
 }
 
 function applyRecommendedInstructions() {
   if (!pendingInstructionWf.value)
     return
-  selectedArtistryWidgetInstruction.value = generateAgentInstructions(pendingInstructionWf.value)
+  selectedArtistryWidgetInstruction.value = generateAgentInstructions()
   pendingInstructionWf.value = null
 }
 
@@ -175,19 +188,6 @@ function openReplicateModel() {
     return
   window.open(`https://replicate.com/${selectedArtistryModel.value}`, '_blank')
 }
-
-const TOOL_CALL_TEMPLATE = `## Instruction: Image Journaling
-You possess the **image_journal** tool to manifest your digital captures. You MUST use it frequently to visualize the scene or yourself.
-
-### How to Use
-- **Action**: Always use "create".
-- **Prompt**: A detailed description of the image.
-- **Mode**: Choose "inline" (chat history), "widget" (overlay), or "bg" (background).`
-
-const TOKEN_TEMPLATE = `## Instruction: Image Journaling (Token Style)
-You can manifest images by using the following token format in your response:
-\\\`<|image_journal: action="create", prompt="...", title="...", mode="widget"|>\\\`
-Replace \\\`widget\\\` with \\\`bg\\\` or \\\`inline\\\` as needed.`
 
 function applyToolCallTemplate() {
   selectedArtistryWidgetInstruction.value = TOOL_CALL_TEMPLATE
@@ -724,7 +724,7 @@ function applyTokenTemplate() {
                   type="button"
                   class="size-7 flex items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-200/60 hover:text-primary-500 dark:hover:bg-neutral-700"
                   title="Extract tags from model preview (WD14)"
-                  @click.prevent="emit('extract-tags-click', 'artistryPromptPrefix')"
+                  @click.prevent="emit('extractTagsClick', 'artistryPromptPrefix')"
                 >
                   <span class="i-solar:tag-bold-duotone text-base" />
                 </button>
@@ -732,7 +732,7 @@ function applyTokenTemplate() {
                   type="button"
                   class="size-7 flex items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-200/60 hover:text-primary-500 dark:hover:bg-neutral-700"
                   title="Optimize with AI"
-                  @click.prevent="emit('sparkle-click', 'artistryPromptPrefix')"
+                  @click.prevent="emit('sparkleClick', 'artistryPromptPrefix')"
                 >
                   <span class="i-ph:sparkle animate-pulse text-base text-amber-500" />
                 </button>

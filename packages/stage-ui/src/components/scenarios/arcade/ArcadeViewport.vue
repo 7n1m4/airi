@@ -6,7 +6,7 @@ import { ref } from 'vue'
 import ArcadeGhostCursor from './ArcadeGhostCursor.vue'
 import ArcadeGridOverlay from './ArcadeGridOverlay.vue'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   engine?: 'jsdos' | 'canvas-2048'
   showGridOverlay?: boolean
   cursorState?: CursorState

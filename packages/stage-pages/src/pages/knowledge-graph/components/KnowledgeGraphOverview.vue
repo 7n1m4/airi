@@ -6,7 +6,7 @@ import { Button, Progress } from '@proj-airi/ui'
 import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 
-const props = withDefaults(
+withDefaults(
   defineProps<{
     characterId?: string
     showWorkspaceButton?: boolean

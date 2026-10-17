@@ -131,7 +131,7 @@ export function useVRMClothInteraction() {
             }
           })
         })
-        console.log(`[WIRED] Wardrobe Manifest Precomputed in ${(performance.now() - start).toFixed(2)}ms. Mapped ${wardrobeManifest.size} texture slots.`)
+        console.info(`[WIRED] Wardrobe Manifest Precomputed in ${(performance.now() - start).toFixed(2)}ms. Mapped ${wardrobeManifest.size} texture slots.`)
       }
     }
   }

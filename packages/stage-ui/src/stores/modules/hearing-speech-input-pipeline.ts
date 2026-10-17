@@ -3,6 +3,7 @@ import type { TranscriptionProviderWithExtraOptions } from '@xsai-ext/providers/
 import type { HearingTranscriptionResult } from './hearing-store'
 
 import { tryCatch } from '@moeru/std'
+import { debug } from '@proj-airi/stage-shared'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, shallowRef, watch } from 'vue'
 import { toast } from 'vue-sonner'
@@ -447,7 +448,7 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
             options?.onSentenceEnd?.(delta)
 
             // Transcription feedback toast
-            console.debug('[Hearing Pipeline] Web Speech API delta:', delta)
+            debug('[Hearing Pipeline] Web Speech API delta:', delta)
             toast.dismiss('transcription-feedback')
             toast.info(`🎤 You said: ${delta}`, {
               id: 'transcription-feedback',

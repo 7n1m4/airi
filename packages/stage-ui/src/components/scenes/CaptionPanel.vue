@@ -57,8 +57,6 @@ onMounted(() => {
     if (!event)
       return
 
-    console.log('[CaptionDebug] [CaptionPanel] Received event:', event)
-
     if (event.type === 'caption-speaker') {
       speakerText.value = event.text
     }

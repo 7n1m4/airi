@@ -17,7 +17,7 @@
 
 A primary aspiration for virtual companion systems—especially those powered by anime/Live2D/VRM avatars—is **multilingual authenticity**: having the companion speak natively in Japanese, French, Korean, or Spanish using high-fidelity neural TTS (e.g. Kokoro, Fish Speech, Edge TTS, GPT-SoVITS), while presenting real-time, synchronized English subtitles for the user.
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                        THE BILINGUAL SUBTITLE TRILEMMA                                 │
 ├──────────────────────────────┬──────────────────────────────┬──────────────────────────┤
@@ -53,7 +53,7 @@ However, deep analysis reveals that **pure "no-code" prompt crafting breaks down
 
 Bilingual dialogue fundamentally affects **dialogue delivery, TTS audio stripping, and subtitle formatting**. It must live in surfaces where users configure persona and voice—never in transient control bars.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                             SURFACE MATRIX                                  │
 ├──────────────────────────────┬──────────────────────────────┬───────────────┤

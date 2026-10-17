@@ -90,25 +90,25 @@ We will register `rwkv-local` under the `consciousness` category:
 
 ```typescript
 // Proposed registration in providers.ts
-{
+const rwkvLocalProvider = {
   id: 'rwkv-local',
   category: 'consciousness',
   tasks: ['chat', 'text-generation'],
   deployment: 'local',
   capabilities: {
-    listModels: (config) => [
+    listModels: () => [
       { id: 'rwkv-100m', name: 'RWKV 100M (Ultra-lightweight)', size: '100M', platform: 'webgpu' },
       { id: 'rwkv-1.5b', name: 'RWKV 1.5B (Recommended)', size: '1.5B', platform: 'webgpu' },
       { id: 'rwkv-3b', name: 'RWKV 3B (High Performance)', size: '3B', platform: 'webgpu' },
     ],
-    loadModel: async (config, hooks) => {
+    loadModel: async (config: { model: string }, hooks?: { onProgress?: (progress: number) => void }) => {
       // Serialized load via coordinator
       await getLoadQueue().enqueue(async () => {
-        const worker = getRWKVWorker();
-        await worker.loadModel(config.model, { onProgress: hooks?.onProgress });
-      });
-    }
-  }
+        const worker = getRWKVWorker()
+        await worker.loadModel(config.model, { onProgress: hooks?.onProgress })
+      })
+    },
+  },
 }
 ```
 
@@ -173,7 +173,7 @@ The original implementation did not use OPFS. Every activation triggered a fresh
 #### 2. HuggingFace rate-limit HTML page cached by browser (`cache: 'no-cache'` bug)
 After getting rate-limited, the browser HTTP cache stored the HTML error response. Subsequent attempts returned the cached HTML page even though the user had since added a valid HF token. The error manifested as:
 
-```
+```text
 web-rwkv: invalid safetensors header length (8104636974849335000 bytes).
 Preview of first 8 bytes: "<!doctyp"
 ```
@@ -325,7 +325,7 @@ Following the empirical findings of Kimi K3's provider audit, local in-browser W
 
 ### The Dual WebGPU Engine Synergy in AIRI
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 🧠 DUAL WEBGPU ENGINE ARCHITECTURE                                          │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -381,7 +381,7 @@ The last three together form RWKV's anti-repetition system. They are fundamental
 
 The web-rwkv provider sits behind an **OpenAI-compatible chat completions endpoint** (`POST /chat/completions`). The provider shim in [`stores/providers/web-rwkv/index.ts`](../packages/stage-ui/src/stores/providers/web-rwkv/index.ts) maps the incoming JSON body to a `WebRwkvGenerateRequest`. The mapping is:
 
-```
+```text
 body.temperature       → request.temperature        (passthrough)
 body.top_p             → request.topP               (passthrough)
 body.presence_penalty  → request.presencePenalty     (passthrough, OpenAI-compatible field used as a proxy)
@@ -421,7 +421,7 @@ await llmStore.stream(model, provider, messages, {
   temperature: generationKnown?.temperature,
   top_p: generationKnown?.topP,
   max_tokens: generationKnown?.maxTokens,
-  ...
+  // ...additional passthrough overrides
 })
 ```
 
@@ -439,7 +439,7 @@ await llmStore.stream(model, provider, messages, {
 
 The provider settings page for web-rwkv shows a read-only code block (or equivalent display) with the three hardcoded defaults:
 
-```
+```text
 presencePenalty  0.4
 countPenalty     0.4
 penaltyDecay     0.996

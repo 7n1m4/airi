@@ -24,7 +24,7 @@ The **Unified System Event Log ("AIRI Event Ledger")** establishes a single, hig
 
 The primary UI surface for inspecting, filtering, and watching the Unified Event Stream is embedded directly into the **Left Slide-Over Drawer of the Chat Area UI** (`packages/stage-layouts/src/components/Widgets/ChatArea.vue`), accessible by clicking the hamburger icon (`☰`) at the top left of the chat surface.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ ☰ AIRI Chat Surface                                                 [⚙] [✕] │
 ├───────────────────────────────────┬─────────────────────────────────────────┤

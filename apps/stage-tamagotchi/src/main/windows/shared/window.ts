@@ -15,7 +15,7 @@ import { createAppService, createProcessSpawnerService, createScreenService, cre
 import { createSensorsService } from '../../services/sensors'
 
 export function toggleWindowShow(window?: BrowserWindow | null): void {
-  console.log(`[Main Process] [toggleWindowShow] Triggered. Window instance exists: ${!!window}`)
+  console.info(`[Main Process] [toggleWindowShow] Triggered. Window instance exists: ${!!window}`)
   if (!window) {
     console.warn('[Main Process] [toggleWindowShow] Aborted: window instance is undefined or null')
     return
@@ -27,13 +27,13 @@ export function toggleWindowShow(window?: BrowserWindow | null): void {
 
   const isMinimized = window.isMinimized()
   const isVisible = window.isVisible()
-  console.log(`[Main Process] [toggleWindowShow] Current Window States -> isMinimized: ${isMinimized}, isVisible: ${isVisible}`)
+  console.info(`[Main Process] [toggleWindowShow] Current Window States -> isMinimized: ${isMinimized}, isVisible: ${isVisible}`)
 
   const createdAt = (window as any).__created_at || 0
   const isJustCreated = Date.now() - createdAt < 1000
 
   if (isJustCreated) {
-    console.log('[Main Process] [toggleWindowShow] Action: Window was just created. Ensuring it is shown and focused.')
+    console.info('[Main Process] [toggleWindowShow] Action: Window was just created. Ensuring it is shown and focused.')
     ;(window as any).__created_at = 0
     if (isMinimized) {
       window.restore()
@@ -44,23 +44,23 @@ export function toggleWindowShow(window?: BrowserWindow | null): void {
   }
 
   if (isMinimized) {
-    console.log('[Main Process] [toggleWindowShow] Action: Restoring, showing, and focusing minimized window')
+    console.info('[Main Process] [toggleWindowShow] Action: Restoring, showing, and focusing minimized window')
     window.restore()
     window.show()
     window.focus()
   }
   else if (isVisible) {
     if (!window.isFocused()) {
-      console.log('[Main Process] [toggleWindowShow] Action: Window is visible but not focused. Focusing it.')
+      console.info('[Main Process] [toggleWindowShow] Action: Window is visible but not focused. Focusing it.')
       window.focus()
     }
     else {
-      console.log('[Main Process] [toggleWindowShow] Action: Hiding currently visible window')
+      console.info('[Main Process] [toggleWindowShow] Action: Hiding currently visible window')
       window.hide()
     }
   }
   else {
-    console.log('[Main Process] [toggleWindowShow] Action: Showing and focusing hidden window')
+    console.info('[Main Process] [toggleWindowShow] Action: Showing and focusing hidden window')
     window.show()
     window.focus()
   }

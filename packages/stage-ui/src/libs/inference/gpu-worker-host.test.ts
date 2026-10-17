@@ -298,7 +298,9 @@ describe('gpuWorkerHost', () => {
       host.setPhase('ready')
 
       let releaseGate!: () => void
-      const gate = new Promise<void>((resolve) => { releaseGate = resolve })
+      const gate = new Promise<void>((resolve) => {
+        releaseGate = resolve
+      })
       const op = host.runExclusive(() => gate)
       expect(host.isLocked).toBe(true)
 

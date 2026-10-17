@@ -33,7 +33,7 @@ As observed in the current provider settings UI:
 
 Building upon the Phase 1 dynamic registry composition (`createProviderRegistry`), AIRI introduces **Multi-Instance Provider Duplication**.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 🦙 Ollama Instances                                                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -73,7 +73,7 @@ resolvedMetadata['ollama:workstation'] = buildProviderInstance(parentDefinition,
 
 The provider settings layout adopts a responsive **2-Column Split / 1-Column Responsive Grid** that preserves split playgrounds while modernizing the configuration panel.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 🔑 Deepgram User Configuration                  [ 🌐 console.deepgram.com ↗ ]│
 │ Ultra-fast, high-accuracy real-time transcription & Aura TTS                │

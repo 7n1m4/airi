@@ -7,10 +7,10 @@ import { app, BrowserWindow, ipcMain } from 'electron'
 
 const defaultBackupDir = process.argv[2] || process.env.AIRI_BACKUP_DIR || '/Volumes/AIRI-Backup-Share'
 
-console.log(`=======================================================`)
-console.log(`   AIRI BYOS Comprehensive Data Catalog Sync Auditor   `)
-console.log(`   Target SMB/FS Backup Share: ${defaultBackupDir}     `)
-console.log(`=======================================================\n`)
+console.info(`=======================================================`)
+console.info(`   AIRI BYOS Comprehensive Data Catalog Sync Auditor   `)
+console.info(`   Target SMB/FS Backup Share: ${defaultBackupDir}     `)
+console.info(`=======================================================\n`)
 
 const userDataPath = process.env.AIRI_USER_DATA || path.join(app.getPath('appData'), '@proj-airi', 'stage-tamagotchi')
 app.setPath('userData', userDataPath)
@@ -32,7 +32,7 @@ function ensureLocalOriginServer(port = 5173) {
 
 // Intercept progress messages from renderer
 ipcMain.on('audit-progress', (event, msg) => {
-  console.log(`[Progress] ${msg}`)
+  console.info(`[Progress] ${msg}`)
 })
 
 app.whenReady().then(async () => {
@@ -48,7 +48,7 @@ app.whenReady().then(async () => {
   // NOTICE: Register handler before loadURL to avoid missing did-finish-load
   win.webContents.on('did-finish-load', async () => {
     try {
-      console.log('Extracting full local IndexedDB & Localforage data catalog...')
+      console.info('Extracting full local IndexedDB & Localforage data catalog...')
       const localData = await win.webContents.executeJavaScript(`
         (async () => {
           const { ipcRenderer } = require('electron');
@@ -276,9 +276,9 @@ function runComprehensiveAudit(local, backupDir) {
   let passedCount = 0
 
   const logHeader = (sectionTitle) => {
-    console.log(`\n=======================================================`)
-    console.log(`   ${sectionTitle}`)
-    console.log(`=======================================================`)
+    console.info(`\n=======================================================`)
+    console.info(`   ${sectionTitle}`)
+    console.info(`=======================================================`)
   }
 
   // 1. Outbox Queue Audit
@@ -294,7 +294,7 @@ function runComprehensiveAudit(local, backupDir) {
     issuesCount += local.outboxQueue.length
   }
   else {
-    console.log('✔ Outbox sync queue is completely clean (0 pending mutations).')
+    console.info('✔ Outbox sync queue is completely clean (0 pending mutations).')
     passedCount++
   }
 
@@ -309,7 +309,7 @@ function runComprehensiveAudit(local, backupDir) {
       const localCardsMap = new Map(Array.isArray(local.cards) ? local.cards : Object.entries(local.cards || {}))
       const remoteCardsMap = new Map(Array.isArray(remoteCards) ? remoteCards : Object.entries(remoteCards))
 
-      console.log(`[AIRI Cards] Local count: ${localCardsMap.size} | Remote Backup count: ${remoteCardsMap.size}`)
+      console.info(`[AIRI Cards] Local count: ${localCardsMap.size} | Remote Backup count: ${remoteCardsMap.size}`)
       let cardIssues = 0
       for (const [id, lCard] of localCardsMap.entries()) {
         const rCard = remoteCardsMap.get(id)
@@ -327,7 +327,7 @@ function runComprehensiveAudit(local, backupDir) {
         }
       }
       if (cardIssues === 0 && localCardsMap.size > 0) {
-        console.log('  ✔ All local character cards are 100% synchronized with remote backup.')
+        console.info('  ✔ All local character cards are 100% synchronized with remote backup.')
         passedCount++
       }
       issuesCount += cardIssues
@@ -345,11 +345,11 @@ function runComprehensiveAudit(local, backupDir) {
   // 2.2 Chat Sessions Index & Records
   const sessDir = path.join(backupDir, 'db', 'chat', 'sessions')
   const localSessIds = Object.keys(local.chatSessions || {})
-  console.log(`\n[Chat Sessions] Local count: ${localSessIds.length}`)
+  console.info(`\n[Chat Sessions] Local count: ${localSessIds.length}`)
   if (fs.existsSync(sessDir)) {
     const remoteFiles = fs.readdirSync(sessDir).filter(f => f.endsWith('.json'))
     const remoteSessIds = new Set(remoteFiles.map(f => f.replace('.json', '')))
-    console.log(`[Chat Sessions] Remote Backup count: ${remoteSessIds.size}`)
+    console.info(`[Chat Sessions] Remote Backup count: ${remoteSessIds.size}`)
     let sessIssues = 0
 
     for (const id of localSessIds) {
@@ -378,7 +378,7 @@ function runComprehensiveAudit(local, backupDir) {
       }
     }
     if (sessIssues === 0 && localSessIds.length > 0) {
-      console.log('  ✔ All local chat sessions are 100% synchronized with remote backup.')
+      console.info('  ✔ All local chat sessions are 100% synchronized with remote backup.')
       passedCount++
     }
     issuesCount += sessIssues
@@ -391,7 +391,7 @@ function runComprehensiveAudit(local, backupDir) {
   // 2.3 Long-Term Memory (Text Journal)
   const journalDir = path.join(backupDir, 'db', 'memory', 'text-journal')
   const localJournalKeys = Object.keys(local.textJournal || {})
-  console.log(`\n[Text Journal] Local user stores count: ${localJournalKeys.length}`)
+  console.info(`\n[Text Journal] Local user stores count: ${localJournalKeys.length}`)
   if (fs.existsSync(journalDir)) {
     let journalIssues = 0
     for (const uid of localJournalKeys) {
@@ -401,7 +401,7 @@ function runComprehensiveAudit(local, backupDir) {
         journalIssues++
       }
       else {
-        console.log(`  ✔ Text journal for user "${uid}" exists in remote backup.`)
+        console.info(`  ✔ Text journal for user "${uid}" exists in remote backup.`)
       }
     }
     if (journalIssues === 0 && localJournalKeys.length > 0)
@@ -412,7 +412,7 @@ function runComprehensiveAudit(local, backupDir) {
   // 2.4 Short-Term Memory
   const stmDir = path.join(backupDir, 'db', 'memory', 'short-term')
   const localStmKeys = Object.keys(local.shortTermMemory || {})
-  console.log(`\n[Short-Term Memory] Local user stores count: ${localStmKeys.length}`)
+  console.info(`\n[Short-Term Memory] Local user stores count: ${localStmKeys.length}`)
   if (fs.existsSync(stmDir)) {
     let stmIssues = 0
     for (const uid of localStmKeys) {
@@ -422,7 +422,7 @@ function runComprehensiveAudit(local, backupDir) {
         stmIssues++
       }
       else {
-        console.log(`  ✔ Short-term memory for user "${uid}" exists in remote backup.`)
+        console.info(`  ✔ Short-term memory for user "${uid}" exists in remote backup.`)
       }
     }
     if (stmIssues === 0 && localStmKeys.length > 0)
@@ -433,7 +433,7 @@ function runComprehensiveAudit(local, backupDir) {
   // 2.5 Lifetime Memory Artifacts
   const ltmmDir = path.join(backupDir, 'db', 'memory', 'lifetime')
   const localLtmmKeys = Object.keys(local.lifetimeMemory || {})
-  console.log(`\n[Lifetime Memory] Local character artifacts count: ${localLtmmKeys.length}`)
+  console.info(`\n[Lifetime Memory] Local character artifacts count: ${localLtmmKeys.length}`)
   if (fs.existsSync(ltmmDir)) {
     let ltmmIssues = 0
     for (const charId of localLtmmKeys) {
@@ -443,7 +443,7 @@ function runComprehensiveAudit(local, backupDir) {
         ltmmIssues++
       }
       else {
-        console.log(`  ✔ Lifetime memory artifact for character "${charId}" exists in remote backup.`)
+        console.info(`  ✔ Lifetime memory artifact for character "${charId}" exists in remote backup.`)
       }
     }
     if (ltmmIssues === 0 && localLtmmKeys.length > 0)
@@ -462,7 +462,7 @@ function runComprehensiveAudit(local, backupDir) {
     issuesCount += conflictsList.length
   }
   else {
-    console.log('✔ No unresolved sync conflicts found in local metadata.')
+    console.info('✔ No unresolved sync conflicts found in local metadata.')
     passedCount++
   }
 
@@ -481,21 +481,21 @@ function runComprehensiveAudit(local, backupDir) {
     }
   }
   const remoteModelKeys = new Set(Object.keys(remoteManifest.models || {}))
-  console.log(`[Display Models] Local count: ${local.localModels.length} | Remote Manifest count: ${remoteModelKeys.size}`)
+  console.info(`[Display Models] Local count: ${local.localModels.length} | Remote Manifest count: ${remoteModelKeys.size}`)
   for (const m of local.localModels) {
     const rawId = m.id.replace('display-model-', '')
     const inRemote = remoteModelKeys.has(m.id) || remoteModelKeys.has(rawId)
     if (!inRemote) {
-      console.log(`  ℹ Model "${m.name || m.id}" (${m.format}) is local-only (not synced to remote backup).`)
+      console.info(`  ℹ Model "${m.name || m.id}" (${m.format}) is local-only (not synced to remote backup).`)
     }
     else {
-      console.log(`  ✔ Model "${m.name || m.id}" exists in both local database and remote backup.`)
+      console.info(`  ✔ Model "${m.name || m.id}" exists in both local database and remote backup.`)
     }
   }
 
   // 4.2 Background Images
   const bgBackupDir = path.join(backupDir, 'assets', 'backgrounds')
-  console.log(`\n[Custom Backgrounds] Local count: ${local.localBackgrounds.length}`)
+  console.info(`\n[Custom Backgrounds] Local count: ${local.localBackgrounds.length}`)
   if (fs.existsSync(bgBackupDir)) {
     for (const bg of local.localBackgrounds) {
       const rawId = bg.id.replace(/^bg-/, '').replace(/^background-/, '')
@@ -505,7 +505,7 @@ function runComprehensiveAudit(local, backupDir) {
         issuesCount++
       }
       else {
-        console.log(`  ✔ Background "${bg.title || bg.id}" exists in remote backup.`)
+        console.info(`  ✔ Background "${bg.title || bg.id}" exists in remote backup.`)
       }
     }
   }
@@ -515,12 +515,12 @@ function runComprehensiveAudit(local, backupDir) {
   }
 
   // 4.3 Custom VRMA Animations & Stickers
-  console.log(`\n[Custom VRMA Animations] Local count: ${local.localAnimations.length}`)
-  console.log(`[Local Stickers] Local count: ${local.localStickers.length}`)
+  console.info(`\n[Custom VRMA Animations] Local count: ${local.localAnimations.length}`)
+  console.info(`[Local Stickers] Local count: ${local.localStickers.length}`)
 
   // 4.4 Custom Voice Profiles
   const voiceBackupDir = path.join(backupDir, 'assets', 'voice-profiles')
-  console.log(`\n[Custom Voice Profiles] Local count: ${local.localVoiceProfiles ? local.localVoiceProfiles.length : 0}`)
+  console.info(`\n[Custom Voice Profiles] Local count: ${local.localVoiceProfiles ? local.localVoiceProfiles.length : 0}`)
   if (fs.existsSync(voiceBackupDir)) {
     for (const vp of (local.localVoiceProfiles || [])) {
       const jsonPath = path.join(voiceBackupDir, `${vp.id}.json`)
@@ -530,7 +530,7 @@ function runComprehensiveAudit(local, backupDir) {
         issuesCount++
       }
       else {
-        console.log(`  ✔ Voice profile "${vp.name || vp.id}" (${vp.sourceFilename || 'WAV'}) exists in remote backup.`)
+        console.info(`  ✔ Voice profile "${vp.name || vp.id}" (${vp.sourceFilename || 'WAV'}) exists in remote backup.`)
         passedCount++
       }
     }
@@ -543,11 +543,11 @@ function runComprehensiveAudit(local, backupDir) {
   // Final Audit Summary
   logHeader('AUDIT SUMMARY')
   if (issuesCount === 0) {
-    console.log('🎉 AUDIT PASSED: All local database records and outbox queues are 100% synced!')
-    console.log('You can clear local IndexedDB state safely; your data will fully restore from backup.')
+    console.info('🎉 AUDIT PASSED: All local database records and outbox queues are 100% synced!')
+    console.info(`Checks passed: ${passedCount}. You can clear local IndexedDB state safely; your data will fully restore from backup.`)
   }
   else {
-    console.log(`⚠️ AUDIT WARNING: Found ${issuesCount} potential unsynced item(s) or pending outbox mutations.`)
-    console.log('Please resolve or allow pending syncs to finish before clearing local storage.')
+    console.info(`⚠️ AUDIT WARNING: Found ${issuesCount} potential unsynced item(s) or pending outbox mutations (checks passed: ${passedCount}).`)
+    console.info('Please resolve or allow pending syncs to finish before clearing local storage.')
   }
 }

@@ -1,9 +1,13 @@
+import type { Buffer } from 'node:buffer'
+
 import type { BrowserWindow, Rectangle } from 'electron'
 
 import type { globalAppConfigSchema } from '../../configs/global'
 import type { Config } from '../../libs/electron/persistence'
 import type { I18n } from '../../libs/i18n'
 import type { ServerChannel } from '../../services/airi/channel-server'
+
+import process from 'node:process'
 
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -117,6 +121,9 @@ export function setupActorStageWindowManager(params: {
   }
   // Tracks per-window disposers so a destroyed window never leaks listeners.
   let windowDisposers: Array<() => void> = []
+  // NOTICE: declared before `createStageWindow()` so the window's `closed`
+  // handler can clear an in-flight single-flight `ensureWindow()` call.
+  let inFlightEnsurePromise: Promise<BrowserWindow | null> | null = null
 
   function emitLifecycle(event: StageLifecycleEvent) {
     for (const listener of lifecycleListeners[event]) {
@@ -191,7 +198,7 @@ export function setupActorStageWindowManager(params: {
     let initialX = actorConfig?.x
     let initialY = actorConfig?.y
 
-    if (initialX !== undefined && initialY !== undefined && !isNaN(initialX) && !isNaN(initialY)) {
+    if (initialX !== undefined && initialY !== undefined && !Number.isNaN(initialX) && !Number.isNaN(initialY)) {
       const valid = ensureWindowInVisibleBounds({
         x: Math.round(initialX),
         y: Math.round(initialY),
@@ -265,7 +272,7 @@ export function setupActorStageWindowManager(params: {
       const y = currentActorConfig?.y
       const width = currentActorConfig?.width ?? 450.0
       const height = currentActorConfig?.height ?? 600.0
-      if (x !== undefined && y !== undefined && !isNaN(x) && !isNaN(y)) {
+      if (x !== undefined && y !== undefined && !Number.isNaN(x) && !Number.isNaN(y)) {
         const valid = ensureWindowInVisibleBounds({
           x: Math.round(x),
           y: Math.round(y),
@@ -357,8 +364,6 @@ export function setupActorStageWindowManager(params: {
 
     return window
   }
-
-  let inFlightEnsurePromise: Promise<BrowserWindow | null> | null = null
 
   async function ensureWindow(): Promise<BrowserWindow | null> {
     if (isStageDisabledByFlag()) {

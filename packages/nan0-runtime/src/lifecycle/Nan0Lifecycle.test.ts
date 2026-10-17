@@ -241,7 +241,10 @@ describe('bounded Nan0 computation lifecycle', () => {
     const seed = kernel({ generate: async () => ({ text: successThought() }) }, store)
     await seed.boot()
     await store.save({ ...seed.getStateSnapshot(), actionIntents: [longLivedAction()] })
-    const restarted = kernel({ generate: async () => { calls(); return { text: successThought() } } }, store)
+    const restarted = kernel({ generate: async () => {
+      calls()
+      return { text: successThought() }
+    } }, store)
     await restarted.boot()
     expect(calls).not.toHaveBeenCalled()
     expect(restarted.getStateSnapshot().actionIntents[0].status).toBe('active')

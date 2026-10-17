@@ -62,9 +62,13 @@ describe('web onboarding login state', () => {
 
   it('marks the onboarding login before requesting OIDC sign-in', async () => {
     const events: string[] = []
-    const setItem = vi.fn(() => { events.push('pending') })
+    const setItem = vi.fn(() => {
+      events.push('pending')
+    })
     const removeItem = vi.fn()
-    const requestLogin = vi.fn(async () => { events.push('login') })
+    const requestLogin = vi.fn(async () => {
+      events.push('login')
+    })
 
     await startOnboardingLogin(requestLogin, { setItem, removeItem })
 
@@ -301,11 +305,13 @@ const { extraSteps = [], onWelcomeStart } = defineProps<{
 ```
 
 ```ts
-{
-  id: 'welcome',
-  component: StepWelcome,
-  props: () => ({ onStart: onWelcomeStart }),
-},
+const steps = [
+  {
+    id: 'welcome',
+    component: StepWelcome,
+    props: () => ({ onStart: onWelcomeStart }),
+  },
+]
 ```
 
 In `onboarding-dialog.vue`, import the same handler type, extend the props, and forward it in both render branches:

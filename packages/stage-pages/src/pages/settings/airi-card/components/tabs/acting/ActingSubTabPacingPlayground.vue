@@ -112,6 +112,16 @@ function selectScenario(preset: ScenarioPreset) {
   scenarioPrompt.value = preset.prompt
 }
 
+// --- Knobs & Configuration ---
+const initialFillerBypass = ref(false)
+const dynamicAsidesEnabled = ref(true)
+const testCadenceSec = ref<number>(5)
+const maxAsideWords = ref<number>(8)
+const minConfidenceThreshold = ref<number>(75)
+const abortAfterFillers = ref<number>(2)
+const abortOnAnswerStart = ref<boolean>(true)
+const isEarlyExit = ref<boolean>(false)
+
 // --- Quick Personality / Pacing Presets ---
 function applyPreset(presetId: 'snappy' | 'balanced' | 'deep_cot') {
   emit('applyPreset', presetId)
@@ -132,16 +142,6 @@ function applyPreset(presetId: 'snappy' | 'balanced' | 'deep_cot') {
   }
   appendLog('CONFIG', `Applied pacing preset: "${presetId}" (Cadence: ${testCadenceSec.value}s, Max Words: ${maxAsideWords.value})`, 'info')
 }
-
-// --- Knobs & Configuration ---
-const initialFillerBypass = ref(false)
-const dynamicAsidesEnabled = ref(true)
-const testCadenceSec = ref<number>(5)
-const maxAsideWords = ref<number>(8)
-const minConfidenceThreshold = ref<number>(75)
-const abortAfterFillers = ref<number>(2)
-const abortOnAnswerStart = ref<boolean>(true)
-const isEarlyExit = ref<boolean>(false)
 
 // --- 5-Stage Color Pipeline State ---
 export type SpanStage = 'white' | 'orange' | 'yellow' | 'green' | 'purple'
@@ -354,7 +354,7 @@ const MAX_FILLERS_PER_TURN = 3
 let lastFillerSpokenAtMs = 0
 const recentlySpokenPhrases = new Set<string>()
 
-async function evaluateCurrentStride(isFinal = false) {
+async function evaluateCurrentStride() {
   if (!dynamicAsidesEnabled.value || isEvaluatingStride || !pendingStrideBuffer.trim() || isEarlyExit.value)
     return
 
@@ -662,7 +662,7 @@ async function startLabTurn() {
 
     // Flush any remaining pending reasoning buffer
     if (pendingStrideBuffer.trim().length > 0) {
-      await evaluateCurrentStride(true)
+      await evaluateCurrentStride()
     }
 
     liveStatus.value = 'COMPLETED'

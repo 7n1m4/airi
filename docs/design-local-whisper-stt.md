@@ -6,7 +6,7 @@ AIRI incorporates a privacy-first, fully in-browser **Speech-to-Text (ASR/STT)**
 
 The engine operates under the **Unified WebGPU & Eventa Streaming Architecture**, integrating directly into AIRI's centralized GPU inference queue, VRAM budgeting layer, and single-tenant browser cache management.
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │                              AIRI UI                                   │
 │  [Onboarding V2 Step 1]  [Settings > Whisper Local]  [Hearing Module] │

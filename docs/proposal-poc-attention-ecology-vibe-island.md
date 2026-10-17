@@ -127,7 +127,7 @@ All hypotheses run on a **synthetic replay harness**: scripted tick streams with
 
 ## 9. UI Touchpoint: Control Island Indicator
 
-```
+```text
 ┌──────────────────────────────────────────────┐
 │  [ ● VIBE ]  AIRI: Active (Focus Mode)  [ _ ]│
 └──────────────────────────────────────────────┘

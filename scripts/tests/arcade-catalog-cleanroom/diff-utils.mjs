@@ -11,7 +11,7 @@
  *
  * @param {Array<[number, number]>} points - Array of [col, row] or [x, y] coordinates
  * @param {number} [distanceThreshold=2.5] - Max Euclidean distance to belong to same cluster
- * @returns {Array<{ x: number, y: number, size: number, bbox: [number, number, number, number], pixels: Array<[number, number]> }>}
+ * @returns {Array<{ x: number, y: number, size: number, bbox: [number, number, number, number], pixels: Array<[number, number]> }>} Detected clusters, one entry per island
  */
 export function getClusters(points, distanceThreshold = 2.5) {
   if (!points || points.length === 0)

@@ -184,7 +184,7 @@ function observationText(observation: Nan0Observation): string {
 
 function looksLowInformation(text: string): boolean {
   const normalized = text.toLowerCase().replace(/[^a-z0-9]+/g, '')
-  return normalized.length < 3 || /^(ok|k|hi|hey|yo|test|ping)+$/.test(normalized)
+  return normalized.length < 3 || /^(?:ok|k|hi|hey|yo|test|ping)+$/.test(normalized)
 }
 
 function invalidPrivateThoughtReason(privateText: string): string | null {
@@ -195,9 +195,9 @@ function invalidPrivateThoughtReason(privateText: string): string | null {
     return 'private-thought.json-like'
   if (/nan0 kernel context|system prompt|thought[_ -]?id|<\|(?:actor|act|delay):/i.test(privateText))
     return 'private-thought.prompt-leakage'
-  if (/\b(as an ai|how can i help|i(?:'| a)m here to assist|let me know if you need)\b/i.test(privateText))
+  if (/\b(?:as an ai|how can i help|i(?:'| a)m here to assist|let me know if you need)\b/i.test(privateText))
     return 'private-thought.generic-assistant'
-  if (/\b(schema|json object|assistant response|user request)\s*:/i.test(privateText))
+  if (/\b(?:schema|json object|assistant response|user request)\s*:/i.test(privateText))
     return 'private-thought.transport-debris'
   return null
 }
@@ -523,7 +523,6 @@ function splitNarrativeResponse(raw: string, maximumNarrativeLength: number): {
 
 function pressureScores(input: Nan0ThoughtEngineInput): PressureScores {
   const text = observationText(input.observation)
-  const lower = text.toLowerCase()
   const lowInformation = looksLowInformation(text)
   const isOwner = input.ownership.kind === 'owner' || input.ownership.kind === 'kyo' || input.ownership.actorId === 'owner' || input.ownership.actorId === 'kyo'
   const addressed = isOwner
@@ -1065,7 +1064,7 @@ export async function generateNan0Thought(input: Nan0ThoughtEngineInput): Promis
     }
     catch (error) {
       lastError = error
-      if (input.signal?.aborted || error instanceof Error && error.name === 'AbortError')
+      if (input.signal?.aborted || (error instanceof Error && error.name === 'AbortError'))
         return createInterruptedNan0Thought(input, streamedText || streamedReasoning, attemptsMade)
     }
   }

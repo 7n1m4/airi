@@ -10,137 +10,6 @@ import { parseVfxColor, sharedUniforms } from '../core/FrameUniforms'
 import { commonGLSL } from '../shaders/common.glsl'
 import { noiseGLSL } from '../shaders/noise.glsl'
 
-export const RibbonPass = {
-  BAND: 0,
-  GLOW: 1,
-} as const
-
-export type RibbonPassType = typeof RibbonPass[keyof typeof RibbonPass]
-
-export interface ArcaneRibbonSyncState {
-  base: Vector3
-  right: Vector3
-  forward: Vector3
-  height: number
-  strength: number
-  seed?: number
-  count?: number
-  palette?: {
-    core?: string | Color
-    inner?: string | Color
-    outer?: string | Color
-    halo?: string | Color
-  }
-}
-
-export function createArcaneRibbonMaterial(pass: RibbonPassType = RibbonPass.BAND): ShaderMaterial {
-  const glow = pass === RibbonPass.GLOW
-
-  const material = new ShaderMaterial({
-    defines: glow ? { RIBBON_GLOW: '' } : {},
-    transparent: true,
-    depthWrite: false,
-    depthTest: true,
-    blending: AdditiveBlending,
-    side: DoubleSide,
-    toneMapped: false,
-    uniforms: sharedUniforms({
-      uSeed: { value: 0 },
-      uStrength: { value: 0 },
-      uCount: { value: 7 },
-
-      uBase: { value: new Vector3() },
-      uRight: { value: new Vector3(1, 0, 0) },
-      uForward: { value: new Vector3(0, 0, 1) },
-      uHeight: { value: 1.8 },
-
-      uRadius: { value: 1.15 },
-      uRadiusVary: { value: 0.22 },
-      uDepth: { value: 1 },
-      uFlare: { value: 0.65 },
-      uLow: { value: -0.05 },
-      uHigh: { value: 1.15 },
-      uScatter: { value: 1.4 },
-
-      uTurns: { value: 1.15 },
-      uTurnVary: { value: 0.35 },
-      uSpin: { value: 0.28 },
-      uSpinVary: { value: 0.3 },
-      uCounter: { value: 0.25 },
-      uClimb: { value: 0.35 },
-
-      uWobble: { value: 0.16 },
-      uWobbleScale: { value: 2.2 },
-      uWave: { value: 0.18 },
-      uWaveScale: { value: 1.8 },
-      uCrawl: { value: 0.35 },
-
-      uRate: { value: 0.32 },
-      uLife: { value: 0.92 },
-
-      uWidth: { value: 0.42 },
-      uWidthScale: { value: glow ? 2.4 : 1 },
-      uWidthVary: { value: 0.4 },
-      uTaper: { value: 0.75 },
-      uBank: { value: 0.35 },
-
-      uFill: { value: 0.35 },
-      uFillFalloff: { value: 1.6 },
-      uEdge: { value: 0.9 },
-      uEdgeWidth: { value: 0.34 },
-      uGlowFalloff: { value: 2.2 },
-
-      uWisp: { value: 0.75 },
-      uWispScale: { value: 3.4 },
-      uWispCross: { value: 0.9 },
-      uWispSpeed: { value: 0.5 },
-      uWispSharp: { value: 1.4 },
-      uEndFade: { value: 0.22 },
-
-      uFlicker: { value: 0.12 },
-      uFlickerSpeed: { value: 9 },
-      uStrandFade: { value: 0.55 },
-      uPassOpacity: { value: glow ? 0.35 : 1 },
-      uOpacity: { value: 1 },
-      uGlow: { value: 2.2 },
-      uSoftFade: { value: 0.5 },
-
-      uColorCore: { value: new Color(1, 0.86, 1) },
-      uColorInner: { value: new Color(0.85, 0.35, 1) },
-      uColorOuter: { value: new Color(0.45, 0.09, 0.85) },
-      uColorHalo: { value: new Color(0.16, 0.02, 0.36) },
-    }),
-    vertexShader: RIBBON_VERTEX,
-    fragmentShader: RIBBON_FRAGMENT,
-  })
-
-  material.userData.sync = (state: ArcaneRibbonSyncState) => {
-    const u = material.uniforms
-    u.uBase.value.copy(state.base)
-    u.uRight.value.copy(state.right)
-    u.uForward.value.copy(state.forward)
-    u.uHeight.value = state.height
-    u.uStrength.value = state.strength
-    if (state.seed !== undefined)
-      u.uSeed.value = state.seed
-    if (state.count !== undefined)
-      u.uCount.value = state.count
-
-    if (state.palette) {
-      if (state.palette.core)
-        (u.uColorCore.value as Color).set(parseVfxColor(state.palette.core))
-      if (state.palette.inner)
-        (u.uColorInner.value as Color).set(parseVfxColor(state.palette.inner))
-      if (state.palette.outer)
-        (u.uColorOuter.value as Color).set(parseVfxColor(state.palette.outer))
-      if (state.palette.halo)
-        (u.uColorHalo.value as Color).set(parseVfxColor(state.palette.halo))
-    }
-  }
-
-  return material
-}
-
 const RIBBON_VERTEX = /* glsl */ `
   #define PI  3.141592653589793
   #define TAU 6.283185307179586
@@ -359,3 +228,134 @@ const RIBBON_FRAGMENT = /* glsl */ `
     gl_FragColor = vec4(color, alpha);
   }
 `
+
+export const RibbonPass = {
+  BAND: 0,
+  GLOW: 1,
+} as const
+
+export type RibbonPassType = typeof RibbonPass[keyof typeof RibbonPass]
+
+export interface ArcaneRibbonSyncState {
+  base: Vector3
+  right: Vector3
+  forward: Vector3
+  height: number
+  strength: number
+  seed?: number
+  count?: number
+  palette?: {
+    core?: string | Color
+    inner?: string | Color
+    outer?: string | Color
+    halo?: string | Color
+  }
+}
+
+export function createArcaneRibbonMaterial(pass: RibbonPassType = RibbonPass.BAND): ShaderMaterial {
+  const glow = pass === RibbonPass.GLOW
+
+  const material = new ShaderMaterial({
+    defines: glow ? { RIBBON_GLOW: '' } : {},
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    blending: AdditiveBlending,
+    side: DoubleSide,
+    toneMapped: false,
+    uniforms: sharedUniforms({
+      uSeed: { value: 0 },
+      uStrength: { value: 0 },
+      uCount: { value: 7 },
+
+      uBase: { value: new Vector3() },
+      uRight: { value: new Vector3(1, 0, 0) },
+      uForward: { value: new Vector3(0, 0, 1) },
+      uHeight: { value: 1.8 },
+
+      uRadius: { value: 1.15 },
+      uRadiusVary: { value: 0.22 },
+      uDepth: { value: 1 },
+      uFlare: { value: 0.65 },
+      uLow: { value: -0.05 },
+      uHigh: { value: 1.15 },
+      uScatter: { value: 1.4 },
+
+      uTurns: { value: 1.15 },
+      uTurnVary: { value: 0.35 },
+      uSpin: { value: 0.28 },
+      uSpinVary: { value: 0.3 },
+      uCounter: { value: 0.25 },
+      uClimb: { value: 0.35 },
+
+      uWobble: { value: 0.16 },
+      uWobbleScale: { value: 2.2 },
+      uWave: { value: 0.18 },
+      uWaveScale: { value: 1.8 },
+      uCrawl: { value: 0.35 },
+
+      uRate: { value: 0.32 },
+      uLife: { value: 0.92 },
+
+      uWidth: { value: 0.42 },
+      uWidthScale: { value: glow ? 2.4 : 1 },
+      uWidthVary: { value: 0.4 },
+      uTaper: { value: 0.75 },
+      uBank: { value: 0.35 },
+
+      uFill: { value: 0.35 },
+      uFillFalloff: { value: 1.6 },
+      uEdge: { value: 0.9 },
+      uEdgeWidth: { value: 0.34 },
+      uGlowFalloff: { value: 2.2 },
+
+      uWisp: { value: 0.75 },
+      uWispScale: { value: 3.4 },
+      uWispCross: { value: 0.9 },
+      uWispSpeed: { value: 0.5 },
+      uWispSharp: { value: 1.4 },
+      uEndFade: { value: 0.22 },
+
+      uFlicker: { value: 0.12 },
+      uFlickerSpeed: { value: 9 },
+      uStrandFade: { value: 0.55 },
+      uPassOpacity: { value: glow ? 0.35 : 1 },
+      uOpacity: { value: 1 },
+      uGlow: { value: 2.2 },
+      uSoftFade: { value: 0.5 },
+
+      uColorCore: { value: new Color(1, 0.86, 1) },
+      uColorInner: { value: new Color(0.85, 0.35, 1) },
+      uColorOuter: { value: new Color(0.45, 0.09, 0.85) },
+      uColorHalo: { value: new Color(0.16, 0.02, 0.36) },
+    }),
+    vertexShader: RIBBON_VERTEX,
+    fragmentShader: RIBBON_FRAGMENT,
+  })
+
+  material.userData.sync = (state: ArcaneRibbonSyncState) => {
+    const u = material.uniforms
+    u.uBase.value.copy(state.base)
+    u.uRight.value.copy(state.right)
+    u.uForward.value.copy(state.forward)
+    u.uHeight.value = state.height
+    u.uStrength.value = state.strength
+    if (state.seed !== undefined)
+      u.uSeed.value = state.seed
+    if (state.count !== undefined)
+      u.uCount.value = state.count
+
+    if (state.palette) {
+      if (state.palette.core)
+        (u.uColorCore.value as Color).set(parseVfxColor(state.palette.core))
+      if (state.palette.inner)
+        (u.uColorInner.value as Color).set(parseVfxColor(state.palette.inner))
+      if (state.palette.outer)
+        (u.uColorOuter.value as Color).set(parseVfxColor(state.palette.outer))
+      if (state.palette.halo)
+        (u.uColorHalo.value as Color).set(parseVfxColor(state.palette.halo))
+    }
+  }
+
+  return material
+}

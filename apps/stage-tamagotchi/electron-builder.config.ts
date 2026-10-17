@@ -4,6 +4,7 @@ import type { Configuration } from 'electron-builder'
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -111,31 +112,28 @@ export default {
     buildResources: 'build',
   },
   afterPack: async (context) => {
-    const { execSync } = require('node:child_process')
-    const { existsSync } = require('node:fs')
-    const { join } = require('node:path')
-    console.log(`  • cleaning detritus for codesign: xattr -cr ${context.appOutDir}`)
+    console.info(`  • cleaning detritus for codesign: xattr -cr ${context.appOutDir}`)
     try {
       execSync(`xattr -cr "${context.appOutDir}"`)
       execSync(`find "${context.appOutDir}" -name ".DS_Store" -delete`)
 
       // Deep-sign nested StageMate helper apps and frameworks so electron-builder signs successfully
       const candidates = [
-        join(context.appOutDir, 'airi.app/Contents/Resources/StageMate/StageMate.app'),
-        join(context.appOutDir, 'AIRI.app/Contents/Resources/StageMate/StageMate.app'),
-        join(context.appOutDir, 'AIRI (dasilva333).app/Contents/Resources/StageMate/StageMate.app'),
+        path.join(context.appOutDir, 'airi.app/Contents/Resources/StageMate/StageMate.app'),
+        path.join(context.appOutDir, 'AIRI.app/Contents/Resources/StageMate/StageMate.app'),
+        path.join(context.appOutDir, 'AIRI (dasilva333).app/Contents/Resources/StageMate/StageMate.app'),
       ]
       for (const cand of candidates) {
-        if (existsSync(cand)) {
-          execSync(`rm -rf "${cand}/Build"`)
-          execSync(`xattr -cr "${cand}"`)
-          console.log(`  • deep signing nested StageMate bundle: ${cand}`)
-          execSync(`codesign --sign - --force --deep "${cand}"`)
+        if (fs.existsSync(cand)) {
+          execSync(`rm -rf ${JSON.stringify(`${cand}/Build`)}`)
+          execSync(`xattr -cr ${JSON.stringify(cand)}`)
+          console.info(`  • deep signing nested StageMate bundle: ${cand}`)
+          execSync(`codesign --sign - --force --deep ${JSON.stringify(cand)}`)
         }
       }
     }
     catch (e) {
-      console.warn(`  • warning: metadata cleanup failed: ${e.message}`)
+      console.warn(`  • warning: metadata cleanup failed: ${(e as Error).message}`)
     }
   },
   // // For self-publishing, testing, and distribution after modified the code without access to

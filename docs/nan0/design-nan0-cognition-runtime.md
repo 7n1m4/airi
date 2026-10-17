@@ -65,7 +65,7 @@ In production, Nan0's subconscious speech-act classification and emotional pertu
 ### 3.1 Sub-Navigation Segmented Layout: Playground-First Architecture
 To avoid overwhelming creators on a monolithic page while accelerating the "aha!" moment for novices, `CardCreationTabCognition.vue` positions the **Playground as the primary landing segment**, while delegating dedicated functionality across 5 modular subcomponents in `packages/stage-pages/src/pages/settings/airi-card/components/tabs/cognition/`:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │   [ 🧪 Playground  LAB ]   [ 🛣️ Routing ]   [ 💓 Affect ]   [ 🎯 Triggers ]   [ 🧠 Memory ]            │
 └────────────────────────────────────────────────────────────────────────────────────────────────────────┘
@@ -232,7 +232,7 @@ This diagnosis confirms: **no wheels need to be reinvented**. The research and f
 
 To maintain 100% test parity and avoid cross-system regressions, integration proceeds domain-by-domain inside `packages/nan0-runtime/` in complete isolation before wiring into the chat orchestrator. Each domain must have dedicated Vitest coverage verifying compliance before proceeding to the next.
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        ISOLATED DOMAIN PHASES                          │
 │                                                                        │

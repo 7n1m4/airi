@@ -166,10 +166,10 @@ let currentLoadId = 0
 const lastLoadedSrc = ref<string>('')
 
 // Expressions
+const modelStore = useModelStore()
 const blink = useBlink()
 const idleEyeSaccades = useIdleEyeSaccades(computed(() => modelStore.followSpeed))
 const vrmEmote = ref<ReturnType<typeof useVRMEmote>>()
-const modelStore = useModelStore()
 const vrmLipSync = useVRMLipSync(currentAudioSource)
 const vrmClothTug = useVRMClothInteraction()
 
@@ -213,6 +213,13 @@ let disposeBeforeRenderLoop: (() => void | undefined)
 const nprProgramVersion = ref(0)
 // For MToon IBL
 let airiIblProbe: ReturnType<typeof createIblProbeController> | null = null
+
+// Cache of loaded clips, keyed by URL, so switching idle/cycle animations does
+// not re-fetch the same VRMA file.
+const clipCache = new Map<string, AnimationClip>()
+let currentAction: AnimationAction | null = null
+// Flag to prevent double-advancing when multiple finished events arrive in one frame
+let cycleAdvancePending = false
 
 // clean the previous vrm model loaded
 function componentCleanUp(deepClean = false) {
@@ -264,9 +271,6 @@ function componentCleanUp(deepClean = false) {
     vrmGroup.value = undefined
   }
 }
-
-const clipCache = new Map<string, AnimationClip>()
-let currentAction: AnimationAction | null = null
 
 const customVrmAnimationsStore = useCustomVrmAnimationsStore()
 
@@ -417,9 +421,6 @@ async function playNextIdleCycleAnimation() {
     console.error('[VRMModel] Failed to play next cycle animation:', err)
   }
 }
-
-// Flag to prevent double-advancing when multiple finished events arrive in one frame
-let cycleAdvancePending = false
 
 function onAnimationFinished(e: any) {
   if (e.action !== currentAction)

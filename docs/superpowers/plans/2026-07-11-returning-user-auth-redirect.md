@@ -237,12 +237,16 @@ describe('returning user login entry', () => {
   it('starts one login after restoration confirms there is no session', async () => {
     const events: string[] = []
     const options = createOptions()
-    options.initializeAuth.mockImplementation(async () => { events.push('initialize') })
+    options.initializeAuth.mockImplementation(async () => {
+      events.push('initialize')
+    })
     options.isAuthenticated.mockImplementation(() => {
       events.push('check')
       return false
     })
-    options.requestLogin.mockImplementation(async () => { events.push('login') })
+    options.requestLogin.mockImplementation(async () => {
+      events.push('login')
+    })
 
     await expect(startReturningUserLoginIfNeeded(options)).resolves.toBe(true)
 
@@ -337,6 +341,7 @@ In `apps/stage-web/src/App.vue`:
 5. Immediately after the mount-start log, add:
 
 ```ts
+// Inside the existing `onMounted(async () => { ... })` callback, after the mount-start log
 const loginStarted = await startReturningUserLoginIfNeeded({
   needsOnboarding: onboardingStore.needsOnboarding,
   isAuthCallback: route.path === '/auth/callback',
@@ -345,8 +350,11 @@ const loginStarted = await startReturningUserLoginIfNeeded({
   requestLogin: () => authStore.requestLogin(),
   onError: error => console.error('[App] Failed to verify authentication:', error),
 })
+
 if (loginStarted)
   return
+
+const { characterReady, optionalReady } = startCharacterFirstInitialization()
 ```
 
 Keep the existing onboarding display and Stage initialization code after this block. Do not alter chat requests or `HeaderAvatar.vue`.

@@ -60,10 +60,20 @@ async function playChoiceSpeech(idx: number, text: string) {
   emit('choose', props.message.choices[idx], true)
 
   await playSpeech(text, voiceId, {
-    onLoading: () => { loadingIndex.value = idx },
-    onPlaying: () => { loadingIndex.value = null; activePlayingIndex.value = idx },
-    onDone: () => { activePlayingIndex.value = null },
-    onError: () => { loadingIndex.value = null; activePlayingIndex.value = null },
+    onLoading: () => {
+      loadingIndex.value = idx
+    },
+    onPlaying: () => {
+      loadingIndex.value = null
+      activePlayingIndex.value = idx
+    },
+    onDone: () => {
+      activePlayingIndex.value = null
+    },
+    onError: () => {
+      loadingIndex.value = null
+      activePlayingIndex.value = null
+    },
   })
 }
 

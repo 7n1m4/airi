@@ -90,7 +90,9 @@ export const useConsciousnessStore = defineStore('consciousness', () => {
     if (provider === 'apple-core-ai' && model && NativeAI.isNative()) {
       const isCached = await NativeAI.isModelCached(model)
       if (!isCached) {
-        console.log(`[Consciousness] Starting proactive background download for on-device model: ${model}`)
+        // NOTICE: `console.info` (not `console.log`) because eslint's no-console
+        // only allows warn/error/info.
+        console.info('[Consciousness] Starting proactive background download for on-device model:', model)
         NativeAI.downloadModel({ modelId: model, repo: model }).catch((err) => {
           console.warn('[Consciousness] Proactive Core AI background download failed:', err)
         })

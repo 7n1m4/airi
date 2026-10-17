@@ -1,5 +1,5 @@
 # AIRI Intimacy Engine & Dating Sim Specification (Refined)
-### 🌸 A Blueprint for a High-Fidelity, Two-Request Game Loop & State Machine
+## 🌸 A Blueprint for a High-Fidelity, Two-Request Game Loop & State Machine
 
 This specification establishes the architecture for the **Intimacy Engine** in AIRI. It replaces low-fidelity mock patterns with a clean, immersive, two-request pipeline driven by a background orchestrator (the Director/IC) and initialized by a setup agent (the Producer). It outlines the taxonomy, the interaction loops, and the setup sequence.
 
@@ -73,7 +73,7 @@ The user is presented with the following controls before starting:
 ### 3. The Producer's One-Time Initialization Prompt
 When the session is started, the **Producer** makes a one-time request to compile the initial scenario stage:
 
-```
+```text
 You are the Producer establishing a Dating Sim scene.
 Given the scenario prompt "${scenarioPrompt}" and the last ${X} turns of dialogue, generate:
 1. An initial inner thought/subtitle for the character setting the scene.
@@ -89,7 +89,7 @@ Once generated, the payload is pushed to the stage overlay. The game state is in
 
 Once the session is active, the engine operates on a strict **two-request turn limit** to preserve latency, token budgets, and narrative immersion.
 
-```
+```text
 [User Clicks Choice]
   └─ Title: "Ask about hobbies"
   └─ Text: "So, Asuka, what do you do when you aren't piloting anyway?"
@@ -171,7 +171,7 @@ The **Artistry tab** (or a new sibling **Intimacy tab**) in character card setti
 ### Implementation Pattern: Safe Prompt Injection
 The hardcoded Director/IC schema wrapper is always preserved. The user's prompt is injected as a variable:
 
-```
+```text
 [HARDCODED SCHEMA WRAPPER]
   The current intimacy scenario context is: "${userScenarioPrompt}"
   Current state - Intimacy: ${intimacy}/100, Tension: ${tension}/100

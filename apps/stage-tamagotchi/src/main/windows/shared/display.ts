@@ -171,17 +171,17 @@ export function ensureWindowInVisibleBounds(bounds: Rectangle): Rectangle {
 
   let width = bounds.width
   let height = bounds.height
-  if (!width || isNaN(width) || width <= 0)
+  if (!width || Number.isNaN(width) || width <= 0)
     width = 450
-  if (!height || isNaN(height) || height <= 0)
+  if (!height || Number.isNaN(height) || height <= 0)
     height = 600
 
   let x = bounds.x
   let y = bounds.y
-  if (x === undefined || x === null || isNaN(x)) {
+  if (x === undefined || x === null || Number.isNaN(x)) {
     x = Math.round(workArea.x + (workArea.width - width) / 2)
   }
-  if (y === undefined || y === null || isNaN(y)) {
+  if (y === undefined || y === null || Number.isNaN(y)) {
     y = Math.round(workArea.y + (workArea.height - height) / 2)
   }
 

@@ -38,9 +38,10 @@ Open [docs-sidebar.ts](file:///Users/richardpinedo/Projects.nosync/airi/airi_das
 
 For example, to place your new page under the **User Guides > Configuration** section:
 ```typescript
-{
+const sidebarEntry = {
   text: 'Your Page Link Text',
-  link: 'manual/config/your-new-page' // Match the relative path inside docs/content/en/docs/
+  // Match the relative path inside docs/content/en/docs/
+  link: 'manual/config/your-new-page',
 }
 ```
 

@@ -79,55 +79,63 @@ export function createNeedleClient(): NeedleClient {
     isPreparingInternal = true
     const requestId = createRequestId()
 
-    preparePromise = new Promise<boolean>((resolve) => {
-      let timeoutId: any
+    let resolvePrepare: (ok: boolean) => void = () => {}
+    let timeoutId: NodeJS.Timeout | undefined
 
-      const cleanup = () => {
-        if (timeoutId)
-          clearTimeout(timeoutId)
-        worker.removeEventListener('message', handler)
-        isPreparingInternal = false
-        preparePromise = null
-      }
-
-      const handler = (event: MessageEvent) => {
-        const data = event.data || {}
-        if (data.requestId !== requestId)
-          return
-
-        if (data.type === 'progress') {
-          if (typeof data.ratio === 'number') {
-            onProgress?.(data.ratio)
-          }
-        }
-        else if (data.type === 'ready') {
-          isInitialized = true
-          cleanup()
-          onProgress?.(1.0)
-          resolve(Boolean(data.ok))
-        }
-        else if (data.type === 'error') {
-          console.warn('[NeedleClient] Worker prepare error:', data.message)
-          // Fallback to ready state so pacing doesn't stall
-          isInitialized = true
-          cleanup()
-          resolve(false)
-        }
-      }
-
-      worker.addEventListener('message', handler)
-      worker.postMessage({ type: 'prepare', requestId })
-
-      // Safety timeout (e.g. 60s for download)
-      timeoutId = setTimeout(() => {
-        console.warn('[NeedleClient] Prepare timed out, marking fallback ready')
-        isInitialized = true
-        cleanup()
-        resolve(false)
-      }, 60000)
+    const promise = new Promise<boolean>((resolve) => {
+      resolvePrepare = resolve
     })
 
-    return preparePromise
+    // Keep a narrowed alias in scope for the closures below: TypeScript does not
+    // retain the `if (!worker) return` guard inside function declarations.
+    const workerRef = worker
+
+    function cleanup() {
+      clearTimeout(timeoutId)
+      workerRef.removeEventListener('message', handler)
+      isPreparingInternal = false
+      preparePromise = null
+    }
+
+    function handler(event: MessageEvent) {
+      const data = event.data || {}
+      if (data.requestId !== requestId)
+        return
+
+      if (data.type === 'progress') {
+        if (typeof data.ratio === 'number') {
+          onProgress?.(data.ratio)
+        }
+      }
+      else if (data.type === 'ready') {
+        isInitialized = true
+        cleanup()
+        onProgress?.(1.0)
+        resolvePrepare(Boolean(data.ok))
+      }
+      else if (data.type === 'error') {
+        console.warn('[NeedleClient] Worker prepare error:', data.message)
+        // Fallback to ready state so pacing doesn't stall
+        isInitialized = true
+        cleanup()
+        resolvePrepare(false)
+      }
+    }
+
+    // Safety timeout (e.g. 60s for download)
+    workerRef.addEventListener('message', handler)
+    timeoutId = setTimeout(() => {
+      console.warn('[NeedleClient] Prepare timed out, marking fallback ready')
+      isInitialized = true
+      cleanup()
+      resolvePrepare(false)
+    }, 60000)
+
+    workerRef.postMessage({ type: 'prepare', requestId })
+
+    preparePromise = promise
+
+    return promise
   }
 
   async function probeInitialReaction(userPrompt: string, budgetMs: number = 1200): Promise<string | null> {
@@ -148,38 +156,42 @@ export function createNeedleClient(): NeedleClient {
 
     const requestId = createRequestId()
 
-    return new Promise<string | null>((resolve) => {
-      let timeoutId: any
+    let resolveProbe: (value: string | null) => void = () => {}
+    let timeoutId: NodeJS.Timeout | undefined
 
-      const cleanup = () => {
-        if (timeoutId)
-          clearTimeout(timeoutId)
-        worker.removeEventListener('message', handler)
-      }
-
-      const handler = (event: MessageEvent) => {
-        const data = event.data || {}
-        if (data.requestId !== requestId)
-          return
-
-        if (data.type === 'response') {
-          cleanup()
-          resolve(data.text || null)
-        }
-        else if (data.type === 'error') {
-          cleanup()
-          resolve(null)
-        }
-      }
-
-      worker.addEventListener('message', handler)
-      worker.postMessage({ type: 'probe_initial_reaction', requestId, prompt: userPrompt })
-
-      timeoutId = setTimeout(() => {
-        cleanup()
-        resolve(null)
-      }, budgetMs)
+    const promise = new Promise<string | null>((resolve) => {
+      resolveProbe = resolve
     })
+
+    // Keep a narrowed alias in scope for the closures below: TypeScript does not
+    // retain the `if (!worker) return` guard inside function declarations.
+    const workerRef = worker
+
+    function cleanup() {
+      clearTimeout(timeoutId)
+      workerRef.removeEventListener('message', handler)
+    }
+
+    function handler(event: MessageEvent) {
+      const data = event.data || {}
+      if (data.requestId !== requestId)
+        return
+
+      if (data.type === 'response')
+        resolveProbe(data.text || null)
+      else if (data.type === 'error')
+        resolveProbe(null)
+    }
+
+    workerRef.addEventListener('message', handler)
+    timeoutId = setTimeout(() => {
+      cleanup()
+      resolveProbe(null)
+    }, budgetMs)
+
+    workerRef.postMessage({ type: 'probe_initial_reaction', requestId, prompt: userPrompt })
+
+    return promise
   }
 
   async function probeCotPivot(reasoningSnippet: string, budgetMs: number = 2000): Promise<string | null> {
@@ -193,38 +205,42 @@ export function createNeedleClient(): NeedleClient {
 
     const requestId = createRequestId()
 
-    return new Promise<string | null>((resolve) => {
-      let timeoutId: any
+    let resolveProbe: (value: string | null) => void = () => {}
+    let timeoutId: NodeJS.Timeout | undefined
 
-      const cleanup = () => {
-        if (timeoutId)
-          clearTimeout(timeoutId)
-        worker.removeEventListener('message', handler)
-      }
-
-      const handler = (event: MessageEvent) => {
-        const data = event.data || {}
-        if (data.requestId !== requestId)
-          return
-
-        if (data.type === 'response') {
-          cleanup()
-          resolve(data.text || null)
-        }
-        else if (data.type === 'error') {
-          cleanup()
-          resolve(null)
-        }
-      }
-
-      worker.addEventListener('message', handler)
-      worker.postMessage({ type: 'probe_cot_pivot', requestId, snippet: reasoningSnippet })
-
-      timeoutId = setTimeout(() => {
-        cleanup()
-        resolve(null)
-      }, budgetMs)
+    const promise = new Promise<string | null>((resolve) => {
+      resolveProbe = resolve
     })
+
+    // Keep a narrowed alias in scope for the closures below: TypeScript does not
+    // retain the `if (!worker) return` guard inside function declarations.
+    const workerRef = worker
+
+    function cleanup() {
+      clearTimeout(timeoutId)
+      workerRef.removeEventListener('message', handler)
+    }
+
+    function handler(event: MessageEvent) {
+      const data = event.data || {}
+      if (data.requestId !== requestId)
+        return
+
+      if (data.type === 'response')
+        resolveProbe(data.text || null)
+      else if (data.type === 'error')
+        resolveProbe(null)
+    }
+
+    workerRef.addEventListener('message', handler)
+    timeoutId = setTimeout(() => {
+      cleanup()
+      resolveProbe(null)
+    }, budgetMs)
+
+    workerRef.postMessage({ type: 'probe_cot_pivot', requestId, snippet: reasoningSnippet })
+
+    return promise
   }
 
   function terminate(): void {

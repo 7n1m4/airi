@@ -172,34 +172,6 @@ export const useMmd = defineStore('mmd', () => {
   const albedoGlow = useLocalStorageManualReset<number>('settings/mmd/albedo-glow', 0.45)
   const renderScale = useLocalStorageManualReset<number>('settings/mmd/render-scale', 1)
 
-  // Camera and Light aliases/computed proxies for nyueki UI compatibility:
-  const cameraFov = computed({
-    get: () => cameraFOV.value,
-    set: (v) => { cameraFOV.value = v },
-  })
-
-  const ambientColor = computed({
-    get: () => ambientLightColor.value,
-    set: (v) => { ambientLightColor.value = v },
-  })
-  const ambientIntensity = computed({
-    get: () => ambientLightIntensity.value,
-    set: (v) => { ambientLightIntensity.value = v },
-  })
-
-  const directionalColor = computed({
-    get: () => directionalLightColor.value,
-    set: (v) => { directionalLightColor.value = v },
-  })
-  const directionalIntensity = computed({
-    get: () => directionalLightIntensity.value,
-    set: (v) => { directionalLightIntensity.value = v },
-  })
-  const directionalPosition = computed({
-    get: () => directionalLightPosition.value,
-    set: (v) => { directionalLightPosition.value = v },
-  })
-
   const availableMotions = ref<string[]>([
     'brushoff_nice_and_tidy.vmd',
     'circulation.vmd',
@@ -244,6 +216,34 @@ export const useMmd = defineStore('mmd', () => {
 
   const ambientLightColor = useLocalStorageManualReset<string>('settings/mmd/scenes/scene/ambient-light/color', '#FFFFFF')
   const ambientLightIntensity = useLocalStorageManualReset<number>('settings/mmd/scenes/scene/ambient-light/intensity', 1.32)
+
+  // Camera and Light aliases/computed proxies for nyueki UI compatibility:
+  const cameraFov = computed({
+    get: () => cameraFOV.value,
+    set: (v) => { cameraFOV.value = v },
+  })
+
+  const ambientColor = computed({
+    get: () => ambientLightColor.value,
+    set: (v) => { ambientLightColor.value = v },
+  })
+  const ambientIntensity = computed({
+    get: () => ambientLightIntensity.value,
+    set: (v) => { ambientLightIntensity.value = v },
+  })
+
+  const directionalColor = computed({
+    get: () => directionalLightColor.value,
+    set: (v) => { directionalLightColor.value = v },
+  })
+  const directionalIntensity = computed({
+    get: () => directionalLightIntensity.value,
+    set: (v) => { directionalLightIntensity.value = v },
+  })
+  const directionalPosition = computed({
+    get: () => directionalLightPosition.value,
+    set: (v) => { directionalLightPosition.value = v },
+  })
 
   const envSelect = useLocalStorageManualReset<'hemisphere' | 'skyBox'>('settings/mmd/envEnabled', 'hemisphere')
   const skyBoxIntensity = useLocalStorageManualReset<number>('settings/mmd/skyBoxIntensity', 0.1)

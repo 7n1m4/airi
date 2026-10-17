@@ -451,10 +451,10 @@ function run() {
     }
   }
 
-  console.log(`✅ Edited ${edited} skill files, skipped ${skipped} (no authoritative docs to add).`)
+  console.info(`✅ Edited ${edited} skill files, skipped ${skipped} (no authoritative docs to add).`)
   if (danglingRemoved.length) {
-    console.log('🗑️  Removed dangling references:')
-    danglingRemoved.forEach(d => console.log(`   - ${d}`))
+    console.info('🗑️  Removed dangling references:')
+    danglingRemoved.forEach(d => console.info(`   - ${d}`))
   }
 }
 

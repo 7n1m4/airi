@@ -8,7 +8,7 @@ This proposal outlines the design, UI integration, and backend implementation fo
 
 Under the unified vision architecture, **any configured Vision Model** acts as a text generator driven by visual inputs. The system provides two routing strategies for this text:
 
-```
+```text
                   [User Image + Message]
                             │
                             ▼

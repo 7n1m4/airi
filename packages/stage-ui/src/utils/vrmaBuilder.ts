@@ -3,26 +3,26 @@ import * as THREE from 'three'
 // VRMA ファイル内に埋め込むレストポーズ骨格 (VRM1 規約: +Z 正面 / +X が左手側 / T ポーズ)
 // [親ボーン名, ローカル平行移動]
 export const SKELETON: Record<string, [string | null, [number, number, number]]> = {
-  hips:          [null,           [0,     0.9,  0]],
-  spine:         ['hips',         [0,     0.08, 0]],
-  chest:         ['spine',        [0,     0.12, 0]],
-  upperChest:    ['chest',        [0,     0.12, 0]],
-  neck:          ['upperChest',   [0,     0.13, 0]],
-  head:          ['neck',         [0,     0.08, 0]],
-  leftShoulder:  ['upperChest',   [0.03,  0.10, 0]],
-  leftUpperArm:  ['leftShoulder', [0.06,  0,    0]],
-  leftLowerArm:  ['leftUpperArm', [0.24,  0,    0]],
-  leftHand:      ['leftLowerArm', [0.22,  0,    0]],
-  rightShoulder: ['upperChest',   [-0.03, 0.10, 0]],
-  rightUpperArm: ['rightShoulder',[-0.06, 0,    0]],
-  rightLowerArm: ['rightUpperArm',[-0.24, 0,    0]],
-  rightHand:     ['rightLowerArm',[-0.22, 0,    0]],
-  leftUpperLeg:  ['hips',         [0.09,  -0.02, 0]],
-  leftLowerLeg:  ['leftUpperLeg', [0,     -0.38, 0]],
-  leftFoot:      ['leftLowerLeg', [0,     -0.42, 0]],
-  rightUpperLeg: ['hips',         [-0.09, -0.02, 0]],
-  rightLowerLeg: ['rightUpperLeg',[0,     -0.38, 0]],
-  rightFoot:     ['rightLowerLeg',[0,     -0.42, 0]],
+  hips: [null, [0, 0.9, 0]],
+  spine: ['hips', [0, 0.08, 0]],
+  chest: ['spine', [0, 0.12, 0]],
+  upperChest: ['chest', [0, 0.12, 0]],
+  neck: ['upperChest', [0, 0.13, 0]],
+  head: ['neck', [0, 0.08, 0]],
+  leftShoulder: ['upperChest', [0.03, 0.1, 0]],
+  leftUpperArm: ['leftShoulder', [0.06, 0, 0]],
+  leftLowerArm: ['leftUpperArm', [0.24, 0, 0]],
+  leftHand: ['leftLowerArm', [0.22, 0, 0]],
+  rightShoulder: ['upperChest', [-0.03, 0.1, 0]],
+  rightUpperArm: ['rightShoulder', [-0.06, 0, 0]],
+  rightLowerArm: ['rightUpperArm', [-0.24, 0, 0]],
+  rightHand: ['rightLowerArm', [-0.22, 0, 0]],
+  leftUpperLeg: ['hips', [0.09, -0.02, 0]],
+  leftLowerLeg: ['leftUpperLeg', [0, -0.38, 0]],
+  leftFoot: ['leftLowerLeg', [0, -0.42, 0]],
+  rightUpperLeg: ['hips', [-0.09, -0.02, 0]],
+  rightLowerLeg: ['rightUpperLeg', [0, -0.38, 0]],
+  rightFoot: ['rightLowerLeg', [0, -0.42, 0]],
 }
 
 // 指ボーン (人差し指〜小指 × 3関節)。LLM には公開せず、自然な手のポーズを自動で焼き込む用
@@ -42,7 +42,7 @@ for (const side of ['left', 'right']) {
 
 export const HIPS_HEIGHT = 0.9
 // LLM に公開する主要ボーン (指は含めない)
-export const BONE_NAMES = Object.keys(SKELETON).filter((n) => !/Proximal|Intermediate|Distal/.test(n))
+export const BONE_NAMES = Object.keys(SKELETON).filter(n => !/Proximal|Intermediate|Distal/.test(n))
 const ALL_BONES = Object.keys(SKELETON)
 
 // 自然な手: 指を軽く曲げるデフォルトポーズ (度)
@@ -50,10 +50,24 @@ const FINGER_CURL = { Proximal: 14, Intermediate: 17, Distal: 10 }
 
 // VRM 1.0 プリセット表情
 export const EXPRESSION_PRESETS = [
-  'happy', 'angry', 'sad', 'relaxed', 'surprised', 'neutral',
-  'aa', 'ih', 'ou', 'ee', 'oh',
-  'blink', 'blinkLeft', 'blinkRight',
-  'lookUp', 'lookDown', 'lookLeft', 'lookRight',
+  'happy',
+  'angry',
+  'sad',
+  'relaxed',
+  'surprised',
+  'neutral',
+  'aa',
+  'ih',
+  'ou',
+  'ee',
+  'oh',
+  'blink',
+  'blinkLeft',
+  'blinkRight',
+  'lookUp',
+  'lookDown',
+  'lookLeft',
+  'lookRight',
 ]
 
 const eulerQuat = (() => {
@@ -64,7 +78,7 @@ const eulerQuat = (() => {
       THREE.MathUtils.degToRad(deg[0]),
       THREE.MathUtils.degToRad(deg[1]),
       THREE.MathUtils.degToRad(deg[2]),
-      'XYZ'
+      'XYZ',
     )
     q.setFromEuler(e)
     return [q.x, q.y, q.z, q.w]
@@ -98,21 +112,25 @@ export function buildVRMA(spec: VRMAMotionSpec): ArrayBuffer {
     }
   }
 
-  const tracks = { ...(spec.tracks ?? {}) }
+  const tracks = { ...spec.tracks }
   const dur = spec.duration ?? 1
 
   // 肩の自動追従
   for (const side of ['left', 'right']) {
     const shoulderBone = `${side}Shoulder`
     const ua = tracks[`${side}UpperArm`]
-    if (!ua?.length || tracks[shoulderBone]) continue
+    if (!ua?.length || tracks[shoulderBone]) {
+      continue
+    }
     const raiseSign = side === 'left' ? 1 : -1
     const keys = ua.map((k) => {
       const raise = Math.max(0, raiseSign * k.r[2] - 55)
       const lift = Math.min(14, raise * 0.4)
       return { t: k.t, r: [0, 0, raiseSign * lift] }
     })
-    if (keys.some((k) => k.r[2] !== 0)) tracks[shoulderBone] = keys
+    if (keys.some(k => k.r[2] !== 0)) {
+      tracks[shoulderBone] = keys
+    }
   }
 
   for (const side of ['left', 'right']) {
@@ -156,12 +174,14 @@ export function buildVRMA(spec: VRMAMotionSpec): ArrayBuffer {
   const channels: any[] = []
 
   const trackEntries = Object.entries(tracks).filter(
-    ([bone]) => bone in SKELETON
+    ([bone]) => bone in SKELETON,
   )
   for (const [bone, keys] of trackEntries) {
-    if (!keys?.length) continue
+    if (!keys?.length) {
+      continue
+    }
     const sorted = [...keys].sort((a, b) => a.t - b.t)
-    const times = new Float32Array(sorted.map((k) => k.t))
+    const times = new Float32Array(sorted.map(k => k.t))
     const values = new Float32Array(sorted.length * 4)
     sorted.forEach((k, i) => values.set(eulerQuat(k.r), i * 4))
     const input = addAccessor(times, 'SCALAR', true)
@@ -175,10 +195,10 @@ export function buildVRMA(spec: VRMAMotionSpec): ArrayBuffer {
 
   if (spec.hips?.length) {
     const sorted = [...spec.hips].sort((a, b) => a.t - b.t)
-    const times = new Float32Array(sorted.map((k) => k.t))
+    const times = new Float32Array(sorted.map(k => k.t))
     const values = new Float32Array(sorted.length * 3)
     sorted.forEach((k, i) =>
-      values.set([k.p[0], HIPS_HEIGHT + k.p[1], k.p[2]], i * 3)
+      values.set([k.p[0], HIPS_HEIGHT + k.p[1], k.p[2]], i * 3),
     )
     const input = addAccessor(times, 'SCALAR', true)
     const output = addAccessor(values, 'VEC3', false)
@@ -191,15 +211,17 @@ export function buildVRMA(spec: VRMAMotionSpec): ArrayBuffer {
 
   const expressionsUsed: Record<string, { node: number }> = {}
   for (const [name, keys] of Object.entries(spec.expressions ?? {})) {
-    if (!EXPRESSION_PRESETS.includes(name) || !keys?.length) continue
+    if (!EXPRESSION_PRESETS.includes(name) || !keys?.length) {
+      continue
+    }
     const nodeIdx = nodes.length
     nodes.push({ name: `E_${name}`, translation: [0, 0, 0] })
     expressionsUsed[name] = { node: nodeIdx }
     const sorted = [...keys].sort((a, b) => a.t - b.t)
-    const times = new Float32Array(sorted.map((k) => k.t))
+    const times = new Float32Array(sorted.map(k => k.t))
     const values = new Float32Array(sorted.length * 3)
     sorted.forEach((k, i) =>
-      values.set([Math.max(0, Math.min(1, Number(k.w) || 0)), 0, 0], i * 3)
+      values.set([Math.max(0, Math.min(1, Number(k.w) || 0)), 0, 0], i * 3),
     )
     const input = addAccessor(times, 'SCALAR', true)
     const output = addAccessor(values, 'VEC3', false)
@@ -258,17 +280,25 @@ function packGLB(json: any, binParts: Float32Array[], binLength: number): ArrayB
   const u8 = new Uint8Array(buffer)
 
   let o = 0
-  dv.setUint32(o, 0x46546c67, true); o += 4 // 'glTF'
-  dv.setUint32(o, 2, true); o += 4
-  dv.setUint32(o, total, true); o += 4
+  dv.setUint32(o, 0x46546C67, true)
+  o += 4 // 'glTF'
+  dv.setUint32(o, 2, true)
+  o += 4
+  dv.setUint32(o, total, true)
+  o += 4
 
-  dv.setUint32(o, jsonChunkLen, true); o += 4
-  dv.setUint32(o, 0x4e4f534a, true); o += 4 // 'JSON'
-  u8.set(jsonBytes, o); o += jsonBytes.length
+  dv.setUint32(o, jsonChunkLen, true)
+  o += 4
+  dv.setUint32(o, 0x4E4F534A, true)
+  o += 4 // 'JSON'
+  u8.set(jsonBytes, o)
+  o += jsonBytes.length
   for (let i = 0; i < jsonPad; i++) u8[o++] = 0x20
 
-  dv.setUint32(o, binChunkLen, true); o += 4
-  dv.setUint32(o, 0x004e4942, true); o += 4 // 'BIN'
+  dv.setUint32(o, binChunkLen, true)
+  o += 4
+  dv.setUint32(o, 0x004E4942, true)
+  o += 4 // 'BIN'
   for (const part of binParts) {
     u8.set(new Uint8Array(part.buffer, part.byteOffset, part.byteLength), o)
     o += part.byteLength

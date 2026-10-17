@@ -8,7 +8,7 @@ This proposal details the design of an AI-driven, multi-character onboarding and
 
 Instead of mapping a single character from the catalog to a flat, static card, this wizard enables users to assemble a custom "World" containing one or more characters, configuring a personalized scenario that is synthesized by the LLM.
 
-```
+```text
 [Browse 36k Catalogue] ──> [Cast Selection (Step 1)] ──> [Roster Settings (Step 2)] ──> [Story Prompts (Step 3)] ──> [LLM Synthesis (Step 4)]
 ```
 
@@ -118,17 +118,18 @@ For multi-character cards, the actor configuration maps to two key namespaces wi
 Each actor receives a dedicated configuration block under the modules namespace to map their manifestation (model ID) and speech settings:
 
 ```typescript
-"extensions.airi.modules.[actor_key]": {
-  "description": string,             // Text description (e.g. "Gura's default shark outfit")
-  "prompt": string,                  // Visual generation prompt combining trigger and tags: trigger, (tags)
-  "isBase": boolean,                 // Set to true
-  "manifestation": {
-    "modelId": string                // The bound displayModelId (e.g. "display-model-...")
-  },
-  "speech": {
-    "provider": string,              // Bound voice provider
-    "model": string,                 // Bound speech model
-    "voice_id": string               // Bound voice profile ID
+interface ActorModule {
+  description: string // Text description (e.g. "Gura's default shark outfit")
+  prompt: string // Visual generation prompt combining trigger and tags: trigger, (tags)
+  isBase: boolean // Set to true
+
+  manifestation: {
+    modelId: string // The bound displayModelId (e.g. "display-model-...")
+  }
+  speech: {
+    provider: string // Bound voice provider
+    model: string // Bound speech model
+    voice_id: string // Bound voice profile ID
   }
 }
 ```
@@ -138,12 +139,13 @@ Each actor receives a dedicated configuration block under the modules namespace 
 The asset parameters are mirrored under the root `visual_assets` configuration to manage wardrobe assets:
 
 ```typescript
-"extensions.airi.visual_assets.[actor_key]": {
-  "description": string,             // Short visual summary of character clothing
-  "prompt": string,                  // Visual generation prompt combining trigger and tags: trigger, (tags)
-  "isBase": boolean,                 // Set to true
-  "manifestation": {
-    "modelId": string                // Bound displayModelId
+interface VisualAsset {
+  description: string // Short visual summary of character clothing
+  prompt: string // Visual generation prompt combining trigger and tags: trigger, (tags)
+  isBase: boolean // Set to true
+
+  manifestation: {
+    modelId: string // Bound displayModelId
   }
 }
 ```
@@ -228,8 +230,11 @@ With multi-character wizard cards each actor has its own **bound model file**, a
 `idleAnimations` is currently a flat array at the card root level. The wizard already populates `visual_assets.[actor_key].manifestation.modelId`, but there is no sibling field for the character's chosen idle animation keys. The fix requires adding a new optional field to the per-actor visual asset block:
 
 ```typescript
-// Proposed schema addition inside extensions.airi.visual_assets.[actor_key]
-"idleAnimations": string[]   // ordered list of motion keys to cycle when this actor is active
+interface VisualAsset {
+  // ... existing fields ...
+  // Proposed schema addition: ordered list of motion keys to cycle when this actor is active
+  idleAnimations?: string[]
+}
 ```
 
 This field would be read by the runtime to override the card-level idle loop whenever a specific actor's model is the active display model.
@@ -331,8 +336,8 @@ if (boundVoiceId) {
 **2. LLM schema** — Add `modelPromptSpeech` to the per-actor output schema in `systemMsg`:
 
 ```json
-"actor_key": {
-  ...
+// Per-actor key inside the LLM output schema, e.g. "hikari": { ... }
+{
   "modelPromptSpeech": "natural language TTS formatting instructions derived from UST config"
 }
 ```

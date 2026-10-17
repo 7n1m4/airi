@@ -20,6 +20,7 @@ import type { ServedDir } from './server.js'
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import puppeteer from 'puppeteer-core'
 
@@ -171,7 +172,9 @@ export class RwkvWebGpuBridge {
     if (!this.page || !this.bootInfo)
       throw new Error('call boot() before generate()')
     // Pass small args via a global to avoid a giant CDP-serialized arg list.
-    await this.page.evaluate((o) => { (window as any).__RWkvNextGen = o }, opts)
+    await this.page.evaluate((o) => {
+      (window as any).__RWkvNextGen = o
+    }, opts)
     const result = await this.page.evaluate(async (fnName) => {
       const g = (window as any)[fnName]
       if (!g)
@@ -202,7 +205,9 @@ export class RwkvWebGpuBridge {
   async makeState(spec: { name: string, texts: string[], appendTo?: string }): Promise<MakeStateResult> {
     if (!this.page || !this.bootInfo)
       throw new Error('call boot() before makeState()')
-    await this.page.evaluate((s) => { (window as any).__RWkvNextMakeState = s }, spec)
+    await this.page.evaluate((s) => {
+      (window as any).__RWkvNextMakeState = s
+    }, spec)
     const result = await this.page.evaluate(async () => {
       const g = (window as any).__rwkvMakeState
       if (!g)
@@ -223,7 +228,9 @@ export class RwkvWebGpuBridge {
   async resetStateChain(): Promise<void> {
     if (!this.page || !this.bootInfo)
       throw new Error('call boot() before resetStateChain()')
-    await this.page.evaluate(() => { (window as any).__rwkvResetState?.() })
+    await this.page.evaluate(() => {
+      ;(window as any).__rwkvResetState?.()
+    })
   }
 
   /** One turn's state delta: aggregate plus per-layer breakdown. */
@@ -239,7 +246,9 @@ export class RwkvWebGpuBridge {
   }>> {
     if (!this.page || !this.bootInfo)
       throw new Error('call boot() before measureStateDelta()')
-    await this.page.evaluate((t) => { (window as any).__RWkvNextTurns = t }, turns)
+    await this.page.evaluate((t) => {
+      (window as any).__RWkvNextTurns = t
+    }, turns)
     const result = await this.page.evaluate(async () => {
       const g = (window as any).__rwkvStateDelta
       if (!g)

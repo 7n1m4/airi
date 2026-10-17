@@ -216,7 +216,14 @@ function parseImportedCard(content: string) {
 
 const importError = ref('')
 const isWizardOpen = ref(false)
-const wizardCardData = ref<any>(null)
+const wizardCardData = ref<unknown>(null)
+
+const importedName = computed(() => {
+  const draftCard = draft.state.importedCardDraft as any
+  if (!draftCard)
+    return ''
+  return ('data' in draftCard ? draftCard.data?.name : draftCard?.name) || draftCard?.name || 'Imported Card'
+})
 
 async function handleCharaCardDownloaded(payload: { base64Data: string, filename: string, ext: string }) {
   try {
@@ -317,13 +324,6 @@ function handleWizardSubmitDraft(finalCard: any) {
   }
   toast.success(`Mounted custom card "${importedName.value}" to draft!`)
 }
-
-const importedName = computed(() => {
-  const draftCard = draft.state.importedCardDraft as any
-  if (!draftCard)
-    return ''
-  return ('data' in draftCard ? draftCard.data?.name : draftCard?.name) || draftCard?.name || 'Imported Card'
-})
 
 function clearImported() {
   applyPersonaToDraft({ source: 'preset', cardId: 'default', importedCardDraft: undefined })
@@ -849,6 +849,19 @@ function removeTag(tag: string) {
   syncCreatorDraft()
 }
 
+// NOTICE: `comma` is not a valid Vue key modifier, so commit on it manually here.
+function onTagInputKeydown(e: KeyboardEvent) {
+  if (e.key === 'Enter') {
+    e.preventDefault()
+    addTag()
+    return
+  }
+  if (e.key === ',') {
+    e.preventDefault()
+    addTag()
+  }
+}
+
 async function runBlipAutoTag() {
   if (!customAvatar.value) {
     toast.error('Please upload an avatar image first')
@@ -958,6 +971,26 @@ function selectProposal(id: string) {
   syncCreatorDraft()
 }
 
+// Pairing resolution
+const vesselName = computed(() => {
+  const id = draft.state.vesselDisplayModelId
+  if (!id)
+    return 'Hiyori (Live2D)'
+  if (id === 'preset-live2d-2')
+    return 'Hiyori (Live2D)'
+  if (id === 'preset-vrm-2')
+    return 'Seed Girl (VRM)'
+  if (id === 'preset-vrm-1')
+    return 'AvatarSample_A (VRM)'
+  const spotlight = SPOTLIGHT_MODELS.find(m => m.id === id)
+  if (spotlight)
+    return `${spotlight.name} (${spotlight.formatLabel || spotlight.format.toUpperCase()})`
+  const custom = displayModelsStore.displayModels.find(m => m.id === id)
+  if (custom)
+    return `${custom.name || custom.id} (Custom)`
+  return id
+})
+
 async function generateStoryIdeas() {
   isGeneratingStory.value = true
   try {
@@ -1027,26 +1060,6 @@ async function generateStoryIdeas() {
     isGeneratingStory.value = false
   }
 }
-
-// Pairing resolution
-const vesselName = computed(() => {
-  const id = draft.state.vesselDisplayModelId
-  if (!id)
-    return 'Hiyori (Live2D)'
-  if (id === 'preset-live2d-2')
-    return 'Hiyori (Live2D)'
-  if (id === 'preset-vrm-2')
-    return 'Seed Girl (VRM)'
-  if (id === 'preset-vrm-1')
-    return 'AvatarSample_A (VRM)'
-  const spotlight = SPOTLIGHT_MODELS.find(m => m.id === id)
-  if (spotlight)
-    return `${spotlight.name} (${spotlight.formatLabel || spotlight.format.toUpperCase()})`
-  const custom = displayModelsStore.displayModels.find(m => m.id === id)
-  if (custom)
-    return `${custom.name || custom.id} (Custom)`
-  return id
-})
 
 const vesselPreviewUrl = computed(() => {
   const id = draft.state.vesselDisplayModelId
@@ -1674,8 +1687,7 @@ onBeforeUnmount(() => {
                     type="text"
                     placeholder="+ Add tag..."
                     :class="['bg-transparent text-[11px] text-neutral-800 dark:text-neutral-200 outline-hidden min-w-[80px] flex-1 px-1']"
-                    @keydown.enter.prevent="addTag"
-                    @keydown.comma.prevent="addTag"
+                    @keydown="onTagInputKeydown"
                   >
                 </div>
               </div>
@@ -1995,8 +2007,7 @@ onBeforeUnmount(() => {
               </button>
             </div>
             <div class="relative z-10 flex-1 bg-white dark:bg-neutral-950">
-              <component
-                is="webview"
+              <webview
                 v-if="activeBrowserSource"
                 :src="activeBrowserSource.url"
                 class="h-full w-full"

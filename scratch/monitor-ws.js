@@ -7,7 +7,7 @@ const collectedLogs = []
 const collectedEvents = []
 
 ws.on('open', () => {
-  console.log('Connected to ws://localhost:3000')
+  console.info('Connected to ws://localhost:3000')
 })
 
 ws.on('message', (data) => {
@@ -20,11 +20,11 @@ ws.on('message', (data) => {
     }
     else if (packet.type === 'log') {
       collectedLogs.push(packet.data)
-      console.log(`Log received [Total: ${collectedLogs.length}]: ${packet.data.message}`)
+      console.info(`Log received [Total: ${collectedLogs.length}]: ${packet.data.message}`)
     }
     else if (packet.type === 'llm_event') {
       collectedEvents.push(packet.data)
-      console.log('LLM event received:', packet.data.name)
+      console.info('LLM event received:', packet.data.name)
     }
   }
   catch (err) {
@@ -40,14 +40,14 @@ ws.on('error', (err) => {
 setTimeout(() => {
   ws.close()
 
-  console.log('\n========================================')
-  console.log('--- CAPTURED TELEMETRY ---')
-  console.log(JSON.stringify(latestTelemetry, null, 2))
+  console.info('\n========================================')
+  console.info('--- CAPTURED TELEMETRY ---')
+  console.info(JSON.stringify(latestTelemetry, null, 2))
 
-  console.log('\n--- LAST 20 LOGS ---')
+  console.info('\n--- LAST 20 LOGS ---')
   const last20Logs = collectedLogs.slice(-20)
   last20Logs.forEach((log, idx) => {
-    console.log(`${idx + 1}. [${log.timestamp}] ${log.message}`)
+    console.info(`${idx + 1}. [${log.timestamp}] ${log.message}`)
   })
-  console.log('========================================')
+  console.info('========================================')
 }, 25000)

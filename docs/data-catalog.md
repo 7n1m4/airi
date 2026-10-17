@@ -1240,7 +1240,7 @@ These bypass the `storage` outbox and are reconciled by dedicated functions:
 
 ### Remote File Structure
 
-```
+```text
 db/{namespace}/{path}.json            (e.g. db/chat/index/local.json)
 assets/backgrounds/{id}.json
 assets/backgrounds/{id}.png
@@ -1279,7 +1279,7 @@ When the selective sync UI builds a "select by character" tree, it needs to walk
 
 This is the root of the tree — selecting a character filters everything below it.
 
-```
+```text
 charactersRepo (local:characters)                    → Character[].id
 airiCardStore  (local:airi-cards)                    → AiriCard.id matches characterId
 ```
@@ -1288,7 +1288,7 @@ airiCardStore  (local:airi-cards)                    → AiriCard.id matches cha
 
 ### 8.2 Character → Chat Sessions
 
-```
+```text
 characterId
   → local:chat/index/{userId}.characters[characterId].sessions[*]
     → local:chat/sessions/{sessionId}
@@ -1298,7 +1298,7 @@ characterId
 
 ### 8.3 Character → Memory (Short-Term, Text Journal, Echo Chips)
 
-```
+```text
 characterId
   → local:memory/short-term/{userId}[*].characterId === characterId
   → local:memory/text-journal/{userId}[*].characterId === characterId
@@ -1309,7 +1309,7 @@ characterId
 
 ### 8.4 Character → Lifetime Memory
 
-```
+```text
 characterId
   → local:memory/lifetime/{characterId}   (keyed by characterId)
 ```
@@ -1318,7 +1318,7 @@ characterId
 
 ### 8.5 Character → Display Model
 
-```
+```text
 airiCard.extensions.airi.modules.displayModelId
   → localforage display-model-{modelId}
   → OR localforage {modelId}   (URL-based models stored by raw ID)
@@ -1330,21 +1330,21 @@ airiCard.extensions.airi.modules.displayModelId
 
 ### 8.6 Character → Background Images
 
-```
+```text
 airiCard.extensions.airi.modules.activeBackgroundId
   → localforage bg-{backgroundId}
 ```
 
 Or via `visual_assets`:
 
-```
+```text
 airiCard.extensions.airi.visual_assets[*].manifestation.backgroundId
   → localforage bg-{backgroundId}
 ```
 
 And from the image journal:
 
-```
+```text
 airiCard.extensions.airi.imageJournal.selfie
   → BackgroundEntry[].characterId === characterId   (type: 'selfie')
 ```
@@ -1355,7 +1355,7 @@ airiCard.extensions.airi.imageJournal.selfie
 
 This is the chain you're most concerned about for selective sync. It requires multiple hops and a **provider-level label lookup**, but no model changes.
 
-```
+```text
 Step 1: character → card → speech config
   airiCard.extensions.airi.modules.speech.voice_id
     → VoiceProfile.id  (from localStorage: settings/speech/voice-profiles[])
@@ -1399,7 +1399,7 @@ This is all **derived at query time** — no stale references, no model migratio
 
 ### 8.8 Character → Visual Assets (Artistry-Generated)
 
-```
+```text
 airiCard.extensions.airi.visual_assets[*]
   → Each asset has a `manifestation` with optional:
     - modelId         → display-model-{modelId}
@@ -1411,7 +1411,7 @@ airiCard.extensions.airi.visual_assets[*]
 
 ### 8.9 Stickers → Character
 
-```
+```text
 stickerMetadata.characterId === characterId
   → localforage sticker-data-{stickerId}
 ```
@@ -1422,7 +1422,7 @@ stickerMetadata.characterId === characterId
 
 When a user selects a character in the selective sync UI, the runtime tree builder would walk these chains and pre-check these store categories:
 
-```
+```text
 ☐ Character "Asuka"
   ├── ☐ AIRI Card (local:airi-cards — always synced, small)
   ├── ☐ Chat Sessions (local:chat/sessions/* — filtered by characterId)

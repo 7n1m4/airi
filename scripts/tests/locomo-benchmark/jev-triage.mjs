@@ -41,7 +41,7 @@ export const JEV_TRIAGE_SCHEMA = {
  * Classifies question intent, temporal subtype, and search scope via TypeSafe Jev System-1.
  * @param {import('./jev-client.mjs').TypeSafeJevClient} jev
  * @param {string} question
- * @returns {Promise<{ category: number, choice: string, confidence: number, probabilities: object, temporalSubtype: string, searchScope: string, method: string }>}
+ * @returns {Promise<{ category: number, choice: string, confidence: number, probabilities: object, temporalSubtype: string, searchScope: string, method: string }>} The classification result — `category` (1=multi-hop, 2=temporal, 3=detective, 4=literal), plus the chosen label, confidence, temporal subtype, search scope, and the classification method used (`typesafe_jev_system1`, `laya_system1_onnx`, or `regex_fallback`).
  */
 export async function jevZeroShotTriage(jev, question) {
   try {
@@ -82,17 +82,17 @@ export async function jevZeroShotTriage(jev, question) {
     let tempSub = 'none'
     let scope = 'single_session'
 
-    if (/\b(how long|how many days|how many months|how many years)\b/i.test(question)) {
+    if (/\b(?:how long|how many days|how many months|how many years)\b/i.test(question)) {
       cat = 2
       choice = 'c2_temporal'
       tempSub = 'duration'
     }
-    else if (/\b(when|what time|what date|which (year|month|day))\b/i.test(question)) {
+    else if (/\b(?:when|what time|what date|which (?:year|month|day))\b/i.test(question)) {
       cat = 2
       choice = 'c2_temporal'
       tempSub = 'calendar_date'
     }
-    else if (/\b(how many|list of|all the|names of|which countries|which games|which books)\b/i.test(question)) {
+    else if (/\b(?:how many|list of|all the|names of|which countries|which games|which books)\b/i.test(question)) {
       cat = 1
       choice = 'c1_multihop'
       scope = 'multi_session'

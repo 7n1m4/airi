@@ -20,7 +20,7 @@
 
 Modern text-to-speech (TTS) in interactive virtual companion systems operates under two competing requirements that directly oppose each other:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                        THE STREAMING TTS TRILEMMA                                      │
 ├──────────────────────────────┬──────────────────────────────┬──────────────────────────┤
@@ -111,7 +111,7 @@ To recover full contextual prosody, an obvious solution is **Progressive Concate
 1. **Slice 1 (The Fast-Path)**: Synthesize the first short clause (3–6 words) immediately so TTFA remains low (< 500ms).
 2. **The Remainder Block**: While Slice 1 is playing, buffer all remaining LLM output. Once generation finishes (or reaches a large paragraph boundary), submit the entire remaining text as a single streaming request (`POST /audio/speech` with `streaming: true`).
 
-```
+```text
 LLM Output: ["Wait,", " I didn't mean to upset you.", " Can we talk about what happened earlier today?"]
                                    │
                                    ▼

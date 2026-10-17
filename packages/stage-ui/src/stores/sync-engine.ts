@@ -2159,7 +2159,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
                   try {
                     remoteVal = JSON.parse(readRes.content)
                   }
-                  catch (e) {}
+                  catch {}
                 }
 
                 conflictData.sessionDetails = {
@@ -2502,7 +2502,9 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
               if (!allowedSessionIds.has(sId)) {
                 let localVal = await storage.getItemRaw<any>(fullKey)
                 if (typeof localVal === 'string') {
-                  try { localVal = JSON.parse(localVal) }
+                  try {
+                    localVal = JSON.parse(localVal)
+                  }
                   catch {}
                 }
                 const charId = localVal?.meta?.characterId
@@ -2928,7 +2930,7 @@ export const useSyncEngineStore = defineStore('sync-engine', () => {
               try {
                 remoteVal = JSON.parse(readRes.content)
               }
-              catch (e) {}
+              catch {}
             }
             const localVal = await storage.getItemRaw<any>(item.key)
             let mergedVal: any = null

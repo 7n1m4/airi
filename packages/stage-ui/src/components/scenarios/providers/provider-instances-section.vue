@@ -93,12 +93,12 @@ function setPrimary(instanceId: string) {
         <div flex="~ row items-center gap-2.5" min-w-0 flex-1>
           <div
             :class="inst.isPrimary ? 'text-amber-500' : 'text-neutral-400'"
-            class="text-base shrink-0"
+            class="shrink-0 text-base"
           >
             <div :class="inst.isPrimary ? 'i-solar:star-bold' : 'i-solar:star-linear'" />
           </div>
 
-          <span class="truncate text-xs font-semibold text-neutral-700 dark:text-neutral-200">
+          <span class="truncate text-xs text-neutral-700 font-semibold dark:text-neutral-200">
             {{ inst.label || inst.id }}
           </span>
 
@@ -110,12 +110,12 @@ function setPrimary(instanceId: string) {
           </span>
         </div>
 
-        <div flex="~ row" items-center gap-1 shrink-0>
+        <div flex="~ row" shrink-0 items-center gap-1>
           <button
             v-if="!inst.isPrimary"
             type="button"
             title="Set as Primary"
-            class="rounded-lg p-1.5 text-xs text-neutral-400 transition-colors hover:bg-neutral-200/60 hover:text-amber-500 dark:hover:bg-neutral-750"
+            class="dark:hover:bg-neutral-750 rounded-lg p-1.5 text-xs text-neutral-400 transition-colors hover:bg-neutral-200/60 hover:text-amber-500"
             @click="setPrimary(inst.id)"
           >
             Set Primary
@@ -159,21 +159,21 @@ function setPrimary(instanceId: string) {
               v-model="newInstanceLabel"
               type="text"
               placeholder="e.g. Personal Key"
-              class="w-full border border-neutral-300 rounded-xl bg-white px-3.5 py-2 text-sm text-neutral-800 outline-none dark:border-neutral-700 dark:bg-neutral-800 focus:border-primary-500 dark:text-neutral-100"
+              class="w-full border border-neutral-300 rounded-xl bg-white px-3.5 py-2 text-sm text-neutral-800 outline-none dark:border-neutral-700 focus:border-primary-500 dark:bg-neutral-800 dark:text-neutral-100"
               @keyup.enter="handleConfirmAddInstance"
             >
 
             <div flex="~ row" justify-end gap-2 class="mt-2">
               <button
                 type="button"
-                class="rounded-xl px-4 py-2 text-xs text-neutral-600 font-medium transition-colors dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                class="rounded-xl px-4 py-2 text-xs text-neutral-600 font-medium transition-colors hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
                 @click="showAddModal = false"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                class="rounded-xl bg-primary-500 px-4 py-2 text-xs text-white font-semibold shadow-xs transition-all hover:bg-primary-600 active:scale-95"
+                class="shadow-xs rounded-xl bg-primary-500 px-4 py-2 text-xs text-white font-semibold transition-all active:scale-95 hover:bg-primary-600"
                 @click="handleConfirmAddInstance"
               >
                 Add Instance
@@ -190,7 +190,7 @@ function setPrimary(instanceId: string) {
         <DialogOverlay class="fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm data-[state=closed]:animate-fadeOut data-[state=open]:animate-fadeIn" />
         <DialogContent class="fixed left-1/2 top-1/2 z-[9999] max-w-md w-[92dvw] flex flex-col transform border border-neutral-200 rounded-2xl bg-white p-6 shadow-xl outline-none backdrop-blur-md -translate-x-1/2 -translate-y-1/2 data-[state=closed]:animate-contentHide data-[state=open]:animate-contentShow dark:border-neutral-800 dark:bg-neutral-900">
           <div class="mb-3 flex items-center justify-between">
-            <DialogTitle class="text-lg text-red-600 font-bold dark:text-red-400 flex items-center gap-2">
+            <DialogTitle class="flex items-center gap-2 text-lg text-red-600 font-bold dark:text-red-400">
               <div class="i-solar:danger-triangle-bold-duotone text-xl" />
               Delete Instance
             </DialogTitle>
@@ -210,14 +210,14 @@ function setPrimary(instanceId: string) {
             <div flex="~ row" justify-end gap-2 class="mt-2">
               <button
                 type="button"
-                class="rounded-xl px-4 py-2 text-xs text-neutral-600 font-medium transition-colors dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800"
+                class="rounded-xl px-4 py-2 text-xs text-neutral-600 font-medium transition-colors hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
                 @click="instanceToDelete = null"
               >
                 Cancel
               </button>
               <button
                 type="button"
-                class="rounded-xl bg-red-600 px-4 py-2 text-xs text-white font-semibold shadow-xs transition-all hover:bg-red-700 active:scale-95"
+                class="shadow-xs rounded-xl bg-red-600 px-4 py-2 text-xs text-white font-semibold transition-all active:scale-95 hover:bg-red-700"
                 @click="handleConfirmRemove"
               >
                 Delete Instance

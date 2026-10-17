@@ -202,19 +202,19 @@ async function prepareNeedleAssets(
   return true
 }
 
-self.onmessage = async (event: MessageEvent) => {
+globalThis.onmessage = async (event: MessageEvent) => {
   const { type, requestId, prompt, snippet } = event.data || {}
 
   switch (type) {
     case 'prepare': {
       try {
         const ok = await prepareNeedleAssets((ratio, message) => {
-          self.postMessage({ type: 'progress', requestId, ratio, message })
+          globalThis.postMessage({ type: 'progress', requestId, ratio, message })
         })
-        self.postMessage({ type: 'ready', requestId, ok })
+        globalThis.postMessage({ type: 'ready', requestId, ok })
       }
       catch (err: any) {
-        self.postMessage({ type: 'error', requestId, message: err?.message || 'Preparation failed' })
+        globalThis.postMessage({ type: 'error', requestId, message: err?.message || 'Preparation failed' })
       }
       break
     }
@@ -222,10 +222,10 @@ self.onmessage = async (event: MessageEvent) => {
     case 'probe_initial_reaction': {
       try {
         const reaction = extractInitialReactionFallback(prompt || '')
-        self.postMessage({ type: 'response', requestId, text: reaction })
+        globalThis.postMessage({ type: 'response', requestId, text: reaction })
       }
       catch (err: any) {
-        self.postMessage({ type: 'error', requestId, message: err?.message || 'Probe failed' })
+        globalThis.postMessage({ type: 'error', requestId, message: err?.message || 'Probe failed' })
       }
       break
     }
@@ -233,16 +233,16 @@ self.onmessage = async (event: MessageEvent) => {
     case 'probe_cot_pivot': {
       try {
         const pivot = extractCotPivotFallback(snippet || '')
-        self.postMessage({ type: 'response', requestId, text: pivot })
+        globalThis.postMessage({ type: 'response', requestId, text: pivot })
       }
       catch (err: any) {
-        self.postMessage({ type: 'error', requestId, message: err?.message || 'Pivot extraction failed' })
+        globalThis.postMessage({ type: 'error', requestId, message: err?.message || 'Pivot extraction failed' })
       }
       break
     }
 
     case 'ping': {
-      self.postMessage({ type: 'pong', requestId, isInitialized })
+      globalThis.postMessage({ type: 'pong', requestId, isInitialized })
       break
     }
 

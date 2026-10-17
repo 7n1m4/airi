@@ -12,6 +12,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
@@ -72,10 +73,10 @@ for (let i = 0; i < qas.length; i++) {
   }
 }
 
-console.log(`================================================================`)
-console.log(`DeepSeek Flash Monolithic Batch Isolation Test`)
-console.log(`Total Escalated Questions: ${items.length}`)
-console.log(`================================================================\n`)
+console.info(`================================================================`)
+console.info(`DeepSeek Flash Monolithic Batch Isolation Test`)
+console.info(`Total Escalated Questions: ${items.length}`)
+console.info(`================================================================\n`)
 
 const systemPrompt = `You are a concise factual reading assistant.
 Answer each item independently. Ground personal facts strictly in the provided dialogue evidence; use general knowledge only to interpret or deduce unstated implications.
@@ -123,8 +124,8 @@ if (!apiKey) {
   process.exit(1)
 }
 
-console.log(`[Monolithic] Dispatching ALL ${items.length} questions in ONE single HTTP request...`)
-console.log(`[Monolithic] Payload user content length: ${JSON.stringify(itemMap).length} characters (~${Math.round(JSON.stringify(itemMap).length / 3.8)} tokens)`)
+console.info(`[Monolithic] Dispatching ALL ${items.length} questions in ONE single HTTP request...`)
+console.info(`[Monolithic] Payload user content length: ${JSON.stringify(itemMap).length} characters (~${Math.round(JSON.stringify(itemMap).length / 3.8)} tokens)`)
 
 const t0 = performance.now()
 const sessionId = `locomo-mono-${Date.now()}`
@@ -149,12 +150,12 @@ try {
   }
 
   const data = await res.json()
-  console.log(`[Monolithic] Request completed in ${durationSec}s!`)
-  console.log(`[Monolithic] Finish Reason:`, data.choices?.[0]?.finish_reason)
-  console.log(`[Monolithic] Usage Telemetry:`, data.usage || '(no usage reported by gateway)')
+  console.info(`[Monolithic] Request completed in ${durationSec}s!`)
+  console.info(`[Monolithic] Finish Reason:`, data.choices?.[0]?.finish_reason)
+  console.info(`[Monolithic] Usage Telemetry:`, data.usage || '(no usage reported by gateway)')
 
   const contentStr = data.choices?.[0]?.message?.content || ''
-  console.log(`[Monolithic] Response length: ${contentStr.length} characters`)
+  console.info(`[Monolithic] Response length: ${contentStr.length} characters`)
 
   let parsed = {}
   try {
@@ -164,7 +165,7 @@ try {
     console.warn(`[Monolithic] Direct JSON.parse failed due to token truncation (${e.message}). Extracting completed answer blocks via regex...`)
     const rawOutPath = path.join(ROOT, 'reports/memory-lab/deepseek-mono-raw-output.json')
     fs.writeFileSync(rawOutPath, contentStr)
-    console.log(`[Monolithic] Saved raw truncated output to ${rawOutPath}`)
+    console.info(`[Monolithic] Saved raw truncated output to ${rawOutPath}`)
 
     // Extract every completed "<id>": { ... } block
     const answersObj = {}
@@ -181,7 +182,7 @@ try {
 
   const answers = parsed.answers || parsed
   const returnedIds = Object.keys(answers)
-  console.log(`[Monolithic] Parsed completed answers count: ${returnedIds.length} / ${items.length}`)
+  console.info(`[Monolithic] Parsed completed answers count: ${returnedIds.length} / ${items.length}`)
 
   // Evaluate Accuracy of Monolithic batch vs Pass 9 chunked batch
   let monoUpstreamF1Sum = 0
@@ -240,26 +241,30 @@ try {
 
   const avgMonoUpstreamF1 = (monoUpstreamF1Sum / items.length) * 100
   const avgChunkedUpstreamF1 = (pass9UpstreamF1Sum / items.length) * 100
+  const avgMonoTokenF1 = (monoTokenF1Sum / items.length) * 100
+  const avgPass9TokenF1 = (pass9TokenF1Sum / items.length) * 100
 
-  console.log(`\n================================================================`)
-  console.log(`ISOLATED BATCH EXPERIMENT RESULTS (121 Questions)`)
-  console.log(`================================================================`)
-  console.log(`HTTP Requests Sent:      1 (Monolithic) vs 13 (Chunked)`)
-  console.log(`Total Wall-Clock Time:   ${durationSec}s (Monolithic) vs 182.18s (Chunked)`)
-  console.log(`Speedup Factor:          ${(182.18 / Number.parseFloat(durationSec)).toFixed(1)}x faster!`)
-  console.log(`Questions Resolved:      ${answeredCount} answered, ${insufficientCount} insufficient, ${missingCount} missing`)
-  console.log(`Monolithic Upstream F1:  ${avgMonoUpstreamF1.toFixed(2)}%`)
-  console.log(`Chunked Upstream F1:     ${avgChunkedUpstreamF1.toFixed(2)}%`)
-  console.log(`Upstream F1 Delta:       ${(avgMonoUpstreamF1 - avgChunkedUpstreamF1) >= 0 ? '+' : ''}${(avgMonoUpstreamF1 - avgChunkedUpstreamF1).toFixed(2)}%`)
-  console.log(`================================================================\n`)
+  console.info(`\n================================================================`)
+  console.info(`ISOLATED BATCH EXPERIMENT RESULTS (121 Questions)`)
+  console.info(`================================================================`)
+  console.info(`HTTP Requests Sent:      1 (Monolithic) vs 13 (Chunked)`)
+  console.info(`Total Wall-Clock Time:   ${durationSec}s (Monolithic) vs 182.18s (Chunked)`)
+  console.info(`Speedup Factor:          ${(182.18 / Number.parseFloat(durationSec)).toFixed(1)}x faster!`)
+  console.info(`Questions Resolved:      ${answeredCount} answered, ${insufficientCount} insufficient, ${missingCount} missing`)
+  console.info(`Monolithic Upstream F1:  ${avgMonoUpstreamF1.toFixed(2)}%`)
+  console.info(`Chunked Upstream F1:     ${avgChunkedUpstreamF1.toFixed(2)}%`)
+  console.info(`Upstream F1 Delta:       ${(avgMonoUpstreamF1 - avgChunkedUpstreamF1) >= 0 ? '+' : ''}${(avgMonoUpstreamF1 - avgChunkedUpstreamF1).toFixed(2)}%`)
+  console.info(`Monolithic Token F1:     ${avgMonoTokenF1.toFixed(2)}%`)
+  console.info(`Chunked Token F1:        ${avgPass9TokenF1.toFixed(2)}%`)
+  console.info(`================================================================\n`)
 
   if (monoDiffs.length > 0) {
-    console.log(`Sample Question Differences (Monolithic vs Chunked):`)
+    console.info(`Sample Question Differences (Monolithic vs Chunked):`)
     monoDiffs.slice(0, 10).forEach((d) => {
-      console.log(`- [${d.id} | C${d.cat}] (${d.delta >= 0 ? '+' : ''}${d.delta}) "${d.question}"`)
-      console.log(`    Gold:    "${d.gold}"`)
-      console.log(`    Chunked: "${d.chunkedPred}" (F1: ${d.chunkedF1})`)
-      console.log(`    Mono:    "${d.monoPred}" (F1: ${d.monoF1})`)
+      console.info(`- [${d.id} | C${d.cat}] (${d.delta >= 0 ? '+' : ''}${d.delta}) "${d.question}"`)
+      console.info(`    Gold:    "${d.gold}"`)
+      console.info(`    Chunked: "${d.chunkedPred}" (F1: ${d.chunkedF1})`)
+      console.info(`    Mono:    "${d.monoPred}" (F1: ${d.monoF1})`)
     })
   }
 
@@ -275,15 +280,17 @@ try {
       insufficientCount,
       missingCount,
       avgUpstreamF1: avgMonoUpstreamF1,
+      avgTokenF1: avgMonoTokenF1,
     },
     chunked: {
       durationSec: 182.18,
       requests: 13,
       avgUpstreamF1: avgChunkedUpstreamF1,
+      avgTokenF1: avgPass9TokenF1,
     },
     diffs: monoDiffs,
   }, null, 2))
-  console.log(`Saved detailed experiment log to ${reportPath}`)
+  console.info(`Saved detailed experiment log to ${reportPath}`)
 }
 catch (err) {
   console.error(`[Monolithic] Execution failed:`, err)

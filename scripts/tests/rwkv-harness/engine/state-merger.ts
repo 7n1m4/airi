@@ -20,6 +20,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
@@ -58,7 +59,7 @@ export async function fetchTensorBinary(url: string): Promise<ArrayBuffer> {
     throw new Error(`Failed to fetch tensor asset ${url} -> HTTP ${response.status}`)
 
   const arrayBuffer = await response.arrayBuffer()
-  fs.writeFileSync(cachedFilePath, Buffer.from(arrayBuffer))
+  fs.writeFileSync(cachedFilePath, new Uint8Array(arrayBuffer))
   console.info(`[RWKV-Cache] Saved tensor binary to local disk cache: ${cachedFilePath} (${(arrayBuffer.byteLength / 1024 / 1024).toFixed(2)} MB)`)
   return arrayBuffer
 }
@@ -214,7 +215,7 @@ export function buildEvidenceWindow(windowMessages: WindowMessage[], charName: s
 }
 
 /** Production instruction block (echo-chips.ts lines 256–271), verbatim. */
-export function buildEchoChipsPrompt(evidenceWindow: string, charName: string): string {
+export function buildEchoChipsPrompt(evidenceWindow: string, _charName: string): string {
   return `
 Extract 3-5 semantic Echo Chips from the following raw conversation evidence window.
 These are for a character memory-stream; avoid clinical labels and generic chatter.
@@ -240,7 +241,7 @@ Output a JSON object with a "pills" array.
  * `{"pills":[{"content":"` (Lever A) before completion-mode generation.
  * NOT the production prompt — a deliberate, labeled relaxation for the 0.1B.
  */
-export function buildEchoChipsPromptADB(evidenceWindow: string, charName: string): string {
+export function buildEchoChipsPromptADB(evidenceWindow: string, _charName: string): string {
   return `
 Extract 3-5 semantic Echo Chips from the following raw conversation evidence window.
 These are for a character memory-stream; avoid clinical labels and generic chatter.

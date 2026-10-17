@@ -28,21 +28,25 @@ Instructs the backend to generate a new item and attach it to a specific avatar 
 *   **Arguments**:
     ```json
     {
-      "attachTo": "wrist" | "head" | "waist" | "ankle",
+      "attachTo": "wrist",
       "prompt": "description of the 3D item to generate"
     }
     ```
+
+    `attachTo` is one of `"wrist"`, `"head"`, `"waist"`, or `"ankle"`.
 
 ### B. `decompose_stage_scene` (Environment Level — Fire3D)
 Takes a source image (camera capture, wallpaper, or generated background) and reconstructs interactive 3D stage props.
 *   **Arguments**:
     ```json
     {
-      "imageSource": "active_background" | "webcam_snapshot" | "custom_url",
+      "imageSource": "active_background",
       "targetObjects": ["chair", "desk", "coffee_cup", "lamp"],
       "enablePhysicsColliders": true
     }
     ```
+
+    `imageSource` is one of `"active_background"`, `"webcam_snapshot"`, or `"custom_url"`.
 
 ### C. `list_stage_items`
 Queries all historically generated items and decomposed scene meshes in the inventory.
@@ -72,7 +76,7 @@ Equips a previously generated item from the inventory.
 
 ## ⚙️ 3. Backend Pipeline & ComfyUI / Fire3D Integration
 
-```
+```text
 [ LLM Tool Invocation ]
         │
         ├──► create_stage_item (TRELLIS Workflow) ──► Single .glb ──► Bone Socket Mounting

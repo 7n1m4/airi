@@ -15,7 +15,7 @@ AIRI includes a dedicated **AI Producer Subsystem**—a secondary intelligence l
 
 While your primary LLM generates character responses, the AI Producer analyzes the conversational flow in the background:
 
-```
+```text
 [ Conversation History ] ──► [ AI Producer Intelligence ]
                                        │
         ┌──────────────────────────────┴──────────────────────────────┐

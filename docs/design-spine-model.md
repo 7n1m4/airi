@@ -8,7 +8,7 @@ This document serves as the canonical technical reference for 2D Spine character
 
 AIRI's Spine subsystem provides high-performance WebGL rendering for esoteric software Spine assets (binary `.skel` and `.json`), multi-outfit variant switching, tactile physics interactions, and LLM-driven expression/motion orchestration.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                              AIRI Spine System                              │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -29,7 +29,7 @@ Spine characters are packaged as single canonical ZIP archives (e.g. `Butter.zip
 
 ### Directory Structure
 
-```
+```text
 /CharacterName.zip
 ├── Basic Civvies/               <-- Variant Subdirectory 1 (Outfit)
 │   ├── Character.skel           <-- Skeleton binary / JSON
@@ -192,7 +192,7 @@ The interaction engine in `Model.vue` supports dual hit-detection modes configur
 
 The Spine interaction engine processes gestures using dedicated gesture state machines bound to target bones:
 
-```
+```text
                           Pointer Down / Touch
                                    │
                ┌───────────────────┴───────────────────┐
@@ -242,7 +242,7 @@ The Spine interaction engine processes gestures using dedicated gesture state ma
 
 The AI actor interacts with the 3D Spine model exclusively via `<|ACT: ...|>` tokens generated during dialogue. `ModelCustomizer` categorizes and exposes Spine features into two distinct tabs:
 
-```
+```text
                                  ModelCustomizer
                                         │
            ┌────────────────────────────┴────────────────────────────┐

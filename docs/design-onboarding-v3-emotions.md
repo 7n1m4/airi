@@ -7,7 +7,7 @@
 In virtual companion design, facial expressions and body language are frequently treated as disconnected afterthoughts—either through naive sentiment classifiers that randomly trigger stock animations, or periodic background blinking.
 
 In AIRI, physical manifestation is governed by the **inline ACT token system**:
-```
+```text
 <|ACT:emotion="happy"|>
 <|ACT:motion="wave"|>
 <|ACT:vfx="fire"|>
@@ -75,7 +75,7 @@ flowchart TD
 
 ## 3. UI Component Architecture & Catalog of Controls
 
-```
+```text
 packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/steps/
 └── step-emotions.vue
 ```
@@ -89,16 +89,16 @@ packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/steps/
 
 ### 3.2 Interactive Emotion Soundboard & Stage Audition
 A responsive grid of mood cards with emoji anchors and live click-to-audition triggers:
-| Mood Preset | Emoji | Default Token Slug | Visual / Expressive Impact |
-| :--- | :---: | :--- | :--- |
-| **Joy / Happy** | 😊 | `<|ACT:emotion="happy"|>` | Cheerful smile, wide radiant eyes |
-| **Sorrow / Sad** | 😢 | `<|ACT:emotion="sad"|>` | Drooped eyebrows, downward mouth |
-| **Surprise** | 😲 | `<|ACT:emotion="surprised"|>` | Widened pupils, raised eyebrows, open mouth |
-| **Anger / Pout** | 😠 | `<|ACT:emotion="angry"|>` | Furrowed brow, pouty lips |
-| **Thinking** | 🤔 | `<|ACT:emotion="think"|> ` | Looking upward, contemplative tilt |
-| **Cool / Smug** | 😎 | `<|ACT:emotion="cool"|>` | Smug half-smile, confident stance |
-| **Blush / Shy** | 😳 | `<|ACT:emotion="blush"|>` | Rosy cheek overlay, bashful glance |
-| **Relaxed** | 😴 | `<|ACT:emotion="relaxed"|>` | Gentle neutral resting expression |
+||| ||| Mood Preset ||| Emoji ||| Default Token Slug ||| Visual / Expressive Impact |
+||| :--- ||| :---: ||| :--- ||| :--- |
+||| **Joy / Happy** ||| 😊 ||| `<|ACT:emotion="happy"|>` ||| Cheerful smile, wide radiant eyes |
+||| **Sorrow / Sad** ||| 😢 ||| `<|ACT:emotion="sad"|>` ||| Drooped eyebrows, downward mouth |
+||| **Surprise** ||| 😲 ||| `<|ACT:emotion="surprised"|>` ||| Widened pupils, raised eyebrows, open mouth |
+||| **Anger / Pout** ||| 😠 ||| `<|ACT:emotion="angry"|>` ||| Furrowed brow, pouty lips |
+||| **Thinking** ||| 🤔 ||| `<|ACT:emotion="think"|>` ||| Looking upward, contemplative tilt |
+||| **Cool / Smug** ||| 😎 ||| `<|ACT:emotion="cool"|>` ||| Smug half-smile, confident stance |
+||| **Blush / Shy** ||| 😳 ||| `<|ACT:emotion="blush"|>` ||| Rosy cheek overlay, bashful glance |
+||| **Relaxed** ||| 😴 ||| `<|ACT:emotion="relaxed"|>` ||| Gentle neutral resting expression |
 
 - **Live Stage Audition**: Clicking any card calls `previewOnStage(modelFormat, rawKey)`, triggering the actual 3D VRM or 2D Live2D facial morph on the active stage.
 

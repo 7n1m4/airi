@@ -9,5 +9,4 @@ export * from './utils/vrm-preview'
 export * from './vfx'
 
 // Utils
-// @ts-ignore
 export { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'

@@ -31,6 +31,14 @@ providersStore.initializeProvider(providerId)
 
 const providerMetadata = computed(() => providersStore.getProviderMetadata(providerId))
 
+// UI Playground State
+const fileInput = ref<HTMLInputElement | null>(null)
+const isModelLoaded = ref(false)
+const loadingModel = ref(false)
+const processingImage = ref(false)
+const modelLoadProgress = ref(0)
+const errorMessage = ref('')
+
 const selectedModel = computed({
   get: () => providers.value[providerId]?.model ?? DEFAULT_LOCAL_VISION_MODEL,
   set: (value) => {
@@ -42,14 +50,6 @@ const selectedModel = computed({
     modelLoadProgress.value = 0
   },
 })
-
-// UI Playground State
-const fileInput = ref<HTMLInputElement | null>(null)
-const isModelLoaded = ref(false)
-const loadingModel = ref(false)
-const processingImage = ref(false)
-const modelLoadProgress = ref(0)
-const errorMessage = ref('')
 
 const testImageFile = ref<File | null>(null)
 const testImageUrl = ref<string | null>(null)

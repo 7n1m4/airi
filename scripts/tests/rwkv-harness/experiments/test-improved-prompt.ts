@@ -4,6 +4,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import puppeteer from 'puppeteer-core'
 
@@ -129,23 +130,23 @@ async function main() {
 
   try {
     for (const m of models) {
-      console.log(`Testing with Detailed Prompt: ${m.name}...`)
+      console.info(`Testing with Detailed Prompt: ${m.name}...`)
       try {
         const text = await query(m.p, m.model, m.temp ?? 0.7)
-        console.log(`  ✓ Received ${text.length} chars`)
+        console.info(`  ✓ Received ${text.length} chars`)
         const js = extractJs(text)
         const outcome = await renderer.render({ code: js, size: CANVAS_SIZE, settleMs: 2500, timeoutMs: 30000 })
         if (outcome.dataUrl && !outcome.blank) {
           const p = path.join(outDir, m.file)
           renderer.savePng(p, outcome.dataUrl)
-          console.log(`  ✓ SUCCESS -> Saved ${m.file} (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors})`)
+          console.info(`  ✓ SUCCESS -> Saved ${m.file} (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors})`)
         }
         else {
-          console.log(`  ✗ Blank/Error: ${outcome.error || outcome.sketchError}`)
+          console.info(`  ✗ Blank/Error: ${outcome.error || outcome.sketchError}`)
         }
       }
       catch (e: any) {
-        console.log(`  ✗ Error: ${e.message}`)
+        console.info(`  ✗ Error: ${e.message}`)
       }
     }
   }

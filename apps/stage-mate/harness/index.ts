@@ -2,6 +2,7 @@ import type { WebSocket } from 'ws'
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 import readline from 'node:readline'
 
 import { fileURLToPath } from 'node:url'
@@ -199,7 +200,7 @@ function logEvent(msg: string) {
   const now = new Date().toTimeString().split(' ')[0]
   lastEvent = `[${now}] ${msg}`
   if (!process.stdout.isTTY) {
-    console.log(`[harness ${now}] ${msg}`)
+    console.info(`[harness ${now}] ${msg}`)
   }
   else {
     render()

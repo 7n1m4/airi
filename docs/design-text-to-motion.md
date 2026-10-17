@@ -30,7 +30,7 @@ Motion generation in AIRI enables conversational AI agents to dynamically expres
 
 In `packages/stage-pages/src/pages/settings/providers.vue`, a new **Motion** tab is added to the top-level provider navigation strip:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │ [ Chat ]  [ Speech ]  [ Transcription ]  [ Artistry ]  [ Vision ]  [ Motion ]  [ Cloud ] │
 └────────────────────────────────────────────────────────────────────────────────────────┘
@@ -38,7 +38,7 @@ In `packages/stage-pages/src/pages/settings/providers.vue`, a new **Motion** tab
 
 Under the **Motion** tab, **FlowMDM (Local WebGPU)** is registered as the single ML model provider entry:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │  FlowMDM (Local WebGPU)                                              [ Active / Select ]│
 │  On-device 3D motion diffusion using CLIP text encoding + ONNX WebGPU.                  │
@@ -52,7 +52,7 @@ Under the **Motion** tab, **FlowMDM (Local WebGPU)** is registered as the single
 
 Under `Settings > Modules`, a new **Text to Motion** module configuration section allows users to define how motion tool calls are fulfilled:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │ ⚙️ Text to Motion Module                                                                │
 │ Configure how avatar motion requests from the generate_motion tool call are processed. │
@@ -67,7 +67,7 @@ Under `Settings > Modules`, a new **Text to Motion** module configuration sectio
 #### Custom LLM Provider & Model Overrides
 When the user switches **Motion Engine** to **Custom LLM**, two secondary dropdowns appear:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │ ⚙️ Text to Motion Module                                                                │
 │                                                                                        │
@@ -96,7 +96,7 @@ Under **Model Cache**, the Motion modality registers the dual-model pipeline:
 - **`CLIP Text Encoder (Xenova/clip-vit-base-patch32)`** — `~340 MB` — Status: `Cached` / `Not cached`
 - **`FlowMDM Motion Denoiser (ONNX WebGPU)`** — `86.8 MB` — Status: `Cached` / `Not cached`
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │ Model Cache                                                                 1.9 GB      │
 │ Downloaded inference models stored in browser cache                                    │
@@ -124,7 +124,7 @@ Under **Model Cache**, the Motion modality registers the dual-model pipeline:
 
 Under `Settings > Providers > Motion`, an interactive testing utility allows users to verify motion generation and export files without triggering a chat session:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │ 🧪 Motion Provider Playground                                                           │
 │ Test text-to-motion generation and download generated animation files.                │
@@ -247,7 +247,7 @@ To ensure open-source maintainability and reproducibility, all Python scripts us
 
 To balance immediate on-device speed, zero external dependencies, and future cinematic motion fidelity, AIRI adopts a **Three-Tier Motion Hierarchy**:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                                 AIRI MOTION TIERS                                      │
 ├────────────────────────────────────────────────────────────────────────────────────────┤

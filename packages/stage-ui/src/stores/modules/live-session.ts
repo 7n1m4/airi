@@ -103,6 +103,20 @@ export const useLiveSessionStore = defineStore('live-session', () => {
     }
   })
 
+  // Streaming State for hooking into the Chat Orchestrator's TTS
+  let currentStreamingMessage: StreamingAssistantMessage | null = null
+  let currentStreamContext: ChatStreamEventContext | null = null
+  let currentCategoriser: ReturnType<typeof createStreamingCategorizer> | null = null
+  let currentMarkerParser: ReturnType<typeof useLlmmarkerParser> | null = null
+  let streamPosition = 0
+
+  // Rate limiter: counts tool-call invocations within the current turn chain.
+  // Resets on every new user utterance (voice or text).
+  let toolCallCounter = 0
+
+  // Cached resolved tools for the active session (resolved on connect, used for execution)
+  let resolvedToolRegistry: Tool[] = []
+
   /**
    * Executes a single tool call from the Gemini Bidi stream.
    * Handles rate limiting, tool registry lookup, execution, and WebSocket response.
@@ -245,20 +259,6 @@ export const useLiveSessionStore = defineStore('live-session', () => {
 
     return true
   }
-
-  // Streaming State for hooking into the Chat Orchestrator's TTS
-  let currentStreamingMessage: StreamingAssistantMessage | null = null
-  let currentStreamContext: ChatStreamEventContext | null = null
-  let currentCategoriser: ReturnType<typeof createStreamingCategorizer> | null = null
-  let currentMarkerParser: ReturnType<typeof useLlmmarkerParser> | null = null
-  let streamPosition = 0
-
-  // Rate limiter: counts tool-call invocations within the current turn chain.
-  // Resets on every new user utterance (voice or text).
-  let toolCallCounter = 0
-
-  // Cached resolved tools for the active session (resolved on connect, used for execution)
-  let resolvedToolRegistry: Tool[] = []
 
   function getApiKey(): string {
     const creds = providersStore.getProviderConfig('google-generative-ai')
@@ -635,7 +635,7 @@ export const useLiveSessionStore = defineStore('live-session', () => {
           }
 
           tokenDetails.value = usage.responseTokensDetails ?? []
-          console.debug(
+          debug(
             `[LiveSession] usageMetadata: delta=+${delta}, voiceTokens=${voiceTokens.value}, inferenceTokens=${inferenceTokens.value}, totalTokens=${totalTokens.value}`,
             tokenDetails.value,
           )
@@ -873,7 +873,7 @@ export const useLiveSessionStore = defineStore('live-session', () => {
         postUsageTelemetry(payload)
       }
       catch {}
-      console.log('[LiveSession:Usage] Inference tokens recorded:', payload)
+      debug('[LiveSession:Usage] Inference tokens recorded:', payload)
       // Sanitize the persisted operand too: a previously-tainted localStorage value
       // (a string from an old session) must not turn this addition into concatenation.
       inferenceTokens.value = sanitizeTokenCount(inferenceTokens.value) + payload.total

@@ -228,7 +228,7 @@ In `packages/stage-pages/src/pages/settings/index.vue`:
 
 ### 6.2 Component Specification: `SettingsUpdateBanner.vue`
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │  ✨  You are on version 0.9.17. Latest version v0.9.32 is available.                   │
 │      [ Download on GitHub ↗ ]    [ (i) View Release Notes ▾ ]                      [ ✕ ] │

@@ -34,7 +34,7 @@ const tools = [
     name: 'mcp_list_tools',
     description: 'Discovery: List all tools available on the connected MCP servers. Use this first to see what capabilities are available.',
     execute: async () => {
-      console.log('[mcp_list_tools] 🔍 Discovery initiated...')
+      console.info('[mcp_list_tools] 🔍 Discovery initiated...')
       try {
         const bridge = tryGetMcpToolBridge()
         if (!bridge) {
@@ -47,7 +47,7 @@ const tools = [
         const names = tools.map(t => t.name)
         const servers = [...new Set(tools.map(t => t.serverName))]
 
-        console.log('[mcp_list_tools] ✅ Discovery complete. Found:', {
+        console.info('[mcp_list_tools] ✅ Discovery complete. Found:', {
           total: tools.length,
           servers,
           tools: names,
@@ -70,11 +70,11 @@ const tools = [
     name: 'mcp_call_tool',
     description: 'Execution: Call a specific tool on an MCP server. Requires a qualified name in "server::tool" format (found via mcp_list_tools).',
     execute: async ({ name, parameters }) => {
-      console.log(`[mcp_call_tool] 🚀 Calling tool "${name}"...`, { parameters })
+      console.info(`[mcp_call_tool] 🚀 Calling tool "${name}"...`, { parameters })
 
       // FORGIVENESS: If the model gets confused and tries to "call" the listing tool, redirect it.
       if (name === 'mcp_list_tools') {
-        console.log('[mcp_call_tool] 💡 FORGIVENESS: Redirecting list request to discovery bridge...')
+        console.info('[mcp_call_tool] 💡 FORGIVENESS: Redirecting list request to discovery bridge...')
         try {
           const bridge = tryGetMcpToolBridge()
           if (!bridge) {
@@ -112,14 +112,14 @@ const tools = [
 
         const parametersObject = Object.fromEntries(parameters.map(({ name, value }) => [name, value]))
 
-        console.log(`[mcp_call_tool] 🌉 Bridge found, executing "${name}"...`)
+        console.info(`[mcp_call_tool] 🌉 Bridge found, executing "${name}"...`)
 
         const result = await bridge.callTool({
           name,
           arguments: parametersObject,
         })
 
-        console.log(`[mcp_call_tool] ✅ Result for "${name}":`, result)
+        console.info(`[mcp_call_tool] ✅ Result for "${name}":`, result)
         return result satisfies {
           content?: Record<string, unknown>[]
           isError?: boolean

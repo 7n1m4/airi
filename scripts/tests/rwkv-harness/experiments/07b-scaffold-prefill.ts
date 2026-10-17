@@ -8,6 +8,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { CANVAS_SIZE, P5_BRUSH_API_REFERENCE } from '../engine/canvas-prompts.js'
 import { CanvasRenderer } from '../engine/canvas-renderer.js'
@@ -39,10 +40,10 @@ ${SCAFFOLD_SETUP_HEADER}`
 }
 
 async function main() {
-  console.log('=== RWKV Cleanroom Harness: Phase 7b Scaffold-Prefill Experiment ===\n')
+  console.info('=== RWKV Cleanroom Harness: Phase 7b Scaffold-Prefill Experiment ===\n')
 
   const modelPath = await ensureModelCached(PHASE7_MODEL_URL_1_5B)
-  console.log(`✓ Model ready: ${modelPath}\n`)
+  console.info(`✓ Model ready: ${modelPath}\n`)
 
   const scenes = [
     { id: 'peach-hibiscus', prompt: 'peach hibiscus with soft petals' },
@@ -56,20 +57,20 @@ async function main() {
   fs.mkdirSync(runDir, { recursive: true })
 
   try {
-    await bridge.boot(m => console.log(`[engine] ${m}`))
-    console.log(`✓ Engine booted: state_len=${bridge.info.stateLen}\n`)
+    await bridge.boot(m => console.info(`[engine] ${m}`))
+    console.info(`✓ Engine booted: state_len=${bridge.info.stateLen}\n`)
 
     const renderer = new CanvasRenderer(await bridge.newPage())
     await renderer.open(bridge.baseUrl)
-    console.log('✓ Renderer tab ready\n')
+    console.info('✓ Renderer tab ready\n')
 
     const results: Array<Record<string, unknown>> = []
 
     for (let i = 0; i < scenes.length; i++) {
       const sc = scenes[i]
-      console.log(`\n======================================================`)
-      console.log(`[Scene ${i + 1}/${scenes.length}] "${sc.prompt}" (id: ${sc.id})`)
-      console.log(`======================================================`)
+      console.info(`\n======================================================`)
+      console.info(`[Scene ${i + 1}/${scenes.length}] "${sc.prompt}" (id: ${sc.id})`)
+      console.info(`======================================================`)
 
       const sceneDir = path.join(runDir, `${String(i + 1).padStart(2, '0')}-${sc.id}`)
       fs.mkdirSync(sceneDir, { recursive: true })
@@ -77,7 +78,7 @@ async function main() {
       const prompt = buildScaffoldCompletionPrefix(sc.prompt)
       const tg0 = Date.now()
 
-      console.log('  Generating code with scaffold prefill (temp=0.75, maxTokens=1200)...')
+      console.info('  Generating code with scaffold prefill (temp=0.75, maxTokens=1200)...')
       const genResult = await bridge.generateCode({
         prompt,
         maxTokens: 1200,
@@ -88,7 +89,7 @@ async function main() {
         stopSeqs: ['\n```\n', '```\n', '\n```', '```'],
       })
       const genMs = Date.now() - tg0
-      console.log(`  ✓ Generated ${genResult.completionTokens} tok in ${(genMs / 1000).toFixed(1)}s (${(genResult.completionTokens / (genMs / 1000)).toFixed(1)} tok/s)`)
+      console.info(`  ✓ Generated ${genResult.completionTokens} tok in ${(genMs / 1000).toFixed(1)}s (${(genResult.completionTokens / (genMs / 1000)).toFixed(1)} tok/s)`)
       fs.writeFileSync(path.join(sceneDir, 'raw-output.txt'), genResult.raw)
 
       // Reassemble the complete runnable sketch
@@ -107,10 +108,10 @@ async function main() {
       const repairedSketch = repairTruncatedProgram(assembledCode) || assembledCode
 
       fs.writeFileSync(path.join(sceneDir, 'sketch.js'), repairedSketch)
-      console.log(`  ✓ Assembled sketch (${repairedSketch.length} chars)`)
+      console.info(`  ✓ Assembled sketch (${repairedSketch.length} chars)`)
 
       // Render sketch in canvas harness
-      console.log('  Rendering on WebGL canvas...')
+      console.info('  Rendering on WebGL canvas...')
       let outcome
       try {
         outcome = await renderer.render({
@@ -130,11 +131,11 @@ async function main() {
       if (outcome.dataUrl) {
         const pngPath = path.join(sceneDir, 'render.png')
         renderer.savePng(pngPath, outcome.dataUrl)
-        console.log(`  ✓ Render output: ok=${outcome.ok}, blank=${outcome.blank}, ink=${(outcome.inkCoverage * 100).toFixed(1)}%, colors=${outcome.uniqueColors}, structureScore=${outcome.structureScore?.toFixed(3) ?? 'N/A'}`)
-        console.log(`  → Saved PNG: ${pngPath}`)
+        console.info(`  ✓ Render output: ok=${outcome.ok}, blank=${outcome.blank}, ink=${(outcome.inkCoverage * 100).toFixed(1)}%, colors=${outcome.uniqueColors}, structureScore=${outcome.structureScore?.toFixed(3) ?? 'N/A'}`)
+        console.info(`  → Saved PNG: ${pngPath}`)
       }
       else {
-        console.log(`  ✗ Canvas rendered blank or errored: ${outcome.error || outcome.sketchError}`)
+        console.info(`  ✗ Canvas rendered blank or errored: ${outcome.error || outcome.sketchError}`)
       }
 
       results.push({
@@ -153,10 +154,10 @@ async function main() {
 
     const reportPath = path.join(runDir, 'summary-report.json')
     fs.writeFileSync(reportPath, JSON.stringify({ meta: { runDir, stamp }, results }, null, 2))
-    console.log(`\n======================================================`)
-    console.log(`✓ Phase 7b Scaffold-Prefill Experiment Complete!`)
-    console.log(`  Report: ${reportPath}`)
-    console.log(`======================================================\n`)
+    console.info(`\n======================================================`)
+    console.info(`✓ Phase 7b Scaffold-Prefill Experiment Complete!`)
+    console.info(`  Report: ${reportPath}`)
+    console.info(`======================================================\n`)
   }
   finally {
     await bridge.dispose()

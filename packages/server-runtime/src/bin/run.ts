@@ -1,11 +1,11 @@
 #!/usr/bin/env tsx
 
-import { env, exit } from 'node:process'
+import process from 'node:process'
 
 import { createServer } from '../server'
 
 const server = createServer({
-  port: env.PORT ? Number.parseInt(env.PORT) : 6121,
+  port: process.env.PORT ? Number.parseInt(process.env.PORT) : 6121,
 })
 
 let stopping = false
@@ -15,7 +15,7 @@ async function shutdown() {
     return
   stopping = true
   await server.stop()
-  exit(0)
+  process.exit(0)
 }
 
 process.on('SIGINT', shutdown)

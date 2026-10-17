@@ -18,6 +18,9 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
+
+import { Buffer } from 'node:buffer'
 
 import { dialog } from 'electron'
 
@@ -277,7 +280,7 @@ export function ensureLevelDBIntegrityOrHalt(userDataPath: string): boolean {
           const repair = attemptWalRepair(rawBuf, result.lastValidOffset)
 
           if (repair.repaired && repair.repairedBuf) {
-            console.log(
+            console.info(
               `[LevelDBGuard] Auto-repair succeeded using strategy '${repair.strategy}'! `
               + `Preserved ${repair.totalRecords} records in ${logFile}. `
               + `Forensic snapshot saved to ${diagDir}. Continuing startup safely.`,
@@ -327,7 +330,7 @@ export function ensureLevelDBIntegrityOrHalt(userDataPath: string): boolean {
       }
     }
 
-    console.log('[LevelDBGuard] IndexedDB LevelDB integrity verified (clean).')
+    console.info('[LevelDBGuard] IndexedDB LevelDB integrity verified (clean).')
     return true
   }
   catch (err) {

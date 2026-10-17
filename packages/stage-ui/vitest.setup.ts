@@ -1,4 +1,6 @@
 // Setup file for stage-ui vitest unit test execution
+import { setSSRHandler } from '@vueuse/core'
+import { JSDOM } from 'jsdom'
 
 if (typeof window === 'undefined') {
   (globalThis as any).window = globalThis
@@ -79,11 +81,7 @@ if (needsStorageMock) {
   }
 }
 
-try {
-  const { setSSRHandler } = await import('@vueuse/core')
-  setSSRHandler('getDefaultStorage', () => globalThis.localStorage)
-}
-catch {}
+setSSRHandler('getDefaultStorage', () => globalThis.localStorage)
 
 if (!globalThis.sessionStorage) {
   const storage = createStorageMock()
@@ -115,13 +113,9 @@ if (!globalThis.window.location) {
 
 // DOMParser polyfill for XML parsing in Node test runner
 if (typeof (globalThis as any).DOMParser === 'undefined') {
-  try {
-    const { JSDOM } = await import('jsdom')
-    const dom = new JSDOM()
-    ;(globalThis as any).DOMParser = dom.window.DOMParser
-    if (globalThis.window) {
-      ;(globalThis.window as any).DOMParser = dom.window.DOMParser
-    }
+  const dom = new JSDOM()
+  ;(globalThis as any).DOMParser = dom.window.DOMParser
+  if (globalThis.window) {
+    ;(globalThis.window as any).DOMParser = dom.window.DOMParser
   }
-  catch {}
 }

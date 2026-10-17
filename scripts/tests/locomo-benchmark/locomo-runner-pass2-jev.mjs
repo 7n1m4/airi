@@ -9,6 +9,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
@@ -17,15 +18,15 @@ import { Laya } from '@receptron/laya'
 import { AnswerHead } from './answer-head.mjs'
 import { DualSearcher } from './dual-searcher.mjs'
 import { HybridSearcher } from './hybrid-searcher.mjs'
-import { TypeSafeJevClient } from './jev-client.mjs'
 import { layaRerankCandidates } from './laya-rerank.mjs'
-import { heuristicRegexTriage, layaZeroShotTriage } from './laya-triage.mjs'
+import { layaZeroShotTriage } from './laya-triage.mjs'
 import { LocomoMemoryIndex } from './locomo-index.mjs'
 import { aggregateBenchmarkResults, computeBleu1, computeTokenF1 } from './locomo-metrics.mjs'
 import { NeedleNode } from './needle-node.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
+const ROOT = path.resolve(__dirname, '../../..')
 // Load .env if present
 if (fs.existsSync(path.join(ROOT, '.env'))) {
   const envContent = fs.readFileSync(path.join(ROOT, '.env'), 'utf8')
@@ -45,32 +46,32 @@ const LEDGER_JEV_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv
 const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-jev-report.md')
 const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-jev-trace.json')
 
-console.log('================================================================')
-console.log('LoCoMo conv-47 Pass 2B: TypeSafe Jev Benchmark Shootout')
-console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Laya vs Jev')
-console.log('================================================================\n')
+console.info('================================================================')
+console.info('LoCoMo conv-47 Pass 2B: TypeSafe Jev Benchmark Shootout')
+console.info('31 Sessions | 689 Turns | 150 Questions | Baseline vs Laya vs Jev')
+console.info('================================================================\n')
 
 // 1. Load Dataset
-console.log('Loading conv-47 dataset...')
+console.info('Loading conv-47 dataset...')
 const convData = JSON.parse(fs.readFileSync(DATASET_PATH, 'utf-8'))
 const qas = convData.qa.filter(q => q.category >= 1 && q.category <= 4)
-console.log(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
+console.info(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
 
 // 2. Initialize Models
-console.log('Initializing TypeSafe Jev Cloud Client...')
-const jev = new TypeSafeJevClient(JEV_API_KEY)
+console.info('Initializing TypeSafe Jev Cloud Client...')
+console.info(`  API key configured: ${JEV_API_KEY ? 'yes' : 'no'} (ledger ingest is local-only in this pass)`)
 
-console.log('Loading Needle 2 WASM module on CPU...')
+console.info('Loading Needle 2 WASM module on CPU...')
 const needle = await NeedleNode.load()
 
-console.log('Loading Laya ONNX module on CPU...')
+console.info('Loading Laya ONNX module on CPU...')
 const laya = await Laya.load({ executionProviders: ['cpu'] })
 
 // 3. Ingest / Build Jev Entity Ledger
-console.log('\nBuilding TypeSafe Jev Entity Ledger...')
+console.info('\nBuilding TypeSafe Jev Entity Ledger...')
 let jevLedger
 if (fs.existsSync(LEDGER_JEV_PATH)) {
-  console.log(`Loading cached Jev ledger from ${LEDGER_JEV_PATH}...`)
+  console.info(`Loading cached Jev ledger from ${LEDGER_JEV_PATH}...`)
   jevLedger = (await import('./entity-ledger.mjs')).EntityLedger.fromJSON(JSON.parse(fs.readFileSync(LEDGER_JEV_PATH, 'utf8')))
 }
 else {
@@ -83,7 +84,7 @@ else {
   const stamfordEnt = jevLedger.entities.get('ent_Stamford_93') || Array.from(jevLedger.entities.values()).find(e => e.label === 'Stamford')
   if (stamfordEnt) {
     stamfordEnt.type = 'place'
-    console.log('[JevLedger] Corrected Stamford type -> place (100% confidence)')
+    console.info('[JevLedger] Corrected Stamford type -> place (100% confidence)')
   }
 
   // Add gaming claims
@@ -99,11 +100,11 @@ else {
     object: 'Apex Legends',
     evidence: ['D4:16'],
   })
-  console.log('[JevLedger] Added game preference claims for John (CS:GO) and James (Apex Legends)')
+  console.info('[JevLedger] Added game preference claims for John (CS:GO) and James (Apex Legends)')
 
   // Save Jev ledger
   fs.writeFileSync(LEDGER_JEV_PATH, JSON.stringify(jevLedger.toJSON(), null, 2))
-  console.log(`Saved Jev ledger to ${LEDGER_JEV_PATH}`)
+  console.info(`Saved Jev ledger to ${LEDGER_JEV_PATH}`)
 }
 
 // 4. Load LocomoMemoryIndex & Hybrid Searcher
@@ -118,7 +119,7 @@ const dualSearcher = new DualSearcher(jevLedger, hybridSearcher)
 const answerHead = new AnswerHead(needle)
 
 // 6. Run 150-Question Shootout
-console.log('\nBeginning 150-question shootout across all arms...')
+console.info('\nBeginning 150-question shootout across all arms...')
 const shootoutT0 = performance.now()
 
 const baselineResults = []
@@ -138,7 +139,6 @@ for (let i = 0; i < qas.length; i++) {
   const queryVector = questionEmbeddings[q.question] || null
 
   // --- ARM 1: Baseline (Regex + BM25) ---
-  const regexTriage = heuristicRegexTriage(q.question)
   const rawHits = index.searchBM25(q.question, 15)
   const baselineTop3 = rawHits.slice(0, 3)
   const baselineRecall = LocomoMemoryIndex.evaluateEvidenceRecall(baselineTop3, goldEvidence)
@@ -159,7 +159,7 @@ for (let i = 0; i < qas.length; i++) {
   let p1Category = 4
   if (rawLayaTriage.confidence >= 0.04)
     p1Category = rawLayaTriage.category
-  else if (/\b(when|what time|what date|how long|which (year|month|day))\b/i.test(q.question))
+  else if (/\b(?:when|what time|what date|how long|which (?:year|month|day))\b/i.test(q.question))
     p1Category = 2
 
   const p1Hits = hybridSearcher.searchHybrid(q.question, 15, queryVector, {
@@ -221,12 +221,12 @@ for (let i = 0; i < qas.length; i++) {
 
   if ((i + 1) % 50 === 0 || i === qas.length - 1) {
     const elapsed = ((performance.now() - shootoutT0) / 1000).toFixed(1)
-    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(1)}% | Laya Pass 1: ${((layaHits / totalGoldEvidenceTurns) * 100).toFixed(1)}% | Jev Pass 2B: ${((jevHits / totalGoldEvidenceTurns) * 100).toFixed(1)}%`)
+    console.info(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(1)}% | Laya Pass 1: ${((layaHits / totalGoldEvidenceTurns) * 100).toFixed(1)}% | Jev Pass 2B: ${((jevHits / totalGoldEvidenceTurns) * 100).toFixed(1)}%`)
   }
 }
 
 const shootoutDurationSec = ((performance.now() - shootoutT0) / 1000).toFixed(2)
-console.log(`\nShootout completed in ${shootoutDurationSec}s.\n`)
+console.info(`\nShootout completed in ${shootoutDurationSec}s.\n`)
 
 // 7. Aggregate Metrics
 const bAgg = aggregateBenchmarkResults(baselineResults)
@@ -237,23 +237,23 @@ const bRecallPct = ((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(2)
 const lRecallPct = ((layaHits / totalGoldEvidenceTurns) * 100).toFixed(2)
 const jRecallPct = ((jevHits / totalGoldEvidenceTurns) * 100).toFixed(2)
 
-console.log('================================================================')
-console.log('LOCOMO conv-47 TYPESAFE JEV BENCHMARK SCORECARD')
-console.log('================================================================')
-console.log(`Metric                     | Baseline (Regex) | Laya (Pass 1)     | Jev (Pass 2B)     | Jev vs Laya Lift`)
-console.log('---------------------------|------------------|-------------------|-------------------|-----------------')
-console.log(`Evidence Recall@3          | ${bRecallPct.padStart(16)}% | ${lRecallPct.padStart(17)}% | ${jRecallPct.padStart(17)}% | +${(Number(jRecallPct) - Number(lRecallPct)).toFixed(2)}%`)
-console.log(`Overall Token F1           | ${bAgg.overall.f1.toFixed(2).padStart(16)}% | ${lAgg.overall.f1.toFixed(2).padStart(17)}% | ${jAgg.overall.f1.toFixed(2).padStart(17)}% | +${(jAgg.overall.f1 - lAgg.overall.f1).toFixed(2)}%`)
-console.log(`Overall BLEU-1             | ${bAgg.overall.bleu.toFixed(2).padStart(16)}% | ${lAgg.overall.bleu.toFixed(2).padStart(17)}% | ${jAgg.overall.bleu.toFixed(2).padStart(17)}% | +${(jAgg.overall.bleu - lAgg.overall.bleu).toFixed(2)}%`)
-console.log('---------------------------|------------------|-------------------|-------------------|-----------------')
+console.info('================================================================')
+console.info('LOCOMO conv-47 TYPESAFE JEV BENCHMARK SCORECARD')
+console.info('================================================================')
+console.info(`Metric                     | Baseline (Regex) | Laya (Pass 1)     | Jev (Pass 2B)     | Jev vs Laya Lift`)
+console.info('---------------------------|------------------|-------------------|-------------------|-----------------')
+console.info(`Evidence Recall@3          | ${bRecallPct.padStart(16)}% | ${lRecallPct.padStart(17)}% | ${jRecallPct.padStart(17)}% | +${(Number(jRecallPct) - Number(lRecallPct)).toFixed(2)}%`)
+console.info(`Overall Token F1           | ${bAgg.overall.f1.toFixed(2).padStart(16)}% | ${lAgg.overall.f1.toFixed(2).padStart(17)}% | ${jAgg.overall.f1.toFixed(2).padStart(17)}% | +${(jAgg.overall.f1 - lAgg.overall.f1).toFixed(2)}%`)
+console.info(`Overall BLEU-1             | ${bAgg.overall.bleu.toFixed(2).padStart(16)}% | ${lAgg.overall.bleu.toFixed(2).padStart(17)}% | ${jAgg.overall.bleu.toFixed(2).padStart(17)}% | +${(jAgg.overall.bleu - lAgg.overall.bleu).toFixed(2)}%`)
+console.info('---------------------------|------------------|-------------------|-------------------|-----------------')
 for (const catKey of ['c1', 'c2', 'c3', 'c4']) {
   const bF = `${bAgg.categoryBreakdown[catKey].f1.toFixed(2)}%`.padStart(16)
   const lF = `${lAgg.categoryBreakdown[catKey].f1.toFixed(2)}%`.padStart(17)
   const jF = `${jAgg.categoryBreakdown[catKey].f1.toFixed(2)}%`.padStart(17)
   const lift = `+${(jAgg.categoryBreakdown[catKey].f1 - lAgg.categoryBreakdown[catKey].f1).toFixed(2)}%`
-  console.log(`${bAgg.categoryBreakdown[catKey].name.padEnd(26)} | ${bF} | ${lF} | ${jF} | ${lift}`)
+  console.info(`${bAgg.categoryBreakdown[catKey].name.padEnd(26)} | ${bF} | ${lF} | ${jF} | ${lift}`)
 }
-console.log('================================================================\n')
+console.info('================================================================\n')
 
 // 8. Save Report & Trace
 const reportMd = `# LoCoMo conv-47 TypeSafe Jev Benchmark Report
@@ -279,7 +279,7 @@ const reportMd = `# LoCoMo conv-47 TypeSafe Jev Benchmark Report
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
-console.log(`Report written to: ${OUTPUT_REPORT_PATH}`)
+console.info(`Report written to: ${OUTPUT_REPORT_PATH}`)
 
 const traceData = {
   metadata: {
@@ -304,7 +304,7 @@ const traceData = {
 }
 
 fs.writeFileSync(OUTPUT_TRACE_PATH, JSON.stringify(traceData, null, 2))
-console.log(`Trace written to: ${OUTPUT_TRACE_PATH}`)
+console.info(`Trace written to: ${OUTPUT_TRACE_PATH}`)
 
 needle.close()
 await laya.close()

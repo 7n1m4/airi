@@ -61,11 +61,6 @@ function onScrubComplete(report: any) {
   setStatus(`Successfully scrubbed ${report.sessionsScanned} session(s) and saved ${(report.bytesSaved / 1024).toFixed(1)} KB!`, 'success')
 }
 
-async function onVaultImported() {
-  setStatus(t('settings.pages.data.status.imported'))
-  orphanedGroups.value = await getOrphanedGroups()
-}
-
 function setStatus(message: string, tone: 'neutral' | 'success' | 'error' = 'success') {
   statusMessage.value = message
   statusTone.value = tone
@@ -237,6 +232,11 @@ const existingCharacters = computed(() => {
 })
 
 async function loadOrphans() {
+  orphanedGroups.value = await getOrphanedGroups()
+}
+
+async function onVaultImported() {
+  setStatus(t('settings.pages.data.status.imported'))
   orphanedGroups.value = await getOrphanedGroups()
 }
 

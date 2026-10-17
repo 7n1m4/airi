@@ -33,8 +33,8 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'navigate-to-playground'): void
-  (e: 'sparkle-click', fieldId: string): void
+  (e: 'navigateToPlayground'): void
+  (e: 'sparkleClick', fieldId: string): void
 }>()
 
 // Mannerism & Thinking Prompt Models
@@ -436,7 +436,7 @@ defineExpose({
       <button
         type="button"
         class="flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs text-white font-medium shadow-sm transition-all active:scale-98 hover:bg-primary-700"
-        @click="emit('navigate-to-playground')"
+        @click="emit('navigateToPlayground')"
       >
         <span>Open Lab</span>
         <span class="i-solar:arrow-right-bold text-xs" />

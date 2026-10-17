@@ -41,13 +41,18 @@ const settingsStore = useSettings()
 const stageModelSettings = useSettingsStageModel()
 const { gunslingerStance } = storeToRefs(stageModelSettings)
 
-console.log('[ControlStrip.vue] Setup loaded with Selfie feature support')
+console.info('[ControlStrip.vue] Setup loaded with Selfie feature support')
 const colorMode = useColorMode()
 const controlStripStore = useSettingsControlStrip()
 const { orientation, buttons, stageEnabled, stageMateEnabled, chatOpen, captionOpen, backgroundTint, stageMode, collapsed, dockedEdge, selfieIncludeBg } = storeToRefs(controlStripStore)
 const isHoveredHandle = ref(false)
 const displayModelsStore = useDisplayModelsStore()
 const datingSimStore = useDatingSimStore()
+const cardStore = useAiriCardStore()
+const { cards, activeCard, activeCardId } = storeToRefs(cardStore)
+const avatarApplyMode = ref<'preview' | 'apply'>('preview')
+
+const isElectron = computed(() => typeof window !== 'undefined' && !!(window as any).electron)
 
 const autoHideMode = computed(() => dockedEdge.value !== null)
 
@@ -233,9 +238,6 @@ const { powerState } = storeToRefs(liveSessionStore)
 const controlsIslandStore = useSettingsControlsIsland()
 const { fadeOnHoverEnabled, alwaysOnTop } = storeToRefs(controlsIslandStore)
 
-const cardStore = useAiriCardStore()
-const { cards, activeCard, activeCardId } = storeToRefs(cardStore)
-
 const speechStore = useSpeechStore()
 const providersStore = useProvidersStore()
 const { activeSpeechProvider, activeSpeechModel, activeSpeechVoiceId } = storeToRefs(speechStore)
@@ -251,7 +253,6 @@ const GEMINI_LIVE_VOICES = ['Leda', 'Zephyr', 'Achernar', 'Algenib', 'Fenrir']
 const selectedManualProvider = ref('')
 const selectedManualModel = ref('')
 const selectedManualVoiceId = ref('')
-const avatarApplyMode = ref<'preview' | 'apply'>('preview')
 
 // Initialize manual selections when popover becomes active or when stores change
 watch([activeSpeechProvider, activeSpeechModel, activeSpeechVoiceId], () => {
@@ -563,7 +564,7 @@ function triggerSelfie() {
   if (selfieCountdown.value !== null)
     return
 
-  console.log('[ControlStrip] Starting selfie countdown for character:', activeCardId.value)
+  console.info('[ControlStrip] Starting selfie countdown for character:', activeCardId.value)
   selfieCountdown.value = 3
   const interval = setInterval(() => {
     if (selfieCountdown.value === null) {
@@ -571,13 +572,13 @@ function triggerSelfie() {
       return
     }
     selfieCountdown.value--
-    console.log('[ControlStrip] Selfie countdown:', selfieCountdown.value)
+    console.info('[ControlStrip] Selfie countdown:', selfieCountdown.value)
     if (selfieCountdown.value === 0) {
       clearInterval(interval)
       selfieCountdown.value = null
       // Wait for the UI/viewfinder overlay to fully hide before triggering capture
       setTimeout(() => {
-        console.log('[ControlStrip] Broadcast stage capture request for character:', activeCardId.value, 'includeBg:', selfieIncludeBg.value)
+        console.info('[ControlStrip] Broadcast stage capture request for character:', activeCardId.value, 'includeBg:', selfieIncludeBg.value)
         postCapture({ characterId: activeCardId.value, includeBg: selfieIncludeBg.value })
       }, 500)
     }
@@ -680,8 +681,6 @@ async function applyMacaron(shell: string, whip: string, heart: string, presetId
 const hoveredButtonId = ref<string | null>(null)
 const popoverRef = ref<HTMLElement | null>(null)
 const wardrobeFilter = ref<'all' | 'base' | 'overlay'>('all')
-
-const isElectron = computed(() => typeof window !== 'undefined' && !!(window as any).electron)
 
 let lastDispatchedStance: string | null = null
 watch(gunslingerStance, async (stance) => {

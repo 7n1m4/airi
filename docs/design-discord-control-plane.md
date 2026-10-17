@@ -19,7 +19,7 @@ While local desktop execution offers high-fidelity Live2D/VRM stage rendering an
 
 To turn AIRI into a **"Vercel for AI Characters"**, we decouple the 5,700-line Cloudflare Worker monolith into a dedicated monorepo workspace package at **`apps/stage-edge`** (`@proj-airi/stage-edge`).
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │ 💬 Discord Integration & Cloud Control Plane                                    │
 ├───────────────────────────┬───────────────────────────┬─────────────────────────┤
@@ -34,7 +34,7 @@ To turn AIRI into a **"Vercel for AI Characters"**, we decouple the 5,700-line C
 
 `apps/stage-edge` is structured into modular TypeScript subsystems, built via `tsdown` into a standalone, zero-dependency Cloudflare Worker bundle:
 
-```
+```text
 apps/stage-edge/
 ├── package.json                    ← @proj-airi/stage-edge
 ├── tsconfig.json                   ← ES2022 / Cloudflare Worker types

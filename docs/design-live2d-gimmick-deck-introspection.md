@@ -1,5 +1,5 @@
 # Live2D Gimmick Deck & Capability Introspection
-### 🎛️ Translating Wild Creator State Machines into Usable Companion Controls
+## 🎛️ Translating Wild Creator State Machines into Usable Companion Controls
 **Specification & Architectural Design**
 
 ---
@@ -104,10 +104,10 @@ Manifest snippet:
 ### Tier 3: Zero-Semantic / Raw Numbers & Filenames (The Brutal Case)
 *Example: `live2d_3548538714` (Senran Kagura Standby Characters)*
 Manifest snippet:
-```json
+```live2d-dsl
 { "Group": "Start", "Entry": "0", "Command": "change_cos model1.json" },
 { "Group": "Start", "Entry": "1", "Command": "change_cos model2.json" },
-...
+// ... entries 2 through 226 follow the same pattern ...
 { "Group": "Start", "Entry": "227", "Command": "change_cos model228.json" }
 ```
 - **Reality**: Zero text. Entry names are sequential digits `0` to `227`. Filenames are `model1.json` to `model228.json`.
@@ -122,7 +122,7 @@ Here is the exact algorithmic mapping from raw manifest keys to Vue 3 UI control
 ### 1. Binary Toggles: `<GimmickSwitch />`
 **Target Mechanics**: `VarFloats` toggling between 0 and 1; Live2D parameters toggling mesh visibility (e.g. glasses, hair ribbons).
 
-```
+```live2d-dsl
 [ Real Manifest Input ]
 Group 'choice': [{"Text": "开启登录动画", "NextMtn": "C"}, {"Text": "关闭登录动画", "NextMtn": "D"}]
 Group 'C': VarFloats: [{"Name": "var1", "Code": "assign 0"}]
@@ -137,21 +137,21 @@ Group 'D': VarFloats: [{"Name": "var1", "Code": "assign 1"}]
 3. Extract root label: `"登录动画"` (Login Animation).
 
 ⬇️ **Rendered Control**:
-```
+```text
 +-------------------------------------------------------------+
 |  [x] 登录动画 (Login Animation)                [var1 = 1]   |
 |      Source: Choice Toggle · Target Group: C / D            |
 +-------------------------------------------------------------+
 ```
 *Fallback when no Choice exists (e.g. `InMouseTracking` initialized in `InitNext`):*
-```
+```text
 +-------------------------------------------------------------+
 |  [x] In Mouse Tracking                         [InMouseTracking]
 |      Source: VarFloat Register                              |
 +-------------------------------------------------------------+
 ```
 *Fallback for bare variable (`var` with no parent text):*
-```
+```text
 +-------------------------------------------------------------+
 |  [x] Flag: var                                 [var = 1]    |
 |      Source: Raw Register                                   |
@@ -163,7 +163,7 @@ Group 'D': VarFloats: [{"Name": "var1", "Code": "assign 1"}]
 ### 2. Multi-MOC Costume Rack: `<CostumePicker />`
 **Target Mechanics**: `change_cos <filename>` commands.
 
-```
+```live2d-dsl
 [ Real Manifest Input ]
 Group 'Start': Entry '13': {"Command": "change_cos model14.json"}
 ```
@@ -175,7 +175,7 @@ Group 'Start': Entry '13': {"Command": "change_cos model14.json"}
 ⬇️ **Rendered Control**:
 - If <= 4 costumes: Render as a segmented pill row: `[ Default ] [ Costume 2 ] [ Costume 3 ]`
 - If > 4 costumes (e.g. Senran Kagura with 228 models): Render as a searchable dropdown combobox + pagination grid:
-```
+```text
 +-------------------------------------------------------------+
 | 👗 WARDROBE (228 Costumes Detected)                         |
 |   [ Search costume / model...                             ] |
@@ -195,7 +195,7 @@ Group 'Start': Entry '13': {"Command": "change_cos model14.json"}
 ### 3. Part & Mesh Sliders: `<PartController />`
 **Target Mechanics**: `ParamValue` controllers inside `model3.json`.
 
-```
+```live2d-dsl
 [ Real Manifest Input ]
 {"Name": "HairOrnmt", "Ids": ["ParamHairornamentSwitch"], "KeyValues": [0.0, 1.0]}
 {"Name": "MomokaSono", "Ids": ["ParamMomokaSono"], "Value": 0.5, "KeyValues": [0.0, 0.5, 1.0]}
@@ -209,7 +209,7 @@ Group 'Start': Entry '13': {"Command": "change_cos model14.json"}
 3. **Continuous Delta-Ticking Clamp**: To prevent the known "Disappearing Body" bug (where Live2D physics resets parameters to 0.0 and turns meshes invisible), the active value is locked into the Delta Ticking loop so it is enforced every frame.
 
 ⬇️ **Rendered Control**:
-```
+```text
 +-------------------------------------------------------------+
 | 🎨 ACCESSORIES & PARTS                                       |
 |   Hair Ornament:    (•) Off   ( ) On        [ParamHairornament]
@@ -223,7 +223,7 @@ Group 'Start': Entry '13': {"Command": "change_cos model14.json"}
 ### 4. Special Gimmicks & Cutscenes: `<GimmickAction />`
 **Target Mechanics**: Semicolon-chained motion, sound, and expression triggers with subtitles (`Text`).
 
-```
+```live2d-dsl
 [ Real Manifest Input ]
 Group 'Sound#1', Entry '011501_051_01_01':
 {
@@ -241,7 +241,7 @@ Group 'Sound#1', Entry '011501_051_01_01':
    - If no `Text`: Fallback to Group + Entry name: `Sound#1 : 011501_051_01_01`.
 
 ⬇️ **Rendered Control & Dual-Execution Switch**:
-```
+```text
 +-------------------------------------------------------------+
 | 🎬 SPECIAL GIMMICKS (Cutscenes & Reactions)                  |
 |   Execution Mode:                                           |
@@ -261,7 +261,7 @@ Group 'Sound#1', Entry '011501_051_01_01':
 - **Mode B: AIRI Generative Sync (The Bridge)**:
   1. The audio file playback is **suppressed** (`sound.muted = true`).
   2. The creator's `Text` is extracted and fed to the AIRI chat orchestrator as an environmental prompt injection:
-     ```
+     ```text
      [System / Scene Context]: The user triggered the character's reaction:
      "わあ、きれいな花火！あっちには金鱼すくいがある！焼きそばも美味しそう～。"
      React to this moment in your own words, voice, and current persona.
@@ -274,7 +274,7 @@ Group 'Sound#1', Entry '011501_051_01_01':
 ### 5. Intimacy & Relationship Gauge: `<IntimacyMeter />`
 **Target Mechanics**: `Intimacy` bounds (`Min`, `Max`, `Bonus`) and variable tiers (`IntimacyVI`).
 
-```
+```live2d-dsl
 [ Real Manifest Input ]
 Group 'Update7#98', Entry '1':  {"Intimacy": {"Min": 0, "Max": 99}, "assign 1"}
 Group 'Update7#98', Entry '16': {"Intimacy": {"Min": 3750, "Max": 4209}, "assign 16"}
@@ -286,7 +286,7 @@ Tap Box 'TapDREFTouchBoxHip':   {"Intimacy": {"Min": 14350}, "Command": "start_m
 3. Count how many touch interactions or motion groups are locked vs unlocked.
 
 ⬇️ **Rendered Control**:
-```
+```text
 +-------------------------------------------------------------+
 | 💖 INTIMACY & RELATIONSHIP PROGRESS                         |
 |   Tier: Level 4 / 16 (Affinity: 450 pts)                    |
@@ -405,13 +405,13 @@ Instead of maintaining the legacy developer-only heap table in `apps/stage-tamag
 The introspected capabilities are not isolated to the UI; they are published directly to the LLM's system prompt and tool registry:
 
 1. **System Prompt Sensory Context**:
-   ```
+   ```text
    [Available Physical Outfits]: "Default", "Summer Yukata (model2)", "Swimsuit (model3)"
    [Available Toggles]: "Glasses" (currently: off), "Cat Ears" (currently: on)
    ```
 2. **ACT Token Generation**:
    The LLM can trigger costume hot-swaps or toggles directly during natural conversation:
-   ```
+   ```text
    "It's getting really hot outside! Let me change into something lighter. <|ACT:costume="model2"|>"
    ```
 3. **Built-in Tool Bridge**:

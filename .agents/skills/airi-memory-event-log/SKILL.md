@@ -16,7 +16,7 @@ A bounded, append-mostly system ledger of what AIRI has been doing — the chara
 | Persistence | unstorage key `local:event-log` via `database/storage.ts` |
 | Capacity | 500 events (`DEFAULT_MAX_CAPACITY` :23) — newest-first, tail-trimmed on overflow |
 | Record | `AiriSystemEvent` — id, timestamp/isoTime, category, type, source, textSummary, payload?, inspectable? |
-| Categories | `'vision' | 'tools' | 'chat' | 'proactivity' | 'memory' | 'stage' | 'discord'` (:6) |
+| Categories | `'vision' \| 'tools' \| 'chat' \| 'proactivity' \| 'memory' \| 'stage' \| 'discord'` (:6) |
 
 ## Key Mechanisms
 

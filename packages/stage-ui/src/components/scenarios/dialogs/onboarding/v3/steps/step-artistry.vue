@@ -84,7 +84,7 @@ function getVesselDefaultPrompt(modelId?: string): string {
 
 // Seed visual prompt on first load if empty or holding stale vessel file placeholders
 onMounted(() => {
-  const isStaleVesselDefault = /\.(zip|vrm|pmx|pmd|skel|moc3)/i.test(visualPrompt.value)
+  const isStaleVesselDefault = /\.(?:zip|vrm|pmx|pmd|skel|moc3)/i.test(visualPrompt.value)
     || visualPrompt.value.includes('custom avatar')
   if (!visualPrompt.value.trim() || isStaleVesselDefault) {
     if (hasPersonaTags.value) {

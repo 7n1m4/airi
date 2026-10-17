@@ -15,7 +15,7 @@ Rather than drawing rigid, geometric diagrams with flat colors, use the organic 
 
 ---
 
-### Canvas Environment & Technical Rules
+## Canvas Environment & Technical Rules
 1. **Setup & Lifecycle**:
    - Declare exactly one `function setup()`.
    - Start with: `createCanvas(600, 600, WEBGL); brush.load(); noLoop();`
@@ -32,7 +32,7 @@ Rather than drawing rigid, geometric diagrams with flat colors, use the organic 
 
 ---
 
-### p5.brush v1 API Palette Reference
+## p5.brush v1 API Palette Reference
 
 - **Brushes**: `brush.set(brushName, color, weight)`
   - Available brush types: `"2B"`, `"HB"`, `"2H"`, `"charcoal"`, `"cpencil"`, `"pen"`, `"rotring"`, `"spray"`, `"marker"`, `"marker2"`.
@@ -58,17 +58,17 @@ Rather than drawing rigid, geometric diagrams with flat colors, use the organic 
 
 ---
 
-### Choose ONE of the following scenes to paint:
+## Choose ONE of the following scenes to paint:
 
-#### Option A: The Blooming Botanical (Peach & Crimson Hibiscus)
+### Option A: The Blooming Botanical (Peach & Crimson Hibiscus)
 *Artistic Prose Vision:*
 Imagine a sunlit morning on warm, textured washi paper. Paint a single blooming flower with layered, translucent watercolor washes. The outer petals should have soft, peach-coral tones that bleed gently into the background. The inner core transitions into concentrated, velvety magenta and deep crimson pigment. Delicate charcoal or graphite stamen lines radiate outward, tipped with warm golden pollen flecks. Below, an organic curved stem supports broad, earthy sage and olive watercolor leaves with subtle vein accents.
 
-#### Option B: The Twilight Alley (Nocturne Rain & Neon Reflections)
+### Option B: The Twilight Alley (Nocturne Rain & Neon Reflections)
 *Artistic Prose Vision:*
 A moody, atmospheric cityscape at dusk under a steady drizzle. The sky is a deep twilight wash of slate navy and dark indigo, silhouettes of misty buildings framing a narrow alley. Warm, glowing orange paper lanterns and cool cyan/magenta neon shop signs hang in the air, casting vibrant, colorful halos through the haze. Below, the wet asphalt glistens with wide, reflective watercolor bleeds where the glowing light puddles and melts into the dark pavement. Fine, directional rain streaks cross the scene.
 
-#### Option C: Artist's Choice (Open Landscape / Nature / Architecture)
+### Option C: Artist's Choice (Open Landscape / Nature / Architecture)
 *Artistic Prose Vision:*
 Choose any atmospheric scene of your liking (e.g. a misty mountain forest at dawn, a lonely seaside lighthouse in a storm, or an autumn tea garden). Express the mood through rich watercolor layering, thoughtful color harmonies, and tactile brush textures.
 

@@ -154,6 +154,117 @@ function getCompanionVoice(c: StarterCompanion, engine: string): string {
   return c.defaultKokoroVoice
 }
 
+function normalizeSpeechProviderId(id: string) {
+  const clean = (id || '').toLowerCase()
+  if (clean.includes('kokoro'))
+    return 'kokoro-local'
+  if (clean.includes('pocket'))
+    return 'pocket-tts-local'
+  if (clean.includes('moss'))
+    return 'moss-nano-local'
+  return id
+}
+
+const availableTtsModels = computed(() => {
+  const normId = normalizeSpeechProviderId(draftStore.state.ttsProvider || 'kokoro-local')
+  if (normId === 'kokoro-local') {
+    return [
+      { id: 'q4', label: 'Kokoro Q4 (Fast CPU WASM · Recommended)' },
+      { id: 'q8', label: 'Kokoro Q8 (High Quality WASM)' },
+      { id: 'q4-webgpu', label: 'Kokoro Q4 (WebGPU)' },
+    ]
+  }
+  if (normId === 'pocket-tts-local') {
+    return [
+      { id: 'english_2026-04', label: 'Pocket English (100M CPU)' },
+      { id: 'french_24l', label: 'Pocket French (24L)' },
+      { id: 'spanish_24l', label: 'Pocket Spanish (24L)' },
+      { id: 'german_24l', label: 'Pocket German (24L)' },
+      { id: 'italian_24l', label: 'Pocket Italian (24L)' },
+    ]
+  }
+  if (normId === 'moss-nano-local') {
+    return [{ id: 'moss-tts-nano-100m', label: 'Moss-Nano Fast Engine (100M)' }]
+  }
+
+  const pModels = providersStore.getModelsForProvider(normId) || []
+  if (pModels.length > 0) {
+    return pModels.map((m: any) => ({ id: m.id, label: m.name || m.id }))
+  }
+  return [{ id: 'default', label: 'Standard Voice Model' }]
+})
+
+const availableTtsVoices = computed(() => {
+  const normId = normalizeSpeechProviderId(draftStore.state.ttsProvider || 'kokoro-local')
+  if (normId === 'kokoro-local') {
+    return [
+      { id: 'af_bella', label: 'Bella (Soft Anime Tone · Sweet)' },
+      { id: 'af_sarah', label: 'Sarah (Professional · Clear)' },
+      { id: 'af_nicole', label: 'Nicole (Crisp & Focused)' },
+      { id: 'af_heart', label: 'Heart (Warm & Natural)' },
+      { id: 'af_sky', label: 'Sky (Gentle Whisper)' },
+      { id: 'am_adam', label: 'Adam (Natural Male)' },
+      { id: 'am_michael', label: 'Michael (Executive Male)' },
+    ]
+  }
+  if (normId === 'pocket-tts-local') {
+    return [
+      ...STARTER_VOICE_CATALOG.map(v => ({ id: v.id, label: `★ ${v.name}` })),
+      { id: 'anna', label: 'Anna (Warm & Conversational)' },
+      { id: 'claire', label: 'Claire (Articulate & Clear)' },
+      { id: 'vera', label: 'Vera (Deep & Conversational)' },
+      { id: 'bella', label: 'Bella (Gentle & Sweet)' },
+      { id: 'daniel', label: 'Daniel (Deep Male)' },
+      { id: 'elena', label: 'Elena (Soft Expressive)' },
+      { id: 'frank', label: 'Frank (Warm Narrator)' },
+    ]
+  }
+  if (normId === 'moss-nano-local') {
+    return [
+      ...STARTER_VOICE_CATALOG.map(v => ({ id: v.id, label: `★ ${v.name}` })),
+      { id: 'Trump', label: 'EN Trump' },
+      { id: 'LJS', label: 'EN LJS' },
+    ]
+  }
+
+  const storeVoices = speechStore.getVoicesForProvider(normId) || []
+  if (storeVoices.length > 0) {
+    return storeVoices.map((v: any) => ({ id: v.id, label: v.name || v.id }))
+  }
+  return [
+    { id: 'default', label: 'Default Voice' },
+    { id: 'alloy', label: 'Alloy' },
+    { id: 'echo', label: 'Echo' },
+    { id: 'fable', label: 'Fable' },
+    { id: 'onyx', label: 'Onyx' },
+    { id: 'nova', label: 'Nova' },
+    { id: 'shimmer', label: 'Shimmer' },
+  ]
+})
+
+const ttsEngine = computed({
+  get: () => normalizeSpeechProviderId(draftStore.state.ttsProvider || 'kokoro-local'),
+  set: (val) => {
+    draftStore.setSpeech({ provider: val })
+    // Reset model to match provider
+    const models = availableTtsModels.value
+    if (models.length > 0 && models[0]?.id) {
+      draftStore.setSpeech({ model: models[0].id })
+    }
+    // Update voice to companion's assigned voice for this engine
+    if (!isVoiceManuallyEdited.value) {
+      const voice = getCompanionVoice(activeCompanion.value, val)
+      draftStore.setSpeech({ voiceId: voice })
+    }
+    else {
+      const voices = availableTtsVoices.value
+      if (voices.length > 0 && voices[0]?.id) {
+        draftStore.setSpeech({ voiceId: voices[0].id })
+      }
+    }
+  },
+})
+
 function selectCompanion(c: StarterCompanion) {
   selectedCompanionId.value = c.id
   if (!isCompanionNameManuallyEdited.value) {
@@ -256,7 +367,7 @@ const llmModel = computed({
     if (llmProvider.value === 'lanlan-free')
       return 'free-model'
     if (llmProvider.value === 'kilo')
-      return 'kilo-auto'
+      return 'kilo-auto/free'
     return 'default'
   },
   set: val => draftStore.setConsciousness({ model: val }),
@@ -378,40 +489,6 @@ const isVoiceEnabled = computed({
   },
 })
 
-function normalizeSpeechProviderId(id: string) {
-  const clean = (id || '').toLowerCase()
-  if (clean.includes('kokoro'))
-    return 'kokoro-local'
-  if (clean.includes('pocket'))
-    return 'pocket-tts-local'
-  if (clean.includes('moss'))
-    return 'moss-nano-local'
-  return id
-}
-
-const ttsEngine = computed({
-  get: () => normalizeSpeechProviderId(draftStore.state.ttsProvider || 'kokoro-local'),
-  set: (val) => {
-    draftStore.setSpeech({ provider: val })
-    // Reset model to match provider
-    const models = availableTtsModels.value
-    if (models.length > 0 && models[0]?.id) {
-      draftStore.setSpeech({ model: models[0].id })
-    }
-    // Update voice to companion's assigned voice for this engine
-    if (!isVoiceManuallyEdited.value) {
-      const voice = getCompanionVoice(activeCompanion.value, val)
-      draftStore.setSpeech({ voiceId: voice })
-    }
-    else {
-      const voices = availableTtsVoices.value
-      if (voices.length > 0 && voices[0]?.id) {
-        draftStore.setSpeech({ voiceId: voices[0].id })
-      }
-    }
-  },
-})
-
 const cloudSpeechProviders = computed(() => {
   const allMap = providersStore.allProvidersMetadata || {}
   const internalIds = ['speech-noop', 'virtual-audio-studio', 'kokoro', 'pocket', 'moss', 'kokoro-local', 'pocket-tts-local', 'moss-nano-local']
@@ -423,86 +500,9 @@ const cloudSpeechProviders = computed(() => {
     }))
 })
 
-const availableTtsModels = computed(() => {
-  const normId = normalizeSpeechProviderId(ttsEngine.value)
-  if (normId === 'kokoro-local') {
-    return [
-      { id: 'q4', label: 'Kokoro Q4 (Fast CPU WASM · Recommended)' },
-      { id: 'q8', label: 'Kokoro Q8 (High Quality WASM)' },
-      { id: 'q4-webgpu', label: 'Kokoro Q4 (WebGPU)' },
-    ]
-  }
-  if (normId === 'pocket-tts-local') {
-    return [
-      { id: 'english_2026-04', label: 'Pocket English (100M CPU)' },
-      { id: 'french_24l', label: 'Pocket French (24L)' },
-      { id: 'spanish_24l', label: 'Pocket Spanish (24L)' },
-      { id: 'german_24l', label: 'Pocket German (24L)' },
-      { id: 'italian_24l', label: 'Pocket Italian (24L)' },
-    ]
-  }
-  if (normId === 'moss-nano-local') {
-    return [{ id: 'moss-tts-nano-100m', label: 'Moss-Nano Fast Engine (100M)' }]
-  }
-
-  const pModels = providersStore.getModelsForProvider(normId) || []
-  if (pModels.length > 0) {
-    return pModels.map((m: any) => ({ id: m.id, label: m.name || m.id }))
-  }
-  return [{ id: 'default', label: 'Standard Voice Model' }]
-})
-
 const ttsModel = computed({
   get: () => draftStore.state.ttsModel || availableTtsModels.value[0]?.id || 'q4',
   set: val => draftStore.setSpeech({ model: val }),
-})
-
-const availableTtsVoices = computed(() => {
-  const normId = normalizeSpeechProviderId(ttsEngine.value)
-  if (normId === 'kokoro-local') {
-    return [
-      { id: 'af_bella', label: 'Bella (Soft Anime Tone · Sweet)' },
-      { id: 'af_sarah', label: 'Sarah (Professional · Clear)' },
-      { id: 'af_nicole', label: 'Nicole (Crisp & Focused)' },
-      { id: 'af_heart', label: 'Heart (Warm & Natural)' },
-      { id: 'af_sky', label: 'Sky (Gentle Whisper)' },
-      { id: 'am_adam', label: 'Adam (Natural Male)' },
-      { id: 'am_michael', label: 'Michael (Executive Male)' },
-    ]
-  }
-  if (normId === 'pocket-tts-local') {
-    return [
-      ...STARTER_VOICE_CATALOG.map(v => ({ id: v.id, label: `★ ${v.name}` })),
-      { id: 'anna', label: 'Anna (Warm & Conversational)' },
-      { id: 'claire', label: 'Claire (Articulate & Clear)' },
-      { id: 'vera', label: 'Vera (Deep & Conversational)' },
-      { id: 'bella', label: 'Bella (Gentle & Sweet)' },
-      { id: 'daniel', label: 'Daniel (Deep Male)' },
-      { id: 'elena', label: 'Elena (Soft Expressive)' },
-      { id: 'frank', label: 'Frank (Warm Narrator)' },
-    ]
-  }
-  if (normId === 'moss-nano-local') {
-    return [
-      ...STARTER_VOICE_CATALOG.map(v => ({ id: v.id, label: `★ ${v.name}` })),
-      { id: 'Trump', label: 'EN Trump' },
-      { id: 'LJS', label: 'EN LJS' },
-    ]
-  }
-
-  const storeVoices = speechStore.getVoicesForProvider(normId) || []
-  if (storeVoices.length > 0) {
-    return storeVoices.map((v: any) => ({ id: v.id, label: v.name || v.id }))
-  }
-  return [
-    { id: 'default', label: 'Default Voice' },
-    { id: 'alloy', label: 'Alloy' },
-    { id: 'echo', label: 'Echo' },
-    { id: 'fable', label: 'Fable' },
-    { id: 'onyx', label: 'Onyx' },
-    { id: 'nova', label: 'Nova' },
-    { id: 'shimmer', label: 'Shimmer' },
-  ]
 })
 
 const ttsVoice = computed({
@@ -520,12 +520,18 @@ function auditionGreeting() {
   if ('speechSynthesis' in window) {
     window.speechSynthesis.cancel()
     const utterance = new SpeechSynthesisUtterance(activeGreeting.value)
-    utterance.onend = () => { isAuditioning.value = false }
-    utterance.onerror = () => { isAuditioning.value = false }
+    utterance.onend = () => {
+      isAuditioning.value = false
+    }
+    utterance.onerror = () => {
+      isAuditioning.value = false
+    }
     window.speechSynthesis.speak(utterance)
   }
   else {
-    setTimeout(() => { isAuditioning.value = false }, 1800)
+    setTimeout(() => {
+      isAuditioning.value = false
+    }, 1800)
   }
 }
 

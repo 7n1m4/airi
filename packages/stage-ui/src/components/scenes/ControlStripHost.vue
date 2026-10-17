@@ -129,7 +129,7 @@ function getActorColor(id: string): string {
       return assets[id].textColor
     }
   }
-  catch (e) {
+  catch {
     // Pinia not initialized
   }
 
@@ -375,10 +375,14 @@ const emotionsQueue = createQueue<EmotionPayload>({
         debug('[Stage] Spine emotion/motion processing:', { name: emotionName, intensity })
         const spineStore = useSpine()
 
-        const match = emotionName.match(/^(.+?)\s*\[(.+?)\]$/)
-        if (match) {
-          const variant = match[1].trim()
-          const skin = match[2].trim()
+        // NOTICE: parse the `name[skin]` form by index instead of a regex; a
+        // `(.+?)\s*\[(.+?)\]` pattern is vulnerable to super-linear backtracking.
+        const bracketStart = emotionName.indexOf('[')
+        const bracketEnd = emotionName.lastIndexOf(']')
+        const hasVariantAndSkin = bracketStart > 0 && bracketEnd > bracketStart + 1 && bracketEnd === emotionName.length - 1
+        if (hasVariantAndSkin) {
+          const variant = emotionName.slice(0, bracketStart).trim()
+          const skin = emotionName.slice(bracketStart + 1, bracketEnd).trim()
           spineStore.selectVariantAndSkin(variant, skin)
         }
         else if (spineStore.availableVariants.some(v => v.name === emotionName)) {

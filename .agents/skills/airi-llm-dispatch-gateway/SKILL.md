@@ -32,10 +32,20 @@ description: >-
 ## 2. StreamOptions Contract (:24-39)
 
 ```ts
-{
-  headers?, onStreamEvent?, toolsCompatibility?, supportsTools?, waitForTools?,
-  tools?,            // Tool[] OR () => Promise<Tool[] | undefined> — lazy, resolved per request
-  abortSignal?, temperature?, top_p?, max_tokens?, contextWidth?, vision?, requestOverrides?
+export interface StreamOptions {
+  headers?: Record<string, string>
+  onStreamEvent?: (event: StreamEvent) => void | Promise<void>
+  toolsCompatibility?: Record<string, boolean>
+  supportsTools?: boolean
+  waitForTools?: boolean
+  tools?: Tool[] | (() => Promise<Tool[] | undefined>) // lazy, resolved per request
+  abortSignal?: AbortSignal
+  temperature?: number
+  top_p?: number
+  max_tokens?: number
+  contextWidth?: number
+  vision?: boolean
+  requestOverrides?: Record<string, unknown>
 }
 ```
 

@@ -144,7 +144,9 @@ describe('nan0 temporal foundation', () => {
   it('keeps computation timeout duration monotonic when wall time moves backward', async () => {
     const clock = new ControllableNan0Clock({ wallTime: 10_000, monotonicTime: 100 })
     let markStarted!: () => void
-    const started = new Promise<void>((resolve) => { markStarted = resolve })
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve
+    })
     const client: Nan0ReasoningClient = {
       generate: request => new Promise((_resolve, reject) => {
         markStarted()

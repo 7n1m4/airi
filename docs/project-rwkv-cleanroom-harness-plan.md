@@ -52,7 +52,7 @@ To systematically tame RWKV without UI overhead, we established a **Standalone C
 
 ## 4. Cleanroom Directory Layout (`scripts/tests/rwkv-harness/`)
 
-```
+```text
 scripts/tests/rwkv-harness/
 ├── package.json               ← Standalone dependencies (@cryscan/web-rwkv-wasm, tsx)
 ├── tsconfig.json              ← TypeScript config for Node.js ESM execution

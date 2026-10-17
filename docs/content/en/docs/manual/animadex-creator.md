@@ -19,7 +19,7 @@ To open the wizard:
 
 ## 2. The 4-Step Creation Workflow
 
-```
+```text
 [ Step 1: Cast Selection ] ──► [ Step 2: Roster & Assets ] ──► [ Step 3: Story & Soul ] ──► [ Step 4: Synthesis & Output ]
   (Search 36k Catalog            (Bind 3D/2D Models,             (Pick Scenario Tropes,       (Compile CCv3 Card,
    or Custom Character)           Voices, & Idle Motions)         Brain Models, & Hooks)       Inspect ACT Tokens)

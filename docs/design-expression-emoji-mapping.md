@@ -52,7 +52,7 @@ When reviving this feature, it should be built directly on top of the modern cap
 
 Instead of a static grid of emojis sending blind ACT tokens, the revived popover will be an interactive, self-configuring quick panel:
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │ EXPRESSIONS                                        [X] │
 ├────────────────────────────────────────────────────────┤

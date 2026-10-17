@@ -5,7 +5,7 @@ import { ref } from 'vue'
 
 import { STORYLINE_PRESETS } from '../../constants/dating-sim/storylines'
 
-const props = defineProps<{
+defineProps<{
   show: boolean
 }>()
 

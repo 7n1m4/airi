@@ -22,7 +22,7 @@ A central pillar of this architecture is the **Core Set** context. Rather than f
 >
 > We inject this Core Set as standard context for downstream generator tasks (e.g., Personality, Scenario, Greetings, etc.) to ensure behavioral coherence.
 
-```
+```text
                                   [SYSTEM HARDWARE STATE]
                                   - Active display model expressions/motions
                                   - Speech capabilities (TTS tags/voice metadata)
@@ -174,7 +174,7 @@ A central pillar of this architecture is the **Core Set** context. Rather than f
 4. **Refined Regeneration**: Clicking "Refine Selection" opens a text input box. The user can type custom instructions (e.g., *"Make it sound a bit more sarcastic and shorter"*). The next generation will inject these instructions to fine-tune the output.
 
 ### 📐 UI Layout Mockup:
-```
+```text
 +-------------------------------------------------------+
 |  Optimize [System Prompt] with Sparkle AI             |
 +-------------------------------------------------------+
@@ -221,7 +221,7 @@ We will introduce a reusable **`FieldAiGeneratorModal.vue`** component and integ
 ##### [MODIFY] [field-input.vue](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/ui/src/components/form/field/field-input.vue)
 * Add a `sparkle` prop (boolean).
 * If `sparkle` is true, render a subtle sparkle icon (using `i-solar:sparkles-bold-duotone`) at the end of the field header line, next to the label.
-* Emit a custom `@sparkle-click` event when the icon is clicked.
+* Emit a custom `@sparkleClick` event when the icon is clicked.
 
 ```html
 <!-- Proposed UI Addition in field-input.vue label -->
@@ -235,7 +235,7 @@ We will introduce a reusable **`FieldAiGeneratorModal.vue`** component and integ
     type="button"
     class="flex items-center text-primary-500 hover:text-primary-600 transition-colors ml-1"
     title="Optimize with AI"
-    @click.prevent="$emit('sparkle-click')"
+    @click.prevent="$emit('sparkleClick')"
   >
     <div class="i-solar:sparkles-bold-duotone text-sm animate-pulse" />
   </button>
@@ -284,11 +284,11 @@ We will provide configurations matching the guidelines defined in the **Prompt C
 
 ##### [MODIFY] [CardCreationTabIdentity.vue](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-pages/src/pages/settings/airi-card/components/tabs/CardCreationTabIdentity.vue)
 * Enable `sparkle` prop on `cardDescription`, `cardSystemPrompt`, and `cardPostHistoryInstructions`.
-* Listen to `@sparkle-click` and trigger the modal with the current Core Set context.
+* Listen to `@sparkleClick` and trigger the modal with the current Core Set context.
 
 ##### [MODIFY] [CardCreationTabArtistry.vue](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-pages/src/pages/settings/airi-card/components/tabs/CardCreationTabArtistry.vue)
 * Enable `sparkle` prop on the Artistry `selectedArtistryPromptPrefix` input.
-* Listen to `@sparkle-click` and trigger visual DNA prompt prefix generation using the character description and personality as context.
+* Listen to `@sparkleClick` and trigger visual DNA prompt prefix generation using the character description and personality as context.
 
 ---
 

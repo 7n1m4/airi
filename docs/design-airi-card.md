@@ -165,7 +165,7 @@ Upstream main (`moeru-ai/airi:main` PR #1998, commit `5aa44aedd`) introduced a *
 
 Upstream packages character cards as a compressed `.zip` archive containing:
 
-```
+```text
 card-package.zip/
 ├── manifest.json            # Package manifest (format version & path index)
 ├── card.json                # CCv3 Character Card specification
@@ -374,7 +374,7 @@ To achieve full upstream interoperability while supporting your fork's multi-mod
 
 ### 6.1 ZIP Package Spec v2 Directory Layout
 
-```
+```text
 my-character-card.zip
 ├── manifest.json            # Version 2 package manifest with multi-model array
 ├── card.json                # CCv3 card metadata via exportToJSON() (clean references, no inline base64 blobs)
@@ -447,7 +447,7 @@ my-character-card.zip
 
 Implemented (ZIP tab renders; ZIP generation pending `exportCardZip`): flavor `v2 Extended` / `v1 Standard`, toggles `includeModels` / `includeBackground` / `includeVoiceProfiles` / `includeCoverFrame` / `includeMemories` / `generateReadme`, live archive-structure preview, cover-art 4-tier picker, compatibility chips. Original mock below for history:
 
-```
+```text
 +-------------------------------------------------------------+
 | Export Character Card Package                               |
 +-------------------------------------------------------------+

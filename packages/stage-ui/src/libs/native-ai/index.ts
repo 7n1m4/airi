@@ -291,7 +291,7 @@ export const NativeAI = {
 
     const isCached = await this.isModelCached(options.modelId)
     if (!isCached) {
-      console.log(`[NativeAI] Model ${options.modelId} not cached. Auto-downloading on-device weights...`)
+      console.info(`[NativeAI] Model ${options.modelId} not cached. Auto-downloading on-device weights...`)
       await this.downloadModel(
         {
           modelId: options.modelId,

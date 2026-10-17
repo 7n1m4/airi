@@ -101,14 +101,14 @@ const { data: speakingState } = useBroadcastChannel<ChatSpeakingState, ChatSpeak
 
 watch(incomingPacingMetrics, (metrics) => {
   if (metrics) {
-    console.log('[Chat:Popover] Incoming pacing metrics telemetry:', metrics)
+    console.info('[Chat:Popover] Incoming pacing metrics telemetry:', metrics)
     latestPacingMetrics.value = metrics
   }
 })
 
 watch(incomingTurnUsage, (usage) => {
   if (usage) {
-    console.log('[Chat:Popover] Incoming turn usage telemetry:', usage)
+    console.info('[Chat:Popover] Incoming turn usage telemetry:', usage)
     latestTurnUsage.value = usage
   }
 })
@@ -139,7 +139,6 @@ function handleOpenJournal() {
 
 const isRightPanelOpen = useLocalStorage('airi:chat:right-panel-open', false)
 const { width } = useWindowSize()
-const showRightPanel = computed(() => isRightPanelOpen.value && width.value >= 768 && activeSurface.value === 'messages' && isCurrentSurfaceReady.value)
 const mediaDisplayCount = ref(12)
 const rightPanelMemoriesCollapsed = useLocalStorage('airi:chat:rp-memories-collapsed', false)
 const rightPanelCurrentSceneCollapsed = useLocalStorage('airi:chat:rp-current-scene-collapsed', false)
@@ -285,6 +284,8 @@ const activeSurfaceIcon = computed(() => SURFACE_ICONS[activeSurface.value] || '
 const loadedSurfaces = ref<Set<string>>(new Set())
 const isCurrentSurfaceReady = computed(() => loadedSurfaces.value.has(activeSurface.value))
 
+const showRightPanel = computed(() => isRightPanelOpen.value && width.value >= 768 && activeSurface.value === 'messages' && isCurrentSurfaceReady.value)
+
 const coordinatorProgress = ref(15)
 const coordinatorStatus = ref('Connecting to workspace...')
 
@@ -323,7 +324,7 @@ onUnmounted(() => {
 })
 
 function handleSurfaceReady() {
-  console.log('[Chat:Coordinator] Surface ready signal received for:', activeSurface.value)
+  console.info('[Chat:Coordinator] Surface ready signal received for:', activeSurface.value)
   isSurfaceSignaledReady = true
   if (pendingSurfaceReadyResolver) {
     pendingSurfaceReadyResolver()
@@ -336,7 +337,7 @@ watch(
   interactiveAreaRef,
   (instance) => {
     if (instance && activeSurface.value === 'messages') {
-      console.log('[Chat:Coordinator] interactiveAreaRef detected in chat.vue')
+      console.info('[Chat:Coordinator] interactiveAreaRef detected in chat.vue')
       handleSurfaceReady()
     }
   },
@@ -752,7 +753,12 @@ function resolveProseBracket(tokens: number): ProseBracket {
   return PROSE_BRACKETS[0]
 }
 
-const LIMITS_REGEX = /\[TOKEN_OUTPUT_LIMITS:\s*(\d+)\][\s\S]*?- STYLE INSTRUCTION:\s*([\s\S]*?)\[\/TOKEN_OUTPUT_LIMITS\]\n*/
+// NOTICE: the prose capture starts directly after the literal colon. A leading
+// `\s*` there is ambiguous with the lazy `[\s\S]*?` that follows (both can
+// consume the same characters) and degrades to polynomial backtracking. The
+// captured prose is trimmed by callers, so the leading whitespace is still
+// handled without the ambiguous quantifier.
+const LIMITS_REGEX = /\[TOKEN_OUTPUT_LIMITS:\s*(\d+)\][\s\S]*?- STYLE INSTRUCTION:([\s\S]*?)\[\/TOKEN_OUTPUT_LIMITS\]\n*/
 
 const popoverOverrideEnabled = ref(false)
 const popoverContextWidth = ref<number | undefined>(undefined)
@@ -908,21 +914,6 @@ watch(popoverContextWidth, () => {
   saveCardGenerationSettings()
 })
 
-const saturationPercent = computed(() => {
-  if (!popoverContextWidth.value)
-    return 0
-  return Math.min(100, Math.max(0, (sessionTokenCount.value / popoverContextWidth.value) * 100))
-})
-
-const saturationColorClass = computed(() => {
-  const percent = saturationPercent.value
-  if (percent >= 90)
-    return 'text-red-500 bg-red-500'
-  if (percent >= 75)
-    return 'text-amber-500 bg-amber-500'
-  return 'text-green-500 bg-emerald-500'
-})
-
 // Timeline Switcher & Management State
 const isSessionPopoverOpen = ref(false)
 const showManageModal = ref(false)
@@ -1005,6 +996,21 @@ const sessionTokenCount = computed(() => {
 })
 
 const formattedSessionTokenCount = computed(() => formatTokenCount(sessionTokenCount.value))
+
+const saturationPercent = computed(() => {
+  if (!popoverContextWidth.value)
+    return 0
+  return Math.min(100, Math.max(0, (sessionTokenCount.value / popoverContextWidth.value) * 100))
+})
+
+const saturationColorClass = computed(() => {
+  const percent = saturationPercent.value
+  if (percent >= 90)
+    return 'text-red-500 bg-red-500'
+  if (percent >= 75)
+    return 'text-amber-500 bg-amber-500'
+  return 'text-green-500 bg-emerald-500'
+})
 
 function formatAbbreviatedCount(num: number): string {
   if (num >= 1_000_000_000)

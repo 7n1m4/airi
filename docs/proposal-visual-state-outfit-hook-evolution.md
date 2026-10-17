@@ -62,7 +62,7 @@ This solution cleanly resolves visual resets while preserving architectural simp
 ### Phase 1: Card Store Mutation Action
 - Expose a simple update action in `AiriCardStore` to reactively update the registry config:
   ```ts
-  updateConceptExpressions(cardId: string, conceptId: string, expressionName: string) {
+  function updateConceptExpressions(cardId: string, conceptId: string, expressionName: string) {
     // sets manifestation.active_expressions = { [expressionName]: 1 }
   }
   ```

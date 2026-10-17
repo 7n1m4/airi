@@ -8,7 +8,7 @@ This document specifies the architecture, mathematical model, and implementation
 1. **3D Avatars (VRM & MMD)**: Driving real-time 4-point directional lighting rigs in Three.js (`@proj-airi/stage-ui-three` and `@proj-airi/stage-ui-mmd`).
 2. **2D Avatars (Live2D Extension)**: Driving a real-time WebGL/PixiJS post-processing shader filter (`@proj-airi/stage-ui-live2d`), adopting and integrating the upstream pattern established in **PR #2391** (`feat(stage-*): add screen ambient light`).
 
-```
+```text
                    [ 🖥️ Top Screen Band (Menu Bar / Active App Header) ]
                                           │
                                           ▼

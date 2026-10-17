@@ -27,36 +27,36 @@ const Q_EMBEDDINGS_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-co
 const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-shootout-report.md')
 const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-shootout-trace.json')
 
-console.log('================================================================')
-console.log('LoCoMo conv-47 System-1 Coprocessor Benchmark Harness')
-console.log('31 Sessions | 150 Questions | Baseline vs. System-1 Coprocessor')
-console.log('================================================================\n')
+console.info('================================================================')
+console.info('LoCoMo conv-47 System-1 Coprocessor Benchmark Harness')
+console.info('31 Sessions | 150 Questions | Baseline vs. System-1 Coprocessor')
+console.info('================================================================\n')
 
 // 1. Load Dataset
-console.log('Loading conv-47 dataset...')
+console.info('Loading conv-47 dataset...')
 const convData = JSON.parse(fs.readFileSync(DATASET_PATH, 'utf-8'))
 const qas = convData.qa.filter(q => q.category >= 1 && q.category <= 4)
-console.log(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
+console.info(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
 
 // 2. Index Sessions into Memory
-console.log('Replaying 31 sessions into LocomoMemoryIndex...')
+console.info('Replaying 31 sessions into LocomoMemoryIndex...')
 const index = new LocomoMemoryIndex()
 index.loadConversation(convData)
-console.log(`Indexed ${index.documents.size} items across raw, stmm, and ltmm layers.\n`)
+console.info(`Indexed ${index.documents.size} items across raw, stmm, and ltmm layers.\n`)
 
 // 3. Initialize Embeddings & Hybrid Searcher
-console.log('Loading precomputed BGE embeddings...')
+console.info('Loading precomputed BGE embeddings...')
 const embeddings = JSON.parse(fs.readFileSync(EMBEDDINGS_PATH, 'utf-8'))
 const questionEmbeddings = JSON.parse(fs.readFileSync(Q_EMBEDDINGS_PATH, 'utf-8'))
-console.log(`Loaded ${Object.keys(embeddings).length} document embeddings, ${Object.keys(questionEmbeddings).length} question embeddings.\n`)
+console.info(`Loaded ${Object.keys(embeddings).length} document embeddings, ${Object.keys(questionEmbeddings).length} question embeddings.\n`)
 
 const hybridSearcher = new HybridSearcher(index, embeddings)
 
 // 4. Initialize Laya ONNX
-console.log('Loading Laya ONNX model...')
+console.info('Loading Laya ONNX model...')
 const layaT0 = performance.now()
 const laya = await Laya.load()
-console.log(`Laya ONNX loaded in ${((performance.now() - layaT0) / 1000).toFixed(2)}s.\n`)
+console.info(`Laya ONNX loaded in ${((performance.now() - layaT0) / 1000).toFixed(2)}s.\n`)
 
 // 5. Answer Extraction Helper
 function extractAnswerFromCandidates(candidates, question, category) {
@@ -67,7 +67,7 @@ function extractAnswerFromCandidates(candidates, question, category) {
 
   // Temporal extraction (C2): prioritize dates, months, years
   if (category === 2) {
-    const dateMatch = topText.match(/\b(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,\s+\d{4})?|\b\d{1,2}\s+(?:years?|months?|weeks?|days?)\s+ago|\b(?:in\s+)?(19\d\d|20\d\d)\b/i)
+    const dateMatch = topText.match(/\b(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2}(?:,\s+\d{4})?|\b\d{1,2}\s+(?:years?|months?|weeks?|days?)\s+ago|\b(?:in\s+)?(?:19\d\d|20\d\d)\b/i)
     if (dateMatch)
       return dateMatch[0]
   }
@@ -84,7 +84,7 @@ function extractAnswerFromCandidates(candidates, question, category) {
 }
 
 // 6. Run Benchmark Shootout
-console.log('Beginning 150-question shootout...')
+console.info('Beginning 150-question shootout...')
 const shootoutT0 = performance.now()
 
 const baselineResults = []
@@ -127,7 +127,7 @@ for (let i = 0; i < qas.length; i++) {
   if (rawLayaTriage.confidence >= 0.04) {
     resolvedCategory = rawLayaTriage.category
   }
-  else if (/\b(when|what time|what date|how long|which (year|month|day))\b/i.test(q.question)) {
+  else if (/\b(?:when|what time|what date|how long|which (?:year|month|day))\b/i.test(q.question)) {
     resolvedCategory = 2 // Grammatical temporal anchor
   }
 
@@ -171,12 +171,12 @@ for (let i = 0; i < qas.length; i++) {
 
   if ((i + 1) % 25 === 0 || i === qas.length - 1) {
     const elapsed = ((performance.now() - shootoutT0) / 1000).toFixed(1)
-    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline Recall@3: ${((baselineRecall3Hits / totalGoldEvidenceTurns) * 100).toFixed(1)}% | System-1 Recall@3: ${((system1Recall3Hits / totalGoldEvidenceTurns) * 100).toFixed(1)}%`)
+    console.info(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline Recall@3: ${((baselineRecall3Hits / totalGoldEvidenceTurns) * 100).toFixed(1)}% | System-1 Recall@3: ${((system1Recall3Hits / totalGoldEvidenceTurns) * 100).toFixed(1)}%`)
   }
 }
 
 const shootoutDurationSec = ((performance.now() - shootoutT0) / 1000).toFixed(2)
-console.log(`\nShootout completed in ${shootoutDurationSec}s.\n`)
+console.info(`\nShootout completed in ${shootoutDurationSec}s.\n`)
 
 // 7. Compute Aggregate Metrics
 const baselineAgg = aggregateBenchmarkResults(baselineResults)
@@ -185,15 +185,15 @@ const system1Agg = aggregateBenchmarkResults(system1Results)
 const baselineRecallPct = ((baselineRecall3Hits / totalGoldEvidenceTurns) * 100).toFixed(2)
 const system1RecallPct = ((system1Recall3Hits / totalGoldEvidenceTurns) * 100).toFixed(2)
 
-console.log('================================================================')
-console.log('LOCOMO conv-47 BENCHMARK SCORECARD')
-console.log('================================================================')
-console.log(`Metric                     | Baseline (Regex+BM25) | System-1 Coprocessor (Laya) | Delta`)
-console.log('---------------------------|-----------------------|-----------------------------|-------')
-console.log(`Evidence Recall@3          | ${baselineRecallPct.padStart(19)}% | ${system1RecallPct.padStart(25)}% | ${Number(system1RecallPct) >= Number(baselineRecallPct) ? '+' : ''}${(Number(system1RecallPct) - Number(baselineRecallPct)).toFixed(2)}%`)
-console.log(`Overall Token F1           | ${baselineAgg.overall.f1.toFixed(2).padStart(19)}% | ${system1Agg.overall.f1.toFixed(2).padStart(25)}% | ${system1Agg.overall.f1 >= baselineAgg.overall.f1 ? '+' : ''}${(system1Agg.overall.f1 - baselineAgg.overall.f1).toFixed(2)}%`)
-console.log(`Overall BLEU-1             | ${baselineAgg.overall.bleu.toFixed(2).padStart(19)}% | ${system1Agg.overall.bleu.toFixed(2).padStart(25)}% | ${system1Agg.overall.bleu >= baselineAgg.overall.bleu ? '+' : ''}${(system1Agg.overall.bleu - baselineAgg.overall.bleu).toFixed(2)}%`)
-console.log('---------------------------|-----------------------|-----------------------------|-------')
+console.info('================================================================')
+console.info('LOCOMO conv-47 BENCHMARK SCORECARD')
+console.info('================================================================')
+console.info(`Metric                     | Baseline (Regex+BM25) | System-1 Coprocessor (Laya) | Delta`)
+console.info('---------------------------|-----------------------|-----------------------------|-------')
+console.info(`Evidence Recall@3          | ${baselineRecallPct.padStart(19)}% | ${system1RecallPct.padStart(25)}% | ${Number(system1RecallPct) >= Number(baselineRecallPct) ? '+' : ''}${(Number(system1RecallPct) - Number(baselineRecallPct)).toFixed(2)}%`)
+console.info(`Overall Token F1           | ${baselineAgg.overall.f1.toFixed(2).padStart(19)}% | ${system1Agg.overall.f1.toFixed(2).padStart(25)}% | ${system1Agg.overall.f1 >= baselineAgg.overall.f1 ? '+' : ''}${(system1Agg.overall.f1 - baselineAgg.overall.f1).toFixed(2)}%`)
+console.info(`Overall BLEU-1             | ${baselineAgg.overall.bleu.toFixed(2).padStart(19)}% | ${system1Agg.overall.bleu.toFixed(2).padStart(25)}% | ${system1Agg.overall.bleu >= baselineAgg.overall.bleu ? '+' : ''}${(system1Agg.overall.bleu - baselineAgg.overall.bleu).toFixed(2)}%`)
+console.info('---------------------------|-----------------------|-----------------------------|-------')
 for (const catKey of ['c1', 'c2', 'c3', 'c4']) {
   const bCat = baselineAgg.categoryBreakdown[catKey]
   const sCat = system1Agg.categoryBreakdown[catKey]
@@ -201,9 +201,9 @@ for (const catKey of ['c1', 'c2', 'c3', 'c4']) {
   const bF1 = `${bCat.f1.toFixed(2)}%`.padStart(19)
   const sF1 = `${sCat.f1.toFixed(2)}%`.padStart(25)
   const delta = `${sCat.f1 >= bCat.f1 ? '+' : ''}${(sCat.f1 - bCat.f1).toFixed(2)}%`
-  console.log(`${catName} | ${bF1} | ${sF1} | ${delta}`)
+  console.info(`${catName} | ${bF1} | ${sF1} | ${delta}`)
 }
-console.log('================================================================\n')
+console.info('================================================================\n')
 
 // 8. Generate Markdown Report
 const reportMd = `# LoCoMo conv-47 System-1 Coprocessor Benchmark Report
@@ -245,7 +245,7 @@ const reportMd = `# LoCoMo conv-47 System-1 Coprocessor Benchmark Report
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
-console.log(`Markdown report saved to: ${OUTPUT_REPORT_PATH}`)
+console.info(`Markdown report saved to: ${OUTPUT_REPORT_PATH}`)
 
 // 9. Save Detailed Trace
 const traceData = {
@@ -288,4 +288,4 @@ const traceData = {
 }
 
 fs.writeFileSync(OUTPUT_TRACE_PATH, JSON.stringify(traceData, null, 2))
-console.log(`Detailed trace saved to: ${OUTPUT_TRACE_PATH}`)
+console.info(`Detailed trace saved to: ${OUTPUT_TRACE_PATH}`)

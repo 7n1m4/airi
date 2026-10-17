@@ -19,7 +19,7 @@ Historically, AI agent interfaces fall into two opposing failure modes:
 
 AIRI resolves this through **Capability Packs**: curated, modular, functional "add-ons" that bundle related runtime tools, native functions, system prompt guidance, and platform-specific gating rules into cohesive thematic units.
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │                       The Capability Pack Model                        │
 ├────────────────────────────────────────────────────────────────────────┤
@@ -36,7 +36,7 @@ AIRI resolves this through **Capability Packs**: curated, modular, functional "a
 
 Capability Packs are surfaced across two primary application boundaries:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        Capability Pack Surfaces                        │
 ├───────────────────────────────────┬────────────────────────────────────┤
@@ -69,7 +69,7 @@ Capability Packs are surfaced across two primary application boundaries:
 
 To keep the system intuitive, Capability Packs are categorized into three configuration tiers based on their user setup footprint:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                      Capability Pack Configuration Tiers                 │
 ├───────────────────┬────────────────────────────┬─────────────────────────┤
@@ -90,7 +90,7 @@ To keep the system intuitive, Capability Packs are categorized into three config
 
 ## 4. Capability Packs Catalog: Present & Future
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                   AiriCard Tools: Capability Packs                       │
 ├───────────────────────────────┬──────────────────────────────────────────┤

@@ -84,7 +84,7 @@
     "onnxruntime-web": "^1.24.2",
     "pinia": "catalog:",
     "rehype-stringify": "catalog:",
-    "reka-ui": "^2.8.2",
+    "reka-ui": "catalog:",
     "remark-parse": "catalog:",
     "remark-rehype": "catalog:",
     "shiki": "^3.23.0",

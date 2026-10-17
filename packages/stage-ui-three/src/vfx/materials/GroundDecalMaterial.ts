@@ -9,84 +9,6 @@ import { parseVfxColor, sharedUniforms } from '../core/FrameUniforms'
 import { commonGLSL } from '../shaders/common.glsl'
 import { noiseGLSL } from '../shaders/noise.glsl'
 
-export const GroundDecalType = {
-  FIRE: 0,
-  ELECTRIC: 1,
-  MAGIC: 2,
-  VERDANT: 3,
-} as const
-
-export type GroundDecalStyle = typeof GroundDecalType[keyof typeof GroundDecalType]
-
-export interface GroundDecalSyncState {
-  fade: number
-  radius: number
-  seed?: number
-  palette?: {
-    char?: string | Color
-    crack?: string | Color
-    ring?: string | Color
-    core?: string | Color
-  }
-}
-
-export function createGroundDecalMaterial(style: GroundDecalStyle = GroundDecalType.FIRE): ShaderMaterial {
-  const defines: Record<string, string> = {}
-  if (style === GroundDecalType.FIRE)
-    defines.DECAL_FIRE = '1'
-  else if (style === GroundDecalType.ELECTRIC)
-    defines.DECAL_ELECTRIC = '1'
-  else if (style === GroundDecalType.MAGIC)
-    defines.DECAL_MAGIC = '1'
-  else if (style === GroundDecalType.VERDANT)
-    defines.DECAL_VERDANT = '1'
-
-  const material = new ShaderMaterial({
-    defines,
-    side: DoubleSide,
-    transparent: true,
-    depthWrite: false,
-    depthTest: true,
-    blending: AdditiveBlending,
-    toneMapped: false,
-    uniforms: sharedUniforms({
-      uFade: { value: 0.0 },
-      uRadius: { value: 1.5 },
-      uSeed: { value: 0.0 },
-      uGlow: { value: 2.2 },
-
-      // Colors
-      uColorChar: { value: new Color('#0a0503') },
-      uColorCrack: { value: new Color('#ff5a10') },
-      uColorRing: { value: new Color('#ff7a1e') },
-      uColorCore: { value: new Color('#fff2bf') },
-    }),
-    vertexShader: GROUND_VERTEX,
-    fragmentShader: GROUND_FRAGMENT,
-  })
-
-  material.userData.sync = (state: GroundDecalSyncState) => {
-    const u = material.uniforms
-    u.uFade.value = state.fade
-    u.uRadius.value = state.radius
-    if (state.seed !== undefined)
-      u.uSeed.value = state.seed
-
-    if (state.palette) {
-      if (state.palette.char)
-        (u.uColorChar.value as Color).set(parseVfxColor(state.palette.char))
-      if (state.palette.crack)
-        (u.uColorCrack.value as Color).set(parseVfxColor(state.palette.crack))
-      if (state.palette.ring)
-        (u.uColorRing.value as Color).set(parseVfxColor(state.palette.ring))
-      if (state.palette.core)
-        (u.uColorCore.value as Color).set(parseVfxColor(state.palette.core))
-    }
-  }
-
-  return material
-}
-
 const GROUND_VERTEX = /* glsl */ `
   varying vec2 vUv;
   varying vec3 vWorldPos;
@@ -229,3 +151,81 @@ const GROUND_FRAGMENT = /* glsl */ `
     gl_FragColor = vec4(color, clamp(alpha, 0.0, 1.0));
   }
 `
+
+export const GroundDecalType = {
+  FIRE: 0,
+  ELECTRIC: 1,
+  MAGIC: 2,
+  VERDANT: 3,
+} as const
+
+export type GroundDecalStyle = typeof GroundDecalType[keyof typeof GroundDecalType]
+
+export interface GroundDecalSyncState {
+  fade: number
+  radius: number
+  seed?: number
+  palette?: {
+    char?: string | Color
+    crack?: string | Color
+    ring?: string | Color
+    core?: string | Color
+  }
+}
+
+export function createGroundDecalMaterial(style: GroundDecalStyle = GroundDecalType.FIRE): ShaderMaterial {
+  const defines: Record<string, string> = {}
+  if (style === GroundDecalType.FIRE)
+    defines.DECAL_FIRE = '1'
+  else if (style === GroundDecalType.ELECTRIC)
+    defines.DECAL_ELECTRIC = '1'
+  else if (style === GroundDecalType.MAGIC)
+    defines.DECAL_MAGIC = '1'
+  else if (style === GroundDecalType.VERDANT)
+    defines.DECAL_VERDANT = '1'
+
+  const material = new ShaderMaterial({
+    defines,
+    side: DoubleSide,
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    blending: AdditiveBlending,
+    toneMapped: false,
+    uniforms: sharedUniforms({
+      uFade: { value: 0.0 },
+      uRadius: { value: 1.5 },
+      uSeed: { value: 0.0 },
+      uGlow: { value: 2.2 },
+
+      // Colors
+      uColorChar: { value: new Color('#0a0503') },
+      uColorCrack: { value: new Color('#ff5a10') },
+      uColorRing: { value: new Color('#ff7a1e') },
+      uColorCore: { value: new Color('#fff2bf') },
+    }),
+    vertexShader: GROUND_VERTEX,
+    fragmentShader: GROUND_FRAGMENT,
+  })
+
+  material.userData.sync = (state: GroundDecalSyncState) => {
+    const u = material.uniforms
+    u.uFade.value = state.fade
+    u.uRadius.value = state.radius
+    if (state.seed !== undefined)
+      u.uSeed.value = state.seed
+
+    if (state.palette) {
+      if (state.palette.char)
+        (u.uColorChar.value as Color).set(parseVfxColor(state.palette.char))
+      if (state.palette.crack)
+        (u.uColorCrack.value as Color).set(parseVfxColor(state.palette.crack))
+      if (state.palette.ring)
+        (u.uColorRing.value as Color).set(parseVfxColor(state.palette.ring))
+      if (state.palette.core)
+        (u.uColorCore.value as Color).set(parseVfxColor(state.palette.core))
+    }
+  }
+
+  return material
+}

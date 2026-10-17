@@ -55,8 +55,8 @@ const emit = defineEmits<{
   (e: 'fork', universeId: string): void
   (e: 'edit'): void
   (e: 'retry'): void
-  (e: 'fork-switch', universeId: string): void
-  (e: 'delete-following'): void
+  (e: 'forkSwitch', universeId: string): void
+  (e: 'deleteFollowing'): void
   (e: 'journal'): void
 }>()
 defineSlots<{
@@ -67,14 +67,14 @@ const airiCardStore = useAiriCardStore()
 const activeCardId = computed(() => airiCardStore.activeCardId)
 
 const showUniversePicker = ref(false)
-const pendingAction = ref<'fork' | 'fork-switch' | null>(null)
+const pendingAction = ref<'fork' | 'forkSwitch' | null>(null)
 
 function handleUniverseConfirm(universeId: string) {
   if (pendingAction.value === 'fork') {
     emit('fork', universeId)
   }
-  else if (pendingAction.value === 'fork-switch') {
-    emit('fork-switch', universeId)
+  else if (pendingAction.value === 'forkSwitch') {
+    emit('forkSwitch', universeId)
   }
   pendingAction.value = null
 }
@@ -172,8 +172,8 @@ async function handleAction(action: ChatActionMenuAction) {
     return
   }
 
-  if (action === 'fork-switch') {
-    pendingAction.value = 'fork-switch'
+  if (action === 'forkSwitch') {
+    pendingAction.value = 'forkSwitch'
     showUniversePicker.value = true
     return
   }
@@ -188,8 +188,8 @@ async function handleAction(action: ChatActionMenuAction) {
     return
   }
 
-  if (action === 'delete-following') {
-    emit('delete-following')
+  if (action === 'deleteFollowing') {
+    emit('deleteFollowing')
     return
   }
 
@@ -198,7 +198,7 @@ async function handleAction(action: ChatActionMenuAction) {
     return
   }
 
-  console.log(`[ChatActionMenu] Unhandled action: ${action}`)
+  console.info(`[ChatActionMenu] Unhandled action: ${action}`)
 }
 
 function handleContextMenuOpenChange(open: boolean) {

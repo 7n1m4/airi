@@ -13,35 +13,11 @@ const outputDir = path.resolve(__dirname, '../packages/i18n/src/dist-lite') // T
 if (!fs.existsSync(outputDir))
   fs.mkdirSync(outputDir, { recursive: true })
 
-function loadDir(dir) {
-  const result = {}
-  const entries = fs.readdirSync(dir, { withFileTypes: true })
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name)
-    if (entry.isDirectory()) {
-      result[entry.name] = loadDir(fullPath)
-    }
-    else if (entry.name.endsWith('.yaml')) {
-      const name = entry.name.replace('.yaml', '')
-      result[name] = yaml.parse(fs.readFileSync(fullPath, 'utf8'))
-    }
-    else if (entry.name.endsWith('.ts') && entry.name !== 'index.ts') {
-      // Basic support for TS files that export default objects
-      // (This is a bit hacky but works for AIRI's structure)
-      const content = fs.readFileSync(fullPath, 'utf8')
-      if (content.includes('export default')) {
-        // Skip for now, we'll manually handle the nesting
-      }
-    }
-  }
-  return result
-}
-
 const allMessages = {}
 const locales = fs.readdirSync(localesDir).filter(f => fs.statSync(path.join(localesDir, f)).isDirectory())
 
 for (const locale of locales) {
-  console.log(`Bundling ${locale}...`)
+  console.info(`Bundling ${locale}...`)
   const localeDir = path.join(localesDir, locale)
 
   // Custom logic for AIRI's nested structure
@@ -80,4 +56,4 @@ messages['zh-TW'] = messages['zh-Hant']
 export default messages
 `
 fs.writeFileSync(path.join(outputDir, 'messages.mjs'), content)
-console.log('Bundle created at packages/i18n/src/dist-lite/messages.mjs')
+console.info('Bundle created at packages/i18n/src/dist-lite/messages.mjs')

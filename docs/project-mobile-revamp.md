@@ -19,7 +19,7 @@ When interacting with an AI companion on a handheld touchscreen, facial expressi
 
 ## 2. The 4-Way Mobile Interaction Architecture
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │ [Logo] [📖 Profile / Story ▾]    [🧠 LLM] [⚡ Injections] [⊞ Strip] [⚙] │ ← Top System Bar
 │ ═════════════════════════════════════════┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈   │ ← Token Progress Line
@@ -58,7 +58,7 @@ When interacting with an AI companion on a handheld touchscreen, facial expressi
 
 ### 3.2 The 4 Header Action Badges
 
-```
+```text
 ┌─────────────┬───────────────────┬───────────────────┬──────────────┐
 │  [🧠 LLM]   │  [⚡ Injections]   │  [⊞ Strip Config] │ [⚙ Settings] │
 └─────────────┴───────────────────┴───────────────────┴──────────────┘
@@ -102,8 +102,8 @@ Unlike desktop (which supports both horizontal bars and vertical columns), **mob
   - When `dockedEdge === 'right'` (Default) ➔ **Control Strip**: Right edge (`right-0`) · **Chatbox**: Left edge (`left-6`).
   - When `dockedEdge === 'left'` ➔ **Control Strip**: Left edge (`left-0`) · **Chatbox**: Right edge (`right-6`).
 
-```
-       [Right Edge Docked (Default)]                         [Left Edge Docked]
+```text
+      [Right Edge Docked (Default)]                         [Left Edge Docked]
 ┌────────────────────────────────────────┐       ┌────────────────────────────────────────┐
 │ ┌──────────────┐          ╭─╮ (14px)   │       │   (14px) ╭─╮          ┌──────────────┐ │
 │ │   Chatbox    │  Avatar  │«│ Control  │  OR   │  Control │»│  Avatar  │   Chatbox    │ │
@@ -142,7 +142,7 @@ In legacy mobile, opening coordinate controls spawned desktop-oriented slider in
 
 The desktop customizer (`w-[760px]` 2-column modal) cannot be rendered on mobile portrait displays without severe clipping and squishing. Mobile uses a **dedicated, touch-first customizer sheet**:
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │  ⠿ CONTROL STRIP CUSTOMIZER                        (×) │
 ├────────────────────────────────────────────────────────┤
@@ -189,7 +189,7 @@ The desktop customizer (`w-[760px]` 2-column modal) cannot be rendered on mobile
 
 To maintain a single source of truth without bloating desktop leaf components or duplicating mobile logic:
 
-```
+```text
 WhisperDock Family
 ├── WhisperComposerBar.vue        ← Shared visual composer row ([+] · [✨] · [textarea] · [🎤] · [✈])
 ├── WhisperDock.vue               ← Desktop Actor-stage wrapper (4-state mouse hover/proximity, auto-dismiss)

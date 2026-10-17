@@ -81,14 +81,14 @@ The consciousness orchestrator is equipped with unified tools allowing it to sea
 ### A. `dj_queue_track`
 Queues a track into the DJ deck from either a generative prompt or a catalog query.
 *   **Arguments**:
-    ```json
+    ```jsonc
     {
-      "source": "auto" | "spotify" | "comfyui" | "yue2" | "suno",
+      "source": "auto", // "spotify" | "comfyui" | "yue2" | "suno"
       "query": "Daft Punk - Digital Love",
       "caption": "french filter house, punchy vintage drums, groovy slap bass, 124 bpm",
       "lyrics": "[Intro]\n[Verse]\nLast night I had a dream about you...",
       "title": "Neon Dreams",
-      "priority": "next" | "tail" | "immediate_fade"
+      "priority": "next" // "tail" | "immediate_fade"
     }
     ```
 *   `source`: `"auto"` (DJ decides based on mode/preference), `"spotify"`, `"comfyui"`, `"yue2"`, or `"suno"`.
@@ -100,10 +100,10 @@ Queues a track into the DJ deck from either a generative prompt or a catalog que
 ### B. `dj_search_catalog`
 Explicitly queries the Spotify catalog for tracks, albums, or playlists.
 *   **Arguments**:
-    ```json
+    ```jsonc
     {
       "query": "Japanese City Pop 1980s",
-      "type": "track" | "album" | "playlist",
+      "type": "track", // "album" | "playlist"
       "limit": 5
     }
     ```
@@ -139,19 +139,21 @@ Queries real-time playback telemetry, current deck state, and upcoming queue.
 ### D. `dj_control`
 Direct playback and transition controls.
 *   **Arguments**:
-    ```json
+    ```jsonc
     {
-      "action": "fade_to_next" | "skip" | "pause" | "resume" | "set_volume" | "clear_queue",
-      "fadeDurationSeconds": 4,
+      "action": "fade_to_next", // "skip" | "pause" | "resume" | "set_volume" | "clear_queue"
+      "fadeDurationSeconds": 4
+    }
+    ```
 ### E. `dj_plan_composition` (Music Room / Sound Studio)
 Initiates the fast symbolic planning phase (taking only 3–15s). Generates or mutates an ABC musical notation score without running heavy acoustic diffusion.
 *   **Arguments**:
-    ```json
+    ```jsonc
     {
-      "action": "generate_new" | "mutate_existing",
+      "action": "generate_new", // "mutate_existing"
       "style": "cyberpunk electro complextro 128 bpm",
       "lyrics": "[intro]\nSystem online...",
-      "cotMode": "melody" | "full",
+      "cotMode": "melody", // "full"
       "existingAbcScore": "X:1\nT:Neon Drive\nM:4/4\nK:Cm\n...",
       "mutationInstructions": "transpose the chorus into a dark minor key and double the bassline tempo",
       "loraAdapter": "ar_lora_inst_v3abc",
@@ -171,12 +173,12 @@ Initiates the fast symbolic planning phase (taking only 3–15s). Generates or m
 ### F. `dj_render_composition`
 Commits an approved or edited ABC score into high-fidelity 48 kHz stereo audio via the YuE 2 NAR ODE pipeline.
 *   **Arguments**:
-    ```json
+    ```jsonc
     {
       "planId": "plan_99a8b",
       "abcScore": "X:1\nT:Neon Drive\n...",
       "odeSteps": 8,
-      "priority": "next" | "tail"
+      "priority": "next" // "tail"
     }
     ```
 
@@ -186,7 +188,7 @@ Commits an approved or edited ABC score into high-fidelity 48 kHz stereo audio v
 
 Audio sources are implemented under `packages/stage-ui/src/libs/providers/` as part of the `music` provider category:
 
-```
+```text
                           ┌───────────────────────────┐
                           │    MusicProvider Interface│
                           └─────────────┬─────────────┘
@@ -202,13 +204,13 @@ Audio sources are implemented under `packages/stage-ui/src/libs/providers/` as p
 └──────────────────────────────┘    └──────────────────────┘    └──────────────────────┘
 ```
 
-#### A. Local Primary Engine: AIRI Audio Server (`audio.cpp` C++ Runtime)
+### A. Local Primary Engine: AIRI Audio Server (`audio.cpp` C++ Runtime)
 * **Dedicated Music API Endpoint (`POST /v1/audio/music`)**:
   Music synthesis differs structurally from plain TTS speech: it requires multi-modal conditioning (genre prompt, structured lyrics with verse/chorus tags, duration, tempo/BPM, and optional LoRA adapters). Rather than overloading `/v1/audio/speech`, `airi-audio-server` exposes a dedicated endpoint:
-  ```json
+  ```http
   POST /v1/audio/music
   {
-    "model": "minimax-music-3" | "yue-2",
+    "model": "minimax-music-3 | yue-2",
     "prompt": "melodic synthwave, analog synths, driving bassline, 120 bpm",
     "lyrics": "[Verse]\nNeon reflections on the wet asphalt...\n[Chorus]\nRunning through the grid...",
     "duration_seconds": 60,
@@ -226,7 +228,7 @@ Audio sources are implemented under `packages/stage-ui/src/libs/providers/` as p
   - **AIRI Integration**: Character cards can declare an optional `extensions.airi.music.default_lora` to ensure the character's generated music matches their artistic persona.
 * **LoRA Management & Training Lifecycle (`/v1/audio/music/loras`)**:
   `airi-audio-server` provides a complete RESTful adapter cartridge management and training pipeline:
-  ```json
+  ```http
   GET    /v1/audio/music/loras              // List installed LoRAs, ranks, sizes, tags
   POST   /v1/audio/music/loras              // Upload ready-to-use .safetensors adapter
   DELETE /v1/audio/music/loras/:id          // Archive or remove an adapter
@@ -291,7 +293,7 @@ Audio sources are implemented under `packages/stage-ui/src/libs/providers/` as p
 
 The playback engine in `packages/stage-ui/src/stores/dj-deck.ts` coordinates both native Web Audio and Spotify streaming:
 
-```
+```text
 [ Local / Generative Audio ] ──► [ Web Audio GainNode A/B ] ──┐
                                                               ├──► [ Master Audio Output ]
 [ Spotify Web Playback ]     ──► [ Spotify Player Volume ]  ──┘           ▲

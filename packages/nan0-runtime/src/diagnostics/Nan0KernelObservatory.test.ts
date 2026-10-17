@@ -175,7 +175,11 @@ describe('nan0KernelObservatory', () => {
   })
 
   it('contains sink failures without throwing into cognition or recursively logging them', async () => {
-    const sink = { write: vi.fn(async () => { throw new Error('disk unavailable') }) }
+    const sink = {
+      write: vi.fn(async () => {
+        throw new Error('disk unavailable')
+      }),
+    }
     const diagnosticConsole = { info: vi.fn(), error: vi.fn() }
     const observatory = createNan0KernelObservatory({
       configuration: { enabled: true, batchSize: 1 },

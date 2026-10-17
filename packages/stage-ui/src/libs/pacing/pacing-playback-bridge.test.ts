@@ -596,7 +596,9 @@ describe('pacing preparation recovery', () => {
   const voiceParams = { provider: 'test', model: 'tts', voiceId: 'voice', text: 'Hmm...' }
   const bytes = new Uint8Array([1, 2, 3]).buffer
 
-  beforeEach(async () => { await clearThinkingAudioCache() })
+  beforeEach(async () => {
+    await clearThinkingAudioCache()
+  })
   afterEach(async () => {
     await clearThinkingAudioCache()
     vi.restoreAllMocks()
@@ -608,6 +610,9 @@ describe('pacing preparation recovery', () => {
   } = {}) {
     const clock = new VirtualClock()
     const playback = { schedule: vi.fn(), stopByIntent: vi.fn() }
+    // The decode stub below only carries `duration`, so this bridge's audio
+    // payload type is that stub — not the `AudioBuffer` default.
+    let bridge!: PacingPlaybackBridge<{ duration: number }>
     const coordinator = new TurnPacingCoordinator({
       turnId: 'recovery',
       generation: 1,
@@ -616,7 +621,7 @@ describe('pacing preparation recovery', () => {
       clock,
       onCancelFiller: reason => bridge.cancelFiller(reason),
     })
-    const bridge = new PacingPlaybackBridge({ coordinator, playback, voiceParams, clock, ...options })
+    bridge = new PacingPlaybackBridge<{ duration: number }>({ coordinator, playback, voiceParams, clock, ...options })
     coordinator.dispatch()
     clock.advance(1800)
     return { clock, playback, coordinator, bridge }
@@ -665,8 +670,10 @@ describe('pacing preparation recovery', () => {
   })
 
   it('does not start synthesis after an answer arrives during cache lookup', async () => {
-    let resolveLookup!: (value: null) => void
-    vi.spyOn(pacingCache, 'getThinkingAudio').mockImplementationOnce(() => new Promise((resolve) => { resolveLookup = resolve }))
+    const { promise, resolve } = Promise.withResolvers<null>()
+    vi.spyOn(pacingCache, 'getThinkingAudio')
+      .mockImplementationOnce(() => promise)
+    const resolveLookup = resolve
     const synthesizeAudio = vi.fn(async () => bytes)
     const { coordinator, bridge, playback } = setup({ synthesizeAudio })
     const preparing = bridge.handleFillerArmed()
@@ -701,7 +708,9 @@ describe('pacing preparation recovery', () => {
     const { coordinator, bridge, playback } = setup({
       synthesizeAudio: async (_text, value) => {
         signal = value
-        return new Promise((resolve) => { finish = resolve })
+        const { promise, resolve } = Promise.withResolvers<ArrayBuffer>()
+        finish = resolve
+        return promise
       },
     })
     const preparing = bridge.handleFillerArmed()
@@ -754,6 +763,7 @@ describe('pacing preparation recovery', () => {
 
   it('stops the real playback intent on turn cancellation', async () => {
     const clock = new VirtualClock()
+    let bridge!: PacingPlaybackBridge
     const coordinator = new TurnPacingCoordinator({
       turnId: 'intent-test',
       generation: 1,
@@ -763,7 +773,7 @@ describe('pacing preparation recovery', () => {
       onCancelFiller: reason => bridge.cancelFiller(reason),
     })
     const playback = { schedule: vi.fn(), stopByIntent: vi.fn() }
-    const bridge = new PacingPlaybackBridge({
+    bridge = new PacingPlaybackBridge({
       coordinator,
       playback,
       voiceParams,

@@ -6,7 +6,7 @@ import { onClickOutside } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   viewMode: 'overview' | 'constellation' | 'timeline'
   searchQuery: string
   selectedCategory: string

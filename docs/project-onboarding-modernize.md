@@ -459,7 +459,7 @@ The Experience Picker allows users to choose their companion's operational role 
 | `sensory` | Extended | Toggleable | Dynamic Performer | Prompts OS permission & enables AFK telemetry loops |
 | `generative_motion` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Feature In Development]`. Tooltip: "FlowMDM WebGPU procedural text-to-motion". |
 | `memory_matrix` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Guided Setup Coming Soon]`. Tooltip: "Lifetime Sacred Journal & DRMM dreaming consolidation (available in Settings)". |
-| `rehearsal_room` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Guided Setup Coming Soon]`. Tooltip: "<|ACT:...|> live emotion and motion cue testing sandbox (available in Model Customizer)". |
+| `rehearsal_room` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Guided Setup Coming Soon]`. Tooltip: "<\|ACT:...\|> live emotion and motion cue testing sandbox (available in Model Customizer)". |
 | `dating_sim` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Guided Setup Coming Soon]`. Tooltip: "Branching visual novel HUD, intimacy tracking, and scene sets (available in Settings)". |
 | `multi_window` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Feature In Development]`. Tooltip: "Detached desktop chat bubble and transparent stage overlay". |
 | `cloud_relay_bot` | Future Expansion | Disabled (`cursor-not-allowed`) | None | Badge: `[Feature In Development]`. Tooltip: "Cloudflare Edge Worker for 24/7 Discord interaction bot". |

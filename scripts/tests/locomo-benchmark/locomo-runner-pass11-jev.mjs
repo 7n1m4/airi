@@ -13,6 +13,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
@@ -62,42 +63,42 @@ const PASS10_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass
 const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass11-jev-report.md')
 const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass11-jev-trace.json')
 
-console.log('================================================================')
-console.log('LoCoMo conv-47 Pass 11 (Jev Cloud): Peer-Review Hardening Shootout')
-console.log('31 Sessions | 689 Turns | 150 Questions | Fixes A/B/C/D + Response Validation')
-console.log('================================================================\n')
+console.info('================================================================')
+console.info('LoCoMo conv-47 Pass 11 (Jev Cloud): Peer-Review Hardening Shootout')
+console.info('31 Sessions | 689 Turns | 150 Questions | Fixes A/B/C/D + Response Validation')
+console.info('================================================================\n')
 
 // 1. Load Dataset
-console.log('Loading conv-47 dataset...')
+console.info('Loading conv-47 dataset...')
 const convData = JSON.parse(fs.readFileSync(DATASET_PATH, 'utf-8'))
 const qas = convData.qa.filter(q => q.category >= 1 && q.category <= 4)
-console.log(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
+console.info(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
 
 // 2. Initialize Models (Jev Client + Needle 2 WASM)
-console.log('Initializing TypeSafe Jev Cloud Client...')
+console.info('Initializing TypeSafe Jev Cloud Client...')
 const jev = new TypeSafeJevClient(JEV_API_KEY)
 
-console.log('Loading Needle 2 WASM module on CPU...')
+console.info('Loading Needle 2 WASM module on CPU...')
 const needle = await NeedleNode.load()
 
 // 3. Load Entity Ledger
-console.log('\nLoading Pass 3 Entity Ledger...')
+console.info('\nLoading Pass 3 Entity Ledger...')
 let ledger
 if (fs.existsSync(PASS3_LEDGER_PATH)) {
-  console.log(`Loading cached Pass 3 ledger from ${PASS3_LEDGER_PATH}...`)
+  console.info(`Loading cached Pass 3 ledger from ${PASS3_LEDGER_PATH}...`)
   ledger = EntityLedger.fromJSON(JSON.parse(fs.readFileSync(PASS3_LEDGER_PATH, 'utf8')))
 }
 else if (fs.existsSync(BASE_LEDGER_PATH)) {
-  console.log(`Loading baseline ledger from ${BASE_LEDGER_PATH}...`)
+  console.info(`Loading baseline ledger from ${BASE_LEDGER_PATH}...`)
   ledger = EntityLedger.fromJSON(JSON.parse(fs.readFileSync(BASE_LEDGER_PATH, 'utf8')))
 }
 else {
   throw new Error('Ledger not found')
 }
-console.log(`Entity Ledger loaded with ${ledger.claims.size} claims.\n`)
+console.info(`Entity Ledger loaded with ${ledger.claims.size} claims.\n`)
 
 // 4. Load LocomoMemoryIndex & Hybrid Searcher with Windowed Embeddings
-console.log('Initializing in-memory Vector/BM25 Index with Turn-1 Windowed Documents...')
+console.info('Initializing in-memory Vector/BM25 Index with Turn-1 Windowed Documents...')
 const index = new LocomoMemoryIndex()
 index.loadConversation(convData)
 const embeddings = JSON.parse(fs.readFileSync(EMBEDDINGS_PATH, 'utf-8'))
@@ -122,7 +123,7 @@ const dualSearcher = new DualSearcherPass3(ledger, hybridSearcher, jev)
 const answerHead = new AnswerHeadPass3(needle, jev, index)
 
 // 7. Shootout Loop
-console.log('Beginning 150-question Shootout with Pass 11 Hardened Boundaries...')
+console.info('Beginning 150-question Shootout with Pass 11 Hardened Boundaries...')
 const shootoutT0 = performance.now()
 
 const baselineResults = []
@@ -218,18 +219,18 @@ for (let i = 0; i < qas.length; i++) {
     const elapsed = ((performance.now() - shootoutT0) / 1000).toFixed(1)
     const bRec = ((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p11Rec = ((pass11Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
-    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 11 (Recall@3): ${p11Rec}%`)
+    console.info(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 11 (Recall@3): ${p11Rec}%`)
   }
 }
 
 // --- ARM 3: Monolithic System-2 Deductive Resolution with Response Validation ---
 const s2Telemetry = []
 if (system2Queue.length > 0) {
-  console.log(`\n[System-2] Dispatching monolithic deductive resolution for ${system2Queue.length} queries to deepseek-v4.1-flash...`)
+  console.info(`\n[System-2] Dispatching monolithic deductive resolution for ${system2Queue.length} queries to deepseek-v4.1-flash...`)
   const s2T0 = performance.now()
   const s2Answers = await resolveSystem2Batch(system2Queue, { telemetry: s2Telemetry })
   const s2DurationSec = ((performance.now() - s2T0) / 1000).toFixed(2)
-  console.log(`[System-2] Monolithic resolution completed in ${s2DurationSec}s (${Object.keys(s2Answers).length} answers resolved).\n`)
+  console.info(`[System-2] Monolithic resolution completed in ${s2DurationSec}s (${Object.keys(s2Answers).length} answers resolved).\n`)
 
   for (const item of system2Queue) {
     if (s2Answers[item.id]) {
@@ -249,7 +250,7 @@ if (system2Queue.length > 0) {
 }
 
 const shootoutDurationSec = ((performance.now() - shootoutT0) / 1000).toFixed(2)
-console.log(`\nShootout completed in ${shootoutDurationSec}s.\n`)
+console.info(`\nShootout completed in ${shootoutDurationSec}s.\n`)
 
 // 8. Aggregate Metrics
 const bAgg = aggregateBenchmarkResults(baselineResults)
@@ -319,7 +320,7 @@ const reportMd = `# LoCoMo conv-47 Pass 11 Jev Benchmark Report
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
-console.log(`Saved Pass 11 Jev report to ${OUTPUT_REPORT_PATH}`)
+console.info(`Saved Pass 11 Jev report to ${OUTPUT_REPORT_PATH}`)
 
 const detailedComparison = qas.map((q, idx) => ({
   index: idx,
@@ -344,9 +345,9 @@ fs.writeFileSync(OUTPUT_TRACE_PATH, JSON.stringify({
   metrics: { baseline: bAgg, pass8: p8Agg, pass9Jev: p9JevAgg, pass9Laya: p9LayaAgg, pass10: p10Agg, pass11Jev: p11Agg },
   detailedComparison,
 }, null, 2))
-console.log(`Saved Pass 11 Jev trace to ${OUTPUT_TRACE_PATH}`)
+console.info(`Saved Pass 11 Jev trace to ${OUTPUT_TRACE_PATH}`)
 
-console.log('\n======================================================')
-console.log('PASS 11 JEV SHOOTOUT COMPLETE')
-console.log('======================================================')
-console.log(reportMd)
+console.info('\n======================================================')
+console.info('PASS 11 JEV SHOOTOUT COMPLETE')
+console.info('======================================================')
+console.info(reportMd)

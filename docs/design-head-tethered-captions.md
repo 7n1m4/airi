@@ -20,7 +20,7 @@ The mechanic consists of three clean ideas:
    If the runtime exposes an actual head drawable / bone bound, use its world center. Otherwise, fall back to a percentage of the model's overall bounding box (`head ≈ (50%, 18%)`, `face ≈ (50%, 31%)`, `chest ≈ (50%, 55%)`).
 
 3. **Fake perspective transform** — Convert pose → a non-uniform 2D transform that *suggests* 3D rotation:
-   ```
+   ```text
    strength    = perspectiveStrength(anchor) * followStrength     // 0..1
    x           = clamp(headYaw / 30,    -1..1)
    y           = clamp(headPitch / 30,  -1..1)
@@ -498,7 +498,7 @@ Redrawing a 20-point PIXI `Graphics` vector path on text change or during a 60 F
 
 To prevent false positives (e.g., `chassis` triggering `hiss`, or `"I'm not angry"` triggering anger), the resolver evaluates input using a **5-tier priority hierarchy**:
 
-```
+```text
 1. Explicit <|ACT:emotion|> Tag  (Highest Priority)
    └─► 2. Structural Patterns (Stutters u-um, Ellipses ..., CAPS, Asides)
         └─► 3. Multi-word Phrases ("I miss you", "what if", "we did it")
@@ -553,7 +553,7 @@ To prevent false positives (e.g., `chassis` triggering `hiss`, or `"I'm not angr
 
 As long messages stream or pace via the Micro-Pacer (~80-char sub-phrases), each sub-phrase operates as its own **animated comic frame**:
 
-```
+```text
 "U-um... I think I really like you!!"
  ├── 1. "U-um..." ➔ Motion: Wobble | Accent: Sweat Drop | Ambient: Blush Wash
  ├── 2. "I think" ➔ Ambient: Floating ? Dots | Rim: Scalloped Cloud
@@ -620,7 +620,7 @@ Upstream PR #2657 introduced the following core modules in `moeru-ai/airi`:
 
 ### 10.2 Empirical Comparison: Strengths & Deficiencies
 
-```
+```text
                         ┌────────────────────────────────────────────────────────┐
                         │        Comparative Subsystem Analysis                  │
 ┌───────────────────────┼─────────────────────────────────┬──────────────────────┴─────────────────┐

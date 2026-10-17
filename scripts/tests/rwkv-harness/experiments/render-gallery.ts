@@ -4,6 +4,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import puppeteer from 'puppeteer-core'
 
@@ -61,17 +62,17 @@ async function main() {
   const page = await browser.newPage()
   const renderer = new CanvasRenderer(page)
   await renderer.open(server.baseUrl)
-  console.log('✓ CanvasRenderer tab ready\n')
+  console.info('✓ CanvasRenderer tab ready\n')
 
   try {
     for (const item of GALLERY_MODELS) {
       const rawPath = path.join(rootDir, item.rawFile)
       if (!fs.existsSync(rawPath)) {
-        console.log(`✗ Missing ${rawPath}`)
+        console.info(`✗ Missing ${rawPath}`)
         continue
       }
 
-      console.log(`Processing: ${item.name} (${item.slug})...`)
+      console.info(`Processing: ${item.name} (${item.slug})...`)
       const raw = fs.readFileSync(rawPath, 'utf8')
       const jsCode = extractJsFromRaw(raw)
 
@@ -85,10 +86,10 @@ async function main() {
       if (outcome.dataUrl) {
         const outPng = path.join(galleryDir, `${item.slug}.png`)
         renderer.savePng(outPng, outcome.dataUrl)
-        console.log(`  ✓ Rendered ${item.slug}.png (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors})`)
+        console.info(`  ✓ Rendered ${item.slug}.png (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors})`)
       }
       else {
-        console.log(`  ✗ Render failed: ${outcome.error || outcome.sketchError}`)
+        console.info(`  ✗ Render failed: ${outcome.error || outcome.sketchError}`)
       }
     }
   }
@@ -97,7 +98,7 @@ async function main() {
     await server.close()
   }
 
-  console.log(`\n✓ All gallery images collected in: ${galleryDir}`)
+  console.info(`\n✓ All gallery images collected in: ${galleryDir}`)
 }
 
 main().catch(console.error)

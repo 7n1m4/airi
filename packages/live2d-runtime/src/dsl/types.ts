@@ -73,7 +73,6 @@ export interface DslEntry {
 }
 
 /**
-
  * A named motion group: an ordered list of candidate entries. Selection among
  * them is guard-filtered, intimacy/time-gated, then weight-random.
  */

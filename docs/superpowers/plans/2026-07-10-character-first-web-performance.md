@@ -12,7 +12,7 @@
 
 ---
 
-### Task 1: Remove DuckDB From the Stage Mount Boundary
+## Task 1: Remove DuckDB From the Stage Mount Boundary
 
 **Files:**
 - Modify: `packages/stage-ui/src/components/scenes/runtime.test.ts`
@@ -95,7 +95,7 @@ $upstream = git rev-parse '@{u}'
 if ($head -ne $upstream) { throw 'Task 1 commit is not on upstream' }
 ```
 
-### Task 2: Start Character Initialization Before Optional Services
+## Task 2: Start Character Initialization Before Optional Services
 
 **Files:**
 - Create: `apps/stage-web/src/modules/app-startup.ts`
@@ -235,10 +235,10 @@ In `App.vue`, import `startCharacterFirstInitialization` from `./modules/app-sta
 
 ```ts
 onMounted(() => {
-  console.log('[App] onMounted start')
+  console.info('[App] onMounted start')
   proactivityStore.startHeartbeatLoop()
 
-  console.log('[App] Initializing Analytics & Card stores...')
+  console.info('[App] Initializing Analytics & Card stores...')
   analyticsStore.initialize()
   cardStore.initialize()
 
@@ -276,8 +276,8 @@ onMounted(() => {
   }
   // @ts-expect-error - exposing to window for debugging
   window.airi = airi
-  console.log('--- [AIRI DEBUG] Store bridge active: window.airi is ready ---')
-  console.log('[App] onMounted complete')
+  console.info('--- [AIRI DEBUG] Store bridge active: window.airi is ready ---')
+  console.info('[App] onMounted complete')
 })
 ```
 
@@ -305,7 +305,7 @@ $upstream = git rev-parse '@{u}'
 if ($head -ne $upstream) { throw 'Task 2 commit is not on upstream' }
 ```
 
-### Task 3: Build Runtime-Only Hiyori Archives
+## Task 3: Build Runtime-Only Hiyori Archives
 
 **Files:**
 - Create: `apps/stage-web/build/live2d-runtime-archive.ts`
@@ -532,7 +532,7 @@ $free[0], $pro[0] | Select-Object Name,Length
 
 Expected: build succeeds from the pushed commit; exactly one Free and one Pro ZIP exist and both remain below budget. If it fails, make a new focused commit, push it, and repeat this step from a clean upstream-matched HEAD.
 
-### Task 4: Replace Bulk PWA Precache With On-Demand Runtime Caching
+## Task 4: Replace Bulk PWA Precache With On-Demand Runtime Caching
 
 **Files:**
 - Create: `apps/stage-web/src/modules/pwa-cache.ts`
@@ -690,7 +690,9 @@ return { register, updateReadyHooks }
 In `App.vue`, replace the standalone `usePWAStore()` call with `const pwaStore = usePWAStore()`. Append this exact entry after the `character orchestrator` entry in `optionalSteps`:
 
 ```ts
-{ name: 'pwa', run: () => pwaStore.register() },
+optionalSteps: [
+  { name: 'pwa', run: () => pwaStore.register() },
+]
 ```
 
 The runtime precache is below 1 MiB, so registration can occur after the character URL is configured without triggering the former 153 MiB competing download.
@@ -750,7 +752,7 @@ if ($sw -match 'stageWebNavigateFallbackDenylist|isDeniedPath') { throw 'Generat
 
 Expected: build succeeds from the pushed commit; the explicit icon precache is below 10 entries and 1 MiB, contains no heavy runtime, and the generated route has no unresolved closure identifiers.
 
-### Task 5: Make Renderer Failures Observable
+## Task 5: Make Renderer Failures Observable
 
 **Files:**
 - Create: `packages/stage-ui-live2d/src/components/scenes/live2d/model-load-state.test.ts`
@@ -920,6 +922,9 @@ In Spine `Model.vue`, declare `let loaded = false` immediately after acquiring t
 Delete the two inner `emits('error', error)` calls that precede `reject(error)` so only the outer catch emits once. Replace the outer tail exactly with:
 
 ```ts
+try {
+  // ...
+}
 catch (error) {
   if (!isUnmounted) {
     componentState.value = 'pending'
@@ -986,7 +991,7 @@ $upstream = git rev-parse '@{u}'
 if ($head -ne $upstream) { throw 'Task 5 commit is not on upstream' }
 ```
 
-### Task 6: Add Automatic Retry, Session Fallback, and Error UI
+## Task 6: Add Automatic Retry, Session Fallback, and Error UI
 
 **Files:**
 - Create: `apps/stage-web/src/modules/model-load-recovery.ts`
@@ -1128,16 +1133,15 @@ async function useTemporaryStageModel(modelId: string, reason = 'temporary model
 
 Add `stageModelActiveId` and `stageModelLoadRevision` beside the other returned refs, and `retryStageModel` plus `useTemporaryStageModel` beside the returned methods. In `resetState`, set the active ID to `undefined` and revision to `0` before calling `updateStageModel('reset state')`.
 
-In the unified settings store, insert these exact properties:
+In the unified settings store, insert these exact properties beside the existing refs and methods:
 
 ```ts
-stageModelActiveId: toRef(stageModel, 'stageModelActiveId'),
-stageModelLoadRevision: toRef(stageModel, 'stageModelLoadRevision'),
-```
-
-```ts
-retryStageModel: stageModel.retryStageModel,
-useTemporaryStageModel: stageModel.useTemporaryStageModel,
+const stageModelStoreBindings = {
+  stageModelActiveId: toRef(stageModel, 'stageModelActiveId'),
+  stageModelLoadRevision: toRef(stageModel, 'stageModelLoadRevision'),
+  retryStageModel: stageModel.retryStageModel,
+  useTemporaryStageModel: stageModel.useTemporaryStageModel,
+}
 ```
 
 - [ ] **Step 5: Key the actual renderer by load revision**
@@ -1253,7 +1257,11 @@ error: The character could not be loaded.
 retry: Retry
 retrying: Retrying the character...
 fallback: Loading the lightweight fallback character...
+```
 
+For Simplified Chinese add:
+
+```yaml
 # zh-Hans
 error: 人物加载失败。
 retry: 重试
@@ -1291,7 +1299,7 @@ $upstream = git rev-parse '@{u}'
 if ($head -ne $upstream) { throw 'Task 6 commit is not on upstream' }
 ```
 
-### Task 7: Track Cache Configuration, Build, and Measure
+## Task 7: Track Cache Configuration, Build, and Measure
 
 **Files:**
 - Create: `deploy/nginx/airi-web.conf`
@@ -1592,7 +1600,7 @@ Before publishing, use the `playwright` skill to open current production with a 
 
 Use the `requesting-code-review` skill against the design and this plan. For each accepted finding, add a focused commit, push it, then repeat Steps 4-10 from the new clean upstream-matched HEAD. Do not bundle unrelated cleanup.
 
-### Task 8: Push, Deploy, and Apply Static Cache Rules
+## Task 8: Push, Deploy, and Apply Static Cache Rules
 
 **Files/servers:**
 - Deploy source: pushed GitHub branch `fork/codex/dasilva-commercial-subscription`

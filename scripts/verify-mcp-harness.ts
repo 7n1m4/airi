@@ -38,7 +38,7 @@ function mapAiriToolToGemini(tool: any): Record<string, unknown> {
 
 async function runHarness() {
   const configPath = 'c:/Users/h4rdc/.gemini/antigravity/mcp_config.json'
-  console.log(`[Harness] Reading config from ${configPath}...`)
+  console.info(`[Harness] Reading config from ${configPath}...`)
 
   const configRaw = await readFile(configPath, 'utf-8')
   const config = JSON.parse(configRaw)
@@ -48,7 +48,7 @@ async function runHarness() {
     throw new Error('Archivist server not found in config')
   }
 
-  console.log(`[Harness] Starting archivist server: ${archivistConfig.command} ${archivistConfig.args.join(' ')}`)
+  console.info(`[Harness] Starting archivist server: ${archivistConfig.command} ${archivistConfig.args.join(' ')}`)
 
   const transport = new StdioClientTransport({
     command: archivistConfig.command,
@@ -63,10 +63,10 @@ async function runHarness() {
 
   try {
     await client.connect(transport)
-    console.log('[Harness] Connected to MCP server!')
+    console.info('[Harness] Connected to MCP server!')
 
     // 1. Simulate mcp_list_tools execute logic
-    console.log('[Harness] Listing tools...')
+    console.info('[Harness] Listing tools...')
     const response = await client.listTools()
 
     // Convert to project's McpToolDescriptor format
@@ -78,7 +78,7 @@ async function runHarness() {
       inputSchema: t.inputSchema,
     }))
 
-    console.log(`[Harness] Found ${descriptors.length} tools.`)
+    console.info(`[Harness] Found ${descriptors.length} tools.`)
 
     // 2. Simulate AIRI tool creation (xsai tool wrapper)
     // We'll just create a mock AIRI tool object for mcp_list_tools itself first
@@ -97,32 +97,32 @@ async function runHarness() {
     }
 
     // 3. Test the mapping
-    console.log('\n--- VERIFICATION: mcp_list_tools (Empty Params) ---')
+    console.info('\n--- VERIFICATION: mcp_list_tools (Empty Params) ---')
     const purifiedList = mapAiriToolToGemini(mcpListToolsAiri)
-    console.log(JSON.stringify(purifiedList, null, 2))
+    console.info(JSON.stringify(purifiedList, null, 2))
 
     // 4. Test calling an actual tool
     const targetToolName = 'catalog_list' // Raw name as returned by server
     const hasCatalogList = descriptors.some(t => t.toolName === targetToolName)
 
     if (hasCatalogList) {
-      console.log(`\n[Harness] --- VERIFICATION: Calling ${targetToolName} ---`)
+      console.info(`\n[Harness] --- VERIFICATION: Calling ${targetToolName} ---`)
       try {
         const result = await client.callTool({
           name: targetToolName,
           arguments: {}, // Assuming catalog_list takes no mandatory args or we just test empty
         })
-        console.log('[Harness] Call Result:', JSON.stringify(result, null, 2))
+        console.info('[Harness] Call Result:', JSON.stringify(result, null, 2))
       }
       catch (callErr) {
         console.error(`[Harness] Call Error on ${targetToolName}:`, callErr)
       }
     }
     else {
-      console.log(`\n[Harness] Tool '${targetToolName}' not found on server. Cannot test execution.`)
+      console.info(`\n[Harness] Tool '${targetToolName}' not found on server. Cannot test execution.`)
     }
 
-    console.log('\n[Harness] All verification steps completed successfully!')
+    console.info('\n[Harness] All verification steps completed successfully!')
   }
   catch (err) {
     console.error('[Harness] Error:', err)

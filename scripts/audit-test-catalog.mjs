@@ -11,6 +11,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -24,7 +25,7 @@ if (!fs.existsSync(CATALOG_PATH)) {
   process.exit(1)
 }
 
-console.log('🔍 Auditing Test Catalog against repository state...')
+console.info('🔍 Auditing Test Catalog against repository state...')
 
 const catalogContent = fs.readFileSync(CATALOG_PATH, 'utf8')
 
@@ -52,7 +53,7 @@ while ((match = tablePathRegex.exec(catalogContent)) !== null) {
   catalogFiles.add(path.normalize(match[1]))
 }
 
-console.log(`📋 Discovered ${catalogFiles.size} unique test suite paths in catalog.`)
+console.info(`📋 Discovered ${catalogFiles.size} unique test suite paths in catalog.`)
 
 // 1. Verify all catalog files exist on disk
 let missingFiles = 0
@@ -96,10 +97,10 @@ if (vitestSuites.length > 0) {
   }
 }
 
-console.log('\n=== Test Catalog Audit Results ===')
-console.log(`Total cataloged test files: ${catalogFiles.size}`)
-console.log(`Missing file errors:        ${missingFiles}`)
-console.log(`Uncataloged Vitest suites:  ${untrackedSuites}`)
+console.info('\n=== Test Catalog Audit Results ===')
+console.info(`Total cataloged test files: ${catalogFiles.size}`)
+console.info(`Missing file errors:        ${missingFiles}`)
+console.info(`Uncataloged Vitest suites:  ${untrackedSuites}`)
 
 if (missingFiles > 0) {
   console.error('\n❌ Audit FAILED: Catalog contains dead or broken file links.')
@@ -110,5 +111,5 @@ if (untrackedSuites > 0) {
   console.warn('\n⚠️ Warning: Some active test suites are missing from the catalog.')
 }
 else {
-  console.log('\n✅ Audit PASSED: 100% of active test suites match catalog inventory.')
+  console.info('\n✅ Audit PASSED: 100% of active test suites match catalog inventory.')
 }

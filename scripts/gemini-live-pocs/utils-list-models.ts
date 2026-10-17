@@ -1,6 +1,8 @@
 import https from 'node:https'
 
-const API_KEY = process.env.GEMINI_API_KEY || ''
+import { env } from 'node:process'
+
+const API_KEY = env.GEMINI_API_KEY || ''
 
 const options = {
   hostname: 'generativelanguage.googleapis.com',
@@ -17,19 +19,22 @@ const req = https.request(options, (res) => {
     data += chunk
   })
   res.on('end', () => {
-    console.log('Response status:', res.statusCode)
+    console.info('Response status:', res.statusCode)
     try {
-      const parsed = JSON.parse(data)
-      if (parsed.models) {
-        console.log('Available models:')
-        parsed.models.forEach((m: any) => console.log(`- ${m.name}`))
+      const parsed: unknown = JSON.parse(data)
+      const models = typeof parsed === 'object' && parsed !== null && 'models' in parsed
+        ? parsed.models
+        : undefined
+      if (Array.isArray(models)) {
+        console.info('Available models:')
+        models.forEach(m => console.info(`- ${(m as { name?: string }).name}`))
       }
       else {
-        console.log('No models found or error:', data)
+        console.info('No models found or error:', data)
       }
     }
     catch {
-      console.log('Raw response:', data)
+      console.info('Raw response:', data)
     }
   })
 })

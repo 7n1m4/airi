@@ -12,7 +12,7 @@ AIRI's data persistence architecture is designed for local-first operations, uti
 2. **Sync Outbox (`unstorage`):** A dedicated IndexedDB instance (`airi-sync-queue`) storing a queue of operations to be mirrored remotely (e.g., S3 or ElectronFS).
 3. **Blob / Binary Storage (`localforage`):** Used for heavy assets (images, VRM/Live2D models, audio, stickers). This bypasses the outbox and is synchronized via specialized reconciliation loops.
 
-# Key Components and Code Paths
+## Key Components and Code Paths
 
 ### 1. Storage Drivers and Monkey-Patching
 **Path:** `packages/stage-ui/src/database/storage.ts`
@@ -35,7 +35,7 @@ AIRI's data persistence architecture is designed for local-first operations, uti
 - E.g., `packages/stage-ui/src/stores/background.ts`, `packages/stage-ui/src/stores/display-models.ts`.
 - Specialized reconciliations (`reconcileBackgrounds()`, `reconcileModels()`) manage syncing independent of the main `outbox`.
 
-# Core SOPs
+## Core SOPs
 
 ### 1. Writing to Structured Data
 - Use `storage.setItemRaw()` and `storage.getItemRaw()` for JSON-serializable structured data prefixed with `local:`.
@@ -51,13 +51,13 @@ AIRI's data persistence architecture is designed for local-first operations, uti
 - Ensure that you handle both `ElectronFSClient` and `S3StorageClient`.
 - Avoid destructive conflict resolutions. Default to LWW (Last-Write-Wins) combined with timestamp checks (`local:sync-metadata/timestamps/*`).
 
-# Known Pitfalls
+## Known Pitfalls
 
 - **Sync Conflicts & Loops:** Failing to toggle `storageState.isImportingRemoteData` when importing cloud data will queue all imported keys back into the outbox, causing exponential sync amplification.
 - **Timestamp Metadata:** `local:sync-metadata/timestamps/*` are internal metadata used for conflict resolution and skipped during sync. Do not use these keys for app logic.
 - **Large Blobs in `unstorage`:** Will cause quota issues and severely degrade sync engine performance since JSON serialization fails or becomes unwieldy.
 
-# Verification Steps
+## Verification Steps
 
 1. Always verify that new structured endpoints are prefixed with `local:` (or they won't sync).
 2. Validate any `unstorage` modifications via standard workspace checks (`pnpm -F @proj-airi/stage-ui typecheck`).

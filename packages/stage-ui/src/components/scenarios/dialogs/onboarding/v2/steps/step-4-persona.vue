@@ -116,6 +116,11 @@ function closeWebview() {
 
 let removeIpcListener = () => {}
 
+// Import wizard state — declared before the handlers that populate it.
+const importError = ref('')
+const isWizardOpen = ref(false)
+const wizardCardData = ref<unknown>(null)
+
 async function handleCharaCardDownloaded(payload: { base64Data: string, filename: string, ext: string }) {
   try {
     console.info('[CardImport:Stage1:ElectronDownload]', {
@@ -205,10 +210,6 @@ function parseImportedCard(content: string) {
     return parsed.card
   return parsed
 }
-
-const importError = ref('')
-const isWizardOpen = ref(false)
-const wizardCardData = ref<any>(null)
 
 async function handleImportFiles(files: FileList | null) {
   importError.value = ''
@@ -514,8 +515,7 @@ onBeforeUnmount(() => {
           </button>
         </div>
         <div class="relative z-10 flex-1 bg-white dark:bg-neutral-950">
-          <component
-            is="webview"
+          <webview
             v-if="activeBrowserSource"
             :src="activeBrowserSource.url"
             class="h-full w-full"

@@ -59,7 +59,7 @@ export async function loadLive2DModelPreview(input: File | string, parameters?: 
     const blob = await res.blob()
     const fileName = typeof input === 'string' ? input.split('/').pop() || 'model.zip' : input.name
 
-    console.log('🔍 [Live2D Preview] Calling setupLive2DModel with:', fileName)
+    console.info('🔍 [Live2D Preview] Calling setupLive2DModel with:', fileName)
     await Live2DFactory.setupLive2DModel(modelInstance, [new File([blob], fileName)], { autoInteract: false })
     app.stage.addChild(modelInstance)
 

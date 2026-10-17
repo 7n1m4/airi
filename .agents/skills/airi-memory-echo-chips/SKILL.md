@@ -14,7 +14,7 @@ Lightweight semantic fragments (3–5 per character) surfaced as at-a-glance rec
 | :--- | :--- |
 | Store | `packages/stage-ui/src/stores/echo-chips.ts` (374 ln) — `useEchoesStore` :106 |
 | Repo | `packages/stage-ui/src/database/repos/echo-chips.repo.ts` → `local:memory/echo-chips/{userId}` |
-| Chip shape | `EchoChip` — `type: 'mood' | 'flavor' | 'journal_candidate'` (+ text, characterId, universe/session tags) |
+| Chip shape | `EchoChip` — `type: 'mood' \| 'flavor' \| 'journal_candidate'` (+ text, characterId, universe/session tags) |
 | Data catalog | `docs/data-catalog.md` §1.10 |
 
 ## Key Mechanisms

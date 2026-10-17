@@ -7,6 +7,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import puppeteer from 'puppeteer-core'
 
@@ -143,7 +144,7 @@ async function queryModel(p: any, modelId: string, temp = 0.7): Promise<{ text: 
 }
 
 async function main() {
-  console.log('=== 100% Free Sandbox Shootout: Simple Flower Target ===\n')
+  console.info('=== 100% Free Sandbox Shootout: Simple Flower Target ===\n')
 
   const credsPath = path.resolve(process.cwd(), 'credentials.json')
   const creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'))
@@ -162,34 +163,34 @@ async function main() {
   const page = await browser.newPage()
   const renderer = new CanvasRenderer(page)
   await renderer.open(server.baseUrl)
-  console.log('✓ CanvasRenderer ready\n')
+  console.info('✓ CanvasRenderer ready\n')
 
   try {
     for (let i = 0; i < FREE_CANDIDATES.length; i++) {
       const c = FREE_CANDIDATES[i]
-      console.log(`------------------------------------------------------`)
-      console.log(`[${i + 1}/${FREE_CANDIDATES.length}] ${c.name} -> ${c.filename}`)
-      console.log(`------------------------------------------------------`)
+      console.info(`------------------------------------------------------`)
+      console.info(`[${i + 1}/${FREE_CANDIDATES.length}] ${c.name} -> ${c.filename}`)
+      console.info(`------------------------------------------------------`)
 
       const provider = creds[c.providerKey]
       if (!provider) {
-        console.log(`  ✗ Provider "${c.providerKey}" missing`)
+        console.info(`  ✗ Provider "${c.providerKey}" missing`)
         continue
       }
 
       let gen
       try {
-        console.log(`  Calling ${provider.name} (${c.modelId})...`)
+        console.info(`  Calling ${provider.name} (${c.modelId})...`)
         gen = await queryModel(provider, c.modelId, c.temperature)
-        console.log(`  ✓ Generated in ${(gen.latencyMs / 1000).toFixed(1)}s (${gen.text.length} chars)`)
+        console.info(`  ✓ Generated in ${(gen.latencyMs / 1000).toFixed(1)}s (${gen.text.length} chars)`)
       }
       catch (err: any) {
-        console.log(`  ✗ Generation failed: ${err.message}`)
+        console.info(`  ✗ Generation failed: ${err.message}`)
         continue
       }
 
       const jsCode = extractJs(gen.text)
-      console.log('  Rendering sketch on WebGL canvas...')
+      console.info('  Rendering sketch on WebGL canvas...')
       let outcome
       try {
         outcome = await renderer.render({
@@ -200,17 +201,17 @@ async function main() {
         })
       }
       catch (err: any) {
-        console.log(`  ✗ Render error: ${err.message}`)
+        console.info(`  ✗ Render error: ${err.message}`)
         continue
       }
 
       if (outcome.dataUrl && !outcome.blank) {
         const outPath = path.join(outDir, c.filename)
         renderer.savePng(outPath, outcome.dataUrl)
-        console.log(`  ✓ SAVED -> ${outPath} (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors})`)
+        console.info(`  ✓ SAVED -> ${outPath} (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors})`)
       }
       else {
-        console.log(`  ✗ Blank canvas or error: ${outcome.error || outcome.sketchError}`)
+        console.info(`  ✗ Blank canvas or error: ${outcome.error || outcome.sketchError}`)
       }
     }
   }
@@ -219,10 +220,10 @@ async function main() {
     await server.close()
   }
 
-  console.log(`\n======================================================`)
-  console.log(`✓ 100% Free Sandbox Shootout Complete!`)
-  console.log(`✓ Files saved to: ${outDir}`)
-  console.log(`======================================================\n`)
+  console.info(`\n======================================================`)
+  console.info(`✓ 100% Free Sandbox Shootout Complete!`)
+  console.info(`✓ Files saved to: ${outDir}`)
+  console.info(`======================================================\n`)
 }
 
 main().catch(console.error)

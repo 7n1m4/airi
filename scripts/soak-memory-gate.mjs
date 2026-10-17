@@ -23,6 +23,8 @@
  *     --rss-budget-mb-per-hour 200 --heap-budget-mb-per-hour 100
  */
 
+import process from 'node:process'
+
 import { readFileSync } from 'node:fs'
 
 function parseArgs(argv) {
@@ -99,9 +101,9 @@ function main() {
   const rssStr = rssSlope === null
     ? 'no RSS samples (renderer without process.memoryUsage; gate on heap only)'
     : `${rss[0].toFixed(0)} -> ${rss[rss.length - 1].toFixed(0)} MB (${rssSlope >= 0 ? '+' : ''}${rssSlope.toFixed(1)}/h, budget ${args.rssBudget}/h)`
-  console.log(`Samples: ${heap.length} probes over ${args.durationHours}h | critical-pressure probes: ${criticalCount}`)
-  console.log(`JS Heap slope: ${heapStr}`)
-  console.log(`RSS slope:     ${rssStr}`)
+  console.info(`Samples: ${heap.length} probes over ${args.durationHours}h | critical-pressure probes: ${criticalCount}`)
+  console.info(`JS Heap slope: ${heapStr}`)
+  console.info(`RSS slope:     ${rssStr}`)
 
   const failures = []
   if (heapSlope > args.heapBudget)
@@ -117,7 +119,7 @@ function main() {
     console.error('Next: compare vmmap-start/end Tag 14/16 deltas + swapfile count (see header runbook).')
     process.exit(1)
   }
-  console.log('PASS: slopes within budget, no critical-pressure probes.')
+  console.info('PASS: slopes within budget, no critical-pressure probes.')
 }
 
 main()

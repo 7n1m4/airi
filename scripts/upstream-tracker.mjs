@@ -17,6 +17,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { execFileSync, execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -756,7 +757,7 @@ async function main() {
   const { values } = parseArgs({ args: process.argv.slice(2), options, allowPositionals: true })
 
   if (values.help) {
-    console.log(`
+    console.info(`
 Usage: node scripts/upstream-tracker.mjs [options]
 
 Commands:
@@ -778,7 +779,7 @@ Commands:
 
   // Mode 1: Initialization
   if (values.init) {
-    console.log('[UpstreamTracker] Fetching upstream...')
+    console.info('[UpstreamTracker] Fetching upstream...')
     fetchUpstream()
     const targetSha = values.sha || getUpstreamHeadSha()
     state.last_inspected_sha = targetSha
@@ -808,7 +809,7 @@ Commands:
       saveState(state)
       ensureRadarLogHeader()
     }
-    console.log(`✅ [UpstreamTracker] Initialized snapshot baseline at: ${targetSha} (tracking ${prCount} PRs)`)
+    console.info(`✅ [UpstreamTracker] Initialized snapshot baseline at: ${targetSha} (tracking ${prCount} PRs)`)
     process.exit(0)
   }
 
@@ -840,10 +841,10 @@ Commands:
 
   if (hasNoCommits && hasNoPRChanges) {
     if (values.json) {
-      console.log(JSON.stringify({ status: 'UP_TO_DATE', sha: currentUpstreamSha, commits: 0, prChanges: 0 }))
+      console.info(JSON.stringify({ status: 'UP_TO_DATE', sha: currentUpstreamSha, commits: 0, prChanges: 0 }))
     }
     else {
-      console.log(`🟢 UP_TO_DATE: Upstream is unchanged at ${currentUpstreamSha.slice(0, 8)}. 0 new commits and 0 PR changes since last check.`)
+      console.info(`🟢 UP_TO_DATE: Upstream is unchanged at ${currentUpstreamSha.slice(0, 8)}. 0 new commits and 0 PR changes since last check.`)
     }
     // Update baseline PR map if we just performed an initial baseline population
     if (!values['dry-run'] && prDelta.available && Object.keys(state.tracked_prs).length === 0) {
@@ -858,7 +859,7 @@ Commands:
     : inspectDelta(baseSha, currentUpstreamSha)
 
   if (values.json) {
-    console.log(JSON.stringify({
+    console.info(JSON.stringify({
       status: 'NEW_ACTIVITY',
       sha: { from: baseSha, to: currentUpstreamSha },
       commits: delta.commits,
@@ -869,16 +870,16 @@ Commands:
   }
   else if (values.format === 'md') {
     const md = formatMarkdownSection(delta, prDelta, values.notes)
-    console.log(md)
+    console.info(md)
   }
   else {
-    console.log(formatTerminalBrief(delta, prDelta))
+    console.info(formatTerminalBrief(delta, prDelta))
   }
 
   if (values['append-log'] && !values['dry-run']) {
     const md = formatMarkdownSection(delta, prDelta, values.notes)
     appendToRadarLog(md)
-    console.log(`\n📝 [UpstreamTracker] Prepending entry to ${path.relative(process.cwd(), RADAR_LOG_FILE)}`)
+    console.info(`\n📝 [UpstreamTracker] Prepending entry to ${path.relative(process.cwd(), RADAR_LOG_FILE)}`)
   }
 
   const shouldUpdateState = !values['dry-run'] && (values['update-state'] || (values['append-log'] && !values.since))
@@ -897,7 +898,7 @@ Commands:
       pr_changes_count: prDelta.totalChanges,
     })
     saveState(state)
-    console.log(`✅ [UpstreamTracker] Advanced baseline SHA to ${currentUpstreamSha.slice(0, 8)} (tracking ${Object.keys(state.tracked_prs).length} PRs)`)
+    console.info(`✅ [UpstreamTracker] Advanced baseline SHA to ${currentUpstreamSha.slice(0, 8)} (tracking ${Object.keys(state.tracked_prs).length} PRs)`)
   }
 }
 

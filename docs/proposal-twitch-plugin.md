@@ -36,7 +36,7 @@ The Bilibili plugin (`airi-plugin-bilibili-laplace`) was the proof-of-concept fo
 
 The AIRI runtime uses a central WebSocket server (`server-runtime`, listening on `ws://localhost:6121/ws`) as a message bus. All modules — the AI character, the UI stage, and plugins — connect to this bus as peer clients. Plugins are **separate processes** that push data into the bus; they do not call the character directly.
 
-```
+```text
 ┌──────────────────────────────────────┐
 │        airi-plugin-twitch-chat       │
 │                                      │
@@ -81,7 +81,7 @@ The SDK distinguishes between two communication planes:
 Every plugin **must** supply a token in its `Client` constructor:
 
 ```ts
-new Client({
+const client = new Client({
   name: 'proj-airi:plugin-twitch-chat',
   url: settings.wsUrl,
   token: settings.airiAuthToken, // ← required, no longer optional
@@ -93,7 +93,7 @@ new Client({
 
 The token is exchanged via the `module:authenticate` → `module:authenticated` handshake before any data is accepted:
 
-```
+```text
 Plugin → server:  { type: 'module:authenticate', data: { token: '...' } }
 server → Plugin:  { type: 'module:authenticated', data: { authenticated: true } }
 Plugin → server:  { type: 'module:announce', data: { name, identity, possibleEvents } }
@@ -108,7 +108,7 @@ The `server-sdk` `Client` class handles this handshake automatically — the plu
 
 The full lifecycle a plugin goes through after connecting:
 
-```
+```text
 1. module:authenticate       → module:authenticated
 2. module:announce           → module:announced
 3. module:prepared
@@ -269,8 +269,7 @@ const configSchema: ModuleConfigSchema = {
     },
   },
 }
-
----
+```
 
 ## Chat Ingestion Strategies (chatMode)
 
@@ -279,7 +278,6 @@ To prevent the LLM from being overwhelmed by high-frequency twitch chat messages
 1. **`followup` (Default)**: Replies to everything sequentially.
 2. **`steer` (Interrupt Mode)**: If the bot is in the middle of generating a response and a new chat message arrives, it halts the current thought, rolls the new message into context, and generates a fresh response.
 3. **`collect` (Lull Mode)**: If chat is highly active, messages are accumulated/batched. Once a silence/lull of `collectLullMs` (default: 5000ms) occurs, the batch is joined and submitted as a single context block. This avoids spamming requests.
-```
 
 ---
 
@@ -289,7 +287,7 @@ To prevent the LLM from being overwhelmed by high-frequency twitch chat messages
 
 Twitch's modern event system. Requires only a **User OAuth token** with appropriate scopes. Supports all the events we care about and is officially maintained.
 
-```
+```text
 Required OAuth scopes:
   chat:read                   — read chat messages
   channel:read:subscriptions
@@ -310,7 +308,7 @@ Simpler to set up, but officially deprecated by Twitch. Avoid for new implementa
 
 ## Proposed File Structure
 
-```
+```text
 plugins/
 └── airi-plugin-twitch-chat/
     ├── package.json

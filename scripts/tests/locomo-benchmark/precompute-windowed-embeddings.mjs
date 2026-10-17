@@ -19,19 +19,19 @@ const ROOT = path.resolve(__dirname, '../../..')
 const DATASET_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47.json')
 const DOC_CACHE_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-embeddings-windowed.json')
 
-console.log('Loading conv-47 dataset with conversational window indexing...')
+console.info('Loading conv-47 dataset with conversational window indexing...')
 const convData = JSON.parse(fs.readFileSync(DATASET_PATH, 'utf-8'))
 const index = new LocomoMemoryIndex()
 index.loadConversation(convData)
 
-console.log(`Total documents to embed: ${index.documents.size}`)
+console.info(`Total documents to embed: ${index.documents.size}`)
 
-console.log('Loading Xenova/bge-small-en-v1.5...')
+console.info('Loading Xenova/bge-small-en-v1.5...')
 const t0 = performance.now()
 const extractor = await pipeline('feature-extraction', 'Xenova/bge-small-en-v1.5')
-console.log(`Loaded in ${((performance.now() - t0) / 1000).toFixed(2)}s.`)
+console.info(`Loaded in ${((performance.now() - t0) / 1000).toFixed(2)}s.`)
 
-console.log('Generating windowed document embeddings...')
+console.info('Generating windowed document embeddings...')
 const docEmbeddings = {}
 const embedT0 = performance.now()
 let count = 0
@@ -45,10 +45,10 @@ for (const [id, doc] of docEntries) {
   count++
   if (count % 100 === 0 || count === docEntries.length) {
     const elapsed = ((performance.now() - embedT0) / 1000).toFixed(1)
-    console.log(`  [${count}/${docEntries.length}] embedded (${elapsed}s)`)
+    console.info(`  [${count}/${docEntries.length}] embedded (${elapsed}s)`)
   }
 }
 
 fs.writeFileSync(DOC_CACHE_PATH, JSON.stringify(docEmbeddings))
 const totalElapsed = ((performance.now() - embedT0) / 1000).toFixed(2)
-console.log(`Successfully cached ${Object.keys(docEmbeddings).length} windowed document embeddings in ${totalElapsed}s to: ${DOC_CACHE_PATH}`)
+console.info(`Successfully cached ${Object.keys(docEmbeddings).length} windowed document embeddings in ${totalElapsed}s to: ${DOC_CACHE_PATH}`)

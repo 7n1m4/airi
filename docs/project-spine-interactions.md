@@ -117,7 +117,7 @@ Previously, the model customizer panel showed *"No expressions match filters"* d
 
 ### B. Mapped ZIP Archive Structure
 To enable full tactile click/hover responses and SFX triggers inside AIRI, character skin ZIP archives must be structured flatly at the root:
-```
+```text
 /Character_Skin.zip
 ├── Character.skel               # Binary skeleton
 ├── Character.atlas              # Spine texture atlas

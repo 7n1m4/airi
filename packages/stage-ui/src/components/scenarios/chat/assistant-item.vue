@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ChatAssistantMessage, ChatHistoryItem, ChatSlices } from '../../../types/chat'
 
+import { useStyleTag } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, ref, useTemplateRef } from 'vue'
 import { toast } from 'vue-sonner'
@@ -34,13 +35,13 @@ const emit = defineEmits<{
   (e: 'copy'): void
   (e: 'delete'): void
 }>()
+const chatOrchestrator = useChatOrchestratorStore()
 const activeSpokenText = computed(() => chatOrchestrator.activeSpokenText)
 const activeSpokenColor = computed(() => chatOrchestrator.activeSpokenColor)
 
 const showJournalModal = ref(false)
 
 const chatSession = useChatSessionStore()
-const chatOrchestrator = useChatOrchestratorStore()
 
 const formattedTime = computed(() => {
   if (!props.message.createdAt)
@@ -113,7 +114,7 @@ async function handleFork(universeId?: string) {
         universeId,
       })
       toast.success('Conversation forked successfully!')
-      console.log(`[AssistantItem] Forked session created: ${newSessionId}`)
+      console.info(`[AssistantItem] Forked session created: ${newSessionId}`)
     }
     catch (error) {
       console.error('Failed to fork session:', error)
@@ -197,7 +198,7 @@ async function handleForkAndSwitch(universeId?: string) {
       chatSession.activeSessionId = newSessionId
 
       toast.success('Conversation forked and switched!')
-      console.log(`[AssistantItem] Forked session created: ${newSessionId}`)
+      console.info(`[AssistantItem] Forked session created: ${newSessionId}`)
     }
     catch (error) {
       console.error('Failed to fork session:', error)
@@ -636,11 +637,11 @@ const dynamicStyles = computed(() => {
   }
   return css
 })
+useStyleTag(dynamicStyles)
 </script>
 
 <template>
   <div v-if="message.role === 'assistant'" class="group ph-no-capture w-full !max-w-full" :class="containerClasses">
-    <component is="style" v-html="dynamicStyles" />
     <JournalMomentModal
       :open="showJournalModal"
       :message-id="message.id"

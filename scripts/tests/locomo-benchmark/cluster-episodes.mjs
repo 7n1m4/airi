@@ -11,7 +11,7 @@
  *
  * @param {number[]} vecA
  * @param {number[]} vecB
- * @returns {number}
+ * @returns {number} Cosine similarity in the range -1..1, or 0 when either vector is missing, the lengths differ, or a magnitude is zero.
  */
 export function cosineSimilarity(vecA, vecB) {
   if (!vecA || !vecB || vecA.length !== vecB.length)
@@ -38,7 +38,7 @@ export function cosineSimilarity(vecA, vecB) {
  * @param {Array<object>} turns - Chronologically sorted raw dialogue turn documents
  * @param {Record<string, number[]>} embeddings - Precomputed BGE embeddings map (turn.id -> vector)
  * @param {number} [threshold=0.55] - Cosine similarity cutoff for episode boundary
- * @returns {Array<{ episodeId: string, turns: Array<object>, startId: string, endId: string, text: string }>}
+ * @returns {Array<{ episodeId: string, turns: Array<object>, startId: string, endId: string, text: string }>} Chronologically ordered episodes; empty when no turns are supplied.
  */
 export function clusterSessionTurns(turns, embeddings, threshold = 0.55) {
   if (!Array.isArray(turns) || turns.length === 0)

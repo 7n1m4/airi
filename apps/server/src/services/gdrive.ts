@@ -1,9 +1,12 @@
 import type { Database } from '../libs/db'
 import type { Env } from '../libs/env'
 
+import { useLogger } from '@guiiai/logg'
 import { and, eq } from 'drizzle-orm'
 
 import * as accountsSchema from '../schemas/accounts'
+
+const logger = useLogger('gdrive').useGlobalConfig()
 
 export function createGoogleDriveService(db: Database, env: Env) {
   /**
@@ -30,7 +33,7 @@ export function createGoogleDriveService(db: Database, env: Env) {
 
     // Attempt to refresh if we have a refresh token
     if (refreshToken) {
-      console.log(`[GDrive] Access token expired, attempting to refresh for user ${userId}...`)
+      logger.log(`[GDrive] Access token expired, attempting to refresh for user ${userId}...`)
       try {
         const res = await fetch('https://oauth2.googleapis.com/token', {
           method: 'POST',
@@ -65,7 +68,7 @@ export function createGoogleDriveService(db: Database, env: Env) {
           })
           .where(eq(accountsSchema.account.id, acc.id))
 
-        console.log('[GDrive] Successfully refreshed Google OAuth access token.')
+        logger.log('[GDrive] Successfully refreshed Google OAuth access token.')
         return data.access_token
       }
       catch (err) {

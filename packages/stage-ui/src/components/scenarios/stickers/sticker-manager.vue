@@ -6,7 +6,7 @@ import { onMounted, ref } from 'vue'
 import { useStickersStore } from '../../../stores/stickers'
 
 const emit = defineEmits<{
-  (e: 'spawn-standalone', id: string): void
+  (e: 'spawnStandalone', id: string): void
 }>()
 const stickersStore = useStickersStore()
 const { currentLibrary, standaloneMode } = storeToRefs(stickersStore)
@@ -55,7 +55,7 @@ async function handleFileUpload(e: Event) {
 
 function spawn(id: string) {
   if (standaloneMode.value) {
-    emit('spawn-standalone', id)
+    emit('spawnStandalone', id)
   }
   else {
     stickersStore.spawnSticker(id, { duration: 60 })

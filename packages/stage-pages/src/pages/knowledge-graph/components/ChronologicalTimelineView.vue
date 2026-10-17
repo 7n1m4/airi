@@ -742,7 +742,6 @@ watch(() => [props.minTimestamp, props.maxTimestamp], () => {
 
 <template>
   <div
-    ref="containerRef"
     class="relative h-full w-full select-none overflow-x-hidden overflow-y-auto bg-neutral-950 text-neutral-100"
   >
     <!-- Sticky Left Category Sidebar -->

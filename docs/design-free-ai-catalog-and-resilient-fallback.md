@@ -266,7 +266,7 @@ In free-tier usage, sudden `429 Too Many Requests` or transient `503 Overloaded`
 ### 5.2 The Pre-Commit Safe Failover Boundary
 To solve this, `useLLM` establishes an explicit **Safe Commit Horizon**:
 
-```
+```text
 Request Started
       │
       ▼

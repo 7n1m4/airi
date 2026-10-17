@@ -7,7 +7,7 @@ import { useRouter } from 'vue-router'
 import { useShortTermMemoryStore } from '../../../stores/memory-short-term'
 import { useAiriCardStore } from '../../../stores/modules/airi-card'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   /** Whether to show the cache status section (rebuild buttons, etc) */
   showCacheStatus?: boolean
   /** Tooltip for the main button */
@@ -21,11 +21,11 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  (e: 'view-context'): void
-  (e: 'manage-sessions'): void
-  (e: 'search-memories'): void
-  (e: 'clear-messages'): void
-  (e: 'open-studio'): void
+  (e: 'viewContext'): void
+  (e: 'manageSessions'): void
+  (e: 'searchMemories'): void
+  (e: 'clearMessages'): void
+  (e: 'openStudio'): void
 }>()
 
 const router = useRouter()
@@ -141,7 +141,7 @@ function navigateToMemory() {
         <!-- System Prompt Quick View -->
         <button
           class="mb-2 w-full flex items-center gap-3 rounded-xl bg-primary-50/50 p-2.5 text-left transition-all dark:bg-primary-900/20 hover:bg-primary-100 dark:hover:bg-primary-800/30"
-          @click="emit('view-context')"
+          @click="emit('viewContext')"
         >
           <div class="i-solar:notes-bold-duotone text-lg text-primary-600 dark:text-primary-400" />
           <div class="flex flex-col">
@@ -153,7 +153,7 @@ function navigateToMemory() {
         <!-- Search Memories Quick View -->
         <button
           class="mb-2 w-full flex items-center gap-3 rounded-xl bg-emerald-50/50 p-2.5 text-left transition-all dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-800/30"
-          @click="emit('search-memories')"
+          @click="emit('searchMemories')"
         >
           <div class="i-solar:magnifer-bold-duotone text-lg text-emerald-600 dark:text-emerald-400" />
           <div class="flex flex-col">
@@ -245,7 +245,7 @@ function navigateToMemory() {
         <div class="space-y-1">
           <button
             class="w-full flex items-center justify-between rounded-xl p-2 text-left transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"
-            @click="emit('manage-sessions')"
+            @click="emit('manageSessions')"
           >
             <div class="flex items-center gap-2">
               <div class="i-solar:layers-minimalistic-linear text-neutral-400" />
@@ -267,7 +267,7 @@ function navigateToMemory() {
 
           <button
             class="w-full flex items-center justify-between rounded-xl p-2 text-left transition-all hover:bg-neutral-100 dark:hover:bg-neutral-800"
-            @click="emit('open-studio')"
+            @click="emit('openStudio')"
           >
             <div class="flex items-center gap-2">
               <div class="i-solar:clapperboard-play-linear text-neutral-400" />
@@ -282,7 +282,7 @@ function navigateToMemory() {
           <!-- Clear Messages -->
           <button
             class="w-full flex items-center justify-between rounded-xl p-2 text-left transition-all hover:bg-red-50 dark:hover:bg-red-950/30"
-            @click="emit('clear-messages')"
+            @click="emit('clearMessages')"
           >
             <div class="flex items-center gap-2">
               <div class="i-solar:trash-bin-2-bold-duotone text-red-400" />

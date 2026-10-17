@@ -1097,7 +1097,7 @@ Unlike the benchmark-only in-memory bank, the Final Implementation **must use Or
 | **Prompting** | Category-specific context sorting (Timeline/Abstract). |
 | **Output** | Category-aware answer generation with strict JSON constraints. |
 
------
+---
 
 can you take that feedback and write up a plan for how you plan to adjust the code based on the provided feedback
 Thought for a few seconds
@@ -1747,7 +1747,7 @@ run 6 - actively running (ill give you those results when thats finished)
 
 to give you a recap this was run 5:
 
-# In-Progress Journal: Run 5 & Cherry-Pick Phase
+## In-Progress Journal: Run 5 & Cherry-Pick Phase
 
 ## Active Goal
 Implementing a 2-phase cherry-pick strategy (Items 2-5 first) to optimize retrieval precision without the invasive architectural shift of dual-layer context (Item 1).
@@ -1799,7 +1799,7 @@ The current implementation being tested (Run 5) differs from the previous baseli
 
 and this is run 6:
 
-# In-Progress Journal: Run 6 - The Great Merger
+## In-Progress Journal: Run 6 - The Great Merger
 
 ## Active Goal
 Executing **Run 6: The Great Merger**. Integrating high-fidelity abstraction layers (Session/Profile summaries) and weighted Reciprocal Rank Fusion (RRF) into the Orama-based Gemini pipeline to break the Open-Domain and Temporal F1 ceilings.
@@ -5718,6 +5718,7 @@ This next step is where systems usually plateau — or break through.
 Let’s push it.
 
 
+```text
 C:\Users\h4rdc\Documents\Github\airi-memory-lab>run-benchmark-chatgpt.bat
 ============================================
   AIRI Memory Lab - CHATGPT BENCHMARK
@@ -5767,6 +5768,7 @@ Phase 1 complete: 377 memories indexed (278 base, 93 session summaries, 6 profil
 Phase 2: Evaluating 150 questions...
 
 Progress: 4/150 | F1: 0.00 | LLM: 1.0 | 131.2s
+```
 
 is it too early to tell or are you getting positive signals from run 12?
 

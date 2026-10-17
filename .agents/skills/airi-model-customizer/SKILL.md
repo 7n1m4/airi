@@ -29,7 +29,7 @@ Read **`docs/design-model-customizer.md`** first. It defines the separation-of-c
 - `packages/stage-ui/src/components/scenarios/settings/model-settings/live2d.vue` — Live2D panel; `<ModelCustomizer :model-id="props.modelId || settings.stageModelSelected" :local-stage="true" />`.
 - `packages/stage-ui/src/components/scenarios/settings/model-settings/mmd.vue` — MMD panel; same embedding pattern.
 - `packages/stage-ui/src/components/scenarios/settings/model-settings/spine.vue` — Spine panel; same embedding pattern.
-- `apps/stage-tamagotchi/src/renderer/components/chat/chat_rehearsal.vue` — Rehearsal Room; embeds with `showInsertActions` + `@insert-token` handling, powered by the active model.
+- `apps/stage-tamagotchi/src/renderer/components/chat/chat_rehearsal.vue` — Rehearsal Room; embeds with `showInsertActions` + `@insertToken` handling, powered by the active model.
 
 ### Data & State
 - `packages/stage-ui/src/stores/display-models.ts` — binary model catalog + IndexedDB persistence. `getOrLoadModelCapabilities(id)` (≈L1424) resolves expression/motion lists: cache hit immediately, otherwise parses the raw file (ZIP walk for Live2D/Spine/MMD) and writes capability lists back to IndexedDB. Works even when the model is **off-stage**.
@@ -47,7 +47,7 @@ Read **`docs/design-model-customizer.md`** first. It defines the separation-of-c
   :show-insert-actions="false"
   :palette="[]"
   :local-stage="false"
-  @insert-token="(t) => appendToPrompt(t)"
+  @insertToken="(t) => appendToPrompt(t)"
   @update:visible-capabilities="({ emotions, motions }) => store.emotions = emotions"
 />
 ```
@@ -59,7 +59,7 @@ Read **`docs/design-model-customizer.md`** first. It defines the separation-of-c
 - `localStage?: boolean` — when the widget is embedded in a settings page that already renders its own stage preview, clicks effectuate that stage directly without requiring the actor window. Set `true` in all four settings panels.
 
 ### Emits
-- **`insert-token`** — `(token: string)` with `<|ACT:emotion="Happy"|>` (expressions) or `<|ACT:motion="...|>` (motions). Rehearsal Room appends it to the sandbox template.
+- **`insertToken`** — `(token: string)` with `<|ACT:emotion="Happy"|>` (expressions) or `<|ACT:motion="...|>` (motions). Rehearsal Room appends it to the sandbox template.
 - **`update:visible-capabilities`** — `({ emotions: string[], motions: string[] })` surfaced after filtering for visibility/renamed-only. Lets parents reflect "what the AI can actually use" without re-deriving.
 
 > [!IMPORTANT]
@@ -144,7 +144,7 @@ All lists are driven by `getOrLoadModelCapabilities` output (model-file level), 
 ## 9. Verification
 
 - `pnpm -F @proj-airi/stage-ui typecheck` — the widget lives in `stage-ui`.
-- Manual (desktop): open Settings → a model panel for each format; rename a technical key; map one to an ACT emotion; toggle idle cycle; confirm previews effectuate the actor window; in Rehearsal Room confirm insert-token appends to the sandbox. For VRM: build an outfit slot with mesh parts and confirm hide/show per slot.
+- Manual (desktop): open Settings → a model panel for each format; rename a technical key; map one to an ACT emotion; toggle idle cycle; confirm previews effectuate the actor window; in Rehearsal Room confirm insertToken appends to the sandbox. For VRM: build an outfit slot with mesh parts and confirm hide/show per slot.
 - Not a label/comment-only change: this is component + store behavior; run the typecheck target above.
 
 ## Related Skills & References

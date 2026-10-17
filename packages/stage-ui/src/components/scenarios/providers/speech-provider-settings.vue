@@ -17,6 +17,7 @@ import {
 } from '.'
 import { useSpeechStore } from '../../../stores/modules/speech'
 import { useProvidersStore } from '../../../stores/providers'
+import { isKeylessProvider, isOptionalKeyProvider, keylessOrOptionalKey } from '../../../libs/providers/types'
 
 const props = defineProps<{
   providerId: string
@@ -140,7 +141,7 @@ function handleResetVoiceSettings() {
       <ProviderSettingsContainer class="w-full md:w-[40%]">
         <!-- Multi-instance management section (only for cloud or remote providers requiring credentials) -->
         <ProviderInstancesSection
-          v-if="providerMetadata?.requiresCredentials !== false && !isLocalProvider"
+          v-if="!isKeylessProvider(providerMetadata?.requiresCredentials) && !isLocalProvider"
           v-model:active-instance-id="activeInstanceId"
           :provider-id="props.providerId"
         />
@@ -158,12 +159,13 @@ function handleResetVoiceSettings() {
             :placeholder="providerMetadata?.defaultOptions?.().base_url as string || ''" required
           />
           <ProviderApiKeyInput
-            v-if="providerMetadata?.requiresCredentials !== false"
+            v-if="!isKeylessProvider(providerMetadata?.requiresCredentials)"
             v-model="apiKey"
             :provider-name="providerMetadata?.localizedName"
             :console-url="providerMetadata?.consoleUrl"
             :placeholder="props.placeholder || 'API Key'"
-            :required="!isLocalProvider"
+            :required="!keylessOrOptionalKey(providerMetadata?.requiresCredentials) && !isLocalProvider"
+            :description="isOptionalKeyProvider(providerMetadata?.requiresCredentials) ? `${providerMetadata?.localizedName ?? props.providerId} works without a key; add one to unlock paid models.` : undefined"
           />
           <!-- Slot for provider-specific basic settings -->
           <slot name="basic-settings" />

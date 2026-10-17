@@ -58,7 +58,7 @@ The header is the **system control plane**. It governs session state, model sele
 * **Token Capacity Indicator (Phase 3+)**
   Thin animated progress bar **under the header**, representing:
 
-  ```
+  ```text
   sessionTokens / contextWidth
   ```
 
@@ -108,7 +108,7 @@ Two independent sections:
 
 When **both sections are collapsed**, they compress into a **single shared row**:
 
-```
+```text
 [ Memories ▸ ] [ Media ▸ ]
 ```
 
@@ -139,7 +139,7 @@ The composer is strictly for **message creation**.
 
 ### Layout
 
-```
+```text
 [+] · [✨] · [textarea] · [✈]
 ```
 
@@ -185,7 +185,7 @@ Anything added here becomes part of the message payload.
 
 The left panel, center content, and right panel are NOT flat siblings in a single row. The layout is a **two-level nesting**:
 
-```
+```text
 [ col-2 left sidebar ] [ content-wrapper (col-10 or col-12)         ]
                                   [ chat col-9 ][ right panel col-3 ]
 ```
@@ -205,7 +205,7 @@ The left panel, center content, and right panel are NOT flat siblings in a singl
 
 #### Portrait (<768px)
 
-```
+```text
 Header
 +----------------------------+
 | [overlay sidebar (col-2)]  | ← hovers over content, auto-closes on selection
@@ -221,7 +221,7 @@ Header
 
 #### Landscape (md+)
 
-```
+```text
 [ col-2 sidebar ] [                   col-10 content wrapper                   ]
                               [ chat col-9 ][ right panel col-3 ]
 ```
@@ -262,7 +262,7 @@ All bottom toolbar functionality is redistributed.
 
 ### Final Composer
 
-```
+```text
 [+] · [✨] · [textarea] · [✈]
 ```
 
@@ -305,7 +305,7 @@ Chat is just one route among many.
 
 ### Routes
 
-```
+```text
 #/chat              → redirect to #/chat/messages
 #/chat/messages     ← Chat view (InteractiveArea + composer)
 #/chat/director     ← Director's Monitor
@@ -323,7 +323,7 @@ All routes nest under `#/chat/` — this preserves the workspace context. `#/cha
 
 `chat.vue` becomes a **workspace shell** — it owns the shared chrome and delegates the center surface via a component slot:
 
-```
+```text
 chat.vue                         ← workspace shell (shared chrome)
   ├── WindowTitleBar             ← session selector, tokens, LLM brain, memory, ellipsis, sidebar toggles
   ├── Left panel nav             ← ☰ toggle, route nav items, footer settings link
@@ -388,7 +388,7 @@ A vertical, expanded version of the Context Band.
 * Thin progress bar under header
 * Represents:
 
-  ```
+  ```text
   sessionTokens / contextWidth
   ```
 
@@ -412,7 +412,7 @@ A vertical, expanded version of the Context Band.
 
 All enriched inputs pass through a deterministic pipeline:
 
-```
+```text
 User Input
  + Attachments / Links
    → Preprocessor
@@ -531,7 +531,7 @@ Contextual bubble replying solves this without requiring awkward prompt phrasing
 
 #### Composer Quote Banner
 * When a reply target is active, an expandable, dismissible quote drawer docks directly above the composer row:
-  ```
+  ```text
   ┌──────────────────────────────────────────────────────────────┐
   │ ↩ Replying to Airi: "Do you want to grab coffee later?"  [✕] │
   └──────────────────────────────────────────────────────────────┘
@@ -541,7 +541,7 @@ Contextual bubble replying solves this without requiring awkward prompt phrasing
 
 #### Visual History Provenance (Inline Quote Box)
 * Once sent, the resulting message bubble renders an inline quote header pinned to the top of the bubble:
-  ```
+  ```text
   ┌──────────────────────────────────────────────┐
   │ ↩ Replying to Airi: Do you want to grab...   │
   │ Yeah, let's do it!                           │
@@ -576,7 +576,7 @@ Contextual bubble replying solves this without requiring awkward prompt phrasing
 
 ---
 
-# Final System Principle
+## Final System Principle
 
 Everything in the UI must map cleanly to one of these:
 

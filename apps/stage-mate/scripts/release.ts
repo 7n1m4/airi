@@ -1,7 +1,7 @@
 import { execSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { env, platform } from 'node:process'
+import { argv, env, exit, platform } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
@@ -17,22 +17,22 @@ const version = pkgJson.version ?? '3.4.1'
 const releaseTag = env.STAGEMATE_RELEASE_TAG || `stagemate-v${version}`
 const fallbackTag = 'stagemate-engine-v3.4'
 
-const targetArg = process.argv[2] ?? (platform === 'darwin' ? 'mac' : platform === 'win32' ? 'win' : 'linux')
+const targetArg = argv[2] ?? (platform === 'darwin' ? 'mac' : platform === 'win32' ? 'win' : 'linux')
 
 function ensureGhCli(): void {
   const res = spawnSync('gh', ['--version'], { stdio: 'ignore', shell: true })
   if (res.status !== 0) {
     console.error('[release] Error: GitHub CLI (gh) is not installed or not in PATH. Please install gh CLI.')
-    process.exit(1)
+    exit(1)
   }
 }
 
 function runBuild(target: string): void {
-  console.log(`[release] Building Stage-Mate companion runtime for ${target}...`)
+  console.info(`[release] Building Stage-Mate companion runtime for ${target}...`)
   const res = spawnSync('pnpm', ['run', `build:${target}`], { cwd: rootDir, stdio: 'inherit', shell: true })
   if (res.status !== 0) {
     console.error(`[release] Build failed for ${target}. Aborting release.`)
-    process.exit(1)
+    exit(1)
   }
 }
 
@@ -50,7 +50,7 @@ function createZip(target: string): string {
       throw new Error(`Expected StageMate.app not found at ${appPath}`)
     }
 
-    console.log(`[release] Compressing ${appPath} -> ${zipPath}...`)
+    console.info(`[release] Compressing ${appPath} -> ${zipPath}...`)
     execSync(`ditto -c -k --sequesterRsrc --keepParent "${appPath}" "${zipPath}"`, { stdio: 'inherit' })
     return zipPath
   }
@@ -62,7 +62,7 @@ function createZip(target: string): string {
       rmSync(zipPath)
 
     const winSource = existsSync(join(buildDir, 'Windows')) ? join(buildDir, 'Windows') : binDir
-    console.log(`[release] Compressing Windows bundle from ${winSource} -> ${zipPath}...`)
+    console.info(`[release] Compressing Windows bundle from ${winSource} -> ${zipPath}...`)
 
     if (platform === 'win32') {
       try {
@@ -85,7 +85,7 @@ function createZip(target: string): string {
       rmSync(zipPath)
 
     const linuxSource = existsSync(join(buildDir, 'Linux')) ? join(buildDir, 'Linux') : binDir
-    console.log(`[release] Compressing Linux bundle from ${linuxSource} -> ${zipPath}...`)
+    console.info(`[release] Compressing Linux bundle from ${linuxSource} -> ${zipPath}...`)
     execSync(`cd "${linuxSource}" && zip -r -q "${zipPath}" .`, { stdio: 'inherit' })
     return zipPath
   }
@@ -96,22 +96,22 @@ function createZip(target: string): string {
 const repoTarget = env.GITHUB_REPOSITORY || 'dasilva333/airi'
 
 function uploadToGitHub(tag: string, zipPath: string): void {
-  console.log(`[release] Publishing ${zipPath} to GitHub release tag: ${tag} on ${repoTarget}...`)
+  console.info(`[release] Publishing ${zipPath} to GitHub release tag: ${tag} on ${repoTarget}...`)
 
   // Check if tag/release already exists
   const check = spawnSync('gh', ['release', 'view', tag, '--repo', repoTarget], { stdio: 'ignore', shell: true })
   if (check.status === 0) {
-    console.log(`[release] Release ${tag} found. Uploading asset with --clobber...`)
+    console.info(`[release] Release ${tag} found. Uploading asset with --clobber...`)
     execSync(`gh release upload "${tag}" "${zipPath}" --repo "${repoTarget}" --clobber`, { stdio: 'inherit' })
   }
   else {
-    console.log(`[release] Release ${tag} does not exist. Creating release...`)
+    console.info(`[release] Release ${tag} does not exist. Creating release...`)
     execSync(`gh release create "${tag}" "${zipPath}" --repo "${repoTarget}" --title "Stage-Mate Companion Runtime v${version}" --notes "Prebuilt companion runtime binaries for Stage-Mate sidecar."`, { stdio: 'inherit' })
   }
 }
 
 async function main() {
-  console.log(`=== Stage-Mate Release Pipeline (v${version}) ===`)
+  console.info(`=== Stage-Mate Release Pipeline (v${version}) ===`)
   ensureGhCli()
 
   const targets = targetArg === 'all' ? ['mac', 'win', 'linux'] : [targetArg]
@@ -131,11 +131,11 @@ async function main() {
       console.warn(`[release] Notice: Could not upload to fallback tag ${fallbackTag}: ${err.message}`)
     }
 
-    console.log(`[release] Successfully built and published ${t} companion runtime!`)
+    console.info(`[release] Successfully built and published ${t} companion runtime!`)
   }
 }
 
 main().catch((err) => {
   console.error(`[release] Fatal error: ${err.message}`)
-  process.exit(1)
+  exit(1)
 })

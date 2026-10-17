@@ -219,7 +219,7 @@ export function extractTemporalHooks(text: string): ExtractedDateHook[] {
   }
 
   // 2. "15 September 2026", "September 15, 2026", "September 15", "Sept 2024"
-  const monthPattern = /\b(?:(\d{1,2})(?:st|nd|rd|th)?\s+)?(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:\s+(\d{1,2})(?:st|nd|rd|th)?)?(?:,?\s*(\d{4}))?\b/gi
+  const monthPattern = /\b(?:(\d{1,2})(?:st|nd|rd|th)?\s+)?(January|February|March|April|May|June|July|August|September|October|November|December|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec)(?:\s+(\d{1,2})(?:st|nd|rd|th)?)?(?:,?\s*(\d{4}))?\b/gi
   for (const match of text.matchAll(monthPattern)) {
     const monthParsed = parseMonth(match[2])
     if (!monthParsed)
@@ -397,11 +397,11 @@ export function heuristicTriage(query: string): TriageDecision {
   let conjunctionStructure = 'single_atomic'
   let requiresDecomposition = 0.1
 
-  if (/\b(?:before or after|after or before|between\s+(?:\S.*|[\t\v\f \xA0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF])\s+and\s+|how many days apart)\b/i.test(norm)) {
+  if (/\b(?:before or after|after or before|between\s+\S+(?:\s+\S+)*\s+and\s+|how many days apart)\b/i.test(norm)) {
     conjunctionStructure = 'temporal_comparison'
     requiresDecomposition = 0.92
   }
-  else if (/\b(?:where (?:i|we) (?:found|went|saw|got)|(?:for the|of the|in the)\s+(?:\S.*?|[\t\v\f \xA0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF])\s+where)\b/i.test(norm)) {
+  else if (/\b(?:where (?:i|we) (?:found|went|saw|got)|(?:for the|of the|in the)\s+\S+(?:\s+\S+)*\s+where)\b/i.test(norm)) {
     conjunctionStructure = 'bridge_relational'
     requiresDecomposition = 0.85
   }
@@ -416,11 +416,11 @@ export function heuristicTriage(query: string): TriageDecision {
 
   // 1. Temporal cues (C2)
   if (
-    /\b(when|what date|which day|what time|how long|how many (?:days|weeks|months|years) ago|how long ago|start|finish|schedule|appointment|timeline)\b/i.test(norm)
-    || /\b(yesterday|today|tomorrow|last (?:week|month|year)|next (?:week|month|year))\b/i.test(norm)
-    || /\b(january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(norm)
+    /\b(?:when|what date|which day|what time|how long|how many (?:days|weeks|months|years) ago|how long ago|start|finish|schedule|appointment|timeline)\b/i.test(norm)
+    || /\b(?:yesterday|today|tomorrow|last (?:week|month|year)|next (?:week|month|year))\b/i.test(norm)
+    || /\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\b/i.test(norm)
   ) {
-    const isDuration = /\b(how long|how many (?:days|weeks|months|years|hours|minutes))\b/i.test(norm)
+    const isDuration = /\b(?:how long|how many (?:days|weeks|months|years|hours|minutes))\b/i.test(norm)
     return {
       category: 2,
       choice: 'c2_temporal',
@@ -435,8 +435,8 @@ export function heuristicTriage(query: string): TriageDecision {
 
   // 2. Multi-hop / List / Aggregation cues (C1)
   if (
-    /\b(both|and .* (?:also|as well)|between|connection|relationship|all the things|list|how many|all of the|every|total|count)\b/i.test(norm)
-    || /\b(different (?:places|jobs|events|pets|animals|games|books|movies|friends))\b/i.test(norm)
+    /\b(?:both|and .* (?:also|as well)|between|connection|relationship|all the things|list|how many|all of the|every|total|count)\b/i.test(norm)
+    || /\bdifferent (?:places|jobs|events|pets|animals|games|books|movies|friends)\b/i.test(norm)
     || conjunctionStructure === 'bridge_relational'
     || conjunctionStructure === 'multi_entity_plural'
   ) {
@@ -454,7 +454,7 @@ export function heuristicTriage(query: string): TriageDecision {
 
   // 3. Open-domain / Detective cues (C3)
   if (
-    /\b(why|suspect|infer|imply|attitude|impression|personality|trait|opinion|perspective|motivation|reason for|likely)\b/i.test(norm)
+    /\b(?:why|suspect|infer|imply|attitude|impression|personality|trait|opinion|perspective|motivation|reason for|likely)\b/i.test(norm)
   ) {
     return {
       category: 3,
@@ -501,7 +501,7 @@ export function decomposeQuery(query: string, triage?: TriageDecision): string[]
   // 1. Relational Conjunction Split: "before or after", "and which", "where I found", "between X and Y"
   if (
     (triage?.conjunctionStructure === 'temporal_comparison' || triage?.conjunctionStructure === 'bridge_relational')
-    || /\b(?:before or after|after or before|and which|where (?:i|we) (?:found|went|saw|got)|between\s+(?:\S.*|[\t\v\f \xA0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF])\s+and\s+)/i.test(norm)
+    || /\b(?:before or after|after or before|and which|where (?:i|we) (?:found|went|saw|got)|between\s+\S+(?:\s+\S+)*\s+and\s+)/i.test(norm)
   ) {
     const parts = norm.split(/\b(?:before or after|after or before|and which|where (?:i|we) (?:found|went|saw|got))\b/i)
     if (parts.length >= 2) {
@@ -515,7 +515,7 @@ export function decomposeQuery(query: string, triage?: TriageDecision): string[]
   }
 
   // 2. Multi-Hop Bridge: "X for the Y where Z"
-  const bridgeMatch = norm.match(/(?:what was the|what is the|tell me the)\s+(.+?)\s+(?:for the|of the|in the)\s+(.+?)\s+where\s+(?:i|we)\s+(.+)/i)
+  const bridgeMatch = norm.match(/(?:what was the|what is the|tell me the)\s+(\S+(?:\s+\S+)*)\s+(?:for the|of the|in the)\s+(\S+(?:\s+\S+)*)\s+where\s+(?:i|we)\s+(\S+(?:\s+\S+)*)/i)
   if (bridgeMatch) {
     const [, targetAttr, intermediateEntity, sourceFact] = bridgeMatch
     subQueries.add(sourceFact.replace(/[?.,]/g, '').trim())
@@ -528,7 +528,7 @@ export function decomposeQuery(query: string, triage?: TriageDecision): string[]
     || /\b(?:two different|all the|both)\b/i.test(norm)
   ) {
     const cleanQuestion = norm.replace(/\b(?:what were the|what are the|can you list|tell me)\b/i, '').trim()
-    const andParts = cleanQuestion.split(/\b(?:,\s*and\s*which|and which|\band\b)\b/i)
+    const andParts = cleanQuestion.split(/\b(?:,\s*and\s*which|and which)\b|\band\b/i)
     if (andParts.length >= 2) {
       for (const ap of andParts) {
         const cleaned = ap.replace(/[?.,]/g, '').trim()
@@ -544,7 +544,7 @@ export function decomposeQuery(query: string, triage?: TriageDecision): string[]
     triage?.conjunctionStructure === 'identity_temporal'
     || /who or what is/i.test(norm)
   ) {
-    const whoOrWhatMatch = norm.match(/who or what is ['"]?([^'",?]+)['"]?\s*(?:,|and|\?)\s*(?:when did (?:i|we) (.+))?/i)
+    const whoOrWhatMatch = norm.match(/who or what is ['"]?([^'",?]*[^\s'",?])['"]?\s*(?:,|and|\?)\s*(?:when did (?:i|we) (.+))?/i)
     if (whoOrWhatMatch) {
       const [, entityName, introduceAction] = whoOrWhatMatch
       subQueries.add(entityName.trim())

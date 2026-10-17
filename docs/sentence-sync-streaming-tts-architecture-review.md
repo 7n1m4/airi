@@ -39,7 +39,7 @@ Viseme/mouth-open for Live2D/VRM is derived from the audio signal (energy or a c
 
 ## 2. Recommended architecture: capability-tiered alignment
 
-```
+```text
 LLM tokens ─► Chunk policy (Tier 0) ─► TTS request(s)
                                           │
                      ┌────────────────────┴──────────────────────┐
@@ -210,7 +210,7 @@ $$\text{bufferLead} = \text{scheduledEndTime} - \text{audioContext.currentTime} 
 
 **Empirical Failure Observed in DevTools**:
 DevTools network waterfall traces revealed that instead of pipelining requests, TTS requests were serialized **5 to 10 seconds apart** (Request 1 at 10s, Request 2 at 15s, Request 3 at 20s, Request 4 at 30s, etc.):
-```
+```text
 [Audio 1 Playing: 4.0s] ──► (Waits until 1.5s remaining) ──► Dispatches Request 2 ──► Network/TTS (0.9s) ──► [GAP OF DEAD SILENCE] ──► [Audio 2 Plays]
 ```
 
@@ -227,7 +227,7 @@ DevTools network waterfall traces revealed that instead of pipelining requests, 
 
 To avoid synchronization traps, the architecture must treat the streaming conversational loop as three distinct, asynchronously decoupled timelines:
 
-```
+```text
 Timeline 1: LLM Token Stream (Producer)
 Tokens arrive:  "Butter's ears..." ──► "She drops the broom..." ──► "...contest?!" ──► [DONE]
                          │

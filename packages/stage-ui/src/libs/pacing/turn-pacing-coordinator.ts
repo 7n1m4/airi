@@ -225,7 +225,7 @@ export class TurnPacingCoordinator {
     }
 
     this.pendingCandidate = candidate
-    console.log(`[TurnPacing:Coordinator] Staged pending aside [${candidate.source}]: "${candidate.text}"`)
+    console.info(`[TurnPacing:Coordinator] Staged pending aside [${candidate.source}]: "${candidate.text}"`)
     return true
   }
 
@@ -324,7 +324,7 @@ export class TurnPacingCoordinator {
 
     // Task 2: Check if dynamic aside candidate is present (Needle 2 semantic extractor)
     const candidate = this.getPendingAsideCandidate()
-    console.log(`[TurnPacing:Coordinator] onDeadlineElapsed - semanticExtractorEnabled: ${this.policy.semanticExtractorEnabled}, candidate: ${candidate ? candidate.text : 'none'}`)
+    console.info(`[TurnPacing:Coordinator] onDeadlineElapsed - semanticExtractorEnabled: ${this.policy.semanticExtractorEnabled}, candidate: ${candidate ? candidate.text : 'none'}`)
     if (candidate && this.policy.semanticExtractorEnabled) {
       this.attemptsMade++
       this.pendingCandidate = null // Consumed atomically
@@ -404,7 +404,7 @@ export class TurnPacingCoordinator {
 
     // Priority 1: Dynamic Explicit Aside (<think_aloud>)
     const candidate = this.getPendingAsideCandidate()
-    console.log(`[TurnPacing:Coordinator] onIntervalFlushElapsed - candidate: ${candidate ? candidate.text : 'none'}, source: ${candidate?.source}, timeSinceT0: ${timeSinceT0}ms`)
+    console.info(`[TurnPacing:Coordinator] onIntervalFlushElapsed - candidate: ${candidate ? candidate.text : 'none'}, source: ${candidate?.source}, timeSinceT0: ${timeSinceT0}ms`)
     if (
       this.policy.dynamicAsidesEnabled
       && timeSinceT0 >= dynamicAfterMs

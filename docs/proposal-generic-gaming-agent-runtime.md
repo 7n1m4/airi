@@ -255,7 +255,7 @@ Selecting any game tile opens a focused provisioning sheet before booting the em
 
 **The chat sidebar is completely hidden during calibration.** The game canvas occupies 100% of the viewport to maximize focus:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [≡] AIRI Arcade Studio — Calibration Mode                                                 [✕ Exit Setup]│
 ├────────────────────────────────────────────────────────────────────────────────────────────────────────┤
@@ -358,7 +358,7 @@ function extractGameState(prevGrid, currGrid, diff, diffUtils) {
 
 Once knowledge is approved (or during the 60-Second Sandboxed Test), the runtime executes the **Decoupled Eyes $\to$ Brain $\to$ Hands Pipeline**:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │               DECOUPLED REAL-TIME CO-PILOT PIPELINE                    │
 │                                                                        │
@@ -379,7 +379,7 @@ Once knowledge is approved (or during the 60-Second Sandboxed Test), the runtime
 
 The Arena layout opens in its refined classic split layout:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ [≡] AIRI - Chat Window [Arcade Room: QBasic Nibbles] [Mastered ✓]                         [⚙] [_][□][X]│
 ├─────────────────┬────────────────────────────────────────────────────┬─────────────────────────────────┤
@@ -496,7 +496,7 @@ Gaming observation adapts this exact technology to the game canvas / viewport (`
 
 To solve this, the gaming runtime introduces a **Dual-Mode Settle & Burst Filter with User-Tuneable Sensitivity**:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                    GAME SALIENCE & SETTLE GATE PIPELINE                      │
 │                                                                              │
@@ -556,7 +556,7 @@ Because game pacing varies drastically across titles, the Arcade Room settings d
 
 To guarantee deterministic, sub-millisecond execution and free the System-2 synthesizer from authoring error-prone pixel algorithms from scratch, the execution sandbox automatically provides the **`diffUtils` Perceptual Primitives SDK**.
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                    TIER 1 PLATFORM PERCEPTUAL PRIMITIVES                     │
 │                                                                              │

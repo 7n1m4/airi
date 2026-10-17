@@ -248,7 +248,8 @@ export function mergeInternalObservationQueues(
   for (const record of right.records) {
     const existing = byId.get(record.observation.id)
     if (!existing || observationRecordStatusRank(record.status) > observationRecordStatusRank(existing.status)
-      || observationRecordStatusRank(record.status) === observationRecordStatusRank(existing.status) && (record.handledAt ?? record.focusedAt ?? record.enqueuedAt) >= (existing.handledAt ?? existing.focusedAt ?? existing.enqueuedAt)) {
+      || (observationRecordStatusRank(record.status) === observationRecordStatusRank(existing.status)
+        && (record.handledAt ?? record.focusedAt ?? record.enqueuedAt) >= (existing.handledAt ?? existing.focusedAt ?? existing.enqueuedAt))) {
       byId.set(record.observation.id, record)
     }
   }
@@ -360,7 +361,7 @@ export function beginObservationFocus(input: {
   const current = attention.currentFocus
   const canInterrupt = !current
     || streamType === 'user-input'
-    || current.canBeInterrupted && input.priority >= current.priority + 0.2
+    || (current.canBeInterrupted && input.priority >= current.priority + 0.2)
   if (current && !canInterrupt)
     return { attention, interruptedObservationId: null }
   const nextFocus: Nan0AttentionFocus = {

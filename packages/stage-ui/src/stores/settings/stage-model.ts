@@ -163,7 +163,7 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
         return
       }
 
-      console.log('[StageModel:performUpdateStageModel] Fetched model from displayModelsStore:', {
+      console.info('[StageModel:performUpdateStageModel] Fetched model from displayModelsStore:', {
         selectedModelId,
         modelFound: !!model,
         modelType: model?.type,
@@ -198,14 +198,23 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
           stageModelSelectedFile.value = model.file
           // Update renderer just in case
           switch (model.format) {
-            case DisplayModelFormat.Live2dZip: stageModelRenderer.value = 'live2d'; break
-            case DisplayModelFormat.VRM: stageModelRenderer.value = 'vrm'; break
-            case DisplayModelFormat.SpineZip: stageModelRenderer.value = 'spine'; break
+            case DisplayModelFormat.Live2dZip:
+              stageModelRenderer.value = 'live2d'
+              break
+            case DisplayModelFormat.VRM:
+              stageModelRenderer.value = 'vrm'
+              break
+            case DisplayModelFormat.SpineZip:
+              stageModelRenderer.value = 'spine'
+              break
             case DisplayModelFormat.PMXZip:
             case DisplayModelFormat.PMXDirectory:
             case DisplayModelFormat.PMD:
-              stageModelRenderer.value = 'mmd'; break
-            default: stageModelRenderer.value = 'disabled'; break
+              stageModelRenderer.value = 'mmd'
+              break
+            default:
+              stageModelRenderer.value = 'disabled'
+              break
           }
           return
         }
@@ -342,7 +351,7 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
       })
 
       if (checkRes?.status === 'need_binary') {
-        console.log(`[StageModel] Stage-Mate cache MISS for ${model.id}. Transferring binary to Main process...`)
+        console.info(`[StageModel] Stage-Mate cache MISS for ${model.id}. Transferring binary to Main process...`)
         const arrayBuffer = await model.file.arrayBuffer()
         await saveModel({
           modelId: String(model.id),
@@ -350,10 +359,10 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
           data: new Uint8Array(arrayBuffer),
           position: rawPos,
         })
-        console.log(`[StageModel] Stage-Mate cache saved for ${model.id}.`)
+        console.info(`[StageModel] Stage-Mate cache saved for ${model.id}.`)
       }
       else {
-        console.log(`[StageModel] Stage-Mate cache HIT for ${model.id}. Zero binary transferred across IPC.`)
+        console.info(`[StageModel] Stage-Mate cache HIT for ${model.id}. Zero binary transferred across IPC.`)
       }
     }
     catch (err) {

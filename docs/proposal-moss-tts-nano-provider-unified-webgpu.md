@@ -380,7 +380,7 @@ To integrate MOSS-TTS-Nano into the unified client cache dashboard, we must upda
 #### 1. OPFS Directory & File Structure
 MOSS downloads files to the root OPFS directory under `nano-reader-browser-model-store/`.
 We must check for the presence and file sizes of the following structure:
-```
+```text
 nano-reader-browser-model-store/
 ├── MOSS-TTS-Nano-100M-ONNX/
 │   ├── browser_poc_manifest.json
@@ -432,10 +432,10 @@ Register the model in the cache dashboard:
 Register `moss-nano-local` with tags to let the providers UI detect its capabilities:
 * **Metadata Structure:**
   ```typescript
-  'moss-nano-local': {
+  const mossNanoLocal: ProviderMetadata = {
     id: 'moss-nano-local',
     category: 'speech',
-    tasks: ['text-to-speech'],
+    tasks: ['text-to-speech', 'tts'],
     name: 'Moss TTS (Nano)',
     description: 'Native AI - Local text-to-speech with voice cloning (0.1B Nano)',
     icon: 'i-lobe-icons:speaker',

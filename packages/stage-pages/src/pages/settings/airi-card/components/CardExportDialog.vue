@@ -407,6 +407,12 @@ const compatibilityMatrix = computed(() => {
         sillyTavern: false,
         moeru: false,
       }
+    default:
+      return {
+        dasilva: false,
+        sillyTavern: false,
+        moeru: false,
+      }
   }
 })
 
@@ -421,6 +427,8 @@ const exportButtonLabel = computed(() => {
       return 'Export Embedded Card (.png)'
     case 'json':
       return 'Export Character JSON (.json)'
+    default:
+      return 'Export Character'
   }
 })
 

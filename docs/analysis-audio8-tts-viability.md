@@ -15,7 +15,7 @@ While the raw checkpoint specs seem alluring on Hugging Face, integrating Audio8
 
 To accurately assess developer effort and project risk, any candidate TTS model must be benchmarked against AIRI’s empirical integration history:
 
-```
+```text
 [TURNKEY / READY RUNTIME] ◄──────────────────────────────► [RAW RESEARCH / UNCHARTED]
        Pocket TTS (~2 Hours)                                    MOSS-TTS-Nano (~4+ Days)
   • Web ONNX graphs pre-packaged                            • No web runtime existed

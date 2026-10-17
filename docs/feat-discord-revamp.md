@@ -269,7 +269,7 @@ To enable raw chat channel listening (`MESSAGE_CREATE`) without sacrificing zero
 
 To maximize compute efficiency and ensure zero wasted usage limits across hosting providers:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                   /togglebot On-Demand Gateway Gating Flow                  │
 ├─────────────────────────────────────────────────────────────────────────────┤

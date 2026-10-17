@@ -1,5 +1,5 @@
 # Live2D DSL Interpreter & Dating Sim Specification
-### 🌸 A Blueprint for Natively Integrating Live2D Creator Scripting & Generative Staging in AIRI
+## 🌸 A Blueprint for Natively Integrating Live2D Creator Scripting & Generative Staging in AIRI
 
 This specification outlines the architecture for a generic, stateful **Live2D DSL Interpreter** in AIRI. By parsing and executing the custom interactive scripting embedded within advanced third-party Live2D manifests, AIRI can natively run complex visual novels, RPG systems, affinity gating, and dynamic dialogue menus.
 
@@ -90,7 +90,7 @@ class ReactiveStore {
 ## 2. The Branching Choice Overlay (`Choices` Engine)
 Instead of launching dialog menus that detach the player from the character, interactive choices are compiled and rendered as **vibrant, floating glassmorphic buttons** composed directly on top of the stage background.
 
-```
+```text
 +-------------------------------------------------------------+
 |                                                             |
 |                          Live2D                             |
@@ -146,7 +146,7 @@ class Live2DStageManager {
   }
 
   async changeCostume(modelJsonPath: string): Promise<void> {
-    console.log(`🎭 Dynamic Costume Swapping triggered: ${modelJsonPath}`)
+    console.info(`🎭 Dynamic Costume Swapping triggered: ${modelJsonPath}`)
 
     // 1. Locate the resource in the current folder / package context
     const fullPath = this.resolvePath(modelJsonPath)
@@ -167,7 +167,7 @@ class Live2DStageManager {
     this.app.stage.addChild(newModel)
     await this.animateAlpha(newModel, 1, 200) // 200ms fade-in
 
-    console.log(`✅ Dynamic model hot-swap complete: ${modelJsonPath}`)
+    console.info(`✅ Dynamic model hot-swap complete: ${modelJsonPath}`)
   }
 
   private resolvePath(path: string): string {
@@ -234,7 +234,7 @@ The character shouldn't be static between clicks. Background delta timers run co
 ## 🎬 The Dating Sim Blend Vision
 This is the **next-level visual-novel staging paradigm** that maps these Live2D mechanical features onto a premium generative AI aesthetic.
 
-```
+```text
 +-------------------------------------------------------------+
 |  [ Generative AI Background (ComfyUI / Flux Scene) ]        |
 |                                                             |

@@ -21,7 +21,7 @@ export const LOCOMO_RERANK_SCHEMA = {
  * @param {import('@receptron/laya').Laya} laya
  * @param {string} question
  * @param {Array<{ id: string, text: string, rawText?: string, score?: number }>} candidates
- * @returns {Promise<Array<{ id: string, text: string, rawText?: string, originalScore: number, layaScore: number, finalScore: number }>>}
+ * @returns {Promise<Array<{ id: string, text: string, rawText?: string, originalScore: number, layaScore: number, finalScore: number }>>} Candidates fused and sorted by descending `finalScore`.
  */
 export async function layaRerankCandidates(laya, question, candidates) {
   const reranked = []

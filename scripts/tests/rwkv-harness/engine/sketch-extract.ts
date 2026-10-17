@@ -6,7 +6,7 @@
 /** Prefer fenced code blocks, then fall back to a `function setup` tail slice. */
 export function extractSketch(raw: string): string | null {
   const candidates: string[] = []
-  for (const m of raw.matchAll(/```[\w-]*\s*([\s\S]*?)```/g))
+  for (const m of raw.matchAll(/```[\w-]*[^\S\r\n]*\r?\n([\s\S]*?)```/g))
     candidates.push(m[1])
   // Unterminated fence (output truncated by the token budget): take the tail.
   const open = raw.lastIndexOf('```')
@@ -54,12 +54,18 @@ export function repairTruncatedProgram(code: string): string | null {
   for (let i = 0; i < sanitized.length; i++) {
     const ch = sanitized[i]
     if (inStr) {
-      if (ch === '\\') { i++; continue }
+      if (ch === '\\') {
+        i++
+        continue
+      }
       if (ch === inStr)
         inStr = null
       continue
     }
-    if (ch === '"' || ch === '\'' || ch === '`') { inStr = ch; continue }
+    if (ch === '"' || ch === '\'' || ch === '`') {
+      inStr = ch
+      continue
+    }
     if (ch === '/' && sanitized[i + 1] === '/') {
       const nl = sanitized.indexOf('\n', i)
       if (nl < 0)
@@ -96,12 +102,18 @@ export function repairTruncatedProgram(code: string): string | null {
   for (let i = 0; i < body.length; i++) {
     const ch = body[i]
     if (inStr) {
-      if (ch === '\\') { i++; continue }
+      if (ch === '\\') {
+        i++
+        continue
+      }
       if (ch === inStr)
         inStr = null
       continue
     }
-    if (ch === '"' || ch === '\'' || ch === '`') { inStr = ch; continue }
+    if (ch === '"' || ch === '\'' || ch === '`') {
+      inStr = ch
+      continue
+    }
     if (ch === '/' && body[i + 1] === '/') {
       const nl = body.indexOf('\n', i)
       if (nl < 0)

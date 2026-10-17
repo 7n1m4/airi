@@ -104,7 +104,7 @@ Baseline failures must not be hidden by weakening assertions, adding exclusions,
 | S3 | Generation invalidation is distinct from navigation. | After Stop/reset, deliver a late callback deliberately; assert the relevant stale-output/persistence boundary. Test Stop and reset separately. |
 | C1 | Stop persists an available partial reply before bumping generation. | At most one persisted stopped partial; `aborted: true`; raw text retained in the stopped-partial path. |
 | C2 | The active transport is aborted when its controller exists. | Captured signal is aborted; non-cooperative late callbacks cannot mutate the protected boundary. |
-| C3 | Stop remains available after LLM completion while speech is active. | Preserve `canStop = sending || isSpeaking`; no-handle Stop emits generation-stopped and clears speaking state. |
+| C3 | Stop remains available after LLM completion while speech is active. | Preserve `canStop = sending \|\| isSpeaking`; no-handle Stop emits generation-stopped and clears speaking state. |
 | C4 | Secondary-window Stop forwards the target session to the owning window. | Assert actual posted payload and receiver dispatch, not merely unchanged local `sending`. |
 | C5 | A subsequent normal send works after cancellation. | New stream, valid hook trace, correct persistence, settled send promise. |
 

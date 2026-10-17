@@ -52,60 +52,7 @@ const modelStore = useModelStore()
 
 const { stageModelRenderer } = storeToRefs(settingsStore)
 
-// --- Motion Playground Demo (VRM + Primed Motion Tool) ---
-const isMotionDemoEligible = computed(() => {
-  return modelType.value === 'vrm' && draft.state.toolMotionGeneratorEnabled === true
-})
-
-const motionPrompt = ref('')
-const isGeneratingMotion = ref(false)
-const motionDemoStatus = ref('')
-
-const motionPresets = [
-  { label: '👋 Wave Hello', prompt: 'Waving right hand while left arm up' },
-  { label: '💋 Blow Kiss', prompt: 'Hand extended towards viewer on chin blowing kisses' },
-  { label: '🙇 Graceful Bow', prompt: 'Graceful bow with hand on chest' },
-  { label: '💃 Celebration', prompt: 'Spin around and wave with both hands' },
-]
-
-function selectMotionPreset(presetPrompt: string) {
-  motionPrompt.value = presetPrompt
-}
-
-async function handleGenerateMotionDemo() {
-  const prompt = motionPrompt.value.trim()
-  if (!prompt || isGeneratingMotion.value)
-    return
-
-  isGeneratingMotion.value = true
-  motionDemoStatus.value = 'Generating 3D VRMA animation...'
-  try {
-    const result = await textToMotionStore.generateMotion(prompt, {
-      onLog: (msg) => { motionDemoStatus.value = msg },
-    })
-
-    if (result && result.buffer) {
-      const blobPart = new Uint8Array(result.buffer)
-      const file = new File([blobPart], `${prompt.slice(0, 15).replace(/[^a-z0-9]/gi, '_')}.vrma`, {
-        type: 'application/octet-stream',
-      })
-      const motionKey = await customVrmAnimationsStore.addCustomAnimation(file)
-      modelStore.triggerMotion(motionKey)
-      toast.success('3D Motion compiled & playing on stage!')
-      motionDemoStatus.value = 'Motion active on stage!'
-    }
-  }
-  catch (err) {
-    console.error('[StepFinale] Failed to generate motion demo:', err)
-    toast.error('Motion generation failed.')
-    motionDemoStatus.value = 'Generation failed.'
-  }
-  finally {
-    isGeneratingMotion.value = false
-  }
-}
-
-// --- Fallback Image Previews ---
+// --- Model Identity (used by motion eligibility, badges, previews) ---
 const presetLive2dPreview = new URL('../../../../../../assets/live2d/models/hiyori/preview.png', import.meta.url).href
 const presetVrmAvatarAPreview = new URL('../../../../../../assets/vrm/models/AvatarSample-A/preview.png', import.meta.url).href
 const presetVrmAvatarBPreview = new URL('../../../../../../assets/vrm/models/AvatarSample-B/preview.png', import.meta.url).href
@@ -182,6 +129,59 @@ const avatarPreviewUrl = computed(() => {
     return presetVrmAvatarAPreview
   return undefined
 })
+
+// --- Motion Playground Demo (VRM + Primed Motion Tool) ---
+const isMotionDemoEligible = computed(() => {
+  return modelType.value === 'vrm' && draft.state.toolMotionGeneratorEnabled === true
+})
+
+const motionPrompt = ref('')
+const isGeneratingMotion = ref(false)
+const motionDemoStatus = ref('')
+
+const motionPresets = [
+  { label: '👋 Wave Hello', prompt: 'Waving right hand while left arm up' },
+  { label: '💋 Blow Kiss', prompt: 'Hand extended towards viewer on chin blowing kisses' },
+  { label: '🙇 Graceful Bow', prompt: 'Graceful bow with hand on chest' },
+  { label: '💃 Celebration', prompt: 'Spin around and wave with both hands' },
+]
+
+function selectMotionPreset(presetPrompt: string) {
+  motionPrompt.value = presetPrompt
+}
+
+async function handleGenerateMotionDemo() {
+  const prompt = motionPrompt.value.trim()
+  if (!prompt || isGeneratingMotion.value)
+    return
+
+  isGeneratingMotion.value = true
+  motionDemoStatus.value = 'Generating 3D VRMA animation...'
+  try {
+    const result = await textToMotionStore.generateMotion(prompt, {
+      onLog: (msg) => { motionDemoStatus.value = msg },
+    })
+
+    if (result && result.buffer) {
+      const blobPart = new Uint8Array(result.buffer)
+      const file = new File([blobPart], `${prompt.slice(0, 15).replace(/[^a-z0-9]/gi, '_')}.vrma`, {
+        type: 'application/octet-stream',
+      })
+      const motionKey = await customVrmAnimationsStore.addCustomAnimation(file)
+      modelStore.triggerMotion(motionKey)
+      toast.success('3D Motion compiled & playing on stage!')
+      motionDemoStatus.value = 'Motion active on stage!'
+    }
+  }
+  catch (err) {
+    console.error('[StepFinale] Failed to generate motion demo:', err)
+    toast.error('Motion generation failed.')
+    motionDemoStatus.value = 'Generation failed.'
+  }
+  finally {
+    isGeneratingMotion.value = false
+  }
+}
 
 // --- Stage Model Live Mounting ---
 const stageModelReady = ref(false)

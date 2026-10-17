@@ -233,7 +233,10 @@ describe('chat orchestrator bridged tool loop runtime contracts', () => {
       {
         type: 'function',
         function: { name: 'tool_alpha' },
-        execute: async () => { executedTools.push('alpha'); return 'alpha_ok' },
+        execute: async () => {
+          executedTools.push('alpha')
+          return 'alpha_ok'
+        },
       },
     ]
 
@@ -276,7 +279,10 @@ describe('chat orchestrator bridged tool loop runtime contracts', () => {
       {
         type: 'function',
         function: { name: 'tool_valid' },
-        execute: async () => { executedTools.push('valid'); return 'valid_ok' },
+        execute: async () => {
+          executedTools.push('valid')
+          return 'valid_ok'
+        },
       },
     ]
 

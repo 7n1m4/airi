@@ -34,7 +34,7 @@ This guide covers the end-to-end integration between native Electron power event
 
 ## Architectural Invariants & Flow
 
-```
+```text
 [OS Sleep / Lock Screen]  OR  [Window Minimize / Hide]
               │
               ▼

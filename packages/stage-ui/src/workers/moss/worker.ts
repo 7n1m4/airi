@@ -57,7 +57,7 @@ defineStreamInvokeHandler(context, mossLoadEvent, toStreamHandler<LoadModelReque
   // Initialize runtime
   if (!runtime) {
     runtime = createBrowserOnnxTtsRuntime({
-      logger: (msg: string) => console.log('[MOSS Worker]', msg),
+      logger: (msg: string) => console.info('[MOSS Worker]', msg),
     })
   }
 
@@ -94,7 +94,7 @@ defineStreamInvokeHandler(context, mossGenerateEvent, toStreamHandler<MossGenera
 
   const signal = options?.abortController?.signal
   const { text, voiceId, cpuThreads, attentionBackend: _attentionBackend, samplingMode, voiceCloneMaxTokens, promptAudioWaveform, promptAudioChannels, promptAudioCodes: cachedPromptAudioCodes } = payload
-  console.log('[MOSS Worker] generate request:', { voiceId, hasWaveform: !!promptAudioWaveform, channels: promptAudioChannels, hasCachedCodes: !!cachedPromptAudioCodes })
+  console.info('[MOSS Worker] generate request:', { voiceId, hasWaveform: !!promptAudioWaveform, channels: promptAudioChannels, hasCachedCodes: !!cachedPromptAudioCodes })
 
   if (signal?.aborted) {
     throw new DOMException('Aborted', 'AbortError')
@@ -117,7 +117,7 @@ defineStreamInvokeHandler(context, mossGenerateEvent, toStreamHandler<MossGenera
     // source of truth. Phase A preconditioning was applied in providers.ts before
     // these bytes were buffered. Phase B cache hits skip the codec encode entirely.
     if (cachedPromptAudioCodes && cachedPromptAudioCodes.length > 0) {
-      console.log('[MOSS Worker] cache hit: using stored prompt_audio_codes, frames:', cachedPromptAudioCodes.length)
+      console.info('[MOSS Worker] cache hit: using stored prompt_audio_codes, frames:', cachedPromptAudioCodes.length)
       extraVoices.push({
         voice: voiceId,
         display_name: voiceId,
@@ -128,7 +128,7 @@ defineStreamInvokeHandler(context, mossGenerateEvent, toStreamHandler<MossGenera
     }
     else if (promptAudioWaveform && promptAudioWaveform.length > 0) {
       const waveformLength = Math.floor(promptAudioWaveform.length / (promptAudioChannels || 1))
-      console.log('[MOSS Worker] cache miss: encoding planar waveform, frames:', waveformLength)
+      console.info('[MOSS Worker] cache miss: encoding planar waveform, frames:', waveformLength)
       await runtime.ensureCodecEncodeLoaded()
       const codes = await runtime.encodeReferenceAudioFromWaveform(
         promptAudioWaveform,

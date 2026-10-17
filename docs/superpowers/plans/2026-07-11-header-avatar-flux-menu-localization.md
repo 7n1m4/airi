@@ -60,7 +60,7 @@ describe('header avatar account menu', () => {
     expect(source).toContain('t(\'settings.pages.account.sessionListErrorFallback\')')
 
     expect(source).not.toMatch(/>\s*(Signed in as|Active Sessions|Settings|Logout)\s*</)
-    expect(source).not.toContain('You have ${sessions.length} active sessions.')
+    expect(source).not.toMatch(/You have \$\{sessions\.length\} active sessions\./)
     expect(source).not.toContain('An unknown error occurred')
   })
 

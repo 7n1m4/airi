@@ -14,9 +14,9 @@ const emit = defineEmits<{
   (e: 'update:open', val: boolean): void
   (e: 'update:showBackground', val: boolean): void
   (e: 'update:showModel', val: boolean): void
-  (e: 'apply-preset', preset: 'mini' | 'med.' | 'large' | 'full'): void
-  (e: 'center-model'): void
-  (e: 'hide-stage'): void
+  (e: 'applyPreset', preset: 'mini' | 'med.' | 'large' | 'full'): void
+  (e: 'centerModel'): void
+  (e: 'hideStage'): void
 }>()
 
 const isOpen = ref(false)
@@ -39,17 +39,17 @@ watch(isOpen, (val) => {
 })
 
 function handleCenterModel() {
-  emit('center-model')
+  emit('centerModel')
   isOpen.value = false
 }
 
 function handlePreset(preset: 'mini' | 'med.' | 'large' | 'full') {
-  emit('apply-preset', preset)
+  emit('applyPreset', preset)
   isOpen.value = false
 }
 
 function handleHide() {
-  emit('hide-stage')
+  emit('hideStage')
   isOpen.value = false
 }
 

@@ -64,6 +64,54 @@ const pacingStateLog = computed<PacingStateLogEntry[]>(() => {
   return localPacingMetrics.value?.stateLog || []
 })
 
+interface ReasoningSegment {
+  type: 'text' | 'think_aloud'
+  content: string
+}
+
+const reasoningSegments = computed<ReasoningSegment[]>(() => {
+  const raw = props.message.categorization?.reasoning || ''
+  if (!raw) {
+    return []
+  }
+
+  const segments: ReasoningSegment[] = []
+  const tagRegex = /<think_aloud(?:\s[^>]*)?>([\s\S]*?)(?:<\/think_aloud>|$)/gi
+
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  while ((match = tagRegex.exec(raw)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({
+        type: 'text',
+        content: raw.slice(lastIndex, match.index),
+      })
+    }
+    if (match[1]) {
+      segments.push({
+        type: 'think_aloud',
+        content: match[1],
+      })
+    }
+    lastIndex = tagRegex.lastIndex
+    if (match.index === tagRegex.lastIndex) {
+      tagRegex.lastIndex++
+    }
+  }
+
+  if (lastIndex < raw.length) {
+    segments.push({
+      type: 'text',
+      content: raw.slice(lastIndex, raw.length),
+    })
+  }
+
+  return segments
+})
+
+const thinkAloudCount = computed(() => reasoningSegments.value.filter(s => s.type === 'think_aloud').length)
+
 const fillersCountText = computed(() => {
   const spoken = localPacingMetrics.value?.fillersSpokenCount ?? localPacingMetrics.value?.spokenCount ?? thinkAloudCount.value ?? 0
   const max = localPacingMetrics.value?.maxFillers ?? airiCardStore.activeCard?.extensions?.airi?.acting?.pacing?.maxFillersPerTurn ?? 3
@@ -175,54 +223,6 @@ const durationDisplay = computed(() => {
   return ''
 })
 
-interface ReasoningSegment {
-  type: 'text' | 'think_aloud'
-  content: string
-}
-
-const reasoningSegments = computed<ReasoningSegment[]>(() => {
-  const raw = props.message.categorization?.reasoning || ''
-  if (!raw) {
-    return []
-  }
-
-  const segments: ReasoningSegment[] = []
-  const tagRegex = /<think_aloud(?:\s[^>]*)?>([\s\S]*?)(?:<\/think_aloud>|$)/gi
-
-  let lastIndex = 0
-  let match: RegExpExecArray | null
-
-  while ((match = tagRegex.exec(raw)) !== null) {
-    if (match.index > lastIndex) {
-      segments.push({
-        type: 'text',
-        content: raw.slice(lastIndex, match.index),
-      })
-    }
-    if (match[1]) {
-      segments.push({
-        type: 'think_aloud',
-        content: match[1],
-      })
-    }
-    lastIndex = tagRegex.lastIndex
-    if (match.index === tagRegex.lastIndex) {
-      tagRegex.lastIndex++
-    }
-  }
-
-  if (lastIndex < raw.length) {
-    segments.push({
-      type: 'text',
-      content: raw.slice(lastIndex),
-    })
-  }
-
-  return segments
-})
-
-const thinkAloudCount = computed(() => reasoningSegments.value.filter(s => s.type === 'think_aloud').length)
-
 const cleanFullReasoning = computed(() => {
   const raw = props.message.categorization?.reasoning?.trim() || ''
   if (!raw) {
@@ -257,7 +257,7 @@ const isThinking = computed(() => {
 })
 
 function findLatestHeuristicPivot(text: string): string | null {
-  const regex = /(?:^|[.!?\n]\s*)(Wait(?:,|\s-\s|\.\.\.)|Actually(?:,|\s-\s|\.\.\.)|Let me (?:check|rethink|calculate|revisit|think back)|Key insight:|Hold on,|The trick is|In conclusion|Therefore,)([^.!?\n]{8,90}[.!?]?)/gi
+  const regex = /(?:^|[.!?\n]\s*)(?:Wait(?:,|\s-\s|\.\.\.)|Actually(?:,|\s-\s|\.\.\.)|Let me (?:check|rethink|calculate|revisit|think back)|Key insight:|Hold on,|The trick is|In conclusion|Therefore,)[^.!?\n]{8,90}[.!?]?/gi
   let lastMatch: string | null = null
   let m: RegExpExecArray | null
   while ((m = regex.exec(text)) !== null) {

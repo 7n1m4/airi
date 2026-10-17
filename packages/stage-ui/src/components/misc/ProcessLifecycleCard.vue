@@ -2,6 +2,7 @@
 import type { ProcessSpawnerInstance } from '../../composables/use-process-spawner'
 
 import { FieldInput } from '@proj-airi/ui'
+import { toRefs } from 'vue'
 
 const props = withDefaults(defineProps<{
   spawner: ProcessSpawnerInstance
@@ -21,6 +22,15 @@ const props = withDefaults(defineProps<{
   stopButtonLabel: 'Stop Server',
   icon: 'i-solar:server-square-bold-duotone',
 })
+
+// The spawner prop owns these refs; destructure them so the template binds to
+// local refs instead of assigning through the prop (vue/no-mutating-props).
+const {
+  autoSpawnOnLaunch,
+  showLogs,
+  spawnCommand,
+  stopCommand,
+} = toRefs(props.spawner)
 </script>
 
 <template>
@@ -58,10 +68,10 @@ const props = withDefaults(defineProps<{
           v-if="props.spawner.lastResult.value"
           type="button"
           class="dark:border-neutral-750 dark:hover:bg-neutral-750 inline-flex cursor-pointer items-center gap-1.5 border border-neutral-200 rounded-xl bg-neutral-50 px-3 py-1.5 text-xs text-neutral-700 font-medium transition-all active:scale-95 dark:bg-neutral-800 hover:bg-neutral-100 dark:text-neutral-300"
-          @click="props.spawner.showLogs.value = !props.spawner.showLogs.value"
+          @click="showLogs = !showLogs"
         >
           <span class="i-solar:terminal-linear text-xs" />
-          <span>{{ props.spawner.showLogs.value ? 'Hide Logs' : 'Terminal Logs' }}</span>
+          <span>{{ showLogs ? 'Hide Logs' : 'Terminal Logs' }}</span>
           <span
             :class="[
               'ml-1 px-1.5 py-0.2 rounded text-[10px] font-mono font-bold',
@@ -75,7 +85,7 @@ const props = withDefaults(defineProps<{
         </button>
 
         <button
-          v-if="props.spawner.stopCommand.value.trim()"
+          v-if="stopCommand.trim()"
           type="button"
           :disabled="props.spawner.isExecuting.value"
           class="shadow-xs inline-flex cursor-pointer items-center gap-1.5 border border-red-200 rounded-xl bg-red-50 px-3.5 py-1.5 text-xs text-red-700 font-semibold transition-all active:scale-95 dark:border-red-900/50 dark:bg-red-950/40 hover:bg-red-100 dark:text-red-300 disabled:opacity-50 dark:hover:bg-red-900/60"
@@ -92,7 +102,7 @@ const props = withDefaults(defineProps<{
 
         <button
           type="button"
-          :disabled="props.spawner.isExecuting.value || !props.spawner.spawnCommand.value.trim()"
+          :disabled="props.spawner.isExecuting.value || !spawnCommand.trim()"
           class="shadow-xs inline-flex cursor-pointer items-center gap-1.5 rounded-xl bg-amber-500 px-4 py-1.5 text-xs text-white font-semibold transition-all active:scale-95 hover:bg-amber-600 disabled:opacity-50"
           @click="props.spawner.handleSpawn"
         >
@@ -110,14 +120,14 @@ const props = withDefaults(defineProps<{
     <!-- Command Configuration Form -->
     <div class="grid grid-cols-1 mt-4 gap-3 lg:grid-cols-2">
       <FieldInput
-        v-model="props.spawner.spawnCommand.value"
+        v-model="spawnCommand"
         label="Spawn Command"
         description="Command to start or spawn the server process (local executable, script, or remote SSH command)."
         :placeholder="props.placeholderSpawn"
       />
 
       <FieldInput
-        v-model="props.spawner.stopCommand.value"
+        v-model="stopCommand"
         label="Stop Command (Optional)"
         description="Optional command to terminate or stop the server process."
         :placeholder="props.placeholderStop"
@@ -128,7 +138,7 @@ const props = withDefaults(defineProps<{
     <div class="mt-3 flex flex-col justify-between gap-2 border-t border-neutral-100 pt-3 sm:flex-row sm:items-center dark:border-neutral-800/80">
       <label class="flex cursor-pointer select-none items-center gap-2 text-xs text-neutral-700 dark:text-neutral-300">
         <input
-          v-model="props.spawner.autoSpawnOnLaunch.value"
+          v-model="autoSpawnOnLaunch"
           type="checkbox"
           class="h-4 w-4 border-neutral-300 rounded text-amber-500 accent-amber-500 dark:border-neutral-700 focus:ring-amber-500"
         >
@@ -147,7 +157,7 @@ const props = withDefaults(defineProps<{
 
     <!-- Collapsible Terminal Execution Logs Drawer -->
     <div
-      v-if="props.spawner.showLogs.value && props.spawner.lastResult.value"
+      v-if="showLogs && props.spawner.lastResult.value"
       class="mt-3 border border-neutral-800 rounded-xl bg-neutral-950 p-3.5 text-xs text-neutral-200 font-mono"
     >
       <div class="flex items-center justify-between border-b border-neutral-800/80 pb-2">
@@ -181,7 +191,7 @@ const props = withDefaults(defineProps<{
           <button
             type="button"
             class="cursor-pointer text-[11px] text-neutral-400 hover:text-white"
-            @click="props.spawner.showLogs.value = false"
+            @click="showLogs = false"
           >
             Close
           </button>

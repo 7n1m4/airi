@@ -12,10 +12,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'spawn-standalone', id: string): void
+  (e: 'spawnStandalone', id: string): void
   (e: 'update:open', val: boolean): void
-  (e: 'get-suggestions', input: string): void
-  (e: 'clear-suggestions'): void
+  (e: 'getSuggestions', input: string): void
+  (e: 'clearSuggestions'): void
 }>()
 
 const isOpen = ref(props.open ?? false)
@@ -37,7 +37,7 @@ function toggleDock() {
 
 function dismiss() {
   isOpen.value = false
-  emit('clear-suggestions')
+  emit('clearSuggestions')
 }
 
 function onSendSuccess() {
@@ -45,11 +45,11 @@ function onSendSuccess() {
 }
 
 function handleGetSuggestions(input: string) {
-  emit('get-suggestions', input)
+  emit('getSuggestions', input)
 }
 
 function handleClearSuggestions() {
-  emit('clear-suggestions')
+  emit('clearSuggestions')
 }
 
 defineExpose({

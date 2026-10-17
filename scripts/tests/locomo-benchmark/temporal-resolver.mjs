@@ -37,7 +37,7 @@ export function formatWeekOfMonth(date) {
  * Handles formats like: "3:47 pm on 17 March, 2022" -> "March 17, 2022 15:47:00"
  *
  * @param {string} str
- * @returns {string|null}
+ * @returns {string|null} The normalized "Month Day, Year HH:mm:00" string, `null` for empty input, or the original text when the format does not match.
  */
 export function parseLoCoMoDateTime(str) {
   if (!str)
@@ -63,7 +63,7 @@ export function parseLoCoMoDateTime(str) {
  * @param {string} rawExpression - e.g. "last week", "three days ago", "yesterday"
  * @param {string|Date} anchorDateInput - e.g. "2022-04-12T09:52:00" or "3:47 pm on 17 March, 2022"
  * @param {string} [turnId]
- * @returns {object|null}
+ * @returns {object|null} A resolution record (`raw_expression`, `anchor_turn_id`, `anchor_date`, `kind`, `precision`, `date` or `start`/`end_inclusive`, `formatted_label`, `policy`, `ambiguous`), or `null` when inputs are missing or the anchor date is unparseable.
  */
 export function resolveTemporalExpression(rawExpression, anchorDateInput, turnId = null) {
   if (!rawExpression || !anchorDateInput)

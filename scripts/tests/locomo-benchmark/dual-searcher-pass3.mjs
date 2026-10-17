@@ -30,7 +30,7 @@ export class DualSearcherPass3 {
    * @param {object} triage - Triage decision from Jev
    * @param {number} [limit=3]
    * @param {number[]} [queryVector=null]
-   * @returns {Promise<{ ledgerResult: object|null, textCandidates: any[], topEvidence: string[], candidateObjects: any[] }>}
+   * @returns {Promise<{ ledgerResult: object|null, textCandidates: any[], topEvidence: string[], candidateObjects: any[] }>} Ledger answer merged with the reranked text-search evidence set.
    */
   async search(question, triage, limit = 3, queryVector = null) {
     const qLower = question.toLowerCase()
@@ -41,7 +41,7 @@ export class DualSearcherPass3 {
     // A0. Single-Hop Adopted Pet Name (C4)
     if (
       qLower.includes('name')
-      && /\b(adopt|adopted|adopting)\b/i.test(question)
+      && /\b(?:adopt|adopted|adopting)\b/i.test(question)
     ) {
       const askedSubject = qLower.includes('james') ? 'James' : (qLower.includes('john') ? 'John' : null)
       // Check if question asks about an explicit third-party person not in the graph (e.g. Mira)
@@ -91,8 +91,8 @@ export class DualSearcherPass3 {
     // B. Temporal Event / Adoption Date (C2)
     if (
       qLower.includes('when')
-      && /\b(adopt|adopted|adopting)\b/i.test(question)
-      && /\b(ned|pup|puppy|dog)\b/i.test(question)
+      && /\b(?:adopt|adopted|adopting)\b/i.test(question)
+      && /\b(?:ned|pup|puppy|dog)\b/i.test(question)
     ) {
       const evDate = this.ledger.queryEventDate('James', 'Ned')
       if (evDate && evDate.formattedDate) {

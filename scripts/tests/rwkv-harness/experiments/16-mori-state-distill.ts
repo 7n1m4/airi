@@ -11,6 +11,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { RwkvWebGpuBridge } from '../engine/rwkv-session.js'
 import {
@@ -37,7 +38,7 @@ export const PROBE_QUESTIONS = [
 ]
 
 async function main() {
-  console.log('=== Phase 16: Mori-v3 Recurrent State Distillation Experiment ===\n')
+  console.info('=== Phase 16: Mori-v3 Recurrent State Distillation Experiment ===\n')
 
   // Parse CLI flags
   const args = process.argv.slice(2)
@@ -45,9 +46,9 @@ async function main() {
   const modelUrl = use15B ? PHASE7_MODEL_URL_1_5B : DEFAULT_BASE_MODEL_URL
   const modelLabel = use15B ? 'RWKV-7 G1 1.5B' : 'RWKV-7 G1 0.1B'
 
-  console.log(`Target Model: ${modelLabel}`)
+  console.info(`Target Model: ${modelLabel}`)
   const modelPath = await ensureModelCached(modelUrl)
-  console.log(`Model Path: ${modelPath}\n`)
+  console.info(`Model Path: ${modelPath}\n`)
 
   // Resolve external corpus (isolated from git)
   const defaultExternalPath = '/tmp/mori_cleanroom/mori_rwkv_conditioning_blocks.json'
@@ -60,33 +61,33 @@ async function main() {
   }
 
   const rawBlocks: string[] = JSON.parse(fs.readFileSync(corpusPath, 'utf8'))
-  console.log(`✓ Loaded ${rawBlocks.length} golden dialogue blocks from external scratch.\n`)
+  console.info(`✓ Loaded ${rawBlocks.length} golden dialogue blocks from external scratch.\n`)
 
   const bridge = new RwkvWebGpuBridge({ modelFilePath: modelPath })
 
   try {
-    await bridge.boot(m => console.log(`[engine] ${m}`))
-    console.log(`✓ WebGPU Engine booted: stateLen=${bridge.info.stateLen}\n`)
+    await bridge.boot(m => console.info(`[engine] ${m}`))
+    console.info(`✓ WebGPU Engine booted: stateLen=${bridge.info.stateLen}\n`)
 
     // 1. Bake Condition 1: S15 (15 golden turns)
     const blocks15 = rawBlocks.slice(0, 15)
-    console.log('--- Baking Cartridge S15 (15 golden turns) ---')
+    console.info('--- Baking Cartridge S15 (15 golden turns) ---')
     const ts15 = Date.now()
     const state15 = await bridge.makeState({ name: 'mori-s15', texts: blocks15 })
-    console.log(`✓ S15 baked: ${state15.fedTokens} tokens in ${((Date.now() - ts15) / 1000).toFixed(2)}s\n`)
+    console.info(`✓ S15 baked: ${state15.fedTokens} tokens in ${((Date.now() - ts15) / 1000).toFixed(2)}s\n`)
 
     // 2. Bake Condition 2: S50 (50 golden turns)
     const blocks50 = rawBlocks.slice(0, 50)
-    console.log('--- Baking Cartridge S50 (50 golden turns) ---')
+    console.info('--- Baking Cartridge S50 (50 golden turns) ---')
     const ts50 = Date.now()
     const state50 = await bridge.makeState({ name: 'mori-s50', texts: blocks50 })
-    console.log(`✓ S50 baked: ${state50.fedTokens} tokens in ${((Date.now() - ts50) / 1000).toFixed(2)}s\n`)
+    console.info(`✓ S50 baked: ${state50.fedTokens} tokens in ${((Date.now() - ts50) / 1000).toFixed(2)}s\n`)
 
     // 3. Bake Condition 3: SFull (all available golden turns)
-    console.log(`--- Baking Cartridge SFull (${rawBlocks.length} golden turns) ---`)
+    console.info(`--- Baking Cartridge SFull (${rawBlocks.length} golden turns) ---`)
     const tsFull = Date.now()
     const stateFull = await bridge.makeState({ name: 'mori-sfull', texts: rawBlocks })
-    console.log(`✓ SFull baked: ${stateFull.fedTokens} tokens in ${((Date.now() - tsFull) / 1000).toFixed(2)}s\n`)
+    console.info(`✓ SFull baked: ${stateFull.fedTokens} tokens in ${((Date.now() - tsFull) / 1000).toFixed(2)}s\n`)
 
     // Evaluate across conditions
     const conditions = [
@@ -107,12 +108,12 @@ async function main() {
     }> = []
 
     for (const probe of PROBE_QUESTIONS) {
-      console.log(`\n======================================================`)
-      console.log(`Probe: "${probe.title}" -> "${probe.prompt}"`)
-      console.log(`======================================================`)
+      console.info(`\n======================================================`)
+      console.info(`Probe: "${probe.title}" -> "${probe.prompt}"`)
+      console.info(`======================================================`)
 
       for (const cond of conditions) {
-        console.log(`\n  [${cond.label}]`)
+        console.info(`\n  [${cond.label}]`)
         const t0 = Date.now()
 
         const res = await bridge.generate({
@@ -128,8 +129,8 @@ async function main() {
 
         const elapsed = Date.now() - t0
         const text = res.text.trim()
-        console.log(`  Output (${text.length} chars, ${res.completionTokens} toks, ${elapsed}ms):`)
-        console.log(`  "${text}"`)
+        console.info(`  Output (${text.length} chars, ${res.completionTokens} toks, ${elapsed}ms):`)
+        console.info(`  "${text}"`)
 
         reportRows.push({
           condition: cond.id,
@@ -150,11 +151,11 @@ async function main() {
 
     const reportPath = path.join(reportsDir, '16-mori-state-distill-results.json')
     fs.writeFileSync(reportPath, JSON.stringify({ model: modelLabel, date: new Date().toISOString(), results: reportRows }, null, 2))
-    console.log(`\n✓ Results saved to ${reportPath}`)
+    console.info(`\n✓ Results saved to ${reportPath}`)
   }
   finally {
     await bridge.dispose()
-    console.log('✓ WebGPU Bridge disposed.')
+    console.info('✓ WebGPU Bridge disposed.')
   }
 }
 

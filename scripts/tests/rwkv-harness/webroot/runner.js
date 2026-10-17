@@ -103,10 +103,8 @@ async function boot() {
     const constraint = opts.constrainEnum || null
     let enumDefs = null // [{str, toks:number[]}]
     let triggerRe = null
-    let keyStr = null
     if (constraint) {
       enumDefs = constraint.values.map(v => ({ str: v, toks: Array.from(tokenizer.encode(enc.encode(v))) }))
-      keyStr = constraint.key
       const k = constraint.key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
       triggerRe = new RegExp(`${k}\\s*:\\s*"?$`)
     }
@@ -133,7 +131,10 @@ async function boot() {
       // Determine allowed next tokens under the constraint.
       let allowed = null
       if (constraint) {
-        if (!inSlot && triggerRe.test(raw)) { inSlot = true; slotText = '' }
+        if (!inSlot && triggerRe.test(raw)) {
+          inSlot = true
+          slotText = ''
+        }
         if (inSlot) {
           // Live enums = those whose full string still starts with what we've emitted in the slot.
           const live = enumDefs.filter(e => e.str !== slotText && e.str.startsWith(slotText))
@@ -152,12 +153,24 @@ async function boot() {
               for (const tid of e.toks) {
                 const piece = new TextDecoder().decode(tokenizer.decode(Uint32Array.of([tid])))
                 const next = acc + piece
-                if (slotText.startsWith(next)) { acc = next; continue } // token fully consumed
-                if (next.startsWith(slotText)) { allowed.add(tid); break } // this token advances slot
+                // Token fully consumed; keep extending the accumulator.
+                if (slotText.startsWith(next)) {
+                  acc = next
+                  continue
+                }
+                // This token advances the slot text beyond what we have emitted.
+                if (next.startsWith(slotText)) {
+                  allowed.add(tid)
+                  break
+                }
                 break
               }
             }
-            if (allowed.size === 0) { inSlot = false; slotText = ''; allowed = null }
+            if (allowed.size === 0) {
+              inSlot = false
+              slotText = ''
+              allowed = null
+            }
           }
         }
       }
@@ -168,14 +181,26 @@ async function boot() {
         let sum = 0
         for (const t of allowed) sum += probs[t]
         if (sum <= 0) {
-          let best = -1; let bestP = -1
-          for (const t of allowed) { if (probs[t] > bestP) { bestP = probs[t]; best = t } }
+          let best = -1
+          let bestP = -1
+          for (const t of allowed) {
+            if (probs[t] > bestP) {
+              bestP = probs[t]
+              best = t
+            }
+          }
           token = best
         }
         else {
           let r = Math.random() * sum
           token = -1
-          for (const t of allowed) { r -= probs[t]; if (r <= 0) { token = t; break } }
+          for (const t of allowed) {
+            r -= probs[t]
+            if (r <= 0) {
+              token = t
+              break
+            }
+          }
           if (token === -1)
             token = [...allowed][0]
         }
@@ -253,7 +278,9 @@ async function boot() {
    * evolving chain (matching Toggle-4 'active session' semantics).
    */
   let __prevRwkvState = null
-  window.__rwkvResetState = () => { __prevRwkvState = null }
+  window.__rwkvResetState = () => {
+    __prevRwkvState = null
+  }
   window.__rwkvStateDelta = async (turns) => {
     const { session, tokenizer, info } = __engine
     const enc = new TextEncoder()
@@ -276,7 +303,10 @@ async function boot() {
 
     // Cosine + L2 over a half-open subslice [a,b) of two equal-length states.
     function sliceDeltas(a0, b0, prev, curVec) {
-      let dot = 0; let na = 0; let nb = 0; let l2 = 0
+      let dot = 0
+      let na = 0
+      let nb = 0
+      let l2 = 0
       for (let i = a0; i < b0; i++) {
         const d = curVec[i] - prev[i]
         l2 += d * d
@@ -310,7 +340,10 @@ async function boot() {
         }
       }
       else {
-        for (let L = 0; L < numLayer; L++) { perLayerCos.push(0); perLayerL2.push(0) }
+        for (let L = 0; L < numLayer; L++) {
+          perLayerCos.push(0)
+          perLayerL2.push(0)
+        }
       }
       out.push({
         turn: idx,
@@ -375,5 +408,8 @@ async function boot() {
 
 window.__RWkvRunnerReady = false
 boot()
-  .then((r) => { window.__RWkvBootResult = r; window.__RWkvRunnerReady = true })
+  .then((r) => {
+    window.__RWkvBootResult = r
+    window.__RWkvRunnerReady = true
+  })
   .catch((e) => { window.__RWkvBootResult = { ok: false, error: String((e && e.stack) || e).slice(0, 1500) } })

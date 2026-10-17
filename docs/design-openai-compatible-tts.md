@@ -23,7 +23,7 @@ All requests include `Authorization: Bearer {apiKey}` when an API key is configu
 
 ### Speech Synthesis Request Shape
 
-```
+```http
 POST {baseURL}/audio/speech
 Content-Type: application/json
 Authorization: Bearer {apiKey}
@@ -123,14 +123,14 @@ If your server doesn't expose a `/voices` endpoint at all (or all probes fail), 
 When a manually entered voice ID is used, AIRI constructs a synthetic voice object on the fly:
 
 ```typescript
-{
-  id: "my-custom-voice",
-  name: "my-custom-voice",
-  description: "my-custom-voice",
-  previewURL: "",
-  languages: [{ code: "en", title: "English" }],
-  provider: "openai-compatible-audio-speech",
-  gender: "neutral"
+const voice = {
+  id: 'my-custom-voice',
+  name: 'my-custom-voice',
+  description: 'my-custom-voice',
+  previewURL: '',
+  languages: [{ code: 'en', title: 'English' }],
+  provider: 'openai-compatible-audio-speech',
+  gender: 'neutral',
 }
 ```
 
@@ -174,7 +174,7 @@ The absolute minimum your server needs:
 
 If you want AIRI to auto-discover voices, add **one** of these endpoints:
 
-```
+```text
 GET /v1/voices        ← most common, recommended
 GET /v1/audio/voices  ← Chatterbox-style
 GET /voices           ← no-prefix fallback
@@ -182,7 +182,10 @@ GET /voices           ← no-prefix fallback
 
 Return either:
 ```json
-[{ "id": "...", "name": "..." }, ...]
+[
+  { "id": "alloy", "name": "Alloy" },
+  { "id": "echo", "name": "Echo" }
+]
 ```
 or:
 ```json

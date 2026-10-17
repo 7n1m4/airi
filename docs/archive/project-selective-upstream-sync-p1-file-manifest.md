@@ -171,7 +171,7 @@ See [`project-selective-upstream-sync-phase-a-buy-in.md`](./project-selective-up
 
 ## Full unique list (66 paths, sorted)
 
-```
+```text
 .gitignore
 AGENTS.md
 apps/server/src/app.ts

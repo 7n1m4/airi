@@ -217,18 +217,18 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
   channelServerConfigStore.setup()
 
   const storedConfig = await getChannelServerConfig()
-  console.log('[Main/ServerChannel] Loaded stored config. Token exists:', !!storedConfig.authToken)
+  console.info('[Main/ServerChannel] Loaded stored config. Token exists:', !!storedConfig.authToken)
 
   if (!storedConfig.authToken) {
     const newToken = randomUUID()
-    console.log('[Main/ServerChannel] No authToken found. Generating new one:', newToken)
+    console.info('[Main/ServerChannel] No authToken found. Generating new one:', newToken)
     storedConfig.authToken = newToken
     channelServerConfigStore.update(storedConfig)
     channelServerConfigStore.flush()
-    console.log('[Main/ServerChannel] authToken generated and flushed.')
+    console.info('[Main/ServerChannel] authToken generated and flushed.')
   }
   else {
-    console.log('[Main/ServerChannel] Using existing authToken:', storedConfig.authToken)
+    console.info('[Main/ServerChannel] Using existing authToken:', storedConfig.authToken)
   }
 
   const serverChannel = createServer({
@@ -391,13 +391,13 @@ export async function setupServerChannel(params: { lifecycle: Lifecycle }): Prom
 
 export async function createServerChannelService(params: { serverChannel: Server }) {
   const { context } = createContext(ipcMain)
-  console.log('[Main/ServerChannel] Registering Eventa invoke handlers')
+  console.info('[Main/ServerChannel] Registering Eventa invoke handlers')
 
   defineInvokeHandler(context, electronGetServerChannelConfig, async () => {
     const startedAt = Date.now()
-    console.log('[Main/ServerChannel] getServerChannelConfig invoked')
+    console.info('[Main/ServerChannel] getServerChannelConfig invoked')
     const config = await getChannelServerConfig()
-    console.log(`[Main/ServerChannel] getServerChannelConfig resolved in ${Date.now() - startedAt}ms`)
+    console.info(`[Main/ServerChannel] getServerChannelConfig resolved in ${Date.now() - startedAt}ms`)
     return {
       websocketTlsConfig: config.tlsConfig || null,
       authToken: config.authToken,

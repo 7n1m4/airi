@@ -1,6 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
+import { Buffer } from 'node:buffer'
 import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
@@ -46,7 +48,7 @@ function getPlatformAsset(): { name: string, url: string, fallbackUrl: string, e
 }
 
 async function downloadFile(url: string, destPath: string): Promise<void> {
-  console.log(`[fetch-runtime] Connecting to ${url}...`)
+  console.info(`[fetch-runtime] Connecting to ${url}...`)
   const response = await fetch(url, { redirect: 'follow' })
 
   if (!response.ok) {
@@ -78,7 +80,7 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
           lastLoggedPercent = percent
           const mbReceived = (receivedBytes / (1024 * 1024)).toFixed(1)
           const mbTotal = (totalBytes / (1024 * 1024)).toFixed(1)
-          console.log(`[fetch-runtime] Progress: ${percent}% (${mbReceived} MB / ${mbTotal} MB)`)
+          console.info(`[fetch-runtime] Progress: ${percent}% (${mbReceived} MB / ${mbTotal} MB)`)
         }
       }
     }
@@ -91,7 +93,7 @@ async function downloadFile(url: string, destPath: string): Promise<void> {
 }
 
 function extractZip(zipPath: string, targetDir: string): void {
-  console.log(`[fetch-runtime] Extracting archive into ${targetDir}...`)
+  console.info(`[fetch-runtime] Extracting archive into ${targetDir}...`)
   fs.mkdirSync(targetDir, { recursive: true })
 
   if (process.platform === 'win32') {
@@ -108,7 +110,7 @@ function extractZip(zipPath: string, targetDir: string): void {
 }
 
 async function main() {
-  console.log('=== Stage-Mate Companion Runtime Fetcher ===')
+  console.info('=== Stage-Mate Companion Runtime Fetcher ===')
   const asset = getPlatformAsset()
 
   fs.mkdirSync(binDir, { recursive: true })
@@ -140,7 +142,7 @@ async function main() {
       for (const cand of candidates) {
         if (fs.existsSync(cand)) {
           fs.chmodSync(cand, 0o755)
-          console.log(`[fetch-runtime] Granted execution permission (+x) to ${cand}`)
+          console.info(`[fetch-runtime] Granted execution permission (+x) to ${cand}`)
         }
       }
     }
@@ -148,11 +150,11 @@ async function main() {
       const cand = path.join(binDir, 'StageMate.x86_64')
       if (fs.existsSync(cand)) {
         fs.chmodSync(cand, 0o755)
-        console.log(`[fetch-runtime] Granted execution permission (+x) to ${cand}`)
+        console.info(`[fetch-runtime] Granted execution permission (+x) to ${cand}`)
       }
     }
 
-    console.log(`[fetch-runtime] Stage-Mate companion runtime installed successfully to ${binDir}!`)
+    console.info(`[fetch-runtime] Stage-Mate companion runtime installed successfully to ${binDir}!`)
   }
   catch (err: any) {
     console.error(`[fetch-runtime] Error fetching runtime: ${err.message}`)

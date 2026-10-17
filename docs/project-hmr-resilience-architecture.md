@@ -129,15 +129,25 @@ Wire `acceptHMRUpdate` across all hot-path stores, combined with a module-scope 
 let hmrEpoch = 0
 let activeAbortController: AbortController | null = null
 
-async function performSend(...) {
-  const currentEpoch = hmrEpoch
-  activeAbortController = new AbortController()
+if (import.meta.hot) {
+  import.meta.hot.accept(() => {
+    // Bump the epoch so every in-flight loop aborts before the replacement module runs.
+    hmrEpoch += 1
+    activeAbortController?.abort()
+  })
+}
 
-  for await (const chunk of stream) {
+async function* performSend(...args: unknown[]) {
+  const currentEpoch = hmrEpoch
+  const controller = new AbortController()
+  activeAbortController = controller
+
+  const source = await stream(args)
+  for await (const chunk of source) {
     // Check epoch after every await and stream callback:
     if (hmrEpoch !== currentEpoch) {
       chatLog('[ChatDebug] Aborting in-flight streaming loop due to HMR reload')
-      activeAbortController.abort()
+      controller.abort()
       return
     }
     // process chunk...

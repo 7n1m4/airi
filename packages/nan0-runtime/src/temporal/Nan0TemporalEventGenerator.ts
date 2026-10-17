@@ -450,7 +450,7 @@ function updateRhythm(lived: Nan0TemporalTrackingState, observation: Readonly<Na
     lastOccurrenceAt: at,
     expectedNextAt: at + DAY_MS,
     missedOccurrences: 0,
-    isActive: existing.isActive || evidence.length >= 3 && consistency >= 0.45,
+    isActive: existing.isActive || (evidence.length >= 3 && consistency >= 0.45),
     brokenEventEmitted: false,
   }
   return { ...lived, detectedRhythms: lived.detectedRhythms.map(item => item.rhythmId === rhythmId ? updated : item) }

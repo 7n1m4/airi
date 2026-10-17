@@ -17,7 +17,7 @@ import { useChatSessionStore } from './session-store'
 let mockIsTamagotchi = true
 let mockPostThrows: Error | null = null
 const mockBridgeData = ref<ChatInputBridgePayload | null>(null)
-const mockBridgePost = vi.fn((payload: ChatInputBridgePayload) => {
+const mockBridgePost = vi.fn((_payload: ChatInputBridgePayload) => {
   if (mockPostThrows) {
     throw mockPostThrows
   }

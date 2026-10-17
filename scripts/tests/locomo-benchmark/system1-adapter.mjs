@@ -27,7 +27,7 @@ export class SystemOneAdapter {
    *
    * @param {string | object} state
    * @param {Record<string, object>} questions
-   * @returns {Promise<object>}
+   * @returns {Promise<object>} The raw `{ answers }` payload from the underlying Laya or Jev engine.
    */
   async systemOne(state, questions) {
     return this.engine.systemOne(state, questions)
@@ -50,7 +50,7 @@ export class SystemOneAdapter {
  * @param {object} [opts]
  * @param {string[]} [opts.executionProviders=['cpu']]
  * @param {string} [opts.apiKey]
- * @returns {Promise<SystemOneAdapter>}
+ * @returns {Promise<SystemOneAdapter>} A ready-to-query adapter wrapper around the Laya ONNX or Jev client.
  */
 export async function createSystemOneCoprocessor(type = 'laya', opts = {}) {
   if (type === 'laya') {

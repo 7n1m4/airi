@@ -510,7 +510,7 @@ watch(inputFiles, async (newFiles) => {
       try {
         importedCard = parseImportedCard(content)
       }
-      catch (e) {
+      catch {
         toast.error('Failed to parse card JSON: Malformed file')
         return
       }
@@ -542,7 +542,7 @@ watch(inputFiles, async (newFiles) => {
         if (profile && profile.id) {
           const exists = speechStore.savedVoiceProfiles.some((p: any) => p.id === profile.id)
           if (!exists) {
-            console.log(`[index.vue] Importing virtual voice profile: ${profile.name} (${profile.id})`)
+            console.info(`[index.vue] Importing virtual voice profile: ${profile.name} (${profile.id})`)
             speechStore.saveVoiceProfile(profile)
           }
           else {
@@ -1198,8 +1198,10 @@ function getDisplayModelId(id: string) {
         />
       </div>
       <div class="flex-1 bg-white dark:bg-neutral-950">
-        <component
-          is="webview"
+        <!-- Native `<webview>` element: `<component is="webview">` cannot satisfy
+        both vue/require-component-is and vue/no-useless-v-bind, and an unregistered
+        static string resolves to the native element anyway. -->
+        <webview
           v-if="activeBrowserSource"
           :src="activeBrowserSource.url"
           class="h-full w-full"

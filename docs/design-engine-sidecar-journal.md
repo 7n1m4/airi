@@ -77,7 +77,7 @@ As specified in [`docs/proposal-acting-sidebar.md`](./proposal-acting-sidebar.md
 
 Below is the complete end-to-end trace from LLM streaming output to Stage Host execution:
 
-```
+```text
 [ LLM Stream Output ] ──▶ `<|ACT:emotion="happy"|>`
                                │
                                ▼
@@ -107,7 +107,7 @@ Below is the canonical catalog of channels (from [`docs/rosetta-stone.md`](./ros
 
 | Pipeline / Channel | Source File | Payload Data | MATE Engine Target Action |
 |---|---|---|---|
-| **`<|ACT|>` Token Stream** | [`packages/stage-ui/src/composables/llm-marker-parser.ts`](../packages/stage-ui/src/composables/llm-marker-parser.ts) | `<|ACT:emotion="..."|>` or `<|ACT:motion="..."|>` | Trigger facial blendshape emotion preset or play VRMA motion clip |
+| **`<\|ACT\|>` Token Stream** | [`packages/stage-ui/src/composables/llm-marker-parser.ts`](../packages/stage-ui/src/composables/llm-marker-parser.ts) | `<\|ACT:emotion="..."\|>` or `<\|ACT:motion="..."\|>` | Trigger facial blendshape emotion preset or play VRMA motion clip |
 | **Speech Intent Special Bus** | [`packages/stage-ui/src/services/speech/bus.ts`](../packages/stage-ui/src/services/speech/bus.ts#L36) | `speechIntentSpecialEvent` (`eventa:audio:speech:intent:special`) | Intercept special token stream prior to renderer dispatch |
 | **`airi::beat-sync`** | [`packages/stage-shared/src/beat-sync/eventa.ts`](../packages/stage-shared/src/beat-sync/eventa.ts) | Lip-sync RMS amplitude (0.0 to 1.0), beat signals (`AnalyserBeatEvent`), frequency data | Real-time mouth morphing (`blendShape` / `vrmBlendShapeProxy` mouthOpen) |
 | **`airi-stores-live2d`** | [`packages/stage-ui-three/src/stores/model-store.ts`](../packages/stage-ui-three/src/stores/model-store.ts#L81) | `trigger-emotion` (`name`, `intensity`), `trigger-motion` (`name`), `should-update-view` | Direct store fallback triggering for expressions & pose animations |
@@ -132,7 +132,7 @@ In AIRI's current WebGL architecture, cross-window stage synchronization relies 
 
 To transmit character commands (`<|ACT|>` expressions, motions, lip-sync, and model swaps) to MATE Engine, we evaluated two potential interception bottlenecks:
 
-```
+```text
 [ LLM Stream / UI Rehearsal ]
              │
              ▼
@@ -145,7 +145,7 @@ To transmit character commands (`<|ACT|>` expressions, motions, lip-sync, and mo
 
 | Tap Point | Mechanics | Advantages | Disadvantages | Decision |
 |---|---|---|---|---|
-| **Option A: `queues.ts` (`useSpecialTokenQueue`)** | Intercepts raw `<|ACT:emotion="..."|>` tags right after stream slicing. | Early capture at the semantic parser layer. | Skips label normalization, alias mapping (e.g. `"happy"` $\rightarrow$ `BlendShapeClip`), and VRMA option matching. MATE Engine would receive unmapped raw strings. | ❌ Rejected |
+| **Option A: `queues.ts` (`useSpecialTokenQueue`)** | Intercepts raw `<\|ACT:emotion="..."\|>` tags right after stream slicing. | Early capture at the semantic parser layer. | Skips label normalization, alias mapping (e.g. `"happy"` $\rightarrow$ `BlendShapeClip`), and VRMA option matching. MATE Engine would receive unmapped raw strings. | ❌ Rejected |
 | **Option B: Renderer Store Dispatcher (`ControlStripHost.vue` / Store Hooks)** | Intercepts inside `emotionsQueue` in [`ControlStripHost.vue:233`](../packages/stage-ui/src/components/scenes/ControlStripHost.vue#L233) or hooks into `vrmStore.triggerEmotion()`. | Captures **resolved** emotions and motions after name normalization and character card mapping. Works universally for LLM tags, Rehearsal Room playback, and manual UI clicks. | Requires emitting explicitly over WebSocket via `StageProxyGateway`. | ✅ **CHOSEN** |
 
 ---
@@ -154,7 +154,7 @@ To transmit character commands (`<|ACT|>` expressions, motions, lip-sync, and mo
 
 When MATE Engine sidecar mode is active, the **Stage Proxy Gateway Service** in the main process hooks into the Stage Host dispatcher (Option B) and relays resolved actions to connected WebSocket clients over the data plane.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │ AIRI Internal Telemetry & Event Pipeline                                        │
 │                                                                                 │
@@ -354,7 +354,7 @@ Below is an audit of how AIRI handles gaze across all 4 avatar formats today, an
 
 When offloading rendering to Unity, gaze can operate in two distinct modes:
 
-```
+```text
 ┌─────────────────────────┐                            ┌──────────────────────────────────┐
 │ AIRI Main Process       │                            │ MATE Engine (Unity C#)           │
 │                         │                            │                                  │
@@ -419,7 +419,7 @@ Prove, with the least code, the two things the entire sidecar bet rests on:
 
 ### Repo Layout
 
-```
+```text
 apps/stage-mate/                      # package @proj-airi/stage-mate (pnpm workspace)
   package.json                        # `harness` script: pnpm -F @proj-airi/stage-mate harness
   harness/index.ts                    # headless mock WS server (tsx + raw `ws`) on :6171
@@ -467,7 +467,7 @@ The vendored fork is Windows-first. It **compiles and imports cleanly on macOS a
 
 The Mate-Engine sidecar window chrome is designed to mirror the production **Actor Stage** ([`docs/design-actor-stage.md`](./design-actor-stage.md)) 1:1:
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │ [⤢ Drag Handle] [⚙ Stage Config]                      │ ◄── Top-Right Floating Toolbar (actor.vue:600)
 │                                                        │
@@ -681,7 +681,7 @@ During initial stage testing, when dragging the avatar across the screen or tran
 Even when custom procedural head tracking was toggled off, UniVRM's internal components (`VRMLookAtHead` in VRM 0.x and `Vrm10Instance.LookAtTarget` in VRM 1.0) remained active in UniVRM's own internal `LateUpdate()` loop.
 These components were locked to a static world coordinate target at `(0, 1.3, -3)` (the camera location). When the avatar was translated away from the origin (e.g. panned to the left, right, or top), the target coordinate ended up behind the model's new local coordinate space. UniVRM's solver calculated a 180° reverse yaw/pitch angle and violently twisted the neck and head bones backwards into the hair.
 
-```
+```text
 [ Model at Origin (0,0,0) ] ──────(Normal 0° LookAt)─────▶ [ Camera Target (0,1.3,-3) ]
                                                                       ▲
 [ Model Dragged to (2,1,0) ] ─────(180° Inverted LookAt)──────────────┘
@@ -705,7 +705,7 @@ The upstream Mate-Engine repository is over 500MB of heavy 3D assets, textures, 
 #### Architecture Solution
 We isolate our custom work in [`apps/stage-mate/unity-src/`](../apps/stage-mate/unity-src/) while keeping `apps/stage-mate/mate-engine/` strictly in `.gitignore`.
 
-```
+```text
 apps/stage-mate/
 ├── unity-src/                               # TRACKED in Git (Clean C#, Scenes, Build scripts)
 │   ├── Assets/StageMate/
@@ -762,7 +762,7 @@ As `MateSidecar.cs` approaches ~1,700 lines, maintaining transport, windowing, U
 
 We decompose the sidecar into clean, focused C# modules organized by domain:
 
-```
+```text
 apps/stage-mate/unity-src/Assets/StageMate/
 ├── Core/
 │   ├── StageMateSocket.cs            # WebSocket client, auth handshake, message routing (:6171)
@@ -794,7 +794,7 @@ apps/stage-mate/unity-src/Assets/StageMate/
 
 Based on empirical testing of the compiled base player (`MateEngineX.exe`), we unify the stage modes so that **`tactileMode` is the full native desktop companion experience**:
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────────────────────────────┐
 │                              AIRI STAGE VIEWPORT MODES                                │
 ├───────────────────────────────────────────────────────────────────────────────────────┤
@@ -840,7 +840,7 @@ Based on empirical testing of the compiled base player (`MateEngineX.exe`), we u
 | **Posture Swaying & Inertia** | `AvatarSwayController.cs` | ✅ **Model Layer**: Spring-damper physics on hips/limbs during movement. |
 | **Universal Blendshapes** | `UniversalBlendshapes.cs` | ✅ **Model Layer**: VRM 0.x / 1.0 normalization and smooth dampening. |
 | **Modular Outfit Toggles** | `AccessoiresHandler.cs` | 🚀 **Phase 2**: Map to AIRI's `extensions.airi.outfits` schema. |
-| **MMD Dance Player** | `AvatarDancePlayer.cs` | 🚀 **Phase 2**: Wire into `airi::beat-sync` and `<|ACT:motion="dance"|>`. |
+| **MMD Dance Player** | `AvatarDancePlayer.cs` | 🚀 **Phase 2**: Wire into `airi::beat-sync` and `<\|ACT:motion="dance"\|>`. |
 
 ---
 

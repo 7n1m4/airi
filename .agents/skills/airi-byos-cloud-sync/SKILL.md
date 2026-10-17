@@ -9,7 +9,7 @@ Governs the architecture and implementation of **BYOS (Bring Your Own Storage) C
 
 The philosophy is **Local-First, Zero-Custody, and Seamless Persistence**. AIRI active state (IndexedDB databases, character cards, event logs, background wallpapers, display models) is continuously backed up to user-owned object storage without intermediate AIRI servers.
 
-# Key Code Paths
+## Key Code Paths
 - `packages/stage-ui/src/database/storage.ts`: The main storage interceptor that handles BYOS outbox tracking using `unstorage` (`local:` mounted on IndexedDB `airi-local`, `outbox:` on `airi-sync-queue`).
 - `packages/stage-ui/src/stores/sync-engine.ts`: Full reconciliation engine — merge rules, `reconcileVoiceProfiles()` (≈L1771), quota checks (`checkQuotaLimit`), manifest catalog, and lifecycle wiring (≈L2711).
 - `packages/stage-ui/src/components/scenarios/providers/selective-sync-panel.vue`: Tree-selection UI used by onboarding Cloud Restore (models/backgrounds/chats/motions opt-in, metadata required).
@@ -20,7 +20,7 @@ The philosophy is **Local-First, Zero-Custody, and Seamless Persistence**. AIRI 
   - `docs/project-byos-cloud-sync.md`: Master document for BYOS logic, S3/R2 reconciliations, and merge rules.
   - `docs/project-audit-cloudsync.md`: Cloud sync audit and verification protocols.
 
-# Architecture: BYOS Cloud Sync Engine
+## Architecture: BYOS Cloud Sync Engine
 Provides privacy-preserving multi-device sync using standard S3/R2/Google Drive backends.
 
 1. **Unified Interceptor Layer (`unstorage`)**: Rather than hooking into every database repository, mutations to `local:` namespaces are patched to enqueue sync operations into `outbox:queue/*` and update modification timestamps in `local:sync-metadata/timestamps/*`.
@@ -32,7 +32,7 @@ Provides privacy-preserving multi-device sync using standard S3/R2/Google Drive 
 4. **Google Drive AppData Sandbox**: For seamless UX, S3/Cloudflare credentials can be stored encrypted in the user's hidden Google Drive `appDataFolder` (`airi_bootstrap.json`), achieving a single-sign-on-like experience without AIRI custody.
 5. **Edge Vault Bootstrap**: `saveToEdgeVault`/`fetchFromEdgeVault` persist an R2/S3 credential vault in the user's Cloudflare `airi-edge-vault` KV namespace; onboarding Cloud Infra auto-restores S3/R2 settings from the vault when the local sync store is empty.
 
-# Core SOPs & Guidelines
+## Core SOPs & Guidelines
 1. **Loop Prevention (`isImportingRemoteData`)**: Ensure `storageState.isImportingRemoteData` is strictly respected in outbox interceptors; imported remote data must not re-enqueue into `outbox:queue/*`.
 2. **Binary Asset Handling**: `localforage` (blob storage for wallpapers/models) converts backgrounds to AVIF on upload to save bandwidth, tracking deletions in `sync-metadata`.
 3. **Anti-Contraction Safeguard**: The sync engine blocks operations that replace a large dataset (>10KB) with a tiny one (<2KB) to prevent accidental remote data erasure.
@@ -41,7 +41,7 @@ Provides privacy-preserving multi-device sync using standard S3/R2/Google Drive 
 6. **Mergeable Key Gates**: Cumulative tables (`airi-cards`, `memory/*`, `voice-profiles`) must pass `shouldSkipMergeableKey`: skip remote download if remote `mtime <= localTime` (or ETags match) and outbox is clean.
 7. **Quota Gates for Downloads**: any remote pull path (including voice-profile reconciliation) must pass `checkQuotaLimit('download')` before enumerating/transferring files; abort cleanly when unsafe.
 
-# Known Pitfalls & Failure Modes
+## Known Pitfalls & Failure Modes
 - **Infinite Sync Loops**: Forgetting to check `isImportingRemoteData` during remote data ingestion will trigger infinite re-upload cascades.
 - **S3 mtime Translations**: S3 objects do not support custom file modification time writes. AIRI relies on the native `LastModified` timestamp returned by `ListObjectsV2`, requiring precise sequence tracking to avoid redundant downloads.
 - **Contraction Triggers**: Replacing a database with an empty array triggers an anti-contraction error requiring manual conflict resolution.

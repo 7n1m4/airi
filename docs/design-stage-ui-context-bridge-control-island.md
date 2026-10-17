@@ -59,7 +59,7 @@ The Control Island is a floating UI component designed for the AIRI desktop envi
 
 ---
 
-# Adjacent Stage Components
+## Adjacent Stage Components
 
 While the Control Island is the primary interaction hub, several other "island-style" or overlay components exist within the Stage view to provide feedback and status.
 

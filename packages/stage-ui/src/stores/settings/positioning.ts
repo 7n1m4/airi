@@ -19,7 +19,7 @@ export const usePositioningStore = defineStore('positioning', () => {
         return positions.value[`${key}:dating-sim`] || { x: 0, y: 0, scale: 1 }
       }
     }
-    catch (e) {
+    catch {
       // Fallback if datingSimStore is not yet initialized or loaded
     }
     return positions.value[key] || { x: 0, y: 0, scale: 1 }
@@ -33,7 +33,7 @@ export const usePositioningStore = defineStore('positioning', () => {
         return
       }
     }
-    catch (e) {
+    catch {
       // Fallback
     }
     positions.value = { ...positions.value, [key]: data }

@@ -41,7 +41,7 @@ Crucially, Core AI is **not limited to Large Language Models**. It provides a un
 
 Core AI's unified graph execution across ANE and Metal GPU allows AIRI Pocket to consolidate multiple separate inference libraries (ONNX Runtime Web, WebLLM, Transformers.js, Web-RWKV) into a single, highly optimized native host subsystem:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                      AIRI Pocket Native Model Suite                     │
 │                        (Powered by Apple Core AI)                       │
@@ -80,7 +80,7 @@ By exporting FlowMDM's UNet denoiser to `.aimodel` and executing it on Apple's *
 
 ## 3. High-Level System Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                           AIRI Client Layer                             │
 │       (Vue 3, Pinia, useLLM Store, useLlmmarkerParser, ACT tokens)      │
@@ -442,7 +442,7 @@ export function createCoreAiChatProvider(config: { model?: string } = {}): ChatP
 
 Rather than maintaining a separate throwaway Capacitor project (which incurs high porting overhead), AIRI uses an **In-Tree Developer Lab Strategy**:
 
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │ Phase 1: Native Plugin Skeleton & Dev Lab UI           │
 │  • Swift Plugin registered in apps/stage-pocket        │
@@ -497,7 +497,7 @@ Mounted at `#/devtools/core-ai-lab` (and linked under **Settings > System > Deve
 
 A critical architectural distinction must be made between Apple's consumer features and Apple's developer frameworks:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │  Apple Intelligence (Consumer OS Features)                             │
 │  • System-level Siri revamp, Writing Tools, Genmoji                    │
@@ -540,7 +540,7 @@ Rather than converting weights on the fly, AIRI sources verified, pre-converted 
 
 ### 11.1 Reasoning & Consciousness (LLMs)
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ Model Repository                                  │ Size   │ RAM Req │ Compute Unit │ Target Tier │
 ├───────────────────────────────────────────────────┼────────┼─────────┼──────────────┼─────────────┤
@@ -565,7 +565,7 @@ Rather than converting weights on the fly, AIRI sources verified, pre-converted 
 
 ### 11.2 Voice & Speech Synthesis (TTS)
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ Model Repository                                  │ Size   │ RAM Req │ Compute Unit │ RTF Speed   │
 ├───────────────────────────────────────────────────────────────────────────────────────────────────┤
@@ -588,7 +588,7 @@ Rather than converting weights on the fly, AIRI sources verified, pre-converted 
 
 ### 11.3 On-Device Generative Artistry: Stable Diffusion on Neural Engine
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ Model Repository                                  │ Size   │ RAM Req │ Architecture │ Gen Time    │
 ├───────────────────────────────────────────────────┼────────┼─────────┼──────────────┼─────────────┤
@@ -608,7 +608,7 @@ Rather than converting weights on the fly, AIRI sources verified, pre-converted 
 
 ### 11.4 Speech Recognition & Hearing (STT)
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────────────────────────────────────────┐
 │ Model Repository                                  │ Size   │ Role in AIRI Architecture            │
 ├───────────────────────────────────────────────────┼────────┼──────────────────────────────────────┤

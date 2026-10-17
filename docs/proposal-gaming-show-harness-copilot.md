@@ -21,7 +21,7 @@ It operates as the unified vision-to-action engine across both execution context
 1. **External Desktop Games** (Destiny 2, Final Fantasy XIV, Visual Novels): Captured via OS video streams (DXGI/ScreenCaptureKit) and driven via virtual gamepad drivers (`ViGEmClient`).
 2. **In-Process Arcade Room Web Classics** ([`docs/proposal-generic-gaming-agent-runtime.md`](./proposal-generic-gaming-agent-runtime.md) & [`chat_arcade.vue`](../apps/stage-tamagotchi/src/renderer/components/chat/chat_arcade.vue)): Captured via HTML5 Canvas snapshots and driven directly via JS-DOS WebAssembly synthetic inputs with **zero Python sidecars** and zero native setup.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                      THE SHOW HARNESS GAMING PIPELINE                   │
 │                                                                         │
@@ -109,7 +109,7 @@ Beyond gaming, Show Harness provides a safe, low-friction solution to the proble
 
 ## ⚙️ 5. Integration with AIRI Architecture
 
-```
+```text
                                 ┌─────────────────────────────────────────┐
                                 │          Screen Ingest Provider         │
                                 │   • External: DXGI / ScreenCaptureKit   │

@@ -44,7 +44,7 @@ export interface ModelCapabilityItem {
 
 ## 2. The 4-Stage Lifecycle Boundary
 
-```
+```text
 [3D Model Rig File (.vrm, .zip, .pmx)]
                 │
                 ▼

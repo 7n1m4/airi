@@ -224,7 +224,7 @@ export function ensureLegacyUserDataMigrated(targetUserDataPath: string): string
 
     for (const candidate of legacyCandidates) {
       if (directoryContainsUserData(candidate)) {
-        console.log(`[Migration] Found existing AIRI data in legacy directory: ${candidate}`)
+        console.info(`[Migration] Found existing AIRI data in legacy directory: ${candidate}`)
 
         // Pre-flight disk space validation (requires directory size + 500MB safety buffer)
         const SAFETY_MARGIN_BYTES = 500 * 1024 * 1024 // 500 MB
@@ -240,7 +240,7 @@ export function ensureLegacyUserDataMigrated(targetUserDataPath: string): string
           return candidate
         }
 
-        console.log(`[Migration] Disk space verified (${(availableBytes / (1024 * 1024)).toFixed(1)} MB free). Seamlessly migrating data to: ${targetUserDataPath}...`)
+        console.info(`[Migration] Disk space verified (${(availableBytes / (1024 * 1024)).toFixed(1)} MB free). Seamlessly migrating data to: ${targetUserDataPath}...`)
 
         try {
           fs.mkdirSync(targetUserDataPath, { recursive: true })
@@ -274,12 +274,12 @@ export function ensureLegacyUserDataMigrated(targetUserDataPath: string): string
         }
         catch (copyError) {
           console.error('[Migration] Critical failure during data copy:', copyError)
-          console.log(`[Migration] Rolling back partial migration and cleaning up: ${targetUserDataPath}`)
+          console.info(`[Migration] Rolling back partial migration and cleaning up: ${targetUserDataPath}`)
           try {
             fs.rmSync(targetUserDataPath, { recursive: true, force: true })
           }
           catch {}
-          console.log(`[Migration] Safely falling back to existing directory at: ${candidate}`)
+          console.info(`[Migration] Safely falling back to existing directory at: ${candidate}`)
           return candidate
         }
       }
@@ -298,11 +298,11 @@ export function ensureLegacyUserDataMigrated(targetUserDataPath: string): string
           2,
         ),
       )
-      console.log(`[Migration] Migration completed successfully from ${migratedSource}! All user data preserved.`)
+      console.info(`[Migration] Migration completed successfully from ${migratedSource}! All user data preserved.`)
       return targetUserDataPath
     }
     else {
-      console.log(`[Migration] Clean installation detected. Starting with fresh isolated profile at: ${targetUserDataPath}`)
+      console.info(`[Migration] Clean installation detected. Starting with fresh isolated profile at: ${targetUserDataPath}`)
       fs.mkdirSync(targetUserDataPath, { recursive: true })
       fs.writeFileSync(
         markerPath,

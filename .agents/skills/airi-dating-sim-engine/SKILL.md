@@ -84,19 +84,22 @@ window.dispatchEvent(new CustomEvent('dating-sim:trigger-motion', { detail: targ
 
 ### 2. Adding a branching choice
 
-Populate the `choices` ref in the store. The overlay reads from it reactively. Each choice may have:
+Populate the `choices` ref in the store (`Choice[]`). The overlay reads from it reactively — the canonical shape is the interface at `packages/stage-ui/src/stores/dating-sim.ts:L12`:
 
 ```ts
-{
-  text: 'Choice label',
-  cost?: number,    // ActionPoint cost
-  mood?: string,    // Sets mood after selection
-  intimacyChange?: number,
-  tensionChange?: number,
-  positiveScore?: number,
-  negativeScore?: number
+export interface Choice {
+  id: string
+  text: string
+  icon?: string
+  action: string
+  condition?: string
+  cost?: number // Time or tension cost
+  positiveScoreChange?: number
+  negativeScoreChange?: number
 }
 ```
+
+Intimacy/tension deltas (`intimacyChange`, `tensionChange`, `mood`) are **not** `Choice` fields — they come back from the LLM evaluation endpoint (`evaluateParameters`, prompt at `L472`, applied at `L483-491`) via `setVariable` / `broadcastMood`.
 
 The LLM dialog controller (`L240`, `L293`, `L374`) also generates choices dynamically; if editing narrative logic, target the prompt sections near those lines.
 

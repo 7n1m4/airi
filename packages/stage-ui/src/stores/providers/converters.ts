@@ -115,7 +115,9 @@ function mapModelsToMetadataModels(providerId: string, models: any[]) {
     const isVision = hasVisionModality || hasExplicitVisionCapability || matchesVisionPattern
 
     if (typeof localStorage !== 'undefined' && localStorage.getItem('airi:debug') === '1') {
-      console.log(`[VLM Check] ${model.id}: input=[${inputModalities.join(', ')}] output=[${outputModalities.join(', ')}] modality=${model.architecture?.modality} isVision=${isVision}`)
+      // NOTICE: `console.info` (not `console.log`) because eslint's no-console
+      // only allows warn/error/info. Gated behind the debug opt-in flag.
+      console.info(`[VLM Check] ${model.id}: input=[${inputModalities.join(', ')}] output=[${outputModalities.join(', ')}] modality=${model.architecture?.modality} isVision=${isVision}`)
     }
 
     if (isVision && !capabilities.includes('vision')) {

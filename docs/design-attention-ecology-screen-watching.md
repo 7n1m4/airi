@@ -120,7 +120,7 @@ In addition to or in place of local RWKV-7, AIRI provides **TypeSafe Jev / Laya 
 To develop and benchmark the Attention Ecology pipeline without UI overhead or agent context saturation, we establish a **Standalone Cleanroom CLI Harness** in `scripts/tests/attention-ecology-harness/`.
 
 ### Directory Layout
-```
+```text
 scripts/tests/attention-ecology-harness/
 ├── package.json                   ← Standalone dependencies (@huggingface/transformers, onnxruntime-node)
 ├── engine/
@@ -208,7 +208,7 @@ To validate the cascaded RNN state-accumulation logic before deploying the full 
 
 AIRI aligns its background vision pipeline directly with upstream's `use-vision-workloads.ts`, `vision/orchestrator.ts`, and `devtools/vision.vue` contracts while introducing our **0-Cost Local Cascading Guard**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                            VISION & TICKER DASHBOARD                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -300,7 +300,7 @@ For developer inspection and real-time monitoring outside the Electron app, AIRI
 
 It captures live desktop frames via macOS native `screencapture -x`, runs the 4-stage cascading engine, and updates an in-place ASCII UI via `process.stdout.write` without scrolling text spam:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 👁️  AIRI ATTENTION ECOLOGY :: REAL-TIME DESKTOP MONITOR       [TICK #042]   │
 ---
@@ -313,7 +313,7 @@ A naive stream of `context:update` events creates two failure modes:
 
 To solve this, Attention Ecology establishes a **Dual Push/Pull Architecture** fed by a single source of truth: the **Rolling Visual Log Store** (`visualLogStore` / `eventStream`).
 
-```
+```text
 [Screen Frame] ──► 4-Stage Attention Ecology Gate (aHash -> CLIP -> OCR -> VLM)
                                   │
                                   ▼
@@ -395,7 +395,7 @@ To prevent fragmentation across DevTools and global system settings, all Push an
 
 Section 3 of `CardCreationTabProactivity.vue` is segmented into two operational modes via a top-level segmented button control:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 3. SALIENCE GATING & SCREEN SENTINEL                                        │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -425,9 +425,7 @@ Section 3 of `CardCreationTabProactivity.vue` is segmented into two operational 
 │ 4. REAL-TIME REACTIONS & DELIVERY                                           │
 │ [x] React Immediately to Screen Highlights (Real-Time Push)                 │
 │ Max Interventions per Hour: [ 4 ]    Cooldown: [ 10 min ]                   │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
 │ [x] Defer & Batch Push Candidates While Speaking (Busy Pipe Safeguard)      │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │ 📤 PULL MECHANICS (Ambient Heartbeats & Log Sampling)                       │

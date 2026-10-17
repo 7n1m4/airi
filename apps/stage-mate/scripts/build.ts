@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
-import { env, platform } from 'node:process'
+import { argv, env, exit, platform } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 import { setupMateEngine } from './setup'
@@ -51,7 +51,7 @@ function findUnityExecutable(): string | null {
   return null
 }
 
-const targetArg = process.argv[2] ?? 'all'
+const targetArg = argv[2] ?? 'all'
 let executeMethod = 'MateSidecarBuild.Build'
 
 if (targetArg === 'original' || targetArg === 'main')
@@ -67,13 +67,13 @@ else if (targetArg === 'all')
 
 const unityPath = findUnityExecutable()
 if (!unityPath) {
-  console.log('[build] Unity executable not found. Skipping native Stage-Mate compile (prebuilt companion runtime will be fetched on startup instead).')
-  process.exit(0)
+  console.info('[build] Unity executable not found. Skipping native Stage-Mate compile (prebuilt companion runtime will be fetched on startup instead).')
+  exit(0)
 }
 
-console.log(`[build] Found Unity: ${unityPath}`)
-console.log(`[build] Project Path: ${mateEngineDir}`)
-console.log(`[build] Executing Build Method: ${executeMethod}`)
+console.info(`[build] Found Unity: ${unityPath}`)
+console.info(`[build] Project Path: ${mateEngineDir}`)
+console.info(`[build] Executing Build Method: ${executeMethod}`)
 
 const args = [
   '-batchmode',
@@ -109,7 +109,7 @@ if (!existsSync(buildDir)) {
 
 const result = spawnSync(unityPath, args, { stdio: 'inherit' })
 if (result.status === 0) {
-  console.log(`[build] Build completed successfully for ${targetArg}!`)
+  console.info(`[build] Build completed successfully for ${targetArg}!`)
 
   // Automatically sync build output to the single canonical runtime directory: apps/stage-mate/bin/
   const canonicalBinDir = join(here, '../bin')
@@ -121,25 +121,25 @@ if (result.status === 0) {
       const srcApp = join(buildDir, 'StageMate', 'StageMate.app')
       const targetApp = join(canonicalBinDir, 'StageMate.app')
       if (existsSync(srcApp)) {
-        console.log(`[build] Syncing ${srcApp} -> ${targetApp}...`)
+        console.info(`[build] Syncing ${srcApp} -> ${targetApp}...`)
         cpSync(srcApp, targetApp, { recursive: true, force: true })
       }
     }
     else if (platform === 'win32') {
       const srcWin = join(buildDir, 'Windows')
       if (existsSync(srcWin)) {
-        console.log(`[build] Syncing ${srcWin} -> ${canonicalBinDir}...`)
+        console.info(`[build] Syncing ${srcWin} -> ${canonicalBinDir}...`)
         cpSync(srcWin, canonicalBinDir, { recursive: true, force: true })
       }
     }
     else if (platform === 'linux') {
       const srcLinux = join(buildDir, 'Linux')
       if (existsSync(srcLinux)) {
-        console.log(`[build] Syncing ${srcLinux} -> ${canonicalBinDir}...`)
+        console.info(`[build] Syncing ${srcLinux} -> ${canonicalBinDir}...`)
         cpSync(srcLinux, canonicalBinDir, { recursive: true, force: true })
       }
     }
-    console.log(`[build] Synced companion runtime to canonical directory: ${canonicalBinDir}`)
+    console.info(`[build] Synced companion runtime to canonical directory: ${canonicalBinDir}`)
   }
   catch (err: any) {
     console.warn(`[build] Warning: failed to copy output to bin: ${err.message}`)
@@ -147,5 +147,5 @@ if (result.status === 0) {
 }
 else {
   console.warn(`[build] Unity build exited with status ${result.status}. Skipping native compile pass (prebuilt release binary will be downloaded instead).`)
-  process.exit(0)
+  exit(0)
 }

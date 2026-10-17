@@ -13,6 +13,7 @@ import {
 import { useProviderValidation } from '@proj-airi/stage-ui/composables/use-provider-validation'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
+import { isOptionalKeyProvider, keylessOrOptionalKey } from '@proj-airi/stage-ui/libs/providers/types'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -97,6 +98,8 @@ function goToModelSelection() {
       >
         <ProviderApiKeyInput
           v-model="apiKey"
+          :required="!keylessOrOptionalKey(providerMetadata?.requiresCredentials)"
+          :description="isOptionalKeyProvider(providerMetadata?.requiresCredentials) ? `${providerMetadata?.localizedName ?? providerId} works without a key; add one to unlock paid models.` : undefined"
           :provider-name="providerMetadata?.localizedName"
           :console-url="providerMetadata?.consoleUrl"
           placeholder="sk-..."

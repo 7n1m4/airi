@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 const DEFAULT_REPO = 'moeru-ai/airi'
 const DEFAULT_AUTHOR = 'dasilva333'
@@ -50,9 +51,9 @@ function printSection(title, items, formatter) {
   if (items.length === 0)
     return
 
-  console.log(`\n${title}`)
+  console.info(`\n${title}`)
   for (const item of items)
-    console.log(formatter(item))
+    console.info(formatter(item))
 }
 
 async function run() {
@@ -103,11 +104,11 @@ async function run() {
     merged: prs.filter(pr => pr.status === 'merged').length,
   }
 
-  console.log(`PR status report for ${author} in ${repo}`)
-  console.log(`Total: ${totals.total}`)
-  console.log(`Open: ${totals.open}`)
-  console.log(`Closed: ${totals.closed}`)
-  console.log(`Merged: ${totals.merged}`)
+  console.info(`PR status report for ${author} in ${repo}`)
+  console.info(`Total: ${totals.total}`)
+  console.info(`Open: ${totals.open}`)
+  console.info(`Closed: ${totals.closed}`)
+  console.info(`Merged: ${totals.merged}`)
 
   printSection('Open PRs', prs.filter(pr => pr.status === 'open'), pr => `- #${pr.number} ${pr.title}`)
 

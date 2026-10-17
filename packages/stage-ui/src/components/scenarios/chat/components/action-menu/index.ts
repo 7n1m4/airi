@@ -1,4 +1,4 @@
-export type ChatActionMenuAction = 'copy' | 'delete' | 'delete-following' | 'fork' | 'fork-switch' | 'edit' | 'retry' | 'journal'
+export type ChatActionMenuAction = 'copy' | 'delete' | 'deleteFollowing' | 'fork' | 'forkSwitch' | 'edit' | 'retry' | 'journal'
 
 export interface ChatActionMenuItem {
   action: ChatActionMenuAction
@@ -48,7 +48,7 @@ export function createChatActionMenuItems(options: {
       : null,
     options.canFork !== false
       ? {
-          action: 'fork-switch',
+          action: 'forkSwitch',
           label: 'Fork & Switch',
           icon: 'i-solar:square-forward-bold',
         }
@@ -69,7 +69,7 @@ export function createChatActionMenuItems(options: {
       : null,
     options.canDelete
       ? {
-          action: 'delete-following',
+          action: 'deleteFollowing',
           label: 'Trim Timeline',
           icon: 'i-solar:scissors-bold',
           danger: true,

@@ -126,6 +126,17 @@ export function useTurnPacing(options: UseTurnPacingOptions) {
       experimentalOrganicPivots: pacingConfig.experimentalOrganicPivots ?? false,
     }
 
+    const voiceParams = createThinkingAudioFingerprintParams({
+      provider: speechStore.activeSpeechProvider,
+      model: speechStore.activeSpeechModel,
+      voiceId: speechStore.activeSpeechVoiceId || speechStore.activeSpeechVoice?.id,
+      pitch: speechStore.pitch,
+      rate: speechStore.rate,
+      language: speechStore.selectedLanguage,
+    })
+
+    const bridgeHolder: { bridge: PacingPlaybackBridge<AudioBuffer> | null } = { bridge: null }
+
     const coordinator = new TurnPacingCoordinator({
       turnId,
       generation: gen,
@@ -133,6 +144,7 @@ export function useTurnPacing(options: UseTurnPacingOptions) {
       policy,
       historicalTtftSamples: samples,
       onArmFiller: async (category, _deadlineMs) => {
+        const bridge = bridgeHolder.bridge!
         const phrase = resolveFillerCandidate(enabledFillers, category, bridge.usedPhrases)
         if (!phrase) {
           coordinator.notifyCacheMiss()
@@ -141,10 +153,10 @@ export function useTurnPacing(options: UseTurnPacingOptions) {
         await bridge.handleFillerArmed(category, phrase)
       },
       onArmDynamicAside: async (candidate, _budgetMs) => {
-        await bridge.handleDynamicAsideArmed(candidate)
+        await bridgeHolder.bridge!.handleDynamicAsideArmed(candidate)
       },
       onCancelFiller: (reason) => {
-        bridge.cancelFiller(reason)
+        bridgeHolder.bridge!.cancelFiller(reason)
       },
       onStateChange: (state, log, nextInMs) => {
         const snapshot: PacingMetrics = {
@@ -171,7 +183,7 @@ export function useTurnPacing(options: UseTurnPacingOptions) {
         activePacingMetrics.value = metrics
         const raw = toRaw(metrics)
         latestPacingMetrics.value = raw
-        console.log('[TurnPacing:Settled] Turn pacing metrics settled:', raw)
+        console.info('[TurnPacing:Settled] Turn pacing metrics settled:', raw)
         try {
           postPacingTelemetry(raw)
         }
@@ -217,15 +229,6 @@ export function useTurnPacing(options: UseTurnPacingOptions) {
       }
     }, 1000)
 
-    const voiceParams = createThinkingAudioFingerprintParams({
-      provider: speechStore.activeSpeechProvider,
-      model: speechStore.activeSpeechModel,
-      voiceId: speechStore.activeSpeechVoiceId || speechStore.activeSpeechVoice?.id,
-      pitch: speechStore.pitch,
-      rate: speechStore.rate,
-      language: speechStore.selectedLanguage,
-    })
-
     const bridge = new PacingPlaybackBridge<AudioBuffer>({
       coordinator,
       playback: {
@@ -245,6 +248,7 @@ export function useTurnPacing(options: UseTurnPacingOptions) {
         return await ctx.decodeAudioData(buffer.slice(0))
       },
     })
+    bridgeHolder.bridge = bridge
 
     coordinator.dispatch()
     activeCoordinator = coordinator
@@ -255,7 +259,7 @@ export function useTurnPacing(options: UseTurnPacingOptions) {
     if (policy.semanticExtractorEnabled && promptText) {
       void needleClient.probeInitialReaction(promptText, policy.armMinMs ?? 900).then((reaction) => {
         if (reaction && activeCoordinator && activeCoordinator.generation === gen && !activeCoordinator.pacingClosed && activeCoordinator.state !== 'SETTLED') {
-          console.log(`[TurnPacing:Needle] Task 2 probe yielded initial candidate: "${reaction}"`)
+          console.info(`[TurnPacing:Needle] Task 2 probe yielded initial candidate: "${reaction}"`)
           coordinator.submitAsideCandidate({
             cueId: `needle-turn1-${Date.now()}`,
             turn: {
@@ -307,7 +311,7 @@ export function useTurnPacing(options: UseTurnPacingOptions) {
       const currentGen = activeCoordinator.generation
       void needleClient.probeCotPivot(windowSnippet, 1500).then((pivot) => {
         if (pivot && activeCoordinator && activeCoordinator.generation === currentGen && !activeCoordinator.pacingClosed && activeCoordinator.state !== 'SETTLED') {
-          console.log(`[TurnPacing:Needle] Task 3 CoT pivot yielded candidate: "${pivot}"`)
+          console.info(`[TurnPacing:Needle] Task 3 CoT pivot yielded candidate: "${pivot}"`)
           activeCoordinator.submitAsideCandidate({
             cueId: `needle-pivot-${Date.now()}`,
             turn: {

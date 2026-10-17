@@ -22,6 +22,8 @@ import type {
   Nan0SystemOneProvider,
 } from '../src/types'
 
+import process from 'node:process'
+
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 
@@ -131,7 +133,7 @@ function createOpenCodeReasoningClient(options: {
       const choice = data.choices?.[0]
       const text = choice?.message?.content || ''
       if (process.env.DEBUG_THOUGHT) {
-        console.log('\n[DEBUG_THOUGHT RAW OUTPUT]:\n', text, '\n[END DEBUG_THOUGHT]\n')
+        console.info('\n[DEBUG_THOUGHT RAW OUTPUT]:\n', text, '\n[END DEBUG_THOUGHT]\n')
       }
       return {
         text,
@@ -390,31 +392,31 @@ function printTurnReport(result: {
 }) {
   const { turnInput, prepared, outwardSpeech, stateBeforeEmotions, stateAfter, durationMs } = result
 
-  console.log(`\n${c.cyan}${c.bold}══════════════════════════════════════════════════════════════════${c.reset}`)
-  console.log(`${c.cyan}${c.bold} Nan0 Turn Evaluation ${c.gray}(${durationMs}ms)${c.reset}`)
-  console.log(`${c.cyan}${c.bold}══════════════════════════════════════════════════════════════════${c.reset}`)
+  console.info(`\n${c.cyan}${c.bold}══════════════════════════════════════════════════════════════════${c.reset}`)
+  console.info(`${c.cyan}${c.bold} Nan0 Turn Evaluation ${c.gray}(${durationMs}ms)${c.reset}`)
+  console.info(`${c.cyan}${c.bold}══════════════════════════════════════════════════════════════════${c.reset}`)
 
   // 1. Observation
-  console.log(`${c.bold}[1. Observation]${c.reset}`)
+  console.info(`${c.bold}[1. Observation]${c.reset}`)
   const roleBadge = turnInput.role === 'stranger' ? `${c.yellow}[Stranger]${c.reset}` : `${c.green}[Owner]${c.reset}`
-  console.log(`  Speaker: ${c.bold}${turnInput.user || 'Richie'}${c.reset} ${roleBadge}`)
-  console.log(`  Content: "${c.bold}${turnInput.input}${c.reset}"`)
+  console.info(`  Speaker: ${c.bold}${turnInput.user || 'Richie'}${c.reset} ${roleBadge}`)
+  console.info(`  Content: "${c.bold}${turnInput.input}${c.reset}"`)
 
   // 2. System 1 Reflex
-  console.log(`\n${c.bold}[2. System 1 Reflex]${c.reset}`)
+  console.info(`\n${c.bold}[2. System 1 Reflex]${c.reset}`)
   if (prepared.reflexOutcome) {
     const srcColor = prepared.reflexOutcome.source === 'system_one_jev' ? c.green : c.yellow
-    console.log(`  Group:   ${c.bold}${prepared.reflexOutcome.group}${c.reset} (choice: ${prepared.reflexOutcome.choice})`)
-    console.log(`  Source:  ${srcColor}${prepared.reflexOutcome.source}${c.reset}${prepared.reflexOutcome.confidence ? ` (conf: ${(prepared.reflexOutcome.confidence * 100).toFixed(0)}%)` : ''}`)
+    console.info(`  Group:   ${c.bold}${prepared.reflexOutcome.group}${c.reset} (choice: ${prepared.reflexOutcome.choice})`)
+    console.info(`  Source:  ${srcColor}${prepared.reflexOutcome.source}${c.reset}${prepared.reflexOutcome.confidence ? ` (conf: ${(prepared.reflexOutcome.confidence * 100).toFixed(0)}%)` : ''}`)
   }
   else {
-    console.log(`  ${c.dim}No reflex triggered (neutral / baseline)${c.reset}`)
+    console.info(`  ${c.dim}No reflex triggered (neutral / baseline)${c.reset}`)
   }
 
   // 3. Emotional Dynamics
-  console.log(`\n${c.bold}[3. Emotional Dynamics]${c.reset}`)
+  console.info(`\n${c.bold}[3. Emotional Dynamics]${c.reset}`)
   const mood = stateAfter.emotionalHistory.lastComputedMood || 'neutral'
-  console.log(`  Primary Mood: ${c.magenta}${c.bold}${mood}${c.reset}`)
+  console.info(`  Primary Mood: ${c.magenta}${c.bold}${mood}${c.reset}`)
   const emoEntries = Object.entries(stateAfter.emotionalState).slice(0, 8)
   const emoDeltas: string[] = []
   for (const [k, v] of emoEntries) {
@@ -426,52 +428,52 @@ function printTurnReport(result: {
     }
   }
   if (emoDeltas.length > 0) {
-    console.log(`  Deltas:       ${c.yellow}${emoDeltas.join(', ')}${c.reset}`)
+    console.info(`  Deltas:       ${c.yellow}${emoDeltas.join(', ')}${c.reset}`)
   }
   else {
-    console.log(`  Vectors:      ${c.dim}${emoEntries.map(([k, v]) => `${k}:${v.toFixed(2)}`).join(' ')}${c.reset}`)
+    console.info(`  Vectors:      ${c.dim}${emoEntries.map(([k, v]) => `${k}:${v.toFixed(2)}`).join(' ')}${c.reset}`)
   }
 
   // 4. 1st LLM Thought
-  console.log(`\n${c.bold}[4. Thought Engine (1st LLM)]${c.reset}`)
+  console.info(`\n${c.bold}[4. Thought Engine (1st LLM)]${c.reset}`)
   const thoughtStatusColor = prepared.thought.status === 'valid' || prepared.thought.status === 'generated' ? c.green : c.red
-  console.log(`  Status:         ${thoughtStatusColor}${prepared.thought.status}${c.reset}`)
+  console.info(`  Status:         ${thoughtStatusColor}${prepared.thought.status}${c.reset}`)
   if (prepared.thought.narrative) {
-    console.log(`  Narrative:      ${c.dim}"${prepared.thought.narrative.slice(0, 160)}${prepared.thought.narrative.length > 160 ? '...' : ''}"${c.reset}`)
+    console.info(`  Narrative:      ${c.dim}"${prepared.thought.narrative.slice(0, 160)}${prepared.thought.narrative.length > 160 ? '...' : ''}"${c.reset}`)
   }
   if (prepared.thought.privateText) {
-    console.log(`  Private Thought:${c.cyan} "${prepared.thought.privateText}"${c.reset}`)
+    console.info(`  Private Thought:${c.cyan} "${prepared.thought.privateText}"${c.reset}`)
   }
   if (prepared.thought.interpretation) {
-    console.log(`  Interpretation: "${prepared.thought.interpretation}"`)
+    console.info(`  Interpretation: "${prepared.thought.interpretation}"`)
   }
   if (prepared.thought.status === 'failed' || prepared.thought.extractionStatus === 'failed') {
-    console.log(`  ${c.red}Failure / Extraction Error: ${JSON.stringify(prepared.thought.metadata.error || 'Unknown failure')}${c.reset}`)
+    console.info(`  ${c.red}Failure / Extraction Error: ${JSON.stringify(prepared.thought.metadata.error || 'Unknown failure')}${c.reset}`)
   }
 
   // 5. Decision Engine
-  console.log(`\n${c.bold}[5. Decision Engine]${c.reset}`)
+  console.info(`\n${c.bold}[5. Decision Engine]${c.reset}`)
   const decColor = prepared.decision.finalDecision === 'SPEAK' ? c.green : prepared.decision.finalDecision === 'SILENCE' ? c.yellow : c.blue
-  console.log(`  Decision:       ${decColor}${c.bold}${prepared.decision.finalDecision}${c.reset} (Allowed: ${prepared.decision.allowed})`)
-  console.log(`  Speakability:   ${prepared.decision.speakability.toFixed(2)}`)
+  console.info(`  Decision:       ${decColor}${c.bold}${prepared.decision.finalDecision}${c.reset} (Allowed: ${prepared.decision.allowed})`)
+  console.info(`  Speakability:   ${prepared.decision.speakability.toFixed(2)}`)
   if (prepared.decision.reasonCodes.length > 0) {
-    console.log(`  Reason Codes:   ${c.dim}${prepared.decision.reasonCodes.join(', ')}${c.reset}`)
+    console.info(`  Reason Codes:   ${c.dim}${prepared.decision.reasonCodes.join(', ')}${c.reset}`)
   }
   if (prepared.decision.suppressionReason) {
-    console.log(`  Suppression:    ${c.yellow}${prepared.decision.suppressionReason}${c.reset}`)
+    console.info(`  Suppression:    ${c.yellow}${prepared.decision.suppressionReason}${c.reset}`)
   }
 
   // 6. Outward Expression
   if (outwardSpeech) {
-    console.log(`\n${c.bold}[6. Outward Speech (2nd LLM)]${c.reset}`)
-    console.log(`  Nan0: ${c.green}${c.bold}"${outwardSpeech}"${c.reset}`)
+    console.info(`\n${c.bold}[6. Outward Speech (2nd LLM)]${c.reset}`)
+    console.info(`  Nan0: ${c.green}${c.bold}"${outwardSpeech}"${c.reset}`)
   }
   else if (prepared.decision.finalDecision === 'SILENCE') {
-    console.log(`\n${c.bold}[6. Outward Speech]${c.reset}`)
-    console.log(`  ${c.dim}(Nan0 chose silence — no outward expression emitted)${c.reset}`)
+    console.info(`\n${c.bold}[6. Outward Speech]${c.reset}`)
+    console.info(`  ${c.dim}(Nan0 chose silence — no outward expression emitted)${c.reset}`)
   }
 
-  console.log(`${c.cyan}${c.bold}══════════════════════════════════════════════════════════════════${c.reset}\n`)
+  console.info(`${c.cyan}${c.bold}══════════════════════════════════════════════════════════════════${c.reset}\n`)
 }
 
 // --- Main CLI Entrypoint ---
@@ -494,7 +496,7 @@ async function main() {
   })
 
   if (args.values.help) {
-    console.log(`
+    console.info(`
 Nan0 Headless CLI & Test Harness
 
 Usage:
@@ -559,9 +561,9 @@ Options:
     }
 
     const scenario: ScenarioFile = JSON.parse(fs.readFileSync(scenarioPath, 'utf8'))
-    console.log(`\n${c.bold}Running Scenario: ${scenario.name}${c.reset}`)
+    console.info(`\n${c.bold}Running Scenario: ${scenario.name}${c.reset}`)
     if (scenario.description) {
-      console.log(`${c.dim}${scenario.description}${c.reset}\n`)
+      console.info(`${c.dim}${scenario.description}${c.reset}\n`)
     }
 
     const clock = new SystemNan0Clock()
@@ -593,7 +595,7 @@ Options:
     let scenarioPass = true
 
     for (const turn of scenario.turns) {
-      console.log(`${c.cyan}${c.bold}--- Turn ${turnIdx}/${scenario.turns.length} ---${c.reset}`)
+      console.info(`${c.cyan}${c.bold}--- Turn ${turnIdx}/${scenario.turns.length} ---${c.reset}`)
       const clientForTurn = turn.simulate
         ? createSimulatedReasoningClient(turn.simulate)
         : reasoningClient
@@ -633,7 +635,7 @@ Options:
 
     if (args.values.dump) {
       fs.writeFileSync(path.resolve(process.cwd(), args.values.dump), JSON.stringify(kernel.getStateSnapshot(), null, 2), 'utf8')
-      console.log(`${c.green}Final state dumped to ${args.values.dump}${c.reset}`)
+      console.info(`${c.green}Final state dumped to ${args.values.dump}${c.reset}`)
     }
 
     process.exit(scenarioPass ? 0 : 1)
@@ -699,7 +701,7 @@ Options:
     const res = await executeHarnessTurn(kernel, reasoningClient, turnInput)
 
     if (args.values.json) {
-      console.log(JSON.stringify({
+      console.info(JSON.stringify({
         input: turnInput.input,
         user: turnInput.user,
         role: turnInput.role,
@@ -726,8 +728,8 @@ Options:
   }
 
   // --- REPL Mode ---
-  console.log(`\n${c.cyan}${c.bold}Nan0 Headless REPL${c.reset} ${c.dim}(Model: ${OPENCODE_MODEL}, System 1: ${TYPESAFE_API_KEY ? 'TypeSafe Jev' : 'Local Reflex'})${c.reset}`)
-  console.log(`${c.dim}Commands: /set <emotion>=<val> | /state | /actor <name> | /role <owner|stranger> | /dump <file> | /exit${c.reset}\n`)
+  console.info(`\n${c.cyan}${c.bold}Nan0 Headless REPL${c.reset} ${c.dim}(Model: ${OPENCODE_MODEL}, System 1: ${TYPESAFE_API_KEY ? 'TypeSafe Jev' : 'Local Reflex'})${c.reset}`)
+  console.info(`${c.dim}Commands: /set <emotion>=<val> | /state | /actor <name> | /role <owner|stranger> | /dump <file> | /exit${c.reset}\n`)
 
   let currentUser = args.values.user || 'Richie'
   let currentRole: 'owner' | 'stranger' = (args.values.role as 'owner' | 'stranger') || 'owner'
@@ -753,16 +755,16 @@ Options:
 
       if (input === '/state') {
         const snap = kernel.getStateSnapshot()
-        console.log(`\n${c.bold}Current State:${c.reset}`)
-        console.log(`  Mood: ${c.magenta}${snap.emotionalHistory.lastComputedMood}${c.reset}`)
-        console.log(`  Emotions:`, snap.emotionalState)
+        console.info(`\n${c.bold}Current State:${c.reset}`)
+        console.info(`  Mood: ${c.magenta}${snap.emotionalHistory.lastComputedMood}${c.reset}`)
+        console.info(`  Emotions:`, snap.emotionalState)
         promptUser()
         return
       }
 
       if (input.startsWith('/actor ')) {
         currentUser = input.replace('/actor ', '').trim()
-        console.log(`${c.dim}Speaker changed to ${currentUser}${c.reset}`)
+        console.info(`${c.dim}Speaker changed to ${currentUser}${c.reset}`)
         promptUser()
         return
       }
@@ -771,7 +773,7 @@ Options:
         const r = input.replace('/role ', '').trim()
         if (r === 'owner' || r === 'stranger') {
           currentRole = r
-          console.log(`${c.dim}Role set to ${currentRole}${c.reset}`)
+          console.info(`${c.dim}Role set to ${currentRole}${c.reset}`)
         }
         promptUser()
         return
@@ -786,7 +788,7 @@ Options:
             ...snap,
             emotionalState: { ...snap.emotionalState, [k.trim()]: Number(v) },
           }
-          console.log(`${c.dim}Set emotion ${k.trim()} = ${v}${c.reset}`)
+          console.info(`${c.dim}Set emotion ${k.trim()} = ${v}${c.reset}`)
         }
         promptUser()
         return
@@ -795,7 +797,7 @@ Options:
       if (input.startsWith('/dump ')) {
         const target = input.replace('/dump ', '').trim()
         fs.writeFileSync(path.resolve(process.cwd(), target), JSON.stringify(kernel.getStateSnapshot(), null, 2), 'utf8')
-        console.log(`${c.green}State dumped to ${target}${c.reset}`)
+        console.info(`${c.green}State dumped to ${target}${c.reset}`)
         promptUser()
         return
       }

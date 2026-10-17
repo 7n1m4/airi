@@ -362,7 +362,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
 
   async function loadDisplayModelsFromIndexedDB(silent = false) {
     const startTime = performance.now()
-    console.log('[DisplayModels:IDBScan] Starting loadDisplayModelsFromIndexedDB...', { silent })
+    console.info('[DisplayModels:IDBScan] Starting loadDisplayModelsFromIndexedDB...', { silent })
     await until(displayModelsFromIndexedDBLoading).toBe(false)
 
     if (!silent)
@@ -372,7 +372,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     try {
       const keys = await localforage.keys()
       const modelKeys = keys.filter(key => key.startsWith('display-model-') && !key.endsWith('-textures'))
-      console.log(`[DisplayModels:IDBScan] Found ${modelKeys.length} user model keys in localforage. Checking metadata cache...`)
+      console.info(`[DisplayModels:IDBScan] Found ${modelKeys.length} user model keys in localforage. Checking metadata cache...`)
 
       let cachedMetadata: any[] = []
       try {
@@ -390,7 +390,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
       const isCacheValid = !hasLegacyFormat && modelKeys.length === cachedMetadata.length && modelKeys.every(k => cachedKeySet.has(k))
 
       if (isCacheValid && cachedMetadata.length > 0) {
-        console.log(`[DisplayModels:IDBScan] Metadata cache HIT! Serving ${cachedMetadata.length} user models in < 1ms.`)
+        console.info(`[DisplayModels:IDBScan] Metadata cache HIT! Serving ${cachedMetadata.length} user models in < 1ms.`)
         cachedMetadata.forEach((m: any) => {
           models.push({
             ...m,
@@ -399,7 +399,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         })
       }
       else {
-        console.log(`[DisplayModels:IDBScan] Metadata cache MISS/Diff detected. Syncing catalog items...`)
+        console.info(`[DisplayModels:IDBScan] Metadata cache MISS/Diff detected. Syncing catalog items...`)
         const updatedCache: any[] = []
         for (const key of modelKeys) {
           const existing = cachedMetadata.find((m: any) => m.id === key)
@@ -417,7 +417,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
             })
           }
           else {
-            console.log(`[DisplayModels:IDBScan] Fetching new model key "${key}" from IDB...`)
+            console.info(`[DisplayModels:IDBScan] Fetching new model key "${key}" from IDB...`)
             const val = await localforage.getItem<any>(key)
             if (val) {
               const modelName = val.name || val.file?.name || key
@@ -476,30 +476,30 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
 
   async function getDisplayModel(rawId: string) {
     const id = MODEL_ID_ALIASES[rawId] || rawId
-    console.log(`[DisplayModels:getDisplayModel] Called for ID "${rawId}" (resolved: "${id}"). Loading flag: ${displayModelsFromIndexedDBLoading.value}`)
+    console.info(`[DisplayModels:getDisplayModel] Called for ID "${rawId}" (resolved: "${id}"). Loading flag: ${displayModelsFromIndexedDBLoading.value}`)
     await until(displayModelsFromIndexedDBLoading).toBe(false)
 
     // Check in-memory catalog first (only if the full File object is already attached)
     const inMemoryModel = displayModels.value.find(m => m.id === id || m.id === rawId)
     if (inMemoryModel && inMemoryModel.type === 'file' && (inMemoryModel as DisplayModelFile).file) {
-      console.log(`[DisplayModels:getDisplayModel] In-memory store hit for "${id}":`, inMemoryModel)
+      console.info(`[DisplayModels:getDisplayModel] In-memory store hit for "${id}":`, inMemoryModel)
       return inMemoryModel as DisplayModelFile
     }
 
     // Check in-memory cache
     if (displayModelCache.has(id)) {
-      console.log(`[DisplayModels:getDisplayModel] In-memory cache hit for "${id}"`)
+      console.info(`[DisplayModels:getDisplayModel] In-memory cache hit for "${id}"`)
       displayModelCache.get(id)!.addedTime = Date.now()
       return displayModelCache.get(id)!.model
     }
 
-    console.log(`[DisplayModels:getDisplayModel] Querying localforage.getItem("${id}")...`)
+    console.info(`[DisplayModels:getDisplayModel] Querying localforage.getItem("${id}")...`)
     const modelFromFile = await localforage.getItem<DisplayModelFile>(id).catch((err) => {
       console.error(`[DisplayModels:getDisplayModel] localforage.getItem("${id}") threw error:`, err)
       return null
     })
 
-    console.log(`[DisplayModels:getDisplayModel] localforage.getItem("${id}") returned:`, {
+    console.info(`[DisplayModels:getDisplayModel] localforage.getItem("${id}") returned:`, {
       found: !!modelFromFile,
       format: modelFromFile?.format,
       file: modelFromFile?.file,
@@ -535,7 +535,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
 
     console.warn(`[DisplayModels:getDisplayModel] No user model found in IndexedDB for "${id}". Checking presets...`)
     const preset = displayModelsPresets.find(model => model.id === id)
-    console.log(`[DisplayModels:getDisplayModel] Preset lookup result for "${id}":`, preset)
+    console.info(`[DisplayModels:getDisplayModel] Preset lookup result for "${id}":`, preset)
     return preset
   }
 
@@ -823,7 +823,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
           const isMultiModelNaming = modelIndex !== null
           const motionRegex = isMultiModelNaming
             ? new RegExp(`^Motions_(.+)_(\\d+)_File_${modelIndex}\\.json$`, 'i')
-            : new RegExp(`^Motions_(.+)\\.json$|motions?[\\/](.+)\\.(?:motion3\\.)?json$`, 'i')
+            : /^Motions_(.+)\.json$|motions?\/(.+)\.(?:motion3\.)?json$/i
 
           const excludeSuffixes = [
             '.moc3',
@@ -1002,7 +1002,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
             const isMultiModelNaming = modelIndex !== null
             const motionRegex = isMultiModelNaming
               ? new RegExp(`^Motions_(.+)_(\\d+)_File_${modelIndex}\\.json$`, 'i')
-              : new RegExp(`^Motions_(.+)\\.json$|motions?[\\/](.+)\\.(?:motion3\\.)?json$`, 'i')
+              : /^Motions_(.+)\.json$|motions?\/(.+)\.(?:motion3\.)?json$/i
 
             const excludeSuffixes = [
               '.moc3',
@@ -1318,7 +1318,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         ...('file' in rawModel ? { file: toRaw((rawModel as any).file) } : {}),
       }
       const targetFile = (cleanModel as any).file
-      console.log('[DisplayModels:updateDisplayModelName] Accountable write to IndexedDB:', { id, isFileInstance: targetFile instanceof File || targetFile instanceof Blob, fileType: typeof targetFile, cleanModel })
+      console.info('[DisplayModels:updateDisplayModelName] Accountable write to IndexedDB:', { id, isFileInstance: targetFile instanceof File || targetFile instanceof Blob, fileType: typeof targetFile, cleanModel })
       await localforage.setItem(id, cleanModel)
       await syncMetadataCacheFromMemory()
       broadcastModelsSync(Date.now())
@@ -1364,7 +1364,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         ...('file' in rawModel ? { file: toRaw((rawModel as any).file) } : {}),
       }
       const targetFile = (cleanModel as any).file
-      console.log('[DisplayModels:updateDisplayModelMeta] Accountable write to IndexedDB:', { id, isFileInstance: targetFile instanceof File || targetFile instanceof Blob, fileType: typeof targetFile, cleanModel })
+      console.info('[DisplayModels:updateDisplayModelMeta] Accountable write to IndexedDB:', { id, isFileInstance: targetFile instanceof File || targetFile instanceof Blob, fileType: typeof targetFile, cleanModel })
       await localforage.setItem(id, cleanModel)
       await syncMetadataCacheFromMemory()
       broadcastModelsSync(Date.now())
@@ -1400,7 +1400,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         ...('file' in rawModel ? { file: toRaw((rawModel as any).file) } : {}),
       }
       const targetFile = (cleanModel as any).file
-      console.log('[DisplayModels:updateDisplayModelTags] Accountable write to IndexedDB:', { id, isFileInstance: targetFile instanceof File || targetFile instanceof Blob, fileType: typeof targetFile, cleanModel })
+      console.info('[DisplayModels:updateDisplayModelTags] Accountable write to IndexedDB:', { id, isFileInstance: targetFile instanceof File || targetFile instanceof Blob, fileType: typeof targetFile, cleanModel })
       await localforage.setItem(id, cleanModel)
       await syncMetadataCacheFromMemory()
       broadcastModelsSync(Date.now())
@@ -1497,7 +1497,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         outfits: rawModel.outfits ? JSON.parse(JSON.stringify(rawModel.outfits)) : undefined,
         _searchKey: rawModel._searchKey,
       }
-      console.log('[DisplayModels:updateDisplayModelCapabilities] Accountable write to IndexedDB:', {
+      console.info('[DisplayModels:updateDisplayModelCapabilities] Accountable write to IndexedDB:', {
         id,
         isFileInstance: targetFile instanceof File || targetFile instanceof Blob,
         fileType: typeof targetFile,

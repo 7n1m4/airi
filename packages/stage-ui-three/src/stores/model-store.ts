@@ -326,6 +326,13 @@ export const useModelStore = defineStore('modelStore', () => {
   const vrmIdleAnimation = useLocalStorage<string>('settings/stage-ui-three/vrmIdleAnimation', 'idleLoop')
   const vrmIdleCycleEnabled = useLocalStorage<boolean>('settings/stage-ui-three/vrmIdleCycleEnabled', false)
 
+  // === Tactile Interaction State ===
+  const detectedWardrobe = ref<{
+    active: { display: string, raw: string } | null
+    siblings: { display: string, raw: string }[]
+    texIndex: number | null
+  }>({ active: null, siblings: [], texIndex: null })
+
   function resetModelStore() {
     modelSize.value = { x: 0, y: 0, z: 0 }
     modelOrigin.value = { x: 0, y: 0, z: 0 }
@@ -355,13 +362,6 @@ export const useModelStore = defineStore('modelStore', () => {
     activeVrmIdentity.value = ''
     detectedWardrobe.value = { active: null, siblings: [], texIndex: null }
   }
-
-  // === Tactile Interaction State ===
-  const detectedWardrobe = ref<{
-    active: { display: string, raw: string } | null
-    siblings: { display: string, raw: string }[]
-    texIndex: number | null
-  }>({ active: null, siblings: [], texIndex: null })
 
   // === Lighting ===
   const directionalLightPosition = useLocalStorage('settings/stage-ui-three/scenes/scene/directional-light/position', { x: 0, y: 1, z: 3 })

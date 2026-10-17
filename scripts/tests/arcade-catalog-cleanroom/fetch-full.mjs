@@ -6,6 +6,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
@@ -18,7 +19,7 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 async function fetchFullCatalog() {
-  console.log('Fetching complete MS-DOS games collection from Internet Archive...')
+  console.info('Fetching complete MS-DOS games collection from Internet Archive...')
   const query = 'collection:(softwarelibrary_msdos_games) AND mediatype:(software)'
   const fields = ['identifier', 'title', 'year', 'downloads', 'description', 'genre'].join(',')
 
@@ -34,7 +35,7 @@ async function fetchFullCatalog() {
   const docs = json.response?.docs || []
   const elapsed = ((performance.now() - t0) / 1000).toFixed(1)
 
-  console.log(`Fetched ${docs.length} games in ${elapsed}s!`)
+  console.info(`Fetched ${docs.length} games in ${elapsed}s!`)
 
   const normalized = docs.map((doc, idx) => ({
     rank: idx + 1,
@@ -46,7 +47,7 @@ async function fetchFullCatalog() {
   }))
 
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(normalized, null, 2), 'utf8')
-  console.log(`Saved full catalog to ${OUTPUT_FILE} (${(fs.statSync(OUTPUT_FILE).size / 1024 / 1024).toFixed(2)} MB)`)
+  console.info(`Saved full catalog to ${OUTPUT_FILE} (${(fs.statSync(OUTPUT_FILE).size / 1024 / 1024).toFixed(2)} MB)`)
 }
 
 fetchFullCatalog().catch((err) => {

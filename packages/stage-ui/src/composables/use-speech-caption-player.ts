@@ -114,13 +114,10 @@ export function useSpeechCaptionPlayer() {
         item.audio.play()
 
         await new Promise<void>((resolve) => {
-          const cleanup = () => {
+          const onDone = () => {
             item.audio.removeEventListener('ended', onDone)
             item.audio.removeEventListener('pause', onDone)
             item.audio.removeEventListener('error', onDone)
-          }
-          const onDone = () => {
-            cleanup()
             resolve()
           }
           item.audio.addEventListener('ended', onDone)

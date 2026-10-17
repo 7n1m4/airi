@@ -4,6 +4,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
@@ -21,17 +22,17 @@ function analyze() {
   const results = JSON.parse(fs.readFileSync(RESULTS_FILE, 'utf8'))
   const metrics = fs.existsSync(METRICS_FILE) ? JSON.parse(fs.readFileSync(METRICS_FILE, 'utf8')) : {}
 
-  console.log(`\n========================================================================`)
-  console.log(`PROJECT AIRI: COMPLETE MS-DOS PRESERVATION CATALOG TRIAGE REPORT`)
-  console.log(`========================================================================`)
-  console.log(`Total Classified:   ${results.length.toLocaleString()} games`)
+  console.info(`\n========================================================================`)
+  console.info(`PROJECT AIRI: COMPLETE MS-DOS PRESERVATION CATALOG TRIAGE REPORT`)
+  console.info(`========================================================================`)
+  console.info(`Total Classified:   ${results.length.toLocaleString()} games`)
   if (metrics.totalCostUSD !== undefined) {
-    console.log(`Total Wall Time:    ${metrics.elapsedSeconds}s (${(metrics.elapsedSeconds / 60).toFixed(2)} min)`)
-    console.log(`Throughput:         ${metrics.ratePerSecond} games/second`)
-    console.log(`Total Tokens:       ${metrics.totalTokens.toLocaleString()}`)
-    console.log(`Final API Cost:     $${metrics.totalCostUSD.toFixed(4)} USD`)
+    console.info(`Total Wall Time:    ${metrics.elapsedSeconds}s (${(metrics.elapsedSeconds / 60).toFixed(2)} min)`)
+    console.info(`Throughput:         ${metrics.ratePerSecond} games/second`)
+    console.info(`Total Tokens:       ${metrics.totalTokens.toLocaleString()}`)
+    console.info(`Final API Cost:     $${metrics.totalCostUSD.toFixed(4)} USD`)
   }
-  console.log(`========================================================================\n`)
+  console.info(`========================================================================\n`)
 
   function printFacet(title, key) {
     const counts = {}
@@ -40,12 +41,12 @@ function analyze() {
       counts[val] = (counts[val] || 0) + 1
     })
 
-    console.log(`--- ${title} ---`)
+    console.info(`--- ${title} ---`)
     Object.entries(counts).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => {
       const pct = ((v / results.length) * 100).toFixed(1)
-      console.log(`  ${k.padEnd(28)} : ${v.toString().padStart(5)} (${pct.padStart(5)}%)`)
+      console.info(`  ${k.padEnd(28)} : ${v.toString().padStart(5)} (${pct.padStart(5)}%)`)
     })
-    console.log('')
+    console.info('')
   }
 
   printFacet('1. RECOMMENDED COGNITIVE ENGINE', 'recommended_system')
@@ -57,10 +58,10 @@ function analyze() {
 
   // Highlights: Tier 1 Fixed Single Screen Games (Pure Pixel Diff Candidates)
   const tier1Games = results.filter(r => r.answers?.screen_motion_architecture === 'fixed_single_screen')
-  console.log(`--- TIER 1 CANDIDATES (Fixed Single Screen -> Pixel Diffing): ${tier1Games.length} Games ---`)
-  console.log(`Top 10 Most Downloaded Tier 1 Titles:`)
+  console.info(`--- TIER 1 CANDIDATES (Fixed Single Screen -> Pixel Diffing): ${tier1Games.length} Games ---`)
+  console.info(`Top 10 Most Downloaded Tier 1 Titles:`)
   tier1Games.slice(0, 10).forEach((r) => {
-    console.log(`  - [Rank #${r.rank.toString().padStart(4)}] ${r.title.padEnd(35)} (${r.downloads.toLocaleString()} dl) -> Genre: ${r.answers.primary_genre}`)
+    console.info(`  - [Rank #${r.rank.toString().padStart(4)}] ${r.title.padEnd(35)} (${r.downloads.toLocaleString()} dl) -> Genre: ${r.answers.primary_genre}`)
   })
 }
 

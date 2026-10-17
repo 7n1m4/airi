@@ -195,6 +195,7 @@ const showVoiceCreator = ref(false)
 // Scene Overrides
 const selectedBackgroundId = ref<string>('inherit')
 const scenePickerOpen = ref(false)
+const selectedIdleAnimations = ref<string[]>([])
 
 // Director status (determines if Scene tab is functional)
 const isDirectorActive = computed(() => {
@@ -239,7 +240,6 @@ watch(() => [props.modelValue, props.conceptId, props.initialData], () => {
 const manifestationSearch = ref('')
 const manifestationFormatFilter = ref<'all' | 'live2d' | 'vrm' | 'spine' | 'mmd'>('all')
 
-const selectedIdleAnimations = ref<string[]>([])
 const newIdleAnimInput = ref('')
 const isAnimDropdownOpen = ref(false)
 const highlightedIndex = ref(0)
@@ -443,7 +443,7 @@ function buildPayload(): { id: string, data: ConceptData } {
   try {
     options = selectedOptionsStr.value.trim() ? JSON.parse(selectedOptionsStr.value) : undefined
   }
-  catch (e) {
+  catch {
     // Ignore invalid JSON for now
   }
 

@@ -1,18 +1,20 @@
 import fs from 'node:fs'
 
+import { Buffer } from 'node:buffer'
+
 // Use the 15:51 backup as the golden source (discovered to be cleaner than 17:02)
 const goldenPath = 'C:\\Users\\h4rdc\\Documents\\Github\\coding-agent\\VRMs\\recovery\\airi-characters-2026-05-01T15_51_30.329Z.json'
 const latestPath = 'C:\\Users\\h4rdc\\Documents\\Github\\coding-agent\\VRMs\\kanjira\\airi-characters-2026-05-06T04_36_38.678Z.json'
 const outputPath = 'C:\\Users\\h4rdc\\Documents\\Github\\airi-rebase-scratch\\fixed_data.txt'
 
 function restoreData() {
-  console.log('Loading files...')
+  console.info('Loading files...')
   const golden = JSON.parse(fs.readFileSync(goldenPath, 'utf8'))
   const latest = JSON.parse(fs.readFileSync(latestPath, 'utf8'))
 
   const goldenById = new Map(golden.cards)
   const goldenByName = new Map()
-  for (const [id, card] of golden.cards) {
+  for (const [_id, card] of golden.cards) {
     goldenByName.set(card.name.toLowerCase(), card)
   }
 
@@ -29,7 +31,7 @@ function restoreData() {
     if (!oldCard) {
       oldCard = goldenByName.get(card.name.toLowerCase())
       if (oldCard) {
-        console.log(`Name match for: ${card.name} (${id})`)
+        console.info(`Name match for: ${card.name} (${id})`)
       }
     }
 
@@ -39,14 +41,14 @@ function restoreData() {
       for (const [gName, gCard] of goldenByName.entries()) {
         if (cardNameLower.includes(gName) || gName.includes(cardNameLower)) {
           oldCard = gCard
-          console.log(`Fuzzy name match for: ${card.name} (${id}) -> ${gCard.name}`)
+          console.info(`Fuzzy name match for: ${card.name} (${id}) -> ${gCard.name}`)
           break
         }
       }
     }
 
     if (oldCard) {
-      console.log(`Restoring tech-stack for: ${card.name} (${id})`)
+      console.info(`Restoring tech-stack for: ${card.name} (${id})`)
 
       // Restore modules (includes displayModelId, consciousness, speech)
       if (oldCard.extensions?.airi?.modules && card.extensions?.airi?.modules) {
@@ -80,7 +82,7 @@ function restoreData() {
     }
   }
 
-  console.log(`Successfully patched ${restoredCount} characters.`)
+  console.info(`Successfully patched ${restoredCount} characters.`)
 
   // Stringify only the cards array (which is what 'airi-cards' store expects)
   const cardsArray = latest.cards
@@ -91,7 +93,7 @@ function restoreData() {
   const command = `localStorage.setItem('airi-cards', atob('${base64Data}')); location.reload();`
 
   fs.writeFileSync(outputPath, command, 'utf8')
-  console.log(`Command written to: ${outputPath}`)
+  console.info(`Command written to: ${outputPath}`)
 }
 
 try {

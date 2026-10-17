@@ -22,7 +22,7 @@ pnpm -F @proj-airi/stage-mate harness
 ```
 
 Expected output:
-```
+```text
 [harness] listening on ws://localhost:6171
 [harness] model paths: /path/to/test-model.vrm
 [harness] idle animations: PET_IDLE 1
@@ -103,20 +103,25 @@ Output: `Build/StageMate.app`
 ### Wire Protocol (v0)
 
 Server → Engine:
-```json
+```jsonl
 { "type": "stage:vrm:load", "data": { "modelPath": "/abs/path/to/model.vrm" } }
 { "type": "stage:vrm:idle", "data": { "idleAnimations": ["PET_IDLE 1", "PET_IDLE 2"] } }
 { "type": "ping", "data": { "t": 1234567890 } }
 ```
 
 Engine → Harness:
-```json
+```jsonl
 { "type": "stage:vrm:ready", "data": { "modelPath": "/path/to/model.vrm" } }
+```
+
+Gunslinger weapon stance control (sent by the AIRI main process, see `docs/project-gunslinger-sidecar-mod.md`):
+```jsonl
+{ "type": "stage:control:weapon", "data": { "enabled": true, "weapon": "cat" } }
 ```
 
 ### Project Structure
 
-```
+```text
 apps/stage-mate/
 ├── README.md                    # This file
 ├── package.json                 # pnpm workspace package

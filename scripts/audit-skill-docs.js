@@ -47,13 +47,13 @@ function getSkillsMap() {
 }
 
 function runAudit() {
-  console.log('🔍 Running Skill-Documentation Coverage Audit...\n')
+  console.info('🔍 Running Skill-Documentation Coverage Audit...\n')
 
   const docs = getAllMarkdownFiles(docsDir)
   const skills = getSkillsMap()
 
-  console.log(`Found ${docs.length} documentation files in docs/`)
-  console.log(`Found ${skills.size} skill definitions in .agents/skills/\n`)
+  console.info(`Found ${docs.length} documentation files in docs/`)
+  console.info(`Found ${skills.size} skill definitions in .agents/skills/\n`)
 
   const coverage = new Map()
   const unreferencedDocs = []
@@ -84,12 +84,12 @@ function runAudit() {
     }
   }
 
-  console.log('====================================================')
-  console.log('📌 COVERAGE REPORT SUMMARY')
-  console.log('====================================================\n')
+  console.info('====================================================')
+  console.info('📌 COVERAGE REPORT SUMMARY')
+  console.info('====================================================\n')
 
-  console.log(`✅ ${coverage.size} / ${docs.length} documentation files matched skills.`)
-  console.log(`⚠️ ${unreferencedDocs.length} documentation files unreferenced by name or keyword.\n`)
+  console.info(`✅ ${coverage.size} / ${docs.length} documentation files matched skills.`)
+  console.info(`⚠️ ${unreferencedDocs.length} documentation files unreferenced by name or keyword.\n`)
 
   return { coverage, unreferencedDocs, skills, docs }
 }

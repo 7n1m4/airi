@@ -339,7 +339,6 @@ function handleOffsetChange(offset: { x: number, y: number }) {
       />
       <VRM
         v-if="stageModelRenderer === 'vrm'"
-        ref="vrmRef"
         :palette="palette"
         :model-id="stageModelSelected"
         @extract-colors-from-model="$emit('extractColorsFromModel')"

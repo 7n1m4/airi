@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import process from 'node:process'
 
 const mode = process.argv[2] ?? 'runtime'
 
@@ -31,7 +32,7 @@ if (mode === 'clear' || mode === 'clean' || mode === 'reset') {
       fs.writeFileSync(deep, '')
     if (fs.existsSync(runtime))
       fs.writeFileSync(runtime, '')
-    console.log('[logs] Cleared both Player.log and stagemate-runtime.log!')
+    console.info('[logs] Cleared both Player.log and stagemate-runtime.log!')
   }
   catch (err: any) {
     console.error(`[logs] Error clearing logs: ${err.message}`)
@@ -41,11 +42,11 @@ if (mode === 'clear' || mode === 'clean' || mode === 'reset') {
 
 const targetFile = mode === 'deep' ? getDeepLogPath() : getRuntimeLogPath()
 
-console.log(`[logs] Viewing ${mode === 'deep' ? 'deep (Player.log)' : 'runtime (stagemate-runtime.log)'}:`)
-console.log(`[logs] Target: ${targetFile}\n`)
+console.info(`[logs] Viewing ${mode === 'deep' ? 'deep (Player.log)' : 'runtime (stagemate-runtime.log)'}:`)
+console.info(`[logs] Target: ${targetFile}\n`)
 
 if (!fs.existsSync(targetFile)) {
-  console.log(`[logs] Log file does not exist yet. Run StageMate to generate logs.`)
+  console.info(`[logs] Log file does not exist yet. Run StageMate to generate logs.`)
   process.exit(0)
 }
 
@@ -53,4 +54,4 @@ if (!fs.existsSync(targetFile)) {
 const content = fs.readFileSync(targetFile, 'utf8')
 const lines = content.split(/\r?\n/)
 const tailLines = lines.slice(Math.max(0, lines.length - 50))
-console.log(tailLines.join('\n'))
+console.info(tailLines.join('\n'))

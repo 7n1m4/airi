@@ -51,7 +51,7 @@ From `docs/proposal-visual-state-outfit-hook.md`, every concept in `visual_asset
 | :--- | :--- | :--- | :--- |
 | **Identity (Prompt)** | `prompt` | Tags concatenated into the image-generation prompt | **Director** (scene continuity, turn-by-turn) |
 | **Artistry (Pipeline)** | `artistry.provider/model/options` | Workflow/provider overrides for generation | **Director** (image generation) |
-| **Manifestation (Physical)** | `manifestation.modelId`, `manifestation.backgroundId`, `manifestation.active_expressions` | Live stage model swap, mood lock | **Actor pipeline** (`<|ACTOR:x|>` tokens) / explicit user action |
+| **Manifestation (Physical)** | `manifestation.modelId`, `manifestation.backgroundId`, `manifestation.active_expressions` | Live stage model swap, mood lock | **Actor pipeline** (`<\|ACTOR:x\|>` tokens) / explicit user action |
 
 The bug is a **pillar-ownership violation**: when the Director applies its resolved scene stack, the Manifestation pillar rides along and clobbers the stage model that the actor pipeline set for the currently-speaking character.
 
@@ -87,7 +87,7 @@ The user's invariant, restated precisely: **the Director deciding "living room +
 
 ## 3. The Full Flow (Multi-Character Turn)
 
-```
+```text
 User: "Hey girls how are you both?"
 │
 ├─► LLM streams: "<|ACTOR:first_girl|> I'm great! <|ACTOR:grumpy_girl|> bah humbug!"
@@ -188,10 +188,13 @@ const newModelId = extension.active_state?.displayModelId ?? extension.modules?.
 ```typescript
 const nonVisualLayers = currentStack.filter(id => !isVisual(visualAssets[id]))
 // …
-if (newBases.length > 0)
-  return [primaryBase, ...nonVisualLayers, ...newLayers]   // visual actors DROPPED
+if (newBases.length > 0) {
+  return [primaryBase, ...nonVisualLayers, ...newLayers] // visual actors DROPPED
+}
 const currentBase = currentStack.find(id => visualAssets[id]?.isBase)
-return [currentBase?, ...nonVisualLayers, ...newLayers]    // non-base visual actors DROPPED
+const nextStack = currentBase ? [currentBase] : []
+nextStack.push(...nonVisualLayers)
+nextStack.push(...newLayers) // non-base visual actors DROPPED
 ```
 
 - Actor concepts are "visual" (they have prompts) → they never survive as `nonVisualLayers`.

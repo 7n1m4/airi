@@ -8,7 +8,7 @@ This proposal details the integration of the **SmilingWolf WD14 Danbooru Tagger*
 
 By utilizing the vision system's image tagger on each model's preview/thumbnail image, we can automatically index their visual attributes without requiring manual tag entry from the user.
 
-```
+```text
 [Model Preview Image] ──> [WD14 Tagger (Local WebGPU)] ──> [Extract Danbooru Tags] ──> [Save to Model Metadata] ──> [Semantic Library Search]
 ```
 

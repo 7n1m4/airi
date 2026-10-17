@@ -31,7 +31,7 @@ const CASUAL_SYNONYMS = [
  * Expands query text with conversational aliases and context words.
  *
  * @param {string} question
- * @returns {string}
+ * @returns {string} The question with any matched expansions appended.
  */
 export function expandCasualQuery(question) {
   if (!question || typeof question !== 'string')

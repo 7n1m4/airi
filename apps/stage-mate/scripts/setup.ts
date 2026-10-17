@@ -1,22 +1,22 @@
 import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { argv, exit } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
 const rootStageMate = join(here, '..')
 const unitySrcDir = join(rootStageMate, 'unity-src')
 const mateEngineDir = join(rootStageMate, 'mate-engine')
-const targetStageMateAssets = join(mateEngineDir, 'Assets', 'StageMate')
 
 export const CANONICAL_MATE_ENGINE_COMMIT = '2c5ea6b8f4cf5e1773a0816b46d9267cda5174d4'
 
 export function setupMateEngine(): boolean {
-  console.log('[setup] Initializing Stage-Mate workspace...')
+  console.info('[setup] Initializing Stage-Mate workspace...')
 
   // 1. Clone upstream Mate-Engine if not present
   if (!existsSync(mateEngineDir)) {
-    console.log('[setup] Cloning upstream shinyflvre/Mate-Engine...')
+    console.info('[setup] Cloning upstream shinyflvre/Mate-Engine...')
     const cloneRes = spawnSync('git', ['clone', 'https://github.com/shinyflvre/Mate-Engine.git', mateEngineDir], {
       stdio: 'inherit',
     })
@@ -31,7 +31,7 @@ export function setupMateEngine(): boolean {
   // 2. Overlay unity-src/Assets/ -> mate-engine/Assets/
   const unityAssetsSrc = join(unitySrcDir, 'Assets')
   if (existsSync(unityAssetsSrc)) {
-    console.log('[setup] Syncing unity-src/Assets/ -> mate-engine/Assets/...')
+    console.info('[setup] Syncing unity-src/Assets/ -> mate-engine/Assets/...')
     cpSync(unityAssetsSrc, join(mateEngineDir, 'Assets'), { recursive: true, force: true })
   }
 
@@ -39,7 +39,7 @@ export function setupMateEngine(): boolean {
   const patchesSrc = join(unitySrcDir, 'Patches')
   const targetScripts = join(mateEngineDir, 'Assets', 'MATE ENGINE - Scripts')
   if (existsSync(patchesSrc) && existsSync(targetScripts)) {
-    console.log('[setup] Applying patches -> mate-engine/Assets/MATE ENGINE - Scripts/...')
+    console.info('[setup] Applying patches -> mate-engine/Assets/MATE ENGINE - Scripts/...')
     cpSync(patchesSrc, targetScripts, { recursive: true, force: true })
   }
 
@@ -47,14 +47,14 @@ export function setupMateEngine(): boolean {
   const packagesSrc = join(unitySrcDir, 'Packages')
   const targetPackages = join(mateEngineDir, 'Assets', 'MATE ENGINE - Packages')
   if (existsSync(packagesSrc) && existsSync(targetPackages)) {
-    console.log('[setup] Applying package patches -> mate-engine/Assets/MATE ENGINE - Packages/...')
+    console.info('[setup] Applying package patches -> mate-engine/Assets/MATE ENGINE - Packages/...')
     cpSync(packagesSrc, targetPackages, { recursive: true, force: true })
   }
 
   // 4. Overlay unity-src/ProjectSettings/ -> mate-engine/ProjectSettings/
   const projectSettingsSrc = join(unitySrcDir, 'ProjectSettings')
   if (existsSync(projectSettingsSrc)) {
-    console.log('[setup] Syncing ProjectSettings -> mate-engine/ProjectSettings/...')
+    console.info('[setup] Syncing ProjectSettings -> mate-engine/ProjectSettings/...')
     cpSync(projectSettingsSrc, join(mateEngineDir, 'ProjectSettings'), { recursive: true, force: true })
   }
 
@@ -71,7 +71,7 @@ export function setupMateEngine(): boolean {
   // 6. Apply UI cleanup (disable AI section and Steam/DLC promo cards)
   patchSettingsMenuUI()
 
-  console.log('[setup] Stage-Mate workspace ready.')
+  console.info('[setup] Stage-Mate workspace ready.')
   return true
 }
 
@@ -189,7 +189,7 @@ function patchSettingsMenuUI() {
 
     if (modified) {
       writeFileSync(scenePath, content, 'utf8')
-      console.log(`[setup] Cleaned up settings menu UI framing, backgrounds, and scroll bounds in ${sceneName}`)
+      console.info(`[setup] Cleaned up settings menu UI framing, backgrounds, and scroll bounds in ${sceneName}`)
     }
   }
 }
@@ -201,7 +201,7 @@ function patchMacCompatibility() {
     if (settings.includes('preserveFramebufferAlpha: 0')) {
       settings = settings.replace('preserveFramebufferAlpha: 0', 'preserveFramebufferAlpha: 1')
       writeFileSync(projectSettingsPath, settings, 'utf8')
-      console.log('[setup] Enabled preserveFramebufferAlpha for macOS window transparency.')
+      console.info('[setup] Enabled preserveFramebufferAlpha for macOS window transparency.')
     }
   }
 
@@ -214,13 +214,13 @@ function patchMacCompatibility() {
       content = content.replace(/#if UNITY_STANDALONE_WIN\r?\n\s*(\[StructLayout\(LayoutKind\.Sequential\)\]\r?\n\s*struct RECT)/g, '$1')
       content = content.replace(/(struct MONITORINFO\s*\{[\s\S]*?\})\s*#endif/g, '$1')
       writeFileSync(windowHandlerPath, content, 'utf8')
-      console.log('[setup] Applied macOS struct declaration fix to AvatarWindowHandler.cs')
+      console.info('[setup] Applied macOS struct declaration fix to AvatarWindowHandler.cs')
     }
   }
 }
 
 // Allow direct CLI execution: tsx scripts/setup.ts
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (argv[1] && fileURLToPath(import.meta.url) === argv[1]) {
   const ok = setupMateEngine()
-  process.exit(ok ? 0 : 1)
+  exit(ok ? 0 : 1)
 }

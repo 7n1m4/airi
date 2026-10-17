@@ -1,5 +1,7 @@
 import type { Nan0TurnSnapshot } from './Nan0ShadowTypes'
 
+import { Buffer } from 'node:buffer'
+
 import { describe, expect, it } from 'vitest'
 
 import { createMockSystemOneProvider } from '../test-utils/mock-system-one'

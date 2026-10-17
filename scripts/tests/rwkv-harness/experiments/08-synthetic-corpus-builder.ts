@@ -8,6 +8,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import puppeteer from 'puppeteer-core'
 
@@ -35,7 +36,7 @@ export interface VerifiedCorpusEntry {
 }
 
 async function main() {
-  console.log('=== RWKV Cleanroom Harness: Synthetic Dataset Builder (Phase 8) ===\n')
+  console.info('=== RWKV Cleanroom Harness: Synthetic Dataset Builder (Phase 8) ===\n')
 
   const datasetDir = path.resolve(process.cwd(), 'dataset')
   const previewDir = path.join(datasetDir, 'previews')
@@ -43,7 +44,7 @@ async function main() {
 
   // 1. Generate seed corpus
   const seeds = generateSeedCorpus()
-  console.log(`✓ Loaded ${seeds.length} base seed sketches across 4 themes\n`)
+  console.info(`✓ Loaded ${seeds.length} base seed sketches across 4 themes\n`)
 
   // 2. Start static server and Brave renderer
   const server = await startStaticServer(path.resolve(process.cwd(), 'webroot'), {})
@@ -55,14 +56,14 @@ async function main() {
 
   const renderer = new CanvasRenderer(await browser.newPage())
   await renderer.open(server.baseUrl)
-  console.log('✓ CanvasRenderer ready in browser\n')
+  console.info('✓ CanvasRenderer ready in browser\n')
 
   const verifiedEntries: VerifiedCorpusEntry[] = []
 
   try {
     for (let i = 0; i < seeds.length; i++) {
       const seed = seeds[i]
-      console.log(`[${i + 1}/${seeds.length}] Verifying: "${seed.title}" (${seed.id})...`)
+      console.info(`[${i + 1}/${seeds.length}] Verifying: "${seed.title}" (${seed.id})...`)
 
       const t0 = Date.now()
       let outcome
@@ -85,8 +86,8 @@ async function main() {
         renderer.savePng(previewPath, outcome.dataUrl)
 
         const inkPct = (outcome.inkCoverage * 100).toFixed(1)
-        console.log(`  ✓ VERIFIED! ink=${inkPct}%, colors=${outcome.uniqueColors}, structure=${outcome.structureScore?.toFixed(3) ?? 'N/A'} (${renderMs}ms)`)
-        console.log(`  → Saved preview: ${previewPath}`)
+        console.info(`  ✓ VERIFIED! ink=${inkPct}%, colors=${outcome.uniqueColors}, structure=${outcome.structureScore?.toFixed(3) ?? 'N/A'} (${renderMs}ms)`)
+        console.info(`  → Saved preview: ${previewPath}`)
 
         verifiedEntries.push({
           id: seed.id,
@@ -112,7 +113,7 @@ async function main() {
     // 3. Export verified corpus files
     const jsonPath = path.join(datasetDir, 'p5-watercolor-corpus.json')
     fs.writeFileSync(jsonPath, JSON.stringify(verifiedEntries, null, 2))
-    console.log(`\n✓ Exported JSON dataset: ${jsonPath} (${verifiedEntries.length} verified entries)`)
+    console.info(`\n✓ Exported JSON dataset: ${jsonPath} (${verifiedEntries.length} verified entries)`)
 
     // Export JSONL for direct SFT / State-Tuning training
     const jsonlPath = path.join(datasetDir, 'p5-watercolor-corpus.jsonl')
@@ -133,11 +134,11 @@ async function main() {
     ).join('\n')
 
     fs.writeFileSync(jsonlPath, jsonlLines)
-    console.log(`✓ Exported JSONL training file: ${jsonlPath}`)
+    console.info(`✓ Exported JSONL training file: ${jsonlPath}`)
 
-    console.log('\n======================================================')
-    console.log(`✓ Dataset collection complete: ${verifiedEntries.length}/${seeds.length} sketches passed 100% verification gate!`)
-    console.log('======================================================\n')
+    console.info('\n======================================================')
+    console.info(`✓ Dataset collection complete: ${verifiedEntries.length}/${seeds.length} sketches passed 100% verification gate!`)
+    console.info('======================================================\n')
   }
   finally {
     await browser.close()

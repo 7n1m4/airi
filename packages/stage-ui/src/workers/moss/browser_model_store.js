@@ -100,7 +100,7 @@
         await storage.persist()
       }
     }
-    catch (error) {
+    catch {
       // Persist is best-effort only.
     }
 
@@ -218,7 +218,7 @@
       try {
         await writable.abort()
       }
-      catch (abortError) {
+      catch {
         // Ignore abort cleanup failures.
       }
       throw error

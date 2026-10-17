@@ -13,7 +13,7 @@ One of the biggest limitations of standard AI assistants is the "Goldfish Effect
 
 AIRI structures memory across several complementary layers:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │ 1. Active Chat Session (Recent messages in current window)  │
 ├─────────────────────────────────────────────────────────────┤
@@ -54,7 +54,7 @@ For long-term companions with months of history, AIRI periodically runs an offli
 
 AIRI decouples conversational threads from the character's memory bank through the **Universe Model**. Instead of confining a companion to a single monolithic memory or struggling with complex Git-like branching trees, memory is organized into flat, isolated **Universes** (`universeId`).
 
-```
+```text
                    [ UNIVERSE: "main-storyline" ]
                       /                       \
                      /                         \

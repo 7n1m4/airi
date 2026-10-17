@@ -27,7 +27,7 @@ function getBackupPathForKey(key) {
 }
 
 try {
-  console.log(`Reading sync log file at: ${LOG_FILE}...`)
+  console.info(`Reading sync log file at: ${LOG_FILE}...`)
   const content = fs.readFileSync(LOG_FILE, 'utf8')
   const lines = content.split('\n')
 
@@ -44,7 +44,7 @@ try {
     }
   }
 
-  console.log(`Found ${parsedKeys.size} distinct database keys in log.`)
+  console.info(`Found ${parsedKeys.size} distinct database keys in log.`)
 
   let totalAudited = 0
   const missingBackup = []
@@ -81,11 +81,11 @@ try {
     }
   }
 
-  console.log('\n=======================================')
-  console.log(`AUDITED ${totalAudited} CRITICAL USER DATA KEYS`)
-  console.log('=======================================')
+  console.info('\n=======================================')
+  console.info(`AUDITED ${totalAudited} CRITICAL USER DATA KEYS`)
+  console.info('=======================================')
 
-  console.log(`\n1. MISSING FROM BACKUP SHARE: ${missingBackup.length}`)
+  console.info(`\n1. MISSING FROM BACKUP SHARE: ${missingBackup.length}`)
   if (missingBackup.length > 0) {
     missingBackup.forEach((item) => {
       console.warn(`[MISSING] Key: "${item.key}"`)
@@ -93,10 +93,10 @@ try {
     })
   }
   else {
-    console.log('🎉 No keys are missing from the backup share!')
+    console.info('🎉 No keys are missing from the backup share!')
   }
 
-  console.log(`\n2. UNSYNCED LOCAL MODIFICATIONS (Local was newer than Backup): ${unsyncedChanges.length}`)
+  console.info(`\n2. UNSYNCED LOCAL MODIFICATIONS (Local was newer than Backup): ${unsyncedChanges.length}`)
   if (unsyncedChanges.length > 0) {
     unsyncedChanges.forEach((item) => {
       console.warn(`[UNSYNCED] Key: "${item.key}"`)
@@ -106,17 +106,17 @@ try {
     })
   }
   else {
-    console.log('🎉 No keys had unsynced local modifications!')
+    console.info('🎉 No keys had unsynced local modifications!')
   }
 
-  console.log('\n=======================================')
+  console.info('\n=======================================')
   if (missingBackup.length === 0 && unsyncedChanges.length === 0) {
-    console.log('🎉 VERDICT: 100% CLEAN SYNC! Every single local key and modification was successfully backed up on `/Volumes/AIRI-Backup-Share` before the reset.')
+    console.info('🎉 VERDICT: 100% CLEAN SYNC! Every single local key and modification was successfully backed up on `/Volumes/AIRI-Backup-Share` before the reset.')
   }
   else {
-    console.log('⚠️ VERDICT: Gaps found! Reconcile missing keys or unsynced changes before clearing IndexedDB.')
+    console.info('⚠️ VERDICT: Gaps found! Reconcile missing keys or unsynced changes before clearing IndexedDB.')
   }
-  console.log('=======================================')
+  console.info('=======================================')
 }
 catch (err) {
   console.error('Failed to run audit:', err)

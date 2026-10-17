@@ -9,6 +9,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { execSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
@@ -88,14 +89,14 @@ function ghApi(endpoint) {
     const raw = execSync(`gh api "${endpoint}"`, { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 })
     return JSON.parse(raw)
   }
-  catch (err) {
+  catch {
     return null
   }
 }
 
 // ── Pre-Flight Upstream Baseline Validation Pass ──
 function validateSignaturesAgainstBaseline(activeProfiles) {
-  console.log('\n⚡ Executing Pre-Flight Upstream Baseline Validation Pass...')
+  console.info('\n⚡ Executing Pre-Flight Upstream Baseline Validation Pass...')
   const suppressed = new Map()
 
   for (const [profileKey, profile] of Object.entries(activeProfiles)) {
@@ -142,12 +143,12 @@ function saveCache(cache) {
 
 // Main Execution
 async function main() {
-  console.log('====================================================')
-  console.log('🛰️  PROJECT FORK EXPLORER — ECOSYSTEM RECONNAISSANCE')
-  console.log('====================================================')
+  console.info('====================================================')
+  console.info('🛰️  PROJECT FORK EXPLORER — ECOSYSTEM RECONNAISSANCE')
+  console.info('====================================================')
 
-  const token = getGitHubToken()
-  console.log(`✓ GitHub Token verified via gh CLI`)
+  getGitHubToken()
+  console.info(`✓ GitHub Token verified via gh CLI`)
 
   // Active profiles selection
   let selectedProfiles = {}
@@ -178,7 +179,7 @@ async function main() {
   const cache = loadCache()
   const cutoffDate = new Date(Date.now() - daysArg * 24 * 60 * 60 * 1000)
 
-  console.log(`\n🔍 Fetching top-starred forks from moeru-ai/airi via REST API (Limit: ${limitArg}, Cutoff: ${daysArg} days)...`)
+  console.info(`\n🔍 Fetching top-starred forks from moeru-ai/airi via REST API (Limit: ${limitArg}, Cutoff: ${daysArg} days)...`)
 
   // Use REST API to list forks sorted by stargazers
   const forksRes = ghApi(`repos/moeru-ai/airi/forks?sort=stargazers&per_page=${Math.min(limitArg, 100)}`) || []
@@ -189,7 +190,7 @@ async function main() {
     defaultBranch: f.default_branch || 'main',
   }))
 
-  console.log(`✓ Found ${forkNodes.length} candidate forks to inspect.`)
+  console.info(`✓ Found ${forkNodes.length} candidate forks to inspect.`)
 
   const matchesByProfile = {}
   for (const pKey of Object.keys(selectedProfiles)) {
@@ -201,17 +202,21 @@ async function main() {
     const fullName = fork.nameWithOwner
     const pushedAt = new Date(fork.pushedAt)
 
+    // --days scan window: ignore forks dormant since before the cutoff
+    if (pushedAt < cutoffDate)
+      continue
+
     inspectedCount++
-    console.log(`\n[${inspectedCount}/${forkNodes.length}] Inspecting ${fullName} (Stars: ${fork.stargazerCount}, Pushed: ${fork.pushedAt})...`)
+    console.info(`\n[${inspectedCount}/${forkNodes.length}] Inspecting ${fullName} (Stars: ${fork.stargazerCount}, Pushed: ${fork.pushedAt})...`)
 
     // Check compare diff against moeru-ai:main
     const compareRes = ghApi(`repos/moeru-ai/airi/compare/main...${fullName.replace('/', ':')}:${fork.defaultBranch}`)
     if (!compareRes || !compareRes.commits || compareRes.commits.length === 0) {
-      console.log(`  └─ No commits ahead of upstream main.`)
+      console.info(`  └─ No commits ahead of upstream main.`)
       continue
     }
 
-    console.log(`  └─ Ahead by ${compareRes.commits.length} commits (${compareRes.files?.length || 0} modified files).`)
+    console.info(`  └─ Ahead by ${compareRes.commits.length} commits (${compareRes.files?.length || 0} modified files).`)
 
     const matchedForFork = []
 
@@ -261,17 +266,17 @@ async function main() {
         }
         matchesByProfile[pKey].push(resultItem)
         matchedForFork.push(pKey)
-        console.log(`  🎯 MATCHED PROFILE [${pKey}]! (${matchesInFork.length} hits)`)
+        console.info(`  🎯 MATCHED PROFILE [${pKey}]! (${matchesInFork.length} hits)`)
       }
     }
   }
 
   // ── Global Signature Code Search ──
-  console.log('\n🔎 Executing Global Signature Code Search across AIRI forks...')
+  console.info('\n🔎 Executing Global Signature Code Search across AIRI forks...')
   for (const [pKey, profile] of Object.entries(selectedProfiles)) {
     const activeSigs = profile.activeSignatures || profile.signatures
     for (const sig of activeSigs) {
-      console.log(`  └─ Querying GitHub Code Search for signature "${sig}" in AIRI forks...`)
+      console.info(`  └─ Querying GitHub Code Search for signature "${sig}" in AIRI forks...`)
       const searchRes = ghApi(`search/code?q=${encodeURIComponent(sig)}+fork:only+airi`)
       if (searchRes && searchRes.items && searchRes.items.length > 0) {
         for (const item of searchRes.items.slice(0, 10)) {
@@ -294,7 +299,7 @@ async function main() {
           const existing = matchesByProfile[pKey].find(m => m.repo === repoName)
           if (!existing) {
             matchesByProfile[pKey].push(resultItem)
-            console.log(`    🎯 FOUND IN AIRI FORK [${repoName}] -> ${item.path}`)
+            console.info(`    🎯 FOUND IN AIRI FORK [${repoName}] -> ${item.path}`)
           }
         }
       }
@@ -305,9 +310,9 @@ async function main() {
   saveCache(cache)
 
   // Generate Markdown Report
-  console.log('\n====================================================')
-  console.log('📊 GENERATING RECONNAISSANCE HARVEST REPORT')
-  console.log('====================================================')
+  console.info('\n====================================================')
+  console.info('📊 GENERATING RECONNAISSANCE HARVEST REPORT')
+  console.info('====================================================')
 
   let markdown = `# AIRI Ecosystem R&D Harvest Report\n\n`
   markdown += `* **Generated At**: ${new Date().toLocaleString()}\n`
@@ -349,13 +354,13 @@ async function main() {
   if (!isDryRun) {
     fs.mkdirSync(path.dirname(outputFile), { recursive: true })
     fs.writeFileSync(outputFile, markdown, 'utf-8')
-    console.log(`\n✅ Harvest Report successfully saved to: ${outputFile}`)
+    console.info(`\n✅ Harvest Report successfully saved to: ${outputFile}`)
   }
   else {
-    console.log(`\n[Dry Run] Report generated in-memory (${totalHits} total candidate hits).`)
+    console.info(`\n[Dry Run] Report generated in-memory (${totalHits} total candidate hits).`)
   }
 
-  console.log(`✓ Fork Explorer scan completed cleanly.\n`)
+  console.info(`✓ Fork Explorer scan completed cleanly.\n`)
 }
 
 main().catch((err) => {

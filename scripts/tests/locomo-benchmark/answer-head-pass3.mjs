@@ -33,7 +33,7 @@ const DIGIT_TO_WORD = {
  *
  * @param {string} ans
  * @param {string} question
- * @returns {string}
+ * @returns {string} The answer, unchanged when it is not a count query or not a short numeral
  */
 export function normalizeCountAnswer(ans, question) {
   if (!ans || typeof ans !== 'string')
@@ -62,7 +62,7 @@ export function normalizeCountAnswer(ans, question) {
  * @param {object|null} ledgerResult
  * @param {object|null} triage
  * @param {string} system1Pred
- * @returns {boolean}
+ * @returns {boolean} True when System-2 escalation is warranted, false when System-1 output is trustworthy
  */
 export function shouldEscalateToSystem2(ledgerResult, triage, system1Pred) {
   // Deterministic, verified ledger results bypass escalation.
@@ -95,7 +95,7 @@ export class AnswerHeadPass3 {
    * @param {string} question
    * @param {object} searchResult
    * @param {object} [triage]
-   * @returns {Promise<string>}
+   * @returns {Promise<string>} The normalized final answer rendered as natural text
    */
   async formatAnswer(question, searchResult, triage = null) {
     const rawAnswer = await this._formatAnswerRaw(question, searchResult, triage)

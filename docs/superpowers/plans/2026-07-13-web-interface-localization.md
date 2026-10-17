@@ -44,7 +44,7 @@ $corepack = 'D:\Tools\airi\.node24.local\node-v24.13.0-win-x64\corepack.cmd'
 在 `packages/stage-layouts/package.json` 的 `devDependencies` 中加入：
 
 ```json
-"yaml": "catalog:"
+{ "yaml": "catalog:" }
 ```
 
 - [ ] **Step 2: 写入静态键覆盖失败测试**
@@ -439,18 +439,35 @@ Expected: 本地化测试 PASS，`stage-pages` 类型检查退出码为 0。
 向 `forbiddenEnglishByFile` 增加这些条目：
 
 ```ts
-'packages/stage-ui/src/components/scenarios/settings/model-settings/audio-studio.vue': [
-  'New Profile', 'Profile Name', 'Base Provider', 'Pitch Tuning', 'Custom Replacement Rules', 'Stop Playback',
-],
-'packages/stage-ui/src/components/scenarios/settings/model-settings/live2d.vue': [
-  'Character Customizations', 'Auto Blink', 'Force Auto Blink (fallback)', 'Reset value to default', 'Mouse Tracking',
-],
-'packages/stage-ui/src/components/scenarios/settings/model-settings/mmd.vue': [
-  'Character Customizations', 'Enable Physics', 'Enable IK Solvers', 'Gravity Strength',
-],
-'packages/stage-pages/src/pages/settings/airi-card/guided.vue': [
-  'Confirm & Create', 'Roster Settings', 'Model Preview', 'Auto-Assign Voices',
-],
+const forbiddenEnglishByFile: Record<string, string[]> = {
+  'packages/stage-ui/src/components/scenarios/settings/model-settings/audio-studio.vue': [
+    'New Profile',
+    'Profile Name',
+    'Base Provider',
+    'Pitch Tuning',
+    'Custom Replacement Rules',
+    'Stop Playback',
+  ],
+  'packages/stage-ui/src/components/scenarios/settings/model-settings/live2d.vue': [
+    'Character Customizations',
+    'Auto Blink',
+    'Force Auto Blink (fallback)',
+    'Reset value to default',
+    'Mouse Tracking',
+  ],
+  'packages/stage-ui/src/components/scenarios/settings/model-settings/mmd.vue': [
+    'Character Customizations',
+    'Enable Physics',
+    'Enable IK Solvers',
+    'Gravity Strength',
+  ],
+  'packages/stage-pages/src/pages/settings/airi-card/guided.vue': [
+    'Confirm & Create',
+    'Roster Settings',
+    'Model Preview',
+    'Auto-Assign Voices',
+  ],
+}
 ```
 
 Run the focused test and expect FAIL with these phrases.
@@ -558,9 +575,12 @@ export default {
 同步扩展 `loadWebMessages()`，让测试读取认证语言包：
 
 ```ts
-server: {
-  auth: parse(readFileSync(resolve(localeRoot, 'server/auth.yaml'), 'utf8')),
-},
+return {
+  ...messages,
+  server: {
+    auth: parse(readFileSync(resolve(localeRoot, 'server/auth.yaml'), 'utf8')),
+  },
+}
 ```
 
 运行本地化测试；若恢复的简体中文认证文件缺键或插值变量不一致，测试必须失败并在本步骤内补齐。
@@ -570,22 +590,34 @@ server: {
 向 `forbiddenEnglishByFile` 加入：
 
 ```ts
-'packages/stage-layouts/src/components/Widgets/ChatArea.vue': [
-  'Describe a scene to imagine...', 'Memory & Context for',
-],
-'packages/stage-layouts/src/components/Layouts/MobileInteractiveArea.vue': [
-  'Hearing', 'Memory', 'Cleanup Messages',
-],
-'packages/stage-ui/src/components/scenarios/dialogs/onboarding/step-provider-selection.vue': [
-  'Deployment', 'Pricing', 'No providers match your current filters.',
-],
-'packages/stage-ui/src/components/scenarios/chat/ProducerChoiceBubble.vue': [
-  'PRODUCER DIRECTIVES', 'Regenerate choices', 'Retry', 'Dismiss suggestions',
-],
-'apps/stage-web/src/pages/auth/login.vue': [
-  'By continuing, you agree to our', 'Terms', 'Privacy Policy',
-],
-'apps/stage-web/src/pages/settings/characters/index.vue': ['Search...'],
+const forbiddenEnglishByFile: Record<string, string[]> = {
+  'packages/stage-layouts/src/components/Widgets/ChatArea.vue': [
+    'Describe a scene to imagine...',
+    'Memory & Context for',
+  ],
+  'packages/stage-layouts/src/components/Layouts/MobileInteractiveArea.vue': [
+    'Hearing',
+    'Memory',
+    'Cleanup Messages',
+  ],
+  'packages/stage-ui/src/components/scenarios/dialogs/onboarding/step-provider-selection.vue': [
+    'Deployment',
+    'Pricing',
+    'No providers match your current filters.',
+  ],
+  'packages/stage-ui/src/components/scenarios/chat/ProducerChoiceBubble.vue': [
+    'PRODUCER DIRECTIVES',
+    'Regenerate choices',
+    'Retry',
+    'Dismiss suggestions',
+  ],
+  'apps/stage-web/src/pages/auth/login.vue': [
+    'By continuing, you agree to our',
+    'Terms',
+    'Privacy Policy',
+  ],
+  'apps/stage-web/src/pages/settings/characters/index.vue': ['Search...'],
+}
 ```
 
 Run the focused test and expect FAIL.

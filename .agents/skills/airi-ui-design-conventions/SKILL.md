@@ -72,7 +72,7 @@ AIRI uses a dynamic OKLCH/Chromatic color system driven by a single hue angle:
 
 There are **4 canonical surfaces** where the user can view or alter the theme:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │                      Theme Switching Surfaces                          │
 ├────────────────────────────────┬───────────────────────────────────────┤

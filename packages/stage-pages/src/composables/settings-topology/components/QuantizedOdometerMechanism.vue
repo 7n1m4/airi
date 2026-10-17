@@ -3,7 +3,7 @@ import type { OdometerPose } from '../layouts/odometer-engine'
 
 import { computed } from 'vue'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   size?: number
   pose: OdometerPose
   cleanMode?: boolean

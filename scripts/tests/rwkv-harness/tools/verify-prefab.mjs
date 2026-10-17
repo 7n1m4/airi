@@ -10,6 +10,7 @@
 import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
+import process from 'node:process'
 
 import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
@@ -82,7 +83,7 @@ function startServer(webroot, targetFile) {
 
 async function main() {
   const webroot = path.join(HARNESS, 'webroot')
-  console.log(`Starting cleanroom server with ${PREFAB_PATH}...`)
+  console.info(`Starting cleanroom server with ${PREFAB_PATH}...`)
   const srv = await startServer(webroot, PREFAB_PATH)
 
   const browser = await puppeteer.launch({
@@ -97,7 +98,7 @@ async function main() {
 
   try {
     const page = await browser.newPage()
-    page.on('console', msg => console.log('  [Browser]', msg.text()))
+    page.on('console', msg => console.info('  [Browser]', msg.text()))
     await page.goto(srv.baseUrl)
 
     const result = await page.evaluate(async (promptText) => {
@@ -138,10 +139,10 @@ async function main() {
       }
     }, PROMPT)
 
-    console.log('\n=== Cleanroom Evaluation Result ===')
-    console.log(`Build Time:    ${(result.buildMs / 1000).toFixed(2)}s`)
-    console.log(`Prefill Time:  ${result.prefillMs.toFixed(1)}ms`)
-    console.log(`Generated Text: \n${result.output}\n`)
+    console.info('\n=== Cleanroom Evaluation Result ===')
+    console.info(`Build Time:    ${(result.buildMs / 1000).toFixed(2)}s`)
+    console.info(`Prefill Time:  ${result.prefillMs.toFixed(1)}ms`)
+    console.info(`Generated Text: \n${result.output}\n`)
   }
   finally {
     await browser.close()

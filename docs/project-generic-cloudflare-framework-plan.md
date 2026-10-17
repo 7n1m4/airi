@@ -14,7 +14,7 @@
 
 AIRI manages a **suite of user-hosted serverless edge microservices, CORS proxies, and key vaults** on the user's private Cloudflare account (`*.workers.dev`). These services run entirely within Cloudflare's free tier, preserving AIRI's **zero-custody, zero-server-cost** core philosophy.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                    AIRI Control Plane (Desktop, Web & Mobile)               │
 │          "Serverless Cloud Infrastructure Management Studio"                │
@@ -102,7 +102,7 @@ The central Pinia store encapsulates all Cloudflare credentials, OAuth tokens, s
 
 ## 4. Two-Stage Onboarding Flow & UI Surfaces
 
-```
+```text
 [ Step 2: Sign In with Cloudflare ]
   • OAuth PKCE 1-click authorization
   • Proof of zero-trust connection

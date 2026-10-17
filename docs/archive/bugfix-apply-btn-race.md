@@ -80,7 +80,7 @@ Currently, `updateStageModel` calls `replaceStageModelUrl(undefined)` or clears/
 * **Refinement**: To preserve the current model if a new one fails:
   ```typescript
   async function updateStageModel(reason?: string) {
-    ...
+    // ...existing early invalidation/teardown removed...
     try {
       const model = await displayModelsStore.getDisplayModel(selectedModelId)
       if (!model || (model.type === 'file' && !model.file)) {
@@ -88,10 +88,12 @@ Currently, `updateStageModel` calls `replaceStageModelUrl(undefined)` or clears/
       }
       // Prepare resources first (e.g. object URLs, textures)
       const nextUrl = URL.createObjectURL(model.file)
-      ...
+      // ...wait for the new assets to finish loading...
+
       // Only swap state / revoke the old URL after successfully loading the new one
       replaceStageModelUrl(nextUrl)
-    } catch (e) {
+    }
+    catch (e) {
       // Toast / log error here
       // Keep old URL and renderer state intact
     }

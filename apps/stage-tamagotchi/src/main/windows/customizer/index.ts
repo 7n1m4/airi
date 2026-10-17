@@ -77,14 +77,14 @@ export function setupCustomizerWindowManager(params: {
 
     window.on('show', () => {
       emitVisibilityChanged()
-      console.log('[@proj-airi/stage-tamagotchi] [Main] Customizer window shown, broadcasting state')
+      console.info('[@proj-airi/stage-tamagotchi] [Main] Customizer window shown, broadcasting state')
       if (params.mainWindow && !params.mainWindow.isDestroyed()) {
         params.mainWindow.webContents.send('customizer-window-state', true)
       }
     })
     window.on('hide', () => {
       emitVisibilityChanged()
-      console.log('[@proj-airi/stage-tamagotchi] [Main] Customizer window hidden, broadcasting state')
+      console.info('[@proj-airi/stage-tamagotchi] [Main] Customizer window hidden, broadcasting state')
       if (params.mainWindow && !params.mainWindow.isDestroyed()) {
         params.mainWindow.webContents.send('customizer-window-state', false)
       }
@@ -97,7 +97,7 @@ export function setupCustomizerWindowManager(params: {
         currentWindow = undefined
       }
       emitVisibilityChanged()
-      console.log('[@proj-airi/stage-tamagotchi] [Main] Customizer window closed, broadcasting state')
+      console.info('[@proj-airi/stage-tamagotchi] [Main] Customizer window closed, broadcasting state')
       if (params.mainWindow && !params.mainWindow.isDestroyed()) {
         params.mainWindow.webContents.send('customizer-window-state', false)
       }

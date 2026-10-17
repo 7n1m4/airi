@@ -59,7 +59,7 @@ export function recognizeToolMarker(input: string): MarkerRecognition {
   // Supports: <|tool:args|>, [call_tool:tool, args], and hybrid <|tool:args</tool_call>
   // Use non-greedy match and NO start-of-line anchor to allow finding markers within blocks.
   const match = input.match(/<\|([\w-]+):([^|]*?)(?:\|>|<\/tool_call>|$)/)
-    || input.match(/\[call_tool:([\w-]+),\s*([^\]]*?)(?:\]|<\/tool_call>|$)/)
+    || input.match(/\[call_tool:([\w-]+),([^\]]*?)(?:\]|<\/tool_call>|$)/)
     || input.match(/<tool_call>([\w-]+)\((.*?)\)<\/tool_call>/s)
     || input.match(/<tool_call>(\{.*?\})<\/tool_call>/s)
 
@@ -104,7 +104,10 @@ export function recognizeToolMarker(input: string): MarkerRecognition {
     kind: 'candidate',
     matchedText,
     toolName: match[1],
-    argumentsText: match[2] || '',
+    // NOTICE: dialects that separate the tool name from args by a space (e.g. `[call_tool:tool, args]`)
+    // keep that leading space in the capture, because the whitespace quantifier is omitted to avoid
+    // super-linear backtracking. Trim it here so downstream parsers see a clean argument string.
+    argumentsText: (match[2] || '').trim(),
   }
 }
 
@@ -118,7 +121,7 @@ export function parseBridgeArguments(argumentsText: string): Record<string, unkn
 
   // NOTICE: We allow unclosed quotes at the end of the string (?:'|$) to handle truncation gracefully.
   // We use a non-capturing group (?:...) for the alternatives to keep the group indexes for key/valDouble/etc consistent.
-  const kvRegex = /(?:^|[, \n\t]+)\s*([\w-]+)\s*[:=]\s*(?:"([^"]*)(?:"|$)|'([^']*)(?:'|$)|(\d+(?:\.\d+)?)|(true|false)|(\{.*(?:\}|$)|\[.*(?:\]|$)))/g
+  const kvRegex = /(?:^|[, \n\t]+)([\w-]+)\s*[:=]\s*(?:"([^"]*)(?:"|$)|'([^']*)(?:'|$)|(\d+(?:\.\d+)?)|(true|false)|(\{.*(?:\}|$)|\[.*(?:\]|$)))/g
   let kvMatch
 
   while ((kvMatch = kvRegex.exec(argumentsText)) !== null) {

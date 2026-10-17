@@ -5,7 +5,7 @@ import { useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useLibp2pStore } from '@proj-airi/stage-ui/stores/modules/libp2p'
 import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
-import { FieldCheckbox } from '@proj-airi/ui'
+import { DoubleCheckButton, FieldCheckbox } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import {
   DialogContent,
@@ -162,21 +162,11 @@ function cleanKeyLabel(key: string): string {
 }
 
 async function handleRestoreFromBackup() {
-  const confirmed = confirm(
-    'WARNING: This will completely wipe all local settings, characters, chat history, and assets, replacing them with the remote backup. This action cannot be undone.\n\nAre you sure you want to proceed?',
-  )
-  if (confirmed) {
-    await syncStore.forceRestoreFromRemote()
-  }
+  await syncStore.forceRestoreFromRemote()
 }
 
 async function handleRestoreSettingsOnly() {
-  const confirmed = confirm(
-    'WARNING: This will overwrite your local settings and configurations with the versions from your remote backup. Your character models and background assets will not be affected.\n\nAre you sure you want to proceed?',
-  )
-  if (confirmed) {
-    await syncStore.restoreSettingsFromRemote()
-  }
+  await syncStore.restoreSettingsFromRemote()
 }
 
 function isMergeable(key: string): boolean {
@@ -424,13 +414,17 @@ function isMergeable(key: string): boolean {
           <span class="text-neutral-700 font-semibold dark:text-neutral-300">Restore Settings Only</span>
           <span class="text-xs text-neutral-400 dark:text-neutral-500">Restore configurations and UI settings without touching character assets.</span>
         </div>
-        <button
-          class="ml-auto rounded-xl bg-amber-600 px-5 py-2.5 text-sm text-white font-semibold transition-colors duration-200 hover:bg-amber-700 focus:outline-none"
+        <DoubleCheckButton
+          class="ml-auto"
+          variant="caution"
           :disabled="isSyncing"
-          @click="handleRestoreSettingsOnly"
+          @confirm="handleRestoreSettingsOnly"
         >
           Restore Settings...
-        </button>
+          <template #confirm>
+            Confirm Restore
+          </template>
+        </DoubleCheckButton>
       </div>
 
       <div class="flex flex-row items-center border-t border-neutral-200 pt-4 dark:border-neutral-800">
@@ -441,13 +435,17 @@ function isMergeable(key: string): boolean {
           <span class="text-neutral-700 font-semibold dark:text-neutral-300">Restore Remote Backup</span>
           <span class="text-xs text-neutral-400 dark:text-neutral-500">Nuke local data and force restore all settings from remote.</span>
         </div>
-        <button
-          class="ml-auto rounded-xl bg-rose-600 px-5 py-2.5 text-sm text-white font-semibold transition-colors duration-200 hover:bg-rose-700 focus:outline-none"
+        <DoubleCheckButton
+          class="ml-auto"
+          variant="danger"
           :disabled="isSyncing"
-          @click="handleRestoreFromBackup"
+          @confirm="handleRestoreFromBackup"
         >
           Restore Backup...
-        </button>
+          <template #confirm>
+            Confirm Wipe &amp; Restore
+          </template>
+        </DoubleCheckButton>
       </div>
 
       <div v-if="syncError" class="mt-2 flex items-center gap-2 rounded-lg bg-rose-500/10 p-3 text-sm text-rose-600 font-medium dark:text-rose-400">

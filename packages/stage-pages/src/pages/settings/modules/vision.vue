@@ -68,14 +68,14 @@ const modelSearchQuery = ref('')
 const filteredModels = computed(() => {
   const models = providerModels.value.filter((model: any) => model.capabilities?.includes('vision'))
   if (typeof localStorage !== 'undefined' && localStorage.getItem('airi:debug') === '1') {
-    console.log(`[Vision UI] Provider Models: ${providerModels.value.length}, Filtered Models: ${models.length}`)
+    console.info(`[Vision UI] Provider Models: ${providerModels.value.length}, Filtered Models: ${models.length}`)
   }
   return models
 })
 
 watch(providerModels, (models) => {
   if (typeof localStorage !== 'undefined' && localStorage.getItem('airi:debug') === '1') {
-    console.log('[Vision UI] providerModels updated:', models)
+    console.info('[Vision UI] providerModels updated:', models)
   }
 }, { deep: true })
 

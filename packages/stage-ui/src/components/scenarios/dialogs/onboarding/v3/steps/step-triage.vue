@@ -12,12 +12,6 @@ const props = defineProps<{
   onFinish?: () => void
 }>()
 
-const emit = defineEmits<{
-  (e: 'previous'): void
-  (e: 'next'): void
-  (e: 'finish'): void
-}>()
-
 const { t } = useI18n()
 
 const draftStore = useOnboardingV3Draft()

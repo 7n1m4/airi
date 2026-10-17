@@ -496,8 +496,8 @@ const activeModelDisplay = computed(() => {
                     <option value="" disabled selected>
                       {{ isLoadingModels ? 'Loading...' : 'Select Model' }}
                     </option>
-                    <option v-for="model in availableModels" :key="model.id" :value="model.id">
-                      {{ model.name || model.id.split('/').pop() || model.id }}
+                    <option v-for="opt in availableModels" :key="opt.id" :value="opt.id">
+                      {{ opt.name || opt.id.split('/').pop() || opt.id }}
                     </option>
                   </select>
 

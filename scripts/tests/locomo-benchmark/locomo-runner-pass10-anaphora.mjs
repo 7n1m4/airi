@@ -10,6 +10,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
@@ -59,33 +60,33 @@ const PASS9_LAYA_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-
 const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass10-anaphora-report.md')
 const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass10-anaphora-trace.json')
 
-console.log('================================================================')
-console.log('LoCoMo conv-47 Pass 10: Turn-1 Windowed Anaphora Resolution')
-console.log('Jev System-1 + Windowed BGE Embeddings + Monolithic System-2 DeepSeek Flash')
-console.log('================================================================\n')
+console.info('================================================================')
+console.info('LoCoMo conv-47 Pass 10: Turn-1 Windowed Anaphora Resolution')
+console.info('Jev System-1 + Windowed BGE Embeddings + Monolithic System-2 DeepSeek Flash')
+console.info('================================================================\n')
 
 // 1. Load Dataset
-console.log('Loading conv-47 dataset...')
+console.info('Loading conv-47 dataset...')
 const convData = JSON.parse(fs.readFileSync(DATASET_PATH, 'utf-8'))
 const qas = convData.qa.filter(q => q.category >= 1 && q.category <= 4)
-console.log(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
+console.info(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
 
 // 2. Initialize Models
-console.log('Initializing TypeSafe Jev Cloud Client...')
+console.info('Initializing TypeSafe Jev Cloud Client...')
 const jev = new TypeSafeJevClient(JEV_API_KEY)
 
-console.log('Loading Needle 2 WASM module on CPU...')
+console.info('Loading Needle 2 WASM module on CPU...')
 const needle = await NeedleNode.load()
 
 // 3. Build / Load Pass 3 Ledger with Hierarchical Disambiguation
-console.log('\nLoading Pass 3 Entity Ledger...')
+console.info('\nLoading Pass 3 Entity Ledger...')
 let ledger
 if (fs.existsSync(PASS3_LEDGER_PATH)) {
-  console.log(`Loading cached Pass 3 ledger from ${PASS3_LEDGER_PATH}...`)
+  console.info(`Loading cached Pass 3 ledger from ${PASS3_LEDGER_PATH}...`)
   ledger = EntityLedger.fromJSON(JSON.parse(fs.readFileSync(PASS3_LEDGER_PATH, 'utf8')))
 }
 else {
-  console.log(`Building Pass 3 ledger from ${BASE_LEDGER_PATH}...`)
+  console.info(`Building Pass 3 ledger from ${BASE_LEDGER_PATH}...`)
   const baseData = JSON.parse(fs.readFileSync(BASE_LEDGER_PATH, 'utf8'))
   ledger = EntityLedger.fromJSON(baseData)
 
@@ -107,7 +108,7 @@ else {
 }
 
 // 4. Load LocomoMemoryIndex with Windowed Embeddings & Hybrid Searcher
-console.log('Loading LocomoMemoryIndex with Turn-1 conversational windowing...')
+console.info('Loading LocomoMemoryIndex with Turn-1 conversational windowing...')
 const index = new LocomoMemoryIndex()
 index.loadConversation(convData)
 const embeddings = JSON.parse(fs.readFileSync(EMBEDDINGS_PATH, 'utf-8'))
@@ -129,7 +130,7 @@ const dualSearcher = new DualSearcherPass3(ledger, hybridSearcher, jev)
 const answerHead = new AnswerHeadPass3(needle, jev, index)
 
 // 7. Shootout Loop
-console.log('Beginning 150-question Shootout with Turn-1 Windowed Anaphora Index...')
+console.info('Beginning 150-question Shootout with Turn-1 Windowed Anaphora Index...')
 const shootoutT0 = performance.now()
 
 const baselineResults = []
@@ -225,17 +226,17 @@ for (let i = 0; i < qas.length; i++) {
     const elapsed = ((performance.now() - shootoutT0) / 1000).toFixed(1)
     const bRec = ((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p10Rec = ((pass10Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
-    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 10 (Recall@3): ${p10Rec}%`)
+    console.info(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 10 (Recall@3): ${p10Rec}%`)
   }
 }
 
 // --- ARM 3: Monolithic System-2 Deductive Resolution (DeepSeek Flash via OpenCode Go) ---
 if (system2Queue.length > 0) {
-  console.log(`\n[System-2] Dispatching monolithic deductive resolution for ${system2Queue.length} queries to deepseek-v4.1-flash...`)
+  console.info(`\n[System-2] Dispatching monolithic deductive resolution for ${system2Queue.length} queries to deepseek-v4.1-flash...`)
   const s2T0 = performance.now()
   const s2Answers = await resolveSystem2Batch(system2Queue)
   const s2DurationSec = ((performance.now() - s2T0) / 1000).toFixed(2)
-  console.log(`[System-2] Monolithic resolution completed in ${s2DurationSec}s (${Object.keys(s2Answers).length} answers resolved).\n`)
+  console.info(`[System-2] Monolithic resolution completed in ${s2DurationSec}s (${Object.keys(s2Answers).length} answers resolved).\n`)
 
   for (const item of system2Queue) {
     if (s2Answers[item.id]) {
@@ -255,7 +256,7 @@ if (system2Queue.length > 0) {
 }
 
 const shootoutDurationSec = ((performance.now() - shootoutT0) / 1000).toFixed(2)
-console.log(`\nShootout completed in ${shootoutDurationSec}s.\n`)
+console.info(`\nShootout completed in ${shootoutDurationSec}s.\n`)
 
 // 8. Aggregate Metrics
 const bAgg = aggregateBenchmarkResults(baselineResults)
@@ -319,7 +320,7 @@ const reportMd = `# LoCoMo conv-47 Pass 10 (Turn-1 Windowed Anaphora + Jev + Mon
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
-console.log(`Saved Pass 10 report to ${OUTPUT_REPORT_PATH}`)
+console.info(`Saved Pass 10 report to ${OUTPUT_REPORT_PATH}`)
 
 const detailedComparison = qas.map((q, idx) => ({
   index: idx,
@@ -342,9 +343,9 @@ fs.writeFileSync(OUTPUT_TRACE_PATH, JSON.stringify({
   metrics: { baseline: bAgg, pass8: p8Agg, pass9Jev: p9JevAgg, pass9Laya: p9LayaAgg, pass10: p10Agg },
   detailedComparison,
 }, null, 2))
-console.log(`Saved Pass 10 trace to ${OUTPUT_TRACE_PATH}`)
+console.info(`Saved Pass 10 trace to ${OUTPUT_TRACE_PATH}`)
 
-console.log('\n======================================================')
-console.log('PASS 10 SHOOTOUT COMPLETE')
-console.log('======================================================')
-console.log(reportMd)
+console.info('\n======================================================')
+console.info('PASS 10 SHOOTOUT COMPLETE')
+console.info('======================================================')
+console.info(reportMd)

@@ -1,4 +1,5 @@
 import https from 'node:https'
+import process from 'node:process'
 
 const UPSTREAM = 'moeru-ai/airi'
 
@@ -15,7 +16,9 @@ function fetchJSON(urlPath) {
 
     https.get(options, (res) => {
       let data = ''
-      res.on('data', (chunk) => { data += chunk })
+      res.on('data', (chunk) => {
+        data += chunk
+      })
       res.on('end', () => {
         if (res.statusCode !== 200) {
           reject(new Error(`Failed to fetch ${urlPath}: ${res.statusCode} ${data}`))
@@ -44,10 +47,10 @@ async function getUpstreamCommits() {
 }
 
 async function run() {
-  console.log('Fetching upstream commits to check divergence baseline...')
+  console.info('Fetching upstream commits to check divergence baseline...')
   const upstreamSHAs = await getUpstreamCommits()
 
-  console.log('Fetching recently created forks (limit 50)...')
+  console.info('Fetching recently created forks (limit 50)...')
   let forks = []
   try {
     forks = await fetchJSON(`/repos/${UPSTREAM}/forks?sort=newest&per_page=50`)
@@ -61,7 +64,7 @@ async function run() {
     process.exit(1)
   }
 
-  console.log(`Found ${forks.length} forks. Analyzing divergence...`)
+  console.info(`Found ${forks.length} forks. Analyzing divergence...`)
   const activeForks = []
 
   for (const fork of forks) {
@@ -96,25 +99,24 @@ async function run() {
       // Sleep slightly to respect GitHub API rate limits
       await new Promise(r => setTimeout(r, 500))
     }
-    catch (err) {
+    catch {
       // Some forks might have empty default branch or API errors
-      // console.error(`Error checking commits for ${fullName}:`, err.message);
     }
   }
 
-  console.log('\n======================================')
-  console.log('      ACTIVE / DIVERGED FORKS         ')
-  console.log('======================================')
+  console.info('\n======================================')
+  console.info('      ACTIVE / DIVERGED FORKS         ')
+  console.info('======================================')
   if (activeForks.length === 0) {
-    console.log('No forks with custom commits found in the recently pushed list.')
+    console.info('No forks with custom commits found in the recently pushed list.')
   }
   else {
     activeForks.forEach((f) => {
-      console.log(`\nFork: ${f.name} (⭐ ${f.stars} | Issues: ${f.openIssues})`)
-      console.log(`Pushed: ${f.pushedAt}`)
-      console.log('Recent Custom Commits:')
+      console.info(`\nFork: ${f.name} (⭐ ${f.stars} | Issues: ${f.openIssues})`)
+      console.info(`Pushed: ${f.pushedAt}`)
+      console.info('Recent Custom Commits:')
       f.customCommits.forEach((c) => {
-        console.log(`  - [${c.date.substring(0, 10)}] ${c.sha}: ${c.message}`)
+        console.info(`  - [${c.date.substring(0, 10)}] ${c.sha}: ${c.message}`)
       })
     })
   }

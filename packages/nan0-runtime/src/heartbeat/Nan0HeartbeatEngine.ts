@@ -231,7 +231,9 @@ export function createNan0HeartbeatEngine(options: Nan0HeartbeatEngineOptions): 
       pendingReason = reason
   }
 
-  const run = (reason: Nan0HeartbeatWakeReason, force = false): void => {
+  // NOTICE: a function declaration (not a const arrow) keeps the mutual reference
+  // between schedule() and run() legal while ts/no-use-before-define has functions disabled.
+  function run(reason: Nan0HeartbeatWakeReason, force = false): void {
     if (!started)
       return
     if (evaluation) {

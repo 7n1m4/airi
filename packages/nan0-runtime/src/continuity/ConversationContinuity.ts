@@ -134,7 +134,7 @@ function unresolvedFromInput(turn: Nan0ConversationTurn, text: string): Nan0Cont
         metadata: { deterministicExtraction: true },
       }]
     : []
-  if (/\b(let'?s|we should|we need to|i need to|remember to)\b/i.test(text)) {
+  if (/\b(?:let'?s|we should|we need to|i need to|remember to)\b/i.test(text)) {
     items.push({
       itemId: `unresolved:${turn.turnId}:intention`,
       kind: 'intention',
@@ -487,7 +487,7 @@ export function attachTerminalEventToContinuity(
   if (!thread || thread.timelineEventIds.includes(input.event.eventId))
     return state
   const promise = input.actorId === 'nan0' && input.content
-    && /\b(i'?ll|i will|i promise|we should)\b/i.test(input.content)
+    && /\b(?:i'?ll|i will|i promise|we should)\b/i.test(input.content)
     ? [{
         itemId: `unresolved:${input.turn.turnId}:promise`,
         kind: 'promise' as const,

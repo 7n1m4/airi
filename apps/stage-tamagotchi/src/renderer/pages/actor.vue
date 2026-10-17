@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import type { ChatHistoryItem } from '@proj-airi/stage-ui/types/chat'
+
+import type { ApplySizePresetPayload } from '../../shared/eventa'
+
 import { useElectronAllDisplays, useElectronEventaContext, useElectronEventaInvoke, useElectronMouseAroundWindowBorder, useElectronMouseInElement, useElectronMouseInWindow } from '@proj-airi/electron-vueuse'
 import { resolveAtmosphereComponent } from '@proj-airi/stage-layouts/components/Backgrounds'
 import { StageConfigOverlay, WhisperDock } from '@proj-airi/stage-ui/components'
@@ -34,34 +38,6 @@ const showModelLayer = ref(true)
 const allDisplays = useElectronAllDisplays()
 const monitorCount = computed(() => (allDisplays.value && allDisplays.value.length > 0) ? allDisplays.value.length : 1)
 const activeMonitor = ref(1)
-
-function handleApplyPreset(preset: string) {
-  const mapped = preset === 'med.' ? 'medium' : preset
-  applySizePreset({ target: 'actor', preset: mapped })
-}
-
-function handleCenterModel() {
-  const current = positioningStore.getPosition(stageModelSelected.value)
-  positioningStore.setPosition(stageModelSelected.value, {
-    ...current,
-    x: 0,
-    y: 0,
-  })
-}
-
-function handleApplyAlignment(alignment: string) {
-  applySizePreset({ target: 'actor', alignment: alignment as any })
-}
-
-function handleSelectMonitor(m: number) {
-  activeMonitor.value = m
-  applySizePreset({ target: 'actor', monitorIndex: m })
-}
-
-function handleOverlayHide() {
-  handleHideStage()
-  configOverlayOpen.value = false
-}
 
 useEventListener(window, 'keydown', (e: KeyboardEvent) => {
   if (e.key === 'Escape' && configOverlayOpen.value) {
@@ -170,6 +146,34 @@ const startDraggingWindowInvoke = useElectronEventaInvoke(electronStartDraggingW
 const getBounds = useElectronEventaInvoke(electron.window.getBounds, context.value)
 const setBounds = useElectronEventaInvoke(electron.window.setBounds, context.value)
 const applySizePreset = useElectronEventaInvoke(electronApplySizePreset)
+
+function handleApplyPreset(preset: string) {
+  const mapped = preset === 'med.' ? 'medium' : preset
+  applySizePreset({ target: 'actor', preset: mapped })
+}
+
+function handleCenterModel() {
+  const current = positioningStore.getPosition(stageModelSelected.value)
+  positioningStore.setPosition(stageModelSelected.value, {
+    ...current,
+    x: 0,
+    y: 0,
+  })
+}
+
+function handleApplyAlignment(alignment: string) {
+  applySizePreset({ target: 'actor', alignment: alignment as ApplySizePresetPayload['alignment'] })
+}
+
+function handleSelectMonitor(m: number) {
+  activeMonitor.value = m
+  applySizePreset({ target: 'actor', monitorIndex: m })
+}
+
+function handleOverlayHide() {
+  handleHideStage()
+  configOverlayOpen.value = false
+}
 
 function startDraggingWindow() {
   startDraggingWindowInvoke()
@@ -280,23 +284,6 @@ function onStageTouchStart(e: TouchEvent) {
   }
 }
 
-const notchProximity = computed(() => {
-  if (whisperDockIsOpen.value)
-    return false
-  if (isOutsideStage.value)
-    return false
-  return stageElementHeight.value - stageElementY.value <= 10
-})
-
-function handleStageClick(e: MouseEvent) {
-  if (!whisperDockIsOpen.value)
-    return
-  const wrapper = whisperDockWrapperRef.value
-  if (wrapper && !wrapper.contains(e.target as Node)) {
-    whisperDockRef.value?.dismiss()
-  }
-}
-
 watch(
   [isInsideWindow, fadeOnHoverEnabled, stageEnabled, isOverControls],
   ([inside, fadeEnabled, stageOn, overControls]) => {
@@ -322,7 +309,7 @@ const stageState = ref<'pending' | 'loading' | 'mounted'>('pending')
 const { data: stageModelQuery, post: broadcastModelReady } = useBroadcastChannel<string, string>({ name: 'airi-stage-model-ready' })
 
 watch(stageState, (val) => {
-  console.log('[Actor Window] stageState changed:', val)
+  console.info('[Actor Window] stageState changed:', val)
   if (val === 'mounted') {
     broadcastModelReady('ready')
   }
@@ -335,9 +322,37 @@ watch(stageModelQuery, (msg) => {
 })
 
 // --- Magic Wand Suggestions State & Logic ---
-const whisperDockRef = ref<any>(null)
-const actorSuggestions = ref<any[]>([])
+interface WhisperDockHandle {
+  inputText: string
+  dismiss: () => void
+  send: () => Promise<void>
+}
+
+interface Suggestion {
+  title: string
+  message: string
+}
+
+const whisperDockRef = ref<WhisperDockHandle | null>(null)
+const actorSuggestions = ref<Suggestion[]>([])
 const isGeneratingSuggestions = ref(false)
+
+const notchProximity = computed(() => {
+  if (whisperDockIsOpen.value)
+    return false
+  if (isOutsideStage.value)
+    return false
+  return stageElementHeight.value - stageElementY.value <= 10
+})
+
+function handleStageClick(e: MouseEvent) {
+  if (!whisperDockIsOpen.value)
+    return
+  const wrapper = whisperDockWrapperRef.value
+  if (wrapper && !wrapper.contains(e.target as Node)) {
+    whisperDockRef.value?.dismiss()
+  }
+}
 
 const suggestionCount = useLocalStorage('airi:producer:suggestion-count', 2)
 const cacheAligned = useLocalStorage('airi:producer:cache-aligned', true)
@@ -406,10 +421,20 @@ async function playChoiceSpeech(idx: number, text: string) {
   stopActiveAudio()
 
   await playSpeech(text, voiceId, {
-    onLoading: () => { loadingIndex.value = idx },
-    onPlaying: () => { loadingIndex.value = null; activePlayingIndex.value = idx },
-    onDone: () => { activePlayingIndex.value = null },
-    onError: () => { loadingIndex.value = null; activePlayingIndex.value = null },
+    onLoading: () => {
+      loadingIndex.value = idx
+    },
+    onPlaying: () => {
+      loadingIndex.value = null
+      activePlayingIndex.value = idx
+    },
+    onDone: () => {
+      activePlayingIndex.value = null
+    },
+    onError: () => {
+      loadingIndex.value = null
+      activePlayingIndex.value = null
+    },
   })
 }
 
@@ -454,7 +479,7 @@ async function handleGetSuggestions(guidance: string) {
 
     const choices = await generateSuggestions({
       characterName: characterNameVal,
-      messages: messagesVal as any,
+      messages: messagesVal as ChatHistoryItem[],
       guidance: guidance ? guidance.trim() : undefined,
       contextDepth: cacheAligned.value ? messagesVal.length : contextDepth.value,
       count: suggestionCount.value,
@@ -472,7 +497,7 @@ async function handleGetSuggestions(guidance: string) {
       void playAllChoices()
     }
   }
-  catch (err) {
+  catch {
     toast.error('Failed to generate suggestions.')
   }
   finally {

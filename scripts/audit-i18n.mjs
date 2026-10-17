@@ -17,6 +17,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
@@ -30,8 +31,8 @@ const args = process.argv.slice(2)
 const isVerbose = args.includes('--verbose') || args.includes('-v')
 const isStrict = args.includes('--strict')
 
-console.log('🌐 AIRI Monorepo Localization Audit')
-console.log(`📁 Locales root: ${LOCALES_DIR}\n`)
+console.info('🌐 AIRI Monorepo Localization Audit')
+console.info(`📁 Locales root: ${LOCALES_DIR}\n`)
 
 if (!fs.existsSync(LOCALES_DIR)) {
   console.error(`❌ Locales directory not found: ${LOCALES_DIR}`)
@@ -122,8 +123,8 @@ function checkDuplicateKeys(filePath) {
 }
 
 const enFiles = findYamlFiles(path.join(LOCALES_DIR, 'en'))
-console.log(`📋 Baseline files in "en" (${enFiles.length} files): ${enFiles.join(', ')}`)
-console.log(`🌍 Target locales discovered (${locales.length - 1}): ${locales.filter(l => l !== 'en').join(', ')}\n`)
+console.info(`📋 Baseline files in "en" (${enFiles.length} files): ${enFiles.join(', ')}`)
+console.info(`🌍 Target locales discovered (${locales.length - 1}): ${locales.filter(l => l !== 'en').join(', ')}\n`)
 
 let totalMissingAcrossMonorepo = 0
 let totalErrors = 0
@@ -149,9 +150,9 @@ for (const relFile of enFiles) {
     locales: {},
   }
 
-  console.log(`\n======================================================================`)
-  console.log(`📄 Domain File: ${relFile} (Baseline: ${enKeys.length} keys)`)
-  console.log(`======================================================================`)
+  console.info(`\n======================================================================`)
+  console.info(`📄 Domain File: ${relFile} (Baseline: ${enKeys.length} keys)`)
+  console.info(`======================================================================`)
 
   for (const loc of locales) {
     if (loc === 'en')
@@ -159,7 +160,7 @@ for (const relFile of enFiles) {
 
     const targetFilePath = path.join(LOCALES_DIR, loc, relFile)
     if (!fs.existsSync(targetFilePath)) {
-      console.log(`  ❌ ${loc.padEnd(8)}: FILE MISSING! (0 / ${enKeys.length} keys - 0.0%)`)
+      console.info(`  ❌ ${loc.padEnd(8)}: FILE MISSING! (0 / ${enKeys.length} keys - 0.0%)`)
       totalMissingAcrossMonorepo += enKeys.length
       domainAuditResults[relFile].locales[loc] = {
         exists: false,
@@ -174,11 +175,11 @@ for (const relFile of enFiles) {
     // Check duplicate keys & syntax
     const dupCheck = checkDuplicateKeys(targetFilePath)
     if (dupCheck.error) {
-      console.log(`  ⚠️  ${loc.padEnd(8)}: YAML Parse error (${dupCheck.error})`)
+      console.info(`  ⚠️  ${loc.padEnd(8)}: YAML Parse error (${dupCheck.error})`)
       totalErrors++
     }
     if (dupCheck.duplicates.length > 0) {
-      console.log(`  ⚠️  ${loc.padEnd(8)}: ${dupCheck.duplicates.length} duplicate key(s) detected: ${dupCheck.duplicates.slice(0, 3).join(', ')}...`)
+      console.info(`  ⚠️  ${loc.padEnd(8)}: ${dupCheck.duplicates.length} duplicate key(s) detected: ${dupCheck.duplicates.slice(0, 3).join(', ')}...`)
       totalErrors++
     }
 
@@ -192,10 +193,10 @@ for (const relFile of enFiles) {
         : '100.0'
 
       const statusIcon = missingKeys.length === 0 ? '✅' : (Number(coverage) > 80 ? '⚡' : '⚠️')
-      console.log(`  ${statusIcon} ${loc.padEnd(8)}: ${String(targetKeys.size).padStart(4)} / ${enKeys.length} keys (${coverage.padStart(5)}% coverage) - Missing: ${missingKeys.length}`)
+      console.info(`  ${statusIcon} ${loc.padEnd(8)}: ${String(targetKeys.size).padStart(4)} / ${enKeys.length} keys (${coverage.padStart(5)}% coverage) - Missing: ${missingKeys.length}`)
 
       if (isVerbose && missingKeys.length > 0) {
-        console.log(`     Missing: ${missingKeys.slice(0, 10).join(', ')}${missingKeys.length > 10 ? ` ...and ${missingKeys.length - 10} more` : ''}`)
+        console.info(`     Missing: ${missingKeys.slice(0, 10).join(', ')}${missingKeys.length > 10 ? ` ...and ${missingKeys.length - 10} more` : ''}`)
       }
 
       totalMissingAcrossMonorepo += missingKeys.length
@@ -208,39 +209,39 @@ for (const relFile of enFiles) {
       }
     }
     catch (e) {
-      console.log(`  ❌ ${loc.padEnd(8)}: Could not read/parse file (${e.message})`)
+      console.info(`  ❌ ${loc.padEnd(8)}: Could not read/parse file (${e.message})`)
       totalErrors++
     }
   }
 }
 
-console.log(`\n======================================================================`)
-console.log(`📊 MONOREPO LOCALIZATION AUDIT SUMMARY`)
-console.log(`======================================================================`)
-console.log(`Total Locales:             ${locales.length}`)
-console.log(`Total Files Checked:       ${enFiles.length} per locale`)
-console.log(`Total Parse/Syntax Errors: ${totalErrors}`)
-console.log(`Total Missing Keys:        ${totalMissingAcrossMonorepo}`)
+console.info(`\n======================================================================`)
+console.info(`📊 MONOREPO LOCALIZATION AUDIT SUMMARY`)
+console.info(`======================================================================`)
+console.info(`Total Locales:             ${locales.length}`)
+console.info(`Total Files Checked:       ${enFiles.length} per locale`)
+console.info(`Total Parse/Syntax Errors: ${totalErrors}`)
+console.info(`Total Missing Keys:        ${totalMissingAcrossMonorepo}`)
 
 // Check Onboarding specific health
 if (enFiles.includes('onboarding.yaml')) {
-  console.log(`\n✨ Onboarding V3 Domain Health Check:`)
+  console.info(`\n✨ Onboarding V3 Domain Health Check:`)
   const onboardingResults = domainAuditResults['onboarding.yaml']
   let onboardingMissingTotal = 0
   if (onboardingResults && onboardingResults.locales) {
     for (const [loc, res] of Object.entries(onboardingResults.locales)) {
       if (res.missing > 0 || !res.exists) {
         onboardingMissingTotal += res.missing
-        console.log(`   - ${loc}: ${res.missing} keys missing (${res.coverage}% coverage)`)
+        console.info(`   - ${loc}: ${res.missing} keys missing (${res.coverage}% coverage)`)
       }
     }
     if (onboardingMissingTotal === 0) {
-      console.log(`   ✅ 100% Onboarding Parity across all ${locales.length} languages!`)
+      console.info(`   ✅ 100% Onboarding Parity across all ${locales.length} languages!`)
     }
   }
 
   // Component Template Audit: Scan Vue/TS components in Onboarding V3
-  console.log(`\n🔍 Onboarding V3 Component Template Key Audit:`)
+  console.info(`\n🔍 Onboarding V3 Component Template Key Audit:`)
   const ONBOARDING_V3_DIR = path.resolve(REPO_ROOT, 'packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3')
   if (fs.existsSync(ONBOARDING_V3_DIR)) {
     const enOnboardingPath = path.join(LOCALES_DIR, 'en', 'onboarding.yaml')
@@ -274,7 +275,7 @@ if (enFiles.includes('onboarding.yaml')) {
       }
 
       const componentFiles = findComponentFiles(ONBOARDING_V3_DIR)
-      const keyRegex = /[\b\s(](?:t|te)\(\s*['"](onboarding\.[\w.-]+)['"]/g
+      const keyRegex = /[\u0008\s(](?:t|te)\(\s*['"](onboarding\.[\w.-]+)['"]/g
       const usedKeys = new Map()
 
       for (const compFile of componentFiles) {
@@ -296,7 +297,7 @@ if (enFiles.includes('onboarding.yaml')) {
       }
 
       if (missingTemplateKeys.length === 0) {
-        console.log(`   ✅ 100% Template-to-YAML Parity: All ${usedKeys.size} keys used in ${componentFiles.length} V3 components exist in en/onboarding.yaml!`)
+        console.info(`   ✅ 100% Template-to-YAML Parity: All ${usedKeys.size} keys used in ${componentFiles.length} V3 components exist in en/onboarding.yaml!`)
       }
       else {
         console.error(`   ❌ Found ${missingTemplateKeys.length} missing translation key(s) called in templates:`)

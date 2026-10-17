@@ -128,6 +128,11 @@ const editingConceptData = ref<any>()
 
 const autoVoiceModalOpen = ref(false)
 
+const visualAssets = computed(() => props.card.extensions?.airi?.visual_assets || {})
+const activeConcepts = computed(() => props.card.extensions?.airi?.active_concepts || [])
+const journalEntries = computed(() => backgroundStore.getCharacterJournalEntries(props.cardId))
+const directorNotes = computed(() => autonomousArtistryStore.directorNotes.slice(-5).reverse())
+
 const isCompatibleWithAutoAssign = computed(() => {
   return Object.keys(visualAssets.value).some(key => key.startsWith('actor_'))
 })
@@ -293,11 +298,6 @@ function saveAssets(assets: any) {
     extensions: extension,
   })
 }
-
-const visualAssets = computed(() => props.card.extensions?.airi?.visual_assets || {})
-const activeConcepts = computed(() => props.card.extensions?.airi?.active_concepts || [])
-const journalEntries = computed(() => backgroundStore.getCharacterJournalEntries(props.cardId))
-const directorNotes = computed(() => autonomousArtistryStore.directorNotes.slice(-5).reverse())
 
 async function toggleConcept(conceptId: string) {
   const concept = visualAssets.value[conceptId]

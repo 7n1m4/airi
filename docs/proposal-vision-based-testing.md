@@ -22,7 +22,7 @@ Upstream recently explored an automated visual testing workflow using **Vishot**
 
 Upstream split their visual testing exploration into two complementary external tools:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                       UPSTREAM VISUAL PIPELINE                              │
 ├──────────────────────────────────────┬──────────────────────────────────────┤
@@ -109,7 +109,7 @@ If we were to blindly port upstream's Vishot and agent-browser skills today, **t
 
 When we choose to adopt vision-based testing, it should be tailored specifically to our current architecture:
 
-```
+```text
 apps/stage-tamagotchi/
   ├── scenarios/                         # Fork-owned visual test scenarios
   │   ├── control-strip.scenario.ts     # Pill, expanded dock, notch hit-testing

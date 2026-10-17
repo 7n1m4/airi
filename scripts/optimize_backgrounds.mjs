@@ -19,6 +19,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 const args = process.argv.slice(2)
 const backupDir = args.find(a => !a.startsWith('--')) || process.env.AIRI_BACKUP_DIR || '/Volumes/AIRI-Backup-Share'
@@ -34,7 +35,7 @@ const outMime = useWebP ? 'WebP' : 'AVIF'
 const REMOTE_BG_DIR = path.join(backupDir, 'assets', 'backgrounds')
 
 // ─── Startup Banner ──────────────────────────────────────────────────────────
-console.log(`
+console.info(`
 ╔══════════════════════════════════════════════════════════╗
 ║       AIRI Background AVIF Optimization Script           ║
 ╠══════════════════════════════════════════════════════════╣
@@ -54,7 +55,7 @@ try {
   await sharp({ create: { width: 1, height: 1, channels: 3, background: { r: 0, g: 0, b: 0 } } })
     .png()
     .toBuffer()
-  console.log('[Optimizer] ✔ sharp loaded and verified\n')
+  console.info('[Optimizer] ✔ sharp loaded and verified\n')
 }
 catch (e) {
   console.error('[Optimizer] ✗ sharp not available or broken:', e.message)
@@ -76,12 +77,12 @@ const alreadyConverted = new Set(allFiles.filter(f => f.endsWith('.avif') || f.e
 const toConvert = pngFiles.filter(f => !alreadyConverted.has(f.replace('.png', '')))
 const alreadyDone = pngFiles.length - toConvert.length
 
-console.log(`[Optimizer] Found ${pngFiles.length} PNG files on remote`)
-console.log(`[Optimizer] Already converted: ${alreadyDone}`)
-console.log(`[Optimizer] To convert: ${toConvert.length}\n`)
+console.info(`[Optimizer] Found ${pngFiles.length} PNG files on remote`)
+console.info(`[Optimizer] Already converted: ${alreadyDone}`)
+console.info(`[Optimizer] To convert: ${toConvert.length}\n`)
 
 if (toConvert.length === 0) {
-  console.log('✅ All backgrounds already converted. Nothing to do.')
+  console.info('✅ All backgrounds already converted. Nothing to do.')
   process.exit(0)
 }
 
@@ -101,14 +102,14 @@ async function convertFile(pngFile) {
     const pngSize = pngStat.size
 
     if (dryRun) {
-      console.log(`[DRY RUN] Would convert: ${pngFile} → ${outFile} (${(pngSize / 1024).toFixed(0)} KB)`)
+      console.info(`[DRY RUN] Would convert: ${pngFile} → ${outFile} (${(pngSize / 1024).toFixed(0)} KB)`)
       converted++
       return
     }
 
     // Re-encode via sharp — process one at a time in memory, then flush to disk
     const instance = sharp(pngPath)
-    const meta = await instance.metadata()
+    await instance.metadata()
 
     let encoder
     if (useWebP) {
@@ -125,8 +126,9 @@ async function convertFile(pngFile) {
     const saving = pngSize - outSize
     savedBytes += saving
 
+    converted++
     const ratio = ((saving / pngSize) * 100).toFixed(1)
-    console.log(`[${++converted}/${toConvert.length}] ${pngFile} → ${outFile} | ${(pngSize / 1024).toFixed(0)} KB → ${(outSize / 1024).toFixed(0)} KB (${ratio}% smaller)`)
+    console.info(`[${converted}/${toConvert.length}] ${pngFile} → ${outFile} | ${(pngSize / 1024).toFixed(0)} KB → ${(outSize / 1024).toFixed(0)} KB (${ratio}% smaller)`)
 
     // Delete the original PNG only after successful encode
     fs.unlinkSync(pngPath)
@@ -135,7 +137,9 @@ async function convertFile(pngFile) {
     console.error(`[FAIL] ${pngFile}: ${err.message}`)
     // Clean up partial output if it exists
     if (fs.existsSync(outPath)) {
-      try { fs.unlinkSync(outPath) }
+      try {
+        fs.unlinkSync(outPath)
+      }
       catch {}
     }
     failed++
@@ -162,7 +166,7 @@ const elapsed = ((Date.now() - startTime) / 1000).toFixed(1)
 const savedMB = (savedBytes / (1024 * 1024)).toFixed(2)
 const savedGB = (savedBytes / (1024 * 1024 * 1024)).toFixed(3)
 
-console.log(`
+console.info(`
 ╔══════════════════════════════════════════════════════════╗
 ║                  OPTIMIZATION SUMMARY                     ║
 ╠══════════════════════════════════════════════════════════╣
@@ -178,6 +182,6 @@ if (failed > 0) {
   process.exit(1)
 }
 else if (!dryRun) {
-  console.log('✅ All backgrounds converted successfully.')
-  console.log(`   The sync engine will now download ${outMime} files when restoring from remote.`)
+  console.info('✅ All backgrounds converted successfully.')
+  console.info(`   The sync engine will now download ${outMime} files when restoring from remote.`)
 }

@@ -20,7 +20,7 @@ This document serves as the **canonical technical architecture specification**, 
 | **Breadcrumb Stepper** | Monolithic list of 15 buttons stretching across the window header, causing horizontal overflow, truncated labels, and cognitive clutter. | **5-Item Sliding-Window Stepper**: Dynamic centered window showing `[current - 2]` to `[current + 2]` with sleek chevron navigation anchors (`<` / `>`) and quick-jump step catalog popover. Constant width, zero layout shift. |
 | **Step Navigation** | Rigid hardcoded numeric index (0..15). Disabling a module left awkward empty placeholders or required manual index skipping. | **Dynamic Step Pruning & Semantic IDs**: Steps are identified by semantic IDs (`currentStepId: OnboardingV3Step`). `activeSteps` is computed reactively from `draftStore.state.modules`. Inactive steps are completely excised from the stepper and navigation path. |
 | **Physical Avatar Selection** | Segregated into installed models vs. a secondary modal dialog triggered by a "Find Free Bodies" top-right button. | **Unified Vessel Coverflow**: Local avatars (`✓ Installed`) and downloadable models (`🌐 Free Download`) presented side-by-side in a single 3D coverflow carousel with source and format filters. |
-| **Cognition & Acting Division** | Combined "Acting & Calibration" into a single overloaded tab conflating conversational fillers, Live2D/VRM morph mapping, and motion delays. | **Cleanly Unbundled into Thinking vs. Emotions**: <br>• **Thinking**: Cognitive latency, 3 conversational pacing presets (*Snappy*, *Balanced*, *Deep CoT*), and 3-tier subconscious aside extraction (Needle 2 WASM).<br>• **Emotions**: The ACT Bridge. 2-pass AI Expression Curation (Pass 1: raw morph normalization to `<|ACT:*|>` tokens; Pass 2: prompt directives teaching character how to express them). |
+| **Cognition & Acting Division** | Combined "Acting & Calibration" into a single overloaded tab conflating conversational fillers, Live2D/VRM morph mapping, and motion delays. | **Cleanly Unbundled into Thinking vs. Emotions**: <br>• **Thinking**: Cognitive latency, 3 conversational pacing presets (*Snappy*, *Balanced*, *Deep CoT*), and 3-tier subconscious aside extraction (Needle 2 WASM).<br>• **Emotions**: The ACT Bridge. 2-pass AI Expression Curation (Pass 1: raw morph normalization to `<\|ACT:*\|>` tokens; Pass 2: prompt directives teaching character how to express them). |
 | **Artistry & Visual Synthesis** | Buried deep within advanced card editor with complex routing mode dropdowns, JSON parameter blocks, and 12+ Director evaluation sliders. | **Streamlined Provider & Character Setup**: <br>• **Top Engines**: Pollinations AI (100% Free / Zero-Config with Quick Pick models) vs. ComfyUI (Local Node:8188) vs. None.<br>• **Visual Style Prompt Box**: Auto-injected with selected vessel's physical traits, preset style chips (+ Ghibli, + Cyberpunk, + Shinkai, + Cozy Cafe), and a bottom-right `[🎨 Preview]` button opening a fast, non-disruptive preview modal.<br>• **Autonomous Director**: Single clean toggle switch, hiding low-level evaluation knobs. |
 | **Sensory & Proactivity** | Spread across disconnected tabs (Proactivity, Attention Ecology, Sleep Gate). | **Unified Sensory Step**: Screen Watching with 4 delivery modes (`Voice & Bubble`, `Bubble Only`, `Voice Only`, `Muted`), Zero-Cost Salience Gating (Lightweight OCR vs Moondream2 VLM), Ambient Heartbeats with `NO_REPLY` smart silence directive, Bedtime / Quiet Hours schedule, and full raw telemetry dump. |
 | **Memory & Tool Placement** | Memory and external tools crammed into one massive vertical page or split across disconnected settings. | **Clean Separation into Dedicated Chapters**: <br>• **Step 14: Memory Hierarchy**: Focused purely on the 4 temporal quadrants (STMM, Sacred Journal LTMM, Lifetime Relational Thread, Dream State Echo Chips) with interactive tiers.<br>• **Step 15: Automation & Tools**: Focused purely on external tools (0-Key Web Search, Desktop Filesystem MCP, 3D Motion Generator). |
@@ -28,10 +28,9 @@ This document serves as the **canonical technical architecture specification**, 
 
 ---
 
-#### 3. Master 18-Step Journey Topology
 ## 3. Master 18-Step Journey Topology
 
-```
+```text
 [ 0. Welcome ] ──▶ [ 1. Triage ] ──▶ [ 2. Appearance ] ──▶ [ 3. Experience Archetypes ]
                                                                         │
    ┌────────────────────────────────────────────────────────────────────┘
@@ -80,7 +79,7 @@ The wizard does not force users through irrelevant steps. Selecting an Archetype
 
 Below is the comprehensive field-by-field and control breakdown for every page in Onboarding V3.
 
-```
+```text
 ┌───────────────────────────────────────────────────────────────────────────────────┐
 │                           ONBOARDING V3 STEP DIRECTORY                            │
 ├────┬────────────────────┬─────────────────────────┬───────────────────────────────┤
@@ -368,7 +367,7 @@ Below is the comprehensive field-by-field and control breakdown for every page i
 
 ## 6. File & Component Responsibility Topology
 
-```
+```text
 packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/
 ├── onboarding-v3.vue                  # Host dialog, window chrome, dynamic sliding stepper router & fast-track coordinator
 ├── quick-start.vue                    # 1-Page Fast Track Cockpit (2x2 grid, starter bundles, shared draft)

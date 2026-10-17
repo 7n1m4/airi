@@ -76,7 +76,7 @@ In previous iterations of the AIRI codebase, outfit configuration lived in [`pac
 
 The outfit toggling behavior in StageMate is governed by three primary C# components:
 
-```
+```text
 [ Active Avatar GameObject ]
            │
            ▼
@@ -354,7 +354,7 @@ When working with avatars exported directly from Blender, mesh names are often g
 
 Instead of disconnected outer settings tabs or disruptive popups, wardrobe management is natively integrated as the third tab inside `ModelCustomizer.vue`:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │ [ Emotions (97) ]    [ Motions (47) ]    [ Outfits (2/8) ]  │
 └─────────────────────────────────────────────────────────────┘

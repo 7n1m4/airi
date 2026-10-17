@@ -22,7 +22,7 @@ A recon pass against the current codebase produced three binding decisions. Thes
 
 ### Revised Component Diagram
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │   @proj-airi/live2d-runtime  (HEADLESS / pure TS package)   │
 │   NO PIXI · NO Vue · NO DOM · NO WebGL                      │

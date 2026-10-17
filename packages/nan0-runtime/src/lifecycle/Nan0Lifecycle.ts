@@ -45,7 +45,7 @@ export function mergeComputationAttempts(
       || (!computationTerminal.has(existing.status) && computationTerminal.has(normalized.status))
       || (!computationTerminal.has(existing.status)
         && !computationTerminal.has(normalized.status)
-        && (existing.status === 'active' && normalized.status === 'streaming'
+        && ((existing.status === 'active' && normalized.status === 'streaming')
           || normalizedProgress > existingProgress))
         || (existing.status === normalized.status && (normalized.finishedAt ?? 0) > (existing.finishedAt ?? 0))) {
       records.set(record.requestId, normalized)

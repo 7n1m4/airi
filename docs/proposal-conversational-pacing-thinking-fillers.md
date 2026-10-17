@@ -342,7 +342,7 @@ Dynamic aside extraction uses a **3-Tier Priority Cascade**, strictly separated 
 - **Decision & Category Gating** is handled upstream by **Universal System 1** (§6.3), deciding *if* an aside is warranted and what emotional tone applies.
 - **Candidate Formulation** is handled downstream by the 3-Tier Cascade to extract the exact listener-facing words from the reasoning stream:
 
-```
+```text
 [Reasoning Buffer at dynamicAfterMs] ──► [System 1 Gating: Eligible?]
                                                     │ (YES)
                                                     ▼
@@ -628,7 +628,7 @@ Consolidate the acting editor into **Model Expressions**, **Speech Tags**, and *
 
 ### 11.1 Acting Tab UI Layout & Controls
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 🎭 Conversational Pacing & Thinking Fillers                                 │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -674,7 +674,7 @@ Treat templates as optional behavior guidance; the parser, budgets, and owner en
 
 To eliminate the opacity of background cognitive pacing and provide an interactive test bench for creators and developers, the Acting tab includes a dedicated sub-tab: **Pacing Lab (`ActingSubTabPacingPlayground.vue`)**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ [ 🎭 Model Expressions ] [ 🗣️ Speech Tags ] [ ⏳ Pacing & Fillers ] [ 🧪 Pacing Lab ⭐ ]
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -745,7 +745,7 @@ A major friction point when using reasoning models (DeepSeek-R1, QwQ, Claude thi
 
 To solve this, the desktop and web chat surfaces (`packages/stage-ui/src/components/scenarios/chat/response-part.vue` inside `assistant-item.vue`) render an **In-Bubble CoT Streaming Drawer**:
 
-```
+```text
 Collapsed Header (when pacing is enabled):
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 💡 ...tail of active reasoning stream | 1/3 fillers · next in 12s | 21.4s ∨ │

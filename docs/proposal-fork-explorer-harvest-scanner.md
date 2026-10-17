@@ -22,7 +22,7 @@ Instead of searching for broad keywords (`voice`, `game`, `discord`) that yield 
 
 ### Curated High-Yield Fingerprint Profiles
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ 🎯 FINGERPRINT REGISTRY                                                      │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -61,7 +61,7 @@ If a signature in a search profile **already exists in upstream `moeru-ai/airi:m
 
 To prevent this, Fork Explorer executes a **Pre-Flight Baseline Pass** before scanning the fork graph:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ ⚡ PRE-FLIGHT BASELINE VALIDATION                                            │
 ├─────────────────────────────────────────────────────────────────────────────┤

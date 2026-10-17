@@ -45,7 +45,7 @@ export interface Nan0SystemOneTurnState {
 }
 ```
 Formatted cleanly for the model via `formatSystemOnePromptState()`:
-```
+```text
 [TARGET UTTERANCE TO CLASSIFY]:
 user: "Great, I just pushed the fixes."
 

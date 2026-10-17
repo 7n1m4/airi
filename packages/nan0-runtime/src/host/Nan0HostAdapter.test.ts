@@ -17,8 +17,14 @@ describe('nan0HostAdapter metabolism lifecycle', () => {
     })
     const originalBoot = kernel.boot.bind(kernel)
     const originalShutdown = kernel.shutdown.bind(kernel)
-    kernel.boot = async () => { order.push('kernel.boot'); await originalBoot() }
-    kernel.shutdown = async () => { order.push('kernel.shutdown'); await originalShutdown() }
+    kernel.boot = async () => {
+      order.push('kernel.boot')
+      await originalBoot()
+    }
+    kernel.shutdown = async () => {
+      order.push('kernel.shutdown')
+      await originalShutdown()
+    }
     const heartbeat = {
       start: vi.fn(() => order.push('heartbeat.start')),
       notify: vi.fn(),

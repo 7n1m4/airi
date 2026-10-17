@@ -54,7 +54,7 @@ Shared step UI: `v2/components/` (`companion-bubble.vue`, `lock-key-picker.vue`,
 
 ### Track Topology
 
-```
+```text
 new / local-first:  welcome → triage → experience → persona → vessel → profile → [hearing] → consciousness → [speech] → [extended] → calibration
 returning:          welcome → triage → cloud-infrastructure → cloud-restore ──► [ 🚀 Launch Stage (Direct) ]
                                                                              └──► [ + Build Another ] ──► experience → persona → ...

@@ -6,6 +6,7 @@ import type {
   DiscordServiceStatus,
 } from '@proj-airi/stage-shared'
 
+import { Buffer } from 'node:buffer'
 import { PassThrough } from 'node:stream'
 
 import * as fs from 'node:fs'
@@ -155,12 +156,12 @@ export function setupDiscordService() {
   const handleInteraction = async (interaction: any) => {
     const isButton = interaction.isButton()
     if (!interaction.isChatInputCommand() && !isButton) {
-      console.log('[DiscordService/Native] Ignoring interaction: not button or command.')
+      console.info('[DiscordService/Native] Ignoring interaction: not button or command.')
       return
     }
 
     try {
-      console.log(`[DiscordService/Native] handleInteraction started. ID=${interaction.id}, Type=${isButton ? 'Button' : 'Command'}, User=${interaction.user.tag}`)
+      console.info(`[DiscordService/Native] handleInteraction started. ID=${interaction.id}, Type=${isButton ? 'Button' : 'Command'}, User=${interaction.user.tag}`)
       if (isButton) {
         pushLog('INTERACTION', `Received button click "${interaction.customId}" from ${interaction.user.tag}`)
         // Defer update so we don't block and can edit the message components dynamically
@@ -169,14 +170,14 @@ export function setupDiscordService() {
       else {
         pushLog('INTERACTION', `Received /${interaction.commandName} from ${interaction.user.tag}`)
         // Defer reply for slash commands to prevent the 3s timeout
-        console.log(`[DiscordService/Native] Deferring reply for /${interaction.commandName}...`)
+        console.info(`[DiscordService/Native] Deferring reply for /${interaction.commandName}...`)
         await interaction.deferReply()
-        console.log('[DiscordService/Native] Defer reply successful.')
+        console.info('[DiscordService/Native] Defer reply successful.')
       }
 
       // 2. Cache the interaction so the renderer can reply to it later
       activeInteractions.set(interaction.id, interaction)
-      console.log(`[DiscordService/Native] Cached interaction ID=${interaction.id}. Active count: ${activeInteractions.size}`)
+      console.info(`[DiscordService/Native] Cached interaction ID=${interaction.id}. Active count: ${activeInteractions.size}`)
 
       let commandName = ''
       const options: Record<string, any> = {}
@@ -435,7 +436,7 @@ export function setupDiscordService() {
   // Electron's native IPC can handle hundreds of megabytes without breaking.
   ipcMain.handle('eventa:invoke:electron:discord:send-image', async (_event, payload: DiscordOutboundImage) => {
     // 0. Hard Terminal Log (Visible in the shell where AIRI started)
-    console.log(`[DiscordService/Native] IPC Received Image. Size: ${Math.round((payload?.base64?.length || 0) / 1024)}KB, Shape: ${payload?.base64?.substring(0, 30)}...`)
+    console.info(`[DiscordService/Native] IPC Received Image. Size: ${Math.round((payload?.base64?.length || 0) / 1024)}KB, Shape: ${payload?.base64?.substring(0, 30)}...`)
 
     // 0. UI Receipt Log
     pushLog('IMAGE_PUSH', `IPC Received: Image Payload (${Math.round((payload?.base64?.length || 0) / 1024)}KB)`)
@@ -541,7 +542,7 @@ export function setupDiscordService() {
 
   ipcMain.handle('eventa:invoke:electron:discord:send-voice-note', async (_event, payload: { channelId: string, audioBuffers: Uint8Array[], content?: string, filename?: string }) => {
     // 0. Hard Terminal Log
-    console.log(`[DiscordService/Native] IPC Received Voice Note. Chunks: ${payload?.audioBuffers?.length}, Total Chunks: ${payload?.audioBuffers?.length}`)
+    console.info(`[DiscordService/Native] IPC Received Voice Note. Chunks: ${payload?.audioBuffers?.length}, Total Chunks: ${payload?.audioBuffers?.length}`)
 
     if (!discordClient?.isReady() || !payload?.channelId || !payload?.audioBuffers || payload.audioBuffers.length === 0) {
       pushLog('ERROR', `SendVoiceNote skipped: ClientReady=${discordClient?.isReady()}, Channel=${payload?.channelId}, BufferCount=${payload?.audioBuffers?.length}`)
@@ -678,7 +679,7 @@ export function setupDiscordService() {
   })
 
   defineInvokeHandler(context, discordServiceSummon, async (payload) => {
-    console.log('[DiscordService/Native] discordServiceSummon called with payload:', JSON.stringify(payload))
+    console.info('[DiscordService/Native] discordServiceSummon called with payload:', JSON.stringify(payload))
     if (!discordClient?.isReady()) {
       console.error('[DiscordService/Native] Summon failed: discordClient is not ready.')
       return { success: false, error: 'Discord bot client is not active/ready.' }
@@ -687,18 +688,18 @@ export function setupDiscordService() {
     const userId = payload.userId
     let voiceChannel: any = null
 
-    console.log(`[DiscordService/Native] Searching for userId=${userId} in cached guilds... Guild count: ${discordClient.guilds.cache.size}`)
+    console.info(`[DiscordService/Native] Searching for userId=${userId} in cached guilds... Guild count: ${discordClient.guilds.cache.size}`)
 
     // Search for the user in any of the cached guild voice states
     for (const guild of discordClient.guilds.cache.values()) {
       const voiceState = guild.voiceStates.cache.get(userId)
-      console.log(`[DiscordService/Native] Guild "${guild.name}" (${guild.id}): Voice state cached for user:`, !!voiceState)
+      console.info(`[DiscordService/Native] Guild "${guild.name}" (${guild.id}): Voice state cached for user:`, !!voiceState)
       if (voiceState) {
-        console.log(`[DiscordService/Native] Voice state details: channelId=${voiceState.channelId}`)
+        console.info(`[DiscordService/Native] Voice state details: channelId=${voiceState.channelId}`)
       }
       if (voiceState?.channel) {
         voiceChannel = voiceState.channel
-        console.log(`[DiscordService/Native] Found user voice channel: "${voiceChannel.name}" in guild "${guild.name}"`)
+        console.info(`[DiscordService/Native] Found user voice channel: "${voiceChannel.name}" in guild "${guild.name}"`)
         break
       }
     }
@@ -710,7 +711,7 @@ export function setupDiscordService() {
 
     try {
       pushLog('VOICE', `Attempting to join voice channel: ${voiceChannel.name} in guild: ${voiceChannel.guild.name}`)
-      console.log(`[DiscordService/Native] Calling joinVoiceChannel with channelId=${voiceChannel.id}, guildId=${voiceChannel.guild.id}`)
+      console.info(`[DiscordService/Native] Calling joinVoiceChannel with channelId=${voiceChannel.id}, guildId=${voiceChannel.guild.id}`)
 
       const connection = joinVoiceChannel({
         channelId: voiceChannel.id,
@@ -720,13 +721,13 @@ export function setupDiscordService() {
         selfMute: false,
       })
 
-      console.log('[DiscordService/Native] joinVoiceChannel connection instance created:', !!connection)
+      console.info('[DiscordService/Native] joinVoiceChannel connection instance created:', !!connection)
 
       // Listen for voice connection state changes to handle auto-stop of Gemini session
       connection.on('stateChange', (oldState, newState) => {
-        console.log(`[DiscordService/Voice] Connection state change: ${oldState.status} -> ${newState.status}`)
+        console.info(`[DiscordService/Voice] Connection state change: ${oldState.status} -> ${newState.status}`)
         if (newState.status === 'destroyed' || newState.status === 'disconnected') {
-          console.log('[DiscordService/Voice] Voice channel disconnected or destroyed. Notifying renderer...')
+          console.info('[DiscordService/Voice] Voice channel disconnected or destroyed. Notifying renderer...')
           broadcastToAllWindows('discord-voice-disconnected', {})
         }
       })
@@ -734,18 +735,18 @@ export function setupDiscordService() {
       // Create an AudioPlayer for piping Gemini responses back into the voice channel
       activeAudioPlayer = new AudioPlayer()
       connection.subscribe(activeAudioPlayer)
-      console.log('[DiscordService/Voice] AudioPlayer created and subscribed to voice connection.')
+      console.info('[DiscordService/Voice] AudioPlayer created and subscribed to voice connection.')
 
       activeAudioPlayer.on('error', (err) => {
         console.error('[DiscordService/Voice] AudioPlayer error:', err)
       })
       activeAudioPlayer.on(AudioPlayerStatus.Idle, () => {
-        console.log('[DiscordService/Voice] AudioPlayer is idle (finished playing).')
+        console.info('[DiscordService/Voice] AudioPlayer is idle (finished playing).')
       })
 
       // Set up speaking listeners on connection.receiver
       connection.receiver.speaking.on('start', (targetUserId) => {
-        console.log(`[DiscordService/Voice] User speaking START: ${targetUserId}`)
+        console.info(`[DiscordService/Voice] User speaking START: ${targetUserId}`)
 
         let username = targetUserId
         for (const guild of discordClient!.guilds.cache.values()) {
@@ -766,7 +767,7 @@ export function setupDiscordService() {
             },
           })
 
-          console.log(`[DiscordService/Voice] ▶ Subscribed to Opus audio stream for ${username}.`)
+          console.info(`[DiscordService/Voice] ▶ Subscribed to Opus audio stream for ${username}.`)
 
           // Decode Opus → raw PCM (48kHz stereo 16-bit)
           const decoder = new prism.opus.Decoder({ frameSize: 960, channels: 2, rate: 48000 })
@@ -779,7 +780,7 @@ export function setupDiscordService() {
             decoderChunkCount++
             decoderTotalBytes += chunk.length
             if (decoderChunkCount === 1) {
-              console.log(`[DiscordService/Voice] 🎙️ Decoder first output chunk for ${username}: ${chunk.length} bytes`)
+              console.info(`[DiscordService/Voice] 🎙️ Decoder first output chunk for ${username}: ${chunk.length} bytes`)
             }
           })
 
@@ -792,10 +793,10 @@ export function setupDiscordService() {
           const filePath = path.join(dir, `speaking_${targetUserId}_${timestamp}.pcm`)
           const writeStream = fs.createWriteStream(filePath)
           decoder.pipe(writeStream)
-          console.log(`[DiscordService/Voice] 📄 Path A: Writing PCM to ${filePath}`)
+          console.info(`[DiscordService/Voice] 📄 Path A: Writing PCM to ${filePath}`)
 
           // Path B: Resample 48kHz stereo → 16kHz mono and forward to renderer via IPC (Pure JS)
-          console.log(`[DiscordService/Voice] 🔀 Path B: Setting up pure JS 48kHz stereo → 16kHz mono downsampler...`)
+          console.info(`[DiscordService/Voice] 🔀 Path B: Setting up pure JS 48kHz stereo → 16kHz mono downsampler...`)
 
           let ipcChunkCount = 0
           const classicAudioChunks: Buffer[] = []
@@ -824,7 +825,7 @@ export function setupDiscordService() {
               classicAudioChunks.push(resampledBuffer)
               const base64 = resampledBuffer.toString('base64')
               if (ipcChunkCount === 1) {
-                console.log(`[DiscordService/Voice] 📡 First resampled chunk for ${username}. Input: ${chunk.length} bytes -> Output: ${resampledBuffer.length} bytes. Sending to renderer...`)
+                console.info(`[DiscordService/Voice] 📡 First resampled chunk for ${username}. Input: ${chunk.length} bytes -> Output: ${resampledBuffer.length} bytes. Sending to renderer...`)
               }
               broadcastToAllWindows('discord-audio-chunk', base64)
             }
@@ -834,14 +835,14 @@ export function setupDiscordService() {
           })
 
           decoder.on('end', () => {
-            console.log(`[DiscordService/Voice] ✅ Decoder ended for ${username}. Total decoder output: ${decoderChunkCount} chunks (${decoderTotalBytes} bytes). Total IPC chunks sent: ${ipcChunkCount}.`)
+            console.info(`[DiscordService/Voice] ✅ Decoder ended for ${username}. Total decoder output: ${decoderChunkCount} chunks (${decoderTotalBytes} bytes). Total IPC chunks sent: ${ipcChunkCount}.`)
             pushLog('VOICE_RECORD_END', `Speech segment complete. Decoder: ${decoderChunkCount} chunks, IPC: ${ipcChunkCount} chunks`)
             broadcastToAllWindows('discord-audio-end', { userId: targetUserId })
 
             // Assemble complete PCM buffer and broadcast for classic STT
             const completePcmBuffer = Buffer.concat(classicAudioChunks)
             if (completePcmBuffer.length > 0) {
-              console.log(`[DiscordService/Voice] 📣 Broadcasting complete speech buffer to renderer for Classic TTS: ${completePcmBuffer.length} bytes.`)
+              console.info(`[DiscordService/Voice] 📣 Broadcasting complete speech buffer to renderer for Classic TTS: ${completePcmBuffer.length} bytes.`)
               broadcastToAllWindows('discord-classic-speech-captured', {
                 userId: targetUserId,
                 username,
@@ -851,7 +852,7 @@ export function setupDiscordService() {
           })
 
           audioStream.on('end', () => {
-            console.log(`[DiscordService/Voice] 📭 Opus stream ended for ${username}. Waiting for decoder to drain...`)
+            console.info(`[DiscordService/Voice] 📭 Opus stream ended for ${username}. Waiting for decoder to drain...`)
           })
 
           audioStream.on('error', (err) => {
@@ -872,7 +873,7 @@ export function setupDiscordService() {
             break
           }
         }
-        console.log(`[DiscordService/Voice] User speaking END: ${username}`)
+        console.info(`[DiscordService/Voice] User speaking END: ${username}`)
       })
 
       pushLog('VOICE', `Successfully joined voice channel: ${voiceChannel.name}`)
@@ -936,14 +937,14 @@ export function setupDiscordService() {
       // If there's no active passthrough stream, create one and start playing
       if (!activeAudioPassthrough) {
         activeAudioPassthrough = new PassThrough()
-        console.log('[DiscordService/Voice] 🔊 Created new PassThrough for Gemini audio playback.')
+        console.info('[DiscordService/Voice] 🔊 Created new PassThrough for Gemini audio playback.')
 
         const resource = createAudioResource(activeAudioPassthrough, {
           inputType: StreamType.Raw,
         })
 
         activeAudioPlayer.play(resource)
-        console.log('[DiscordService/Voice] 🎵 AudioPlayer playing raw stream.')
+        console.info('[DiscordService/Voice] 🎵 AudioPlayer playing raw stream.')
       }
 
       // Upsample: 24kHz mono (1 sample = 2 bytes) → 48kHz stereo (4 samples = 8 bytes)
@@ -970,7 +971,7 @@ export function setupDiscordService() {
   })
 
   ipcMain.on('gemini-audio-end', () => {
-    console.log('[DiscordService/Voice] Received gemini-audio-end. Finalizing audio stream.')
+    console.info('[DiscordService/Voice] Received gemini-audio-end. Finalizing audio stream.')
     if (activeAudioPassthrough) {
       activeAudioPassthrough.end()
       activeAudioPassthrough = null

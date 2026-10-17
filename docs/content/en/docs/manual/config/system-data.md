@@ -13,7 +13,7 @@ AIRI gives you complete ownership of your data. This section explains how your s
 
 AIRI utilizes a dual-engine local storage architecture directly inside your browser / Electron client:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    AIRI Local Storage                       │
 ├──────────────────────────────┬──────────────────────────────┤

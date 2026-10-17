@@ -56,7 +56,7 @@ In `step-finale.vue` (lines 592–606), the avatar is embedded directly as a chi
 
 Rather than introducing an artificial tab switcher that segments the right panel, we align with the established design pattern already powering the right-hand panel in `apps/stage-tamagotchi/src/renderer/pages/chat.vue`:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │ Desktop Chat Window (`apps/stage-tamagotchi/src/renderer/pages/chat.vue`)    │
 ├────────────────────────────────────────┬────────────────────────────────────┤

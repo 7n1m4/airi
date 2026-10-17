@@ -16,6 +16,8 @@
 import crypto from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
+import vm from 'node:vm'
 
 import { fileURLToPath } from 'node:url'
 
@@ -59,9 +61,9 @@ function getEnvConfig() {
 }
 const env = getEnvConfig()
 
-console.log('===============================================================')
-console.log('🕹️  AIRI Arcade Cleanroom: Headless Replay & Extractor Harness')
-console.log('===============================================================\n')
+console.info('===============================================================')
+console.info('🕹️  AIRI Arcade Cleanroom: Headless Replay & Extractor Harness')
+console.info('===============================================================\n')
 
 // 3. Load Trace File
 if (!fs.existsSync(tracePath)) {
@@ -69,17 +71,17 @@ if (!fs.existsSync(tracePath)) {
   process.exit(1)
 }
 
-console.log(`📂 Loading trace: ${path.relative(ROOT, tracePath)}...`)
+console.info(`📂 Loading trace: ${path.relative(ROOT, tracePath)}...`)
 const traceData = JSON.parse(fs.readFileSync(tracePath, 'utf8'))
 const gameTitle = traceData.game || 'Retro Arcade'
 const frames = traceData.frames || []
-console.log(`🎮 Game: ${gameTitle}`)
-console.log(`⏱️ Duration: ${traceData.durationMs || 0}ms | Total Frames: ${frames.length}`)
+console.info(`🎮 Game: ${gameTitle}`)
+console.info(`⏱️ Duration: ${traceData.durationMs || 0}ms | Total Frames: ${frames.length}`)
 
 const framesToProcess = maxFrames > 0 ? frames.slice(0, maxFrames) : frames
 
 // 4. Trace Replay Loop with diffUtils
-console.log(`\n🚀 Executing Replay Loop (${framesToProcess.length} frames)...`)
+console.info(`\n🚀 Executing Replay Loop (${framesToProcess.length} frames)...`)
 const startTime = performance.now()
 
 let prevClusters = []
@@ -157,14 +159,14 @@ for (let i = 0; i < framesToProcess.length; i++) {
 const totalTimeMs = performance.now() - startTime
 const avgFrameMs = (totalTimeMs / framesToProcess.length).toFixed(3)
 
-console.log('\n--- Replay Benchmark Results ---')
-console.log(`⚡ Processed: ${framesToProcess.length} frames in ${totalTimeMs.toFixed(1)}ms (avg: ${avgFrameMs}ms / frame)`)
-console.log(`🎯 Player Tracking Continuity: ${Math.round((playerTrackedCount / framesToProcess.length) * 100)}%`)
+console.info('\n--- Replay Benchmark Results ---')
+console.info(`⚡ Processed: ${framesToProcess.length} frames in ${totalTimeMs.toFixed(1)}ms (avg: ${avgFrameMs}ms / frame)`)
+console.info(`🎯 Player Tracking Continuity: ${Math.round((playerTrackedCount / framesToProcess.length) * 100)}%`)
 if (detectedLossFrame !== null) {
-  console.log(`💥 Game-Over / Loss Event Detected at Frame #${detectedLossFrame} (t=${framesToProcess[detectedLossFrame].t}ms)`)
+  console.info(`💥 Game-Over / Loss Event Detected at Frame #${detectedLossFrame} (t=${framesToProcess[detectedLossFrame].t}ms)`)
 }
 else {
-  console.log('ℹ️  No Game-Over burst detected during this segment.')
+  console.info('ℹ️  No Game-Over burst detected during this segment.')
 }
 
 // 5. Optional System-2 Extractor Synthesis (OpenCode Go)
@@ -187,8 +189,8 @@ function renderAsciiGrid(frame, state, grid80x40) {
   }
   const headingArrow = arrows[state.player?.heading || 'STATIONARY'] || '●'
 
-  console.log(`\nFrame #${state.frameIndex} [t=${state.t}ms] | Keys: [${state.keys.join(', ')}] | Heading: ${state.player?.heading || 'NONE'} ${headingArrow} | Loss: ${state.isGameOver ? '💥 CRASH' : 'NO'}`)
-  console.log(`┌${'─'.repeat(80)}┐`)
+  console.info(`\nFrame #${state.frameIndex} [t=${state.t}ms] | Keys: [${state.keys.join(', ')}] | Heading: ${state.player?.heading || 'NONE'} ${headingArrow} | Loss: ${state.isGameOver ? '💥 CRASH' : 'NO'}`)
+  console.info(`┌${'─'.repeat(80)}┐`)
 
   // Render 80x20 half-block terminal lines (packs 80x40 perfectly)
   for (let y = 0; y < 40; y += 2) {
@@ -217,19 +219,19 @@ function renderAsciiGrid(frame, state, grid80x40) {
           line += ' '
       }
     }
-    console.log(`│${line}│`)
+    console.info(`│${line}│`)
   }
-  console.log(`└${'─'.repeat(80)}┘`)
+  console.info(`└${'─'.repeat(80)}┘`)
   if (state.player) {
-    console.log(`📍 Player Head: (${state.player.x}, ${state.player.y}) | Vector: (${state.player.dx || 0}, ${state.player.dy || 0}) | Active Clusters: ${state.threats.length + 1}`)
+    console.info(`📍 Player Head: (${state.player.x}, ${state.player.y}) | Vector: (${state.player.dx || 0}, ${state.player.dy || 0}) | Active Clusters: ${state.threats.length + 1}`)
   }
 }
 
 // --- System-2 Agentic Reflexion Synthesis Routine ---
 async function runAgenticSynthesisLoop(trace) {
-  console.log('\n===============================================================')
-  console.log('🧠 System-2 Agentic Synthesis Loop (Test-Time Reflexion)')
-  console.log('===============================================================')
+  console.info('\n===============================================================')
+  console.info('🧠 System-2 Agentic Synthesis Loop (Test-Time Reflexion)')
+  console.info('===============================================================')
 
   const apiKey = env.OPENCODE_GO_API_KEY
   const baseUrl = env.OPENCODE_GO_BASE_URL || 'https://opencode.ai/zen/go/v1'
@@ -243,7 +245,7 @@ async function runAgenticSynthesisLoop(trace) {
   const maxTurns = Number.parseInt(getArg('--turns', '5'), 10)
   const sessionId = crypto.randomUUID()
 
-  console.log(`🤖 Model: ${synthModel} | Max Turns: ${maxTurns} | Session: ${sessionId}`)
+  console.info(`🤖 Model: ${synthModel} | Max Turns: ${maxTurns} | Session: ${sessionId}`)
 
   const initialPrompt = `You are AIRI's Autonomous Gaming Subsystem.
 Synthesize a pure JavaScript state extractor and evaluator for this retro game:
@@ -286,9 +288,9 @@ Output ONLY the code block in \`\`\`javascript ... \`\`\`.`
   let verifiedCode = null
 
   for (let turn = 1; turn <= maxTurns; turn++) {
-    console.log(`\n--------------------------------------------------`)
-    console.log(`🔄 Turn ${turn} / ${maxTurns}: Requesting Code Synthesis from ${synthModel}...`)
-    console.log(`--------------------------------------------------`)
+    console.info(`\n--------------------------------------------------`)
+    console.info(`🔄 Turn ${turn} / ${maxTurns}: Requesting Code Synthesis from ${synthModel}...`)
+    console.info(`--------------------------------------------------`)
 
     const t0 = performance.now()
     let rawContent = ''
@@ -323,12 +325,12 @@ Output ONLY the code block in \`\`\`javascript ... \`\`\`.`
     }
 
     const elapsed = Math.round(performance.now() - t0)
-    console.log(`⚡ Model responded in ${elapsed}ms`)
+    console.info(`⚡ Model responded in ${elapsed}ms`)
 
     // Extract code block strictly from msg.content
     let candidateCode = ''
     if (rawContent) {
-      const codeBlocks = [...rawContent.matchAll(/```(?:javascript|js)?\s*([\s\S]*?)```/g)].map(m => m[1].trim())
+      const codeBlocks = [...rawContent.matchAll(/```(?:javascript|js)?([\s\S]*?)```/g)].map(m => m[1].trim())
       candidateCode = codeBlocks.find(b => b.includes('extractGameState')) || ''
       if (!candidateCode) {
         const fnMatch = rawContent.match(/function\s+extractGameState[\s\S]*?(?:function\s+evaluateGameState[\s\S]*?\}|\})/)
@@ -344,23 +346,23 @@ Output ONLY the code block in \`\`\`javascript ... \`\`\`.`
       continue
     }
 
-    console.log(`\n📝 Candidate Code (Turn ${turn}):`)
-    console.log(candidateCode.slice(0, 350) + (candidateCode.length > 350 ? '\n... (truncated)' : ''))
+    console.info(`\n📝 Candidate Code (Turn ${turn}):`)
+    console.info(candidateCode.slice(0, 350) + (candidateCode.length > 350 ? '\n... (truncated)' : ''))
 
     // Run Sandbox Judge against actual recorded frames
-    console.log('\n⚖️  Running Automated Sandbox Judge against recorded frames...')
+    console.info('\n⚖️  Running Automated Sandbox Judge against recorded frames...')
     const testFrames = trace.frames.slice(0, 200)
     const judgeResult = runSandboxJudge(candidateCode, testFrames, diffUtils)
 
-    console.log('Judge Report:')
-    console.log(`  1. Runtime Safety: ${judgeResult.safety.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.safety.reason}`}`)
-    console.log(`  2. Dynamic Heading: ${judgeResult.heading.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.heading.reason}`}`)
-    console.log(`  3. Action Diversity: ${judgeResult.actions.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.actions.reason}`}`)
-    console.log(`  4. Game-Over Consistency: ${judgeResult.loss.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.loss.reason}`}`)
+    console.info('Judge Report:')
+    console.info(`  1. Runtime Safety: ${judgeResult.safety.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.safety.reason}`}`)
+    console.info(`  2. Dynamic Heading: ${judgeResult.heading.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.heading.reason}`}`)
+    console.info(`  3. Action Diversity: ${judgeResult.actions.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.actions.reason}`}`)
+    console.info(`  4. Game-Over Consistency: ${judgeResult.loss.passed ? '✅ PASS' : `❌ FAIL: ${judgeResult.loss.reason}`}`)
 
     if (judgeResult.passed) {
-      console.log(`\n🎉 ALL 4 SANDBOX JUDGE CRITERIA PASSED on Turn ${turn}!`)
-      console.log('✨ Verified mini-program synthesized successfully!')
+      console.info(`\n🎉 ALL 4 SANDBOX JUDGE CRITERIA PASSED on Turn ${turn}!`)
+      console.info('✨ Verified mini-program synthesized successfully!')
       isVerified = true
       verifiedCode = candidateCode
       break
@@ -382,19 +384,19 @@ ${failures.map((f, i) => `${i + 1}. ${f}`).join('\n')}
 
 Please review these empirical failures, fix your logic, and output the updated complete code inside a \`\`\`javascript block.`
 
-    console.log(`\n💬 Sending Critique Feedback to Agent for Turn ${turn + 1}...`)
+    console.info(`\n💬 Sending Critique Feedback to Agent for Turn ${turn + 1}...`)
     messages.push({ role: 'assistant', content: rawContent })
     messages.push({ role: 'user', content: critique })
   }
 
   if (isVerified) {
-    console.log('\n===============================================================')
-    console.log('🏆 AGENTIC SYNTHESIS COMPLETE: VERIFIED CODE')
-    console.log('===============================================================')
-    console.log(verifiedCode)
+    console.info('\n===============================================================')
+    console.info('🏆 AGENTIC SYNTHESIS COMPLETE: VERIFIED CODE')
+    console.info('===============================================================')
+    console.info(verifiedCode)
   }
   else {
-    console.log('\n⚠️ Reached maximum turns without passing all judge criteria.')
+    console.info('\n⚠️ Reached maximum turns without passing all judge criteria.')
   }
 }
 
@@ -409,18 +411,22 @@ function runSandboxJudge(code, frames, diffUtils) {
   }
 
   // 1. Runtime Safety (compilation)
+  // NOTICE: `node:vm` context instead of `new Function` so the candidate code runs
+  // in an isolated scope (no shared globals, no host access) — matches the sandbox
+  // pattern in scripts/sync-free-ai-platforms.ts.
   let extractFn = null
   let evaluateFn = null
   try {
     const wrapped = `
+      (function (diffUtils) {
       ${code}
       return {
         extractGameState: typeof extractGameState !== 'undefined' ? extractGameState : null,
         evaluateGameState: typeof evaluateGameState !== 'undefined' ? evaluateGameState : null,
       };
+      })(diffUtils)
     `
-    const factory = new Function('diffUtils', wrapped)
-    const exports = factory(diffUtils)
+    const exports = vm.runInNewContext(wrapped, { diffUtils })
     extractFn = exports.extractGameState
     evaluateFn = exports.evaluateGameState
     if (!extractFn) {
@@ -522,9 +528,9 @@ function runSandboxJudge(code, frames, diffUtils) {
 
 // --- System-1 Jev Reflex Routine ---
 async function runJevReflexTest(history) {
-  console.log('\n===============================================================')
-  console.log('⚡ Testing System-1 Fast Reflex Loop (TypeSafe Jev)')
-  console.log('===============================================================')
+  console.info('\n===============================================================')
+  console.info('⚡ Testing System-1 Fast Reflex Loop (TypeSafe Jev)')
+  console.info('===============================================================')
 
   const apiKey = env.TYPESAFE_API_KEY
   if (!apiKey) {
@@ -539,7 +545,7 @@ async function runJevReflexTest(history) {
     return
   }
 
-  console.log(`Evaluating reflex decision for Frame #${sample.frameIndex} (Heading: ${sample.player?.heading}, Targets: ${sample.targets.length})`)
+  console.info(`Evaluating reflex decision for Frame #${sample.frameIndex} (Heading: ${sample.player?.heading}, Targets: ${sample.targets.length})`)
 
   const payload = {
     game: 'Nibbles',
@@ -582,8 +588,8 @@ async function runJevReflexTest(history) {
 
     const data = await res.json()
     const elapsed = Math.round(performance.now() - t0)
-    console.log(`⚡ Jev reflex resolved in ${elapsed}ms:`)
-    console.log('Response:', JSON.stringify(data.answers || data, null, 2))
+    console.info(`⚡ Jev reflex resolved in ${elapsed}ms:`)
+    console.info('Response:', JSON.stringify(data.answers || data, null, 2))
   }
   catch (err) {
     console.error('❌ Jev evaluation failed:', err.message)

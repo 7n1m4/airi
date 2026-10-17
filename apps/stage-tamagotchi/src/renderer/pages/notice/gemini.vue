@@ -172,7 +172,6 @@ async function handleButtonClick() {
 
         <!-- Feature Grid (Bottom Section) -->
         <div
-          ref="descriptionContainerRef"
           v-motion
           :initial="{ opacity: 0, y: 30 }"
           :enter="{ opacity: 1, y: 0 }"

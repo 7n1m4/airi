@@ -1,8 +1,18 @@
+import process from 'node:process'
+
 import WebSocket from 'ws'
 
-import * as dotenv from 'dotenv'
-
-dotenv.config()
+// NOTICE: this POC used `dotenv`, which the depend/ban-dependencies rule rejects.
+// Node >= 20.12 (repo engines require >= 20.14) exposes `process.loadEnvFile()`
+// natively, so no dependency is needed. A missing local `.env` is tolerated to
+// preserve the old `dotenv.config()` behaviour of falling back to the caller's
+// environment.
+try {
+  process.loadEnvFile('.env')
+}
+catch {
+  // No local .env — fall back to variables from the caller's environment.
+}
 
 // USE PROVIDED API KEY (Second one)
 const PRIMARY_API_KEY = process.env.GEMINI_API_KEY || ''
@@ -10,15 +20,15 @@ const MODEL = 'models/gemini-3.1-flash-live-preview'
 const API_VERSION = 'v1alpha'
 
 async function main() {
-  console.log('--- Grounding POC: Isolated Clean Room ---')
+  console.info('--- Grounding POC: Isolated Clean Room ---')
 
   const endpoint = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.${API_VERSION}.GenerativeService.BidiGenerateContent?key=${PRIMARY_API_KEY}`
-  console.debug('Connecting to endpoint...')
+  console.info('Connecting to endpoint...')
 
   const ws = new WebSocket(endpoint)
 
   ws.on('open', () => {
-    console.debug('WebSocket connected!')
+    console.info('WebSocket connected!')
 
     const setupMessage = {
       setup: {
@@ -35,7 +45,7 @@ async function main() {
       },
     }
 
-    console.debug('Sending setup message (AUDIO + google_search)...')
+    console.info('Sending setup message (AUDIO + google_search)...')
     ws.send(JSON.stringify(setupMessage))
   })
 
@@ -45,17 +55,17 @@ async function main() {
 
       // LOG EVERYTHING for deep inspection
       if (!response.serverContent) {
-        console.log('\n[RAW RESPONSE]:', JSON.stringify(response, null, 2))
+        console.info('\n[RAW RESPONSE]:', JSON.stringify(response, null, 2))
       }
 
       if (response.setupComplete) {
-        console.debug('--- Setup complete! ---')
+        console.info('--- Setup complete! ---')
         const clientMessage = {
           realtimeInput: {
             text: 'Who won the game between the Dodgers and the Orioles last night?',
           },
         }
-        console.log('Sending query: "Who won the Dodgers/Orioles game last night?"')
+        console.info('Sending query: "Who won the Dodgers/Orioles game last night?"')
         ws.send(JSON.stringify(clientMessage))
       }
 
@@ -65,20 +75,20 @@ async function main() {
         if (content.modelTurn?.parts) {
           content.modelTurn.parts.forEach((p: any) => {
             if (p.text) {
-              console.log('\n[ASSISTANT]:', p.text)
+              console.info('\n[ASSISTANT]:', p.text)
             }
             if (p.call) {
-              console.log('\n[TOOL CALL]:', JSON.stringify(p.call, null, 2))
+              console.info('\n[TOOL CALL]:', JSON.stringify(p.call, null, 2))
             }
           })
         }
 
         if (content.groundingMetadata) {
-          console.log('\n[GROUNDING METADATA]:', JSON.stringify(content.groundingMetadata, null, 2))
+          console.info('\n[GROUNDING METADATA]:', JSON.stringify(content.groundingMetadata, null, 2))
         }
 
         if (content.turnComplete) {
-          console.log('\n--- Turn Complete ---')
+          console.info('\n--- Turn Complete ---')
           ws.close()
         }
       }
@@ -98,7 +108,7 @@ async function main() {
   })
 
   ws.on('close', (code, reason) => {
-    console.debug(`WebSocket closed [${code}]:`, reason.toString())
+    console.info(`WebSocket closed [${code}]:`, reason.toString())
   })
 }
 

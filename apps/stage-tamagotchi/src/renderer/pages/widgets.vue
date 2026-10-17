@@ -83,7 +83,7 @@ async function requestRemoval(id: string) {
 }
 
 function applySnapshot(snapshot: WidgetSnapshot) {
-  console.log('[Widgets] Applying snapshot:', snapshot)
+  console.info('[Widgets] Applying snapshot:', snapshot)
   clearTtl()
   widget.value = {
     id: snapshot.id,
@@ -144,7 +144,7 @@ onMounted(() => {
       if (!body || body.id !== widgetId.value)
         return
 
-      console.log(`[Widgets] 📥 Update Received for ${body.id}:`, body.componentProps)
+      console.info(`[Widgets] 📥 Update Received for ${body.id}:`, body.componentProps)
 
       if (!widget.value) {
         requestSnapshot(body.id)
@@ -157,7 +157,7 @@ onMounted(() => {
       }
 
       const merged = { ...widget.value.componentProps, ...body.componentProps }
-      console.log(`[Widgets] 🌓 Props Merged. New State:`, merged)
+      console.info(`[Widgets] 🌓 Props Merged. New State:`, merged)
 
       widget.value = {
         ...widget.value,

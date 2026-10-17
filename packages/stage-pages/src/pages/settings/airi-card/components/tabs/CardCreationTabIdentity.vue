@@ -3,7 +3,7 @@ import { FieldInput, FieldValues } from '@proj-airi/ui'
 import { useI18n } from 'vue-i18n'
 
 const emit = defineEmits<{
-  (e: 'sparkle-click', fieldId: string): void
+  (e: 'sparkleClick', fieldId: string): void
 }>()
 const cardName = defineModel<string>('cardName', { required: true })
 const cardNickname = defineModel<string>('cardNickname', { required: true })
@@ -52,7 +52,7 @@ const { t } = useI18n()
               style="position: absolute; top: 8px; right: 8px; z-index: 50; display: flex; height: 32px; width: 32px; align-items: center; justify-content: center; border-radius: 8px; border: none; cursor: pointer; background: transparent;"
               class="text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-primary-500 dark:hover:bg-neutral-800 dark:hover:text-primary-400"
               title="Optimize with AI"
-              @click.prevent="emit('sparkle-click', 'description')"
+              @click.prevent="emit('sparkleClick', 'description')"
             >
               <span i-ph:sparkle class="i-ph:sparkle animate-pulse text-lg" style="display: inline-block; width: 1.2em; height: 1.2em;" />
             </button>
@@ -85,7 +85,7 @@ const { t } = useI18n()
               style="position: absolute; top: 8px; right: 8px; z-index: 50; display: flex; height: 32px; width: 32px; align-items: center; justify-content: center; border-radius: 8px; border: none; cursor: pointer; background: transparent;"
               class="text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-primary-500 dark:hover:bg-neutral-800 dark:hover:text-primary-400"
               title="Optimize with AI"
-              @click.prevent="emit('sparkle-click', 'personality')"
+              @click.prevent="emit('sparkleClick', 'personality')"
             >
               <span i-ph:sparkle class="i-ph:sparkle animate-pulse text-lg" style="display: inline-block; width: 1.2em; height: 1.2em;" />
             </button>
@@ -117,7 +117,7 @@ const { t } = useI18n()
               style="position: absolute; top: 8px; right: 8px; z-index: 50; display: flex; height: 32px; width: 32px; align-items: center; justify-content: center; border-radius: 8px; border: none; cursor: pointer; background: transparent;"
               class="text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-primary-500 dark:hover:bg-neutral-800 dark:hover:text-primary-400"
               title="Optimize with AI"
-              @click.prevent="emit('sparkle-click', 'scenario')"
+              @click.prevent="emit('sparkleClick', 'scenario')"
             >
               <span i-ph:sparkle class="i-ph:sparkle animate-pulse text-lg" style="display: inline-block; width: 1.2em; height: 1.2em;" />
             </button>
@@ -136,7 +136,7 @@ const { t } = useI18n()
                 style="display: inline-flex; height: 24px; width: 24px; align-items: center; justify-content: center; border-radius: 6px; border: none; cursor: pointer; background: transparent;"
                 class="text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-primary-500 dark:hover:bg-neutral-800 dark:hover:text-primary-400"
                 title="Generate with AI"
-                @click.prevent="emit('sparkle-click', 'greetings')"
+                @click.prevent="emit('sparkleClick', 'greetings')"
               >
                 <span i-ph:sparkle class="i-ph:sparkle animate-pulse text-sm" style="display: inline-block; width: 1.2em; height: 1.2em;" />
               </button>
@@ -175,7 +175,7 @@ const { t } = useI18n()
                 style="position: absolute; top: 8px; right: 8px; z-index: 50; display: flex; height: 32px; width: 32px; align-items: center; justify-content: center; border-radius: 8px; border: none; cursor: pointer; background: transparent;"
                 class="text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-primary-500 dark:hover:bg-neutral-800 dark:hover:text-primary-400"
                 title="Optimize with AI"
-                @click.prevent="emit('sparkle-click', 'systemPrompt')"
+                @click.prevent="emit('sparkleClick', 'systemPrompt')"
               >
                 <span i-ph:sparkle class="i-ph:sparkle animate-pulse text-lg" style="display: inline-block; width: 1.2em; height: 1.2em;" />
               </button>

@@ -3,6 +3,8 @@
  * Validates both Chat and TTS (Speech) capabilities using standard fetch.
  */
 
+import process from 'node:process'
+
 const API_KEY = (process.env.AIRI_TEST_API_KEY || '').trim()
 const BASE_URL = (process.env.AIRI_TEST_BASE_URL || '').trim()
 
@@ -19,13 +21,13 @@ if (!normalizedBaseUrl.endsWith('/v1'))
 normalizedBaseUrl += '/'
 
 async function validateProvider() {
-  console.log(`\n🚀 Starting validation for: ${normalizedBaseUrl}`)
-  console.log(`🔑 API Key: ${API_KEY ? (`${API_KEY.substring(0, 4)}...${API_KEY.substring(API_KEY.length - 4)}`) : 'NONE'}`)
+  console.info(`\n🚀 Starting validation for: ${normalizedBaseUrl}`)
+  console.info(`🔑 API Key: ${API_KEY ? (`${API_KEY.substring(0, 4)}...${API_KEY.substring(API_KEY.length - 4)}`) : 'NONE'}`)
 
   const errors: string[] = []
 
   // 1. Model List Check
-  console.log('\n📡 [1/2] Checking Model List (/models)...')
+  console.info('\n📡 [1/2] Checking Model List (/models)...')
   let testModel = 'gpt-3.5-turbo'
   try {
     const controller = new AbortController()
@@ -42,10 +44,10 @@ async function validateProvider() {
     if (response.ok) {
       const data = await response.json()
       const models = data.data || []
-      console.log(`✅ Success: Found ${models.length} models.`)
+      console.info(`✅ Success: Found ${models.length} models.`)
       if (models.length > 0) {
         testModel = models[0].id
-        console.log(`   First model: ${testModel}`)
+        console.info(`   First model: ${testModel}`)
       }
     }
     else {
@@ -63,12 +65,12 @@ async function validateProvider() {
   }
 
   // 2. Health Check
-  console.log('\n📡 [2/2] Checking Health...')
+  console.info('\n📡 [2/2] Checking Health...')
 
   // Try Chat Completions
   let chatPassed = false
   try {
-    console.log(`   Trying Chat Completions (/chat/completions) with model: ${testModel}`)
+    console.info(`   Trying Chat Completions (/chat/completions) with model: ${testModel}`)
     const response = await fetch(`${normalizedBaseUrl}chat/completions`, {
       method: 'POST',
       headers: {
@@ -85,7 +87,7 @@ async function validateProvider() {
     if (response.ok) {
       const data = await response.json()
       const content = data.choices?.[0]?.message?.content || ''
-      console.log(`✅ Success (Chat): Received response "${content.trim()}"`)
+      console.info(`✅ Success (Chat): Received response "${content.trim()}"`)
       chatPassed = true
     }
     else {
@@ -96,11 +98,11 @@ async function validateProvider() {
       // Explain AIRI Heuristics
       const chatOk = status === 400 || (status >= 200 && status < 300)
       if (chatOk) {
-        console.log(`   ℹ️ Heuristic: AIRI will treat this HTTP ${status} as "Functional" (reachable/ready).`)
+        console.info(`   ℹ️ Heuristic: AIRI will treat this HTTP ${status} as "Functional" (reachable/ready).`)
         chatPassed = true // For the sake of the harness summary
       }
       else {
-        console.log(`   ❌ Heuristic: AIRI will treat this as "Invalid" (connectivity/unsupported).`)
+        console.info(`   ❌ Heuristic: AIRI will treat this as "Invalid" (connectivity/unsupported).`)
       }
     }
   }
@@ -110,7 +112,7 @@ async function validateProvider() {
 
   if (!chatPassed) {
     // If Chat fails, try Speech
-    console.log('   Trying Speech Generation (/audio/speech)...')
+    console.info('   Trying Speech Generation (/audio/speech)...')
     try {
       // Use the model from /models if it looks like tts, else fallback
       const speechModel = testModel.includes('tts') ? testModel : 'tts-1'
@@ -129,7 +131,7 @@ async function validateProvider() {
 
       if (response.ok) {
         const buffer = await response.arrayBuffer()
-        console.log(`✅ Success (Speech): Received ${buffer.byteLength} bytes of audio.`)
+        console.info(`✅ Success (Speech): Received ${buffer.byteLength} bytes of audio.`)
       }
       else {
         const text = await response.text()
@@ -143,13 +145,13 @@ async function validateProvider() {
     }
   }
 
-  console.log('\n--- Result ---')
+  console.info('\n--- Result ---')
   if (errors.length === 0) {
-    console.log('💚 VALIDATION PASSED')
+    console.info('💚 VALIDATION PASSED')
   }
   else {
-    console.log('🔴 VALIDATION FAILED')
-    errors.forEach(err => console.log(`   - ${err}`))
+    console.info('🔴 VALIDATION FAILED')
+    errors.forEach(err => console.info(`   - ${err}`))
   }
 }
 

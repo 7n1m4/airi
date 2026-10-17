@@ -173,8 +173,24 @@ function onOrbitControlsReady() {
   controlsReady.value = true
 }
 
-//  === VRMModel ===
+// === VRMModel ===
 const modelLoaded = ref<boolean>(false)
+
+// === VFX Aura Controller ===
+const auraController = shallowRef<AuraController | null>(null)
+
+function initAuraController(scene: Scene) {
+  if (auraController.value) {
+    auraController.value.dispose()
+    auraController.value = null
+  }
+  auraController.value = new AuraController({ scene })
+  const activeVrm = modelRef.value?.getVRM?.()
+  if (activeVrm) {
+    auraController.value.setResolver(new VrmSocketResolver(activeVrm))
+  }
+}
+
 function onVRMModelLoadStart() {
   modelLoaded.value = false
   controlEnable.value = false
@@ -230,21 +246,6 @@ function onSkyBoxReady(EnvPayload: {
   irrSH: SphericalHarmonics3 | null
 }) {
   irrSHTex.value = EnvPayload.irrSH || null
-}
-
-// === VFX Aura Controller ===
-const auraController = shallowRef<AuraController | null>(null)
-
-function initAuraController(scene: Scene) {
-  if (auraController.value) {
-    auraController.value.dispose()
-    auraController.value = null
-  }
-  auraController.value = new AuraController({ scene })
-  const activeVrm = modelRef.value?.getVRM?.()
-  if (activeVrm) {
-    auraController.value.setResolver(new VrmSocketResolver(activeVrm))
-  }
 }
 
 // === Tres Canvas ===

@@ -17,6 +17,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 import vm from 'node:vm'
 
 import { fileURLToPath } from 'node:url'
@@ -189,27 +190,27 @@ async function main() {
   const srcIndex = args.indexOf('--source')
   if (srcIndex !== -1 && args[srcIndex + 1]) {
     localSourceDir = path.resolve(args[srcIndex + 1])
-    console.log(`📂 Using local FreeLLMAPI source directory: ${localSourceDir}`)
+    console.info(`📂 Using local FreeLLMAPI source directory: ${localSourceDir}`)
   }
   else {
-    console.log(`🌐 Fetching latest FreeLLMAPI source from GitHub (${GITHUB_RAW_BASE})...`)
+    console.info(`🌐 Fetching latest FreeLLMAPI source from GitHub (${GITHUB_RAW_BASE})...`)
   }
 
-  console.log('⏳ Reading server/src/providers/index.ts...')
+  console.info('⏳ Reading server/src/providers/index.ts...')
   const indexContent = await fetchOrReadFile('server/src/providers/index.ts', localSourceDir)
 
-  console.log('⏳ Reading client/src/components/keys/shared.tsx...')
+  console.info('⏳ Reading client/src/components/keys/shared.tsx...')
   const sharedContent = await fetchOrReadFile('client/src/components/keys/shared.tsx', localSourceDir)
 
-  console.log('⚙️  Mounting mock execution harness for provider registrations...')
+  console.info('⚙️  Mounting mock execution harness for provider registrations...')
   const providersMap = extractProvidersFromIndex(indexContent)
-  console.log(`   Found ${providersMap.size} provider configurations in server registry.`)
+  console.info(`   Found ${providersMap.size} provider configurations in server registry.`)
 
-  console.log('⚙️  Mounting mock execution harness for client PLATFORMS table...')
+  console.info('⚙️  Mounting mock execution harness for client PLATFORMS table...')
   const platformsList = extractPlatformsFromShared(sharedContent)
-  console.log(`   Found ${platformsList.length} platform definitions in client shared UI catalog.`)
+  console.info(`   Found ${platformsList.length} platform definitions in client shared UI catalog.`)
 
-  console.log('🧩 Merging and synthesizing platform metadata...')
+  console.info('🧩 Merging and synthesizing platform metadata...')
   const result: Record<string, FreeAIPlatformMeta> = {}
 
   // Merge client platforms first
@@ -273,10 +274,10 @@ async function main() {
   fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true })
   fs.writeFileSync(OUTPUT_FILE, `${JSON.stringify(sortedResult, null, 2)}\n`, 'utf8')
 
-  console.log(`\n✅ Successfully generated ${OUTPUT_FILE}`)
-  console.log(`📊 Total platforms cataloged: ${sortedKeys.length}`)
-  console.log(`🔑 Keyless platforms: ${sortedKeys.filter(k => sortedResult[k].keyless).join(', ')}`)
-  console.log(`🚀 Ready for import in stage-ui free-ai-catalog store.`)
+  console.info(`\n✅ Successfully generated ${OUTPUT_FILE}`)
+  console.info(`📊 Total platforms cataloged: ${sortedKeys.length}`)
+  console.info(`🔑 Keyless platforms: ${sortedKeys.filter(k => sortedResult[k].keyless).join(', ')}`)
+  console.info('🚀 Ready for import in stage-ui free-ai-catalog store.')
 }
 
 main().catch((err) => {

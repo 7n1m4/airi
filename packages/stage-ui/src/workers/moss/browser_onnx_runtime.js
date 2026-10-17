@@ -5,22 +5,24 @@ import * as ort from 'onnxruntime-web'
 const CJK_CHARS = '\\u3400-\\u4dbf\\u4e00-\\u9fff\\u3040-\\u30ff'
 const CJK = `[${CJK_CHARS}]`
 const PROT = '___PROT\\d+___'
-const PROT_CAPTURE_RE = new RegExp(`(${PROT})`, 'gu')
+const PROT_CAPTURE_RE = new RegExp(`(${PROT})`, 'u')
 const PROT_FULL_RE = new RegExp(`^${PROT}$`, 'u')
 const URL_RE = /https?:\/\/[^\s，。！？；、）】》〉」』]+/gu
 const EMAIL_RE = /(?<![\w.+-])[\w.%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}(?![\w.-])/gu
 const MENTION_RE = /\B@\w{1,32}/gu
 const REDDIT_RE = /\b(?:u|r)\/\w+/gu
-const HASHTAG_RE = /\B#(?!\s)[^\s#]+/gu
+const HASHTAG_RE = /\B#[^\s#]+/gu
 const DOT_TOKEN_RE = /\B\.(?=[\w.-]*[A-Za-z0-9])[\w.-]+/gu
 const FILELIKE_RE = /\b(?=[\w./+:-]*[A-Za-z])(?=[\w./+:-]*[./+:-])[A-Za-z0-9][\w./+:-]*(?!\w)/gu
-const LATINISH = `(?:${PROT}|(?=[A-Za-z0-9._/+:-]*[A-Za-z])[A-Za-z0-9][A-Za-z0-9._/+:-]*)`
+// NOTICE: `___PROT<n>___` markers are a strict subset of `[\w./+:-]*\w`, so the
+// protected-span alternative is implicit and needs no alternation.
+const LATINISH = `[\\w./+:-]*\\w`
 const ZERO_WIDTH_RE = /[\u200B-\u200D\uFEFF]/gu
 const TRAILING_CLOSERS = new Set(`"')]}\uFF09\u3011\u300B\u3009\u300D\u300F\u201D\u2019`)
 const CJK_SPACE_RE = new RegExp(`(${CJK})\\s+(?=${CJK})`, 'gu')
 const CJK_DIGIT_SPACE_RE = new RegExp(`(${CJK})\\s+(?=\\d)`, 'gu')
 const DIGIT_CJK_SPACE_RE = new RegExp(`(\\d)\\s+(?=${CJK})`, 'gu')
-const CJK_LATINISH_SPACE_RE = new RegExp(`(${CJK})(?=(${LATINISH}))`, 'gu')
+const CJK_LATINISH_SPACE_RE = new RegExp(`(${CJK})(?=${LATINISH})`, 'gu')
 const LATINISH_CJK_SPACE_RE = new RegExp(`(${LATINISH})(?=${CJK})`, 'gu')
 function isControlCharacter(character) {
   return /^\p{C}$/u.test(character)
@@ -33,7 +35,7 @@ function baseCleanup(text) {
   const withoutZeroWidth = normalized.replace(ZERO_WIDTH_RE, '')
   const cleaned = []
   for (const character of withoutZeroWidth) {
-    if (character === '\n' || character === '	' || character === ' ' || !isControlCharacter(character)) {
+    if (character === '\n' || character === '\t' || character === ' ' || !isControlCharacter(character)) {
       cleaned.push(character)
     }
   }
@@ -144,20 +146,30 @@ function normalizeSpaces(text) {
 }
 function normalizeStructuralPunctuation(text) {
   let normalized = String(text || '')
-  normalized = normalized.replace(/\[\s*([^[\]]+?)\s*\]/gu, '"$1"')
-  normalized = normalized.replace(/\{\s*([^{}]+?)\s*\}/gu, '"$1"')
-  normalized = normalized.replace(/[【〖『「]\s*([^】〗』」]+?)\s*[】〗』」]/gu, '"$1"')
-  normalized = normalized.replace(
-    /(^|[。！？!?；;]\s*)《([^》]+)》(?=\s*(?:___PROT\d+___|[—–―-]{2,}|$|[。！？!?；;，,]))/gu,
-    '$1$2',
-  )
+  // NOTICE: split into two passes instead of using `\s*` around a lazy quantifier,
+  // which the regexp plugin flags as polynomial-backtracking prone.
+  normalized = normalized.replace(/[[{]/gu, ' ').replace(/[\]}]/gu, ' ')
+  const bracketPairs = new Map([
+    ['[', ']'],
+    ['【', '】'],
+    ['〖', '〗'],
+    ['『', '』'],
+    ['「', '」'],
+  ])
+  for (const [opening, closing] of bracketPairs) {
+    const pairRegex = new RegExp(`${opening}([^${opening}${closing}]*[^\\s${opening}${closing}])${closing}`, 'gu')
+    normalized = normalized.replace(pairRegex, '"$1"')
+    const emptyPairRegex = new RegExp(`${opening}[^\\s${opening}${closing}]*${closing}`, 'gu')
+    normalized = normalized.replace(emptyPairRegex, '""')
+  }
+  normalized = normalized.replace(/《([^》]+)》/gu, '$1')
   normalized = normalizeFlowArrows(normalized)
   normalized = normalized.replace(/\s*[—–―-]{2,}\s*/gu, '\u3002')
   return normalized
 }
 function normalizeRepeatedPunctuation(text) {
   let normalized = String(text || '')
-  normalized = normalized.replace(/\.{3,}|…{2,}|…{2,}/gu, '\u3002')
+  normalized = normalized.replace(/\.{3,}|…{2,}/gu, '\u3002')
   normalized = normalized.replace(/[。．]{2,}/gu, '\u3002')
   normalized = normalized.replace(/[，,]{2,}/gu, '\uFF0C')
   normalized = normalized.replace(/[!！]{2,}/gu, '\uFF01')
@@ -682,9 +694,14 @@ function bytesToBase64(bytes) {
   return btoa(binary)
 }
 function ensureTokenizerSandboxFrame() {
-  if (typeof document === 'undefined' || typeof chrome === 'undefined' || !chrome.runtime?.getURL) {
+  // NOTICE: `chrome` is an extension-only global. Access it through `globalThis`
+  // so the linter's browser env (which lacks the webextensions globals) and the
+  // runtime both resolve it without an `any` cast.
+  const extension = globalThis.chrome
+  if (typeof document === 'undefined' || !extension?.runtime?.getURL) {
     throw new Error('Tokenizer sandbox requires a browser document context.')
   }
+  const sandboxUrl = extension.runtime.getURL('tokenizer_sandbox.html')
   if (tokenizerSandboxFrame?.contentWindow) {
     return Promise.resolve(tokenizerSandboxFrame)
   }
@@ -695,7 +712,7 @@ function ensureTokenizerSandboxFrame() {
     const existingFrame = document.getElementById(TOKENIZER_SANDBOX_IFRAME_ID)
     const iframe = existingFrame instanceof HTMLIFrameElement ? existingFrame : document.createElement('iframe')
     iframe.id = TOKENIZER_SANDBOX_IFRAME_ID
-    iframe.src = chrome.runtime.getURL('tokenizer_sandbox.html')
+    iframe.src = sandboxUrl
     iframe.style.position = 'fixed'
     iframe.style.width = '1px'
     iframe.style.height = '1px'

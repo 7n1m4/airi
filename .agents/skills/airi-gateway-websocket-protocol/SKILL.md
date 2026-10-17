@@ -23,7 +23,7 @@ description: >-
 
 ## Architecture & Security Contracts
 
-```
+```text
 [ External Client (Pocket / VS Code) ]
                  │
                  ▼  ws://[IP]:6121 (or wss://)

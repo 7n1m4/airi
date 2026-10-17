@@ -61,7 +61,7 @@ When clicked, this hook triggers the plugin's modal component without requiring 
 
 The plugin developer has **total freedom** to design their UI, modal layouts, animation chain builders, and controls inside their untracked plugin directory:
 
-```
+```text
 plugins/
   motion-exp-manager/
     package.json
@@ -82,7 +82,7 @@ plugins/
 
 Presets are stored in plugin-owned `localStorage` space, strictly isolated per model file:
 
-```
+```text
 localStorage key:  plugin/motion-exp-manager/models/${displayModelId}
 value:             JSON-serialized ModelActionGroupMap
 ```
@@ -126,9 +126,9 @@ The plugin parses standard SCHALE Lounge prefix rules embedded directly inside `
 
 | Prefix | Token Example | Meaning | Behavior |
 |---|---|---|---|
-| `!` | `<|ACT:emotions="!happy"|>` | **Forced Raw Single** | Bypasses group lookup; fires raw expression target `"happy"` directly. |
-| `@` | `<|ACT:emotions="@happy"|>` | **Random Variant Pick** | Queries `plugin/motion-exp-manager/models/${modelId}` for group `"happy"` and randomly selects 1 variant item. |
-| *(none)* | `<|ACT:emotions="happy"|>` | **Full Composite Group** | Queries `plugin/motion-exp-manager/models/${modelId}` for group `"happy"` and executes all stacked expressions + motion chains. |
+| `!` | `<\|ACT:emotions="!happy"\|>` | **Forced Raw Single** | Bypasses group lookup; fires raw expression target `"happy"` directly. |
+| `@` | `<\|ACT:emotions="@happy"\|>` | **Random Variant Pick** | Queries `plugin/motion-exp-manager/models/${modelId}` for group `"happy"` and randomly selects 1 variant item. |
+| *(none)* | `<\|ACT:emotions="happy"\|>` | **Full Composite Group** | Queries `plugin/motion-exp-manager/models/${modelId}` for group `"happy"`; executes all stacked expressions and motion chains. |
 
 ---
 
@@ -136,7 +136,7 @@ The plugin parses standard SCHALE Lounge prefix rules embedded directly inside `
 
 ```mermaid
 graph TD
-    A["LLM / Script Outputs <|ACT:emotions='@happy'|>"] --> B["ACT Token Resolver"]
+    A["LLM / Script Outputs <\|ACT:emotions='@happy'|>"] --> B["ACT Token Resolver"]
     B --> C{"Check Token Prefix"}
 
     C -- "Starts with !" --> D["Raw Force Mode: Fire expression 'happy' directly"]

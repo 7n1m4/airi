@@ -34,8 +34,8 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   (e: 'choose', choice: { title: string, message: string }, isPlaybackOnly?: boolean): void
-  (e: 'retry-producer'): void
-  (e: 'delete-producer'): void
+  (e: 'retryProducer'): void
+  (e: 'deleteProducer'): void
   (e: 'settled'): void
 }>()
 
@@ -320,8 +320,8 @@ watch(() => props.sending, (val) => {
         <ProducerChoiceBubble
           :message="message as any"
           @choose="(choice, isPlaybackOnly) => emit('choose', choice, isPlaybackOnly)"
-          @retry="emit('retry-producer')"
-          @delete="emit('delete-producer')"
+          @retry="emit('retryProducer')"
+          @delete="emit('deleteProducer')"
         />
       </div>
 

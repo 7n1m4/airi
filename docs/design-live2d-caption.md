@@ -86,7 +86,7 @@ So if your `model3.json` has `"File": "motions_start_0_file_0.motion3.json"`, th
 
 The **group key** (e.g. `"demanding"`, `"idle"`) IS what the Live2D store uses to fire a motion:
 ```ts
-startMotion(group: "demanding", index: 0)
+startMotion('demanding', 0)
 ```
 This is how the AI card's motion triggers work — the card says `"demanding"` and the runtime looks up the `demanding` group in `motionManager.definitions`.
 
@@ -176,20 +176,22 @@ The full label catalog is in [`umaru_labels.json`](../personal_airi/himouto_umar
 To support bilingual captions, add a second entry per motion with `"Language": "ja"`:
 
 ```json
-"sulky": [
-  {
-    "File": "motions_start_10_file_0.motion3.json",
-    "Sound": "motions_start_10_sound_0.wav",
-    "Text": "I was so lonely... Where did you go, big bro?",
-    "Language": "en"
-  },
-  {
-    "File": "motions_start_10_file_0.motion3.json",
-    "Sound": "motions_start_10_sound_0.wav",
-    "Text": "寂しかったよお兄ちゃんどこ行ってたのおも",
-    "Language": "ja"
-  }
-]
+{
+  "sulky": [
+    {
+      "File": "motions_start_10_file_0.motion3.json",
+      "Sound": "motions_start_10_sound_0.wav",
+      "Text": "I was so lonely... Where did you go, big bro?",
+      "Language": "en"
+    },
+    {
+      "File": "motions_start_10_file_0.motion3.json",
+      "Sound": "motions_start_10_sound_0.wav",
+      "Text": "寂しかったよお兄ちゃんどこ行ってたのおも",
+      "Language": "ja"
+    }
+  ]
+}
 ```
 
 The runtime already prefers `en` when both exist (`enLocalized?.text ? enLocalized : defaultDef`), so this is backwards compatible. Displaying `ja` would require a user preference toggle — not yet implemented.

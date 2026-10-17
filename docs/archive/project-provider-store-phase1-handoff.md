@@ -35,7 +35,7 @@ The groundwork for Phase 1 is already in place:
 
 ### Target Files to Create in `packages/stage-ui/src/stores/providers/registry/`:
 
-```
+```text
 packages/stage-ui/src/stores/providers/registry/
 ├── index.ts               ← Composes all registries (speech, transcription, defined providers)
 ├── speech.ts              ← Hand-written TTS provider metadata declarations

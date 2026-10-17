@@ -369,11 +369,6 @@ export const useBackgroundStore = defineStore('background', () => {
   }
 
   // List of available backgrounds for the current character
-  const availableBackgrounds = computed(() => {
-    const airiCardStore = useAiriCardStore()
-    return getCharacterBackgrounds.value(airiCardStore.activeCardId)
-  })
-
   const getCharacterBackgrounds = computed(() => (characterId?: string) => {
     const chatSessionStore = useChatSessionStore()
     const airiCardStore = useAiriCardStore()
@@ -398,11 +393,6 @@ export const useBackgroundStore = defineStore('background', () => {
   })
 
   // The 'journal' store functionality needs to access just the journal entries for the active char
-  const journalEntries = computed(() => {
-    const airiCardStore = useAiriCardStore()
-    return getCharacterJournalEntries.value(airiCardStore.activeCardId)
-  })
-
   const getCharacterJournalEntries = computed(() => (characterId?: string) => {
     const chatSessionStore = useChatSessionStore()
     const airiCardStore = useAiriCardStore()
@@ -422,6 +412,16 @@ export const useBackgroundStore = defineStore('background', () => {
       ...e,
       url: backgroundUrls[e.id] ?? null,
     })).sort((a, b) => b.createdAt - a.createdAt)
+  })
+
+  const availableBackgrounds = computed(() => {
+    const airiCardStore = useAiriCardStore()
+    return getCharacterBackgrounds.value(airiCardStore.activeCardId)
+  })
+
+  const journalEntries = computed(() => {
+    const airiCardStore = useAiriCardStore()
+    return getCharacterJournalEntries.value(airiCardStore.activeCardId)
   })
 
   // ── Hooks ─────────────────────────────────────────────────────────────────
@@ -485,7 +485,7 @@ export const useBackgroundStore = defineStore('background', () => {
         const { storage } = await import('../database/storage')
         await storage.removeItem(`local:sync-metadata/deleted-backgrounds/${id}`)
       }
-      catch (e) {}
+      catch {}
 
       await localforage.setItem(id, entry)
       ensureObjectUrl(id, blob)

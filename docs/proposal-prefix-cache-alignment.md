@@ -15,7 +15,7 @@ For modern LLM providers supporting prefix caching (such as DeepSeek, OpenRouter
    - Keep the historical message sequence intact across auxiliary loops (Proactivity, Suggestions, Journaling).
    - Constrain character attention and prevent drift through **Tail Framing Directives** (e.g., appending *"Focus your response strictly on the last $N$ dialogue exchanges above"* at the tail) rather than destroying the prefix cache via physical array truncation.
 
-```
+```text
 [System Prompt] -> [Sensor Data (Deltas)] -> [Conversation History] ❌ INVALIDATES CACHE ON EVERY HEARTBEAT
 [System Prompt] -> [Sliced History (6 msgs)] -> [Instructions]      ❌ BREAKS PREFIX CACHE OF MAIN CHAT
 [System Prompt] -> [Full History (Warm Cache)] -> [Tail Directive]  ✅ 100% CACHE HITS + FOCUSED ATTENTION
@@ -75,7 +75,7 @@ export interface LlmPerformanceSettings {
 
 ### Settings UI Mockup
 This panel will be placed under **Settings > Behavior > LLM Performance**:
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │  LLM Performance & Cache Alignment                    │
 │                                                        │
@@ -202,7 +202,7 @@ export function compileCacheAlignedPrompt(options: ContextBuilderOptions) {
 
 ### C. Producer Lite (Per-Turn Controls)
 * **UI Controls**: Control toggles within the reply suggestions popover or settings sidebar.
-  ```
+  ```text
   [Suggestions Options]
   Focus Scope:
   (o) Soft Focus on last [ 6 ] rounds (Prefix-Cache Preserved)
@@ -222,7 +222,7 @@ export function compileCacheAlignedPrompt(options: ContextBuilderOptions) {
 
 ### D. Journal Moments (Per-Invocation Controls)
 * **UI Controls**: When triggering a journal moment (e.g. from the conversation action menu), a modal or mini-overlay prompts the user to select the reflection scope:
-  ```
+  ```text
   [Create Journal Entry]
   Choose Focus Scope:
   (o) Soft Focus on the last [ 10 ] turns (Recent Arc - Cache Preserved)

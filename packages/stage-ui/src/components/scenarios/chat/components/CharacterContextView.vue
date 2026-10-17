@@ -36,7 +36,7 @@ const datingSimState = computed(() => {
       }
     }
   }
-  catch (e) {
+  catch {
     // Pinia not ready or dating sim store not present
   }
   return { active: false, story: null, premise: '' }

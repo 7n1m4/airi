@@ -20,6 +20,7 @@ import { WHISPER_MODELS } from '../../../../../../libs/inference/constants'
 import { useAudioContext } from '../../../../../../stores/audio'
 import { useHearingSpeechInputPipeline, useHearingStore } from '../../../../../../stores/modules/hearing'
 import { useProvidersStore } from '../../../../../../stores/providers'
+import { isKeylessProvider } from '../../../../../../libs/providers/types'
 import { useSettingsAudioDevice } from '../../../../../../stores/settings'
 import { useOnboardingV2Draft } from '../draft-store'
 import { onboardingV2GateKey } from '../gate'
@@ -59,6 +60,8 @@ const { startAnalyzer, stopAnalyzer, volumeLevel } = useAudioAnalyzer()
 
 // --- Verification state machine ---
 const verification = ref<Verification>('idle')
+const testStreamingText = ref('')
+const transcribedText = ref('')
 const isVerified = computed(() => verification.value === 'verified' || transcribedText.value.trim().length > 0 || testStreamingText.value.trim().length > 0)
 
 const gate = inject(onboardingV2GateKey, null)
@@ -271,7 +274,7 @@ const inlineConfigProvider = computed(() => {
   if (!activeTranscriptionProvider.value)
     return null
   const meta = allAudioTranscriptionProvidersMetadata.value.find(p => p.id === activeTranscriptionProvider.value)
-  if (!meta || meta.requiresCredentials === false)
+  if (!meta || isKeylessProvider(meta.requiresCredentials))
     return null
   return meta
 })
@@ -329,8 +332,6 @@ watch(selectedWhisperModel, async (m) => {
 // --- Live test ---
 const isTesting = ref(false)
 const testStatusMessage = ref('')
-const testStreamingText = ref('')
-const transcribedText = ref('')
 const testError = ref('')
 const testStreamWasStarted = ref(false)
 
@@ -486,7 +487,7 @@ onMounted(() => {
       }
     }
     catch (err) {
-      console.debug('[V2 Hearing] Whisper probe on mount:', err)
+      console.info('[V2 Hearing] Whisper probe on mount:', err)
     }
   })()
 

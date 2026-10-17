@@ -35,7 +35,7 @@ Generative Code-Painting turns prompts into lightweight, executable **`p5.brush`
 
 To ensure **zero-friction universality across all devices**, AIRI adopts the **Symmetric Dual-Engine Architecture** pioneered by the Text-to-Motion subsystem:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                        Generative Code-Painting Dual Engines                           │
 ├──────────────────────────────────────┬─────────────────────────────────────────────────┤
@@ -71,7 +71,7 @@ Located in `packages/stage-pages/src/pages/settings/modules/artistry.vue`. The u
 
 Located in `packages/stage-pages/src/pages/settings/providers/artistry/code-painter.vue`.
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │  🎨 Generative Code Painter Settings                                                   │
 │  Configure how AIRI paints on-device watercolor and canvas artwork from text prompts.  │
@@ -134,8 +134,10 @@ To maintain absolute user transparency over disk space, the RWKV-7 model weights
 ### 3.1 Model Registry Entries
 Registered in [`packages/stage-ui/src/components/scenarios/settings/ModelCacheManager.vue`](packages/stage-ui/src/components/scenarios/settings/ModelCacheManager.vue):
 ```typescript
-{ id: 'rwkv7-g1d-1.5b-canvas', name: 'RWKV-7 1.5B (Code Painter Base)', size: '2.8 GB', target: 'opfs' },
-{ id: 'p5-watercolor-1.5b.state', name: 'Watercolor S0 Cartridge', size: '12.2 MB', target: 'opfs' },
+const registryEntries = [
+  { id: 'rwkv7-g1d-1.5b-canvas', name: 'RWKV-7 1.5B (Code Painter Base)', size: '2.8 GB', target: 'opfs' },
+  { id: 'p5-watercolor-1.5b.state', name: 'Watercolor S0 Cartridge', size: '12.2 MB', target: 'opfs' },
+]
 ```
 
 ### 3.2 Storage Backend (OPFS)
@@ -191,12 +193,13 @@ To prevent models from hallucinating `createCanvas` dimensions or getting trappe
 
 ```javascript
 function setup() {
-  createCanvas(600, 600, WEBGL);
-  brush.load();
-  noLoop();
-  brush.seed(42);
-  background(250, 246, 238);
+  createCanvas(600, 600, WEBGL)
+  brush.load()
+  noLoop()
+  brush.seed(42)
+  background(250, 246, 238)
   // Model begins emitting painting operations immediately at (0,0) center
+}
 ```
 
 ### 5.2 Syntax Auto-Balancer (`repairTruncatedProgram`)

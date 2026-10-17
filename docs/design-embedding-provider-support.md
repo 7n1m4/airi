@@ -31,7 +31,7 @@ AIRI's **Free AI Hub** already catalogs **39 embedding models** across providers
 In Settings → Inference Providers, the navigation bar currently features explicit functional modalities:
 `Chat` · `Speech` · `Transcription` · `Artistry` · `Vision` · `Motion` · `System 1` · `Cloud & Storage`
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │  Chat   Speech   Transcription   Artistry   Vision   Motion   System 1   [ Embeddings ]│
 └────────────────────────────────────────────────────────────────────────────────────────┘

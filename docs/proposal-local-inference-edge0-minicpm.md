@@ -51,7 +51,7 @@ MiniCPM-5 2B (released by OpenBMB) represents a breakthrough in dense edge intel
 ### 3.2 In-Browser Worker Integration
 MiniCPM-5 2B integrates directly into AIRI's existing Web Worker infrastructure without external binaries:
 
-```
+```text
 [ stage-pages: Chat / Island ]
              │
              ▼ (BroadcastChannel: airi:inference:web-llm)
@@ -82,7 +82,7 @@ Because browser sandboxes forbid low-level kernel memory mapping (`mmap`) and di
 
 To prevent the unacceptable operational burden of a Python sidecar (pip dependencies, PyTorch DLLs, CUDA mismatches, broken paths), AIRI implements Edge0 as an **Electron Native Addon**:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                         APPS/STAGE-TAMAGOTCHI (ELECTRON)                 │
 │                                                                          │

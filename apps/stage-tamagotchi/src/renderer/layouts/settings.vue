@@ -87,7 +87,7 @@ function updateSettingsWindowTitle() {
   const nextTitle = parts.join(' - ')
 
   if (document.title !== nextTitle) {
-    console.log('[SettingsTitle] Updating document.title', {
+    console.info('[SettingsTitle] Updating document.title', {
       from: document.title,
       to: nextTitle,
       route: route.path,

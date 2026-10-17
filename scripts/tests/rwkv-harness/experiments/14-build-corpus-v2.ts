@@ -7,6 +7,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import puppeteer from 'puppeteer-core'
 
@@ -142,7 +143,7 @@ async function queryKios(p: any, modelId: string, promptText: string, temp = 0.7
       })
 
       if (res.status === 429) {
-        console.log(`    [429 Rate Limit on ${modelId}] Pausing 15s before retry...`)
+        console.info(`    [429 Rate Limit on ${modelId}] Pausing 15s before retry...`)
         await new Promise(r => setTimeout(r, 15000))
         continue
       }
@@ -158,7 +159,7 @@ async function queryKios(p: any, modelId: string, promptText: string, temp = 0.7
     catch (e: any) {
       if (attempt === 3)
         throw e
-      console.log(`    [Retry ${attempt}] ${e.message}. Waiting 10s...`)
+      console.info(`    [Retry ${attempt}] ${e.message}. Waiting 10s...`)
       await new Promise(r => setTimeout(r, 10000))
     }
   }
@@ -166,7 +167,7 @@ async function queryKios(p: any, modelId: string, promptText: string, temp = 0.7
 }
 
 async function main() {
-  console.log('=== Phase 14: Synthesizing Full Training Corpus V2 (24 Subjects) ===\n')
+  console.info('=== Phase 14: Synthesizing Full Training Corpus V2 (24 Subjects) ===\n')
 
   const credsPath = path.resolve(process.cwd(), 'credentials.json')
   const creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'))
@@ -189,7 +190,7 @@ async function main() {
   const page = await browser.newPage()
   const renderer = new CanvasRenderer(page)
   await renderer.open(server.baseUrl)
-  console.log('✓ CanvasRenderer ready\n')
+  console.info('✓ CanvasRenderer ready\n')
 
   const models = [
     { name: 'Kios Kimi K3', model: 'kimi-k3', temp: 1.0 },
@@ -203,18 +204,18 @@ async function main() {
       const spec = SUBJECT_CATALOG[i]
       const modelChoice = models[i % models.length]
 
-      console.log(`------------------------------------------------------`)
-      console.log(`[${i + 1}/${SUBJECT_CATALOG.length}] Synthesizing: "${spec.subject}" via ${modelChoice.name}`)
-      console.log(`------------------------------------------------------`)
+      console.info(`------------------------------------------------------`)
+      console.info(`[${i + 1}/${SUBJECT_CATALOG.length}] Synthesizing: "${spec.subject}" via ${modelChoice.name}`)
+      console.info(`------------------------------------------------------`)
 
       const promptStr = buildSynthesisPrompt(spec)
       let rawText = ''
       try {
         rawText = await queryKios(creds.kios, modelChoice.model, promptStr, modelChoice.temp)
-        console.log(`  ✓ Generated ${rawText.length} chars`)
+        console.info(`  ✓ Generated ${rawText.length} chars`)
       }
       catch (err: any) {
-        console.log(`  ✗ Query failed: ${err.message}`)
+        console.info(`  ✗ Query failed: ${err.message}`)
         continue
       }
 
@@ -229,7 +230,7 @@ async function main() {
         })
       }
       catch (err: any) {
-        console.log(`  ✗ Render error: ${err.message}`)
+        console.info(`  ✗ Render error: ${err.message}`)
         continue
       }
 
@@ -253,14 +254,14 @@ async function main() {
         }
 
         fs.appendFileSync(corpusPath, `${JSON.stringify(record)}\n`)
-        console.log(`  ✓ VERIFIED & SAVED [${record.id}] (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors}) -> ${slug}.png`)
+        console.info(`  ✓ VERIFIED & SAVED [${record.id}] (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors}) -> ${slug}.png`)
       }
       else {
-        console.log(`  ✗ Rejected (blank/low ink: ${outcome.inkCoverage ?? 0})`)
+        console.info(`  ✗ Rejected (blank/low ink: ${outcome.inkCoverage ?? 0})`)
       }
 
       // 10s cooldown per request to keep within 6 req/min (< 10 req/min limit)
-      console.log('  (Cooldown 10s for zero-rate-limit safety...)')
+      console.info('  (Cooldown 10s for zero-rate-limit safety...)')
       await new Promise(r => setTimeout(r, 10000))
     }
   }
@@ -269,12 +270,12 @@ async function main() {
     await server.close()
   }
 
-  console.log(`\n======================================================`)
-  console.log(`✓ Full Corpus V2 Generation Complete!`)
-  console.log(`✓ Total Verified Samples: ${verifiedCount}/${SUBJECT_CATALOG.length}`)
-  console.log(`✓ Dataset saved to: ${corpusPath}`)
-  console.log(`✓ Visual previews in: ${previewDir}`)
-  console.log(`======================================================\n`)
+  console.info(`\n======================================================`)
+  console.info(`✓ Full Corpus V2 Generation Complete!`)
+  console.info(`✓ Total Verified Samples: ${verifiedCount}/${SUBJECT_CATALOG.length}`)
+  console.info(`✓ Dataset saved to: ${corpusPath}`)
+  console.info(`✓ Visual previews in: ${previewDir}`)
+  console.info(`======================================================\n`)
 }
 
 main().catch(console.error)

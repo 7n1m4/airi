@@ -78,7 +78,9 @@ const parsedProseMap = computed(() => {
   }
 
   // 2. Matches place settings: ### Setting: name
-  const placeRegex = /###\s+Setting:\s+([^\n]+)\n([\s\S]*?)(?=\n###|$)/g
+  // NOTICE: the captured name starts with a non-space run so the preceding `\s+` cannot
+  // be split across group 1 while backtracking (regexp/no-super-linear-backtracking).
+  const placeRegex = /###\s+Setting:\s+(\S[^\n]*)\n([\s\S]*?)(?=\n###|$)/g
   let placeMatch
   while ((placeMatch = placeRegex.exec(combinedText)) !== null) {
     const rawName = placeMatch[1].trim()

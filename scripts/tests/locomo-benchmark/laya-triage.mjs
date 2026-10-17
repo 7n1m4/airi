@@ -31,7 +31,7 @@ export function heuristicRegexTriage(question) {
 
   // Temporal cues
   if (
-    /\b(when|what time|what date|how long|how many (years|months|days|weeks|hours)|which (year|month|day)|timeline|first time|last time|since|ago|duration)\b/i.test(norm)
+    /\b(?:when|what time|what date|how long|how many (?:years|months|days|weeks|hours)|which (?:year|month|day)|timeline|first time|last time|since|ago|duration)\b/i.test(norm)
   ) {
     return {
       category: 2,
@@ -43,7 +43,7 @@ export function heuristicRegexTriage(question) {
 
   // Open-domain / Detective cues
   if (
-    /\b(why|suspect|infer|imply|health problem|medical|attitude|impression|personality|trait|opinion|perspective|motivation|reason for)\b/i.test(norm)
+    /\b(?:why|suspect|infer|imply|health problem|medical|attitude|impression|personality|trait|opinion|perspective|motivation|reason for)\b/i.test(norm)
   ) {
     return {
       category: 3,
@@ -55,7 +55,7 @@ export function heuristicRegexTriage(question) {
 
   // Multi-hop cues
   if (
-    /\b(both|and .* (also|as well)|between|connection|relationship|all the things|different (places|jobs|events))\b/i.test(norm)
+    /\b(?:both|and .* (?:also|as well)|between|connection|relationship|all the things|different (?:places|jobs|events))\b/i.test(norm)
   ) {
     return {
       category: 1,

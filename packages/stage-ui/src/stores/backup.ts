@@ -11,7 +11,7 @@ export const useBackupStore = defineStore('backup', () => {
   const dataMaintenance = useDataMaintenance()
 
   async function triggerBackup() {
-    console.log('[Backup] Triggering backup...')
+    console.info('[Backup] Triggering backup...')
 
     try {
       const timestamp = new Date().toISOString().replace(/:/g, '-')
@@ -48,7 +48,7 @@ export const useBackupStore = defineStore('backup', () => {
 
       // Update last backup time
       lastBackupTime.value = Date.now()
-      console.log('[Backup] Backup completed successfully!')
+      console.info('[Backup] Backup completed successfully!')
       return result.path
     }
     catch (error) {
@@ -71,7 +71,7 @@ export const useBackupStore = defineStore('backup', () => {
   }
 
   async function restoreBackup(backupDir: string, options: { characters: boolean, sessions: boolean, memory: boolean, localStorage: boolean }) {
-    console.log(`[Backup] Restoring backup from ${backupDir} with options:`, options)
+    console.info(`[Backup] Restoring backup from ${backupDir} with options:`, options)
     try {
       const res = await (window as any).electron.ipcRenderer.invoke('read-backup-files', { backupDir })
       if (!res.success) {
@@ -115,7 +115,7 @@ export const useBackupStore = defineStore('backup', () => {
           for (const [key, value] of Object.entries(storageData)) {
             // CRITICAL: Skip any keys starting with 'airi_cc_' to prevent writing bloated base64 Data URIs back to LocalStorage
             if (key.startsWith('airi_cc_')) {
-              console.log(`[Backup Restore] Skipping bloated image color cache key: ${key.substring(0, 100)}...`)
+              console.info(`[Backup Restore] Skipping bloated image color cache key: ${key.substring(0, 100)}...`)
               continue
             }
             localStorage.setItem(key, value)

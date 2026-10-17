@@ -59,7 +59,7 @@ const MODEL_EXTENSIONS = new Set(['.pmx', '.pmd'])
  */
 export async function extractMmdFromZip(zipFile: File | Blob, onProgress?: (message: string) => void): Promise<MmdZipExtractResult | undefined> {
   const name = zipFile instanceof File ? zipFile.name : 'blob'
-  console.log(`[MMD:Extractor] Starting extraction for: ${name}`)
+  console.info(`[MMD:Extractor] Starting extraction for: ${name}`)
 
   onProgress?.('Loading zip file...')
   const zip = await JSZip.loadAsync(zipFile, {
@@ -75,7 +75,7 @@ export async function extractMmdFromZip(zipFile: File | Blob, onProgress?: (mess
     },
   })
   const allPaths = Object.keys(zip.files).filter(p => !zip.files[p].dir)
-  console.log(`[MMD:Extractor] Found ${allPaths.length} files in zip.`)
+  console.info(`[MMD:Extractor] Found ${allPaths.length} files in zip.`)
 
   // Find the model file (prefer .pmx over .pmd)
   const modelPath = findModelFile(allPaths)
@@ -83,13 +83,13 @@ export async function extractMmdFromZip(zipFile: File | Blob, onProgress?: (mess
     console.warn('[MMD:Extractor] No PMX or PMD file found in zip!')
     return undefined
   }
-  console.log(`[MMD:Extractor] Detected model file: ${modelPath}`)
+  console.info(`[MMD:Extractor] Detected model file: ${modelPath}`)
 
   // Determine the model's directory (for relative texture resolution)
   const modelDir = modelPath.includes('/')
     ? modelPath.substring(0, modelPath.lastIndexOf('/') + 1)
     : ''
-  console.log(`[MMD:Extractor] Model directory: ${modelDir || '(root)'}`)
+  console.info(`[MMD:Extractor] Model directory: ${modelDir || '(root)'}`)
 
   // Extract the model file
   onProgress?.('Extracting model file...')
@@ -99,7 +99,7 @@ export async function extractMmdFromZip(zipFile: File | Blob, onProgress?: (mess
 
   // Extract texture files — collect all image/resource files
   const textureFiles: MmdTextureFile[] = []
-  console.log('[MMD:Extractor] Scanning for textures...')
+  console.info('[MMD:Extractor] Scanning for textures...')
 
   let count = 0
   for (const filePath of allPaths) {
@@ -123,7 +123,7 @@ export async function extractMmdFromZip(zipFile: File | Blob, onProgress?: (mess
     }
 
     const fileName = relativePath.split('/').pop() ?? relativePath
-    console.log(`[MMD:Extractor] Extracted texture: ${relativePath} (mapped as: ${relativePath.toLowerCase()})`)
+    console.info(`[MMD:Extractor] Extracted texture: ${relativePath} (mapped as: ${relativePath.toLowerCase()})`)
     onProgress?.(`Extracting texture ${count}: ${fileName}`)
 
     textureFiles.push({
@@ -132,7 +132,7 @@ export async function extractMmdFromZip(zipFile: File | Blob, onProgress?: (mess
     })
   }
 
-  console.log(`[MMD:Extractor] Extraction complete. Found ${textureFiles.length} textures.`)
+  console.info(`[MMD:Extractor] Extraction complete. Found ${textureFiles.length} textures.`)
   return { modelFile, textureFiles }
 }
 

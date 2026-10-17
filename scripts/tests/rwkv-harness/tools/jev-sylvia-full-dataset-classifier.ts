@@ -14,6 +14,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 function resolveApiKey(): string {
   if (process.env.OPENROUTER_API_KEY)
@@ -128,9 +129,9 @@ async function classifyTurnWithRetry(turn: CandidateTurn, retries = 5): Promise<
 }
 
 async function main() {
-  console.log('========================================================================')
-  console.log('🚀 SYLVIA / NEURO-SAMA FULL DATASET JEV SYSTEM-1 CLASSIFIER (62k TURNS)')
-  console.log('========================================================================\n')
+  console.info('========================================================================')
+  console.info('🚀 SYLVIA / NEURO-SAMA FULL DATASET JEV SYSTEM-1 CLASSIFIER (62k TURNS)')
+  console.info('========================================================================\n')
 
   const sessionDir = '/tmp/sylvia_cleanroom/sessions'
   if (!fs.existsSync(sessionDir)) {
@@ -159,7 +160,7 @@ async function main() {
       }
       catch {}
     }
-    console.log(`✓ Loaded ${existingMap.size} turns from existing progress JSONL`)
+    console.info(`✓ Loaded ${existingMap.size} turns from existing progress JSONL`)
   }
 
   // Also import earlier sweep report if present
@@ -173,7 +174,7 @@ async function main() {
           fs.appendFileSync(jsonlPath, `${JSON.stringify(item)}\n`, 'utf8')
         }
       }
-      console.log(`✓ Imported previous 8k sweep results. Total cached: ${existingMap.size}`)
+      console.info(`✓ Imported previous 8k sweep results. Total cached: ${existingMap.size}`)
     }
     catch {}
   }
@@ -186,7 +187,7 @@ async function main() {
     return numA - numB
   })
 
-  console.log(`Scanning ${files.length} session files for eligible user/assistant pairs...`)
+  console.info(`Scanning ${files.length} session files for eligible user/assistant pairs...`)
 
   const queue: CandidateTurn[] = []
 
@@ -221,19 +222,19 @@ async function main() {
     }
   }
 
-  console.log(`Found total remaining turns to classify: ${queue.length}`)
-  console.log(`Already classified & skipped:           ${existingMap.size}`)
-  console.log(`Total dataset turns:                     ${queue.length + existingMap.size}\n`)
+  console.info(`Found total remaining turns to classify: ${queue.length}`)
+  console.info(`Already classified & skipped:           ${existingMap.size}`)
+  console.info(`Total dataset turns:                     ${queue.length + existingMap.size}\n`)
 
   if (queue.length === 0) {
-    console.log('✓ All turns have already been classified! Compiling final dataset...')
+    console.info('✓ All turns have already been classified! Compiling final dataset...')
     compileFinalDataset(Array.from(existingMap.values()), finalJsonPath)
     return
   }
 
   // 3. Dispatch parallel classification
   const concurrency = 14
-  console.log(`Dispatching parallel workers (concurrency = ${concurrency})...`)
+  console.info(`Dispatching parallel workers (concurrency = ${concurrency})...`)
 
   const jsonlStream = fs.createWriteStream(jsonlPath, { flags: 'a', encoding: 'utf8' })
   const startTime = Date.now()
@@ -269,14 +270,14 @@ async function main() {
 
   jsonlStream.end()
   const totalElapsedMin = ((Date.now() - startTime) / 1000 / 60).toFixed(2)
-  console.log(`\n\n✓ Classification sweep completed in ${totalElapsedMin} minutes!`)
+  console.info(`\n\n✓ Classification sweep completed in ${totalElapsedMin} minutes!`)
 
   // 4. Compile final artifacts
   compileFinalDataset(Array.from(existingMap.values()), finalJsonPath)
 }
 
 function compileFinalDataset(allResults: ClassifiedTurn[], finalJsonPath: string) {
-  console.log(`\nCompiling master dataset for ${allResults.length} turns...`)
+  console.info(`\nCompiling master dataset for ${allResults.length} turns...`)
 
   // Category counts
   const catCounts: Record<string, number> = {}
@@ -284,23 +285,23 @@ function compileFinalDataset(allResults: ClassifiedTurn[], finalJsonPath: string
     catCounts[r.category] = (catCounts[r.category] || 0) + 1
   }
 
-  console.log('========================================================================')
-  console.log('📊 COMPLETE DATASET CATEGORY DISTRIBUTION:')
-  console.log('========================================================================')
+  console.info('========================================================================')
+  console.info('📊 COMPLETE DATASET CATEGORY DISTRIBUTION:')
+  console.info('========================================================================')
   for (const [cat, count] of Object.entries(catCounts).sort((a, b) => b[1] - a[1])) {
     const pct = ((count / allResults.length) * 100).toFixed(1)
-    console.log(` • ${cat.padEnd(18)}: ${count.toString().padStart(6)} turns (${pct}%)`)
+    console.info(` • ${cat.padEnd(18)}: ${count.toString().padStart(6)} turns (${pct}%)`)
   }
 
   // Filter out filler_routine
   const nonFiller = allResults.filter(r => r.category !== 'filler_routine')
   nonFiller.sort((a, b) => b.iconicScore - a.iconicScore)
 
-  console.log(`\n✓ Non-filler golden turns available: ${nonFiller.length} (${((nonFiller.length / allResults.length) * 100).toFixed(1)}%)`)
+  console.info(`\n✓ Non-filler golden turns available: ${nonFiller.length} (${((nonFiller.length / allResults.length) * 100).toFixed(1)}%)`)
 
   // Export clean master JSON
   fs.writeFileSync(finalJsonPath, JSON.stringify(allResults, null, 2), 'utf8')
-  console.log(`✓ Master dataset saved: ${finalJsonPath} (${(fs.statSync(finalJsonPath).size / 1024 / 1024).toFixed(2)} MB)`)
+  console.info(`✓ Master dataset saved: ${finalJsonPath} (${(fs.statSync(finalJsonPath).size / 1024 / 1024).toFixed(2)} MB)`)
 
   // Export curated golden tiers for RWKV state cartridges
   const cleanroomDir = '/tmp/sylvia_cleanroom'
@@ -316,13 +317,13 @@ function compileFinalDataset(allResults: ClassifiedTurn[], finalJsonPath: string
       const blocks = nonFiller.slice(0, tier.count).map(t => `User: ${t.targetUser}\n\nAssistant: ${t.targetAssistant}\n\n`)
       const tierPath = path.join(cleanroomDir, tier.name)
       fs.writeFileSync(tierPath, JSON.stringify(blocks, null, 2), 'utf8')
-      console.log(`✓ Exported ${tier.count} golden pack to: ${tierPath}`)
+      console.info(`✓ Exported ${tier.count} golden pack to: ${tierPath}`)
     }
   }
 
-  console.log('\n========================================================================')
-  console.log('🎉 Full dataset classification and export complete!')
-  console.log('========================================================================\n')
+  console.info('\n========================================================================')
+  console.info('🎉 Full dataset classification and export complete!')
+  console.info('========================================================================\n')
 }
 
 main().catch(console.error)

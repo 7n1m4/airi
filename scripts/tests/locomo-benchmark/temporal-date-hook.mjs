@@ -13,7 +13,7 @@ const DATE_PATTERN = /\b(?:(\d{1,2})\s+)?(January|February|March|April|May|June|
  * Extracts date components from question string.
  *
  * @param {string} question
- * @returns {Array<{ text: string, day?: string, month: string, year?: string }>}
+ * @returns {Array<{ text: string, day?: string, month: string, year?: string }>} Every date expression found in the question, in order of appearance.
  */
 export function extractQuestionDates(question) {
   if (!question || typeof question !== 'string')
@@ -35,7 +35,7 @@ export function extractQuestionDates(question) {
  *
  * @param {string} question
  * @param {Map<string, object>|Array<object>} documents
- * @returns {Array<{ sessionKey: string, timestamp: string, matchType: 'exact_day'|'month_year' }>}
+ * @returns {Array<{ sessionKey: string, timestamp: string, matchType: 'exact_day'|'month_year' }>} Sessions whose timestamp matches one of the question's dates.
  */
 export function detectTemporalDateSessions(question, documents) {
   const dates = extractQuestionDates(question)
@@ -85,7 +85,7 @@ export function detectTemporalDateSessions(question, documents) {
  * @param {Map<string, object>} documents
  * @param {Array<object>} candidates
  * @param {number} [maxInject=3]
- * @returns {Array<object>}
+ * @returns {Array<object>} The candidate list with up to `maxInject` date-matched turns appended.
  */
 export function injectTemporalDateCandidates(question, documents, candidates, maxInject = 3) {
   const matchedSessions = detectTemporalDateSessions(question, documents)

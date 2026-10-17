@@ -348,7 +348,12 @@ describe('nan0ThoughtEngine thought-first contract', () => {
 
   it('turns an empty observation into durable silence without invoking the provider', async () => {
     let calls = 0
-    const { kernel } = createKernel({ async generate() { calls++; return { text: thoughtEnvelope() } } })
+    const { kernel } = createKernel({
+      async generate() {
+        calls++
+        return { text: thoughtEnvelope() }
+      },
+    })
     await kernel.boot()
     const prepared = await kernel.prepareTurn(observation({ content: '' }))
     expect(calls).toBe(0)

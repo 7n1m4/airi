@@ -42,7 +42,7 @@ In goal-driven dating simulations, the **Intimate Director + Producer OE/NT** ar
 
 To maintain architectural stability, the prompt compiler **MUST NOT** route Director calls through the standard prefix cache alignment routine.
 
-```
+```text
 ❌ DO NOT APPLY THIS LAYOUT TO THE DIRECTOR:
 [System Prompt] ──> [Chat Turn 1 (User)] ──> [Chat Turn 2 (Assistant)] ──> [Tail Telemetry]
 ```
@@ -55,7 +55,7 @@ To maintain architectural stability, the prompt compiler **MUST NOT** route Dire
 
 We can achieve moderate caching benefits without exposing the Director to roleplay drift by caching **only the system prompt**.
 
-```
+```text
 [Cinematic System Prompt (Static)]  <── CACHED PREFIX (Static for the campaign)
 ─── (Cache Boundary) ───
 [User Input: Scratchpad + Flat Text Transcript]  <── UNCACHED (Changes every turn)

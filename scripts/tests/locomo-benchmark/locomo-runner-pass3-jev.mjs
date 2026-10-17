@@ -10,6 +10,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { performance } from 'node:perf_hooks'
 import { fileURLToPath } from 'node:url'
@@ -52,45 +53,44 @@ const EMBEDDINGS_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv
 const Q_EMBEDDINGS_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-question-embeddings.json')
 const BASE_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger.json')
 const PASS3_LEDGER_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-conv47-ledger-pass3.json')
-const PASS1_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass2-trace.json')
 const PASS8_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass8-trace.json')
 const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass9-report.md')
 const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass9-trace.json')
 
-console.log('================================================================')
-console.log('LoCoMo conv-47 Pass 9: Polar Guard, Anima Date-Range Hooks, Strict Distillation & Corrected Dual Process')
-console.log('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 8 vs Pass 9')
-console.log('================================================================\n')
+console.info('================================================================')
+console.info('LoCoMo conv-47 Pass 9: Polar Guard, Anima Date-Range Hooks, Strict Distillation & Corrected Dual Process')
+console.info('31 Sessions | 689 Turns | 150 Questions | Baseline vs Pass 8 vs Pass 9')
+console.info('================================================================\n')
 
 // 1. Load Dataset
-console.log('Loading conv-47 dataset...')
+console.info('Loading conv-47 dataset...')
 const convData = JSON.parse(fs.readFileSync(DATASET_PATH, 'utf-8'))
 const qas = convData.qa.filter(q => q.category >= 1 && q.category <= 4)
-console.log(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
+console.info(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
 
 // 2. Initialize Models
-console.log('Initializing TypeSafe Jev Cloud Client...')
+console.info('Initializing TypeSafe Jev Cloud Client...')
 const jev = new TypeSafeJevClient(JEV_API_KEY)
 
-console.log('Loading Needle 2 WASM module on CPU...')
+console.info('Loading Needle 2 WASM module on CPU...')
 const needle = await NeedleNode.load()
 
 // 3. Build / Load Pass 3 Ledger with Hierarchical Disambiguation
-console.log('\nLoading Pass 3 Entity Ledger...')
+console.info('\nLoading Pass 3 Entity Ledger...')
 let ledger
 if (fs.existsSync(PASS3_LEDGER_PATH)) {
-  console.log(`Loading cached Pass 3 ledger from ${PASS3_LEDGER_PATH}...`)
+  console.info(`Loading cached Pass 3 ledger from ${PASS3_LEDGER_PATH}...`)
   ledger = EntityLedger.fromJSON(JSON.parse(fs.readFileSync(PASS3_LEDGER_PATH, 'utf8')))
 }
 else {
-  console.log(`Building Pass 3 ledger from ${BASE_LEDGER_PATH}...`)
+  console.info(`Building Pass 3 ledger from ${BASE_LEDGER_PATH}...`)
   const baseData = JSON.parse(fs.readFileSync(BASE_LEDGER_PATH, 'utf8'))
   ledger = EntityLedger.fromJSON(baseData)
 
   // Resolve Stamford hierarchically via Jev
-  console.log('[PlaceResolver] Resolving "Stamford" hierarchically via Jev...')
+  console.info('[PlaceResolver] Resolving "Stamford" hierarchically via Jev...')
   const stamfordRes = await resolvePlaceHierarchically(jev, 'Stamford')
-  console.log('[PlaceResolver] Resolved:', JSON.stringify(stamfordRes))
+  console.info('[PlaceResolver] Resolved:', JSON.stringify(stamfordRes))
 
   const stamfordEnt = ledger.entities.get('ent_Stamford_93') || Array.from(ledger.entities.values()).find(e => e.label === 'Stamford')
   if (stamfordEnt) {
@@ -101,7 +101,7 @@ else {
       state: stamfordRes.subdivision || 'connecticut',
       region: stamfordRes.region || 'north_america',
     }
-    console.log(`[Ledger] Updated Stamford entity with resolved attributes: state=${stamfordEnt.attributes.state}, country=${stamfordEnt.attributes.country}`)
+    console.info(`[Ledger] Updated Stamford entity with resolved attributes: state=${stamfordEnt.attributes.state}, country=${stamfordEnt.attributes.country}`)
   }
 
   // Add gaming claims
@@ -119,7 +119,7 @@ else {
   })
 
   fs.writeFileSync(PASS3_LEDGER_PATH, JSON.stringify(ledger.toJSON(), null, 2))
-  console.log(`Saved Pass 3 ledger to ${PASS3_LEDGER_PATH}\n`)
+  console.info(`Saved Pass 3 ledger to ${PASS3_LEDGER_PATH}\n`)
 }
 
 // 4. Load LocomoMemoryIndex & Hybrid Searcher
@@ -142,11 +142,10 @@ const dualSearcher = new DualSearcherPass3(ledger, hybridSearcher, jev)
 const answerHead = new AnswerHeadPass3(needle, jev, index)
 
 // 7. Shootout Loop
-console.log('Beginning 150-question Shootout: Baseline vs Pass 8 vs Pass 9 (Polar Guard + Anima)...')
+console.info('Beginning 150-question Shootout: Baseline vs Pass 8 vs Pass 9 (Polar Guard + Anima)...')
 const shootoutT0 = performance.now()
 
 const baselineResults = []
-const pass1Results = []
 const pass3Results = []
 const system2Queue = []
 
@@ -227,7 +226,7 @@ for (let i = 0; i < qas.length; i++) {
       const dateStr = c.timestamp || 'Unknown date'
       const speakerPrefix = c.speaker ? `${c.speaker}: ` : ''
       const body = c.text || c.rawText || ''
-      return `[Turn ${turnId} | Date: ${dateStr}]\n${body}`
+      return `[Turn ${turnId} | Date: ${dateStr}]\n${speakerPrefix}${body}`
     }).join('\n\n')
 
     system2Queue.push({
@@ -243,17 +242,17 @@ for (let i = 0; i < qas.length; i++) {
     const elapsed = ((performance.now() - shootoutT0) / 1000).toFixed(1)
     const bRec = ((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p3Rec = ((pass3Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
-    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 9 (Recall@3): ${p3Rec}%`)
+    console.info(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 9 (Recall@3): ${p3Rec}%`)
   }
 }
 
 // --- ARM 4: Batched System-2 Deductive Resolution (DeepSeek Flash via OpenCode Go) ---
 if (system2Queue.length > 0) {
-  console.log(`\n[System-2] Dispatching batched deductive resolution for ${system2Queue.length} queries to deepseek-v4.1-flash...`)
+  console.info(`\n[System-2] Dispatching batched deductive resolution for ${system2Queue.length} queries to deepseek-v4.1-flash...`)
   const s2T0 = performance.now()
   const s2Answers = await resolveSystem2Batch(system2Queue)
   const s2DurationSec = ((performance.now() - s2T0) / 1000).toFixed(2)
-  console.log(`[System-2] Batched resolution completed in ${s2DurationSec}s (${Object.keys(s2Answers).length} answers resolved).\n`)
+  console.info(`[System-2] Batched resolution completed in ${s2DurationSec}s (${Object.keys(s2Answers).length} answers resolved).\n`)
 
   for (const item of system2Queue) {
     if (s2Answers[item.id]) {
@@ -273,7 +272,7 @@ if (system2Queue.length > 0) {
 }
 
 const shootoutDurationSec = ((performance.now() - shootoutT0) / 1000).toFixed(2)
-console.log(`\nShootout completed in ${shootoutDurationSec}s.\n`)
+console.info(`\nShootout completed in ${shootoutDurationSec}s.\n`)
 
 // 8. Aggregate Metrics
 const bAgg = aggregateBenchmarkResults(baselineResults)
@@ -324,7 +323,7 @@ const reportMd = `# LoCoMo conv-47 Pass 9: Polar Guard, Anima Date-Range Hooks, 
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
-console.log(`Saved Pass 9 report to ${OUTPUT_REPORT_PATH}`)
+console.info(`Saved Pass 9 report to ${OUTPUT_REPORT_PATH}`)
 
 const detailedComparison = qas.map((q, idx) => ({
   index: idx,
@@ -345,9 +344,9 @@ fs.writeFileSync(OUTPUT_TRACE_PATH, JSON.stringify({
   metrics: { baseline: bAgg, pass8: p8Agg, pass9: p3Agg },
   detailedComparison,
 }, null, 2))
-console.log(`Saved Pass 9 trace to ${OUTPUT_TRACE_PATH}`)
+console.info(`Saved Pass 9 trace to ${OUTPUT_TRACE_PATH}`)
 
-console.log('\n======================================================')
-console.log('PASS 9 SHOOTOUT COMPLETE')
-console.log('======================================================')
-console.log(reportMd)
+console.info('\n======================================================')
+console.info('PASS 9 SHOOTOUT COMPLETE')
+console.info('======================================================')
+console.info(reportMd)

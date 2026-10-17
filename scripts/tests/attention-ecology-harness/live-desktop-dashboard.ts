@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
+import process from 'node:process'
 import readline from 'node:readline'
 
 import { DesktopCaptureManager } from './engine/screen-capture.js'
@@ -74,12 +75,9 @@ function renderWarmupScreen(step: string, detail: string, percent?: number) {
 }
 
 function renderDashboard() {
-  const tickStr = String(tickCount).padStart(3, '0')
   const latencyStr = `${lastLatencyMs}ms`
   const spinner = SPINNER_FRAMES[spinnerIndex % SPINNER_FRAMES.length]
   spinnerIndex++
-
-  const captureTag = `[${lastCaptureSource}]`
 
   let streamBoxLines = ''
   if (eventStream.length === 0) {
@@ -412,7 +410,7 @@ async function cleanExit() {
       fs.unlinkSync(TEMP_PREV_PATH)
   }
   catch {}
-  console.log('👋 Terminal Observer Dashboard stopped cleanly.')
+  console.info('👋 Terminal Observer Dashboard stopped cleanly.')
   process.exit(0)
 }
 

@@ -3,7 +3,6 @@ import path from 'node:path'
 
 import { createRequire } from 'node:module'
 
-const require = createRequire(import.meta.url)
 const rootRequire = createRequire(path.resolve(import.meta.dirname, '..', '..', 'package.json'))
 const targetNodeModules = path.resolve('node_modules')
 
@@ -51,7 +50,7 @@ for (const pkg of packages) {
     const srcDir = fs.realpathSync(dir)
     const destDir = path.join(targetNodeModules, pkg)
 
-    console.log(`[copy-deps] Copying ${pkg} from ${srcDir} to ${destDir}`)
+    console.info(`[copy-deps] Copying ${pkg} from ${srcDir} to ${destDir}`)
     if (fs.existsSync(destDir)) {
       fs.rmSync(destDir, { recursive: true, force: true })
     }

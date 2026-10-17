@@ -12,7 +12,7 @@ Stage-Mate is a native **Unity 6000.2.6f2 / VRM sidecar** that renders the AIRI 
 
 ## 1. The Workspace Purity Rule (most important section)
 
-```
+```text
 apps/stage-mate/
 ├── unity-src/        <-- [TRACKED IN GIT] ALL custom AIRI code lives here. EDIT HERE.
 │   ├── Assets/StageMate/       # Core sidecar (socket, bridge, state sync, model drivers, ...)
@@ -79,7 +79,7 @@ Transport: WebSocket, default `ws://localhost:6171` (`MATE_HARNESS_PORT`).
 
 Server → Engine:
 
-```json
+```jsonl
 { "type": "stage:vrm:load", "data": { "modelPath": "/abs/path/to/model.vrm" } }
 { "type": "stage:vrm:idle", "data": { "idleAnimations": ["PET_IDLE 1", "PET_IDLE 2"] } }
 { "type": "ping", "data": { "t": 1234567890 } }

@@ -179,7 +179,7 @@ export function evaluateEmotionDrivenGoalFormation(input: {
   const formingCount = goals.filter(goal => goal.status === 'candidate').length
   for (const event of input.emotionalEvents) {
     const rule = FORMATION_RULES.find(candidate => candidate.emotion === event.targetEmotion && candidate.eventCause.test(event.cause) && Math.abs(event.delta) >= candidate.minimumDelta)
-    if (!rule || rule.kyoOnly && input.observation.actorId !== 'kyo')
+    if (!rule || (rule.kyoOnly && input.observation.actorId !== 'kyo'))
       continue
     const title = rule.title(input.observation)
     const key = formationKey(rule, input.observation.actorId, title)

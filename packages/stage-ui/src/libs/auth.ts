@@ -21,19 +21,19 @@ export const authClient = createAuthClient({
 
 export async function fetchSession() {
   if (!isRemoteSyncEnabled()) {
-    console.log('[Auth] fetchSession skipped: remote sync not enabled in localStorage')
+    console.info('[Auth] fetchSession skipped: remote sync not enabled in localStorage')
     return false
   }
 
-  console.log('[Auth] fetchSession: calling authClient.getSession()...')
+  console.info('[Auth] fetchSession: calling authClient.getSession()...')
   try {
     const res = await authClient.getSession()
-    console.log('[Auth] fetchSession response:', res)
+    console.info('[Auth] fetchSession response:', res)
     if (res.data) {
       const authStore = useAuthStore()
       authStore.user = res.data.user
       authStore.session = res.data.session
-      console.log('[Auth] fetchSession successfully updated authStore with user:', res.data.user.email)
+      console.info('[Auth] fetchSession successfully updated authStore with user:', res.data.user.email)
       return true
     }
     else {

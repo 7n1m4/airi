@@ -136,9 +136,7 @@ onMounted(() => {
         b.y = height + 30
         b.x = Math.random() * width
         const colors = getColors()
-        {
-          b.color = colors[Math.floor(Math.random() * colors.length)]
-        }
+        b.color = colors[Math.floor(Math.random() * colors.length)]
       }
 
       drawBubble(ctx, b.x, b.y, b.size, b.color, b.opacity)

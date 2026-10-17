@@ -16,7 +16,7 @@ import type { GazeOffset, MMDAnimationManager, MorphController } from '../../com
 import type { ResolvedMMDModel } from '../../utils/mmd-loader'
 
 import { errorMessageFrom } from '@moeru/std'
-import { computeDirectionalLightOrbit } from '@proj-airi/stage-shared'
+import { computeDirectionalLightOrbit, debug } from '@proj-airi/stage-shared'
 import { Screen } from '@proj-airi/ui'
 import { defaultWindow, useElementBounding, useEventListener } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
@@ -242,7 +242,7 @@ function handleWheel(event: WheelEvent) {
 }
 
 function handlePointerDown(event: PointerEvent) {
-  console.log('[MMD] handlePointerDown, mode:', props.interactionMode, 'draggable:', props.draggable)
+  debug('[MMD] handlePointerDown, mode:', props.interactionMode, 'draggable:', props.draggable)
   if (!props.draggable && props.interactionMode !== 'drag' && props.interactionMode !== 'positioning')
     return
 
@@ -263,7 +263,7 @@ function handlePointerMove(event: PointerEvent) {
   if (!isDragging.value)
     return
 
-  console.log('[MMD] handlePointerMove dragging')
+  debug('[MMD] handlePointerMove dragging')
   const SENSITIVITY = 2.0
   const deltaX = (event.clientX - dragStartX) * SENSITIVITY
   const deltaY = (event.clientY - dragStartY) * SENSITIVITY
@@ -275,7 +275,7 @@ function handlePointerMove(event: PointerEvent) {
 }
 
 function handlePointerUp(event: PointerEvent) {
-  console.log('[MMD] handlePointerUp')
+  debug('[MMD] handlePointerUp')
   if (!isDragging.value)
     return
 

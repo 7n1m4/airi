@@ -6,10 +6,10 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (e: 'settings-open', open: boolean): void
+  (e: 'settingsOpen', open: boolean): void
 }>()
 </script>
 
 <template>
-  <MobileWhisperSheet :tools="props.tools" @settings-open="emit('settings-open', $event)" />
+  <MobileWhisperSheet :tools="props.tools" @settings-open="emit('settingsOpen', $event)" />
 </template>

@@ -1,6 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
+import { argv } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 import { CANONICAL_MATE_ENGINE_COMMIT } from './setup.js'
@@ -10,10 +11,10 @@ const rootStageMate = join(here, '..')
 const mateEngineDir = join(rootStageMate, 'mate-engine')
 
 export function cleanMateEngine(): boolean {
-  console.log(`[clean] Resetting mate-engine to canonical commit (${CANONICAL_MATE_ENGINE_COMMIT.slice(0, 8)})...`)
+  console.info(`[clean] Resetting mate-engine to canonical commit (${CANONICAL_MATE_ENGINE_COMMIT.slice(0, 8)})...`)
 
   if (!existsSync(mateEngineDir)) {
-    console.log('[clean] mate-engine directory does not exist, nothing to clean.')
+    console.info('[clean] mate-engine directory does not exist, nothing to clean.')
     return true
   }
 
@@ -35,10 +36,10 @@ export function cleanMateEngine(): boolean {
     return false
   }
 
-  console.log('[clean] mate-engine is 100% clean and pristine!')
+  console.info('[clean] mate-engine is 100% clean and pristine!')
   return true
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (argv[1] && fileURLToPath(import.meta.url) === argv[1]) {
   cleanMateEngine()
 }

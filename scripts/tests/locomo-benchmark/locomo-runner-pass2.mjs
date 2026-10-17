@@ -34,27 +34,27 @@ const LEDGER_CACHE_PATH = path.join(ROOT, 'reports/memory-lab/datasets/locomo-co
 const OUTPUT_REPORT_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass2-report.md')
 const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/memory-lab/locomo-conv47-pass2-trace.json')
 
-console.log('================================================================')
-console.log('LoCoMo conv-47 Pass 2: System-1 Entity Ledger Benchmark')
-console.log('31 Sessions | 689 Turns | 150 Questions | 3-Way Shootout')
-console.log('================================================================\n')
+console.info('================================================================')
+console.info('LoCoMo conv-47 Pass 2: System-1 Entity Ledger Benchmark')
+console.info('31 Sessions | 689 Turns | 150 Questions | 3-Way Shootout')
+console.info('================================================================\n')
 
 // 1. Load Dataset
-console.log('Loading conv-47 dataset...')
+console.info('Loading conv-47 dataset...')
 const convData = JSON.parse(fs.readFileSync(DATASET_PATH, 'utf-8'))
 const qas = convData.qa.filter(q => q.category >= 1 && q.category <= 4)
-console.log(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
+console.info(`Loaded ${qas.length} non-adversarial QA pairs.\n`)
 
 // 2. Initialize Models (Needle WASM + Laya ONNX)
-console.log('Loading Needle 2 WASM module on CPU...')
+console.info('Loading Needle 2 WASM module on CPU...')
 const needleT0 = performance.now()
 const needle = await NeedleNode.load()
-console.log(`Needle 2 WASM loaded in ${((performance.now() - needleT0) / 1000).toFixed(2)}s.`)
+console.info(`Needle 2 WASM loaded in ${((performance.now() - needleT0) / 1000).toFixed(2)}s.`)
 
-console.log('Loading Laya ONNX module on CPU...')
+console.info('Loading Laya ONNX module on CPU...')
 const layaT0 = performance.now()
 const laya = await Laya.load({ executionProviders: ['cpu'] })
-console.log(`Laya ONNX loaded in ${((performance.now() - layaT0) / 1000).toFixed(2)}s.\n`)
+console.info(`Laya ONNX loaded in ${((performance.now() - layaT0) / 1000).toFixed(2)}s.\n`)
 
 // 3. Ingest Dataset into Entity Ledger (with caching)
 const ledger = await ingestDatasetIntoLedger(convData, needle, laya, {
@@ -62,23 +62,23 @@ const ledger = await ingestDatasetIntoLedger(convData, needle, laya, {
   enableLayaClassification: true,
   enableLayaSalience: true,
 })
-console.log('')
+console.info('')
 
 // 4. Load LocomoMemoryIndex & Hybrid Searcher
-console.log('Replaying sessions into LocomoMemoryIndex & loading BGE embeddings...')
+console.info('Replaying sessions into LocomoMemoryIndex & loading BGE embeddings...')
 const index = new LocomoMemoryIndex()
 index.loadConversation(convData)
 const embeddings = JSON.parse(fs.readFileSync(EMBEDDINGS_PATH, 'utf-8'))
 const questionEmbeddings = JSON.parse(fs.readFileSync(Q_EMBEDDINGS_PATH, 'utf-8'))
 const hybridSearcher = new HybridSearcher(index, embeddings)
-console.log(`Indexed ${index.documents.size} items across memory layers.\n`)
+console.info(`Indexed ${index.documents.size} items across memory layers.\n`)
 
 // 5. Initialize Dual Searcher & Answer Head
 const dualSearcher = new DualSearcher(ledger, hybridSearcher)
 const answerHead = new AnswerHead(needle)
 
 // 6. Run 150-Question Shootout
-console.log('Beginning 150-question shootout across all 3 arms...')
+console.info('Beginning 150-question shootout across all 3 arms...')
 const shootoutT0 = performance.now()
 
 const baselineResults = []
@@ -125,7 +125,7 @@ for (let i = 0; i < qas.length; i++) {
   let p1Category = 4
   if (rawLayaTriage.confidence >= 0.04)
     p1Category = rawLayaTriage.category
-  else if (/\b(when|what time|what date|how long|which (year|month|day))\b/i.test(q.question))
+  else if (/\b(?:when|what time|what date|how long|which (?:year|month|day))\b/i.test(q.question))
     p1Category = 2
 
   const p1Hits = hybridSearcher.searchHybrid(q.question, 15, queryVector, {
@@ -187,12 +187,12 @@ for (let i = 0; i < qas.length; i++) {
     const bRec = ((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p1Rec = ((pass1Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
     const p2Rec = ((pass2Hits / totalGoldEvidenceTurns) * 100).toFixed(1)
-    console.log(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 1: ${p1Rec}% | Pass 2 (Ledger): ${p2Rec}%`)
+    console.info(`  [${i + 1}/${qas.length}] (${elapsed}s) - Baseline: ${bRec}% | Pass 1: ${p1Rec}% | Pass 2 (Ledger): ${p2Rec}%`)
   }
 }
 
 const shootoutDurationSec = ((performance.now() - shootoutT0) / 1000).toFixed(2)
-console.log(`\nShootout completed in ${shootoutDurationSec}s.\n`)
+console.info(`\nShootout completed in ${shootoutDurationSec}s.\n`)
 
 // 7. Aggregate Metrics
 const bAgg = aggregateBenchmarkResults(baselineResults)
@@ -203,23 +203,23 @@ const bRecallPct = ((baselineHits / totalGoldEvidenceTurns) * 100).toFixed(2)
 const p1RecallPct = ((pass1Hits / totalGoldEvidenceTurns) * 100).toFixed(2)
 const p2RecallPct = ((pass2Hits / totalGoldEvidenceTurns) * 100).toFixed(2)
 
-console.log('================================================================')
-console.log('LOCOMO conv-47 PASS 2 BENCHMARK SCORECARD')
-console.log('================================================================')
-console.log(`Metric                     | Baseline (Regex) | Pass 1 (Laya+RRF) | Pass 2 (Entity Ledger) | Pass 2 Lift`)
-console.log('---------------------------|------------------|-------------------|------------------------|------------')
-console.log(`Evidence Recall@3          | ${bRecallPct.padStart(16)}% | ${p1RecallPct.padStart(17)}% | ${p2RecallPct.padStart(22)}% | +${(Number(p2RecallPct) - Number(p1RecallPct)).toFixed(2)}%`)
-console.log(`Overall Token F1           | ${bAgg.overall.f1.toFixed(2).padStart(16)}% | ${p1Agg.overall.f1.toFixed(2).padStart(17)}% | ${p2Agg.overall.f1.toFixed(2).padStart(22)}% | +${(p2Agg.overall.f1 - p1Agg.overall.f1).toFixed(2)}%`)
-console.log(`Overall BLEU-1             | ${bAgg.overall.bleu.toFixed(2).padStart(16)}% | ${p1Agg.overall.bleu.toFixed(2).padStart(17)}% | ${p2Agg.overall.bleu.toFixed(2).padStart(22)}% | +${(p2Agg.overall.bleu - p1Agg.overall.bleu).toFixed(2)}%`)
-console.log('---------------------------|------------------|-------------------|------------------------|------------')
+console.info('================================================================')
+console.info('LOCOMO conv-47 PASS 2 BENCHMARK SCORECARD')
+console.info('================================================================')
+console.info(`Metric                     | Baseline (Regex) | Pass 1 (Laya+RRF) | Pass 2 (Entity Ledger) | Pass 2 Lift`)
+console.info('---------------------------|------------------|-------------------|------------------------|------------')
+console.info(`Evidence Recall@3          | ${bRecallPct.padStart(16)}% | ${p1RecallPct.padStart(17)}% | ${p2RecallPct.padStart(22)}% | +${(Number(p2RecallPct) - Number(p1RecallPct)).toFixed(2)}%`)
+console.info(`Overall Token F1           | ${bAgg.overall.f1.toFixed(2).padStart(16)}% | ${p1Agg.overall.f1.toFixed(2).padStart(17)}% | ${p2Agg.overall.f1.toFixed(2).padStart(22)}% | +${(p2Agg.overall.f1 - p1Agg.overall.f1).toFixed(2)}%`)
+console.info(`Overall BLEU-1             | ${bAgg.overall.bleu.toFixed(2).padStart(16)}% | ${p1Agg.overall.bleu.toFixed(2).padStart(17)}% | ${p2Agg.overall.bleu.toFixed(2).padStart(22)}% | +${(p2Agg.overall.bleu - p1Agg.overall.bleu).toFixed(2)}%`)
+console.info('---------------------------|------------------|-------------------|------------------------|------------')
 for (const catKey of ['c1', 'c2', 'c3', 'c4']) {
   const bF = `${bAgg.categoryBreakdown[catKey].f1.toFixed(2)}%`.padStart(16)
   const p1F = `${p1Agg.categoryBreakdown[catKey].f1.toFixed(2)}%`.padStart(17)
   const p2F = `${p2Agg.categoryBreakdown[catKey].f1.toFixed(2)}%`.padStart(22)
   const lift = `+${(p2Agg.categoryBreakdown[catKey].f1 - p1Agg.categoryBreakdown[catKey].f1).toFixed(2)}%`
-  console.log(`${bAgg.categoryBreakdown[catKey].name.padEnd(26)} | ${bF} | ${p1F} | ${p2F} | ${lift}`)
+  console.info(`${bAgg.categoryBreakdown[catKey].name.padEnd(26)} | ${bF} | ${p1F} | ${p2F} | ${lift}`)
 }
-console.log('================================================================\n')
+console.info('================================================================\n')
 
 // 8. Write Markdown Report
 const reportMd = `# LoCoMo conv-47 Pass 2 Benchmark Report: System-1 Entity Ledger
@@ -260,7 +260,7 @@ const reportMd = `# LoCoMo conv-47 Pass 2 Benchmark Report: System-1 Entity Ledg
 `
 
 fs.writeFileSync(OUTPUT_REPORT_PATH, reportMd)
-console.log(`Markdown report saved to: ${OUTPUT_REPORT_PATH}`)
+console.info(`Markdown report saved to: ${OUTPUT_REPORT_PATH}`)
 
 // 9. Save Detailed Trace
 const traceData = {
@@ -289,7 +289,7 @@ const traceData = {
 }
 
 fs.writeFileSync(OUTPUT_TRACE_PATH, JSON.stringify(traceData, null, 2))
-console.log(`Detailed trace saved to: ${OUTPUT_TRACE_PATH}`)
+console.info(`Detailed trace saved to: ${OUTPUT_TRACE_PATH}`)
 
 // Clean up
 needle.close()

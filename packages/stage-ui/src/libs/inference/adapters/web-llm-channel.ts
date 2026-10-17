@@ -255,7 +255,7 @@ export async function createSingleOwnerWebLlmAdapter(options?: { forceLeader?: b
           opts.signal.removeEventListener('abort', onAbort)
       }
 
-      const onAbort = () => {
+      function onAbort() {
         channel.postMessage({ type: 'cancel', requestId, senderId: localId })
         cleanup()
         reject(new Error('Operation aborted'))
@@ -316,7 +316,7 @@ export async function createSingleOwnerWebLlmAdapter(options?: { forceLeader?: b
           opts.signal.removeEventListener('abort', onAbort)
       }
 
-      const onAbort = () => {
+      function onAbort() {
         channel.postMessage({ type: 'cancel', requestId, senderId: localId })
         cleanup()
         reject(new Error('Operation aborted'))

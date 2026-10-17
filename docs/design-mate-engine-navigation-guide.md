@@ -47,7 +47,7 @@ In Unity YAML serialization:
 3. **MonoBehaviours (`!u!114`)**: Custom C# scripts attached to GameObjects.
 4. **Prefabs & PrefabInstances (`!u!1001`)**: Reusable component templates stamped into the scene.
 
-```yaml
+```text
 --- !u!1 &1274733643              # ◄── GameObject Unique File ID in this scene
 GameObject:
   m_Name: Smoothie                # ◄── Hierarchy Name

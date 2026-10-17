@@ -71,6 +71,27 @@ export const useLive2d = defineStore('live2d', () => {
   const rawSettings = ref<any>(null)
   const dslVM = shallowRef<any>(null)
 
+  const position = useLocalStorageManualReset<{ x: number, y: number }>('settings/live2d/position', { x: 0, y: 0 }) // position is relative to the center of the screen, units are %
+  const positionInPercentageString = computed(() => ({
+    x: `${position.value.x}%`,
+    y: `${position.value.y}%`,
+  }))
+  const currentMotion = useLocalStorageManualReset<{ group: string, index?: number }>('settings/live2d/current-motion', () => ({ group: 'Idle', index: 0 }))
+  const availableMotions = useLocalStorageManualReset<{ motionName: string, motionIndex: number, fileName: string, sound?: string, text?: string, language?: string }[]>('settings/live2d/available-motions', () => [])
+  const motionMap = useLocalStorageManualReset<Record<string, string>>('settings/live2d/motion-map', {})
+  const scale = useLocalStorageManualReset('settings/live2d/scale', 1)
+
+  // Meta information from CDI and EXP files (In-memory refs to prevent localStorage QuotaExceededError)
+  const availableExpressions = useLocalStorageManualReset<{ name: string, fileName: string }[]>('settings/live2d/available-expressions', () => [])
+  const parameterMetadata = ref<{ id: string, name: string, groupId?: string, groupName?: string }[]>([])
+  const emotionMappings = useLocalStorageManualReset<Record<string, string>>('settings/live2d/emotion-mappings', {})
+  const modelParamReplayDisabled = useLocalStorageManualReset<Record<string, boolean>>('settings/live2d/model-param-replay-disabled', {})
+  const activeExpressions = useLocalStorageManualReset<Record<string, number>>('settings/live2d/active-expressions', {})
+  const expressionData = ref<Array<{ name: string, fileName: string, data: any }>>([])
+
+  // Live2D model parameters
+  const modelParameters = useLocalStorageManualReset<Record<string, number>>('settings/live2d/parameters', defaultModelParameters)
+
   function setVarFloat(name: string, value: number) {
     if (dslVM.value?.vars) {
       if (typeof dslVM.value.vars.set === 'function') {
@@ -186,27 +207,6 @@ export const useLive2d = defineStore('live2d', () => {
       executeTriggerEmotion(event.name, event.intensity, event.duration)
     }
   })
-
-  const position = useLocalStorageManualReset<{ x: number, y: number }>('settings/live2d/position', { x: 0, y: 0 }) // position is relative to the center of the screen, units are %
-  const positionInPercentageString = computed(() => ({
-    x: `${position.value.x}%`,
-    y: `${position.value.y}%`,
-  }))
-  const currentMotion = useLocalStorageManualReset<{ group: string, index?: number }>('settings/live2d/current-motion', () => ({ group: 'Idle', index: 0 }))
-  const availableMotions = useLocalStorageManualReset<{ motionName: string, motionIndex: number, fileName: string, sound?: string, text?: string, language?: string }[]>('settings/live2d/available-motions', () => [])
-  const motionMap = useLocalStorageManualReset<Record<string, string>>('settings/live2d/motion-map', {})
-  const scale = useLocalStorageManualReset('settings/live2d/scale', 1)
-
-  // Meta information from CDI and EXP files (In-memory refs to prevent localStorage QuotaExceededError)
-  const availableExpressions = useLocalStorageManualReset<{ name: string, fileName: string }[]>('settings/live2d/available-expressions', () => [])
-  const parameterMetadata = ref<{ id: string, name: string, groupId?: string, groupName?: string }[]>([])
-  const emotionMappings = useLocalStorageManualReset<Record<string, string>>('settings/live2d/emotion-mappings', {})
-  const modelParamReplayDisabled = useLocalStorageManualReset<Record<string, boolean>>('settings/live2d/model-param-replay-disabled', {})
-  const activeExpressions = useLocalStorageManualReset<Record<string, number>>('settings/live2d/active-expressions', {})
-  const expressionData = ref<Array<{ name: string, fileName: string, data: any }>>([])
-
-  // Live2D model parameters
-  const modelParameters = useLocalStorageManualReset<Record<string, number>>('settings/live2d/parameters', defaultModelParameters)
 
   function resetState() {
     position.reset()

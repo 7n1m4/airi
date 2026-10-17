@@ -10,7 +10,7 @@ It directly integrates with and builds upon the core **Direct vs. Forward-to-LLM
 
 When the proactivity loop triggers or a message is sent with screen grounding enabled, the system captures a screenshot. This image is handled under one of two modes, based on the **Impersonator vs. Forwarder** design:
 
-```
+```text
                     ┌────────────────────────┐
                     │  Screen Capture Event  │
                     └───────────┬────────────┘
@@ -56,7 +56,7 @@ When the proactivity loop triggers or a message is sent with screen grounding en
 
 The **Proactivity** tab in the **Edit Card** modal will be expanded to support the following screenshot settings:
 
-```
+```text
 [ ] Enable Screen Grounding (Screenshots)
     ├── Monitor Selection:  [ 1 ]  [ 2 ]  [ 3 ]  (Button selector representing active displays)
     ├── VLM Configuration:

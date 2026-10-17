@@ -124,7 +124,7 @@ This phase bridges the existing AIRI proactive tool ecosystem with the Gemini Li
 
 AIRI tools use the `@xsai/shared-chat` `Tool` interface, which already stores `function.parameters` as JSON Schema (produced by `@xsai/tool` from Zod). The bridge maps these directly to Gemini's `functionDeclarations` format:
 
-```
+```text
 AIRI Tool.function → Gemini functionDeclaration
   .name           → .name
   .description    → .description

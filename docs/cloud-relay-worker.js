@@ -1271,7 +1271,7 @@ async function loadLongTermMemory(
       return ''
     }
 
-    console.log(
+    console.info(
       'Long-term memory loaded:',
       memoryKey,
       'characters:',
@@ -1483,7 +1483,7 @@ async function saveIndependentChatTurn(
     turnRecord,
   )
 
-  console.log(
+  console.info(
     'Independent chat turn saved:',
     turnKey,
   )
@@ -2178,8 +2178,8 @@ function archiveMatchesSourceTurns(
         archivedTurn.model,
       )
       !== JSON.stringify(
-          sourceTurn.model,
-        )
+        sourceTurn.model,
+      )
     ) {
       return false
     }
@@ -2623,7 +2623,7 @@ async function archivePendingTurns(
       )
     }
     else {
-      console.log(
+      console.info(
         'Ten turns archived and source keys deleted:',
         archiveKey,
       )
@@ -3642,7 +3642,7 @@ async function compactLongTermMemoryIfNeeded(
     document,
   )
 
-  console.log(
+  console.info(
     'Long-term memory compacted:',
     userId,
     'characters:',
@@ -4151,7 +4151,7 @@ async function summarizeAndMergeLongTermMemory(
         ),
       )
 
-      console.log(
+      console.info(
         'Independent memory summary saved:',
         summaryKey,
       )
@@ -5208,6 +5208,19 @@ async function handleChatCommand(
             .trim()
         : ''
 
+    /*
+     * 媒體附件的解析與校驗放在 KV 讀取之前，
+     * 讓不合規的附件在呼叫 Gemini 前就失敗。
+     */
+    const media
+      = getMediaAttachment(
+        interaction,
+      )
+
+    validateMediaAttachment(
+      media,
+    )
+
     const longTermMemory
       = await loadLongTermMemory(
         env,
@@ -5257,7 +5270,7 @@ async function handleChatCommand(
     const geminiStartedAt
       = Date.now()
 
-    console.log(
+    console.info(
       'Gemini request started:',
       userId,
       interactionId,
@@ -5286,7 +5299,7 @@ async function handleChatCommand(
             userIdentityInstruction,
           )
 
-    console.log(
+    console.info(
       'Gemini request completed:',
       userId,
       interactionId,
@@ -5484,7 +5497,7 @@ async function handleChatCommand(
       )
     }
 
-    console.log(
+    console.info(
       'Chat command completed:',
       userId,
       'interactionId:',

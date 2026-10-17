@@ -6,6 +6,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
@@ -106,15 +107,15 @@ async function classifyGame(game) {
 }
 
 async function main() {
-  console.log('=== TypeSafe Jev: 1,000 MS-DOS Games Batch Triage ===')
-  console.log(`Model: ${MODEL} | Concurrency: ${CONCURRENCY}`)
+  console.info('=== TypeSafe Jev: 1,000 MS-DOS Games Batch Triage ===')
+  console.info(`Model: ${MODEL} | Concurrency: ${CONCURRENCY}`)
 
   if (!fs.existsSync(INPUT_FILE)) {
     throw new Error(`Input file ${INPUT_FILE} not found! Run fetch-catalog.mjs first.`)
   }
 
   const catalog = JSON.parse(fs.readFileSync(INPUT_FILE, 'utf8'))
-  console.log(`Loaded ${catalog.length} games from ${INPUT_FILE}`)
+  console.info(`Loaded ${catalog.length} games from ${INPUT_FILE}`)
 
   // Load existing checkpoint if present
   let results = []
@@ -123,7 +124,7 @@ async function main() {
     try {
       results = JSON.parse(fs.readFileSync(OUTPUT_FILE, 'utf8'))
       results.forEach(r => processedIds.add(r.identifier))
-      console.log(`Resuming from checkpoint: ${processedIds.size} already classified.`)
+      console.info(`Resuming from checkpoint: ${processedIds.size} already classified.`)
     }
     catch {
       results = []
@@ -131,7 +132,7 @@ async function main() {
   }
 
   const queue = catalog.filter(g => !processedIds.has(g.identifier))
-  console.log(`Games remaining to classify: ${queue.length}`)
+  console.info(`Games remaining to classify: ${queue.length}`)
 
   let completed = processedIds.size
   const total = catalog.length
@@ -173,8 +174,8 @@ async function main() {
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(results, null, 2), 'utf8')
 
   const totalTime = ((Date.now() - startTime) / 1000).toFixed(1)
-  console.log(`\n\nClassified all ${results.length} games in ${totalTime}s!`)
-  console.log(`Saved results to: ${OUTPUT_FILE}`)
+  console.info(`\n\nClassified all ${results.length} games in ${totalTime}s!`)
+  console.info(`Saved results to: ${OUTPUT_FILE}`)
 }
 
 main().catch((err) => {

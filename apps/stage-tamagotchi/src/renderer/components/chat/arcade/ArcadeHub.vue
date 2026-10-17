@@ -169,6 +169,15 @@ const page = ref(1)
 const pageSize = 24
 const fileInputRef = ref<HTMLInputElement | null>(null)
 
+// The parent may preselect a game (e.g. when re-opening the hub from a live
+// session). Mirror it into the search box so the hub focuses that entry.
+watch(() => props.initialSelectedGameId, (gameId) => {
+  if (!gameId)
+    return
+
+  searchQuery.value = gameId
+}, { immediate: true })
+
 // Lazy loader for 8,924 catalog
 async function ensureCatalogLoaded(): Promise<void> {
   if (fullCatalog.value.length > 0 || isCatalogLoading.value)

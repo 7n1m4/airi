@@ -15,7 +15,7 @@ AIRI supports two primary ACT token formats:
 - Elemental VFX: `<|ACT:vfx="fire",duration="4"|>`
 
 ### JSON Chaining Format (Alternative)
-```
+```text
 <|ACT:{"emotion":{"name":"heart","intensity":1,"duration":3},"motion":"action cue"}|>
 <|DELAY:1|>
 ```
@@ -24,7 +24,7 @@ The parser in `queues.ts` extracts `name`, `intensity`, and `duration` with rege
 
 ## Pipeline
 
-```
+```text
 AI Response text
     ↓
 Stage.vue  processMarkers()          ← regex: /<\|(?:ACT|DELAY)[\s\S]*?\|>/gi

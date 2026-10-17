@@ -7,8 +7,8 @@ withDefaults(
     cardId?: string
     surfaceLabel: string
     surfaceIcon: string
-    progress: number
-    statusText: string
+    progress?: number
+    statusText?: string
   }>(),
   {
     characterName: 'AIRI',

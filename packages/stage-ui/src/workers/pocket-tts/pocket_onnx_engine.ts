@@ -117,7 +117,10 @@ function parseNpyFloat32(buffer: ArrayBuffer): { data: Float32Array, shape: numb
   const headerLen = major === 1 ? view.getUint16(8, true) : view.getUint32(8, true)
   const headerOffset = major === 1 ? 10 : 12
   const headerText = new TextDecoder().decode(new Uint8Array(buffer, headerOffset, headerLen))
-  const shapeMatch = headerText.match(/\(\s*([0-9,\s]+)\)/)
+  // NOTICE: `\s*` after `(` is redundant — `[0-9,\s]+` already consumes the
+  // whitespace that precedes the shape digits, and the overlapping quantifiers
+  // made this pattern super-linear (regexp/no-super-linear-backtracking).
+  const shapeMatch = headerText.match(/\(([0-9,\s]+)\)/)
   if (!shapeMatch)
     throw new Error('Could not parse NPY shape')
   const shape = shapeMatch[1]
@@ -306,9 +309,12 @@ function prepareTextPrompt(text: string, bundle: PocketBundleManifest): { text: 
   if (bundle.model_recommended_frames_after_eos != null)
     framesAfterEos = Number(bundle.model_recommended_frames_after_eos)
 
-  if (!/[A-ZÀ-Þ]/.test(prompt[0]))
+  // NOTICE: the Latin-1 Supplement letters are written as `\u00c0`-style escapes
+  // rather than `À-Þ` literals: eslint-plugin-regexp's no-obscure-range rejects
+  // those ranges because the literal glyphs hide what the range actually spans.
+  if (!/[A-Z\u00C0-\u00DE]/.test(prompt[0]))
     prompt = prompt[0].toUpperCase() + prompt.slice(1)
-  if (/[0-9A-Za-zÀ-ÿ]/.test(prompt[prompt.length - 1]))
+  if (/[0-9A-Za-z\u00C0-\u00FF]/.test(prompt[prompt.length - 1]))
     prompt += '.'
   if (bundle.pad_with_spaces_for_short_inputs && wordCount < 5)
     prompt = `        ${prompt}`

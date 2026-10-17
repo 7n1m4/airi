@@ -16,7 +16,7 @@ Model preview thumbnails (`previewImage`) are critical for UI rendering performa
 
 AIRI enforces a strict **Two-Tier Storage Hierarchy** to balance fast reactivity against memory safety:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │ Tier 1: Core Binary Persistence Layer (IndexedDB via localforage)       │
 │ - Key: `display-model-<nanoid>`                                         │

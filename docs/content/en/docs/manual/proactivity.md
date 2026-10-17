@@ -13,8 +13,8 @@ Unlike traditional chatbots that only speak when spoken to, AIRI is equipped wit
 
 The Proactivity Engine runs on a periodic **Heartbeat Loop** managed in the background.
 
-```
-[ OS Sensors (Window, AFK, Time) ] 
+```text
+[ OS Sensors (Window, AFK, Time) ]
                │
                ▼
 [ Salience & Cooldown Filter ] ──(Busy / Suppressed)──► [ Skip Turn ]

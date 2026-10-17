@@ -23,7 +23,7 @@ The raw [`shinyflvre/Mate-Engine`](https://github.com/shinyflvre/Mate-Engine) re
 
 ## 📂 Directory Layout
 
-```
+```text
 apps/stage-mate/
 ├── unity-src/                        <-- [TRACKED IN GIT] Custom AIRI Unity C# Code
 │   ├── MateSidecar.cs                # Runtime: WebSocket client, VRM loader, idle cycle, viewport

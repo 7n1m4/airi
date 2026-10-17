@@ -149,7 +149,7 @@ Compared fork `packages/stage-ui/src/stores/chat.ts` `performSend` (~line 173+) 
 
 Fork `stores/chat/context-store.ts` already does **source-key buckets** + `ReplaceSelf` / `AppendSelf` (same semantics as upstream `createContextRegistry`).
 
-# 1819 adds on top:
+### #1819 adds on top:
 
 - `Map` instead of `Record` (prototype-pollution hardening for keys like `__proto__`)
 - Bounded **context history** (400 entries) + observability

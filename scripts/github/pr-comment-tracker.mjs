@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 const REPO = 'moeru-ai/airi'
 const CATALOG_PATH = 'docs/project-upstream-pr-catalog.md'
@@ -25,7 +26,7 @@ async function fetchWithRetry(url, retries = 2) {
         const reset = response.headers.get('x-ratelimit-reset')
         console.warn(`Rate limited. Reset at ${reset ? new Date(reset * 1000).toLocaleTimeString() : 'unknown'}`)
         if (i < retries) {
-          console.log(`Waiting 5s before retry ${i + 1}...`)
+          console.info(`Waiting 5s before retry ${i + 1}...`)
           await delay(5000)
           continue
         }
@@ -90,7 +91,7 @@ async function run() {
   let content = fs.readFileSync(fullPath, 'utf8')
   const prNumbers = parseCatalog(content)
 
-  console.log(`Analyzing ${prNumbers.length} PRs: ${prNumbers.join(', ')}`)
+  console.info(`Analyzing ${prNumbers.length} PRs: ${prNumbers.join(', ')}`)
 
   const summary = []
   for (const prNum of prNumbers) {
@@ -114,14 +115,14 @@ async function run() {
   }
 
   fs.writeFileSync(fullPath, content)
-  console.log(`\nSuccess: Catalog updated at ${CATALOG_PATH}`)
+  console.info(`\nSuccess: Catalog updated at ${CATALOG_PATH}`)
 
-  console.log('\n--- PR COMMENTER SUMMARY REPORT ---')
+  console.info('\n--- PR COMMENTER SUMMARY REPORT ---')
   for (const item of summary) {
     const humanCommenters = item.uniqueUsers.filter(u => !u.endsWith(BOT_POSTFIX) && !AGENT_LOGINS.includes(u))
-    console.log(`PR #${item.prNumber}: [${item.uniqueUsers.length} total] ${item.uniqueUsers.join(', ')}`)
+    console.info(`PR #${item.prNumber}: [${item.uniqueUsers.length} total] ${item.uniqueUsers.join(', ')}`)
     if (humanCommenters.length > 0) {
-      console.log(`  Humans: ${humanCommenters.join(', ')}`)
+      console.info(`  Humans: ${humanCommenters.join(', ')}`)
     }
   }
 }

@@ -28,6 +28,10 @@ const backgroundStore = useBackgroundStore()
 // Filter history for current character using unified store
 const history = computed(() => backgroundStore.getCharacterJournalEntries(cardStore.activeCardId))
 const currentIndex = ref(0)
+const isBrowsingGallery = ref(false)
+const isFlipped = ref(false)
+const errorOccurred = ref(false)
+const isSettingBackground = ref(false)
 
 // Snap to a specific entry if the prop is explicitly changed (e.g. from the tool)
 watch(() => props.entryId, (newId) => {
@@ -49,11 +53,6 @@ watch(() => props.status, (newStatus) => {
     currentIndex.value = 0
   }
 })
-
-const isFlipped = ref(false)
-const errorOccurred = ref(false)
-const isSettingBackground = ref(false)
-const isBrowsingGallery = ref(false)
 
 // (Removed legacy status watcher as it's merged into the entryId/status logic above)
 
@@ -114,7 +113,7 @@ async function handleSetAsBackground() {
       extension.airi.modules.activeBackgroundId = entry.id
 
       await cardStore.updateCard(cardId, { ...card, extensions: extension })
-      console.log(`[ComfyWidget] Set activeBackgroundId to ${entry.id} for ${cardId}`)
+      console.info(`[ComfyWidget] Set activeBackgroundId to ${entry.id} for ${cardId}`)
     }
   }
   catch (e) {

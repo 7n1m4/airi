@@ -4,6 +4,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import puppeteer from 'puppeteer-core'
 
@@ -137,14 +138,14 @@ async function main() {
 
   try {
     for (const c of TARGETS) {
-      console.log(`Processing: ${c.name}...`)
+      console.info(`Processing: ${c.name}...`)
       const provider = creds[c.providerKey]
       if (!provider)
         continue
 
       try {
         const gen = await queryModel(provider, c.modelId, prompt, c.temperature)
-        console.log(`  ✓ Received ${gen.text.length} chars in ${(gen.latencyMs / 1000).toFixed(1)}s`)
+        console.info(`  ✓ Received ${gen.text.length} chars in ${(gen.latencyMs / 1000).toFixed(1)}s`)
         const jsCode = extractJs(gen.text)
 
         const outcome = await renderer.render({
@@ -157,14 +158,14 @@ async function main() {
         if (outcome.dataUrl && !outcome.blank) {
           const outPath = path.join(outDir, c.filename)
           renderer.savePng(outPath, outcome.dataUrl)
-          console.log(`  ✓ SAVED: ${outPath} (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors})`)
+          console.info(`  ✓ SAVED: ${outPath} (ink: ${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors: ${outcome.uniqueColors})`)
         }
         else {
-          console.log(`  ✗ Blank/Error: ${outcome.error || outcome.sketchError}`)
+          console.info(`  ✗ Blank/Error: ${outcome.error || outcome.sketchError}`)
         }
       }
       catch (err: any) {
-        console.log(`  ✗ Error: ${err.message}`)
+        console.info(`  ✗ Error: ${err.message}`)
       }
     }
   }

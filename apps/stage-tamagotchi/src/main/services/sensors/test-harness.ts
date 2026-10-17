@@ -1,6 +1,8 @@
 import os from 'node:os'
 import path from 'node:path'
+import process from 'node:process'
 
+import { Buffer } from 'node:buffer'
 import { exec } from 'node:child_process'
 import { writeFileSync } from 'node:fs'
 import { promisify } from 'node:util'
@@ -53,7 +55,7 @@ async function runTest() {
   const logFile = 'apps/stage-tamagotchi/src/main/services/sensors/results.txt'
   const logLines: string[] = []
   const print = (msg: string) => {
-    console.log(msg)
+    console.info(msg)
     logLines.push(msg)
   }
 
@@ -73,7 +75,7 @@ async function runTest() {
     try {
       const { stdout: loadStdout } = await execAsync(`powershell -NoProfile -NonInteractive -Command "${loadScript}"`)
       const loadVal = Number.parseFloat(loadStdout.trim())
-      print(`PowerShell Load Percentage: ${isNaN(loadVal) ? 'FAILED' : loadVal.toFixed(2)}%`)
+      print(`PowerShell Load Percentage: ${Number.isNaN(loadVal) ? 'FAILED' : loadVal.toFixed(2)}%`)
     }
     catch (e: any) {
       print(`Load Check Failed: ${e.message}`)
@@ -110,7 +112,7 @@ async function runTest() {
   try {
     const absolutePath = path.resolve(logFile)
     writeFileSync(absolutePath, logLines.join('\n'))
-    console.log(`Results written to ${absolutePath}`)
+    console.info(`Results written to ${absolutePath}`)
   }
   catch (e: any) {
     console.error('Failed to write log file:', e.message)

@@ -6,25 +6,25 @@ async function test() {
   const specials: string[] = []
 
   const onLiteral = (v: string) => {
-    console.log('Literal:', v)
+    console.info('Literal:', v)
     literals.push(v)
   }
   const onSpecial = (v: string) => {
-    console.log('Special:', v)
+    console.info('Special:', v)
     specials.push(v)
   }
 
   // Simulating the bug: unclosed ACT inside think, followed by response
   const input = '<think> Planning... <|ACT: emotion="excited" </think> Hello world! This is the response.'
 
-  console.log('--- Consuming input ---')
+  console.info('--- Consuming input ---')
   await parser.consume(input, onLiteral, onSpecial)
-  console.log('--- Ending parser ---')
+  console.info('--- Ending parser ---')
   await parser.end(onLiteral, onSpecial)
 
-  console.log('\nResults:')
-  console.log('Literals total:', literals.join(''))
-  console.log('Specials total:', specials.join(''))
+  console.info('\nResults:')
+  console.info('Literals total:', literals.join(''))
+  console.info('Specials total:', specials.join(''))
 }
 
 test()

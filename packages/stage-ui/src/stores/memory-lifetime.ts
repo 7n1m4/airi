@@ -256,7 +256,7 @@ function buildBaseArchivePrompt(characterName: string, docs: SourceDoc[], chunkS
 }
 
 function renderLifetimeArchiveMd(characterName: string, rawArchive: LifetimeArchive | Record<string, unknown> | undefined, docCount: number, chunkCount: number) {
-  console.log('[memory-lifetime] Rendering Lifetime Archive with raw data:', rawArchive)
+  console.info('[memory-lifetime] Rendering Lifetime Archive with raw data:', rawArchive)
   const archive = normalizeLifetimeArchive(rawArchive)
   return [
     `# Lifetime Archive: ${characterName}`,
@@ -416,7 +416,7 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
 
   watch(lifetimeSyncSignal, (val) => {
     if (val?.characterId) {
-      console.log(`[MemoryLifetime] Received lifetime sync signal for character: ${val.characterId} (universe: ${val.universeId}), reloading...`)
+      console.info(`[MemoryLifetime] Received lifetime sync signal for character: ${val.characterId} (universe: ${val.universeId}), reloading...`)
       void loadForCharacter(val.characterId, val.universeId || 'global')
     }
   })
@@ -618,7 +618,7 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
       })
       useLiveSessionStore().recordInferenceUsage(response.usage)
       const text = response.text || (response as any).reasoning || (response as any).reasoning_content || '{}'
-      console.log(`[memory-lifetime] [json_object] Response text length: ${text.length}`)
+      console.info(`[memory-lifetime] [json_object] Response text length: ${text.length}`)
       const parsed = JSON.parse(text)
       return validateJsonSchema(parsed, schema) as T
     }
@@ -639,7 +639,7 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
       })
       useLiveSessionStore().recordInferenceUsage(response.usage)
       const text = response.text || (response as any).reasoning || (response as any).reasoning_content || '{}'
-      console.log(`[memory-lifetime] [json_schema] Response text length: ${text.length}`)
+      console.info(`[memory-lifetime] [json_schema] Response text length: ${text.length}`)
       const parsed = JSON.parse(text)
       return validateJsonSchema(parsed, schema) as T
     }
@@ -659,7 +659,7 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
         text = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/, '').trim()
       }
 
-      console.log(`[memory-lifetime] [fallback] Response text length: ${text.length}`)
+      console.info(`[memory-lifetime] [fallback] Response text length: ${text.length}`)
       const parsed = JSON.parse(text)
       return validateJsonSchema(parsed, schema) as T
     }
@@ -775,7 +775,7 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
       // EXPOSE FOR DEBUGGING
       if (typeof window !== 'undefined') {
         (window as any).__LIFETIME_DEBUG_CHUNKS = chunks
-        console.log('[memory-lifetime] Chunks prepared for inspection:', chunks)
+        console.info('[memory-lifetime] Chunks prepared for inspection:', chunks)
       }
 
       // N chunks + 1 base synthesis + 2 distillation passes = N + 3
@@ -794,7 +794,7 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
           const currentChunkData = chunks[i]
           const chunkPromptBody = currentChunkData.map((doc, index) => `${index + 1}. [${doc.layer.toUpperCase()}] [${doc.timestamp || 'undated'}] ${doc.text}`).join('\n')
 
-          console.log(`[memory-lifetime] Processing Chunk ${i + 1}/${chunks.length}`, {
+          console.info(`[memory-lifetime] Processing Chunk ${i + 1}/${chunks.length}`, {
             docCount: currentChunkData.length,
             charCount: chunkPromptBody.length,
             estimatedTokens: Math.round(chunkPromptBody.length / 4),

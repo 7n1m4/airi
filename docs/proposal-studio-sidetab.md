@@ -50,7 +50,7 @@ An asset is classified as a **Place** if:
 
 ## 🎨 3. Proposed Panel Layout
 
-```
+```text
 +-----------------------------------------------------------------------+
 |  STUDIO MONITOR                                                       |
 |  Inspect active concept stacks and actor alignments.                  |

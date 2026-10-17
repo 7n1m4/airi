@@ -20,7 +20,7 @@ app.whenReady().then(() => {
 
   win.webContents.on('did-finish-load', async () => {
     try {
-      console.log('Extracting local IndexedDB database records...')
+      console.info('Extracting local IndexedDB database records...')
       const localData = await win.webContents.executeJavaScript(`
         (async () => {
           const dbName = "keyval-store";
@@ -74,7 +74,7 @@ app.whenReady().then(() => {
         })()
       `)
 
-      console.log('Running comparison with remote backup share at:', BACKUP_DIR)
+      console.info('Running comparison with remote backup share at:', BACKUP_DIR)
       runComparison(localData)
     }
     catch (e) {
@@ -90,14 +90,14 @@ function runComparison(local) {
   let issuesFound = 0
 
   // 1. Audit Cards
-  console.log('\n--- 1. AUDITING CHARACTER CARDS ---')
+  console.info('\n--- 1. AUDITING CHARACTER CARDS ---')
   const remoteCardsPath = path.join(BACKUP_DIR, 'airi-cards.json')
   if (fs.existsSync(remoteCardsPath)) {
     const remoteCards = JSON.parse(fs.readFileSync(remoteCardsPath, 'utf8'))
     const localCardsMap = new Map(Array.isArray(local.cards) ? local.cards : Object.entries(local.cards || {}))
     const remoteCardsMap = new Map(Array.isArray(remoteCards) ? remoteCards : Object.entries(remoteCards))
 
-    console.log(`Local Cards count: ${localCardsMap.size}, Backup Cards count: ${remoteCardsMap.size}`)
+    console.info(`Local Cards count: ${localCardsMap.size}, Backup Cards count: ${remoteCardsMap.size}`)
 
     // Check for local-only modifications
     for (const [id, localCard] of localCardsMap.entries()) {
@@ -122,16 +122,16 @@ function runComparison(local) {
   }
 
   // 2. Audit Chat Sessions
-  console.log('\n--- 2. AUDITING CHAT SESSIONS ---')
+  console.info('\n--- 2. AUDITING CHAT SESSIONS ---')
   const remoteSessionsDir = path.join(BACKUP_DIR, 'chat', 'sessions')
   const localSessions = local.sessions || {}
   const localSessionIds = Object.keys(localSessions)
-  console.log(`Local Chat Sessions count: ${localSessionIds.length}`)
+  console.info(`Local Chat Sessions count: ${localSessionIds.length}`)
 
   if (fs.existsSync(remoteSessionsDir)) {
     const remoteSessionFiles = fs.readdirSync(remoteSessionsDir).filter(f => f.endsWith('.json'))
     const remoteSessionIds = new Set(remoteSessionFiles.map(f => f.replace('.json', '')))
-    console.log(`Backup Chat Sessions count: ${remoteSessionIds.size}`)
+    console.info(`Backup Chat Sessions count: ${remoteSessionIds.size}`)
 
     for (const id of localSessionIds) {
       const localSess = localSessions[id]
@@ -161,13 +161,13 @@ function runComparison(local) {
     issuesFound++
   }
 
-  console.log('\n--- AUDIT COMPLETE ---')
+  console.info('\n--- AUDIT COMPLETE ---')
   if (issuesFound === 0) {
-    console.log('🎉 SUCCESS: Your local cards and chat history are 100% in sync with the backup share!')
-    console.log('You can safely clear IndexedDB site storage; no user data will be lost.')
+    console.info('🎉 SUCCESS: Your local cards and chat history are 100% in sync with the backup share!')
+    console.info('You can safely clear IndexedDB site storage; no user data will be lost.')
   }
   else {
-    console.log(`⚠️ WARNING: Found ${issuesFound} unsynced differences between local DB and backup share.`)
-    console.log('Do not clear IndexedDB until these differences are reconciled.')
+    console.info(`⚠️ WARNING: Found ${issuesFound} unsynced differences between local DB and backup share.`)
+    console.info('Do not clear IndexedDB until these differences are reconciled.')
   }
 }

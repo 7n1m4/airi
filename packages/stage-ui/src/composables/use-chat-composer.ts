@@ -195,7 +195,7 @@ export function useChatComposer(options: ChatComposerOptions = {}) {
 
   // Principal Send Command
   async function handleSend() {
-    if (!messageInput.value.trim() && !attachments.value.length || isComposing.value) {
+    if ((!messageInput.value.trim() && !attachments.value.length) || isComposing.value) {
       return
     }
 
@@ -331,7 +331,7 @@ export function useChatComposer(options: ChatComposerOptions = {}) {
         throw err
       }
     }
-    catch (err) {
+    catch {
       isListening.value = false
     }
   }
@@ -361,7 +361,7 @@ export function useChatComposer(options: ChatComposerOptions = {}) {
       await stopStreamingTranscription(true)
       isListening.value = false
     }
-    catch (err) {
+    catch {
       isListening.value = false
     }
   }

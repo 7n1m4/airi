@@ -174,6 +174,48 @@ For a complete, categorized index of every registered provider, see **[`docs/pro
 | **Provider Type Definitions** | `packages/stage-ui/src/libs/providers/types.ts` — `ProviderDefinition`, `ModelInfo`, `VoiceInfo`, `SpeechCapabilitiesInfo`. |
 | **Database Persistence Repo** | `packages/stage-ui/src/database/repos/providers.repo.ts` — persists configured provider instances in `local:providers`. |
 
+### Credential Contract (`requiresCredentials`)
+
+The provider credential contract is a **tri-state**, declared on both
+`ProviderDefinition` (`libs/providers/types.ts`) and the converted
+`ProviderMetadata` (`stores/providers/types.ts`):
+
+| Value | Meaning | Key field | Blocks connection |
+| :--- | :--- | :--- | :--- |
+| `false` | Strictly keyless — accepts no key at all | hide | never |
+| `{ optional: true }` | Works keyless, a key unlocks paid models / higher quotas | keep, marked optional | never |
+| `true` | Key required | keep, marked required | until saved |
+| `undefined` | Not declared — treated as required for `cloud`, keyless for `local` | keep | until saved |
+
+**Why the third state.** `false` alone was overloaded across the codebase: some
+gates read it as "no key is mandatory", others as "do not show a key field".
+Free-tier gateways need both — e.g. Kilo serves `:free` models keyless, but the
+same endpoint answers `401 PAID_MODEL_AUTH_REQUIRED` keyless for paid models. A
+boolean cannot express "optional, and still show the field".
+
+**Use the helpers** in `libs/providers/types.ts`, never a raw comparison:
+
+```ts
+isKeylessProvider(x)      // strictly keyless, no field
+isOptionalKeyProvider(x)  // works keyless, field still applies
+keylessOrOptionalKey(x)   // either → usable without a saved key
+```
+
+The two predicates are deliberately distinct because they answer different
+questions: `keylessOrOptionalKey` gates *connection* ("can this run now"),
+while `isOptionalKeyProvider` gates *affordance* ("should the input still be
+rendered"). Collapsing them into one `!== false`-style check is how the original
+bug shipped — it also made `isProviderConfigured` a tautology.
+
+Every credential gate must go through one of these three helpers:
+`stores/providers/selectors/config.ts`, `stores/providers/runtime/instances.ts`
+(the keyless connect path), `stores/providers/runtime/validation.ts`, and the
+onboarding consciousness/hearing steps.
+
+> **Kilo precedent:** `libs/providers/providers/kilo/index.ts` is the reference
+> optional-key provider. Any provider declaring `requiresCredentials: true` whose
+> free tier works keyless should migrate to `{ optional: true }`.
+
 ### Provider Contract
 Every provider implements this shape (defined in `providers.ts`):
 ```typescript

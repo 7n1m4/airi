@@ -11,6 +11,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { RwkvWebGpuBridge } from '../engine/rwkv-session.js'
 import {
@@ -40,16 +41,16 @@ export const GLYPH_PROBES = [
 ]
 
 async function main() {
-  console.log('=== Phase 17: Glyph Recurrent State Distillation Experiment ===\n')
+  console.info('=== Phase 17: Glyph Recurrent State Distillation Experiment ===\n')
 
   const args = process.argv.slice(2)
   const use15B = !args.includes('--model=0.1b')
   const modelUrl = use15B ? PHASE7_MODEL_URL_1_5B : DEFAULT_BASE_MODEL_URL
   const modelLabel = use15B ? 'RWKV-7 G1 1.5B' : 'RWKV-7 G1 0.1B'
 
-  console.log(`Target Model: ${modelLabel}`)
+  console.info(`Target Model: ${modelLabel}`)
   const modelPath = await ensureModelCached(modelUrl)
-  console.log(`Model Path: ${modelPath}\n`)
+  console.info(`Model Path: ${modelPath}\n`)
 
   const defaultExternalPath = '/tmp/glyph_cleanroom/glyph_rwkv_conditioning_blocks.json'
   const corpusPath = process.env.GLYPH_CORPUS_PATH || defaultExternalPath
@@ -60,19 +61,19 @@ async function main() {
   }
 
   const rawBlocks: string[] = JSON.parse(fs.readFileSync(corpusPath, 'utf8'))
-  console.log(`✓ Loaded ${rawBlocks.length} Glyph conditioning blocks from external scratch.\n`)
+  console.info(`✓ Loaded ${rawBlocks.length} Glyph conditioning blocks from external scratch.\n`)
 
   const bridge = new RwkvWebGpuBridge({ modelFilePath: modelPath })
 
   try {
-    await bridge.boot(m => console.log(`[engine] ${m}`))
-    console.log(`✓ WebGPU Engine booted: stateLen=${bridge.info.stateLen}\n`)
+    await bridge.boot(m => console.info(`[engine] ${m}`))
+    console.info(`✓ WebGPU Engine booted: stateLen=${bridge.info.stateLen}\n`)
 
     // Bake SFull cartridge (all available dialogue history)
-    console.log(`--- Baking Cartridge SFull (${rawBlocks.length} dialogue blocks) ---`)
+    console.info(`--- Baking Cartridge SFull (${rawBlocks.length} dialogue blocks) ---`)
     const tsFull = Date.now()
     const stateFull = await bridge.makeState({ name: 'glyph-sfull', texts: rawBlocks })
-    console.log(`✓ SFull baked: ${stateFull.fedTokens} tokens in ${((Date.now() - tsFull) / 1000).toFixed(2)}s\n`)
+    console.info(`✓ SFull baked: ${stateFull.fedTokens} tokens in ${((Date.now() - tsFull) / 1000).toFixed(2)}s\n`)
 
     // Conditions matrix
     const conditions = [
@@ -93,12 +94,12 @@ async function main() {
     }> = []
 
     for (const probe of GLYPH_PROBES) {
-      console.log(`\n======================================================`)
-      console.log(`Probe: "${probe.title}" -> "${probe.prompt}"`)
-      console.log(`======================================================`)
+      console.info(`\n======================================================`)
+      console.info(`Probe: "${probe.title}" -> "${probe.prompt}"`)
+      console.info(`======================================================`)
 
       for (const cond of conditions) {
-        console.log(`\n  [${cond.label}]`)
+        console.info(`\n  [${cond.label}]`)
         const t0 = Date.now()
 
         const res = await bridge.generate({
@@ -116,8 +117,8 @@ async function main() {
         const text = res.text.trim()
         const hasKaomoji = /[(（][^a-zA-Z0-9\s]{1,10}[)）]|┻━┻|[✿◕‿◡ﾉヮ´ω☆♥]/.test(text)
 
-        console.log(`  Output (${text.length} chars, ${res.completionTokens} toks, ${elapsed}ms, kaomoji=${hasKaomoji}):`)
-        console.log(`  "${text}"`)
+        console.info(`  Output (${text.length} chars, ${res.completionTokens} toks, ${elapsed}ms, kaomoji=${hasKaomoji}):`)
+        console.info(`  "${text}"`)
 
         reportRows.push({
           condition: cond.id,
@@ -138,11 +139,11 @@ async function main() {
 
     const reportPath = path.join(reportsDir, '17-glyph-state-distill-results.json')
     fs.writeFileSync(reportPath, JSON.stringify({ model: modelLabel, date: new Date().toISOString(), results: reportRows }, null, 2))
-    console.log(`\n✓ Results saved to ${reportPath}`)
+    console.info(`\n✓ Results saved to ${reportPath}`)
   }
   finally {
     await bridge.dispose()
-    console.log('✓ WebGPU Bridge disposed.')
+    console.info('✓ WebGPU Bridge disposed.')
   }
 }
 

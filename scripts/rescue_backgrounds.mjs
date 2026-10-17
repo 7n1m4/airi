@@ -21,6 +21,8 @@ import http from 'node:http'
 import path from 'node:path'
 import process from 'node:process'
 
+import { Buffer } from 'node:buffer'
+
 import { app, BrowserWindow, ipcMain } from 'electron'
 
 const args = process.argv.slice(2)
@@ -36,14 +38,14 @@ let sharp = null
 if (optimize) {
   try {
     sharp = (await import('sharp')).default
-    console.log('[Rescue] ✔ sharp loaded — image optimization enabled')
+    console.info('[Rescue] ✔ sharp loaded — image optimization enabled')
   }
   catch (e) {
     console.warn('[Rescue] ⚠ sharp not available, skipping optimization:', e.message)
   }
 }
 
-console.log(`
+console.info(`
 ╔══════════════════════════════════════════════════════════╗
 ║         AIRI Background Rescue & Optimization Script      ║
 ╠══════════════════════════════════════════════════════════╣
@@ -67,11 +69,11 @@ function ensureLocalOriginServer() {
     // If the dev server is already on 5173, we skip our own server — the real app page
     // also fires did-finish-load and has the same nodeIntegration access.
     server.on('error', () => {
-      console.log('[Rescue] Port 5173 already in use (dev server running) — will use it directly.')
+      console.info('[Rescue] Port 5173 already in use (dev server running) — will use it directly.')
       resolve(null)
     })
     server.listen(5173, '127.0.0.1', () => {
-      console.log('[Rescue] Origin server started on port 5173.')
+      console.info('[Rescue] Origin server started on port 5173.')
       resolve(server)
     })
   })
@@ -88,7 +90,7 @@ ipcMain.on('rescue-bg-chunk', (event, { id, index, data }) => {
     entry.chunks[index] = data
 })
 ipcMain.on('rescue-progress', (event, msg) => {
-  console.log(`[Progress] ${msg}`)
+  console.info(`[Progress] ${msg}`)
 })
 
 app.whenReady().then(async () => {
@@ -109,7 +111,7 @@ app.whenReady().then(async () => {
 
   win.webContents.on('did-finish-load', async () => {
     try {
-      console.log('[Rescue] Renderer ready — extracting backgrounds from localforage...\n')
+      console.info('[Rescue] Renderer ready — extracting backgrounds from localforage...\n')
 
       // Extract all bg-* entries from localforage, sending blobs as chunked base64 via IPC
       await win.webContents.executeJavaScript(`
@@ -201,7 +203,7 @@ app.whenReady().then(async () => {
 })
 
 async function runRescue() {
-  console.log(`\n[Rescue] Processing ${bgChunks.size} backgrounds extracted from localforage...\n`)
+  console.info(`\n[Rescue] Processing ${bgChunks.size} backgrounds extracted from localforage...\n`)
 
   if (!fs.existsSync(REMOTE_BG_DIR)) {
     console.warn(`[Rescue] Remote backgrounds dir doesn't exist: ${REMOTE_BG_DIR}`)
@@ -221,7 +223,7 @@ async function runRescue() {
     }
   }
 
-  console.log(`[Rescue] Remote already has ${backedUpIds.size} complete background(s)`)
+  console.info(`[Rescue] Remote already has ${backedUpIds.size} complete background(s)`)
 
   let rescued = 0
   let skipped = 0
@@ -298,7 +300,7 @@ async function runRescue() {
   const totalPngMB = sizeStats.pngBytes.reduce((a, b) => a + b, 0) / 1048576
   const totalOutMB = sizeStats.outBytes.reduce((a, b) => a + b, 0) / 1048576
 
-  console.log(`
+  console.info(`
 ╔══════════════════════════════════════════════════════════╗
 ║                    RESCUE SUMMARY                         ║
 ╠══════════════════════════════════════════════════════════╣

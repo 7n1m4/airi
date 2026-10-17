@@ -20,7 +20,7 @@
     "./*": "./src/*"
   },
   "scripts": {
-    "typecheck": "vue-tsc --noEmit"
+    "typecheck": "NODE_OPTIONS=\"--max-old-space-size=12288\" vue-tsc --noEmit"
   },
   "dependencies": {
     "@moeru/eventa": "catalog:",
@@ -50,7 +50,7 @@
     "nanoid": "catalog:",
     "node-vibrant": "^4.0.4",
     "pinia": "catalog:",
-    "reka-ui": "^2.8.2",
+    "reka-ui": "catalog:",
     "splitpanes": "catalog:",
     "unspeech": "catalog:xsai",
     "valibot": "catalog:",

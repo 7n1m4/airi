@@ -9,6 +9,7 @@ import { useSpeechStore } from '@proj-airi/stage-ui/stores/modules/speech'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { Button, Callout, Input, Progress, Select } from '@proj-airi/ui'
 import { computed, onMounted, ref, watch } from 'vue'
+import { toast } from 'vue-sonner'
 
 const providerId = 'moss-nano-local'
 const defaultModel = 'moss-tts-nano-100m'
@@ -243,7 +244,7 @@ async function handleFileUpload(event: Event) {
 
   try {
     if (!file.name.toLowerCase().endsWith('.wav') && !file.type.startsWith('audio/')) {
-      alert('Please upload a valid audio file (preferably WAV).')
+      toast.error('Please upload a valid audio file (preferably WAV).')
       return
     }
 
@@ -271,7 +272,7 @@ async function handleFileUpload(event: Event) {
   }
   catch (error) {
     console.error('Failed to upload voice profile:', error)
-    alert('Failed to process and save the voice profile.')
+    toast.error('Failed to process and save the voice profile.')
   }
   finally {
     isUploading.value = false
@@ -306,7 +307,7 @@ function cancelRename() {
 async function saveRename(profile: MossVoiceProfile) {
   const sanitized = sanitizeVoiceName(editingName.value)
   if (!sanitized) {
-    alert('Please enter a valid voice profile name.')
+    toast.error('Please enter a valid voice profile name.')
     return
   }
 
@@ -316,7 +317,7 @@ async function saveRename(profile: MossVoiceProfile) {
   existingNames.push('EN Trump', 'Trump', 'EN LJS', 'LJS')
 
   if (existingNames.includes(sanitized)) {
-    alert('A voice profile with that name already exists.')
+    toast.error('A voice profile with that name already exists.')
     return
   }
 
@@ -332,7 +333,7 @@ async function saveRename(profile: MossVoiceProfile) {
   }
   catch (error) {
     console.error('Failed to rename voice profile:', error)
-    alert('Failed to rename the voice profile.')
+    toast.error('Failed to rename the voice profile.')
   }
 }
 

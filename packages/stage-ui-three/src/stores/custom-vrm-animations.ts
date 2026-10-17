@@ -41,7 +41,7 @@ export const useCustomVrmAnimationsStore = defineStore('custom-vrm-animations', 
 
   watch(customVrmaSyncSignal, (val) => {
     if (val) {
-      console.log('[CustomVRMA] Received custom VRMA sync signal, reloading from IndexedDB...')
+      console.info('[CustomVRMA] Received custom VRMA sync signal, reloading from IndexedDB...')
       customAnimationsLoaded.value = false
       void loadCustomAnimations()
     }

@@ -166,7 +166,7 @@ function statusFor(
     return supportCount >= policy.goalProposalPolicy.activationSupportCount && averageConfidence >= 0.75 ? 'active' : 'candidate'
   }
   if (origin === 'self-generated') {
-    return stronglyGrounded || signal.confidence >= 0.85 || supportCount >= 2 && averageConfidence >= 0.75
+    return stronglyGrounded || signal.confidence >= 0.85 || (supportCount >= 2 && averageConfidence >= 0.75)
       ? (supportCount >= 2 ? 'active' : 'candidate')
       : null
   }
@@ -203,10 +203,10 @@ function goalFromEvidence(input: Nan0GoalFormationInput, signal: Nan0GoalSignal,
     return null
 
   const existing = input.existingGoals.find(goal => goal.metadata.formationKey === key
-    || goal.origin === origin
-    && goal.originActorId === actorId
-    && goal.metadata.signalKind === signal.kind
-    && sameDirection(goal.title, signal.title))
+    || (goal.origin === origin
+      && goal.originActorId === actorId
+      && goal.metadata.signalKind === signal.kind
+      && sameDirection(goal.title, signal.title)))
   const supportingThoughtIds = unique([...supports.map(item => item.thought.thoughtId), input.thought.thoughtId])
   const supportingDecisionIds = unique(input.allDecisions
     .filter(decision => supportingThoughtIds.includes(decision.thoughtId))

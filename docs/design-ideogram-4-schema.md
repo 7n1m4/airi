@@ -13,8 +13,8 @@ A valid JSON caption object consists of three root keys:
 ```json
 {
   "high_level_description": "A global summary of the overall scene",
-  "style_description": { ... },
-  "compositional_deconstruction": { ... }
+  "style_description": { "…": "see §2" },
+  "compositional_deconstruction": { "…": "see §4" }
 }
 ```
 

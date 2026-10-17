@@ -16,7 +16,7 @@ AIRI's **Entity Ledger** (`useEntityLedgerStore`) is uniquely grounded:
 
 Rather than forcing users into a single visualization, the Mind Map provides **two complementary views over the exact same underlying memory data**, toggled with a single switch in the workspace header:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │  RECALL  >  MIND MAP                                                                   │
 │  VIEW MODE:   (●) Constellation Graph       ( ) Chronological Timeline                 │
@@ -29,7 +29,7 @@ Rather than forcing users into a single visualization, the Mind Map provides **t
 
 The **hero interactive force-directed graph** that visualizes the character's mental world model:
 
-```
+```text
                           [ NERV ] ───────── [ Misato ]
                              │                   │ (steals)
                              │                   ▼
@@ -60,7 +60,7 @@ The **hero interactive force-directed graph** that visualizes the character's me
 
 An alternative, linear representation of the **exact same data**, working chronologically (or in reverse) through time:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │  CHRONOLOGICAL TIMELINE STREAM                                    [ Newest First ▼ ]   │
 ├────────────────────────────────────────────────────────────────────────────────────────┤
@@ -107,7 +107,7 @@ An alternative, linear representation of the **exact same data**, working chrono
 
 Both views are bridged by a **Universal Time Slider** along the bottom bar:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │  ◀  Day 1 (May 20) ────── Day 5 (May 25) ────── Day 10 (May 30) ────── Today (Live)  ▶ │
 └────────────────────────────────────────────────────────────────────────────────────────┘
@@ -148,7 +148,7 @@ When `entities.length === 0`:
 When the user clicks `⚡ Synthesize Knowledge Graph`:
 - The system checks if **In-Flight Memory Grounding (Universe RAG++)** is enabled on the active character card (`extensions.airi.cognitionConfig.inFlightGrounding`).
 - **If Grounding is Disabled:** Instead of failing silently or forcing the user to leave the page, a friendly confirmation modal appears:
-  ```
+  ```text
   ┌────────────────────────────────────────────────────────────────────────┐
   │  Enable In-Flight Memory Grounding?                                    │
   │                                                                        │
@@ -174,7 +174,7 @@ When the user clicks `⚡ Synthesize Knowledge Graph`:
 
 Users should not have to leave the Mind Map and dig into Settings just to manage their knowledge graph. The workspace canvas header includes a **Cognition Utility Strip**:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │  RECALL  >  MIND MAP                     🟢 Universe RAG++ Active  [ ⚡ Rebuild ] [ ⋮ ]│
 │  View: (●) Constellation  ( ) Timeline   Stats: 277 Entities · 3 Claims · 514 Turns    │
@@ -222,7 +222,7 @@ pnpm -F @proj-airi/stage-pages add -D @types/d3-force @types/d3-zoom
 ## 9. Technical Implementation Blueprint
 
 ### Workspace Component Hierarchy
-```
+```text
 apps/stage-tamagotchi/src/renderer/components/chat/chat_knowledge_graph.vue
   └─ packages/stage-pages/src/pages/knowledge-graph/MindMapExplorer.vue
        ├─ MindMapHeader.vue (View toggle, Cognition pill, Rebuild button, Quick Settings)

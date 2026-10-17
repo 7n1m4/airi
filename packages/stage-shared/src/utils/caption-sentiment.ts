@@ -116,25 +116,25 @@ export function analyzeCaptionSentence(text: string): AnalyzedSentenceEffects {
   // 2. Keyword / Phrase Matches (Evaluated with respect to Tier 1 bracket token precedence)
   const lower = cleanText.toLowerCase()
 
-  if (/\b(love|cute|darling|sweetheart|like you)\b/i.test(lower)) {
+  if (/\b(?:love|cute|darling|sweetheart|like you)\b/i.test(lower)) {
     if (!res.ambient)
       res.ambient = 'hearts'
     if (res.tailStyle === 'pointer')
       res.tailStyle = 'heart-curl'
   }
-  else if (/\b(thanks|thank you|pretty|beautiful|amazing|star|sparkle)\b/i.test(lower)) {
+  else if (/\b(?:thanks|thank you|pretty|beautiful|amazing|star|sparkle)\b/i.test(lower)) {
     if (!res.rim)
       res.rim = 'flower-bloom'
     if (!res.ambient)
       res.ambient = 'stars'
   }
-  else if (/\b(sorry|miss you|cry|lonely|sniff|alone)\b/i.test(lower)) {
+  else if (/\b(?:sorry|miss you|cry|lonely|sniff|alone)\b/i.test(lower)) {
     if (!res.ambient)
       res.ambient = 'rain'
     if (res.tailStyle === 'pointer')
       res.tailStyle = 'droop'
   }
-  else if (/\b(angry|hmph|grr|annoyed|shut up)\b/i.test(lower)) {
+  else if (/\b(?:angry|hmph|grr|annoyed|shut up)\b/i.test(lower)) {
     if (res.bodyStyle === 'standard-rounded')
       res.bodyStyle = 'jagged-starburst'
     if (res.tailStyle === 'pointer')
@@ -144,13 +144,13 @@ export function analyzeCaptionSentence(text: string): AnalyzedSentenceEffects {
     if (!res.motion)
       res.motion = 'shake'
   }
-  else if (/\b(mine|jealous|belong to me|forever)\b/i.test(lower)) {
+  else if (/\b(?:mine|jealous|belong to me|forever)\b/i.test(lower)) {
     if (!res.ambient)
       res.ambient = 'vignette'
     if (!res.rim)
       res.rim = 'heartbeat-pulse'
   }
-  else if (/\b(scared|eek|creepy|cold)\b/i.test(lower)) {
+  else if (/\b(?:scared|eek|creepy|cold)\b/i.test(lower)) {
     if (!res.ambient)
       res.ambient = 'fireflies'
     if (!res.motion)
@@ -158,15 +158,15 @@ export function analyzeCaptionSentence(text: string): AnalyzedSentenceEffects {
     if (!res.rim)
       res.rim = 'frost-rim'
   }
-  else if (/\b(meow|nya|purr)\b/i.test(lower)) {
+  else if (/\b(?:meow|nya|purr)\b/i.test(lower)) {
     if (res.tailStyle === 'pointer')
       res.tailStyle = 'wagging'
   }
-  else if (/\b(code|system|analyze|data|diagnostic)\b/i.test(lower)) {
+  else if (/\b(?:code|system|analyze|data|diagnostic)\b/i.test(lower)) {
     if (!res.ambient)
       res.ambient = 'scanline'
   }
-  else if (/\b(cozy|warm|relax|goodnight|sleepy|yawn)\b/i.test(lower)) {
+  else if (/\b(?:cozy|warm|relax|goodnight|sleepy|yawn)\b/i.test(lower)) {
     if (!res.ambient)
       res.ambient = 'sunbeam'
     if (!res.motion)

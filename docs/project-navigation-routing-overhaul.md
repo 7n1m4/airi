@@ -39,7 +39,7 @@ Additionally, `settingsWindow` reuses a single `BrowserWindow` instance and re-t
 
 ## 3. Durable Target Architecture
 
-```
+```text
                        ┌─────────────────────────────────────────┐
                        │           Vue Router Guard              │
                        │        (renderer/router.ts)             │

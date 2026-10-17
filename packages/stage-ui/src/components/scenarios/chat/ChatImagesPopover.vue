@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   /** Tooltip for the main button */
   title?: string
   variant?: 'default' | 'mobile'

@@ -28,7 +28,7 @@ Currently, all raster generation backends require either:
 
 [Pollinations.ai](https://pollinations.ai) provides a publicly available, unmetered, zero-key image synthesis endpoint powered by open-weight diffusion clusters (Flux, SDXL, Turbo):
 
-```
+```http
 GET https://image.pollinations.ai/prompt/{encoded_prompt}?width={width}&height={height}&seed={seed}&model={model}&nologo=true
 ```
 
@@ -43,7 +43,7 @@ By adding **`PollinationsProvider`** to AIRI's Artistry architecture:
 
 ### 2.1 Dynamic Model Discovery (`listModels`)
 Pollinations provides a live model catalog endpoint:
-```
+```http
 GET https://gen.pollinations.ai/models
 ```
 Returns an array of rich model metadata objects:
@@ -101,6 +101,8 @@ Located at `apps/stage-tamagotchi/src/main/services/airi/widgets/providers/polli
 Implements the standard `ArtistryProvider` interface with dynamic model fetching:
 
 ```typescript
+import { Buffer } from 'node:buffer'
+
 export class PollinationsProvider implements ArtistryProvider {
   readonly id = 'pollinations'
   readonly name = 'Pollinations AI (Free / Zero-Config)'

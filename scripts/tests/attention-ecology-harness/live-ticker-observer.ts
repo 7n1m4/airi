@@ -1,4 +1,5 @@
 import path from 'node:path'
+import process from 'node:process'
 
 import { computeImageDelta } from './engine/stage0-phash.js'
 import { calculateCosineSimilarity, disposeVisionEncoder, getVisionEmbedding, normalizeVector } from './engine/stage1-vision-embed.js'
@@ -17,11 +18,11 @@ const TEST_CYCLES = [
   { id: '05b', name: '05b-browser-video-frame2.png', desc: 'Browser Video Drift (Stage 1 Centroid Muted)' },
 ]
 
-console.log('='.repeat(80))
-console.log('  👁️  ATTENTION ECOLOGY GUARD: LIVE TERMINAL OBSERVER & TELEMETRY')
-console.log('='.repeat(80))
-console.log('  Mode: Continuous Live Ticker over Seeded Benchmark Cycle')
-console.log('  Press Ctrl+C to stop.\n')
+console.info('='.repeat(80))
+console.info('  👁️  ATTENTION ECOLOGY GUARD: LIVE TERMINAL OBSERVER & TELEMETRY')
+console.info('='.repeat(80))
+console.info('  Mode: Continuous Live Ticker over Seeded Benchmark Cycle')
+console.info('  Press Ctrl+C to stop.\n')
 
 let tickCount = 0
 let prevPath: string | null = null
@@ -33,7 +34,7 @@ async function runTick() {
   const currentPath = path.join(FIXTURES_DIR, item.name)
 
   const timestamp = new Date().toISOString().split('T')[1].slice(0, 8)
-  console.log(`[${timestamp}] --- TICK #${tickCount} | Frame: ${item.name} (${item.desc}) ---`)
+  console.info(`[${timestamp}] --- TICK #${tickCount} | Frame: ${item.name} (${item.desc}) ---`)
 
   const startMs = Date.now()
 
@@ -42,8 +43,8 @@ async function runTick() {
     const { embedding } = await getVisionEmbedding(currentPath)
     currentCentroid = embedding
     prevPath = currentPath
-    console.log(`  ├─ Verdict:       ⚡ BASELINE SEEDED (Centroid Established)`)
-    console.log(`  └─ Total Latency: ${Date.now() - startMs}ms\n`)
+    console.info(`  ├─ Verdict:       ⚡ BASELINE SEEDED (Centroid Established)`)
+    console.info(`  └─ Total Latency: ${Date.now() - startMs}ms\n`)
     return
   }
 
@@ -51,9 +52,9 @@ async function runTick() {
   prevPath = currentPath
 
   if (!stage0.hasChanged) {
-    console.log(`  ├─ Verdict:       💤 IGNORED (0-COST FILTERED)`)
-    console.log(`  ├─ Stage 0 aHash: norm=${stage0.normalizedDistance.toFixed(4)} < 0.0050`)
-    console.log(`  └─ Total Latency: ${Date.now() - startMs}ms\n`)
+    console.info(`  ├─ Verdict:       💤 IGNORED (0-COST FILTERED)`)
+    console.info(`  ├─ Stage 0 aHash: norm=${stage0.normalizedDistance.toFixed(4)} < 0.0050`)
+    console.info(`  └─ Total Latency: ${Date.now() - startMs}ms\n`)
     return
   }
 
@@ -84,18 +85,18 @@ async function runTick() {
       ? '📝 NOTE (WINDOW / CONTEXT SHIFT)'
       : '💤 IGNORED (QUIET FRAME)'
 
-  console.log(`  ├─ Verdict:       ${decisionBadge}`)
-  console.log(`  ├─ Stage 0 aHash: norm=${stage0.normalizedDistance.toFixed(4)} (CHANGED)`)
-  console.log(`  ├─ Stage 1 CLIP:  novelty=${novelty.toFixed(4)} (threshold: 0.0200) | Top: ${zeroShot.topLabel}`)
-  console.log(`  ├─ Stage 2 OCR:   errorHits=${ocrEvidence.errorPatternHits} | interestHits=${ocrEvidence.interestKeywordHits} [${ocrEvidence.interestKeywords.join(', ')}]`)
-  console.log(`  └─ Total Latency: ${totalMs}ms`)
+  console.info(`  ├─ Verdict:       ${decisionBadge}`)
+  console.info(`  ├─ Stage 0 aHash: norm=${stage0.normalizedDistance.toFixed(4)} (CHANGED)`)
+  console.info(`  ├─ Stage 1 CLIP:  novelty=${novelty.toFixed(4)} (threshold: 0.0200) | Top: ${zeroShot.topLabel}`)
+  console.info(`  ├─ Stage 2 OCR:   errorHits=${ocrEvidence.errorPatternHits} | interestHits=${ocrEvidence.interestKeywordHits} [${ocrEvidence.interestKeywords.join(', ')}]`)
+  console.info(`  └─ Total Latency: ${totalMs}ms`)
 
   if (salience.decision === 'PROMOTE') {
-    console.log('\n  ┌────────────────────────────────────────────────────────────┐')
-    console.log('  │  SYNTHESIZING PROMOTION PACKET & VISUAL EVENT SUMMARY...  │')
-    console.log('  └────────────────────────────────────────────────────────────┘')
+    console.info('\n  ┌────────────────────────────────────────────────────────────┐')
+    console.info('  │  SYNTHESIZING PROMOTION PACKET & VISUAL EVENT SUMMARY...  │')
+    console.info('  └────────────────────────────────────────────────────────────┘')
     const summaryResult = await runForwarder(currentPath, zeroShot, ocrEvidence)
-    console.log(summaryResult.summary)
+    console.info(summaryResult.summary)
   }
   else {
     if (currentCentroid && novelty > 0.01) {
@@ -107,7 +108,7 @@ async function runTick() {
     }
   }
 
-  console.log('')
+  console.info('')
 }
 
 // Run immediately, then repeat every 2.5 seconds
@@ -132,6 +133,6 @@ process.on('SIGINT', async () => {
     ])
   }
   catch {}
-  console.log('\n👋 Observer stopped. Clean teardown complete.')
+  console.info('\n👋 Observer stopped. Clean teardown complete.')
   process.exit(0)
 })

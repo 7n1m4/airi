@@ -99,7 +99,7 @@ async function copyPrompt(promptText: string, noteId: string) {
       }
     }, 2000)
   }
-  catch (err) {
+  catch {
     // Clipboard failed
   }
 }

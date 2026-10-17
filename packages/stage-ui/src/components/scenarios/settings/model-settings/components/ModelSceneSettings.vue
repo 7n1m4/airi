@@ -18,6 +18,11 @@ const props = withDefaults(defineProps<{
   sceneMutationLocked: false,
 })
 
+// The scene stores are pinia/localStorage based and are shared by reference,
+// so their writable state is unwrapped into a local binding: writes go through
+// the store itself, not through the `store` prop.
+const store = computed(() => props.store)
+
 const { t } = useI18n()
 
 const activeTab = ref('placement')
@@ -42,15 +47,15 @@ const computedX = computed({
     if (props.positioningStore) {
       return props.positioningStore.getPosition(modelKey.value).x
     }
-    return props.store.modelOffset?.x || 0
+    return store.value.modelOffset?.x || 0
   },
   set: (val) => {
     if (props.positioningStore) {
       const current = props.positioningStore.getPosition(modelKey.value)
       props.positioningStore.setPosition(modelKey.value, { ...current, x: val })
     }
-    else if (props.store.modelOffset) {
-      props.store.modelOffset.x = val
+    else if (store.value.modelOffset) {
+      store.value.modelOffset.x = val
     }
   },
 })
@@ -60,15 +65,15 @@ const computedY = computed({
     if (props.positioningStore) {
       return props.positioningStore.getPosition(modelKey.value).y
     }
-    return props.store.modelOffset?.y || 0
+    return store.value.modelOffset?.y || 0
   },
   set: (val) => {
     if (props.positioningStore) {
       const current = props.positioningStore.getPosition(modelKey.value)
       props.positioningStore.setPosition(modelKey.value, { ...current, y: val })
     }
-    else if (props.store.modelOffset) {
-      props.store.modelOffset.y = val
+    else if (store.value.modelOffset) {
+      store.value.modelOffset.y = val
     }
   },
 })
@@ -78,7 +83,7 @@ const computedScale = computed({
     if (props.positioningStore) {
       return props.positioningStore.getPosition(modelKey.value).scale
     }
-    return props.store.cameraDistance || 1
+    return store.value.cameraDistance || 1
   },
   set: (val) => {
     if (props.positioningStore) {
@@ -86,7 +91,7 @@ const computedScale = computed({
       props.positioningStore.setPosition(modelKey.value, { ...current, scale: val })
     }
     else {
-      props.store.cameraDistance = val
+      store.value.cameraDistance = val
     }
   },
 })
@@ -127,12 +132,12 @@ const computedScale = computed({
           />
           <PropertyNumber
             v-if="!props.positioningStore"
-            v-model="props.store.modelOffset.z"
+            v-model="store.modelOffset.z"
             :config="{ min: -props.modelSize.z * 2, max: props.modelSize.z * 2, step: props.modelSize.z / 1000, label: 'Z', formatValue: val => val?.toFixed(4), disabled: sceneMutationLocked }"
             :label="t('settings.vrm.scale-and-position.z')"
           />
           <PropertyNumber
-            v-model="props.store.modelRotationY"
+            v-model="store.modelRotationY"
             :config="{ min: -180, max: 180, step: 1, label: t('settings.vrm.scale-and-position.rotation-y'), disabled: sceneMutationLocked }"
             :label="t('settings.vrm.scale-and-position.rotation-y')"
           />
@@ -142,7 +147,7 @@ const computedScale = computed({
             :label="props.positioningStore ? 'Scale' : t('settings.vrm.scale-and-position.camera-distance')"
           />
           <PropertyNumber
-            v-model="props.store.cameraFOV"
+            v-model="store.cameraFOV"
             :config="{ min: 1, max: 180, step: 1, label: t('settings.vrm.scale-and-position.fov'), disabled: sceneMutationLocked }"
             :label="t('settings.vrm.scale-and-position.fov')"
           />
@@ -158,22 +163,22 @@ const computedScale = computed({
           </div>
           <div grid="~ cols-5 gap-y-2 gap-x-1" items-center>
             <PropertyNumber
-              v-model="props.store.directionalLightRotation.x"
+              v-model="store.directionalLightRotation.x"
               :config="{ min: -180, max: 180, step: 1, label: 'X°', formatValue: val => val?.toFixed(0), disabled: sceneMutationLocked }"
               label="Rotation X"
             />
             <PropertyNumber
-              v-model="props.store.directionalLightRotation.y"
+              v-model="store.directionalLightRotation.y"
               :config="{ min: -180, max: 180, step: 1, label: 'Y°', formatValue: val => val?.toFixed(0), disabled: sceneMutationLocked }"
               label="Rotation Y"
             />
             <PropertyColor
-              v-model="props.store.directionalLightColor"
+              v-model="store.directionalLightColor"
               :disabled="sceneMutationLocked"
               label="Color"
             />
             <PropertyNumber
-              v-model="props.store.directionalLightIntensity"
+              v-model="store.directionalLightIntensity"
               :config="{ min: 0, max: 10, step: 0.01, label: 'Intensity', disabled: sceneMutationLocked }"
               label="Intensity"
             />
@@ -187,12 +192,12 @@ const computedScale = computed({
           </div>
           <div grid="~ cols-5 gap-y-2 gap-x-1" items-center>
             <PropertyColor
-              v-model="props.store.ambientLightColor"
+              v-model="store.ambientLightColor"
               :disabled="sceneMutationLocked"
               label="Color"
             />
             <PropertyNumber
-              v-model="props.store.ambientLightIntensity"
+              v-model="store.ambientLightIntensity"
               :config="{ min: 0, max: 10, step: 0.01, label: 'Intensity', disabled: sceneMutationLocked }"
               label="Intensity"
             />
@@ -205,29 +210,29 @@ const computedScale = computed({
             Environment
           </div>
           <div class="mb-1">
-            <SelectTab v-model="props.store.envSelect" :options="envOptions" :disabled="sceneMutationLocked" size="sm" />
+            <SelectTab v-model="store.envSelect" :options="envOptions" :disabled="sceneMutationLocked" size="sm" />
           </div>
 
-          <div v-if="props.store.envSelect === 'hemisphere'" grid="~ cols-5 gap-y-2 gap-x-1" items-center>
+          <div v-if="store.envSelect === 'hemisphere'" grid="~ cols-5 gap-y-2 gap-x-1" items-center>
             <PropertyColor
-              v-model="props.store.hemisphereSkyColor"
+              v-model="store.hemisphereSkyColor"
               :disabled="sceneMutationLocked"
               label="Sky Color"
             />
             <PropertyColor
-              v-model="props.store.hemisphereGroundColor"
+              v-model="store.hemisphereGroundColor"
               :disabled="sceneMutationLocked"
               label="Ground Color"
             />
             <PropertyNumber
-              v-model="props.store.hemisphereLightIntensity"
+              v-model="store.hemisphereLightIntensity"
               :config="{ min: 0, max: 10, step: 0.01, label: 'Intensity', disabled: sceneMutationLocked }"
               label="Intensity"
             />
           </div>
           <div v-else grid="~ cols-5 gap-y-2 gap-x-1" items-center>
             <PropertyNumber
-              v-model="props.store.skyBoxIntensity"
+              v-model="store.skyBoxIntensity"
               :config="{ min: 0, max: 1, step: 0.01, label: 'Intensity', disabled: sceneMutationLocked }"
               label="Skybox Intensity"
             />

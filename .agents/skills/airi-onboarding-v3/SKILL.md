@@ -53,7 +53,7 @@ Directory: `packages/stage-ui/src/components/scenarios/dialogs/onboarding/v3/`
 
 ## 3. The 18-Step Journey Topology
 
-```
+```text
 [ 0. Welcome ] ──▶ [ 1. Triage ] ──▶ [ 2. Appearance ] ──▶ [ 3. Experience Archetypes ]
                                                                         │
    ┌────────────────────────────────────────────────────────────────────┘

@@ -484,8 +484,10 @@ onUnmounted(() => {
 
       <!-- Embedded Webview Canvas -->
       <div class="relative overflow-hidden border border-neutral-200/80 rounded-2xl bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950">
-        <component
-          is="webview"
+        <!-- Native `<webview>` element: `<component is="webview">` cannot satisfy
+        vue/require-component-is and vue/no-useless-v-bind, and an unregistered
+        static string resolves to the native element anyway. -->
+        <webview
           ref="webviewRef"
           :src="activeBrowserSource.url"
           class="h-[74vh] min-h-[580px] w-full"

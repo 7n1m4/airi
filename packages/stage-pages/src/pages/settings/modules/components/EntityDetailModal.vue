@@ -3,7 +3,7 @@ import type { EntityType } from '@proj-airi/stage-ui/libs/search/entity-ledger'
 
 import { useEntityLedgerStore } from '@proj-airi/stage-ui/stores/entity-ledger'
 import { useSystemOneStore } from '@proj-airi/stage-ui/stores/modules/system-one'
-import { Button } from '@proj-airi/ui'
+import { Button, DoubleCheckButton } from '@proj-airi/ui'
 import { computed, ref } from 'vue'
 
 const props = defineProps<{
@@ -88,12 +88,10 @@ async function handleReclassify() {
 async function handleDelete() {
   if (!entity.value)
     return
-  if (confirm(`Remove entity "${entity.value.label}" and its indexed references from the Knowledge Graph?`)) {
-    const id = entity.value.entityId
-    await entityLedgerStore.deleteEntity(id)
-    emit('deleted', id)
-    close()
-  }
+  const id = entity.value.entityId
+  await entityLedgerStore.deleteEntity(id)
+  emit('deleted', id)
+  close()
 }
 
 function formatTimestamp(ts?: number | string): string {
@@ -319,14 +317,23 @@ function formatTimestamp(ts?: number | string): string {
 
       <!-- Footer -->
       <footer class="relative z-10 flex items-center justify-between border-t border-neutral-100 bg-neutral-50/50 p-4 dark:border-neutral-800/80 dark:bg-neutral-900/50">
-        <button
-          type="button"
-          class="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs text-rose-600 font-bold transition-all hover:bg-rose-50 dark:text-rose-400 hover:text-rose-700 dark:hover:bg-rose-950/30"
-          @click="handleDelete"
+        <DoubleCheckButton
+          variant="danger"
+          size="sm"
+          :disabled="!entity"
+          @confirm="handleDelete"
         >
-          <div class="i-solar:trash-bin-trash-bold-duotone text-sm" />
-          <span>Mark as Noise / Delete</span>
-        </button>
+          <div class="flex items-center gap-1.5">
+            <div class="i-solar:trash-bin-trash-bold-duotone text-sm" />
+            <span>Mark as Noise / Delete</span>
+          </div>
+          <template #confirm>
+            Remove entity &amp; indexed references?
+          </template>
+          <template #cancel>
+            Cancel
+          </template>
+        </DoubleCheckButton>
 
         <Button
           label="Done"

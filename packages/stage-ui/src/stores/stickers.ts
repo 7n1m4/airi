@@ -235,7 +235,9 @@ export const useStickersStore = Pinia.defineStore('stickers', () => {
     activePlacements.value = activePlacements.value.filter(p => !p.expiresAt || p.expiresAt > now)
 
     if (import.meta.env.DEV && activePlacements.value.length !== initialCount) {
-      console.log(`[StickersStore] Purged ${initialCount - activePlacements.value.length} expired stickers.`)
+      // NOTICE: `console.info` (not `console.log`) because eslint's no-console
+      // only allows warn/error/info.
+      console.info(`[StickersStore] Purged ${initialCount - activePlacements.value.length} expired stickers.`)
     }
   }, 2000)
 

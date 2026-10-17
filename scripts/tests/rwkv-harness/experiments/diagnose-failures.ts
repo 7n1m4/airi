@@ -31,12 +31,12 @@ async function main() {
   ]
 
   for (const m of models) {
-    console.log(`\n======================================================`)
-    console.log(`Diagnostic: ${m.name} (${m.model})`)
-    console.log(`======================================================`)
+    console.info(`\n======================================================`)
+    console.info(`Diagnostic: ${m.name} (${m.model})`)
+    console.info(`======================================================`)
 
     if (!m.p) {
-      console.log(`✗ Provider config missing`)
+      console.info(`✗ Provider config missing`)
       continue
     }
 
@@ -60,21 +60,21 @@ async function main() {
 
       const raw = await res.text()
       if (!res.ok) {
-        console.log(`✗ HTTP ${res.status}: ${raw.slice(0, 300)}`)
+        console.info(`✗ HTTP ${res.status}: ${raw.slice(0, 300)}`)
         continue
       }
 
       const data = JSON.parse(raw)
       const choice = data.choices?.[0]
       const content = choice?.message?.content || choice?.text || ''
-      console.log(`HTTP 200 OK. Content length: ${content.length} chars`)
-      console.log(`Finish reason: ${choice?.finish_reason || 'N/A'}`)
-      console.log(`--- Raw output snippet ---`)
-      console.log(content.slice(0, 500))
-      console.log(`--------------------------`)
+      console.info(`HTTP 200 OK. Content length: ${content.length} chars`)
+      console.info(`Finish reason: ${choice?.finish_reason || 'N/A'}`)
+      console.info(`--- Raw output snippet ---`)
+      console.info(content.slice(0, 500))
+      console.info(`--------------------------`)
     }
     catch (e: any) {
-      console.log(`✗ Error: ${e.message}`)
+      console.info(`✗ Error: ${e.message}`)
     }
   }
 }

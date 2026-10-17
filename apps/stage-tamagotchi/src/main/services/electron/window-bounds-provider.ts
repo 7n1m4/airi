@@ -4,6 +4,8 @@ import type { TargetWindowBounds } from '@proj-airi/electron-eventa'
 
 import { execFile } from 'node:child_process'
 
+import koffi from 'koffi'
+
 import { isMacOS, isWindows } from 'std-env'
 
 type BoundsCallback = (bounds: TargetWindowBounds | null) => void
@@ -24,7 +26,6 @@ function createWindowsPoller(nativeId: string, callback: BoundsCallback): { stop
   // Native FFI Hook for Windows User32 via Koffi
   let win32: any = null
   try {
-    const koffi = require('koffi')
     const user32 = koffi.load('user32.dll')
 
     koffi.struct('RECT', {

@@ -130,7 +130,7 @@ export default defineConfig({
   },
   build: {
     target: 'esnext',
-    sourcemap: process.env.SOURCE_MAP === 'true',
+    sourcemap: env.SOURCE_MAP === 'true',
   },
   worker: {
     format: 'es',
@@ -240,7 +240,7 @@ export default defineConfig({
     // https://github.com/webfansplz/vite-plugin-vue-devtools
     // VueDevTools(),
 
-    ...(!process.env.SKIP_DOWNLOADS
+    ...(!env.SKIP_DOWNLOADS
       ? [
           resilient(DownloadLive2DSDK()),
           resilient(Download('https://dist.ayaka.moe/live2d-models/hiyori_free_zh.zip', 'hiyori_free_zh.zip', 'live2d/models', { parentDir: stageUIAssetsRoot, cacheDir: sharedCacheDir })),

@@ -2,7 +2,7 @@
 import type { EntityType } from '@proj-airi/stage-ui/libs/search/entity-ledger'
 
 import { useEntityLedgerStore } from '@proj-airi/stage-ui/stores/entity-ledger'
-import { Button } from '@proj-airi/ui'
+import { Button, DoubleCheckButton } from '@proj-airi/ui'
 import { computed, ref } from 'vue'
 
 const props = defineProps<{
@@ -100,12 +100,11 @@ async function handleReclassify() {
 async function handleDelete() {
   if (!entity.value)
     return
-  if (confirm(`Remove entity "${entity.value.label}" and its indexed references from the Knowledge Graph?`)) {
-    const id = entity.value.entityId
-    await entityLedgerStore.deleteEntity(id)
-    emit('deleted', id)
-    close()
-  }
+
+  const id = entity.value.entityId
+  await entityLedgerStore.deleteEntity(id)
+  emit('deleted', id)
+  close()
 }
 
 function formatTimestamp(ts?: number | string): string {
@@ -288,14 +287,23 @@ function formatTimestamp(ts?: number | string): string {
 
       <!-- Footer Actions -->
       <div class="flex items-center justify-between gap-3 border-t border-neutral-800/80 bg-neutral-950/50 p-4">
-        <button
-          type="button"
-          class="flex items-center gap-1.5 p-1.5 text-xs text-rose-400 transition-colors hover:text-rose-300"
-          @click="handleDelete"
+        <DoubleCheckButton
+          variant="danger"
+          size="sm"
+          :block="false"
+          @confirm="handleDelete"
         >
-          <div class="i-solar:trash-bin-trash-bold-duotone text-sm" />
-          <span>Mark as Noise / Delete</span>
-        </button>
+          <div class="flex items-center gap-1.5">
+            <div class="i-solar:trash-bin-trash-bold-duotone text-sm" />
+            <span>Mark as Noise / Delete</span>
+          </div>
+          <template #confirm>
+            <div class="flex items-center gap-1.5">
+              <div class="i-solar:trash-bin-trash-bold-duotone text-sm" />
+              <span>Confirm removal</span>
+            </div>
+          </template>
+        </DoubleCheckButton>
 
         <Button
           label="Done"

@@ -42,7 +42,7 @@ await fetch(`${hostUrl}/prompt`, {
 
 ## 2. Architecture Overview
 
-```
+```text
 ┌──────────────────────────────────────────────────────────┐
 │  AIRI Settings UI                                        │
 │  ┌────────────────────────────────────────────────────┐  │
@@ -92,20 +92,22 @@ This function is the proven engine powering **all** CUIPP workflow modes. Every 
 ### The Universal Pattern (7+ modes confirm this)
 
 ```js
-// 1. Import the template engine
-const { getComfyTemplate } = require("../workflowBuilder/getComfyTemplate");
+async function buildTemplate() {
+  // 1. Import the template engine
+  const { getComfyTemplate } = require('../workflowBuilder/getComfyTemplate')
 
-// 2. Point to a pre-built workflow JSON (exported from ComfyUI)
-const workflowPath = "./controllers/workflowBuilder/someWorkflow.json";
+  // 2. Point to a pre-built workflow JSON (exported from ComfyUI)
+  const workflowPath = './controllers/workflowBuilder/someWorkflow.json'
 
-// 3. Build a config object keyed by node _meta.title
-const config = {
-  "Node Title": { inputName: value },
-};
+  // 3. Build a config object keyed by node _meta.title
+  const config = {
+    'Node Title': { inputName: value },
+  }
 
-// 4. Apply config to workflow, get back { prompt, workflow }
-const result = await getComfyTemplate(workflowPath, config);
-return { output: result.prompt, workflow: result.workflow };
+  // 4. Apply config to workflow, get back { prompt, workflow }
+  const result = await getComfyTemplate(workflowPath, config)
+  return { output: result.prompt, workflow: result.workflow }
+}
 ```
 
 ### How It Works Internally
@@ -120,7 +122,7 @@ return { output: result.prompt, workflow: result.workflow };
 
 These show the actual variety of overrides the system handles:
 
-```js
+```text
 // sbsMode.js — Side-by-side comparison
 {
   "load_first_image":        { image: "output_001.png" },     // filename
@@ -195,7 +197,7 @@ User drops or selects a `workflow_api.json` file they exported from ComfyUI (Set
 #### Step 2: Field Discovery
 The UI parses the JSON and displays all nodes with their `_meta.title` and `inputs`:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────┐
 │  📋 Workflow Nodes — "My Anime Generator"                │
 │                                                          │
@@ -424,7 +426,7 @@ The new ComfyUI settings page should follow the rich, informational pattern from
 
 Rounded card with icon + title + description:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────┐
 │ 🖥️  ComfyUI Native API                                  │
 │                                                          │
@@ -444,7 +446,7 @@ Rounded card with icon + title + description:
 
 ### Connection Section
 
-```
+```text
 ┌──────────────────────────────────────────────────────────┐
 │ Server URL:  [http://localhost:8188        ] [🔌 Test]   │
 │                                                          │
@@ -532,7 +534,7 @@ interface ArtistryJobStatus {
 
 Same pattern, but the "async work" is the polling loop:
 
-```typescript
+```text
 async generate(request: ArtistryRequest): Promise<ArtistryJob> {
   // 1. Apply template overrides using getComfyTemplate logic
   // 2. POST /prompt → get prompt_id

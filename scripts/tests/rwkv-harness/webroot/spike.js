@@ -74,8 +74,10 @@ async function run() {
     tokens = Uint32Array.of(token)
     const dec = decoder.decode(tokenizer.decode(tokens), { stream: true })
     if (dec) {
-      const t = stopScanner.push(dec); if (t)
-        text += t; if (stopScanner.stopped)
+      const t = stopScanner.push(dec)
+      if (t)
+        text += t
+      if (stopScanner.stopped)
         break
     }
   }

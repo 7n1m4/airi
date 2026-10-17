@@ -67,7 +67,7 @@ To let the user balance performance against descriptive style, the local vision 
 
 Rather than attempting to build the entire system end-to-end (connecting to character cards and LLMs on the first run), we will implement a sandbox rollout:
 
-```
+```text
 [Phase 1: Local Provider & Settings] ──> [Phase 2: UI Playground Sandbox] ──> [Phase 3: Card Editor Integration]
 ```
 

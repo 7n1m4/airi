@@ -35,7 +35,7 @@ Echo Chips (Dreaming) is not being deprecated; it remains the authoritative dorm
 
 Crucially, **Daydreaming** and **Recent Topics (Toggle 4)** are two consumer surfaces of this exact same underlying subconscious engine, and **Daydreaming Chips live side-by-side with Echo Chips in the very same visual memories stream**:
 
-```
+```text
                                   Active Conversation Turn
                               (Sliding Window: Last 2–4 Turns)
                                               │
@@ -131,7 +131,7 @@ Tests evaluated 3 strategies:
 
 To overcome single-pass ambiguity and deadpan sarcasm blindness without exceeding client compute, AIRI employs a **Subconscious Probe Tree** (budgeted at **1,000–2,000 ms** across 3–5 adaptive micro-probes):
 
-```
+```text
                         Incoming Turn Ingestion
                                    │
                                    ▼
@@ -185,7 +185,7 @@ With Needle:
 3. **Storage:** Stored in volatile session state (`useRecentTopicsStore`)—**never polluting the character card YAML/JSON**.
 4. **Pre-Flight UI Preview:** Displayed in the amber **`PRE-FLIGHT GROUNDING ACTIVE`** popover box above the chat composer alongside sensor and salience telemetry.
 5. **Prompt Assembly:** Injected cleanly into the 6th grounding slot via `formatRecentTopicsBlock()` in [`grounding-assembler.ts`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-ui/src/stores/chat/grounding-assembler.ts):
-   ```
+   ```text
    [RECENT TOPICS]
    You have the following topics and conceptual threads active in your recent memory. Use them to maintain awareness of what has been discussed lately:
    ---
@@ -214,7 +214,7 @@ If the system dumped raw extracted tags into the visual Memories ribbon on every
 
 To maintain a refined, organic feel, the **Daydream Cadence Governor** in `packages/stage-ui/src/stores/daydream.ts` enforces four strict curation filters:
 
-```
+```text
                   Needle Extracted Beat Output
                                │
                                ▼

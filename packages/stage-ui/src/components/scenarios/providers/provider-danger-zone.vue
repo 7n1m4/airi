@@ -34,7 +34,9 @@ export default { name: 'ProviderDangerZone' }
     </div>
 
     <DoubleCheckButton variant="danger" block :disabled="props.disabled" @confirm="handleDelete">
-      <template>{{ t('settings.pages.providers.common.section.dangerZone.deleteCredentials') }}</template>
+      <template #default>
+        {{ t('settings.pages.providers.common.section.dangerZone.deleteCredentials') }}
+      </template>
       <template #confirm>
         {{ t('settings.pages.providers.common.section.dangerZone.confirmDelete') }}
       </template>

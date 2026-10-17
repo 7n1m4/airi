@@ -42,7 +42,7 @@ function pruneCache() {
     return
   }
 
-  console.log(`[Turbo Cache Pruner] Cache size is ${(totalSize / (1024 * 1024 * 1024)).toFixed(2)} GB, which exceeds the limit of 2.00 GB. Pruning oldest entries...`)
+  console.info(`[Turbo Cache Pruner] Cache size is ${(totalSize / (1024 * 1024 * 1024)).toFixed(2)} GB, which exceeds the limit of 2.00 GB. Pruning oldest entries...`)
 
   // Sort files by last modification time (oldest first)
   filesList.sort((a, b) => a.mtime - b.mtime)
@@ -65,7 +65,7 @@ function pruneCache() {
     }
   }
 
-  console.log(`[Turbo Cache Pruner] Pruned ${deletedCount} files. New cache size: ${(currentSize / (1024 * 1024 * 1024)).toFixed(2)} GB`)
+  console.info(`[Turbo Cache Pruner] Pruned ${deletedCount} files. New cache size: ${(currentSize / (1024 * 1024 * 1024)).toFixed(2)} GB`)
 }
 
 pruneCache()

@@ -17,7 +17,7 @@ The Stage Radial Menu synthesizes two proven technical architectures:
    - Sourced from [`docs/design-head-tethered-captions.md`](./design-head-tethered-captions.md), [`docs/design-actor-stage.md`](./design-actor-stage.md), and [`StageConfigOverlay.vue`](../packages/stage-ui/src/components/scenarios/StageConfigOverlay.vue).
    - Core mechanics extracted: Unified `getHeadPose()` contract across all 4 avatar runtimes (Live2D, VRM, MMD, Spine), 3D NDC-to-pixel projection, and Euler angle perspective deformation.
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        Stage-Mate Heritage                             │
 │  • Polar angle slicing (360° / N) & polar-to-cartesian button layout   │
@@ -63,7 +63,7 @@ $$\text{anchorY} = \text{headPose.screenY} + \text{verticalOffset}$$
 
 Every sub-menu in the Stage Radial Menu is a **first-class radial pie menu**, eliminating rectangular lists and flat modals:
 
-```
+```text
                        [ ROOT WHEEL (4 or 5 Slices) ]
                                       │
         ┌─────────────────┬───────────┴───────────┬─────────────────┐

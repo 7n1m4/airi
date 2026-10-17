@@ -79,7 +79,7 @@ To compile a highly representative and computationally lightweight topic map, th
 
 The injected block is compact and human-readable:
 
-```
+```text
 [RECENT TOPICS]
 Topics this user has been talking about lately (by recency & frequency):
 - work stress (high — last 20 turns)
@@ -103,7 +103,7 @@ Maintains verbal-visual coherence between the Actor (character voice) and the Di
 
 When enabled, the system retrieves the latest persistent scratchpad from the most recent `directorNotes` repository entry (maximum 1000 characters). This scratchpad tracks active scene information such as current location, active outfits/accessories, held items, and active lighting. The text is formatted and injected as a system context prompt:
 
-```
+```text
 [VISUAL STATE BOARD]
 Active scene & character visual state (maintained by Director):
 - Location: cozy tea room, torii gate in background

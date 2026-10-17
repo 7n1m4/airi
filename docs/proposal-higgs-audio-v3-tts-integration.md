@@ -35,7 +35,7 @@ This is where it gets interesting and uncomfortable.
 
 Higgs v3's killer feature is its **inline control token syntax**:
 
-```
+```text
 All tags follow <|category:value|> syntax and can be inserted mid-utterance.
 ```
 
@@ -51,7 +51,7 @@ All tags follow <|category:value|> syntax and can be inserted mid-utterance.
 - Language switching: `<|zh|>`, `<|en|>`, `<|ja|>`, etc.
 
 Example:
-```
+```text
 "I can't believe you did that. <|emotion:awe|> That's... actually incredible. <|pause:short|> Wow."
 ```
 
@@ -110,7 +110,7 @@ A new checkbox in the Audio Studio profile editor:
 
 The transformation is a simple regex substitution on `[category:value]` shaped brackets only:
 
-```
+```text
 [category:value]  →  <|category:value|>
 ```
 
@@ -197,7 +197,7 @@ The `expressionTags` data comes directly from `supported_tags.csv`, which is hot
 
 The full end-to-end flow with zero new AIRI plumbing:
 
-```
+```text
 supported_tags.csv (Higgs rows added)
     ↓ hot-reload
 /chatterbox/capabilities → expressionTags

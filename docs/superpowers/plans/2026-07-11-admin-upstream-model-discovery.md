@@ -10,7 +10,7 @@
 
 ---
 
-### Task 1: Implement model discovery in the router-config service
+## Task 1: Implement model discovery in the router-config service
 
 **Files:**
 - Modify: `apps/server/src/services/domain/admin/router-config/index.ts`
@@ -69,7 +69,7 @@ git add apps/server/src/services/domain/admin/router-config/index.ts apps/server
 git commit -m "feat(server): discover upstream models"
 ```
 
-### Task 2: Expose the validated admin endpoint
+## Task 2: Expose the validated admin endpoint
 
 **Files:**
 - Modify: `apps/server/src/routes/admin/config/router/index.ts`
@@ -105,13 +105,14 @@ Expected: the new route is absent.
 - [x] **Step 3: Add the route before the existing router-config POST**
 
 ```ts
-.post('/models', async (c) => {
-  const raw = await c.req.json().catch(() => null)
-  const parsed = safeParse(ModelDiscoveryBodySchema, raw)
-  if (!parsed.success)
-    throw createBadRequestError('Invalid request body', 'INVALID_BODY', parsed.issues)
-  return c.json(await service.discoverModels(parsed.output))
-})
+new Hono<HonoEnv>()
+  .post('/models', async (c) => {
+    const raw = await c.req.json().catch(() => null)
+    const parsed = safeParse(ModelDiscoveryBodySchema, raw)
+    if (!parsed.success)
+      throw createBadRequestError('Invalid request body', 'INVALID_BODY', parsed.issues)
+    return c.json(await service.discoverModels(parsed.output))
+  })
 ```
 
 Use bounded Valibot strings for provider kind, Base URL, plaintext key, configured model name, and existing key entry ID. Existing auth and admin guards cover this route.
@@ -123,7 +124,7 @@ git add apps/server/src/routes/admin/config/router/index.ts apps/server/src/rout
 git commit -m "feat(server): expose upstream model discovery"
 ```
 
-### Task 3: Add the web client mapping
+## Task 3: Add the web client mapping
 
 **Files:**
 - Modify: `apps/stage-web/src/pages/admin/adminApi.ts`
@@ -174,7 +175,7 @@ git add apps/stage-web/src/pages/admin/adminApi.ts apps/stage-web/src/pages/admi
 git commit -m "feat(web): add upstream model discovery client"
 ```
 
-### Task 4: Add the editable picker and localizations
+## Task 4: Add the editable picker and localizations
 
 **Files:**
 - Modify: `apps/stage-web/src/pages/admin/components/AdminOfficialGatewayPanel.vue`
@@ -210,7 +211,7 @@ git add apps/stage-web/src/pages/admin/components/AdminOfficialGatewayPanel.vue 
 git commit -m "feat(web): select discovered upstream models"
 ```
 
-### Task 5: Verify, close documentation, and push
+## Task 5: Verify, close documentation, and push
 
 **Files:**
 - Modify: `docs/superpowers/README.md`

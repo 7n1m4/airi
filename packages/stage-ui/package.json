@@ -57,7 +57,7 @@
     "./types": "./src/types/index.ts"
   },
   "scripts": {
-    "typecheck": "vue-tsc --noEmit",
+    "typecheck": "NODE_OPTIONS=\"--max-old-space-size=12288\" vue-tsc --noEmit",
     "story:dev": "histoire dev",
     "story:build": "histoire build",
     "story:build-base": "histoire build --base /ui",
@@ -133,7 +133,7 @@
     "rehype-katex": "^7.0.1",
     "rehype-parse": "^9.0.1",
     "rehype-stringify": "catalog:",
-    "reka-ui": "^2.8.2",
+    "reka-ui": "catalog:",
     "remark-breaks": "catalog:",
     "remark-math": "^6.0.0",
     "remark-parse": "catalog:",
@@ -192,6 +192,7 @@
     "csstype": "^3.2.3",
     "histoire": "catalog:",
     "is-network-error": "catalog:",
+    "jsdom": "catalog:",
     "unocss": "^66.6.2",
     "unplugin-info": "catalog:",
     "unplugin-yaml": "^4.0.0",

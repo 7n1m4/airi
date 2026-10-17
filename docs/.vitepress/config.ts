@@ -51,7 +51,7 @@ function fallbackMediaPlugin() {
     name: 'vite-plugin-fallback-media',
     enforce: 'pre' as const,
     resolveId(id: string) {
-      if (/\.(mp4|gif)$/i.test(id) || id.startsWith('/assets/tutorial-')) {
+      if (/\.(?:mp4|gif)$/i.test(id) || id.startsWith('/assets/tutorial-')) {
         return `\0virtual-media:${id}`
       }
       return null

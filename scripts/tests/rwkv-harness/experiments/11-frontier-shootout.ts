@@ -7,6 +7,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import puppeteer from 'puppeteer-core'
 
@@ -97,8 +98,8 @@ async function queryModel(p: any, modelId: string, prompt: string, temp = 0.7): 
 }
 
 async function main() {
-  console.log('=== Frontier LLM Generative Code-Painting Shootout ===\n')
-  console.log(`Prompt: "${SHOOTOUT_PROMPT}"\n`)
+  console.info('=== Frontier LLM Generative Code-Painting Shootout ===\n')
+  console.info(`Prompt: "${SHOOTOUT_PROMPT}"\n`)
 
   const credsPath = path.resolve(process.cwd(), 'credentials.json')
   const creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'))
@@ -118,32 +119,32 @@ async function main() {
   const page = await browser.newPage()
   const renderer = new CanvasRenderer(page)
   await renderer.open(server.baseUrl)
-  console.log('✓ CanvasRenderer tab ready\n')
+  console.info('✓ CanvasRenderer tab ready\n')
 
   const results: Array<Record<string, unknown>> = []
 
   try {
     for (let i = 0; i < CANDIDATES.length; i++) {
       const c = CANDIDATES[i]
-      console.log(`\n======================================================`)
-      console.log(`[${i + 1}/${CANDIDATES.length}] Testing: ${c.name} (${c.slug})`)
-      console.log(`======================================================`)
+      console.info(`\n======================================================`)
+      console.info(`[${i + 1}/${CANDIDATES.length}] Testing: ${c.name} (${c.slug})`)
+      console.info(`======================================================`)
 
       const modelDir = path.join(shootoutDir, c.slug)
       fs.mkdirSync(modelDir, { recursive: true })
 
       const provider = creds[c.providerKey]
       if (!provider) {
-        console.log(`  ✗ Provider "${c.providerKey}" not found in credentials.json`)
+        console.info(`  ✗ Provider "${c.providerKey}" not found in credentials.json`)
         continue
       }
 
       const prompt = buildShootoutPrompt(SHOOTOUT_PROMPT)
       let genResult: { text: string, latencyMs: number }
       try {
-        console.log(`  Calling ${provider.name} (${c.modelId})...`)
+        console.info(`  Calling ${provider.name} (${c.modelId})...`)
         genResult = await queryModel(provider, c.modelId, prompt, c.temperature)
-        console.log(`  ✓ Received response in ${(genResult.latencyMs / 1000).toFixed(1)}s (${genResult.text.length} chars)`)
+        console.info(`  ✓ Received response in ${(genResult.latencyMs / 1000).toFixed(1)}s (${genResult.text.length} chars)`)
         fs.writeFileSync(path.join(modelDir, 'raw-output.txt'), genResult.text)
       }
       catch (err: any) {
@@ -175,7 +176,7 @@ async function main() {
       fs.writeFileSync(path.join(modelDir, 'sketch.js'), repairedSketch)
 
       // Render on WebGL canvas
-      console.log('  Rendering on WebGL canvas...')
+      console.info('  Rendering on WebGL canvas...')
       let outcome
       try {
         outcome = await renderer.render({
@@ -196,11 +197,11 @@ async function main() {
       if (outcome.dataUrl) {
         const pngPath = path.join(modelDir, 'render.png')
         renderer.savePng(pngPath, outcome.dataUrl)
-        console.log(`  ✓ Rendered: ok=${outcome.ok}, blank=${outcome.blank}, ink=${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors=${outcome.uniqueColors}, structure=${outcome.structureScore?.toFixed(3) ?? 'N/A'}`)
-        console.log(`  → Saved PNG: ${pngPath}`)
+        console.info(`  ✓ Rendered: ok=${outcome.ok}, blank=${outcome.blank}, ink=${((outcome.inkCoverage || 0) * 100).toFixed(1)}%, colors=${outcome.uniqueColors}, structure=${outcome.structureScore?.toFixed(3) ?? 'N/A'}`)
+        console.info(`  → Saved PNG: ${pngPath}`)
       }
       else {
-        console.log(`  ✗ Canvas blank or failed: ${outcome.error || outcome.sketchError}`)
+        console.info(`  ✗ Canvas blank or failed: ${outcome.error || outcome.sketchError}`)
       }
 
       results.push({
@@ -234,15 +235,15 @@ async function main() {
 
     const mdPath = path.join(shootoutDir, 'SHOOTOUT.md')
     fs.writeFileSync(mdPath, md)
-    console.log(`\n✓ Exported Shootout Markdown: ${mdPath}`)
+    console.info(`\n✓ Exported Shootout Markdown: ${mdPath}`)
 
     const reportPath = path.join(shootoutDir, 'shootout-report.json')
     fs.writeFileSync(reportPath, JSON.stringify({ meta: { prompt: SHOOTOUT_PROMPT, total: results.length }, results }, null, 2))
-    console.log(`✓ Exported Shootout JSON Report: ${reportPath}`)
+    console.info(`✓ Exported Shootout JSON Report: ${reportPath}`)
 
-    console.log('\n======================================================')
-    console.log(`✓ Frontier LLM Shootout Complete!`)
-    console.log('======================================================\n')
+    console.info('\n======================================================')
+    console.info(`✓ Frontier LLM Shootout Complete!`)
+    console.info('======================================================\n')
   }
   finally {
     await browser.close()

@@ -7,6 +7,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 const API_KEY = process.env.TYPESAFE_API_KEY
 if (!API_KEY) {
@@ -83,7 +84,7 @@ async function classifyTurn(turn: CandidateTurn): Promise<{
 }
 
 async function main() {
-  console.log('=== Sylvia / Neuro-sama Jev Pilot Classifier (150 Samples) ===\n')
+  console.info('=== Sylvia / Neuro-sama Jev Pilot Classifier (150 Samples) ===\n')
 
   const sessionDir = '/tmp/sylvia_cleanroom/sessions'
   if (!fs.existsSync(sessionDir)) {
@@ -127,7 +128,7 @@ async function main() {
     }
   }
 
-  console.log(`Loaded ${candidates.length} candidate turns from Sylvia batches across streams.\nClassifying with TypeSafe Jev...`)
+  console.info(`Loaded ${candidates.length} candidate turns from Sylvia batches across streams.\nClassifying with TypeSafe Jev...`)
 
   // Run in chunks with concurrency
   const results: Array<CandidateTurn & { iconicScore: number, category: string, confidence: number }> = []
@@ -153,7 +154,7 @@ async function main() {
     process.stdout.write(`\rProgress: ${completed}/${candidates.length} classified...`)
   }
 
-  console.log('\n\n✓ All turns classified successfully!')
+  console.info('\n\n✓ All turns classified successfully!')
 
   // Sort by iconic score descending
   results.sort((a, b) => b.iconicScore - a.iconicScore)
@@ -161,24 +162,24 @@ async function main() {
   // Save full results
   const reportPath = path.resolve('scripts/tests/rwkv-harness/reports/19-sylvia-jev-pilot-results.json')
   fs.writeFileSync(reportPath, JSON.stringify(results, null, 2), 'utf8')
-  console.log(`✓ Full results written to: ${reportPath}\n`)
+  console.info(`✓ Full results written to: ${reportPath}\n`)
 
-  console.log('========================================================================')
-  console.log('🏆 TOP 8 HIGHEST-SALIENCE GOLDEN TURNS (High Neuro Fidelity):')
-  console.log('========================================================================')
+  console.info('========================================================================')
+  console.info('🏆 TOP 8 HIGHEST-SALIENCE GOLDEN TURNS (High Neuro Fidelity):')
+  console.info('========================================================================')
   for (const item of results.slice(0, 8)) {
-    console.log(`\nScore: ${item.iconicScore.toFixed(2)} | Category: [${item.category}] (Conf: ${item.confidence.toFixed(2)})`)
-    console.log(`User:      "${item.targetUser}"`)
-    console.log(`Assistant: "${item.targetAssistant}"`)
+    console.info(`\nScore: ${item.iconicScore.toFixed(2)} | Category: [${item.category}] (Conf: ${item.confidence.toFixed(2)})`)
+    console.info(`User:      "${item.targetUser}"`)
+    console.info(`Assistant: "${item.targetAssistant}"`)
   }
 
-  console.log('\n========================================================================')
-  console.log('📉 BOTTOM 5 LOWEST-SALIENCE TURNS (Routine / Filler):')
-  console.log('========================================================================')
+  console.info('\n========================================================================')
+  console.info('📉 BOTTOM 5 LOWEST-SALIENCE TURNS (Routine / Filler):')
+  console.info('========================================================================')
   for (const item of results.slice(-5)) {
-    console.log(`\nScore: ${item.iconicScore.toFixed(2)} | Category: [${item.category}]`)
-    console.log(`User:      "${item.targetUser}"`)
-    console.log(`Assistant: "${item.targetAssistant}"`)
+    console.info(`\nScore: ${item.iconicScore.toFixed(2)} | Category: [${item.category}]`)
+    console.info(`User:      "${item.targetUser}"`)
+    console.info(`Assistant: "${item.targetAssistant}"`)
   }
 }
 

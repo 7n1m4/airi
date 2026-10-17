@@ -36,7 +36,7 @@ export const LAYA_SALIENCE_SCHEMA = {
  * @param {import('@receptron/laya').Laya} laya
  * @param {string} passage
  * @param {string} mention
- * @returns {Promise<{ type: string, confidence: number, probabilities: object }>}
+ * @returns {Promise<{ type: string, confidence: number, probabilities: object }>} Resolved type (falls back to `other_or_unknown`), its confidence, and the raw per-class probabilities.
  */
 export async function classifyEntityInContext(laya, passage, mention) {
   const state = {
@@ -66,7 +66,7 @@ export async function classifyEntityInContext(laya, passage, mention) {
  * Salience is used to prioritize processing order, NEVER as a deletion gate.
  * @param {import('@receptron/laya').Laya} laya
  * @param {string} turnText
- * @returns {Promise<{ score: number, confidence: number }>}
+ * @returns {Promise<{ score: number, confidence: number }>} Salience score on the 0..3 scale (defaults to 1.5 when unanswerable) with the engine's confidence.
  */
 export async function scoreTurnSalience(laya, turnText) {
   const state = {

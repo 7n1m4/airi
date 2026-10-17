@@ -29,7 +29,7 @@ Here's the complete Phase 3 design. Per the roadmap you linked, the file layout 
 
 ### 1.1 Execution flow (5 stages)
 
-```
+```text
 Corpus Loader → Prompt Builder → RWKV Inference → Output Parser/Validator → Scorer
      │                │                │                   │                    │
  corpus.json    evidenceWindow    state-merged      valibot ChipSchema    metrics report
@@ -41,7 +41,7 @@ Corpus Loader → Prompt Builder → RWKV Inference → Output Parser/Validator 
 
 **Stage 2 — Prompt construction (mirror production exactly).** Rebuild the evidence window identically to `synthesizeForCharacter` (echo-chips.ts:248-254):
 
-```
+```text
 ${index}: [${iso}] ${speaker}: ${content}   joined by \n
 ```
 
@@ -86,7 +86,7 @@ Then run the production `normalize` mapper (echo-chips.ts:291-304) verbatim — 
 
 **Stage 5 — Scoring.** Per-session and aggregate (§1.3 below). Output appended to an eval-report JSON:
 
-```
+```text
 scripts/tests/rwkv-harness/reports/03-echo-chip-eval-<timestamp>.json
 ```
 
@@ -104,7 +104,7 @@ Recommendation: **run the eval with an A/B toggle — base-only vs. base+rolepla
 | **Evidence-spanned cosine similarity** | For each GT pill: `max` cos-sim against any RWKV pill (embeddings — see below). Session score = mean over GT pills | ≥ 0.75 mean |
 | **Precision @ k** | Fraction of RWKV pills with cos-sim ≥ 0.65 against *any* GT pill (hallucination detector) | ≥ 0.70 |
 | **Type agreement** | `{mood, flavor, journal_candidate}` exact-match rate on matched pill pairs | ≥ 0.80 vs. `normalizeChipType` |
-| **Relevance calibration** | `|relevanceScore_pred − relevanceScore_GT|` mean (both exist in corpus) | ≤ 0.15 |
+| **Relevance calibration** | `\|relevanceScore_pred − relevanceScore_GT\|` mean (both exist in corpus) | ≤ 0.15 |
 
 **Embedding source — key infra choice.** No separate embedding model download: the harness already has RWKV's own `emb.weight` matrix — embed GT and predicted chip text by tokenizing + averaging token embeddings (mean-pool with L2 norm). This is cheap, local, and reproducible. **Caveat:** same-embedder scoring can flatter RWKV output (identical surface tokens score high). Mitigation: also log raw token-overlap F1 (bag-of-words) as a sanity-metric; if cosine is high but F1 ≈ 0 everywhere, distrust it. If we later find the threshold too forgiving, promote the existing `packages/stage-ui/src/libs/workers/search` embedding path — but don't import stage-ui into the Node harness (Vue/Pinia dep tree), keep Phase 3 cleanroom-pure.
 
@@ -122,7 +122,8 @@ for (const cfg of CONFIGS) {
 parseResult = repairLadder(rawOutput) // stages 1–5, counts
 validated = v.safeParse(ArtifactsSchema, normalize(parseResult))
 scored = scoreSession(validated, session.groundTruthChips, embedder)
-report.aggregate(); report.write()
+report.aggregate()
+report.write()
 ```
 
 ---

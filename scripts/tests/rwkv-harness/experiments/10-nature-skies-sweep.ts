@@ -7,6 +7,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { CANVAS_SIZE, P5_BRUSH_API_REFERENCE } from '../engine/canvas-prompts.js'
 import { CanvasRenderer } from '../engine/canvas-renderer.js'
@@ -66,7 +67,7 @@ ${SCAFFOLD_HEADER}`
 }
 
 async function main() {
-  console.log('=== RWKV Cleanroom Harness: 20-Scene Nature & Skies Sweep ===\n')
+  console.info('=== RWKV Cleanroom Harness: 20-Scene Nature & Skies Sweep ===\n')
 
   const modelPath = await ensureModelCached(PHASE7_MODEL_URL_1_5B)
   const sweepDir = path.resolve(process.cwd(), 'reports/nature-skies-sweep')
@@ -75,8 +76,8 @@ async function main() {
   const bridge = new RwkvWebGpuBridge({ modelFilePath: modelPath })
 
   try {
-    await bridge.boot(m => console.log(`[engine] ${m}`))
-    console.log(`✓ Engine booted: state_len=${bridge.info.stateLen}\n`)
+    await bridge.boot(m => console.info(`[engine] ${m}`))
+    console.info(`✓ Engine booted: state_len=${bridge.info.stateLen}\n`)
 
     // Load verified dataset and condition S0 cartridge
     const corpusPath = path.resolve(process.cwd(), 'dataset/p5-watercolor-corpus.json')
@@ -86,19 +87,19 @@ async function main() {
     const STATE_NAME = 'p5-watercolor-s0'
     const ts0 = Date.now()
     const stateInfo = await bridge.makeState({ name: STATE_NAME, texts: conditioningTexts })
-    console.log(`✓ Ingested S0 state cartridge "${STATE_NAME}" (${stateInfo.fedTokens} tokens in ${((Date.now() - ts0) / 1000).toFixed(1)}s)\n`)
+    console.info(`✓ Ingested S0 state cartridge "${STATE_NAME}" (${stateInfo.fedTokens} tokens in ${((Date.now() - ts0) / 1000).toFixed(1)}s)\n`)
 
     const renderer = new CanvasRenderer(await bridge.newPage())
     await renderer.open(bridge.baseUrl)
-    console.log('✓ CanvasRenderer tab ready\n')
+    console.info('✓ CanvasRenderer tab ready\n')
 
     const sweepEntries: Array<Record<string, unknown>> = []
 
     for (let i = 0; i < NATURE_SWEEP_SCENES.length; i++) {
       const sc = NATURE_SWEEP_SCENES[i]
-      console.log(`\n======================================================`)
-      console.log(`[${i + 1}/${NATURE_SWEEP_SCENES.length}] Painting: "${sc.title}" (${sc.id}) [${sc.category}]`)
-      console.log(`======================================================`)
+      console.info(`\n======================================================`)
+      console.info(`[${i + 1}/${NATURE_SWEEP_SCENES.length}] Painting: "${sc.title}" (${sc.id}) [${sc.category}]`)
+      console.info(`======================================================`)
 
       const sceneDir = path.join(sweepDir, sc.id)
       fs.mkdirSync(sceneDir, { recursive: true })
@@ -106,7 +107,7 @@ async function main() {
       const prompt = buildNaturePrompt(sc.prompt)
       const t0 = Date.now()
 
-      console.log(`  Generating sketch code with S0 state "${STATE_NAME}" (temp=0.75, maxTokens=1200)...`)
+      console.info(`  Generating sketch code with S0 state "${STATE_NAME}" (temp=0.75, maxTokens=1200)...`)
       const genResult = await bridge.generateCode({
         prompt,
         maxTokens: 1200,
@@ -118,7 +119,7 @@ async function main() {
         stopSeqs: ['\n```\n', '```\n', '\n```'],
       })
       const genMs = Date.now() - t0
-      console.log(`  ✓ Generated ${genResult.completionTokens} tok in ${(genMs / 1000).toFixed(1)}s (${(genResult.completionTokens / (genMs / 1000)).toFixed(1)} tok/s)`)
+      console.info(`  ✓ Generated ${genResult.completionTokens} tok in ${(genMs / 1000).toFixed(1)}s (${(genResult.completionTokens / (genMs / 1000)).toFixed(1)} tok/s)`)
       fs.writeFileSync(path.join(sceneDir, 'raw-output.txt'), genResult.raw)
 
       // Assemble full sketch
@@ -135,7 +136,7 @@ async function main() {
       fs.writeFileSync(path.join(sceneDir, 'sketch.js'), repairedSketch)
 
       // Render sketch in canvas harness
-      console.log('  Rendering on WebGL canvas...')
+      console.info('  Rendering on WebGL canvas...')
       let outcome
       try {
         outcome = await renderer.render({
@@ -156,11 +157,11 @@ async function main() {
       if (outcome.dataUrl) {
         const pngPath = path.join(sceneDir, 'render.png')
         renderer.savePng(pngPath, outcome.dataUrl)
-        console.log(`  ✓ Rendered: ok=${outcome.ok}, blank=${outcome.blank}, ink=${(outcome.inkCoverage * 100).toFixed(1)}%, colors=${outcome.uniqueColors}, structure=${outcome.structureScore?.toFixed(3) ?? 'N/A'}`)
-        console.log(`  → Saved PNG: ${pngPath}`)
+        console.info(`  ✓ Rendered: ok=${outcome.ok}, blank=${outcome.blank}, ink=${(outcome.inkCoverage * 100).toFixed(1)}%, colors=${outcome.uniqueColors}, structure=${outcome.structureScore?.toFixed(3) ?? 'N/A'}`)
+        console.info(`  → Saved PNG: ${pngPath}`)
       }
       else {
-        console.log(`  ✗ Canvas blank or failed: ${outcome.error || outcome.sketchError}`)
+        console.info(`  ✗ Canvas blank or failed: ${outcome.error || outcome.sketchError}`)
       }
 
       sweepEntries.push({
@@ -194,15 +195,15 @@ async function main() {
 
     const mdPath = path.join(sweepDir, 'GALLERY.md')
     fs.writeFileSync(mdPath, md)
-    console.log(`\n✓ Exported Gallery Markdown: ${mdPath}`)
+    console.info(`\n✓ Exported Gallery Markdown: ${mdPath}`)
 
     const reportPath = path.join(sweepDir, 'sweep-report.json')
     fs.writeFileSync(reportPath, JSON.stringify({ meta: { sweepDir, total: sweepEntries.length }, sweep: sweepEntries }, null, 2))
-    console.log(`✓ Exported Sweep JSON Report: ${reportPath}`)
+    console.info(`✓ Exported Sweep JSON Report: ${reportPath}`)
 
-    console.log('\n======================================================')
-    console.log(`✓ 20-Scene Nature & Skies Sweep Complete!`)
-    console.log('======================================================\n')
+    console.info('\n======================================================')
+    console.info(`✓ 20-Scene Nature & Skies Sweep Complete!`)
+    console.info('======================================================\n')
   }
   finally {
     await bridge.dispose()

@@ -2,6 +2,8 @@
 import DOMPurify from 'dompurify'
 
 import { healMozibake } from '@proj-airi/stage-shared'
+import { Button } from '@proj-airi/ui'
+import { AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogOverlay, AlertDialogPortal, AlertDialogRoot, AlertDialogTitle } from 'reka-ui'
 import { onMounted, ref, watch, watchPostEffect } from 'vue'
 
 import { useMarkdown } from '../../composables/markdown'
@@ -21,6 +23,8 @@ const props = defineProps<Props>()
 
 const processedContent = ref('')
 const containerRef = ref<HTMLElement | null>(null)
+const externalLinkConfirmOpen = ref(false)
+const pendingExternalHref = ref<string | null>(null)
 const { process, processSync } = useMarkdown()
 
 async function processContent() {
@@ -78,7 +82,7 @@ async function processContent() {
       if (matchedBg) {
         const objectUrl = backgroundStore.getBackgroundUrl(matchedBg.id)
         if (objectUrl) {
-          console.log('[MarkdownRenderer] resolved inline image by title:', alt, '->', objectUrl)
+          console.info('[MarkdownRenderer] resolved inline image by title:', alt, '->', objectUrl)
           return `![${alt}](${objectUrl})`
         }
       }
@@ -111,9 +115,17 @@ function handleLinkClick(e: MouseEvent) {
   const href = anchor.getAttribute('href')
   if (href && (href.startsWith('http') || href.startsWith('mailto:'))) {
     e.preventDefault()
-    if (window.confirm(`Open external resource?\n\nThis will take you to:\n${href}`)) {
-      window.open(href, '_blank')
-    }
+    pendingExternalHref.value = href
+    externalLinkConfirmOpen.value = true
+  }
+}
+
+function confirmExternalLink() {
+  const href = pendingExternalHref.value
+  externalLinkConfirmOpen.value = false
+  pendingExternalHref.value = null
+  if (href) {
+    window.open(href, '_blank')
   }
 }
 
@@ -386,7 +398,7 @@ watch(() => [props.content, props.actorId, props.startsActor], () => {
 const backgroundStore = useBackgroundStore()
 watch(() => backgroundStore.loading, (isLoading) => {
   if (props.content?.startsWith('![')) {
-    console.log('[MarkdownRenderer] background store loading:', isLoading, props.content)
+    console.info('[MarkdownRenderer] background store loading:', isLoading, props.content)
     if (!isLoading) {
       processContent()
     }
@@ -420,6 +432,37 @@ onMounted(() => {
     @click="handleLinkClick"
     v-html="processedContent"
   />
+
+  <AlertDialogRoot :open="externalLinkConfirmOpen" @update:open="externalLinkConfirmOpen = $event">
+    <AlertDialogPortal>
+      <AlertDialogOverlay class="fixed inset-0 z-[9999] bg-black/50 data-[state=closed]:animate-fadeOut data-[state=open]:animate-fadeIn" />
+      <AlertDialogContent class="fixed left-1/2 top-1/2 z-[9999] max-w-md w-[92dvw] border border-neutral-200 rounded-xl bg-white p-6 shadow-xl -translate-x-1/2 -translate-y-1/2 data-[state=closed]:animate-contentHide data-[state=open]:animate-contentShow dark:border-neutral-700 dark:bg-neutral-800">
+        <AlertDialogTitle class="mb-2 text-lg text-neutral-800 font-bold dark:text-neutral-100">
+          Open external resource?
+        </AlertDialogTitle>
+        <AlertDialogDescription class="mb-5 text-sm text-neutral-600 leading-relaxed dark:text-neutral-300">
+          This will take you to:
+          <span class="break-all text-xs font-mono">{{ pendingExternalHref }}</span>
+        </AlertDialogDescription>
+
+        <div class="flex flex-row justify-end gap-3">
+          <AlertDialogCancel as-child>
+            <Button
+              variant="secondary"
+              label="Cancel"
+            />
+          </AlertDialogCancel>
+          <AlertDialogAction as-child>
+            <Button
+              variant="primary"
+              label="Open link"
+              @click="confirmExternalLink"
+            />
+          </AlertDialogAction>
+        </div>
+      </AlertDialogContent>
+    </AlertDialogPortal>
+  </AlertDialogRoot>
 </template>
 
 <style scoped>

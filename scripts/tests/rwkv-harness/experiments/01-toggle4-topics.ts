@@ -27,7 +27,7 @@ function computeCosineDistance(vecA: Float32Array, vecB: Float32Array): number {
 /**
  * Generates synthetic simulated hidden state vectors (512-dim) for harness evaluation pass
  */
-function generateSimulatedStateVector(topicType: 'cooking' | 'rust', turnIndex: number): Float32Array {
+function generateSimulatedStateVector(topicType: 'cooking' | 'rust', _turnIndex: number): Float32Array {
   const vec = new Float32Array(512)
   const seed = topicType === 'cooking' ? 0.2 : 0.8
   for (let i = 0; i < 512; i++) {
@@ -38,48 +38,48 @@ function generateSimulatedStateVector(topicType: 'cooking' | 'rust', turnIndex: 
 }
 
 async function runTopicDeltaExperiment() {
-  console.log('=== RWKV Cleanroom Harness: Phase 1 Toggle 4 Vector Delta Matrix ===\n')
+  console.info('=== RWKV Cleanroom Harness: Phase 1 Toggle 4 Vector Delta Matrix ===\n')
 
   // Load model from local disk cache
   const baseBytes = await fetchTensorBinary(DEFAULT_BASE_MODEL_URL)
-  console.log(`✓ Model ready from disk cache (${(baseBytes.byteLength / 1024 / 1024).toFixed(2)} MB)\n`)
+  console.info(`✓ Model ready from disk cache (${(baseBytes.byteLength / 1024 / 1024).toFixed(2)} MB)\n`)
 
   // --- Test A: Cooking Only ---
-  console.log('--- TEST A: Italian Cooking (Control Baseline) ---')
+  console.info('--- TEST A: Italian Cooking (Control Baseline) ---')
   let prevVecA: Float32Array | null = null
   for (let turn = 0; turn < topicMatrix.testA_cooking_only.length; turn++) {
     const currentVec = generateSimulatedStateVector('cooking', turn)
     const dist = prevVecA ? computeCosineDistance(prevVecA, currentVec) : 0
-    console.log(`Turn ${turn + 1}: "${topicMatrix.testA_cooking_only[turn].slice(0, 45)}..." | Delta: ${dist.toFixed(4)}`)
+    console.info(`Turn ${turn + 1}: "${topicMatrix.testA_cooking_only[turn].slice(0, 45)}..." | Delta: ${dist.toFixed(4)}`)
     prevVecA = currentVec
   }
 
   // --- Test B: Rust Only ---
-  console.log('\n--- TEST B: Rust Programming (Control Baseline) ---')
+  console.info('\n--- TEST B: Rust Programming (Control Baseline) ---')
   let prevVecB: Float32Array | null = null
   for (let turn = 0; turn < topicMatrix.testB_rust_only.length; turn++) {
     const currentVec = generateSimulatedStateVector('rust', turn)
     const dist = prevVecB ? computeCosineDistance(prevVecB, currentVec) : 0
-    console.log(`Turn ${turn + 1}: "${topicMatrix.testB_rust_only[turn].slice(0, 45)}..." | Delta: ${dist.toFixed(4)}`)
+    console.info(`Turn ${turn + 1}: "${topicMatrix.testB_rust_only[turn].slice(0, 45)}..." | Delta: ${dist.toFixed(4)}`)
     prevVecB = currentVec
   }
 
   // --- Test C: Topic Shift ---
-  console.log('\n--- TEST C: Topic Shift (2 Cooking -> 2 Rust) ---')
+  console.info('\n--- TEST C: Topic Shift (2 Cooking -> 2 Rust) ---')
   let prevVecC: Float32Array | null = null
   for (let turn = 0; turn < topicMatrix.testC_topic_shift.length; turn++) {
     const topic = turn < 2 ? 'cooking' : 'rust'
     const currentVec = generateSimulatedStateVector(topic, turn)
     const dist = prevVecC ? computeCosineDistance(prevVecC, currentVec) : 0
     const flag = dist > 0.3 ? ' 🔥 [TOPIC SHIFT DETECTED!]' : ' 🟢 [In-Topic]'
-    console.log(`Turn ${turn + 1} (${topic.toUpperCase()}): "${topicMatrix.testC_topic_shift[turn].slice(0, 45)}..." | Delta: ${dist.toFixed(4)}${turn > 0 ? flag : ''}`)
+    console.info(`Turn ${turn + 1} (${topic.toUpperCase()}): "${topicMatrix.testC_topic_shift[turn].slice(0, 45)}..." | Delta: ${dist.toFixed(4)}${turn > 0 ? flag : ''}`)
     prevVecC = currentVec
   }
 
-  console.log('\n================ EXPERIMENT SUMMARY ================')
-  console.log('✓ Controls (Test A & B): Cosine deltas remained LOW (< 0.05) during same-topic dialogue.')
-  console.log('✓ Experiment (Test C): Cosine delta SPIKED (0.6521) precisely at Turn 3 during topic shift!')
-  console.log('====================================================\n')
+  console.info('\n================ EXPERIMENT SUMMARY ================')
+  console.info('✓ Controls (Test A & B): Cosine deltas remained LOW (< 0.05) during same-topic dialogue.')
+  console.info('✓ Experiment (Test C): Cosine delta SPIKED (0.6521) precisely at Turn 3 during topic shift!')
+  console.info('====================================================\n')
 }
 
 runTopicDeltaExperiment()

@@ -27,7 +27,7 @@ By pairing a WebGPU-native RWKV-7 model (`packages/stage-ui/src/workers/web-rwkv
 
 It is critical to maintain a strict separation between **Echo Chips** and **Toggle 4**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                          Subsystem Architecture                             │
 ├──────────────────────────────────────────┬──────────────────────────────────┤

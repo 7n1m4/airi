@@ -26,12 +26,12 @@ const CANDIDATES_TO_VERIFY = [
 
 async function main() {
   const creds = JSON.parse(fs.readFileSync('credentials.json', 'utf8'))
-  console.log('=== Verifying True Frontier Model Candidates ===\n')
+  console.info('=== Verifying True Frontier Model Candidates ===\n')
 
   for (const c of CANDIDATES_TO_VERIFY) {
     const p = creds[c.provider]
     if (!p) {
-      console.log(`✗ Provider ${c.provider} missing`)
+      console.info(`✗ Provider ${c.provider} missing`)
       continue
     }
 
@@ -55,15 +55,15 @@ async function main() {
       if (res.ok) {
         const data = await res.json()
         const text = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || ''
-        console.log(`✓ [${c.provider}] ${c.name} (${c.model}) -> OK in ${elapsed}ms: "${text.trim().replace(/\n/g, ' ')}"`)
+        console.info(`✓ [${c.provider}] ${c.name} (${c.model}) -> OK in ${elapsed}ms: "${text.trim().replace(/\n/g, ' ')}"`)
       }
       else {
         const err = await res.text()
-        console.log(`✗ [${c.provider}] ${c.name} (${c.model}) -> HTTP ${res.status}: ${err.slice(0, 100)}`)
+        console.info(`✗ [${c.provider}] ${c.name} (${c.model}) -> HTTP ${res.status}: ${err.slice(0, 100)}`)
       }
     }
     catch (e: any) {
-      console.log(`✗ [${c.provider}] ${c.name} (${c.model}) -> Error: ${e.message}`)
+      console.info(`✗ [${c.provider}] ${c.name} (${c.model}) -> Error: ${e.message}`)
     }
   }
 }

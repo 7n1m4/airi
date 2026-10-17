@@ -38,7 +38,7 @@ This document outlines the architectural plan, asset mapping, and cross-platform
 
 In accordance with the **Stage-Mate Workspace Purity Contract** in `AGENTS.md`, no files inside `apps/stage-mate/mate-engine/` may be edited directly. All Gunslinger components map cleanly into `apps/stage-mate/unity-src/`:
 
-```
+```text
 apps/stage-mate/unity-src/
 ├── Assets/
 │   ├── Gunslinger/
@@ -136,14 +136,16 @@ To support seamless, in-context weapon toggling and cycling, the Gunslinger mod 
 Add a new 4-way cycler button entry `actor-gunslinger` into the `CUSTOMIZER_CATALOG` in [`packages/stage-ui/src/constants/control-customizer.ts`](file:///c:/Users/h4rdc/Documents/Github/airi-rebase-scratch/packages/stage-ui/src/constants/control-customizer.ts) right below the Macaron Floatie option (`actor-macaron`):
 
 ```typescript
-{
-  id: 'actor-gunslinger',
-  label: 'Gunslinger Stance',
-  description: 'Cycle companion weapon stance: OFF > CAT > BLK > GRAY.',
-  icon: 'i-mdi:pistol',
-  type: 'cycler',
-  defaultOnStrip: false,
-}
+const CUSTOMIZER_CATALOG: CustomizerGroup[] = [
+  {
+    id: 'actor-gunslinger',
+    label: 'Gunslinger Stance',
+    description: 'Cycle companion weapon stance: OFF > CAT > BLK > GRAY.',
+    icon: 'i-ph:crosshair-bold',
+    type: 'cycler',
+    defaultOnStrip: false,
+  },
+]
 ```
 
 ### 6.2 Settings Store & State Mapping
@@ -163,10 +165,13 @@ When the `gunslingerStance` state changes in the renderer store, the Stage-Mate 
   "type": "stage:control:weapon",
   "data": {
     "enabled": true,
-    "weapon": "cat" | "blk" | "gray"
+    "weapon": "cat"
   }
 }
 ```
+
+The `weapon` field carries one of `"cat"`, `"blk"`, or `"gray"` (see `StageMateSetWeaponPayload` in `packages/stage-shared/src/stage-mate.ts`).
+
 *If stance is `'off'`, `enabled` is set to `false`.*
 
 ---

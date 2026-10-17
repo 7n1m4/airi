@@ -1,5 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
@@ -14,23 +15,23 @@ const V2_QUESTIONS_PATH = path.join(ROOT, 'docs/nan0/nan0-jev-12-group-rich-v2.q
 const JEV_TRACE_PATH = path.join(ROOT, 'reports/nan0-cleanroom/nan0-v1-vs-v2-shootout-trace.json')
 const OUTPUT_TRACE_PATH = path.join(ROOT, 'reports/nan0-cleanroom/nan0-laya-vs-jev-shootout-trace.json')
 
-console.log('====================================================')
-console.log('Project Nan0 Cleanroom: Laya ONNX vs. TypeSafe Jev')
-console.log('Target: 43 Canonical Probes (V2 80-Choice Schema)')
-console.log('====================================================\n')
+console.info('====================================================')
+console.info('Project Nan0 Cleanroom: Laya ONNX vs. TypeSafe Jev')
+console.info('Target: 43 Canonical Probes (V2 80-Choice Schema)')
+console.info('====================================================\n')
 
 // 1. Load Data
-console.log('Loading benchmark probes and questions...')
+console.info('Loading benchmark probes and questions...')
 const benchmarkRaw = JSON.parse(fs.readFileSync(BENCHMARK_PATH, 'utf-8'))
 const cases = benchmarkRaw.cases || []
 const questions = JSON.parse(fs.readFileSync(V2_QUESTIONS_PATH, 'utf-8'))
 const jevTrace = JSON.parse(fs.readFileSync(JEV_TRACE_PATH, 'utf-8'))
 const jevArm2 = jevTrace.traces?.arm2 || {}
 
-console.log(`Loaded ${cases.length} benchmark probes, ${Object.keys(questions).length} questions.`)
+console.info(`Loaded ${cases.length} benchmark probes, ${Object.keys(questions).length} questions.`)
 
 // 2. Load Laya ONNX Model
-console.log('\nInitializing Laya ONNX model (downloading weights if not cached)...')
+console.info('\nInitializing Laya ONNX model (downloading weights if not cached)...')
 const loadT0 = performance.now()
 let lastLoggedFile = ''
 
@@ -51,7 +52,7 @@ const laya = await Laya.load({
 if (lastLoggedFile)
   process.stdout.write('\n')
 const loadTimeMs = performance.now() - loadT0
-console.log(`Laya loaded successfully in ${(loadTimeMs / 1000).toFixed(2)}s.`)
+console.info(`Laya loaded successfully in ${(loadTimeMs / 1000).toFixed(2)}s.`)
 
 // Helper: Resolve Policy
 function resolvePolicy(answers, caseItem) {
@@ -113,9 +114,9 @@ function resolvePolicy(answers, caseItem) {
 }
 
 // 3. Execute Benchmark Shootout
-console.log('\n====================================================')
-console.log('Running 43 Cleanroom Probes through Laya...')
-console.log('====================================================\n')
+console.info('\n====================================================')
+console.info('Running 43 Cleanroom Probes through Laya...')
+console.info('====================================================\n')
 
 const results = {}
 const latencies = []
@@ -216,7 +217,7 @@ for (const caseItem of cases) {
 
   const mark = fullMatch ? '✅' : '❌'
   const jevMark = agreesWithJev ? '🤝 JevMatch' : '⚡ JevDiff'
-  console.log(`  [${mark}] ${caseId.padEnd(5)}: ${dtMs.toFixed(1)}ms | P:${predPolicy.suspicion_delta_steps},${predPolicy.attachment_delta_steps},${predPolicy.gremlin_pride_action.padEnd(13)} G:${goldPolicy.suspicion_delta_steps},${goldPolicy.attachment_delta_steps},${goldPolicy.gremlin_pride_action.padEnd(13)} | ${jevMark}`)
+  console.info(`  [${mark}] ${caseId.padEnd(5)}: ${dtMs.toFixed(1)}ms | P:${predPolicy.suspicion_delta_steps},${predPolicy.attachment_delta_steps},${predPolicy.gremlin_pride_action.padEnd(13)} G:${goldPolicy.suspicion_delta_steps},${goldPolicy.attachment_delta_steps},${goldPolicy.gremlin_pride_action.padEnd(13)} | ${jevMark}`)
 }
 
 await laya.close()
@@ -257,21 +258,21 @@ const outputData = {
 }
 
 fs.writeFileSync(OUTPUT_TRACE_PATH, JSON.stringify(outputData, null, 2), 'utf-8')
-console.log(`\nResults written to: ${OUTPUT_TRACE_PATH}`)
+console.info(`\nResults written to: ${OUTPUT_TRACE_PATH}`)
 
-console.log('\n====================================================')
-console.log('FINAL HEAD-TO-HEAD SHOOTOUT RESULTS')
-console.log('====================================================')
-console.log(`Cases Tested:             ${cases.length}`)
-console.log(`Full Vector Accuracy:     ${summary.full_vector_matches} / ${cases.length} (${summary.full_vector_pct.toFixed(1)}%)`)
-console.log(`Suspicion Match:          ${summary.suspicion_matches} / ${cases.length} (${((summary.suspicion_matches / cases.length) * 100).toFixed(1)}%)`)
-console.log(`Attachment Match:         ${summary.attachment_matches} / ${cases.length} (${((summary.attachment_matches / cases.length) * 100).toFixed(1)}%)`)
-console.log(`Gremlin Pride Match:      ${summary.gremlin_pride_matches} / ${cases.length} (${((summary.gremlin_pride_matches / cases.length) * 100).toFixed(1)}%)`)
-console.log(`Counterexamples Match:    ${summary.counterexamples_matches} / ${counterexampleIds.size} (${summary.counterexamples_pct.toFixed(1)}%)`)
-console.log(`Jev Agreement:            ${summary.jev_agreement_matches} / ${cases.length} (${summary.jev_agreement_pct.toFixed(1)}%)`)
-console.log('----------------------------------------------------')
-console.log(`Laya Mean Latency:        ${summary.latency_mean_ms.toFixed(1)} ms (p50: ${p50.toFixed(1)} ms, p95: ${p95.toFixed(1)} ms)`)
-console.log(`Jev Mean Latency:         ${summary.jev_comparison.jev_latency_mean_ms.toFixed(1)} ms (Cloud HTTP)`)
-console.log(`Laya Cost:                $0.0000 (Local CPU)`)
-console.log(`Jev Cost:                 $${summary.jev_comparison.jev_cost_usd.toFixed(4)} (OpenRouter Cloud)`)
-console.log('====================================================\n')
+console.info('\n====================================================')
+console.info('FINAL HEAD-TO-HEAD SHOOTOUT RESULTS')
+console.info('====================================================')
+console.info(`Cases Tested:             ${cases.length}`)
+console.info(`Full Vector Accuracy:     ${summary.full_vector_matches} / ${cases.length} (${summary.full_vector_pct.toFixed(1)}%)`)
+console.info(`Suspicion Match:          ${summary.suspicion_matches} / ${cases.length} (${((summary.suspicion_matches / cases.length) * 100).toFixed(1)}%)`)
+console.info(`Attachment Match:         ${summary.attachment_matches} / ${cases.length} (${((summary.attachment_matches / cases.length) * 100).toFixed(1)}%)`)
+console.info(`Gremlin Pride Match:      ${summary.gremlin_pride_matches} / ${cases.length} (${((summary.gremlin_pride_matches / cases.length) * 100).toFixed(1)}%)`)
+console.info(`Counterexamples Match:    ${summary.counterexamples_matches} / ${counterexampleIds.size} (${summary.counterexamples_pct.toFixed(1)}%)`)
+console.info(`Jev Agreement:            ${summary.jev_agreement_matches} / ${cases.length} (${summary.jev_agreement_pct.toFixed(1)}%)`)
+console.info('----------------------------------------------------')
+console.info(`Laya Mean Latency:        ${summary.latency_mean_ms.toFixed(1)} ms (p50: ${p50.toFixed(1)} ms, p95: ${p95.toFixed(1)} ms)`)
+console.info(`Jev Mean Latency:         ${summary.jev_comparison.jev_latency_mean_ms.toFixed(1)} ms (Cloud HTTP)`)
+console.info(`Laya Cost:                $0.0000 (Local CPU)`)
+console.info(`Jev Cost:                 $${summary.jev_comparison.jev_cost_usd.toFixed(4)} (OpenRouter Cloud)`)
+console.info('====================================================\n')

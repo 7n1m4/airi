@@ -7,11 +7,13 @@ import type {
   StartupSnapshot,
 } from '../shared/eventa'
 
+import process, { env, platform, stderr, stdout } from 'node:process'
+
+import { Buffer } from 'node:buffer'
 import { dirname } from 'node:path'
-import { env, platform, stderr, stdout } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-// @ts-ignore
+// @ts-expect-error generated bundle without type declarations
 import messages from '@proj-airi/i18n-bundle'
 
 import { electronApp, optimizer } from '@electron-toolkit/utils'
@@ -215,7 +217,7 @@ if (forceHighPerformanceGpu) {
   app.commandLine.appendSwitch('force-high-performance-gpu')
   app.commandLine.appendSwitch('enable-gpu-rasterization')
   app.commandLine.appendSwitch('ignore-gpu-blocklist')
-  console.log('[AIRI] High-performance GPU overrides enabled via AIRI_FORCE_HIGH_PERFORMANCE_GPU=1')
+  console.info('[AIRI] High-performance GPU overrides enabled via AIRI_FORCE_HIGH_PERFORMANCE_GPU=1')
 }
 
 const appUserDataPath = env.AIRI_USER_DATA_DIR?.trim() || env.APP_USER_DATA_PATH?.trim()
@@ -479,6 +481,31 @@ app.whenReady().then(async () => {
   injeca.invoke({
     dependsOn: { mainWindow, tray, serverChannel, pluginHost, mcpStdioManager, onboardingWindow: onboardingWindowManager, appConfig, i18n, captionWindow, stageWindow, splashWindow, chatWindow, customizerWindow, beatSync, libp2p, agenticOs },
     callback: (deps) => {
+      // NOTICE: `stage:capture-window` ghosts the stage window (show inactive → hide) purely to
+      // produce a screenshot. Those synthetic show/hide events must not be treated as user-driven
+      // visibility changes, so listeners check this flag and skip caption-follow handling during capture.
+      let isCapturingStage = false
+      // NOTICE: The renderer always pushes its persisted `settings/caption-open` state once on boot
+      // (immediate watcher in `pages/index.vue`). We gate caption auto-restores/follows on this so a
+      // transient stage show or main-window restore can't flash the caption before the renderer's
+      // authoritative state has arrived (mirrors the stage default-visible boot pattern).
+      let captionOpenFromRenderer: boolean | undefined
+
+      // Single owner of the stage→caption follow rule (the renderer no longer mirrors these).
+      // captureInFlight suppresses the synthetic stage events emitted by `stage:capture-window`.
+      const syncCaptionToStage = (stageVisible: boolean, opts?: { captureInFlight?: boolean }) => {
+        if (!deps.captionWindow.getIsFollowingStageVisibility() || opts?.captureInFlight)
+          return
+        // Hide always applies. Show is deferred until the renderer pushes `caption-open`
+        // so a boot-time transient can't flash the caption against the persisted preference.
+        if (!stageVisible) {
+          void deps.captionWindow.toggleVisibility(false)
+        }
+        else if (captionOpenFromRenderer !== undefined) {
+          void deps.captionWindow.toggleVisibility(captionOpenFromRenderer)
+        }
+      }
+
       createServerChannelService({ serverChannel: deps.serverChannel })
       createMcpServersService({ context, manager: deps.mcpStdioManager })
       createI18nService({ context, window: deps.mainWindow, i18n: deps.i18n })
@@ -531,7 +558,7 @@ app.whenReady().then(async () => {
       })
 
       defineInvokeHandler(context, electronCaptionToggleVisibility, async (enabled?: boolean) => {
-        console.log('[@proj-airi/stage-tamagotchi] [Main] Caption visibility toggle triggered via Control Island. enabled:', enabled)
+        console.info('[@proj-airi/stage-tamagotchi] [Main] Caption visibility toggle triggered via Control Island. enabled:', enabled)
         // Record the renderer-authoritative open state first so the boot restore and the
         // stage→caption follow only apply once the renderer's persisted preference is known.
         if (enabled !== undefined)
@@ -540,21 +567,21 @@ app.whenReady().then(async () => {
       })
       defineInvokeHandler(context, electronGetChatWindowState, async () => {
         const isOpen = deps.chatWindow.isVisible()
-        console.log('[@proj-airi/stage-tamagotchi] [Main] Retrieved chat window state:', isOpen)
+        console.info('[@proj-airi/stage-tamagotchi] [Main] Retrieved chat window state:', isOpen)
         return isOpen
       })
       defineInvokeHandler(context, electronGetCaptionWindowState, async () => {
         const winEnabled = deps.appConfig.get()?.windows?.find((w: any) => w.tag === 'caption')?.enabled
         const winVisible = deps.captionWindow.isVisible()
         const isOpen = Boolean(winEnabled || winVisible)
-        console.log('[@proj-airi/stage-tamagotchi] [Main] Retrieved caption window state:', isOpen, 'enabled:', winEnabled, 'visible:', winVisible)
+        console.info('[@proj-airi/stage-tamagotchi] [Main] Retrieved caption window state:', isOpen, 'enabled:', winEnabled, 'visible:', winVisible)
         return isOpen
       })
       defineInvokeHandler(context, electronEnsureBeatSync, async () => {
         await deps.beatSync.getWindow()
       })
       defineInvokeHandler(context, electronCaptionSyncDocking, async (dock) => {
-        console.log('[@proj-airi/stage-tamagotchi] [Main] Caption docking sync triggered via Control Island:', dock)
+        console.info('[@proj-airi/stage-tamagotchi] [Main] Caption docking sync triggered via Control Island:', dock)
         const appConfig = deps.appConfig.get()
         if (appConfig) {
           const windows = appConfig.windows ?? []
@@ -573,19 +600,19 @@ app.whenReady().then(async () => {
         await deps.captionWindow.triggerMove(dock)
       })
       defineInvokeHandler(context, electronCaptionSetFollowStagePosition, async (shouldFollow) => {
-        console.log('[@proj-airi/stage-tamagotchi] [Main] Caption set follow stage position triggered:', shouldFollow)
+        console.info('[@proj-airi/stage-tamagotchi] [Main] Caption set follow stage position triggered:', shouldFollow)
         await deps.captionWindow.setFollowStagePosition(shouldFollow)
       })
       defineInvokeHandler(context, electronCaptionSetFollowStageVisibility, async (shouldFollow) => {
-        console.log('[@proj-airi/stage-tamagotchi] [Main] Caption set follow stage visibility triggered:', shouldFollow)
+        console.info('[@proj-airi/stage-tamagotchi] [Main] Caption set follow stage visibility triggered:', shouldFollow)
         await deps.captionWindow.setFollowStageVisibility(shouldFollow)
       })
       defineInvokeHandler(context, electronSetIgnoreMouseEvents, async (ignore) => {
-        // @ts-ignore - window might be undefined if context is global, but here it's window-specific
+        // @ts-expect-error window might be undefined if context is global, but here it's window-specific
         context.window?.setIgnoreMouseEvents(ignore, { forward: true })
       })
       defineInvokeHandler(context, electronStageToggleVisibility, async (enabled: boolean) => {
-        console.log('[@proj-airi/stage-tamagotchi] [Main] Actor Stage visibility changed:', enabled)
+        console.info('[@proj-airi/stage-tamagotchi] [Main] Actor Stage visibility changed:', enabled)
         setStageVisibleState(enabled)
         if (enabled) {
           const window = await deps.stageWindow.ensureWindow()
@@ -599,11 +626,11 @@ app.whenReady().then(async () => {
         syncCaptionToStage(enabled, { captureInFlight: isCapturingStage })
       })
       defineInvokeHandler(context, electronOpenChat, async (enabled?: boolean) => {
-        console.log('[@proj-airi/stage-tamagotchi] [Main] Global open chat triggered:', enabled)
+        console.info('[@proj-airi/stage-tamagotchi] [Main] Global open chat triggered:', enabled)
         await deps.chatWindow.openChat(enabled)
       })
       defineInvokeHandler(context, electronStageSetAlwaysOnTop, async (flag) => {
-        console.log('[@proj-airi/stage-tamagotchi] [Main] Actor Stage always-on-top changed:', flag)
+        console.info('[@proj-airi/stage-tamagotchi] [Main] Actor Stage always-on-top changed:', flag)
         deps.stageWindow.setAlwaysOnTop(flag)
         stageMateService.broadcast({
           type: 'control:always-on-top',
@@ -673,7 +700,7 @@ app.whenReady().then(async () => {
         if (!payload)
           return
         const { target, preset, monitorIndex, alignment } = payload
-        console.log(`[@proj-airi/stage-tamagotchi] [Main] Apply size preset: ${preset} for target: ${target}, monitor: ${monitorIndex}, align: ${alignment}`)
+        console.info(`[@proj-airi/stage-tamagotchi] [Main] Apply size preset: ${preset} for target: ${target}, monitor: ${monitorIndex}, align: ${alignment}`)
 
         if (target === 'actor') {
           stageMateService.broadcast({
@@ -712,9 +739,9 @@ app.whenReady().then(async () => {
         let height = bounds?.height || winConfig?.height || (target === 'actor' ? 600 : 800)
 
         // Ensure they are valid numbers
-        if (!width || isNaN(width) || width <= 0)
+        if (!width || Number.isNaN(width) || width <= 0)
           width = target === 'actor' ? 450 : 600
-        if (!height || isNaN(height) || height <= 0)
+        if (!height || Number.isNaN(height) || height <= 0)
           height = target === 'actor' ? 600 : 800
 
         let targetDisplay: Electron.Display | undefined
@@ -726,7 +753,7 @@ app.whenReady().then(async () => {
           try {
             targetDisplay = screen.getDisplayMatching(bounds)
           }
-          catch (e) {
+          catch {
             targetDisplay = screen.getPrimaryDisplay()
           }
         }
@@ -797,7 +824,7 @@ app.whenReady().then(async () => {
 
                 // Load 'actor-dating-sim' bounds
                 const dsConfig = currentAppConfig?.windows?.find((w: any) => w.tag === 'actor-dating-sim')
-                if (dsConfig && dsConfig.x !== undefined && dsConfig.y !== undefined && !isNaN(dsConfig.x) && !isNaN(dsConfig.y)) {
+                if (dsConfig && dsConfig.x !== undefined && dsConfig.y !== undefined && !Number.isNaN(dsConfig.x) && !Number.isNaN(dsConfig.y)) {
                   width = dsConfig.width ?? width
                   height = dsConfig.height ?? height
                   newX = dsConfig.x
@@ -817,7 +844,7 @@ app.whenReady().then(async () => {
 
                 const currentAppConfig = deps.appConfig.get()
                 const userConfig = currentAppConfig?.windows?.find((w: any) => w.tag === 'actor-user')
-                if (userConfig && userConfig.x !== undefined && userConfig.y !== undefined && !isNaN(userConfig.x) && !isNaN(userConfig.y)) {
+                if (userConfig && userConfig.x !== undefined && userConfig.y !== undefined && !Number.isNaN(userConfig.x) && !Number.isNaN(userConfig.y)) {
                   width = userConfig.width ?? width
                   height = userConfig.height ?? height
                   newX = userConfig.x
@@ -857,9 +884,9 @@ app.whenReady().then(async () => {
         }
 
         if (!boundsDetermined) {
-          if (newX === undefined || isNaN(newX))
+          if (newX === undefined || Number.isNaN(newX))
             newX = workArea.x
-          if (newY === undefined || isNaN(newY))
+          if (newY === undefined || Number.isNaN(newY))
             newY = workArea.y
 
           if (alignment) {
@@ -908,10 +935,10 @@ app.whenReady().then(async () => {
               newY = workArea.y + (workArea.height - height) / 2
             }
             else {
-              const currentX = (bounds?.x === undefined || isNaN(bounds.x)) ? workArea.x : bounds.x
-              const currentY = (bounds?.y === undefined || isNaN(bounds.y)) ? workArea.y : bounds.y
-              const currentW = (bounds?.width === undefined || isNaN(bounds.width) || bounds.width <= 0) ? width : bounds.width
-              const currentH = (bounds?.height === undefined || isNaN(bounds.height) || bounds.height <= 0) ? height : bounds.height
+              const currentX = (bounds?.x === undefined || Number.isNaN(bounds.x)) ? workArea.x : bounds.x
+              const currentY = (bounds?.y === undefined || Number.isNaN(bounds.y)) ? workArea.y : bounds.y
+              const currentW = (bounds?.width === undefined || Number.isNaN(bounds.width) || bounds.width <= 0) ? width : bounds.width
+              const currentH = (bounds?.height === undefined || Number.isNaN(bounds.height) || bounds.height <= 0) ? height : bounds.height
               newX = currentX + (currentW - width) / 2
               newY = currentY + (currentH - height) / 2
             }
@@ -919,9 +946,9 @@ app.whenReady().then(async () => {
         }
 
         // Final safety check against NaN/undefined
-        if (newX === undefined || isNaN(newX))
+        if (newX === undefined || Number.isNaN(newX))
           newX = workArea.x + (workArea.width - width) / 2
-        if (newY === undefined || isNaN(newY))
+        if (newY === undefined || Number.isNaN(newY))
           newY = workArea.y + (workArea.height - height) / 2
 
         const newBounds = ensureWindowInVisibleBounds({
@@ -931,7 +958,7 @@ app.whenReady().then(async () => {
           height: Math.round(height),
         })
 
-        console.log(`[@proj-airi/stage-tamagotchi] [Main] Final calculated newBounds:`, newBounds)
+        console.info(`[@proj-airi/stage-tamagotchi] [Main] Final calculated newBounds:`, newBounds)
 
         const appConfigToSave = deps.appConfig.get()
         if (appConfigToSave) {
@@ -969,7 +996,7 @@ app.whenReady().then(async () => {
       })
 
       const handleResetWindowPositions = async () => {
-        console.log('[@proj-airi/stage-tamagotchi] [Main] Resetting all window positions...')
+        console.info('[@proj-airi/stage-tamagotchi] [Main] Resetting all window positions...')
         const primaryDisplay = screen.getPrimaryDisplay()
         const workArea = primaryDisplay.workArea
 
@@ -1055,7 +1082,7 @@ app.whenReady().then(async () => {
       ipcMain.on('reset-window-positions-action', handleResetWindowPositions)
 
       ipcMain.on('logger:write', (_event, level: string, message: string) => {
-        console.log(`[RendererLog/${level}] ${message}`)
+        console.info(`[RendererLog/${level}] ${message}`)
       })
 
       // NOTICE: ControlStrip.vue calls `ipcRenderer.invoke('eventa:invoke:electron:windows:get-monitor-count')
@@ -1070,30 +1097,6 @@ app.whenReady().then(async () => {
       })
 
       let stageInitialized = false
-      // NOTICE: `stage:capture-window` ghosts the stage window (show inactive → hide) purely to
-      // produce a screenshot. Those synthetic show/hide events must not be treated as user-driven
-      // visibility changes, so listeners check this flag and skip caption-follow handling during capture.
-      let isCapturingStage = false
-      // NOTICE: The renderer always pushes its persisted `settings/caption-open` state once on boot
-      // (immediate watcher in `pages/index.vue`). We gate caption auto-restores/follows on this so a
-      // transient stage show or main-window restore can't flash the caption before the renderer's
-      // authoritative state has arrived (mirrors the stage default-visible boot pattern).
-      let captionOpenFromRenderer: boolean | undefined
-
-      // Single owner of the stage→caption follow rule (the renderer no longer mirrors these).
-      // captureInFlight suppresses the synthetic stage events emitted by `stage:capture-window`.
-      const syncCaptionToStage = (stageVisible: boolean, opts?: { captureInFlight?: boolean }) => {
-        if (!deps.captionWindow.getIsFollowingStageVisibility() || opts?.captureInFlight)
-          return
-        // Hide always applies. Show is deferred until the renderer pushes `caption-open`
-        // so a boot-time transient can't flash the caption against the persisted preference.
-        if (!stageVisible) {
-          void deps.captionWindow.toggleVisibility(false)
-        }
-        else if (captionOpenFromRenderer !== undefined) {
-          void deps.captionWindow.toggleVisibility(captionOpenFromRenderer)
-        }
-      }
 
       ipcMain.handle('stage:capture-window', async () => {
         if (deps.stageWindow.hasWindow()) {
@@ -1178,7 +1181,7 @@ app.whenReady().then(async () => {
 
       import('./libs/bootkit/lifecycle').then((m) => {
         m.onAppBeforeQuit(async () => {
-          console.log('[@proj-airi/stage-tamagotchi] App is quitting, flushing all configs...')
+          console.info('[@proj-airi/stage-tamagotchi] App is quitting, flushing all configs...')
           const sensorsService = await sensorsServicePromise
           sensorsService.stop()
           flushAllConfigs()
@@ -1186,7 +1189,7 @@ app.whenReady().then(async () => {
       })
 
       ipcMain.handle('save-backup-bundle', async (_event, data: { timestamp: string, files: Record<string, string>, customPath?: string }) => {
-        console.log('[Backup] Received backup bundle request')
+        console.info('[Backup] Received backup bundle request')
         const fs = await import('node:fs/promises')
         const path = await import('node:path')
 
@@ -1204,7 +1207,7 @@ app.whenReady().then(async () => {
             await fs.writeFile(path.join(bundleDir, filename), content)
           }
 
-          console.log(`[Backup] Backup saved to ${bundleDir}`)
+          console.info(`[Backup] Backup saved to ${bundleDir}`)
           return { success: true, path: bundleDir }
         }
         catch (error) {
@@ -1293,7 +1296,9 @@ app.whenReady().then(async () => {
           }
           catch (writeErr) {
             if (handle) {
-              try { await handle.close() }
+              try {
+                await handle.close()
+              }
               catch {}
             }
             throw writeErr
@@ -1336,7 +1341,7 @@ app.whenReady().then(async () => {
               targetFullPath = fullPath.replace(/\.png$/, '.avif')
               finalBuffer = avifBuffer
             }
-            catch (e) {
+            catch {
               // If sharp is unavailable or fails, fall back to writing raw PNG
             }
           }
@@ -1356,7 +1361,9 @@ app.whenReady().then(async () => {
           }
           catch (writeErr) {
             if (handle) {
-              try { await handle.close() }
+              try {
+                await handle.close()
+              }
               catch {}
             }
             throw writeErr
@@ -1392,7 +1399,9 @@ app.whenReady().then(async () => {
           }
           catch (readErr) {
             if (handle) {
-              try { await handle.close() }
+              try {
+                await handle.close()
+              }
               catch {}
             }
             throw readErr
@@ -1474,12 +1483,12 @@ app.whenReady().then(async () => {
         const status = 'FAIL'
         const color = '\x1B[31m'
         const reset = '\x1B[0m'
-        console.log(`${color}[Provider Validation]${reset} [${data.providerId}] ${status}`)
+        console.info(`${color}[Provider Validation]${reset} [${data.providerId}] ${status}`)
         if (!data.valid) {
-          console.log(`  └─ Reason: ${data.reason}`)
+          console.info(`  └─ Reason: ${data.reason}`)
         }
         if (data.config && (data.valid || !data.reason?.includes('required'))) {
-          console.log(`  └─ Config: ${JSON.stringify(data.config)}`)
+          console.info(`  └─ Config: ${JSON.stringify(data.config)}`)
         }
       })
 
@@ -1491,15 +1500,15 @@ app.whenReady().then(async () => {
           /*
           // Log deltas in yellow, but only if they are not just whitespace (too noisy otherwise)
           if (data.text.trim()) {
-            console.log(`${yellow}[LLM Delta]${reset} ${data.text}`)
+            console.info(`${yellow}[LLM Delta]${reset} ${data.text}`)
           }
           */
         }
         else {
-          console.log(`${cyan}[LLM Final Output]${reset} Session: ${data.sessionId}`)
-          console.log(`----------------------------------------`)
-          console.log(data.text)
-          console.log(`----------------------------------------`)
+          console.info(`${cyan}[LLM Final Output]${reset} Session: ${data.sessionId}`)
+          console.info(`----------------------------------------`)
+          console.info(data.text)
+          console.info(`----------------------------------------`)
         }
       })
     },
@@ -1576,7 +1585,7 @@ app.on('before-quit', async (event) => {
   event.preventDefault()
   isQuitting = true
 
-  console.log('[@proj-airi/stage-tamagotchi] Shutdown sequence started...')
+  console.info('[@proj-airi/stage-tamagotchi] Shutdown sequence started...')
 
   try {
     // NOTICE: We await the initialization-level hooks and the DI container stop
@@ -1584,7 +1593,7 @@ app.on('before-quit', async (event) => {
     await emitAppBeforeQuit()
     await injeca.stop()
     cleanupMicToggleShortcut()
-    console.log('[@proj-airi/stage-tamagotchi] Shutdown complete. Quitting...')
+    console.info('[@proj-airi/stage-tamagotchi] Shutdown complete. Quitting...')
   }
   catch (err) {
     console.error('[@proj-airi/stage-tamagotchi] Error during shutdown sequence:', err)

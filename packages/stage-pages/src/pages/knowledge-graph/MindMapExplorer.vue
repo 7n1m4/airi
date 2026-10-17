@@ -5,7 +5,18 @@ import type { GraphEdge, GraphNode } from './components/ConstellationCanvas.vue'
 import { useEntityLedgerStore } from '@proj-airi/stage-ui/stores/entity-ledger'
 import { useShortTermMemoryStore } from '@proj-airi/stage-ui/stores/memory-short-term'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { Button } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
+import {
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogRoot,
+  AlertDialogTitle,
+} from 'reka-ui'
 import { computed, onMounted, ref, watch } from 'vue'
 
 import ChronologicalTimelineView from './components/ChronologicalTimelineView.vue'
@@ -23,7 +34,9 @@ const emit = defineEmits<{
 const entityLedgerStore = useEntityLedgerStore()
 const shortTermStore = useShortTermMemoryStore()
 const airiCardStore = useAiriCardStore()
-const { activeCardId } = storeToRefs(airiCardStore)
+const { activeCard, activeCardId } = storeToRefs(airiCardStore)
+
+const characterName = computed(() => activeCard.value?.name || 'this character')
 
 // View State
 const viewMode = ref<'overview' | 'constellation' | 'timeline'>('overview')
@@ -187,15 +200,25 @@ async function handleRebuild() {
   calculateTimeBounds()
 }
 
-async function handleClear() {
+// NOTICE: native `confirm()` is banned by the no-alert lint rule, so the destructive
+// clear confirmation is an in-app AlertDialog (see markdown-renderer.vue for the
+// established reka-ui pattern) rather than a blocking browser dialog.
+const isClearConfirmOpen = ref(false)
+
+function handleClear() {
   if (!activeCardId.value)
     return
-  if (confirm('Are you sure you want to clear the entire Knowledge Graph for this character?')) {
-    await entityLedgerStore.clearLedger(activeCardId.value)
-    selectedEntityId.value = null
-    selectedTurnId.value = null
-    isDrawerOpen.value = false
-  }
+  isClearConfirmOpen.value = true
+}
+
+async function confirmClear() {
+  isClearConfirmOpen.value = false
+  if (!activeCardId.value)
+    return
+  await entityLedgerStore.clearLedger(activeCardId.value)
+  selectedEntityId.value = null
+  selectedTurnId.value = null
+  isDrawerOpen.value = false
 }
 
 watch(activeCardId, () => {
@@ -289,5 +312,40 @@ onMounted(() => {
       :total-entities-count="graphNodes.length"
       :active-entities-count="activeEntitiesCount"
     />
+
+    <!-- Destructive Clear Confirmation -->
+    <AlertDialogRoot :open="isClearConfirmOpen" @update:open="isClearConfirmOpen = $event">
+      <AlertDialogPortal>
+        <AlertDialogOverlay class="fixed inset-0 z-[9999] bg-black/50" />
+        <AlertDialogContent class="fixed left-1/2 top-1/2 z-[9999] max-w-md w-[92dvw] border border-neutral-200 rounded-2xl bg-white p-6 shadow-xl -translate-x-1/2 -translate-y-1/2 space-y-4 dark:border-neutral-800 dark:bg-neutral-900">
+          <AlertDialogTitle class="text-sm text-neutral-800 font-bold dark:text-neutral-100">
+            Clear the entire Knowledge Graph for this character?
+          </AlertDialogTitle>
+          <AlertDialogDescription class="block text-xs text-neutral-600 leading-relaxed dark:text-neutral-400">
+            This permanently removes every indexed entity, claim, and dialogue source for "{{ characterName }}".
+            Priming sessions can regenerate the graph later from your conversation history.
+          </AlertDialogDescription>
+
+          <div class="flex items-center justify-end gap-3">
+            <AlertDialogCancel as-child>
+              <Button
+                label="Cancel"
+                variant="secondary"
+                size="sm"
+              />
+            </AlertDialogCancel>
+            <AlertDialogAction as-child>
+              <Button
+                label="Clear Graph"
+                icon="i-solar:trash-bin-trash-bold"
+                variant="danger"
+                size="sm"
+                @click="confirmClear"
+              />
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialogPortal>
+    </AlertDialogRoot>
   </div>
 </template>

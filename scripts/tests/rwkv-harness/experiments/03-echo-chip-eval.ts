@@ -17,6 +17,7 @@ import type { CorpusMessage } from '../engine/state-merger.js'
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { scoreBadge, scoreSession } from '../engine/metrics.js'
 import { parseEchoChips, REPAIR_STAGES } from '../engine/parse.js'
@@ -96,12 +97,12 @@ const GATES = {
 }
 
 async function main() {
-  console.log('=== RWKV Cleanroom Harness: Phase 3 Echo Chips Ground-Truth Eval ===\n')
+  console.info('=== RWKV Cleanroom Harness: Phase 3 Echo Chips Ground-Truth Eval ===\n')
 
   // 1. Warm the disk cache (instant after first download).
   await fetchTensorBinary(DEFAULT_BASE_MODEL_URL)
   const modelPath = cachedModelPath(DEFAULT_BASE_MODEL_URL)
-  console.log(`✓ Base model cached at ${modelPath}\n`)
+  console.info(`✓ Base model cached at ${modelPath}\n`)
 
   // 2. Load candidate corpora (union schema — actual files use top-level fields).
   const corpora: CorpusFile[] = CANDIDATES.map((n) => {
@@ -114,13 +115,13 @@ async function main() {
   const t0 = Date.now()
 
   try {
-    await bridge.boot(m => console.log(`[engine] ${m}`))
-    console.log(`✓ Engine booted: state_len=${bridge.info.stateLen}, tensors=${bridge.info.numTensors}\n`)
+    await bridge.boot(m => console.info(`[engine] ${m}`))
+    console.info(`✓ Engine booted: state_len=${bridge.info.stateLen}, tensors=${bridge.info.numTensors}\n`)
 
     const allReports: any[] = []
 
     for (const cfg of CONFIGS) {
-      console.log(`\n########## Decoding config: ${cfg.name} (temp=${cfg.temperature}, top_p=${cfg.topP}, presence_pen=${cfg.presencePenalty}) ##########`)
+      console.info(`\n########## Decoding config: ${cfg.name} (temp=${cfg.temperature}, top_p=${cfg.topP}, presence_pen=${cfg.presencePenalty}) ##########`)
       const sessionScores: any[] = []
       const repairHist: Record<string, number> = Object.fromEntries(REPAIR_STAGES.map(s => [s, 0]))
 
@@ -137,7 +138,7 @@ async function main() {
         const linesUsed = evidenceWindow ? evidenceWindow.split('\n').length : 0
         const truncatedFrom = windowMessages.length
 
-        console.log(`\n--- ${title} [${cfg.promptFrame}${cfg.constrainTypeEnum ? '+constrain' : ''}] (windowed ${truncatedFrom} msgs -> ${linesUsed} evidence lines; evidenceChars=${evidenceWindow.length}) ---`)
+        console.info(`\n--- ${title} [${cfg.promptFrame}${cfg.constrainTypeEnum ? '+constrain' : ''}] (windowed ${truncatedFrom} msgs -> ${linesUsed} evidence lines; evidenceChars=${evidenceWindow.length}) ---`)
         const t = Date.now()
         let rawText = ''
         let promptTokens = 0
@@ -183,14 +184,14 @@ async function main() {
           continue
         }
         const elapsedMs = Date.now() - t
-        console.log(`  raw (${completionTokens} tok, ${elapsedMs} ms): ${rawText.slice(0, 220).replace(/\n/g, ' ')}${rawText.length > 220 ? '…' : ''}`)
+        console.info(`  raw (${completionTokens} tok, ${elapsedMs} ms): ${rawText.slice(0, 220).replace(/\n/g, ' ')}${rawText.length > 220 ? '…' : ''}`)
 
         // 4. Parse + repair ladder (reassembled scaffold+continuation for ADB).
         const parsed = parseEchoChips(rawText)
         repairHist[parsed.stage]++
-        console.log(`  parse stage: ${parsed.stage}  ->  ${parsed.pills.length} pill(s)`)
+        console.info(`  parse stage: ${parsed.stage}  ->  ${parsed.pills.length} pill(s)`)
         for (const p of parsed.pills)
-          console.log(`    ${scoreBadge(0)} ${p.content}  [${p.type}]  score=${p.relevanceScore.toFixed(2)}`)
+          console.info(`    ${scoreBadge(0)} ${p.content}  [${p.type}]  score=${p.relevanceScore.toFixed(2)}`)
 
         // 5. Score against ground truth.
         const score = scoreSession(
@@ -203,7 +204,7 @@ async function main() {
         ;(score as any).completionTokens = completionTokens
         ;(score as any).promptFrame = cfg.promptFrame
         ;(score as any).constrainTypeEnum = !!cfg.constrainTypeEnum
-        console.log(
+        console.info(
           `  sim=${score.evidenceSpannedSimilarity.toFixed(3)} prec=${score.precision.toFixed(3)} `
           + `f1=${score.meanTokenF1.toFixed(3)} type=${score.typeAgreement.toFixed(2)} `
           + `rel=${score.relevanceCalibration.toFixed(2)} matched=${score.gtMatched}/${score.gtTotal} `
@@ -233,13 +234,13 @@ async function main() {
       }
       allReports.push({ config: cfg.name, corpusVersion: '0.1.0', generatedAt: new Date().toISOString(), aggregate: configReport, sessions: sessionScores })
 
-      console.log(`\n===== ${cfg.name} — aggregate =====`)
-      console.log(`  schema compliance : ${(configReport.schemaCompliance * 100).toFixed(0)}%  (gate ${GATES.schema * 100}%)  repairLadder=${JSON.stringify(repairHist)}`)
-      console.log(`  similarity        : ${configReport.meanSimilarity.toFixed(3)}  (gate ${GATES.similarity})`)
-      console.log(`  precision         : ${configReport.meanPrecision.toFixed(3)}  (gate ${GATES.precision})`)
-      console.log(`  type agreement    : ${configReport.meanTypeAgreement.toFixed(3)}  (gate ${GATES.typeAgreement})`)
-      console.log(`  relevance calib   : ${configReport.meanRelevanceCalibration.toFixed(3)}  (gate ${GATES.relevance})`)
-      console.log(`  gt coverage       : ${configReport.totalGtMatched}/${configReport.totalGt} pills matched`)
+      console.info(`\n===== ${cfg.name} — aggregate =====`)
+      console.info(`  schema compliance : ${(configReport.schemaCompliance * 100).toFixed(0)}%  (gate ${GATES.schema * 100}%)  repairLadder=${JSON.stringify(repairHist)}`)
+      console.info(`  similarity        : ${configReport.meanSimilarity.toFixed(3)}  (gate ${GATES.similarity})`)
+      console.info(`  precision         : ${configReport.meanPrecision.toFixed(3)}  (gate ${GATES.precision})`)
+      console.info(`  type agreement    : ${configReport.meanTypeAgreement.toFixed(3)}  (gate ${GATES.typeAgreement})`)
+      console.info(`  relevance calib   : ${configReport.meanRelevanceCalibration.toFixed(3)}  (gate ${GATES.relevance})`)
+      console.info(`  gt coverage       : ${configReport.totalGtMatched}/${configReport.totalGt} pills matched`)
     }
 
     // Write report.
@@ -248,7 +249,7 @@ async function main() {
     const stamp = new Date().toISOString().replace(/[:.]/g, '-')
     const reportPath = path.join(reportsDir, `03-echo-chip-eval-${stamp}.json`)
     fs.writeFileSync(reportPath, JSON.stringify({ meta: { modelPath, elapsedMs: Date.now() - t0 }, reports: allReports }, null, 2))
-    console.log(`\n✓ Report written to ${reportPath}`)
+    console.info(`\n✓ Report written to ${reportPath}`)
   }
   finally {
     await bridge.dispose()

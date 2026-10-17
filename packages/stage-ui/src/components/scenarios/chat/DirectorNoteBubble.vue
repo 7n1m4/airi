@@ -3,7 +3,7 @@ import type { DirectorNote } from '../../../types/director'
 
 import { ref } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   note: DirectorNote
 }>()
 

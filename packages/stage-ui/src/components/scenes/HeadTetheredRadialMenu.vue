@@ -73,10 +73,10 @@ const emit = defineEmits<{
   (e: 'update:open', val: boolean): void
   (e: 'update:showBackground', val: boolean): void
   (e: 'update:showModel', val: boolean): void
-  (e: 'apply-preset', preset: 'mini' | 'medium' | 'large' | 'full'): void
-  (e: 'apply-alignment', alignment: string): void
-  (e: 'hide-stage'): void
-  (e: 'select-monitor', monitorId: number): void
+  (e: 'applyPreset', preset: 'mini' | 'medium' | 'large' | 'full'): void
+  (e: 'applyAlignment', alignment: string): void
+  (e: 'hideStage'): void
+  (e: 'selectMonitor', monitorId: number): void
 }>()
 
 const isOpen = ref(false)
@@ -431,7 +431,7 @@ function onSliceClick(idx: number) {
       hoveredIndex.value = null
     }
     else if (wedge.id === 'hide') {
-      emit('hide-stage')
+      emit('hideStage')
       closeMenu()
     }
     else if (wedge.id === 'monitor') {
@@ -440,7 +440,7 @@ function onSliceClick(idx: number) {
         hoveredIndex.value = null
       }
       else {
-        emit('select-monitor', 1)
+        emit('selectMonitor', 1)
         closeMenu()
       }
     }
@@ -448,14 +448,14 @@ function onSliceClick(idx: number) {
   else if (subMenuMode.value === 'size') {
     const preset = SIZE_PRESETS[idx]
     if (preset) {
-      emit('apply-preset', preset.id)
+      emit('applyPreset', preset.id)
       closeMenu()
     }
   }
   else if (subMenuMode.value === 'align') {
     const dir = ALIGN_SLICES[idx]
     if (dir) {
-      emit('apply-alignment', dir.id)
+      emit('applyAlignment', dir.id)
       closeMenu()
     }
   }
@@ -475,14 +475,14 @@ function onSliceClick(idx: number) {
     }
   }
   else if (subMenuMode.value === 'monitor') {
-    emit('select-monitor', idx + 1)
+    emit('selectMonitor', idx + 1)
     closeMenu()
   }
 }
 
 function selectAlignment(alignment: string) {
   playActionSound()
-  emit('apply-alignment', alignment)
+  emit('applyAlignment', alignment)
   closeMenu()
 }
 

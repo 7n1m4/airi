@@ -201,7 +201,7 @@ export function useMotionUpdatePluginBeatSync(beatSync: BeatSyncController): Mot
     const debug = beatSync.debugState()
     if (debug.primed && ctx.now - lastLogTime > 1000) {
       lastLogTime = ctx.now
-      console.debug('[Live2D BeatSync]', {
+      console.info('[Live2D BeatSync]', {
         bpm: debug.bpm ? Math.round(debug.bpm) : null,
         style: debug.style,
         segments: debug.segments.length,

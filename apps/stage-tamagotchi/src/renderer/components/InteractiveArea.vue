@@ -72,6 +72,19 @@ const shortTermMemory = useShortTermMemoryStore()
 const { cleanupMessages } = useChatMaintenanceStore()
 const { ingest, onAfterMessageComposed, stopCurrentGeneration } = chatOrchestrator
 const { messages, activeSessionId } = storeToRefs(chatSession)
+const producerSuggestion = ref<{ type: 'producer-suggestion', choices: Array<{ title: string, message: string }>, loading?: boolean, createdAt: number } | null>(null)
+
+const historyMessages = computed(() => {
+  const base = messages.value as unknown as ChatHistoryItem[]
+  if (producerSuggestion.value) {
+    return [...base, producerSuggestion.value]
+  }
+  return base
+})
+
+const hasVisibleMessages = computed(() => {
+  return messages.value.some(m => m.role === 'user' || m.role === 'assistant')
+})
 const { streamingMessage } = storeToRefs(chatStream)
 const { sending, canStop } = storeToRefs(chatOrchestrator)
 const { activeCardId } = storeToRefs(airiCardStore)
@@ -145,6 +158,8 @@ async function handleJournalSubmit(data: { scope: 'all' | 'turns', turns?: numbe
   showJournalModal.value = false
 }
 
+const artistryStore = useAutonomousArtistryStore()
+
 function handleImagineSubmit() {
   if (!imaginePrompt.value.trim())
     return
@@ -165,7 +180,6 @@ const isGroundingPreviewExpanded = useLocalStorage('airi:chat:grounding-preview-
 const isMemoriesPreviewExpanded = useLocalStorage('airi:chat:memories-preview-expanded', true)
 const isTopicsPreviewExpanded = useLocalStorage('airi:chat:topics-preview-expanded', true)
 const isScratchpadPreviewExpanded = useLocalStorage('airi:chat:scratchpad-preview-expanded', true)
-const artistryStore = useAutonomousArtistryStore()
 
 watch(
   isGroundingPreviewExpanded,
@@ -286,7 +300,7 @@ const latestTextEntries = computed(() => {
   const autoEntries = shortTermMemory.getCharacterBlocks(activeCardId.value)
     .map((b) => {
       // Robust stripping of markdown code fences (``` or ~~~) with optional language tag
-      const fenceMatch = b.summary.trim().match(/^(?:`{3,}|~{3,})[\w-]*\n?([\s\S]*?)\n?(?:`{3,}|~{3,})$/)
+      const fenceMatch = b.summary.trim().match(/^(?:`{3,}|~{3,})[\w-]*\r?\n((?:(?!`{3}|~{3})[\s\S])*)\r?\n?(?:`{3,}|~{3,})$/)
       const content = fenceMatch ? fenceMatch[1].trim() : b.summary.trim()
 
       return ({
@@ -331,7 +345,7 @@ const allTextEntries = computed(() => {
 
   const autoEntries = shortTermMemory.getCharacterBlocks(activeCardId.value)
     .map((b) => {
-      const fenceMatch = b.summary.trim().match(/^(?:`{3,}|~{3,})[\w-]*\n?([\s\S]*?)\n?(?:`{3,}|~{3,})$/)
+      const fenceMatch = b.summary.trim().match(/^(?:`{3,}|~{3,})[\w-]*\r?\n((?:(?!`{3}|~{3})[\s\S])*)\r?\n?(?:`{3,}|~{3,})$/)
       const content = fenceMatch ? fenceMatch[1].trim() : b.summary.trim()
       return {
         id: b.id,
@@ -427,7 +441,6 @@ const characterName = computed(() => activeCard.value?.name || 'AIRI')
 const effectiveSystemPrompt = computed(() => buildSystemPrompt(activeCard.value))
 
 const isProducerModalOpen = ref(false)
-const producerSuggestion = ref<{ type: 'producer-suggestion', choices: Array<{ title: string, message: string }>, loading?: boolean, createdAt: number } | null>(null)
 const { generateSuggestions } = useProducer()
 const lastProducerConfig = ref<{ guidance: string, contextDepth: number, count: number, shortReplies: boolean } | null>(null)
 
@@ -489,7 +502,7 @@ async function handleProducerSubmit(payload: { guidance: string, contextDepth: n
       createdAt: Date.now(),
     }
   }
-  catch (err) {
+  catch {
     producerSuggestion.value = null
     toast.error('Failed to generate suggestions. Please check your provider settings.')
   }
@@ -657,10 +670,10 @@ function addScreenshotAttachment(data: string, mimeType: string) {
 }
 
 async function handleScreenshotClick() {
-  console.log('[InteractiveArea] Manual screenshot capture requested via visionStore...')
+  console.info('[InteractiveArea] Manual screenshot capture requested via visionStore...')
   try {
     const result = await visionStore.captureSnapshot({ width: 1280, height: 720 }) as any
-    console.log('[InteractiveArea] Capture result:', result ? (result.error ? result.error : 'Success') : 'Null/Empty')
+    console.info('[InteractiveArea] Capture result:', result ? (result.error ? result.error : 'Success') : 'Null/Empty')
 
     if (result?.error === 'permission_denied') {
       toast.error('Screen recording permission required.', {
@@ -707,7 +720,7 @@ async function handleInternalImageAttach({ url, title }: { url: string, title: s
 }
 
 async function captureAndSendScreenshot() {
-  console.log('[InteractiveArea] Auto-send screenshot requested (shortcut) via visionStore...')
+  console.info('[InteractiveArea] Auto-send screenshot requested (shortcut) via visionStore...')
   try {
     const result = await visionStore.captureSnapshot({ width: 1280, height: 720 }) as any
     if (result?.error === 'permission_denied') {
@@ -769,18 +782,6 @@ onAfterMessageComposed(async () => {
   attachments.value.forEach(att => URL.revokeObjectURL(att.url))
   attachments.value = []
   producerSuggestion.value = null
-})
-
-const historyMessages = computed(() => {
-  const base = messages.value as unknown as ChatHistoryItem[]
-  if (producerSuggestion.value) {
-    return [...base, producerSuggestion.value]
-  }
-  return base
-})
-
-const hasVisibleMessages = computed(() => {
-  return messages.value.some(m => m.role === 'user' || m.role === 'assistant')
 })
 
 const isGreetMode = computed(() => !hasVisibleMessages.value && !messageInput.value.trim())

@@ -22,6 +22,16 @@ import AutoVoiceConfigModal from './components/AutoVoiceConfigModal.vue'
 import CustomCharacterModal from './components/CustomCharacterModal.vue'
 import VoiceCreatorModal from './components/VoiceCreatorModal.vue'
 
+const router = useRouter()
+const wizardStore = useAnimaDexWizardStore()
+const airiCardStore = useAiriCardStore()
+const llmStore = useLLM()
+const consciousnessStore = useConsciousnessStore()
+const providersStore = useProvidersStore()
+const displayModelsStore = useDisplayModelsStore()
+const speechStore = useSpeechStore()
+const userProfileStore = useSettingsUserProfile()
+
 // LocalStorage persistent state for hiding the wizard welcome banner
 const showWelcomeBanner = useLocalStorage('airi:animadex-wizard:welcome-banner-visible', true)
 
@@ -61,16 +71,6 @@ function handleCloneCustomCharacter(charId: string) {
     toast.success(`Cloned as ${cloned.name}`)
   }
 }
-
-const router = useRouter()
-const wizardStore = useAnimaDexWizardStore()
-const airiCardStore = useAiriCardStore()
-const llmStore = useLLM()
-const consciousnessStore = useConsciousnessStore()
-const providersStore = useProvidersStore()
-const displayModelsStore = useDisplayModelsStore()
-const speechStore = useSpeechStore()
-const userProfileStore = useSettingsUserProfile()
 
 const {
   catalogLoaded,
@@ -632,7 +632,7 @@ async function handleGenerate(guidance = '') {
     }
 
     synthesisPayload.value = payload
-    console.log('[AnimaDexWizard] Compiled LLM Ingestion Payload:', JSON.stringify(payload, null, 2))
+    console.info('[AnimaDexWizard] Compiled LLM Ingestion Payload:', JSON.stringify(payload, null, 2))
 
     // Call LLM for Synthesis
     const activeModel = consciousnessStore.activeModel

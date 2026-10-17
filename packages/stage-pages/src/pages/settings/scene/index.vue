@@ -4,7 +4,7 @@ import type { StageAtmosphere } from '@proj-airi/stage-ui/stores'
 import { ATMOSPHERE_OPTIONS } from '@proj-airi/stage-layouts/components/Backgrounds'
 import { CharacterAvatar } from '@proj-airi/stage-ui/components'
 import { useAiriCardStore, useBackgroundStore } from '@proj-airi/stage-ui/stores'
-import { Button, Callout } from '@proj-airi/ui'
+import { Button, Callout, DoubleCheckButton } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -81,12 +81,10 @@ function setAsBackground(id: string) {
 }
 
 function removeBackground(id: string) {
-  if (confirm(t('settings.pages.scene.gallery.delete_confirm', 'Are you sure you want to delete this background?'))) {
-    if (activeBackgroundId.value === id) {
-      backgroundStore.setActiveBackground('none')
-    }
-    backgroundStore.removeBackground(id)
+  if (activeBackgroundId.value === id) {
+    backgroundStore.setActiveBackground('none')
   }
+  backgroundStore.removeBackground(id)
 }
 
 function clearDefault() {
@@ -506,19 +504,24 @@ function selectAtmosphere(id: StageAtmosphere) {
               <span>Currently Active</span>
             </div>
 
-            <button
+            <DoubleCheckButton
               v-if="bg.type !== 'builtin'"
-              type="button"
-              :class="[
-                'cursor-pointer h-9 px-3 rounded-xl text-xs text-white font-semibold',
-                'bg-red-600 hover:bg-red-500 active:scale-95 transition-all shadow-lg',
-                'flex items-center justify-center border border-white/25',
-              ]"
-              :title="t('settings.pages.scene.gallery.delete', 'Delete from Gallery')"
-              @click.stop="removeBackground(bg.id)"
+              size="sm"
+              variant="danger"
+              :class="['rounded-xl text-xs font-semibold']"
+              @click.stop
+              @confirm="removeBackground(bg.id)"
             >
-              <div :class="['i-solar:trash-bin-trash-bold-duotone text-base']" />
-            </button>
+              <template #default>
+                <div class="flex items-center gap-1.5">
+                  <div class="i-solar:trash-bin-trash-bold-duotone text-base" />
+                  <span>{{ t('settings.pages.scene.gallery.delete', 'Delete') }}</span>
+                </div>
+              </template>
+              <template #confirm>
+                <span class="whitespace-nowrap">{{ t('settings.pages.scene.gallery.delete_confirm', 'Delete?') }}</span>
+              </template>
+            </DoubleCheckButton>
           </div>
         </div>
 

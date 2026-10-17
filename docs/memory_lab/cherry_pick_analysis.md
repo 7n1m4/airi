@@ -25,7 +25,7 @@
 - `episodic_limit: 10` — raw conversation narratives with original dialogue
 
 The context fed to the LLM looks like:
-```
+```text
 ## Episodic Memories
 ### Discussing Career Plans
 **Conversation Time:** 2024-06-15 3:00 PM UTC (2 months ago)

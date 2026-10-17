@@ -11,7 +11,7 @@
  * Resolves a place name hierarchically using TypeSafe Jev.
  * @param {import('./jev-client.mjs').TypeSafeJevClient} jev
  * @param {string} place
- * @returns {Promise<{ place: string, isReal: boolean, domain: string, region?: string, country?: string, subdivision?: string, settingType?: string }>}
+ * @returns {Promise<{ place: string, isReal: boolean, domain: string, region?: string, country?: string, subdivision?: string, settingType?: string }>} A promise resolving to the hierarchical resolution result for the given place.
  */
 export async function resolvePlaceHierarchically(jev, place) {
   if (!place || typeof place !== 'string' || place.trim().length === 0) {

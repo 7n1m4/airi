@@ -230,7 +230,7 @@ export const useShortTermMemoryStore = defineStore('short-term-memory', () => {
 
   watch(stmSyncSignal, (val) => {
     if (val) {
-      console.log('[ShortTermMemory] Received short-term memory sync signal, reloading...')
+      console.info('[ShortTermMemory] Received short-term memory sync signal, reloading...')
       void load(true, true)
     }
   })

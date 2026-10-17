@@ -174,7 +174,7 @@ const onSetModels = computed(() => {
     }
   }
 
-  console.log('[RehearsalRoom] onSetModels computed:', {
+  console.info('[RehearsalRoom] onSetModels computed:', {
     cardId: activeCardId.value,
     count: list.length,
     models: list.map(m => ({ key: m.key, modelId: m.modelId, isFallback: m.isFallback })),
@@ -407,7 +407,10 @@ function triggerRehearsalEmotion(key: string) {
       }, 2000)
     }
     else if (type === 'spine') {
-      const match = key.match(/^(.+?)\s*\[(.+?)\]$/)
+      // NOTICE: Character classes exclude the bracket delimiters so the
+      // quantifiers cannot trade characters with each other; surrounding
+      // whitespace is stripped by the trim() calls below.
+      const match = key.match(/^([^[\]]+)\[([^\]]+)\]$/)
       if (match) {
         spineRehearsalStore.selectVariantAndSkin(match[1].trim(), match[2].trim())
       }
@@ -1301,7 +1304,7 @@ function selectModel(m: typeof onSetModels.value[0]) {
               :model-id="activeModelId"
               :show-insert-actions="true"
               :local-stage="true"
-              @insert-token="handleInsertToken"
+              @insertToken="handleInsertToken"
               @update:visible-capabilities="handleVisibleCapabilitiesUpdate"
             />
           </div>

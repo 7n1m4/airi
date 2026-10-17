@@ -265,7 +265,7 @@ export const useAnimaDexWizardStore = defineStore('animadex-wizard', () => {
             if (!binding || !binding.displayModelId)
               return false
           }
-          catch (e) {
+          catch {
             return false
           }
         }

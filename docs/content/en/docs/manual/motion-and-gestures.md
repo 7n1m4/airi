@@ -13,7 +13,7 @@ In AIRI, your 3D avatar does not simply repeat the same static idle loop. Throug
 
 AIRI uses a dual-engine motion architecture:
 
-```
+```text
 [ LLM Turn / User Command ]
               │
               ├──► Built-in Presets (11+ VRMA animations: waving, thinking, jumping, dancing)

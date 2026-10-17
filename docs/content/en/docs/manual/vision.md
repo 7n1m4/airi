@@ -25,7 +25,7 @@ Once attached, type your message or question and press **Send**. AIRI will exami
 
 In AIRI, the "Mind" (Chat LLM) and the "Eyes" (Vision VLM) can be completely independent models:
 
-```
+```text
 [ User Message + Image Attachment ]
                │
                ▼

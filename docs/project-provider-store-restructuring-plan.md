@@ -98,10 +98,10 @@ Conceptually:
 ```ts
 export const useProvidersStore = defineStore('providers', () => {
   const { t } = useI18n()
-  const providerCredentials = useLocalStorage(...)
-  const addedProviders = useLocalStorage(...)
+  const providerCredentials = instanceStore.providerCredentials
+  const addedProviders = useLocalStorage<Record<string, boolean>>('settings/providers/added', {})
 
-  const providerMetadata = createProviderRegistry({ t })
+  const providerMetadata = createProviderRegistry(t, providerDefinitions)
 
   // Existing runtime logic remains in place for now:
   // - initialize provider state
@@ -163,7 +163,7 @@ This structure deliberately stops before adding `runtime/` and `selectors/` modu
 Phase 1 responsibilities:
 
 - create persisted store state
-- call `createProviderRegistry({ t })`
+- call `createProviderRegistry(t, providerDefinitions)`
 - retain current validation and runtime logic
 - retain current selectors and public API
 

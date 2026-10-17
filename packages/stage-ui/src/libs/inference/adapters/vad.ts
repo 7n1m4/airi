@@ -109,15 +109,7 @@ export function createVADAdapter(): VADAdapter {
       let timeoutId: ReturnType<typeof setTimeout> | undefined
       let abortListener: (() => void) | null = null
 
-      const cleanup = (): void => {
-        if (timeoutId !== undefined)
-          clearTimeout(timeoutId)
-        w.removeEventListener('message', handler)
-        if (abortListener && signal)
-          signal.removeEventListener('abort', abortListener)
-      }
-
-      const handler = (event: MessageEvent): void => {
+      function handler(event: MessageEvent): void {
         if (event.data.requestId !== requestId)
           return
 
@@ -136,6 +128,13 @@ export function createVADAdapter(): VADAdapter {
         else {
           onOther?.(event.data)
         }
+      }
+
+      function cleanup(): void {
+        clearTimeout(timeoutId)
+        w.removeEventListener('message', handler)
+        if (abortListener && signal)
+          signal.removeEventListener('abort', abortListener)
       }
 
       w.addEventListener('message', handler)

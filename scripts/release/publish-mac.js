@@ -11,7 +11,7 @@ safeEnv.GH_SSL_NO_VERIFY = 'true'
 safeEnv.NODE_OPTIONS = '--max-old-space-size=12288'
 
 function execute(cmd, options = {}) {
-  console.log(`\n🤖 Running: ${cmd}`)
+  console.info(`\n🤖 Running: ${cmd}`)
   return execSync(cmd, { env: safeEnv, stdio: 'inherit', ...options })
 }
 
@@ -28,15 +28,15 @@ async function main() {
   const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
   const version = pkg.version
   const tag = `v${version}`
-  console.log(`📦 Resolved target release version: ${version} (tag: ${tag})`)
+  console.info(`📦 Resolved target release version: ${version} (tag: ${tag})`)
 
   // Step 1: Pull and fetch tags from git
-  console.log('🔄 Syncing local repository with remote...')
+  console.info('🔄 Syncing local repository with remote...')
   try {
     execute('git -c http.sslVerify=false pull')
     execute('git -c http.sslVerify=false fetch --tags --force')
   }
-  catch (error) {
+  catch {
     console.warn('⚠️ Warning: Git sync failed. Proceeding with local repository state.')
   }
 
@@ -67,7 +67,7 @@ async function main() {
   }
 
   // Step 2: Remove leftover physical copy-deps folders in stage-tamagotchi to prevent Vite V8 memory crashes (3221225477)
-  console.log(`\n🧹 Cleaning physical node_modules overrides before Vite bundling...`)
+  console.info(`\n🧹 Cleaning physical node_modules overrides before Vite bundling...`)
   const copiedPackages = [
     '@discordjs/voice',
     'discord.js',
@@ -85,20 +85,20 @@ async function main() {
     if (fs.existsSync(pkgPath) && !fs.lstatSync(pkgPath).isSymbolicLink()) {
       try {
         fs.rmSync(pkgPath, { recursive: true, force: true })
-        console.log(`  - Cleaned physical override: ${pkg}`)
+        console.info(`  - Cleaned physical override: ${pkg}`)
       }
-      catch (e) {
+      catch {
         // ignore
       }
     }
   }
 
   // Step 3: Run the build:mac script
-  console.log(`\n🔨 Compiling macOS target bundle...`)
+  console.info(`\n🔨 Compiling macOS target bundle...`)
   try {
     execute('pnpm -F @proj-airi/stage-tamagotchi run build:mac')
   }
-  catch (error) {
+  catch {
     console.error('❌ Build execution failed.')
     process.exit(1)
   }
@@ -115,22 +115,22 @@ async function main() {
 
   if (artifacts.length === 0) {
     console.error(`\n❌ Error: Could not find generated DMG/ZIP executables matching "(airi-dasilva333|AIRI)*${version}*.(dmg|zip)" in ${distDir}`)
-    console.log('Available files in dist:', files)
+    console.info('Available files in dist:', files)
     process.exit(1)
   }
 
-  console.log(`\n🎉 Found macOS release asset(s):`, artifacts)
+  console.info(`\n🎉 Found macOS release asset(s):`, artifacts)
 
   // Step 4: Check if GitHub release already exists, if not, create it
-  console.log(`\n🌐 Checking if GitHub release ${tag} exists...`)
+  console.info(`\n🌐 Checking if GitHub release ${tag} exists...`)
   let releaseExists = false
   try {
     execute(`gh release view ${tag} --repo dasilva333/airi`, { stdio: 'ignore' })
     releaseExists = true
-    console.log(`✅ Release ${tag} already exists on GitHub.`)
+    console.info(`✅ Release ${tag} already exists on GitHub.`)
   }
-  catch (err) {
-    console.log(`ℹ️ Release ${tag} does not exist. Creating new release draft...`)
+  catch {
+    console.info(`ℹ️ Release ${tag} does not exist. Creating new release draft...`)
   }
 
   if (!releaseExists) {
@@ -139,7 +139,7 @@ async function main() {
       : ''
     try {
       execute(`gh release create ${tag} --repo dasilva333/airi --title "AIRI ${tag}"${notesFileOpt}`)
-      console.log(`✅ Release ${tag} successfully created.`)
+      console.info(`✅ Release ${tag} successfully created.`)
     }
     catch (err) {
       console.error(`❌ Failed to create GitHub release ${tag}. Error:`, err.message)
@@ -150,10 +150,10 @@ async function main() {
   // Step 5: Upload the artifacts
   for (const artifact of artifacts) {
     const artifactPath = path.join('apps', 'stage-tamagotchi', 'dist', artifact)
-    console.log(`\n🚀 Uploading ${artifact} to release ${tag}...`)
+    console.info(`\n🚀 Uploading ${artifact} to release ${tag}...`)
     try {
       execute(`gh release upload ${tag} "${artifactPath}" --repo dasilva333/airi --clobber`)
-      console.log(`✅ Successfully uploaded: ${artifact}`)
+      console.info(`✅ Successfully uploaded: ${artifact}`)
     }
     catch (err) {
       console.error(`❌ Failed to upload ${artifact}. Error:`, err.message)
@@ -162,19 +162,19 @@ async function main() {
   }
 
   // Step 6: Dispatch Linux Desktop CI build on GitHub Actions
-  console.log(`\n🐧 Dispatching Linux desktop release workflow on GitHub Actions...`)
+  console.info(`\n🐧 Dispatching Linux desktop release workflow on GitHub Actions...`)
   try {
     execute(`gh workflow run release-linux-desktop.yml --repo dasilva333/airi -f tag=${tag}`)
-    console.log(`✅ Successfully dispatched Linux desktop build workflow (release-linux-desktop.yml) for tag ${tag}.`)
-    console.log(`ℹ️ GitHub Actions is now compiling Linux x64 and arm64 (.deb, .rpm, .flatpak) packages in parallel.`)
+    console.info(`✅ Successfully dispatched Linux desktop build workflow (release-linux-desktop.yml) for tag ${tag}.`)
+    console.info(`ℹ️ GitHub Actions is now compiling Linux x64 and arm64 (.deb, .rpm, .flatpak) packages in parallel.`)
   }
   catch (err) {
     console.warn(`⚠️ Warning: Failed to dispatch Linux desktop workflow automatically: ${err.message}`)
     console.warn(`👉 You can dispatch it manually with: gh workflow run release-linux-desktop.yml --repo dasilva333/airi -f tag=${tag}`)
   }
 
-  console.log(`\n🏆 Success! All macOS artifacts uploaded to GitHub release:`)
-  console.log(`👉 https://github.com/dasilva333/airi/releases/tag/${tag}`)
+  console.info(`\n🏆 Success! All macOS artifacts uploaded to GitHub release:`)
+  console.info(`👉 https://github.com/dasilva333/airi/releases/tag/${tag}`)
 }
 
 main().catch((err) => {

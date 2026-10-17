@@ -19,7 +19,7 @@ Instead of bound timelines, we introduce the concept of a **Universe** (or Group
 * A **Chat Session** is a sequence of messages (dialogue history) associated with a single Universe.
 * **Multiple Chat Sessions** can run concurrently inside the same Universe, sharing the same background memory and relationship status while maintaining independent chat bubbles.
 
-```
+```text
                    [ UNIVERSE: "seaside-cottage-main" ]
                      /                              \
                     /                                \

@@ -483,7 +483,6 @@ defineExpose({
     />
     <ThreeScene
       v-if="stageModelRenderer === 'vrm' && stageModelSelectedUrl"
-      v-slot
       ref="vrmViewerRef"
       v-model:state="componentState"
       :mouth-open-size="mouthOpenSize"
@@ -533,7 +532,6 @@ defineExpose({
     />
     <MMDScene
       v-if="stageModelRenderer === 'mmd' && stageModelSelectedUrl"
-      v-slot
       ref="mmdViewerRef"
       v-model:state="componentState"
       :class="['min-w-50% <lg:full', 'h-full w-full flex-1']"

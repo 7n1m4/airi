@@ -208,10 +208,10 @@ export const useEntityLedgerStore = defineStore('entity-ledger', () => {
     const activeSessionMeta = chatSessionStore.activeSessionId ? chatSessionStore.getSessionMeta(chatSessionStore.activeSessionId) : null
     const targetUniverseId = universeId || activeSessionMeta?.universeId || 'global'
 
-    console.log(`[EntityLedger:Rebuild] ========== Starting Universe Graph Rebuild ==========`)
-    console.log(`[EntityLedger:Rebuild] Target Character ID: "${characterId}"`)
-    console.log(`[EntityLedger:Rebuild] Target Universe ID:  "${targetUniverseId}"`)
-    console.log(`[EntityLedger:Rebuild] Resolved User ID:    "${userId}"`)
+    console.info(`[EntityLedger:Rebuild] ========== Starting Universe Graph Rebuild ==========`)
+    console.info(`[EntityLedger:Rebuild] Target Character ID: "${characterId}"`)
+    console.info(`[EntityLedger:Rebuild] Target Universe ID:  "${targetUniverseId}"`)
+    console.info(`[EntityLedger:Rebuild] Resolved User ID:    "${userId}"`)
 
     try {
       const ledger = new EntityLedger()
@@ -229,7 +229,7 @@ export const useEntityLedgerStore = defineStore('entity-ledger', () => {
           rawJournals = localJournals
       }
 
-      console.log(`[EntityLedger:Rebuild] Discovered ${rawJournals.length} total journal entries in IndexedDB storage.`)
+      console.info(`[EntityLedger:Rebuild] Discovered ${rawJournals.length} total journal entries in IndexedDB storage.`)
 
       const charJournalEntries = rawJournals.filter((entry) => {
         const matchesUniverse = (entry.universeId || 'global') === targetUniverseId
@@ -248,7 +248,7 @@ export const useEntityLedgerStore = defineStore('entity-ledger', () => {
           || cIdLower.includes(entryCharIdLower)
       })
 
-      console.log(`[EntityLedger:Rebuild] Found ${charJournalEntries.length} journal entries matching character "${characterId}" in universe "${targetUniverseId}".`)
+      console.info(`[EntityLedger:Rebuild] Found ${charJournalEntries.length} journal entries matching character "${characterId}" in universe "${targetUniverseId}".`)
 
       // -------------------------------------------------------------
       // STEP 2: Ingest Chat Sessions (Canonical + Branch Deduplication)
@@ -265,7 +265,7 @@ export const useEntityLedgerStore = defineStore('entity-ledger', () => {
 
       const characters = sessionsIndex?.characters || {}
       const availableCharacterKeys = Object.keys(characters)
-      console.log(`[EntityLedger:Rebuild] Chat sessions index found ${availableCharacterKeys.length} characters in storage:`, availableCharacterKeys)
+      console.info(`[EntityLedger:Rebuild] Chat sessions index found ${availableCharacterKeys.length} characters in storage:`, availableCharacterKeys)
 
       // Collect all sessions in the active universe matching characterId
       interface SessionTarget {
@@ -297,7 +297,7 @@ export const useEntityLedgerStore = defineStore('entity-ledger', () => {
         }
       }
 
-      console.log(`[EntityLedger:Rebuild] Discovered ${matchingSessions.length} session(s) in universe "${targetUniverseId}".`)
+      console.info(`[EntityLedger:Rebuild] Discovered ${matchingSessions.length} session(s) in universe "${targetUniverseId}".`)
 
       // Sort by messageCount descending so the longest session is treated as Canonical Timeline
       matchingSessions.sort((a, b) => b.messageCount - a.messageCount)
@@ -325,7 +325,7 @@ export const useEntityLedgerStore = defineStore('entity-ledger', () => {
         const sInfo = matchingSessions[i]
         const record = await chatSessionsRepo.getSession(sInfo.sessionId)
         if (!record?.messages?.length) {
-          console.log(`[EntityLedger:Rebuild] Session "${sInfo.sessionId}" has no messages in storage.`)
+          console.info(`[EntityLedger:Rebuild] Session "${sInfo.sessionId}" has no messages in storage.`)
           continue
         }
 
@@ -371,7 +371,7 @@ export const useEntityLedgerStore = defineStore('entity-ledger', () => {
         })
       }
 
-      console.log(`[EntityLedger:Rebuild] Raw turns scanned: ${totalRawTurnsScanned}. Deduplicated turns: ${deduplicatedTurns.length} (skipped ${duplicatedForkTurnsSkipped} duplicated fork turns).`)
+      console.info(`[EntityLedger:Rebuild] Raw turns scanned: ${totalRawTurnsScanned}. Deduplicated turns: ${deduplicatedTurns.length} (skipped ${duplicatedForkTurnsSkipped} duplicated fork turns).`)
 
       // Chronologically order deduplicated turns
       deduplicatedTurns.sort((a, b) => a.timestamp - b.timestamp)
@@ -383,22 +383,22 @@ export const useEntityLedgerStore = defineStore('entity-ledger', () => {
       let classificationMap: Map<string, any> | undefined
 
       const candidateProposals = collectUniqueCandidateMentions(deduplicatedTurns, charJournalEntries)
-      console.log(`[EntityLedger:Rebuild] Discovered ${candidateProposals.length} candidate entity spans across turns and journals.`)
+      console.info(`[EntityLedger:Rebuild] Discovered ${candidateProposals.length} candidate entity spans across turns and journals.`)
 
       if (systemOneStore.configured && candidateProposals.length > 0) {
         primingProgress.value = 0.22
         primingStatusText.value = `Classifying ${candidateProposals.length} candidate entities via System 1 (${systemOneStore.activeModel})...`
-        console.log(`[EntityLedger:Rebuild] Running System 1 (${systemOneStore.activeModel}) classification on ${candidateProposals.length} candidates...`)
+        console.info(`[EntityLedger:Rebuild] Running System 1 (${systemOneStore.activeModel}) classification on ${candidateProposals.length} candidates...`)
         try {
           classificationMap = await systemOneStore.classifyEntities(candidateProposals)
-          console.log(`[EntityLedger:Rebuild] System 1 classification completed for ${classificationMap.size} candidates.`)
+          console.info(`[EntityLedger:Rebuild] System 1 classification completed for ${classificationMap.size} candidates.`)
         }
         catch (err) {
           console.warn(`[EntityLedger:Rebuild] System 1 classification failed:`, err)
         }
       }
       else {
-        console.log(`[EntityLedger:Rebuild] System 1 not configured (${systemOneStore.activeProvider}); proceeding with neutral typing without greedy concept dump.`)
+        console.info(`[EntityLedger:Rebuild] System 1 not configured (${systemOneStore.activeProvider}); proceeding with neutral typing without greedy concept dump.`)
       }
 
       // -------------------------------------------------------------
@@ -488,13 +488,13 @@ export const useEntityLedgerStore = defineStore('entity-ledger', () => {
         availableCharacterKeys,
       }
 
-      console.log(`[EntityLedger:Rebuild] ================= Rebuild Complete =================`)
-      console.log(`[EntityLedger:Rebuild] Ingested Universe:     "${targetUniverseId}"`)
-      console.log(`[EntityLedger:Rebuild] Sessions Discovered:   ${matchingSessions.length} (Canonical: "${canonicalTitle}")`)
-      console.log(`[EntityLedger:Rebuild] Raw Dialogue Turns:    ${totalRawTurnsScanned} scanned, ${deduplicatedTurns.length} ingested, ${duplicatedForkTurnsSkipped} duplicated fork turns skipped.`)
-      console.log(`[EntityLedger:Rebuild] Sacred Journals:       ${charJournalEntries.length} records.`)
-      console.log(`[EntityLedger:Rebuild] Knowledge Graph Nodes: ${ledger.entities.size} Entities, ${ledger.claims.size} Claims, ${ledger.sources.size} Sources.`)
-      console.log(`[EntityLedger:Rebuild] ========================================================`)
+      console.info(`[EntityLedger:Rebuild] ================= Rebuild Complete =================`)
+      console.info(`[EntityLedger:Rebuild] Ingested Universe:     "${targetUniverseId}"`)
+      console.info(`[EntityLedger:Rebuild] Sessions Discovered:   ${matchingSessions.length} (Canonical: "${canonicalTitle}")`)
+      console.info(`[EntityLedger:Rebuild] Raw Dialogue Turns:    ${totalRawTurnsScanned} scanned, ${deduplicatedTurns.length} ingested, ${duplicatedForkTurnsSkipped} duplicated fork turns skipped.`)
+      console.info(`[EntityLedger:Rebuild] Sacred Journals:       ${charJournalEntries.length} records.`)
+      console.info(`[EntityLedger:Rebuild] Knowledge Graph Nodes: ${ledger.entities.size} Entities, ${ledger.claims.size} Claims, ${ledger.sources.size} Sources.`)
+      console.info(`[EntityLedger:Rebuild] ========================================================`)
 
       primingProgress.value = 1.0
       primingStatusText.value = `Successfully indexed ${ledger.entities.size} entities & ${ledger.claims.size} claims across ${matchingSessions.length} session(s).`

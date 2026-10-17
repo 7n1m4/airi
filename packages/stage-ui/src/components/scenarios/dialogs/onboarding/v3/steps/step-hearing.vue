@@ -24,6 +24,7 @@ import { WHISPER_MODELS } from '../../../../../../libs/inference/constants'
 import { useAudioContext } from '../../../../../../stores/audio'
 import { useHearingSpeechInputPipeline } from '../../../../../../stores/modules/hearing'
 import { useProvidersStore } from '../../../../../../stores/providers'
+import { isKeylessProvider } from '../../../../../../libs/providers/types'
 import { useSettingsAudioDevice } from '../../../../../../stores/settings'
 import { ensureWhisperLoaded } from '../../v2/whisper-loader'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
@@ -262,7 +263,7 @@ const inlineConfigProvider = computed(() => {
   if (!selectedCloudProviderId.value)
     return null
   const meta = allAudioTranscriptionProvidersMetadata.value.find(p => p.id === selectedCloudProviderId.value)
-  if (!meta || meta.requiresCredentials === false)
+  if (!meta || isKeylessProvider(meta.requiresCredentials))
     return null
   return meta
 })
@@ -495,7 +496,7 @@ onMounted(() => {
       }
     }
     catch (err) {
-      console.debug('[V3 Hearing] Whisper probe on mount:', err)
+      console.warn('[V3 Hearing] Whisper probe on mount:', err)
     }
   })()
 
@@ -517,7 +518,7 @@ onMounted(() => {
       await audioDevice.askPermission()
     }
     catch (err) {
-      console.debug('[V3 Hearing] Permission ask on mount:', err)
+      console.warn('[V3 Hearing] Permission ask on mount:', err)
     }
     finally {
       if (!selectedAudioInput.value && audioInputs.value.length > 0) {

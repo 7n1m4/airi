@@ -96,7 +96,7 @@ function checkMentionInFile(content, pkgName) {
 }
 
 function audit() {
-  console.log('🔍 Scanning workspace packages for orphaned dependencies...\n')
+  console.info('🔍 Scanning workspace packages for orphaned dependencies...\n')
 
   const packageJsonPaths = findPackageJsons(REPO_ROOT).sort()
   const totalFindings = {
@@ -157,34 +157,34 @@ function audit() {
     }
 
     if (pkgOrphans.length > 0 || pkgConfigOnly.length > 0) {
-      console.log(`📦 \x1B[1m${pkgName}\x1B[0m (\x1B[90m${relPkgDir}\x1B[0m)`)
+      console.info(`📦 \x1B[1m${pkgName}\x1B[0m (\x1B[90m${relPkgDir}\x1B[0m)`)
 
       if (pkgOrphans.length > 0) {
-        console.log('  \x1B[31m❌ Orphaned Dependencies (0 imports or citations anywhere):\x1B[0m')
+        console.info('  \x1B[31m❌ Orphaned Dependencies (0 imports or citations anywhere):\x1B[0m')
         for (const dep of pkgOrphans) {
-          console.log(`     - \x1B[31m${dep}\x1B[0m \x1B[90m(${deps[dep]})\x1B[0m`)
+          console.info(`     - \x1B[31m${dep}\x1B[0m \x1B[90m(${deps[dep]})\x1B[0m`)
           totalFindings.orphans.push({ pkgName, relPkgDir, dep, version: deps[dep] })
         }
       }
 
       if (pkgConfigOnly.length > 0) {
-        console.log('  \x1B[33m⚠️  Config-Only Citations (Cited in config/exclude, but never imported in src):\x1B[0m')
+        console.info('  \x1B[33m⚠️  Config-Only Citations (Cited in config/exclude, but never imported in src):\x1B[0m')
         for (const dep of pkgConfigOnly) {
-          console.log(`     - \x1B[33m${dep}\x1B[0m \x1B[90m(${deps[dep]})\x1B[0m`)
+          console.info(`     - \x1B[33m${dep}\x1B[0m \x1B[90m(${deps[dep]})\x1B[0m`)
           totalFindings.configOnly.push({ pkgName, relPkgDir, dep, version: deps[dep] })
         }
       }
 
-      console.log('')
+      console.info('')
     }
   }
 
-  console.log('========================================================')
-  console.log('                 AUDIT SUMMARY')
-  console.log('========================================================')
-  console.log(`  Total Completely Orphaned Dependencies : \x1B[31m${totalFindings.orphans.length}\x1B[0m`)
-  console.log(`  Total Config-Only / Lingering Packages : \x1B[33m${totalFindings.configOnly.length}\x1B[0m`)
-  console.log('========================================================')
+  console.info('========================================================')
+  console.info('                 AUDIT SUMMARY')
+  console.info('========================================================')
+  console.info(`  Total Completely Orphaned Dependencies : \x1B[31m${totalFindings.orphans.length}\x1B[0m`)
+  console.info(`  Total Config-Only / Lingering Packages : \x1B[33m${totalFindings.configOnly.length}\x1B[0m`)
+  console.info('========================================================')
 
   return totalFindings
 }

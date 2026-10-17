@@ -50,6 +50,17 @@ const customVisionProviders = computed(() => {
   )
 })
 
+// Local reactive state bound to draftStore
+const activeProvider = ref<string>(draftStore.state.visionProvider || visionStore.activeProvider || '')
+const activeModel = ref<string>(draftStore.state.visionModel || visionStore.activeModel || '')
+const strategy = ref<'direct' | 'forward'>(draftStore.state.visionStrategy || visionStore.strategy || 'direct')
+const promptShimDirect = ref<string>(
+  draftStore.state.visionPromptShimDirect || visionStore.promptShimDirect || 'You are currently acting as a vision-capable stand-in for the main character. Keep your responses natural, in-character, and avoid any meta-commentary about "analyzing" or "describing" the image for the user. Just react to what you see as the character would.',
+)
+const promptShimForward = ref<string>(
+  draftStore.state.visionPromptShimForward || visionStore.promptShimForward || 'You are an objective image analysis model. Analyze the provided image in the context of the conversation and the user\'s latest message. Describe the key visual details, subjects, actions, colors, text, or any specific elements mentioned or asked about by the user, so that the primary chat LLM can respond appropriately. Keep your analysis descriptive and objective, and avoid any conversational filler.',
+)
+
 function setTab(tab: 'local' | 'custom') {
   activeTab.value = tab
   if (tab === 'local') {
@@ -66,17 +77,6 @@ function setTab(tab: 'local' | 'custom') {
   }
   syncDraft()
 }
-
-// Local reactive state bound to draftStore
-const activeProvider = ref<string>(draftStore.state.visionProvider || visionStore.activeProvider || '')
-const activeModel = ref<string>(draftStore.state.visionModel || visionStore.activeModel || '')
-const strategy = ref<'direct' | 'forward'>(draftStore.state.visionStrategy || visionStore.strategy || 'direct')
-const promptShimDirect = ref<string>(
-  draftStore.state.visionPromptShimDirect || visionStore.promptShimDirect || 'You are currently acting as a vision-capable stand-in for the main character. Keep your responses natural, in-character, and avoid any meta-commentary about "analyzing" or "describing" the image for the user. Just react to what you see as the character would.',
-)
-const promptShimForward = ref<string>(
-  draftStore.state.visionPromptShimForward || visionStore.promptShimForward || 'You are an objective image analysis model. Analyze the provided image in the context of the conversation and the user\'s latest message. Describe the key visual details, subjects, actions, colors, text, or any specific elements mentioned or asked about by the user, so that the primary chat LLM can respond appropriately. Keep your analysis descriptive and objective, and avoid any conversational filler.',
-)
 
 const userName = computed(() => draftStore.state.userName?.trim() || 'Richy')
 const resolvedPersona = computed(() => resolvePersona(draftStore.state, userName.value))

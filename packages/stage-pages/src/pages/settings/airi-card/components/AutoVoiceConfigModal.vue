@@ -513,7 +513,7 @@ Return ONLY a raw JSON array matching this schema (no markdown formatting, no wr
 
     const rawText = (response.text || '').trim()
     let cleanJson = rawText
-    const match = rawText.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
+    const match = rawText.match(/^```(?:json)?[ \t]*\r?\n([\s\S]*?)\r?\n?```/)
     if (match) {
       cleanJson = match[1].trim()
     }
@@ -602,7 +602,7 @@ async function playPreview(rec: Recommendation) {
       },
     }
 
-    console.log('[AutoVoiceConfigModal] Saving temporary preview voice profile:', tempProfile)
+    console.info('[AutoVoiceConfigModal] Saving temporary preview voice profile:', tempProfile)
 
     // Trigger array replacement to ensure LocalStorage/Vue reactivity runs
     const currentProfiles = [...(speechStore.savedVoiceProfiles || [])]
@@ -684,7 +684,7 @@ function handleApply() {
       },
     }
 
-    console.log(`[AutoVoiceConfigModal] Saving final configured voice profile for ${rec.name}:`, newProfile)
+    console.info(`[AutoVoiceConfigModal] Saving final configured voice profile for ${rec.name}:`, newProfile)
 
     const profileIdx = currentProfiles.findIndex(p => p.id === profileId)
     if (profileIdx !== -1) {

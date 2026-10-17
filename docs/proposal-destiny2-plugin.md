@@ -25,7 +25,7 @@ graph TD
 
 The plugin adds a new settings view under `Settings > Modules > Destiny2`.
 
-```
+```text
 Settings > Modules > Destiny2
 ┌────────────────────────────────────────────────────────┐
 │  [X] Enable Destiny 2 Integration                      │

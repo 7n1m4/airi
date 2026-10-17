@@ -39,13 +39,19 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'sparkle-click', fieldId: string): void
+  (e: 'sparkleClick', fieldId: string): void
 }>()
 
 const capabilities = useActingCapabilities({
   selectedDisplayModelId: () => props.selectedDisplayModelId,
   selectedSpeechProvider: () => props.selectedSpeechProvider,
 })
+
+// Existing Acting Models
+const selectedActingModelExpressionPrompt = defineModel<string>('selectedActingModelExpressionPrompt', { required: true })
+const selectedActingSpeechExpressionPrompt = defineModel<string>('selectedActingSpeechExpressionPrompt', { required: true })
+const selectedActingSpeechMannerismPrompt = defineModel<string>('selectedActingSpeechMannerismPrompt', { required: true })
+const selectedActingIdleAnimations = defineModel<string[]>('selectedActingIdleAnimations', { required: true })
 
 const actingModelEmotionOptions = computed(() => props.actingModelEmotionOptions ?? capabilities.actingModelEmotionOptions.value)
 const actingModelMotionOptions = computed(() => props.actingModelMotionOptions ?? capabilities.actingModelMotionOptions.value)
@@ -97,12 +103,6 @@ watch(() => props.selectedSpeechProvider, (newProvider) => {
     void capabilities.loadActingSpeechCapabilities(newProvider)
   }
 }, { immediate: true })
-
-// Existing Acting Models
-const selectedActingModelExpressionPrompt = defineModel<string>('selectedActingModelExpressionPrompt', { required: true })
-const selectedActingSpeechExpressionPrompt = defineModel<string>('selectedActingSpeechExpressionPrompt', { required: true })
-const selectedActingSpeechMannerismPrompt = defineModel<string>('selectedActingSpeechMannerismPrompt', { required: true })
-const selectedActingIdleAnimations = defineModel<string[]>('selectedActingIdleAnimations', { required: true })
 
 // Autonomous Cues (System-1 Interceptor) & Allowlist Models
 const selectedActingCueAllowlist = defineModel<CharacterCueAllowlist | undefined>('selectedActingCueAllowlist')
@@ -218,7 +218,7 @@ function applyPacingProfile(profileId: 'snappy' | 'balanced' | 'deep_cot') {
         :insert-model-emotion="insertModelEmotion"
         :insert-model-motion="insertModelMotion"
         :insert-model-vfx="props.insertModelVfx"
-        @sparkle-click="(fieldId) => emit('sparkle-click', fieldId)"
+        @sparkle-click="(fieldId) => emit('sparkleClick', fieldId)"
       />
 
       <!-- 1. IDLING SUB-TAB -->
@@ -239,7 +239,7 @@ function applyPacingProfile(profileId: 'snappy' | 'balanced' | 'deep_cot') {
         :acting-mannerism-options="actingMannerismOptions"
         :insert-speech-tag="insertSpeechTag"
         :insert-speech-mannerism="insertSpeechMannerism"
-        @sparkle-click="(fieldId) => emit('sparkle-click', fieldId)"
+        @sparkle-click="(fieldId) => emit('sparkleClick', fieldId)"
       />
 
       <!-- 3. THINKING SUB-TAB -->
@@ -269,7 +269,7 @@ function applyPacingProfile(profileId: 'snappy' | 'balanced' | 'deep_cot') {
         :acting-mannerism-options="actingMannerismOptions"
         :insert-speech-mannerism="insertSpeechMannerism"
         @navigate-to-playground="activeSubTab = 'playground'"
-        @sparkle-click="(fieldId) => emit('sparkle-click', fieldId)"
+        @sparkle-click="(fieldId) => emit('sparkleClick', fieldId)"
       />
 
       <!-- 4. STICKERS SUB-TAB -->
@@ -279,7 +279,7 @@ function applyPacingProfile(profileId: 'snappy' | 'balanced' | 'deep_cot') {
         v-model:sticker-widgets-enabled="selectedActingStickerWidgetsEnabled"
         v-model:active-sticker-ids="selectedActingActiveStickerIds"
         :card-id="props.cardId"
-        @sparkle-click="(fieldId) => emit('sparkle-click', fieldId)"
+        @sparkle-click="(fieldId) => emit('sparkleClick', fieldId)"
       />
 
       <!-- 5. LAB (PLAYGROUND) SUB-TAB -->

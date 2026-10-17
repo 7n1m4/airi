@@ -60,7 +60,7 @@ export function registerToastService(context: EventaContext, window: BrowserWind
       return
 
     // 2. Execute logic
-    console.log(`[ToastService] Toast: ${payload.message}`)
+    console.info(`[ToastService] Toast: ${payload.message}`)
   })
 }
 ```

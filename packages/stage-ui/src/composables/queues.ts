@@ -79,7 +79,7 @@ export function extractEmotions(payload: any): EmotionPayload[] {
 }
 
 export function parseActEmotion(content: string) {
-  const match = /<\|ACT\s*(?::\s*)?([\s\S]*?)(?:\|>|>)/i.exec(content)
+  const match = /<\|ACT\s*(?::\s*)?(?!\s)([\s\S]*?)(?:\|>|>)/i.exec(content)
   if (!match)
     return { ok: false, emotions: [] as EmotionPayload[] }
 
@@ -110,7 +110,7 @@ export function parseActEmotion(content: string) {
     const intensityMatch = /"?intensity"?\s*[:=]\s*(?:"([^"]+)"|'([^']+)'|([\d.]+))/i.exec(payloadText)
     const parsedIntensity = intensityMatch ? normalizeIntensity(Number.parseFloat(intensityMatch[1] || intensityMatch[2] || intensityMatch[3])) : 1
 
-    const emotionMatch = /"?(?:emotion|motion|vfx|aura)"?\s*[:=]\s*(?:\{?[\s\S]*?"name"\s*[:=]\s*)?(?:"([^"]+)"|'([^']+)'|([^"}\s,]+))/gi
+    const emotionMatch = /"?(?:emotion|motion|vfx|aura)"?\s*[:=]\s*(?=\S)(?:\{?[\s\S]*?"name"\s*[:=]\s*)?(?:"([^"]+)"|'([^']+)'|([^"}\s,]+))/gi
     let m
     while ((m = emotionMatch.exec(payloadText)) !== null) {
       const tagText = m[0].trim().toLowerCase().replace(/^"/, '')
@@ -207,7 +207,7 @@ export function getActorColor(id: string): string {
       return assets[id].textColor
     }
   }
-  catch (e) {
+  catch {
     // Pinia not initialized
   }
 

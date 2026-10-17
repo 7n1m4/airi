@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router'
 
 import { useAiriCardStore } from '../../../stores/modules/airi-card'
 
-const props = withDefaults(defineProps<{
+withDefaults(defineProps<{
   /** Tooltip for the main button */
   title?: string
   /** Variant of the trigger button */

@@ -80,7 +80,7 @@ The switch relies on the same toggle wiring as `groundingTopicsEnabled` (see `ha
 File: `InteractiveArea.vue`, directly under the grounding panel header (mirrors `isTopicsPreviewExpanded` drawer around line 1167).
 
 Mock draw content (fixed-height ~4.5rem sparkline):
-```
+```text
 Δh/t (L9–L11 cos): ▁▁▂∙▅█▅▂▁▁▁▂▃▅▇▂▁▁▁
 turns:  -12  -9  -6  -3   now   thr=1.5×floor
 ```

@@ -63,6 +63,9 @@ export const useSpine = defineStore('spine', () => {
   })
   const shouldUpdateViewHooks = ref(new Set<() => void>())
 
+  /** Transient request to play a one-shot animation. */
+  const oneShotAnimation = ref<SpineOneShotAnimation>()
+
   const onShouldUpdateView = (hook: () => void) => {
     shouldUpdateViewHooks.value.add(hook)
     return () => {
@@ -131,9 +134,6 @@ export const useSpine = defineStore('spine', () => {
 
   /** Whether a Spine skeleton is currently loaded in the active scene. */
   const isModelLoaded = ref(false)
-
-  /** Transient request to play a one-shot animation. */
-  const oneShotAnimation = ref<SpineOneShotAnimation>()
 
   /** Triggers a one-shot animation on the emotion track and broadcasts to other windows. */
   function playOneShotAnimation(name: string, loop = false) {

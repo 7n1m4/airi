@@ -10,6 +10,8 @@ import type { Page } from 'puppeteer-core'
 
 import fs from 'node:fs'
 
+import { Buffer } from 'node:buffer'
+
 export interface RenderSpec {
   code: string
   size?: number
@@ -57,7 +59,9 @@ export class CanvasRenderer {
   }
 
   async render(spec: RenderSpec): Promise<RenderOutcome> {
-    await this.page.evaluate((s) => { (window as any).__RWkvNextRender = s }, spec)
+    await this.page.evaluate((s) => {
+      (window as unknown as Record<string, RenderSpec>).__RWkvNextRender = s
+    }, spec)
     const timeoutMs = (spec.timeoutMs ?? 30_000) + 10_000
     const result = await Promise.race([
       this.page.evaluate(async () => {

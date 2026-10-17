@@ -108,7 +108,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
   function rateLimitAllowsPromotion(config: ScreenWatchingConfig, now = Date.now()): boolean {
     const cooldownMs = (config.hysteresisMinutes || 1) * 60 * 1000
     if (now - lastPromotionAt.value < cooldownMs) {
-      console.log(`[ScreenWatcher:RateLimit] ⏳ Promotion throttled by hysteresis cooldown (${Math.round((cooldownMs - (now - lastPromotionAt.value)) / 1000)}s remaining).`)
+      console.info(`[ScreenWatcher:RateLimit] ⏳ Promotion throttled by hysteresis cooldown (${Math.round((cooldownMs - (now - lastPromotionAt.value)) / 1000)}s remaining).`)
       return false
     }
 
@@ -119,7 +119,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
     const maxPerHour = config.maxPerHour || 4
     if (recentPromotionTimestamps.value.length >= maxPerHour) {
-      console.log(`[ScreenWatcher:RateLimit] 🛑 Promotion throttled: Reached max ${maxPerHour} interventions per hour.`)
+      console.info(`[ScreenWatcher:RateLimit] 🛑 Promotion throttled: Reached max ${maxPerHour} interventions per hour.`)
       return false
     }
 
@@ -209,10 +209,10 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       action: 'Dispatching promoted screen reaction',
       extra: { deliveryMode, itemCount: typeof events === 'string' ? 1 : events.length },
     })
-    console.log(`[ScreenWatcher:Reaction] 🎙️ Dispatching real-time reaction (deliveryMode="${deliveryMode}")...`)
+    console.info(`[ScreenWatcher:Reaction] 🎙️ Dispatching real-time reaction (deliveryMode="${deliveryMode}")...`)
 
     if (deliveryMode === 'off') {
-      console.log('[ScreenWatcher:Reaction] 🔇 Delivery mode is "off" — skipping dialogue dispatch.')
+      console.info('[ScreenWatcher:Reaction] 🔇 Delivery mode is "off" — skipping dialogue dispatch.')
       return
     }
 
@@ -232,7 +232,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     const hasActiveSpeech = Boolean(speechStore.activeSpeechProvider && speechStore.activeSpeechProvider !== 'speech-noop')
 
     if (deliveryMode === 'both' && hasActiveSpeech) {
-      console.log('[ScreenWatcher:Reaction] 🔊 Ingesting into Chat Orchestrator (Voice + Bubble)...')
+      console.info('[ScreenWatcher:Reaction] 🔊 Ingesting into Chat Orchestrator (Voice + Bubble)...')
       await chatOrchestrator.ingest(reactionPrompt, {
         metadata: {
           source: 'screen-watcher',
@@ -266,12 +266,12 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         { role: 'user' as const, content: reactionPrompt },
       ]
 
-      console.log('[ScreenWatcher:Reaction] Generating bubble commentary turn from LLM...')
+      console.info('[ScreenWatcher:Reaction] Generating bubble commentary turn from LLM...')
       const response = await llmStore.generate(activeModel, activeProvider, messages, {})
       const rawReply = (response.text || '').trim()
 
       if (!rawReply || rawReply === 'NO_REPLY') {
-        console.log('[ScreenWatcher:Reaction] Character decided to stay silent (NO_REPLY).')
+        console.info('[ScreenWatcher:Reaction] Character decided to stay silent (NO_REPLY).')
         return
       }
 
@@ -298,7 +298,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
       // Split into small, bite-sized reading chunks that comfortably fit the speech bubble (~32 chars)
       const chunks = splitIntoReadingChunks(cleanReply, 32)
-      console.log(`[ScreenWatcher:Reaction] 💬 Playing ${chunks.length} reading chunk(s) at reading speed...`, chunks)
+      console.info(`[ScreenWatcher:Reaction] 💬 Playing ${chunks.length} reading chunk(s) at reading speed...`, chunks)
 
       const thisToken = nanoid()
       currentBubblePlaybackToken = thisToken
@@ -363,7 +363,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
   async function captureAndProcess(): Promise<void> {
     const tickEpoch = watcherEpoch
     if (isCapturing.value) {
-      console.log('[ScreenWatcher:Tick] ⏳ Previous capture still in progress, skipping overlapping tick.')
+      console.info('[ScreenWatcher:Tick] ⏳ Previous capture still in progress, skipping overlapping tick.')
       return
     }
 
@@ -382,7 +382,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         if (schedule?.start && schedule?.end) {
           const isAwake = isWithinSchedule(schedule.start, schedule.end)
           if (!isAwake) {
-            console.log(`[ScreenWatcher:Tick] ⏸️ Skipped: Outside operating schedule (${schedule.start} - ${schedule.end}) — character is asleep.`)
+            console.info(`[ScreenWatcher:Tick] ⏸️ Skipped: Outside operating schedule (${schedule.start} - ${schedule.end}) — character is asleep.`)
             return
           }
         }
@@ -398,7 +398,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         const afkLimitSec = afkLimitMinutes * 60
         const currentIdleSec = proactivityStore.idleTimeSec ?? 0
         if (currentIdleSec >= afkLimitSec) {
-          console.log(`[ScreenWatcher:Tick] ⏸️ Skipped: User is away / AFK (${Math.floor(currentIdleSec / 60)}m ${currentIdleSec % 60}s idle, limit ${afkLimitMinutes}m).`)
+          console.info(`[ScreenWatcher:Tick] ⏸️ Skipped: User is away / AFK (${Math.floor(currentIdleSec / 60)}m ${currentIdleSec % 60}s idle, limit ${afkLimitMinutes}m).`)
           return
         }
       }
@@ -409,7 +409,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         || Boolean(chatOrchestrator.isUserTyping)
         || liveSessionStore.isActive
       if (isSpeaking) {
-        console.log('[ScreenWatcher:Tick] ⏸️ Skipped: Busy Pipe (user or character is speaking/typing).')
+        console.info('[ScreenWatcher:Tick] ⏸️ Skipped: Busy Pipe (user or character is speaking/typing).')
         return
       }
 
@@ -436,12 +436,12 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
         try {
           const adapter = await visionOrchestrator.ensureGuardLoaded({ enableVlm: isMoondream })
           if (adapter.state !== 'ready' && adapter.state !== 'processing') {
-            console.log('[ScreenWatcher:Tick] ⏳ Attention Ecology Guard is loading/downloading models, waiting for ready...')
+            console.info('[ScreenWatcher:Tick] ⏳ Attention Ecology Guard is loading/downloading models, waiting for ready...')
             return
           }
         }
-        catch (err: any) {
-          console.log('[ScreenWatcher:Tick] ⏳ Attention Ecology Guard is loading/downloading models, waiting for ready...')
+        catch {
+          console.info('[ScreenWatcher:Tick] ⏳ Attention Ecology Guard is loading/downloading models, waiting for ready...')
           return
         }
       }
@@ -449,7 +449,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       const resLabel = useNative
         ? (displaySize ? `native ${displaySize.width}×${displaySize.height}` : 'native')
         : `${width}×${height} (${downscale}% of native)`
-      console.log(`[ScreenWatcher:Tick] 📸 Capturing screen frame #${captureCount.value + 1} (${resLabel}, source="${sourceId}")...`)
+      console.info(`[ScreenWatcher:Tick] 📸 Capturing screen frame #${captureCount.value + 1} (${resLabel}, source="${sourceId}")...`)
 
       let snapshot: any
       try {
@@ -473,7 +473,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
       // Strategy C: orphaned HMR-generation tick — drop the frame, act on nothing.
       if (tickEpoch !== watcherEpoch) {
-        console.log('[ScreenWatcher:Tick] 🛑 Aborting orphaned tick after HMR reload (post-capture).')
+        console.info('[ScreenWatcher:Tick] 🛑 Aborting orphaned tick after HMR reload (post-capture).')
         snapshot.dataUrl = ''
         return
       }
@@ -518,7 +518,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       // Strategy C: orphaned HMR-generation tick — release refs above, then
       // abort before promotions, buffer writes, or telemetry.
       if (tickEpoch !== watcherEpoch) {
-        console.log('[ScreenWatcher:Tick] 🛑 Aborting orphaned tick after HMR reload (post-process).')
+        console.info('[ScreenWatcher:Tick] 🛑 Aborting orphaned tick after HMR reload (post-process).')
         return
       }
 
@@ -526,13 +526,13 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       lastDecision.value = processed?.decision || 'UNKNOWN'
       const logSummary = processed?.summary ? ` | summary="${processed.summary.replace(/\n/g, ' ')}"` : ''
       const matchedTagsStr = processed?.interestKeywords?.length ? ` ([${processed.interestKeywords.join(', ')}])` : ''
-      console.log(`[ScreenWatcher:Engine] 🔍 Result in ${lastLatencyMs.value}ms: decision=${processed?.decision || 'UNKNOWN'} | novelty=${processed?.novelty?.toFixed(4) ?? '0.0000'} | errorHits=${processed?.ocrErrorPatternHits ?? 0} | interestHits=${processed?.interestKeywordHits ?? 0}${matchedTagsStr} | targets=[${cleanTags.join(', ')}]${logSummary}`)
+      console.info(`[ScreenWatcher:Engine] 🔍 Result in ${lastLatencyMs.value}ms: decision=${processed?.decision || 'UNKNOWN'} | novelty=${processed?.novelty?.toFixed(4) ?? '0.0000'} | errorHits=${processed?.ocrErrorPatternHits ?? 0} | interestHits=${processed?.interestKeywordHits ?? 0}${matchedTagsStr} | targets=[${cleanTags.join(', ')}]${logSummary}`)
 
       if (processed?.decision === 'PROMOTE') {
         const now = Date.now()
         promotionsCount.value++
 
-        console.log(`[ScreenWatcher:Promotion] 🚀 NOVELTY PROMOTED! Summary: "${processed.summary}"`)
+        console.info(`[ScreenWatcher:Promotion] 🚀 NOVELTY PROMOTED! Summary: "${processed.summary}"`)
 
         // 1. Record in Event Ledger
         await eventLogStore.appendEvent({
@@ -568,7 +568,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
               || liveSessionStore.isActive
 
             if (isSpeaking && config.deferWhileSpeaking) {
-              console.log('[ScreenWatcher:Promotion] ⏸️ Pipe is busy (user/assistant active). Preserved in observation buffer for next clear turn.')
+              console.info('[ScreenWatcher:Promotion] ⏸️ Pipe is busy (user/assistant active). Preserved in observation buffer for next clear turn.')
             }
             else {
               lastPromotionAt.value = now
@@ -579,11 +579,11 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
             }
           }
           else {
-            console.log(`[ScreenWatcher:Promotion] ⏳ Promotion throttled by rate limit/cooldown. Preserved in observation buffer (${observationBuffer.value.length}/${MAX_BUFFER_SIZE} items).`)
+            console.info(`[ScreenWatcher:Promotion] ⏳ Promotion throttled by rate limit/cooldown. Preserved in observation buffer (${observationBuffer.value.length}/${MAX_BUFFER_SIZE} items).`)
           }
         }
         else {
-          console.log('[ScreenWatcher:Promotion] 💤 Real-Time Push is OFF. Event logged silently to Unified Event Ledger for next Heartbeat.')
+          console.info('[ScreenWatcher:Promotion] 💤 Real-Time Push is OFF. Event logged silently to Unified Event Ledger for next Heartbeat.')
         }
       }
       else if (observationBuffer.value.length > 0 && config.publishToContext) {
@@ -596,7 +596,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
             || liveSessionStore.isActive
 
           if (!isSpeaking || !config.deferWhileSpeaking) {
-            console.log(`[ScreenWatcher:Promotion] 🚰 Draining ${observationBuffer.value.length} pending buffered observation(s) after pipe cleared...`)
+            console.info(`[ScreenWatcher:Promotion] 🚰 Draining ${observationBuffer.value.length} pending buffered observation(s) after pipe cleared...`)
             lastPromotionAt.value = now
             recentPromotionTimestamps.value.push(now)
             const eventsToDispatch = [...observationBuffer.value]
@@ -622,7 +622,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
     }
 
     const intervalMs = activeConfig.value?.captureIntervalMs || 2000
-    console.log(`[ScreenWatcher:Lifecycle] 🟢 Starting ambient screen watcher (interval=${intervalMs}ms)...`)
+    console.info(`[ScreenWatcher:Lifecycle] 🟢 Starting ambient screen watcher (interval=${intervalMs}ms)...`)
 
     // Warm guard worker before first tick if using attention guard and currently within schedule
     if (!activeConfig.value?.workload || activeConfig.value.workload === 'attention-guard') {
@@ -632,11 +632,11 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       if (isAwake) {
         const isMoondream = activeConfig.value?.vlmTier === 'moondream' || (Boolean(activeConfig.value?.enableVlm) && activeConfig.value?.vlmTier !== 'external')
         void visionOrchestrator.ensureGuardLoaded({ enableVlm: isMoondream })
-          .then(() => console.log('[ScreenWatcher:Init] 🚀 Attention Ecology Guard ready.'))
+          .then(() => console.info('[ScreenWatcher:Init] 🚀 Attention Ecology Guard ready.'))
           .catch((err: any) => console.warn('[ScreenWatcher:Init] Guard pre-warm in progress or failed:', err))
       }
       else {
-        console.log('[ScreenWatcher:Init] 🌙 Character is currently asleep; deferring Attention Guard model pre-warm until awake.')
+        console.info('[ScreenWatcher:Init] 🌙 Character is currently asleep; deferring Attention Guard model pre-warm until awake.')
       }
     }
 
@@ -648,7 +648,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
   function pauseWatcher(): void {
     if (timerHandle) {
-      console.log('[ScreenWatcher:Lifecycle] ⏸️ Pausing ambient screen watcher timer.')
+      console.info('[ScreenWatcher:Lifecycle] ⏸️ Pausing ambient screen watcher timer.')
       clearInterval(timerHandle)
       timerHandle = null
     }
@@ -657,7 +657,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
 
   function stopWatcher(): void {
     pauseWatcher()
-    console.log('[ScreenWatcher:Lifecycle] 🔴 Teardown ambient screen watcher and vision worker.')
+    console.info('[ScreenWatcher:Lifecycle] 🔴 Teardown ambient screen watcher and vision worker.')
     visionOrchestrator.terminate()
   }
 
@@ -741,7 +741,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
       previousCardId = cardId ? String(cardId) : null
       previousWatcherConfigSignature = nextSignature
 
-      console.log('[ScreenWatcher:Watch] Screen watcher config changed:', { cardId, enabled, enableVlm, vlmTier, respectSchedule, start, end, cardChanged })
+      console.info('[ScreenWatcher:Watch] Screen watcher config changed:', { cardId, enabled, enableVlm, vlmTier, respectSchedule, start, end, cardChanged })
 
       scheduleRestart(cardChanged)
     },
@@ -781,7 +781,7 @@ export const useScreenWatcherStore = defineStore('screen-watcher', () => {
   // Diagnostic Hook for console inspection
   if (typeof window !== 'undefined') {
     (window as any).triggerScreenCaptureTick = () => {
-      console.log('[ScreenWatcher:Diagnostic] Manual capture tick triggered via window.triggerScreenCaptureTick()')
+      console.info('[ScreenWatcher:Diagnostic] Manual capture tick triggered via window.triggerScreenCaptureTick()')
       return captureAndProcess()
     }
     ;(window as any).screenWatcherStatus = () => {

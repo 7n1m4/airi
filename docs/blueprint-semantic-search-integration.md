@@ -8,7 +8,7 @@ This blueprint establishes the canonical production architecture for integrating
 
 We move beyond naive keyword search and simple flat vector similarity toward a **Hierarchical Hybrid Intelligence** architecture.
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                               USER INPUT / SYSTEM TURN                                 │
 └──────────────────────────────────────────┬─────────────────────────────────────────────┘
@@ -63,7 +63,7 @@ AIRI splits the computational workload to achieve hyperscale reasoning while mai
 
 Semantic search within AIRI is not a single monolith. It serves **four distinct consumers**, each with fundamentally different latency tolerances, reasoning requirements, and presentation contracts.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────────────────┐
 │                           UNIVERSE RAG++ CORE RETRIEVAL                                 │
 └──────────────┬──────────────────────────┬───────────────────────────┬───────────────────┘
@@ -133,7 +133,7 @@ Semantic search within AIRI is not a single monolith. It serves **four distinct 
 
 A critical requirement of AIRI is **universal zero-install portability**. The system must never fail or block the user if specialized models are absent.
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │ LEVEL 2: DEDUCTIVE COPROCESSOR (System 2)                             │
 │ • Multi-hop reasoning, temporal graph verification, conflict resolution│
@@ -174,7 +174,7 @@ In the AIRI Memory Lab, Pass 11 demonstrated that a single flat retrieval strate
 
 AIRI integrates the canonical Pass 11 **Triage-Driven Dual Search Engine** (`DualSearcherPass3`):
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
 │                              INCOMING SEARCH / CHAT QUERY                              │
 └──────────────────────────────────────────┬─────────────────────────────────────────────┘
@@ -252,7 +252,7 @@ In AIRI, they do not collide—they **compose naturally across pipeline stages**
 1. **Memory Retrieval (Universe RAG) is UPSTREAM of Cognition**: When a user turn begins, Universe RAG executes first, retrieving relevant facts from LTMM/STMM and formatting them into a standard contextual memory block.
 2. **Cognition Consumes the Grounded Input**: The Cognition Pipeline receives `[User Message + Injected Memory Context]` as its baseline input.
 
-```
+```text
                   [User Input: "What's the door pin code?"]
                                      │
                                      ▼
@@ -309,7 +309,7 @@ Temporal and multi-hop queries frequently rely on anchor dates (e.g. *"What did 
 
 To prevent memory from decaying into an unsearchable, contradictory swamp, AIRI adopts the **Predict-Calibrate Learning (PCL)** model:
 
-```
+```text
                   [New Episode / Conversation Turn]
                                   │
                                   ▼

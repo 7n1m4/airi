@@ -19,6 +19,7 @@ import type { OcrEvidence } from './engine/stage2-ocr.js'
 import type { SalienceDecision, ZeroShotResult } from './engine/stage2-salience-eval.js'
 
 import path from 'node:path'
+import process from 'node:process'
 
 import { computeImageDelta } from './engine/stage0-phash.js'
 import { calculateCosineDistance, centroidOf, disposeVisionEncoder, getVisionEmbedding } from './engine/stage1-vision-embed.js'
@@ -107,9 +108,9 @@ function fmtSimMap(zeroShot: ZeroShotResult): string {
 }
 
 async function runAttentionEcologyEval() {
-  console.log('=== Attention Ecology Standalone Cleanroom Benchmark ===\n')
-  console.log(`Model: Xenova/clip-vit-base-patch32 (ONNX, CPU backend; WebGPU is the in-app target)`)
-  console.log(`Frames: ${MANIFEST.length} seeded screenshots in ${SCREENSHOT_DIR}\n`)
+  console.info('=== Attention Ecology Standalone Cleanroom Benchmark ===\n')
+  console.info(`Model: Xenova/clip-vit-base-patch32 (ONNX, CPU backend; WebGPU is the in-app target)`)
+  console.info(`Frames: ${MANIFEST.length} seeded screenshots in ${SCREENSHOT_DIR}\n`)
 
   const records: TickRecord[] = []
   const acceptedEmbeddings: Float32Array[] = []
@@ -119,7 +120,7 @@ async function runAttentionEcologyEval() {
   let prevFramePath: string | null = null
   let embeddedFrameCount = 0
 
-  console.log('--- Tick Stream (cascaded gate) ---\n')
+  console.info('--- Tick Stream (cascaded gate) ---\n')
 
   for (const entry of MANIFEST) {
     const framePath = path.join(SCREENSHOT_DIR, entry.file)
@@ -134,7 +135,7 @@ async function runAttentionEcologyEval() {
       embeddedFrameCount++
       prevFramePath = framePath
       records.push({ frame: entry.file, stage0Ms: 0, embedded: true, encodeMs, decision: 'BASELINE', reason: 'seeded baseline centroid v0' })
-      console.log(`[tick ${entry.file}] BASELINE -> centroid v0 seeded (embed ${encodeMs.toFixed(0)}ms)`)
+      console.info(`[tick ${entry.file}] BASELINE -> centroid v0 seeded (embed ${encodeMs.toFixed(0)}ms)`)
       continue
     }
 
@@ -155,7 +156,7 @@ async function runAttentionEcologyEval() {
         decision: 'IGNORE',
         reason: 'stage-0 filtered: static tick, 0-cost drop before neural models',
       })
-      console.log(`[tick ${entry.file}] Stage0 hamming=${delta.hammingDistance} (norm ${delta.normalizedDistance.toFixed(4)}) -> NO_CHANGE, dropped at 0 neural cost (${stage0Ms.toFixed(1)}ms)`)
+      console.info(`[tick ${entry.file}] Stage0 hamming=${delta.hammingDistance} (norm ${delta.normalizedDistance.toFixed(4)}) -> NO_CHANGE, dropped at 0 neural cost (${stage0Ms.toFixed(1)}ms)`)
       continue
     }
 
@@ -175,13 +176,13 @@ async function runAttentionEcologyEval() {
       // Stage 3: WebGPU vision semantic forwarder synthesizes the [Visual
       // Event] summary block attached to the promotion packet (VLM caption is
       // best-effort; deterministic fields always present).
-      const forwarder = await runForwarder(framePath, zeroShot, ocr, msg => console.log(`  Stage3 ${msg}`))
+      const forwarder = await runForwarder(framePath, zeroShot, ocr, msg => console.info(`  Stage3 ${msg}`))
       evaluation.packet.summary = forwarder.summary
       packets.push(evaluation.packet)
       diary.push(`[${entry.file}] PROMOTED (ocrHits=${ocr.errorPatternHits}, novelty=${novelty.toFixed(4)}) -> cloud LLM reaction requested`)
-      console.log('  Stage3 [Visual Event] summary:')
-      forwarder.summary.split('\n').forEach(line => console.log(`    ${line}`))
-      console.log(`  Stage3 VLM status: ${forwarder.vlmStatus}${forwarder.note ? ` (${forwarder.note})` : ''}`)
+      console.info('  Stage3 [Visual Event] summary:')
+      forwarder.summary.split('\n').forEach(line => console.info(`    ${line}`))
+      console.info(`  Stage3 VLM status: ${forwarder.vlmStatus}${forwarder.note ? ` (${forwarder.note})` : ''}`)
     }
     else {
       acceptedEmbeddings.push(embedding)
@@ -204,17 +205,17 @@ async function runAttentionEcologyEval() {
       reason: evaluation.reason,
     })
 
-    console.log(`[tick ${entry.file}] Stage0 hamming=${delta.hammingDistance} (norm ${delta.normalizedDistance.toFixed(4)}) -> CHANGED (${stage0Ms.toFixed(1)}ms)`)
-    console.log(`  Stage1 novelty vs centroid = ${novelty.toFixed(4)} (embed ${encodeMs.toFixed(0)}ms, gate total ${(performance.now() - t1).toFixed(0)}ms)`)
-    console.log(`  Stage2 OCR errors=${ocr.errorPatternHits} [${ocr.errorPatterns.join(', ') || '-'}] | interest=${ocr.interestKeywordHits} [${ocr.interestKeywords.join(', ') || '-'}] (${ocr.ocrMs.toFixed(0)}ms)`)
-    console.log(`  Stage2 zero-shot: ${fmtSimMap(zeroShot)} | errorMargin=${zeroShot.errorMargin.toFixed(4)} redAlert=${(redAlertRatio * 100).toFixed(3)}%`)
-    console.log(`  -> ${evaluation.decision}: ${evaluation.reason}\n`)
+    console.info(`[tick ${entry.file}] Stage0 hamming=${delta.hammingDistance} (norm ${delta.normalizedDistance.toFixed(4)}) -> CHANGED (${stage0Ms.toFixed(1)}ms)`)
+    console.info(`  Stage1 novelty vs centroid = ${novelty.toFixed(4)} (embed ${encodeMs.toFixed(0)}ms, gate total ${(performance.now() - t1).toFixed(0)}ms)`)
+    console.info(`  Stage2 OCR errors=${ocr.errorPatternHits} [${ocr.errorPatterns.join(', ') || '-'}] | interest=${ocr.interestKeywordHits} [${ocr.interestKeywords.join(', ') || '-'}] (${ocr.ocrMs.toFixed(0)}ms)`)
+    console.info(`  Stage2 zero-shot: ${fmtSimMap(zeroShot)} | errorMargin=${zeroShot.errorMargin.toFixed(4)} redAlert=${(redAlertRatio * 100).toFixed(3)}%`)
+    console.info(`  -> ${evaluation.decision}: ${evaluation.reason}\n`)
   }
 
   // -------------------------------------------------------------------------
   // Assertions (proposal §5 benchmark protocol)
   // -------------------------------------------------------------------------
-  console.log('--- Assertions ---\n')
+  console.info('--- Assertions ---\n')
 
   const rec = Object.fromEntries(records.map(r => [r.frame, r]))
 
@@ -233,6 +234,10 @@ async function runAttentionEcologyEval() {
     'A3: 02->03 cosine novelty spike (calibrated floor; proposal §5 target was 0.45)',
     novelty03 >= NOVELTY_SPIKE_MIN,
     `measured novelty=${novelty03.toFixed(4)} >= calibrated ${NOVELTY_SPIKE_MIN} (proposal target ${PROPOSAL_NOVELTY_TARGET} is unattainable: full app switch measured only ${rec['05a-browser-video-frame1.png']?.novelty?.toFixed(4) ?? 'n/a'})`,
+  )
+  knownLimitation(
+    'L2: proposal §5 novelty target of 0.45 is unattainable in global CLIP space (documented gap)',
+    `measured same-app context switch (02->03) = ${novelty03.toFixed(4)} and full application switch (04->05a) = ${(rec['05a-browser-video-frame1.png']?.novelty ?? 0).toFixed(4)}; both sit below the > ${PROPOSAL_NOVELTY_TARGET} target. A global-embedding novelty gate can therefore never be the sole promotion trigger — Stage-2 content salience (OCR) is mandatory. Threshold recalibrated to ${NOVELTY_SPIKE_MIN}.`,
   )
   const rec04 = rec['04-term-error-stack.png']
   // A4: KNOWN-LIMIT L1 (Phase 1) RESOLVED — localized OCR text evidence now
@@ -270,53 +275,53 @@ async function runAttentionEcologyEval() {
 
   for (const a of assertions) {
     const verdict = a.severity === 'limitation' ? 'KNOWN-LIMIT' : a.pass ? 'PASS' : 'FAIL'
-    console.log(`  ${verdict.padEnd(11)} ${a.name}`)
-    console.log(`       ${a.detail}`)
+    console.info(`  ${verdict.padEnd(11)} ${a.name}`)
+    console.info(`       ${a.detail}`)
   }
 
   // -------------------------------------------------------------------------
   // Benchmark report
   // -------------------------------------------------------------------------
-  console.log('\n--- Benchmark Report ---\n')
-  console.log('frame                          stage0norm  novelty   errorMargin  redAlert%  ocrHits  decision')
+  console.info('\n--- Benchmark Report ---\n')
+  console.info('frame                          stage0norm  novelty   errorMargin  redAlert%  ocrHits  decision')
   for (const r of records) {
-    console.log(
+    console.info(
       `  ${r.frame.padEnd(30)} ${(r.normalizedDistance !== undefined ? r.normalizedDistance.toFixed(4) : '-').padStart(9)}  ${(r.novelty !== undefined ? r.novelty.toFixed(4) : '-').padStart(7)}  ${(r.zeroShot ? r.zeroShot.errorMargin.toFixed(4) : '-').padStart(10)}  ${(r.redAlertRatio !== undefined ? (r.redAlertRatio * 100).toFixed(3) : '-').padStart(8)}  ${(r.ocr?.errorPatternHits ?? '-').toString().padStart(7)}  ${r.decision}`,
     )
   }
 
-  console.log('\nDiary buffer:')
-  diary.forEach(d => console.log(`  ${d}`))
+  console.info('\nDiary buffer:')
+  diary.forEach(d => console.info(`  ${d}`))
 
   if (packets.length > 0) {
-    console.log('\nPromotion packets:')
-    packets.forEach(p => console.log(`  ${JSON.stringify(p, null, 2)}`))
+    console.info('\nPromotion packets:')
+    packets.forEach(p => console.info(`  ${JSON.stringify(p, null, 2)}`))
   }
   else {
-    console.log('\nPromotion packets: none emitted')
+    console.info('\nPromotion packets: none emitted')
   }
 
   // -------------------------------------------------------------------------
   // Measured findings (calibration evidence for the proposal)
   // -------------------------------------------------------------------------
-  console.log('\n--- Measured Findings ---\n')
+  console.info('\n--- Measured Findings ---\n')
   const noveltyApp = rec['05a-browser-video-frame1.png']?.novelty ?? 0
-  console.log(`  F1: Novelty geometry. Same-app context switch (02->03) = ${novelty03.toFixed(4)};`)
-  console.log(`      full app switch (04->05a) = ${noveltyApp.toFixed(4)}. Proposal §5's > ${PROPOSAL_NOVELTY_TARGET}`)
-  console.log('      target is unattainable in global CLIP space and should be recalibrated.')
-  console.log(`  F2: Error-frame novelty (03->04) = ${(rec04?.novelty ?? 0).toFixed(4)} — a pure novelty gate`)
-  console.log('      can never catch small-region error events; content salience is mandatory.')
-  console.log('  F3: CLIP-only salience is blind to small-region errors (zero-shot margins ~-0.04) —')
-  console.log('      RESOLVED in Phase 2 via localized OCR text evidence (03: 1 pattern, 04: 3 patterns).')
-  console.log('      OCR text also produces the §3 "OCR Text Snippet" field for the RWKV forwarder.')
-  console.log(`  F4: Stage-0 separating band is narrow: 01->02 = ${(rec['02-static-editor-cursor.png']?.normalizedDistance ?? 0).toFixed(4)}`)
-  console.log(`      vs 03->04 = ${(rec04?.normalizedDistance ?? 0).toFixed(4)}. Pristine synthetic data; real capture noise`)
-  console.log('      will need a finer secondary signal for small-region changes.')
+  console.info(`  F1: Novelty geometry. Same-app context switch (02->03) = ${novelty03.toFixed(4)};`)
+  console.info(`      full app switch (04->05a) = ${noveltyApp.toFixed(4)}. Proposal §5's > ${PROPOSAL_NOVELTY_TARGET}`)
+  console.info('      target is unattainable in global CLIP space and should be recalibrated.')
+  console.info(`  F2: Error-frame novelty (03->04) = ${(rec04?.novelty ?? 0).toFixed(4)} — a pure novelty gate`)
+  console.info('      can never catch small-region error events; content salience is mandatory.')
+  console.info('  F3: CLIP-only salience is blind to small-region errors (zero-shot margins ~-0.04) —')
+  console.info('      RESOLVED in Phase 2 via localized OCR text evidence (03: 1 pattern, 04: 3 patterns).')
+  console.info('      OCR text also produces the §3 "OCR Text Snippet" field for the RWKV forwarder.')
+  console.info(`  F4: Stage-0 separating band is narrow: 01->02 = ${(rec['02-static-editor-cursor.png']?.normalizedDistance ?? 0).toFixed(4)}`)
+  console.info(`      vs 03->04 = ${(rec04?.normalizedDistance ?? 0).toFixed(4)}. Pristine synthetic data; real capture noise`)
+  console.info('      will need a finer secondary signal for small-region changes.')
 
   const failed = assertions.filter(a => !a.pass && a.severity === 'assert')
   const limitations = assertions.filter(a => a.severity === 'limitation')
   const passed = assertions.filter(a => a.pass)
-  console.log(`\n=== ${passed.length} PASSED, ${limitations.length} KNOWN LIMITATION(S), ${failed.length} FAILED ===`)
+  console.info(`\n=== ${passed.length} PASSED, ${limitations.length} KNOWN LIMITATION(S), ${failed.length} FAILED ===`)
 
   // NOTICE: Do NOT use process.exit() here — onnxruntime-node aborts at
   // teardown (exit 134) if sessions are still alive. Dispose, then let the

@@ -73,6 +73,18 @@ export interface CanonicalEntityResolution {
   aliasVariants: string[]
 }
 
+/** Japanese honorific suffixes with arbitrary vowel elongation, e.g. `chan`, `chaaaaan`, `sama`, `kuuuun`, `senseeei`. */
+const hyphenHonorificSuffix = /^(?:c+h+a+n+|s+a+m+a+|s+a+n+|k+u+n+|s+e+n+[ps]+a+i+|s+e+n+s+e+i+|d+o+n+o+|t+a+n+)$/i
+/** Same set as {@link hyphenHonorificSuffix}, matched case-sensitively against a CamelCase suffix. */
+const camelHonorificSuffix = /C(?:h+a+n+|a+m+a+|a+n+)|Ku+n+|S(?:e+n+[ps]+a+i+|e+n+s+e+i+|a+m+a+|a+n+)|do+n+o+|ta+n+/
+
+/**
+ * Matches `<name><camelCaseHonorific>` where the name ends with at least two lowercase letters.
+ * The suffix is anchored and self-delimiting, so the lazy prefix `.*?` cannot exchange characters
+ * with the suffix quantifiers.
+ */
+const camelHonorificPrefix = new RegExp(`^(.*?[a-z]{2})(?:${camelHonorificSuffix.source})$`)
+
 /**
  * Normalizes an entity label to its canonical root form:
  * 1. Collapses leading stutter repetitions: e.g. "N-Nords" -> "Nords", "T-Teio" -> "Teio", "N-N-Nords" -> "Nords"
@@ -96,15 +108,26 @@ export function normalizeCanonicalEntityLabel(rawLabel: string): CanonicalEntity
 
   // 2. Strip Japanese honorific suffixes with arbitrary vowel repetitions (e.g. -chan, -chaaaan, -sama, -saaaan, -kuuuun, -senseeei)
   // Hyphenated/underscored suffix: e.g. "Nords-sama", "Evil-chaaaan", "Neuro-chaaaan", "Hiyori-sama", "Neko-sama"
-  const hyphenHonorificRegex = /^(.*?)[-_]+(?:c+h+a+n+|s+a+m+a+|s+a+n+|k+u+n+|s+e+n+[ps]+a+i+|s+e+n+s+e+i+|d+o+n+o+|t+a+n+)$/i
-  const hyphenMatch = cleaned.match(hyphenHonorificRegex)
-  if (hyphenMatch && hyphenMatch[1] && hyphenMatch[1].trim().length >= 2) {
-    cleaned = hyphenMatch[1].trim()
+  // NOTICE: the prefix is not captured with a lazy `(.*?)` in front of the separator class. A lazy
+  // quantifier and `[-_]+` can exchange characters, which makes the match super-linear (backtracking)
+  // and is rejected by `regexp/no-super-linear-backtracking`. Splitting on the separator run first is
+  // equivalent: an honorific candidate never contains separators, so only the run that ends at the
+  // last separator in the label can precede one.
+  const lastSeparatorIndex = Math.max(cleaned.lastIndexOf('-'), cleaned.lastIndexOf('_'))
+  if (lastSeparatorIndex > 0) {
+    let separatorStart = lastSeparatorIndex
+    while (separatorStart > 0 && (cleaned[separatorStart - 1] === '-' || cleaned[separatorStart - 1] === '_'))
+      separatorStart--
+
+    const candidatePrefix = cleaned.slice(0, separatorStart).trim()
+    const candidateSuffix = cleaned.slice(lastSeparatorIndex + 1)
+    if (candidatePrefix.length >= 2 && hyphenHonorificSuffix.test(candidateSuffix))
+      cleaned = candidatePrefix
   }
-  else {
+
+  if (cleaned === trimmed) {
     // CamelCase suffix: e.g. "AiriChan", "NordsSama"
-    const camelHonorificRegex = /^(.*?[a-z]{2})(?:C+h+a+n+|S+a+m+a+|S+a+n+|K+u+n+|S+e+n+[ps]+a+i+|S+e+n+s+e+i+|D+o+n+o+|T+a+n+)$/
-    const camelMatch = cleaned.match(camelHonorificRegex)
+    const camelMatch = cleaned.match(camelHonorificPrefix)
     if (camelMatch && camelMatch[1] && camelMatch[1].trim().length >= 2) {
       cleaned = camelMatch[1].trim()
     }

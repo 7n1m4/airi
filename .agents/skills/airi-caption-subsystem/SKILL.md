@@ -8,7 +8,7 @@ description: >-
 
 Captions are a single **publisher/ subscriber BroadcastChannel protocol** (`airi-caption-overlay`) feeding up to four conceptually distinct render surfaces. Know which surface you're touching before editing — windowed features only exist on desktop Electron; the in-scene plank and dating-sim panel are renderer-agnostic.
 
-```
+```text
                     Speech STT / LLM / TTS / motion Text
                                  │
                                  ▼

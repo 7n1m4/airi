@@ -143,7 +143,7 @@ export function detectQueryProfile(query: string): QueryProfile {
 
   if (
     normalized.endsWith('?')
-    || /^(who|what|when|where|why|how)\b/.test(normalized)
+    || /^(?:who|what|when|where|why|how)\b/.test(normalized)
   ) {
     return 'question'
   }

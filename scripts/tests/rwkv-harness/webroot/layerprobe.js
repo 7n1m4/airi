@@ -14,7 +14,8 @@ export async function probe() {
   const fileBytes = new Uint8Array(await (await fetch(MODEL, { headers: { Range: `bytes=${dataStart}-${dataStart + dataEnd - 1}` } })).arrayBuffer())
   const built = []
   for (const nm of names) {
-    const info = tensors[nm]; const [s, e] = info.data_offsets
+    const info = tensors[nm]
+    const [s, e] = info.data_offsets
     const f16 = ST.toF16Bytes(fileBytes.subarray(s, e), info.dtype)
     const o = ST.orientAdapterMatrix(nm, f16, info.shape, numEmb)
     built.push(new wasm.Tensor(nm, Uint32Array.from(o.shape), o.data.buffer.slice(o.data.byteOffset, o.data.byteOffset + o.data.byteLength)))

@@ -51,9 +51,11 @@ Attempting to automatically correct the user's Node.js version to v24.13.0 prove
    Add an `engines` field in the root `package.json` that requires `>=20.14.0` (or specifically `24.x` as desired). Coupling this with `engine-strict=true` in `.npmrc` guarantees that `pnpm install` will reject older Node.js versions immediately, saving developers minutes of waiting and cryptic stack traces.
 
    ```json
-   "engines": {
-     "node": ">=20.14.0",
-     "pnpm": ">=10.0.0"
+   {
+     "engines": {
+       "node": ">=20.14.0",
+       "pnpm": ">=10.0.0"
+     }
    }
    ```
 

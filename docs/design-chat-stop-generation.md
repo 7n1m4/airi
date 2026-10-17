@@ -75,7 +75,7 @@ All four converge on `ingest()` (chat.ts:1812); `WhisperComposerBar` covers thre
 
 Add to `useChatOrchestratorStore` in `packages/stage-ui/src/stores/chat.ts`, next to `cancelPendingSends` (:1962), and export it (:1976+):
 
-```
+```text
 stopCurrentGeneration(sessionId?)
   1. Capture partial text from streamingMessage (only if non-empty).
   2. Finalize it as a partial assistant turn via chatSession.inscribeTurn()

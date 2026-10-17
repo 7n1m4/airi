@@ -92,26 +92,26 @@ onMounted(async () => {
   try {
     // Synchronize position follow with settings store
     watch(() => settingsStore.captionFollowStagePosition, (shouldFollow) => {
-      console.log('[Caption] Follow stage position changed:', shouldFollow)
+      console.info('[Caption] Follow stage position changed:', shouldFollow)
       followsStagePosition.value = shouldFollow
       setFollowStagePosition(shouldFollow)
     }, { immediate: true })
 
     // Synchronize visibility follow with settings store
     watch(() => settingsStore.captionFollowStageVisibility, (shouldFollow) => {
-      console.log('[Caption] Follow stage visibility changed:', shouldFollow)
+      console.info('[Caption] Follow stage visibility changed:', shouldFollow)
       followsStageVisibility.value = shouldFollow
       setFollowStageVisibility(shouldFollow)
     }, { immediate: true })
 
     // Listen for Layout Mode transitions
     watch(() => settingsStore.captionLayoutMode, (mode) => {
-      console.log('[Caption] Layout mode changed:', mode)
+      console.info('[Caption] Layout mode changed:', mode)
     }, { immediate: true })
 
     // Listen for Home Snap triggers
     watch(() => settingsStore.captionResetTrigger, () => {
-      console.log('[Caption] Reset Position triggered.')
+      console.info('[Caption] Reset Position triggered.')
       if (!settingsStore.captionFollowStagePosition) {
         settingsStore.captionFollowStagePosition = true
       }

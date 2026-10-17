@@ -90,13 +90,13 @@ function computeInitialCaptionBounds(params: { stageWindow?: BrowserWindow | Act
   let mainY = mainBounds.y
   let mainWidth = mainBounds.width
   let mainHeight = mainBounds.height
-  if (mainX === undefined || isNaN(mainX))
+  if (mainX === undefined || Number.isNaN(mainX))
     mainX = 0
-  if (mainY === undefined || isNaN(mainY))
+  if (mainY === undefined || Number.isNaN(mainY))
     mainY = 0
-  if (!mainWidth || isNaN(mainWidth) || mainWidth <= 0)
+  if (!mainWidth || Number.isNaN(mainWidth) || mainWidth <= 0)
     mainWidth = 450
-  if (!mainHeight || isNaN(mainHeight) || mainHeight <= 0)
+  if (!mainHeight || Number.isNaN(mainHeight) || mainHeight <= 0)
     mainHeight = 600
 
   const sanitizedMain = { x: mainX, y: mainY, width: mainWidth, height: mainHeight }
@@ -105,7 +105,7 @@ function computeInitialCaptionBounds(params: { stageWindow?: BrowserWindow | Act
   try {
     targetDisplay = screen.getDisplayMatching(sanitizedMain)
   }
-  catch (e) {
+  catch {
     targetDisplay = screen.getPrimaryDisplay()
   }
   if (!targetDisplay) {
@@ -228,6 +228,11 @@ export function setupCaptionWindowManager(params: {
   // Keep references to listeners so we can detach when toggling
   let detachMainMoveListener: (() => void) | undefined
 
+  // Shared mutable state declared before the closures that read/write it.
+  let lastTarget: Rectangle | undefined
+  let triggerMoveInternal: (() => void) | undefined
+  let currentWindow: BrowserWindow | undefined
+
   // NOTICE: Resolve the live stage window on every read. The manager returns
   // the current window (or undefined across lazy create/destroy cycles).
   const getStageWindow = () => resolveStageWindow(params.stageWindow)
@@ -243,7 +248,7 @@ export function setupCaptionWindowManager(params: {
       : { x: 0, y: 0, width: 450, height: 600 }
     let dx = caption.x - main.x
     let dy = caption.y - main.y
-    if (isNaN(dx) || isNaN(dy)) {
+    if (Number.isNaN(dx) || Number.isNaN(dy)) {
       dx = 466
       dy = 420
     }
@@ -261,27 +266,27 @@ export function setupCaptionWindowManager(params: {
     let mainY = main.y
     let mainWidth = main.width
     let mainHeight = main.height
-    if (mainX === undefined || isNaN(mainX))
+    if (mainX === undefined || Number.isNaN(mainX))
       mainX = 0
-    if (mainY === undefined || isNaN(mainY))
+    if (mainY === undefined || Number.isNaN(mainY))
       mainY = 0
-    if (!mainWidth || isNaN(mainWidth) || mainWidth <= 0)
+    if (!mainWidth || Number.isNaN(mainWidth) || mainWidth <= 0)
       mainWidth = 450
-    if (!mainHeight || isNaN(mainHeight) || mainHeight <= 0)
+    if (!mainHeight || Number.isNaN(mainHeight) || mainHeight <= 0)
       mainHeight = 600
 
     let winWidth = b.width
     let winHeight = b.height
-    if (!winWidth || isNaN(winWidth) || winWidth <= 0)
+    if (!winWidth || Number.isNaN(winWidth) || winWidth <= 0)
       winWidth = 480
-    if (!winHeight || isNaN(winHeight) || winHeight <= 0)
+    if (!winHeight || Number.isNaN(winHeight) || winHeight <= 0)
       winHeight = 180
 
     let targetDisplay: Electron.Display | undefined
     try {
       targetDisplay = screen.getDisplayMatching(main)
     }
-    catch (e) {
+    catch {
       targetDisplay = screen.getPrimaryDisplay()
     }
     const workArea = (targetDisplay || screen.getPrimaryDisplay()).workArea
@@ -453,22 +458,22 @@ export function setupCaptionWindowManager(params: {
 
         let mainWidth = main.width
         let mainHeight = main.height
-        if (!mainWidth || isNaN(mainWidth) || mainWidth <= 0)
+        if (!mainWidth || Number.isNaN(mainWidth) || mainWidth <= 0)
           mainWidth = 450
-        if (!mainHeight || isNaN(mainHeight) || mainHeight <= 0)
+        if (!mainHeight || Number.isNaN(mainHeight) || mainHeight <= 0)
           mainHeight = 600
 
         let winWidth = b.width
         let winHeight = b.height
-        if (!winWidth || isNaN(winWidth) || winWidth <= 0)
+        if (!winWidth || Number.isNaN(winWidth) || winWidth <= 0)
           winWidth = 480
-        if (!winHeight || isNaN(winHeight) || winHeight <= 0)
+        if (!winHeight || Number.isNaN(winHeight) || winHeight <= 0)
           winHeight = 180
 
-        if (dx === undefined || dy === undefined || isNaN(dx) || isNaN(dy)) {
+        if (dx === undefined || dy === undefined || Number.isNaN(dx) || Number.isNaN(dy)) {
           dx = initialOffset?.dx
           dy = initialOffset?.dy
-          if (dx === undefined || dy === undefined || isNaN(dx) || isNaN(dy)) {
+          if (dx === undefined || dy === undefined || Number.isNaN(dx) || Number.isNaN(dy)) {
             dx = mainWidth + 16
             dy = mainHeight - winHeight
           }
@@ -476,9 +481,9 @@ export function setupCaptionWindowManager(params: {
 
         let mainX = main.x
         let mainY = main.y
-        if (mainX === undefined || isNaN(mainX))
+        if (mainX === undefined || Number.isNaN(mainX))
           mainX = 0
-        if (mainY === undefined || isNaN(mainY))
+        if (mainY === undefined || Number.isNaN(mainY))
           mainY = 0
 
         target = {
@@ -493,7 +498,7 @@ export function setupCaptionWindowManager(params: {
       try {
         targetDisplay = screen.getDisplayMatching(target)
       }
-      catch (e) {
+      catch {
         targetDisplay = screen.getPrimaryDisplay()
       }
       if (!targetDisplay) {
@@ -509,7 +514,6 @@ export function setupCaptionWindowManager(params: {
       applyBounds(win, clamped, { programmatic: true, resizable: !dock })
     }
 
-    let lastTarget: Rectangle | undefined
     const moveThrottled = throttle(syncNow, 1000 / 60)
     const settleDebounced = debounce(() => {
       if (lastTarget)
@@ -555,9 +559,7 @@ export function setupCaptionWindowManager(params: {
     }
   }
 
-  let triggerMoveInternal: (() => void) | undefined
   let eventaContext: ReturnType<typeof createContext>['context'] | undefined
-  let currentWindow: BrowserWindow | undefined
   const visibilityListeners = new Set<() => void>()
 
   const emitVisibilityChanged = () => {
@@ -606,7 +608,7 @@ export function setupCaptionWindowManager(params: {
     // Rule: locked only when dock=top or dock=bottom; all other modes are freely resizable.
     const initDock = params.appConfig.get()?.windows?.find((w: any) => w.tag === 'caption')?.dock as 'top' | 'bottom' | undefined
     window.setResizable(!initDock)
-    console.log(`[@proj-airi/stage-tamagotchi] [Main] Caption window initial resizable=${!initDock} (dock=${initDock ?? 'none'})`)
+    console.info(`[@proj-airi/stage-tamagotchi] [Main] Caption window initial resizable=${!initDock} (dock=${initDock ?? 'none'})`)
 
     const persistBounds = () => {
       if (window.isDestroyed())
@@ -630,7 +632,7 @@ export function setupCaptionWindowManager(params: {
       isCaptionVisible = true
       emitVisibilityChanged()
       syncGlobalConfig()
-      console.log('[@proj-airi/stage-tamagotchi] [Main] Caption window shown, broadcasting state')
+      console.info('[@proj-airi/stage-tamagotchi] [Main] Caption window shown, broadcasting state')
       const mainWin = (params.mainWindow && !params.mainWindow.isDestroyed())
         ? params.mainWindow
         : ElectronBrowserWindow.getAllWindows().find(w => (w as any).__is_main_window === true)
@@ -642,7 +644,7 @@ export function setupCaptionWindowManager(params: {
       isCaptionVisible = false
       emitVisibilityChanged()
       syncGlobalConfig()
-      console.log('[@proj-airi/stage-tamagotchi] [Main] Caption window hidden, broadcasting state')
+      console.info('[@proj-airi/stage-tamagotchi] [Main] Caption window hidden, broadcasting state')
       const mainWin = (params.mainWindow && !params.mainWindow.isDestroyed())
         ? params.mainWindow
         : ElectronBrowserWindow.getAllWindows().find(w => (w as any).__is_main_window === true)
@@ -678,7 +680,7 @@ export function setupCaptionWindowManager(params: {
       }
       eventaContext = undefined
       emitVisibilityChanged()
-      console.log('[@proj-airi/stage-tamagotchi] [Main] Caption window closed, broadcasting state')
+      console.info('[@proj-airi/stage-tamagotchi] [Main] Caption window closed, broadcasting state')
       const mainWin = (params.mainWindow && !params.mainWindow.isDestroyed())
         ? params.mainWindow
         : ElectronBrowserWindow.getAllWindows().find(w => (w as any).__is_main_window === true)

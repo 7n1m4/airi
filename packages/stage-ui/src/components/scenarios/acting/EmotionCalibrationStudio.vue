@@ -83,7 +83,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   (e: 'sync', payload: EmotionStudioSyncPayload): void
   (e: 'applied'): void
-  (e: 'request-model', modelId: string): void
+  (e: 'requestModel', modelId: string): void
   (e: 'finish'): void
 }>()
 
@@ -183,17 +183,17 @@ const previewXOffset = ref(0)
 const previewYOffset = ref(0)
 const previewScale = ref(1)
 
+// Face-level framing preset (VRM): zoom in and lift the head into frame so
+// expression test-fires are visible. Starting values — tune live if the head
+// sits high/low on a given rig. Any manual drag keeps custom values.
+const faceFramed = ref(false)
+
 function resetPreviewPosition() {
   previewXOffset.value = 0
   previewYOffset.value = 0
   previewScale.value = 1
   faceFramed.value = false
 }
-
-// Face-level framing preset (VRM): zoom in and lift the head into frame so
-// expression test-fires are visible. Starting values — tune live if the head
-// sits high/low on a given rig. Any manual drag keeps custom values.
-const faceFramed = ref(false)
 
 function toggleFaceFrame() {
   if (faceFramed.value) {
@@ -286,7 +286,7 @@ const CANONICAL_EMOTIONS: CanonicalEmotionSlot[] = [
   { id: 'blush', name: 'Blush', emoji: '😳', actToken: 'blush', matchRegex: /relaxed|blush|dere|shy|joy|exp_02|f02/i },
   { id: 'pout', name: 'Pout', emoji: '😠', actToken: 'pout', matchRegex: /angry|pout|rage|irritated|displeased|exp_03|f03/i },
   { id: 'surprise', name: 'Surprise', emoji: '😲', actToken: 'surprise', matchRegex: /surprised|surprise|shock|wide_eye|exp_04|f04/i },
-  { id: 'wink', name: 'Wink', emoji: '😉', actToken: 'wink', matchRegex: /wink|blink_l|blink_r|wink_l|wink_r|exp_05|f05/i },
+  { id: 'wink', name: 'Wink', emoji: '😉', actToken: 'wink', matchRegex: /wink|blink_l|blink_r|exp_05|f05/i },
   { id: 'shy', name: 'Shy', emoji: '🙈', actToken: 'shy', matchRegex: /shy|sad|sorrow|troubled|down|cry|tear|exp_06|f06/i },
 ]
 
@@ -365,7 +365,10 @@ function triggerModelEmotion(type: string, key: string) {
       }, 2000)
     }
     else if (type === 'spine') {
-      const match = key.match(/^(.+?)\s*\[(.+?)\]$/)
+      // Keys look like `variant [skin]` (see display-models.ts); the
+      // character-class bounded pattern keeps matching linear instead of
+      // backtracking over nested brackets.
+      const match = key.match(/^([^[\]]+) \[([^[\]]+)\]$/)
       if (match)
         spineStore.selectVariantAndSkin(match[1].trim(), match[2].trim())
       else
@@ -507,6 +510,11 @@ function runAutoCalibration(silent = false, force = false) {
 const isDirectivesModalOpen = ref(false)
 const tempDirectivesText = ref('')
 
+// Curation state lives here because `buildCompiledWhitelist()` and the
+// directives/Enhance flows below all derive from it.
+const curationItems = ref<CuratedExpressionItem[]>([])
+const curationDone = ref(false)
+
 // Live template: derives ONLY from currently mapped slots, so unmapped cues
 // (e.g. wink with nothing bound) are never taught. Re-rendered on mapping
 // changes and Remaps entry — unless the text went bespoke this session
@@ -516,13 +524,13 @@ const tempDirectivesText = ref('')
 const sessionBespoke = ref(false)
 const lastRenderedTemplate = ref('')
 
-const templatedDirectives = computed(() => {
-  return buildDefaultActingDirectives(templateTokens.value)
-})
-
 // Template vocabulary: keys of the compiled whitelist (single source —
 // template and classifier can never disagree on the vocabulary again).
 const templateTokens = computed(() => Object.keys(buildCompiledWhitelist().emotions))
+
+const templatedDirectives = computed(() => {
+  return buildDefaultActingDirectives(templateTokens.value)
+})
 
 function refreshTemplatedDirectives() {
   actingDirectivesPrompt.value = templatedDirectives.value
@@ -623,6 +631,26 @@ function handleAdvancedCurationApplied() {
   toast.success('Advanced token curation applied!')
 }
 
+// --- 10. Name step: stats, AI gate, curation trigger ---
+const rawCount = computed(() => rawExpressions.value.length)
+const candidateCount = computed(() => candidateExpressions.value.length)
+const noiseCount = computed(() => Math.max(0, rawCount.value - candidateCount.value))
+// Body motions inventory: Live2D/Spine queried from the model file,
+// MMD/VRM always ship built-in (+ custom) animation sets.
+const motionCount = computed(() => {
+  const type = modelType.value
+  if (type === 'mmd') {
+    return (mmdStore.availableMotions?.length || 0) + (mmdStore.customMotions?.length || 0)
+  }
+  if (type === 'vrm') {
+    return customVrmAnimationsStore.animationOptions?.length || 0
+  }
+  return rawMotions.value.length
+})
+// Incompatible rig: nothing survived the noise filter, so there is nothing to
+// name. (Raw morphs may exist, but none are usable expressions.)
+const zeroExpressions = computed(() => candidateCount.value === 0)
+
 // --- 8. State Synchronization (parent owns persistence) ---
 function buildCompiledWhitelist(): CompiledWhitelist {
   const emotions: Record<string, { rawKey: string, label: string }> = {}
@@ -652,41 +680,19 @@ function emitSync() {
   })
 }
 
-// --- 10. Name step: stats, AI gate, curation trigger ---
-const curationItems = ref<CuratedExpressionItem[]>([])
-const curationDone = ref(false)
+// --- Director: step-scoped override of the global consciousness pair ---
+// Step-scoped director override: snapshot of the global consciousness pair at
+// setup. Picking here never touches the global store — it only affects this step.
+const directorProvider = ref(consciousnessStore.activeProvider || '')
+const directorModel = ref(consciousnessStore.activeModel || '')
 
-const rawCount = computed(() => rawExpressions.value.length)
-const candidateCount = computed(() => candidateExpressions.value.length)
-const noiseCount = computed(() => Math.max(0, rawCount.value - candidateCount.value))
-// Body motions inventory: Live2D/Spine queried from the model file,
-// MMD/VRM always ship built-in (+ custom) animation sets.
-const motionCount = computed(() => {
-  const type = modelType.value
-  if (type === 'mmd') {
-    return (mmdStore.availableMotions?.length || 0) + (mmdStore.customMotions?.length || 0)
-  }
-  if (type === 'vrm') {
-    return customVrmAnimationsStore.animationOptions?.length || 0
-  }
-  return rawMotions.value.length
-})
-// Incompatible rig: nothing survived the noise filter, so there is nothing to
-// name. (Raw morphs may exist, but none are usable expressions.)
-const zeroExpressions = computed(() => candidateCount.value === 0)
+const directorModelShort = computed(() => directorModel.value?.split('/').pop() || directorModel.value)
 
 const directorLabel = computed(() => {
   if (!directorProvider.value || !directorModel.value)
     return ''
   return `${directorProvider.value} · ${directorModelShort.value}`
 })
-
-const directorModelShort = computed(() => directorModel.value?.split('/').pop() || directorModel.value)
-
-// Step-scoped director override: snapshot of the global consciousness pair at
-// setup. Picking here never touches the global store — it only affects this step.
-const directorProvider = ref(consciousnessStore.activeProvider || '')
-const directorModel = ref(consciousnessStore.activeModel || '')
 
 const directorIsGlobal = computed(() => directorProvider.value === (consciousnessStore.activeProvider || '')
   && directorModel.value === (consciousnessStore.activeModel || ''))
@@ -728,13 +734,15 @@ async function handleNameTrigger() {
   }
 }
 
+// --- 12. Remaps step: keeper-constrained dropdowns + one-shot auto-apply ---
+const remapsAutoApplied = ref(false)
+
 function resetCuration() {
   curationItems.value = []
   curationDone.value = false
   remapsAutoApplied.value = false
 }
 
-// --- 12. Remaps step: keeper-constrained dropdowns + one-shot auto-apply ---
 // Dropdown source: verified keeper rawKeys. Falls back to noise-filtered
 // candidates when Remaps is reached with zero keepers (all hidden / legacy).
 const remapOptions = computed(() => {
@@ -744,8 +752,6 @@ const remapOptions = computed(() => {
   }
   return candidateExpressions.value.length > 0 ? candidateExpressions.value : rawExpressions.value
 })
-
-const remapsAutoApplied = ref(false)
 
 function autoApplyKeepersToSlots() {
   if (!curationDone.value || remapsAutoApplied.value) {
@@ -840,7 +846,7 @@ function skipGuide() {
 }
 
 function requestDemoModel() {
-  emit('request-model', props.demoModelId)
+  emit('requestModel', props.demoModelId)
 }
 
 const demoSurpriseKey = computed(() => expressionMappings.value.surprise || '')

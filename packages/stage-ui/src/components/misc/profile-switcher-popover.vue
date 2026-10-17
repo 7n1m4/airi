@@ -20,7 +20,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   (e: 'manage'): void
-  (e: 'image-journal'): void
+  (e: 'imageJournal'): void
 }>()
 
 const { t } = useI18n()
@@ -50,7 +50,7 @@ function handleManage() {
 
 function handleImageJournal() {
   open.value = false
-  emit('image-journal')
+  emit('imageJournal')
 }
 </script>
 

@@ -26,18 +26,18 @@ export async function createMicToggleService(params: { context: ReturnType<typeo
       return
     }
 
-    console.log(`[Mic Toggle Service] Setting hotkey ->`, hotkey, `(payload:`, payload, `)`)
+    console.info(`[Mic Toggle Service] Setting hotkey ->`, hotkey, `(payload:`, payload, `)`)
     const currentConfig = config.get() || { language: 'en', windows: [], microphoneToggleHotkey: 'Scroll' as const }
     config.update({ ...currentConfig, microphoneToggleHotkey: hotkey })
 
     // Immediate log to check what we JUST updated
-    console.log(`[Mic Toggle Service] Config check after update ->`, config.get()?.microphoneToggleHotkey)
+    console.info(`[Mic Toggle Service] Config check after update ->`, config.get()?.microphoneToggleHotkey)
     setupMicToggleShortcut(params.window, hotkey)
   })
 
   defineInvokeHandler(params.context, electronGetMicToggleHotkey, () => {
     const hotkey = config.get()?.microphoneToggleHotkey
-    console.log(`[Mic Toggle Service] Getting hotkey ->`, hotkey, `(normalized:`, (Array.isArray(hotkey) ? hotkey[0] : (hotkey as MicToggleHotkey)) || 'Scroll', `)`)
+    console.info(`[Mic Toggle Service] Getting hotkey ->`, hotkey, `(normalized:`, (Array.isArray(hotkey) ? hotkey[0] : (hotkey as MicToggleHotkey)) || 'Scroll', `)`)
     // Normalizing: ensure we always return a string, even if an array was somehow stored
     return (Array.isArray(hotkey) ? hotkey[0] : (hotkey as MicToggleHotkey)) || 'Scroll'
   })

@@ -87,7 +87,7 @@ export function normalizeAnswerUpstream(s) {
     s = String(s || '')
   s = s.replace(/,/g, '')
   s = s.toLowerCase()
-  s = s.replace(/[!"#$%&'()*+,-./:;<=>?@[\\\]^_`{|}~]/g, '')
+  s = s.replace(/[!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/g, '')
   s = s.replace(/\b(a|an|the|and)\b/g, ' ')
   return s.trim().split(/\s+/).filter(Boolean).join(' ')
 }

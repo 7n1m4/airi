@@ -16,7 +16,7 @@ When the AIRI client tries to validate connectivity or fetch `/models` from thes
 
 AIRI provides a unified CORS bypass approach tailored to each runtime:
 
-```
+```text
                                ┌──────────────────────────────────────────────┐
                                │             AIRI Renderer Client             │
                                │  (useCorsBypassStore & Provider Validation)  │

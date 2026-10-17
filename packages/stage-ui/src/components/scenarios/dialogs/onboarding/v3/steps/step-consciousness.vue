@@ -3,6 +3,8 @@ import type { WebLlmLoadTarget } from '../../../../../../libs/inference/adapters
 import type { ProgressPayload } from '../../../../../../libs/inference/protocol'
 import type { ProviderMetadata } from '../../../../../../stores/providers'
 
+import { isKeylessProvider, isOptionalKeyProvider, keylessOrOptionalKey } from '../../../../../../libs/providers/types'
+
 import { Capacitor } from '@capacitor/core'
 import { isApplePlatform, isStageTamagotchi, isStageWeb } from '@proj-airi/stage-shared'
 import { detectWebGPU } from '@proj-airi/stage-shared/webgpu'
@@ -18,6 +20,9 @@ import { useAiriCardStore } from '../../../../../../stores/modules/airi-card'
 import { useProvidersStore } from '../../../../../../stores/providers'
 import { DEFAULT_APPLE_CORE_AI_MODEL } from '../../../../../../stores/providers/apple-core-ai'
 import { BrainModelPicker } from '../../../../chat'
+// NOTICE: reuses v2's picker because v3 has no copy of its own — keep both
+// onboarding flows aligned rather than moving or duplicating it.
+import ProviderPickerGrid from '../../v2/components/provider-picker-grid.vue'
 import { resolvePersona } from '../composables/useStarterCardCommit'
 import { useOnboardingV3Draft } from '../stores/useOnboardingV3Draft'
 
@@ -271,21 +276,38 @@ const selectedChatProvider = computed<ProviderMetadata | null>(() => {
   return allChatProvidersMetadata.value.find(p => p.id === selectedProviderId.value) || null
 })
 
+// Whether the provider can be used right away. Keyless and optional-key
+// providers always can; a key-required provider needs a saved configuration.
 const isProviderConfigured = computed(() => {
   if (!selectedChatProvider.value)
     return false
-  if (selectedChatProvider.value.requiresCredentials === false)
+  const provider = selectedChatProvider.value
+  if (keylessOrOptionalKey(provider.requiresCredentials))
     return true
-  return configuredChatProvidersMetadata.value.some(p => p.id === selectedChatProvider.value!.id)
+  return configuredChatProvidersMetadata.value.some(p => p.id === provider.id)
 })
 
-const inlineConfigProvider = computed(() => {
+// An optional-key provider works immediately, but its key field still has to be
+// reachable, so only strictly keyless providers skip the inline card.
+const needsInlineConfig = computed(() => {
   if (!selectedChatProvider.value)
-    return null
-  if (selectedChatProvider.value.requiresCredentials === false)
-    return null
-  return isProviderConfigured.value ? null : selectedChatProvider.value
+    return false
+  const provider = selectedChatProvider.value
+  if (isKeylessProvider(provider.requiresCredentials))
+    return false
+  // NOTICE: an optional-key provider is `isProviderConfigured` the moment it is
+  // selected (it is marked added for keyless use), so asking that computed
+  // would hide the key field forever. Gate on an actually typed key instead.
+  const savedKey = (providersStore.providers[provider.id]?.apiKey as string | undefined)?.trim()
+  if (isOptionalKeyProvider(provider.requiresCredentials))
+    return !savedKey
+  return !isProviderConfigured.value
 })
+
+const inlineConfigProvider = computed(() => (needsInlineConfig.value ? selectedChatProvider.value : null))
+
+// Optional-key providers can proceed without typing a key.
+const keyIsOptional = computed(() => isOptionalKeyProvider(selectedChatProvider.value?.requiresCredentials))
 
 const actionTargetRef = ref<HTMLElement | null>(null)
 
@@ -337,9 +359,11 @@ function onSelectProvider(provider: ProviderMetadata) {
     return
   }
 
-  // Zero-credential or pre-configured providers query live models immediately
-  if (provider.requiresCredentials === false || isProviderConfigured.value) {
-    if (provider.requiresCredentials === false) {
+  // Keyless and optional-key providers are usable without typing anything;
+  // pre-configured providers resume from their saved key immediately.
+  const zeroCredential = keylessOrOptionalKey(provider.requiresCredentials)
+  if (zeroCredential || isProviderConfigured.value) {
+    if (zeroCredential) {
       providersStore.markProviderAdded(provider.id)
     }
     void fetchLiveModels()
@@ -365,7 +389,10 @@ async function fetchLiveModels() {
 }
 
 async function saveAndConnectInline() {
-  if (!selectedProviderId.value || !apiKeyInput.value.trim())
+  if (!selectedProviderId.value)
+    return
+  // An optional-key provider may be connected without any key.
+  if (!keyIsOptional.value && !apiKeyInput.value.trim())
     return
 
   isSavingConfig.value = true
@@ -1002,8 +1029,13 @@ onBeforeUnmount(() => {
             <!-- API Key Field -->
             <div class="space-y-1.5">
               <label class="text-xs text-neutral-700 font-semibold dark:text-neutral-300">
-                API Key <span class="text-red-500">*</span>
+                API Key
+                <span v-if="!keyIsOptional" class="text-red-500">*</span>
+                <span v-else class="text-neutral-400">(optional)</span>
               </label>
+              <p v-if="keyIsOptional" class="text-[11px] leading-relaxed text-neutral-500 dark:text-neutral-400">
+                {{ inlineConfigProvider.name }} works without a key. Add one to unlock paid models and higher quotas.
+              </p>
               <div class="relative flex items-center">
                 <input
                   v-model="apiKeyInput"
@@ -1053,12 +1085,12 @@ onBeforeUnmount(() => {
               </button>
               <button
                 type="button"
-                :disabled="!apiKeyInput.trim() || isSavingConfig"
+                :disabled="(keyIsOptional ? false : !apiKeyInput.trim()) || isSavingConfig"
                 class="flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary-500 px-4 py-1.5 text-xs text-white font-bold shadow-md transition active:scale-95 disabled:cursor-not-allowed hover:bg-primary-600 disabled:opacity-50"
                 @click="saveAndConnectInline"
               >
                 <div v-if="isSavingConfig" class="i-solar:restart-square-bold h-3.5 w-3.5 animate-spin" />
-                <span>{{ isSavingConfig ? 'Connecting…' : 'Save & Connect' }}</span>
+                <span>{{ isSavingConfig ? 'Connecting…' : (keyIsOptional ? 'Continue without key' : 'Save & Connect') }}</span>
               </button>
             </div>
           </div>

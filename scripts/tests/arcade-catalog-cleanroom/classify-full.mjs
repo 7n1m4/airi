@@ -6,6 +6,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
@@ -166,15 +167,15 @@ async function classifyWithRetry(game, maxRetries = 3) {
 }
 
 async function main() {
-  console.log('=== TypeSafe Jev: Complete 8,924 MS-DOS Catalog Batch Triage ===')
-  console.log(`Model: ${MODEL} | Concurrency: ${CONCURRENCY} | Price: $42 / Billion tokens`)
+  console.info('=== TypeSafe Jev: Complete 8,924 MS-DOS Catalog Batch Triage ===')
+  console.info(`Model: ${MODEL} | Concurrency: ${CONCURRENCY} | Price: $42 / Billion tokens`)
 
   if (!fs.existsSync(INPUT_FILE)) {
     throw new Error(`Input file ${INPUT_FILE} not found! Run fetch-full.mjs first.`)
   }
 
   const catalog = JSON.parse(fs.readFileSync(INPUT_FILE, 'utf8'))
-  console.log(`Loaded ${catalog.length} games from ${INPUT_FILE}`)
+  console.info(`Loaded ${catalog.length} games from ${INPUT_FILE}`)
 
   let results = []
   const processedIds = new Set()
@@ -182,7 +183,7 @@ async function main() {
     try {
       results = JSON.parse(fs.readFileSync(OUTPUT_FILE, 'utf8'))
       results.forEach(r => processedIds.add(r.identifier))
-      console.log(`Resuming from checkpoint: ${processedIds.size} already classified.`)
+      console.info(`Resuming from checkpoint: ${processedIds.size} already classified.`)
     }
     catch {
       results = []
@@ -190,7 +191,7 @@ async function main() {
   }
 
   const queue = catalog.filter(g => !processedIds.has(g.identifier))
-  console.log(`Games remaining to classify: ${queue.length}\n`)
+  console.info(`Games remaining to classify: ${queue.length}\n`)
 
   let completed = processedIds.size
   const total = catalog.length
@@ -247,14 +248,14 @@ async function main() {
 
   fs.writeFileSync(METRICS_FILE, JSON.stringify(metrics, null, 2), 'utf8')
 
-  console.log(`\n\n======================================================`)
-  console.log(`CATALOG TRIAGE COMPLETE!`)
-  console.log(`Classified:     ${results.length} games`)
-  console.log(`Total Time:     ${totalTime}s (${(totalTime / 60).toFixed(2)} min)`)
-  console.log(`Throughput:     ${metrics.ratePerSecond} games/sec`)
-  console.log(`Total Tokens:   ${totalTokens.toLocaleString()}`)
-  console.log(`Final API Cost: $${finalCost} USD`)
-  console.log(`======================================================\n`)
+  console.info(`\n\n======================================================`)
+  console.info(`CATALOG TRIAGE COMPLETE!`)
+  console.info(`Classified:     ${results.length} games`)
+  console.info(`Total Time:     ${totalTime}s (${(totalTime / 60).toFixed(2)} min)`)
+  console.info(`Throughput:     ${metrics.ratePerSecond} games/sec`)
+  console.info(`Total Tokens:   ${totalTokens.toLocaleString()}`)
+  console.info(`Final API Cost: $${finalCost} USD`)
+  console.info(`======================================================\n`)
 }
 
 main().catch((err) => {

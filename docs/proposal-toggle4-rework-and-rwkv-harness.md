@@ -47,7 +47,7 @@ To ensure zero wheel-spinning during research, here are the exact authoritative 
 
 It is critical to clarify the distinction between **Toggle 4 (Recent Topics)** and **Echo Chips**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                          Memory & Tagging Distinction                       │
 ├──────────────────────────────────────────┬──────────────────────────────────┤
@@ -71,7 +71,7 @@ It is critical to clarify the distinction between **Toggle 4 (Recent Topics)** a
 
 The research agent is tasked with researching, web searching, and evaluating four distinct ML avenues to replace hardcoded stopword parsing with high-precision topic extraction:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                       Candidate Topic Extraction Avenues                     │
 ├──────────────────────────┬──────────────────────────┬───────────────────────┤
@@ -105,7 +105,7 @@ The research agent is tasked with researching, web searching, and evaluating fou
 To tame the "wild horse" of RWKV and empirically test its hidden state vectors for topic extraction without UI overhead, we specify a **standalone cleanroom CLI test harness**.
 
 ### Cleanroom Directory Structure (`scripts/tests/rwkv-harness/`)
-```
+```text
 scripts/tests/rwkv-harness/
 ├── package.json              ← Isolated dependencies (@onnxruntime-node, web-rwkv-wasm)
 ├── run-rwkv-cli.ts           ← Node.js CLI script for testing RWKV ONNX/WASM execution

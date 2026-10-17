@@ -52,7 +52,7 @@ export async function setupMainWindow(params: {
   let height = mainWindowConfig?.height ?? mainWindowConfig?.snapshot?.height ?? (orientation === 'vertical' ? 300.0 : 56.0)
   let x = mainWindowConfig?.x ?? mainWindowConfig?.snapshot?.x
   let y = mainWindowConfig?.y ?? mainWindowConfig?.snapshot?.y
-  if (x !== undefined && y !== undefined && !isNaN(x) && !isNaN(y)) {
+  if (x !== undefined && y !== undefined && !Number.isNaN(x) && !Number.isNaN(y)) {
     const valid = ensureWindowInVisibleBounds({
       x: Math.round(x),
       y: Math.round(y),
@@ -127,7 +127,7 @@ export async function setupMainWindow(params: {
     const orientation = mainWindow?.orientation || 'vertical'
     const width = mainWindow?.width ?? (orientation === 'vertical' ? 56.0 : 300.0)
     const height = mainWindow?.height ?? (orientation === 'vertical' ? 300.0 : 56.0)
-    if (x !== undefined && y !== undefined && !isNaN(x) && !isNaN(y)) {
+    if (x !== undefined && y !== undefined && !Number.isNaN(x) && !Number.isNaN(y)) {
       const valid = ensureWindowInVisibleBounds({
         x: Math.round(x),
         y: Math.round(y),

@@ -50,7 +50,9 @@ export function startStaticServer(webroot: string, modelFiles: Record<string, st
       const name = path.basename(urlPath)
       const abs = modelFiles[name]
       if (!abs || !fs.existsSync(abs)) {
-        res.writeHead(404); res.end('not found'); return
+        res.writeHead(404)
+        res.end('not found')
+        return
       }
       const stat = fs.statSync(abs)
       const range = req.headers.range
@@ -82,7 +84,9 @@ export function startStaticServer(webroot: string, modelFiles: Record<string, st
     const rel = urlPath === '/' ? '/index.html' : urlPath
     const fp = path.join(root, rel)
     if (!fp.startsWith(root) || !fs.existsSync(fp) || !fs.statSync(fp).isFile()) {
-      res.writeHead(404); res.end('not found'); return
+      res.writeHead(404)
+      res.end('not found')
+      return
     }
     res.writeHead(200, { 'content-type': MIME[path.extname(fp)] || 'application/octet-stream' })
     fs.createReadStream(fp).pipe(res)

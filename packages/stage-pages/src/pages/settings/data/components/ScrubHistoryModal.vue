@@ -18,7 +18,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
-  (e: 'scrub-complete', report: ScrubReport): void
+  (e: 'scrubComplete', report: ScrubReport): void
 }>()
 
 const {
@@ -81,7 +81,7 @@ async function runScrub() {
     })
     report.value = res
     step.value = 'complete'
-    emit('scrub-complete', res)
+    emit('scrubComplete', res)
   }
   catch (e) {
     console.error('Failed to scrub history', e)

@@ -33,7 +33,7 @@ The Rehearsal Room exists to configure `modelExpressionPrompt` for the active ch
 
 One of the most critical aspects of the Rehearsal Room is establishing the bridge between technical assets and semantic understanding.
 
-```
+```text
 [Raw Asset Keys]              [Renamed Mapped Labels]         [AI & Suggestion Engines]
 expression_1_2.json   ───>   "happy"                ───>     LLM understands "happy",
 ParamEyeLX            ───>   "wink"                 ───>     writes <|ACT:emotion="happy"|>
@@ -57,7 +57,7 @@ By renaming these keys in the Rehearsal Room:
 
 To prevent duplication of audio/visual parsing and timing code, the Rehearsal Room's play button hooks directly into the **shared Speech Runtime Pipeline** instead of creating a custom speech playback lane.
 
-```
+```text
 Rehearsal Room (Chatbox Process)                Stage Window Host (Renderer Process)
 ───────────────────────────────                ────────────────────────────────────
 1. Parse playground text
@@ -87,7 +87,7 @@ Rehearsal Room (Chatbox Process)                Stage Window Host (Renderer Proc
 
 Once special tokens arrive at the Stage Host (`ControlStripHost.vue`), the pipeline parses the token contents (`<|ACT:emotion="..."|>` or `<|ACT:motion="..."|>`) and dispatches the visual command to the active renderer.
 
-```
+```text
                           <|ACT:emotion="Name"|>
                                     │
                      [ControlStripHost.vue:320-370]
@@ -108,7 +108,7 @@ live2dStore.triggerEmotion   modelStore.triggerEmotion    Composite Key & Motion
 |------|-----------------|---------|
 | **1. UI Trigger** | [`chat_rehearsal.vue:296`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/apps/stage-tamagotchi/src/renderer/components/chat/chat_rehearsal.vue#L296) | Sandbox text parser; emits tokens via `orchestrator.emitTokenSpecialHooks()`. |
 | **2. Stream Bus** | [`pipeline-runtime.ts:184`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-ui/src/services/speech/pipeline-runtime.ts#L184) | Slices stream into `speechIntentSpecialEvent` tokens over cross-window Eventa bus. |
-| **3. Stage Host** | [`ControlStripHost.vue:326`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-ui/src/components/scenes/ControlStripHost.vue#L326) | Receives `<|ACT...|>` token and branches execution to the active model renderer store. |
+| **3. Stage Host** | [`ControlStripHost.vue:326`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-ui/src/components/scenes/ControlStripHost.vue#L326) | Receives `<\|ACT...\|>` token and branches execution to the active model renderer store. |
 | **4. Spine Dispatch** | [`ControlStripHost.vue:331`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-ui/src/components/scenes/ControlStripHost.vue#L331) | Parses `Variant [Skin]` keys $\rightarrow$ calls `spineStore.selectVariantAndSkin()`; motion keys $\rightarrow$ calls `spineStore.playOneShotAnimation()`. |
 | **5. Spine Store** | [`spine.ts:174`](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-ui-spine/src/stores/spine.ts#L174) | Manages atomic `currentVariant` & `currentSkin` refs; triggers WebGL skeleton switch on stage. |
 
@@ -116,7 +116,7 @@ live2dStore.triggerEmotion   modelStore.triggerEmotion    Composite Key & Motion
 
 To ensure TTS speech audio uses the correct voice during rehearsal playback, speech synthesis resolves voice configuration using a strict **3-Tier Fallback Hierarchy**:
 
-```
+```text
                        TTS Voice Resolution
                                 │
           ┌─────────────────────┴─────────────────────┐
@@ -207,7 +207,7 @@ The Studio's character selector represents every cast member regardless of their
 
 ### The Derivation Rule
 
-```
+```text
 const boundModels = Object.entries(visual_assets)
   .filter(([key, asset]) => {
     const mod = modules[key] || {}
@@ -240,7 +240,7 @@ else:  // no per-actor bindings = Gen1 / simple single-model card
 
 In multi-character cards, the director system can dynamically change which model is displayed for a given actor slot on a per-turn basis. The binding resolution order is:
 
-```
+```text
 modules[key].manifestation.modelId    ← runtime director override (authoritative)
   ↓ (fallback if not set)
 visual_assets[key].manifestation.modelId   ← static author-time binding
@@ -270,7 +270,7 @@ This means if you select a character whose model is not currently on stage, you 
 
 The Rehearsal Room (via `ModelCustomizer`) routes all list resolution through `displayModelsStore.getOrLoadModelCapabilities(modelId)`:
 
-```
+```text
 getOrLoadModelCapabilities(modelId)
   │
   ├── model.expressions && model.motions exist in memory?
@@ -373,7 +373,7 @@ Raw parameter manipulation (individual sliders, bone values) is deferred — foc
 
 Normalize all four backends into a single list component for the Rehearsal Room. Every entry row:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────┐
 │ ● [group badge]  Display Name                          [∞] [✎] [👁] │
 │   originalKey                                        (1.2s)  (♪)  │

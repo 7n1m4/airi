@@ -5,6 +5,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import puppeteer from 'puppeteer-core'
 
@@ -215,10 +216,10 @@ const SKETCH_STREET_ANTIGRAVITY = `function setup() {
 }`
 
 async function run() {
-  console.log('=== Rendering Antigravity Creative Spikes ===\n')
+  console.info('=== Rendering Antigravity Creative Spikes ===\n')
   const webroot = path.resolve(process.cwd(), 'webroot')
   const server = await startStaticServer(webroot, {})
-  console.log(`✓ Static server running at ${server.baseUrl}`)
+  console.info(`✓ Static server running at ${server.baseUrl}`)
 
   const browser = await puppeteer.launch({
     executablePath: BRAVE_PATH,
@@ -232,34 +233,34 @@ async function run() {
   const page = await browser.newPage()
   const renderer = new CanvasRenderer(page)
   await renderer.open(server.baseUrl)
-  console.log('✓ Renderer tab ready\n')
+  console.info('✓ Renderer tab ready\n')
 
   const spikeDir = path.resolve(process.cwd(), 'reports/spike')
   fs.mkdirSync(spikeDir, { recursive: true })
 
   // 1. Render Flower
-  console.log('Rendering Flower (Antigravity style)...')
+  console.info('Rendering Flower (Antigravity style)...')
   const resFlower = await renderer.render({ code: SKETCH_FLOWER_ANTIGRAVITY, size: 600, settleMs: 2500 })
-  console.log(`  Outcome: ok=${resFlower.ok}, ink=${(resFlower.inkCoverage * 100).toFixed(1)}%, colors=${resFlower.uniqueColors}`)
+  console.info(`  Outcome: ok=${resFlower.ok}, ink=${(resFlower.inkCoverage * 100).toFixed(1)}%, colors=${resFlower.uniqueColors}`)
   if (resFlower.dataUrl) {
     const flowerPath = path.join(spikeDir, 'flower-antigravity.png')
     renderer.savePng(flowerPath, resFlower.dataUrl)
-    console.log(`  ✓ Saved to ${flowerPath}\n`)
+    console.info(`  ✓ Saved to ${flowerPath}\n`)
   }
 
   // 2. Render Street
-  console.log('Rendering Street / Twilight Alley (Antigravity style)...')
+  console.info('Rendering Street / Twilight Alley (Antigravity style)...')
   const resStreet = await renderer.render({ code: SKETCH_STREET_ANTIGRAVITY, size: 600, settleMs: 2500 })
-  console.log(`  Outcome: ok=${resStreet.ok}, ink=${(resStreet.inkCoverage * 100).toFixed(1)}%, colors=${resStreet.uniqueColors}`)
+  console.info(`  Outcome: ok=${resStreet.ok}, ink=${(resStreet.inkCoverage * 100).toFixed(1)}%, colors=${resStreet.uniqueColors}`)
   if (resStreet.dataUrl) {
     const streetPath = path.join(spikeDir, 'street-antigravity.png')
     renderer.savePng(streetPath, resStreet.dataUrl)
-    console.log(`  ✓ Saved to ${streetPath}\n`)
+    console.info(`  ✓ Saved to ${streetPath}\n`)
   }
 
   await browser.close()
   await server.close()
-  console.log('Done!')
+  console.info('Done!')
 }
 
 run().catch(console.error)

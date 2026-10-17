@@ -1,5 +1,6 @@
 import type { Ref } from 'vue'
 
+import { keylessOrOptionalKey } from '../../../libs/providers/types'
 import type { ProviderMetadata } from '../types'
 
 /**
@@ -90,7 +91,7 @@ export function createProvidersConfigSelectors(state: ProvidersConfigSelectorsSt
     // intentionally redundant — kept for backward compatibility with the
     // legacy single-slot store call sites that inject `isProviderConfigured`
     // into raw credential checks elsewhere).
-    if (metadata.requiresCredentials === false || metadata.deployment === 'local' || providerId === 'browser-web-speech-api')
+    if (keylessOrOptionalKey(metadata.requiresCredentials) || metadata.deployment === 'local' || providerId === 'browser-web-speech-api')
       return true
 
     const config = state.providerInstanceOptions?.(providerId, instanceId)

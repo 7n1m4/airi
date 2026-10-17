@@ -115,16 +115,26 @@ function parsePropsOffset() {
   }
 }
 
+/**
+ * NOTICE: the constructed `Notification` is intentionally not retained by the
+ * caller — showing the OS notification is a fire-and-forget side effect, and
+ * there is no teardown handle to keep. Wrapping it keeps the `new` expression
+ * out of an expression statement (`no-new`) while preserving behavior exactly.
+ */
+function showWebNotification(title: string, body: string) {
+  return new Notification(title, { body, silent: true })
+}
+
 function showHtml5Notification(title: string, body: string) {
   try {
     if ('Notification' in window) {
       if (Notification.permission === 'granted') {
-        new Notification(title, { body, silent: true })
+        showWebNotification(title, body)
       }
       else if (Notification.permission !== 'denied') {
         Notification.requestPermission().then((permission) => {
           if (permission === 'granted') {
-            new Notification(title, { body, silent: true })
+            showWebNotification(title, body)
           }
         })
       }
@@ -142,6 +152,22 @@ const modelLoading = ref(false)
 let isUnmounted = false
 
 const modelLoadMutex = new Mutex()
+
+const pixiApp = toRef(() => props.app)
+const paused = toRef(() => props.paused)
+const live2dStore = useLive2d()
+const { post: postCaption } = useBroadcastChannel<any, any>({ name: 'airi-caption-overlay' })
+const { model } = storeToRefs(live2dStore)
+const {
+  currentMotion,
+  availableMotions,
+  motionMap,
+  modelParameters,
+  availableExpressions,
+  parameterMetadata,
+  expressionData,
+  activeExpressions,
+} = storeToRefs(live2dStore)
 
 // --- Live2D DSL runtime (additive; never alters existing Cubism behavior) ---
 let dslVM: DSLVirtualMachine | null = null
@@ -191,12 +217,6 @@ const offset = computed(() => {
     yOffset: base.yOffset + manualControlOffset.value.y,
   }
 })
-
-const pixiApp = toRef(() => props.app)
-const paused = toRef(() => props.paused)
-const live2dStore = useLive2d()
-const { post: postCaption } = useBroadcastChannel<any, any>({ name: 'airi-caption-overlay' })
-const { model } = storeToRefs(live2dStore)
 
 const initialModelWidth = ref<number>(0)
 const initialModelHeight = ref<number>(0)
@@ -402,17 +422,6 @@ function setScaleAndPosition() {
     model.value.filterArea = pixiApp.value.renderer.screen
   }
 }
-
-const {
-  currentMotion,
-  availableMotions,
-  motionMap,
-  modelParameters,
-  availableExpressions,
-  parameterMetadata,
-  expressionData,
-  activeExpressions,
-} = storeToRefs(live2dStore)
 
 function findExpressionData(fileName: string) {
   const targetBase = fileName.split(/[\\/]/).pop()?.toLowerCase()
@@ -1759,8 +1768,7 @@ watch(live2dIdleAnimationEnabled, (enabled) => {
 })
 
 onMounted(() => {
-  const removeListener = listenBeatSyncBeatSignal((e) => {
-    console.debug('[Live2D Model] Received beat signal:', e)
+  const removeListener = listenBeatSyncBeatSignal(() => {
     beatSync.scheduleBeat()
   })
   const cleanupTriggerMotion = live2dStore.onTriggerMotion((group, index) => {

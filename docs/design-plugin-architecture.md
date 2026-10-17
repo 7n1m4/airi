@@ -20,7 +20,7 @@ The plugin system adheres to four core principles:
    - **Host-Managed Local Plugins (In-Process / Electron)**: Managed by AIRI's internal `PluginHost`, discovered from user storage, and loaded inside the desktop runtime.
    - **External Network Plugins / Bridges (Out-of-Process / WebSocket)**: Run as standalone daemons, background scripts, or browser extensions in any programming language, connecting to AIRI's central WebSocket message bus.
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────────────┐
 │                                PROJECT AIRI RUNTIME                              │
 │                                                                                  │
@@ -298,13 +298,13 @@ AIRI includes documented real-world plugin designs demonstrating how to apply th
    import os from 'node:os'
 
    export async function init(context) {
-     console.log('[SystemStats] Initialized in Electron runtime')
+     console.info('[SystemStats] Initialized in Electron runtime')
    }
 
    export async function setupModules({ apis }) {
      setInterval(() => {
        const freeMemGb = (os.freemem() / (1024 ** 3)).toFixed(2)
-       console.log(`[SystemStats] Free memory: ${freeMemGb} GB`)
+       console.info(`[SystemStats] Free memory: ${freeMemGb} GB`)
      }, 30000)
    }
    ```
@@ -341,7 +341,7 @@ AIRI includes documented real-world plugin designs demonstrating how to apply th
    // React when authentication succeeds
    client.onEvent('module:authenticated', (event) => {
      if (event.data.authenticated) {
-       console.log('✅ Connected and authenticated with AIRI hub!')
+       console.info('✅ Connected and authenticated with AIRI hub!')
 
        // Send an initial context update
        client.send({

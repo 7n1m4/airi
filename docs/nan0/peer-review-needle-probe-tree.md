@@ -14,7 +14,7 @@
 ## 1. System Context & Architectural Seam
 
 AIRI's cognitive architecture for Project Nan0 follows an invariant dual-hop pipeline:
-```
+```text
 User Input ──► [ Pre-Processor: Needle 2 ] ──► [ 1st LLM: Monologue ] ──► [ Post-Processor ] ──► [ 2nd LLM: Outward Speech ] ──► Audio / UI
 ```
 

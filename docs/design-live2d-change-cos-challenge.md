@@ -23,11 +23,13 @@ At first glance, it might seem like `change_cos` is an optional feature that can
 
 ### 1. Mesh & Collider Coupling (Hit Areas)
 Tapping interactions and menus are bound to specific `hit_areas` (colliders) mapped directly to vertices in the `.moc3` file:
-```json
-"hit_areas": [
-  {"name": "head", "id": "D_FACE.00"},
-  {"name": "menu", "id": "D_HAIR_BACK.04"}
-]
+```jsonc
+{
+  "hit_areas": [
+    { "name": "head", "id": "D_FACE.00" },
+    { "name": "menu", "id": "D_HAIR_BACK.04" }
+  ]
+}
 ```
 If a costume swap command fails to change the model, the user remains on the old model, but the interpreter may try to read hit areas or trigger motions that do not exist or have different mesh IDs on the active skeleton.
 

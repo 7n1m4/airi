@@ -96,7 +96,7 @@ To provide transparency and "peace of mind," each sensor will feature a circular
 | Sensor | Tooltip Description | Sample Prompt Payload (Template Format) |
 | :--- | :--- | :--- |
 | **Window History** | Recent active apps with duration and time range. | `[ VS Code ] [ 15m ] [ 10:45 - 11:00 ]`<br>`[ Spotify ] [ 3m ] [ 11:00 - 11:03 ]` |
-| **Load Averages** | CPU & Multi-GPU resource load over time. | `CPU Load (1/5/15): 0.5 | 0.72 | 0.61`<br>`GPU Load (Avg): 0.45` |
+| **Load Averages** | CPU & Multi-GPU resource load over time. | `CPU Load (1/5/15): 0.5 \| 0.72 \| 0.61`<br>`GPU Load (Avg): 0.45` |
 | **Usage Metrics** | Hourly interaction statistics (TTS, STT, Chat). | `TTS (Last Hr): 5`<br>`STT (Last Hr): 0`<br>`Chat (Last Hr): 2` |
 | **Milestones** | Total interaction counts and next target. | `Turn Count: 498 (Next Target: 500)` |
 

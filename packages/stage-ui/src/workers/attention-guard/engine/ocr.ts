@@ -245,7 +245,7 @@ export async function ocrImageData(imageData: ImageData, options?: { degraded?: 
   try {
     ocrRecognizeCount++
     if (ocrRecognizeCount >= OCR_RECYCLE_INTERVAL) {
-      console.log(`[Attention Guard OCR] ♻️ Periodic recycle (${ocrRecognizeCount} recognitions): releasing Tesseract WASM heap`)
+      console.info(`[Attention Guard OCR] ♻️ Periodic recycle (${ocrRecognizeCount} recognitions): releasing Tesseract WASM heap`)
       await disposeOcrEngine()
       ocrRecognizeCount = 0
     }
@@ -331,7 +331,11 @@ function boundedLevenshtein(a: string, b: string, maxDist: number): number {
     }
     if (rowMin > maxDist) {
       return maxDist + 1
-    }[prev, curr] = [curr, prev]
+    }
+
+    const swap = prev
+    prev = curr
+    curr = swap
   }
 
   return prev[b.length]

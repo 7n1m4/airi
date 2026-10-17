@@ -136,8 +136,11 @@ I've verified the revision against source, Pinia 3.0.4, Vite's actual client HMR
 This is the most important pre-execution finding. I read Vite's client at [client.mjs:48-49](file:///Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/node_modules/vite/dist/client/client.mjs):
 
 ```js
-dispose(cb) {
-  this.hmrClient.disposeMap.set(this.ownerPath, cb);
+// Shape of Vite's client `HotNotifierInfo` disposal hook (client.mjs:48-49)
+class HotNotifierInfo {
+  dispose(cb) {
+    this.hmrClient.disposeMap.set(this.ownerPath, cb)
+  }
 }
 ```
 

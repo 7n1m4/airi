@@ -138,8 +138,8 @@ The target state is a small store that looks conceptually like this:
 export const useProvidersStore = defineStore('providers', () => {
   const { t } = useI18n()
 
-  const providerCredentials = useLocalStorage(...)
-  const addedProviders = useLocalStorage(...)
+  const providerCredentials = useLocalStorage('settings/providers/credentials', {})
+  const addedProviders = useLocalStorage('settings/providers/added', {})
 
   const registry = createProviderRegistry({ t })
   const runtime = createProviderRuntime({
@@ -401,7 +401,7 @@ That removes the current pattern where `providers.ts` creates a large `providerM
 Instead of:
 
 ```ts
-const providerMetadata = { ...large inline object... }
+const providerMetadata = buildMetadataEntries({ t })
 // mutate it later
 delete providerMetadata[id]
 providerMetadata[id] = translated

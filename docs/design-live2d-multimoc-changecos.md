@@ -18,7 +18,7 @@ Currently, when the stateful Live2D DSL VM encounters a `ChangeCos` command, the
 
 ## 2. History of Code Evolution & Upstream Comparison
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                       Upstream vs. AIRI Fork Comparison                     │
 ├──────────────────────────────────────────┬──────────────────────────────────┤
@@ -52,7 +52,7 @@ In our fork, [`live2d-zip-loader.ts`](file:///Users/richardpinedo/Projects.nosyn
 ### The Solution: MOC3 VRAM Buffer Hot-Swapping
 The DSL VM state MUST remain untouched during costume changes:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                      In-Memory MOC3 Hot-Swap Pipeline                       │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -79,7 +79,7 @@ When a user drops a `.zip` file containing **multiple `.moc3` binaries** into AI
 ### The Multi-Costume Import Modal
 The importer inspects the archive. If `.moc3` count > 1, it presents the user with two clear choices:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                    Multi-Costume Package Detected                           │
 ├─────────────────────────────────────────────────────────────────────────────┤

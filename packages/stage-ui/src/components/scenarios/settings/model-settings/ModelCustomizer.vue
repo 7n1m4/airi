@@ -57,7 +57,7 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const emit = defineEmits<{
-  (e: 'insert-token', token: string): void
+  (e: 'insertToken', token: string): void
   (e: 'update:visible-capabilities', payload: { emotions: string[], motions: string[] }): void
 }>()
 
@@ -269,12 +269,17 @@ function applyModelMappings(model?: any) {
   live2dStore.emotionMappings = emotionMap
 }
 
+const editingKey = ref<string | null>(null)
+const editingValue = ref('')
+
 // React when currentModel in store updates (e.g. from IndexedDB or background sync)
 watch(currentModel, (model) => {
   if (model && !editingKey.value) {
     applyModelMappings(model)
   }
 })
+
+const showEmotionCalibrationConfirm = ref(false)
 
 // Sync local state + capabilities when modelId changes
 watch(() => props.modelId, async (newId) => {
@@ -293,7 +298,7 @@ watch(() => props.modelId, async (newId) => {
       model = rawModel as any
   }
 
-  console.log(`[ModelCustomizer] modelId changed → ${newId}`, {
+  console.info(`[ModelCustomizer] modelId changed → ${newId}`, {
     found: !!model,
     format: model?.format,
     expressionCapabilities: model?.expressionCapabilities?.length ?? 'none',
@@ -310,7 +315,7 @@ watch(() => props.modelId, async (newId) => {
     const caps = await displayModelsStore.getOrLoadModelCapabilities(newId)
     expressionCapabilities.value = JSON.parse(JSON.stringify(caps.expressionCapabilities || []))
     motionCapabilities.value = JSON.parse(JSON.stringify(caps.motionCapabilities || []))
-    console.log(`[ModelCustomizer] capabilities resolved for ${newId}:`, {
+    console.info(`[ModelCustomizer] capabilities resolved for ${newId}:`, {
       expressions: caps.expressionCapabilities?.length,
       motions: caps.motionCapabilities?.length,
     })
@@ -364,7 +369,7 @@ const rawExpressions = computed<UnifiedExpression[]>(() => {
       isActive = mmdStore.previewExpression === item.rawKey
     }
     else if (mType === 'spine') {
-      const match = item.rawKey.match(/^(.+?)\s*\[(.+?)\]$/)
+      const match = item.rawKey.match(/^([^[\]]+)\[([^[\]]+)\]$/)
       if (match) {
         isActive = spineStore.currentVariant === match[1].trim() && spineStore.currentSkin === match[2].trim()
       }
@@ -496,10 +501,6 @@ const allExpressionsCount = computed(() => rawExpressions.value.length)
 const usableMotionsCount = computed(() => rawMotions.value.filter(m => m.usable).length)
 const allMotionsCount = computed(() => rawMotions.value.length)
 
-const editingKey = ref<string | null>(null)
-const editingValue = ref('')
-
-const showEmotionCalibrationConfirm = ref(false)
 const router = useRouter()
 
 function openEmotionCalibration() {
@@ -809,7 +810,7 @@ function triggerExpressionEffect(key: string) {
     }, 2000)
   }
   else if (modelType.value === 'spine') {
-    const match = key.match(/^(.+?)\s*\[(.+?)\]$/)
+    const match = key.match(/^([^[\]]+)\[([^[\]]+)\]$/)
     if (match) {
       const variant = match[1].trim()
       const skin = match[2].trim()
@@ -1337,7 +1338,7 @@ function toggleMotionCycle(key: string) {
                   v-if="props.showInsertActions"
                   class="cursor-pointer rounded p-1 text-neutral-400 hover:bg-primary-500/10 dark:text-neutral-500 hover:text-primary-500"
                   title="Insert into Sandbox"
-                  @click.stop="emit('insert-token', `<|ACT:emotion=\x22${exp.displayName}\x22|>`)"
+                  @click.stop="emit('insertToken', `<|ACT:emotion=\x22${exp.displayName}\x22|>`)"
                 >
                   <div class="i-solar:document-add-bold-duotone text-sm" />
                 </button>
@@ -1441,7 +1442,7 @@ function toggleMotionCycle(key: string) {
                     v-if="props.showInsertActions"
                     class="cursor-pointer rounded p-1 text-neutral-400 hover:bg-primary-500/10 dark:text-neutral-500 hover:text-primary-500"
                     title="Insert into Sandbox"
-                    @click.stop="emit('insert-token', `<|ACT:motion=\x22${mot.displayName}\x22|>`)"
+                    @click.stop="emit('insertToken', `<|ACT:motion=\x22${mot.displayName}\x22|>`)"
                   >
                     <div class="i-solar:document-add-bold-duotone text-sm" />
                   </button>
@@ -1791,7 +1792,7 @@ function toggleMotionCycle(key: string) {
                         v-if="props.showInsertActions"
                         class="flex cursor-pointer items-center gap-1 rounded-md bg-neutral-100 px-2 py-1 text-[11px] text-neutral-700 font-medium transition-colors dark:bg-neutral-800 hover:bg-primary-500/10 dark:text-neutral-200 hover:text-primary-600 dark:hover:text-primary-400"
                         title="Insert ACT token into prompt"
-                        @click="emit('insert-token', `<|ACT:vfx=&quot;${vfx.key}&quot;|>`); toast.info(`Inserted <|ACT:vfx=&quot;${vfx.key}&quot;|> token`)"
+                        @click="emit('insertToken', `<|ACT:vfx=&quot;${vfx.key}&quot;|>`); toast.info(`Inserted <|ACT:vfx=&quot;${vfx.key}&quot;|> token`)"
                       >
                         <div class="i-solar:add-circle-bold-duotone size-3.5 text-primary-500" />
                         <span>Insert</span>

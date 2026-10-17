@@ -83,7 +83,10 @@ Now I have the complete chain. Here is the full trace.
 - **Props:** `modelValue: boolean`, `characterName: string` (lines 9-12)
 - **Emits:** `update:modelValue` and `submit` (lines 14-17):
   ```ts
-  (e: 'submit', payload: { guidance: string, contextDepth: number, count: number, shortReplies: boolean }): void
+  defineEmits<{
+    (e: 'update:modelValue', value: boolean): void
+    (e: 'submit', payload: { guidance: string, contextDepth: number, count: number, shortReplies: boolean }): void
+  }>()
   ```
 - **Guidance textarea** — lines 120-127 (`v-model="guidance"`)
 - **Config controls** — `contextDepth` slider (line 161), `suggestionCount` slider (line 184), `shortReplies` checkbox (line 199), `autoSend` checkbox (line 212), `autoPlayAll` checkbox (line 224), `cacheAligned` checkbox (line 238). All backed by `useLocalStorage` refs (lines 22-30).
@@ -171,7 +174,7 @@ Key points:
   5. Returns `res.options` (line 266) — the array of `{title, message}` choices.
 
   **Default template** `DEFAULT_SYSTEM_PROMPT_TEMPLATE` — lines 70-80:
-  ```
+  ```text
   You are a dialogue writing assistant for an interactive roleplay.
   Your job is to suggest {count} things the USER could say next...
   ```
@@ -221,8 +224,8 @@ After `generateSuggestions` returns, `producerSuggestion.value` is updated in `I
     <ProducerChoiceBubble
       :message="message as any"
       @choose="(choice, isPlaybackOnly) => emit('choose', choice, isPlaybackOnly)"
-      @retry="emit('retry-producer')"
-      @delete="emit('delete-producer')"
+      @retry="emit('retryProducer')"
+      @delete="emit('deleteProducer')"
     />
   </div>
   ```
@@ -230,6 +233,8 @@ After `generateSuggestions` returns, `producerSuggestion.value` is updated in `I
   ```html
   <ChatHistory ... @choose="handleChooseOption" @retry-producer="handleRetryProducer" @delete-producer="handleDeleteProducer" />
   ```
+
+  `ChatHistory` declares its emits in camelCase (`retryProducer`, `deleteProducer`, matching `vue/custom-event-name-casing`); the parent listens using the hyphenated form that `vue/v-on-event-hyphenation` prefers.
 
 **File:** `/Users/richardpinedo/Projects.nosync/airi/airi_dasilva333/packages/stage-ui/src/components/scenarios/chat/ProducerChoiceBubble.vue`
 
@@ -252,7 +257,7 @@ After `generateSuggestions` returns, `producerSuggestion.value` is updated in `I
 
 ### Summary Flow Diagram
 
-```
+```text
 [Magic Wand Button click]
   InteractiveArea.vue:1096  →  isProducerModalOpen = true
     ↓

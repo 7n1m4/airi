@@ -21,7 +21,7 @@ import {
   electronSelectDirectories,
 } from '../../../../shared/eventa'
 
-console.log('[MCP] Settings module loaded')
+console.info('[MCP] Settings module loaded')
 
 const openConfigFile = useElectronEventaInvoke(electronMcpOpenConfigFile)
 const applyAndRestart = useElectronEventaInvoke(electronMcpApplyAndRestart)
@@ -269,7 +269,7 @@ async function refreshStatus() {
   isBusy.value = true
   errorMessage.value = ''
 
-  console.log('[MCP] Refreshing status via Bridge...')
+  console.info('[MCP] Refreshing status via Bridge...')
 
   try {
     const bridge = tryGetMcpToolBridge()
@@ -277,7 +277,7 @@ async function refreshStatus() {
       throw new Error('MCP tool bridge is not available in this runtime.')
     }
 
-    console.log('[MCP] Bridge found:', bridge)
+    console.info('[MCP] Bridge found:', bridge)
 
     // Use Bridge for runtime data
     const [resStatus, resTools, resConfig] = await Promise.allSettled([
@@ -287,7 +287,7 @@ async function refreshStatus() {
     ])
 
     if (resStatus.status === 'fulfilled' && resStatus.value) {
-      console.log('[MCP] Bridge Runtime status loaded:', resStatus.value)
+      console.info('[MCP] Bridge Runtime status loaded:', resStatus.value)
       status.value = resStatus.value
     }
     else if (resStatus.status === 'rejected') {
@@ -296,7 +296,7 @@ async function refreshStatus() {
     }
 
     if (resTools.status === 'fulfilled' && resTools.value) {
-      console.log(`[MCP] Bridge Tools loaded: ${resTools.value.length} tools`)
+      console.info(`[MCP] Bridge Tools loaded: ${resTools.value.length} tools`)
       tools.value = resTools.value
     }
 
@@ -306,7 +306,7 @@ async function refreshStatus() {
 
     // Fallback Mock Data ONLY if IPC totally failed or returned nothing
     if (!status.value?.servers?.length) {
-      console.log('[MCP] No servers found from bridge, loading mock data...')
+      console.info('[MCP] No servers found from bridge, loading mock data...')
       status.value = {
         path: status.value?.path || 'mcp.json (Fallback)',
         updatedAt: Date.now(),
@@ -322,7 +322,7 @@ async function refreshStatus() {
       }
     }
   }
-  catch (error) {
+  catch {
     console.warn('[MCP] Bridge is not yet available, falling back to IPC or mock.')
     // Fallback to direct IPC if bridge is missing
     try {

@@ -156,6 +156,8 @@ function handleChoiceClick(choice: any) {
   datingSimStore.currentSubtitle = ''
 }
 
+const showSelector = ref(false)
+
 async function handleRestart() {
   datingSimStore.activeStoryline = null
   datingSimStore.setVariable('positiveScore', 0)
@@ -190,7 +192,6 @@ function submitCustomPrompt() {
   })
 }
 
-const showSelector = ref(false)
 const showModeSelector = ref(false)
 
 watch(() => datingSimStore.enabled, (enabled) => {

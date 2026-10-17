@@ -82,11 +82,12 @@ flowchart TD
 Instead of dispatching immediately on every `messageCreate` event:
 * Inbound messages for a given channel are held in a **short sliding buffer** (e.g., 2–4 seconds debounce or until a conversational pause is detected).
 * If multiple messages arrive in quick succession from different users, they are compiled into a unified batch turn:
-  ```
+  ```text
   [10:01 PM] Niv: A.
   [10:02 PM] azimuthal: she's a little derp...
   [10:02 PM] I_am_Amikas_Grandfather: Gm
   ```
+
 * This transforms $N$ separate API calls into $1$ contextual evaluation turn.
 
 ### 3.2. Salience & Attention Ecology Gating
@@ -120,7 +121,7 @@ To produce realistic Discord typing patterns (short bursts instead of massive wa
 
 Tracing developer and tester logs from **UPD Dialog 1.0 through 6.0** reveals a comprehensive taxonomy of failure modes encountered when building autonomous characters on a **Triple-Tier LLM Architecture** (specifically local `Qwen3-VL 30B Abliterated` clusters) across Discord, Twitch streams, and multi-modal voice.
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────┐
 │              Chronological Evolution of Group Bot Failure Modes          │
 ├─────────┬───────────────────┬────────────────────────────────────────────┤
@@ -274,7 +275,7 @@ Tracing developer and tester logs from **UPD Dialog 1.0 through 6.0** reveals a 
 
 ## 5. Architectural Specification: Ambient Group Bot Engine
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                         Discord Gateway Listener                         │
 └────────────────────────────────────┬─────────────────────────────────────┘
@@ -482,7 +483,7 @@ Rather than treating response density and multi-bubble pacing purely as a Discor
 
 In `packages/stage-ui/src/components/modules/MessagingDiscord.vue`, a new dedicated tab **`'group'`** is added alongside `'bot'`, `'relay'`, and `'acl'`. It grounds itself in AIRI's existing `/chatmode` engine and character profile cadence settings:
 
-```
+```text
 ┌──────────────────────────────────────────────────────────────────────────┐
 │  Discord Settings                                                        │
 │  [Bot Status]   [★ Group Dynamics]   [Cloud Relay]   [ACL Rules]         │

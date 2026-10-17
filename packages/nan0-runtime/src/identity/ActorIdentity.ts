@@ -16,10 +16,6 @@ function normalizeKey(value: unknown): string {
   return String(value ?? '').trim().toLowerCase()
 }
 
-function canonicalUnknownId(rawActorId: string): string {
-  return normalizeKey(rawActorId) || 'unknown'
-}
-
 function createActor(
   actorId: string,
   displayName: string,

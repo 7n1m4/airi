@@ -24,6 +24,25 @@
   },
   "exclude": [
     "**/dist/**",
-    "node_modules"
+    "node_modules",
+    "apps",
+    "packages",
+    "plugins",
+    "docs",
+    "services",
+    "integrations",
+    "crates",
+    "coverage",
+    "tmp",
+    "scratch",
+    "reports",
+    "memory",
+    "nix",
+    "apps/**",
+    "packages/**",
+    "plugins/**",
+    "docs/**",
+    "services/**",
+    "integrations/**"
   ]
 }

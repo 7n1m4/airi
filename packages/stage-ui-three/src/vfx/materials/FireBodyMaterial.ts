@@ -11,145 +11,6 @@ import { parseVfxColor, sharedUniforms } from '../core/FrameUniforms'
 import { commonGLSL } from '../shaders/common.glsl'
 import { noiseGLSL } from '../shaders/noise.glsl'
 
-export const FlamePass = {
-  FLAME: 0,
-  GLOW: 1,
-} as const
-
-export type FlamePassType = typeof FlamePass[keyof typeof FlamePass]
-
-export const MAX_FLAME_BONES = 40
-
-export interface FireBodySyncState {
-  strength: number
-  seed?: number
-  right?: Vector3
-  forward?: Vector3
-  height?: number
-  flameHeight?: number
-  boneA?: Vector4[]
-  boneB?: Vector4[]
-  boneCount?: number
-  palette?: {
-    core?: string | Color
-    flame?: string | Color
-    ember?: string | Color
-    smoke?: string | Color
-  }
-}
-
-export function createFireBodyMaterial(pass: FlamePassType = FlamePass.FLAME): ShaderMaterial {
-  const glow = pass === FlamePass.GLOW
-
-  const material = new ShaderMaterial({
-    defines: glow
-      ? { FLAME_GLOW: '', FLAME_BONES: MAX_FLAME_BONES }
-      : { FLAME_BONES: MAX_FLAME_BONES },
-    transparent: true,
-    depthWrite: false,
-    depthTest: true,
-    blending: AdditiveBlending,
-    side: DoubleSide,
-    toneMapped: false,
-    uniforms: sharedUniforms({
-      uSeed: { value: 0 },
-      uStrength: { value: 0 },
-
-      uRight: { value: new Vector3(1, 0, 0) },
-      uForward: { value: new Vector3(0, 0, 1) },
-      uBoneA: { value: Array.from({ length: MAX_FLAME_BONES }, () => new Vector4()) },
-      uBoneB: { value: Array.from({ length: MAX_FLAME_BONES }, () => new Vector4()) },
-      uBoneCount: { value: 0 },
-      uThickness: { value: 1.0 },
-      uOffset: { value: 0.02 },
-      uLimbRef: { value: 0.15 },
-      uLimbTaper: { value: 0.85 },
-      uBend: { value: 1.9 },
-      uWrap: { value: 1.1 },
-
-      uRate: { value: 1.35 },
-      uLife: { value: 0.95 },
-      uSprout: { value: 0.35 },
-      uLength: { value: 0.62 },
-      uLengthVary: { value: 0.5 },
-      uLean: { value: 0.16 },
-      uClimb: { value: 0.35 },
-
-      uSway: { value: 0.13 },
-      uSwayPower: { value: 1.4 },
-      uSwayScale: { value: 2.1 },
-      uSwaySpeed: { value: 1.6 },
-
-      uWidth: { value: 0.11 },
-      uWidthScale: { value: glow ? 2.2 : 1.0 },
-      uWidthVary: { value: 0.4 },
-      uTaper: { value: 1.2 },
-      uRootPinch: { value: 0.12 },
-      uBank: { value: 0.55 },
-
-      uSharp: { value: 1.8 },
-      uGlowFalloff: { value: 2.2 },
-      uTear: { value: 0.72 },
-      uTearScale: { value: 5.5 },
-      uTearCross: { value: 1.6 },
-      uTearSpeed: { value: 3.2 },
-      uTearBias: { value: 0.38 },
-      uHeatBias: { value: 1.1 },
-      uCoreSize: { value: 0.8 },
-      uSmoke: { value: 0.6 },
-
-      uFlicker: { value: 0.25 },
-      uFlickerSpeed: { value: 18.0 },
-      uStrandFade: { value: 0.5 },
-      uPassOpacity: { value: glow ? 0.38 : 0.92 },
-      uOpacity: { value: 1.0 },
-      uGlow: { value: glow ? 1.4 : 2.2 },
-      uSoftFade: { value: 0.25 },
-
-      uColorCore: { value: new Color(1, 0.95, 0.75) },
-      uColorFlame: { value: new Color(1, 0.45, 0.08) },
-      uColorEmber: { value: new Color(0.65, 0.12, 0.02) },
-      uColorSmoke: { value: new Color(0.08, 0.05, 0.05) },
-    }),
-    vertexShader: FLAME_VERTEX,
-    fragmentShader: FLAME_FRAGMENT,
-  })
-
-  material.userData.sync = (state: FireBodySyncState) => {
-    const u = material.uniforms
-    u.uStrength.value = state.strength
-    if (state.seed !== undefined)
-      u.uSeed.value = state.seed
-    if (state.right)
-      u.uRight.value.copy(state.right)
-    if (state.forward)
-      u.uForward.value.copy(state.forward)
-    if (state.height)
-      u.uLimbRef.value = state.height * 0.085
-    if (state.flameHeight !== undefined)
-      u.uLength.value = state.flameHeight
-
-    if (state.boneA && state.boneB && state.boneCount !== undefined) {
-      u.uBoneA.value = state.boneA
-      u.uBoneB.value = state.boneB
-      u.uBoneCount.value = state.boneCount
-    }
-
-    if (state.palette) {
-      if (state.palette.core)
-        (u.uColorCore.value as Color).set(parseVfxColor(state.palette.core))
-      if (state.palette.flame)
-        (u.uColorFlame.value as Color).set(parseVfxColor(state.palette.flame))
-      if (state.palette.ember)
-        (u.uColorEmber.value as Color).set(parseVfxColor(state.palette.ember))
-      if (state.palette.smoke)
-        (u.uColorSmoke.value as Color).set(parseVfxColor(state.palette.smoke))
-    }
-  }
-
-  return material
-}
-
 const FLAME_VERTEX = /* glsl */ `
   #define PI  3.141592653589793
   #define TAU 6.283185307179586
@@ -398,3 +259,142 @@ const FLAME_FRAGMENT = /* glsl */ `
     gl_FragColor = vec4(color, alpha);
   }
 `
+
+export const FlamePass = {
+  FLAME: 0,
+  GLOW: 1,
+} as const
+
+export type FlamePassType = typeof FlamePass[keyof typeof FlamePass]
+
+export const MAX_FLAME_BONES = 40
+
+export interface FireBodySyncState {
+  strength: number
+  seed?: number
+  right?: Vector3
+  forward?: Vector3
+  height?: number
+  flameHeight?: number
+  boneA?: Vector4[]
+  boneB?: Vector4[]
+  boneCount?: number
+  palette?: {
+    core?: string | Color
+    flame?: string | Color
+    ember?: string | Color
+    smoke?: string | Color
+  }
+}
+
+export function createFireBodyMaterial(pass: FlamePassType = FlamePass.FLAME): ShaderMaterial {
+  const glow = pass === FlamePass.GLOW
+
+  const material = new ShaderMaterial({
+    defines: glow
+      ? { FLAME_GLOW: '', FLAME_BONES: MAX_FLAME_BONES }
+      : { FLAME_BONES: MAX_FLAME_BONES },
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+    blending: AdditiveBlending,
+    side: DoubleSide,
+    toneMapped: false,
+    uniforms: sharedUniforms({
+      uSeed: { value: 0 },
+      uStrength: { value: 0 },
+
+      uRight: { value: new Vector3(1, 0, 0) },
+      uForward: { value: new Vector3(0, 0, 1) },
+      uBoneA: { value: Array.from({ length: MAX_FLAME_BONES }, () => new Vector4()) },
+      uBoneB: { value: Array.from({ length: MAX_FLAME_BONES }, () => new Vector4()) },
+      uBoneCount: { value: 0 },
+      uThickness: { value: 1.0 },
+      uOffset: { value: 0.02 },
+      uLimbRef: { value: 0.15 },
+      uLimbTaper: { value: 0.85 },
+      uBend: { value: 1.9 },
+      uWrap: { value: 1.1 },
+
+      uRate: { value: 1.35 },
+      uLife: { value: 0.95 },
+      uSprout: { value: 0.35 },
+      uLength: { value: 0.62 },
+      uLengthVary: { value: 0.5 },
+      uLean: { value: 0.16 },
+      uClimb: { value: 0.35 },
+
+      uSway: { value: 0.13 },
+      uSwayPower: { value: 1.4 },
+      uSwayScale: { value: 2.1 },
+      uSwaySpeed: { value: 1.6 },
+
+      uWidth: { value: 0.11 },
+      uWidthScale: { value: glow ? 2.2 : 1.0 },
+      uWidthVary: { value: 0.4 },
+      uTaper: { value: 1.2 },
+      uRootPinch: { value: 0.12 },
+      uBank: { value: 0.55 },
+
+      uSharp: { value: 1.8 },
+      uGlowFalloff: { value: 2.2 },
+      uTear: { value: 0.72 },
+      uTearScale: { value: 5.5 },
+      uTearCross: { value: 1.6 },
+      uTearSpeed: { value: 3.2 },
+      uTearBias: { value: 0.38 },
+      uHeatBias: { value: 1.1 },
+      uCoreSize: { value: 0.8 },
+      uSmoke: { value: 0.6 },
+
+      uFlicker: { value: 0.25 },
+      uFlickerSpeed: { value: 18.0 },
+      uStrandFade: { value: 0.5 },
+      uPassOpacity: { value: glow ? 0.38 : 0.92 },
+      uOpacity: { value: 1.0 },
+      uGlow: { value: glow ? 1.4 : 2.2 },
+      uSoftFade: { value: 0.25 },
+
+      uColorCore: { value: new Color(1, 0.95, 0.75) },
+      uColorFlame: { value: new Color(1, 0.45, 0.08) },
+      uColorEmber: { value: new Color(0.65, 0.12, 0.02) },
+      uColorSmoke: { value: new Color(0.08, 0.05, 0.05) },
+    }),
+    vertexShader: FLAME_VERTEX,
+    fragmentShader: FLAME_FRAGMENT,
+  })
+
+  material.userData.sync = (state: FireBodySyncState) => {
+    const u = material.uniforms
+    u.uStrength.value = state.strength
+    if (state.seed !== undefined)
+      u.uSeed.value = state.seed
+    if (state.right)
+      u.uRight.value.copy(state.right)
+    if (state.forward)
+      u.uForward.value.copy(state.forward)
+    if (state.height)
+      u.uLimbRef.value = state.height * 0.085
+    if (state.flameHeight !== undefined)
+      u.uLength.value = state.flameHeight
+
+    if (state.boneA && state.boneB && state.boneCount !== undefined) {
+      u.uBoneA.value = state.boneA
+      u.uBoneB.value = state.boneB
+      u.uBoneCount.value = state.boneCount
+    }
+
+    if (state.palette) {
+      if (state.palette.core)
+        (u.uColorCore.value as Color).set(parseVfxColor(state.palette.core))
+      if (state.palette.flame)
+        (u.uColorFlame.value as Color).set(parseVfxColor(state.palette.flame))
+      if (state.palette.ember)
+        (u.uColorEmber.value as Color).set(parseVfxColor(state.palette.ember))
+      if (state.palette.smoke)
+        (u.uColorSmoke.value as Color).set(parseVfxColor(state.palette.smoke))
+    }
+  }
+
+  return material
+}

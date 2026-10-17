@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { isStageTamagotchi } from '@proj-airi/stage-shared'
 import { useMotion } from '@vueuse/motion'
-import { computed, nextTick, onMounted, onUnmounted, ref, useAttrs, watch } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 
 import SettingsSearchBar from '../widgets/SettingsSearchBar.vue'
@@ -25,7 +25,8 @@ const emit = defineEmits<{
   (e: 'back'): void
 }>()
 const route = useRoute()
-const attrs = useAttrs()
+
+const finalizedDisableBackButton = ref(props.disableBackButton)
 
 const isRootOfSettings = computed(() => {
   return route.path === '/settings' || route.path === '/settings/' || Boolean(route.meta?.rootOfSettings)
@@ -42,7 +43,6 @@ const shouldShowBackButton = computed(() => {
 })
 
 function handleBack() {
-  console.log('[PageHeader] handleBack clicked. attrs.onBack:', Boolean(attrs.onBack), 'history.state:', window.history.state)
   if (!shouldShowBackButton.value)
     return
 
@@ -52,7 +52,6 @@ function handleBack() {
 const pageHeaderRef = ref<HTMLElement>()
 const title = ref(props.title)
 const subtitle = ref(props.subtitle)
-const finalizedDisableBackButton = ref(props.disableBackButton)
 
 const { apply } = useMotion(pageHeaderRef, {
   initial: { opacity: 0, x: 10, transition: { duration: 50 } },

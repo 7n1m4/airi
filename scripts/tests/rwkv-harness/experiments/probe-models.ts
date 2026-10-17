@@ -4,17 +4,18 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 async function probe() {
   const credsPath = path.resolve(process.cwd(), 'credentials.json')
   const creds = JSON.parse(fs.readFileSync(credsPath, 'utf8'))
 
-  console.log('=== Probing Provider Endpoints for Available Models ===\n')
+  console.info('=== Probing Provider Endpoints for Available Models ===\n')
 
   for (const [key, p] of Object.entries<any>(creds)) {
-    console.log(`\n------------------------------------------------------`)
-    console.log(`[${key}] ${p.name} (${p.baseUrl})`)
-    console.log(`------------------------------------------------------`)
+    console.info(`\n------------------------------------------------------`)
+    console.info(`[${key}] ${p.name} (${p.baseUrl})`)
+    console.info(`------------------------------------------------------`)
 
     const url = `${p.baseUrl.replace(/\/+$/, '')}/models`
     try {
@@ -25,22 +26,22 @@ async function probe() {
         },
       })
       if (!res.ok) {
-        console.log(`  ✗ HTTP ${res.status}: ${res.statusText}`)
+        console.info(`  ✗ HTTP ${res.status}: ${res.statusText}`)
         continue
       }
       const data = await res.json()
       const models = data.data || data.models || data
       if (Array.isArray(models)) {
-        console.log(`  ✓ Found ${models.length} models. Sample:`)
+        console.info(`  ✓ Found ${models.length} models. Sample:`)
         const sample = models.slice(0, 8).map((m: any) => m.id || m.name || m)
-        console.log(`    ${sample.join(', ')}`)
+        console.info(`    ${sample.join(', ')}`)
       }
       else {
-        console.log(`  ✓ Response object:`, Object.keys(data))
+        console.info(`  ✓ Response object:`, Object.keys(data))
       }
     }
     catch (err: any) {
-      console.log(`  ✗ Error probing: ${err.message}`)
+      console.info(`  ✗ Error probing: ${err.message}`)
     }
   }
 }

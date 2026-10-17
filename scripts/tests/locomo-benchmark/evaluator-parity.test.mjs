@@ -264,7 +264,6 @@ describe('pass 7: Jev Multi-Field Triage, Greeting Filtering & Count Normalizati
     // D16:9: "leaving the day after tomorrow evening" -> July 11
     // D16:13: "I plan to return on July 20"
     // True elapsed duration = 9 days (or 10 inclusive days). The reference "19 days" is unmentioned in dialogue.
-    const s16_date = '5:13 pm on 9 July, 2022'
     const departure = new Date('2022-07-11T18:00:00')
     const returnDate = new Date('2022-07-20T18:00:00')
     const elapsedDays = Math.round((returnDate - departure) / (1000 * 60 * 60 * 24))

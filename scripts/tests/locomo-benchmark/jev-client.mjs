@@ -6,6 +6,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
 
@@ -35,7 +36,7 @@ export class TypeSafeJevClient {
    *
    * @param {object|string} state
    * @param {Record<string, object>} questions
-   * @returns {Promise<object>}
+   * @returns {Promise<object>} The Jev System-1 response payload keyed by question.
    */
   async systemOne(state, questions) {
     let statePayload = state

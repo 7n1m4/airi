@@ -148,7 +148,7 @@ export async function extractModelIcon(displayModelId: string): Promise<string |
 
       // Size guard: never inflate warehouse-scale zips for a grid thumbnail.
       if (zipData && typeof zipData.size === 'number' && zipData.size > ICON_ZIP_MAX_BYTES) {
-        console.debug(`[CharacterMediaResolver] Skipping icon extraction for oversized model (${Math.round(zipData.size / 1024 / 1024)}MB > 15MB):`, displayModelId)
+        console.info(`[CharacterMediaResolver] Skipping icon extraction for oversized model (${Math.round(zipData.size / 1024 / 1024)}MB > 15MB):`, displayModelId)
         iconCache.set(displayModelId, '')
         return null
       }
@@ -223,9 +223,15 @@ function rgbToHsv(r: number, g: number, b: number): [number, number, number] {
 
   if (max !== min) {
     switch (max) {
-      case r: h = (g - b) / d + (g < b ? 6 : 0); break
-      case g: h = (b - r) / d + 2; break
-      case b: h = (r - g) / d + 4; break
+      case r:
+        h = (g - b) / d + (g < b ? 6 : 0)
+        break
+      case g:
+        h = (b - r) / d + 2
+        break
+      case b:
+        h = (r - g) / d + 4
+        break
     }
     h /= 6
   }
@@ -243,12 +249,36 @@ function hsvToRgb(h: number, s: number, v: number): [number, number, number] {
   const t = v * (1 - (1 - f) * s)
 
   switch (i % 6) {
-    case 0: r = v; g = t; b = p; break
-    case 1: r = q; g = v; b = p; break
-    case 2: r = p; g = v; b = t; break
-    case 3: r = p; g = q; b = v; break
-    case 4: r = t; g = p; b = v; break
-    case 5: r = v; g = p; b = q; break
+    case 0:
+      r = v
+      g = t
+      b = p
+      break
+    case 1:
+      r = q
+      g = v
+      b = p
+      break
+    case 2:
+      r = p
+      g = v
+      b = t
+      break
+    case 3:
+      r = p
+      g = q
+      b = v
+      break
+    case 4:
+      r = t
+      g = p
+      b = v
+      break
+    case 5:
+      r = v
+      g = p
+      b = q
+      break
   }
   return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)]
 }

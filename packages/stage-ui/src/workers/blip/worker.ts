@@ -72,7 +72,7 @@ function parseCsvLine(line: string): string[] {
 async function loadTaggerTags(modelId: string): Promise<TaggerTag[]> {
   try {
     const url = `https://huggingface.co/${modelId}/resolve/main/selected_tags.csv`
-    console.log(`[Vision Worker] Fetching tag vocabulary from ${url}...`)
+    console.info(`[Vision Worker] Fetching tag vocabulary from ${url}...`)
     const response = await fetch(url)
     if (!response.ok)
       throw new Error(`Failed to fetch tags CSV: ${response.statusText}`)
@@ -170,7 +170,7 @@ defineStreamInvokeHandler(context, blipLoadEvent, toStreamHandler<any, any>(asyn
   const isTagger = modelId.toLowerCase().includes('wd-v1-4') || modelId.toLowerCase().includes('wd14') || modelId.toLowerCase().includes('wd-') || modelId.toLowerCase().includes('tagger')
 
   if (isTagger) {
-    console.log(`[Vision Worker] Loading WD14 Tagger: ${modelId} on ${resolvedDevice}`)
+    console.info(`[Vision Worker] Loading WD14 Tagger: ${modelId} on ${resolvedDevice}`)
     taggerModel = await AutoModel.from_pretrained(modelId, {
       device: resolvedDevice,
       model_file_name: '../model',
@@ -180,7 +180,7 @@ defineStreamInvokeHandler(context, blipLoadEvent, toStreamHandler<any, any>(asyn
     taggerTags = await loadTaggerTags(modelId)
   }
   else {
-    console.log(`[Vision Worker] Loading image-to-text pipeline: ${modelId} on ${resolvedDevice}`)
+    console.info(`[Vision Worker] Loading image-to-text pipeline: ${modelId} on ${resolvedDevice}`)
     imageToTextPipeline = await pipeline('image-to-text', modelId, {
       device: resolvedDevice,
       progress_callback: progressCallback,
@@ -198,7 +198,7 @@ defineInvokeHandler(context, blipProcessEvent, async ({ imageUrl, generalThresho
       throw new Error('Tagger model not loaded. Call load() first.')
 
     const img = await RawImage.fromURL(imageUrl)
-    console.log(`[Vision Worker Debug] img: width=${img.width}, height=${img.height}, channels=${img.channels}, dataLength=${img.data ? img.data.length : 0}, sampleData=[${img.data ? Array.from(img.data.slice(0, 12)).join(', ') : ''}]`)
+    console.info(`[Vision Worker Debug] img: width=${img.width}, height=${img.height}, channels=${img.channels}, dataLength=${img.data ? img.data.length : 0}, sampleData=[${img.data ? Array.from(img.data.slice(0, 12)).join(', ') : ''}]`)
 
     // Composite alpha on white
     const canvas = new RawImage(new Uint8ClampedArray(img.width * img.height * 4), img.width, img.height, 4)
@@ -207,7 +207,10 @@ defineInvokeHandler(context, blipProcessEvent, async ({ imageUrl, generalThresho
     const imgChannels = img.channels
 
     for (let i = 0; i < img.width * img.height; i++) {
-      let r = 255; let g = 255; let b = 255; const a = 255
+      let r = 255
+      let g = 255
+      let b = 255
+      const a = 255
       if (imgChannels === 4) {
         const alpha = imgData[4 * i + 3] / 255.0
         r = Math.round(imgData[4 * i] * alpha + 255 * (1 - alpha))
@@ -250,7 +253,7 @@ defineInvokeHandler(context, blipProcessEvent, async ({ imageUrl, generalThresho
     const paddedImage = new RawImage(paddedData, maxDim, maxDim, 4)
     const resized = await paddedImage.resize(448, 448, { resample: 3 })
     const resizedData = resized.data
-    console.log(`[Vision Worker Debug] resizedData: width=${resized.width}, height=${resized.height}, channels=${resized.channels}, min=${(resizedData as any).reduce((a: number, b: number) => Math.min(a, b), 255)}, max=${(resizedData as any).reduce((a: number, b: number) => Math.max(a, b), 0)}, sampleData=[${Array.from(resizedData.slice(0, 12)).join(', ')}]`)
+    console.info(`[Vision Worker Debug] resizedData: width=${resized.width}, height=${resized.height}, channels=${resized.channels}, min=${(resizedData as any).reduce((a: number, b: number) => Math.min(a, b), 255)}, max=${(resizedData as any).reduce((a: number, b: number) => Math.max(a, b), 0)}, sampleData=[${Array.from(resizedData.slice(0, 12)).join(', ')}]`)
 
     const data = new Float32Array(448 * 448 * 3)
 
@@ -303,7 +306,7 @@ defineInvokeHandler(context, blipProcessEvent, async ({ imageUrl, generalThresho
 
     const allTags = [...characterTags.map(c => c.tag), ...slicedGeneral.map(g => g.tag)]
 
-    console.log('[Vision Worker] Top 25 Predictions:', [...characterTags, ...slicedGeneral]
+    console.info('[Vision Worker] Top 25 Predictions:', [...characterTags, ...slicedGeneral]
       .sort((a, b) => b.prob - a.prob)
       .map(t => `${t.tag}: ${(t.prob * 100).toFixed(1)}%`))
 
@@ -325,5 +328,5 @@ defineInvokeHandler(context, blipUnloadEvent, () => {
   taggerModel = null
   taggerProcessor = null
   taggerTags = []
-  console.log('[Vision Worker] Unloaded local vision models.')
+  console.info('[Vision Worker] Unloaded local vision models.')
 })

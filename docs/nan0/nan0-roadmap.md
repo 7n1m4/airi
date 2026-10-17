@@ -35,7 +35,7 @@ This is AIRI. Do not rewrite AIRI. Become AIRI-native.
 * **Character Runtime:** Build Nan0 as a first-class AIRI character. No forks. No custom runtime. No parallel architecture.
 * **Provider Architecture:** Adopt AIRI providers (LLM, TTS, STT, Vision, Artistry, Embeddings). Never hardcode providers.
 * **Dependency Ownership:** Clearly define:
-  ```
+  ```text
   Runtime ──> Services ──> Providers ──> Modules ──> Character
   ```
   Nan0 should own identity, not infrastructure.
@@ -63,7 +63,7 @@ Replace static prompts. Identity becomes state.
 #### Personality Graph
 Not traits. Relationships.
 *Example:*
-```
+```text
 Suspicion ──> Curiosity ──> Investigation ──> Memory ──> Grudge ──> Future behavior
 ```
 
@@ -100,7 +100,7 @@ Memory should include:
 * Recurring thoughts
 
 #### Layers
-```
+```text
 Working Memory ──> Conversation Memory ──> Journal ──> Relationship Memory ──> Life Story ──> Identity
 ```
 
@@ -141,7 +141,7 @@ Every relationship should include:
 Reduce prompts. Increase cognition.
 
 #### Transition
-```
+```text
 Prompt ──> Runtime
 ```
 Instead of: *"You are suspicious."*
@@ -153,7 +153,7 @@ Nan0 becomes suspicious because memories, experiences, personality, and context 
 Introduce thinking.
 
 #### Steps
-```
+```text
 Observation ──> Interpretation ──> Planning ──> Decision ──> Expression
 ```
 
@@ -196,7 +196,7 @@ Nan0 begins inhabiting the computer.
 * Browser
 
 #### Execution flow
-```
+```text
 Passive observation ──> Curiosity ──> Commentary ──> Action
 ```
 
@@ -206,7 +206,7 @@ Passive observation ──> Curiosity ──> Commentary ──> Action
 Natural conversation.
 
 #### Pipeline
-```
+```text
 Deepgram ──> Reasoning ──> Identity ──> Emotion ──> Speech
 ```
 
@@ -247,7 +247,7 @@ Nan0 should:
 
 ### Phase 12 — Timeline (P2)
 Life becomes continuous. Sessions become chapters.
-```
+```text
 Timeline ──> Events ──> Relationships ──> Life Story ──> Identity
 ```
 

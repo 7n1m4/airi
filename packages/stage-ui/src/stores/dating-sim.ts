@@ -328,7 +328,7 @@ Your output MUST be EXACTLY in this JSON format and nothing else:
       const cardStore = useAiriCardStore()
       const aaEnabled = cardStore.activeCard?.extensions?.airi?.artistry?.autonomousEnabled ?? false
       if (aaEnabled) {
-        console.log('[DatingSim] Skipping generateLiveChoices: Autonomous Artistry is enabled.')
+        console.info('[DatingSim] Skipping generateLiveChoices: Autonomous Artistry is enabled.')
         return
       }
     }
@@ -626,6 +626,8 @@ Generate 4 options for what the User could say next and the subtitle.`
   // Cross-Window Sync for testing and runtime state propagation
   const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('dating-sim-sync') : null
 
+  const isBroadcasting = ref(true)
+
   // Watch state changes in main window to broadcast updates automatically
   if (bc && typeof window !== 'undefined') {
     watch(
@@ -651,8 +653,6 @@ Generate 4 options for what the User could say next and the subtitle.`
       { deep: true },
     )
   }
-
-  const isBroadcasting = ref(true)
 
   if (bc) {
     bc.onmessage = (event) => {
@@ -808,8 +808,10 @@ Generate 4 options for what the User could say next and the subtitle.`
   if (typeof window !== 'undefined' && (window as any).electron) {
     const ipcRenderer = (window as any).electron.ipcRenderer
     if (typeof ipcRenderer.removeAllListeners === 'function') {
-      try { ipcRenderer.removeAllListeners('dating-sim-toggle') }
-      catch (e) {}
+      try {
+        ipcRenderer.removeAllListeners('dating-sim-toggle')
+      }
+      catch { /* listener may not exist yet */ }
     }
     ipcRenderer.on('dating-sim-toggle', () => {
       toggleDatingSim()

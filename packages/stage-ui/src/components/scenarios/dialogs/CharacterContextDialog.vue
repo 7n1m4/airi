@@ -9,7 +9,7 @@ interface Props {
   systemPrompt?: string
 }
 
-const props = defineProps<Props>()
+defineProps<Props>()
 const showDialog = defineModel<boolean>({ default: false })
 </script>
 

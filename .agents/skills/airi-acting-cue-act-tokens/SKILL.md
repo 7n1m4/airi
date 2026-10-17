@@ -14,8 +14,8 @@ The ACT token is the annotation link between LLM output and the avatar's body. T
 
 | Format | Shape | Where it is taught |
 | --- | --- | --- |
-| **Short Format (official)** | `<|ACT:emotion="expression_name"|>` and `<|ACT:motion="action_cue"|>` | `FieldAiGeneratorModal.vue` actingModelExpression default template (:~152-164); Rehearsal Room presets (:442-449 also emit the mixed `emotion="..",motion=".."` combined form) |
-| **JSON Chaining Format** | `<|ACT:{"emotion":{"name":"expression_name","intensity":1},"motion":"action_cue"}|>` | `character-defaults.ts` `DEFAULT_ACTING_MODEL_EXPRESSION_PROMPT` (:5); Field AI Generator `json` template |
+| **Short Format (official)** | `<\|ACT:emotion="expression_name"\|>` and `<\|ACT:motion="action_cue"\|>` | `FieldAiGeneratorModal.vue` actingModelExpression default template (:~152-164); Rehearsal Room presets (:442-449 also emit the mixed `emotion="..",motion=".."` combined form) |
+| **JSON Chaining Format** | `<\|ACT:{"emotion":{"name":"expression_name","intensity":1},"motion":"action_cue"}\|>` | `character-defaults.ts` `DEFAULT_ACTING_MODEL_EXPRESSION_PROMPT` (:5); Field AI Generator `json` template |
 
 The marker parser does not interpret payload syntax — it only splits `<| ... |>` spans. Payload interpretation (emotion name/intensity, motion cue) happens downstream in the cue-execution chain (§4). Both formats coexist deliberately; cards may teach either or both.
 

@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve } from 'node:path'
+import { cwd, argv as processArgv, exit as processExit } from 'node:process'
 import { fileURLToPath } from 'node:url'
 
 const here = fileURLToPath(new URL('.', import.meta.url))
@@ -266,7 +267,7 @@ export function parseUnityScene(scenePath: string = defaultScenePath, guidCache?
       }
       else if (curClassId === 224) {
         if (line.startsWith('  m_AnchoredPosition: {x: ')) {
-          const posMatch = line.match(/x:\s*([^,]+),\s*y:\s*([^}]+)/)
+          const posMatch = line.match(/x:\s*([^,\s]+)\s*,\s*y:\s*([^,\s}]+)/)
           if (posMatch) {
             curProps.anchoredPos = {
               x: Number.parseFloat(posMatch[1]),
@@ -275,7 +276,7 @@ export function parseUnityScene(scenePath: string = defaultScenePath, guidCache?
           }
         }
         else if (line.startsWith('  m_SizeDelta: {x: ')) {
-          const sizeMatch = line.match(/x:\s*([^,]+),\s*y:\s*([^}]+)/)
+          const sizeMatch = line.match(/x:\s*([^,\s]+)\s*,\s*y:\s*([^,\s}]+)/)
           if (sizeMatch) {
             curProps.sizeDelta = {
               x: Number.parseFloat(sizeMatch[1]),
@@ -550,16 +551,16 @@ export function generateMarkdownHierarchy(graph: SceneGraph, sceneName = 'Mate E
 // CLI Runner
 // -----------------------------------------------------------------------------
 
-export function runCli(argv: string[] = process.argv.slice(2)) {
+export function runCli(argv: string[] = processArgv.slice(2)) {
   const cmd = argv[0] || 'help'
   const arg1 = argv[1]
   const arg2 = argv[2]
 
   const sceneFile = argv.find(a => a.endsWith('.unity')) || defaultScenePath
 
-  console.log(`[scene-tree] Inspecting scene: ${basename(sceneFile)}...`)
+  console.info(`[scene-tree] Inspecting scene: ${basename(sceneFile)}...`)
   const graph = parseUnityScene(sceneFile)
-  console.log(`[scene-tree] Indexed ${graph.gameObjects.size} GameObjects in ${graph.parseTimeMs}ms.\n`)
+  console.info(`[scene-tree] Indexed ${graph.gameObjects.size} GameObjects in ${graph.parseTimeMs}ms.\n`)
 
   switch (cmd) {
     case 'tree': {
@@ -568,39 +569,39 @@ export function runCli(argv: string[] = process.argv.slice(2)) {
         const matches = findNodes(graph, arg1)
         if (matches.length === 0) {
           console.error(`❌ No GameObject found matching: "${arg1}"`)
-          process.exit(1)
+          processExit(1)
         }
         if (matches.length > 1) {
-          console.log(`⚠️ Multiple matches found for "${arg1}". Showing first match:`)
+          console.info(`⚠️ Multiple matches found for "${arg1}". Showing first match:`)
           for (const m of matches) {
-            console.log(`  - ${m.path} [ID: ${m.go.id}]`)
+            console.info(`  - ${m.path} [ID: ${m.go.id}]`)
           }
-          console.log('')
+          console.info('')
         }
         const target = matches[0]
         if (!target.tf) {
           console.error(`❌ Matched GameObject has no Transform: ${target.go.name}`)
-          process.exit(1)
+          processExit(1)
         }
         rootTfId = target.tf.id
       }
 
       const depth = arg2 ? Number.parseInt(arg2, 10) : 10
       const treeLines = renderSubtree(graph, rootTfId, '', true, depth)
-      console.log(treeLines.join('\n'))
+      console.info(treeLines.join('\n'))
       break
     }
 
     case 'find': {
       if (!arg1) {
         console.error('Usage: scene-tree find <name|guid|id>')
-        process.exit(1)
+        processExit(1)
       }
       const matches = findNodes(graph, arg1)
-      console.log(`Found ${matches.length} matches for "${arg1}":\n`)
+      console.info(`Found ${matches.length} matches for "${arg1}":\n`)
       for (const m of matches) {
-        console.log(`📍 ${formatNodeSummary(graph, m.go, m.tf)}`)
-        console.log(`   Breadcrumb: ${m.path}\n`)
+        console.info(`📍 ${formatNodeSummary(graph, m.go, m.tf)}`)
+        console.info(`   Breadcrumb: ${m.path}\n`)
       }
       break
     }
@@ -609,20 +610,20 @@ export function runCli(argv: string[] = process.argv.slice(2)) {
     case 'ancestors': {
       if (!arg1) {
         console.error('Usage: scene-tree path <name|id>')
-        process.exit(1)
+        processExit(1)
       }
       const matches = findNodes(graph, arg1)
       if (matches.length === 0) {
         console.error(`❌ No GameObject found matching: "${arg1}"`)
-        process.exit(1)
+        processExit(1)
       }
       const target = matches[0]
       const chain = getAncestorChain(graph, target.go)
-      console.log(`Ancestor chain for "${target.go.name}" (Root to Leaf):\n`)
+      console.info(`Ancestor chain for "${target.go.name}" (Root to Leaf):\n`)
       chain.forEach((item, idx) => {
         const indent = '  '.repeat(idx)
         const arrow = idx === 0 ? 'Root: ' : '└── '
-        console.log(`${indent}${arrow}${item.go.name} [ID:${item.go.id}] [${item.go.isActive ? 'Active' : 'INACTIVE ⚠️'}]`)
+        console.info(`${indent}${arrow}${item.go.name} [ID:${item.go.id}] [${item.go.isActive ? 'Active' : 'INACTIVE ⚠️'}]`)
       })
       break
     }
@@ -638,41 +639,41 @@ export function runCli(argv: string[] = process.argv.slice(2)) {
         if (tf.isRectTransform)
           rectCount++
       }
-      console.log(`=== Scene Statistics ===`)
-      console.log(`Total GameObjects:     ${graph.gameObjects.size}`)
-      console.log(`  - Active:            ${activeCount}`)
-      console.log(`  - Inactive:          ${graph.gameObjects.size - activeCount}`)
-      console.log(`Total Transforms:      ${graph.transforms.size} (${rectCount} RectTransforms / 2D UI)`)
-      console.log(`Total MonoBehaviours:  ${graph.monoBehaviours.size}`)
-      console.log(`Root Scene Trees:      ${graph.rootTransformIds.length}`)
+      console.info(`=== Scene Statistics ===`)
+      console.info(`Total GameObjects:     ${graph.gameObjects.size}`)
+      console.info(`  - Active:            ${activeCount}`)
+      console.info(`  - Inactive:          ${graph.gameObjects.size - activeCount}`)
+      console.info(`Total Transforms:      ${graph.transforms.size} (${rectCount} RectTransforms / 2D UI)`)
+      console.info(`Total MonoBehaviours:  ${graph.monoBehaviours.size}`)
+      console.info(`Root Scene Trees:      ${graph.rootTransformIds.length}`)
       break
     }
 
     case 'dump-md': {
-      const outPath = arg1 ? resolve(process.cwd(), arg1) : resolve(rootStageMate, '..', '..', 'docs', 'design-mate-scene-hierarchy.md')
-      console.log(`Exporting Markdown hierarchy to: ${outPath}...`)
+      const outPath = arg1 ? resolve(cwd(), arg1) : resolve(rootStageMate, '..', '..', 'docs', 'design-mate-scene-hierarchy.md')
+      console.info(`Exporting Markdown hierarchy to: ${outPath}...`)
       const md = generateMarkdownHierarchy(graph, basename(sceneFile))
       const outDir = resolve(outPath, '..')
       if (!existsSync(outDir)) {
         mkdirSync(outDir, { recursive: true })
       }
       writeFileSync(outPath, md, 'utf8')
-      console.log(`✅ Successfully wrote ${md.length} bytes to ${outPath}`)
+      console.info(`✅ Successfully wrote ${md.length} bytes to ${outPath}`)
       break
     }
 
     default:
-      console.log('Usage: tsx scripts/scene-tree.ts <command> [args]')
-      console.log('Commands:')
-      console.log('  tree [nameOrId] [maxDepth]   - Print visual hierarchy tree for root or target object')
-      console.log('  find <query>                 - Search by GameObject name, Script class, GUID, or ID')
-      console.log('  path <nameOrId>              - Show full ancestor chain (root-to-leaf) and active states')
-      console.log('  stats                        - Display total GameObject, Transform, and script counts')
-      console.log('  dump-md [outPath]            - Generate complete Markdown documentation of the scene')
+      console.info('Usage: tsx scripts/scene-tree.ts <command> [args]')
+      console.info('Commands:')
+      console.info('  tree [nameOrId] [maxDepth]   - Print visual hierarchy tree for root or target object')
+      console.info('  find <query>                 - Search by GameObject name, Script class, GUID, or ID')
+      console.info('  path <nameOrId>              - Show full ancestor chain (root-to-leaf) and active states')
+      console.info('  stats                        - Display total GameObject, Transform, and script counts')
+      console.info('  dump-md [outPath]            - Generate complete Markdown documentation of the scene')
       break
   }
 }
 
-if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+if (processArgv[1] && fileURLToPath(import.meta.url) === processArgv[1]) {
   runCli()
 }

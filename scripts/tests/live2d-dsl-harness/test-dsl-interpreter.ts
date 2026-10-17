@@ -20,6 +20,8 @@
 import type { DslMotionGroup } from '../../../packages/live2d-runtime/src/dsl/types'
 import type { Live2DRuntimePorts } from '../../../packages/live2d-runtime/src/ports'
 
+import process from 'node:process'
+
 import { fileURLToPath } from 'node:url'
 
 import * as fs from 'node:fs'
@@ -49,7 +51,7 @@ let passes = 0
 function assert(condition: boolean, label: string, detail?: string): void {
   if (condition) {
     passes += 1
-    console.log(`  PASS ${label}`)
+    console.info(`  PASS ${label}`)
   }
   else {
     failures += 1
@@ -66,7 +68,7 @@ function assertEqual<T>(actual: T, expected: T, label: string): void {
 }
 
 function section(title: string): void {
-  console.log(`\n== ${title}`)
+  console.info(`\n== ${title}`)
 }
 
 // ---------------------------------------------------------------------------
@@ -187,6 +189,7 @@ section('Scenario 1: fixture 2262182171 (Flandre) — Taphead / Tapbody intimacy
   const beforeGate = host.intimacy
   vm.dispatch('Tapbody')
   assert(!host.motions.some(m => m.group === 'B40'), 'Tapbody at intimacy 10 never selects the Min:20 command entry')
+  assertEqual(host.intimacy, beforeGate, 'Tapbody below the Min:20 gate carries no Bonus — intimacy unchanged')
 
   // Raise past the Min:20 gate and the first ladder entry becomes reachable.
   host.intimacy = 25
@@ -499,6 +502,6 @@ section('Scenario 4: authored DSL — DoubleClick guard + Choices menu + command
 // Report.
 // ===========================================================================
 
-console.log(`\n== DSL harness result: ${passes} passed, ${failures} failed`)
+console.info(`\n== DSL harness result: ${passes} passed, ${failures} failed`)
 if (failures > 0)
   process.exit(1)

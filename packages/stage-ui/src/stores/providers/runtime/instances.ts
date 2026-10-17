@@ -10,6 +10,7 @@ import type {
 } from '@xsai-ext/providers/utils'
 import type { Ref } from 'vue'
 
+import { keylessOrOptionalKey } from '../../../libs/providers/types'
 import type { ProviderMetadata } from '../types'
 
 export interface ProviderInstancesDeps {
@@ -79,7 +80,7 @@ export function createProviderInstances(deps: ProviderInstancesDeps) {
     // Everything else must present a non-empty credential BEFORE the SDK is
     // instantiated so client code receives an immediate, localized error
     // instead of a network round-trip that ends in a 401.
-    const noCredentials = metadata.requiresCredentials === false || metadata.deployment === 'local' || providerId === 'browser-web-speech-api'
+    const noCredentials = keylessOrOptionalKey(metadata.requiresCredentials) || metadata.deployment === 'local' || providerId === 'browser-web-speech-api'
 
     let config = deps.providerInstanceOptions?.(providerId, targetInstanceId)
       ?? deps.getProviderCredentials()[providerId]

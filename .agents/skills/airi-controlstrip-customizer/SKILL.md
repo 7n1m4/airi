@@ -14,7 +14,7 @@ The Control Strip Customizer is the **user-facing "Customizer"** — a floating,
 
 ## 1. Architecture & Cross-Window State Sync
 
-```
+```text
   [ Control Strip / Tray / Hotkey ]
                  │
                  ▼ (via eventa IPC)
@@ -53,7 +53,7 @@ The Control Strip Customizer is the **user-facing "Customizer"** — a floating,
 - **`packages/stage-ui/src/stores/settings/settings.ts`**: Stage viewport coordinates, drag/tactile modes, caption docking, and window stay-on-top flags.
 
 ### Authoritative Design & Architecture Documents
-- **`docs/design-model-customizer.md`**: Design document defining `ModelCustomizer.vue` separation of concerns, settings panel adoption matrix (`live2d.vue`, `mmd.vue`, `spine.vue`, `vrm.vue`), Rehearsal Room (`chat_rehearsal.vue`) sandbox integration, `@insert-token` events, and transient motion previewing.
+- **`docs/design-model-customizer.md`**: Design document defining `ModelCustomizer.vue` separation of concerns, settings panel adoption matrix (`live2d.vue`, `mmd.vue`, `spine.vue`, `vrm.vue`), Rehearsal Room (`chat_rehearsal.vue`) sandbox integration, `@insertToken` events, and transient motion previewing.
 - **`docs/catalog-control-strip.md`**: Master catalog of control strip items, customizer rows, and default visibility flags.
 - [docs/project-control-strip-rfc.md](docs/project-control-strip-rfc.md) — Control strip RFC.
 - [docs/design-stage-ui-context-bridge-control-island.md](docs/design-stage-ui-context-bridge-control-island.md) — Stage UI context bridge / control island architecture.

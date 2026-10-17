@@ -74,7 +74,7 @@ The toolbar is a compact, frosted pill anchored at `top-2.5 right-2.5` (`z-50`) 
 
 When triggered, a floating frosted-glass panel (`bg-neutral-50/30 dark:bg-neutral-900/30 backdrop-blur-xl border border-neutral-200/20 rounded-2xl p-3 shadow-xl`) opens at `right-3 top-10`:
 
-```
+```text
 ┌──────────────────────────────────────────────┐
 │  [ + / ⧉ ] Mode Toggle      [ 👁⃥ ] Hide Stage │ ◄── Row 1
 ├──────────────────────────────────────────────┤

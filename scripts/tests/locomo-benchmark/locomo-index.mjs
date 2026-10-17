@@ -107,7 +107,6 @@ export class LocomoMemoryIndex {
     const conversation = convData.conversation || {}
     const observations = convData.observation || {}
     const sessionSummaries = convData.session_summary || {}
-    const eventSummaries = convData.event_summary || {}
 
     // 1. Layer: RAW (Dialogue turns)
     for (const [key, val] of Object.entries(conversation)) {

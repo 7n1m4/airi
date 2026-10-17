@@ -63,6 +63,31 @@ export function isModelProvider(providerInstance: ProviderInstance): providerIns
   return false
 }
 
+/**
+ * `false` only for a strictly keyless provider: one that accepts no API key at
+ * all. An optional-key provider still takes a key, so UIs must keep the field.
+ */
+export function isKeylessProvider(requiresCredentials: ProviderDefinition['requiresCredentials']): boolean {
+  return requiresCredentials === false
+}
+
+/**
+ * Provider that runs without a key but accepts one to unlock paid models or
+ * higher quotas (Kilo, and future free-tier gateways).
+ */
+export function isOptionalKeyProvider(requiresCredentials: ProviderDefinition['requiresCredentials']): boolean {
+  return typeof requiresCredentials === 'object' && requiresCredentials !== null && 'optional' in requiresCredentials
+}
+
+/**
+ * Whether a provider is usable without any key present: either strictly keyless
+ * or optional-keyed. Used by every credential gate that must decide "can this
+ * provider run right now?".
+ */
+export function keylessOrOptionalKey(requiresCredentials: ProviderDefinition['requiresCredentials']): boolean {
+  return isKeylessProvider(requiresCredentials) || isOptionalKeyProvider(requiresCredentials)
+}
+
 export interface ProviderExtraMethods<TConfig> {
   listModels?: (config: TConfig, provider: ProviderInstance) => Promise<ModelInfo[]>
   listVoices?: (config: TConfig, provider: ProviderInstance) => Promise<VoiceInfo[]>
@@ -129,7 +154,14 @@ export interface VoiceInfo {
 export interface ProviderDefinition<TConfig extends any = any> {
   id: string
   order?: number
-  requiresCredentials?: boolean
+  /**
+   * Credential contract for this provider:
+   * - `true` (default for cloud): an API key is required.
+   * - `false`: keyless only, no key field is offered.
+   * - `{ optional: true }`: works without a key, but a key unlocks paid/higher
+   *   quotas. UIs offer the key field as optional instead of hiding it.
+   */
+  requiresCredentials?: boolean | { optional: true }
   tasks: string[]
   nameLocalize: (ctx: { t: (input: string) => string }) => string // i18n key for provider name
   name: string // Default name (fallback)

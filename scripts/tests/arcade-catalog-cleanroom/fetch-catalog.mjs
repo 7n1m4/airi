@@ -6,8 +6,15 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { fileURLToPath } from 'node:url'
+
+// NOTICE: eslint's no-console only allows warn/error/info. This fetch tool's
+// entire output is user-facing prose, so every log line routes through a helper.
+function log(...args) {
+  console.info(...args)
+}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = path.join(__dirname, 'data')
@@ -18,7 +25,7 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 async function fetchTop1000Games() {
-  console.log('Connecting to Internet Archive Advanced Search API...')
+  log('Connecting to Internet Archive Advanced Search API...')
   const query = 'collection:(softwarelibrary_msdos_games) AND mediatype:(software)'
   const fields = ['identifier', 'title', 'year', 'downloads', 'description', 'genre'].join(',')
 
@@ -34,8 +41,8 @@ async function fetchTop1000Games() {
   const totalFound = json.response?.numFound || 0
   const docs = json.response?.docs || []
 
-  console.log(`Archive.org Collection Size: ${totalFound} total items`)
-  console.log(`Fetched top ${docs.length} games (sorted by downloads desc)`)
+  log(`Archive.org Collection Size: ${totalFound} total items`)
+  log(`Fetched top ${docs.length} games (sorted by downloads desc)`)
 
   const normalized = docs.map((doc, idx) => ({
     rank: idx + 1,
@@ -47,7 +54,7 @@ async function fetchTop1000Games() {
   }))
 
   fs.writeFileSync(OUTPUT_FILE, JSON.stringify(normalized, null, 2), 'utf8')
-  console.log(`Saved catalog to ${OUTPUT_FILE} (${(fs.statSync(OUTPUT_FILE).size / 1024 / 1024).toFixed(2)} MB)`)
+  log(`Saved catalog to ${OUTPUT_FILE} (${(fs.statSync(OUTPUT_FILE).size / 1024 / 1024).toFixed(2)} MB)`)
 }
 
 fetchTop1000Games().catch((err) => {

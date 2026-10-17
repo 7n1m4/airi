@@ -32,7 +32,7 @@ Transform the existing `selective-sync-panel.vue` from a simple tree checklist i
 ### Option B: Integrated "Cloud Mode" inside the Model Selector (Selected)
 Introduce a "Cloud" or "Remote Catalog" tab/toggle directly into the main `model-selector.vue` component.
 
-```
+```text
 +-------------------------------------------------------------+
 | Model Selector                                              |
 | [ Library ]  [ Explore ]  [ Cloud / Remote ] <--- New Tab   |

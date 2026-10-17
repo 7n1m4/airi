@@ -503,7 +503,7 @@ export function createSpeechMetadata(t: ComposerTranslation): Record<string, Pro
                         codec.sample_rate,
                         codec.channels,
                       )
-                      console.log('[MOSS Provider] Loaded bundled starter voice:', voiceId, 'planar length:', promptAudioWaveform.length)
+                      console.info('[MOSS Provider] Loaded bundled starter voice:', voiceId, 'planar length:', promptAudioWaveform.length)
                     }
                   }
                   else {
@@ -518,10 +518,10 @@ export function createSpeechMetadata(t: ComposerTranslation): Record<string, Pro
                       })
                       const metadata = await mossVoiceProfilesStore.getItem<any>(voiceId)
                       promptAudioCodes = metadata?.promptAudioCodes
-                      console.log('[MOSS Provider] voiceId:', voiceId, 'cached codes:', !!promptAudioCodes)
+                      console.info('[MOSS Provider] voiceId:', voiceId, 'cached codes:', !!promptAudioCodes)
                       if (!promptAudioCodes) {
                         const audioBlob = await mossVoiceProfileBlobsStore.getItem<Blob>(voiceId)
-                        console.log('[MOSS Provider] voiceId:', voiceId, 'found blob:', !!audioBlob)
+                        console.info('[MOSS Provider] voiceId:', voiceId, 'found blob:', !!audioBlob)
                         if (audioBlob) {
                           const buffer = await audioBlob.arrayBuffer()
                           const codec = adapter.codecConfig ?? { sample_rate: 16000, channels: 1 }
@@ -531,7 +531,7 @@ export function createSpeechMetadata(t: ComposerTranslation): Record<string, Pro
                             codec.sample_rate,
                             codec.channels,
                           )
-                          console.log('[MOSS Provider] conditioned planar length:', promptAudioWaveform.length, 'channels:', promptAudioChannels)
+                          console.info('[MOSS Provider] conditioned planar length:', promptAudioWaveform.length, 'channels:', promptAudioChannels)
                         }
                       }
                     }

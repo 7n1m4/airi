@@ -269,7 +269,7 @@ async function generateAndSwap() {
       try {
         options = JSON.parse(aiComfyParams.value || '{}')
       }
-      catch (e) {
+      catch {
         options = {}
       }
       model = artistryStore.comfyuiActiveWorkflow
@@ -515,9 +515,10 @@ function applyEraserPurge() {
     const [tr, tg, tb] = eraserPickedColor.value!
     const tol = eraserTolerance.value
 
-    let count = 0
     for (let i = 0; i < data.length; i += 4) {
-      const r = data[i]; const g = data[i + 1]; const b = data[i + 2]
+      const r = data[i]
+      const g = data[i + 1]
+      const b = data[i + 2]
       const diff = Math.sqrt(
         (r - tr) ** 2
         + (g - tg) ** 2
@@ -526,7 +527,6 @@ function applyEraserPurge() {
 
       if (diff <= tol) {
         data[i + 3] = 0
-        count++
       }
     }
     ctx.putImageData(imageData, 0, 0)

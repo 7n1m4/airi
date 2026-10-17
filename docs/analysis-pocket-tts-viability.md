@@ -12,7 +12,7 @@ Following our empirical victory with **MOSS-TTS-Nano** (utilizing **Prompt Audio
 
 Pocket TTS is a 2-stage neural text-to-speech system optimized for low-latency CPU execution:
 
-```
+```text
 [Target Text + Reference Audio (.wav)]
           │
           ├──> 1. Text Conditioner (Phoneme & Language Embeddings)
@@ -103,7 +103,7 @@ To guarantee sub-second latency across all voice clone generations:
 
 All voice files are hosted on the **gated** `kyutai/pocket-tts` Hugging Face repo at:
 
-```
+```text
 https://huggingface.co/kyutai/pocket-tts/resolve/main/languages/{langFolder}/embeddings/{voice}.safetensors
 ```
 

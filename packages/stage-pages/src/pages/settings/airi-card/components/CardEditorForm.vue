@@ -118,7 +118,7 @@ const CardCreationTabStaging = defineAsyncComponent({
 
 function kebabcase(str: string): string {
   return str
-    .replace(/([a-z0-9]|(?=[A-Z]))([A-Z])/g, '$1-$2')
+    .replace(/([A-Z])/g, ' $1')
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
@@ -152,6 +152,13 @@ const { availableExpressions: live2dExpressions } = storeToRefs(live2dStore)
 const { availableMorphs: mmdMorphs, availableMotions: mmdMotions, customMotions: mmdCustomMotions } = storeToRefs(mmdStore)
 const { availableAnimations: spineAnimations } = storeToRefs(spineStore)
 
+// Initialization tracking: prevent watchers from clearing model selections during card rehydration
+const initializingDepth = ref(0)
+const isInitializing = computed(() => initializingDepth.value > 0)
+
+// Declared before isLive2d/isSpine/isMmd, which read it exclusively
+const selectedDisplayModelId = ref<string>('')
+
 // Determine if we're in edit mode
 const isEditMode = computed(() => !!props.cardId)
 
@@ -182,17 +189,12 @@ const isMmd = computed(() => {
 // Chat model favorites reference (to validate custom favorites without wiping them)
 const chatFavorites = useLocalStorage<{ provider: string, model: string }[]>('airi:chat-model-favorites', [])
 
-// Initialization tracking: prevent watchers from clearing model selections during card rehydration
-const initializingDepth = ref(0)
-const isInitializing = computed(() => initializingDepth.value > 0)
-
 // Modules configuration
 const selectedConsciousnessProvider = ref<string>('')
 const selectedConsciousnessModel = ref<string>('')
 const selectedSpeechProvider = ref<string>('')
 const selectedSpeechModel = ref<string>('')
 const selectedSpeechVoiceId = ref<string>('')
-const selectedDisplayModelId = ref<string>('')
 const selectedActiveBackgroundId = ref<string>('none')
 const cognitivePipelineEnabled = ref<boolean>(false)
 const firstHopProcessor = ref<'none' | 'local_nan0' | 'universe_rag'>('none')
@@ -752,14 +754,6 @@ function insertSpeechMannerism(id: string) {
   selectedActingSpeechMannerismPrompt.value = `${selectedActingSpeechMannerismPrompt.value}${suffix}${snippet}`
 }
 
-onMounted(async () => {
-  toast.dismiss('character-config-opening')
-  if (cardsLoading.value) {
-    await until(cardsLoading).toBe(false)
-  }
-  card.value = initializeCard()
-})
-
 // Defer loading provider models/voices until user navigates away from the Identity tab
 let initialProvidersLoaded = false
 async function ensureProviderModelsAndVoices() {
@@ -1272,7 +1266,7 @@ async function saveCard(card: Card): Promise<boolean> {
     journalIntrusionPrompt: selectedJournalIntrusionPrompt.value,
   }
 
-  console.log('[CardCreationDialog] 📊 DUMPING SAVED CHARACTER PROFILE GRAPH:', {
+  console.info('[CardCreationDialog] 📊 DUMPING SAVED CHARACTER PROFILE GRAPH:', {
     isEditMode: isEditMode.value,
     cardId: props.cardId,
     name: cardWithModules.name,
@@ -1495,7 +1489,7 @@ function initializeCard(): Card {
     eventLedgerDomains.value = airiExt?.eventLedger?.domains ?? ['vision', 'tools', 'chat', 'memory', 'discord']
 
     // Short-Term Memory (24h Daily Summaries)
-    shortTermMemoryEnabled.value = airiExt?.shortTermMemory ? true : true
+    shortTermMemoryEnabled.value = airiExt?.shortTermMemory?.enabled ?? true
     shortTermMemoryWindowSize.value = airiExt?.shortTermMemory?.windowSize ?? 3
     shortTermMemoryTokenBudget.value = airiExt?.shortTermMemory?.tokenBudgetPerDay ?? 1000
 
@@ -1545,6 +1539,14 @@ function initializeCard(): Card {
 }
 
 const card = ref<Card>(initializeCard())
+
+onMounted(async () => {
+  toast.dismiss('character-config-opening')
+  if (cardsLoading.value) {
+    await until(cardsLoading).toBe(false)
+  }
+  card.value = initializeCard()
+})
 
 // Reinitialize when cardId changes
 watch(() => props.cardId, async () => {

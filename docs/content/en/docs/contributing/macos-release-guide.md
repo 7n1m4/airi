@@ -57,7 +57,7 @@ Ensure all manifests, package definitions, and documentation links are synchroni
 1. **Desktop Version (`apps/stage-tamagotchi/package.json`)**:
    Update `version` using the date-stamped stable format:
    ```json
-   "version": "[major].[minor].[patch]-stable.[YYYYMMDD]"
+   { "version": "<major>.<minor>.<patch>-stable.<YYYYMMDD>" }
    ```
    *(Note: The release script checks if the date stamp matches today's date to avoid multi-machine tag drift.)*
 

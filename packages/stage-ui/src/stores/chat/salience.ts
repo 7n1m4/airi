@@ -128,7 +128,7 @@ export const useChatSalienceStore = defineStore('chat-salience', () => {
       controlMean: control.reduce((a, b) => a + b, 0) / control.length,
     }
 
-    console.log('[SalienceGate] turn probe metrics:', {
+    console.info('[SalienceGate] turn probe metrics:', {
       turnPreview: turnText.slice(0, 40),
       lateLayerDeltas: late.map(d => d.toFixed(4)),
       lateLayerMean: lateMean.toFixed(4),

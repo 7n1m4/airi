@@ -9,10 +9,12 @@
  *   tsx scripts/tests/test-mcp-registry-health.ts
  */
 
+import process from 'node:process'
+
 const REGISTRY_BASE_URL = 'https://registry.modelcontextprotocol.io/v0.1/servers'
 
 async function probeMcpRegistry() {
-  console.log(`🔌 [MCP Registry Probe] Probing ${REGISTRY_BASE_URL}...`)
+  console.info(`🔌 [MCP Registry Probe] Probing ${REGISTRY_BASE_URL}...`)
 
   // Step 1: Lightweight HEAD request for endpoint liveness & deprecation headers
   const headStart = performance.now()
@@ -44,7 +46,7 @@ async function probeMcpRegistry() {
     console.warn(`⚠️ [MCP Registry Probe] Deprecation warning detected! Sunset: ${sunsetHeader || 'N/A'}, Deprecation: ${deprecationHeader || 'N/A'}`)
   }
 
-  console.log(`  ✓ HEAD liveness check passed in ${headLatency}ms (HTTP ${headRes.status})`)
+  console.info(`  ✓ HEAD liveness check passed in ${headLatency}ms (HTTP ${headRes.status})`)
 
   // Step 2: Sample GET request verifying latest version filter and schema
   const getUrl = new URL(REGISTRY_BASE_URL)
@@ -107,11 +109,11 @@ async function probeMcpRegistry() {
     process.exit(1)
   }
 
-  console.log(`  ✓ GET payload & sample structure check passed in ${getLatency}ms.`)
-  console.log(`    - Sample server: "${sample.name}" (Title: ${sample.title || 'N/A'}, Version: ${sample.version})`)
-  console.log(`    - Detected transports: ${hasValidPackage ? 'Packages: YES' : 'Packages: NO'} | ${hasValidRemote ? 'Remotes: YES' : 'Remotes: NO'}`)
+  console.info(`  ✓ GET payload & sample structure check passed in ${getLatency}ms.`)
+  console.info(`    - Sample server: "${sample.name}" (Title: ${sample.title || 'N/A'}, Version: ${sample.version})`)
+  console.info(`    - Detected transports: ${hasValidPackage ? 'Packages: YES' : 'Packages: NO'} | ${hasValidRemote ? 'Remotes: YES' : 'Remotes: NO'}`)
 
-  console.log(`✅ [MCP Registry Probe] Official MCP Registry sample payload compatibility check passed (Total RTT: ${headLatency + getLatency}ms)`)
+  console.info(`✅ [MCP Registry Probe] Official MCP Registry sample payload compatibility check passed (Total RTT: ${headLatency + getLatency}ms)`)
 }
 
 probeMcpRegistry().catch((err) => {

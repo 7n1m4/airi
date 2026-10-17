@@ -1,5 +1,5 @@
 # Desktop AI Companions Landscape (2026)
-### An Evidence-Backed Architectural Comparison Across 11 Open & Community Runtimes
+## An Evidence-Backed Architectural Comparison Across 11 Open & Community Runtimes
 
 > **Maintainer Affiliation & Disclosure:**
 > This comparison is authored and maintained by the creator of the `dasilva333/airi` fork. It was born out of frustration with superficial marketing checklists (e.g. *"Supports VRM: Yes/No"* or *"Has Memory: Yes/No"*) that conceal fundamental architectural differences—such as whether speech synthesis runs in-process on WebGPU versus requiring an external background server daemon, or whether memory is a flat sliding context window versus a structured temporal hierarchy.

@@ -11,7 +11,9 @@
  * covers cases where the attribute did not stick.
  */
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)) }
+function sleep(ms) {
+  return new Promise(r => setTimeout(r, ms))
+}
 
 /** Ink/color analysis: draw the sketch canvas into a 2D canvas and sample it. */
 function captureAndAnalyze(srcCanvas, size) {
@@ -28,10 +30,17 @@ function captureAndAnalyze(srcCanvas, size) {
   for (let y = 0; y < size; y += 2) {
     for (let x = 0; x < size; x += 2) {
       const i = (y * size + x) * 4
-      const r = data[i]; const g = data[i + 1]; const b = data[i + 2]
+      const r = data[i]
+      const g = data[i + 1]
+      const b = data[i + 2]
       const key = ((r >> 4) << 8) | ((g >> 4) << 4) | (b >> 4)
       const e = buckets.get(key)
-      if (e) { e.count++; e.r += r; e.g += g; e.b += b }
+      if (e) {
+        e.count++
+        e.r += r
+        e.g += g
+        e.b += b
+      }
       else {
         buckets.set(key, { count: 1, r, g, b })
       }
@@ -78,7 +87,7 @@ window.__renderReady = false
  * setup(); looping sketches paint into this window); `timeoutMs`: hard cap.
  * `frames`: reserved for a future per-frame budget (currently unused).
  */
-window.__renderSketch = async ({ code, size = 600, frames = 150, settleMs = 2000, timeoutMs = 30000 }) => {
+window.__renderSketch = async ({ code, size = 600, _frames = 150, settleMs = 2000, timeoutMs = 30000 }) => {
   const t0 = Date.now()
   const outcome = {
     ok: false,
@@ -170,7 +179,9 @@ ${safeCode}
       if (first.inkCoverage <= 0.005 && typeof win.redraw === 'function') {
         // Buffer may have been composited away — force one draw and re-capture
         // synchronously in this task.
-        try { win.redraw() }
+        try {
+          win.redraw()
+        }
         catch { /* non-fatal */ }
         const second = captureAndAnalyze(canvas, size)
         if (second.inkCoverage > outcome.inkCoverage) {

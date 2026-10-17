@@ -178,7 +178,7 @@ To protect TTS, captions, and history replay, the token pipeline enforces six ga
 
 The Stickers sub-tab in `CardCreationTabActing.vue` is refactored from unhooked mockups to a functional prompt-authoring workstation:
 
-```
+```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │ 🎨 Reaction Stickers Directives & Library                              │
 │ Configure character reaction stickers, inline cadence, and screen     │
@@ -219,7 +219,7 @@ The Stickers sub-tab in `CardCreationTabActing.vue` is refactored from unhooked 
    - Captures label, description, and emotions for prompt synthesis.
    - Saves binary directly to `localforage` and metadata to `card.extensions.airi.stickers`.
 3. **AI Sparkle Integration**:
-   Uses `@sparkle-click="emit('sparkle-click', 'actingStickerDirectives')"` to allow LLM refinement of sticker behavior and personality tone.
+   Uses `@sparkleClick="emit('sparkleClick', 'actingStickerDirectives')"` to allow LLM refinement of sticker behavior and personality tone.
 
 ---
 

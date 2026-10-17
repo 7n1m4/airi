@@ -138,7 +138,7 @@ export class EntityLedger {
    * Query all pets owned or adopted by a person across all sessions (solves C1 multi-hop).
    * @param {string} ownerName - e.g. "James"
    * @param {string} [species] - e.g. "dog"
-   * @returns {{ names: string[], proofBundles: Array<{ name: string, evidence: string[], sourceText: string }> }}
+   * @returns {object} The pet names plus a proof bundle (name, predicate, evidence, dateInfo) per pet.
    */
   queryPetsByOwner(ownerName, species = null) {
     const normOwner = ownerName.trim().toLowerCase()
@@ -181,7 +181,7 @@ export class EntityLedger {
    * Query the event date or adoption date for a subject and target (solves C2 temporal).
    * @param {string} subject - e.g. "James"
    * @param {string} target - e.g. "Ned"
-   * @returns {{ formattedDate: string|null, evidence: string[], dateInfo: object|null }}
+   * @returns {object} The formatted date label with its evidence and raw date info, or null date data when absent.
    */
   queryEventDate(subject, target) {
     const normSubj = subject.trim().toLowerCase()
@@ -189,7 +189,7 @@ export class EntityLedger {
 
     for (const [subj, predMap] of this.bySubjectPredicate.entries()) {
       if (subj.toLowerCase() === normSubj) {
-        for (const [pred, claimSet] of predMap.entries()) {
+        for (const [_pred, claimSet] of predMap.entries()) {
           for (const claimId of claimSet) {
             const claim = this.claims.get(claimId)
             if (typeof claim.object === 'string' && claim.object.toLowerCase() === normTarget) {
@@ -213,7 +213,7 @@ export class EntityLedger {
    * Query attribute of an entity or location (solves C4 literal and C3 entity isolation).
    * @param {string} subject
    * @param {string} attribute
-   * @returns {Array<{ value: any, evidence: string[] }>}
+   * @returns {Array<object>} One entry per matching claim, each with the claimed value and its evidence.
    */
   queryAttribute(subject, attribute) {
     const normSubj = subject.trim().toLowerCase()

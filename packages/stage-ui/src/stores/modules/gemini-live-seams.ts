@@ -1,5 +1,7 @@
 import type { Tool } from '@xsai/shared-chat'
 
+import process from 'node:process'
+
 export const GEMINI_LIVE_MODEL = 'models/gemini-3.1-flash-live-preview'
 export const GEMINI_LIVE_WS_BASE = 'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent'
 export const MAX_TOOL_CALLS_PER_TURN = 5
@@ -253,7 +255,7 @@ export function parseBridgeMarker(marker: string): ParsedBridgeMarker | null {
     return null
 
   const match = marker.match(/^<\|([\w-]+):([^|]*?)(?:\|>|<\/tool_call>|$)/)
-    || marker.match(/^\[call_tool:([\w-]+),\s*([^\]]*?)(?:\]|<\/tool_call>|$)/)
+    || marker.match(/^\[call_tool:([\w-]+),([^\]]*?)(?:\]|<\/tool_call>|$)/)
     || marker.match(/<tool_call>([\w-]+)\((.*?)\)<\/tool_call>/s)
     || marker.match(/<tool_call>(\{.*?\})<\/tool_call>/s)
 
@@ -292,7 +294,12 @@ export function parseBridgeMarker(marker: string): ParsedBridgeMarker | null {
   const args: Record<string, any> = {}
 
   // Parse key-value arguments (e.g. key="val", count=5, active=true)
-  const kvRegex = /(?:^|[, \n\t]+)\s*([\w-]+)\s*[:=]\s*(?:"([^"]*)"|'([^']*)'|(\d+(?:\.\d+)?)|(true|false)|(\{.*\}|\[.*\]))/g
+  // NOTICE: the separator is `^[, \n\t]*` at the start of `argsRaw` or
+  // `[, \n\t]+` between entries. Merging the two original alternatives into
+  // disjoint anchored/unanchored forms stops `\s*` and the separator
+  // quantifier from trading the same character, which was polynomial
+  // backtracking on long argument strings.
+  const kvRegex = /(?:^[, \n\t]*|[, \n\t]+)([\w-]+)\s*[:=]\s*(?:"([^"]*)"|'([^']*)'|(\d+(?:\.\d+)?)|(true|false)|(\{.*\}|\[.*\]))/g
   let kvMatch
   while ((kvMatch = kvRegex.exec(argsRaw)) !== null) {
     const [, key, valDouble, valSingle, valNum, valBool, valComplex] = kvMatch
@@ -401,9 +408,14 @@ export function decodePcm16Chunk(base64Data: string): Float32Array {
     return new Float32Array(0)
   }
 
+  // NOTICE: `atob` is the only decoder available in a browser/worker bundle,
+  // so the `node:process` fallback is resolved lazily through
+  // `process.getBuiltinModule` rather than a static `node:buffer` import —
+  // Vite/Rollup externalizes `node:process` for browsers but hard-fails the
+  // build when `node:buffer` is imported from renderer code.
   const binaryString = typeof atob === 'function'
     ? atob(base64Data)
-    : Buffer.from(base64Data, 'base64').toString('binary')
+    : process.getBuiltinModule?.('buffer')?.Buffer.from(base64Data, 'base64').toString('binary') ?? ''
 
   const bytes = new Uint8Array(binaryString.length)
   for (let i = 0; i < binaryString.length; i++) {

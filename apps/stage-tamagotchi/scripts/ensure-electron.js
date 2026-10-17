@@ -1,9 +1,9 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { execSync } from 'node:child_process'
 import { createRequire } from 'node:module'
-import { env } from 'node:process'
 
 const require = createRequire(import.meta.url)
 
@@ -36,7 +36,7 @@ function sanitizePathTxt(electronDir) {
       if (rawContent !== trimmed || trimmed === 'Electron uninstall' || trimmed !== platformPath) {
         if (fs.existsSync(expectedBinaryPath)) {
           fs.writeFileSync(pathFile, platformPath)
-          console.log(`[AIRI] Auto-repaired path.txt to point to valid binary (${platformPath}).`)
+          console.info(`[AIRI] Auto-repaired path.txt to point to valid binary (${platformPath}).`)
           return true
         }
       }
@@ -48,7 +48,7 @@ function sanitizePathTxt(electronDir) {
   else if (fs.existsSync(expectedBinaryPath)) {
     try {
       fs.writeFileSync(pathFile, platformPath)
-      console.log(`[AIRI] Created missing path.txt pointing to (${platformPath}).`)
+      console.info(`[AIRI] Created missing path.txt pointing to (${platformPath}).`)
       return true
     }
     catch {
@@ -114,7 +114,7 @@ function ensureElectron() {
   if (isElectronBroken(electronDir, distDir)) {
     console.warn('[AIRI] Electron binary runtime is missing or in uninstalled state.')
     console.warn(`[AIRI] Electron package dir: ${electronDir} (platform binary: ${getPlatformPath()})`)
-    console.warn(`[AIRI] env: ELECTRON_SKIP_BINARY_DOWNLOAD=${env.ELECTRON_SKIP_BINARY_DOWNLOAD ?? '<unset>'} ELECTRON_OVERRIDE_DIST_PATH=${env.ELECTRON_OVERRIDE_DIST_PATH ?? '<unset>'} npm_config_platform=${env.npm_config_platform ?? '<unset>'} npm_config_arch=${env.npm_config_arch ?? '<unset>'}`)
+    console.warn(`[AIRI] env: ELECTRON_SKIP_BINARY_DOWNLOAD=${process.env.ELECTRON_SKIP_BINARY_DOWNLOAD ?? '<unset>'} ELECTRON_OVERRIDE_DIST_PATH=${process.env.ELECTRON_OVERRIDE_DIST_PATH ?? '<unset>'} npm_config_platform=${process.env.npm_config_platform ?? '<unset>'} npm_config_arch=${process.env.npm_config_arch ?? '<unset>'}`)
     snapshotDist('before repair')
     console.warn('[AIRI] Triggering automatic repair via electron/install.js...')
 
@@ -142,7 +142,7 @@ function ensureElectron() {
       try {
         execSync(`node "${installScript}"`, {
           stdio: 'inherit',
-          env: { ...env, force_no_cache: 'true' },
+          env: { ...process.env, force_no_cache: 'true' },
         })
       }
       catch (err) {
@@ -157,7 +157,7 @@ function ensureElectron() {
       process.exit(1)
     }
     else {
-      console.log('[AIRI] Electron binary runtime repaired successfully.')
+      console.info('[AIRI] Electron binary runtime repaired successfully.')
     }
   }
 }

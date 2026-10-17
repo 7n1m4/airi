@@ -51,10 +51,6 @@ const setupTrayOnce = once((params: SetupTrayParams) => {
   trayImage.setTemplateImage(isMacOS)
 
   const appTray = new Tray(trayImage)
-  onAppBeforeQuit(() => {
-    rebuildContextMenu.cancel()
-    appTray.destroy()
-  })
 
   const rebuildContextMenu = debounce((): void => {
     if (!appTray || appTray.isDestroyed() || !params.mainWindow || params.mainWindow.isDestroyed())
@@ -125,6 +121,11 @@ const setupTrayOnce = once((params: SetupTrayParams) => {
 
     appTray.setContextMenu(contextMenu)
   }, 50)
+
+  onAppBeforeQuit(() => {
+    rebuildContextMenu.cancel()
+    appTray.destroy()
+  })
 
   rebuildContextMenu()
 

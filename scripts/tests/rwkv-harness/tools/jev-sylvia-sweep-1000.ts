@@ -7,6 +7,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 const API_KEY = process.env.TYPESAFE_API_KEY
 if (!API_KEY) {
@@ -105,7 +106,7 @@ async function classifyTurnWithRetry(turn: CandidateTurn, retries = 3): Promise<
 }
 
 async function main() {
-  console.log('=== Sylvia / Neuro-sama 1,000-Turn Jev Sweep ===\n')
+  console.info('=== Sylvia / Neuro-sama 1,000-Turn Jev Sweep ===\n')
 
   const sessionDir = '/tmp/sylvia_cleanroom/sessions'
   if (!fs.existsSync(sessionDir)) {
@@ -158,8 +159,8 @@ async function main() {
     }
   }
 
-  console.log(`Gathered ${candidates.length} turns evenly distributed across ${files.length} sessions.`)
-  console.log('Dispatching parallel classification to TypeSafe Jev (concurrency = 8)...\n')
+  console.info(`Gathered ${candidates.length} turns evenly distributed across ${files.length} sessions.`)
+  console.info('Dispatching parallel classification to TypeSafe Jev (concurrency = 8)...\n')
 
   const results: ClassifiedTurn[] = []
   const concurrency = 8
@@ -182,12 +183,12 @@ async function main() {
   }
 
   const totalTimeSec = ((Date.now() - startTime) / 1000).toFixed(1)
-  console.log(`\n\n✓ Finished classifying ${results.length} turns in ${totalTimeSec}s!`)
+  console.info(`\n\n✓ Finished classifying ${results.length} turns in ${totalTimeSec}s!`)
 
   // Save raw results
   const reportPath = path.resolve('scripts/tests/rwkv-harness/reports/19-sylvia-jev-1000-sweep-results.json')
   fs.writeFileSync(reportPath, JSON.stringify(results, null, 2), 'utf8')
-  console.log(`✓ Full results saved to: ${reportPath}\n`)
+  console.info(`✓ Full results saved to: ${reportPath}\n`)
 
   // Aggregate Category Breakdown
   const catCounts: Record<string, number> = {}
@@ -195,38 +196,38 @@ async function main() {
     catCounts[r.category] = (catCounts[r.category] || 0) + 1
   }
 
-  console.log('========================================================================')
-  console.log('📊 CATEGORY DISTRIBUTION (Across 1,000 Turns):')
-  console.log('========================================================================')
+  console.info('========================================================================')
+  console.info('📊 CATEGORY DISTRIBUTION (Across 1,000 Turns):')
+  console.info('========================================================================')
   for (const [cat, count] of Object.entries(catCounts).sort((a, b) => b[1] - a[1])) {
     const pct = ((count / results.length) * 100).toFixed(1)
-    console.log(` • ${cat.padEnd(18)}: ${count.toString().padStart(4)} turns (${pct}%)`)
+    console.info(` • ${cat.padEnd(18)}: ${count.toString().padStart(4)} turns (${pct}%)`)
   }
 
   // Filter and Inspect "other_distinct" Category
   const otherTurns = results.filter(r => r.category === 'other_distinct')
   otherTurns.sort((a, b) => b.iconicScore - a.iconicScore)
 
-  console.log('\n========================================================================')
-  console.log(`🔍 "OTHER_DISTINCT" CATCH-ALL EXPLORATION (${otherTurns.length} turns found):`)
-  console.log('========================================================================')
-  console.log('Inspecting what turned up in "other_distinct" to find uncharted edges:\n')
+  console.info('\n========================================================================')
+  console.info(`🔍 "OTHER_DISTINCT" CATCH-ALL EXPLORATION (${otherTurns.length} turns found):`)
+  console.info('========================================================================')
+  console.info('Inspecting what turned up in "other_distinct" to find uncharted edges:\n')
 
   for (const item of otherTurns.slice(0, 10)) {
-    console.log(`--- [Score: ${item.iconicScore.toFixed(2)} | Conf: ${item.confidence.toFixed(2)}] (${item.batchTitle}) ---`)
-    console.log(`User:      "${item.targetUser}"`)
-    console.log(`Assistant: "${item.targetAssistant}"\n`)
+    console.info(`--- [Score: ${item.iconicScore.toFixed(2)} | Conf: ${item.confidence.toFixed(2)}] (${item.batchTitle}) ---`)
+    console.info(`User:      "${item.targetUser}"`)
+    console.info(`Assistant: "${item.targetAssistant}"\n`)
   }
 
   // Top 5 Highest Iconic Turns overall
   results.sort((a, b) => b.iconicScore - a.iconicScore)
-  console.log('========================================================================')
-  console.log('🏆 TOP 5 HIGHEST-RATED TURNS OVERALL:')
-  console.log('========================================================================')
+  console.info('========================================================================')
+  console.info('🏆 TOP 5 HIGHEST-RATED TURNS OVERALL:')
+  console.info('========================================================================')
   for (const item of results.slice(0, 5)) {
-    console.log(`\nScore: ${item.iconicScore.toFixed(2)} | Category: [${item.category}]`)
-    console.log(`User:      "${item.targetUser}"`)
-    console.log(`Assistant: "${item.targetAssistant}"`)
+    console.info(`\nScore: ${item.iconicScore.toFixed(2)} | Category: [${item.category}]`)
+    console.info(`User:      "${item.targetUser}"`)
+    console.info(`Assistant: "${item.targetAssistant}"`)
   }
 }
 

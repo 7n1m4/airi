@@ -30,6 +30,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 import { RwkvWebGpuBridge } from '../engine/rwkv-session.js'
 import {
@@ -60,7 +61,7 @@ function pullText(content: CorpusFile['chatTranscript'][number]['content']): str
 }
 
 async function main() {
-  console.log('=== Phase 4b.2: L9–L11 SNR-gated spike trigger sweep ===\n')
+  console.info('=== Phase 4b.2: L9–L11 SNR-gated spike trigger sweep ===\n')
 
   await fetchTensorBinary(DEFAULT_BASE_MODEL_URL)
   const modelPath = cachedModelPath(DEFAULT_BASE_MODEL_URL)
@@ -119,33 +120,33 @@ async function main() {
 
   const bridge = new RwkvWebGpuBridge({ modelFilePath: modelPath })
   try {
-    await bridge.boot(m => console.log(`[engine] ${m}`))
-    console.log(`✓ Engine ready: state_len=${bridge.info.stateLen}\n`)
+    await bridge.boot(m => console.info(`[engine] ${m}`))
+    console.info(`✓ Engine ready: state_len=${bridge.info.stateLen}\n`)
 
     // --- Run A: CONTROL (in-topic only) to get the per-layer noise floor ---
-    console.log('--- CONTROL: single, sustained topic (in-topic noise floor) ---')
+    console.info('--- CONTROL: single, sustained topic (in-topic noise floor) ---')
     await bridge.resetStateChain()
     const controlDeltas = await bridge.measureStateDelta(segments[2].slice(0, 8)) // 8 turns pure Chloe-topic
-    console.log('  per-late-layer in-topic mean Δcos (CONTROL):')
+    console.info('  per-late-layer in-topic mean Δcos (CONTROL):')
     const controlLayerMean = LATE_LAYERS.map((L) => {
       const series = controlDeltas.slice(1).map(d => d.perLayerCosine[L] ?? 0)
       const mean = series.reduce((a, b) => a + b, 0) / Math.max(1, series.length)
       const max = Math.max(...series)
-      console.log(`    L${L}: mean=${mean.toFixed(4)}  max=${max.toFixed(4)}`)
+      console.info(`    L${L}: mean=${mean.toFixed(4)}  max=${max.toFixed(4)}`)
       return { L, mean }
     })
 
     // --- Run B: BOUNDARY sweep with ground truth ---
-    console.log(`\n--- BOUNDARY SWEEP: ${SEG}-turn segments; true boundaries at turns ${trueBoundaryIdx.join(',')} ---`)
+    console.info(`\n--- BOUNDARY SWEEP: ${SEG}-turn segments; true boundaries at turns ${trueBoundaryIdx.join(',')} ---`)
     await bridge.resetStateChain()
     const sweepDeltas = await bridge.measureStateDelta(evalTurns)
 
     // Show the per-turn late-layer combined delta with ground-truth label.
-    console.log('\n  per-turn L9–L11 mean Δcos (label: 1=true boundary):')
+    console.info('\n  per-turn L9–L11 mean Δcos (label: 1=true boundary):')
     sweepDeltas.slice(1).forEach((d) => {
       const lateMean = LATE_LAYERS.reduce((a, L) => a + (d.perLayerCosine[L] ?? 0), 0) / LATE_LAYERS.length
       const flag = labelOf(d.turn) === 1 ? '🎯 boundary' : ''
-      console.log(`    turn ${String(d.turn).padStart(2)} [${labelOf(d.turn)}]: L9-11mean=${lateMean.toFixed(4)} ${flag}`)
+      console.info(`    turn ${String(d.turn).padStart(2)} [${labelOf(d.turn)}]: L9-11mean=${lateMean.toFixed(4)} ${flag}`)
     })
 
     // --- Trigger-rule sweep ---
@@ -191,7 +192,10 @@ async function main() {
       for (const d of sweepDeltas.slice(1)) {
         const f = fired(d)
         if (label(d.turn) === 1) {
-          if (f) { tp++; firedAt.push(d.turn) }
+          if (f) {
+            tp++
+            firedAt.push(d.turn)
+          }
           else {
             fn++
           }
@@ -223,32 +227,32 @@ async function main() {
     for (const metric of ['topicShift', 'salience'] as const) {
       const mrows = rows.filter(r => r.metric === metric)
       const positives = metric === 'salience' ? salienceTurns.size : trueBoundaryIdx.length
-      console.log(`\n================ TRIGGER-RULE SWEEP — metric: ${metric.toUpperCase()} (${positives} positives) ================`)
-      console.log('  rule       mult | thresholds L9/L10/L11     | TP FP FN | recall prec   F1   FPR | fired turns')
+      console.info(`\n================ TRIGGER-RULE SWEEP — metric: ${metric.toUpperCase()} (${positives} positives) ================`)
+      console.info('  rule       mult | thresholds L9/L10/L11     | TP FP FN | recall prec   F1   FPR | fired turns')
       for (const r of mrows) {
         const th = LATE_LAYERS.map(L => threshOf(r.mult, L).toFixed(3)).join('/')
-        console.log(`  ${r.rule.padEnd(10)} ${r.mult.toFixed(1)}x | ${th.padEnd(24)} |  ${r.tp}  ${r.fp}   ${r.fn} |  ${r.recall.toFixed(2)}   ${r.precision.toFixed(2)}  ${r.f1.toFixed(2)}  ${r.fpr.toFixed(2)} | ${r.firedAt.join(',') || '—'}`)
+        console.info(`  ${r.rule.padEnd(10)} ${r.mult.toFixed(1)}x | ${th.padEnd(24)} |  ${r.tp}  ${r.fp}   ${r.fn} |  ${r.recall.toFixed(2)}   ${r.precision.toFixed(2)}  ${r.f1.toFixed(2)}  ${r.fpr.toFixed(2)} | ${r.firedAt.join(',') || '—'}`)
       }
     }
 
     // Per-turn vote composition: helps eyeball whether in-topic spikes are single-layer.
-    console.log('\n  per-turn L9/L10/L11 Δcos (B=topic boundary, S=salience beat):')
+    console.info('\n  per-turn L9/L10/L11 Δcos (B=topic boundary, S=salience beat):')
     for (const d of sweepDeltas.slice(1)) {
       const lv = LATE_LAYERS.map(L => (d.perLayerCosine[L] ?? 0).toFixed(3)).join('/')
       const tags = [
         labelOf(d.turn) === 1 ? 'B' : ' ',
         salienceOf(d.turn) === 1 ? 'S' : ' ',
       ].join('')
-      console.log(`    turn ${String(d.turn).padStart(2)} [${tags}]: ${lv}`)
+      console.info(`    turn ${String(d.turn).padStart(2)} [${tags}]: ${lv}`)
     }
 
     const byMetric = (m: 'topicShift' | 'salience') => rows.filter(r => r.metric === m)
     const bestTopic = [...byMetric('topicShift')].sort((a, b) => (b.f1 - a.f1) || (a.fpr - b.fpr))[0]
     const bestSalience = [...byMetric('salience')].sort((a, b) => (b.f1 - a.f1) || (a.fpr - b.fpr))[0]
     const bestVoteSalience = byMetric('salience').filter(r => r.rule === 'vote-2of3').sort((a, b) => (b.f1 - a.f1) || (a.fpr - b.fpr))[0]
-    console.log(`\n  Best topicShift rule: ${bestTopic.rule} @ ${bestTopic.mult}x  (F1=${bestTopic.f1.toFixed(2)}, recall=${bestTopic.recall.toFixed(2)}, prec=${bestTopic.precision.toFixed(2)}, FPR=${bestTopic.fpr.toFixed(2)})`)
-    console.log(`  Best salience rule:  ${bestSalience.rule} @ ${bestSalience.mult}x  (F1=${bestSalience.f1.toFixed(2)}, recall=${bestSalience.recall.toFixed(2)}, prec=${bestSalience.precision.toFixed(2)}, FPR=${bestSalience.fpr.toFixed(2)})`)
-    console.log(`  Best salience 2-of-3 vote: ${bestVoteSalience.mult}x  (F1=${bestVoteSalience.f1.toFixed(2)}, recall=${bestVoteSalience.recall.toFixed(2)}, prec=${bestVoteSalience.precision.toFixed(2)}, FPR=${bestVoteSalience.fpr.toFixed(2)})`)
+    console.info(`\n  Best topicShift rule: ${bestTopic.rule} @ ${bestTopic.mult}x  (F1=${bestTopic.f1.toFixed(2)}, recall=${bestTopic.recall.toFixed(2)}, prec=${bestTopic.precision.toFixed(2)}, FPR=${bestTopic.fpr.toFixed(2)})`)
+    console.info(`  Best salience rule:  ${bestSalience.rule} @ ${bestSalience.mult}x  (F1=${bestSalience.f1.toFixed(2)}, recall=${bestSalience.recall.toFixed(2)}, prec=${bestSalience.precision.toFixed(2)}, FPR=${bestSalience.fpr.toFixed(2)})`)
+    console.info(`  Best salience 2-of-3 vote: ${bestVoteSalience.mult}x  (F1=${bestVoteSalience.f1.toFixed(2)}, recall=${bestVoteSalience.recall.toFixed(2)}, prec=${bestVoteSalience.precision.toFixed(2)}, FPR=${bestVoteSalience.fpr.toFixed(2)})`)
 
     // Persist report
     const outDir = path.resolve(process.cwd(), 'reports')
@@ -296,7 +300,7 @@ async function main() {
         },
       },
     }, null, 2))
-    console.log(`\n✓ Vote-sweep report written to ${outPath}`)
+    console.info(`\n✓ Vote-sweep report written to ${outPath}`)
   }
   finally {
     await bridge.dispose()

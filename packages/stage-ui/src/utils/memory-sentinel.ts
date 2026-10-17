@@ -6,6 +6,8 @@
  * Output is logged with `[MEM-PROBE]` to stdout/airi.log.
  */
 
+import process from 'node:process'
+
 export interface SubsystemStats {
   action?: string
   extra?: Record<string, any>
@@ -42,6 +44,10 @@ function readMemoryMB(): { jsHeapUsed: number, jsHeapTotal: number, jsHeapLimit:
     rssMB,
   }
 }
+
+// NOTICE: eslint's no-console only allows warn/error/info. The probe writes to
+// stdout/airi.log via `console.info` so `[MEM-PROBE]` lines remain observable
+// evidence without widening the rule.
 
 function levelOf(level: MemoryPressureLevel, candidate: MemoryPressureLevel): MemoryPressureLevel {
   const rank = { normal: 0, elevated: 1, critical: 2 } as const
@@ -114,7 +120,7 @@ export function logMemoryProbe(tag: string = 'TICK', stats?: SubsystemStats): vo
     const extraStr = stats?.extra ? ` | Details: ${JSON.stringify(stats.extra)}` : ''
     const actionStr = stats?.action ? ` | Action: [${stats.action}]` : ''
 
-    console.log(
+    console.info(
       `[MEM-PROBE] [${tag}] Route: "${winHash}" | JS Heap: ${jsHeapUsed.toFixed(1)} MB / ${jsHeapTotal.toFixed(1)} MB (Limit: ${jsHeapLimit.toFixed(0)} MB, Δ: ${deltaStr})${nativeStr}${pressureStr}${actionStr}${extraStr}`,
     )
   }

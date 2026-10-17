@@ -450,11 +450,9 @@ Output a JSON object with "pills", "claims", and "mood_shift".
       return newChips
     }
     catch (err) {
-      console.group('Echo Synthesis Critical Failure')
-      console.error('Error Object:', err)
+      console.error('Echo Synthesis Critical Failure', err)
       if (err instanceof Error)
         console.error('Stack:', err.stack)
-      console.groupEnd()
       throw err
     }
     finally {

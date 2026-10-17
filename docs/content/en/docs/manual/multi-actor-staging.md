@@ -13,7 +13,7 @@ AIRI is not limited to a single character. With **Multi-Actor Staging** and the 
 
 In a multi-actor card (created in the AnimaDex Wizard or Card Editor), multiple character personas live inside one card definition:
 
-```
+```text
 <|ACTOR:Alice|> Hey Bob, did you finish review on the PR?
 <|ACT:motion="think"|>
 <|ACTOR:Bob|> Almost! Just running the typecheck suite now.

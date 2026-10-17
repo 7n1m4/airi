@@ -106,7 +106,7 @@ sequenceDiagram
 - **Movable**: Draggable via the top brand zone (`-webkit-app-region: drag`), allowing users to reposition the splash if desired. Interactive elements (progress bar, details summary, buttons) declare `-webkit-app-region: no-drag`.
 
 ### 3.2. Visual Hierarchy (Sleek Floating Card)
-```
+```text
 ┌────────────────────────────────────────────────────────┐
 │                                                        │
 │                     [ AIRI Logo ]                      │

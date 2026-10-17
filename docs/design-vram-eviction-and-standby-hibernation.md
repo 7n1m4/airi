@@ -39,7 +39,7 @@ If an always-on AIRI instance has processed one voice turn and one image inspect
 
 ## 3. System Architecture & Component Mapping
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                       ELECTRON MAIN PROCESS                                 │
 │  apps/stage-tamagotchi/src/main/services/electron/window.ts                │

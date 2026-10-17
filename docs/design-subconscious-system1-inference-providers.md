@@ -55,7 +55,7 @@ A foundational design rule of AIRI's Subconsciousness layer is that **generative
 
 The Subconsciousness category provides **three distinct backends out of the box**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                 AIRI Subconsciousness (System-1) Providers                  │
 ├───────────────────────┬────────────────────────────┬────────────────────────┤
@@ -163,7 +163,7 @@ To unify these capabilities cleanly across AIRI's UI architecture:
 ### A. Settings Surface: `Settings > Inference Providers > Subconsciousness`
 Located as the 8th tab in `packages/stage-pages/src/pages/settings/providers/index.vue`:
 
-```
+```text
 [Chat]  [Speech]  [Transcription]  [Artistry]  [Vision]  [Motion]  [Cloud & Storage]  [Subconsciousness 🧠]
 ```
 

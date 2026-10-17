@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useMemoryLifetimeStore } from '@proj-airi/stage-ui/stores/memory-lifetime'
-import { Button } from '@proj-airi/ui'
+import { Button, DoubleCheckButton } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 
@@ -45,9 +45,7 @@ function close() {
 }
 
 async function handleResynthesize() {
-  if (confirm('This will skip the history collection phase and re-run the synthesis and distillation based on these chunks. Proceed?')) {
-    await lifetimeStore.reprovisionFromChunks(props.characterId, 'global', 2, artifact.value?.metadata?.targetTokens) // Default 2s interval
-  }
+  await lifetimeStore.reprovisionFromChunks(props.characterId, 'global', 2, artifact.value?.metadata?.targetTokens) // Default 2s interval
 }
 </script>
 
@@ -73,13 +71,19 @@ async function handleResynthesize() {
         </div>
 
         <div class="flex items-center gap-4">
-          <Button
+          <DoubleCheckButton
             v-if="!isProvisioning"
-            label="Re-synthesize Soul Blueprint"
-            variant="primary"
-            icon="i-solar:magic-stick-bold-duotone"
-            @click="handleResynthesize"
-          />
+            variant="caution"
+            @confirm="handleResynthesize"
+          >
+            Re-synthesize Soul Blueprint
+            <template #confirm>
+              Skip history collection &amp; re-run?
+            </template>
+            <template #cancel>
+              Cancel
+            </template>
+          </DoubleCheckButton>
           <div v-else class="flex flex-col items-end gap-1">
             <span class="animate-pulse text-xs text-amber-500 font-bold uppercase">{{ progress.phase }}...</span>
             <div class="h-1.5 w-48 overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">

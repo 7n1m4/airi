@@ -15,7 +15,7 @@ The resumable build-state record for lifetime-artifact generation. Pillar 5 does
 | Repo | `packages/stage-ui/src/database/repos/provisioning-session.repo.ts` |
 | Key | `local:memory/provisioning-session/{characterId}` |
 | Record | `ProvisioningSession` — `phase` state machine + persisted chunk summaries + `distillPass1Pack` |
-| Phases | `'idle' | 'aggregating' | 'chunking' | 'synthesizing' | 'distill_pass_1' | 'distill_pass_2' | 'success'` (:5) |
+| Phases | `'idle' \| 'aggregating' \| 'chunking' \| 'synthesizing' \| 'distill_pass_1' \| 'distill_pass_2' \| 'success'` (:5) |
 | Data catalog | `docs/data-catalog.md` §1.9 |
 
 ## Key Mechanisms

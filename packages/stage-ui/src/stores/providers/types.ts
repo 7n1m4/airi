@@ -30,7 +30,11 @@ export interface ProviderMetadata {
   description: string
   localizedDescription?: string
   configured?: boolean
-  requiresCredentials?: boolean
+  /**
+   * Credential contract. `false` = keyless only; `true` = required;
+   * `{ optional: true }` = works without a key but accepts one.
+   */
+  requiresCredentials?: boolean | { optional: true }
   isAvailableBy?: () => Promise<boolean> | boolean
   icon?: string
   iconColor?: string

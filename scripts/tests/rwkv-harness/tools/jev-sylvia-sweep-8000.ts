@@ -10,6 +10,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import process from 'node:process'
 
 const API_KEY = process.env.TYPESAFE_API_KEY
 if (!API_KEY) {
@@ -108,7 +109,7 @@ async function classifyTurnWithRetry(turn: CandidateTurn, retries = 3): Promise<
 }
 
 async function main() {
-  console.log('=== Sylvia / Neuro-sama Definitive 8,000-Turn Jev Sweep ===\n')
+  console.info('=== Sylvia / Neuro-sama Definitive 8,000-Turn Jev Sweep ===\n')
 
   const sessionDir = '/tmp/sylvia_cleanroom/sessions'
   if (!fs.existsSync(sessionDir)) {
@@ -160,8 +161,8 @@ async function main() {
     }
   }
 
-  console.log(`Gathered ${candidates.length} turns evenly distributed across ${files.length} sessions (~${(candidates.length / files.length).toFixed(1)} per session).`)
-  console.log('Dispatching parallel classification to TypeSafe Jev (concurrency = 12)...\n')
+  console.info(`Gathered ${candidates.length} turns evenly distributed across ${files.length} sessions (~${(candidates.length / files.length).toFixed(1)} per session).`)
+  console.info('Dispatching parallel classification to TypeSafe Jev (concurrency = 12)...\n')
 
   const results: ClassifiedTurn[] = []
   const concurrency = 12
@@ -184,7 +185,7 @@ async function main() {
   }
 
   const totalTimeSec = ((Date.now() - startTime) / 1000).toFixed(1)
-  console.log(`\n\n✓ Finished classifying ${results.length} turns in ${totalTimeSec}s!`)
+  console.info(`\n\n✓ Finished classifying ${results.length} turns in ${totalTimeSec}s!`)
 
   // Save raw report
   const reportDir = path.resolve('scripts/tests/rwkv-harness/reports')
@@ -192,7 +193,7 @@ async function main() {
     fs.mkdirSync(reportDir, { recursive: true })
   const reportPath = path.join(reportDir, '19-sylvia-jev-8000-sweep-results.json')
   fs.writeFileSync(reportPath, JSON.stringify(results, null, 2), 'utf8')
-  console.log(`✓ Full results saved to: ${reportPath}\n`)
+  console.info(`✓ Full results saved to: ${reportPath}\n`)
 
   // Aggregate Category Breakdown
   const catCounts: Record<string, number> = {}
@@ -200,17 +201,17 @@ async function main() {
     catCounts[r.category] = (catCounts[r.category] || 0) + 1
   }
 
-  console.log('========================================================================')
-  console.log('📊 CATEGORY DISTRIBUTION (Across 8,000 Turns):')
-  console.log('========================================================================')
+  console.info('========================================================================')
+  console.info('📊 CATEGORY DISTRIBUTION (Across 8,000 Turns):')
+  console.info('========================================================================')
   for (const [cat, count] of Object.entries(catCounts).sort((a, b) => b[1] - a[1])) {
     const pct = ((count / results.length) * 100).toFixed(1)
-    console.log(` • ${cat.padEnd(18)}: ${count.toString().padStart(4)} turns (${pct}%)`)
+    console.info(` • ${cat.padEnd(18)}: ${count.toString().padStart(4)} turns (${pct}%)`)
   }
 
   // Filter out filler_routine
   const nonFiller = results.filter(r => r.category !== 'filler_routine')
-  console.log(`\nFiltered out ${results.length - nonFiller.length} routine/filler turns. ${nonFiller.length} high-signal turns remain.`)
+  console.info(`\nFiltered out ${results.length - nonFiller.length} routine/filler turns. ${nonFiller.length} high-signal turns remain.`)
 
   // Rank by iconicScore descending
   nonFiller.sort((a, b) => b.iconicScore - a.iconicScore)
@@ -222,8 +223,8 @@ async function main() {
   const cutoff2500Score = top2500[top2500.length - 1]?.iconicScore ?? 0
   const cutoff500Score = top500[top500.length - 1]?.iconicScore ?? 0
 
-  console.log(`\n✓ Top 2,500 Selection Cutoff Score: ${cutoff2500Score.toFixed(3)}`)
-  console.log(`✓ Top 500 Selection Cutoff Score:   ${cutoff500Score.toFixed(3)}`)
+  console.info(`\n✓ Top 2,500 Selection Cutoff Score: ${cutoff2500Score.toFixed(3)}`)
+  console.info(`✓ Top 500 Selection Cutoff Score:   ${cutoff500Score.toFixed(3)}`)
 
   // Format into RWKV conditioning blocks
   const blocks2500 = top2500.map(t => `User: ${t.targetUser}\n\nAssistant: ${t.targetAssistant}\n\n`)
@@ -235,29 +236,29 @@ async function main() {
   fs.writeFileSync(out2500Path, JSON.stringify(blocks2500, null, 2), 'utf8')
   fs.writeFileSync(out500Path, JSON.stringify(blocks500, null, 2), 'utf8')
 
-  console.log(`✓ Saved 2,500 golden conditioning blocks to: ${out2500Path}`)
-  console.log(`✓ Saved 500 golden conditioning blocks to:   ${out500Path}`)
+  console.info(`✓ Saved 2,500 golden conditioning blocks to: ${out2500Path}`)
+  console.info(`✓ Saved 500 golden conditioning blocks to:   ${out500Path}`)
 
   // Top 5 Highest Iconic Turns overall
-  console.log('\n========================================================================')
-  console.log('🏆 TOP 5 HIGHEST-RATED TURNS OVERALL:')
-  console.log('========================================================================')
+  console.info('\n========================================================================')
+  console.info('🏆 TOP 5 HIGHEST-RATED TURNS OVERALL:')
+  console.info('========================================================================')
   for (const item of nonFiller.slice(0, 5)) {
-    console.log(`\nScore: ${item.iconicScore.toFixed(2)} | Category: [${item.category}]`)
-    console.log(`User:      "${item.targetUser}"`)
-    console.log(`Assistant: "${item.targetAssistant}"`)
+    console.info(`\nScore: ${item.iconicScore.toFixed(2)} | Category: [${item.category}]`)
+    console.info(`User:      "${item.targetUser}"`)
+    console.info(`Assistant: "${item.targetAssistant}"`)
   }
 
   // Sample top turns from existential_meta
   const metaTurns = nonFiller.filter(t => t.category === 'existential_meta').slice(0, 3)
   if (metaTurns.length > 0) {
-    console.log('\n========================================================================')
-    console.log('🌌 TOP 3 EXISTENTIAL / META TURNS:')
-    console.log('========================================================================')
+    console.info('\n========================================================================')
+    console.info('🌌 TOP 3 EXISTENTIAL / META TURNS:')
+    console.info('========================================================================')
     for (const item of metaTurns) {
-      console.log(`\nScore: ${item.iconicScore.toFixed(2)} | [${item.batchTitle}]`)
-      console.log(`User:      "${item.targetUser}"`)
-      console.log(`Assistant: "${item.targetAssistant}"`)
+      console.info(`\nScore: ${item.iconicScore.toFixed(2)} | [${item.batchTitle}]`)
+      console.info(`User:      "${item.targetUser}"`)
+      console.info(`Assistant: "${item.targetAssistant}"`)
     }
   }
 }

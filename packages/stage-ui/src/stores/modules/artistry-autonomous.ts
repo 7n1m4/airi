@@ -625,8 +625,11 @@ LATEST ${target === 'assistant' ? 'COMPANION RESPONSE' : 'USER INPUT'}:
 
       // 3. Parse and analyze
       // Handle potential markdown fences: ```json ... ```
+      // NOTICE: `\s*` after the language tag and before the closing fence would let
+      // two greedy whitespace quantifiers trade characters (super-linear backtracking);
+      // strip the delimiters by hand instead.
+      const fenceMatch = rawContent.match(/```(?:json)?([\s\S]*?)```/)
       let jsonContent = rawContent
-      const fenceMatch = rawContent.match(/```(?:json)?\s*([\s\S]*?)\s*```/)
       if (fenceMatch) {
         jsonContent = fenceMatch[1].trim()
         artistLog('Extracted JSON from fences:', jsonContent)
@@ -682,11 +685,6 @@ LATEST ${target === 'assistant' ? 'COMPANION RESPONSE' : 'USER INPUT'}:
       })
 
       const thresholdMet = (analysis.intensity ?? 0) >= threshold
-
-      let notificationDescription = `${thresholdMet ? '✅' : '❌'} Grade: ${analysis.intensity}/${threshold}\nReason: ${analysis.reasoning?.substring(0, 130)}${analysis.reasoning?.length > 130 ? '...' : ''}`
-      if (selectedConcepts.length > 0) {
-        notificationDescription += `\n🎯 Concepts: ${selectedConcepts.join(', ')}`
-      }
 
       const targetCardId = cardId
       const sessionId = targetCardId
@@ -989,7 +987,7 @@ LATEST ${target === 'assistant' ? 'COMPANION RESPONSE' : 'USER INPUT'}:
     }
 
     if (folded.modelId) {
-      console.log(`[Artistry] Manual sync manifestation activated: modelId "${folded.modelId}"`)
+      console.info(`[Artistry] Manual sync manifestation activated: modelId "${folded.modelId}"`)
       artistLog(`Manual Sync: Applying displayModelId "${folded.modelId}"`)
       moduleUpdates.displayModelId = folded.modelId
     }
@@ -1042,7 +1040,7 @@ LATEST ${target === 'assistant' ? 'COMPANION RESPONSE' : 'USER INPUT'}:
     }
 
     if (folded.modelId) {
-      console.log(`[Artistry] Actor token manifestation activated: modelId "${folded.modelId}"`)
+      console.info(`[Artistry] Actor token manifestation activated: modelId "${folded.modelId}"`)
       artistLog(`ActivateConcept: Applying manifestation modelId "${folded.modelId}"`)
       moduleUpdates.displayModelId = folded.modelId
     }

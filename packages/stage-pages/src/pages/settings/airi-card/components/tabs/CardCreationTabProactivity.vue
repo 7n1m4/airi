@@ -17,13 +17,13 @@ import {
 } from 'reka-ui'
 import { computed, onMounted, ref, watch } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   sensorPayload?: string
   staticSamplePayload: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'sparkle-click', fieldId: string): void
+  (e: 'sparkleClick', fieldId: string): void
 }>()
 
 const proactivityStore = useProactivityStore()
@@ -33,15 +33,6 @@ const visionOrchestrator = useVisionOrchestratorStore()
 const { isProvisioning, provisioningPercent, provisioningMessage, isLightweightReady, isVlmReady } = storeToRefs(visionOrchestrator)
 const { hourlyPromotionsCount, nextHourlyResetAt } = storeToRefs(screenWatcherStore)
 const isRefreshingSensors = ref(false)
-
-async function handleProvision() {
-  try {
-    await visionOrchestrator.provisionModels({ enableVlm: screenWatchingVlmTier.value === 'moondream' })
-  }
-  catch (err) {
-    console.error('[CardCreationTabProactivity] Provisioning failed:', err)
-  }
-}
 
 // Primary display size so the capture-resolution readout reflects the real
 // display (downscale is relative to native resolution, not a 720p baseline).
@@ -155,6 +146,16 @@ const screenWatchingEnableVlm = defineModel<boolean>('screenWatchingEnableVlm', 
 const screenWatchingVlmTier = defineModel<'lightweight' | 'moondream' | 'external'>('screenWatchingVlmTier', {
   default: 'lightweight',
 })
+
+async function handleProvision() {
+  try {
+    await visionOrchestrator.provisionModels({ enableVlm: screenWatchingVlmTier.value === 'moondream' })
+  }
+  catch (err) {
+    console.error('[CardCreationTabProactivity] Provisioning failed:', err)
+  }
+}
+
 const screenWatchingRespectSchedule = defineModel<boolean>('screenWatchingRespectSchedule', { default: true })
 
 export interface SentinelQuestionConfig {
@@ -762,7 +763,7 @@ const intervalPresets = [2, 5, 10, 20]
                 type="button"
                 class="absolute right-2.5 top-2.5 h-7 w-7 flex items-center justify-center border border-neutral-200 rounded-md bg-white text-neutral-500 shadow-sm transition-colors dark:border-neutral-700 dark:bg-neutral-800 hover:text-primary-500"
                 title="Optimize with AI Sparkle"
-                @click.prevent="emit('sparkle-click', 'heartbeatsPrompt')"
+                @click.prevent="emit('sparkleClick', 'heartbeatsPrompt')"
               >
                 <span class="i-solar:sparkles-bold-duotone text-sm" />
               </button>

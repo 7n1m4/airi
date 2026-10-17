@@ -23,6 +23,8 @@ Update the Artistry bridge and provider interfaces to support batches:
 ### 3. Native Slicing in Main Process
 Use the `sharp` library in the Electron Main process for high-performance image manipulation.
 ```typescript
+import { Buffer } from 'node:buffer'
+
 // Example Slicing Logic
 async function sliceGrid(inputBuffer: Buffer, rows: number, cols: number) {
   const image = sharp(inputBuffer)

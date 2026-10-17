@@ -1,3 +1,5 @@
+import process from 'node:process'
+
 let debugEnabled = false
 
 // NOTICE: histoire collection and SSR provide a JSDOM `window` without a
@@ -22,6 +24,6 @@ export function setDebugEnabled(enabled: boolean): void {
 
 export function debug(...args: any[]): void {
   if (debugEnabled) {
-    console.log(...args)
+    console.info(...args)
   }
 }

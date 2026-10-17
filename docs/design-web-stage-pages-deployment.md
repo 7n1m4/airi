@@ -18,7 +18,10 @@ To ensure `apps/stage-web` works seamlessly across different deployment targets 
 1. **`apps/stage-web/vite.config.ts`**:
    Configured with dynamic base URL support:
    ```typescript
-   base: env.BASE_URL || '/',
+   // vite.config.ts
+   export default defineConfig({
+     base: env.BASE_URL || '/',
+   })
    ```
 2. **`apps/stage-web/src/main.ts`**:
    Vue Router history is initialized with the injected base path:
@@ -43,7 +46,7 @@ When published:
 The workflow triggers on pushes to `main` touching `docs/**`, `apps/stage-web/**`, `packages/**`, or manually via `workflow_dispatch`.
 
 ```yaml
-name: Deploy: Frontends (Docs & Web Stage)
+name: 'Deploy: Frontends (Docs & Web Stage)'
 
 on:
   push:

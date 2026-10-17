@@ -35,7 +35,7 @@ async function resolve7za(): Promise<string> {
 }
 
 async function main() {
-  console.log('\n📦 [package-win-zip] Creating high-compatibility Windows ZIP archive...')
+  console.info('\n📦 [package-win-zip] Creating high-compatibility Windows ZIP archive...')
 
   if (!fs.existsSync(winUnpackedDir)) {
     console.error(`❌ Error: Unpacked Windows directory does not exist at: ${winUnpackedDir}`)
@@ -49,13 +49,13 @@ async function main() {
   const zipPath = path.join(distDir, zipFilename)
 
   if (fs.existsSync(zipPath)) {
-    console.log(`  • Removing existing archive: ${zipFilename}`)
+    console.info(`  • Removing existing archive: ${zipFilename}`)
     fs.rmSync(zipPath, { force: true })
   }
 
   const sevenZipBin = await resolve7za()
-  console.log(`  • Using 7za engine: ${sevenZipBin}`)
-  console.log(`  • Wrapping unpacked directory inside root "${stageFolderName}/" folder...`)
+  console.info(`  • Using 7za engine: ${sevenZipBin}`)
+  console.info(`  • Wrapping unpacked directory inside root "${stageFolderName}/" folder...`)
 
   // Stage dist/win-unpacked as dist/AIRI temporarily so archive contains top-level root folder
   let wasRenamed = false
@@ -72,7 +72,7 @@ async function main() {
     // -mm=Deflate: explicit standard Deflate compression method
     // -mcu=on: UTF-8 encoding for filenames
     const cmd = `"${sevenZipBin}" a -tzip -mx=7 -mm=Deflate -mcu=on "${zipPath}" "${stageFolderName}"`
-    console.log(`  • Running: ${cmd}`)
+    console.info(`  • Running: ${cmd}`)
     execSync(cmd, { cwd: distDir, stdio: 'inherit' })
   }
   finally {
@@ -88,7 +88,7 @@ async function main() {
 
   const stats = fs.statSync(zipPath)
   const sizeMb = (stats.size / (1024 * 1024)).toFixed(2)
-  console.log(`✅ [package-win-zip] Successfully packaged Windows ZIP: ${zipFilename} (${sizeMb} MB)`)
+  console.info(`✅ [package-win-zip] Successfully packaged Windows ZIP: ${zipFilename} (${sizeMb} MB)`)
 }
 
 main().catch((err) => {

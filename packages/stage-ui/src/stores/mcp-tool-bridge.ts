@@ -77,6 +77,32 @@ export interface McpToolBridge {
   applyAndRestart?: () => Promise<unknown>
 }
 
+/**
+ * Renderer host interface exposing a sliver of `process` when the embedder
+ * provides it (Electron with nodeIntegration/preload bridging). Browsers and
+ * contextIsolated renderers omit it entirely.
+ */
+interface NodeProcessHost {
+  readonly process?: { readonly env?: Record<string, string | undefined> }
+}
+
+const PROCESS_KEY = 'process'
+
+/**
+ * Resolves the user's home directory for MCP filesystem server defaults.
+ * Falls back to the macOS convention when the host exposes no `process.env`,
+ * which is the case in every non-Electron runtime.
+ */
+function resolveRendererHomeDirectory(): string {
+  // NOTICE: `process` is absent under renderer contextIsolation and in browser
+  // bundles, so read it via the typed host interface instead of the bare global.
+  // Bracket access keeps the lookup off the identifier that lint rules treat as
+  // an unused Node global in the renderer.
+  const host = globalThis as NodeProcessHost
+  const env = host[PROCESS_KEY]?.env
+  return env?.HOME || '/Users'
+}
+
 export async function ensureMcpServersForAllowedTools(allowedTools: string[] | undefined): Promise<boolean> {
   if (!allowedTools || !allowedTools.length)
     return false
@@ -132,7 +158,7 @@ export async function ensureMcpServersForAllowedTools(allowedTools: string[] | u
     // 2. Ensure filesystem if filesystem is enabled
     if (hasFilesystem) {
       if (!servers.filesystem) {
-        const home = typeof process !== 'undefined' && process.env?.HOME ? process.env.HOME : '/Users'
+        const home = resolveRendererHomeDirectory()
         servers.filesystem = {
           command: 'npx',
           args: [
@@ -156,7 +182,7 @@ export async function ensureMcpServersForAllowedTools(allowedTools: string[] | u
     }
 
     if (changed) {
-      console.log('[mcp-tool-bridge] 🛠️ Automatically updating mcp.json with required server configs:', Object.keys(servers))
+      console.info('[mcp-tool-bridge] 🛠️ Automatically updating mcp.json with required server configs:', Object.keys(servers))
       await bridge.updateConfig({ mcpServers: servers })
       if (bridge.applyAndRestart) {
         bridge.applyAndRestart().catch((err) => {

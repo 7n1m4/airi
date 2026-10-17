@@ -52,10 +52,10 @@ AIRI characters have dynamic emotional states, mood tiers, and intimacy levels. 
 
 | Aura Effect | Architectural Origin | Visual Description | Emotional / ACT Trigger |
 | :--- | :--- | :--- | :--- |
-| **Fire Boost (`FireBodyMaterial`)** | Rig-anchored particle emitters + convective flame distortion | Procedural fire rooted to forearms and chest; embers trail behind arm movements | `<|ACT:emotion="angry"|>`, `<|ACT:emotion="flustered"|>`, Battle / Tension |
-| **Electric Boost (`FresnelAura`)** | Instanced ribbon strips + high-frequency electrical arcs | Crawling arcs around limbs, Fresnel rim illumination | `<|ACT:emotion="excited"|>`, `<|ACT:emotion="focused"|>`, Computing / Analysis |
-| **Magic Boost (`ArcaneRibbonMaterial`)** | Helical orbiting particles + smooth chromatic dispersion | Soft orbiting starlight ribbons, iridescent body glow | `<|ACT:emotion="blushing"|>`, `<|ACT:emotion="loving"|>`, High Intimacy |
-| **Abyss / Shadow Aura** | Raymarched dark pool + inverse Fresnel absorption | Silhouette edges dissolve into smoke-like void filaments | `<|ACT:emotion="sad"|>`, `<|ACT:emotion="gloomy"|>`, Mystery |
+| **Fire Boost (`FireBodyMaterial`)** | Rig-anchored particle emitters + convective flame distortion | Procedural fire rooted to forearms and chest; embers trail behind arm movements | `<\|ACT:emotion="angry"\|>`, `<\|ACT:emotion="flustered"\|>`, Battle / Tension |
+| **Electric Boost (`FresnelAura`)** | Instanced ribbon strips + high-frequency electrical arcs | Crawling arcs around limbs, Fresnel rim illumination | `<\|ACT:emotion="excited"\|>`, `<\|ACT:emotion="focused"\|>`, Computing / Analysis |
+| **Magic Boost (`ArcaneRibbonMaterial`)** | Helical orbiting particles + smooth chromatic dispersion | Soft orbiting starlight ribbons, iridescent body glow | `<\|ACT:emotion="blushing"\|>`, `<\|ACT:emotion="loving"\|>`, High Intimacy |
+| **Abyss / Shadow Aura** | Raymarched dark pool + inverse Fresnel absorption | Silhouette edges dissolve into smoke-like void filaments | `<\|ACT:emotion="sad"\|>`, `<\|ACT:emotion="gloomy"\|>`, Mystery |
 
 #### Skeletal Anchoring Logic
 Unlike screen-space post-processing overlays, these effects hook directly into the avatar's humanoid rig:
@@ -110,11 +110,13 @@ For gaming companions, Twitch stream interactive modes, or tabletop/roleplay sce
    {
      "name": "cast_stage_ability",
      "arguments": {
-       "ability": "pyre_crown" | "kraken_crown" | "earthen_spire" | "verdant_gate",
-       "target": "stage_center" | "self_feet" | "random_arena"
+       "ability": "pyre_crown",
+       "target": "stage_center"
      }
    }
    ```
+
+   `ability` ∈ { `pyre_crown`, `kraken_crown`, `earthen_spire`, `verdant_gate` }; `target` ∈ { `stage_center`, `self_feet`, `random_arena` }.
 
 ---
 
@@ -166,7 +168,7 @@ While authoring raw GLSL from scratch requires graphics engineering expertise, *
 
 To ensure rapid experimentation without risking regression to `RendererStage.vue` or production stage performance, development follows the exact architectural pattern established by the **Live2D DSL Playground** ([`apps/stage-tamagotchi/src/renderer/pages/devtools/live2d.vue`](../apps/stage-tamagotchi/src/renderer/pages/devtools/live2d.vue)).
 
-```
+```text
 +-------------------------------------------------------------------------+
 |  Stage VFX & Aura Playground [Sandboxed]                                |
 +---------------------------------------------------+---------------------+
@@ -219,7 +221,7 @@ To ensure rapid experimentation without risking regression to `RendererStage.vue
 | **Settings Catalog** | `packages/stage-ui/src/constants/settings-catalog.ts` | Registers the tool under `sys-developer` in `RUNTIME & NEURAL LABS 脳`. |
 | **Renderer Stage** | `packages/stage-ui/src/components/scenes/RendererStage.vue` | Production stage mount for the validated procedural VFX scene layer. |
 | **VRM Skeleton** | `packages/stage-ui/src/composables/use-vrm.ts` | Exposes humanoid bone transforms (`leftWrist`, `rightWrist`, `chest`, `head`) as anchor sockets. |
-| **ACT Token Pipeline** | `packages/stage-ui/src/composables/llm-marker-parser.ts` | Maps emotion tokens (`<|ACT:emotion="..."|>`) and kinetic cues to character aura activations. |
+| **ACT Token Pipeline** | `packages/stage-ui/src/composables/llm-marker-parser.ts` | Maps emotion tokens (`<\|ACT:emotion="..."\|>`) and kinetic cues to character aura activations. |
 | **Memory / Universes** | `packages/stage-ui/src/stores/chat/session-store.ts` | Triggers portal sequence animations when switching universes or lifetime memory timelines. |
 | **Tool Registry** | `apps/stage-tamagotchi/src/renderer/stores/tools/builtin/` | Registers `cast_stage_ability` and `set_character_aura` into the character's callable toolset. |
 | **Control Strip Customizer** | `packages/stage-ui/src/constants/control-customizer.ts` | Exposes aura toggles, particle density, and color sliders in the user customization panel. |

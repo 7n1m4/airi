@@ -26,25 +26,26 @@ There are **two distinct concepts** that share the word "idle". Do not conflate 
 - **What**: one ambient animation that loops forever when no idle cycle is active.
 - **Where**: `packages/stage-ui-three/src/stores/model-store.ts:161` — `vrmIdleAnimation`, a `useLocalStorage` ref keyed `settings/stage-ui-three/vrmIdleAnimation`, default `'idleLoop'`. Reset to `'idleLoop'` at `model-store.ts:185`.
 - **Control surface**: the **"Idle Animations"** feature in the Control Strip (see `docs/catalog-control-strip.md` §2 "Actor & Wardrobe") is a **Cycler** — clicking rotates the selected base idle. Implemented in `packages/stage-ui/src/components/scenarios/layout/ControlStrip.vue`:
-  - `isMotionActive` (`:771`) — highlights the active motion; for VRM, `motion.key === ''` means "no base idle", else `vrmIdleAnimation.value === motion.key`.
-  - `playMotion` (`:821`) — `motion.key === ''` clears `vrmIdleAnimation` (and strips any non-VRM idle-cycle entries); otherwise selects the key.
+  - `isMotionActive` (`:986`) — highlights the active motion; for VRM, `motion.key === ''` means "no base idle", else `vrmIdleAnimation.value === motion.key`.
+  - `playMotion` (`:1036`) — `motion.key === ''` clears `vrmIdleAnimation` (and strips any non-VRM idle-cycle entries); otherwise selects the key.
 
 ### 2b. Idle cycle — `acting.idleAnimations` (list, per-card, auto-random)
 
 - **What**: a `string[]` of motion keys the character treats as its idle pool. The renderer plays one at a time and, on completion, randomly advances (may repeat the same clip). This is the behavior being ported to Mate-Engine.
-- **Where (data model)**: `packages/stage-ui/src/types/card.schema.ts:145-150`:
+- **Where (data model)**: `packages/stage-ui/src/types/card.schema.ts:333-347`:
 
   ```ts
-  acting: optional(looseObject({
+  const acting = optional(looseObject({
     modelExpressionPrompt: string(),
     speechExpressionPrompt: string(),
     speechMannerismPrompt: string(),
     idleAnimations: optional(array(string())),
-  })),
+    pacing: optional(AiriPacingSchema),
+  }))
   ```
 
-  Stored on the card at `extensions.airi.acting.idleAnimations`; default `[]` (`packages/stage-ui/src/stores/modules/airi-card.ts:871`).
-- **Per-visual-asset override**: `visual_assets[*].manifestation` may carry its own `idleAnimations`, which wins over the card-level list. Resolution order in `packages/stage-ui/src/composables/use-idle-animations.ts:41-55` (`resolveActiveIdleAnimations`):
+  Stored on the card at `extensions.airi.acting.idleAnimations`; default `[]` (`packages/stage-ui/src/stores/modules/airi-card.ts:1077`).
+- **Per-visual-asset override**: `visual_assets[*].manifestation` may carry its own `idleAnimations`, which wins over the card-level list. Resolution order in `packages/stage-ui/src/composables/use-idle-animations.ts:44-58` (`resolveActiveIdleAnimations`):
   1. If `activeModelId` matches a `visual_assets[*].manifestation.modelId` and that asset has `idleAnimations`, return it.
   2. Else return `card.extensions.airi.acting.idleAnimations`.
 
@@ -124,7 +125,7 @@ Goal: mirror AIRI's **idle cycle** semantics in the Unity/VRM 0.x sidecar, drive
 | Concern | Path |
 | :--- | :--- |
 | Card schema (`acting.idleAnimations`, `visual_assets`) | `packages/stage-ui/src/types/card.schema.ts` |
-| Card store (default `idleAnimations: []`) | `packages/stage-ui/src/stores/modules/airi-card.ts:871` |
+| Card store (default `idleAnimations: []`) | `packages/stage-ui/src/stores/modules/airi-card.ts:1077` |
 | Idle composable (resolver, per-asset override) | `packages/stage-ui/src/composables/use-idle-animations.ts` |
 | Custom VRM animation store (`resolveAnimationUrl`, `animationOptions`) | `packages/stage-ui-three/src/stores/custom-vrm-animations.ts` |
 | Builtin animation registry (`idleLoop`, etc.) | `packages/stage-ui-three/src/assets/vrm/animations/index.ts` |

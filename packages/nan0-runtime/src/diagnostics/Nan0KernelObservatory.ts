@@ -329,7 +329,7 @@ export function createNan0KernelObservatory(options: {
   let sinkFailureReported = false
   let overflowReported = false
 
-  const drain = async (): Promise<void> => {
+  async function drain(): Promise<void> {
     if (!sink || draining)
       return draining ?? Promise.resolve()
     scheduled = false
@@ -354,7 +354,7 @@ export function createNan0KernelObservatory(options: {
     return draining
   }
 
-  const scheduleDrain = (): void => {
+  function scheduleDrain(): void {
     if (!sink || scheduled || draining)
       return
     scheduled = true
@@ -437,10 +437,10 @@ export function createNan0KernelObservatory(options: {
         queue.splice(0, queue.length - configuration.bufferCapacity)
     },
     async flush() {
-      while (queue.length || draining) {
+      while (true) {
         await drain()
-        if (draining)
-          await draining
+        if (!queue.length && !draining)
+          return
       }
     },
   }

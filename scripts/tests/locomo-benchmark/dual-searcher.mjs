@@ -21,7 +21,7 @@ export class DualSearcher {
    * @param {string} question
    * @param {object} triage - Triage decision from Laya
    * @param {number} [limit=3]
-   * @returns {Promise<{ ledgerResult: object|null, textCandidates: any[], topEvidence: string[], combinedCandidates: any[] }>}
+   * @returns {Promise<{ ledgerResult: object|null, textCandidates: any[], topEvidence: string[], combinedCandidates: any[] }>} The ledger lookup result, hybrid text candidates, deduplicated evidence, and the merged candidate pool.
    */
   async search(question, triage, limit = 3, queryVector = null) {
     const qLower = question.toLowerCase()

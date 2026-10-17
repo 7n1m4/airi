@@ -3,6 +3,7 @@ import type { BaseIssue, BaseSchema, InferIssue, InferOutput } from 'valibot'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { copyFile, mkdir, rename, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { pid as processPid } from 'node:process'
 
 import { safeDestr } from 'destr'
 import { app } from 'electron'
@@ -98,7 +99,7 @@ export function createConfig<TSchema extends PersistedSchema>(
       const path = configPath()
       await ensureConfigDirectory(path)
       const sequence = ++saveSequence
-      const tmpPath = `${path}.${process.pid}.${sequence}.tmp`
+      const tmpPath = `${path}.${processPid}.${sequence}.tmp`
       const data = persistenceMap.get(key)
       // console.log(`[Persistence] Writing config to disk: ${path}`, JSON.stringify(data, null, 2))
       await writeFile(tmpPath, JSON.stringify(data))

@@ -33,7 +33,7 @@ In practice, binary checkboxes are misleading. There is a fundamental architectu
 
 ---
 
-##### 1.2 Lessons from the September 2026 Competitive Audit
+### 1.2 Lessons from the September 2026 Competitive Audit
 
 An independent 11-page competitive evaluation published on September 14, 2026 reviewed visible AI companions and forks. It recommended `dasilva333/airi` second overall for a Windows desktop trial behind Project N.E.K.O., while identifying `dasilva333/airi` as the **strongest active general-purpose AIRI fork in the sampled forks**.
 
@@ -402,7 +402,7 @@ This matrix extends the verified capability catalog from the AIRI repository, pr
 
 ---
 
-#### 3.1 Embodiment & Avatar Integration Depth
+### 3.1 Embodiment & Avatar Integration Depth
 
 | Capability / Dimension | `dasilva333/airi` | Upstream AIRI | Project N.E.K.O. | NekoGPT | Utsuwa | Soul of Waifu | Open-LLM-VTuber | Amica | Komorebi | AITuberKit | VPet |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |

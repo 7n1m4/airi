@@ -6,7 +6,6 @@ import { Button } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
-// @ts-ignore
 import * as THREE from 'three'
 
 import { useArtistryStore } from '../../../../../stores/modules/artistry'
@@ -142,7 +141,7 @@ function getTextureUrl(tex: any) {
       return canvas.toDataURL()
     }
   }
-  catch (e) {}
+  catch {}
   return null
 }
 
@@ -395,7 +394,10 @@ function selectTexture(item: any) {
     jumpToNode(associated[0])
 }
 
-function jumpToNode(nodeItem: any) { selectNode(nodeItem); activeTab.value = 'material' }
+function jumpToNode(nodeItem: any) {
+  selectNode(nodeItem)
+  activeTab.value = 'material'
+}
 
 // Unified Artistry Generation
 async function generateAndSwap() {
@@ -447,7 +449,7 @@ async function generateAndSwap() {
       try {
         options = JSON.parse(aiComfyParams.value || '{}')
       }
-      catch (e) {
+      catch {
         options = {}
       }
       model = artistryStore.comfyuiActiveWorkflow
@@ -574,14 +576,16 @@ function swapTextureByRef(url: string, targetRef?: any) {
       let blackCount = 0
       const tolerance = 8 // Key out anything darker than 8/255 (approx 3% gray)
       for (let i = 0; i < data.length; i += 4) {
-        const r = data[i]; const g = data[i + 1]; const b = data[i + 2]
+        const r = data[i]
+        const g = data[i + 1]
+        const b = data[i + 2]
         if (r <= tolerance && g <= tolerance && b <= tolerance) {
           data[i + 3] = 0
           blackCount++
         }
       }
       if (blackCount > 0) {
-        console.log(`[VHACK] Alpha Patch: Keyed out ${blackCount} black pixels.`)
+        console.info(`[VHACK] Alpha Patch: Keyed out ${blackCount} black pixels.`)
         ctx.putImageData(imageData, 0, 0)
         tex.image = canvas
       }
@@ -605,7 +609,7 @@ function swapTextureByRef(url: string, targetRef?: any) {
               : (currentSlotTex.image?.uuid === targetFingerprint || currentSlotTex.image?.src === targetFingerprint || currentSlotTex.uuid === targetFingerprint)
 
             if (matches) {
-              console.log(`[VHACK] Nuclear Match: ${node.name} [${slot}]. Injecting pixels.`)
+              console.info(`[VHACK] Nuclear Match: ${node.name} [${slot}]. Injecting pixels.`)
 
               currentSlotTex.image = tex.image
               currentSlotTex.colorSpace = tex.colorSpace
@@ -628,7 +632,7 @@ function swapTextureByRef(url: string, targetRef?: any) {
         })
       }
     })
-    console.log('[VHACK] Swap complete.')
+    console.info('[VHACK] Swap complete.')
   })
 }
 
@@ -669,7 +673,7 @@ function handleEraserClick(e: MouseEvent) {
 
   const pixel = ctx.getImageData(x, y, 1, 1).data
   eraserPickedColor.value = [pixel[0], pixel[1], pixel[2]]
-  console.log('[VHACK] Color Picked:', eraserPickedColor.value)
+  console.info('[VHACK] Color Picked:', eraserPickedColor.value)
 
   // Auto-preview purge
   applyEraserPurge()
@@ -693,7 +697,9 @@ function applyEraserPurge() {
 
     let count = 0
     for (let i = 0; i < data.length; i += 4) {
-      const r = data[i]; const g = data[i + 1]; const b = data[i + 2]
+      const r = data[i]
+      const g = data[i + 1]
+      const b = data[i + 2]
       const diff = Math.sqrt(
         (r - tr) ** 2
         + (g - tg) ** 2
@@ -706,7 +712,7 @@ function applyEraserPurge() {
       }
     }
     ctx.putImageData(imageData, 0, 0)
-    console.log(`[VHACK] Eraser: Purged ${count} pixels.`)
+    console.info(`[VHACK] Eraser: Purged ${count} pixels.`)
   }
   img.src = eraserImageUrl.value
 }
@@ -737,7 +743,7 @@ async function exportVrm() {
         const res = await fetch(settingsStore.stageModelSelectedUrl)
         vhackStore.setSourceArrayBuffer(await res.arrayBuffer())
       }
-      catch (e) {
+      catch (e: unknown) {
         console.warn('[VHack] Failed to fetch source ArrayBuffer on demand:', e)
       }
     }
@@ -763,7 +769,7 @@ async function exportVrm() {
     const gltf = JSON.parse(jsonContent)
 
     // EXPORT VISIBILITY SURGERY: Permanently disable nodes that are hidden in the UI
-    console.group('>>> [VHACK] Surgical Export (Primitive-Aware Active)')
+    console.info('>>> [VHACK] Surgical Export (Primitive-Aware Active)')
     let unlinkedCount = 0
     let hiddenCandidates = 0
 
@@ -796,7 +802,7 @@ async function exportVrm() {
           const meshIdx = assoc.meshes
           const primIdx = assoc.primitives
           if (gltf.meshes[meshIdx] && gltf.meshes[meshIdx].primitives[primIdx]) {
-            console.log(`[VHACK] Primitive Surgery: Neutering Mesh [${meshIdx}] Prim [${primIdx}] ("${node.name}")`)
+            console.info(`[VHACK] Primitive Surgery: Neutering Mesh [${meshIdx}] Prim [${primIdx}] ("${node.name}")`)
             gltf.meshes[meshIdx].primitives[primIdx].material = hiddenMatIdx
             unlinkedCount++
           }
@@ -804,7 +810,7 @@ async function exportVrm() {
         // CASE B: Isolated Node (Maika Mode)
         // If it's a dedicated node for this part, use the scale trick
         else if (nodeIdx !== null && gltf.nodes[nodeIdx]) {
-          console.log(`[VHACK] Node Surgery (Ghost Scale): Hiding Node [${nodeIdx}] ("${node.name}")`)
+          console.info(`[VHACK] Node Surgery (Ghost Scale): Hiding Node [${nodeIdx}] ("${node.name}")`)
           gltf.nodes[nodeIdx].scale = [0, 0, 0]
           unlinkedCount++
         }
@@ -814,8 +820,7 @@ async function exportVrm() {
     if (hiddenCandidates > 0 && unlinkedCount === 0) {
       console.error('[VHACK] CRITICAL FAILURE: Found hidden meshes but could not resolve any GLTF indices.')
     }
-    console.log(`[VHACK] Surgery Complete. Candidates: ${hiddenCandidates}, Unlinked: ${unlinkedCount}`)
-    console.groupEnd()
+    console.info(`[VHACK] Surgery Complete. Candidates: ${hiddenCandidates}, Unlinked: ${unlinkedCount}`)
 
     // BIN Chunk Info
     const binOffset = 20 + jsonLen + 8
@@ -996,7 +1001,12 @@ function revert() {
     sourceTextureUrl.value = getTextureUrl(selectedMaterial.value.map)
 }
 
-watch(activeVrm, () => { if (activeVrm.value) { extractTextures(); takeGlobalSnapshot() } }, { immediate: true })
+watch(activeVrm, () => {
+  if (activeVrm.value) {
+    extractTextures()
+    takeGlobalSnapshot()
+  }
+}, { immediate: true })
 onMounted(() => {
   if (activeVrm.value)
     takeGlobalSnapshot()

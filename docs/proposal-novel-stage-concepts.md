@@ -54,7 +54,7 @@ Currently, the **Stage** (running Live2D/VRM) and the **Chatbox** exist as detac
 
 ---
 
-# Proposal: Stage Window Collapse Behaviors
+## Proposal: Stage Window Collapse Behaviors
 
 This proposal evaluates how the Stage floating window can be temporarily collapsed or hidden to reduce desktop clutter without fully closing the companion. The top-right corner of the Stage currently hosts a drag handle and an eye-hide button — prime real estate for a third, collapse-style action.
 

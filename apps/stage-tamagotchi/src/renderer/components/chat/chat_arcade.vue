@@ -113,6 +113,7 @@ const GAME_PRESETS: GamePreset[] = [
 
 // --- JS-DOS WebAssembly Engine State ---
 const dosContainerRef = ref<HTMLDivElement | null>(null)
+const canvasRef = ref<HTMLCanvasElement | null>(null)
 let dosPlayerInstance: any = null
 let currentCommandInterface: any = null
 let isJsDosLoaded = false
@@ -1253,7 +1254,6 @@ watch(currentGameIdentifier, (newId) => {
 })
 
 // --- Game Engine State (2048 Retro Canvas) ---
-const canvasRef = ref<HTMLCanvasElement | null>(null)
 const isCanvasFocused = ref(false)
 const score = ref(0)
 const bestScore = ref(0)

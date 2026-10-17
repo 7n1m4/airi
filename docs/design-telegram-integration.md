@@ -24,7 +24,7 @@ This design document modernizes Telegram integration into AIRI's unified archite
 
 A critical architectural distinction makes Telegram **vastly superior for serverless edge hosting**:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                    Telegram Pure HTTP Webhook Advantage                     │
 ├──────────────────────────────────────────┬──────────────────────────────────┤
@@ -49,7 +49,7 @@ A critical architectural distinction makes Telegram **vastly superior for server
 
 AIRI supports two complementary deployment models depending on user preference:
 
-```
+```text
                   ┌─────────────────────────────────────────┐
                   │          AIRI Control Plane             │
                   │   (Desktop Studio / Authoring UI)       │
@@ -86,7 +86,7 @@ Telegram users rely heavily on stickers, voice notes, and photo attachments. The
 
 ### 4.1 Protocol Boundaries: Voice Notes vs. Real-Time Voice Calls
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                 Protocol Boundaries: Voice Notes vs. Calls                  │
 ├──────────────────────────────────────────┬──────────────────────────────────┤
@@ -103,7 +103,7 @@ Telegram users rely heavily on stickers, voice notes, and photo attachments. The
 
 Following the audio delivery architecture in `packages/stage-ui/src/stores/modules/discord.ts` (lines 2170–2205):
 
-```
+```text
 [TTS Worker / Speech Store]
           │
           ▼ (Emits PCM Audio Chunks)
@@ -132,7 +132,7 @@ Unlike Discord (where normal users cannot send voice notes in text channels), **
 
 AIRI leverages this to support **Full Two-Way Asynchronous Spoken Dialogue**:
 
-```
+```text
 [User records Voice Note on Phone (Telegram)]
           │
           ▼ (Telegram Webhook: message.voice { file_id })
@@ -176,7 +176,7 @@ AIRI leverages this to support **Full Two-Way Asynchronous Spoken Dialogue**:
 
 Following the interactive component pattern established in Discord's `/status` and `/timelines` dashboard widgets (`packages/stage-ui/src/stores/modules/discord.ts`), Telegram leverages native **Inline Keyboards** (`InlineKeyboardMarkup`) and `callback_query` updates to provide a responsive, in-place dashboard without generating chat log clutter:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                  AIRI Telegram Interactive Status Dashboard                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -258,7 +258,7 @@ await bot.api.editMessageText(chatId, messageId, updatedDashboardMarkdown, inlin
 
 Standard messaging bots wait for full LLM completion before sending a single massive text block—creating a laggy, unresponsive feel. AIRI introduces **Debounced Real-Time SSE Streaming** on Telegram, matching the fluid "typing out" experience of the Desktop web interface while respecting Telegram's HTTP rate limits.
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                 Debounced Real-Time SSE Text Streaming Protocol             │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -334,7 +334,7 @@ export async function handleStreamingTelegramReply(
 
 Following the command registration and versioning pattern in `packages/stage-ui/src/stores/modules/discord.ts` (lines 480–498), Telegram slash commands are registered dynamically with Telegram's Bot API whenever the command version increases or upon initial deployment:
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                Versioned Command Auto-Sync Pipeline                         │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -366,12 +366,12 @@ export const TELEGRAM_CORE_COMMANDS = [
 
 export async function syncTelegramCommands(bot: Bot, lastVersion: number, force = false): Promise<number> {
   if (!force && lastVersion >= TELEGRAM_COMMANDS_VERSION) {
-    console.log(`[Telegram] Commands up to date (v${lastVersion})`)
+    console.info(`[Telegram] Commands up to date (v${lastVersion})`)
     return lastVersion
   }
 
   try {
-    console.log(`[Telegram] Syncing commands with Telegram API (v${TELEGRAM_COMMANDS_VERSION})...`)
+    console.info(`[Telegram] Syncing commands with Telegram API (v${TELEGRAM_COMMANDS_VERSION})...`)
     await bot.api.setMyCommands(TELEGRAM_CORE_COMMANDS)
     return TELEGRAM_COMMANDS_VERSION
   }
@@ -388,7 +388,7 @@ export async function syncTelegramCommands(bot: Bot, lastVersion: number, force 
 
 Telegram Mini Apps (`Telegram.WebApp`) run full HTML5/Vue 3 web applications inside Telegram's mobile and desktop apps. By pairing AIRI's Electron local host process (`apps/stage-tamagotchi`) with a secure tunnel (e.g. Cloudflare Tunnel or local HTTPS proxy), tapping an **`🎭 Open Companion Stage`** button in Telegram opens a dedicated mobile UI connected directly to your desktop AIRI instance!
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │               Telegram Mini App Architecture & Dual-Phase Roadmap           │
 ├─────────────────────────────────────────────────────────────────────────────┤
@@ -446,7 +446,7 @@ When developing locally inside `apps/stage-tamagotchi` without a Cloudflare Tunn
 
 ## 11. Summary of Migration & Implementation Roadmap
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                        Telegram Migration Plan                              │
 ├─────────────────────────────────────────────────────────────────────────────┤

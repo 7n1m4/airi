@@ -39,19 +39,19 @@ function formatDuration(startedAt, completedAt) {
 }
 
 function printReleaseAssets(tag) {
-  console.log(`\n📦 Assets for Release [${tag}]:`)
+  console.info(`\n📦 Assets for Release [${tag}]:`)
   try {
     const data = ghJson(`release view ${tag} -R ${REPO} --json assets,tagName,publishedAt`)
     if (!data || !data.assets || data.assets.length === 0) {
-      console.log('  No assets attached yet.')
+      console.info('  No assets attached yet.')
       return
     }
 
-    console.log(`  Published: ${data.publishedAt} | Total Assets: ${data.assets.length}\n`)
+    console.info(`  Published: ${data.publishedAt} | Total Assets: ${data.assets.length}\n`)
     const maxName = Math.max(...data.assets.map(a => a.name.length), 10)
     for (const a of data.assets) {
       const sizeMb = (a.size / (1024 * 1024)).toFixed(2)
-      console.log(`  • ${a.name.padEnd(maxName + 2)} ${sizeMb.padStart(7)} MB  (${a.contentType || 'file'})`)
+      console.info(`  • ${a.name.padEnd(maxName + 2)} ${sizeMb.padStart(7)} MB  (${a.contentType || 'file'})`)
     }
   }
   catch (err) {
@@ -126,14 +126,14 @@ function getWorkflowSummary() {
 function printStatusTable() {
   const summaries = getWorkflowSummary()
   if (summaries.length === 0) {
-    console.log('No recent workflow runs found.')
+    console.info('No recent workflow runs found.')
     return { activeCount: 0, hasFailure: false }
   }
 
-  console.log(`\n🚀 GitHub Actions Status (${REPO}) at ${new Date().toLocaleTimeString()}:`)
-  console.log('─'.repeat(95))
-  console.log(`${'ID'.padEnd(13)} ${'Workflow'.padEnd(32)} ${'Status'.padEnd(12)} ${'Time'.padEnd(8)} ${'Details'}`)
-  console.log('─'.repeat(95))
+  console.info(`\n🚀 GitHub Actions Status (${REPO}) at ${new Date().toLocaleTimeString()}:`)
+  console.info('─'.repeat(95))
+  console.info(`${'ID'.padEnd(13)} ${'Workflow'.padEnd(32)} ${'Status'.padEnd(12)} ${'Time'.padEnd(8)} ${'Details'}`)
+  console.info('─'.repeat(95))
 
   let activeCount = 0
   let hasFailure = false
@@ -155,10 +155,10 @@ function printStatusTable() {
       statusDisplay = '✗ failure'
     }
 
-    console.log(`${String(s.id).padEnd(13)} ${s.name.slice(0, 30).padEnd(32)} ${statusDisplay.padEnd(12)} ${s.duration.padEnd(8)} ${s.details}`)
+    console.info(`${String(s.id).padEnd(13)} ${s.name.slice(0, 30).padEnd(32)} ${statusDisplay.padEnd(12)} ${s.duration.padEnd(8)} ${s.details}`)
   }
 
-  console.log('─'.repeat(95))
+  console.info('─'.repeat(95))
   return { activeCount, hasFailure }
 }
 
@@ -171,19 +171,19 @@ async function main() {
   if (isLogError) {
     const runId = args.find(a => /^\d+$/.test(a))
     const target = runId ? `run view ${runId} --log-failed` : 'run view --log-failed'
-    console.log(gh(`${target} -R ${REPO}`))
+    console.info(gh(`${target} -R ${REPO}`))
     return
   }
 
   const { activeCount } = printStatusTable()
 
   if (isWatch && activeCount > 0) {
-    console.log(`\nWatching ${activeCount} active run(s)... (press Ctrl+C to stop)`)
+    console.info(`\nWatching ${activeCount} active run(s)... (press Ctrl+C to stop)`)
     while (true) {
       await new Promise(r => setTimeout(r, 20000))
       const res = printStatusTable()
       if (res.activeCount === 0) {
-        console.log('\n🎉 All runs completed.')
+        console.info('\n🎉 All runs completed.')
         printReleaseAssets(tagArg)
         process.exit(res.hasFailure ? 1 : 0)
       }

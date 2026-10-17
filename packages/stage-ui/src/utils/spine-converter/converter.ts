@@ -1,7 +1,18 @@
-// @ts-ignore
 import initModule from './SpineSkeletonDataConverter.js'
-// @ts-ignore
 import wasmUrl from './SpineSkeletonDataConverter.wasm?url'
+
+/**
+ * The subset of the emscripten module surface used to run the Spine converter:
+ * an in-memory FS plus the `callMain` entry point of the linked converter.
+ */
+interface SpineConverterModule {
+  FS: {
+    writeFile: (path: string, data: Uint8Array) => void
+    readFile: (path: string) => Uint8Array
+    unlink: (path: string) => void
+  }
+  callMain: (args: string[]) => void
+}
 
 /**
  * Converts a Spine skeleton file from 3.x to a supported target version (default 4.1.20)
@@ -17,30 +28,32 @@ export async function convertSpineSkeleton(
   filename: string,
   targetVersion = '4.1.20',
 ): Promise<Uint8Array> {
-  console.log(`[Spine-Wasm-Converter] Instantiating SpineSkeletonDataConverter WebAssembly for ${filename}...`)
-  const Module = (await initModule({
+  console.info(`[Spine-Wasm-Converter] Instantiating SpineSkeletonDataConverter WebAssembly for ${filename}...`)
+  // NOTICE: the glue module is untyped, so the resolved value is asserted once against
+  // the narrow surface we actually call instead of being treated as `any`.
+  const Module = await initModule({
     locateFile: (path: string) => {
       if (path.endsWith('.wasm')) {
-        console.log(`[Spine-Wasm-Converter] Loading Wasm from: ${wasmUrl}`)
+        console.info(`[Spine-Wasm-Converter] Loading Wasm from: ${wasmUrl}`)
         return wasmUrl
       }
       return path
     },
-  })) as any
+  }) as unknown as SpineConverterModule
 
   const inputPath = `/${filename}`
   const outputPath = `/output_${Date.now()}_${filename}`
 
-  console.log(`[Spine-Wasm-Converter] Writing file ${filename} to MEMFS...`)
+  console.info(`[Spine-Wasm-Converter] Writing file ${filename} to MEMFS...`)
   Module.FS.writeFile(inputPath, inputBytes)
 
   try {
-    console.log(`[Spine-Wasm-Converter] Calling callMain conversion for version: ${targetVersion}`)
+    console.info(`[Spine-Wasm-Converter] Calling callMain conversion for version: ${targetVersion}`)
     Module.callMain([inputPath, outputPath, '-v', targetVersion])
 
-    console.log(`[Spine-Wasm-Converter] Reading output file from MEMFS...`)
+    console.info(`[Spine-Wasm-Converter] Reading output file from MEMFS...`)
     const outputBytes = Module.FS.readFile(outputPath)
-    console.log(`[Spine-Wasm-Converter] Successfully converted skeleton: ${outputBytes.length} bytes.`)
+    console.info(`[Spine-Wasm-Converter] Successfully converted skeleton: ${outputBytes.length} bytes.`)
     return outputBytes
   }
   finally {

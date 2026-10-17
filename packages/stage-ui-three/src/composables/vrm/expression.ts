@@ -135,7 +135,7 @@ export function useVRMEmote(vrm: VRMCore) {
     if (logKey !== lastEmotionKey || now - lastEmotionLogAt > 5000) {
       lastEmotionKey = logKey
       lastEmotionLogAt = now
-      if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+      if (import.meta.env.DEV) {
         // eslint-disable-next-line no-console
         console.debug('[VRMExpression] setEmotion called:', { emotionName, intensity })
       }

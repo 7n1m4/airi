@@ -13,7 +13,7 @@ import {
 } from 'reka-ui'
 import { computed, reactive, ref } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   modelValue: boolean
 }>()
 

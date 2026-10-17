@@ -1,5 +1,7 @@
 import type { ScreenCaptureOptions } from '@proj-airi/stage-shared'
 
+import process from 'node:process'
+
 import { defineInvokeHandler } from '@moeru/eventa'
 import { visionCaptureScreen, visionCheckPermission, visionGetPrimaryDisplaySize, visionRequestPermission } from '@proj-airi/stage-shared'
 import { desktopCapturer, screen } from 'electron'
@@ -112,7 +114,7 @@ export function createVisionService(params: { context: any }) {
       const mu = process.memoryUsage()
       const sys = process.getSystemMemoryInfo()
       const toMB = (kb: number) => Math.round(kb / 1024)
-      console.log(
+      console.info(
         `[MEM-PROBE] [vision-main] tick=${captureTickCount} | RSS: ${toMB(mu.rss)} MB (heap ${toMB(mu.heapUsed)}/${toMB(mu.heapTotal)} MB, external ${toMB(mu.external)} MB) | System free: ${toMB(sys.free)} MB / ${toMB(sys.total)} MB, swapFree: ${toMB(sys.swapFree)} MB`,
       )
     }
@@ -122,7 +124,7 @@ export function createVisionService(params: { context: any }) {
   }
 
   defineInvokeHandler(params.context, visionCaptureScreen, async (options) => {
-    console.log('[Vision Service] visionCaptureScreen requested:', JSON.stringify(options))
+    console.info('[Vision Service] visionCaptureScreen requested:', JSON.stringify(options))
     captureTickCount++
     if (captureTickCount % MAIN_PROBE_EVERY_TICKS === 0)
       logMainMemoryProbe()
@@ -130,12 +132,12 @@ export function createVisionService(params: { context: any }) {
       mainProcessCaptureCount++
       if (mainProcessCaptureCount % 20 === 0) {
         const mem = process.memoryUsage()
-        console.log(`[Vision Service:MEM] [MAIN-PROC] Capture #${mainProcessCaptureCount} | RSS: ${(mem.rss / 1024 / 1024).toFixed(1)} MB | Heap: ${(mem.heapUsed / 1024 / 1024).toFixed(1)} / ${(mem.heapTotal / 1024 / 1024).toFixed(1)} MB | External: ${(mem.external / 1024 / 1024).toFixed(1)} MB | ArrayBuffers: ${((mem.arrayBuffers || 0) / 1024 / 1024).toFixed(1)} MB`)
+        console.info(`[Vision Service:MEM] [MAIN-PROC] Capture #${mainProcessCaptureCount} | RSS: ${(mem.rss / 1024 / 1024).toFixed(1)} MB | Heap: ${(mem.heapUsed / 1024 / 1024).toFixed(1)} / ${(mem.heapTotal / 1024 / 1024).toFixed(1)} MB | External: ${(mem.external / 1024 / 1024).toFixed(1)} MB | ArrayBuffers: ${((mem.arrayBuffers || 0) / 1024 / 1024).toFixed(1)} MB`)
       }
 
       const types: ('screen' | 'window')[] = options?.type === 'window' ? ['window'] : ['screen']
       const thumbnailSize = resolveThumbnailSize(options)
-      console.log(`[Vision Service] Requesting thumbnailSize: ${thumbnailSize.width}×${thumbnailSize.height} (${options?.native ? 'native' : 'scaled'})`)
+      console.info(`[Vision Service] Requesting thumbnailSize: ${thumbnailSize.width}×${thumbnailSize.height} (${options?.native ? 'native' : 'scaled'})`)
       const sources = await desktopCapturer.getSources({
         types,
         thumbnailSize,
@@ -146,7 +148,7 @@ export function createVisionService(params: { context: any }) {
         return null
       }
 
-      console.log(`[Vision Service] desktopCapturer found ${sources.length} sources.`)
+      console.info(`[Vision Service] desktopCapturer found ${sources.length} sources.`)
 
       // Attempt to find a valid source with a thumbnail
       let selectedSource = options?.sourceId
@@ -163,7 +165,7 @@ export function createVisionService(params: { context: any }) {
         return null
       }
 
-      console.log(`[Vision Service] Capturing from: "${selectedSource.name}" (ID: ${selectedSource.id})`)
+      console.info(`[Vision Service] Capturing from: "${selectedSource.name}" (ID: ${selectedSource.id})`)
 
       if (selectedSource.thumbnail.isEmpty()) {
         console.warn('[Vision Service] Selected capture source thumbnail is empty.')

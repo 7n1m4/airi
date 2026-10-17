@@ -58,8 +58,12 @@ export function createDockModeService(params: {
     return currentStatus
   }
 
-  onAppWindowAllClosed(() => { stopDocking() })
-  onAppBeforeQuit(() => { stopDocking() })
+  onAppWindowAllClosed(() => {
+    stopDocking()
+  })
+  onAppBeforeQuit(() => {
+    stopDocking()
+  })
 
   // List desktop windows via desktopCapturer
   defineInvokeHandler(params.context, electron.dockMode.listWindows, async () => {

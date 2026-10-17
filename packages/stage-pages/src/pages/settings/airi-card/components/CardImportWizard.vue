@@ -526,7 +526,7 @@ async function finalizeImport() {
         if (profile && profile.id) {
           const exists = speechStore.savedVoiceProfiles.some((p: any) => p.id === profile.id)
           if (!exists) {
-            console.log(`[ImportWizard] Importing virtual voice profile: ${profile.name} (${profile.id})`)
+            console.info(`[ImportWizard] Importing virtual voice profile: ${profile.name} (${profile.id})`)
             speechStore.saveVoiceProfile(profile)
           }
           else {

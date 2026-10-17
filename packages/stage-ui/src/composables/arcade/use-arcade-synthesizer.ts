@@ -270,10 +270,10 @@ function evaluateGameState(prevFrame, currFrame, telemetry, diffUtils) {
         avgLatencyMs,
       }
 
-      console.group('%c[Arcade Studio] 🧪 Sandbox Test Execution (60 Ticks)...', 'color: #06b6d4; font-weight: bold;')
+      console.info('%c[Arcade Studio] 🧪 Sandbox Test Execution (60 Ticks)...', 'color: #06b6d4; font-weight: bold;')
       console.info('Sandbox Test Input Code:\n', code)
       console.info('Sandbox Test Result:', result)
-      console.groupEnd()
+      console.info('---')
 
       lastTestResult.value = result
       return result
@@ -324,8 +324,8 @@ function evaluateGameState(prevFrame, currFrame, telemetry, diffUtils) {
     }
 
     // Verbose Developer & User Console Logging for Game Knowledge Synthesis
-    console.group('%c[Arcade Studio] 🧠 Synthesizing Game Intelligence...', 'color: #38bdf8; font-weight: bold; font-size: 13px;')
-    console.group('%c📥 INPUT SPEC & TELEMETRY', 'color: #a855f7; font-weight: bold;')
+    console.info('%c[Arcade Studio] 🧠 Synthesizing Game Intelligence...', 'color: #38bdf8; font-weight: bold; font-size: 13px;')
+    console.info('%c📥 INPUT SPEC & TELEMETRY', 'color: #a855f7; font-weight: bold;')
     console.info('Catalog Game:', {
       identifier: game.identifier,
       title: game.title,
@@ -346,9 +346,9 @@ function evaluateGameState(prevFrame, currFrame, telemetry, diffUtils) {
       keyEventsSample: trace.keyEvents.slice(0, 15),
       demonstrationFrames: trace.frames ? { total: trace.frames.length, sample: trace.frames.slice(0, 8) } : 'none',
     })
-    console.groupEnd()
+    console.info('---')
 
-    console.group('%c📤 OUTPUT STRATEGY & REFLEX PROGRAM', 'color: #10b981; font-weight: bold;')
+    console.info('%c📤 OUTPUT STRATEGY & REFLEX PROGRAM', 'color: #10b981; font-weight: bold;')
     console.info('Strategy Specification:', {
       summary: strategy.summary,
       pacing: strategy.pacing,
@@ -367,12 +367,11 @@ function evaluateGameState(prevFrame, currFrame, telemetry, diffUtils) {
     else {
       console.info('Reflex Mini-Program: None (Continuous VLM Architecture)')
     }
-    console.groupEnd()
+    console.info('---')
 
-    console.group('%c💾 FINAL ACQUIRED KNOWLEDGE PAYLOAD (IndexedDB)', 'color: #f59e0b; font-weight: bold;')
+    console.info('%c💾 FINAL ACQUIRED KNOWLEDGE PAYLOAD (IndexedDB)', 'color: #f59e0b; font-weight: bold;')
     console.info('AcquiredGameKnowledge:', knowledge)
-    console.groupEnd()
-    console.groupEnd()
+    console.info('---')
 
     return knowledge
   }
