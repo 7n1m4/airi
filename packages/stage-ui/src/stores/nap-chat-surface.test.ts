@@ -130,13 +130,30 @@ function setPresenceState(state: PresenceState) {
   presence.presence.state = state
 }
 
-/** Hook-only trace of the delivery, and nothing else. */
+/**
+ * Hook-only trace of the delivery, and nothing else.
+ *
+ * NOTICE: every hook the turn emits is registered, not only the two that were
+ * missing. A test that asserted only "streamEnd is somewhere in the list" would
+ * still pass if the order were inverted — which was the original bug — so the
+ * tracer records the full emission sequence and the tests compare it wholesale.
+ */
 function traceHooks(): string[] {
   const trace: string[] = []
   const chatOrchestrator = useChatOrchestratorStore()
 
   chatOrchestrator.onBeforeMessageComposed(async () => {
     trace.push('beforeMessageComposed')
+  })
+  chatOrchestrator.onStreamEnd(async () => {
+    trace.push('streamEnd')
+  })
+  // NOTICE: the response-end hook's first argument is the text, the second is
+  // the stream context (`hooks.ts:203-205`) — named so here rather than read
+  // positionally, because a tracer that got that backwards would silently
+  // record `[object Object]` and the order assertion would still pass.
+  chatOrchestrator.onAssistantResponseEnd(async (text) => {
+    trace.push(`assistantResponseEnd:${text}`)
   })
   chatOrchestrator.onAssistantMessage(async (_message, text) => {
     trace.push(`assistantMessage:${text}`)
@@ -285,10 +302,11 @@ describe('nap-chat memory write-back and return surfacing', () => {
     setPresenceState('away')
     await vi.waitFor(() => expect(nap.pendingRecap?.sessionId).toBe('nap-session-2'))
 
-    // The return edge.
+    // The return edge. The full sequence, in the order the heartbeat precedent
+    // uses, so an inverted order fails here rather than downstream.
     setPresenceState('active')
     await vi.waitFor(() => {
-      expect(trace).toEqual(['beforeMessageComposed', `assistantMessage:${secondRecap}`, 'chatTurnComplete'])
+      expect(trace).toEqual(['beforeMessageComposed', 'streamEnd', `assistantResponseEnd:${secondRecap}`, `assistantMessage:${secondRecap}`, 'chatTurnComplete'])
     })
 
     // Exactly one turn, inscribed into the user's own session as an assistant turn.
@@ -307,7 +325,7 @@ describe('nap-chat memory write-back and return surfacing', () => {
     setPresenceState('idle')
     setPresenceState('active')
     await vi.waitFor(() => expect(nap.pendingRecap).toBeNull())
-    expect(trace).toHaveLength(3)
+    expect(trace).toHaveLength(5)
     expect(inscripted()).toHaveLength(1)
     expect(surfaced()).toHaveLength(1)
   })
@@ -322,7 +340,7 @@ describe('nap-chat memory write-back and return surfacing', () => {
     await vi.waitFor(() => expect(nap.pendingRecap).not.toBeNull())
     setPresenceState('active')
     await vi.waitFor(() => {
-      expect(trace).toHaveLength(3)
+      expect(trace).toHaveLength(5)
     })
     expect(nap.pendingRecap).toBeNull()
   })
@@ -349,7 +367,7 @@ describe('nap-chat memory write-back and return surfacing', () => {
     setPresenceState('away')
     setPresenceState('active')
     await vi.waitFor(() => {
-      expect(trace).toHaveLength(3)
+      expect(trace).toHaveLength(5)
     })
 
     // A restart reads the persisted lease rather than the cleared in-memory slot.
@@ -359,7 +377,7 @@ describe('nap-chat memory write-back and return surfacing', () => {
 
     setPresenceState('idle')
     setPresenceState('active')
-    await vi.waitFor(() => expect(trace).toHaveLength(3))
+    await vi.waitFor(() => expect(trace).toHaveLength(5))
   })
 
   it('never creates a session, and never moves the active session id', async () => {
@@ -402,6 +420,81 @@ describe('nap-chat memory write-back and return surfacing', () => {
     composed.length = 0
     await nap.surfacePendingRecap()
     expect(composed).toEqual([])
+  })
+
+  /**
+   * B5 — the sequence itself, not just the presence of the two missing hooks.
+   *
+   * The defect was that `deliverRecapTurn` inscribed before every hook and
+   * omitted `emitStreamEndHooks`/`emitAssistantResponseEndHooks` entirely, which
+   * is what made the recap silent: TTS, the bubble and every other downstream
+   * consumer wait on those two. A test that only asserted the hooks were present
+   * would still pass with the order inverted, so this compares the whole
+   * recorded sequence against the heartbeat precedent (`proactivity.ts:877-892`).
+   */
+  it('emits the full sequence in the heartbeat precedent order, with chatTurnComplete last', async () => {
+    const nap = useNapChatStore()
+    const composed: string[] = []
+    useChatOrchestratorStore().onAssistantMessage(async (_message, text) => {
+      composed.push(text)
+    })
+
+    await nap.recordNapChatCompletion(BASE_RECORD)
+    setPresenceState('idle')
+    await vi.waitFor(() => expect(nap.pendingRecap).not.toBeNull())
+
+    // NOTICE: the inscribe is not traced. What the defect took away was the
+    // stream's completion announcement — `emitStreamEndHooks` and
+    // `emitAssistantResponseEndHooks` are the two hooks every downstream
+    // consumer waits on, so without them the recap was written to the journal
+    // and to memory and then never said out loud or shown. The hooks' relative
+    // order is what is pinned here; the inscribe's own single-write behaviour is
+    // already covered by the "exactly one turn" assertion in this suite.
+    const trace: string[] = []
+    const chatOrchestrator = useChatOrchestratorStore()
+
+    chatOrchestrator.onBeforeMessageComposed(async () => {
+      trace.push('beforeMessageComposed')
+    })
+    chatOrchestrator.onStreamEnd(async () => {
+      trace.push('streamEnd')
+    })
+    chatOrchestrator.onAssistantResponseEnd(async (text) => {
+      trace.push(`assistantResponseEnd:${text}`)
+    })
+    chatOrchestrator.onAssistantMessage(async (_message, text) => {
+      trace.push(`assistantMessage:${text}`)
+    })
+    chatOrchestrator.onChatTurnComplete(async () => {
+      trace.push('chatTurnComplete')
+    })
+
+    setPresenceState('active')
+
+    // The exact sequence, pinned wholesale: the two hooks that were missing come
+    // *before* the inscribe, and `chatTurnComplete` is last.
+    //
+    // NOTICE: the inscribe is not traced. The hook *order* is what the defect
+    // was about — `emitStreamEndHooks`/`emitAssistantResponseEndHooks` were
+    // missing entirely, so no downstream consumer ever fired — and the hooks'
+    // relative order is what this pins. The inscribe's own position is already
+    // covered by the existing "exactly one turn, inscribed into the user's own
+    // session" assertion in this suite, which would catch a double-write; a
+    // tracer entry for it would instead be counting the session-refresh
+    // emissions the later hooks make, which is noise rather than signal.
+    await vi.waitFor(() => {
+      expect(trace).toEqual([
+        'beforeMessageComposed',
+        'streamEnd',
+        `assistantResponseEnd:${recapFor(BASE_RECORD)}`,
+        `assistantMessage:${recapFor(BASE_RECORD)}`,
+        'chatTurnComplete',
+      ])
+    })
+
+    // And the recap is the one that was spoken at every hook that carries text,
+    // rather than a placeholder the turn never used.
+    expect(composed).toEqual([recapFor(BASE_RECORD)])
   })
 
   it('never inscribes without an active session', async () => {

@@ -75,6 +75,12 @@ export const useProactivityStore = defineStore('proactivity', () => {
 
   debug('[Proactivity] Proactivity Store initialized.')
 
+  const lastHeartbeatTime = ref<number>(Date.now())
+  const isDreamStateEvaluating = ref(false)
+  const isUpdatingSensors = ref(false)
+  const isHeartbeatEvaluating = ref(false)
+  let heartbeatInterval: any = null
+
   const isPipeBusy = computed(() => {
     return checkIsPipeBusy({
       sending: Boolean(chatOrchestrator.sending),
@@ -95,12 +101,6 @@ export const useProactivityStore = defineStore('proactivity', () => {
       registeredTools.value.push(tools)
     }
   }
-
-  const lastHeartbeatTime = ref<number>(Date.now())
-  const isDreamStateEvaluating = ref(false)
-  const isUpdatingSensors = ref(false)
-  const isHeartbeatEvaluating = ref(false)
-  let heartbeatInterval: any = null
 
   const isElectron = typeof window !== 'undefined' && !!(window as any).electron
   const getIdleTimeInvoke = isElectron ? useElectronEventaInvoke(sensorsGetIdleTime) : null

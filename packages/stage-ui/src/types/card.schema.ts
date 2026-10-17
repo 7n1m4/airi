@@ -166,7 +166,7 @@ const AiriDreamStateSchema = object({
  * this feature owns.
  */
 const AiriNapSchema = looseObject({
-  enabled: boolean(),
+  enabled: optional(boolean()),
 })
 
 const AiriTextJournalSchema = object({

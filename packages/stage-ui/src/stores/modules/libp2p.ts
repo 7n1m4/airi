@@ -304,6 +304,12 @@ const PairedDeviceSchema = v.object({
   pairedAt: v.number(),
   lastSeen: v.number(),
   trusted: v.boolean(),
+  // The nap-chat consent the pairing flow recorded, mirrored from main's
+  // `PairedDeviceSchema`. NOTICE: it must be declared here or valibot's
+  // `object` drops it on arrival and the renderer reads every paired device as
+  // a refusal, so a grant the user granted in the pairing dialog is invisible
+  // on the list pushed back through `libp2pServicePairedDevicesChanged`.
+  napChatGranted: v.optional(v.boolean()),
 })
 
 function dropMalformed(contract: string, body: unknown) {
@@ -738,14 +744,15 @@ async function copyNodeName() {
  *
  * NOTICE: `napChatGranted` is the user's nap-chat decision for the device being
  * paired with, and it is *this node's* own half of the consent — the other half
- * is the accepter's. It travels appended as an optional param so every existing
- * caller pairs exactly as before; an explicit `false` makes main refuse the
- * pairing outright, and omitting it records no grant, which the consent gate
- * reads as a refusal anyway. Main, not this store, is the process that decides
- * what the grant means, because the paired-device record is the thing the
- * consent read consults and only main writes it.
+ * is the accepter's. An explicit `false` makes main refuse the pairing
+ * outright, and so does an omitted one: the transmitted payload always carries
+ * a boolean, so a call site with no user intent (an automatic or re-pair flow)
+ * can never leave the field absent and rely on main guessing. Main, not this
+ * store, is the process that decides what the grant means, because the
+ * paired-device record is the thing the consent read consults and only main
+ * writes it.
  */
-async function createPairing(ttlMinutes?: number, name?: string, napChatGranted?: boolean) {
+async function createPairing(ttlMinutes?: number, name?: string, napChatGranted = false) {
   if (!invokeCreatePairing) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
     return
@@ -789,14 +796,16 @@ function clearPairing() {
  * Accept a pairing.
  *
  * NOTICE: `napChatGranted` is this node's own nap-chat decision for the inviter,
- * chosen beside the alias in the pairing dialog. It is appended as an optional
- * param so existing callers pair exactly as before; an explicit `false` stops
- * the pairing in main before any dial or record is written, per the design's
- * "don't want it → don't pair". The store forwards it and nothing more — the
- * decision's meaning lives on the record only main writes, so a renderer that
- * interpreted it locally would be a second source of truth for a permission.
+ * chosen beside the alias in the pairing dialog. An explicit `false` stops the
+ * pairing in main before any dial or record is written, per the design's
+ * "don't want it → don't pair", and so does an omitted one — the transmitted
+ * payload always carries a boolean, so a call site with no user intent (an
+ * automatic or re-pair flow) cannot leave the field absent and rely on main
+ * guessing. The store forwards it and nothing more — the decision's meaning
+ * lives on the record only main writes, so a renderer that interpreted it
+ * locally would be a second source of truth for a permission.
  */
-async function acceptPairing(input: string, alias?: string, napChatGranted?: boolean) {
+async function acceptPairing(input: string, alias?: string, napChatGranted = false) {
   if (!invokeAcceptPairing) {
     reportError('Local Mesh requires the AIRI desktop app', new Error('invoke unavailable outside the AIRI desktop app'))
     return

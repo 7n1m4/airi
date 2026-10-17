@@ -198,6 +198,12 @@ export const electronMeshIdentitySetName = defineInvokeEventa<MeshIdentityInfo, 
  * is — a nap-chat grant the user declined refuses the pairing, and a contract
  * that can only answer success would force the renderer to guess why the
  * dialog never opened.
+ *
+ * `napChatGranted` stays *optional* so an older peer, or a peer built before
+ * the grant existed, pairs exactly as before and simply records no grant. The
+ * renderer store nonetheless always transmits a boolean: an omitted decision
+ * would cross IPC as an explicit `undefined`, and a caller with no user intent
+ * to report must send the refusal rather than leave the field absent.
  */
 export const libp2pServiceCreatePairing = defineInvokeEventa<
   { qrCode: string, magicCode: string, expiresAt: string } | { error: string },
@@ -214,8 +220,10 @@ export const libp2pServiceCreatePairing = defineInvokeEventa<
  * NOTICE: `napChatGranted` is this node's own half of the nap-chat consent,
  * chosen in the pairing dialog beside the alias. An explicit `false` refuses the
  * pairing outright, before the invitation is dialled or a record is written —
- * the design's "don't want it → don't pair". Omitting it leaves an older caller
- * pairing exactly as before, with no grant recorded.
+ * the design's "don't want it → don't pair". The field stays *optional* so an
+ * older peer pairs exactly as before with no grant recorded; the renderer store
+ * always sends a boolean, so the omitted case is an old peer, never a peer whose
+ * user was never asked.
  */
 export const libp2pServiceAcceptPairing = defineInvokeEventa<
   { peerId: string, alias: string } | { error: string },

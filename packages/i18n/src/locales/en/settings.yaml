@@ -358,6 +358,11 @@ settings:
       pairingCodeCopied: 'Pairing code copied'
       expiresAt: 'Expires'
       regeneratePairing: 'Regenerate'
+      napChatGrantLabel: Allow nap-chat with this device
+      napChatGrantDesc: While you are away, this companion may chat autonomously over the local
+        mesh with the paired device's companion. It runs on local or known-free
+        models only, and the decision is made once, here — refusing it means this
+        pairing does not happen.
     agentic-os:
       title: 'Agentic OS'
       description: 'Autonomous companion behaviour driven by presence detection,
@@ -461,26 +466,18 @@ settings:
       shared: 'Companion shared'
       shareFailed: 'Sharing failed'
       meshNotRunning: 'Local mesh is not running'
-modules:
-  agentic-os:
-    nap: Nap
-    napDesc: The companion rests while you are away. It keeps dreaming, and nothing
-      else — no autonomous cycle fires from a resting companion.
-    napEnable: Enable nap
-    napEnableDesc: When off, the companion never rests, however long the machine is
-      unattended.
-    napThreshold: Nap after
-    napThresholdMinutes: '%{n} minutes'
-    napThresholdInherited: 'Nap owns no threshold of its own: it starts once the
-      shared presence AFK threshold is reached. Moving this slider moves that
-      shared threshold, which the heartbeat gate reads too — one number, one
-      owner.'
-    napIndependentOfAutonomousMode: Napping does not require the autonomous mode to
-      be enabled. Resting is not acting — a companion in Disabled mode can still
-      nap.
-  libp2p:
-    napChatGrantLabel: Allow nap-chat with this device
-    napChatGrantDesc: While you are away, this companion may chat autonomously over the local
-      mesh with the paired device's companion. It runs on local or known-free
-      models only, and the decision is made once, here — refusing it means this
-      pairing does not happen.
+      nap: Nap
+      napDesc: The companion rests while you are away. It keeps dreaming, and nothing
+        else — no autonomous cycle fires from a resting companion.
+      napEnable: Enable nap
+      napEnableDesc: When off, the companion never rests, however long the machine is
+        unattended.
+      napThreshold: Nap after
+      napThresholdMinutes: '%{n} minutes'
+      napThresholdInherited: 'Nap owns no threshold of its own: it starts once the
+        shared presence AFK threshold is reached. Moving this slider moves that
+        shared threshold, which the heartbeat gate reads too — one number, one
+        owner.'
+      napIndependentOfAutonomousMode: Napping does not require the autonomous mode to
+        be enabled. Resting is not acting — a companion in Disabled mode can still
+        nap.

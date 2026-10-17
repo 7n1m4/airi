@@ -74,6 +74,7 @@ import {
   registerPendingAcceptedConfirmation,
   rememberDiscoveredInvite,
   removePairedDevice,
+  setupPairedDevices,
   updatePairedDeviceAlias,
 } from './pairing'
 
@@ -793,6 +794,26 @@ export async function setupLibp2pService(params: { lifecycle: Lifecycle }) {
   // default, which auto-heal can then overwrite), so it must run first — the
   // other AIRI services call `.setup()` from their own setup functions too.
   libp2pConfigStore.setup()
+  // NOTICE: the paired-device store is populated by the same synchronous disk
+  // read and nothing else. `getPairedDevices()` reads that in-memory map and
+  // returns `[]` when it is empty, so without this call a fresh boot sees zero
+  // paired devices and `napChatConsentFor` answers `not-paired` for every peer —
+  // the grant the user gave survives the reboot only if this runs. The first
+  // `addPairedDevice` after such a boot would also write a one-element list over
+  // the persisted file it never read.
+  //
+  // Placement is deliberate: this is the first statement of the setup function,
+  // before `getPrivateKey()` and `createLibp2pNode()`, so no libp2p node exists
+  // yet and therefore no `gossipsub:message` listener can have fired. The only
+  // paths that call `getPairedDevices()` before this point would be a renderer
+  // invoking `libp2pServiceListPairedDevices` or another service calling
+  // `listPairedDevices()` during app construction — `createLibp2pService` (which
+  // registers those handlers) is only invoked from the `injeca.invoke` block in
+  // `main/index.ts`, whose `dependsOn` includes this very `modules:libp2p`
+  // provider, so injeca resolves this setup first. Same ordering reason
+  // `agentic/index.ts` calls `agenticConfigStore.setup()` before starting its
+  // HTTP endpoint.
+  setupPairedDevices()
   const config = await loadConfig()
   currentConfig = config
 

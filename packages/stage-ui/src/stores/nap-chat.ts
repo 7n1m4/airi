@@ -365,7 +365,31 @@ export const useNapChatStore = defineStore('nap-chat', () => {
     }
 
     await chatOrchestrator.emitBeforeMessageComposedHooks('[Autonomous Intent]', context)
+
+    // The stream's completion is announced *before* the turn is inscribed, which
+    // is the order the heartbeat precedent uses (`proactivity.ts:877-892`):
+    // stream ended, then the assistant response ended, then the inscribe, then
+    // the assistant message, then chatTurnComplete last.
+    //
+    // NOTICE: the two omitted hooks are the whole defect. `emitStreamEndHooks`
+    // and `emitAssistantResponseEndHooks` are what every downstream consumer
+    // waits on — TTS, the bubble, Discord — so a recap that skipped them was
+    // written to the journal and to memory and then never said out loud or
+    // shown, which is the opposite of what "surface on return" is for. They are
+    // not optional companions to `emitAssistantMessageHooks`; each one drives a
+    // different set of subscribers.
+    await chatOrchestrator.emitStreamEndHooks(context)
+    await chatOrchestrator.emitAssistantResponseEndHooks(pending.recapText, context)
+
     chatSessionStore.inscribeTurn(buildingMessage, sessionId)
+
+    // The precedent resets the streaming slot only when the session is the user's
+    // active one (`proactivity.ts:883-885`), so a recap inscribing into a
+    // background session cannot blank the bubble the user is looking at.
+    if (sessionId === chatSessionStore.activeSessionId) {
+      chatOrchestrator.streamingMessage = { role: 'assistant', content: '', slices: [], tool_results: [] }
+    }
+
     await chatOrchestrator.emitAssistantMessageHooks(buildingMessage, pending.recapText, context)
     await chatOrchestrator.emitChatTurnCompleteHooks({
       output: buildingMessage,

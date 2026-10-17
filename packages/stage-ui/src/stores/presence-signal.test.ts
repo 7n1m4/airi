@@ -239,4 +239,44 @@ describe('adding or removing a signal provider changes no consumer call', () => 
     expect(presence.availability.sleep).toBe('derivable')
     expect(presence.derivableStates).toContain('sleep')
   })
+
+  it('promotes a screen-locked reading from unavailable to derivable once a provider answers', () => {
+    const presence = usePresenceStore()
+    expect(presence.availability['screen-locked']).toBe('unavailable')
+    expect(presence.derivableStates).not.toContain('screen-locked')
+
+    // The provider answers `'unlocked'`: a reading exists either way, so the
+    // state is derivable from the lock signal, not from the answer's value.
+    presence.addSignalProvider({ id: 'lock-events', readIdleSec: () => 0, readLockState: () => 'unlocked' })
+    presence.writeIdleTimeSec(60)
+
+    expect(presence.availability['screen-locked']).toBe('derivable')
+    expect(presence.derivableStates).toContain('screen-locked')
+    // The snapshot carries the promoted availability, so consumers that read the
+    // single snapshot rather than the store's own getter see it too.
+    expect(presence.presence.signals.availability['screen-locked']).toBe('derivable')
+  })
+
+  it('leaves screen-locked unavailable with no answering provider, and demotes it once one is removed', () => {
+    const presence = usePresenceStore()
+    expect(presence.availability['screen-locked']).toBe('unavailable')
+    expect(presence.derivableStates).not.toContain('screen-locked')
+
+    presence.addSignalProvider({ id: 'lock-events', readIdleSec: () => 0, readLockState: () => 'locked' })
+    presence.writeIdleTimeSec(60)
+
+    expect(presence.availability['screen-locked']).toBe('derivable')
+    expect(presence.derivableStates).toContain('screen-locked')
+    expect(presence.presence.signals.availability['screen-locked']).toBe('derivable')
+    // The reading itself is what makes the state observable, independent of the
+    // idle reading — the snapshot never claims a locked screen from idle alone.
+    expect(presence.presence.signals.hasLockSignal).toBe(true)
+
+    presence.removeSignalProvider('lock-events')
+
+    expect(presence.availability['screen-locked']).toBe('unavailable')
+    expect(presence.derivableStates).not.toContain('screen-locked')
+    expect(presence.presence.signals.availability['screen-locked']).toBe('unavailable')
+    expect(presence.presence.signals.hasLockSignal).toBe(false)
+  })
 })

@@ -28,8 +28,10 @@ if (config.strictAfkGating) {
   // (both arms call the same function — see §2)
   await refreshIdleTimeOnly()
   const afkThresholdSec = (config.afkThresholdMinutes || 5) * 60
+  // NOTICE: both arms are identical today; the branch is the sharp edge this
+  // refactor removes, so the stub keeps the shape of the original.
   if (!options?.force && (idleTimeSec.value ?? 0) < afkThresholdSec) {
-
+    await refreshIdleTimeOnly() // no-op placeholder for the removed branch
   }
 }
 ```
@@ -207,7 +209,7 @@ an empty desk.
 
 `nap` is derived each tick; `dozing`/`awake` are latched on top of it:
 
-```
+```text
 active/idle ──(presence AFK)──► nap
 nap ──(invite accepted, session open)──► awake (session)
 awake (session) ──(session closed)──► nap or active per the same AFK signal
@@ -261,7 +263,7 @@ All messages are JSON in a `Uint8Array`, base64 on the wire, exactly as
 send time — never captured at service start, per the precedent at
 `companion.ts:227-228`), `at` (epoch ms), and a monotonic `seq`.
 
-```
+```text
 proposal    { protocol, from, to, sessionId, at, turnCap, durationMs, nonce }
 accept      { protocol, from, to, sessionId, at, nonce }        // nonce echoed
 decline     { protocol, from, to, sessionId, at, reason }
@@ -424,10 +426,11 @@ fields.** Both pieces exist today; neither is currently used for this purpose.
 
 ```ts
 // Conceptual — the naming and location are proposals, not a decision.
-function isNapChatEligibleModel(providerKey: string, modelId: string): boolean
-  = providerMetadata?.deployment === 'local'
+function isNapChatEligibleModel(providerKey: string, modelId: string): boolean {
+  return providerMetadata?.deployment === 'local'
     || providerMetadata?.pricing === 'free'
     || freeAICatalogStore.allModels.some(m => m.id === `${baseProvider}:${modelId}`)
+}
 ```
 
 `deployment === 'local'` is checked **before** the network is considered, so a

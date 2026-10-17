@@ -93,6 +93,23 @@ const pairedDevicesStore = createConfig(
   { default: { devices: [] } },
 )
 
+/**
+ * Read the persisted paired-device list into the store's in-memory map, which is
+ * the only place `getPairedDevices()` ever reads.
+ *
+ * NOTICE: `.setup()` must run before anything can call `getPairedDevices()`. The
+ * in-memory map is populated *only* by `createConfig`'s synchronous disk read —
+ * the same failure mode `consentStore.setup()` in `agentic/companion.ts` and
+ * `libp2pConfigStore.setup()` in `libp2p/index.ts` both document. Without it a
+ * real boot ignores the persisted file entirely: every peer answers
+ * `not-paired`, so a nap-chat grant the user actually gave dies silently on
+ * restart, and the first `addPairedDevice` writes a one-element list over the
+ * file it never read.
+ */
+export function setupPairedDevices() {
+  pairedDevicesStore.setup()
+}
+
 interface PairingInvitation {
   peerId: string
   multiaddrs: string[]

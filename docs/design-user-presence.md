@@ -33,7 +33,7 @@ per-feature.
 
 ## 2. The canonical model
 
-```
+```text
      ┌────────────────────────── raw OS / platform signals ──────────────────────────┐
      │  OS idle seconds (sensorsGetIdleTime)   lock   sleep   in-app mouse/keyboard   │
      └────────────────────────────────────┬──────────────────────────────────────────┘
@@ -199,9 +199,9 @@ const provider: PresenceSignalProvider = {
   id: 'global-native-input',
   readIdleSec: () => nativeIdleBridge.read(),
 }
-presenceStore.addSignalProvider(provider)   // recomputes and takes effect immediately
-…
-presenceStore.removeSignalProvider('global-native-input')  // back to OS idle, no consumer change
+presenceStore.addSignalProvider(provider) // recomputes and takes effect immediately
+// ... consumers keep reading the same snapshot ...
+presenceStore.removeSignalProvider('global-native-input') // back to OS idle, no consumer change
 ```
 
 Resolution order when several providers are registered: the *largest* idle reading wins.
@@ -218,7 +218,7 @@ Provider registration is the only store surface a new signal needs. Nothing in
 | Consumer | Before | After |
 | --- | --- | --- |
 | Heartbeat AFK gate (`proactivity.ts:587`) | `evaluateHeartbeatGating({ afkThresholdMinutes: config?.afkThresholdMinutes ?? 5, currentIdleSec: idleTimeSec.value ?? 0 })` | same pure call; the threshold comes from `presence.afkThresholdMinutes` (resolved via `resolveAfkThresholdMinutes`, same clamp) and the idle value from the presence store's single raw signal |
-| Dream State gate (`proactivity.ts:443`) | inline `(config.afkThresholdMinutes || 5) * 60` — reading **dreamState's own** field — compared against the raw ref | `presence.isUserAway(config.afkThresholdMinutes)`: same threshold field, same `|| 5` fallback, same strict `>=` sign, same raw signal. Dream state keeps its own threshold rather than inheriting heartbeats' |
+| Dream State gate (`proactivity.ts:443`) | inline `(config.afkThresholdMinutes \|\| 5) * 60` — reading **dreamState's own** field — compared against the raw ref | `presence.isUserAway(config.afkThresholdMinutes)`: same threshold field, same `\|\| 5` fallback, same strict `>=` sign, same raw signal. Dream state keeps its own threshold rather than inheriting heartbeats' |
 | Agentic OS gate (`agentic.ts:320`) | `presence.presenceState` | unchanged — already the derived snapshot |
 | Screen watcher AFK gate (`modules/screen-watcher.ts:391`) | its own `afkLimitMinutes` chain plus `proactivityStore.refreshIdleTimeOnly()` | unchanged in this refactor; it is the screen-watcher's own config, and centralising it is a follow-up (see §8). Its `proactivityStore.idleTimeSec` read and `refreshIdleTimeOnly()` now flow through the presence store, so it still sees the same reading |
 | `proactivity.refreshIdleTimeOnly` | second writer path | delegates to `presence.refreshIdleTimeOnce()`; the provider path is the only writer |
