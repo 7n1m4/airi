@@ -15,7 +15,7 @@ const mockClient = vi.hoisted(() => ({
   getEtag: vi.fn(),
 }))
 
-vi.mock('s3mini', () => ({ S3mini() { return mockClient } }))
+vi.mock('s3mini', () => ({ S3mini: class { constructor() { return mockClient } } }))
 
 describe('s3 unit', () => {
   beforeEach(() => {

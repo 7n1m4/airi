@@ -1,0 +1,141 @@
+npm warn Unknown project config "shamefully-hoist". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm warn Unknown project config "public-hoist-pattern". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+npm notice run @proj-airi/root@0.9.37-stable.20261008 npx
+npm notice run 'vitest' run src/utils/tts.test.ts --coverage
+
+ RUN  v4.0.18 /home/vi/7n1m4/airi/packages/stage-ui
+      Coverage enabled with v8
+
+(node:742476) ExperimentalWarning: localStorage is not available because --localstorage-file was not provided.
+(Use `node --trace-warnings ...` to show where the warning was created)
+stdout | src/utils/tts.test.ts > chunkTTSInput > empty input yields nothing
+while loop ends, chunk/buffer:  
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > simple text yields one flush chunk
+while loop ends, chunk/buffer:  hello world
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > boost yields early chunks
+while loop ends, chunk/buffer:  one two three four five six seven eight nine ten eleven twelve thirteen fourteen
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > hard punctuation flushes
+while loop ends, chunk/buffer:   Foo bar
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > soft punctuation accumulates
+while loop ends, chunk/buffer:   world
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > flush instruction yields flush
+while loop ends, chunk/buffer:  there
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > special token yields special
+while loop ends, chunk/buffer:  
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > special token with empty buffer yields special with empty text
+while loop ends, chunk/buffer:  
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > decimal point stays
+while loop ends, chunk/buffer:  value 2.5 here
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > ellipsis becomes …
+while loop ends, chunk/buffer:  
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > ellipsis partial (two dots) handled
+while loop ends, chunk/buffer:  b
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > max words triggers limit
+while loop ends, chunk/buffer:  w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16 w17 w18 w19 w20 w21 w22 w23 w24 w25 w26 w27 w28 w29
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > kept punctuation handling
+while loop ends, chunk/buffer:  
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > unicode grapheme multi-length skip
+while loop ends, chunk/buffer:  hi  there
+
+stdout | src/utils/tts.test.ts > chunkTTSInput > ReaderLike input works
+while loop ends, chunk/buffer:  hello world
+
+stdout | src/utils/tts.test.ts > chunkEmitter > calls handler for chunks
+while loop ends, chunk/buffer:  hello world
+
+stdout | src/utils/tts.test.ts > chunkEmitter > special shifts pendingSpecials
+while loop ends, chunk/buffer:  
+
+stdout | src/utils/tts.test.ts > chunkEmitter > special with empty pendingSpecials yields null
+while loop ends, chunk/buffer:  
+
+stdout | src/utils/tts.test.ts > chunkEmitter > sanitizes tokens in chunk
+while loop ends, chunk/buffer:  hi world
+
+stderr | src/utils/tts.test.ts > chunkEmitter > catches errors without throwing
+Error chunking stream to TTS queue: Error: boom
+    at Object.read (/home/vi/7n1m4/airi/packages/stage-ui/src/utils/tts.test.ts:141:51)
+    at i.decode.stream (file:///home/vi/7n1m4/airi/node_modules/.pnpm/clustr@1.0.2/node_modules/clustr/dist/index.js:1:391)
+    at new Promise (<anonymous>)
+    at file:///home/vi/7n1m4/airi/node_modules/.pnpm/clustr@1.0.2/node_modules/clustr/dist/index.js:1:241
+    at AsyncGenerator.next (<anonymous>)
+    at chunkTTSInput (/home/vi/7n1m4/airi/packages/stage-ui/src/utils/tts.ts:71:32)
+    at chunkTTSInput.next (<anonymous>)
+    at chunkEmitter (/home/vi/7n1m4/airi/packages/stage-ui/src/utils/tts.ts:249:22)
+    at /home/vi/7n1m4/airi/packages/stage-ui/src/utils/tts.test.ts:142:18
+    at file:///home/vi/7n1m4/airi/node_modules/.pnpm/@vitest+runner@4.0.18/node_modules/@vitest/runner/dist/index.js:145:11
+
+ ❯ src/utils/tts.test.ts (20 tests | 2 failed) 19ms
+     ✓ empty input yields nothing 8ms
+     ✓ simple text yields one flush chunk 1ms
+     × boost yields early chunks 3ms
+     ✓ hard punctuation flushes 0ms
+     ✓ soft punctuation accumulates 0ms
+     ✓ flush instruction yields flush 0ms
+     ✓ special token yields special 0ms
+     ✓ special token with empty buffer yields special with empty text 1ms
+     ✓ decimal point stays 0ms
+     ✓ ellipsis becomes … 0ms
+     ✓ ellipsis partial (two dots) handled 0ms
+     × max words triggers limit 2ms
+     ✓ kept punctuation handling 0ms
+     ✓ unicode grapheme multi-length skip 0ms
+     ✓ ReaderLike input works 0ms
+     ✓ calls handler for chunks 1ms
+     ✓ special shifts pendingSpecials 1ms
+     ✓ special with empty pendingSpecials yields null 0ms
+     ✓ sanitizes tokens in chunk 0ms
+     ✓ catches errors without throwing 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/utils/tts.test.ts > chunkTTSInput > boost yields early chunks
+AssertionError: expected 1 to be greater than 1
+ ❯ src/utils/tts.test.ts:26:22
+     24|     const text = 'one two three four five six seven eight nine ten ele…
+     25|     const r = await collect(text, { boost: 1, minimumWords: 2, maximum…
+     26|     expect(r.length).toBeGreaterThan(1)
+       |                      ^
+     27|   })
+     28| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/utils/tts.test.ts > chunkTTSInput > max words triggers limit
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/utils/tts.test.ts:74:47
+     72|     const words = Array.from({ length: 30 }, (_, i) => `w${i}`).join('…
+     73|     const r = await collect(words, { maximumWords: 5, minimumWords: 1,…
+     74|     expect(r.some(c => c.reason === 'limit')).toBe(true)
+       |                                               ^
+     75|   })
+     76| 
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 18 passed (20)
+   Start at  03:57:23
+   Duration  571ms (transform 30ms, setup 402ms, import 25ms, tests 19ms, environment 0ms)
+
