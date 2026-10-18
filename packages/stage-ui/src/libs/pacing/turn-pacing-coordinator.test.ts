@@ -1182,4 +1182,12 @@ describe('turnPacingCoordinator (coverage extras)', () => {
     coord.notifyCacheMiss({ reason: 'timeout' })
     expect(coord.state).toBe('STAGING')
   })
+  it('notifyFillerAudioStarted when not FILLER_ARMED marks filler rejected', () => {
+    const onSettled = vi.fn()
+    const clock = new VirtualClock()
+    const coord = new TurnPacingCoordinator({ turnId: 't', generation: 1, providerKey: 'p', policy: defaultPolicy, clock, onSettled })
+    coord.dispatch()
+    coord.notifyFillerAudioStarted(clock.now())
+    expect(coord.metrics.fillerOutcome).toBe('rejected')
+  })
 })

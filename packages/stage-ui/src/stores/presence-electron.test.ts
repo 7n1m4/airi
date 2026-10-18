@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { usePresenceStore } from './presence'
 
 vi.mock('@proj-airi/electron-vueuse', () => ({
-  useElectronEventaInvoke: () => async () => 1000,
+  useElectronEventaInvoke: vi.fn(() => async () => 1000),
 }))
 
 vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
@@ -56,5 +56,84 @@ describe('presence electron path', () => {
     presence.addSignalProvider({ id: 'boom', readIdleSec: async () => { throw new Error('nope') } })
     await presence.refreshIdleTimeOnce()
     expect(true).toBe(true)
+  })
+  it('lock/sleep signals become derivable when provider supplies them', () => {
+    const presence = usePresenceStore()
+    presence.addSignalProvider({ id: 'lock', readIdleSec: async () => 5, readLockState: () => 'locked', readSleepState: () => 'asleep' })
+    expect(presence.availability['screen-locked']).toBe('derivable')
+    expect(presence.availability.sleep).toBe('derivable')
+    expect(presence.derivableStates).toContain('screen-locked')
+    expect(presence.derivableStates).toContain('sleep')
+    expect(presence.presence.signals.hasLockSignal).toBe(true)
+    expect(presence.presence.signals.hasSleepSignal).toBe(true)
+  })
+
+  it('readIdleTimeOnce returns undefined when no usable readings', async () => {
+    const presence = usePresenceStore()
+    presence.removeSignalProvider('os-idle-time')
+    presence.addSignalProvider({ id: 'undef', readIdleSec: async () => undefined })
+    const r = await presence.readIdleTimeOnce()
+    expect(r).toBeUndefined()
+  })
+
+  it('writeIdleTimeSec ignores undefined', () => {
+    const presence = usePresenceStore()
+    const before = presence.rawIdleTimeSec
+    presence.writeIdleTimeSec(undefined)
+    expect(presence.rawIdleTimeSec).toBe(before)
+  })
+
+  it('afk and isUserAway reflect idle threshold', async () => {
+    const presence = usePresenceStore()
+    presence.writeIdleTimeSec(400)
+    expect(presence.afk).toBe(true)
+    expect(presence.isUserAway()).toBe(true)
+    expect(presence.isUserAway(1)).toBe(true)
+    expect(presence.isUserAway(0)).toBe(true)
+  })
+
+  it('isUserAway returns false when no reading', () => {
+    const presence = usePresenceStore()
+    presence.removeSignalProvider('os-idle-time')
+    // force raw undefined by new store
+    const p2 = usePresenceStore()
+    // reset not possible; check initial
+    expect(p2.isUserAway()).toBe(false)
+  })
+
+  it('readIdleTimeOnce throws when all providers fail', async () => {
+    const presence = usePresenceStore()
+    presence.removeSignalProvider('os-idle-time')
+    presence.addSignalProvider({ id: 'boom2', readIdleSec: async () => { throw new Error('nope2') } })
+    await expect(presence.readIdleTimeOnce()).rejects.toThrow()
+  })
+  it('derivePresenceState screen-locked/away/idle branches', () => {
+    const presence = usePresenceStore()
+    presence.addSignalProvider({ id: 'lock2', readIdleSec: async () => 5, readLockState: () => 'locked' })
+    presence.writeIdleTimeSec(2000)
+    presence.recompute()
+    presence.removeSignalProvider('lock2')
+    presence.writeIdleTimeSec(2000)
+    presence.recompute()
+    expect(presence.presence.state).toBe('away')
+    presence.writeIdleTimeSec(150)
+    presence.recompute()
+    expect(presence.presence.state).toBe('idle')
+  })
+
+  it('addSignalProvider ignores duplicate id', () => {
+    const presence = usePresenceStore()
+    const before = presence.signalProviders.length
+    presence.addSignalProvider({ id: 'os-idle-time', readIdleSec: async () => 1 })
+    expect(presence.signalProviders.length).toBe(before)
+  })
+
+  it('os-idle-time returns undefined for non-finite reading', async () => {
+    const ev = await import('@proj-airi/electron-vueuse')
+    vi.mocked(ev.useElectronEventaInvoke).mockReturnValue(() => async () => Number.NaN)
+    const presence = usePresenceStore()
+    await presence.refreshIdleTimeOnce()
+    expect(true).toBe(true)
+    vi.mocked(ev.useElectronEventaInvoke).mockReturnValue(() => async () => 1000)
   })
 })

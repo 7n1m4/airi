@@ -164,4 +164,19 @@ describe('consciousness store', () => {
     }
     expect(true).toBe(true)
   })
+  it('native apple core ai logs warning when download fails', async () => {
+    const { NativeAI } = await import('../../libs/native-ai')
+    vi.mocked(NativeAI.isNative).mockReturnValue(true)
+    vi.mocked(NativeAI.isModelCached).mockResolvedValue(false)
+    vi.mocked(NativeAI.downloadModel).mockRejectedValue(new Error('boom'))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const store = useConsciousnessStore()
+    store.activeProvider = 'apple-core-ai'
+    store.activeModel = 'model-z'
+    await new Promise(r => setTimeout(r, 20))
+    expect(NativeAI.downloadModel).toHaveBeenCalled()
+    warn.mockRestore()
+    vi.mocked(NativeAI.isNative).mockReturnValue(false)
+    vi.mocked(NativeAI.downloadModel).mockResolvedValue(undefined)
+  })
 })

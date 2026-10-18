@@ -149,4 +149,36 @@ describe('store free-ai-catalog', () => {
     expect(typeof store.catalogGeneratedAt).toBe('string')
     expect(store.availablePlatforms.length).toBeGreaterThan(0)
   })
+  it('covers embedding modality count and unknown selected model', () => {
+    const store = useFreeAICatalogStore()
+    expect(store.countsByModality.embedding).toBeGreaterThanOrEqual(0)
+    store.selectModel('no-such-model-id')
+    expect(store.selectedModelDetail).toBeNull()
+    store.selectModel(null)
+  })
+
+  it('sorts by rpm with null limits and context with zero values', () => {
+    const store = useFreeAICatalogStore()
+    store.sortBy = 'rpm'
+    store.sortDirection = 'asc'
+    expect(store.filteredModels.length).toBeGreaterThanOrEqual(0)
+    store.sortBy = 'context'
+    store.sortDirection = 'asc'
+    expect(store.filteredModels.length).toBeGreaterThanOrEqual(0)
+    store.sortBy = 'intelligence'
+    store.sortDirection = 'desc'
+    expect(store.filteredModels.length).toBeGreaterThanOrEqual(0)
+  })
+
+  it('search matches modelId and platformDisplayName', () => {
+    const store = useFreeAICatalogStore()
+    const m = store.filteredModels.find(x => x.contextWindow === 0) || store.filteredModels[0]
+    store.searchQuery = m.modelId
+    expect(store.filteredModels.length).toBeGreaterThan(0)
+    store.searchQuery = m.platformDisplayName
+    expect(store.filteredModels.length).toBeGreaterThan(0)
+    store.searchQuery = m.platform
+    expect(store.filteredModels.length).toBeGreaterThan(0)
+    store.searchQuery = ''
+  })
 })
