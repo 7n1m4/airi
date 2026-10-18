@@ -148,7 +148,14 @@ jobs:
           printf 'electron' > "${ELECTRON_DIR}/path.txt"
           test -x "${ELECTRON_DIR}/dist/electron"
       - run: pnpm run build:packages
-      - run: pnpm run test:run
+      - run: pnpm test
+      - run: pnpm run test:catalog:audit
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/
 
   check-provenance:
     name: Check Provenance

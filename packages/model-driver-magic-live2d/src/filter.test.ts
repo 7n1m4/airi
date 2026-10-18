@@ -77,4 +77,15 @@ describe('output filter', () => {
 
     expect(bypassed.pose.headX).toBe(-0.75)
   })
+
+  it('keeps history when the enabled state stays the same', () => {
+    const filter = createOutputFilter({ enabled: true, smoothing: 0.9, cutoff: 0 })
+
+    filter.process(pose())
+    filter.process(pose({ headX: 1 }))
+    filter.setOptions({ enabled: true, smoothing: 0.5, cutoff: 0 })
+    const frame = filter.process(pose({ headX: 1 }))
+
+    expect(frame.pose.headX).toBeCloseTo(0.55)
+  })
 })

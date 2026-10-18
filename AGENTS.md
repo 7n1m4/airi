@@ -74,4 +74,4 @@ Choose the smallest validation that gives useful confidence; validation is not a
 - For TypeScript, Vue logic, interfaces, or imports, run the affected workspace's typecheck: `pnpm -F <workspace> typecheck`.
 - For build configuration, entry points, packaging, or Electron integration, run the affected workspace build. `stage-tamagotchi`'s build includes typechecking; `stage-web`'s does not.
 - Treat `pnpm lint:fix` as a broad mutating cleanup tool, not validation. Use it only deliberately and review its whole diff.
-- State which validation you ran and why broader validation was unnecessary.
+- Enforce LCOV coverage close to 100% for touched code: run the affected workspace's tests with coverage (`pnpm -F <workspace> test --coverage` or the package's coverage script) and do not land changes that drop coverage below ~100% on changed lines; add or update tests to cover new/changed branches before committing.
