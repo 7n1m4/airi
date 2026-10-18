@@ -1,5 +1,6 @@
+import z from 'zod'
+
 import { tool } from '@xsai/tool'
-import { z } from 'zod'
 
 import { useSpine } from '../stores/spine'
 

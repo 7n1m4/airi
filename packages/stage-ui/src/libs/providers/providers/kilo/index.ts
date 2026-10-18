@@ -1,7 +1,8 @@
-import { createOpenAI } from '@xsai-ext/providers/create'
-import { z } from 'zod'
-
 import type { ModelInfo } from '../../types'
+
+import z from 'zod'
+
+import { createOpenAI } from '@xsai-ext/providers/create'
 
 import { createOpenAICompatibleValidators } from '../../validators/openai-compatible'
 import { defineProvider } from '../registry'
@@ -254,7 +255,7 @@ export const providerKilo = defineProvider<KiloConfig>({
           ? (Array.isArray(envelope.data) ? envelope.data : envelope.data.data)
           : []
 
-        const gatewayModels = rows.flatMap(model => {
+        const gatewayModels = rows.flatMap((model) => {
           const parsed = kiloGatewayModelSchema.safeParse(model)
           return parsed.success ? [parsed.data] : []
         })

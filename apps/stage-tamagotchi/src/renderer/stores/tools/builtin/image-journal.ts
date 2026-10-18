@@ -1,6 +1,8 @@
 import type { ResolvedArtistryConfig } from '@proj-airi/stage-ui/stores'
 import type { Tool } from '@xsai/shared-chat'
 
+import z from 'zod'
+
 import { defineInvoke } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/electron/renderer'
 import {
@@ -12,7 +14,6 @@ import {
   useChatSessionStore,
 } from '@proj-airi/stage-ui/stores'
 import { tool } from '@xsai/tool'
-import { z } from 'zod'
 
 import { artistryGenerateHeadless, widgetsAdd } from '../../../../shared/eventa'
 import { getIpcRenderer } from '../../../utils/electron'

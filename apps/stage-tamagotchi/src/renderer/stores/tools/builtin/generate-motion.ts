@@ -1,11 +1,12 @@
 import type { Tool } from '@xsai/shared-chat'
 
+import z from 'zod'
+
 import { useCustomVrmAnimationsStore } from '@proj-airi/stage-ui-three'
 import { DisplayModelFormat, useDisplayModelsStore } from '@proj-airi/stage-ui/stores/display-models'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { useTextToMotionStore } from '@proj-airi/stage-ui/stores/modules/text-to-motion'
 import { tool } from '@xsai/tool'
-import { z } from 'zod'
 
 const generateMotionParams = z.object({
   id: z.string().describe('A unique snake_case identifier for this motion (e.g. \'jumping_jacks\', \'happy_wave\').'),

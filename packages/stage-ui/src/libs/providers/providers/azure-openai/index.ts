@@ -1,6 +1,7 @@
+import z from 'zod'
+
 import { errorMessageFrom } from '@moeru/std'
 import { createOpenAI } from '@xsai-ext/providers/create'
-import { z } from 'zod'
 
 import { sanitizeTools } from '../../tool-schema'
 import { defineProvider } from '../registry'

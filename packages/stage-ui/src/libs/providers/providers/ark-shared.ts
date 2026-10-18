@@ -1,7 +1,8 @@
 import type { ModelInfo, ProviderDefinition, ProviderInstance } from '../types'
 
+import z from 'zod'
+
 import { createOpenAI } from '@xsai-ext/providers/create'
-import { z } from 'zod'
 
 import { createOpenAICompatibleValidators } from '../validators/openai-compatible'
 import { defineProvider } from './registry'

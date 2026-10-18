@@ -1,8 +1,9 @@
 import type { Tool } from '@xsai/shared-chat'
 
+import z from 'zod'
+
 import { useDatingSimStore } from '@proj-airi/stage-ui/stores/dating-sim'
 import { tool } from '@xsai/tool'
-import { z } from 'zod'
 
 const updateVariablesParams = z.object({
   intimacyChange: z.number().describe('Change to Intimacy (-20 to +20)'),

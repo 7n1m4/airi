@@ -109,7 +109,7 @@ Every local provider page (e.g. `web-llm.vue`, `flowmdm.vue`, `whisper-local.vue
 Define the configuration schema with localized labels via `.meta()`:
 
 ```typescript
-import { z } from 'zod'
+import z from 'zod'
 
 const providerConfigSchema = z.object({
   apiKey: z.string('API Key'),

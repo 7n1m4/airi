@@ -1,6 +1,7 @@
+import z from 'zod'
+
 import { isStageTamagotchi } from '@proj-airi/stage-shared'
 import { createOpenAI } from '@xsai-ext/providers/create'
-import { z } from 'zod'
 
 import { createOpenAICompatibleValidators } from '../../validators/openai-compatible'
 import { defineProvider } from '../registry'

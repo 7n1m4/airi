@@ -1,5 +1,6 @@
+import z from 'zod'
+
 import { createChatProvider, createEmbedProvider, createModelProvider, merge } from '@xsai-ext/providers/utils'
-import { z } from 'zod'
 
 import { createOpenAICompatibleValidators } from '../../validators/openai-compatible'
 import { defineProvider } from '../registry'

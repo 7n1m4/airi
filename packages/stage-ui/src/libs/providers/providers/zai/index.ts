@@ -1,5 +1,6 @@
+import z from 'zod'
+
 import { createZai } from '@xsai-ext/providers/create'
-import { z } from 'zod'
 
 import { createOpenAICompatibleValidators } from '../../validators'
 import { defineProvider } from '../registry'

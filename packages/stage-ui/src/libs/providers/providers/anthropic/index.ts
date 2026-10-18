@@ -1,7 +1,8 @@
 import type { ModelInfo } from '../../types'
 
+import z from 'zod'
+
 import { createChatProvider, createModelProvider, merge } from '@xsai-ext/providers/utils'
-import { z } from 'zod'
 
 import { createOpenAICompatibleValidators } from '../../validators/openai-compatible'
 import { defineProvider } from '../registry'

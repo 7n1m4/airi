@@ -1,6 +1,6 @@
 import type { System1Response } from '../../types'
 
-import { z } from 'zod'
+import z from 'zod'
 
 import { defineProvider } from '../registry'
 

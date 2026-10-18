@@ -1,8 +1,9 @@
 import type { ModelInfo } from '../../types'
 
+import z from 'zod'
+
 import { createModelProvider, merge } from '@xsai-ext/providers/utils'
 import { AwsClient } from 'aws4fetch'
-import { z } from 'zod'
 
 import { defineProvider } from '../registry'
 

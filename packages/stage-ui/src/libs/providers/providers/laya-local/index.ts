@@ -1,6 +1,6 @@
 import type { System1Response } from '../../types'
 
-import { z } from 'zod'
+import z from 'zod'
 
 import { downloadLayaModel, runLayaSystemOne } from '../../../inference/laya-engine'
 import { defineProvider } from '../registry'

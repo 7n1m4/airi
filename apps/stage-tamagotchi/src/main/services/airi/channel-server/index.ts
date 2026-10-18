@@ -7,6 +7,8 @@ import { Socket } from 'node:net'
 import { join } from 'node:path'
 import { env, platform } from 'node:process'
 
+import z from 'zod'
+
 import { useLogg } from '@guiiai/logg'
 import { defineInvokeHandler } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/electron/main'
@@ -16,7 +18,6 @@ import { app, ipcMain } from 'electron'
 import { createCA, createCert } from 'mkcert'
 import { x } from 'tinyexec'
 import { nullable, object, optional, string } from 'valibot'
-import { z } from 'zod'
 
 import {
   electronApplyServerChannelConfig,

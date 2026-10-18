@@ -1,9 +1,10 @@
 import type { ElectronMcpToolDescriptor } from '../../../../shared/eventa'
 
+import z from 'zod'
+
 import { tryGetMcpToolBridge } from '@proj-airi/stage-ui/stores/mcp-tool-bridge'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
 import { tool } from '@xsai/tool'
-import { z } from 'zod'
 
 function filterToolsForCard(rawTools: ElectronMcpToolDescriptor[]): ElectronMcpToolDescriptor[] {
   const cardStore = useAiriCardStore()

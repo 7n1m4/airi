@@ -1,7 +1,8 @@
 import type { ModelInfo } from '../../types'
 
+import z from 'zod'
+
 import { createAzure } from '@xsai-ext/providers/special/create'
-import { z } from 'zod'
 
 import { defineProvider } from '../registry'
 

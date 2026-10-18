@@ -1,7 +1,8 @@
+import z from 'zod'
+
 import { createOpenAI } from '@xsai-ext/providers/create'
 import { nanoid } from 'nanoid'
 import { getActivePinia } from 'pinia'
-import { z } from 'zod'
 
 import { createOpenAICompatibleValidators } from '../../validators/openai-compatible'
 import { defineProvider } from '../registry'

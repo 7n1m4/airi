@@ -1,7 +1,8 @@
 import type { ModelInfo } from '../../types'
 
+import z from 'zod'
+
 import { createMinimax, createMinimaxCn } from '@xsai-ext/providers/create'
-import { z } from 'zod'
 
 import { createOpenAICompatibleValidators } from '../../validators/openai-compatible'
 import { defineProvider } from '../registry'

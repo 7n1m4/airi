@@ -4,11 +4,12 @@ import type { Message } from '@xsai/shared-chat'
 
 import type { StreamEvent } from '../../../../llm'
 
+import z from 'zod'
+
 import { errorMessageFrom } from '@moeru/std'
 import { tool } from '@xsai/tool'
 import { nanoid } from 'nanoid'
 import { validate } from 'xsschema'
-import { z } from 'zod'
 
 import { getEventSourceKey } from '../../../../../utils'
 
