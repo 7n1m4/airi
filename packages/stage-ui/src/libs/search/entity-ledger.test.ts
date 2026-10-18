@@ -239,3 +239,29 @@ describe('entity-ledger uncovered branches2', () => {
     expect(L.entities.size).toBe(1)
   })
 })
+
+describe('entity-ledger uncovered branches3', () => {
+  it('hyphen non-honorific suffix keeps label', () => {
+    const r = normalizeCanonicalEntityLabel('foo-bar')
+    expect(r.canonical).toBe('foo-bar')
+  })
+  it('hyphen short prefix keeps label', () => {
+    const r = normalizeCanonicalEntityLabel('a-sama')
+    // prefix length < 2, branch false
+    expect(r.canonical).toBe('a-sama')
+  })
+  it('addSource duplicate turnId', () => {
+    const l = new EntityLedger()
+    l.addSource({ turnId: 't1', text: 'x', speaker: 's', timestamp: 1 })
+    l.addSource({ turnId: 't1', text: 'y', speaker: 's', timestamp: 2 })
+    expect(l.sources.get('t1')?.text).toBe('y')
+  })
+
+  it('getOrCreateEntity missing entity branch', () => {
+    const l = new EntityLedger()
+    const e = l.getOrCreateEntity('Foo')
+    l.entities.delete(e.entityId)
+    const e2 = l.getOrCreateEntity('Foo')
+    expect(e2.entityId).toBe(e.entityId)
+  })
+})

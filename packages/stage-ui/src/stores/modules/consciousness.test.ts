@@ -12,8 +12,9 @@ vi.mock('../../libs/native-ai', () => ({
     downloadModel: vi.fn(async () => undefined),
   },
 }))
+const onboardingState = vi.hoisted(() => ({ needsOnboarding: false }))
 vi.mock('../onboarding', () => ({
-  useOnboardingStore: () => ({ needsOnboarding: false }),
+  useOnboardingStore: () => onboardingState,
 }))
 
 describe('consciousness store', () => {
@@ -202,6 +203,21 @@ describe('consciousness store', () => {
   it('filteredModels handles model without description', () => {
     const store = useConsciousnessStore()
     store.modelSearchQuery = 'abc'
+    expect(Array.isArray(store.filteredModels)).toBe(true)
+  })
+  it('self-healing bypassed during onboarding', () => {
+    onboardingState.needsOnboarding = true
+    const store = useConsciousnessStore()
+    store.activeProvider = 'nonexistent-provider-xyz'
+    store.activeModel = 'm'
+    store.activeProvider = 'nonexistent-provider-xyz'
+    expect(store.activeProvider).toBe('nonexistent-provider-xyz')
+    onboardingState.needsOnboarding = false
+  })
+
+  it('filteredModels matches description', () => {
+    const store = useConsciousnessStore()
+    store.modelSearchQuery = 'description'
     expect(Array.isArray(store.filteredModels)).toBe(true)
   })
 })

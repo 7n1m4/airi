@@ -197,9 +197,16 @@ describe('memory-sentinel', () => {
   })
   it('readMemoryMB performance undefined branch', () => {
     vi.stubGlobal('localStorage', { getItem: () => null } as unknown as Storage)
-    vi.stubGlobal('performance', undefined as unknown as Performance)
-    procMock.memoryUsage = () => ({ rss: 0 })
-    expect(getMemoryPressureLevel()).toBe('normal')
+    const orig = Object.getOwnPropertyDescriptor(globalThis, 'performance')
+    try {
+      delete (globalThis as any).performance
+      procMock.memoryUsage = () => ({ rss: 0 })
+      expect(getMemoryPressureLevel()).toBe('normal')
+    }
+    finally {
+      if (orig)
+        Object.defineProperty(globalThis, 'performance', orig)
+    }
   })
 
   it('initMemorySentinel enabled without window (branch)', async () => {
@@ -213,6 +220,22 @@ describe('memory-sentinel', () => {
     vi.stubGlobal('window', undefined as unknown as Window)
     mod.initMemorySentinel(5000)
     expect(info).toHaveBeenCalled()
+  })
+
+  it('initMemorySentinel already started no-op (branch)', async () => {
+    vi.resetModules()
+    const mod = await import('./memory-sentinel')
+    vi.stubGlobal('localStorage', { getItem: (k: string) => (k === 'settings/debug/enable-memory-sentinel' ? 'true' : null) } as unknown as Storage)
+    vi.stubGlobal('performance', {} as unknown as Performance)
+    procMock.memoryUsage = () => ({ rss: 0 })
+    const info = vi.fn()
+    const setInterval = vi.fn(() => 1 as unknown as number)
+    vi.stubGlobal('console', { info, warn: vi.fn() } as unknown as Console)
+    vi.stubGlobal('window', { setInterval, location: { hash: '#/' } } as unknown as Window)
+    mod.initMemorySentinel(5000)
+    mod.initMemorySentinel(5000)
+    expect(setInterval).toHaveBeenCalledTimes(1)
+    expect(info).toHaveBeenCalledTimes(1)
   })
   it('readMemoryMB process global undefined branch', () => {
     vi.stubGlobal('localStorage', { getItem: () => null } as unknown as Storage)

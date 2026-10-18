@@ -1190,4 +1190,46 @@ describe('turnPacingCoordinator (coverage extras)', () => {
     coord.notifyFillerAudioStarted(clock.now())
     expect(coord.metrics.fillerOutcome).toBe('rejected')
   })
+  it('arms organic pivot candidate via onArmFiller fallback when no onArmDynamicAside', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-fallback',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: {
+        ...defaultPolicy,
+        semanticExtractorEnabled: true,
+        dynamicAfterMs: 15000,
+        pacingIntervalMs: 15000,
+      },
+      clock,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+
+    clock.advance(1800)
+    coordinator.notifyFillerAudioStarted(clock.now())
+    clock.advance(1200)
+    coordinator.notifyFillerAudioEnded(clock.now())
+
+    clock.advance(12200)
+    coordinator.submitAsideCandidate({
+      cueId: 'needle-pivot-2',
+      turn: { turnId: 'turn-fallback', generation: 1 },
+      source: 'organic',
+      text: 'organic fallback candidate',
+      phraseKey: 'needle-pivot-2',
+      collectedAtMs: clock.now(),
+      expiresAtMs: clock.now() + 15000,
+    })
+
+    clock.advance(2800)
+
+    expect(coordinator.state).toBe('FILLER_ARMED')
+    expect(onArmFiller).toHaveBeenCalled()
+    expect(coordinator.metrics.dynamicCueSource).toBe('organic')
+  })
 })
