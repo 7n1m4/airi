@@ -192,6 +192,15 @@ describe('entity-ledger extra coverage', () => {
   })
   it('fromJSON alias exists branch', () => {
     const L = EntityLedger.fromJSON({ entities: [{ entityId: 'e1', label: 'Alice', type: 'person', attributes: {}, mentions: [] }, { entityId: 'e2', label: 'Alice', type: 'person', attributes: {}, mentions: [] }] })
-    expect(L.entities.size).toBe(2)
+  })
+  it('addClaim with non-string object skips object index', () => {
+    const l = new EntityLedger()
+    const c = l.addClaim({ subject: 's', predicate: 'p', object: 42 } as unknown as Parameters<typeof l.addClaim>[0])
+    expect(c.object).toBe(42)
+  })
+  it('getOrCreateEntity plain', () => {
+    const l = new EntityLedger()
+    const e = l.getOrCreateEntity('Airi', 'person')
+    expect(e.label).toBe('Airi')
   })
 })

@@ -92,6 +92,45 @@ describe('store free-ai-catalog', () => {
     expect(store.sortDirection).toBe('asc')
   })
 
+  it('filters by modality transcription', () => {
+    const store = useFreeAICatalogStore()
+    store.selectedModality = 'transcription'
+    expect(store.filteredModels.length).toBeGreaterThan(0)
+    expect(store.countsByModality.transcription).toBeGreaterThan(0)
+    store.selectedModality = 'all'
+  })
+
+  it('sorts by context', () => {
+    const store = useFreeAICatalogStore()
+    store.sortBy = 'context'
+    store.sortDirection = 'desc'
+    expect(store.filteredModels.length).toBeGreaterThan(0)
+    store.sortBy = 'intelligence'
+    store.sortDirection = 'asc'
+  })
+
+  it('exercises modalities and sorts', () => {
+    const store = useFreeAICatalogStore()
+    for (const m of ['chat', 'vision', 'transcription', 'embedding'] as const) {
+      store.selectedModality = m
+      expect(store.filteredModels.length).toBeGreaterThanOrEqual(0)
+    }
+    for (const s of ['intelligence', 'speed', 'context', 'rpm'] as const) {
+      store.sortBy = s
+      store.sortDirection = 'desc'
+      expect(store.filteredModels.length).toBeGreaterThanOrEqual(0)
+      store.sortDirection = 'asc'
+    }
+    store.selectedModality = 'all'
+    store.selectModel(null)
+    expect(store.selectedModelDetail).toBeNull()
+    const id = store.filteredModels[0]?.id
+    if (id) {
+      store.selectModel(id)
+      expect(store.selectedModelDetail).not.toBeNull()
+    }
+  })
+
   it('viewMode default table', () => {
     const store = useFreeAICatalogStore()
     expect(store.viewMode).toBe('table')

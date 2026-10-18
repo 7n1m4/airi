@@ -102,4 +102,12 @@ describe('settings-catalog', () => {
   it('back segments fallback', () => {
     expect(resolveSettingsBackRoute('/a/b')).toBe('/a')
   })
+  it('resolvePathFromRoute hashed base skip', () => {
+    const topo = buildSettingsCatalogTopology()
+    expect(resolvePathFromRoute(topo, '/settings/providers').nodeId).toBeDefined()
+  })
+  it('back segments parent no route', () => {
+    const topo = buildSettingsCatalogTopology()
+    expect(resolveSettingsBackRoute('/nonexistent-parent/child', { topology: topo })).toBe('/nonexistent-parent')
+  })
 })

@@ -44,6 +44,11 @@ describe('presence electron path', () => {
     const presence = usePresenceStore()
     expect(presence.signalProviders.some(p => p.id === 'os-idle-time')).toBe(true)
   })
+  it('refreshIdleTimeOnce reads os-idle-time provider', async () => {
+    const presence = usePresenceStore()
+    await presence.refreshIdleTimeOnce()
+    expect(presence.idleTimeSec).toBe(1)
+  })
 
   it('refreshIdleTimeOnce handles throw', async () => {
     const presence = usePresenceStore()

@@ -254,4 +254,95 @@ describe('useFacultyDefaultsStore', () => {
     store.setPrimary('speech', 'p', 'm')
     expect(store.speech.primaryVoiceId).toBe('af_heart')
   })
+  it('migrates legacy artistry keys without model', () => {
+    localStorage.setItem('artistry-provider', JSON.stringify('artprov'))
+    setActivePinia(createPinia())
+    const store = useFacultyDefaultsStore()
+    expect(store.artistry.primaryProvider).toBe('artprov')
+  })
+
+  it('migrates legacy vision keys without model', () => {
+    localStorage.setItem('settings/vision/active-provider', 'visionprov')
+    setActivePinia(createPinia())
+    const store = useFacultyDefaultsStore()
+    expect(store.vision.primaryProvider).toBe('visionprov')
+  })
+
+  it('setFallback without voiceId does not overwrite', () => {
+    const store = useFacultyDefaultsStore()
+    store.setFallback('speech', 'fb', 'fm')
+    expect(store.speech.fallbackVoiceId).toBe('')
+  })
+  it('setPrimary consciousness syncs legacy keys', () => {
+    const store = useFacultyDefaultsStore()
+    store.setPrimary('consciousness', 'cp', 'cm')
+    expect(localStorage.getItem('settings/consciousness/active-provider')).toBe(JSON.stringify('cp'))
+  })
+
+  it('setPrimary hearing syncs legacy keys', () => {
+    const store = useFacultyDefaultsStore()
+    store.setPrimary('hearing', 'hp', 'hm')
+    expect(localStorage.getItem('settings/hearing/active-provider')).toBe(JSON.stringify('hp'))
+  })
+
+  it('setPrimary artistry syncs legacy keys', () => {
+    const store = useFacultyDefaultsStore()
+    store.setPrimary('artistry', 'ap', 'am')
+    expect(localStorage.getItem('artistry-provider')).toBe(JSON.stringify('ap'))
+  })
+
+  it('migrates legacy speech without voice', () => {
+    localStorage.setItem('settings/speech/active-provider', JSON.stringify('speechprov'))
+    localStorage.setItem('settings/speech/active-model', JSON.stringify('speechmodel'))
+    setActivePinia(createPinia())
+    const store = useFacultyDefaultsStore()
+    expect(store.speech.primaryProvider).toBe('speechprov')
+  })
+
+  it('migrates legacy hearing without model', () => {
+    localStorage.setItem('settings/hearing/active-provider', JSON.stringify('hearingprov'))
+    setActivePinia(createPinia())
+    const store = useFacultyDefaultsStore()
+    expect(store.hearing.primaryProvider).toBe('hearingprov')
+  })
+  it('migrates legacy consciousness without model', () => {
+    localStorage.setItem('settings/consciousness/active-provider', JSON.stringify('provX'))
+    setActivePinia(createPinia())
+    const store = useFacultyDefaultsStore()
+    expect(store.consciousness.primaryProvider).toBe('provX')
+  })
+
+  it('migrates legacy speech without model', () => {
+    localStorage.setItem('settings/speech/active-provider', JSON.stringify('speechprov'))
+    setActivePinia(createPinia())
+    const store = useFacultyDefaultsStore()
+    expect(store.speech.primaryProvider).toBe('speechprov')
+  })
+  it('returns factory defaults when window is undefined', () => {
+    const originalWindow = globalThis.window
+    try {
+      // @ts-expect-error
+      delete globalThis.window
+      setActivePinia(createPinia())
+      const store = useFacultyDefaultsStore()
+      expect(store.consciousness.primaryProvider).toBe('mimo')
+    }
+    finally {
+      globalThis.window = originalWindow
+    }
+  })
+
+  it('syncLegacyKeys no-ops when window is undefined', () => {
+    const store = useFacultyDefaultsStore()
+    const originalWindow = globalThis.window
+    try {
+      // @ts-expect-error
+      delete globalThis.window
+      store.setPrimary('consciousness', 'p', 'm')
+      expect(store.consciousness.primaryProvider).toBe('p')
+    }
+    finally {
+      globalThis.window = originalWindow
+    }
+  })
 })

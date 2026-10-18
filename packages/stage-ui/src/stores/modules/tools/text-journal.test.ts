@@ -141,6 +141,27 @@ describe('text-journal module', () => {
     expect(parsed[0].layer).toBe('short-term')
     expect(parsed[0].fact).toBe('sum')
   })
+  it('entry without date or score branches', async () => {
+    mockSearchEntries.mockResolvedValueOnce([
+      { id: 'nd', kind: 'journal', title: '[tag] T', content: 'c' },
+    ])
+    const res = await executeSearchTextJournalEntries({ query: 'q' })
+    const parsed = JSON.parse(res)
+    expect(parsed[0].date).toBe('')
+    expect(parsed[0].relevanceScore).toBeUndefined()
+    expect(parsed[0].subject).toBe('T')
+  })
+
+  it('short-term block without date or createdAt', async () => {
+    mockSearchEntries.mockResolvedValueOnce([])
+    mockSearchBlocks.mockReturnValueOnce([
+      { id: 'b3', summary: 'sum3' },
+    ])
+    const res = await executeSearchTextJournalEntries({ query: 'q' })
+    const parsed = JSON.parse(res)
+    expect(parsed[0].date).toBe('')
+    expect(parsed[0].subject).toBe('Recap: undefined')
+  })
 
   it('returns empty array when no fallback', async () => {
     mockSearchEntries.mockResolvedValueOnce([])

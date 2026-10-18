@@ -18,10 +18,14 @@ vi.mock('node-vibrant/browser', () => ({
   },
 }))
 
+vi.mock('culori', () => ({
+  average: vi.fn(() => ({ r: 1, g: 2, b: 3 })),
+}))
+
 const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'http://localhost' })
 const gDoc2 = globalThis as { document?: Document }
 gDoc2.document = dom.window.document as unknown as Document
-(globalThis as { HTMLImageElement?: unknown }).HTMLImageElement = dom.window.HTMLImageElement
+;(globalThis as { HTMLImageElement?: unknown }).HTMLImageElement = dom.window.HTMLImageElement
 describe('patchThemeSamplingHtml2CanvasClone', () => {
   it('placeholder', () => {
     expect(true).toBe(true)
@@ -60,6 +64,18 @@ describe('patchThemeSamplingHtml2CanvasClone', () => {
     document.body.removeChild(overlay)
     document.body.removeChild(wave)
     document.documentElement.classList.remove('dark')
+  })
+
+  it('styles colored areas in light mode with empty hue fallback', () => {
+    document.documentElement.classList.remove('dark')
+    const wave = document.createElement('div')
+    wave.className = 'colored-area'
+    document.body.appendChild(wave)
+    const gc = globalThis as unknown as { getComputedStyle: (el: Element) => { getPropertyValue: (n: string) => string } }
+    gc.getComputedStyle = () => ({ getPropertyValue: () => '' })
+    patchThemeSamplingHtml2CanvasClone(document)
+    expect((wave as HTMLElement).style.background).toBeTruthy()
+    document.body.removeChild(wave)
   })
 })
 
@@ -107,6 +123,32 @@ describe('colorFromElement', () => {
     vi.restoreAllMocks()
   })
 
+  it('vibrant mode with img element and null canvas ctx skips draw', async () => {
+    const img = document.createElement('img') as HTMLImageElement
+    img.src = 'data:image/png;base64,AAAA'
+    class MockImage {
+      crossOrigin = ''
+      naturalWidth = 4
+      naturalHeight = 4
+      onload: (() => void) | null = null
+      onerror: (() => void) | null = null
+      set src(_v: string) { queueMicrotask(() => this.onload?.()) }
+    }
+    ;(globalThis as unknown as { Image: unknown }).Image = MockImage
+    const canvas = document.createElement('canvas')
+    const origCreate = document.createElement.bind(document)
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'canvas')
+        return canvas
+      return origCreate(tag)
+    })
+    vi.spyOn(canvas, 'getContext').mockReturnValue(null)
+    vi.spyOn(canvas, 'toDataURL').mockReturnValue('data:image/png;base64,BBBB')
+    const res = await colorFromElement(img, { mode: 'vibrant' })
+    expect(res.vibrant?.palette).toContain('#ff0000')
+    vi.restoreAllMocks()
+  })
+
   it('html2canvas mode', async () => {
     const el = document.createElement('div')
     Object.defineProperty(el, 'offsetWidth', { value: 5 })
@@ -118,6 +160,7 @@ describe('colorFromElement', () => {
 
   it('html2canvas mode no ctx returns undefined average', async () => {
     vi.mocked(html2canvas).mockResolvedValue({ width: 2, height: 2, getContext: () => null } as unknown as HTMLCanvasElement)
+    vi.mocked((await import('culori')).average).mockReturnValueOnce(undefined as never)
     const el = document.createElement('div')
     Object.defineProperty(el, 'offsetWidth', { value: 5 })
     Object.defineProperty(el, 'offsetHeight', { value: 5 })
@@ -131,6 +174,7 @@ describe('colorFromElement', () => {
       height: 2,
       getContext: () => ({ getImageData: () => ({ data: new Uint8ClampedArray([0, 0, 0, 0]) }) }),
     } as unknown as HTMLCanvasElement)
+    vi.mocked((await import('culori')).average).mockReturnValueOnce(undefined as never)
     const el = document.createElement('div')
     Object.defineProperty(el, 'offsetWidth', { value: 5 })
     Object.defineProperty(el, 'offsetHeight', { value: 5 })
@@ -172,5 +216,19 @@ describe('colorFromElement', () => {
     } as unknown as HTMLCanvasElement)
     await colorFromElement(el, { mode: 'html2canvas', html2canvas: { onclone, region: { x: 1, y: 2, width: 3, height: 4 }, backgroundColor: 'red', allowTaint: false, useCORS: false, logging: true } })
     expect(html2canvas).toHaveBeenCalledWith(el, expect.objectContaining({ onclone, x: 1, y: 2, width: 3, height: 4 }))
+  })
+
+  it('html2canvas mode returns undefined average when culori average undefined', async () => {
+    vi.mocked(html2canvas).mockResolvedValue({
+      width: 2,
+      height: 2,
+      getContext: () => ({ getImageData: () => ({ data: new Uint8ClampedArray([1, 2, 3, 255]) }) }),
+    } as unknown as HTMLCanvasElement)
+    vi.mocked((await import('culori')).average).mockReturnValueOnce(undefined as never)
+    const el = document.createElement('div')
+    Object.defineProperty(el, 'offsetWidth', { value: 5 })
+    Object.defineProperty(el, 'offsetHeight', { value: 5 })
+    const res = await colorFromElement(el, { mode: 'html2canvas' })
+    expect(res.html2canvas?.average).toBeUndefined()
   })
 })
