@@ -82,6 +82,16 @@ describe('autonomous intention ranking', () => {
       const score = scoreIntention(intention({ memoryCreatedAt: NOW + 5 * DAY }), AUTONOMOUS_RANKING_POLICY, NOW)
       expect(score.recencyPoints).toBeCloseTo(AUTONOMOUS_RANKING_POLICY.recency.points, 6)
     })
+
+    it('returns zero for a negative memory timestamp', () => {
+      const score = scoreIntention(intention({ memoryCreatedAt: -1 }), AUTONOMOUS_RANKING_POLICY, NOW)
+      expect(score.recencyPoints).toBe(0)
+    })
+
+    it('treats a non-finite memory timestamp as missing', () => {
+      const score = scoreIntention(intention({ memoryCreatedAt: Number.NaN }), AUTONOMOUS_RANKING_POLICY, NOW)
+      expect(score.recencyPoints).toBe(0)
+    })
   })
 
   describe('deadline pressure', () => {
@@ -108,6 +118,19 @@ describe('autonomous intention ranking', () => {
 
       expect(ranked[0].intention.id).toBe('deadline')
     })
+
+    it('linearly decays a deadline between the within-window and the remembered window', () => {
+      const mid = scoreIntention(intention({ deadlineAt: NOW + 3 * DAY }), AUTONOMOUS_RANKING_POLICY, NOW)
+      expect(mid.deadlinePoints).toBeGreaterThan(0)
+      expect(mid.deadlinePoints).toBeLessThan(AUTONOMOUS_RANKING_POLICY.deadline.points)
+    })
+
+    it('returns zero for a non-positive deadline', () => {
+      const zero = scoreIntention(intention({ deadlineAt: 0 }), AUTONOMOUS_RANKING_POLICY, NOW)
+      const neg = scoreIntention(intention({ deadlineAt: -5 }), AUTONOMOUS_RANKING_POLICY, NOW)
+      expect(zero.deadlinePoints).toBe(0)
+      expect(neg.deadlinePoints).toBe(0)
+    })
   })
 
   describe('relationship intensity', () => {
@@ -126,6 +149,25 @@ describe('autonomous intention ranking', () => {
       expect(hot.intensityPoints).toBeCloseTo(AUTONOMOUS_RANKING_POLICY.intensity, 6)
       expect(cold.intensityPoints).toBe(0)
     })
+
+    it('defaults a missing intensity to neutral rather than to zero', () => {
+      const neutral = scoreIntention(intention({ kind: 'relationship-anchor' }), AUTONOMOUS_RANKING_POLICY, NOW)
+      expect(neutral.intensityPoints).toBeCloseTo(AUTONOMOUS_RANKING_POLICY.intensity * 0.5, 6)
+    })
+
+    it('bounds intensity below deadline weight so warmth never beats a commitment', () => {
+      const anchor = scoreIntention(intention({ kind: 'relationship-anchor', intensity: 1 }), AUTONOMOUS_RANKING_POLICY, NOW)
+      const deadline = scoreIntention(intention({ deadlineAt: NOW + HOUR }), AUTONOMOUS_RANKING_POLICY, NOW)
+
+      expect(anchor.intensityPoints).toBeLessThan(deadline.deadlinePoints)
+    })
+
+    it('yields zero intensity when the policy intensity is non-finite', () => {
+      const policy: IntentionRankingPolicy = { ...AUTONOMOUS_RANKING_POLICY, intensity: Number.NaN }
+      const score = scoreIntention(intention({ kind: 'relationship-anchor', intensity: 0.5 }), policy, NOW)
+      expect(score.intensityPoints).toBe(0)
+    })
+  })
 
     it('defaults a missing intensity to neutral rather than to zero', () => {
       const neutral = scoreIntention(intention({ kind: 'relationship-anchor' }), AUTONOMOUS_RANKING_POLICY, NOW)
