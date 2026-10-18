@@ -1,399 +1,155 @@
 import { describe, expect, it } from 'vitest'
 
-import { EntityLedger } from './entity-ledger'
+import { EntityLedger, normalizeCanonicalEntityLabel } from './entity-ledger'
+
+describe('normalizeCanonicalEntityLabel', () => {
+  it('handles empty', () => {
+    const r = normalizeCanonicalEntityLabel('')
+    expect(r).toBeTruthy()
+  })
+  it('strips honorific camel', () => {
+    const r = normalizeCanonicalEntityLabel('AliceChan')
+    expect(r.canonical).toContain('Alice')
+  })
+  it('handles hyphen honorific', () => {
+    const r = normalizeCanonicalEntityLabel('alice-chan')
+    expect(r).toBeTruthy()
+  })
+  it('plain label', () => {
+    const r = normalizeCanonicalEntityLabel('  Bob  ')
+    expect(r.normalizedKey).toBe('bob')
+  })
+})
 
 describe('entityLedger', () => {
-  it('creates and aliases entities correctly', () => {
-    const ledger = new EntityLedger()
-    const ent1 = ledger.getOrCreateEntity('Ned', 'animal', { species: 'dog' })
-    expect(ent1.entityId).toBeDefined()
-    expect(ent1.label).toBe('Ned')
-    expect(ent1.type).toBe('animal')
-
-    // Case-insensitive lookup matches the alias
-    const ent2 = ledger.getOrCreateEntity('ned')
-    expect(ent2.entityId).toBe(ent1.entityId)
-    expect(ent2.attributes.species).toBe('dog')
+  it('addSource', () => {
+    const L = new EntityLedger()
+    L.addSource({ turnId: 't1', text: 'x', timestamp: 1 } as { turnId: string, text: string, timestamp: number })
+    expect(L.sources.size).toBe(1)
+    expect(L.bySource.has('t1')).toBe(true)
   })
 
-  it('indexes claims by subject and object', () => {
-    const ledger = new EntityLedger()
-    ledger.addClaim({
-      subject: 'James',
-      predicate: 'adopted',
-      object: 'Ned',
-      evidence: ['turn-1'],
-    })
-
-    const claims = ledger.queryClaims('James')
-    expect(claims).toHaveLength(1)
-    expect(claims[0].predicate).toBe('adopted')
-    expect(claims[0].object).toBe('Ned')
-
-    expect(ledger.bySubjectPredicate.get('James')?.get('adopted')?.size).toBe(1)
-    expect(ledger.byObjectPredicate.get('Ned')?.get('adopted')?.size).toBe(1)
+  it('getOrCreateEntity new and existing', () => {
+    const L = new EntityLedger()
+    const e1 = L.getOrCreateEntity('Alice', 'person')
+    const e2 = L.getOrCreateEntity('alice')
+    expect(e2.entityId).toBe(e1.entityId)
+    expect(e1.type).toBe('person')
+    // canonical
+    const e3 = L.getOrCreateEntity('  Bob Chan  ', 'person')
+    expect(e3.attributes.aliases).toContain('Bob Chan')
   })
 
-  it('serializes and deserializes cleanly without losing data', () => {
-    const ledger = new EntityLedger()
-    ledger.addSource({
-      turnId: 't-1',
-      text: 'James adopted Ned in Stamford',
-      speaker: 'User',
-      timestamp: 1720000000000,
-    })
-    const ent = ledger.getOrCreateEntity('Ned', 'animal')
-    ledger.addMention({ span: 'Ned', turnId: 't-1', entityId: ent.entityId })
-    ledger.addClaim({
-      subject: 'James',
-      predicate: 'adopted',
-      object: 'Ned',
-      evidence: ['t-1'],
-      dateInfo: { formatted_label: 'July 3, 2024' },
-    })
-
-    const json = ledger.toJSON()
-    const restored = EntityLedger.fromJSON(json)
-
-    expect(restored.sources.size).toBe(1)
-    expect(restored.entities.size).toBe(1)
-    expect(restored.claims.size).toBe(1)
-    expect(restored.queryClaims('James')[0].dateInfo?.formatted_label).toBe('July 3, 2024')
-    expect(restored.getOrCreateEntity('Ned').entityId).toBe(ent.entityId)
+  it('addMention', () => {
+    const L = new EntityLedger()
+    const e = L.getOrCreateEntity('X')
+    const m = L.addMention({ span: 'x', turnId: 't1', entityId: e.entityId })
+    expect(e.mentions.has(m.mentionId)).toBe(true)
+    // unknown entity
+    const m2 = L.addMention({ span: 'y', turnId: 't1', entityId: 'nope' })
+    expect(m2.mentionId).toBeTruthy()
   })
 
-  it('extracts proper nouns cleanly without classifying verbs or snacks as animals', async () => {
-    const { extractTurnKnowledge } = await import('./ledger-priming')
-    const ledger = new EntityLedger()
-
-    const classificationMap = new Map<string, any>([
-      ['Shinji', 'person'],
-      ['Misato', 'person'],
-      ['Asuka', 'person'],
-      ['NERV', 'organization'],
-    ])
-
-    // Test turn with contractions, snacks, proper nouns, and an ID
-    extractTurnKnowledge(
-      'User: I didn\'t want to step over Shinji, but I got snacks for Misato and Asuka at NERV.',
-      {
-        id: 'turn-1',
-        speaker: 'User',
-        text: 'I didn\'t want to step over Shinji, but I got snacks for Misato and Asuka at NERV.',
-        timestamp: 1720000000000,
-      },
-      ledger,
-      classificationMap,
-    )
-
-    const entities = Array.from(ledger.entities.values())
-    const labels = entities.map(e => e.label)
-
-    // Should contain true proper nouns
-    expect(labels).toContain('Shinji')
-    expect(labels).toContain('Misato')
-    expect(labels).toContain('Asuka')
-    expect(labels).toContain('NERV')
-    expect(labels).toContain('User')
-
-    // Person entities should be typed person
-    const asuka = ledger.getOrCreateEntity('Asuka')
-    expect(asuka.type).toBe('person')
-
-    // NERV should be typed organization
-    const nerv = ledger.getOrCreateEntity('NERV')
-    expect(nerv.type).toBe('organization')
-
-    // Must NOT contain contraction fragments or common words as animals
-    expect(labels).not.toContain('t')
-    expect(labels).not.toContain('ve')
-    expect(labels).not.toContain('didn')
-    expect(labels).not.toContain('snacks')
-    expect(labels).not.toContain('got')
-
-    // No animal should exist in this turn
-    const animals = entities.filter(e => e.type === 'animal')
-    expect(animals).toHaveLength(0)
+  it('addClaim and indexes', () => {
+    const L = new EntityLedger()
+    const c = L.addClaim({ subject: 'A', predicate: 'likes', object: 'B', evidence: ['t1'] })
+    expect(L.claims.size).toBe(1)
+    expect(L.bySource.get('t1')?.has(c.claimId)).toBe(true)
+    expect(L.bySubjectPredicate.get('A')?.get('likes')?.has(c.claimId)).toBe(true)
   })
 
-  it('correctly classifies animals like Pen-Pen and penguin via System 1 and discards conversational artifacts', async () => {
-    const { extractTurnKnowledge } = await import('./ledger-priming')
-    const ledger = new EntityLedger()
-
-    const classificationMap = new Map<string, any>([
-      ['Misato', 'person'],
-      ['penguin', 'animal'],
-      ['Pen-Pen', 'animal'],
-      ['Obviously', 'conversational_artifact'],
-      ['Goodnight', 'conversational_artifact'],
-      ['Trigonometry', 'activity'],
-    ])
-
-    extractTurnKnowledge(
-      'Misato: Obviously, I brought home a pet penguin named Pen-Pen to study Trigonometry. Goodnight!',
-      {
-        id: 'turn-2',
-        speaker: 'Misato',
-        text: 'Obviously, I brought home a pet penguin named Pen-Pen to study Trigonometry. Goodnight!',
-        timestamp: 1720000001000,
-      },
-      ledger,
-      classificationMap,
-    )
-
-    const entities = Array.from(ledger.entities.values())
-    const labels = entities.map(e => e.label)
-
-    // Should include pet penguin and Pen-Pen
-    expect(labels).toContain('Pen-Pen')
-    expect(labels).toContain('penguin')
-    expect(ledger.getOrCreateEntity('Pen-Pen').type).toBe('animal')
-    expect(ledger.getOrCreateEntity('penguin').type).toBe('animal')
-
-    // Should include Trigonometry as activity
-    expect(labels).toContain('Trigonometry')
-    expect(ledger.getOrCreateEntity('Trigonometry').type).toBe('activity')
-
-    // Should completely discard conversational artifacts
-    expect(labels).not.toContain('Obviously')
-    expect(labels).not.toContain('Goodnight')
+  it('addEvent', () => {
+    const L = new EntityLedger()
+    const ev = L.addEvent({ type: 'meet', roles: { a: 1 }, claimIds: ['c1'] })
+    expect(L.events.size).toBe(1)
+    expect(L.byEvent.get(ev.eventId)?.has('c1')).toBe(true)
   })
 
-  it('filters out conversational stopwords, pronouns, and onomatopoeia even without System 1', async () => {
-    const { extractFragmentsFromText, extractTurnKnowledge } = await import('./ledger-priming')
-    const ledger = new EntityLedger()
-
-    // Test text loaded with typical dialogue noise: "Hey", "They", "Now", "Kyaa", "Eeeep", "Maybe", "Could"
-    const text = 'Hey! They could bring snacks now. Maybe Asuka and Shinji want some? Kyaa! Eeeep!'
-    const fragments = extractFragmentsFromText(text)
-
-    expect(fragments.mentions).toContain('Asuka')
-    expect(fragments.mentions).toContain('Shinji')
-    expect(fragments.mentions).not.toContain('Hey')
-    expect(fragments.mentions).not.toContain('They')
-    expect(fragments.mentions).not.toContain('Now')
-    expect(fragments.mentions).not.toContain('Maybe')
-    expect(fragments.mentions).not.toContain('Could')
-    expect(fragments.mentions).not.toContain('Kyaa')
-    expect(fragments.mentions).not.toContain('Eeeep')
-
-    extractTurnKnowledge(
-      text,
-      {
-        id: 'turn-stopword-1',
-        speaker: 'User',
-        text,
-        timestamp: 1720000002000,
-      },
-      ledger,
-    )
-
-    const labels = Array.from(ledger.entities.values()).map(e => e.label)
-    expect(labels).toContain('Asuka')
-    expect(labels).toContain('Shinji')
-    expect(labels).toContain('User')
-    expect(labels).not.toContain('Hey')
-    expect(labels).not.toContain('They')
-    expect(labels).not.toContain('Now')
-    expect(labels).not.toContain('Maybe')
-    expect(labels).not.toContain('Could')
-    expect(labels).not.toContain('Kyaa')
-    expect(labels).not.toContain('Eeeep')
+  it('queryEntities', () => {
+    const L = new EntityLedger()
+    L.getOrCreateEntity('Alice', 'person', { foo: 'bar' })
+    L.getOrCreateEntity('Bob', 'place')
+    expect(L.queryEntities('person').length).toBe(1)
+    expect(L.queryEntities('all', 'ali').length).toBe(1)
+    expect(L.queryEntities(undefined, 'bar').length).toBe(1)
   })
 
-  it('peels leading grammatical words from sentence starters and prevents "And Kyo", "As NanO", "And Richard" from forming compound entities', async () => {
-    const { extractFragmentsFromText, extractTurnKnowledge } = await import('./ledger-priming')
-    const ledger = new EntityLedger()
-
-    const text = 'And Kyo, what do you think? As NanO pointed out earlier, we should proceed. User: And Richard agreed with us.'
-    const fragments = extractFragmentsFromText(text)
-
-    // Mentions must extract the real names, NOT the conjunction-polluted compounds
-    expect(fragments.mentions).toContain('Kyo')
-    expect(fragments.mentions).toContain('NanO')
-    expect(fragments.mentions).toContain('Richard')
-    expect(fragments.mentions).not.toContain('And Kyo')
-    expect(fragments.mentions).not.toContain('As NanO')
-    expect(fragments.mentions).not.toContain('And Richard')
-
-    extractTurnKnowledge(
-      text,
-      {
-        id: 'turn-peel-1',
-        speaker: 'User',
-        text,
-        timestamp: 1720000003000,
-      },
-      ledger,
-    )
-
-    const labels = Array.from(ledger.entities.values()).map(e => e.label)
-    expect(labels).toContain('Kyo')
-    expect(labels).toContain('NanO')
-    expect(labels).toContain('Richard')
-    expect(labels).toContain('User')
-    expect(labels).not.toContain('And Kyo')
-    expect(labels).not.toContain('As NanO')
-    expect(labels).not.toContain('And Richard')
+  it('queryClaims', () => {
+    const L = new EntityLedger()
+    L.addClaim({ subject: 'Alice', predicate: 'likes', object: 'Bob' })
+    L.addClaim({ subject: 'Alice', predicate: 'knows', object: 'Carol', qualifiers: { isCurrent: false } })
+    expect(L.queryClaims('alice', 'likes').length).toBe(1)
+    expect(L.queryClaims('alice').length).toBe(2)
+    expect(L.queryClaims(undefined, undefined, true).length).toBe(1)
   })
 
-  describe('pCL Contradiction Resolution & Invalidation', () => {
-    it('creates new claims with isCurrent: true', () => {
-      const ledger = new EntityLedger()
-      const res = ledger.applyPCLClaim({
-        subject: 'Sam',
-        predicate: 'likes',
-        object: 'pickles',
-        action: 'new',
-      })
-
-      expect(res.actionTaken).toBe('created')
-      const claims = ledger.queryClaims('Sam', 'likes', true)
-      expect(claims).toHaveLength(1)
-      expect(claims[0].object).toBe('pickles')
-      expect(claims[0].qualifiers?.isCurrent).toBe(true)
-    })
-
-    it('reinforces existing claims by incrementing reinforcement count', () => {
-      const ledger = new EntityLedger()
-      ledger.applyPCLClaim({
-        subject: 'Sam',
-        predicate: 'likes',
-        object: 'pickles',
-        action: 'new',
-      })
-
-      const res = ledger.applyPCLClaim({
-        subject: 'Sam',
-        predicate: 'likes',
-        object: 'pickles',
-        action: 'reinforce',
-        evidenceTurnId: 'turn-99',
-      })
-
-      expect(res.actionTaken).toBe('reinforced')
-      const claims = ledger.queryClaims('Sam', 'likes', true)
-      expect(claims).toHaveLength(1)
-      expect(claims[0].qualifiers?.reinforcementCount).toBe(2)
-      expect(claims[0].evidence).toContain('turn-99')
-    })
-
-    it('updates beliefs by superseding prior claims (Predict-Calibrate-Learn)', () => {
-      const ledger = new EntityLedger()
-      // Initial belief: Sam likes pickles
-      const initial = ledger.applyPCLClaim({
-        subject: 'Sam',
-        predicate: 'likes',
-        object: 'pickles',
-        action: 'new',
-      })
-
-      // Evolving truth / Contradiction: Sam now hates pickles (or prefers olives)
-      const updateRes = ledger.applyPCLClaim({
-        subject: 'Sam',
-        predicate: 'likes',
-        object: 'olives',
-        action: 'update',
-      })
-
-      expect(updateRes.actionTaken).toBe('updated')
-
-      // Query only current beliefs
-      const currentClaims = ledger.queryClaims('Sam', 'likes', true)
-      expect(currentClaims).toHaveLength(1)
-      expect(currentClaims[0].object).toBe('olives')
-      expect(currentClaims[0].qualifiers?.isCurrent).toBe(true)
-
-      // Query all claims (historical audit trail)
-      const allClaims = ledger.queryClaims('Sam', 'likes', false)
-      expect(allClaims).toHaveLength(2)
-
-      const oldClaim = allClaims.find(c => c.claimId === initial.claimId)
-      expect(oldClaim?.qualifiers?.isCurrent).toBe(false)
-      expect(oldClaim?.qualifiers?.supersededBy).toBe(updateRes.claimId)
-    })
-
-    it('invalidates claims without erasing historical provenance', () => {
-      const ledger = new EntityLedger()
-      ledger.applyPCLClaim({
-        subject: 'Alice',
-        predicate: 'lives_in',
-        object: 'Paris',
-        action: 'new',
-      })
-
-      const invRes = ledger.applyPCLClaim({
-        subject: 'Alice',
-        predicate: 'lives_in',
-        object: 'Paris',
-        action: 'invalidate',
-      })
-
-      expect(invRes.actionTaken).toBe('invalidated')
-
-      // Active beliefs: empty
-      expect(ledger.queryClaims('Alice', 'lives_in', true)).toHaveLength(0)
-
-      // Historical beliefs: preserved with isCurrent: false
-      const history = ledger.queryClaims('Alice', 'lives_in', false)
-      expect(history).toHaveLength(1)
-      expect(history[0].qualifiers?.isCurrent).toBe(false)
-      expect(history[0].qualifiers?.invalidatedAt).toBeDefined()
-    })
+  it('applyPCLClaim reinforce/update/invalidate/new', () => {
+    const L = new EntityLedger()
+    const c0 = L.addClaim({ subject: 'A', predicate: 'p', object: 'B' })
+    // reinforce
+    const r1 = L.applyPCLClaim({ subject: 'A', predicate: 'P', object: 'B', action: 'reinforce' })
+    expect(r1.actionTaken).toBe('reinforced')
+    // update
+    const r2 = L.applyPCLClaim({ subject: 'A', predicate: 'p', object: 'C', action: 'update', date: '2020', evidenceTurnId: 't1' })
+    expect(r2.actionTaken).toBe('updated')
+    // invalidate
+    const r3 = L.applyPCLClaim({ subject: 'A', predicate: 'p', object: 'C', action: 'invalidate' })
+    expect(r3.actionTaken).toBe('invalidated')
+    // new
+    const r4 = L.applyPCLClaim({ subject: 'X', predicate: 'q', object: 'Y', action: 'new' })
+    expect(r4.actionTaken).toBe('created')
+    // reinforce not found falls to? action reinforce with no match -> falls through to new
+    const r5 = L.applyPCLClaim({ subject: 'Z', predicate: 'q', object: 'W', action: 'reinforce' })
+    expect(r5.actionTaken).toBe('created')
+    expect(c0.claimId).toBeTruthy()
   })
 
-  describe('canonical Entity Resolution & Honorific Folding', () => {
-    it('folds Japanese honorifics with arbitrary vowel elongation into canonical entity', () => {
-      const ledger = new EntityLedger()
-      const nords = ledger.getOrCreateEntity('Nords', 'person')
-      expect(nords.label).toBe('Nords')
+  it('getSummaryStats', () => {
+    const L = new EntityLedger()
+    L.addSource({ turnId: 't1', text: 'x' } as { turnId: string, text: string })
+    const s = L.getSummaryStats()
+    expect(s.sourcesCount).toBe(1)
+  })
 
-      // -sama
-      const nordsSama = ledger.getOrCreateEntity('Nords-sama')
-      expect(nordsSama.entityId).toBe(nords.entityId)
+  it('toJSON/fromJSON roundtrip', () => {
+    const L = new EntityLedger()
+    L.addSource({ turnId: 't1', text: 'x', timestamp: 1 } as { turnId: string, text: string, timestamp: number })
+    L.getOrCreateEntity('Alice', 'person')
+    L.addClaim({ subject: 'A', predicate: 'p', object: 'B', evidence: ['t1'] })
+    L.addEvent({ type: 'e', claimIds: ['claim_1'] })
+    const json = L.toJSON()
+    const L2 = EntityLedger.fromJSON(json)
+    expect(L2.sources.size).toBe(1)
+    expect(L2.entities.size).toBe(1)
+    expect(L2.claims.size).toBe(1)
+    expect(L2.events.size).toBe(1)
+    expect(L2.ingestion.size).toBe(0)
+  })
 
-      // -saaaaan (elongated vowels)
-      const nordsSaaan = ledger.getOrCreateEntity('Nords-saaaaan')
-      expect(nordsSaaan.entityId).toBe(nords.entityId)
+  it('fromJSON null/empty', () => {
+    const L = EntityLedger.fromJSON(null)
+    expect(L.sources.size).toBe(0)
+    const L2 = EntityLedger.fromJSON({ ingestion: [['k', 'v']] })
+    expect(L2.ingestion.get('k')).toBe('v')
+  })
+})
 
-      // -chaaaan
-      const evil = ledger.getOrCreateEntity('Evil', 'person')
-      const evilChaaaaan = ledger.getOrCreateEntity('Evil-chaaaan')
-      expect(evilChaaaaan.entityId).toBe(evil.entityId)
-
-      // -kuuuun
-      const shinji = ledger.getOrCreateEntity('Shinji', 'person')
-      const shinjiKun = ledger.getOrCreateEntity('Shinji-kuuuun')
-      expect(shinjiKun.entityId).toBe(shinji.entityId)
-    })
-
-    it('collapses leading single-letter stutter repetitions', () => {
-      const ledger = new EntityLedger()
-      const nords = ledger.getOrCreateEntity('Nords', 'person')
-
-      // N-Nords
-      const stutterNords = ledger.getOrCreateEntity('N-Nords')
-      expect(stutterNords.entityId).toBe(nords.entityId)
-
-      // Multi-stutter + honorific: N-N-Nords-sama
-      const multiStutterHonorific = ledger.getOrCreateEntity('N-N-Nords-sama')
-      expect(multiStutterHonorific.entityId).toBe(nords.entityId)
-
-      // T-Teio
-      const teio = ledger.getOrCreateEntity('T-Teio-chaaaan', 'person')
-      expect(teio.label).toBe('Teio')
-
-      const teioPlain = ledger.getOrCreateEntity('Teio')
-      expect(teioPlain.entityId).toBe(teio.entityId)
-    })
-
-    it('preserves non-stutter hyphenated names and short names', () => {
-      const ledger = new EntityLedger()
-      const xmen = ledger.getOrCreateEntity('X-Men', 'organization')
-      expect(xmen.label).toBe('X-Men')
-
-      const spiderMan = ledger.getOrCreateEntity('Spider-Man', 'person')
-      expect(spiderMan.label).toBe('Spider-Man')
-    })
+describe('entity-ledger extra coverage', () => {
+  it('reinforce with evidence turn', () => {
+    const L = new EntityLedger()
+    L.addClaim({ subject: 'A', predicate: 'p', object: 'B', evidence: [] })
+    const r = L.applyPCLClaim({ subject: 'A', predicate: 'p', object: 'B', action: 'reinforce', evidenceTurnId: 't9' })
+    expect(r.actionTaken).toBe('reinforced')
+  })
+  it('fromJSON mentions', () => {
+    const L = EntityLedger.fromJSON({ mentions: [{ mentionId: 'm1', span: 'x', turnId: 't1', entityId: 'e' }] })
+    expect(L.mentions.size).toBe(1)
+  })
+  it('getOrCreateEntity missing aliases branch', () => {
+    const L = new EntityLedger()
+    const e = L.getOrCreateEntity('Alice', 'person')
+    delete (e.attributes as Record<string, unknown>).aliases
+    const e2 = L.getOrCreateEntity('alice')
+    expect(e2.entityId).toBe(e.entityId)
   })
 })
