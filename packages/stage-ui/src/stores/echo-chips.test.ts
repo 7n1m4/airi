@@ -4,6 +4,7 @@ import { createTestingPinia } from '@pinia/testing'
 import { setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { layeredMemory } from '../libs/search/layered-memory'
 import { useEchoesStore } from './echo-chips'
 
 const mockSavedChips = vi.hoisted(() => ({ list: [] as any[] }))
@@ -277,5 +278,48 @@ describe('useEchoesStore (Consumer 4)', () => {
     await store.synthesizeForCharacter('char-1', { force: true, fromTimestamp: 0, toTimestamp: 3000 })
     await store.deleteChip('nonexistent')
     expect(store.chips.length).toBe(2)
+  })
+
+  it('filters historical anchors inside the window', async () => {
+    vi.mocked(layeredMemory.search).mockResolvedValueOnce([
+      { id: 'inside', layer: 'dialogue', date: '2026-08-01', observed_text: 'inside window', timestamp: 1500 },
+    ] as any)
+    const store = useEchoesStore()
+    const chips = await store.synthesizeForCharacter('char-1', { force: true, fromTimestamp: 0, toTimestamp: 3000 })
+    expect(chips).toHaveLength(2)
+  })
+
+  it('handles historical anchor search failure', async () => {
+    vi.mocked(layeredMemory.search).mockRejectedValueOnce(new Error('boom'))
+    const store = useEchoesStore()
+    const chips = await store.synthesizeForCharacter('char-1', { force: true, fromTimestamp: 0, toTimestamp: 3000 })
+    expect(chips).toHaveLength(2)
+  })
+
+  it('throws when no provider/model configured', async () => {
+    h.activeProvider.r.value = null
+    h.activeModel.r.value = null
+    const cardMap = new Map()
+    cardMap.set('char-1', { name: 'Alice', extensions: {} } as any)
+    h.cards.r.value = cardMap
+    const store = useEchoesStore()
+    await expect(store.synthesizeForCharacter('char-1', { force: true, fromTimestamp: 0, toTimestamp: 3000 })).rejects.toThrow()
+    h.activeProvider.r.value = 'provider-1'
+    h.activeModel.r.value = 'model-1'
+    const restored = new Map()
+    restored.set('char-1', {
+      name: 'Alice',
+      extensions: { airi: { modules: { consciousness: { provider: 'provider-1', model: 'model-1' } } } },
+    } as any)
+    h.cards.r.value = restored
+  })
+
+  it('aborts when provider unconfigured and not forced', async () => {
+    const prev = h.configuredProviders.r
+    h.configuredProviders.r = {} as any
+    const store = useEchoesStore()
+    const chips = await store.synthesizeForCharacter('char-1', { fromTimestamp: 0, toTimestamp: 3000 })
+    expect(chips).toEqual([])
+    h.configuredProviders.r = prev
   })
 })

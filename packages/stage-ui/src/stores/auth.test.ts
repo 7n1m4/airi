@@ -102,4 +102,28 @@ describe('auth store', () => {
     store.isLoginDrawerOpen = true
     expect(store.isLoginDrawerOpen).toBe(true)
   })
+
+  it('initialize swallows fetchSession rejection', async () => {
+    setSync(true)
+    fetchSessionMock.mockRejectedValue(new Error('boom'))
+    fetchSessionMock.mockClear()
+    fetchSessionMock.mockRejectedValue(new Error('boom'))
+    setActivePinia(createTestingPinia({ createSpy: vi.fn, stubActions: false }))
+    expect(() => useAuthStore()).not.toThrow()
+    await Promise.resolve()
+  })
+
+  it('watch enables swallows fetchSession rejection', async () => {
+    setSync(false)
+    fetchSessionMock.mockClear()
+    fetchSessionMock.mockRejectedValue(new Error('boom'))
+    setActivePinia(createTestingPinia({ createSpy: vi.fn, stubActions: false }))
+    useAuthStore()
+    fetchSessionMock.mockClear()
+    fetchSessionMock.mockRejectedValue(new Error('boom'))
+    setSync(true)
+    await nextTick()
+    await Promise.resolve()
+    expect(fetchSessionMock).toHaveBeenCalled()
+  })
 })

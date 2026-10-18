@@ -136,4 +136,81 @@ describe('audio store', () => {
     dev.selectedAudioOutput.value = ''
     expect(dev.selectedAudioOutputLabel.value).toBe('Default Output Device')
   })
+  it('useAudioContext restores saved sink', async () => {
+    const ctx = { setSinkId: vi.fn().mockResolvedValue(undefined) }
+    const g = globalThis as unknown as { AudioContext: unknown }
+    g.AudioContext = function () { return ctx }
+    localStorage.setItem('settings/audio/output', JSON.stringify('sink-1'))
+    const store = useAudioContext()
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(ctx.setSinkId).toHaveBeenCalledWith('sink-1')
+    await store.setSinkId('sink-2')
+    expect(ctx.setSinkId).toHaveBeenCalledWith('sink-2')
+  })
+
+  it('useAudioContext setSinkId no setSinkId method', async () => {
+    const ctx = {}
+    const g2 = globalThis as unknown as { AudioContext: unknown }
+    g2.AudioContext = function () { return ctx }
+    const store = useAudioContext()
+    await store.setSinkId('x')
+    expect(true).toBe(true)
+  })
+
+  it('useAudioContext setSinkId error caught', async () => {
+    const ctx = { setSinkId: vi.fn().mockRejectedValue(new Error('boom')) }
+    const g3 = globalThis as unknown as { AudioContext: unknown }
+    g3.AudioContext = function () { return ctx }
+    localStorage.clear()
+    const store = useAudioContext()
+    await store.setSinkId('x')
+    expect(true).toBe(true)
+  })
+
+  it('calculateVolume default mode', () => {
+    const store = useAudioContext()
+    const v = store.calculateVolume(makeAnalyser([10, 20, 30]))
+    expect(typeof v).toBe('number')
+  })
+
+  it('selectedAudioInputLabel unknown', () => {
+    const dev = useAudioDevice(false)
+    dev.selectedAudioInput.value = 'missing'
+    expect(dev.selectedAudioInputLabel.value).toBe('Unknown Device')
+  })
+
+  it('selectedAudioOutputLabel found device', () => {
+    mockAudioOutputs.value = [{ deviceId: 'out1', label: 'Speaker' }]
+    const dev = useAudioDevice(false)
+    dev.selectedAudioOutput.value = 'out1'
+    expect(dev.selectedAudioOutputLabel.value).toBe('Speaker')
+  })
+
+  it('watch switches from communications', async () => {
+    mockAudioInputs.value = [{ deviceId: 'comm', label: 'Microphone Array Communications' }]
+    const dev = useAudioDevice(false)
+    dev.selectedAudioInput.value = 'comm'
+    mockAudioInputs.value = [
+      { deviceId: 'comm', label: 'Microphone Array Communications' },
+      { deviceId: 'arr', label: 'Microphone Array' },
+    ]
+    await Promise.resolve()
+    expect(dev.selectedAudioInput.value).toBe('arr')
+  })
+
+  it('askPermission sets best when empty', async () => {
+    mockAudioInputs.value = [{ deviceId: 'first', label: 'Plain Mic' }]
+    const dev = useAudioDevice(false)
+    dev.selectedAudioInput.value = ''
+    await dev.askPermission()
+    expect(dev.selectedAudioInput.value).toBe('first')
+  })
+
+  it('useSpeakingStore not speaking', () => {
+    const store = useSpeakingStore()
+    store.nowSpeaking = false
+    store.mouthOpenSize = 0.5
+    expect(store.nowSpeakingAvatarBorderOpacity).toBe(30)
+  })
 })

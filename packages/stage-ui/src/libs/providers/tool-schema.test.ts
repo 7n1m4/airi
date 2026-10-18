@@ -151,6 +151,24 @@ describe('cleanJsonSchema desc', () => {
     expect(schema.description).toBe('outer desc')
     expect(schema.type).toBe('string')
   })
+  it('preserves description when collapsing anyOf whose chosen has falsy description', () => {
+    const schema: Record<string, unknown> = {
+      description: 'outer desc',
+      anyOf: [{ type: 'string', description: null }],
+    }
+    cleanJsonSchema(schema)
+    expect(schema.description).toBe('outer desc')
+    expect(schema.type).toBe('string')
+  })
+  it('preserves description when collapsing oneOf whose chosen has falsy description', () => {
+    const schema: Record<string, unknown> = {
+      description: 'outer desc',
+      oneOf: [{ type: 'string', description: null }],
+    }
+    cleanJsonSchema(schema)
+    expect(schema.description).toBe('outer desc')
+    expect(schema.type).toBe('string')
+  })
   it('preserves description when collapsing oneOf', () => {
     const schema: Record<string, unknown> = {
       description: 'outer desc',
@@ -191,6 +209,32 @@ describe('cleanJsonSchema edge cases', () => {
     cleanJsonSchema(schema)
     expect(schema.items).not.toHaveProperty('additionalProperties')
     expect(schema.items.properties).toEqual({})
+  })
+  it('handles anyOf with only null schemas (no collapse)', () => {
+    const schema: Record<string, unknown> = { anyOf: [{ type: 'null' }] }
+    cleanJsonSchema(schema)
+    expect(schema.anyOf).toBeDefined()
+  })
+  it('handles oneOf with only null schemas (no collapse)', () => {
+    const schema: Record<string, unknown> = { oneOf: [{ type: 'null' }] }
+    cleanJsonSchema(schema)
+    expect(schema.oneOf).toBeDefined()
+  })
+  it('skips non-object properties', () => {
+    const schema: Record<string, unknown> = { type: 'object', properties: { a: null, b: 5 } }
+    cleanJsonSchema(schema)
+    expect(schema.properties).toEqual({ a: null, b: 5 })
+  })
+  it('handles items that are neither array nor object gracefully', () => {
+    const schema: Record<string, unknown> = { items: 'x' }
+    cleanJsonSchema(schema)
+    expect(schema.items).toBe('x')
+  })
+  it('sanitizeTools handles tool without parameters', () => {
+    const tools = [{ type: 'function', function: { name: 'f', description: 'd' }, execute: async () => 1 }] as unknown as Parameters<typeof sanitizeTools>[0]
+    const out = sanitizeTools(tools)
+    expect(out).toHaveLength(1)
+    expect(typeof out![0].execute).toBe('function')
   })
 })
 

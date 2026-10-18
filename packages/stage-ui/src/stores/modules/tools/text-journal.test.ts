@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import {
+  createTextJournalTool,
   executeCreateTextJournalEntry,
   executeSearchTextJournalEntries,
   executeTextJournalAction,
@@ -77,6 +78,39 @@ describe('text-journal module', () => {
     expect(parsed[0].layer).toBe('knowledge-graph')
     expect(parsed[0].fact).toBe('S P O')
   })
+  it('dateInfo timestamp branch', async () => {
+    mockSearchEntries.mockResolvedValueOnce([
+      { id: 'd1', kind: 'journal', title: 'T', content: 'c', dateInfo: { timestamp: '2024-09-10T00:00:00Z' }, score: 0.1 },
+    ])
+    const res = await executeSearchTextJournalEntries({ query: 'q' })
+    const parsed = JSON.parse(res)
+    expect(parsed[0].date).toBe('2024-09-10')
+  })
+  it('timestamp branch', async () => {
+    mockSearchEntries.mockResolvedValueOnce([
+      { id: 'd2', kind: 'journal', title: 'T', content: 'c', timestamp: '2024-11-12', score: 0.1 },
+    ])
+    const res = await executeSearchTextJournalEntries({ query: 'q' })
+    const parsed = JSON.parse(res)
+    expect(parsed[0].date).toBe('2024-11-12')
+  })
+  it('timestamp T branch', async () => {
+    mockSearchEntries.mockResolvedValueOnce([
+      { id: 'd3', kind: 'journal', title: 'T', content: 'c', timestamp: '2024-12-13T00:00:00Z', score: 0.1 },
+    ])
+    const res = await executeSearchTextJournalEntries({ query: 'q' })
+    const parsed = JSON.parse(res)
+    expect(parsed[0].date).toBe('2024-12-13')
+  })
+  it('fallback createdAt branch', async () => {
+    mockSearchEntries.mockResolvedValueOnce([])
+    mockSearchBlocks.mockReturnValueOnce([
+      { id: 'b2', summary: 'sum2', createdAt: '2024-02-03T00:00:00Z' },
+    ])
+    const res = await executeSearchTextJournalEntries({ query: 'q' })
+    const parsed = JSON.parse(res)
+    expect(parsed[0].date).toBe('2024-02-03')
+  })
 
   it('short-term layer', async () => {
     mockSearchEntries.mockResolvedValueOnce([
@@ -130,6 +164,19 @@ describe('text-journal module', () => {
     mockSearchBlocks.mockReturnValueOnce([])
     const res = await executeTextJournalAction({ action: 'search', query: 'q' })
     expect(JSON.parse(res)).toEqual([])
+  })
+  it('no-op message', async () => {
+    const res = await executeTextJournalAction({ action: 'nope' as any })
+    expect(res).toBe('No text journal action performed.')
+  })
+
+  it('createTextJournalTool factory', async () => {
+    mockCreateEntry.mockResolvedValueOnce({ title: 'hello tool', characterName: 'Asuka' })
+    const toolDef = await createTextJournalTool()
+    expect((toolDef as { name?: string, function?: { name?: string } }).name || (toolDef as { name?: string, function?: { name?: string } }).function?.name).toBe('text_journal')
+    expect(typeof (toolDef as { execute?: unknown }).execute).toBe('function')
+    const created = await (toolDef as { execute: (p: unknown) => Promise<unknown> }).execute({ action: 'create', content: 'hello tool' })
+    expect(created).toContain('Saved text journal entry')
   })
 
   it('params schema validates', () => {

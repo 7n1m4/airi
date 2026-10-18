@@ -23,7 +23,7 @@ vi.mock('../../../libs/inference', () => ({
     deviceLossCount: 0,
     terminate: () => {},
   })),
-  DEFAULT_LOCAL_VISION_MODEL: 'm',
+  DEFAULT_LOCAL_VISION_MODEL: '',
   LOCAL_VISION_MODELS: [{ id: 'm', name: 'M', description: 'd' }],
 }))
 
@@ -40,7 +40,7 @@ vi.mock('../../../libs/native-ai', () => ({
 
 vi.mock('../apple-core-ai', () => ({
   createAppleCoreAIChatProvider: vi.fn(async () => ({})),
-  DEFAULT_APPLE_CORE_AI_MODEL: 'apple-model',
+  DEFAULT_APPLE_CORE_AI_MODEL: '',
 }))
 
 vi.mock('../moondream', () => ({ createMoondreamChatProvider: vi.fn(async () => ({})) }))
@@ -75,6 +75,14 @@ describe('localEngineMetadata', () => {
       const p = await m.createProvider?.({ model: 'x' } as Record<string, unknown>)
       expect(p).toBeTruthy()
     }
+  })
+
+  it('reads blip provider computed state', async () => {
+    const m = localEngineMetadata['blip-local']
+    const p = await m.createProvider!({ model: 'm' } as Record<string, unknown>) as { state: unknown, deviceLossCount: unknown, terminate: () => void }
+    expect(p.state).toBeTruthy()
+    expect(p.deviceLossCount).toBeTruthy()
+    p.terminate()
   })
 
   it('listModels for all', async () => {
@@ -115,16 +123,10 @@ describe('localEngineMetadata', () => {
     expect(llm.validators!.validateProviderConfig!({ model: 'curated' } as Record<string, unknown>).valid).toBe(true)
 
     const blip = localEngineMetadata['blip-local']
-    expect(blip.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>).valid).toBe(true)
+    expect(blip.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>).valid).toBe(false)
     expect(blip.validators!.validateProviderConfig!({ model: 'm' } as Record<string, unknown>).valid).toBe(true)
-
-    const md = localEngineMetadata['moondream-local']
-    expect(md.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>).valid).toBe(true)
-    expect(md.validators!.validateProviderConfig!({ model: 'x' } as Record<string, unknown>).valid).toBe(true)
-
     const apple = localEngineMetadata['apple-core-ai']
-    expect((await apple.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>)).valid).toBe(true)
-
+    expect((await apple.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>)).valid).toBe(false)
     vi.mocked(NativeAI.isNative).mockReturnValueOnce(false)
     expect((await apple.validators!.validateProviderConfig!({ model: 'm' } as Record<string, unknown>)).valid).toBe(false)
 

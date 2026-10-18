@@ -1147,4 +1147,11 @@ describe('turnPacingCoordinator (coverage extras)', () => {
     await coord.onAssistantEnd()
     expect(coord.state).toBe('SETTLED')
   })
+  it('cancel with stale generation is no-op', () => {
+    const clock = new VirtualClock()
+    const coord = new TurnPacingCoordinator({ turnId: 't', generation: 1, providerKey: 'p', policy: defaultPolicy, clock })
+    coord.dispatch()
+    coord.cancel('stale', 999)
+    expect(coord.state).not.toBe('SETTLED')
+  })
 })

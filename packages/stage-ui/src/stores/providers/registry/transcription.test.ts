@@ -2,6 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { transcriptionMetadata } from './transcription'
 
+vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@proj-airi/stage-shared')>()
+  return { ...actual, isStageTamagotchi: () => (globalThis as any).__TAMAGOTCHI__ === true }
+})
+
 describe('transcription registry coverage', () => {
   describe('extra branches', () => {
     it('aliyun transcription fn', async () => {
@@ -127,5 +132,28 @@ describe('transcription registry coverage', () => {
     expect(await meta.capabilities.listModels({ apiKey: 'x', baseUrl: 'https://example.com/v1/' })).toEqual([])
     // @ts-ignore
     globalThis.fetch = undefined
+  })
+
+  it('exercises openai audio validator reason', () => {
+    const meta = (transcriptionMetadata as any)['openai-audio-transcription']
+    const v = meta.validators.validateProviderConfig({ apiKey: '', baseUrl: 'https://example.com/v1/' })
+    expect(typeof v.reason).toBe('string')
+  })
+
+  it('exercises openai-compatible listModels success filter', async () => {
+    const meta = (transcriptionMetadata as any)['openai-compatible-audio-transcription']
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: [{ id: 'whisper-1', name: 'Whisper' }] }), { status: 200 })) as any
+    const res = await meta.capabilities.listModels({ apiKey: 'x', baseUrl: 'https://example.com/v1/' })
+    expect(Array.isArray(res)).toBe(true)
+    globalThis.fetch = undefined as any
+  })
+
+  it('exercises web speech tamagotchi branch', async () => {
+    (globalThis as any).__TAMAGOTCHI__ = true
+    const meta = (transcriptionMetadata as any)['browser-web-speech-api']
+    ;(globalThis as any).window = { webkitSpeechRecognition() {} }
+    expect(await meta.isAvailableBy()).toBe(false)
+    delete (globalThis as any).window
+    ;(globalThis as any).__TAMAGOTCHI__ = false
   })
 })
