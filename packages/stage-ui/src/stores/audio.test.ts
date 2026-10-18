@@ -317,4 +317,23 @@ describe('audio store', () => {
   it('placeholder', () => {
     expect(true).toBe(true)
   })
+  it('setSinkId early return when AudioContext constructor returns null', async () => {
+    const g = globalThis as unknown as { AudioContext: unknown }
+    const prev = g.AudioContext
+    g.AudioContext = function () { return null }
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useAudioContext()
+    const r = await store.setSinkId('x')
+    expect(r).toBeUndefined()
+    g.AudioContext = prev
+  })
+
+  it('findBestDevice empty inputs returns empty', async () => {
+    mockAudioInputs.value = []
+    const dev = useAudioDevice(false)
+    dev.selectedAudioInput.value = ''
+    await dev.askPermission()
+    expect(dev.selectedAudioInput.value).toBe('')
+  })
 })

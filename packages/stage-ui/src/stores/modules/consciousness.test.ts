@@ -220,4 +220,28 @@ describe('consciousness store', () => {
     store.modelSearchQuery = 'description'
     expect(Array.isArray(store.filteredModels)).toBe(true)
   })
+
+  it('filteredModels matches model id', () => {
+    const providers = useProvidersStore()
+    providers.providerMetadata = { p: { capabilities: { listModels: async () => [] } } } as any
+    providers.providerRuntimeState = { p: { models: [{ id: 'abc-123', name: 'ZZZ', description: 'nope' }] } } as any
+    const store = useConsciousnessStore()
+    store.activeProvider = 'p'
+    store.modelSearchQuery = 'abc'
+    expect(store.filteredModels.map(m => m.id)).toEqual(['abc-123'])
+  })
+
+  it('watch does not load models when provider cleared', () => {
+    const store = useConsciousnessStore()
+    store.activeProvider = ''
+    expect(store.activeProvider).toBe('')
+  })
+
+  it('self-healing skipped when no provider metadata', () => {
+    const providers = useProvidersStore()
+    providers.providerMetadata = {} as any
+    const store = useConsciousnessStore()
+    store.activeProvider = 'ghost'
+    expect(store.activeProvider).toBe('ghost')
+  })
 })

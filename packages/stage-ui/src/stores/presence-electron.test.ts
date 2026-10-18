@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { usePresenceStore } from './presence'
+import { resolveAfkThresholdMinutes, usePresenceStore } from './presence'
 
 vi.mock('@proj-airi/electron-vueuse', () => ({
   useElectronEventaInvoke: vi.fn(() => async () => 1000),
@@ -12,7 +12,7 @@ vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
   return {
     ...actual,
     debug: vi.fn(),
-    isElectronWindow: () => true,
+    isElectronWindow: () => Reflect.get(globalThis, '__ELECTRON_PRESENCE__') !== false,
     isWithinSchedule: vi.fn(() => true),
     sensorsGetActiveWindow: vi.fn(),
     sensorsGetActiveWindowHistory: vi.fn(() => []),
@@ -141,5 +141,20 @@ describe('presence electron path', () => {
     presence.writeIdleTimeSec(10)
     presence.recompute()
     expect(presence.presenceState).toBe(presence.presence.state)
+  })
+  it('resolveAfkThresholdMinutes falls back for invalid config', () => {
+    expect(resolveAfkThresholdMinutes(undefined)).toBe(5)
+    expect(resolveAfkThresholdMinutes({ airi: { heartbeats: { afkThresholdMinutes: 0 } } })).toBe(5)
+    expect(resolveAfkThresholdMinutes({ airi: { heartbeats: { afkThresholdMinutes: 10 } } })).toBe(10)
+  })
+  it('non-electron path skips os-idle-time registration', async () => {
+    // Test module loading boundary: presence reads isElectronWindow at store creation.
+    Reflect.set(globalThis, '__ELECTRON_PRESENCE__', false)
+    vi.resetModules()
+    const mod = await import('./presence')
+    setActivePinia(createPinia())
+    const presence = mod.usePresenceStore()
+    expect(presence.signalProviders.some((p: { id: string }) => p.id === 'os-idle-time')).toBe(false)
+    Reflect.set(globalThis, '__ELECTRON_PRESENCE__', true)
   })
 })

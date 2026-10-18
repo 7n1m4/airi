@@ -1232,4 +1232,40 @@ describe('turnPacingCoordinator (coverage extras)', () => {
     expect(onArmFiller).toHaveBeenCalled()
     expect(coordinator.metrics.dynamicCueSource).toBe('organic')
   })
+
+  it('closes pacing when organic aside arms at maxFillersPerTurn=1', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-organic-close',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: {
+        ...defaultPolicy,
+        semanticExtractorEnabled: true,
+        maxFillersPerTurn: 1,
+        dynamicAfterMs: 0,
+        pacingIntervalMs: 1000,
+      },
+      clock,
+      onArmFiller,
+    })
+    coordinator.dispatch()
+    clock.advance(1000)
+    coordinator.notifyFillerAudioStarted(clock.now())
+    clock.advance(100)
+    coordinator.notifyFillerAudioEnded(clock.now())
+    clock.advance(1200)
+    coordinator.submitAsideCandidate({
+      cueId: 'organic-close',
+      turn: { turnId: 'turn-organic-close', generation: 1 },
+      source: 'organic',
+      text: 'organic close candidate',
+      phraseKey: 'organic-close',
+      collectedAtMs: clock.now(),
+      expiresAtMs: clock.now() + 15000,
+    })
+    clock.advance(1100)
+    expect(coordinator.metrics.pacingClosed).toBe(true)
+  })
 })

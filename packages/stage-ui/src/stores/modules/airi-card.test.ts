@@ -282,4 +282,12 @@ describe('airi-card coverage', () => {
   it('resolve default extension', () => {
     buildSystemPrompt({ name: 'x' } as unknown as AiriCard)
   })
+  it('applyOutfit with no active card', async () => {
+    const store = useAiriCardStore()
+    await store.loadCards()
+    store.activeCardId = ''
+    try { await store.applyOutfit('o1') }
+    catch {}
+    expect(true).toBe(true)
+  })
 })

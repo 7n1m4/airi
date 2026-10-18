@@ -291,6 +291,13 @@ describe('useFacultyDefaultsStore', () => {
     expect(localStorage.getItem('artistry-provider')).toBe(JSON.stringify('ap'))
   })
 
+  it('setPrimary artistry syncs legacy model key', () => {
+    const store = useFacultyDefaultsStore()
+    store.setPrimary('artistry', 'ap2', 'am2')
+    expect(localStorage.getItem('artistry-provider')).toBe(JSON.stringify('ap2'))
+    expect(localStorage.getItem('artistry-model')).toBe(JSON.stringify('am2'))
+  })
+
   it('migrates legacy speech without voice', () => {
     localStorage.setItem('settings/speech/active-provider', JSON.stringify('speechprov'))
     localStorage.setItem('settings/speech/active-model', JSON.stringify('speechmodel'))

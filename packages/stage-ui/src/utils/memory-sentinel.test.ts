@@ -255,4 +255,23 @@ describe('memory-sentinel', () => {
     logMemoryProbe('B')
     expect(info).toHaveBeenCalledTimes(2)
   })
+  it('initMemorySentinel enabled with window absent (typeof branch)', async () => {
+    vi.resetModules()
+    const mod = await import('./memory-sentinel')
+    vi.stubGlobal('localStorage', { getItem: (k: string) => (k === 'settings/debug/enable-memory-sentinel' ? 'true' : null) } as unknown as Storage)
+    vi.stubGlobal('performance', {} as unknown as Performance)
+    procMock.memoryUsage = () => ({ rss: 0 })
+    const info = vi.fn()
+    vi.stubGlobal('console', { info, warn: vi.fn() } as unknown as Console)
+    const orig = Object.getOwnPropertyDescriptor(globalThis, 'window')
+    try {
+      delete (globalThis as any).window
+      mod.initMemorySentinel(5000)
+      expect(info).toHaveBeenCalled()
+    }
+    finally {
+      if (orig)
+        Object.defineProperty(globalThis, 'window', orig)
+    }
+  })
 })
