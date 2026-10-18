@@ -67,6 +67,8 @@ const h = vi.hoisted(() => ({
   activeProvider: { r: null as any },
   activeModel: { r: null as any },
   generateObjectResult: { r: null as any },
+  configuredProviders: { r: { 'provider-1': {} } as unknown },
+  providerInstance: { r: {} as unknown },
 }))
 
 vi.mock('./auth', async () => {
@@ -115,8 +117,8 @@ vi.mock('./modules/consciousness', async () => {
 
 vi.mock('./providers', () => ({
   useProvidersStore: () => ({
-    configuredProviders: { 'provider-1': {} },
-    getProviderInstance: vi.fn(async () => ({})),
+    configuredProviders: h.configuredProviders.r,
+    getProviderInstance: vi.fn(async () => h.providerInstance.r),
   }),
 }))
 
@@ -254,5 +256,26 @@ describe('useEchoesStore (Consumer 4)', () => {
     expect(newChips[0].content).toBe('Late night tea')
     expect(newChips[0].claims).toEqual([])
     expect(newChips[0].moodShift).toBeUndefined()
+  })
+
+  it('provider instance null throws', async () => {
+    h.providerInstance.r = null
+    const store = useEchoesStore()
+    await expect(store.synthesizeForCharacter('char-1', { force: true, fromTimestamp: 0, toTimestamp: 3000 })).rejects.toThrow()
+    h.providerInstance.r = {}
+  })
+
+  it('load and persist and getCharacterChips', async () => {
+    const store = useEchoesStore()
+    await store.load()
+    await store.persist([])
+    expect(store.getCharacterChips('char-1')).toEqual([])
+  })
+
+  it('deleteChip', async () => {
+    const store = useEchoesStore()
+    await store.synthesizeForCharacter('char-1', { force: true, fromTimestamp: 0, toTimestamp: 3000 })
+    await store.deleteChip('nonexistent')
+    expect(store.chips.length).toBe(2)
   })
 })
