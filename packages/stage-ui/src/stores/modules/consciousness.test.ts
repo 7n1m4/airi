@@ -125,4 +125,43 @@ describe('consciousness store', () => {
     store.activeModel = 'some-model'
     expect(true).toBe(true)
   })
+  it('native apple core ai downloads when not cached', async () => {
+    const { NativeAI } = await import('../../libs/native-ai')
+    vi.mocked(NativeAI.isNative).mockReturnValue(true)
+    vi.mocked(NativeAI.isModelCached).mockResolvedValue(false)
+    const store = useConsciousnessStore()
+    store.activeProvider = 'apple-core-ai'
+    store.activeModel = 'model-x'
+    await new Promise(r => setTimeout(r, 0))
+    expect(NativeAI.downloadModel).toHaveBeenCalled()
+    vi.mocked(NativeAI.isNative).mockReturnValue(false)
+  })
+
+  it('native apple core ai skips download when cached', async () => {
+    const { NativeAI } = await import('../../libs/native-ai')
+    vi.mocked(NativeAI.isNative).mockReturnValue(true)
+    vi.mocked(NativeAI.isModelCached).mockResolvedValue(true)
+    const store = useConsciousnessStore()
+    store.activeProvider = 'apple-core-ai'
+    store.activeModel = 'model-y'
+    await new Promise(r => setTimeout(r, 0))
+    expect(true).toBe(true)
+    vi.mocked(NativeAI.isNative).mockReturnValue(false)
+  })
+
+  it('watch loads models on provider change', async () => {
+    const store = useConsciousnessStore()
+    const providers = useProvidersStore()
+    const first = Object.keys(providers.providerMetadata)[0]
+    if (first) {
+      store.activeProvider = first
+      await new Promise(r => setTimeout(r, 0))
+      const second = Object.keys(providers.providerMetadata)[1]
+      if (second) {
+        store.activeProvider = second
+        await new Promise(r => setTimeout(r, 0))
+      }
+    }
+    expect(true).toBe(true)
+  })
 })

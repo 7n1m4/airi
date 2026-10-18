@@ -55,4 +55,9 @@ describe('buildVRMA', () => {
     const buf = buildVRMA({ name: 'm', duration: 1, loop: false, tracks: { hips: [] } })
     expect(buf).toBeInstanceOf(ArrayBuffer)
   })
+  it('throws when no tracks/channels', () => {
+    const emptyTracks: Record<string, any[]> = {}
+    for (const b of Object.keys(SKELETON)) emptyTracks[b] = []
+    expect(() => buildVRMA({ name: 'm', duration: 1, loop: false, tracks: emptyTracks })).toThrow('モーションにトラックがありません')
+  })
 })

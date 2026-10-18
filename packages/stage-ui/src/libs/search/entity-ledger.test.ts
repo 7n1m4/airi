@@ -7,6 +7,10 @@ describe('normalizeCanonicalEntityLabel', () => {
     const r = normalizeCanonicalEntityLabel('')
     expect(r).toBeTruthy()
   })
+  it('stutter', () => {
+    const r = normalizeCanonicalEntityLabel('N-Nords')
+    expect(r.canonical).toContain('Nords')
+  })
   it('strips honorific camel', () => {
     const r = normalizeCanonicalEntityLabel('AliceChan')
     expect(r.canonical).toContain('Alice')
@@ -151,5 +155,43 @@ describe('entity-ledger extra coverage', () => {
     delete (e.attributes as Record<string, unknown>).aliases
     const e2 = L.getOrCreateEntity('alice')
     expect(e2.entityId).toBe(e.entityId)
+  })
+  it('multi separator honorific', () => {
+    const r = normalizeCanonicalEntityLabel('alice---chan')
+    expect(r.canonical).toContain('alice')
+  })
+  it('canonical lookup path', () => {
+    const L = new EntityLedger()
+    L.getOrCreateEntity('AliceChan')
+    const e2 = L.getOrCreateEntity('Alice-Chan', 'person')
+    expect(e2.type).toBe('person')
+  })
+  it('type upgrade on existing unknown', () => {
+    const L = new EntityLedger()
+    const e = L.getOrCreateEntity('Zed')
+    expect(e.type).toBe('unknown')
+    const e2 = L.getOrCreateEntity('zed', 'person')
+    expect(e2.type).toBe('person')
+  })
+  it('update no date evidence', () => {
+    const L = new EntityLedger()
+    L.addClaim({ subject: 'A', predicate: 'p', object: 'B' })
+    const r = L.applyPCLClaim({ subject: 'A', predicate: 'p', object: 'C', action: 'update' })
+    expect(r.actionTaken).toBe('updated')
+  })
+  it('update with date and evidence', () => {
+    const L = new EntityLedger()
+    L.addClaim({ subject: 'A', predicate: 'p', object: 'B' })
+    const r = L.applyPCLClaim({ subject: 'A', predicate: 'p', object: 'C', action: 'update', date: '2020', evidenceTurnId: 't1' })
+    expect(r.actionTaken).toBe('updated')
+  })
+  it('new with evidence and date', () => {
+    const L = new EntityLedger()
+    const r = L.applyPCLClaim({ subject: 'X', predicate: 'q', object: 'Y', action: 'new', date: '2021', evidenceTurnId: 't2' })
+    expect(r.actionTaken).toBe('created')
+  })
+  it('fromJSON alias exists branch', () => {
+    const L = EntityLedger.fromJSON({ entities: [{ entityId: 'e1', label: 'Alice', type: 'person', attributes: {}, mentions: [] }, { entityId: 'e2', label: 'Alice', type: 'person', attributes: {}, mentions: [] }] })
+    expect(L.entities.size).toBe(2)
   })
 })

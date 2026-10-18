@@ -288,6 +288,15 @@ describe('useEchoesStore (Consumer 4)', () => {
     const chips = await store.synthesizeForCharacter('char-1', { force: true, fromTimestamp: 0, toTimestamp: 3000 })
     expect(chips).toHaveLength(2)
   })
+  it('filters historical anchors at window boundaries', async () => {
+    vi.mocked(layeredMemory.search).mockResolvedValueOnce([
+      { id: 'boundary', layer: 'dialogue', date: '2026-08-01', observed_text: 'boundary', timestamp: 1000 },
+      { id: 'outside', layer: 'dialogue', date: '2026-08-01', observed_text: 'outside', timestamp: 5000 },
+    ] as any)
+    const store = useEchoesStore()
+    const chips = await store.synthesizeForCharacter('char-1', { force: true, fromTimestamp: 0, toTimestamp: 3000 })
+    expect(chips).toHaveLength(2)
+  })
 
   it('handles historical anchor search failure', async () => {
     vi.mocked(layeredMemory.search).mockRejectedValueOnce(new Error('boom'))

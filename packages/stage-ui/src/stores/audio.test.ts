@@ -213,4 +213,29 @@ describe('audio store', () => {
     store.mouthOpenSize = 0.5
     expect(store.nowSpeakingAvatarBorderOpacity).toBe(30)
   })
+  it('useAudioContext ignores invalid saved sink JSON', () => {
+    const ctx = { setSinkId: vi.fn() }
+    const g = globalThis as unknown as { AudioContext: unknown }
+    g.AudioContext = function () { return ctx }
+    localStorage.setItem('settings/audio/output', '{bad json')
+    const store = useAudioContext()
+    expect(store).toBeDefined()
+    expect(ctx.setSinkId).not.toHaveBeenCalled()
+  })
+
+  it('askPermission no-op when selected exists', async () => {
+    mockAudioInputs.value = [{ deviceId: 'first', label: 'Plain Mic' }]
+    const dev = useAudioDevice(false)
+    dev.selectedAudioInput.value = 'existing'
+    await dev.askPermission()
+    expect(dev.selectedAudioInput.value).toBe('existing')
+  })
+
+  it('askPermission no-op when no inputs', async () => {
+    mockAudioInputs.value = []
+    const dev = useAudioDevice(false)
+    dev.selectedAudioInput.value = ''
+    await dev.askPermission()
+    expect(dev.selectedAudioInput.value).toBe('')
+  })
 })

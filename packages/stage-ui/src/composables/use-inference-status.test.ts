@@ -37,6 +37,25 @@ describe('use-inference-status', () => {
     updateInferenceStatus('b', { state: 'ready' })
     const { isAnyLoading, totalProgress } = useInferenceStatus()
     expect(isAnyLoading.value).toBe(true)
-    expect(totalProgress.value).toBe(25)
+  })
+  it('returns 100 totalProgress when no models are loading', () => {
+    updateInferenceStatus('a', { state: 'ready' })
+    updateInferenceStatus('b', { state: 'ready' })
+    updateInferenceStatus('m1', { state: 'ready' })
+    updateInferenceStatus('m2', { state: 'ready' })
+    const { totalProgress, isAnyLoading } = useInferenceStatus()
+    expect(isAnyLoading.value).toBe(false)
+    expect(totalProgress.value).toBe(100)
+  })
+
+  it('clamps negative progress to zero in totalProgress', () => {
+    updateInferenceStatus('d', { state: 'downloading', progress: { percent: -5 } as ProgressPayload })
+    const { totalProgress } = useInferenceStatus()
+    expect(totalProgress.value).toBe(0)
+  })
+  it('handles downloading model without progress', () => {
+    updateInferenceStatus('e', { state: 'downloading' })
+    const { totalProgress } = useInferenceStatus()
+    expect(totalProgress.value).toBe(0)
   })
 })

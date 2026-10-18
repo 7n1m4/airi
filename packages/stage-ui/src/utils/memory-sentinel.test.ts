@@ -81,6 +81,11 @@ describe('memory-sentinel', () => {
     expect(isMemorySentinelEnabled()).toBe(false)
   })
 
+  it('isMemorySentinelEnabled returns false when localStorage undefined', () => {
+    vi.unstubAllGlobals()
+    expect(isMemorySentinelEnabled()).toBe(false)
+  })
+
   it('logMemoryProbe disabled returns', () => {
     vi.stubGlobal('localStorage', { getItem: () => null } as unknown as Storage)
     const info = vi.fn()
@@ -110,29 +115,10 @@ describe('memory-sentinel', () => {
     const warn = vi.fn()
     vi.stubGlobal('console', { info: vi.fn(), warn } as unknown as Console)
     vi.stubGlobal('performance', {} as unknown as Performance)
-    const circular: any = {}
+    const circular: Record<string, unknown> = {}
     circular.self = circular
     logMemoryProbe('TAG', { extra: circular })
     expect(warn).toHaveBeenCalled()
-  })
-
-  it('initMemorySentinel enabled', () => {
-    vi.stubGlobal('localStorage', { getItem: (k: string) => (k === 'settings/debug/enable-memory-sentinel' ? 'true' : null) } as unknown as Storage)
-    const setInterval = vi.fn()
-    vi.stubGlobal('window', { setInterval, location: { hash: '#/' } } as unknown as Window & { setInterval: typeof setInterval })
-    vi.stubGlobal('performance', {} as unknown as Performance)
-    procMock.memoryUsage = () => ({ rss: 0 })
-    vi.stubGlobal('console', { info: vi.fn(), warn: vi.fn() } as unknown as Console)
-    initMemorySentinel(5000)
-    expect(setInterval).toHaveBeenCalled()
-  })
-
-  it('initMemorySentinel disabled no-op', () => {
-    vi.stubGlobal('localStorage', { getItem: () => null } as unknown as Storage)
-    const setInterval = vi.fn()
-    vi.stubGlobal('window', { setInterval } as unknown as Window)
-    initMemorySentinel()
-    expect(setInterval).not.toHaveBeenCalled()
   })
 
   it('logMemoryProbe window unknown branch', () => {
@@ -144,5 +130,42 @@ describe('memory-sentinel', () => {
     procMock.memoryUsage = () => ({ rss: 0 })
     logMemoryProbe()
     expect(info).toHaveBeenCalled()
+  })
+
+  it('getMemoryPressureLevel catch on localStorage', () => {
+    vi.stubGlobal('localStorage', { getItem: () => { throw new Error('x') } } as unknown as Storage)
+    vi.stubGlobal('performance', {} as unknown as Performance)
+    procMock.memoryUsage = () => ({ rss: 0 })
+    expect(getMemoryPressureLevel()).toBe('normal')
+  })
+
+  it('readMemoryMB catch on process memoryUsage', () => {
+    vi.stubGlobal('localStorage', { getItem: () => null } as unknown as Storage)
+    vi.stubGlobal('performance', {} as unknown as Performance)
+    procMock.memoryUsage = () => { throw new Error('boom') }
+    expect(getMemoryPressureLevel()).toBe('normal')
+  })
+
+  it('initMemorySentinel enabled', () => {
+    vi.stubGlobal('localStorage', { getItem: (k: string) => (k === 'settings/debug/enable-memory-sentinel' ? 'true' : null) } as unknown as Storage)
+    const cbHolder: { cb?: () => void } = {}
+    const setInterval = vi.fn((cb: () => void) => { cbHolder.cb = cb; return 1 as unknown as number })
+    vi.stubGlobal('window', { setInterval, location: { hash: '#/' } } as unknown as Window & { setInterval: typeof setInterval })
+    vi.stubGlobal('performance', {} as unknown as Performance)
+    procMock.memoryUsage = () => ({ rss: 0 })
+    const info = vi.fn()
+    vi.stubGlobal('console', { info, warn: vi.fn() } as unknown as Console)
+    initMemorySentinel(5000)
+    expect(setInterval).toHaveBeenCalled()
+    cbHolder.cb?.()
+    expect(info).toHaveBeenCalled()
+  })
+
+  it('initMemorySentinel disabled no-op', () => {
+    vi.stubGlobal('localStorage', { getItem: () => null } as unknown as Storage)
+    const setInterval = vi.fn()
+    vi.stubGlobal('window', { setInterval } as unknown as Window)
+    initMemorySentinel()
+    expect(setInterval).not.toHaveBeenCalled()
   })
 })

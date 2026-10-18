@@ -28,6 +28,21 @@ describe('patchThemeSamplingHtml2CanvasClone', () => {
   })
 
   it('placeholder2', () => { expect(true).toBe(true) })
+  it('returns when document missing', () => {
+    const g = globalThis as Record<string, unknown>
+    const saved = g.document
+    Reflect.deleteProperty(g, 'document')
+    expect(() => patchThemeSamplingHtml2CanvasClone(null!)).not.toThrow()
+    g.document = saved
+  })
+
+  it('returns when getComputedStyle missing', () => {
+    const g = globalThis as Record<string, unknown>
+    const saved = g.getComputedStyle
+    Reflect.deleteProperty(g, 'getComputedStyle')
+    expect(() => patchThemeSamplingHtml2CanvasClone(null!)).not.toThrow()
+    g.getComputedStyle = saved
+  })
 
   it('hides overlays and styles colored areas', () => {
     document.documentElement.classList.add('dark')
