@@ -141,6 +141,60 @@ describe('cleanJsonSchema', () => {
     expect(schema).not.toHaveProperty('required')
   })
 })
+describe('cleanJsonSchema desc', () => {
+  it('preserves description when collapsing anyOf', () => {
+    const schema: Record<string, unknown> = {
+      description: 'outer desc',
+      anyOf: [{ type: 'string' }],
+    }
+    cleanJsonSchema(schema)
+    expect(schema.description).toBe('outer desc')
+    expect(schema.type).toBe('string')
+  })
+  it('preserves description when collapsing oneOf', () => {
+    const schema: Record<string, unknown> = {
+      description: 'outer desc',
+      oneOf: [{ type: 'string' }],
+    }
+    cleanJsonSchema(schema)
+    expect(schema.description).toBe('outer desc')
+    expect(schema.type).toBe('string')
+  })
+})
+
+describe('cleanJsonSchema edge cases', () => {
+  it('returns early for non-object input', () => {
+    expect(() => cleanJsonSchema(null)).not.toThrow()
+    expect(() => cleanJsonSchema('x')).not.toThrow()
+    expect(() => cleanJsonSchema(42)).not.toThrow()
+  })
+
+  it('recurses into array items', () => {
+    const schema = {
+      type: 'array',
+      items: [
+        { type: 'object', properties: { a: { type: ['string', 'null'] } } },
+        { type: 'object' },
+      ],
+    }
+    cleanJsonSchema(schema)
+    expect(schema.items[0].properties.a.type).toBe('string')
+    expect(schema.items[0].properties).toBeDefined()
+    expect(schema.items[1].properties).toEqual({})
+  })
+
+  it('recurses into object items', () => {
+    const schema = {
+      type: 'array',
+      items: { type: 'object', additionalProperties: true },
+    }
+    cleanJsonSchema(schema)
+    expect(schema.items).not.toHaveProperty('additionalProperties')
+    expect(schema.items.properties).toEqual({})
+  })
+})
+
+// (placeholder removed)
 
 describe('sanitizeTools', () => {
   it('returns undefined if tools is undefined', () => {
@@ -184,5 +238,26 @@ describe('sanitizeTools', () => {
     expect(sanitizedParams.properties.foo).not.toHaveProperty('anyOf')
     expect(sanitizedParams.properties.foo.type).toBe('string')
     expect(sanitizedParams).not.toHaveProperty('required')
+  })
+})
+
+describe('sanitizeTools extra', () => {
+  it('normalizes parameters whose type is not object and missing properties', () => {
+    const executeMock = vi.fn()
+    const tools = [
+      {
+        execute: executeMock,
+        function: {
+          name: 't',
+          parameters: { type: 'string' },
+        },
+      },
+    ] as unknown as Parameters<typeof sanitizeTools>[0]
+    const sanitized = sanitizeTools(tools)
+    const sanitizedTool = sanitized![0] as { function: { parameters: { type: string, properties: Record<string, unknown> } } }
+    const params = sanitizedTool.function.parameters
+    expect(params.type).toBe('object')
+    expect(params.properties).toEqual({})
+    expect(sanitized![0].execute).toBe(executeMock)
   })
 })

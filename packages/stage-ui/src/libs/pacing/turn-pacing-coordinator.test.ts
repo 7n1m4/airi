@@ -1110,3 +1110,41 @@ describe('turnPacingCoordinator (Phase 0)', () => {
     })
   })
 })
+
+describe('turnPacingCoordinator (coverage extras)', () => {
+  it('cancel is no-op when already SETTLED', () => {
+    const clock = new VirtualClock()
+    const coord = new TurnPacingCoordinator({ turnId: 't', generation: 1, providerKey: 'p', policy: defaultPolicy, clock })
+    coord.dispatch()
+    coord.cancel('first')
+    coord.cancel('second')
+    expect(coord.state).toBe('SETTLED')
+  })
+
+  it('onAssistantEnd is no-op when already SETTLED', async () => {
+    const clock = new VirtualClock()
+    const coord = new TurnPacingCoordinator({ turnId: 't', generation: 1, providerKey: 'p', policy: defaultPolicy, clock })
+    coord.dispatch()
+    coord.cancel('x')
+    await coord.onAssistantEnd()
+    expect(coord.state).toBe('SETTLED')
+  })
+
+  it('cancel while FILLER_ARMED marks filler canceled', () => {
+    const clock = new VirtualClock()
+    const coord = new TurnPacingCoordinator({ turnId: 't', generation: 1, providerKey: 'p', policy: defaultPolicy, clock })
+    coord.dispatch()
+    clock.advance(coord.deadlineMs + 1)
+    coord.cancel('x')
+    expect(coord.state).toBe('SETTLED')
+  })
+
+  it('onAssistantEnd while FILLER_ARMED cancels filler', async () => {
+    const clock = new VirtualClock()
+    const coord = new TurnPacingCoordinator({ turnId: 't', generation: 1, providerKey: 'p', policy: defaultPolicy, clock })
+    coord.dispatch()
+    clock.advance(coord.deadlineMs + 1)
+    await coord.onAssistantEnd()
+    expect(coord.state).toBe('SETTLED')
+  })
+})
