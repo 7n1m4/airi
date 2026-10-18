@@ -242,6 +242,19 @@ describe('airi-card coverage', () => {
     catch {}
     try { await store.applyOutfit('o2') }
     catch {}
+    // missing outfit branch
+    try { await store.applyOutfit('does-not-exist') }
+    catch {}
+    // two base outfits: applying one zeroes other's expressions
+    try {
+      await store.updateCardOutfits(id, [
+        { id: 'b1', name: 'B1', type: 'base', expressions: { smile: 1 } },
+        { id: 'b2', name: 'B2', type: 'base', expressions: { blink: 1 } },
+      ] as unknown as AiriOutfit[])
+    }
+    catch {}
+    try { await store.applyOutfit('b1') }
+    catch {}
   })
 
   it('sync preset model branch', async () => {

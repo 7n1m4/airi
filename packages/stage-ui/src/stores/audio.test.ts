@@ -256,6 +256,54 @@ describe('audio store', () => {
     g.document = prevDoc
   })
 
+  it('useAudioContext unlockOnInteraction fires on document touchend', () => {
+    const g = globalThis as Record<string, unknown>
+    const prevDoc = g.document
+    let handler: ((...args: unknown[]) => void) | undefined
+    const addEventListener = vi.fn((event: string, cb: (...args: unknown[]) => void) => {
+      if (event === 'touchend')
+        handler = cb
+    })
+    const removeEventListener = vi.fn()
+    g.document = { addEventListener, removeEventListener }
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAudioContext()
+    expect(handler).toBeDefined()
+    handler!()
+    expect(removeEventListener).toHaveBeenCalled()
+    g.document = prevDoc
+  })
+
+  it('useAudioContext unlockOnInteraction fires on document click', () => {
+    const g = globalThis as Record<string, unknown>
+    const prevDoc = g.document
+    let handler: ((...args: unknown[]) => void) | undefined
+    const addEventListener = vi.fn((event: string, cb: (...args: unknown[]) => void) => {
+      if (event === 'click')
+        handler = cb
+    })
+    const removeEventListener = vi.fn()
+    g.document = { addEventListener, removeEventListener }
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    useAudioContext()
+    expect(handler).toBeDefined()
+    handler!()
+    expect(removeEventListener).toHaveBeenCalled()
+    g.document = prevDoc
+  })
+  it('useAudioContext setSinkId returns when no audioContext (2)', async () => {
+    const g = globalThis as unknown as { AudioContext: unknown }
+    g.AudioContext = function () { return {} }
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useAudioContext()
+    store.audioContext.value = null as unknown as AudioContext
+    const r = await store.setSinkId('x')
+    expect(r).toBeUndefined()
+  })
+
   it('placeholder', () => {
     expect(true).toBe(true)
   })

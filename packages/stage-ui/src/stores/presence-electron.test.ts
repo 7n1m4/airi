@@ -136,4 +136,10 @@ describe('presence electron path', () => {
     expect(true).toBe(true)
     vi.mocked(ev.useElectronEventaInvoke).mockReturnValue(() => async () => 1000)
   })
+  it('exposes presenceState computed', () => {
+    const presence = usePresenceStore()
+    presence.writeIdleTimeSec(10)
+    presence.recompute()
+    expect(presence.presenceState).toBe(presence.presence.state)
+  })
 })

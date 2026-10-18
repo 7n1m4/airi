@@ -345,4 +345,24 @@ describe('useFacultyDefaultsStore', () => {
       globalThis.window = originalWindow
     }
   })
+  it('covers mixed circuit breaker branches', () => {
+    localStorage.setItem('settings/faculties/defaults', JSON.stringify({
+      consciousness: { autoFailover: false },
+      speech: { autoFailover: true },
+      hearing: { autoFailover: false },
+      artistry: { autoFailover: false },
+      vision: { autoFailover: false },
+    }))
+    setActivePinia(createPinia())
+    const store = useFacultyDefaultsStore()
+    expect(store.isGlobalCircuitBreakerEnabled).toBe(true)
+  })
+
+  it('covers syncLegacyKeys catch', () => {
+    const store = useFacultyDefaultsStore()
+    const spy = vi.spyOn(window.localStorage, 'setItem').mockImplementation(() => { throw new Error('boom') })
+    store.setPrimary('consciousness', 'p', 'm')
+    expect(store.consciousness.primaryProvider).toBe('p')
+    spy.mockRestore()
+  })
 })

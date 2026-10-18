@@ -231,4 +231,17 @@ describe('colorFromElement', () => {
     const res = await colorFromElement(el, { mode: 'html2canvas' })
     expect(res.html2canvas?.average).toBeUndefined()
   })
+  it('vibrant mode image load failure rejects', async () => {
+    const img = document.createElement('img') as HTMLImageElement
+    class MockImage {
+      crossOrigin = ''
+      naturalWidth = 4
+      naturalHeight = 4
+      onload: (() => void) | null = null
+      onerror: (() => void) | null = null
+      set src(_v: string) { queueMicrotask(() => this.onerror?.()) }
+    }
+    ;(globalThis as unknown as { Image: unknown }).Image = MockImage
+    await expect(colorFromElement(img, { mode: 'vibrant', vibrant: { imageSource: 'http://x' } })).rejects.toThrow('Failed to load image for Vibrant extraction')
+  })
 })

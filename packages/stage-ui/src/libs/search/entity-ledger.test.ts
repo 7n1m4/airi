@@ -204,3 +204,38 @@ describe('entity-ledger extra coverage', () => {
     expect(e.label).toBe('Airi')
   })
 })
+
+describe('entity-ledger uncovered branches', () => {
+  it('empty label skips empty keys', () => {
+    const L = new EntityLedger()
+    const e = L.getOrCreateEntity('   ')
+    expect(e.entityId).toBeTruthy()
+  })
+  it('byObjectPredicate existing object+predicate', () => {
+    const L = new EntityLedger()
+    L.addClaim({ subject: 'A', predicate: 'p', object: 'B' })
+    L.addClaim({ subject: 'C', predicate: 'p', object: 'B' })
+    expect(L.byObjectPredicate.get('B')?.get('p')?.size).toBe(2)
+  })
+  it('addEvent with duplicate eventId skips', () => {
+    const L = new EntityLedger()
+    L.addEvent({ eventId: 'ev1', type: 'meet', claimIds: ['c1'] })
+    L.addEvent({ eventId: 'ev1', type: 'meet', claimIds: ['c2'] })
+    expect(L.byEvent.get('ev1')?.has('c1')).toBe(true)
+  })
+})
+
+describe('entity-ledger uncovered branches2', () => {
+  it('alias already present', () => {
+    const L = new EntityLedger()
+    L.getOrCreateEntity('Alice')
+    L.getOrCreateEntity('Alice')
+    expect(L.entities.size).toBe(1)
+  })
+  it('type not upgraded', () => {
+    const L = new EntityLedger()
+    L.getOrCreateEntity('Bob', 'person')
+    L.getOrCreateEntity('bob', 'unknown')
+    expect(L.entities.size).toBe(1)
+  })
+})

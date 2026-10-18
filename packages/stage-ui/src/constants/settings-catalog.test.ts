@@ -110,4 +110,13 @@ describe('settings-catalog', () => {
     const topo = buildSettingsCatalogTopology()
     expect(resolveSettingsBackRoute('/nonexistent-parent/child', { topology: topo })).toBe('/nonexistent-parent')
   })
+  it('resolvePathFromRoute full hashed route', () => {
+    const topo = buildSettingsCatalogTopology()
+    const r = resolvePathFromRoute(topo, '/settings/providers#chat')
+    expect(r.nodeId).toBeDefined()
+  })
+  it('back settings child parent route', () => {
+    const topo = buildSettingsCatalogTopology()
+    expect(resolveSettingsBackRoute('/settings/system/general', { topology: topo })).toBe('/settings/system')
+  })
 })
