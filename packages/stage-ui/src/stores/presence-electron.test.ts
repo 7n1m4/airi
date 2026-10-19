@@ -147,6 +147,70 @@ describe('presence electron path', () => {
     expect(resolveAfkThresholdMinutes({ airi: { heartbeats: { afkThresholdMinutes: 0 } } })).toBe(5)
     expect(resolveAfkThresholdMinutes({ airi: { heartbeats: { afkThresholdMinutes: 10 } } })).toBe(10)
   })
+  it('derivableStates excludes lock/sleep when no provider answers them', () => {
+    const presence = usePresenceStore()
+    presence.removeSignalProvider('os-idle-time')
+    expect(presence.derivableStates).toEqual(['active', 'idle', 'away'])
+    expect(presence.availability['screen-locked']).toBe('unavailable')
+    expect(presence.availability.sleep).toBe('unavailable')
+    expect(presence.presence.signals.hasLockSignal).toBe(false)
+    expect(presence.presence.signals.hasSleepSignal).toBe(false)
+  })
+
+  it('derivableStates falls back when a lock provider answers but sleep does not', () => {
+    const presence = usePresenceStore()
+    presence.addSignalProvider({ id: 'lock-only', readIdleSec: async () => 1, readLockState: () => 'unlocked' })
+    expect(presence.derivableStates).toEqual(['active', 'idle', 'away', 'screen-locked'])
+  })
+
+  it('derivableStates includes sleep without a lock provider', () => {
+    const presence = usePresenceStore()
+    presence.addSignalProvider({ id: 'sleep-only', readIdleSec: async () => 1, readSleepState: () => 'awake' })
+    expect(presence.derivableStates).toEqual(['active', 'idle', 'away', 'sleep'])
+  })
+
+  it('isAway is true only in the away state', () => {
+    const presence = usePresenceStore()
+    expect(presence.isAway).toBe(false)
+    presence.writeIdleTimeSec(1800)
+    presence.recompute()
+    expect(presence.isAway).toBe(true)
+    presence.writeIdleTimeSec(10)
+    presence.recompute()
+    expect(presence.isAway).toBe(false)
+  })
+
+  it('isUserPresent is true only in the active state', () => {
+    const presence = usePresenceStore()
+    expect(presence.isUserPresent).toBe(true)
+    presence.writeIdleTimeSec(1800)
+    presence.recompute()
+    expect(presence.isUserPresent).toBe(false)
+    presence.writeIdleTimeSec(130)
+    presence.recompute()
+    expect(presence.isUserPresent).toBe(false)
+  })
+
+  it('isUserAway uses the resolved threshold and the falsy-value fallback', () => {
+    const presence = usePresenceStore()
+    presence.writeIdleTimeSec(400)
+    expect(presence.isUserAway(Number.NaN)).toBe(true)
+    presence.writeIdleTimeSec(100)
+    expect(presence.isUserAway(Number.NaN)).toBe(false)
+    expect(presence.isUserAway(7)).toBe(false)
+    expect(presence.isUserAway(1)).toBe(true)
+  })
+
+  it('removeSignalProvider drops the registered id', () => {
+    const presence = usePresenceStore()
+    presence.addSignalProvider({ id: 'temp', readIdleSec: async () => 1 })
+    expect(presence.signalProviders.some(p => p.id === 'temp')).toBe(true)
+    presence.removeSignalProvider('temp')
+    expect(presence.signalProviders.some(p => p.id === 'temp')).toBe(false)
+    presence.removeSignalProvider('never-registered')
+    expect(presence.signalProviders.length).toBe(1)
+  })
+
   it('non-electron path skips os-idle-time registration', async () => {
     // Test module loading boundary: presence reads isElectronWindow at store creation.
     Reflect.set(globalThis, '__ELECTRON_PRESENCE__', false)

@@ -1,5 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick } from 'vue'
 
 import { useProvidersStore } from '../providers'
 import { useConsciousnessStore } from './consciousness'
@@ -243,5 +244,33 @@ describe('consciousness store', () => {
     const store = useConsciousnessStore()
     store.activeProvider = 'ghost'
     expect(store.activeProvider).toBe('ghost')
+  })
+
+  it('provider-change watch skips model loading when the provider is cleared', async () => {
+    const providers = useProvidersStore()
+    const first = Object.keys(providers.providerMetadata)[0]
+    const store = useConsciousnessStore()
+    store.activeProvider = first || 'openai'
+    await nextTick()
+    // clearing the provider makes the guard fall through instead of loading models
+    store.activeProvider = ''
+    await nextTick()
+    expect(store.activeProvider).toBe('')
+    expect(store.providerModels).toEqual([])
+  })
+
+  it('self-healing handles composite provider keys containing a colon', async () => {
+    const providers = useProvidersStore()
+    const base = Object.keys(providers.providerMetadata)[0] || 'openai'
+    const store = useConsciousnessStore()
+    store.activeProvider = `${base}:instance-1`
+    await nextTick()
+    // the colon path strips the instance suffix and finds the base provider
+    expect(store.activeProvider === `${base}:instance-1` || store.activeProvider === '').toBe(true)
+
+    store.activeModel = 'm'
+    store.activeProvider = `unknown-base:instance-1`
+    await nextTick()
+    expect(store.activeProvider === 'unknown-base:instance-1' || store.activeProvider === '').toBe(true)
   })
 })

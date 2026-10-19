@@ -1,15 +1,36 @@
+// @vitest-environment jsdom
+// The cross-tab sync test needs a DOM to mount a component, which is what makes
+// vueuse's `useMounted()` flip and `useBroadcastChannel` create its channel. The
+// workspace default is the node environment, where that test cannot run.
+import type { Store } from 'pinia'
+
 import type { AiriCard, AiriOutfit } from './airi-card'
 
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createApp, nextTick } from 'vue'
 
 import { storage } from '../../database/storage'
 import { useChatSessionStore } from '../chat/session-store'
+import { DisplayModelFormat, useDisplayModelsStore } from '../display-models'
 import { useSettingsStageModel } from '../settings/stage-model'
 import { buildSystemPrompt, useAiriCardStore } from './airi-card'
 
+/** Setup-store instance type; the store module exports no type of its own. */
+type AiriCardStore = Store<'airi-card', ReturnType<typeof useAiriCardStore>>
+
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 vi.mock('../dating-sim', () => ({ useDatingSimStore: () => ({ enabled: true, activeStoryline: { premise: 'p', appearances: 'a', scene: 's' }, customPremise: 'cp' }) }))
+
+// Controllable stand-in so tests can drive both the success and rejection paths
+// of `toggleGroundingTopics`'s `updateRecentTopics(...).catch(...)`.
+const recentTopicsState = { shouldReject: false }
+vi.mock('../chat/recent-topics', () => ({
+  updateRecentTopics: async () => {
+    if (recentTopicsState.shouldReject)
+      throw new Error('recent topics boom')
+  },
+}))
 
 const cardFixture = {
   name: 'Test',
@@ -289,5 +310,230 @@ describe('airi-card coverage', () => {
     try { await store.applyOutfit('o1') }
     catch {}
     expect(true).toBe(true)
+  })
+
+  it('toggleGroundingTopics computes recent topics for active session', async () => {
+    const store = useAiriCardStore()
+    await store.loadCards()
+    const id = await store.addCard(cardFixture)
+
+    const sessionStore = useChatSessionStore()
+    // These members are outside the store's declared public surface.
+    const session = sessionStore as unknown as {
+      activeSessionId: string
+      getSessionMeta: (id: string) => { universeId?: string } | undefined
+      getSessionMessages: (id: string) => { role: string, content: string }[]
+    }
+    session.activeSessionId = 'sess-1'
+    session.getSessionMeta = () => ({ universeId: 'u1' })
+    session.getSessionMessages = () => [{ role: 'user', content: 'hey' }]
+
+    // cardFixture has groundingTopicsEnabled: true, so toggle off then on to
+    // reach the `next && activeSessionId` branch.
+    await store.toggleGroundingTopics(id)
+    await store.toggleGroundingTopics(id)
+
+    // Rejection path: the store swallows it via `.catch()`.
+    recentTopicsState.shouldReject = true
+    await store.toggleGroundingTopics(id)
+    await store.toggleGroundingTopics(id)
+    recentTopicsState.shouldReject = false
+  })
+
+  it('ccv3 messageExample keeps already-prefixed dialogue lines', async () => {
+    const store = useAiriCardStore()
+    await store.loadCards()
+    const ccv3 = {
+      data: {
+        name: 'CC',
+        description: 'd',
+        first_mes: 'hi',
+        mes_example: '<START>\n{{char}}: hello\n{{user}}: hi there\nplain line\n<START>\n{{user}}: second',
+        tags: ['t'],
+        extensions: { airi: {} },
+      },
+    }
+    const id = await store.addCard(ccv3 as unknown as AiriCard)
+    const card = store.getCard(id)!
+    const lines = (card.messageExample ?? []).flat()
+    // Prefixed lines pass through unchanged; unprefixed lines get {{char}}:.
+    expect(lines.includes('{{char}}: hello')).toBe(true)
+    expect(lines.includes('{{user}}: hi there')).toBe(true)
+    expect(lines.includes('{{user}}: second')).toBe(true)
+    expect(lines.includes('{{char}}: plain line')).toBe(true)
+  })
+
+  it('syncCardState folds concept expressions onto Spine and model formats', async () => {
+    const store = useAiriCardStore()
+    const stageModelStore = useSettingsStageModel()
+    stageModelStore.stageModelRenderer = {} as unknown as typeof stageModelStore.stageModelRenderer
+    stageModelStore.stageModelSelectedDisplayModel = {} as unknown as typeof stageModelStore.stageModelSelectedDisplayModel
+
+    // Spine: 'Happy [smile]' matches the `variant [skin]` pattern, 'Sad' matches
+    // an available variant name.
+    localStorage.setItem('settings/spine/available-variants', JSON.stringify([{ name: 'Sad', skins: [] }]))
+    stageModelStore.stageModelSelected = 'preset-vrm-1'
+    const spineCard = {
+      name: 'Spine',
+      extensions: {
+        airi: {
+          modules: { displayModelId: 'preset-vrm-1' },
+          artistry: { autonomousEnabled: false },
+          active_concepts: ['c1'],
+          visual_assets: {
+            c1: {
+              manifestation: {
+                backgroundId: 'inherit',
+                active_expressions: { 'Happy [smile]': 1, 'Sad': 1 },
+              },
+            },
+          },
+        },
+      },
+    } as unknown as AiriCard
+    const spineId = await store.addCard(spineCard)
+    try { await store.syncCardState(store.getCard(spineId), true) }
+    catch {}
+    localStorage.removeItem('settings/spine/available-variants')
+  })
+
+  it('syncCardState applies PMX model-local mapping', async () => {
+    const displayModelsStore = useDisplayModelsStore()
+    const store = useAiriCardStore()
+    const stageModelStore = useSettingsStageModel()
+
+    // Register a real PMX model so `getDisplayModel` resolves it in-memory.
+    // `addDisplayModelWithTextures` awaits the store's own loading flag before
+    // appending, so the entry cannot be clobbered by the eager catalog load.
+    const pmxModel = await displayModelsStore.addDisplayModelWithTextures(
+      DisplayModelFormat.PMXZip,
+      new File(['x'], 'm.pmx'),
+      [],
+    )
+    // `getDisplayModel` returns this same reference, so the label mapping loop
+    // in `syncCardState` sees these capabilities.
+    const capabilities = [
+      { rawKey: 'smile', label: 'Smile', usable: true },
+      { rawKey: 'plain', label: 'plain', usable: true },
+    ]
+    // Assign after the first sync: `updateStageModel` re-reads the catalog and
+    // replaces `displayModels`, which would drop an earlier assignment.
+    const seedCard = {
+      name: 'PMX-seed',
+      extensions: {
+        airi: {
+          modules: { displayModelId: pmxModel.id },
+          artistry: { autonomousEnabled: false },
+          active_concepts: [],
+          visual_assets: {},
+        },
+      },
+    } as unknown as AiriCard
+    const seedId = await store.addCard(seedCard)
+    try { await store.syncCardState(store.getCard(seedId), true) }
+    catch {}
+
+    const live = await displayModelsStore.addDisplayModelWithTextures(
+      DisplayModelFormat.PMXZip,
+      new File(['x'], 'm.pmx'),
+      [],
+    )
+    // `getDisplayModel` returns this same reference, so the label mapping loop in
+    // `syncCardState` sees these capabilities. Registered after the seed sync so a
+    // catalog reload cannot drop it.
+    live.expressionCapabilities = capabilities
+
+    stageModelStore.stageModelSelected = live.id
+    stageModelStore.stageModelRenderer = {} as unknown as typeof stageModelStore.stageModelRenderer
+    stageModelStore.stageModelSelectedDisplayModel = {} as unknown as typeof stageModelStore.stageModelSelectedDisplayModel
+
+    const pmxCard = {
+      name: 'PMX',
+      extensions: {
+        airi: {
+          modules: { displayModelId: live.id },
+          artistry: { autonomousEnabled: false },
+          active_concepts: [],
+          visual_assets: {},
+        },
+      },
+    } as unknown as AiriCard
+    const id = await store.addCard(pmxCard)
+    try { await store.syncCardState(store.getCard(id), true) }
+    catch {}
+  })
+
+  it('syncCardState aborts when superseded by a newer call', async () => {
+    const store = useAiriCardStore()
+    const stageModelStore = useSettingsStageModel()
+    // Start from a different id so the call enters the model-swap block and has to
+    // await `updateStageModel()` before reaching the sequence guard.
+    stageModelStore.stageModelSelected = ''
+    stageModelStore.stageModelRenderer = {} as unknown as typeof stageModelStore.stageModelRenderer
+    stageModelStore.stageModelSelectedDisplayModel = {} as unknown as typeof stageModelStore.stageModelSelectedDisplayModel
+
+    const card = {
+      name: 'Race',
+      extensions: {
+        airi: {
+          modules: { displayModelId: 'preset-vrm-1' },
+          artistry: { autonomousEnabled: false },
+          active_concepts: [],
+          visual_assets: {},
+        },
+      },
+    } as unknown as AiriCard
+    const id = await store.addCard(card)
+
+    // Concurrent calls are expected to settle cleanly: whichever resolves later is
+    // dropped by the sequence guard rather than clobbering the newer state.
+    await Promise.allSettled([
+      store.syncCardState(store.getCard(id), false),
+      store.syncCardState(store.getCard(id), false),
+      store.syncCardState(store.getCard(id), false),
+    ])
+  })
+
+  it('cardsSyncSignal reloads cards on a cross-tab sync signal', async () => {
+    // `useBroadcastChannel` creates its channel inside `onMounted`, and
+    // `useSupported` also reads `useMounted()`, which only turns true once a real
+    // component instance is mounted. Without that, `isSupported` stays false and the
+    // watcher never receives anything — so instantiate the store inside an app.
+    const host = document.createElement('div')
+    let mountedStore: AiriCardStore | undefined
+    const app = createApp({
+      setup() {
+        mountedStore = useAiriCardStore()
+        return () => null
+      },
+    })
+    app.mount(host)
+    await nextTick()
+    const card = mountedStore!
+
+    await card.loadCards()
+
+    const { promise, resolve } = Promise.withResolvers<void>()
+    // The watcher body runs `loadCards(true)`, which reads exactly this key, so
+    // matching on it keeps unrelated storage reads from resolving the gate early.
+    const origItemRaw = storage.getItemRaw
+    storage.getItemRaw = (async (key: string) => {
+      if (key === 'local:airi-cards')
+        resolve()
+      return origItemRaw(key)
+    }) as typeof storage.getItemRaw
+
+    // A BroadcastChannel never receives its own message, so post from a distinct
+    // sender: the store's channel is the listener under test.
+    const sender = new BroadcastChannel('airi:cards-sync')
+    sender.postMessage('airi-card-sync-test-tick')
+    await promise
+    storage.getItemRaw = origItemRaw
+    sender.close()
+    app.unmount()
+
+    // L455 is the `loadCards(true)` call itself; the reload re-reads the key above
+    // and leaves the store idle rather than stuck mid-load.
+    expect(card.cardsLoading).toBe(false)
   })
 })

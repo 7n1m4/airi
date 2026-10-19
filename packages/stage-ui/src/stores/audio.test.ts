@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ref } from 'vue'
+import { nextTick, ref } from 'vue'
 
 import { useAudioContext, useAudioDevice, useSpeakingStore } from './audio'
 
@@ -293,31 +293,17 @@ describe('audio store', () => {
     expect(removeEventListener).toHaveBeenCalled()
     g.document = prevDoc
   })
-  it('useAudioContext setSinkId returns when no audioContext (2)', async () => {
+  it('useAudioContext setSinkId returns when setSinkId is absent', async () => {
     const g = globalThis as unknown as { AudioContext: unknown }
     g.AudioContext = function () { return {} }
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useAudioContext()
-    store.audioContext.value = null as unknown as AudioContext
     const r = await store.setSinkId('x')
     expect(r).toBeUndefined()
   })
-  it('setSinkId early return when null (cover 76)', async () => {
-    const g = globalThis as unknown as { AudioContext: unknown }
-    g.AudioContext = function () { return { setSinkId: vi.fn() } }
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    const store = useAudioContext()
-    store.audioContext.value = null as unknown as AudioContext
-    const r = await store.setSinkId('zzz')
-    expect(r).toBeUndefined()
-  })
 
-  it('placeholder', () => {
-    expect(true).toBe(true)
-  })
-  it('setSinkId early return when AudioContext constructor returns null', async () => {
+  it('setSinkId resolves when the AudioContext constructor yields null', async () => {
     const g = globalThis as unknown as { AudioContext: unknown }
     const prev = g.AudioContext
     g.AudioContext = function () { return null }
@@ -337,14 +323,63 @@ describe('audio store', () => {
     expect(dev.selectedAudioInput.value).toBe('')
   })
 
-  it('setSinkId early return when audioContext null (line 76)', async () => {
+  // audio.ts:75-76 (`if (!audioContext.value) return`) cannot be reached from
+  // a test: the closure captures its own `shallowRef`, while everything reachable
+  // from the store (toRaw(store).audioContext, pinia.state['audio-context'])
+  // resolves to a *different* object, so external nulling never reaches the
+  // closure. Even `new AudioContext()` returning `null` leaves the ref truthy
+  // for the guard because the store's `$state` only mirrors the ref wrapper.
+  // Kept as a regression guard around the store's public surface instead.
+  it('setSinkId with null-returning AudioContext resolves without a setSinkId object', async () => {
     const g = globalThis as unknown as { AudioContext: unknown }
-    g.AudioContext = function () { return { setSinkId: vi.fn() } }
+    g.AudioContext = function () { return null }
     const pinia = createPinia()
     setActivePinia(pinia)
     const store = useAudioContext()
-    store.audioContext.value = null as unknown as AudioContext
-    const r = await store.setSinkId('zzz')
-    expect(r).toBeUndefined()
+    await expect(store.setSinkId('never-reached')).resolves.toBeUndefined()
+  })
+
+  it('useAudioContext skips localStorage restore when localStorage is undefined (branch line 88)', async () => {
+    const g = globalThis as unknown as { AudioContext: unknown }
+    const ctx = { setSinkId: vi.fn().mockResolvedValue(undefined) }
+    g.AudioContext = function () { return ctx }
+    const win = globalThis as unknown as { localStorage?: unknown }
+    const prev = win.localStorage
+    delete win.localStorage
+    try {
+      const pinia = createPinia()
+      setActivePinia(pinia)
+      const store = useAudioContext()
+      await Promise.resolve()
+      expect(store).toBeDefined()
+      expect(ctx.setSinkId).not.toHaveBeenCalled()
+    }
+    finally {
+      win.localStorage = prev
+    }
+  })
+
+  it('deviceConstraints exposes both undefined and exact deviceId branches (line 167)', async () => {
+    const dev = useAudioDevice(false)
+    const constraints = dev.deviceConstraints as unknown as { value: { audio?: { deviceId?: unknown } } }
+    expect(constraints.value.audio?.deviceId).toBeUndefined()
+    dev.selectedAudioInput.value = 'mic-42'
+    await nextTick()
+    expect(constraints.value.audio?.deviceId).toEqual({ exact: 'mic-42' })
+  })
+
+  it('watch does not switch when best device equals current selection (line 186)', async () => {
+    // selectedAudioInput === 'default' keeps `needsBest` true, and the only
+    // candidate's deviceId is 'default' too, so `best === selectedAudioInput`
+    // and the assignment at line 188 must NOT run.
+    mockAudioInputs.value = [{ deviceId: 'default', label: 'Plain Mic' }]
+    const dev = useAudioDevice(false)
+    dev.selectedAudioInput.value = 'default'
+    mockAudioInputs.value = [
+      { deviceId: 'default', label: 'Plain Mic' },
+      { deviceId: 'other', label: 'Plain Mic' },
+    ]
+    await nextTick()
+    expect(dev.selectedAudioInput.value).toBe('default')
   })
 })
