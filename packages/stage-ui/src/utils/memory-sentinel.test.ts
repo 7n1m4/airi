@@ -274,4 +274,12 @@ describe('memory-sentinel', () => {
         Object.defineProperty(globalThis, 'window', orig)
     }
   })
+  it('readMemoryMB process import undefined branch', async () => {
+    vi.resetModules()
+    vi.doMock('node:process', () => ({ default: undefined }))
+    const mod = await import('./memory-sentinel')
+    vi.stubGlobal('localStorage', { getItem: () => null } as unknown as Storage)
+    vi.stubGlobal('performance', {} as unknown as Performance)
+    expect(mod.getMemoryPressureLevel()).toBe('normal')
+  })
 })

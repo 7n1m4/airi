@@ -336,4 +336,15 @@ describe('audio store', () => {
     await dev.askPermission()
     expect(dev.selectedAudioInput.value).toBe('')
   })
+
+  it('setSinkId early return when audioContext null (line 76)', async () => {
+    const g = globalThis as unknown as { AudioContext: unknown }
+    g.AudioContext = function () { return { setSinkId: vi.fn() } }
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useAudioContext()
+    store.audioContext.value = null as unknown as AudioContext
+    const r = await store.setSinkId('zzz')
+    expect(r).toBeUndefined()
+  })
 })

@@ -1265,6 +1265,94 @@ describe('turnPacingCoordinator (coverage extras)', () => {
       collectedAtMs: clock.now(),
       expiresAtMs: clock.now() + 15000,
     })
+  })
+  it('arms explicit dynamic aside via onArmFiller fallback when no onArmDynamicAside', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-explicit-fallback',
+      generation: 1,
+      providerKey: 'deepseek-r1',
+      policy: {
+        ...defaultPolicy,
+        maxFillersPerTurn: 3,
+        pacingIntervalMs: 15000,
+        dynamicAsidesEnabled: true,
+        dynamicAfterMs: 15000,
+        maxSynthesisBudgetMs: 600,
+      },
+      clock,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+
+    const earlyAside: AsideCandidate = {
+      cueId: 'aside-early',
+      turn: { turnId: 'turn-explicit-fallback', generation: 1 },
+      source: 'explicit',
+      text: 'Checking the math.',
+      phraseKey: 'checking-the-math',
+      collectedAtMs: 1000,
+      expiresAtMs: 30000,
+    }
+    coordinator.submitAsideCandidate(earlyAside)
+
+    clock.advance(1800)
+    coordinator.notifyFillerAudioStarted(clock.now())
+    clock.advance(1200)
+    coordinator.notifyFillerAudioEnded(clock.now())
+    expect(coordinator.state).toBe('STAGING')
+
+    const liveAside: AsideCandidate = {
+      cueId: 'aside-live',
+      turn: { turnId: 'turn-explicit-fallback', generation: 1 },
+      source: 'explicit',
+      text: 'This is taking a bit of computation.',
+      phraseKey: 'taking-computation',
+      collectedAtMs: 5000,
+      expiresAtMs: 35000,
+    }
+    coordinator.submitAsideCandidate(liveAside)
+
+    clock.advance(15000)
+    expect(onArmFiller).toHaveBeenCalled()
+    expect(coordinator.metrics.dynamicCueSource).toBe('explicit')
+  })
+
+  it('closes pacing when organic aside arms and committedCount reaches maxFillers', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-organic-close2',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: {
+        ...defaultPolicy,
+        semanticExtractorEnabled: true,
+        maxFillersPerTurn: 1,
+        dynamicAfterMs: 0,
+        pacingIntervalMs: 1000,
+      },
+      clock,
+      onArmFiller,
+    })
+    coordinator.dispatch()
+    clock.advance(1000)
+    coordinator.notifyFillerAudioStarted(clock.now())
+    clock.advance(100)
+    coordinator.notifyFillerAudioEnded(clock.now())
+    clock.advance(1200)
+    coordinator.submitAsideCandidate({
+      cueId: 'organic-close2',
+      turn: { turnId: 'turn-organic-close2', generation: 1 },
+      source: 'organic',
+      text: 'organic close candidate',
+      phraseKey: 'organic-close2',
+      collectedAtMs: clock.now(),
+      expiresAtMs: clock.now() + 15000,
+    })
     clock.advance(1100)
     expect(coordinator.metrics.pacingClosed).toBe(true)
   })
