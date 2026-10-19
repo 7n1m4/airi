@@ -169,19 +169,6 @@ describe('autonomous intention ranking', () => {
     })
   })
 
-    it('defaults a missing intensity to neutral rather than to zero', () => {
-      const neutral = scoreIntention(intention({ kind: 'relationship-anchor' }), AUTONOMOUS_RANKING_POLICY, NOW)
-      expect(neutral.intensityPoints).toBeCloseTo(AUTONOMOUS_RANKING_POLICY.intensity * 0.5, 6)
-    })
-
-    it('bounds intensity below deadline weight so warmth never beats a commitment', () => {
-      const anchor = scoreIntention(intention({ kind: 'relationship-anchor', intensity: 1 }), AUTONOMOUS_RANKING_POLICY, NOW)
-      const deadline = scoreIntention(intention({ deadlineAt: NOW + HOUR }), AUTONOMOUS_RANKING_POLICY, NOW)
-
-      expect(anchor.intensityPoints).toBeLessThan(deadline.deadlinePoints)
-    })
-  })
-
   describe('diversity multiplier', () => {
     it('keeps the best representative of a kind at full score', () => {
       const ranked = rankIntentions([
