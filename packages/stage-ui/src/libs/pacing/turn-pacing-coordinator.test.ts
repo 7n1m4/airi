@@ -1134,7 +1134,7 @@ describe('turnPacingCoordinator (coverage extras)', () => {
     const clock = new VirtualClock()
     const coord = new TurnPacingCoordinator({ turnId: 't', generation: 1, providerKey: 'p', policy: defaultPolicy, clock })
     coord.dispatch()
-    clock.advance(coord.deadlineMs + 1)
+    clock.advance(coord.metrics.deadlineMs + 1)
     coord.cancel('x')
     expect(coord.state).toBe('SETTLED')
   })
@@ -1143,7 +1143,7 @@ describe('turnPacingCoordinator (coverage extras)', () => {
     const clock = new VirtualClock()
     const coord = new TurnPacingCoordinator({ turnId: 't', generation: 1, providerKey: 'p', policy: defaultPolicy, clock })
     coord.dispatch()
-    clock.advance(coord.deadlineMs + 1)
+    clock.advance(coord.metrics.deadlineMs + 1)
     await coord.onAssistantEnd()
     expect(coord.state).toBe('SETTLED')
   })
@@ -1159,7 +1159,7 @@ describe('turnPacingCoordinator (coverage extras)', () => {
     const clock = new VirtualClock()
     const coord = new TurnPacingCoordinator({ turnId: 't', generation: 1, providerKey: 'p', policy: defaultPolicy, clock, onSettled })
     coord.dispatch()
-    clock.advance(coord.deadlineMs + 1)
+    clock.advance(coord.metrics.deadlineMs + 1)
     coord.notifyFillerAudioStarted(clock.now())
     coord.notifyAnswerAudioScheduled(clock.now())
     coord.notifyFillerAudioEnded(clock.now())
@@ -1177,7 +1177,7 @@ describe('turnPacingCoordinator (coverage extras)', () => {
     const clock = new VirtualClock()
     const coord = new TurnPacingCoordinator({ turnId: 't', generation: 1, providerKey: 'p', policy: defaultPolicy, clock })
     coord.dispatch()
-    clock.advance(coord.deadlineMs + 1)
+    clock.advance(coord.metrics.deadlineMs + 1)
     ;(coord as any).intervalTimerHandle = clock.setTimeout(() => {}, 1000)
     coord.notifyCacheMiss({ reason: 'timeout' })
     expect(coord.state).toBe('STAGING')
@@ -1355,5 +1355,730 @@ describe('turnPacingCoordinator (coverage extras)', () => {
     })
     clock.advance(1100)
     expect(coordinator.metrics.pacingClosed).toBe(true)
+  })
+})
+
+describe('turnPacingCoordinator (guard and lifecycle coverage)', () => {
+  const ultraFastSamples = [200, 250, 300, 350, 400, 450, 500, 550, 600, 650]
+
+  it('uses the default wall clock and records zero relative time before dispatch', () => {
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-default-clock',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+    })
+
+    const before = Date.now()
+    coordinator.stateLog.length = 0
+    coordinator.metrics.stateLog = []
+    // Force a log entry through the public callback surface via cancel.
+    coordinator.dispatch()
+    coordinator.cancel('default-clock-probe')
+
+    const entry = coordinator.stateLog.at(-1)!
+    expect(entry.timestampMs).toBeGreaterThanOrEqual(before)
+    expect(entry.relTimeMs).toBeGreaterThanOrEqual(0)
+    expect(entry.state).toBe('SETTLED')
+  })
+
+  it('ignores a second dispatch once the turn has left IDLE', () => {
+    const clock = new VirtualClock()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-double-dispatch',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+      clock,
+    })
+
+    coordinator.dispatch()
+    const logCount = coordinator.stateLog.length
+
+    coordinator.dispatch()
+
+    expect(coordinator.state).toBe('STAGING')
+    expect(coordinator.stateLog.length).toBe(logCount)
+
+    // The original deadline timer is still the only one armed.
+    clock.advance(1800)
+    expect(coordinator.state).toBe('FILLER_ARMED')
+  })
+
+  it('schedules nothing when policy.enabled is false', () => {
+    const clock = new VirtualClock()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-disabled',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: { ...defaultPolicy, enabled: false },
+      clock,
+    })
+
+    coordinator.dispatch()
+    expect(coordinator.state).toBe('STAGING')
+    expect(coordinator.nextEligibleAtMs).toBeUndefined()
+
+    clock.advance(120000)
+    expect(coordinator.state).toBe('STAGING')
+  })
+
+  it('arms the ultra-fast interval flush and keeps only one filler per opportunity', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-ultrafast',
+      generation: 1,
+      providerKey: 'groq-llama',
+      policy: { ...defaultPolicy, maxFillersPerTurn: 1, pacingIntervalMs: 1000 },
+      clock,
+      historicalTtftSamples: ultraFastSamples,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+    expect(coordinator.state).toBe('STAGING')
+    expect(coordinator.nextEligibleAtMs).toBe(1000)
+    expect(coordinator.metrics.nextOpportunityCountdownSec).toBe(1)
+
+    clock.advance(1000)
+    expect(coordinator.state).toBe('FILLER_ARMED')
+    expect(onArmFiller).toHaveBeenCalledTimes(1)
+
+    // The budget (maxFillersPerTurn: 1) is now spent; a second flush must latch closed.
+    clock.advance(50000)
+    expect(onArmFiller).toHaveBeenCalledTimes(1)
+    expect(coordinator.pacingClosed).toBe(true)
+  })
+
+  it('skips onDeadlineElapsed when pacing is already closed', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-deadline-closed',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+      clock,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+    // An error cancels (and closes) pacing before the deadline fires.
+    coordinator.onInferenceEvent({ type: 'error', error: new Error('boom'), at: clock.now() })
+    expect(coordinator.pacingClosed).toBe(true)
+
+    clock.advance(20000)
+    expect(onArmFiller).not.toHaveBeenCalled()
+  })
+
+  it('skips onDeadlineElapsed when answer audio is already scheduled', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-deadline-scheduled',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+      clock,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+    coordinator.notifyAnswerAudioScheduled(clock.now())
+    // Answer audio closed pacing and cleared the pending deadline timer; no filler was armed
+    // to preempt, so the state stays STAGING while the guard blocks any later arming.
+    expect(coordinator.pacingClosed).toBe(true)
+    expect(coordinator.state).toBe('STAGING')
+
+    clock.advance(20000)
+    expect(onArmFiller).not.toHaveBeenCalled()
+  })
+
+  it('latches pacingClosed on the initial deadline when maxFillersPerTurn is 1', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-deadline-budget',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: { ...defaultPolicy, maxFillersPerTurn: 1 },
+      clock,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+    clock.advance(1800)
+
+    expect(onArmFiller).toHaveBeenCalledTimes(1)
+    expect(coordinator.committedCount).toBe(1)
+    expect(coordinator.pacingClosed).toBe(true)
+    expect(coordinator.metrics.pacingClosed).toBe(true)
+
+    // The interval flush must be a no-op now that the commit budget is spent.
+    coordinator.notifyFillerAudioStarted(clock.now())
+    coordinator.notifyFillerAudioEnded(clock.now())
+    expect(coordinator.state).toBe('HANDOFF')
+    clock.advance(60000)
+    expect(onArmFiller).toHaveBeenCalledTimes(1)
+  })
+
+  it('stops arming once the attempt ceiling 2 * maxFillersPerTurn is reached', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-attempt-ceiling-halt',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: { ...defaultPolicy, maxFillersPerTurn: 1, pacingIntervalMs: 15000 },
+      clock,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+    clock.advance(1800)
+    expect(onArmFiller).toHaveBeenCalledTimes(1)
+
+    // Cache miss 1: rolls back the commit and reschedules (attemptsMade = 1).
+    coordinator.notifyCacheMiss()
+    expect(coordinator.state).toBe('STAGING')
+    expect(coordinator.committedCount).toBe(0)
+
+    // Attempt 2 fires; the committedCount rollback means the budget is open again.
+    clock.advance(15000)
+    expect(onArmFiller).toHaveBeenCalledTimes(2)
+    expect(coordinator.attemptsMade).toBe(2)
+
+    // Filler 2 misses too -> attempts exhausted -> degrade to ANSWER_READY.
+    coordinator.notifyCacheMiss()
+    expect(coordinator.state).toBe('ANSWER_READY')
+    clock.advance(60000)
+    expect(onArmFiller).toHaveBeenCalledTimes(2)
+  })
+
+  it('arms a dynamic aside through the onArmFiller fallback on the initial deadline', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-initial-fallback',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: { ...defaultPolicy, semanticExtractorEnabled: true, maxFillersPerTurn: 1 },
+      clock,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+    coordinator.submitAsideCandidate({
+      cueId: 'initial-fallback',
+      turn: { turnId: 'turn-initial-fallback', generation: 1 },
+      source: 'organic',
+      text: 'initial fallback candidate',
+      phraseKey: 'initial-fallback',
+      collectedAtMs: clock.now(),
+      expiresAtMs: clock.now() + 15000,
+    })
+
+    clock.advance(1800)
+    expect(coordinator.state).toBe('FILLER_ARMED')
+    expect(onArmFiller).toHaveBeenCalledWith(
+      'generic',
+      3200,
+      expect.objectContaining({ cueId: 'initial-fallback' }),
+    )
+    expect(coordinator.metrics.dynamicCueSource).toBe('organic')
+    // maxFillersPerTurn: 1 -> latching closed at budget.
+    expect(coordinator.pacingClosed).toBe(true)
+    expect(coordinator.metrics.pacingClosed).toBe(true)
+  })
+
+  it('skips onIntervalFlushElapsed when pacing is already closed', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-interval-closed',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: { ...defaultPolicy, pacingIntervalMs: 15000 },
+      clock,
+      historicalTtftSamples: ultraFastSamples,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+    coordinator.cancel('pre-interval')
+    expect(coordinator.pacingClosed).toBe(true)
+
+    clock.advance(60000)
+    expect(onArmFiller).not.toHaveBeenCalled()
+  })
+
+  it('skips onIntervalFlushElapsed when answer audio is already scheduled', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-interval-scheduled',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: { ...defaultPolicy, pacingIntervalMs: 15000 },
+      clock,
+      historicalTtftSamples: ultraFastSamples,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+    coordinator.notifyAnswerAudioScheduled(clock.now())
+    // Answer audio closed pacing and cleared the pending interval timer; state stays STAGING
+    // because no filler was armed to preempt.
+    expect(coordinator.pacingClosed).toBe(true)
+    expect(coordinator.nextEligibleAtMs).toBeUndefined()
+
+    clock.advance(60000)
+    expect(onArmFiller).not.toHaveBeenCalled()
+    expect(coordinator.state).toBe('STAGING')
+  })
+
+  it('honors the interval attempt ceiling and the interval commit budget', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-interval-ceilings',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: {
+        ...defaultPolicy,
+        maxFillersPerTurn: 1,
+        pacingIntervalMs: 15000,
+        // Only the generic pool is reachable: no dynamic asides, and reasoning stays neutral.
+      },
+      clock,
+      historicalTtftSamples: ultraFastSamples,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+    // Interval flush #1 arms a filler; a cache miss rolls the commit back but consumes an attempt.
+    clock.advance(15000)
+    expect(onArmFiller).toHaveBeenCalledTimes(1)
+    coordinator.notifyCacheMiss()
+    expect(coordinator.state).toBe('STAGING')
+
+    // Interval flush #2 is the final allowed attempt (2 * 1 = 2).
+    clock.advance(15000)
+    expect(onArmFiller).toHaveBeenCalledTimes(2)
+    coordinator.notifyFillerAudioStarted(clock.now())
+    coordinator.notifyFillerAudioEnded(clock.now())
+    expect(coordinator.state).toBe('HANDOFF')
+
+    // Commit budget maxFillersPerTurn: 1 reached; no further flushes arm anything.
+    clock.advance(60000)
+    expect(onArmFiller).toHaveBeenCalledTimes(2)
+    expect(coordinator.pacingClosed).toBe(true)
+  })
+
+  it('latches pacingClosed when an interval dynamic aside lands on the last allowed filler', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    // The ultra-fast bypass schedules the interval flush instead of an initial deadline.
+    const ultraFast = new TurnPacingCoordinator({
+      turnId: 'turn-interval-dynamic-close-ultrafast',
+      generation: 1,
+      providerKey: 'deepseek-r1',
+      policy: {
+        ...defaultPolicy,
+        maxFillersPerTurn: 1,
+        pacingIntervalMs: 1000,
+        dynamicAsidesEnabled: true,
+        dynamicAfterMs: 0,
+        maxSynthesisBudgetMs: 600,
+      },
+      clock,
+      historicalTtftSamples: ultraFastSamples,
+      onArmFiller,
+    })
+    ultraFast.dispatch()
+
+    // A live explicit aside arrives while the interval is pending.
+    ultraFast.submitAsideCandidate({
+      cueId: 'interval-explicit-close',
+      turn: { turnId: 'turn-interval-dynamic-close-ultrafast', generation: 1 },
+      source: 'explicit',
+      text: 'explicit interval close candidate',
+      phraseKey: 'interval-explicit-close',
+      collectedAtMs: clock.now(),
+      expiresAtMs: clock.now() + 15000,
+    })
+
+    clock.advance(1000)
+
+    expect(ultraFast.state).toBe('FILLER_ARMED')
+    expect(onArmFiller).toHaveBeenCalledWith(
+      'generic',
+      600,
+      expect.objectContaining({ cueId: 'interval-explicit-close' }),
+    )
+    expect(ultraFast.metrics.dynamicCueSource).toBe('explicit')
+    // maxFillersPerTurn: 1 -> landing on the last allowed filler latches pacing closed.
+    expect(ultraFast.pacingClosed).toBe(true)
+    expect(ultraFast.metrics.pacingClosed).toBe(true)
+
+    clock.advance(60000)
+    expect(onArmFiller).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips the adaptive 5s cache-miss retry once a filler has actually been committed', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-miss-full-interval',
+      generation: 1,
+      providerKey: 'deep-cot-provider',
+      policy: { ...defaultPolicy, maxFillersPerTurn: 3, pacingIntervalMs: 15000 },
+      clock,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+    clock.advance(1800)
+    expect(onArmFiller).toHaveBeenCalledTimes(1)
+
+    // The first filler plays to completion, so committedCount stays at 1 and the next
+    // cache-miss retry takes the plain pacingIntervalMs branch rather than the 5s fast path.
+    coordinator.notifyFillerAudioStarted(clock.now())
+    clock.advance(1000)
+    coordinator.notifyFillerAudioEnded(clock.now())
+    expect(coordinator.state).toBe('STAGING')
+
+    clock.advance(15000)
+    expect(onArmFiller).toHaveBeenCalledTimes(2)
+    expect(coordinator.committedCount).toBe(2)
+
+    coordinator.notifyCacheMiss()
+    // stateLog is optional on PacingMetrics; it is always populated by logStateEvent.
+    if (!coordinator.metrics.stateLog)
+      throw new Error('expected stateLog to be populated')
+    const missLog = coordinator.metrics.stateLog.at(-1)!
+    expect(missLog.event).toContain('Rescheduled next opportunity')
+    expect(missLog.details).toBe('+15s')
+
+    // Still staging inside the 15s window, then re-arms at the interval boundary.
+    clock.advance(14999)
+    expect(coordinator.state).toBe('STAGING')
+    clock.advance(1)
+    expect(coordinator.state).toBe('FILLER_ARMED')
+    expect(onArmFiller).toHaveBeenCalledTimes(3)
+  })
+
+  it('falls back to the plain "Cache miss / timeout" log when no reason is supplied', () => {
+    const clock = new VirtualClock()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-miss-generic-log',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: { ...defaultPolicy, pacingIntervalMs: 15000 },
+      clock,
+    })
+
+    coordinator.dispatch()
+    clock.advance(1800)
+    coordinator.notifyCacheMiss()
+
+    // stateLog is optional on PacingMetrics; it is always populated by logStateEvent.
+    if (!coordinator.metrics.stateLog)
+      throw new Error('expected stateLog to be populated')
+    const missLog = coordinator.metrics.stateLog.at(-1)!
+    expect(missLog.event).toBe('Cache miss / timeout ➔ Rescheduled next opportunity')
+    expect(missLog.details).toBe('+5s')
+  })
+
+  it('logs cache-miss exhaustion with reason, elapsed time, and error detail', () => {
+    const clock = new VirtualClock()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-miss-exhausted-full',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: { ...defaultPolicy, maxFillersPerTurn: 1, pacingIntervalMs: 15000 },
+      clock,
+    })
+
+    coordinator.dispatch()
+    clock.advance(1800)
+    coordinator.notifyCacheMiss()
+    expect(coordinator.state).toBe('STAGING')
+
+    clock.advance(15000)
+    expect(coordinator.state).toBe('FILLER_ARMED')
+    coordinator.notifyCacheMiss({
+      reason: 'synthesis_timeout',
+      elapsedMs: 2500,
+      error: 'Dynamic synthesis timed out',
+    })
+
+    expect(coordinator.state).toBe('ANSWER_READY')
+    // stateLog is optional on PacingMetrics; it is always populated by logStateEvent.
+    if (!coordinator.metrics.stateLog)
+      throw new Error('expected stateLog to be populated')
+    const lastLog = coordinator.metrics.stateLog.at(-1)!
+    expect(lastLog.event).toBe('Cache miss (attempts exhausted)')
+    expect(lastLog.details).toBe('[synthesis_timeout · 2500ms]  (Dynamic synthesis timed out)')
+  })
+
+  it('logs bare cache-miss exhaustion when no details are supplied', () => {
+    const clock = new VirtualClock()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-miss-exhausted-bare',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: { ...defaultPolicy, maxFillersPerTurn: 1, pacingIntervalMs: 15000 },
+      clock,
+    })
+
+    coordinator.dispatch()
+    clock.advance(1800)
+    coordinator.notifyCacheMiss()
+    clock.advance(15000)
+    expect(coordinator.state).toBe('FILLER_ARMED')
+
+    coordinator.notifyCacheMiss()
+
+    expect(coordinator.state).toBe('ANSWER_READY')
+    // stateLog is optional on PacingMetrics; it is always populated by logStateEvent.
+    if (!coordinator.metrics.stateLog)
+      throw new Error('expected stateLog to be populated')
+    const lastLog = coordinator.metrics.stateLog.at(-1)!
+    expect(lastLog.event).toBe('Cache miss (attempts exhausted)')
+    expect(lastLog.details).toBeUndefined()
+  })
+
+  it('ignores notifyCacheMiss when no filler is armed', () => {
+    const clock = new VirtualClock()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-miss-unarmed',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+      clock,
+    })
+
+    coordinator.dispatch()
+    const logCount = coordinator.metrics.stateLog?.length ?? 0
+    const outcome = coordinator.metrics.fillerOutcome
+
+    coordinator.notifyCacheMiss({ reason: 'cache_not_found' })
+
+    expect(coordinator.state).toBe('STAGING')
+    expect(coordinator.metrics.stateLog?.length).toBe(logCount)
+    expect(coordinator.metrics.fillerOutcome).toBe(outcome)
+  })
+
+  it('rolls back committedCount and usedCategories on cache miss', () => {
+    const clock = new VirtualClock()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-miss-rollback',
+      generation: 1,
+      providerKey: 'deep-cot-provider',
+      policy: { ...defaultPolicy, maxFillersPerTurn: 3, pacingIntervalMs: 15000 },
+      clock,
+    })
+
+    coordinator.dispatch()
+    coordinator.onInferenceEvent({
+      type: 'reasoning',
+      text: 'Let me calculate and solve the equation. ',
+      visibility: 'hidden',
+      at: clock.now(),
+    })
+
+    clock.advance(1800)
+    expect(coordinator.state).toBe('FILLER_ARMED')
+    expect(coordinator.committedCount).toBe(1)
+    expect(coordinator.metrics.categoriesSpoken).toEqual(['analytical'])
+
+    coordinator.notifyCacheMiss()
+
+    expect(coordinator.state).toBe('STAGING')
+    expect(coordinator.committedCount).toBe(0)
+    expect(coordinator.metrics.committedCount).toBe(0)
+    expect(coordinator.metrics.pacingClosed).toBe(false)
+    expect(coordinator.metrics.fillerCandidate).toBe('analytical')
+    expect(coordinator.metrics.categoriesSpoken).toEqual([])
+  })
+
+  it('keeps pacing closed on cache miss when the turn has already answered', () => {
+    const clock = new VirtualClock()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-miss-after-answer',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+      clock,
+    })
+
+    coordinator.dispatch()
+    clock.advance(1800)
+    expect(coordinator.state).toBe('FILLER_ARMED')
+
+    // The answer literal closes pacing, so the rollback path keeps it closed.
+    coordinator.onInferenceEvent({ type: 'answer', text: 'result', at: clock.now() })
+    expect(coordinator.pacingClosed).toBe(true)
+    expect(coordinator.turnPhase).toBe('answering')
+
+    coordinator.notifyCacheMiss()
+
+    expect(coordinator.pacingClosed).toBe(true)
+    expect(coordinator.metrics.pacingClosed).toBe(true)
+    expect(coordinator.state).toBe('ANSWER_READY')
+  })
+
+  it('routes aside-cue, error, and finish inference events', async () => {
+    const clock = new VirtualClock()
+    const onSettled = vi.fn()
+    const onCancelFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-event-routing',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+      clock,
+      onSettled,
+      onCancelFiller,
+    })
+
+    coordinator.dispatch()
+
+    // aside-cue -> submitAsideCandidate
+    coordinator.onInferenceEvent({
+      type: 'aside-cue',
+      candidate: {
+        cueId: 'cue-event',
+        turn: { turnId: 'turn-event-routing', generation: 1 },
+        source: 'organic',
+        text: 'routed aside candidate',
+        phraseKey: 'cue-event',
+        collectedAtMs: clock.now(),
+        expiresAtMs: clock.now() + 15000,
+      },
+      at: clock.now(),
+    })
+    expect(coordinator.getPendingAsideCandidate()?.cueId).toBe('cue-event')
+
+    coordinator.clearPendingCandidate()
+
+    // error -> cancel('inference-error')
+    coordinator.onInferenceEvent({ type: 'error', error: new Error('boom'), at: clock.now() })
+    expect(coordinator.state).toBe('SETTLED')
+    expect(coordinator.metrics.cutoffReason).toBe('inference-error')
+    expect(coordinator.metrics.interrupted).toBe(true)
+    expect(onCancelFiller).toHaveBeenCalledWith('inference-error')
+    expect(onSettled).toHaveBeenCalledTimes(1)
+
+    // finish -> onAssistantEnd
+    const second = new TurnPacingCoordinator({
+      turnId: 'turn-event-finish',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+      clock,
+      onSettled,
+    })
+    second.dispatch()
+    second.onInferenceEvent({ type: 'finish', at: clock.now() })
+    expect(second.state).toBe('SETTLED')
+    expect(second.terminalSeen).toBe(true)
+  })
+
+  it('ignores reasoning classification outside STAGING and FILLER_ARMED', () => {
+    const clock = new VirtualClock()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-reasoning-state-guard',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+      clock,
+    })
+
+    coordinator.dispatch()
+    clock.advance(1800)
+    coordinator.notifyFillerAudioStarted(clock.now())
+    expect(coordinator.state).toBe('FILLER_ACTIVE')
+
+    coordinator.onInferenceEvent({
+      type: 'reasoning',
+      text: 'Let me calculate and solve the equation. ',
+      visibility: 'hidden',
+      at: clock.now(),
+    })
+    expect(coordinator.metrics.fillerCandidate).toBe('generic')
+  })
+
+  it('ignores visible reasoning entirely', () => {
+    const clock = new VirtualClock()
+    const onArmFiller = vi.fn()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-visible-reasoning',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+      clock,
+      onArmFiller,
+    })
+
+    coordinator.dispatch()
+    coordinator.onInferenceEvent({
+      type: 'reasoning',
+      text: 'Let me calculate and solve the equation. ',
+      visibility: 'visible',
+      at: clock.now(),
+    })
+
+    clock.advance(1800)
+    expect(onArmFiller).toHaveBeenCalledWith('generic', 1800)
+    expect(coordinator.metrics.fillerCandidate).toBe('generic')
+  })
+
+  it('keeps FILLER_ACTIVE across a second answer literal and records ttft once', () => {
+    const clock = new VirtualClock()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-ttft-once',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+      clock,
+    })
+
+    coordinator.dispatch()
+    clock.advance(1800)
+    coordinator.notifyFillerAudioStarted(clock.now())
+
+    clock.advance(400)
+    coordinator.onInferenceEvent({ type: 'answer', text: 'chunk one', at: clock.now() })
+    expect(coordinator.state).toBe('FILLER_ACTIVE')
+    expect(coordinator.metrics.ttftMs).toBe(2200)
+
+    clock.advance(300)
+    coordinator.onInferenceEvent({ type: 'answer', text: 'chunk two', at: clock.now() })
+    expect(coordinator.metrics.ttftMs).toBe(2200)
+  })
+
+  it('keeps the first answerFirstAudioMs across repeated scheduler notifications', () => {
+    const clock = new VirtualClock()
+    const coordinator = new TurnPacingCoordinator({
+      turnId: 'turn-first-audio-once',
+      generation: 1,
+      providerKey: 'test-provider',
+      policy: defaultPolicy,
+      clock,
+    })
+
+    coordinator.dispatch()
+    clock.advance(1800)
+    coordinator.notifyFillerAudioStarted(clock.now())
+    clock.advance(200)
+    coordinator.notifyAnswerAudioScheduled(clock.now())
+    expect(coordinator.metrics.answerFirstAudioMs).toBe(2000)
+
+    // A multi-chunk answer streams more audio; the metric must not move.
+    coordinator.notifyAnswerAudioScheduled(clock.now() + 500)
+    expect(coordinator.metrics.answerFirstAudioMs).toBe(2000)
   })
 })

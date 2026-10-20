@@ -303,6 +303,19 @@ export class TurnPacingCoordinator {
     }
   }
 
+  private closePacing(cutoffReason?: string): void {
+    // Pacing is now latched closed for the rest of the turn: no further filler opportunities.
+    this.pacingClosed = true
+    this.metrics.pacingClosed = true
+    // A closed turn has no further filler opportunity: drop the stale countdown
+    // so consumers never report a "next in Ns" opportunity that can never fire.
+    // Timer re-arming is the resume path's job (see notifyCacheMiss), never this one's.
+    this.nextEligibleAtMs = undefined
+    if (cutoffReason) {
+      this.metrics.cutoffReason = cutoffReason
+    }
+  }
+
   private onDeadlineElapsed(): void {
     this.timerHandle = null
     if (this.pacingClosed || this.state !== 'STAGING')
@@ -312,8 +325,7 @@ export class TurnPacingCoordinator {
 
     const maxFillers = this.policy.maxFillersPerTurn ?? 3
     if (this.committedCount >= maxFillers) {
-      this.pacingClosed = true
-      this.metrics.pacingClosed = true
+      this.closePacing()
       return
     }
 
@@ -337,8 +349,7 @@ export class TurnPacingCoordinator {
       this.metrics.fillerOutcome = 'none'
 
       if (this.committedCount >= maxFillers) {
-        this.pacingClosed = true
-        this.metrics.pacingClosed = true
+        this.closePacing()
       }
 
       this.logStateEvent(`Armed dynamic aside [${candidate.source}]`, `"${candidate.text.slice(0, 24)}"`)
@@ -371,8 +382,7 @@ export class TurnPacingCoordinator {
     this.metrics.fillerOutcome = 'none'
 
     if (this.committedCount >= maxFillers) {
-      this.pacingClosed = true
-      this.metrics.pacingClosed = true
+      this.closePacing()
     }
 
     this.logStateEvent(`Armed initial filler [${catToArm}]`, `Deadline: ${this.deadlineMs}ms`)
@@ -388,8 +398,7 @@ export class TurnPacingCoordinator {
 
     const maxFillers = this.policy.maxFillersPerTurn ?? 3
     if (this.committedCount >= maxFillers) {
-      this.pacingClosed = true
-      this.metrics.pacingClosed = true
+      this.closePacing()
       return
     }
 
@@ -422,8 +431,7 @@ export class TurnPacingCoordinator {
       this.metrics.fillerOutcome = 'none'
 
       if (this.committedCount >= maxFillers) {
-        this.pacingClosed = true
-        this.metrics.pacingClosed = true
+        this.closePacing()
       }
 
       this.logStateEvent(`Armed dynamic aside [explicit]`, `"${candidate.text.slice(0, 24)}"`)
@@ -455,8 +463,7 @@ export class TurnPacingCoordinator {
       this.metrics.fillerOutcome = 'none'
 
       if (this.committedCount >= maxFillers) {
-        this.pacingClosed = true
-        this.metrics.pacingClosed = true
+        this.closePacing()
       }
 
       this.logStateEvent(`Armed dynamic aside [organic]`, `"${candidate.text.slice(0, 24)}"`)
@@ -490,8 +497,7 @@ export class TurnPacingCoordinator {
     this.metrics.fillerOutcome = 'none'
 
     if (this.committedCount >= maxFillers) {
-      this.pacingClosed = true
-      this.metrics.pacingClosed = true
+      this.closePacing()
     }
 
     this.logStateEvent(`Armed interval filler [${nextCat}]`, `Opportunity ${this.committedCount}/${maxFillers}`)
@@ -504,9 +510,7 @@ export class TurnPacingCoordinator {
       this.metrics.ttftMs = at - this.t0
     }
 
-    this.pacingClosed = true
-    this.metrics.pacingClosed = true
-    this.metrics.cutoffReason = 'answer-literal'
+    this.closePacing('answer-literal')
     this.turnPhase = 'answering'
     this.clearPendingCandidate()
     this.clearAllTimers()
@@ -581,8 +585,7 @@ export class TurnPacingCoordinator {
       return
 
     this.answerAudioScheduled = true
-    this.pacingClosed = true
-    this.metrics.pacingClosed = true
+    this.closePacing()
     this.clearPendingCandidate()
     this.clearAllTimers()
 
@@ -674,9 +677,7 @@ export class TurnPacingCoordinator {
     if (this.state === 'SETTLED')
       return
 
-    this.pacingClosed = true
-    this.metrics.pacingClosed = true
-    this.metrics.cutoffReason = reason
+    this.closePacing(reason)
     this.turnPhase = 'canceled'
     this.clearPendingCandidate()
     this.clearAllTimers()
@@ -698,8 +699,7 @@ export class TurnPacingCoordinator {
 
     const wasPreparing = this.state === 'FILLER_ARMED'
     this.terminalSeen = true
-    this.pacingClosed = true
-    this.metrics.pacingClosed = true
+    this.closePacing()
     this.turnPhase = 'draining'
     this.clearPendingCandidate()
     this.clearAllTimers()

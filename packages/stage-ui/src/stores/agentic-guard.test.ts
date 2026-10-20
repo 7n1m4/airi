@@ -75,8 +75,17 @@ vi.mock('../database/storage', () => ({
   },
 }))
 
-vi.mock('./libs/search/layered-memory', () => ({
-  layeredMemory: { init: vi.fn(async () => {}), search: vi.fn(async () => []) },
+// NOTICE: `../libs/search/layered-memory` (two levels up), not `./libs/...` — the
+// stores dir has no `libs` subdir, and a mock path that resolves to nothing
+// leaves `layeredMemory.init` real, which posts into a Vite `?worker` module the
+// Node runner cannot answer: every test then hangs on the journal load rather
+// than failing an assertion.
+vi.mock('../libs/search/layered-memory', () => ({
+  layeredMemory: {
+    init: vi.fn(async () => ({ stale: false, reason: null })),
+    indexDocuments: vi.fn(async () => undefined),
+    search: vi.fn(async () => []),
+  },
 }))
 
 const ACTION_INTENT = 'expression.body'

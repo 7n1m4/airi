@@ -15,6 +15,18 @@ vi.mock('../database/repos/text-journal.repo', () => ({
   },
 }))
 
+// The search index is the seam: `load()` awaits `layeredMemory.init()`, which
+// posts a message to a real Web Worker spawned from a Vite `?worker` module —
+// an environment the Node test runner cannot answer, so every test hung. Same
+// seam the sibling store suite (echo-chips) already mocks.
+vi.mock('../libs/search/layered-memory', () => ({
+  layeredMemory: {
+    init: vi.fn(async () => ({ stale: false, reason: null })),
+    indexDocuments: vi.fn(async () => undefined),
+    search: vi.fn(async () => []),
+  },
+}))
+
 // NOTICE: Pinia v3's storeToRefs iterates all keys and does `value.effect` before
 // isRef/isReactive — it crashes on null/primitive values. The correct pattern is to
 // return a `reactive()` object wrapping Vue refs so storeToRefs gets a Pinia-like
