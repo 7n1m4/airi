@@ -1,0 +1,10 @@
+// Single File Components are compiled by the bundler, not by tsc, so this
+// ambient declaration is a shape placeholder and must not restrict the exported
+// type. Without it, every `import ... from '../*.vue'` under .vitepress reports
+// TS2307 "Cannot find module" even though the files exist on disk.
+declare module '*.vue' {
+  import type { DefineComponent } from 'vue'
+
+  const component: DefineComponent<Record<string, any>, Record<string, any>, any>
+  export default component
+}

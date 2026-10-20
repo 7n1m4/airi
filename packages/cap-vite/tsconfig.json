@@ -10,5 +10,14 @@
   },
   "include": [
     "./src/**/*"
+  ],
+  // NOTICE: root tsconfig.json excludes bare "packages"/"packages/**"; in a child config those
+  // entries resolve against this child's own directory, i.e. <root>/packages, which is an
+  // ancestor of ./src/**/* here and therefore emptied the entire include set (TS18003).
+  // A child-level exclude fully REPLACES the inherited one, so restate the only entries that
+  // matter locally.
+  "exclude": [
+    "dist",
+    "node_modules"
   ]
 }

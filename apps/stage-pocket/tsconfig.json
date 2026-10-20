@@ -39,5 +39,25 @@
     "allowJs": true,
     "strict": true,
     "skipLibCheck": true
-  }
+  },
+  "include": [
+    "*.ts",
+    "*.d.ts",
+    "scripts/**/*.ts",
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.vue"
+  ],
+  // NOTICE: root tsconfig.json excludes bare "apps"/"apps/**"; in a child config those entries
+  // resolve against this child's own directory, i.e. <root>/apps, which is an ancestor of this
+  // workspace, so the inherited exclude emptied the entire default (**/*) include set (TS18003).
+  // A child-level exclude fully REPLACES the inherited one, so restate what matters locally.
+  // The android/ and ios/ trees (gradle, xcodeproj, .jar/.class) are not TypeScript inputs.
+  "exclude": [
+    "dist",
+    "node_modules",
+    "android",
+    "ios",
+    ".turbo"
+  ]
 }

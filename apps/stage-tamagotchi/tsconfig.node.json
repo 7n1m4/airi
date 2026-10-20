@@ -13,13 +13,15 @@
       "vitest",
       "vite/client",
       "electron-vite/node",
-      "unplugin-info/client"
+      "unplugin-info/client",
+      "node"
     ],
     "allowJs": true,
     "strict": true,
     "skipLibCheck": true
   },
   "include": [
+    "src/env.d.ts",
     "../../uno.config.ts",
     "uno.config.ts",
     "electron.vite.config.ts",
@@ -33,5 +35,14 @@
     "src/shared/**/*.d.ts",
     "src/shared/**/*.tsx",
     "src/shared/**/*.vue"
+  ],
+  // NOTICE: root tsconfig.json excludes bare "apps"/"apps/**"; in a child config those
+  // entries resolve against this child's own directory, i.e. <root>/apps, which is an
+  // ancestor of the sources included here and therefore excludes this app's own files.
+  // A child-level exclude fully REPLACES the inherited one, so restate the only entries
+  // that matter locally.
+  "exclude": [
+    "node_modules",
+    "dist"
   ]
 }
