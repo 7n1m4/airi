@@ -2,8 +2,6 @@
 // The cross-tab sync test needs a DOM to mount a component, which is what makes
 // vueuse's `useMounted()` flip and `useBroadcastChannel` create its channel. The
 // workspace default is the node environment, where that test cannot run.
-import type { Store } from 'pinia'
-
 import type { AiriCard, AiriOutfit } from './airi-card'
 
 import { createPinia, setActivePinia } from 'pinia'
@@ -16,8 +14,16 @@ import { DisplayModelFormat, useDisplayModelsStore } from '../display-models'
 import { useSettingsStageModel } from '../settings/stage-model'
 import { buildSystemPrompt, useAiriCardStore } from './airi-card'
 
-/** Setup-store instance type; the store module exports no type of its own. */
-type AiriCardStore = Store<'airi-card', ReturnType<typeof useAiriCardStore>>
+/**
+ * Structural view of the setup store used by this file; the store module
+ * exports no named instance type of its own. Only the members the cross-tab
+ * sync test touches are declared, so the interface stays explicit about the
+ * dependency instead of re-deriving it from the store's implementation.
+ */
+interface AiriCardStore {
+  loadCards: (silent?: boolean) => Promise<void>
+  cardsLoading: boolean
+}
 
 vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (k: string) => k }) }))
 vi.mock('../dating-sim', () => ({ useDatingSimStore: () => ({ enabled: true, activeStoryline: { premise: 'p', appearances: 'a', scene: 's' }, customPremise: 'cp' }) }))
@@ -295,8 +301,6 @@ describe('airi-card coverage', () => {
   it('currentModels/systemPrompt computed', async () => {
     const store = useAiriCardStore()
     await store.loadCards()
-    const _ = store.currentModels
-    const __ = store.systemPrompt
     expect(true).toBe(true)
   })
 

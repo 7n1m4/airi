@@ -1,3 +1,5 @@
+import type { SettingsTopology } from './settings-catalog'
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -36,7 +38,8 @@ describe('settings-catalog', () => {
   })
   it('convert shortLabel fallback empty parens', () => {
     const n = convertProviderToCatalogNodeItem({ id: 'z', name: '(only)' })
-    expect(n.shortLabel.length).toBeGreaterThan(0)
+    const shortLabel = n.shortLabel ?? ''
+    expect(shortLabel.length).toBeGreaterThan(0)
   })
   it('convert description/icon fallback', () => {
     const n = convertProviderToCatalogNodeItem({ id: 'q', name: 'Q', deployment: 'local' })
@@ -54,12 +57,13 @@ describe('settings-catalog', () => {
   it('buildTopology custom providers', () => { expect(buildSettingsCatalogTopology([{ id: 'cp', name: 'CP' }]).nodesById['prov-cp']).toBeDefined() })
   it('resolvePath unknown', () => { expect(resolvePath(buildSettingsCatalogTopology(), 'nonexistent')).toEqual(['hub']) })
   it('resolvePath prepends root', () => {
-    const topo = { rootId: 'hub', nodesById: { hub: { id: 'hub', label: 'hub', shortLabel: 'hub', route: '/', parentId: null, children: [], order: 0, kind: 'root', metadata: {} }, x: { id: 'x', label: 'x', shortLabel: 'x', route: '/x', parentId: null, children: [], order: 0, kind: 'page', metadata: {} } } }
-    expect(resolvePath(topo as unknown as Parameters<typeof resolvePath>[0], 'x')).toEqual(['hub', 'x'])
+    const topo: SettingsTopology = { rootId: 'hub', nodesById: { hub: { id: 'hub', label: 'hub', shortLabel: 'hub', route: '/', parentId: null, children: [], order: 0, kind: 'root', metadata: {} }, x: { id: 'x', label: 'x', shortLabel: 'x', route: '/x', parentId: null, children: [], order: 0, kind: 'page', metadata: {} } } }
+    expect(resolvePath(topo, 'x')).toEqual(['hub', 'x'])
   })
   it('resolvePath cycle', () => {
-    const topo2 = { rootId: 'hub', nodesById: { hub: { id: 'hub', label: 'hub', shortLabel: 'hub', route: '/', parentId: 'hub', children: [], order: 0, kind: 'root', metadata: {} } } }
-    expect(resolvePath(topo2 as unknown, 'hub')).toEqual(['hub'])
+    // Deliberate cycle: `hub` is its own parent, so path resolution must bail out instead of looping.
+    const topo2: SettingsTopology = { rootId: 'hub', nodesById: { hub: { id: 'hub', label: 'hub', shortLabel: 'hub', route: '/', parentId: 'hub', children: [], order: 0, kind: 'root', metadata: {} } } }
+    expect(resolvePath(topo2, 'hub')).toEqual(['hub'])
   })
   it('resolvePathFromRoute exact hash', () => {
     const topo = buildSettingsCatalogTopology()

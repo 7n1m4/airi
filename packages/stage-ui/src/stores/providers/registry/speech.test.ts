@@ -13,15 +13,15 @@ describe('speech registry coverage', () => {
       expect(meta).toBeDefined()
       void id
       if (typeof meta.isAvailableBy === 'function') {
-        try { await meta.isAvailableBy({} as unknown as Record<string, unknown>) }
+        try { await meta.isAvailableBy() }
         catch { /* ignore */ }
       }
       if (typeof meta.createProvider === 'function') {
-        try { await meta.createProvider({ apiKey: 'key', baseUrl: 'http://localhost/', model: 'm' } as unknown as Parameters<NonNullable<typeof meta.createProvider>>[0]) }
+        try { await meta.createProvider({ apiKey: 'key', baseUrl: 'http://localhost/', model: 'm' }) }
         catch { /* ignore */ }
       }
-      if (typeof meta.listModels === 'function') {
-        try { await meta.listModels({ apiKey: 'key', baseUrl: 'http://localhost/' } as unknown as Parameters<NonNullable<typeof meta.listModels>>[0]) }
+      if (typeof meta.capabilities.listModels === 'function') {
+        try { await meta.capabilities.listModels({ apiKey: 'key', baseUrl: 'http://localhost/' }) }
         catch { /* ignore */ }
       }
     }

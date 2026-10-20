@@ -17,17 +17,10 @@ describe('api client', () => {
 
   it('invokes fetch with credentials included', async () => {
     try {
-      await (client as any)('/')
+      await client.health.$get()
     }
     catch {
-      await (client as unknown as Record<string, (path?: string) => Promise<unknown>>)('/')
-    }
-    // fallback: call a known-ish path
-    try {
-      await fetch('http://localhost:3000/', { credentials: 'include' })
-    }
-    catch {
-      // ignore
+      // ignore network errors: the mock always responds 200
     }
     expect(vi.mocked(fetch)).toHaveBeenCalled()
   })

@@ -27,8 +27,8 @@ describe('setupAgentSparkNotifyHandler', () => {
   beforeEach(() => {
     deps = {
       stream: vi.fn(async (_m, _p, _msgs, opts: StreamOpts) => {
-        await opts.onStreamEvent({ type: 'text-delta', text: 'hi' })
-        await opts.onStreamEvent({ type: 'finish' })
+        await opts.onStreamEvent!({ type: 'text-delta', text: 'hi' })
+        await opts.onStreamEvent!({ type: 'finish' })
       }) as unknown as SparkNotifyAgentDeps['stream'],
       getActiveProvider: vi.fn(() => 'p'),
       getActiveModel: vi.fn(() => 'm'),
@@ -79,10 +79,10 @@ describe('setupAgentSparkNotifyHandler', () => {
 
   it('noResponse tool path', async () => {
     deps.stream = vi.fn(async (_m, _p, _msgs, opts: StreamOpts) => {
-      const noRespTool = opts.tools[0]
+      const noRespTool = opts.tools![0]
       await noRespTool.execute({})
-      await opts.onStreamEvent({ type: 'text-delta', text: 'ignored' })
-      await opts.onStreamEvent({ type: 'finish' })
+      await opts.onStreamEvent!({ type: 'text-delta', text: 'ignored' })
+      await opts.onStreamEvent!({ type: 'finish' })
     }) as unknown as SparkNotifyAgentDeps['stream']
     const { handle } = setupAgentSparkNotifyHandler(deps)
     const ev = makeEvent({ data: { urgency: 'immediate', id: 'e2' } })
@@ -93,7 +93,7 @@ describe('setupAgentSparkNotifyHandler', () => {
 
   it('error stream event throws', async () => {
     deps.stream = vi.fn(async (_m, _p, _msgs, opts: StreamOpts) => {
-      await opts.onStreamEvent({ type: 'error', error: new Error('boom') })
+      await opts.onStreamEvent!({ type: 'error', error: new Error('boom') })
     }) as unknown as SparkNotifyAgentDeps['stream']
     const { handle } = setupAgentSparkNotifyHandler(deps)
     const ev = makeEvent({ data: { urgency: 'immediate', id: 'e3' } })
@@ -102,9 +102,9 @@ describe('setupAgentSparkNotifyHandler', () => {
 
   it('command tool creates command and filters destinations', async () => {
     deps.stream = vi.fn(async (_m, _p, _msgs, opts: StreamOpts) => {
-      const cmdTool = opts.tools[1]
+      const cmdTool = opts.tools![1]
       await cmdTool.execute({ commands: [{ destinations: ['a'], interrupt: 'false', priority: 'high', intent: 'plan', ack: 'ack', guidance: null }] })
-      await opts.onStreamEvent({ type: 'finish' })
+      await opts.onStreamEvent!({ type: 'finish' })
     }) as unknown as SparkNotifyAgentDeps['stream']
     const { handle } = setupAgentSparkNotifyHandler(deps)
     const ev = makeEvent({ data: { urgency: 'immediate', id: 'e4' } })
@@ -115,10 +115,10 @@ describe('setupAgentSparkNotifyHandler', () => {
 
   it('command tool invalid params returns error string', async () => {
     deps.stream = vi.fn(async (_m, _p, _msgs, opts: StreamOpts) => {
-      const cmdTool = opts.tools[1]
+      const cmdTool = opts.tools![1]
       const r = await cmdTool.execute({ commands: [{ destinations: [] }] })
       expect(String(r)).toContain('Error')
-      await opts.onStreamEvent({ type: 'finish' })
+      await opts.onStreamEvent!({ type: 'finish' })
     }) as unknown as SparkNotifyAgentDeps['stream']
     const { handle } = setupAgentSparkNotifyHandler(deps)
     const ev = makeEvent({ data: { urgency: 'immediate', id: 'e5' } })
@@ -127,7 +127,7 @@ describe('setupAgentSparkNotifyHandler', () => {
 
   it('command tool maps guidance persona and options', async () => {
     deps.stream = vi.fn(async (_m, _p, _msgs, opts: StreamOpts) => {
-      const cmdTool = opts.tools[1]
+      const cmdTool = opts.tools![1]
       await cmdTool.execute({ commands: [{
         destinations: ['a', 'b'],
         interrupt: 'soft',
@@ -148,7 +148,7 @@ describe('setupAgentSparkNotifyHandler', () => {
           }],
         },
       }] })
-      await opts.onStreamEvent({ type: 'finish' })
+      await opts.onStreamEvent!({ type: 'finish' })
     }) as unknown as SparkNotifyAgentDeps['stream']
     const { handle } = setupAgentSparkNotifyHandler(deps)
     const ev = makeEvent({ data: { urgency: 'immediate', id: 'e7' } })
@@ -165,7 +165,7 @@ describe('setupAgentSparkNotifyHandler', () => {
 
   it('command tool maps empty guidance fields', async () => {
     deps.stream = vi.fn(async (_m, _p, _msgs, opts: StreamOpts) => {
-      const cmdTool = opts.tools[1]
+      const cmdTool = opts.tools![1]
       await cmdTool.execute({ commands: [{
         destinations: ['a'],
         interrupt: 'force',
@@ -186,7 +186,7 @@ describe('setupAgentSparkNotifyHandler', () => {
           }],
         },
       }] })
-      await opts.onStreamEvent({ type: 'finish' })
+      await opts.onStreamEvent!({ type: 'finish' })
     }) as unknown as SparkNotifyAgentDeps['stream']
     const { handle } = setupAgentSparkNotifyHandler(deps)
     const ev = makeEvent({ data: { urgency: 'immediate', id: 'e8' } })
@@ -200,9 +200,9 @@ describe('setupAgentSparkNotifyHandler', () => {
 
   it('filters commands with empty destinations', async () => {
     deps.stream = vi.fn(async (_m, _p, _msgs, opts: StreamOpts) => {
-      const cmdTool = opts.tools[1]
+      const cmdTool = opts.tools![1]
       await cmdTool.execute({ commands: [{ destinations: [], interrupt: null, priority: null, intent: null, ack: '', guidance: null }] })
-      await opts.onStreamEvent({ type: 'finish' })
+      await opts.onStreamEvent!({ type: 'finish' })
     }) as unknown as SparkNotifyAgentDeps['stream']
     const { handle } = setupAgentSparkNotifyHandler(deps)
     const ev = makeEvent({ data: { urgency: 'immediate', id: 'e6' } })

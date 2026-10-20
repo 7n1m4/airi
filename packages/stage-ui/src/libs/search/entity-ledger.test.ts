@@ -28,7 +28,7 @@ describe('normalizeCanonicalEntityLabel', () => {
 describe('entityLedger', () => {
   it('addSource', () => {
     const L = new EntityLedger()
-    L.addSource({ turnId: 't1', text: 'x', timestamp: 1 } as { turnId: string, text: string, timestamp: number })
+    L.addSource({ turnId: 't1', text: 'x', speaker: 'airi', timestamp: 1 })
     expect(L.sources.size).toBe(1)
     expect(L.bySource.has('t1')).toBe(true)
   })
@@ -110,14 +110,14 @@ describe('entityLedger', () => {
 
   it('getSummaryStats', () => {
     const L = new EntityLedger()
-    L.addSource({ turnId: 't1', text: 'x' } as { turnId: string, text: string })
+    L.addSource({ turnId: 't1', text: 'x', speaker: 'airi', timestamp: 1 })
     const s = L.getSummaryStats()
     expect(s.sourcesCount).toBe(1)
   })
 
   it('toJSON/fromJSON roundtrip', () => {
     const L = new EntityLedger()
-    L.addSource({ turnId: 't1', text: 'x', timestamp: 1 } as { turnId: string, text: string, timestamp: number })
+    L.addSource({ turnId: 't1', text: 'x', speaker: 'airi', timestamp: 1 })
     L.getOrCreateEntity('Alice', 'person')
     L.addClaim({ subject: 'A', predicate: 'p', object: 'B', evidence: ['t1'] })
     L.addEvent({ type: 'e', claimIds: ['claim_1'] })
@@ -191,7 +191,7 @@ describe('entity-ledger extra coverage', () => {
     expect(r.actionTaken).toBe('created')
   })
   it('fromJSON alias exists branch', () => {
-    const L = EntityLedger.fromJSON({ entities: [{ entityId: 'e1', label: 'Alice', type: 'person', attributes: {}, mentions: [] }, { entityId: 'e2', label: 'Alice', type: 'person', attributes: {}, mentions: [] }] })
+    EntityLedger.fromJSON({ entities: [{ entityId: 'e1', label: 'Alice', type: 'person', attributes: {}, mentions: [] }, { entityId: 'e2', label: 'Alice', type: 'person', attributes: {}, mentions: [] }] })
   })
   it('addClaim with non-string object skips object index', () => {
     const l = new EntityLedger()

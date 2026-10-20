@@ -1,7 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { useVisionStore } from '../vision'
 import {
   appendChronoLogEntry,
   clearChronoLog,
@@ -12,6 +11,7 @@ import {
 
 const {
   mockAdapter,
+  visionStoreState,
   mockSendContextUpdate,
   mockIngest,
   mockGenerate,
@@ -27,8 +27,13 @@ const {
     process: vi.fn(),
     terminate: vi.fn(),
   }
+  // Mutable stand-in for the vision store. The orchestrator only reads
+  // `activeProvider`/`activeModel` off it, so the tests switch those fields
+  // directly instead of swapping in a differently-shaped store object.
+  const visionStoreState = { activeProvider: 'prov', activeModel: 'model' }
   return {
     mockAdapter: adapter,
+    visionStoreState,
     mockSendContextUpdate: vi.fn(),
     mockIngest: vi.fn().mockResolvedValue(undefined),
     mockGenerate: vi.fn().mockResolvedValue({ text: 'caption', usage: { input_tokens: 1 } }),
@@ -72,7 +77,7 @@ vi.mock('../system-one', () => ({
 }))
 
 vi.mock('../vision', () => ({
-  useVisionStore: vi.fn(() => ({ activeProvider: 'prov', activeModel: 'model' })),
+  useVisionStore: () => visionStoreState,
 }))
 
 // Mock useEntityLedgerStore
@@ -177,6 +182,8 @@ describe('vision orchestrator store', () => {
     clearChronoLog()
     setActivePinia(createPinia())
     vi.clearAllMocks()
+    visionStoreState.activeProvider = 'prov'
+    visionStoreState.activeModel = 'model'
     mockAdapter.state = 'idle'
     mockAdapter.lastLoadConfig = null
     mockAdapter.load.mockReset()
@@ -254,10 +261,35 @@ describe('vision orchestrator store', () => {
     expect(store.isProvisioning).toBe(false)
   })
 
-  it('promotionAllowed and recordPromotion', () => {
+  it('promotionAllowed applies the hysteresis cooldown to a second promotion', async () => {
+    mockAdapter.state = 'ready'
+    mockAdapter.lastLoadConfig = null
+    mockAdapter.process.mockResolvedValue({
+      decision: 'PROMOTE',
+      summary: '[Visual Event]',
+      caption: 'cap',
+      novelty: 0.5,
+      ocrErrorPatterns: [],
+      interestKeywords: [],
+    })
     const store = useVisionOrchestratorStore()
-    expect(store.promotionAllowed?.() ?? true).toBe(true)
-    // access not exported? promotionAllowed not in return, so skip direct
+    const payload = {
+      dataUrl: 'data:image/png;base64,AAA',
+      width: 10,
+      height: 10,
+      sourceId: 'src',
+      workloadId: 'screen:attention-ecology-guard',
+    }
+
+    const first = await store.processCapture({ ...payload, timestamp: Date.now() })
+    expect(first?.decision).toBe('PROMOTE')
+
+    // A second promotion inside the 60s hysteresis window is suppressed: the
+    // capture still resolves, but no second context update is published.
+    const before = mockSendContextUpdate.mock.calls.length
+    const second = await store.processCapture({ ...payload, timestamp: Date.now() })
+    expect(second?.decision).toBe('PROMOTE')
+    expect(mockSendContextUpdate.mock.calls.length).toBe(before)
   })
 
   it('publishContext calls sendContextUpdate', () => {
@@ -482,7 +514,8 @@ describe('vision orchestrator store', () => {
       ocrErrorPatterns: [],
       interestKeywords: [],
     })
-    vi.mocked(useVisionStore).mockReturnValue({ activeProvider: '', activeModel: '' } as unknown as { activeProvider: string, activeModel: string })
+    visionStoreState.activeProvider = ''
+    visionStoreState.activeModel = ''
     const store = useVisionOrchestratorStore()
     const res = await store.processCapture({
       dataUrl: 'data:image/png;base64,AAA',
@@ -494,7 +527,8 @@ describe('vision orchestrator store', () => {
       vlmTier: 'external',
     })
     expect(res?.decision).toBe('PROMOTE')
-    vi.mocked(useVisionStore).mockReturnValue({ activeProvider: 'prov', activeModel: 'model' } as unknown as { activeProvider: string, activeModel: string })
+    visionStoreState.activeProvider = 'prov'
+    visionStoreState.activeModel = 'model'
   })
 
   it('processCapture guard path sentinel all policy promotes', async () => {

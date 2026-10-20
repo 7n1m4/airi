@@ -43,6 +43,38 @@ vi.mock('../apple-core-ai', () => ({
   DEFAULT_APPLE_CORE_AI_MODEL: '',
 }))
 
+/**
+ * Surface the local vision factory builds on top of the compute adapter:
+ * caption/load entry points, computed lifecycle + device-loss state, and a
+ * teardown hook. `ProviderMetadata` types `createProvider` as the xsai
+ * request-builder union (`chat`/`embed`/`systemOne`/…), which carries none of
+ * these — an `in` check can only drop members from that union, never add the
+ * vision extras — so the surface is asserted through a type guard instead.
+ */
+interface LocalVisionProvider {
+  captionImage: (...args: unknown[]) => unknown
+  loadModel: (...args: unknown[]) => unknown
+  /** Computed wrapper around the adapter lifecycle string. */
+  state: { value: unknown }
+  /** Computed wrapper around the adapter WebGPU device-loss counter. */
+  deviceLossCount: { value: unknown }
+  terminate: () => unknown
+}
+
+function isLocalVisionProvider(provider: unknown): provider is LocalVisionProvider {
+  if (typeof provider !== 'object' || provider === null)
+    return false
+
+  return 'captionImage' in provider
+    && typeof provider.captionImage === 'function'
+    && 'loadModel' in provider
+    && typeof provider.loadModel === 'function'
+    && 'state' in provider
+    && 'deviceLossCount' in provider
+    && 'terminate' in provider
+    && typeof provider.terminate === 'function'
+}
+
 vi.mock('../moondream', () => ({ createMoondreamChatProvider: vi.fn(async () => ({})) }))
 vi.mock('../web-llm', () => ({ createWebLlmChatProvider: vi.fn(async () => ({})) }))
 vi.mock('../web-rwkv', () => ({ createWebRwkvChatProvider: vi.fn(async () => ({})) }))
@@ -79,10 +111,16 @@ describe('localEngineMetadata', () => {
 
   it('reads blip provider computed state', async () => {
     const m = localEngineMetadata['blip-local']
-    const p = await m.createProvider!({ model: 'm' } as Record<string, unknown>) as { state: unknown, deviceLossCount: unknown, terminate: () => void }
-    expect(p.state).toBeTruthy()
-    expect(p.deviceLossCount).toBeTruthy()
-    p.terminate()
+    const p = await m.createProvider!({ model: 'm' } as Record<string, unknown>)
+    expect(isLocalVisionProvider(p)).toBe(true)
+    if (!isLocalVisionProvider(p))
+      throw new Error('blip-local did not expose the local vision adapter surface')
+
+    // `state` / `deviceLossCount` are Vue computed refs over adapter state, so
+    // they unwrap through `.value` rather than being plain fields.
+    expect(p.state.value).toBe('x')
+    expect(p.deviceLossCount.value).toBe(0)
+    expect(() => p.terminate()).not.toThrow()
   })
 
   it('listModels for all', async () => {
@@ -113,18 +151,18 @@ describe('localEngineMetadata', () => {
 
   it('validators', async () => {
     const rwkv = localEngineMetadata['web-rwkv']
-    expect(rwkv.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>).valid).toBe(true)
-    expect(rwkv.validators!.validateProviderConfig!({ model: 'u' } as Record<string, unknown>).valid).toBe(true)
+    expect((await rwkv.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>)).valid).toBe(true)
+    expect((await rwkv.validators!.validateProviderConfig!({ model: 'u' } as Record<string, unknown>)).valid).toBe(true)
 
     const llm = localEngineMetadata['web-llm']
-    expect(llm.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>).valid).toBe(true)
-    expect(llm.validators!.validateProviderConfig!({ model: 'custom-id', modelUrl: 'http://u', modelLib: '' } as Record<string, unknown>).valid).toBe(false)
-    expect(llm.validators!.validateProviderConfig!({ model: 'custom-id', modelUrl: 'http://u', modelLib: 'lib' } as Record<string, unknown>).valid).toBe(true)
-    expect(llm.validators!.validateProviderConfig!({ model: 'curated' } as Record<string, unknown>).valid).toBe(true)
+    expect((await llm.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>)).valid).toBe(true)
+    expect((await llm.validators!.validateProviderConfig!({ model: 'custom-id', modelUrl: 'http://u', modelLib: '' } as Record<string, unknown>)).valid).toBe(false)
+    expect((await llm.validators!.validateProviderConfig!({ model: 'custom-id', modelUrl: 'http://u', modelLib: 'lib' } as Record<string, unknown>)).valid).toBe(true)
+    expect((await llm.validators!.validateProviderConfig!({ model: 'curated' } as Record<string, unknown>)).valid).toBe(true)
 
     const blip = localEngineMetadata['blip-local']
-    expect(blip.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>).valid).toBe(false)
-    expect(blip.validators!.validateProviderConfig!({ model: 'm' } as Record<string, unknown>).valid).toBe(true)
+    expect((await blip.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>)).valid).toBe(false)
+    expect((await blip.validators!.validateProviderConfig!({ model: 'm' } as Record<string, unknown>)).valid).toBe(true)
     const apple = localEngineMetadata['apple-core-ai']
     expect((await apple.validators!.validateProviderConfig!({ model: '' } as Record<string, unknown>)).valid).toBe(false)
     vi.mocked(NativeAI.isNative).mockReturnValueOnce(false)

@@ -26,7 +26,7 @@ describe('chatLocalMetadata', () => {
   })
 
   it('vllm listModels returns models', async () => {
-    const models = await chatLocalMetadata.vllm.capabilities?.listModels?.()
+    const models = await chatLocalMetadata.vllm.capabilities?.listModels?.({ baseUrl: 'http://localhost:8000/v1/' })
     expect(Array.isArray(models)).toBe(true)
     expect(models?.length).toBeGreaterThan(0)
   })
@@ -69,7 +69,7 @@ describe('chatLocalMetadata', () => {
   })
 
   it('player2 listModels returns models', async () => {
-    const models = await chatLocalMetadata.player2.capabilities?.listModels?.()
+    const models = await chatLocalMetadata.player2.capabilities?.listModels?.({ baseUrl: 'http://localhost:4315/v1/' })
     expect(Array.isArray(models)).toBe(true)
   })
 

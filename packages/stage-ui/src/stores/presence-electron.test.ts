@@ -1,3 +1,5 @@
+import type * as StageShared from '@proj-airi/stage-shared'
+
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -8,7 +10,7 @@ vi.mock('@proj-airi/electron-vueuse', () => ({
 }))
 
 vi.mock('@proj-airi/stage-shared', async (importOriginal) => {
-  const actual = await importOriginal()
+  const actual = await importOriginal<typeof StageShared>()
   return {
     ...actual,
     debug: vi.fn(),

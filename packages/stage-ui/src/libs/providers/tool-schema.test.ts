@@ -1,6 +1,30 @@
+import type { Tool } from '@xsai/shared-chat'
+
 import { describe, expect, it, vi } from 'vitest'
 
 import { cleanJsonSchema, sanitizeTools } from './tool-schema'
+
+/**
+ * `Tool` with required `function.parameters` made optional. Real providers omit
+ * `parameters` on some tools, and `sanitizeTools` guards with `t.function?.parameters`,
+ * so this is the shape those fixtures must use.
+ */
+type ToolWithOptionalParameters = Omit<Tool, 'function'> & {
+  function: Omit<Tool['function'], 'parameters'> & { parameters?: Tool['function']['parameters'] }
+}
+
+/** Typed shape of a JSON-Schema node as mutated in place by `cleanJsonSchema`. */
+interface SchemaNode {
+  additionalProperties?: boolean
+  anyOf?: SchemaNode[]
+  description?: string
+  items?: SchemaNode | SchemaNode[]
+  oneOf?: SchemaNode[]
+  properties?: Record<string, SchemaNode>
+  required?: string[]
+  type?: string | string[]
+  [key: string]: unknown
+}
 
 describe('cleanJsonSchema', () => {
   it('strips $schema and additionalProperties from schema nodes', () => {
@@ -188,27 +212,25 @@ describe('cleanJsonSchema edge cases', () => {
   })
 
   it('recurses into array items', () => {
-    const schema = {
-      type: 'array',
-      items: [
-        { type: 'object', properties: { a: { type: ['string', 'null'] } } },
-        { type: 'object' },
-      ],
-    }
+    const firstItem: SchemaNode = { type: 'object', properties: { a: { type: ['string', 'null'] } } }
+    const secondItem: SchemaNode = { type: 'object' }
+    const schema: SchemaNode = { type: 'array', items: [firstItem, secondItem] }
+
     cleanJsonSchema(schema)
-    expect(schema.items[0].properties.a.type).toBe('string')
-    expect(schema.items[0].properties).toBeDefined()
-    expect(schema.items[1].properties).toEqual({})
+
+    expect(firstItem.properties?.a.type).toBe('string')
+    expect(firstItem.properties).toBeDefined()
+    expect(secondItem.properties).toEqual({})
   })
 
   it('recurses into object items', () => {
-    const schema = {
-      type: 'array',
-      items: { type: 'object', additionalProperties: true },
-    }
+    const item: SchemaNode = { type: 'object', additionalProperties: true }
+    const schema: SchemaNode = { type: 'array', items: item }
+
     cleanJsonSchema(schema)
-    expect(schema.items).not.toHaveProperty('additionalProperties')
-    expect(schema.items.properties).toEqual({})
+
+    expect(item).not.toHaveProperty('additionalProperties')
+    expect(item.properties).toEqual({})
   })
   it('handles anyOf with only null schemas (no collapse)', () => {
     const schema: Record<string, unknown> = { anyOf: [{ type: 'null' }] }
@@ -231,8 +253,12 @@ describe('cleanJsonSchema edge cases', () => {
     expect(schema.items).toBe('x')
   })
   it('sanitizeTools handles tool without parameters', () => {
-    const tools = [{ type: 'function', function: { name: 'f', description: 'd' }, execute: async () => 1 }] as unknown as Parameters<typeof sanitizeTools>[0]
-    const out = sanitizeTools(tools)
+    // `Tool.parameters` is required by the type, but real providers omit it and
+    // `sanitizeTools` guards with `t.function?.parameters`; this fixture exercises that branch.
+    const tools: ToolWithOptionalParameters[] = [
+      { type: 'function', function: { name: 'f', description: 'd' }, execute: async () => 1 },
+    ]
+    const out = sanitizeTools(tools as unknown as Tool[])
     expect(out).toHaveLength(1)
     expect(typeof out![0].execute).toBe('function')
   })
@@ -288,18 +314,16 @@ describe('sanitizeTools', () => {
 describe('sanitizeTools extra', () => {
   it('normalizes parameters whose type is not object and missing properties', () => {
     const executeMock = vi.fn()
-    const tools = [
-      {
-        execute: executeMock,
-        function: {
-          name: 't',
-          parameters: { type: 'string' },
-        },
+    const tools: Tool[] = [{
+      type: 'function',
+      execute: executeMock,
+      function: {
+        name: 't',
+        parameters: { type: 'string' },
       },
-    ] as unknown as Parameters<typeof sanitizeTools>[0]
+    }]
     const sanitized = sanitizeTools(tools)
-    const sanitizedTool = sanitized![0] as { function: { parameters: { type: string, properties: Record<string, unknown> } } }
-    const params = sanitizedTool.function.parameters
+    const params = sanitized![0].function.parameters as { type?: string, properties?: Record<string, unknown> }
     expect(params.type).toBe('object')
     expect(params.properties).toEqual({})
     expect(sanitized![0].execute).toBe(executeMock)

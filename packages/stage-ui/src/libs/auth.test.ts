@@ -144,7 +144,7 @@ describe('auth lib', () => {
     win.electron = {}
     if (!window.open)
       (window as unknown as { open: unknown }).open = vi.fn()
-    const open = vi.spyOn(window, 'open' as never).mockReturnValue(null as never)
+    const open = vi.spyOn(window, 'open').mockReturnValue(null)
     mocks.signInSocial.mockResolvedValue('res2')
     expect(await signIn('github')).toBe('res2')
     open.mockRestore()

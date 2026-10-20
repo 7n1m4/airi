@@ -1,3 +1,5 @@
+import type { Ref } from 'vue'
+
 // @vitest-environment jsdom
 import type { PreloadTask } from './use-model-preload'
 
@@ -5,6 +7,20 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from 'vue'
 
 import { useModelPreload } from './use-model-preload'
+
+/**
+ * Structural view of the composable's return value; the module exports no named
+ * handle type of its own. Mirrors the shape `useModelPreload()` returns so the
+ * lifecycle tests can hold a handle that is assigned inside a component's
+ * `setup()` and read after `app.mount()`.
+ */
+interface ModelPreloadHandle {
+  preloading: Ref<boolean>
+  preloadedModels: Ref<string[]>
+  failedModels: Ref<string[]>
+  schedulePreload: (tasks: PreloadTask[]) => void
+  cancelPreload: () => void
+}
 
 function task(modelId: string, loader?: (signal: AbortSignal) => Promise<void>): PreloadTask {
   return {
@@ -344,7 +360,9 @@ describe('useModelPreload', () => {
 describe('useModelPreload lifecycle', () => {
   it('cancels an in-flight preload when the owning component unmounts', async () => {
     let observedSignal: AbortSignal | undefined
-    let disposed
+    // Assigned during `setup()`, which runs at `app.mount()`; it is therefore
+    // guaranteed to be set by the time the assertions below run.
+    let disposed!: ModelPreloadHandle
 
     const app = createApp({
       setup() {

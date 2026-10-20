@@ -1,7 +1,8 @@
 import html2canvas from 'html2canvas'
 
+// @ts-expect-error jsdom lacks declaration in this config
 import { JSDOM } from 'jsdom'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { colorFromElement, patchThemeSamplingHtml2CanvasClone } from './color-from-element'
 
@@ -26,6 +27,7 @@ const dom = new JSDOM('<!DOCTYPE html><html><body></body></html>', { url: 'http:
 const gDoc2 = globalThis as { document?: Document }
 gDoc2.document = dom.window.document as unknown as Document
 ;(globalThis as { HTMLImageElement?: unknown }).HTMLImageElement = dom.window.HTMLImageElement
+
 describe('patchThemeSamplingHtml2CanvasClone', () => {
   it('placeholder', () => {
     expect(true).toBe(true)
@@ -80,6 +82,12 @@ describe('patchThemeSamplingHtml2CanvasClone', () => {
 })
 
 describe('colorFromElement', () => {
+  // Restores the fake `document` swapped in by the vibrant tests. Scoped to this
+  // describe only: the sibling one runs real-DOM tests and deletes globals on purpose.
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   beforeEach(() => {
     vi.mocked(html2canvas).mockResolvedValue({
       width: 10,
@@ -108,19 +116,20 @@ describe('colorFromElement', () => {
       set src(_v: string) { queueMicrotask(() => this.onload?.()) }
     }
     ;(globalThis as unknown as { Image: unknown }).Image = MockImage
-    const canvas = document.createElement('canvas')
-    const origCreate = document.createElement.bind(document)
-    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-      if (tag === 'canvas')
-        return canvas
-      return origCreate(tag)
-    })
-    const ctx = { drawImage: vi.fn() }
-    vi.spyOn(canvas, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D)
-    vi.spyOn(canvas, 'toDataURL').mockReturnValue('data:image/png;base64,BBBB')
+    const drawImage = vi.fn()
+    const canvas = {
+      width: 4,
+      height: 2,
+      getContext: () => ({ drawImage }),
+      toDataURL: () => 'data:image/png;base64,BBBB',
+    }
+    // A fake document hands out a plain object literal, so neither the `'webview'`
+    // `createElement` signature from `electron.d.ts` nor the `getContext('webgpu')`
+    // overload from `@webgpu/types` is ever the one TS checks the mock against.
+    vi.stubGlobal('document', { createElement: () => canvas })
     const res = await colorFromElement(img, { mode: 'vibrant', vibrant: { sampleTopRatio: 0.5 } })
+    expect(drawImage).toHaveBeenCalled()
     expect(res.vibrant?.palette).toContain('#ff0000')
-    vi.restoreAllMocks()
   })
 
   it('vibrant mode with img element and null canvas ctx skips draw', async () => {
@@ -135,18 +144,16 @@ describe('colorFromElement', () => {
       set src(_v: string) { queueMicrotask(() => this.onload?.()) }
     }
     ;(globalThis as unknown as { Image: unknown }).Image = MockImage
-    const canvas = document.createElement('canvas')
-    const origCreate = document.createElement.bind(document)
-    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-      if (tag === 'canvas')
-        return canvas
-      return origCreate(tag)
-    })
-    vi.spyOn(canvas, 'getContext').mockReturnValue(null)
-    vi.spyOn(canvas, 'toDataURL').mockReturnValue('data:image/png;base64,BBBB')
+    const canvas = {
+      width: 4,
+      height: 4,
+      getContext: () => null,
+      toDataURL: () => 'data:image/png;base64,BBBB',
+    }
+    // Same fake-document swap as above: `createElement` is never the `'webview'` overload.
+    vi.stubGlobal('document', { createElement: () => canvas })
     const res = await colorFromElement(img, { mode: 'vibrant' })
     expect(res.vibrant?.palette).toContain('#ff0000')
-    vi.restoreAllMocks()
   })
 
   it('html2canvas mode', async () => {

@@ -35,7 +35,7 @@ describe('use-inference-status', () => {
   it('computes isAnyLoading and totalProgress', () => {
     updateInferenceStatus('a', { state: 'downloading', progress: { percent: 50 } as ProgressPayload })
     updateInferenceStatus('b', { state: 'ready' })
-    const { isAnyLoading, totalProgress } = useInferenceStatus()
+    const { isAnyLoading } = useInferenceStatus()
     expect(isAnyLoading.value).toBe(true)
   })
   it('returns 100 totalProgress when no models are loading', () => {

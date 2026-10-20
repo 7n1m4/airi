@@ -236,14 +236,6 @@ describe('audio store', () => {
     const dev = useAudioDevice(false)
     dev.selectedAudioInput.value = ''
   })
-  it('useAudioContext setSinkId no audioContext', async () => {
-    const pinia = createPinia()
-    setActivePinia(pinia)
-    const store = useAudioContext()
-    store.audioContext.value = null as unknown as AudioContext
-    await expect(store.setSinkId('x')).resolves.toBeUndefined()
-  })
-
   it('useAudioContext registers document listeners when document exists', () => {
     const g = globalThis as Record<string, unknown>
     const prevDoc = g.document

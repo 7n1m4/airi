@@ -87,6 +87,11 @@ describe('settings-search-index', () => {
       name: 'Provider',
       descriptionKey: 'd',
       description: 'desc',
+      createProvider: () => ({ systemOne: async () => ({ answers: {}, raw: '' }) }),
+      capabilities: {},
+      validators: {
+        validateProviderConfig: () => ({ errors: [], reason: '', valid: true }),
+      },
     }
 
     it('maps known categories', () => {

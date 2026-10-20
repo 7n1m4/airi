@@ -12,12 +12,15 @@ import {
 describe('providers/types', () => {
   describe('isModelProvider', () => {
     it('returns true when object has model function', () => {
-      expect(isModelProvider({ model: () => ({}) } as ProviderInstance)).toBe(true)
+      expect(isModelProvider({ model: () => ({ baseURL: 'https://api.example.com/' }) })).toBe(true)
     })
 
     it('returns false otherwise', () => {
       expect(isModelProvider({} as ProviderInstance)).toBe(false)
-      expect(isModelProvider({ model: 'x' } as ProviderInstance)).toBe(false)
+
+      // Structurally a chat provider carrying a malformed, non-function `model` field.
+      const withBogusModelField = { chat: (model: string) => ({ baseURL: 'https://api.example.com/', model }), model: 'x' }
+      expect(isModelProvider(withBogusModelField)).toBe(false)
     })
   })
 
@@ -40,7 +43,10 @@ describe('providers/types', () => {
       expect(isOptionalKeyProvider(true)).toBe(false)
       expect(isOptionalKeyProvider(undefined)).toBe(false)
       expect(isOptionalKeyProvider(null as unknown as Parameters<typeof isOptionalKeyProvider>[0])).toBe(false)
-      expect(isOptionalKeyProvider({})).toBe(false)
+      // Cast, not widening: `requiresCredentials` is `boolean | { optional: true } | undefined`, so an
+      // object literal lacking `optional` is not expressible in that type — this asserts the guard's
+      // defensive `'optional' in value` check against runtime junk.
+      expect(isOptionalKeyProvider({} as Parameters<typeof isOptionalKeyProvider>[0])).toBe(false)
     })
   })
 

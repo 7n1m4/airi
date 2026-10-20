@@ -360,9 +360,9 @@ describe('createTextJournalTool factory', () => {
   it('creates an xsai tool named text_journal with parameters and execute function', async () => {
     mockCreateEntry.mockResolvedValueOnce({ title: 'hello tool', characterName: 'Asuka' })
     const toolDef = await createTextJournalTool()
-    expect((toolDef as { name?: string, function?: { name?: string } }).name || (toolDef as { name?: string, function?: { name?: string } }).function?.name).toBe('text_journal')
-    expect(typeof (toolDef as { execute?: unknown }).execute).toBe('function')
-    const created = await (toolDef as { execute: (p: unknown) => Promise<unknown> }).execute({ action: 'create', content: 'hello tool' })
+    expect(toolDef.function.name).toBe('text_journal')
+    expect(typeof toolDef.execute).toBe('function')
+    const created = await toolDef.execute({ action: 'create', content: 'hello tool' }, { messages: [], toolCallId: '' })
     expect(created).toContain('Saved text journal entry')
   })
 })
