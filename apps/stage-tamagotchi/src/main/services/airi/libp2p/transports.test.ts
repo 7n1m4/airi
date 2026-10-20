@@ -11,6 +11,8 @@ import { webSockets } from '@libp2p/websockets'
 import { createLibp2p } from 'libp2p'
 import { describe, expect, it } from 'vitest'
 
+import { webSocketsCloseSafe } from './websockets-bun-close'
+
 /**
  * Transport and listen-address derivation in
  * `apps/stage-tamagotchi/src/main/services/airi/libp2p/index.ts`.
@@ -51,13 +53,17 @@ type Libp2pTransports = NonNullable<Libp2pOptions<ServiceMap>['transports']>
 /**
  * The transports `createLibp2pNode` pushes onto its transport array. mDNS is
  * deliberately absent: `mdns()` returns a `PeerDiscovery`.
+ *
+ * NOTICE: the websockets entry is `webSocketsCloseSafe()`, not the bare
+ * `webSockets()`, because this is exactly what the service pushes — see
+ * `websockets-bun-close.ts` for why the shipped transport needs it.
  */
 function deriveTransports(transports: readonly string[]): Libp2pTransports {
   const derived: Libp2pTransports = []
   if (transports.includes('tcp'))
     derived.push(tcp())
   if (transports.includes('websockets'))
-    derived.push(webSockets())
+    derived.push(webSocketsCloseSafe())
   return derived
 }
 
@@ -218,6 +224,10 @@ describe('libp2p static-import boot regression', () => {
     // static imports are that graph; if `index.ts` had pulled `@libp2p/webrtc`
     // in statically through them, importing this module would already have thrown.
     expect(tcp()).toBeDefined()
+
+    // And the websockets graph, which `websockets-bun-close.ts` imports
+    // statically, is part of that same loadable set.
+    expect(webSockets()).toBeDefined()
 
     // And the addon really is absent in this harness, which is the environment
     // the guard is written for.

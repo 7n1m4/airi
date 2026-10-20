@@ -25,7 +25,6 @@ import { mplex } from '@libp2p/mplex'
 import { peerIdFromString } from '@libp2p/peer-id'
 import { ping } from '@libp2p/ping'
 import { tcp } from '@libp2p/tcp'
-import { webSockets } from '@libp2p/websockets'
 import { webTransport } from '@libp2p/webtransport'
 import { defineInvokeHandler } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/electron/main'
@@ -77,6 +76,7 @@ import {
   setupPairedDevices,
   updatePairedDeviceAlias,
 } from './pairing'
+import { webSocketsCloseSafe } from './websockets-bun-close'
 
 // ── Main → Renderer Push ──────────────────────────────────────────────────────
 // eventa's electron renderer adapter only binds `ipcRenderer.on('eventa-message')`,
@@ -489,7 +489,7 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
     transports.push(tcp())
   }
   if (config.transports.includes('websockets')) {
-    transports.push(webSockets())
+    transports.push(webSocketsCloseSafe())
   }
   if (config.transports.includes('webrtc')) {
     // Static import cannot work here: `@libp2p/webrtc` re-exports
