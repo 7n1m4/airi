@@ -1,0 +1,78 @@
+name: 'CI: Cross-WAN P2P (hosted runners)'
+
+# Cross-WAN P2P test harness for the libp2p mesh (Phase 5, roadmap #1).
+#
+# GitHub-hosted runners have no inbound reachability, so this workflow cannot
+# exercise a true peer-dials-peer topology across the WAN. What it DOES cover:
+#   - wire correctness of the pairing + gossipsub protocol (in-process, real
+#     libp2p nodes on 127.0.0.1 TCP with real gossipsub), and
+#   - egress-side resilience: the suite runs behind the runner's outbound
+#     firewall, which is a stricter proxy for a residential NAT on the dialing
+#     side than anything a home network presents.
+#
+# True cross-WAN dialing (one side listening on a public IP) requires a peer
+# with inbound reachability (self-hosted runner or VPS) and remains out of scope
+# for this fork; circuit relay v2 is likewise out of scope (requires public infra).
+# mDNS / LAN discovery and inbound listen addresses are exercised only in the
+# in-process suite below.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  libp2p-in-process:
+    name: libp2p in-process P2P (localhost TCP, real gossipsub)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      # WebRTC transport needs the @ipshipyard/node-datachannel native addon,
+      # which the --ignore-scripts install above skips. Build it explicitly so
+      # the WebRTC transport can be exercised in CI.
+      - name: Build node-datachannel native addon
+        run: |
+          cd node_modules/.pnpm/@ipshipyard+node-datachannel@*/node_modules/@ipshipyard/node-datachannel
+          npx prebuild-install -r napi || npm run _prebuild
+      - name: Run libp2p P2P integration tests
+        run: |
+          pnpm -F @proj-airi/stage-tamagotchi exec vitest run \
+            src/main/services/airi/libp2p/pairing-trust-flow.test.ts \
+            src/main/services/airi/libp2p/transports.test.ts
+
+  egress-resilience:
+    name: Egress-resilience smoke (dialing side behind runner firewall)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      # WebRTC transport needs the @ipshipyard/node-datachannel native addon.
+      - name: Build node-datachannel native addon
+        run: |
+          cd node_modules/.pnpm/@ipshipyard+node-datachannel@*/node_modules/@ipshipyard/node-datachannel
+          npx prebuild-install -r napi || npm run _prebuild
+      # The pairing-trust-flow suite already runs real nodes that dial each other
+      # over 127.0.0.1; re-running it here under the runner's egress firewall
+      # confirms the dialing path survives that environment. No inbound ports are
+      # opened, so this is a single-sided (dialing) check only.
+      - name: Run pairing trust flow under egress firewall
+        run: |
+          pnpm -F @proj-airi/stage-tamagotchi exec vitest run \
+            src/main/services/airi/libp2p/pairing-trust-flow.test.ts

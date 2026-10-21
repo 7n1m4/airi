@@ -500,7 +500,21 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
     // its error handling — crashing the app with no window ever created.
     // Deferring keeps that a recoverable, reported node-start failure.
     const { webRTC } = await import('@libp2p/webrtc')
-    transports.push(webRTC())
+    // Public STUN servers for NAT traversal. Host candidates suffice on a LAN;
+    // server-reflexive (STUN) candidates are needed for cross-WAN dialing and
+    // corporate-firewall traversal. TURN (relay) is intentionally omitted —
+    // it requires hosted infra; symmetric-NAT corporate users may need a TURN
+    // server configured here later.
+    transports.push(
+      webRTC({
+        rtcConfiguration: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+          ],
+        },
+      }),
+    )
   }
   if (config.transports.includes('webtransport')) {
     transports.push(webTransport())
