@@ -51,6 +51,20 @@ async function issueWrite(content) {
     throw new Error(`issue comment write failed: ${res.status} ${await res.text()}`)
 }
 
+async function issueComment(body) {
+  const res = await fetch(`https://api.github.com/repos/anlmalabs/airi/issues/${RENDEZVOUS_ISSUE}/comments`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${GITHUB_TOKEN}`,
+      'Accept': 'application/vnd.github+json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ body }),
+  })
+  if (!res.ok)
+    console.log('[cross-wan] comment post failed:', res.status)
+}
+
 async function issueRead() {
   const res = await fetch(`https://api.github.com/repos/anlmalabs/airi/issues/${RENDEZVOUS_ISSUE}/comments?per_page=100`, {
     headers: {
@@ -134,6 +148,7 @@ async function runDialer() {
       console.log('[dialer] dialing', ma)
       await node.dial(multiaddr(ma))
       console.log('[dialer] connected to', ma)
+      await issueComment(`🐝 Cross-WAN rendezvous success! Node B dialed Node A.\n\n- Multiaddr: \`${ma}\`\n- Time: ${new Date().toISOString()}`)
       await node.stop()
       console.log('[dialer] SUCCESS')
       process.exit(0)
@@ -148,6 +163,7 @@ async function runDialer() {
       console.log('[dialer] attempting dial to peer', rendezvous.peerId)
       await node.dial(multiaddr(`/p2p/${rendezvous.peerId}`))
       console.log('[dialer] connected to peer')
+      await issueComment(`🐝 Cross-WAN rendezvous success! Node B reached Node A via peer dial.\n\n- Peer: ${rendezvous.peerId}\n- Time: ${new Date().toISOString()}`)
       await node.stop()
       console.log('[dialer] SUCCESS')
       process.exit(0)
