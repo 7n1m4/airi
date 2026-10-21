@@ -7,11 +7,11 @@ import type {
   CompanionShareInput,
   CompanionShareScope,
 } from '@proj-airi/stage-shared/agentic'
+import type { TransportAdapter } from '@proj-airi/stage-shared/transport-adapter'
 import type { InferOutput } from 'valibot'
 
 import type { AgenticInvokeContext } from './index'
 
-import { Buffer } from 'node:buffer'
 import { randomBytes } from 'node:crypto'
 
 import { useLogg } from '@guiiai/logg'
@@ -38,8 +38,33 @@ import { boolean, number, object, optional, picklist } from 'valibot'
 import { createConfig } from '../../../libs/electron/persistence'
 import { getLibp2pMeshPublisher } from '../libp2p'
 import { listPairedDevices } from '../libp2p/pairing'
+import { createLibp2pTransportAdapter } from '../libp2p/transport-adapter'
 
 const log = useLogg('agentic-companion').useGlobalConfig()
+
+// TransportAdapter seam: companion publishing goes through the shared contract
+// instead of the libp2p-specific publisher. Lifecycle (init/dispose) stays with
+// setupLibp2pService.
+//
+// `currentMeshPublisher` is captured once per publishCompanionShare call so the
+// adapter does not re-resolve the mesh publisher (which would open a
+// resolve-time window where hostPeerId and the emitting node could diverge).
+let currentMeshPublisher: ReturnType<typeof getLibp2pMeshPublisher> = null
+
+const companionTransportAdapter: TransportAdapter = createLibp2pTransportAdapter({
+  deps: {
+    initialize: async () => {},
+    dispose: async () => {},
+    publish: async (topic, data) => {
+      const publisher = currentMeshPublisher ?? getLibp2pMeshPublisher()
+      if (!publisher) {
+        throw new Error('libp2p mesh unavailable')
+      }
+      await publisher.publish(topic, data)
+    },
+    subscribe: () => () => {},
+  },
+})
 
 // ── Topics ────────────────────────────────────────────────────────────────────
 
@@ -527,8 +552,15 @@ function publishCompanionShare(card: CompanionShareInput): CompanionShareCard | 
     scope: card.scope,
   }
 
-  void publisher.publish(COMPANION_TOPIC, Buffer.from(JSON.stringify(published), 'utf8'))
+  // Capture the publisher once so the adapter does not re-resolve it (avoids a
+  // hostPeerId / emitting-node mismatch on a concurrent node restart).
+  currentMeshPublisher = publisher
+  void companionTransportAdapter
+    .publish(COMPANION_TOPIC, new TextEncoder().encode(JSON.stringify(published)))
     .catch((err: unknown) => log.withError(err).warn('Failed to publish companion share'))
+    .finally(() => {
+      currentMeshPublisher = null
+    })
 
   return published
 }
