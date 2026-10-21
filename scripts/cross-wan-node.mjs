@@ -110,6 +110,7 @@ async function runListener() {
   const peerId = node.peerId.toString()
   const rendezvous = JSON.stringify({ peerId, multiaddrs: mas, ts: Date.now() })
   await issueWrite(rendezvous)
+  await issueComment(`📋 Cross-WAN journal: Node A (listener) booted.\n\n- PeerId: \`${peerId}\`\n- Multiaddrs: ${mas.map(m => `\`${m}\``).join(', ')}\n- Run: ${process.env.GITHUB_RUN_ID || 'local'}\n- Time: ${new Date().toISOString()}`)
   console.log('[listener] wrote rendezvous to issue:', rendezvous)
 
   await new Promise(resolve => setTimeout(resolve, TIMEOUT_MS))
@@ -173,6 +174,7 @@ async function runDialer() {
     }
   }
 
+  await issueComment(`📋 Cross-WAN journal: Node B (dialer) FAILED to connect.\n\n- Target peer: ${rendezvous.peerId}\n- Attempts: ${rendezvous.multiaddrs?.length || 0} multiaddrs + peer dial\n- Run: ${process.env.GITHUB_RUN_ID || 'local'}\n- Time: ${new Date().toISOString()}`)
   await node.stop()
   console.error('[dialer] FAILED: could not connect to listener')
   process.exit(1)
