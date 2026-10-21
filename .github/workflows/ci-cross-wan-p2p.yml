@@ -38,6 +38,13 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      # WebRTC transport needs the @ipshipyard/node-datachannel native addon,
+      # which the --ignore-scripts install above skips. Build it explicitly so
+      # the WebRTC transport can be exercised in CI.
+      - name: Build node-datachannel native addon
+        run: |
+          cd node_modules/.pnpm/@ipshipyard+node-datachannel@*/node_modules/@ipshipyard/node-datachannel
+          npx prebuild-install -r napi || npm run _prebuild
       - name: Run libp2p P2P integration tests
         run: |
           pnpm -F @proj-airi/stage-tamagotchi exec vitest run \
@@ -56,6 +63,11 @@ jobs:
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile --ignore-scripts
+      # WebRTC transport needs the @ipshipyard/node-datachannel native addon.
+      - name: Build node-datachannel native addon
+        run: |
+          cd node_modules/.pnpm/@ipshipyard+node-datachannel@*/node_modules/@ipshipyard/node-datachannel
+          npx prebuild-install -r napi || npm run _prebuild
       # The pairing-trust-flow suite already runs real nodes that dial each other
       # over 127.0.0.1; re-running it here under the runner's egress firewall
       # confirms the dialing path survives that environment. No inbound ports are
