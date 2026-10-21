@@ -1,20 +1,29 @@
-name: 'CI: Cross-WAN P2P (hosted runners)'
+name: 'CI: Cross-WAN P2P (three runners)'
 
-# Cross-WAN P2P test harness for the libp2p mesh (Phase 5, roadmap #1).
+# Three GitHub-hosted runners that stand up a real libp2p mesh across the
+# public internet.
 #
-# GitHub-hosted runners have no inbound reachability, so this workflow cannot
-# exercise a true peer-dials-peer topology across the WAN. What it DOES cover:
-#   - wire correctness of the pairing + gossipsub protocol (in-process, real
-#     libp2p nodes on 127.0.0.1 TCP with real gossipsub), and
-#   - egress-side resilience: the suite runs behind the runner's outbound
-#     firewall, which is a stricter proxy for a residential NAT on the dialing
-#     side than anything a home network presents.
+# Every runner plays the same role: it boots a libp2p node behind a public
+# tunnel, publishes its public WSS multiaddr to the rendezvous issue, and
+# dials the other runners it finds there. Each runner sits behind Azure's
+# symmetric NAT and can only dial out — the tunnel is what makes it reachable
+# at all, because the tunnel's edge dials back in.
 #
-# True cross-WAN dialing (one side listening on a public IP) requires a peer
-# with inbound reachability (self-hosted runner or VPS) and remains out of scope
-# for this fork; circuit relay v2 is likewise out of scope (requires public infra).
-# mDNS / LAN discovery and inbound listen addresses are exercised only in the
-# in-process suite below.
+# Why not WebRTC/STUN: against a symmetric NAT, hole punching fails, so STUN
+# buys nothing.
+#
+# Rendezvous: a dedicated GitHub issue (#17) used as a ledger. Each runner
+# writes its WSS multiaddr as a marked issue comment; the others read it and
+# dial. Uses the default GITHUB_TOKEN (auto-provided) — no extra secrets, no
+# cloud account, no named tunnel.
+#
+# Tunnel backends, tried in order until one actually routes to the node:
+#   cloudflared — an anonymous quick tunnel (trycloudflare.com).
+#   pinggy      — a reverse tunnel through pinggy (*.free.pinggy.net).
+#   ssh         — a reverse tunnel through localhost.run (*.lhr.life).
+#
+# The in-process job is the always-green backbone: real libp2p nodes and real
+# gossipsub over loopback, with no network in the picture at all.
 
 on:
   push:
@@ -25,9 +34,13 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
-  libp2p-in-process:
-    name: libp2p in-process P2P (localhost TCP, real gossipsub)
+  peer-a:
+    name: 'Peer A'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -36,43 +49,96 @@ jobs:
         with:
           node-version: lts/*
           cache: pnpm
-
       - run: pnpm install --frozen-lockfile --ignore-scripts
-      # WebRTC transport needs the @ipshipyard/node-datachannel native addon,
-      # which the --ignore-scripts install above skips. Build it explicitly so
-      # the WebRTC transport can be exercised in CI.
-      - name: Build node-datachannel native addon
+      - name: Install cloudflared
         run: |
-          cd node_modules/.pnpm/@ipshipyard+node-datachannel@*/node_modules/@ipshipyard/node-datachannel
-          npx prebuild-install -r napi || npm run _prebuild
+          curl -fsSL --retry 3 -o /tmp/cloudflared \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          chmod +x /tmp/cloudflared
+          sudo mv /tmp/cloudflared /usr/local/bin/cloudflared
+          cloudflared --version
+      - name: Join the mesh
+        env:
+          CROSS_WAN_ROLE: peer-a
+          CROSS_WAN_CHANNEL: ci
+          CROSS_WAN_RENDEZVOUS_ISSUE: '17'
+          CROSS_WAN_TIMEOUT_MS: '300000'
+          CROSS_WAN_EXPECTED_PEERS: '2'
+          CROSS_WAN_ROUND_TRIP_TIMEOUT_MS: '150000'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/cross-wan-node.mjs
+
+  peer-b:
+    name: 'Peer B'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install cloudflared
+        run: |
+          curl -fsSL --retry 3 -o /tmp/cloudflared \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          chmod +x /tmp/cloudflared
+          sudo mv /tmp/cloudflared /usr/local/bin/cloudflared
+          cloudflared --version
+      - name: Join the mesh
+        env:
+          CROSS_WAN_ROLE: peer-b
+          CROSS_WAN_CHANNEL: ci
+          CROSS_WAN_RENDEZVOUS_ISSUE: '17'
+          CROSS_WAN_TIMEOUT_MS: '300000'
+          CROSS_WAN_EXPECTED_PEERS: '2'
+          CROSS_WAN_ROUND_TRIP_TIMEOUT_MS: '150000'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/cross-wan-node.mjs
+
+  peer-c:
+    name: 'Peer C'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install cloudflared
+        run: |
+          curl -fsSL --retry 3 -o /tmp/cloudflared \
+            https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+          chmod +x /tmp/cloudflared
+          sudo mv /tmp/cloudflared /usr/local/bin/cloudflared
+          cloudflared --version
+      - name: Join the mesh
+        env:
+          CROSS_WAN_ROLE: peer-c
+          CROSS_WAN_CHANNEL: ci
+          CROSS_WAN_RENDEZVOUS_ISSUE: '17'
+          CROSS_WAN_TIMEOUT_MS: '300000'
+          CROSS_WAN_EXPECTED_PEERS: '2'
+          CROSS_WAN_ROUND_TRIP_TIMEOUT_MS: '150000'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/cross-wan-node.mjs
+
+  in-process:
+    name: 'In-process P2P (localhost, real gossipsub)'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: lts/*
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - name: Run libp2p P2P integration tests
         run: |
           pnpm -F @proj-airi/stage-tamagotchi exec vitest run \
             src/main/services/airi/libp2p/pairing-trust-flow.test.ts \
             src/main/services/airi/libp2p/transports.test.ts
-
-  egress-resilience:
-    name: Egress-resilience smoke (dialing side behind runner firewall)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v6
-        with:
-          node-version: lts/*
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile --ignore-scripts
-      # WebRTC transport needs the @ipshipyard/node-datachannel native addon.
-      - name: Build node-datachannel native addon
-        run: |
-          cd node_modules/.pnpm/@ipshipyard+node-datachannel@*/node_modules/@ipshipyard/node-datachannel
-          npx prebuild-install -r napi || npm run _prebuild
-      # The pairing-trust-flow suite already runs real nodes that dial each other
-      # over 127.0.0.1; re-running it here under the runner's egress firewall
-      # confirms the dialing path survives that environment. No inbound ports are
-      # opened, so this is a single-sided (dialing) check only.
-      - name: Run pairing trust flow under egress firewall
-        run: |
-          pnpm -F @proj-airi/stage-tamagotchi exec vitest run \
-            src/main/services/airi/libp2p/pairing-trust-flow.test.ts
