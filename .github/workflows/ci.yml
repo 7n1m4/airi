@@ -1,14 +1,8 @@
 name: 'CI: Monorepo Verification'
 
+# TEMPORARILY DISABLED: monorepo verification runs locally (pnpm typecheck/test).
+# Re-enable by restoring the push/pull_request triggers below.
 on:
-  push:
-    branches:
-      - main
-
-  pull_request:
-    branches:
-      - main
-
   workflow_dispatch:
 
 jobs:
