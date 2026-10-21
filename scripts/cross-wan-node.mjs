@@ -22,6 +22,13 @@ import { createLibp2p } from 'libp2p'
 const ROLE = process.env.CROSS_WAN_ROLE || 'listener'
 const GIST_TOKEN = process.env.CROSS_WAN_GIST_TOKEN
 const GIST_ID = process.env.CROSS_WAN_GIST_ID
+
+// Graceful skip when secrets aren't configured (e.g. forks, or before the
+// rendezvous gist is set up). Exit 0 so the CI job stays green.
+if (!GIST_TOKEN || !GIST_ID) {
+  console.log('[cross-wan] CROSS_WAN_GIST_TOKEN or CROSS_WAN_GIST_ID not set — skipping.')
+  process.exit(0)
+}
 const TOPIC = 'airi/cross-wan-test'
 const TIMEOUT_MS = Number.parseInt(process.env.CROSS_WAN_TIMEOUT_MS || '60000', 10)
 const POLL_INTERVAL_MS = 5000

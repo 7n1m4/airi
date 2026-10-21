@@ -30,7 +30,6 @@ jobs:
   listener:
     name: 'Node A (listener)'
     runs-on: ubuntu-latest
-    if: ${{ secrets.CROSS_WAN_GIST_TOKEN != '' && secrets.CROSS_WAN_GIST_ID != '' }}
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
@@ -61,7 +60,6 @@ jobs:
   dialer:
     name: 'Node B (dialer)'
     runs-on: ubuntu-latest
-    if: ${{ secrets.CROSS_WAN_GIST_TOKEN != '' && secrets.CROSS_WAN_GIST_ID != '' }}
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v4
