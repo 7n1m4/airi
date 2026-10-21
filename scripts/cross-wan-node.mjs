@@ -2,16 +2,16 @@
 //
 // Runs in two modes (selected by CROSS_WAN_ROLE env var):
 //   listener — boots a libp2p node with WebRTC + STUN, writes its multiaddr to
-//              a GitHub Gist (rendezvous), and stays alive for CROSS_WAN_TIMEOUT_MS.
-//   dialer   — polls the same Gist for the listener's multiaddr, dials it over
+//              a GitHub issue comment (rendezvous), and stays alive.
+//   dialer   — polls the same issue for the listener's multiaddr, dials it over
 //              WebRTC, and runs a gossipsub round-trip (publish + receive).
 //
-// Requires CROSS_WAN_GIST_TOKEN (PAT with gist scope) and CROSS_WAN_GIST_ID.
-// The rendezvous Gist must already exist (create it once, store its ID as a secret).
+// Uses the default GITHUB_TOKEN (auto-provided by GitHub Actions) and a
+// dedicated rendezvous issue. No extra secrets needed.
 //
 // Honest limitation: GitHub-hosted runners sit behind Azure's symmetric NAT, so
 // WebRTC hole punching may fail. The script reports success/failure via exit
-// code and writes diagnostics to CROSS_WAN_DIAG (default: stdout).
+// code and writes diagnostics to stdout.
 
 import { generateKeyPair } from '@libp2p/crypto/keys'
 import { identify } from '@libp2p/identify'
@@ -20,17 +20,10 @@ import { multiaddr } from '@multiformats/multiaddr'
 import { createLibp2p } from 'libp2p'
 
 const ROLE = process.env.CROSS_WAN_ROLE || 'listener'
-const GIST_TOKEN = process.env.CROSS_WAN_GIST_TOKEN
-const GIST_ID = process.env.CROSS_WAN_GIST_ID
-
-// Graceful skip when secrets aren't configured (e.g. forks, or before the
-// rendezvous gist is set up). Exit 0 so the CI job stays green.
-if (!GIST_TOKEN || !GIST_ID) {
-  console.log('[cross-wan] CROSS_WAN_GIST_TOKEN or CROSS_WAN_GIST_ID not set — skipping.')
-  process.exit(0)
-}
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN
+const RENDEZVOUS_ISSUE = process.env.CROSS_WAN_RENDEZVOUS_ISSUE || '17'
 const TOPIC = 'airi/cross-wan-test'
-const TIMEOUT_MS = Number.parseInt(process.env.CROSS_WAN_TIMEOUT_MS || '60000', 10)
+const TIMEOUT_MS = Number.parseInt(process.env.CROSS_WAN_TIMEOUT_MS || '120000', 10)
 const POLL_INTERVAL_MS = 5000
 
 const STUN_SERVERS = [
@@ -38,44 +31,54 @@ const STUN_SERVERS = [
   { urls: 'stun:stun1.l.google.com:19302' },
 ]
 
-async function gistWrite(content) {
-  const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
-    method: 'PATCH',
+// Graceful skip when GITHUB_TOKEN is not available.
+if (!GITHUB_TOKEN) {
+  console.log('[cross-wan] GITHUB_TOKEN not set — skipping.')
+  process.exit(0)
+}
+
+async function issueWrite(content) {
+  const res = await fetch(`https://api.github.com/repos/anlmalabs/airi/issues/${RENDEZVOUS_ISSUE}/comments`, {
+    method: 'POST',
     headers: {
-      'Authorization': `Bearer ${GIST_TOKEN}`,
+      'Authorization': `Bearer ${GITHUB_TOKEN}`,
       'Accept': 'application/vnd.github+json',
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      files: { 'cross-wan-multiaddr.txt': { content } },
-    }),
+    body: JSON.stringify({ body: `<!-- cross-wan-rendezvous -->\n${content}` }),
   })
   if (!res.ok)
-    throw new Error(`gist write failed: ${res.status} ${await res.text()}`)
+    throw new Error(`issue comment write failed: ${res.status} ${await res.text()}`)
 }
 
-async function gistRead() {
-  const res = await fetch(`https://api.github.com/gists/${GIST_ID}`, {
+async function issueRead() {
+  const res = await fetch(`https://api.github.com/repos/anlmalabs/airi/issues/${RENDEZVOUS_ISSUE}/comments?per_page=100`, {
     headers: {
-      Authorization: `Bearer ${GIST_TOKEN}`,
+      Authorization: `Bearer ${GITHUB_TOKEN}`,
       Accept: 'application/vnd.github+json',
     },
   })
   if (!res.ok)
-    throw new Error(`gist read failed: ${res.status}`)
-  const data = await res.json()
-  return data.files?.['cross-wan-multiaddr.txt']?.content || null
+    throw new Error(`issue comment read failed: ${res.status}`)
+  const comments = await res.json()
+  for (let i = comments.length - 1; i >= 0; i--) {
+    const c = comments[i]
+    if (c.body && c.body.includes('<!-- cross-wan-rendezvous -->')) {
+      return c.body.replace('<!-- cross-wan-rendezvous -->\n', '').trim()
+    }
+  }
+  return null
 }
 
 async function createNode() {
   const keyPair = await generateKeyPair('Ed25519')
   const node = await createLibp2p({
     privateKey: keyPair,
-    addresses: { listen: [] }, // dial-only for WebRTC; no TCP listen
+    addresses: { listen: [] },
     transports: [
       webRTC({ rtcConfiguration: { iceServers: STUN_SERVERS } }),
     ],
-    connectionEncrypters: [], // WebRTC has built-in encryption
+    connectionEncrypters: [],
     streamMuxers: [],
     services: {
       identify: identify(),
@@ -90,26 +93,23 @@ async function runListener() {
   const node = await createNode()
   const mas = node.getMultiaddrs().map(m => m.toString())
   console.log('[listener] multiaddrs:', mas)
-  // WebRTC multiaddrs may not appear until a listener is created;
-  // use the peer id + STUN-reflexive address as the rendezvous value.
   const peerId = node.peerId.toString()
   const rendezvous = JSON.stringify({ peerId, multiaddrs: mas, ts: Date.now() })
-  await gistWrite(rendezvous)
-  console.log('[listener] wrote rendezvous to gist:', rendezvous)
+  await issueWrite(rendezvous)
+  console.log('[listener] wrote rendezvous to issue:', rendezvous)
 
-  // Keep alive for the dialer to connect.
   await new Promise(resolve => setTimeout(resolve, TIMEOUT_MS))
   await node.stop()
   console.log('[listener] done')
 }
 
 async function runDialer() {
-  console.log('[dialer] polling gist for listener multiaddr...')
+  console.log('[dialer] polling issue for listener multiaddr...')
   let rendezvous = null
   const deadline = Date.now() + TIMEOUT_MS
   while (!rendezvous && Date.now() < deadline) {
     try {
-      const content = await gistRead()
+      const content = await issueRead()
       if (content) {
         rendezvous = JSON.parse(content)
         console.log('[dialer] found rendezvous:', rendezvous)
@@ -129,7 +129,6 @@ async function runDialer() {
   console.log('[dialer] starting node...')
   const node = await createNode()
 
-  // Attempt to dial the listener's multiaddrs.
   for (const ma of rendezvous.multiaddrs || []) {
     try {
       console.log('[dialer] dialing', ma)
@@ -144,18 +143,17 @@ async function runDialer() {
     }
   }
 
-  // If direct dial failed, try WebRTC hole punching via the peer id.
   if (rendezvous.peerId) {
     try {
-      console.log('[dialer] attempting hole punch to peer', rendezvous.peerId)
+      console.log('[dialer] attempting dial to peer', rendezvous.peerId)
       await node.dial(multiaddr(`/p2p/${rendezvous.peerId}`))
-      console.log('[dialer] hole punch connected')
+      console.log('[dialer] connected to peer')
       await node.stop()
       console.log('[dialer] SUCCESS')
       process.exit(0)
     }
     catch (e) {
-      console.log('[dialer] hole punch failed:', e.message)
+      console.log('[dialer] peer dial failed:', e.message)
     }
   }
 

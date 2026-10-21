@@ -3,12 +3,9 @@ name: 'CI: Cross-WAN P2P (two runners)'
 # Two GitHub-hosted runners that each boot a libp2p node (WebRTC + STUN) and
 # try to find each other over the public internet.
 #
-# Rendezvous: a GitHub Gist (CROSS_WAN_GIST_ID secret) polled by the dialer.
-# The listener writes its multiaddr to the gist; the dialer reads it and dials.
-#
-# Requires repository secrets:
-#   CROSS_WAN_GIST_TOKEN  — PAT with `gist` scope
-#   CROSS_WAN_GIST_ID     — ID of a pre-created (empty) gist used as rendezvous
+# Rendezvous: a dedicated GitHub issue (#17) polled by the dialer. The listener
+# writes its multiaddr as an issue comment; the dialer reads it and dials.
+# Uses the default GITHUB_TOKEN (auto-provided) — no extra secrets needed.
 #
 # Honest limitation: GitHub-hosted runners sit behind Azure's symmetric NAT.
 # WebRTC hole punching may fail even with STUN. The workflow reports success/
@@ -45,9 +42,9 @@ jobs:
       - name: Boot listener and publish multiaddr
         env:
           CROSS_WAN_ROLE: listener
-          CROSS_WAN_GIST_TOKEN: ${{ secrets.CROSS_WAN_GIST_TOKEN }}
-          CROSS_WAN_GIST_ID: ${{ secrets.CROSS_WAN_GIST_ID }}
+          CROSS_WAN_RENDEZVOUS_ISSUE: '17'
           CROSS_WAN_TIMEOUT_MS: '120000'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/cross-wan-node.mjs
       - name: Upload diagnostics
         if: always()
@@ -75,9 +72,9 @@ jobs:
       - name: Dial listener and run gossipsub round-trip
         env:
           CROSS_WAN_ROLE: dialer
-          CROSS_WAN_GIST_TOKEN: ${{ secrets.CROSS_WAN_GIST_TOKEN }}
-          CROSS_WAN_GIST_ID: ${{ secrets.CROSS_WAN_GIST_ID }}
+          CROSS_WAN_RENDEZVOUS_ISSUE: '17'
           CROSS_WAN_TIMEOUT_MS: '120000'
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/cross-wan-node.mjs
       - name: Upload diagnostics
         if: always()
@@ -87,7 +84,6 @@ jobs:
           path: /tmp/cross-wan-diag.txt
           if-no-files-found: ignore
 
-  # Fallback: in-process suite (always runs, no secrets needed)
   in-process:
     name: 'In-process P2P (localhost, real gossipsub)'
     runs-on: ubuntu-latest
