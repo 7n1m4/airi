@@ -1,8 +1,10 @@
 name: 'CI: Monorepo Verification'
 
-# TEMPORARILY DISABLED: monorepo verification runs locally (pnpm typecheck/test).
-# Re-enable by restoring the push/pull_request triggers below.
+# Monorepo verification is heavy, so it runs on a daily schedule instead of on
+# every commit or pull request. It can still be triggered manually.
 on:
+  schedule:
+    - cron: '0 3 * * *'
   workflow_dispatch:
 
 jobs:

@@ -25,6 +25,12 @@
   Built for AI companions, virtual characters, and anyone who wants more than a chatbot wearing an avatar.
 </p>
 
+<p align="center">
+  <a href="https://github.com/anlmalabs/airi/actions/workflows/ci.yml">
+    <img src="https://github.com/anlmalabs/airi/actions/workflows/ci.yml/badge.svg" alt="Monorepo CI" />
+  </a>
+</p>
+
 ---
 
 ## A character, not a collection of features
