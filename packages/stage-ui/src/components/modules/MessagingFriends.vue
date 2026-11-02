@@ -989,9 +989,11 @@ function onCompanionSelectChange(event: Event) {
 const conversationTurns = computed(() => latestEpisode.value?.turns ?? EMPTY_TURNS)
 
 function handleViewHistory() {
-  const recap = napChatStore.formatWelcomeBackRecap()
-  if (recap !== 'NO_REPLY') {
-    toast.info(recap, { duration: 5000 })
+  // NOTICE: upstream-aligned recap now lives in the journal/pendingRecap slot.
+  // Surface the pending recap if any; otherwise fall back to the journal view.
+  const pending = napChatStore.pendingRecap
+  if (pending?.recapText) {
+    toast.info(pending.recapText, { duration: 5000 })
   }
   else {
     toast.info('Viewing full historical dream turn logs.')
