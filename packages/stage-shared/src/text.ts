@@ -133,6 +133,32 @@ export function healMozibake(text: string): string {
 }
 
 /**
+ * Truncates text safely to a maximum number of Unicode code points without splitting
+ * UTF-16 surrogate pairs (astral-plane characters like emoji 🎭, kaomoji, or extended CJK).
+ *
+ * Operates on Unicode code points via `Array.from()` to guarantee the output string is
+ * always well-formed (`str.isWellFormed() === true`) and safe for `encodeURIComponent()`.
+ *
+ * @param text The input string to truncate.
+ * @param maxChars The maximum number of Unicode code points to preserve.
+ * @param ellipsis Optional suffix string (e.g. '...' or '…') appended if truncation occurs.
+ *
+ * @example
+ * safeTruncate('Hello world', 5, '...') // => 'Hello...'
+ * safeTruncate('a'.repeat(30) + '😀 more', 31, '...') // => 'a'.repeat(30) + '😀...'
+ */
+export function safeTruncate(text: string, maxChars: number, ellipsis: string = ''): string {
+  if (!text || maxChars <= 0)
+    return ''
+
+  const chars = Array.from(text)
+  if (chars.length <= maxChars)
+    return text
+
+  return `${chars.slice(0, maxChars).join('').trimEnd()}${ellipsis}`
+}
+
+/**
  * Normalizes text for resilient search comparisons:
  * 1. NFKC normalization (converts full-width Latin/numbers, half-width katakana, ligatures)
  * 2. Lowercase

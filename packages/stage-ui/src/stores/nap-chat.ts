@@ -531,24 +531,6 @@ export const useNapChatStore = defineStore('nap-chat', () => {
     firedForIdleSession.value = false
   }
 
-  function shouldDeliverRecap(): boolean {
-    if (!welcomeBackRecapEnabled.value || firedForIdleSession.value)
-      return false
-    firedForIdleSession.value = true
-    return true
-  }
-
-  function recordEpisode(episode: NapEpisode) {
-    latestEpisode.value = episode
-  }
-
-  function formatWelcomeBackRecap(episode?: NapEpisode | null): string {
-    const ep = episode !== undefined ? episode : latestEpisode.value
-    if (!ep || !ep.with?.characterName)
-      return 'NO_REPLY'
-    return `While you were away, I had a brief chat with ${ep.with.characterName} about our project notes!`
-  }
-
   if (isNapChatWatchSurface()) {
     watchPresenceEdge()
   }
@@ -572,9 +554,6 @@ export const useNapChatStore = defineStore('nap-chat', () => {
     latestEpisode,
     selectCandidates,
     markIdleSessionStarted,
-    shouldDeliverRecap,
-    recordEpisode,
-    formatWelcomeBackRecap,
   }
 })
 

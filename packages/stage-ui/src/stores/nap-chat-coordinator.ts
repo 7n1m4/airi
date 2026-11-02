@@ -101,7 +101,7 @@ export const useNapChatCoordinatorStore = defineStore('nap-chat-coordinator', ()
       journalEntryId: '',
       turns: [...turns.value],
     }
-    napChat.recordEpisode(episode)
+    napChat.latestEpisode = episode
     status.value = 'done'
     return episode
   }

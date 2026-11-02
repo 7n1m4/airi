@@ -42,6 +42,7 @@ export class DSLVirtualMachine {
   private readonly clock?: IClockLike
   private language?: string
   private readonly motionGroupEnabled = new Map<string, boolean>()
+  private readonly hitAreaEnabled = new Map<string, boolean>()
   private pendingChoices: { text?: string, textDuration?: number, choices: ResolvedChoice[], rawEntry: DslEntry } | null = null
 
   constructor(options: VMOptions = {}) {
@@ -87,6 +88,11 @@ export class DSLVirtualMachine {
   /** Whether a named motion pool is enabled (motions enable/disable). */
   isMotionGroupEnabled(name: string): boolean {
     return this.motionGroupEnabled.get(name) ?? true
+  }
+
+  /** Whether a named hit area is enabled (hit_areas enable/disable). */
+  isHitAreaEnabled(name: string): boolean {
+    return this.hitAreaEnabled.get(name) ?? true
   }
 
   /** Whether a Choices menu is awaiting a selection. */
@@ -293,6 +299,10 @@ export class DSLVirtualMachine {
           break
         case 'replace_tex':
           this.host.texture?.replaceTexture(cmd.textureIndex, cmd.file)
+          break
+        case 'hit_areas':
+          for (const t of cmd.targets)
+            this.hitAreaEnabled.set(t, cmd.enabled)
           break
         case 'noop':
           break

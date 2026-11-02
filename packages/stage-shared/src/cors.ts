@@ -4,6 +4,8 @@
 
 export const DEFAULT_CORS_BYPASS_URLS: string[] = [
   'https://api.typesafe.ai/*',
+  'https://api.cloudflare.com/*',
+  'https://dash.cloudflare.com/*',
   'https://api.deepgram.com/*',
   'https://opencode.ai/*',
   'https://pioneer.ai/*',
@@ -11,7 +13,7 @@ export const DEFAULT_CORS_BYPASS_URLS: string[] = [
   'https://text.pollinations.ai/*',
   'https://image.pollinations.ai/*',
   'https://gen.pollinations.ai/*',
-  'https://api.xiaomimimo.com/*',
+  'https://api.kilo.ai/*',
   'https://archive.org/*',
   'https://*.archive.org/*',
   'http://archive.org/*',
@@ -28,6 +30,8 @@ export const DEFAULT_CORS_BYPASS_URLS: string[] = [
 
 export const DEFAULT_SKIP_CORS_HOSTS: string[] = [
   'api.typesafe.ai',
+  'api.cloudflare.com',
+  'dash.cloudflare.com',
   'api.deepgram.com',
   'opencode.ai',
   'pioneer.ai',
@@ -35,7 +39,7 @@ export const DEFAULT_SKIP_CORS_HOSTS: string[] = [
   'text.pollinations.ai',
   'image.pollinations.ai',
   'gen.pollinations.ai',
-  'api.xiaomimimo.com',
+  'api.kilo.ai',
   'archive.org',
   'localhost:11434',
   '127.0.0.1:11434',
@@ -94,6 +98,18 @@ export function isCorsBypassTarget(url: string, customPatterns?: string[]): bool
  */
 export function formatCorsProxyUrl(targetUrl: string, customProxyBase?: string): string {
   let proxyBase = customProxyBase
+
+  if (!proxyBase && typeof window !== 'undefined') {
+    // Try to get configured subdomain from localStorage
+    const savedSubdomain = (window.localStorage.getItem('settings/cloudflare/cfSubdomain')
+      || window.localStorage.getItem('settings/cloudflare/subdomain'))
+      ?.replace(/^["']|["']$/g, '')
+      ?.trim()
+
+    if (savedSubdomain) {
+      proxyBase = `https://airi-cors-proxy.${savedSubdomain}.workers.dev`
+    }
+  }
 
   if (!proxyBase) {
     proxyBase = 'https://airi-cors-proxy.r1ch4rd.workers.dev'
