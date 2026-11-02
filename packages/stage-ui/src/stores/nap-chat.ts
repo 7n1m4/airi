@@ -50,6 +50,8 @@ export interface NapChatSessionRecord {
    * pass, so the journal text and the surfaced text cannot drift apart.
    */
   recap: string
+  /** Optional turn transcript for UI projections. */
+  turns?: NapTurn[]
 }
 
 /** What the write-back persists, per session. Key order is the §6 list. */
@@ -354,6 +356,20 @@ export const useNapChatStore = defineStore('nap-chat', () => {
       endedAt: record.endedAt,
     }
     writeSlot(PENDING_RECAP_KEY, pendingRecap.value)
+
+    // Single source of truth: also update latestEpisode projection for UI.
+    try {
+      latestEpisode.value = {
+        sessionId: record.sessionId,
+        with: { characterName: record.peerCardName, alias: record.peerCardName },
+        turnCount: record.turnCount,
+        summary: record.recap,
+        timestamp: record.endedAt,
+        journalEntryId,
+        turns: record.turns ?? [],
+      }
+    }
+    catch {}
   }
 
   /** Speak the recap through the ordinary single-pipeline chat turn. */
