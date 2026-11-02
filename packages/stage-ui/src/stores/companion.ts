@@ -1292,7 +1292,7 @@ export const useCompanionStore = defineStore('companion', () => {
    * A malformed payload is dropped here rather than forwarded, because a bad
    * shape must never reach main's record.
    */
-  async function handleMeshMessage(message: { topic: string, data: string }): Promise<void> {
+  async function handleMeshMessage(message: { topic: string, data: string, timestamp?: number }): Promise<void> {
     // The topic is checked before the decode. `libp2pMessageReceived` pushes
     // every subscribed topic to this renderer, so `airi/presence`,
     // `airi/memory` and `airi/vault` all land here; decoding them first would

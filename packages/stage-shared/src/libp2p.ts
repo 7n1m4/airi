@@ -122,6 +122,8 @@ export interface Libp2pMessage {
   topic: string
   /** PeerId of the sender. */
   from: string
+  /** Epoch ms when the message was received locally. */
+  timestamp: number
   /** Base64-encoded message body (binary-safe across IPC). */
   data: string
 }

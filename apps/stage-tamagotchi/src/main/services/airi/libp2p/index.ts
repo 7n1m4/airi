@@ -614,6 +614,7 @@ async function createLibp2pNode(config: Libp2pServiceConfig, privateKey: Uint8Ar
     emitToAllWindows(libp2pMessageReceived, {
       topic: msg.topic,
       from,
+      timestamp: Date.now(),
       data: Buffer.from(msg.data).toString('base64'),
     })
 
