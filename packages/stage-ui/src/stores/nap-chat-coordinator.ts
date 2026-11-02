@@ -1,13 +1,15 @@
 import type { Peer } from '@proj-airi/stage-shared'
 
 import type { ChatHistoryItem } from '../types/chat'
-import type { NapEpisode, NapTurn } from './nap-chat'
+import type { NapChatSessionRecord, NapEpisode, NapTurn } from './nap-chat'
 
 import { nanoid } from 'nanoid'
-import { defineStore } from 'pinia'
+import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 
 import { useChatSessionStore } from './chat/session-store'
+import { useCompanionStore } from './companion'
+import { useAiriCardStore } from './modules/airi-card'
 import { NAPCHAT_UNIVERSE_ID, resolveNapIdleSec, useNapChatStore } from './nap-chat'
 import { isUserAway } from './proactivity-telemetry'
 
@@ -29,16 +31,9 @@ function stampNow(): string {
   }
 }
 
-/**
- * Autonomous nap-chat session coordinator (plumbing side).
- *
- * Owns trigger evaluation + the turn-taking state machine. Dialogue
- * generation (LLM) and journal write-back (text_journal tool) are injected
- * by the caller at a later step — this store never speaks or writes.
- * UI reads `latestEpisode` from useNapChatStore; this store is the engine.
- */
 export const useNapChatCoordinatorStore = defineStore('nap-chat-coordinator', () => {
   const napChat = useNapChatStore()
+  const airiCardStore = useAiriCardStore()
 
   const status = ref<NapSessionStatus>('idle')
   const activePeerId = ref<string | null>(null)
@@ -46,6 +41,27 @@ export const useNapChatCoordinatorStore = defineStore('nap-chat-coordinator', ()
   const sessionTopic = ref<string | null>(null)
   const turns = ref<NapTurn[]>([])
   const startedAt = ref<number | null>(null)
+
+  function napChatStoreActiveCardName(): string {
+    try {
+      const { activeCard } = storeToRefs(airiCardStore)
+      return activeCard.value?.name || 'AIRI'
+    }
+    catch {
+      return 'AIRI'
+    }
+  }
+
+  function localPeerIdSafe(): string {
+    try {
+      const companion = useCompanionStore()
+      const id = companion.localPeerId?.()
+      return typeof id === 'string' ? id : 'local'
+    }
+    catch {
+      return 'local'
+    }
+  }
 
   const isActive = computed(() => status.value === 'active')
   const turnCount = computed(() => turns.value.length)
@@ -55,8 +71,6 @@ export const useNapChatCoordinatorStore = defineStore('nap-chat-coordinator', ()
       return { fire: false, reason: 'disabled' }
     const candidates = napChat.selectCandidates(roster, companionId, currentIdleSec)
     if (candidates.length === 0) {
-      // The same resolver the candidate filter uses, so the two can never
-      // disagree about whether the user is away.
       const away = isUserAway(resolveNapIdleSec(currentIdleSec), napChat.afkThresholdMinutes)
       return { fire: false, reason: away ? 'no-candidates' : 'user-present' }
     }
@@ -87,59 +101,64 @@ export const useNapChatCoordinatorStore = defineStore('nap-chat-coordinator', ()
     return true
   }
 
-  function finishSession(summary: string): NapEpisode | null {
+  async function finishSession(summary: string): Promise<NapEpisode | null> {
     if (status.value !== 'active')
       return null
     status.value = 'consolidating'
     const peerId = activePeerId.value ?? 'unknown-peer'
-    const episode: NapEpisode = {
-      sessionId: `nap-${startedAt.value ?? Date.now()}`,
-      with: { characterName: peerId, alias: peerId },
+    const now = Date.now()
+    const started = startedAt.value ?? now
+    const record: NapChatSessionRecord = {
+      sessionId: `nap-${started}`,
+      localPeerId: localPeerIdSafe(),
+      peerPeerId: peerId,
+      localCardName: napChatStoreActiveCardName(),
+      peerCardName: peerId,
       turnCount: turns.value.length,
-      summary,
-      timestamp: Date.now(),
-      journalEntryId: '',
+      startedAt: started,
+      endedAt: now,
+      closeReason: 'completed',
+      recap: summary,
       turns: [...turns.value],
     }
-    napChat.latestEpisode = episode
+    try {
+      await napChat.recordNapChatCompletion(record)
+    }
+    catch {}
     status.value = 'done'
-    return episode
+    return napChat.latestEpisode.value ?? {
+      sessionId: record.sessionId,
+      with: { characterName: record.peerCardName, alias: record.peerCardName },
+      turnCount: record.turnCount,
+      summary: record.recap,
+      timestamp: record.endedAt,
+      journalEntryId: '',
+      turns: record.turns ?? [],
+    }
   }
 
-  /**
-   * Per-pair dialog session in the `napchat` universe (one session per
-   * companion↔peer pair; group chat can later key `napPeerId` by group id).
-   * Created with `setActive: false` so nap traffic never hijacks the user's
-   * active chat; universe scoping keeps it out of `global` memory grounding
-   * until the user explicitly moves it. Best-effort: returns null when the
-   * session layer is unavailable so previews keep working session-less.
-   */
   async function ensureDialogSessionId(characterId: string, peerId: string, peerName: string): Promise<string | null> {
     try {
       const sessionStore = useChatSessionStore()
       const characterIndex = sessionStore.getCharacterIndex(characterId)
       const existing = characterIndex
-        ? Object.values(characterIndex.sessions).find(s => s.universeId === NAPCHAT_UNIVERSE_ID && (s as { napPeerId?: string }).napPeerId === peerId)
+        ? Object.values(characterIndex.sessions).find((s: any) => s.universeId === NAPCHAT_UNIVERSE_ID && (s as any).napPeerId === peerId)
         : undefined
       if (existing)
-        return existing.sessionId
+        return (existing as any).sessionId
       return await sessionStore.createSession(characterId, {
         setActive: false,
         universeId: NAPCHAT_UNIVERSE_ID,
         napPeerId: peerId,
         title: `Nap-chat with ${peerName}`,
         messages: [{ role: 'system', content: `Nap-chat dialog with ${peerName}. Turns are inscribed automatically; only user/assistant turns count as dialog history.` }],
-      })
+      } as any)
     }
     catch {
       return null
     }
   }
 
-  /**
-   * Last `limit` dialog turns (user/assistant with text content only —
-   * system notes, errors, and director messages are excluded).
-   */
   function getDialogTurns(sessionId: string | null, limit: number): Array<{ role: 'user' | 'assistant', content: string }> {
     if (!sessionId)
       return []
@@ -147,9 +166,9 @@ export const useNapChatCoordinatorStore = defineStore('nap-chat-coordinator', ()
       const sessionStore = useChatSessionStore()
       const messages = sessionStore.getSessionMessages(sessionId) as Array<{ role?: string, content?: unknown }>
       return messages
-        .filter(m => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim().length > 0)
+        .filter((m: any) => (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string' && m.content.trim().length > 0)
         .slice(-Math.max(1, limit))
-        .map(m => ({ role: m.role as 'user' | 'assistant', content: (m.content as string).slice(0, 500) }))
+        .map((m: any) => ({ role: m.role as 'user' | 'assistant', content: (m.content as string).slice(0, 500) }))
     }
     catch {
       return []
@@ -170,14 +189,14 @@ export const useNapChatCoordinatorStore = defineStore('nap-chat-coordinator', ()
             slices: [],
             tool_results: [],
             metadata: { source: 'napchat', peerId },
-          }
+          } as any
         : {
             id: nanoid(),
             role: 'user',
             content: text.slice(0, 2000),
             createdAt: Date.now(),
             metadata: { source: 'napchat', peerId },
-          }
+          } as any
       sessionStore.inscribeTurn(message, sessionId)
     }
     catch {}
