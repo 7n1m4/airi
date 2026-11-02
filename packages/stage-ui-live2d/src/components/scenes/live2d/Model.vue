@@ -1390,7 +1390,14 @@ async function loadModel() {
       live2dStore.dslVM = dslVM
       // Bridge resolution: when the dating-sim overlay replies with a chosen option,
       // resume the VM. Registered here so the adapter never needs a VM reference.
-      dslAdapter.setSelectChoiceHandler(idx => dslVM?.selectChoice(idx))
+      dslAdapter.setDslDispatchHandler((target) => {
+        try { dslVM?.dispatch(target) }
+        catch (e) { console.warn('[Live2D DSL] dispatch failed (non-fatal):', e) }
+      })
+      dslAdapter.setDslCommandHandler((chain) => {
+        try { dslVM?.dispatch(chain) }
+        catch (e) { console.warn('[Live2D DSL] command failed (non-fatal):', e) }
+      })
       // When a DSL `motions disable <group>` fires, ensure a currently-looping motion in
       // that group stops even if the pool was mid-idle. The adapter already stops the exact
       // active group; this guard clears a lingering currentMotion so the restart path below

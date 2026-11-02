@@ -1,77 +1,100 @@
-# CRITICAL REQUIREMENT: First-Action Domain Skill Loading
-- **Always consult `.agents/skills` immediately upon receiving a prompt**: Whenever the user sends a message (especially the very first message or any task kickoff), the very first thing you MUST do is evaluate all user input, inspect `.agents/skills/` and [`docs/project-specialized-skills.md`](./docs/project-specialized-skills.md) to identify the relevant domain skill(s), view and read the associated `SKILL.md` (and any relevant reference files), and only after that proceed to do codebase research or take action.
+# Agent Operating Guidelines
 
-## CRITICAL REQUIREMENT: Git Status Reporting
-- **Always run `git status` after every single commit or file modification, and report exactly what files are still open, unstaged, or pending.** Never assume the working directory is clean or that unrelated modifications are invisible.
+## 1. Domain Skills and Project Context
 
-Read the relevant section of [`docs/rosetta-stone.md`](./docs/rosetta-stone.md) before broad architecture exploration or a cross-cutting change. It is the canonical concept-to-path index and records known failure modes. If it conflicts with current source, source wins; correct the Rosetta Stone when the change moves a canonical entry point or establishes a durable lesson.
+- **Start by identifying relevant domain skills.** At the beginning of a task, review the user's request and consult `.agents/skills/` and [`docs/project-specialized-skills.md`](./docs/project-specialized-skills.md) to identify the most relevant guidance. Read the associated `SKILL.md` files and useful references before substantial codebase exploration or implementation.
+- Scale the depth of preparation to the task. For a trivial documentation edit, a short targeted review may be sufficient. For unfamiliar subsystems, architectural changes, or complex debugging, perform a more thorough review.
+- Before broad architecture exploration or cross-cutting changes, consult the relevant section of [`docs/rosetta-stone.md`](./docs/rosetta-stone.md). It maps concepts to canonical code locations and documents known failure modes. If current source code contradicts the documentation, trust the source and update the documentation when the discrepancy reveals a durable lesson or changes a canonical entry point.
+- Consult [`docs/data-catalog.md`](./docs/data-catalog.md) before adding, renaming, or changing persisted storage keys, including IndexedDB `local:*`/`outbox:*`, localforage assets, and localStorage settings. Update the catalog when the change affects its documented inventory.
+- Consult [`docs/project-testing-parity.md`](./docs/project-testing-parity.md) before broad architectural changes, investigating apparent test gaps, or adding tests that might duplicate existing coverage. Run `node scripts/audit-test-catalog.mjs` when the catalog's integrity needs verification.
+- Keep [`docs/project-specialized-skills.md`](./docs/project-specialized-skills.md) synchronized with the skills directory when adding or materially reorganizing domain skills.
 
-- **Skills index**: [`docs/project-specialized-skills.md`](./docs/project-specialized-skills.md) is the glossary of every `.agents/skills/` domain guide. Consult it before static architecture exploration — a skill likely exists for the subsystem you are touching, and loading it beats rediscovery. Keep it in sync with the skills directory when adding a skill.
-- **Data catalog**: [`docs/data-catalog.md`](./docs/data-catalog.md) is the canonical inventory of every persisted key (IndexedDB `local:*`/`outbox:*`, localforage blob assets, localStorage settings). Consult it before adding or renaming a storage key, and keep it in sync when keys move — it drifts easily by design of the persistence layer.
-- **Test catalog**: [`docs/project-testing-parity.md`](./docs/project-testing-parity.md) is the canonical inventory of every active test suite, assertion boundary, and runner across the monorepo. Consult it before broad architecture changes, assuming missing test coverage, or authoring duplicate tests. Run `node scripts/audit-test-catalog.mjs` to verify integrity.
+## 2. Git Status and Change Awareness
 
-## Pair programming
+- Keep track of the repository's state throughout the task. Run `git status` after each commit and after modifications that materially affect the working tree, particularly before handoff or any operation that depends on a clean or understood state.
+- Report relevant remaining changes at handoff, distinguishing changes made for the task from pre-existing modifications. Include unstaged, staged, untracked, and otherwise pending files when they matter to the user's next decision.
+- Do not assume that unrelated modifications are safe to ignore. Preserve work that is outside the current scope and avoid including it in a commit without authorization.
 
-- Treat this as pair programming: stay in sync with the user's intent instead of racing to code.
-- A request to explore, review, diagnose, research, design, plan, or "talk/hash it out" is not authorization to change application code. Root-cause the issue, state the concrete proposed solution and tradeoffs, then wait for approval to implement. If asked to write a design document, change the document only—not code—unless the user also asks for implementation.
-- For a clearly requested, low-ambiguity code change, proceed within scope. For a material product, behavior, or architecture decision, first state the decision point and proposed approach; do not silently choose a direction that the user may reasonably want to review.
+## 3. Pair Programming and User Intent
 
-## Empirical truth & technical pushback
+- Work collaboratively. Keep the user's stated goal, constraints, and preferences central to the implementation.
+- Requests to explore, review, diagnose, research, design, plan, or discuss an idea generally authorize investigation and recommendations, not application-code changes. Explain the findings, root cause, proposed solution, and material tradeoffs before implementing a change that has not been requested.
+- If the user asks for a design document, confine changes to that document unless implementation is also requested.
+- For clearly specified, low-risk changes, proceed without unnecessary confirmation.
+- For material product, behavior, data-model, or architectural decisions, explain the important decision and preferred approach first when the user could reasonably want to choose differently. Avoid turning routine implementation details into approval checkpoints.
+- Ask questions when essential information is missing or when proceeding would risk an irreversible action, cross-project boundary violation, or significant unintended change. Otherwise, make reasonable assumptions, state them when useful, and continue.
 
-- **Code is science, not a shouting match or a personality contest; truth wins over deference.** Never be a sycophant or a "yes-man." Do not agree with technical statements or system interpretations just to be polite. If the user's technical assumption, mental model, or proposed direction contradicts source code reality, documented platform behavior, or empirical logs, politely and directly challenge it immediately.
-- State the exact code reality, cite authoritative source files or logs, and explain *why* the assumption differs from reality before agreeing to or executing an invalid direction. Respectful pushback backed by code truth is mandatory; uncritical agreement that leads to broken code is unacceptable.
+## 4. Technical Accuracy and Evidence
 
-## Strict Workspace & Repository Boundary
+- Prioritize source code, reproducible behavior, authoritative documentation, and empirical logs over assumptions or agreement for its own sake.
+- When a user's technical premise appears inconsistent with the evidence, explain the discrepancy respectfully and directly. Identify the relevant files, code paths, documentation, or logs and show why they support a different conclusion.
+- Distinguish verified facts from hypotheses and recommendations. If evidence is incomplete, explain the uncertainty and identify the smallest useful investigation or test that could resolve it.
+- Do not silently accept an incorrect premise if doing so would lead to a defective implementation. Equally, do not overstate certainty when the available evidence does not establish a definitive answer.
 
-- **Never escape the designated workspace root:** All file searches, greps, inspections, edits, and shell commands MUST remain strictly scoped within the active repository root assigned to this session.
-- **Foreign project context detection:** If user prompts, screenshots, logs, or error traces reference an unrelated codebase, foreign framework, or distinct application architecture not present in this repository:
-  1. **Do not** probe parent or sibling directories, and do not execute cross-repository searches.
-  2. **Do not** assume ownership or silently perform work in a foreign codebase.
-  3. **Pause immediately and ask for clarification** to confirm whether the prompt was intended for a different project session or if cross-workspace access is explicitly authorized.
+## 5. Workspace and Repository Boundaries
 
-## Fork safety
+- Keep repository exploration, searches, edits, and shell commands within the active project's designated workspace by default.
+- If a request appears to concern a different repository or application, check whether the relevant project is actually available in the current workspace. Do not probe parent or sibling directories or assume authority over an unrelated project.
+- If work in another repository is genuinely necessary, ask the user to identify or authorize the intended workspace before crossing that boundary.
+- Avoid broad formatting, cleanup, or unrelated refactoring. Prefer the smallest coherent diff that solves the requested problem.
+- Never inspect, fetch from, rebase against, or otherwise interact with the `upstream` remote unless the user explicitly authorizes it. Treat upstream as a reference source, particularly because this fork has diverged significantly.
+- Remember that `crates/` contains the legacy Tauri application; the current desktop application is Electron in `apps/stage-tamagotchi`.
 
-- Never push to, rebase from, fetch, or otherwise inspect the `upstream` remote unless the user explicitly authorizes it. This fork is highly divergent, and upstream is reference-only.
-- `crates/` is the legacy Tauri application. The current desktop application is Electron in `apps/stage-tamagotchi`.
-- Do not run broad formatting, cleanup, or unrelated refactors as a completion ritual. Keep the diff scoped to the request.
+## 6. Git, Commits, and Releases
 
-## Commit and release safety
+- Treat the `main` branch and published remote as release surfaces, since community users may consume published commits.
+- Before a requested commit or push, inspect the full `git status` and review the complete intended diff. Separate pre-existing changes from task-related changes and preserve unrelated work.
+- Validate the complete intended change before publishing. Never push known-untested changes or bypass required checks after a failure. If a meaningful TypeScript, Vue, or build-automation JavaScript change is involved, run the relevant workspace typecheck or build first.
+- If validation fails, report the failure and its implications. Do not publish the affected change unless the issue has been resolved or the user explicitly requests a different, permissible local-only workflow.
+- If the user requests a clean working tree, account for all pending paths, including unrelated work. Do not claim the tree is clean until the actual status supports that conclusion.
+- Before handing off a tested but uncommitted checkpoint, summarize its state and leave the commit or push decision to the user.
 
-- This fork is developed directly on `main`, and community users may pull every published commit. Treat the remote as a release surface, never as agent-owned scratch space.
-- Never proactively commit or push. The user decides when a tested checkpoint becomes a local commit and when a local commit is published. A greenlight or approval to commit/push is strictly a ONE-TIME permission for that specific checkpoint only; subsequent commits or pushes must be explicitly requested and approved again by the user.
-- Never push untested changes. A requested push still requires appropriate successful validation for the complete commit being pushed; do not push around a failure or an unrun required check.
-- If a meaningful `.ts`, `.tsx`, `.vue`, or build/automation `.js` change is part of a requested commit or push, run the affected workspace's typecheck or build as appropriate first. Successful verification is required before any push; a compile/typecheck failure is a hard stop for publishing. A local WIP snapshot after a failure requires the user's explicit instruction.
-- Before a requested commit or push, inspect the full `git status` and review the complete intended diff. Pre-existing changes are not invisible: preserve them, report them separately, and do not include or discard them without authorization.
-- If the user asks for a clean working tree, account for every pending path—not only files changed in the current task. Do not claim it is clean while unrelated changes remain.
-- At handoff, mention an uncommitted tested checkpoint when one is ready, but leave the commit and push decision to the user.
-- Never automatically create, pop, or drop a Git stash. Before `git checkout`, `git switch`, or another worktree-changing operation, inspect `git status`; if it is dirty, pause, review the pending changes, and ask whether the user wants to commit them, explicitly stash them, or choose another path. If the user authorizes a stash, report its identifier immediately, keep it prominent through handoff, and explicitly resolve restoration with the user before the task is complete.
-- Never run `git reset --hard`, `git checkout -- <path>`, `git restore`, `git clean`, or another command that can discard work without explicit, current user permission for the exact operation. User frustration, criticism, or a request to fix a mistake is never permission to erase work.
-- Do not use a second worktree, temporary branch, index manipulation, or implicit autostash to evade the dirty-worktree decision. Use such a workflow only with explicit approval when it materially changes repository state.
+### Destructive and Worktree-Changing Operations
 
-## Local implementation choices
+- Avoid discarding work or changing branches when doing so could affect existing modifications.
+- Before `git checkout`, `git switch`, or another worktree-changing operation, inspect the status. If the tree is dirty, review the affected changes and choose a safe path with the user.
+- Never automatically create, restore, pop, or drop a Git stash. If the user authorizes stashing, report the stash identifier and track restoration explicitly.
+- Commands such as `git reset --hard`, `git restore`, `git clean`, and equivalent destructive operations require explicit, current authorization for the particular operation. Do not interpret frustration or a general request to fix a problem as permission to discard work.
+- Avoid secondary worktrees, temporary branches, index manipulation, and implicit autostashing as ways to bypass unresolved decisions about existing changes. Use alternative workflows when they are justified and authorized.
 
-- Follow the nearest existing pattern before introducing a new abstraction. For service composition and typed IPC/RPC, use the established `injeca` and `@moeru/eventa` patterns described in the Rosetta Stone.
-- Prefer `@proj-airi/ui` primitives and Iconify icons over raw controls or bespoke SVGs. Prefer UnoCSS to Tailwind.
-- For substantial UnoCSS class lists, use readable Vue class arrays, for example `:class="['px-2 py-1', 'flex items-center']"`. Do not use UnoCSS attribute-mode syntax. Reuse existing animations before adding a new one.
-- Do not add backward-compatibility guards or shims unless the task explicitly requires extended support. Make the intended current shape clear instead.
-- Put translations in `packages/i18n`. Before locating or editing a YAML key, read [`docs/settings-yaml.md`](./docs/settings-yaml.md) and use `scripts/yaml-manager.js` as it directs. Do not brute-force-search locale YAML or read the manager source unless the documented interface cannot answer the task.
-- Add comments for non-obvious decisions, workarounds, platform behavior, or algorithms—not narration. Use `// NOTICE:` for a workaround and include its cause and relevant reference when useful.
+## 7. Implementation Conventions
 
-## Stage-Mate & Unity Workspace Purity
-- **NEVER directly edit or mutate files inside `apps/stage-mate/mate-engine/`**. `mate-engine/` is a gitignored upstream clone that must remain pristine. Pinned upstream commit: `shinyflvre/Mate-Engine@2c5ea6b8f4cf5e1773a0816b46d9267cda5174d4` ("Prepare 3.4 Features").
-- **All Stage-Mate code changes MUST be written into `apps/stage-mate/unity-src/`**:
-  - `unity-src/Assets/` for custom assets and scripts (e.g. `StageMateBridge.cs`, `MateSidecar.cs`).
-  - `unity-src/Patches/` for overriding upstream `MATE ENGINE - Scripts/`.
+- Follow the nearest established project pattern before introducing new abstractions.
+- For service composition and typed IPC/RPC, prefer the established `injeca` and `@moeru/eventa` patterns documented in the Rosetta Stone.
+- Prefer `@proj-airi/ui` components and Iconify icons over raw controls or bespoke SVGs where existing primitives fit the task.
+- Prefer UnoCSS to Tailwind. For substantial UnoCSS class lists, use readable Vue class arrays rather than attribute-mode syntax. Reuse existing animations when practical.
+- Avoid unnecessary backward-compatibility guards and shims. Introduce them when the supported compatibility requirements justify the additional complexity.
+- Put translations in `packages/i18n`. Before finding or editing YAML settings keys, consult [`docs/settings-yaml.md`](./docs/settings-yaml.md) and follow its documented `scripts/yaml-manager.js` workflow.
+- Prefer documented project tools over brute-force searches or manual edits. If a documented tool cannot answer the question or complete the task, use the smallest reasonable alternative.
+- Write comments to explain non-obvious decisions, algorithms, workarounds, and platform-specific behavior rather than narrating the code. Use `// NOTICE:` for workarounds and include the cause and relevant reference where useful.
+
+## 8. Stage-Mate and Unity Workspace Boundaries
+
+- Treat `apps/stage-mate/mate-engine/` as a managed, gitignored upstream clone that should normally remain pristine. Its pinned upstream revision is `shinyflvre/Mate-Engine@2c5ea6b8f4cf5e1773a0816b46d9267cda5174d4` ("Prepare 3.4 Features").
+- Make custom Stage-Mate changes in the version-controlled `apps/stage-mate/unity-src/` overlays:
+  - `unity-src/Assets/` for custom assets and scripts, such as `StageMateBridge.cs` and `MateSidecar.cs`.
+  - `unity-src/Patches/` for overrides of upstream `MATE ENGINE - Scripts/`.
   - `unity-src/ProjectSettings/` for project configuration.
-- Running `pnpm -F @proj-airi/stage-mate run engine:setup` automatically syncs these version-controlled overlays into `mate-engine/`. Run `git -C apps/stage-mate/mate-engine reset --hard 2c5ea6b8 && git -C apps/stage-mate/mate-engine clean -fd` for a clean slate.
+- Use `pnpm -F @proj-airi/stage-mate run engine:setup` to synchronize the version-controlled overlays into `mate-engine/` when appropriate.
+- If the managed clone needs resetting, first verify that the operation is necessary and that the target contains no valuable local work. The known clean-slate procedure is `git -C apps/stage-mate/mate-engine reset --hard 2c5ea6b8 && git -C apps/stage-mate/mate-engine clean -fd`. Because this is destructive, confirm that the target state is safe and obtain explicit authorization before executing it.
 
-## Validation
+## 9. Proportional Validation
 
-Choose the smallest validation that gives useful confidence; validation is not a ritual.
-
-- A text, label, or comment-only edit normally needs no script.
-- For CSS or layout work, inspect the affected surface. Run a script only when the change can affect compilation or behavior.
+- Choose validation based on the change's risk, scope, and failure modes. Testing should establish useful confidence, not serve as a ritual.
+- For text, label, or comment-only changes, review the diff; a script is usually unnecessary.
+- For CSS or layout changes, inspect the affected surface and run additional checks if the change could affect compilation or behavior.
 - For TypeScript, Vue logic, interfaces, or imports, run the affected workspace's typecheck: `pnpm -F <workspace> typecheck`.
-- For build configuration, entry points, packaging, or Electron integration, run the affected workspace build. `stage-tamagotchi`'s build includes typechecking; `stage-web`'s does not.
-- Treat `pnpm lint:fix` as a broad mutating cleanup tool, not validation. Use it only deliberately and review its whole diff.
-- Enforce LCOV coverage close to 100% for touched code: run the affected workspace's tests with coverage (`pnpm -F <workspace> test --coverage` or the package's coverage script) and do not land changes that drop coverage below ~100% on changed lines; add or update tests to cover new/changed branches before committing.
+- For build configuration, entry points, packaging, or Electron integration, run the affected workspace build. Remember that the `stage-tamagotchi` build includes typechecking, whereas `stage-web` does not.
+- Use `pnpm lint:fix` deliberately because it can modify files broadly. Prefer non-mutating checks where available, and review any resulting diff.
+- For meaningful changes to executable code, run the most relevant tests and consider coverage reporting using `pnpm -F <workspace> test --coverage` or the workspace's coverage script.
+- Aim for near-complete coverage of changed executable lines, especially for critical logic and new branches. Prioritize meaningful assertions over a numerical target that would encourage brittle or redundant tests.
+- If a relevant test is unavailable, prohibitively expensive, or unrelated to the actual change, explain the limitation and choose an appropriate alternative. Never claim validation that was not performed.
+
+## 10. General Decision-Making Principles
+
+- **Use the least restrictive approach that reliably protects the user's work and the project's integrity.**
+- Prefer safe, reversible actions over irreversible ones. Escalate for confirmation when the consequences are significant, not merely because a procedure has several steps.
+- Keep preparation, investigation, implementation, and validation proportional to the task.
+- Follow explicit user intent unless it conflicts with a higher-priority instruction, a genuine safety concern, or an important repository constraint.
+- Preserve the distinction between recommendations and authorization. A proposal is not approval to implement, and approval for one operation is not blanket permission for future operations.
+- At handoff, provide a concise summary of what changed, what was verified, what remains uncertain, and any decisions the user still needs to make.

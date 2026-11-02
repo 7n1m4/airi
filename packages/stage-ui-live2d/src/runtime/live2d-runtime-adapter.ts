@@ -45,6 +45,14 @@ type DslBridgeEvent
     choiceIndex: number
   }
   | {
+    type: 'dsl-widget-dispatch'
+    target: string
+  }
+  | {
+    type: 'dsl-widget-command'
+    command: string
+  }
+  | {
     type: 'dsl-intimacy-changed'
     modelId?: string
     /** Raw native score (0..DSL_INTIMACY_MAX). */
@@ -107,6 +115,8 @@ export class Live2DRuntimeAdapter {
 
   /** Set after VM construction so a bridged choice selection can resume the VM. */
   private selectChoiceHandler: ((choiceIndex: number) => void) | null = null
+  private dslDispatchHandler: ((target: string) => void) | null = null
+  private dslCommandHandler: ((command: string) => void) | null = null
   private currentChoiceRequestId: string | null = null
 
   private readonly bridge = useBroadcastChannel<DslBridgeEvent, DslBridgeEvent>({ name: DSL_BRIDGE_CHANNEL })
@@ -131,7 +141,23 @@ export class Live2DRuntimeAdapter {
         this.currentChoiceRequestId = null
         this.selectChoiceHandler?.(event.choiceIndex)
       }
+      else if (event?.type === 'dsl-widget-dispatch') {
+        try { this.dslDispatchHandler?.(event.target) }
+        catch (e) { console.warn('[Live2D DSL] dispatch failed (non-fatal):', e) }
+      }
+      else if (event?.type === 'dsl-widget-command') {
+        try { this.dslCommandHandler?.(event.command) }
+        catch (e) { console.warn('[Live2D DSL] command failed (non-fatal):', e) }
+      }
     })
+  }
+
+  setDslDispatchHandler(handler: (target: string) => void): void {
+    this.dslDispatchHandler = handler
+  }
+
+  setDslCommandHandler(handler: (command: string) => void): void {
+    this.dslCommandHandler = handler
   }
 
   /** Called by Model.vue after constructing the VM so a bridged selection resumes it. */
