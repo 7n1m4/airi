@@ -92,3 +92,75 @@ describe('createTransportRegistry', () => {
     await expect(reg.initialize('nope', false)).rejects.toThrow(/unknown/i)
   })
 })
+
+describe('sovereignty gate (phase5/tdd)', () => {
+  it('rejects initializing an adapter with requiresExternalRelay when sovereign', async () => {
+    const reg = createTransportRegistry()
+    reg.register({
+      id: 'cloud-edge-test',
+      status: 'disconnected',
+      capabilities: {
+        isLocalOnly: false,
+        supportsMultiParty: true,
+        supportsMeshGossip: false,
+        requiresExternalRelay: true,
+      },
+      async initialize() {},
+      async start() {},
+      async stop() {},
+      async sendToPeer() { return false },
+      async broadcast() {},
+      subscribe() { return () => {} },
+    } as any)
+    await expect(reg.initialize('cloud-edge-test', true)).rejects.toThrow()
+  })
+
+  it('allows initializing a local adapter when sovereign', async () => {
+    const reg = createTransportRegistry()
+    reg.register({
+      id: 'local-test',
+      status: 'disconnected',
+      capabilities: {
+        isLocalOnly: true,
+        supportsMultiParty: false,
+        supportsMeshGossip: true,
+        requiresExternalRelay: false,
+      },
+      async initialize() { this.status = 'connected' },
+      async start() {},
+      async stop() {},
+      async sendToPeer() { return true },
+      async broadcast() {},
+      subscribe() { return () => {} },
+    } as any)
+    await expect(reg.initialize('local-test', true)).resolves.toBeUndefined()
+  })
+
+  it('captures requiresExternalRelay at register time for gate decisions', async () => {
+    const reg = createTransportRegistry()
+    const adapter: any = {
+      id: 'mut-test',
+      status: 'disconnected',
+      capabilities: {
+        isLocalOnly: false,
+        supportsMultiParty: true,
+        supportsMeshGossip: false,
+        requiresExternalRelay: true,
+      },
+      async initialize() {},
+      async start() {},
+      async stop() {},
+      async sendToPeer() { return false },
+      async broadcast() {},
+      subscribe() { return () => {} },
+    }
+    reg.register(adapter)
+    adapter.capabilities.requiresExternalRelay = false
+    await expect(reg.initialize('mut-test', true)).rejects.toThrow()
+  })
+
+  it('rejects initializing a missing adapter', async () => {
+    const reg = createTransportRegistry()
+    await expect(reg.initialize('nope', false)).rejects.toThrow()
+  })
+})
