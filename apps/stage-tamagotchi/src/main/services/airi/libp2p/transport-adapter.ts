@@ -18,7 +18,7 @@ export interface Libp2pTransportAdapterDeps {
   initialize: () => Promise<void>
   dispose: () => Promise<void>
   publish: (topic: string, data: Uint8Array) => Promise<void>
-  subscribe: (topic: string, handler: (data: Uint8Array) => void) => () => void
+  subscribe: (topic: string, handler: (data: Uint8Array, meta?: { senderId?: string, timestamp?: number }) => void) => () => void
   /** Optional: resolve a peer's worker URL / direct dial for sendToPeer. */
   sendToPeer?: (peerId: string, topic: string, payload: unknown) => Promise<boolean>
 }
@@ -73,15 +73,22 @@ export function createLibp2pTransportAdapter(
       await publish(topic, data)
     },
     subscribe: async <T>(topic: string, handler: TransportHandler<T>) => {
-      const inner = (data: Uint8Array) => {
+      const inner = (data: Uint8Array, meta?: { senderId?: string, timestamp?: number }) => {
         let parsed: unknown = data
         try { parsed = JSON.parse(new TextDecoder().decode(data)) }
         catch { /* keep raw */ }
-        handler({ topic, payload: parsed as T, senderId: 'mesh', timestamp: Date.now() })
+        handler({
+          topic,
+          payload: parsed as T,
+          senderId: meta?.senderId ?? 'mesh',
+          timestamp: meta?.timestamp ?? Date.now(),
+        })
       }
       // The libp2p subscriber hands raw bytes; wrap so handler gets a TransportMessage.
-      const unsub = subscribe(topic, (raw) => {
-        inner(raw)
+      // NOTICE: meta (senderId/timestamp) preserved when the dep subscriber supplies it,
+      // instead of hardcoding 'mesh'/Date.now() — keeps peer identity stable across hops.
+      const unsub = subscribe(topic, (raw, meta) => {
+        inner(raw, meta as { senderId?: string, timestamp?: number } | undefined)
       })
       return unsub
     },
