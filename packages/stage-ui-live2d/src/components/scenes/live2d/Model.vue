@@ -1395,7 +1395,7 @@ async function loadModel() {
         catch (e) { console.warn('[Live2D DSL] dispatch failed (non-fatal):', e) }
       })
       dslAdapter.setDslCommandHandler((chain) => {
-        try { dslVM?.dispatch(chain) }
+        try { dslVM?.runCommandChain(chain) }
         catch (e) { console.warn('[Live2D DSL] command failed (non-fatal):', e) }
       })
       // When a DSL `motions disable <group>` fires, ensure a currently-looping motion in

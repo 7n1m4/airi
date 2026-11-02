@@ -264,6 +264,11 @@ export class DSLVirtualMachine {
   }
 
   /** Run a parsed command chain through the ports. */
+  /** Execute a raw `;`-delimited command chain (parsed + run). Public entry for host command handlers. */
+  runCommandChain(chain: string): void {
+    this.runCommands(parseCommandChain(chain), 0)
+  }
+
   private runCommands(commands: readonly DslCommand[], hop: number): void {
     for (const cmd of commands) {
       switch (cmd.kind) {
