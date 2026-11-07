@@ -29,8 +29,8 @@ export interface GlobalFacultyDefaultsState {
 
 export const FACTORY_SAFE_DEFAULTS: GlobalFacultyDefaultsState = {
   consciousness: {
-    primaryProvider: 'mimo',
-    primaryModel: 'mimo-auto',
+    primaryProvider: 'kilo', // mimo left the zero-config tier (API sunset 2026-07-26)
+    primaryModel: 'kilo-auto/free',
     fallbackProvider: 'web-llm',
     fallbackModel: '',
     autoFailover: true,

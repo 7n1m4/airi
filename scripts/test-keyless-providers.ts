@@ -1,9 +1,10 @@
 // Smoke test for keyless/optional-key providers.
 // Run: tsx scripts/test-keyless-providers.ts [--dry-run]
 import { writeFileSync } from 'node:fs'
+
 import { listProviders } from '../packages/stage-ui/src/libs/providers/index.ts'
 
-type ProviderDef = {
+interface ProviderDef {
   id: string
   requiresCredentials?: unknown
   business?: (ctx: { t: (k: string) => string }) => { deployment?: string } | undefined
@@ -14,25 +15,29 @@ type ProviderDef = {
 const DRY_RUN = process.argv.includes('--dry-run')
 
 const LOCAL_ENV = {
-  ollama: process.env.OLLAMA_BASE_URL,
+  'ollama': process.env.OLLAMA_BASE_URL,
   'lm-studio': process.env.LM_STUDIO_BASE_URL,
 }
 
 function keylessOrOptionalKey(rc: unknown) {
-  if (rc === false) return true
+  if (rc === false)
+    return true
   return typeof rc === 'object' && rc !== null && 'optional' in rc
 }
 
 function normalizeBase(url: string) {
-  if (!url) return ''
+  if (!url)
+    return ''
   return url.endsWith('/') ? url : `${url}/`
 }
 
 function isLocal(provider: ProviderDef) {
   try {
     const biz = provider.business?.({ t: (k: string) => k })
-    if (biz?.deployment === 'local') return true
-  } catch {}
+    if (biz?.deployment === 'local')
+      return true
+  }
+  catch {}
   return provider.id === 'ollama' || provider.id === 'lm-studio' || provider.id === 'laya-local'
 }
 
@@ -44,11 +49,13 @@ function isNonChatModel(model: { id?: string, description?: string }) {
 async function defaultConfig(provider: ProviderDef): Promise<{ baseUrl?: string, apiKey?: string }> {
   try {
     const create = provider.createProviderConfig
-    if (!create) return {}
+    if (!create)
+      return {}
     const schema = create({ t: (k: string) => k })
     const parsed = schema.parse({})
     return (parsed && typeof parsed === 'object') ? (parsed as { baseUrl?: string, apiKey?: string }) : {}
-  } catch (e) {
+  }
+  catch (e) {
     return {}
   }
 }
@@ -56,27 +63,14 @@ async function defaultConfig(provider: ProviderDef): Promise<{ baseUrl?: string,
 async function fetchModels(baseUrl: string) {
   const url = `${normalizeBase(baseUrl)}models`
   const res = await fetch(url, { signal: AbortSignal.timeout(20000) })
-  if (!res.ok) throw new Error(`models ${res.status}`)
+  if (!res.ok)
+    throw new Error(`models ${res.status}`)
   const data = await res.json()
   const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [])
   return list.map((m: unknown) => {
     const o = m as { id?: string, name?: string, model?: string }
     return { id: o.id || o.name || o.model, name: o.name || o.id }
   })
-}
-
-async function getJwt(baseUrl: string) {
-  const fingerprint = 'c94903eb3d0d05229daaac50d051c65e634462b52034c8b2d79405a51b391f37'
-  const res = await fetch(`${baseUrl}/api/free-ai/bootstrap`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ client: fingerprint }),
-    signal: AbortSignal.timeout(20000),
-  })
-  if (!res.ok) throw new Error(`bootstrap ${res.status}`)
-  const data = await res.json()
-  if (!data?.jwt) throw new Error('no jwt')
-  return data.jwt
 }
 
 async function smokeOne(provider: ProviderDef, model: { id: string, description?: string }, config: { baseUrl?: string, apiKey?: string }) {
@@ -88,28 +82,10 @@ async function smokeOne(provider: ProviderDef, model: { id: string, description?
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   let body: Record<string, unknown>
 
-  if (id === 'mimo') {
-    let jwt
-    try {
-      jwt = await getJwt(baseUrl.replace(/\/$/, ''))
-    } catch (e: unknown) {
-      return { status: 0, result: 'pass', reason: `bootstrap-fail treated transient: ${e instanceof Error ? e.message : String(e)}` }
-    }
-    url = `${baseUrl.replace(/\/$/, '')}/api/free-ai/openai/chat`
-    headers.Authorization = `Bearer ${jwt}`
-    headers['X-Mimo-Source'] = 'mimocode-cli-free'
-    headers['User-Agent'] = 'Mozilla/5.0'
-    const messages = [{ role: 'user', content: 'hi' }]
-    const marker = 'You are MiMoCode, an interactive CLI tool that helps users with software engineering tasks.'
-    if (!messages.some((m: unknown) => (m as { role?: string, content?: string }).role === 'system' && (m as { role?: string, content?: string }).content === marker)) {
-      messages.unshift({ role: 'system', content: marker })
-    }
-    body = { model: 'mimo-auto', messages, max_tokens: 1 }
-  } else {
-    url = `${baseUrl}chat/completions`
-    if (apiKey) headers.Authorization = `Bearer ${apiKey}`
-    body = { model: model.id, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }
-  }
+  url = `${baseUrl}chat/completions`
+  if (apiKey)
+    headers.Authorization = `Bearer ${apiKey}`
+  body = { model: model.id, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }
 
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), 30000)
@@ -126,13 +102,16 @@ async function smokeOne(provider: ProviderDef, model: { id: string, description?
     if (status === 200) {
       try {
         await res.json()
-      } catch {
+      }
+      catch {
         malformed = true
       }
     }
     let result = 'fail'
     let reason = ''
-    if (status === 200 && !malformed) result = 'pass'
+    if (status === 200 && !malformed) {
+      result = 'pass'
+    }
     else if (status === 429) { result = 'pass'; reason = 'rate-limited' }
     else if (status >= 500) { result = 'pass'; reason = `transient ${status}` }
     else if (status === 0) { result = 'pass'; reason = 'network' }
@@ -140,14 +119,15 @@ async function smokeOne(provider: ProviderDef, model: { id: string, description?
     else if (status >= 400) { result = 'fail'; reason = `http ${status}` }
     else { result = 'pass' }
     return { status, result, reason }
-  } catch (e: unknown) {
+  }
+  catch (e: unknown) {
     clearTimeout(timer)
     return { status: 0, result: 'pass', reason: `network/timeout: ${e instanceof Error ? e.message : String(e)}` }
   }
 }
 
 async function main() {
-  const providers = (listProviders() as unknown as ProviderDef[]).filter((p) => keylessOrOptionalKey(p.requiresCredentials))
+  const providers = (listProviders() as unknown as ProviderDef[]).filter(p => keylessOrOptionalKey(p.requiresCredentials))
 
   const rows: unknown[] = []
   const results: unknown[] = []
@@ -168,20 +148,23 @@ async function main() {
     }
 
     const config = await defaultConfig(provider)
-    if (envOverride) config.baseUrl = envOverride
+    if (envOverride)
+      config.baseUrl = envOverride
 
     let models: unknown[] = []
     if (provider.extraMethods?.listModels) {
       try {
         models = await provider.extraMethods.listModels()
-      } catch (e: unknown) {
+      }
+      catch (e: unknown) {
         console.warn(`${provider.id} listModels failed: ${e instanceof Error ? e.message : String(e)}`)
       }
     }
     if (!models || models.length === 0) {
       try {
         models = await fetchModels(config.baseUrl ?? '')
-      } catch (e: unknown) {
+      }
+      catch (e: unknown) {
         console.warn(`${provider.id} models fetch failed: ${e instanceof Error ? e.message : String(e)}`)
       }
     }
@@ -194,7 +177,8 @@ async function main() {
     // filter non-chat models
     const filtered = models.filter((m: unknown) => !isNonChatModel(m as { id?: string, description?: string }))
     const excluded = models.length - filtered.length
-    if (excluded > 0) console.log(`EXCLUDE ${provider.id}: ${excluded} non-chat model(s)`)
+    if (excluded > 0)
+      console.log(`EXCLUDE ${provider.id}: ${excluded} non-chat model(s)`)
     models = filtered
     if (models.length === 0) {
       skipped++
@@ -216,7 +200,8 @@ async function main() {
       const row = { provider: provider.id, model: m.id, status: r.status, result: r.result, reason: r.reason }
       results.push(row)
       rows.push(row)
-      if (r.result === 'fail') failures++
+      if (r.result === 'fail')
+        failures++
       console.log(`${r.result.toUpperCase()} ${provider.id}/${m.id} status=${r.status} ${r.reason}`)
     }
   }
@@ -231,11 +216,13 @@ async function main() {
     }
     console.log(`\nFailures: ${failures}, Skipped: ${skipped}`)
     writeFileSync('keyless-providers-report.json', JSON.stringify(results, null, 2))
-  } else {
+  }
+  else {
     console.log(`\nDry run: ${providers.length} providers, skipped locals without env counted separately`)
   }
 
-  if (failures > 0) process.exit(1)
+  if (failures > 0)
+    process.exit(1)
 }
 
 main().catch((e) => {

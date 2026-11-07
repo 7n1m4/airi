@@ -1066,7 +1066,7 @@ pages:
         settings:
           title: 本機檔案系統 / Samba 設定
       mimo:
-        description: 小米 MiMo Code - 零門檻免費 AI 程式設計助手
+        description: 小米 MiMo 開放平台 - 付費 MiMo V2.6 系列模型
         title: MiMo
       moondream-local:
         description: 透過 WebGPU 在瀏覽器中執行的 1.6B 裝置端視覺語言模型，用於自然圖像理解與視覺問答。

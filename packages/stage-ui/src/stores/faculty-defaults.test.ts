@@ -11,7 +11,7 @@ describe('useFacultyDefaultsStore', () => {
 
   it('initializes from factory defaults when no legacy data', () => {
     const store = useFacultyDefaultsStore()
-    expect(store.consciousness.primaryProvider).toBe('mimo')
+    expect(store.consciousness.primaryProvider).toBe('kilo')
     expect(store.isGlobalCircuitBreakerEnabled).toBe(true)
   })
 
@@ -38,7 +38,7 @@ describe('useFacultyDefaultsStore', () => {
     localStorage.setItem('settings/consciousness/active-provider', '""')
     setActivePinia(createPinia())
     const store = useFacultyDefaultsStore()
-    expect(store.consciousness.primaryProvider).toBe('mimo')
+    expect(store.consciousness.primaryProvider).toBe('kilo')
   })
 
   it('migrates legacy speech keys', () => {
@@ -98,7 +98,7 @@ describe('useFacultyDefaultsStore', () => {
     localStorage.setItem('settings/faculties/defaults', '{bad json')
     setActivePinia(createPinia())
     const store = useFacultyDefaultsStore()
-    expect(store.consciousness.primaryProvider).toBe('mimo')
+    expect(store.consciousness.primaryProvider).toBe('kilo')
     warn.mockRestore()
   })
 
@@ -115,7 +115,7 @@ describe('useFacultyDefaultsStore', () => {
     const store = useFacultyDefaultsStore()
     // @ts-expect-error testing guard
     store.setPrimary('nope', 'p', 'm')
-    expect(store.consciousness.primaryProvider).toBe('mimo')
+    expect(store.consciousness.primaryProvider).toBe('kilo')
   })
 
   it('setFallback updates', () => {
@@ -183,14 +183,14 @@ describe('useFacultyDefaultsStore', () => {
     const store = useFacultyDefaultsStore()
     store.setPrimary('consciousness', 'x', 'y')
     store.resetToFactorySafe()
-    expect(store.consciousness.primaryProvider).toBe('mimo')
+    expect(store.consciousness.primaryProvider).toBe('kilo')
   })
 
   it('resetFaculty', () => {
     const store = useFacultyDefaultsStore()
     store.setPrimary('consciousness', 'x', 'y')
     store.resetFaculty('consciousness')
-    expect(store.consciousness.primaryProvider).toBe('mimo')
+    expect(store.consciousness.primaryProvider).toBe('kilo')
   })
 
   it('resetFaculty ignores unknown', () => {
@@ -209,9 +209,9 @@ describe('useFacultyDefaultsStore', () => {
   it('resolveFaculty inherit/default falls to defaults', () => {
     const store = useFacultyDefaultsStore()
     const r = store.resolveFaculty('consciousness', { provider: 'inherit' })
-    expect(r.provider).toBe('mimo')
+    expect(r.provider).toBe('kilo')
     const r2 = store.resolveFaculty('consciousness', { provider: 'default' })
-    expect(r2.provider).toBe('mimo')
+    expect(r2.provider).toBe('kilo')
   })
 
   it('resolveFaculty trims and empty model', () => {
@@ -224,7 +224,7 @@ describe('useFacultyDefaultsStore', () => {
   it('resolveFaculty with no override', () => {
     const store = useFacultyDefaultsStore()
     const r = store.resolveFaculty('consciousness')
-    expect(r.provider).toBe('mimo')
+    expect(r.provider).toBe('kilo')
     expect(r.voiceId).toBeUndefined()
   })
 
@@ -332,7 +332,7 @@ describe('useFacultyDefaultsStore', () => {
       delete globalThis.window
       setActivePinia(createPinia())
       const store = useFacultyDefaultsStore()
-      expect(store.consciousness.primaryProvider).toBe('mimo')
+      expect(store.consciousness.primaryProvider).toBe('kilo')
     }
     finally {
       globalThis.window = originalWindow

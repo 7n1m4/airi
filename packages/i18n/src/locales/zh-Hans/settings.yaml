@@ -1100,7 +1100,7 @@ pages:
         settings:
           title: 本地文件系统 / Samba 配置
       mimo:
-        description: 小米 MiMo Code - 零门槛免费 AI 编程助手
+        description: 小米 MiMo 开放平台 - 付费 MiMo V2.6 系列模型
         title: MiMo
       moondream-local:
         description: 通过 WebGPU 在浏览器中运行的 1.6B 端侧视觉语言模型，用于自然图像理解和视觉问答。
