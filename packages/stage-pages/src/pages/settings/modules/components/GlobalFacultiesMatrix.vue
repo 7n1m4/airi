@@ -339,7 +339,11 @@ function resolveModelsForFacultyProvider(faculty: FacultyName | null, provider: 
 
   if (faculty === 'consciousness') {
     if (provider === 'mimo') {
-      return [{ id: 'mimo-auto', name: 'mimo-auto (Free Xiaomi Cloud)' }]
+      return [
+        { id: 'mimo-v2.6-flash', name: 'MiMo-V2.6-Flash' },
+        { id: 'mimo-v2.6-pro', name: 'MiMo-V2.6-Pro' },
+        { id: 'mimo-v2.6-pro-ultraspeed', name: 'MiMo-V2.6-Pro-UltraSpeed' },
+      ]
     }
     if (provider === 'web-llm') {
       return [

@@ -85,11 +85,10 @@ settings:
     onboarding:
       chat:
         title: New to Chat?
-        description: For a quick start, try <b>LanLan Free</b> (Zero-setup, no key
-          needed), <b>Kilo</b> (Coding-optimized free gateway), or <b>Google
-          Gemini</b> (Free Cloud) or <b>OpenRouter</b> (Unified Cloud). If you
-          prefer privacy and have a GPU, use <b>Ollama</b> or <b>LM Studio</b>
-          for a local experience.
+        description: For a quick start, try <b>Kilo</b> (Coding-optimized free gateway),
+          or <b>Google Gemini</b> (Free Cloud) or <b>OpenRouter</b> (Unified
+          Cloud). If you prefer privacy and have a GPU, use <b>Ollama</b> or
+          <b>LM Studio</b> for a local experience.
       speech:
         title: Need a Voice?
         description: Try <b>Deepgram</b> or <b>Azure Speech</b> for high-quality cloud
@@ -137,9 +136,6 @@ settings:
       pollinations:
         description: Zero Friction Free - Open-source, no key required chat completions
         title: Pollinations
-      lanlan-free:
-        description: Zero-setup free LLM endpoint sponsored by StepFun
-        title: LanLan Free
       kilo:
         description: Coding-optimized free gateway — auto-routes to best model
         title: Kilo
@@ -363,10 +359,10 @@ settings:
       expiresAt: 'Expires'
       regeneratePairing: 'Regenerate'
       napChatGrantLabel: Allow nap-chat with this device
-      napChatGrantDesc: While you are away, this companion may chat autonomously over the local
-        mesh with the paired device's companion. It runs on local or known-free
-        models only, and the decision is made once, here — refusing it means this
-        pairing does not happen.
+      napChatGrantDesc: While you are away, this companion may chat autonomously over
+        the local mesh with the paired device's companion. It runs on local or
+        known-free models only, and the decision is made once, here — refusing
+        it means this pairing does not happen.
     agentic-os:
       title: 'Agentic OS'
       description: 'Autonomous companion behaviour driven by presence detection,
@@ -483,5 +479,5 @@ settings:
         shared threshold, which the heartbeat gate reads too — one number, one
         owner.'
       napIndependentOfAutonomousMode: Napping does not require the autonomous mode to
-        be enabled. Resting is not acting — a companion in Disabled mode can still
-        nap.
+        be enabled. Resting is not acting — a companion in Disabled mode can
+        still nap.

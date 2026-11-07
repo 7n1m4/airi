@@ -316,11 +316,6 @@ function getInitialProvider(): string {
   if (hasWebLlm)
     return 'web-llm'
 
-  // Prefer LanLan Free (zero-setup, no API key required)
-  const hasLanlanFree = allChatProviders.value.some((p: any) => p.id === 'lanlan-free')
-  if (hasLanlanFree)
-    return 'lanlan-free'
-
   // Prefer Kilo (coding-optimized free gateway, no API key required)
   const hasKilo = allChatProviders.value.some((p: any) => p.id === 'kilo')
   if (hasKilo)
@@ -364,8 +359,6 @@ const llmModel = computed({
       return 'gpt-4o'
     if (llmProvider.value === 'gemini')
       return 'gemini-2.5-flash'
-    if (llmProvider.value === 'lanlan-free')
-      return 'free-model'
     if (llmProvider.value === 'kilo')
       return 'kilo-auto/free'
     return 'default'

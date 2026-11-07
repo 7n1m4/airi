@@ -1153,7 +1153,7 @@ pages:
         settings:
           title: Configuración del sistema de archivos local / Samba
       mimo:
-        description: Xiaomi MiMo Code - Asistente de código con IA gratuito y sin fricciones
+        description: Plataforma abierta de Xiaomi MiMo - modelos pagos de la serie MiMo V2.6
         title: MiMo
       moondream-local:
         description: Modelo de lenguaje y visión de 1.6B en el dispositivo que se

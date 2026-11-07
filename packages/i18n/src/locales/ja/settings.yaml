@@ -1081,7 +1081,7 @@ pages:
         settings:
           title: ローカルファイルシステム / Samba 設定
       mimo:
-        description: Xiaomi MiMo Code - 完全無料の AI コーディングアシスタント
+        description: Xiaomi MiMo オープンプラットフォーム - MiMo V2.6 シリーズの有料モデル
         title: MiMo
       moondream-local:
         description: WebGPU を介してブラウザ内で実行される 1.6B オンデバイス視覚言語モデル。自然な画像理解と視覚的 Q&A を提供します。

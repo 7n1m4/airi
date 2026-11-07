@@ -1108,7 +1108,7 @@ pages:
         settings:
           title: Cấu hình hệ thống tệp cục bộ / Samba
       mimo:
-        description: Xiaomi MiMo Code - Trợ lý lập trình AI miễn phí và nhanh chóng
+        description: Nền tảng mở Xiaomi MiMo - các mô hình trả phí dòng MiMo V2.6
         title: MiMo
       moondream-local:
         description: Mô hình ngôn ngữ - thị giác 1.6B trên thiết bị chạy trong trình
