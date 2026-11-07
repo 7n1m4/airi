@@ -59,9 +59,9 @@ export const providerMimo = defineProvider<MimoConfig>({
   extraMethods: {
     async listModels() {
       return [
-        { id: 'mimo-v2.6-flash', name: 'MiMo-V2.6-Flash' },
-        { id: 'mimo-v2.6-pro', name: 'MiMo-V2.6-Pro' },
-        { id: 'mimo-v2.6-pro-ultraspeed', name: 'MiMo-V2.6-Pro-UltraSpeed' },
+        { id: 'mimo-v2.6-flash', name: 'MiMo-V2.6-Flash', provider: 'mimo' },
+        { id: 'mimo-v2.6-pro', name: 'MiMo-V2.6-Pro', provider: 'mimo' },
+        { id: 'mimo-v2.6-pro-ultraspeed', name: 'MiMo-V2.6-Pro-UltraSpeed', provider: 'mimo' },
       ]
     },
   },

@@ -1445,5 +1445,6 @@ export const useCompanionStore = defineStore('companion', () => {
     evaluateModelGate,
     /** Test seam: the prompt one turn is generated from, for the leak boundary. */
     buildNapChatTurnPrompt,
+    localPeerId,
   }
 })
