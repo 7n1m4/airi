@@ -1,0 +1,33 @@
+{
+  "name": "@proj-airi/airi-plugin-oh-my-pi",
+  "type": "module",
+  "version": "0.9.0-alpha.15",
+  "private": true,
+  "description": "oh-my-pi coding-agent extension bridging sessions to AIRI Channel Server",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dasilva333/airi.git",
+    "directory": "integrations/oh-my-pi/airi-plugin-oh-my-pi"
+  },
+  "omp": {
+    "extensions": [
+      "./src/index.ts"
+    ]
+  },
+  "scripts": {
+    "build": "tsdown",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@proj-airi/server-sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "@oh-my-pi/pi-coding-agent": "^18.17.0",
+    "@proj-airi/server-shared": "workspace:*",
+    "tsdown": "catalog:",
+    "typescript": "~5.9.3",
+    "vitest": "catalog:vitest"
+  }
+}

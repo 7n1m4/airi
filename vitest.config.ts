@@ -27,6 +27,7 @@ export default defineConfig({
       'packages/motion-driver-magic',
       'packages/electron-screen-capture',
       'packages/server-shared',
+      'integrations/oh-my-pi/airi-plugin-oh-my-pi',
     ],
     coverage: {
       provider: 'v8',
