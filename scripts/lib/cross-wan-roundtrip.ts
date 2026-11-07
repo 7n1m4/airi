@@ -1,3 +1,5 @@
+import type { GossipSub } from '@chainsafe/libp2p-gossipsub'
+
 import { gossipsub } from '@chainsafe/libp2p-gossipsub'
 import { noise } from '@chainsafe/libp2p-noise'
 import { yamux } from '@chainsafe/libp2p-yamux'
@@ -46,7 +48,7 @@ export async function runRoundTrip(
   options: { ignore?: string[], timeoutMs?: number } = {},
 ): Promise<RoundTripMessage | null> {
   const { ignore = [], timeoutMs = 120000 } = options
-  const pubsub = node.services.pubsub
+  const pubsub = node.services.pubsub as GossipSub
   const encoder = new TextEncoder()
   const ignored = new Set([node.peerId.toString(), ...ignore])
 

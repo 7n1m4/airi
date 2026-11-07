@@ -126,7 +126,7 @@ export const useNapChatCoordinatorStore = defineStore('nap-chat-coordinator', ()
     }
     catch {}
     status.value = 'done'
-    return napChat.latestEpisode.value ?? {
+    return napChat.latestEpisode ?? {
       sessionId: record.sessionId,
       with: { characterName: record.peerCardName, alias: record.peerCardName },
       turnCount: record.turnCount,
