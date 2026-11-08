@@ -7,6 +7,8 @@
  * 3. Conversational Synonym Expansion (bridges spoken phrasing to indexed autobiographical forms).
  */
 
+import type { ChatGroundingMetadata } from '../../types/chat'
+
 export interface ExtractedDateHook {
   text: string
   day?: number
@@ -58,7 +60,7 @@ const MONTH_ABBRS = [
   'dec',
 ]
 
-const PRONOUN_REGEX = /\b(that|this|it|he|him|she|her|they|them|there|that place|that thing|that topic|that job|that person)\b/
+const PRONOUN_REGEX = /\b(that|this|it|he|him|she|her|they|them|there|that place|that thing|that topic|that job|that person|that item|this item|those items|these items)\b/
 
 const CASUAL_SYNONYMS: { pattern: RegExp, expansion: string }[] = [
   {
@@ -265,7 +267,11 @@ export function extractTemporalHooks(text: string): ExtractedDateHook[] {
  * Resolves Turn-1 anaphora by binding trailing pronouns in the current query
  * with salient content words/entities from the immediately preceding turn.
  */
-export function resolveTurnAnaphora(query: string, previousTurnText?: string): { expandedQuery: string, anaphoraResolved: boolean, pronounsDetected: string[] } {
+export function resolveTurnAnaphora(
+  query: string,
+  previousTurnText?: string,
+  previousGrounding?: ChatGroundingMetadata,
+): { expandedQuery: string, anaphoraResolved: boolean, pronounsDetected: string[] } {
   if (!query) {
     return { expandedQuery: query, anaphoraResolved: false, pronounsDetected: [] }
   }
@@ -281,24 +287,60 @@ export function resolveTurnAnaphora(query: string, previousTurnText?: string): {
     }
   }
 
-  if (pronouns.length === 0 || !previousTurnText) {
+  if (pronouns.length === 0 || (!previousTurnText && !previousGrounding)) {
     return { expandedQuery: query, anaphoraResolved: false, pronounsDetected: [] }
   }
 
-  // Extract meaningful context tokens from previous turn
-  const prevTokens = previousTurnText
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
-    .split(/\s+/)
-    .filter(t => t.length > 2 && !STOPWORDS.has(t))
+  const salientTokens: string[] = []
 
-  if (prevTokens.length === 0) {
+  // 1. High-salience grounding entities from Turn N-1 (e.g. "crystal", "tentacle")
+  if (previousGrounding?.entities && previousGrounding.entities.length > 0) {
+    for (const ent of previousGrounding.entities) {
+      const cleaned = ent.toLowerCase().replace(/[^\w\s]/g, ' ').trim()
+      const words = cleaned.split(/\s+/).filter(w => w.length > 2 && !STOPWORDS.has(w))
+      for (const w of words) {
+        if (!salientTokens.includes(w))
+          salientTokens.push(w)
+      }
+    }
+  }
+
+  // 2. High-salience subjects/objects from top grounding hits
+  if (previousGrounding?.hits && previousGrounding.hits.length > 0) {
+    for (const hit of previousGrounding.hits.slice(0, 3)) {
+      for (const field of [hit.subject, hit.object]) {
+        if (field && typeof field === 'string') {
+          const words = field.toLowerCase().replace(/[^\w\s]/g, ' ').split(/\s+/).filter(w => w.length > 2 && !STOPWORDS.has(w))
+          for (const w of words) {
+            if (!salientTokens.includes(w))
+              salientTokens.push(w)
+          }
+        }
+      }
+    }
+  }
+
+  // 3. Extract meaningful context tokens from previous turn text
+  if (previousTurnText) {
+    const prevTokens = previousTurnText
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(t => t.length > 2 && !STOPWORDS.has(t))
+
+    for (const t of prevTokens) {
+      if (!salientTokens.includes(t)) {
+        salientTokens.push(t)
+      }
+    }
+  }
+
+  if (salientTokens.length === 0) {
     return { expandedQuery: query, anaphoraResolved: false, pronounsDetected: pronouns }
   }
 
-  // Take the most salient content words from preceding turn
-  const uniquePrevTokens = Array.from(new Set(prevTokens)).slice(0, 8)
-  const contextSupplement = uniquePrevTokens.join(' ')
+  // Take the most salient content words (prioritizing grounding entities first)
+  const contextSupplement = salientTokens.slice(0, 8).join(' ')
 
   const expandedQuery = `${query} (${contextSupplement})`
   return {
@@ -332,6 +374,7 @@ export function analyzeQuery(
   query: string,
   options?: {
     previousTurn?: string
+    previousGrounding?: ChatGroundingMetadata
     anaphoraEnabled?: boolean
   },
 ): QueryAnalysisResult {
@@ -342,8 +385,8 @@ export function analyzeQuery(
   let anaphoraResolved = false
   let pronounsDetected: string[] = []
 
-  if (anaphoraEnabled && options?.previousTurn) {
-    const res = resolveTurnAnaphora(cleanQuery, options.previousTurn)
+  if (anaphoraEnabled && (options?.previousTurn || options?.previousGrounding)) {
+    const res = resolveTurnAnaphora(cleanQuery, options.previousTurn, options.previousGrounding)
     resolvedQuery = res.expandedQuery
     anaphoraResolved = res.anaphoraResolved
     pronounsDetected = res.pronounsDetected
@@ -353,12 +396,16 @@ export function analyzeQuery(
   const temporalHooks = extractTemporalHooks(cleanQuery)
   const hasTemporalIntent = temporalHooks.length > 0
 
-  // Extract non-stopword keywords
-  const extractedKeywords = cleanQuery
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
-    .split(/\s+/)
-    .filter(t => t.length > 2 && !STOPWORDS.has(t))
+  // Extract non-stopword keywords from resolved query if anaphora was resolved,
+  // otherwise from clean query.
+  const keywordSource = anaphoraResolved ? resolvedQuery : cleanQuery
+  const extractedKeywords = Array.from(new Set(
+    keywordSource
+      .toLowerCase()
+      .replace(/[^\w\s]/g, ' ')
+      .split(/\s+/)
+      .filter(t => t.length > 2 && !STOPWORDS.has(t)),
+  ))
 
   return {
     originalQuery: query,
@@ -382,6 +429,9 @@ export interface TriageDecision {
   conjunctionStructure?: string
   conjunctionConfidence?: number
   requiresDecomposition?: number
+  focusKeywords?: string[]
+  focusQuery?: string
+  wordScores?: Record<string, number>
   method?: string
   latencyMs?: number | null
 }
@@ -414,6 +464,12 @@ export function heuristicTriage(query: string): TriageDecision {
     requiresDecomposition = 0.70
   }
 
+  const extractedKeywords = norm
+    .replace(/[^\w\s]/g, ' ')
+    .split(/\s+/)
+    .filter(t => t.length > 2 && !STOPWORDS.has(t))
+  const focusQuery = extractedKeywords.join(' ')
+
   // 1. Temporal cues (C2)
   if (
     /\b(?:when|what date|which day|what time|how long|how many (?:days|weeks|months|years) ago|how long ago|start|finish|schedule|appointment|timeline)\b/i.test(norm)
@@ -429,6 +485,8 @@ export function heuristicTriage(query: string): TriageDecision {
       searchScope: 'single_session',
       conjunctionStructure,
       requiresDecomposition,
+      focusKeywords: extractedKeywords,
+      focusQuery,
       method: 'heuristic_regex_temporal',
     }
   }
@@ -448,6 +506,8 @@ export function heuristicTriage(query: string): TriageDecision {
       searchScope: 'multi_session',
       conjunctionStructure,
       requiresDecomposition: Math.max(requiresDecomposition, 0.8),
+      focusKeywords: extractedKeywords,
+      focusQuery,
       method: 'heuristic_regex_multihop',
     }
   }
@@ -464,6 +524,8 @@ export function heuristicTriage(query: string): TriageDecision {
       searchScope: 'single_session',
       conjunctionStructure,
       requiresDecomposition,
+      focusKeywords: extractedKeywords,
+      focusQuery,
       method: 'heuristic_regex_detective',
     }
   }
@@ -477,6 +539,8 @@ export function heuristicTriage(query: string): TriageDecision {
     searchScope: 'single_session',
     conjunctionStructure,
     requiresDecomposition,
+    focusKeywords: extractedKeywords,
+    focusQuery,
     method: 'heuristic_literal_default',
   }
 }
@@ -492,6 +556,11 @@ export function decomposeQuery(query: string, triage?: TriageDecision): string[]
 
   // Always keep the original query as one anchor
   subQueries.add(norm)
+
+  // If focusQuery is available from triage and distinct from raw query, add it as a distilled sub-query
+  if (triage?.focusQuery && triage.focusQuery.trim().length > 0 && triage.focusQuery.trim().toLowerCase() !== norm.toLowerCase()) {
+    subQueries.add(triage.focusQuery.trim())
+  }
 
   // If Jev or heuristic triage indicates this is a pure single atomic query without decomposition:
   if (triage && triage.conjunctionStructure === 'single_atomic' && (triage.requiresDecomposition ?? 0) < 0.25) {
