@@ -26,6 +26,7 @@ import { useTextJournalStore } from '../memory-text-journal'
 import { useAiriCardStore } from '../modules/airi-card'
 import { useSettingsGeneral } from '../settings'
 import { CHAT_STREAM_CHANNEL_NAME } from './constants'
+import { stripLargeInlineImagesForPersistence } from './message-sanitizer'
 import { updateRecentTopics } from './recent-topics'
 import { mergeLoadedSessionMessages } from './session-message-merge'
 
@@ -57,7 +58,12 @@ export const useChatSessionStore = defineStore('chat-session', () => {
   }
 
   const isMainWindow = !isStageTamagotchi()
-    || (typeof window !== 'undefined' && (window.location.hash === '' || window.location.hash === '#/' || window.location.hash === '#'))
+    || (typeof window !== 'undefined' && (
+      window.location.hash === ''
+      || window.location.hash === '#/'
+      || window.location.hash === '#'
+      || window.location.hash.startsWith('#/chat')
+    ))
 
   const activeSessionId = ref<string>('')
   const sessionMessages = ref<Record<string, ChatHistoryItem[]>>({})
@@ -83,7 +89,7 @@ export const useChatSessionStore = defineStore('chat-session', () => {
   }
 
   function getCurrentCharacterId() {
-    return activeCardId.value || 'default'
+    return activeCardId.value || 'relu'
   }
 
   function enqueuePersist(task: () => Promise<void>) {
@@ -168,7 +174,7 @@ export const useChatSessionStore = defineStore('chat-session', () => {
           { type: 'user', userId: userId.value },
         ]
 
-        if (cachedRecord.meta.characterId && cachedRecord.meta.characterId !== 'default') {
+        if (cachedRecord.meta.characterId) {
           members.push({
             type: 'character',
             characterId: cachedRecord.meta.characterId,
@@ -242,10 +248,17 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     ].join('\n\n')
   }
 
-  function buildLifetimeMemoryContext(characterId = getCurrentCharacterId()) {
+  function buildLifetimeMemoryContext(characterId = getCurrentCharacterId(), universeId?: string) {
     if (!characterId)
       return ''
-    const artifact = lifetimeMemory.artifacts.get(characterId)
+    const cardStore = useAiriCardStore()
+    const card = cardStore.getCard(characterId)
+    if (card?.extensions?.airi?.lifetimeMemory?.enabled === false)
+      return ''
+    const resolvedUniverseId = universeId
+      ?? sessionMetas.value[activeSessionId.value]?.universeId
+      ?? 'global'
+    const artifact = lifetimeMemory.getArtifact(characterId, resolvedUniverseId)
     const distilledContent = artifact?.distilledContent?.trim()
     if (!distilledContent)
       return ''
@@ -312,7 +325,16 @@ export const useChatSessionStore = defineStore('chat-session', () => {
         if (!record || !record.meta)
           continue
 
-        const charId = record.meta.characterId || 'default'
+        // NOTICE: Legacy 'default' ghost ID migration — sessions created before
+        // 7178d242a carry characterId 'default'; fold them into 'relu'.
+        let charId = record.meta.characterId || 'relu'
+        if (charId === 'default') {
+          charId = 'relu'
+          if (record.meta.characterId !== charId) {
+            record.meta = { ...record.meta, characterId: charId }
+            void chatSessionsRepo.saveSession(sessionId, record).catch(() => {})
+          }
+        }
         if (!index.value.characters[charId]) {
           index.value.characters[charId] = {
             activeSessionId: sessionId,
@@ -352,6 +374,25 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     index.value = stored ?? {
       userId: currentUserId,
       characters: {},
+    }
+    // NOTICE: Fold legacy `characters['default']` index into `characters['relu']`
+    // so pre-rename timelines stay attached. Never delete user timelines.
+    if (index.value?.characters?.default) {
+      const legacy = index.value.characters.default
+      const targetKey = 'relu'
+      if (!index.value.characters[targetKey]) {
+        index.value.characters[targetKey] = { activeSessionId: '', sessions: {} }
+      }
+      const target = index.value.characters[targetKey]
+      for (const [sid, meta] of Object.entries(legacy.sessions || {})) {
+        if (!target.sessions[sid]) {
+          target.sessions[sid] = { ...(meta as any), characterId: targetKey }
+        }
+      }
+      if (!target.activeSessionId && legacy.activeSessionId)
+        target.activeSessionId = legacy.activeSessionId
+      delete (index.value.characters as any).default
+      void persistIndex()
     }
     await reconstructIndexFromIndexedDB(currentUserId)
   }
@@ -395,7 +436,10 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     const meta = sessionMetas.value[sessionId]
     if (!meta)
       return
-    const messages = snapshotMessages(ensureSessionMessageIds(sessionId))
+    // NOTICE: Strip oversized inline `data:` images before snapshotting so the
+    // multi-megabyte base64 payloads never reach IndexedDB, the outbox sync, or
+    // the JSON serialization itself (see message-sanitizer).
+    const messages = snapshotMessages(stripLargeInlineImagesForPersistence(ensureSessionMessageIds(sessionId)))
     const now = Date.now()
     const updatedMeta: ChatSessionMeta = {
       ...meta,
@@ -456,6 +500,40 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     void persistSession(sessionId)
   }
 
+  async function renameSession(sessionId: string, title: string): Promise<boolean> {
+    const val = title.trim()
+    if (!val)
+      return false
+    // NOTICE: The timeline popover lists sessions from the character index,
+    // which includes unopened timelines with no sessionMetas entry. Resolve
+    // the meta through the index fallback so a rename always has a base.
+    const existing = sessionMetas.value[sessionId] ?? getSessionMeta(sessionId)
+    if (!existing)
+      return false
+    if (existing.title === val)
+      return true
+    const updated: ChatSessionMeta = { ...existing, title: val, updatedAt: Date.now() }
+    sessionMetas.value[sessionId] = updated
+    const characterIndex = index.value?.characters[updated.characterId]
+    if (characterIndex?.sessions[sessionId])
+      characterIndex.sessions[sessionId] = updated
+    if (sessionMessages.value[sessionId]) {
+      // Loaded timeline: persistSession writes the record and the index.
+      await persistSession(sessionId)
+    }
+    else {
+      // Unopened timeline: persistSession would no-op on the missing
+      // sessionMetas entry, and must not run with no loaded messages (it
+      // would snapshot an empty record). Patch the stored record in place
+      // when one exists, then flush the renamed index entry.
+      const stored = await chatSessionsRepo.getSession(sessionId)
+      if (stored)
+        await enqueuePersist(() => chatSessionsRepo.saveSession(sessionId, { meta: updated, messages: stored.messages }))
+      await persistIndex()
+    }
+    return true
+  }
+
   async function setSessionMessages(sessionId: string, next: ChatHistoryItem[]) {
     const prev = sessionMessages.value[sessionId] ?? []
 
@@ -487,7 +565,9 @@ export const useChatSessionStore = defineStore('chat-session', () => {
           isUpdated,
           contentPreview: typeof msg.content === 'string' ? msg.content.slice(0, 60) : '[Complex Content]',
         })
-        broadcastStreamEvent({ type: 'session-updated', sessionId, message: JSON.parse(JSON.stringify(msg)) })
+        // NOTICE: Broadcast the lean copy — full `data:` image payloads must not
+        // ride every BroadcastChannel turn (structured-clone + JSON cost per window).
+        broadcastStreamEvent({ type: 'session-updated', sessionId, message: JSON.parse(JSON.stringify(stripLargeInlineImagesForPersistence([msg])[0])) })
       }
     }
 
@@ -497,7 +577,7 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     // 5. Broadcast session-refreshed if any previous messages were removed
     const removedAny = prev.some(m => m.id && !nextWithIds.some(n => n.id === m.id))
     if (removedAny) {
-      broadcastStreamEvent({ type: 'session-refreshed', sessionId, messages: JSON.parse(JSON.stringify(nextWithIds)) })
+      broadcastStreamEvent({ type: 'session-refreshed', sessionId, messages: JSON.parse(JSON.stringify(stripLargeInlineImagesForPersistence(nextWithIds))) })
     }
   }
 
@@ -519,7 +599,8 @@ export const useChatSessionStore = defineStore('chat-session', () => {
 
     // NOTICE: Broadcast the actual message payload so other windows can apply it directly
     // without waiting for the DB write to complete (avoids race condition).
-    broadcastStreamEvent({ type: 'session-updated', sessionId, message: JSON.parse(JSON.stringify(message)) })
+    // Sanitized first — `data:` image payloads stay out of cross-window traffic.
+    broadcastStreamEvent({ type: 'session-updated', sessionId, message: JSON.parse(JSON.stringify(stripLargeInlineImagesForPersistence([message])[0])) })
   }
 
   async function loadSession(sessionId: string, force = false) {
@@ -547,13 +628,25 @@ export const useChatSessionStore = defineStore('chat-session', () => {
         return
       }
 
+      // NOTICE: Normalize legacy 'default' before the mid-flight guard so
+      // pre-rename sessions don't abort loading after index migration.
+      if (stored.meta?.characterId === 'default') {
+        stored.meta = { ...stored.meta, characterId: 'relu' }
+      }
       // NOTICE: Guard against mid-flight session deletions during the async IDB fetch.
       // If the session is no longer registered in our character index, abort loading.
       const characterId = stored.meta?.characterId
       const characterIndex = characterId ? index.value?.characters[characterId] : undefined
       if (!characterIndex || !characterIndex.sessions[sessionId]) {
-        debug(`[ChatSession] loadSession aborted: session ${sessionId} was deleted mid-flight.`)
-        return
+        // Fallback: legacy session may still be registered under the other key
+        const fallbackIndex = index.value?.characters[characterId === 'relu' ? 'default' : 'relu']
+        if (fallbackIndex?.sessions[sessionId]) {
+          fallbackIndex.sessions[sessionId] = { ...fallbackIndex.sessions[sessionId], characterId: characterId || 'relu' } as any
+        }
+        else {
+          debug(`[ChatSession] loadSession aborted: session ${sessionId} was deleted mid-flight.`)
+          return
+        }
       }
 
       const currentMessages = sessionMessages.value[sessionId] ?? []
@@ -561,9 +654,14 @@ export const useChatSessionStore = defineStore('chat-session', () => {
         ? stored.messages
         : mergeLoadedSessionMessages(stored.messages, currentMessages)
 
+      // NOTICE: One-time migration for pre-sanitizer records — strip oversized
+      // inline `data:` images left over in IndexedDB so neither memory nor the
+      // re-persist below keeps the multi-megabyte base64 payloads.
+      const leanMessages = stripLargeInlineImagesForPersistence(mergedMessages)
+
       // Ensure the meta messageCount is correct and up to date
-      const actualCount = mergedMessages.length
-      let needsPersist = mergedMessages !== stored.messages
+      const actualCount = leanMessages.length
+      let needsPersist = mergedMessages !== stored.messages || leanMessages !== mergedMessages
 
       if (stored.meta.messageCount !== actualCount) {
         stored.meta.messageCount = actualCount
@@ -571,7 +669,7 @@ export const useChatSessionStore = defineStore('chat-session', () => {
       }
 
       sessionMetas.value[sessionId] = stored.meta
-      sessionMessages.value[sessionId] = mergedMessages
+      sessionMessages.value[sessionId] = leanMessages
       ensureGeneration(sessionId)
 
       if (needsPersist)
@@ -915,7 +1013,7 @@ export const useChatSessionStore = defineStore('chat-session', () => {
       if (personaIndices.includes(i)) {
         if (i === headIndex || i === tailIndex) {
           const content = extractMessageContent(msg)
-          if (options?.force || content !== nextContent) {
+          if (content !== nextContent) {
             changed = true
             finalMessages.push({
               ...nextSystemMessage,
@@ -1000,6 +1098,22 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     if (ready.value)
       void loadSession(sessionId)
     return sessionMessages.value[sessionId] ?? []
+  }
+
+  function getLastGroundedTurn(sessionId = activeSessionId.value) {
+    if (!sessionId)
+      return null
+    const msgs = sessionMessages.value[sessionId] || []
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const msg = msgs[i]
+      if (msg && (msg as any).grounding && (((msg as any).grounding.hits?.length > 0) || ((msg as any).grounding.entities?.length > 0))) {
+        return {
+          message: msg,
+          grounding: (msg as any).grounding,
+        }
+      }
+    }
+    return null
   }
 
   function getSessionGeneration(sessionId: string) {
@@ -1196,12 +1310,19 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     refreshActiveSystemMessage({ force: true })
   }, { debounce: 300 })
 
+  // NOTICE: Watch artifact version + id (rather than updatedAt) so routine days
+  // where changed=false only advance the watermark without dirtying the system prompt.
   watch(
-    () => lifetimeMemory.artifacts.get(activeCardId.value || 'default')?.updatedAt ?? 0,
+    () => {
+      const charId = activeCardId.value || 'relu'
+      const currentUniverseId = sessionMetas.value[activeSessionId.value]?.universeId || 'global'
+      const artifact = lifetimeMemory.getArtifact(charId, currentUniverseId)
+      return artifact ? `${artifact.id}:${artifact.version}` : ''
+    },
     () => {
       if (!ready.value || !isMainWindow)
         return
-      refreshActiveSystemMessage()
+      void refreshActiveSystemMessage()
     },
   )
 
@@ -1580,6 +1701,7 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     setSessionMessages,
     persistSessionMessages,
     getSessionMessages,
+    getLastGroundedTurn,
     sessionMessages,
     sessionMetas,
     getSessionMeta,
@@ -1588,6 +1710,7 @@ export const useChatSessionStore = defineStore('chat-session', () => {
     getSessionGenerationValue,
 
     deleteSession,
+    renameSession,
     deleteMessage,
     deleteMessagesFromHere,
     forkSession,
