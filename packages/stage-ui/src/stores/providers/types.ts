@@ -147,7 +147,10 @@ export interface ProviderRuntimeState {
   models: ModelInfo[]
 }
 
-export type BracketAction = 'mute' | 'flatten' | 'ignore' | 'token'
+export type BracketAction = 'mute' | 'flatten' | 'passThrough' | 'ignore' | 'token'
+export type NotationAction = 'verbalize' | 'mute' | 'passThrough' | 'ignore'
+export type CodeBlockAction = 'mute' | 'passThrough' | 'ignore'
+export type FormulaLanguage = 'auto' | 'en' | 'ja' | 'ko' | 'zh'
 
 export interface ProviderInstanceConfig {
   /** Globally unique storage key: `${providerId}:${id}`. */
@@ -212,10 +215,25 @@ export interface VoiceProfile {
     customBracketEnd: string
     customBracketAction: BracketAction
 
+    // Notation & Technical Speech (UST V3 / PR #3054 & PR #3332)
+    mathFormulas?: NotationAction
+    chemicalNotation?: NotationAction
+    codeBlocks?: CodeBlockAction
+    readCurrencyNaturally?: boolean
+    readWebAddressesNaturally?: boolean
+    formulaLanguage?: FormulaLanguage
+
     stripEmojis: boolean
     stripSymbols: boolean
     tildeReplacement: string
     customReplacements: CustomReplacementRule[]
+
+    // Markdown & Speech Sanitization (UST V2)
+    stripCodeBlocks?: boolean
+    stripHtml?: boolean
+    preserveMarkdownLinks?: 'extract_text' | 'mute' | 'raw'
+    preserveMathOperators?: boolean
+    normalizeBlockPauses?: boolean
 
     // Legacy fields kept for backward compatibility / auto-migration
     mode?: 'mute' | 'flatten' | 'custom'
