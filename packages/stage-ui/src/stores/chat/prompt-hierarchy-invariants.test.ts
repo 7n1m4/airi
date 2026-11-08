@@ -135,12 +135,20 @@ const mockVrmStore = {
   activeExpressions: null as Record<string, number> | null,
 }
 
+const mockStickersStore = {
+  currentLibrary: [] as Array<{ label: string }>,
+}
+
 vi.mock('@proj-airi/stage-ui-live2d', () => ({
   useLive2d: () => mockLive2dStore,
 }))
 
 vi.mock('@proj-airi/stage-ui-three', () => ({
   useModelStore: () => mockVrmStore,
+}))
+
+vi.mock('../stickers', () => ({
+  useStickersStore: () => mockStickersStore,
 }))
 
 function extractUserText(content: any): string {
@@ -163,6 +171,7 @@ describe('chat prompt hierarchy and message ordering invariants', () => {
 
     mockLive2dStore.activeExpressions = null
     mockVrmStore.activeExpressions = null
+    mockStickersStore.currentLibrary = []
     mockBackgroundStore.entries.clear()
 
     activeCardRef.value = {
@@ -413,6 +422,9 @@ describe('chat prompt hierarchy and message ordering invariants', () => {
         prompt: 'Neon lights and rain',
       })
 
+      // 4. Stickers
+      mockStickersStore.currentLibrary = [{ label: 'sparkle' }, { label: 'heart' }]
+
       // 5. Staged Dream state
       activeCardRef.value.extensions.airi.dreamState = {
         injectDreamContext: true,
@@ -469,7 +481,7 @@ describe('chat prompt hierarchy and message ordering invariants', () => {
       expect(capturedMessages[0].role).toBe('system')
       expect(capturedMessages[0].content).toBe('You are Airi, a cheerful companion with strict persona rules.')
 
-      // Invariant 2: messages[1] is the Module Context block containing datetime, expressions, and scenes
+      // Invariant 2: messages[1] is the Module Context block containing datetime, expressions, scene, and stickers
       expect(capturedMessages[1].role).toBe('system')
       expect(capturedMessages[1].content).toContain('These are the contextual information retrieved or on-demand updated from other modules:')
       expect(capturedMessages[1].content).toContain('Module datetime:')
@@ -477,6 +489,8 @@ describe('chat prompt hierarchy and message ordering invariants', () => {
       expect(capturedMessages[1].content).toContain('blush')
       expect(capturedMessages[1].content).toContain('Module scenes:')
       expect(capturedMessages[1].content).toContain('Cyber Cafe')
+      expect(capturedMessages[1].content).toContain('Module stickers:')
+      expect(capturedMessages[1].content).toContain('sparkle, heart')
 
       // Invariant 3: Introspection blocks (Dream, Journal, Artistry)
       expect(capturedMessages[1].content).toContain('[INSPECTIVE DREAM STATE]')
@@ -486,30 +500,28 @@ describe('chat prompt hierarchy and message ordering invariants', () => {
       expect(capturedMessages[1].content).toContain('[INSPECTIVE ARTWORK AWARENESS]')
       expect(capturedMessages[1].content).toContain('Futuristic floating city in sunset')
 
-      // Invariant 4: Grounding blocks deterministic stable -> volatile order
-      // (1.1 lifetime < 1.2 stmm < 2 topics < 3 scratch < 4 rag < 5 env < 6 vlm;
-      // salience force-disabled, see below)
-      const idxLtmm = capturedMessages.findIndex((m: any) => m.content?.includes('[LIFETIME RECORD]'))
+      // Invariant 4: Grounding blocks deterministic order (0 < 1 < 1.5 < 1.6 < 2 < 3 < 4; salience force-disabled, see below)
+      const idxVlm = capturedMessages.findIndex((m: any) => m.content?.includes('[IMAGE ANALYSIS]'))
+      const idxEnv = capturedMessages.findIndex((m: any, i: number) => i > idxVlm && m.content?.includes('[ENVIRONMENTAL AWARENESS]'))
       const idxStmm = capturedMessages.findIndex((m: any) => m.content?.includes('[DAILY MEMORY CONTINUITY]'))
+      const idxLtmm = capturedMessages.findIndex((m: any) => m.content?.includes('[LIFETIME RECORD]'))
+      const idxRag = capturedMessages.findIndex((m: any) => m.content?.includes('[GROUNDED LONG-TERM MEMORIES]'))
       const idxTopics = capturedMessages.findIndex((m: any) => m.content?.includes('[RECENT TOPICS]'))
       const idxScratch = capturedMessages.findIndex((m: any) => m.content?.includes('[VISUAL STATE BOARD]'))
-      const idxRag = capturedMessages.findIndex((m: any) => m.content?.includes('[GROUNDED LONG-TERM MEMORIES]'))
-      const idxEnv = capturedMessages.findIndex((m: any) => m.content?.includes('[ENVIRONMENTAL AWARENESS]'))
-      const idxVlm = capturedMessages.findIndex((m: any) => m.content?.includes('[IMAGE ANALYSIS]'))
       const idxSalience = capturedMessages.findIndex((m: any) => m.content?.includes('[SALIENCE TELEMETRY]'))
 
-      expect(idxLtmm).toBeGreaterThan(-1)
-      expect(idxStmm).toBeGreaterThan(idxLtmm)
-      expect(idxTopics).toBeGreaterThan(idxStmm)
+      expect(idxVlm).toBeGreaterThan(-1)
+      expect(idxEnv).toBeGreaterThan(idxVlm)
+      expect(idxStmm).toBeGreaterThan(idxEnv)
+      expect(idxLtmm).toBeGreaterThan(idxStmm)
+      expect(idxRag).toBeGreaterThan(idxLtmm)
+      expect(idxTopics).toBeGreaterThan(idxRag)
       expect(idxScratch).toBeGreaterThan(idxTopics)
-      expect(idxRag).toBeGreaterThan(idxScratch)
-      expect(idxEnv).toBeGreaterThan(idxRag)
-      expect(idxVlm).toBeGreaterThan(idxEnv)
       // NOTICE: salienceGateEnabled is true on the card, yet no [SALIENCE
       // TELEMETRY] block is emitted: production force-disables the RWKV
-      // salience gate for release stability (5fdec1456b, chat.ts "7. Salience
+      // salience gate for release stability (5fdec1456b, chat.ts "5. Salience
       // Gate injection"). This assertion pins that decision; if salience is
-      // ever re-enabled, restore the tail-order assertion for it.
+      // ever re-enabled, restore `expect(idxSalience).toBeGreaterThan(idxScratch)`.
       expect(idxSalience).toBe(-1)
 
       // Invariant 5: User message is placed after all grounding and contains original prompt

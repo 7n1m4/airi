@@ -99,8 +99,8 @@ export function formatLifetimeMemoryBlock(context: string): GroundingMessage {
  * Knowledge Graph facts, proof bundle sub-goals, and episodic verbatim turns.
  */
 export function formatSemanticMemoriesBlock(memories: SemanticMemoryItem[]): GroundingMessage {
-  const kgClaims = memories.filter(r => (r.isKgClaim || r.kind === 'kg_claim') && r.predicate !== 'mentioned in')
-  const episodicMemories = memories.filter(r => (!r.isKgClaim && r.kind !== 'kg_claim') || r.predicate === 'mentioned in')
+  const kgClaims = memories.filter(r => r.isKgClaim || r.kind === 'kg_claim')
+  const episodicMemories = memories.filter(r => !r.isKgClaim && r.kind !== 'kg_claim')
 
   const sections: string[] = []
 
@@ -125,12 +125,7 @@ export function formatSemanticMemoriesBlock(memories: SemanticMemoryItem[]): Gro
       ? (hasDialogue ? '[VERBATIM DIALOGUE MEMORIES]\n' : '[EPISODIC & JOURNAL MEMORIES]\n')
       : ''
 
-    // Prioritize entity mentions at the top of dialogue memories so key character/entity lore is never pushed out
-    const entityMentions = episodicMemories.filter(r => r.isKgClaim || r.kind === 'kg_claim' || r.id?.startsWith('kg-'))
-    const rawMemories = episodicMemories.filter(r => !r.isKgClaim && r.kind !== 'kg_claim' && !r.id?.startsWith('kg-'))
-    const orderedEpisodic = [...entityMentions, ...rawMemories]
-
-    const itemsFormatted = orderedEpisodic.map((r) => {
+    const itemsFormatted = episodicMemories.map((r) => {
       const kindTag = (r.kind || 'Journal').toUpperCase()
       const titleTag = r.title || 'Memory'
       let metaStr = ''
@@ -239,20 +234,14 @@ export function buildGroundingMessages(blocks: readonly (GroundingBlock | null |
   return result
 }
 
-const LIFETIME_BLOCK_HEADER = '[LIFETIME RELATIONSHIP ARTIFACT]'
-const MAX_LIFETIME_BLOCK_CHARS = 13000
-
 /**
  * Bounds grounding messages to prevent memory compressor and swap death from unbounded managed strings.
  * Applies individual block truncation limits and enforces a global character budget.
- * NOTICE: the lifetime artifact block is exempt from the standard per-block cap —
- * a 1,000-token (Recommended) or 3,000-token (Detailed) distilled pack would otherwise
- * lose its trailing sections (Meaningful Old Moments, Inside Jokes) on every turn.
  */
 export function budgetGroundingMessages(
   messages: readonly GroundingMessage[],
-  maxTotalChars = 15000,
-  maxPerBlockChars = 8000,
+  maxTotalChars = 7000,
+  maxPerBlockChars = 2500,
 ): GroundingMessage[] {
   let remainingBudget = maxTotalChars
   const budgeted: GroundingMessage[] = []
@@ -262,12 +251,8 @@ export function budgetGroundingMessages(
       break
 
     let content = msg.content
-    const blockCap = content.startsWith(LIFETIME_BLOCK_HEADER)
-      ? MAX_LIFETIME_BLOCK_CHARS
-      : maxPerBlockChars
-
-    if (content.length > blockCap) {
-      content = `${content.slice(0, blockCap)}\n[...truncated to fit budget]`
+    if (content.length > maxPerBlockChars) {
+      content = `${content.slice(0, maxPerBlockChars)}\n[...truncated to fit budget]`
     }
 
     if (content.length > remainingBudget) {

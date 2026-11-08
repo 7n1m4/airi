@@ -1057,7 +1057,7 @@ export const useChatSessionStore = defineStore('chat-session', () => {
       // persistIndex() → index-refreshed → (old) ensureActiveSessionForCharacter loop.
     }
     else {
-      debug('[ChatSession] No stale persona messages found to refresh', { sessionId })
+      console.debug('[ChatSession] No stale persona messages found to refresh', { sessionId })
     }
   }
 
