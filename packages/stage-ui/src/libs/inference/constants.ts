@@ -13,15 +13,16 @@
 export const MODEL_IDS = {
   KOKORO: 'onnx-community/Kokoro-82M-v1.0-ONNX',
   WHISPER: 'onnx-community/whisper-large-v3-turbo',
-  BG_REMOVAL: 'Xenova/modnet',
+  BG_REMOVAL: 'jellybox/isnet-anime',
   WD14: 'SmilingWolf/wd-v1-4-swinv2-tagger-v2',
+  MING3: 'fusorlabs/ming-3.0-tts-0.5b-web',
 } as const
 
 /** Short model identifiers used in adapter state tracking and logging */
 export const MODEL_NAMES = {
   KOKORO: 'kokoro-82m',
   WHISPER: 'whisper-large-v3-turbo',
-  BG_REMOVAL: 'modnet',
+  BG_REMOVAL: 'isnet-anime',
   WEB_RWKV: 'web-rwkv',
   WEB_LLM: 'web-llm',
   BLIP: 'blip',
@@ -29,7 +30,7 @@ export const MODEL_NAMES = {
   MOONDREAM: 'moondream2',
   ATTENTION_GUARD: 'attention-guard',
   LAYA: 'laya',
-  MING3: 'ming-3.0-tts-0.5b-mix',
+  MING3: 'ming3-local',
 } as const
 
 /**
@@ -60,32 +61,32 @@ export interface WhisperModelInfo {
 export const WHISPER_MODELS: readonly WhisperModelInfo[] = [
   {
     id: 'onnx-community/whisper-tiny',
-    name: 'Whisper Tiny (Multilingual)',
-    description: 'Fastest & lightest (~75 MB DL · ~250 MB VRAM). Multilingual.',
+    name: 'Tiny',
+    description: 'Fastest, lightest. Best for real-time use on low-end devices.',
     downloadBytes: 75 * 1024 * 1024,
     vramBytes: 250 * 1024 * 1024,
     multilingual: true,
   },
   {
     id: 'onnx-community/whisper-base',
-    name: 'Whisper Base (Multilingual)',
-    description: 'Lightweight (~145 MB DL · ~500 MB VRAM). Multilingual.',
+    name: 'Base',
+    description: 'Balanced speed and accuracy for everyday use.',
     downloadBytes: 145 * 1024 * 1024,
     vramBytes: 500 * 1024 * 1024,
     multilingual: true,
   },
   {
     id: 'onnx-community/whisper-small',
-    name: 'Whisper Small (Multilingual)',
-    description: 'High quality (~460 MB DL · ~1 GB VRAM). Multilingual.',
+    name: 'Small',
+    description: 'High quality transcripts, needs a discrete GPU.',
     downloadBytes: 460 * 1024 * 1024,
     vramBytes: 1024 * 1024 * 1024,
     multilingual: true,
   },
   {
     id: 'onnx-community/whisper-large-v3-turbo',
-    name: 'Whisper Large V3 Turbo (Multilingual)',
-    description: 'Highest accuracy & speed (~800 MB DL · ~3 GB VRAM). Multilingual.',
+    name: 'Large V3 Turbo',
+    description: 'Highest accuracy and speed. Needs ~3 GB VRAM.',
     downloadBytes: 800 * 1024 * 1024,
     vramBytes: 3 * 1024 * 1024 * 1024,
     multilingual: true,
@@ -246,6 +247,10 @@ export interface WebLlmModelInfo {
   vramMB: number
   /** Whether this model requires WebGPU `shader-f16` (FP16) support. False indicates standard FP32 compatibility. */
   fp16?: boolean
+  /** Custom HF weights URL when not in MLC prebuilt catalog. */
+  modelUrl?: string
+  /** Custom `model_lib` WASM URL when not in MLC prebuilt catalog. */
+  modelLib?: string
 }
 
 export const WEB_LLM_MODELS: readonly WebLlmModelInfo[] = [
@@ -256,6 +261,15 @@ export const WEB_LLM_MODELS: readonly WebLlmModelInfo[] = [
     description: 'Ultra-fast pre-filtering and event-log distillation; complements the web-rwkv salience gate.',
     vramMB: 1629,
     fp16: true,
+  },
+  {
+    id: 'LFM3-1.7B-q6f16_a-MLC',
+    name: 'Liquid AI LFM3 1.7B (Hybrid SSM)',
+    description: 'Liquid AI tri-hybrid architecture (short convs + sliding window + global attention). Ultra-fast 1.7B on-device brain.',
+    vramMB: 3202,
+    fp16: true,
+    modelUrl: 'https://huggingface.co/CharlZKP/LFM3-1.7B-MLC/resolve/main/LFM3-1.7B-q6f16_a-MLC',
+    modelLib: 'https://huggingface.co/CharlZKP/LFM3-1.7B-MLC/resolve/main/libs/LFM3-1.7B-q6f16_a_cs1k-webgpu.wasm',
   },
   {
     id: 'gemma3-1b-it-q4f16_1-MLC',
@@ -378,9 +392,9 @@ export const TIMEOUTS = {
   WHISPER_TRANSCRIBE_IDLE: 10_000,
 
   /** Background removal model load timeout (absolute) */
-  BG_REMOVAL_LOAD: 120_000,
+  BG_REMOVAL_LOAD: 300_000,
   /** Background removal per-image processing timeout (absolute; unary op) */
-  BG_REMOVAL_PROCESS: 60_000,
+  BG_REMOVAL_PROCESS: 180_000,
 
   /** web-rwkv model load timeout (absolute; download + bf16→f16 + shader compile) */
   WEB_RWKV_LOAD: 900_000,
@@ -426,10 +440,26 @@ export const TIMEOUTS = {
   /** Attention Ecology Guard per-tick process timeout (unary cascade) */
   ATTENTION_GUARD_PROCESS: 120_000,
 
-  /** Laya System-1 model load timeout (424MB int8 / 843MB fp16 download + compile) */
+  /** Laya System-1 model load timeout (633MB int8 / 847MB fp16 download + compile) */
   LAYA_LOAD: 300_000,
-  /** Laya System-1 single decide timeout (batched session.run on WASM) */
-  LAYA_DECIDE: 15_000,
+  /**
+   * Laya System-1 single decide timeout (batched session.run on WASM).
+   * A timeout terminates the worker, so this is a hang guard, not a latency
+   * budget: single-threaded WASM needs ~3s per question, and a 6-candidate
+   * rerank legitimately runs ~20s. Callers impose their own latency budgets.
+   */
+  LAYA_DECIDE: 60_000,
+
+  /** Ming 3.0 TTS bundle download timeout (absolute; 850MB mix bundle in 15 parts) */
+  MING3_LOAD: 3_600_000,
+  /**
+   * Time-to-first-audio budget for Ming generation, armed at request start.
+   * Covers prefill + the streaming vocoder's look-ahead frames (~0.3s threaded,
+   * ~2s single-threaded); single-thread on slower machines may exceed this.
+   */
+  MING3_GENERATE_FIRST_CHUNK: 30_000,
+  /** Inter-frame inactivity budget for Ming generation (one 80ms frame per step) */
+  MING3_GENERATE_IDLE: 15_000,
 } as const
 
 // ---------------------------------------------------------------------------

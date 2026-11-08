@@ -1,8 +1,9 @@
-import process from 'node:process'
-
 import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
 
+import ErgosphereMain from '@ergosphere-it/electron/vite/main'
+import ErgospherePreload from '@ergosphere-it/electron/vite/preload'
+import ErgosphereRenderer from '@ergosphere-it/electron/vite/renderer'
 import VueI18n from '@intlify/unplugin-vue-i18n/vite'
 import Vue from '@vitejs/plugin-vue'
 import UnoCss from 'unocss/vite'
@@ -57,6 +58,9 @@ const stageUIAssetsRoot = resolve(join(import.meta.dirname, '..', '..', 'package
 const sharedCacheDir = resolve(join(import.meta.dirname, '..', '..', '.cache'))
 const require = createRequire(import.meta.url)
 
+/** The renderer chunk that holds the `unplugin-info` modules. Its file name has no hash. */
+const buildInfoChunkName = 'build-info'
+
 export default defineConfig({
   main: {
     build: {
@@ -76,6 +80,24 @@ export default defineConfig({
       },
     },
     plugins: [
+      ErgosphereMain({ launcher: 'src/launcher/index.ts' }),
+      {
+        name: 'proj-airi:ergosphere-main-rollup-bridge',
+        config(config) {
+          const build: any = config.build
+          if (build?.rolldownOptions?.input) {
+            build.rollupOptions = {
+              ...build.rollupOptions,
+              input: build.rolldownOptions.input,
+              output: {
+                ...build.rollupOptions?.output,
+                ...build.rolldownOptions.output,
+              },
+            }
+          }
+        },
+      },
+
       {
         // To replace `build.rolldownOptions`, as electron-vite still uses the deprecated
         // `rollupOptions`, using `rollupOptions` and `rolldownOptions` at the same
@@ -137,7 +159,25 @@ export default defineConfig({
       },
     },
 
-    plugins: [],
+    plugins: [
+      ErgospherePreload(),
+      {
+        name: 'proj-airi:ergosphere-preload-rollup-bridge',
+        config(config) {
+          const build: any = config.build
+          if (build?.rolldownOptions?.input) {
+            build.rollupOptions = {
+              ...build.rollupOptions,
+              input: build.rolldownOptions.input,
+              output: {
+                ...build.rollupOptions?.output,
+                ...build.rolldownOptions.output,
+              },
+            }
+          }
+        },
+      },
+    ],
   },
 
   renderer: {
@@ -152,6 +192,22 @@ export default defineConfig({
           'main': resolve(join(import.meta.dirname, 'src', 'renderer', 'index.html')),
           'beat-sync': resolve(join(import.meta.dirname, 'src', 'renderer', 'beat-sync.html')),
           'splash': resolve(join(import.meta.dirname, 'src', 'renderer', 'splash.html')),
+          'sticker': resolve(join(import.meta.dirname, 'src', 'renderer', 'sticker.html')),
+        },
+        output: {
+          // `~build/git` and `~build/time` change with each commit. An update downloads each file whose hash changed.
+          // The build info goes into a small chunk with a fixed name. Then the names of the chunks that import it
+          // do not change, and a new commit does not rename the other chunks.
+          manualChunks(id) {
+            if (id.startsWith('\0~build/'))
+              return buildInfoChunkName
+          },
+          ...({
+            codeSplitting: {
+              groups: [{ name: buildInfoChunkName, test: /^\0~build\// }],
+            },
+          } as any),
+          chunkFileNames: chunk => chunk.name === buildInfoChunkName ? `assets/${buildInfoChunkName}.js` : 'assets/[name]-[hash].js',
         },
       },
     },
@@ -182,6 +238,12 @@ export default defineConfig({
         // kills the web-rwkv worker before it registers its load handler. Serve
         // the original ESM so the `?url` wasm asset resolves correctly.
         '@cryscan/web-rwkv-wasm',
+
+        // onnxruntime-web: serve the original ESM bundles (including the
+        // `./webgpu` asyncify subpath required for IS-Net anime's ceil-mode
+        // MaxPool) without esbuild dep pre-bundling.
+        'onnxruntime-web',
+        'onnxruntime-web/webgpu',
 
         // Static Assets: Models, Images, etc.
         'src/renderer/public/assets/*',
@@ -309,6 +371,11 @@ export default defineConfig({
               export const promises = { readFile: async () => '', writeFile: async () => {} };
               export const join = (...args) => args.filter(Boolean).join('/');
               export const resolve = (...args) => args.filter(Boolean).join('/');
+              export const constants = {};
+              export const gunzipSync = (data) => data;
+              export const gzipSync = (data) => data;
+              export const inflateSync = (data) => data;
+              export const deflateSync = (data) => data;
               export const dirname = (p) => (p ? p.split('/').slice(0, -1).join('/') : '');
               export const basename = (p) => (p ? p.split('/').pop() : '');
               export const extname = (p) => (p && p.includes('.') ? '.' + p.split('.').pop() : '');
@@ -318,6 +385,7 @@ export default defineConfig({
         },
       },
       Info(),
+      ErgosphereRenderer(),
 
       {
         name: 'proj-airi:defines',
@@ -384,6 +452,19 @@ export default defineConfig({
         ],
         pagesDirs: [resolve(import.meta.dirname, 'src', 'renderer', 'pages')],
       }),
+      {
+        // NOTICE:
+        // Checkouts at different paths must build the same chunks.
+        // The layouts virtual id looks absolute, so its `//#region` comment gets one `../` per parent directory.
+        // Source: MODULE_ID_VIRTUAL in node_modules/vite-plugin-vue-layouts/dist/index.mjs (0.11.0).
+        // Remove when the plugin uses a `\0` virtual id.
+        name: 'proj-airi:layouts-region-comment',
+        apply: 'build',
+        renderChunk(code) {
+          const stable = code.replace(/(\/\/#region )(?:\.\.\/)+(@vite-plugin-vue-layouts\/)/g, '$1$2')
+          return stable === code ? undefined : { code: stable, map: null }
+        },
+      },
 
       UnoCss(),
 

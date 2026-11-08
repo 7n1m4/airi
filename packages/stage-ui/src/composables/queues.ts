@@ -79,7 +79,7 @@ export function extractEmotions(payload: any): EmotionPayload[] {
 }
 
 export function parseActEmotion(content: string) {
-  const match = /<\|ACT\s*(?::\s*)?(?!\s)([\s\S]*?)(?:\|>|>)/i.exec(content)
+  const match = /<\|ACT\s*(?::\s*)?([\s\S]*?)(?:\|>|>)/i.exec(content)
   if (!match)
     return { ok: false, emotions: [] as EmotionPayload[] }
 
@@ -110,7 +110,7 @@ export function parseActEmotion(content: string) {
     const intensityMatch = /"?intensity"?\s*[:=]\s*(?:"([^"]+)"|'([^']+)'|([\d.]+))/i.exec(payloadText)
     const parsedIntensity = intensityMatch ? normalizeIntensity(Number.parseFloat(intensityMatch[1] || intensityMatch[2] || intensityMatch[3])) : 1
 
-    const emotionMatch = /"?(?:emotion|motion|vfx|aura)"?\s*[:=]\s*(?=\S)(?:\{?[\s\S]*?"name"\s*[:=]\s*)?(?:"([^"]+)"|'([^']+)'|([^"}\s,]+))/gi
+    const emotionMatch = /"?(?:emotion|motion|vfx|aura)"?\s*[:=]\s*(?:\{?[\s\S]*?"name"\s*[:=]\s*)?(?:"([^"]+)"|'([^']+)'|([^"}\s,]+))/gi
     let m
     while ((m = emotionMatch.exec(payloadText)) !== null) {
       const tagText = m[0].trim().toLowerCase().replace(/^"/, '')
@@ -158,9 +158,100 @@ export function useSpecialTokenQueue(emotionsQueue: UseQueueReturn<EmotionPayloa
           debug('[Queue] Dispatching ACTOR swap:', actorId)
           ctx.emit('actor', actorId)
         }
+
+        // 4. Check for Sticker
+        const sticker = parseSticker(ctx.data)
+        if (sticker) {
+          debug('[Queue] Dispatching STICKER payload:', sticker)
+          ctx.emit('sticker', sticker)
+        }
       },
     ],
   })
+}
+
+export interface StickerTokenPayload {
+  id: string
+  surface: 'chat' | 'widget' | 'both'
+  weight: number
+  pos: 'topLeft' | 'topRight' | 'bottomLeft' | 'bottomRight' | 'random' | 'center'
+}
+
+export function parseSticker(content: string): StickerTokenPayload | null {
+  const match = /<\|STICKER\b[\s:]*([\s\S]*?)(?:\|>|\|\}|>)/i.exec(content)
+  if (!match)
+    return null
+
+  const payloadText = match[1].trim()
+  if (!payloadText)
+    return null
+
+  let id = ''
+  let surface: StickerTokenPayload['surface'] = 'chat'
+  let weight = 0.5
+  let pos: StickerTokenPayload['pos'] = 'random'
+
+  // Attempt 1: JSON parse if starts with {
+  if (payloadText.startsWith('{') && payloadText.endsWith('}')) {
+    try {
+      const obj = JSON.parse(payloadText)
+      if (obj.id)
+        id = String(obj.id).trim()
+      if (['chat', 'widget', 'both'].includes(obj.surface))
+        surface = obj.surface
+      if (typeof obj.weight === 'number' || typeof obj.weight === 'string') {
+        const val = Number.parseFloat(String(obj.weight))
+        if (!Number.isNaN(val))
+          weight = Math.min(1.0, Math.max(0.1, val))
+      }
+      if (['topLeft', 'topRight', 'bottomLeft', 'bottomRight', 'random', 'center'].includes(obj.pos))
+        pos = obj.pos
+    }
+    catch {}
+  }
+
+  // Attempt 2: Key-value attributes / space-delimited
+  if (!id) {
+    const idMatch = /\bid\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i.exec(payloadText)
+    if (idMatch) {
+      id = (idMatch[1] || idMatch[2] || idMatch[3]).trim()
+    }
+    else {
+      const bareMatch = /^([\w-]+)/.exec(payloadText)
+      if (bareMatch && !['surface', 'weight', 'pos'].includes(bareMatch[1].toLowerCase())) {
+        id = bareMatch[1].trim()
+      }
+    }
+
+    const surfaceMatch = /\bsurface\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i.exec(payloadText)
+    if (surfaceMatch) {
+      const val = (surfaceMatch[1] || surfaceMatch[2] || surfaceMatch[3]).toLowerCase().trim()
+      if (val === 'chat' || val === 'widget' || val === 'both') {
+        surface = val
+      }
+    }
+
+    const weightMatch = /\bweight\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i.exec(payloadText)
+    if (weightMatch) {
+      const val = Number.parseFloat(weightMatch[1] || weightMatch[2] || weightMatch[3])
+      if (!Number.isNaN(val)) {
+        weight = Math.min(1.0, Math.max(0.1, val))
+      }
+    }
+
+    const posMatch = /\bpos\s*=\s*(?:"([^"]+)"|'([^']+)'|([^\s>]+))/i.exec(payloadText)
+    if (posMatch) {
+      const val = (posMatch[1] || posMatch[2] || posMatch[3]).trim()
+      if (['topLeft', 'topRight', 'bottomLeft', 'bottomRight', 'random', 'center'].includes(val)) {
+        pos = val as StickerTokenPayload['pos']
+      }
+    }
+  }
+
+  if (!id)
+    return null
+
+  return { id, surface, weight, pos }
 }
 
 export function normalizeDelayMs(rawDelay: number): number {
@@ -207,7 +298,7 @@ export function getActorColor(id: string): string {
       return assets[id].textColor
     }
   }
-  catch {
+  catch (e) {
     // Pinia not initialized
   }
 

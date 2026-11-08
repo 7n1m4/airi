@@ -7,7 +7,7 @@ import { useRoute } from 'vue-router'
 
 import WeatherSkeleton from '../widgets/weather/components/Skeleton.vue'
 
-import { widgetsClearEvent, widgetsFetch, widgetsRemove, widgetsRemoveEvent, widgetsRenderEvent, widgetsUpdateEvent } from '../../shared/eventa'
+import { electronOpenMainDevtools, electronWindowClose, widgetsClearEvent, widgetsFetch, widgetsHideWindow, widgetsRemove, widgetsRemoveEvent, widgetsRenderEvent, widgetsUpdateEvent } from '../../shared/eventa'
 
 type SizePreset = 's' | 'm' | 'l' | { cols?: number, rows?: number }
 
@@ -62,6 +62,9 @@ const loading = ref(false)
 const context = useElectronEventaContext()
 const removeWidgetInvoke = useElectronEventaInvoke(widgetsRemove)
 const fetchWidget = useElectronEventaInvoke(widgetsFetch)
+const openDevTools = useElectronEventaInvoke(electronOpenMainDevtools)
+const closeWindow = useElectronEventaInvoke(electronWindowClose)
+const hideWidgetWindow = useElectronEventaInvoke(widgetsHideWindow)
 
 let ttlTimer: ReturnType<typeof setTimeout> | undefined
 
@@ -83,7 +86,7 @@ async function requestRemoval(id: string) {
 }
 
 function applySnapshot(snapshot: WidgetSnapshot) {
-  console.info('[Widgets] Applying snapshot:', snapshot)
+  console.log('[Widgets] Applying snapshot:', snapshot)
   clearTtl()
   widget.value = {
     id: snapshot.id,
@@ -101,7 +104,31 @@ function applySnapshot(snapshot: WidgetSnapshot) {
 async function requestSnapshot(id: string) {
   loading.value = true
   try {
-    const snapshot = await fetchWidget({ id })
+    let snapshot = await fetchWidget({ id })
+    if (!snapshot) {
+      try {
+        const { widgetsRepo } = await import('@proj-airi/stage-ui/libs/sandbox')
+        const persisted = await widgetsRepo.getWidget(id)
+        if (persisted) {
+          snapshot = {
+            id: persisted.id,
+            componentName: 'generative',
+            componentProps: {
+              id: persisted.id,
+              title: persisted.title,
+              path: persisted.path,
+              code: persisted.code,
+            },
+            size: 'm',
+            ttlMs: 0,
+          }
+        }
+      }
+      catch (fallbackErr) {
+        console.warn('[Widgets] Fallback to widgetsRepo failed:', fallbackErr)
+      }
+    }
+
     if (widgetId.value !== id)
       return
     if (snapshot)
@@ -118,6 +145,13 @@ async function requestSnapshot(id: string) {
   }
 }
 
+function onKeyDown(e: KeyboardEvent) {
+  if (e.key === 'F12' || ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'i')) {
+    e.preventDefault()
+    void openDevTools?.()
+  }
+}
+
 watch(widgetId, (id) => {
   clearTtl()
   widget.value = null
@@ -128,6 +162,8 @@ watch(widgetId, (id) => {
 }, { immediate: true })
 
 onMounted(() => {
+  window.addEventListener('keydown', onKeyDown)
+
   try {
     context.value.on(widgetsRenderEvent, (evt) => {
       const body = evt?.body
@@ -144,7 +180,7 @@ onMounted(() => {
       if (!body || body.id !== widgetId.value)
         return
 
-      console.info(`[Widgets] 📥 Update Received for ${body.id}:`, body.componentProps)
+      console.log(`[Widgets] 📥 Update Received for ${body.id}:`, body.componentProps)
 
       if (!widget.value) {
         requestSnapshot(body.id)
@@ -157,7 +193,7 @@ onMounted(() => {
       }
 
       const merged = { ...widget.value.componentProps, ...body.componentProps }
-      console.info(`[Widgets] 🌓 Props Merged. New State:`, merged)
+      console.log(`[Widgets] 🌓 Props Merged. New State:`, merged)
 
       widget.value = {
         ...widget.value,
@@ -190,6 +226,7 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeyDown)
   clearTtl()
 })
 
@@ -202,6 +239,7 @@ const Registry: Record<string, any> = {
   artistry: defineAsyncComponent(() => import('../widgets/artistry').then(m => m.Artistry)),
   comfy: defineAsyncComponent(() => import('../widgets/artistry').then(m => m.Artistry)),
   sticker: defineAsyncComponent(() => import('../widgets/sticker').then(m => m.Sticker)),
+  generative: defineAsyncComponent(() => import('../widgets/generative').then(m => m.GenerativeWidget)),
 }
 
 const GenericWidget = defineComponent({
@@ -239,7 +277,20 @@ async function handleClose() {
   if (widgetId.value) {
     await requestRemoval(widgetId.value)
   }
-  window.close()
+  try {
+    if (widgetId.value) {
+      await hideWidgetWindow?.({ id: widgetId.value })
+    }
+  }
+  catch {}
+  try {
+    await closeWindow?.()
+  }
+  catch {}
+  try {
+    window.close()
+  }
+  catch {}
 }
 </script>
 
@@ -252,7 +303,9 @@ async function handleClose() {
     </div>
     <div v-else-if="widget" class="relative h-full">
       <button
-        class="absolute right-2 top-2 z-50 size-7 rounded-full bg-black/40 text-xs text-white shadow-lg transition hover:bg-black/60"
+        v-if="widget.componentName !== 'generative'"
+        class="absolute right-2 top-1 z-50 size-5.5 flex items-center justify-center rounded-full bg-black/40 text-[10px] text-white shadow-lg transition hover:bg-black/60"
+        style="-webkit-app-region: no-drag;"
         title="Close widget"
         @click="handleClose"
       >
@@ -266,6 +319,7 @@ async function handleClose() {
         :model-value="widget.componentProps"
         :size="widget.size"
         v-bind="widget.componentProps"
+        @close="handleClose"
       />
     </div>
     <div v-else class="h-full flex items-center justify-center">
@@ -274,7 +328,7 @@ async function handleClose() {
       </div>
     </div>
   </div>
-  <div class="[-webkit-app-region:drag] pointer-events-auto absolute left-1/2 top-2 z-50 h-[14px] w-[36px] cursor-grab border border-white/10 rounded-[10px] bg-[rgba(125,125,125,0.4)] shadow-sm backdrop-blur-[6px] -translate-x-1/2 active:cursor-grabbing">
+  <div class="[-webkit-app-region:drag] pointer-events-auto absolute left-1/2 top-[7px] z-50 h-[14px] w-[36px] cursor-grab border border-white/10 rounded-[10px] bg-[rgba(125,125,125,0.4)] shadow-sm backdrop-blur-[6px] -translate-x-1/2 active:cursor-grabbing">
     <div class="absolute left-1/2 top-1/2 h-[3px] w-4 rounded-full bg-[rgba(255,255,255,0.85)] -translate-x-1/2 -translate-y-1/2" />
   </div>
 </template>

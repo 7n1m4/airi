@@ -19,17 +19,19 @@ import { useTextJournalStore } from '@proj-airi/stage-ui/stores/memory-text-jour
 import { useModsServerChannelStore } from '@proj-airi/stage-ui/stores/mods/api/channel-server'
 import { useContextBridgeStore } from '@proj-airi/stage-ui/stores/mods/api/context-bridge'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
+import { useCodeAssistantStore } from '@proj-airi/stage-ui/stores/modules/code-assistant'
 import { useDiscordStore } from '@proj-airi/stage-ui/stores/modules/discord'
 import { useScreenWatcherStore } from '@proj-airi/stage-ui/stores/modules/screen-watcher'
-import { useNapChatStore } from '@proj-airi/stage-ui/stores/nap-chat'
 import { useOnboardingStore } from '@proj-airi/stage-ui/stores/onboarding'
 import { usePerfTracerBridgeStore } from '@proj-airi/stage-ui/stores/perf-tracer-bridge'
 import { listProvidersForPluginHost, shouldPublishPluginHostCapabilities } from '@proj-airi/stage-ui/stores/plugin-host-capabilities'
 import { useProactivityStore } from '@proj-airi/stage-ui/stores/proactivity'
+import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
 import { useSettings } from '@proj-airi/stage-ui/stores/settings'
 import { useSettingsControlStrip } from '@proj-airi/stage-ui/stores/settings/control-strip'
 import { useSyncEngineStore } from '@proj-airi/stage-ui/stores/sync-engine'
 import { useTheme } from '@proj-airi/ui'
+import { useTitle } from '@vueuse/core'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -46,6 +48,7 @@ import {
   electronMcpGetConfig,
   electronMcpGetRuntimeStatus,
   electronMcpListTools,
+  electronMcpTestServer,
   electronMcpUpdateConfig,
   electronOpenOnboarding,
   electronPluginInspect,
@@ -68,6 +71,8 @@ import {
 import { useServerChannelSettingsStore } from './stores/settings/server-channel'
 import { useStageWindowLifecycleStore } from './stores/stage-window-lifecycle'
 import { builtinTools } from './stores/tools/builtin'
+import { snapshotAudioStateFromWindow, stopAmbientAudioFromWindow } from './utils/debug-audio'
+import { seedTextJournalEntryFromWindow } from './utils/debug-journal'
 
 const { isDark: dark } = useTheme()
 const i18n = useI18n()
@@ -94,27 +99,30 @@ const backupStore = useBackupStore()
 usePerfTracerBridgeStore()
 
 const proactivityStore = useProactivityStore()
+const providersStore = useProvidersStore()
 const screenWatcherStore = useScreenWatcherStore()
+const codeAssistantStore = useCodeAssistantStore()
 const stageWindowLifecycleStore = useStageWindowLifecycleStore()
 void stageWindowLifecycleStore.initializeWindowLifecycleBridge()
-// Arms the presence → `active` edge that surfaces the most recent nap-chat
-// recap (design §7). Instantiated once per window; the store itself only watches
-// in the main window.
-useNapChatStore()
-
-async function seedTextJournalEntryFromWindow() {
-  await textJournalStore.load()
-  const entry = await textJournalStore.seedActiveCharacterEntry()
-  console.info('[TextJournal] Seeded entry via window.seedTextJournalEntry()', entry)
-  return entry
-}
 
 async function ensureYesterdayShortTermBlockForActiveCharacter() {
-  if (!cardStore.activeCardId)
+  const targetCardId = cardStore.activeCardId
+  if (!targetCardId)
+    return
+
+  // Wait for any in-flight card-switch session resolution so activeSessionId and universeId are current
+  try {
+    await chatSessionStore.ensureActiveSessionForCharacter()
+  }
+  catch (error) {
+    console.warn('[ChatSession] Failed to ensure active session before memory maintenance.', error)
+  }
+
+  if (cardStore.activeCardId !== targetCardId)
     return
 
   try {
-    await shortTermMemoryStore.ensureYesterdayBlock(cardStore.activeCardId)
+    await shortTermMemoryStore.ensureYesterdayBlock(targetCardId)
   }
   catch (error) {
     console.warn('[ShortTermMemory] Failed to auto-generate yesterday block.', error)
@@ -123,10 +131,10 @@ async function ensureYesterdayShortTermBlockForActiveCharacter() {
   // NOTICE: lifetime maintenance rides the STMM cadence but runs as fire-and-forget background
   // work — a multi-day catch-up merge must never block app boot or card switches.
   try {
-    const activeSessionId = chatSessionStore.getCharacterIndex(cardStore.activeCardId)?.activeSessionId || chatSessionStore.activeSessionId
+    const activeSessionId = chatSessionStore.getCharacterIndex(targetCardId)?.activeSessionId || chatSessionStore.activeSessionId
     const activeSessionMeta = chatSessionStore.getSessionMeta(activeSessionId)
     const universeId = activeSessionMeta?.universeId || 'global'
-    void lifetimeMemoryStore.applyIncrementalUpdate(cardStore.activeCardId, universeId)
+    void lifetimeMemoryStore.applyIncrementalUpdate(targetCardId, universeId)
       .catch(error => console.warn('[LifetimeMemory] Background incremental update failed.', error))
   }
   catch (error) {
@@ -134,9 +142,18 @@ async function ensureYesterdayShortTermBlockForActiveCharacter() {
   }
 }
 
-Object.assign(window as Window & typeof globalThis, {
-  seedTextJournalEntry: seedTextJournalEntryFromWindow,
-})
+// NOTICE: DevTools-only debug escape hatch. The helper is module-scoped (see
+// utils/debug-journal.ts) so `window` never retains the App setup scope and its
+// stores. Exposed only in dev and removed on unmount to avoid a permanent GC root.
+if (import.meta.env.DEV && typeof window !== 'undefined') {
+  Object.assign(window as Window & typeof globalThis, {
+    seedTextJournalEntry: seedTextJournalEntryFromWindow,
+    __AIRI_DEBUG_AUDIO__: {
+      snapshotAudioState: snapshotAudioStateFromWindow,
+      stopAmbientAudio: stopAmbientAudioFromWindow,
+    },
+  })
+}
 
 const context = useElectronEventaContext()
 const getServerChannelConfig = useElectronEventaInvoke(electronGetServerChannelConfig)
@@ -153,6 +170,7 @@ const getMcpRuntimeStatus = useElectronEventaInvoke(electronMcpGetRuntimeStatus)
 const getMcpConfig = useElectronEventaInvoke(electronMcpGetConfig)
 const updateMcpConfig = useElectronEventaInvoke(electronMcpUpdateConfig)
 const applyAndRestartMcp = useElectronEventaInvoke(electronMcpApplyAndRestart)
+const testMcpServer = useElectronEventaInvoke(electronMcpTestServer)
 const setLocale = useElectronEventaInvoke(i18nSetLocale)
 const openOnboarding = useElectronEventaInvoke(electronOpenOnboarding)
 const reportMilestone = useElectronEventaInvoke(electronSplashReportMilestone)
@@ -161,36 +179,48 @@ const releaseActorStage = useElectronEventaInvoke(electronStageRelease)
 const getStageDisabled = useElectronEventaInvoke(electronGetStageDisabled)
 
 // NOTICE: register plugin host bridge during setup to avoid race with pages using it in immediate watchers.
-pluginHostInspectorStore.setBridge({
-  list: () => listPlugins(),
-  setEnabled: payload => setPluginEnabled(payload),
-  loadEnabled: () => loadEnabledPlugins(),
-  load: payload => loadPlugin(payload),
-  unload: payload => unloadPlugin(payload),
-  inspect: () => inspectPluginHost(),
-})
+if (context.value) {
+  pluginHostInspectorStore.setBridge({
+    list: () => listPlugins(),
+    setEnabled: payload => setPluginEnabled(payload),
+    loadEnabled: () => loadEnabledPlugins(),
+    load: payload => loadPlugin(payload),
+    unload: payload => unloadPlugin(payload),
+    inspect: () => inspectPluginHost(),
+  })
 
-// NOTICE: MCP tools are declared from stage-ui and executed during model streaming.
-// Register runtime bridge during setup to avoid missing bridge in early tool invocations.
-setMcpToolBridge({
-  listTools: () => listMcpTools(),
-  callTool: payload => callMcpTool(payload),
-  getRuntimeStatus: () => getMcpRuntimeStatus(),
-  getConfig: () => getMcpConfig(),
-  updateConfig: payload => updateMcpConfig(payload),
-  applyAndRestart: () => applyAndRestartMcp(),
-})
+  // NOTICE: MCP tools are declared from stage-ui and executed during model streaming.
+  // Register runtime bridge during setup to avoid missing bridge in early tool invocations.
+  setMcpToolBridge({
+    listTools: () => listMcpTools(),
+    callTool: payload => callMcpTool(payload),
+    getRuntimeStatus: () => getMcpRuntimeStatus(),
+    getConfig: () => getMcpConfig(),
+    updateConfig: payload => updateMcpConfig(payload),
+    applyAndRestart: () => applyAndRestartMcp(),
+    testServer: payload => testMcpServer(payload as any),
+  })
 
-watch(activeCard, (card) => {
-  const allowed = card?.extensions?.airi?.generation?.known?.allowedTools
-  if (allowed?.length) {
-    void ensureMcpServersForAllowedTools(allowed)
-  }
-}, { immediate: true })
+  watch(activeCard, (card) => {
+    const allowed = card?.extensions?.airi?.generation?.known?.allowedTools
+    if (allowed?.length) {
+      // The audio server advertises its MCP endpoint itself; the provider baseUrl
+      // is only the fallback target when that advertisement is unavailable.
+      void ensureMcpServersForAllowedTools(allowed, {
+        providerBaseUrl: providersStore.getProviderConfig('airi-audio-server')?.baseUrl as string | undefined,
+      })
+    }
+  }, { immediate: true })
+}
 
 watch(language, () => {
   i18n.locale.value = language.value
-  setLocale(language.value)
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = language.value || 'en'
+  }
+  if (context.value) {
+    setLocale(language.value)
+  }
 })
 
 const { updateThemeColor } = useThemeColor(themeColorFromValue({ light: 'rgb(255 255 255)', dark: 'rgb(18 18 18)' }))
@@ -310,6 +340,10 @@ async function runSyncEngineStep() {
 async function runCharacterCardStep() {
   await reportStartupMilestone('character-card', 'loading')
   try {
+    // NOTICE: Card store must initialize after local-backup restore and before
+    // chat sessions so activeCardId is healed (legacy 'default' -> 'relu')
+    // before session indexes bind to it.
+    await cardStore.initialize()
     await chatSessionStore.initialize()
     await shortTermMemoryStore.load()
     if (isMainWindow.value) {
@@ -460,6 +494,7 @@ onMounted(async () => {
 
   logStep('Initializing Analytics & Card stores')
   analyticsStore.initialize()
+  await cardStore.initialize().catch((err: any) => console.error('[PipelineTTS:App] FAILED card store init:', err))
   if (isMainWindow.value) {
     await textJournalStore.load()
   }
@@ -501,16 +536,18 @@ onMounted(async () => {
   }
 
   // Expose stage provider definitions to plugin host APIs.
-  defineInvokeHandler(context.value, pluginProtocolListProviders, async () => listProvidersForPluginHost())
+  if (context.value) {
+    defineInvokeHandler(context.value, pluginProtocolListProviders, async () => listProvidersForPluginHost())
 
-  if (shouldPublishPluginHostCapabilities()) {
-    await reportPluginCapability({
-      key: pluginProtocolListProvidersEventName,
-      state: 'ready',
-      metadata: {
-        source: 'stage-ui',
-      },
-    })
+    if (shouldPublishPluginHostCapabilities()) {
+      await reportPluginCapability({
+        key: pluginProtocolListProvidersEventName,
+        state: 'ready',
+        metadata: {
+          source: 'stage-ui',
+        },
+      })
+    }
   }
 
   // Auto-start Discord service if previously enabled and token is configured
@@ -622,6 +659,10 @@ watch(
     if (route.path.startsWith('/settings') || route.path === '/chat')
       return
 
+    // Secondary windows (chat, settings, widgets, etc.) should never have their title defaulted to Control Strip
+    if (!isMainWindow.value && (route.path === '/' || route.path === ''))
+      return
+
     const activeCharacterLabel = activeCard.value?.name?.trim() || 'AIRI'
     const titleTemplate = ROUTE_TITLES[route.path] || 'AIRI - Looking at {character}'
     const nextTitle = titleTemplate.replace('{character}', activeCharacterLabel)
@@ -640,7 +681,7 @@ watch(
 )
 
 watch(() => [isMainWindow.value, onboardingStore.needsOnboarding] as const, ([isMain, needSetup]) => {
-  if (isMain && needSetup) {
+  if (isMain && needSetup && context.value) {
     openOnboarding()
   }
 }, { immediate: true })
@@ -649,12 +690,13 @@ watch(() => [isMainWindow.value, onboardingStore.needsOnboarding] as const, ([is
 // above mutate `document.title`); report it to the main process so the native OS
 // chrome stays in sync instead of relying on the static BrowserWindow constructor
 // `title`, which desyncs as soon as a route changes.
+const observedTitle = useTitle(undefined, { observe: true })
 const reportWindowTitle = useElectronEventaInvoke(electronWindowSetTitle)
 let lastReportedTitle: string | undefined
 watch(
-  () => document.title,
+  observedTitle,
   (title) => {
-    if (title === lastReportedTitle)
+    if (!title || title === lastReportedTitle || !context.value)
       return
     lastReportedTitle = title
     void reportWindowTitle({ title })
@@ -666,6 +708,12 @@ onUnmounted(() => {
   contextBridgeStore.dispose()
   clearMcpToolBridge()
   proactivityStore.stopHeartbeatLoop()
+  // NOTICE: Release the dev-only debug handle so `window` drops its last
+  // reference to the journal seeder (and anything it touched).
+  if (import.meta.env.DEV && typeof window !== 'undefined')
+    delete (window as Window & typeof globalThis & { seedTextJournalEntry?: unknown, __AIRI_DEBUG_AUDIO__?: unknown }).seedTextJournalEntry
+  if (import.meta.env.DEV && typeof window !== 'undefined')
+    delete (window as Window & typeof globalThis & { __AIRI_DEBUG_AUDIO__?: unknown }).__AIRI_DEBUG_AUDIO__
 })
 </script>
 

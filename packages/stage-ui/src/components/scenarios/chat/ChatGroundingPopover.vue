@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
+import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useAiriCardStore } from '../../../stores/modules/airi-card'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   /** Tooltip for the main button */
   title?: string
   /** Variant of the trigger button */
@@ -18,6 +19,23 @@ withDefaults(defineProps<{
 const router = useRouter()
 const airiCardStore = useAiriCardStore()
 const { activeCard, activeCardId } = storeToRefs(airiCardStore)
+
+const activeAiriExt = computed(() => {
+  const card = activeCard.value as any
+  if (!card)
+    return undefined
+  const rawDataExt = ('data' in card ? card.data?.extensions?.airi : undefined)
+  const rootExt = card.extensions?.airi
+  return rawDataExt && rootExt ? { ...rawDataExt, ...rootExt } : (rootExt || rawDataExt)
+})
+
+// NOTICE: Universe Memory (RAG) unification — groundingMemoryEnabled is the
+// canonical flag, cognition.searchEngine.universeRagEnabled is the legacy alias.
+const isGroundingMemoryEnabled = computed(() => {
+  return (activeAiriExt.value as any)?.groundingMemoryEnabled
+    ?? (activeAiriExt.value as any)?.cognition?.searchEngine?.universeRagEnabled
+    ?? false
+})
 
 function navigateToProactivity() {
   if (!activeCardId.value)
@@ -70,7 +88,7 @@ function handleToggleSalienceGate() {
         v-else
         class="max-h-[10lh] min-h-[1lh] flex items-center justify-center rounded-md p-2 outline-none transition-colors transition-transform active:scale-95"
         :class="[
-          activeCard?.extensions?.airi?.groundingEnabled || activeCard?.extensions?.airi?.groundingMemoryEnabled || activeCard?.extensions?.airi?.groundingTopicsEnabled || activeCard?.extensions?.airi?.groundingDirectorScratchpadEnabled
+          activeCard?.extensions?.airi?.groundingEnabled || isGroundingMemoryEnabled || activeCard?.extensions?.airi?.groundingTopicsEnabled || activeCard?.extensions?.airi?.groundingDirectorScratchpadEnabled
             ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
             : 'bg-neutral-100 text-neutral-500 hover:text-primary-500 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:text-primary-400',
         ]"
@@ -79,7 +97,7 @@ function handleToggleSalienceGate() {
       >
         <div
           :class="[
-            activeCard?.extensions?.airi?.groundingEnabled || activeCard?.extensions?.airi?.groundingMemoryEnabled || activeCard?.extensions?.airi?.groundingTopicsEnabled || activeCard?.extensions?.airi?.groundingDirectorScratchpadEnabled
+            activeCard?.extensions?.airi?.groundingEnabled || isGroundingMemoryEnabled || activeCard?.extensions?.airi?.groundingTopicsEnabled || activeCard?.extensions?.airi?.groundingDirectorScratchpadEnabled
               ? 'i-solar:cpu-bolt-bold-duotone'
               : 'i-solar:cpu-bold-duotone',
           ]"
@@ -161,7 +179,7 @@ function handleToggleSalienceGate() {
             <div class="flex items-center gap-2.5">
               <div
                 class="text-lg" :class="[
-                  activeCard?.extensions?.airi?.groundingMemoryEnabled
+                  isGroundingMemoryEnabled
                     ? 'text-amber-500 i-solar:database-bold-duotone'
                     : 'text-neutral-400 dark:text-neutral-500 i-solar:database-linear',
                 ]"
@@ -173,11 +191,11 @@ function handleToggleSalienceGate() {
             </div>
             <!-- Switch UI -->
             <div
-              :class="activeCard?.extensions?.airi?.groundingMemoryEnabled ? 'bg-primary-500' : 'bg-neutral-200 dark:bg-neutral-700'"
+              :class="isGroundingMemoryEnabled ? 'bg-primary-500' : 'bg-neutral-200 dark:bg-neutral-700'"
               class="relative h-4 w-7 inline-flex shrink-0 cursor-pointer items-center border border-transparent rounded-full transition-colors duration-200 ease-in-out"
             >
               <span
-                :class="activeCard?.extensions?.airi?.groundingMemoryEnabled ? 'translate-x-3.5' : 'translate-x-0.5'"
+                :class="isGroundingMemoryEnabled ? 'translate-x-3.5' : 'translate-x-0.5'"
                 class="pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
               />
             </div>

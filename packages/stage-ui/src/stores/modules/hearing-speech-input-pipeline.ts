@@ -3,7 +3,6 @@ import type { TranscriptionProviderWithExtraOptions } from '@xsai-ext/providers/
 import type { HearingTranscriptionResult } from './hearing-store'
 
 import { tryCatch } from '@moeru/std'
-import { debug } from '@proj-airi/stage-shared'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, shallowRef, watch } from 'vue'
 import { toast } from 'vue-sonner'
@@ -41,6 +40,7 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
     providerId?: string
     callbacks?: {
       onSentenceEnd?: (delta: string) => void
+      onInterim?: (interim: string) => void
       onSpeechEnd?: (text: string) => void
     }
   }>()
@@ -125,8 +125,10 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
 
   async function stopStreamingTranscription(abort?: boolean, disposeProviderId?: string) {
     const session = streamingSession.value
-    if (!session)
+    if (!session) {
+      hearingStore.isTranscribing = false
       return
+    }
 
     // Special handling for Web Speech API
     if (session.providerId === 'browser-web-speech-api') {
@@ -155,6 +157,7 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
         clearTimeout(session.idleTimer)
 
       streamingSession.value = undefined
+      hearingStore.isTranscribing = false
 
       if (session.result?.mode === 'stream') {
         try {
@@ -162,8 +165,10 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
           return text
         }
         catch (err) {
-          error.value = errorMessage(err)
-          console.error('Error getting transcription result:', error.value)
+          if (!abort) {
+            error.value = errorMessage(err)
+            console.error('Error getting transcription result:', error.value)
+          }
         }
       }
 
@@ -231,6 +236,7 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
     providerId?: string
     model?: string
     onSentenceEnd?: (delta: string) => void
+    onInterim?: (interim: string) => void
     onSpeechEnd?: (text: string) => void
     onError?: (error: string) => void
   }) {
@@ -243,7 +249,7 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
       supportsStreamInput: isStreamSupported,
       hasStream: !!stream,
       providerId,
-      hasCallbacks: !!(options?.onSentenceEnd || options?.onSpeechEnd),
+      hasCallbacks: !!(options?.onSentenceEnd || options?.onInterim || options?.onSpeechEnd),
     })
 
     if (!isStreamSupported) {
@@ -253,11 +259,11 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
 
     // NOTICE: We check isTranscribing here but allow re-entry when there's an
     // existing session to restart (the restart logic below handles teardown).
-    // Previously this guard permanently blocked re-entry because
-    // stopStreamingTranscription did not reset isTranscribing.
+    // If isTranscribing was left true with no active streaming session (e.g. from
+    // an unexpected error or abort), self-heal by resetting the stale flag.
     if (hearingStore.isTranscribing && !streamingSession.value) {
-      console.warn('[Hearing Pipeline] Transcription already in progress (no session to restart), skipping')
-      return
+      console.warn('[Hearing Pipeline] Stale isTranscribing flag detected with no active session, resetting')
+      hearingStore.isTranscribing = false
     }
 
     error.value = undefined
@@ -364,7 +370,7 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
           // For Web Speech API, if callbacks are provided and different, we need to restart
           // because recognition instance callbacks are set once and can't be changed
           // However, if no new callbacks are provided, we can just reuse the session
-          const hasNewCallbacks = !!(options?.onSentenceEnd || options?.onSpeechEnd)
+          const hasNewCallbacks = !!(options?.onSentenceEnd || options?.onInterim || options?.onSpeechEnd)
 
           if (hasNewCallbacks) {
             // We need to restart to use new callbacks, but only if they're actually different
@@ -448,11 +454,17 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
             options?.onSentenceEnd?.(delta)
 
             // Transcription feedback toast
-            debug('[Hearing Pipeline] Web Speech API delta:', delta)
+            console.debug('[Hearing Pipeline] Web Speech API delta:', delta)
             toast.dismiss('transcription-feedback')
             toast.info(`🎤 You said: ${delta}`, {
               id: 'transcription-feedback',
             })
+          },
+          onInterim: (interim) => {
+            if (abortController.signal.aborted)
+              return
+            bumpIdle()
+            options?.onInterim?.(interim)
           },
           onSpeechEnd: (text) => {
             if (abortController.signal.aborted)
@@ -482,6 +494,7 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
           providerId,
           callbacks: {
             onSentenceEnd: options?.onSentenceEnd,
+            onInterim: options?.onInterim,
             onSpeechEnd: options?.onSpeechEnd,
           },
         } as any // Type assertion needed because recognition is extra
@@ -506,6 +519,8 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
               }
             }
             catch (err) {
+              if (err instanceof DOMException && err.name === 'AbortError')
+                return
               console.error('Error reading text stream:', err)
             }
           })()
@@ -685,11 +700,15 @@ export const useHearingSpeechInputPipeline = defineStore('modules:hearing:speech
           model,
           fileName: 'recording.wav',
         })
+        // NOTICE: File does not inherit the Blob's MIME type — pass it
+        // explicitly, otherwise downstream senders (e.g. Deepgram, which
+        // falls back to 'audio/webm') declare the wrong container and the
+        // provider decodes silence.
         const result = await hearingStore.transcription(
           providerId,
           provider,
           model,
-          new File([recording], 'recording.wav'),
+          new File([recording], 'recording.wav', { type: recording.type || 'audio/wav' }),
         )
         const text = result.mode === 'stream' ? await result.text : result.text
         if (!text || !text.trim()) {

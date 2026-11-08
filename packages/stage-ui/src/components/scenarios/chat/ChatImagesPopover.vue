@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 
-withDefaults(defineProps<{
+const props = withDefaults(defineProps<{
   /** Tooltip for the main button */
   title?: string
-  variant?: 'default' | 'mobile'
+  variant?: 'default' | 'mobile' | 'ghost'
 }>(), {
   variant: 'default',
 })
@@ -18,23 +18,35 @@ const emit = defineEmits<{
 <template>
   <PopoverRoot>
     <PopoverTrigger as-child>
-      <!-- Mobile trigger -->
-      <button
-        v-if="variant === 'mobile'"
-        class="w-fit flex items-center justify-center border-2 border-neutral-100/60 rounded-xl border-solid bg-neutral-50/70 p-2 backdrop-blur-md transition-all active:scale-95 dark:border-neutral-800/30 dark:bg-neutral-800/70"
-        :title="title || 'Attach Image'"
-      >
-        <div class="i-solar:gallery-add-bold-duotone size-5 text-neutral-500 dark:text-neutral-400" />
-      </button>
+      <slot name="trigger">
+        <!-- Ghost / Frameless trigger -->
+        <button
+          v-if="variant === 'ghost'"
+          type="button"
+          class="flex cursor-pointer items-center justify-center rounded-lg p-1 text-neutral-400 transition-colors duration-200 active:scale-95 hover:text-neutral-700 dark:hover:text-neutral-200"
+          :title="title || 'Attach Image'"
+        >
+          <div class="i-solar:gallery-add-linear text-xl" />
+        </button>
 
-      <!-- Default (composer inline) trigger -->
-      <button
-        v-else
-        class="h-8 w-8 flex items-center justify-center rounded-xl bg-neutral-200/20 text-neutral-500 transition-all duration-200 active:scale-95 dark:bg-neutral-800/20 hover:bg-neutral-200/40 dark:text-neutral-400 hover:text-neutral-700 dark:hover:bg-neutral-800/40 dark:hover:text-neutral-200"
-        :title="title || 'Attach Image'"
-      >
-        <div class="i-solar:gallery-add-bold text-base" />
-      </button>
+        <!-- Mobile trigger -->
+        <button
+          v-else-if="variant === 'mobile'"
+          class="w-fit flex items-center justify-center border-2 border-neutral-100/60 rounded-xl border-solid bg-neutral-50/70 p-2 backdrop-blur-md transition-all active:scale-95 dark:border-neutral-800/30 dark:bg-neutral-800/70"
+          :title="title || 'Attach Image'"
+        >
+          <div class="i-solar:gallery-add-bold-duotone size-5 text-neutral-500 dark:text-neutral-400" />
+        </button>
+
+        <!-- Default (composer inline) trigger -->
+        <button
+          v-else
+          class="h-8 w-8 flex items-center justify-center rounded-xl bg-neutral-200/20 text-neutral-500 transition-all duration-200 active:scale-95 dark:bg-neutral-800/20 hover:bg-neutral-200/40 dark:text-neutral-400 hover:text-neutral-700 dark:hover:bg-neutral-800/40 dark:hover:text-neutral-200"
+          :title="title || 'Attach Image'"
+        >
+          <div class="i-solar:gallery-add-bold text-base" />
+        </button>
+      </slot>
     </PopoverTrigger>
 
     <PopoverPortal>

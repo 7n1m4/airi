@@ -138,6 +138,54 @@ const displayModelInfo = computed(() => {
   }
 })
 
+// ==================== 1b. MULTI-MODEL ROSTER (v2) ====================
+// v1 stays primary-only (upstream whitelist). v2 bundles every concept model
+// so multi-actor cards round-trip the full on-set roster.
+const displayModelsInfo = computed(() => {
+  const airi = (activeCard.value as any)?.extensions?.airi as any
+  const primaryId = (props.cardId ? cardStore.getCardDisplayModelId(props.cardId) : null)
+    || (airi?.modules?.displayModelId)
+  const seen = new Set<string>()
+  const roster: Array<{ key: string, modelId: string }> = []
+  const push = (key: string, modelId: unknown) => {
+    if (typeof modelId !== 'string' || !modelId || modelId === 'none' || modelId === 'inherit' || seen.has(modelId))
+      return
+    seen.add(modelId)
+    roster.push({ key, modelId })
+  }
+  if (primaryId)
+    push('primary', primaryId)
+  const assets = airi?.visual_assets || {}
+  const modules = airi?.modules || {}
+  for (const key of Object.keys(assets)) {
+    const asset = (assets[key] || {}) as any
+    const mod = (modules[key] || {}) as any
+    push(key, mod.manifestation?.modelId || asset.manifestation?.modelId)
+  }
+  for (const key of Object.keys(modules)) {
+    if (key === 'displayModelId')
+      continue
+    push(key, (modules[key] || {})?.manifestation?.modelId)
+  }
+
+  return roster.map(({ key, modelId }) => {
+    const model = displayModelsStore.displayModels.find(m => m.id === modelId)
+    const rawFormat = (model?.format || '').toLowerCase()
+    const isMmd = rawFormat.includes('pmx') || rawFormat.includes('pmd')
+    const cleanName = (model?.name || key || 'model').toLowerCase().replace(/[^a-z0-9_-]/g, '_')
+    const ext = rawFormat === 'vrm' ? 'vrm' : 'zip'
+    return {
+      key,
+      id: modelId,
+      filename: `${cleanName}.${ext}`,
+      exportSupported: !!model && !isMmd,
+      missing: !model,
+    }
+  })
+})
+
+const exportableModelsInfo = computed(() => displayModelsInfo.value.filter(m => m.exportSupported))
+
 // ==================== 1.1 COVER ART SOURCES (4-TIER STRATEGY) ====================
 export type CoverArtSourceType = 'selfie' | 'preview' | 'author-icon' | 'letter'
 
@@ -379,8 +427,10 @@ const jsonPretty = ref(true)
 const jsonIncludeMemories = ref(false)
 
 // Synchronize initial checkbox states with detected capabilities
-watch([() => activeCard.value, () => detectedChatSessions.value.length, () => displayModelInfo.value], () => {
-  includeModels.value = !!displayModelInfo.value?.exportSupported
+watch([() => activeCard.value, () => detectedChatSessions.value.length, () => displayModelInfo.value, () => exportableModelsInfo.value.length, () => zipFlavor.value], () => {
+  includeModels.value = zipFlavor.value === 'v1'
+    ? !!displayModelInfo.value?.exportSupported
+    : exportableModelsInfo.value.length > 0
   includeBackground.value = !!detectedBackground.value
   includeVoiceProfiles.value = !!detectedVoiceProfile.value
   includeMemories.value = detectedChatSessions.value.length > 0
@@ -407,12 +457,6 @@ const compatibilityMatrix = computed(() => {
         sillyTavern: false,
         moeru: false,
       }
-    default:
-      return {
-        dasilva: false,
-        sillyTavern: false,
-        moeru: false,
-      }
   }
 })
 
@@ -427,8 +471,6 @@ const exportButtonLabel = computed(() => {
       return 'Export Embedded Card (.png)'
     case 'json':
       return 'Export Character JSON (.json)'
-    default:
-      return 'Export Character'
   }
 })
 
@@ -759,22 +801,28 @@ async function handleExportDownload() {
               <label
                 :class="[
                   'flex items-start gap-2.5 select-none',
-                  displayModelInfo && displayModelInfo.exportSupported ? 'cursor-pointer' : 'cursor-not-allowed opacity-60',
+                  (zipFlavor === 'v1' ? (displayModelInfo && displayModelInfo.exportSupported) : exportableModelsInfo.length > 0) ? 'cursor-pointer' : 'cursor-not-allowed opacity-60',
                 ]"
               >
                 <input
                   v-model="includeModels"
                   type="checkbox"
-                  :disabled="!displayModelInfo || !displayModelInfo.exportSupported"
+                  :disabled="zipFlavor === 'v1' ? (!displayModelInfo || !displayModelInfo.exportSupported) : exportableModelsInfo.length === 0"
                   :class="['mt-0.5 rounded text-primary-600']"
                 >
                 <div :class="['flex flex-col']">
                   <div :class="['flex items-center gap-2']">
                     <span :class="['font-medium text-neutral-800 dark:text-neutral-200']">
-                      {{ zipFlavor === 'v1' ? `Bundle Body Model (${displayModelInfo?.upstreamFilename || 'body-model.vrm'})` : 'Bundle 3D/2D Display Model' }}
+                      {{ zipFlavor === 'v1' ? `Bundle Body Model (${displayModelInfo?.upstreamFilename || 'body-model.vrm'})` : `Bundle 3D/2D Display Models${exportableModelsInfo.length > 1 ? ` (${exportableModelsInfo.length})` : ''}` }}
                     </span>
                     <span
-                      v-if="displayModelInfo && displayModelInfo.exportSupported"
+                      v-if="zipFlavor === 'v2' && exportableModelsInfo.length > 1"
+                      :class="['text-[10px] px-1.5 py-0.2 rounded bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-mono']"
+                    >
+                      {{ exportableModelsInfo.length }} models • multi-actor roster
+                    </span>
+                    <span
+                      v-else-if="displayModelInfo && displayModelInfo.exportSupported"
                       :class="['text-[10px] px-1.5 py-0.2 rounded bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 font-mono']"
                     >
                       {{ displayModelInfo.name }} • {{ displayModelInfo.format }}
@@ -946,7 +994,7 @@ async function handleExportDownload() {
                   </template>
 
                   <!-- Models -->
-                  <div v-if="includeModels && displayModelInfo && displayModelInfo.exportSupported" :class="['flex flex-col pl-2 border-l border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300']">
+                  <div v-if="zipFlavor === 'v1' ? (includeModels && displayModelInfo && displayModelInfo.exportSupported) : (includeModels && exportableModelsInfo.length > 0)" :class="['flex flex-col pl-2 border-l border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300']">
                     <button
                       type="button"
                       :class="['flex items-center gap-1.5 text-left text-neutral-400 text-[10px] uppercase font-bold hover:text-neutral-600 dark:hover:text-neutral-200 transition-colors py-0.5 select-none']"
@@ -959,12 +1007,18 @@ async function handleExportDownload() {
                         ]"
                       />
                       <span>📁 models/</span>
-                      <span :class="['text-[9px] font-normal normal-case opacity-70 ml-1']">(1 item)</span>
+                      <span :class="['text-[9px] font-normal normal-case opacity-70 ml-1']">({{ zipFlavor === 'v1' ? '1 item' : `${exportableModelsInfo.length} item${exportableModelsInfo.length > 1 ? 's' : ''}` }})</span>
                     </button>
-                    <div v-show="treeExpandedModels" :class="['flex items-center gap-1.5 pl-3 py-0.5']">
+                    <div v-if="zipFlavor === 'v1'" v-show="treeExpandedModels" :class="['flex items-center gap-1.5 pl-3 py-0.5']">
                       <div i-solar:box-linear :class="['text-purple-500 text-xs']" />
-                      <span>{{ zipFlavor === 'v1' ? displayModelInfo.upstreamFilename : displayModelInfo.filename }}</span>
+                      <span>{{ displayModelInfo?.upstreamFilename }}</span>
                     </div>
+                    <template v-else>
+                      <div v-for="m in exportableModelsInfo" v-show="treeExpandedModels" :key="m.id" :class="['flex items-center gap-1.5 pl-3 py-0.5']">
+                        <div i-solar:box-linear :class="['text-purple-500 text-xs']" />
+                        <span>{{ m.filename }}</span>
+                      </div>
+                    </template>
                   </div>
 
                   <!-- Voices (v2 only) -->

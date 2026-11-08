@@ -1,3 +1,5 @@
+import type { System1Response } from '../../types'
+
 import z from 'zod'
 
 import { createOpenAI } from '@xsai-ext/providers/create'
@@ -49,7 +51,7 @@ export const providerOpenCodeGo = defineProvider<OpenCodeGoConfig>({
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.opencode-go.title'),
   description: 'Developer API Platform - Plans start at $10 a month',
   descriptionLocalize: ({ t }) => t('settings.pages.providers.provider.opencode-go.description'),
-  tasks: ['chat', 'vision'],
+  tasks: ['chat', 'vision', 'system1'],
   icon: 'i-lobe-icons:openai-compatible',
   business: () => ({
     pricing: 'paid',
@@ -111,6 +113,49 @@ export const providerOpenCodeGo = defineProvider<OpenCodeGoConfig>({
         ...provider.model(...args),
         fetch: customFetch,
       }),
+      systemOne: async (state: string | object, questions: Record<string, any>, model = 'jev-1.13-free'): Promise<System1Response> => {
+        let statePayload: string
+        if (typeof state === 'string') {
+          statePayload = state
+        }
+        else if (state && typeof state === 'object' && 'target_turn' in state && (state as any).target_turn?.text) {
+          statePayload = (state as any).target_turn.text
+        }
+        else {
+          statePayload = JSON.stringify(state)
+        }
+
+        // Normalize model name (strip foreign typesafe/ prefix if passed)
+        const normalizedModel = (model || 'jev-1.13-free').replace(/^typesafe\//, '')
+
+        let endpoint = 'https://opencode.ai/zen/v1/systemone'
+        if (config.baseUrl && !config.baseUrl.includes('opencode.ai/zen/go/v1')) {
+          endpoint = config.baseUrl.endsWith('/')
+            ? `${config.baseUrl}systemone`
+            : `${config.baseUrl}/systemone`
+        }
+
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${config.apiKey}`,
+            'Content-Type': 'application/json',
+            'x-opencode-session': resolveOpenCodeSessionId(),
+          },
+          body: JSON.stringify({
+            model: normalizedModel,
+            state: statePayload,
+            questions,
+          }),
+        })
+
+        if (!res.ok) {
+          const errText = await res.text()
+          throw new Error(`[OpenCode Go System-1] API error ${res.status}: ${errText}`)
+        }
+
+        return await res.json() as System1Response
+      },
     }
   },
 

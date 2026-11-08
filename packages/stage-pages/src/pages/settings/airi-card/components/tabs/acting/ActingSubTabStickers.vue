@@ -17,11 +17,11 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'sparkleClick', fieldId: string): void
+  (e: 'sparkle-click', fieldId: string): void
 }>()
 
 const stickerDirectivesPrompt = defineModel<string>('stickerDirectivesPrompt', { default: '' })
-defineModel<boolean>('stickerWidgetsEnabled', { default: false })
+const stickerWidgetsEnabled = defineModel<boolean>('stickerWidgetsEnabled', { default: false })
 const activeStickerIds = defineModel<string[]>('activeStickerIds', { default: () => [] })
 
 const isCatalogDirty = ref(false)
@@ -158,7 +158,9 @@ function uncheckAllStickers() {
 }
 
 function handleInsertStickerToken(stickerId: string) {
-  const token = `<|STICKER ${stickerId}|>`
+  const token = stickerWidgetsEnabled.value
+    ? `<|STICKER ${stickerId} surface="widget" weight="0.8" pos="random"|>`
+    : `<|STICKER ${stickerId}|>`
 
   const current = stickerDirectivesPrompt.value || ''
   if (current.includes(stickerId)) {
@@ -200,6 +202,63 @@ async function handleCustomStickerCreated(newSticker: CardCustomSticker) {
   isCatalogDirty.value = true
 }
 
+const editingSticker = ref<CardCustomSticker | null>(null)
+
+function openAddModal() {
+  editingSticker.value = null
+  showAddModal.value = true
+}
+
+function openEditModal(stickerId: string) {
+  const custom = cardCustomStickers.value[stickerId]
+  if (custom) {
+    editingSticker.value = custom
+    showAddModal.value = true
+  }
+}
+
+async function handleCustomStickerUpdated(payload: { oldId: string, sticker: CardCustomSticker }) {
+  const { oldId, sticker: updatedSticker } = payload
+  const targetCardId = props.cardId || cardStore.activeCardId
+  if (targetCardId && card.value) {
+    const existingStickers = { ...card.value.extensions?.airi?.stickers }
+    if (oldId !== updatedSticker.id) {
+      delete existingStickers[oldId]
+    }
+    existingStickers[updatedSticker.id] = updatedSticker
+
+    cardStore.updateCard(targetCardId, {
+      extensions: {
+        ...card.value.extensions,
+        airi: {
+          ...card.value.extensions?.airi,
+          stickers: existingStickers,
+        },
+      },
+    } as any)
+  }
+
+  if (oldId !== updatedSticker.id) {
+    delete customStickerUrls.value[oldId]
+    activeStickerIds.value = activeStickerIds.value.map(id => id === oldId ? updatedSticker.id : id)
+
+    // Also update any occurrences of <|STICKER oldId in the prompt
+    if (stickerDirectivesPrompt.value) {
+      const regex = new RegExp(`<\\|STICKER\\s+${oldId}\\b`, 'g')
+      stickerDirectivesPrompt.value = stickerDirectivesPrompt.value.replace(regex, `<|STICKER ${updatedSticker.id}`)
+      const bareRegex = new RegExp(`\\b${oldId}\\b:`, 'g')
+      stickerDirectivesPrompt.value = stickerDirectivesPrompt.value.replace(bareRegex, `${updatedSticker.id}:`)
+    }
+  }
+
+  const url = await stickersStore.getStickerUrl(updatedSticker.id)
+  if (url) {
+    customStickerUrls.value[updatedSticker.id] = url
+  }
+
+  isCatalogDirty.value = true
+}
+
 async function handleDeleteCustomSticker(id: string) {
   await stickersStore.deleteSticker(id)
 
@@ -234,28 +293,71 @@ function syncDirectivesFromCatalog() {
     return
   }
 
-  let prompt = `## Instruction: Reaction Stickers
+  let prompt = ''
+  if (!stickerWidgetsEnabled.value) {
+    // Template 1: v1 Standard Chat Reaction (Baseline)
+    prompt = `## Instruction: Reaction Stickers
 You have access to character reaction stickers to punctuate conversation and express emotional beats.
 
 ### Token Syntax
-- To send an inline reaction sticker in the chat, emit: \`<|STICKER id|>\`
+- To send an inline reaction sticker in the chat, emit: \`<|STICKER airi-happy|>\`
 
 ### Active Character Sticker Catalog
 Use ONLY the following sticker IDs matching appropriate conversational moments:
 `
-  for (const s of activeList) {
-    prompt += `- \`${s.id}\`: ${s.description} (emotions: ${s.emotions.join(', ')})\n`
-  }
+    for (const s of activeList) {
+      prompt += `- \`${s.id}\`: ${s.description} (emotions: ${s.emotions.join(', ')})\n`
+    }
 
-  prompt += `\n### Guidelines
+    prompt += `\n### Guidelines
+- Exact IDs: Always emit the exact lowercase-hyphenated ID listed in the catalog (e.g. \`airi-happy\`, not the descriptive title).
 - Punctuate naturally: Use stickers during humor, shock, warmth, greetings, teasing, or emotional emphasis.
 - Never spam: Do not emit more than 1 sticker per turn unless specifically roleplaying heavy emotion.
 - Mood alignment: Choose the sticker ID matching the current conversation vibe.
 `
+  }
+  else {
+    // Template 2: v2 Desktop Sticker Slappers (Multi-Modal & Spatial Overlay)
+    prompt = `## Instruction: Reaction Stickers & Desktop Slappers
+You have access to physical reaction stickers that you can send into the chat or slap directly onto the user's desktop screen as ephemeral stickers.
+
+### Token Syntax & Attributes
+- Inline chat sticker: \`<|STICKER airi-happy|>\` (default surface="chat")
+- Desktop screen slapper: \`<|STICKER airi-celebrate surface="widget" weight="0.8" pos="topRight"|>\`
+- Dual manifest: \`<|STICKER lupin-sparkle surface="both" weight="0.5"|>\`
+
+### Attributes
+- \`surface\`: \`"chat"\` (default in-line), \`"widget"\` (slaps onto desktop screen), or \`"both"\`
+- \`weight\`: \`0.1\` to \`1.0\` (controls both physical dimensions and screen duration)
+  • 0.2: Small cute stamp (~160px), fades in 60s
+  • 0.5: Standard reaction (~220px), stays 120s
+  • 0.8+: Big dramatic exclamation (~280px+), stays 240s+
+- \`pos\`: Preferred viewport placement quadrant: \`"topLeft"\`, \`"topRight"\`, \`"bottomLeft"\`, \`"bottomRight"\`, or \`"random"\`
+
+### Active Character Sticker Catalog
+Use ONLY the following sticker IDs matching appropriate conversational moments:
+`
+    for (const s of activeList) {
+      prompt += `- \`${s.id}\`: ${s.description} (emotions: ${s.emotions.join(', ')})\n`
+    }
+
+    prompt += `\n### Guidelines
+- Exact IDs: Always emit the exact lowercase-hyphenated ID listed in the catalog (e.g. \`airi-celebrate\`, not the descriptive title).
+- Desktop Slappers are special: Only slap the desktop screen (\`surface="widget"\` or \`"both"\`) for notable moments (intense celebrations, dramatic pouting, high praise, or teasing). For routine conversation, default to normal chat stickers.
+- Never spam: Do not emit more than 1 sticker per turn.
+- Mood alignment: Choose the sticker ID and weight matching the current conversation vibe.
+`
+  }
 
   stickerDirectivesPrompt.value = prompt
   isCatalogDirty.value = false
-  toast.success(`Synced directives from ${activeList.length} active stickers!`)
+  toast.success(`Synced directives from ${activeList.length} active stickers (${stickerWidgetsEnabled.value ? 'Desktop Slappers v2' : 'Standard Chat v1'})!`)
+}
+
+function onStickerWidgetsToggled() {
+  if (isStickersEnabled.value) {
+    syncDirectivesFromCatalog()
+  }
 }
 </script>
 
@@ -300,6 +402,34 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
           </div>
         </label>
       </div>
+
+      <!-- Secondary Toggle: Desktop Sticker Slappers (Screen Overlay) -->
+      <div v-if="isStickersEnabled" class="mt-3 border-t border-primary-500/10 pt-3">
+        <label class="flex cursor-pointer items-center justify-between gap-4">
+          <div class="flex flex-col gap-0.5">
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs text-neutral-800 font-semibold dark:text-neutral-200">
+                Desktop Sticker Slappers (Screen Overlay)
+              </span>
+              <span class="rounded bg-primary-500/10 px-1.5 py-0.2 text-[10px] text-primary-600 font-medium dark:text-primary-400">
+                Multi-Modal v2
+              </span>
+            </div>
+            <span class="text-[11px] text-neutral-500 dark:text-neutral-400">
+              Allows the character to slap ephemeral stickers directly onto your desktop screen as lightweight overlays using <code class="rounded bg-neutral-200/50 px-1 py-0.2 text-primary-600 dark:bg-neutral-800/50 dark:text-primary-400">surface="widget"</code> and <code class="rounded bg-neutral-200/50 px-1 py-0.2 text-primary-600 dark:bg-neutral-800/50 dark:text-primary-400">weight</code> attributes.
+            </span>
+          </div>
+          <div class="relative inline-flex shrink-0 cursor-pointer items-center">
+            <input
+              v-model="stickerWidgetsEnabled"
+              type="checkbox"
+              class="peer sr-only"
+              @change="onStickerWidgetsToggled"
+            >
+            <div class="h-6 w-11 rounded-full bg-neutral-200 transition-colors after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:border-neutral-300 dark:border-neutral-600 after:rounded-full after:bg-white dark:bg-neutral-700 peer-checked:bg-primary-500 peer-focus:outline-none after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white dark:peer-focus:ring-primary-800" />
+          </div>
+        </label>
+      </div>
     </div>
 
     <!-- Directives Editor Card -->
@@ -308,8 +438,18 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
         <label class="flex flex-col gap-3">
           <div class="flex items-center justify-between">
             <div>
-              <div class="flex items-center gap-1.5 text-sm font-medium">
+              <div class="flex items-center gap-2 text-sm font-medium">
                 <span>Sticker Directives & Persona Instructions</span>
+                <span
+                  class="rounded px-1.5 py-0.5 text-[10px] font-semibold tracking-wider uppercase"
+                  :class="[
+                    stickerWidgetsEnabled
+                      ? 'bg-primary-500/15 text-primary-600 dark:text-primary-300 border border-primary-500/30'
+                      : 'bg-neutral-200/60 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400 border border-neutral-300/40 dark:border-neutral-700',
+                  ]"
+                >
+                  {{ stickerWidgetsEnabled ? 'Template: v2 Desktop Slappers' : 'Template: v1 Standard Chat' }}
+                </span>
               </div>
               <div class="text-xs text-neutral-500 dark:text-neutral-400">
                 Instruction prompt guiding the LLM on when, how frequently, and which reaction stickers to emit.
@@ -349,7 +489,7 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
               style="position: absolute; top: 8px; right: 8px; z-index: 50; display: flex; height: 32px; width: 32px; align-items: center; justify-content: center; border-radius: 8px; border: none; cursor: pointer; background: transparent;"
               class="text-neutral-400 transition-colors hover:bg-neutral-100 hover:text-primary-500 dark:hover:bg-neutral-800 dark:hover:text-primary-400"
               title="Optimize with AI"
-              @click.prevent="emit('sparkleClick', 'actingStickerDirectives')"
+              @click.prevent="emit('sparkle-click', 'actingStickerDirectives')"
             >
               <span class="i-ph:sparkle animate-pulse text-lg" style="display: inline-block; width: 1.2em; height: 1.2em;" />
             </button>
@@ -375,7 +515,7 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
             variant="secondary"
             size="sm"
             class="h-7 gap-1.5 text-xs"
-            @click="showAddModal = true"
+            @click="openAddModal"
           >
             <div class="i-solar:add-circle-bold text-sm text-primary-500" />
             <span>Add Custom Sticker</span>
@@ -420,8 +560,17 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
             </span>
           </div>
 
-          <!-- Active Checkbox and Delete Button in top right -->
+          <!-- Active Checkbox, Edit and Delete Buttons in top right -->
           <div class="absolute right-2 top-2 z-10 flex items-center gap-1">
+            <button
+              v-if="sticker.isCustom"
+              type="button"
+              class="h-5 w-5 flex items-center justify-center rounded text-neutral-400 opacity-0 transition-opacity hover:bg-primary-500/10 hover:text-primary-500 group-hover:opacity-100"
+              title="Edit custom sticker"
+              @click.stop="openEditModal(sticker.id)"
+            >
+              <div class="i-solar:pen-bold text-xs" />
+            </button>
             <button
               v-if="sticker.isCustom"
               type="button"
@@ -485,12 +634,14 @@ Use ONLY the following sticker IDs matching appropriate conversational moments:
       </div>
     </div>
 
-    <!-- Add Custom Sticker Modal -->
+    <!-- Add / Edit Custom Sticker Modal -->
     <CardStickerAddModal
       v-model="showAddModal"
       :card-id="props.cardId"
       :existing-ids="combinedCatalog.map(s => s.id)"
+      :sticker-to-edit="editingSticker"
       @created="handleCustomStickerCreated"
+      @updated="handleCustomStickerUpdated"
     />
   </div>
 </template>

@@ -12,13 +12,13 @@ import {
   useElectronRelativeMouse,
 } from '@proj-airi/electron-vueuse'
 import { debug } from '@proj-airi/stage-shared'
-import { useMmd } from '@proj-airi/stage-ui-mmd'
 import { useCustomVrmAnimationsStore, useModelStore } from '@proj-airi/stage-ui-three'
 import { WidgetStage } from '@proj-airi/stage-ui/components/scenes'
 import { useAudioRecorder } from '@proj-airi/stage-ui/composables/audio/audio-recorder'
 import { createVoiceInputBinding } from '@proj-airi/stage-ui/libs/audio'
 import { useVAD } from '@proj-airi/stage-ui/stores/ai/models/vad'
 import { useChatOrchestratorStore } from '@proj-airi/stage-ui/stores/chat'
+import { sendTextToChatComposer } from '@proj-airi/stage-ui/stores/chat/composer-draft-bridge'
 import { useLive2d } from '@proj-airi/stage-ui/stores/live2d'
 import { useLLM } from '@proj-airi/stage-ui/stores/llm'
 import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
@@ -426,7 +426,7 @@ const {
 const { supportsStreamInput } = storeToRefs(hearingPipeline)
 const chatStore = useChatOrchestratorStore()
 const hearingStore = useHearingStore()
-const { hearingDetectionMode, vadThreshold } = storeToRefs(hearingStore)
+const { hearingDetectionMode, vadThreshold, micOwner, tapToTalk } = storeToRefs(hearingStore)
 
 const shouldUseStreamInput = computed(() => supportsStreamInput.value && !!stream.value)
 
@@ -488,6 +488,12 @@ async function handleSpeechEnd() {
     return
   }
   stopRecord()
+  // Tap-to-talk (VAD mode only — manual mode has no utterance boundary):
+  // first utterance ends the capture, mute the mic. Clearing enabled drops
+  // the binding, which tears down VAD + recording.
+  if (tapToTalk.value) {
+    settingsAudioDeviceStore.enabled = false
+  }
 }
 
 let currentBinding: VoiceInputBinding | undefined
@@ -503,7 +509,12 @@ async function startAudioInteraction(binding: VoiceInputBinding) {
         hasStream: !!binding.stream,
       })
 
+      // Tap-to-talk: single utterance then cold. Scoped to Web Speech (its
+      // provider ends itself after the final); gate off defers to the default
+      // hot-restart.
+      const singleShot = tapToTalk.value && hearingStore.activeTranscriptionProvider === 'browser-web-speech-api'
       await transcribeForMediaStream(binding.stream, {
+        ...(singleShot ? { providerOptions: { continuous: false } } : {}),
         onSentenceEnd: (delta) => {
           if (currentBinding !== binding)
             return
@@ -523,8 +534,22 @@ async function startAudioInteraction(binding: VoiceInputBinding) {
 
           postCaption({ type: 'caption-speaker', text })
 
+          // Tap-to-talk: the provider ended itself after the final — mute the
+          // mic. Clearing enabled drops the binding, which tears down VAD +
+          // streaming. Runs before the ingest/draft below; neither needs the
+          // master switch. No-op when the user already stopped manually.
+          if (singleShot) {
+            settingsAudioDeviceStore.enabled = false
+          }
+
           void (async () => {
             try {
+              if (!hearingStore.autoSendEnabled) {
+                toast.info(`🎤 Added to chat input: ${text}`, { id: 'transcription-feedback' })
+                await sendTextToChatComposer(text)
+                return
+              }
+
               const provider = await providersStore.getProviderInstance(activeChatProvider.value)
               if (!provider || !activeChatModel.value) {
                 console.warn('[Main Page] No provider or model available, skipping chat send')
@@ -534,12 +559,10 @@ async function startAudioInteraction(binding: VoiceInputBinding) {
               toast.info(`🎤 You said: ${text}`, { id: 'transcription-feedback' })
               console.info('[Main Page] Sending transcription to chat:', text)
 
-              const { autoSendEnabled } = storeToRefs(hearingStore)
               await chatStore.ingest(text, {
                 model: activeChatModel.value,
                 chatProvider: provider as ChatProvider,
                 tools: builtinTools,
-                skipAssistant: !autoSendEnabled.value,
               })
             }
             catch (err) {
@@ -584,26 +607,31 @@ async function startAudioInteraction(binding: VoiceInputBinding) {
         return
       }
 
-      toast.info(`🎤 You said: ${text}`, { id: 'transcription-feedback' })
-
       postCaption({ type: 'caption-speaker', text })
 
       if (hearingDialogOpen.value) {
+        toast.info(`🎤 You said: ${text}`, { id: 'transcription-feedback' })
         console.info('[Main Page] (Manual) Hearing dialog is open, skipping duplicate ingestion in favor of ChatArea.')
         return
       }
 
       try {
+        if (!hearingStore.autoSendEnabled) {
+          toast.info(`🎤 Added to chat input: ${text}`, { id: 'transcription-feedback' })
+          await sendTextToChatComposer(text)
+          return
+        }
+
+        toast.info(`🎤 You said: ${text}`, { id: 'transcription-feedback' })
+
         const provider = await providersStore.getProviderInstance(activeChatProvider.value)
         if (!provider || !activeChatModel.value)
           return
 
-        const { autoSendEnabled } = storeToRefs(hearingStore)
         await chatStore.ingest(text, {
           model: activeChatModel.value,
           chatProvider: provider as ChatProvider,
           tools: builtinTools,
-          skipAssistant: !autoSendEnabled.value,
         })
       }
       catch (err) {
@@ -637,8 +665,10 @@ const voiceInputBinding = createVoiceInputBinding({
   stop: stopAudioInteraction,
 })
 
-watch([enabled, stream, supportsStreamInput], ([isEnabled, currentStream, supportsStream]) => {
-  const binding: VoiceInputBinding | undefined = isEnabled && currentStream
+// Mic authority pact: an explicit composer tap (owner === 'composer') owns the
+// live capture, so the ambient page loop stands down until release.
+watch([enabled, stream, supportsStreamInput, micOwner], ([isEnabled, currentStream, supportsStream, owner]) => {
+  const binding: VoiceInputBinding | undefined = isEnabled && currentStream && owner !== 'composer'
     ? { stream: currentStream, mode: supportsStream ? 'stream' : 'recording' }
     : undefined
   void voiceInputBinding.update(binding).catch((error) => {
@@ -672,53 +702,6 @@ function handleOpenSettings(e: Event) {
   const route = (e as CustomEvent).detail?.route
   console.info(`[Main Page] [Control Strip Action] Opening settings for route: "${route}"`)
   openSettings({ route })
-}
-
-function cycleAnimation() {
-  if (stageModelRenderer.value === 'mmd') {
-    const mmdStore = useMmd()
-    const allKeys = mmdStore.availableMotions
-    if (allKeys.length === 0) {
-      toast.error('No MMD motions available', { id: 'animation-cycle' })
-      return
-    }
-    const currentKey = mmdStore.currentMotion
-    const currentIndex = allKeys.indexOf(currentKey)
-    const nextIndex = (currentIndex + 1) % allKeys.length
-    const nextAnimation = allKeys[nextIndex]
-
-    mmdStore.currentMotion = nextAnimation
-    toast.info(`Cycling MMD: ${nextAnimation}`, { id: 'animation-cycle' })
-    return
-  }
-
-  const cardIdleAnimations = activeCard.value?.extensions?.airi?.acting?.idleAnimations || []
-  const allKeys = customVrmAnimationsStore.animationKeys
-  const hasCardSubset = cardIdleAnimations.length > 0
-
-  if (cardIdleAnimations.length === 1) {
-    const currentKey = cardIdleAnimations[0]
-    const currentIndex = allKeys.indexOf(currentKey)
-    const nextIndex = (currentIndex + 1) % allKeys.length
-    const nextAnimation = allKeys[nextIndex]
-
-    if (activeCard.value?.extensions?.airi?.acting) {
-      activeCard.value.extensions.airi.acting.idleAnimations = [nextAnimation]
-    }
-    toast.info(`Character Fixed: ${customVrmAnimationsStore.animationLabelByKey[nextAnimation] || nextAnimation}`, { id: 'animation-cycle' })
-    return
-  }
-
-  const keys = hasCardSubset ? cardIdleAnimations.filter(k => allKeys.includes(k)) : allKeys
-  const finalKeys = keys.length > 0 ? keys : allKeys
-
-  const currentKey = vrmIdleAnimation.value
-  const currentIndex = finalKeys.indexOf(currentKey)
-  const nextIndex = (currentIndex + 1) % finalKeys.length
-  const nextAnimation = finalKeys[nextIndex]
-
-  vrmIdleAnimation.value = nextAnimation
-  toast.info(`Cycling: ${customVrmAnimationsStore.animationLabelByKey[nextAnimation] || nextAnimation}`, { id: 'animation-cycle' })
 }
 
 function handleControlStripAction(e: Event) {
@@ -767,9 +750,6 @@ function handleControlStripAction(e: Event) {
       modelStore.modelOffset = { x: 0, y: 0, z: 0 }
       modelStore.cameraDistance = modelStore.modelSize.z * 10
     }
-  }
-  else if (action === 'actor-idle-animations') {
-    cycleAnimation()
   }
 }
 
@@ -828,8 +808,8 @@ onMounted(async () => {
   const h = controlStripStore.orientation === 'vertical' ? stripLength.value : 48
   const current = await getBounds()
   if (current) {
-    const targetX = (mainConfig?.x !== undefined && !Number.isNaN(mainConfig.x)) ? mainConfig.x : current.x
-    const targetY = (mainConfig?.y !== undefined && !Number.isNaN(mainConfig.y)) ? mainConfig.y : current.y
+    const targetX = (mainConfig?.x !== undefined && !isNaN(mainConfig.x)) ? mainConfig.x : current.x
+    const targetY = (mainConfig?.y !== undefined && !isNaN(mainConfig.y)) ? mainConfig.y : current.y
     await setBounds([{
       x: Math.round(targetX),
       y: Math.round(targetY),
@@ -849,7 +829,12 @@ onMounted(async () => {
         return
       }
 
-      settingsAudioDeviceStore.enabled = !settingsAudioDeviceStore.enabled
+      // Mic authority pact (mirrors the control strip): lock keys toggle the
+      // shared flag and claim/release ownership with it, so an in-flight
+      // composer capture stops too (composers watch `enabled` going false).
+      const nextEnabled = !settingsAudioDeviceStore.enabled
+      settingsAudioDeviceStore.enabled = nextEnabled
+      hearingStore.micOwner = nextEnabled ? 'ambient' : null
     })
     window.electron.ipcRenderer.on('chat-window-state', (_, isOpen: boolean) => {
       lastIpcChatOpen = isOpen

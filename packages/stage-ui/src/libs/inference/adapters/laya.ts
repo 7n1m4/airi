@@ -1,3 +1,4 @@
+import type { LayaPrecision } from '../laya-models'
 import type { ProgressPayload } from '../protocol'
 
 import { defineInvoke, defineStreamInvoke } from '@moeru/eventa'
@@ -11,19 +12,21 @@ import { consumeLoadStream, layaDecideEvent, layaLoadEvent, layaUnloadEvent, sig
 import { MODEL_VRAM_ESTIMATES } from '../coordinator'
 import { GPU_PRIORITY } from '../gpu-executor'
 import { createGpuWorkerHost } from '../gpu-worker-host'
-import { InferenceAbortError, throwIfAborted } from '../protocol'
+import { LAYA_MODEL_SPECS } from '../laya-models'
+import { InferenceAbortError, InferenceTimeoutError, throwIfAborted } from '../protocol'
 
-export type LayaPrecision = 'int8' | 'fp16'
+export type { LayaPrecision }
 
 export interface LayaDecideOptions {
   signal?: AbortSignal
   useWebGpu?: boolean
+  model?: string
 }
 
 export interface LayaAdapter {
   load: (
     precision?: LayaPrecision,
-    options?: { signal?: AbortSignal, useWebGpu?: boolean, onProgress?: (p: ProgressPayload) => void, force?: boolean },
+    options?: { signal?: AbortSignal, useWebGpu?: boolean, model?: string, onProgress?: (p: ProgressPayload) => void, force?: boolean },
   ) => Promise<void>
   decide: (
     state: string | Record<string, unknown>,
@@ -51,7 +54,7 @@ type LayaRpc = ReturnType<typeof createLayaRpc>
 
 export function createLayaAdapter(workerUrl?: string | URL): LayaAdapter {
   let lastManifest: { precision: LayaPrecision, device: string } | null = null
-  let lastLoadConfig: { precision: LayaPrecision, useWebGpu: boolean } | null = null
+  let lastLoadConfig: { precision: LayaPrecision, useWebGpu: boolean, model?: string } | null = null
 
   const host = createGpuWorkerHost<LayaRpc>({
     modelId: () => lastManifest ? `laya-${lastManifest.precision}` : MODEL_NAMES.LAYA,
@@ -70,12 +73,18 @@ export function createLayaAdapter(workerUrl?: string | URL): LayaAdapter {
 
   async function load(
     precision: LayaPrecision = 'int8',
-    options?: { signal?: AbortSignal, useWebGpu?: boolean, onProgress?: (p: ProgressPayload) => void, force?: boolean },
+    options?: { signal?: AbortSignal, useWebGpu?: boolean, model?: string, onProgress?: (p: ProgressPayload) => void, force?: boolean },
   ): Promise<void> {
     const useWebGpu = options?.useWebGpu ?? false
+    const model = options?.model
     if (options?.force)
       lastManifest = null
-    if (lastManifest && lastManifest.precision === precision && !options?.force)
+    // NOTICE: the manifest outlives the worker session — the host's inactivity
+    // unload and crash restart both drop the phase to 'idle' while keeping it.
+    // Short-circuiting on the manifest alone then made decide() throw
+    // "Laya model not loaded" forever, so also require a live session.
+    const sessionLive = host.phase === 'ready' || host.phase === 'busy'
+    if (sessionLive && lastManifest && lastManifest.precision === precision && lastLoadConfig?.useWebGpu === useWebGpu && lastLoadConfig?.model === model)
       return
     throwIfAborted(options?.signal)
     return host.runExclusive(async () => {
@@ -85,8 +94,9 @@ export function createLayaAdapter(workerUrl?: string | URL): LayaAdapter {
       const rpc = options?.force ? host.reset() : host.ensure()
       return host.runOnGpu(MODEL_NAMES.LAYA, GPU_PRIORITY.LAYA_LOAD, options?.signal, async ({ crashSignal }) => {
         throwIfAborted(options?.signal)
+        const targetModel = model || LAYA_MODEL_SPECS[precision].repo
         const stream = rpc.load(
-          { device: useWebGpu ? 'webgpu' : 'wasm', dtype: precision, model: precision === 'fp16' ? 'tozp/laya-onnx-fp16' : 'tozp/laya-onnx' },
+          { device: useWebGpu ? 'webgpu' : 'wasm', dtype: precision, model: targetModel },
           { signal: AbortSignal.any([signalWithTimeout(options?.signal, TIMEOUTS.LAYA_LOAD), crashSignal]) },
         )
         try {
@@ -100,7 +110,7 @@ export function createLayaAdapter(workerUrl?: string | URL): LayaAdapter {
           })
           host.allocate(MODEL_NAMES.LAYA, estimateFor(precision))
           lastManifest = { precision, device: info.device }
-          lastLoadConfig = { precision, useWebGpu }
+          lastLoadConfig = { precision, useWebGpu, model }
           host.setPhase('ready')
           updateInferenceStatus(MODEL_NAMES.LAYA, { state: 'ready', device: info.device as any })
           host.recordSuccess()
@@ -114,6 +124,15 @@ export function createLayaAdapter(workerUrl?: string | URL): LayaAdapter {
     }).catch((error: unknown) => {
       if ((error as Error)?.name === 'AbortError')
         throw error
+      const msg = errorMessageFrom(error) ?? ''
+      const isTimeout = msg.includes('timed out') || msg.includes('TimeoutError') || (error as Error)?.name === 'TimeoutError'
+      if (isTimeout) {
+        const timeoutError = new InferenceTimeoutError(
+          `Laya model load timed out after ${TIMEOUTS.LAYA_LOAD}ms. Model compilation or download took too long.`,
+        )
+        host.handleWorkerError(timeoutError)
+        throw timeoutError
+      }
       host.handleWorkerError(error instanceof Error ? error : new Error(String(error)))
       throw error
     })
@@ -126,15 +145,12 @@ export function createLayaAdapter(workerUrl?: string | URL): LayaAdapter {
     options?: LayaDecideOptions,
   ) {
     throwIfAborted(options?.signal)
-    if (host.phase === 'idle' && lastLoadConfig) {
-      await load(lastLoadConfig.precision, { signal: options?.signal, useWebGpu: lastLoadConfig.useWebGpu })
-    }
-    else if (host.phase === 'idle' && !lastLoadConfig) {
-      await load(precision, { signal: options?.signal, useWebGpu: options?.useWebGpu })
-    }
-    else if (lastManifest && lastManifest.precision !== precision) {
-      await load(precision, { signal: options?.signal, useWebGpu: options?.useWebGpu, force: true })
-    }
+    // Load on demand (no-op while the requested session is live); a precision
+    // or device switch replaces the worker so the old session is reclaimed.
+    const useWebGpu = options?.useWebGpu ?? lastLoadConfig?.useWebGpu ?? false
+    const model = options?.model
+    const switching = lastLoadConfig != null && (lastLoadConfig.precision !== precision || lastLoadConfig.useWebGpu !== useWebGpu || lastLoadConfig.model !== model)
+    await load(precision, { signal: options?.signal, useWebGpu, model, force: switching })
 
     return host.runExclusive(async () => {
       throwIfAborted(options?.signal)
@@ -148,7 +164,7 @@ export function createLayaAdapter(workerUrl?: string | URL): LayaAdapter {
           if (options?.signal)
             signals.push(options.signal)
           return await host.rpc!.decide(
-            { state: state as any, questions, precision: lastManifest?.precision ?? precision, useWebGpu: lastLoadConfig?.useWebGpu ?? options?.useWebGpu },
+            { state: state as any, questions, precision, model, useWebGpu },
             { signal: AbortSignal.any(signals) },
           )
         })
@@ -161,14 +177,25 @@ export function createLayaAdapter(workerUrl?: string | URL): LayaAdapter {
           host.setPhase('ready')
           throw new InferenceAbortError(typeof options.signal.reason === 'string' ? options.signal.reason : undefined)
         }
-        host.setPhase('error')
+        // A rejected run (bad input, ORT kernel error) leaves the worker and its
+        // session intact, so stay usable. Timeouts are escalated below, and a
+        // crash has already torn the worker down (rpc is null).
+        host.setPhase(host.rpc ? 'ready' : 'error')
         throw error
       }
     }).catch((error: unknown) => {
       if ((error as Error)?.name === 'AbortError')
         throw error
-      if (errorMessageFrom(error)?.includes('timed out') || (error as Error)?.name === 'TimeoutError')
-        host.handleWorkerError(error instanceof Error ? error : new Error(String(error)))
+      const msg = errorMessageFrom(error) ?? ''
+      const isTimeout = msg.includes('timed out') || msg.includes('TimeoutError') || (error as Error)?.name === 'TimeoutError'
+      if (isTimeout) {
+        const timeoutError = new InferenceTimeoutError(
+          `Laya inference timed out after ${TIMEOUTS.LAYA_DECIDE}ms. The model worker may be overloaded or unresponsive.`,
+        )
+        host.handleWorkerError(timeoutError)
+        throw timeoutError
+      }
+      host.handleWorkerError(error instanceof Error ? error : new Error(String(error)))
       throw error
     })
   }

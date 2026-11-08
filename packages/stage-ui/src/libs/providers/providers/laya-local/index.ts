@@ -20,7 +20,7 @@ type LayaLocalConfig = z.input<typeof layaLocalConfigSchema>
 
 export const providerLayaLocal = defineProvider<LayaLocalConfig>({
   id: 'laya-local',
-  order: 2,
+  order: 3,
   name: 'Local Laya (On-Device)',
   nameLocalize: ({ t }) => t('settings.pages.providers.provider.laya-local.title'),
   description: 'Client-side ModernBERT System 1 classification running locally via WebGPU/WASM',
@@ -37,6 +37,7 @@ export const providerLayaLocal = defineProvider<LayaLocalConfig>({
         const precision = targetModel.includes('fp16') ? 'fp16' : 'int8'
         const res = await runLayaSystemOne(state, questions, precision, {
           useWebGpu: Boolean(config?.enableWebGpu),
+          model: targetModel,
         })
         return {
           answers: res.answers,
@@ -52,9 +53,11 @@ export const providerLayaLocal = defineProvider<LayaLocalConfig>({
 
   extraMethods: {
     async loadModel(config, _provider, hooks) {
-      const precision = config?.model?.includes('fp16') ? 'fp16' : 'int8'
+      const targetModel = config?.model || 'tozp/laya-onnx'
+      const precision = targetModel.includes('fp16') ? 'fp16' : 'int8'
       await downloadLayaModel({
         precision,
+        modelId: targetModel,
         onProgress: (p) => {
           hooks?.onProgress?.({
             status: 'progress',
@@ -72,15 +75,15 @@ export const providerLayaLocal = defineProvider<LayaLocalConfig>({
       return [
         {
           id: 'tozp/laya-onnx',
-          name: 'Laya INT8 (424 MB, CPU Recommended)',
+          name: 'Laya Large INT8 (633 MB, Deep Reasoning)',
           provider: 'laya-local',
-          description: 'On-device ModernBERT quantized INT8 sequence classifier',
+          description: 'On-device ModernBERT-large 421M quantized INT8 sequence classifier',
         },
         {
           id: 'tozp/laya-onnx-fp16',
-          name: 'Laya FP16 (843 MB, CPU)',
+          name: 'Laya Large FP16 (847 MB, WebGPU)',
           provider: 'laya-local',
-          description: 'On-device ModernBERT FP16 precision sequence classifier',
+          description: 'On-device ModernBERT-large 421M FP16 precision sequence classifier',
         },
       ]
     },

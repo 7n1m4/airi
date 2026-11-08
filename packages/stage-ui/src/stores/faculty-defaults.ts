@@ -10,9 +10,11 @@ export interface FacultyConfig {
   primaryProvider: string
   primaryModel: string
   primaryVoiceId?: string
+  primaryAdvanced?: Record<string, unknown>
   fallbackProvider: string
   fallbackModel: string
   fallbackVoiceId?: string
+  fallbackAdvanced?: Record<string, unknown>
   autoFailover: boolean
   failoverTriggers: FailoverTrigger[]
   notificationStyle: 'toast' | 'badge' | 'silent'
@@ -29,7 +31,7 @@ export interface GlobalFacultyDefaultsState {
 
 export const FACTORY_SAFE_DEFAULTS: GlobalFacultyDefaultsState = {
   consciousness: {
-    primaryProvider: 'kilo', // mimo left the zero-config tier (API sunset 2026-07-26)
+    primaryProvider: 'kilo',
     primaryModel: 'kilo-auto/free',
     fallbackProvider: 'web-llm',
     fallbackModel: '',
@@ -52,7 +54,7 @@ export const FACTORY_SAFE_DEFAULTS: GlobalFacultyDefaultsState = {
   },
   hearing: {
     primaryProvider: 'whisper-local',
-    primaryModel: 'openai/whisper-tiny',
+    primaryModel: 'onnx-community/whisper-tiny',
     fallbackProvider: 'web-speech-api',
     fallbackModel: '',
     autoFailover: true,
@@ -82,6 +84,12 @@ export const FACTORY_SAFE_DEFAULTS: GlobalFacultyDefaultsState = {
   },
 }
 
+// NOTICE: Earlier defaults saved `openai/whisper-*` ids. The local Whisper worker loads the id as a
+// Hugging Face repo and only the `onnx-community/whisper-*` repos ship ONNX weights.
+function migrateWhisperModelId(model: string): string {
+  return model.replace(/^("?)openai\/whisper-(tiny|base|small)("?)$/, '$1onnx-community/whisper-$2$3')
+}
+
 function getInitialStateWithMigration(): GlobalFacultyDefaultsState {
   const base = JSON.parse(JSON.stringify(FACTORY_SAFE_DEFAULTS)) as GlobalFacultyDefaultsState
 
@@ -89,13 +97,22 @@ function getInitialStateWithMigration(): GlobalFacultyDefaultsState {
     return base
 
   try {
+    const activeHearingModel = window.localStorage.getItem('settings/hearing/active-model')
+    if (activeHearingModel && migrateWhisperModelId(activeHearingModel) !== activeHearingModel)
+      window.localStorage.setItem('settings/hearing/active-model', migrateWhisperModelId(activeHearingModel))
+
     const existing = window.localStorage.getItem('settings/faculties/defaults')
     if (existing) {
       const parsed = JSON.parse(existing)
+      const hearing = { ...base.hearing, ...parsed.hearing }
       return {
         consciousness: { ...base.consciousness, ...parsed.consciousness },
         speech: { ...base.speech, ...parsed.speech },
-        hearing: { ...base.hearing, ...parsed.hearing },
+        hearing: {
+          ...hearing,
+          primaryModel: migrateWhisperModelId(hearing.primaryModel),
+          fallbackModel: migrateWhisperModelId(hearing.fallbackModel),
+        },
         artistry: { ...base.artistry, ...parsed.artistry },
         vision: { ...base.vision, ...parsed.vision },
       }
@@ -171,7 +188,7 @@ export const useFacultyDefaultsStore = defineStore('faculty-defaults', () => {
       || defaults.value.artistry.autoFailover
   })
 
-  function syncLegacyKeys(faculty: FacultyName, provider: string, model: string, voiceId?: string) {
+  function syncLegacyKeys(faculty: FacultyName, provider: string, model: string, voiceId?: string, advanced?: Record<string, unknown>) {
     if (typeof window === 'undefined')
       return
 
@@ -197,12 +214,16 @@ export const useFacultyDefaultsStore = defineStore('faculty-defaults', () => {
       else if (faculty === 'vision') {
         window.localStorage.setItem('settings/vision/active-provider', provider)
         window.localStorage.setItem('settings/vision/active-model', model)
+        if (advanced)
+          window.localStorage.setItem('settings/vision/active-advanced', JSON.stringify(advanced))
+        else
+          window.localStorage.removeItem('settings/vision/active-advanced')
       }
     }
     catch {}
   }
 
-  function setPrimary(faculty: FacultyName, provider: string, model: string, voiceId?: string) {
+  function setPrimary(faculty: FacultyName, provider: string, model: string, voiceId?: string, advanced?: Record<string, unknown>) {
     if (!defaults.value[faculty])
       return
 
@@ -213,12 +234,13 @@ export const useFacultyDefaultsStore = defineStore('faculty-defaults', () => {
         primaryProvider: provider,
         primaryModel: model,
         ...(voiceId !== undefined ? { primaryVoiceId: voiceId } : {}),
+        primaryAdvanced: advanced,
       },
     }
-    syncLegacyKeys(faculty, provider, model, voiceId)
+    syncLegacyKeys(faculty, provider, model, voiceId, advanced)
   }
 
-  function setFallback(faculty: FacultyName, provider: string, model: string, voiceId?: string) {
+  function setFallback(faculty: FacultyName, provider: string, model: string, voiceId?: string, advanced?: Record<string, unknown>) {
     if (!defaults.value[faculty])
       return
 
@@ -229,6 +251,7 @@ export const useFacultyDefaultsStore = defineStore('faculty-defaults', () => {
         fallbackProvider: provider,
         fallbackModel: model,
         ...(voiceId !== undefined ? { fallbackVoiceId: voiceId } : {}),
+        fallbackAdvanced: advanced,
       },
     }
   }
@@ -306,7 +329,7 @@ export const useFacultyDefaultsStore = defineStore('faculty-defaults', () => {
   function resolveFaculty(
     faculty: FacultyName,
     cardOverride?: { provider?: string, model?: string, voiceId?: string },
-  ): { provider: string, model: string, voiceId?: string, isFallback: boolean } {
+  ): { provider: string, model: string, voiceId?: string, advanced?: Record<string, unknown>, isFallback: boolean } {
     const cardProvider = cardOverride?.provider?.trim()
     const cardModel = cardOverride?.model?.trim()
     const cardVoiceId = cardOverride?.voiceId?.trim()
@@ -325,6 +348,7 @@ export const useFacultyDefaultsStore = defineStore('faculty-defaults', () => {
       provider: conf.primaryProvider,
       model: conf.primaryModel,
       voiceId: conf.primaryVoiceId,
+      advanced: conf.primaryAdvanced,
       isFallback: false,
     }
   }
