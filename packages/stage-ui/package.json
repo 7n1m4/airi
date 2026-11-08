@@ -16,6 +16,8 @@
   },
   "exports": {
     ".": "./src/components/index.ts",
+    "./assets/*": "./src/assets/*",
+    "./assets/stickers": "./src/assets/stickers/index.ts",
     "./components/scenarios/dialogs/model-selector": "./src/components/scenarios/dialogs/model-selector/index.ts",
     "./components/scenarios/settings/model-settings": "./src/components/scenarios/settings/model-settings/index.ts",
     "./components/scenarios/settings/model-settings/*": "./src/components/scenarios/settings/model-settings/*",
@@ -38,6 +40,8 @@
     "./libs/inference/*": "./src/libs/inference/*",
     "./libs/pacing": "./src/libs/pacing/index.ts",
     "./libs/pacing/*": "./src/libs/pacing/*",
+    "./libs/sandbox": "./src/libs/sandbox/index.ts",
+    "./libs/sandbox/*": "./src/libs/sandbox/*",
     "./libs/vfx": "./src/libs/vfx/index.ts",
     "./libs/vfx/*": "./src/libs/vfx/*",
     "./libs": "./src/libs/index.ts",
@@ -53,6 +57,8 @@
     "./utils": "./src/utils/index.ts",
     "./utils/tts": "./src/utils/tts.ts",
     "./database/*": "./src/database/*",
+    "./tools": "./src/tools/index.ts",
+    "./tools/*": "./src/tools/*.ts",
     "./types/*": "./src/types/*.ts",
     "./types": "./src/types/index.ts"
   },
