@@ -111,3 +111,26 @@ export function createLoopbackTransport(): TransportAdapter {
     },
   }
 }
+
+/**
+ * Safely dispatches a topic payload over a TransportAdapter.
+ *
+ * If the adapter implements `publish` (e.g. libp2p raw byte stream), it encodes
+ * and awaits `publish()`. Otherwise, it gracefully falls back to `broadcast()`.
+ * This prevents runtime non-null assertion crashes when an adapter omits `publish`.
+ */
+export async function safePublishOrBroadcast<T = unknown>(
+  adapter: TransportAdapter,
+  topic: string,
+  payload: T,
+): Promise<void> {
+  if (typeof adapter.publish === 'function') {
+    const data = payload instanceof Uint8Array
+      ? payload
+      : new TextEncoder().encode(typeof payload === 'string' ? payload : JSON.stringify(payload))
+    await adapter.publish(topic, data)
+  }
+  else if (typeof adapter.broadcast === 'function') {
+    await adapter.broadcast(topic, payload)
+  }
+}

@@ -37,7 +37,7 @@
 - If a request appears to concern a different repository or application, check whether the relevant project is actually available in the current workspace. Do not probe parent or sibling directories or assume authority over an unrelated project.
 - If work in another repository is genuinely necessary, ask the user to identify or authorize the intended workspace before crossing that boundary.
 - Avoid broad formatting, cleanup, or unrelated refactoring. Prefer the smallest coherent diff that solves the requested problem.
-- Never inspect, fetch from, rebase against, or otherwise interact with the `upstream` remote unless the user explicitly authorizes it. Treat upstream as a reference source, particularly because this fork has diverged significantly.
+- Upstream (`dasilva333/airi`) MAY be inspected, fetched, and compared against for mergeability and upstream alignment (read-only reference operations: `git fetch upstream`, `git show upstream/<branch>:<path>`, `gh` API reads, `git diff upstream/main...HEAD` for review). Never push to, rebase onto, or merge from `upstream` without explicit current user authorization — those remain write/history operations, not reference reads.
 - Remember that `crates/` contains the legacy Tauri application; the current desktop application is Electron in `apps/stage-tamagotchi`.
 
 ## 6. Git, Commits, and Releases
