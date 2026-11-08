@@ -69,7 +69,7 @@ export const AiriCognitionSchema = looseObject({
   searchEngine: optional(looseObject({
     universeRagEnabled: optional(boolean()),
     rerankerEnabled: optional(boolean()),
-    rerankerProvider: optional(union([literal('laya-local'), literal('typesafe-ai'), literal('openrouter-ai')])),
+    rerankerProvider: optional(union([literal('laya-local'), literal('typesafe-ai'), literal('openrouter-ai'), literal('opencode-go')])),
     system2EscalationEnabled: optional(boolean()),
     reasoningModel: optional(string()),
     evidenceLimit: optional(number()),
@@ -156,19 +156,6 @@ const AiriDreamStateSchema = object({
   journalWorthyThreshold: optional(number()),
 })
 
-/**
- * Nap config (`extensions.airi.nap`).
- *
- * NOTICE: there is deliberately **no** threshold field. The nap floor is the
- * canonical presence source's resolved AFK threshold
- * (`docs/design-user-presence.md` §2), because a second copy of that number
- * here would be two thresholds that can drift. `enabled` is the only decision
- * this feature owns.
- */
-const AiriNapSchema = looseObject({
-  enabled: optional(boolean()),
-})
-
 const AiriTextJournalSchema = object({
   widgetInstruction: optional(string()),
   injectJournalContext: optional(boolean()),
@@ -179,10 +166,25 @@ const AiriTextJournalSchema = object({
   })),
 })
 
+const AiriSandboxSchema = object({
+  enabled: optional(boolean()),
+  widgetInstruction: optional(string()),
+})
+
+const AiriToolCallReflectionSchema = object({
+  enabled: optional(boolean()),
+  promptTemplate: optional(string()),
+})
+
 const AiriShortTermMemorySchema = object({
   enabled: optional(boolean()),
   windowSize: number(),
   tokenBudgetPerDay: number(),
+})
+
+const AiriLifetimeMemorySchema = object({
+  enabled: optional(boolean()),
+  tokenBudget: optional(number()),
 })
 
 const AiriScreenWatchingSchema = object({
@@ -263,6 +265,21 @@ export const AiriPacingSchema = object({
 export type AiriThinkingFiller = InferOutput<typeof AiriThinkingFillerSchema>
 export type AiriPacing = InferOutput<typeof AiriPacingSchema>
 
+export const AiriCadenceSchema = object({
+  multiBubbleEnabled: optional(boolean()),
+  splitThreshold: optional(pipe(number(), minValue(0.1), maxValue(1.0))),
+  interBubblePauseMs: optional(pipe(number(), integer(), minValue(200), maxValue(5000))),
+  typingCadenceMsPerChar: optional(pipe(number(), integer(), minValue(10), maxValue(200))),
+  maxBubblesPerTurn: optional(pipe(number(), integer(), minValue(1), maxValue(10))),
+  dynamicPacingEnabled: optional(boolean()),
+  rapidBurstMs: optional(pipe(number(), integer(), minValue(100), maxValue(1000))),
+  conversationalBeatMs: optional(pipe(number(), integer(), minValue(300), maxValue(3000))),
+  thoughtfulPauseMs: optional(pipe(number(), integer(), minValue(500), maxValue(5000))),
+  maxDelayCeilingMs: optional(pipe(number(), integer(), minValue(1000), maxValue(10000))),
+})
+
+export type AiriCadence = InferOutput<typeof AiriCadenceSchema>
+
 export const CharacterCueAllowlistSchema = object({
   version: literal(1),
   emotions: optional(record(string(), object({
@@ -276,6 +293,15 @@ export const CharacterCueAllowlistSchema = object({
 })
 
 export type CharacterCueAllowlist = InferOutput<typeof CharacterCueAllowlistSchema>
+
+export const CompactionStrategySchema = union([
+  literal('none'),
+  literal('prune'),
+  literal('winnow'),
+  literal('distill'),
+])
+
+export type CompactionStrategy = InferOutput<typeof CompactionStrategySchema>
 
 export const CardCustomStickerSchema = looseObject({
   id: string(),
@@ -293,10 +319,12 @@ const AiriExtensionSchema = looseObject({
   cognition: optional(AiriCognitionSchema),
   heartbeats: optional(AiriHeartbeatSchema),
   dreamState: optional(AiriDreamStateSchema),
-  nap: optional(AiriNapSchema),
   shortTermMemory: optional(AiriShortTermMemorySchema),
+  lifetimeMemory: optional(AiriLifetimeMemorySchema),
   screenWatching: optional(AiriScreenWatchingSchema),
   textJournal: optional(AiriTextJournalSchema),
+  sandbox: optional(AiriSandboxSchema),
+  toolCallReflection: optional(AiriToolCallReflectionSchema),
   groundingEnabled: optional(boolean()),
   groundingMemoryEnabled: optional(boolean()),
   groundingTopicsEnabled: optional(boolean()),
@@ -322,8 +350,14 @@ const AiriExtensionSchema = looseObject({
       temperature: optional(number()),
       topP: optional(number()),
       reasoningFallback: optional(boolean()),
+      maxToolSteps: optional(number()),
+      preserveToolHistory: optional(boolean()),
     })),
     advanced: optional(record(string(), unknown())),
+    compaction: optional(looseObject({
+      strategy: optional(CompactionStrategySchema),
+      minKeepTurns: optional(number()),
+    })),
     importedPresetMeta: optional(looseObject({
       source: optional(string()),
       originalKeys: optional(array(string())),
@@ -336,6 +370,7 @@ const AiriExtensionSchema = looseObject({
     speechMannerismPrompt: string(),
     idleAnimations: optional(array(string())),
     pacing: optional(AiriPacingSchema),
+    cadence: optional(AiriCadenceSchema),
     cueAllowlist: optional(CharacterCueAllowlistSchema),
     autoCuesEnabled: optional(boolean()),
     autoCueExpressions: optional(boolean()),
@@ -379,6 +414,7 @@ const AiriExtensionSchema = looseObject({
     description: string(),
     prompt: optional(string()),
     isBase: optional(boolean()),
+    textColor: optional(string()),
     artistry: optional(looseObject({
       provider: optional(string()),
       model: optional(string()),
@@ -389,6 +425,7 @@ const AiriExtensionSchema = looseObject({
       mood: optional(string()),
     })),
   }))),
+  textColor: optional(string()),
   active_concepts: optional(array(string())),
   eternal_record: optional(looseObject({
     relational_milestones: optional(array(string())),
@@ -425,6 +462,7 @@ const AiriExtensionSchema = looseObject({
 export const AiriCardSchema = looseObject({
   name: string('Card name is required'),
   nickname: optional(string()),
+  tagline: optional(string()),
   version: string('Version is required'),
   description: optional(string()),
   notes: optional(string()),

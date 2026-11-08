@@ -242,6 +242,7 @@ describe('use-autonomous-cues', () => {
 
     it('returns allowlist emotion keys plus none when present in manual mode (leaving motions empty)', () => {
       const allowlist: CharacterCueAllowlist = {
+        version: 1,
         emotions: {
           smug: { rawKey: 'Smug', label: 'Smug' },
           pout: { rawKey: 'Pout', label: 'Pout' },

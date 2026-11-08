@@ -1,6 +1,6 @@
 import type { Card, ccv3 } from '@proj-airi/ccc'
 
-import type { AiriCognition, AiriPacing, CardCustomSticker, CharacterCueAllowlist } from '../../types/card.schema'
+import type { AiriCadence, AiriCognition, AiriPacing, CardCustomSticker, CharacterCueAllowlist } from '../../types/card.schema'
 import type { VoiceProfile } from '../providers'
 
 import { debug } from '@proj-airi/stage-shared'
@@ -24,6 +24,9 @@ import {
   DEFAULT_ARTISTRY_WIDGET_SPAWNING_PROMPT,
   DEFAULT_HEARTBEATS_PROMPT,
   DEFAULT_POST_HISTORY_INSTRUCTIONS,
+  DEFAULT_SANDBOX_SCRATCHPAD_INSTRUCTION,
+  DEFAULT_SANDBOX_WORKSTATION_INSTRUCTION,
+  DEFAULT_STARTER_CARD_ID,
   DEFAULT_TEXT_JOURNAL_WIDGET_INSTRUCTION,
   STARTER_CHARACTERS,
 } from '../../constants/prompts/character-defaults'
@@ -37,6 +40,7 @@ import { DisplayModelFormat, useDisplayModelsStore } from '../display-models'
 import { useShortTermMemoryStore } from '../memory-short-term'
 import { useSettingsStageModel } from '../settings/stage-model'
 import { useStickersStore } from '../stickers'
+import { useSyncEngineStore } from '../sync-engine'
 import { useArtistryStore } from './artistry'
 import { useConsciousnessStore } from './consciousness'
 import { useSpeechStore } from './speech'
@@ -81,6 +85,12 @@ export interface DreamStateConfig {
   dreamIntrusionPrompt?: string
 }
 
+export interface ShortTermMemoryConfig {
+  enabled?: boolean
+  windowSize: number
+  tokenBudgetPerDay: number
+}
+
 /**
  * Nap config (`extensions.airi.nap`).
  *
@@ -94,10 +104,14 @@ export interface NapConfig {
   enabled: boolean
 }
 
-export interface ShortTermMemoryConfig {
+export interface LifetimeMemoryConfig {
   enabled?: boolean
-  windowSize: number
-  tokenBudgetPerDay: number
+  tokenBudget?: number
+}
+
+export interface AiriSandboxConfig {
+  enabled?: boolean
+  widgetInstruction?: string
 }
 
 export type { CharacterCueAllowlist } from '../../types/card.schema'
@@ -108,6 +122,7 @@ export interface ActingConfig {
   speechMannerismPrompt: string
   idleAnimations?: string[]
   pacing?: AiriPacing
+  cadence?: AiriCadence
   cueAllowlist?: CharacterCueAllowlist
   autoCuesEnabled?: boolean
   autoCueExpressions?: boolean
@@ -140,10 +155,12 @@ export interface CharacterGenerationConfig {
     contextWidth?: number
     reasoningFallback?: boolean
     allowedTools?: string[]
+    maxToolSteps?: number
+    preserveToolHistory?: boolean
   }
   advanced?: Record<string, any>
   compaction?: {
-    strategy?: string
+    strategy?: 'none' | 'prune' | 'winnow' | 'distill' | string
     minKeepTurns?: number
   }
   importedPresetMeta?: {
@@ -179,7 +196,7 @@ export interface ScreenWatchingConfig {
   pauseWhenAfk?: boolean
   afkThresholdMinutes?: number
   gatingMode?: 'trigger_tags' | 'system1_sentinel'
-  sentinelProvider?: 'laya-local' | 'typesafe-ai' | 'openrouter-ai'
+  sentinelProvider?: 'laya-local' | 'typesafe-ai' | 'openrouter-ai' | 'opencode-go'
   sentinelModel?: string
   sentinelQuestions?: SentinelQuestionConfig[]
   sentinelPolicy?: 'any' | 'all'
@@ -250,6 +267,13 @@ export interface AiriExtension {
     journalIntrusionPrompt?: string
   }
 
+  sandbox?: AiriSandboxConfig
+
+  toolCallReflection?: {
+    enabled?: boolean
+    promptTemplate?: string
+  }
+
   artistry?: {
     provider?: string
     model?: string
@@ -288,12 +312,14 @@ export interface AiriExtension {
 
   heartbeats?: HeartbeatConfig
   dreamState?: DreamStateConfig
+  shortTermMemory?: ShortTermMemoryConfig
+  lifetimeMemory?: LifetimeMemoryConfig
+
   /**
    * Nap config. No threshold field of its own: the nap floor is the shared
    * presence AFK threshold, on purpose.
    */
   nap?: NapConfig
-  shortTermMemory?: ShortTermMemoryConfig
   screenWatching?: ScreenWatchingConfig
   eventLedger?: EventLedgerConfig
   groundingEnabled?: boolean
@@ -309,6 +335,7 @@ export interface AiriExtension {
     temporalBoost?: boolean
   }
   recentTopics?: Array<{ topic: string, weight: number }>
+  textColor?: string
   visual_assets?: Record<string, {
     description: string
     prompt?: string
@@ -370,6 +397,10 @@ export interface AiriCard extends Card {
   createdAt?: number
 }
 
+const defaultNap: NapConfig = {
+  enabled: false,
+}
+
 export const useAiriCardStore = defineStore('airi-card', () => {
   const { t } = useI18n()
   const defaultSystemPrompt = t('settings.pages.card.creation.defaults.systemprompt')
@@ -380,7 +411,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
   // can sync it as a first-class key without the localStorage dump/restore bridge.
   const cards = ref<Map<string, AiriCard>>(new Map())
   const cardsLoading = ref(true)
-  const activeCardId = useLocalStorageManualReset<string>('airi-card-active-id', 'default')
+  const activeCardId = useLocalStorageManualReset<string>('airi-card-active-id', DEFAULT_STARTER_CARD_ID)
 
   // Store-driven modal intents to eliminate route-query race conditions
   const pendingEditCardId = ref<string | null>(null)
@@ -596,19 +627,36 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     const nextCards = new Map(cards.value)
     nextCards.set(newCardId, compactCard(card))
     await persistCards(nextCards)
+
+    // Ensure locally added or forged cards are immediately registered as synced if selective sync is enabled
+    try {
+      const syncEngineStore = useSyncEngineStore()
+      if (syncEngineStore.selectiveSyncEnabled) {
+        const displayModelId = modules?.displayModelId || ext?.modules?.displayModelId
+        syncEngineStore.addCardToSelectiveSync(newCardId, displayModelId)
+      }
+    }
+    catch (err) {
+      debug('[AiriCard] Failed to register newly added card to selective sync:', err)
+    }
+
     return newCardId
   }
 
   const removeCard = async (id: string) => {
     await until(cardsLoading).toBe(false)
+    const resolvedId = resolveMutationId(id)
     const nextCards = new Map(cards.value)
+    nextCards.delete(resolvedId)
     nextCards.delete(id)
     void persistCards(nextCards)
+    ensureValidActiveCardId()
   }
 
   const updateCard = async (id: string, updates: Partial<AiriCard> | Partial<Card> | Partial<ccv3.CharacterCardV3>) => {
     await until(cardsLoading).toBe(false)
-    const existingCard = cards.value.get(id)
+    const resolvedId = resolveMutationId(id)
+    const existingCard = cards.value.get(resolvedId) ?? cards.value.get(id)
     if (!existingCard)
       return false
 
@@ -632,35 +680,52 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       updatedAt: Date.now(),
     }
 
-    // NOTICE: `console.info` (not `console.log`) because eslint's no-console only
-    // allows warn/error/info. Kept unconditional: it is the observable evidence
-    // that an update was accepted and persisted.
-    console.info('[AiriCard Store] updateCard persisting card:', {
-      id,
+    // CCv3 synchronization: if existing card has a 'data' container and updates modify extensions,
+    // ensure data.extensions is updated in lockstep so serialization never drops runtime changes.
+    if ('data' in existingCard && (updates as any).extensions) {
+      (updatedCard as any).data = {
+        ...(existingCard as any).data,
+        extensions: {
+          ...(existingCard as any).data?.extensions,
+          ...(updates as any).extensions,
+          airi: {
+            ...(existingCard as any).data?.extensions?.airi,
+            ...(updates as any).extensions?.airi,
+          },
+        },
+      }
+    }
+
+    console.log('[AiriCard Store] 💾 updateCard persisting card:', {
+      id: resolvedId,
       name: (updatedCard as any).name || (updatedCard as any).data?.name,
       speechModule: (updatedCard as any).extensions?.airi?.modules?.speech || (updatedCard as any).data?.extensions?.airi?.modules?.speech,
+      fullUpdatedCard: JSON.parse(JSON.stringify(updatedCard)),
     })
 
     const nextCards = new Map(cards.value)
-    nextCards.set(id, compactCard(updatedCard))
+    nextCards.set(resolvedId, compactCard(updatedCard))
     void persistCards(nextCards)
     return true
   }
 
   const toggleGrounding = async (id: string) => {
     await until(cardsLoading).toBe(false)
-    const card = cards.value.get(id)
+    const resolvedId = resolveMutationId(id)
+    const card = cards.value.get(resolvedId) ?? cards.value.get(id)
     if (!card) {
       debug('[AiriCard] toggleGrounding: card not found for id', id)
       return
     }
 
-    const current = card.extensions?.airi?.groundingEnabled ?? false
-    debug('[AiriCard] toggleGrounding:', { id, current, next: !current })
-    updateCard(id, {
+    const ext = ('data' in card ? (card as any).data?.extensions?.airi : undefined)
+    const current = (card.extensions?.airi?.groundingEnabled ?? ext?.groundingEnabled) ?? false
+    debug('[AiriCard] toggleGrounding:', { id: resolvedId, current, next: !current })
+    await updateCard(resolvedId, {
       extensions: {
         ...card.extensions,
         airi: {
+          ...ext,
           ...card.extensions?.airi,
           groundingEnabled: !current,
         },
@@ -672,46 +737,97 @@ export const useAiriCardStore = defineStore('airi-card', () => {
 
   const toggleGroundingMemory = async (id: string) => {
     await until(cardsLoading).toBe(false)
-    const card = cards.value.get(id)
+    const resolvedId = resolveMutationId(id)
+    const card = cards.value.get(resolvedId) ?? cards.value.get(id)
     if (!card) {
       debug('[AiriCard] toggleGroundingMemory: card not found for id', id)
       return
     }
 
-    const current = card.extensions?.airi?.groundingMemoryEnabled ?? false
-    debug('[AiriCard] toggleGroundingMemory:', { id, current, next: !current })
-    updateCard(id, {
+    const ext = ('data' in card ? (card as any).data?.extensions?.airi : undefined)
+    const current = (card.extensions?.airi?.groundingMemoryEnabled
+      ?? ext?.groundingMemoryEnabled
+      ?? (card.extensions?.airi as any)?.cognition?.searchEngine?.universeRagEnabled
+      ?? (ext as any)?.cognition?.searchEngine?.universeRagEnabled)
+    ?? false
+    debug('[AiriCard] toggleGroundingMemory:', { id: resolvedId, current, next: !current })
+    const nextAir = {
+      ...ext,
+      ...card.extensions?.airi,
+      groundingMemoryEnabled: !current,
+      cognition: {
+        ...(card.extensions?.airi as any)?.cognition,
+        ...(ext as any)?.cognition,
+        searchEngine: {
+          ...(card.extensions?.airi as any)?.cognition?.searchEngine,
+          ...(ext as any)?.cognition?.searchEngine,
+          universeRagEnabled: !current,
+        },
+      },
+    }
+    await updateCard(resolvedId, {
       extensions: {
         ...card.extensions,
-        airi: {
-          ...card.extensions?.airi,
-          groundingMemoryEnabled: !current,
-        },
+        airi: nextAir,
       },
     } as any)
   }
 
   const toggleShortTermMemory = async (id: string) => {
     await until(cardsLoading).toBe(false)
-    const card = cards.value.get(id)
+    const resolvedId = resolveMutationId(id)
+    const card = cards.value.get(resolvedId) ?? cards.value.get(id)
     if (!card) {
       debug('[AiriCard] toggleShortTermMemory: card not found for id', id)
       return
     }
 
-    const current = card.extensions?.airi?.shortTermMemory?.enabled ?? true
-    debug('[AiriCard] toggleShortTermMemory:', { id, current, next: !current })
-    await updateCard(id, {
+    const ext = ('data' in card ? (card as any).data?.extensions?.airi : undefined)
+    const current = (card.extensions?.airi?.shortTermMemory?.enabled ?? ext?.shortTermMemory?.enabled) ?? true
+    debug('[AiriCard] toggleShortTermMemory:', { id: resolvedId, current, next: !current })
+    await updateCard(resolvedId, {
       extensions: {
         ...card.extensions,
         airi: {
+          ...ext,
           ...card.extensions?.airi,
           shortTermMemory: {
+            ...ext?.shortTermMemory,
             ...card.extensions?.airi?.shortTermMemory,
-            windowSize: card.extensions?.airi?.shortTermMemory?.windowSize ?? 3,
-            tokenBudgetPerDay: card.extensions?.airi?.shortTermMemory?.tokenBudgetPerDay ?? 1000,
+            windowSize: card.extensions?.airi?.shortTermMemory?.windowSize ?? ext?.shortTermMemory?.windowSize ?? 3,
+            tokenBudgetPerDay: card.extensions?.airi?.shortTermMemory?.tokenBudgetPerDay ?? ext?.shortTermMemory?.tokenBudgetPerDay ?? 1000,
             enabled: !current,
           },
+        },
+      },
+    } as any)
+  }
+
+  const toggleLifetimeMemory = async (id: string, forceState?: boolean) => {
+    await until(cardsLoading).toBe(false)
+    const resolvedId = resolveMutationId(id)
+    const card = cards.value.get(resolvedId) ?? cards.value.get(id)
+    if (!card) {
+      debug('[AiriCard] toggleLifetimeMemory: card not found for id', id)
+      return
+    }
+
+    const ext = ('data' in card ? (card as any).data?.extensions?.airi : undefined)
+    const current = (card.extensions?.airi?.lifetimeMemory?.enabled ?? ext?.lifetimeMemory?.enabled) ?? false
+    const next = forceState !== undefined ? forceState : !current
+    debug('[AiriCard] toggleLifetimeMemory:', { id: resolvedId, current, next })
+    await updateCard(resolvedId, {
+      extensions: {
+        ...card.extensions,
+        airi: {
+          ...ext,
+          ...card.extensions?.airi,
+          lifetimeMemory: {
+            ...ext?.lifetimeMemory,
+            ...card.extensions?.airi?.lifetimeMemory,
+            enabled: next,
+          },
+          nap: defaultNap,
         },
       },
     } as any)
@@ -724,21 +840,24 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     const authStore = useAuthStore()
 
     await until(cardsLoading).toBe(false)
-    const card = cards.value.get(id)
+    const resolvedId = resolveMutationId(id)
+    const card = cards.value.get(resolvedId) ?? cards.value.get(id)
     if (!card) {
       debug('[AiriCard] toggleGroundingTopics: card not found for id', id)
       return
     }
 
-    const current = card.extensions?.airi?.groundingTopicsEnabled ?? false
+    const ext = ('data' in card ? (card as any).data?.extensions?.airi : undefined)
+    const current = (card.extensions?.airi?.groundingTopicsEnabled ?? ext?.groundingTopicsEnabled) ?? false
     const next = !current
     debug('[AiriCard] toggleGroundingTopics:', { id, current, next })
 
     // First update the state so that the engine doesn't return early due to groundingTopicsEnabled being false
-    await updateCard(id, {
+    await updateCard(resolvedId, {
       extensions: {
         ...card.extensions,
         airi: {
+          ...ext,
           ...card.extensions?.airi,
           groundingTopicsEnabled: next,
         },
@@ -751,10 +870,10 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       const universeId = meta?.universeId || 'global'
       const userId = authStore.userId || 'default_user'
       const messages = sessionStore.getSessionMessages(activeSessionId)
-      const stmBlocks = stmStore.getCharacterBlocks(id)
+      const stmBlocks = stmStore.getCharacterBlocks(resolvedId)
 
       const { updateRecentTopics } = await import('../chat/recent-topics')
-      void updateRecentTopics(id, activeSessionId, userId, messages, stmBlocks, universeId).catch((err) => {
+      void updateRecentTopics(resolvedId, activeSessionId, userId, messages, stmBlocks, universeId).catch((err) => {
         console.error('[AiriCard] Failed to compute initial recent topics:', err)
       })
     }
@@ -762,18 +881,21 @@ export const useAiriCardStore = defineStore('airi-card', () => {
 
   const toggleGroundingDirectorScratchpad = async (id: string) => {
     await until(cardsLoading).toBe(false)
-    const card = cards.value.get(id)
+    const resolvedId = resolveMutationId(id)
+    const card = cards.value.get(resolvedId) ?? cards.value.get(id)
     if (!card) {
       debug('[AiriCard] toggleGroundingDirectorScratchpad: card not found for id', id)
       return
     }
 
-    const current = card.extensions?.airi?.groundingDirectorScratchpadEnabled ?? false
-    debug('[AiriCard] toggleGroundingDirectorScratchpad:', { id, current, next: !current })
-    updateCard(id, {
+    const ext = ('data' in card ? (card as any).data?.extensions?.airi : undefined)
+    const current = (card.extensions?.airi?.groundingDirectorScratchpadEnabled ?? ext?.groundingDirectorScratchpadEnabled) ?? false
+    debug('[AiriCard] toggleGroundingDirectorScratchpad:', { id: resolvedId, current, next: !current })
+    await updateCard(resolvedId, {
       extensions: {
         ...card.extensions,
         airi: {
+          ...ext,
           ...card.extensions?.airi,
           groundingDirectorScratchpadEnabled: !current,
         },
@@ -781,9 +903,38 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     } as any)
   }
 
+  const toggleToolCallReflection = async (id: string) => {
+    await until(cardsLoading).toBe(false)
+    const resolvedId = resolveMutationId(id)
+    const card = cards.value.get(resolvedId) ?? cards.value.get(id)
+    if (!card) {
+      debug('[AiriCard] toggleToolCallReflection: card not found for id', id)
+      return
+    }
+
+    const ext = ('data' in card ? (card as any).data?.extensions?.airi : undefined)
+    const current = (card.extensions?.airi?.toolCallReflection?.enabled ?? ext?.toolCallReflection?.enabled) ?? true
+    debug('[AiriCard] toggleToolCallReflection:', { id: resolvedId, current, next: !current })
+    await updateCard(resolvedId, {
+      extensions: {
+        ...card.extensions,
+        airi: {
+          ...ext,
+          ...card.extensions?.airi,
+          toolCallReflection: {
+            ...ext?.toolCallReflection,
+            ...card.extensions?.airi?.toolCallReflection,
+            enabled: !current,
+          },
+        },
+      },
+    } as any)
+  }
+
   const toggleSalienceGate = async (id: string) => {
     await until(cardsLoading).toBe(false)
-    const card = cards.value.get(id)
+    const resolvedId = resolveMutationId(id)
+    const card = cards.value.get(resolvedId) ?? cards.value.get(id)
     if (!card) {
       debug('[AiriCard] toggleSalienceGate: card not found for id', id)
       return
@@ -795,16 +946,20 @@ export const useAiriCardStore = defineStore('airi-card', () => {
 
   const setAutonomousArtistry = async (id: string, enabled: boolean) => {
     await until(cardsLoading).toBe(false)
-    const card = cards.value.get(id)
+    const resolvedId = resolveMutationId(id)
+    const card = cards.value.get(resolvedId) ?? cards.value.get(id)
     if (!card)
       return
 
-    updateCard(id, {
+    const ext = ('data' in card ? (card as any).data?.extensions?.airi : undefined)
+    await updateCard(resolvedId, {
       extensions: {
         ...card.extensions,
         airi: {
+          ...ext,
           ...card.extensions?.airi,
           artistry: {
+            ...ext?.artistry,
             ...card.extensions?.airi?.artistry,
             autonomousEnabled: enabled,
           },
@@ -813,19 +968,66 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     } as any)
   }
 
-  const getCard = (id: string) => {
+  function getCard(id: string) {
     return cards.value.get(id)
   }
 
+  // NOTICE: Canonical resolver for the legacy 'default' ghost ID.
+  // Raw getCard('default') stays undefined (invariant test); all mutations
+  // and UI resolution go through here so 'default' can never strand a write.
+  function resolveCardId(id?: string | null): string {
+    if (id && cards.value.has(id))
+      return id
+    if (id === 'default') {
+      if (cards.value.has(DEFAULT_STARTER_CARD_ID))
+        return DEFAULT_STARTER_CARD_ID
+      if (cards.value.size > 0) {
+        const first = cards.value.keys().next().value as string | undefined
+        if (first)
+          return first
+      }
+      return DEFAULT_STARTER_CARD_ID
+    }
+    if (id && !cards.value.has(id)) {
+      // Unknown custom ID: fall through to active/relay chain below
+    }
+    else if (id) {
+      return id
+    }
+    if (activeCardId.value && cards.value.has(activeCardId.value))
+      return activeCardId.value
+    if (cards.value.has(DEFAULT_STARTER_CARD_ID))
+      return DEFAULT_STARTER_CARD_ID
+    if (cards.value.size > 0) {
+      const first = cards.value.keys().next().value as string | undefined
+      if (first)
+        return first
+    }
+    return DEFAULT_STARTER_CARD_ID
+  }
+
+  function resolveMutationId(id: string): string {
+    if (id === 'default' && !cards.value.has('default'))
+      return resolveCardId(id)
+    return id
+  }
+
+  function ensureValidActiveCardId() {
+    if (!activeCardId.value || !cards.value.has(activeCardId.value)) {
+      activeCardId.value = resolveCardId(activeCardId.value)
+    }
+  }
+
   const getCardDisplayModelId = (id: string) => {
-    const card = cards.value.get(id)
+    const resolvedId = resolveMutationId(id)
+    const card = getCard(resolvedId) ?? getCard(id)
     if (!card)
       return undefined
     return resolveAiriExtension(card).modules?.displayModelId
   }
 
   let syncCardStateSequence = 0
-  async function syncCardState(card: AiriCard | undefined, force = false) {
+  async function syncCardState(card: AiriCard | undefined, force = false, options?: { actorInitiated?: boolean }) {
     const seq = ++syncCardStateSequence
     if (!card)
       return
@@ -881,9 +1083,14 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     // displayModelId actually differs (written explicitly by activateConcept at playback,
     // or by the Director for Base-sourced outfit swaps). Card activation never needs
     // force here because it clears isModelSyncPrevented first, so a genuinely different
-    // model applies via `modelChanged`. See docs/design-fix-actor-stage-desync.md (v4, Leg 2a).
+    // model applies via `modelChanged`. The actor pipeline passes
+    // `actorInitiated:true` so its sequenced handoff still lands mid-speech.
+    // See docs/design-fix-actor-stage-desync.md (v4, Leg 2a).
     const rendererUninitialized = !stageModelStore.stageModelRenderer || !stageModelStore.stageModelSelectedDisplayModel
-    if (!isModelSyncPrevented.value || rendererUninitialized) {
+    const pendingModelId = extension.active_state?.displayModelId ?? extension.modules?.displayModelId
+    const pendingModelChanged = pendingModelId && pendingModelId !== stageModelStore.stageModelSelected
+    const actorHandoff = options?.actorInitiated === true && !!pendingModelChanged
+    if (!isModelSyncPrevented.value || rendererUninitialized || actorHandoff) {
       const newModelId = extension.active_state?.displayModelId ?? extension.modules?.displayModelId
       const modelChanged = newModelId && newModelId !== stageModelStore.stageModelSelected
 
@@ -902,6 +1109,13 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     // itself is speech-gated.
     if (!isModelSyncPrevented.value || force) {
       const nextExpressions = extension.active_state?.active_expressions || {}
+      debug('[AiriCard Store] Model & Expression sync parameters:', {
+        newModelId: extension.active_state?.displayModelId ?? extension.modules?.displayModelId,
+        actorHandoff,
+        isModelSyncPrevented: isModelSyncPrevented.value,
+        force,
+        nextExpressions,
+      })
       if (JSON.stringify(live2dStore.activeExpressions) !== JSON.stringify(nextExpressions)) {
         live2dStore.activeExpressions = { ...nextExpressions }
       }
@@ -925,7 +1139,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
           }
         }
       }
-      catch {
+      catch (e) {
         // Spine store might not be loaded in non-stage contexts
       }
 
@@ -973,15 +1187,21 @@ export const useAiriCardStore = defineStore('airi-card', () => {
   async function activateCard(id: string, force = false) {
     await until(cardsLoading).toBe(false)
     isModelSyncPrevented.value = false
-    activeCardId.value = id
-    await syncCardState(cards.value.get(id), force)
+    const resolvedId = resolveMutationId(id)
+    activeCardId.value = resolvedId
+    ensureValidActiveCardId()
+    await syncCardState(cards.value.get(activeCardId.value), force)
   }
 
   function resolveAiriExtension(card: Card | ccv3.CharacterCardV3): AiriExtension {
-    // Get existing extension if available
-    const existingExtension = ('data' in card
-      ? card.data?.extensions?.airi
-      : card.extensions?.airi) as AiriExtension
+    // Get existing extension if available (prioritizing root updates over nested data.extensions)
+    const rawDataExt = ('data' in card ? card.data?.extensions?.airi : undefined) as AiriExtension | undefined
+    const rootExt = (card as any).extensions?.airi as AiriExtension | undefined
+    const existingExtension = (
+      rawDataExt && rootExt
+        ? { ...rawDataExt, ...rootExt }
+        : (rootExt || rawDataExt)
+    ) as AiriExtension
 
     // Create default modules config
     const defaultModules = {
@@ -1038,10 +1258,6 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       tokenBudgetPerDay: 1000,
     }
 
-    const defaultNap: NapConfig = {
-      enabled: false,
-    }
-
     const defaultArtistry = {
       widgetInstruction: DEFAULT_ARTISTRY_WIDGET_SPAWNING_PROMPT,
       spawnMode: 'bg' as const,
@@ -1087,7 +1303,6 @@ export const useAiriCardStore = defineStore('airi-card', () => {
         agents: {},
         heartbeats: defaultHeartbeats,
         dreamState: defaultDreamState,
-        nap: defaultNap,
         shortTermMemory: defaultShortTermMemory,
         artistry: defaultArtistry,
         generation: defaultGeneration,
@@ -1283,7 +1498,34 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       eternal_record: (existingExtension as any)?.eternal_record || { relational_milestones: [], lore_bits: [] },
       active_concepts: (existingExtension as any)?.active_concepts ?? [],
       groundingEnabled: existingExtension?.groundingEnabled ?? false,
-      groundingMemoryEnabled: existingExtension?.groundingMemoryEnabled ?? false,
+      groundingMemoryEnabled: (() => {
+        // NOTICE: Universe Memory (RAG) lives in two places historically:
+        // extensions.airi.groundingMemoryEnabled and
+        // extensions.airi.cognition.searchEngine.universeRagEnabled.
+        // Unify here so Card Editor saves, chat toggles, and runtime checks agree.
+        const fromFlag = existingExtension?.groundingMemoryEnabled
+        if (fromFlag !== undefined)
+          return fromFlag
+        const fromCognition = (existingExtension as any)?.cognition?.searchEngine?.universeRagEnabled
+        if (fromCognition !== undefined)
+          return fromCognition
+        return false
+      })(),
+      cognition: (() => {
+        const existingCognition = (existingExtension as any)?.cognition
+        if (!existingCognition)
+          return existingCognition
+        const resolvedRag = existingExtension?.groundingMemoryEnabled
+          ?? existingCognition?.searchEngine?.universeRagEnabled
+          ?? false
+        return {
+          ...existingCognition,
+          searchEngine: {
+            ...existingCognition.searchEngine,
+            universeRagEnabled: resolvedRag,
+          },
+        }
+      })(),
       groundingTopicsEnabled: existingExtension?.groundingTopicsEnabled ?? false,
       recentTopics: existingExtension?.recentTopics ?? [],
       imageJournal: (existingExtension as any)?.imageJournal || { selfie: false },
@@ -1346,7 +1588,8 @@ export const useAiriCardStore = defineStore('airi-card', () => {
         tags: ccv3Card.data.tags ?? [],
         extensions: {
           ...ccv3Card.data.extensions,
-          airi: stripEmbeddedStickersData(stripEmbeddedBackgroundData(resolveAiriExtension(ccv3Card))),
+          ...(card as any).extensions,
+          airi: stripEmbeddedStickersData(stripEmbeddedBackgroundData(resolveAiriExtension(card))),
         },
         updatedAt: (ccv3Card as any).updatedAt || (ccv3Card.data as any).updatedAt,
         createdAt: (ccv3Card as any).createdAt || (ccv3Card.data as any).createdAt,
@@ -1376,6 +1619,34 @@ export const useAiriCardStore = defineStore('airi-card', () => {
 
   async function initialize() {
     await until(cardsLoading).toBe(false)
+    // Legacy 'default' -> 'relu' migration (rename-preserving, never delete user data)
+    {
+      const raw = new Map(cards.value)
+      if (raw.has('default') && !raw.has(DEFAULT_STARTER_CARD_ID)) {
+        const legacy = raw.get('default')
+        if (legacy) {
+          raw.set(DEFAULT_STARTER_CARD_ID, legacy)
+          debug('[AiriCard] Migrated legacy card default -> relu')
+        }
+        raw.delete('default')
+        cards.value = raw
+      }
+      else if (raw.has('default') && raw.has(DEFAULT_STARTER_CARD_ID)) {
+        const legacy = raw.get('default')
+        if (legacy) {
+          const preservedKey = `default-imported-${Date.now()}`
+          const renamed = { ...(legacy as any) }
+          if (typeof (renamed as any).name === 'string' && (renamed as any).name.trim().toLowerCase() === 'relu')
+            (renamed as any).name = `${(renamed as any).name} (Legacy)`
+          raw.set(preservedKey, renamed as any)
+          debug('[AiriCard] Preserved legacy default card as', preservedKey)
+        }
+        raw.delete('default')
+        cards.value = raw
+      }
+      if (activeCardId.value === 'default' || (activeCardId.value && !cards.value.has(activeCardId.value)))
+        activeCardId.value = DEFAULT_STARTER_CARD_ID
+    }
     // Compact and normalize all cards on startup and persist any changes back to IndexedDB
     const compacted = compactAllCardsMap(cards.value)
     const nextCards = new Map(compacted)
@@ -1388,7 +1659,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       if (!nextCards.has(starter.id)) {
         nextCards.set(starter.id, compactCard({
           name: starter.name,
-          creator: starter.id === 'default' ? undefined : 'AIRI',
+          creator: 'AIRI',
           version: '1.0.0',
           description: starter.description,
           personality: starter.personality,
@@ -1437,8 +1708,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       cards.value = compacted
     }
 
-    if (!activeCardId.value)
-      activeCardId.value = 'default'
+    ensureValidActiveCardId()
   }
 
   async function seedDefaults(selectedId: string) {
@@ -1449,7 +1719,7 @@ export const useAiriCardStore = defineStore('airi-card', () => {
       await activateCard(selectedId, true)
     }
     else {
-      await activateCard('default', true)
+      await activateCard(DEFAULT_STARTER_CARD_ID, true)
     }
   }
 
@@ -1481,11 +1751,15 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     removeCard,
     updateCard,
     getCard,
+    resolveCardId,
+    ensureValidActiveCardId,
     toggleGrounding,
     toggleGroundingMemory,
     toggleShortTermMemory,
+    toggleLifetimeMemory,
     toggleGroundingTopics,
     toggleGroundingDirectorScratchpad,
+    toggleToolCallReflection,
     toggleSalienceGate,
     setAutonomousArtistry,
     getCardDisplayModelId,
@@ -1497,11 +1771,12 @@ export const useAiriCardStore = defineStore('airi-card', () => {
     syncCardState,
 
     updateCardOutfits: (id: string, outfits: AiriOutfit[]) => {
-      const card = cards.value.get(id)
+      const resolvedId = resolveMutationId(id)
+      const card = cards.value.get(resolvedId) ?? cards.value.get(id)
       if (!card)
         return false
 
-      return updateCard(id, {
+      return updateCard(resolvedId, {
         extensions: {
           ...card.extensions,
           airi: {
@@ -1598,7 +1873,7 @@ export function buildSystemPrompt(card: AiriCard | undefined) {
       premise = datingSimStore.customPremise || story.premise || ''
     }
   }
-  catch {
+  catch (e) {
     // Ignore store initialization exceptions outside of Pinia
   }
 
@@ -1659,6 +1934,15 @@ export function buildSystemPrompt(card: AiriCard | undefined) {
     }
   }
 
+  const sandbox = card.extensions?.airi?.sandbox
+  const isSandboxAllowed = Boolean(generation?.known?.allowedTools?.includes('bash'))
+  if (isSandboxAllowed) {
+    const sandboxInstruction = sandbox?.widgetInstruction || DEFAULT_SANDBOX_WORKSTATION_INSTRUCTION
+    if (sandboxInstruction && sandboxInstruction.trim() !== '') {
+      components.push(sandboxInstruction)
+    }
+  }
+
   if (isDatingSimActive && story) {
     if (premise) {
       components.push(`The user wants to customize or tweak the premise of this encounter, please adjust to the text below: ${premise}`)
@@ -1672,4 +1956,9 @@ export function buildSystemPrompt(card: AiriCard | undefined) {
   }
 
   return components.join('\n')
+}
+
+export {
+  DEFAULT_SANDBOX_SCRATCHPAD_INSTRUCTION,
+  DEFAULT_SANDBOX_WORKSTATION_INSTRUCTION,
 }

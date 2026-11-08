@@ -1,7 +1,7 @@
-import type { PrimaryDisplaySize } from '@proj-airi/stage-shared'
+import type { PrimaryDisplaySize, ScreenCaptureOptions, VisionDisplaySource, VisionWindowSource } from '@proj-airi/stage-shared'
 
 import { useElectronEventaInvoke } from '@proj-airi/electron-vueuse'
-import { isWithinSchedule, visionCaptureScreen, visionCheckPermission, visionGetPrimaryDisplaySize, visionRequestPermission } from '@proj-airi/stage-shared'
+import { isWithinSchedule, visionCaptureScreen, visionCheckPermission, visionGetPrimaryDisplaySize, visionListDisplays, visionListWindows, visionRequestPermission } from '@proj-airi/stage-shared'
 import { useLocalStorageManualReset } from '@proj-airi/stage-shared/composables'
 import { defineStore, storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
@@ -20,6 +20,7 @@ export const useVisionStore = defineStore('vision', () => {
   const strategy = useLocalStorageManualReset<'direct' | 'forward'>('settings/vision/strategy', 'direct')
   const activeProvider = useLocalStorageManualReset<string>('settings/vision/active-provider', '')
   const activeModel = useLocalStorageManualReset<string>('settings/vision/active-model', '')
+  const activeAdvanced = useLocalStorageManualReset<Record<string, unknown>>('settings/vision/active-advanced', {})
   const contextWindow = useLocalStorageManualReset<number>('settings/vision/context-window', 1) // Number of images to include in context
   const promptShimDirect = useLocalStorageManualReset<string>(
     'settings/vision/prompt-shim',
@@ -51,6 +52,8 @@ export const useVisionStore = defineStore('vision', () => {
   const checkPermissionInvoke = useElectronEventaInvoke(visionCheckPermission)
   const requestPermissionInvoke = useElectronEventaInvoke(visionRequestPermission)
   const getPrimaryDisplaySizeInvoke = useElectronEventaInvoke(visionGetPrimaryDisplaySize)
+  const listWindowsInvoke = useElectronEventaInvoke(visionListWindows)
+  const listDisplaysInvoke = useElectronEventaInvoke(visionListDisplays)
 
   // Cached primary display size so capture-resolution UI and the screen watcher
   // can reason about native resolution without an IPC round-trip per tick.
@@ -88,7 +91,7 @@ export const useVisionStore = defineStore('vision', () => {
     try {
       // In renderer, we use the IPC handler to check via systemPreferences
       const status = await checkPermissionInvoke()
-      console.info('[Vision Store] macOS Screen Capture Permission Status:', status)
+      console.log('[Vision Store] macOS Screen Capture Permission Status:', status)
       cachedPermission = status
       cachedPermissionAt = Date.now()
       return status
@@ -109,7 +112,7 @@ export const useVisionStore = defineStore('vision', () => {
   // Heartbeat Logic
   const heartbeat = async (options?: { force?: boolean }) => {
     const liveSessionStore = useLiveSessionStore()
-    console.info('[Vision Store] Heartbeat checking...', {
+    console.log('[Vision Store] Heartbeat checking...', {
       isActive: liveSessionStore.isActive,
       isWitnessEnabled: isWitnessEnabled.value,
       force: !!options?.force,
@@ -117,7 +120,7 @@ export const useVisionStore = defineStore('vision', () => {
 
     // Master Gate Check: if the session is not active, we never capture.
     if (!liveSessionStore.isActive) {
-      console.info('[Vision Store] Heartbeat aborted: Master Gate (Live API) is OFF.')
+      console.log('[Vision Store] Heartbeat aborted: Master Gate (Live API) is OFF.')
       return
     }
 
@@ -132,14 +135,14 @@ export const useVisionStore = defineStore('vision', () => {
       // Background interval: enforce the full interval duration minus a small 10s drift buffer
       const intervalMs = 2 * 60 * 1000 // Minimum cooldown between captures
       if (now - lastHeartbeatExec.value < (intervalMs - 10000)) {
-        console.info(`[Vision Store] Background heartbeat skipped. Next allowed in ${intervalMs - (now - lastHeartbeatExec.value)}ms due to cross-window sync.`)
+        console.log(`[Vision Store] Background heartbeat skipped. Next allowed in ${intervalMs - (now - lastHeartbeatExec.value)}ms due to cross-window sync.`)
         return
       }
     }
     else {
       // Manual trigger: enforce a small 15-second debounce to prevent spam clicks and IPC echo
       if (now - lastHeartbeatExec.value < 15000) {
-        console.info(`[Vision Store] Forced heartbeat throttled (15s cooldown).`)
+        console.log(`[Vision Store] Forced heartbeat throttled (15s cooldown).`)
         return
       }
     }
@@ -152,13 +155,13 @@ export const useVisionStore = defineStore('vision', () => {
     if (!options?.force && respectSchedule.value && config?.schedule?.start && config.schedule.end) {
       const inWindow = isWithinSchedule(config.schedule.start, config.schedule.end)
       if (!inWindow) {
-        console.info(`[Vision Store] Heartbeat skipped: Outside schedule window (${config.schedule.start} - ${config.schedule.end})`)
+        console.log(`[Vision Store] Heartbeat skipped: Outside schedule window (${config.schedule.start} - ${config.schedule.end})`)
         return
       }
-      console.info(`[Vision Store] Heartbeat inside schedule window (${config.schedule.start} - ${config.schedule.end})`)
+      console.log(`[Vision Store] Heartbeat inside schedule window (${config.schedule.start} - ${config.schedule.end})`)
     }
 
-    console.info('[Vision Store] Heartbeat pulse starting...')
+    console.log('[Vision Store] Heartbeat pulse starting...')
     status.value = 'capturing'
 
     try {
@@ -178,11 +181,11 @@ export const useVisionStore = defineStore('vision', () => {
       }
 
       if (result?.dataUrl) {
-        console.info('[Vision Store] Heartbeat: Screen capture successful!')
+        console.log('[Vision Store] Heartbeat: Screen capture successful!')
         lastWitnessTime.value = result.timestamp
 
         // Send to Gemini via Chat Orchestrator
-        console.info('[Vision Store] Sending screenshot to Chat Orchestrator for commentary...')
+        console.log('[Vision Store] Sending screenshot to Chat Orchestrator for commentary...')
         const base64 = result.dataUrl.split(',')[1]
 
         await chatOrchestrator.ingest(witnessPrompt.value, {
@@ -206,7 +209,7 @@ export const useVisionStore = defineStore('vision', () => {
     }
     finally {
       status.value = 'idle'
-      console.info('[Vision Store] Heartbeat pulse complete.')
+      console.log('[Vision Store] Heartbeat pulse complete.')
     }
   }
 
@@ -216,8 +219,8 @@ export const useVisionStore = defineStore('vision', () => {
    * When no dimensions are provided the capture defaults to the display's native
    * resolution (needed for accurate OCR).
    */
-  async function captureSnapshot(options?: { width?: number, height?: number, native?: boolean, downscalePercent?: number }) {
-    console.info('[Vision Store] captureSnapshot requested...')
+  async function captureSnapshot(options?: ScreenCaptureOptions) {
+    console.log('[Vision Store] captureSnapshot requested...')
 
     // 1. Permission Check (macOS only)
     const permission = await checkPermissions()
@@ -226,13 +229,16 @@ export const useVisionStore = defineStore('vision', () => {
       return { error: 'permission_denied' }
     }
 
-    console.info('[Vision Store] Invoking OS screen capture via Eventa...')
+    console.log('[Vision Store] Invoking OS screen capture via Eventa...')
     try {
       const result = await captureInvoke({
         width: options?.width,
         height: options?.height,
         native: options?.native,
         downscalePercent: options?.downscalePercent,
+        type: options?.type,
+        sourceId: options?.sourceId,
+        windowTitle: options?.windowTitle,
       })
 
       if (!result || !result.dataUrl) {
@@ -247,10 +253,30 @@ export const useVisionStore = defineStore('vision', () => {
     }
   }
 
+  async function listWindows(): Promise<VisionWindowSource[]> {
+    try {
+      return await listWindowsInvoke() ?? []
+    }
+    catch (err) {
+      console.error('[Vision Store] listWindows error:', err)
+      return []
+    }
+  }
+
+  async function listDisplays(): Promise<VisionDisplaySource[]> {
+    try {
+      return await listDisplaysInvoke() ?? []
+    }
+    catch (err) {
+      console.error('[Vision Store] listDisplays error:', err)
+      return []
+    }
+  }
+
   function toggleWitness() {
-    console.info('[Vision Store] toggleWitness() called. Current:', isWitnessEnabled.value)
+    console.log('[Vision Store] toggleWitness() called. Current:', isWitnessEnabled.value)
     isWitnessEnabled.value = !isWitnessEnabled.value
-    console.info('[Vision Store] toggleWitness() new state:', isWitnessEnabled.value)
+    console.log('[Vision Store] toggleWitness() new state:', isWitnessEnabled.value)
   }
 
   // Computed properties
@@ -316,6 +342,7 @@ export const useVisionStore = defineStore('vision', () => {
     strategy,
     activeProvider,
     activeModel,
+    activeAdvanced,
     contextWindow,
     promptShimDirect,
     promptShimForward,
@@ -342,6 +369,8 @@ export const useVisionStore = defineStore('vision', () => {
     toggleWitness,
     heartbeat,
     captureSnapshot,
+    listWindows,
+    listDisplays,
     checkPermissions,
     openPermissionSettings,
     getPrimaryDisplaySize,

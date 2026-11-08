@@ -47,6 +47,7 @@ describe('store character', () => {
       async end() {
         parserEndSpy()
       },
+      flush: async () => {},
     }))
 
     writeLiteralSpy.mockClear()

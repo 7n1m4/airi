@@ -593,8 +593,8 @@ export const useChatSessionStore = defineStore('chat-session', () => {
       role: message.role,
       createdAt: message.createdAt,
       contentPreview: typeof message.content === 'string' ? message.content.slice(0, 60) : '[Complex Content]',
-      source: message.metadata?.source ?? 'unknown',
-      metadata: message.metadata,
+      source: (message as any).metadata?.source ?? 'unknown',
+      metadata: (message as any).metadata,
     })
 
     // NOTICE: Broadcast the actual message payload so other windows can apply it directly
@@ -1459,8 +1459,8 @@ export const useChatSessionStore = defineStore('chat-session', () => {
       role: message.role,
       createdAt: message.createdAt,
       contentPreview: typeof message.content === 'string' ? message.content.slice(0, 60) : '[Complex Content]',
-      source: message.metadata?.source ?? 'unknown',
-      metadata: message.metadata,
+      source: (message as any).metadata?.source ?? 'unknown',
+      metadata: (message as any).metadata,
     })
     debug(`[IngestDebug] Cross-window ADDING message payload stringified:`, JSON.stringify(message))
 
