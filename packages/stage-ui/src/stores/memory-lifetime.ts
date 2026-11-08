@@ -651,17 +651,24 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
     return userId.value || 'local'
   }
 
+  // Which universe is currently mirrored into the legacy `artifacts` map.
+  // Store-internal only (not returned, to keep the public API unchanged):
+  // when undefined, `artifacts` stays empty so a reader cannot silently
+  // consume an artifact from an arbitrary universe.
+  const activeUniverseId = ref<Map<string, string>>(new Map())
+
   function setCachedArtifact(characterId: string, universeId: string, artifact: LifetimeMemoryArtifact | null) {
     const compositeKey = `${characterId}:${universeId}`
     if (artifact) {
       const tagged: LifetimeMemoryArtifact = { ...artifact, universeId }
       artifactsByUniverse.value.set(compositeKey, tagged)
-      artifacts.value.set(characterId, tagged)
+      if (activeUniverseId.value.get(characterId) === universeId) {
+        artifacts.value.set(characterId, tagged)
+      }
     }
     else {
       artifactsByUniverse.value.delete(compositeKey)
-      const current = artifacts.value.get(characterId)
-      if (!current || (current.universeId || 'global') === universeId) {
+      if (activeUniverseId.value.get(characterId) === universeId) {
         artifacts.value.delete(characterId)
       }
     }
@@ -685,6 +692,14 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
         lifetimeMemoryRepo.getByCharacter(characterId, universeId),
         provisioningSessionRepo.get(characterId, universeId),
       ])
+      // Anchor the legacy `artifacts` mirror to this explicitly-loaded
+      // universe *before* caching, so setCachedArtifact can mirror it.
+      if (artifact) {
+        activeUniverseId.value.set(characterId, universeId)
+      }
+      else {
+        activeUniverseId.value.delete(characterId)
+      }
       setCachedArtifact(characterId, universeId, artifact ?? null)
       activeSession.value = session || null
     }

@@ -5,9 +5,9 @@ import { toast } from 'vue-sonner'
 import { useShortTermMemoryStore } from '../memory-short-term'
 import { useAiriCardStore } from '../modules/airi-card'
 import { useConsciousnessStore } from '../modules/consciousness'
+import { useSystemOneStore } from '../modules/system-one'
 import { useProvidersStore } from '../providers'
 import { useChatSessionStore } from './session-store'
-
 // Strategy C (HMR Async Epoch Guard): module-scope epoch bumped by the single
 // dispose ledger at the bottom of this module. executeCompaction performs
 // archive-session creation, per-bucket LLM distillations, STMM persists, and a
@@ -113,6 +113,7 @@ export const useCompactionStore = defineStore('chat-compaction', () => {
   const shortTermMemory = useShortTermMemoryStore()
   const airiCardStore = useAiriCardStore()
   const consciousnessStore = useConsciousnessStore()
+  const systemOneStore = useSystemOneStore()
   const providersStore = useProvidersStore()
 
   const { activeCard, activeCardId } = storeToRefs(airiCardStore)
@@ -204,12 +205,13 @@ export const useCompactionStore = defineStore('chat-compaction', () => {
     try {
       // 1. Create a background archive session containing all current messages
       const archiveTitle = `Archive: ${card.name} - ${new Date().toLocaleDateString()}`
+      const archiveUniverseId = chatSession.getSessionMeta(sessionId)?.universeId || 'global'
       await chatSession.createSession(activeCardId.value || 'default', {
         setActive: false,
         messages: JSON.parse(JSON.stringify(originalMessages)),
         title: archiveTitle,
+        universeId: archiveUniverseId,
       })
-
       if (isStale()) {
         debug('[Compaction] Aborting orphaned compaction after HMR reload (post-archive).')
         toast.dismiss(toastId)
@@ -220,13 +222,47 @@ export const useCompactionStore = defineStore('chat-compaction', () => {
       // Keep system messages (role === 'system') plus the last N turns
       const systemMessages = originalMessages.filter(m => m.role === 'system')
       const chatMessagesOnly = originalMessages.filter(m => m.role !== 'system')
-
       const toPreserve = chatMessagesOnly.slice(-keepTurns)
       const toCompact = chatMessagesOnly.slice(0, chatMessagesOnly.length - keepTurns)
 
-      const finalMessages = [...systemMessages, ...toPreserve]
+      let retainedFromCompact: any[] = []
 
-      // 3. Apply distillation if requested
+      // 3A. Apply System-1 Winnow in-place garbage collection if requested
+      if (strategy === 'winnow') {
+        if (systemOneStore.configured && toCompact.length > 0) {
+          try {
+            const windows = buildWinnowCompactionWindows(toCompact, card.name || 'Assistant', 2)
+            if (windows.length > 0) {
+              const keptIds = await systemOneStore.runWinnowTurnCompaction(
+                windows.map(w => ({ id: w.id, text: w.text })),
+              )
+              if (isStale()) {
+                debug('[Compaction] Aborting orphaned compaction after HMR reload (post-winnow).')
+                toast.dismiss(toastId)
+                return
+              }
+              const rawSurvivors = windows
+                .filter(w => keptIds.has(w.id))
+                .flatMap(w => w.messages)
+
+              const threshold = card.extensions?.airi?.generation?.known?.contextWidth
+              const baseTokens = estimateMessageListTokens([...systemMessages, ...toPreserve])
+              retainedFromCompact = capWinnowSurvivorsToBudget(rawSurvivors, baseTokens, threshold, WINNOW_TARGET_BUDGET_RATIO)
+            }
+          }
+          catch (winnowErr) {
+            console.warn('[Compaction] System-1 Winnow scoring failed, falling back to prune:', winnowErr)
+            retainedFromCompact = []
+          }
+        }
+        else {
+          debug('[Compaction] Winnow selected but System 1 is not configured; falling back to prune.')
+        }
+      }
+
+      const finalMessages = [...systemMessages, ...retainedFromCompact, ...toPreserve]
+
+      // 3B. Apply distillation if requested
       if (strategy === 'distill') {
         const windowSize = card.extensions?.airi?.shortTermMemory?.windowSize ?? 3
         const tokenBudget = card.extensions?.airi?.shortTermMemory?.tokenBudgetPerDay ?? 1000

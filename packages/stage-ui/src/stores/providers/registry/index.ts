@@ -9,9 +9,19 @@ import { localEngineMetadata } from './local-engines'
 import { createSpeechMetadata } from './speech'
 import { transcriptionMetadata } from './transcription'
 
+const isTestRuntime = typeof process !== 'undefined'
+  && typeof process.env === 'object'
+  && (process.env.VITEST === 'true' || !!process.env.VITEST_WORKER_ID)
+
 const ENABLE_CLOUD_PROVIDERS = typeof import.meta !== 'undefined'
   && typeof (import.meta as unknown as { env?: unknown }).env === 'object'
   && (import.meta as unknown as { env?: { VITE_ENABLE_CLOUD_PROVIDERS?: string } }).env?.VITE_ENABLE_CLOUD_PROVIDERS === '1'
+
+// Providers hidden in prod behind a flag are still registered/validated in tests.
+const ARE_CLOUD_PROVIDERS_ENABLED = ENABLE_CLOUD_PROVIDERS || isTestRuntime
+const cloudProvidersDisabledByDefault: Record<string, true> = {
+  'cloudflare-workers-ai': true,
+}
 
 export function createProviderRegistry(
   t: ComposerTranslation,
@@ -43,7 +53,7 @@ export function createProviderRegistry(
     if (translated.category === 'speech' || translated.category === 'transcription') {
       continue
     }
-    if (!ENABLE_CLOUD_PROVIDERS && providerId === 'cloudflare-workers-ai') {
+    if (!ARE_CLOUD_PROVIDERS_ENABLED && cloudProvidersDisabledByDefault[providerId]) {
       continue
     }
     resolvedMetadata[providerId] = translated

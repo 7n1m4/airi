@@ -33,7 +33,12 @@ export default defineConfig(({ mode }) => {
     test: {
       include: ['src/**/*.test.ts'],
       setupFiles: [resolve(import.meta.dirname, 'vitest.setup.ts')],
-      env: loadEnv(mode, join(cwd(), 'packages', 'stage-ui'), ''),
+      env: {
+        ...loadEnv(mode, join(cwd(), 'packages', 'stage-ui'), ''),
+        // runtime-matrix validates every registered provider incl. the
+        // prod flag-gated cloudflare-workers-ai; enable it in tests.
+        VITE_ENABLE_CLOUD_PROVIDERS: '1',
+      },
     },
   })
 })

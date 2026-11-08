@@ -313,12 +313,16 @@ describe('f-03 universe isolation', () => {
     for (const a of shared.savedLifetime)
       expect(a.universeId).toBe('cyberpunk-au')
     expect(shared.lifetime.get('char-1:global').version).toBe(1)
-    // The charId-keyed slot currently holds cyberpunk-au, so a global lookup
-    // must refuse it (strict isolation) until global is explicitly loaded.
+    // The charId-keyed legacy mirror is only populated on an explicit
+    // loadForCharacter(), so a background cyberpunk-au update must not
+    // leak into `artifacts` (strict isolation).
     expect(store.artifacts.get('char-1')).toBeUndefined()
+    expect(store.getArtifact('char-1', 'cyberpunk-au')?.version).toBe(7)
+    expect(store.getArtifact('char-1', 'global')).toBeUndefined()
     await store.loadForCharacter('char-1', 'global')
     expect(store.artifacts.get('char-1')?.version).toBe(1)
-    expect((store.artifacts.get('char-1') as any)?.version).toBe(7)
+    await store.loadForCharacter('char-1', 'cyberpunk-au')
+    expect(store.artifacts.get('char-1')?.version).toBe(7)
   })
 })
 

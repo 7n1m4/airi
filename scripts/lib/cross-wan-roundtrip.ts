@@ -6,6 +6,7 @@ import { yamux } from '@chainsafe/libp2p-yamux'
 import { generateKeyPair } from '@libp2p/crypto/keys'
 import { identify } from '@libp2p/identify'
 import { ping } from '@libp2p/ping'
+import { tcp } from '@libp2p/tcp'
 import { webSockets } from '@libp2p/websockets'
 import { createLibp2p } from 'libp2p'
 
@@ -26,7 +27,7 @@ export async function startNode(listen: string[] = ['/ip4/127.0.0.1/tcp/0/ws']):
   const node = await createLibp2p({
     privateKey: keyPair,
     addresses: { listen },
-    transports: [webSockets()],
+    transports: [tcp(), webSockets()],
     connectionEncrypters: [noise()],
     streamMuxers: [yamux()],
     services: {
@@ -59,14 +60,21 @@ export async function runRoundTrip(
   let done = false
   let publisher: ReturnType<typeof setInterval> | null = null
   let timer: ReturnType<typeof setTimeout> | null = null
-  const onMessage = (event: { detail: { topic: string, from?: { toString?: () => string } } }) => {
+  const onMessage = (event: { detail: { topic: string, from?: { toString?: () => string }, data?: Uint8Array } }) => {
     const message = event.detail
     if (message.topic !== CROSS_WAN_TEST_TOPIC)
       return
     const from = message.from?.toString?.() ?? String(message.from)
     if (ignored.has(from))
       return
-    setTimeout(() => finish(message as unknown as RoundTripMessage), SETTLE_MS)
+    let payload: RoundTripMessage | null = null
+    try {
+      payload = JSON.parse(new TextDecoder().decode(message.data)) as RoundTripMessage
+    }
+    catch {
+      return
+    }
+    setTimeout(() => finish(payload), SETTLE_MS)
   }
 
   const finish = (message: RoundTripMessage | null) => {
