@@ -132,7 +132,7 @@ function openAudioStudio() {
       :initial-provider="selectedVoiceProfile ? 'virtual-audio-studio' : undefined"
       :initial-voice="selectedVoiceProfile ? selectedVoiceProfile.id : (userProfileStore.voiceProfileId || undefined)"
       :initial-model="selectedVoiceProfile ? 'virtual' : undefined"
-      @save="(payload) => {
+      @save="(payload: any) => {
         userProfileStore.voiceProfileId = typeof payload === 'string' ? payload : payload.baseVoice
       }"
     />

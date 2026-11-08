@@ -1127,7 +1127,7 @@ function handleClone() {
     :initial-provider="selectedSpeechProvider"
     :initial-model="selectedSpeechModel"
     :initial-voice="selectedSpeechVoiceId"
-    @save="(payload) => {
+    @save="(payload: any) => {
       selectedSpeechProvider = payload.baseProvider
       selectedSpeechModel = payload.baseModel
       selectedSpeechVoiceId = payload.baseVoice

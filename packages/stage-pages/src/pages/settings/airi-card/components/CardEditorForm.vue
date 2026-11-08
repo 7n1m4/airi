@@ -454,7 +454,7 @@ const DEFAULT_SENTINEL_QUESTIONS: SentinelQuestionItem[] = [
 ]
 
 const screenWatchingGatingMode = ref<'trigger_tags' | 'system1_sentinel'>('trigger_tags')
-const screenWatchingSentinelProvider = ref<'laya-local' | 'typesafe-ai' | 'openrouter-ai'>('laya-local')
+const screenWatchingSentinelProvider = ref<'laya-local' | 'typesafe-ai' | 'openrouter-ai' | 'opencode-go'>('laya-local')
 const screenWatchingSentinelQuestions = ref<SentinelQuestionItem[]>(JSON.parse(JSON.stringify(DEFAULT_SENTINEL_QUESTIONS)))
 const screenWatchingSentinelPolicy = ref<'any' | 'all'>('any')
 const screenWatchingSentinelThreshold = ref<number>(0.75)
