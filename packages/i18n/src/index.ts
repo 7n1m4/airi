@@ -10,3 +10,5 @@ export const all = {
   'zh-Hans': '简体中文',
   'zh-Hant': '繁體中文',
 }
+
+export { createFallbackOptions } from './fallback'
