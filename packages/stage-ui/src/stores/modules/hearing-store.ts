@@ -55,8 +55,43 @@ export const useHearingStore = defineStore('hearing-store', () => {
   const autoSendEnabled = useLocalStorageManualReset<boolean>('settings/hearing/auto-send-enabled', true)
   const autoSendDelay = useLocalStorageManualReset<number>('settings/hearing/auto-send-delay', 2000) // Default 2 seconds
   const hearingDetectionMode = useLocalStorageManualReset<'vad' | 'manual'>('settings/hearing/detection-mode', 'vad')
+  // Tap-to-talk (single tap captures one utterance and stops itself at
+  // speech end) vs open line (tap opens, tap closes, utterances segment
+  // automatically). Independent of the mic-hot `enabled` flag — taps never
+  // touch ambient listening.
+  const tapToTalk = useLocalStorageManualReset<boolean>('settings/hearing/tap-to-talk', true)
+  // Mic capture ownership — the single authority pact shared by the control
+  // strip, lock-key hotkeys, and every chat composer (desktop, web, pocket).
+  // 'composer' = an explicit composer tap owns the live capture (ambient
+  // page loops stand down); 'ambient' = strip/lock-key toggle owns it;
+  // null = released. Last actor wins; releasing always also drops `enabled`.
+  // Persisted (not a plain ref) so main-window and chat-window stores agree.
+  const micOwner = useLocalStorageManualReset<'composer' | 'ambient' | null>('settings/audio/input/owner', null)
+  // A persisted 'composer' can only be stale (a reload kills any live
+  // capture), so clear it at store setup — within-session taps set it after.
+  if (micOwner.value === 'composer')
+    micOwner.value = null
+  const voiceInputMode = useLocalStorageManualReset<'dictation' | 'voice-message'>('settings/hearing/voice-input-mode', 'dictation')
   const vadThreshold = useLocalStorageManualReset<number>('settings/hearing/vad-threshold', 0.6)
   const isTranscribing = ref(false)
+  // Ephemeral cross-surface voice draft: page-level ambient loops (web/pocket
+  // stage) park transcripts here when auto-send is off; the active composer
+  // claims them into its input. Plain ref (not persisted): a reload kills any
+  // live capture, so a carried draft would be stale.
+  const pendingVoiceDraft = ref('')
+  function appendVoiceDraft(text: string) {
+    const addition = text.trim()
+    if (!addition)
+      return
+    pendingVoiceDraft.value = pendingVoiceDraft.value ? `${pendingVoiceDraft.value} ${addition}` : addition
+  }
+  // Atomic claim: returns the draft and clears it so a second mounted composer
+  // can't append the same utterance twice.
+  function takeVoiceDraft() {
+    const text = pendingVoiceDraft.value
+    pendingVoiceDraft.value = ''
+    return text
+  }
   const speechProviderSettings = useLocalStorageManualReset<Record<string, { deviceId: string, sampleRate: number }>>('settings/hearing/speech-provider-settings', {
     'app-local-audio-speech': { deviceId: 'default', sampleRate: 16000 },
   })
@@ -126,7 +161,11 @@ export const useHearingStore = defineStore('hearing-store', () => {
     autoSendEnabled.reset()
     autoSendDelay.reset()
     hearingDetectionMode.reset()
+    tapToTalk.reset()
+    micOwner.reset()
+    voiceInputMode.reset()
     vadThreshold.reset()
+    pendingVoiceDraft.value = ''
   }
 
   async function transcription(
@@ -283,8 +322,14 @@ export const useHearingStore = defineStore('hearing-store', () => {
     autoSendEnabled,
     autoSendDelay,
     hearingDetectionMode,
+    tapToTalk,
+    micOwner,
+    voiceInputMode,
     vadThreshold,
     isTranscribing,
+    pendingVoiceDraft,
+    appendVoiceDraft,
+    takeVoiceDraft,
 
     supportsModelListing,
     providerModels,

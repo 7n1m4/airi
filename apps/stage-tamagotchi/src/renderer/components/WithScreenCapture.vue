@@ -2,13 +2,14 @@
 import type { SourcesOptions } from 'electron'
 
 import { useElectronScreenCapture } from '@proj-airi/electron-screen-capture/vue'
+import { getElectronEventaContext } from '@proj-airi/electron-vueuse'
 import { Button } from '@proj-airi/ui'
 import { useWindowFocus } from '@vueuse/core'
 import { DialogContent, DialogDescription, DialogOverlay, DialogPortal, DialogRoot, DialogTitle } from 'reka-ui'
 import { onMounted, ref, toRef, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { getIpcRenderer, getPlatform } from '../utils/electron'
+import { getPlatform } from '../utils/electron'
 
 const props = defineProps<{
   sourcesOptions: SourcesOptions
@@ -26,7 +27,7 @@ const {
   selectWithSource,
   checkMacOSPermission,
   requestMacOSPermission,
-} = useElectronScreenCapture(getIpcRenderer(), sourcesOptions)
+} = useElectronScreenCapture(getElectronEventaContext(), sourcesOptions)
 const focused = useWindowFocus()
 
 async function checkPermissions() {

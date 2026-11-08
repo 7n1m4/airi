@@ -24,7 +24,7 @@ export const DEFAULT_BUTTONS: ControlStripButton[] = [
   { id: 'actor-characters', enabled: true, label: 'Characters', icon: 'i-solar:users-group-rounded-outline' },
   { id: 'mic', enabled: true, label: 'Microphone Toggle', icon: 'i-solar:muted-linear' },
   { id: 'stage', enabled: true, label: 'Actor Stage', icon: 'i-solar:clapperboard-play-bold-duotone' },
-  { id: 'stage-atmosphere', enabled: true, label: 'Stage & Chat Theme', icon: 'i-solar:magic-stick-3-bold-duotone' },
+  { id: 'stage-atmosphere', enabled: true, label: 'Stage & Chat Theme', icon: 'i-solar:magic-stick-3-linear' },
   { id: 'caption', enabled: true, label: 'Captions', icon: 'i-ph:closed-captioning-duotone' },
   { id: 'gemini-session', enabled: true, label: 'Toggle Speech Session', icon: 'i-ph:sparkle' },
   { id: 'settings', enabled: true, label: 'Settings', icon: 'i-solar:settings-linear' },
@@ -36,18 +36,29 @@ export const DEFAULT_BUTTONS: ControlStripButton[] = [
   { id: 'gemini-voice', enabled: false, label: 'Voice Switch', icon: 'i-solar:user-speak-linear' },
   { id: 'gemini-schedule', enabled: false, label: 'Respect Schedule', icon: 'i-solar:calendar-linear' },
   { id: 'gemini-grounding', enabled: false, label: 'Google Search Grounding', icon: 'i-solar:global-linear' },
-  { id: 'actor-selfies', enabled: false, label: 'Selfies', icon: 'i-solar:camera-bold-duotone' },
+  { id: 'actor-selfies', enabled: false, label: 'Selfies', icon: 'i-solar:camera-linear' },
   { id: 'actor-macaron', enabled: false, label: 'Macaron Floatie', icon: 'i-solar:donut-bold-duotone' },
+  { id: 'workspace', enabled: true, label: 'Workspace', icon: 'i-solar:code-square-linear' },
+  { id: 'actor-all-emotions', enabled: true, label: 'All Emotions', icon: 'i-solar:emoji-funny-square-linear' },
+  { id: 'actor-vfx', enabled: true, label: 'VFX & Auras', icon: 'i-solar:fire-linear' },
+  { id: 'actor-motion-playground', enabled: true, label: 'Motion', icon: 'i-solar:walking-round-linear' },
 ]
 
 export const DEFAULT_MOBILE_BUTTONS: ControlStripButton[] = [
-  { id: 'viewport-cycle-modes', enabled: true, label: 'Cycle Viewport Modes', icon: 'i-solar:cursor-bold-duotone' },
-  { id: 'head-tethered-caption', enabled: true, label: 'Head-Tethered Caption', icon: 'i-solar:chat-round-call-bold-duotone' },
-  { id: 'theme-mode', enabled: true, label: 'Theme Mode', icon: 'i-solar:sun-2-bold-duotone' },
-  { id: 'actor-characters', enabled: true, label: 'Characters', icon: 'i-solar:users-group-rounded-outline' },
-  { id: 'actor-avatars', enabled: true, label: 'Avatars', icon: 'i-solar:user-bold-duotone' },
-  { id: 'stage-atmosphere', enabled: true, label: 'Stage Theme', icon: 'i-solar:magic-stick-3-bold-duotone' },
-  { id: 'actor-wardrobe', enabled: true, label: 'Wardrobe (Outfits)', icon: 'i-solar:t-shirt-outline' },
+  { id: 'chat', enabled: true, label: 'Chat Toggle', icon: 'i-solar:chat-line-linear' },
+  { id: 'viewport-cycle-modes', enabled: true, label: 'Cycle Viewport Modes', icon: 'i-solar:cursor-linear' },
+  { id: 'head-tethered-caption', enabled: true, label: 'Head-Tethered Caption', icon: 'i-solar:chat-round-line-linear' },
+  { id: 'actor-motion-playground', enabled: true, label: 'Motion', icon: 'i-solar:walking-round-linear' },
+  { id: 'actor-motions', enabled: true, label: 'Motions', icon: 'i-solar:running-2-linear' },
+  { id: 'actor-all-emotions', enabled: true, label: 'All Emotions', icon: 'i-solar:emoji-funny-square-linear' },
+  { id: 'actor-vfx', enabled: true, label: 'VFX & Auras', icon: 'i-solar:fire-linear' },
+  { id: 'actor-selfies', enabled: true, label: 'Selfies', icon: 'i-solar:camera-linear' },
+  // NOTICE (mobile deprecations, no version bump — the keyed merge handles
+  // existing users): 'stage-atmosphere' (Stage Theme) is consolidated into
+  // Quick Settings > Appearance; 'actor-wardrobe' (WEAR) stays in the catalog
+  // but is no longer a default while it has no outfits to show. Previous
+  // defaults ('theme-mode', 'actor-characters', 'actor-avatars', 'workspace')
+  // remain valid catalog entries for existing strips.
 ]
 
 export function getDefaultControlStripButtons(): ControlStripButton[] {
@@ -82,8 +93,18 @@ export const useSettingsControlStrip = defineStore('settings-control-strip', () 
   const stageEnabled = useLocalStorageManualReset<boolean>('settings/stage-enabled', true)
   const stageDisabled = ref(false)
   const stageMateEnabled = useLocalStorageManualReset<boolean>('settings/stage-mate-enabled', false)
-  const chatOpen = useLocalStorageManualReset<boolean>('settings/chat-open', false)
+  const chatOpen = useLocalStorageManualReset<boolean>('settings/chat-open', !isStageTamagotchi())
   const captionOpen = useLocalStorageManualReset<boolean>('settings/caption-open', false)
+
+  // Web default: chat is open by default on web/mobile stages.
+  // Existing web sessions that had the legacy 'false' default are initialized to true once.
+  if (!isStageTamagotchi() && typeof localStorage !== 'undefined') {
+    if (localStorage.getItem('settings/control-strip/web-chat-defaulted') !== 'true') {
+      chatOpen.value = true
+      localStorage.setItem('settings/control-strip/web-chat-defaulted', 'true')
+    }
+  }
+  const workspaceOpen = useLocalStorageManualReset<boolean>('settings/control-strip/workspace-open', false)
   const backgroundTint = useLocalStorageManualReset<string>('settings/control-strip/background-tint', '#171717')
   const collapsed = useLocalStorageManualReset<boolean>('settings/control-strip/collapsed', false)
   const dockedEdge = useLocalStorageManualReset<'left' | 'right' | 'top' | 'bottom'>('settings/control-strip/docked-edge', 'right')
@@ -102,7 +123,7 @@ export const useSettingsControlStrip = defineStore('settings-control-strip', () 
   // Desktop preserves existing 'v4' and 'v5' configs without wiping user layouts.
   const storedVersion = localStorage.getItem('settings/control-strip/buttons-version')
   const isValidDesktopVersion = isStageTamagotchi() && (storedVersion === 'v4' || storedVersion === 'v5')
-  const isValidMobileVersion = !isStageTamagotchi() && storedVersion === 'v4-mobile'
+  const isValidMobileVersion = !isStageTamagotchi() && (storedVersion === 'v4-mobile' || storedVersion === 'v5-mobile')
 
   if (!isValidDesktopVersion && !isValidMobileVersion) {
     buttons.value = [...defaultButtons]
@@ -121,16 +142,23 @@ export const useSettingsControlStrip = defineStore('settings-control-strip', () 
     let changed = false
     const existing = [...buttons.value]
 
-    // On mobile/web, seamlessly migrate any existing 'gemini-session' button slot to 'stage-atmosphere'
+    // On mobile/web, drop any legacy 'gemini-session' button slot. It used to
+    // migrate into 'stage-atmosphere', but Stage Theme is deprecated on
+    // mobile (consolidated into Quick Settings > Appearance), so there is
+    // nothing to migrate it into. Also ensure 'chat' is present on the strip.
     if (!isStageTamagotchi()) {
       const geminiIdx = existing.findIndex(btn => btn.id === 'gemini-session')
-      if (geminiIdx !== -1 && !existing.some(btn => btn.id === 'stage-atmosphere')) {
-        existing[geminiIdx] = {
-          id: 'stage-atmosphere',
+      if (geminiIdx !== -1) {
+        existing.splice(geminiIdx, 1)
+        changed = true
+      }
+      if (!existing.some(btn => btn.id === 'chat')) {
+        existing.unshift({
+          id: 'chat',
           enabled: true,
-          label: 'Stage Theme',
-          icon: 'i-solar:magic-stick-3-bold-duotone',
-        }
+          label: 'Chat Toggle',
+          icon: 'i-solar:chat-line-linear',
+        })
         changed = true
       }
     }
@@ -142,7 +170,7 @@ export const useSettingsControlStrip = defineStore('settings-control-strip', () 
         id: 'stage-atmosphere',
         enabled: true,
         label: 'Stage & Chat Theme',
-        icon: 'i-solar:magic-stick-3-bold-duotone',
+        icon: 'i-solar:magic-stick-3-linear',
       })
       changed = true
     }
@@ -210,6 +238,7 @@ export const useSettingsControlStrip = defineStore('settings-control-strip', () 
     stageMateEnabled.reset()
     chatOpen.reset()
     captionOpen.reset()
+    workspaceOpen.reset()
     resetButtons()
     backgroundTint.reset()
     collapsed.reset()
@@ -226,6 +255,7 @@ export const useSettingsControlStrip = defineStore('settings-control-strip', () 
     stageMateEnabled,
     chatOpen,
     captionOpen,
+    workspaceOpen,
     buttons,
     backgroundTint,
     collapsed,

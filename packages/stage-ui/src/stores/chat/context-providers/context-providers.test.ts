@@ -7,7 +7,6 @@ import { getEventSourceKey } from '../../../utils/event-source'
 import { createDatetimeContext } from './datetime'
 import { createExpressionsContext } from './expressions'
 import { createScenesContext } from './scenes'
-import { createStickersContext } from './stickers'
 
 const mockLive2dStore = {
   activeExpressions: null as Record<string, number> | null,
@@ -92,22 +91,6 @@ describe('chat context providers contracts', () => {
       expect(ctx?.text).toContain('Active Visual Expressions/Props:')
       expect(ctx?.text).toContain('blush')
       expect(ctx?.text).toContain('glasses')
-    })
-  })
-
-  describe('createStickersContext', () => {
-    it('returns null when stickers library is empty', () => {
-      mockStickersStore.currentLibrary = []
-      expect(createStickersContext()).toBeNull()
-    })
-
-    it('returns formatted context with source="stickers" when stickers exist', () => {
-      mockStickersStore.currentLibrary = [{ label: 'sparkle' }, { label: 'heart' }]
-      const ctx = createStickersContext()
-      expect(ctx).not.toBeNull()
-      expect(ctx?.source).toBe('stickers')
-      expect(ctx?.contextId).toBe('stickers')
-      expect(ctx?.text).toContain('sparkle, heart')
     })
   })
 

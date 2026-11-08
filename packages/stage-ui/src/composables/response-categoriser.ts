@@ -533,11 +533,14 @@ export function createStreamingCategorizer(
     }
 
     try {
-      const tree = unified().use(rehypeParse, { fragment: true }).parse(buffer) as Root
+      // A `<` that does not start a tag, as in `a < b` or `<=>`, is text, and so is `&`. rehype writes them as references.
+      // Write them so here too, or the source never equals the output and all later text counts as a tag.
+      const source = buffer.replaceAll('&', '&#x26;').replace(/<(?![a-z/!])/gi, '&#x3C;')
+      const tree = unified().use(rehypeParse, { fragment: true }).parse(source) as Root
       const stringified = unified().use(rehypeStringify).stringify(tree).toString()
 
-      if (stringified !== buffer) {
-        const bufferEnd = buffer.trim().slice(-30)
+      if (stringified !== source) {
+        const bufferEnd = source.trim().slice(-30)
         const stringifiedEnd = stringified.trim().slice(-30)
         return bufferEnd !== stringifiedEnd
       }
@@ -760,8 +763,8 @@ export function createStreamingCategorizer(
           filtered += text.slice(beforeStart, beforeEnd)
         }
 
-        // Skip the segment content (don't add to filtered)
-        currentPos = segmentEnd
+        // Nested segments must not move the cursor behind an outer segment (PR #2916).
+        currentPos = Math.max(currentPos, segmentEnd)
       }
 
       // Add remaining text after last segment

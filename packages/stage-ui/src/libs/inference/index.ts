@@ -12,23 +12,33 @@ export {
   clearLayaCache,
   clearModelCache,
   clearNeedleCache,
+  clearOpenJevCache,
   clearSingleModelCache,
+  clearWdTaggerCache,
   clearWebLlmCache,
   clearWebRwkvCache,
+  evictOtherMing3Models,
+  evictOtherPocketModels,
+  evictOtherWdTaggerModels,
   evictOtherWhisperModels,
   formatBytes,
+  getDetailedModelCacheMap,
   getLayaCacheSize,
   getModelCacheSize,
   getNeedleCacheSize,
+  getOpenJevCacheSize,
   getWebLlmCacheSize,
   isLayaModelCached,
   isModelCached,
   isNeedleModelCached,
+  isOpenJevModelCached,
   isStateCached,
+  isWdTaggerCached,
   isWebLlmModelCached,
   isWebRwkvSlotOccupied,
   LAYA_CACHE_NAME,
 } from './cache-utils'
+export type { ModelCacheItemStatus, ModelCacheStatusMap } from './cache-utils'
 export {
   DEFAULT_WEB_LLM_FP32_MODEL,
   DEFAULT_WEB_LLM_MODEL,
@@ -83,9 +93,6 @@ export {
   downloadLayaModel,
   ensureOrtConfigured,
   isLayaDownloaded,
-  LAYA_FP16_MODEL_FILE,
-  LAYA_HF_REPO,
-  LAYA_INT8_MODEL_FILE,
   loadLayaSession,
   loadLayaTokenizer,
   resetLayaSession,
@@ -93,6 +100,12 @@ export {
   terminateLayaWorker,
 } from './laya-engine'
 export type { LayaDownloadProgress, LayaSessionOptions } from './laya-engine'
+export {
+  getDecisionModelSpec,
+  LAYA_MODEL_SPECS,
+  OPENJEV_MODEL_SPECS,
+} from './laya-models'
+export type { DecisionModelSpec, LayaModelSpec } from './laya-models'
 export {
   classifyError,
   createRequestId,

@@ -1,9 +1,15 @@
-import { onUnmounted, ref } from 'vue'
+import { getCurrentInstance, onUnmounted, ref } from 'vue'
+
+/**
+ * One level every 50 ms gives a 20 Hz meter, the same rate as the voice host's input level.
+ * A level on each animation frame makes every meter render on each frame, at up to 120 Hz.
+ */
+const ANALYZE_INTERVAL_MS = 50
 
 export function useAudioAnalyzer() {
   const analyzer = ref<AnalyserNode>()
   const dataArray = ref<Uint8Array<ArrayBuffer>>()
-  const animationFrame = ref<number>()
+  let timer: ReturnType<typeof setInterval> | undefined
 
   const onAnalyzerUpdateHooks = ref<Array<(volumeLevel: number) => void | Promise<void>>>([])
 
@@ -21,7 +27,7 @@ export function useAudioAnalyzer() {
   }
 
   function start() {
-    if (animationFrame.value)
+    if (timer)
       return // prevent multiple loops
 
     const analyze = () => {
@@ -42,11 +48,10 @@ export function useAudioAnalyzer() {
       for (const hook of onAnalyzerUpdateHooks.value) {
         hook(volumeLevel.value)
       }
-
-      animationFrame.value = requestAnimationFrame(analyze)
     }
 
     analyze()
+    timer = setInterval(analyze, ANALYZE_INTERVAL_MS)
   }
 
   function startAnalyzer(audioContext: AudioContext) {
@@ -76,10 +81,9 @@ export function useAudioAnalyzer() {
   }
 
   function stopAnalyzer() {
-    // Stop animation frame
-    if (animationFrame.value) {
-      cancelAnimationFrame(animationFrame.value)
-      animationFrame.value = undefined
+    if (timer) {
+      clearInterval(timer)
+      timer = undefined
     }
 
     analyzer.value = undefined
@@ -87,9 +91,11 @@ export function useAudioAnalyzer() {
   }
 
   // Auto-cleanup when used in a component
-  onUnmounted(() => {
-    stopAnalyzer()
-  })
+  if (getCurrentInstance()) {
+    onUnmounted(() => {
+      stopAnalyzer()
+    })
+  }
 
   return {
     volumeLevel,

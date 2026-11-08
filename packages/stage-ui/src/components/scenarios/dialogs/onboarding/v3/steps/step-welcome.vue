@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Button } from '@proj-airi/ui'
+import { isStageTamagotchi } from '@proj-airi/stage-shared'
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
@@ -13,10 +13,26 @@ const { t } = useI18n()
 
 const showSkipConfirmation = ref(false)
 
+// Desktop (Electron system tray) vs web stage (cog icon in settings) have
+// different re-entry paths back into the Companion Wizard.
+const isDesktop = computed(() => isStageTamagotchi())
+
 const featurePills = computed(() => [
-  { icon: 'i-solar:cpu-bolt-bold-duotone', label: t('onboarding.steps.welcome.pills.webgpu'), color: 'text-cyan-400' },
-  { icon: 'i-solar:shield-check-bold-duotone', label: t('onboarding.steps.welcome.pills.offline'), color: 'text-emerald-400' },
-  { icon: 'i-solar:magic-stick-3-bold-duotone', label: t('onboarding.steps.welcome.pills.souls'), color: 'text-purple-400' },
+  {
+    icon: 'i-solar:cpu-bolt-bold-duotone',
+    label: t('onboarding.steps.welcome.pills.webgpu'),
+    iconColor: 'text-[#0086AD] dark:text-cyan-400',
+  },
+  {
+    icon: 'i-solar:shield-check-bold-duotone',
+    label: t('onboarding.steps.welcome.pills.offline'),
+    iconColor: 'text-[#10B981] dark:text-emerald-400',
+  },
+  {
+    icon: 'i-solar:magic-stick-3-bold-duotone',
+    label: t('onboarding.steps.welcome.pills.souls'),
+    iconColor: 'text-[#8B5CF6] dark:text-purple-400',
+  },
 ])
 
 function confirmCloseToTray() {
@@ -26,136 +42,138 @@ function confirmCloseToTray() {
 </script>
 
 <template>
-  <div :class="['h-full flex flex-col items-center justify-center gap-5 px-4 text-center select-none py-2 relative']">
-    <!-- Top Header Animation (Radiant Icon Orb with Ping Animation) -->
+  <div :class="['w-full max-w-[720px] flex flex-col items-center justify-center select-none py-4 text-center']">
+    <!-- Top Header Brand Icon Tile (104px x 104px, radius 26px) -->
     <div
       v-motion
-      :initial="{ opacity: 0, scale: 0.8 }"
+      :initial="{ opacity: 0, scale: 0.9 }"
       :enter="{ opacity: 1, scale: 1 }"
-      :duration="500"
+      :duration="400"
       :class="['relative']"
     >
       <div
-        :class="['absolute inset-0 animate-ping rounded-full bg-cyan-500/20']"
-        style="animation-duration: 3s"
-      />
-      <div
         :class="[
-          'relative h-20 w-20 flex items-center justify-center border border-cyan-500/30 rounded-3xl',
-          'from-cyan-500/20 to-indigo-500/20 bg-gradient-to-br shadow-lg shadow-cyan-500/10',
+          'w-[104px] h-[104px] rounded-[26px] flex items-center justify-center border border-[#BAE6FD]/80 dark:border-cyan-400/20',
+          'bg-gradient-to-br from-[#E0F2FE]/80 via-[#F0F9FF]/60 to-[#F3E8FF]/60 dark:from-cyan-950/40 dark:via-sky-950/20 dark:to-indigo-950/30 shadow-md shadow-sky-500/5',
         ]"
       >
-        <div :class="['i-solar:stars-line-bold-duotone h-10 w-10 text-cyan-400']" />
+        <div :class="['i-solar:magic-stick-3-bold-duotone h-12 w-12 text-[#0086AD] dark:text-cyan-400']" />
       </div>
     </div>
 
-    <!-- Title & Subtitle -->
+    <!-- Title & Subtitle (Hero Tile -> Heading = 24px, Heading -> Subtitle = 12px) -->
     <div
       v-motion
       :initial="{ opacity: 0, y: 10 }"
       :enter="{ opacity: 1, y: 0 }"
       :duration="400"
       :delay="100"
-      :class="['text-center']"
+      :class="['text-center mt-6']"
     >
-      <h1 :class="['text-3xl text-neutral-900 dark:text-white font-bold tracking-tight']">
+      <h1 :class="['text-[40px] font-bold leading-[1.15] text-[#142333] dark:text-white tracking-tight']">
         {{ t('onboarding.steps.welcome.heroTitle') }}
       </h1>
-      <p :class="['mt-2 text-sm text-neutral-600 dark:text-neutral-400']">
+      <p :class="['mt-3 text-[20px] font-medium leading-[1.4] text-[#50657D] dark:text-neutral-400']">
         {{ t('onboarding.steps.welcome.heroSubtitle') }}
       </p>
     </div>
 
-    <!-- Chat Bubble (Companion Speech Bubble with Tail) -->
+    <!-- Companion Greeting Card (Subtitle -> Card = 28px) -->
     <div
       v-motion
       :initial="{ opacity: 0, y: 10 }"
       :enter="{ opacity: 1, y: 0 }"
       :duration="400"
       :delay="200"
-      :class="['max-w-xl w-full flex items-start gap-3.5 text-left']"
+      :class="[
+        'w-full max-w-[720px] mt-7 flex items-center text-left px-7 py-6 rounded-[20px]',
+        'bg-white dark:bg-neutral-900/80 border border-[#D8E6EF] dark:border-white/10 shadow-[0_10px_24px_rgba(37,76,108,0.07)]',
+      ]"
     >
-      <!-- Companion Avatar Circle -->
+      <!-- Companion Avatar Badge -->
       <div
         :class="[
-          'h-10 w-10 flex flex-shrink-0 items-center justify-center border border-primary-500/30 rounded-full',
-          'bg-gradient-to-br from-primary-500/20 to-indigo-500/20 shadow-sm mt-0.5',
+          'h-12 w-12 flex flex-shrink-0 items-center justify-center rounded-full',
+          'bg-[#EDF2F6] dark:bg-cyan-950/50 border border-[#D8E6EF] dark:border-cyan-800/40 text-[#0086AD] dark:text-cyan-400 shadow-xs',
         ]"
       >
-        <div :class="['i-solar:emoji-funny-circle-bold-duotone h-6 w-6 text-primary-400']" />
+        <div :class="['i-solar:emoji-funny-circle-bold h-7 w-7']" />
       </div>
 
-      <!-- Bubble Container -->
-      <div
-        :class="[
-          'relative flex-1 border border-primary-500/25 rounded-2xl rounded-tl-sm px-5 py-3.5',
-          'text-sm text-neutral-800 dark:text-neutral-200 leading-relaxed backdrop-blur-md bg-primary-500/5 dark:bg-primary-950/20 shadow-lg shadow-primary-950/10',
-        ]"
-      >
-        "{{ t('onboarding.steps.welcome.companionQuote') }}"
+      <!-- Vertical Divider -->
+      <div :class="['h-10 w-px bg-[#D8E6EF] dark:bg-white/10 mx-5 shrink-0']" />
+
+      <!-- Greeting Text (18px, weight 400, line-height 1.55, #30465C) -->
+      <div :class="['text-[18px] font-normal leading-[1.55] text-[#30465C] dark:text-neutral-200']">
+        {{ t('onboarding.steps.welcome.companionQuote') }}
       </div>
     </div>
 
-    <!-- Feature Pills -->
+    <!-- Feature Chips (Card -> Chips = 24px, Space between chips = 12px) -->
     <div
       v-motion
       :initial="{ opacity: 0, y: 10 }"
       :enter="{ opacity: 1, y: 0 }"
       :duration="400"
       :delay="300"
-      :class="['flex flex-wrap items-center justify-center gap-2 max-w-lg']"
+      :class="['mt-6 flex flex-wrap items-center justify-center gap-3 w-full']"
     >
       <div
         v-for="pill in featurePills"
         :key="pill.label"
         :class="[
-          'flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-medium',
-          'border-neutral-200/80 dark:border-white/10 bg-white/50 dark:bg-white/5 backdrop-blur-md',
-          'text-neutral-700 dark:text-neutral-300 shadow-xs',
+          'h-[42px] px-5 rounded-full flex items-center gap-2 whitespace-nowrap transition-colors',
+          'bg-[#EDF2F6] dark:bg-white/5 border border-[#D8E6EF]/70 dark:border-white/10 text-[#30465C] dark:text-neutral-200',
         ]"
       >
-        <div :class="[pill.icon, pill.color, 'h-3.5 w-3.5 shrink-0']" />
-        <span>{{ pill.label }}</span>
+        <div :class="[pill.icon, pill.iconColor, 'h-[19px] w-[19px] shrink-0']" />
+        <span :class="['text-[14px] font-semibold tracking-normal']">{{ pill.label }}</span>
       </div>
     </div>
 
-    <!-- Action Buttons -->
+    <!-- Action Buttons (Chips -> Buttons = 32px) -->
     <div
       v-motion
       :initial="{ opacity: 0, y: 10 }"
       :enter="{ opacity: 1, y: 0 }"
       :duration="400"
       :delay="400"
-      :class="['flex flex-col sm:flex-row items-center gap-3 pt-3']"
+      :class="['mt-8 flex flex-col items-center w-full max-w-[480px]']"
     >
-      <button
-        v-if="props.onQuickStart"
-        type="button"
-        :class="[
-          'rounded-xl px-5 py-2.5 text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer',
-          'border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 shadow-sm shadow-cyan-500/10',
-        ]"
-        @click="props.onQuickStart"
-      >
-        <div :class="['i-solar:bolt-bold text-cyan-400 h-4 w-4']" />
-        <span>{{ t('onboarding.steps.welcome.actions.quickStart') }}</span>
-      </button>
+      <div :class="['flex items-center justify-center gap-[14px] w-full']">
+        <!-- Quick Start (Primary Button, #007FA3, height 54px, radius 14px) -->
+        <button
+          v-if="props.onQuickStart"
+          type="button"
+          :class="[
+            'flex-1 h-[54px] rounded-[14px] px-7 text-[16px] font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+            'bg-[#007FA3] hover:bg-[#006F8F] text-white shadow-md shadow-[#007FA3]/20 active:scale-[0.98]',
+          ]"
+          @click="props.onQuickStart"
+        >
+          <div :class="['i-solar:bolt-bold text-white h-4.5 w-4.5']" />
+          <span>{{ t('onboarding.steps.welcome.quickStartButton') }}</span>
+          <span :class="['font-normal opacity-85 text-[14px] ml-1']">{{ t('onboarding.steps.welcome.quickStartDuration') }}</span>
+        </button>
 
-      <Button
-        variant="primary"
-        :class="[
-          'rounded-xl px-6 py-2.5 text-sm font-semibold shadow-lg shadow-primary-500/20 transition-all cursor-pointer',
-          'flex items-center gap-2',
-        ]"
-        @click="props.onNext"
-      >
-        <span>{{ t('onboarding.steps.welcome.actions.guidedSetup') }}</span>
-        <div :class="['i-solar:alt-arrow-right-line-duotone h-4 w-4']" />
-      </Button>
+        <!-- Guided Setup (Secondary Button, outline #007FA3, height 54px, radius 14px) -->
+        <button
+          type="button"
+          :class="[
+            'flex-1 h-[54px] rounded-[14px] px-7 text-[16px] font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer',
+            'border-2 border-[#007FA3] text-[#007FA3] dark:text-cyan-400 dark:border-cyan-400 bg-white dark:bg-white/5 hover:bg-[#007FA3]/5 active:scale-[0.98]',
+          ]"
+          @click="props.onNext"
+        >
+          <span>{{ t('onboarding.steps.welcome.actions.guidedSetup') }}</span>
+          <div :class="['i-solar:alt-arrow-right-line-duotone h-4.5 w-4.5']" />
+        </button>
+      </div>
 
+      <!-- Set up later (Buttons -> Link = 20px, 15px, muted slate, underlined) -->
       <button
         type="button"
-        :class="['rounded-xl px-4 py-2.5 text-sm text-neutral-500 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white font-medium transition-colors hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer']"
+        :class="['mt-5 text-[15px] font-normal text-[#50657D] hover:text-[#142333] dark:text-neutral-400 dark:hover:text-white underline underline-offset-4 cursor-pointer transition-colors']"
         @click="showSkipConfirmation = true"
       >
         {{ t('onboarding.steps.welcome.actions.setupLater') }}
@@ -169,7 +187,7 @@ function confirmCloseToTray() {
     >
       <div :class="['relative max-w-sm w-full rounded-2xl border border-neutral-200 dark:border-white/15 bg-white dark:bg-[#10101c] p-6 text-center shadow-2xl space-y-4']">
         <div :class="['mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-primary-500/30 bg-primary-950/20 text-primary-400 shadow-inner']">
-          <div :class="['i-solar:tray-bold-duotone h-8 w-8']" />
+          <div :class="[isDesktop ? 'i-solar:tray-bold-duotone' : 'i-solar:settings-bold-duotone', 'h-8 w-8']" />
         </div>
 
         <div>
@@ -177,12 +195,25 @@ function confirmCloseToTray() {
             {{ t('onboarding.steps.welcome.dialog.savedTitle') }}
           </h3>
           <p :class="['mt-2 text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed']">
-            {{ t('onboarding.steps.welcome.dialog.savedDescription') }}
+            {{ t('onboarding.steps.welcome.dialog.comebackLead', 'If you want to come back to this later, just') }}
+            <template v-if="isDesktop">
+              {{ t('onboarding.steps.welcome.dialog.desktopInstruction', 'right-click the AIRI system tray icon and click Companion Wizard.') }}
+            </template>
+            <template v-else>
+              {{ t('onboarding.steps.welcome.dialog.webInstruction', 'tap the cog icon in the top-right to open Settings, then go Guided Tours → Companion Wizard.') }}
+            </template>
           </p>
-          <div :class="['mt-3 rounded-xl border border-primary-500/30 bg-primary-500/10 dark:bg-primary-950/30 px-3.5 py-2 text-xs font-semibold text-primary-600 dark:text-primary-300 flex items-center justify-center gap-2']">
+          <div v-if="isDesktop" :class="['mt-3 rounded-xl border border-primary-500/30 bg-primary-500/10 dark:bg-primary-950/30 px-3.5 py-2 text-xs font-semibold text-primary-600 dark:text-primary-300 flex items-center justify-center gap-2']">
             <div :class="['i-solar:cursor-square-bold-duotone h-4 w-4']" />
             <span>{{ t('onboarding.steps.welcome.dialog.trayItem') }}</span>
           </div>
+          <div v-else :class="['mt-3 rounded-xl border border-primary-500/30 bg-primary-500/10 dark:bg-primary-950/30 px-3.5 py-2 text-xs font-semibold text-primary-600 dark:text-primary-300 flex items-center justify-center gap-2']">
+            <div :class="['i-solar:settings-bold-duotone h-4 w-4']" />
+            <span>{{ t('onboarding.steps.welcome.dialog.webSettingsPath', 'Settings → Guided Tours → Companion Wizard') }}</span>
+          </div>
+          <p v-if="isDesktop" :class="['mt-2 text-[11px] text-neutral-500 dark:text-neutral-400 leading-relaxed']">
+            {{ t('onboarding.steps.welcome.dialog.desktopAlternative', 'Or open Settings → Guided Tours → Companion Wizard.') }}
+          </p>
         </div>
 
         <div :class="['flex items-center gap-3 pt-2']">
@@ -198,7 +229,7 @@ function confirmCloseToTray() {
             :class="['flex-1 rounded-xl bg-primary-600 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-500 transition-colors shadow-md shadow-primary-600/30 cursor-pointer']"
             @click="confirmCloseToTray"
           >
-            {{ t('onboarding.steps.welcome.dialog.closeToTray') }}
+            {{ isDesktop ? t('onboarding.steps.welcome.dialog.closeToTray') : t('onboarding.steps.welcome.dialog.close', 'Close') }}
           </button>
         </div>
       </div>

@@ -14,15 +14,15 @@ html {
 }
 
 html {
-  --bg-color-light: rgb(255 255 255);
-  --bg-color-dark: rgb(18 18 18);
+  --bg-color-light: #FAF9F6;
+  --bg-color-dark: #18181B;
   --progress-bar-color: rgb(244 114 182);
   --bg-color: var(--bg-color-light);
 }
 
 html.dark {
-  --bg-color-light: rgb(255 255 255);
-  --bg-color-dark: rgb(18 18 18);
+  --bg-color-light: #FAF9F6;
+  --bg-color-dark: #18181B;
   --progress-bar-color: rgb(244 114 182);
   --bg-color: var(--bg-color-dark);
 }

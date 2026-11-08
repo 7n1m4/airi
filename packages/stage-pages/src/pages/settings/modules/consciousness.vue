@@ -1,312 +1,44 @@
 <script setup lang="ts">
-import { Alert, ErrorContainer, RadioCardManySelect, RadioCardSimple } from '@proj-airi/stage-ui/components'
-import { BrainModelPicker } from '@proj-airi/stage-ui/components/scenarios/chat'
-import { useAnalytics } from '@proj-airi/stage-ui/composables'
-import { useAiriCardStore } from '@proj-airi/stage-ui/stores/modules/airi-card'
-import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
-import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { storeToRefs } from 'pinia'
-import { computed, watch } from 'vue'
+import { ConsciousnessWorkspace } from '@proj-airi/stage-ui/components'
 import { useI18n } from 'vue-i18n'
-import { RouterLink } from 'vue-router'
-
-const providersStore = useProvidersStore()
-const consciousnessStore = useConsciousnessStore()
-const airiCardStore = useAiriCardStore()
-const { activeCard } = storeToRefs(airiCardStore)
-const activeCharacterName = computed(() => activeCard.value?.name || 'Active Character')
-const { persistedChatProvidersMetadata, configuredProviders } = storeToRefs(providersStore)
-const {
-  activeProvider,
-  activeModel,
-  customModelName,
-  modelSearchQuery,
-  supportsModelListing,
-  providerModels,
-  isLoadingActiveProviderModels,
-  activeProviderModelError,
-} = storeToRefs(consciousnessStore)
 
 const { t } = useI18n()
-const { trackProviderClick } = useAnalytics()
-const isOpenAICompatibleProvider = computed(() => activeProvider.value === 'openai-compatible')
-
-watch(activeProvider, async (provider, oldProvider) => {
-  if (!provider)
-    return
-
-  // Reset model when switching providers (but not on initial load)
-  if (oldProvider !== undefined && oldProvider !== provider) {
-    activeModel.value = ''
-  }
-
-  await consciousnessStore.loadModelsForProvider(provider)
-}, { immediate: true })
-
-function updateCustomModelName(value: string) {
-  customModelName.value = value
-}
-
-function handleDeleteProvider(providerId: string) {
-  if (activeProvider.value === providerId) {
-    activeProvider.value = ''
-    activeModel.value = ''
-  }
-  providersStore.deleteProvider(providerId)
-}
 </script>
 
 <template>
-  <div bg="neutral-50 dark:[rgba(0,0,0,0.3)]" rounded-xl p-4 flex="~ col gap-4">
-    <!-- Active Character Model Quick-Switch Banner -->
-    <div class="flex flex-col gap-3 border border-primary-500/30 rounded-xl bg-primary-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div class="flex items-center gap-3">
-        <div class="i-solar:user-bold-duotone shrink-0 text-2xl text-primary-500" />
-        <div class="flex flex-col">
-          <div class="flex items-center gap-2">
-            <span class="text-sm text-neutral-800 font-bold dark:text-neutral-100">Active Character: {{ activeCharacterName }}</span>
-          </div>
-          <span class="text-xs text-neutral-500 dark:text-neutral-400">
-            Use the model picker on the right to set or switch the model directly for {{ activeCharacterName }}.
-          </span>
-        </div>
-      </div>
-
-      <BrainModelPicker variant="button" side="bottom" :button-label="`Switch Model for ${activeCharacterName}`" />
+  <div :class="['w-full flex flex-col gap-6 p-4 sm:p-6 lg:p-8 max-w-[1400px] mx-auto animate-fadeIn select-none']">
+    <!-- Header -->
+    <div :class="['flex flex-col gap-1']">
+      <h1 :class="['text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-white flex items-center gap-2.5']">
+        <div :class="['i-solar:brain-bold-duotone text-primary-500 h-6 w-6 flex-shrink-0']" />
+        <span>{{ t('settings.pages.consciousness.title', 'Consciousness (LLM)') }}</span>
+      </h1>
+      <p :class="['text-xs sm:text-sm text-neutral-500 dark:text-neutral-400']">
+        {{ t('settings.pages.consciousness.description', 'Configure the language model brain driving your companion’s persona, reasoning, and dialogues.') }}
+      </p>
     </div>
 
-    <!-- Global Default Consciousness Controls -->
-    <div>
-      <div flex="~ col gap-4">
-        <div>
-          <h2 class="text-lg text-neutral-500 md:text-2xl dark:text-neutral-500">
-            {{ t('settings.pages.providers.title') }}
-          </h2>
-          <div text="neutral-400 dark:neutral-400">
-            <span>Configure AIRI's global default provider & model below. This serves as the system-wide default whenever a character card does not override its own model.</span>
-          </div>
-        </div>
-        <div max-w-full>
-          <!--
-          fieldset has min-width set to --webkit-min-container, in order to use over flow scroll,
-          we need to set the min-width to 0.
-          See also: https://stackoverflow.com/a/33737340
-        -->
-          <fieldset
-            v-if="persistedChatProvidersMetadata.length > 0"
-            flex="~ col gap-2"
-            class="max-h-[300px] overflow-y-auto pr-2" min-w-0
-            role="radiogroup"
-          >
-            <RadioCardSimple
-              v-for="metadata in persistedChatProvidersMetadata"
-              :id="metadata.id"
-              :key="metadata.id"
-              v-model="activeProvider"
-              name="provider"
-              :value="metadata.id"
-              :title="metadata.localizedName || 'Unknown'"
-              :description="metadata.localizedDescription"
-              @click="trackProviderClick(metadata.id, 'consciousness')"
-            >
-              <template #topRight>
-                <button
-                  type="button"
-                  class="rounded bg-neutral-100 p-1 text-neutral-600 transition-colors dark:bg-neutral-800/60 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-700/60"
-                  @click.stop.prevent="handleDeleteProvider(metadata.id)"
-                >
-                  <div i-solar:trash-bin-trash-bold-duotone class="text-base" />
-                </button>
-              </template>
-
-              <template v-if="configuredProviders[metadata.id] === false" #bottomRight>
-                <div class="rounded bg-amber-100 px-2 py-0.5 text-xs text-amber-700 font-medium dark:bg-amber-900/30 dark:text-amber-300">
-                  {{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.health_check_failed') }}
-                </div>
-              </template>
-            </RadioCardSimple>
-            <RouterLink
-              to="/settings/providers"
-              border="2px dashed"
-              class="border-neutral-200 bg-transparent text-neutral-400 dark:border-neutral-800 hover:border-primary-500/50 hover:bg-neutral-50 hover:text-primary-500 dark:hover:border-primary-400/50 dark:hover:bg-neutral-900/50 dark:hover:text-primary-400"
-              flex="~ row items-center justify-center gap-2"
-              transition="all duration-200 ease-in-out"
-              relative w-full shrink-0 rounded-xl p-3
-            >
-              <div i-solar:add-circle-line-duotone class="text-xl" />
-              <span class="text-sm font-medium">Add Provider</span>
-            </RouterLink>
-          </fieldset>
-          <div v-else>
-            <RouterLink
-              class="flex items-center gap-3 rounded-lg p-4"
-              border="2 dashed neutral-200 dark:neutral-800"
-              bg="neutral-50 dark:neutral-800"
-              transition="colors duration-200 ease-in-out"
-              to="/settings/providers"
-            >
-              <div i-solar:warning-circle-line-duotone class="text-2xl text-amber-500 dark:text-amber-400" />
-              <div class="flex flex-col">
-                <span class="font-medium">{{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.no_providers_configured_title') }}</span>
-                <span class="text-sm text-neutral-400 dark:text-neutral-500">{{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.no_providers_configured_description') }}</span>
-              </div>
-              <div i-solar:arrow-right-line-duotone class="ml-auto text-xl text-neutral-400 dark:text-neutral-500" />
-            </RouterLink>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Model selection section -->
-    <div v-if="activeProvider && supportsModelListing">
-      <div flex="~ col gap-4">
-        <div>
-          <h2 class="text-lg md:text-2xl">
-            {{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.title') }}
-          </h2>
-          <div class="flex flex-col items-start gap-1 text-neutral-400 md:flex-row md:items-center md:justify-between dark:text-neutral-400">
-            <span>{{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.subtitle') }}</span>
-            <span v-if="activeModel" class="text-sm text-neutral-400 font-medium dark:text-neutral-400">{{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.current_model_label') }} {{ activeModel }}</span>
-          </div>
-        </div>
-
-        <!-- Loading state -->
-        <div v-if="isLoadingActiveProviderModels" class="flex items-center justify-center py-4">
-          <div class="mr-2 animate-spin">
-            <div i-solar:spinner-line-duotone text-xl />
-          </div>
-          <span>{{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.loading') }}</span>
-        </div>
-
-        <!-- Error state -->
-        <template v-else-if="activeProviderModelError">
-          <ErrorContainer
-            :title="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.error')"
-            :error="activeProviderModelError"
-          />
-
-          <div v-if="isOpenAICompatibleProvider" class="mt-2">
-            <label class="mb-1 block text-sm font-medium">
-              {{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.manual_model_name') }}
-            </label>
-            <input
-              v-model="activeModel"
-              type="text"
-              class="w-full border border-neutral-300 rounded bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
-              :placeholder="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.manual_model_placeholder')"
-            >
-          </div>
-        </template>
-
-        <!-- Manual model input fallback when model list fails to load -->
-        <div v-if="activeProviderModelError" class="mt-2">
-          <label class="mb-1 block text-sm font-medium">
-            {{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.manual_model_name') }}
-          </label>
-          <input
-            v-model="activeModel" type="text"
-            class="w-full border border-neutral-300 rounded bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
-            :placeholder="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.manual_model_placeholder')"
-          >
-        </div>
-
-        <!-- No models available -->
-        <template v-else-if="providerModels.length === 0 && !isLoadingActiveProviderModels">
-          <Alert type="warning">
-            <template #title>
-              {{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.no_models') }}
-            </template>
-            <template #content>
-              {{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.no_models_description') }}
-            </template>
-          </Alert>
-
-          <div v-if="isOpenAICompatibleProvider" class="mt-2">
-            <label class="mb-1 block text-sm font-medium">
-              {{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.manual_model_name') }}
-            </label>
-            <input
-              v-model="activeModel"
-              type="text"
-              class="w-full border border-neutral-300 rounded bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
-              :placeholder="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.manual_model_placeholder')"
-            >
-          </div>
-        </template>
-
-        <!-- Using the new RadioCardManySelect component -->
-        <template v-else-if="providerModels.length > 0">
-          <RadioCardManySelect
-            v-model="activeModel"
-            v-model:search-query="modelSearchQuery"
-            :items="providerModels"
-            :searchable="true"
-            :allow-custom="true"
-            :search-placeholder="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.search_placeholder')"
-            :search-no-results-title="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.no_search_results')"
-            :search-no-results-description="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.no_search_results_description', { query: modelSearchQuery })"
-            :search-results-text="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.search_results', { count: '{count}', total: '{total}' })"
-            :custom-input-placeholder="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.custom_model_placeholder')"
-            :expand-button-text="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.expand')"
-            :collapse-button-text="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.collapse')"
-            @update:custom-value="updateCustomModelName"
-          />
-        </template>
-      </div>
-    </div>
-
-    <!-- Provider doesn't support model listing -->
-    <div v-else-if="activeProvider && !supportsModelListing">
-      <div flex="~ col gap-4">
-        <div>
-          <h2 class="text-lg text-neutral-500 md:text-2xl dark:text-neutral-400">
-            {{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.title') }}
-          </h2>
-          <div text="neutral-400 dark:neutral-500">
-            <span>{{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.subtitle') }}</span>
-          </div>
-        </div>
-
-        <div
-          class="flex items-center gap-3 border border-primary-200 rounded-lg bg-primary-50 p-4 dark:border-primary-800 dark:bg-primary-900/20"
-        >
-          <div i-solar:info-circle-line-duotone class="text-2xl text-primary-500 dark:text-primary-400" />
-          <div class="flex flex-col">
-            <span class="font-medium">{{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.not_supported')
-            }}</span>
-            <span class="text-sm text-primary-600 dark:text-primary-400">{{
-              t('settings.pages.modules.consciousness.sections.section.provider-model-selection.not_supported_description') }}</span>
-          </div>
-        </div>
-
-        <!-- Manual model input for providers without model listing -->
-        <div class="mt-2">
-          <label class="mb-1 block text-sm font-medium">
-            {{ t('settings.pages.modules.consciousness.sections.section.provider-model-selection.manual_model_name') }}
-          </label>
-          <input
-            v-model="activeModel" type="text"
-            class="w-full border border-neutral-300 rounded bg-white px-3 py-2 dark:border-neutral-700 dark:bg-neutral-900"
-            :placeholder="t('settings.pages.modules.consciousness.sections.section.provider-model-selection.manual_model_placeholder')"
-          >
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div
-    v-motion
-    text="neutral-200/50 dark:neutral-600/20" pointer-events-none
-    fixed top="[calc(100dvh-15rem)]" bottom-0 right--5 z--1
-    :initial="{ scale: 0.9, opacity: 0, x: 20 }"
-    :enter="{ scale: 1, opacity: 1, x: 0 }"
-    :duration="500"
-    size-60
-    flex items-center justify-center
-  >
-    <div text="60" i-solar:ghost-bold-duotone />
+    <!-- Decomposed Canonical Consciousness Workspace in Settings Mode -->
+    <ConsciousnessWorkspace mode="settings" />
   </div>
 </template>
+
+<style scoped>
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+</style>
 
 <route lang="yaml">
 meta:

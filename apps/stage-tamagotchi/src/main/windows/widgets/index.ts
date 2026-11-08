@@ -8,7 +8,7 @@ import type { ServerChannel } from '../../services/airi/channel-server'
 import { join, resolve } from 'node:path'
 
 import { createContext } from '@moeru/eventa/adapters/electron/main'
-import { BrowserWindow as ElectronBrowserWindow, ipcMain, screen, shell } from 'electron'
+import { BrowserWindow as ElectronBrowserWindow, ipcMain, Menu, screen, shell } from 'electron'
 import { isMacOS } from 'std-env'
 import { number, object, optional } from 'valibot'
 
@@ -32,6 +32,7 @@ export interface WidgetsWindowManager {
   clearWidgets: () => Promise<void>
   getWidgetSnapshot: (id: string) => WidgetSnapshot | undefined
   prepareWidgetWindow: (options?: { id?: string }) => string
+  resizeWidgetWindow: (payload: { id?: string, width?: number, height?: number, window?: BrowserWindow }) => Promise<void>
 }
 
 const widgetsWindowConfigSchema = object({
@@ -52,6 +53,91 @@ function computeDefaultBounds(): Rectangle {
   const x = primary.x + primary.width - width - 16
   const y = primary.y + 16
   return { x, y, width, height }
+}
+
+function computeStickerBounds(weight?: number, pos?: string): Rectangle {
+  const primary = screen.getPrimaryDisplay().workArea
+  const clampedWeight = Math.max(0.1, Math.min(1.0, typeof weight === 'number' && !Number.isNaN(weight) ? weight : 0.5))
+  // Size range: 160px (at 0.1) to 300px (at 1.0)
+  const size = Math.round(160 + (clampedWeight - 0.1) * (140 / 0.9))
+
+  // Random jitter (+/- 20px) to prevent multiple stickers from stacking exactly
+  const jitterX = Math.round((Math.random() - 0.5) * 40)
+  const jitterY = Math.round((Math.random() - 0.5) * 40)
+  const margin = 36
+
+  const validPositions = ['topLeft', 'topRight', 'bottomLeft', 'bottomRight']
+  const targetPos = (!pos || pos === 'random' || !validPositions.includes(pos))
+    ? validPositions[Math.floor(Math.random() * validPositions.length)]
+    : pos
+
+  let x: number
+  let y: number
+
+  switch (targetPos) {
+    case 'topLeft':
+      x = primary.x + margin + jitterX
+      y = primary.y + margin + jitterY
+      break
+    case 'topRight':
+      x = primary.x + primary.width - size - margin + jitterX
+      y = primary.y + margin + jitterY
+      break
+    case 'bottomLeft':
+      x = primary.x + margin + jitterX
+      y = primary.y + primary.height - size - margin + jitterY
+      break
+    case 'bottomRight':
+    default:
+      x = primary.x + primary.width - size - margin + jitterX
+      y = primary.y + primary.height - size - margin + jitterY
+      break
+  }
+
+  return {
+    x: Math.max(primary.x, Math.min(x, primary.x + primary.width - size)),
+    y: Math.max(primary.y, Math.min(y, primary.y + primary.height - size)),
+    width: size,
+    height: size,
+  }
+}
+
+function createStickerWindow(bounds: Rectangle): ElectronBrowserWindow {
+  const window = new ElectronBrowserWindow({
+    title: 'AIRI — Sticker',
+    width: bounds.width,
+    height: bounds.height,
+    x: bounds.x,
+    y: bounds.y,
+    show: false,
+    frame: false,
+    transparent: true,
+    hasShadow: false,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    skipTaskbar: true,
+    type: 'panel',
+    backgroundColor: '#00000000',
+    webPreferences: {
+      preload: join(getElectronMainDirname(), '../preload/index.cjs'),
+      sandbox: true,
+    },
+    ...transparentWindowConfig(),
+  })
+
+  window.setAlwaysOnTop(true, 'screen-saver', 1)
+  window.setFullScreenable(false)
+  showWindowOnAllWorkspaces(window)
+  if (isMacOS)
+    window.setWindowButtonVisibility(false)
+
+  window.on('ready-to-show', () => {
+    if (!window.isDestroyed())
+      window.showInactive()
+  })
+
+  return window
 }
 
 function createWidgetsWindow(options?: Electron.BrowserWindowConstructorOptions & { spotlight?: boolean }) {
@@ -80,6 +166,53 @@ function createWidgetsWindow(options?: Electron.BrowserWindowConstructorOptions 
   showWindowOnAllWorkspaces(window)
   if (isMacOS)
     window.setWindowButtonVisibility(false)
+
+  // DevTools toggle shortcut & input handling (F12, Ctrl+Shift+I, Cmd+Alt+I)
+  window.webContents.on('before-input-event', (event, input) => {
+    if (input.type !== 'keyDown')
+      return
+
+    const isF12 = input.key === 'F12'
+    const isDevToolsShortcut = ((input.control || input.meta) && input.shift && input.key.toLowerCase() === 'i')
+      || (input.alt && input.meta && input.key.toLowerCase() === 'i')
+
+    if (isF12 || isDevToolsShortcut) {
+      event.preventDefault()
+      if (window.webContents.isDevToolsOpened()) {
+        window.webContents.closeDevTools()
+      }
+      else {
+        window.webContents.openDevTools({ mode: 'detach' })
+      }
+    }
+  })
+
+  // Right-click context menu with Inspect Element & Toggle Developer Tools
+  window.webContents.on('context-menu', (_event, params) => {
+    const menu = Menu.buildFromTemplate([
+      {
+        label: 'Inspect Element',
+        click: () => {
+          window.webContents.inspectElement(params.x, params.y)
+          if (!window.webContents.isDevToolsOpened()) {
+            window.webContents.openDevTools({ mode: 'detach' })
+          }
+        },
+      },
+      {
+        label: 'Toggle Developer Tools',
+        click: () => {
+          if (window.webContents.isDevToolsOpened()) {
+            window.webContents.closeDevTools()
+          }
+          else {
+            window.webContents.openDevTools({ mode: 'detach' })
+          }
+        },
+      },
+    ])
+    menu.popup()
+  })
 
   window.on('ready-to-show', () => window.show())
   window.webContents.setWindowOpenHandler((details) => {
@@ -131,7 +264,7 @@ export function setupWidgetsWindowManager(params: {
     ipcMain.setMaxListeners(0)
 
     const window = createWidgetsWindow()
-    const { context } = createContext(ipcMain, window)
+    const { context } = createContext(ipcMain, window, { onlySameWindow: true })
     eventaContext = context
 
     const saved = getConfig().bounds
@@ -165,15 +298,16 @@ export function setupWidgetsWindowManager(params: {
       }
     })
 
-    const initialRoute = pendingRoute ?? defaultRoute
-    await loadWithRoute(window, initialRoute)
-
     await setupWidgetsWindowInvokes({
       widgetWindow: window,
       widgetsManager: widgetsManager!,
       i18n: params.i18n,
       serverChannel: params.serverChannel,
+      context,
     })
+
+    const initialRoute = pendingRoute ?? defaultRoute
+    await loadWithRoute(window, initialRoute)
 
     pendingRoute = undefined
 
@@ -304,23 +438,46 @@ export function setupWidgetsWindowManager(params: {
     const isSticker = payload.componentName === 'sticker'
 
     let window: BrowserWindow
-    if (isSticker && payload.bounds) {
-      window = await createWidgetsWindow({
-        ...payload.bounds,
-        spotlight: false,
-        alwaysOnTop: true,
-        skipTaskbar: true,
-      })
-      standaloneWindows.set(id, window)
-      const { context: evCtx } = createContext(ipcMain, window)
-      // For standalone windows, we need to load the route directly
-      await loadWithRoute(window, `${defaultRoute}?id=${id}`)
+    if (isSticker) {
+      const bounds = payload.bounds
+        ? {
+            x: payload.bounds.x ?? 0,
+            y: payload.bounds.y ?? 0,
+            width: payload.bounds.width ?? 220,
+            height: payload.bounds.height ?? 220,
+          }
+        : computeStickerBounds(payload.componentProps?.weight, payload.componentProps?.pos)
 
-      // Since standalone windows have their own eventa context, we need to emit render through it
-      // but wait for ready-to-show
-      window.once('ready-to-show', () => {
-        evCtx.emit(widgetsRenderEvent, snapshot)
+      window = createStickerWindow(bounds)
+      standaloneWindows.set(id, window)
+
+      window.on('closed', () => {
+        standaloneWindows.delete(id)
+        removeWidgetInternal(id, true)
       })
+
+      const rendererDir = resolve(getElectronMainDirname(), '..', 'renderer')
+      const target = baseUrl(rendererDir, 'sticker.html')
+      const query: Record<string, string> = {
+        id,
+        stickerId: String(payload.componentProps?.stickerId || 'airi-happy'),
+        src: String(payload.componentProps?.src || ''),
+        weight: String(payload.componentProps?.weight ?? 0.5),
+        ttlMs: String(payload.ttlMs ?? 0),
+        pos: String(payload.componentProps?.pos || 'random'),
+      }
+
+      if (typeof target === 'object' && 'url' in target && target.url) {
+        const u = new URL(target.url)
+        for (const [k, v] of Object.entries(query)) {
+          if (v)
+            u.searchParams.set(k, v)
+        }
+        await window.loadURL(u.toString())
+      }
+      else if (typeof target === 'object' && 'file' in target && target.file) {
+        await window.loadFile(target.file, { query })
+      }
     }
     else {
       window = await showWindowWithRoute(`${defaultRoute}?id=${id}`, context)
@@ -389,6 +546,47 @@ export function setupWidgetsWindowManager(params: {
     eventaContext?.emit(event, payload)
   }
 
+  async function resizeWidgetWindow(payload: { id?: string, width?: number, height?: number, window?: BrowserWindow }) {
+    let targetWin: BrowserWindow | undefined = payload.window
+
+    if (!targetWin || targetWin.isDestroyed()) {
+      if (payload.id) {
+        targetWin = standaloneWindows.get(payload.id)
+        if (!targetWin || targetWin.isDestroyed()) {
+          const ctx = windowContexts.get(payload.id)
+          if (ctx?.window && !ctx.window.isDestroyed()) {
+            targetWin = ctx.window
+          }
+        }
+      }
+    }
+
+    if (!targetWin || targetWin.isDestroyed()) {
+      targetWin = await getWindow()
+    }
+
+    if (!targetWin || targetWin.isDestroyed())
+      return
+
+    const currentBounds = targetWin.getBounds()
+    const primary = screen.getDisplayMatching(currentBounds).workArea
+
+    const newWidth = payload.width != null ? Math.round(payload.width) : currentBounds.width
+    const newHeight = payload.height != null ? Math.round(payload.height) : currentBounds.height
+
+    const clampedWidth = Math.min(Math.max(160, newWidth), primary.width)
+    const clampedHeight = Math.min(Math.max(80, newHeight), primary.height)
+
+    if (currentBounds.width !== clampedWidth || currentBounds.height !== clampedHeight) {
+      targetWin.setBounds({
+        x: currentBounds.x,
+        y: currentBounds.y,
+        width: clampedWidth,
+        height: clampedHeight,
+      })
+    }
+  }
+
   widgetsManager = {
     getWindow,
     openWindow,
@@ -399,6 +597,7 @@ export function setupWidgetsWindowManager(params: {
     getWidgetSnapshot,
     prepareWidgetWindow,
     hideWindow,
+    resizeWidgetWindow,
     emit,
   }
 
@@ -418,5 +617,6 @@ export interface WidgetsWindowManager {
   clearWidgets: () => Promise<void>
   getWidgetSnapshot: (id: string) => WidgetSnapshot | undefined
   prepareWidgetWindow: (options?: { id?: string }) => string
+  resizeWidgetWindow: (payload: { id?: string, width?: number, height?: number, window?: BrowserWindow }) => Promise<void>
   emit: (event: any, payload: any) => void
 }

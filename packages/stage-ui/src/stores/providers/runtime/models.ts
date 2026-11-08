@@ -44,15 +44,14 @@ export function createProviderModels(deps: ProviderModelsDeps) {
       }
     }
 
-    const config = deps.providerInstanceOptions?.(providerId, targetInstanceId)
-      ?? providerCredentials.value[providerId]
-
-    if (!config)
-      return []
-
     const metadata = providerMetadata[providerId]
     if (!metadata)
       return []
+
+    const config = deps.providerInstanceOptions?.(providerId, targetInstanceId)
+      ?? providerCredentials.value[providerId]
+      ?? metadata.defaultOptions?.()
+      ?? {}
 
     if (!providerRuntimeState.value[providerId]) {
       providerRuntimeState.value[providerId] = {

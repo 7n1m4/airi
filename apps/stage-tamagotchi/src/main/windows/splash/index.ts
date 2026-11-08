@@ -24,8 +24,8 @@ export interface SplashWindowManager {
 export async function setupSplashWindowManager(): Promise<SplashWindowManager> {
   let initialX: number | undefined
   let initialY: number | undefined
-  const width = 360
-  const height = 500
+  const width = 420
+  const height = 560
 
   try {
     const workArea = screen.getPrimaryDisplay().workArea

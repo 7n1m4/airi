@@ -17,7 +17,7 @@ import type {
   WorkerInboundMessage,
 } from '../../libs/inference/protocol'
 
-import { AutoModel, env, Tensor } from '@huggingface/transformers'
+import { AutoModel, env, PretrainedConfig, Tensor } from '@huggingface/transformers'
 
 import { classifyError, isRecoverable } from '../../libs/inference/protocol'
 
@@ -146,6 +146,13 @@ async function loadModel(request: LoadModelRequest): Promise<void> {
 
     env.backends.onnx.logLevel = 'error'
     env.backends.onnx.wasm!.proxy = false
+    // NOTICE: transformers 4.x's stock wasmPaths default is the broken
+    // object form (backend init dies with "Failed to construct 'URL':
+    // Invalid URL" — verified live). Overwrite unconditionally with the
+    // string form, matching the search/blip workers.
+    if (env.backends.onnx.wasm) {
+      env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.2/dist/'
+    }
 
     // Initialize state tensors
     state = new Tensor('float32', new Float32Array(2 * 1 * 128), [2, 1, 128])
@@ -153,7 +160,7 @@ async function loadModel(request: LoadModelRequest): Promise<void> {
 
     model = await AutoModel.from_pretrained(MODEL_ID, {
       device,
-      config: { model_type: 'custom' } as any,
+      config: new PretrainedConfig({ model_type: 'custom' }),
       dtype: 'fp32', // Use full precision for Silero VAD stability
       progress_callback: (progress: any) => {
         sendProgress(requestId, progress?.progress ?? -1, progress?.status)

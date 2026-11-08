@@ -253,6 +253,7 @@ export function createIdleTimeout(firstOutputMs: number, idleMs: number): IdleTi
 export interface KokoroGenerateRequest {
   text: string
   voice: VoiceKey
+  styleVector?: Float32Array | number[]
 }
 
 /**
@@ -513,6 +514,7 @@ export interface LayaDecideRequest {
   state: string | Record<string, unknown>
   questions: Record<string, any>
   precision?: 'int8' | 'fp16'
+  model?: string
   useWebGpu?: boolean
 }
 

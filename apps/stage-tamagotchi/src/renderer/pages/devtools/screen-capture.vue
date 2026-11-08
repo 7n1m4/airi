@@ -3,13 +3,12 @@ import type { SerializableDesktopCapturerSource } from '@proj-airi/electron-scre
 import type { SourcesOptions } from 'electron'
 
 import { useElectronScreenCapture } from '@proj-airi/electron-screen-capture/vue'
+import { getElectronEventaContext } from '@proj-airi/electron-vueuse'
 import { Button, SelectTab } from '@proj-airi/ui'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import WithScreenCapture from '../../components/WithScreenCapture.vue'
-
-import { getIpcRenderer } from '../../utils/electron'
 
 interface ScreenCaptureSource extends SerializableDesktopCapturerSource {
   appIconURL?: string
@@ -33,7 +32,7 @@ const { t } = useI18n()
 const {
   getSources,
   selectWithSource,
-} = useElectronScreenCapture(getIpcRenderer(), sourcesOptions)
+} = useElectronScreenCapture(getElectronEventaContext(), sourcesOptions)
 
 const categoryOptions = [
   { label: 'Applications', value: 'applications', icon: 'i-solar:window-frame-line-duotone' },

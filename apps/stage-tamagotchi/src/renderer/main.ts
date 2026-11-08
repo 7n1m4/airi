@@ -62,3 +62,21 @@ createApp(App)
   .use(i18n)
   .use(Tres)
   .mount('#app')
+
+if (typeof window !== 'undefined') {
+  const win = window as any
+  win.spawnSticker = (stickerId: string, options: { weight?: number, pos?: string, ttlMs?: number } = {}) => {
+    return win.electron?.ipcRenderer?.invoke('eventa:invoke:electron:windows:widgets:add', [{
+      componentName: 'sticker',
+      componentProps: {
+        stickerId,
+        weight: options.weight ?? 0.5,
+        pos: options.pos ?? 'random',
+      },
+      ttlMs: options.ttlMs ?? 0,
+    }])
+  }
+  win.clearStickers = () => {
+    return win.electron?.ipcRenderer?.invoke('eventa:invoke:electron:windows:widgets:clear')
+  }
+}

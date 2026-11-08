@@ -316,7 +316,10 @@ It's your turn, what do you do?`
             modelId,
             provider,
             vlmMessages as any,
-            { vision: true },
+            {
+              vision: true,
+              requestOverrides: resolvedFaculty.advanced || visionStore.activeAdvanced,
+            },
           )
           return response.text || ''
         }

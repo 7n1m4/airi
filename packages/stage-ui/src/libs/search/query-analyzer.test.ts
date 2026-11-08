@@ -78,6 +78,27 @@ describe('query-analyzer', () => {
       expect(res.anaphoraResolved).toBe(false)
       expect(res.expandedQuery).toBe(query)
     })
+
+    it('binds grounded entities from Turn N-1 when pronoun is present', () => {
+      const query = 'and where did you get that item from?'
+      const prevTurn = 'Ren was on the cot with mana poisoning and the nurse tried to flush it.'
+      const prevGrounding = {
+        entities: ['crystal', 'tentacle', 'infirmary'],
+        hits: [
+          {
+            id: 'kg-mention:123',
+            subject: 'Ren & Taro & The Central Academy',
+            content: 'The crystal was almost completely absorbed.',
+          },
+        ],
+      }
+
+      const res = resolveTurnAnaphora(query, prevTurn, prevGrounding)
+      expect(res.anaphoraResolved).toBe(true)
+      expect(res.pronounsDetected).toContain('that')
+      expect(res.expandedQuery).toContain('crystal')
+      expect(res.expandedQuery).toContain('tentacle')
+    })
   })
 
   describe('expandCasualQuery', () => {
@@ -101,6 +122,22 @@ describe('query-analyzer', () => {
       expect(result.temporalHooks.length).toBe(1)
       expect(result.temporalHooks[0].isoDateHint).toBe('2026-09-15')
       expect(result.expandedQuery).toContain('concert')
+      expect(result.extractedKeywords).toContain('concert')
+    })
+
+    it('extracts keywords from previous grounding entities when follow-up anaphora is resolved', () => {
+      const query = 'and where did you get that item from?'
+      const prevGrounding = {
+        entities: ['crystal', 'lens', 'infirmary'],
+        hits: [],
+      }
+
+      const result = analyzeQuery(query, { previousGrounding: prevGrounding })
+      expect(result.anaphoraResolved).toBe(true)
+      expect(result.expandedQuery).toContain('crystal')
+      expect(result.extractedKeywords).toContain('crystal')
+      expect(result.extractedKeywords).toContain('lens')
+      expect(result.extractedKeywords).toContain('infirmary')
     })
   })
 

@@ -68,8 +68,10 @@ export const MODEL_VRAM_ESTIMATES: Record<string, number> = {
   // Whisper large v3 turbo — encoder fp16 + decoder q4
   [MODEL_NAMES.WHISPER]: 800 * 1024 * 1024, // ~800 MB
 
-  // Xenova/modnet — small model
-  [MODEL_NAMES.BG_REMOVAL]: 25 * 1024 * 1024, // ~25 MB
+  // jellybox/isnet-anime — 176 MB fp32 weights + 1024px fp32 activations.
+  // Sized from the Metal validation run; re-measure in-app if eviction
+  // behavior looks wrong (see docs/design-background-removal-isnet.md).
+  [MODEL_NAMES.BG_REMOVAL]: 600 * 1024 * 1024, // ~600 MB peak
 
   // web-rwkv (WebGPU RWKV) — varies widely by model; conservative estimate
   // covering small chat models (0.1B–0.4B). Larger models under-estimate.
@@ -96,8 +98,16 @@ export const MODEL_VRAM_ESTIMATES: Record<string, number> = {
   // MOSS TTS Nano (fp32 weights + split ONNX graphs + OPFS blobs)
   'moss-tts-nano': 400 * 1024 * 1024, // ~400 MB
 
+  // Pocket TTS (per-language int8 ONNX bundle in OPFS, WASM heap backing —
+  // single active language, ~160MB weights + arena)
+  'pocket-tts-local': 200 * 1024 * 1024, // ~200 MB
+
+  // Ming 3.0 TTS (850MB mix bundle in OPFS, CPU WASM heap, not WebGPU VRAM —
+  // single-threaded-first until cross-origin isolation lands for worker threads)
+  'ming3-local': 1500 * 1024 * 1024, // ~1.5 GB (weights + WASM arena)
+
   // Laya System-1 ModernBERT ONNX — WASM heap backing, freed by worker terminate
-  'laya-int8': 500 * 1024 * 1024, // ~500 MB (424MB weights + arena)
+  'laya-int8': 750 * 1024 * 1024, // ~750 MB (633MB weights + arena)
   'laya-fp16': 1000 * 1024 * 1024, // ~1 GB (843MB weights + arena)
 }
 

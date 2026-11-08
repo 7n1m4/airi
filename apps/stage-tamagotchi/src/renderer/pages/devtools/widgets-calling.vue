@@ -274,6 +274,58 @@ function applyArtistryPreset() {
   form.ttlSeconds = ''
   resetFeedback()
 }
+
+const defaultStickerProps = {
+  stickerId: 'airi-happy',
+  weight: 0.8,
+  pos: 'topRight',
+}
+
+const testStickerWeight = ref(0.8)
+const testStickerPos = ref('random')
+
+const quickTestStickers = [
+  { id: 'airi-happy', label: 'Happy', emoji: '😊' },
+  { id: 'airi-celebrate', label: 'Celebrate', emoji: '🎉' },
+  { id: 'airi-surprised', label: 'Surprised', emoji: '😲' },
+  { id: 'airi-sad', label: 'Sad', emoji: '😢' },
+  { id: 'airi-confused', label: 'Confused', emoji: '❓' },
+  { id: 'airi-affectionate', label: 'Love', emoji: '❤️' },
+  { id: 'lupin-warm-smile', label: 'Warm Smile', emoji: '🌸' },
+  { id: 'lupin-cheer', label: 'Lupin Cheer', emoji: '👍' },
+]
+
+function applyStickerPreset() {
+  form.componentName = 'sticker'
+  form.sizePreset = 's'
+  form.customCols = '1'
+  form.customRows = '1'
+  form.componentProps = JSON.stringify(defaultStickerProps, null, 2)
+  form.ttlSeconds = '120'
+  resetFeedback()
+}
+
+async function quickSlapSticker(stickerId: string) {
+  resetFeedback()
+  busy.value = true
+  try {
+    const id = await addWidget({
+      componentName: 'sticker',
+      componentProps: {
+        stickerId,
+        weight: testStickerWeight.value,
+        pos: testStickerPos.value,
+      },
+    })
+    lastAction.value = `Slapped sticker "${stickerId}" onto desktop (${id}).`
+  }
+  catch (error) {
+    lastError.value = (error as Error).message || 'Failed to slap sticker.'
+  }
+  finally {
+    busy.value = false
+  }
+}
 </script>
 
 <template>
@@ -309,6 +361,91 @@ function applyArtistryPreset() {
         >
           Artistry Preset
         </Button>
+        <Button
+          variant="secondary"
+          :disabled="busy"
+          @click="applyStickerPreset"
+        >
+          Sticker Slapper Preset
+        </Button>
+      </div>
+    </div>
+
+    <!-- Dedicated Desktop Sticker Slapper Test Strip -->
+    <div class="border border-primary-500/20 rounded-2xl bg-primary-500/5 p-5">
+      <div class="mb-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="rounded-xl bg-primary-500/10 p-2 text-xl text-primary-500">
+            <div class="i-solar:sticker-smile-circle-bold-duotone" />
+          </div>
+          <div>
+            <h3 class="text-sm text-neutral-800 font-semibold dark:text-neutral-100">
+              Desktop Sticker Slappers (Lightweight MPA)
+            </h3>
+            <p class="text-xs text-neutral-500 dark:text-neutral-400">
+              Trigger lightweight, zero-framework sticker windows directly onto your desktop to test tap-to-peel physics, tilts, weight scaling, and placement quadrants.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controls row: Weight and Position Quadrant -->
+      <div class="grid grid-cols-1 mb-4 gap-4 sm:grid-cols-2">
+        <div>
+          <label class="mb-1 block text-xs text-neutral-700 font-medium dark:text-neutral-300">
+            Weight Scale: {{ testStickerWeight }} ({{ testStickerWeight <= 0.3 ? 'Compact ~160px · 60s' : testStickerWeight <= 0.7 ? 'Normal ~220px · 120s' : 'Emphatic ~280px+ · 240s+' }})
+          </label>
+          <input
+            v-model.number="testStickerWeight"
+            type="range"
+            min="0.1"
+            max="1.0"
+            step="0.1"
+            class="w-full accent-primary-500"
+          >
+        </div>
+        <div>
+          <label class="mb-1 block text-xs text-neutral-700 font-medium dark:text-neutral-300">
+            Viewport Placement Quadrant
+          </label>
+          <div class="flex flex-wrap gap-1.5">
+            <button
+              v-for="p in ['random', 'topLeft', 'topRight', 'bottomLeft', 'bottomRight']"
+              :key="p"
+              type="button"
+              class="rounded px-2 py-1 text-xs transition-colors"
+              :class="[
+                testStickerPos === p
+                  ? 'bg-primary-500 text-white font-medium'
+                  : 'bg-neutral-200/60 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-300 dark:hover:bg-neutral-700',
+              ]"
+              @click="testStickerPos = p"
+            >
+              {{ p === 'random' ? '🎲 Random' : p }}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Slap Buttons -->
+      <div>
+        <label class="mb-2 block text-xs text-neutral-500 font-medium dark:text-neutral-400">
+          Click any sticker below to slap it directly onto your desktop screen:
+        </label>
+        <div class="flex flex-wrap gap-2">
+          <button
+            v-for="s in quickTestStickers"
+            :key="s.id"
+            type="button"
+            class="flex items-center gap-1.5 border border-neutral-200 rounded-lg bg-white px-3 py-1.5 text-xs text-neutral-800 shadow-sm transition-all dark:border-neutral-700 hover:border-primary-500 dark:bg-neutral-900 dark:text-neutral-200 hover:text-primary-600 hover:shadow"
+            :disabled="busy"
+            @click="quickSlapSticker(s.id)"
+          >
+            <span class="text-sm">{{ s.emoji }}</span>
+            <span class="font-medium">{{ s.label }}</span>
+            <span class="text-[10px] text-neutral-400 font-mono">({{ s.id }})</span>
+          </button>
+        </div>
       </div>
     </div>
 

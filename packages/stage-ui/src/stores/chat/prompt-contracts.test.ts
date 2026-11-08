@@ -77,9 +77,11 @@ vi.mock('../modules/vision', () => ({
   }),
 }))
 
+const sensorBox = vi.hoisted(() => ({ value: 'Sensors: CPU 20%, Time 14:00' }))
+
 vi.mock('../modules/proactivity', () => ({
   useProactivityStore: () => ({
-    sensorPayload: 'Sensors: CPU 20%, Time 14:00',
+    get sensorPayload() { return sensorBox.value },
     updateSensors: vi.fn(async () => {}),
   }),
 }))
@@ -294,7 +296,7 @@ describe('chat orchestrator prompt & grounding contracts (P1-P4, Intrusions)', (
   })
 
   // P4: Grounding order preservation across all 7 active sources
-  it('p4: preserves deterministic order of all 7 grounding blocks (VLM -> Env -> STMM -> LTMM -> RAG -> Topics -> Scratchpad), salience force-disabled', async () => {
+  it('p4: preserves deterministic order of all 7 grounding blocks (Lifetime -> STMM -> Topics -> Scratchpad -> RAG -> Env -> VLM), salience force-disabled', async () => {
     const chatStore = useChatOrchestratorStore(pinia)
     const chatSession = useChatSessionStore(pinia)
     const llmStore = useLLM(pinia)
@@ -338,37 +340,93 @@ describe('chat orchestrator prompt & grounding contracts (P1-P4, Intrusions)', (
       attachments: [{ type: 'image', mimeType: 'image/png', data: 'qubit-diag' }],
     }, sessionId)
 
-    // Locate all 8 grounding system messages in the streamed prompt
-    const idx0 = capturedMessages.findIndex((m: any) => m.content?.includes('[IMAGE ANALYSIS]'))
-    const idx1 = capturedMessages.findIndex((m: any, i: number) => i > idx0 && m.content?.includes('[ENVIRONMENTAL AWARENESS]'))
-    const idx15 = capturedMessages.findIndex((m: any) => m.content?.includes('[DAILY MEMORY CONTINUITY]'))
+    // Locate grounding system messages in the streamed prompt (stable -> volatile tail order)
     const idx16 = capturedMessages.findIndex((m: any) => m.content?.includes('[LIFETIME RECORD]'))
-    const idx2 = capturedMessages.findIndex((m: any) => m.content?.includes('[GROUNDED LONG-TERM MEMORIES]'))
+    const idx15 = capturedMessages.findIndex((m: any) => m.content?.includes('[DAILY MEMORY CONTINUITY]'))
     const idx3 = capturedMessages.findIndex((m: any) => m.content?.includes('[RECENT TOPICS]'))
     const idx4 = capturedMessages.findIndex((m: any) => m.content?.includes('[VISUAL STATE BOARD]'))
+    const idx2 = capturedMessages.findIndex((m: any) => m.content?.includes('[GROUNDED LONG-TERM MEMORIES]'))
+    const idx1 = capturedMessages.findIndex((m: any) => m.content?.includes('[ENVIRONMENTAL AWARENESS]'))
+    const idx0 = capturedMessages.findIndex((m: any) => m.content?.includes('[IMAGE ANALYSIS]'))
     const idx5 = capturedMessages.findIndex((m: any) => m.content?.includes('[SALIENCE TELEMETRY]'))
 
-    expect(idx0).toBeGreaterThan(-1)
-    expect(idx1).toBeGreaterThan(-1)
-    expect(idx15).toBeGreaterThan(-1)
     expect(idx16).toBeGreaterThan(-1)
-    expect(idx2).toBeGreaterThan(-1)
+    expect(idx15).toBeGreaterThan(-1)
     expect(idx3).toBeGreaterThan(-1)
     expect(idx4).toBeGreaterThan(-1)
+    expect(idx2).toBeGreaterThan(-1)
+    expect(idx1).toBeGreaterThan(-1)
+    expect(idx0).toBeGreaterThan(-1)
     // NOTICE: salienceGateEnabled is true on the card, yet no [SALIENCE
     // TELEMETRY] block is emitted: production force-disables the RWKV
-    // salience gate for release stability (5fdec1456b, chat.ts "5. Salience
+    // salience gate for release stability (5fdec1456b, chat.ts "7. Salience
     // Gate injection"). This assertion pins that decision; if salience is
     // ever re-enabled, restore the 8-block sequence assertions here.
     expect(idx5).toBe(-1)
 
-    // Assert exact 7-part sequence preservation: 0 < 1 < 1.5 < 1.6 < 2 < 3 < 4
-    expect(idx0).toBeLessThan(idx1)
-    expect(idx1).toBeLessThan(idx15)
-    expect(idx15).toBeLessThan(idx16)
-    expect(idx16).toBeLessThan(idx2)
-    expect(idx2).toBeLessThan(idx3)
+    // Assert exact 7-part stable -> volatile sequence: 1.1 < 1.2 < 2 < 3 < 4 < 5 < 6
+    expect(idx16).toBeLessThan(idx15)
+    expect(idx15).toBeLessThan(idx3)
     expect(idx3).toBeLessThan(idx4)
+    expect(idx4).toBeLessThan(idx2)
+    expect(idx2).toBeLessThan(idx1)
+    expect(idx1).toBeLessThan(idx0)
+  })
+
+  // P5: Prefix-cache stability — volatile sensors live only in the grounding tail.
+  // ROOT CAUSE (Follow-up 1 discovery #2):
+  // sensorPayload was injected twice per turn (grounding tail + messages[1]
+  // contextContent). The messages[1] copy sat ahead of the entire conversation
+  // history and changed every turn, busting the provider KV prefix cache for
+  // everything after it. Only the tail copy remains.
+  it('p5: keeps persona + history stable across turns while sensors change', async () => {
+    const chatStore = useChatOrchestratorStore(pinia)
+    const chatSession = useChatSessionStore(pinia)
+    const llmStore = useLLM(pinia)
+
+    const sessionId = 'session-p5-prefix-stability'
+    chatSession.activeSessionId = sessionId
+    chatSession.setSessionMessages(sessionId, [])
+
+    activeCardRef.value.extensions.airi.groundingEnabled = true
+    chatSession.buildShortTermMemoryContext = vi.fn(() => '[DAILY MEMORY CONTINUITY]\nToday was productive.')
+    chatSession.buildLifetimeMemoryContext = vi.fn(() => '[LIFETIME RECORD]\nLikes tea and coding.')
+
+    const payloads: any[] = []
+    llmStore.stream = vi.fn(async (_model, _provider, msgs, options) => {
+      payloads.push(structuredClone(msgs))
+      await options.onStreamEvent({ type: 'text-delta', text: 'Noted.' })
+    })
+
+    sensorBox.value = 'Sensors: CPU 20%, Time 14:00'
+    await chatStore.ingest('First turn hello', { triggerOnly: false }, sessionId)
+    sensorBox.value = 'Sensors: CPU 85%, Time 14:01'
+    await chatStore.ingest('Second turn hello', { triggerOnly: false }, sessionId)
+
+    expect(payloads).toHaveLength(2)
+    const [turn1, turn2] = payloads
+    const countEnv = (msgs: any[]) => msgs.filter((m: any) => m.content?.includes('[ENVIRONMENTAL AWARENESS]')).length
+    const indexOf = (msgs: any[], header: string) => msgs.findIndex((m: any) => m.content?.includes(header))
+    const block = (msgs: any[], header: string) => msgs.find((m: any) => m.content?.includes(header))?.content
+
+    // No duplicate: exactly one live copy per turn, positioned after the
+    // stable memory blocks in the tail.
+    expect(countEnv(turn1)).toBe(1)
+    expect(countEnv(turn2)).toBe(1)
+    expect(indexOf(turn1, '[ENVIRONMENTAL AWARENESS]')).toBeGreaterThan(indexOf(turn1, '[LIFETIME RECORD]'))
+
+    // Frozen persona prefix is byte-identical across turns.
+    expect(turn2[0]).toEqual(turn1[0])
+
+    // Turn 1 history is preserved verbatim inside turn 2.
+    const t1User = turn1.find((m: any) => m.role === 'user')
+    expect(t1User).toBeDefined()
+    expect(turn2).toContainEqual(t1User)
+
+    // Stable memory blocks are identical; only the volatile tail moved.
+    expect(block(turn2, '[LIFETIME RECORD]')).toBe(block(turn1, '[LIFETIME RECORD]'))
+    expect(block(turn2, '[DAILY MEMORY CONTINUITY]')).toBe(block(turn1, '[DAILY MEMORY CONTINUITY]'))
+    expect(block(turn2, '[ENVIRONMENTAL AWARENESS]')).not.toBe(block(turn1, '[ENVIRONMENTAL AWARENESS]'))
   })
 
   // Intrusions: Staging consumption & clearing

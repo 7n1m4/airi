@@ -3,13 +3,12 @@ import type { SerializableDesktopCapturerSource } from '@proj-airi/electron-scre
 import type { SourcesOptions } from 'electron'
 
 import { useElectronScreenCapture } from '@proj-airi/electron-screen-capture/vue'
+import { getElectronEventaContext } from '@proj-airi/electron-vueuse'
 import { useVisionStore } from '@proj-airi/stage-ui/stores/modules/vision'
 import { ATTENTION_GUARD_WORKLOAD_ID, useVisionOrchestratorStore, VISION_WORKLOADS } from '@proj-airi/stage-ui/stores/modules/vision/orchestrator'
 import { Button, FieldCheckbox, FieldRange, FieldSelect, SelectTab } from '@proj-airi/ui'
 import { useIntervalFn } from '@vueuse/core'
 import { computed, onBeforeUnmount, ref } from 'vue'
-
-import { getIpcRenderer } from '../../utils/electron'
 
 interface ScreenCaptureSource extends SerializableDesktopCapturerSource {
   appIconURL?: string
@@ -33,7 +32,7 @@ const sourcesOptions = ref<SourcesOptions>({
   fetchWindowIcons: true,
 })
 
-const { getSources } = useElectronScreenCapture(getIpcRenderer(), sourcesOptions)
+const { getSources } = useElectronScreenCapture(getElectronEventaContext(), sourcesOptions)
 
 const isWindowSource = (source: ScreenCaptureSource) => source.id.startsWith('window:')
 const isDisplaySource = (source: ScreenCaptureSource) => source.id.startsWith('screen:')
@@ -90,7 +89,13 @@ async function captureAndProcess() {
     const width = Math.round(1280 * (captureDownscalePercent.value / 100))
     const height = Math.round(720 * (captureDownscalePercent.value / 100))
 
-    const result = await visionStore.captureSnapshot({ width, height })
+    const sourceId = selectedSourceId.value || undefined
+    const result = await visionStore.captureSnapshot({
+      width,
+      height,
+      sourceId,
+      type: sourceId?.startsWith('window:') ? 'window' : 'screen',
+    })
     if (!result?.dataUrl) {
       orchestrator.lastError = result?.error === 'permission_denied' ? 'Screen capture permission denied.' : 'Capture returned no frame.'
       return
@@ -167,7 +172,7 @@ void refetchSources()
           :key="source.id"
           type="button"
           class="flex flex-col gap-1 border rounded-md border-solid p-2 text-left text-xs transition-colors"
-          :class="selectedSourceId === source.id ? 'border-[var(--ui-accent)]' : 'border-[var(--ui-border)]'"
+          :class="selectedSourceId === source.id ? 'border-primary-500 bg-primary-500/10' : 'border-neutral-200 dark:border-neutral-700'"
           @click="selectedSourceId = source.id"
         >
           <img
