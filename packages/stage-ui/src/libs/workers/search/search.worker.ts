@@ -1,4 +1,5 @@
 import type { SearchIndexSnapshotHeader } from '../../search/embedding-format'
+import type { EmbedderStatus } from './search-channel'
 
 import { AutoConfig, AutoModel, AutoTokenizer, env } from '@huggingface/transformers'
 
@@ -16,6 +17,16 @@ import {
 
 // Suppress noisy ONNX Runtime warnings
 env.backends.onnx.logLevel = 'error'
+if (env.backends?.onnx?.wasm) {
+  env.backends.onnx.wasm.proxy = false
+  // NOTICE: threaded jsep build requires SharedArrayBuffer + COOP/COEP.
+  // In Electron/Vite without isolation headers, crossOriginIsolated is false;
+  // forcing numThreads=1 avoids spawning pthreads with invalid Worker URLs.
+  const isolated = typeof crossOriginIsolated !== 'undefined' && crossOriginIsolated
+  env.backends.onnx.wasm.numThreads = isolated ? Math.min(4, (typeof navigator !== 'undefined' ? navigator.hardwareConcurrency : 4) || 4) : 1
+  env.backends.onnx.wasm.simd = true
+  env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.2/dist/'
+}
 
 interface SearchDocument {
   id: string
@@ -51,9 +62,40 @@ interface SearchSnapshot {
 
 let embedderModel: any = null
 let embedderTokenizer: any = null
+// Which provider actually loaded the weights. Null until the first embed or
+// model load, and cleared by the idle-TTL unload.
+let activeEmbedder: EmbedderStatus | null = null
 let documents = new Map<string, SearchDocument>()
+// High-watermark of indexed turn time. Restored from the snapshot header on
+// init, advanced on every index batch, stamped into the header on persist.
+let lastIndexedTurnAt: number | undefined
 let averageDocumentLength = 0
 let documentFrequency = new Map<string, number>()
+
+/**
+ * Coerce heterogeneous doc timestamps (`createdAt` epoch ms or ISO `timestamp`
+ * strings) to epoch ms. Unparseable values yield 0 so they can never NaN-poison
+ * the `Math.max` watermark.
+ */
+function toDocTimeMs(value: unknown): number {
+  if (typeof value === 'number')
+    return Number.isFinite(value) ? value : 0
+  if (typeof value === 'string') {
+    const parsed = Date.parse(value)
+    return Number.isFinite(parsed) ? parsed : 0
+  }
+  return 0
+}
+
+function trackIndexedTurnTime(docs: Array<{ createdAt?: unknown, timestamp?: unknown }>): void {
+  let watermark = lastIndexedTurnAt ?? 0
+  for (const doc of docs) {
+    const time = Math.max(toDocTimeMs(doc.createdAt), toDocTimeMs(doc.timestamp))
+    if (time > watermark)
+      watermark = time
+  }
+  lastIndexedTurnAt = watermark
+}
 
 const STOPWORDS = new Set([
   'a',
@@ -137,14 +179,32 @@ async function loadEmbedderStack(device: 'webgpu' | 'wasm') {
   const mutableConfig = config as unknown as Record<string, unknown>
   mutableConfig.vision_config = null
   mutableConfig.audio_config = null
+
+  // NOTICE: q4 has no WASM kernel in ONNX Runtime (GatherBlockQuantized is WGSL-only).
+  // The WASM/CPU fallback path must load fp32 model weights.
+  const dtype = device === 'webgpu' ? EMBEDDING_DTYPE : 'fp32'
+  const modelOptions: Record<string, unknown> = {
+    config,
+    device,
+    dtype,
+  }
+  if (device === 'wasm') {
+    modelOptions.model_file_name = 'model'
+  }
+
   const [model, tokenizer] = await Promise.all([
-    AutoModel.from_pretrained(EMBEDDING_MODEL_ID, {
-      config,
-      device,
-      dtype: EMBEDDING_DTYPE,
-    }),
+    AutoModel.from_pretrained(EMBEDDING_MODEL_ID, modelOptions as any),
     AutoTokenizer.from_pretrained(EMBEDDING_MODEL_ID),
   ])
+  // NOTICE: winning device/dtype visibility — a silent WebGPU→WASM fallback
+  // loads >1 GB of fp32 weights instead of the 175 MB q4 backbone. This line
+  // is the only in-app signal of which path actually stuck.
+  activeEmbedder = { device, dtype, modelId: EMBEDDING_MODEL_ID }
+  console.info('[Telemetry:SearchWorker:embedder-loaded]', {
+    modelId: EMBEDDING_MODEL_ID,
+    device,
+    dtype,
+  })
   return { model, tokenizer }
 }
 
@@ -170,13 +230,21 @@ async function getVector(text: string) {
   const inputs = await tokenizer(text, { padding: true, truncation: true })
   const output = await model(inputs)
   try {
+    // NOTICE: Transformers 4.x native sentence_embedding output (MRL-slice to EMBEDDING_DIM).
+    // Verified 1.0000 correlation with sequence mean-pooling without per-token loop overhead.
+    if (output.sentence_embedding) {
+      const raw = Array.from(output.sentence_embedding.data as ArrayLike<number>)
+      const truncated = raw.slice(0, EMBEDDING_DIM)
+      return l2Normalize(truncated)
+    }
+
     const lastHidden = output.last_hidden_state
     const dims = lastHidden.dims as number[]
     const seqLen = dims[1]
     const hiddenSize = dims[2]
     const hiddenData = lastHidden.data as ArrayLike<number>
     const maskData = inputs.attention_mask?.data as ArrayLike<number> | undefined
-    // NOTICE: mean-pool over the sequence dim with the attention mask, then
+    // NOTICE: fallback mean-pool over the sequence dim with the attention mask, then
     // MRL-truncate to EMBEDDING_DIM. Slicing breaks unit length, so the
     // truncated vector MUST be L2 re-normalized before storage/scoring.
     const pooled = new Array<number>(hiddenSize).fill(0)
@@ -404,13 +472,25 @@ function getTemporalCandidates(
 }
 
 // NOTICE: bound worker RAM — chat history is unbounded but the in-memory
-// embedding + BM25 caches must not be. Evict oldest docs FIFO past the cap.
-const MAX_WORKER_DOCUMENTS = 600
+// embedding + BM25 caches must not be. Evict oldest docs past the cap,
+// protecting high-value memory tiers (LTMM, STMM, lifetime, echo chips).
+const MAX_WORKER_DOCUMENTS = 10000
 function upsertDocument(document: SearchDocument) {
   if (!documents.has(document.id) && documents.size >= MAX_WORKER_DOCUMENTS) {
-    const oldestKey = documents.keys().next().value
-    if (oldestKey !== undefined)
-      documents.delete(oldestKey)
+    // Tier-aware eviction: Prefer evicting oldest raw_turn entries first
+    let evictedKey: string | undefined
+    for (const [key, doc] of documents.entries()) {
+      if (doc.kind === 'raw_turn' || doc.kind === 'raw') {
+        evictedKey = key
+        break
+      }
+    }
+    // If no raw turns found, evict oldest entry FIFO
+    if (evictedKey === undefined) {
+      evictedKey = documents.keys().next().value
+    }
+    if (evictedKey !== undefined)
+      documents.delete(evictedKey)
   }
   documents.set(document.id, document)
 }
@@ -462,11 +542,39 @@ globalThis.addEventListener('message', async (e) => {
         // cosine math never mixes geometries; the backfill re-embeds through
         // the index handler below.
         hydrateDocuments(normalizedSnapshot?.documents, { stripEmbeddings: !compatible })
+        // Restore the persisted high-watermark (absent on pre-watermark
+        // snapshots) so delta checks stay correct across worker restarts.
+        const restoredWatermark = normalizedSnapshot?.header?.lastIndexedTurnAt
+        lastIndexedTurnAt = typeof restoredWatermark === 'number' && Number.isFinite(restoredWatermark)
+          ? restoredWatermark
+          : undefined
+        // Counts describe what the worker actually holds, not what the header
+        // claimed: a stripped snapshot reports 0 vectors even if the file said
+        // otherwise, which is exactly the "index exists but search is lexical"
+        // state the telemetry surface must expose.
+        let restoredVectors = 0
+        for (const doc of documents.values()) {
+          if (doc.embedding?.length)
+            restoredVectors++
+        }
+        console.log('[Telemetry:SearchWorker:init]', {
+          hasSnapshot: !!payload?.snapshot,
+          snapshotDocCount: normalizedSnapshot?.documents?.length ?? 0,
+          compatible,
+          workerDocumentsCount: documents.size,
+          vectorCount: restoredVectors,
+          indexedAt: normalizedSnapshot?.header?.indexedAt,
+          lastIndexedTurnAt,
+        })
         globalThis.postMessage({
           id,
           type: 'ready',
           stale: !compatible,
           reason: compatible ? undefined : 'incompatible-or-missing snapshot header',
+          lastIndexedTurnAt,
+          documentCount: documents.size,
+          vectorCount: restoredVectors,
+          indexedAt: normalizedSnapshot?.header?.indexedAt,
         })
         break
       }
@@ -514,6 +622,12 @@ globalThis.addEventListener('message', async (e) => {
         }
 
         rebuildKeywordStats()
+        trackIndexedTurnTime(nextDocuments as SearchDocument[])
+        console.log('[Telemetry:SearchWorker:index:Complete]', {
+          indexedCount,
+          totalDocumentsInWorker: documents.size,
+          lastIndexedTurnAt,
+        })
         globalThis.postMessage({ id, type: 'indexed', count: indexedCount })
         break
       }
@@ -544,6 +658,18 @@ globalThis.addEventListener('message', async (e) => {
           ...temporalHits.map(h => h.id),
         ])
 
+        console.log('[Telemetry:SearchWorker:search]', {
+          query,
+          limit,
+          characterId,
+          totalDocumentsInWorker: documents.size,
+          candidateLimit,
+          vectorHitsCount: vectorHits.length,
+          keywordHitsCount: keywordHits.length,
+          temporalHitsCount: temporalHits.length,
+          matchedCandidatesCount: candidateIds.size,
+        })
+
         // NOTICE: never ship document embedding arrays back over postMessage — each
         // 256-dim number[] cloned per candidate per search is MBs of structured-
         // clone traffic and compressor/swap pressure. We return queryVector so
@@ -570,20 +696,33 @@ globalThis.addEventListener('message', async (e) => {
       }
 
       case 'persist': {
-        // NOTICE: slim the IndexedDB snapshot — raw chat turns are the largest,
-        // lowest-value embedding set (re-embedded lazily on next index cycle),
-        // and full float64 JSON arrays bloat swap/compressor with MBs of text.
+        // NOTICE: `watermark` is an explicit coverage frontier from the
+        // background backfill. The worker's own tracker is a max-over-batch
+        // value, which is only equivalent when the pass is strictly
+        // oldest→newest with no hot-set detour.
+        const override = payload?.watermark
+        if (typeof override === 'number' && Number.isFinite(override))
+          lastIndexedTurnAt = override
+
+        // NOTICE: persist documents with 4-decimal-place quantized embeddings
+        // to cut JSON snapshot size in half while preserving vectors across reboots.
+        let vectorCount = 0
+        const persistedDocuments = [...documents.values()].map((doc) => {
+          const { tokens, tokenFreqs, embedding, ...persistedDoc } = doc
+          if (!embedding?.length)
+            return persistedDoc
+          vectorCount++
+          const quantized = new Array<number>(embedding.length)
+          for (let i = 0; i < embedding.length; i++)
+            quantized[i] = Math.round((embedding[i] as number) * 10000) / 10000
+          return { ...persistedDoc, embedding: quantized }
+        })
         const snapshot: SearchSnapshot = {
-          header: buildSnapshotHeader(),
-          documents: [...documents.values()].map((doc) => {
-            const { tokens, tokenFreqs, embedding, ...persistedDoc } = doc
-            if (doc.kind === 'raw_turn' || !embedding?.length)
-              return persistedDoc
-            const quantized = new Array<number>(embedding.length)
-            for (let i = 0; i < embedding.length; i++)
-              quantized[i] = Math.round((embedding[i] as number) * 10000) / 10000
-            return { ...persistedDoc, embedding: quantized }
+          header: buildSnapshotHeader(lastIndexedTurnAt, {
+            documents: documents.size,
+            vectors: vectorCount,
           }),
+          documents: persistedDocuments,
         }
 
         globalThis.postMessage({ id, type: 'snapshot', snapshot })
@@ -599,13 +738,59 @@ globalThis.addEventListener('message', async (e) => {
         globalThis.postMessage({ id, type: 'removed', existed })
         break
       }
+
+      case 'unload': {
+        // NOTICE: idle-TTL eviction path (see GpuWorkerHost in the leader).
+        // Drops the embedder sessions/tensors but KEEPS the in-memory document
+        // index, so the next query only reloads model weights — never
+        // re-indexes. Snapshot persistence stays main-side via 'persist'.
+        if (embedderModel) {
+          try {
+            await embedderModel.dispose?.()
+          }
+          catch {}
+          embedderModel = null
+        }
+        embedderTokenizer = null
+        activeEmbedder = null
+        console.info('[Telemetry:SearchWorker:unload]', {
+          workerDocumentsCount: documents.size,
+        })
+        globalThis.postMessage({ id, type: 'unloaded' })
+        break
+      }
+
+      case 'status': {
+        // Read-only: deliberately does NOT call getEmbedder(), so opening the
+        // telemetry surface cannot force a 1 GB fp32 load on a WASM machine.
+        let vectorCount = 0
+        for (const doc of documents.values()) {
+          if (doc.embedding?.length)
+            vectorCount++
+        }
+        globalThis.postMessage({
+          id,
+          type: 'status',
+          status: {
+            embedder: activeEmbedder,
+            documents: documents.size,
+            vectors: vectorCount,
+            lastIndexedTurnAt,
+          },
+        })
+        break
+      }
     }
   }
   catch (err) {
+    const errorMsg = (typeof err === 'number' || (typeof err === 'string' && /^\d+$/.test(err.trim())))
+      ? `ONNX Runtime WASM exception pointer: ${err} (unsupported ONNX operator or WASM/WebGPU allocation error)`
+      : (err instanceof Error ? (err.stack ? `${err.message}\n${err.stack}` : err.message) : String(err))
+
     globalThis.postMessage({
       id,
       type: 'error',
-      error: err instanceof Error ? err.message : String(err),
+      error: errorMsg,
     })
   }
 })

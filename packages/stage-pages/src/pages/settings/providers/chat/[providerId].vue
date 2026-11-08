@@ -13,7 +13,7 @@ import {
 import { useProviderValidation } from '@proj-airi/stage-ui/composables/use-provider-validation'
 import { useConsciousnessStore } from '@proj-airi/stage-ui/stores/modules/consciousness'
 import { useProvidersStore } from '@proj-airi/stage-ui/stores/providers'
-import { isOptionalKeyProvider, keylessOrOptionalKey } from '@proj-airi/stage-ui/libs/providers/types'
+import { FieldCheckbox } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
@@ -45,6 +45,18 @@ const baseUrl = computed({
     const config = getActiveInstanceConfig()
     config.options.baseUrl = value
   },
+})
+
+const serverWebSearch = computed({
+  get: () => Boolean(getActiveInstanceConfig().options.serverWebSearch),
+  set: (value) => {
+    const config = getActiveInstanceConfig()
+    config.options.serverWebSearch = value
+  },
+})
+
+const supportsServerWebSearch = computed(() => {
+  return providerId === 'deepseek' || providerId === 'openrouter' || providerId === 'openrouter-ai' || providerId.includes('opencode')
 })
 
 const activeInstanceLabel = computed(() => {
@@ -98,8 +110,6 @@ function goToModelSelection() {
       >
         <ProviderApiKeyInput
           v-model="apiKey"
-          :required="!keylessOrOptionalKey(providerMetadata?.requiresCredentials)"
-          :description="isOptionalKeyProvider(providerMetadata?.requiresCredentials) ? `${providerMetadata?.localizedName ?? providerId} works without a key; add one to unlock paid models.` : undefined"
           :provider-name="providerMetadata?.localizedName"
           :console-url="providerMetadata?.consoleUrl"
           placeholder="sk-..."
@@ -111,6 +121,14 @@ function goToModelSelection() {
           v-model="baseUrl"
           :placeholder="providerMetadata?.defaultOptions?.().baseUrl as string || 'Base URL of your provider'"
         />
+
+        <div v-if="supportsServerWebSearch" class="mt-4 border-t border-neutral-200/60 pt-4 dark:border-neutral-800/60">
+          <FieldCheckbox
+            v-model="serverWebSearch"
+            label="Enable Hosted Web Search"
+            description="Execute server-side web grounding directly on provider GPU infrastructure (OpenRouter / DeepSeek). Subject to provider credit billing."
+          />
+        </div>
       </ProviderAdvancedSettings>
 
       <!-- In-Page Model Combobox for active instance -->

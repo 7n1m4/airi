@@ -33,7 +33,7 @@ describe('useOnboardingStore', () => {
     expect(store.hasSkippedSetup).toBe(true)
     expect(store.hasCompletedSetup).toBe(false)
     expect(store.needsOnboarding).toBe(false)
-    expect(localStorage.getItem('onboarding/skipped')).toBe('true')
+    expect(localStorage.getItem('onboarding/v3-skipped')).toBe('true')
   })
 
   it('marks setup completed and clears skipped state', async () => {
@@ -48,8 +48,16 @@ describe('useOnboardingStore', () => {
     expect(store.hasCompletedSetup).toBe(true)
     expect(store.hasSkippedSetup).toBe(false)
     expect(store.needsOnboarding).toBe(false)
-    expect(localStorage.getItem('onboarding/completed')).toBe('true')
-    expect(localStorage.getItem('onboarding/skipped')).toBe('false')
+    expect(localStorage.getItem('onboarding/v3-completed')).toBe('true')
+    expect(localStorage.getItem('onboarding/v3-skipped')).toBe('false')
+  })
+
+  it('ignores legacy V1/V2 flags: prior completed/skipped still needs V3 onboarding', () => {
+    localStorage.setItem('onboarding/completed', 'true')
+    localStorage.setItem('onboarding/skipped', 'true')
+    const store = useOnboardingStore()
+
+    expect(store.needsOnboarding).toBe(true)
   })
 
   it('resets setup state when explicitly requested', async () => {

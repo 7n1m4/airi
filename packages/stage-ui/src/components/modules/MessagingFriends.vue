@@ -46,9 +46,11 @@ const cloudflareStore = useCloudflareStore()
 // whether this build ships the Cloudflare Edge surface at all. `isAuthenticated`
 // only says whether a Cloudflare account is signed in — a signed-out-but-present
 // surface and an absent surface are different states, and only the latter is
-// rendered as "unavailable in this build".
+// rendered as "unavailable in this build". The flag mirrors the registration
+// gate AIRI_ENABLE_CLOUD_ADAPTERS via VITE_AIRI_ENABLE_CLOUD_ADAPTERS so the
+// unavailable branches stay reachable when the adapters are not shipped.
 const { cfSubdomain } = storeToRefs(cloudflareStore)
-const isCloudAvailable = ref(true)
+const isCloudAvailable = ref(import.meta.env?.VITE_AIRI_ENABLE_CLOUD_ADAPTERS === '1')
 const airiCardStore = useAiriCardStore()
 const userProfileStore = useSettingsUserProfile()
 const napChatStore = useNapChatStore()

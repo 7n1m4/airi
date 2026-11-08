@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { MarkdownRenderer } from '@proj-airi/stage-ui/components'
 import { useAiriCardStore, useEntityLedgerStore, useTextJournalStore } from '@proj-airi/stage-ui/stores'
-import { Button, FieldInput, FieldSelect } from '@proj-airi/ui'
+import { Button, FieldInput, FieldSelect, Progress } from '@proj-airi/ui'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
@@ -27,7 +27,15 @@ const textJournalStore = useTextJournalStore()
 const entityLedgerStore = useEntityLedgerStore()
 
 const { cards, activeCardId } = storeToRefs(cardStore)
-const { entries, loading, lastSearchTriage, lastSearchMode } = storeToRefs(textJournalStore)
+const {
+  entries,
+  loading,
+  lastSearchTriage,
+  lastSearchMode,
+  isRebuildingVectorIndex,
+  vectorIndexProgress,
+  backgroundIndexProgress,
+} = storeToRefs(textJournalStore)
 
 const activeTab = ref<'records' | 'graph'>('records')
 
@@ -98,6 +106,21 @@ async function handleClearGraph() {
     return
   await entityLedgerStore.clearLedger(selectedCharacter.value)
   toast.info('Knowledge Graph cleared.')
+}
+
+async function handleRebuildVectorIndex() {
+  try {
+    await textJournalStore.rebuildVectorIndex({
+      characterId: selectedCharacter.value === 'all' ? undefined : selectedCharacter.value,
+    })
+    if (textJournalStore.vectorIndexProgress?.phase === 'completed') {
+      toast.success(textJournalStore.vectorIndexProgress.message || 'Vector search index rebuild complete.')
+    }
+  }
+  catch (err) {
+    const message = err instanceof Error ? err.message : String(err)
+    toast.error(`Vector index rebuild failed: ${message}`)
+  }
 }
 
 // Legacy keyword filter as a fallback
@@ -302,7 +325,21 @@ watch(characterOptions, (options) => {
           description="High-fidelity semantic retrieval across all memory layers (Raw, STMM, LTMM)."
           placeholder="Filter memories..."
         />
-        <div class="flex items-end">
+        <div class="flex flex-wrap items-end gap-3">
+          <Button
+            :label="isRebuildingVectorIndex ? 'Rebuilding Index...' : 'Rebuild Vector Search Index'"
+            icon="i-solar:database-bold-duotone"
+            variant="primary"
+            :disabled="isRebuildingVectorIndex"
+            @click="handleRebuildVectorIndex"
+          />
+          <Button
+            v-if="isRebuildingVectorIndex"
+            label="Cancel"
+            icon="i-solar:close-circle-bold-duotone"
+            variant="secondary"
+            @click="textJournalStore.cancelRebuildVectorIndex()"
+          />
           <Button
             label="Seed Record"
             icon="i-solar:pen-new-square-bold-duotone"
@@ -310,6 +347,90 @@ watch(characterOptions, (options) => {
             @click="seedEntry"
           />
         </div>
+      </div>
+
+      <!-- Vector Rebuild Progress Banner -->
+      <div
+        v-if="isRebuildingVectorIndex || (vectorIndexProgress && vectorIndexProgress.phase !== 'idle')"
+        class="mt-6 flex flex-col gap-2 border rounded-2xl p-4 transition-all"
+        :class="[
+          vectorIndexProgress?.phase === 'error'
+            ? 'border-rose-500/30 bg-rose-500/5 text-rose-700 dark:text-rose-300'
+            : vectorIndexProgress?.phase === 'cancelled'
+              ? 'border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300'
+              : vectorIndexProgress?.phase === 'completed'
+                ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300'
+                : 'border-primary-500/30 bg-primary-500/5 text-primary-700 dark:text-primary-300',
+        ]"
+      >
+        <div class="flex items-center justify-between text-xs">
+          <span class="flex items-center gap-2 font-medium">
+            <div
+              :class="[
+                isRebuildingVectorIndex
+                  ? 'i-solar:loading-bold animate-spin text-base'
+                  : vectorIndexProgress?.phase === 'completed'
+                    ? 'i-solar:check-circle-bold-duotone text-base text-emerald-500'
+                    : vectorIndexProgress?.phase === 'cancelled'
+                      ? 'i-solar:close-circle-bold-duotone text-base text-amber-500'
+                      : 'i-solar:danger-triangle-bold-duotone text-base text-rose-500',
+              ]"
+            />
+            {{ vectorIndexProgress?.message || (isRebuildingVectorIndex ? 'Rebuilding vector search index...' : '') }}
+          </span>
+          <span v-if="vectorIndexProgress?.percent !== undefined" class="font-bold">
+            {{ vectorIndexProgress.percent }}%
+          </span>
+        </div>
+        <Progress
+          v-if="isRebuildingVectorIndex && vectorIndexProgress?.percent !== undefined"
+          :progress="vectorIndexProgress.percent"
+        />
+      </div>
+
+      <!-- Background Index Progress Banner — resumable, checkpointed pass -->
+      <div
+        v-if="backgroundIndexProgress && backgroundIndexProgress.phase !== 'idle'"
+        class="mt-4 flex flex-col gap-2 border rounded-2xl p-4 transition-all"
+        :class="[
+          backgroundIndexProgress.phase === 'error'
+            ? 'border-rose-500/30 bg-rose-500/5 text-rose-700 dark:text-rose-300'
+            : backgroundIndexProgress.phase === 'deferred'
+              ? 'border-amber-500/30 bg-amber-500/5 text-amber-700 dark:text-amber-300'
+              : backgroundIndexProgress.phase === 'completed'
+                ? 'border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300'
+                : 'border-primary-500/30 bg-primary-500/5 text-primary-700 dark:text-primary-300',
+        ]"
+      >
+        <div class="flex items-center justify-between text-xs">
+          <span class="flex items-center gap-2 font-medium">
+            <div
+              :class="[
+                backgroundIndexProgress.phase === 'completed'
+                  ? 'i-solar:check-circle-bold-duotone text-base text-emerald-500'
+                  : backgroundIndexProgress.phase === 'error'
+                    ? 'i-solar:danger-triangle-bold-duotone text-base text-rose-500'
+                    : backgroundIndexProgress.phase === 'deferred'
+                      ? 'i-solar:pause-circle-bold-duotone text-base text-amber-500'
+                      : 'i-solar:loading-bold animate-spin text-base',
+              ]"
+            />
+            {{ backgroundIndexProgress.message }}
+          </span>
+          <span
+            v-if="backgroundIndexProgress.phase !== 'completed' && backgroundIndexProgress.total > 0"
+            class="font-bold"
+          >
+            {{ backgroundIndexProgress.indexed }}/{{ backgroundIndexProgress.total }}
+          </span>
+        </div>
+        <Progress
+          v-if="backgroundIndexProgress.phase !== 'completed' && backgroundIndexProgress.total > 0"
+          :progress="backgroundIndexProgress.percent"
+        />
+        <span class="text-[10px] text-neutral-500 dark:text-neutral-400">
+          Progress is checkpointed to the search snapshot, so an interrupted pass resumes from the last checkpoint instead of re-embedding everything.
+        </span>
       </div>
     </section>
 
@@ -636,6 +757,7 @@ watch(characterOptions, (options) => {
         @select-entity="openEntityDetail"
         @rebuild="handleRebuildGraph"
         @clear="handleClearGraph"
+        @rebuild-vector="handleRebuildVectorIndex"
       />
     </div>
 

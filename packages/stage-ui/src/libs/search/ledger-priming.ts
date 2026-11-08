@@ -3,12 +3,59 @@ import type { EntityLedger, EntityType } from './entity-ledger'
 import { normalizeCanonicalEntityLabel } from './entity-ledger'
 
 export const CONVERSATIONAL_STOPWORDS = new Set([
-  // Pronouns, Demonstratives, Quantifiers
+  // Personal Pronouns & Possessives
+  'i',
+  'me',
+  'my',
+  'mine',
+  'myself',
+  'you',
+  'your',
+  'yours',
+  'yourself',
+  'yourselves',
+  'youre',
+  'you\'re',
+  'he',
+  'him',
+  'his',
+  'himself',
+  'hes',
+  'he\'s',
+  'she',
+  'her',
+  'hers',
+  'herself',
+  'shes',
+  'she\'s',
+  'it',
+  'its',
+  'itself',
+  'we',
+  'us',
+  'our',
+  'ours',
+  'ourselves',
   'they',
   'them',
   'their',
   'theirs',
   'themselves',
+  'theyre',
+  'they\'re',
+
+  // Articles & Conjunctions
+  'a',
+  'an',
+  'the',
+  'and',
+  'or',
+  'nor',
+  'but',
+  'so',
+  'yet',
+
+  // Demonstratives, Relative & Indefinite Pronouns
   'this',
   'that',
   'these',
@@ -65,6 +112,50 @@ export const CONVERSATIONAL_STOPWORDS = new Set([
   'making',
   'bring',
   'bringing',
+  'say',
+  'says',
+  'said',
+  'saying',
+  'tell',
+  'tells',
+  'told',
+  'telling',
+  'see',
+  'sees',
+  'saw',
+  'seen',
+  'seeing',
+  'know',
+  'knows',
+  'knew',
+  'known',
+  'think',
+  'thinks',
+  'thought',
+  'thinking',
+  'look',
+  'looks',
+  'looked',
+  'looking',
+  'come',
+  'came',
+  'comes',
+  'coming',
+  'go',
+  'goes',
+  'went',
+  'gone',
+  'going',
+  'little',
+  'small',
+  'big',
+  'large',
+  'good',
+  'bad',
+  'new',
+  'old',
+  'great',
+  'sure',
 
   // Common Conversational Adverbs, Connectives & Starters
   'maybe',
@@ -219,6 +310,7 @@ export interface DialogueTurn {
   text: string
   timestamp: number
   sessionDate?: string
+  session?: number | string
 }
 
 export interface ExtractedFragments {
@@ -511,6 +603,7 @@ export function extractTurnKnowledge(
     speaker: turn.speaker,
     timestamp: turn.timestamp,
     sessionDate: turn.sessionDate,
+    session: turn.session,
   })
 
   // 2. Register Speaker as a Person entity

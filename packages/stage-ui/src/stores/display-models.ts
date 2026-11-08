@@ -49,6 +49,7 @@ export interface DisplayModelCloud {
   nsfw?: boolean
   groups?: string[]
   tags?: string[]
+  externalCatalogId?: string
   expressionCapabilities?: ModelCapabilityItem[]
   motionCapabilities?: ModelCapabilityItem[]
   vfxMappings?: Record<string, string[]>
@@ -83,6 +84,7 @@ export interface DisplayModelFile {
   nsfw?: boolean
   groups?: string[]
   tags?: string[]
+  externalCatalogId?: string
   expressionCapabilities?: ModelCapabilityItem[]
   motionCapabilities?: ModelCapabilityItem[]
   vfxMappings?: Record<string, string[]>
@@ -102,6 +104,7 @@ export interface DisplayModelURL {
   nsfw?: boolean
   groups?: string[]
   tags?: string[]
+  externalCatalogId?: string
   expressionCapabilities?: ModelCapabilityItem[]
   motionCapabilities?: ModelCapabilityItem[]
   vfxMappings?: Record<string, string[]>
@@ -109,12 +112,95 @@ export interface DisplayModelURL {
   _searchKey?: string
 }
 
-const displayModelsPresets: DisplayModel[] = [
+const formatSearchAliases: Record<string, string> = {
+  [DisplayModelFormat.Live2dZip]: 'live2d',
+  [DisplayModelFormat.Live2dDirectory]: 'live2d',
+  [DisplayModelFormat.VRM]: 'vrm 3d',
+  [DisplayModelFormat.SpineZip]: 'spine 2d',
+  [DisplayModelFormat.PMXZip]: 'mmd pmx',
+  [DisplayModelFormat.PMXDirectory]: 'mmd pmx',
+  [DisplayModelFormat.PMD]: 'mmd pmd',
+}
+
+export function buildDisplayModelSearchKey(m: any): string {
+  if (!m)
+    return ''
+
+  const parts: string[] = []
+
+  if (m.name)
+    parts.push(String(m.name))
+
+  if (m.id)
+    parts.push(String(m.id))
+
+  // Groups / Franchises / Series (e.g. "Mahou Shoujo Madoka Magica", "Azur Lane")
+  if (m.groups) {
+    if (Array.isArray(m.groups)) {
+      for (const g of m.groups) {
+        if (g)
+          parts.push(String(g))
+      }
+    }
+    else {
+      parts.push(String(m.groups))
+    }
+  }
+
+  // Tags (both raw and space-normalized for underscore-separated tags like "mahou_shoujo_madoka_magica")
+  if (m.tags) {
+    if (Array.isArray(m.tags)) {
+      for (const t of m.tags) {
+        if (t) {
+          const str = String(t)
+          parts.push(str)
+          if (str.includes('_')) {
+            parts.push(str.replace(/_/g, ' '))
+          }
+        }
+      }
+    }
+    else if (typeof m.tags === 'string') {
+      parts.push(m.tags)
+      if (m.tags.includes('_')) {
+        parts.push(m.tags.replace(/_/g, ' '))
+      }
+    }
+  }
+
+  if (m.description)
+    parts.push(String(m.description))
+
+  if (m.author)
+    parts.push(String(m.author))
+
+  if (m.authorName)
+    parts.push(String(m.authorName))
+
+  if (m.externalCatalogId)
+    parts.push(String(m.externalCatalogId))
+
+  if (m.format) {
+    parts.push(String(m.format))
+    const alias = formatSearchAliases[m.format]
+    if (alias)
+      parts.push(alias)
+  }
+
+  return parts.join(' ').toLowerCase()
+}
+
+const rawPresets: DisplayModelURL[] = [
   { id: 'preset-live2d-1', format: DisplayModelFormat.Live2dZip, type: 'url', url: presetLive2dProUrl, name: 'Hiyori (Pro)', authorIcon: presetLive2dPreview, previewImage: presetLive2dPreview, importedAt: 1733113886840 },
   { id: 'preset-live2d-2', format: DisplayModelFormat.Live2dZip, type: 'url', url: presetLive2dFreeUrl, name: 'Hiyori (Free)', authorIcon: presetLive2dPreview, previewImage: presetLive2dPreview, importedAt: 1733113886840 },
-  { id: 'preset-vrm-1', format: DisplayModelFormat.VRM, type: 'url', url: presetVrmAvatarAUrl, name: 'AvatarSample_A', previewImage: presetVrmAvatarAPreview, importedAt: 1733113886840 },
-  { id: 'preset-vrm-2', format: DisplayModelFormat.VRM, type: 'url', url: presetVrmAvatarBUrl, name: 'AvatarSample_B', previewImage: presetVrmAvatarBPreview, importedAt: 1733113886840 },
+  { id: 'preset-vrm-1', format: DisplayModelFormat.VRM, type: 'url', url: presetVrmAvatarAUrl, name: 'AvatarSample_A', previewImage: presetVrmAvatarAPreview, importedAt: 1733113886840, outfits: [{ id: 'preset-tanktop-leggings', name: 'TANKTOP_LEGGINGS', tag: '', icon: 'i-solar:t-shirt-outline', meshes: ['Body_1'], defaultEnabled: true }] },
+  { id: 'preset-vrm-2', format: DisplayModelFormat.VRM, type: 'url', url: presetVrmAvatarBUrl, name: 'AvatarSample_B', previewImage: presetVrmAvatarBPreview, importedAt: 1733113886840, outfits: [{ id: 'qPJXZdPQeJupaPqZKx4ZY', name: 'UNDIES', tag: '', icon: 'i-solar:t-shirt-outline', meshes: ['Body_1'], defaultEnabled: true }] },
 ]
+
+const displayModelsPresets: DisplayModel[] = rawPresets.map(p => ({
+  ...p,
+  _searchKey: buildDisplayModelSearchKey(p),
+}))
 
 // NOTICE: IndexedDB structured clones of File/Blob can lose prototype methods in some
 // environments. Re-wrap degraded clones so callers always receive a usable File.
@@ -179,7 +265,10 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     try {
       const cached = await storage.getItemRaw<any>('local:sync-metadata/remote-catalog-cache')
       if (cached) {
-        remoteModelsCatalog.value = cached
+        remoteModelsCatalog.value = cached.map((m: any) => ({
+          ...m,
+          _searchKey: m._searchKey || buildDisplayModelSearchKey(m),
+        }))
         debug(`[DisplayModels] Initializing: Cache loaded successfully. Found ${cached.length} remote models.`)
       }
       else {
@@ -229,6 +318,30 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         debug('[DisplayModels:HMR] Channel close during HMR dispose failed:', err)
       }
     })
+  }
+
+  /**
+   * Deep un-proxying helper to prevent DataCloneError on IndexedDB writes.
+   * Recursively un-proxies plain objects and arrays while strictly preserving
+   * native File, Blob, and ArrayBuffer instances.
+   */
+  function toPlainModel<T>(obj: T): T {
+    if (obj === null || obj === undefined)
+      return obj
+    if (typeof obj !== 'object')
+      return obj
+    if (obj instanceof Blob || obj instanceof File || obj instanceof ArrayBuffer)
+      return toRaw(obj) as any
+    if (Array.isArray(obj)) {
+      const rawArr = toRaw(obj)
+      return rawArr.map(item => toPlainModel(item)) as any
+    }
+    const rawObj = toRaw(obj) as any
+    const clean: any = {}
+    for (const key of Object.keys(rawObj)) {
+      clean[key] = toPlainModel(rawObj[key])
+    }
+    return clean
   }
 
   async function compressPreviewDataUrl(dataUrl?: string, maxDim = 768, quality = 0.85): Promise<string | undefined> {
@@ -362,7 +475,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
 
   async function loadDisplayModelsFromIndexedDB(silent = false) {
     const startTime = performance.now()
-    console.info('[DisplayModels:IDBScan] Starting loadDisplayModelsFromIndexedDB...', { silent })
+    debug('[DisplayModels:IDBScan] Starting loadDisplayModelsFromIndexedDB...', { silent })
     await until(displayModelsFromIndexedDBLoading).toBe(false)
 
     if (!silent)
@@ -372,7 +485,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     try {
       const keys = await localforage.keys()
       const modelKeys = keys.filter(key => key.startsWith('display-model-') && !key.endsWith('-textures'))
-      console.info(`[DisplayModels:IDBScan] Found ${modelKeys.length} user model keys in localforage. Checking metadata cache...`)
+      debug(`[DisplayModels:IDBScan] Found ${modelKeys.length} user model keys in localforage. Checking metadata cache...`)
 
       let cachedMetadata: any[] = []
       try {
@@ -390,16 +503,16 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
       const isCacheValid = !hasLegacyFormat && modelKeys.length === cachedMetadata.length && modelKeys.every(k => cachedKeySet.has(k))
 
       if (isCacheValid && cachedMetadata.length > 0) {
-        console.info(`[DisplayModels:IDBScan] Metadata cache HIT! Serving ${cachedMetadata.length} user models in < 1ms.`)
+        debug(`[DisplayModels:IDBScan] Metadata cache HIT! Serving ${cachedMetadata.length} user models in < 1ms.`)
         cachedMetadata.forEach((m: any) => {
           models.push({
             ...m,
-            _searchKey: `${m.name || ''} ${Array.isArray(m.tags) ? m.tags.join(' ') : ''} ${Array.isArray(m.groups) ? m.groups.join(' ') : ''}`.toLowerCase(),
+            _searchKey: buildDisplayModelSearchKey(m),
           })
         })
       }
       else {
-        console.info(`[DisplayModels:IDBScan] Metadata cache MISS/Diff detected. Syncing catalog items...`)
+        debug(`[DisplayModels:IDBScan] Metadata cache MISS/Diff detected. Syncing catalog items...`)
         const updatedCache: any[] = []
         for (const key of modelKeys) {
           const existing = cachedMetadata.find((m: any) => m.id === key)
@@ -413,11 +526,11 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
             updatedCache.push(existing)
             models.push({
               ...existing,
-              _searchKey: `${existing.name || ''} ${Array.isArray(existing.tags) ? existing.tags.join(' ') : ''} ${Array.isArray(existing.groups) ? existing.groups.join(' ') : ''}`.toLowerCase(),
+              _searchKey: buildDisplayModelSearchKey(existing),
             })
           }
           else {
-            console.info(`[DisplayModels:IDBScan] Fetching new model key "${key}" from IDB...`)
+            debug(`[DisplayModels:IDBScan] Fetching new model key "${key}" from IDB...`)
             const val = await localforage.getItem<any>(key)
             if (val) {
               const modelName = val.name || val.file?.name || key
@@ -443,7 +556,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
               updatedCache.push(itemMeta)
               models.push({
                 ...itemMeta,
-                _searchKey: `${modelName} ${Array.isArray(val.tags) ? val.tags.join(' ') : ''} ${Array.isArray(val.groups) ? val.groups.join(' ') : ''}`.toLowerCase(),
+                _searchKey: buildDisplayModelSearchKey(itemMeta),
               })
             }
           }
@@ -476,30 +589,30 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
 
   async function getDisplayModel(rawId: string) {
     const id = MODEL_ID_ALIASES[rawId] || rawId
-    console.info(`[DisplayModels:getDisplayModel] Called for ID "${rawId}" (resolved: "${id}"). Loading flag: ${displayModelsFromIndexedDBLoading.value}`)
+    debug(`[DisplayModels:getDisplayModel] Called for ID "${rawId}" (resolved: "${id}"). Loading flag: ${displayModelsFromIndexedDBLoading.value}`)
     await until(displayModelsFromIndexedDBLoading).toBe(false)
 
     // Check in-memory catalog first (only if the full File object is already attached)
     const inMemoryModel = displayModels.value.find(m => m.id === id || m.id === rawId)
     if (inMemoryModel && inMemoryModel.type === 'file' && (inMemoryModel as DisplayModelFile).file) {
-      console.info(`[DisplayModels:getDisplayModel] In-memory store hit for "${id}":`, inMemoryModel)
+      debug(`[DisplayModels:getDisplayModel] In-memory store hit for "${id}":`, inMemoryModel)
       return inMemoryModel as DisplayModelFile
     }
 
     // Check in-memory cache
     if (displayModelCache.has(id)) {
-      console.info(`[DisplayModels:getDisplayModel] In-memory cache hit for "${id}"`)
+      debug(`[DisplayModels:getDisplayModel] In-memory cache hit for "${id}"`)
       displayModelCache.get(id)!.addedTime = Date.now()
       return displayModelCache.get(id)!.model
     }
 
-    console.info(`[DisplayModels:getDisplayModel] Querying localforage.getItem("${id}")...`)
+    debug(`[DisplayModels:getDisplayModel] Querying localforage.getItem("${id}")...`)
     const modelFromFile = await localforage.getItem<DisplayModelFile>(id).catch((err) => {
       console.error(`[DisplayModels:getDisplayModel] localforage.getItem("${id}") threw error:`, err)
       return null
     })
 
-    console.info(`[DisplayModels:getDisplayModel] localforage.getItem("${id}") returned:`, {
+    debug(`[DisplayModels:getDisplayModel] localforage.getItem("${id}") returned:`, {
       found: !!modelFromFile,
       format: modelFromFile?.format,
       file: modelFromFile?.file,
@@ -535,7 +648,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
 
     console.warn(`[DisplayModels:getDisplayModel] No user model found in IndexedDB for "${id}". Checking presets...`)
     const preset = displayModelsPresets.find(model => model.id === id)
-    console.info(`[DisplayModels:getDisplayModel] Preset lookup result for "${id}":`, preset)
+    debug(`[DisplayModels:getDisplayModel] Preset lookup result for "${id}":`, preset)
     return preset
   }
 
@@ -1230,12 +1343,13 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
       }
     }
 
+    newDisplayModel._searchKey = buildDisplayModelSearchKey(newDisplayModel)
     displayModels.value = [newDisplayModel, ...displayModels.value]
 
-    const cleanModel = {
+    const cleanModel = toPlainModel({
       ...toRaw(newDisplayModel),
       file: toRaw(file),
-    }
+    })
     await localforage.setItem<DisplayModelFile>(newDisplayModel.id, cleanModel)
       .catch(err => console.error(err))
     broadcastModelsSync(Date.now())
@@ -1254,19 +1368,20 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
       console.error('[DisplayModels] Failed to generate MMD preview:', e)
     }
 
+    newDisplayModel._searchKey = buildDisplayModelSearchKey(newDisplayModel)
     displayModels.value = [newDisplayModel, ...displayModels.value]
 
     // Persist model file un-proxied so IndexedDB structured clone preserves native File prototype
-    const cleanModel = {
+    const cleanModel = toPlainModel({
       ...toRaw(newDisplayModel),
       file: toRaw(modelFile),
-    }
+    })
     await localforage.setItem<DisplayModelFile>(newDisplayModel.id, cleanModel)
       .catch(err => console.error(err))
 
     // Persist texture files keyed by model ID
     if (textureFiles.length > 0) {
-      const cleanTextures = textureFiles.map(t => ({
+      const cleanTextures = textureFiles.map(t => toPlainModel({
         ...toRaw(t),
         file: toRaw(t.file),
       }))
@@ -1306,17 +1421,16 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     if (index !== -1) {
       const target = displayModels.value[index]
       target.name = name
-      target._searchKey = `${name} ${Array.isArray(target.tags) ? target.tags.join(' ') : ''} ${Array.isArray(target.groups) ? target.groups.join(' ') : ''}`.toLowerCase()
+      target._searchKey = buildDisplayModelSearchKey(target)
       triggerRef(displayModels)
     }
 
     // Persist if it's a file-based model
     if (id.startsWith('display-model-')) {
-      const rawModel = toRaw(displayModel)
-      const cleanModel = {
-        ...rawModel,
-        ...('file' in rawModel ? { file: toRaw((rawModel as any).file) } : {}),
-      }
+      const cleanModel = toPlainModel({
+        ...toRaw(displayModel),
+        ...('file' in displayModel ? { file: toRaw((displayModel as any).file) } : {}),
+      })
       const targetFile = (cleanModel as any).file
       console.info('[DisplayModels:updateDisplayModelName] Accountable write to IndexedDB:', { id, isFileInstance: targetFile instanceof File || targetFile instanceof Blob, fileType: typeof targetFile, cleanModel })
       await localforage.setItem(id, cleanModel)
@@ -1325,7 +1439,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     }
   }
 
-  async function updateDisplayModelMeta(id: string, updates: { nsfw?: boolean, groups?: string[] }) {
+  async function updateDisplayModelMeta(id: string, updates: { nsfw?: boolean, groups?: string[], tags?: string[], name?: string, externalCatalogId?: string, previewImage?: string }) {
     await until(displayModelsFromIndexedDBLoading).toBe(false)
     const displayModel = id.startsWith('display-model-')
       ? await localforage.getItem<DisplayModelFile>(id)
@@ -1337,8 +1451,20 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     if ('nsfw' in updates) {
       displayModel.nsfw = updates.nsfw
     }
-    if ('groups' in updates) {
-      displayModel.groups = updates.groups
+    if ('groups' in updates && updates.groups) {
+      displayModel.groups = Array.isArray(updates.groups) ? [...updates.groups].map(String) : []
+    }
+    if ('tags' in updates && updates.tags) {
+      displayModel.tags = Array.isArray(updates.tags) ? [...updates.tags].map(String) : []
+    }
+    if ('name' in updates && updates.name) {
+      displayModel.name = updates.name
+    }
+    if ('externalCatalogId' in updates && updates.externalCatalogId) {
+      displayModel.externalCatalogId = updates.externalCatalogId
+    }
+    if ('previewImage' in updates && updates.previewImage) {
+      displayModel.previewImage = updates.previewImage
     }
     displayModelCache.delete(id)
 
@@ -1349,20 +1475,31 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
       if ('nsfw' in updates) {
         target.nsfw = updates.nsfw
       }
-      if ('groups' in updates) {
-        target.groups = updates.groups
+      if ('groups' in updates && updates.groups) {
+        target.groups = Array.isArray(updates.groups) ? [...updates.groups].map(String) : []
       }
-      target._searchKey = `${target.name || ''} ${Array.isArray(target.tags) ? target.tags.join(' ') : ''} ${Array.isArray(target.groups) ? target.groups.join(' ') : ''}`.toLowerCase()
+      if ('tags' in updates && updates.tags) {
+        target.tags = Array.isArray(updates.tags) ? [...updates.tags].map(String) : []
+      }
+      if ('name' in updates && updates.name) {
+        target.name = updates.name
+      }
+      if ('externalCatalogId' in updates && updates.externalCatalogId) {
+        target.externalCatalogId = updates.externalCatalogId
+      }
+      if ('previewImage' in updates && updates.previewImage) {
+        target.previewImage = updates.previewImage
+      }
+      target._searchKey = buildDisplayModelSearchKey(target)
       triggerRef(displayModels)
     }
 
     // Persist if it's a file-based model
     if (id.startsWith('display-model-')) {
-      const rawModel = toRaw(displayModel)
-      const cleanModel = {
-        ...rawModel,
-        ...('file' in rawModel ? { file: toRaw((rawModel as any).file) } : {}),
-      }
+      const cleanModel = toPlainModel({
+        ...toRaw(displayModel),
+        ...('file' in displayModel ? { file: toRaw((displayModel as any).file) } : {}),
+      })
       const targetFile = (cleanModel as any).file
       console.info('[DisplayModels:updateDisplayModelMeta] Accountable write to IndexedDB:', { id, isFileInstance: targetFile instanceof File || targetFile instanceof Blob, fileType: typeof targetFile, cleanModel })
       await localforage.setItem(id, cleanModel)
@@ -1380,25 +1517,25 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
     if (!displayModel)
       return
 
-    displayModel.tags = tags
+    const cleanTags = Array.isArray(tags) ? [...tags].map(String) : []
+    displayModel.tags = cleanTags
     displayModelCache.delete(id)
 
     // Update reactive state
     const index = displayModels.value.findIndex(m => m.id === id)
     if (index !== -1) {
       const target = displayModels.value[index]
-      target.tags = tags
-      target._searchKey = `${target.name || ''} ${Array.isArray(tags) ? tags.join(' ') : ''} ${Array.isArray(target.groups) ? target.groups.join(' ') : ''}`.toLowerCase()
+      target.tags = cleanTags
+      target._searchKey = buildDisplayModelSearchKey(target)
       triggerRef(displayModels)
     }
 
     // Persist if it's a file-based model
     if (id.startsWith('display-model-')) {
-      const rawModel = toRaw(displayModel)
-      const cleanModel = {
-        ...rawModel,
-        ...('file' in rawModel ? { file: toRaw((rawModel as any).file) } : {}),
-      }
+      const cleanModel = toPlainModel({
+        ...toRaw(displayModel),
+        ...('file' in displayModel ? { file: toRaw((displayModel as any).file) } : {}),
+      })
       const targetFile = (cleanModel as any).file
       console.info('[DisplayModels:updateDisplayModelTags] Accountable write to IndexedDB:', { id, isFileInstance: targetFile instanceof File || targetFile instanceof Blob, fileType: typeof targetFile, cleanModel })
       await localforage.setItem(id, cleanModel)
@@ -1469,7 +1606,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         motionCapabilities: displayModel.motionCapabilities ? JSON.parse(JSON.stringify(displayModel.motionCapabilities)) : undefined,
         vfxMappings: displayModel.vfxMappings ? JSON.parse(JSON.stringify(displayModel.vfxMappings)) : undefined,
         outfits: displayModel.outfits ? JSON.parse(JSON.stringify(displayModel.outfits)) : undefined,
-        _searchKey: `${displayModel.name || ''} ${Array.isArray(displayModel.tags) ? displayModel.tags.join(' ') : ''} ${Array.isArray(displayModel.groups) ? displayModel.groups.join(' ') : ''}`.toLowerCase(),
+        _searchKey: buildDisplayModelSearchKey(displayModel),
       }
       displayModels.value.push(itemMeta)
       triggerRef(displayModels)
@@ -1503,7 +1640,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         fileType: typeof targetFile,
         cleanModel,
       })
-      await localforage.setItem(id, cleanModel)
+      await localforage.setItem(id, toPlainModel(cleanModel))
       await syncMetadataCacheFromMemory()
       broadcastModelsSync(Date.now())
     }
@@ -1647,6 +1784,7 @@ export const useDisplayModelsStore = defineStore('display-models', () => {
         remoteModelsCatalog.value = (res.models || []).map((m: any) => ({
           ...m,
           type: 'cloud',
+          _searchKey: buildDisplayModelSearchKey(m),
         }))
         debug(`[DisplayModels] fetchRemoteDisplayModelsCatalog: Successfully fetched ${remoteModelsCatalog.value.length} remote models.`)
         if (!providerOverride || providerOverride === syncStore.activeProvider) {

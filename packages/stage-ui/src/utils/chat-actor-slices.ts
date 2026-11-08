@@ -1,7 +1,9 @@
 import type { ChatSlices, ChatSlicesText } from '../types/chat'
 
+import { parseSticker } from '../composables/queues'
+
 const ACTOR_TOKEN_PATTERN = /^<\|ACTOR:\s*([\w-]+)\s*(?:\|>|>)$/i
-const LLM_MARKER_PATTERN = /<\|[\s\S]*?\|>|<\|(?:ACTOR|ACT|DELAY|llm_[\w:-])[^\r\n>]*>/gi
+const LLM_MARKER_PATTERN = /<\|[\s\S]*?\|>|<\|(?:ACTOR|ACT|DELAY|STICKER|llm_[\w:-])[^\r\n>]*>/gi
 
 export interface ActorSliceState {
   currentActorId?: string
@@ -209,8 +211,8 @@ export function hydrateStickerSlices(slices: ChatSlices[], rawContent?: string):
   if (!rawContent)
     return slices
 
-  const STICKER_REGEX = /<\|STICKER\s+([\w-]+)/gi
-  const matches = [...rawContent.matchAll(STICKER_REGEX)]
+  const STICKER_TAG_REGEX = /<\|STICKER\b[^\r\n>]*?(?:\|>|>|\})/gi
+  const matches = [...rawContent.matchAll(STICKER_TAG_REGEX)]
   if (matches.length === 0)
     return slices
 
@@ -218,14 +220,26 @@ export function hydrateStickerSlices(slices: ChatSlices[], rawContent?: string):
     slices.filter(s => s.type === 'sticker').map(s => s.stickerId),
   )
 
-  const missingMatches = matches.filter(m => !existingIds.has(m[1]))
-  if (missingMatches.length === 0)
+  const candidateMatches: { match: RegExpMatchArray, parsed: ReturnType<typeof parseSticker> }[] = []
+  for (const match of matches) {
+    const parsed = parseSticker(match[0])
+    if (!parsed)
+      continue
+    // Only chat or both surfaces are hydrated as chat bubble slices; widget-only stickers are desktop decals
+    if (parsed.surface !== 'chat' && parsed.surface !== 'both')
+      continue
+    if (existingIds.has(parsed.id))
+      continue
+    candidateMatches.push({ match, parsed })
+  }
+
+  if (candidateMatches.length === 0)
     return slices
 
   const result = [...slices]
 
-  for (const match of missingMatches) {
-    const stickerId = match[1]
+  for (const { match, parsed } of candidateMatches) {
+    const stickerId = parsed!.id
     const stickerSlice: ChatSlices = { type: 'sticker', stickerId }
 
     if (result.length === 0) {

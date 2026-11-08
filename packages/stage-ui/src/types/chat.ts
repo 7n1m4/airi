@@ -29,6 +29,25 @@ export interface ChatSlicesSticker {
 
 export type ChatSlices = ChatSlicesText | ChatSlicesToolCall | ChatSlicesToolCallResult | ChatSlicesSticker
 
+export interface ChatGroundingHit {
+  id: string
+  subject?: string
+  predicate?: string
+  object?: string
+  title?: string
+  content?: string
+  score?: number
+  source?: string
+  isKgClaim?: boolean
+}
+
+export interface ChatGroundingMetadata {
+  queries?: string[]
+  chunks?: { title: string, uri: string }[]
+  entities?: string[]
+  hits?: ChatGroundingHit[]
+}
+
 export interface ChatAssistantMessage extends AssistantMessage {
   slices: ChatSlices[]
   tool_results: {
@@ -47,11 +66,16 @@ export interface ChatAssistantMessage extends AssistantMessage {
     speech: string
     reasoning: string
   }
-  grounding?: {
-    queries: string[]
-    chunks: { title: string, uri: string }[]
-  }
+  grounding?: ChatGroundingMetadata
   error?: { message: string, detail: string }
+  cadenceBubbles?: string[]
+  /** [start, end) offsets into the original message content, parallel to cadenceBubbles. */
+  cadenceBubbleRanges?: { start: number, end: number }[]
+  /** Conversational beats per split transition. Voiced delivery waits for audio, then this. */
+  cadenceBeatsMs?: number[]
+  /** Text-only delays per split transition (beat + full next-bubble typing). Legacy pauses alias. */
+  cadenceTextDelaysMs?: number[]
+  cadencePausesMs?: number[]
 }
 
 export type ChatMessage = ChatAssistantMessage | SystemMessage | ToolMessage | UserMessage
@@ -78,7 +102,7 @@ export interface ContextMessage extends ContextUpdate<Record<string, unknown>, s
   createdAt: number
 }
 
-export type ChatHistoryItem = (ChatMessage | ErrorMessage | DirectorMessage) & { context?: ContextMessage } & { createdAt?: number, id?: string, metadata?: Record<string, unknown> }
+export type ChatHistoryItem = (ChatMessage | ErrorMessage | DirectorMessage) & { context?: ContextMessage, grounding?: ChatGroundingMetadata } & { createdAt?: number, id?: string }
 
 export interface ChatStreamEventContext {
   message: ChatHistoryItem

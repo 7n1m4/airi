@@ -13,7 +13,6 @@ import { useIdleAnimations } from '../../../../composables'
 import { useAiriCardStore } from '../../../../stores/modules'
 import { useSettings } from '../../../../stores/settings'
 import { usePositioningStore } from '../../../../stores/settings/positioning'
-import { useVHackStore } from '../../../../stores/vhack'
 import { ModelAssignmentModal } from '../../dialogs/model-assignment'
 import { ModelSelectorDialog } from '../../dialogs/model-selector'
 
@@ -38,9 +37,6 @@ const VRM = defineAsyncComponent(() => import('./vrm.vue'))
 const Spine = defineAsyncComponent(() => import('./spine.vue'))
 const MMD = defineAsyncComponent(() => import('./mmd.vue'))
 
-const HackerPanel = defineAsyncComponent(() => import('./vrm-vhack/HackerPanel.vue'))
-const LHackerPanel = defineAsyncComponent(() => import('./live2d-lhack/LHackerPanel.vue'))
-
 const router = useRouter()
 const modelSelectorOpen = ref(false)
 const modelSelectorTab = ref<'library' | 'explore' | 'cloud'>(props.initialTab || 'library')
@@ -56,7 +52,6 @@ function openModelSelector(tab: 'library' | 'explore' | 'cloud' = 'library') {
 const modelAssignmentOpen = ref(false)
 const positionCursor = useMouse()
 const settingsStore = useSettings()
-const vhackStore = useVHackStore()
 const spineStore = useSpine()
 const {
   live2dDisableFocus,
@@ -235,7 +230,6 @@ function handleOffsetChange(offset: { x: number, y: number }) {
             :model-src="stageModelSelectedUrl"
             :model-identity="stageModelSelected"
             :idle-animations="resolvedIdleAnimations"
-            @binary-loaded="vhackStore.setSourceArrayBuffer"
           />
         </div>
       </template>
@@ -356,8 +350,5 @@ function handleOffsetChange(offset: { x: number, y: number }) {
         @extract-colors-from-model="$emit('extractColorsFromModel')"
       />
     </div>
-
-    <HackerPanel v-if="stageModelRenderer === 'vrm'" />
-    <LHackerPanel v-if="stageModelRenderer === 'live2d'" />
   </div>
 </template>

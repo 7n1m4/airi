@@ -17,15 +17,18 @@ interface Props {
   modelValue: boolean
   cardId?: string
   existingIds?: string[]
+  stickerToEdit?: CardCustomSticker | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
   existingIds: () => [],
+  stickerToEdit: null,
 })
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: boolean): void
   (e: 'created', sticker: CardCustomSticker): void
+  (e: 'updated', payload: { oldId: string, sticker: CardCustomSticker }): void
 }>()
 
 const stickersStore = useStickersStore()
@@ -40,6 +43,29 @@ const emotionsInput = ref<string>('')
 const idManuallyEdited = ref(false)
 const isSaving = ref(false)
 const isDragging = ref(false)
+
+const isRemovingBg = ref(false)
+const bgProgress = ref<number | null>(null)
+const bgPhase = ref<'idle' | 'loading-model' | 'segmenting'>('idle')
+const originalFileBackup = ref<File | Blob | null>(null)
+const lastMaskData = ref<Uint8Array | null>(null)
+const lastSourceImageData = ref<ImageData | null>(null)
+const bgSensitivity = ref(65)
+let bgAborter: AbortController | null = null
+
+const isBusy = computed(() => isSaving.value || isRemovingBg.value)
+
+const removeBgButtonText = computed(() => {
+  if (bgPhase.value === 'loading-model') {
+    return bgProgress.value != null ? `Loading model… ${bgProgress.value}%` : 'Loading model…'
+  }
+  if (bgPhase.value === 'segmenting') {
+    return 'Removing background…'
+  }
+  return 'Remove Background'
+})
+
+const isEdit = computed(() => !!props.stickerToEdit)
 
 const EMOTION_SUGGESTIONS = [
   'happy',
@@ -71,7 +97,12 @@ function handleFileSelected(file: File) {
     return
   }
 
-  if (previewUrl.value) {
+  bgAborter?.abort()
+  originalFileBackup.value = null
+  isRemovingBg.value = false
+  bgPhase.value = 'idle'
+
+  if (selectedFile.value && previewUrl.value) {
     URL.revokeObjectURL(previewUrl.value)
   }
 
@@ -128,12 +159,15 @@ function toggleEmotionChip(emotion: string) {
 const idCollision = computed(() => {
   if (!stickerId.value)
     return false
-  return props.existingIds.includes(stickerId.value)
+  if (isEdit.value && props.stickerToEdit && stickerId.value.trim().toLowerCase() === props.stickerToEdit.id.toLowerCase())
+    return false
+  return props.existingIds.map(id => id.toLowerCase()).includes(stickerId.value.trim().toLowerCase())
 })
 
 const isValid = computed(() => {
+  const hasImage = !!selectedFile.value || (isEdit.value && !!previewUrl.value)
   return (
-    !!selectedFile.value
+    hasImage
     && !!stickerId.value
     && !idCollision.value
     && !!label.value.trim()
@@ -142,7 +176,14 @@ const isValid = computed(() => {
 })
 
 function resetForm() {
-  if (previewUrl.value) {
+  bgAborter?.abort()
+  bgAborter = null
+  isRemovingBg.value = false
+  bgPhase.value = 'idle'
+  bgProgress.value = null
+  originalFileBackup.value = null
+
+  if (selectedFile.value && previewUrl.value) {
     URL.revokeObjectURL(previewUrl.value)
   }
   selectedFile.value = null
@@ -153,22 +194,196 @@ function resetForm() {
   emotionsInput.value = ''
   idManuallyEdited.value = false
   isSaving.value = false
+  lastMaskData.value = null
+  lastSourceImageData.value = null
+  bgSensitivity.value = 65
   if (fileInputRef.value) {
     fileInputRef.value.value = ''
   }
 }
 
+function handleRemoveNewFile() {
+  bgAborter?.abort()
+  originalFileBackup.value = null
+  lastMaskData.value = null
+  lastSourceImageData.value = null
+  bgSensitivity.value = 65
+  isRemovingBg.value = false
+  bgPhase.value = 'idle'
+
+  if (selectedFile.value && previewUrl.value) {
+    URL.revokeObjectURL(previewUrl.value)
+  }
+  selectedFile.value = null
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
+  if (isEdit.value && props.stickerToEdit) {
+    stickersStore.getStickerUrl(props.stickerToEdit.id).then((url) => {
+      previewUrl.value = url || ''
+    })
+  }
+  else {
+    previewUrl.value = ''
+  }
+}
+
+async function handleRemoveBackground() {
+  let blobToProcess: Blob | null = selectedFile.value
+  if (!blobToProcess && previewUrl.value) {
+    try {
+      const res = await fetch(previewUrl.value)
+      blobToProcess = await res.blob()
+    }
+    catch (err) {
+      console.error('[CardStickerAddModal] Failed to fetch preview blob:', err)
+    }
+  }
+
+  if (!blobToProcess || isBusy.value)
+    return
+
+  if (!originalFileBackup.value) {
+    originalFileBackup.value = selectedFile.value || blobToProcess
+  }
+
+  bgAborter?.abort()
+  bgAborter = new AbortController()
+  isRemovingBg.value = true
+  bgPhase.value = 'loading-model'
+  bgProgress.value = null
+
+  try {
+    const cutout = await stickersStore.removeImageBackground(blobToProcess, {
+      signal: bgAborter.signal,
+      sensitivity: bgSensitivity.value,
+      onProgress: (stage, percent) => {
+        bgPhase.value = stage
+        bgProgress.value = typeof percent === 'number' && percent >= 0 ? Math.round(percent) : null
+      },
+    })
+
+    lastMaskData.value = cutout.maskData ?? null
+    lastSourceImageData.value = cutout.sourceImageData ?? null
+
+    const originalName = selectedFile.value?.name || (label.value ? `${label.value}.png` : 'sticker.png')
+    const pngName = `${originalName.replace(/\.[^/.]+$/, '')}.png`
+    const newFile = new File([cutout], pngName, { type: 'image/png' })
+
+    if (previewUrl.value && selectedFile.value) {
+      URL.revokeObjectURL(previewUrl.value)
+    }
+
+    selectedFile.value = newFile
+    previewUrl.value = URL.createObjectURL(cutout)
+    toast.success('Background removed successfully!')
+  }
+  catch (err: any) {
+    if (err?.name === 'AbortError' || bgAborter?.signal.aborted)
+      return
+    console.error('[CardStickerAddModal] Background removal failed:', err)
+    toast.error(`Background removal failed: ${err?.message || 'Unknown error'}`)
+  }
+  finally {
+    isRemovingBg.value = false
+    bgPhase.value = 'idle'
+  }
+}
+
+async function handleSensitivityChange() {
+  if (!lastSourceImageData.value || !lastMaskData.value)
+    return
+
+  try {
+    const newCutout = await stickersStore.recomputeCutoutBlob(
+      lastSourceImageData.value,
+      lastMaskData.value,
+      bgSensitivity.value,
+    )
+
+    const originalName = selectedFile.value?.name || (label.value ? `${label.value}.png` : 'sticker.png')
+    const pngName = `${originalName.replace(/\.[^/.]+$/, '')}.png`
+    const newFile = new File([newCutout], pngName, { type: 'image/png' })
+
+    if (previewUrl.value && selectedFile.value) {
+      URL.revokeObjectURL(previewUrl.value)
+    }
+
+    selectedFile.value = newFile
+    previewUrl.value = URL.createObjectURL(newCutout)
+  }
+  catch (err) {
+    console.error('[CardStickerAddModal] Failed to recompute cutout with sensitivity:', err)
+  }
+}
+
+function handleRevert() {
+  if (isBusy.value)
+    return
+  bgAborter?.abort()
+  lastMaskData.value = null
+  lastSourceImageData.value = null
+  bgSensitivity.value = 65
+
+  if (originalFileBackup.value) {
+    if (selectedFile.value && previewUrl.value) {
+      URL.revokeObjectURL(previewUrl.value)
+    }
+    const restored = originalFileBackup.value
+    originalFileBackup.value = null
+
+    if (restored instanceof File) {
+      selectedFile.value = restored
+      previewUrl.value = URL.createObjectURL(restored)
+    }
+    else if (isEdit.value && props.stickerToEdit) {
+      selectedFile.value = null
+      stickersStore.getStickerUrl(props.stickerToEdit.id).then((url) => {
+        previewUrl.value = url || ''
+      })
+    }
+    else {
+      const restoredFile = new File([restored], `${stickerId.value || 'sticker'}.png`, { type: (restored as Blob).type || 'image/png' })
+      selectedFile.value = restoredFile
+      previewUrl.value = URL.createObjectURL(restored)
+    }
+    toast.info('Reverted to original artwork.')
+    return
+  }
+
+  handleRemoveNewFile()
+}
+
 watch(
-  () => props.modelValue,
-  (open) => {
+  [() => props.modelValue, () => props.stickerToEdit],
+  async ([open, toEdit]) => {
     if (!open) {
+      resetForm()
+      return
+    }
+
+    if (toEdit) {
+      stickerId.value = toEdit.id
+      label.value = toEdit.label
+      description.value = toEdit.description
+      emotionsInput.value = toEdit.emotions ? toEdit.emotions.join(', ') : ''
+      idManuallyEdited.value = true
+      selectedFile.value = null
+
+      const existingUrl = await stickersStore.getStickerUrl(toEdit.id)
+      if (existingUrl && !selectedFile.value) {
+        previewUrl.value = existingUrl
+      }
+    }
+    else {
       resetForm()
     }
   },
+  { immediate: true },
 )
 
 async function handleSave() {
-  if (!isValid.value || !selectedFile.value) {
+  if (!isValid.value) {
     return
   }
 
@@ -184,25 +399,50 @@ async function handleSave() {
       parsedEmotions.push(finalId)
     }
 
-    // Save binary into localforage directly
-    await stickersStore.addSticker(
-      selectedFile.value,
-      label.value.trim(),
-      props.cardId,
-      finalId,
-    )
+    if (isEdit.value && props.stickerToEdit) {
+      await stickersStore.updateSticker(
+        props.stickerToEdit.id,
+        {
+          id: finalId,
+          label: label.value.trim(),
+          file: selectedFile.value || undefined,
+          characterId: props.cardId,
+        },
+      )
 
-    const newSticker: CardCustomSticker = {
-      id: finalId,
-      label: label.value.trim(),
-      description: description.value.trim(),
-      emotions: parsedEmotions,
-      createdAt: Date.now(),
+      const updatedSticker: CardCustomSticker = {
+        id: finalId,
+        label: label.value.trim(),
+        description: description.value.trim(),
+        emotions: parsedEmotions,
+        createdAt: props.stickerToEdit.createdAt || Date.now(),
+      }
+
+      emit('updated', { oldId: props.stickerToEdit.id, sticker: updatedSticker })
+      emit('update:modelValue', false)
+      toast.success(`Sticker "${finalId}" updated!`)
     }
+    else if (selectedFile.value) {
+      // Save binary into localforage directly
+      await stickersStore.addSticker(
+        selectedFile.value,
+        label.value.trim(),
+        props.cardId,
+        finalId,
+      )
 
-    emit('created', newSticker)
-    emit('update:modelValue', false)
-    toast.success(`Sticker "<|STICKER ${finalId}|>" created!`)
+      const newSticker: CardCustomSticker = {
+        id: finalId,
+        label: label.value.trim(),
+        description: description.value.trim(),
+        emotions: parsedEmotions,
+        createdAt: Date.now(),
+      }
+
+      emit('created', newSticker)
+      emit('update:modelValue', false)
+      toast.success(`Sticker "<|STICKER ${finalId}|>" created!`)
+    }
   }
   catch (err: any) {
     console.error('[CardStickerAddModal] Failed to save sticker:', err)
@@ -229,10 +469,10 @@ async function handleSave() {
             </div>
             <div>
               <DialogTitle class="text-base text-neutral-800 font-semibold dark:text-neutral-100">
-                Add Custom Reaction Sticker
+                {{ isEdit ? 'Edit Reaction Sticker' : 'Add Custom Reaction Sticker' }}
               </DialogTitle>
               <p class="text-xs text-neutral-500 dark:text-neutral-400">
-                Upload a transparent PNG/WebP and configure its LLM prompt directives.
+                {{ isEdit ? 'Update sticker ID, label, description, or replacement artwork.' : 'Upload a transparent PNG/WebP and configure its LLM prompt directives.' }}
               </p>
             </div>
           </div>
@@ -262,7 +502,7 @@ async function handleSave() {
             >
 
             <div
-              v-if="!selectedFile"
+              v-if="!selectedFile && !previewUrl"
               class="cursor-pointer border-2 rounded-xl border-dashed p-6 text-center transition-all"
               :class="[
                 isDragging
@@ -305,28 +545,72 @@ async function handleSave() {
 
               <div class="flex flex-1 flex-col gap-1 overflow-hidden">
                 <span class="truncate text-xs text-neutral-800 font-semibold dark:text-neutral-200">
-                  {{ selectedFile.name }}
+                  {{ selectedFile ? selectedFile.name : (label || stickerId) }}
                 </span>
                 <span class="text-[11px] text-neutral-400">
-                  {{ (selectedFile.size / 1024).toFixed(1) }} KB • {{ selectedFile.type || 'image/png' }}
+                  {{ selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB • ${selectedFile.type || 'image/png'}` : 'Current artwork (replace optional)' }}
                 </span>
                 <div class="mt-1 flex items-center gap-2">
                   <button
                     type="button"
-                    class="rounded px-2 py-0.5 text-xs text-primary-600 transition-colors hover:bg-primary-500/10 dark:text-primary-400"
+                    class="rounded px-2 py-0.5 text-xs text-primary-600 transition-colors hover:bg-primary-500/10 dark:text-primary-400 disabled:opacity-50"
+                    :disabled="isBusy"
                     @click="fileInputRef?.click()"
                   >
                     Change Image
                   </button>
-                  <span class="text-neutral-300 dark:text-neutral-700">|</span>
-                  <button
-                    type="button"
-                    class="rounded px-2 py-0.5 text-xs text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400"
-                    @click="resetForm"
-                  >
-                    Remove
-                  </button>
+                  <template v-if="selectedFile || previewUrl">
+                    <span class="text-neutral-300 dark:text-neutral-700">|</span>
+                    <button
+                      type="button"
+                      class="flex items-center gap-1 rounded px-2 py-0.5 text-xs text-primary-600 transition-colors hover:bg-primary-500/10 dark:text-primary-400 disabled:opacity-50"
+                      :disabled="isBusy"
+                      @click="handleRemoveBackground"
+                    >
+                      <div v-if="isRemovingBg" class="i-ph:spinner-gap-bold size-3 animate-spin" />
+                      <div v-else class="i-ph:sparkle-bold size-3" />
+                      <span>{{ removeBgButtonText }}</span>
+                    </button>
+                  </template>
+                  <template v-if="selectedFile || originalFileBackup">
+                    <span class="text-neutral-300 dark:text-neutral-700">|</span>
+                    <button
+                      type="button"
+                      class="rounded px-2 py-0.5 text-xs text-red-600 transition-colors hover:bg-red-500/10 dark:text-red-400 disabled:opacity-50"
+                      :disabled="isBusy"
+                      @click="handleRevert"
+                    >
+                      Revert
+                    </button>
+                  </template>
                 </div>
+              </div>
+            </div>
+
+            <!-- Edge Sensitivity Slider (Active after background removal) -->
+            <div v-if="lastMaskData" class="mt-2.5 w-full flex flex-col gap-1.5 border border-neutral-200/80 rounded-lg bg-neutral-50/80 p-2.5 text-left dark:border-neutral-700/80 dark:bg-neutral-800/50">
+              <div class="flex items-center justify-between text-xs">
+                <label for="sticker-card-sensitivity-slider" class="flex items-center gap-1.5 text-neutral-600 font-medium dark:text-neutral-300">
+                  <div class="i-ph:sliders-horizontal-bold size-3.5 text-primary-500" />
+                  <span>Edge Sensitivity</span>
+                </label>
+                <span class="text-[11px] text-neutral-500 font-mono dark:text-neutral-400">{{ bgSensitivity }}%</span>
+              </div>
+              <input
+                id="sticker-card-sensitivity-slider"
+                v-model.number="bgSensitivity"
+                type="range"
+                min="0"
+                max="100"
+                step="1"
+                :disabled="isBusy"
+                class="h-1.5 w-full cursor-pointer rounded-lg bg-neutral-200 accent-primary-500 dark:bg-neutral-700"
+                @input="handleSensitivityChange"
+              >
+              <div class="flex justify-between text-[10px] text-neutral-400">
+                <span>Clean (0%)</span>
+                <span class="text-neutral-500 font-medium">Default (65%)</span>
+                <span>Preserve Edges (100%)</span>
               </div>
             </div>
           </div>
@@ -433,7 +717,7 @@ async function handleSave() {
             variant="primary"
             size="sm"
             :disabled="!isValid || isSaving"
-            :label="isSaving ? 'Saving...' : 'Add Sticker'"
+            :label="isSaving ? 'Saving...' : (isEdit ? 'Save Changes' : 'Add Sticker')"
             @click="handleSave"
           />
         </div>

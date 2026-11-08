@@ -266,7 +266,7 @@ async function resolveContext(candidate: string | undefined, ctx: ResolvedComman
     try {
       if (await ctx.fs.exists(fullPath)) {
         const stat = await ctx.fs.stat(fullPath)
-        const isDir = stat && typeof stat.isDirectory === 'function' ? stat.isDirectory() : !!(stat && stat.isDirectory)
+        const isDir = stat && typeof (stat.isDirectory as unknown) === 'function' ? (stat.isDirectory as unknown as () => boolean).call(stat) : !!(stat && stat.isDirectory)
         if (!isDir) {
           return await ctx.fs.readFile(fullPath)
         }
@@ -597,7 +597,7 @@ Examples:
       try {
         if (await ctx.fs.exists(fullPath)) {
           const stat = await ctx.fs.stat(fullPath)
-          const isDir = stat && typeof stat.isDirectory === 'function' ? stat.isDirectory() : !!(stat && stat.isDirectory)
+          const isDir = stat && typeof (stat.isDirectory as unknown) === 'function' ? (stat.isDirectory as unknown as () => boolean).call(stat) : !!(stat && stat.isDirectory)
           if (!isDir) {
             schemaContent = await ctx.fs.readFile(fullPath)
           }

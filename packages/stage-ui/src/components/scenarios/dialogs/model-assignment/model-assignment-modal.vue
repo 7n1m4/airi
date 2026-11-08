@@ -9,6 +9,7 @@ import { DrawerContent, DrawerHandle, DrawerOverlay, DrawerPortal, DrawerRoot, D
 import { computed, onMounted, ref, watch } from 'vue'
 import { toast } from 'vue-sonner'
 
+import { useDisplayModelsStore } from '../../../../stores/display-models'
 import { useAiriCardStore } from '../../../../stores/modules'
 
 const props = defineProps<{
@@ -31,7 +32,7 @@ const airiCardStore = useAiriCardStore()
 const { activeCard, activeCardId } = storeToRefs(airiCardStore)
 const { updateCard } = airiCardStore
 
-const showAllConcepts = ref(false)
+const displayModelsStore = useDisplayModelsStore()
 const selectedTargetKey = ref<string>('')
 
 interface ConceptOption {
@@ -47,71 +48,75 @@ const visualAssets = computed(() => {
   return activeCard.value?.extensions?.airi?.visual_assets || {}
 })
 
-// Concepts with explicit manifestation modelId
-const assignedConcepts = computed<ConceptOption[]>(() => {
+function getModelName(modelId?: string): string {
+  if (!modelId)
+    return ''
+  const model = displayModelsStore.displayModels.find(m => m.id === modelId)
+  return model?.name || modelId
+}
+
+// Collect actor/character concepts from visual_assets (excluding places/scenes and user concept)
+const actorConcepts = computed<ConceptOption[]>(() => {
   const assets = visualAssets.value
   const result: ConceptOption[] = []
 
   for (const [key, asset] of Object.entries(assets)) {
-    if (asset?.manifestation?.modelId) {
-      result.push({
-        key,
-        label: key,
-        description: asset.description || asset.prompt,
-        currentModelId: asset.manifestation.modelId,
-        isAssigned: true,
-      })
-    }
+    const isPlace = asset?.isBase || key.startsWith('place_') || key.startsWith('scene_') || key.startsWith('bg_')
+    const isUser = key === 'concept_user'
+    if (isPlace || isUser)
+      continue
+
+    const currentModelId = asset?.manifestation?.modelId
+    result.push({
+      key,
+      label: key,
+      description: asset.description || asset.prompt,
+      currentModelId,
+      isAssigned: Boolean(currentModelId),
+      isRootFallback: false,
+    })
   }
   return result
 })
 
-const isMultiModelSetup = computed(() => assignedConcepts.value.length > 0)
-
-// Concepts without explicit manifestation modelId
-const unassignedConcepts = computed<ConceptOption[]>(() => {
-  const assets = visualAssets.value
-  const result: ConceptOption[] = []
-
-  for (const [key, asset] of Object.entries(assets)) {
-    if (!asset?.manifestation?.modelId) {
-      result.push({
-        key,
-        label: key,
-        description: asset.description || asset.prompt,
-        currentModelId: undefined,
-        isAssigned: false,
-      })
-    }
-  }
-  return result
-})
+const isMultiActorCard = computed(() => actorConcepts.value.length > 0)
 
 const availableOptions = computed<ConceptOption[]>(() => {
-  if (!isMultiModelSetup.value) {
-    // Single-model setup: root displayModelId is the only option
-    return [
-      {
-        key: '__ROOT_DISPLAY_MODEL__',
-        label: activeCard.value?.name || 'Primary Character Default',
-        description: 'Set as the main 3D model for this card',
-        currentModelId: activeCard.value?.extensions?.airi?.modules?.displayModelId,
-        isAssigned: true,
-        isRootFallback: true,
-      },
-    ]
+  const rootOption: ConceptOption = {
+    key: '__ROOT_DISPLAY_MODEL__',
+    label: activeCard.value?.name || 'Primary Character Default',
+    description: isMultiActorCard.value
+      ? 'Set as the fallback 3D model when no specific actor is active'
+      : 'Set as the main 3D model for this card',
+    currentModelId: activeCard.value?.extensions?.airi?.modules?.displayModelId,
+    isAssigned: Boolean(activeCard.value?.extensions?.airi?.modules?.displayModelId),
+    isRootFallback: true,
   }
 
-  // Multi-model setup: list assigned concepts, and unassigned concepts if toggle is enabled
-  if (showAllConcepts.value) {
-    return [...assignedConcepts.value, ...unassignedConcepts.value]
+  if (!isMultiActorCard.value) {
+    return [rootOption]
   }
-  return assignedConcepts.value
+
+  // Multi-actor setup: list root default fallback + all actor concepts
+  return [rootOption, ...actorConcepts.value]
 })
 
 watch(showDialog, (isOpen) => {
   if (isOpen && availableOptions.value.length > 0) {
-    selectedTargetKey.value = availableOptions.value[0].key
+    // If the selected model name matches an actor key, smart pre-select it
+    const modelName = (props.selectedModel?.name || props.modelId || '').toLowerCase()
+    const matched = actorConcepts.value.find((opt) => {
+      const cleanKey = opt.key.replace(/^(actor_|actress_)/, '').toLowerCase()
+      const parts = cleanKey.split('_').filter(p => p.length >= 3)
+      return parts.some(p => modelName.includes(p))
+    })
+
+    if (matched) {
+      selectedTargetKey.value = matched.key
+    }
+    else if (!selectedTargetKey.value || !availableOptions.value.some(opt => opt.key === selectedTargetKey.value)) {
+      selectedTargetKey.value = availableOptions.value[0].key
+    }
   }
 })
 
@@ -194,7 +199,9 @@ async function handleConfirmAssignment() {
   try {
     const raw = localStorage.getItem('settings/airi-card/character-bindings')
     const map = raw ? JSON.parse(raw) : {}
-    const triggerKey = card.name?.toLowerCase().trim()
+    const triggerKey = selectedTargetKey.value !== '__ROOT_DISPLAY_MODEL__'
+      ? selectedTargetKey.value.replace(/^(actor_|actress_)/, '').toLowerCase().trim()
+      : card.name?.toLowerCase().trim()
     if (triggerKey) {
       map[triggerKey] = {
         ...map[triggerKey],
@@ -257,32 +264,11 @@ async function handleConfirmAssignment() {
             </div>
           </div>
 
-          <!-- Multi-model director notice & toggle -->
-          <div v-if="isMultiModelSetup" :class="['flex flex-col gap-2']">
+          <!-- Multi-actor notice -->
+          <div v-if="isMultiActorCard" :class="['flex flex-col gap-2']">
             <div :class="['rounded-lg bg-amber-500/10 p-2.5 text-xs text-amber-600 dark:text-amber-400 flex items-start gap-2']">
               <div :class="['i-solar:info-circle-bold-duotone text-base flex-shrink-0 mt-0.5']" />
-              <span>Multi-concept card detected. Root model fallback is managed by the Director between turns. Assign directly to a concept slot below.</span>
-            </div>
-
-            <div v-if="unassignedConcepts.length > 0" :class="['flex items-center justify-between pt-1']">
-              <span :class="['text-xs text-neutral-500 dark:text-neutral-400']">
-                Show unassigned concepts ({{ unassignedConcepts.length }})
-              </span>
-              <button
-                type="button"
-                :class="[
-                  'relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none',
-                  showAllConcepts ? 'bg-primary-500' : 'bg-neutral-300 dark:bg-neutral-700',
-                ]"
-                @click="showAllConcepts = !showAllConcepts"
-              >
-                <span
-                  :class="[
-                    'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out',
-                    showAllConcepts ? 'translate-x-4' : 'translate-x-0',
-                  ]"
-                />
-              </button>
+              <span>Multi-actor card detected. Select which actor to manifest this model, or set as the card's default fallback.</span>
             </div>
           </div>
 
@@ -320,7 +306,13 @@ async function handleConfirmAssignment() {
                       Default
                     </span>
                     <span
-                      v-else-if="!opt.isAssigned"
+                      v-else-if="opt.isAssigned"
+                      :class="['rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400']"
+                    >
+                      Assigned
+                    </span>
+                    <span
+                      v-else
                       :class="['rounded px-1.5 py-0.5 text-[10px] font-semibold bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400']"
                     >
                       Unassigned
@@ -329,12 +321,15 @@ async function handleConfirmAssignment() {
                   <p v-if="opt.description" :class="['text-xs text-neutral-500 dark:text-neutral-400 truncate mt-0.5']">
                     {{ opt.description }}
                   </p>
+                  <p v-if="opt.currentModelId" :class="['text-[11px] text-neutral-400 dark:text-neutral-500 truncate mt-0.5 font-mono']">
+                    Current: {{ getModelName(opt.currentModelId) }}
+                  </p>
                 </div>
               </div>
             </label>
 
             <div v-if="availableOptions.length === 0" :class="['py-6 text-center text-sm text-neutral-500']">
-              No concepts available for model assignment. Toggle "Show unassigned concepts" to reveal available slots.
+              No targets available for model assignment.
             </div>
           </div>
 
@@ -386,30 +381,10 @@ async function handleConfirmAssignment() {
             </div>
           </div>
 
-          <!-- Multi-model director notice & toggle -->
-          <div v-if="isMultiModelSetup" :class="['flex flex-col gap-2']">
+          <!-- Multi-actor notice -->
+          <div v-if="isMultiActorCard" :class="['flex flex-col gap-2']">
             <div :class="['rounded-lg bg-amber-500/10 p-2 text-xs text-amber-600 dark:text-amber-400']">
-              Multi-concept card detected. Root model is managed by Director. Select a concept slot below.
-            </div>
-            <div v-if="unassignedConcepts.length > 0" :class="['flex items-center justify-between']">
-              <span :class="['text-xs text-neutral-500 dark:text-neutral-400']">
-                Show unassigned concepts ({{ unassignedConcepts.length }})
-              </span>
-              <button
-                type="button"
-                :class="[
-                  'relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out',
-                  showAllConcepts ? 'bg-primary-500' : 'bg-neutral-300 dark:bg-neutral-700',
-                ]"
-                @click="showAllConcepts = !showAllConcepts"
-              >
-                <span
-                  :class="[
-                    'pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition',
-                    showAllConcepts ? 'translate-x-4' : 'translate-x-0',
-                  ]"
-                />
-              </button>
+              Multi-actor card detected. Select an actor or default fallback.
             </div>
           </div>
 
@@ -434,9 +409,31 @@ async function handleConfirmAssignment() {
                   :checked="selectedTargetKey === opt.key"
                   @change="selectedTargetKey = opt.key"
                 >
-                <span :class="['font-medium text-sm text-neutral-900 dark:text-neutral-100 truncate']">
-                  {{ opt.label }}
-                </span>
+                <div :class="['min-w-0 flex-1']">
+                  <div :class="['flex items-center gap-2']">
+                    <span :class="['font-medium text-sm text-neutral-900 dark:text-neutral-100 truncate']">
+                      {{ opt.label }}
+                    </span>
+                    <span
+                      v-if="opt.isRootFallback"
+                      :class="['rounded px-1.5 py-0.5 text-[10px] font-semibold bg-neutral-200 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300']"
+                    >
+                      Default
+                    </span>
+                    <span
+                      v-else-if="opt.isAssigned"
+                      :class="['rounded px-1.5 py-0.5 text-[10px] font-semibold bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400']"
+                    >
+                      Assigned
+                    </span>
+                    <span
+                      v-else
+                      :class="['rounded px-1.5 py-0.5 text-[10px] font-semibold bg-neutral-100 text-neutral-500 dark:bg-neutral-800 dark:text-neutral-400']"
+                    >
+                      Unassigned
+                    </span>
+                  </div>
+                </div>
               </div>
             </label>
           </div>

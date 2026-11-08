@@ -10,6 +10,16 @@ import { computed, onMounted, watch } from 'vue'
 import { toXml } from 'xast-util-to-xml'
 import { x } from 'xastscript'
 
+import { speechAudioCache } from '../../services/speech/audio-cache'
+import {
+  braceBareScripts,
+  detectSpeechLanguage,
+  findBareLatex,
+  replaceBalancedCommand,
+  speakMath,
+  toSpeechLanguage,
+} from '../../utils/math-speech'
+import { verbalizeWebAddressesAndLinks } from '../../utils/web-address-speech'
 import { useOnboardingStore } from '../onboarding'
 import { useProactivityStore } from '../proactivity'
 import { useProvidersStore } from '../providers'
@@ -20,6 +30,398 @@ export function toSignedPercent(value: number): string {
   if (value < 0)
     return `-${Math.abs(value)}%`
   return '0%'
+}
+
+export function integerToWords(num: number): string {
+  if (num === 0)
+    return 'zero'
+  if (num < 0)
+    return `minus ${integerToWords(Math.abs(num))}`
+
+  const ones = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen']
+  const tens = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety']
+
+  function convertThreeDigits(n: number): string {
+    let str = ''
+    if (n >= 100) {
+      str += `${ones[Math.floor(n / 100)]} hundred`
+      n %= 100
+      if (n > 0)
+        str += ' '
+    }
+    if (n >= 20) {
+      str += tens[Math.floor(n / 10)]
+      n %= 10
+      if (n > 0)
+        str += `-${ones[n]}`
+    }
+    else if (n > 0) {
+      str += ones[n]
+    }
+    return str
+  }
+
+  let words = ''
+  if (num >= 1000) {
+    const thousands = Math.floor(num / 1000)
+    words += `${convertThreeDigits(thousands)} thousand`
+    num %= 1000
+    if (num > 0)
+      words += ' '
+  }
+  if (num > 0) {
+    words += convertThreeDigits(num)
+  }
+  return words
+}
+
+export function verbalizePrices(text: string, _language = 'en'): string {
+  // Matches dollar amounts like $19.99, $1,200.50, $5, $0.50
+  const priceRegex = /\$(\d{1,3}(?:,\d{3})*|\d+)(?:\.(\d{1,2}))?(?=$|[\s,.;:!?)\]])/g
+  return text.replace(priceRegex, (_, dollarsStr, centsStr) => {
+    const dollars = Number.parseInt(dollarsStr.replace(/,/g, ''), 10)
+    if (Number.isNaN(dollars))
+      return _
+
+    const dollarsWord = integerToWords(dollars)
+    const dollarUnit = dollars === 1 ? 'dollar' : 'dollars'
+
+    if (centsStr !== undefined) {
+      const paddedCents = centsStr.length === 1 ? `${centsStr}0` : centsStr
+      const cents = Number.parseInt(paddedCents, 10)
+      if (cents > 0) {
+        const centsWord = integerToWords(cents)
+        const centUnit = cents === 1 ? 'cent' : 'cents'
+        if (dollars === 0)
+          return `${centsWord} ${centUnit}`
+        return `${dollarsWord} ${dollarUnit} and ${centsWord} ${centUnit}`
+      }
+    }
+
+    return `${dollarsWord} ${dollarUnit}`
+  })
+}
+
+export interface PlaygroundPreset {
+  id: string
+  label: string
+  text: string
+}
+
+export const PLAYGROUND_PRESETS: PlaygroundPreset[] = [
+  {
+    id: 'everyday',
+    label: 'Everyday dialogue',
+    text: '*smiles* Your total is $19.99 😊\nLet\'s try a softer voice.',
+  },
+  {
+    id: 'math',
+    label: 'Technical & math',
+    text: 'The solution to $x^2 + y^2 = z^2$ is simple, and costs $4.50.',
+  },
+  {
+    id: 'chemistry',
+    label: 'Chemical reactions',
+    text: 'When \\ce{H2O} reacts with \\ce{CO2}, carbonic acid forms.',
+  },
+  {
+    id: 'roleplay',
+    label: 'Roleplay & stage directions',
+    text: '*giggles softly* [happy] (whispering in your ear) <aside> Are you ready? ~nyan~',
+  },
+  {
+    id: 'code',
+    label: 'Code & markdown',
+    text: 'Here is how to run it:\n```bash\npnpm dev\n```\nIt costs $0.00 to try.',
+  },
+]
+
+export function applyUSTTransformations(text: string, ust?: VoiceProfile['ust'], language?: string): string {
+  if (!ust || !ust.enabled)
+    return text
+
+  // Strip markdown image embeds (e.g., ![caption](url)) so they are not sent to the TTS
+  let transformed = text.replace(/!\[.*?\]\(.*?\)/g, '')
+
+  // 0. Markdown & Speech Sanitization (UST V2 & V3)
+  // Code blocks handling (defaults to mute)
+  const codeBlockAction = ust.codeBlocks ?? (ust.stripCodeBlocks !== false ? 'mute' : 'passThrough')
+  if (codeBlockAction === 'mute') {
+    transformed = transformed.replace(/```[\s\S]*?```/g, '')
+  }
+
+  // Strip raw HTML tags (e.g., <div>, <br/>) if enabled (default true)
+  if (ust.stripHtml !== false) {
+    transformed = transformed.replace(/<\/?[a-z][^>]*>/gi, '')
+  }
+
+  // Process markdown links [label](url) according to preserveMarkdownLinks setting (default 'extract_text')
+  const preserveMarkdownLinks = ust.preserveMarkdownLinks ?? 'extract_text'
+  if (preserveMarkdownLinks === 'extract_text') {
+    transformed = transformed.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+  }
+  else if (preserveMarkdownLinks === 'mute') {
+    transformed = transformed.replace(/\[([^\]]+)\]\([^)]+\)/g, '')
+  }
+
+  // Normalize markdown block boundaries (headers, quotes, lists) into natural line pauses (default true)
+  if (ust.normalizeBlockPauses !== false) {
+    transformed = transformed.replace(/^#{1,6}\s+/gm, '')
+    transformed = transformed.replace(/^>\s+/gm, '')
+    transformed = transformed.replace(/^[-*+]\s+/gm, '')
+    transformed = transformed.replace(/^\d+\.\s+/gm, '')
+  }
+
+  // Resolve formula verbalization base language
+  const baseLanguage = ust.formulaLanguage && ust.formulaLanguage !== 'auto'
+    ? ust.formulaLanguage
+    : detectSpeechLanguage(text, toSpeechLanguage(language) || 'en')
+
+  // Chemical notation handling (mute vs verbalize vs passThrough)
+  const chemAction = ust.chemicalNotation ?? 'passThrough'
+  if (chemAction === 'mute') {
+    transformed = replaceBalancedCommand(transformed, 'ce', () => '')
+  }
+  else if (chemAction === 'verbalize') {
+    transformed = replaceBalancedCommand(transformed, 'ce', (fullMatch) => {
+      const spoken = speakMath(fullMatch, baseLanguage)
+      return spoken ? ` ${spoken.trim()} ` : ''
+    })
+  }
+
+  // Currency verbalization
+  if (ust.readCurrencyNaturally !== false) {
+    transformed = verbalizePrices(transformed, baseLanguage)
+  }
+
+  // Web addresses, file paths, and Obsidian wiki-links (PR #3332 / UST V3)
+  if (ust.readWebAddressesNaturally !== false) {
+    transformed = verbalizeWebAddressesAndLinks(transformed, baseLanguage)
+  }
+
+  // Math formulas handling (mute vs verbalize vs passThrough)
+  const mathAction = ust.mathFormulas ?? 'passThrough'
+  if (mathAction === 'mute') {
+    transformed = transformed.replace(/\$\$[\s\S]*?\$\$/g, '')
+    transformed = transformed.replace(/\\\[[\s\S]*?\\\]/g, '')
+    transformed = transformed.replace(/\\\([\s\S]*?\\\)/g, '')
+    transformed = transformed.replace(/(?<!\\|\$)\$((?!\s)(?:\\\$|[^$])+(?<!\s))\$(?!\$)/g, (match, inner) => {
+      return /^\d+(?:\.\d+)?$/.test(inner.trim()) ? match : ''
+    })
+  }
+  else if (mathAction === 'verbalize') {
+    // 1. Display math: $$...$$
+    transformed = transformed.replace(/\$\$([\s\S]*?)\$\$/g, (_, inner) => {
+      const spoken = speakMath(inner.trim(), baseLanguage)
+      return spoken ? ` ${spoken.trim()} ` : ''
+    })
+    // 2. Display math: \[...\]
+    transformed = transformed.replace(/\\\[([\s\S]*?)\\\]/g, (_, inner) => {
+      const spoken = speakMath(inner.trim(), baseLanguage)
+      return spoken ? ` ${spoken.trim()} ` : ''
+    })
+    // 3. Inline math: \(...\)
+    transformed = transformed.replace(/\\\(([\s\S]*?)\\\)/g, (_, inner) => {
+      const spoken = speakMath(inner.trim(), baseLanguage)
+      return spoken ? ` ${spoken.trim()} ` : ''
+    })
+    // 4. Inline math: $...$
+    transformed = transformed.replace(/(?<!\\|\$)\$((?!\s)(?:\\\$|[^$])+(?<!\s))\$(?!\$)/g, (fullMatch, inner) => {
+      if (/^\d+(?:\.\d+)?$/.test(inner.trim()))
+        return fullMatch
+      const spoken = speakMath(inner.trim(), baseLanguage)
+      return spoken ? ` ${spoken.trim()} ` : ''
+    })
+    // 5. Bare LaTeX commands (e.g. \frac{1}{2}, \alpha = \beta)
+    const bareSpans = findBareLatex(transformed)
+    if (bareSpans.length > 0) {
+      let result = ''
+      let lastIndex = 0
+      for (const span of bareSpans) {
+        result += transformed.slice(lastIndex, span.start)
+        const bareFormula = braceBareScripts(transformed.slice(span.start, span.end))
+        const spoken = speakMath(bareFormula, baseLanguage)
+        result += spoken ? ` ${spoken.trim()} ` : ''
+        lastIndex = span.end
+      }
+      result += transformed.slice(lastIndex)
+      transformed = result
+    }
+  }
+
+  // Protect arithmetic operators (e.g., 2 * 3, 2**10, x**2) from bracket muting/flattening
+  const mathPlaceholders: string[] = []
+  if (ust.preserveMathOperators !== false) {
+    transformed = transformed.replace(/(?<=\d)\s*\*{2}\s*(?=\d)|(?<=\b\w+)\s+\*{2}\s+(?=\w+\b)|(?<=\b[a-z]\b)\*{2}(?=\d+\b)/gi, (match) => {
+      const id = `__UST_MATH_EXP_${mathPlaceholders.length}__`
+      mathPlaceholders.push(match)
+      return id
+    })
+    transformed = transformed.replace(/(?<=\d)\s*\*\s*(?=\d)|(?<=\b\w+)\s+\*\s+(?=\w+\b)/g, (match) => {
+      const id = `__UST_MATH_MUL_${mathPlaceholders.length}__`
+      mathPlaceholders.push(match)
+      return id
+    })
+  }
+
+  // 1. Resolve bracket action behaviors (supporting fallback/auto-migration of older profiles)
+  let asterisks = ust.asterisks
+  let squareBrackets = ust.squareBrackets
+  let parentheses = ust.parentheses
+  let angleBrackets = ust.angleBrackets
+  const customBracketEnabled = ust.customBracketEnabled
+  const customBracketStart = ust.customBracketStart || ''
+  const customBracketEnd = ust.customBracketEnd || ''
+  const customBracketAction = ust.customBracketAction || 'passThrough'
+
+  if (!asterisks && !squareBrackets && !parentheses && !angleBrackets) {
+    const legacyMode = ust.mode || 'mute'
+    if (legacyMode === 'mute') {
+      asterisks = 'mute'
+      squareBrackets = 'mute'
+      parentheses = 'mute'
+      angleBrackets = 'mute'
+    }
+    else if (legacyMode === 'flatten') {
+      asterisks = 'flatten'
+      squareBrackets = 'flatten'
+      parentheses = 'flatten'
+      angleBrackets = 'flatten'
+    }
+    else {
+      asterisks = 'passThrough'
+      squareBrackets = 'passThrough'
+      parentheses = 'passThrough'
+      angleBrackets = 'passThrough'
+    }
+  }
+
+  // Helper to process a bracket type
+  const tokenPlaceholders: string[] = []
+  const processBracket = (input: string, start: string, end: string, action: BracketAction): string => {
+    if (action === 'ignore' || action === 'passThrough' || !start || !end) {
+      return input
+    }
+
+    const escStart = start.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const escEnd = end.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+    if (action === 'mute') {
+      const regex = new RegExp(`${escStart}.*?${escEnd}`, 'g')
+      let result = input.replace(regex, '')
+      const boundaryRegex = new RegExp(`[${escStart}${escEnd}]`, 'g')
+      result = result.replace(boundaryRegex, '')
+      return result
+    }
+    else if (action === 'flatten') {
+      const boundaryRegex = new RegExp(`[${escStart}${escEnd}]`, 'g')
+      return input.replace(boundaryRegex, '')
+    }
+    else if (action === 'token') {
+      const regex = new RegExp(`${escStart}(.*?)${escEnd}`, 'g')
+      return input.replace(regex, (_, content) => {
+        const id = `__UST_TOKEN_${tokenPlaceholders.length}__`
+        tokenPlaceholders.push(`<|${content}|>`)
+        return id
+      })
+    }
+
+    return input
+  }
+
+  // 2. Process bracket modes
+  transformed = processBracket(transformed, '*', '*', asterisks)
+  transformed = processBracket(transformed, '[', ']', squareBrackets)
+  transformed = processBracket(transformed, '(', ')', parentheses)
+  transformed = processBracket(transformed, '<', '>', angleBrackets)
+
+  // Process custom bracket if enabled
+  if (customBracketEnabled) {
+    transformed = processBracket(transformed, customBracketStart, customBracketEnd, customBracketAction)
+  }
+
+  // Legacy custom strip character fallback
+  if (ust.mode === 'custom' && ust.customStripChars) {
+    const escapedChars = ust.customStripChars.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    if (escapedChars) {
+      const regex = new RegExp(`[${escapedChars}]`, 'g')
+      transformed = transformed.replace(regex, '')
+    }
+  }
+
+  // 3. Strip Emojis
+  if (ust.stripEmojis) {
+    transformed = transformed.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+    transformed = transformed.replace(/\u200D/g, '')
+  }
+
+  // 4. Strip Symbols & Kaomoji (Extreme Cleaning)
+  if (ust.stripSymbols) {
+    transformed = transformed.replace(/[^\p{L}\p{N}\s.,!?;:"'-]/gu, '')
+  }
+
+  // Restore protected arithmetic operators
+  if (mathPlaceholders.length > 0) {
+    for (let i = 0; i < mathPlaceholders.length; i++) {
+      transformed = transformed.replace(new RegExp(`__UST_MATH_(?:EXP|MUL)_${i}__`, 'g'), mathPlaceholders[i])
+    }
+  }
+
+  // Restore protected tokens
+  if (tokenPlaceholders.length > 0) {
+    for (let i = 0; i < tokenPlaceholders.length; i++) {
+      transformed = transformed.replace(new RegExp(`__UST_TOKEN_${i}__`, 'g'), tokenPlaceholders[i])
+    }
+  }
+
+  // 5. Tilde substitution
+  if (ust.tildeReplacement !== undefined) {
+    const replacement = ust.tildeReplacement.trim()
+    if (replacement) {
+      transformed = transformed.replace(/~/g, ` ${replacement} `)
+    }
+    else {
+      transformed = transformed.replace(/~/g, '')
+    }
+  }
+
+  // 6. Custom Replacement Rules
+  if (ust.customReplacements && Array.isArray(ust.customReplacements)) {
+    for (const rule of ust.customReplacements) {
+      if (!rule.pattern)
+        continue
+      try {
+        if (rule.type === 'regex') {
+          let pattern = rule.pattern
+          let flags = ''
+          if (pattern.startsWith('/') && pattern.lastIndexOf('/') > 0) {
+            const lastSlash = pattern.lastIndexOf('/')
+            flags = pattern.slice(lastSlash + 1)
+            pattern = pattern.slice(1, lastSlash)
+          }
+          const regex = new RegExp(pattern, flags)
+          transformed = transformed.replace(regex, rule.replacement)
+        }
+        else {
+          const escPattern = rule.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+          const flags = rule.caseSensitive ? 'g' : 'gi'
+          const regexStr = rule.wholeWord ? `\\b${escPattern}\\b` : escPattern
+          const regex = new RegExp(regexStr, flags)
+          transformed = transformed.replace(regex, rule.replacement)
+        }
+      }
+      catch (err) {
+        console.error('Failed to apply custom replacement rule:', rule, err)
+      }
+    }
+  }
+
+  return transformed
+    .split('\n')
+    .map(line => line.replace(/[^\S\r\n]+/g, ' ').trim())
+    .filter((line, i, arr) => line.length > 0 || (i > 0 && arr[i - 1].length > 0))
+    .join('\n')
+    .trim()
 }
 
 export const useSpeechStore = defineStore('speech', () => {
@@ -35,6 +437,8 @@ export const useSpeechStore = defineStore('speech', () => {
 
   const pitch = useLocalStorageManualReset<number>('settings/speech/pitch', 0)
   const rate = useLocalStorageManualReset<number>('settings/speech/rate', 1)
+  const outputVolume = useLocalStorageManualReset<number>('settings/speech/output-volume', 1.0)
+  const speechEnabled = useLocalStorageManualReset<boolean>('settings/speech/enabled', true)
   const ssmlEnabled = useLocalStorageManualReset<boolean>('settings/speech/ssml-enabled', false)
   const isLoadingSpeechProviderVoices = refManualReset<boolean>(false)
   const speechProviderError = refManualReset<string | null>(null)
@@ -44,6 +448,17 @@ export const useSpeechStore = defineStore('speech', () => {
 
   // Virtual Voice Profiles State
   const savedVoiceProfiles = useLocalStorageManualReset<VoiceProfile[]>('settings/speech/voice-profiles', [])
+
+  // Playground state for Audio Studio
+  const playgroundTestText = useLocalStorageManualReset<string>(
+    'settings/speech/playground-test-text',
+    PLAYGROUND_PRESETS[0]?.text || '*smiles* Your total is $19.99 😊\nLet\'s try a softer voice.',
+  )
+  const playgroundPreset = refManualReset<string>('everyday')
+
+  function previewTransformText(text: string, ust?: VoiceProfile['ust'], language?: string): string {
+    return applyUSTTransformations(text, ust, ust?.formulaLanguage || language || selectedLanguage.value)
+  }
 
   // Computed properties
   const availableSpeechProvidersMetadata = computed(() => allAudioSpeechProvidersMetadata.value)
@@ -240,149 +655,22 @@ export const useSpeechStore = defineStore('speech', () => {
 
     const isVirtual = providerId === 'virtual-audio-studio' || !!voiceProfileId
     const targetVoiceId = voiceProfileId || activeSpeechVoiceId.value
-    const profile = isVirtual ? savedVoiceProfiles.value.find(p => p.id === targetVoiceId || p.name === targetVoiceId) : null
+    let profile = isVirtual ? savedVoiceProfiles.value.find(p => p.id === targetVoiceId || p.name === targetVoiceId) : null
+
+    // If no virtual profile matched, check if any saved profile matches the active voice ID and provider
+    if (!profile && savedVoiceProfiles.value.length > 0) {
+      profile = savedVoiceProfiles.value.find(p => p.baseVoice === activeSpeechVoiceId.value && p.baseProvider === activeSpeechProvider.value) || null
+    }
 
     if (!profile || !profile.ust.enabled) {
       return text
     }
 
-    // Strip markdown image embeds (e.g., ![caption](url)) so they are not sent to the TTS
-    let transformed = text.replace(/!\[.*?\]\(.*?\)/g, '')
+    const targetLang = profile.ust.formulaLanguage && profile.ust.formulaLanguage !== 'auto'
+      ? profile.ust.formulaLanguage
+      : (activeSpeechVoice.value?.languages[0]?.code || selectedLanguage.value)
 
-    // 1. Resolve bracket action behaviors (supporting fallback/auto-migration of older profiles)
-    let asterisks = profile.ust.asterisks
-    let squareBrackets = profile.ust.squareBrackets
-    let parentheses = profile.ust.parentheses
-    let angleBrackets = profile.ust.angleBrackets
-    const customBracketEnabled = profile.ust.customBracketEnabled
-    const customBracketStart = profile.ust.customBracketStart || ''
-    const customBracketEnd = profile.ust.customBracketEnd || ''
-    const customBracketAction = profile.ust.customBracketAction || 'ignore'
-
-    if (!asterisks && !squareBrackets && !parentheses && !angleBrackets) {
-      const legacyMode = profile.ust.mode || 'mute'
-      if (legacyMode === 'mute') {
-        asterisks = 'mute'
-        squareBrackets = 'mute'
-        parentheses = 'mute'
-        angleBrackets = 'mute'
-      }
-      else if (legacyMode === 'flatten') {
-        asterisks = 'flatten'
-        squareBrackets = 'flatten'
-        parentheses = 'flatten'
-        angleBrackets = 'flatten'
-      }
-      else {
-        asterisks = 'ignore'
-        squareBrackets = 'ignore'
-        parentheses = 'ignore'
-        angleBrackets = 'ignore'
-      }
-    }
-
-    // Helper to process a bracket type
-    const processBracket = (input: string, start: string, end: string, action: BracketAction): string => {
-      if (action === 'ignore' || !start || !end) {
-        return input
-      }
-
-      const escStart = start.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      const escEnd = end.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-
-      if (action === 'mute') {
-        const regex = new RegExp(`${escStart}.*?${escEnd}`, 'g')
-        let result = input.replace(regex, '')
-        const boundaryRegex = new RegExp(`[${escStart}${escEnd}]`, 'g')
-        result = result.replace(boundaryRegex, '')
-        return result
-      }
-      else if (action === 'flatten') {
-        const boundaryRegex = new RegExp(`[${escStart}${escEnd}]`, 'g')
-        return input.replace(boundaryRegex, '')
-      }
-      else if (action === 'token') {
-        const regex = new RegExp(`${escStart}(.*?)${escEnd}`, 'g')
-        return input.replace(regex, '<|$1|>')
-      }
-
-      return input
-    }
-
-    // 2. Process bracket modes
-    transformed = processBracket(transformed, '*', '*', asterisks)
-    transformed = processBracket(transformed, '[', ']', squareBrackets)
-    transformed = processBracket(transformed, '(', ')', parentheses)
-    transformed = processBracket(transformed, '<', '>', angleBrackets)
-
-    // Process custom bracket if enabled
-    if (customBracketEnabled) {
-      transformed = processBracket(transformed, customBracketStart, customBracketEnd, customBracketAction)
-    }
-
-    // Legacy custom strip character fallback (if profile has customStripChars and was in custom mode)
-    if (profile.ust.mode === 'custom' && profile.ust.customStripChars) {
-      const escapedChars = profile.ust.customStripChars.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-      if (escapedChars) {
-        const regex = new RegExp(`[${escapedChars}]`, 'g')
-        transformed = transformed.replace(regex, '')
-      }
-    }
-
-    // 3. Strip Emojis
-    if (profile.ust.stripEmojis) {
-      transformed = transformed.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
-      transformed = transformed.replace(/\u200D/g, '')
-    }
-
-    // 4. Strip Symbols & Kaomoji (Extreme Cleaning)
-    if (profile.ust.stripSymbols) {
-      transformed = transformed.replace(/[^\p{L}\p{N}\s.,!?;:"'-]/gu, '')
-    }
-
-    // 5. Tilde substitution
-    if (profile.ust.tildeReplacement !== undefined) {
-      const replacement = profile.ust.tildeReplacement.trim()
-      if (replacement) {
-        transformed = transformed.replace(/~/g, ` ${replacement} `)
-      }
-      else {
-        transformed = transformed.replace(/~/g, '')
-      }
-    }
-
-    // 6. Custom Replacement Rules
-    if (profile.ust.customReplacements && Array.isArray(profile.ust.customReplacements)) {
-      for (const rule of profile.ust.customReplacements) {
-        if (!rule.pattern)
-          continue
-        try {
-          if (rule.type === 'regex') {
-            let pattern = rule.pattern
-            let flags = ''
-            if (pattern.startsWith('/') && pattern.lastIndexOf('/') > 0) {
-              const lastSlash = pattern.lastIndexOf('/')
-              flags = pattern.slice(lastSlash + 1)
-              pattern = pattern.slice(1, lastSlash)
-            }
-            const regex = new RegExp(pattern, flags)
-            transformed = transformed.replace(regex, rule.replacement)
-          }
-          else {
-            const escPattern = rule.pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-            const flags = rule.caseSensitive ? 'g' : 'gi'
-            const regexStr = rule.wholeWord ? `\\b${escPattern}\\b` : escPattern
-            const regex = new RegExp(regexStr, flags)
-            transformed = transformed.replace(regex, rule.replacement)
-          }
-        }
-        catch (err) {
-          console.error('Failed to apply custom replacement rule:', rule, err)
-        }
-      }
-    }
-
-    return transformed.replace(/\s+/g, ' ').trim()
+    return applyUSTTransformations(text, profile.ust, targetLang)
   }
 
   /**
@@ -568,6 +856,8 @@ export const useSpeechStore = defineStore('speech', () => {
     activeSpeechVoiceId,
     pitch,
     rate,
+    outputVolume,
+    speechEnabled,
     ssmlEnabled,
     selectedLanguage,
     isLoadingSpeechProviderVoices,
@@ -576,6 +866,8 @@ export const useSpeechStore = defineStore('speech', () => {
     modelSearchQuery,
 
     savedVoiceProfiles,
+    playgroundTestText,
+    playgroundPreset,
 
     // Computed
     availableSpeechProvidersMetadata,
@@ -593,8 +885,11 @@ export const useSpeechStore = defineStore('speech', () => {
     getVoicesForProvider,
     generateSSML,
     transformTextForSpeech,
+    previewTransformText,
+    applyUSTTransformations,
     saveVoiceProfile,
     deleteVoiceProfile,
     resetState,
+    audioCache: speechAudioCache,
   }
 })

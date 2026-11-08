@@ -5,12 +5,17 @@ import { NativeAI } from '../native-ai'
 const TRANSFORMERS_CACHE_NAME = 'transformers-cache'
 const OPFS_DIR_NAME = 'web-rwkv'
 const MOSS_OPFS_DIR_NAME = 'nano-reader-browser-model-store'
+const POCKET_OPFS_DIR_NAME = 'pocket-tts-browser-model-store'
+// Ming 3.0 TTS browser bundle (fusor WASM): manifest.json + parts/*.bin shards +
+// tokenizer.json, one file per BLAKE3 hash — matches the loader's `CACHE_DIR`.
+const MING3_OPFS_DIR_NAME = 'ming-tts-parts'
 // WebLLM (`@mlc-ai/web-llm`) stores weights / WASM libs / model config in the
 // browser Cache Storage API under these scoped cache names (its default
 // `cacheBackend` is `"cache"`; see `createScopedArtifactCache` in the library).
 const WEBLLM_CACHE_NAMES = ['webllm/model', 'webllm/wasm', 'webllm/config'] as const
 export const NEEDLE_CACHE_NAME = 'needle-cache'
 export const LAYA_CACHE_NAME = 'laya-cache'
+export const BG_REMOVAL_CACHE_NAME = 'bg-removal-cache'
 
 async function getDirectorySizeRecursive(dirHandle: FileSystemDirectoryHandle): Promise<number> {
   let size = 0
@@ -75,6 +80,204 @@ async function isMossModelCached(): Promise<boolean> {
   }
   catch {
     return false
+  }
+}
+
+// NOTICE: Pocket TTS bundles live in per-language subdirs (`{langFolder}/` with
+// 8 REQUIRED_FILES each + `{langFolder}/voices/*.safetensors`), plus a shared
+// `sentencepiece.js` at the store root. Sizes must be measured recursively and
+// eviction must only remove language subdirs — never the root-level shared files.
+async function getPocketOpfsCacheSize(): Promise<number> {
+  if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
+    return 0
+  try {
+    const root = await navigator.storage.getDirectory()
+    let dir: FileSystemDirectoryHandle
+    try {
+      dir = await root.getDirectoryHandle(POCKET_OPFS_DIR_NAME, { create: false })
+    }
+    catch {
+      return 0
+    }
+    return await getDirectorySizeRecursive(dir)
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to get Pocket cache size', error)
+    return 0
+  }
+}
+
+async function clearPocketOpfsCache(): Promise<void> {
+  if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
+    return
+  try {
+    const root = await navigator.storage.getDirectory()
+    try {
+      await root.removeEntry(POCKET_OPFS_DIR_NAME, { recursive: true })
+    }
+    catch {
+      // Ignored if directory doesn't exist
+    }
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to clear Pocket cache', error)
+  }
+}
+
+async function isPocketModelCached(): Promise<boolean> {
+  if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
+    return false
+  try {
+    const root = await navigator.storage.getDirectory()
+    const dir = await root.getDirectoryHandle(POCKET_OPFS_DIR_NAME, { create: false })
+    for await (const _entry of dir.values()) {
+      return true // directory is not empty
+    }
+    return false
+  }
+  catch {
+    return false
+  }
+}
+
+// NOTICE: mirrors `POCKET_LANG_ALIASES` in `workers/pocket-tts/worker.ts` (which
+// itself mirrors `langMap` in `workers/pocket-tts/pocket_model_store.ts` and
+// `normalizePocketLangFolder` in `stores/providers/registry/speech.ts`).
+// Everything downstream needs the canonical bundle folder name.
+const POCKET_LANG_FOLDER_ALIASES: Record<string, string> = {
+  english: 'english_2026-04',
+  french: 'french_24l',
+  spanish: 'spanish_24l',
+  german: 'german_24l',
+  portuguese: 'portuguese_24l',
+  italian: 'italian_24l',
+}
+
+function normalizePocketLangFolderId(languageOrFolder: string): string {
+  return POCKET_LANG_FOLDER_ALIASES[languageOrFolder] || languageOrFolder.replace(/_2026_/, '_2026-')
+}
+
+async function getMing3OpfsCacheSize(): Promise<number> {
+  if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
+    return 0
+  try {
+    const root = await navigator.storage.getDirectory()
+    let dir: FileSystemDirectoryHandle
+    try {
+      dir = await root.getDirectoryHandle(MING3_OPFS_DIR_NAME, { create: false })
+    }
+    catch {
+      return 0
+    }
+    return await getDirectorySizeRecursive(dir)
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to get Ming3 cache size', error)
+    return 0
+  }
+}
+
+async function clearMing3OpfsCache(): Promise<void> {
+  if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
+    return
+  try {
+    const root = await navigator.storage.getDirectory()
+    try {
+      await root.removeEntry(MING3_OPFS_DIR_NAME, { recursive: true })
+    }
+    catch {
+      // Ignored if directory doesn't exist
+    }
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to clear Ming3 cache', error)
+  }
+}
+
+async function isMing3ModelCached(): Promise<boolean> {
+  if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
+    return false
+  try {
+    const root = await navigator.storage.getDirectory()
+    const dir = await root.getDirectoryHandle(MING3_OPFS_DIR_NAME, { create: false })
+    for await (const _entry of dir.values()) {
+      return true // directory is not empty
+    }
+    return false
+  }
+  catch {
+    return false
+  }
+}
+
+/**
+ * Enforce a single active Ming 3.0 bundle in OPFS (mix vs future q7 profiles
+ * use distinct BLAKE3 part hashes that would otherwise accumulate side by side).
+ * Keeps exactly the part files listed in the just-loaded manifest; everything
+ * else in `ming-tts-parts` is removed.
+ */
+export async function evictOtherMing3Models(keepBlake3Hashes: string[]): Promise<void> {
+  if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
+    return
+  try {
+    const root = await navigator.storage.getDirectory()
+    let dir: FileSystemDirectoryHandle
+    try {
+      dir = await root.getDirectoryHandle(MING3_OPFS_DIR_NAME, { create: false })
+    }
+    catch {
+      return
+    }
+    const keep = new Set(keepBlake3Hashes)
+    for await (const entry of dir.values()) {
+      if (entry.kind === 'file' && !keep.has(entry.name)) {
+        try {
+          await dir.removeEntry(entry.name)
+        }
+        catch (error) {
+          console.warn('[cache-utils] failed to evict Ming3 bundle part', entry.name, error)
+        }
+      }
+    }
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to evict other Ming3 models', error)
+  }
+}
+
+/**
+ * Enforce single active Pocket TTS language bundle in OPFS (mirrors the
+ * Whisper single-shard eviction). Removes every `{langFolder}/` subdirs except
+ * the one just loaded — including its `voices/` embeddings (full-dir evict).
+ * Root-level shared files (`sentencepiece.js`) are files, not directories, so
+ * they are never touched.
+ */
+export async function evictOtherPocketModels(keepLanguageOrFolder: string): Promise<void> {
+  if (typeof navigator === 'undefined' || !navigator.storage || !navigator.storage.getDirectory)
+    return
+  try {
+    const root = await navigator.storage.getDirectory()
+    let dir: FileSystemDirectoryHandle
+    try {
+      dir = await root.getDirectoryHandle(POCKET_OPFS_DIR_NAME, { create: false })
+    }
+    catch {
+      return
+    }
+    const keepFolder = normalizePocketLangFolderId(keepLanguageOrFolder)
+    for await (const entry of dir.values()) {
+      if (entry.kind === 'directory' && entry.name !== keepFolder) {
+        try {
+          await dir.removeEntry(entry.name, { recursive: true })
+        }
+        catch (error) {
+          console.warn('[cache-utils] failed to evict Pocket language bundle', entry.name, error)
+        }
+      }
+    }
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to evict other Pocket models', error)
   }
 }
 
@@ -209,17 +412,20 @@ async function isOpfsModelCached(modelUrl: string): Promise<boolean> {
  * Returns 0 if no caches exist or all are empty.
  */
 export async function getModelCacheSize(): Promise<number> {
-  const [transformersSize, opfsSize, mossSize, webLlmSize, needleSize, layaSize, nativeSize] = await Promise.all([
+  const [transformersSize, opfsSize, mossSize, pocketSize, ming3Size, webLlmSize, needleSize, layaSize, openjevSize, nativeSize] = await Promise.all([
     getTransformersCacheSize(),
     getOpfsCacheSize(),
     getMossOpfsCacheSize(),
+    getPocketOpfsCacheSize(),
+    getMing3OpfsCacheSize(),
     getWebLlmCacheSize(),
     getNeedleCacheSize(),
     getLayaCacheSize(),
+    getOpenJevCacheSize(),
     NativeAI.listCachedModels().then(res => res.totalSizeBytes).catch(() => 0),
   ])
 
-  return transformersSize + opfsSize + mossSize + webLlmSize + needleSize + layaSize + nativeSize
+  return transformersSize + opfsSize + mossSize + pocketSize + ming3Size + webLlmSize + needleSize + layaSize + openjevSize + nativeSize
 }
 
 async function getTransformersCacheSize(): Promise<number> {
@@ -262,6 +468,8 @@ export async function clearModelCache(): Promise<void> {
     clearTransformersCache(),
     clearOpfsCache(),
     clearMossOpfsCache(),
+    clearPocketOpfsCache(),
+    clearMing3OpfsCache(),
     clearWebLlmCache(),
     clearNeedleCache(),
     clearLayaCache(),
@@ -285,6 +493,14 @@ export async function clearSingleModelCache(modelId: string): Promise<void> {
     await clearMossOpfsCache()
     return
   }
+  if (modelId === 'pocket-tts-local') {
+    await clearPocketOpfsCache()
+    return
+  }
+  if (modelId === 'ming3-local') {
+    await clearMing3OpfsCache()
+    return
+  }
   if (modelId === 'web-llm') {
     await clearWebLlmCache()
     return
@@ -293,12 +509,24 @@ export async function clearSingleModelCache(modelId: string): Promise<void> {
     await clearNeedleCache()
     return
   }
+  if (modelId.includes('openjev') || modelId.includes('rlcd-modernbert')) {
+    await clearOpenJevCache()
+    return
+  }
   if (modelId.includes('laya')) {
     await clearLayaCache()
     return
   }
+  if (modelId.includes('isnet') || modelId.includes('jellybox')) {
+    await clearBgRemovalCache()
+    return
+  }
   if (modelId === 'web-rwkv') {
     await clearWebRwkvCache()
+    return
+  }
+  if (modelId === 'wd-tagger' || modelId.includes('SmilingWolf') || modelId.includes('wd-v1-4') || modelId.includes('wd-swinv2') || modelId.includes('wd-convnext')) {
+    await clearWdTaggerCache()
     return
   }
   if (modelId.startsWith('http')) {
@@ -328,7 +556,9 @@ async function clearSingleTransformersModelCache(modelId: string): Promise<void>
     const cache = await caches.open(TRANSFORMERS_CACHE_NAME)
     const keys = await cache.keys()
     for (const request of keys) {
-      if (request.url.includes(modelId)) {
+      const isKokoroMatch = modelId === 'onnx-community/Kokoro-82M-v1.0-ONNX'
+        && (request.url.includes('Kokoro-82M') || request.url.includes('kokoro-inno') || request.url.includes('inno-kokoro') || request.url.includes('inno-tuner') || request.url.includes('inno_tuner'))
+      if (request.url.includes(modelId) || isKokoroMatch) {
         await cache.delete(request)
       }
     }
@@ -357,6 +587,68 @@ export async function evictOtherWhisperModels(keepModelId: string): Promise<void
   }
   catch (error) {
     console.warn('[cache-utils] failed to evict other whisper model shards', error)
+  }
+}
+
+/**
+ * Evict all cached WD tagger models except the specified model repository ID.
+ * Ensures that only a single active WD tagger model is retained in browser storage.
+ */
+export async function evictOtherWdTaggerModels(keepModelId: string): Promise<void> {
+  if (typeof caches === 'undefined')
+    return
+
+  try {
+    const cache = await caches.open(TRANSFORMERS_CACHE_NAME)
+    const keys = await cache.keys()
+    for (const request of keys) {
+      const isOtherTagger = request.url.includes('SmilingWolf') || request.url.includes('wd-v1-4') || request.url.includes('wd-swinv2') || request.url.includes('wd-convnext')
+      if (isOtherTagger && !request.url.includes(keepModelId)) {
+        await cache.delete(request)
+      }
+    }
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to evict other WD taggers', error)
+  }
+}
+
+/** Clear all WD tagger models from the transformers cache. */
+export async function clearWdTaggerCache(): Promise<void> {
+  if (typeof caches === 'undefined')
+    return
+
+  try {
+    const cache = await caches.open(TRANSFORMERS_CACHE_NAME)
+    const keys = await cache.keys()
+    for (const request of keys) {
+      const isTagger = request.url.includes('SmilingWolf') || request.url.includes('wd-v1-4') || request.url.includes('wd-swinv2') || request.url.includes('wd-convnext')
+      if (isTagger) {
+        await cache.delete(request)
+      }
+    }
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to clear WD tagger cache', error)
+  }
+}
+
+export async function isWdTaggerCached(): Promise<boolean> {
+  if (typeof caches === 'undefined')
+    return false
+
+  try {
+    const cache = await caches.open(TRANSFORMERS_CACHE_NAME)
+    const keys = await cache.keys()
+    return keys.some(request =>
+      request.url.includes('SmilingWolf')
+      || request.url.includes('wd-v1-4')
+      || request.url.includes('wd-swinv2')
+      || request.url.includes('wd-convnext'),
+    )
+  }
+  catch {
+    return false
   }
 }
 
@@ -551,8 +843,16 @@ export async function isNeedleModelCached(): Promise<boolean> {
 }
 
 // ---------------------------------------------------------------------------
-// Laya (Cache Storage API, `laya-cache` scope)
+// Laya & OpenJev System 1 Models (Cache Storage API, `laya-cache` scope)
 // ---------------------------------------------------------------------------
+
+function isOpenJevRequest(url: string): boolean {
+  return url.includes('rlcd-modernbert-151m') || url.includes('ModernBERT-base') || url.includes('heman10x')
+}
+
+function isLayaRequest(url: string): boolean {
+  return url.includes('laya-int8') || url.includes('laya-ONNX') || url.includes('ModernBERT-large') || url.includes('bgoldfarb93') || url.includes('tozp')
+}
 
 export async function getLayaCacheSize(): Promise<number> {
   if (typeof caches === 'undefined')
@@ -566,6 +866,8 @@ export async function getLayaCacheSize(): Promise<number> {
     const keys = await cache.keys()
     let totalSize = 0
     for (const request of keys) {
+      if (!isLayaRequest(request.url))
+        continue
       const response = await cache.match(request)
       if (response) {
         const cl = response.headers.get('content-length')
@@ -586,14 +888,91 @@ export async function getLayaCacheSize(): Promise<number> {
   }
 }
 
+export async function getOpenJevCacheSize(): Promise<number> {
+  if (typeof caches === 'undefined')
+    return 0
+
+  try {
+    const has = await caches.has(LAYA_CACHE_NAME)
+    if (!has)
+      return 0
+    const cache = await caches.open(LAYA_CACHE_NAME)
+    const keys = await cache.keys()
+    let totalSize = 0
+    for (const request of keys) {
+      if (!isOpenJevRequest(request.url))
+        continue
+      const response = await cache.match(request)
+      if (response) {
+        const cl = response.headers.get('content-length')
+        if (cl) {
+          totalSize += Number.parseInt(cl, 10)
+        }
+        else {
+          const blob = await response.blob()
+          totalSize += blob.size
+        }
+      }
+    }
+    return totalSize
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to get OpenJev cache size', error)
+    return 0
+  }
+}
+
 export async function clearLayaCache(): Promise<void> {
   if (typeof caches === 'undefined')
     return
   try {
-    await caches.delete(LAYA_CACHE_NAME)
+    const has = await caches.has(LAYA_CACHE_NAME)
+    if (!has)
+      return
+    const cache = await caches.open(LAYA_CACHE_NAME)
+    const keys = await cache.keys()
+    let remaining = 0
+    for (const request of keys) {
+      if (isLayaRequest(request.url)) {
+        await cache.delete(request)
+      }
+      else {
+        remaining++
+      }
+    }
+    if (remaining === 0) {
+      await caches.delete(LAYA_CACHE_NAME)
+    }
   }
   catch (error) {
     console.warn('[cache-utils] failed to clear Laya cache', error)
+  }
+}
+
+export async function clearOpenJevCache(): Promise<void> {
+  if (typeof caches === 'undefined')
+    return
+  try {
+    const has = await caches.has(LAYA_CACHE_NAME)
+    if (!has)
+      return
+    const cache = await caches.open(LAYA_CACHE_NAME)
+    const keys = await cache.keys()
+    let remaining = 0
+    for (const request of keys) {
+      if (isOpenJevRequest(request.url)) {
+        await cache.delete(request)
+      }
+      else {
+        remaining++
+      }
+    }
+    if (remaining === 0) {
+      await caches.delete(LAYA_CACHE_NAME)
+    }
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to clear OpenJev cache', error)
   }
 }
 
@@ -605,6 +984,85 @@ export async function isLayaModelCached(): Promise<boolean> {
     if (!has)
       return false
     const cache = await caches.open(LAYA_CACHE_NAME)
+    const keys = await cache.keys()
+    return keys.some(k => isLayaRequest(k.url))
+  }
+  catch {
+    return false
+  }
+}
+
+export async function isOpenJevModelCached(): Promise<boolean> {
+  if (typeof caches === 'undefined')
+    return false
+  try {
+    const has = await caches.has(LAYA_CACHE_NAME)
+    if (!has)
+      return false
+    const cache = await caches.open(LAYA_CACHE_NAME)
+    const keys = await cache.keys()
+    return keys.some(k => isOpenJevRequest(k.url))
+  }
+  catch {
+    return false
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Background removal / IS-Net anime (Cache Storage API, `bg-removal-cache` scope)
+// ---------------------------------------------------------------------------
+
+export async function getBgRemovalCacheSize(): Promise<number> {
+  if (typeof caches === 'undefined')
+    return 0
+
+  try {
+    const has = await caches.has(BG_REMOVAL_CACHE_NAME)
+    if (!has)
+      return 0
+    const cache = await caches.open(BG_REMOVAL_CACHE_NAME)
+    const keys = await cache.keys()
+    let totalSize = 0
+    for (const request of keys) {
+      const response = await cache.match(request)
+      if (response) {
+        const cl = response.headers.get('content-length')
+        if (cl) {
+          totalSize += Number.parseInt(cl, 10)
+        }
+        else {
+          const blob = await response.blob()
+          totalSize += blob.size
+        }
+      }
+    }
+    return totalSize
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to get BG removal cache size', error)
+    return 0
+  }
+}
+
+export async function clearBgRemovalCache(): Promise<void> {
+  if (typeof caches === 'undefined')
+    return
+  try {
+    await caches.delete(BG_REMOVAL_CACHE_NAME)
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to clear BG removal cache', error)
+  }
+}
+
+export async function isBgRemovalModelCached(): Promise<boolean> {
+  if (typeof caches === 'undefined')
+    return false
+  try {
+    const has = await caches.has(BG_REMOVAL_CACHE_NAME)
+    if (!has)
+      return false
+    const cache = await caches.open(BG_REMOVAL_CACHE_NAME)
     const keys = await cache.keys()
     return keys.length > 0
   }
@@ -626,17 +1084,29 @@ export async function isModelCached(modelId: string): Promise<boolean> {
   if (modelId === 'moss-tts-nano') {
     return isMossModelCached()
   }
+  if (modelId === 'pocket-tts-local') {
+    return isPocketModelCached()
+  }
+  if (modelId === 'ming3-local') {
+    return isMing3ModelCached()
+  }
   if (modelId === 'web-llm') {
     return isWebLlmModelCached()
   }
   if (modelId === 'needle-2' || modelId.includes('needle2') || modelId.includes('needle')) {
     return isNeedleModelCached()
   }
+  if (modelId.includes('openjev') || modelId.includes('rlcd-modernbert')) {
+    return isOpenJevModelCached()
+  }
   if (modelId.includes('laya')) {
     return isLayaModelCached()
   }
   if (modelId === 'web-rwkv') {
     return isWebRwkvSlotOccupied()
+  }
+  if (modelId === 'wd-tagger') {
+    return isWdTaggerCached()
   }
   if (modelId.startsWith('http')) {
     return isOpfsModelCached(modelId)
@@ -670,6 +1140,201 @@ async function isTransformersModelCached(modelId: string): Promise<boolean> {
   }
 }
 
+export interface ModelCacheItemStatus {
+  cached: boolean
+  sizeBytes: number
+}
+
+export type ModelCacheStatusMap = Record<string, ModelCacheItemStatus>
+
+/**
+ * Inspects all storage backends (NativeAI, OPFS, CacheStorage) and returns
+ * cache status and byte size for all known model slots in a unified pass.
+ */
+export async function getDetailedModelCacheMap(): Promise<ModelCacheStatusMap> {
+  const result: ModelCacheStatusMap = {}
+
+  // 1. Native AI / CoreML
+  try {
+    const nativeRes = await NativeAI.listCachedModels().catch(() => ({ models: [] }))
+    for (const m of nativeRes.models) {
+      const size = m.sizeBytes ?? 0
+      result[m.modelId] = { cached: true, sizeBytes: size }
+      const slashed = m.modelId.replace(/_/g, '/')
+      result[slashed] = { cached: true, sizeBytes: size }
+    }
+  }
+  catch (error) {
+    console.warn('[cache-utils] failed to inspect NativeAI cache', error)
+  }
+
+  // 2. Web-RWKV (OPFS single-slot)
+  try {
+    const rwkvOccupied = await isWebRwkvSlotOccupied()
+    const rwkvSize = rwkvOccupied ? await getOpfsCacheSize() : 0
+    result['web-rwkv'] = { cached: rwkvOccupied, sizeBytes: rwkvSize }
+  }
+  catch {
+    result['web-rwkv'] = { cached: false, sizeBytes: 0 }
+  }
+
+  // 3. MOSS TTS Nano (OPFS)
+  try {
+    const mossCached = await isMossModelCached()
+    const mossSize = mossCached ? await getMossOpfsCacheSize() : 0
+    result['moss-tts-nano'] = { cached: mossCached, sizeBytes: mossSize }
+  }
+  catch {
+    result['moss-tts-nano'] = { cached: false, sizeBytes: 0 }
+  }
+
+  // 3b. Pocket TTS (OPFS, single active language bundle)
+  try {
+    const pocketCached = await isPocketModelCached()
+    const pocketSize = pocketCached ? await getPocketOpfsCacheSize() : 0
+    result['pocket-tts-local'] = { cached: pocketCached, sizeBytes: pocketSize }
+  }
+  catch {
+    result['pocket-tts-local'] = { cached: false, sizeBytes: 0 }
+  }
+
+  // 3c. Ming 3.0 TTS (OPFS, BLAKE3-addressed bundle parts)
+  try {
+    const ming3Cached = await isMing3ModelCached()
+    const ming3Size = ming3Cached ? await getMing3OpfsCacheSize() : 0
+    result['ming3-local'] = { cached: ming3Cached, sizeBytes: ming3Size }
+  }
+  catch {
+    result['ming3-local'] = { cached: false, sizeBytes: 0 }
+  }
+
+  // 4. WebLLM (Cache Storage API)
+  try {
+    const webLlmCached = await isWebLlmModelCached()
+    const webLlmSize = webLlmCached ? await getWebLlmCacheSize() : 0
+    result['web-llm'] = { cached: webLlmCached, sizeBytes: webLlmSize }
+  }
+  catch {
+    result['web-llm'] = { cached: false, sizeBytes: 0 }
+  }
+
+  // 5. Needle 2 (Cache Storage API)
+  try {
+    const needleCached = await isNeedleModelCached()
+    const needleSize = needleCached ? await getNeedleCacheSize() : 0
+    result['needle-2'] = { cached: needleCached, sizeBytes: needleSize }
+  }
+  catch {
+    result['needle-2'] = { cached: false, sizeBytes: 0 }
+  }
+
+  // 6. Laya (Cache Storage API)
+  try {
+    const layaCached = await isLayaModelCached()
+    const layaSize = layaCached ? await getLayaCacheSize() : 0
+    result['tozp/laya-onnx'] = { cached: layaCached, sizeBytes: layaSize }
+  }
+  catch {
+    result['tozp/laya-onnx'] = { cached: false, sizeBytes: 0 }
+  }
+
+  // 7. OpenJev (Cache Storage API)
+  try {
+    const openjevCached = await isOpenJevModelCached()
+    const openjevSize = openjevCached ? await getOpenJevCacheSize() : 0
+    result['heman10x/rlcd-modernbert-151m'] = { cached: openjevCached, sizeBytes: openjevSize }
+  }
+  catch {
+    result['heman10x/rlcd-modernbert-151m'] = { cached: false, sizeBytes: 0 }
+  }
+
+  // 8. Background removal / IS-Net anime (Cache Storage API)
+  try {
+    const bgCached = await isBgRemovalModelCached()
+    const bgSize = bgCached ? await getBgRemovalCacheSize() : 0
+    result['jellybox/isnet-anime'] = { cached: bgCached, sizeBytes: bgSize }
+  }
+  catch {
+    result['jellybox/isnet-anime'] = { cached: false, sizeBytes: 0 }
+  }
+
+  // 7. Transformers Cache (transformers-cache)
+  if (typeof caches !== 'undefined') {
+    try {
+      const cache = await caches.open(TRANSFORMERS_CACHE_NAME)
+      const keys = await cache.keys()
+
+      const tfModels: { id: string, match: (url: string) => boolean }[] = [
+        { id: 'onnx-community/Kokoro-82M-v1.0-ONNX', match: url => url.includes('Kokoro-82M') || url.includes('kokoro-inno') || url.includes('inno-kokoro') || url.includes('inno-tuner') || url.includes('inno_tuner') },
+        { id: 'whisper', match: url => url.includes('whisper') },
+        { id: 'wd-tagger', match: url => url.includes('SmilingWolf') || url.includes('wd-v1-4') || url.includes('wd-swinv2') || url.includes('wd-convnext') },
+        { id: 'Xenova/moondream2', match: url => url.includes('moondream2') },
+        { id: 'Xenova/modnet', match: url => url.includes('modnet') },
+        { id: 'dasilva333/flowmdm-onnx', match: url => url.includes('flowmdm') },
+        { id: 'Xenova/clip-vit-base-patch32', match: url => url.includes('clip-vit-base-patch32') },
+      ]
+
+      const tfSizes: Record<string, number> = {}
+      const tfCounts: Record<string, number> = {}
+      const tfMoondreamShards = new Set<string>()
+
+      for (const m of tfModels) {
+        tfSizes[m.id] = 0
+        tfCounts[m.id] = 0
+      }
+
+      for (const request of keys) {
+        let reqSize = 0
+        const response = await cache.match(request)
+        if (response) {
+          const cl = response.headers.get('content-length')
+          if (cl) {
+            reqSize = Number.parseInt(cl, 10)
+          }
+          else {
+            try {
+              const blob = await response.blob()
+              reqSize = blob.size
+            }
+            catch {}
+          }
+        }
+
+        for (const m of tfModels) {
+          if (m.match(request.url)) {
+            tfSizes[m.id] += reqSize
+            tfCounts[m.id]++
+            if (m.id === 'Xenova/moondream2') {
+              if (request.url.includes('decoder_model_merged'))
+                tfMoondreamShards.add('decoder_model_merged')
+              if (request.url.includes('vision_encoder'))
+                tfMoondreamShards.add('vision_encoder')
+              if (request.url.includes('embed_tokens'))
+                tfMoondreamShards.add('embed_tokens')
+            }
+          }
+        }
+      }
+
+      for (const m of tfModels) {
+        let isCached = tfCounts[m.id] > 0
+        if (m.id === 'Xenova/moondream2') {
+          isCached = tfMoondreamShards.size >= 3
+        }
+        result[m.id] = {
+          cached: isCached,
+          sizeBytes: tfSizes[m.id] || 0,
+        }
+      }
+    }
+    catch (error) {
+      console.warn('[cache-utils] failed to inspect transformers cache', error)
+    }
+  }
+
+  return result
+}
+
 /**
  * Format bytes into a human-readable string (e.g. "512 MB").
  */
@@ -683,13 +1348,6 @@ export function formatBytes(bytes: number): string {
   const value = bytes / k ** i
 
   return `${value.toFixed(i > 0 ? 1 : 0)} ${units[i]}`
-}
-
-/**
- * Evict all cached Ming 3.0 model parts except those in `keepPartHashes`.
- */
-export async function evictOtherMing3Models(keepPartHashes: string[]): Promise<void> {
-  void keepPartHashes
 }
 
 export { isStateCached }

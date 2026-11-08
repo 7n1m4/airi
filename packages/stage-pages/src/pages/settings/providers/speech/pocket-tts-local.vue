@@ -49,10 +49,33 @@ const availableVoices = computed(() => {
   return speechStore.availableVoices[providerId] || []
 })
 
-// Get provider config
+// NOTICE: `getProviderConfig()` returns a detached snapshot copy (`{...defaults,
+// ...persisted}` in `selectors/config.ts`) — mutating it never persists, so the
+// UI snaps back on the next recompute. All reads/writes below go through the
+// live persisted row (`getProviderInstanceConfig(...).options`).
+function getLiveOptions(): Record<string, unknown> {
+  return providersStore.getProviderInstanceConfig(providerId).options as Record<string, unknown>
+}
+
+// Read-only merged view for template fallbacks that don't need to write.
 const providerConfig = computed(() => {
   return providersStore.getProviderConfig(providerId)
 })
+
+// Model bundle <-> bare language code stay in lockstep; the worker normalizes
+// both, but `listVoices` keys off `language` first, so a split write leaves the
+// voice list filtering a stale bundle.
+const BUNDLE_TO_LANG: Record<string, string> = {
+  'english_2026-04': 'english',
+  'french_24l': 'french',
+  'spanish_24l': 'spanish',
+  'german_24l': 'german',
+  'portuguese_24l': 'portuguese',
+  'italian_24l': 'italian',
+}
+const LANG_TO_BUNDLE: Record<string, string> = Object.fromEntries(
+  Object.entries(BUNDLE_TO_LANG).map(([bundle, lang]) => [lang, bundle]),
+)
 
 const modelsLoading = computed(() => {
   return providersStore.isLoadingModels[providerId] || false
@@ -66,13 +89,16 @@ const isActiveProvider = computed(() => speechStore.activeSpeechProvider === pro
 
 const model = computed({
   get(): string {
-    return (providerConfig.value?.model as string) || defaultModel
+    return (getLiveOptions().model as string) || (providerConfig.value?.model as string) || defaultModel
   },
   set(val: string) {
-    const config = providersStore.getProviderConfig(providerId)
-    if (config) {
-      config.model = val
-    }
+    const options = getLiveOptions()
+    options.model = val
+    // Keep the legacy `language` key in lockstep so voice filtering and
+    // generation never read a stale counterpart.
+    const lang = BUNDLE_TO_LANG[val]
+    if (lang)
+      options.language = lang
     if (isActiveProvider.value) {
       speechStore.activeSpeechModel = val
     }
@@ -96,23 +122,28 @@ const modelOptions = computed(() => {
 
 const cpuThreads = computed({
   get(): number {
-    return (providerConfig.value?.cpuThreads as number) ?? 4
+    return (getLiveOptions().cpuThreads as number) ?? (providerConfig.value?.cpuThreads as number) ?? 4
   },
   set(val: number) {
-    const config = providersStore.getProviderConfig(providerId)
-    if (config) {
-      config.cpuThreads = Number(val)
-    }
+    getLiveOptions().cpuThreads = Number(val)
   },
 })
 
 const currentLanguage = computed({
-  get: () => (providerConfig.value?.language as string) || 'english',
+  get: () => {
+    // Derive from the canonical model bundle first so the two dropdowns can
+    // never disagree; fall back to the legacy bare code for old configs.
+    const bundle = getLiveOptions().model as string | undefined
+    if (bundle && BUNDLE_TO_LANG[bundle])
+      return BUNDLE_TO_LANG[bundle]
+    return (getLiveOptions().language as string) || (providerConfig.value?.language as string) || 'english'
+  },
   set: (val: string) => {
-    const config = providersStore.getProviderConfig(providerId)
-    if (config) {
-      config.language = val
-    }
+    const options = getLiveOptions()
+    options.language = val
+    const bundle = LANG_TO_BUNDLE[val]
+    if (bundle)
+      options.model = bundle
   },
 })
 
@@ -128,11 +159,9 @@ const languageOptions = [
 function setActiveSpeechProvider() {
   speechStore.activeSpeechProvider = providerId
   speechStore.activeSpeechModel = model.value
-  const config = providersStore.getProviderConfig(providerId)
-  if (config) {
-    config.model = model.value
-    config.language = currentLanguage.value
-  }
+  const options = getLiveOptions()
+  options.model = model.value
+  options.language = currentLanguage.value
   toast.success('Pocket TTS set as AIRI\'s active speech engine!')
 }
 
@@ -245,8 +274,8 @@ async function handleGenerateSpeech(input: string, voiceId: string, _useSSML: bo
       throw new Error('Failed to initialize Pocket TTS speech provider instance')
     }
 
-    const config = providersStore.getProviderConfig(providerId)
-    const selectedModel = model.value || (config?.model as string) || defaultModel
+    const liveOptions = getLiveOptions()
+    const selectedModel = model.value || (liveOptions?.model as string) || defaultModel
 
     toast.loading(`Synthesizing audio with Pocket model "${selectedModel}"...`, { id: toastId })
 
@@ -256,7 +285,7 @@ async function handleGenerateSpeech(input: string, voiceId: string, _useSSML: bo
       input,
       voiceId,
       {
-        ...config,
+        ...liveOptions,
         model: selectedModel,
         language: currentLanguage.value,
       },
@@ -276,9 +305,14 @@ onMounted(async () => {
   try {
     voicesLoading.value = true
     await providersStore.fetchModelsForProvider(providerId)
-    const config = providersStore.getProviderConfig(providerId)
-    if (config && !config.model) {
-      config.model = defaultModel
+    const options = getLiveOptions()
+    if (!options.model) {
+      options.model = defaultModel
+      options.language = BUNDLE_TO_LANG[defaultModel] || 'english'
+    }
+    else if (!options.language && typeof options.model === 'string' && BUNDLE_TO_LANG[options.model]) {
+      // Backfill the bare code for configs saved before the two fields synced.
+      options.language = BUNDLE_TO_LANG[options.model]
     }
     await loadCustomVoiceProfiles()
     await speechStore.loadVoicesForProvider(providerId)
@@ -291,27 +325,24 @@ onMounted(async () => {
   }
 })
 
-watch([model, currentLanguage], async ([newModel, newLang]) => {
-  // Refresh the voice list whenever the bundle (model) or target language changes
-  // so built-in predefined presets filter to the active language.
-  if (newModel || newLang) {
-    try {
-      voicesLoading.value = true
-      const config = providersStore.getProviderConfig(providerId)
-      if (config) {
-        if (newModel)
-          config.model = newModel
-        if (newLang)
-          config.language = newLang
-      }
-      await speechStore.loadVoicesForProvider(providerId)
-    }
-    catch (error) {
-      console.error('[Pocket Settings] Error reloading voices:', error)
-    }
-    finally {
-      voicesLoading.value = false
-    }
+// Setters already persist + keep model/language in lockstep; this watcher only
+// refreshes the filtered voice list. Guard re-entry so a slow voice fetch can't
+// stack up and flash stale dropdown state.
+let voicesReloadInFlight = false
+watch(model, async () => {
+  if (voicesReloadInFlight)
+    return
+  voicesReloadInFlight = true
+  try {
+    voicesLoading.value = true
+    await speechStore.loadVoicesForProvider(providerId)
+  }
+  catch (error) {
+    console.error('[Pocket Settings] Error reloading voices:', error)
+  }
+  finally {
+    voicesLoading.value = false
+    voicesReloadInFlight = false
   }
 })
 </script>

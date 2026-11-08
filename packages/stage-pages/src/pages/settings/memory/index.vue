@@ -17,7 +17,7 @@ const lifetimeStore = useMemoryLifetimeStore()
 const { activeCardId } = storeToRefs(cardStore)
 const { entries, loading: textJournalLoading } = storeToRefs(textJournalStore)
 const { loading: stmmLoading, error: stmmError } = storeToRefs(shortTermMemoryStore)
-const { artifacts, loading: lifetimeLoading, isProvisioning, error: lifetimeError } = storeToRefs(lifetimeStore)
+const { loading: lifetimeLoading, isProvisioning, error: lifetimeError } = storeToRefs(lifetimeStore)
 
 const isInitializing = ref(false)
 const initError = ref<string | null>(null)
@@ -76,7 +76,7 @@ const totalDepthTokens = computed(() => {
 
   // 3. Lifetime distilled artifact tokens
   if (charId) {
-    const artifact = artifacts.value.get(charId)
+    const artifact = lifetimeStore.getArtifact(charId, 'global')
     if (artifact?.distilledContent) {
       total += estimateTokens(artifact.distilledContent)
     }

@@ -54,6 +54,11 @@ describe('stores/modules index barrel', () => {
       isMainWindow: true,
       toSignedPercent: true,
       NAN0_DEFAULT_EMOTIONS: true,
+      // upstream speech.ts public helpers (ported in reconcile wave5)
+      integerToWords: true,
+      verbalizePrices: true,
+      PLAYGROUND_PRESETS: true,
+      applyUSTTransformations: true,
     }
 
     const unexpected = Object.keys(modules).filter(key => !expected[key])

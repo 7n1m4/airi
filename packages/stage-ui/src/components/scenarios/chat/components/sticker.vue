@@ -9,15 +9,20 @@ const props = defineProps<{ stickerId: string }>()
 const stickersStore = useStickersStore()
 const airiCardStore = useAiriCardStore()
 
+const resolvedId = computed(() => {
+  return stickersStore.resolveStickerId?.(props.stickerId) ?? props.stickerId
+})
+
 const stickerInfo = computed(() => {
-  return chatStickers.find(s => s.id === props.stickerId)
+  return chatStickers.find(s => s.id === resolvedId.value)
 })
 
 const displayLabel = computed(() => {
   if (stickerInfo.value?.description) {
     return stickerInfo.value.description
   }
-  const custom = airiCardStore.activeCard?.extensions?.airi?.stickers?.[props.stickerId]
+  const custom = airiCardStore.activeCard?.extensions?.airi?.stickers?.[resolvedId.value]
+    || airiCardStore.activeCard?.extensions?.airi?.stickers?.[props.stickerId]
   if (custom?.label) {
     return custom.label
   }
@@ -26,7 +31,7 @@ const displayLabel = computed(() => {
 
 const imgUrl = ref<string>(stickerInfo.value?.src || '')
 
-watch(() => props.stickerId, async (id) => {
+watch(resolvedId, async (id) => {
   if (stickerInfo.value?.src) {
     imgUrl.value = stickerInfo.value.src
     return

@@ -119,9 +119,11 @@ catalog:
   jsdom: ^30.0.1
   jszip: ^3.10.1
   just-bash: ^3.6.0
+  katex: ^0.16.27
   knip: ^5.85.0
   libp2p: 2.10.0
   loudness: ^0.4.2
+  mhchemparser: ^4.2.1
   mkcert: ^3.2.0
   nano-staged: ^0.9.0
   nanoid: 5.1.6
@@ -133,6 +135,7 @@ catalog:
   rehype-stringify: ^10.0.1
   reka-ui: ^2.8.2
   remark-breaks: ^4.0.0
+  remark-cjk-friendly: ^2.3.3
   remark-parse: ^11.0.0
   remark-rehype: ^11.1.2
   splitpanes: ^4.0.4

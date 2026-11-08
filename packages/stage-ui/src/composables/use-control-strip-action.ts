@@ -1,8 +1,10 @@
 import { useModelStore } from '@proj-airi/stage-ui-three'
-import { useBroadcastChannel, useColorMode } from '@vueuse/core'
+import { useTheme } from '@proj-airi/ui'
+import { useBroadcastChannel } from '@vueuse/core'
 import { toast } from 'vue-sonner'
 
 import { useAiriCardStore } from '../stores/modules/airi-card'
+import { useHearingStore } from '../stores/modules/hearing'
 import { useLiveSessionStore } from '../stores/modules/live-session'
 import { useSettings, useSettingsAudioDevice, useSettingsControlsIsland, useSettingsControlStrip, useSettingsStageModel } from '../stores/settings'
 
@@ -13,7 +15,7 @@ export function useControlStripAction() {
   const settingsAudioDeviceStore = useSettingsAudioDevice()
   const liveSessionStore = useLiveSessionStore()
   const airiCardStore = useAiriCardStore()
-  const colorMode = useColorMode()
+  const { themeMode, switchToNextTheme } = useTheme()
   const { post: postControlStripAction } = useBroadcastChannel<string, string>({ name: 'airi-control-strip-actions' })
 
   function dispatchAction(actionId: string, options?: { skipBroadcast?: boolean }) {
@@ -101,11 +103,12 @@ export function useControlStripAction() {
         break
 
       case 'theme-mode':
-        colorMode.value = colorMode.value === 'dark' ? 'light' : 'dark'
+        switchToNextTheme()
+        toast.info(`Theme: ${themeMode.value === 'auto' ? 'System' : themeMode.value === 'dark' ? 'Dark' : 'Light'}`)
         break
 
       case 'caption-theme-mode':
-        colorMode.value = colorMode.value === 'dark' ? 'light' : 'dark'
+        switchToNextTheme()
         break
 
       case 'caption-sync-position':
@@ -166,9 +169,20 @@ export function useControlStripAction() {
         controlStripStore.captionOpen = !controlStripStore.captionOpen
         break
 
-      case 'mic':
-        settingsAudioDeviceStore.enabled = !settingsAudioDeviceStore.enabled
+      case 'workspace':
+        controlStripStore.workspaceOpen = !controlStripStore.workspaceOpen
         break
+
+      case 'mic': {
+        // Mic authority pact: the strip toggles the shared `enabled` flag
+        // and claims/releases ownership with it, so composer captures and
+        // lock keys stay in lockstep.
+        const hearingStore = useHearingStore()
+        const nextEnabled = !settingsAudioDeviceStore.enabled
+        settingsAudioDeviceStore.enabled = nextEnabled
+        hearingStore.micOwner = nextEnabled ? 'ambient' : null
+        break
+      }
 
       case 'layout':
         if (typeof window !== 'undefined') {

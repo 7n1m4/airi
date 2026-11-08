@@ -578,6 +578,51 @@ export function useCardExport() {
   }
 
   /**
+   * Collects every display model referenced by the card: the primary
+   * `modules.displayModelId` first, then each `visual_assets` / `modules`
+   * concept entry carrying a `manifestation.modelId`. Mirrors the rehearsal
+   * room roster so multi-actor cards export every on-set model, not just
+   * whoever is currently on stage.
+   */
+  function collectCardModelIds(card: AiriCard, primaryModelId?: string | null): Array<{ key: string, modelId: string }> {
+    const seen = new Set<string>()
+    const collected: Array<{ key: string, modelId: string }> = []
+    const push = (key: string, modelId: unknown) => {
+      if (typeof modelId !== 'string' || !modelId || modelId === 'none' || modelId === 'inherit')
+        return
+      if (seen.has(modelId))
+        return
+      seen.add(modelId)
+      collected.push({ key, modelId })
+    }
+
+    if (primaryModelId)
+      push('primary', primaryModelId)
+
+    const airi = (card as any)?.extensions?.airi as any
+    const assets = airi?.visual_assets || {}
+    const modules = airi?.modules || {}
+    for (const key of Object.keys(assets)) {
+      const asset = (assets[key] || {}) as any
+      const mod = (modules[key] || {}) as any
+      push(key, mod.manifestation?.modelId || asset.manifestation?.modelId)
+    }
+    // Modules-block concepts without a visual_assets entry (same fallback the
+    // rehearsal roster uses for single-actor cards lives in modules.displayModelId).
+    for (const key of Object.keys(modules)) {
+      if (key === 'displayModelId')
+        continue
+      const mod = (modules[key] || {}) as any
+      if (mod?.manifestation?.modelId)
+        push(key, mod.manifestation.modelId)
+    }
+    if (!primaryModelId && typeof modules.displayModelId === 'string')
+      push('primary', modules.displayModelId)
+
+    return collected
+  }
+
+  /**
    * Resolves the card's display model binary for ZIP bundling.
    * MMD split-storage (pmx + separate `${id}-textures`) can't be rebuilt into
    * a valid archive, so MMD exports metadata only.
@@ -603,7 +648,7 @@ export function useCardExport() {
     }
 
     if (model.type === 'file' && model.file) {
-      // NOTICE: unwrap the Vue reactive proxy or the stored blob corrupts on read.
+    // NOTICE: unwrap the Vue reactive proxy or the stored blob corrupts on read.
       const file = toRaw(model.file) as File
       return { file, name: model.name || 'model', format: model.format as DisplayModelFormat, ext }
     }
@@ -717,12 +762,28 @@ export function useCardExport() {
     }
 
     // --- Gather assets (sizes first for the 1 GB pre-flight estimate) ---
-    const model = includeModels
-      ? await resolveModelForZip(cardStore.getCardDisplayModelId(cardId))
-      : null
-    if (model && 'skipped' in model && model.skipped === 'mmd') {
+    // v1 stays upstream-whitelisted: primary body model only. v2 bundles the
+    // full on-set roster so multi-actor cards round-trip every character.
+    const primaryModelId = cardStore.getCardDisplayModelId(cardId)
+    const modelEntries = includeModels
+      ? (isV2
+          ? collectCardModelIds(enriched, primaryModelId)
+          : (primaryModelId ? [{ key: 'primary', modelId: primaryModelId }] : []))
+      : []
+    const resolvedModels: Array<{ key: string, modelId: string, ref: Exclude<ZipModelRef, null> }> = []
+    for (const entry of modelEntries) {
+      const ref = await resolveModelForZip(entry.modelId)
+      if (ref)
+        resolvedModels.push({ ...entry, ref })
+    }
+    const bundledModels = resolvedModels.filter(m => 'file' in m.ref) as Array<{ key: string, modelId: string, ref: Extract<ZipModelRef, { file: File }> }>
+    if (resolvedModels.some(m => 'skipped' in m.ref && (m.ref as any).skipped === 'mmd')) {
       console.warn('[useCardExport] MMD model bundling is unsupported, exporting metadata only')
     }
+    // Legacy single-model handle for README/estimate paths below.
+    const model = bundledModels.length > 0
+      ? { file: bundledModels[0].ref.file, name: bundledModels[0].ref.name, format: bundledModels[0].ref.format, ext: bundledModels[0].ref.ext }
+      : null
 
     let background: { blob: Blob, title: string } | null = null
     if (isV2 && includeBackground) {
@@ -769,7 +830,7 @@ export function useCardExport() {
     const memoryText = memoryExport ? JSON.stringify(memoryExport, null, 2) : null
 
     const encoder = new TextEncoder()
-    const estimated = (model && 'file' in model ? model.file.size : 0)
+    const estimated = bundledModels.reduce((sum, m) => sum + m.ref.file.size, 0)
       + (background?.blob.size ?? 0)
       + (coverBytes?.length ?? 0)
       + encoder.encode(cardJsonText).length
@@ -782,9 +843,25 @@ export function useCardExport() {
 
     // --- Manifest ---
     const createdAt = new Date().toISOString()
-    const modelFileName = model && 'file' in model
-      ? `${(model.name || 'model').replace(/\.[a-z0-9]+$/i, '').toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'model'}.${model.ext}`
-      : null
+    const cleanModelStem = (name: string) =>
+      (name || 'model').replace(/\.[a-z0-9]+$/i, '').toLowerCase().replace(/[^a-z0-9_-]/g, '_') || 'model'
+    const usedModelFileNames = new Set<string>()
+    const modelFileNameFor = (name: string, ext: string) => {
+      const stem = cleanModelStem(name)
+      let candidate = `${stem}.${ext}`
+      let n = 2
+      while (usedModelFileNames.has(candidate)) {
+        candidate = `${stem}_${n}.${ext}`
+        n += 1
+      }
+      usedModelFileNames.add(candidate)
+      return candidate
+    }
+    const bundledModelFiles = bundledModels.map(m => ({
+      ...m,
+      fileName: modelFileNameFor(m.ref.name, m.ref.ext),
+    }))
+    const modelFileName = bundledModelFiles.length > 0 ? bundledModelFiles[0].fileName : null
     let manifest: any
     if (!isV2) {
       manifest = {
@@ -809,9 +886,7 @@ export function useCardExport() {
         resources: {
           ...(coverBytes ? { cardImage: { path: 'cover.png' } } : {}),
           ...(background ? { backgroundImage: { path: 'background.png', title: background.title } } : {}),
-          displayModels: model && 'file' in model && modelFileName
-            ? [{ id: 'primary', format: model.format, name: model.file.name, path: `models/${modelFileName}`, role: 'base' }]
-            : [],
+          displayModels: bundledModelFiles.map((m, i) => ({ id: m.key === 'primary' ? 'primary' : m.key, format: m.ref.format, name: m.ref.file.name, path: `models/${m.fileName}`, role: i === 0 ? 'base' : 'layer' })),
           voiceProfiles: voicesTexts.map((v, i) => ({ id: voiceProfiles[i].id || `voice-${i + 1}`, path: `voices/${v.filename}` })),
           ...(sessionsExport ? { memories: { chatSessions: { path: 'memories/chat_sessions.json' }, memory: { path: 'memories/memory.json' } } } : {}),
         },
@@ -822,9 +897,13 @@ export function useCardExport() {
     const zip = new JSZip()
     zip.file('manifest.json', JSON.stringify(manifest, null, 2))
     zip.file('card.json', cardJsonText)
-    if (model && 'file' in model) {
-      const modelPath = !isV2 ? `models/body-model.${model.ext}` : `models/${modelFileName}`
+    if (model && 'file' in model && !isV2) {
+      const modelPath = `models/body-model.${model.ext}`
       zip.file(modelPath, await model.file.arrayBuffer())
+    }
+    if (isV2) {
+      for (const m of bundledModelFiles)
+        zip.file(`models/${m.fileName}`, await m.ref.file.arrayBuffer())
     }
     if (background)
       zip.file('background.png', await background.blob.arrayBuffer())
@@ -856,6 +935,7 @@ export function useCardExport() {
   }
 
   return {
+    collectCardModelIds,
     getCardWithExportedBackground,
     buildCharaCardV2,
     composeCardExportPng,

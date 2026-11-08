@@ -581,23 +581,27 @@ export const useLiveSessionStore = defineStore('live-session', () => {
             const searchQueries = content.groundingMetadata.searchEntryPoints?.map((sep: any) => sep.renderedContent).filter(Boolean) || []
 
             if (currentStreamingMessage) {
-              if (!currentStreamingMessage.grounding) {
-                currentStreamingMessage.grounding = {
+              const msg = currentStreamingMessage
+              if (!msg.grounding) {
+                msg.grounding = {
                   queries: [],
                   chunks: [],
                 }
               }
+              const grounding = msg.grounding
+              const queriesList = grounding.queries || (grounding.queries = [])
+              const chunksList = grounding.chunks || (grounding.chunks = [])
 
               // De-duplicate and add queries
               searchQueries.forEach((q: string) => {
-                if (!currentStreamingMessage!.grounding!.queries.includes(q))
-                  currentStreamingMessage!.grounding!.queries.push(q)
+                if (!queriesList.includes(q))
+                  queriesList.push(q)
               })
 
               // Add chunks (sources)
               chunks.forEach((chunk: any) => {
                 if (chunk.web) {
-                  currentStreamingMessage!.grounding!.chunks.push({
+                  chunksList.push({
                     title: chunk.web.title,
                     uri: chunk.web.uri,
                   })

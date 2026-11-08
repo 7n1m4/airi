@@ -97,6 +97,13 @@ export function createLlmJsonInterceptor(options: LlmJsonInterceptorOptions) {
       }
     },
 
+    async flush() {
+      if (!inBlock && buffer) {
+        await options.onText(buffer)
+        buffer = ''
+      }
+    },
+
     async end() {
       if (buffer) {
         await options.onText(buffer)

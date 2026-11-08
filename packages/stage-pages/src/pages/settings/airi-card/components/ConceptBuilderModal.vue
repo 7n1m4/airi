@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import VoiceCreatorModal from '@proj-airi/stage-ui/components/scenarios/dialogs/VoiceCreatorModal.vue'
+
 import { StageBackgroundDialogPicker } from '@proj-airi/stage-ui/components/scenarios/dialogs/stage-background-picker'
 import { useIdleAnimations } from '@proj-airi/stage-ui/composables'
 import { useBackgroundStore } from '@proj-airi/stage-ui/stores/background'
@@ -20,7 +22,6 @@ import {
 import { computed, ref, watch } from 'vue'
 
 import ImageTagExtractorModal from './ImageTagExtractorModal.vue'
-import VoiceCreatorModal from './VoiceCreatorModal.vue'
 
 interface ConceptData {
   description: string
@@ -195,7 +196,6 @@ const showVoiceCreator = ref(false)
 // Scene Overrides
 const selectedBackgroundId = ref<string>('inherit')
 const scenePickerOpen = ref(false)
-const selectedIdleAnimations = ref<string[]>([])
 
 // Director status (determines if Scene tab is functional)
 const isDirectorActive = computed(() => {
@@ -240,6 +240,7 @@ watch(() => [props.modelValue, props.conceptId, props.initialData], () => {
 const manifestationSearch = ref('')
 const manifestationFormatFilter = ref<'all' | 'live2d' | 'vrm' | 'spine' | 'mmd'>('all')
 
+const selectedIdleAnimations = ref<string[]>([])
 const newIdleAnimInput = ref('')
 const isAnimDropdownOpen = ref(false)
 const highlightedIndex = ref(0)
@@ -443,9 +444,38 @@ function buildPayload(): { id: string, data: ConceptData } {
   try {
     options = selectedOptionsStr.value.trim() ? JSON.parse(selectedOptionsStr.value) : undefined
   }
-  catch {
+  catch (e) {
     // Ignore invalid JSON for now
   }
+
+  // Prune non-existent / hallucinated expression keys against active model capabilities
+  let cleanExpressions: Record<string, number> | undefined
+  if (Object.keys(selectedExpressions.value).length > 0) {
+    if (availableExpressions.value.length > 0) {
+      const validKeys = new Set<string>()
+      for (const exp of availableExpressions.value) {
+        if (exp.key)
+          validKeys.add(exp.key)
+        if (exp.name)
+          validKeys.add(exp.name)
+      }
+      const filtered: Record<string, number> = {}
+      for (const [k, v] of Object.entries(selectedExpressions.value)) {
+        if (validKeys.has(k)) {
+          filtered[k] = v
+        }
+      }
+      if (Object.keys(filtered).length > 0) {
+        cleanExpressions = filtered
+      }
+    }
+    else {
+      cleanExpressions = { ...selectedExpressions.value }
+    }
+  }
+
+  // Synchronize internal state with sanitized expressions
+  selectedExpressions.value = cleanExpressions ? { ...cleanExpressions } : {}
 
   return {
     id: id.value.trim(),
@@ -466,9 +496,7 @@ function buildPayload(): { id: string, data: ConceptData } {
         modelId: selectedModelId.value !== 'inherit' ? selectedModelId.value : undefined,
         mood: selectedMood.value.trim() || undefined,
         backgroundId: selectedBackgroundId.value !== 'inherit' ? selectedBackgroundId.value : undefined,
-        active_expressions: Object.keys(selectedExpressions.value).length > 0
-          ? { ...selectedExpressions.value }
-          : undefined,
+        active_expressions: cleanExpressions,
       },
       speech: selectedSpeechProvider.value !== 'inherit'
         ? {
@@ -1099,7 +1127,7 @@ function handleClone() {
     :initial-provider="selectedSpeechProvider"
     :initial-model="selectedSpeechModel"
     :initial-voice="selectedSpeechVoiceId"
-    @save="(payload) => {
+    @save="(payload: any) => {
       selectedSpeechProvider = payload.baseProvider
       selectedSpeechModel = payload.baseModel
       selectedSpeechVoiceId = payload.baseVoice

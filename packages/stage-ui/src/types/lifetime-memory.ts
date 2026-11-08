@@ -9,6 +9,7 @@ export interface LifetimeUpdateRecord {
 export interface LifetimeMemoryArtifact {
   id: string
   characterId: string
+  universeId?: string
   version: number
   /** The foundation: summarized chunks used for synthesis */
   chunkSummaries: any[]
@@ -34,9 +35,13 @@ export interface LifetimeMemoryArtifact {
     totalElapsedMs: number
     chunkCount: number
     targetTokens?: number
-    /** Incremental watermark: the last local day key (YYYY-MM-DD) fully consumed into this artifact. Missing on legacy artifacts. */
+    /** The day watermark captured when chunkSummaries were originally built. */
+    initialConsumedDay?: string
+    /** Incremental watermark: the last completed local day key (YYYY-MM-DD) fully consumed into this artifact. */
     lastConsumedDay?: string
-    lastUpdateType?: 'init' | 'incremental'
+    lastUpdateType?: 'init' | 'incremental' | 'reprovision'
+    /** Number of changed=true incremental merges since the last full synthesis/rebase. */
+    mergesSinceRebase?: number
     /** Capped audit chain of incremental merge passes, newest last */
     updateHistory?: LifetimeUpdateRecord[]
   }

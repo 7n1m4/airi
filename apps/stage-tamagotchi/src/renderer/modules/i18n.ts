@@ -1,8 +1,10 @@
 import messages from '@proj-airi/i18n/locales'
 
+import { createFallbackOptions } from '@proj-airi/i18n'
 import { createI18n } from 'vue-i18n'
 
 const languageRemap: Record<string, string> = {
+  'zh': 'zh-Hans',
   'zh-CN': 'zh-Hans',
   'zh-TW': 'zh-Hant',
   'zh-HK': 'zh-Hant',
@@ -33,9 +35,18 @@ function getLocale() {
   return 'en'
 }
 
+const locale = getLocale()
+
+// Chromium picks the fallback font for CJK text from the document language.
+// It must follow the UI locale, so the OS language does not choose the font.
+// `App.vue` updates it when the language changes.
+if (typeof document !== 'undefined') {
+  document.documentElement.lang = locale
+}
+
 export const i18n = createI18n({
   legacy: false,
-  locale: getLocale(),
-  fallbackLocale: 'en',
+  locale,
   messages,
+  ...createFallbackOptions(console.warn),
 })

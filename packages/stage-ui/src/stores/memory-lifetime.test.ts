@@ -15,7 +15,7 @@ vi.mock('./modules/airi-card', () => ({ useAiriCardStore: () => ({}) }))
 vi.mock('./modules/consciousness', () => ({ useConsciousnessStore: () => ({}) }))
 vi.mock('./modules/live-session', () => ({ useLiveSessionStore: () => ({}) }))
 vi.mock('./providers', () => ({ useProvidersStore: () => ({}) }))
-vi.mock('@vueuse/core', () => ({ useBroadcastChannel: () => ({}) }))
+vi.mock('@vueuse/core', () => ({ useBroadcastChannel: () => ({}), useLocalStorage: (_k: string, v: unknown) => ({ value: v }), refManualReset: (v: unknown) => ({ value: v }) }))
 
 describe('memory-lifetime', () => {
   beforeEach(() => {

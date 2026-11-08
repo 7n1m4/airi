@@ -8,18 +8,34 @@ import * as ort from 'onnxruntime-web'
 
 import { LAYA_CACHE_NAME } from '../../libs/inference/cache-utils'
 import { layaDecideEvent, layaLoadEvent, layaUnloadEvent } from '../../libs/inference/contract'
-import { decodeAnswers, QTYPES, renderOptions, serializeState, toInternal } from './prep'
-
-export const LAYA_HF_REPO = 'tozp/laya-onnx'
-export const LAYA_INT8_MODEL_FILE = 'model_int8.onnx'
-export const LAYA_FP16_MODEL_FILE = 'model_fp16.onnx'
+import {
+  evictStaleLayaEntries,
+  getDecisionModelSpec,
+  LAYA_MAX_SEQ_LEN,
+  LAYA_TOKENIZER_REPO,
+  LAYA_TOKENIZER_REVISION,
+  layaFileUrl,
+  layaModelFiles,
+  layaWeightsFile,
+} from '../../libs/inference/laya-models'
+import {
+  decodeAnswers,
+  decodeOpenJevAnswers,
+  prepareOpenJevItem,
+  QTYPES,
+  renderOptions,
+  serializeState,
+  toInternal,
+} from './prep'
 
 const { context } = createContext()
 
 let activeSession: ort.InferenceSession | null = null
 let activePrecision: 'int8' | 'fp16' | null = null
 let activeEp: 'wasm' | 'webgpu' | null = null
+let activeModelId: string | null = null
 let activeTokenizer: any = null
+let activeTokenizerModel: string | null = null
 let runLock: Promise<unknown> = Promise.resolve()
 
 function ensureOrtConfigured(): void {
@@ -38,12 +54,10 @@ function ensureOrtConfigured(): void {
 
 ensureOrtConfigured()
 
-async function downloadFile(fileName: string, onProgress?: (loaded: number, total: number) => void): Promise<void> {
-  const fileUrl = `https://huggingface.co/${LAYA_HF_REPO}/resolve/main/${fileName}`
-  const cache = await caches.open(LAYA_CACHE_NAME)
+async function downloadFile(cache: Cache, fileUrl: string, onProgress?: (loaded: number, total: number) => void): Promise<void> {
   const res = await fetch(fileUrl, { redirect: 'follow' })
   if (!res.ok || !res.body)
-    throw new Error(`Failed to download ${fileName}: HTTP ${res.status}`)
+    throw new Error(`Failed to download ${fileUrl}: HTTP ${res.status}`)
   const total = Number(res.headers.get('content-length')) || 0
   const reader = res.body.getReader()
   const chunks: Uint8Array[] = []
@@ -65,59 +79,77 @@ async function downloadFile(fileName: string, onProgress?: (loaded: number, tota
 async function ensureSession(
   precision: 'int8' | 'fp16',
   targetEp: 'wasm' | 'webgpu',
+  modelId?: string,
   emit?: (item: LoadStreamItem) => void,
 ): Promise<ort.InferenceSession> {
-  if (activeSession && activePrecision === precision && activeEp === targetEp)
+  const normModel = modelId || 'default'
+  if (activeSession && activePrecision === precision && activeEp === targetEp && activeModelId === normModel)
     return activeSession
-  if (activeSession && (activePrecision !== precision || activeEp !== targetEp)) {
+  if (activeSession) {
     activeSession = null
     activePrecision = null
     activeEp = null
+    activeModelId = null
   }
-  if (activeSession)
-    return activeSession
 
   ensureOrtConfigured()
-  const targetFile = precision === 'fp16' ? LAYA_FP16_MODEL_FILE : LAYA_INT8_MODEL_FILE
-  const fileUrl = `https://huggingface.co/${LAYA_HF_REPO}/resolve/main/${targetFile}`
+  const spec = getDecisionModelSpec(modelId, precision)
   const cache = await caches.open(LAYA_CACHE_NAME)
-  let match = await cache.match(fileUrl)
-  if (!match) {
-    await downloadFile(targetFile, (loaded, total) => emit?.({
-      kind: 'progress',
-      payload: { phase: 'download', percent: total > 0 ? Math.round((loaded / total) * 100) : -1, message: targetFile, file: targetFile, loaded, total },
-    }))
-    match = await cache.match(fileUrl)
-    if (!match)
-      throw new Error('Failed to retrieve Laya model from cache after download.')
+  const buffers = new Map<string, ArrayBuffer>()
+  for (const file of layaModelFiles(spec)) {
+    const fileUrl = layaFileUrl(spec, file)
+    let match = await cache.match(fileUrl)
+    if (!match) {
+      await evictStaleLayaEntries(cache)
+      await downloadFile(cache, fileUrl, (loaded, total) => emit?.({
+        kind: 'progress',
+        payload: { phase: 'download', percent: total > 0 ? Math.round((loaded / total) * 100) : -1, message: file, file, loaded, total },
+      }))
+      match = await cache.match(fileUrl)
+      if (!match)
+        throw new Error(`Failed to retrieve ${spec.family === 'openjev' ? 'OpenJev' : 'Laya'} ${file} from cache after download.`)
+    }
+    buffers.set(file, await match.arrayBuffer())
   }
-  const buffer = await match.arrayBuffer()
-  if (buffer.byteLength < 50_000_000) {
-    await cache.delete(fileUrl)
-    throw new Error(`Cached Laya model truncated (${buffer.byteLength} bytes). Evicted; retry load.`)
+  const weightsFile = layaWeightsFile(spec)
+  const weightsBytes = buffers.get(weightsFile)!.byteLength
+  if (weightsBytes < spec.minWeightsBytes) {
+    await cache.delete(layaFileUrl(spec, weightsFile))
+    throw new Error(`Cached ${spec.family === 'openjev' ? 'OpenJev' : 'Laya'} weights truncated (${weightsBytes} bytes). Evicted; retry load.`)
   }
 
-  emit?.({ kind: 'progress', payload: { phase: 'compile', percent: -1, message: `Compiling ${targetFile} (${targetEp})...` } })
+  emit?.({ kind: 'progress', payload: { phase: 'compile', percent: -1, message: `Compiling ${spec.modelFile} (${targetEp})...` } })
   const executionProviders: string[] = targetEp === 'webgpu' ? ['webgpu', 'wasm'] : ['wasm']
   // NOTICE: fp16 ModernBERT trips SimplifiedLayerNormFusion at level 'all'
   // (GetIndexFromName: InsertedPrecisionFreeCast not found); 'basic' skips it.
   const optLevel: 'basic' | 'all' = precision === 'fp16' ? 'basic' : 'all'
+  const modelBytes = new Uint8Array(buffers.get(spec.modelFile)!)
+  // The graph references its external weights by file name relative to itself.
+  const externalData = spec.externalDataFile
+    ? [{ path: spec.externalDataFile.split('/').pop()!, data: new Uint8Array(buffers.get(spec.externalDataFile)!) }]
+    : undefined
   try {
-    activeSession = await ort.InferenceSession.create(new Uint8Array(buffer), { executionProviders, graphOptimizationLevel: optLevel })
+    activeSession = await ort.InferenceSession.create(modelBytes, { executionProviders, graphOptimizationLevel: optLevel, externalData })
   }
   catch {
-    activeSession = await ort.InferenceSession.create(new Uint8Array(buffer), { executionProviders, graphOptimizationLevel: 'disabled' })
+    activeSession = await ort.InferenceSession.create(modelBytes, { executionProviders, graphOptimizationLevel: 'disabled', externalData })
   }
   activePrecision = precision
   activeEp = targetEp
+  activeModelId = normModel
   return activeSession
 }
 
-async function ensureTokenizer(emit?: (item: LoadStreamItem) => void): Promise<any> {
-  if (activeTokenizer)
+async function ensureTokenizer(modelId?: string, emit?: (item: LoadStreamItem) => void): Promise<any> {
+  const spec = getDecisionModelSpec(modelId, 'int8')
+  const tokenizerRepo = spec.tokenizerRepo || LAYA_TOKENIZER_REPO
+  const tokenizerRevision = spec.tokenizerRevision || LAYA_TOKENIZER_REVISION
+  if (activeTokenizer && activeTokenizerModel === tokenizerRepo)
     return activeTokenizer
-  emit?.({ kind: 'progress', payload: { phase: 'download', percent: -1, message: 'Loading Laya tokenizer...' } })
-  activeTokenizer = await AutoTokenizer.from_pretrained(LAYA_HF_REPO)
+  activeTokenizer = null
+  emit?.({ kind: 'progress', payload: { phase: 'download', percent: -1, message: `Loading ${spec.family === 'openjev' ? 'OpenJev' : 'Laya'} tokenizer...` } })
+  activeTokenizer = await AutoTokenizer.from_pretrained(tokenizerRepo, { revision: tokenizerRevision })
+  activeTokenizerModel = tokenizerRepo
   return activeTokenizer
 }
 
@@ -134,139 +166,321 @@ function precisionFromPayload(payload?: LoadModelRequest): 'int8' | 'fp16' {
 defineStreamInvokeHandler(context, layaLoadEvent, toStreamHandler<LoadModelRequest, LoadStreamItem>(async ({ payload, emit }) => {
   const precision = precisionFromPayload(payload)
   const wantWebGpu = payload?.device === 'webgpu'
-  const session = await ensureSession(precision, wantWebGpu ? 'webgpu' : 'wasm', emit)
-  await ensureTokenizer(emit)
+  const session = await ensureSession(precision, wantWebGpu ? 'webgpu' : 'wasm', payload?.model, emit)
+  await ensureTokenizer(payload?.model, emit)
   void session
-  emit({ kind: 'ready', info: { device: (wantWebGpu ? 'webgpu' : 'wasm') as InferenceDevice, metadata: { precision } } })
+  emit({ kind: 'ready', info: { device: (wantWebGpu ? 'webgpu' : 'wasm') as InferenceDevice, metadata: { precision, model: payload?.model } } })
 }))
 
 defineInvokeHandler(context, layaDecideEvent, async (req: LayaDecideRequest) => {
-  const start = performance.now()
-  const precision = req.precision ?? 'int8'
-  const targetEp = req.useWebGpu ? 'webgpu' : 'wasm'
-  const [session, tokenizer] = await Promise.all([
-    ensureSession(precision, targetEp),
-    ensureTokenizer(),
-  ])
-
-  const qids = Object.keys(req.questions)
-  if (qids.length === 0)
-    throw new Error('runLayaSystemOne: at least one question is required')
-
-  const clsId = tokenizer.cls_token_id ?? 50281
-  const sepId = tokenizer.sep_token_id ?? 50282
-  const maskId = tokenizer.mask_token_id ?? 50284
-  const padId = tokenizer.pad_token_id ?? 50283
-  const maxLen = 512
-  const headMaxLen = 192
-
-  const encodeText = (txt: string): number[] => {
-    const out = tokenizer(txt, { add_special_tokens: false })
-    const data = out.input_ids.ort_tensor?.cpuData || out.input_ids.data
-    return Array.from(data, (v: any) => Number(v))
-  }
-
-  const items = qids.map((qid) => {
-    const q = toInternal((req.questions as any)[qid])
-    const opts = renderOptions(q)
-    const scrub = (s: string) => s.split('[MASK]').join(' ')
-    let headIds = encodeText(`${q.t} question: ${scrub(q.ins)}`)
-    let optIds = opts.map(o => [maskId, ...encodeText(` ${scrub(o)}`).slice(0, 48)])
-    const total = (xs: number[][]) => xs.reduce((s, o) => s + o.length, 0)
-    let optBudget = headMaxLen - total(optIds)
-    if (optBudget < 16) {
-      const per = Math.max(4, Math.floor((headMaxLen - 16) / Math.max(1, optIds.length)))
-      optIds = optIds.map(o => o.slice(0, per))
-      optBudget = headMaxLen - total(optIds)
-    }
-    headIds = headIds.slice(0, Math.max(8, optBudget))
-    const seq = [clsId, ...headIds, sepId]
-    const markers: number[] = []
-    for (const o of optIds) {
-      markers.push(seq.length)
-      seq.push(...o)
-    }
-    seq.push(sepId)
-    const room = Math.max(0, maxLen - seq.length - 1)
-    const st = encodeText(scrub(serializeState(req.state))).slice(0, room)
-    seq.push(...st, sepId)
-    return { q, ids: seq.slice(0, maxLen), markers: markers.filter(m => m < maxLen), qtype: QTYPES[q.t] ?? 0 }
-  })
-
-  const n = items.length
-  const L = maxLen
-  const K = Math.max(...items.map(it => it.markers.length))
-  const inputIds = new BigInt64Array(n * L).fill(BigInt(padId))
-  const attention = new BigInt64Array(n * L)
-  const markerPos = new BigInt64Array(n * K)
-  const markerMask = new Uint8Array(n * K)
-  const qtype = new BigInt64Array(n)
-  let nTokens = 0
-  items.forEach((it, i) => {
-    it.ids.forEach((v, j) => {
-      inputIds[i * L + j] = BigInt(v)
-      attention[i * L + j] = 1n
-    })
-    nTokens += it.ids.length
-    it.markers.forEach((m, j) => {
-      markerPos[i * K + j] = BigInt(m)
-      markerMask[i * K + j] = 1
-    })
-    qtype[i] = BigInt(it.qtype)
-  })
-
-  const inputTensor = new ort.Tensor('int64', inputIds, [n, L])
-  const attentionTensor = new ort.Tensor('int64', attention, [n, L])
-  const markerPosTensor = new ort.Tensor('int64', markerPos, [n, K])
-  const markerMaskTensor = new ort.Tensor('bool', markerMask, [n, K])
-  const qtypeTensor = new ort.Tensor('int64', qtype, [n])
-
-  let out: Record<string, ort.Tensor> | null = null
   try {
-    let release!: () => void
-    const next = new Promise<void>(r => release = r)
-    const prev = runLock
-    runLock = next
-    await prev.catch(() => {})
-    try {
-      out = await session.run({
+    const start = performance.now()
+    const precision = req.precision ?? 'int8'
+    const targetEp = req.useWebGpu ? 'webgpu' : 'wasm'
+    const [session, tokenizer] = await Promise.all([
+      ensureSession(precision, targetEp, req.model),
+      ensureTokenizer(req.model),
+    ])
+
+    const qids = Object.keys(req.questions)
+    if (qids.length === 0)
+      throw new Error('runLayaSystemOne: at least one question is required')
+
+    const clsId = tokenizer.cls_token_id ?? 50281
+    const sepId = tokenizer.sep_token_id ?? 50282
+    const maskId = tokenizer.mask_token_id ?? 50284
+    const padId = tokenizer.pad_token_id ?? 50283
+    const maxLen = LAYA_MAX_SEQ_LEN
+    const headMaxLen = 192
+    const spec = getDecisionModelSpec(req.model, precision)
+    const isOpenJev = spec.family === 'openjev'
+    const MAX_ATTENTION_BUFFER_BYTES = 1_342_177_280
+
+    if (isOpenJev) {
+      const openJevItems = qids.map((qid) => {
+        const rawQ = (req.questions as any)[qid]
+        const prep = prepareOpenJevItem(rawQ, req.state)
+        const out = tokenizer(prep.prompt, { add_special_tokens: true })
+        const data = out.input_ids.ort_tensor?.cpuData || out.input_ids.data
+        const ids = Array.from(data, (v: any) => Number(v)).slice(0, maxLen)
+        return { prep, ids }
+      })
+
+      const nTokens = openJevItems.reduce((sum, it) => sum + it.ids.length, 0)
+      const numHeads = spec.numHeads ?? 12
+      const bytesMultiplier = numHeads * 4
+      const chunks: Array<{ items: typeof openJevItems, qids: string[] }> = []
+      let currentChunkItems: typeof openJevItems = []
+      let currentChunkQids: string[] = []
+      let currentMaxL = 0
+
+      for (let i = 0; i < openJevItems.length; i++) {
+        const item = openJevItems[i]
+        const qid = qids[i]
+        const candidateMaxL = Math.max(currentMaxL, item.ids.length)
+        const candidateBytes = (currentChunkItems.length + 1) * bytesMultiplier * candidateMaxL * candidateMaxL
+        if (currentChunkItems.length > 0 && candidateBytes > MAX_ATTENTION_BUFFER_BYTES) {
+          chunks.push({ items: currentChunkItems, qids: currentChunkQids })
+          currentChunkItems = [item]
+          currentChunkQids = [qid]
+          currentMaxL = item.ids.length
+        }
+        else {
+          currentChunkItems.push(item)
+          currentChunkQids.push(qid)
+          currentMaxL = candidateMaxL
+        }
+      }
+      if (currentChunkItems.length > 0)
+        chunks.push({ items: currentChunkItems, qids: currentChunkQids })
+
+      const allAnswers: Record<string, any> = {}
+
+      for (const chunk of chunks) {
+        const n = chunk.items.length
+        const L = Math.max(...chunk.items.map(it => it.ids.length))
+        const inputIds = new BigInt64Array(n * L).fill(BigInt(padId))
+        const attention = new BigInt64Array(n * L)
+
+        chunk.items.forEach((it, i) => {
+          it.ids.forEach((v, j) => {
+            inputIds[i * L + j] = BigInt(v)
+            attention[i * L + j] = 1n
+          })
+        })
+
+        const inputTensor = new ort.Tensor('int64', inputIds, [n, L])
+        const attentionTensor = new ort.Tensor('int64', attention, [n, L])
+        const feeds: Record<string, ort.Tensor> = {
+          input_ids: inputTensor,
+          attention_mask: attentionTensor,
+        }
+
+        let out: Record<string, ort.Tensor> | null = null
+        try {
+          let release!: () => void
+          const next = new Promise<void>(r => release = r)
+          const prev = runLock
+          runLock = next
+          await prev.catch(() => {})
+          try {
+            out = await session.run(feeds)
+          }
+          catch (runErr: any) {
+            console.error('[OpenJevWorker] session.run failed!', {
+              sessionInputNames: session.inputNames,
+              sessionOutputNames: session.outputNames,
+              feedKeys: Object.keys(feeds),
+              error: runErr,
+              stack: runErr?.stack,
+            })
+            throw runErr
+          }
+          finally {
+            release()
+          }
+
+          const outputKey = session.outputNames.find(name => name === 'logits' || name === 'output' || name === 'probabilities') || session.outputNames[0]
+          const logitsTensor = out![outputKey]
+          const logits = logitsTensor?.data
+          if (!(logits instanceof Float32Array))
+            throw new Error(`OpenJev worker: unexpected logits dtype (outputKey=${outputKey})`)
+
+          const chunkAnswers = decodeOpenJevAnswers(logits, chunk.items.map(it => it.prep), chunk.qids)
+          Object.assign(allAnswers, chunkAnswers)
+        }
+        finally {
+          inputTensor.dispose?.()
+          attentionTensor.dispose?.()
+          if (out) {
+            for (const t of Object.values(out))
+              (t as any)?.dispose?.()
+          }
+        }
+      }
+
+      return {
+        model: `${spec.family || 'openjev'}-${precision}${req.useWebGpu ? '-webgpu' : ''}`,
+        answers: allAnswers,
+        usage: { input_tokens: nTokens, output_tokens: 0 },
+        latency_ms: Math.round(performance.now() - start),
+      }
+    }
+
+    const encodeText = (txt: string): number[] => {
+      const out = tokenizer(txt, { add_special_tokens: false })
+      const data = out.input_ids.ort_tensor?.cpuData || out.input_ids.data
+      return Array.from(data, (v: any) => Number(v))
+    }
+
+    const items = qids.map((qid) => {
+      const q = toInternal((req.questions as any)[qid])
+      const opts = renderOptions(q)
+      const scrub = (s: string) => s.split('[MASK]').join(' ')
+      let headIds = encodeText(`${q.t} question: ${scrub(q.ins)}`)
+      let optIds = opts.map(o => [maskId, ...encodeText(` ${scrub(o)}`).slice(0, 48)])
+      const total = (xs: number[][]) => xs.reduce((s, o) => s + o.length, 0)
+      let optBudget = headMaxLen - total(optIds)
+      if (optBudget < 16) {
+        const per = Math.max(4, Math.floor((headMaxLen - 16) / Math.max(1, optIds.length)))
+        optIds = optIds.map(o => o.slice(0, per))
+        optBudget = headMaxLen - total(optIds)
+      }
+      headIds = headIds.slice(0, Math.max(8, optBudget))
+      const seq = [clsId, ...headIds, sepId]
+      const markers: number[] = []
+      for (const o of optIds) {
+        markers.push(seq.length)
+        seq.push(...o)
+      }
+      seq.push(sepId)
+      const room = Math.max(0, maxLen - seq.length - 1)
+      const stateIds = encodeText(scrub(serializeState(req.state)))
+      if (stateIds.length > room)
+        console.warn(`[Laya worker] State truncated from ${stateIds.length} to ${room} tokens (max sequence ${maxLen}).`)
+      seq.push(...stateIds.slice(0, room), sepId)
+      return { q, ids: seq.slice(0, maxLen), markers: markers.filter(m => m < maxLen), qtype: QTYPES[q.t] ?? 0 }
+    })
+
+    const nTokens = items.reduce((sum, it) => sum + it.ids.length, 0)
+
+    // NOTICE: the exported ModernBERT graph constructs an fp32 self-attention tensor
+    // [batch, num_heads, L, L] (num_heads * 4 * L^2 bytes per sequence in the batch).
+    // ModernBERT-large (Laya) has 16 heads (64 * L^2); ModernBERT-base (OpenJev) has 12 heads (48 * L^2).
+    // WebGPU adapters enforce a hard maxBufferSize of 2 GiB (2,147,483,648 bytes).
+    // We cap attention tensor allocation at 1.25 GiB (~1.34 GB) so sub-batches never overflow.
+    const numHeads = spec.numHeads ?? 16
+    const bytesMultiplier = numHeads * 4
+    const chunks: Array<{ items: typeof items, qids: string[] }> = []
+    let currentChunkItems: typeof items = []
+    let currentChunkQids: string[] = []
+    let currentMaxL = 0
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      const qid = qids[i]
+      const candidateMaxL = Math.max(currentMaxL, item.ids.length)
+      const candidateBytes = (currentChunkItems.length + 1) * bytesMultiplier * candidateMaxL * candidateMaxL
+      if (currentChunkItems.length > 0 && candidateBytes > MAX_ATTENTION_BUFFER_BYTES) {
+        chunks.push({ items: currentChunkItems, qids: currentChunkQids })
+        currentChunkItems = [item]
+        currentChunkQids = [qid]
+        currentMaxL = item.ids.length
+      }
+      else {
+        currentChunkItems.push(item)
+        currentChunkQids.push(qid)
+        currentMaxL = candidateMaxL
+      }
+    }
+    if (currentChunkItems.length > 0)
+      chunks.push({ items: currentChunkItems, qids: currentChunkQids })
+
+    const allAnswers: Record<string, any> = {}
+
+    for (const chunk of chunks) {
+      const n = chunk.items.length
+      // Pad only to the longest sequence in this sub-batch: the encoder is length-agnostic
+      // and padding every question to 512 multiplies CPU time ~5x for typical prompts.
+      const L = Math.max(...chunk.items.map(it => it.ids.length))
+      // NOTICE: the exported graph computes the act-head features with an
+      // unconditional `topk(2)` over the option axis, so a batch whose widest
+      // question has one option fails with "k argument [2] should not be greater
+      // than specified axis dim value [1]". Extra slots stay masked out.
+      const K = Math.max(2, ...chunk.items.map(it => it.markers.length))
+      const inputIds = new BigInt64Array(n * L).fill(BigInt(padId))
+      const attention = new BigInt64Array(n * L)
+      const markerPos = new BigInt64Array(n * K)
+      const markerMask = new Uint8Array(n * K)
+      const qtype = new BigInt64Array(n)
+
+      chunk.items.forEach((it, i) => {
+        it.ids.forEach((v, j) => {
+          inputIds[i * L + j] = BigInt(v)
+          attention[i * L + j] = 1n
+        })
+        it.markers.forEach((m, j) => {
+          markerPos[i * K + j] = BigInt(m)
+          markerMask[i * K + j] = 1
+        })
+        qtype[i] = BigInt(it.qtype)
+      })
+
+      const inputTensor = new ort.Tensor('int64', inputIds, [n, L])
+      const attentionTensor = new ort.Tensor('int64', attention, [n, L])
+      const markerPosTensor = new ort.Tensor('int64', markerPos, [n, K])
+      const markerMaskTensor = new ort.Tensor('bool', markerMask, [n, K])
+      const qtypeTensor = new ort.Tensor('int64', qtype, [n])
+
+      const feeds: Record<string, ort.Tensor> = {
         input_ids: inputTensor,
         attention_mask: attentionTensor,
-        marker_pos: markerPosTensor,
-        marker_mask: markerMaskTensor,
-        qtype: qtypeTensor,
-      })
-    }
-    finally {
-      release()
-    }
-  }
-  finally {
-    inputTensor.dispose?.()
-    attentionTensor.dispose?.()
-    markerPosTensor.dispose?.()
-    markerMaskTensor.dispose?.()
-    qtypeTensor.dispose?.()
-  }
+      }
+      if (session.inputNames.includes('marker_pos'))
+        feeds.marker_pos = markerPosTensor
+      if (session.inputNames.includes('marker_mask'))
+        feeds.marker_mask = markerMaskTensor
+      if (session.inputNames.includes('qtype'))
+        feeds.qtype = qtypeTensor
 
-  try {
-    const logitsTensor = out!.logits || (out as any).output
-    const logits = logitsTensor?.data
-    if (!(logits instanceof Float32Array))
-      throw new Error('Laya worker: unexpected logits dtype')
-    const answers = decodeAnswers(logits, items, K, qids)
+      let out: Record<string, ort.Tensor> | null = null
+      try {
+        let release!: () => void
+        const next = new Promise<void>(r => release = r)
+        const prev = runLock
+        runLock = next
+        await prev.catch(() => {})
+        try {
+          out = await session.run(feeds)
+        }
+        catch (runErr: any) {
+          console.error('[LayaWorker] session.run failed!', {
+            sessionInputNames: session.inputNames,
+            sessionOutputNames: session.outputNames,
+            feedKeys: Object.keys(feeds),
+            error: runErr,
+            stack: runErr?.stack,
+          })
+          throw runErr
+        }
+        finally {
+          release()
+        }
+
+        const outputKey = session.outputNames.find(name => name === 'logits' || name === 'output' || name === 'probabilities') || session.outputNames[0]
+        const logitsTensor = out![outputKey]
+        const logits = logitsTensor?.data
+        if (!(logits instanceof Float32Array))
+          throw new Error(`Laya worker: unexpected logits dtype (outputKey=${outputKey})`)
+        const chunkAnswers = decodeAnswers(logits, chunk.items, K, chunk.qids)
+        Object.assign(allAnswers, chunkAnswers)
+      }
+      finally {
+        inputTensor.dispose?.()
+        attentionTensor.dispose?.()
+        markerPosTensor.dispose?.()
+        markerMaskTensor.dispose?.()
+        qtypeTensor.dispose?.()
+        if (out) {
+          for (const t of Object.values(out))
+            (t as any)?.dispose?.()
+        }
+      }
+    }
+
     return {
-      model: `laya-${precision}${req.useWebGpu ? '-webgpu' : ''}`,
-      answers,
+      model: `${spec.family || 'laya'}-${precision}${req.useWebGpu ? '-webgpu' : ''}`,
+      answers: allAnswers,
       usage: { input_tokens: nTokens, output_tokens: 0 },
       latency_ms: Math.round(performance.now() - start),
     }
   }
-  finally {
-    if (out) {
-      for (const t of Object.values(out))
-        (t as any)?.dispose?.()
+  catch (err: any) {
+    console.error('[LayaWorker] layaDecideEvent failed:', err)
+    if (err?.stack) {
+      console.error('[LayaWorker] Stack trace:', err.stack)
     }
+    throw err
   }
 })
 
@@ -277,4 +491,6 @@ defineInvokeHandler(context, layaUnloadEvent, async () => {
   activeTokenizer = null
   activePrecision = null
   activeEp = null
+  activeModelId = null
+  activeTokenizerModel = null
 })

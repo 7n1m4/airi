@@ -22,6 +22,13 @@ import {
 } from '../../libs/inference/contract'
 
 env.backends.onnx.logLevel = 'error'
+// NOTICE: transformers 4.x's stock wasmPaths default is the broken object
+// form (backend init dies with "Failed to construct 'URL': Invalid URL" —
+// verified live on VAD/whisper). Overwrite unconditionally with the string
+// form, matching the search/blip workers.
+if (env.backends.onnx.wasm) {
+  env.backends.onnx.wasm.wasmPaths = 'https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.2/dist/'
+}
 
 const { context } = createContext()
 
@@ -141,6 +148,48 @@ defineStreamInvokeHandler(context, kokoroGenerateEvent, toStreamHandler<KokoroGe
     throw new Error('Kokoro TTS generation failed: No model loaded.')
 
   const signal = options?.abortController?.signal
+
+  // NOTICE: Support zero-shot custom voice packs for Kokoro.
+  // In kokoro-js, `_validate_voice(voice)` checks whether the voice exists in an internal
+  // frozen dictionary ($) and returns the phonemizer language code ('a' for en-us).
+  // Monkey-patching `_validate_voice` allows custom voice profiles (e.g. `kokoro-profile-*`)
+  // to pass validation and route through the 'a' (American English) phonemizer.
+  // kokoro-js resolves voice tensors by checking `caches.open('kokoro-voices')` matching
+  // `voices/${voice}.bin`, so caching the [510 * 256] Float32Array in CacheStorage enables
+  // cloned voices with zero runtime latency and no model modifications.
+  if (!(ttsModel as any)._customVoicesPatched) {
+    const origValidate = (ttsModel as any)._validate_voice?.bind(ttsModel)
+    ;(ttsModel as any)._validate_voice = (voice: string) => {
+      if (voice && (voice.startsWith('kokoro-profile-') || !origValidate))
+        return 'a'
+      try {
+        return origValidate(voice)
+      }
+      catch (e) {
+        if (voice && typeof voice === 'string' && (voice.startsWith('kokoro-profile-') || voice.includes('profile')))
+          return 'a'
+        throw e
+      }
+    }
+    ;(ttsModel as any)._customVoicesPatched = true
+  }
+
+  if (payload.styleVector && typeof caches !== 'undefined') {
+    try {
+      const cache = await caches.open('kokoro-voices')
+      const voiceUrl = `https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main/voices/${payload.voice}.bin`
+      const floatArr = payload.styleVector instanceof Float32Array
+        ? payload.styleVector
+        : new Float32Array(payload.styleVector)
+      const buffer = floatArr.byteOffset === 0 && floatArr.byteLength === floatArr.buffer.byteLength
+        ? floatArr.buffer
+        : floatArr.buffer.slice(floatArr.byteOffset, floatArr.byteOffset + floatArr.byteLength)
+      await cache.put(voiceUrl, new Response(buffer as ArrayBuffer))
+    }
+    catch (e) {
+      console.warn('[Kokoro Worker] Failed to cache custom voice in kokoro-voices:', e)
+    }
+  }
 
   // NOTICE:
   // Why: passing a plain string to `ttsModel.stream(text)` makes the generator

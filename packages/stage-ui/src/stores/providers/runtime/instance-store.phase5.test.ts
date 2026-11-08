@@ -228,6 +228,7 @@ describe('phase 5: upstream migration compatibility & defensive validation', () 
         providerMetadata: {
           'openrouter-ai': makeCloudProviderMetadata('openrouter-ai'),
           'browser-web-speech-api': makeCloudProviderMetadata('browser-web-speech-api', false),
+          'kilo': makeCloudProviderMetadata('kilo', { optional: true } as any),
         },
         getProviderCredentials: () => ({}),
         setProviderCredentials: () => {},
@@ -265,6 +266,22 @@ describe('phase 5: upstream migration compatibility & defensive validation', () 
       const { getProviderInstance } = createProviderInstances(deps)
       await expect(getProviderInstance('browser-web-speech-api')).resolves.toBeDefined()
       expect(deps.providerMetadata['browser-web-speech-api'].createProvider).toHaveBeenCalledOnce()
+    })
+
+    it('materializes default options for optional-key providers without throwing', async () => {
+      const deps = makeDeps()
+      const { getProviderInstance } = createProviderInstances(deps)
+      await expect(getProviderInstance('kilo')).resolves.toBeDefined()
+      expect(deps.providerMetadata.kilo.createProvider).toHaveBeenCalledOnce()
+    })
+
+    it('instantiates optional-key providers with empty apiKey without throwing', async () => {
+      const deps = makeDeps({
+        getProviderCredentials: () => ({ kilo: { apiKey: '' } }),
+      })
+      const { getProviderInstance } = createProviderInstances(deps)
+      await expect(getProviderInstance('kilo')).resolves.toBeDefined()
+      expect(deps.providerMetadata.kilo.createProvider).toHaveBeenCalledWith({ apiKey: '' })
     })
 
     it('instantiates the provider when a live apiKey is persisted', async () => {

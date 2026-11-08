@@ -41,6 +41,7 @@ import './byteplus-coding-plan'
 import './volcengine-coding-plan'
 import './typesafe-ai'
 import './laya-local'
+import './openjev-local'
 
 export {
   getDefinedProvider,

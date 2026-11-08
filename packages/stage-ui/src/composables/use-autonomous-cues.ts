@@ -47,8 +47,16 @@ export interface AutonomousCueRunRecord {
 export interface AutonomousCueContext {
   activeCard?: MaybeRefOrGetter<Card | null | undefined>
   activeModelId?: MaybeRefOrGetter<string | null | undefined>
+  currentActorId?: MaybeRefOrGetter<string | null | undefined>
+  autoMode?: MaybeRefOrGetter<boolean | undefined>
+  enforceBudget?: MaybeRefOrGetter<boolean | undefined>
   expressionCapabilities?: MaybeRefOrGetter<ModelCapabilityItem[] | undefined>
   motionCapabilities?: MaybeRefOrGetter<ModelCapabilityItem[] | undefined>
+  resolveActorModel?: (actorId?: string | null) => {
+    modelId: string | null
+    expressionCapabilities: ModelCapabilityItem[]
+    motionCapabilities: ModelCapabilityItem[]
+  }
   actuateEmotion?: (rawKey: string, meta: AutonomousCueMeta) => void
   actuateMotion?: (rawKey: string, meta: AutonomousCueMeta) => void
 }
@@ -246,36 +254,119 @@ export function resolveCueToken(
     }
   }
 
+  // 5. Model capabilities fallback: match by stemmed label or rawKey
+  const stemTarget = stemCueName(token).toLowerCase()
+  for (const cap of capabilities) {
+    if (cap.usable !== false) {
+      const stemLabel = cap.label ? stemCueName(cap.label).toLowerCase() : null
+      const stemRawKey = cap.rawKey ? stemCueName(cap.rawKey).toLowerCase() : null
+      if (stemLabel === stemTarget || stemRawKey === stemTarget) {
+        return { rawKey: cap.rawKey, label: cap.label }
+      }
+    }
+  }
+
   return null
 }
 
 /**
+ * Stems a motion or emotion cue name by stripping trailing numbers or numbered variant suffixes
+ * (e.g. "Happy 1" -> "Happy", "Angry_2" -> "Angry", "Tickle Idle 1" -> "Tickle Idle").
+ * Preserves compound words, spaces, skins, and bracketed descriptors (e.g. "Basic Civvies [Normal]").
+ */
+export function stemCueName(name: string): string {
+  if (!name || typeof name !== 'string') {
+    return ''
+  }
+  const stripped = name.replace(/[\s_]+\d+$/, '').trim()
+  return stripped.length > 0 ? stripped : name
+}
+
+export interface AllowedEmotionOptionsResult {
+  options: string[]
+  isFallback: boolean
+  variantMap: Map<string, string[]>
+}
+
+/**
  * Extracts candidate emotion option names from the character's allowlist or model capabilities.
+ * Groups numbered motion/emotion variants under their base name to eliminate classifier noise
+ * and prevent candidate list overflow, returning a variantMap for playback entropy.
  */
 export function resolveAllowedEmotionOptions(
   allowlist?: CharacterCueAllowlist,
   capabilities?: ModelCapabilityItem[],
-): { options: string[], isFallback: boolean } {
+  motionCapabilities?: ModelCapabilityItem[],
+  options: { autoMode?: boolean } = {},
+): AllowedEmotionOptionsResult {
+  const { autoMode = false } = options
+
+  const usableExprs = (capabilities || []).filter(c => c.usable !== false)
+  const usableMotions = (motionCapabilities || []).filter(c => c.usable !== false)
+  const modelExprKeys = usableExprs.map(c => c.label || c.rawKey)
+  const modelMotionKeys = usableMotions.map(c => c.label || c.rawKey)
+
+  const variantMap = new Map<string, string[]>()
+  variantMap.set('none', ['none'])
+
+  function groupKeys(keys: string[]) {
+    for (const key of keys) {
+      if (!key)
+        continue
+      const base = stemCueName(key)
+      if (!variantMap.has(base)) {
+        variantMap.set(base, [])
+      }
+      const list = variantMap.get(base)!
+      if (!list.includes(key)) {
+        list.push(key)
+      }
+    }
+  }
+
+  // Auto Mode ON: Populate both emotions and motions dynamically from the active model (falling back to allowlist if model has no stored caps)
+  if (autoMode) {
+    const exprKeys = usableExprs.length > 0
+      ? modelExprKeys
+      : (allowlist?.emotions ? Object.keys(allowlist.emotions) : [])
+    const motionKeys = usableMotions.length > 0
+      ? modelMotionKeys
+      : (allowlist?.motions ? Object.keys(allowlist.motions) : [])
+
+    const allCaps = [...exprKeys, ...motionKeys]
+    if (allCaps.length > 0) {
+      groupKeys(allCaps)
+      const uniqueBases = Array.from(variantMap.keys()).filter(k => k !== 'none')
+      return {
+        options: ['none', ...uniqueBases],
+        isFallback: false,
+        variantMap,
+      }
+    }
+    return {
+      options: ['none'],
+      isFallback: false,
+      variantMap,
+    }
+  }
+
+  // Auto Mode OFF (Manual Mode): Respect cueAllowlist config for emotions, leave motions blank/empty
   if (allowlist?.emotions && Object.keys(allowlist.emotions).length > 0) {
+    const emotionKeys = Object.keys(allowlist.emotions)
+    groupKeys(emotionKeys)
+    const uniqueBases = Array.from(variantMap.keys()).filter(k => k !== 'none')
     return {
-      options: ['none', ...Object.keys(allowlist.emotions)],
+      options: ['none', ...uniqueBases],
       isFallback: false,
+      variantMap,
     }
   }
 
-  const usableCaps = (capabilities || []).filter(c => c.usable !== false)
-  if (usableCaps.length > 0) {
-    const names = usableCaps.map(c => c.label || c.rawKey)
-    return {
-      options: ['none', ...Array.from(new Set(names))],
-      isFallback: false,
-    }
-  }
-
-  // Fallback canonical cues when model has zero stored capabilities
+  // If cueAllowlist has no emotions and auto mode is off, do not inject fallbacks
   return {
-    options: ['none', 'happy', 'sad', 'angry', 'surprised', 'thinking', 'neutral'],
-    isFallback: true,
+    options: ['none'],
+    isFallback: false,
+    variantMap,
   }
 }
 
@@ -312,19 +403,40 @@ export function extractTokensFromPrompt(promptText: string, candidateTokens: str
 }
 
 /**
- * Builds persona context string from the active character card.
+ * Maximum character budget for persona context passed to System 1.
+ * Keeps prompt token footprint under ~200 tokens to ensure sub-second WebGPU inference.
  */
-export function buildPersonaContext(card?: Card | null): { name: string, block: string } {
-  const name = (card as any)?.nickname || card?.name || 'Character'
+export const MAX_PERSONA_CONTEXT_CHARS = 800
+
+/**
+ * Builds persona context string from the active character card, truncated to maxChars.
+ */
+export function buildPersonaContext(
+  card?: Card | null,
+  actorId?: string | null,
+  maxChars = MAX_PERSONA_CONTEXT_CHARS,
+): { name: string, block: string } {
+  let name = (card as any)?.nickname || card?.name || 'Character'
+  if (actorId && typeof actorId === 'string') {
+    const rawName = actorId.replace(/^actor_/, '').split('_')[0]
+    if (rawName) {
+      name = rawName.charAt(0).toUpperCase() + rawName.slice(1)
+    }
+  }
+
   const personality = (card as any)?.personality || ''
   const description = (card as any)?.description || ''
   const directives = (card as any)?.extensions?.airi?.acting?.modelExpressionPrompt || ''
 
-  const block = [
+  const rawBlock = [
+    directives ? `Acting directives: ${directives}` : '',
     personality ? `Personality: ${personality}` : '',
     description ? `Description: ${description}` : '',
-    directives ? `Acting directives: ${directives}` : '',
   ].filter(Boolean).join('\n')
+
+  const block = rawBlock.length > maxChars
+    ? `${rawBlock.slice(0, maxChars)}...`
+    : rawBlock
 
   return { name, block }
 }
@@ -349,7 +461,7 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
    */
   async function evaluateSentenceStride(
     rawSentence: string,
-    options: { force?: boolean } = {},
+    options: { force?: boolean, enforceBudget?: boolean } = {},
   ): Promise<AutonomousCueRunRecord> {
     const cleanSentence = normalizeSentenceText(rawSentence)
     const budgetMs = calculateWpmBudgetMs(cleanSentence)
@@ -421,15 +533,65 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
       return record
     }
 
+    const actorId = toValue(context.currentActorId) || null
+
+    let modelId = toValue(context.activeModelId)
+    let caps = toValue(context.expressionCapabilities) || []
+    let motionCaps = toValue(context.motionCapabilities) || []
+
+    if (context.resolveActorModel) {
+      const resolved = context.resolveActorModel(actorId)
+      if (resolved.modelId) {
+        modelId = resolved.modelId
+        caps = resolved.expressionCapabilities
+        motionCaps = resolved.motionCapabilities
+      }
+    }
+
     const allowlist: CharacterCueAllowlist | undefined = actingConfig?.cueAllowlist || actingConfig?.compiledWhitelist
-    const caps = toValue(context.expressionCapabilities) || []
-    const { options: emotionOptions } = resolveAllowedEmotionOptions(
-      allowlist,
-      caps,
+    const autoMode = Boolean(
+      toValue(context.autoMode)
+      ?? actingConfig?.autoMode
+      ?? actingConfig?.autoCueMotions
+      ?? true,
     )
 
-    const { name, block } = buildPersonaContext(card)
+    const { options: emotionOptions, variantMap } = resolveAllowedEmotionOptions(
+      allowlist,
+      caps,
+      motionCaps,
+      { autoMode },
+    )
+
+    const { name, block } = buildPersonaContext(card, actorId)
     const state = `Line for ${name}:\n${block}\nLine: "${cleanSentence}"`
+
+    console.log('[AutonomousCues] Evaluating stride:', {
+      actorId,
+      modelId,
+      autoMode,
+      sentence: cleanSentence,
+      systemPrompt: block,
+      state,
+      expressions: caps.filter(c => c.usable !== false).map(c => c.label || c.rawKey),
+      motions: autoMode ? motionCaps.filter(c => c.usable !== false).map(c => c.label || c.rawKey) : [],
+      options: emotionOptions,
+    })
+
+    // Skip API request if there are no cues available (only 'none')
+    if (emotionOptions.length <= 1) {
+      const record: AutonomousCueRunRecord = {
+        sentence: cleanSentence,
+        token: 'none',
+        rawKey: null,
+        confidence: 0,
+        latencyMs: 0,
+        budgetMs,
+        status: 'none',
+      }
+      activeRuns.value.push(record)
+      return record
+    }
 
     const questions: Record<string, any> = {
       emotion: {
@@ -442,6 +604,12 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
       intensity: {
         type: 'score',
         instructions: 'Score the emotional intensity of this line from 0.3 (subtle, understated) to 1.0 (peak, theatrical).',
+        criteria: [
+          'Subtle, understated delivery.',
+          'Mild feeling — a hint of warmth, tension, or playfulness.',
+          'Strong feeling — clearly audible emotion driving the line.',
+          'Exaggerated, theatrical peak — maximum emotional charge.',
+        ],
         min: 0.3,
         max: 1.0,
       },
@@ -465,9 +633,28 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
         intensity = Math.round(Math.min(1.0, Math.max(0.3, rawIntensity)) * 100) / 100
       }
 
-      // Budget check: dropped if latency exceeded 90% spoken duration
-      if (latencyMs > budgetMs) {
-        const record: AutonomousCueRunRecord = {
+      function finishRun(record: AutonomousCueRunRecord): AutonomousCueRunRecord {
+        console.log('[AutonomousCues] Classifier result:', {
+          actorId,
+          modelId,
+          token: record.token,
+          rawKey: record.rawKey,
+          status: record.status,
+          intensity: record.intensity,
+          confidence: record.confidence,
+          latencyMs: record.latencyMs,
+          budgetMs: record.budgetMs,
+          sentence: record.sentence,
+        })
+        activeRuns.value.push(record)
+        return record
+      }
+
+      // Budget check: only drop if explicitly requested by caller (e.g. strict synchronous test/timeout).
+      // During live chat streaming, timing is owned by the playback queue (heldAutonomousCues in ControlStripHost).
+      const enforceBudget = options.enforceBudget ?? toValue(context.enforceBudget) ?? false
+      if (enforceBudget && latencyMs > budgetMs) {
+        return finishRun({
           sentence: cleanSentence,
           token,
           rawKey: null,
@@ -476,50 +663,53 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
           latencyMs,
           budgetMs,
           status: 'budget-dropped',
-        }
-        activeRuns.value.push(record)
-        return record
+        })
       }
 
       // If System 1 picked 'none', no actuation
       if (token === 'none') {
-        const record: AutonomousCueRunRecord = {
+        return finishRun({
           sentence: cleanSentence,
           token: 'none',
           rawKey: null,
           confidence,
+          intensity,
           latencyMs,
           budgetMs,
           status: 'none',
-        }
-        activeRuns.value.push(record)
-        return record
+        })
+      }
+
+      // Resolve base token to specific variant from variant pool (entropy without classifier confusion)
+      let selectedVariant = token
+      const variants = variantMap.get(token)
+      if (variants && variants.length > 0) {
+        const randIdx = Math.floor(Math.random() * variants.length)
+        selectedVariant = variants[randIdx]
       }
 
       // Resolve token to physical rig rawKey
-      const resolved = resolveCueToken(token, {
+      const resolved = resolveCueToken(selectedVariant, {
         allowlist,
-        capabilities: caps,
+        capabilities: [...caps, ...motionCaps],
       })
 
       if (!resolved?.rawKey) {
-        const record: AutonomousCueRunRecord = {
+        return finishRun({
           sentence: cleanSentence,
-          token,
+          token: selectedVariant,
           rawKey: null,
           confidence,
           intensity,
           latencyMs,
           budgetMs,
           status: 'unmapped',
-        }
-        activeRuns.value.push(record)
-        return record
+        })
       }
 
       // Trigger actuation (evaporates: in-memory callback only, never persisted)
       const meta: AutonomousCueMeta = {
-        token,
+        token: selectedVariant,
         rawKey: resolved.rawKey,
         sentence: cleanSentence,
         confidence,
@@ -531,22 +721,20 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
 
       context.actuateEmotion?.(resolved.rawKey, meta)
 
-      const record: AutonomousCueRunRecord = {
+      return finishRun({
         sentence: cleanSentence,
-        token,
+        token: selectedVariant,
         rawKey: resolved.rawKey,
         confidence,
         intensity,
         latencyMs,
         budgetMs,
         status: 'fired',
-      }
-      activeRuns.value.push(record)
-      return record
+      })
     }
     catch (err: any) {
       const latencyMs = Math.round(performance.now() - t0)
-      const record: AutonomousCueRunRecord = {
+      const errorRecord: AutonomousCueRunRecord = {
         sentence: cleanSentence,
         token: '',
         rawKey: null,
@@ -556,8 +744,19 @@ export function useAutonomousCues(context: AutonomousCueContext = {}) {
         status: 'error',
         error: err?.message || String(err),
       }
-      activeRuns.value.push(record)
-      return record
+      console.log('[AutonomousCues] Classifier result:', {
+        actorId,
+        modelId,
+        token: '',
+        rawKey: null,
+        status: 'error',
+        error: errorRecord.error,
+        latencyMs,
+        budgetMs,
+        sentence: cleanSentence,
+      })
+      activeRuns.value.push(errorRecord)
+      return errorRecord
     }
     finally {
       isEvaluating.value = false

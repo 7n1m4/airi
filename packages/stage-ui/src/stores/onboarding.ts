@@ -14,9 +14,13 @@ function hasNonEmptyText(value: unknown): boolean {
 export const useOnboardingStore = defineStore('onboarding', () => {
   const providersStore = useProvidersStore()
 
+  // NOTICE: V3-only first-run flags. Legacy `onboarding/completed` /
+  // `onboarding/skipped` (V1/V2 era) are intentionally never read: anyone
+  // without an explicit V3 flag is treated as never onboarded, so returning
+  // and upstream-migrated users still get the V3 panel.
   // Track if first-time setup has been completed or skipped
-  const hasCompletedSetup = useLocalStorage('onboarding/completed', false)
-  const hasSkippedSetup = useLocalStorage('onboarding/skipped', false)
+  const hasCompletedSetup = useLocalStorage('onboarding/v3-completed', false)
+  const hasSkippedSetup = useLocalStorage('onboarding/v3-skipped', false)
 
   // Track if we should show the setup dialog
   const showingSetup = ref(false)
@@ -40,7 +44,8 @@ export const useOnboardingStore = defineStore('onboarding', () => {
     })
   })
 
-  // Check if first-time setup should be shown
+  // V3 shows unless explicitly completed (finale) or dismissed (setup
+  // later). No card-count, provider, or legacy-state signal suppresses it.
   const needsOnboarding = computed(() => !hasSkippedSetup.value && !hasCompletedSetup.value)
 
   // Keep in-memory display flag aligned with persisted onboarding status

@@ -3,6 +3,18 @@ import { useSettingsTheme } from '@proj-airi/stage-ui/stores/settings'
 import { useTheme } from '@proj-airi/ui'
 import { PopoverContent, PopoverPortal, PopoverRoot, PopoverTrigger } from 'reka-ui'
 
+withDefaults(defineProps<{
+  align?: 'start' | 'center' | 'end'
+  side?: 'top' | 'right' | 'bottom' | 'left'
+  sideOffset?: number
+  collisionPadding?: number
+}>(), {
+  align: 'end',
+  side: 'bottom',
+  sideOffset: 8,
+  collisionPadding: 12,
+})
+
 const { isDark, toggleDark } = useTheme()
 const settingsTheme = useSettingsTheme()
 
@@ -60,7 +72,7 @@ function resetToDefault() {
     <!-- Day / Night Toggle Button -->
     <button
       type="button"
-      class="h-7 w-7 flex items-center justify-center rounded-lg text-neutral-600 transition-all active:scale-95 hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
+      class="h-7 w-7 flex cursor-pointer items-center justify-center rounded-lg text-neutral-600 transition-all active:scale-95 hover:bg-black/5 dark:text-neutral-300 dark:hover:bg-white/10"
       :title="isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'"
       @click="toggleDark()"
     >
@@ -78,7 +90,7 @@ function resetToDefault() {
       <PopoverTrigger as-child>
         <button
           type="button"
-          class="group flex items-center gap-1.5 rounded-lg px-1.5 py-1 transition-all active:scale-95 hover:bg-black/5 dark:hover:bg-white/10"
+          class="group flex cursor-pointer items-center gap-1.5 rounded-lg px-1.5 py-1 transition-all active:scale-95 hover:bg-black/5 dark:hover:bg-white/10"
           title="Quick Theme Accent"
         >
           <!-- Current Active Swatch (Rounded Square per User Request) -->
@@ -91,10 +103,15 @@ function resetToDefault() {
 
       <PopoverPortal>
         <PopoverContent
-          side="bottom"
-          align="end"
-          :side-offset="8"
-          class="animate-in fade-in zoom-in-95 z-[9999] max-w-[280px] w-auto border border-neutral-200/90 rounded-2xl bg-white/95 p-3 shadow-2xl backdrop-blur-xl duration-150 dark:border-neutral-800/90 dark:bg-neutral-900/95"
+          :side="side"
+          :align="align"
+          :side-offset="sideOffset"
+          :collision-padding="collisionPadding"
+          :class="[
+            'animate-in fade-in zoom-in-95 z-[10050] max-w-[280px] w-auto',
+            'border border-neutral-200/90 dark:border-neutral-800/90 rounded-2xl',
+            'bg-white/95 dark:bg-neutral-900/95 p-3 shadow-2xl backdrop-blur-xl duration-150',
+          ]"
         >
           <!-- Popover Header -->
           <div class="mb-2.5 flex items-center justify-between border-b border-neutral-100 pb-2 dark:border-neutral-800">
@@ -106,7 +123,11 @@ function resetToDefault() {
             </div>
             <button
               type="button"
-              class="flex items-center gap-1 text-[11px] text-neutral-400 font-medium transition-colors hover:text-primary-500"
+              :class="[
+                'flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium transition-all cursor-pointer',
+                'border border-amber-500/40 text-amber-600 dark:border-amber-400/40 dark:text-amber-400',
+                'hover:bg-amber-500/10 active:scale-95',
+              ]"
               @click="resetToDefault"
             >
               <div class="i-solar:restart-linear text-[10px]" />
@@ -127,7 +148,7 @@ function resetToDefault() {
                 type="button"
                 :title="swatch.name"
                 :class="[
-                  'relative h-6 w-6 rounded-md transition-all duration-150',
+                  'relative h-6 w-6 rounded-md transition-all duration-150 cursor-pointer',
                   'hover:scale-115 hover:z-10 hover:shadow-md',
                   'focus:outline-none',
                   settingsTheme.isColorSelectedForPrimary(swatch.color)

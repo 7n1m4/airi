@@ -21,6 +21,7 @@ const props = withDefaults(defineProps<{
   showBadge?: boolean
   isActive?: boolean
   useDynamicBackground?: boolean
+  transparent?: boolean
 }>(), {
   shape: 'circle',
   sizeClass: 'h-8 w-8',
@@ -28,6 +29,7 @@ const props = withDefaults(defineProps<{
   showBadge: false,
   isActive: false,
   useDynamicBackground: true,
+  transparent: false,
 })
 
 const displayModelsStore = useDisplayModelsStore()
@@ -166,7 +168,7 @@ watch(
 
 // Dynamically compute the inline background style or colors
 const backgroundStyle = computed(() => {
-  if (!props.useDynamicBackground || !dynamicBackground.value || portraitSource.value !== 'preview') {
+  if (props.transparent || !props.useDynamicBackground || !dynamicBackground.value || portraitSource.value !== 'preview') {
     return {}
   }
   return {
@@ -210,9 +212,11 @@ function cardInitialColor(name: string) {
       shape === 'circle' ? 'rounded-full' : shape === 'rounded' ? 'rounded-xl' : 'rounded-none',
       sizeClass,
       // Apply dark/light background via styling variables
-      portraitSource === 'preview' && dynamicBackground
-        ? 'bg-[var(--avatar-bg-light)] dark:bg-[var(--avatar-bg-dark)]'
-        : 'bg-neutral-100 dark:bg-neutral-800/80',
+      transparent
+        ? 'bg-transparent'
+        : (portraitSource === 'preview' && dynamicBackground
+          ? 'bg-[var(--avatar-bg-light)] dark:bg-[var(--avatar-bg-dark)]'
+          : 'bg-neutral-100 dark:bg-neutral-800/80'),
     ]"
     :style="backgroundStyle"
   >

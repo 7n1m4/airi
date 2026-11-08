@@ -1,5 +1,6 @@
 import type { ChatSessionRecord, ChatSessionsIndex } from '../../types/chat-session'
 
+import { stripLargeInlineImagesForPersistence } from '../../stores/chat/message-sanitizer'
 import { storage } from '../storage'
 
 export const chatSessionsRepo = {
@@ -40,7 +41,13 @@ export const chatSessionsRepo = {
   async saveSession(sessionId: string, record: ChatSessionRecord) {
     const key = `local:chat/sessions/${sessionId}`
     try {
-      const cleanRecord = JSON.parse(JSON.stringify(record))
+      // NOTICE: Strip oversized inline `data:` images before the IndexedDB write —
+      // session history otherwise accumulates multi-megabyte base64 strings that
+      // bloat the heap, outbox sync, and storage quota (see message-sanitizer).
+      const cleanRecord = JSON.parse(JSON.stringify({
+        ...record,
+        messages: stripLargeInlineImagesForPersistence(record.messages),
+      }))
       await storage.setItemRaw(key, cleanRecord)
     }
     catch (err) {
