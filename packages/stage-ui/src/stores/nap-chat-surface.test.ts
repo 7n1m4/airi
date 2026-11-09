@@ -96,13 +96,10 @@ vi.mock('../database/storage', () => ({
 // leaves `layeredMemory.init` real, which posts into a Vite `?worker` module the
 // Node runner cannot answer: every test then hangs on the journal load rather
 // than failing an assertion.
-vi.mock('../libs/search/layered-memory', () => ({
-  layeredMemory: {
-    init: vi.fn(async () => ({ stale: false, reason: null })),
-    indexDocuments: vi.fn(async () => undefined),
-    search: vi.fn(async () => []),
-  },
-}))
+vi.mock('../libs/search/layered-memory', async () => {
+  const { createMockLayeredMemoryModule } = await import('../test-utils/mock-layered-memory')
+  return createMockLayeredMemoryModule()
+})
 
 const LOCAL_CARD_ID = 'card-airi'
 
