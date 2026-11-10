@@ -71,6 +71,8 @@ settings:
     discord: Discord
     cloudSync: Cloud Sync
     pluginHost: Plugin Host
+    screenCapture: Screen Capture
+    acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     gemini: Gemini
     fadeOnHover: Fade on Hover
@@ -855,3 +857,72 @@ pluginHost:
     pluginDirPlaceholder: '<userData>/plugins/v1'
     pluginDirHint: 'Manifests are read from <pluginDir>/<plugin>/*.json; enablement persists to plugins-v1.json alongside the app config.'
     save: 'Save & Restart Host'
+
+capture:
+  title: 'Screen Capture'
+  badge: 'Primary screen'
+  description: "Grab the primary screen to a PNG, saved under the app's captures folder. Saved captures are listed below — click one to open it in the system image viewer."
+  errorTitle: "Couldn't complete the capture action"
+  captureButton: 'Capture Screen'
+  refresh: 'Refresh'
+  clearAll: 'Clear All Captures'
+  openHint: 'Click a thumbnail to open it in the system image viewer.'
+  capturesSection: 'Saved Captures'
+  emptyTitle: 'No captures yet'
+  emptySubtitle: 'Press Capture Screen to grab the primary screen. Captures land in the captures folder and are listed here.'
+  clearConfirmTitle: 'Clear All Captures'
+  clearConfirmBody: 'Permanently delete %1 capture file(s) from the captures folder. Only files matching capture-*.png are deleted — nothing else is touched. This cannot be undone.'
+  clearConfirmCancel: 'Cancel'
+  clearConfirmConfirm: 'Delete'
+
+acp:
+  title: 'ACP Agents'
+  description: 'Connect to ACP (Agent Client Protocol) agents running as subprocesses. Prompt them, watch their work, and approve or reject their tool calls.'
+  notice: 'Agents run as live subprocesses over stdio. Only prompt turns and permission requests are wired — fs/* and terminal/* are not implemented, so agents that want to read or write files or spawn terminals will ask first (or be denied by your permission policy).'
+  state:
+    running: 'Running'
+    stopped: 'Stopped'
+    error: 'Error'
+  agents:
+    caption: 'Configured Agents'
+    emptyTitle: 'No agents configured'
+    emptySubtitle: 'Add your first ACP agent — command, args, and a permission policy.'
+    start: 'Start'
+    stop: 'Stop'
+    delete: 'Delete'
+  addAgent:
+    caption: 'Add a Stdio Agent'
+    title: 'Add Stdio Agent'
+    description: 'Spawns a local agent over stdio (ACP). Example: command npx, args ["-y", "some-acp-agent"].'
+    nameLabel: 'Agent Name'
+    namePlaceholder: 'e.g. claude-agent'
+    commandLabel: 'Command'
+    commandPlaceholder: 'e.g. npx'
+    argsLabel: 'Arguments (JSON array or space-separated)'
+    argsPlaceholder: '["-y", "some-acp-agent"]'
+    envLabel: 'Environment (KEY=value per line, optional)'
+    envPlaceholder: 'FOO=bar'
+    addButton: 'Add Agent'
+  policyLabel: 'Permission Policy'
+  session:
+    caption: 'Agent Session'
+    activeLabel: 'Agent session — %1'
+    noAgent: 'No agent running'
+    stopButton: 'Stop Agent'
+  permission:
+    pendingBadge: 'Permission pending'
+    allowOnce: 'Allow once'
+    allowSession: 'Allow for session'
+    reject: 'Reject'
+    title: 'Permission Request'
+    body: 'The agent wants to run a tool:'
+    toolKind: 'Tool kind'
+    offered: 'The agent offered: %1'
+    dismiss: 'Not now'
+  transcript:
+    caption: 'Transcript'
+    emptyTitle: 'No transcript yet'
+    emptySubtitle: 'Start an agent and send a prompt to see the conversation here.'
+  inputPlaceholder: 'Ask the agent…'
+  send: 'Send'
+  cancel: 'Cancel'

@@ -71,6 +71,8 @@ settings:
     discord: Discord
     cloudSync: Cloud Sync
     pluginHost: Plugin Host
+    screenCapture: Screen Capture
+    acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     gemini: Gemini
     fadeOnHover: Fade on Hover
@@ -856,3 +858,72 @@ pluginHost:
     pluginDirPlaceholder: '<userData>/plugins/v1'
     pluginDirHint: 'Manifest dibaca dari <pluginDir>/<plugin>/*.json; aktivasi disimpan ke plugins-v1.json di samping konfigurasi app.'
     save: 'Simpan & Mulai Ulang Host'
+
+capture:
+  title: 'Tangkapan Layar'
+  badge: 'Layar utama'
+  description: 'Ambil layar utama sebagai PNG, tersimpan di folder captures app. Tangkapan yang tersimpan terdaftar di bawah — klik salah satunya untuk membukanya di penampil gambar sistem.'
+  errorTitle: 'Tidak dapat menyelesaikan aksi tangkapan'
+  captureButton: 'Ambil Layar'
+  refresh: 'Muat Ulang'
+  clearAll: 'Hapus Semua Tangkapan'
+  openHint: 'Klik thumbnail untuk membukanya di penampil gambar sistem.'
+  capturesSection: 'Tangkapan Tersimpan'
+  emptyTitle: 'Belum ada tangkapan'
+  emptySubtitle: 'Tekan Ambil Layar untuk mengambil layar utama. Tangkapan masuk ke folder captures dan terdaftar di sini.'
+  clearConfirmTitle: 'Hapus Semua Tangkapan'
+  clearConfirmBody: 'Hapus permanen %1 berkas tangkapan dari folder captures. Hanya berkas yang cocok dengan capture-*.png yang dihapus — tidak ada yang lain. Ini tidak bisa dibatalkan.'
+  clearConfirmCancel: 'Batal'
+  clearConfirmConfirm: 'Hapus'
+
+acp:
+  title: 'Agen ACP'
+  description: 'Terhubung ke agen ACP (Agent Client Protocol) yang berjalan sebagai subproses. Kirim prompt, tonton pekerjaan mereka, dan setujui atau tolak panggilan alat mereka.'
+  notice: 'Agen berjalan sebagai subproses langsung melalui stdio. Hanya giliran prompt dan permintaan izin yang terhubung — fs/* dan terminal/* belum diimplementasikan, jadi agen yang ingin membaca atau menulis berkas atau menjalankan terminal akan bertanya dulu (atau ditolak oleh kebijakan izinmu).'
+  state:
+    running: 'Berjalan'
+    stopped: 'Berhenti'
+    error: 'Galat'
+  agents:
+    caption: 'Agen Terkonfigurasi'
+    emptyTitle: 'Belum ada agen terkonfigurasi'
+    emptySubtitle: 'Tambahkan agen ACP pertamamu — perintah, args, dan kebijakan izin.'
+    start: 'Mulai'
+    stop: 'Berhenti'
+    delete: 'Hapus'
+  addAgent:
+    caption: 'Tambah Agen stdio'
+    title: 'Tambah Agen stdio'
+    description: 'Menjalankan agen lokal melalui stdio (ACP). Contoh: perintah npx, args ["-y", "some-acp-agent"].'
+    nameLabel: 'Nama Agen'
+    namePlaceholder: 'mis. claude-agent'
+    commandLabel: 'Perintah'
+    commandPlaceholder: 'mis. npx'
+    argsLabel: 'Argumen (array JSON atau dipisahkan spasi)'
+    argsPlaceholder: '["-y", "some-acp-agent"]'
+    envLabel: 'Lingkungan (KEY=nilai per baris, opsional)'
+    envPlaceholder: 'FOO=bar'
+    addButton: 'Tambah Agen'
+  policyLabel: 'Kebijakan Izin'
+  session:
+    caption: 'Sesi Agen'
+    activeLabel: 'Sesi agen — %1'
+    noAgent: 'Tidak ada agen yang berjalan'
+    stopButton: 'Hentikan Agen'
+  permission:
+    pendingBadge: 'Izin tertunda'
+    allowOnce: 'Izinkan sekali'
+    allowSession: 'Izinkan untuk sesi ini'
+    reject: 'Tolak'
+    title: 'Permintaan Izin'
+    body: 'Agen ingin menjalankan alat:'
+    toolKind: 'Jenis alat'
+    offered: 'Agen menawarkan: %1'
+    dismiss: 'Nanti saja'
+  transcript:
+    caption: 'Transkrip'
+    emptyTitle: 'Belum ada transkrip'
+    emptySubtitle: 'Mulai agen dan kirim prompt untuk melihat percakapan di sini.'
+  inputPlaceholder: 'Tanya agen…'
+  send: 'Kirim'
+  cancel: 'Batal'

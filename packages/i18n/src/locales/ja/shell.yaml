@@ -70,6 +70,8 @@ settings:
     discord: Discord
     cloudSync: Cloud Sync
     pluginHost: Plugin Host
+    screenCapture: Screen Capture
+    acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     gemini: Gemini
     fadeOnHover: Fade on Hover
@@ -854,3 +856,72 @@ pluginHost:
     pluginDirPlaceholder: '<userData>/plugins/v1'
     pluginDirHint: 'マニフェストは <pluginDir>/<plugin>/*.json から読み取られます。有効化はアプリ設定の隣の plugins-v1.json に永続化されます。'
     save: '保存してホストを再起動'
+
+capture:
+  title: 'スクリーンキャプチャ'
+  badge: 'プライマリ画面'
+  description: 'プライマリ画面をPNGとしてキャプチャし、アプリのcapturesフォルダに保存します。保存されたキャプチャは下に一覧表示されます — クリックしてシステムの画像ビューアーで開けます。'
+  errorTitle: 'キャプチャ操作を完了できませんでした'
+  captureButton: '画面をキャプチャ'
+  refresh: '更新'
+  clearAll: 'すべてのキャプチャを消去'
+  openHint: 'サムネイルをクリックしてシステムの画像ビューアーで開きます。'
+  capturesSection: '保存されたキャプチャ'
+  emptyTitle: 'キャプチャはまだありません'
+  emptySubtitle: '「画面をキャプチャ」を押すとプライマリ画面を取得します。キャプチャは captures フォルダに保存され、ここに一覧表示されます。'
+  clearConfirmTitle: 'すべてのキャプチャを消去'
+  clearConfirmBody: 'captures フォルダから %1 個のキャプチャファイルを完全に削除します。capture-*.png に一致するファイルのみが削除されます — それ以外には一切触れません。この操作は元に戻せません。'
+  clearConfirmCancel: 'キャンセル'
+  clearConfirmConfirm: '削除'
+
+acp:
+  title: 'ACPエージェント'
+  description: 'ACP (Agent Client Protocol) エージェントをサブプロセスとして接続します。プロンプトを送り、作業を見守り、ツール呼び出しを承認または拒否します。'
+  notice: 'エージェントはstdio上のライブサブプロセスとして実行されます。プロンプトターンと権限リクエストのみが接続されています — fs/* と terminal/* は未実装のため、ファイルの読み書きやターミナルの起動を求めるエージェントは先に尋ねます (または権限ポリシーにより拒否されます)。'
+  state:
+    running: '実行中'
+    stopped: '停止'
+    error: 'エラー'
+  agents:
+    caption: '構成済みエージェント'
+    emptyTitle: 'エージェントが構成されていません'
+    emptySubtitle: '最初のACPエージェントを追加してください — コマンド、args、権限ポリシー。'
+    start: '開始'
+    stop: '停止'
+    delete: '削除'
+  addAgent:
+    caption: 'stdioエージェントを追加'
+    title: 'stdioエージェントを追加'
+    description: 'stdio (ACP) 経由でローカルエージェントを起動します。例: コマンド npx、args ["-y", "some-acp-agent"]。'
+    nameLabel: 'エージェント名'
+    namePlaceholder: '例: claude-agent'
+    commandLabel: 'コマンド'
+    commandPlaceholder: '例: npx'
+    argsLabel: '引数 (JSON配列または空白区切り)'
+    argsPlaceholder: '["-y", "some-acp-agent"]'
+    envLabel: '環境変数 (1行に1つ KEY=value、任意)'
+    envPlaceholder: 'FOO=bar'
+    addButton: 'エージェントを追加'
+  policyLabel: '権限ポリシー'
+  session:
+    caption: 'エージェントセッション'
+    activeLabel: 'エージェントセッション — %1'
+    noAgent: '実行中のエージェントはいません'
+    stopButton: 'エージェントを停止'
+  permission:
+    pendingBadge: '権限待ち'
+    allowOnce: '今回のみ許可'
+    allowSession: 'このセッションで許可'
+    reject: '拒否'
+    title: '権限リクエスト'
+    body: 'エージェントがツールを実行しようとしています:'
+    toolKind: 'ツール種別'
+    offered: 'エージェントが提示: %1'
+    dismiss: '後で'
+  transcript:
+    caption: 'トランスクリプト'
+    emptyTitle: 'トランスクリプトはまだありません'
+    emptySubtitle: 'エージェントを開始してプロンプトを送ると、ここに会話が表示されます。'
+  inputPlaceholder: 'エージェントに尋ねる…'
+  send: '送信'
+  cancel: 'キャンセル'

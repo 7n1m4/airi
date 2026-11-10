@@ -4,7 +4,7 @@
 //! JSON-RPC 2.0, routes responses to their requests by id, and fans out
 //! `session/update` notifications to the session that subscribed.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 use std::process::{Child, ChildStdin, Command, Stdio};
@@ -20,12 +20,15 @@ use crate::error::AcpError;
 use crate::jsonrpc::{
     self, normalize_response_id, response_to_result, JsonRpcNotification, JsonRpcRequest,
 };
-use crate::permission::{decide_permission, parse_permission_options, permission_result};
+use crate::permission::{
+    decide_permission, decide_prompt_decision, parse_permission_options, permission_result,
+    select_allow, select_deny, PermissionOutcome,
+};
 use crate::types::{
     AgentCapabilities, CloseSessionResult, ContentBlock, ContentChunk, Implementation,
-    InitializeResult, McpCapabilities, PromptCapabilities, PromptResult, SessionCapabilities,
-    SessionId, SessionUpdate, StopReason, ToolCall, ToolCallUpdate, ACP_PROTOCOL_VERSION,
-    CLIENT_NAME, DEFAULT_PROMPT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT,
+    InitializeResult, McpCapabilities, PermissionRequest, PromptCapabilities, PromptResult,
+    SessionCapabilities, SessionId, SessionUpdate, StopReason, ToolCall, ToolCallUpdate,
+    ACP_PROTOCOL_VERSION, CLIENT_NAME, DEFAULT_PROMPT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT,
 };
 
 /// Internal callback type for slots in the pending-request map. Used instead
@@ -35,12 +38,33 @@ use crate::types::{
 type PendingCallback = Box<dyn FnOnce(Result<Value, AcpError>) + Send>;
 
 /// Events delivered to a session's subscription during a prompt turn.
+///
+/// Returned by [`AcpAgentClient::prompt_stream`]; consumed by
+/// [`AcpAgentClient::prompt`] internally or by an embedder that wants the
+/// turn's updates as they arrive (the Qt bridge does exactly that).
 #[derive(Debug)]
-enum SessionEvent {
+pub enum SessionEvent {
     /// A `session/update` notification routed to this session.
     Update(SessionUpdate),
-    /// The agent answered the outstanding `session/prompt` request.
+    /// The agent answered the outstanding `session/prompt` request. The
+    /// payload is the raw `result` object (or the mapped error); the turn
+    /// is over either way.
     Finished(Result<Value, AcpError>),
+}
+
+/// A `session/request_permission` request the client enqueued for the
+/// human (the [`crate::PermissionPolicy::Prompt`] policy, when the session
+/// is not auto-allowed). The reply is written by
+/// [`AcpAgentClient::answer_permission`].
+#[derive(Debug)]
+struct PendingPermission {
+    /// The raw JSON-RPC id of the agent's server-initiated request — echoed
+    /// back verbatim in the reply.
+    reply_id: Value,
+    /// The session the tool call belongs to.
+    session_id: SessionId,
+    /// Options offered by the agent, in wire order.
+    options: Vec<crate::types::PermissionOption>,
 }
 
 /// A JSON-RPC client for a single ACP agent reached over its stdio pipes.
@@ -50,8 +74,10 @@ enum SessionEvent {
 /// from the agent's stdout. Responses are routed to the waiting caller **by
 /// request id**; `session/update` notifications are routed to the session
 /// subscription created by [`AcpAgentClient::prompt`]; server-initiated
-/// requests (`session/request_permission`) are answered from the configured
-/// [`PermissionPolicy`](crate::PermissionPolicy) inside the reader thread. stderr is
+/// `session/request_permission` requests are either answered from the
+/// configured [`PermissionPolicy`](crate::PermissionPolicy) (`auto-*`) or
+/// enqueued for the human (`prompt` policy) — see
+/// [`AcpAgentClient::permission_requests`]. stderr is
 /// drained into `tracing` so a chatty agent cannot block on a full pipe.
 ///
 /// The wire protocol is JSON-RPC 2.0 as described by the Agent Client
@@ -70,8 +96,11 @@ enum SessionEvent {
 ///   (`docs/phase-notes/p9-lane-acp-agents.md`) for the honest diff
 ///   (notably: Electron's `auto-read` behaved like `auto-all`; this crate
 ///   implements the documented read-only check).
-/// * **`prompt` policy fails closed** — this crate has no renderer to ask, so
-///   it selects the reject-style option instead of waiting for a human.
+/// * **`prompt` policy asks the human** — `session/request_permission`
+///   requests are enqueued on the channel from
+///   [`AcpAgentClient::permission_requests`]; the agent stays blocked until
+///   [`AcpAgentClient::answer_permission`] writes the reply. Nothing is
+///   asked or answered inside this crate.
 /// * **`session/close` is attempted** — the Electron service only disposed
 ///   local routing on close. This client sends the (stable) `session/close`
 ///   RPC and tolerates JSON-RPC errors by falling back to local cleanup,
@@ -86,6 +115,17 @@ pub struct AcpAgentClient {
     pending: Arc<Mutex<HashMap<u64, PendingCallback>>>,
     subscriptions: Arc<Mutex<HashMap<SessionId, mpsc::Sender<SessionEvent>>>>,
     policy: Arc<Mutex<crate::types::PermissionPolicy>>,
+    /// Receiver side of the permission-request enqueue channel (capacity 8),
+    /// shared with the embedder via [`AcpAgentClient::permission_requests`].
+    permission_requests: Arc<Mutex<mpsc::Receiver<PermissionRequest>>>,
+    /// Server-initiated `session/request_permission` requests awaiting a
+    /// human decision, keyed by the normalized request id.
+    pending_permissions: Arc<Mutex<HashMap<String, PendingPermission>>>,
+    /// Sessions the human approved for the rest of the session
+    /// (`AllowSession`). The agent re-asks; we answer `allow_*` without
+    /// prompting. Client-side approximation only — see
+    /// [`crate::PromptDecision::AllowSession`].
+    session_allowlist: Arc<Mutex<HashSet<SessionId>>>,
     reader: Option<JoinHandle<()>>,
     next_id: AtomicU64,
     request_timeout: Duration,
@@ -137,6 +177,12 @@ impl AcpAgentClient {
             Arc::new(Mutex::new(HashMap::new()));
         let policy = Arc::new(Mutex::new(crate::types::PermissionPolicy::default()));
         let closed = Arc::new(AtomicBool::new(false));
+        let (permission_tx, permission_rx) = mpsc::sync_channel(8);
+        let permission_requests = Arc::new(Mutex::new(permission_rx));
+        let pending_permissions: Arc<Mutex<HashMap<String, PendingPermission>>> =
+            Arc::new(Mutex::new(HashMap::new()));
+        let session_allowlist: Arc<Mutex<HashSet<SessionId>>> =
+            Arc::new(Mutex::new(HashSet::new()));
 
         if let Some(stderr) = stderr {
             std::thread::Builder::new()
@@ -165,9 +211,23 @@ impl AcpAgentClient {
             let closed = Arc::clone(&closed);
             let stdin = Arc::clone(&stdin);
             let policy = Arc::clone(&policy);
+            let pending_permissions = Arc::clone(&pending_permissions);
+            let session_allowlist = Arc::clone(&session_allowlist);
             std::thread::Builder::new()
                 .name("airi-acp-reader".into())
-                .spawn(move || reader_loop(stdout, pending, subscriptions, closed, stdin, policy))
+                .spawn(move || {
+                    reader_loop(
+                        stdout,
+                        pending,
+                        subscriptions,
+                        closed,
+                        stdin,
+                        policy,
+                        permission_tx,
+                        pending_permissions,
+                        session_allowlist,
+                    )
+                })
                 .map_err(|e| AcpError::Transport(format!("failed to spawn reader thread: {e}")))?
         };
 
@@ -177,6 +237,9 @@ impl AcpAgentClient {
             pending,
             subscriptions,
             policy,
+            permission_requests,
+            pending_permissions,
+            session_allowlist,
             reader: Some(reader),
             next_id: AtomicU64::new(1),
             request_timeout: DEFAULT_REQUEST_TIMEOUT,
@@ -229,6 +292,72 @@ impl AcpAgentClient {
         self.policy.lock().map(|p| *p).unwrap_or_default()
     }
 
+    /// Returns the channel carrying `session/request_permission` requests
+    /// that the [`crate::PermissionPolicy::Prompt`] policy enqueued for the
+    /// human.
+    ///
+    /// The same `Arc` is handed out on every call, so an embedder can hold it
+    /// for the client's lifetime and poll/`recv` it from a worker thread or
+    /// drain it from a UI timer. The channel is bounded (capacity 8); when
+    /// it is full, new requests fail closed (reject-style answer) instead of
+    /// blocking the agent. When the client is dropped, the send half is
+    /// dropped and receivers observe `Disconnected`.
+    ///
+    /// Embedders that also want streaming prompt updates should use
+    /// [`AcpAgentClient::prompt_stream`] and drain both channels.
+    pub fn permission_requests(&self) -> Arc<Mutex<mpsc::Receiver<PermissionRequest>>> {
+        Arc::clone(&self.permission_requests)
+    }
+
+    /// Answers a pending permission request previously delivered through
+    /// [`AcpAgentClient::permission_requests`].
+    ///
+    /// Maps `decision` onto the options the agent offered (see
+    /// [`crate::PromptDecision`]), writes the `session/request_permission`
+    /// reply to the agent's stdin, and — for
+    /// [`crate::PromptDecision::AllowSession`] — records the request's
+    /// session in an internal allowlist so subsequent requests from that
+    /// session are auto-allowed (the agent re-asks; we answer `allow_*`
+    /// without prompting — a client-side approximation of "allow for
+    /// session"; see [`crate::PromptDecision::AllowSession`]).
+    ///
+    /// # Errors
+    ///
+    /// [`AcpError::UnknownPermissionRequest`] when `request_id` does not
+    /// match a pending request (already answered, never enqueued, or the
+    /// enqueue queue was full and the request failed closed). Transport
+    /// errors when the reply cannot be written.
+    pub fn answer_permission(
+        &self,
+        request_id: &str,
+        decision: crate::types::PromptDecision,
+    ) -> Result<(), AcpError> {
+        self.ensure_open()?;
+        let pending = {
+            let mut map = self
+                .pending_permissions
+                .lock()
+                .map_err(|_| AcpError::Transport("pending-permissions lock poisoned".into()))?;
+            map.remove(request_id)
+        };
+        let Some(pending) = pending else {
+            return Err(AcpError::UnknownPermissionRequest(request_id.to_string()));
+        };
+        let outcome = decide_prompt_decision(decision, &pending.options);
+        if matches!(decision, crate::types::PromptDecision::AllowSession) {
+            if let Ok(mut allowlist) = self.session_allowlist.lock() {
+                allowlist.insert(pending.session_id.clone());
+            }
+        }
+        let reply = json!({
+            "jsonrpc": "2.0",
+            "id": pending.reply_id,
+            "result": permission_result(&outcome),
+        });
+        let line = jsonrpc::encode_line(&reply)?;
+        self.write_line(&line)
+    }
+
     /// Performs the ACP `initialize` handshake.
     ///
     /// Sends `protocolVersion: 1`, empty `clientCapabilities` (the agent must
@@ -275,19 +404,44 @@ impl AcpAgentClient {
             })
     }
 
-    /// Sends a text prompt to a session (`session/prompt`) and collects the
-    /// turn's `session/update` notifications.
+    /// Starts a prompt turn and returns the event receiver immediately,
+    /// instead of collecting the events like [`AcpAgentClient::prompt`]
+    /// does.
     ///
-    /// All updates (message chunks, thought chunks, tool calls, plans, and
-    /// protocol extensions) are returned in wire order in
-    /// [`PromptResult::updates`]. [`PromptResult::final_text`] concatenates
-    /// the `agent_message_chunk` text for convenience. The turn ends when the
-    /// agent answers `session/prompt`; the response's `stopReason` is parsed
-    /// into [`PromptResult::stop_reason`].
+    /// The returned receiver yields every `session/update` notification for
+    /// the session in wire order, then exactly one
+    /// [`SessionEvent::Finished`] carrying the agent's raw prompt response
+    /// (or the mapped error). The caller must keep draining the receiver —
+    /// there is no timeout in this mode; cancel the turn with
+    /// [`AcpAgentClient::cancel`] if the agent stalls. If the caller drops
+    /// the receiver without draining, the turn's updates are dropped
+    /// silently (the pending-request entry is still removed when the agent's
+    /// response arrives).
     ///
-    /// Only one prompt may be in flight per session; a second call returns
-    /// [`AcpError::PromptInProgress`].
-    pub fn prompt(&self, session_id: &str, text: &str) -> Result<PromptResult, AcpError> {
+    /// Only one prompt may be in flight per session, exactly as with
+    /// [`AcpAgentClient::prompt`]; a second concurrent call returns
+    /// [`AcpError::PromptInProgress`]. Callers are responsible for the
+    /// same cleanup [`AcpAgentClient::prompt`] does internally: drop the
+    /// receiver and call [`AcpAgentClient::close_session`] (or
+    /// [`AcpAgentClient::cancel`]) when abandoning a turn.
+    pub fn prompt_stream(
+        &self,
+        session_id: &str,
+        text: &str,
+    ) -> Result<mpsc::Receiver<SessionEvent>, AcpError> {
+        let (_, event_rx) = self.start_prompt(session_id, text)?;
+        Ok(event_rx)
+    }
+
+    /// Shared prompt setup: registers the per-session subscription, inserts
+    /// the pending-request callback that forwards the agent's prompt
+    /// response into the event stream, and writes `session/prompt`.
+    /// Returns the request id and the event receiver.
+    fn start_prompt(
+        &self,
+        session_id: &str,
+        text: &str,
+    ) -> Result<(u64, mpsc::Receiver<SessionEvent>), AcpError> {
         self.ensure_open()?;
 
         let (event_tx, event_rx) = mpsc::channel::<SessionEvent>();
@@ -325,6 +479,28 @@ impl AcpAgentClient {
             self.remove_subscription(session_id);
             return Err(error);
         }
+
+        Ok((id, event_rx))
+    }
+
+    /// Sends a text prompt to a session (`session/prompt`) and collects the
+    /// turn's `session/update` notifications.
+    ///
+    /// All updates (message chunks, thought chunks, tool calls, plans, and
+    /// protocol extensions) are returned in wire order in
+    /// [`PromptResult::updates`]. [`PromptResult::final_text`] concatenates
+    /// the `agent_message_chunk` text for convenience. The turn ends when the
+    /// agent answers `session/prompt`; the response's `stopReason` is parsed
+    /// into [`PromptResult::stop_reason`].
+    ///
+    /// Only one prompt may be in flight per session; a second call returns
+    /// [`AcpError::PromptInProgress`].
+    ///
+    /// Embedders that need the updates as they arrive (e.g. a UI rendering a
+    /// growing transcript) should use [`AcpAgentClient::prompt_stream`]
+    /// instead.
+    pub fn prompt(&self, session_id: &str, text: &str) -> Result<PromptResult, AcpError> {
+        let (id, event_rx) = self.start_prompt(session_id, text)?;
 
         let deadline = Instant::now() + self.prompt_timeout;
         let mut updates: Vec<SessionUpdate> = Vec::new();
@@ -424,7 +600,10 @@ impl AcpAgentClient {
     /// Kills the agent process and joins the background reader thread.
     ///
     /// Idempotent: dropping the client after `close` is a no-op. Pending
-    /// requests are failed with [`AcpError::Closed`].
+    /// requests are failed with [`AcpError::Closed`]; pending permission
+    /// requests are dropped (their replies are never written — the agent is
+    /// being killed, and an `UnknownPermissionRequest`-style answer would
+    /// arrive after the agent can no longer read it anyway).
     pub fn close(mut self) {
         self.shutdown();
     }
@@ -519,6 +698,13 @@ impl AcpAgentClient {
         // Drop subscriptions so prompt loops observing them terminate.
         if let Ok(mut subscriptions) = self.subscriptions.lock() {
             subscriptions.clear();
+        }
+        if let Ok(mut pending_permissions) = self.pending_permissions.lock() {
+            let dropped = pending_permissions.len();
+            if dropped > 0 {
+                tracing::warn!(target: "airi-acp", dropped, "dropping unanswered permission requests on shutdown");
+            }
+            pending_permissions.clear();
         }
         if let Some(mut child) = self.child.take() {
             let _ = child.kill();
@@ -665,6 +851,7 @@ fn parse_content_chunk(value: &Value) -> Option<ContentChunk> {
 
 /// Background reader: parses JSON-RPC lines from the agent's stdout and
 /// routes responses / notifications / server-initiated requests.
+#[allow(clippy::too_many_arguments)]
 fn reader_loop(
     stdout: std::process::ChildStdout,
     pending: Arc<Mutex<HashMap<u64, PendingCallback>>>,
@@ -672,6 +859,9 @@ fn reader_loop(
     closed: Arc<AtomicBool>,
     stdin: Arc<Mutex<ChildStdin>>,
     policy: Arc<Mutex<crate::types::PermissionPolicy>>,
+    permission_tx: mpsc::SyncSender<PermissionRequest>,
+    pending_permissions: Arc<Mutex<HashMap<String, PendingPermission>>>,
+    session_allowlist: Arc<Mutex<HashSet<SessionId>>>,
 ) {
     let mut reader = BufReader::new(stdout);
     let mut line = String::new();
@@ -685,9 +875,16 @@ fn reader_loop(
                     continue;
                 }
                 match serde_json::from_str::<Value>(trimmed) {
-                    Ok(message) => {
-                        handle_message(&message, &pending, &subscriptions, &stdin, &policy)
-                    }
+                    Ok(message) => handle_message(
+                        &message,
+                        &pending,
+                        &subscriptions,
+                        &stdin,
+                        &policy,
+                        &permission_tx,
+                        &pending_permissions,
+                        &session_allowlist,
+                    ),
                     Err(e) => {
                         tracing::debug!(target: "airi-acp", "ignoring non-JSON line from agent: {e}");
                     }
@@ -710,12 +907,16 @@ fn reader_loop(
 }
 
 /// Classifies one parsed message and dispatches it.
+#[allow(clippy::too_many_arguments)]
 fn handle_message(
     message: &Value,
     pending: &Mutex<HashMap<u64, PendingCallback>>,
     subscriptions: &Mutex<HashMap<SessionId, mpsc::Sender<SessionEvent>>>,
     stdin: &Mutex<ChildStdin>,
     policy: &Mutex<crate::types::PermissionPolicy>,
+    permission_tx: &mpsc::SyncSender<PermissionRequest>,
+    pending_permissions: &Mutex<HashMap<String, PendingPermission>>,
+    session_allowlist: &Mutex<HashSet<SessionId>>,
 ) {
     let method = message.get("method").and_then(Value::as_str);
     let id = message.get("id").cloned();
@@ -726,15 +927,32 @@ fn handle_message(
             if method == "session/request_permission" {
                 let policy = policy.lock().map(|p| *p).unwrap_or_default();
                 let params = message.get("params");
-                let tool_call = params
-                    .and_then(|p| p.get("toolCall"))
-                    .cloned()
-                    .unwrap_or(Value::Null);
-                let options = parse_permission_options(params);
-                let outcome = decide_permission(policy, &tool_call, &options);
-                let result = permission_result(&outcome);
-                let reply = json!({ "jsonrpc": "2.0", "id": id, "result": result });
-                write_json_line(stdin, &reply);
+                let session_allowlisted = params
+                    .and_then(|p| p.get("sessionId"))
+                    .and_then(Value::as_str)
+                    .is_some_and(|sid| {
+                        session_allowlist
+                            .lock()
+                            .map(|set| set.contains(sid))
+                            .unwrap_or(false)
+                    });
+                match plan_permission(
+                    policy,
+                    session_allowlisted,
+                    permission_tx,
+                    pending_permissions,
+                    &id,
+                    params,
+                ) {
+                    PermissionPlan::Immediate(outcome) => {
+                        let result = permission_result(&outcome);
+                        let reply = json!({ "jsonrpc": "2.0", "id": id, "result": result });
+                        write_json_line(stdin, &reply);
+                    }
+                    PermissionPlan::Enqueued => {
+                        // The reply is written later by `answer_permission`.
+                    }
+                }
             } else {
                 let reply = json!({
                     "jsonrpc": "2.0",
@@ -791,6 +1009,107 @@ fn handle_message(
     }
 }
 
+/// How [`plan_permission`] decided to answer (or not answer) a
+/// `session/request_permission` request.
+#[derive(Debug, PartialEq, Eq)]
+enum PermissionPlan {
+    /// Reply immediately with this outcome (auto policies, an
+    /// allow-for-session session, or a fail-closed fallback).
+    Immediate(PermissionOutcome),
+    /// The request was enqueued for the human; the reply is written later
+    /// by [`AcpAgentClient::answer_permission`].
+    Enqueued,
+}
+
+/// Plans the answer to a `session/request_permission` request.
+///
+/// Split out from [`handle_message`] so the enqueue path can be unit-tested
+/// without a child process. Pure with respect to I/O: it reads no streams,
+/// it only mutates the enqueue channel and the pending-permissions map.
+///
+/// Decision order:
+///
+/// 1. `Prompt` policy + session in the allow-for-session list → allow
+///    immediately (first `allow_*` option, else first option, else
+///    `cancelled`). The agent re-asks; we allow without prompting.
+/// 2. `Prompt` policy → enqueue the request for the human and stash the
+///    reply context in `pending_permissions`. If the enqueue queue is full
+///    or disconnected (or the pending-permissions lock is poisoned), the
+///    request fails closed: the first `reject_*` option, or the last option,
+///    or `cancelled`.
+/// 3. Anything else → the configured [`crate::PermissionPolicy`]
+///    (unchanged `auto-*` semantics).
+fn plan_permission(
+    policy: crate::types::PermissionPolicy,
+    session_allowlisted: bool,
+    permission_tx: &mpsc::SyncSender<PermissionRequest>,
+    pending_permissions: &Mutex<HashMap<String, PendingPermission>>,
+    reply_id: &Value,
+    params: Option<&Value>,
+) -> PermissionPlan {
+    let tool_call = params
+        .and_then(|p| p.get("toolCall"))
+        .cloned()
+        .unwrap_or(Value::Null);
+    let options = parse_permission_options(params);
+    let session_id = params
+        .and_then(|p| p.get("sessionId"))
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+
+    if policy == crate::types::PermissionPolicy::Prompt {
+        if session_allowlisted {
+            // "Allow for session" approximation: silently allow this re-ask.
+            return PermissionPlan::Immediate(
+                select_allow(&options)
+                    .or_else(|| options.first().map(|o| o.option_id.clone()))
+                    .map(PermissionOutcome::Select)
+                    .unwrap_or(PermissionOutcome::Cancelled),
+            );
+        }
+        let request_id = normalize_response_id(reply_id)
+            .map(|n| n.to_string())
+            .unwrap_or_else(|| reply_id.to_string());
+        let request = PermissionRequest {
+            request_id: request_id.clone(),
+            session_id: session_id.clone(),
+            tool_call,
+            options: options.clone(),
+        };
+        let Ok(mut pending) = pending_permissions.lock() else {
+            // Fail closed: nobody will ever see this request.
+            return PermissionPlan::Immediate(
+                select_deny(&options)
+                    .map(PermissionOutcome::Select)
+                    .unwrap_or(PermissionOutcome::Cancelled),
+            );
+        };
+        pending.insert(
+            request_id.clone(),
+            PendingPermission {
+                reply_id: reply_id.clone(),
+                session_id,
+                options: options.clone(),
+            },
+        );
+        return match permission_tx.try_send(request) {
+            Ok(()) => PermissionPlan::Enqueued,
+            Err(_) => {
+                // The queue is full or the receiver is gone: fail closed.
+                pending.remove(&request_id);
+                PermissionPlan::Immediate(
+                    select_deny(&options)
+                        .map(PermissionOutcome::Select)
+                        .unwrap_or(PermissionOutcome::Cancelled),
+                )
+            }
+        };
+    }
+
+    PermissionPlan::Immediate(decide_permission(policy, &tool_call, &options))
+}
+
 fn write_json_line(stdin: &Mutex<ChildStdin>, reply: &Value) {
     if let Ok(line) = jsonrpc::encode_line(reply) {
         if let Ok(mut stdin) = stdin.lock() {
@@ -803,6 +1122,180 @@ fn write_json_line(stdin: &Mutex<ChildStdin>, reply: &Value) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn permission_test_args() -> (
+        mpsc::SyncSender<PermissionRequest>,
+        mpsc::Receiver<PermissionRequest>,
+        Mutex<HashMap<String, PendingPermission>>,
+    ) {
+        let (tx, rx) = mpsc::sync_channel(8);
+        (tx, rx, Mutex::new(HashMap::new()))
+    }
+
+    fn prompt_params(session: &str, tool_call: Value) -> Value {
+        json!({
+            "sessionId": session,
+            "toolCall": tool_call,
+            "options": [
+                {"optionId": "allow-1", "name": "Allow once", "kind": "allow_once"},
+                {"optionId": "reject-1", "name": "Reject once", "kind": "reject_once"},
+            ],
+        })
+    }
+
+    #[test]
+    fn plan_permission_enqueues_for_prompt_policy() {
+        let (tx, rx, pending) = permission_test_args();
+        let plan = plan_permission(
+            crate::types::PermissionPolicy::Prompt,
+            false,
+            &tx,
+            &pending,
+            &json!(9001),
+            Some(&prompt_params(
+                "sess-1",
+                json!({"toolCallId": "tc-1", "kind": "read"}),
+            )),
+        );
+        assert_eq!(plan, PermissionPlan::Enqueued);
+        let request = rx.try_recv().expect("permission request enqueued");
+        assert_eq!(request.request_id, "9001");
+        assert_eq!(request.session_id, "sess-1");
+        assert_eq!(request.options.len(), 2);
+        let stored = pending.lock().unwrap();
+        let entry = stored.get("9001").expect("pending permission stored");
+        assert_eq!(entry.session_id, "sess-1");
+        assert_eq!(entry.reply_id, json!(9001));
+    }
+
+    #[test]
+    fn plan_permission_enqueue_normalizes_string_ids_like_responses() {
+        let (tx, rx, pending) = permission_test_args();
+        let plan = plan_permission(
+            crate::types::PermissionPolicy::Prompt,
+            false,
+            &tx,
+            &pending,
+            &json!(" 9002 "),
+            Some(&prompt_params("sess-1", json!({}))),
+        );
+        assert_eq!(plan, PermissionPlan::Enqueued);
+        assert_eq!(rx.try_recv().unwrap().request_id, "9002");
+        assert!(pending.lock().unwrap().contains_key("9002"));
+    }
+
+    #[test]
+    fn plan_permission_full_queue_fails_closed() {
+        let (tx, _rx, pending) = {
+            let (tx, rx) = mpsc::sync_channel(0);
+            (tx, rx, Mutex::new(HashMap::new()))
+        };
+        let plan = plan_permission(
+            crate::types::PermissionPolicy::Prompt,
+            false,
+            &tx,
+            &pending,
+            &json!(9003),
+            Some(&prompt_params("sess-1", json!({"kind": "read"}))),
+        );
+        assert_eq!(
+            plan,
+            PermissionPlan::Immediate(PermissionOutcome::Select("reject-1".into())),
+            "a full queue must fail closed with the reject-style option"
+        );
+        assert!(pending.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn plan_permission_allowlisted_session_allows_without_enqueue() {
+        let (tx, rx, pending) = permission_test_args();
+        let plan = plan_permission(
+            crate::types::PermissionPolicy::Prompt,
+            true,
+            &tx,
+            &pending,
+            &json!(9004),
+            Some(&prompt_params(
+                "sess-1",
+                json!({"kind": "edit", "title": "Edit file"}),
+            )),
+        );
+        assert_eq!(
+            plan,
+            PermissionPlan::Immediate(PermissionOutcome::Select("allow-1".into()))
+        );
+        assert!(
+            rx.try_recv().is_err(),
+            "allowlisted sessions must not enqueue"
+        );
+        assert!(pending.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn plan_permission_allowlisted_session_with_no_options_cancels() {
+        let (tx, _rx, pending) = permission_test_args();
+        let plan = plan_permission(
+            crate::types::PermissionPolicy::Prompt,
+            true,
+            &tx,
+            &pending,
+            &json!(9005),
+            Some(&json!({"sessionId": "sess-1", "toolCall": {}, "options": []})),
+        );
+        assert_eq!(
+            plan,
+            PermissionPlan::Immediate(PermissionOutcome::Cancelled)
+        );
+    }
+
+    #[test]
+    fn plan_permission_auto_read_and_auto_all_unchanged() {
+        let (tx, rx, pending) = permission_test_args();
+        let read_params = prompt_params("sess-1", json!({"kind": "read"}));
+        let edit_params = prompt_params("sess-1", json!({"kind": "edit"}));
+
+        let auto_read_hit = plan_permission(
+            crate::types::PermissionPolicy::AutoRead,
+            false,
+            &tx,
+            &pending,
+            &json!(9006),
+            Some(&read_params),
+        );
+        assert_eq!(
+            auto_read_hit,
+            PermissionPlan::Immediate(PermissionOutcome::Select("allow-1".into()))
+        );
+
+        let auto_read_miss = plan_permission(
+            crate::types::PermissionPolicy::AutoRead,
+            false,
+            &tx,
+            &pending,
+            &json!(9007),
+            Some(&edit_params),
+        );
+        assert_eq!(
+            auto_read_miss,
+            PermissionPlan::Immediate(PermissionOutcome::Select("reject-1".into()))
+        );
+
+        let auto_all = plan_permission(
+            crate::types::PermissionPolicy::AutoAll,
+            false,
+            &tx,
+            &pending,
+            &json!(9008),
+            Some(&edit_params),
+        );
+        assert_eq!(
+            auto_all,
+            PermissionPlan::Immediate(PermissionOutcome::Select("allow-1".into()))
+        );
+
+        assert!(rx.try_recv().is_err(), "auto policies must not enqueue");
+        assert!(pending.lock().unwrap().is_empty());
+    }
 
     #[test]
     fn parse_initialize_result_lenient() {

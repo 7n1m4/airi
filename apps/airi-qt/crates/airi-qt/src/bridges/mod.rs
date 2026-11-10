@@ -6,6 +6,8 @@
 //! sees the same data. Bridges must stay thin: no Tokio, no heavy work on the
 //! Qt thread — persistence calls are small synchronous SQLite reads/writes.
 
+pub mod acp;
+pub mod capture;
 pub mod cards;
 pub mod chat;
 pub mod data;

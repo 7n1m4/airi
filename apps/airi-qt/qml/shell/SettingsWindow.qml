@@ -214,6 +214,20 @@ Window {
                     active: settingsWindow.navIndex === 24
                     onClicked: settingsWindow.navIndex = 24
                 }
+                AListItem {
+                    Layout.fillWidth: true
+                    icon: "📷"
+                    title: I18n.tr("shell.settings.nav.screenCapture")
+                    active: settingsWindow.navIndex === 25
+                    onClicked: settingsWindow.navIndex = 25
+                }
+                AListItem {
+                    Layout.fillWidth: true
+                    icon: "🤵"
+                    title: I18n.tr("shell.settings.nav.acpAgents")
+                    active: settingsWindow.navIndex === 26
+                    onClicked: settingsWindow.navIndex = 26
+                }
 
                 Item {
                     Layout.fillHeight: true
@@ -353,6 +367,12 @@ Window {
             }
             // Plugin Host — devtools scaffold (host not wired).
             PluginHostPage {
+            }
+            // Screen Capture — wired to the CaptureController bridge.
+            ScreenCapturePage {
+            }
+            // ACP Agents — wired to the AcpController bridge (HITL permissions).
+            AcpAgentsPage {
             }
         }
     }

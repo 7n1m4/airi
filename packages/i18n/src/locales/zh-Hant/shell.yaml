@@ -70,6 +70,8 @@ settings:
     discord: Discord
     cloudSync: Cloud Sync
     pluginHost: Plugin Host
+    screenCapture: Screen Capture
+    acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     gemini: Gemini
     fadeOnHover: Fade on Hover
@@ -854,3 +856,72 @@ pluginHost:
     pluginDirPlaceholder: '<userData>/plugins/v1'
     pluginDirHint: '清單從 <pluginDir>/<plugin>/*.json 讀取；啟用狀態保存在應用程式設定旁的 plugins-v1.json 中。'
     save: '儲存並重新啟動宿主'
+
+capture:
+  title: '螢幕截圖'
+  badge: '主螢幕'
+  description: '將主螢幕截取為 PNG，儲存在應用程式的 captures 資料夾中。已儲存的截圖會列在下方 — 點擊即可在系統圖片檢視器中開啟。'
+  errorTitle: '無法完成截圖操作'
+  captureButton: '擷取螢幕'
+  refresh: '重新整理'
+  clearAll: '清除全部截圖'
+  openHint: '點擊縮圖即可在系統圖片檢視器中開啟。'
+  capturesSection: '已儲存的截圖'
+  emptyTitle: '還沒有截圖'
+  emptySubtitle: '按「擷取螢幕」抓取主螢幕。截圖會儲存到 captures 資料夾並在此列出。'
+  clearConfirmTitle: '清除全部截圖'
+  clearConfirmBody: '永久刪除 captures 資料夾中的 %1 個截圖檔案。僅刪除符合 capture-*.png 的檔案 —— 不會觸碰其他任何內容。此操作無法復原。'
+  clearConfirmCancel: '取消'
+  clearConfirmConfirm: '刪除'
+
+acp:
+  title: 'ACP 智慧體'
+  description: '連接以子行程執行的 ACP（Agent Client Protocol）智慧體。向它們發送提示、觀察工作並批准或拒絕它們的工具呼叫。'
+  notice: '智慧體作為 stdio 上的即時子行程執行。僅提示回合與權限請求已接入 —— fs/* 與 terminal/* 尚未實作，因此想要讀寫檔案或產生終端機的智慧體會先詢問（或被你的權限策略拒絕）。'
+  state:
+    running: '執行中'
+    stopped: '已停止'
+    error: '錯誤'
+  agents:
+    caption: '已設定的智慧體'
+    emptyTitle: '尚未設定任何智慧體'
+    emptySubtitle: '新增你的第一個 ACP 智慧體 —— 指令、args 與權限策略。'
+    start: '啟動'
+    stop: '停止'
+    delete: '刪除'
+  addAgent:
+    caption: '新增 stdio 智慧體'
+    title: '新增 stdio 智慧體'
+    description: '透過 stdio（ACP）啟動本機智慧體。範例：指令 npx，args ["-y", "some-acp-agent"]。'
+    nameLabel: '智慧體名稱'
+    namePlaceholder: '例如 claude-agent'
+    commandLabel: '指令'
+    commandPlaceholder: '例如 npx'
+    argsLabel: '參數（JSON 陣列或空白分隔）'
+    argsPlaceholder: '["-y", "some-acp-agent"]'
+    envLabel: '環境變數（每行一條 KEY=值，選用）'
+    envPlaceholder: 'FOO=bar'
+    addButton: '新增智慧體'
+  policyLabel: '權限策略'
+  session:
+    caption: '智慧體工作階段'
+    activeLabel: '智慧體工作階段 —— %1'
+    noAgent: '沒有正在執行的智慧體'
+    stopButton: '停止智慧體'
+  permission:
+    pendingBadge: '等待授權'
+    allowOnce: '允許一次'
+    allowSession: '本工作階段允許'
+    reject: '拒絕'
+    title: '權限請求'
+    body: '智慧體想要執行一個工具：'
+    toolKind: '工具類型'
+    offered: '智慧體提供了：%1'
+    dismiss: '稍後'
+  transcript:
+    caption: '工作階段記錄'
+    emptyTitle: '還沒有工作階段記錄'
+    emptySubtitle: '啟動智慧體並發送提示，即可在此看到對話。'
+  inputPlaceholder: '向智慧體提問…'
+  send: '傳送'
+  cancel: '取消'

@@ -71,6 +71,8 @@ settings:
     discord: Discord
     cloudSync: Cloud Sync
     pluginHost: Plugin Host
+    screenCapture: Screen Capture
+    acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     gemini: Gemini
     fadeOnHover: Fade on Hover
@@ -855,3 +857,72 @@ pluginHost:
     pluginDirPlaceholder: '<userData>/plugins/v1'
     pluginDirHint: 'Les manifestes sont lus depuis <pluginDir>/<plugin>/*.json ; l’activation est persistée dans plugins-v1.json à côté de la configuration de l’app.'
     save: 'Sauvegarder et redémarrer l’hôte'
+
+capture:
+  title: "Capture d'écran"
+  badge: 'Écran principal'
+  description: "Capturez l'écran principal en PNG, enregistrée dans le dossier captures de l'app. Les captures enregistrées sont listées ci-dessous — cliquez-en une pour l'ouvrir dans la visionneuse d'images du système."
+  errorTitle: "Impossible de terminer l'action de capture"
+  captureButton: "Capturer l'écran"
+  refresh: 'Actualiser'
+  clearAll: 'Effacer toutes les captures'
+  openHint: "Cliquez sur une vignette pour l'ouvrir dans la visionneuse d'images du système."
+  capturesSection: 'Captures enregistrées'
+  emptyTitle: "Aucune capture pour l'instant"
+  emptySubtitle: "Appuyez sur Capturer l'écran pour saisir l'écran principal. Les captures arrivent dans le dossier captures et sont listées ici."
+  clearConfirmTitle: 'Effacer toutes les captures'
+  clearConfirmBody: "Supprimer définitivement %1 fichier(s) de capture du dossier captures. Seuls les fichiers correspondant à capture-*.png sont supprimés — rien d'autre n'est touché. Ceci est irréversible."
+  clearConfirmCancel: 'Annuler'
+  clearConfirmConfirm: 'Supprimer'
+
+acp:
+  title: 'Agents ACP'
+  description: 'Connectez-vous à des agents ACP (Agent Client Protocol) exécutés en sous-processus. Promptez-les, regardez leur travail, et approuvez ou rejetez leurs appels d’outils.'
+  notice: 'Les agents tournent en sous-processus live sur stdio. Seuls les tours de prompt et les demandes de permission sont câblés — fs/* et terminal/* ne sont pas implémentés, donc les agents qui veulent lire ou écrire des fichiers ou lancer des terminaux demanderont d’abord (ou seront refusés par votre politique de permission).'
+  state:
+    running: 'En cours'
+    stopped: 'Arrêté'
+    error: 'Erreur'
+  agents:
+    caption: 'Agents configurés'
+    emptyTitle: 'Aucun agent configuré'
+    emptySubtitle: 'Ajoutez votre premier agent ACP — commande, args et une politique de permission.'
+    start: 'Démarrer'
+    stop: 'Arrêter'
+    delete: 'Supprimer'
+  addAgent:
+    caption: 'Ajouter un agent stdio'
+    title: 'Ajouter un agent stdio'
+    description: 'Lance un agent local sur stdio (ACP). Exemple : commande npx, args ["-y", "some-acp-agent"].'
+    nameLabel: "Nom de l'agent"
+    namePlaceholder: 'ex. claude-agent'
+    commandLabel: 'Commande'
+    commandPlaceholder: 'ex. npx'
+    argsLabel: 'Arguments (tableau JSON ou séparés par des espaces)'
+    argsPlaceholder: '["-y", "some-acp-agent"]'
+    envLabel: 'Environnement (KEY=valeur par ligne, optionnel)'
+    envPlaceholder: 'FOO=bar'
+    addButton: "Ajouter l'agent"
+  policyLabel: 'Politique de permission'
+  session:
+    caption: "Session de l'agent"
+    activeLabel: "Session de l'agent — %1"
+    noAgent: 'Aucun agent en cours'
+    stopButton: "Arrêter l'agent"
+  permission:
+    pendingBadge: 'Permission en attente'
+    allowOnce: 'Autoriser une fois'
+    allowSession: 'Autoriser pour la session'
+    reject: 'Rejeter'
+    title: 'Demande de permission'
+    body: "L'agent veut exécuter un outil :"
+    toolKind: "Type d'outil"
+    offered: "L'agent a proposé : %1"
+    dismiss: 'Pas maintenant'
+  transcript:
+    caption: 'Transcription'
+    emptyTitle: 'Pas encore de transcription'
+    emptySubtitle: 'Démarrez un agent et envoyez un prompt pour voir la conversation ici.'
+  inputPlaceholder: "Demandez à l'agent…"
+  send: 'Envoyer'
+  cancel: 'Annuler'

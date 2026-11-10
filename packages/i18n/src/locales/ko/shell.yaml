@@ -71,6 +71,8 @@ settings:
     discord: Discord
     cloudSync: Cloud Sync
     pluginHost: Plugin Host
+    screenCapture: Screen Capture
+    acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     gemini: Gemini
     fadeOnHover: Fade on Hover
@@ -855,3 +857,72 @@ pluginHost:
     pluginDirPlaceholder: '<userData>/plugins/v1'
     pluginDirHint: '매니페스트는 <pluginDir>/<plugin>/*.json 에서 읽습니다. 활성화는 앱 설정 옆의 plugins-v1.json에 저장됩니다.'
     save: '저장하고 호스트 재시작'
+
+capture:
+  title: '화면 캡처'
+  badge: '기본 화면'
+  description: '기본 화면을 PNG로 캡처하여 앱의 captures 폴더에 저장합니다. 저장된 캡처는 아래에 나열됩니다 — 클릭하면 시스템 이미지 뷰어로 엽니다.'
+  errorTitle: '캡처 작업을 완료할 수 없습니다'
+  captureButton: '화면 캡처'
+  refresh: '새로고침'
+  clearAll: '모든 캡처 지우기'
+  openHint: '썸네일을 클릭하면 시스템 이미지 뷰어로 엽니다.'
+  capturesSection: '저장된 캡처'
+  emptyTitle: '아직 캡처가 없습니다'
+  emptySubtitle: '화면 캡처를 눌러 기본 화면을 가져옵니다. 캡처는 captures 폴더에 저장되고 여기에 나열됩니다.'
+  clearConfirmTitle: '모든 캡처 지우기'
+  clearConfirmBody: 'captures 폴더에서 캡처 파일 %1개를 영구적으로 삭제합니다. capture-*.png와 일치하는 파일만 삭제되며 다른 것은 건드리지 않습니다. 이 작업은 되돌릴 수 없습니다.'
+  clearConfirmCancel: '취소'
+  clearConfirmConfirm: '삭제'
+
+acp:
+  title: 'ACP 에이전트'
+  description: 'ACP(Agent Client Protocol) 에이전트를 서브프로세스로 연결합니다. 프롬프트를 보내고 작업을 지켜보며 도구 호출을 승인하거나 거부하세요.'
+  notice: '에이전트는 stdio를 통해 라이브 서브프로세스로 실행됩니다. 프롬프트 턴과 권한 요청만 연결되어 있습니다 — fs/*와 terminal/*은 구현되지 않았으므로 파일을 읽거나 쓰거나 터미널을 만드는 에이전트는 먼저 묻습니다(또는 권한 정책에 의해 거부됩니다).'
+  state:
+    running: '실행 중'
+    stopped: '정지됨'
+    error: '오류'
+  agents:
+    caption: '설정된 에이전트'
+    emptyTitle: '설정된 에이전트가 없습니다'
+    emptySubtitle: '첫 번째 ACP 에이전트를 추가하세요 — 명령, args, 권한 정책.'
+    start: '시작'
+    stop: '중지'
+    delete: '삭제'
+  addAgent:
+    caption: 'stdio 에이전트 추가'
+    title: 'stdio 에이전트 추가'
+    description: 'stdio(ACP)를 통해 로컬 에이전트를 실행합니다. 예: 명령 npx, args ["-y", "some-acp-agent"].'
+    nameLabel: '에이전트 이름'
+    namePlaceholder: '예: claude-agent'
+    commandLabel: '명령'
+    commandPlaceholder: '예: npx'
+    argsLabel: '인자 (JSON 배열 또는 공백 구분)'
+    argsPlaceholder: '["-y", "some-acp-agent"]'
+    envLabel: '환경 변수 (한 줄에 하나씩 KEY=값, 선택 사항)'
+    envPlaceholder: 'FOO=bar'
+    addButton: '에이전트 추가'
+  policyLabel: '권한 정책'
+  session:
+    caption: '에이전트 세션'
+    activeLabel: '에이전트 세션 — %1'
+    noAgent: '실행 중인 에이전트가 없습니다'
+    stopButton: '에이전트 중지'
+  permission:
+    pendingBadge: '권한 대기 중'
+    allowOnce: '한 번만 허용'
+    allowSession: '이 세션 동안 허용'
+    reject: '거부'
+    title: '권한 요청'
+    body: '에이전트가 도구를 실행하려 합니다:'
+    toolKind: '도구 종류'
+    offered: '에이전트가 제안: %1'
+    dismiss: '나중에'
+  transcript:
+    caption: '트랜스크립트'
+    emptyTitle: '아직 트랜스크립트가 없습니다'
+    emptySubtitle: '에이전트를 시작하고 프롬프트를 보내면 여기에 대화가 표시됩니다.'
+  inputPlaceholder: '에이전트에게 물어보기…'
+  send: '보내기'
+  cancel: '취소'

@@ -44,14 +44,22 @@ pub type SessionId = String;
 /// branch never actually inspected the tool call (it allowed anything, like
 /// `auto-all`). This crate implements the documented intent — see the phase
 /// note (`docs/phase-notes/p9-lane-acp-agents.md`) for the exact heuristic.
-/// The `prompt` policy cannot ask a human from inside this crate, so it
-/// always selects the reject-style option (also a behaviour change from
-/// Electron, which round-tripped to the renderer).
+/// The `prompt` policy enqueues the request for the embedding application
+/// (see [`crate::AcpAgentClient::permission_requests`] and
+/// [`crate::AcpAgentClient::answer_permission`]) instead of answering it
+/// itself; the Electron app round-tripped to the renderer.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PermissionPolicy {
-    /// Reject the permission request. The `prompt` wire behaviour is "ask the
-    /// user"; this crate has no UI, so it fails closed (selects the first
-    /// `reject_*` option, or the last option when no reject option exists).
+    /// Enqueue the permission request for the human (via
+    /// [`crate::AcpAgentClient::permission_requests`]) and wait for
+    /// [`crate::AcpAgentClient::answer_permission`]. The agent is blocked
+    /// (its `session/request_permission` stays unanswered) until the user
+    /// decides or the turn is cancelled. When the embedding application
+    /// answers [`PromptDecision::AllowSession`], subsequent requests from the
+    /// same session are auto-allowed without prompting — see
+    /// [`PromptDecision::AllowSession`] for the caveats. If the enqueue queue
+    /// is full or disconnected, the request fails closed (reject-style
+    /// answer) so the agent is never left hanging silently.
     #[default]
     Prompt,
     /// Allow only read-like tool calls; everything else is rejected. A tool
@@ -464,6 +472,61 @@ pub struct PermissionOption {
     /// verbatim; matching is done with `starts_with("allow")` /
     /// `starts_with("reject")`.
     pub kind: String,
+}
+
+/// How the human answered a pending permission request
+/// (see [`crate::AcpAgentClient::answer_permission`]).
+///
+/// Wire mapping: `AllowOnce` and `AllowSession` select the first `allow_*`
+/// option (falling back to the first option when the agent offers no
+/// `allow_*` option, mirroring the `auto-all` fallback); `Reject` selects the
+/// first `reject_*` option (falling back to the last option). When the agent
+/// offered no options at all, every decision maps to the protocol-level
+/// `outcome: "cancelled"`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PromptDecision {
+    /// Allow this one tool call only (first `allow_*` option).
+    AllowOnce,
+    /// Allow this tool call (first `allow_*` option) and remember the
+    /// session: subsequent `session/request_permission` requests from the
+    /// same session are auto-allowed without prompting.
+    ///
+    /// **Approximation, not protocol.** ACP has no "allow for session"
+    /// grant message; agents that offer an `allow_always` option apply it
+    /// *agent-side* once selected. This client-side variant does not speak
+    /// to the agent about future requests: the agent will re-ask, and this
+    /// client answers `allow_*` again without asking the human. If the
+    /// agent is expected to enforce `allow_always` itself, prefer selecting
+    /// the `allow_always` option via [`crate::AcpAgentClient::answer_permission`]
+    /// with [`PromptDecision::AllowOnce`] (the first `allow_*` option is
+    /// typically `allow_once`, so this depends on the agent's ordering).
+    AllowSession,
+    /// Reject the tool call (first `reject_*` option, or the last option
+    /// when none exists).
+    Reject,
+}
+
+/// A `session/request_permission` request enqueued for the human when the
+/// [`PermissionPolicy::Prompt`] policy is active (or when a `Prompt`-policy
+/// session was not auto-allowed). Delivered through the channel returned by
+/// [`crate::AcpAgentClient::permission_requests`]; answered with
+/// [`crate::AcpAgentClient::answer_permission`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct PermissionRequest {
+    /// Identifier of the server-initiated JSON-RPC request, normalized the
+    /// same way as response ids (`normalize_response_id`): the decimal
+    /// string form of a numeric id, or the raw id's JSON text when it is
+    /// not a number. Pass it back verbatim as `request_id` to
+    /// [`crate::AcpAgentClient::answer_permission`]. It is **not** the
+    /// tool-call id.
+    pub request_id: String,
+    /// The session the tool call belongs to (`sessionId` in the request).
+    pub session_id: String,
+    /// The raw `toolCall` object from the request (a `ToolCallUpdate` on
+    /// the wire), verbatim.
+    pub tool_call: Value,
+    /// The options the agent offered, in wire order.
+    pub options: Vec<PermissionOption>,
 }
 
 /// Outcome of [`crate::AcpAgentClient::close_session`].

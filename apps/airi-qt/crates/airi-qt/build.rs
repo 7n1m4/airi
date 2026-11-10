@@ -37,6 +37,8 @@ fn main() {
         manifest_dir.join("src/bridges/cards.rs"),
         manifest_dir.join("src/bridges/data.rs"),
         manifest_dir.join("src/bridges/mcp.rs"),
+        manifest_dir.join("src/bridges/capture.rs"),
+        manifest_dir.join("src/bridges/acp.rs"),
         manifest_dir.join("src/bridges/shell.rs"),
         manifest_dir.join("src/bridges/stage.rs"),
         manifest_dir.join("src/bridges/settings_stage.rs"),
@@ -57,6 +59,8 @@ fn main() {
         manifest_dir.join("src/cpp/airi_qt_bridge.h"),
         manifest_dir.join("src/cpp/spine_item.cpp"),
         manifest_dir.join("src/cpp/spine_item.h"),
+        manifest_dir.join("src/cpp/capture_item.cpp"),
+        manifest_dir.join("src/cpp/capture_item.h"),
     ];
 
     let mut module =
@@ -143,6 +147,8 @@ fn main() {
     module = module.qml_file("qml/pages/settings/modules/discord/DiscordSettingsPage.qml");
     module = module.qml_file("qml/pages/settings/modules/cloud-sync/CloudSyncSettingsPage.qml");
     module = module.qml_file("qml/pages/devtools/plugin-host/PluginHostPage.qml");
+    module = module.qml_file("qml/pages/devtools/screen-capture/ScreenCapturePage.qml");
+    module = module.qml_file("qml/pages/settings/modules/acp/AcpAgentsPage.qml");
 
     CxxQtBuilder::new_qml_module(module)
         .qt_module("Gui")

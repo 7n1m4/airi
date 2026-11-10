@@ -71,6 +71,8 @@ settings:
     discord: Discord
     cloudSync: Cloud Sync
     pluginHost: Plugin Host
+    screenCapture: Screen Capture
+    acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     gemini: Gemini
     fadeOnHover: Fade on Hover
@@ -855,3 +857,72 @@ pluginHost:
     pluginDirPlaceholder: '<userData>/plugins/v1'
     pluginDirHint: 'Manifest được đọc từ <pluginDir>/<plugin>/*.json; việc kích hoạt được lưu vào plugins-v1.json bên cạnh cấu hình app.'
     save: 'Lưu & Khởi động lại Host'
+
+capture:
+  title: 'Chụp màn hình'
+  badge: 'Màn hình chính'
+  description: 'Chụp màn hình chính thành PNG, lưu trong thư mục captures của ứng dụng. Các ảnh đã lưu được liệt kê bên dưới — bấm vào để mở trong trình xem ảnh hệ thống.'
+  errorTitle: 'Không thể hoàn tất hành động chụp'
+  captureButton: 'Chụp màn hình'
+  refresh: 'Làm mới'
+  clearAll: 'Xóa tất cả ảnh chụp'
+  openHint: 'Bấm vào một hình thu nhỏ để mở trong trình xem ảnh hệ thống.'
+  capturesSection: 'Ảnh đã lưu'
+  emptyTitle: 'Chưa có ảnh chụp nào'
+  emptySubtitle: 'Nhấn Chụp màn hình để chụp màn hình chính. Ảnh chụp vào thư mục captures và được liệt kê ở đây.'
+  clearConfirmTitle: 'Xóa tất cả ảnh chụp'
+  clearConfirmBody: 'Xóa vĩnh viễn %1 tệp ảnh chụp khỏi thư mục captures. Chỉ các tệp khớp với capture-*.png mới bị xóa — không có gì khác bị chạm vào. Thao tác này không thể hoàn tác.'
+  clearConfirmCancel: 'Hủy'
+  clearConfirmConfirm: 'Xóa'
+
+acp:
+  title: 'Tác tử ACP'
+  description: 'Kết nối tới các tác tử ACP (Agent Client Protocol) chạy như tiến trình con. Gửi prompt, theo dõi công việc và chấp thuận hoặc từ chối các lời gọi công cụ của chúng.'
+  notice: 'Các tác tử chạy như tiến trình con live qua stdio. Chỉ các lượt prompt và yêu cầu quyền được nối — fs/* và terminal/* chưa được triển khai, nên tác tử muốn đọc/ghi tệp hoặc sinh terminal sẽ hỏi trước (hoặc bị từ chối bởi chính sách quyền của bạn).'
+  state:
+    running: 'Đang chạy'
+    stopped: 'Đã dừng'
+    error: 'Lỗi'
+  agents:
+    caption: 'Tác tử Đã cấu hình'
+    emptyTitle: 'Chưa cấu hình tác tử nào'
+    emptySubtitle: 'Thêm tác tử ACP đầu tiên — lệnh, args và chính sách quyền.'
+    start: 'Bắt đầu'
+    stop: 'Dừng'
+    delete: 'Xóa'
+  addAgent:
+    caption: 'Thêm Tác tử stdio'
+    title: 'Thêm Tác tử stdio'
+    description: 'Chạy một tác tử cục bộ qua stdio (ACP). Ví dụ: lệnh npx, args ["-y", "some-acp-agent"].'
+    nameLabel: 'Tên Tác tử'
+    namePlaceholder: 'vd. claude-agent'
+    commandLabel: 'Lệnh'
+    commandPlaceholder: 'vd. npx'
+    argsLabel: 'Đối số (mảng JSON hoặc tách bằng khoảng trắng)'
+    argsPlaceholder: '["-y", "some-acp-agent"]'
+    envLabel: 'Môi trường (KEY=giá trị mỗi dòng, tùy chọn)'
+    envPlaceholder: 'FOO=bar'
+    addButton: 'Thêm Tác tử'
+  policyLabel: 'Chính sách Quyền'
+  session:
+    caption: 'Phiên Tác tử'
+    activeLabel: 'Phiên tác tử — %1'
+    noAgent: 'Không có tác tử nào đang chạy'
+    stopButton: 'Dừng Tác tử'
+  permission:
+    pendingBadge: 'Chờ quyền'
+    allowOnce: 'Cho phép một lần'
+    allowSession: 'Cho phép trong phiên'
+    reject: 'Từ chối'
+    title: 'Yêu cầu Quyền'
+    body: 'Tác tử muốn chạy một công cụ:'
+    toolKind: 'Loại công cụ'
+    offered: 'Tác tử đề xuất: %1'
+    dismiss: 'Để sau'
+  transcript:
+    caption: 'Bản ghi hội thoại'
+    emptyTitle: 'Chưa có bản ghi hội thoại'
+    emptySubtitle: 'Bắt đầu một tác tử và gửi prompt để xem cuộc trò chuyện ở đây.'
+  inputPlaceholder: 'Hỏi tác tử…'
+  send: 'Gửi'
+  cancel: 'Hủy'

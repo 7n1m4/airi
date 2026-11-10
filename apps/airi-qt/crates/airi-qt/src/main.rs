@@ -41,15 +41,23 @@ pub struct Cli {
     /// Import a `.vrm` model into the models dir and exit, without booting
     /// the GUI.
     pub import_model: Option<PathBuf>,
+    /// Start the AIRI gateway channel server on loopback (opt-in).
+    ///
+    /// Lives on `127.0.0.1` by default (set `SERVER_CHANNEL_PORT` to change
+    /// the port, default 6121). The auth token lives in
+    /// `<profile>/server-channel/config.json` (profiled launches) or the
+    /// platform data dir otherwise (plain launches).
+    pub gateway: bool,
 }
 
 impl Cli {
-    /// Parse `--profile <dir>`, `--smoke`, `--import-card <file>` and `--import-model <file>`.
+    /// Parse `--profile <dir>`, `--smoke`, `--import-card <file>`, `--import-model <file>`, `--gateway`.
     pub fn parse(args: impl Iterator<Item = String>) -> Self {
         let mut profile = None;
         let mut smoke = false;
         let mut import_card = None;
         let mut import_model = None;
+        let mut gateway = false;
         let mut it = args.peekable();
         while let Some(arg) = it.next() {
             match arg.as_str() {
@@ -59,6 +67,7 @@ impl Cli {
                     }
                 }
                 "--smoke" => smoke = true,
+                "--gateway" => gateway = true,
                 "--import-card" => {
                     if let Some(v) = it.next() {
                         import_card = Some(PathBuf::from(v));
@@ -86,6 +95,7 @@ impl Cli {
             smoke,
             import_card,
             import_model,
+            gateway,
         }
     }
 }
@@ -270,6 +280,53 @@ fn main() -> ExitCode {
     }
 
     bridges::set_smoke(cli.smoke);
+
+    // Opt-in AIRI gateway channel server (loopback-first; plaintext token
+    // file — same posture as the Electron main service). Off by default.
+    let gateway_handle: Option<airi_channel::ServerHandle> = cli
+        .gateway
+        .then(|| {
+            let config_path = if explicit_profile {
+                bridges::profile_dir().map(|p| p.join("server-channel").join("config.json"))
+            } else {
+                airi_channel::default_config_path()
+            };
+            let Some(config_path) = config_path else {
+                eprintln!("[airi-qt] gateway: no config path available; not starting");
+                return None;
+            };
+            let config = match airi_channel::load_or_heal(&config_path) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("[airi-qt] gateway: failed to load config: {e}");
+                    return None;
+                }
+            };
+            let port = airi_channel::server_channel_port();
+            match airi_channel::ChannelServer::bind(&config.hostname, port, &config)
+                .and_then(|s| s.spawn())
+            {
+                Ok(handle) => {
+                    eprintln!(
+                        "[airi-qt] gateway: listening on {}:{} (token at {})",
+                        config.hostname,
+                        handle.port(),
+                        config_path.display()
+                    );
+                    Some(handle)
+                }
+                Err(e) => {
+                    eprintln!(
+                        "[airi-qt] gateway: failed to start on {}:{}: {e}",
+                        config.hostname, port
+                    );
+                    None
+                }
+            }
+        })
+        .flatten();
+    // Held for the app lifetime; the accept loop stops on process exit.
+    let _gateway_handle = gateway_handle;
 
     if cli.smoke {
         crate::spine_rt::spine_smoke_check();

@@ -70,6 +70,8 @@ settings:
     discord: Discord
     cloudSync: Cloud Sync
     pluginHost: Plugin Host
+    screenCapture: Screen Capture
+    acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     gemini: Gemini
     fadeOnHover: Fade on Hover
@@ -854,3 +856,72 @@ pluginHost:
     pluginDirPlaceholder: '<userData>/plugins/v1'
     pluginDirHint: '清单从 <pluginDir>/<plugin>/*.json 读取；启用状态保存在应用配置旁的 plugins-v1.json 中。'
     save: '保存并重启宿主'
+
+capture:
+  title: '屏幕截图'
+  badge: '主屏幕'
+  description: '将主屏幕截取为 PNG，保存在应用的 captures 文件夹中。已保存的截图会列在下方 — 点击即可在系统图片查看器中打开。'
+  errorTitle: '无法完成截图操作'
+  captureButton: '截取屏幕'
+  refresh: '刷新'
+  clearAll: '清除全部截图'
+  openHint: '点击缩略图即可在系统图片查看器中打开。'
+  capturesSection: '已保存的截图'
+  emptyTitle: '还没有截图'
+  emptySubtitle: '按“截取屏幕”抓取主屏幕。截图会保存到 captures 文件夹并在此列出。'
+  clearConfirmTitle: '清除全部截图'
+  clearConfirmBody: '永久删除 captures 文件夹中的 %1 个截图文件。仅删除匹配 capture-*.png 的文件 —— 不会触碰其他任何内容。此操作无法撤销。'
+  clearConfirmCancel: '取消'
+  clearConfirmConfirm: '删除'
+
+acp:
+  title: 'ACP 智能体'
+  description: '连接以子进程运行的 ACP（Agent Client Protocol）智能体。向它们发送提示、观察工作并批准或拒绝它们的工具调用。'
+  notice: '智能体作为 stdio 上的实时子进程运行。仅提示回合与权限请求已接入 —— fs/* 与 terminal/* 尚未实现，因此想要读写文件或生成终端的智能体会先询问（或被你的权限策略拒绝）。'
+  state:
+    running: '运行中'
+    stopped: '已停止'
+    error: '错误'
+  agents:
+    caption: '已配置的智能体'
+    emptyTitle: '尚未配置任何智能体'
+    emptySubtitle: '添加你的第一个 ACP 智能体 —— 命令、args 与权限策略。'
+    start: '启动'
+    stop: '停止'
+    delete: '删除'
+  addAgent:
+    caption: '添加 stdio 智能体'
+    title: '添加 stdio 智能体'
+    description: '通过 stdio（ACP）启动本地智能体。示例：命令 npx，args ["-y", "some-acp-agent"]。'
+    nameLabel: '智能体名称'
+    namePlaceholder: '例如 claude-agent'
+    commandLabel: '命令'
+    commandPlaceholder: '例如 npx'
+    argsLabel: '参数（JSON 数组或空格分隔）'
+    argsPlaceholder: '["-y", "some-acp-agent"]'
+    envLabel: '环境变量（每行一条 KEY=值，可选）'
+    envPlaceholder: 'FOO=bar'
+    addButton: '添加智能体'
+  policyLabel: '权限策略'
+  session:
+    caption: '智能体会话'
+    activeLabel: '智能体会话 —— %1'
+    noAgent: '没有正在运行的智能体'
+    stopButton: '停止智能体'
+  permission:
+    pendingBadge: '等待授权'
+    allowOnce: '允许一次'
+    allowSession: '本会话允许'
+    reject: '拒绝'
+    title: '权限请求'
+    body: '智能体想要运行一个工具：'
+    toolKind: '工具类型'
+    offered: '智能体提供了：%1'
+    dismiss: '暂不'
+  transcript:
+    caption: '会话记录'
+    emptyTitle: '还没有会话记录'
+    emptySubtitle: '启动智能体并发送提示，即可在此看到对话。'
+  inputPlaceholder: '向智能体提问…'
+  send: '发送'
+  cancel: '取消'

@@ -7,9 +7,12 @@
 //! available, so the suite stays green on minimal systems.
 
 use std::process::Command;
+use std::sync::Arc;
 use std::time::Duration;
 
-use airi_acp::{AcpAgentClient, CloseSessionResult, PermissionPolicy, SessionUpdate, StopReason};
+use airi_acp::{
+    AcpAgentClient, CloseSessionResult, PermissionPolicy, PromptDecision, SessionUpdate, StopReason,
+};
 
 /// Modes the mock agent understands (passed as argv[1]):
 ///
@@ -231,19 +234,137 @@ fn auto_read_policy_denies_write_tool() {
     );
 }
 
+/// Answers the next enqueued permission request on a background thread.
+/// Returns a join handle yielding the request that was answered.
+fn answer_next_permission(
+    client: &Arc<AcpAgentClient>,
+    decision: PromptDecision,
+) -> std::thread::JoinHandle<airi_acp::PermissionRequest> {
+    let client = Arc::clone(client);
+    let requests = client.permission_requests();
+    std::thread::spawn(move || {
+        let request = {
+            let receiver = requests.lock().expect("permission receiver lock poisoned");
+            receiver
+                .recv_timeout(Duration::from_secs(5))
+                .expect("timed out waiting for the permission request to be enqueued")
+        };
+        client
+            .answer_permission(&request.request_id, decision)
+            .expect("failed to answer the permission request");
+        request
+    })
+}
+
 #[test]
-fn prompt_policy_rejects_permission_request() {
+fn prompt_policy_enqueues_permission_request_and_reject_is_delivered() {
     require_python3!();
-    let client = spawn_mock("perm_read", PermissionPolicy::Prompt);
+    let client = Arc::new(spawn_mock("perm_read", PermissionPolicy::Prompt));
     let session = initialize_and_session(&client);
 
+    let answering = answer_next_permission(&client, PromptDecision::Reject);
     let result = client
         .prompt(&session, "please read")
         .expect("prompt failed");
+    let request = answering.join().expect("answering thread panicked");
+
+    assert_eq!(request.session_id, "sess-mock-1");
+    assert_eq!(request.options.len(), 2);
+    assert!(request.request_id.parse::<u64>().is_ok());
+    assert_eq!(request.tool_call["toolCallId"], "tc-1");
     assert_eq!(
         result.final_text, "reject-1",
-        "prompt policy fails closed (rejects) without a human in the loop"
+        "a human reject must be delivered to the agent as the reject-style option"
     );
+}
+
+#[test]
+fn prompt_policy_allow_once_delivers_allow_option() {
+    require_python3!();
+    let client = Arc::new(spawn_mock("perm_write", PermissionPolicy::Prompt));
+    let session = initialize_and_session(&client);
+
+    let answering = answer_next_permission(&client, PromptDecision::AllowOnce);
+    let result = client
+        .prompt(&session, "please edit")
+        .expect("prompt failed");
+    answering.join().expect("answering thread panicked");
+
+    assert_eq!(result.final_text, "allow-1");
+}
+
+#[test]
+fn prompt_policy_allow_session_auto_allows_subsequent_requests() {
+    require_python3!();
+    let client = Arc::new(spawn_mock("perm_read", PermissionPolicy::Prompt));
+    let session = initialize_and_session(&client);
+
+    // First turn: answer AllowSession — the allowlist is recorded.
+    let answering = answer_next_permission(&client, PromptDecision::AllowSession);
+    let first = client
+        .prompt(&session, "please read")
+        .expect("first prompt failed");
+    answering.join().expect("answering thread panicked");
+    assert_eq!(first.final_text, "allow-1");
+
+    // Second turn: nobody answers. The session allowlist must short-circuit
+    // the enqueue and allow the re-asked request automatically.
+    let second = client
+        .prompt(&session, "please read again")
+        .expect("second prompt failed");
+    assert_eq!(
+        second.final_text, "allow-1",
+        "an allow-for-session answer must auto-allow the next request from that session"
+    );
+}
+
+#[test]
+fn answer_permission_with_unknown_request_id_fails() {
+    require_python3!();
+    let client = spawn_mock("basic", PermissionPolicy::Prompt);
+    let error = client
+        .answer_permission("no-such-request", PromptDecision::Reject)
+        .expect_err("answering an unknown request id must fail");
+    assert!(matches!(
+        error,
+        airi_acp::AcpError::UnknownPermissionRequest(id) if id == "no-such-request"
+    ));
+}
+
+#[test]
+fn prompt_stream_delivers_updates_incrementally_and_finishes() {
+    require_python3!();
+    let client = Arc::new(spawn_mock("basic", PermissionPolicy::Prompt));
+    let session = initialize_and_session(&client);
+
+    let events = client
+        .prompt_stream(&session, "hi there")
+        .expect("prompt_stream failed");
+    let mut text = String::new();
+    let mut saw_agent_chunk = false;
+    let mut stop_reason = None;
+    for event in events {
+        match event {
+            airi_acp::SessionEvent::Update(update) => {
+                if let Some(chunk) = airi_acp::SessionUpdate::agent_text(&update) {
+                    saw_agent_chunk = true;
+                    text.push_str(chunk);
+                }
+            }
+            airi_acp::SessionEvent::Finished(Ok(result)) => {
+                stop_reason = result
+                    .get("stopReason")
+                    .and_then(|v| v.as_str())
+                    .map(str::to_string);
+                break;
+            }
+            airi_acp::SessionEvent::Finished(Err(error)) => panic!("turn failed: {error}"),
+        }
+    }
+
+    assert!(saw_agent_chunk, "expected at least one agent_message_chunk");
+    assert_eq!(text, "Hello world");
+    assert_eq!(stop_reason.as_deref(), Some("end_turn"));
 }
 
 #[test]

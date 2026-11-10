@@ -60,6 +60,12 @@ pub enum AcpError {
     /// it) before sending the next.
     #[error("a prompt is already in progress for session `{0}`")]
     PromptInProgress(String),
+
+    /// No pending permission request with the given id — either it was never
+    /// enqueued, it was already answered, or the enqueue queue was full and
+    /// the request was rejected without reaching the user.
+    #[error("no pending permission request with id `{0}`")]
+    UnknownPermissionRequest(String),
 }
 
 impl AcpError {

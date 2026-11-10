@@ -10,11 +10,15 @@
 //! `options[0]`) — i.e. `auto-read` never actually inspected the tool call.
 //! This crate implements the documented intent instead:
 //!
-//! * [`PermissionPolicy::Prompt`] — the crate has no user to prompt, so it
-//!   fails closed: select the first `reject_*` option, falling back to the
-//!   last option (matching the shape of the Electron user-deny path, whose
-//!   `startsWith("deny")` check never matched the real `reject_*` kinds and
-//!   also fell back to the last option).
+//! * [`PermissionPolicy::Prompt`] — the request is **enqueued** for the human
+//!   (see [`crate::AcpAgentClient::permission_requests`]); the agent stays
+//!   blocked until [`crate::AcpAgentClient::answer_permission`] supplies a
+//!   [`PromptDecision`]. [`PromptDecision::AllowSession`] additionally records
+//!   the session in a client-side allowlist: subsequent requests from that
+//!   session are auto-allowed (an approximation of "allow for session" — see
+//!   [`PromptDecision`](crate::PromptDecision)). If the enqueue queue is full
+//!   or the receiver is gone, the request fails closed (reject-style
+//!   selection, same shape as [`decide_permission`]'s `Prompt` arm).
 //! * [`PermissionPolicy::AutoRead`] — allow when the tool call is read-like,
 //!   otherwise reject. Read-like means the tool call's `kind` is `read`
 //!   (case-insensitive) or its `title` contains `read` (case-insensitive).
@@ -28,7 +32,7 @@
 
 use serde_json::Value;
 
-use crate::types::{PermissionOption, PermissionPolicy};
+use crate::types::{PermissionOption, PermissionPolicy, PromptDecision};
 
 /// What the client should answer a permission request with.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -74,8 +78,35 @@ pub(crate) fn decide_permission(
     }
 }
 
+/// Maps a human [`PromptDecision`] to a [`PermissionOutcome`] against the
+/// options the agent actually offered.
+///
+/// `AllowOnce`/`AllowSession` select the first `allow_*` option, falling
+/// back to the first option when the agent offered none (same fallback as
+/// [`PermissionPolicy::AutoAll`]); `Reject` selects the first `reject_*`
+/// option, falling back to the last option (same fallback as
+/// [`PermissionPolicy::Prompt`] historically). An empty option list always
+/// yields `cancelled`.
+pub(crate) fn decide_prompt_decision(
+    decision: PromptDecision,
+    options: &[PermissionOption],
+) -> PermissionOutcome {
+    if options.is_empty() {
+        return PermissionOutcome::Cancelled;
+    }
+    match decision {
+        PromptDecision::AllowOnce | PromptDecision::AllowSession => select_allow(options)
+            .or_else(|| options.first().map(|o| o.option_id.clone()))
+            .map(PermissionOutcome::Select)
+            .unwrap_or(PermissionOutcome::Cancelled),
+        PromptDecision::Reject => select_deny(options)
+            .map(PermissionOutcome::Select)
+            .unwrap_or(PermissionOutcome::Cancelled),
+    }
+}
+
 /// First option whose `kind` starts with `allow`, in wire order.
-fn select_allow(options: &[PermissionOption]) -> Option<String> {
+pub(crate) fn select_allow(options: &[PermissionOption]) -> Option<String> {
     options
         .iter()
         .find(|o| o.kind.starts_with("allow"))
@@ -84,7 +115,7 @@ fn select_allow(options: &[PermissionOption]) -> Option<String> {
 
 /// First option whose `kind` starts with `reject`, else the last option
 /// (mirrors the Electron user-deny fallback of `options[options.length - 1]`).
-fn select_deny(options: &[PermissionOption]) -> Option<String> {
+pub(crate) fn select_deny(options: &[PermissionOption]) -> Option<String> {
     options
         .iter()
         .find(|o| o.kind.starts_with("reject"))
@@ -211,6 +242,72 @@ mod tests {
             &opts(),
         );
         assert_eq!(out, PermissionOutcome::Select("reject-1".into()));
+    }
+
+    #[test]
+    fn decide_prompt_decision_allow_once_picks_first_allow() {
+        let out = decide_prompt_decision(PromptDecision::AllowOnce, &opts());
+        assert_eq!(out, PermissionOutcome::Select("allow-1".into()));
+    }
+
+    #[test]
+    fn decide_prompt_decision_allow_session_picks_first_allow() {
+        let out = decide_prompt_decision(PromptDecision::AllowSession, &opts());
+        assert_eq!(out, PermissionOutcome::Select("allow-1".into()));
+    }
+
+    #[test]
+    fn decide_prompt_decision_reject_picks_first_reject() {
+        let out = decide_prompt_decision(PromptDecision::Reject, &opts());
+        assert_eq!(out, PermissionOutcome::Select("reject-1".into()));
+    }
+
+    #[test]
+    fn decide_prompt_decision_allow_without_allow_option_falls_back_to_first() {
+        let options = vec![
+            PermissionOption {
+                option_id: "first".into(),
+                name: "First".into(),
+                kind: "reject_once".into(),
+            },
+            PermissionOption {
+                option_id: "last".into(),
+                name: "Last".into(),
+                kind: "reject_always".into(),
+            },
+        ];
+        let out = decide_prompt_decision(PromptDecision::AllowOnce, &options);
+        assert_eq!(out, PermissionOutcome::Select("first".into()));
+    }
+
+    #[test]
+    fn decide_prompt_decision_reject_without_reject_option_falls_back_to_last() {
+        let options = vec![
+            PermissionOption {
+                option_id: "first".into(),
+                name: "First".into(),
+                kind: "allow_once".into(),
+            },
+            PermissionOption {
+                option_id: "last".into(),
+                name: "Last".into(),
+                kind: "allow_always".into(),
+            },
+        ];
+        let out = decide_prompt_decision(PromptDecision::Reject, &options);
+        assert_eq!(out, PermissionOutcome::Select("last".into()));
+    }
+
+    #[test]
+    fn decide_prompt_decision_empty_options_cancel() {
+        for decision in [
+            PromptDecision::AllowOnce,
+            PromptDecision::AllowSession,
+            PromptDecision::Reject,
+        ] {
+            let out = decide_prompt_decision(decision, &[]);
+            assert_eq!(out, PermissionOutcome::Cancelled);
+        }
     }
 
     #[test]

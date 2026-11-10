@@ -71,6 +71,8 @@ settings:
     discord: Discord
     cloudSync: Cloud Sync
     pluginHost: Plugin Host
+    screenCapture: Screen Capture
+    acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     gemini: Gemini
     fadeOnHover: Fade on Hover
@@ -855,3 +857,72 @@ pluginHost:
     pluginDirPlaceholder: '<userData>/plugins/v1'
     pluginDirHint: 'Манифесты читаются из <pluginDir>/<plugin>/*.json; активация сохраняется в plugins-v1.json рядом с конфигурацией приложения.'
     save: 'Сохранить и перезапустить хост'
+
+capture:
+  title: 'Снимок экрана'
+  badge: 'Основной экран'
+  description: 'Сделайте снимок основного экрана в PNG, сохраняется в папку captures приложения. Сохранённые снимки перечислены ниже — нажмите, чтобы открыть в системном просмотрщике изображений.'
+  errorTitle: 'Не удалось выполнить действие снимка'
+  captureButton: 'Снять экран'
+  refresh: 'Обновить'
+  clearAll: 'Очистить все снимки'
+  openHint: 'Нажмите на миниатюру, чтобы открыть её в системном просмотрщике изображений.'
+  capturesSection: 'Сохранённые снимки'
+  emptyTitle: 'Снимков пока нет'
+  emptySubtitle: 'Нажмите «Снять экран», чтобы снять основной экран. Снимки попадают в папку captures и перечисляются здесь.'
+  clearConfirmTitle: 'Очистить все снимки'
+  clearConfirmBody: 'Очистить %1 файл(ов) снимков в папке captures без возможности восстановления. Удаляются только файлы, соответствующие capture-*.png — ничего больше не затрагивается. Это нельзя отменить.'
+  clearConfirmCancel: 'Отмена'
+  clearConfirmConfirm: 'Удалить'
+
+acp:
+  title: 'Агенты ACP'
+  description: 'Подключайтесь к агентам ACP (Agent Client Protocol), работающим как подпроцессы. Отправляйте им промпты, следите за их работой и одобряйте или отклоняйте их вызовы инструментов.'
+  notice: 'Агенты работают как живые подпроцессы через stdio. Подключены только ходы промпта и запросы разрешений — fs/* и terminal/* не реализованы, поэтому агенты, которым нужно читать или писать файлы или запускать терминалы, сначала спросят (или будут отклонены вашей политикой разрешений).'
+  state:
+    running: 'Работает'
+    stopped: 'Остановлен'
+    error: 'Ошибка'
+  agents:
+    caption: 'Настроенные агенты'
+    emptyTitle: 'Агенты не настроены'
+    emptySubtitle: 'Добавьте первого агента ACP — команда, args и политика разрешений.'
+    start: 'Запустить'
+    stop: 'Остановить'
+    delete: 'Удалить'
+  addAgent:
+    caption: 'Добавить stdio-агента'
+    title: 'Добавить stdio-агента'
+    description: 'Запускает локального агента через stdio (ACP). Пример: команда npx, args ["-y", "some-acp-agent"].'
+    nameLabel: 'Имя агента'
+    namePlaceholder: 'напр. claude-agent'
+    commandLabel: 'Команда'
+    commandPlaceholder: 'напр. npx'
+    argsLabel: 'Аргументы (JSON-массив или через пробел)'
+    argsPlaceholder: '["-y", "some-acp-agent"]'
+    envLabel: 'Окружение (KEY=значение по строке, опционально)'
+    envPlaceholder: 'FOO=bar'
+    addButton: 'Добавить агента'
+  policyLabel: 'Политика разрешений'
+  session:
+    caption: 'Сессия агента'
+    activeLabel: 'Сессия агента — %1'
+    noAgent: 'Агент не запущен'
+    stopButton: 'Остановить агента'
+  permission:
+    pendingBadge: 'Разрешение ожидается'
+    allowOnce: 'Разрешить один раз'
+    allowSession: 'Разрешить на сессию'
+    reject: 'Отклонить'
+    title: 'Запрос разрешения'
+    body: 'Агент хочет выполнить инструмент:'
+    toolKind: 'Тип инструмента'
+    offered: 'Агент предложил: %1'
+    dismiss: 'Не сейчас'
+  transcript:
+    caption: 'Транскрипт'
+    emptyTitle: 'Транскрипта пока нет'
+    emptySubtitle: 'Запустите агента и отправьте промпт, чтобы увидеть разговор здесь.'
+  inputPlaceholder: 'Спросите агента…'
+  send: 'Отправить'
+  cancel: 'Отмена'

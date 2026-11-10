@@ -177,6 +177,8 @@ dependencies = [
 name = "airi-qt"
 version = "0.1.0"
 dependencies = [
+ "airi-acp",
+ "airi-channel",
  "airi-core",
  "airi-i18n",
  "airi-llm",
