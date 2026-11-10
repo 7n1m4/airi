@@ -5,7 +5,6 @@ stepper:
   jumpToStep: Aller à n'importe quelle étape
   allSteps: Toutes les étapes ({count})
   stepCount: Étape {current} sur {total}
-
 shell:
   close: Fermer
   finish: Lancer la scène
@@ -15,9 +14,8 @@ shell:
   brand: Configuration du Compagnon AIRI
   stageReady: Scène Prête
   closeSetup: Fermer la configuration (Enregistrer pour plus tard)
-  placeholderNotice: Ce module est en cours de configuration. Vous pouvez passer à l'étape
-    suivante.
-
+  placeholderNotice: Ce module est en cours de configuration. Vous pouvez passer à
+    l'étape suivante.
 steps:
   welcome:
     label: Bienvenue
@@ -25,10 +23,10 @@ steps:
     heroTitle: Bienvenue sur AIRI
     heroSubtitle: La scène de votre compagnon virtuel — configurée en quelques
       minutes, 100% sur votre machine.
-    companionQuote: "Bonjour ! Je suis votre compagnon numérique autonome. Que vous
+    companionQuote: Bonjour ! Je suis votre compagnon numérique autonome. Que vous
       souhaitiez une conversation vocale, des performances scéniques expressives
       ou une présence discrète sur votre bureau, je suis prête à m'adapter à
-      votre univers."
+      votre univers.
     pills:
       webgpu: Cœur WebGPU local
       offline: 100% hors-ligne et privé
@@ -45,7 +43,13 @@ steps:
       trayItem: Configuration et connexion du compagnon (V3)
       continue: Poursuivre la configuration
       closeToTray: Réduire dans la barre d'état
-
+      close: Close
+      comebackLead: If you want to come back to this later, just
+      desktopInstruction: right-click the AIRI system tray icon and click Companion Wizard.
+      webInstruction: tap the cog icon in the top-right to open Settings, then go
+        Guided Tours → Companion Wizard.
+      webSettingsPath: Settings → Guided Tours → Companion Wizard
+      desktopAlternative: Or open Settings → Guided Tours → Companion Wizard.
   triage:
     label: Compte
     subtitle: Connexion et architecture
@@ -62,9 +66,9 @@ steps:
       badge: Priorité locale
       action: Continuer en local
     stepBadge: Triage de l'Architecture · Étape {current} sur {total}
-    companionGreeting: Bienvenue sur AIRI ! Choisissez la méthode de configuration de votre
-      scène. Vous pouvez fonctionner à 100% en local hors ligne, ou vous
-      connecter pour synchroniser vos appareils.
+    companionGreeting: Bienvenue sur AIRI ! Choisissez la méthode de configuration
+      de votre scène. Vous pouvez fonctionner à 100% en local hors ligne, ou
+      vous connecter pour synchroniser vos appareils.
     local:
       badge: Hors Ligne d'Abord
       title: Compagnon Local (Air-Gapped)
@@ -108,7 +112,56 @@ steps:
       activeColor: 'Actif : {color}'
     perDeviceToggle: Conserver cette apparence uniquement sur cet appareil (exclure
       de la synchronisation cloud)
-
+    companionGreeting: Choisissez votre langue, thème et couleur d'accent pour
+      personnaliser la scène de votre compagnon.
+    languages:
+      en: Anglais
+      ja: Japonais
+      zh-Hans: Chinois simplifié
+      zh-Hant: Chinois traditionnel
+      ko: Coréen
+      es: Espagnol
+      fr: Français
+      ru: Russe
+      vi: Vietnamien
+      id: Indonésien
+      th: Thaï
+    languageCount: '{count} langues disponibles'
+    colors:
+      crimson: Cramoisi
+      coral: Corail
+      tangerine: Mandarine
+      marigold: Souci
+      amber: Ambre
+      lemon: Citron
+      lime: Citron vert
+      emerald: Émeraude
+      mint: Menthe
+      jade: Jade
+      viridian: Viridien
+      teal: Sarcelle
+      turquoise: Turquoise
+      cyan-default: Cyan
+      cerulean: Céruléen
+      cobalt: Cobalt
+      sapphire: Saphir
+      denim: Denim
+      indigo: Indigo
+      amethyst: Améthyste
+      violet: Violet
+      fuchsia: Fuchsia
+      magenta: Magenta
+      rose: Rose
+    colorGroups:
+      warm: Chaleur et Feu
+      earth: Terre et Flore
+      ocean: Océan et Ciel
+      royal: Royauté et Fleurs
+    resetToSignatureAiriCyan: Réinitialiser au cyan signature d'AIRI
+    preventsRemoteCloudSyncFromOverwritingThisMachineSLanguageAndTheme:
+      Empêche la synchronisation cloud distante d'écraser la langue et le thème
+      de cette machine
+    nextHint: Continuer vers l'Archétype d'Expérience
   experience:
     label: Expérience
     subtitle: Archétype d'interaction
@@ -162,20 +215,20 @@ steps:
         title: Le Compagnon Décontracté
         badge: ✨ Choix Populaire
         subtitle: Dialogue Vocal & Vision
-        description: Transcription vocale en direct (STT), voix émotionnelle (TTS), vision
-          photo, rythme naturel et mémoire.
+        description: Transcription vocale en direct (STT), voix émotionnelle (TTS),
+          vision photo, rythme naturel et mémoire.
       muse:
         title: La Muse Créative
         badge: 🎨 Accent Visuel
         subtitle: Voix, Vision & Créativité
-        description: Dialogue vocal, génération d’images (Pollinations/ComfyUI), vision par
-          chat et métamorphoses expressives.
+        description: Dialogue vocal, génération d’images (Pollinations/ComfyUI), vision
+          par chat et métamorphoses expressives.
       copilot:
         title: Le Copilote Exécutif
         badge: 💼 Productivité
         subtitle: Voix + Outils d'Action
-        description: Dialogue vocal, observation de l'écran, outils système MCP locaux et
-          recherche web en temps réel.
+        description: Dialogue vocal, observation de l'écran, outils système MCP locaux
+          et recherche web en temps réel.
       roommate:
         title: Le Colocataire Ambiant
         badge: 🌙 Présence Proactive
@@ -186,9 +239,9 @@ steps:
         title: Le Couteau Suisse
         badge: 🔥 Toutes Options · Tout-en-un
         subtitle: Multimodal Autonome Complet
-        description: Le compagnon tout-en-un par excellence. Ouïe, voix neuronale, pauses
-          de réflexion, émotions ACT en 2 passes, vision d'écran, art et mémoire
-          cognitive.
+        description: Le compagnon tout-en-un par excellence. Ouïe, voix neuronale,
+          pauses de réflexion, émotions ACT en 2 passes, vision d'écran, art et
+          mémoire cognitive.
     advanced:
       toggle: 'Avancé : Personnaliser les modules individuels'
       description: Activez ou désactivez manuellement les différents modules
@@ -206,7 +259,78 @@ steps:
         tools: Outils (Recherche web et MCP de bureau)
     hideModules: Masquer les modules
     customizeModules: 'Avancé : Personnaliser les modules'
-
+    companionGreeting: Choose how you want to interact with your companion. Each
+      archetype unlocks different capabilities.
+    resetToPreset: Reset to Preset
+    enabledAvailableSteps: '{length} modules enabled · {lengthValue} steps available
+      (of {totalSteps})'
+    on: On
+    off: Off
+    extensiblePlugins: Extensible Plugins
+    soon: Soon
+    discordBotCommunitySkillsTriggers: Discord bot, community skills & triggers
+    moduleDefinitions:
+      hearing:
+        title: Hearing
+        description: Transcribe your voice to text using local or cloud engines.
+      speech:
+        title: Speech
+        description: Give your companion a voice with neural TTS.
+      thinking:
+        title: Thinking
+        description: Natural conversational pacing and subconscious asides.
+      emotions:
+        title: Emotions
+        description: 2-pass ACT expression bridge for avatar emoting.
+      vision:
+        title: Vision
+        description: Understand images sent in chat via VLM.
+      screen:
+        title: Screen
+        description: Desktop perception and OCR for contextual awareness.
+      proactivity:
+        title: Proactivity
+        description: Ambient heartbeats, sleep schedule, and check-ins.
+      artistry:
+        title: Artistry
+        description: Image generation via Pollinations, ComfyUI, or Replicate.
+      memory:
+        title: Memory
+        description: 4-quadrant cognitive memory hierarchy.
+      tools:
+        title: Tools
+        description: Web search, desktop MCP, and generative motion.
+    capabilities:
+      hearing:
+        title: Voice Transcription (STT)
+        description: Transcribe speech to text using cloud or local engines.
+      speech:
+        title: Neural Voice (TTS)
+        description: High-quality voice synthesis with multiple providers.
+      thinking:
+        title: Conversational Pacing
+        description: Natural pauses, fillers, and subconscious asides.
+      emotions:
+        title: ACT Expression Bridge
+        description: Map dialogue emotions to avatar facial expressions.
+      vision:
+        title: Chat Photo Understanding
+        description: Analyze and discuss images you share in chat.
+      screen:
+        title: Desktop Perception
+        description: Background screen watching with privacy controls.
+      proactivity:
+        title: Ambient Presence
+        description: Heartbeats, sleep schedule, and proactive check-ins.
+      artistry:
+        title: Visual Generation
+        description: Pollinations, ComfyUI, Replicate image generation.
+      memory:
+        title: Cognitive Memory
+        description: STMM, LTMM, Eternal Thread, Dream State.
+      tools:
+        title: External Tools
+        description: Web search, filesystem MCP, generative motion.
   profile:
     label: Profil
     subtitle: Qui êtes-vous ?
@@ -216,12 +340,14 @@ steps:
     userName:
       label: Comment votre compagnon doit-il vous appeler ?
       placeholder: 'Ex. : Maître, Alex, Senpai, Producteur'
+      help: Choose a name or title your companion will use when speaking to you.
     pronouns:
       label: Pronoms préférés
       placeholder: 'Ex. : il/lui, elle, iel'
       he: Masculin
       she: Féminin
       they: Non-Binaire
+      help: Select your preferred pronouns for natural conversation.
     relationship:
       label: Dynamique relationnelle
       options:
@@ -234,7 +360,38 @@ steps:
       label: À propos de vous (Contexte optionnel)
       placeholder: Partagez vos passions ou votre routine pour permettre à votre
         compagnon de mieux vous comprendre.
-
+      help: Share a little about yourself so your companion can connect more deeply.
+    companionGreeting: Let your companion know who you are. This helps them address
+      you naturally and tailor their personality.
+    quickTemplates: Quick Templates
+    selectTemplateHint: Pick a preset or customize your own.
+    yourProfile: Your Profile
+    nameInformation: This is how your companion will address you in conversation.
+    pronounsInformation: Your companion will use these pronouns when referring to you.
+    aboutYouInformation: Optional context about your interests, routine, or personality.
+    visualPrompt:
+      label: Visual Prompt (Optional)
+      help: Describe how you'd like your companion to visualize you in generated
+        artwork.
+    visualPromptInformation: Used when your companion generates artwork featuring you.
+    visualPromptHint: e.g., tall, short hair, casual clothes, warm smile
+    templateEditingHint: You can edit any field after selecting a template.
+    optional: (Optional)
+    summary:
+      displayName: Display Name
+    archetypes:
+      companion: Friendly companion
+      creative: Creative partner
+      productive: Productivity focus
+    gender:
+      male: Male
+      female: Female
+      nonBinary: Non-Binary
+      preferNotToSay: Prefer not to say
+    pronounLabels:
+      he: he/him
+      she: she/her
+      they: they/them
   vessel:
     label: Enveloppe corporelle
     subtitle: Corps d'avatar Live2D / VRM
@@ -247,13 +404,29 @@ steps:
       downloadable: Téléchargement gratuit
       vrm: 3D (VRM)
       live2d: 2D (Live2D)
+      spine2d: 2D (Spine)
     searchPlaceholder: Rechercher des avatars...
     download: Télécharger l'avatar
     downloading: Téléchargement en cours... {progress}%
     installedBadge: Installé
     license: 'Licence :'
     author: 'Créateur :'
-
+    companionGreeting: Pick a body for your companion. You can choose from installed
+      models or download new ones.
+    selectedAvatar: Selected Vessel
+    downloadBadge: Download
+    select: Select
+    browsing: Browsing
+    mountedValueAsCompanionVessel: '{name} mounted as companion vessel'
+    openingDownloadPageForValue: Opening download page for {name}...
+    importingValue: Importing {name}...
+    loadedAvatarValue: 'Loaded avatar: {name}'
+    failedToLoadAvatarValue: 'Failed to load avatar: {messageInvalidmodelfile}'
+    invalidModelFile: Invalid model file
+    visualStyleDescriptor: Visual style descriptor for AI-generated artwork
+    visualStyleHint: e.g., anime aesthetic, detailed illustration, soft lighting
+    summary:
+      selected: '{name} selected'
   consciousness:
     label: Conscience
     subtitle: Cœur de raisonnement (LLM)
@@ -276,7 +449,6 @@ steps:
     verify: Tester la connexion
     verified: Connexion validée
     verifyFailed: 'Échec de la connexion : {reason}'
-
   persona:
     label: Âme & Persona
     subtitle: Cœur de personnalité
@@ -292,7 +464,6 @@ steps:
     firstMessage: Salutation inaugurale (Tour 0)
     firstMessagePlaceholder: Que dira votre compagnon la toute première fois que la scène s'ouvrira ?
     speechQuirks: Tics de langage et intonation
-
   hearing:
     label: Ouïe
     subtitle: Transcription vocale (STT)
@@ -306,7 +477,91 @@ steps:
       deepgram: Deepgram Nova (Transcription cloud ultra-rapide)
       whisper: Whisper local (100% sur l'appareil)
       browser: Web Speech API (Standard natif du navigateur)
-
+    activeMicrophoneInput: Active microphone input
+    assistantMessage: Set up how your companion hears you. Choose a microphone and
+      transcription engine.
+    microphone: Microphone
+    microphoneDescription: Select your audio input device for voice recognition.
+    selectAnAudioInputDevice: Select an audio input device
+    defaultMicrophoneInput: Default Microphone Input
+    webSpeechApi: Web Speech API
+    localWhisper: Local Whisper (WebGPU)
+    localWhisperDescription: Runs entirely on your device using WebGPU acceleration.
+    whisperWebgpuModel: Whisper WebGPU Model
+    whisperModelShardIsCachedResidentInMemoryReadyToTranscribe: Model shard cached in memory — ready to transcribe
+    largerModelsOfferHigherAccuracySmallerModelsDownloadFasterWithLessV:
+      Larger models offer higher accuracy; smaller models download faster with
+      less VRAM
+    selectATranscriptionModel: Select a transcription model
+    downloadModel: Download Model
+    downloading: Downloading...
+    downloadRequired: Download required
+    downloadHint: Model will be downloaded and cached for offline use.
+    reDownload: Re-download
+    retryDownload: Retry Download
+    download:
+      cancel: Cancel
+      outOfMemory: Out of memory — try a smaller model
+    downloadFailedOrConnectionInterrupted: Download failed or connection interrupted
+    noModel: No model selected
+    noEngine: No engine selected
+    verified: Verified
+    earVerified: Ear Verified
+    earVerifiedReadyToProceed: Ear verified — ready to proceed
+    listening: Listening...
+    startListeningTest: Start Listening Test
+    testing: Testing...
+    heardFinishing: Heard — finishing...
+    hearingFinishing: Hearing — finishing...
+    hearingYou: Hearing you...
+    finalTranscription: Final Transcription
+    recognizedSpeech: Recognized Speech
+    speakNow: Speak now...
+    speakIntoYourMicrophoneNextUnlocksOnceWeHearYou: Speak into your microphone — next step unlocks once we hear you
+    noTranscriptionYetStartTheTestAndSpeakIntoYourMicrophone: No transcription yet — start the test and speak into your microphone
+    microphoneAccessRequired: Microphone access required
+    clickBelowToGrantMicrophonePermissionInYourBrowserApp: Click below to grant microphone permission in your browser/app
+    grantAccess: Grant Access
+    startTestHint: Click to begin microphone test
+    stopTest: Stop Test
+    readyToTest: Ready to test
+    listeningCheck: Listening Check
+    listeningCheckDescription: Speak naturally — we'll show the live transcription
+    speechRecognition: Speech Recognition
+    keyDetected: Key detected
+    pushToTalkTriggerKey: Push-to-Talk Trigger Key
+    hotkeyOptions:
+      scroll:
+        label: Scroll Lock
+      caps:
+        label: Caps Lock
+      num:
+        label: Num Lock
+    pickALockKeyToToggleTheMicrophoneHandsFree: Pick a lock key to toggle the microphone hands-free
+    rescanAudioDevices: Rescan Audio Devices
+    browserRecognitionDescription: Zero-config browser speech recognition (online)
+    cloudRemoteEnginesApiKeyRequired: Cloud/remote engines require API key
+    builtIn: Built-in
+    processedOnDevice: Processed on device
+    webgpuOffline: WebGPU Offline
+    pricing: Pricing
+    provider:
+      modelLabel: Model
+      fallbackName: Provider
+    filters:
+      all: All
+      cloud: Cloud
+      free: Free
+      local: Local
+      paid: Paid
+    valueConnected: '{nameProvider} connected'
+    messages:
+      noTranscriptionReturnedFromProviderPleaseCheckMicrophoneInputVolumeA:
+        No transcription returned from provider. Please check microphone input
+        volume.
+    verification:
+      microphoneUnavailable: Microphone unavailable
+    checkFailed: Check failed
   speech:
     label: Parole
     subtitle: Synthèse vocale neuronale (TTS)
@@ -322,7 +577,6 @@ steps:
     previewVoice: Écouter un extrait de voix
     pitch: Hauteur de la voix
     speed: Vitesse d'élocution
-
   thinking:
     label: Réflexion
     subtitle: Rythme et apartés intérieurs
@@ -344,7 +598,6 @@ steps:
     subconsciousAsides: Apartés intérieurs prononcés (Needle 2 WASM)
     asidesDescription: Autoriser le personnage à murmurer ses pensées à voix basse
       pendant qu'il élabore une réponse complexe.
-
   emotions:
     label: Émotions
     subtitle: Passerelle d'expressions ACT
@@ -363,7 +616,9 @@ steps:
       thinking: Pensif / Dubitatif
       surprised: Surprise
       wink: Clin d'œil malicieux
-
+    companionGreeting: Configure how your companion expresses emotions through their avatar.
+    heading: Emotions & The ACT Bridge
+    changesAutomaticallySavedToCompanionDraft: Changes automatically saved to companion draft
   vision:
     label: Vision
     subtitle: Analyse d'images du chat (VLM)
@@ -379,7 +634,6 @@ steps:
     testPrompt: Téléversez une image pour vérifier la compréhension visuelle de
       votre compagnon.
     perceptionAccuracy: Latence et précision de perception
-
   screen:
     label: Écran
     subtitle: Observation du bureau
@@ -398,7 +652,46 @@ steps:
       vlm: Analyse visuelle approfondie par modèle VLM
     privacyExclusions: Liste d'exclusion de confidentialité (Exclut banques, mots de
       passe et fenêtres privées)
-
+    status: Status
+    enabled: Enabled
+    paused: Paused
+    screenWatchingActive: Screen Watching Active
+    watcherPaused: Watcher Paused
+    eventDrivenPush: Event-Driven Push
+    screenSamplingCadence: Screen Sampling Cadence
+    reactionDeliveryMode: Reaction Delivery Mode
+    reactionModes:
+      voice-and-bubble:
+        title: Voice & Bubble
+        badge: Full Presence
+        desc: Companion speaks reactions and shows a chat bubble
+      bubble-only:
+        title: Bubble Only
+        badge: Quiet Notification
+        desc: Silent chat bubble only, no voice
+      voice-only:
+        title: Voice Only
+        badge: Voice Only
+        desc: Companion speaks reactions without a visible bubble
+      muted:
+        title: Muted
+        badge: Context Only
+        desc: Observations added to context only, no notifications
+    perceptionEngineTier: Perception Engine Tier
+    visionTiers:
+      lightweight:
+        title: Lightweight OCR
+        vram: Ultra-low CPU
+        desc: Fast text extraction via OCR, minimal resource usage
+      moondream:
+        title: Moondream VLM
+        vram: ~2 GB VRAM
+        desc: Full visual understanding with Moondream 2B model
+    howReactionsArePresented: How reactions are presented
+    screenPerceptionVisualPush: Screen Perception (Visual Push)
+    enableBackgroundDesktopFrameCapturesPromotesSignificantVisualDifferenc:
+      Enable background desktop frame captures. Promotes significant visual
+      differences to companion awareness.
   proactivity:
     label: Proactivité
     subtitle: Routine et battements de cœur
@@ -413,7 +706,83 @@ steps:
       (aucun avertissement vocal impromptu).
     scheduleFrom: Heure de coucher
     scheduleTo: Heure de réveil
-
+    companionGreeting: Set up your companion's daily routine — sleep schedule,
+      proactive check-ins, and screen awareness.
+    behavior:
+      title: Proactivity Behavior
+      onDemandActive: On-Demand Active
+      onDemandDescription: Companion only acts when you initiate. No background activity.
+      screenBehavior: Screen Behavior
+      quietTitle: Quiet Awareness
+      quietDescription: Companion observes silently, adds context to memory, never interrupts.
+      commentTitle: Commentary Mode
+      commentDescription: Companion voices observations and reactions to screen activity.
+      commentDelivery: Comment Delivery
+      commentDeliveryHint: How should companions deliver screen comments?
+      checkInFrequency: Check-In Frequency
+      scheduleHint: When should companion check in?
+      fineTuneHint: Fine-tune these later in Settings → Proactivity
+      fineTuneLater: Fine-tune later
+    expectations:
+      title: What to Expect
+      onDemandTitle: On-Demand Only
+      onDemand: Companion waits for you to start conversations
+      periodicTitle: Periodic Check-Ins
+      commentTitle: Screen Commentary
+      quietTitle: Quiet Observation
+      bothTitle: Both Heartbeats & Screen
+      voiceAndBubble: Voice + Bubble
+      bubbleOnly: Bubble Only
+      voiceOnly: Voice Only
+      screenComments: Screen Comments
+      screenQuiet: Screen Quiet
+      checkIns: Check-Ins
+      noBackground: No Background Activity
+    interactionChoices:
+      heartbeats: Ambient Heartbeats
+      screen: Screen Awareness
+      both: Heartbeats + Screen
+    deliveryOptions:
+      voiceAndBubble: Voice & Bubble
+      bubbleOnly: Bubble Only
+      voiceOnly: Voice Only
+    sources:
+      title: Screen Sources
+      displays: Displays
+      applications: Applications
+      choose: Choose
+      primaryDisplay: Primary Display
+      refresh: Refresh
+      settings: Settings
+      virtualScreen: Virtual Screen
+      noWindows: No windows available
+      permissionNeeded: Permission needed
+    analysis:
+      title: Screen Analysis Engine
+      processingLocation: Processing Location
+      local:
+        title: Local (Moondream)
+        description: Runs on-device via WebGPU. Private, no cloud calls.
+      external:
+        title: External API
+        description: Cloud VLM for richer understanding (requires API key).
+        active: Active
+        unconfigured: Unconfigured
+      lightweight:
+        title: Lightweight OCR
+        description: Fast text-only extraction, minimal resources.
+      moondream:
+        title: Moondream VLM
+        description: Full visual understanding (~2 GB VRAM).
+      notDownloaded: Not Downloaded
+      downloading: Downloading...
+      downloaded: Downloaded
+      download: Download
+      downloadSuccess: Download successful
+      downloadFailure: 'Download failed: {error}'
+    checkInMinutes: Check-In Every (minutes)
+    setUpLater: Set Up Later
+    adjustLater: Adjust Later
   artistry:
     label: Art visuel
     subtitle: Création d'images et mise en scène
@@ -428,7 +797,72 @@ steps:
     previewButton: Générer une illustration test
     autonomousDirector: Réalisateur autonome (Permet au compagnon de dessiner de son
       propre chef au cours du dialogue)
-
+    assistantMessage: Give your companion the power to create visual art. Choose a
+      provider and configure the director.
+    imageGeneration: Image Generation
+    providers:
+      pollinations:
+        secondary: Free cloud generation, no API key needed
+        badge: 100% Free
+      comfyui:
+        secondary: Local workflows on localhost:8188 or WSL
+        badge: Local WebGPU
+      replicate:
+        secondary: High-res LoRAs, FLUX, specialized checkpoints
+        badge: Cloud API
+      none:
+        shortName: None
+        secondary: Disable all image generation
+        badge: Disabled
+    models:
+      freeRouter: Free Router (Auto-select)
+    workflow:
+      empty: No workflow loaded
+      option: '{name} ({count} params)'
+    workflowLabel: ComfyUI Workflow
+    workflowHint: Load a workflow JSON to expose custom parameters
+    uploadWorkflowApiJson: Upload workflow_api.json
+    connection:
+      connected: Connected — {gpu} ({vram})
+      connectedLabel: Connected
+      fallbackGpu: GPU detected
+      vram: 'VRAM: {size}'
+    messages:
+      connectedValue: '{value0}'
+      failedValue: 'Failed: {value0}'
+      invalidJsonValue: 'Invalid JSON: {value0}'
+    serviceDescription: ComfyUI lets you run custom Stable Diffusion workflows locally.
+    directorLabel: Autonomous Director
+    directorDescription: When enabled, your companion can spontaneously generate
+      images during conversation based on context.
+    evaluationTriggerMode: Evaluation Trigger Mode
+    userInput: User Input
+    userLlmReplyDirector: User → LLM Reply → Director
+    evaluatesUserSIncomingMessageImmediatelyBeforeTheCompanionSpeaks: Evaluates user's incoming message immediately before the companion speaks
+    whenCreateImages: When to Create Images
+    companionCreation: Companion Creation
+    companionCreationDescription: Your companion can create artwork autonomously during dialogue.
+    companionReactionDefault: Companion Reaction (Default)
+    impactFocus: Impact Focus
+    promptFocus: Prompt Focus
+    styleDescription: Visual style presets for generated artwork
+    shinkaiSky: Shinkai Sky
+    ghibliMeadow: Ghibli Meadow
+    cozyCafe: Cozy Cafe
+    cyberpunkNeon: Cyberpunk Neon
+    eGMasterpieceBestQuality1girlBlueEyes: e.g., masterpiece, best quality, 1girl, blue eyes...
+    addAestheticLabel: Add Aesthetic
+    pollinationsApiKeyPollenToken: Pollinations API Key (Pollen Token)
+    leaveBlankFor100FreeModeOrEnterTokenForFluxGrok: Leave blank for 100% free mode, or enter token for FLUX/Grok access
+    googleAiStudioApiKey: Google AI Studio API Key
+    replicateApiToken: Replicate API Token
+    resetAvatar: Reset Avatar
+    resetToPersonaTags: Reset to Persona Tags
+    synthesizerModel: Synthesizer Model
+    test: Test
+    characterStyle: Character Style
+    comfyServerLabel: ComfyUI Server
+    optional: Optional
   memory:
     label: Mémoire
     subtitle: Hiérarchie cognitive en 4 quadrants
@@ -451,7 +885,45 @@ steps:
         title: Consolidation de rêve (DRMM et échos émotionnels)
         desc: Processus nocturne synthétisant les ancres émotionnelles et résolvant les
           contradictions.
-
+    companionGreeting: Your companion remembers. Configure how they retain and
+      recall your shared journey.
+    recentContext:
+      title: Recent Context (STMM)
+      description: Rolling summary of recent conversation turns. Kept in working
+        memory for immediate recall.
+      window: Context Window
+      windowHint: How many days of conversation to keep in active memory
+    personalJournal:
+      title: Personal Journal (LTMM)
+      description: Immutable append-only log of significant moments, facts, and milestones.
+      appendOnly: Append-only — entries are never modified or deleted
+    sharedHistory:
+      title: Shared History (Eternal Thread)
+      description: Continuous distillation of your relationship — trust, bonds, and
+        shared experiences.
+      summary: Lifetime relational graph distilled from every interaction
+    quietReflection:
+      title: Quiet Reflection (Dream State)
+      description: Nightly consolidation synthesizing emotional anchors and resolving
+        contradictions.
+      idle: Idle — runs during quiet hours
+    setup:
+      title: Memory Setup
+      recentContext: Recent Context
+      disabled: Disabled
+    stmmTiers:
+      minimal:
+        title: Minimal (1 day)
+        description: Single-day rolling buffer
+      standard:
+        title: Standard (7 days)
+        description: Week-long conversational context
+      extended:
+        title: Extended (30 days)
+        description: Month-long deep context
+    window:
+      oneDay: 1 day
+      days: '{count} days'
   tools:
     label: Outils
     subtitle: Automatisation et MCP de bureau
@@ -470,7 +942,18 @@ steps:
       title: Animation 3D générative (FlowMDM)
       desc: Génération à la volée d'animations d'avatar 3D et d'extraits VRMA adaptés
         au sens de la réplique.
-
+    greeting: Equip your companion with external capabilities — web search,
+      filesystem access, and generative motion.
+    preWarmDownloadEngine: Pre-warm Download Engine
+    preWarmedCached: Pre-warmed & Cached
+    downloadingShardsValue: Downloading shards... {percentage15}%
+    hint: These tools expand what your companion can do beyond conversation.
+    footer:
+      toolsEnabled: '{count} tool(s) enabled'
+    sections:
+      webSearch: Web Search
+      desktopMcp: Desktop MCP
+      motionGen: Generative Motion
   finale:
     label: Lancement
     subtitle: Vérification finale et envol
@@ -490,7 +973,6 @@ steps:
     greetingCard: Aperçu de la réplique d'ouverture (Tour 0)
     launchButton: Lancer la scène AIRI
     launching: Démarrage de la scène...
-
 quickStart:
   title: Démarrage express en 60 secondes
   subtitle: Une configuration rapide utilisant les paramètres recommandés par défaut.

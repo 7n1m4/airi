@@ -5,7 +5,6 @@ stepper:
   jumpToStep: 任意のステップへ移動
   allSteps: 全ステップ ({count})
   stepCount: ステップ {current} / {total}
-
 shell:
   close: 閉じる
   finish: ステージを起動
@@ -16,7 +15,6 @@ shell:
   stageReady: ステージ準備完了
   closeSetup: セットアップを閉じる (後で再開)
   placeholderNotice: このモジュールは現在構成中です。次のステップに進むことができます。
-
 steps:
   welcome:
     label: ようこそ
@@ -34,11 +32,17 @@ steps:
       setupLater: あとで設定
     dialog:
       savedTitle: 設定は保存されました
-      savedDescription: 'macOS メニューバーまたはシステムトレイの AIRI アイコンをクリックすれば、いつでもセットアップを再開できます：'
+      savedDescription: macOS メニューバーまたはシステムトレイの AIRI アイコンをクリックすれば、いつでもセットアップを再開できます：
       trayItem: パートナー設定とサインイン (V3)
       continue: 設定を続ける
       closeToTray: トレイに格納
-
+      close: Close
+      comebackLead: If you want to come back to this later, just
+      desktopInstruction: right-click the AIRI system tray icon and click Companion Wizard.
+      webInstruction: tap the cog icon in the top-right to open Settings, then go
+        Guided Tours → Companion Wizard.
+      webSettingsPath: Settings → Guided Tours → Companion Wizard
+      desktopAlternative: Or open Settings → Guided Tours → Companion Wizard.
   triage:
     label: アカウント
     subtitle: アカウントサインインと構成
@@ -64,7 +68,6 @@ steps:
         f1: 端末内完全オフライン保存
         f2: クラウドテレメトリ・外部通信ゼロ
         f3: ローカルDBによる超高速起動
-
   appearance:
     label: 外観
     subtitle: 言語・テーマ・アクセント
@@ -93,7 +96,53 @@ steps:
         royal: ロイヤル＆ブルーム
       activeColor: '選択中: {color}'
     perDeviceToggle: 外観設定をこのデバイス限定にする (クラウド同期から除外)
-
+    companionGreeting: インターフェース言語、テーマ、アクセントカラーを選んで、あなたのコンパニオンのステージをパーソナライズしましょう。
+    languages:
+      en: 英語
+      ja: 日本語
+      zh-Hans: 中国語（簡体）
+      zh-Hant: 中国語（繁体）
+      ko: 韓国語
+      es: スペイン語
+      fr: フランス語
+      ru: ロシア語
+      vi: ベトナム語
+      id: インドネシア語
+      th: タイ語
+    languageCount: '{count} 言語利用可能'
+    colors:
+      crimson: クリムゾン
+      coral: コーラル
+      tangerine: タンジェリン
+      marigold: マリーゴールド
+      amber: アンバー
+      lemon: レモン
+      lime: ライム
+      emerald: エメラルド
+      mint: ミント
+      jade: ジェイド
+      viridian: ビリジアン
+      teal: ティール
+      turquoise: ターコイズ
+      cyan-default: シアン
+      cerulean: セルリアン
+      cobalt: コバルト
+      sapphire: サファイア
+      denim: デニム
+      indigo: インディゴ
+      amethyst: アメジスト
+      violet: バイオレット
+      fuchsia: フューシャ
+      magenta: マゼンタ
+      rose: ローズ
+    colorGroups:
+      warm: 暖色と火
+      earth: 大地と植物
+      ocean: 海と空
+      royal: ロイヤルと花
+    resetToSignatureAiriCyan: AIRIシグネチャーシアンにリセット
+    preventsRemoteCloudSyncFromOverwritingThisMachineSLanguageAndTheme: リモートクラウド同期がこのマシンの言語とテーマを上書きすることを防止
+    nextHint: 体験アーキタイプへ進む
   experience:
     label: 体験
     subtitle: インタラクション類型
@@ -123,7 +172,7 @@ steps:
       swissArmy:
         title: オールインワン (Swiss Army)
         tag: 全機能搭載 · フル装備
-        description: '最高峰のフルスペック体験：双方向音声認識、画像分析、画面見守り、自発的対話、アート生成、外部ツール、4象限記憶。'
+        description: 最高峰のフルスペック体験：双方向音声認識、画像分析、画面見守り、自発的対話、アート生成、外部ツール、4象限記憶。
       quiet:
         title: 静かな観察者
         badge: ⚡ 最速 · ミニマリスト
@@ -155,7 +204,7 @@ steps:
         subtitle: フルスペック自律型マルチモーダル
         description: すべてを備えた最高峰コンパニオン。聴覚、ニューラル音声、思考テンポ、2パスACT表情、画面認識、アート生成、認知記憶階層。
     advanced:
-      toggle: '高度な設定：個別モジュールのカスタマイズ'
+      toggle: 高度な設定：個別モジュールのカスタマイズ
       description: 各感覚および認知モジュールの有効/無効を手動で切り替えます。
       modules:
         hearing: 聴覚 (マイク音声の文字起こし)
@@ -170,7 +219,78 @@ steps:
         tools: 外部ツール (Web検索とデスクトップMCP)
     hideModules: モジュールを非表示
     customizeModules: '高度な設定: モジュールを個別にカスタマイズ'
-
+    companionGreeting: Choose how you want to interact with your companion. Each
+      archetype unlocks different capabilities.
+    resetToPreset: Reset to Preset
+    enabledAvailableSteps: '{length} modules enabled · {lengthValue} steps available
+      (of {totalSteps})'
+    on: On
+    off: Off
+    extensiblePlugins: Extensible Plugins
+    soon: Soon
+    discordBotCommunitySkillsTriggers: Discord bot, community skills & triggers
+    moduleDefinitions:
+      hearing:
+        title: Hearing
+        description: Transcribe your voice to text using local or cloud engines.
+      speech:
+        title: Speech
+        description: Give your companion a voice with neural TTS.
+      thinking:
+        title: Thinking
+        description: Natural conversational pacing and subconscious asides.
+      emotions:
+        title: Emotions
+        description: 2-pass ACT expression bridge for avatar emoting.
+      vision:
+        title: Vision
+        description: Understand images sent in chat via VLM.
+      screen:
+        title: Screen
+        description: Desktop perception and OCR for contextual awareness.
+      proactivity:
+        title: Proactivity
+        description: Ambient heartbeats, sleep schedule, and check-ins.
+      artistry:
+        title: Artistry
+        description: Image generation via Pollinations, ComfyUI, or Replicate.
+      memory:
+        title: Memory
+        description: 4-quadrant cognitive memory hierarchy.
+      tools:
+        title: Tools
+        description: Web search, desktop MCP, and generative motion.
+    capabilities:
+      hearing:
+        title: Voice Transcription (STT)
+        description: Transcribe speech to text using cloud or local engines.
+      speech:
+        title: Neural Voice (TTS)
+        description: High-quality voice synthesis with multiple providers.
+      thinking:
+        title: Conversational Pacing
+        description: Natural pauses, fillers, and subconscious asides.
+      emotions:
+        title: ACT Expression Bridge
+        description: Map dialogue emotions to avatar facial expressions.
+      vision:
+        title: Chat Photo Understanding
+        description: Analyze and discuss images you share in chat.
+      screen:
+        title: Desktop Perception
+        description: Background screen watching with privacy controls.
+      proactivity:
+        title: Ambient Presence
+        description: Heartbeats, sleep schedule, and proactive check-ins.
+      artistry:
+        title: Visual Generation
+        description: Pollinations, ComfyUI, Replicate image generation.
+      memory:
+        title: Cognitive Memory
+        description: STMM, LTMM, Eternal Thread, Dream State.
+      tools:
+        title: External Tools
+        description: Web search, filesystem MCP, generative motion.
   profile:
     label: プロフィール
     subtitle: あなたについて
@@ -179,12 +299,14 @@ steps:
     userName:
       label: なんて呼ばれたいですか？
       placeholder: 例：マスター、先輩、プロデューサー、あなたのお名前
+      help: Choose a name or title your companion will use when speaking to you.
     pronouns:
       label: 代名詞 / 自称
       placeholder: 例：私、僕、俺、自分
       he: 男性
       she: 女性
       they: ノンバイナリー
+      help: Select your preferred pronouns for natural conversation.
     relationship:
       label: パートナーとの関係性
       options:
@@ -196,7 +318,38 @@ steps:
     userBio:
       label: あなたについての追加情報 (任意)
       placeholder: 趣味や日々の過ごし方を共有すると、パートナーがよりあなたを理解できるようになります。
-
+      help: Share a little about yourself so your companion can connect more deeply.
+    companionGreeting: Let your companion know who you are. This helps them address
+      you naturally and tailor their personality.
+    quickTemplates: Quick Templates
+    selectTemplateHint: Pick a preset or customize your own.
+    yourProfile: Your Profile
+    nameInformation: This is how your companion will address you in conversation.
+    pronounsInformation: Your companion will use these pronouns when referring to you.
+    aboutYouInformation: Optional context about your interests, routine, or personality.
+    visualPrompt:
+      label: Visual Prompt (Optional)
+      help: Describe how you'd like your companion to visualize you in generated
+        artwork.
+    visualPromptInformation: Used when your companion generates artwork featuring you.
+    visualPromptHint: e.g., tall, short hair, casual clothes, warm smile
+    templateEditingHint: You can edit any field after selecting a template.
+    optional: (Optional)
+    summary:
+      displayName: Display Name
+    archetypes:
+      companion: Friendly companion
+      creative: Creative partner
+      productive: Productivity focus
+    gender:
+      male: Male
+      female: Female
+      nonBinary: Non-Binary
+      preferNotToSay: Prefer not to say
+    pronounLabels:
+      he: he/him
+      she: she/her
+      they: they/them
   vessel:
     label: アバター体
     subtitle: Live2D / VRM アバターボディ
@@ -208,13 +361,29 @@ steps:
       downloadable: 無料ダウンロード可能
       vrm: 3D (VRM)
       live2d: 2D (Live2D)
+      spine2d: 2D (Spine)
     searchPlaceholder: アバターを検索...
     download: アバターをダウンロード
     downloading: ダウンロード中... {progress}%
     installedBadge: インストール済み
     license: 'ライセンス:'
     author: '制作者:'
-
+    companionGreeting: Pick a body for your companion. You can choose from installed
+      models or download new ones.
+    selectedAvatar: Selected Vessel
+    downloadBadge: Download
+    select: Select
+    browsing: Browsing
+    mountedValueAsCompanionVessel: '{name} mounted as companion vessel'
+    openingDownloadPageForValue: Opening download page for {name}...
+    importingValue: Importing {name}...
+    loadedAvatarValue: 'Loaded avatar: {name}'
+    failedToLoadAvatarValue: 'Failed to load avatar: {messageInvalidmodelfile}'
+    invalidModelFile: Invalid model file
+    visualStyleDescriptor: Visual style descriptor for AI-generated artwork
+    visualStyleHint: e.g., anime aesthetic, detailed illustration, soft lighting
+    summary:
+      selected: '{name} selected'
   consciousness:
     label: 意識コア
     subtitle: 推論エンジン (LLM)
@@ -236,7 +405,6 @@ steps:
     verify: 接続テスト
     verified: 接続確認済み
     verifyFailed: '接続に失敗しました: {reason}'
-
   persona:
     label: 魂とペルソナ
     subtitle: 個性のコア
@@ -251,7 +419,6 @@ steps:
     firstMessage: 最初の挨拶 (Turn 0)
     firstMessagePlaceholder: ステージが起動したとき、パートナーが最初に発する言葉は何ですか？
     speechQuirks: 口調とトーンの特徴
-
   hearing:
     label: 聴覚
     subtitle: 音声認識 (STT)
@@ -264,7 +431,91 @@ steps:
       deepgram: Deepgram Nova (超高速クラウド認識)
       whisper: ローカル Whisper (100% オンデバイス)
       browser: Web Speech API (設定不要ブラウザ標準)
-
+    activeMicrophoneInput: Active microphone input
+    assistantMessage: Set up how your companion hears you. Choose a microphone and
+      transcription engine.
+    microphone: Microphone
+    microphoneDescription: Select your audio input device for voice recognition.
+    selectAnAudioInputDevice: Select an audio input device
+    defaultMicrophoneInput: Default Microphone Input
+    webSpeechApi: Web Speech API
+    localWhisper: Local Whisper (WebGPU)
+    localWhisperDescription: Runs entirely on your device using WebGPU acceleration.
+    whisperWebgpuModel: Whisper WebGPU Model
+    whisperModelShardIsCachedResidentInMemoryReadyToTranscribe: Model shard cached in memory — ready to transcribe
+    largerModelsOfferHigherAccuracySmallerModelsDownloadFasterWithLessV:
+      Larger models offer higher accuracy; smaller models download faster with
+      less VRAM
+    selectATranscriptionModel: Select a transcription model
+    downloadModel: Download Model
+    downloading: Downloading...
+    downloadRequired: Download required
+    downloadHint: Model will be downloaded and cached for offline use.
+    reDownload: Re-download
+    retryDownload: Retry Download
+    download:
+      cancel: Cancel
+      outOfMemory: Out of memory — try a smaller model
+    downloadFailedOrConnectionInterrupted: Download failed or connection interrupted
+    noModel: No model selected
+    noEngine: No engine selected
+    verified: Verified
+    earVerified: Ear Verified
+    earVerifiedReadyToProceed: Ear verified — ready to proceed
+    listening: Listening...
+    startListeningTest: Start Listening Test
+    testing: Testing...
+    heardFinishing: Heard — finishing...
+    hearingFinishing: Hearing — finishing...
+    hearingYou: Hearing you...
+    finalTranscription: Final Transcription
+    recognizedSpeech: Recognized Speech
+    speakNow: Speak now...
+    speakIntoYourMicrophoneNextUnlocksOnceWeHearYou: Speak into your microphone — next step unlocks once we hear you
+    noTranscriptionYetStartTheTestAndSpeakIntoYourMicrophone: No transcription yet — start the test and speak into your microphone
+    microphoneAccessRequired: Microphone access required
+    clickBelowToGrantMicrophonePermissionInYourBrowserApp: Click below to grant microphone permission in your browser/app
+    grantAccess: Grant Access
+    startTestHint: Click to begin microphone test
+    stopTest: Stop Test
+    readyToTest: Ready to test
+    listeningCheck: Listening Check
+    listeningCheckDescription: Speak naturally — we'll show the live transcription
+    speechRecognition: Speech Recognition
+    keyDetected: Key detected
+    pushToTalkTriggerKey: Push-to-Talk Trigger Key
+    hotkeyOptions:
+      scroll:
+        label: Scroll Lock
+      caps:
+        label: Caps Lock
+      num:
+        label: Num Lock
+    pickALockKeyToToggleTheMicrophoneHandsFree: Pick a lock key to toggle the microphone hands-free
+    rescanAudioDevices: Rescan Audio Devices
+    browserRecognitionDescription: Zero-config browser speech recognition (online)
+    cloudRemoteEnginesApiKeyRequired: Cloud/remote engines require API key
+    builtIn: Built-in
+    processedOnDevice: Processed on device
+    webgpuOffline: WebGPU Offline
+    pricing: Pricing
+    provider:
+      modelLabel: Model
+      fallbackName: Provider
+    filters:
+      all: All
+      cloud: Cloud
+      free: Free
+      local: Local
+      paid: Paid
+    valueConnected: '{nameProvider} connected'
+    messages:
+      noTranscriptionReturnedFromProviderPleaseCheckMicrophoneInputVolumeA:
+        No transcription returned from provider. Please check microphone input
+        volume.
+    verification:
+      microphoneUnavailable: Microphone unavailable
+    checkFailed: Check failed
   speech:
     label: 発話
     subtitle: ニューラル音声合成 (TTS)
@@ -279,7 +530,6 @@ steps:
     previewVoice: 音声サンプルを試聴
     pitch: 声の高さ (ピッチ)
     speed: 話す速度
-
   thinking:
     label: 思考
     subtitle: 間合いとつぶやき
@@ -297,7 +547,6 @@ steps:
         description: じっくりと考えを巡らせる深い思考モード。回答をまとめる間に豊かなつぶやきを発します。
     subconsciousAsides: 思考中のつぶやき音声 (Needle 2 WASM)
     asidesDescription: 複雑な回答を生成している間に、心の中の思考プロセスをつぶやきとして声に出すことを許可します。
-
   emotions:
     label: 感情
     subtitle: 2-Pass ACT 表情ブリッジ
@@ -314,7 +563,9 @@ steps:
       thinking: 熟考・思案
       surprised: 驚き
       wink: ウィンク
-
+    companionGreeting: Configure how your companion expresses emotions through their avatar.
+    heading: Emotions & The ACT Bridge
+    changesAutomaticallySavedToCompanionDraft: Changes automatically saved to companion draft
   vision:
     label: 視覚
     subtitle: チャット画像分析 (VLM)
@@ -328,7 +579,6 @@ steps:
     testImage: 画像認識のテスト
     testPrompt: 画像をアップロードして、パートナーが正しく認識できるかテストします。
     perceptionAccuracy: 認識レイテンシと精度
-
   screen:
     label: 画面
     subtitle: デスクトップ見守り
@@ -345,7 +595,46 @@ steps:
       ocr: 軽量 OCR (極めて低い CPU 負荷)
       vlm: VLM による深い画像分析
     privacyExclusions: プライバシー除外リスト (銀行、パスワード、プライベートウィンドウを自動除外)
-
+    status: Status
+    enabled: Enabled
+    paused: Paused
+    screenWatchingActive: Screen Watching Active
+    watcherPaused: Watcher Paused
+    eventDrivenPush: Event-Driven Push
+    screenSamplingCadence: Screen Sampling Cadence
+    reactionDeliveryMode: Reaction Delivery Mode
+    reactionModes:
+      voice-and-bubble:
+        title: Voice & Bubble
+        badge: Full Presence
+        desc: Companion speaks reactions and shows a chat bubble
+      bubble-only:
+        title: Bubble Only
+        badge: Quiet Notification
+        desc: Silent chat bubble only, no voice
+      voice-only:
+        title: Voice Only
+        badge: Voice Only
+        desc: Companion speaks reactions without a visible bubble
+      muted:
+        title: Muted
+        badge: Context Only
+        desc: Observations added to context only, no notifications
+    perceptionEngineTier: Perception Engine Tier
+    visionTiers:
+      lightweight:
+        title: Lightweight OCR
+        vram: Ultra-low CPU
+        desc: Fast text extraction via OCR, minimal resource usage
+      moondream:
+        title: Moondream VLM
+        vram: ~2 GB VRAM
+        desc: Full visual understanding with Moondream 2B model
+    howReactionsArePresented: How reactions are presented
+    screenPerceptionVisualPush: Screen Perception (Visual Push)
+    enableBackgroundDesktopFrameCapturesPromotesSignificantVisualDifferenc:
+      Enable background desktop frame captures. Promotes significant visual
+      differences to companion awareness.
   proactivity:
     label: 自発性
     subtitle: 日常スケジュールと自発対話
@@ -357,7 +646,83 @@ steps:
     quietHoursDesc: 指定した時間帯は睡眠モードに入り、自発的な音声アラートを行いません。
     scheduleFrom: 就寝時間
     scheduleTo: 起床時間
-
+    companionGreeting: Set up your companion's daily routine — sleep schedule,
+      proactive check-ins, and screen awareness.
+    behavior:
+      title: Proactivity Behavior
+      onDemandActive: On-Demand Active
+      onDemandDescription: Companion only acts when you initiate. No background activity.
+      screenBehavior: Screen Behavior
+      quietTitle: Quiet Awareness
+      quietDescription: Companion observes silently, adds context to memory, never interrupts.
+      commentTitle: Commentary Mode
+      commentDescription: Companion voices observations and reactions to screen activity.
+      commentDelivery: Comment Delivery
+      commentDeliveryHint: How should companions deliver screen comments?
+      checkInFrequency: Check-In Frequency
+      scheduleHint: When should companion check in?
+      fineTuneHint: Fine-tune these later in Settings → Proactivity
+      fineTuneLater: Fine-tune later
+    expectations:
+      title: What to Expect
+      onDemandTitle: On-Demand Only
+      onDemand: Companion waits for you to start conversations
+      periodicTitle: Periodic Check-Ins
+      commentTitle: Screen Commentary
+      quietTitle: Quiet Observation
+      bothTitle: Both Heartbeats & Screen
+      voiceAndBubble: Voice + Bubble
+      bubbleOnly: Bubble Only
+      voiceOnly: Voice Only
+      screenComments: Screen Comments
+      screenQuiet: Screen Quiet
+      checkIns: Check-Ins
+      noBackground: No Background Activity
+    interactionChoices:
+      heartbeats: Ambient Heartbeats
+      screen: Screen Awareness
+      both: Heartbeats + Screen
+    deliveryOptions:
+      voiceAndBubble: Voice & Bubble
+      bubbleOnly: Bubble Only
+      voiceOnly: Voice Only
+    sources:
+      title: Screen Sources
+      displays: Displays
+      applications: Applications
+      choose: Choose
+      primaryDisplay: Primary Display
+      refresh: Refresh
+      settings: Settings
+      virtualScreen: Virtual Screen
+      noWindows: No windows available
+      permissionNeeded: Permission needed
+    analysis:
+      title: Screen Analysis Engine
+      processingLocation: Processing Location
+      local:
+        title: Local (Moondream)
+        description: Runs on-device via WebGPU. Private, no cloud calls.
+      external:
+        title: External API
+        description: Cloud VLM for richer understanding (requires API key).
+        active: Active
+        unconfigured: Unconfigured
+      lightweight:
+        title: Lightweight OCR
+        description: Fast text-only extraction, minimal resources.
+      moondream:
+        title: Moondream VLM
+        description: Full visual understanding (~2 GB VRAM).
+      notDownloaded: Not Downloaded
+      downloading: Downloading...
+      downloaded: Downloaded
+      download: Download
+      downloadSuccess: Download successful
+      downloadFailure: 'Download failed: {error}'
+    checkInMinutes: Check-In Every (minutes)
+    setUpLater: Set Up Later
+    adjustLater: Adjust Later
   artistry:
     label: アート
     subtitle: 画面生成と自律ディレクター
@@ -370,7 +735,72 @@ steps:
     styleChips: アートスタイル
     previewButton: テストイラストを生成
     autonomousDirector: 自律ディレクター (会話の流れに合わせて自発的に絵を描くことを許可)
-
+    assistantMessage: Give your companion the power to create visual art. Choose a
+      provider and configure the director.
+    imageGeneration: Image Generation
+    providers:
+      pollinations:
+        secondary: Free cloud generation, no API key needed
+        badge: 100% Free
+      comfyui:
+        secondary: Local workflows on localhost:8188 or WSL
+        badge: Local WebGPU
+      replicate:
+        secondary: High-res LoRAs, FLUX, specialized checkpoints
+        badge: Cloud API
+      none:
+        shortName: None
+        secondary: Disable all image generation
+        badge: Disabled
+    models:
+      freeRouter: Free Router (Auto-select)
+    workflow:
+      empty: No workflow loaded
+      option: '{name} ({count} params)'
+    workflowLabel: ComfyUI Workflow
+    workflowHint: Load a workflow JSON to expose custom parameters
+    uploadWorkflowApiJson: Upload workflow_api.json
+    connection:
+      connected: Connected — {gpu} ({vram})
+      connectedLabel: Connected
+      fallbackGpu: GPU detected
+      vram: 'VRAM: {size}'
+    messages:
+      connectedValue: '{value0}'
+      failedValue: 'Failed: {value0}'
+      invalidJsonValue: 'Invalid JSON: {value0}'
+    serviceDescription: ComfyUI lets you run custom Stable Diffusion workflows locally.
+    directorLabel: Autonomous Director
+    directorDescription: When enabled, your companion can spontaneously generate
+      images during conversation based on context.
+    evaluationTriggerMode: Evaluation Trigger Mode
+    userInput: User Input
+    userLlmReplyDirector: User → LLM Reply → Director
+    evaluatesUserSIncomingMessageImmediatelyBeforeTheCompanionSpeaks: Evaluates user's incoming message immediately before the companion speaks
+    whenCreateImages: When to Create Images
+    companionCreation: Companion Creation
+    companionCreationDescription: Your companion can create artwork autonomously during dialogue.
+    companionReactionDefault: Companion Reaction (Default)
+    impactFocus: Impact Focus
+    promptFocus: Prompt Focus
+    styleDescription: Visual style presets for generated artwork
+    shinkaiSky: Shinkai Sky
+    ghibliMeadow: Ghibli Meadow
+    cozyCafe: Cozy Cafe
+    cyberpunkNeon: Cyberpunk Neon
+    eGMasterpieceBestQuality1girlBlueEyes: e.g., masterpiece, best quality, 1girl, blue eyes...
+    addAestheticLabel: Add Aesthetic
+    pollinationsApiKeyPollenToken: Pollinations API Key (Pollen Token)
+    leaveBlankFor100FreeModeOrEnterTokenForFluxGrok: Leave blank for 100% free mode, or enter token for FLUX/Grok access
+    googleAiStudioApiKey: Google AI Studio API Key
+    replicateApiToken: Replicate API Token
+    resetAvatar: Reset Avatar
+    resetToPersonaTags: Reset to Persona Tags
+    synthesizerModel: Synthesizer Model
+    test: Test
+    characterStyle: Character Style
+    comfyServerLabel: ComfyUI Server
+    optional: Optional
   memory:
     label: 記憶
     subtitle: 4象限認知メモリ
@@ -389,7 +819,45 @@ steps:
       dreaming:
         title: 夢想状態の定着 (DRMM と感情のエコー)
         desc: 夜間のバックグラウンドで感情の錨を統合し、記憶の矛盾を整理するプロセス。
-
+    companionGreeting: Your companion remembers. Configure how they retain and
+      recall your shared journey.
+    recentContext:
+      title: Recent Context (STMM)
+      description: Rolling summary of recent conversation turns. Kept in working
+        memory for immediate recall.
+      window: Context Window
+      windowHint: How many days of conversation to keep in active memory
+    personalJournal:
+      title: Personal Journal (LTMM)
+      description: Immutable append-only log of significant moments, facts, and milestones.
+      appendOnly: Append-only — entries are never modified or deleted
+    sharedHistory:
+      title: Shared History (Eternal Thread)
+      description: Continuous distillation of your relationship — trust, bonds, and
+        shared experiences.
+      summary: Lifetime relational graph distilled from every interaction
+    quietReflection:
+      title: Quiet Reflection (Dream State)
+      description: Nightly consolidation synthesizing emotional anchors and resolving
+        contradictions.
+      idle: Idle — runs during quiet hours
+    setup:
+      title: Memory Setup
+      recentContext: Recent Context
+      disabled: Disabled
+    stmmTiers:
+      minimal:
+        title: Minimal (1 day)
+        description: Single-day rolling buffer
+      standard:
+        title: Standard (7 days)
+        description: Week-long conversational context
+      extended:
+        title: Extended (30 days)
+        description: Month-long deep context
+    window:
+      oneDay: 1 day
+      days: '{count} days'
   tools:
     label: ツール
     subtitle: 自動化とデスクトップ MCP
@@ -404,7 +872,18 @@ steps:
     motionGen:
       title: 生成的 3D モーション (FlowMDM)
       desc: 会話の内容に合わせて、オリジナルの 3D アバター動作や VRMA クリップを即座に生成します。
-
+    greeting: Equip your companion with external capabilities — web search,
+      filesystem access, and generative motion.
+    preWarmDownloadEngine: Pre-warm Download Engine
+    preWarmedCached: Pre-warmed & Cached
+    downloadingShardsValue: Downloading shards... {percentage15}%
+    hint: These tools expand what your companion can do beyond conversation.
+    footer:
+      toolsEnabled: '{count} tool(s) enabled'
+    sections:
+      webSearch: Web Search
+      desktopMcp: Desktop MCP
+      motionGen: Generative Motion
   finale:
     label: 準備完了
     subtitle: 最終チェックと出航
@@ -423,7 +902,6 @@ steps:
     greetingCard: 最初のセリフのプレビュー (Turn 0)
     launchButton: AIRI ステージを起動
     launching: ステージを起動中...
-
 quickStart:
   title: 60秒クイックスタート
   subtitle: おすすめの標準設定ですぐにパートナーとの生活を始められます。
