@@ -36,6 +36,7 @@ fn main() {
     let files = [
         manifest_dir.join("src/bridges/cards.rs"),
         manifest_dir.join("src/bridges/data.rs"),
+        manifest_dir.join("src/bridges/mcp.rs"),
         manifest_dir.join("src/bridges/shell.rs"),
         manifest_dir.join("src/bridges/stage.rs"),
         manifest_dir.join("src/bridges/settings_stage.rs"),
@@ -140,6 +141,8 @@ fn main() {
     module = module.qml_file("qml/pages/widgets/WidgetsPage.qml");
     module = module.qml_file("qml/pages/settings/modules/mcp/McpSettingsPage.qml");
     module = module.qml_file("qml/pages/settings/modules/discord/DiscordSettingsPage.qml");
+    module = module.qml_file("qml/pages/settings/modules/cloud-sync/CloudSyncSettingsPage.qml");
+    module = module.qml_file("qml/pages/devtools/plugin-host/PluginHostPage.qml");
 
     CxxQtBuilder::new_qml_module(module)
         .qt_module("Gui")

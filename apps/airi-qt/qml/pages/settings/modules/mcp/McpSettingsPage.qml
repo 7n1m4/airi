@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// MCP Servers & Tools — UI-complete scaffold.
-// Structural port of packages/stage-pages/src/pages/settings/modules/mcp.vue
-// (+ components/McpConnectionTestPanel.vue). There is NO Rust MCP client in
-// the Qt build yet (the airi-mcp lane): no bridge, no config-file access, no
-// registry client, no probe and no tool dispatch. Every mutating control is
-// rendered but disabled with an explanatory tooltip; the page says so
-// persistently in the banner up top. Nothing here is persisted.
+// MCP Servers & Tools — Manage/Test tabs wired to the real `McpController`
+// bridge (spawn → initialize → tools/list through airi-mcp) and to the app's
+// own mcp.json (<profile>/airi/mcp.json). The documented Electron default is
+// shown when no config exists, with an explicit "add it" action. Discover
+// stays a deferred preview (no registry client).
 // The single configured server shown is the documented Electron default
 // (apps/stage-tamagotchi/src/main/services/airi/mcp-servers/index.ts:
 //   mcpServers["open-websearch"] = { command: "npx",
@@ -19,7 +17,118 @@ Item {
     id: page
 
     property int activeTab: 0
-    property bool exampleExpanded: false
+    property string probeTarget: ""
+    property var servers: []
+    property var probeTools: []
+    property string probeStatus: ""
+    property bool probeOk: false
+    property string callOutput: ""
+    property bool callOk: false
+    property bool probing: false
+
+    McpController {
+        id: controller
+    }
+
+    Connections {
+        target: controller
+        function onServersChanged() { page.reloadServers() }
+    }
+
+    readonly property var serverNames: page.servers.map(function (s2) { return s2.name })
+
+    function reloadServers() {
+        var parsed = []
+        try {
+            parsed = JSON.parse(controller.serversJson)
+        } catch (e) {
+            console.log("[airi-qt] mcp: failed to parse serversJson:", e)
+        }
+        page.servers = parsed
+        if (page.probeTarget.length === 0 && parsed.length > 0)
+            page.probeTarget = parsed[0].name
+    }
+
+    function addDefaultServer() {
+        controller.addStdioServer("open-websearch", "npx", "[\"-y\", \"open-websearch@latest\"]")
+    }
+
+    function serversForSave() {
+        return page.servers.map(function (s2) {
+            return {
+                name: s2.name,
+                command: s2.command === undefined ? null : s2.command,
+                args: s2.args || [],
+                env: s2.env || {},
+                url: s2.url === undefined ? null : s2.url,
+                headers: s2.headers || {},
+                enabled: s2.enabled !== false
+            }
+        })
+    }
+
+    function parseArgsInput(text) {
+        var t = text.trim()
+        if (t.length === 0)
+            return []
+        if (t.charAt(0) === "[") {
+            try {
+                return JSON.parse(t)
+            } catch (e) {
+                return null
+            }
+        }
+        return t.split(/\s+/)
+    }
+
+    function pickTool(name) {
+        toolNameField.text = name
+    }
+
+    function addStdioFromFields() {
+        var args = page.parseArgsInput(stdioArgsField.text)
+        if (args === null)
+            return
+        controller.addStdioServer(stdioNameField.text, stdioCommandField.text, JSON.stringify(args))
+    }
+
+    function runProbe() {
+        page.probing = true
+        var raw = controller.probeServer(page.probeTarget)
+        page.probing = false
+        var result = null
+        try {
+            result = JSON.parse(raw)
+        } catch (e) {
+            result = { error: "unexpected bridge response" }
+        }
+        if (result && result.error) {
+            page.probeOk = false
+            page.probeTools = []
+            page.probeStatus = result.error
+        } else if (result && result.ok) {
+            page.probeOk = true
+            page.probeTools = result.tools || []
+            page.probeStatus = result.toolCount + " · " + result.durationMs + " ms"
+        }
+    }
+
+    function runCallTool(toolName, toolArgs) {
+        var raw = controller.callTool(page.probeTarget, toolName, toolArgs)
+        var result = null
+        try {
+            result = JSON.parse(raw)
+        } catch (e) {
+            result = { error: "unexpected bridge response" }
+        }
+        page.callOutput = JSON.stringify(result, null, 2)
+        page.callOk = !!(result && result.ok && !(result && result.error) && !(result && result.isError))
+    }
+
+    Component.onCompleted: {
+        controller.refreshServers()
+        page.reloadServers()
+    }
 
     // ── Deferred-control idioms (the honest "not wired" pattern) ─────────
     // Disabled AButton + ATooltip on wrapper hover (used for every action).
@@ -217,8 +326,10 @@ Item {
                             Item { Layout.fillWidth: true }
 
                             ABadge {
-                                variant: "warning"
-                                text: I18n.tr("shell.mcp.notWiredBadge")
+                                variant: controller.configLoaded ? "success" : "warning"
+                                text: controller.configLoaded
+                                    ? I18n.tr("shell.mcp.manage.configLoaded")
+                                    : I18n.tr("shell.mcp.manage.configMissing")
                             }
                         }
 
@@ -238,7 +349,7 @@ Item {
                                 anchors.topMargin: Theme.spacingS
                                 anchors.bottomMargin: Theme.spacingS
                                 verticalAlignment: Text.AlignVCenter
-                                text: "<appData>/airi/mcp.json"
+                                text: controller.configPath
                                 font.family: Theme.fontBody
                                 font.pixelSize: 12
                                 wrapMode: Text.WrapAnywhere
@@ -260,9 +371,11 @@ Item {
 
                             Item { Layout.fillWidth: true }
 
-                            DeferredButton {
+                            AButton {
                                 variant: AButton.Accent
                                 text: I18n.tr("shell.mcp.manage.applyRestart")
+                                enabled: !controller.working
+                                onClicked: controller.saveServers(JSON.stringify(page.serversForSave()))
                             }
                         }
                     }
@@ -272,107 +385,105 @@ Item {
                     text: I18n.tr("shell.mcp.manage.configuredServers")
                 }
 
-                // Documented Electron default entry — not read from disk.
+                // Dynamic server list read from mcp.json; empty state offers the documented default.
                 ACard {
                     Layout.fillWidth: true
+                    visible: page.servers.length === 0
 
                     ColumnLayout {
                         width: parent ? parent.width : implicitWidth
                         spacing: Theme.spacingS
 
-                        // Clickable header row expands the server details.
-                        Item {
+                        RowLayout {
+                            spacing: Theme.spacingS
+
+                            Rectangle {
+                                implicitWidth: 10
+                                implicitHeight: 10
+                                radius: 5
+                                color: Theme.textSecondary
+                            }
+                            Text {
+                                text: "open-websearch"
+                                font.family: Theme.fontBody
+                                font.pixelSize: 14
+                                font.bold: true
+                                color: Theme.textPrimary
+                            }
+                            ABadge {
+                                variant: "info"
+                                text: I18n.tr("shell.mcp.manage.documentedExample")
+                            }
+                        }
+                        Text {
                             Layout.fillWidth: true
-                            implicitHeight: serverHeader.implicitHeight
+                            wrapMode: Text.WordWrap
+                            text: I18n.tr("shell.mcp.manage.emptyBody")
+                            font.family: Theme.fontBody
+                            font.pixelSize: 12
+                            color: Theme.textSecondary
+                        }
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Item { Layout.fillWidth: true }
+                            AButton {
+                                variant: AButton.Accent
+                                text: I18n.tr("shell.mcp.manage.addDefault")
+                                onClicked: page.addDefaultServer()
+                            }
+                        }
+                    }
+                }
+
+                Repeater {
+                    model: page.servers
+
+                    delegate: ACard {
+                        id: serverCard
+                        Layout.fillWidth: true
+                        required property var modelData
+
+                        ColumnLayout {
+                            width: parent ? parent.width : implicitWidth
+                            spacing: Theme.spacingS
 
                             RowLayout {
-                                id: serverHeader
-                                anchors.fill: parent
                                 spacing: Theme.spacingM
 
                                 Rectangle {
                                     implicitWidth: 10
                                     implicitHeight: 10
                                     radius: 5
-                                    color: Theme.textSecondary
+                                    color: serverCard.modelData.enabled ? Theme.success : Theme.textSecondary
                                 }
-
                                 ColumnLayout {
                                     spacing: 2
 
                                     Text {
-                                        text: "open-websearch"
+                                        text: serverCard.modelData.name
                                         font.family: Theme.fontBody
                                         font.pixelSize: 14
                                         font.bold: true
                                         color: Theme.textPrimary
                                     }
-
                                     Text {
-                                        text: I18n.tr("shell.mcp.manage.serverStateUnknown")
+                                        text: serverCard.modelData.enabled
+                                            ? I18n.tr("shell.mcp.manage.serverStateEnabled")
+                                            : I18n.tr("shell.mcp.manage.serverStateDisabled")
                                         font.family: Theme.fontBody
                                         font.pixelSize: 10
                                         font.bold: true
                                         font.capitalization: Font.AllUppercase
-                                        color: Theme.textSecondary
+                                        color: serverCard.modelData.enabled ? Theme.success : Theme.textSecondary
                                     }
                                 }
-
                                 ABadge {
                                     variant: "info"
-                                    text: I18n.tr("shell.mcp.manage.documentedExample")
+                                    text: serverCard.modelData.transport === "remote"
+                                        ? "Remote HTTP"
+                                        : I18n.tr("shell.mcp.manage.transportStdio")
                                 }
-
                                 Item { Layout.fillWidth: true }
-
-                                Text {
-                                    text: I18n.tr("shell.mcp.manage.toolsNone")
-                                    font.family: Theme.fontBody
-                                    font.pixelSize: 11
-                                    font.bold: true
-                                    font.capitalization: Font.AllUppercase
-                                    color: Theme.textSecondary
-                                }
-
-                                Text {
-                                    text: "▾"
-                                    font.pixelSize: 14
-                                    color: Theme.textSecondary
-                                    rotation: page.exampleExpanded ? 180 : 0
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: page.exampleExpanded = !page.exampleExpanded
-                            }
-                        }
-
-                        // Expanded details — endpoint, environment, tools, actions.
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            visible: page.exampleExpanded
-                            spacing: Theme.spacingS
-
-                            ASeparator {
-                                Layout.fillWidth: true
-                            }
-
-                            RowLayout {
-                                Layout.fillWidth: true
-                                spacing: Theme.spacingS
-
-                                SectionCaption {
-                                    text: I18n.tr("shell.mcp.manage.endpointLabel")
-                                }
-
-                                Item { Layout.fillWidth: true }
-
-                                ABadge {
-                                    variant: "info"
-                                    text: I18n.tr("shell.mcp.manage.transportStdio")
-                                }
                             }
 
                             Rectangle {
@@ -391,7 +502,7 @@ Item {
                                     anchors.topMargin: Theme.spacingS
                                     anchors.bottomMargin: Theme.spacingS
                                     verticalAlignment: Text.AlignVCenter
-                                    text: "npx -y open-websearch@latest"
+                                    text: serverCard.modelData.summary
                                     font.family: Theme.fontBody
                                     font.pixelSize: 12
                                     wrapMode: Text.WrapAnywhere
@@ -399,73 +510,29 @@ Item {
                                 }
                             }
 
-                            SectionCaption {
-                                text: I18n.tr("shell.mcp.manage.envCaption")
-                                font.pixelSize: 10
-                            }
-
-                            Text {
-                                Layout.fillWidth: true
-                                wrapMode: Text.WrapAnywhere
-                                text: "DEFAULT_SEARCH_ENGINE=duckduckgo   SEARCH_MODE=auto   MODE=stdio"
-                                font.family: Theme.fontBody
-                                font.pixelSize: 11
-                                color: Theme.textSecondary
-                            }
-
-                            SectionCaption {
-                                text: I18n.tr("shell.mcp.manage.toolsLabel")
-                            }
-
-                            Text {
-                                Layout.fillWidth: true
-                                wrapMode: Text.WordWrap
-                                text: I18n.tr("shell.mcp.manage.toolsPending")
-                                font.family: Theme.fontBody
-                                font.pixelSize: 12
-                                color: Theme.textSecondary
-                            }
-
                             RowLayout {
-                                Layout.fillWidth: true
                                 spacing: Theme.spacingS
 
                                 AButton {
-                                    variant: AButton.Default
                                     text: I18n.tr("shell.mcp.manage.testConnection")
-                                    onClicked: page.activeTab = 2
+                                    onClicked: {
+                                        page.probeTarget = serverCard.modelData.name
+                                        page.activeTab = 2
+                                    }
                                 }
-
                                 Item { Layout.fillWidth: true }
-
-                                Text {
-                                    text: I18n.tr("shell.mcp.manage.disable")
-                                    font.family: Theme.fontBody
-                                    font.pixelSize: 12
-                                    color: Theme.textSecondary
+                                ASwitch {
+                                    checked: serverCard.modelData.enabled
+                                    onToggled: controller.setServerEnabled(serverCard.modelData.name, checked)
                                 }
-
-                                DeferredSwitch {
-                                    checked: true
-                                }
-
-                                DeferredButton {
+                                AButton {
                                     variant: AButton.Danger
                                     text: I18n.tr("shell.mcp.manage.delete")
+                                    onClicked: controller.removeServer(serverCard.modelData.name)
                                 }
                             }
                         }
                     }
-                }
-
-                Text {
-                    Layout.fillWidth: true
-                    Layout.maximumWidth: 560
-                    wrapMode: Text.WordWrap
-                    text: I18n.tr("shell.mcp.manage.exampleNote")
-                    font.family: Theme.fontBody
-                    font.pixelSize: 11
-                    color: Theme.textSecondary
                 }
 
                 SectionCaption {
@@ -563,10 +630,21 @@ Item {
                         }
 
                         FieldLabel {
+                            text: I18n.tr("shell.mcp.manage.nameLabel")
+                        }
+
+                        ATextField {
+                            id: stdioNameField
+                            Layout.fillWidth: true
+                            placeholderText: I18n.tr("shell.mcp.manage.namePlaceholder")
+                        }
+
+                        FieldLabel {
                             text: I18n.tr("shell.mcp.manage.commandLabel")
                         }
 
                         ATextField {
+                            id: stdioCommandField
                             Layout.fillWidth: true
                             placeholderText: I18n.tr("shell.mcp.manage.commandPlaceholder")
                         }
@@ -576,6 +654,7 @@ Item {
                         }
 
                         ATextField {
+                            id: stdioArgsField
                             Layout.fillWidth: true
                             placeholderText: I18n.tr("shell.mcp.manage.argsPlaceholder")
                         }
@@ -585,9 +664,11 @@ Item {
 
                             Item { Layout.fillWidth: true }
 
-                            DeferredButton {
+                            AButton {
                                 variant: AButton.Accent
                                 text: I18n.tr("shell.mcp.manage.addStdio")
+                                enabled: stdioNameField.text.trim().length > 0 && stdioCommandField.text.trim().length > 0
+                                onClicked: page.addStdioFromFields()
                             }
                         }
                     }
@@ -698,28 +779,18 @@ Item {
                                 ASelect {
                                     id: serverSelect
                                     anchors.fill: parent
-                                    enabled: false
-                                    model: [I18n.tr("shell.mcp.test.targetExample")]
-                                    currentIndex: 0
-                                }
-
-                                MouseArea {
-                                    id: serverSelectHover
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                }
-
-                                ATooltip {
-                                    text: I18n.tr("shell.mcp.deferredTip")
-                                    visible: serverSelectHover.containsMouse
-                                    x: 0
-                                    y: parent.height + Theme.spacingS
+                                    enabled: page.servers.length > 0
+                                    model: page.serverNames
+                                    currentIndex: Math.max(0, page.serverNames.indexOf(page.probeTarget))
+                                    onActivated: page.probeTarget = serverSelect.currentText
                                 }
                             }
 
-                            DeferredButton {
+                            AButton {
                                 variant: AButton.Accent
-                                text: I18n.tr("shell.mcp.test.runProbe")
+                                text: page.probing ? I18n.tr("shell.mcp.test.probing") : I18n.tr("shell.mcp.test.runProbe")
+                                enabled: page.probeTarget.length > 0 && !page.probing
+                                onClicked: page.runProbe()
                             }
                         }
 
@@ -737,12 +808,24 @@ Item {
 
                             ABadge {
                                 variant: "info"
-                                text: I18n.tr("shell.mcp.manage.transportStdio")
+                                text: {
+                                    for (var i = 0; i < page.servers.length; ++i)
+                                        if (page.servers[i].name === page.probeTarget)
+                                            return page.servers[i].transport === "remote"
+                                                ? "Remote HTTP"
+                                                : I18n.tr("shell.mcp.manage.transportStdio")
+                                    return "—"
+                                }
                             }
 
                             Text {
                                 Layout.fillWidth: true
-                                text: "npx -y open-websearch@latest"
+                                text: {
+                                    for (var i = 0; i < page.servers.length; ++i)
+                                        if (page.servers[i].name === page.probeTarget)
+                                            return page.servers[i].summary
+                                    return "—"
+                                }
                                 font.family: Theme.fontBody
                                 font.pixelSize: 12
                                 wrapMode: Text.WrapAnywhere
@@ -757,14 +840,86 @@ Item {
                 }
 
                 ACard {
+                    id: toolsCard
                     Layout.fillWidth: true
 
-                    AEmptyState {
-                        Layout.fillWidth: true
-                        implicitHeight: 180
-                        icon: "🛠️"
-                        title: I18n.tr("shell.mcp.test.emptyToolsTitle")
-                        subtitle: I18n.tr("shell.mcp.test.emptyToolsSubtitle")
+                    ColumnLayout {
+                        width: parent ? parent.width : implicitWidth
+                        spacing: Theme.spacingS
+
+                        Text {
+                            visible: page.probeStatus.length > 0
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: page.probeStatus
+                            font.family: Theme.fontBody
+                            font.pixelSize: 11
+                            color: page.probeOk ? Theme.textSecondary : Theme.error
+                        }
+
+                        AEmptyState {
+                            visible: page.probeTools.length === 0
+                            Layout.fillWidth: true
+                            implicitHeight: 140
+                            icon: "🛠️"
+                            title: I18n.tr("shell.mcp.test.emptyToolsTitle")
+                            subtitle: page.probeStatus.length > 0
+                                ? page.probeStatus
+                                : I18n.tr("shell.mcp.test.emptyToolsSubtitle")
+                        }
+
+                        Repeater {
+                            model: page.probeTools
+
+                            delegate: Rectangle {
+                                id: toolRow
+                                required property var modelData
+                                Layout.fillWidth: true
+                                implicitHeight: toolRowCol.implicitHeight + 2 * Theme.spacingS
+                                radius: Theme.radiusS
+                                color: Theme.surfaceHover
+                                border.width: 1
+                                border.color: Theme.border
+
+                                RowLayout {
+                                    id: toolRowCol
+                                    anchors.fill: parent
+                                    anchors.margins: Theme.spacingS
+                                    spacing: Theme.spacingM
+
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 0
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: toolRow.modelData.name
+                                            font.family: Theme.fontBody
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                            color: Theme.textPrimary
+                                            elide: Text.ElideRight
+                                        }
+                                        Text {
+                                            Layout.fillWidth: true
+                                            text: toolRow.modelData.description || ""
+                                            font.family: Theme.fontBody
+                                            font.pixelSize: 10
+                                            color: Theme.textSecondary
+                                            wrapMode: Text.WordWrap
+                                            maximumLineCount: 2
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+
+                                    AButton {
+                                        variant: AButton.Ghost
+                                        text: I18n.tr("shell.mcp.test.callCaption")
+                                        implicitWidth: 72
+                                        onClicked: page.pickTool(toolRow.modelData.name)
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -784,8 +939,9 @@ Item {
                         }
 
                         ATextField {
+                            id: toolNameField
                             Layout.fillWidth: true
-                            enabled: false
+                            enabled: page.probeTarget.length > 0
                             placeholderText: I18n.tr("shell.mcp.test.toolNamePlaceholder")
                         }
 
@@ -794,9 +950,11 @@ Item {
                         }
 
                         ATextArea {
+                            id: toolArgsField
                             Layout.fillWidth: true
                             implicitHeight: 96
-                            enabled: false
+                            enabled: page.probeTarget.length > 0
+                            text: "{}"
                             placeholderText: I18n.tr("shell.mcp.test.toolArgsPlaceholder")
                         }
 
@@ -805,10 +963,30 @@ Item {
 
                             Item { Layout.fillWidth: true }
 
-                            DeferredButton {
+                            AButton {
                                 variant: AButton.Accent
                                 text: I18n.tr("shell.mcp.test.callTool")
+                                enabled: page.probeTarget.length > 0 && toolNameField.text.trim().length > 0
+                                onClicked: page.runCallTool(toolNameField.text.trim(), toolArgsField.text)
                             }
+                        }
+
+                        Text {
+                            visible: page.callOutput.length > 0
+                            Layout.fillWidth: true
+                            text: page.callOk ? "ok" : "error"
+                            font.family: Theme.fontBody
+                            font.pixelSize: 10
+                            font.bold: true
+                            font.capitalization: Font.AllUppercase
+                            color: page.callOk ? Theme.success : Theme.error
+                        }
+                        ATextArea {
+                            visible: page.callOutput.length > 0
+                            Layout.fillWidth: true
+                            implicitHeight: 180
+                            readOnly: true
+                            text: page.callOutput
                         }
                     }
                 }

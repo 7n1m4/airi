@@ -1,0 +1,340 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+//! The TCP WebSocket channel server.
+//!
+//! One thread per accepted connection; the accept loop is non-blocking and
+//! polls a stop flag every ~10 ms so [`ServerHandle::stop`] can shut it down
+//! cleanly. Reads after the handshake have **no timeout** — idle clients
+//! (e.g. the desktop app and a paired phone) are expected. The auth
+//! handshake itself has a 10-second deadline; sockets that do not complete
+//! the upgrade and auth within it are dropped.
+//!
+//! This module performs no TLS and no origin validation — see the
+//! crate-level security posture docs.
+
+use std::io::{self, Read, Write};
+use std::net::{TcpListener, TcpStream};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::thread::JoinHandle;
+use std::time::Duration;
+
+use crate::config::ChannelConfig;
+use crate::session::{
+    Session, CLOSE_MESSAGE_TOO_BIG, CLOSE_PROTOCOL_ERROR, CLOSE_UNSUPPORTED_DATA,
+};
+use crate::ws::{
+    accept_key, encode_frame, parse_upgrade_request, upgrade_request_complete, upgrade_response,
+    DecodeError, Frame, FrameDecoder, UpgradeError, MAX_HTTP_HEADER_BYTES, MAX_WS_PAYLOAD_BYTES,
+    OP_BINARY, OP_CLOSE, OP_CONTINUATION, OP_PING, OP_PONG, OP_TEXT,
+};
+
+/// How long a client may take to send the HTTP upgrade headers.
+const HANDSHAKE_READ_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// The bound, not-yet-running channel server.
+pub struct ChannelServer {
+    listener: TcpListener,
+    token: Arc<str>,
+}
+
+impl ChannelServer {
+    /// Bind `hostname:port`. Port `0` asks the OS for an ephemeral port.
+    ///
+    /// Binding is loopback-only by convention: the config defaults to
+    /// `127.0.0.1` and `0.0.0.0` should be a deliberate choice (LAN access).
+    pub fn bind(hostname: &str, port: u16, config: &ChannelConfig) -> io::Result<Self> {
+        let listener = TcpListener::bind((hostname, port))?;
+        Ok(Self {
+            listener,
+            token: Arc::from(config.auth_token.as_str()),
+        })
+    }
+
+    /// The local address the socket is bound to (useful with port `0`).
+    pub fn local_addr(&self) -> io::Result<std::net::SocketAddr> {
+        self.listener.local_addr()
+    }
+
+    /// The bound port.
+    pub fn local_port(&self) -> io::Result<u16> {
+        Ok(self.listener.local_addr()?.port())
+    }
+
+    /// Serve forever (blocking). Used by the desktop app once it decides to
+    /// start the channel server.
+    pub fn run(self) -> io::Result<()> {
+        let stop = Arc::new(AtomicBool::new(false));
+        serve(self.listener, self.token, stop)
+    }
+
+    /// Spawn the accept loop on a background thread.
+    pub fn spawn(self) -> io::Result<ServerHandle> {
+        let port = self.listener.local_addr()?.port();
+        self.listener.set_nonblocking(true)?;
+        let stop = Arc::new(AtomicBool::new(false));
+        let thread_stop = Arc::clone(&stop);
+        let token = self.token;
+        let join = std::thread::Builder::new()
+            .name("airi-channel-accept".to_string())
+            .spawn(move || serve(self.listener, token, thread_stop))?;
+        Ok(ServerHandle {
+            port,
+            stop,
+            join: Some(join),
+        })
+    }
+}
+
+/// Handle to a running background server. Dropping it stops the accept loop
+/// (existing connections are not force-closed).
+pub struct ServerHandle {
+    port: u16,
+    stop: Arc<AtomicBool>,
+    join: Option<JoinHandle<io::Result<()>>>,
+}
+
+impl ServerHandle {
+    /// The bound port.
+    pub fn port(&self) -> u16 {
+        self.port
+    }
+
+    /// Signal the accept loop to stop and wait for it.
+    pub fn stop(mut self) {
+        self.stop.store(true, Ordering::SeqCst);
+        if let Some(join) = self.join.take() {
+            let _ = join.join();
+        }
+    }
+}
+
+fn serve(listener: TcpListener, token: Arc<str>, stop: Arc<AtomicBool>) -> io::Result<()> {
+    listener.set_nonblocking(true)?;
+    loop {
+        if stop.load(Ordering::SeqCst) {
+            return Ok(());
+        }
+        match listener.accept() {
+            Ok((stream, peer)) => {
+                let token = Arc::clone(&token);
+                std::thread::Builder::new()
+                    .name(format!("airi-channel-conn-{peer}"))
+                    .spawn(move || {
+                        if let Err(err) = handle_connection(stream, &token) {
+                            tracing::debug!(%peer, %err, "channel connection ended with error");
+                        }
+                    })?;
+            }
+            Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
+                std::thread::sleep(Duration::from_millis(10));
+            }
+            Err(err) => {
+                tracing::warn!(%err, "channel accept failed");
+                std::thread::sleep(Duration::from_millis(100));
+            }
+        }
+    }
+}
+
+fn handle_connection(mut stream: TcpStream, token: &str) -> io::Result<()> {
+    stream.set_read_timeout(Some(HANDSHAKE_READ_TIMEOUT))?;
+    stream.set_nonblocking(false)?;
+
+    // --- HTTP Upgrade phase -------------------------------------------------
+    let mut header_buf = Vec::with_capacity(1024);
+    loop {
+        if upgrade_request_complete(&header_buf) {
+            break;
+        }
+        if header_buf.len() > MAX_HTTP_HEADER_BYTES {
+            write_http_error(&mut stream, 431, "Request Header Fields Too Large")?;
+            return Ok(());
+        }
+        let mut chunk = [0u8; 4096];
+        match stream.read(&mut chunk) {
+            Ok(0) => return Ok(()), // client went away mid-headers
+            Ok(n) => header_buf.extend_from_slice(&chunk[..n]),
+            Err(err)
+                if err.kind() == io::ErrorKind::WouldBlock
+                    || err.kind() == io::ErrorKind::TimedOut =>
+            {
+                tracing::debug!("channel handshake timed out");
+                return Ok(());
+            }
+            Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+            Err(err) => return Err(err),
+        }
+    }
+
+    let request = match parse_upgrade_request(&header_buf) {
+        Ok(req) => req,
+        Err(UpgradeError::UnsupportedVersion(v)) => {
+            tracing::debug!(version = %v, "channel upgrade rejected: bad version");
+            write_http_error(&mut stream, 426, "Upgrade Required")?;
+            return Ok(());
+        }
+        Err(err) => {
+            tracing::debug!(%err, "channel upgrade rejected");
+            write_http_error(&mut stream, 400, "Bad Request")?;
+            return Ok(());
+        }
+    };
+
+    let accept = accept_key(request.websocket_key().unwrap_or_default());
+    stream.write_all(&upgrade_response(&accept))?;
+    tracing::debug!(path = %request.path, "channel client upgraded");
+
+    // --- WebSocket phase ----------------------------------------------------
+    stream.set_read_timeout(None)?; // idle clients are fine post-handshake
+    let mut session = Session::new(token.to_string());
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+    let mut fragments: Option<(u8, Vec<u8>)> = None;
+
+    loop {
+        let mut chunk = [0u8; 16 * 1024];
+        let n = match stream.read(&mut chunk) {
+            Ok(0) => return Ok(()),
+            Ok(n) => n,
+            Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+            Err(err) => return Err(err),
+        };
+        decoder.push(&chunk[..n]);
+
+        loop {
+            match decoder.next_frame() {
+                Ok(Some(frame)) => {
+                    if !handle_frame(&mut stream, &frame, &mut session, &mut fragments)? {
+                        return Ok(());
+                    }
+                }
+                Ok(None) => break,
+                Err(DecodeError::FrameTooLarge { .. }) => {
+                    send_close(&mut stream, CLOSE_MESSAGE_TOO_BIG, "message too big");
+                    return Ok(());
+                }
+                Err(_) => {
+                    send_close(&mut stream, CLOSE_PROTOCOL_ERROR, "protocol error");
+                    return Ok(());
+                }
+            }
+        }
+    }
+}
+
+/// Handle one decoded frame. Returns `false` when the connection should close.
+fn handle_frame(
+    stream: &mut TcpStream,
+    frame: &Frame,
+    session: &mut Session,
+    fragments: &mut Option<(u8, Vec<u8>)>,
+) -> io::Result<bool> {
+    match frame.opcode {
+        OP_CLOSE => {
+            // Echo the close payload back, then drop the connection.
+            let _ = stream.write_all(&encode_frame(OP_CLOSE, &frame.payload, None));
+            return Ok(false);
+        }
+        OP_PING => {
+            stream.write_all(&encode_frame(OP_PONG, &frame.payload, None))?;
+            return Ok(true);
+        }
+        OP_PONG => return Ok(true), // unsolicited pongs are fine
+        OP_BINARY => {
+            send_close(
+                stream,
+                CLOSE_UNSUPPORTED_DATA,
+                "binary frames not supported",
+            );
+            return Ok(false);
+        }
+        OP_TEXT | OP_CONTINUATION => {}
+        _ => {
+            send_close(stream, CLOSE_PROTOCOL_ERROR, "unknown opcode");
+            return Ok(false);
+        }
+    }
+
+    // Text / continuation: reassemble fragmented messages.
+    let message: Option<Vec<u8>> = match frame.opcode {
+        OP_TEXT => {
+            if fragments.is_some() {
+                send_close(
+                    stream,
+                    CLOSE_PROTOCOL_ERROR,
+                    "new text frame during fragmented message",
+                );
+                return Ok(false);
+            }
+            if frame.fin {
+                Some(frame.payload.clone())
+            } else {
+                *fragments = Some((OP_TEXT, frame.payload.clone()));
+                None
+            }
+        }
+        OP_CONTINUATION => {
+            let Some((_, buf)) = fragments.as_mut() else {
+                send_close(
+                    stream,
+                    CLOSE_PROTOCOL_ERROR,
+                    "continuation without initial frame",
+                );
+                return Ok(false);
+            };
+            buf.extend_from_slice(&frame.payload);
+            if buf.len() as u64 > MAX_WS_PAYLOAD_BYTES {
+                send_close(stream, CLOSE_MESSAGE_TOO_BIG, "message too big");
+                return Ok(false);
+            }
+            if frame.fin {
+                fragments.take().map(|(_, buf)| buf)
+            } else {
+                None
+            }
+        }
+        _ => unreachable!("handled above"),
+    };
+
+    let Some(message) = message else {
+        return Ok(true); // fragment buffered, wait for more
+    };
+
+    let text = match String::from_utf8(message) {
+        Ok(t) => t,
+        Err(_) => {
+            // RFC 6455 §8.1: close 1007 on invalid UTF-8 in a text message.
+            send_close(stream, 1007, "invalid UTF-8 in text message");
+            return Ok(false);
+        }
+    };
+
+    let outcome = session.handle_text(&text);
+    for reply in &outcome.replies {
+        stream.write_all(&encode_frame(OP_TEXT, reply.as_bytes(), None))?;
+    }
+    if let Some(close) = outcome.close {
+        send_close(stream, close.code, &close.reason);
+        return Ok(false);
+    }
+    Ok(true)
+}
+
+/// Send a close frame; errors are ignored (we are tearing down anyway).
+fn send_close(stream: &mut TcpStream, code: u16, reason: &str) {
+    let mut payload = code.to_be_bytes().to_vec();
+    let bytes = reason.as_bytes();
+    let keep = bytes.len().min(123); // close payloads are capped at 125 bytes
+    payload.extend_from_slice(&bytes[..keep]);
+    let _ = stream.write_all(&encode_frame(OP_CLOSE, &payload, None));
+    let _ = stream.flush();
+}
+
+fn write_http_error(stream: &mut TcpStream, code: u16, reason: &str) -> io::Result<()> {
+    let body = format!("{code} {reason}\n");
+    let response = format!(
+        "HTTP/1.1 {code} {reason}\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: {}\r\n\r\n{body}",
+        body.len()
+    );
+    stream.write_all(response.as_bytes())
+}

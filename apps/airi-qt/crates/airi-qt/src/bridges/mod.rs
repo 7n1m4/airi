@@ -11,6 +11,7 @@ pub mod chat;
 pub mod data;
 pub mod desktop;
 pub mod i18n;
+pub mod mcp;
 pub mod providers;
 pub mod settings_chat;
 pub mod settings_general;

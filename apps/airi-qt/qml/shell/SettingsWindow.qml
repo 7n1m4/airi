@@ -200,6 +200,20 @@ Window {
                     active: settingsWindow.navIndex === 22
                     onClicked: settingsWindow.navIndex = 22
                 }
+                AListItem {
+                    Layout.fillWidth: true
+                    icon: "☁️"
+                    title: I18n.tr("shell.settings.nav.cloudSync")
+                    active: settingsWindow.navIndex === 23
+                    onClicked: settingsWindow.navIndex = 23
+                }
+                AListItem {
+                    Layout.fillWidth: true
+                    icon: "🛠️"
+                    title: I18n.tr("shell.settings.nav.pluginHost")
+                    active: settingsWindow.navIndex === 24
+                    onClicked: settingsWindow.navIndex = 24
+                }
 
                 Item {
                     Layout.fillHeight: true
@@ -333,6 +347,12 @@ Window {
             }
             // Discord — gateway (scaffold; bridge pending).
             DiscordSettingsPage {
+            }
+            // Cloud Sync — BYOS backup (scaffold; sync engine pending).
+            CloudSyncSettingsPage {
+            }
+            // Plugin Host — devtools scaffold (host not wired).
+            PluginHostPage {
             }
         }
     }

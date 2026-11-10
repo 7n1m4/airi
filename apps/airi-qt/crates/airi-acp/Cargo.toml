@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "airi-acp"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "ACP (Agent Client Protocol) agent client for AIRI — stdio NDJSON JSON-RPC (wave ④ lane)"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

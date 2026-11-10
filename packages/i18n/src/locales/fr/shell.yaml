@@ -69,6 +69,8 @@ settings:
     widgets: Widgets
     mcp: MCP
     discord: Discord
+    cloudSync: Cloud Sync
+    pluginHost: Plugin Host
     onboardingV3: Onboarding V3
     gemini: Gemini
     fadeOnHover: Fade on Hover
@@ -615,6 +617,13 @@ mcp:
     argsPlaceholder: '-y open-websearch@latest'
     addStdio: 'Ajouter un serveur stdio'
     applyRestart: 'Appliquer et redémarrer'
+    configLoaded: 'Chargé depuis le disque'
+    configMissing: 'Non configuré'
+    addDefault: 'Ajouter le défaut open-websearch'
+    serverStateEnabled: 'Activé'
+    serverStateDisabled: 'Désactivé'
+    emptyBody: 'Aucun serveur pour l’instant. Ajoutez le défaut documenté ci-dessous (il lance npx -y open-websearch@latest), ou ajoutez votre propre serveur stdio.'
+    probing: 'Sondage…'
   discover:
     searchPlaceholder: 'Rechercher dans le registre MCP (ex. fetch, weather, remote)…'
     emptyTitle: 'La découverte du registre n’est pas encore câblée'
@@ -698,3 +707,151 @@ discord:
     addMapping: '+ Ajouter un mappage de salon'
     matrixEmptyTitle: 'Aucun mappage de salon'
     matrixEmptySubtitle: 'La table de routage se remplira quand le pont de passerelle arrivera. Les lignes simulées de l’aperçu en amont ne sont volontairement pas rendues.'
+
+cloudSync:
+  title: 'Cloud Sync'
+  description: 'Sauvegarde et synchronise vos bases de données, cartes de personnage, segments de mémoire et assets multimédias entre appareils.'
+  notWiredBadge: 'Pas encore câblé'
+  deferredNotice: "Le module Cloud Sync n'est pas encore câblé à un moteur de synchronisation dans la build Qt. Cibles de sync, identifiants, planification et restauration sont présentés en aperçu structurel — chaque action est désactivée jusqu'à l'arrivée du moteur."
+  deferredTip: 'Nécessite le moteur de synchronisation (transports S3 / local-FS, instantanés IndexedDB, garde anti-conflits) dans la build Qt.'
+  storage:
+    title: 'Cible de stockage'
+    notWiredState: 'Non câblé'
+    providerLabel: 'Fournisseur de stockage actif'
+    providerDescription: 'Choisissez quelle cible de synchronisation est active.'
+    providerS3: 'Stockage cloud compatible S3'
+    providerLocalFs: 'Système de fichiers local / Partage Samba'
+    s3Caption: 'Paramètres compatibles S3'
+    endpointLabel: "URL d'endpoint"
+    endpointDescription: "L'URL d'endpoint de base de votre fournisseur S3 (ex. https://s3.amazonaws.com)."
+    endpointPlaceholder: 'https://s3.amazonaws.com'
+    bucketLabel: 'Nom du bucket'
+    bucketDescription: 'Le nom de votre bucket cloud.'
+    bucketPlaceholder: 'my-airi-sync'
+    regionLabel: 'Région'
+    regionDescription: 'La région de votre bucket (us-east-1 par défaut si laissé vide).'
+    regionPlaceholder: 'us-east-1'
+    accessKeyLabel: 'Access Key ID'
+    accessKeyDescription: 'L’identifiant Access Key ID S3.'
+    accessKeyPlaceholder: 'Saisissez l’Access Key ID'
+    secretKeyLabel: 'Secret Access Key'
+    secretKeyDescription: 'Le secret Secret Access Key S3.'
+    secretKeyPlaceholder: 'Saisissez le Secret Access Key'
+    pathStyleLabel: 'Accès style path'
+    pathStyleDescription: 'Force les URLs de bucket style path (https://host/bucket). Requis pour MinIO et la plupart des stockages S3 auto-hébergés.'
+    localCaption: 'Paramètres du partage local'
+    localPathLabel: 'Chemin du répertoire de sauvegarde'
+    localPathDescription: 'Le chemin absolu vers votre dossier de synchro local ou votre lecteur réseau monté (NAS / partage Samba).'
+    localPathPlaceholder: '/Volumes/AIRI-Backup-Share'
+    testConnection: 'Tester la connexion'
+  sync:
+    title: 'Synchronisation'
+    enableLabel: 'Activer Cloud Sync'
+    enableDescription: 'Sauvegardez et synchronisez automatiquement vos données en arrière-plan.'
+    intervalLabel: 'Intervalle de synchro (minutes)'
+    intervalDescription: 'Délai entre les cycles automatiques de synchro en arrière-plan.'
+    intervalValue: '30 min'
+    conflictLabel: 'Stratégie de résolution des conflits'
+    conflictDescription: 'Comment un conflit est résolu quand les données divergent sur plusieurs appareils.'
+    conflictLww: 'Dernier écrivain gagnant (LWW)'
+    conflictRemoteWins: 'Distant gagnant (écraser les conflits)'
+    conflictLocalWins: 'Local gagnant (garder la copie locale)'
+    selectiveLabel: 'Synchro sélective'
+    selectiveDescription: 'Ne synchroniser que les personnages, historiques de chat et modèles d’affichage sélectionnés.'
+  scope:
+    title: 'Ce qui est synchronisé'
+    coreLabel: 'Noyau de la base & paramètres'
+    coreDescription: 'Requis — les paramètres de l’app, les configurations fournisseurs, la base de cartes de personnage et la mémoire à court terme sont toujours synchronisés en amont.'
+    avatarLabel: 'Synchro avatar & modèle d’affichage'
+    avatarDescription: 'Avatars de cartes de personnage et modèles d’affichage Live2D / VRM / MMD (airi-cards).'
+    memoryLabel: 'Synchro mémoire & journal'
+    memoryDescription: 'Résumés mémoire à court terme, journal texte et chips d’écho (memory/*).'
+    chatLabel: 'Synchro historique de chat'
+    chatDescription: 'Sessions de chat et index de sessions (chat/sessions, chat/index).'
+  mesh:
+    title: 'Synchro maillage local'
+    enableLabel: 'Activer la synchro maillage libp2p'
+    enableDescription: 'Synchronisez mémoire, identifiants du coffre et cartes compagnons directement avec d’autres instances AIRI sur votre réseau local.'
+    memoryLabel: 'Mémoire (STMM / LTMM / Event Ledger)'
+    vaultLabel: 'Coffre (identifiants BYOS)'
+    companionsLabel: 'Compagnons (cartes de personnage)'
+    targetDescription: 'Synchronisé avec les instances AIRI appairées via libp2p.'
+  actions:
+    title: 'Actions manuelles'
+    manualTitle: 'Synchronisation manuelle'
+    lastSyncedNever: 'Dernière synchro : jamais'
+    selectiveSync: 'Synchro sélective…'
+    syncNow: 'Synchroniser maintenant'
+    pruneTitle: 'Élaguer les modèles locaux non liés'
+    pruneDescription: 'Libérez de l’espace disque en supprimant en toute sécurité les modèles non associés à une carte de personnage. Vérifiés contre les sauvegardes cloud avant suppression.'
+    pruneButton: 'Élaguer les modèles…'
+    restoreSettingsTitle: 'Restaurer les réglages seulement'
+    restoreSettingsDescription: "Restaurez configurations et réglages d'UI sans toucher aux assets de personnage."
+    restoreSettingsButton: 'Restaurer les réglages…'
+    restoreBackupTitle: 'Restaurer la sauvegarde distante'
+    restoreBackupDescription: 'Effacer les données locales et forcer la restauration complète depuis le distant.'
+    restoreBackupButton: 'Restaurer la sauvegarde…'
+  conflicts:
+    title: 'Conflits de synchronisation'
+    emptyTitle: 'Aucun conflit à examiner'
+    emptySubtitle: "Le moteur de synchro n'est pas câblé dans cette build, donc les conflits du garde anti-contraction ne peuvent se produire. Quand il arrivera, les fichiers bloqués à l'écrasement auto apparaîtront ici — vous garderez le local, le distant, ou fusionnerez."
+
+pluginHost:
+  title: 'Plugin Host'
+  description: 'Inspectez et gérez les plugins AIRI : manifestes découverts, activation, sessions chargées et capacités annoncées.'
+  notWiredBadge: 'Pas encore câblé'
+  deferredTip: 'Pas encore câblé — aucun hôte de plugins n’existe dans la build Qt. Cet aperçu montre seulement la mise en page ; rien ici ne découvre, charge ou persiste de plugins.'
+  deferredNotice: 'L’hôte de plugins n’est pas câblé dans cette build. Aucun manifeste n’est découvert depuis le disque, aucun plugin n’est chargé, et chaque contrôle ci-dessous est inerte jusqu’à l’arrivée d’un hôte de plugins Qt (ou d’un pont style Electron).'
+  stats:
+    discovered: 'Découverts'
+    enabled: 'Activés'
+    loaded: 'Chargés'
+    capabilities: 'Capacités'
+  host:
+    section: 'État de l’hôte de plugins'
+    stateLabel: 'État de l’hôte'
+    stateValue: 'Non câblé'
+    busLabel: 'Bus de plugins'
+    busValue: 'Inconnu / non câblé'
+    manifestRootLabel: 'Racine des manifestes'
+    configLabel: 'Magasin d’activation'
+    portLabel: 'Port'
+    portValue: 'Aucun — hôte dans le processus'
+    portHint: 'L’hôte de plugins d’Electron s’exécute dans le processus principal et n’a pas de port TCP. Le port 6121 appartient au serveur de canal AIRI (SERVER_CHANNEL_PORT) et n’a rien à voir avec l’hôte de plugins.'
+  installed:
+    section: 'Plugins installés'
+    emptyTitle: 'Aucun plugin installé dans cette build'
+    emptySubtitle: 'Rien ici ne découvre ou ne charge de plugins pour l’instant. Quand un hôte arrivera, les manifestes trouvés dans la racine apparaîtront dans cette liste.'
+  examples:
+    section: 'Exemple de documentation — non installé'
+    badge: 'Exemple de documentation'
+    chipNotWired: 'Non câblé'
+    load: 'Charger'
+    unload: 'Décharger'
+    note: 'Ce sont des paquets d’intégration du dépôt sous integrations/, montrés pour documenter à quoi ressemble un plugin. Aucun ne livre un manifeste d’hôte de plugins aujourd’hui, et cette build ne découvre rien depuis le disque.'
+  filter:
+    placeholder: 'Filtrer les plugins découverts…'
+  actions:
+    section: 'Actions'
+    refresh: 'Actualiser'
+    loadEnabled: 'Charger les activés'
+    loadByNamePlaceholder: 'Charger un plugin découvert par nom exact…'
+    loadPlugin: 'Charger le plugin'
+    reload: 'Recharger les plugins'
+    openDir: 'Ouvrir le dossier des plugins'
+    newScaffold: 'Nouveau scaffold de plugin'
+  capabilities:
+    section: 'Capacités'
+    emptyTitle: 'Aucune capacité annoncée'
+    emptySubtitle: 'Les capacités apparaissent ici quand un hôte est câblé et que les plugins annoncent des entrées module:contribute:capability sur le bus de plugins.'
+  hostSettings:
+    section: 'Réglages de l’hôte de plugins (non câblé)'
+    portLabel: 'Port'
+    portDescription: 'Le port hypothétique de l’hôte. L’hôte réel est dans le processus et n’en a pas.'
+    portPlaceholder: 'Non câblé'
+    portHint: 'Le port 6121 est le serveur de canal AIRI (SERVER_CHANNEL_PORT), pas l’hôte de plugins. Toute valeur ici serait fictive.'
+    logLevelLabel: 'Niveau de log'
+    pluginDirLabel: 'Répertoire des plugins'
+    pluginDirPlaceholder: '<userData>/plugins/v1'
+    pluginDirHint: 'Les manifestes sont lus depuis <pluginDir>/<plugin>/*.json ; l’activation est persistée dans plugins-v1.json à côté de la configuration de l’app.'
+    save: 'Sauvegarder et redémarrer l’hôte'

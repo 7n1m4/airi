@@ -43,6 +43,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "airi-acp"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
+name = "airi-channel"
+version = "0.1.0"
+dependencies = [
+ "dirs 5.0.1",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
 name = "airi-core"
 version = "0.1.0"
 dependencies = [
@@ -158,6 +180,7 @@ dependencies = [
  "airi-core",
  "airi-i18n",
  "airi-llm",
+ "airi-mcp",
  "airi-render",
  "airi-store",
  "anyhow",
