@@ -1,0 +1,21 @@
+{
+  "name": "@proj-airi/stage-qt",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native Qt Quick 3D VRM desktop-pet renderer (Rust + cxx-qt), protocol-compatible with the Stage-Mate sidecar",
+  "scripts": {
+    "dev": "cargo run -q --",
+    "build": "bash -lc 'cargo build --release && mkdir -p bin && cp target/release/stage-qt bin/'",
+    "harness": "tsx harness/index.ts",
+    "check": "cargo check",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@types/ws": "catalog:",
+    "ws": "catalog:"
+  },
+  "devDependencies": {
+    "tsx": "catalog:"
+  }
+}

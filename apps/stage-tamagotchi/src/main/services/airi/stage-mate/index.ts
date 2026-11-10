@@ -276,6 +276,12 @@ export function createStageMateService(params?: {
 
   function resolveBinaryPath(): { binPath: string | null, candidates: string[], baseBinPath: string } {
     const baseBinPath = join(getElectronMainDirname(), '../../../../apps/stage-mate/bin')
+    // Native Qt companion renderer (apps/stage-qt) — appended AFTER the
+    // Unity Stage-Mate candidates so the Unity sidecar stays preferred
+    // when its binary exists. The Qt binary accepts `--token <t>`
+    // and speaks the same protocol, so ensureRunning() spawns it
+    // unchanged when it is the only renderer available.
+    const baseQtBinPath = join(getElectronMainDirname(), '../../../../apps/stage-qt/bin')
     let candidates: string[] = []
 
     if (platform === 'win32') {
@@ -290,6 +296,8 @@ export function createStageMateService(params?: {
         join(process.resourcesPath, 'MateEngineX.exe'),
         join(process.resourcesPath, 'StageMate', 'StageMate.exe'),
         join(process.resourcesPath, 'StageMate', 'MateEngineX.exe'),
+        join(baseQtBinPath, 'stage-qt.exe'),
+        join(process.resourcesPath, 'stage-qt.exe'),
       ]
     }
     else if (platform === 'linux') {
@@ -300,6 +308,8 @@ export function createStageMateService(params?: {
         join(baseBinPath, 'Linux', 'MateEngineX.x86_64'),
         join(process.resourcesPath, 'StageMate.x86_64'),
         join(process.resourcesPath, 'MateEngineX.x86_64'),
+        join(baseQtBinPath, 'stage-qt'),
+        join(process.resourcesPath, 'stage-qt'),
       ]
     }
     else if (platform === 'darwin') {
@@ -315,6 +325,8 @@ export function createStageMateService(params?: {
         join(process.resourcesPath, 'StageMate.app', 'Contents/MacOS/MateEngineX'),
         join(process.resourcesPath, 'StageMate', 'StageMate.app'),
         join(process.resourcesPath, 'StageMate.app'),
+        join(baseQtBinPath, 'StageQt.app', 'Contents/MacOS/stage-qt'),
+        join(process.resourcesPath, 'StageQt.app', 'Contents/MacOS/stage-qt'),
       ]
     }
 
