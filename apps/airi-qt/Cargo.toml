@@ -1,0 +1,100 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[workspace]
+resolver = "2"
+members = [
+  "crates/airi-store",
+  "crates/airi-llm",
+  "crates/airi-core",
+  "crates/airi-i18n",
+  "crates/airi-render",
+  "crates/airi-qt",
+  "crates/airi-stt",
+  "crates/airi-speech",
+  "crates/airi-local-llm",
+  "crates/airi-laya",
+]
+
+[workspace.dependencies]
+# Core
+anyhow = "1"
+serde = { version = "1", features = [ "derive" ] }
+serde_json = "1"
+tokio = { version = "1", features = [
+  "rt-multi-thread",
+  "time",
+  "sync",
+  "macros"
+] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = [ "env-filter" ] }
+async-stream = "0.3"
+bytes = "1"
+
+# Database
+rusqlite = { version = "0.31", features = [
+  "bundled",
+  "modern_sqlite"
+] }
+dirs = "5"
+
+# LLM / HTTP
+async-openai = "0.31"
+reqwest = { version = "0.12", features = [
+  "json",
+  "stream",
+  "rustls-tls",
+  "cookies",
+  "multipart",
+  "gzip",
+  "brotli",
+  "blocking"
+] }
+futures-util = "0.3"
+async-trait = "0.1"
+thiserror = "1"
+mockito = "1"
+
+# Rendering
+gltf = { version = "1", features = [ "extensions" ] }
+zip = "0.6"
+image = { version = "0.25", features = [
+  "png",
+  "jpeg",
+  "webp"
+] }
+png = "0.17"
+
+# Qt / cxx-qt
+cxx = "1"
+cxx-qt = "0.10"
+cxx-qt-lib = { version = "0.10", features = [ "full" ] }
+
+# Laya (P9 lane 4): ONNX Runtime + HF tokenizers
+ort = "2.0.0-rc.15"
+tokenizers = { version = "0.22", default-features = false, features = [ "onig" ] }
+
+# Speech (P5 lane)
+rodio = "0.22"
+sha2 = "0.10"
+hmac = "0.12"
+
+# (Audio deps intentionally omitted; P0 is out of scope)
+
+# Desktop integration (P8 lane 1: tray / hotkeys / notifications / autostart)
+tray-item = { version = "0.10", features = [ "ksni" ] }
+global-hotkey = "0.10"
+notify-rust = "4"
+auto-launch = "0.6"
+dbus = "0.9"
+
+# Testing
+tempfile = "3"
+
+[profile.dev]
+opt-level = 1
+debug = true
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

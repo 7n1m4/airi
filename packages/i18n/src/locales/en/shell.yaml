@@ -1,0 +1,569 @@
+# Strings for the Qt (QML) desktop shell: splash, control strip, windows and
+# placeholder pages. Kept under the `shell.` prefix after flattening.
+app:
+  name: AIRI
+  tagline: Your AI companion, on your desktop.
+  version-label: Version
+splash:
+  milestones:
+    core_services: Initializing core services…
+    sync_engine: Restoring local state and storage…
+    providers: Connecting model providers…
+    stage_ready: Preparing the stage…
+strip:
+  tooltips:
+    avatar: AIRI
+    mic: Microphone toggle
+    chat: Chat
+    stage: Stage
+    settings: Settings
+    about: About AIRI
+    collapse: Collapse
+    expand: Expand
+    theme: Toggle dark / light mode
+    language: Change language
+    quit: Quit AIRI
+    caption: Captions
+chat:
+  title: AIRI — Chat
+  recent: Recent
+  new: New chat
+  search-placeholder: Search chats…
+  delete-session: Delete chat
+  empty-title: Start a conversation
+  empty-subtitle: Your messages are stored locally on this device.
+  input-placeholder: Message AIRI…
+  send: Send
+  stop: Stop
+  streaming: Streaming…
+  provider-unconfigured: No model provider configured
+  status:
+    error: Error
+  card-picker:
+    none: No card
+    empty-title: No character cards yet
+    empty-subtitle: Import a CCv2/CCv3 character card (png or json) to chat with a persona.
+    import: Import card…
+    import-error: 'Could not import that card — not a valid CCv2/CCv3 card (png or json).'
+settings:
+  title: AIRI — Settings
+  description: Configure your AI assistant.
+  nav:
+    providers: Providers
+    theme: Theme
+    about: About
+    soon: Wave B
+    stage: Stage
+    spine: Spine
+    mmd: MMD
+    live2d: Live2D
+    general: General
+    chat: Chat
+    voice: Voice
+    profile: Profile
+    cards: Cards
+    explore: Explore
+    data: Data
+    onboarding: Onboarding
+    notice: Notice
+    widgets: Widgets
+    onboardingV3: Onboarding V3
+    gemini: Gemini
+    fadeOnHover: Fade on Hover
+  theme-page:
+    title: Theme
+    description: Personalize AIRI's colors and appearance.
+    hue: Accent hue
+    chroma: Chroma multiplier
+    dark: Dark mode
+    reset: Reset to defaults
+  spine:
+    title: Spine
+    description: Spine runtime behavior for the stage companion.
+    maxFps: Max FPS
+    maxFpsHint: 0 = unlimited
+    renderScale: Render scale
+    mixDuration: Mix duration
+    animationSpeed: Animation speed
+    idleAnimation: Idle animation
+    scalePosTitle: Model placement
+    scalePosX: Position X
+    scalePosY: Position Y
+    scalePosScale: Scale
+    saveError: Couldn't save Spine settings.
+  mmd:
+    title: MMD
+    description: MMD runtime behavior for the stage companion.
+    idleAnimation: Idle animation
+    renderScale: Render scale
+    physicsNote: Render scale for MMD renders; physics is disabled until P10.
+    saveError: Couldn't save MMD settings.
+  live2d:
+    title: Live2D
+    description: Live2D behavior for the stage companion.
+    deferredNotice: Live2D renderer is deferred until after Spine ships. Edits are saved but won't affect rendering yet.
+    disableFocus: Disable focus
+    idleAnimation: Idle animation
+    autoBlink: Auto blink
+    forceAutoBlink: Force auto blink
+    shadow: Drop shadow
+    followSpeed: Follow speed
+    maxFps: Max FPS
+    maxFpsHint: 0 = unlimited
+    saveError: Couldn't save Live2D settings.
+providers:
+  search: Search providers…
+  search-empty: No providers match your filter.
+  enabled: Enabled
+  not-available: Not yet available
+  not-available-hint: This provider's engine arrives in a later phase. Its configuration is saved but cannot be used for chat yet.
+  configured: Saved
+  test: Test connection
+  test-success: Connection OK — the provider answered.
+  test-failed: Connection failed
+  test-unsupported: Connection test is not available for this provider yet.
+  save: Save
+  saved: Saved.
+  save-failed: Couldn't save the configuration.
+  delete: Remove
+  models-refresh: Fetch models
+  models-empty: No models yet — save your credentials and fetch, or type a model name.
+  kind:
+    open-ai-compatible: OpenAI-compatible
+    anthropic: Anthropic
+    google-gemini: Gemini
+    aws-bedrock: Bedrock
+    local-server: Local server
+  field:
+    api_key: API Key
+    base_url: Base URL
+    model: Model
+    region: AWS Region
+    aws_access_key_id: AWS Access Key ID
+    aws_secret_access_key: AWS Secret Access Key
+    account_id: Cloudflare Account ID
+about:
+  title: AIRI — About
+  app-name: AIRI
+  tagline: Your AI companion, on your desktop.
+  body: AIRI is a desktop AI companion — a digital being that talks, sees and reacts. Built with Rust, Qt 6 and QML.
+  license: Licensed under GPL-3.0-or-later. Qt Quick 3D is used under its GPL terms.
+  source-label: Source code
+  source-url: https://github.com/moeru-ai/airi
+  credit: Created by Neko Ayaka and the AIRI contributors.
+  check-update: Check for updates
+  update-up-to-date: AIRI is up to date.
+  update-available: 'Update available:'
+stage:
+  description: Show and position the floating stage window with your AI companion.
+  openStageWindow: Show stage window
+  windowTitle: Stage window
+  empty-title: No model on stage
+  empty-subtitle: Pick a VRM model in Settings → Stage and it will dance here.
+  openSettings: Open stage settings
+  resetPosition: Reset position
+  boundsResetNotice: Position cleared — the stage re-centers on next open.
+  modelSection:
+    title: Model
+    hint: The VRM file used for the stage companion. Pick a model below, browse for an absolute path, or import a .vrm.
+  modelListEmpty: No .vrm model found — import below or browse to one
+  modelNone: No model selected
+  browseModel: Browse…
+  importModel: Import
+  captions:
+    title: Captions
+    enabled: Show captions
+    fontSize: Font size
+    opacity: Opacity
+    docking: Docking
+    top: Top
+    bottom: Bottom
+    head: Head
+    none: None
+    preview: Preview
+    previewSample: This is how captions will look while AIRI talks.
+  stripSection:
+    title: Control strip
+    hint: Choose which stage controls appear on the control strip.
+    stage: Stage toggle
+    caption: Captions toggle
+  saveError: Couldn't save. Check the path and try again.
+general:
+  description: App-wide behavior and privacy.
+  languageSection: Interface language
+  languagePlaceholder: e.g. en, zh-Hans (empty = system default)
+  languageHint: Leave empty to follow the system language.
+  transitionsSection: Page transitions
+  disableTransitions: Disable all page transitions
+  usePageSpecificTransitions: Use page-specific transitions
+  privacySection: Privacy & network
+  remoteSyncEnabled: Allow privacy-sensitive diagnostics to sync remotely
+  websocketSecureEnabled: Use wss:// for the built-in websocket server
+  startupSection: Startup
+  autostartEnabled: Enable autostart on login
+  saveError: Couldn't save. Try again.
+chat-settings:
+  description: How messages are sent and streamed.
+  inputSection: Input
+  sendMode: Send message with
+  suggestMode: Accept suggestion with
+  modeEnter: Enter
+  modeCtrlEnter: Ctrl+Enter
+  modeDoubleEnter: Double Enter
+  modeDisabled: Disabled
+  streamIdleTimeout: Stream idle timeout (ms)
+  streamIdleTimeoutHint: Abort a streaming response after this many milliseconds of silence. 600000 = 10 minutes.
+  messagesSection: Messages
+  showDirectorNotes: Show director notes in the chat view
+  combineSystemMessages: Combine consecutive system messages before sending
+  saveError: Couldn't save. Try again.
+audio:
+  description: Microphone input and speaker output for voice.
+  inputSection: Voice input
+  inputEnabled: Enable voice input
+  inputDevice: Input device id
+  inputDevicePlaceholder: paste device id (e.g. pulse key from `pactl list sources short`)
+  outputDevice: Output device id
+  outputDevicePlaceholder: paste device id (e.g. pulse key from `pactl list sinks short`)
+  deviceHint: Device enumeration is not available in this build yet — paste the device id manually. Leave empty to use the system default.
+  save: Save
+  saveError: Couldn't save. Try again.
+profile:
+  description: Who you are to AIRI.
+  identitySection: Identity
+  name: Display name
+  namePlaceholder: Your name
+  descriptionLabel: About you
+  descriptionPlaceholder: A short description of yourself…
+  voiceProfileId: Voice profile id
+  voiceProfileIdPlaceholder: e.g. a voice profile from your TTS provider
+  promptSection: System prompt
+  promptHint: Optional override for the system prompt sent to the model. Leave empty to use the default.
+  promptPlaceholder: You are…
+  save: Save
+  saveError: Couldn't save. Try again.
+notify:
+  replyReady: AIRI replied
+common:
+  close: Close
+
+cards:
+  title: Cards
+  searchPlaceholder: Search cards…
+  import: Import…
+  importDialogTitle: Import a character card
+  new: New card
+  refresh: Refresh
+  emptyTitle: No character cards yet
+  emptyBody: Import a CCv2/CCv3 card (.png or .json) to chat with a persona.
+  noGreeting: No greeting
+  jsonCard: JSON card (no avatar)
+  active: In use
+  use: Use in chat
+  edit: Edit
+  delete: Delete
+  cancel: Cancel
+  deleteTitle: Delete card?
+  deleteBody: This permanently deletes the card file from your device.
+  save: Save
+  editor:
+    title: Edit card
+    newTitle: New card
+    saving: Saving…
+    nameRequired: Name is required.
+    saveError: Couldn't save the card.
+    loadError: Couldn't load that card.
+  fields:
+    name: Name…
+    description: Description…
+    personality: Personality…
+    scenario: Scenario…
+    firstMes: First message…
+    alternateGreetings: Alternate greetings — one per line…
+    mesExample: Example dialogue (<START> blocks)…
+    systemPrompt: System prompt…
+    postHistoryInstructions: Post-history instructions…
+    creator: Creator…
+    creatorNotes: Creator notes…
+    characterVersion: Version…
+    tags: Tags, comma separated…
+  sections:
+    dialogue: Dialogue
+    behavior: Behavior
+    metadata: Metadata
+models:
+  explore:
+    title: Discover Avatars
+    description: Explore community archives, external repositories, and free model libraries for VRM, Live2D, Spine, and MMD.
+    suggestSite: Suggest a site
+    filterLabel: Format
+    featuredFree: Featured Free Avatars
+    downloadModel: Download
+    freeArchives: Free Community Archives
+    creatorMarketplaces: Creator Marketplaces
+    emptyFree: No free community archives found for this format filter.
+    emptyPaid: No marketplaces found for this format filter.
+    free: 100% Free
+    mixed: Free & Paid
+    paid: Paid / Commissions
+    visit: Visit
+    knowRepository: Know another great model repository?
+    knowRepositoryHint: Help the AIRI community grow by recommending more free repositories, tools, or archives.
+    submitOnGithub: Submit on GitHub
+    formats:
+      all: All Formats
+      vrm: VRM (3D)
+      live2d: Live2D (2D)
+      spine: Spine (2D)
+      mmd: MMD
+
+onboarding:
+  deferredNotice: "First-run completion isn't wired in this Qt build yet — these screens are presentational. Buttons that finish or skip the wizard unlock once the onboarding store lands."
+  deferredTip: 'Not wired yet — the first-run onboarding store will enable this action.'
+  back: 'Back'
+  v2:
+    title: 'AIRI Companion Setup'
+    previewBadge: 'First-run wizard'
+    next: 'Next'
+    finish: 'Finish'
+    skip: 'Setup Later'
+    steps:
+      welcome:
+        label: 'Welcome'
+        subtitle: "Meet your digital companion and pick how you'd like to set things up."
+      triage:
+        label: 'Your Path'
+        subtitle: 'New machine or returning device — choose how to continue.'
+      hearing:
+        label: 'Hearing'
+        subtitle: 'Give your companion ears with speech-to-text and a mic check.'
+      consciousness:
+        label: 'Consciousness'
+        subtitle: 'Choose the reasoning engine behind your companion.'
+      profile:
+        label: 'You'
+        subtitle: 'Tell your companion who you are and how you like to work.'
+      persona:
+        label: 'Persona'
+        subtitle: 'Shape the soul: name, character and personality traits.'
+      vessel:
+        label: 'Vessel'
+        subtitle: 'Pick the body: Live2D, VRM or a minimal presence.'
+      speech:
+        label: 'Voice'
+        subtitle: 'Voice selection and a speaking-rate sanity check.'
+      calibration:
+        label: 'Launch'
+        subtitle: 'A quick calibration, then straight onto the stage.'
+  v3:
+    brand: 'AIRI Companion Setup'
+    stageReady: 'Stage Ready'
+    heroTitle: 'Welcome to AIRI'
+    heroSubtitle: "Your companion's stage — set up in minutes, 100% on your machine."
+    companionQuote: "Hello! I'm your autonomous digital companion. Whether you want voice conversation, creative stage performances, or a quiet desktop presence, I'm ready to adapt to your world."
+    pillWebgpu: 'Local WebGPU Core'
+    pillOffline: '100% Offline & Private'
+    pillSouls: 'Mix & Match Souls + Bodies'
+    quickStart: 'Quick Start (60s)'
+    guidedSetup: 'Guided Setup'
+    setupLater: 'Set up later'
+
+notice:
+  previewBadge: 'Preview'
+  deferredTip: "Needs the notice-window action bridge (windowAction / pageMounted / pageUnmounted), which doesn't exist in the Qt build yet."
+  index:
+    title: 'Notice'
+    subtitle: "AIRI's main process shows transient notice windows for one-off prompts. This page lists the notices the desktop app ships with."
+    surfaces: 'Notice surfaces'
+    geminiTitle: 'Gemini onboarding'
+    geminiSubtitle: 'Opens when no Google Generative AI key is configured, offering to add one before the first session.'
+    fadeOnHoverTitle: 'Fade on Hover tutorial'
+    fadeOnHoverSubtitle: 'Explains the auto-hide behavior that fades the character when the cursor roams nearby.'
+    routeGemini: '/notice/gemini'
+    routeFadeOnHover: '/notice/fade-on-hover'
+    deferredNotice: 'The Qt build has no notice-window host yet. These surfaces will open as frameless notice windows driven by the pending-notice request store once it lands.'
+    footnote: 'In the Electron build these live at /notice/gemini and /notice/fade-on-hover.'
+  gemini:
+    header: 'Intelligence Node Online'
+    title: 'Gemini Quantum Leap'
+    intro: 'Welcome to the next generation of AI interaction. Your character is now powered by Google Gemini, enabling deep multimodal understanding.'
+    graphicCaption: 'Gemini cosmic visualization'
+    poweredBy: 'Powered by Gemini'
+    visionTitle: 'True Vision'
+    visionDescription: 'I can finally see your screen and world. Use the Camera icon to trigger a capture or show me things through your lens.'
+    memoryTitle: 'Contextual Memory'
+    memoryDescription: 'I remember our current session with extreme precision, allowing us to build deeper conversations over time.'
+    addKey: 'Add Gemini Key'
+    dontShowAgain: "Don't show again"
+  fadeOnHover:
+    badge: 'Tutorial'
+    title: 'Fade on Hover'
+    intro: 'Automatically fades the character when your cursor roams nearby. It helps reduce distractions while keeping your character visible.'
+    opacityLine: 'After turning on, the opacity drops to 0 for both the character and UI when your cursor is nearby.'
+    toggleLine: 'You can toggle it off by hovering at the Controls Island, then clicking the eye-slash icon again.'
+    confirm: 'Got it'
+    dontShowAgain: "Don't show again"
+    previewTitle: 'Tutorial preview'
+    previewNote: "The fade-on-hover walkthrough video ships with the stage-tamagotchi renderer assets. Bundling it needs an asset-registration pass that hasn't landed in the Qt build yet."
+
+widgets:
+  title: 'Widgets'
+  previewBadge: 'Preview'
+  catalogTitle: 'Known widget components'
+  samplePropsCaption: 'Sample componentProps'
+  missingId: 'Missing widget id. Launch this window via a component call (widgets.render) to populate the view.'
+  refresh: 'Refresh'
+  closeWidget: 'Close widget'
+  deferredNotice: 'The Qt build has no widgets bridge yet (widgets.fetch / render / update / remove / clear events) and no QML renderer registry. Everything below is static preview data.'
+  deferredTip: 'Needs the widgets bridge (fetch + render/update/remove/clear events) in the Qt build.'
+  kinds:
+    weather:
+      name: 'Weather'
+      description: "Current conditions and forecast, resolved for the companion's location."
+    map:
+      name: 'Map'
+      description: 'Interactive map snapshot for a location the companion asked about.'
+    artistry:
+      name: 'Artistry'
+      description: 'Generated artwork from the artistry pipeline (ComfyUI / image generation).'
+    comfy:
+      name: 'Comfy'
+      description: 'Alias of artistry — the ComfyUI-backed generation view.'
+    sticker:
+      name: 'Sticker'
+      description: 'Sticker or reaction image the companion picks for the conversation.'
+    generic:
+      name: 'Generic'
+      description: 'Fallback JSON dump for unregistered component names.'
+
+data:
+  title: 'Data'
+  description: 'Everything AIRI stores locally on this device — export it, import it, or scrub heavy history.'
+  status:
+    notWired: 'Export is not wired to a Rust backend yet — see phase note'
+    actionNotWired: 'This action is not wired to a Rust backend yet — see phase note'
+    imported: 'Import complete.'
+    placeholderCopied: 'Placeholder manifest copied to the clipboard — it contains no user data.'
+    scrubDone: 'Scrub complete.'
+    importDone: 'Import complete — chats and memories restored (existing rows win); cards and credentials were not applied.'
+    exportDone: 'Export complete.'
+  vault:
+    title: 'Data Vault: Archive & Universal Import'
+    description: 'Selective, human-readable ZIP archives across all memory pillars, or restore data with automatic companion linking.'
+    import: 'Universal Import'
+    export: 'Export Archive'
+  sync:
+    title: 'Cloud Sync: Zero-Custody Continuous Backup'
+    description: 'Continuous replication to your personal S3-compatible bucket or local network share.'
+    badge: 'Not wired yet'
+    enable: 'Enable Auto-Sync'
+    active: 'Auto-Sync Active'
+    syncNow: 'Sync Now'
+    openSettings: 'Open Cloud Sync Settings'
+    zeroCustodyTitle: 'Zero-Custody Automatic Replication:'
+    zeroCustodyBody: 'Cloud Sync continuously mirrors your conversations, companions, daily memory summaries, and settings to storage you control (AWS S3, S3-compatible buckets, or Local Share). We never see or hold custody of your data.'
+    avatarsTitle: 'Live2D, VRM, Spine & MMD Avatars:'
+    avatarsBody: 'Avatar models are large binary assets, so there is no single-file export; Cloud Sync is the only automated backup mechanism for them.'
+    activeTarget: 'Active Target'
+    lastSynced: 'Last Synchronized'
+    notConfigured: 'Not configured'
+    never: 'Never'
+  scrub:
+    title: 'Session Media Optimization & Scrub'
+    description: 'Extract inline base64 image strings and leaked tool payloads from your chat history into persistent local storage, preventing LLM token blowup.'
+    button: 'Clean & Resolve History'
+  scrubHistory:
+    title: 'Scrub History'
+    description: 'Reports from past optimization runs.'
+    emptyTitle: 'No scrubs recorded yet'
+    emptySubtitle: 'Scrub history will appear here once the scrub backend lands and you run your first optimization.'
+  scrubDialog:
+    title: 'Scrub & Resolve Session Media'
+    subtitle: 'Extract heavy inline images into storage to eliminate token blowup.'
+    promptBody: 'This process scans all chat conversations for embedded base64 image data URLs and raw tool image payloads. Each detected image is safely relocated to your local background gallery and replaced in your history with a lightweight asset pointer.'
+    currentChatSize: 'Current Total Chat Size'
+    sizeUnknown: 'Unknown — backend not wired'
+    safetyTitle: 'Safety Confirmation:'
+    safetyBody: 'Just to be safe, do you want to create a full backup archive of your companions and conversations before proceeding?'
+    cancel: 'Cancel'
+    scrubWithoutBackup: 'Scrub Without Backup'
+    backupAndScrub: 'Create Backup & Scrub'
+    waveNote: 'Selected files are inspected on Import. Chats and memories are restored (existing rows win); cards and provider credentials are not applied.'
+  unlinked:
+    title: 'Unlinked Conversations & Memories'
+    description: 'Recover chat histories and memories left behind by deleted or renamed companions.'
+    badge: 'Not wired yet'
+    emptyTitle: 'Unlinked-data detection not wired yet'
+    emptySubtitle: 'Detecting orphaned sessions requires the data bridge (wave ④). Once it lands, groups you can recreate or merge will be listed here.'
+  legacy:
+    title: 'Individual Domain Tools (Legacy Single-File JSON)'
+    show: 'Show'
+    hide: 'Hide'
+    chatsTitle: 'Chat Sessions'
+    chatsDescription: 'Export or purge all chat sessions as a single JSON file.'
+    charactersTitle: 'Companions & Cards'
+    charactersDescription: 'Export or import all character cards as a single JSON file.'
+    memoryTitle: 'Memories & Journals'
+    memoryDescription: 'Export or import memories, daily recaps and journal entries.'
+    backgroundsTitle: 'Backgrounds'
+    backgroundsDescription: 'Export or import custom scene backgrounds.'
+    export: 'Export'
+    import: 'Import'
+    deleteChats: 'Delete All Chat Sessions'
+  models:
+    title: 'Downloaded Models'
+    description: 'Remove all downloaded VRM/MMD/Spine/Live2D model files from this device.'
+    delete: 'Delete All Models'
+  modules:
+    title: 'Module Settings'
+    description: 'Reset all module configuration to defaults.'
+    reset: 'Reset Module Settings'
+  danger:
+    title: 'Danger Zone'
+    description: 'These actions are irreversible.'
+    providersTitle: 'Providers & Credentials'
+    providersDescription: 'Reset provider configuration and stored credentials.'
+    providersReset: 'Reset Providers'
+    allTitle: 'All User Data'
+    allDescription: 'Delete everything — sessions, memories, cards, settings. Cannot be undone.'
+    allDelete: 'Delete All Data'
+  desktop:
+    title: 'Desktop Application State'
+    description: 'Reset window placement, tray and other desktop-shell state (desktop build only).'
+    reset: 'Reset Desktop State'
+  confirm:
+    title: 'Are you sure?'
+    notWiredBody: 'This action is not wired to a Rust backend yet — confirming will only show a notice, nothing will be deleted or reset.'
+    confirm: 'Confirm'
+    cancel: 'Cancel'
+  exportDialog:
+    title: 'Export Data Archive'
+    subtitle: 'Select data domains to package into a standard ZIP archive.'
+    characters: 'Companions & Cards'
+    charactersHint: 'Prompts, wardrobe, avatars'
+    chats: 'Chat Histories & Timelines'
+    chatsHint: 'Sessions and messages across all companions'
+    memory: 'Memories & Journals'
+    memoryHint: 'Daily recaps, journal entries, lifetime cores'
+    providers: 'AI Providers & App Settings'
+    providersHint: 'Configured providers & preferences (~2 KB)'
+    backgrounds: 'Custom Scene Backgrounds'
+    backgroundsHint: 'Saved image wallpapers'
+    linkageWarning: 'Companions & Cards is unselected. We recommend including it so chats and memories stay linked when restored.'
+    estimatedSize: 'Estimated archive size:'
+    sizeUnknown: 'Unknown — backend not wired'
+    cancel: 'Cancel'
+    confirm: 'Export Archive'
+    copyPlaceholder: 'Copy Placeholder Manifest'
+  importDialog:
+    title: 'Universal Data Import'
+    subtitle: 'Restore from a ZIP archive, legacy backup JSON, or character card.'
+    dropTitle: 'Click or drag files here to import'
+    dropSubtitle: 'Supports .zip archives, chat/memory JSONs, and PNG cards (multi-file drop supported)'
+    browse: 'Browse Files…'
+    selectedTitle: 'Selected files:'
+    waveNote: 'File inspection, companion linking and the import itself arrive with the wave ④ vault bridge. Nothing is written yet.'
+    filterVault: 'Vault archives and backups (*.zip *.json *.png)'
+    filterAll: 'All files (*)'
+    cancel: 'Cancel'
+    confirm: 'Import All Data'

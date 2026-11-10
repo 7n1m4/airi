@@ -1,0 +1,108 @@
+{
+  "skeleton": {
+    "hash": "airi-p4-synthetic",
+    "spine": "4.2.18",
+    "x": -16,
+    "y": -16,
+    "width": 32,
+    "height": 32,
+    "fps": 30,
+    "images": "./",
+    "audio": ""
+  },
+  "bones": [
+    {
+      "name": "root"
+    }
+  ],
+  "slots": [
+    {
+      "name": "body",
+      "bone": "root",
+      "attachment": "body"
+    }
+  ],
+  "skins": [
+    {
+      "name": "default",
+      "attachments": {
+        "body": {
+          "body": {
+            "width": 32,
+            "height": 32
+          }
+        }
+      }
+    }
+  ],
+  "animations": {
+    "idle": {
+      "bones": {
+        "root": {
+          "rotate": [
+            {
+              "time": 0,
+              "value": 0
+            },
+            {
+              "time": 1,
+              "value": 8
+            },
+            {
+              "time": 2,
+              "value": 0
+            },
+            {
+              "time": 3,
+              "value": -8
+            },
+            {
+              "time": 4,
+              "value": 0
+            }
+          ],
+          "translate": [
+            {
+              "time": 0,
+              "x": 0,
+              "y": 0
+            },
+            {
+              "time": 2,
+              "x": 0,
+              "y": 3
+            },
+            {
+              "time": 4,
+              "x": 0,
+              "y": 0
+            }
+          ]
+        }
+      }
+    },
+    "hit_body": {
+      "bones": {
+        "root": {
+          "scale": [
+            {
+              "time": 0,
+              "x": 1,
+              "y": 1
+            },
+            {
+              "time": 0.15,
+              "x": 0.75,
+              "y": 1.25
+            },
+            {
+              "time": 0.45,
+              "x": 1,
+              "y": 1
+            }
+          ]
+        }
+      }
+    }
+  }
+}

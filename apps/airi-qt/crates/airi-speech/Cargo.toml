@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "airi-speech"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "AIRI text-to-speech providers and playback pipeline (P5 lane)"
+
+[dependencies]
+async-trait = { workspace = true }
+base64 = "0.22"
+bytes = { workspace = true }
+dirs = { workspace = true }
+futures-util = { workspace = true }
+hmac = { workspace = true }
+reqwest = { workspace = true }
+rodio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+ort = { workspace = true }
+# ONNX Runtime for Kokoro-82M local inference (P9 lane 3). Same pinned version as airi-stt.
+
+[dev-dependencies]
+mockito = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = [
+  "macros",
+  "rt-multi-thread"
+] }

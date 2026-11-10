@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "airi-llm"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+futures-util = { workspace = true }
+reqwest = { workspace = true }
+async-stream = { workspace = true }
+bytes = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+mockito = { workspace = true }
+tokio = { workspace = true, features = [
+  "macros",
+  "rt-multi-thread"
+] }

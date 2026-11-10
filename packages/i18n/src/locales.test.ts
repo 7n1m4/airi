@@ -118,4 +118,35 @@ describe('@proj-airi/i18n locale integrity', () => {
       expect(missing, `Locale ${locale} is missing keys in onboarding.yaml: ${missing.slice(0, 5).join(', ')}`).toEqual([])
     }
   })
+
+  it('maintains 100% key parity for shell.yaml across all supported languages', () => {
+    const enPath = path.join(LOCALES_DIR, 'en', 'shell.yaml')
+    if (!fs.existsSync(enPath)) {
+      // Pending Qt shell YAML creation
+      return
+    }
+
+    const enData = yaml.parse(fs.readFileSync(enPath, 'utf8')) || {}
+    const enKeys = extractLeafKeys(enData)
+    expect(enKeys.length).toBeGreaterThan(50)
+
+    for (const locale of SUPPORTED_LOCALES) {
+      if (locale === 'en')
+        continue
+      const targetPath = path.join(LOCALES_DIR, locale, 'shell.yaml')
+      expect(fs.existsSync(targetPath), `Missing shell.yaml for locale: ${locale}`).toBe(true)
+
+      const targetIndexPath = path.join(LOCALES_DIR, locale, 'index.ts')
+      if (fs.existsSync(targetIndexPath)) {
+        const indexContent = fs.readFileSync(targetIndexPath, 'utf8')
+        expect(indexContent, `Locale ${locale}/index.ts must register shell module`).toContain('shell')
+      }
+
+      const targetData = yaml.parse(fs.readFileSync(targetPath, 'utf8')) || {}
+      const targetKeys = new Set(extractLeafKeys(targetData))
+
+      const missing = enKeys.filter(k => !targetKeys.has(k))
+      expect(missing, `Locale ${locale} is missing keys in shell.yaml: ${missing.slice(0, 5).join(', ')}`).toEqual([])
+    }
+  })
 })

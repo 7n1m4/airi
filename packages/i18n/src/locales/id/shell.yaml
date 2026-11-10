@@ -1,0 +1,570 @@
+# String untuk shell desktop Qt (QML): splash, strip kontrol, jendela, dan
+# halaman placeholder.
+app:
+  name: AIRI
+  tagline: Teman AI kamu, di desktopmu.
+  version-label: Versi
+splash:
+  milestones:
+    core_services: Menginisialisasi layanan inti…
+    sync_engine: Memulihkan state lokal dan penyimpanan…
+    providers: Menghubungkan penyedia model…
+    stage_ready: Menyiapkan panggung…
+strip:
+  tooltips:
+    avatar: AIRI
+    mic: alihkan Mikrofon
+    chat: Obrolan
+    stage: Panggung
+    settings: Pengaturan
+    about: Tentang AIRI
+    collapse: Ciutkan
+    expand: Bentangkan
+    theme: Alihkan mode gelap / terang
+    language: Ubah bahasa
+    quit: Keluar dari AIRI
+    caption: Takarir
+chat:
+  title: AIRI — Obrolan
+  recent: Terbaru
+  new: Chat baru
+  search-placeholder: Cari chat…
+  delete-session: Hapus chat
+  empty-title: Mulai percakapan
+  empty-subtitle: Pesan Anda disimpan secara lokal di perangkat ini.
+  input-placeholder: Pesan untuk AIRI…
+  send: Kirim
+  stop: Berhenti
+  streaming: Mengalir…
+  provider-unconfigured: Belum ada penyedia model yang dikonfigurasi
+  status:
+    error: Kesalahan
+  card-picker:
+    none: Tanpa kartu
+    empty-title: Belum ada kartu karakter
+    empty-subtitle: Impor kartu karakter CCv2/CCv3 (png atau json) untuk mengobrol dengan sebuah persona.
+    import: Impor kartu…
+    import-error: 'Kartu tidak dapat diimpor — bukan kartu CCv2/CCv3 yang valid (png atau json).'
+settings:
+  title: AIRI — Pengaturan
+  description: Konfigurasikan asisten AI kamu.
+  nav:
+    providers: Penyedia
+    theme: Tema
+    about: Tentang
+    soon: Wave B
+    stage: Panggung
+    spine: Spine
+    mmd: MMD
+    live2d: Live2D
+    general: Umum
+    chat: Obrolan
+    voice: Suara
+    profile: Profil
+    cards: Kartu
+    explore: Jelajahi
+    data: Data
+    onboarding: Onboarding
+    notice: Pemberitahuan
+    widgets: Widget
+    onboardingV3: Onboarding V3
+    gemini: Gemini
+    fadeOnHover: Fade on Hover
+  theme-page:
+    title: Tema
+    description: Personalisasi warna dan tampilan AIRI.
+    hue: Hue aksen
+    chroma: Pengali kroma
+    dark: Mode gelap
+    reset: Atur ulang ke bawaan
+  spine:
+    title: Spine
+    description: Perilaku mesin Spine untuk pendamping di panggung.
+    maxFps: FPS maksimum
+    maxFpsHint: 0 = tanpa batas
+    renderScale: Skala render
+    mixDuration: Durasi campuran
+    animationSpeed: Kecepatan animasi
+    idleAnimation: Animasi diam
+    scalePosTitle: Penempatan model
+    scalePosX: Posisi X
+    scalePosY: Posisi Y
+    scalePosScale: Skala
+    saveError: Gagal menyimpan pengaturan Spine.
+  mmd:
+    title: MMD
+    description: Perilaku mesin MMD untuk pendamping di panggung.
+    idleAnimation: Animasi diam
+    renderScale: Skala render
+    physicsNote: Skala render untuk render MMD; fisika dinonaktifkan hingga P10.
+    saveError: Gagal menyimpan pengaturan MMD.
+  live2d:
+    title: Live2D
+    description: Perilaku Live2D untuk pendamping di panggung.
+    deferredNotice: Renderer Live2D ditunda hingga Spine selesai. Perubahan disimpan tetapi belum memengaruhi rendering.
+    disableFocus: Nonaktifkan fokus
+    idleAnimation: Animasi diam
+    autoBlink: Kedip otomatis
+    forceAutoBlink: Paksa kedip otomatis
+    shadow: Bayangan jatuh
+    followSpeed: Kecepatan mengikuti
+    maxFps: FPS maksimum
+    maxFpsHint: 0 = tanpa batas
+    saveError: Gagal menyimpan pengaturan Live2D.
+providers:
+  search: Cari penyedia…
+  search-empty: Tidak ada penyedia yang cocok dengan filter Anda.
+  enabled: Aktif
+  not-available: Belum tersedia
+  not-available-hint: Mesin penyedia ini hadir pada fase berikutnya. Konfigurasinya tersimpan tetapi belum bisa digunakan untuk obrolan.
+  configured: Tersimpan
+  test: Uji koneksi
+  test-success: Koneksi berhasil — penyedia merespons.
+  test-failed: Koneksi gagal
+  test-unsupported: Uji koneksi belum tersedia untuk penyedia ini.
+  save: Simpan
+  saved: Tersimpan.
+  save-failed: Gagal menyimpan konfigurasi.
+  delete: Hapus
+  models-refresh: Ambil model
+  models-empty: Belum ada model — simpan kredensial Anda lalu ambil, atau ketik nama model.
+  kind:
+    open-ai-compatible: Kompatibel dengan OpenAI
+    anthropic: Anthropic
+    google-gemini: Gemini
+    aws-bedrock: Bedrock
+    local-server: Server lokal
+  field:
+    api_key: Kunci API
+    base_url: URL Dasar
+    model: Model
+    region: Region AWS
+    aws_access_key_id: ID Kunci Akses AWS
+    aws_secret_access_key: Kunci Akses Rahasia AWS
+    account_id: ID Akun Cloudflare
+about:
+  title: AIRI — Tentang
+  app-name: AIRI
+  tagline: Teman AI kamu, di desktopmu.
+  body: AIRI adalah teman AI desktop — makhluk digital yang bisa bicara, melihat, dan bereaksi. Dibangun dengan Rust, Qt 6
+    dan QML.
+  license: Berlisensi GPL-3.0-or-later. Qt Quick 3D digunakan di bawah ketentuan GPL-nya.
+  source-label: Kode sumber
+  source-url: https://github.com/moeru-ai/airi
+  credit: Dibuat oleh Neko Ayaka dan para kontributor AIRI.
+  check-update: Periksa pembaruan
+  update-up-to-date: AIRI sudah yang terbaru.
+  update-available: 'Pembaruan tersedia:'
+stage:
+  description: Tampilkan dan posisikan jendela panggung melayang dengan pendamping AI Anda.
+  openStageWindow: Tampilkan jendela panggung
+  windowTitle: Jendela panggung
+  empty-title: Belum ada model di panggung
+  empty-subtitle: Pilih model VRM di Pengaturan → Panggung dan model akan tampil di sini.
+  openSettings: Buka pengaturan panggung
+  resetPosition: Atur ulang posisi
+  boundsResetNotice: Posisi dihapus — panggung akan berpusat kembali saat dibuka berikutnya.
+  modelSection:
+    title: Model
+    hint: File VRM yang digunakan untuk pendamping panggung. Pilih model di bawah, impor .vrm, atau telusuri jalur absolut.
+  modelListEmpty: Tidak ada model .vrm ditemukan — impor di bawah atau telusuri
+  modelNone: Tidak ada model dipilih
+  browseModel: Telusuri…
+  importModel: Impor
+  captions:
+    title: Takarir
+    enabled: Tampilkan takarir
+    fontSize: Ukuran huruf
+    opacity: Opasitas
+    docking: Penempatan
+    top: Atas
+    bottom: Bawah
+    head: Kepala
+    none: Tidak ada
+    preview: Pratinjau
+    previewSample: Begini tampilan takarir saat AIRI berbicara.
+  stripSection:
+    title: Bilah kontrol
+    hint: Pilih kontrol panggung mana yang tampil di bilah kontrol.
+    stage: Tombol panggung
+    caption: Tombol takarir
+  saveError: Gagal menyimpan. Periksa jalur dan coba lagi.
+general:
+  description: Perilaku umum aplikasi dan privasi.
+  languageSection: Bahasa antarmuka
+  languagePlaceholder: mis. id, en (kosong = sistem)
+  languageHint: Kosongkan untuk mengikuti bahasa sistem.
+  transitionsSection: Transisi halaman
+  disableTransitions: Nonaktifkan semua transisi halaman
+  usePageSpecificTransitions: Gunakan transisi khusus halaman
+  privacySection: Privasi & jaringan
+  remoteSyncEnabled: Izinkan diagnostik sensitif privasi disinkronkan jarak jauh
+  websocketSecureEnabled: Gunakan wss:// untuk server websocket bawaan
+  startupSection: Startup
+  autostartEnabled: Aktifkan mulai otomatis saat login
+  saveError: Gagal menyimpan. Coba lagi.
+chat-settings:
+  description: Cara pesan dikirim dan dialirkan.
+  inputSection: Input
+  sendMode: Kirim pesan dengan
+  suggestMode: Terima saran dengan
+  modeEnter: Enter
+  modeCtrlEnter: Ctrl+Enter
+  modeDoubleEnter: Enter ganda
+  modeDisabled: Dinonaktifkan
+  streamIdleTimeout: Batas waktu aliran menganggur (ms)
+  streamIdleTimeoutHint: Batalkan respons streaming setelah diam selama ini. 600000 = 10 menit.
+  messagesSection: Pesan
+  showDirectorNotes: Tampilkan catatan sutradara di tampilan obrolan
+  combineSystemMessages: Gabungkan pesan sistem berturut-turut sebelum mengirim
+  saveError: Gagal menyimpan. Coba lagi.
+audio:
+  description: Input mikrofon dan output speaker untuk suara.
+  inputSection: Input suara
+  inputEnabled: Aktifkan input suara
+  inputDevice: Id perangkat input
+  inputDevicePlaceholder: tempel id perangkat (mis. dari `pactl list sources short`)
+  outputDevice: Id perangkat output
+  outputDevicePlaceholder: tempel id perangkat (mis. dari `pactl list sinks short`)
+  deviceHint: Enumerasi perangkat belum tersedia di build ini — tempel id perangkat secara manual. Kosongkan untuk default sistem.
+  save: Simpan
+  saveError: Gagal menyimpan. Coba lagi.
+profile:
+  description: Siapa kamu bagi AIRI.
+  identitySection: Identitas
+  name: Nama tampilan
+  namePlaceholder: Nama kamu
+  descriptionLabel: Tentang kamu
+  descriptionPlaceholder: Deskripsi singkat tentang dirimu…
+  voiceProfileId: Id profil suara
+  voiceProfileIdPlaceholder: mis. profil suara dari penyedia TTS kamu
+  promptSection: Prompt sistem
+  promptHint: Penggantian opsional untuk prompt sistem yang dikirim ke model. Kosongkan untuk default.
+  promptPlaceholder: Kamu adalah…
+  save: Simpan
+  saveError: Gagal menyimpan. Coba lagi.
+notify:
+  replyReady: AIRI telah membalas
+common:
+  close: Tutup
+
+cards:
+  title: Kartu
+  searchPlaceholder: Cari kartu…
+  import: Impor…
+  importDialogTitle: Impor kartu karakter
+  new: Kartu baru
+  refresh: Muat ulang
+  emptyTitle: Belum ada kartu karakter
+  emptyBody: Impor kartu CCv2/CCv3 (.png atau .json) untuk mengobrol dengan persona.
+  noGreeting: Tanpa sapaan
+  jsonCard: Kartu JSON (tanpa avatar)
+  active: Digunakan
+  use: Gunakan di obrolan
+  edit: Ubah
+  delete: Hapus
+  cancel: Batal
+  deleteTitle: Hapus kartu?
+  deleteBody: Ini menghapus file kartu secara permanen dari perangkatmu.
+  save: Simpan
+  editor:
+    title: Ubah kartu
+    newTitle: Kartu baru
+    saving: Menyimpan…
+    nameRequired: Nama wajib diisi.
+    saveError: Kartu tidak dapat disimpan.
+    loadError: Kartu itu tidak dapat dimuat.
+  fields:
+    name: Nama…
+    description: Deskripsi…
+    personality: Kepribadian…
+    scenario: Skenario…
+    firstMes: Pesan pertama…
+    alternateGreetings: Sapaan alternatif — satu per baris…
+    mesExample: Contoh dialog (blokir <START>)…
+    systemPrompt: Prompt sistem…
+    postHistoryInstructions: Instruksi pasca-riwayat…
+    creator: Pembuat…
+    creatorNotes: Catatan pembuat…
+    characterVersion: Versi…
+    tags: Tag, pisahkan dengan koma…
+  sections:
+    dialogue: Dialog
+    behavior: Perilaku
+    metadata: Metadata
+models:
+  explore:
+    title: Jelajahi Avatar
+    description: Jelajahi arsip komunitas, repositori eksternal, dan pustaka model gratis untuk VRM, Live2D, Spine, dan MMD.
+    suggestSite: Saran situs
+    filterLabel: Format
+    featuredFree: Avatar Gratis Pilihan
+    downloadModel: Unduh
+    freeArchives: Arsip Komunitas Gratis
+    creatorMarketplaces: Marketplace Kreator
+    emptyFree: Tidak ada arsip komunitas gratis untuk filter format ini.
+    emptyPaid: Tidak ada marketplace untuk filter format ini.
+    free: 100% Gratis
+    mixed: Gratis & Berbayar
+    paid: Berbayar / Komisi
+    visit: Kunjungi
+    knowRepository: Tahu repositori model hebat lainnya?
+    knowRepositoryHint: Bantu komunitas AIRI tumbuh dengan merekomendasikan lebih banyak repositori, alat, atau arsip gratis.
+    submitOnGithub: Kirim di GitHub
+    formats:
+      all: Semua Format
+      vrm: VRM (3D)
+      live2d: Live2D (2D)
+      spine: Spine (2D)
+      mmd: MMD
+
+onboarding:
+  deferredNotice: 'Penyelesaian first-run belum terhubung di build Qt ini — layar-layar ini hanya presentasi. Tombol yang menyelesaikan atau melewati wizard akan terbuka setelah store onboarding tersedia.'
+  deferredTip: 'Belum terhubung — store onboarding first-run akan mengaktifkan aksi ini.'
+  back: 'Kembali'
+  v2:
+    title: 'Pengaturan Companion AIRI'
+    previewBadge: 'Wizard first-run'
+    next: 'Lanjut'
+    finish: 'Selesai'
+    skip: 'Atur nanti'
+    steps:
+      welcome:
+        label: 'Selamat datang'
+        subtitle: 'Kenali companion digitalmu dan pilih cara terbaik untuk mengaturnya.'
+      triage:
+        label: 'Jalurmu'
+        subtitle: 'Mesin baru atau perangkat lama — pilih cara melanjutkan.'
+      hearing:
+        label: 'Pendengaran'
+        subtitle: 'Berikan companionmu telinga dengan speech-to-text dan pemeriksaan mikrofon.'
+      consciousness:
+        label: 'Kesadaran'
+        subtitle: 'Pilih mesin penalaran di balik companionmu.'
+      profile:
+        label: 'Kamu'
+        subtitle: 'Ceritakan pada companionmu siapa dirimu dan cara kerjamu.'
+      persona:
+        label: 'Persona'
+        subtitle: 'Bentuk jiwa: nama, karakter dan sifat.'
+      vessel:
+        label: 'Wadah'
+        subtitle: 'Pilih tubuh: Live2D, VRM atau kehadiran minimal.'
+      speech:
+        label: 'Suara'
+        subtitle: 'Pemilihan suara dan pemeriksaan kecepatan bicara.'
+      calibration:
+        label: 'Mulai'
+        subtitle: 'Kalibrasi singkat, lalu langsung ke panggung.'
+  v3:
+    brand: 'Pengaturan Companion AIRI'
+    stageReady: 'Panggung siap'
+    heroTitle: 'Selamat datang di AIRI'
+    heroSubtitle: 'Panggung companionmu — diatur dalam hitungan menit, 100% di mesinmu.'
+    companionQuote: 'Halo! Aku companion digital otonommu. Mau percakapan suara, penampilan panggung kreatif, atau kehadiran desktop yang tenang, aku siap beradaptasi dengan duniamu.'
+    pillWebgpu: 'Inti WebGPU lokal'
+    pillOffline: '100% offline & privat'
+    pillSouls: 'Campur jiwa + tubuh'
+    quickStart: 'Mulai cepat (60 detik)'
+    guidedSetup: 'Pengaturan terpandu'
+    setupLater: 'Atur nanti'
+
+notice:
+  previewBadge: 'Pratinjau'
+  deferredTip: 'Membutuhkan jembatan aksi jendela pemberitahuan (windowAction / pageMounted / pageUnmounted), yang belum ada di build Qt.'
+  index:
+    title: 'Pemberitahuan'
+    subtitle: 'Proses utama AIRI menampilkan jendela pemberitahuan sementara untuk prompt satu kali. Halaman ini mencantumkan pemberitahuan yang dibawa aplikasi desktop.'
+    surfaces: 'Permukaan pemberitahuan'
+    geminiTitle: 'Onboarding Gemini'
+    geminiSubtitle: 'Terbuka saat tidak ada kunci Google Generative AI yang dikonfigurasi, menawarkan untuk menambahkannya sebelum sesi pertama.'
+    fadeOnHoverTitle: 'Tutorial Fade on Hover'
+    fadeOnHoverSubtitle: 'Menjelaskan perilaku sembunyi otomatis yang memudar karakter saat kursor mendekat.'
+    routeGemini: '/notice/gemini'
+    routeFadeOnHover: '/notice/fade-on-hover'
+    deferredNotice: 'Build Qt belum punya tuan rumah jendela pemberitahuan. Permukaan-permukaan ini akan terbuka sebagai jendela pemberitahuan tanpa bingkai yang digerakkan oleh store permintaan tertunda setelah tersedia.'
+    footnote: 'Di build Electron, keduanya berada di /notice/gemini dan /notice/fade-on-hover.'
+  gemini:
+    header: 'Node kecerdasan daring'
+    title: 'Lompatan kuantum Gemini'
+    intro: 'Selamat datang di generasi interaksi AI berikutnya. Karaktermu kini ditenagai oleh Google Gemini, dengan pemahaman multimodal mendalam.'
+    graphicCaption: 'Visualisasi kosmik Gemini'
+    poweredBy: 'Ditenagai Gemini'
+    visionTitle: 'Visi sejati'
+    visionDescription: 'Aku akhirnya bisa melihat layar dan duniamu. Gunakan ikon Kamera untuk capture atau tunjukkan sesuatu lewat lensamu.'
+    memoryTitle: 'Memori kontekstual'
+    memoryDescription: 'Aku mengingat sesi kita saat ini dengan sangat presisi, memungkinkan kita membangun percakapan yang lebih dalam seiring waktu.'
+    addKey: 'Tambahkan kunci Gemini'
+    dontShowAgain: 'Jangan tampilkan lagi'
+  fadeOnHover:
+    badge: 'Tutorial'
+    title: 'Fade on Hover'
+    intro: 'Secara otomatis memudar karakter saat kursor mendekat. Ini membantu mengurangi gangguan sambil menjaga karaktermu tetap terlihat.'
+    opacityLine: 'Setelah diaktifkan, opasitas turun ke 0 untuk karakter dan UI saat kursor mendekat.'
+    toggleLine: 'Kamu bisa mematikannya dengan mengarahkan kursor ke Controls Island, lalu klik ikon mata-dicoret lagi.'
+    confirm: 'Mengerti'
+    dontShowAgain: 'Jangan tampilkan lagi'
+    previewTitle: 'Pratinjau tutorial'
+    previewNote: 'Video walkthrough fade-on-hover dibawa oleh aset renderer stage-tamagotchi. Mengemasnya butuh pass pendaftaran aset yang belum masuk ke build Qt.'
+
+widgets:
+  title: 'Widgets'
+  previewBadge: 'Pratinjau'
+  catalogTitle: 'Komponen widget yang dikenal'
+  samplePropsCaption: 'Contoh componentProps'
+  missingId: 'ID widget hilang. Luncurkan jendela ini lewat pemanggilan komponen (widgets.render) untuk mengisi tampilan.'
+  refresh: 'Muat ulang'
+  closeWidget: 'Tutup widget'
+  deferredNotice: 'Build Qt belum punya jembatan widget (widgets.fetch / render / update / remove / clear) dan belum punya registry renderer QML. Semua di bawah ini adalah data pratinjau statis.'
+  deferredTip: 'Membutuhkan jembatan widget (fetch + event render/update/remove/clear) di build Qt.'
+  kinds:
+    weather:
+      name: 'Cuaca'
+      description: 'Kondisi saat ini dan prakiraan, diselesaikan untuk lokasi companion.'
+    map:
+      name: 'Peta'
+      description: 'Cuplikan peta interaktif untuk lokasi yang ditanyakan companion.'
+    artistry:
+      name: 'Artistik'
+      description: 'Karya seni yang dihasilkan dari pipeline artistry (ComfyUI / pembuatan gambar).'
+    comfy:
+      name: 'Comfy'
+      description: 'Alias dari artistry — tampilan generasi berbasis ComfyUI.'
+    sticker:
+      name: 'Stiker'
+      description: 'Stiker atau gambar reaksi yang dipilih companion untuk percakapan.'
+    generic:
+      name: 'Generik'
+      description: 'Fallback JSON dump untuk nama komponen yang tidak terdaftar.'
+
+data:
+  title: 'Data'
+  description: 'Semua yang disimpan AIRI secara lokal di perangkat ini — ekspor, impor, atau bersihkan riwayat berat.'
+  status:
+    notWired: 'Ekspor belum terhubung ke backend Rust — lihat catatan fase'
+    actionNotWired: 'Aksi ini belum terhubung ke backend Rust — lihat catatan fase'
+    imported: 'Impor selesai.'
+    placeholderCopied: 'Manifest placeholder disalin ke papan klip — tidak berisi data pengguna.'
+    scrubDone: 'Pembersihan selesai.'
+    importDone: 'Impor selesai — chat dan memori dipulihkan (baris yang ada diutamakan); kartu dan kredensial tidak diterapkan.'
+    exportDone: 'Ekspor selesai.'
+  vault:
+    title: 'Data Vault: Arsip & Impor Universal'
+    description: 'Arsip ZIP selektif dan mudah dibaca untuk semua pilar memori, atau pulihkan data dengan penautan companion otomatis.'
+    import: 'Impor Universal'
+    export: 'Ekspor Arsip'
+  sync:
+    title: 'Cloud Sync: Cadangan Berkelanjutan Tanpa Penjaga'
+    description: 'Replikasi berkelanjutan ke bucket S3-compatible pribadimu atau berbagi jaringan lokal.'
+    badge: 'Belum terhubung'
+    enable: 'Aktifkan Auto-Sync'
+    active: 'Auto-Sync Aktif'
+    syncNow: 'Sinkron Sekarang'
+    openSettings: 'Buka Pengaturan Cloud Sync'
+    zeroCustodyTitle: 'Replikasi Otomatis Tanpa Penjaga:'
+    zeroCustodyBody: 'Cloud Sync terus menerus mencerminkan percakapan, companion, ringkasan memori harian, dan pengaturanmu ke penyimpanan yang kamu kontrol (AWS S3, bucket S3-compatible, atau Local Share). Kami tidak pernah melihat atau menyimpan datamu.'
+    avatarsTitle: 'Avatar Live2D, VRM, Spine & MMD:'
+    avatarsBody: 'Model avatar adalah aset biner besar, jadi tidak ada ekspor satu file; Cloud Sync adalah satu-satunya mekanisme cadangan otomatis untuk mereka.'
+    activeTarget: 'Target Aktif'
+    lastSynced: 'Terakhir Disinkronkan'
+    notConfigured: 'Belum dikonfigurasi'
+    never: 'Tidak pernah'
+  scrub:
+    title: 'Optimasi & Pembersihan Media Sesi'
+    description: 'Ekstrak string gambar base64 inline dan payload tool yang bocor dari riwayat chat ke penyimpanan lokal persisten, mencegah pembengkakan token LLM.'
+    button: 'Bersihkan & Selesaikan Riwayat'
+  scrubHistory:
+    title: 'Riwayat Pembersihan'
+    description: 'Laporan dari eksekusi optimasi sebelumnya.'
+    emptyTitle: 'Belum ada pembersihan tercatat'
+    emptySubtitle: 'Riwayat pembersihan akan muncul di sini setelah backend pembersihan tersedia dan kamu menjalankan optimasi pertamamu.'
+  scrubDialog:
+    title: 'Bersihkan & Selesaikan Media Sesi'
+    subtitle: 'Ekstrak gambar inline berat ke penyimpanan untuk menghilangkan pembengkakan token.'
+    promptBody: 'Proses ini memindai semua percakapan chat untuk URL data gambar base64 dan payload gambar tool mentah. Setiap gambar yang terdeteksi dipindahkan dengan aman ke galeri latar lokalmu dan diganti di riwayatmu dengan penunjuk aset ringan.'
+    currentChatSize: 'Ukuran Total Chat Saat Ini'
+    sizeUnknown: 'Tidak diketahui — backend belum terhubung'
+    safetyTitle: 'Konfirmasi Keamanan:'
+    safetyBody: 'Untuk jaga-jaga, apakah kamu ingin membuat arsip cadangan lengkap dari companion dan percakapanmu sebelum melanjutkan?'
+    cancel: 'Batal'
+    scrubWithoutBackup: 'Bersihkan Tanpa Cadangan'
+    backupAndScrub: 'Buat Cadangan & Bersihkan'
+    waveNote: 'File yang dipilih diperiksa saat impor. Chat dan memori dipulihkan (baris yang ada diutamakan); kartu dan kredensial provider tidak diterapkan.'
+  unlinked:
+    title: 'Percakapan & Memori Tidak Tertaut'
+    description: 'Pulihkan riwayat chat dan memori yang tertinggal oleh companion yang dihapus atau diganti nama.'
+    badge: 'Belum terhubung'
+    emptyTitle: 'Deteksi data yatim belum terhubung'
+    emptySubtitle: 'Mendeteksi sesi yatim membutuhkan jembatan data (wave ④). Setelah tersedia, grup yang bisa kamu buat ulang atau gabungkan akan tercantum di sini.'
+  legacy:
+    title: 'Alat per Domain (JSON Tunggal Warisan)'
+    show: 'Tampilkan'
+    hide: 'Sembunyikan'
+    chatsTitle: 'Sesi Chat'
+    chatsDescription: 'Ekspor atau purge semua sesi chat sebagai satu file JSON.'
+    charactersTitle: 'Companion & Kartu'
+    charactersDescription: 'Ekspor atau impor semua kartu karakter sebagai satu file JSON.'
+    memoryTitle: 'Memori & Jurnal'
+    memoryDescription: 'Ekspor atau impor memori, ringkasan harian, dan entri jurnal.'
+    backgroundsTitle: 'Latar Belakang'
+    backgroundsDescription: 'Ekspor atau impor latar belakang scene kustom.'
+    export: 'Ekspor'
+    import: 'Impor'
+    deleteChats: 'Hapus Semua Sesi Chat'
+  models:
+    title: 'Model yang Diunduh'
+    description: 'Hapus semua file model VRM/MMD/Spine/Live2D yang diunduh dari perangkat ini.'
+    delete: 'Hapus Semua Model'
+  modules:
+    title: 'Pengaturan Modul'
+    description: 'Kembalikan semua konfigurasi modul ke bawaan.'
+    reset: 'Atur Ulang Pengaturan Modul'
+  danger:
+    title: 'Zona Bahaya'
+    description: 'Aksi-aksi ini tidak dapat dibatalkan.'
+    providersTitle: 'Provider & Kredensial'
+    providersDescription: 'Atur ulang konfigurasi provider dan kredensial yang tersimpan.'
+    providersReset: 'Atur Ulang Provider'
+    allTitle: 'Semua Data Pengguna'
+    allDescription: 'Hapus semuanya — sesi, memori, kartu, pengaturan. Tidak bisa dibatalkan.'
+    allDelete: 'Hapus Semua Data'
+  desktop:
+    title: 'Status Aplikasi Desktop'
+    description: 'Atur ulang penempatan jendela, tray, dan status shell desktop lainnya (hanya build desktop).'
+    reset: 'Atur Ulang Status Desktop'
+  confirm:
+    title: 'Yakin?'
+    notWiredBody: 'Aksi ini belum terhubung ke backend Rust — mengonfirmasi hanya akan menampilkan pemberitahuan, tidak ada yang dihapus atau diatur ulang.'
+    confirm: 'Konfirmasi'
+    cancel: 'Batal'
+  exportDialog:
+    title: 'Ekspor Arsip Data'
+    subtitle: 'Pilih domain data untuk dikemas ke dalam arsip ZIP standar.'
+    characters: 'Companion & Kartu'
+    charactersHint: 'Prompt, lemari pakaian, avatar'
+    chats: 'Riwayat & Garis Waktu Chat'
+    chatsHint: 'Sesi dan pesan di semua companion'
+    memory: 'Memori & Jurnal'
+    memoryHint: 'Ringkasan harian, entri jurnal, inti seumur hidup'
+    providers: 'Provider AI & Pengaturan Aplikasi'
+    providersHint: 'Provider terkonfigurasi & preferensi (~2 KB)'
+    backgrounds: 'Latar Belakang Scene Kustom'
+    backgroundsHint: 'Wallpaper gambar tersimpan'
+    linkageWarning: 'Companion & Kartu tidak dipilih. Kami sarankan menyertakannya agar chat dan memori tetap tertaut saat dipulihkan.'
+    estimatedSize: 'Perkiraan ukuran arsip:'
+    sizeUnknown: 'Tidak diketahui — backend belum terhubung'
+    cancel: 'Batal'
+    confirm: 'Ekspor Arsip'
+    copyPlaceholder: 'Salin Manifest Placeholder'
+  importDialog:
+    title: 'Impor Universal Data'
+    subtitle: 'Pulihkan dari arsip ZIP, JSON cadangan warisan, atau kartu karakter.'
+    dropTitle: 'Klik atau seret file ke sini untuk impor'
+    dropSubtitle: 'Mendukung arsip .zip, JSON chat/memori, dan kartu PNG (drop multi-file didukung)'
+    browse: 'Telusuri File…'
+    selectedTitle: 'File terpilih:'
+    waveNote: 'Inspeksi file, penautan companion, dan impor itu sendiri tiba dengan jembatan vault (wave ④). Belum ada yang ditulis.'
+    filterVault: 'Arsip vault dan cadangan (*.zip *.json *.png)'
+    filterAll: 'Semua file (*)'
+    cancel: 'Batal'
+    confirm: 'Impor Semua Data'

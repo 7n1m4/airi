@@ -1,0 +1,12 @@
+{
+  "apps/stage-tamagotchi/src/renderer/pages/chat.vue": true,
+  "apps/stage-tamagotchi/src/renderer/pages/settings/index.vue": true,
+  "packages/stage-pages/src/pages/settings/airi-card/edit.vue": true,
+  "packages/stage-pages/src/pages/settings/airi-card/index.vue": true,
+  "packages/stage-pages/src/pages/settings/models/explore.vue": true,
+  "apps/stage-tamagotchi/src/renderer/pages/splash.vue": true,
+  "apps/stage-tamagotchi/src/renderer/pages/about.vue": true,
+  "packages/stage-pages/src/pages/settings/system/general.vue": true,
+  "packages/stage-pages/src/pages/settings/system/chat.vue": true,
+  "packages/stage-pages/src/pages/settings/system/user-profile.vue": true
+}

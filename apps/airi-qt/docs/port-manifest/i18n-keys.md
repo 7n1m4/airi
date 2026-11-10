@@ -1,0 +1,120 @@
+# Port Manifest — i18n Locale Layout and Key Counts
+
+Generated from `packages/i18n/src/locales/<locale>/**/*.yaml`. Leaf-key counts produced by `scripts/gen-manifest/gen-manifest.mjs` (indentation-aware minimal parser; block scalars count as one key).
+
+Locale layout: `base.yaml` (prompt/edition/toaster), `settings.yaml`, `stage.yaml` (chat/speech), `onboarding.yaml`, `docs/*.yaml`, `tamagotchi/{settings,stage}.yaml`, `tamagotchi/electron/tray.yaml`, `server/*.yaml` (id only).
+
+Locales: **10** — en, es, fr, id, ja, ko, ru, vi, zh-Hans, zh-Hant
+English reference leaf-key count (mapping keys only): **1810**. Note: `airi-i18n` build.rs (serde_yaml flatten) reports 1329 keys for en because it also counts sequence items; the two counts differ by design and serve as a cross-check.
+
+- [ ] `en` — 10 YAML files, 1810 leaf keys
+  - `base.yaml`: 8
+  - `docs/theme.yaml`: 24
+  - `docs/versions.yaml`: 20
+  - `onboarding.yaml`: 729
+  - `settings.yaml`: 336
+  - `shell.yaml`: 483
+  - `stage.yaml`: 38
+  - `tamagotchi/electron/tray.yaml`: 31
+  - `tamagotchi/settings.yaml`: 79
+  - `tamagotchi/stage.yaml`: 62
+- [ ] `es` — 10 YAML files, 2556 leaf keys
+  - `base.yaml`: 8
+  - `docs/theme.yaml`: 24
+  - `docs/versions.yaml`: 20
+  - `onboarding.yaml`: 729
+  - `settings.yaml`: 1110
+  - `shell.yaml`: 483
+  - `stage.yaml`: 29
+  - `tamagotchi/electron/tray.yaml`: 31
+  - `tamagotchi/settings.yaml`: 75
+  - `tamagotchi/stage.yaml`: 47
+- [ ] `fr` — 10 YAML files, 2555 leaf keys
+  - `base.yaml`: 8
+  - `docs/theme.yaml`: 24
+  - `docs/versions.yaml`: 20
+  - `onboarding.yaml`: 728
+  - `settings.yaml`: 1110
+  - `shell.yaml`: 483
+  - `stage.yaml`: 29
+  - `tamagotchi/electron/tray.yaml`: 31
+  - `tamagotchi/settings.yaml`: 75
+  - `tamagotchi/stage.yaml`: 47
+- [ ] `id` — 11 YAML files, 3372 leaf keys
+  - `base.yaml`: 10
+  - `docs/theme.yaml`: 25
+  - `docs/versions.yaml`: 20
+  - `onboarding.yaml`: 729
+  - `server/auth.yaml`: 143
+  - `settings.yaml`: 1369
+  - `shell.yaml`: 483
+  - `stage.yaml`: 134
+  - `tamagotchi/electron/tray.yaml`: 24
+  - `tamagotchi/settings.yaml`: 374
+  - `tamagotchi/stage.yaml`: 61
+- [ ] `ja` — 10 YAML files, 2557 leaf keys
+  - `base.yaml`: 8
+  - `docs/theme.yaml`: 24
+  - `docs/versions.yaml`: 20
+  - `onboarding.yaml`: 729
+  - `settings.yaml`: 1110
+  - `shell.yaml`: 483
+  - `stage.yaml`: 29
+  - `tamagotchi/electron/tray.yaml`: 31
+  - `tamagotchi/settings.yaml`: 75
+  - `tamagotchi/stage.yaml`: 48
+- [ ] `ko` — 10 YAML files, 2554 leaf keys
+  - `base.yaml`: 8
+  - `docs/theme.yaml`: 24
+  - `docs/versions.yaml`: 20
+  - `onboarding.yaml`: 729
+  - `settings.yaml`: 1108
+  - `shell.yaml`: 483
+  - `stage.yaml`: 29
+  - `tamagotchi/electron/tray.yaml`: 31
+  - `tamagotchi/settings.yaml`: 75
+  - `tamagotchi/stage.yaml`: 47
+- [ ] `ru` — 10 YAML files, 2571 leaf keys
+  - `base.yaml`: 8
+  - `docs/theme.yaml`: 24
+  - `docs/versions.yaml`: 20
+  - `onboarding.yaml`: 728
+  - `settings.yaml`: 1127
+  - `shell.yaml`: 483
+  - `stage.yaml`: 29
+  - `tamagotchi/electron/tray.yaml`: 30
+  - `tamagotchi/settings.yaml`: 75
+  - `tamagotchi/stage.yaml`: 47
+- [ ] `vi` — 10 YAML files, 2553 leaf keys
+  - `base.yaml`: 8
+  - `docs/theme.yaml`: 22
+  - `docs/versions.yaml`: 20
+  - `onboarding.yaml`: 729
+  - `settings.yaml`: 1109
+  - `shell.yaml`: 483
+  - `stage.yaml`: 29
+  - `tamagotchi/electron/tray.yaml`: 31
+  - `tamagotchi/settings.yaml`: 75
+  - `tamagotchi/stage.yaml`: 47
+- [ ] `zh-Hans` — 10 YAML files, 2576 leaf keys
+  - `base.yaml`: 8
+  - `docs/theme.yaml`: 24
+  - `docs/versions.yaml`: 20
+  - `onboarding.yaml`: 730
+  - `settings.yaml`: 1116
+  - `shell.yaml`: 483
+  - `stage.yaml`: 38
+  - `tamagotchi/electron/tray.yaml`: 31
+  - `tamagotchi/settings.yaml`: 79
+  - `tamagotchi/stage.yaml`: 47
+- [ ] `zh-Hant` — 10 YAML files, 2555 leaf keys
+  - `base.yaml`: 8
+  - `docs/theme.yaml`: 24
+  - `docs/versions.yaml`: 20
+  - `onboarding.yaml`: 729
+  - `settings.yaml`: 1109
+  - `shell.yaml`: 483
+  - `stage.yaml`: 29
+  - `tamagotchi/electron/tray.yaml`: 31
+  - `tamagotchi/settings.yaml`: 75
+  - `tamagotchi/stage.yaml`: 47

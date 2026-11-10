@@ -1,0 +1,34 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "airi-core"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+
+[dependencies]
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+base64 = "0.22"
+png = { workspace = true }
+futures-util = { workspace = true }
+async-trait = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+airi-store = { path = "../airi-store" }
+airi-llm = { path = "../airi-llm" }
+airi-local-llm = { path = "../airi-local-llm" }
+reqwest = { workspace = true }
+rusqlite = { workspace = true }
+dirs = { workspace = true }
+semver = "1"
+
+[dev-dependencies]
+tempfile = { workspace = true }
+mockito = { workspace = true }
+tokio = { workspace = true, features = [
+  "macros",
+  "rt-multi-thread"
+] }

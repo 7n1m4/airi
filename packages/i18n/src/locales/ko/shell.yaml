@@ -1,0 +1,569 @@
+# Qt(QML) 데스크톱 셸 문자열: 스플래시, 컨트롤 스트립, 창 및
+# 플레이스홀더 페이지.
+app:
+  name: AIRI
+  tagline: 당신의 AI 컴패니언, 이제 데스크톱에.
+  version-label: 버전
+splash:
+  milestones:
+    core_services: 핵심 서비스 초기화 중…
+    sync_engine: 로컬 상태와 저장소 복원 중…
+    providers: 모델 공급자 연결 중…
+    stage_ready: 스테이지 준비 중…
+strip:
+  tooltips:
+    avatar: AIRI
+    mic: 마이크 토글
+    chat: 채팅
+    stage: 스테이지
+    settings: 설정
+    about: AIRI 정보
+    collapse: 접기
+    expand: 펼치기
+    theme: 다크 / 라이트 모드 전환
+    language: 언어 변경
+    quit: AIRI 종료
+    caption: 자막
+chat:
+  title: AIRI — 채팅
+  recent: 최근
+  new: 새 채팅
+  search-placeholder: 채팅 검색…
+  delete-session: 채팅 삭제
+  empty-title: 대화를 시작하세요
+  empty-subtitle: 메시지는 이 기기에 로컬로 저장됩니다.
+  input-placeholder: AIRI에게 메시지 보내기…
+  send: 보내기
+  stop: 중지
+  streaming: 스트리밍 중…
+  provider-unconfigured: 설정된 모델 제공자가 없습니다
+  status:
+    error: 오류
+  card-picker:
+    none: 카드 없음
+    empty-title: 캐릭터 카드가 아직 없습니다
+    empty-subtitle: CCv2/CCv3 캐릭터 카드(png 또는 json)를 가져와 페르소나와 대화해 보세요.
+    import: 카드 가져오기…
+    import-error: '카드를 가져올 수 없습니다 — 유효한 CCv2/CCv3 카드(png 또는 json)가 아닙니다.'
+settings:
+  title: AIRI — 설정
+  description: AI 어시스턴트를 설정합니다.
+  nav:
+    providers: 공급자
+    theme: 테마
+    about: 정보
+    soon: Wave B
+    stage: 스테이지
+    spine: Spine
+    mmd: MMD
+    live2d: Live2D
+    general: 일반
+    chat: 채팅
+    voice: 음성
+    profile: 프로필
+    cards: 카드
+    explore: 탐색
+    data: 데이터
+    onboarding: 온보딩
+    notice: 알림
+    widgets: 위젯
+    onboardingV3: Onboarding V3
+    gemini: Gemini
+    fadeOnHover: Fade on Hover
+  theme-page:
+    title: 테마
+    description: AIRI의 색상과 외관을 개인화합니다.
+    hue: 강조 색상
+    chroma: 채도 배율
+    dark: 다크 모드
+    reset: 기본값으로 재설정
+  spine:
+    title: Spine
+    description: 무대 동반자를 위한 Spine 런타임 동작입니다.
+    maxFps: 최대 FPS
+    maxFpsHint: 0 = 무제한
+    renderScale: 렌더 스케일
+    mixDuration: 믹스 시간
+    animationSpeed: 애니메이션 속도
+    idleAnimation: 대기 애니메이션
+    scalePosTitle: 모델 배치
+    scalePosX: X 위치
+    scalePosY: Y 위치
+    scalePosScale: 스케일
+    saveError: Spine 설정을 저장하지 못했습니다.
+  mmd:
+    title: MMD
+    description: 무대 동반자를 위한 MMD 런타임 동작입니다.
+    idleAnimation: 대기 애니메이션
+    renderScale: 렌더 스케일
+    physicsNote: MMD 렌더링용 렌더 스케일입니다. 물리 효과는 P10까지 비활성화됩니다.
+    saveError: MMD 설정을 저장하지 못했습니다.
+  live2d:
+    title: Live2D
+    description: 무대 동반자를 위한 Live2D 동작입니다.
+    deferredNotice: Live2D 렌더러는 Spine 이후로 연기되었습니다. 변경 사항은 저장되지만 렌더링에는 아직 적용되지 않습니다.
+    disableFocus: 포커스 비활성화
+    idleAnimation: 대기 애니메이션
+    autoBlink: 자동 눈 깜빡임
+    forceAutoBlink: 자동 눈 깜빡임 강제
+    shadow: 드롭 섀도
+    followSpeed: 추적 속도
+    maxFps: 최대 FPS
+    maxFpsHint: 0 = 무제한
+    saveError: Live2D 설정을 저장하지 못했습니다.
+providers:
+  search: 공급자 검색…
+  search-empty: 필터와 일치하는 공급자가 없습니다.
+  enabled: 사용
+  not-available: 아직 사용 불가
+  not-available-hint: 이 공급자의 엔진은 다음 단계에서 제공됩니다. 설정은 저장되지만 아직 채팅에 사용할 수 없습니다.
+  configured: 저장됨
+  test: 연결 테스트
+  test-success: 연결 성공 — 공급자가 응답했습니다.
+  test-failed: 연결 실패
+  test-unsupported: 이 공급자는 아직 연결 테스트를 사용할 수 없습니다.
+  save: 저장
+  saved: 저장되었습니다.
+  save-failed: 구성을 저장하지 못했습니다.
+  delete: 삭제
+  models-refresh: 모델 가져오기
+  models-empty: 아직 모델이 없습니다 — 자격 증명을 저장하고 가져오거나 모델 이름을 입력하세요.
+  kind:
+    open-ai-compatible: OpenAI 호환
+    anthropic: Anthropic
+    google-gemini: Gemini
+    aws-bedrock: Bedrock
+    local-server: 로컬 서버
+  field:
+    api_key: API 키
+    base_url: 기본 URL
+    model: 모델
+    region: AWS 리전
+    aws_access_key_id: AWS 액세스 키 ID
+    aws_secret_access_key: AWS 시크릿 액세스 키
+    account_id: Cloudflare 계정 ID
+about:
+  title: AIRI — 정보
+  app-name: AIRI
+  tagline: 당신의 AI 컴패니언, 이제 데스크톱에.
+  body: AIRI는 데스크톱 AI 컴패니언입니다 — 말하고, 보고, 반응하는 디지털 존재입니다. Rust, Qt 6, QML로 만들어졌습니다.
+  license: GPL-3.0-or-later 라이선스. Qt Quick 3D는 해당 GPL 조건에 따라 사용됩니다.
+  source-label: 소스 코드
+  source-url: https://github.com/moeru-ai/airi
+  credit: Neko Ayaka와 AIRI 기여자들이 만들었습니다.
+  check-update: 업데이트 확인
+  update-up-to-date: AIRI가 최신입니다.
+  update-available: '업데이트가 있습니다:'
+stage:
+  description: AI 동반자와 함께 플로팅 스테이지 창을 표시하고 배치합니다.
+  openStageWindow: 스테이지 창 표시
+  windowTitle: 스테이지 창
+  empty-title: 무대에 모델이 없습니다
+  empty-subtitle: 설정 → 스테이지에서 VRM 모델을 선택하면 여기에 표시됩니다.
+  openSettings: 스테이지 설정 열기
+  resetPosition: 위치 재설정
+  boundsResetNotice: 위치가 지워졌습니다 — 다음 열기 시 스테이지가 다시 중앙에 배치됩니다.
+  modelSection:
+    title: 모델
+    hint: 스테이지 동반자에 사용할 VRM 파일입니다. 아래에서 모델을 선택하거나 .vrm을 가져오거나 절대 경로를 찾아보세요.
+  modelListEmpty: .vrm 모델을 찾을 수 없습니다 — 아래에서 가져오거나 찾아보세요
+  modelNone: 선택된 모델 없음
+  browseModel: 찾아보기…
+  importModel: 가져오기
+  captions:
+    title: 자막
+    enabled: 자막 표시
+    fontSize: 글자 크기
+    opacity: 불투명도
+    docking: 도킹 위치
+    top: 상단
+    bottom: 하단
+    head: 머리 위
+    none: 없음
+    preview: 미리 보기
+    previewSample: AIRI가 말할 때 자막이 이렇게 표시됩니다.
+  stripSection:
+    title: 컨트롤 스트립
+    hint: 컨트롤 스트립에 표시할 스테이지 컨트롤을 선택하세요.
+    stage: 스테이지 토글
+    caption: 자막 토글
+  saveError: 저장하지 못했습니다. 경로를 확인하고 다시 시도하세요.
+general:
+  description: 앱 전반 동작 및 개인정보.
+  languageSection: 인터페이스 언어
+  languagePlaceholder: '예: ko, en (비움 = 시스템)'
+  languageHint: 비워 두면 시스템 언어를 따릅니다.
+  transitionsSection: 페이지 전환
+  disableTransitions: 모든 페이지 전환 비활성화
+  usePageSpecificTransitions: 페이지별 전환 사용
+  privacySection: 개인정보 및 네트워크
+  remoteSyncEnabled: 민감한 진단 정보를 원격으로 동기화 허용
+  websocketSecureEnabled: 내장 WebSocket 서버에 wss:// 사용
+  startupSection: 시작
+  autostartEnabled: 로그인 시 자동 실행
+  saveError: 저장하지 못했습니다. 다시 시도하세요.
+chat-settings:
+  description: 메시지를 보내고 스트리밍하는 방식.
+  inputSection: 입력
+  sendMode: 메시지 보내기 키
+  suggestMode: 제안 수락 키
+  modeEnter: Enter
+  modeCtrlEnter: Ctrl+Enter
+  modeDoubleEnter: Enter 두 번
+  modeDisabled: 비활성화
+  streamIdleTimeout: 스트림 유휴 제한 시간 (ms)
+  streamIdleTimeoutHint: 이 시간 동안 무음이 지속되면 스트리밍 응답을 중단합니다. 600000 = 10분.
+  messagesSection: 메시지
+  showDirectorNotes: 채팅 화면에 디렉터 노트 표시
+  combineSystemMessages: 보내기 전에 연속된 시스템 메시지 합치기
+  saveError: 저장하지 못했습니다. 다시 시도하세요.
+audio:
+  description: 음성용 마이크 입력과 스피커 출력.
+  inputSection: 음성 입력
+  inputEnabled: 음성 입력 사용
+  inputDevice: 입력 장치 ID
+  inputDevicePlaceholder: '장치 ID 붙여넣기 (예: `pactl list sources short`)'
+  outputDevice: 출력 장치 ID
+  outputDevicePlaceholder: '장치 ID 붙여넣기 (예: `pactl list sinks short`)'
+  deviceHint: 이 빌드에서는 장치 목록을 아직 제공하지 않습니다 — ID를 수동으로 붙여넣으세요. 비워 두면 시스템 기본값을 사용합니다.
+  save: 저장
+  saveError: 저장하지 못했습니다. 다시 시도하세요.
+profile:
+  description: AIRI에게 보이는 당신.
+  identitySection: 신원
+  name: 표시 이름
+  namePlaceholder: 당신의 이름
+  descriptionLabel: 당신에 대하여
+  descriptionPlaceholder: 당신에 대한 짧은 설명…
+  voiceProfileId: 음성 프로필 ID
+  voiceProfileIdPlaceholder: '예: TTS 제공자의 음성 프로필'
+  promptSection: 시스템 프롬프트
+  promptHint: 모델에 보낼 시스템 프롬프트의 선택적 재정의. 비워 두면 기본값을 사용합니다.
+  promptPlaceholder: 당신은…
+  save: 저장
+  saveError: 저장하지 못했습니다. 다시 시도하세요.
+notify:
+  replyReady: AIRI의 답변이 도착했어요
+common:
+  close: 닫기
+
+cards:
+  title: 카드
+  searchPlaceholder: 카드 검색…
+  import: 가져오기…
+  importDialogTitle: 캐릭터 카드 가져오기
+  new: 새 카드
+  refresh: 새로고침
+  emptyTitle: 아직 카드가 없습니다
+  emptyBody: CCv2/CCv3 카드(.png 또는 .json)를 가져와 페르소나와 대화하세요.
+  noGreeting: 인사 없음
+  jsonCard: JSON 카드 (아바타 없음)
+  active: 사용 중
+  use: 채팅에서 사용
+  edit: 편집
+  delete: 삭제
+  cancel: 취소
+  deleteTitle: 카드를 삭제할까요?
+  deleteBody: 이 카드 파일은 기기에서 영구적으로 삭제됩니다.
+  save: 저장
+  editor:
+    title: 카드 편집
+    newTitle: 새 카드
+    saving: 저장 중…
+    nameRequired: 이름은 필수입니다.
+    saveError: 카드를 저장할 수 없습니다.
+    loadError: 이 카드를 불러올 수 없습니다.
+  fields:
+    name: 이름…
+    description: 설명…
+    personality: 성격…
+    scenario: 시나리오…
+    firstMes: 첫 메시지…
+    alternateGreetings: 대체 인사말 — 한 줄에 하나씩…
+    mesExample: 예시 대화 (<START> 블록)…
+    systemPrompt: 시스템 프롬프트…
+    postHistoryInstructions: 기록 이후 지시…
+    creator: 제작자…
+    creatorNotes: 제작자 노트…
+    characterVersion: 버전…
+    tags: 태그 (쉼표로 구분)…
+  sections:
+    dialogue: 대화
+    behavior: 행동
+    metadata: 메타데이터
+models:
+  explore:
+    title: 아바타 탐색
+    description: VRM, Live2D, Spine, MMD용 커뮤니티 아카이브, 외부 저장소, 무료 모델 라이브러리를 탐색하세요.
+    suggestSite: 사이트 제안
+    filterLabel: 형식
+    featuredFree: 추천 무료 아바타
+    downloadModel: 다운로드
+    freeArchives: 무료 커뮤니티 아카이브
+    creatorMarketplaces: 크리에이터 마켓
+    emptyFree: 이 형식 필터에 맞는 무료 아카이브가 없습니다.
+    emptyPaid: 이 형식 필터에 맞는 마켓이 없습니다.
+    free: 100% 무료
+    mixed: 무료 & 유료
+    paid: 유료 / 커미션
+    visit: 방문
+    knowRepository: 괜찮은 모델 저장소를 알고 계신가요?
+    knowRepositoryHint: 더 많은 무료 저장소, 도구, 아카이브를 추천하여 AIRI 커뮤니티 성장을 도와주세요.
+    submitOnGithub: GitHub에서 제안
+    formats:
+      all: 모든 형식
+      vrm: VRM (3D)
+      live2d: Live2D (2D)
+      spine: Spine (2D)
+      mmd: MMD
+
+onboarding:
+  deferredNotice: '이 Qt 빌드에서는 첫 실행 완료 기능이 아직 연결되지 않았습니다 — 이 화면들은 프레젠테이션용입니다. 마법사를 완료하거나 건너뛰는 버튼은 온보딩 스토어가 들어오면 활성화됩니다.'
+  deferredTip: '아직 연결 안 됨 — 첫 실행 온보딩 스토어가 이 동작을 활성화합니다.'
+  back: '뒤로'
+  v2:
+    title: 'AIRI 컴패니언 설정'
+    previewBadge: '첫 실행 마법사'
+    next: '다음'
+    finish: '완료'
+    skip: '나중에 설정'
+    steps:
+      welcome:
+        label: '환영합니다'
+        subtitle: '디지털 컴패니언을 만나고 원하는 설정 방식을 선택하세요.'
+      triage:
+        label: '시작 경로'
+        subtitle: '새 기기인가요, 다시 오는 기기인가요 — 계속할 방법을 선택하세요.'
+      hearing:
+        label: '청각'
+        subtitle: '음성 텍스트 변환과 마이크 점검으로 컴패니언에게 귀를 주세요.'
+      consciousness:
+        label: '의식'
+        subtitle: '컴패니언을 움직이는 추론 엔진을 선택하세요.'
+      profile:
+        label: '나'
+        subtitle: '당신이 누구인지, 어떻게 일하는지 컴패니언에게 알려주세요.'
+      persona:
+        label: '페르소나'
+        subtitle: '영혼을 빚어보세요: 이름, 캐릭터, 성격 특성.'
+      vessel:
+        label: '그릇'
+        subtitle: '몸을 고르세요: Live2D, VRM 또는 최소 존재.'
+      speech:
+        label: '목소리'
+        subtitle: '목소리 선택과 말하기 속도 점검.'
+      calibration:
+        label: '실행'
+        subtitle: '간단한 보정 후 바로 무대로.'
+  v3:
+    brand: 'AIRI 컴패니언 설정'
+    stageReady: '무대 준비 완료'
+    heroTitle: 'AIRI에 오신 것을 환영합니다'
+    heroSubtitle: '컴패니언의 무대 — 몇 분 만에 설정, 100% 내 컴퓨터에서.'
+    companionQuote: '안녕하세요! 저는 당신의 자율 디지털 컴패니언입니다. 음성 대화, 창의적인 무대 공연, 조용한 데스크톱 존재감 — 무엇이든 당신의 세계에 맞게 적응할 수 있습니다.'
+    pillWebgpu: '로컬 WebGPU 코어'
+    pillOffline: '100% 오프라인 & 비공개'
+    pillSouls: '영혼 + 몸 섞기'
+    quickStart: '빠른 시작 (60초)'
+    guidedSetup: '가이드 설정'
+    setupLater: '나중에 설정'
+
+notice:
+  previewBadge: '미리보기'
+  deferredTip: '알림 창 액션 브리지(windowAction / pageMounted / pageUnmounted)가 필요하며, Qt 빌드에는 아직 없습니다.'
+  index:
+    title: '알림'
+    subtitle: 'AIRI의 메인 프로세스는 일회성 프롬프트에 대해 일시적인 알림 창을 표시합니다. 이 페이지는 데스크톱 앱이 제공하는 알림을 나열합니다.'
+    surfaces: '알림 표면'
+    geminiTitle: 'Gemini 온보딩'
+    geminiSubtitle: 'Google Generative AI 키가 설정되지 않았을 때 열리며, 첫 세션 전에 키를 추가할지 제안합니다.'
+    fadeOnHoverTitle: 'Fade on Hover 튜토리얼'
+    fadeOnHoverSubtitle: '커서가 가까워지면 캐릭터를 흐리게 하는 자동 숨김 동작을 설명합니다.'
+    routeGemini: '/notice/gemini'
+    routeFadeOnHover: '/notice/fade-on-hover'
+    deferredNotice: 'Qt 빌드에는 아직 알림 창 호스트가 없습니다. 이 표면들은 대기 중인 알림 요청 스토어가 들어오면 프레임 없는 알림 창으로 열립니다.'
+    footnote: 'Electron 빌드에서는 /notice/gemini 및 /notice/fade-on-hover에 있습니다.'
+  gemini:
+    header: '인텔리전스 노드 온라인'
+    title: 'Gemini Quantum Leap'
+    intro: 'AI 상호작용의 다음 세대에 오신 것을 환영합니다. 당신의 캐릭터는 이제 Google Gemini로 구동되며, 깊은 멀티모달 이해가 가능합니다.'
+    graphicCaption: 'Gemini 코스믹 비주얼'
+    poweredBy: 'Powered by Gemini'
+    visionTitle: '진정한 시각'
+    visionDescription: '이제 당신의 화면과 세계를 볼 수 있습니다. 카메라 아이콘으로 캡처를 실행하거나 렌즈를 통해 보여주세요.'
+    memoryTitle: '문맥 기억'
+    memoryDescription: '현재 세션을 극도로 정밀하게 기억하여 시간이 지날수록 더 깊은 대화를 만들 수 있습니다.'
+    addKey: 'Gemini 키 추가'
+    dontShowAgain: '다시 표시하지 않음'
+  fadeOnHover:
+    badge: '튜토리얼'
+    title: 'Fade on Hover'
+    intro: '커서가 가까워지면 캐릭터를 자동으로 흐리게 합니다. 캐릭터를 계속 보이게 하면서 방해를 줄여줍니다.'
+    opacityLine: '켜면 커서가 가까이 있을 때 캐릭터와 UI의 불투명도가 모두 0으로 떨어집니다.'
+    toggleLine: 'Controls Island 위에 마우스를 올린 다음 눈-슬래시 아이콘을 다시 클릭하여 끌 수 있습니다.'
+    confirm: '알겠습니다'
+    dontShowAgain: '다시 표시하지 않음'
+    previewTitle: '튜토리얼 미리보기'
+    previewNote: 'fade-on-hover 워크스루 영상은 stage-tamagotchi 렌더러 에셋과 함께 배포됩니다. 번들하려면 Qt 빌드에 아직 들어오지 않은 에셋 등록 단계가 필요합니다.'
+
+widgets:
+  title: '위젯'
+  previewBadge: '미리보기'
+  catalogTitle: '알려진 위젯 컴포넌트'
+  samplePropsCaption: '샘플 componentProps'
+  missingId: '위젯 id가 없습니다. 이 창은 컴포넌트 호출(widgets.render)로 실행하여 뷰를 채워주세요.'
+  refresh: '새로고침'
+  closeWidget: '위젯 닫기'
+  deferredNotice: 'Qt 빌드에는 아직 위젯 브리지(widgets.fetch / render / update / remove / clear 이벤트)와 QML 렌더러 레지스트리가 없습니다. 아래는 모두 정적 미리보기 데이터입니다.'
+  deferredTip: 'Qt 빌드의 위젯 브리지(fetch + render/update/remove/clear 이벤트)가 필요합니다.'
+  kinds:
+    weather:
+      name: '날씨'
+      description: '컴패니언의 위치를 기준으로 해석한 현재 날씨와 예보.'
+    map:
+      name: '지도'
+      description: '컴패니언이 물어본 위치의 상호작용 지도 스냅샷.'
+    artistry:
+      name: '아티스트리'
+      description: 'artistry 파이프라인(ComfyUI / 이미지 생성)에서 생성된 아트워크.'
+    comfy:
+      name: 'Comfy'
+      description: 'artistry의 별칭 — ComfyUI 기반 생성 뷰.'
+    sticker:
+      name: '스티커'
+      description: '컴패니언이 대화에 고르는 스티커 또는 리액션 이미지.'
+    generic:
+      name: '일반'
+      description: '등록되지 않은 컴포넌트 이름을 위한 JSON 덤프 대체.'
+
+data:
+  title: '데이터'
+  description: '이 기기에 로컬로 저장되는 모든 AIRI 데이터 — 내보내기, 가져오기 또는 무거운 기록 정리.'
+  status:
+    notWired: '내보내기는 아직 Rust 백엔드에 연결되지 않았습니다 — 단계 노트를 참조하세요'
+    actionNotWired: '이 동작은 아직 Rust 백엔드에 연결되지 않았습니다 — 단계 노트를 참조하세요'
+    imported: '가져오기 완료.'
+    placeholderCopied: '플레이스홀더 매니페스트가 클립보드에 복사되었습니다 — 사용자 데이터는 포함되지 않습니다.'
+    scrubDone: '스크럽 완료.'
+    importDone: '가져오기 완료 — 채팅과 기억이 복원되었습니다(기존 행 우선). 카드와 자격 증명은 적용되지 않았습니다.'
+    exportDone: '내보내기 완료.'
+  vault:
+    title: '데이터 보관소: 아카이브 & 범용 가져오기'
+    description: '모든 메모리 기둥에 대한 선택적 사람이 읽을 수 있는 ZIP 아카이브, 또는 컴패니언 자동 연결로 데이터 복원.'
+    import: '범용 가져오기'
+    export: '아카이브 내보내기'
+  sync:
+    title: 'Cloud Sync: 제로 커스터디 지속 백업'
+    description: '개인 S3 호환 버킷 또는 로컬 네트워크 공유를 향한 지속 복제.'
+    badge: '아직 연결 안 됨'
+    enable: '자동 동기화 켜기'
+    active: '자동 동기화 켜짐'
+    syncNow: '지금 동기화'
+    openSettings: 'Cloud Sync 설정 열기'
+    zeroCustodyTitle: '제로 커스터디 자동 복제:'
+    zeroCustodyBody: 'Cloud Sync는 대화, 컴패니언, 일일 메모리 요약, 설정을 사용자가 관리하는 저장소(AWS S3, S3 호환 버킷 또는 Local Share)에 지속 미러링합니다. 당사는 사용자의 데이터를 보거나 보관하지 않습니다.'
+    avatarsTitle: 'Live2D, VRM, Spine & MMD 아바타:'
+    avatarsBody: '아바타 모델은 대용량 바이너리 에셋이므로 단일 파일 내보내기가 없으며, Cloud Sync가 유일한 자동 백업 수단입니다.'
+    activeTarget: '활성 대상'
+    lastSynced: '마지막 동기화'
+    notConfigured: '설정되지 않음'
+    never: '없음'
+  scrub:
+    title: '세션 미디어 최적화 & 스크럽'
+    description: '채팅 기록의 인라인 base64 이미지 문자열과 누출된 도구 페이로드를 영구 로컬 저장소로 추출하여 LLM 토큰 폭증을 방지합니다.'
+    button: '기록 정리 & 해결'
+  scrubHistory:
+    title: '스크럽 기록'
+    description: '지난 최적화 실행 보고서.'
+    emptyTitle: '아직 기록된 스크럽이 없습니다'
+    emptySubtitle: '스크럽 백엔드가 들어오고 첫 최적화를 실행하면 여기에 기록이 표시됩니다.'
+  scrubDialog:
+    title: '세션 미디어 스크럽 & 해결'
+    subtitle: '무거운 인라인 이미지를 저장소로 추출하여 토큰 폭증을 제거합니다.'
+    promptBody: '이 프로세스는 모든 채팅 대화를 스캔하여 임베디드 base64 이미지 데이터 URL과 원시 도구 이미지 페이로드를 찾습니다. 감지된 각 이미지는 로컬 배경 갤러리로 안전하게 이동되고, 기록에서는 가벼운 에셋 포인터로 대체됩니다.'
+    currentChatSize: '현재 채팅 총 크기'
+    sizeUnknown: '알 수 없음 — 백엔드 미연결'
+    safetyTitle: '안전 확인:'
+    safetyBody: '혹시 모르니 계속하기 전에 컴패니언과 대화의 전체 백업 아카이브를 만들겠습니까?'
+    cancel: '취소'
+    scrubWithoutBackup: '백업 없이 스크럽'
+    backupAndScrub: '백업 만들고 스크럽'
+    waveNote: '선택한 파일은 가져오기 시 검사됩니다. 채팅과 기억은 복원되며(기존 행 우선) 카드와 프로바이더 자격 증명은 적용되지 않습니다.'
+  unlinked:
+    title: '연결 해제된 대화 & 기억'
+    description: '삭제되거나 이름이 바뀐 컴패니언이 남긴 채팅 기록과 기억을 복구합니다.'
+    badge: '아직 연결 안 됨'
+    emptyTitle: '연결 해제 데이터 감지가 아직 연결되지 않았습니다'
+    emptySubtitle: '고아 세션을 감지하려면 데이터 브리지(wave ④)가 필요합니다. 들어오면 재생성하거나 병합할 수 있는 그룹이 여기에 나열됩니다.'
+  legacy:
+    title: '도메인별 도구 (레거시 단일 파일 JSON)'
+    show: '표시'
+    hide: '숨기기'
+    chatsTitle: '채팅 세션'
+    chatsDescription: '모든 채팅 세션을 단일 JSON 파일로 내보내거나 삭제합니다.'
+    charactersTitle: '컴패니언 & 카드'
+    charactersDescription: '모든 캐릭터 카드를 단일 JSON 파일로 내보내거나 가져옵니다.'
+    memoryTitle: '기억 & 저널'
+    memoryDescription: '기억, 일일 요약, 저널 항목을 내보내거나 가져옵니다.'
+    backgroundsTitle: '배경'
+    backgroundsDescription: '커스텀 씬 배경을 내보내거나 가져옵니다.'
+    export: '내보내기'
+    import: '가져오기'
+    deleteChats: '모든 채팅 세션 삭제'
+  models:
+    title: '다운로드한 모델'
+    description: '이 기기에 다운로드된 모든 VRM/MMD/Spine/Live2D 모델 파일을 제거합니다.'
+    delete: '모든 모델 삭제'
+  modules:
+    title: '모듈 설정'
+    description: '모든 모듈 설정을 기본값으로 재설정합니다.'
+    reset: '모듈 설정 재설정'
+  danger:
+    title: '위험 구역'
+    description: '이 동작은 되돌릴 수 없습니다.'
+    providersTitle: '프로바이더 & 자격 증명'
+    providersDescription: '프로바이더 설정과 저장된 자격 증명을 재설정합니다.'
+    providersReset: '프로바이더 재설정'
+    allTitle: '모든 사용자 데이터'
+    allDescription: '전부 삭제 — 세션, 기억, 카드, 설정. 되돌릴 수 없습니다.'
+    allDelete: '모든 데이터 삭제'
+  desktop:
+    title: '데스크톱 앱 상태'
+    description: '창 배치, 트레이, 기타 데스크톱 셸 상태를 재설정합니다 (데스크톱 빌드 전용).'
+    reset: '데스크톱 상태 재설정'
+  confirm:
+    title: '확실합니까?'
+    notWiredBody: '이 동작은 아직 Rust 백엔드에 연결되지 않았습니다 — 확인해도 안내만 표시되며 아무것도 삭제되거나 재설정되지 않습니다.'
+    confirm: '확인'
+    cancel: '취소'
+  exportDialog:
+    title: '데이터 아카이브 내보내기'
+    subtitle: '표준 ZIP 아카이브로 묶을 데이터 도메인을 선택하세요.'
+    characters: '컴패니언 & 카드'
+    charactersHint: '프롬프트, 의상, 아바타'
+    chats: '채팅 기록 & 타임라인'
+    chatsHint: '모든 컴패니언의 세션과 메시지'
+    memory: '기억 & 저널'
+    memoryHint: '일일 요약, 저널 항목, 평생 코어'
+    providers: 'AI 프로바이더 & 앱 설정'
+    providersHint: '구성된 프로바이더 & 선호 설정 (~2 KB)'
+    backgrounds: '커스텀 씬 배경'
+    backgroundsHint: '저장된 배경 이미지'
+    linkageWarning: '컴패니언 & 카드가 선택되지 않았습니다. 복원 시 채팅과 기억이 연결된 상태를 유지하도록 포함하는 것을 권장합니다.'
+    estimatedSize: '예상 아카이브 크기:'
+    sizeUnknown: '알 수 없음 — 백엔드 미연결'
+    cancel: '취소'
+    confirm: '아카이브 내보내기'
+    copyPlaceholder: '플레이스홀더 매니페스트 복사'
+  importDialog:
+    title: '범용 데이터 가져오기'
+    subtitle: 'ZIP 아카이브, 레거시 백업 JSON 또는 캐릭터 카드에서 복원합니다.'
+    dropTitle: '클릭하거나 파일을 끌어다 놓아 가져오세요'
+    dropSubtitle: '.zip 아카이브, 채팅/기억 JSON, PNG 카드 지원 (다중 파일 드롭 지원)'
+    browse: '파일 찾아보기…'
+    selectedTitle: '선택된 파일:'
+    waveNote: '파일 검사, 컴패니언 연결, 실제 가져오기는 wave ④ 보관소 브리지와 함께 제공됩니다. 아직 아무것도 쓰이지 않습니다.'
+    filterVault: '보관소 아카이브 및 백업 (*.zip *.json *.png)'
+    filterAll: '모든 파일 (*)'
+    cancel: '취소'
+    confirm: '모든 데이터 가져오기'

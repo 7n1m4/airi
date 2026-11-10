@@ -1,0 +1,17 @@
+{
+  "name": "@proj-airi/airi-qt",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Native Qt Quick desktop app for AIRI (Rust + cxx-qt), standalone rewrite",
+  "license": "GPL-3.0-or-later",
+  "scripts": {
+    "dev": "cargo run -q -p airi-qt --",
+    "build": "bash -lc 'cargo build --release -p airi-qt && mkdir -p bin && cp target/release/airi-qt bin/'",
+    "check": "cargo check --workspace",
+    "typecheck": "cargo check --workspace",
+    "test": "cargo test --workspace",
+    "clippy": "cargo clippy --workspace --all-targets -- -D warnings",
+    "fmt": "cargo fmt --all"
+  }
+}

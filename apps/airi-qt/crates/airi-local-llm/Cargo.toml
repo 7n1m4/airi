@@ -1,0 +1,27 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "airi-local-llm"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "Native in-process llama.cpp chat inference behind the airi-llm ChatProvider trait (GGUF models)."
+
+[dependencies]
+airi-llm = { path = "../airi-llm" }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+futures-util = { workspace = true }
+async-stream = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+llama-cpp-2 = "0.1.161"
+
+[dev-dependencies]
+tokio = { workspace = true, features = [
+  "macros",
+  "rt-multi-thread"
+] }

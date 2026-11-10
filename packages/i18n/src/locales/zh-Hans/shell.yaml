@@ -1,0 +1,568 @@
+# Qt（QML）桌面 shell 的字符串：启动画面、控制条、窗口和占位页面。
+app:
+  name: AIRI
+  tagline: 你的 AI 伙伴，就在桌面上。
+  version-label: 版本
+splash:
+  milestones:
+    core_services: 正在初始化核心服务……
+    sync_engine: 正在恢复本地状态和存储……
+    providers: 正在连接模型提供商……
+    stage_ready: 正在准备舞台……
+strip:
+  tooltips:
+    avatar: AIRI
+    mic: 麦克风开关
+    chat: 聊天
+    stage: 舞台
+    settings: 设置
+    about: 关于 AIRI
+    collapse: 收起
+    expand: 展开
+    theme: 切换深色 / 浅色模式
+    language: 切换语言
+    quit: 退出 AIRI
+    caption: 字幕
+chat:
+  title: AIRI — 聊天
+  recent: 最近
+  new: 新对话
+  search-placeholder: 搜索对话…
+  delete-session: 删除对话
+  empty-title: 开始对话
+  empty-subtitle: 你的消息仅存储在本设备。
+  input-placeholder: 给 AIRI 发消息…
+  send: 发送
+  stop: 停止
+  streaming: 生成中…
+  provider-unconfigured: 未配置模型提供商
+  status:
+    error: 错误
+  card-picker:
+    none: 无卡片
+    empty-title: 还没有角色卡
+    empty-subtitle: 导入 CCv2/CCv3 角色卡（png 或 json），与角色对话。
+    import: 导入卡片…
+    import-error: '无法导入该卡片 —— 不是有效的 CCv2/CCv3 卡片（png 或 json）。'
+settings:
+  title: AIRI — 设置
+  description: 配置你的 AI 助手。
+  nav:
+    providers: 提供商
+    theme: 主题
+    about: 关于
+    soon: Wave B
+    stage: 舞台
+    spine: Spine
+    mmd: MMD
+    live2d: Live2D
+    general: 通用
+    chat: 聊天
+    voice: 语音
+    profile: 个人资料
+    cards: 角色卡
+    explore: 探索
+    data: 数据
+    onboarding: 引导
+    notice: 通知
+    widgets: 小组件
+    onboardingV3: Onboarding V3
+    gemini: Gemini
+    fadeOnHover: Fade on Hover
+  theme-page:
+    title: 主题
+    description: 个性化 AIRI 的颜色和外观。
+    hue: 强调色相
+    chroma: 色度倍率
+    dark: 深色模式
+    reset: 恢复默认值
+  spine:
+    title: Spine
+    description: 舞台伙伴的 Spine 运行时行为。
+    maxFps: 最大帧率
+    maxFpsHint: 0 = 无限制
+    renderScale: 渲染缩放
+    mixDuration: 混合时长
+    animationSpeed: 动画速度
+    idleAnimation: 待机动画
+    scalePosTitle: 模型位置
+    scalePosX: X 位置
+    scalePosY: Y 位置
+    scalePosScale: 缩放
+    saveError: 无法保存 Spine 设置。
+  mmd:
+    title: MMD
+    description: 舞台伙伴的 MMD 运行时行为。
+    idleAnimation: 待机动画
+    renderScale: 渲染缩放
+    physicsNote: MMD 渲染的渲染缩放；物理效果在 P10 之前禁用。
+    saveError: 无法保存 MMD 设置。
+  live2d:
+    title: Live2D
+    description: 舞台伙伴的 Live2D 行为。
+    deferredNotice: Live2D 渲染器推迟至 Spine 之后。修改会被保存，但暂时不会影响渲染。
+    disableFocus: 禁用注视
+    idleAnimation: 待机动画
+    autoBlink: 自动眨眼
+    forceAutoBlink: 强制自动眨眼
+    shadow: 投影
+    followSpeed: 跟随速度
+    maxFps: 最大帧率
+    maxFpsHint: 0 = 无限制
+    saveError: 无法保存 Live2D 设置。
+providers:
+  search: 搜索提供商…
+  search-empty: 没有符合筛选条件的提供商。
+  enabled: 已启用
+  not-available: 暂未可用
+  not-available-hint: 该提供商的引擎将在后续阶段推出。配置会被保存，但暂时还不能用于聊天。
+  configured: 已保存
+  test: 测试连接
+  test-success: 连接成功 — 提供商已响应。
+  test-failed: 连接失败
+  test-unsupported: 该提供商暂不支持连接测试。
+  save: 保存
+  saved: 已保存。
+  save-failed: 无法保存配置。
+  delete: 删除
+  models-refresh: 获取模型
+  models-empty: 暂无模型 — 请先保存凭据后获取，或手动输入模型名称。
+  kind:
+    open-ai-compatible: 兼容 OpenAI
+    anthropic: Anthropic
+    google-gemini: Gemini
+    aws-bedrock: Bedrock
+    local-server: 本地服务器
+  field:
+    api_key: API 密钥
+    base_url: 基础 URL
+    model: 模型
+    region: AWS 区域
+    aws_access_key_id: AWS 访问密钥 ID
+    aws_secret_access_key: AWS 私密访问密钥
+    account_id: Cloudflare 账户 ID
+about:
+  title: AIRI — 关于
+  app-name: AIRI
+  tagline: 你的 AI 伙伴，就在桌面上。
+  body: AIRI 是一款桌面 AI 伙伴——一个会说话、会观察、会反应的数字生命。使用 Rust、Qt 6 和 QML 构建。
+  license: 采用 GPL-3.0-or-later 许可证。Qt Quick 3D 依据其 GPL 条款使用。
+  source-label: 源代码
+  source-url: https://github.com/moeru-ai/airi
+  credit: 由 Neko Ayaka 和 AIRI 贡献者共同创作。
+  check-update: 检查更新
+  update-up-to-date: AIRI 已是最新版本。
+  update-available: '有可用更新：'
+stage:
+  description: 显示并定位悬浮的舞台窗口及你的 AI 伙伴。
+  openStageWindow: 显示舞台窗口
+  windowTitle: 舞台窗口
+  empty-title: 舞台上还没有模型
+  empty-subtitle: 在“设置 → 舞台”中选择一个 VRM 模型，它就会出现在这里。
+  openSettings: 打开舞台设置
+  resetPosition: 重置位置
+  boundsResetNotice: 已清除位置 —— 下次打开时舞台将重新居中。
+  modelSection:
+    title: 模型
+    hint: 舞台伙伴使用的 VRM 文件。在下方选择模型、导入 .vrm，或浏览选择绝对路径。
+  modelListEmpty: 未找到 .vrm 模型 —— 请在下方导入或浏览选择
+  modelNone: 未选择模型
+  browseModel: 浏览…
+  importModel: 导入
+  captions:
+    title: 字幕
+    enabled: 显示字幕
+    fontSize: 字号
+    opacity: 不透明度
+    docking: 停靠位置
+    top: 顶部
+    bottom: 底部
+    head: 头顶
+    none: 无
+    preview: 预览
+    previewSample: 这是 AIRI 说话时字幕的显示效果。
+  stripSection:
+    title: 控制条
+    hint: 选择在控制条上显示哪些舞台控件。
+    stage: 舞台开关
+    caption: 字幕开关
+  saveError: 保存失败。请检查路径后重试。
+general:
+  description: 应用的通用行为与隐私。
+  languageSection: 界面语言
+  languagePlaceholder: 例如 zh-Hans、en（留空 = 系统）
+  languageHint: 留空则跟随系统语言。
+  transitionsSection: 页面过渡
+  disableTransitions: 禁用所有页面过渡
+  usePageSpecificTransitions: 使用按页面定制的过渡
+  privacySection: 隐私与网络
+  remoteSyncEnabled: 允许将敏感诊断信息远程同步
+  websocketSecureEnabled: 内置 WebSocket 服务器使用 wss://
+  startupSection: 启动
+  autostartEnabled: 登录时自动启动
+  saveError: 无法保存，请重试。
+chat-settings:
+  description: 消息的发送与流式传输方式。
+  inputSection: 输入
+  sendMode: 发送消息的快捷键
+  suggestMode: 接受建议的快捷键
+  modeEnter: Enter
+  modeCtrlEnter: Ctrl+Enter
+  modeDoubleEnter: 双击 Enter
+  modeDisabled: 禁用
+  streamIdleTimeout: 流空闲超时（毫秒）
+  streamIdleTimeoutHint: 静默达到该时长后中止流式响应。600000 = 10 分钟。
+  messagesSection: 消息
+  showDirectorNotes: 在聊天界面显示导演笔记
+  combineSystemMessages: 发送前合并连续的系统消息
+  saveError: 无法保存，请重试。
+audio:
+  description: 语音所用的麦克风输入与扬声器输出。
+  inputSection: 语音输入
+  inputEnabled: 启用语音输入
+  inputDevice: 输入设备 ID
+  inputDevicePlaceholder: 粘贴设备 ID（例如 `pactl list sources short` 的 pulse 键）
+  outputDevice: 输出设备 ID
+  outputDevicePlaceholder: 粘贴设备 ID（例如 `pactl list sinks short` 的 pulse 键）
+  deviceHint: 此版本尚不支持设备枚举——请手动粘贴设备 ID。留空则使用系统默认设备。
+  save: 保存
+  saveError: 无法保存，请重试。
+profile:
+  description: 你在 AIRI 眼中的自己。
+  identitySection: 身份
+  name: 显示名称
+  namePlaceholder: 你的名字
+  descriptionLabel: 关于你
+  descriptionPlaceholder: 简短介绍一下你自己…
+  voiceProfileId: 语音配置 ID
+  voiceProfileIdPlaceholder: 例如你的 TTS 提供商提供的语音配置
+  promptSection: 系统提示词
+  promptHint: 可选，覆盖发送给模型的系统提示词。留空则使用默认值。
+  promptPlaceholder: 你是…
+  save: 保存
+  saveError: 无法保存，请重试。
+notify:
+  replyReady: AIRI 已回复
+common:
+  close: 关闭
+
+cards:
+  title: 角色卡
+  searchPlaceholder: 搜索角色卡…
+  import: 导入…
+  importDialogTitle: 导入角色卡
+  new: 新建角色卡
+  refresh: 刷新
+  emptyTitle: 还没有角色卡
+  emptyBody: 导入 CCv2/CCv3 角色卡（.png 或 .json）即可与人格对话。
+  noGreeting: 无开场白
+  jsonCard: JSON 角色卡（无头像）
+  active: 使用中
+  use: 在对话中使用
+  edit: 编辑
+  delete: 删除
+  cancel: 取消
+  deleteTitle: 删除角色卡？
+  deleteBody: 这将永久删除你设备上的角色卡文件。
+  save: 保存
+  editor:
+    title: 编辑角色卡
+    newTitle: 新建角色卡
+    saving: 保存中…
+    nameRequired: 名称为必填项。
+    saveError: 无法保存角色卡。
+    loadError: 无法加载该角色卡。
+  fields:
+    name: 名称…
+    description: 描述…
+    personality: 性格…
+    scenario: 场景…
+    firstMes: 首条消息…
+    alternateGreetings: 备选开场白 —— 每行一条…
+    mesExample: 示例对话（<START> 块）…
+    systemPrompt: 系统提示词…
+    postHistoryInstructions: 历史后指示…
+    creator: 创作者…
+    creatorNotes: 创作者备注…
+    characterVersion: 版本…
+    tags: 标签，用逗号分隔…
+  sections:
+    dialogue: 对话
+    behavior: 行为
+    metadata: 元数据
+models:
+  explore:
+    title: 发现头像
+    description: 探索 VRM、Live2D、Spine 和 MMD 的社区档案、外部仓库和免费模型库。
+    suggestSite: 推荐网站
+    filterLabel: 格式
+    featuredFree: 精选免费头像
+    downloadModel: 下载
+    freeArchives: 免费社区档案
+    creatorMarketplaces: 创作者市场
+    emptyFree: 此格式筛选没有找到免费社区档案。
+    emptyPaid: 此格式筛选没有找到市场。
+    free: 100% 免费
+    mixed: 免费 & 付费
+    paid: 付费 / 委托
+    visit: 访问
+    knowRepository: 知道其他优秀的模型仓库吗？
+    knowRepositoryHint: 通过推荐更多免费仓库、工具或档案，帮助 AIRI 社区成长。
+    submitOnGithub: 在 GitHub 提交
+    formats:
+      all: 全部格式
+      vrm: VRM (3D)
+      live2d: Live2D (2D)
+      spine: Spine (2D)
+      mmd: MMD
+
+onboarding:
+  deferredNotice: '此 Qt 版本尚未接入首次完成流程 —— 这些页面仅为展示。完成或跳过向导的按钮将在 onboarding 存储落地后解锁。'
+  deferredTip: '尚未接入 —— 首次运行的 onboarding 存储将启用此操作。'
+  back: '返回'
+  v2:
+    title: 'AIRI 伙伴设置'
+    previewBadge: '首次向导'
+    next: '下一步'
+    finish: '完成'
+    skip: '稍后设置'
+    steps:
+      welcome:
+        label: '欢迎'
+        subtitle: '认识你的数字伙伴，并选择你希望的设置方式。'
+      triage:
+        label: '你的路径'
+        subtitle: '新设备还是回归设备 —— 选择如何继续。'
+      hearing:
+        label: '听觉'
+        subtitle: '通过语音转文字和麦克风检查为伙伴赋予听觉。'
+      consciousness:
+        label: '意识'
+        subtitle: '选择伙伴背后的推理引擎。'
+      profile:
+        label: '你'
+        subtitle: '告诉你的伙伴你是谁、你喜欢怎样工作。'
+      persona:
+        label: '人格'
+        subtitle: '塑造灵魂：名称、性格与特质。'
+      vessel:
+        label: '躯体'
+        subtitle: '选择身体：Live2D、VRM 或极简存在。'
+      speech:
+        label: '语音'
+        subtitle: '选择音色并做语速检查。'
+      calibration:
+        label: '启动'
+        subtitle: '快速校准，然后直接登上舞台。'
+  v3:
+    brand: 'AIRI 伙伴设置'
+    stageReady: '舞台就绪'
+    heroTitle: '欢迎来到 AIRI'
+    heroSubtitle: '你伙伴的舞台 —— 几分钟即可完成设置，100% 在你的机器上。'
+    companionQuote: '你好！我是你的自主数字伙伴。无论你想要语音对话、创意舞台表演，还是一个安静的桌面存在，我都已准备好适应你的世界。'
+    pillWebgpu: '本地 WebGPU 核心'
+    pillOffline: '100% 离线且私密'
+    pillSouls: '混合灵魂 + 躯体'
+    quickStart: '快速开始 (60 秒)'
+    guidedSetup: '引导式设置'
+    setupLater: '稍后设置'
+
+notice:
+  previewBadge: '预览'
+  deferredTip: '需要通知窗口动作桥（windowAction / pageMounted / pageUnmounted），Qt 版本尚未具备。'
+  index:
+    title: '通知'
+    subtitle: 'AIRI 主进程会为一次性提示显示临时通知窗口。本页面列出桌面应用随附的通知。'
+    surfaces: '通知界面'
+    geminiTitle: 'Gemini 引导'
+    geminiSubtitle: '当未配置 Google Generative AI 密钥时打开，提议在首次会话前添加一个。'
+    fadeOnHoverTitle: '淡出悬停教程'
+    fadeOnHoverSubtitle: '解释当光标靠近时自动淡出角色的隐藏行为。'
+    routeGemini: '/notice/gemini'
+    routeFadeOnHover: '/notice/fade-on-hover'
+    deferredNotice: 'Qt 版本尚未有通知窗口宿主。这些界面将在待处理通知请求存储落地后，作为无边框通知窗口打开。'
+    footnote: '在 Electron 版本中，它们位于 /notice/gemini 和 /notice/fade-on-hover。'
+  gemini:
+    header: '智能节点在线'
+    title: 'Gemini 量子跃迁'
+    intro: '欢迎来到下一代 AI 互动。你的角色现在由 Google Gemini 驱动，具备深度多模态理解能力。'
+    graphicCaption: 'Gemini 宇宙可视化'
+    poweredBy: '由 Gemini 驱动'
+    visionTitle: '真实视觉'
+    visionDescription: '我终于能看见你的屏幕和世界了。用相机图标触发截取，或通过你的镜头给我看。'
+    memoryTitle: '情境记忆'
+    memoryDescription: '我极其精确地记住我们当前的会话，让我们随时间建立更深的对话。'
+    addKey: '添加 Gemini 密钥'
+    dontShowAgain: '不再显示'
+  fadeOnHover:
+    badge: '教程'
+    title: '淡出悬停'
+    intro: '当光标靠近时自动淡出角色。在保持角色可见的同时减少干扰。'
+    opacityLine: '开启后，当光标靠近时，角色和界面的不透明度都会降为 0。'
+    toggleLine: '你可以将光标移到 Controls Island 上，再次点击斜杠眼睛图标来关闭它。'
+    confirm: '知道了'
+    dontShowAgain: '不再显示'
+    previewTitle: '教程预览'
+    previewNote: '淡出悬停演示视频随 stage-tamagotchi 渲染器资产一起发布。打包它需要 Qt 版本尚未具备的资产注册流程。'
+
+widgets:
+  title: '小组件'
+  previewBadge: '预览'
+  catalogTitle: '已知的小组件组件'
+  samplePropsCaption: '示例 componentProps'
+  missingId: '缺少小组件 id。请通过组件调用 (widgets.render) 打开此窗口以填充视图。'
+  refresh: '刷新'
+  closeWidget: '关闭小组件'
+  deferredNotice: 'Qt 版本尚未有小组件桥（widgets.fetch / render / update / remove / clear 事件），也没有 QML 渲染器注册表。以下内容均为静态预览数据。'
+  deferredTip: '需要 Qt 版本中的小组件桥（fetch + render/update/remove/clear 事件）。'
+  kinds:
+    weather:
+      name: '天气'
+      description: '为伙伴所在位置解析的当前状况和预报。'
+    map:
+      name: '地图'
+      description: '伙伴询问过的位置的交互式地图快照。'
+    artistry:
+      name: '艺术创作'
+      description: '来自 artistry 流水线（ComfyUI / 图像生成）的生成作品。'
+    comfy:
+      name: 'Comfy'
+      description: 'artistry 的别名 —— 基于 ComfyUI 的生成视图。'
+    sticker:
+      name: '贴纸'
+      description: '伙伴为对话挑选的贴纸或反应图片。'
+    generic:
+      name: '通用'
+      description: '未注册组件名的 JSON 转储回退。'
+
+data:
+  title: '数据'
+  description: 'AIRI 在此设备本地存储的一切 —— 导出、导入，或清理重度历史。'
+  status:
+    notWired: '导出尚未连接到 Rust 后端 —— 见阶段说明'
+    actionNotWired: '此操作尚未连接到 Rust 后端 —— 见阶段说明'
+    imported: '导入完成。'
+    placeholderCopied: '占位 manifest 已复制到剪贴板 —— 其中不含用户数据。'
+    scrubDone: '清理完成。'
+    importDone: '导入完成 —— 聊天和记忆已恢复（已有记录优先）；卡片和凭据未被应用。'
+    exportDone: '导出完成。'
+  vault:
+    title: '数据保险库：归档与通用导入'
+    description: '针对所有记忆支柱的可选择、可读的 ZIP 归档，或通过自动伙伴关联恢复数据。'
+    import: '通用导入'
+    export: '导出归档'
+  sync:
+    title: 'Cloud Sync：零保管持续备份'
+    description: '持续复制到你的个人 S3 兼容存储桶或本地网络共享。'
+    badge: '尚未连接'
+    enable: '启用自动同步'
+    active: '自动同步已开启'
+    syncNow: '立即同步'
+    openSettings: '打开 Cloud Sync 设置'
+    zeroCustodyTitle: '零保管自动复制：'
+    zeroCustodyBody: 'Cloud Sync 会持续将你的对话、伙伴、每日记忆摘要和设置镜像到你控制的存储（AWS S3、S3 兼容存储桶或 Local Share）。我们从不查看或保管你的数据。'
+    avatarsTitle: 'Live2D、VRM、Spine 与 MMD 头像：'
+    avatarsBody: '头像模型是大型二进制资产，因此没有单文件导出；Cloud Sync 是它们唯一的自动备份机制。'
+    activeTarget: '当前目标'
+    lastSynced: '上次同步'
+    notConfigured: '未配置'
+    never: '从未'
+  scrub:
+    title: '会话媒体优化与清理'
+    description: '将内联 base64 图片字符串和泄漏的工具负载从聊天历史提取到持久本地存储，避免 LLM 令牌膨胀。'
+    button: '清理并处理历史'
+  scrubHistory:
+    title: '清理历史'
+    description: '过往优化运行报告。'
+    emptyTitle: '尚无清理记录'
+    emptySubtitle: '清理后端落地并运行首次优化后，历史将在此显示。'
+  scrubDialog:
+    title: '清理并处理会话媒体'
+    subtitle: '将沉重的内联图片提取到存储中，消除令牌膨胀。'
+    promptBody: '此过程扫描所有聊天对话中的嵌入式 base64 图片数据 URL 和原始工具图片负载。检测到的每张图片都会安全移至你的本地背景画廊，并在历史中替换为轻量资产指针。'
+    currentChatSize: '当前聊天总大小'
+    sizeUnknown: '未知 —— 后端未连接'
+    safetyTitle: '安全确认：'
+    safetyBody: '为了稳妥起见，你是否想在继续之前为伙伴和对话创建完整备份归档？'
+    cancel: '取消'
+    scrubWithoutBackup: '不备份直接清理'
+    backupAndScrub: '创建备份并清理'
+    waveNote: '所选文件在导入时会被检查。聊天和记忆会被恢复（已有记录优先）；卡片和提供商凭据不会被应用。'
+  unlinked:
+    title: '未关联的对话与记忆'
+    description: '恢复被删除或重命名伙伴留下的聊天历史和记忆。'
+    badge: '尚未连接'
+    emptyTitle: '孤儿数据检测尚未连接'
+    emptySubtitle: '检测孤儿会话需要数据桥（wave ④）。落地后，可以重新创建或合并的分组将在此列出。'
+  legacy:
+    title: '分领域工具（旧版单文件 JSON）'
+    show: '显示'
+    hide: '隐藏'
+    chatsTitle: '聊天会话'
+    chatsDescription: '将所有聊天会话导出或清除为单个 JSON 文件。'
+    charactersTitle: '伙伴与角色卡'
+    charactersDescription: '将所有角色卡导出或导入为单个 JSON 文件。'
+    memoryTitle: '记忆与日记'
+    memoryDescription: '导出或导入记忆、每日回顾和日记条目。'
+    backgroundsTitle: '背景'
+    backgroundsDescription: '导出或导入自定义场景背景。'
+    export: '导出'
+    import: '导入'
+    deleteChats: '删除所有聊天会话'
+  models:
+    title: '已下载模型'
+    description: '从此设备删除所有已下载的 VRM/MMD/Spine/Live2D 模型文件。'
+    delete: '删除所有模型'
+  modules:
+    title: '模块设置'
+    description: '将所有模块配置重置为默认值。'
+    reset: '重置模块设置'
+  danger:
+    title: '危险区'
+    description: '这些操作不可逆。'
+    providersTitle: '提供商与凭据'
+    providersDescription: '重置提供商配置和已存储的凭据。'
+    providersReset: '重置提供商'
+    allTitle: '所有用户数据'
+    allDescription: '删除一切 —— 会话、记忆、角色卡、设置。无法撤销。'
+    allDelete: '删除所有数据'
+  desktop:
+    title: '桌面应用状态'
+    description: '重置窗口位置、托盘及其他桌面 shell 状态（仅桌面版）。'
+    reset: '重置桌面状态'
+  confirm:
+    title: '确定吗？'
+    notWiredBody: '此操作尚未连接到 Rust 后端 —— 确认只会显示通知，不会删除或重置任何内容。'
+    confirm: '确认'
+    cancel: '取消'
+  exportDialog:
+    title: '导出数据归档'
+    subtitle: '选择要打包进标准 ZIP 归档的数据领域。'
+    characters: '伙伴与角色卡'
+    charactersHint: '提示词、衣橱、头像'
+    chats: '聊天历史与时间线'
+    chatsHint: '所有伙伴的会话和消息'
+    memory: '记忆与日记'
+    memoryHint: '每日回顾、日记条目、终生核心'
+    providers: 'AI 提供商与应用设置'
+    providersHint: '已配置的提供商与偏好 (~2 KB)'
+    backgrounds: '自定义场景背景'
+    backgroundsHint: '已保存的图片壁纸'
+    linkageWarning: '未选择“伙伴与角色卡”。建议包含它，以便恢复时聊天和记忆保持关联。'
+    estimatedSize: '预估归档大小：'
+    sizeUnknown: '未知 —— 后端未连接'
+    cancel: '取消'
+    confirm: '导出归档'
+    copyPlaceholder: '复制占位 manifest'
+  importDialog:
+    title: '通用数据导入'
+    subtitle: '从 ZIP 归档、旧版备份 JSON 或角色卡恢复。'
+    dropTitle: '点击或拖拽文件到此处以导入'
+    dropSubtitle: '支持 .zip 归档、聊天/记忆 JSON 和 PNG 角色卡（支持多文件拖放）'
+    browse: '浏览文件…'
+    selectedTitle: '已选文件：'
+    waveNote: '文件检查、伙伴关联以及导入本身将随 wave ④ 保险库桥一起到来。目前什么都不会被写入。'
+    filterVault: '保险库归档和备份 (*.zip *.json *.png)'
+    filterAll: '所有文件 (*)'
+    cancel: '取消'
+    confirm: '导入所有数据'

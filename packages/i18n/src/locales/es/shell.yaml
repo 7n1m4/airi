@@ -1,0 +1,569 @@
+# Cadena del shell de escritorio Qt (QML): splash, tira de control, ventanas y
+# páginas de marcador de posición.
+app:
+  name: AIRI
+  tagline: Tu compañero de IA, en tu escritorio.
+  version-label: Versión
+splash:
+  milestones:
+    core_services: Inicializando servicios principales…
+    sync_engine: Restaurando el estado local y el almacenamiento…
+    providers: Conectando proveedores de modelos…
+    stage_ready: Preparando el escenario…
+strip:
+  tooltips:
+    avatar: AIRI
+    mic: Alternar micrófono
+    chat: Conversación
+    stage: Escenario
+    settings: Ajustes
+    about: Acerca de AIRI
+    collapse: Contraer
+    expand: Expandir
+    theme: Cambiar modo oscuro / claro
+    language: Cambiar idioma
+    quit: Salir de AIRI
+    caption: Subtítulos
+chat:
+  title: AIRI — Chat
+  recent: Recientes
+  new: Nuevo chat
+  search-placeholder: Buscar chats…
+  delete-session: Eliminar chat
+  empty-title: Empieza una conversación
+  empty-subtitle: Tus mensajes se guardan localmente en este dispositivo.
+  input-placeholder: Mensaje a AIRI…
+  send: Enviar
+  stop: Detener
+  streaming: Transmitiendo…
+  provider-unconfigured: Ningún proveedor de modelo configurado
+  status:
+    error: Error
+  card-picker:
+    none: Sin tarjeta
+    empty-title: Aún no hay tarjetas de personaje
+    empty-subtitle: Importa una tarjeta de personaje CCv2/CCv3 (png o json) para chatear con una personalidad.
+    import: Importar tarjeta…
+    import-error: 'No se pudo importar la tarjeta — no es una tarjeta CCv2/CCv3 válida (png o json).'
+settings:
+  title: AIRI — Ajustes
+  description: Configura tu asistente de IA.
+  nav:
+    providers: Proveedores
+    theme: Tema
+    about: Acerca de
+    soon: Wave B
+    stage: Stage
+    spine: Spine
+    mmd: MMD
+    live2d: Live2D
+    general: General
+    chat: Chat
+    voice: Voz
+    profile: Perfil
+    cards: Tarjetas
+    explore: Explorar
+    data: Datos
+    onboarding: Onboarding
+    notice: Avisos
+    widgets: Widgets
+    onboardingV3: Onboarding V3
+    gemini: Gemini
+    fadeOnHover: Fade on Hover
+  theme-page:
+    title: Tema
+    description: Personaliza los colores y la apariencia de AIRI.
+    hue: Matiz de acento
+    chroma: Multiplicador de croma
+    dark: Modo oscuro
+    reset: Restablecer valores
+  spine:
+    title: Spine
+    description: Comportamiento del motor Spine para el compañero del escenario.
+    maxFps: FPS máximos
+    maxFpsHint: 0 = ilimitado
+    renderScale: Escala de renderizado
+    mixDuration: Duración de mezcla
+    animationSpeed: Velocidad de animación
+    idleAnimation: Animación inactiva
+    scalePosTitle: Ubicación del modelo
+    scalePosX: Posición X
+    scalePosY: Posición Y
+    scalePosScale: Escala
+    saveError: No se pudieron guardar los ajustes de Spine.
+  mmd:
+    title: MMD
+    description: Comportamiento del motor MMD para el compañero del escenario.
+    idleAnimation: Animación inactiva
+    renderScale: Escala de renderizado
+    physicsNote: Escala de renderizado para renders de MMD; la física está desactivada hasta la P10.
+    saveError: No se pudieron guardar los ajustes de MMD.
+  live2d:
+    title: Live2D
+    description: Comportamiento de Live2D para el compañero del escenario.
+    deferredNotice: El renderizador de Live2D se pospone hasta después de Spine. Los cambios se guardan, pero aún no afectarán al renderizado.
+    disableFocus: Desactivar enfoque
+    idleAnimation: Animación inactiva
+    autoBlink: Parpadeo automático
+    forceAutoBlink: Forzar parpadeo automático
+    shadow: Sombra paralela
+    followSpeed: Velocidad de seguimiento
+    maxFps: FPS máximos
+    maxFpsHint: 0 = ilimitado
+    saveError: No se pudieron guardar los ajustes de Live2D.
+providers:
+  search: Buscar proveedores…
+  search-empty: Ningún proveedor coincide con tu filtro.
+  enabled: Habilitado
+  not-available: Aún no disponible
+  not-available-hint: El motor de este proveedor llegará en una fase posterior. La configuración se guarda pero aún no se puede usar para el chat.
+  configured: Guardado
+  test: Probar conexión
+  test-success: Conexión correcta — el proveedor respondió.
+  test-failed: Error de conexión
+  test-unsupported: La prueba de conexión aún no está disponible para este proveedor.
+  save: Guardar
+  saved: Guardado.
+  save-failed: No se pudo guardar la configuración.
+  delete: Eliminar
+  models-refresh: Obtener modelos
+  models-empty: Aún no hay modelos — guarda tus credenciales y obtén la lista, o escribe un nombre de modelo.
+  kind:
+    open-ai-compatible: Compatible con OpenAI
+    anthropic: Anthropic
+    google-gemini: Gemini
+    aws-bedrock: Bedrock
+    local-server: Servidor local
+  field:
+    api_key: Clave de API
+    base_url: URL base
+    model: Modelo
+    region: Región de AWS
+    aws_access_key_id: ID de clave de acceso de AWS
+    aws_secret_access_key: Clave secreta de acceso de AWS
+    account_id: ID de cuenta de Cloudflare
+about:
+  title: AIRI — Acerca de
+  app-name: AIRI
+  tagline: Tu compañero de IA, en tu escritorio.
+  body: AIRI es un compañero de IA de escritorio — un ser digital que habla, ve y reacciona. Construido con Rust, Qt 6 y QML.
+  license: Con licencia GPL-3.0-or-later. Qt Quick 3D se usa bajo sus términos GPL.
+  source-label: Código fuente
+  source-url: https://github.com/moeru-ai/airi
+  credit: Creado por Neko Ayaka y los colaboradores de AIRI.
+  check-update: Buscar actualizaciones
+  update-up-to-date: AIRI está actualizado.
+  update-available: 'Actualización disponible:'
+stage:
+  description: Muestra y posiciona la ventana flotante del escenario con tu compañera de IA.
+  openStageWindow: Mostrar ventana del escenario
+  windowTitle: Ventana del escenario
+  empty-title: Sin modelo en el escenario
+  empty-subtitle: Elige un modelo VRM en Ajustes → Escenario y aparecerá aquí.
+  openSettings: Abrir ajustes del escenario
+  resetPosition: Restablecer posición
+  boundsResetNotice: Posición borrada — el escenario se reacomoda al abrirse.
+  modelSection:
+    title: Modelo
+    hint: Archivo VRM usado para la compañera del escenario. Elige un modelo, importa un .vrm o búscalo en el disco.
+  modelListEmpty: No se encontró ningún modelo .vrm — importa uno abajo o búscalo
+  modelNone: Ningún modelo seleccionado
+  browseModel: Explorar…
+  importModel: Importar
+  captions:
+    title: Subtítulos
+    enabled: Mostrar subtítulos
+    fontSize: Tamaño de fuente
+    opacity: Opacidad
+    docking: Anclaje
+    top: Arriba
+    bottom: Abajo
+    head: Cabeza
+    none: Ninguno
+    preview: Vista previa
+    previewSample: Así se verán los subtítulos mientras AIRI habla.
+  stripSection:
+    title: Tira de control
+    hint: Elige qué controles de escenario aparecen en la tira de control.
+    stage: Botón de escenario
+    caption: Botón de subtítulos
+  saveError: No se pudo guardar. Revisa la ruta e inténtalo de nuevo.
+general:
+  description: Comportamiento general de la app y privacidad.
+  languageSection: Idioma de la interfaz
+  languagePlaceholder: p. ej. es, en (vacío = sistema)
+  languageHint: Déjalo vacío para seguir el idioma del sistema.
+  transitionsSection: Transiciones de página
+  disableTransitions: Desactivar todas las transiciones
+  usePageSpecificTransitions: Usar transiciones específicas por página
+  privacySection: Privacidad y red
+  remoteSyncEnabled: Permitir que los diagnósticos sensibles se sincronicen remotamente
+  websocketSecureEnabled: Usar wss:// para el servidor websocket integrado
+  startupSection: Inicio
+  autostartEnabled: Iniciar automáticamente al iniciar sesión
+  saveError: No se pudo guardar. Inténtalo de nuevo.
+chat-settings:
+  description: Cómo se envían y transmiten los mensajes.
+  inputSection: Entrada
+  sendMode: Enviar mensaje con
+  suggestMode: Aceptar sugerencia con
+  modeEnter: Enter
+  modeCtrlEnter: Ctrl+Enter
+  modeDoubleEnter: Doble Enter
+  modeDisabled: Desactivado
+  streamIdleTimeout: Tiempo de espera de flujo inactivo (ms)
+  streamIdleTimeoutHint: Abortar una respuesta en streaming tras este tiempo de silencio. 600000 = 10 minutos.
+  messagesSection: Mensajes
+  showDirectorNotes: Mostrar notas del director en el chat
+  combineSystemMessages: Combinar mensajes de sistema consecutivos antes de enviar
+  saveError: No se pudo guardar. Inténtalo de nuevo.
+audio:
+  description: Entrada de micrófono y salida de altavoz para voz.
+  inputSection: Entrada de voz
+  inputEnabled: Activar entrada de voz
+  inputDevice: Id del dispositivo de entrada
+  inputDevicePlaceholder: pega el id del dispositivo (p. ej. de `pactl list sources short`)
+  outputDevice: Id del dispositivo de salida
+  outputDevicePlaceholder: pega el id del dispositivo (p. ej. de `pactl list sinks short`)
+  deviceHint: La enumeración de dispositivos aún no está disponible en esta versión — pega el id manualmente. Déjalo vacío para usar el predeterminado del sistema.
+  save: Guardar
+  saveError: No se pudo guardar. Inténtalo de nuevo.
+profile:
+  description: Quién eres para AIRI.
+  identitySection: Identidad
+  name: Nombre visible
+  namePlaceholder: Tu nombre
+  descriptionLabel: Sobre ti
+  descriptionPlaceholder: Una breve descripción sobre ti…
+  voiceProfileId: Id de perfil de voz
+  voiceProfileIdPlaceholder: p. ej. un perfil de voz de tu proveedor TTS
+  promptSection: Prompt del sistema
+  promptHint: Sustitución opcional del prompt del sistema enviado al modelo. Déjalo vacío para usar el predeterminado.
+  promptPlaceholder: Eres…
+  save: Guardar
+  saveError: No se pudo guardar. Inténtalo de nuevo.
+notify:
+  replyReady: AIRI respondió
+common:
+  close: Cerrar
+
+cards:
+  title: Tarjetas
+  searchPlaceholder: Buscar tarjetas…
+  import: Importar…
+  importDialogTitle: Importar una tarjeta de personaje
+  new: Nueva tarjeta
+  refresh: Actualizar
+  emptyTitle: Aún no hay tarjetas
+  emptyBody: Importa una tarjeta CCv2/CCv3 (.png o .json) para chatear con un personaje.
+  noGreeting: Sin saludo
+  jsonCard: Tarjeta JSON (sin avatar)
+  active: En uso
+  use: Usar en el chat
+  edit: Editar
+  delete: Eliminar
+  cancel: Cancelar
+  deleteTitle: ¿Eliminar tarjeta?
+  deleteBody: Esto elimina permanentemente el archivo de la tarjeta de tu dispositivo.
+  save: Guardar
+  editor:
+    title: Editar tarjeta
+    newTitle: Nueva tarjeta
+    saving: Guardando…
+    nameRequired: El nombre es obligatorio.
+    saveError: No se pudo guardar la tarjeta.
+    loadError: No se pudo cargar esa tarjeta.
+  fields:
+    name: Nombre…
+    description: Descripción…
+    personality: Personalidad…
+    scenario: Escenario…
+    firstMes: Primer mensaje…
+    alternateGreetings: Saludos alternativos — uno por línea…
+    mesExample: Diálogo de ejemplo (bloques <START>)…
+    systemPrompt: Indicaciones del sistema…
+    postHistoryInstructions: Instrucciones tras el historial…
+    creator: Creador…
+    creatorNotes: Notas del creador…
+    characterVersion: Versión…
+    tags: Etiquetas, separadas por comas…
+  sections:
+    dialogue: Diálogo
+    behavior: Comportamiento
+    metadata: Metadatos
+models:
+  explore:
+    title: Descubre avatares
+    description: Explora archivos comunitarios, repositorios externos y bibliotecas de modelos gratuitos para VRM, Live2D, Spine y MMD.
+    suggestSite: Sugerir un sitio
+    filterLabel: Formato
+    featuredFree: Avatares gratuitos destacados
+    downloadModel: Descargar
+    freeArchives: Archivos comunitarios gratuitos
+    creatorMarketplaces: Mercados de creadores
+    emptyFree: No se encontraron archivos gratuitos para este formato.
+    emptyPaid: No se encontraron mercados para este formato.
+    free: 100 % gratis
+    mixed: Gratis y de pago
+    paid: De pago / Comisiones
+    visit: Visitar
+    knowRepository: ¿Conoces otro buen repositorio de modelos?
+    knowRepositoryHint: Ayuda a la comunidad AIRI recomendando más repositorios, herramientas o archivos gratuitos.
+    submitOnGithub: Enviar en GitHub
+    formats:
+      all: Todos los formatos
+      vrm: VRM (3D)
+      live2d: Live2D (2D)
+      spine: Spine (2D)
+      mmd: MMD
+
+onboarding:
+  deferredNotice: 'Aún no se ha conectado la finalización del primer arranque en esta compilación de Qt — estas pantallas son de presentación. Los botones para completar o saltar el asistente se habilitarán cuando llegue el store de onboarding.'
+  deferredTip: 'Aún no conectado — el store de onboarding del primer arranque habilitará esta acción.'
+  back: 'Atrás'
+  v2:
+    title: 'Configuración del compañero AIRI'
+    previewBadge: 'Asistente de primer arranque'
+    next: 'Siguiente'
+    finish: 'Finalizar'
+    skip: 'Configurar más tarde'
+    steps:
+      welcome:
+        label: 'Bienvenido'
+        subtitle: 'Conoce a tu compañero digital y elige cómo quieres configurarlo.'
+      triage:
+        label: 'Tu ruta'
+        subtitle: 'Máquina nueva o dispositivo recurrente — elige cómo continuar.'
+      hearing:
+        label: 'Oído'
+        subtitle: 'Dale oídos a tu compañero con voz a texto y una comprobación de micrófono.'
+      consciousness:
+        label: 'Conciencia'
+        subtitle: 'Elige el motor de razonamiento detrás de tu compañero.'
+      profile:
+        label: 'Tú'
+        subtitle: 'Cuéntale a tu compañero quién eres y cómo te gusta trabajar.'
+      persona:
+        label: 'Persona'
+        subtitle: 'Da forma al alma: nombre, carácter y rasgos de personalidad.'
+      vessel:
+        label: 'Cuerpo'
+        subtitle: 'Elige el cuerpo: Live2D, VRM o una presencia mínima.'
+      speech:
+        label: 'Voz'
+        subtitle: 'Selección de voz y una comprobación rápida de velocidad de habla.'
+      calibration:
+        label: 'Lanzar'
+        subtitle: 'Una calibración rápida y directo al escenario.'
+  v3:
+    brand: 'Configuración del compañero AIRI'
+    stageReady: 'Escenario listo'
+    heroTitle: 'Bienvenido a AIRI'
+    heroSubtitle: 'El escenario de tu compañero — configúralo en minutos, 100% en tu máquina.'
+    companionQuote: '¡Hola! Soy tu compañero digital autónomo. Ya sea que quieras conversación por voz, actuaciones creativas en el escenario o una presencia tranquila en el escritorio, estoy listo para adaptarme a tu mundo.'
+    pillWebgpu: 'Núcleo WebGPU local'
+    pillOffline: '100% sin conexión y privado'
+    pillSouls: 'Mezcla almas + cuerpos'
+    quickStart: 'Inicio rápido (60 s)'
+    guidedSetup: 'Configuración guiada'
+    setupLater: 'Configurar más tarde'
+
+notice:
+  previewBadge: 'Vista previa'
+  deferredTip: 'Necesita el puente de acciones de ventanas de aviso (windowAction / pageMounted / pageUnmounted), que aún no existe en la build de Qt.'
+  index:
+    title: 'Avisos'
+    subtitle: 'El proceso principal de AIRI muestra ventanas de aviso transitorias para avisos puntuales. Esta página lista los avisos con los que se distribuye la app de escritorio.'
+    surfaces: 'Superficies de aviso'
+    geminiTitle: 'Onboarding de Gemini'
+    geminiSubtitle: 'Se abre cuando no hay una clave de Google Generative AI configurada, ofreciendo añadir una antes de la primera sesión.'
+    fadeOnHoverTitle: 'Tutorial de Desaparecer al pasar el cursor'
+    fadeOnHoverSubtitle: 'Explica el comportamiento de ocultado automático que atenúa al personaje cuando el cursor se acerca.'
+    routeGemini: '/notice/gemini'
+    routeFadeOnHover: '/notice/fade-on-hover'
+    deferredNotice: 'La build de Qt aún no tiene un anfitrión de ventanas de aviso. Estas superficies se abrirán como ventanas de aviso sin marco impulsadas por el store de solicitudes pendientes en cuanto llegue.'
+    footnote: 'En la build de Electron viven en /notice/gemini y /notice/fade-on-hover.'
+  gemini:
+    header: 'Nodo de inteligencia en línea'
+    title: 'Salto cuántico de Gemini'
+    intro: 'Bienvenido a la próxima generación de interacción con IA. Tu personaje ahora está impulsado por Google Gemini, con comprensión multimodal profunda.'
+    graphicCaption: 'Visualización cósmica de Gemini'
+    poweredBy: 'Impulsado por Gemini'
+    visionTitle: 'Visión real'
+    visionDescription: 'Por fin puedo ver tu pantalla y tu mundo. Usa el icono de cámara para capturar o muéstrame cosas con tu lente.'
+    memoryTitle: 'Memoria contextual'
+    memoryDescription: 'Recuerdo nuestra sesión actual con extrema precisión, lo que nos permite construir conversaciones más profundas con el tiempo.'
+    addKey: 'Añadir clave de Gemini'
+    dontShowAgain: 'No volver a mostrar'
+  fadeOnHover:
+    badge: 'Tutorial'
+    title: 'Desaparecer al pasar el cursor'
+    intro: 'Atenúa automáticamente al personaje cuando tu cursor se acerca. Ayuda a reducir distracciones manteniendo visible a tu personaje.'
+    opacityLine: 'Tras activarlo, la opacidad cae a 0 tanto para el personaje como para la UI cuando tu cursor está cerca.'
+    toggleLine: 'Puedes desactivarlo pasando el cursor por el Controls Island y haciendo clic en el icono de ojo tachado.'
+    confirm: 'Entendido'
+    dontShowAgain: 'No volver a mostrar'
+    previewTitle: 'Vista previa del tutorial'
+    previewNote: 'El video del tutorial se distribuye con los assets del renderer de stage-tamagotchi. Empaquetarlo requiere un pase de registro de assets que aún no ha llegado a la build de Qt.'
+
+widgets:
+  title: 'Widgets'
+  previewBadge: 'Vista previa'
+  catalogTitle: 'Componentes de widget conocidos'
+  samplePropsCaption: 'componentProps de ejemplo'
+  missingId: 'Falta el id del widget. Lanza esta ventana mediante una llamada de componente (widgets.render) para poblar la vista.'
+  refresh: 'Actualizar'
+  closeWidget: 'Cerrar widget'
+  deferredNotice: 'La build de Qt aún no tiene puente de widgets (widgets.fetch / render / update / remove / clear) ni registro de renderizadores QML. Todo lo de abajo son datos de vista previa estáticos.'
+  deferredTip: 'Necesita el puente de widgets (fetch + eventos render/update/remove/clear) en la build de Qt.'
+  kinds:
+    weather:
+      name: 'Clima'
+      description: 'Condiciones actuales y pronóstico, resueltos para la ubicación del compañero.'
+    map:
+      name: 'Mapa'
+      description: 'Instantánea de mapa interactivo para una ubicación sobre la que preguntó el compañero.'
+    artistry:
+      name: 'Artística'
+      description: 'Arte generado desde el pipeline de artistry (ComfyUI / generación de imágenes).'
+    comfy:
+      name: 'Comfy'
+      description: 'Alias de artistry — la vista de generación respaldada por ComfyUI.'
+    sticker:
+      name: 'Sticker'
+      description: 'Sticker o imagen de reacción que el compañero elige para la conversación.'
+    generic:
+      name: 'Genérico'
+      description: 'Vuelco JSON de reserva para nombres de componentes no registrados.'
+
+data:
+  title: 'Datos'
+  description: 'Todo lo que AIRI almacena localmente en este dispositivo — expórtalo, impórtalo o depura el historial pesado.'
+  status:
+    notWired: 'La exportación aún no está conectada con un backend de Rust — ver la nota de fase'
+    actionNotWired: 'Esta acción aún no está conectada con un backend de Rust — ver la nota de fase'
+    imported: 'Importación completada.'
+    placeholderCopied: 'Manifiesto de marcador copiado al portapapeles — no contiene datos del usuario.'
+    scrubDone: 'Depuración completada.'
+    importDone: 'Importación completada — chats y memorias restaurados (las filas existentes prevalecen); las tarjetas y credenciales no se aplicaron.'
+    exportDone: 'Exportación completada.'
+  vault:
+    title: 'Data Vault: archivo e importación universal'
+    description: 'Archivos ZIP selectivos y legibles para todos los pilares de memoria, o restaura datos con vinculación automática de compañeros.'
+    import: 'Importación universal'
+    export: 'Exportar archivo'
+  sync:
+    title: 'Cloud Sync: respaldo continuo sin custodia'
+    description: 'Replicación continua a tu bucket S3-compatible personal o a una carpeta local de red.'
+    badge: 'Aún no conectado'
+    enable: 'Activar auto-sincronización'
+    active: 'Auto-sincronización activa'
+    syncNow: 'Sincronizar ahora'
+    openSettings: 'Abrir configuración de Cloud Sync'
+    zeroCustodyTitle: 'Replicación automática sin custodia:'
+    zeroCustodyBody: 'Cloud Sync replica continuamente tus conversaciones, compañeros, resúmenes diarios de memoria y ajustes en un almacenamiento que controlas (AWS S3, buckets S3-compatibles o Local Share). Nunca vemos ni custodiamos tus datos.'
+    avatarsTitle: 'Avatares Live2D, VRM, Spine y MMD:'
+    avatarsBody: 'Los modelos de avatar son assets binarios grandes, por lo que no existe una exportación en un solo archivo; Cloud Sync es el único mecanismo de respaldo automatizado para ellos.'
+    activeTarget: 'Objetivo activo'
+    lastSynced: 'Última sincronización'
+    notConfigured: 'No configurado'
+    never: 'Nunca'
+  scrub:
+    title: 'Optimización y depuración de medios de sesión'
+    description: 'Extrae cadenas de imagen base64 en línea y payloads de herramientas filtrados de tu historial de chat al almacenamiento local persistente, evitando el inflado de tokens del LLM.'
+    button: 'Limpiar e inspeccionar historial'
+  scrubHistory:
+    title: 'Historial de depuración'
+    description: 'Informes de ejecuciones pasadas de optimización.'
+    emptyTitle: 'Aún no hay depuraciones registradas'
+    emptySubtitle: 'El historial de depuración aparecerá aquí cuando llegue el backend de depuración y ejecutes tu primera optimización.'
+  scrubDialog:
+    title: 'Depurar y resolver medios de sesión'
+    subtitle: 'Extrae imágenes pesadas en línea al almacenamiento para eliminar el inflado de tokens.'
+    promptBody: 'Este proceso escanea todas las conversaciones en busca de URLs de datos de imagen base64 y payloads de imagen de herramientas en bruto. Cada imagen detectada se reubica de forma segura en tu galería local de fondos y se reemplaza en tu historial por un puntero de asset ligero.'
+    currentChatSize: 'Tamaño total actual del chat'
+    sizeUnknown: 'Desconocido — backend no conectado'
+    safetyTitle: 'Confirmación de seguridad:'
+    safetyBody: 'Por si acaso, ¿quieres crear un archivo de respaldo completo de tus compañeros y conversaciones antes de continuar?'
+    cancel: 'Cancelar'
+    scrubWithoutBackup: 'Depurar sin respaldo'
+    backupAndScrub: 'Crear respaldo y depurar'
+    waveNote: 'Los archivos seleccionados se inspeccionan al importar. Los chats y memorias se restauran (las filas existentes prevalecen); las tarjetas y credenciales de proveedores no se aplican.'
+  unlinked:
+    title: 'Conversaciones y memorias sin vincular'
+    description: 'Recupera historiales de chat y memorias abandonadas por compañeros eliminados o renombrados.'
+    badge: 'Aún no conectado'
+    emptyTitle: 'La detección de datos huérfanos aún no está conectada'
+    emptySubtitle: 'Detectar sesiones huérfanas requiere el puente de datos (wave ④). Cuando llegue, aquí se listarán los grupos que puedes recrear o fusionar.'
+  legacy:
+    title: 'Herramientas por dominio (JSON heredado de un solo archivo)'
+    show: 'Mostrar'
+    hide: 'Ocultar'
+    chatsTitle: 'Sesiones de chat'
+    chatsDescription: 'Exporta o purga todas las sesiones de chat como un único archivo JSON.'
+    charactersTitle: 'Compañeros y tarjetas'
+    charactersDescription: 'Exporta o importa todas las tarjetas de personaje como un único archivo JSON.'
+    memoryTitle: 'Memorias y diarios'
+    memoryDescription: 'Exporta o importa memorias, resúmenes diarios y entradas de diario.'
+    backgroundsTitle: 'Fondos'
+    backgroundsDescription: 'Exporta o importa fondos de escena personalizados.'
+    export: 'Exportar'
+    import: 'Importar'
+    deleteChats: 'Eliminar todas las sesiones de chat'
+  models:
+    title: 'Modelos descargados'
+    description: 'Elimina todos los archivos de modelos VRM/MMD/Spine/Live2D descargados de este dispositivo.'
+    delete: 'Eliminar todos los modelos'
+  modules:
+    title: 'Ajustes de módulos'
+    description: 'Restablece toda la configuración de módulos a valores por defecto.'
+    reset: 'Restablecer ajustes de módulos'
+  danger:
+    title: 'Zona de peligro'
+    description: 'Estas acciones son irreversibles.'
+    providersTitle: 'Proveedores y credenciales'
+    providersDescription: 'Restablece la configuración de proveedores y las credenciales almacenadas.'
+    providersReset: 'Restablecer proveedores'
+    allTitle: 'Todos los datos del usuario'
+    allDescription: 'Elimina todo — sesiones, memorias, tarjetas, ajustes. No se puede deshacer.'
+    allDelete: 'Eliminar todos los datos'
+  desktop:
+    title: 'Estado de la aplicación de escritorio'
+    description: 'Restablece la colocación de ventanas, la bandeja y otros estados del shell de escritorio (solo build de escritorio).'
+    reset: 'Restablecer estado de escritorio'
+  confirm:
+    title: '¿Seguro?'
+    notWiredBody: 'Esta acción aún no está conectada con un backend de Rust — confirmar solo mostrará un aviso, nada se eliminará ni restablecerá.'
+    confirm: 'Confirmar'
+    cancel: 'Cancelar'
+  exportDialog:
+    title: 'Exportar archivo de datos'
+    subtitle: 'Selecciona los dominios de datos para empaquetar en un archivo ZIP estándar.'
+    characters: 'Compañeros y tarjetas'
+    charactersHint: 'Prompts, vestuario, avatares'
+    chats: 'Historiales y cronologías de chat'
+    chatsHint: 'Sesiones y mensajes de todos los compañeros'
+    memory: 'Memorias y diarios'
+    memoryHint: 'Resúmenes diarios, entradas de diario, núcleos de vida'
+    providers: 'Proveedores de IA y ajustes de la app'
+    providersHint: 'Proveedores configurados y preferencias (~2 KB)'
+    backgrounds: 'Fondos de escena personalizados'
+    backgroundsHint: 'Fondos de imagen guardados'
+    linkageWarning: 'Compañeros y tarjetas no está seleccionado. Recomendamos incluirlo para que los chats y las memorias sigan vinculados al restaurarlos.'
+    estimatedSize: 'Tamaño estimado del archivo:'
+    sizeUnknown: 'Desconocido — backend no conectado'
+    cancel: 'Cancelar'
+    confirm: 'Exportar archivo'
+    copyPlaceholder: 'Copiar manifiesto de marcador'
+  importDialog:
+    title: 'Importación universal de datos'
+    subtitle: 'Restaura desde un archivo ZIP, un JSON heredado de respaldo o una tarjeta de personaje.'
+    dropTitle: 'Haz clic o arrastra archivos aquí para importar'
+    dropSubtitle: 'Soporta archivos .zip, JSON de chat/memoria y tarjetas PNG (arrastre múltiple soportado)'
+    browse: 'Buscar archivos…'
+    selectedTitle: 'Archivos seleccionados:'
+    waveNote: 'La inspección de archivos, la vinculación de compañeros y la importación en sí llegarán con el puente del vault (wave ④). Aún no se escribe nada.'
+    filterVault: 'Archivos del vault y respaldos (*.zip *.json *.png)'
+    filterAll: 'Todos los archivos (*)'
+    cancel: 'Cancelar'
+    confirm: 'Importar todos los datos'

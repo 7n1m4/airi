@@ -1,0 +1,569 @@
+# Chuỗi cho Qt (QML) desktop shell: màn hình khởi động, thanh điều khiển, các
+# cửa sổ và trang giữ chỗ.
+app:
+  name: AIRI
+  tagline: Người bạn đồng hành AI của bạn, ngay trên desktop.
+  version-label: Phiên bản
+splash:
+  milestones:
+    core_services: Đang khởi tạo các dịch vụ cốt lõi…
+    sync_engine: Đang khôi phục trạng thái và bộ lưu trữ cục bộ…
+    providers: Đang kết nối nhà cung cấp mô hình…
+    stage_ready: Đang chuẩn bị sân khấu…
+strip:
+  tooltips:
+    avatar: AIRI
+    mic: Bật/tắt micro
+    chat: Trò chuyện
+    stage: Sân khấu
+    settings: Cài đặt
+    about: Giới thiệu AIRI
+    collapse: Thu gọn
+    expand: Mở rộng
+    theme: Chuyển chế độ tối / sáng
+    language: Đổi ngôn ngữ
+    quit: Thoát AIRI
+    caption: Phụ đề
+chat:
+  title: AIRI — Trò chuyện
+  recent: Gần đây
+  new: Trò chuyện mới
+  search-placeholder: Tìm cuộc trò chuyện…
+  delete-session: Xóa cuộc trò chuyện
+  empty-title: Bắt đầu cuộc trò chuyện
+  empty-subtitle: Tin nhắn được lưu cục bộ trên thiết bị này.
+  input-placeholder: Nhắn tin cho AIRI…
+  send: Gửi
+  stop: Dừng
+  streaming: Đang tạo…
+  provider-unconfigured: Chưa cấu hình nhà cung cấp mô hình
+  status:
+    error: Lỗi
+  card-picker:
+    none: Không có thẻ
+    empty-title: Chưa có thẻ nhân vật
+    empty-subtitle: Nhập thẻ nhân vật CCv2/CCv3 (png hoặc json) để trò chuyện với một nhân cách.
+    import: Nhập thẻ…
+    import-error: 'Không thể nhập thẻ — không phải thẻ CCv2/CCv3 hợp lệ (png hoặc json).'
+settings:
+  title: AIRI — Cài đặt
+  description: Cấu hình trợ lý AI của bạn.
+  nav:
+    providers: Nhà cung cấp
+    theme: Giao diện
+    about: Giới thiệu
+    soon: Wave B
+    stage: Sân khấu
+    spine: Spine
+    mmd: MMD
+    live2d: Live2D
+    general: Chung
+    chat: Trò chuyện
+    voice: Giọng nói
+    profile: Hồ sơ
+    cards: Thẻ
+    explore: Khám phá
+    data: Dữ liệu
+    onboarding: Onboarding
+    notice: Thông báo
+    widgets: Tiện ích
+    onboardingV3: Onboarding V3
+    gemini: Gemini
+    fadeOnHover: Fade on Hover
+  theme-page:
+    title: Giao diện
+    description: Cá nhân hóa màu sắc và diện mạo của AIRI.
+    hue: Tông màu nhấn
+    chroma: Hệ số sắc độ
+    dark: Chế độ tối
+    reset: Khôi phục mặc định
+  spine:
+    title: Spine
+    description: Hành vi của trình chạy Spine cho bạn đồng hành trên sân khấu.
+    maxFps: FPS tối đa
+    maxFpsHint: 0 = không giới hạn
+    renderScale: Tỷ lệ render
+    mixDuration: Thời lượng pha trộn
+    animationSpeed: Tốc độ hoạt ảnh
+    idleAnimation: Hoạt ảnh chờ
+    scalePosTitle: Vị trí mô hình
+    scalePosX: Vị trí X
+    scalePosY: Vị trí Y
+    scalePosScale: Tỷ lệ
+    saveError: Không thể lưu cài đặt Spine.
+  mmd:
+    title: MMD
+    description: Hành vi của trình chạy MMD cho bạn đồng hành trên sân khấu.
+    idleAnimation: Hoạt ảnh chờ
+    renderScale: Tỷ lệ render
+    physicsNote: Tỷ lệ render cho render MMD; vật lý bị tắt cho đến P10.
+    saveError: Không thể lưu cài đặt MMD.
+  live2d:
+    title: Live2D
+    description: Hành vi Live2D cho bạn đồng hành trên sân khấu.
+    deferredNotice: Trình render Live2D được hoãn lại cho đến sau Spine. Các chỉnh sửa được lưu nhưng chưa ảnh hưởng đến việc render.
+    disableFocus: Tắt tiêu điểm
+    idleAnimation: Hoạt ảnh chờ
+    autoBlink: Tự động chớp mắt
+    forceAutoBlink: Buộc tự động chớp mắt
+    shadow: Bóng đổ
+    followSpeed: Tốc độ theo dõi
+    maxFps: FPS tối đa
+    maxFpsHint: 0 = không giới hạn
+    saveError: Không thể lưu cài đặt Live2D.
+providers:
+  search: Tìm kiếm nhà cung cấp…
+  search-empty: Không có nhà cung cấp nào khớp với bộ lọc.
+  enabled: Bật
+  not-available: Chưa khả dụng
+  not-available-hint: Engine của nhà cung cấp này sẽ có ở giai đoạn sau. Cấu hình được lưu nhưng chưa thể dùng cho chat.
+  configured: Đã lưu
+  test: Kiểm tra kết nối
+  test-success: Kết nối thành công — nhà cung cấp đã phản hồi.
+  test-failed: Kết nối thất bại
+  test-unsupported: Kiểm tra kết nối chưa khả dụng cho nhà cung cấp này.
+  save: Lưu
+  saved: Đã lưu.
+  save-failed: Không thể lưu cấu hình.
+  delete: Xoá
+  models-refresh: Lấy danh sách model
+  models-empty: Chưa có model — lưu thông tin xác thực rồi lấy danh sách, hoặc nhập tên model.
+  kind:
+    open-ai-compatible: Tương thích OpenAI
+    anthropic: Anthropic
+    google-gemini: Gemini
+    aws-bedrock: Bedrock
+    local-server: Máy chủ cục bộ
+  field:
+    api_key: Khoá API
+    base_url: URL cơ sở
+    model: Model
+    region: Vùng AWS
+    aws_access_key_id: ID khoá truy cập AWS
+    aws_secret_access_key: Khoá truy cập bí mật AWS
+    account_id: ID tài khoản Cloudflare
+about:
+  title: AIRI — Giới thiệu
+  app-name: AIRI
+  tagline: Người bạn đồng hành AI của bạn, ngay trên desktop.
+  body: AIRI là một người bạn đồng hành AI trên desktop — một thực thể kỹ thuật số biết nói, nhìn và phản ứng. Được xây dựng bằng Rust, Qt 6 và QML.
+  license: Giấy phép GPL-3.0-or-later. Qt Quick 3D được sử dụng theo các điều khoản GPL của nó.
+  source-label: Mã nguồn
+  source-url: https://github.com/moeru-ai/airi
+  credit: Được tạo ra bởi Neko Ayaka và các cộng tác viên AIRI.
+  check-update: Kiểm tra cập nhật
+  update-up-to-date: AIRI đã là phiên bản mới nhất.
+  update-available: 'Có bản cập nhật:'
+stage:
+  description: Hiển thị và bố trí cửa sổ sân khấu bay cùng bạn đồng hành AI của bạn.
+  openStageWindow: Hiển thị cửa sổ sân khấu
+  windowTitle: Cửa sổ sân khấu
+  empty-title: Chưa có mô hình trên sân khấu
+  empty-subtitle: Chọn mô hình VRM trong Cài đặt → Sân khấu và nó sẽ xuất hiện ở đây.
+  openSettings: Mở cài đặt sân khấu
+  resetPosition: Đặt lại vị trí
+  boundsResetNotice: Đã xóa vị trí — sân khấu sẽ căn giữa khi mở lại.
+  modelSection:
+    title: Mô hình
+    hint: Tệp VRM dùng cho bạn đồng hành trên sân khấu. Chọn một mô hình bên dưới, nhập .vrm hoặc duyệt tới đường dẫn tuyệt đối.
+  modelListEmpty: Không tìm thấy mô hình .vrm — nhập bên dưới hoặc duyệt tìm
+  modelNone: Chưa chọn mô hình
+  browseModel: Duyệt…
+  importModel: Nhập
+  captions:
+    title: Phụ đề
+    enabled: Hiện phụ đề
+    fontSize: Cỡ chữ
+    opacity: Độ mờ
+    docking: Vị trí neo
+    top: Trên
+    bottom: Dưới
+    head: Trên đầu
+    none: Không có
+    preview: Xem thử
+    previewSample: Đây là cách phụ đề hiển thị khi AIRI đang nói.
+  stripSection:
+    title: Thanh điều khiển
+    hint: Chọn các điều khiển sân khấu hiển thị trên thanh điều khiển.
+    stage: Nút sân khấu
+    caption: Nút phụ đề
+  saveError: Không thể lưu. Kiểm tra đường dẫn và thử lại.
+general:
+  description: Hành vi chung của ứng dụng và quyền riêng tư.
+  languageSection: Ngôn ngữ giao diện
+  languagePlaceholder: vd. vi, en (trống = hệ thống)
+  languageHint: Để trống để theo ngôn ngữ hệ thống.
+  transitionsSection: Chuyển trang
+  disableTransitions: Tắt mọi hiệu ứng chuyển trang
+  usePageSpecificTransitions: Dùng hiệu ứng chuyển riêng cho từng trang
+  privacySection: Quyền riêng tư & mạng
+  remoteSyncEnabled: Cho phép đồng bộ từ xa chẩn đoán nhạy cảm
+  websocketSecureEnabled: Dùng wss:// cho máy chủ websocket tích hợp
+  startupSection: Khởi động
+  autostartEnabled: Tự động khởi động khi đăng nhập
+  saveError: Không thể lưu. Thử lại.
+chat-settings:
+  description: Cách tin nhắn được gửi và truyền phát.
+  inputSection: Nhập liệu
+  sendMode: Gửi tin nhắn bằng
+  suggestMode: Chấp nhận gợi ý bằng
+  modeEnter: Enter
+  modeCtrlEnter: Ctrl+Enter
+  modeDoubleEnter: Enter hai lần
+  modeDisabled: Tắt
+  streamIdleTimeout: Thời gian chờ luồng nhàn rỗi (ms)
+  streamIdleTimeoutHint: Hủy phản hồi streaming sau khoảng im lặng này. 600000 = 10 phút.
+  messagesSection: Tin nhắn
+  showDirectorNotes: Hiện ghi chú đạo diễn trong khung chat
+  combineSystemMessages: Gộp các tin nhắn hệ thống liên tiếp trước khi gửi
+  saveError: Không thể lưu. Thử lại.
+audio:
+  description: Đầu vào mic và đầu ra loa cho giọng nói.
+  inputSection: Đầu vào giọng nói
+  inputEnabled: Bật đầu vào giọng nói
+  inputDevice: ID thiết bị đầu vào
+  inputDevicePlaceholder: dán ID thiết bị (vd. từ `pactl list sources short`)
+  outputDevice: ID thiết bị đầu ra
+  outputDevicePlaceholder: dán ID thiết bị (vd. từ `pactl list sinks short`)
+  deviceHint: Bản dựng này chưa liệt kê được thiết bị — hãy dán ID thủ công. Để trống để dùng mặc định của hệ thống.
+  save: Lưu
+  saveError: Không thể lưu. Thử lại.
+profile:
+  description: Bạn là ai đối với AIRI.
+  identitySection: Danh tính
+  name: Tên hiển thị
+  namePlaceholder: Tên của bạn
+  descriptionLabel: Về bạn
+  descriptionPlaceholder: Mô tả ngắn gọn về bạn…
+  voiceProfileId: ID hồ sơ giọng nói
+  voiceProfileIdPlaceholder: vd. hồ sơ giọng nói từ nhà cung cấp TTS của bạn
+  promptSection: Prompt hệ thống
+  promptHint: Ghi đè tùy chọn cho prompt hệ thống gửi đến mô hình. Để trống để dùng mặc định.
+  promptPlaceholder: Bạn là…
+  save: Lưu
+  saveError: Không thể lưu. Thử lại.
+notify:
+  replyReady: AIRI đã trả lời
+common:
+  close: Đóng
+
+cards:
+  title: Thẻ
+  searchPlaceholder: Tìm thẻ…
+  import: Nhập…
+  importDialogTitle: Nhập thẻ nhân vật
+  new: Thẻ mới
+  refresh: Tải lại
+  emptyTitle: Chưa có thẻ nào
+  emptyBody: Nhập thẻ CCv2/CCv3 (.png hoặc .json) để trò chuyện với một người bạn ảo.
+  noGreeting: Không có lời chào
+  jsonCard: Thẻ JSON (không có ảnh đại diện)
+  active: Đang dùng
+  use: Dùng trong trò chuyện
+  edit: Sửa
+  delete: Xóa
+  cancel: Hủy
+  deleteTitle: Xóa thẻ?
+  deleteBody: Thao tác này sẽ xóa vĩnh viễn tệp thẻ khỏi thiết bị của bạn.
+  save: Lưu
+  editor:
+    title: Sửa thẻ
+    newTitle: Thẻ mới
+    saving: Đang lưu…
+    nameRequired: Tên là bắt buộc.
+    saveError: Không thể lưu thẻ.
+    loadError: Không thể tải thẻ đó.
+  fields:
+    name: Tên…
+    description: Mô tả…
+    personality: Tính cách…
+    scenario: Kịch bản…
+    firstMes: Tin nhắn đầu tiên…
+    alternateGreetings: Lời chào thay thế — mỗi dòng một lời…
+    mesExample: Đối thoại mẫu (các khối <START>)…
+    systemPrompt: Prompt hệ thống…
+    postHistoryInstructions: Hướng dẫn sau lịch sử…
+    creator: Tác giả…
+    creatorNotes: Ghi chú tác giả…
+    characterVersion: Phiên bản…
+    tags: Thẻ (phân cách bởi dấu phẩy)…
+  sections:
+    dialogue: Đối thoại
+    behavior: Hành vi
+    metadata: Siêu dữ liệu
+models:
+  explore:
+    title: Khám phá Avatar
+    description: Khám phá các kho lưu trữ cộng đồng, kho bên ngoài và thư viện model miễn phí cho VRM, Live2D, Spine và MMD.
+    suggestSite: Đề xuất trang web
+    filterLabel: Định dạng
+    featuredFree: Avatar miễn phí nổi bật
+    downloadModel: Tải xuống
+    freeArchives: Kho lưu trữ cộng đồng miễn phí
+    creatorMarketplaces: Chợ của nhà sáng tạo
+    emptyFree: Không tìm thấy kho lưu trữ miễn phí cho bộ lọc định dạng này.
+    emptyPaid: Không tìm thấy chợ nào cho bộ lọc định dạng này.
+    free: 100% Miễn phí
+    mixed: Miễn phí & Trả phí
+    paid: Trả phí / Hoa hồng
+    visit: Truy cập
+    knowRepository: Bạn biết kho model tuyệt vời nào khác không?
+    knowRepositoryHint: Giúp cộng đồng AIRI phát triển bằng cách đề cử thêm nhiều kho, công cụ hoặc lưu trữ miễn phí.
+    submitOnGithub: Đề xuất trên GitHub
+    formats:
+      all: Mọi định dạng
+      vrm: VRM (3D)
+      live2d: Live2D (2D)
+      spine: Spine (2D)
+      mmd: MMD
+
+onboarding:
+  deferredNotice: 'Việc hoàn tất khởi chạy lần đầu chưa được nối trong bản dựng Qt này — các màn hình chỉ mang tính trình bày. Các nút hoàn tất hoặc bỏ qua trình hướng dẫn sẽ mở khoá khi store onboarding có mặt.'
+  deferredTip: 'Chưa được nối — store onboarding lần đầu sẽ kích hoạt hành động này.'
+  back: 'Quay lại'
+  v2:
+    title: 'Thiết lập bạn đồng hành AIRI'
+    previewBadge: 'Trình hướng dẫn khởi chạy'
+    next: 'Tiếp theo'
+    finish: 'Hoàn tất'
+    skip: 'Thiết lập sau'
+    steps:
+      welcome:
+        label: 'Chào mừng'
+        subtitle: 'Gặp gỡ bạn đồng hành kỹ thuật số của bạn và chọn cách thiết lập mọi thứ.'
+      triage:
+        label: 'Con đường của bạn'
+        subtitle: 'Máy mới hay thiết bị cũ — chọn cách tiếp tục.'
+      hearing:
+        label: 'Thính giác'
+        subtitle: 'Cho bạn đồng hành đôi tai với chuyển giọng nói thành văn bản và kiểm tra micro.'
+      consciousness:
+        label: 'Ý thức'
+        subtitle: 'Chọn động cơ suy luận phía sau bạn đồng hành.'
+      profile:
+        label: 'Bạn'
+        subtitle: 'Hãy cho bạn đồng hành biết bạn là ai và cách bạn làm việc.'
+      persona:
+        label: 'Persona'
+        subtitle: 'Nhào nặn linh hồn: tên, tính cách và đặc điểm.'
+      vessel:
+        label: 'Thân thể'
+        subtitle: 'Chọn thân thể: Live2D, VRM hoặc hiện diện tối giản.'
+      speech:
+        label: 'Giọng nói'
+        subtitle: 'Chọn giọng nói và kiểm tra tốc độ nói.'
+      calibration:
+        label: 'Khởi động'
+        subtitle: 'Hiệu chuẩn nhanh rồi thẳng lên sân khấu.'
+  v3:
+    brand: 'Thiết lập bạn đồng hành AIRI'
+    stageReady: 'Sân khấu sẵn sàng'
+    heroTitle: 'Chào mừng đến với AIRI'
+    heroSubtitle: 'Sân khấu của bạn đồng hành — thiết lập trong vài phút, 100% trên máy của bạn.'
+    companionQuote: 'Xin chào! Mình là bạn đồng hành kỹ thuật số tự chủ của bạn. Dù bạn muốn trò chuyện bằng giọng nói, biểu diễn sân khấu sáng tạo hay một sự hiện diện nhẹ nhàng trên desktop, mình sẵn sàng thích nghi với thế giới của bạn.'
+    pillWebgpu: 'Lõi WebGPU cục bộ'
+    pillOffline: '100% ngoại tuyến & riêng tư'
+    pillSouls: 'Pha trộn linh hồn + thân thể'
+    quickStart: 'Bắt đầu nhanh (60 giây)'
+    guidedSetup: 'Thiết lập có hướng dẫn'
+    setupLater: 'Thiết lập sau'
+
+notice:
+  previewBadge: 'Bản xem trước'
+  deferredTip: 'Cần cầu nối hành động của cửa sổ thông báo (windowAction / pageMounted / pageUnmounted), vốn chưa tồn tại trong bản dựng Qt.'
+  index:
+    title: 'Thông báo'
+    subtitle: 'Tiến trình chính của AIRI hiển thị các cửa sổ thông báo tạm thời cho các lời nhắc một lần. Trang này liệt kê các thông báo mà ứng dụng desktop đi kèm.'
+    surfaces: 'Bề mặt thông báo'
+    geminiTitle: 'Onboarding Gemini'
+    geminiSubtitle: 'Mở khi chưa có khoá Google Generative AI nào được cấu hình, đề nghị thêm một khoá trước phiên đầu tiên.'
+    fadeOnHoverTitle: 'Hướng dẫn Fade on Hover'
+    fadeOnHoverSubtitle: 'Giải thích hành vi tự ẩn làm mờ nhân vật khi con trỏ đến gần.'
+    routeGemini: '/notice/gemini'
+    routeFadeOnHover: '/notice/fade-on-hover'
+    deferredNotice: 'Bản dựng Qt chưa có host cho cửa sổ thông báo. Các bề mặt này sẽ mở dưới dạng cửa sổ thông báo không khung được điều khiển bởi store yêu cầu đang chờ khi nó có mặt.'
+    footnote: 'Trong bản dựng Electron, chúng nằm ở /notice/gemini và /notice/fade-on-hover.'
+  gemini:
+    header: 'Nút trí tuệ trực tuyến'
+    title: 'Bước nhảy lượng tử Gemini'
+    intro: 'Chào mừng bạn đến thế hệ tương tác AI tiếp theo. Nhân vật của bạn giờ được vận hành bởi Google Gemini, với khả năng hiểu đa phương thức sâu sắc.'
+    graphicCaption: 'Hình dung vũ trụ Gemini'
+    poweredBy: 'Vận hành bởi Gemini'
+    visionTitle: 'Tầm nhìn thật'
+    visionDescription: 'Cuối cùng tôi có thể nhìn thấy màn hình và thế giới của bạn. Dùng biểu tượng Camera để chụp hoặc cho tôi xem qua ống kính của bạn.'
+    memoryTitle: 'Trí nhớ ngữ cảnh'
+    memoryDescription: 'Tôi nhớ phiên hiện tại của chúng ta với độ chính xác cực cao, cho phép chúng ta xây dựng các cuộc trò chuyện sâu hơn theo thời gian.'
+    addKey: 'Thêm khoá Gemini'
+    dontShowAgain: 'Không hiện lại'
+  fadeOnHover:
+    badge: 'Hướng dẫn'
+    title: 'Fade on Hover'
+    intro: 'Tự động làm mờ nhân vật khi con trỏ đến gần. Nó giúp giảm xao nhãng trong khi vẫn giữ nhân vật hiển thị.'
+    opacityLine: 'Sau khi bật, độ mờ giảm xuống 0 cho cả nhân vật và giao diện khi con trỏ ở gần.'
+    toggleLine: 'Bạn có thể tắt nó bằng cách di chuột lên Controls Island, rồi nhấn biểu tượng mắt-gạch-chéo một lần nữa.'
+    confirm: 'Đã hiểu'
+    dontShowAgain: 'Không hiện lại'
+    previewTitle: 'Xem trước hướng dẫn'
+    previewNote: 'Video hướng dẫn fade-on-hover đi kèm với asset của renderer stage-tamagotchi. Đóng gói nó cần một lượt đăng ký asset chưa có trong bản dựng Qt.'
+
+widgets:
+  title: 'Tiện ích'
+  previewBadge: 'Bản xem trước'
+  catalogTitle: 'Các thành phần widget đã biết'
+  samplePropsCaption: 'componentProps mẫu'
+  missingId: 'Thiếu widget id. Hãy mở cửa sổ này qua một lời gọi component (widgets.render) để điền view.'
+  refresh: 'Làm mới'
+  closeWidget: 'Đóng widget'
+  deferredNotice: 'Bản dựng Qt chưa có cầu nối widget (widgets.fetch / render / update / remove / clear) và chưa có registry renderer QML. Mọi thứ bên dưới là dữ liệu xem trước tĩnh.'
+  deferredTip: 'Cần cầu nối widget (fetch + sự kiện render/update/remove/clear) trong bản dựng Qt.'
+  kinds:
+    weather:
+      name: 'Thời tiết'
+      description: 'Điều kiện hiện tại và dự báo, phân giải theo vị trí của bạn đồng hành.'
+    map:
+      name: 'Bản đồ'
+      description: 'Ảnh chụp bản đồ tương tác cho địa điểm mà bạn đồng hành hỏi tới.'
+    artistry:
+      name: 'Nghệ thuật'
+      description: 'Tác phẩm sinh từ pipeline artistry (ComfyUI / tạo ảnh).'
+    comfy:
+      name: 'Comfy'
+      description: 'Bí danh của artistry — view tạo dựa trên ComfyUI.'
+    sticker:
+      name: 'Nhãn dán'
+      description: 'Nhãn dán hoặc hình phản ứng mà bạn đồng hành chọn cho cuộc trò chuyện.'
+    generic:
+      name: 'Đa dụng'
+      description: 'JSON dump dự phòng cho tên component chưa đăng ký.'
+
+data:
+  title: 'Dữ liệu'
+  description: 'Mọi thứ AIRI lưu cục bộ trên thiết bị này — xuất, nhập hoặc dọn lịch sử nặng.'
+  status:
+    notWired: 'Chưa nối xuất dữ liệu với backend Rust — xem ghi chú giai đoạn'
+    actionNotWired: 'Hành động này chưa được nối với backend Rust — xem ghi chú giai đoạn'
+    imported: 'Nhập hoàn tất.'
+    placeholderCopied: 'Manifest placeholder đã được sao chép vào clipboard — nó không chứa dữ liệu người dùng.'
+    scrubDone: 'Dọn hoàn tất.'
+    importDone: 'Nhập hoàn tất — chat và ký ức đã được khôi phục (ưu tiên hàng hiện có); thẻ và thông tin xác thực không được áp dụng.'
+    exportDone: 'Xuất hoàn tất.'
+  vault:
+    title: 'Data Vault: Lưu trữ & Nhập Universal'
+    description: 'Các kho lưu trữ ZIP chọn lọc, dễ đọc cho mọi trụ cột bộ nhớ, hoặc khôi phục dữ liệu với liên kết companion tự động.'
+    import: 'Nhập Universal'
+    export: 'Xuất kho lưu trữ'
+  sync:
+    title: 'Cloud Sync: Sao lưu liên tục không lưu trữ dữ liệu'
+    description: 'Nhân bản liên tục tới bucket S3-compatible cá nhân hoặc thư mục chia sẻ trong mạng nội bộ.'
+    badge: 'Chưa nối'
+    enable: 'Bật Auto-Sync'
+    active: 'Auto-Sync đang bật'
+    syncNow: 'Đồng bộ ngay'
+    openSettings: 'Mở cài đặt Cloud Sync'
+    zeroCustodyTitle: 'Nhân bản tự động không lưu trữ dữ liệu:'
+    zeroCustodyBody: 'Cloud Sync liên tục sao chép các cuộc trò chuyện, companion, tóm tắt bộ nhớ hằng ngày và cài đặt của bạn tới bộ lưu trữ do bạn kiểm soát (AWS S3, bucket S3-compatible hoặc Local Share). Chúng tôi không bao giờ thấy hoặc giữ dữ liệu của bạn.'
+    avatarsTitle: 'Avatar Live2D, VRM, Spine & MMD:'
+    avatarsBody: 'Model avatar là asset nhị phân lớn nên không có xuất file đơn; Cloud Sync là cơ chế sao lưu tự động duy nhất cho chúng.'
+    activeTarget: 'Đích hiện tại'
+    lastSynced: 'Lần đồng bộ gần nhất'
+    notConfigured: 'Chưa cấu hình'
+    never: 'Chưa từng'
+  scrub:
+    title: 'Tối ưu & dọn media phiên'
+    description: 'Trích xuất các chuỗi ảnh base64 nội tuyến và payload công cụ rò rỉ từ lịch sử chat vào bộ lưu trữ cục bộ bền vững, ngăn LLM phình token.'
+    button: 'Dọn & xử lý lịch sử'
+  scrubHistory:
+    title: 'Lịch sử dọn'
+    description: 'Báo cáo từ các lần tối ưu trước.'
+    emptyTitle: 'Chưa có lần dọn nào'
+    emptySubtitle: 'Lịch sử dọn sẽ xuất hiện ở đây sau khi backend dọn có mặt và bạn chạy lần tối ưu đầu tiên.'
+  scrubDialog:
+    title: 'Dọn & xử lý media phiên'
+    subtitle: 'Trích xuất ảnh nội tuyến nặng vào bộ lưu trữ để loại bỏ phình token.'
+    promptBody: 'Quy trình này quét mọi cuộc trò chuyện chat để tìm URL dữ liệu ảnh base64 và payload ảnh tool thô. Mỗi ảnh được phát hiện sẽ được chuyển an toàn tới thư viện ảnh nền cục bộ và thay bằng một con trỏ asset nhẹ trong lịch sử.'
+    currentChatSize: 'Tổng kích thước chat hiện tại'
+    sizeUnknown: 'Không rõ — backend chưa nối'
+    safetyTitle: 'Xác nhận an toàn:'
+    safetyBody: 'Để chắc chắn, bạn có muốn tạo một kho lưu trữ sao lưu đầy đủ của companion và các cuộc trò chuyện trước khi tiếp tục không?'
+    cancel: 'Hủy'
+    scrubWithoutBackup: 'Dọn không sao lưu'
+    backupAndScrub: 'Tạo sao lưu & dọn'
+    waveNote: 'Các file đã chọn được kiểm tra khi nhập. Chat và ký ức được khôi phục (ưu tiên hàng hiện có); thẻ và thông tin xác thực nhà cung cấp không được áp dụng.'
+  unlinked:
+    title: 'Cuộc trò chuyện & ký ức chưa liên kết'
+    description: 'Khôi phục lịch sử chat và ký ức bị bỏ lại bởi companion đã xóa hoặc đổi tên.'
+    badge: 'Chưa nối'
+    emptyTitle: 'Phát hiện dữ liệu mồ côi chưa được nối'
+    emptySubtitle: 'Phát hiện phiên mồ côi cần cầu nối dữ liệu (wave ④). Khi có mặt, các nhóm bạn có thể tạo lại hoặc gộp sẽ được liệt kê ở đây.'
+  legacy:
+    title: 'Công cụ theo miền (JSON đơn lẻ cũ)'
+    show: 'Hiện'
+    hide: 'Ẩn'
+    chatsTitle: 'Phiên chat'
+    chatsDescription: 'Xuất hoặc xóa toàn bộ phiên chat thành một file JSON.'
+    charactersTitle: 'Companion & Thẻ'
+    charactersDescription: 'Xuất hoặc nhập toàn bộ thẻ nhân vật thành một file JSON.'
+    memoryTitle: 'Ký ức & Nhật ký'
+    memoryDescription: 'Xuất hoặc nhập ký ức, tóm tắt hằng ngày và nhật ký.'
+    backgroundsTitle: 'Nền'
+    backgroundsDescription: 'Xuất hoặc nhập nền cảnh tùy chỉnh.'
+    export: 'Xuất'
+    import: 'Nhập'
+    deleteChats: 'Xóa mọi phiên chat'
+  models:
+    title: 'Model đã tải'
+    description: 'Xóa tất cả file model VRM/MMD/Spine/Live2D đã tải khỏi thiết bị này.'
+    delete: 'Xóa mọi model'
+  modules:
+    title: 'Cài đặt module'
+    description: 'Đặt lại toàn bộ cấu hình module về mặc định.'
+    reset: 'Đặt lại cài đặt module'
+  danger:
+    title: 'Vùng nguy hiểm'
+    description: 'Các hành động này không thể hoàn tác.'
+    providersTitle: 'Nhà cung cấp & Thông tin xác thực'
+    providersDescription: 'Đặt lại cấu hình nhà cung cấp và thông tin xác thực đã lưu.'
+    providersReset: 'Đặt lại nhà cung cấp'
+    allTitle: 'Tất cả dữ liệu người dùng'
+    allDescription: 'Xóa mọi thứ — phiên, ký ức, thẻ, cài đặt. Không thể hoàn tác.'
+    allDelete: 'Xóa mọi dữ liệu'
+  desktop:
+    title: 'Trạng thái ứng dụng desktop'
+    description: 'Đặt lại vị trí cửa sổ, khay và trạng thái shell desktop khác (chỉ bản desktop).'
+    reset: 'Đặt lại trạng thái desktop'
+  confirm:
+    title: 'Chắc chắn chứ?'
+    notWiredBody: 'Hành động này chưa được nối với backend Rust — xác nhận sẽ chỉ hiển thị thông báo, không có gì bị xóa hoặc đặt lại.'
+    confirm: 'Xác nhận'
+    cancel: 'Hủy'
+  exportDialog:
+    title: 'Xuất kho lưu trữ dữ liệu'
+    subtitle: 'Chọn các miền dữ liệu để đóng gói vào kho ZIP chuẩn.'
+    characters: 'Companion & Thẻ'
+    charactersHint: 'Prompt, tủ đồ, avatar'
+    chats: 'Lịch sử chat & Dòng thời gian'
+    chatsHint: 'Phiên và tin nhắn của mọi companion'
+    memory: 'Ký ức & Nhật ký'
+    memoryHint: 'Tóm tắt hằng ngày, nhật ký, lõi trọn đời'
+    providers: 'Nhà cung cấp AI & Cài đặt ứng dụng'
+    providersHint: 'Nhà cung cấp đã cấu hình & tùy chọn (~2 KB)'
+    backgrounds: 'Nền cảnh tùy chỉnh'
+    backgroundsHint: 'Hình nền đã lưu'
+    linkageWarning: 'Companion & Thẻ chưa được chọn. Chúng tôi khuyên nên bao gồm nó để chat và ký ức vẫn được liên kết khi khôi phục.'
+    estimatedSize: 'Kích thước kho ước tính:'
+    sizeUnknown: 'Không rõ — backend chưa nối'
+    cancel: 'Hủy'
+    confirm: 'Xuất kho lưu trữ'
+    copyPlaceholder: 'Sao chép manifest placeholder'
+  importDialog:
+    title: 'Nhập dữ liệu Universal'
+    subtitle: 'Khôi phục từ kho ZIP, JSON sao lưu cũ hoặc thẻ nhân vật.'
+    dropTitle: 'Nhấp hoặc kéo thả file vào đây để nhập'
+    dropSubtitle: 'Hỗ trợ file .zip, JSON chat/ký ức và thẻ PNG (hỗ trợ thả nhiều file)'
+    browse: 'Duyệt file…'
+    selectedTitle: 'File đã chọn:'
+    waveNote: 'Việc kiểm tra file, liên kết companion và chính việc nhập sẽ đến cùng cầu nối vault (wave ④). Chưa có gì được ghi.'
+    filterVault: 'Kho vault và sao lưu (*.zip *.json *.png)'
+    filterAll: 'Mọi file (*)'
+    cancel: 'Hủy'
+    confirm: 'Nhập mọi dữ liệu'

@@ -7,6 +7,7 @@ packages:
   - examples/**
   - docs/**
   - apps/**
+  - '!apps/airi-qt/target/**'
   - '!**/dist/**'
   - '!apps/stage-mate/mate-engine/**'
 overrides:

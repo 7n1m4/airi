@@ -1,0 +1,568 @@
+# Qt (QML) デスクトップシェル用の文字列：スプラッシュ、コントロールストリップ、ウィンドウ、プレースホルダーページ。
+app:
+  name: AIRI
+  tagline: あなたのAIコンパニオンが、デスクトップに。
+  version-label: バージョン
+splash:
+  milestones:
+    core_services: コアサービスを初期化しています…
+    sync_engine: ローカルの状態とストレージを復元しています…
+    providers: モデルプロバイダーに接続しています…
+    stage_ready: ステージを準備しています…
+strip:
+  tooltips:
+    avatar: AIRI
+    mic: マイクの切り替え
+    chat: チャット
+    stage: ステージ
+    settings: 設定
+    about: AIRI について
+    collapse: 折りたたむ
+    expand: 展開する
+    theme: ダーク／ライトモード切り替え
+    language: 言語を変更
+    quit: AIRI を終了
+    caption: キャプション
+chat:
+  title: AIRI — チャット
+  recent: 最近
+  new: 新しいチャット
+  search-placeholder: チャットを検索…
+  delete-session: チャットを削除
+  empty-title: 会話を始めましょう
+  empty-subtitle: メッセージはこのデバイスにローカル保存されます。
+  input-placeholder: AIRI にメッセージ…
+  send: 送信
+  stop: 停止
+  streaming: ストリーミング中…
+  provider-unconfigured: モデルプロバイダーが設定されていません
+  status:
+    error: エラー
+  card-picker:
+    none: カードなし
+    empty-title: キャラクターカードはまだありません
+    empty-subtitle: CCv2/CCv3 キャラクターカード（png または json）をインポートすると、人格と会話できます。
+    import: カードをインポート…
+    import-error: 'カードをインポートできませんでした — 有効な CCv2/CCv3 カード（png または json）ではありません。'
+settings:
+  title: AIRI — 設定
+  description: AIアシスタントを設定します。
+  nav:
+    providers: プロバイダー
+    theme: テーマ
+    about: このアプリについて
+    soon: Wave B
+    stage: ステージ
+    spine: Spine
+    mmd: MMD
+    live2d: Live2D
+    general: 一般
+    chat: チャット
+    voice: 音声
+    profile: プロフィール
+    cards: カード
+    explore: 探す
+    data: データ
+    onboarding: オンボーディング
+    notice: お知らせ
+    widgets: ウィジェット
+    onboardingV3: Onboarding V3
+    gemini: Gemini
+    fadeOnHover: Fade on Hover
+  theme-page:
+    title: テーマ
+    description: AIRI の色と外観をカスタマイズします。
+    hue: アクセントの色相
+    chroma: 彩度の倍率
+    dark: ダークモード
+    reset: 初期設定に戻す
+  spine:
+    title: Spine
+    description: ステージのコンパニオン向け Spine ランタイムの動作。
+    maxFps: 最大 FPS
+    maxFpsHint: 0 = 無制限
+    renderScale: レンダー倍率
+    mixDuration: ミックス時間
+    animationSpeed: アニメーション速度
+    idleAnimation: アイドルアニメーション
+    scalePosTitle: モデルの配置
+    scalePosX: X 位置
+    scalePosY: Y 位置
+    scalePosScale: 倍率
+    saveError: Spine 設定を保存できませんでした。
+  mmd:
+    title: MMD
+    description: ステージのコンパニオン向け MMD ランタイムの動作。
+    idleAnimation: アイドルアニメーション
+    renderScale: レンダー倍率
+    physicsNote: MMD レンダリングのレンダー倍率。物理演算は P10 まで無効です。
+    saveError: MMD 設定を保存できませんでした。
+  live2d:
+    title: Live2D
+    description: ステージのコンパニオン向け Live2D の動作。
+    deferredNotice: Live2D レンダラーは Spine の後に実装予定です。編集内容は保存されますが、描画にはまだ反映されません。
+    disableFocus: フォーカスを無効化
+    idleAnimation: アイドルアニメーション
+    autoBlink: 自動まばたき
+    forceAutoBlink: 自動まばたきを強制
+    shadow: ドロップシャドウ
+    followSpeed: 追従速度
+    maxFps: 最大 FPS
+    maxFpsHint: 0 = 無制限
+    saveError: Live2D 設定を保存できませんでした。
+providers:
+  search: プロバイダーを検索…
+  search-empty: フィルターに一致するプロバイダーはありません。
+  enabled: 有効
+  not-available: まだ利用できません
+  not-available-hint: このプロバイダーのエンジンは後のフェーズで提供されます。設定は保存されますが、まだチャットには使用できません。
+  configured: 保存済み
+  test: 接続テスト
+  test-success: 接続成功 — プロバイダーが応答しました。
+  test-failed: 接続に失敗しました
+  test-unsupported: このプロバイダーでは接続テストをまだ利用できません。
+  save: 保存
+  saved: 保存しました。
+  save-failed: 設定を保存できませんでした。
+  delete: 削除
+  models-refresh: モデルを取得
+  models-empty: まだモデルがありません — 認証情報を保存して取得するか、モデル名を入力してください。
+  kind:
+    open-ai-compatible: OpenAI 互換
+    anthropic: Anthropic
+    google-gemini: Gemini
+    aws-bedrock: Bedrock
+    local-server: ローカルサーバー
+  field:
+    api_key: API キー
+    base_url: ベース URL
+    model: モデル
+    region: AWS リージョン
+    aws_access_key_id: AWS アクセスキー ID
+    aws_secret_access_key: AWS シークレットアクセスキー
+    account_id: Cloudflare アカウント ID
+about:
+  title: AIRI — このアプリについて
+  app-name: AIRI
+  tagline: あなたのAIコンパニオンが、デスクトップに。
+  body: AIRI はデスクトップAIコンパニオンです。話し、見て、反応するデジタルの存在。Rust、Qt 6、QML で構築されています。
+  license: GPL-3.0-or-later ライセンス。Qt Quick 3D は GPL 条件の下で使用されています。
+  source-label: ソースコード
+  source-url: https://github.com/moeru-ai/airi
+  credit: Neko Ayaka と AIRI コントリビューターによって作られました。
+  check-update: アップデートを確認
+  update-up-to-date: AIRI は最新です。
+  update-available: 'アップデートがあります:'
+stage:
+  description: AI コンパニオンと一緒に、フローティングステージウィンドウを表示・配置します。
+  openStageWindow: ステージウィンドウを表示
+  windowTitle: ステージウィンドウ
+  empty-title: ステージにモデルがありません
+  empty-subtitle: 設定 → ステージで VRM モデルを選ぶと、ここに表示されます。
+  openSettings: ステージ設定を開く
+  resetPosition: 位置をリセット
+  boundsResetNotice: 位置を消去しました — 次回表示時にステージが中央に戻ります。
+  modelSection:
+    title: モデル
+    hint: ステージのコンパニオンに使う VRM ファイルです。下からモデルを選ぶか、.vrm をインポートするか、絶対パスを参照してください。
+  modelListEmpty: .vrm モデルが見つかりません — 下からインポートするか参照してください
+  modelNone: モデル未選択
+  browseModel: 参照…
+  importModel: インポート
+  captions:
+    title: キャプション
+    enabled: キャプションを表示
+    fontSize: 文字サイズ
+    opacity: 不透明度
+    docking: 表示位置
+    top: 上
+    bottom: 下
+    head: 頭上
+    none: なし
+    preview: プレビュー
+    previewSample: AIRI が話しているときのキャプションの見え方です。
+  stripSection:
+    title: コントロールストリップ
+    hint: コントロールストリップに表示するステージ操作を選びます。
+    stage: ステージボタン
+    caption: キャプションボタン
+  saveError: 保存できませんでした。パスを確認してもう一度お試しください。
+general:
+  description: アプリ全体の動作とプライバシー。
+  languageSection: インターフェース言語
+  languagePlaceholder: '例: ja, en（空 = システム）'
+  languageHint: 空のままにするとシステムの言語に従います。
+  transitionsSection: ページ遷移
+  disableTransitions: すべてのページ遷移を無効にする
+  usePageSpecificTransitions: ページごとの遷移を使う
+  privacySection: プライバシーとネットワーク
+  remoteSyncEnabled: プライバシーに関わる診断情報のリモート同期を許可する
+  websocketSecureEnabled: 内蔵 WebSocket サーバーに wss:// を使う
+  startupSection: 起動
+  autostartEnabled: ログイン時に自動起動する
+  saveError: 保存できませんでした。もう一度お試しください。
+chat-settings:
+  description: メッセージの送信方法とストリーミング。
+  inputSection: 入力
+  sendMode: メッセージを送信するキー
+  suggestMode: 提案を承諾するキー
+  modeEnter: Enter
+  modeCtrlEnter: Ctrl+Enter
+  modeDoubleEnter: Enter 2回
+  modeDisabled: 無効
+  streamIdleTimeout: ストリーミング無応答タイムアウト (ms)
+  streamIdleTimeoutHint: この時間だけ無音が続いたらストリーミング応答を中断します。600000 = 10分。
+  messagesSection: メッセージ
+  showDirectorNotes: チャット画面にディレクターノートを表示する
+  combineSystemMessages: 送信前に連続するシステムメッセージを結合する
+  saveError: 保存できませんでした。もう一度お試しください。
+audio:
+  description: 音声用のマイク入力とスピーカー出力。
+  inputSection: 音声入力
+  inputEnabled: 音声入力を有効にする
+  inputDevice: 入力デバイス ID
+  inputDevicePlaceholder: 'デバイス ID を貼り付け（例: `pactl list sources short` の pulse キー）'
+  outputDevice: 出力デバイス ID
+  outputDevicePlaceholder: 'デバイス ID を貼り付け（例: `pactl list sinks short` の pulse キー）'
+  deviceHint: このビルドではデバイス列挙はまだ利用できません。ID を手動で貼り付けてください。空欄ならシステム既定を使用します。
+  save: 保存
+  saveError: 保存できませんでした。もう一度お試しください。
+profile:
+  description: AIRI から見たあなたの情報。
+  identitySection: アイデンティティ
+  name: 表示名
+  namePlaceholder: あなたの名前
+  descriptionLabel: あなたについて
+  descriptionPlaceholder: あなた自身の短い説明…
+  voiceProfileId: ボイスプロファイル ID
+  voiceProfileIdPlaceholder: '例: TTS プロバイダーのボイスプロファイル'
+  promptSection: システムプロンプト
+  promptHint: モデルに送信するシステムプロンプトの任意の上書き。空欄なら既定を使用します。
+  promptPlaceholder: あなたは…
+  save: 保存
+  saveError: 保存できませんでした。もう一度お試しください。
+notify:
+  replyReady: AIRIが返信しました
+common:
+  close: 閉じる
+
+cards:
+  title: カード
+  searchPlaceholder: カードを検索…
+  import: インポート…
+  importDialogTitle: キャラクターカードをインポート
+  new: 新しいカード
+  refresh: 再読み込み
+  emptyTitle: カードはまだありません
+  emptyBody: CCv2/CCv3 カード (.png または .json) をインポートしてペルソナとチャットしましょう。
+  noGreeting: 挨拶なし
+  jsonCard: JSON カード (アバターなし)
+  active: 使用中
+  use: チャットで使用
+  edit: 編集
+  delete: 削除
+  cancel: キャンセル
+  deleteTitle: カードを削除しますか？
+  deleteBody: このカードファイルはデバイスから完全に削除されます。
+  save: 保存
+  editor:
+    title: カードを編集
+    newTitle: 新しいカード
+    saving: 保存中…
+    nameRequired: 名前は必須です。
+    saveError: カードを保存できませんでした。
+    loadError: このカードを読み込めませんでした。
+  fields:
+    name: 名前…
+    description: 説明…
+    personality: 性格…
+    scenario: シナリオ…
+    firstMes: 最初のメッセージ…
+    alternateGreetings: 別の挨拶 — 1行につき1つ…
+    mesExample: 例の会話 (<START> ブロック)…
+    systemPrompt: システムプロンプト…
+    postHistoryInstructions: 履歴後の指示…
+    creator: 作成者…
+    creatorNotes: 作成者ノート…
+    characterVersion: バージョン…
+    tags: タグ (カンマ区切り)…
+  sections:
+    dialogue: 会話
+    behavior: 振る舞い
+    metadata: メタデータ
+models:
+  explore:
+    title: アバターを探す
+    description: VRM、Live2D、Spine、MMD のコミュニティアーカイブ、外部リポジトリ、無料モデルライブラリを探索します。
+    suggestSite: サイトを提案
+    filterLabel: 形式
+    featuredFree: 注目の無料アバター
+    downloadModel: ダウンロード
+    freeArchives: 無料コミュニティアーカイブ
+    creatorMarketplaces: クリエイターマーケット
+    emptyFree: この形式フィルターで見つかった無料アーカイブはありません。
+    emptyPaid: この形式フィルターで見つかったマーケットはありません。
+    free: 100% 無料
+    mixed: 無料 & 有料
+    paid: 有料 / コミッション
+    visit: 訪問
+    knowRepository: 他に素晴らしいモデルリポジトリを知っていますか？
+    knowRepositoryHint: 無料のリポジトリ、ツール、アーカイブをもっと推薦して AIRI コミュニティの成長を助けましょう。
+    submitOnGithub: GitHub で提案
+    formats:
+      all: すべての形式
+      vrm: VRM (3D)
+      live2d: Live2D (2D)
+      spine: Spine (2D)
+      mmd: MMD
+
+onboarding:
+  deferredNotice: 'このQtビルドでは初回セットアップ完了がまだ接続されていません — これらの画面はプレゼンテーション用です。ウィザードを完了またはスキップするボタンは、オンボーディングストアが実装されると有効になります。'
+  deferredTip: '未接続 — 初回オンボーディングストアが実装されるとこの操作が有効になります。'
+  back: '戻る'
+  v2:
+    title: 'AIRIコンパニオンセットアップ'
+    previewBadge: '初回ウィザード'
+    next: '次へ'
+    finish: '完了'
+    skip: '後でセットアップ'
+    steps:
+      welcome:
+        label: 'ようこそ'
+        subtitle: 'あなたのデジタルコンパニオンに出会い、セットアップ方法を選びましょう。'
+      triage:
+        label: 'あなたの道'
+        subtitle: '新しいマシンか、戻ってきたデバイスか — 続け方を選びます。'
+      hearing:
+        label: '聴覚'
+        subtitle: '音声テキスト変換とマイクチェックでコンパニオンに耳を与えましょう。'
+      consciousness:
+        label: '意識'
+        subtitle: 'コンパニオンの背後にある推論エンジンを選びます。'
+      profile:
+        label: 'あなた'
+        subtitle: 'あなたのこと、働き方をコンパニオンに教えてください。'
+      persona:
+        label: 'ペルソナ'
+        subtitle: '魂を形作る：名前、性格、特性。'
+      vessel:
+        label: '容れ物'
+        subtitle: '身体を選ぶ：Live2D、VRM、または最小限のプレゼンス。'
+      speech:
+        label: '音声'
+        subtitle: '音声選択と発話速度のチェック。'
+      calibration:
+        label: '起動'
+        subtitle: '簡単なキャリブレーションをして、すぐにステージへ。'
+  v3:
+    brand: 'AIRIコンパニオンセットアップ'
+    stageReady: 'ステージ準備完了'
+    heroTitle: 'AIRIへようこそ'
+    heroSubtitle: 'あなたのコンパニオンのステージ — 数分でセットアップ、100% あなたのマシンで。'
+    companionQuote: 'こんにちは！私はあなたの自律型デジタルコンパニオンです。音声会話、創造的なステージパフォーマンス、静かなデスクトッププレゼンスなど、どんなことでも、あなたの世界に適応する準備ができています。'
+    pillWebgpu: 'ローカルWebGPUコア'
+    pillOffline: '100%オフライン＆プライベート'
+    pillSouls: '魂と身体をミックス'
+    quickStart: 'クイックスタート (60秒)'
+    guidedSetup: 'ガイド付きセットアップ'
+    setupLater: '後でセットアップ'
+
+notice:
+  previewBadge: 'プレビュー'
+  deferredTip: '通知ウィンドウのアクションブリッジ (windowAction / pageMounted / pageUnmounted) が必要です。Qtビルドにはまだありません。'
+  index:
+    title: '通知'
+    subtitle: 'AIRIのメインプロセスは、一回限りのプロンプト用に一時的な通知ウィンドウを表示します。このページはデスクトップアプリが同梱する通知を一覧します。'
+    surfaces: '通知サーフェス'
+    geminiTitle: 'Geminiオンボーディング'
+    geminiSubtitle: 'Google Generative AIキーが設定されていないときに開き、最初のセッション前に追加を提案します。'
+    fadeOnHoverTitle: 'Fade on Hoverチュートリアル'
+    fadeOnHoverSubtitle: 'カーソルが近づくとキャラクターをフェードする自動非表示の動作を説明します。'
+    routeGemini: '/notice/gemini'
+    routeFadeOnHover: '/notice/fade-on-hover'
+    deferredNotice: 'Qtビルドにはまだ通知ウィンドウのホストがありません。これらのサーフェスは、保留中の通知リクエストストアが実装され次第、フレームレスの通知ウィンドウとして開きます。'
+    footnote: 'Electronビルドでは、/notice/gemini と /notice/fade-on-hover にあります。'
+  gemini:
+    header: 'インテリジェンスノード オンライン'
+    title: 'Gemini Quantum Leap'
+    intro: 'AIインタラクションの次世代へようこそ。キャラクターはGoogle Geminiによって動き、深いマルチモーダル理解が可能になりました。'
+    graphicCaption: 'Gemini宇宙ビジュアル'
+    poweredBy: 'Powered by Gemini'
+    visionTitle: '本物の視覚'
+    visionDescription: 'ついにあなたの画面と世界を見ることができます。カメラアイコンでキャプチャを実行するか、レンズ越しに見せてください。'
+    memoryTitle: '文脈メモリ'
+    memoryDescription: '現在のセッションを極めて高い精度で覚えているので、時間とともに深い会話を築けます。'
+    addKey: 'Geminiキーを追加'
+    dontShowAgain: '次回から表示しない'
+  fadeOnHover:
+    badge: 'チュートリアル'
+    title: 'Fade on Hover'
+    intro: 'カーソルが近づくとキャラクターを自動的にフェードします。キャラクターを見せたまま、気が散るのを減らします。'
+    opacityLine: 'オンにすると、カーソルが近づいたとき、キャラクターとUIの両方の不透明度が0になります。'
+    toggleLine: 'Controls Islandにカーソルを合わせ、斜線入りの目アイコンをクリックするとオフにできます。'
+    confirm: 'わかりました'
+    dontShowAgain: '次回から表示しない'
+    previewTitle: 'チュートリアルプレビュー'
+    previewNote: 'fade-on-hoverのウォークスルー動画は、stage-tamagotchiレンダラーのアセットとして同梱されています。バンドルにはQtビルドに未導入のアセット登録パスが必要です。'
+
+widgets:
+  title: 'ウィジェット'
+  previewBadge: 'プレビュー'
+  catalogTitle: '既知のウィジェットコンポーネント'
+  samplePropsCaption: 'サンプル componentProps'
+  missingId: 'ウィジェットIDがありません。このウィンドウはコンポーネント呼び出し (widgets.render) 経由で起動して表示を埋めてください。'
+  refresh: '更新'
+  closeWidget: 'ウィジェットを閉じる'
+  deferredNotice: 'Qtビルドにはまだウィジェットブリッジ (widgets.fetch / render / update / remove / clear イベント) もQMLレンダラーレジストリもありません。以下はすべて静的なプレビューデータです。'
+  deferredTip: 'Qtビルドのウィジェットブリッジ (fetch + render/update/remove/clear イベント) が必要です。'
+  kinds:
+    weather:
+      name: '天気'
+      description: 'コンパニオンの現在地向けに解決された現在の状況と予報。'
+    map:
+      name: 'マップ'
+      description: 'コンパニオンが尋ねた場所のインタラクティブマップスナップショット。'
+    artistry:
+      name: 'アーティストリー'
+      description: 'artistryパイプライン (ComfyUI / 画像生成) で生成されたアートワーク。'
+    comfy:
+      name: 'Comfy'
+      description: 'artistryの別名 — ComfyUIベースの生成ビュー。'
+    sticker:
+      name: 'スタンプ'
+      description: 'コンパニオンが会話用に選ぶスタンプやリアクション画像。'
+    generic:
+      name: '汎用'
+      description: '未登録コンポーネント名用のJSONフォールバックダンプ。'
+
+data:
+  title: 'データ'
+  description: 'このデバイスにローカル保存されるすべてのAIRIデータ — エクスポート、インポート、重い履歴のクリーンアップ。'
+  status:
+    notWired: 'エクスポートはまだRustバックエンドに接続されていません — フェーズノートを参照'
+    actionNotWired: 'この操作はまだRustバックエンドに接続されていません — フェーズノートを参照'
+    imported: 'インポート完了。'
+    placeholderCopied: 'プレースホルダーマニフェストをクリップボードにコピーしました — ユーザーデータは含まれません。'
+    scrubDone: 'スクラブ完了。'
+    importDone: 'インポート完了 — チャットとメモリが復元されました（既存の行が優先されます）。カードと認証情報は適用されませんでした。'
+    exportDone: 'エクスポート完了。'
+  vault:
+    title: 'データ保管庫: アーカイブ＆ユニバーサルインポート'
+    description: 'すべてのメモリピラーに対する選択的な、人間が読めるZIPアーカイブ。または、コンパニオンの自動リンクでデータを復元。'
+    import: 'ユニバーサルインポート'
+    export: 'アーカイブをエクスポート'
+  sync:
+    title: 'Cloud Sync: ゼロカストディの継続バックアップ'
+    description: 'あなたの個人S3互換バケットまたはローカルネットワークシェアへの継続レプリケーション。'
+    badge: '未接続'
+    enable: '自動同期を有効化'
+    active: '自動同期 有効'
+    syncNow: '今すぐ同期'
+    openSettings: 'Cloud Sync設定を開く'
+    zeroCustodyTitle: 'ゼロカストディ自動レプリケーション:'
+    zeroCustodyBody: 'Cloud Syncは、あなたの会話、コンパニオン、日次メモリ要約、設定を、あなたが管理するストレージ（AWS S3、S3互換バケット、Local Share）に継続ミラーします。私たちがあなたのデータを見ることはなく、保管もしません。'
+    avatarsTitle: 'Live2D、VRM、Spine & MMDアバター:'
+    avatarsBody: 'アバターモデルは大きなバイナリアセットなので、単一ファイルのエクスポートはありません。Cloud Syncが唯一の自動バックアップ手段です。'
+    activeTarget: 'アクティブなターゲット'
+    lastSynced: '最終同期'
+    notConfigured: '未設定'
+    never: 'なし'
+  scrub:
+    title: 'セッションメディア最適化＆スクラブ'
+    description: 'チャット履歴内のインラインbase64画像文字列と漏洩したツールペイロードを永続ローカルストレージに抽出し、LLMのトークン膨張を防ぎます。'
+    button: '履歴をクリーン＆解決'
+  scrubHistory:
+    title: 'スクラブ履歴'
+    description: '過去の最適化実行レポート。'
+    emptyTitle: 'スクラブの記録はまだありません'
+    emptySubtitle: 'スクラブバックエンドが実装され、初回の最適化を実行すると、ここに履歴が表示されます。'
+  scrubDialog:
+    title: 'セッションメディアのスクラブ＆解決'
+    subtitle: '重いインライン画像をストレージへ抽出し、トークン膨張を解消。'
+    promptBody: 'このプロセスは、すべてのチャット会話をスキャンして、埋め込まれたbase64画像データURLと生のツール画像ペイロードを検出します。検出された各画像は、ローカルの背景ギャラリーへ安全に移動され、履歴内では軽量なアセットポインタに置き換えられます。'
+    currentChatSize: '現在のチャット総サイズ'
+    sizeUnknown: '不明 — バックエンド未接続'
+    safetyTitle: '安全確認:'
+    safetyBody: '念のため、続行する前に、コンパニオンと会話の完全バックアップアーカイブを作成しますか？'
+    cancel: 'キャンセル'
+    scrubWithoutBackup: 'バックアップなしでスクラブ'
+    backupAndScrub: 'バックアップを作成してスクラブ'
+    waveNote: '選択したファイルはインポート時に検査されます。チャットとメモリが復元され（既存の行が優先）、カードとプロバイダー認証情報は適用されません。'
+  unlinked:
+    title: 'リンク解除された会話とメモリ'
+    description: '削除または改名されたコンパニオンが残したチャット履歴とメモリを復元します。'
+    badge: '未接続'
+    emptyTitle: '未リンクデータ検出は未接続です'
+    emptySubtitle: '孤立セッションの検出にはデータブリッジ (wave ④) が必要です。実装後は、再作成または結合できるグループがここに一覧表示されます。'
+  legacy:
+    title: 'ドメイン別ツール（レガシー単一ファイルJSON）'
+    show: '表示'
+    hide: '非表示'
+    chatsTitle: 'チャットセッション'
+    chatsDescription: 'すべてのチャットセッションを単一のJSONファイルとしてエクスポートまたはパージ。'
+    charactersTitle: 'コンパニオン＆カード'
+    charactersDescription: 'すべてのキャラクターカードを単一のJSONファイルとしてエクスポートまたはインポート。'
+    memoryTitle: 'メモリ＆ジャーナル'
+    memoryDescription: 'メモリ、日次リキャップ、ジャーナルエントリをエクスポートまたはインポート。'
+    backgroundsTitle: '背景'
+    backgroundsDescription: 'カスタムシーン背景をエクスポートまたはインポート。'
+    export: 'エクスポート'
+    import: 'インポート'
+    deleteChats: 'すべてのチャットセッションを削除'
+  models:
+    title: 'ダウンロード済みモデル'
+    description: 'このデバイスにダウンロードされたすべてのVRM/MMD/Spine/Live2Dモデルファイルを削除します。'
+    delete: 'すべてのモデルを削除'
+  modules:
+    title: 'モジュール設定'
+    description: 'すべてのモジュール設定をデフォルトにリセット。'
+    reset: 'モジュール設定をリセット'
+  danger:
+    title: '危険ゾーン'
+    description: 'これらの操作は元に戻せません。'
+    providersTitle: 'プロバイダー＆認証情報'
+    providersDescription: 'プロバイダー設定と保存された認証情報をリセット。'
+    providersReset: 'プロバイダーをリセット'
+    allTitle: 'すべてのユーザーデータ'
+    allDescription: 'すべてを削除 — セッション、メモリ、カード、設定。取り消し不可。'
+    allDelete: 'すべてのデータを削除'
+  desktop:
+    title: 'デスクトップアプリの状態'
+    description: 'ウィンドウ配置、トレイ、その他のデスクトップシェル状態をリセット（デスクトップビルドのみ）。'
+    reset: 'デスクトップ状態をリセット'
+  confirm:
+    title: '本当ですか？'
+    notWiredBody: 'この操作はまだRustバックエンドに接続されていません — 確認してもお知らせが表示されるだけで、何も削除・リセットされません。'
+    confirm: '確認'
+    cancel: 'キャンセル'
+  exportDialog:
+    title: 'データアーカイブをエクスポート'
+    subtitle: '標準ZIPアーカイブにパッケージするデータドメインを選択。'
+    characters: 'コンパニオン＆カード'
+    charactersHint: 'プロンプト、衣装、アバター'
+    chats: 'チャット履歴＆タイムライン'
+    chatsHint: 'すべてのコンパニオンのセッションとメッセージ'
+    memory: 'メモリ＆ジャーナル'
+    memoryHint: '日次リキャップ、ジャーナルエントリ、ライフタイムコア'
+    providers: 'AIプロバイダー＆アプリ設定'
+    providersHint: '設定済みプロバイダーと設定 (~2 KB)'
+    backgrounds: 'カスタムシーン背景'
+    backgroundsHint: '保存済み画像の壁紙'
+    linkageWarning: 'コンパニオン＆カードが未選択です。復元時にチャットとメモリのリンクが保たれるよう、含めることをおすすめします。'
+    estimatedSize: 'アーカイブ推定サイズ:'
+    sizeUnknown: '不明 — バックエンド未接続'
+    cancel: 'キャンセル'
+    confirm: 'アーカイブをエクスポート'
+    copyPlaceholder: 'プレースホルダーマニフェストをコピー'
+  importDialog:
+    title: 'ユニバーサルデータインポート'
+    subtitle: 'ZIPアーカイブ、レガシーバックアップJSON、またはキャラクターカードから復元。'
+    dropTitle: 'ここをクリックまたはファイルをドロップしてインポート'
+    dropSubtitle: '.zipアーカイブ、チャット/メモリJSON、PNGカードに対応（複数ファイルのドロップ可）'
+    browse: 'ファイルを参照…'
+    selectedTitle: '選択されたファイル:'
+    waveNote: 'ファイル検査、コンパニオンリンク、インポート本体はwave ④の保管庫ブリッジで提供されます。まだ何も書き込まれません。'
+    filterVault: '保管庫アーカイブとバックアップ (*.zip *.json *.png)'
+    filterAll: 'すべてのファイル (*)'
+    cancel: 'キャンセル'
+    confirm: 'すべてのデータをインポート'
