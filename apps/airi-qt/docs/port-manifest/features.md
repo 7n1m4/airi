@@ -66,9 +66,9 @@ Total: **234**
 - [ ] `/settings/airi-card/guided` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/guided.vue`
 - [ ] `/settings/airi-card/import-hub` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/import-hub.vue`
 - [x] `/settings/airi-card` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/index.vue`
-- [ ] `/settings/data` (stage-pages) — `packages/stage-pages/src/pages/settings/data/index.vue`
+- [x] `/settings/data` (stage-pages) — `packages/stage-pages/src/pages/settings/data/index.vue`
 - [ ] `/settings/dating-sim` (stage-pages) — `packages/stage-pages/src/pages/settings/dating-sim.vue`
-- [ ] `/settings` (stage-pages) — `packages/stage-pages/src/pages/settings/index.vue`
+- [x] `/settings` (stage-pages) — `packages/stage-pages/src/pages/settings/index.vue`
 - [ ] `/settings/memory` (stage-pages) — `packages/stage-pages/src/pages/settings/memory/index.vue`
 - [ ] `/settings/models/emotions` (stage-pages) — `packages/stage-pages/src/pages/settings/models/emotions.vue`
 - [x] `/settings/models/explore` (stage-pages) — `packages/stage-pages/src/pages/settings/models/explore.vue`
@@ -103,7 +103,7 @@ Total: **234**
 - [ ] `/settings/providers/chat/apple-core-ai` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/chat/apple-core-ai.vue`
 - [ ] `/settings/providers/chat/azure-ai-foundry` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/chat/azure-ai-foundry.vue`
 - [ ] `/settings/providers/chat/blip-local` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/chat/blip-local.vue`
-- [ ] `/settings/providers/chat` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/chat/index.vue`
+- [x] `/settings/providers/chat` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/chat/index.vue`
 - [ ] `/settings/providers/chat/lm-studio` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/chat/lm-studio.vue`
 - [ ] `/settings/providers/chat/moondream-local` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/chat/moondream-local.vue`
 - [ ] `/settings/providers/chat/ollama` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/chat/ollama.vue`
@@ -187,14 +187,14 @@ Total: **234**
 - [ ] `/settings/airi-card/components/CardCreate` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardCreate.vue`
 - [ ] `/settings/airi-card/components/CardCreationDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardCreationDialog.vue`
 - [ ] `/settings/airi-card/components/CardDetailDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardDetailDialog.vue`
-- [ ] `/settings/airi-card/components/CardEditorForm` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardEditorForm.vue`
+- [x] `/settings/airi-card/components/CardEditorForm` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardEditorForm.vue`
 - [ ] `/settings/airi-card/components/CardExportDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardExportDialog.vue`
 - [ ] `/settings/airi-card/components/CardImportWizard` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardImportWizard.vue`
-- [ ] `/settings/airi-card/components/CardListItem` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardListItem.vue`
+- [x] `/settings/airi-card/components/CardListItem` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardListItem.vue`
 - [ ] `/settings/airi-card/components/ConceptBuilderModal` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/ConceptBuilderModal.vue`
 - [ ] `/settings/airi-card/components/CreateModeSelectorDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CreateModeSelectorDialog.vue`
 - [ ] `/settings/airi-card/components/CustomCharacterModal` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CustomCharacterModal.vue`
-- [ ] `/settings/airi-card/components/DeleteCardDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/DeleteCardDialog.vue`
+- [x] `/settings/airi-card/components/DeleteCardDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/DeleteCardDialog.vue`
 - [ ] `/settings/airi-card/components/FieldAiGeneratorModal` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/FieldAiGeneratorModal.vue`
 - [ ] `/settings/airi-card/components/ImageTagExtractorModal` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/ImageTagExtractorModal.vue`
 - [ ] `/settings/airi-card/components/SyncCardDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/SyncCardDialog.vue`
@@ -230,10 +230,10 @@ Total: **234**
 - [ ] `/settings/components/SettingsSearchBar` (stage-pages) — `packages/stage-pages/src/pages/settings/components/SettingsSearchBar.vue`
 - [ ] `/settings/components/SettingsUpdateBanner` (stage-pages) — `packages/stage-pages/src/pages/settings/components/SettingsUpdateBanner.vue`
 - [ ] `/settings/composables/use-desktop-release-checker.spec` (stage-pages) — `packages/stage-pages/src/pages/settings/composables/use-desktop-release-checker.spec.ts`
-- [ ] `/settings/composables/use-desktop-release-checker` (stage-pages) — `packages/stage-pages/src/pages/settings/composables/use-desktop-release-checker.ts`
-- [ ] `/settings/data/components/ExportVaultModal` (stage-pages) — `packages/stage-pages/src/pages/settings/data/components/ExportVaultModal.vue`
-- [ ] `/settings/data/components/ImportVaultModal` (stage-pages) — `packages/stage-pages/src/pages/settings/data/components/ImportVaultModal.vue`
-- [ ] `/settings/data/components/ScrubHistoryModal` (stage-pages) — `packages/stage-pages/src/pages/settings/data/components/ScrubHistoryModal.vue`
+- [x] `/settings/composables/use-desktop-release-checker` (stage-pages) — `packages/stage-pages/src/pages/settings/composables/use-desktop-release-checker.ts`
+- [x] `/settings/data/components/ExportVaultModal` (stage-pages) — `packages/stage-pages/src/pages/settings/data/components/ExportVaultModal.vue`
+- [x] `/settings/data/components/ImportVaultModal` (stage-pages) — `packages/stage-pages/src/pages/settings/data/components/ImportVaultModal.vue`
+- [x] `/settings/data/components/ScrubHistoryModal` (stage-pages) — `packages/stage-pages/src/pages/settings/data/components/ScrubHistoryModal.vue`
 - [ ] `/settings/data/settings-search-index` (stage-pages) — `packages/stage-pages/src/pages/settings/data/settings-search-index.ts`
 - [ ] `/settings/data/status` (stage-pages) — `packages/stage-pages/src/pages/settings/data/status.ts`
 - [ ] `/settings/models/components/DiscoverCarousel` (stage-pages) — `packages/stage-pages/src/pages/settings/models/components/DiscoverCarousel.vue`

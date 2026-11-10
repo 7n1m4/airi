@@ -8,5 +8,15 @@
   "apps/stage-tamagotchi/src/renderer/pages/about.vue": true,
   "packages/stage-pages/src/pages/settings/system/general.vue": true,
   "packages/stage-pages/src/pages/settings/system/chat.vue": true,
-  "packages/stage-pages/src/pages/settings/system/user-profile.vue": true
+  "packages/stage-pages/src/pages/settings/system/user-profile.vue": true,
+  "packages/stage-pages/src/pages/settings/index.vue": true,
+  "packages/stage-pages/src/pages/settings/providers/chat/index.vue": true,
+  "packages/stage-pages/src/pages/settings/airi-card/components/CardEditorForm.vue": true,
+  "packages/stage-pages/src/pages/settings/airi-card/components/CardListItem.vue": true,
+  "packages/stage-pages/src/pages/settings/airi-card/components/DeleteCardDialog.vue": true,
+  "packages/stage-pages/src/pages/settings/composables/use-desktop-release-checker.ts": true,
+  "packages/stage-pages/src/pages/settings/data/index.vue": true,
+  "packages/stage-pages/src/pages/settings/data/components/ExportVaultModal.vue": true,
+  "packages/stage-pages/src/pages/settings/data/components/ImportVaultModal.vue": true,
+  "packages/stage-pages/src/pages/settings/data/components/ScrubHistoryModal.vue": true
 }

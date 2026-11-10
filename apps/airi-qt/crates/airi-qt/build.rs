@@ -138,6 +138,8 @@ fn main() {
         module = module.qml_file(format!("qml/pages/notice/{notice_page}.qml").as_str());
     }
     module = module.qml_file("qml/pages/widgets/WidgetsPage.qml");
+    module = module.qml_file("qml/pages/settings/modules/mcp/McpSettingsPage.qml");
+    module = module.qml_file("qml/pages/settings/modules/discord/DiscordSettingsPage.qml");
 
     CxxQtBuilder::new_qml_module(module)
         .qt_module("Gui")

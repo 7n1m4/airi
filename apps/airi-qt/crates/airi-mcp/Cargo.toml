@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "airi-mcp"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "MCP (Model Context Protocol) client for AIRI — stdio JSON-RPC transport first (wave ④ lane)"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

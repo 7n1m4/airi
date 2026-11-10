@@ -13,6 +13,8 @@ members = [
   "crates/airi-speech",
   "crates/airi-local-llm",
   "crates/airi-laya",
+  "crates/airi-mcp",
+  "crates/airi-mmd",
 ]
 
 [workspace.dependencies]

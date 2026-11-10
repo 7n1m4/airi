@@ -186,6 +186,20 @@ Window {
                     active: settingsWindow.navIndex === 20
                     onClicked: settingsWindow.navIndex = 20
                 }
+                AListItem {
+                    Layout.fillWidth: true
+                    icon: "🔌"
+                    title: I18n.tr("shell.settings.nav.mcp")
+                    active: settingsWindow.navIndex === 21
+                    onClicked: settingsWindow.navIndex = 21
+                }
+                AListItem {
+                    Layout.fillWidth: true
+                    icon: "💬"
+                    title: I18n.tr("shell.settings.nav.discord")
+                    active: settingsWindow.navIndex === 22
+                    onClicked: settingsWindow.navIndex = 22
+                }
 
                 Item {
                     Layout.fillHeight: true
@@ -313,6 +327,12 @@ Window {
             }
             // Widgets — static catalog of known widget components.
             WidgetsPage {
+            }
+            // MCP — servers & tools (scaffold; bridge pending).
+            McpSettingsPage {
+            }
+            // Discord — gateway (scaffold; bridge pending).
+            DiscordSettingsPage {
             }
         }
     }

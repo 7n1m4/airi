@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "airi-mmd"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "MMD (MikuMikuDance) model runtime for AIRI — PMX/PMD/VMD parsers (P10 M0 lane)"
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
