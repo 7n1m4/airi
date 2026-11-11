@@ -19,8 +19,8 @@ use std::time::Duration;
 
 use airi_channel::ws::MAX_WS_PAYLOAD_BYTES;
 use airi_channel::{
-    accept_key, encode_frame, ChannelConfig, ChannelServer, Frame, FrameDecoder, OP_CLOSE, OP_PING,
-    OP_TEXT,
+    accept_key, encode_frame, ChannelConfig, ChannelServer, Frame, FrameDecoder, RendererHandlers,
+    OP_CLOSE, OP_PING, OP_TEXT,
 };
 
 const CLIENT_KEY: &str = "dGhlIHNhbXBsZSBub25jZQ==";
@@ -352,6 +352,75 @@ fn rpc_runtime_ping_round_trip() {
     assert_eq!(error["error"]["code"], "auth_required");
     let frame = read_frame(&mut stream2, &mut decoder2);
     assert_eq!(frame.opcode, OP_CLOSE);
+
+    handle.stop();
+}
+
+#[test]
+fn renderer_info_round_trip() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    // Skip (don't fail) when the port is pinned and unavailable — same
+    // tolerance the other integration tests get from ephemeral port 0.
+    let config = ChannelConfig {
+        hostname: "127.0.0.1".to_string(),
+        auth_token: TOKEN.to_string(),
+    };
+    let mut handlers = RendererHandlers::new();
+    handlers.insert(
+        "info".to_string(),
+        Box::new(|_method: &str, _payload: &serde_json::Value| {
+            Ok(serde_json::json!({ "app": "test", "n": 42 }))
+        }),
+    );
+    let server =
+        match ChannelServer::bind_with_renderer("127.0.0.1", test_port(), &config, handlers) {
+            Ok(server) => server,
+            Err(err) => {
+                eprintln!("skipping renderer_info_round_trip: bind failed: {err}");
+                return;
+            }
+        };
+    let handle = server.spawn().expect("spawn channel server");
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let response = http_upgrade(&mut stream, port);
+    assert!(response.starts_with("HTTP/1.1 101"));
+
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"integration-test-token"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&frame.payload).unwrap(),
+        serde_json::json!({"type":"auth","ok":true})
+    );
+
+    // --- renderer.info round trip -------------------------------------------
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"rpc","action":"renderer.info","payload":{},"id":"ri-1"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    let rpc: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(rpc["type"], "rpc");
+    assert_eq!(rpc["action"], "renderer.info");
+    assert_eq!(rpc["ok"], true);
+    assert_eq!(rpc["data"], serde_json::json!({ "app": "test", "n": 42 }));
+    assert_eq!(rpc["id"], "ri-1");
+
+    // --- an unregistered renderer method on the same server ------------------
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"rpc","action":"renderer.nope","payload":{},"id":"ri-2"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    let rpc: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(rpc["ok"], false);
+    assert_eq!(rpc["error"]["code"], "rpc_not_implemented");
+    assert_eq!(rpc["id"], "ri-2");
 
     handle.stop();
 }

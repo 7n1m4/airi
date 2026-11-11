@@ -25,24 +25,40 @@
 //! | `runtime.status`   | `{ "app": "airi-qt", "version": <CARGO_PKG_VERSION>, "pid": <u32>, … }`           | Build/process info |
 //! | `gateway.config`   | `{ "hostname": <str>, "port": <number> }`                                        | **Never** includes `authToken` |
 //! | `gateway.auth`     | `{ "authenticated": true, "sessionStartedMs": <ms> }`                            | Relies on the prior handshake |
-//! | `renderer.*`       | —                                                                                | Always `rpc_not_implemented` |
+//! | `renderer.*`       | handler-defined | Embedder-registered read-only handlers; unregistered methods are `rpc_not_implemented` |
 //! | anything else      | —                                                                                | `rpc_unknown_method` |
 //!
 //! ## Payload rules
 //!
 //! A missing payload is treated as an empty object (`{}`). A present payload
 //! must be a JSON object; anything else (number, string, boolean, array) is
-//! rejected with `rpc_bad_payload` before a handler runs.
+//! rejected with `rpc_bad_payload` before a handler runs — including for
+//! `renderer.*`.
 //!
 //! ## Error codes (stable)
 //!
 //! - `rpc_unknown_method` — no handler is registered for the top-level method.
-//! - `rpc_not_implemented` — `renderer.*` methods; the renderer bridge is not
-//!   wired in the Qt build yet.
+//! - `rpc_not_implemented` — a `renderer.<method>` with no embedder-registered
+//!   handler for `<method>`.
 //! - `rpc_bad_payload` — the `payload` field is not a JSON object.
+//! - `rpc_handler_error` — a registered renderer handler returned `Err(msg)`
+//!   (message truncated to 512 chars).
+//! - `rpc_handler_panic` — a registered renderer handler panicked; the client
+//!   gets a generic message, the payload is logged server-side only.
 //!
 //! `gateway.config` never serializes the auth token into its reply; the
 //! config token is the session's only authenticator and stays server-side.
+//!
+//! ## Renderer handlers
+//!
+//! Embedders register read-only handlers for `renderer.*` methods via
+//! [`RendererHandlers`]; the map travels behind an `Arc` and is consulted
+//! only under the `renderer.` prefix. Handlers receive the sub-method name
+//! (e.g. `info` for `renderer.info`) and the already-validated JSON object
+//! payload. They run on the connection's reader thread, receive and return
+//! plain JSON (never the token or the config), and must not block for long.
+//! A panicking handler does not take the connection down — see
+//! [`RpcError::renderer_handler_panic`].
 
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
@@ -58,6 +74,30 @@ pub const APP_NAME: &str = "airi-qt";
 pub type Payload = Value;
 /// A handler's successful result, serialized into the reply's `data` field.
 pub type RpcValue = Value;
+
+/// A renderer-bridge handler: maps the `renderer.<method>` sub-method and
+/// validated JSON object payload to a JSON value (sent verbatim as `data`)
+/// or a plain error message.
+///
+/// Handlers never receive the auth token, the config, or any credential —
+/// only the method name and the payload object. They run on the connection
+/// thread, so they must be quick, must never block the GUI event loop, and
+/// must not touch Qt `QObject`s directly. Return plain JSON in, plain JSON
+/// out.
+///
+/// NOTE (deliberate deviation from the initial lane brief, which asked for
+/// `Send + 'static` only): the registry is shared by reference across all
+/// connection threads behind an `Arc`, which also requires `Sync` on the
+/// boxed trait object — so the bound is `Send + Sync + 'static`. Callers
+/// implementing handlers with non-`Sync` captures will not compile, which
+/// is the desired property here.
+pub type RendererHandler =
+    dyn Fn(&str, &serde_json::Value) -> Result<serde_json::Value, String> + Send + Sync + 'static;
+/// The renderer handler registry: `renderer.<method>` → handler.
+///
+/// An empty map is the default — `renderer.*` then replies with
+/// `rpc_not_implemented`, exactly as before the registry existed.
+pub type RendererHandlers = std::collections::HashMap<String, Box<RendererHandler>>;
 
 /// Per-server / per-session context handed to RPC handlers.
 ///
@@ -132,12 +172,33 @@ impl RpcError {
         }
     }
 
-    /// `rpc_not_implemented` — reserved for `renderer.*` until the Qt
-    /// renderer bridge (GUI-thread dispatch target) lands.
-    pub fn renderer_not_implemented() -> Self {
+    /// `rpc_not_implemented` — no embedder-registered handler exists for
+    /// `renderer.<method>`.
+    pub fn renderer_not_implemented(method: &str) -> Self {
         Self {
             code: "rpc_not_implemented",
-            message: "renderer-bound RPC is not wired in the Qt build yet — see docs/phase-notes/p9-lane-channel-rpc.md".to_string(),
+            message: format!(
+                "renderer.{method} is not wired in this build — see docs/phase-notes/p9-lane-channel-rpc.md"
+            ),
+        }
+    }
+
+    /// `rpc_handler_error` — a registered renderer handler returned `Err`.
+    /// The message is truncated to 512 chars.
+    pub fn renderer_handler_error(message: &str) -> Self {
+        Self {
+            code: "rpc_handler_error",
+            message: message.chars().take(512).collect(),
+        }
+    }
+
+    /// `rpc_handler_panic` — a registered renderer handler panicked. The
+    /// client gets a fixed generic message; the panic payload is logged
+    /// server-side and never reaches the wire.
+    pub fn renderer_handler_panic() -> Self {
+        Self {
+            code: "rpc_handler_panic",
+            message: "renderer handler panicked — see server log".to_string(),
         }
     }
 
@@ -183,22 +244,30 @@ impl RpcRegistry {
 
     /// Dispatch `action` with `payload` to its handler.
     ///
-    /// `renderer.*` is always `rpc_not_implemented`; any other unrecognized
-    /// top-level method is `rpc_unknown_method`. The caller has already
-    /// authenticated the session by this point — handlers rely on that and
-    /// perform no further authentication.
+    /// `renderer.<method>` is looked up in `renderer_handlers` (the map is
+    /// consulted only under the `renderer.` prefix); anything else is the
+    /// built-in `match` above. The caller has already authenticated the
+    /// session by this point — handlers rely on that and perform no further
+    /// authentication.
+    ///
+    /// Renderer handler failures surface as typed errors: `Err(msg)` from a
+    /// handler becomes `rpc_handler_error` (truncated), a panic becomes
+    /// `rpc_handler_panic` (generic message; the panic is logged server-side).
     pub fn dispatch(
         ctx: &RpcContext,
         action: &str,
         payload: &Payload,
+        renderer_handlers: &RendererHandlers,
     ) -> Result<RpcValue, RpcError> {
         match action {
             "runtime.ping" => runtime_ping(ctx, payload),
             "runtime.status" => runtime_status(ctx, payload),
             "gateway.config" => gateway_config(ctx, payload),
             "gateway.auth" => gateway_auth(ctx, payload),
-            _ if action.starts_with("renderer.") => Err(RpcError::renderer_not_implemented()),
-            _ => Err(RpcError::unknown_method(action)),
+            _ => match action.strip_prefix("renderer.") {
+                Some(method) => dispatch_renderer(renderer_handlers, method, payload),
+                None => Err(RpcError::unknown_method(action)),
+            },
         }
     }
 }
@@ -208,6 +277,37 @@ fn require_object_payload(payload: &Payload) -> Result<(), RpcError> {
     match payload {
         Value::Null | Value::Object(_) => Ok(()),
         _ => Err(RpcError::bad_payload("rpc payload must be a JSON object")),
+    }
+}
+
+/// Dispatch a `renderer.<method>` action. The map is consulted only under
+/// the `renderer.` prefix; built-in methods are never shadowed by it.
+/// The payload is validated (object or null) before any handler runs, and
+/// handlers are invoked behind `catch_unwind` so a panicking renderer
+/// handler cannot take the connection — or the server — down with it.
+fn dispatch_renderer(
+    renderer_handlers: &RendererHandlers,
+    method: &str,
+    payload: &Payload,
+) -> Result<RpcValue, RpcError> {
+    require_object_payload(payload)?;
+    let Some(handler) = renderer_handlers.get(method) else {
+        return Err(RpcError::renderer_not_implemented(method));
+    };
+    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| handler(method, payload))) {
+        Ok(Ok(value)) => Ok(value),
+        Ok(Err(message)) => Err(RpcError::renderer_handler_error(&message)),
+        Err(panic) => {
+            // NOTICE: log the payload server-side; never serialize it into
+            // the client reply (it can hold arbitrary handler internals).
+            let detail = panic
+                .downcast_ref::<&str>()
+                .map(|s| (*s).to_string())
+                .or_else(|| panic.downcast_ref::<String>().cloned())
+                .unwrap_or_else(|| "<non-string panic payload>".to_string());
+            tracing::warn!(%detail, %method, "renderer handler panicked");
+            Err(RpcError::renderer_handler_panic())
+        }
     }
 }
 
@@ -276,9 +376,22 @@ mod tests {
         RpcContext::new("127.0.0.1", 6121)
     }
 
+    fn empty_handlers() -> RendererHandlers {
+        RendererHandlers::new()
+    }
+
+    /// Dispatch with the default (empty) renderer registry.
+    fn dispatch_no_renderers(
+        ctx: &RpcContext,
+        action: &str,
+        payload: &Value,
+    ) -> Result<RpcValue, RpcError> {
+        RpcRegistry::dispatch(ctx, action, payload, &empty_handlers())
+    }
+
     #[test]
     fn runtime_ping_shape() {
-        let out = RpcRegistry::dispatch(&ctx(), "runtime.ping", &Value::Null).unwrap();
+        let out = dispatch_no_renderers(&ctx(), "runtime.ping", &Value::Null).unwrap();
         assert_eq!(out["pong"], json!(true));
         assert!(out["time"].as_u64().unwrap() > 0);
         assert!(out["uptimeSeconds"].as_u64().unwrap() < 60);
@@ -286,7 +399,7 @@ mod tests {
 
     #[test]
     fn runtime_status_shape() {
-        let out = RpcRegistry::dispatch(&ctx(), "runtime.status", &json!({})).unwrap();
+        let out = dispatch_no_renderers(&ctx(), "runtime.status", &json!({})).unwrap();
         assert_eq!(out["app"], json!("airi-qt"));
         assert_eq!(out["version"], json!(env!("CARGO_PKG_VERSION")));
         assert!(out["pid"].as_u64().unwrap() > 0);
@@ -296,7 +409,7 @@ mod tests {
 
     #[test]
     fn gateway_config_never_leaks_token() {
-        let out = RpcRegistry::dispatch(&ctx(), "gateway.config", &Value::Null).unwrap();
+        let out = dispatch_no_renderers(&ctx(), "gateway.config", &Value::Null).unwrap();
         assert_eq!(out["hostname"], json!("127.0.0.1"));
         assert_eq!(out["port"], json!(6121));
         let obj = out.as_object().unwrap();
@@ -307,14 +420,14 @@ mod tests {
 
     #[test]
     fn gateway_auth_shape() {
-        let out = RpcRegistry::dispatch(&ctx(), "gateway.auth", &Value::Null).unwrap();
+        let out = dispatch_no_renderers(&ctx(), "gateway.auth", &Value::Null).unwrap();
         assert_eq!(out["authenticated"], json!(true));
         assert!(out["sessionStartedMs"].as_u64().unwrap() > 0);
     }
 
     #[test]
     fn unknown_method_is_typed_error() {
-        let err = RpcRegistry::dispatch(&ctx(), "stage.move", &json!({})).unwrap_err();
+        let err = dispatch_no_renderers(&ctx(), "stage.move", &json!({})).unwrap_err();
         assert_eq!(err.code(), "rpc_unknown_method");
         assert!(err.message().contains("stage.move"));
     }
@@ -322,7 +435,7 @@ mod tests {
     #[test]
     fn renderer_namespace_is_not_implemented() {
         for action in ["renderer.getModels", "renderer.dispatch", "renderer.x"] {
-            let err = RpcRegistry::dispatch(&ctx(), action, &json!({})).unwrap_err();
+            let err = dispatch_no_renderers(&ctx(), action, &json!({})).unwrap_err();
             assert_eq!(err.code(), "rpc_not_implemented", "action {action}");
             assert!(err
                 .message()
@@ -332,14 +445,162 @@ mod tests {
 
     #[test]
     fn bare_renderer_prefix_is_unknown_method() {
-        let err = RpcRegistry::dispatch(&ctx(), "renderer", &json!({})).unwrap_err();
+        let err = dispatch_no_renderers(&ctx(), "renderer", &json!({})).unwrap_err();
         assert_eq!(err.code(), "rpc_unknown_method");
+    }
+
+    fn info_handlers() -> RendererHandlers {
+        let mut handlers = RendererHandlers::new();
+        handlers.insert(
+            "info".to_string(),
+            Box::new(|method: &str, payload: &Value| {
+                assert_eq!(method, "info");
+                Ok(json!({ "echoMethod": method, "echoPayload": payload }))
+            }),
+        );
+        handlers
+    }
+
+    #[test]
+    fn registered_renderer_handler_returns_data_verbatim() {
+        let out = RpcRegistry::dispatch(
+            &ctx(),
+            "renderer.info",
+            &json!({ "q": "status" }),
+            &info_handlers(),
+        )
+        .unwrap();
+        assert_eq!(
+            out,
+            json!({ "echoMethod": "info", "echoPayload": { "q": "status" } })
+        );
+    }
+
+    #[test]
+    fn renderer_handler_receives_method_and_payload() {
+        use std::sync::{Arc, Mutex};
+        let seen = Arc::new(Mutex::new(Vec::new()));
+        let seen_in_handler = Arc::clone(&seen);
+        let mut handlers = RendererHandlers::new();
+        handlers.insert(
+            "getModels".to_string(),
+            Box::new(move |method: &str, payload: &Value| {
+                seen_in_handler
+                    .lock()
+                    .unwrap()
+                    .push((method.to_string(), payload.clone()));
+                Ok(json!({ "ok": true }))
+            }),
+        );
+        let out = RpcRegistry::dispatch(
+            &ctx(),
+            "renderer.getModels",
+            &json!({ "limit": 3 }),
+            &handlers,
+        )
+        .unwrap();
+        assert_eq!(out, json!({ "ok": true }));
+        let seen = seen.lock().unwrap();
+        assert_eq!(
+            seen.as_slice(),
+            [("getModels".to_string(), json!({ "limit": 3 }))]
+        );
+    }
+
+    #[test]
+    fn renderer_handler_error_is_typed_and_truncated() {
+        let mut handlers = RendererHandlers::new();
+        handlers.insert(
+            "explode".to_string(),
+            Box::new(|_method: &str, _payload: &Value| Err("boom".repeat(200))),
+        );
+        let err =
+            RpcRegistry::dispatch(&ctx(), "renderer.explode", &Value::Null, &handlers).unwrap_err();
+        assert_eq!(err.code(), "rpc_handler_error");
+        assert_eq!(err.message().len(), 512);
+        assert!(err.message().starts_with("boomboom"));
+    }
+
+    #[test]
+    fn renderer_handler_short_error_is_not_truncated() {
+        let mut handlers = RendererHandlers::new();
+        handlers.insert(
+            "explode".to_string(),
+            Box::new(|_method: &str, _payload: &Value| Err("nope".to_string())),
+        );
+        let err =
+            RpcRegistry::dispatch(&ctx(), "renderer.explode", &Value::Null, &handlers).unwrap_err();
+        assert_eq!(err.code(), "rpc_handler_error");
+        assert_eq!(err.message(), "nope");
+    }
+
+    #[test]
+    fn renderer_handler_panic_is_caught_and_generic() {
+        let mut handlers = RendererHandlers::new();
+        handlers.insert(
+            "boom".to_string(),
+            Box::new(|_method: &str, _payload: &Value| -> Result<Value, String> { panic!("boom") }),
+        );
+        let err =
+            RpcRegistry::dispatch(&ctx(), "renderer.boom", &Value::Null, &handlers).unwrap_err();
+        assert_eq!(err.code(), "rpc_handler_panic");
+        assert_eq!(err.message(), "renderer handler panicked — see server log");
+        // The test itself survives; the connection would stay open.
+    }
+
+    #[test]
+    fn unregistered_renderer_method_is_not_implemented_with_docs_path() {
+        let err = dispatch_no_renderers(&ctx(), "renderer.whatever", &json!({})).unwrap_err();
+        assert_eq!(err.code(), "rpc_not_implemented");
+        assert!(err.message().contains("renderer.whatever"));
+        assert!(err
+            .message()
+            .contains("docs/phase-notes/p9-lane-channel-rpc.md"));
+    }
+
+    #[test]
+    fn renderer_registry_cannot_shadow_builtin_methods() {
+        let mut handlers = RendererHandlers::new();
+        for key in [
+            "runtime.ping",
+            "gateway.config",
+            "gateway.auth",
+            "runtime.status",
+        ] {
+            handlers.insert(
+                key.to_string(),
+                Box::new(|_method: &str, _payload: &Value| Ok(json!({ "shadowed": true }))),
+            );
+        }
+        let out = dispatch_no_renderers(&ctx(), "runtime.ping", &Value::Null).unwrap();
+        assert_eq!(out["pong"], json!(true));
+        let out = dispatch_no_renderers(&ctx(), "gateway.auth", &Value::Null).unwrap();
+        assert_eq!(out["authenticated"], json!(true));
+        // And the same map is consulted (only) under the renderer. prefix —
+        // "renderer.runtime.ping" looks up the sub-method "runtime.ping".
+        let out = RpcRegistry::dispatch(&ctx(), "renderer.runtime.ping", &Value::Null, &handlers)
+            .unwrap();
+        assert_eq!(out, json!({ "shadowed": true }));
+    }
+
+    #[test]
+    fn renderer_handler_rejects_non_object_payload() {
+        let err = RpcRegistry::dispatch(&ctx(), "renderer.info", &json!([1, 2]), &info_handlers())
+            .unwrap_err();
+        assert_eq!(err.code(), "rpc_bad_payload");
+    }
+
+    #[test]
+    fn bare_renderer_dot_is_not_implemented() {
+        // "renderer." with an empty sub-method has no registered handler.
+        let err = dispatch_no_renderers(&ctx(), "renderer.", &json!({})).unwrap_err();
+        assert_eq!(err.code(), "rpc_not_implemented");
     }
 
     #[test]
     fn non_object_payloads_are_bad_payload() {
         for payload in [json!(5), json!("text"), json!(true), json!([1, 2])] {
-            let err = RpcRegistry::dispatch(&ctx(), "runtime.ping", &payload).unwrap_err();
+            let err = dispatch_no_renderers(&ctx(), "runtime.ping", &payload).unwrap_err();
             assert_eq!(err.code(), "rpc_bad_payload", "payload {payload}");
         }
     }
@@ -347,7 +608,7 @@ mod tests {
     #[test]
     fn null_and_object_payloads_are_accepted() {
         for payload in [Value::Null, json!({}), json!({"verbose": true})] {
-            assert!(RpcRegistry::dispatch(&ctx(), "runtime.ping", &payload).is_ok());
+            assert!(dispatch_no_renderers(&ctx(), "runtime.ping", &payload).is_ok());
         }
     }
 

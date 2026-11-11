@@ -38,8 +38,10 @@
 //!   dispatched through the typed [`crate::dispatch`] registry. Success
 //!   replies: `{"type":"rpc","action":"…","ok":true,"data":…}`; failure
 //!   replies: `{"type":"rpc","action":"…","ok":false,"error":{"code":"…","message":"…"}}`.
-//!   A client-supplied `id` is echoed verbatim. `renderer.*` methods get
-//!   `rpc_not_implemented`; unknown methods get `rpc_unknown_method`;
+//!   A client-supplied `id` is echoed verbatim. `renderer.*` methods are
+//!   dispatched to embedder-registered renderer handlers (`rpc_not_implemented`
+//!   when unregistered; `rpc_handler_error` / `rpc_handler_panic` when a
+//!   registered handler fails); unknown methods get `rpc_unknown_method`;
 //!   non-object payloads get `rpc_bad_payload`.
 //! - Anything else → typed `error` frame with code `unsupported_type`;
 //!   the connection stays open.
@@ -52,9 +54,11 @@
 //! `invalid_rpc`, `unsupported_type`. RPC failures inside `rpc` replies use
 //! the stable `rpc_*` codes documented in [`crate::dispatch`].
 
+use std::sync::Arc;
+
 use serde_json::{json, Value};
 
-use crate::dispatch::{RpcContext, RpcRegistry};
+use crate::dispatch::{RendererHandlers, RpcContext, RpcRegistry};
 
 /// Close code used when the policy (auth handshake) is violated: 1008.
 pub const CLOSE_POLICY_VIOLATION: u16 = 1008;
@@ -102,11 +106,11 @@ pub enum SessionState {
 }
 
 /// One WebSocket connection's protocol state.
-#[derive(Debug)]
 pub struct Session {
     expected_token: String,
     state: SessionState,
     rpc_ctx: RpcContext,
+    renderer_handlers: Arc<RendererHandlers>,
 }
 
 impl Session {
@@ -115,6 +119,8 @@ impl Session {
     /// The RPC context defaults to loopback/`DEFAULT_PORT` with the uptime
     /// clock starting now; servers should prefer [`Session::with_context`]
     /// so handlers observe the real bind address and shared server uptime.
+    /// No renderer handlers are registered; `renderer.*` replies with
+    /// `rpc_not_implemented`.
     pub fn new(expected_token: String) -> Self {
         Self::with_context(
             expected_token,
@@ -123,12 +129,27 @@ impl Session {
     }
 
     /// Create a session with an explicit RPC context (server bind address,
-    /// uptime origin shared with other connections).
+    /// uptime origin shared with other connections). No renderer handlers
+    /// are registered.
     pub fn with_context(expected_token: String, rpc_ctx: RpcContext) -> Self {
+        Self::with_renderer(expected_token, rpc_ctx, Arc::new(RendererHandlers::new()))
+    }
+
+    /// Create a session with an explicit RPC context and a shared renderer
+    /// handler registry (as built by
+    /// [`crate::ChannelServer::bind_with_renderer`]). The map travels
+    /// behind an `Arc`; sessions (and connections) all see the same
+    /// registrations.
+    pub fn with_renderer(
+        expected_token: String,
+        rpc_ctx: RpcContext,
+        renderer_handlers: Arc<RendererHandlers>,
+    ) -> Self {
         Self {
             expected_token,
             state: SessionState::AwaitingAuth,
             rpc_ctx,
+            renderer_handlers,
         }
     }
 
@@ -255,7 +276,12 @@ impl Session {
                 match action {
                     Some(action) if !action.trim().is_empty() => {
                         let payload = value.get("payload").cloned().unwrap_or(Value::Null);
-                        let result = RpcRegistry::dispatch(&self.rpc_ctx, action, &payload);
+                        let result = RpcRegistry::dispatch(
+                            &self.rpc_ctx,
+                            action,
+                            &payload,
+                            &self.renderer_handlers,
+                        );
                         let mut reply = serde_json::Map::new();
                         reply.insert("type".to_string(), json!("rpc"));
                         reply.insert("action".to_string(), json!(action));
@@ -306,6 +332,17 @@ impl Session {
                 reason: "authentication failed".to_string(),
             }),
         }
+    }
+}
+
+impl std::fmt::Debug for Session {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // The expected token is deliberately never printed.
+        f.debug_struct("Session")
+            .field("state", &self.state)
+            .field("rpc_ctx", &self.rpc_ctx)
+            .field("renderer_handlers_len", &self.renderer_handlers.len())
+            .finish_non_exhaustive()
     }
 }
 
@@ -526,6 +563,34 @@ mod tests {
         assert_eq!(replies[0]["ok"], false);
         assert_eq!(replies[0]["error"]["code"], "rpc_not_implemented");
         assert!(replies[0].get("id").is_none());
+    }
+
+    #[test]
+    fn rpc_renderer_registered_handler_round_trips() {
+        use crate::dispatch::RendererHandlers;
+        use std::sync::Arc;
+        let mut handlers = RendererHandlers::new();
+        handlers.insert(
+            "info".to_string(),
+            Box::new(|_method: &str, _payload: &serde_json::Value| {
+                Ok(serde_json::json!({ "app": "test", "n": 42 }))
+            }),
+        );
+        let mut s = Session::with_renderer(
+            TOKEN.to_string(),
+            RpcContext::new("127.0.0.1", 6121),
+            Arc::new(handlers),
+        );
+        s.handle_text(r#"{"type":"auth","authToken":"test-token-123"}"#);
+        let out =
+            s.handle_text(r#"{"type":"rpc","action":"renderer.info","payload":{},"id":"ri-1"}"#);
+        let replies = outcome_replies(&out);
+        assert_eq!(replies[0]["ok"], true);
+        assert_eq!(
+            replies[0]["data"],
+            serde_json::json!({ "app": "test", "n": 42 })
+        );
+        assert_eq!(replies[0]["id"], "ri-1");
     }
 
     #[test]

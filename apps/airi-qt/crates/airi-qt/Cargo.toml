@@ -15,9 +15,12 @@ airi-core = { path = "../airi-core" }
 airi-mcp = { path = "../airi-mcp" }
 airi-channel = { path = "../airi-channel" }
 airi-acp = { path = "../airi-acp" }
+airi-sync = { path = "../airi-sync" }
+airi-discord = { path = "../airi-discord" }
 airi-i18n = { path = "../airi-i18n" }
 airi-render = { path = "../airi-render" }
 anyhow = { workspace = true }
+rusqlite = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true }

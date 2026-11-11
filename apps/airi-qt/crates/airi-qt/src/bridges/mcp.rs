@@ -11,8 +11,8 @@
 //! disk or is empty — never a fabricated default. When no config file
 //! exists, the page shows the documented Electron default as a suggestion
 //! with an explicit "add it" action; nothing is persisted until the user
-//! acts. Remote (streamable HTTP) servers are *parsed* but not connectable
-//! yet — probing them returns a typed error explaining why.
+//! acts. Remote (streamable HTTP) servers connect without auth headers —
+//! servers that require them are not reachable from this build.
 //!
 //! Boundary contract (same as cards/providers/data bridges): JSON document
 //! strings cross the boundary.
@@ -24,7 +24,7 @@ use std::collections::BTreeMap;
 use std::pin::Pin;
 use std::time::Instant;
 
-use airi_mcp::{McpStdioClient, McpToolResult};
+use airi_mcp::{McpHttpClient, McpStdioClient, McpToolResult};
 use serde_json::json;
 
 use crate::bridges;
@@ -132,17 +132,8 @@ fn servers_value(config: Option<&McpConfigFile>) -> Vec<serde_json::Value> {
         .unwrap_or_default()
 }
 
-fn probe(entry: &McpServerEntry, name: &str) -> Result<serde_json::Value, String> {
-    let started = Instant::now();
-    let command = entry
-        .command
-        .as_deref()
-        .filter(|c| !c.trim().is_empty())
-        .ok_or_else(|| {
-            format!("server {name:?} is a remote server — streamable HTTP is not ported yet")
-        })?;
-    let args: Vec<&str> = entry.args.iter().map(String::as_str).collect();
-    let env: Option<Vec<(String, String)>> = if entry.env.is_empty() {
+fn stdio_env(entry: &McpServerEntry) -> Option<Vec<(String, String)>> {
+    if entry.env.is_empty() {
         None
     } else {
         Some(
@@ -152,21 +143,68 @@ fn probe(entry: &McpServerEntry, name: &str) -> Result<serde_json::Value, String
                 .map(|(k, v)| (k.clone(), v.clone()))
                 .collect(),
         )
+    }
+}
+
+fn stdio_command(entry: &McpServerEntry, name: &str) -> Result<(String, Vec<String>), String> {
+    let command = entry
+        .command
+        .as_deref()
+        .filter(|c| !c.trim().is_empty())
+        .map(str::to_string)
+        .ok_or_else(|| format!("server {name:?} is not a stdio server (no command configured)"))?;
+    let args = entry.args.clone();
+    Ok((command, args))
+}
+
+fn probe(entry: &McpServerEntry, name: &str) -> Result<serde_json::Value, String> {
+    let started = Instant::now();
+    let is_remote = entry
+        .command
+        .as_deref()
+        .map(str::trim)
+        .unwrap_or("")
+        .is_empty()
+        && entry
+            .url
+            .as_deref()
+            .map(str::trim)
+            .filter(|u| !u.is_empty())
+            .is_some();
+    let (tools, duration_ms) = if is_remote {
+        let url = entry.url.as_deref().unwrap_or_default().to_string();
+        // No auth headers — see module docs.
+        let mut client =
+            McpHttpClient::connect(&url).map_err(|e| format!("cannot connect to {url}: {e}"))?;
+        client
+            .initialize()
+            .map_err(|e| format!("initialize failed: {e}"))?;
+        let tools = client
+            .tools_list()
+            .map_err(|e| format!("tools/list failed: {e}"))?;
+        let duration_ms = started.elapsed().as_millis() as u64;
+        client.close();
+        (tools, duration_ms)
+    } else {
+        let (command, args) = stdio_command(entry, name)?;
+        let args: Vec<&str> = args.iter().map(String::as_str).collect();
+        let env = stdio_env(entry);
+        let mut client = McpStdioClient::spawn(&command, &args, env.as_deref())
+            .map_err(|e| format!("failed to spawn {command}: {e}"))?;
+        client
+            .initialize()
+            .map_err(|e| format!("initialize failed: {e}"))?;
+        let tools = client
+            .tools_list()
+            .map_err(|e| format!("tools/list failed: {e}"))?;
+        let duration_ms = started.elapsed().as_millis() as u64;
+        drop(client); // Drop kills the child process.
+        (tools, duration_ms)
     };
-    let mut client = McpStdioClient::spawn(command, &args, env.as_deref())
-        .map_err(|e| format!("failed to spawn {command}: {e}"))?;
-    client
-        .initialize()
-        .map_err(|e| format!("initialize failed: {e}"))?;
-    let tools = client
-        .tools_list()
-        .map_err(|e| format!("tools/list failed: {e}"))?;
     let tool_values: Vec<serde_json::Value> = tools
         .iter()
         .map(|t| json!({ "name": t.name, "description": t.description }))
         .collect();
-    let duration_ms = started.elapsed().as_millis() as u64;
-    drop(client); // Drop kills the child process.
     Ok(json!({
         "ok": true,
         "server": name,
@@ -182,33 +220,45 @@ fn call_tool(
     tool: &str,
     arguments: serde_json::Value,
 ) -> Result<serde_json::Value, String> {
-    let command = entry
+    let is_remote = entry
         .command
         .as_deref()
-        .filter(|c| !c.trim().is_empty())
-        .ok_or_else(|| {
-            format!("server {name:?} is a remote server — streamable HTTP is not ported yet")
-        })?;
-    let args: Vec<&str> = entry.args.iter().map(String::as_str).collect();
-    let env: Option<Vec<(String, String)>> = if entry.env.is_empty() {
-        None
+        .map(str::trim)
+        .unwrap_or("")
+        .is_empty()
+        && entry
+            .url
+            .as_deref()
+            .map(str::trim)
+            .filter(|u| !u.is_empty())
+            .is_some();
+    let result: McpToolResult = if is_remote {
+        let url = entry.url.as_deref().unwrap_or_default().to_string();
+        let mut client =
+            McpHttpClient::connect(&url).map_err(|e| format!("cannot connect to {url}: {e}"))?;
+        client
+            .initialize()
+            .map_err(|e| format!("initialize failed: {e}"))?;
+        let result = client
+            .tools_call(tool, arguments)
+            .map_err(|e| format!("tools/call {tool:?} failed: {e}"))?;
+        client.close();
+        result
     } else {
-        Some(
-            entry
-                .env
-                .iter()
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .collect(),
-        )
+        let (command, args) = stdio_command(entry, name)?;
+        let args: Vec<&str> = args.iter().map(String::as_str).collect();
+        let env = stdio_env(entry);
+        let mut client = McpStdioClient::spawn(&command, &args, env.as_deref())
+            .map_err(|e| format!("failed to spawn {command}: {e}"))?;
+        client
+            .initialize()
+            .map_err(|e| format!("initialize failed: {e}"))?;
+        let result = client
+            .tools_call(tool, arguments)
+            .map_err(|e| format!("tools/call {tool:?} failed: {e}"))?;
+        drop(client);
+        result
     };
-    let mut client = McpStdioClient::spawn(command, &args, env.as_deref())
-        .map_err(|e| format!("failed to spawn {command}: {e}"))?;
-    client
-        .initialize()
-        .map_err(|e| format!("initialize failed: {e}"))?;
-    let result: McpToolResult = client
-        .tools_call(tool, arguments)
-        .map_err(|e| format!("tools/call {tool:?} failed: {e}"))?;
     let content: Vec<serde_json::Value> = result
         .content
         .iter()
@@ -219,7 +269,6 @@ fn call_tool(
             }
         })
         .collect();
-    drop(client);
     Ok(json!({
         "ok": true,
         "tool": tool,

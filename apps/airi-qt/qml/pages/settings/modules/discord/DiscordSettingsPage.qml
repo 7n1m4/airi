@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Discord messaging module — UI-complete scaffold.
-// Structural port of packages/stage-pages/src/pages/settings/modules/
+// Discord messaging module — send-only REST slice.
+// The page is wired to the `DiscordController` bridge
+// (crates/airi-qt/src/bridges/discord.rs) and to the app's own config file
+// (<profile>/airi/discord.json, or the platform data dir without --profile;
+// written atomically, 0600 on unix). Verified: Save & Verify (token check via
+// GET /users/@me) and sending the message you type (POST /channels/{id}/messages)
+// are live. NOT wired: receiving messages and running bot commands. The gateway
+// WebSocket exists in airi-discord, but the app never auto-connects to it —
+// receiving is opt-in only, by design. Nothing is ever sent automatically;
+// every send is the human pressing Send.
+// Structural source: packages/stage-pages/src/pages/settings/modules/
 // messaging-discord.vue (MessagingDiscord.vue in @proj-airi/stage-ui).
-// There is NO Rust Discord gateway in the Qt build: no websocket lifecycle,
-// no token store, no guild/channel fetch, no event log. Every control is
-// rendered but disabled with an explanatory tooltip, nothing is persisted,
-// and the page says so persistently in the banner up top.
-// The Access & Routing tab is an upstream "demonstration purposes only"
-// preview; it is ported dimmed and fully inert, link-free.
+// Everything not listed above stays rendered but disabled with an explanatory
+// tooltip; the Access & Routing tab is an inert upstream "demonstration
+// purposes only" preview.
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import com.airi.airiqt 1.0
@@ -16,6 +22,128 @@ Item {
     id: page
 
     property int activeTab: 0
+
+    // ── Live send-only REST state ─────────────────────────────────────────
+    property string verifyStatus: ""
+    property bool verifyOk: true
+    property string sendResult: ""
+    property bool sendOk: true
+    property bool gatewayVisible: false
+    property bool gatewayOk: false
+    property string gatewayUrl: ""
+    property int gatewayShards: 0
+    property int gatewayRemaining: 0
+    property string gatewayError: ""
+
+    DiscordController {
+        id: controller
+    }
+
+    Connections {
+        target: controller
+        function onConfigChanged() { page.syncFromController() }
+    }
+
+    Component.onCompleted: page.syncFromController()
+
+    function syncFromController() {
+        tokenField.text = ""
+        channelField.text = controller.channelId
+        if (!controller.configured) {
+            page.verifyStatus = ""
+            page.sendResult = ""
+            page.gatewayVisible = false
+        }
+    }
+
+    function parseBridgeJson(raw) {
+        try {
+            return JSON.parse(raw)
+        } catch (e) {
+            return { error: "unexpected bridge response" }
+        }
+    }
+
+    function runSaveAndVerify() {
+        var result = page.parseBridgeJson(controller.saveConfig(tokenField.text, channelField.text))
+        page.verifyOk = !!(result && result.ok)
+        page.verifyStatus = page.verifyOk
+            ? I18n.tr("shell.discord.live.verifyOk").replace("%1", result.username).replace("%2", result.id)
+            : (result && result.error ? result.error : "unexpected bridge response")
+        tokenField.text = ""
+        page.sendResult = ""
+    }
+
+    function runFetchGatewayInfo() {
+        var result = page.parseBridgeJson(controller.gatewayInfo())
+        page.gatewayVisible = true
+        page.gatewayOk = !!(result && result.ok)
+        if (page.gatewayOk) {
+            page.gatewayUrl = result.url
+            page.gatewayShards = result.shards
+            page.gatewayRemaining = result.remaining
+            page.gatewayError = ""
+        } else {
+            page.gatewayUrl = ""
+            page.gatewayError = result && result.error ? result.error : "unexpected bridge response"
+        }
+    }
+
+    function runSendTestMessage() {
+        var content = messageField.text.trim()
+        if (content.length === 0)
+            return
+        var result = page.parseBridgeJson(controller.sendTestMessage(messageField.text))
+        page.sendOk = !!(result && result.ok)
+        page.sendResult = page.sendOk
+            ? I18n.tr("shell.discord.live.sentOk").replace("%1", result.id)
+            : (result && result.error ? result.error : "unexpected bridge response")
+    }
+
+    function doClearConfig() {
+        controller.clearConfig()
+        tokenField.text = ""
+        channelField.text = ""
+        messageField.text = ""
+        page.verifyStatus = ""
+        page.sendResult = ""
+        page.gatewayVisible = false
+    }
+
+    AModal {
+        id: clearConfirm
+
+        title: I18n.tr("shell.discord.live.clearConfirmTitle")
+
+        Text {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            text: I18n.tr("shell.discord.live.clearConfirmBody")
+            font.family: Theme.fontBody
+            font.pixelSize: 12
+            color: Theme.textPrimary
+        }
+
+        RowLayout {
+            Layout.alignment: Qt.AlignRight
+            spacing: Theme.spacingS
+
+            AButton {
+                variant: AButton.Ghost
+                text: I18n.tr("shell.discord.live.clearConfirmCancel")
+                onClicked: clearConfirm.close()
+            }
+
+            AButton {
+                variant: AButton.Danger
+                text: I18n.tr("shell.discord.live.clearConfirmConfirm")
+                onClicked: {
+                    clearConfirm.close()
+                    page.doClearConfig()
+                }
+            }
+        }
+    }
 
     // ── Deferred-control idioms (the honest "not wired" pattern) ─────────
     // Disabled ASwitch + ATooltip on wrapper hover.
@@ -217,7 +345,7 @@ Item {
 
                 ABadge {
                     variant: "warning"
-                    text: I18n.tr("shell.discord.connectivity.notWiredBadge")
+                    text: I18n.tr("shell.discord.live.badge")
                 }
             }
 
@@ -249,7 +377,7 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
-                        text: I18n.tr("shell.discord.deferredNotice")
+                        text: I18n.tr("shell.discord.live.banner")
                         font.family: Theme.fontBody
                         font.pixelSize: 13
                         color: Theme.warning
@@ -285,7 +413,7 @@ Item {
                         width: parent ? parent.width : implicitWidth
                         spacing: Theme.spacingM
 
-                        // Status row — "Not wired" state.
+                        // Status row — reflects the bridge's lastStatus qproperty.
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: Theme.spacingS
@@ -294,31 +422,32 @@ Item {
                                 implicitWidth: 10
                                 implicitHeight: 10
                                 radius: 5
-                                color: Theme.textSecondary
+                                color: controller.lastStatus === "verified"
+                                    ? Theme.success
+                                    : (controller.lastStatus === "error" ? Theme.error : Theme.textSecondary)
                             }
 
                             Text {
                                 Layout.fillWidth: true
-                                text: I18n.tr("shell.discord.connectivity.notWiredState")
+                                text: controller.lastStatus === "verified"
+                                    ? I18n.tr("shell.discord.live.statusVerified")
+                                    : (controller.lastStatus === "error"
+                                        ? I18n.tr("shell.discord.live.statusError")
+                                        : I18n.tr("shell.discord.live.statusUnconfigured"))
                                 font.family: Theme.fontBody
                                 font.pixelSize: 14
-                                color: Theme.textSecondary
-                            }
-
-                            Text {
-                                text: "—"
-                                font.family: Theme.fontBody
-                                font.pixelSize: 12
-                                color: Theme.textSecondary
+                                color: controller.lastStatus === "verified"
+                                    ? Theme.success
+                                    : (controller.lastStatus === "error" ? Theme.error : Theme.textSecondary)
                             }
 
                             ABadge {
-                                variant: "warning"
-                                text: I18n.tr("shell.discord.connectivity.notWiredBadge")
+                                variant: controller.lastStatus === "verified" ? "success" : "warning"
+                                text: I18n.tr("shell.discord.live.badge")
                             }
                         }
 
-                        // Bot token — password echo; disabled until the bridge lands.
+                        // Bot token — password echo; write-only, required on every save.
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: Theme.spacingS
@@ -340,31 +469,129 @@ Item {
                                 color: Theme.textSecondary
                             }
 
-                            Item {
+                            // Write-only field: the stored token is never shown;
+                            // saving requires the token to be pasted again.
+                            ATextField {
+                                id: tokenField
                                 Layout.fillWidth: true
-                                implicitWidth: tokenField.implicitWidth
-                                implicitHeight: tokenField.implicitHeight
+                                enabled: !controller.working
+                                echoMode: TextInput.Password
+                                placeholderText: controller.configured
+                                    ? I18n.tr("shell.discord.live.tokenPlaceholderReplace")
+                                    : I18n.tr("shell.discord.connectivity.tokenPlaceholder")
+                            }
+                        }
 
-                                ATextField {
-                                    id: tokenField
-                                    anchors.fill: parent
-                                    enabled: false
-                                    echoMode: TextInput.Password
-                                    placeholderText: I18n.tr("shell.discord.connectivity.tokenPlaceholder")
-                                }
+                        // Channel ID — where the test message goes. Not secret.
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spacingS
 
-                                MouseArea {
-                                    id: tokenHover
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                }
+                            Text {
+                                text: I18n.tr("shell.discord.live.channelIdLabel")
+                                font.family: Theme.fontBody
+                                font.pixelSize: 13
+                                font.bold: true
+                                color: Theme.textPrimary
+                            }
 
-                                ATooltip {
-                                    text: I18n.tr("shell.discord.deferredTip")
-                                    visible: tokenHover.containsMouse
-                                    x: 0
-                                    y: parent.height + Theme.spacingS
-                                }
+                            Text {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: I18n.tr("shell.discord.live.channelIdDescription")
+                                font.family: Theme.fontBody
+                                font.pixelSize: 12
+                                color: Theme.textSecondary
+                            }
+
+                            ATextField {
+                                id: channelField
+                                Layout.fillWidth: true
+                                enabled: !controller.working
+                                placeholderText: I18n.tr("shell.discord.live.channelIdPlaceholder")
+                            }
+                        }
+
+                        // Config location — the file's folder, never the token.
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spacingS
+
+                            Text {
+                                text: I18n.tr("shell.discord.live.configPathLabel")
+                                font.family: Theme.fontBody
+                                font.pixelSize: 12
+                                color: Theme.textSecondary
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: controller.configDir
+                                font.family: Theme.fontBody
+                                font.pixelSize: 11
+                                wrapMode: Text.WrapAnywhere
+                                color: Theme.textSecondary
+                            }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: I18n.tr("shell.discord.live.configPathHint")
+                            font.family: Theme.fontBody
+                            font.pixelSize: 10
+                            color: Theme.textSecondary
+                        }
+
+                        // Save & Verify — persists atomically (0600), then verifies once.
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spacingS
+
+                            Item { Layout.fillWidth: true }
+
+                            AButton {
+                                variant: AButton.Accent
+                                text: I18n.tr("shell.discord.live.saveAndVerify")
+                                enabled: !controller.working
+                                onClicked: page.runSaveAndVerify()
+                            }
+                        }
+
+                        Text {
+                            visible: page.verifyStatus.length > 0
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: page.verifyStatus
+                            font.family: Theme.fontBody
+                            font.pixelSize: 12
+                            color: page.verifyOk ? Theme.success : Theme.error
+                        }
+
+                        // Already configured — small summary row + clear action.
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spacingS
+                            visible: controller.configured
+
+                            Text {
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: controller.botName !== ""
+                                    ? I18n.tr("shell.discord.live.configuredAs")
+                                        .replace("%1", controller.botName)
+                                        .replace("%2", controller.botId)
+                                    : I18n.tr("shell.discord.live.configuredUnverified")
+                                font.family: Theme.fontBody
+                                font.pixelSize: 12
+                                color: Theme.textSecondary
+                            }
+
+                            AButton {
+                                variant: AButton.Danger
+                                text: I18n.tr("shell.discord.live.clearToken")
+                                enabled: !controller.working
+                                onClicked: clearConfirm.open()
                             }
                         }
 
@@ -438,6 +665,180 @@ Item {
                                 variant: AButton.Danger
                                 text: I18n.tr("shell.discord.connectivity.disconnect")
                             }
+                        }
+                    }
+                }
+
+                // Verify connection — display-only gateway info; receiving is NOT enabled.
+                SectionCaption {
+                    text: I18n.tr("shell.discord.live.verifySectionTitle")
+                }
+
+                ACard {
+                    Layout.fillWidth: true
+
+                    ColumnLayout {
+                        width: parent ? parent.width : implicitWidth
+                        spacing: Theme.spacingS
+
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: I18n.tr("shell.discord.live.gatewayDisplayOnly")
+                            font.family: Theme.fontBody
+                            font.pixelSize: 12
+                            color: Theme.textSecondary
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spacingS
+
+                            Item { Layout.fillWidth: true }
+
+                            AButton {
+                                variant: AButton.Default
+                                text: I18n.tr("shell.discord.live.fetchGatewayInfo")
+                                enabled: controller.configured && !controller.working
+                                onClicked: page.runFetchGatewayInfo()
+                            }
+                        }
+
+                        // Hidden until the first fetch. Plain facts, directly from GET /gateway/bot.
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            visible: page.gatewayVisible
+                            spacing: Theme.spacingS
+
+                            ASeparator {
+                                Layout.fillWidth: true
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: page.gatewayOk
+                                spacing: Theme.spacingS
+
+                                Text {
+                                    text: I18n.tr("shell.discord.live.gatewayUrlLabel")
+                                    font.family: Theme.fontBody
+                                    font.pixelSize: 12
+                                    color: Theme.textSecondary
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: page.gatewayUrl
+                                    font.family: Theme.fontBody
+                                    font.pixelSize: 11
+                                    wrapMode: Text.WrapAnywhere
+                                    color: Theme.textPrimary
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: page.gatewayOk
+                                spacing: Theme.spacingS
+
+                                Text {
+                                    text: I18n.tr("shell.discord.live.gatewayShardsLabel")
+                                    font.family: Theme.fontBody
+                                    font.pixelSize: 12
+                                    color: Theme.textSecondary
+                                }
+
+                                Text {
+                                    text: page.gatewayShards
+                                    font.family: Theme.fontBody
+                                    font.pixelSize: 12
+                                    color: Theme.textPrimary
+                                }
+                            }
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                visible: page.gatewayOk
+                                spacing: Theme.spacingS
+
+                                Text {
+                                    text: I18n.tr("shell.discord.live.gatewayRemainingLabel")
+                                    font.family: Theme.fontBody
+                                    font.pixelSize: 12
+                                    color: Theme.textSecondary
+                                }
+
+                                Text {
+                                    text: page.gatewayRemaining
+                                    font.family: Theme.fontBody
+                                    font.pixelSize: 12
+                                    color: Theme.textPrimary
+                                }
+                            }
+
+                            Text {
+                                visible: !page.gatewayOk
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                text: page.gatewayError
+                                font.family: Theme.fontBody
+                                font.pixelSize: 12
+                                color: Theme.error
+                            }
+                        }
+                    }
+                }
+
+                // Send a test message — exactly what the user typed, once, on click.
+                SectionCaption {
+                    text: I18n.tr("shell.discord.live.sendTitle")
+                }
+
+                ACard {
+                    Layout.fillWidth: true
+
+                    ColumnLayout {
+                        width: parent ? parent.width : implicitWidth
+                        spacing: Theme.spacingS
+
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: I18n.tr("shell.discord.live.sendDescription")
+                            font.family: Theme.fontBody
+                            font.pixelSize: 12
+                            color: Theme.textSecondary
+                        }
+
+                        ATextField {
+                            id: messageField
+                            Layout.fillWidth: true
+                            enabled: controller.configured && !controller.working
+                            placeholderText: I18n.tr("shell.discord.live.sendPlaceholder")
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spacingS
+
+                            Item { Layout.fillWidth: true }
+
+                            AButton {
+                                variant: AButton.Accent
+                                text: I18n.tr("shell.discord.live.send")
+                                enabled: controller.configured && !controller.working && messageField.text.trim().length > 0
+                                onClicked: page.runSendTestMessage()
+                            }
+                        }
+
+                        Text {
+                            visible: page.sendResult.length > 0
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: page.sendResult
+                            font.family: Theme.fontBody
+                            font.pixelSize: 12
+                            color: page.sendOk ? Theme.success : Theme.error
                         }
                     }
                 }

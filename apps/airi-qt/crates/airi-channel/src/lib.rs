@@ -50,9 +50,12 @@
 //!
 //! Not a general-purpose RPC bridge, not a module registry, not audio
 //! streaming, not LAN discovery. The `rpc` registry is a small, fully local
-//! slice of the gateway protocol; `renderer.*` methods report
-//! `rpc_not_implemented` until the Qt renderer bridge lands. Wiring RPC to
-//! the renderer and host capabilities is a separate decision.
+//! slice of the gateway protocol. `renderer.*` methods dispatch to
+//! embedder-registered [`RendererHandlers`] (read-only, plain-JSON handlers
+//! registered via [`ChannelServer::bind_with_renderer`]); unregistered
+//! methods reply `rpc_not_implemented`. Wiring Qt GUI-thread targets into
+//! that registry is a separate decision — handlers here must never touch
+//! `QObject`s directly; they get plain JSON and return plain JSON.
 
 pub mod base64;
 pub mod config;
@@ -64,7 +67,9 @@ pub mod uuid;
 pub mod ws;
 
 pub use config::{default_config_path, load_or_heal, ChannelConfig, ConfigError, DEFAULT_HOSTNAME};
-pub use dispatch::{RpcContext, RpcError, RpcRegistry, APP_NAME, PROTOCOL};
+pub use dispatch::{
+    RendererHandler, RendererHandlers, RpcContext, RpcError, RpcRegistry, APP_NAME, PROTOCOL,
+};
 pub use server::{ChannelServer, ServerHandle};
 pub use session::{CloseInfo, Session, SessionOutcome, SessionState, CLOSE_POLICY_VIOLATION};
 pub use ws::{accept_key, encode_frame, Frame, FrameDecoder, OP_CLOSE, OP_PING, OP_PONG, OP_TEXT};

@@ -20,7 +20,7 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use crate::config::ChannelConfig;
-use crate::dispatch::RpcContext;
+use crate::dispatch::{RendererHandlers, RpcContext};
 use crate::session::{
     Session, CLOSE_MESSAGE_TOO_BIG, CLOSE_PROTOCOL_ERROR, CLOSE_UNSUPPORTED_DATA,
 };
@@ -38,6 +38,7 @@ pub struct ChannelServer {
     listener: TcpListener,
     token: Arc<str>,
     rpc: RpcContext,
+    renderer_handlers: Arc<RendererHandlers>,
 }
 
 impl ChannelServer {
@@ -45,13 +46,31 @@ impl ChannelServer {
     ///
     /// Binding is loopback-only by convention: the config defaults to
     /// `127.0.0.1` and `0.0.0.0` should be a deliberate choice (LAN access).
+    /// No renderer handlers are registered; `renderer.*` replies with
+    /// `rpc_not_implemented`. Use [`ChannelServer::bind_with_renderer`] to
+    /// register some.
     pub fn bind(hostname: &str, port: u16, config: &ChannelConfig) -> io::Result<Self> {
+        Self::bind_with_renderer(hostname, port, config, RendererHandlers::new())
+    }
+
+    /// Bind `hostname:port` with a renderer handler registry for
+    /// `renderer.<method>` RPC dispatch. The map is wrapped in an `Arc` and
+    /// shared with every accepted connection; handlers run on the
+    /// connection's reader thread and receive/return plain JSON (never the
+    /// token or the config).
+    pub fn bind_with_renderer(
+        hostname: &str,
+        port: u16,
+        config: &ChannelConfig,
+        handlers: RendererHandlers,
+    ) -> io::Result<Self> {
         let listener = TcpListener::bind((hostname, port))?;
         let bound_port = listener.local_addr()?.port();
         Ok(Self {
             listener,
             token: Arc::from(config.auth_token.as_str()),
             rpc: RpcContext::new(hostname.to_string(), bound_port),
+            renderer_handlers: Arc::new(handlers),
         })
     }
 
@@ -69,7 +88,13 @@ impl ChannelServer {
     /// start the channel server.
     pub fn run(self) -> io::Result<()> {
         let stop = Arc::new(AtomicBool::new(false));
-        serve(self.listener, self.token, self.rpc, stop)
+        serve(
+            self.listener,
+            self.token,
+            self.rpc,
+            self.renderer_handlers,
+            stop,
+        )
     }
 
     /// Spawn the accept loop on a background thread.
@@ -80,9 +105,10 @@ impl ChannelServer {
         let thread_stop = Arc::clone(&stop);
         let token = self.token;
         let rpc = self.rpc;
+        let renderer_handlers = self.renderer_handlers;
         let join = std::thread::Builder::new()
             .name("airi-channel-accept".to_string())
-            .spawn(move || serve(self.listener, token, rpc, thread_stop))?;
+            .spawn(move || serve(self.listener, token, rpc, renderer_handlers, thread_stop))?;
         Ok(ServerHandle {
             port,
             stop,
@@ -118,6 +144,7 @@ fn serve(
     listener: TcpListener,
     token: Arc<str>,
     rpc: RpcContext,
+    renderer_handlers: Arc<RendererHandlers>,
     stop: Arc<AtomicBool>,
 ) -> io::Result<()> {
     listener.set_nonblocking(true)?;
@@ -129,10 +156,12 @@ fn serve(
             Ok((stream, peer)) => {
                 let token = Arc::clone(&token);
                 let rpc = rpc.for_session();
+                let renderer_handlers = Arc::clone(&renderer_handlers);
                 std::thread::Builder::new()
                     .name(format!("airi-channel-conn-{peer}"))
                     .spawn(move || {
-                        if let Err(err) = handle_connection(stream, &token, rpc) {
+                        if let Err(err) = handle_connection(stream, &token, rpc, &renderer_handlers)
+                        {
                             tracing::debug!(%peer, %err, "channel connection ended with error");
                         }
                     })?;
@@ -148,7 +177,12 @@ fn serve(
     }
 }
 
-fn handle_connection(mut stream: TcpStream, token: &str, rpc: RpcContext) -> io::Result<()> {
+fn handle_connection(
+    mut stream: TcpStream,
+    token: &str,
+    rpc: RpcContext,
+    renderer_handlers: &Arc<RendererHandlers>,
+) -> io::Result<()> {
     stream.set_read_timeout(Some(HANDSHAKE_READ_TIMEOUT))?;
     stream.set_nonblocking(false)?;
 
@@ -198,7 +232,7 @@ fn handle_connection(mut stream: TcpStream, token: &str, rpc: RpcContext) -> io:
 
     // --- WebSocket phase ----------------------------------------------------
     stream.set_read_timeout(None)?; // idle clients are fine post-handshake
-    let mut session = Session::with_context(token.to_string(), rpc);
+    let mut session = Session::with_renderer(token.to_string(), rpc, Arc::clone(renderer_handlers));
     let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
     let mut fragments: Option<(u8, Vec<u8>)> = None;
 

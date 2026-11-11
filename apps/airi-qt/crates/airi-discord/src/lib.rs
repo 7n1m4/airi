@@ -1,29 +1,31 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #![deny(missing_docs)]
 
-//! `airi-discord` — AIRI Discord bot, **blocking REST slice**, for the Qt build.
+//! `airi-discord` — Discord bot for the Qt build: a blocking REST slice
+//! **plus a blocking Gateway (WebSocket) client**.
 //!
-//! This crate is the honest Q1 slice of a Discord integration: a synchronous
-//! (`reqwest::blocking`) client for the Discord HTTP API, authenticated with a
-//! bot token, covering exactly the calls AIRI's Qt settings page needs to go
+//! The REST half is a synchronous (`reqwest::blocking`) client for the
+//! Discord HTTP API, authenticated with a bot token, covering exactly the
+//! calls AIRI's Qt settings page needs to go
 //! from "disabled scaffold" to "can talk to Discord on demand":
 //!
-//! * [`DiscordRestClient::get_gateway_url`] — `GET /gateway/bot` (where a
-//!   gateway connection would go, and how many session starts remain).
+//! * [`DiscordRestClient::get_gateway_url`] — `GET /gateway/bot` (the gateway
+//!   WebSocket URL [`GatewayClient::connect`] dials, and how many session
+//!   starts remain).
 //! * [`DiscordRestClient::get_current_bot_user`] — `GET /users/@me`.
 //! * [`DiscordRestClient::send_message`] — `POST /channels/{channel_id}/messages`.
 //! * [`DiscordRestClient::get_channel`] — `GET /channels/{channel_id}`.
 //!
-//! # Out of scope — the gateway WebSocket
+//! The gateway half ([`GatewayClient`], added wave ⑧) is a blocking
+//! `tungstenite` WebSocket client implementing the HELLO → IDENTIFY →
+//! heartbeat handshake, dispatch decoding (`READY`, `RESUMED`,
+//! `MESSAGE_CREATE`), caller-driven resume (op 6) and reconnect. It never
+//! spawns threads; automatic reconnect/backoff is the caller's loop. See
+//! `docs/phase-notes/p9-lane-discord-gateway-ws.md`.
 //!
-//! **Live message receipt (the Discord Gateway) is not implemented here and
-//! cannot be implemented in this workspace today.** The gateway is a WebSocket
-//! protocol (op 10 `HELLO` → op 2 `IDENTIFY` → op 1 `HEARTBEAT`, then dispatch
-//! events such as `MESSAGE_CREATE`) and no WebSocket client crate exists in
-//! the workspace dependency set. Adding one (e.g. `tokio-tungstenite`) is a
-//! user dependency decision, not a lane decision. Do not hand-roll TLS/WS
-//! framing. See `docs/phase-notes/p9-lane-discord-gateway.md` for the exact
-//! blocker write-up.
+//! **The Qt app must never auto-connect to the gateway** — receiving is
+//! opt-in (e.g. behind a `--gateway` flag), and every outbound action stays
+//! human-in-the-loop.
 //!
 //! # Self-hosted proxies and tests
 //!
@@ -43,6 +45,10 @@
 //!   bodies only (Discord error bodies do not contain the token).
 //! * There is deliberately no way to extract the token back out of the client
 //!   (no accessor); moving it out means moving the whole client.
+//! * The gateway client ([`GatewayClient`]) likewise stores the token as a
+//!   plain [`String`]; it travels only inside IDENTIFY/RESUME JSON payloads,
+//!   never in the URL or headers, is covered by the same redacted [`Debug`]
+//!   pattern, and is never echoed into any error value.
 //!
 //! # Rate limiting
 //!
@@ -67,8 +73,10 @@
 
 mod client;
 mod error;
+mod gateway;
 mod types;
 
 pub use client::{DiscordRestClient, RateLimit, DEFAULT_BASE_URL, DEFAULT_TIMEOUT};
 pub use error::DiscordError;
+pub use gateway::{GatewayClient, GatewayEvent, MessageAuthor, ReadyUser, DEFAULT_INTENTS};
 pub use types::{BotUser, Channel, GatewayBot, Message, SessionStartLimit};

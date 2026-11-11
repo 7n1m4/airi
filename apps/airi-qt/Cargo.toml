@@ -97,6 +97,9 @@ dbus = "0.9"
 # Testing
 tempfile = "3"
 
+# Discord gateway WebSocket (user decision 2026-11-11)
+tungstenite = { version = "0.24", features = [ "rustls-tls-webpki-roots" ] }
+
 [profile.dev]
 opt-level = 1
 debug = true

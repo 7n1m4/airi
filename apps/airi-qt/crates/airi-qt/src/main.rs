@@ -20,6 +20,8 @@ use std::time::{Duration, Instant};
 
 /// Qt/cxx-qt bridge objects exposed to QML.
 pub mod bridges;
+/// Read-only `renderer.*` RPC handlers for the `--gateway` channel server.
+mod gateway_handlers;
 /// Shared spine runtime state and C ABI for the C++ scene-graph item.
 pub mod spine_rt;
 
@@ -264,12 +266,15 @@ fn main() -> ExitCode {
         cli.smoke
     );
 
+    let mut gateway_db: Option<airi_store::Database> = None;
+
     // Open the store against the profile dir (isolated when --profile is passed),
     // then register a SettingsStore for the QML bridges (theme/locale persistence).
     let store_path = db_path.to_string_lossy().into_owned();
     match airi_store::Database::open(&db_path) {
         Ok(db) => {
             eprintln!("[airi-qt] store ready at {store_path}");
+            gateway_db = Some(db.clone());
             let (bus, _rx) = tokio::sync::broadcast::channel(8);
             bridges::set_provider_repo(airi_store::ProviderRepo::new(db.clone()));
             bridges::chat::set_chat_context(airi_core::ChatService::new(db.clone()), db.clone());
@@ -286,8 +291,8 @@ fn main() -> ExitCode {
     let gateway_handle: Option<airi_channel::ServerHandle> = cli
         .gateway
         .then(|| {
-            let config_path = if explicit_profile {
-                bridges::profile_dir().map(|p| p.join("server-channel").join("config.json"))
+            let config_path = if explicit_profile || cli.smoke {
+                Some(profile_dir.join("server-channel").join("config.json"))
             } else {
                 airi_channel::default_config_path()
             };
@@ -303,9 +308,16 @@ fn main() -> ExitCode {
                 }
             };
             let port = airi_channel::server_channel_port();
-            match airi_channel::ChannelServer::bind(&config.hostname, port, &config)
-                .and_then(|s| s.spawn())
-            {
+            let server = match &gateway_db {
+                Some(db) => airi_channel::ChannelServer::bind_with_renderer(
+                    &config.hostname,
+                    port,
+                    &config,
+                    gateway_handlers::build(db.clone()),
+                ),
+                None => airi_channel::ChannelServer::bind(&config.hostname, port, &config),
+            };
+            match server.and_then(|s| s.spawn()) {
                 Ok(handle) => {
                     eprintln!(
                         "[airi-qt] gateway: listening on {}:{} (token at {})",

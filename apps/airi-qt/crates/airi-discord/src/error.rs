@@ -45,7 +45,23 @@ pub enum DiscordError {
     Decode(String),
     /// `401 Unauthorized` — the bot token is missing, malformed, or
     /// revoked. Surface this as "check the token in settings", never as a
-    /// generic failure, and never retry it automatically.
+    /// generic failure, and never retry it automatically. Also produced when
+    /// the gateway closes with code 4004 (authentication failed).
     #[error("unauthorized: bot token rejected (401)")]
     Unauthorized,
+    /// Gateway WebSocket transport-level failure: TCP connect, TLS handshake,
+    /// frame read/write, or an unclean close during handshake. The wrapped
+    /// string is a tungstenite error description; it never contains the token
+    /// (the token travels in a JSON payload, never in the URL or headers).
+    #[error("gateway transport error: {0}")]
+    GatewayTransport(String),
+    /// op 9 INVALID SESSION — the gateway rejected the session. `resumable`
+    /// carries the `d` boolean: `true` means op 6 RESUME may succeed,
+    /// `false` means a fresh IDENTIFY (new [`crate::GatewayClient::connect`])
+    /// is required.
+    #[error("invalid session (resumable={resumable})")]
+    InvalidSession {
+        /// Whether the session may be resumed with op 6.
+        resumable: bool,
+    },
 }

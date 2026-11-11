@@ -1,24 +1,191 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Cloud Sync module — UI-complete scaffold.
-// Structural port of packages/stage-pages/src/pages/settings/modules/cloud-sync.vue
-// (sync-engine store surface + provider pages settings/providers/cloud/s3.vue and
-// local-fs.vue for the credential fields). There is NO Rust sync engine in the Qt
-// build: no S3/local-FS client, no IndexedDB snapshot pipeline, no conflict
-// contraction guard, no libp2p mesh. Every mutating control is rendered but
-// disabled with an explanatory tooltip; the page says so persistently in the
-// banner up top. Nothing here is persisted, and no status is fabricated — the
-// only honest values are "Not wired" and "never" (last sync).
+// Cloud Sync module — partially wired to the real `SyncController` bridge
+// (crates/airi-qt/src/bridges/sync.rs) and the `airi-sync` snapshot engine.
+// What WORKS in this slice: the local-folder target (persisted to
+// <profile>/airi/sync.json or <platform-data>/airi-qt/sync.json), snapshot
+// list refresh, "Test Connection" (probe snapshot, kept on purpose),
+// "Sync Now" (snapshot of the Qt data directory), per-snapshot Verify and
+// Restore… (dry-run plan confirm; a second explicit "Overwrite anyway" path
+// after a DirtyTarget refusal).
+// What stays DISABLED in this slice: S3 (not implemented), the sync-interval
+// slider (no scheduling backend), Selective Sync, Local Mesh Sync, Conflicts,
+// prune, restore-settings-only and the restore-remote-backup row (the
+// destructive restore path lives inside each snapshot's Restore… dialog).
+// Every disabled control keeps the explanatory tooltip; nothing is persisted
+// except the target path, and no status is fabricated.
 // The Qt shell has no sync-provider sub-pages, so the credential fields upstream
 // keeps under /settings/providers/cloud/* are inlined into the Storage Target
 // card here; the "Configure" route upstream is intentionally omitted.
 // Dialogs (Selective Sync scope, Prune Unlinked Models) are intentionally not
 // ported — they would be dead UI.
+pragma ComponentBehavior: Bound
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
 import com.airi.airiqt 1.0
 
 Item {
     id: page
+
+    // ── Live bridge state ───────────────────────────────────────────────
+    // Everything the local-FS slice can honestly do flows through this
+    // controller; QML holds only parsed views of its JSON boundary.
+    SyncController {
+        id: controller
+    }
+
+    Connections {
+        target: controller
+        function onSnapshotsChanged() { page.reloadSnapshots() }
+    }
+
+    property var snapshots: []
+    property var verifyResults: ({})
+    property string storageStatus: ""
+    property bool storageStatusOk: true
+    property string actionStatus: ""
+    property bool actionStatusOk: true
+    property string restoreSnapshotId: ""
+    property string restoreLabelText: ""
+    property var restorePlan: null
+    property string restoreError: ""
+    property bool restoreOverwriteVisible: false
+
+    readonly property bool targetConfigured: controller.targetPath.trim().length > 0
+
+    Component.onCompleted: {
+        controller.refreshSnapshots()
+        localPathField.text = controller.targetPath
+        page.reloadSnapshots()
+    }
+
+    function reloadSnapshots() {
+        var parsed = []
+        try {
+            parsed = JSON.parse(controller.snapshotsJson)
+        } catch (e) {
+            console.log("[airi-qt] cloud-sync: failed to parse snapshotsJson:", e)
+            parsed = []
+        }
+        page.snapshots = parsed
+    }
+
+    function formatBytes(n) {
+        if (n >= 1073741824) return (n / 1073741824).toFixed(1) + " GB"
+        if (n >= 1048576) return (n / 1048576).toFixed(1) + " MB"
+        if (n >= 1024) return (n / 1024).toFixed(1) + " KB"
+        return n + " B"
+    }
+
+    function formatDate(ms) {
+        return Qt.formatDateTime(new Date(ms), "yyyy-MM-dd HH:mm")
+    }
+
+    function snapshotTitle(snap) {
+        return (snap.label && snap.label.length > 0) ? snap.label : snap.id
+    }
+
+    function saveTarget() {
+        var ok = controller.saveTargetPath(localPathField.text)
+        page.storageStatusOk = ok
+        page.storageStatus = ok
+            ? I18n.tr("shell.cloudSync.live.configSaved")
+            : controller.lastError
+    }
+
+    function runProbe() {
+        var raw = controller.probeTarget()
+        var res = null
+        try {
+            res = JSON.parse(raw)
+        } catch (e) {
+            res = { error: "unexpected bridge response" }
+        }
+        if (res && res.ok) {
+            page.storageStatusOk = true
+            page.storageStatus = I18n.tr("shell.cloudSync.live.probeOk").arg(res.probeId)
+        } else {
+            page.storageStatusOk = false
+            page.storageStatus = I18n.tr("shell.cloudSync.live.probeFailed")
+                .arg(res && res.error ? res.error : "unknown error")
+        }
+    }
+
+    function runSyncNow() {
+        page.actionStatus = ""
+        var ok = controller.createSnapshot("")
+        if (ok) {
+            page.actionStatusOk = true
+            page.actionStatus = I18n.tr("shell.cloudSync.live.syncDone")
+        } else {
+            page.actionStatusOk = false
+            page.actionStatus = controller.lastError
+        }
+    }
+
+    function runVerify(snap) {
+        var raw = controller.verifySnapshot(snap.id)
+        var res = null
+        try {
+            res = JSON.parse(raw)
+        } catch (e) {
+            res = { error: "unexpected bridge response" }
+        }
+        var entry = {}
+        if (res && res.ok) {
+            entry = {
+                ok: true,
+                text: I18n.tr("shell.cloudSync.live.verifyOk").arg(res.filesChecked).arg(page.formatBytes(res.bytesChecked))
+            }
+        } else if (res && res.error) {
+            entry = { ok: false, text: I18n.tr("shell.cloudSync.live.verifyError").arg(res.error) }
+        } else {
+            entry = {
+                ok: false,
+                text: I18n.tr("shell.cloudSync.live.verifyFailed")
+                    .arg((res.missing || []).length).arg((res.mismatched || []).length)
+            }
+        }
+        var next = {}
+        for (var key in page.verifyResults) {
+            if (key !== snap.id)
+                next[key] = page.verifyResults[key]
+        }
+        next[snap.id] = entry
+        page.verifyResults = next
+    }
+
+    function openRestore(snap) {
+        page.restoreSnapshotId = snap.id
+        page.restoreLabelText = page.snapshotTitle(snap)
+        page.restoreError = ""
+        page.restoreOverwriteVisible = false
+        page.restorePlan = null
+        var raw = controller.dryRunRestore(snap.id)
+        var plan = null
+        try {
+            plan = JSON.parse(raw)
+        } catch (e) {
+            plan = { error: "unexpected bridge response" }
+        }
+        page.restorePlan = plan
+        restoreModal.open()
+    }
+
+    function confirmRestore(allowDirty) {
+        var ok = controller.restoreSnapshot(page.restoreSnapshotId, allowDirty)
+        if (ok) {
+            restoreModal.close()
+            page.actionStatusOk = true
+            page.actionStatus = I18n.tr("shell.cloudSync.live.restoreDone")
+            return
+        }
+        page.restoreError = controller.lastError
+        // "Overwrite anyway" only makes sense when the plan had modified
+        // files — the engine's require_clean guard is the only refusal this
+        // path relaxes.
+        if (!allowDirty && page.restorePlan && (page.restorePlan.overwrite || []).length > 0)
+            page.restoreOverwriteVisible = true
+    }
 
     // ── Deferred-control idioms (the honest "not wired" pattern) ─────────
     // Disabled AButton + ATooltip on wrapper hover (used for every action).
@@ -243,7 +410,7 @@ Item {
 
                 ABadge {
                     variant: "warning"
-                    text: I18n.tr("shell.cloudSync.notWiredBadge")
+                    text: I18n.tr("shell.cloudSync.live.partialBadge")
                 }
             }
 
@@ -257,7 +424,7 @@ Item {
                 color: Theme.textSecondary
             }
 
-            // ── Persistent deferred notice (Live2D-deferred style) ────────
+            // ── Persistent partial notice (local FS live, the rest pending) ──
             ACard {
                 Layout.fillWidth: true
                 borderColor: Theme.warning
@@ -275,7 +442,7 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
-                        text: I18n.tr("shell.cloudSync.deferredNotice")
+                        text: I18n.tr("shell.cloudSync.live.notice")
                         font.family: Theme.fontBody
                         font.pixelSize: 13
                         color: Theme.warning
@@ -297,7 +464,8 @@ Item {
                     width: parent ? parent.width : implicitWidth
                     spacing: Theme.spacingS
 
-                    // Status row — "Not wired" state; no fabricated sync time.
+                    // Status row — live target-configuration state from the
+                    // bridge; no fabricated sync time.
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: Theme.spacingS
@@ -306,27 +474,22 @@ Item {
                             implicitWidth: 10
                             implicitHeight: 10
                             radius: 5
-                            color: Theme.textSecondary
+                            color: page.targetConfigured ? Theme.success : Theme.textSecondary
                         }
 
                         Text {
                             Layout.fillWidth: true
-                            text: I18n.tr("shell.cloudSync.storage.notWiredState")
+                            text: page.targetConfigured
+                                ? I18n.tr("shell.cloudSync.live.stateConfigured")
+                                : I18n.tr("shell.cloudSync.live.stateNotConfigured")
                             font.family: Theme.fontBody
                             font.pixelSize: 14
-                            color: Theme.textSecondary
-                        }
-
-                        Text {
-                            text: "—"
-                            font.family: Theme.fontBody
-                            font.pixelSize: 12
-                            color: Theme.textSecondary
+                            color: page.targetConfigured ? Theme.textPrimary : Theme.textSecondary
                         }
 
                         ABadge {
                             variant: "warning"
-                            text: I18n.tr("shell.cloudSync.notWiredBadge")
+                            text: I18n.tr("shell.cloudSync.live.partialBadge")
                         }
                     }
 
@@ -357,13 +520,34 @@ Item {
                             color: Theme.textSecondary
                         }
 
-                        DeferredSelect {
+                        // ASelect (ComboBox) cannot disable individual items,
+                        // so the selector stays enabled with exactly one
+                        // selectable option — the local folder target. S3 is
+                        // not implemented; the tooltip says so.
+                        Item {
                             Layout.fillWidth: true
-                            model: [
-                                I18n.tr("shell.cloudSync.storage.providerS3"),
-                                I18n.tr("shell.cloudSync.storage.providerLocalFs")
-                            ]
-                            currentIndex: 0
+                            implicitWidth: providerSelect.implicitWidth
+                            implicitHeight: providerSelect.implicitHeight
+
+                            ASelect {
+                                id: providerSelect
+                                anchors.fill: parent
+                                model: [I18n.tr("shell.cloudSync.storage.providerLocalFs")]
+                                currentIndex: 0
+                            }
+
+                            MouseArea {
+                                id: providerHover
+                                anchors.fill: parent
+                                hoverEnabled: true
+                            }
+
+                            ATooltip {
+                                text: I18n.tr("shell.cloudSync.live.s3PendingTip")
+                                visible: providerHover.containsMouse
+                                x: 0
+                                y: parent.height + Theme.spacingS
+                            }
                         }
                     }
 
@@ -423,22 +607,63 @@ Item {
                         font.pixelSize: 10
                     }
 
-                    DeferredField {
-                        label: I18n.tr("shell.cloudSync.storage.localPathLabel")
-                        description: I18n.tr("shell.cloudSync.storage.localPathDescription")
-                        placeholder: I18n.tr("shell.cloudSync.storage.localPathPlaceholder")
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.spacingS
+
+                        Text {
+                            text: I18n.tr("shell.cloudSync.storage.localPathLabel")
+                            font.family: Theme.fontBody
+                            font.pixelSize: 13
+                            font.bold: true
+                            color: Theme.textPrimary
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: I18n.tr("shell.cloudSync.storage.localPathDescription")
+                            font.family: Theme.fontBody
+                            font.pixelSize: 12
+                            color: Theme.textSecondary
+                        }
+
+                        ATextField {
+                            id: localPathField
+                            Layout.fillWidth: true
+                            placeholderText: I18n.tr("shell.cloudSync.storage.localPathPlaceholder")
+                            onAccepted: page.saveTarget()
+                        }
                     }
 
                     RowLayout {
                         Layout.fillWidth: true
                         spacing: Theme.spacingS
 
-                        DeferredButton {
+                        AButton {
                             variant: AButton.Accent
+                            text: I18n.tr("shell.cloudSync.live.save")
+                            onClicked: page.saveTarget()
+                        }
+
+                        AButton {
+                            variant: AButton.Default
+                            enabled: !controller.working
                             text: I18n.tr("shell.cloudSync.storage.testConnection")
+                            onClicked: page.runProbe()
                         }
 
                         Item { Layout.fillWidth: true }
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        visible: page.storageStatus.length > 0
+                        text: page.storageStatus
+                        font.family: Theme.fontBody
+                        font.pixelSize: 12
+                        color: page.storageStatusOk ? Theme.success : Theme.error
                     }
                 }
             }
@@ -726,7 +951,10 @@ Item {
                             Text {
                                 Layout.fillWidth: true
                                 wrapMode: Text.WordWrap
-                                text: I18n.tr("shell.cloudSync.actions.lastSyncedNever")
+                                text: page.snapshots.length > 0
+                                    ? I18n.tr("shell.cloudSync.live.lastSnapshot")
+                                        .arg(page.formatDate(page.snapshots[0].createdMs))
+                                    : I18n.tr("shell.cloudSync.actions.lastSyncedNever")
                                 font.family: Theme.fontBody
                                 font.pixelSize: 12
                                 color: Theme.textSecondary
@@ -738,10 +966,24 @@ Item {
                             text: I18n.tr("shell.cloudSync.actions.selectiveSync")
                         }
 
-                        DeferredButton {
+                        AButton {
                             variant: AButton.Accent
-                            text: I18n.tr("shell.cloudSync.actions.syncNow")
+                            enabled: !controller.working
+                            text: controller.working
+                                ? I18n.tr("shell.cloudSync.live.syncing")
+                                : I18n.tr("shell.cloudSync.actions.syncNow")
+                            onClicked: page.runSyncNow()
                         }
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        wrapMode: Text.WordWrap
+                        visible: page.actionStatus.length > 0
+                        text: page.actionStatus
+                        font.family: Theme.fontBody
+                        font.pixelSize: 12
+                        color: page.actionStatusOk ? Theme.success : Theme.error
                     }
 
                     ASeparator {
@@ -855,6 +1097,103 @@ Item {
             }
 
             // ═════════════════════════════════════════════════════════════
+            // SAVED SNAPSHOTS (live, from the target folder)
+            // ═════════════════════════════════════════════════════════════
+            SectionCaption {
+                text: I18n.tr("shell.cloudSync.live.snapshotsTitle")
+            }
+
+            ACard {
+                Layout.fillWidth: true
+
+                ColumnLayout {
+                    width: parent ? parent.width : implicitWidth
+                    spacing: Theme.spacingS
+
+                    AEmptyState {
+                        Layout.fillWidth: true
+                        implicitHeight: 140
+                        visible: page.snapshots.length === 0
+                        icon: "💾"
+                        title: I18n.tr("shell.cloudSync.live.snapshotsEmpty")
+                        subtitle: I18n.tr("shell.cloudSync.live.snapshotsEmptyHint")
+                    }
+
+                    Repeater {
+                        model: page.snapshots
+
+                        delegate: ColumnLayout {
+                            id: snapshotRow
+                            required property var modelData
+                            Layout.fillWidth: true
+                            spacing: 2
+
+                            RowLayout {
+                                Layout.fillWidth: true
+                                spacing: Theme.spacingM
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                        text: page.snapshotTitle(snapshotRow.modelData)
+                                        font.family: Theme.fontBody
+                                        font.pixelSize: 13
+                                        font.bold: true
+                                        color: Theme.textPrimary
+                                    }
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                        text: snapshotRow.modelData.id
+                                            + " · " + page.formatDate(snapshotRow.modelData.createdMs)
+                                            + " · " + page.formatBytes(snapshotRow.modelData.totalBytes)
+                                            + " · " + I18n.tr("shell.cloudSync.live.fileCount").arg(snapshotRow.modelData.files)
+                                        font.family: Theme.fontBody
+                                        font.pixelSize: 11
+                                        color: Theme.textSecondary
+                                    }
+                                }
+
+                                AButton {
+                                    variant: AButton.Default
+                                    enabled: !controller.working
+                                    text: I18n.tr("shell.cloudSync.live.verify")
+                                    onClicked: page.runVerify(snapshotRow.modelData)
+                                }
+
+                                AButton {
+                                    variant: AButton.Danger
+                                    enabled: !controller.working
+                                    text: I18n.tr("shell.cloudSync.live.restore")
+                                    onClicked: page.openRestore(snapshotRow.modelData)
+                                }
+                            }
+
+                            Text {
+                                property var result: page.verifyResults[snapshotRow.modelData.id]
+                                Layout.fillWidth: true
+                                wrapMode: Text.WordWrap
+                                visible: result !== undefined
+                                text: result !== undefined ? result.text : ""
+                                font.family: Theme.fontBody
+                                font.pixelSize: 11
+                                color: result !== undefined && result.ok ? Theme.success : Theme.error
+                            }
+
+                            ASeparator {
+                                Layout.fillWidth: true
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ═════════════════════════════════════════════════════════════
             // SYNC CONFLICTS (upstream list, gated on conflicts.length > 0)
             // ═════════════════════════════════════════════════════════════
             SectionCaption {
@@ -876,6 +1215,146 @@ Item {
             Item {
                 Layout.fillHeight: true
                 implicitHeight: Theme.spacingL
+            }
+        }
+    }
+
+    // Restore confirm: shows the dry-run plan (computed by the bridge against
+    // the Qt data directory — nothing is written yet). The first confirm
+    // keeps require_clean; a DirtyTarget refusal reveals "Overwrite anyway",
+    // the only path that passes allow_dirty=true to the bridge.
+    AModal {
+        id: restoreModal
+
+        title: I18n.tr("shell.cloudSync.live.restoreTitle")
+
+        Text {
+            Layout.fillWidth: true
+            elide: Text.ElideRight
+            text: page.restoreLabelText
+            font.family: Theme.fontBody
+            font.pixelSize: 14
+            font.bold: true
+            color: Theme.textPrimary
+        }
+
+        Text {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            text: I18n.tr("shell.cloudSync.live.restoreSubtitle")
+            font.family: Theme.fontBody
+            font.pixelSize: 12
+            color: Theme.textSecondary
+        }
+
+        // Plan lines (only when the dry run succeeded).
+        ColumnLayout {
+            Layout.fillWidth: true
+            spacing: 2
+            visible: page.restorePlan !== null && page.restorePlan.error === undefined
+
+            Text {
+                wrapMode: Text.WordWrap
+                text: I18n.tr("shell.cloudSync.live.restoreCreate").arg(page.restorePlan ? page.restorePlan.create.length : 0)
+                font.family: Theme.fontBody
+                font.pixelSize: 12
+                color: Theme.textPrimary
+            }
+
+            Text {
+                wrapMode: Text.WordWrap
+                text: I18n.tr("shell.cloudSync.live.restoreOverwrite").arg(page.restorePlan ? page.restorePlan.overwrite.length : 0)
+                font.family: Theme.fontBody
+                font.pixelSize: 12
+                color: Theme.textPrimary
+            }
+
+            Text {
+                wrapMode: Text.WordWrap
+                text: I18n.tr("shell.cloudSync.live.restoreUnchanged").arg(page.restorePlan ? page.restorePlan.unchanged.length : 0)
+                font.family: Theme.fontBody
+                font.pixelSize: 12
+                color: Theme.textSecondary
+            }
+
+            Text {
+                Layout.fillWidth: true
+                wrapMode: Text.WordWrap
+                text: I18n.tr("shell.cloudSync.live.restoreKeep").arg(page.restorePlan ? page.restorePlan.keep.length : 0)
+                font.family: Theme.fontBody
+                font.pixelSize: 12
+                color: Theme.textSecondary
+            }
+        }
+
+        // Plan computation failed.
+        Text {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            visible: page.restorePlan !== null && page.restorePlan.error !== undefined
+            text: I18n.tr("shell.cloudSync.live.restorePlanError") + " " + (page.restorePlan ? page.restorePlan.error : "")
+            font.family: Theme.fontBody
+            font.pixelSize: 12
+            color: Theme.error
+        }
+
+        // Non-Dirty failure detail.
+        Text {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            visible: page.restoreError.length > 0 && !page.restoreOverwriteVisible
+            text: page.restoreError
+            font.family: Theme.fontBody
+            font.pixelSize: 12
+            color: Theme.error
+        }
+
+        // DirtyTarget refusal detail + explicit, separate override path.
+        Text {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            visible: page.restoreOverwriteVisible
+            text: I18n.tr("shell.cloudSync.live.restoreDirtyHint")
+            font.family: Theme.fontBody
+            font.pixelSize: 12
+            font.bold: true
+            color: Theme.warning
+        }
+
+        Text {
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+            visible: page.restoreOverwriteVisible
+            text: page.restoreError
+            font.family: Theme.fontBody
+            font.pixelSize: 11
+            color: Theme.textSecondary
+        }
+
+        RowLayout {
+            Layout.alignment: Qt.AlignRight
+            spacing: Theme.spacingS
+
+            AButton {
+                variant: AButton.Ghost
+                text: I18n.tr("shell.cloudSync.live.cancel")
+                onClicked: restoreModal.close()
+            }
+
+            AButton {
+                variant: AButton.Danger
+                visible: !page.restoreOverwriteVisible
+                    && page.restorePlan !== null
+                    && page.restorePlan.error === undefined
+                text: I18n.tr("shell.cloudSync.live.restoreConfirm")
+                onClicked: page.confirmRestore(false)
+            }
+
+            AButton {
+                variant: AButton.Danger
+                visible: page.restoreOverwriteVisible
+                text: I18n.tr("shell.cloudSync.live.restoreOverwriteAnyway")
+                onClicked: page.confirmRestore(true)
             }
         }
     }

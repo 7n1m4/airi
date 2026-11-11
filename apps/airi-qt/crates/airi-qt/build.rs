@@ -37,6 +37,8 @@ fn main() {
         manifest_dir.join("src/bridges/cards.rs"),
         manifest_dir.join("src/bridges/data.rs"),
         manifest_dir.join("src/bridges/mcp.rs"),
+        manifest_dir.join("src/bridges/sync.rs"),
+        manifest_dir.join("src/bridges/discord.rs"),
         manifest_dir.join("src/bridges/capture.rs"),
         manifest_dir.join("src/bridges/acp.rs"),
         manifest_dir.join("src/bridges/shell.rs"),
