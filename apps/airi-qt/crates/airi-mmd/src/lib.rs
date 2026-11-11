@@ -40,6 +40,15 @@
 //!   encoding crate dependency and decodes ASCII-lossily, keeping raw bytes
 //!   in `name_raw` (see the VMD module docs).
 //!
+//! ## Rest-pose engine (P10 M1)
+//!
+//! [`RestPoseEngine`] assembles an interleaved 64-byte vertex buffer (the
+//! VRM layout) + per-material primitive index buffers from a parsed model,
+//! expands BDEF1/BDEF2/BDEF4/SDEF deform data onto 4-slot joints/weights
+//! (SDEF as an approved BDEF2-style approximation), and maps PMX materials
+//! onto MToon-ish base/shade colors. It never animates: [`RestPoseEngine::tick`]
+//! is a pure frame counter. Motion, IK and skinning land in M2+.
+//!
 //! Allocation is capped on hostile input (see [`MAX_VERTICES`] and friends),
 //! and every read is bounds-checked; [`from_bytes`] never panics.
 //!
@@ -55,6 +64,7 @@ mod cursor;
 mod error;
 mod model;
 mod pmx;
+mod rest_pose;
 mod vmd;
 
 pub use error::MmdError;
@@ -63,6 +73,9 @@ pub use model::{
     Deform, MmdBone, MmdMaterial, MmdModel, MmdMorph, MmdMorphOffset, MmdToon, MmdVertex,
     PmxEncoding, MAX_ADDITIONAL_UV, MAX_BONES, MAX_FACE_INDICES, MAX_IK_LINKS, MAX_MATERIALS,
     MAX_MORPHS, MAX_MORPH_OFFSETS, MAX_TEXTURES, MAX_VERTICES,
+};
+pub use rest_pose::{
+    RestPoseEngine, RestPoseMaterial, RestPosePrimitive, RestPoseTexture, VERTEX_STRIDE,
 };
 pub use vmd::{
     VmdBoneKey, VmdMorphKey, VmdMotion, MAX_VMD_BONE_KEYS, MAX_VMD_CAMERA_KEYS, MAX_VMD_LIGHT_KEYS,

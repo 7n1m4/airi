@@ -711,7 +711,7 @@ discord:
 
   live:
     badge: '仅发送（REST）'
-    banner: 'Discord 模块仅接入发送能力：保存并验证会检查你的 bot 令牌，你输入的消息会通过 Discord REST API 发送。接收消息和运行 bot 命令尚未接入 —— gateway WebSocket 存在于 airi-discord 中，但应用绝不会自动连接它；接收仅为可选加入，这是设计使然。绝不会自动发送任何内容。'
+    banner: 'Discord 模块可以发送和（严格可选加入）接收：保存并验证会检查你的 bot 令牌；你输入的消息会通过 REST API 发送；接收功能在“Gateway events (opt-in)”卡片中，只有你按下“开始”才会启动 —— 绝不会自动发送任何内容，接收到的消息只保留在内存中。'
     statusUnconfigured: '未配置'
     statusVerified: '已验证'
     statusError: '错误'
@@ -731,7 +731,7 @@ discord:
     clearConfirmConfirm: '清除令牌'
     verifyOk: '已验证为 %1（id %2）'
     verifySectionTitle: '验证连接'
-    gatewayDisplayOnly: '仅显示 —— 接收未启用。此操作调用 GET /gateway/bot 以显示 gateway URL 和 bot 剩余的 IDENTIFY 配额。应用绝不会打开 gateway 连接。'
+    gatewayDisplayOnly: '仅显示。此操作调用 GET /gateway/bot 以显示 gateway URL 和 bot 剩余的 IDENTIFY 配额。不会连接到 gateway；如需接收消息，请使用“Gateway events (opt-in)”卡片。'
     fetchGatewayInfo: '获取 gateway 信息'
     gatewayUrlLabel: 'Gateway URL'
     gatewayShardsLabel: '建议分片数'
@@ -741,6 +741,19 @@ discord:
     sendPlaceholder: '输入要发送的消息…'
     send: '发送'
     sentOk: '已发送（id %1）'
+  gateway:
+    title: 'Gateway events (opt-in)'
+    description: '接收你的 bot 能看到的消息 —— 严格可选加入、由人驱动。按下“开始”会打开到 Discord gateway 的只读连接；接收到的消息只保留在内存中（最多 100 条，最新的在前），绝不持久化、记录日志或转发到任何地方，按“停止”或“清除”即被抹除。此卡片是收件箱，不是命令处理器：绝不会解析或执行任何命令，也绝不会自动发送任何回复。需要特权 intent MESSAGE_CONTENT（Discord Developer Portal → Bot → Privileged Gateway Intents → Message Content）。没有它，事件仍会到达，但 content 字段为空。'
+    statusRunning: '运行中'
+    statusStopped: '已停止'
+    statusError: '错误'
+    start: '开始'
+    stop: '停止'
+    clearEvents: '清除事件'
+    emptyTitle: '还没有事件'
+    emptySubtitle: '监听已停止，或还没有消息到达。按“开始”开始监听 —— 收到的消息显示在此处，绝不会离开这台机器。'
+    botBadge: 'Bot'
+    needToken: '先保存 bot 令牌（Bot Connection 标签页）才能开启监听。'
 cloudSync:
   title: 'Cloud Sync'
   description: '在多设备间备份并同步你的数据库、角色卡、记忆分段与媒体资产。'

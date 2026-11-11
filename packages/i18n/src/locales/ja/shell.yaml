@@ -711,7 +711,7 @@ discord:
 
   live:
     badge: '送信のみ (REST)'
-    banner: 'Discordモジュールは送信専用に接続されています: 「保存して検証」でbotトークンを確認し、入力したメッセージの送信はDiscord REST APIを通ります。メッセージの受信とbotコマンドの実行は未接続です — ゲートウェイWebSocketはairi-discordに存在しますが、アプリが自動で接続することはありません。受信はオプトインのみです (設計上の仕様)。自動送信は一切行われません。'
+    banner: 'Discordモジュールは送信と (厳密なオプトインでの) 受信ができます: 「保存して検証」でbotトークンを確認し、入力したメッセージの送信はREST APIを通ります。受信は「Gateway events (opt-in)」カードにあり、「開始」を押した時だけ始まります — 自動送信は一切行われず、受信したメッセージはメモリ内のみに留まります。'
     statusUnconfigured: '未設定'
     statusVerified: '検証済み'
     statusError: 'エラー'
@@ -731,7 +731,7 @@ discord:
     clearConfirmConfirm: 'トークンを消去'
     verifyOk: '%1 (id %2) として検証済み'
     verifySectionTitle: '接続を検証'
-    gatewayDisplayOnly: '表示のみ — 受信は有効ではありません。GET /gateway/bot を呼んでゲートウェイURLとbotの残りIDENTIFY予算を表示します。アプリはゲートウェイ接続を決して開きません。'
+    gatewayDisplayOnly: '表示のみ。GET /gateway/bot を呼んでゲートウェイURLとbotの残りIDENTIFY予算を表示します。ゲートウェイには接続しません。メッセージを受信するには「Gateway events (opt-in)」カードを使ってください。'
     fetchGatewayInfo: 'ゲートウェイ情報を取得'
     gatewayUrlLabel: 'ゲートウェイURL'
     gatewayShardsLabel: '推奨シャード数'
@@ -741,6 +741,19 @@ discord:
     sendPlaceholder: '送信するメッセージを入力…'
     send: '送信'
     sentOk: '送信しました (id %1)'
+  gateway:
+    title: 'Gateway events (opt-in)'
+    description: 'botが見られるメッセージを受信します — 厳密なオプトインかつ人間主導。「開始」を押すとDiscordゲートウェイへの読み取り専用接続が開きます。受信メッセージはメモリ内のみに留まり (最大100件・新しい順)、保存・記録・転送されることはなく、「停止」または「消去」で消えます。このカードは受信箱であり、コマンドプロセッサではありません: コマンドが解析・実行されることはなく、返信が自動送信されることもありません。Privileged intent MESSAGE_CONTENT (Discord Developer Portal → Bot → Privileged Gateway Intents → Message Content) が必要です。有効化していない場合、イベントは届きますがcontentフィールドは空になります。'
+    statusRunning: '実行中'
+    statusStopped: '停止'
+    statusError: 'エラー'
+    start: '開始'
+    stop: '停止'
+    clearEvents: 'イベントを消去'
+    emptyTitle: 'イベントはまだありません'
+    emptySubtitle: 'リッスンは停止中か、まだメッセージが届いていません。「開始」を押すと受信を始めます — 受信メッセージはここに表示され、このマシンから出ることはありません。'
+    botBadge: 'Bot'
+    needToken: 'リッスンを有効化するには、まずbotトークンを保存してください (Bot Connectionタブ)。'
 cloudSync:
   title: 'Cloud Sync'
   description: 'データベース、キャラクターカード、メモリセグメント、メディアアセットをデバイス間でバックアップ・同期します。'

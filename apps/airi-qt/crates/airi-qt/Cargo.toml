@@ -19,6 +19,7 @@ airi-sync = { path = "../airi-sync" }
 airi-discord = { path = "../airi-discord" }
 airi-i18n = { path = "../airi-i18n" }
 airi-render = { path = "../airi-render" }
+airi-mmd = { path = "../airi-mmd" }
 anyhow = { workspace = true }
 rusqlite = { workspace = true }
 serde = { workspace = true }

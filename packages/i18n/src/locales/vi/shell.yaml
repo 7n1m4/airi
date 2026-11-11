@@ -712,7 +712,7 @@ discord:
 
   live:
     badge: 'Chỉ gửi (REST)'
-    banner: 'Module Discord được nối chỉ để gửi: Lưu & Xác minh kiểm tra token bot của bạn, và việc gửi tin nhắn bạn gõ đi qua Discord REST API. Nhận tin nhắn và chạy lệnh bot chưa được nối — WebSocket gateway tồn tại trong airi-discord, nhưng app không bao giờ tự động kết nối; nhận tin chỉ là opt-in, theo thiết kế. Không bao giờ có gì được gửi tự động.'
+    banner: 'Module Discord có thể gửi và (strictly opt-in) nhận: Lưu & Xác minh kiểm tra token bot của bạn; việc gửi tin nhắn bạn gõ đi qua REST API; việc nhận nằm trong thẻ "Gateway events (opt-in)" và chỉ bắt đầu khi bạn nhấn Bắt đầu — không bao giờ có gì được gửi tự động, và tin nhắn nhận được chỉ ở trong bộ nhớ.'
     statusUnconfigured: 'Chưa cấu hình'
     statusVerified: 'Đã xác minh'
     statusError: 'Lỗi'
@@ -732,7 +732,7 @@ discord:
     clearConfirmConfirm: 'Xóa token'
     verifyOk: 'Đã xác minh là %1 (id %2)'
     verifySectionTitle: 'Xác minh kết nối'
-    gatewayDisplayOnly: 'Chỉ hiển thị — nhận tin chưa được bật. Lệnh gọi GET /gateway/bot để hiển thị URL gateway và ngân sách IDENTIFY còn lại của bot. App không bao giờ mở kết nối gateway.'
+    gatewayDisplayOnly: 'Chỉ hiển thị. Lệnh gọi GET /gateway/bot để hiển thị URL gateway và ngân sách IDENTIFY còn lại của bot. Không kết nối tới gateway; dùng thẻ "Gateway events (opt-in)" để nhận tin nhắn.'
     fetchGatewayInfo: 'Lấy thông tin gateway'
     gatewayUrlLabel: 'URL Gateway'
     gatewayShardsLabel: 'Số shard khuyến nghị'
@@ -742,6 +742,19 @@ discord:
     sendPlaceholder: 'Nhập tin nhắn để gửi…'
     send: 'Gửi'
     sentOk: 'Đã gửi (id %1)'
+  gateway:
+    title: 'Gateway events (opt-in)'
+    description: 'Nhận các tin nhắn mà bot của bạn xem được — strictly opt-in và do con người điều khiển. Nhấn Bắt đầu mở một kết nối chỉ đọc tới Discord gateway; tin nhắn nhận được chỉ ở trong bộ nhớ (tối đa 100, mới nhất trước), không bao giờ được lưu, ghi log hay chuyển đi đâu cả, và bị xóa khi bạn nhấn Dừng hoặc Xóa. Thẻ này là hộp thư đến, không phải bộ xử lý lệnh: không lệnh nào bao giờ được phân tích hay chạy, và không bao giờ có phản hồi nào được gửi tự động. Cần privileged intent MESSAGE_CONTENT (Discord Developer Portal → Bot → Privileged Gateway Intents → Message Content). Nếu không có, events vẫn đến nhưng với field content trống.'
+    statusRunning: 'Đang chạy'
+    statusStopped: 'Đã dừng'
+    statusError: 'Lỗi'
+    start: 'Bắt đầu'
+    stop: 'Dừng'
+    clearEvents: 'Xóa events'
+    emptyTitle: 'Chưa có event nào'
+    emptySubtitle: 'Đang dừng lắng nghe, hoặc chưa có tin nhắn nào đến. Nhấn Bắt đầu để lắng nghe — tin nhắn nhận được xuất hiện ở đây và không bao giờ rời khỏi máy này.'
+    botBadge: 'Bot'
+    needToken: 'Lưu token bot trước (tab Bot Connection) để bật lắng nghe.'
 cloudSync:
   title: 'Cloud Sync'
   description: 'Sao lưu và đồng bộ cơ sở dữ liệu, thẻ nhân vật, phân đoạn bộ nhớ và tài sản media giữa các thiết bị.'

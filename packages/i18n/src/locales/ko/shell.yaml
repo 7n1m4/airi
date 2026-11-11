@@ -712,7 +712,7 @@ discord:
 
   live:
     badge: '보내기 전용 (REST)'
-    banner: 'Discord 모듈은 보내기 전용으로 연결되어 있습니다: 저장 및 확인은 bot 토큰을 검증하고, 입력한 메시지 전송은 Discord REST API를 거칩니다. 메시지 수신과 bot 명령 실행은 연결되지 않았습니다 — 게이트웨이 WebSocket은 airi-discord에 존재하지만 앱은 절대 자동 연결하지 않습니다. 수신은 옵트인만 가능하며 이는 설계상 의도된 것입니다. 자동 전송은 절대 없습니다.'
+    banner: 'Discord 모듈은 보내기와 (엄격한 옵트인으로) 받기가 가능합니다: 저장 및 확인은 bot 토큰을 검증하고, 입력한 메시지 전송은 REST API를 거칩니다. 수신은 "Gateway events (opt-in)" 카드에 있으며 시작 버튼을 누를 때만 시작됩니다 — 자동 전송은 절대 없으며, 받은 메시지는 메모리에만 남습니다.'
     statusUnconfigured: '설정 안 됨'
     statusVerified: '확인됨'
     statusError: '오류'
@@ -732,7 +732,7 @@ discord:
     clearConfirmConfirm: '토큰 지우기'
     verifyOk: '%1(id %2)(으)로 확인됨'
     verifySectionTitle: '연결 확인'
-    gatewayDisplayOnly: '표시 전용 — 수신이 활성화되어 있지 않습니다. GET /gateway/bot을 호출해 게이트웨이 URL과 bot의 남은 IDENTIFY 예산을 표시합니다. 앱은 게이트웨이 연결을 절대 열지 않습니다.'
+    gatewayDisplayOnly: '표시 전용. GET /gateway/bot을 호출해 게이트웨이 URL과 bot의 남은 IDENTIFY 예산을 표시합니다. 게이트웨이에 연결하지 않습니다. 메시지를 받으려면 "Gateway events (opt-in)" 카드를 사용하세요.'
     fetchGatewayInfo: '게이트웨이 정보 가져오기'
     gatewayUrlLabel: '게이트웨이 URL'
     gatewayShardsLabel: '권장 샤드 수'
@@ -742,6 +742,19 @@ discord:
     sendPlaceholder: '보낼 메시지를 입력하세요…'
     send: '보내기'
     sentOk: '전송됨 (id %1)'
+  gateway:
+    title: 'Gateway events (opt-in)'
+    description: 'bot이 볼 수 있는 메시지를 받습니다 — 엄격한 옵트인이며 사람이 주도합니다. 시작을 누르면 Discord 게이트웨이에 읽기 전용 연결이 열립니다. 받은 메시지는 메모리에만 남고(최대 100개, 최신순), 저장·기록·전달되지 않으며, 중지 또는 지우기를 누르면 삭제됩니다. 이 카드는 받은편지함이지 명령 프로세서가 아닙니다: 명령은 절대 해석하거나 실행되지 않고, 답장도 절대 자동 전송되지 않습니다. Privileged intent MESSAGE_CONTENT(Discord Developer Portal → Bot → Privileged Gateway Intents → Message Content)가 필요합니다. 없으면 이벤트는 도착하지만 content 필드가 비어 있습니다.'
+    statusRunning: '실행 중'
+    statusStopped: '정지됨'
+    statusError: '오류'
+    start: '시작'
+    stop: '중지'
+    clearEvents: '이벤트 지우기'
+    emptyTitle: '아직 이벤트가 없습니다'
+    emptySubtitle: '수신이 중지되었거나 아직 메시지가 도착하지 않았습니다. 시작을 눌러 수신하세요 — 받은 메시지는 여기에 표시되며 이 기기를 떠나지 않습니다.'
+    botBadge: 'Bot'
+    needToken: '먼저 bot 토큰을 저장하세요(Bot Connection 탭). 그래야 수신을 켤 수 있습니다.'
 cloudSync:
   title: 'Cloud Sync'
   description: '기기 간에 데이터베이스, 캐릭터 카드, 메모리 세그먼트, 미디어 자산을 백업하고 동기화합니다.'

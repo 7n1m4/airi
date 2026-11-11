@@ -5,10 +5,13 @@
 // (<profile>/airi/discord.json, or the platform data dir without --profile;
 // written atomically, 0600 on unix). Verified: Save & Verify (token check via
 // GET /users/@me) and sending the message you type (POST /channels/{id}/messages)
-// are live. NOT wired: receiving messages and running bot commands. The gateway
-// WebSocket exists in airi-discord, but the app never auto-connects to it —
-// receiving is opt-in only, by design. Nothing is ever sent automatically;
-// every send is the human pressing Send.
+// are live. Receiving messages IS wired as an strictly opt-in, in-memory-only
+// "Gateway events (opt-in)" card: the gateway worker starts only from that
+// card's Start button (never automatically, never in the background), keeps at
+// most 100 events in memory (cleared on Stop / Clear), and never parses or
+// dispatches anything — an inbox, not a command processor. Bot commands and
+// any automated reaction to messages are NOT wired. Nothing is ever sent
+// automatically; every send is the human pressing Send.
 // Structural source: packages/stage-pages/src/pages/settings/modules/
 // messaging-discord.vue (MessagingDiscord.vue in @proj-airi/stage-ui).
 // Everything not listed above stays rendered but disabled with an explanatory
@@ -35,8 +38,18 @@ Item {
     property int gatewayRemaining: 0
     property string gatewayError: ""
 
+    // ── Live gateway (opt-in, receive-only) state ─────────────────────────
+    property bool gatewayRunning: false
+    property string gatewayStatusLine: "stopped"
+    property string gatewayLastError: ""
+    property var gatewayEvents: []
+
     DiscordController {
         id: controller
+    }
+
+    DiscordGatewayController {
+        id: gatewayController
     }
 
     Connections {
@@ -44,7 +57,23 @@ Item {
         function onConfigChanged() { page.syncFromController() }
     }
 
-    Component.onCompleted: page.syncFromController()
+    Connections {
+        target: gatewayController
+        function onStateChanged() { page.syncGateway() }
+    }
+
+    Timer {
+        id: gatewayPoll
+        interval: 1000
+        repeat: true
+        running: page.gatewayRunning
+        onTriggered: gatewayController.refresh()
+    }
+
+    Component.onCompleted: {
+        page.syncFromController()
+        page.syncGateway()
+    }
 
     function syncFromController() {
         tokenField.text = ""
@@ -62,6 +91,35 @@ Item {
         } catch (e) {
             return { error: "unexpected bridge response" }
         }
+    }
+
+    function syncGateway() {
+        page.gatewayRunning = gatewayController.running
+        page.gatewayStatusLine = gatewayController.statusLine
+        page.gatewayLastError = gatewayController.error
+        var parsed = []
+        try {
+            parsed = JSON.parse(gatewayController.eventsJson)
+        } catch (e) {
+            console.log("[airi-qt] discord gateway: failed to parse eventsJson:", e)
+        }
+        page.gatewayEvents = parsed
+    }
+
+    function gatewayBadgeVariant() {
+        if (page.gatewayRunning)
+            return "success"
+        if (page.gatewayStatusLine.indexOf("error") === 0)
+            return "error"
+        return "default"
+    }
+
+    function gatewayBadgeText() {
+        if (page.gatewayRunning)
+            return I18n.tr("shell.discord.live.gateway.statusRunning")
+        if (page.gatewayStatusLine.indexOf("error") === 0)
+            return I18n.tr("shell.discord.live.gateway.statusError")
+        return I18n.tr("shell.discord.live.gateway.statusStopped")
     }
 
     function runSaveAndVerify() {
@@ -102,12 +160,16 @@ Item {
 
     function doClearConfig() {
         controller.clearConfig()
+        // The token is gone — make sure the receive path is not left listening.
+        gatewayController.stop()
+        gatewayController.clearEvents()
         tokenField.text = ""
         channelField.text = ""
         messageField.text = ""
         page.verifyStatus = ""
         page.sendResult = ""
         page.gatewayVisible = false
+        page.syncGateway()
     }
 
     AModal {
@@ -839,6 +901,185 @@ Item {
                             font.family: Theme.fontBody
                             font.pixelSize: 12
                             color: page.sendOk ? Theme.success : Theme.error
+                        }
+                    }
+                }
+
+                // Gateway events (opt-in) — receive-only, in-memory, human-started.
+                SectionCaption {
+                    text: I18n.tr("shell.discord.live.gateway.title")
+                }
+
+                ACard {
+                    Layout.fillWidth: true
+
+                    ColumnLayout {
+                        width: parent ? parent.width : implicitWidth
+                        spacing: Theme.spacingS
+
+                        Text {
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: I18n.tr("shell.discord.live.gateway.description")
+                            font.family: Theme.fontBody
+                            font.pixelSize: 12
+                            color: Theme.textSecondary
+                        }
+
+                        // Status row — badge + statusLine + human-driven Start/Stop.
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spacingS
+
+                            ABadge {
+                                variant: page.gatewayBadgeVariant()
+                                text: page.gatewayBadgeText()
+                            }
+
+                            Text {
+                                Layout.fillWidth: true
+                                text: page.gatewayStatusLine
+                                font.family: Theme.fontBody
+                                font.pixelSize: 12
+                                elide: Text.ElideRight
+                                color: page.gatewayStatusLine.indexOf("error") === 0
+                                    ? Theme.error
+                                    : Theme.textSecondary
+                            }
+
+                            AButton {
+                                visible: !page.gatewayRunning
+                                variant: AButton.Accent
+                                text: I18n.tr("shell.discord.live.gateway.start")
+                                enabled: controller.configured
+                                onClicked: gatewayController.start()
+                            }
+
+                            AButton {
+                                visible: page.gatewayRunning
+                                variant: AButton.Default
+                                text: I18n.tr("shell.discord.live.gateway.stop")
+                                onClicked: gatewayController.stop()
+                            }
+                        }
+
+                        Text {
+                            visible: !controller.configured && !page.gatewayRunning
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: I18n.tr("shell.discord.live.gateway.needToken")
+                            font.family: Theme.fontBody
+                            font.pixelSize: 10
+                            color: Theme.textSecondary
+                        }
+
+                        Text {
+                            visible: page.gatewayLastError.length > 0
+                            Layout.fillWidth: true
+                            wrapMode: Text.WordWrap
+                            text: page.gatewayLastError
+                            font.family: Theme.fontBody
+                            font.pixelSize: 12
+                            color: Theme.error
+                        }
+
+                        // Events — in-memory inbox, newest first, capped at 100.
+                        ListView {
+                            id: gatewayEventsList
+                            Layout.fillWidth: true
+                            visible: page.gatewayEvents.length > 0
+                            implicitHeight: Math.min(360, gatewayEventsList.count * 88 + Theme.spacingS)
+                            clip: true
+                            model: page.gatewayEvents
+                            spacing: Theme.spacingS
+
+                            delegate: RowLayout {
+                                id: eventRow
+                                required property var modelData
+                                width: ListView.view.width
+                                spacing: Theme.spacingS
+
+                                ColumnLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 2
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: Theme.spacingS
+
+                                        Text {
+                                            text: "@" + eventRow.modelData.authorName
+                                            font.family: Theme.fontBody
+                                            font.pixelSize: 12
+                                            font.bold: true
+                                            elide: Text.ElideRight
+                                            color: Theme.textPrimary
+                                        }
+
+                                        Text {
+                                            text: "(#" + eventRow.modelData.channelId + ")"
+                                            font.family: Theme.fontBody
+                                            font.pixelSize: 11
+                                            elide: Text.ElideRight
+                                            color: Theme.textSecondary
+                                        }
+
+                                        ABadge {
+                                            visible: eventRow.modelData.authorBot === true
+                                            variant: "info"
+                                            text: I18n.tr("shell.discord.live.gateway.botBadge")
+                                        }
+
+                                        Item { Layout.fillWidth: true }
+
+                                        Text {
+                                            text: {
+                                                var ms = eventRow.modelData.receivedMs
+                                                var date = ms ? new Date(ms) : null
+                                                if (date !== null && !isNaN(date.getTime()))
+                                                    return Qt.formatDateTime(date, "yyyy-MM-dd HH:mm")
+                                                return eventRow.modelData.timestamp ? eventRow.modelData.timestamp : ""
+                                            }
+                                            font.family: Theme.fontBody
+                                            font.pixelSize: 10
+                                            color: Theme.textSecondary
+                                        }
+                                    }
+
+                                    Text {
+                                        Layout.fillWidth: true
+                                        text: eventRow.modelData.content
+                                        font.family: Theme.fontBody
+                                        font.pixelSize: 12
+                                        wrapMode: Text.WordWrap
+                                        elide: Text.ElideRight
+                                        maximumLineCount: 3
+                                        color: Theme.textPrimary
+                                    }
+                                }
+                            }
+                        }
+
+                        AEmptyState {
+                            Layout.fillWidth: true
+                            visible: page.gatewayEvents.length === 0
+                            icon: "📭"
+                            title: I18n.tr("shell.discord.live.gateway.emptyTitle")
+                            subtitle: I18n.tr("shell.discord.live.gateway.emptySubtitle")
+                        }
+
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: Theme.spacingS
+
+                            Item { Layout.fillWidth: true }
+
+                            AButton {
+                                variant: AButton.Danger
+                                text: I18n.tr("shell.discord.live.gateway.clearEvents")
+                                enabled: page.gatewayEvents.length > 0
+                                onClicked: gatewayController.clearEvents()
+                            }
                         }
                     }
                 }

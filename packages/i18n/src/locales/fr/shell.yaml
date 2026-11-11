@@ -712,7 +712,7 @@ discord:
 
   live:
     badge: 'Envoi uniquement (REST)'
-    banner: 'Le module Discord est câblé pour l’envoi uniquement : Enregistrer et vérifier teste votre token de bot, et l’envoi du message que vous tapez passe par l’API REST de Discord. Recevoir des messages et exécuter des commandes de bot ne sont pas câblés — le WebSocket de gateway existe dans airi-discord, mais l’app ne s’y connecte jamais automatiquement ; la réception n’est que sur opt-in, par conception. Rien n’est jamais envoyé automatiquement.'
+    banner: 'Le module Discord peut envoyer et (strictement sur opt-in) recevoir : Enregistrer et vérifier teste votre token de bot ; l’envoi du message que vous tapez passe par l’API REST ; la réception vit dans la carte « Gateway events (opt-in) » et ne démarre que lorsque vous appuyez sur Démarrer — rien n’est jamais envoyé automatiquement, et les messages reçus restent en mémoire uniquement.'
     statusUnconfigured: 'Non configuré'
     statusVerified: 'Vérifié'
     statusError: 'Erreur'
@@ -732,7 +732,7 @@ discord:
     clearConfirmConfirm: 'Effacer le token'
     verifyOk: 'Vérifié en tant que %1 (id %2)'
     verifySectionTitle: 'Vérifier la connexion'
-    gatewayDisplayOnly: 'Affichage uniquement — la réception n’est pas activée. Ceci appelle GET /gateway/bot pour montrer l’URL du gateway et le budget IDENTIFY restant du bot. L’app n’ouvre jamais de connexion gateway.'
+    gatewayDisplayOnly: 'Affichage uniquement. Ceci appelle GET /gateway/bot pour montrer l’URL du gateway et le budget IDENTIFY restant du bot. Cela ne connecte pas au gateway ; utilisez la carte « Gateway events (opt-in) » pour recevoir des messages.'
     fetchGatewayInfo: 'Récupérer les infos du gateway'
     gatewayUrlLabel: 'URL du gateway'
     gatewayShardsLabel: 'Shards recommandés'
@@ -742,6 +742,19 @@ discord:
     sendPlaceholder: 'Tapez un message à envoyer…'
     send: 'Envoyer'
     sentOk: 'Envoyé (id %1)'
+  gateway:
+    title: 'Gateway events (opt-in)'
+    description: 'Recevez les messages que votre bot peut voir — strictement sur opt-in et piloté humainement. Appuyer sur Démarrer ouvre une connexion en lecture seule au gateway Discord ; les messages reçus restent en mémoire uniquement (100 max, du plus récent au plus ancien), ne sont jamais persistés, journalisés ni transférés, et sont effacés quand vous appuyez sur Arrêter ou Effacer. Cette carte est une boîte de réception, pas un processeur de commandes : aucune commande n’est jamais analysée ou exécutée, et aucune réponse n’est jamais envoyée automatiquement. Nécessite l’intent privilégié MESSAGE_CONTENT (Discord Developer Portal → Bot → Privileged Gateway Intents → Message Content). Sans lui, les événements arrivent toujours mais avec un champ content vide.'
+    statusRunning: 'En cours'
+    statusStopped: 'Arrêté'
+    statusError: 'Erreur'
+    start: 'Démarrer'
+    stop: 'Arrêter'
+    clearEvents: 'Effacer les événements'
+    emptyTitle: 'Aucun événement pour l’instant'
+    emptySubtitle: 'L’écoute est arrêtée, ou aucun message n’est encore arrivé. Appuyez sur Démarrer pour écouter — les messages reçus apparaissent ici et ne quittent jamais cette machine.'
+    botBadge: 'Bot'
+    needToken: 'Enregistrez d’abord un token de bot (onglet Bot Connection) pour activer l’écoute.'
 cloudSync:
   title: 'Cloud Sync'
   description: 'Sauvegarde et synchronise vos bases de données, cartes de personnage, segments de mémoire et assets multimédias entre appareils.'

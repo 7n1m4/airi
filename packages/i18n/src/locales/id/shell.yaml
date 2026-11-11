@@ -713,7 +713,7 @@ discord:
 
   live:
     badge: 'Hanya kirim (REST)'
-    banner: 'Modul Discord terhubung hanya untuk mengirim: Simpan & Verifikasi memeriksa token botmu, dan pengiriman pesan yang kamu ketik melewati API REST Discord. Menerima pesan dan menjalankan perintah bot tidak terhubung — WebSocket gateway ada di airi-discord, tetapi app tidak pernah terhubung otomatis; menerima hanya opt-in, sesuai desain. Tidak ada yang pernah terkirim otomatis.'
+    banner: 'Modul Discord dapat mengirim dan (hanya dengan opt-in ketat) menerima: Simpan & Verifikasi memeriksa token bot-mu; pengiriman pesan yang kamu ketik melewati API REST; penerimaan ada di kartu "Gateway events (opt-in)" dan hanya dimulai saat kamu menekan Mulai — tidak ada yang pernah terkirim otomatis, dan pesan yang diterima tetap hanya di memori.'
     statusUnconfigured: 'Belum dikonfigurasi'
     statusVerified: 'Terverifikasi'
     statusError: 'Galat'
@@ -733,7 +733,7 @@ discord:
     clearConfirmConfirm: 'Hapus token'
     verifyOk: 'Terverifikasi sebagai %1 (id %2)'
     verifySectionTitle: 'Verifikasi koneksi'
-    gatewayDisplayOnly: 'Hanya tampilan — menerima tidak diaktifkan. Ini memanggil GET /gateway/bot untuk menampilkan URL gateway dan sisa anggaran IDENTIFY bot. App tidak pernah membuka koneksi gateway.'
+    gatewayDisplayOnly: 'Hanya tampilan. Ini memanggil GET /gateway/bot untuk menampilkan URL gateway dan sisa anggaran IDENTIFY bot. Ini tidak terhubung ke gateway; gunakan kartu "Gateway events (opt-in)" untuk menerima pesan.'
     fetchGatewayInfo: 'Ambil info gateway'
     gatewayUrlLabel: 'URL Gateway'
     gatewayShardsLabel: 'Shard yang direkomendasikan'
@@ -743,6 +743,19 @@ discord:
     sendPlaceholder: 'Ketik pesan untuk dikirim…'
     send: 'Kirim'
     sentOk: 'Terkirim (id %1)'
+  gateway:
+    title: 'Gateway events (opt-in)'
+    description: 'Terima pesan yang bisa dilihat botmu — ketat opt-in dan dikendalikan manusia. Menekan Mulai membuka koneksi baca-saja ke gateway Discord; pesan yang diterima hanya ada di memori (maks 100, terbaru dulu), tidak pernah disimpan, dicatat, atau diteruskan ke mana pun, dan dihapus saat kamu menekan Berhenti atau Hapus. Kartu ini adalah kotak masuk, bukan pemroses perintah: tidak ada perintah yang pernah diuraikan atau dijalankan, dan tidak ada balasan yang pernah terkirim otomatis. Membutuhkan privileged intent MESSAGE_CONTENT (Discord Developer Portal → Bot → Privileged Gateway Intents → Message Content). Tanpanya, event tetap datang tetapi dengan field content kosong.'
+    statusRunning: 'Berjalan'
+    statusStopped: 'Berhenti'
+    statusError: 'Galat'
+    start: 'Mulai'
+    stop: 'Berhenti'
+    clearEvents: 'Hapus event'
+    emptyTitle: 'Belum ada event'
+    emptySubtitle: 'Pemantauan berhenti, atau belum ada pesan yang masuk. Tekan Mulai untuk memantau — pesan yang diterima muncul di sini dan tidak pernah keluar dari mesin ini.'
+    botBadge: 'Bot'
+    needToken: 'Simpan token bot dulu (tab Bot Connection) untuk mengaktifkan pemantauan.'
 cloudSync:
   title: 'Cloud Sync'
   description: 'Mencadangkan dan menyinkronkan basis data, kartu karakter, segmen memori, dan aset media lintas perangkat.'

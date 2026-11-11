@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Stage window: frameless, translucent, always-on-top desktop-pet stage.
 // Renders the settings-selected model: `.vrm` via `StageScene`/`View3D`
-// (VRM path, unchanged), or a `.json`/`.skel`/`.atlas`/`.zip` bundle via
-// `SpineStage`. Selection is by extension of the configured
+// (VRM path, unchanged), a `.pmx`/`.pmd` model via the same
+// `StageScene`/`View3D` with `MmdController`, or a
+// `.json`/`.skel`/`.atlas`/`.zip` bundle via `SpineStage`.
+// Selection is by extension of the configured
 // `settings/stage-model.modelId`; empty modelId keeps the bundled VRM
 // default. Exposes lip-sync/gaze/expression hooks through
 // `StageSceneController` on the VRM path.
@@ -42,14 +44,30 @@ Window {
         id: controller
     }
 
+    MmdController {
+        id: mmdController
+    }
+
     StageSettingsController {
         id: stageSettings
     }
 
     // --- Scene selection ------------------------------------------------------
-    // `.json`/`.skel`/`.atlas`/`.zip` route to the spine renderer; anything
-    // else (including `.vrm` and the empty bundled default) stays on VRM.
+    // `.json`/`.skel`/`.atlas`/`.zip` route to the spine renderer;
+    // `.pmx`/`.pmd` route to the MMD renderer; anything else (including
+    // `.vrm` and the empty bundled default) stays on VRM.
     property string stageModelId: ""
+
+    function isMmdModelPath(path) {
+        var lower = String(path).trim().toLowerCase()
+        var dot = lower.lastIndexOf(".")
+        if (dot < 0)
+            return false
+        var ext = lower.substring(dot)
+        return ext === ".pmx" || ext === ".pmd"
+    }
+
+    readonly property bool mmdMode: isMmdModelPath(stageModelId)
 
     function isSpineModelPath(path) {
         var lower = String(path).trim().toLowerCase()
@@ -65,6 +83,8 @@ Window {
     function applyModelSelection() {
         if (spineMode)
             spineStage.loadModel(stageModelId)
+        else if (mmdMode)
+            mmdController.loadFromSettings()
         else
             controller.loadFromSettings()
     }
@@ -162,8 +182,9 @@ Window {
                 entry.material.destroy()
         }
         modelObjects = []
-        if (!controller.ready) {
-            console.log("[airi-qt] stage: no model (%1)".arg(controller.status))
+        var active = stageWindow.mmdMode ? mmdController : controller
+        if (!active.ready) {
+            console.log("[airi-qt] stage: no model (%1)".arg(active.status))
             return
         }
         var geomComp = Qt.createComponent("com.airi.airiqt", "AiriVrmGeometryShell")
@@ -174,16 +195,16 @@ Window {
             return
         }
         var created = []
-        for (var prim = 0; prim < controller.primitiveCount; prim++) {
+        for (var prim = 0; prim < active.primitiveCount; prim++) {
             var shell = geomComp.createObject(null)
-            shell.setBuffers(controller.vertexData(prim), controller.indexData(prim), controller.vertexStride())
-            var matIdx = controller.primitiveMaterial(prim)
-            var useMap = matIdx >= 0 && controller.hasMaterialTexture(matIdx)
+            shell.setBuffers(active.vertexData(prim), active.indexData(prim), active.vertexStride())
+            var matIdx = active.primitiveMaterial(prim)
+            var useMap = matIdx >= 0 && active.hasMaterialTexture(matIdx)
             var material = matComp.createObject(null, {
-                uBaseColor: matIdx >= 0 ? controller.materialBaseColor(matIdx) : "#ffffff",
-                uShadeColor: matIdx >= 0 ? controller.materialShadeColor(matIdx) : "#b4b4b4",
+                uBaseColor: matIdx >= 0 ? active.materialBaseColor(matIdx) : "#ffffff",
+                uShadeColor: matIdx >= 0 ? active.materialShadeColor(matIdx) : "#b4b4b4",
                 uUseMap: useMap ? 1.0 : 0.0,
-                uBaseMapUrl: controller.materialTextureUrl(matIdx)
+                uBaseMapUrl: matIdx >= 0 ? active.materialTextureUrl(matIdx) : ""
             })
             var model = modelComp.createObject(scene.modelRoot, {
                 geometry: shell,
@@ -203,18 +224,26 @@ Window {
         repeat: true
         onTriggered: {
             // skinAndMorph doubles as the smoke-tour tick counter (it
-            // increments even with no VRM engine loaded), so it runs
-            // unconditionally; the VRM scene is only repainted when ready.
-            controller.skinAndMorph(16.0)
-            if (!controller.ready)
+            // increments even with no engine loaded), so it runs
+            // unconditionally; the scene is only repainted when ready.
+            var active = stageWindow.mmdMode ? mmdController : controller
+            active.skinAndMorph(16.0)
+            if (!active.ready)
                 return
             for (var i = 0; i < modelObjects.length; i++)
-                modelObjects[i].shell.updateVertexData(controller.vertexData(modelObjects[i].index))
+                modelObjects[i].shell.updateVertexData(active.vertexData(modelObjects[i].index))
         }
     }
 
     Connections {
         target: controller
+        function onModelVersionChanged() {
+            rebuildModels()
+        }
+    }
+
+    Connections {
+        target: mmdController
         function onModelVersionChanged() {
             rebuildModels()
         }
@@ -230,7 +259,7 @@ Window {
         repeat: true
         onTriggered: {
             // Re-read the persisted model id; reload only when it changed.
-            // Spine reloads go through SpineStage; VRM through the bridge.
+            // Spine reloads go through SpineStage; VRM/MMD through their bridges.
             stageSettings.loadAll()
             var id = String(stageSettings.modelId).trim()
             if (id !== stageWindow.stageModelId) {
@@ -252,7 +281,9 @@ Window {
     AEmptyState {
         anchors.centerIn: parent
         width: parent.width - 2 * Theme.spacingL
-        visible: stageWindow.spineMode ? !spineStage.loaded : !controller.ready
+        visible: stageWindow.spineMode ? !spineStage.loaded
+            : stageWindow.mmdMode ? !mmdController.ready
+            : !controller.ready
         icon: "✦"
         title: I18n.tr("shell.stage.empty-title")
         subtitle: I18n.tr("shell.stage.empty-subtitle")
@@ -279,7 +310,9 @@ Window {
             anchors.centerIn: parent
             text: stageWindow.spineMode
                 ? ("spine · model=" + stageWindow.stageModelId + (spineStage.loaded ? "" : " (load failed)"))
-                : controller.status + (controller.ready ? " · model=" + controller.modelId : "")
+                : stageWindow.mmdMode
+                    ? "mmd · " + mmdController.status + (mmdController.ready ? " · model=" + mmdController.modelId : "")
+                    : controller.status + (controller.ready ? " · model=" + controller.modelId : "")
             color: "#ffffff"
             font.pixelSize: 11
             elide: Text.ElideRight
@@ -366,6 +399,9 @@ Window {
             if (stageWindow.spineMode)
                 console.log("[airi-qt] stage: spine model=%1 loaded=%2"
                     .arg(stageWindow.stageModelId).arg(spineStage.loaded))
+            else if (stageWindow.mmdMode)
+                console.log("[airi-qt] stage: mmd scene ticks ok, model=%1"
+                    .arg(mmdController.ready ? mmdController.modelId : "none"))
             else
                 console.log("[airi-qt] stage: scene ticks ok, model=%1"
                     .arg(controller.ready ? controller.modelId : "none"))

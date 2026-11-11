@@ -3,7 +3,8 @@
 
 //! airi-qt: native Qt Quick desktop shell for AIRI (Rust + cxx-qt).
 //!
-//! `--profile <dir>` isolates the data directory; `--smoke` boots a temporary
+//! `--profile <dir>` isolates the data directory; plain launches persist to the
+//! platform data dir; `--smoke` boots a temporary
 //! profile, walks the Splash milestones into the Control Strip, opens the
 //! Chat/Settings/About windows via the smoke tour, prints the visited pages,
 //! and exits 0. `--import-card <file>` / `--import-model <file>` copy a
@@ -43,6 +44,9 @@ pub struct Cli {
     /// Import a `.vrm` model into the models dir and exit, without booting
     /// the GUI.
     pub import_model: Option<PathBuf>,
+    /// Start the Discord gateway receive worker after boot (opt-in; needs the
+    /// token saved on the Discord settings page; never under --smoke).
+    pub discord_gateway: bool,
     /// Start the AIRI gateway channel server on loopback (opt-in).
     ///
     /// Lives on `127.0.0.1` by default (set `SERVER_CHANNEL_PORT` to change
@@ -53,13 +57,14 @@ pub struct Cli {
 }
 
 impl Cli {
-    /// Parse `--profile <dir>`, `--smoke`, `--import-card <file>`, `--import-model <file>`, `--gateway`.
+    /// Parse `--profile <dir>`, `--smoke`, `--import-card <file>`, `--import-model <file>`, `--gateway`, `--discord-gateway`.
     pub fn parse(args: impl Iterator<Item = String>) -> Self {
         let mut profile = None;
         let mut smoke = false;
         let mut import_card = None;
         let mut import_model = None;
         let mut gateway = false;
+        let mut discord_gateway = false;
         let mut it = args.peekable();
         while let Some(arg) = it.next() {
             match arg.as_str() {
@@ -70,6 +75,7 @@ impl Cli {
                 }
                 "--smoke" => smoke = true,
                 "--gateway" => gateway = true,
+                "--discord-gateway" => discord_gateway = true,
                 "--import-card" => {
                     if let Some(v) = it.next() {
                         import_card = Some(PathBuf::from(v));
@@ -98,6 +104,7 @@ impl Cli {
             import_card,
             import_model,
             gateway,
+            discord_gateway,
         }
     }
 }
@@ -186,10 +193,20 @@ fn main() -> ExitCode {
     let explicit_profile = cli.profile.is_some();
     unsafe { airi_install_message_handler() };
 
-    let profile_dir = cli
-        .profile
-        .clone()
-        .unwrap_or_else(|| std::env::temp_dir().join(format!("airi-qt-{}", std::process::id())));
+    let profile_dir = cli.profile.clone().unwrap_or_else(|| {
+        if cli.smoke {
+            std::env::temp_dir().join(format!("airi-qt-{}", std::process::id()))
+        } else {
+            // Default launches persist to the platform data dir — settings,
+            // cards, models and mcp.json must survive restarts. `--smoke`
+            // stays throwaway so the gate never touches user data.
+            dirs::data_dir()
+                .map(|d| d.join("airi-qt"))
+                .unwrap_or_else(|| {
+                    std::env::temp_dir().join(format!("airi-qt-{}", std::process::id()))
+                })
+        }
+    });
     // Crash log capture (before any Qt/C++ calls). Logs land in the
     // effective data dir's `logs/` subdir: `<profile>/logs` for explicit
     // `--profile` and for `--smoke` (smoke isolates everything in a temp
@@ -340,6 +357,13 @@ fn main() -> ExitCode {
     // Held for the app lifetime; the accept loop stops on process exit.
     let _gateway_handle = gateway_handle;
 
+    // Opt-in Discord gateway receive worker (off unless --discord-gateway is
+    // passed; never under --smoke). Same rails as the Start button on the
+    // Discord settings page — refuses cleanly when no token is configured.
+    if cli.discord_gateway && !cli.smoke && !crate::bridges::discord_gateway::start_from_main() {
+        eprintln!("[airi-qt] discord-gateway: autostart requested but not started (see the Discord settings page)");
+    }
+
     if cli.smoke {
         crate::spine_rt::spine_smoke_check();
     }
@@ -400,7 +424,8 @@ fn main() -> ExitCode {
             }
             let visited = bridges::windows::smoke_visited();
             let chat_done = bridges::chat::smoke_chat_outcome().is_some();
-            let stage_done = bridges::stage::smoke_skin_ticks() >= 30;
+            let stage_done =
+                bridges::stage::smoke_skin_ticks() >= 30 || bridges::mmd::smoke_skin_ticks() >= 30;
             if visited.iter().any(|page| page == "about") && chat_done && stage_done {
                 break;
             }
@@ -416,7 +441,7 @@ fn main() -> ExitCode {
         let visited = bridges::windows::smoke_visited();
         let outcome = bridges::chat::smoke_chat_outcome().unwrap_or("missing");
         let deltas = bridges::chat::smoke_delta_count();
-        let stage_ticks = bridges::stage::smoke_skin_ticks();
+        let stage_ticks = bridges::stage::smoke_skin_ticks() + bridges::mmd::smoke_skin_ticks();
         eprintln!("[airi-qt] smoke: pages visited: {}", visited.join(", "));
         eprintln!("[airi-qt] smoke: chat outcome: {outcome} ({deltas} deltas applied)");
         eprintln!("[airi-qt] smoke: stage skinAndMorph ticks: {stage_ticks}");

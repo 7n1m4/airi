@@ -200,6 +200,7 @@ dependencies = [
  "airi-i18n",
  "airi-llm",
  "airi-mcp",
+ "airi-mmd",
  "airi-render",
  "airi-store",
  "airi-sync",

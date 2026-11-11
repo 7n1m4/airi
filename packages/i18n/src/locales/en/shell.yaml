@@ -712,7 +712,7 @@ discord:
 
   live:
     badge: 'Send-only (REST)'
-    banner: 'The Discord module is wired for sending only: Save & Verify checks your bot token, and sending the message you type goes through the Discord REST API. Receiving messages and running bot commands are not wired — the gateway WebSocket exists in airi-discord, but the app never auto-connects to it; receiving is opt-in only, by design. Nothing is ever sent automatically.'
+    banner: 'The Discord module can send and (strictly opt-in) receive: Save & Verify checks your bot token; sending the message you type goes through the REST API; receiving lives in the "Gateway events (opt-in)" card and only ever starts when you press Start — nothing is ever sent automatically, and received messages stay in memory only.'
     statusUnconfigured: 'Not configured'
     statusVerified: 'Verified'
     statusError: 'Error'
@@ -732,7 +732,7 @@ discord:
     clearConfirmConfirm: 'Clear token'
     verifyOk: 'Verified as %1 (id %2)'
     verifySectionTitle: 'Verify connection'
-    gatewayDisplayOnly: 'Display only — receiving is not enabled. This calls GET /gateway/bot to show the gateway URL and the bot’s remaining IDENTIFY budget. The app never opens a gateway connection.'
+    gatewayDisplayOnly: 'Display only. This calls GET /gateway/bot to show the gateway URL and the bot’s remaining IDENTIFY budget. It does not connect to the gateway; use the "Gateway events (opt-in)" card to receive messages.'
     fetchGatewayInfo: 'Fetch gateway info'
     gatewayUrlLabel: 'Gateway URL'
     gatewayShardsLabel: 'Recommended shards'
@@ -742,6 +742,19 @@ discord:
     sendPlaceholder: 'Type a message to send…'
     send: 'Send'
     sentOk: 'Sent (id %1)'
+  gateway:
+    title: 'Gateway events (opt-in)'
+    description: 'Receive messages your bot can see — strictly opt-in and human-driven. Pressing Start opens a read-only connection to the Discord gateway; received messages stay in memory only (max 100, newest first), are never persisted, logged, or forwarded anywhere, and are wiped when you press Stop or Clear. This card is an inbox, not a command processor: no command is ever parsed or run, and no reply is ever sent automatically. Requires the privileged MESSAGE_CONTENT intent (Discord Developer Portal → Bot → Privileged Gateway Intents → Message Content). Without it, events still arrive but with an empty content field.'
+    statusRunning: 'Running'
+    statusStopped: 'Stopped'
+    statusError: 'Error'
+    start: 'Start'
+    stop: 'Stop'
+    clearEvents: 'Clear events'
+    emptyTitle: 'No events yet'
+    emptySubtitle: 'Listening is stopped, or no message has arrived yet. Press Start to listen — received messages appear here and never leave this machine.'
+    botBadge: 'Bot'
+    needToken: 'Save a bot token first (Bot Connection tab) to enable listening.'
 cloudSync:
   title: 'Cloud Sync'
   description: 'Backs up and synchronises your databases, character cards, memory segments, and media assets across devices.'
