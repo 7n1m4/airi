@@ -97,6 +97,22 @@ function countYamlLeaves(text) {
 const TICKS_FILE = () => join(outDir, 'features.ticks.json')
 
 // Ticks are keyed by the source file path (unique, stable), not by route.
+const WAIVERS_FILE = () => join(outDir, 'features.waivers.json')
+
+// Waivers are keyed by source file path (same keyspace as ticks). A waived row
+// is rendered as waived — it stays visible but is not an actionable gap.
+function loadWaivers() {
+  if (!existsSync(WAIVERS_FILE()))
+    return {}
+  try {
+    return JSON.parse(readFileSync(WAIVERS_FILE(), 'utf8'))
+  }
+  catch (err) {
+    console.error(`failed to parse ${WAIVERS_FILE()}: ${err.message}`)
+    return {}
+  }
+}
+
 function loadTicks() {
   if (existsSync(TICKS_FILE())) {
     try {
@@ -158,11 +174,14 @@ function features() {
   }
 
   const ticks = loadTicks()
+  const waivers = loadWaivers()
   const entry = (p, prefix, tag) => {
     const path = rel(p)
     const route = routeOf(p, null, prefix)
-    const box = ticks[path] ? 'x' : ' '
-    return { line: `- [${box}] \`${route}\`${tag ? ` ${tag}` : ''} — \`${path}\``, path, isRoute: isRoute(p) }
+    const waived = waivers[path]
+    const box = waived ? '-' : ticks[path] ? 'x' : ' '
+    const suffix = waived ? ` — waived: ${waived}` : ''
+    return { line: `- [${box}] \`${route}\`${tag ? ` ${tag}` : ''} — \`${path}\`${suffix}`, path, isRoute: isRoute(p), waived: !!waived }
   }
 
   const routeItems = []
@@ -182,14 +201,19 @@ function features() {
       `stage-pages routes: **${stagePages.filter(isRoute).length}**`,
       `Non-route files (components/composables/tests/presets): **${otherItems.length}**`,
       `Total: **${routeItems.length + otherItems.length}**`,
+      `Waived (stay in Electron/web): **${routeItems.concat(otherItems).filter(i => i.waived).length}**`,
       '',
       '## Routes (auto-routable pages)',
       '',
-      ...routeItems.map(i => i.line),
+      ...routeItems.filter(i => !i.waived).map(i => i.line),
       '',
       '## Non-route files (not auto-routed)',
       '',
-      ...otherItems.map(i => i.line),
+      ...otherItems.filter(i => !i.waived).map(i => i.line),
+      '',
+      '## Waived (stay in Electron/web — user decision 2026-11-11)',
+      '',
+      ...routeItems.concat(otherItems).filter(i => i.waived).map(i => i.line),
     ].join('\n'),
   )
   write('features.md', md)

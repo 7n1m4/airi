@@ -9,6 +9,7 @@ Renderer routes: **37**
 stage-pages routes: **115**
 Non-route files (components/composables/tests/presets): **82**
 Total: **234**
+Waived (stay in Electron/web): **25**
 
 ## Routes (auto-routable pages)
 
@@ -18,18 +19,11 @@ Total: **234**
 - [x] `/chat` — `apps/stage-tamagotchi/src/renderer/pages/chat.vue`
 - [ ] `/customizer` — `apps/stage-tamagotchi/src/renderer/pages/customizer.vue`
 - [ ] `/dashboard` — `apps/stage-tamagotchi/src/renderer/pages/dashboard/index.vue`
-- [ ] `/devtools` — `apps/stage-tamagotchi/src/renderer/pages/devtools/index.vue`
-- [ ] `/devtools/lag-visualizer` — `apps/stage-tamagotchi/src/renderer/pages/devtools/lag-visualizer.vue`
 - [ ] `/devtools/live2d` — `apps/stage-tamagotchi/src/renderer/pages/devtools/live2d.vue`
-- [ ] `/devtools/performance-visualizer` — `apps/stage-tamagotchi/src/renderer/pages/devtools/performance-visualizer.vue`
-- [ ] `/devtools/screen-capture` — `apps/stage-tamagotchi/src/renderer/pages/devtools/screen-capture.vue`
-- [ ] `/devtools/stage-vfx` — `apps/stage-tamagotchi/src/renderer/pages/devtools/stage-vfx.vue`
 - [ ] `/devtools/use-electron-all-displays` — `apps/stage-tamagotchi/src/renderer/pages/devtools/use-electron-all-displays.vue`
 - [ ] `/devtools/use-electron-relative-mouse` — `apps/stage-tamagotchi/src/renderer/pages/devtools/use-electron-relative-mouse.vue`
 - [ ] `/devtools/use-magic-keys` — `apps/stage-tamagotchi/src/renderer/pages/devtools/use-magic-keys.vue`
 - [ ] `/devtools/use-window-mouse` — `apps/stage-tamagotchi/src/renderer/pages/devtools/use-window-mouse.vue`
-- [ ] `/devtools/vision` — `apps/stage-tamagotchi/src/renderer/pages/devtools/vision.vue`
-- [ ] `/devtools/widgets-calling` — `apps/stage-tamagotchi/src/renderer/pages/devtools/widgets-calling.vue`
 - [ ] `/index` — `apps/stage-tamagotchi/src/renderer/pages/index.vue`
 - [ ] `/inlay` — `apps/stage-tamagotchi/src/renderer/pages/inlay/index.vue`
 - [ ] `/notice/fade-on-hover` — `apps/stage-tamagotchi/src/renderer/pages/notice/fade-on-hover.vue`
@@ -49,16 +43,6 @@ Total: **234**
 - [ ] `/settings/system/window-shortcuts` — `apps/stage-tamagotchi/src/renderer/pages/settings/system/window-shortcuts.vue`
 - [x] `/splash` — `apps/stage-tamagotchi/src/renderer/pages/splash.vue`
 - [ ] `/widgets` — `apps/stage-tamagotchi/src/renderer/pages/widgets.vue`
-- [ ] `/devtools/beat-sync` (stage-pages) — `packages/stage-pages/src/pages/devtools/beat-sync.vue`
-- [ ] `/devtools/context-flow` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/index.vue`
-- [ ] `/devtools/core-ai-lab` (stage-pages) — `packages/stage-pages/src/pages/devtools/core-ai-lab.vue`
-- [ ] `/devtools/image` (stage-pages) — `packages/stage-pages/src/pages/devtools/image.vue`
-- [ ] `/devtools/markdown-stress` (stage-pages) — `packages/stage-pages/src/pages/devtools/markdown-stress.vue`
-- [ ] `/devtools/orbital-navigation` (stage-pages) — `packages/stage-pages/src/pages/devtools/orbital-navigation.vue`
-- [ ] `/devtools/plugin-host` (stage-pages) — `packages/stage-pages/src/pages/devtools/plugin-host.vue`
-- [ ] `/devtools/providers-transcription-realtime-aliyun-nls` (stage-pages) — `packages/stage-pages/src/pages/devtools/providers-transcription-realtime-aliyun-nls.vue`
-- [ ] `/devtools/vibrant` (stage-pages) — `packages/stage-pages/src/pages/devtools/vibrant.vue`
-- [ ] `/devtools/websocket-inspector` (stage-pages) — `packages/stage-pages/src/pages/devtools/websocket-inspector.vue`
 - [ ] `/knowledge-graph/MindMapExplorer` (stage-pages) — `packages/stage-pages/src/pages/knowledge-graph/MindMapExplorer.vue`
 - [ ] `/settings/about` (stage-pages) — `packages/stage-pages/src/pages/settings/about/index.vue`
 - [x] `/settings/airi-card/edit` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/edit.vue`
@@ -167,15 +151,7 @@ Total: **234**
 
 ## Non-route files (not auto-routed)
 
-- [ ] `/devtools/context-flow/components/context-flow-actions` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-actions.vue`
-- [ ] `/devtools/context-flow/components/context-flow-entry-card` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-entry-card.vue`
-- [ ] `/devtools/context-flow/components/context-flow-filters` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-filters.vue`
-- [ ] `/devtools/context-flow/components/context-flow-preview` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-preview.vue`
-- [ ] `/devtools/context-flow/components/context-flow-spark-notify` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-spark-notify.vue`
-- [ ] `/devtools/context-flow/components/context-flow-stream` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-stream.vue`
 - [ ] `/devtools/context-flow/composables/use-context-flow-formatters.test` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/composables/use-context-flow-formatters.test.ts`
-- [ ] `/devtools/context-flow/composables/use-context-flow-formatters` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/composables/use-context-flow-formatters.ts`
-- [ ] `/devtools/context-flow/context-flow-types` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/context-flow-types.ts`
 - [ ] `/knowledge-graph/components/ChronologicalTimelineView` (stage-pages) — `packages/stage-pages/src/pages/knowledge-graph/components/ChronologicalTimelineView.vue`
 - [ ] `/knowledge-graph/components/ConstellationCanvas` (stage-pages) — `packages/stage-pages/src/pages/knowledge-graph/components/ConstellationCanvas.vue`
 - [ ] `/knowledge-graph/components/EntityDetailDrawer` (stage-pages) — `packages/stage-pages/src/pages/knowledge-graph/components/EntityDetailDrawer.vue`
@@ -249,3 +225,31 @@ Total: **234**
 - [ ] `/settings/providers/free-hub/helpers` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/free-hub/helpers.ts`
 - [ ] `/settings/system/connection` (stage-pages) — `packages/stage-pages/src/pages/settings/system/connection.vue`
 - [x] `/settings/system/general` (stage-pages) — `packages/stage-pages/src/pages/settings/system/general.vue`
+
+## Waived (stay in Electron/web — user decision 2026-11-11)
+
+- [-] `/devtools` — `apps/stage-tamagotchi/src/renderer/pages/devtools/index.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/lag-visualizer` — `apps/stage-tamagotchi/src/renderer/pages/devtools/lag-visualizer.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/performance-visualizer` — `apps/stage-tamagotchi/src/renderer/pages/devtools/performance-visualizer.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/screen-capture` — `apps/stage-tamagotchi/src/renderer/pages/devtools/screen-capture.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11); Qt Screen Capture page is new functionality, not a port of this route
+- [-] `/devtools/stage-vfx` — `apps/stage-tamagotchi/src/renderer/pages/devtools/stage-vfx.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/vision` — `apps/stage-tamagotchi/src/renderer/pages/devtools/vision.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/widgets-calling` — `apps/stage-tamagotchi/src/renderer/pages/devtools/widgets-calling.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/beat-sync` (stage-pages) — `packages/stage-pages/src/pages/devtools/beat-sync.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/context-flow` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/index.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/core-ai-lab` (stage-pages) — `packages/stage-pages/src/pages/devtools/core-ai-lab.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/image` (stage-pages) — `packages/stage-pages/src/pages/devtools/image.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/markdown-stress` (stage-pages) — `packages/stage-pages/src/pages/devtools/markdown-stress.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/orbital-navigation` (stage-pages) — `packages/stage-pages/src/pages/devtools/orbital-navigation.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/plugin-host` (stage-pages) — `packages/stage-pages/src/pages/devtools/plugin-host.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11); Qt Plugin Host page is an honest scaffold, not a port of this route
+- [-] `/devtools/providers-transcription-realtime-aliyun-nls` (stage-pages) — `packages/stage-pages/src/pages/devtools/providers-transcription-realtime-aliyun-nls.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/vibrant` (stage-pages) — `packages/stage-pages/src/pages/devtools/vibrant.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/websocket-inspector` (stage-pages) — `packages/stage-pages/src/pages/devtools/websocket-inspector.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/context-flow/components/context-flow-actions` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-actions.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/context-flow/components/context-flow-entry-card` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-entry-card.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/context-flow/components/context-flow-filters` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-filters.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/context-flow/components/context-flow-preview` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-preview.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/context-flow/components/context-flow-spark-notify` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-spark-notify.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/context-flow/components/context-flow-stream` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/components/context-flow-stream.vue` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/context-flow/composables/use-context-flow-formatters` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/composables/use-context-flow-formatters.ts` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
+- [-] `/devtools/context-flow/context-flow-types` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/context-flow-types.ts` — waived: devtools waived for Qt v1 — stays in Electron/web (user decision 2026-11-11)
