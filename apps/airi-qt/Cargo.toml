@@ -17,6 +17,8 @@ members = [
   "crates/airi-mmd",
   "crates/airi-acp",
   "crates/airi-channel",
+  "crates/airi-sync",
+  "crates/airi-discord",
 ]
 
 [workspace.dependencies]

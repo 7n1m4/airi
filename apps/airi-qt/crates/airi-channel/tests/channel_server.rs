@@ -5,9 +5,9 @@
 //! hand-rolled client over raw TCP.
 //!
 //! Covers: HTTP upgrade handshake (known accept-key vector), the
-//! mandatory auth flow for both accepted auth shapes, ping/pong, the `rpc`
-//! echo placeholder, typed error frames, and rejection of a bad token
-//! (error frame + close 1008) before any state is reached.
+//! mandatory auth flow for both accepted auth shapes, ping/pong, the typed
+//! `rpc` dispatch (`runtime.ping`), typed error frames, and rejection of a
+//! bad token (error frame + close 1008) before any state is reached.
 //!
 //! Not marked `#[ignore]` — it is fully deterministic (ephemeral port,
 //! 5 s read timeouts, no shared state). Set `CHANNEL_TEST_PORT` only if you
@@ -151,16 +151,19 @@ fn upgrade_auth_ping_pong_rpc_and_close() {
     assert_eq!(heartbeat["type"], "transport:connection:heartbeat");
     assert_eq!(heartbeat["data"]["kind"], "pong");
 
-    // --- RPC echo placeholder ------------------------------------------------
+    // --- RPC dispatch: runtime.ping round trip --------------------------------
     send_masked_text(
         &mut stream,
-        r#"{"type":"rpc","action":"stage.say","payload":{"text":"hi"}}"#,
+        r#"{"type":"rpc","action":"runtime.ping","payload":{},"id":"it-1"}"#,
     );
     let frame = read_frame(&mut stream, &mut decoder);
-    assert_eq!(
-        serde_json::from_slice::<serde_json::Value>(&frame.payload).unwrap(),
-        serde_json::json!({"type":"rpc","action":"stage.say","ok":true,"payload":{"text":"hi"}})
-    );
+    let rpc: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(rpc["type"], "rpc");
+    assert_eq!(rpc["action"], "runtime.ping");
+    assert_eq!(rpc["ok"], true);
+    assert_eq!(rpc["data"]["pong"], true);
+    assert!(rpc["data"]["uptimeSeconds"].as_u64().is_some());
+    assert_eq!(rpc["id"], "it-1");
 
     // --- Unknown type → typed error, connection stays open -------------------
     send_masked_text(&mut stream, r#"{"type":"teleport"}"#);
@@ -274,6 +277,81 @@ fn server_runtime_auth_shape_also_authenticates() {
         serde_json::from_slice::<serde_json::Value>(&frame.payload).unwrap(),
         serde_json::json!({"type":"pong"})
     );
+
+    handle.stop();
+}
+
+#[test]
+fn rpc_runtime_ping_round_trip() {
+    let _guard = TEST_LOCK.lock().unwrap();
+    // Skip (don't fail) when the port is pinned and unavailable — same
+    // tolerance the other integration tests get from ephemeral port 0.
+    let config = ChannelConfig {
+        hostname: "127.0.0.1".to_string(),
+        auth_token: TOKEN.to_string(),
+    };
+    let server = match ChannelServer::bind("127.0.0.1", test_port(), &config) {
+        Ok(server) => server,
+        Err(err) => {
+            eprintln!("skipping rpc_runtime_ping_round_trip: bind failed: {err}");
+            return;
+        }
+    };
+    let handle = server.spawn().expect("spawn channel server");
+    let port = handle.port();
+    let mut stream = tcp_connect(port);
+    let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+
+    let response = http_upgrade(&mut stream, port);
+    assert!(response.starts_with("HTTP/1.1 101"));
+
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"auth","authToken":"integration-test-token"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    assert_eq!(
+        serde_json::from_slice::<serde_json::Value>(&frame.payload).unwrap(),
+        serde_json::json!({"type":"auth","ok":true})
+    );
+
+    // --- runtime.ping round trip -------------------------------------------
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"rpc","action":"runtime.ping","id":"rt-ping-1"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    let rpc: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(rpc["type"], "rpc");
+    assert_eq!(rpc["action"], "runtime.ping");
+    assert_eq!(rpc["ok"], true);
+    assert_eq!(rpc["data"]["pong"], true);
+    assert!(rpc["data"]["time"].as_u64().unwrap() > 0);
+    assert!(rpc["data"]["uptimeSeconds"].as_u64().is_some());
+    assert_eq!(rpc["id"], "rt-ping-1");
+
+    // --- gateway.config: shape ok, token absent -----------------------------
+    send_masked_text(
+        &mut stream,
+        r#"{"type":"rpc","action":"gateway.config","payload":{},"id":"gc-1"}"#,
+    );
+    let frame = read_frame(&mut stream, &mut decoder);
+    let rpc: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(rpc["ok"], true);
+    assert_eq!(rpc["data"]["hostname"], "127.0.0.1");
+    assert!(rpc["data"]["port"].as_u64().unwrap() > 0);
+    assert!(rpc["data"].get("authToken").is_none());
+
+    // --- rpc before auth is still rejected (auth gate is not bypassed) ------
+    let mut stream2 = tcp_connect(port);
+    let mut decoder2 = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
+    let _ = http_upgrade(&mut stream2, port);
+    send_masked_text(&mut stream2, r#"{"type":"rpc","action":"runtime.ping"}"#);
+    let frame = read_frame(&mut stream2, &mut decoder2);
+    let error: serde_json::Value = serde_json::from_slice(&frame.payload).unwrap();
+    assert_eq!(error["error"]["code"], "auth_required");
+    let frame = read_frame(&mut stream2, &mut decoder2);
+    assert_eq!(frame.opcode, OP_CLOSE);
 
     handle.stop();
 }

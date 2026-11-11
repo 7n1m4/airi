@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use thiserror::Error;
 
-/// Errors returned by [`crate::McpStdioClient`].
+/// Errors returned by [`crate::McpStdioClient`] and [`crate::McpHttpClient`].
 #[derive(Debug, Error)]
 pub enum McpError {
     /// The MCP server process could not be spawned (missing binary, permission
@@ -15,7 +15,10 @@ pub enum McpError {
     Spawn(#[source] std::io::Error),
 
     /// An I/O failure while writing to the server's stdin or while the
-    /// background reader thread was draining the server's stdout/stderr.
+    /// background reader thread was draining the server's stdout/stderr
+    /// (stdio transport), or an HTTP request-level failure before a response
+    /// was received (streamable-HTTP transport, e.g. connect refused, TLS
+    /// failure, request timeout).
     #[error("MCP transport error: {0}")]
     Transport(String),
 
@@ -36,6 +39,25 @@ pub enum McpError {
         data: Option<serde_json::Value>,
     },
 
+    /// The HTTP transport received a non-success status code (anything
+    /// outside 2xx, except the `202 Accepted` "no body" notification
+    /// response, which is treated as success). The response body is
+    /// preserved verbatim (lossy UTF-8) for diagnostics.
+    #[error("HTTP {status} from MCP endpoint: {body}")]
+    HttpStatus {
+        /// The HTTP status code returned by the server.
+        status: u16,
+        /// Response body, lossily decoded; may be empty.
+        body: String,
+    },
+
+    /// The `text/event-stream` body could not be parsed or did not contain a
+    /// JSON-RPC response for the request id this client was waiting for.
+    /// Examples: a `data:` frame whose payload is not valid JSON, or a
+    /// stream that ended (or errored) before the response frame arrived.
+    #[error("SSE stream error: {0}")]
+    Sse(String),
+
     /// No response arrived within the configured timeout (5 s by default).
     #[error("timed out after {timeout:?} waiting for response to `{method}`")]
     Timeout {
@@ -51,10 +73,11 @@ pub enum McpError {
     #[error("MCP protocol violation: {0}")]
     Protocol(String),
 
-    /// A transport this crate does not implement was requested. The stdio
-    /// transport never returns this; it exists so callers can surface a
-    /// typed error for the not-yet-ported streamable-HTTP transport instead
-    /// of a generic failure.
+    /// A transport this crate does not implement was requested. Kept for
+    /// backwards compatibility: the streamable-HTTP transport has since been
+    /// implemented as [`crate::McpHttpClient`], so the HTTP client never
+    /// returns this variant anymore. It remains so existing callers that
+    /// match on it keep compiling.
     #[error("unsupported MCP transport: {0}")]
     UnsupportedTransport(String),
 }

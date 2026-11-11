@@ -14,9 +14,10 @@
 //!    `authToken` from `<data>/airi-qt/server-channel/config.json`.
 //!    Unauthenticated peers receive nothing else and are closed with 1008.
 //! 4. After auth: `ping` → `pong` (plus the server-runtime
-//!    `transport:connection:heartbeat` mirror), and an `rpc` passthrough that
-//!    echoes the payload as a documented placeholder for the real renderer
-//!    bridge. Unknown types get a typed `error` frame.
+//!    `transport:connection:heartbeat` mirror), and a typed `rpc` dispatch
+//!    registry (`runtime.ping`, `runtime.status`, `gateway.config`,
+//!    `gateway.auth`) with stable `rpc_*` error codes. See [`dispatch`].
+//!    Unknown types get a typed `error` frame.
 //!
 //! ## Security posture (read before enabling on a network)
 //!
@@ -48,11 +49,14 @@
 //! ## What this is not (yet)
 //!
 //! Not a general-purpose RPC bridge, not a module registry, not audio
-//! streaming, not LAN discovery. The `rpc` echo is a wire-shape placeholder;
-//! wiring it to the renderer and host capabilities is a separate decision.
+//! streaming, not LAN discovery. The `rpc` registry is a small, fully local
+//! slice of the gateway protocol; `renderer.*` methods report
+//! `rpc_not_implemented` until the Qt renderer bridge lands. Wiring RPC to
+//! the renderer and host capabilities is a separate decision.
 
 pub mod base64;
 pub mod config;
+pub mod dispatch;
 pub mod server;
 pub mod session;
 pub mod sha1;
@@ -60,6 +64,7 @@ pub mod uuid;
 pub mod ws;
 
 pub use config::{default_config_path, load_or_heal, ChannelConfig, ConfigError, DEFAULT_HOSTNAME};
+pub use dispatch::{RpcContext, RpcError, RpcRegistry, APP_NAME, PROTOCOL};
 pub use server::{ChannelServer, ServerHandle};
 pub use session::{CloseInfo, Session, SessionOutcome, SessionState, CLOSE_POLICY_VIOLATION};
 pub use ws::{accept_key, encode_frame, Frame, FrameDecoder, OP_CLOSE, OP_PING, OP_PONG, OP_TEXT};

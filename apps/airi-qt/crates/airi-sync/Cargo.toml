@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "airi-sync"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "AIRI sync engine (BYOS) — local-FS snapshot transport for the Qt build (wave ⑦ lane)"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+sha2 = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }

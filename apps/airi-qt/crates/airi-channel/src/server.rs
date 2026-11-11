@@ -20,6 +20,7 @@ use std::thread::JoinHandle;
 use std::time::Duration;
 
 use crate::config::ChannelConfig;
+use crate::dispatch::RpcContext;
 use crate::session::{
     Session, CLOSE_MESSAGE_TOO_BIG, CLOSE_PROTOCOL_ERROR, CLOSE_UNSUPPORTED_DATA,
 };
@@ -36,6 +37,7 @@ const HANDSHAKE_READ_TIMEOUT: Duration = Duration::from_secs(10);
 pub struct ChannelServer {
     listener: TcpListener,
     token: Arc<str>,
+    rpc: RpcContext,
 }
 
 impl ChannelServer {
@@ -45,9 +47,11 @@ impl ChannelServer {
     /// `127.0.0.1` and `0.0.0.0` should be a deliberate choice (LAN access).
     pub fn bind(hostname: &str, port: u16, config: &ChannelConfig) -> io::Result<Self> {
         let listener = TcpListener::bind((hostname, port))?;
+        let bound_port = listener.local_addr()?.port();
         Ok(Self {
             listener,
             token: Arc::from(config.auth_token.as_str()),
+            rpc: RpcContext::new(hostname.to_string(), bound_port),
         })
     }
 
@@ -65,7 +69,7 @@ impl ChannelServer {
     /// start the channel server.
     pub fn run(self) -> io::Result<()> {
         let stop = Arc::new(AtomicBool::new(false));
-        serve(self.listener, self.token, stop)
+        serve(self.listener, self.token, self.rpc, stop)
     }
 
     /// Spawn the accept loop on a background thread.
@@ -75,9 +79,10 @@ impl ChannelServer {
         let stop = Arc::new(AtomicBool::new(false));
         let thread_stop = Arc::clone(&stop);
         let token = self.token;
+        let rpc = self.rpc;
         let join = std::thread::Builder::new()
             .name("airi-channel-accept".to_string())
-            .spawn(move || serve(self.listener, token, thread_stop))?;
+            .spawn(move || serve(self.listener, token, rpc, thread_stop))?;
         Ok(ServerHandle {
             port,
             stop,
@@ -109,7 +114,12 @@ impl ServerHandle {
     }
 }
 
-fn serve(listener: TcpListener, token: Arc<str>, stop: Arc<AtomicBool>) -> io::Result<()> {
+fn serve(
+    listener: TcpListener,
+    token: Arc<str>,
+    rpc: RpcContext,
+    stop: Arc<AtomicBool>,
+) -> io::Result<()> {
     listener.set_nonblocking(true)?;
     loop {
         if stop.load(Ordering::SeqCst) {
@@ -118,10 +128,11 @@ fn serve(listener: TcpListener, token: Arc<str>, stop: Arc<AtomicBool>) -> io::R
         match listener.accept() {
             Ok((stream, peer)) => {
                 let token = Arc::clone(&token);
+                let rpc = rpc.for_session();
                 std::thread::Builder::new()
                     .name(format!("airi-channel-conn-{peer}"))
                     .spawn(move || {
-                        if let Err(err) = handle_connection(stream, &token) {
+                        if let Err(err) = handle_connection(stream, &token, rpc) {
                             tracing::debug!(%peer, %err, "channel connection ended with error");
                         }
                     })?;
@@ -137,7 +148,7 @@ fn serve(listener: TcpListener, token: Arc<str>, stop: Arc<AtomicBool>) -> io::R
     }
 }
 
-fn handle_connection(mut stream: TcpStream, token: &str) -> io::Result<()> {
+fn handle_connection(mut stream: TcpStream, token: &str, rpc: RpcContext) -> io::Result<()> {
     stream.set_read_timeout(Some(HANDSHAKE_READ_TIMEOUT))?;
     stream.set_nonblocking(false)?;
 
@@ -187,7 +198,7 @@ fn handle_connection(mut stream: TcpStream, token: &str) -> io::Result<()> {
 
     // --- WebSocket phase ----------------------------------------------------
     stream.set_read_timeout(None)?; // idle clients are fine post-handshake
-    let mut session = Session::new(token.to_string());
+    let mut session = Session::with_context(token.to_string(), rpc);
     let mut decoder = FrameDecoder::new(MAX_WS_PAYLOAD_BYTES);
     let mut fragments: Option<(u8, Vec<u8>)> = None;
 

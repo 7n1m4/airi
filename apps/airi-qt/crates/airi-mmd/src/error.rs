@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Error type for PMX parsing.
+//! Error type for PMX/VMD parsing.
 
 use std::io;
 
-/// Error returned when a PMX file cannot be decoded into an [`crate::MmdModel`].
+/// Error returned when a PMX file cannot be decoded into an [`crate::MmdModel`],
+/// or a VMD file cannot be decoded into an [`crate::VmdMotion`].
 ///
-/// `from_bytes` never panics on untrusted input; every bounds failure surfaces
-/// here.
+/// `from_bytes` / [`crate::VmdMotion::parse`] never panic on untrusted input;
+/// every bounds failure surfaces here.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum MmdError {
@@ -34,13 +35,25 @@ pub enum MmdError {
     UnsupportedDeformType(u8),
 
     /// A correctly-formed section was found that this crate deliberately does
-    /// not decode yet.
+    /// not decode.
     ///
-    /// Today this is used for the morphs section (and everything behind it:
-    /// display frames, rigid bodies, joints). Physics and IK *evaluation* are
-    /// likewise out of scope for the M0 parser milestone.
+    /// Reserved; morphs were the canonical use case until the morph parser
+    /// landed (they are decoded now). Kept for future correctly-formed but
+    /// unsupported sections.
     #[error("unsupported PMX feature: {0}")]
     UnsupportedFeature(&'static str),
+
+    /// A morph type byte this crate does not decode (flip, display-frame or
+    /// an unknown value).
+    ///
+    /// Group/vertex/bone/UV/additional-UV/material morphs (types 0..=8) are
+    /// decoded; anything else is a loud, typed error rather than a misparse.
+    #[error("unsupported PMX morph type {0}")]
+    UnsupportedMorphType(u8),
+
+    /// The 30-byte VMD signature was not `Vocaloid Motion Data 0000/0001/0002`.
+    #[error("bad VMD signature (expected \"Vocaloid Motion Data 0002\")")]
+    BadVmdSignature,
 
     /// A structurally impossible value was found (bad index size, count not
     /// divisible by 3, limit exceeded, face index out of range, …).

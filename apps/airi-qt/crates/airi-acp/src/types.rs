@@ -540,3 +540,108 @@ pub enum CloseSessionResult {
     /// agent side until it exits.
     AgentRefused(String),
 }
+
+/// Outcome of [`crate::AcpAgentClient::delete_session`].
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DeleteSessionResult {
+    /// The agent acknowledged `session/delete` with a normal response.
+    AgentAcknowledged,
+    /// The agent rejected `session/delete` with a JSON-RPC error other than
+    /// `-32601` (method not found, which maps to [`crate::AcpError::Unsupported`])
+    /// or `-32002` (resource not found, which maps to
+    /// [`crate::AcpError::SessionNotFound`]). Local routing for the session
+    /// was still cleaned up; the session may leak on the agent side.
+    AgentRefused(String),
+}
+
+/// A session summary returned by `session/list` (`SessionInfo` in the SDK
+/// schema). Only the fields AIRI renders are typed; everything is also
+/// available verbatim in [`SessionSummary::raw`].
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionSummary {
+    /// Unique identifier of the session (`sessionId`).
+    pub session_id: SessionId,
+    /// Working directory the session is bound to (`cwd`; the schema requires
+    /// it). May be an empty string when the agent omits it despite the
+    /// schema.
+    pub cwd: String,
+    /// Human-readable title, when the agent reports one.
+    pub title: Option<String>,
+    /// ISO 8601 timestamp of last activity, when the agent reports one
+    /// (`updatedAt`).
+    pub updated_at: Option<String>,
+    /// Additional workspace roots reported for the session
+    /// (`additionalDirectories`); empty when absent.
+    pub additional_directories: Vec<String>,
+    /// The raw `SessionInfo` object, verbatim.
+    pub raw: Value,
+}
+
+/// A selectable mode advertised by the agent (`SessionMode` in the schema).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionMode {
+    /// Stable identifier used to refer to the mode (`id`).
+    pub id: String,
+    /// Human-readable name shown to the user (`name`).
+    pub name: String,
+    /// Optional human-readable details (`description`).
+    pub description: Option<String>,
+}
+
+/// The agent's mode state for a session (`SessionModeState` in the schema).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionModeState {
+    /// The mode the agent is currently in (`currentModeId`).
+    pub current_mode_id: String,
+    /// The modes the agent can operate in (`availableModes`).
+    pub available_modes: Vec<SessionMode>,
+}
+
+/// Result of the session re-attachment RPCs: `session/load` and
+/// `session/resume` (both return the same wire shape — `modes` and
+/// `configOptions`, both optional).
+///
+/// `updates` carries every `session/update` notification the agent sent
+/// while answering the RPC, in wire order. `session/load` replays the
+/// conversation history this way; `session/resume` does not (its `updates`
+/// is normally empty, but an agent that emits updates anyway is not
+/// silently dropped).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SessionSetupResult {
+    /// The session that was loaded or resumed.
+    pub session_id: SessionId,
+    /// Initial mode state, when the agent reports it.
+    pub modes: Option<SessionModeState>,
+    /// Initial session configuration options, kept verbatim (the schema is
+    /// still churning); `None` when absent or explicitly `null`.
+    pub config_options: Option<Vec<Value>>,
+    /// `session/update` notifications received while the agent answered the
+    /// RPC, in wire order.
+    pub updates: Vec<SessionUpdate>,
+    /// The raw `result` object, for fields this struct does not model.
+    pub raw: Value,
+}
+
+/// Value for [`crate::AcpAgentClient::set_config_option`].
+///
+/// The schema (`SetSessionConfigOptionRequest`) is a union: string values
+/// (a `SessionConfigValueId`, the default when `type` is absent on the
+/// wire) or an explicit boolean toggle (`type: "boolean"`).
+#[derive(Debug, Clone, PartialEq)]
+pub enum SessionConfigValue {
+    /// A string value id; serialised as `{ "value": "<id>" }`.
+    ValueId(String),
+    /// A boolean toggle; serialised as `{ "type": "boolean", "value": true }`.
+    Boolean(bool),
+}
+
+/// Result of [`crate::AcpAgentClient::set_config_option`]
+/// (`SetSessionConfigOptionResponse` in the schema).
+#[derive(Debug, Clone, PartialEq)]
+pub struct SetSessionConfigOptionResult {
+    /// The full set of configuration options and their current values,
+    /// kept verbatim (the schema is still churning).
+    pub config_options: Vec<Value>,
+    /// The raw `result` object, for fields this struct does not model.
+    pub raw: Value,
+}

@@ -56,8 +56,8 @@ type PendingMap = HashMap<u64, mpsc::Sender<Result<Value, McpError>>>;
 /// * **Server-initiated requests** (e.g. `roots/list`, `sampling/…`) are
 ///   answered with a `-32601` (method not found) error so the server does not
 ///   block forever; notifications from the server are ignored.
-/// * **Streamable HTTP** is not implemented here. It maps to
-///   [`McpError::UnsupportedTransport`] if a caller tries to force it.
+/// * **Streamable HTTP** lives in [`crate::McpHttpClient`]; this stdio
+///   client never returns [`McpError::UnsupportedTransport`].
 pub struct McpStdioClient {
     child: Option<Child>,
     stdin: Arc<Mutex<ChildStdin>>,

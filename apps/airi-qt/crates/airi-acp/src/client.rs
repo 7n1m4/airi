@@ -16,7 +16,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::{json, Value};
 
-use crate::error::AcpError;
+use crate::error::{AcpError, JSONRPC_METHOD_NOT_FOUND, JSONRPC_RESOURCE_NOT_FOUND};
 use crate::jsonrpc::{
     self, normalize_response_id, response_to_result, JsonRpcNotification, JsonRpcRequest,
 };
@@ -25,10 +25,12 @@ use crate::permission::{
     select_allow, select_deny, PermissionOutcome,
 };
 use crate::types::{
-    AgentCapabilities, CloseSessionResult, ContentBlock, ContentChunk, Implementation,
-    InitializeResult, McpCapabilities, PermissionRequest, PromptCapabilities, PromptResult,
-    SessionCapabilities, SessionId, SessionUpdate, StopReason, ToolCall, ToolCallUpdate,
-    ACP_PROTOCOL_VERSION, CLIENT_NAME, DEFAULT_PROMPT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT,
+    AgentCapabilities, CloseSessionResult, ContentBlock, ContentChunk, DeleteSessionResult,
+    Implementation, InitializeResult, McpCapabilities, PermissionRequest, PromptCapabilities,
+    PromptResult, SessionCapabilities, SessionConfigValue, SessionId, SessionMode,
+    SessionModeState, SessionSetupResult, SessionSummary, SessionUpdate,
+    SetSessionConfigOptionResult, StopReason, ToolCall, ToolCallUpdate, ACP_PROTOCOL_VERSION,
+    CLIENT_NAME, DEFAULT_PROMPT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT,
 };
 
 /// Internal callback type for slots in the pending-request map. Used instead
@@ -382,17 +384,7 @@ impl AcpAgentClient {
     /// empty `mcpServers` list — ACP session setup with MCP servers is not
     /// exposed by this crate yet.
     pub fn new_session(&self, cwd: Option<&Path>) -> Result<SessionId, AcpError> {
-        let cwd = match cwd {
-            Some(path) => std::path::absolute(path).map_err(|e| {
-                AcpError::Protocol(format!("failed to absolutise session cwd: {e}"))
-            })?,
-            None => std::env::current_dir().map_err(|e| {
-                AcpError::Protocol(format!("failed to read current directory: {e}"))
-            })?,
-        };
-        let cwd = cwd
-            .to_str()
-            .ok_or_else(|| AcpError::Protocol("session cwd contains non-UTF-8 bytes".into()))?;
+        let cwd = absolutise_cwd(cwd)?;
         let params = json!({ "cwd": cwd, "mcpServers": [] });
         let result = self.send_request_with_timeout("session/new", params, self.request_timeout)?;
         result
@@ -444,27 +436,12 @@ impl AcpAgentClient {
     ) -> Result<(u64, mpsc::Receiver<SessionEvent>), AcpError> {
         self.ensure_open()?;
 
-        let (event_tx, event_rx) = mpsc::channel::<SessionEvent>();
-        {
-            let mut subscriptions = self
-                .subscriptions
-                .lock()
-                .map_err(|_| AcpError::Transport("subscriptions lock poisoned".into()))?;
-            if subscriptions.contains_key(session_id) {
-                return Err(AcpError::PromptInProgress(session_id.to_string()));
-            }
-            subscriptions.insert(session_id.to_string(), event_tx.clone());
-        }
+        let (event_tx, event_rx) = self.register_subscription(session_id)?;
 
         let id = self.next_id.fetch_add(1, Ordering::SeqCst);
-        let finish = {
-            let event_tx = event_tx.clone();
-            move |result: Result<Value, AcpError>| {
-                let _ = event_tx.send(SessionEvent::Finished(result));
-            }
-        };
+        let finish = make_finish_callback(event_tx);
         if let Ok(mut pending) = self.pending.lock() {
-            pending.insert(id, Box::new(finish));
+            pending.insert(id, finish);
         } else {
             self.remove_subscription(session_id);
             return Err(AcpError::Transport("pending-requests lock poisoned".into()));
@@ -481,6 +458,101 @@ impl AcpAgentClient {
         }
 
         Ok((id, event_rx))
+    }
+
+    /// Registers a per-session event subscription. Fails with
+    /// [`AcpError::PromptInProgress`] when the session already has a
+    /// subscription (an in-flight prompt turn, or an in-flight
+    /// `session/load` / `session/resume`).
+    fn register_subscription(
+        &self,
+        session_id: &str,
+    ) -> Result<(mpsc::Sender<SessionEvent>, mpsc::Receiver<SessionEvent>), AcpError> {
+        let (event_tx, event_rx) = mpsc::channel::<SessionEvent>();
+        let mut subscriptions = self
+            .subscriptions
+            .lock()
+            .map_err(|_| AcpError::Transport("subscriptions lock poisoned".into()))?;
+        if subscriptions.contains_key(session_id) {
+            return Err(AcpError::PromptInProgress(session_id.to_string()));
+        }
+        subscriptions.insert(session_id.to_string(), event_tx.clone());
+        Ok((event_tx, event_rx))
+    }
+
+    /// Shared setup for `session/load` and `session/resume`: registers the
+    /// per-session subscription, sends the RPC with an empty `mcpServers`
+    /// list, accumulates every `session/update` notification the agent
+    /// replays while answering (wire order), and parses the result.
+    fn session_setup(
+        &self,
+        session_id: &str,
+        method: &str,
+        cwd: Option<&Path>,
+    ) -> Result<SessionSetupResult, AcpError> {
+        self.ensure_open()?;
+        let cwd = absolutise_cwd(cwd)?;
+
+        let (event_tx, event_rx) = self.register_subscription(session_id)?;
+        let id = self.next_id.fetch_add(1, Ordering::SeqCst);
+        let finish = make_finish_callback(event_tx);
+        if let Ok(mut pending) = self.pending.lock() {
+            pending.insert(id, finish);
+        } else {
+            self.remove_subscription(session_id);
+            return Err(AcpError::Transport("pending-requests lock poisoned".into()));
+        }
+
+        let params = json!({ "sessionId": session_id, "cwd": cwd, "mcpServers": [] });
+        if let Err(error) = self.write_request_with_id(id, method, params) {
+            self.remove_pending(id);
+            self.remove_subscription(session_id);
+            return Err(error);
+        }
+
+        // The stream ends when the agent answers the RPC (like a very short
+        // prompt turn). Bound the whole operation by the short-RPC timeout:
+        // agents that replay very long histories may need `set_timeout`
+        // raised accordingly.
+        let deadline = Instant::now() + self.request_timeout;
+        let mut updates: Vec<SessionUpdate> = Vec::new();
+        let response = loop {
+            let remaining = match deadline.checked_duration_since(Instant::now()) {
+                Some(remaining) => remaining,
+                None => {
+                    self.remove_pending(id);
+                    self.remove_subscription(session_id);
+                    return Err(AcpError::Timeout {
+                        method: method.to_string(),
+                        timeout: self.request_timeout,
+                    });
+                }
+            };
+            match event_rx.recv_timeout(remaining) {
+                Ok(SessionEvent::Update(update)) => updates.push(update),
+                Ok(SessionEvent::Finished(Ok(result))) => break result,
+                Ok(SessionEvent::Finished(Err(error))) => {
+                    self.remove_subscription(session_id);
+                    return Err(map_session_error(error, method, session_id));
+                }
+                Err(RecvTimeoutError::Timeout) => {
+                    self.remove_pending(id);
+                    self.remove_subscription(session_id);
+                    return Err(AcpError::Timeout {
+                        method: method.to_string(),
+                        timeout: self.request_timeout,
+                    });
+                }
+                Err(RecvTimeoutError::Disconnected) => {
+                    self.remove_pending(id);
+                    self.remove_subscription(session_id);
+                    return Err(AcpError::Closed);
+                }
+            }
+        };
+
+        self.remove_subscription(session_id);
+        Ok(parse_session_setup_result(&response, session_id, updates))
     }
 
     /// Sends a text prompt to a session (`session/prompt`) and collects the
@@ -581,20 +653,222 @@ impl AcpAgentClient {
     pub fn close_session(&self, session_id: &str) -> Result<CloseSessionResult, AcpError> {
         self.ensure_open()?;
         let params = json!({ "sessionId": session_id });
-        let result =
-            match self.send_request_with_timeout("session/close", params, self.request_timeout) {
-                Ok(_) => CloseSessionResult::AgentAcknowledged,
-                Err(AcpError::JsonRpc { message, .. }) => {
-                    tracing::warn!(target: "airi-acp", "agent refused session/close: {message}");
-                    CloseSessionResult::AgentRefused(message)
-                }
-                Err(other) => {
-                    self.remove_subscription(session_id);
-                    return Err(other);
-                }
-            };
+        let result = match self.send_request_with_timeout(
+            "session/close",
+            params,
+            self.request_timeout,
+        ) {
+            Ok(_) => CloseSessionResult::AgentAcknowledged,
+            Err(AcpError::JsonRpc { message, .. }) => {
+                tracing::warn!(target: "airi-acp", "agent refused session/close: {message}");
+                CloseSessionResult::AgentRefused(message)
+            }
+            Err(AcpError::Unsupported { method }) => {
+                tracing::warn!(target: "airi-acp", "agent refused session/close: `{method}` not supported");
+                CloseSessionResult::AgentRefused(format!("agent does not support `{method}`"))
+            }
+            Err(other) => {
+                self.remove_subscription(session_id);
+                return Err(other);
+            }
+        };
         self.remove_subscription(session_id);
         Ok(result)
+    }
+
+    /// Re-attaches to an existing session (`session/load`).
+    ///
+    /// The agent replays the conversation history as `session/update`
+    /// notifications and then answers the RPC; the replayed updates are
+    /// accumulated and returned in [`SessionSetupResult::updates`], in wire
+    /// order. The session's local routing is registered for the duration of
+    /// the call and removed afterwards — a later [`AcpAgentClient::prompt`]
+    /// re-registers its own subscription.
+    ///
+    /// `cwd` defaults to the process's current directory when `None` and is
+    /// absolutised before sending (the schema requires absolute paths).
+    /// `mcpServers` is sent as `[]` — one outstanding operation per session
+    /// is enforced, exactly like [`AcpAgentClient::prompt`]; a second
+    /// concurrent call (or one concurrent with an in-flight prompt) fails
+    /// with [`AcpError::PromptInProgress`].
+    ///
+    /// # Errors
+    ///
+    /// [`AcpError::Unsupported`] when the agent does not implement
+    /// `session/load` (JSON-RPC `-32601`); [`AcpError::SessionNotFound`] when
+    /// the agent reports the session does not exist (JSON-RPC `-32002`, the
+    /// documented "resource not found" code — ACP has no session-specific
+    /// not-found code); other JSON-RPC errors pass through as
+    /// [`AcpError::JsonRpc`]. Bounded by the short-RPC timeout
+    /// ([`crate::DEFAULT_REQUEST_TIMEOUT`], raisable via
+    /// [`AcpAgentClient::set_timeout`]).
+    pub fn load_session(
+        &self,
+        session_id: &str,
+        cwd: Option<&Path>,
+    ) -> Result<SessionSetupResult, AcpError> {
+        self.session_setup(session_id, "session/load", cwd)
+    }
+
+    /// Resumes an existing session without replaying its history
+    /// (`session/resume`).
+    ///
+    /// Unlike [`AcpAgentClient::load_session`], no conversation replay is
+    /// expected; any `session/update` notifications the agent emits while
+    /// answering are still accumulated and returned (normally empty).
+    ///
+    /// Only available when the agent advertises
+    /// `sessionCapabilities.resume`; the capability is not pre-checked — a
+    /// non-supporting agent answers `-32601` and this returns
+    /// [`AcpError::Unsupported`]. Same error semantics as
+    /// [`AcpAgentClient::load_session`].
+    pub fn resume_session(
+        &self,
+        session_id: &str,
+        cwd: Option<&Path>,
+    ) -> Result<SessionSetupResult, AcpError> {
+        self.session_setup(session_id, "session/resume", cwd)
+    }
+
+    /// Lists the sessions the agent knows about (`session/list`).
+    ///
+    /// Follows the `nextCursor` pagination cursor until the agent stops
+    /// returning one (hard cap: 100 pages — exceeding it fails with
+    /// [`AcpError::Protocol`] rather than looping forever). Entries the
+    /// agent sends that do not parse as `SessionInfo` (no string
+    /// `sessionId`) are skipped rather than failing the whole listing,
+    /// mirroring the schema's skip-invalid-items semantics.
+    ///
+    /// Only available when the agent advertises `sessionCapabilities.list`;
+    /// a non-supporting agent answers `-32601` and this returns
+    /// [`AcpError::Unsupported`]. Other JSON-RPC errors pass through as
+    /// [`AcpError::JsonRpc`].
+    ///
+    /// The schema's optional `cwd` filter and `cursor` parameters are not
+    /// exposed yet; the client always lists everything.
+    pub fn list_sessions(&self) -> Result<Vec<SessionSummary>, AcpError> {
+        const MAX_PAGES: usize = 100;
+        let mut out = Vec::new();
+        let mut cursor: Option<String> = None;
+        for _ in 0..MAX_PAGES {
+            let params = match &cursor {
+                Some(cursor) => json!({ "cursor": cursor }),
+                None => json!({}),
+            };
+            let result =
+                self.send_request_with_timeout("session/list", params, self.request_timeout)?;
+            let sessions = result
+                .get("sessions")
+                .and_then(Value::as_array)
+                .ok_or_else(|| {
+                    AcpError::Protocol("session/list response missing `sessions` array".into())
+                })?;
+            for entry in sessions {
+                if let Some(summary) = parse_session_summary(entry) {
+                    out.push(summary);
+                } else {
+                    tracing::debug!(target: "airi-acp", "skipping unparseable SessionInfo entry in session/list");
+                }
+            }
+            match result.get("nextCursor").and_then(Value::as_str) {
+                Some(next) if !next.is_empty() => cursor = Some(next.to_string()),
+                _ => return Ok(out),
+            }
+        }
+        Err(AcpError::Protocol(
+            "session/list pagination exceeded 100 pages; refusing to loop forever".into(),
+        ))
+    }
+
+    /// Deletes a session (`session/delete`) — best effort.
+    ///
+    /// Mirrors [`AcpAgentClient::close_session`]: local routing for the
+    /// session is removed regardless of the outcome. A normal response
+    /// yields [`DeleteSessionResult::AgentAcknowledged`]; a JSON-RPC error
+    /// other than `-32601`/`-32002` yields [`DeleteSessionResult::AgentRefused`]
+    /// (the session may leak on the agent side). `-32601` (method not
+    /// found) fails with [`AcpError::Unsupported`] and `-32002` (resource
+    /// not found) with [`AcpError::SessionNotFound`]; transport-level
+    /// failures (timeout, EOF) are returned as [`AcpError`] either way.
+    pub fn delete_session(&self, session_id: &str) -> Result<DeleteSessionResult, AcpError> {
+        self.ensure_open()?;
+        let params = json!({ "sessionId": session_id });
+        let result = self.send_request_with_timeout("session/delete", params, self.request_timeout);
+        let result = map_session_not_found(result, session_id);
+        let outcome = match result {
+            Ok(_) => DeleteSessionResult::AgentAcknowledged,
+            Err(AcpError::JsonRpc { message, .. }) => {
+                tracing::warn!(target: "airi-acp", "agent refused session/delete: {message}");
+                DeleteSessionResult::AgentRefused(message)
+            }
+            Err(other) => {
+                self.remove_subscription(session_id);
+                return Err(other);
+            }
+        };
+        self.remove_subscription(session_id);
+        Ok(outcome)
+    }
+
+    /// Sets a session's mode (`session/set_mode`).
+    ///
+    /// Available when the agent reports modes (e.g. via
+    /// [`SessionSetupResult::modes`]); there is no dedicated capability flag.
+    /// A non-supporting agent answers `-32601` and this returns
+    /// [`AcpError::Unsupported`]; `-32002` maps to
+    /// [`AcpError::SessionNotFound`].
+    pub fn set_mode(&self, session_id: &str, mode_id: &str) -> Result<(), AcpError> {
+        self.ensure_open()?;
+        let params = json!({ "sessionId": session_id, "modeId": mode_id });
+        let result =
+            self.send_request_with_timeout("session/set_mode", params, self.request_timeout);
+        map_session_not_found(result, session_id)?;
+        Ok(())
+    }
+
+    /// Sets a session configuration option (`session/set_config_option`).
+    ///
+    /// `value` selects one arm of the schema's union: a string value id
+    /// ([`SessionConfigValue::ValueId`], the default when `type` is absent
+    /// on the wire) or an explicit boolean toggle
+    /// ([`SessionConfigValue::Boolean`]). The response carries the full set
+    /// of configuration options with their current values, kept verbatim.
+    ///
+    /// A non-supporting agent answers `-32601` and this returns
+    /// [`AcpError::Unsupported`]; `-32002` maps to
+    /// [`AcpError::SessionNotFound`].
+    pub fn set_config_option(
+        &self,
+        session_id: &str,
+        config_id: &str,
+        value: &SessionConfigValue,
+    ) -> Result<SetSessionConfigOptionResult, AcpError> {
+        self.ensure_open()?;
+        let params = match value {
+            SessionConfigValue::ValueId(id) => {
+                json!({ "sessionId": session_id, "configId": config_id, "value": id })
+            }
+            SessionConfigValue::Boolean(flag) => {
+                json!({ "sessionId": session_id, "configId": config_id, "type": "boolean", "value": flag })
+            }
+        };
+        let result = map_session_not_found(
+            self.send_request_with_timeout(
+                "session/set_config_option",
+                params,
+                self.request_timeout,
+            ),
+            session_id,
+        )?;
+        let config_options = result
+            .get("configOptions")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        Ok(SetSessionConfigOptionResult {
+            config_options,
+            raw: result,
+        })
     }
 
     /// Kills the agent process and joins the background reader thread.
@@ -638,7 +912,7 @@ impl AcpAgentClient {
         }
 
         match rx.recv_timeout(timeout) {
-            Ok(result) => result,
+            Ok(result) => map_method_not_found(result, method),
             Err(RecvTimeoutError::Timeout) => {
                 self.remove_pending(id);
                 Err(AcpError::Timeout {
@@ -722,6 +996,79 @@ impl Drop for AcpAgentClient {
     }
 }
 
+/// Absolutises `cwd` (the schema requires absolute paths); defaults to the
+/// process's current directory when `None`.
+fn absolutise_cwd(cwd: Option<&Path>) -> Result<String, AcpError> {
+    let cwd = match cwd {
+        Some(path) => std::path::absolute(path)
+            .map_err(|e| AcpError::Protocol(format!("failed to absolutise session cwd: {e}")))?,
+        None => std::env::current_dir()
+            .map_err(|e| AcpError::Protocol(format!("failed to read current directory: {e}")))?,
+    };
+    cwd.to_str()
+        .map(str::to_string)
+        .ok_or_else(|| AcpError::Protocol("session cwd contains non-UTF-8 bytes".into()))
+}
+
+/// Builds the pending-request callback that forwards the agent's response
+/// into the session's event stream as [`SessionEvent::Finished`].
+fn make_finish_callback(event_tx: mpsc::Sender<SessionEvent>) -> PendingCallback {
+    Box::new(move |result: Result<Value, AcpError>| {
+        let _ = event_tx.send(SessionEvent::Finished(result));
+    })
+}
+
+/// Maps a JSON-RPC `-32601` (method not found) error onto
+/// [`AcpError::Unsupported`]. Everything else passes through unchanged.
+fn map_method_not_found(result: Result<Value, AcpError>, method: &str) -> Result<Value, AcpError> {
+    match result {
+        Err(AcpError::JsonRpc {
+            code: JSONRPC_METHOD_NOT_FOUND,
+            ..
+        }) => Err(AcpError::Unsupported {
+            method: method.to_string(),
+        }),
+        other => other,
+    }
+}
+
+/// Maps a JSON-RPC `-32002` (resource not found) error onto
+/// [`AcpError::SessionNotFound`]. Everything else passes through unchanged
+/// (`-32601` has already been mapped to [`AcpError::Unsupported`] by the
+/// time results reach here, either by `send_request_with_timeout` or by
+/// `map_session_error`).
+fn map_session_not_found(
+    result: Result<Value, AcpError>,
+    session_id: &str,
+) -> Result<Value, AcpError> {
+    match result {
+        Err(AcpError::JsonRpc {
+            code: JSONRPC_RESOURCE_NOT_FOUND,
+            ..
+        }) => Err(AcpError::SessionNotFound(session_id.to_string())),
+        other => other,
+    }
+}
+
+/// Applies both session-error mappings for the callback-based RPCs
+/// (`session/load`, `session/resume`), whose responses bypass
+/// [`AcpAgentClient::send_request_with_timeout`].
+fn map_session_error(error: AcpError, method: &str, session_id: &str) -> AcpError {
+    match error {
+        AcpError::JsonRpc {
+            code: JSONRPC_METHOD_NOT_FOUND,
+            ..
+        } => AcpError::Unsupported {
+            method: method.to_string(),
+        },
+        AcpError::JsonRpc {
+            code: JSONRPC_RESOURCE_NOT_FOUND,
+            ..
+        } => AcpError::SessionNotFound(session_id.to_string()),
+        other => other,
+    }
+}
+
 /// Parses the `result` object of the `initialize` response, leniently.
 fn parse_initialize_result(result: &Value) -> InitializeResult {
     let protocol_version = result
@@ -799,6 +1146,98 @@ fn capabilities_present(value: &Value, key: &str) -> bool {
     value
         .get(key)
         .is_some_and(|v| !v.is_null() && v != &Value::Bool(false))
+}
+
+/// Parses one `SessionInfo` entry from `session/list`, leniently. Returns
+/// `None` when `sessionId` is missing or not a string (the schema requires
+/// it); callers skip such entries.
+fn parse_session_summary(value: &Value) -> Option<SessionSummary> {
+    let session_id = value.get("sessionId").and_then(Value::as_str)?.to_string();
+    let additional_directories = value
+        .get("additionalDirectories")
+        .and_then(Value::as_array)
+        .map(|dirs| {
+            dirs.iter()
+                .filter_map(Value::as_str)
+                .map(str::to_string)
+                .collect()
+        })
+        .unwrap_or_default();
+    Some(SessionSummary {
+        session_id,
+        cwd: value
+            .get("cwd")
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string(),
+        title: value
+            .get("title")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        updated_at: value
+            .get("updatedAt")
+            .and_then(Value::as_str)
+            .map(str::to_string),
+        additional_directories,
+        raw: value.clone(),
+    })
+}
+
+/// Parses a `SessionModeState` object (`modes` in `session/load` /
+/// `session/resume` responses), leniently. Returns `None` when the
+/// `currentModeId` string is missing.
+fn parse_session_mode_state(value: &Value) -> Option<SessionModeState> {
+    let current_mode_id = value
+        .get("currentModeId")
+        .and_then(Value::as_str)?
+        .to_string();
+    let available_modes = value
+        .get("availableModes")
+        .and_then(Value::as_array)
+        .cloned()
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|mode| {
+            Some(SessionMode {
+                id: mode.get("id").and_then(Value::as_str)?.to_string(),
+                name: mode
+                    .get("name")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string(),
+                description: mode
+                    .get("description")
+                    .and_then(Value::as_str)
+                    .map(str::to_string),
+            })
+        })
+        .collect();
+    Some(SessionModeState {
+        current_mode_id,
+        available_modes,
+    })
+}
+
+/// Builds the [`SessionSetupResult`] returned by `session/load` and
+/// `session/resume` from the raw response and the updates accumulated while
+/// waiting for it.
+fn parse_session_setup_result(
+    response: &Value,
+    session_id: &str,
+    updates: Vec<SessionUpdate>,
+) -> SessionSetupResult {
+    let modes = response.get("modes").and_then(parse_session_mode_state);
+    let config_options = response
+        .get("configOptions")
+        .and_then(Value::as_array)
+        .cloned();
+    SessionSetupResult {
+        session_id: session_id.to_string(),
+        modes,
+        config_options,
+        updates,
+        raw: response.clone(),
+    }
 }
 
 /// Parses a `session/update` notification's `update` object, leniently.

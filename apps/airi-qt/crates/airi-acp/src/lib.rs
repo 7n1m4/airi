@@ -23,6 +23,17 @@
 //! * [`AcpAgentClient::cancel`] sends the `session/cancel` notification;
 //!   [`AcpAgentClient::close_session`] sends `session/close` and always cleans
 //!   up local routing, reporting whether the agent acknowledged.
+//! * [`AcpAgentClient::load_session`] re-attaches to an existing session
+//!   (`session/load`), accumulating the `session/update` notifications the
+//!   agent replays as history; [`AcpAgentClient::resume_session`] does the
+//!   same without a replay (`session/resume`); [`AcpAgentClient::list_sessions`]
+//!   enumerates sessions (`session/list`, cursor-paginated);
+//!   [`AcpAgentClient::delete_session`] removes one (`session/delete`,
+//!   best-effort); [`AcpAgentClient::set_mode`] and
+//!   [`AcpAgentClient::set_config_option`] adjust session behaviour. SDKs and
+//!   agents that do not implement these answer `-32601`; this crate maps
+//!   that onto [`AcpError::Unsupported`] (never a hang or a panic), and the
+//!   documented `-32002` "resource not found" onto [`AcpError::SessionNotFound`].
 //! * `session/request_permission` requests from the agent are answered from a
 //!   configurable [`PermissionPolicy`]: `auto-read` allows read-like tool
 //!   calls only; `auto-all` allows everything; `prompt` **enqueues** the
@@ -39,9 +50,9 @@
 //!   them. Server-initiated requests other than `session/request_permission`
 //!   are answered with JSON-RPC `-32601`.
 //! * MCP servers in `session/new` (`mcpServers` is sent as `[]`).
-//! * `session/load`, `session/list`, `session/delete`, `session/resume`,
-//!   `session/set_mode`, `session/set_config_option`, `authenticate`,
-//!   `logout`, elicitation, and the unstable v2 protocol.
+//! * `authenticate`, `logout`, elicitation, `$/cancel_request`, the
+//!   `cwd` filter and cursor parameters of `session/list`, and the unstable
+//!   v2 protocol.
 //! * The `prompt` policy no longer answers `session/request_permission`
 //!   itself — it hands the request to the embedder. Embedders without a UI
 //!   should drain [`AcpAgentClient::permission_requests`] and answer with
@@ -59,11 +70,13 @@ mod permission;
 mod types;
 
 pub use client::{AcpAgentClient, SessionEvent};
-pub use error::{AcpError, JSONRPC_METHOD_NOT_FOUND};
+pub use error::{AcpError, JSONRPC_METHOD_NOT_FOUND, JSONRPC_RESOURCE_NOT_FOUND};
 pub use types::{
-    AgentCapabilities, CloseSessionResult, ContentBlock, ContentChunk, Implementation,
-    InitializeResult, McpCapabilities, PermissionOption, PermissionPolicy, PermissionRequest,
-    PromptCapabilities, PromptDecision, PromptResult, SessionCapabilities, SessionId,
-    SessionUpdate, StopReason, ToolCall, ToolCallStatus, ToolCallUpdate, ToolKind,
-    ACP_PROTOCOL_VERSION, CLIENT_NAME, DEFAULT_PROMPT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT,
+    AgentCapabilities, CloseSessionResult, ContentBlock, ContentChunk, DeleteSessionResult,
+    Implementation, InitializeResult, McpCapabilities, PermissionOption, PermissionPolicy,
+    PermissionRequest, PromptCapabilities, PromptDecision, PromptResult, SessionCapabilities,
+    SessionConfigValue, SessionId, SessionMode, SessionModeState, SessionSetupResult,
+    SessionSummary, SessionUpdate, SetSessionConfigOptionResult, StopReason, ToolCall,
+    ToolCallStatus, ToolCallUpdate, ToolKind, ACP_PROTOCOL_VERSION, CLIENT_NAME,
+    DEFAULT_PROMPT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT,
 };

@@ -90,6 +90,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "airi-discord"
+version = "0.1.0"
+dependencies = [
+ "mockito",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror 1.0.69",
+ "tracing",
+]
+
+[[package]]
 name = "airi-i18n"
 version = "0.1.0"
 dependencies = [
@@ -157,6 +169,8 @@ dependencies = [
 name = "airi-mcp"
 version = "0.1.0"
 dependencies = [
+ "mockito",
+ "reqwest",
  "serde",
  "serde_json",
  "thiserror 1.0.69",
@@ -171,6 +185,7 @@ dependencies = [
  "serde_json",
  "thiserror 1.0.69",
  "tracing",
+ "zip",
 ]
 
 [[package]]
@@ -277,6 +292,18 @@ dependencies = [
  "tokio-tungstenite",
  "tracing",
  "whisper-rs",
+]
+
+[[package]]
+name = "airi-sync"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 1.0.69",
+ "tracing",
 ]
 
 [[package]]

@@ -11,7 +11,8 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use airi_acp::{
-    AcpAgentClient, CloseSessionResult, PermissionPolicy, PromptDecision, SessionUpdate, StopReason,
+    AcpAgentClient, AcpError, CloseSessionResult, DeleteSessionResult, PermissionPolicy,
+    PromptDecision, SessionConfigValue, SessionUpdate, StopReason,
 };
 
 /// Modes the mock agent understands (passed as argv[1]):
@@ -26,6 +27,15 @@ use airi_acp::{
 ///   is echoed back as the agent message so the test can assert it.
 /// * `perm_write` — like `perm_read`, but the tool call is write-like
 ///   (`kind: "edit"`, title "Edit file").
+/// * `sessions` — implements the session-management RPCs: `session/load`
+///   replays two `agent_message_chunk` notifications ("Loaded ", "history")
+///   then answers with modes + config options (`sess-missing` gets `-32002`);
+///   `session/resume` answers with modes + config options, no replay;
+///   `session/list` paginates two canned sessions (`nextCursor: "page2"`,
+///   then `sess-mock-2`); `session/delete` answers `{}` (`sess-missing` gets
+///   `-32002`); `session/set_mode` answers `{}`; `session/set_config_option`
+///   answers with one updated config option. `basic` doubles as the
+///   "capability not advertised" agent — its catch-all answers `-32601`.
 const MOCK_AGENT: &str = r#"
 import sys
 import json
@@ -54,6 +64,9 @@ while True:
     mid = msg.get("id")
 
     if method == "initialize":
+        session_caps = {"close": {}}
+        if mode == "sessions":
+            session_caps = {"list": {}, "delete": {}, "resume": {}, "close": {}, "additionalDirectories": {}}
         send({
             "jsonrpc": "2.0",
             "id": mid,
@@ -63,7 +76,7 @@ while True:
                     "loadSession": True,
                     "promptCapabilities": {"image": False, "audio": False, "embeddedContext": False},
                     "mcpCapabilities": {"http": True, "sse": False},
-                    "sessionCapabilities": {"close": {}},
+                    "sessionCapabilities": session_caps,
                 },
                 "authMethods": [],
                 "agentInfo": {"name": "mock-agent", "version": "0.0.1"},
@@ -113,6 +126,66 @@ while True:
         pass  # notification: no response
     elif method == "session/close":
         send({"jsonrpc": "2.0", "id": mid, "result": {}})
+    elif method == "session/load" and mode == "sessions":
+        sid = msg["params"]["sessionId"]
+        if sid == "sess-missing":
+            send({"jsonrpc": "2.0", "id": mid, "error": {"code": -32002, "message": "Resource not found: sess-missing"}})
+        else:
+            for chunk in ["Loaded ", "history"]:
+                send({
+                    "jsonrpc": "2.0",
+                    "method": "session/update",
+                    "params": {"sessionId": sid, "update": {
+                        "sessionUpdate": "agent_message_chunk",
+                        "content": {"type": "text", "text": chunk},
+                    }},
+                })
+            send({"jsonrpc": "2.0", "id": mid, "result": {
+                "modes": {"currentModeId": "default", "availableModes": [
+                    {"id": "default", "name": "Default"},
+                    {"id": "plan", "name": "Plan", "description": "Planning mode"},
+                ]},
+                "configOptions": [
+                    {"id": "model", "name": "Model", "type": "select", "currentValue": "fast",
+                     "options": [{"value": "fast", "name": "Fast"}]},
+                ],
+            }})
+    elif method == "session/resume" and mode == "sessions":
+        sid = msg["params"]["sessionId"]
+        if sid == "sess-missing":
+            send({"jsonrpc": "2.0", "id": mid, "error": {"code": -32002, "message": "Resource not found: sess-missing"}})
+        else:
+            send({"jsonrpc": "2.0", "id": mid, "result": {
+                "modes": {"currentModeId": "default", "availableModes": [
+                    {"id": "default", "name": "Default"},
+                ]},
+                "configOptions": [],
+            }})
+    elif method == "session/list" and mode == "sessions":
+        cursor = (msg.get("params") or {}).get("cursor")
+        if cursor == "page2":
+            send({"jsonrpc": "2.0", "id": mid, "result": {"sessions": [
+                {"sessionId": "sess-mock-2", "cwd": "/work",
+                 "additionalDirectories": ["/work/extra"]},
+            ]}})
+        else:
+            send({"jsonrpc": "2.0", "id": mid, "result": {"nextCursor": "page2", "sessions": [
+                {"sessionId": "sess-mock-1", "cwd": "/tmp", "title": "Mock session one",
+                 "updatedAt": "2026-11-01T00:00:00Z"},
+            ]}})
+    elif method == "session/delete" and mode == "sessions":
+        sid = msg["params"]["sessionId"]
+        if sid == "sess-missing":
+            send({"jsonrpc": "2.0", "id": mid, "error": {"code": -32002, "message": "Resource not found: sess-missing"}})
+        else:
+            send({"jsonrpc": "2.0", "id": mid, "result": {}})
+    elif method == "session/set_mode" and mode == "sessions":
+        send({"jsonrpc": "2.0", "id": mid, "result": {}})
+    elif method == "session/set_config_option" and mode == "sessions":
+        send({"jsonrpc": "2.0", "id": mid, "result": {"configOptions": [
+            {"id": "model", "name": "Model", "type": "select", "currentValue": "thorough",
+             "options": [{"value": "thorough", "name": "Thorough"}]},
+        ]}})
     elif mid is not None:
         send({"jsonrpc": "2.0", "id": mid, "error": {"code": -32601, "message": "mock: unsupported method"}})
 "#;
@@ -393,4 +466,194 @@ fn cancel_and_close_session_round_trip() {
         .close_session(&session)
         .expect("close_session failed");
     assert_eq!(closed, CloseSessionResult::AgentAcknowledged);
+}
+
+#[test]
+fn load_session_accumulates_replayed_updates() {
+    require_python3!();
+    let client = spawn_mock("sessions", PermissionPolicy::Prompt);
+    client.initialize().expect("initialize failed");
+
+    let result = client
+        .load_session("sess-mock-1", Some(std::path::Path::new("/tmp")))
+        .expect("load_session failed");
+    assert_eq!(result.session_id, "sess-mock-1");
+    assert_eq!(result.updates.len(), 2);
+    let text: String = result
+        .updates
+        .iter()
+        .filter_map(SessionUpdate::agent_text)
+        .collect();
+    assert_eq!(text, "Loaded history");
+    assert!(result
+        .updates
+        .iter()
+        .all(|u| matches!(u, SessionUpdate::AgentMessageChunk(_))));
+    let modes = result
+        .modes
+        .as_ref()
+        .expect("modes missing from load result");
+    assert_eq!(modes.current_mode_id, "default");
+    assert_eq!(modes.available_modes.len(), 2);
+    assert_eq!(modes.available_modes[1].id, "plan");
+    assert_eq!(modes.available_modes[1].name, "Plan");
+    assert_eq!(
+        modes.available_modes[1].description.as_deref(),
+        Some("Planning mode")
+    );
+    let config_options = result
+        .config_options
+        .as_ref()
+        .expect("configOptions missing from load result");
+    assert_eq!(config_options.len(), 1);
+    assert_eq!(config_options[0]["id"], "model");
+}
+
+#[test]
+fn load_session_reports_missing_session_as_typed_not_found() {
+    require_python3!();
+    let client = spawn_mock("sessions", PermissionPolicy::Prompt);
+    client.initialize().expect("initialize failed");
+
+    let error = client
+        .load_session("sess-missing", Some(std::path::Path::new("/tmp")))
+        .expect_err("loading a missing session must fail");
+    assert!(matches!(error, AcpError::SessionNotFound(id) if id == "sess-missing"));
+}
+
+#[test]
+fn resume_session_returns_setup_state_without_replay() {
+    require_python3!();
+    let client = spawn_mock("sessions", PermissionPolicy::Prompt);
+    client.initialize().expect("initialize failed");
+
+    let result = client
+        .resume_session("sess-mock-1", Some(std::path::Path::new("/tmp")))
+        .expect("resume_session failed");
+    assert_eq!(result.session_id, "sess-mock-1");
+    assert!(result.updates.is_empty(), "resume does not replay history");
+    let modes = result
+        .modes
+        .as_ref()
+        .expect("modes missing from resume result");
+    assert_eq!(modes.current_mode_id, "default");
+    assert_eq!(modes.available_modes.len(), 1);
+}
+
+#[test]
+fn list_sessions_parses_and_follows_pagination() {
+    require_python3!();
+    let client = spawn_mock("sessions", PermissionPolicy::Prompt);
+    client.initialize().expect("initialize failed");
+
+    let sessions = client.list_sessions().expect("list_sessions failed");
+    assert_eq!(sessions.len(), 2, "expected both pages of canned sessions");
+    assert_eq!(sessions[0].session_id, "sess-mock-1");
+    assert_eq!(sessions[0].cwd, "/tmp");
+    assert_eq!(sessions[0].title.as_deref(), Some("Mock session one"));
+    assert_eq!(
+        sessions[0].updated_at.as_deref(),
+        Some("2026-11-01T00:00:00Z")
+    );
+    assert!(sessions[0].additional_directories.is_empty());
+    assert_eq!(sessions[1].session_id, "sess-mock-2");
+    assert_eq!(sessions[1].cwd, "/work");
+    assert_eq!(sessions[1].title, None);
+    assert_eq!(sessions[1].updated_at, None);
+    assert_eq!(sessions[1].additional_directories, ["/work/extra"]);
+}
+
+#[test]
+fn delete_session_acknowledges() {
+    require_python3!();
+    let client = spawn_mock("sessions", PermissionPolicy::Prompt);
+    client.initialize().expect("initialize failed");
+
+    let outcome = client
+        .delete_session("sess-mock-1")
+        .expect("delete_session failed");
+    assert_eq!(outcome, DeleteSessionResult::AgentAcknowledged);
+}
+
+#[test]
+fn delete_session_reports_missing_session_as_typed_not_found() {
+    require_python3!();
+    let client = spawn_mock("sessions", PermissionPolicy::Prompt);
+    client.initialize().expect("initialize failed");
+
+    let error = client
+        .delete_session("sess-missing")
+        .expect_err("deleting a missing session must fail");
+    assert!(matches!(error, AcpError::SessionNotFound(id) if id == "sess-missing"));
+}
+
+#[test]
+fn set_mode_and_set_config_option_round_trip() {
+    require_python3!();
+    let client = spawn_mock("sessions", PermissionPolicy::Prompt);
+    client.initialize().expect("initialize failed");
+
+    client
+        .set_mode("sess-mock-1", "plan")
+        .expect("set_mode failed");
+
+    let result = client
+        .set_config_option(
+            "sess-mock-1",
+            "model",
+            &SessionConfigValue::ValueId("thorough".to_string()),
+        )
+        .expect("set_config_option failed");
+    assert_eq!(result.config_options.len(), 1);
+    assert_eq!(result.config_options[0]["currentValue"], "thorough");
+
+    let result = client
+        .set_config_option("sess-mock-1", "fast", &SessionConfigValue::Boolean(true))
+        .expect("set_config_option (boolean) failed");
+    assert_eq!(result.config_options.len(), 1);
+}
+
+#[test]
+fn unsupported_agent_fails_with_typed_error_no_hang() {
+    require_python3!();
+    // The `basic` mock has a catch-all that answers -32601 for anything it
+    // does not implement.
+    let client = spawn_mock("basic", PermissionPolicy::Prompt);
+    client.initialize().expect("initialize failed");
+
+    let error = client
+        .load_session("sess-mock-1", Some(std::path::Path::new("/tmp")))
+        .expect_err("load_session must fail on an agent without the capability");
+    assert!(matches!(error, AcpError::Unsupported { ref method } if method == "session/load"));
+
+    let error = client
+        .resume_session("sess-mock-1", Some(std::path::Path::new("/tmp")))
+        .expect_err("resume_session must fail on an agent without the capability");
+    assert!(matches!(error, AcpError::Unsupported { ref method } if method == "session/resume"));
+
+    let error = client
+        .list_sessions()
+        .expect_err("list_sessions must fail on an agent without the capability");
+    assert!(matches!(error, AcpError::Unsupported { ref method } if method == "session/list"));
+
+    let error = client
+        .delete_session("sess-mock-1")
+        .expect_err("delete_session must fail on an agent without the capability");
+    assert!(matches!(error, AcpError::Unsupported { ref method } if method == "session/delete"));
+
+    let error = client
+        .set_mode("sess-mock-1", "plan")
+        .expect_err("set_mode must fail on an agent without the capability");
+    assert!(matches!(error, AcpError::Unsupported { ref method } if method == "session/set_mode"));
+
+    let error = client
+        .set_config_option(
+            "sess-mock-1",
+            "model",
+            &SessionConfigValue::ValueId("fast".to_string()),
+        )
+        .expect_err("set_config_option must fail on an agent without the capability");
+    assert!(
+        matches!(error, AcpError::Unsupported { ref method } if method == "session/set_config_option")
+    );
 }

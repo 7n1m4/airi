@@ -20,6 +20,11 @@ pub const MAX_BONES: usize = 4_096;
 pub const MAX_IK_LINKS: usize = 256;
 /// Maximum number of additional UV sets accepted (spec default is 4).
 pub const MAX_ADDITIONAL_UV: usize = 16;
+/// Maximum number of morphs accepted.
+pub const MAX_MORPHS: usize = 4_096;
+/// Maximum number of offsets per morph accepted (a full-model vertex morph
+/// can legitimately carry tens of thousands).
+pub const MAX_MORPH_OFFSETS: usize = 5_000_000;
 
 /// String encoding flag stored in the PMX header.
 ///
@@ -271,13 +276,137 @@ pub mod bone_flags {
     pub const EXTERNAL_PARENT: u16 = 0x2000;
 }
 
+/// PMX morph type byte values as stored in the file.
+pub mod morph_types {
+    /// Group morph — a weighted sum of member morphs.
+    pub const GROUP: u8 = 0;
+    /// Vertex morph — per-vertex position offsets.
+    pub const VERTEX: u8 = 1;
+    /// Bone morph — per-bone position/rotation offsets.
+    pub const BONE: u8 = 2;
+    /// UV morph — per-vertex UV offset (vec4).
+    pub const UV: u8 = 3;
+    /// Additional-UV morph 1 — per-vertex offset (vec4).
+    pub const ADDITIONAL_UV_1: u8 = 4;
+    /// Additional-UV morph 2 — per-vertex offset (vec4).
+    pub const ADDITIONAL_UV_2: u8 = 5;
+    /// Additional-UV morph 3 — per-vertex offset (vec4).
+    pub const ADDITIONAL_UV_3: u8 = 6;
+    /// Additional-UV morph 4 — per-vertex offset (vec4).
+    pub const ADDITIONAL_UV_4: u8 = 7;
+    /// Material morph — per-material parameter offsets.
+    pub const MATERIAL: u8 = 8;
+    /// Flip morph.
+    pub const FLIP: u8 = 9;
+    /// Display-frame morph.
+    pub const DISPLAY_FRAME: u8 = 10;
+}
+
+/// One offset entry inside an [`MmdMorph`].
+///
+/// The variant matches the morph's `morph_type` byte (see [`morph_types`]).
+/// Vertex and UV morph indices are **unsigned** on the wire; the others are
+/// signed (`-1` = "no reference", kept as `-1`).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum MmdMorphOffset {
+    /// Group member reference (`morph_types::GROUP`).
+    Group {
+        /// Index of the member morph (unsigned value as stored; never `-1`).
+        morph_index: i32,
+        /// Weight of the member morph (`0..=1` typical, not enforced).
+        weight: f32,
+    },
+    /// Per-vertex position offset (`morph_types::VERTEX`).
+    Vertex {
+        /// Vertex index (unsigned on the wire).
+        vertex_index: u32,
+        /// Position offset added to the base position.
+        offset: [f32; 3],
+    },
+    /// Per-bone position/rotation offset (`morph_types::BONE`).
+    Bone {
+        /// Bone index, or `-1` for none.
+        bone_index: i32,
+        /// Position offset.
+        position: [f32; 3],
+        /// Rotation offset (quaternion, as stored: x, y, z, w).
+        rotation: [f32; 4],
+    },
+    /// Per-vertex UV offset (`morph_types::UV`).
+    Uv {
+        /// Vertex index (unsigned on the wire).
+        vertex_index: u32,
+        /// UV offset (vec4, as stored).
+        offset: [f32; 4],
+    },
+    /// Per-vertex additional-UV offset (`morph_types::ADDITIONAL_UV_1..=4`).
+    ///
+    /// The on-wire element layout (vertex index + vec4 offset) is the same as
+    /// [`MmdMorphOffset::Uv`]; the additional-UV channel is carried in
+    /// `uv_index` (1..=4). Layout verified against the PMX spec, not against a
+    /// real model — three-stdlib does not decode these elements.
+    AdditionalUv {
+        /// Which additional-UV channel (1..=4) this morph edits.
+        uv_index: u8,
+        /// Vertex index (unsigned on the wire).
+        vertex_index: u32,
+        /// Offset for the additional-UV channel (vec4).
+        offset: [f32; 4],
+    },
+    /// Per-material parameter offset (`morph_types::MATERIAL`).
+    ///
+    /// `material_index == -1` means "all materials" per the PMX spec.
+    Material {
+        /// Material index, or `-1` for all materials.
+        material_index: i32,
+        /// Offset mode: 0 = add, 1 = multiply.
+        mode: u8,
+        /// Diffuse RGBA offset/factor.
+        diffuse: [f32; 4],
+        /// Specular RGB offset/factor.
+        specular: [f32; 3],
+        /// Specular strength offset/factor.
+        shininess: f32,
+        /// Ambient RGB offset/factor.
+        ambient: [f32; 3],
+        /// Edge color RGBA offset/factor.
+        edge_color: [f32; 4],
+        /// Edge size offset/factor.
+        edge_size: f32,
+        /// Texture color offset/factor.
+        texture_color: [f32; 4],
+        /// Sphere-texture (environment) color offset/factor.
+        sphere_texture_color: [f32; 4],
+        /// Toon color offset/factor.
+        toon_color: [f32; 4],
+    },
+}
+
+/// A PMX morph record.
+///
+/// `panel` is stored raw (PMX editor display-panel byte; meaning varies by
+/// tool). `morph_type` is stored raw and matches the offset variant tags
+/// (see [`morph_types`]).
+#[derive(Debug, Clone, PartialEq)]
+pub struct MmdMorph {
+    /// Local (authoring-language) morph name.
+    pub name: String,
+    /// Global (English) morph name, may be empty.
+    pub name_global: String,
+    /// Display panel byte (0 = system, 1 = eyebrow, 2 = eye, 3 = mouth,
+    /// 4 = other; tools vary — stored raw, not interpreted).
+    pub panel: u8,
+    /// Morph type byte (see [`morph_types`]).
+    pub morph_type: u8,
+    /// Offsets in file order.
+    pub offsets: Vec<MmdMorphOffset>,
+}
+
 /// A fully decoded PMX 2.0 model, limited to the sections AIRI consumes.
 ///
-/// Sections after bones (morphs, display frames, rigid bodies, joints) are
-/// **not** decoded: a non-zero morph count yields
-/// [`MmdError::UnsupportedFeature`], and frame/physics sections are never
-/// interpreted. Zero-morph models parse successfully and simply carry no
-/// morph information.
+/// Sections after morphs (display frames, rigid bodies, joints) are **not**
+/// decoded — the parser stops after the morphs section and ignores any bytes
+/// after it (a file that ends there is equally valid).
 #[derive(Debug, Clone, PartialEq)]
 pub struct MmdModel {
     /// Local (authoring-language) model name.
@@ -302,6 +431,11 @@ pub struct MmdModel {
     pub materials: Vec<MmdMaterial>,
     /// Bones in file order.
     pub bones: Vec<MmdBone>,
+    /// Morphs in file order.
+    ///
+    /// Display frames, rigid bodies and joints (everything after morphs) are
+    /// never interpreted.
+    pub morphs: Vec<MmdMorph>,
 }
 
 impl MmdModel {

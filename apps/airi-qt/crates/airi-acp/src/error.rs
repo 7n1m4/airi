@@ -9,6 +9,11 @@ use thiserror::Error;
 /// JSON-RPC 2.0 error code for "method not found".
 pub const JSONRPC_METHOD_NOT_FOUND: i64 = -32601;
 
+/// ACP-specific error code for "resource not found" (see `ErrorCode` in the
+/// SDK schema). ACP has no session-specific not-found code; session-scoped
+/// RPCs treat this as [`AcpError::SessionNotFound`].
+pub const JSONRPC_RESOURCE_NOT_FOUND: i64 = -32002;
+
 /// Errors returned by [`crate::AcpAgentClient`].
 #[derive(Debug, Error)]
 pub enum AcpError {
@@ -27,6 +32,24 @@ pub enum AcpError {
     /// error instead of blocking until the timeout.
     #[error("ACP transport closed: the agent closed its output stream or exited")]
     Closed,
+
+    /// The agent answered with a JSON-RPC error for a method it does not
+    /// implement (`-32601` method not found). Distinct from
+    /// [`AcpError::JsonRpc`] so callers can feature-detect agent support
+    /// without string matching.
+    #[error("ACP agent does not support `{method}` (method not found, JSON-RPC -32601)")]
+    Unsupported {
+        /// The method the agent did not implement.
+        method: String,
+    },
+
+    /// The agent reported that the session does not exist — ACP has no
+    /// session-specific not-found code, so session-scoped RPCs map the
+    /// documented `-32002` "resource not found" (`ErrorCode` in the SDK
+    /// schema) onto this variant. The inner string is the session id the
+    /// caller asked about.
+    #[error("session not found: {0}")]
+    SessionNotFound(String),
 
     /// The agent answered a request with a JSON-RPC 2.0 error object.
     #[error("JSON-RPC error {code}: {message}")]
@@ -70,13 +93,15 @@ pub enum AcpError {
 
 impl AcpError {
     /// Returns `true` for a JSON-RPC `-32601` (method not found) error.
+    /// Recognises both the raw [`AcpError::JsonRpc`] form and the mapped
+    /// [`AcpError::Unsupported`] form.
     pub fn is_method_not_found(&self) -> bool {
         matches!(
             self,
             AcpError::JsonRpc {
                 code: JSONRPC_METHOD_NOT_FOUND,
                 ..
-            }
+            } | AcpError::Unsupported { .. }
         )
     }
 }

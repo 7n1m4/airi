@@ -10,88 +10,8 @@
 
 use airi_mmd::*;
 
-const ENC_UTF16LE: u8 = 0;
-const ENC_UTF8: u8 = 1;
-
-fn w_f32(buf: &mut Vec<u8>, v: f32) {
-    buf.extend_from_slice(&v.to_le_bytes());
-}
-
-fn w_u32(buf: &mut Vec<u8>, v: u32) {
-    buf.extend_from_slice(&v.to_le_bytes());
-}
-
-fn w_i32(buf: &mut Vec<u8>, v: i32) {
-    buf.extend_from_slice(&v.to_le_bytes());
-}
-
-fn w_u8(buf: &mut Vec<u8>, v: u8) {
-    buf.push(v);
-}
-
-/// Write a signed index of the given PMX index size (1, 2 or 4 bytes).
-fn w_index_signed(buf: &mut Vec<u8>, size: u8, v: i32) {
-    match size {
-        1 => w_u8(buf, v as i8 as u8),
-        2 => buf.extend_from_slice(&(v as i16).to_le_bytes()),
-        4 => buf.extend_from_slice(&v.to_le_bytes()),
-        other => panic!("bad index size {other}"),
-    }
-}
-
-/// Write an unsigned face index of the given PMX index size.
-fn w_index_unsigned(buf: &mut Vec<u8>, size: u8, v: u32) {
-    match size {
-        1 => w_u8(buf, v as u8),
-        2 => buf.extend_from_slice(&(v as u16).to_le_bytes()),
-        4 => w_u32(buf, v),
-        other => panic!("bad index size {other}"),
-    }
-}
-
-/// Header with vertex/texture/material/bone/morph/rigidbody index sizes
-/// [2, 1, 1, 2, 1, 1] — realistic for a small PMX 2.0 model.
-fn base_header(enc: u8, additional_uv: u8) -> Vec<u8> {
-    let mut buf = Vec::new();
-    buf.extend_from_slice(b"PMX ");
-    w_f32(&mut buf, 2.0);
-    w_u8(&mut buf, 8); // header size
-    w_u8(&mut buf, enc);
-    w_u8(&mut buf, additional_uv);
-    buf.extend_from_slice(&[2, 1, 1, 2, 1, 1]);
-    buf
-}
-
-fn w_str(buf: &mut Vec<u8>, enc: u8, s: &str) {
-    match enc {
-        ENC_UTF16LE => {
-            let units: Vec<u16> = s.encode_utf16().collect();
-            w_i32(buf, (units.len() * 2) as i32);
-            for unit in units {
-                buf.extend_from_slice(&unit.to_le_bytes());
-            }
-        }
-        _ => {
-            w_i32(buf, s.len() as i32);
-            buf.extend_from_slice(s.as_bytes());
-        }
-    }
-}
-
-/// Additional UV sets are vec4 in the file; emit `count` of them with
-/// sentinel values so a parser that misreads them trips.
-fn w_auvs(buf: &mut Vec<u8>, count: u8) {
-    for i in 0..(count as u32 * 4) {
-        w_f32(buf, 100.0 + i as f32);
-    }
-}
-
-fn w_names(buf: &mut Vec<u8>, enc: u8) {
-    w_str(buf, enc, "テストモデル");
-    w_str(buf, enc, "test-model");
-    w_str(buf, enc, "コメント");
-    w_str(buf, enc, "comment");
-}
+mod common;
+use common::*;
 
 fn w_vertex_bdef2(buf: &mut Vec<u8>, additional_uv: u8, i0: i32, i1: i32, w: f32) {
     w_f32(buf, 1.0);
@@ -298,14 +218,6 @@ fn build_model(enc: u8, additional_uv: u8, morph_count: u32) -> Vec<u8> {
     w_names(&mut buf, enc);
     w_standard_sections(&mut buf, enc, additional_uv, 2, morph_count);
     buf
-}
-
-fn w_u16(buf: &mut Vec<u8>, v: u16) {
-    buf.extend_from_slice(&v.to_le_bytes());
-}
-
-fn assert_f32(a: f32, b: f32) {
-    assert!((a - b).abs() < 1e-6, "expected {a} ≈ {b}");
 }
 
 #[test]
@@ -522,12 +434,15 @@ fn unsupported_deform_type_returns_typed_error() {
 }
 
 #[test]
-fn morphs_present_aborts_parse() {
-    let bytes = build_model(ENC_UTF8, 0, 2); // two morphs declared
+fn morphs_declared_but_absent_returns_truncated() {
+    // Two morphs declared but not written — must surface as a typed
+    // Truncated error (morphs are decoded since the morph-parser landed;
+    // the old UnsupportedFeature("morphs") behavior is gone).
+    let bytes = build_model(ENC_UTF8, 0, 2); // two morphs declared, none written
     let err = from_bytes(&bytes).unwrap_err();
     assert!(
-        matches!(err, MmdError::UnsupportedFeature("morphs")),
-        "expected UnsupportedFeature(\"morphs\"), got {err:?}"
+        matches!(err, MmdError::Truncated { at: "morphs" }),
+        "expected Truncated at \"morphs\", got {err:?}"
     );
 }
 

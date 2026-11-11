@@ -34,10 +34,13 @@
 //!   `{"type": "transport:connection:heartbeat", "data": {"kind": "pong", "message": "💛", "at": <ms>}}`.
 //!   A heartbeat with a non-`ping` kind is acknowledged silently (as in the
 //!   server-runtime, only pings get pongs).
-//! - `{"type": "rpc", "action": "…", "payload": …}` →
-//!   `{"type": "rpc", "action": "…", "ok": true, "payload": …}`. This is a
-//!   documented **placeholder** for the real renderer bridge; it echoes the
-//!   payload and never executes anything.
+//! - `{"type": "rpc", "action": "…", "payload": …, "id": "<optional>"}` →
+//!   dispatched through the typed [`crate::dispatch`] registry. Success
+//!   replies: `{"type":"rpc","action":"…","ok":true,"data":…}`; failure
+//!   replies: `{"type":"rpc","action":"…","ok":false,"error":{"code":"…","message":"…"}}`.
+//!   A client-supplied `id` is echoed verbatim. `renderer.*` methods get
+//!   `rpc_not_implemented`; unknown methods get `rpc_unknown_method`;
+//!   non-object payloads get `rpc_bad_payload`.
 //! - Anything else → typed `error` frame with code `unsupported_type`;
 //!   the connection stays open.
 //!
@@ -46,9 +49,12 @@
 //! `{"type": "error", "error": {"code": "<code>", "message": "<message>"}}`
 //!
 //! Codes: `auth_required`, `bad_message`, `bad_auth_message`, `invalid_token`,
-//! `invalid_rpc`, `unsupported_type`.
+//! `invalid_rpc`, `unsupported_type`. RPC failures inside `rpc` replies use
+//! the stable `rpc_*` codes documented in [`crate::dispatch`].
 
 use serde_json::{json, Value};
+
+use crate::dispatch::{RpcContext, RpcRegistry};
 
 /// Close code used when the policy (auth handshake) is violated: 1008.
 pub const CLOSE_POLICY_VIOLATION: u16 = 1008;
@@ -100,14 +106,29 @@ pub enum SessionState {
 pub struct Session {
     expected_token: String,
     state: SessionState,
+    rpc_ctx: RpcContext,
 }
 
 impl Session {
     /// Create a session expecting `expected_token` for the handshake.
+    ///
+    /// The RPC context defaults to loopback/`DEFAULT_PORT` with the uptime
+    /// clock starting now; servers should prefer [`Session::with_context`]
+    /// so handlers observe the real bind address and shared server uptime.
     pub fn new(expected_token: String) -> Self {
+        Self::with_context(
+            expected_token,
+            RpcContext::new(crate::config::DEFAULT_HOSTNAME, crate::DEFAULT_PORT),
+        )
+    }
+
+    /// Create a session with an explicit RPC context (server bind address,
+    /// uptime origin shared with other connections).
+    pub fn with_context(expected_token: String, rpc_ctx: RpcContext) -> Self {
         Self {
             expected_token,
             state: SessionState::AwaitingAuth,
+            rpc_ctx,
         }
     }
 
@@ -204,7 +225,7 @@ impl Session {
         SessionOutcome::replies_only(vec![reply.to_string()])
     }
 
-    /// Post-auth path: ping/pong, rpc placeholder, typed errors.
+    /// Post-auth path: ping/pong, typed RPC dispatch, typed errors.
     fn handle_authenticated(&mut self, value: &Value) -> SessionOutcome {
         match value.get("type").and_then(Value::as_str) {
             Some("ping") => {
@@ -234,13 +255,28 @@ impl Session {
                 match action {
                     Some(action) if !action.trim().is_empty() => {
                         let payload = value.get("payload").cloned().unwrap_or(Value::Null);
-                        let reply = json!({
-                            "type": "rpc",
-                            "action": action,
-                            "ok": true,
-                            "payload": payload,
-                        });
-                        SessionOutcome::replies_only(vec![reply.to_string()])
+                        let result = RpcRegistry::dispatch(&self.rpc_ctx, action, &payload);
+                        let mut reply = serde_json::Map::new();
+                        reply.insert("type".to_string(), json!("rpc"));
+                        reply.insert("action".to_string(), json!(action));
+                        match result {
+                            Ok(data) => {
+                                reply.insert("ok".to_string(), json!(true));
+                                reply.insert("data".to_string(), data);
+                            }
+                            Err(err) => {
+                                reply.insert("ok".to_string(), json!(false));
+                                reply.insert(
+                                    "error".to_string(),
+                                    json!({ "code": err.code(), "message": err.message() }),
+                                );
+                            }
+                        }
+                        // Echo the client-supplied id verbatim, if any.
+                        if let Some(id) = value.get("id") {
+                            reply.insert("id".to_string(), id.clone());
+                        }
+                        SessionOutcome::replies_only(vec![Value::Object(reply).to_string()])
                     }
                     _ => SessionOutcome::replies_only(vec![error_frame(
                         "invalid_rpc",
@@ -454,15 +490,64 @@ mod tests {
     }
 
     #[test]
-    fn rpc_echoes_payload() {
+    fn rpc_runtime_ping_is_dispatched_and_echoes_id() {
         let mut s = session();
         s.handle_text(r#"{"type":"auth","authToken":"test-token-123"}"#);
-        let out = s.handle_text(r#"{"type":"rpc","action":"stage.move","payload":{"x":1,"y":2}}"#);
+        let out =
+            s.handle_text(r#"{"type":"rpc","action":"runtime.ping","payload":{},"id":"req-42"}"#);
         let replies = outcome_replies(&out);
-        assert_eq!(
-            replies,
-            vec![json!({"type":"rpc","action":"stage.move","ok":true,"payload":{"x":1,"y":2}})]
-        );
+        assert_eq!(replies.len(), 1);
+        assert_eq!(replies[0]["type"], "rpc");
+        assert_eq!(replies[0]["action"], "runtime.ping");
+        assert_eq!(replies[0]["ok"], true);
+        assert_eq!(replies[0]["data"]["pong"], true);
+        assert_eq!(replies[0]["id"], "req-42");
+        assert!(out.close.is_none());
+    }
+
+    #[test]
+    fn rpc_unknown_method_is_typed_error_with_id_echo() {
+        let mut s = session();
+        s.handle_text(r#"{"type":"auth","authToken":"test-token-123"}"#);
+        let out = s.handle_text(r#"{"type":"rpc","action":"stage.move","payload":{"x":1},"id":7}"#);
+        let replies = outcome_replies(&out);
+        assert_eq!(replies[0]["ok"], false);
+        assert_eq!(replies[0]["error"]["code"], "rpc_unknown_method");
+        assert_eq!(replies[0]["id"], 7);
+        assert!(out.close.is_none());
+    }
+
+    #[test]
+    fn rpc_renderer_namespace_is_not_implemented() {
+        let mut s = session();
+        s.handle_text(r#"{"type":"auth","authToken":"test-token-123"}"#);
+        let out = s.handle_text(r#"{"type":"rpc","action":"renderer.getModels","payload":{}}"#);
+        let replies = outcome_replies(&out);
+        assert_eq!(replies[0]["ok"], false);
+        assert_eq!(replies[0]["error"]["code"], "rpc_not_implemented");
+        assert!(replies[0].get("id").is_none());
+    }
+
+    #[test]
+    fn rpc_non_object_payload_is_bad_payload() {
+        let mut s = session();
+        s.handle_text(r#"{"type":"auth","authToken":"test-token-123"}"#);
+        let out = s.handle_text(r#"{"type":"rpc","action":"runtime.ping","payload":[1,2]}"#);
+        let replies = outcome_replies(&out);
+        assert_eq!(replies[0]["ok"], false);
+        assert_eq!(replies[0]["error"]["code"], "rpc_bad_payload");
+    }
+
+    #[test]
+    fn rpc_runtime_status_reports_build_info() {
+        let mut s = session();
+        s.handle_text(r#"{"type":"auth","authToken":"test-token-123"}"#);
+        let out = s.handle_text(r#"{"type":"rpc","action":"runtime.status"}"#);
+        let replies = outcome_replies(&out);
+        assert_eq!(replies[0]["ok"], true);
+        assert_eq!(replies[0]["data"]["app"], "airi-qt");
+        assert_eq!(replies[0]["data"]["version"], env!("CARGO_PKG_VERSION"));
+        assert_eq!(replies[0]["data"]["protocol"], "airi-channel/1");
     }
 
     #[test]

@@ -4,9 +4,9 @@
 //! `airi-mmd` — MMD model parsers for the P10 renderer.
 //!
 //! This crate is the P10 **M0 (parser)** milestone for AIRI's Qt stage. It
-//! decodes PMX 2.0 binary models into typed Rust structures. It does **not**
-//! render, load textures, simulate physics, evaluate IK, or animate; those
-//! land in later P10 milestones.
+//! decodes PMX 2.0 binary models and VMD motions into typed Rust structures.
+//! It does **not** render, load textures, simulate physics, evaluate IK, or
+//! animate; those land in later P10 milestones.
 //!
 //! What parses today:
 //!
@@ -22,16 +22,23 @@
 //! - Bones (names, parent, layer, position, tail, rotation/translation
 //!   inheritance, fixed axis, local axes, external-parent key, IK
 //!   definition with angle-limited links)
+//! - Morphs (group/vertex/bone/UV/additional-UV/material; flip and
+//!   display-frame morphs return [`MmdError::UnsupportedMorphType`])
+//! - VMD motions (`.vmd`; signature, model name, bone keys with 64-byte
+//!   interpolation, morph keys; camera/light/shadow sections are skipped,
+//!   their counts stored; the trailing IK on/off section is never decoded)
 //!
-//! What explicitly does **not** parse (a typed [`MmdError::UnsupportedFeature`]
-//! is returned instead of a misparse):
+//! What explicitly does **not** parse (a typed error is returned instead of
+//! a misparse, or the section is never interpreted):
 //!
-//! - **Morphs** — a non-zero morph count aborts the parse. Display frames,
-//!   rigid bodies, joints and everything after bones is never interpreted.
 //! - **PMX 2.1** and **PMD** — rejected (version/magic) respectively.
+//! - **Display frames, rigid bodies and joints** — bytes after the morphs
+//!   section are never read.
 //! - **Physics / IK evaluation** — IK data is decoded and stored, never run.
 //! - **QDEF** deform type — reported as [`MmdError::UnsupportedDeformType`](4).
-//! - **.vmd motion** files — out of scope for this milestone.
+//! - **CP932 decoding** — VMD names are CP932 on the wire; this crate has no
+//!   encoding crate dependency and decodes ASCII-lossily, keeping raw bytes
+//!   in `name_raw` (see the VMD module docs).
 //!
 //! Allocation is capped on hostile input (see [`MAX_VERTICES`] and friends),
 //! and every read is bounds-checked; [`from_bytes`] never panics.
@@ -48,18 +55,24 @@ mod cursor;
 mod error;
 mod model;
 mod pmx;
+mod vmd;
 
 pub use error::MmdError;
 pub use model::{
-    bone_flags, material_flags, sphere_mode, BoneGrant, BoneIk, BoneIkLink, BoneTail, Deform,
-    MmdBone, MmdMaterial, MmdModel, MmdToon, MmdVertex, PmxEncoding, MAX_ADDITIONAL_UV, MAX_BONES,
-    MAX_FACE_INDICES, MAX_IK_LINKS, MAX_MATERIALS, MAX_TEXTURES, MAX_VERTICES,
+    bone_flags, material_flags, morph_types, sphere_mode, BoneGrant, BoneIk, BoneIkLink, BoneTail,
+    Deform, MmdBone, MmdMaterial, MmdModel, MmdMorph, MmdMorphOffset, MmdToon, MmdVertex,
+    PmxEncoding, MAX_ADDITIONAL_UV, MAX_BONES, MAX_FACE_INDICES, MAX_IK_LINKS, MAX_MATERIALS,
+    MAX_MORPHS, MAX_MORPH_OFFSETS, MAX_TEXTURES, MAX_VERTICES,
+};
+pub use vmd::{
+    VmdBoneKey, VmdMorphKey, VmdMotion, MAX_VMD_BONE_KEYS, MAX_VMD_CAMERA_KEYS, MAX_VMD_LIGHT_KEYS,
+    MAX_VMD_MORPH_KEYS, MAX_VMD_SHADOW_KEYS,
 };
 
 /// Parse a PMX 2.0 model from an in-memory buffer.
 ///
 /// Returns either a complete [`MmdModel`] (everything up to and including the
-/// bones section; sections past bones are not decoded) or a typed [`MmdError`].
+/// morphs section; sections past morphs are not decoded) or a typed [`MmdError`].
 /// Never panics on untrusted input.
 ///
 /// # Errors
@@ -71,7 +84,8 @@ pub use model::{
 /// - [`MmdError::UnsupportedVersion`] when the `f32` version is not `2.0`,
 /// - [`MmdError::UnsupportedDeformType`] for deform types other than
 ///   BDEF1/BDEF2/BDEF4/SDEF,
-/// - [`MmdError::UnsupportedFeature`] when the model contains morphs.
+/// - [`MmdError::UnsupportedMorphType`] for morph types other than
+///   group/vertex/bone/UV/additional-UV/material (types 0..=8).
 pub fn from_bytes(bytes: &[u8]) -> Result<MmdModel, MmdError> {
     pmx::parse(bytes)
 }

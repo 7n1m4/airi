@@ -1,0 +1,18 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+[package]
+name = "airi-discord"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "AIRI Discord bot (blocking REST slice) for the Qt build (wave ⑦ lane)"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+reqwest = { workspace = true }
+
+[dev-dependencies]
+mockito = { workspace = true }

@@ -34,6 +34,12 @@ impl<'a> Cursor<'a> {
         self.buf.len() - self.pos
     }
 
+    /// Read exactly `n` bytes (fixed-width fields such as the VMD name and
+    /// interpolation blocks).
+    pub(crate) fn take_bytes(&mut self, n: usize) -> Result<&'a [u8], MmdError> {
+        self.take(n)
+    }
+
     /// Read exactly 4 bytes (the magic).
     pub(crate) fn take_magic(&mut self) -> Result<[u8; 4], MmdError> {
         Ok(self.take(4)?.try_into().expect("4 bytes"))

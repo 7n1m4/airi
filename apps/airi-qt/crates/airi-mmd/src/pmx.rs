@@ -13,17 +13,18 @@
 //! vertices, faces, textures, materials, bones, morphs…
 //! ```
 //!
-//! This reader deliberately stops after the bones section. A non-zero morph
-//! count yields [`MmdError::UnsupportedFeature`] ("morphs"); display frames,
-//! rigid bodies and joints are never interpreted. Zero-morph models decode
-//! successfully and simply carry no morph/frame/physics information.
+//! This reader decodes everything up to and including the morphs section.
+//! Display frames, rigid bodies and joints (everything after morphs) are
+//! never interpreted. Physics and IK *evaluation* remain out of scope for
+//! the M0 parser milestone (IK data is decoded and stored, never run).
 
 use crate::cursor::Cursor;
 use crate::error::MmdError;
 use crate::model::{
-    BoneGrant, BoneIk, BoneIkLink, BoneTail, Deform, MmdBone, MmdMaterial, MmdModel, MmdToon,
-    MmdVertex, PmxEncoding, MAX_ADDITIONAL_UV, MAX_BONES, MAX_FACE_INDICES, MAX_IK_LINKS,
-    MAX_MATERIALS, MAX_TEXTURES, MAX_VERTICES,
+    BoneGrant, BoneIk, BoneIkLink, BoneTail, Deform, MmdBone, MmdMaterial, MmdModel, MmdMorph,
+    MmdMorphOffset, MmdToon, MmdVertex, PmxEncoding, MAX_ADDITIONAL_UV, MAX_BONES,
+    MAX_FACE_INDICES, MAX_IK_LINKS, MAX_MATERIALS, MAX_MORPHS, MAX_MORPH_OFFSETS, MAX_TEXTURES,
+    MAX_VERTICES,
 };
 
 /// Deform type byte values as stored in the file.
@@ -63,11 +64,12 @@ pub(crate) fn parse(bytes: &[u8]) -> Result<MmdModel, MmdError> {
     }
     let vertex_index_size = index_size(cur.u8()?)?;
     let texture_index_size = index_size(cur.u8()?)?;
-    // Validated but otherwise unused by the sections decoded below: indices
-    // are read with the parsed bone/texture index sizes.
-    let _material_index_size = index_size(cur.u8()?)?;
+    // Validated but, apart from the morphs section, unused: morph element
+    // indices are read with these sizes (display frames/physics sections are
+    // never decoded).
+    let material_index_size = index_size(cur.u8()?)?;
     let bone_index_size = index_size(cur.u8()?)?;
-    let _morph_index_size = index_size(cur.u8()?)?;
+    let morph_index_size = index_size(cur.u8()?)?;
     let _rigid_body_index_size = index_size(cur.u8()?)?;
 
     cur.set_section("names");
@@ -124,13 +126,23 @@ pub(crate) fn parse(bytes: &[u8]) -> Result<MmdModel, MmdError> {
         bones.push(parse_bone(&mut cur, encoding, bone_index_size)?);
     }
 
-    // The morphs section follows bones. We do not decode morphs yet; a
-    // non-zero count is a loud, typed error rather than a misparse.
+    // The morphs section follows bones. Display frames, rigid bodies and
+    // joints (everything after morphs) are never interpreted — a file that
+    // ends right after the morphs section is equally valid.
     cur.set_section("morphs");
-    let morph_count = cur.u32()?;
-    if morph_count != 0 {
-        return Err(MmdError::UnsupportedFeature("morphs"));
+    let morph_count = count(cur.u32()?, MAX_MORPHS)?;
+    let mut morphs = Vec::with_capacity(morph_count);
+    for _ in 0..morph_count {
+        morphs.push(parse_morph(
+            &mut cur,
+            encoding,
+            vertex_index_size,
+            bone_index_size,
+            material_index_size,
+            morph_index_size,
+        )?);
     }
+    validate_morph_indices(&morphs, vertices.len(), bones.len(), materials.len())?;
 
     Ok(MmdModel {
         name,
@@ -144,6 +156,7 @@ pub(crate) fn parse(bytes: &[u8]) -> Result<MmdModel, MmdError> {
         textures,
         materials,
         bones,
+        morphs,
     })
 }
 
@@ -276,6 +289,137 @@ fn parse_material(
         comment,
         vertex_count: raw_vertex_count as i32,
     })
+}
+
+/// Parse a single morph record.
+///
+/// Element layouts are verified against three-stdlib's mmdparser.js (what
+/// AIRI's Vue stage runs), with two exceptions: additional-UV morphs
+/// (types 4..=7) are parsed spec-consistently as `vertex index + vec4` but
+/// cannot be verified against a real file (three-stdlib does not decode
+/// them), and flip/display morphs (types 9 and 10) return
+/// [`MmdError::UnsupportedMorphType`] because no layout is confirmed.
+fn parse_morph(
+    cur: &mut Cursor<'_>,
+    encoding: PmxEncoding,
+    vertex_index_size: u8,
+    bone_index_size: u8,
+    material_index_size: u8,
+    morph_index_size: u8,
+) -> Result<MmdMorph, MmdError> {
+    use crate::model::morph_types;
+
+    let name = cur.string(encoding)?;
+    let name_global = cur.string(encoding)?;
+    let panel = cur.u8()?;
+    let morph_type = cur.u8()?;
+    let offset_count = count(cur.u32()?, MAX_MORPH_OFFSETS)?;
+    let mut offsets = Vec::with_capacity(offset_count);
+
+    for _ in 0..offset_count {
+        match morph_type {
+            morph_types::GROUP => offsets.push(MmdMorphOffset::Group {
+                morph_index: cur.index_signed(morph_index_size)?,
+                weight: cur.f32()?,
+            }),
+            morph_types::VERTEX => offsets.push(MmdMorphOffset::Vertex {
+                vertex_index: cur.index_unsigned(vertex_index_size)?,
+                offset: cur.f32_array::<3>()?,
+            }),
+            morph_types::BONE => offsets.push(MmdMorphOffset::Bone {
+                bone_index: cur.index_signed(bone_index_size)?,
+                position: cur.f32_array::<3>()?,
+                rotation: cur.f32_array::<4>()?,
+            }),
+            morph_types::UV => offsets.push(MmdMorphOffset::Uv {
+                vertex_index: cur.index_unsigned(vertex_index_size)?,
+                offset: cur.f32_array::<4>()?,
+            }),
+            morph_types::ADDITIONAL_UV_1
+            | morph_types::ADDITIONAL_UV_2
+            | morph_types::ADDITIONAL_UV_3
+            | morph_types::ADDITIONAL_UV_4 => offsets.push(MmdMorphOffset::AdditionalUv {
+                uv_index: morph_type - morph_types::ADDITIONAL_UV_1 + 1,
+                vertex_index: cur.index_unsigned(vertex_index_size)?,
+                offset: cur.f32_array::<4>()?,
+            }),
+            morph_types::MATERIAL => offsets.push(MmdMorphOffset::Material {
+                material_index: cur.index_signed(material_index_size)?,
+                mode: cur.u8()?,
+                diffuse: cur.f32_array::<4>()?,
+                specular: cur.f32_array::<3>()?,
+                shininess: cur.f32()?,
+                ambient: cur.f32_array::<3>()?,
+                edge_color: cur.f32_array::<4>()?,
+                edge_size: cur.f32()?,
+                texture_color: cur.f32_array::<4>()?,
+                sphere_texture_color: cur.f32_array::<4>()?,
+                toon_color: cur.f32_array::<4>()?,
+            }),
+            other => return Err(MmdError::UnsupportedMorphType(other)),
+        }
+    }
+
+    Ok(MmdMorph {
+        name,
+        name_global,
+        panel,
+        morph_type,
+        offsets,
+    })
+}
+
+/// Bounds-check every morph offset against the decoded document.
+///
+/// Indices are validated against the sections they reference (a forward
+/// reference to a not-yet-declared morph is not possible here because this
+/// runs after the whole morphs section is decoded):
+/// - group members must reference an existing morph,
+/// - vertex/UV/additional-UV indices must reference an existing vertex,
+/// - bone indices must be `-1` (none) or reference an existing bone,
+/// - material indices must be `-1` ("all materials") or reference an existing
+///   material.
+fn validate_morph_indices(
+    morphs: &[MmdMorph],
+    vertex_count: usize,
+    bone_count: usize,
+    material_count: usize,
+) -> Result<(), MmdError> {
+    for morph in morphs {
+        for offset in &morph.offsets {
+            match offset {
+                MmdMorphOffset::Group { morph_index, .. } => {
+                    if *morph_index < 0 || *morph_index as usize >= morphs.len() {
+                        return Err(MmdError::InvalidData(
+                            "group morph references out-of-range morph",
+                        ));
+                    }
+                }
+                MmdMorphOffset::Vertex { vertex_index, .. }
+                | MmdMorphOffset::Uv { vertex_index, .. }
+                | MmdMorphOffset::AdditionalUv { vertex_index, .. } => {
+                    if *vertex_index as usize >= vertex_count {
+                        return Err(MmdError::InvalidData(
+                            "morph references out-of-range vertex",
+                        ));
+                    }
+                }
+                MmdMorphOffset::Bone { bone_index, .. } => {
+                    if *bone_index != -1 && *bone_index as usize >= bone_count {
+                        return Err(MmdError::InvalidData("morph references out-of-range bone"));
+                    }
+                }
+                MmdMorphOffset::Material { material_index, .. } => {
+                    if *material_index != -1 && *material_index as usize >= material_count {
+                        return Err(MmdError::InvalidData(
+                            "morph references out-of-range material",
+                        ));
+                    }
+                }
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Parse a single bone record.
