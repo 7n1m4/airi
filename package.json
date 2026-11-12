@@ -123,8 +123,7 @@
     "services/**",
     "examples/**",
     "docs/**",
-    "apps/**",
-    "!apps/airi-qt/target/**"
+    "apps/**"
   ],
   "nano-staged": {
     "*": "moeru-lint --fix"

@@ -532,7 +532,7 @@ awareness:
   badge: 'Preview'
   caption: '這個可選加入的 awareness 守護行程的狀態、各項來源開關、kill switch 與本地稽核日誌。這裡的一切都不會自行行動。'
   daemonDownTitle: 'airi-daemon 未執行'
-  daemonDownSubtitle: 'awareness 守護行程是一個可選加入的使用者工作階段服務。dev-run 說明：apps/airi-qt/packaging/README.md。'
+  daemonDownSubtitle: 'awareness 守護行程是一個可選加入的使用者工作階段服務。dev-run 說明：packaging/README.md。'
   retry: '重試'
   killSwitch:
     title: 'Awareness 已啟用'

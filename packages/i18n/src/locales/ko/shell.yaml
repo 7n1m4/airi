@@ -533,7 +533,7 @@ awareness:
   badge: 'Preview'
   caption: '옵트인 awareness 데몬의 상태, 소스별 스위치, kill switch 및 로컬 감사 로그. 여기의 어떤 것도 스스로 작동하지 않습니다.'
   daemonDownTitle: 'airi-daemon이 실행 중이 아닙니다'
-  daemonDownSubtitle: 'awareness 데몬은 옵트인 사용자 세션 서비스입니다. dev-run 안내: apps/airi-qt/packaging/README.md.'
+  daemonDownSubtitle: 'awareness 데몬은 옵트인 사용자 세션 서비스입니다. dev-run 안내: packaging/README.md.'
   retry: '다시 시도'
   killSwitch:
     title: 'Awareness 활성화됨'

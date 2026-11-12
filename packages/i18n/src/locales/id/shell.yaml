@@ -534,7 +534,7 @@ awareness:
   badge: 'Preview'
   caption: 'Status, sakelar per sumber, kill switch dan log audit lokal untuk daemon awareness opt-in. Tidak ada di sini yang bertindak sendiri.'
   daemonDownTitle: 'airi-daemon tidak berjalan'
-  daemonDownSubtitle: 'Daemon awareness adalah layanan sesi pengguna opt-in. Instruksi dev-run: apps/airi-qt/packaging/README.md.'
+  daemonDownSubtitle: 'Daemon awareness adalah layanan sesi pengguna opt-in. Instruksi dev-run: packaging/README.md.'
   retry: 'Coba lagi'
   killSwitch:
     title: 'Awareness aktif'

@@ -137,7 +137,7 @@ git checkout -b <your-branch-name>
 corepack enable
 pnpm install
 
-# For Rust dependencies (apps/airi-qt, apps/stage-qt)
+# For Rust dependencies (the crate workspace at the repo root, e.g. the Qt app)
 cargo fetch
 ```
 

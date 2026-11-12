@@ -533,7 +533,7 @@ awareness:
   badge: 'Preview'
   caption: 'Статус, переключатели по источникам, kill switch и локальный журнал аудита для opt-in демона awareness. Ничто здесь не действует само по себе.'
   daemonDownTitle: 'airi-daemon не запущен'
-  daemonDownSubtitle: 'Демон awareness — это opt-in сервис пользовательской сессии. Инструкции dev-run: apps/airi-qt/packaging/README.md.'
+  daemonDownSubtitle: 'Демон awareness — это opt-in сервис пользовательской сессии. Инструкции dev-run: packaging/README.md.'
   retry: 'Повторить'
   killSwitch:
     title: 'Awareness включена'

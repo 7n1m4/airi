@@ -533,7 +533,7 @@ awareness:
   badge: 'Preview'
   caption: 'Estado, interruptores por fuente, kill switch y el registro de auditoría local para el daemon de awareness opt-in. Nada aquí actúa por su cuenta.'
   daemonDownTitle: 'airi-daemon no está en ejecución'
-  daemonDownSubtitle: 'El daemon de awareness es un servicio de sesión de usuario opt-in. Instrucciones de dev-run: apps/airi-qt/packaging/README.md.'
+  daemonDownSubtitle: 'El daemon de awareness es un servicio de sesión de usuario opt-in. Instrucciones de dev-run: packaging/README.md.'
   retry: 'Reintentar'
   killSwitch:
     title: 'Awareness activada'

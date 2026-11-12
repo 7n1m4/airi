@@ -7,7 +7,6 @@ packages:
   - examples/**
   - docs/**
   - apps/**
-  - '!apps/airi-qt/target/**'
   - '!**/dist/**'
 overrides:
   '@libp2p/crypto': 5.1.8
