@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Skinning metadata (joint list + inverse bind matrices) + skeleton
-//! descriptor consumed by QML's `Skin { joints, inverseBindPoses }`.
+//! descriptor consumed by Slint's `Skin { joints, inverseBindPoses }`.
 
 use super::VrmDocument;
 
-/// Skin data for `Model.skin` in Qt Quick 3D.
+/// Skin data for `Model.skin` in Slint.
 #[derive(Debug, Clone)]
 pub struct SkinData {
     /// Joint node indices (order matches `JOINTS_0`).
     pub joints: Vec<u32>,
     /// Column-major 4×4 inverse bind matrices per joint.
     pub inverse_bind_poses: Vec<[f32; 16]>,
-    /// Joint node names (for the QML Node tree).
+    /// Joint node names (for the Node tree).
     pub joint_names: Vec<String>,
 }
 

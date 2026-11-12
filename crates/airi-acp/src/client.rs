@@ -43,7 +43,7 @@ type PendingCallback = Box<dyn FnOnce(Result<Value, AcpError>) + Send>;
 ///
 /// Returned by [`AcpAgentClient::prompt_stream`]; consumed by
 /// [`AcpAgentClient::prompt`] internally or by an embedder that wants the
-/// turn's updates as they arrive (the Qt bridge does exactly that).
+/// turn's updates as they arrive (the bridge does exactly that).
 #[derive(Debug)]
 pub enum SessionEvent {
     /// A `session/update` notification routed to this session.

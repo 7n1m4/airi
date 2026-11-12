@@ -10,9 +10,9 @@
 //! registry and served by `airi-local-llm`; anything else falls back to
 //! `airi_llm::build_client` against the static registry), persists the
 //! assistant message, and broadcasts typed
-//! [`ChatEvent`]s for the Qt layer to pump into the UI.
+//! [`ChatEvent`]s for the UI layer to pump into the UI.
 //!
-//! Flow is one-way: core → broadcast → Qt pump. Events carry the session and
+//! Flow is one-way: core → broadcast → the UI pump. Events carry the session and
 //! message ids so subscribers can correlate deltas to a rendered bubble.
 //!
 //! Current limitations (later phases):
@@ -57,7 +57,7 @@ pub enum ChatStatus {
     Error,
 }
 
-/// Typed chat events broadcast to subscribers (e.g. the Qt pump).
+/// Typed chat events broadcast to subscribers (e.g. the UI pump).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum ChatEvent {

@@ -50,7 +50,7 @@
 //!   `server::tool` qualification/rewriting logic from the Electron bridge —
 //!   this crate deliberately handles exactly one server per client and the
 //!   bare wire tool name.
-//! * Qt bridges — wiring this crate into the Qt UI is a separate lane.
+//! * UI bridges — wiring this crate into the UI is a separate lane.
 
 mod client;
 mod error;

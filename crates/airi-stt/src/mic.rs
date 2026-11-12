@@ -22,7 +22,7 @@
 //!   Auto mode will transcribe the assistant. Use headphones, or the duck gate
 //!   once amplitude events are wired.
 //!
-//! Events are broadcast on [`MicService::subscribe`]; the QML bridge pumps them
+//! Events are broadcast on [`MicService::subscribe`]; the bridge pumps them
 //! into the UI in a later phase. Final transcripts are NOT injected into any
 //! composer here — that wiring is the next phase (see phase notes).
 
@@ -179,7 +179,7 @@ pub struct MicConfig {
     pub vad: VadConfig,
     /// Reserved hook for duplex operation (shed mic frames while TTS amplitude is
     /// high). Gates [`MicService::set_ducked`]; TTS amplitude wiring lands with
-    /// the QML bridge. **No echo cancellation is implemented.**
+    /// the bridge. **No echo cancellation is implemented.**
     pub duck_while_speaking: bool,
     /// Whole-blob client used for PTT flush and Auto segment transcription
     /// (ignored when [`MicConfig::streaming`] is set).
@@ -224,7 +224,7 @@ impl MicConfig {
     }
 }
 
-/// Events emitted by the mic pipeline for the QML bridge (and tests).
+/// Events emitted by the mic pipeline for the bridge (and tests).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum MicEvent {
     /// Capture (and, in [`MicMode::Auto`], the VAD model) is ready and running.
@@ -311,7 +311,7 @@ impl MicService {
     }
 
     /// Set the duck gate (frame shedding while TTS speaks). The gate is honored
-    /// whenever set; wiring it to TTS amplitude lands with the QML bridge.
+    /// whenever set; wiring it to TTS amplitude lands with the bridge.
     pub fn set_ducked(&self, ducked: bool) {
         self.ducked.store(ducked, Ordering::Relaxed);
     }

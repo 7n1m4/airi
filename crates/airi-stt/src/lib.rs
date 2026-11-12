@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-//! Native capture + Silero VAD + STT clients for the AIRI Qt rewrite.
-//! No Qt dependencies; pure tokio/cpal/ort/reqwest. See `README.md` for the
+//! Native capture + Silero VAD + STT clients for the AIRI Slint rewrite.
+//! No Slint dependencies; pure tokio/cpal/ort/reqwest. See `README.md` for the
 //! runtime Silero model download location and Linux capture notes.
 
 pub mod capture;

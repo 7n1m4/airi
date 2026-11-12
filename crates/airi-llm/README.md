@@ -2,8 +2,8 @@
 
 # airi-llm
 
-Streaming OpenAI-compatible **chat provider registry** for the AIRi Qt rewrite.
-Pure async (tokio/reqwest) crate: **no Qt, no `airi-store`, no `airi-core`, no
+Streaming OpenAI-compatible **chat provider registry** for the AIRI's Slint rewrite.
+Pure async (tokio/reqwest) crate: **no toolkit, no `airi-store`, no `airi-core`, no
 `airi-i18n`**. JSON appears only at the HTTP and config boundaries; public APIs
 are typed structs. Desktop HTTP — no CORS handling.
 

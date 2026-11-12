@@ -11,9 +11,9 @@
 //!
 //! - Only Rust panics that *unwind* through the hook are captured. Aborts
 //!   (`panic = "abort"`), stack overflows, and C++ `std::terminate` — e.g.
-//!   exceptions raised inside Qt or cxx-qt C++ code — never reach the hook
-//!   and are **not** logged here. Qt's own messages still flow to stderr via
-//!   the app message handler installed in `airi_qt_bridge.cpp`.
+//!   exceptions raised inside Slint or native C++ code — never reach the hook
+//!   and are **not** logged here. The platform's own messages still flow to
+//!   stderr through the backend's own handler.
 //! - The hook performs best-effort I/O and must never panic while handling
 //!   a panic; all failures are swallowed.
 //!
@@ -65,7 +65,7 @@ impl PanicLogConfig {
 
 /// Install the panic hook and prune old panic logs first.
 ///
-/// Safe to call once at process start (before any Qt calls). Calling it
+/// Safe to call once at process start (before any Slint calls). Calling it
 /// again replaces the previously installed hook (the old hook is still
 /// chained, so calling twice chains through the first custom hook once).
 pub fn install_panic_hook(config: PanicLogConfig) {

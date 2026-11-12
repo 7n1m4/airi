@@ -3,7 +3,7 @@
 //! Rest-pose (M1) mesh assembly for PMX models.
 //!
 //! [`RestPoseEngine`] converts a parsed [`MmdModel`] into the interleaved
-//! 64-byte vertex buffer + u32 index buffers the Qt Quick 3D
+//! 64-byte vertex buffer + u32 index buffers the Slint
 //! `AiriVrmGeometryShell` already consumes. One primitive is emitted per
 //! contiguous face range per material (PMX orders faces by material, so each
 //! material normally yields exactly one primitive).
@@ -52,7 +52,7 @@
 //!   [`RestPoseEngine::ambient_fallback_count`].
 //! - Specular, shininess, edge flags/colors/sizes, sphere maps and the toon
 //!   reference are **ignored** in M1 (see the phase note); the two-step toon
-//!   ramp applied by the QML material family is the only toon term.
+//!   ramp applied by the material family is the only toon term.
 //!
 //! ## Textures
 //!
@@ -116,7 +116,7 @@ pub struct RestPoseMaterial {
 
 /// A PMX model assembled into render-ready rest-pose buffers.
 ///
-/// Pure data; no Qt types. The bridge layer wraps this in a QObject.
+/// Pure data; no toolkit types. The bridge layer wraps this in a QObject.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RestPoseEngine {
     vertex_data: Vec<u8>,
@@ -319,7 +319,7 @@ impl RestPoseEngine {
     /// Advance the (M1: non-existent) animation clock.
     ///
     /// No pose is evaluated — the rest pose is uploaded verbatim on every
-    /// tick. The counter exists so the QML frame timer and the smoke tour
+    /// tick. The counter exists so the frame timer and the smoke tour
     /// have a truthful "frames elapsed" signal.
     pub fn tick(&mut self, dt_ms: f32) {
         if dt_ms.is_finite() && dt_ms > 0.0 {

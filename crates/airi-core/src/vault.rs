@@ -3,14 +3,14 @@
 //! Data vault (P9 wave ④): export/import of local user data as a plain,
 //! human-readable ZIP archive, plus the chat-history "session media scrub".
 //!
-//! The Qt app stores user data as:
+//! The the Slint app stores user data as:
 //!
 //! - **chats** — `sessions` / `messages` (SQLite),
 //! - **memory** — `summaries` / `journal_entries` / `memory_embeddings` (SQLite),
 //! - **providers** — `providers` (SQLite; **contains API keys**, see manifest),
 //! - **characters** — CCv2/CCv3 card files under `<profile>/cards` (not SQLite),
 //! - **backgrounds** — not implemented in this build (the Vue background gallery
-//!   has no Qt counterpart yet), reported as an empty domain.
+//!   has no toolkit counterpart yet), reported as an empty domain.
 //!
 //! The archive format is a *stored* (uncompressed) ZIP with human-readable
 //! JSON documents, matching the Vue app's "selective, human-readable ZIP
@@ -206,7 +206,7 @@ pub(crate) fn zip_read(bytes: &[u8]) -> Result<Vec<ZipEntry>> {
     for _ in 0..count {
         // Every slice below is derived from attacker-controlled offsets/lengths;
         // each is bounds-checked before use so a truncated or hand-edited archive
-        // returns an error instead of panicking across the cxx-qt boundary.
+        // returns an error instead of panicking across the native boundary.
         let entry_end = pos
             .checked_add(46)
             .context("central-directory entry offset overflow")?;

@@ -106,7 +106,7 @@ pub type SentenceId = String;
 /// Events emitted by [`crate::SpeechPipeline`] on its broadcast bus.
 ///
 /// Mirrors `airi-core`'s `ChatEvent` pattern: one-way `tokio::sync::broadcast`,
-/// Qt (or any consumer) pumps these on its own thread.
+/// Slint (or any consumer) pumps these on its own thread.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "type", rename_all = "kebab-case")]
 pub enum SpeechEvent {

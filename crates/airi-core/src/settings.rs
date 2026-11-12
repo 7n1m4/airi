@@ -16,7 +16,7 @@
 //! the type boundary, and missing fields fall back to the defaults below.
 //!
 //! Saving emits [`crate::CoreEvent::SettingsChanged`] on the core broadcast
-//! bus so Qt/UI layers can react without polling.
+//! bus so Slint/UI layers can react without polling.
 
 use airi_store::{Database, SettingsRepo};
 use anyhow::Result;
@@ -106,7 +106,7 @@ fn default_true() -> bool {
 ///
 /// `autostart` (P8 lane 1) is an additive mirror of the OS-level autostart
 /// state (XDG autostart `.desktop` on Linux, registry Run key on Windows,
-/// LaunchAgent on macOS). The OS entry itself is managed by the Qt shell
+/// LaunchAgent on macOS). The OS entry itself is managed by the desktop shell
 /// (`DesktopController.setAutostart`); this field only persists the last
 /// applied preference. It is deliberately not a new settings section.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -128,7 +128,7 @@ pub struct GeneralSettings {
     #[serde(default)]
     pub websocket_secure_enabled: bool,
     /// Whether the app launches at OS login. Mirrors the OS-level entry;
-    /// applied through the Qt shell, not by the settings store.
+    /// applied through the desktop shell, not by the settings store.
     #[serde(default)]
     pub autostart: bool,
 }
@@ -758,9 +758,9 @@ impl SettingsSection for PositioningSettings {
 ///
 /// Maps the Electron keys `settings/spine/max-fps`, `settings/spine/render-scale`,
 /// `settings/spine/default-mix`, `settings/spine/idle-enabled`. `animation_speed`
-/// and `scale_pos` are persisted here for the Qt port (the Electron app kept
+/// and `scale_pos` are persisted here for the desktop port (the Electron app kept
 /// `animationSpeed` in the runtime spine store and placement in the positioning
-/// store; the Qt pages edit them alongside the other spine knobs).
+/// store; the pages edit them alongside the other spine knobs).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SpineSettings {

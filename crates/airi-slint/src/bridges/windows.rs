@@ -4,7 +4,7 @@
 //! The smoke tour calls [`WindowsState::visited`] for each window it opens;
 //! visits are recorded in order so `main` can print the pages it exercised
 //! before exiting. The window registry itself is Rust-side: the UI asks this
-//! module to open/close pages instead of instantiating QML windows.
+//! module to open/close pages instead of instantiating windows.
 
 use std::sync::Mutex;
 

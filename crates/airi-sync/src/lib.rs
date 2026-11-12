@@ -3,7 +3,7 @@
 
 //! `airi-sync` — AIRI sync engine (BYOS), local-FS snapshot transport.
 //!
-//! This crate is the first honest slice of AIRI's sync story for the Qt
+//! This crate is the first honest slice of AIRI's sync story for the Slint
 //! build: **point-in-time snapshots of the app's data directory onto a local
 //! filesystem destination** (a folder, an external drive, an NFS/SMB/NAS
 //! mount). It creates timestamped snapshots, lists them, verifies them,
@@ -15,7 +15,7 @@
 //!   cloud transport, no object store, no presigned URLs, no remote. the
 //!   BYOS ("bring your own storage") folder is the *only* destination.
 //! * **Not a migration tool, ever.** Electron's sync engine snapshots
-//!   IndexedDB; this engine snapshots the **Qt app's SQLite / profile data
+//!   IndexedDB; this engine snapshots the **Slint app's SQLite / profile data
 //!   directory** (e.g. the `airi.sqlite` vault and friends). It does not
 //!   import, convert, migrate, or read anything produced by the Electron
 //!   build, and it never will — there is no migration path, by design.

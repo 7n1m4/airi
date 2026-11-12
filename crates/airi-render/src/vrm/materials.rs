@@ -3,8 +3,8 @@
 //! MToon material parameter extraction.
 //!
 //! Reads VRM 0.x `materialProperties` (shader `VRM/MToon`) and VRM 1.0
-//! `VRMC_materials_mtoon` into a uniform [`MtoonParams`] struct the QML
-//! `CustomMaterial` (`qml/VrmMtoonMaterial.qml`) consumes.
+//! `VRMC_materials_mtoon` into a uniform [`MtoonParams`] struct the Slint
+//! material consumes.
 
 use super::VrmDocument;
 

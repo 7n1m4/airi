@@ -3,7 +3,7 @@
 
 //! `airi-mmd` — MMD model parsers for the P10 renderer.
 //!
-//! This crate is the P10 **M0 (parser)** milestone for AIRI's Qt stage. It
+//! This crate is the P10 **M0 (parser)** milestone for AIRI's Slint stage. It
 //! decodes PMX 2.0 binary models and VMD motions into typed Rust structures.
 //! It does **not** render, load textures, simulate physics, evaluate IK, or
 //! animate; those land in later P10 milestones.

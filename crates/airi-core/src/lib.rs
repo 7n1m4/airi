@@ -17,9 +17,9 @@
 //! - [`AppCore`]: aggregate state wiring the store, the provider registry,
 //!   and the event bus together.
 //!
-//! Cross-thread notification uses Tokio broadcast channels; Qt bindings pump
-//! these into QObject signals on the Qt thread (P2). One-way flow only:
-//! core → broadcast → Qt.
+//! Cross-thread notification uses Tokio broadcast channels; UI bindings pump
+//! these into UI signals on the UI thread (P2). One-way flow only:
+//! core → broadcast → the UI.
 //!
 //! Not yet implemented (later phases): tool calling and the `WaitingOnTool`
 //! round trip, incremental assistant-message persistence while streaming

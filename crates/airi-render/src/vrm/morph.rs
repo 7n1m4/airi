@@ -3,7 +3,7 @@
 //! Morph-target computation on top of a parsed [`super::VrmDocument`].
 //!
 //! Produces the *expression-bound* morph set: only morph targets referenced by
-//! blendshape/expression presets and lip-sync vowels are kept, so the Qt
+//! blendshape/expression presets and lip-sync vowels are kept, so the Slint
 //! Quick 3D geometry stays under morph-count limits. Each [`MorphTarget`]
 //! exposes interpolated position/normal deltas used by the expression engine
 //! and consumed by [`super::geometry`] when emitting `TargetAttribute` data.

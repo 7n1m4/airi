@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #![deny(missing_docs)]
 
-//! AIRi Qt renderer crate.
+//! AIRI's Slint renderer crate.
 //!
 //! P0: seeded from `apps/stage-qt/src/vrm/**`.
 

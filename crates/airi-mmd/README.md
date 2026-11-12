@@ -2,8 +2,8 @@
 
 # airi-mmd
 
-MMD (MikuMikuDance) parsers for AIRI's Qt stage — the P10 **M0 (parser)** milestone.
-Pure Rust, no Qt dependency. It decodes **PMX 2.0** models and **VMD** motions into
+MMD (MikuMikuDance) parsers for AIRI's Slint stage — the P10 **M0 (parser)** milestone.
+Pure Rust, no toolkit dependency. It decodes **PMX 2.0** models and **VMD** motions into
 typed Rust structures. It does **not** render, load textures, simulate physics,
 evaluate IK, or animate; those land in later P10 milestones.
 

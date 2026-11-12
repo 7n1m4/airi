@@ -69,8 +69,8 @@
 //!   or op 9 INVALID SESSION (→ [`DiscordError::InvalidSession`]).
 //! * If there is no `session_id` (never reached READY), discard the client and
 //!   call [`GatewayClient::connect`] again — a fresh IDENTIFY is required.
-//! * Backoff, jitter, resume-vs-fresh decisions, and lifecycle (connect on Qt
-//!   start? never? opt-in only?) are entirely the caller's policy. **The Qt
+//! * Backoff, jitter, resume-vs-fresh decisions, and lifecycle (connect on Slint
+//!   start? never? opt-in only?) are entirely the caller's policy. **The Slint
 //!   app must never auto-connect**; receiving is opt-in (e.g. behind a
 //!   `--gateway` flag), mirroring the human-in-the-loop posture of the REST
 //!   slice.

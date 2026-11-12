@@ -5,7 +5,7 @@
 //! Emits per-primitive interleaved vertices (POSITION/NORMAL/TEXCOORD_0/
 //! JOINTS_0/WEIGHTS_0 + u32 index) plus morph-target deltas as flat byte
 //! vectors. The Rust-side [`PrimitiveGeometry`] decouples the `gltf` blob
-//! layout from the Qt Quick 3D side: the C++/bridge layer consumes this
+//! layout from the Slint side: the C++/bridge layer consumes this
 //! verbatim via `QQuick3DGeometry::setVertexData`/`setIndexData` +
 //! `addTargetAttribute`/`setTargetData`.
 
@@ -34,7 +34,7 @@ pub struct PrimitiveGeometry {
     pub morphs: Vec<MorphSlot>,
 }
 
-/// One Qt Quick 3D morph slot on a primitive.
+/// One Slint morph slot on a primitive.
 #[derive(Debug, Clone)]
 pub struct MorphSlot {
     /// Expression/preset name.
@@ -107,7 +107,7 @@ fn build_primitive(
         let j = joints.get(i).copied().unwrap_or([0, 0, 0, 0]);
         let w = weights.get(i).copied().unwrap_or([1.0, 0.0, 0.0, 0.0]);
         vertices.extend_from_slice(&[p[0], p[1], p[2], n[0], n[1], n[2], u[0], u[1]]);
-        // JOINTS_0 is expected as 4× u32 on the Qt side; store bit-patterns.
+        // JOINTS_0 is expected as 4× u32 on the Slint side; store bit-patterns.
         vertices.extend_from_slice(&[j[0] as f32, j[1] as f32, j[2] as f32, j[3] as f32]);
         vertices.extend_from_slice(&w);
     }

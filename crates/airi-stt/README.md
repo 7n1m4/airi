@@ -2,9 +2,9 @@
 
 # airi-stt
 
-Native microphone capture + Silero VAD + speech-to-text clients for the AIRI Qt
-rewrite. **No Qt dependencies** — pure tokio / cpal / `ort` / reqwest. This
-crate is consumed by `airi-qt`; the QML bridge pumps [`MicEvent`]s into the
+Native microphone capture + Silero VAD + speech-to-text clients for the AIRI Slint
+rewrite. **No Slint dependencies** — pure tokio / cpal / `ort` / reqwest. This
+crate is consumed by `airi-qt`; the bridge pumps [`MicEvent`]s into the
 UI in a later phase.
 
 [`MicEvent`]: src/mic.rs
@@ -156,7 +156,7 @@ exposed). Not hardware-verified: microphones other than PulseAudio routing,
 ## Deliberately out of scope (this lane)
 
 - Echo cancellation / duplex self-listening (see above).
-- Composer transcript injection (QML bridge + composer wiring — next phase).
+- Composer transcript injection (bridge + composer wiring — next phase).
 - Resampling (<-> non-16 kHz devices error out; `rubato`-based fallback TODO).
 - Aliyun AK/SK token exchange (`token.ts`) — pre-issued tokens only.
 - Hot-swapping streaming providers mid-session.

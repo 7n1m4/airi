@@ -3,11 +3,11 @@
 //! CPU-side VRM engine: rest-pose math, skinning, morph blending, and the
 //! idle / gaze / blink / lip-sync / expression / spring-bone controllers.
 //!
-//! The Qt Quick 3D side consumes per-frame, fully-resolved vertex buffers
-//! (see `qml/StageScene.qml` and the `AiriVrmGeometryShell`
+//! The Slint side consumes per-frame, fully-resolved vertex buffers
+//! (see the stage scene and the `AiriVrmGeometryShell`
 //! C++ shell). Skinning and morphs are evaluated on the CPU every frame:
 //! 30–60k vertices is well under a millisecond, and it removes any reliance
-//! on Qt Quick 3D's skinning internals (attribute formats, joint limits).
+//! on Slint's skinning internals (attribute formats, joint limits).
 //!
 //! Coordinate conventions are glTF's: right-handed, column-major matrices,
 //! VRM units are meters.

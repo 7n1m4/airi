@@ -20,7 +20,7 @@ const MANIFEST_FILE: &str = "manifest.json";
 const FILES_DIR: &str = "files";
 const SNAP_SUFFIX: &str = ".snap";
 const STAGING_PREFIX: &str = ".airi-sync-staging-";
-/// Main database file the Qt app opens in its data directory
+/// Main database file the desktop app opens in its data directory
 /// (`airi_store::Database`'s private `DB_FILE_NAME`, mirrored here to keep this
 /// crate free of a dependency on `airi-store`).
 const SQLITE_DB: &str = "airi.sqlite";

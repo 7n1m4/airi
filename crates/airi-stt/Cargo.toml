@@ -5,7 +5,7 @@ name = "airi-stt"
 version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
-description = "Native capture + Silero VAD + STT clients (OpenAI-compatible, Deepgram, Aliyun NLS) for the AIRI Qt rewrite"
+description = "Native capture + Silero VAD + STT clients (OpenAI-compatible, Deepgram, Aliyun NLS) for the AIRI Slint rewrite"
 
 [dependencies]
 anyhow = { workspace = true }

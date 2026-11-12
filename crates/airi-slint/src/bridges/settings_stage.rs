@@ -9,7 +9,7 @@
 //!   `modelId` is either an absolute filesystem path to a `.vrm` or `""`
 //!   (none). No catalog is maintained; consumers resolve the path.
 //! - [`airi_core::settings::CaptionsSettings`] (`settings/captions`) —
-//!   `fontSize`/`opacity` are percentages (`100` == 100%); QML divides by
+//!   `fontSize`/`opacity` are percentages (`100` == 100%); the view divides by
 //!   100 for the overlay. `docking` is `top` | `bottom` | `head` | `none`.
 //! - [`airi_core::settings::StageWindowSettings`] (`settings/stage-window`) —
 //!   `x`/`y` (nullable), `width`, `height`, `visible`.

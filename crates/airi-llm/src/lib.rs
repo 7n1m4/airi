@@ -11,7 +11,7 @@
 //!   blanket-implemented for every [`ChatProvider`].
 //! - [`build_client`]: constructs the right client for a [`ProviderDef`].
 //!
-//! Layering: no Qt, no `airi-store`, no `airi-core`, no `airi-i18n` — only
+//! Layering: no toolkit, no `airi-store`, no `airi-core`, no `airi-i18n` — only
 //! tokio-compatible async deps and `reqwest`. JSON appears only at the HTTP and
 //! config boundaries; public APIs use typed structs.
 //!

@@ -7,7 +7,7 @@ use std::path::PathBuf;
 /// Errors returned by the `airi-sync` snapshot engine.
 ///
 /// Variants are deliberately typed (rather than a single `String`) so callers —
-/// in particular the future Qt bridge — can branch on the failure mode
+/// in particular the future the Slint bridge — can branch on the failure mode
 /// (e.g. show a "files were modified" dialog for [`SyncError::DirtyTarget`]).
 #[derive(Debug, thiserror::Error)]
 pub enum SyncError {

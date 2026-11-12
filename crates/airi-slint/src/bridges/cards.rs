@@ -8,7 +8,7 @@
 //! avatar pixels preserved).
 //!
 //! The library crossing the boundary is a `Vec<CardEntry>` (one plain struct
-//! per scanned card, the shape the QML delegate read); the save payload is the
+//! per scanned card, the shape the list delegate reads); the save payload is the
 //! typed-ish editor envelope documented on
 //! [`CardControllerState::save_card`].
 
@@ -58,7 +58,7 @@ fn same_file(a: &std::path::Path, b: &std::path::Path) -> bool {
     absolute(a) == absolute(b)
 }
 
-/// One scanned card in the library list (the QML delegate's row shape).
+/// One scanned card in the library list (the list delegate's row shape).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CardEntry {
     /// File-stem id used by every other invokable.

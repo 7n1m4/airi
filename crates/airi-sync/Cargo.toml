@@ -5,7 +5,7 @@ name = "airi-sync"
 version = "0.1.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
-description = "AIRI sync engine (BYOS) — local-FS snapshot transport for the Qt build (wave ⑦ lane)"
+description = "AIRI sync engine (BYOS) — local-FS snapshot transport for the Slint build (wave ⑦ lane)"
 
 [dependencies]
 serde = { workspace = true }

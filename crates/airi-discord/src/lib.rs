@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #![deny(missing_docs)]
 
-//! `airi-discord` — Discord bot for the Qt build: a blocking REST slice
+//! `airi-discord` — Discord bot for the Slint build: a blocking REST slice
 //! **plus a blocking Gateway (WebSocket) client**.
 //!
 //! The REST half is a synchronous (`reqwest::blocking`) client for the
 //! Discord HTTP API, authenticated with a bot token, covering exactly the
-//! calls AIRI's Qt settings page needs to go
+//! calls AIRI's Slint settings page needs to go
 //! from "disabled scaffold" to "can talk to Discord on demand":
 //!
 //! * [`DiscordRestClient::get_gateway_url`] — `GET /gateway/bot` (the gateway
@@ -23,7 +23,7 @@
 //! spawns threads; automatic reconnect/backoff is the caller's loop. See
 //! `docs/phase-notes/p9-lane-discord-gateway-ws.md`.
 //!
-//! **The Qt app must never auto-connect to the gateway** — receiving is
+//! **The the Slint app must never auto-connect to the gateway** — receiving is
 //! opt-in (e.g. behind a `--gateway` flag), and every outbound action stays
 //! human-in-the-loop.
 //!

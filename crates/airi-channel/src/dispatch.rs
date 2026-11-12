@@ -85,7 +85,7 @@ pub type RpcValue = Value;
 /// Handlers never receive the auth token, the config, or any credential —
 /// only the method name and the payload object. They run on the connection
 /// thread, so they must be quick, must never block the GUI event loop, and
-/// must not touch Qt `QObject`s directly. Return plain JSON in, plain JSON
+/// must not touch toolkit objects directly. Return plain JSON in, plain JSON
 /// out.
 ///
 /// NOTE (deliberate deviation from the initial lane brief, which asked for

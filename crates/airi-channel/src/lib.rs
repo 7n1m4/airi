@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #![deny(missing_docs)]
 
-//! `airi-channel` — the AIRI gateway channel server for the Qt desktop app.
+//! `airi-channel` — the AIRI gateway channel server for the desktop app.
 //!
 //! A local WebSocket server on port **6121** (override with
 //! `SERVER_CHANNEL_PORT`, see [`server_channel_port`]) implementing the
@@ -53,7 +53,7 @@
 //! slice of the gateway protocol. `renderer.*` methods dispatch to
 //! embedder-registered [`RendererHandlers`] (read-only, plain-JSON handlers
 //! registered via [`ChannelServer::bind_with_renderer`]); unregistered
-//! methods reply `rpc_not_implemented`. Wiring Qt GUI-thread targets into
+//! methods reply `rpc_not_implemented`. Wiring it into GUI-thread targets into
 //! that registry is a separate decision — handlers here must never touch
 //! `QObject`s directly; they get plain JSON and return plain JSON.
 
