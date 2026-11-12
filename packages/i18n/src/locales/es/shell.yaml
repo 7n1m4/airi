@@ -119,6 +119,7 @@ settings:
     memory: 'Memoria'
     speech: 'Voz'
     hearing: 'Audición'
+    awareness: 'Awareness'
 providers:
   search: Buscar proveedores…
   search-empty: Ningún proveedor coincide con tu filtro.
@@ -527,6 +528,45 @@ speech:
     caption: 'Voz-a-texto'
     title: 'La voz-a-texto vive en otro lugar (no integrada aquí)'
     body: 'airi-stt porta los clientes STT: Whisper (en proceso, whisper-rs), un cliente OpenAI-compatible /audio/transcriptions, un cliente Deepgram streaming y Aliyun NLS (streaming, token pre-emitido requerido). La superficie de audición de Qt que los usaría aún no existe — esta página configura solo texto-a-voz.'
+awareness:
+  title: 'Awareness'
+  badge: 'Preview'
+  caption: 'Estado, interruptores por fuente, kill switch y el registro de auditoría local para el daemon de awareness opt-in. Nada aquí actúa por su cuenta.'
+  daemonDownTitle: 'airi-daemon no está en ejecución'
+  daemonDownSubtitle: 'El daemon de awareness es un servicio de sesión de usuario opt-in. Instrucciones de dev-run: apps/airi-qt/packaging/README.md.'
+  retry: 'Reintentar'
+  killSwitch:
+    title: 'Awareness activada'
+    caption: 'Pausa TODOS los observers al instante — tu pausa gana la re-habilitación tras bloqueo o suspensión. La observación ocurre solo mientras awareness está activada; el bloqueo y la suspensión desarman todos los observers temporalmente de todos modos.'
+  sources:
+    title: 'Fuentes'
+    sleep:
+      title: 'Suspender/reanudar'
+      caption: 'Eventos de suspensión y reanudación de la máquina (logind).'
+    lock:
+      title: 'Bloqueo de pantalla'
+      caption: 'Bloqueo/desbloqueo de pantalla vía el servicio de screensaver del escritorio (mejor esfuerzo según escritorio).'
+    media:
+      title: 'Reproducción de medios'
+      caption: 'Cambios play/pausa reportados por reproductores multimedia (MPRIS).'
+    network:
+      title: 'Estado de red'
+      caption: 'Cambios de conectividad reportados por NetworkManager.'
+    power:
+      title: 'Batería/AC'
+      caption: 'Cambios entre batería y corriente alterna (UPower).'
+  audit:
+    title: 'Registro de auditoría'
+    refresh: 'Actualizar'
+    clear: 'Borrar…'
+    emptyTitle: 'Aún no hay eventos de awareness'
+    emptySubtitle: 'Aún no hay eventos de awareness — activa una fuente y mira lo que susurra la máquina.'
+    footer: 'Solo local — almacenado como awareness-audit.jsonl en el directorio de datos de la app (retención de 7 días, redactado). Nada sale de la máquina.'
+  confirmClear:
+    title: '¿Borrar el registro de auditoría?'
+    body: '¿Borrar el registro de auditoría? Esto no se puede deshacer.'
+    confirm: 'Borrar'
+    cancel: 'Cancelar'
 widgets:
   title: 'Widgets'
   previewBadge: 'Vista previa'

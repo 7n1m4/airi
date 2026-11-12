@@ -1,0 +1,50 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# AIRI awareness daemon — user session, Type=dbus.
+# Type=dbus + BusName means: zero startup cost at login, D-Bus activation
+# (see ../dbus/org.moeru.airi.Daemon1.service) starts it on first use, and
+# systemd itself dedups activation — a second concurrent start request gets
+# the running service, and systemd refuses a second unit with the same
+# BusName. The daemon additionally exits(1) on name-request failure so a
+# standalone dev run fails loudly instead of double-owning.
+[Unit]
+Description=AIRI awareness daemon (user session)
+Documentation=https://github.com/anlmalabs/airi
+After=graphical-session.target
+PartOf=graphical-session.target
+# Not Requires=: a running-but-inert daemon on a headless/degraded boot is
+# fine (§A.2); it just arms nothing.
+# Restart-storm circuit breaker: 5 starts per 60 s, then systemd stops
+# retrying — the Qt-side circuit breaker (§A.2) takes it from there.
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=dbus
+BusName=org.moeru.airi.Daemon1
+ExecStart=%h/.local/bin/airi-daemon
+Restart=on-failure
+RestartSec=2
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+# ProtectHome must NOT be inaccessible/tmpfs: the audit log lives in the
+# home directory. read-only + a narrow ReadWritePaths exception gives us
+# write access to exactly the audit directory and nothing else in home.
+# (ProtectHome=tmpfs was rejected in the lane review: it would hide the
+# real home on which the audit path depends and break XDG_DATA_HOME
+# resolution; ProtectHome=inaccessible was rejected for the same write
+# reason; ProtectHome=false/yes rejected as broader than needed.)
+ProtectHome=read-only
+ReadWritePaths=%h/.local/share/airi-qt/audit
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictAddressFamilies=AF_UNIX
+LockPersonality=true
+RestrictRealtime=true
+MemoryMax=64M
+CPUQuota=25%
+
+[Install]
+WantedBy=graphical-session.target

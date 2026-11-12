@@ -119,6 +119,7 @@ settings:
     memory: '메모리'
     speech: '음성'
     hearing: '청취'
+    awareness: 'Awareness'
 providers:
   search: 공급자 검색…
   search-empty: 필터와 일치하는 공급자가 없습니다.
@@ -527,6 +528,45 @@ speech:
     caption: '음성 인식'
     title: '음성 인식은 다른 곳에 있습니다 (여기서는 연결 안 됨)'
     body: 'airi-stt는 STT 클라이언트를 이식합니다: Whisper(인프로세스, whisper-rs), OpenAI 호환 /audio/transcriptions 클라이언트, Deepgram streaming 클라이언트, Aliyun NLS(streaming, 사전 발급 토큰 필요). 이를 구동할 Qt 청취 표면은 아직 없습니다 — 이 페이지는 텍스트 음성 변환만 설정합니다.'
+awareness:
+  title: 'Awareness'
+  badge: 'Preview'
+  caption: '옵트인 awareness 데몬의 상태, 소스별 스위치, kill switch 및 로컬 감사 로그. 여기의 어떤 것도 스스로 작동하지 않습니다.'
+  daemonDownTitle: 'airi-daemon이 실행 중이 아닙니다'
+  daemonDownSubtitle: 'awareness 데몬은 옵트인 사용자 세션 서비스입니다. dev-run 안내: apps/airi-qt/packaging/README.md.'
+  retry: '다시 시도'
+  killSwitch:
+    title: 'Awareness 활성화됨'
+    caption: '모든 observer를 즉시 일시 정지합니다 — 화면 잠금이나 절전 후 재활성화보다 사용자의 일시 정지가 우선합니다. 관찰은 awareness가 활성화된 동안에만 일어납니다. 잠금과 절전은 어차피 모든 observer를 일시적으로 디스암합니다.'
+  sources:
+    title: '소스'
+    sleep:
+      title: '절전/깨어나기'
+      caption: '머신 절전 및 재개 이벤트 (logind).'
+    lock:
+      title: '화면 잠금'
+      caption: '데스크탑 screensaver 서비스를 통한 화면 잠금/해제 (데스크탑별 최선).'
+    media:
+      title: '미디어 재생'
+      caption: '미디어 플레이어가 보고하는 재생/일시정지 변경 (MPRIS).'
+    network:
+      title: '네트워크 상태'
+      caption: 'NetworkManager가 보고하는 연결 변경.'
+    power:
+      title: '배터리/AC'
+      caption: '배터리 대 교류 전원 변경 (UPower).'
+  audit:
+    title: '감사 로그'
+    refresh: '새로고침'
+    clear: '지우기…'
+    emptyTitle: '아직 awareness 이벤트가 없습니다'
+    emptySubtitle: '아직 awareness 이벤트가 없습니다 — 소스를 활성화하고 머신이 속삭이는 것을 들어보세요.'
+    footer: '로컬 전용 — awareness-audit.jsonl로 앱 데이터 디렉터리에 저장 (7일 보존, 리댁션됨). 머기를 벗어나지 않습니다.'
+  confirmClear:
+    title: '감사 로그를 지우시겠습니까?'
+    body: '감사 로그를 지우시겠습니까? 되돌릴 수 없습니다.'
+    confirm: '지우기'
+    cancel: '취소'
 widgets:
   title: '위젯'
   previewBadge: '미리보기'

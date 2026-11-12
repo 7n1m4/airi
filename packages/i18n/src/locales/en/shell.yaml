@@ -119,6 +119,7 @@ settings:
     memory: 'Memory'
     speech: 'Speech'
     hearing: 'Hearing'
+    awareness: 'Awareness'
 providers:
   search: Search providers…
   search-empty: No providers match your filter.
@@ -527,6 +528,45 @@ speech:
     caption: 'Speech-to-text'
     title: 'Speech-to-text lives elsewhere (not wired here)'
     body: 'airi-stt ports the STT clients: Whisper (in-process, whisper-rs), an OpenAI-compatible /audio/transcriptions client, a Deepgram streaming client, and Aliyun NLS (streaming, pre-issued token required). The Qt hearing surface that would drive them does not exist yet — this page configures text-to-speech only.'
+awareness:
+  title: 'Awareness'
+  badge: 'Preview'
+  caption: 'Status, per-source switches, kill switch and the local audit log for the opt-in awareness daemon. Nothing here acts on its own.'
+  daemonDownTitle: 'airi-daemon is not running'
+  daemonDownSubtitle: 'The awareness daemon is an opt-in user-session service. Dev-run instructions: apps/airi-qt/packaging/README.md.'
+  retry: 'Retry'
+  killSwitch:
+    title: 'Awareness enabled'
+    caption: 'Pauses ALL observers instantly — your pause wins over re-arming after lock or sleep. Observation happens only while awareness is enabled; lock and sleep disarm all observers temporarily regardless.'
+  sources:
+    title: 'Sources'
+    sleep:
+      title: 'Sleep/wake'
+      caption: 'Machine sleep and resume events (logind).'
+    lock:
+      title: 'Screen lock'
+      caption: 'Screen lock/unlock via the desktop screensaver service (best effort per desktop).'
+    media:
+      title: 'Media playback'
+      caption: 'Play/pause changes reported by media players (MPRIS).'
+    network:
+      title: 'Network state'
+      caption: 'Connectivity changes reported by NetworkManager.'
+    power:
+      title: 'Battery/AC'
+      caption: 'Battery versus AC power changes (UPower).'
+  audit:
+    title: 'Audit log'
+    refresh: 'Refresh'
+    clear: 'Clear…'
+    emptyTitle: 'No awareness events yet'
+    emptySubtitle: 'No awareness events yet — enable a source and see what the machine whispers.'
+    footer: 'Local only — stored as awareness-audit.jsonl in the app data directory (7-day retention, redacted). Nothing leaves the machine.'
+  confirmClear:
+    title: 'Clear the audit log?'
+    body: 'Clear the audit log? This cannot be undone.'
+    confirm: 'Clear'
+    cancel: 'Cancel'
 widgets:
   title: 'Widgets'
   previewBadge: 'Preview'

@@ -119,6 +119,7 @@ settings:
     memory: 'Память'
     speech: 'Речь'
     hearing: 'Слух'
+    awareness: 'Awareness'
 providers:
   search: Поиск поставщиков…
   search-empty: Нет поставщиков, соответствующих фильтру.
@@ -527,6 +528,45 @@ speech:
     caption: 'Распознавание речи'
     title: 'Распознавание речи живёт в другом месте (здесь не подключено)'
     body: 'airi-stt переносит STT-клиенты: Whisper (в процессе, whisper-rs), OpenAI-совместимый клиент /audio/transcriptions, streaming-клиент Deepgram и Aliyun NLS (streaming, требуется заранее выданный токен). Qt-поверхность слуха, которая бы ими управляла, ещё не существует — эта страница настраивает только синтез речи.'
+awareness:
+  title: 'Awareness'
+  badge: 'Preview'
+  caption: 'Статус, переключатели по источникам, kill switch и локальный журнал аудита для opt-in демона awareness. Ничто здесь не действует само по себе.'
+  daemonDownTitle: 'airi-daemon не запущен'
+  daemonDownSubtitle: 'Демон awareness — это opt-in сервис пользовательской сессии. Инструкции dev-run: apps/airi-qt/packaging/README.md.'
+  retry: 'Повторить'
+  killSwitch:
+    title: 'Awareness включена'
+    caption: 'Немедленно приостанавливает ВСЕ observer’ы — ваша пауза побеждает переактивацию после блокировки или сна. Наблюдение происходит только пока awareness включена; блокировка и сон так или иначе временно отключают все observer’ы.'
+  sources:
+    title: 'Источники'
+    sleep:
+      title: 'Сон/пробуждение'
+      caption: 'События сна и пробуждения машины (logind).'
+    lock:
+      title: 'Блокировка экрана'
+      caption: 'Блокировка/разблокировка через сервис хранителя экрана рабочего стола (best effort на каждом рабочем столе).'
+    media:
+      title: 'Воспроизведение'
+      caption: 'Изменения play/pause от медиаплееров (MPRIS).'
+    network:
+      title: 'Состояние сети'
+      caption: 'Изменения связности от NetworkManager.'
+    power:
+      title: 'Батарея/AC'
+      caption: 'Изменения батареи и переменного тока (UPower).'
+  audit:
+    title: 'Журнал аудита'
+    refresh: 'Обновить'
+    clear: 'Очистить…'
+    emptyTitle: 'Событий awareness пока нет'
+    emptySubtitle: 'Событий awareness пока нет — включите источник и послушайте, что нашёптывает машина.'
+    footer: 'Только локально — awareness-audit.jsonl в каталоге данных приложения (хранение 7 дней, редактировано). Ничего не покидает машину.'
+  confirmClear:
+    title: 'Очистить журнал аудита?'
+    body: 'Очистить журнал аудита? Это нельзя отменить.'
+    confirm: 'Очистить'
+    cancel: 'Отмена'
 widgets:
   title: 'Виджеты'
   previewBadge: 'Просмотр'

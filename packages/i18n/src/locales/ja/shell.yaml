@@ -118,6 +118,7 @@ settings:
     memory: 'メモリ'
     speech: '音声'
     hearing: 'ヒアリング'
+    awareness: 'Awareness'
 providers:
   search: プロバイダーを検索…
   search-empty: フィルターに一致するプロバイダーはありません。
@@ -526,6 +527,45 @@ speech:
     caption: '音声認識'
     title: '音声認識は別の場所にあります (ここでは未配線)'
     body: 'airi-sttはSTTクライアントをポートします: Whisper (インプロセス、whisper-rs)、OpenAI互換 /audio/transcriptions クライアント、Deepgram streaming クライアント、Aliyun NLS (streaming、事前発行トークンが必要)。それらを駆動するQtヒアリングサーフェスはまだありません — このページはテキスト読み上げのみを設定します。'
+awareness:
+  title: 'Awareness'
+  badge: 'Preview'
+  caption: 'オプトインのawarenessデーモンの状態、ソース別スイッチ、kill switch、ローカル監査ログ。ここにあるものは何も自分では動きません。'
+  daemonDownTitle: 'airi-daemon が起動していません'
+  daemonDownSubtitle: 'awarenessデーモンはオプトインのユーザーセッションサービスです。dev-run手順: apps/airi-qt/packaging/README.md。'
+  retry: '再試行'
+  killSwitch:
+    title: 'Awareness 有効'
+    caption: 'すべてのobserverを即座に一時停止します — ロックやスリープ後の再アームではユーザーの一時停止が優先されます。観測はawarenessが有効な間だけ行われます。いずれにせよ、ロックとスリープはすべてのobserverを一時的にディスアームします。'
+  sources:
+    title: 'ソース'
+    sleep:
+      title: 'スリープ/ウェイク'
+      caption: 'マシンのスリープと復帰イベント (logind)。'
+    lock:
+      title: '画面ロック'
+      caption: 'デスクトップのスクリーンセーバーサービス経由の画面ロック/解除（デスクトップ依存のベストエフォート）。'
+    media:
+      title: 'メディア再生'
+      caption: 'メディアプレイヤーが報告する再生/一時停止の変化 (MPRIS)。'
+    network:
+      title: 'ネットワーク状態'
+      caption: 'NetworkManagerが報告する接続性の変化。'
+    power:
+      title: 'バッテリー/AC'
+      caption: 'バッテリーとAC電源の変化 (UPower)。'
+  audit:
+    title: '監査ログ'
+    refresh: '再読み込み'
+    clear: '消去…'
+    emptyTitle: 'awarenessイベントはまだありません'
+    emptySubtitle: 'awarenessイベントはまだありません — ソースを有効にして、マシンがささやくものを聞いてみてください。'
+    footer: 'ローカルのみ — awareness-audit.jsonl としてアプリのデータディレクトリに保存（7日保持、リダクション済み）。マシンの外に出ません。'
+  confirmClear:
+    title: '監査ログを消去しますか？'
+    body: '監査ログを消去しますか？これは元に戻せません。'
+    confirm: '消去'
+    cancel: 'キャンセル'
 widgets:
   title: 'ウィジェット'
   previewBadge: 'プレビュー'

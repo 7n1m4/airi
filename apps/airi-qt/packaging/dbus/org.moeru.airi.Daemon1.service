@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# D-Bus activation for org.moeru.airi.Daemon1.
+# Install to ~/.local/share/dbus-1/services/org.moeru.airi.Daemon1.service
+# Per dbus-daemon(1), the
+# per-user servicedir is read for the session bus; no root needed.
+#
+# Note: adding `SystemdService=airi-daemon.service` here ties activation to
+# the systemd user unit so activation goes through systemd (and gets the
+# Restart= policy for free). Kept minimal per the P1 packaging spec — the
+# dbus activation file itself is sufficient for a single instance when the
+# unit is also enabled via systemd. See packaging/README.md.
+[D-BUS Service]
+Name=org.moeru.airi.Daemon1
+Exec=%h/.local/bin/airi-daemon

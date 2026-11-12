@@ -119,6 +119,7 @@ settings:
     memory: 'Memori'
     speech: 'Bicara'
     hearing: 'Pendengaran'
+    awareness: 'Awareness'
 providers:
   search: Cari penyedia…
   search-empty: Tidak ada penyedia yang cocok dengan filter Anda.
@@ -528,6 +529,45 @@ speech:
     caption: 'Speech-to-text'
     title: 'Speech-to-text hidup di tempat lain (belum tersambung di sini)'
     body: 'airi-stt mem-port klien STT: Whisper (in-process, whisper-rs), klien OpenAI-compatible /audio/transcriptions, klien Deepgram streaming, dan Aliyun NLS (streaming, token pra-terbit diperlukan). Permukaan hearing Qt yang akan mengendalikannya belum ada — halaman ini hanya mengonfigurasi text-to-speech.'
+awareness:
+  title: 'Awareness'
+  badge: 'Preview'
+  caption: 'Status, sakelar per sumber, kill switch dan log audit lokal untuk daemon awareness opt-in. Tidak ada di sini yang bertindak sendiri.'
+  daemonDownTitle: 'airi-daemon tidak berjalan'
+  daemonDownSubtitle: 'Daemon awareness adalah layanan sesi pengguna opt-in. Instruksi dev-run: apps/airi-qt/packaging/README.md.'
+  retry: 'Coba lagi'
+  killSwitch:
+    title: 'Awareness aktif'
+    caption: 'Menjeda SEMUA observer seketika — jeda Anda mengalahkan re-arm setelah kunci atau tidur. Observasi hanya terjadi saat awareness aktif; kunci dan tidur mendesarman semua observer sementara, apa pun yang terjadi.'
+  sources:
+    title: 'Sumber'
+    sleep:
+      title: 'Tidur/bangun'
+      caption: 'Event tidur dan lanjut mesin (logind).'
+    lock:
+      title: 'Kunci layar'
+      caption: 'Kunci/buka kunci layar via layanan screensaver desktop (upaya terbaik per desktop).'
+    media:
+      title: 'Pemutaran media'
+      caption: 'Perubahan play/pause dilaporkan pemain media (MPRIS).'
+    network:
+      title: 'Status jaringan'
+      caption: 'Perubahan konektivitas dilaporkan NetworkManager.'
+    power:
+      title: 'Baterai/AC'
+      caption: 'Perubahan baterai versus arus AC (UPower).'
+  audit:
+    title: 'Log audit'
+    refresh: 'Segarkan'
+    clear: 'Hapus…'
+    emptyTitle: 'Belum ada event awareness'
+    emptySubtitle: 'Belum ada event awareness — aktifkan sumber dan lihat apa yang dibisikkan mesin.'
+    footer: 'Hanya lokal — tersimpan sebagai awareness-audit.jsonl di direktori data aplikasi (retensi 7 hari, diredaksi). Tidak ada yang keluar dari mesin.'
+  confirmClear:
+    title: 'Hapus log audit?'
+    body: 'Hapus log audit? Ini tidak bisa dibatalkan.'
+    confirm: 'Hapus'
+    cancel: 'Batal'
 widgets:
   title: 'Widgets'
   previewBadge: 'Pratinjau'

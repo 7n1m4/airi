@@ -19,6 +19,7 @@ members = [
   "crates/airi-channel",
   "crates/airi-sync",
   "crates/airi-discord",
+  "crates/airi-daemon",
 ]
 
 [workspace.dependencies]

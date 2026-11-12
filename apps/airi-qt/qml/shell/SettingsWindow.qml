@@ -242,6 +242,13 @@ Window {
                     active: settingsWindow.navIndex === 28
                     onClicked: settingsWindow.navIndex = 28
                 }
+                AListItem {
+                    Layout.fillWidth: true
+                    icon: "👁️"
+                    title: I18n.tr("shell.settings.nav.awareness")
+                    active: settingsWindow.navIndex === 29
+                    onClicked: settingsWindow.navIndex = 29
+                }
 
                 Item {
                     Layout.fillHeight: true
@@ -393,6 +400,9 @@ Window {
             }
             // Hearing — mic intent settings (capture pipeline not wired).
             HearingSettingsPage {
+            }
+            // Awareness — opt-in user-session daemon surface (kill switch, sources, audit).
+            AwarenessSettingsPage {
             }
         }
     }

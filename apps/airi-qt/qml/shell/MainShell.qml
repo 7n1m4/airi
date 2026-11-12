@@ -64,6 +64,13 @@ Window {
         id: audioDeviceCtl
     }
 
+    // Client for the opt-in airi-daemon awareness service (session bus).
+    // Used by the tray "toggle-awareness" action to pause/resume all
+    // observers; the Awareness settings page polls it once a second.
+    DaemonController {
+        id: daemonCtl
+    }
+
     // Themed icon button used only inside the strip.
     component StripButton: Item {
         id: wrapper
@@ -310,6 +317,9 @@ Window {
             break
         case "toggle-stage":
             strip.toggleStageStrip()
+            break
+        case "toggle-awareness":
+            daemonCtl.togglePause()
             break
         case "reset-positions":
             strip.resetPositions()

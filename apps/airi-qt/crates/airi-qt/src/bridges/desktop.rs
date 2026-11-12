@@ -45,6 +45,8 @@ use crate::bridges::qstring_to_string;
 pub const ACTION_TOGGLE_CHAT: &str = "toggle-chat";
 /// Action code: toggle the Stage window.
 pub const ACTION_TOGGLE_STAGE: &str = "toggle-stage";
+/// Action code: toggle the awareness daemon (pause/resume all observers).
+pub const ACTION_TOGGLE_AWARENESS: &str = "toggle-awareness";
 /// Action code: reset all windows to their default on-screen positions.
 pub const ACTION_RESET_POSITIONS: &str = "reset-positions";
 /// Action code: open (or raise) the Settings window.
@@ -194,6 +196,9 @@ fn init_tray() {
         tray.add_menu_item("Toggle Stage", || {
             publish_desktop_action(ACTION_TOGGLE_STAGE)
         })?;
+        tray.add_menu_item("Awareness: Toggle", || {
+            publish_desktop_action(ACTION_TOGGLE_AWARENESS)
+        })?;
         tray.add_menu_item("Reset Positions", || {
             publish_desktop_action(ACTION_RESET_POSITIONS)
         })?;
@@ -206,7 +211,7 @@ fn init_tray() {
     })();
     match result {
         Ok(()) => {
-            eprintln!("[airi-qt] tray: icon registered (Toggle Chat | Toggle Stage | Reset Positions | Settings | About | Quit)");
+            eprintln!("[airi-qt] tray: icon registered (Toggle Chat | Toggle Stage | Awareness: Toggle | Reset Positions | Settings | About | Quit)");
             #[cfg(not(target_os = "windows"))]
             let _ = TRAY.set(tray);
             #[cfg(target_os = "windows")]

@@ -118,6 +118,7 @@ settings:
     memory: '记忆'
     speech: '语音'
     hearing: '听觉'
+    awareness: 'Awareness'
 providers:
   search: 搜索提供商…
   search-empty: 没有符合筛选条件的提供商。
@@ -526,6 +527,45 @@ speech:
     caption: '语音识别'
     title: '语音识别在别处（此处未接线）'
     body: 'airi-stt 移植了 STT 客户端：Whisper（进程内，whisper-rs）、一个 OpenAI 兼容 /audio/transcriptions 客户端、一个 Deepgram streaming 客户端，以及 Aliyun NLS（streaming，需预先签发的令牌）。驱动它们的 Qt 听觉界面尚不存在——本页仅配置文本转语音。'
+awareness:
+  title: 'Awareness'
+  badge: 'Preview'
+  caption: '这个可选加入的 awareness 守护进程的状态、各项源开关、kill switch 与本地审计日志。这里的一切都不会自行行动。'
+  daemonDownTitle: 'airi-daemon 未运行'
+  daemonDownSubtitle: 'awareness 守护进程是一个可选加入的用户会话服务。dev-run 说明：apps/airi-qt/packaging/README.md。'
+  retry: '重试'
+  killSwitch:
+    title: 'Awareness 已启用'
+    caption: '立即暂停所有 observer——你的暂停优先于锁屏或休眠后的重新启用。仅在 awareness 启用期间进行观察；锁屏和休眠无论如何都会暂时解除所有 observer。'
+  sources:
+    title: '来源'
+    sleep:
+      title: '休眠/唤醒'
+      caption: '机器的休眠与唤醒事件 (logind)。'
+    lock:
+      title: '锁屏'
+      caption: '通过桌面 screensaver 服务的锁屏/解锁（按桌面类型尽力而为）。'
+    media:
+      title: '媒体播放'
+      caption: '媒体播放器报告的播放/暂停变化 (MPRIS)。'
+    network:
+      title: '网络状态'
+      caption: 'NetworkManager 报告的连接状态变化。'
+    power:
+      title: '电池/AC'
+      caption: '电池与交流电源的切换 (UPower)。'
+  audit:
+    title: '审计日志'
+    refresh: '刷新'
+    clear: '清除…'
+    emptyTitle: '暂无 awareness 事件'
+    emptySubtitle: '暂无 awareness 事件——启用一个来源，听听机器在低语什么。'
+    footer: '仅本地——以 awareness-audit.jsonl 存储在应用数据目录（保留 7 天，已脱敏）。不会离开这台机器。'
+  confirmClear:
+    title: '清除审计日志？'
+    body: '清除审计日志？此操作不可撤销。'
+    confirm: '清除'
+    cancel: '取消'
 widgets:
   title: '小组件'
   previewBadge: '预览'

@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+[package]
+name = "airi-daemon"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "AIRI user-session awareness daemon (owns org.moeru.airi.Daemon1 on the session bus)"
+
+[[bin]]
+name = "airi-daemon"
+path = "src/main.rs"
+
+[dependencies]
+dbus = { workspace = true }
+dirs = { workspace = true }
+serde = { workspace = true, features = [ "derive" ] }
+serde_json = { workspace = true }

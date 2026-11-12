@@ -79,3 +79,69 @@ sudo dpkg -r airi-qt-dev   # or sudo pacman -R / remove the extracted files
 
 User data lives in the platform data dir (`~/.local/share/airi-qt`); removing
 the package does not remove it.
+
+## Dev-run airi-daemon
+
+`airi-daemon` (Phase P1) is the user-session awareness daemon: it owns
+`org.moeru.airi.Daemon1` on the session bus, watches five T0 sources
+(logind sleep, screensaver lock, MPRIS playback, NetworkManager state,
+UPower on-battery), keeps an in-memory ring (cap 200) plus an append-only
+audit JSONL (7-day retention, pruned on startup), and answers control RPCs
+(`GetStatus`, `SetSource`, `Pause`). It is **not wired into the Qt app
+yet** — the P1b lane builds the face. Nothing in this directory ships it in
+the deb; the steps below are dev-install only.
+
+Build and install from `apps/airi-qt`:
+
+```sh
+cargo build -p airi-daemon
+cargo install --path crates/airi-daemon --root ~/.local   # lands in ~/.local/bin/airi-daemon
+```
+
+Install the user unit and the D-Bus activation file:
+
+```sh
+mkdir -p ~/.config/systemd/user ~/.local/share/dbus-1/services
+cp packaging/systemd/airi-daemon.service ~/.config/systemd/user/
+cp packaging/dbus/org.moeru.airi.Daemon1.service ~/.local/share/dbus-1/services/
+systemctl --user daemon-reload
+systemctl --user start --now airi-daemon
+```
+
+Check that it is up and inspect it:
+
+```sh
+journalctl --user -u airi-daemon -f           # logs; all lines pre-redacted
+busctl --user call org.moeru.airi.Daemon1 /org/moeru/airi/Daemon1 \
+  org.moeru.airi.Daemon1 GetStatus            # JSON: protocol/version/paused/sources/...
+busctl --user call org.moeru.airi.Daemon1 /org/moeru/airi/Daemon1 \
+  org.moeru.airi.Daemon1 Pause b true          # kill switch: disarm all + purge ring
+```
+
+Capability probe that claims nothing on the bus and exits 0:
+
+```sh
+~/.local/bin/airi-daemon --selftest
+```
+
+Notes and honest limits:
+
+- Unit hardening: `ProtectSystem=strict` + `ProtectHome=read-only` with a
+  single `ReadWritePaths=%h/.local/share/airi-qt/audit` exception, because
+  the audit log lives in the home directory. If you run with a non-default
+  `XDG_DATA_HOME`, widen `ReadWritePaths` to match `<data>/airi-qt/audit`
+  or the audit log will fail to open (the daemon stays up, just without
+  audit). The unit's `%h/.local/share/...` path assumes the default.
+- D-Bus activation (`~/.local/share/dbus-1/services/org.moeru.airi.Daemon1.service`)
+  starts the daemon on first use of the name; with `Type=dbus` +
+  `BusName=` systemd dedups and refuses a second instance. The daemon also
+  exits(1) if it cannot own the name.
+- Enable at login: `systemctl --user enable airi-daemon`
+  (WantedBy=graphical-session.target). `systemctl --user stop airi-daemon`
+  and `disable` remove it again — nothing else in this package depends on
+  it yet.
+- Audit file: `<data>/airi-qt/audit/awareness-audit.jsonl` (default
+  `~/.local/share/airi-qt/audit/awareness-audit.jsonl`), append-only,
+  7-day retention, pruned at every startup.
+- No network is used; `RestrictAddressFamilies=AF_UNIX` in the unit enforces
+  that even against bugs.

@@ -10,6 +10,7 @@ pub mod acp;
 pub mod capture;
 pub mod cards;
 pub mod chat;
+pub mod daemon;
 pub mod data;
 pub mod desktop;
 pub mod discord;
