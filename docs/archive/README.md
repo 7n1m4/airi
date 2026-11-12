@@ -24,3 +24,13 @@ This directory contains historical handoffs, point-in-time model reviews, comple
 | `[[linux-wayland-chat-cpu-spikes]]` | Resolved Bug Report | Resolved Linux Wayland CPU spike diagnostic memo. |
 | `[[pr-summary]]` | Historical Upstream Sync Log | Upstream PR snapshot (#1861-#1895). |
 | `[[proposal-onboarding-overhaul]]` | Superseded Proposal | Historical Post-V2 Advanced Setup Lab proposal superseded and unified into `[[project-onboarding-modernize]]`. |
+
+## `qt-port/` — the Qt Quick port (2026, superseded by the Slint port)
+
+The full dated build log of the Qt Quick desktop port: architecture decisions,
+lane handoffs, audits and the MMD/Spine renderer work. The crate was renamed
+`crates/airi-qt` → `crates/airi-slint` and retargeted from Qt6/cxx-qt to Slint
+on 2026-11-13; the QML tree and the cxx-qt bridges were deleted. These notes
+describe the port as it was built, so they stay here as the record.
+
+Current state lives in `docs/port-manifest/` and `crates/airi-slint/`.

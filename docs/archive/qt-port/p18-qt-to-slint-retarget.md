@@ -27,10 +27,8 @@ with the working tree cut over as each slice lands.
 - `cxx`, `cxx-qt`, `cxx-qt-lib`, `cxx-qt-build`, `qt-build-utils` dropped;
   `slint` + `slint-build` added to the workspace.
 - Packaging: `packaging/airi-slint.desktop`, `build-deb.sh`, the systemd unit,
-  and `packaging/README.md` (the Qt runtime-dep table is gone — Slint links no
-  Qt packages).
-- `docs/bridge-pattern.md` and `docs/component-library.md` are marked
-  SUPERSEDED with a pointer to the Slint equivalents.
+  and `packaging/README.md` (the runtime-dep table is gone — Slint links no
+  toolkit packages).
 
 ### Render seam (complete)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Deterministic port-manifest generator for the native Qt app.
+// Deterministic port-manifest generator for the native desktop app.
 // Writes markdown files into docs/port-manifest/.
 // Usage: node scripts/gen-manifest/gen-manifest.mjs
 

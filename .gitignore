@@ -10,6 +10,9 @@ node_modules
 
 # Logs
 *.log
+# Build output dumps (extension is .txt, so *.log misses them)
+build_log*.txt
+*_utf8.txt
 *.logs
 npm-debug.log*
 yarn-debug.log*

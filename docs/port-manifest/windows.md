@@ -46,9 +46,9 @@ Total window definitions: **15**
   - constructor: `title: 'AIRI — Inlay', width: 450, height: 150, show: false, icon, webPreferences: { preload: join(getElectronMainDirname(), '../preload/index.cjs'), sandbox: true,`
 
 - [ ] **main** — `apps/stage-tamagotchi/src/main/windows/main/index.ts`
-  - detected flags: width, height, x, y, alwaysOnTop, show, backgroundColor, title, webPreferences
-  - ready-to-show handling: yes
-  - constructor: `title: 'AIRI', width, height, x, y, show: false, icon, webPreferences: { preload: resolve(dirname(fileURLToPath(import.meta.url)), '../preload/index.cjs'), sandbox: true,`
+  - detected flags: width, height, x, y, frame, transparent, alwaysOnTop, backgroundColor, title
+  - ready-to-show handling: no
+  - constructor: `not found (created via shared helper)`
 
 - [ ] **notice** — `apps/stage-tamagotchi/src/main/windows/notice/index.ts`
   - detected flags: width, height, show, title, webPreferences
@@ -66,7 +66,7 @@ Total window definitions: **15**
   - constructor: `title: 'AIRI — Settings', width: 600.0, height: 800.0, show: false, icon, webPreferences: { preload: join(getElectronMainDirname(), '../preload/index.cjs'), sandbox: true, webviewTag: true,`
 
 - [ ] **splash** — `apps/stage-tamagotchi/src/main/windows/splash/index.ts`
-  - detected flags: x, y, alwaysOnTop, skipTaskbar, show, resizable, title, webPreferences
+  - detected flags: frame, transparent, alwaysOnTop, show, title
   - ready-to-show handling: yes
   - constructor: `not found (created via shared helper)`
 

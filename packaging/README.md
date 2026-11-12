@@ -37,9 +37,9 @@ menu. **Install it at your own risk — it is a dev build.**
 
 ## Runtime dependencies
 
-The Slint build links the `renderer-software` backend, so there are **no Qt
-runtime packages**. The only shared libraries are the ones the Rust crates
-already need (fontconfig/freetype for text shaping, libpng via `image`).
+The Slint build links the `renderer-software` backend, so there are **no
+toolkit runtime packages**. The only shared libraries are the ones the Rust
+crates already need (fontconfig/freetype for text shaping, libpng via `image`).
 
 `ffmpeg` is needed for screen capture (not a hard dependency of the package —
 the app detects and disables capture without it at runtime).
