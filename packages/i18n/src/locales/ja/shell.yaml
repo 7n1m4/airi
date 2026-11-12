@@ -73,6 +73,7 @@ settings:
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     fadeOnHover: Fade on Hover
+    modules: 'モジュール'
   theme-page:
     title: テーマ
     description: AIRI の色と外観をカスタマイズします。
@@ -114,6 +115,9 @@ settings:
     maxFps: 最大 FPS
     maxFpsHint: 0 = 無制限
     saveError: Live2D 設定を保存できませんでした。
+    memory: 'メモリ'
+    speech: '音声'
+    hearing: 'ヒアリング'
 providers:
   search: プロバイダーを検索…
   search-empty: フィルターに一致するプロバイダーはありません。
@@ -269,6 +273,14 @@ cards:
   deleteTitle: カードを削除しますか？
   deleteBody: このカードファイルはデバイスから完全に削除されます。
   save: 保存
+  export: 'エクスポート'
+  exportDialogTitle: 'カードをエクスポート'
+  exportHint: 'このカードのバイト単位で同一のコピーをファイルに保存します。'
+  exportFileName: 'ファイル名'
+  exportDone: 'カードをエクスポートしました。'
+  exportFilterPng: 'PNG カード (*.png)'
+  exportFilterJson: 'JSON カード (*.json)'
+  exportFilterAll: 'すべてのファイル (*)'
   editor:
     title: カードを編集
     newTitle: 新しいカード
@@ -359,6 +371,158 @@ notice:
     previewTitle: 'チュートリアルプレビュー'
     previewNote: 'fade-on-hoverのウォークスルー動画は、stage-tamagotchiレンダラーのアセットとして同梱されています。バンドルにはQtビルドに未導入のアセット登録パスが必要です。'
 
+modules:
+  title: 'モジュール'
+  overviewBadge: '概要'
+  notice: 'モジュール群の静的概要 — ステータスはこのページの実装時に手作業で検証済み。ライブ表示はありません。設定ナビが各ページへのルートを提供します。延期されたエントリは無効化されています。'
+  footer: '延期されたモジュールは無効です。このページは切り替え・接続・保存を一切行いません。'
+  sectionChat: 'チャット & 知能'
+  sectionIntegrations: '連携'
+  sectionRenderers: 'レンダラー'
+  sectionCardAi: 'Card-AI'
+  statusReady: '使用可能'
+  statusExperimental: '実験的'
+  statusDeferred: '延期'
+  entries:
+    memory:
+      blurb: 'コンパニオンのための短期・長期記憶、ジャーナル、retrieval。'
+      reason: 'Qt で使用可能 — ルートは設定ナビが処理。バックエンドは airi-core memory (journal・retrieval・embeddings) に着地。設定サーフェスはこのwaveで到着。'
+    speech:
+      blurb: 'コンパニオンのテキスト読み上げ音声出力。'
+      reason: 'Qt で使用可能 — バックエンドは airi-speech (TTS 定義26件 + Kokoro) に着地。Qt TTS/STT 設定サーフェスはこのwaveで到着。'
+    hearing:
+      blurb: 'マイク入力、音声区間検出、文字起こし。'
+      reason: 'Qt で使用可能 — バックエンドは airi-stt (capture・Silero VAD・Deepgram/Aliyun/whisper-local) に着地。Qt ヒアリング設定サーフェスはこのwaveで到着。'
+    vision:
+      blurb: '画面とカメラの視覚認識。'
+      reason: '延期 — Qt の vision スタックなし (moondream/blip/apple-core-ai は Rust レジストリにない)。現在は Electron アプリに存在。'
+    consciousness:
+      blurb: '性格、推論、モデルの基本挙動。'
+      reason: '延期 — Qt 対応なし。現在は Electron アプリに存在。'
+    agenticOs:
+      blurb: 'presence 駆動の自律的挙動と OS 自動化フック。'
+      reason: '延期 — Qt バックエンドなし (presence、companion scopes、event log)。現在は Electron アプリに存在。'
+    textToMotion:
+      blurb: 'テキストからの手続き的アニメーション生成 (VRMA 出力)。'
+      reason: '延期 — Qt 対応なし (FlowMDM / VRMA)。P10 隣接。現在は Electron アプリに存在。'
+    discord:
+      blurb: 'Discord ボット: メッセージ送信と受信専用ゲートウェイの閲覧。'
+      reason: '配線済み — 送信専用 REST + オプトイン・メモリ上・受信専用ゲートウェイ。bot コマンドなし。完全な bot コマンド経路は Electron が担当。'
+    mcp:
+      blurb: 'Model Context Protocol のサーバーとツール群。'
+      reason: '配線済み — MCP クライアント (stdio + streamable-HTTP)、mcp.json で設定。Discover は未配線。'
+    acp:
+      blurb: 'HITL パーミッション付き Agent Client Protocol セッション。'
+      reason: '配線済み — ACP ブリッジ。HITL パーミッションプロンプトが Qt で機能。'
+    cloudSync:
+      blurb: '自前のストレージへスナップショットをバックアップ (BYOS)。'
+      reason: '配線済み — ローカルフォルダーターゲット、スナップショット検証/復元。S3/メッシュ/選択的同期は未配線。'
+    pluginHost:
+      blurb: 'AIRI プラグインパッケージのホスト。'
+      reason: 'スキャフォールドのみ — discovery/有効化/capability バスなし。Qt v1 では免除。Electron のメインプロセスがプラグインをホスト。'
+    vrm:
+      blurb: 'VRM モデルのレンダリングとステージシーン。'
+      reason: 'Qt で使用可能 — VRM ステージがレンダリング (VrmMtoonMaterial + ステージシーン)。smoke 検証済み。'
+    spine:
+      blurb: 'Spine 2D スケルタルアニメーションモデル。'
+      reason: 'Qt で使用可能 — SpineStage + SpineSettingsPage。smoke 検証済み。'
+    mmd:
+      blurb: 'MikuMikuDance モデル (.pmx/.pmd)。'
+      reason: '実験的 — 合成フィクスチャによる rest pose のみ検証済み。ライセンスのある実 .pmx は未実演。'
+    live2d:
+      blurb: 'Live2D Cubism モデル。'
+      reason: '延期 — ライセンス。Qt の Cubism ランタイムなし。Electron が Live2D をレンダリング。'
+    cardAiStudio:
+      blurb: 'AI 支援キャラクターカード作成スタジオ。'
+      reason: '延期 — Qt v1 では免除、v1.1 予定。現在は Electron アプリに存在。'
+memory:
+  title: 'メモリ'
+  badge: '情報'
+  infoTip: 'メモリはチャットのコンテキストを豊かにします。短期要約とretrievalはこのビルドではまだ消費されません。下のジャーナルはライブです。'
+  description: '短期の日次要約と長期のテキストジャーナル。メモリはチャットのコンテキストを豊かにします — 設定したLLMプロバイダー以外にマシンの外へ出ません。'
+  notWiredNotice: 'メモリを有効にしても設定が保存されるだけです。このビルドのどこもまだ消費しません — 短期要約とretrievalはチャットに未配線です。下のジャーナルはライブです。'
+  enable:
+    title: 'メモリを有効化'
+    description: '下の設定を保存します。チャットのパイプラインはこのビルドではまだ読みません。'
+    disabledCaption: 'メモリはオフです — 有効にするまで下のretrievalコントロールは無効です。'
+  shortTerm:
+    title: '短期 & retrieval'
+    badge: '未配線'
+    note: 'topKはプロンプトに注入されるretrievalメモリの数を制限します (1–20)。retrievalのランキングは意味的類似度 (重み0.75) と語彙的重複 (重み0.25) をairi-coreでブレンドします。このビルドではチャットパイプラインは呼びません。'
+  topK:
+    label: 'Retrieval top-k'
+    description: '1プロンプトあたりretrievalが注入できるメモリの数 (1–20)。'
+    disabledTip: 'メモリを有効にするとretrievalの予算を変更できます。'
+  provider:
+    label: 'Retrievalプロバイダー'
+    notConfigured: '未設定'
+  journal:
+    title: '長期ジャーナル'
+    refresh: '再読み込み'
+    emptyTitle: 'ジャーナルエントリはまだありません'
+    emptySubtitle: 'ジャーナルエントリはまだありません — アプリを使うにつれチャットメモリが埋めます。'
+  footer: '設定とジャーナルはこのプロファイルの airi-store SQLite バルト (airi.sqlite) に保存されます。メモリはチャットのコンテキストを豊かにします — 設定したLLMプロバイダー以外にマシンの外へ出ません。'
+  saveError: '保存に失敗しました — 詳細はステータス行を確認してください。'
+  time:
+    justNow: 'たった今'
+    minutesAgo: '%1分前'
+    hoursAgo: '%1時間前'
+hearing:
+  title: 'ヒアリング'
+  badge: '意志のみ'
+  description: 'コンパニオンのマイク入力とリッスン設定。'
+  enable:
+    title: 'ヒアリングを有効化'
+    description: 'AIRIに聞いてほしいという意志を記録します。キャプチャパイプラインが来れば発効します — これを保存してもマイクは開きません。'
+  mode:
+    title: 'リッスンモード'
+    caption: 'Autoは連続リッスン (キャプチャパイプラインが必要)。PTTはホットキーを押している間だけリッスンします。'
+    auto: 'Auto'
+    ptt: 'プッシュ・トゥ・トーク'
+  hotkey:
+    title: 'ホットキー'
+    placeholder: 'Ctrl+Space'
+    caption: 'このビルドではグローバルホットキー登録は未配線です — 値は保存されますが、ショートカットはまだ動作しません。'
+  device:
+    title: '入力デバイス'
+    caption: 'キャプチャパイプラインが来たときにAIRIが使うマイクを選択します。'
+    emptyTitle: '入力デバイスが列挙されていません'
+    emptySubtitle: 'このQtビルドはまだマイクを列挙できません — 音声キャプチャは未配線です。'
+    useDefault: 'システムデフォルト'
+  footerWarning: 'このQtビルドではキャプチャパイプラインとSilero VADはチャットに未配線です。これらの設定は意志のみを保存します。ここでの何も聞きません。'
+  saveError: '保存に失敗しました — 詳細はステータス行を確認してください。'
+  nav: 'ヒアリング'
+speech:
+  title: '音声'
+  description: 'AIRI用のテキスト読み上げ。カタログからプロバイダーを選び、声と速度を調整し、確認用にサンプルファイルを書き出します。ポート状態はRust音声レジストリからそのままです。'
+  providers:
+    caption: 'テキスト読み上げプロバイダー'
+    empty: 'プロバイダーカタログを読み込めませんでした — コンソールを確認してください。'
+  noDefaultEndpoint: 'デフォルトエンドポイントなし (必須)'
+  save: '保存'
+  missingKey: 'このプロバイダーはAPIキーが必要ですが、storeにはありません。キーはプロバイダーストア (id = このプロバイダー) から読まれます。QtのプロバイダーUIはまだ音声スコープの資格情報を書きません。'
+  status:
+    ported: 'ポート済み'
+    partial: '部分'
+    unsupported: '未サポート'
+  voice:
+    caption: '声と速度'
+    label: '声'
+    placeholderDefault: 'プロバイダーのデフォルト声'
+  speed:
+    label: '速度'
+  sample:
+    caption: 'サンプル合成'
+    description: '選択したプロバイダーで短いサンプルを合成し、プロファイルディレクトリ配下の新しいファイルに書き出します。プロバイダーのデフォルトエンドポイントを使用します。何も再生されません。'
+    label: 'サンプルテキスト'
+    placeholder: 'こんにちは、私はAIRIです。'
+    button: 'サンプルを合成'
+    written: 'サンプルを書き出しました:'
+    notPlayable: 'サンプルファイルはディスクに書き出され、アプリ内ではまだ再生できません — システムプレイヤーで開いてください。'
+  stt:
+    caption: '音声認識'
+    title: '音声認識は別の場所にあります (ここでは未配線)'
+    body: 'airi-sttはSTTクライアントをポートします: Whisper (インプロセス、whisper-rs)、OpenAI互換 /audio/transcriptions クライアント、Deepgram streaming クライアント、Aliyun NLS (streaming、事前発行トークンが必要)。それらを駆動するQtヒアリングサーフェスはまだありません — このページはテキスト読み上げのみを設定します。'
 widgets:
   title: 'ウィジェット'
   previewBadge: 'プレビュー'

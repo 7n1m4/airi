@@ -31,6 +31,8 @@ Item {
     property string filterText: ""
     property string deleteTargetId: ""
     property string errorMessage: ""
+    property string statusMessage: ""
+    property var exportTargetCard: null
 
     readonly property var visibleCards: {
         var needle = page.filterText.trim().toLowerCase()
@@ -75,13 +77,47 @@ Item {
         return idx >= 0 ? path.substring(idx + 1) : path
     }
 
+    // Transient status (e.g. "card exported"); cleared by statusTimer.
+    Timer {
+        id: statusTimer
+        interval: 4000
+        onTriggered: page.statusMessage = ""
+    }
+
     Component.onCompleted: refresh()
+
+    // Export the pending card to `destination` (byte copy — the bridge
+    // resolves the file via the same path the load path uses).
+    function exportCard(destination) {
+        if (!page.exportTargetCard)
+            return
+        var ok = controller.exportCardToFile(page.exportTargetCard.id, destination)
+        exportDialog.close()
+        if (ok) {
+            page.errorMessage = ""
+            page.statusMessage = I18n.tr("shell.cards.exportDone")
+            statusTimer.restart()
+        } else {
+            page.statusMessage = ""
+            page.errorMessage = controller.error
+        }
+    }
+
+    function openExport(cardEntry) {
+        page.exportTargetCard = cardEntry
+        exportDialog.openFor(cardEntry)
+    }
 
     FileDialog {
         id: importDialog
         title: I18n.tr("shell.cards.importDialogTitle")
         nameFilters: ["*.png", "*.json"]
         onAccepted: controller.importCard(page.localPath(file))
+    }
+
+    CardExportDialog {
+        id: exportDialog
+        onExportRequested: function (destination) { page.exportCard(destination) }
     }
 
     ColumnLayout {
@@ -129,6 +165,15 @@ Item {
             visible: page.errorMessage.length > 0
             text: page.errorMessage
             color: Theme.error
+            font.pixelSize: 11
+            Layout.fillWidth: true
+            wrapMode: Text.WordWrap
+        }
+
+        Text {
+            visible: page.statusMessage.length > 0
+            text: page.statusMessage
+            color: Theme.success
             font.pixelSize: 11
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
@@ -225,6 +270,10 @@ Item {
                     AButton {
                         text: I18n.tr("shell.cards.edit")
                         onClicked: page.editCard(row.modelData.id)
+                    }
+                    AButton {
+                        text: I18n.tr("shell.cards.export")
+                        onClicked: page.openExport(row.modelData)
                     }
                     AButton {
                         text: I18n.tr("shell.cards.delete")

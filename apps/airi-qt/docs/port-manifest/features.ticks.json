@@ -18,5 +18,18 @@
   "packages/stage-pages/src/pages/settings/data/index.vue": true,
   "packages/stage-pages/src/pages/settings/data/components/ExportVaultModal.vue": true,
   "packages/stage-pages/src/pages/settings/data/components/ImportVaultModal.vue": true,
-  "packages/stage-pages/src/pages/settings/data/components/ScrubHistoryModal.vue": true
+  "packages/stage-pages/src/pages/settings/data/components/ScrubHistoryModal.vue": true,
+  "packages/stage-pages/src/pages/settings/memory/index.vue": true,
+  "packages/stage-pages/src/pages/settings/modules/memory-short-term.vue": true,
+  "packages/stage-pages/src/pages/settings/modules/memory-long-term.vue": true,
+  "packages/stage-pages/src/pages/settings/modules/hearing.vue": true,
+  "packages/stage-pages/src/pages/settings/modules/speech.vue": true,
+  "packages/stage-pages/src/pages/settings/modules/index.vue": true,
+  "packages/stage-pages/src/pages/settings/providers/speech/index.vue": true,
+  "apps/stage-tamagotchi/src/renderer/pages/settings/modules/mcp.vue": true,
+  "packages/stage-pages/src/pages/settings/modules/mcp.vue": true,
+  "packages/stage-pages/src/pages/settings/modules/messaging-discord.vue": true,
+  "packages/stage-pages/src/pages/settings/modules/cloud-sync.vue": true,
+  "packages/stage-pages/src/pages/settings/airi-card/components/CardExportDialog.vue": true,
+  "packages/stage-pages/src/pages/settings/airi-card/composables/use-card-export.ts": true
 }

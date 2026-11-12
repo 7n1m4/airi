@@ -74,6 +74,7 @@ settings:
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     fadeOnHover: Fade on Hover
+    modules: '모듈'
   theme-page:
     title: 테마
     description: AIRI의 색상과 외관을 개인화합니다.
@@ -115,6 +116,9 @@ settings:
     maxFps: 최대 FPS
     maxFpsHint: 0 = 무제한
     saveError: Live2D 설정을 저장하지 못했습니다.
+    memory: '메모리'
+    speech: '음성'
+    hearing: '청취'
 providers:
   search: 공급자 검색…
   search-empty: 필터와 일치하는 공급자가 없습니다.
@@ -270,6 +274,14 @@ cards:
   deleteTitle: 카드를 삭제할까요?
   deleteBody: 이 카드 파일은 기기에서 영구적으로 삭제됩니다.
   save: 저장
+  export: '내보내기'
+  exportDialogTitle: '카드 내보내기'
+  exportHint: '이 카드의 바이트 단위 동일한 사본을 파일로 저장합니다.'
+  exportFileName: '파일 이름'
+  exportDone: '카드를 내보냈습니다.'
+  exportFilterPng: 'PNG 카드 (*.png)'
+  exportFilterJson: 'JSON 카드 (*.json)'
+  exportFilterAll: '모든 파일 (*)'
   editor:
     title: 카드 편집
     newTitle: 새 카드
@@ -360,6 +372,158 @@ notice:
     previewTitle: '튜토리얼 미리보기'
     previewNote: 'fade-on-hover 워크스루 영상은 stage-tamagotchi 렌더러 에셋과 함께 배포됩니다. 번들하려면 Qt 빌드에 아직 들어오지 않은 에셋 등록 단계가 필요합니다.'
 
+modules:
+  title: '모듈'
+  overviewBadge: '개요'
+  notice: '모듈 제품군의 정적 개요 — 이 페이지가 출시된 시점에 수동으로 검증된 상태입니다. 실시간 표시는 없습니다. 설정 내비가 각 페이지의 경로를 제공하며, 연기된 항목은 비활성화됩니다.'
+  footer: '연기된 모듈은 비활성화됩니다. 이 페이지는 아무것도 토글하거나 연결하거나 저장하지 않습니다.'
+  sectionChat: '채팅 & 지능'
+  sectionIntegrations: '연동'
+  sectionRenderers: '렌더러'
+  sectionCardAi: 'Card-AI'
+  statusReady: '사용 가능'
+  statusExperimental: '실험적'
+  statusDeferred: '연기됨'
+  entries:
+    memory:
+      blurb: '동반자의 단기·장기 기억, 저널, retrieval.'
+      reason: 'Qt에서 사용 가능 — 경로는 설정 내비가 처리. 백엔드는 airi-core memory(journal, retrieval, embeddings)에 구현됨. 설정 표면은 이번 wave에 도착.'
+    speech:
+      blurb: '동반자를 위한 텍스트 음성 출력.'
+      reason: 'Qt에서 사용 가능 — 백엔드는 airi-speech(TTS 정의 26개 + Kokoro)에 구현됨. Qt TTS/STT 설정 표면은 이번 wave에 도착.'
+    hearing:
+      blurb: '마이크 입력, 음성 활동 감지, 전사.'
+      reason: 'Qt에서 사용 가능 — 백엔드는 airi-stt(capture, Silero VAD, Deepgram/Aliyun/whisper-local)에 구현됨. Qt 청취 설정 표면은 이번 wave에 도착.'
+    vision:
+      blurb: '화면과 카메라 시각 인식.'
+      reason: '연기됨 — Qt vision 스택 없음(moondream/blip/apple-core-ai는 Rust 레지스트리에 없음). 현재 Electron 앱에 존재.'
+    consciousness:
+      blurb: '성격, 추론, 모델 기본 동작.'
+      reason: '연기됨 — Qt 대응 없음. 현재 Electron 앱에 존재.'
+    agenticOs:
+      blurb: 'presence 기반 자율 동작과 OS 자동화 훅.'
+      reason: '연기됨 — Qt 백엔드 없음(presence, companion scopes, event log). 현재 Electron 앱에 존재.'
+    textToMotion:
+      blurb: '텍스트에서 절차적 애니메이션 생성(VRMA 출력).'
+      reason: '연기됨 — Qt 대응 없음(FlowMDM / VRMA). P10 인접. 현재 Electron 앱에 존재.'
+    discord:
+      blurb: 'Discord 봇: 메시지 전송과 수신 전용 게이트웨이 모니터링.'
+      reason: '연결됨 — 전송 전용 REST + 옵트인 메모리 내 수신 전용 게이트웨이. 봇 명령 없음. Electron이 전체 봇 명령 경로를 유지.'
+    mcp:
+      blurb: 'Model Context Protocol 서버와 도구 모음.'
+      reason: '연결됨 — MCP 클라이언트(stdio + streamable-HTTP), mcp.json 구성. Discover 미연결.'
+    acp:
+      blurb: 'HITL 권한이 있는 Agent Client Protocol 세션.'
+      reason: '연결됨 — ACP 브리지. HITL 권한 프롬프트가 Qt에서 동작.'
+    cloudSync:
+      blurb: '자체 저장소에 스냅샷 백업(BYOS).'
+      reason: '연결됨 — 로컬 폴더 타깃, 스냅샷 검증/복원. S3/메시/선택적 동기화 미연결.'
+    pluginHost:
+      blurb: 'AIRI 플러그인 패키지의 호스트.'
+      reason: '스캐폴드만 — discovery/활성화/capability 버스 없음. Qt v1 면제. Electron 메인 프로세스가 플러그인을 호스트.'
+    vrm:
+      blurb: 'VRM 모델 렌더링과 스테이지 씬.'
+      reason: 'Qt에서 사용 가능 — VRM 스테이지 렌더링(VrmMtoonMaterial + 스테이지 씬). smoke 검증됨.'
+    spine:
+      blurb: 'Spine 2D 스켈레탈 애니메이션 모델.'
+      reason: 'Qt에서 사용 가능 — SpineStage + SpineSettingsPage. smoke 검증됨.'
+    mmd:
+      blurb: 'MikuMikuDance 모델(.pmx/.pmd).'
+      reason: '실험적 — 합성 픽스처 rest pose만 검증됨. 라이선스된 실제 .pmx는 아직 구동되지 않음.'
+    live2d:
+      blurb: 'Live2D Cubism 모델.'
+      reason: '연기됨 — 라이선스. Qt용 Cubism 런타임 없음. Electron이 Live2D를 렌더링.'
+    cardAiStudio:
+      blurb: 'AI 지원 캐릭터 카드 제작 스튜디오.'
+      reason: '연기됨 — Qt v1 면제, v1.1 예정. 현재 Electron 앱에 존재.'
+memory:
+  title: '메모리'
+  badge: '정보'
+  infoTip: '메모리는 채팅 컨텍스트를 풍부하게 합니다. 단기 요약과 retrieval은 이 빌드에서 아직 소비되지 않습니다. 아래 저널은 실시간입니다.'
+  description: '단기 일일 요약과 장기 텍스트 저널. 메모리는 채팅 컨텍스트를 풍부하게 하며 — 설정한 LLM 제공자 외에는 기기를 벗어나지 않습니다.'
+  notWiredNotice: '메모리를 켜도 설정만 저장됩니다. 이 빌드의 어떤 부분도 아직 소비하지 않습니다 — 단기 요약과 retrieval은 채팅에 연결되어 있지 않습니다. 아래 저널은 실시간입니다.'
+  enable:
+    title: '메모리 켜기'
+    description: '아래 설정을 저장합니다. 채팅 파이프라인은 이 빌드에서 아직 이를 읽지 않습니다.'
+    disabledCaption: '메모리가 꺼져 있습니다 — 켤 때까지 아래 retrieval 컨트롤이 비활성화됩니다.'
+  shortTerm:
+    title: '단기 & retrieval'
+    badge: '미연결'
+    note: 'topK는 프롬프트에 주입될 retrieval 메모리 수를 제한합니다 (1–20). retrieval 순위는 의미 유사도(가중 0.75)와 어휘 중첩(가중 0.25)을 airi-core에서 블렌딩합니다. 이 빌드에서는 채팅 파이프라인이 이를 호출하지 않습니다.'
+  topK:
+    label: 'Retrieval top-k'
+    description: '프롬프트당 retrieval이 주입할 수 있는 메모리 수 (1–20).'
+    disabledTip: '메모리를 켜면 retrieval 예산을 변경할 수 있습니다.'
+  provider:
+    label: 'Retrieval 제공자'
+    notConfigured: '미설정'
+  journal:
+    title: '장기 저널'
+    refresh: '새로고침'
+    emptyTitle: '아직 저널 항목이 없습니다'
+    emptySubtitle: '아직 저널 항목이 없습니다 — 앱을 사용할수록 채팅 메모리가 채워집니다.'
+  footer: '설정과 저널은 이 프로필의 airi-store SQLite 볼트(airi.sqlite)에 저장됩니다. 메모리는 채팅 컨텍스트를 풍부하게 하며 — 설정한 LLM 제공자 외에는 기기를 벗어나지 않습니다.'
+  saveError: '저장에 실패했습니다 — 자세한 내용은 상태 표시줄을 확인하세요.'
+  time:
+    justNow: '방금 전'
+    minutesAgo: '%1분 전'
+    hoursAgo: '%1시간 전'
+hearing:
+  title: '청취'
+  badge: '의도만'
+  description: '동반자의 마이크 입력과 청취 환경설정.'
+  enable:
+    title: '청취 켜기'
+    description: 'AIRI가 듣기를 원한다는 의도를 기록합니다. 캡처 파이프라인이 도착하면 적용됩니다 — 이것을 저장해도 마이크는 열리지 않습니다.'
+  mode:
+    title: '청취 모드'
+    caption: 'Auto는 계속 듣습니다 (캡처 파이프라인 필요). PTT는 단축키를 누르는 동안만 듣습니다.'
+    auto: 'Auto'
+    ptt: '눌러서 말하기'
+  hotkey:
+    title: '단축키'
+    placeholder: 'Ctrl+Space'
+    caption: '이 빌드에서는 전역 단축키 등록이 연결되어 있지 않습니다 — 값은 저장되지만 단축키는 아직 작동하지 않습니다.'
+  device:
+    title: '입력 장치'
+    caption: '캡처 파이프라인이 도착하면 AIRI가 사용할 마이크를 선택합니다.'
+    emptyTitle: '입력 장치가 열거되지 않았습니다'
+    emptySubtitle: '이 Qt 빌드는 아직 마이크를 나열할 수 없습니다 — 오디오 캡처는 연결되지 않았습니다.'
+    useDefault: '시스템 기본값'
+  footerWarning: '이 Qt 빌드에서는 캡처 파이프라인과 Silero VAD가 채팅에 연결되어 있지 않습니다. 이 설정들은 의도만 저장합니다. 아무것도 듣지 않습니다.'
+  saveError: '저장에 실패했습니다 — 자세한 내용은 상태 표시줄을 확인하세요.'
+  nav: '청취'
+speech:
+  title: '음성'
+  description: 'AIRI용 텍스트 음성 변환. 카탈로그에서 제공자를 선택하고, 목소리와 속도를 조정하고, 확인용 샘플 파일을 씁니다. 포트 상태는 Rust speech 레지스트리에서 그대로입니다.'
+  providers:
+    caption: '텍스트 음성 변환 제공자'
+    empty: '제공자 카탈로그를 불러오지 못했습니다 — 콘솔을 확인하세요.'
+  noDefaultEndpoint: '기본 엔드포인트 없음 (필수)'
+  save: '저장'
+  missingKey: '이 제공자는 API 키가 필요하지만 store에 없습니다. 키는 제공자 store(id = 이 제공자)에서 읽습니다. Qt 제공자 UI는 아직 speech 범위 자격 증명을 쓰지 않습니다.'
+  status:
+    ported: '이식됨'
+    partial: '부분'
+    unsupported: '미지원'
+  voice:
+    caption: '목소리 & 속도'
+    label: '목소리'
+    placeholderDefault: '제공자 기본 목소리'
+  speed:
+    label: '속도'
+  sample:
+    caption: '샘플 합성'
+    description: '선택한 제공자로 짧은 샘플을 합성해 프로필 디렉터리 아래의 새 파일에 씁니다. 제공자의 기본 엔드포인트를 사용하며, 재생하지 않습니다.'
+    label: '샘플 텍스트'
+    placeholder: '안녕하세요, 저는 AIRI입니다.'
+    button: '샘플 합성'
+    written: '샘플을 썼습니다:'
+    notPlayable: '샘플 파일은 디스크에 쓰이며 앱 안에서 아직 재생할 수 없습니다 — 시스템 플레이어로 여세요.'
+  stt:
+    caption: '음성 인식'
+    title: '음성 인식은 다른 곳에 있습니다 (여기서는 연결 안 됨)'
+    body: 'airi-stt는 STT 클라이언트를 이식합니다: Whisper(인프로세스, whisper-rs), OpenAI 호환 /audio/transcriptions 클라이언트, Deepgram streaming 클라이언트, Aliyun NLS(streaming, 사전 발급 토큰 필요). 이를 구동할 Qt 청취 표면은 아직 없습니다 — 이 페이지는 텍스트 음성 변환만 설정합니다.'
 widgets:
   title: '위젯'
   previewBadge: '미리보기'

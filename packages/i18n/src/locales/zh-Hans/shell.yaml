@@ -73,6 +73,7 @@ settings:
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     fadeOnHover: Fade on Hover
+    modules: '模块'
   theme-page:
     title: 主题
     description: 个性化 AIRI 的颜色和外观。
@@ -114,6 +115,9 @@ settings:
     maxFps: 最大帧率
     maxFpsHint: 0 = 无限制
     saveError: 无法保存 Live2D 设置。
+    memory: '记忆'
+    speech: '语音'
+    hearing: '听觉'
 providers:
   search: 搜索提供商…
   search-empty: 没有符合筛选条件的提供商。
@@ -269,6 +273,14 @@ cards:
   deleteTitle: 删除角色卡？
   deleteBody: 这将永久删除你设备上的角色卡文件。
   save: 保存
+  export: '导出'
+  exportDialogTitle: '导出卡片'
+  exportHint: '将此卡片的逐字节副本保存到文件。'
+  exportFileName: '文件名'
+  exportDone: '卡片已导出。'
+  exportFilterPng: 'PNG 卡片 (*.png)'
+  exportFilterJson: 'JSON 卡片 (*.json)'
+  exportFilterAll: '所有文件 (*)'
   editor:
     title: 编辑角色卡
     newTitle: 新建角色卡
@@ -359,6 +371,158 @@ notice:
     previewTitle: '教程预览'
     previewNote: '淡出悬停演示视频随 stage-tamagotchi 渲染器资产一起发布。打包它需要 Qt 版本尚未具备的资产注册流程。'
 
+modules:
+  title: '模块'
+  overviewBadge: '概览'
+  notice: '模块家族的静态概览——本页发布时手动核对的状态；此处没有任何内容是实时的。设置导航提供各页面路由；延期项已禁用。'
+  footer: '延期的模块已禁用。本页不切换、连接或持久化任何内容。'
+  sectionChat: '对话与智能'
+  sectionIntegrations: '集成'
+  sectionRenderers: '渲染器'
+  sectionCardAi: 'Card-AI'
+  statusReady: '就绪'
+  statusExperimental: '实验性'
+  statusDeferred: '延期'
+  entries:
+    memory:
+      blurb: '为你的伙伴提供短期与长期记忆、日志与检索。'
+      reason: 'Qt 中就绪——路由由设置导航处理；后端已落地 airi-core memory（日志、检索、向量嵌入）；设置界面在本 wave 到达。'
+    speech:
+      blurb: '为你的伙伴提供文本转语音输出。'
+      reason: 'Qt 中就绪——后端已落地 airi-speech（26 个 TTS 定义 + Kokoro）；Qt TTS/STT 设置界面在本 wave 到达。'
+    hearing:
+      blurb: '麦克风输入、语音活动检测与转录。'
+      reason: 'Qt 中就绪——后端已落地 airi-stt（采集、Silero VAD、Deepgram/Aliyun/whisper-local）；Qt 听觉设置界面在本 wave 到达。'
+    vision:
+      blurb: '屏幕与摄像头视觉感知。'
+      reason: '延期——Qt 无 vision 栈（moondream/blip/apple-core-ai 不在 Rust 注册表中）；目前存在于 Electron 应用。'
+    consciousness:
+      blurb: '性格、推理与模型基础行为。'
+      reason: '延期——Qt 无对应实现；目前存在于 Electron 应用。'
+    agenticOs:
+      blurb: '基于 presence 的自主行为与 OS 自动化钩子。'
+      reason: '延期——Qt 无后端（presence、companion scopes、event log）；目前存在于 Electron 应用。'
+    textToMotion:
+      blurb: '从文本生成程序化动画（VRMA 输出）。'
+      reason: '延期——Qt 无对应实现（FlowMDM / VRMA）；与 P10 相邻；目前存在于 Electron 应用。'
+    discord:
+      blurb: 'Discord 机器人：发送消息并观察只读接收网关。'
+      reason: '已接线——仅发送 REST + 可选加入的内存内只读接收网关；无 bot 命令；完整 bot 命令路径归 Electron。'
+    mcp:
+      blurb: 'Model Context Protocol 服务器与工具集。'
+      reason: '已接线——MCP 客户端（stdio + streamable-HTTP），由 mcp.json 配置；Discover 尚未接线。'
+    acp:
+      blurb: '带 HITL 权限的 Agent Client Protocol 会话。'
+      reason: '已接线——ACP 桥；HITL 权限提示在 Qt 中可用。'
+    cloudSync:
+      blurb: '备份快照到你自己的存储（BYOS）。'
+      reason: '已接线——本地文件夹目标、快照验证/恢复；S3/mesh/选择性同步未接线。'
+    pluginHost:
+      blurb: 'AIRI 插件包的主机。'
+      reason: '仅脚手架——无发现/启用/capability 总线；Qt v1 豁免；插件由 Electron 主进程托管。'
+    vrm:
+      blurb: 'VRM 模型渲染与舞台场景。'
+      reason: 'Qt 中就绪——VRM 舞台渲染（VrmMtoonMaterial + 舞台场景）；已通过 smoke 验证。'
+    spine:
+      blurb: 'Spine 2D 骨骼动画模型。'
+      reason: 'Qt 中就绪——SpineStage + SpineSettingsPage；已通过 smoke 验证。'
+    mmd:
+      blurb: 'MikuMikuDance 模型（.pmx/.pmd）。'
+      reason: '实验性——仅用合成 fixture 验证了绑定姿势；未运行过有许可的真实 .pmx。'
+    live2d:
+      blurb: 'Live2D Cubism 模型。'
+      reason: '延期——许可；Qt 无 Cubism 运行时；Live2D 由 Electron 渲染。'
+    cardAiStudio:
+      blurb: 'AI 辅助的角色卡创建工作室。'
+      reason: '延期——Qt v1 豁免，计划 v1.1；目前存在于 Electron 应用。'
+memory:
+  title: '记忆'
+  badge: '信息'
+  infoTip: '记忆丰富聊天上下文。短期摘要和检索在本构建中尚未被使用；下方日志是实时的。'
+  description: '短期每日摘要与长期文本日志。记忆丰富聊天上下文——除已配置的 LLM 提供商外，一切都不会离开这台机器。'
+  notWiredNotice: '启用记忆仅持久化你的偏好。本构建中尚无任何部分消费它——短期摘要与检索未接入聊天。下方日志是实时的。'
+  enable:
+    title: '启用记忆'
+    description: '持久化下方的偏好。本构建中聊天管线尚不读取它。'
+    disabledCaption: '记忆已关闭——在启用之前，下方的检索控件已禁用。'
+  shortTerm:
+    title: '短期与检索'
+    badge: '未接线'
+    note: 'topK 限制每次注入提示词的检索记忆数（1–20）。检索排序在 airi-core 中混合语义相似度（权重 0.75）与词汇重合（权重 0.25）；本构建中聊天管线不调用它。'
+  topK:
+    label: 'Retrieval top-k'
+    description: '每次提示词检索可注入的记忆数（1–20）。'
+    disabledTip: '启用记忆以更改检索预算。'
+  provider:
+    label: '检索提供商'
+    notConfigured: '未配置'
+  journal:
+    title: '长期日志'
+    refresh: '刷新'
+    emptyTitle: '还没有日志条目'
+    emptySubtitle: '还没有日志条目——聊天记忆会随着你使用应用逐步填充。'
+  footer: '偏好与日志保存在此配置文件的 airi-store SQLite 保险库（airi.sqlite）中。记忆丰富聊天上下文——除已配置的 LLM 提供商外，一切都不会离开这台机器。'
+  saveError: '保存失败——详情见状态行。'
+  time:
+    justNow: '刚刚'
+    minutesAgo: '%1 分钟前'
+    hoursAgo: '%1 小时前'
+hearing:
+  title: '听觉'
+  badge: '仅意图'
+  description: '为你的伙伴配置麦克风输入与聆听偏好。'
+  enable:
+    title: '启用听觉'
+    description: '记录你希望 AIRI 听到你。当采集管线落地时生效——保存此项不会打开你的麦克风。'
+  mode:
+    title: '聆听模式'
+    caption: 'Auto 持续聆听（需要采集管线）；PTT 仅在按住热键期间聆听。'
+    auto: 'Auto'
+    ptt: '按住说话'
+  hotkey:
+    title: '热键'
+    placeholder: 'Ctrl+Space'
+    caption: '本构建中尚未接线全局热键注册——值会被保存，但目前没有任何快捷键生效。'
+  device:
+    title: '输入设备'
+    caption: '选择当采集管线落地时 AIRI 将使用的麦克风。'
+    emptyTitle: '未枚举到输入设备'
+    emptySubtitle: '本 Qt 构建尚无法列举麦克风——音频采集未接线。'
+    useDefault: '系统默认'
+  footerWarning: '本 Qt 构建中采集管线与 Silero VAD 未接入聊天。这些设置仅持久化你的意图；此处没有任何东西在听。'
+  saveError: '保存失败——详情见状态行。'
+  nav: '听觉'
+speech:
+  title: '语音'
+  description: '为 AIRI 提供文本转语音。从目录中挑选提供商，调整声音与速度，并写出一个样本文件用于检查。移植状态直接来自 Rust speech 注册表。'
+  providers:
+    caption: '文本转语音提供商'
+    empty: '提供商目录加载失败——请查看控制台。'
+  noDefaultEndpoint: '无默认端点（必填）'
+  save: '保存'
+  missingKey: '该提供商需要 API 密钥，而 store 中没有它的密钥。密钥从 provider store 读取（id = 该提供商）；Qt 的提供商 UI 尚不写入 speech 范围的凭据。'
+  status:
+    ported: '已移植'
+    partial: '部分'
+    unsupported: '不支持'
+  voice:
+    caption: '声音与速度'
+    label: '声音'
+    placeholderDefault: '提供商默认声音'
+  speed:
+    label: '速度'
+  sample:
+    caption: '样本合成'
+    description: '用所选提供商合成一段短样本，并写入你的配置目录下的新文件。使用提供商的默认端点；不播放任何内容。'
+    label: '样本文本'
+    placeholder: '你好，我是 AIRI。'
+    button: '合成样本'
+    written: '样本已写出：'
+    notPlayable: '样本文件写入磁盘后尚不能在应用内播放——请用系统播放器打开。'
+  stt:
+    caption: '语音识别'
+    title: '语音识别在别处（此处未接线）'
+    body: 'airi-stt 移植了 STT 客户端：Whisper（进程内，whisper-rs）、一个 OpenAI 兼容 /audio/transcriptions 客户端、一个 Deepgram streaming 客户端，以及 Aliyun NLS（streaming，需预先签发的令牌）。驱动它们的 Qt 听觉界面尚不存在——本页仅配置文本转语音。'
 widgets:
   title: '小组件'
   previewBadge: '预览'

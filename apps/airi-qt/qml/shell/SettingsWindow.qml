@@ -214,6 +214,34 @@ Window {
                     active: settingsWindow.navIndex === 24
                     onClicked: settingsWindow.navIndex = 24
                 }
+                AListItem {
+                    Layout.fillWidth: true
+                    icon: "📦"
+                    title: I18n.tr("shell.settings.nav.modules")
+                    active: settingsWindow.navIndex === 25
+                    onClicked: settingsWindow.navIndex = 25
+                }
+                AListItem {
+                    Layout.fillWidth: true
+                    icon: "🧠"
+                    title: I18n.tr("shell.settings.nav.memory")
+                    active: settingsWindow.navIndex === 26
+                    onClicked: settingsWindow.navIndex = 26
+                }
+                AListItem {
+                    Layout.fillWidth: true
+                    icon: "🗣️"
+                    title: I18n.tr("shell.settings.nav.speech")
+                    active: settingsWindow.navIndex === 27
+                    onClicked: settingsWindow.navIndex = 27
+                }
+                AListItem {
+                    Layout.fillWidth: true
+                    icon: "👂"
+                    title: I18n.tr("shell.settings.nav.hearing")
+                    active: settingsWindow.navIndex === 28
+                    onClicked: settingsWindow.navIndex = 28
+                }
 
                 Item {
                     Layout.fillHeight: true
@@ -336,13 +364,13 @@ Window {
             // Widgets — static catalog of known widget components.
             WidgetsPage {
             }
-            // MCP — servers & tools (scaffold; bridge pending).
+            // MCP — servers & tools (wired; mcp.json).
             McpSettingsPage {
             }
-            // Discord — gateway (scaffold; bridge pending).
+            // Discord — REST send + opt-in receive (wired).
             DiscordSettingsPage {
             }
-            // Cloud Sync — BYOS backup (scaffold; sync engine pending).
+            // Cloud Sync — BYOS local-folder slice (wired); S3 pending.
             CloudSyncSettingsPage {
             }
             // Plugin Host — devtools scaffold (host not wired).
@@ -353,6 +381,18 @@ Window {
             }
             // ACP Agents — wired to the AcpController bridge (HITL permissions).
             AcpAgentsPage {
+            }
+            // Modules — static overview of the module family.
+            ModulesSettingsPage {
+            }
+            // Memory — settings surface for the landed airi-core memory backend.
+            MemorySettingsPage {
+            }
+            // Speech — TTS provider catalog (airi-speech registry).
+            SpeechSettingsPage {
+            }
+            // Hearing — mic intent settings (capture pipeline not wired).
+            HearingSettingsPage {
             }
         }
     }

@@ -1,5 +1,7 @@
 # P11 — features.md audit (Lane P11-audit)
 
+> 2026-11-12 update (wave ⑪ integration): module-services wave landed — Memory (airi-core backend, Qt page), Speech (airi-speech catalog, Qt page), Hearing (settings surface, no capture), Modules overview page, CardExportDialog. Manifest reclassified: 13 rows ticked (#26/#221 MCP, #58 cloud-sync local-FS, #68 messaging-discord, #52 memory, #62 modules landing, #61 hearing, #65 long-term, #66 short-term, #70 speech, #108 speech landing, + 2 unwaived card-export rows); unchecked 189 → 116. The 23 per-provider speech/transcription rows stay (b) unchecked pending a manifest-refresh decision; #126 transcription landing stays (a); #64 lifetime-memory and #67 memory-signals stay (a) — not built this wave.
+
 > 2026-11-12 update (user decision, "next move"): the previously listed
 > remaining (a)-gap blocks are now waived for v1 — card-AI suite 43 rows,
 > knowledge-graph 8 rows, artistry/consciousness/vision/agentic-os/emotion 11

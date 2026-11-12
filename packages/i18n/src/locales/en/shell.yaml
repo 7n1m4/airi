@@ -74,6 +74,7 @@ settings:
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     fadeOnHover: Fade on Hover
+    modules: 'Modules'
   theme-page:
     title: Theme
     description: Personalize AIRI's colors and appearance.
@@ -115,6 +116,9 @@ settings:
     maxFps: Max FPS
     maxFpsHint: 0 = unlimited
     saveError: Couldn't save Live2D settings.
+    memory: 'Memory'
+    speech: 'Speech'
+    hearing: 'Hearing'
 providers:
   search: Search providers…
   search-empty: No providers match your filter.
@@ -270,6 +274,14 @@ cards:
   deleteTitle: Delete card?
   deleteBody: This permanently deletes the card file from your device.
   save: Save
+  export: 'Export'
+  exportDialogTitle: 'Export card'
+  exportHint: 'Save a byte-identical copy of this card to a file.'
+  exportFileName: 'File name'
+  exportDone: 'Card exported.'
+  exportFilterPng: 'PNG card (*.png)'
+  exportFilterJson: 'JSON card (*.json)'
+  exportFilterAll: 'All files (*)'
   editor:
     title: Edit card
     newTitle: New card
@@ -360,6 +372,158 @@ notice:
     previewTitle: 'Tutorial preview'
     previewNote: "The fade-on-hover walkthrough video ships with the stage-tamagotchi renderer assets. Bundling it needs an asset-registration pass that hasn't landed in the Qt build yet."
 
+modules:
+  title: 'Modules'
+  overviewBadge: 'Overview'
+  notice: 'Static overview of the module family — statuses verified by hand when this page landed; nothing here is live. The settings nav provides the routes; deferred entries are disabled.'
+  footer: 'Deferred modules are disabled. This page does not toggle, connect, or persist anything.'
+  sectionChat: 'Chat & Intelligence'
+  sectionIntegrations: 'Integrations'
+  sectionRenderers: 'Renderers'
+  sectionCardAi: 'Card-AI'
+  statusReady: 'Ready'
+  statusExperimental: 'Experimental'
+  statusDeferred: 'Deferred'
+  entries:
+    memory:
+      blurb: 'Short- and long-term memory, journals and retrieval for your companion.'
+      reason: 'Ready in Qt — routes handled by the settings nav; backend landed in airi-core memory (journal, retrieval, embeddings); settings surface lands in this wave.'
+    speech:
+      blurb: 'Text-to-speech voice output for your companion.'
+      reason: 'Ready in Qt — backend landed in airi-speech (26 TTS definitions + Kokoro); Qt TTS/STT settings surface lands in this wave.'
+    hearing:
+      blurb: 'Microphone input, voice activity detection and transcription.'
+      reason: 'Ready in Qt — backend landed in airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); Qt hearing settings surface lands in this wave.'
+    vision:
+      blurb: 'Screen and camera visual perception.'
+      reason: 'Deferred — no Qt vision stack (moondream/blip/apple-core-ai not in the Rust registry); lives in the Electron app today.'
+    consciousness:
+      blurb: 'Personality, reasoning and baseline model behavior.'
+      reason: 'Deferred — no Qt counterpart; lives in the Electron app today.'
+    agenticOs:
+      blurb: 'Presence-driven autonomous behavior and OS automation hooks.'
+      reason: 'Deferred — no Qt backend (presence, companion scopes, event log); lives in the Electron app today.'
+    textToMotion:
+      blurb: 'Procedural animation generation from text (VRMA output).'
+      reason: 'Deferred — no Qt counterpart (FlowMDM / VRMA); P10-adjacent; lives in the Electron app today.'
+    discord:
+      blurb: 'Discord bot: send messages and watch a receive-only gateway.'
+      reason: 'Wired — send-only REST + opt-in in-memory receive gateway; no bot commands; Electron keeps the full bot-commands path.'
+    mcp:
+      blurb: 'Model Context Protocol servers and tool suites.'
+      reason: 'Wired — MCP client (stdio + streamable-HTTP) with mcp.json config; Discover not wired yet.'
+    acp:
+      blurb: 'Agent Client Protocol sessions with HITL permissions.'
+      reason: 'Wired — ACP bridge with HITL permission prompts functional in Qt.'
+    cloudSync:
+      blurb: 'Back up snapshots to your own storage (BYOS).'
+      reason: 'Wired — local-folder target, snapshot verify/restore; S3/mesh/selective sync not wired yet.'
+    pluginHost:
+      blurb: 'Host for AIRI plugin packages.'
+      reason: 'Scaffold only — no discovery/enablement/capability bus; waived for Qt v1; Electron main process hosts plugins.'
+    vrm:
+      blurb: 'VRM model rendering and stage scene.'
+      reason: 'Ready in Qt — VRM stage renders (VrmMtoonMaterial + stage scene); smoke-verified.'
+    spine:
+      blurb: 'Spine 2D skeletal animation models.'
+      reason: 'Ready in Qt — SpineStage + SpineSettingsPage; smoke-verified.'
+    mmd:
+      blurb: 'MikuMikuDance models (.pmx/.pmd).'
+      reason: 'Experimental — synthetic-verified rest pose only; no licensed real .pmx has been exercised.'
+    live2d:
+      blurb: 'Live2D Cubism models.'
+      reason: 'Deferred — license; no Qt Cubism runtime; Electron renders Live2D.'
+    cardAiStudio:
+      blurb: 'AI-assisted character card creation studio.'
+      reason: 'Deferred — waived for Qt v1, slated v1.1; lives in the Electron app today.'
+memory:
+  title: 'Memory'
+  badge: 'Info'
+  infoTip: 'Memory augments the chat context. Short-term summaries and retrieval are not consumed by this build yet; the journal below is live.'
+  description: 'Short-term daily summaries and a long-term text journal. Memory augments the chat context — nothing leaves the machine except to the configured LLM provider.'
+  notWiredNotice: 'Enabling memory persists your preference only. No part of this build consumes it yet — short-term summarization and retrieval are not wired into chat. The journal below is live.'
+  enable:
+    title: 'Enable memory'
+    description: 'Persist the preference below. The chat pipeline does not read it in this build yet.'
+    disabledCaption: 'Memory is off — the retrieval controls below are disabled until you enable it.'
+  shortTerm:
+    title: 'Short-term & retrieval'
+    badge: 'Not wired'
+    note: 'topK caps how many retrieved memories may be injected into a prompt (1–20). Retrieval ranking blends semantic similarity (weight 0.75) with lexical overlap (weight 0.25) in airi-core; the chat pipeline does not call it in this build.'
+  topK:
+    label: 'Retrieval top-k'
+    description: 'How many memories retrieval may inject per prompt (1–20).'
+    disabledTip: 'Enable memory to change the retrieval budget.'
+  provider:
+    label: 'Retrieval provider'
+    notConfigured: 'not configured'
+  journal:
+    title: 'Long-term journal'
+    refresh: 'Refresh'
+    emptyTitle: 'No journal entries yet'
+    emptySubtitle: 'No journal entries yet — chat memory fills this as you use the app.'
+  footer: 'Preference and journal live in the airi-store SQLite vault (airi.sqlite) for this profile. Memory augments the chat context — nothing leaves the machine except to the configured LLM provider.'
+  saveError: 'Failed to save — see the status line for details.'
+  time:
+    justNow: 'just now'
+    minutesAgo: '%1m ago'
+    hoursAgo: '%1h ago'
+hearing:
+  title: 'Hearing'
+  badge: 'Intent only'
+  description: 'Microphone input and listening preferences for your companion.'
+  enable:
+    title: 'Enable hearing'
+    description: 'Records that you want AIRI to hear you. Takes effect when the capture pipeline lands — persisting this does not open your microphone.'
+  mode:
+    title: 'Listening mode'
+    caption: 'Auto listens continuously (requires the capture pipeline); PTT listens only while the hotkey is held.'
+    auto: 'Auto'
+    ptt: 'Push to talk'
+  hotkey:
+    title: 'Hotkey'
+    placeholder: 'Ctrl+Space'
+    caption: 'Global hotkey registration is not wired in this build — the value is saved but no shortcut is active yet.'
+  device:
+    title: 'Input device'
+    caption: 'Select the microphone AIRI will use once the capture pipeline lands.'
+    emptyTitle: 'No input devices enumerated'
+    emptySubtitle: 'The Qt build cannot list microphones yet — audio capture is not wired.'
+    useDefault: 'System default'
+  footerWarning: 'The capture pipeline and Silero VAD are not wired to chat in this Qt build. These settings persist your intent only; nothing here listens.'
+  saveError: 'Failed to save — see the status line for details.'
+  nav: 'Hearing'
+speech:
+  title: 'Speech'
+  description: 'Text-to-speech for AIRI. Pick a provider from the catalog, tune voice and speed, and write a sample file to check it. Port status comes from the Rust speech registry verbatim.'
+  providers:
+    caption: 'Text-to-speech provider'
+    empty: 'The provider catalog failed to load — see console.'
+  noDefaultEndpoint: 'no default endpoint (required)'
+  save: 'Save'
+  missingKey: 'This provider requires an API key and the store has none for it. Keys are read from the providers store (id = this provider); the Qt providers UI does not write speech-scoped credentials yet.'
+  status:
+    ported: 'Ported'
+    partial: 'Partial'
+    unsupported: 'Unsupported'
+  voice:
+    caption: 'Voice & speed'
+    label: 'Voice'
+    placeholderDefault: 'Provider default voice'
+  speed:
+    label: 'Speed'
+  sample:
+    caption: 'Sample synthesis'
+    description: 'Synthesize a short sample with the selected provider and write it to a new file under your profile dir. Uses the provider’s default endpoint; nothing is played.'
+    label: 'Sample text'
+    placeholder: 'Hello, I’m AIRI.'
+    button: 'Synthesize sample'
+    written: 'Sample written:'
+    notPlayable: 'Sample files are written to disk and are not playable in-app yet — open them with your system player.'
+  stt:
+    caption: 'Speech-to-text'
+    title: 'Speech-to-text lives elsewhere (not wired here)'
+    body: 'airi-stt ports the STT clients: Whisper (in-process, whisper-rs), an OpenAI-compatible /audio/transcriptions client, a Deepgram streaming client, and Aliyun NLS (streaming, pre-issued token required). The Qt hearing surface that would drive them does not exist yet — this page configures text-to-speech only.'
 widgets:
   title: 'Widgets'
   previewBadge: 'Preview'

@@ -74,6 +74,7 @@ settings:
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     fadeOnHover: Fade on Hover
+    modules: 'Modul'
   theme-page:
     title: Tema
     description: Personalisasi warna dan tampilan AIRI.
@@ -115,6 +116,9 @@ settings:
     maxFps: FPS maksimum
     maxFpsHint: 0 = tanpa batas
     saveError: Gagal menyimpan pengaturan Live2D.
+    memory: 'Memori'
+    speech: 'Bicara'
+    hearing: 'Pendengaran'
 providers:
   search: Cari penyedia…
   search-empty: Tidak ada penyedia yang cocok dengan filter Anda.
@@ -271,6 +275,14 @@ cards:
   deleteTitle: Hapus kartu?
   deleteBody: Ini menghapus file kartu secara permanen dari perangkatmu.
   save: Simpan
+  export: 'Ekspor'
+  exportDialogTitle: 'Ekspor kartu'
+  exportHint: 'Simpan salinan identik byte dari kartu ini ke sebuah file.'
+  exportFileName: 'Nama file'
+  exportDone: 'Kartu diekspor.'
+  exportFilterPng: 'Kartu PNG (*.png)'
+  exportFilterJson: 'Kartu JSON (*.json)'
+  exportFilterAll: 'Semua file (*)'
   editor:
     title: Ubah kartu
     newTitle: Kartu baru
@@ -361,6 +373,158 @@ notice:
     previewTitle: 'Pratinjau tutorial'
     previewNote: 'Video walkthrough fade-on-hover dibawa oleh aset renderer stage-tamagotchi. Mengemasnya butuh pass pendaftaran aset yang belum masuk ke build Qt.'
 
+modules:
+  title: 'Modul'
+  overviewBadge: 'Ringkasan'
+  notice: 'Ringkasan statis keluarga modul — status diverifikasi manual saat halaman ini mendarat; tidak ada yang live di sini. Navigasi pengaturan menyediakan rutenya; entri yang ditunda dinonaktifkan.'
+  footer: 'Modul yang ditunda dinonaktifkan. Halaman ini tidak mengaktifkan, menghubungkan, atau menyimpan apa pun.'
+  sectionChat: 'Chat & Kecerdasan'
+  sectionIntegrations: 'Integrasi'
+  sectionRenderers: 'Render'
+  sectionCardAi: 'Card-AI'
+  statusReady: 'Siap'
+  statusExperimental: 'Eksperimental'
+  statusDeferred: 'Ditunda'
+  entries:
+    memory:
+      blurb: 'Memori jangka pendek & panjang, jurnal dan retrieval untuk companion-mu.'
+      reason: 'Siap di Qt — rute dikelola navigasi pengaturan; backend mendarat di airi-core memory (journal, retrieval, embeddings); permukaan pengaturan tiba di wave ini.'
+    speech:
+      blurb: 'Keluaran suara text-to-speech untuk companion-mu.'
+      reason: 'Siap di Qt — backend mendarat di airi-speech (26 definisi TTS + Kokoro); permukaan pengaturan TTS/STT Qt tiba di wave ini.'
+    hearing:
+      blurb: 'Input mikrofon, deteksi aktivitas suara dan transkripsi.'
+      reason: 'Siap di Qt — backend mendarat di airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); permukaan pengaturan pendengaran Qt tiba di wave ini.'
+    vision:
+      blurb: 'Persepsi visual layar dan kamera.'
+      reason: 'Ditunda — tanpa stack vision di Qt (moondream/blip/apple-core-ai tidak ada di registri Rust); hidup di aplikasi Electron hari ini.'
+    consciousness:
+      blurb: 'Kepribadian, penalaran dan perilaku dasar model.'
+      reason: 'Ditunda — tanpa padanan Qt; hidup di aplikasi Electron hari ini.'
+    agenticOs:
+      blurb: 'Perilaku otonom berbasis presence dan hook otomasi OS.'
+      reason: 'Ditunda — tanpa backend Qt (presence, companion scopes, event log); hidup di aplikasi Electron hari ini.'
+    textToMotion:
+      blurb: 'Generasi animasi prosedural dari teks (keluaran VRMA).'
+      reason: 'Ditunda — tanpa padanan Qt (FlowMDM / VRMA); berdekatan dengan P10; hidup di aplikasi Electron hari ini.'
+    discord:
+      blurb: 'Bot Discord: kirim pesan dan lihat gateway khusus terima.'
+      reason: 'Tersambung — REST kirim-saja + gateway terima opt-in di memori; tanpa perintah bot; Electron mempertahankan jalur perintah bot penuh.'
+    mcp:
+      blurb: 'Server dan toolset Model Context Protocol.'
+      reason: 'Tersambung — klien MCP (stdio + streamable-HTTP) dengan konfigurasi mcp.json; Discover belum disambungkan.'
+    acp:
+      blurb: 'Sesi Agent Client Protocol dengan izin HITL.'
+      reason: 'Tersambung — jembatan ACP dengan prompt izin HITL fungsional di Qt.'
+    cloudSync:
+      blurb: 'Cadangkan snapshot ke penyimpananmu sendiri (BYOS).'
+      reason: 'Tersambung — target folder lokal, verifikasi/restore snapshot; S3/mesh/selektif belum disambungkan.'
+    pluginHost:
+      blurb: 'Host untuk paket plugin AIRI.'
+      reason: 'Hanya scaffold — tanpa penemuan/pengaktifan/bus kapabilitas; dibebaskan untuk Qt v1; main process Electron yang meng-host plugin.'
+    vrm:
+      blurb: 'Render model VRM dan scene stage.'
+      reason: 'Siap di Qt — stage VRM me-render (VrmMtoonMaterial + scene); terverifikasi smoke.'
+    spine:
+      blurb: 'Model animasi skeletal 2D Spine.'
+      reason: 'Siap di Qt — SpineStage + SpineSettingsPage; terverifikasi smoke.'
+    mmd:
+      blurb: 'Model MikuMikuDance (.pmx/.pmd).'
+      reason: 'Eksperimental — rest pose terverifikasi dengan fixture sintetis saja; tidak ada .pmx asli berlisensi yang pernah diuji.'
+    live2d:
+      blurb: 'Model Live2D Cubism.'
+      reason: 'Ditunda — lisensi; tanpa runtime Cubism di Qt; Electron me-render Live2D.'
+    cardAiStudio:
+      blurb: 'Studio pembuatan character card berbantuan AI.'
+      reason: 'Ditunda — dibebaskan untuk Qt v1, dijadwalkan v1.1; hidup di aplikasi Electron hari ini.'
+memory:
+  title: 'Memori'
+  badge: 'Info'
+  infoTip: 'Memori memperbesar konteks chat. Ringkasan jangka pendek dan retrieval belum dikonsumsi build ini; jurnal di bawah aktif.'
+  description: 'Ringkasan harian jangka pendek dan jurnal teks jangka panjang. Memori memperbesar konteks chat — tidak ada yang keluar dari mesin kecuali ke penyedia LLM yang dikonfigurasi.'
+  notWiredNotice: 'Mengaktifkan memori hanya menyimpan preferensi Anda. Belum ada bagian build ini yang mengonsumsinya — peringkasan jangka pendek dan retrieval belum terhubung ke chat. Jurnal di bawah aktif.'
+  enable:
+    title: 'Aktifkan memori'
+    description: 'Simpan preferensi di bawah. Pipeline chat belum membacanya di build ini.'
+    disabledCaption: 'Memori nonaktif — kontrol retrieval di bawah dinonaktifkan sampai Anda mengaktifkannya.'
+  shortTerm:
+    title: 'Jangka pendek & retrieval'
+    badge: 'Belum terhubung'
+    note: 'topK membatasi berapa banyak memori yang diambil dan diinjeksikan per prompt (1–20). Peringkat retrieval menggabungkan kemiripan semantik (bobot 0.75) dengan tumpang tindih leksikal (bobot 0.25) di airi-core; pipeline chat belum memanggilnya di build ini.'
+  topK:
+    label: 'Retrieval top-k'
+    description: 'Berapa banyak memori yang dapat diinjeksikan retrieval per prompt (1–20).'
+    disabledTip: 'Aktifkan memori untuk mengubah anggaran retrieval.'
+  provider:
+    label: 'Penyedia retrieval'
+    notConfigured: 'belum dikonfigurasi'
+  journal:
+    title: 'Jurnal jangka panjang'
+    refresh: 'Segarkan'
+    emptyTitle: 'Belum ada entri jurnal'
+    emptySubtitle: 'Belum ada entri jurnal — memori chat mengisinya saat Anda memakai aplikasi.'
+  footer: 'Preferensi dan jurnal tersimpan di vault SQLite airi-store (airi.sqlite) untuk profil ini. Memori memperbesar konteks chat — tidak ada yang keluar dari mesin kecuali ke penyedia LLM yang dikonfigurasi.'
+  saveError: 'Gagal menyimpan — lihat baris status untuk detail.'
+  time:
+    justNow: 'baru saja'
+    minutesAgo: '%1m yang lalu'
+    hoursAgo: '%1h yang lalu'
+hearing:
+  title: 'Pendengaran'
+  badge: 'Hanya niat'
+  description: 'Input mikrofon dan preferensi mendengar untuk companion-mu.'
+  enable:
+    title: 'Aktifkan pendengaran'
+    description: 'Mencatat bahwa Anda ingin AIRI mendengar Anda. Berlaku saat pipeline capture mendarat — menyimpan ini tidak membuka mikrofon Anda.'
+  mode:
+    title: 'Mode mendengar'
+    caption: 'Auto mendengar terus-menerus (memerlukan pipeline capture); PTT mendengar hanya saat tombol ditahan.'
+    auto: 'Auto'
+    ptt: 'Tekan untuk bicara'
+  hotkey:
+    title: 'Pintasan'
+    placeholder: 'Ctrl+Space'
+    caption: 'Pendaftaran pintasan global belum tersambung di build ini — nilainya disimpan tetapi belum ada pintasan yang aktif.'
+  device:
+    title: 'Perangkat input'
+    caption: 'Pilih mikrofon yang akan dipakai AIRI setelah pipeline capture mendarat.'
+    emptyTitle: 'Tidak ada perangkat input terdaftar'
+    emptySubtitle: 'Build Qt belum bisa mendaftar mikrofon — capture audio belum tersambung.'
+    useDefault: 'Default sistem'
+  footerWarning: 'Pipeline capture dan Silero VAD belum tersambung ke chat di build Qt ini. Pengaturan ini hanya menyimpan niat Anda; tidak ada yang mendengar di sini.'
+  saveError: 'Gagal menyimpan — lihat baris status untuk detail.'
+  nav: 'Pendengaran'
+speech:
+  title: 'Bicara'
+  description: 'Text-to-speech untuk AIRI. Pilih penyedia dari katalog, sesuaikan suara dan kecepatan, lalu tulis file sampel untuk memeriksanya. Status port berasal dari registri speech Rust apa adanya.'
+  providers:
+    caption: 'Penyedia text-to-speech'
+    empty: 'Katalog penyedia gagal dimuat — lihat konsol.'
+  noDefaultEndpoint: 'tanpa endpoint default (wajib)'
+  save: 'Simpan'
+  missingKey: 'Penyedia ini memerlukan kunci API dan store tidak punya untuknya. Kunci dibaca dari store penyedia (id = penyedia ini); UI penyedia Qt belum menulis kredensial scoped speech.'
+  status:
+    ported: 'Terporting'
+    partial: 'Parsial'
+    unsupported: 'Tidak didukung'
+  voice:
+    caption: 'Suara & kecepatan'
+    label: 'Suara'
+    placeholderDefault: 'Suara default penyedia'
+  speed:
+    label: 'Kecepatan'
+  sample:
+    caption: 'Sintesis sampel'
+    description: 'Sintesis sampel pendek dengan penyedia terpilih dan tulis ke file baru di direktori profil Anda. Menggunakan endpoint default penyedia; tidak ada yang diputar.'
+    label: 'Teks sampel'
+    placeholder: 'Halo, aku AIRI.'
+    button: 'Sintesis sampel'
+    written: 'Sampel ditulis:'
+    notPlayable: 'File sampel ditulis ke disk dan belum bisa diputar di dalam aplikasi — buka dengan pemutar sistem Anda.'
+  stt:
+    caption: 'Speech-to-text'
+    title: 'Speech-to-text hidup di tempat lain (belum tersambung di sini)'
+    body: 'airi-stt mem-port klien STT: Whisper (in-process, whisper-rs), klien OpenAI-compatible /audio/transcriptions, klien Deepgram streaming, dan Aliyun NLS (streaming, token pra-terbit diperlukan). Permukaan hearing Qt yang akan mengendalikannya belum ada — halaman ini hanya mengonfigurasi text-to-speech.'
 widgets:
   title: 'Widgets'
   previewBadge: 'Pratinjau'

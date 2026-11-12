@@ -74,6 +74,7 @@ settings:
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     fadeOnHover: Fade on Hover
+    modules: 'Modules'
   theme-page:
     title: Giao diện
     description: Cá nhân hóa màu sắc và diện mạo của AIRI.
@@ -115,6 +116,9 @@ settings:
     maxFps: FPS tối đa
     maxFpsHint: 0 = không giới hạn
     saveError: Không thể lưu cài đặt Live2D.
+    memory: 'Trí nhớ'
+    speech: 'Giọng nói'
+    hearing: 'Thính giác'
 providers:
   search: Tìm kiếm nhà cung cấp…
   search-empty: Không có nhà cung cấp nào khớp với bộ lọc.
@@ -270,6 +274,14 @@ cards:
   deleteTitle: Xóa thẻ?
   deleteBody: Thao tác này sẽ xóa vĩnh viễn tệp thẻ khỏi thiết bị của bạn.
   save: Lưu
+  export: 'Xuất'
+  exportDialogTitle: 'Xuất thẻ'
+  exportHint: 'Lưu một bản sao y hệt từng byte của thẻ này vào một tệp.'
+  exportFileName: 'Tên tệp'
+  exportDone: 'Đã xuất thẻ.'
+  exportFilterPng: 'Thẻ PNG (*.png)'
+  exportFilterJson: 'Thẻ JSON (*.json)'
+  exportFilterAll: 'Tất cả tệp (*)'
   editor:
     title: Sửa thẻ
     newTitle: Thẻ mới
@@ -360,6 +372,158 @@ notice:
     previewTitle: 'Xem trước hướng dẫn'
     previewNote: 'Video hướng dẫn fade-on-hover đi kèm với asset của renderer stage-tamagotchi. Đóng gói nó cần một lượt đăng ký asset chưa có trong bản dựng Qt.'
 
+modules:
+  title: 'Modules'
+  overviewBadge: 'Tổng quan'
+  notice: 'Tổng quan tĩnh của dòng modules — trạng thái được xác minh thủ công khi trang này được phát hành; không có gì ở đây là trực tiếp. Điều hướng cài đặt cung cấp các tuyến; các mục hoãn lại bị tắt.'
+  footer: 'Module bị hoãn sẽ bị tắt. Trang này không bật/tắt, kết nối hay lưu trữ bất cứ thứ gì.'
+  sectionChat: 'Chat & Trí tuệ'
+  sectionIntegrations: 'Tích hợp'
+  sectionRenderers: 'Trình render'
+  sectionCardAi: 'Card-AI'
+  statusReady: 'Sẵn sàng'
+  statusExperimental: 'Thử nghiệm'
+  statusDeferred: 'Hoãn lại'
+  entries:
+    memory:
+      blurb: 'Trí nhớ ngắn/dài hạn, journal và retrieval cho companion của bạn.'
+      reason: 'Sẵn sàng trong Qt — tuyến do điều hướng cài đặt lo; backend đã đưa vào airi-core memory (journal, retrieval, embeddings); bề mặt cài đặt đến trong wave này.'
+    speech:
+      blurb: 'Đầu ra giọng nói text-to-speech cho companion của bạn.'
+      reason: 'Sẵn sàng trong Qt — backend đã đưa vào airi-speech (26 định nghĩa TTS + Kokoro); bề mặt cài đặt TTS/STT của Qt đến trong wave này.'
+    hearing:
+      blurb: 'Đầu vào mic, phát hiện hoạt động giọng nói và chuyển lời thành văn bản.'
+      reason: 'Sẵn sàng trong Qt — backend đã đưa vào airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local); bề mặt cài đặt hearing của Qt đến trong wave này.'
+    vision:
+      blurb: 'Nhận thức thị giác màn hình và camera.'
+      reason: 'Hoãn lại — không có vision stack trong Qt (moondream/blip/apple-core-ai không có trong Rust registry); hiện sống trong ứng dụng Electron.'
+    consciousness:
+      blurb: 'Tính cách, lý luận và hành vi nền của model.'
+      reason: 'Hoãn lại — không có đối tác Qt; hiện sống trong ứng dụng Electron.'
+    agenticOs:
+      blurb: 'Hành vi tự chủ dẫn dắt bởi presence và các hook tự động hóa OS.'
+      reason: 'Hoãn lại — không có backend Qt (presence, companion scopes, event log); hiện sống trong ứng dụng Electron.'
+    textToMotion:
+      blurb: 'Sinh animation thủ tục từ văn bản (đầu ra VRMA).'
+      reason: 'Hoãn lại — không có đối tác Qt (FlowMDM / VRMA); kề cận P10; hiện sống trong ứng dụng Electron.'
+    discord:
+      blurb: 'Bot Discord: gửi tin nhắn và theo dõi gateway chỉ-nhận.'
+      reason: 'Đã nối — REST chỉ-gửi + gateway nhận opt-in trong bộ nhớ; không lệnh bot; Electron giữ đường lệnh bot đầy đủ.'
+    mcp:
+      blurb: 'Máy chủ và bộ công cụ Model Context Protocol.'
+      reason: 'Đã nối — client MCP (stdio + streamable-HTTP) với cấu hình mcp.json; Discover chưa được nối.'
+    acp:
+      blurb: 'Phiên Agent Client Protocol với quyền HITL.'
+      reason: 'Đã nối — cầu ACP; lời nhắc quyền HITL hoạt động trên Qt.'
+    cloudSync:
+      blurb: 'Sao lưu snapshot tới kho lưu trữ của riêng bạn (BYOS).'
+      reason: 'Đã nối — mục tiêu thư mục cục bộ, xác minh/khôi phục snapshot; S3/mesh/chọn lọc chưa được nối.'
+    pluginHost:
+      blurb: 'Host cho gói plugin AIRI.'
+      reason: 'Chỉ scaffold — không discovery/bật/tắt/capability bus; miễn trừ cho Qt v1; main process Electron host plugin.'
+    vrm:
+      blurb: 'Render model VRM và cảnh stage.'
+      reason: 'Sẵn sàng trong Qt — stage VRM renders (VrmMtoonMaterial + stage scene); xác minh smoke.'
+    spine:
+      blurb: 'Model animation xương 2D Spine.'
+      reason: 'Sẵn sàng trong Qt — SpineStage + SpineSettingsPage; xác minh smoke.'
+    mmd:
+      blurb: 'Model MikuMikuDance (.pmx/.pmd).'
+      reason: 'Thử nghiệm — rest pose chỉ xác minh bằng fixture tổng hợp; chưa từng chạy .pmx thật có license.'
+    live2d:
+      blurb: 'Model Live2D Cubism.'
+      reason: 'Hoãn lại — license; không runtime Cubism cho Qt; Electron renders Live2D.'
+    cardAiStudio:
+      blurb: 'Studio tạo character card bằng AI.'
+      reason: 'Hoãn lại — miễn trừ cho Qt v1, dự kiến v1.1; hiện sống trong ứng dụng Electron.'
+memory:
+  title: 'Trí nhớ'
+  badge: 'Thông tin'
+  infoTip: 'Trí nhớ làm giàu ngữ cảnh chat. Tóm tắt ngắn hạn và retrieval chưa được build này tiêu thụ; journal bên dưới đang sống.'
+  description: 'Tóm tắt hằng ngày ngắn hạn và một journal văn bản dài hạn. Trí nhớ làm giàu ngữ cảnh chat — không gì rời khỏi máy ngoại trừ tới nhà cung cấp LLM đã cấu hình.'
+  notWiredNotice: 'Bật trí nhớ chỉ lưu tùy chọn của bạn. Không phần nào của build này tiêu thụ nó — tóm tắt ngắn hạn và retrieval chưa được nối vào chat. Journal bên dưới đang sống.'
+  enable:
+    title: 'Bật trí nhớ'
+    description: 'Lưu tùy chọn bên dưới. Pipeline chat chưa đọc nó trong build này.'
+    disabledCaption: 'Trí nhớ đang tắt — các điều khiển retrieval bên dưới bị tắt cho đến khi bạn bật nó.'
+  shortTerm:
+    title: 'Ngắn hạn & retrieval'
+    badge: 'Chưa nối'
+    note: 'topK giới hạn số trí nhớ được lấy tiêm vào mỗi prompt (1–20). Xếp hạng retrieval pha trộn tương đồng ngữ nghĩa (trọng số 0.75) với trùng lặp từ vựng (trọng số 0.25) trong airi-core; pipeline chat chưa gọi nó trong build này.'
+  topK:
+    label: 'Retrieval top-k'
+    description: 'Số trí nhớ retrieval có thể tiêm mỗi prompt (1–20).'
+    disabledTip: 'Bật trí nhớ để thay đổi ngân sách retrieval.'
+  provider:
+    label: 'Nhà cung cấp retrieval'
+    notConfigured: 'chưa cấu hình'
+  journal:
+    title: 'Journal dài hạn'
+    refresh: 'Làm mới'
+    emptyTitle: 'Chưa có mục journal nào'
+    emptySubtitle: 'Chưa có mục journal nào — trí nhớ chat sẽ lấp đầy khi bạn dùng ứng dụng.'
+  footer: 'Tùy chọn và journal nằm trong vault SQLite airi-store (airi.sqlite) của hồ sơ này. Trí nhớ làm giàu ngữ cảnh chat — không gì rời khỏi máy ngoại trừ tới nhà cung cấp LLM đã cấu hình.'
+  saveError: 'Lưu thất bại — xem dòng trạng thái để biết chi tiết.'
+  time:
+    justNow: 'vừa xong'
+    minutesAgo: '%1 phút trước'
+    hoursAgo: '%1 giờ trước'
+hearing:
+  title: 'Thính giác'
+  badge: 'Chỉ là ý định'
+  description: 'Đầu vào mic và tùy chọn lắng nghe cho companion của bạn.'
+  enable:
+    title: 'Bật thính giác'
+    description: 'Ghi nhận rằng bạn muốn AIRI nghe bạn. Có hiệu lực khi pipeline capture đến — lưu điều này không mở mic của bạn.'
+  mode:
+    title: 'Chế độ lắng nghe'
+    caption: 'Auto nghe liên tục (cần pipeline capture); PTT chỉ nghe khi giữ phím nóng.'
+    auto: 'Auto'
+    ptt: 'Nhấn để nói'
+  hotkey:
+    title: 'Phím nóng'
+    placeholder: 'Ctrl+Space'
+    caption: 'Đăng ký phím nóng toàn cục chưa được nối trong build này — giá trị được lưu nhưng chưa có phím tắt nào hoạt động.'
+  device:
+    title: 'Thiết bị đầu vào'
+    caption: 'Chọn microphone mà AIRI sẽ dùng sau khi pipeline capture đến.'
+    emptyTitle: 'Không liệt kê được thiết bị đầu vào'
+    emptySubtitle: 'Build Qt chưa thể liệt kê microphone — capture audio chưa được nối.'
+    useDefault: 'Mặc định của hệ thống'
+  footerWarning: 'Pipeline capture và Silero VAD chưa được nối vào chat trong build Qt này. Các cài đặt này chỉ lưu ý định của bạn; không có gì nghe ở đây.'
+  saveError: 'Lưu thất bại — xem dòng trạng thái để biết chi tiết.'
+  nav: 'Thính giác'
+speech:
+  title: 'Giọng nói'
+  description: 'Chuyển văn bản thành giọng nói cho AIRI. Chọn một nhà cung cấp từ danh mục, chỉnh giọng và tốc độ, rồi ghi một tệp mẫu để kiểm tra. Trạng thái port lấy từ registry speech Rust nguyên văn.'
+  providers:
+    caption: 'Nhà cung cấp text-to-speech'
+    empty: 'Danh mục nhà cung cấp không tải được — xem console.'
+  noDefaultEndpoint: 'không có endpoint mặc định (bắt buộc)'
+  save: 'Lưu'
+  missingKey: 'Nhà cung cấp này yêu cầu API key và store không có cho nó. Key được đọc từ store provider (id = nhà cung cấp này); UI provider của Qt chưa ghi credential scoped speech.'
+  status:
+    ported: 'Đã port'
+    partial: 'Một phần'
+    unsupported: 'Không hỗ trợ'
+  voice:
+    caption: 'Giọng & tốc độ'
+    label: 'Giọng'
+    placeholderDefault: 'Giọng mặc định của nhà cung cấp'
+  speed:
+    label: 'Tốc độ'
+  sample:
+    caption: 'Tổng hợp mẫu'
+    description: 'Tổng hợp một mẫu ngắn với nhà cung cấp đã chọn và ghi vào một tệp mới trong thư mục hồ sơ của bạn. Dùng endpoint mặc định của nhà cung cấp; không phát lại gì.'
+    label: 'Văn bản mẫu'
+    placeholder: 'Xin chào, tôi là AIRI.'
+    button: 'Tổng hợp mẫu'
+    written: 'Đã ghi mẫu:'
+    notPlayable: 'Các tệp mẫu được ghi xuống đĩa và chưa phát được trong ứng dụng — hãy mở bằng trình phát hệ thống của bạn.'
+  stt:
+    caption: 'Nhận dạng giọng nói'
+    title: 'Nhận dạng giọng nói sống ở nơi khác (chưa nối tại đây)'
+    body: 'airi-stt port các client STT: Whisper (in-process, whisper-rs), client OpenAI-compatible /audio/transcriptions, client Deepgram streaming và Aliyun NLS (streaming, cần token cấp trước). Bề mặt hearing Qt sẽ điều khiển chúng chưa tồn tại — trang này chỉ cấu hình text-to-speech.'
 widgets:
   title: 'Tiện ích'
   previewBadge: 'Bản xem trước'

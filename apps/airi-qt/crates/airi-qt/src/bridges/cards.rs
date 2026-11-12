@@ -41,6 +41,25 @@ fn locate_card(id: &str) -> Option<PathBuf> {
     None
 }
 
+/// True when `a` and `b` refer to the same file. Used to refuse copying a
+/// card onto itself (the copy would truncate the source first). Falls back
+/// to an absolute lexical comparison when `b` does not exist yet.
+fn same_file(a: &std::path::Path, b: &std::path::Path) -> bool {
+    if let (Ok(a), Ok(b)) = (a.canonicalize(), b.canonicalize()) {
+        return a == b;
+    }
+    fn absolute(p: &std::path::Path) -> PathBuf {
+        if p.is_absolute() {
+            p.to_path_buf()
+        } else {
+            std::env::current_dir()
+                .map(|cwd| cwd.join(p))
+                .unwrap_or_else(|_| p.to_path_buf())
+        }
+    }
+    absolute(a) == absolute(b)
+}
+
 fn card_to_editor_json(card: &CharacterCard, path: &std::path::Path) -> serde_json::Value {
     let data = &card.data;
     json!({
@@ -224,6 +243,21 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "saveCard"]
         fn save_card(self: Pin<&mut CardController>, fields_json: QString) -> bool;
+
+        /// Byte-copy the card file with file-stem `id` to `destination`.
+        /// PNG cards are copied verbatim (embedded PNG `tEXt` chunks
+        /// included); JSON cards are copied as-is. `destination` is the
+        /// full file path confirmed by a Save dialog — existing files are
+        /// overwritten (the Save dialog already confirmed with the user).
+        /// The library is not rescanned; cards are unchanged by an export.
+        /// Returns `true` on success.
+        #[qinvokable]
+        #[cxx_name = "exportCardToFile"]
+        fn export_card_to_file(
+            self: Pin<&mut CardController>,
+            id: QString,
+            destination: QString,
+        ) -> bool;
     }
 }
 
@@ -388,6 +422,49 @@ impl qobject::CardController {
         match parsed {
             Ok(card) => QString::from(card_to_editor_json(&card, &path).to_string().as_str()),
             Err(_) => QString::from(""),
+        }
+    }
+
+    /// Export the card with file-stem `id` by byte-copying its file to
+    /// `destination`. `destination` is the full file path confirmed by a
+    /// Save dialog; an existing destination is overwritten (the Save
+    /// dialog already confirmed that with the user). No parent directories
+    /// are created. PNG cards keep their embedded `tEXt` chunks — nothing
+    /// is re-serialized. The error property carries a human message on
+    /// failure. Cards are unchanged, so no rescan is emitted.
+    pub fn export_card_to_file(
+        mut self: Pin<&mut Self>,
+        id: QString,
+        destination: QString,
+    ) -> bool {
+        self.as_mut().clear_error();
+        let id = qstring_to_string(&id);
+        let destination = qstring_to_string(&destination);
+        if destination.trim().is_empty() {
+            self.set_error_msg("no destination file was chosen".into());
+            return false;
+        }
+        let Some(source) = locate_card(&id) else {
+            self.set_error_msg(format!("card not found: {id}"));
+            return false;
+        };
+        let destination = PathBuf::from(destination.as_str());
+        if destination.is_dir() {
+            self.set_error_msg("the destination is a directory, not a file".into());
+            return false;
+        }
+        if same_file(&source, &destination) {
+            self.set_error_msg("the destination is the card's own file".into());
+            return false;
+        }
+        // std::fs::copy truncates/creates the destination as given. It does
+        // not create missing parent directories.
+        match std::fs::copy(&source, &destination) {
+            Ok(_) => true,
+            Err(err) => {
+                self.set_error_msg(format!("failed to export the card: {err}"));
+                false
+            }
         }
     }
 

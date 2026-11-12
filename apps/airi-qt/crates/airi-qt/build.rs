@@ -57,6 +57,9 @@ fn main() {
         manifest_dir.join("src/bridges/spine.rs"),
         manifest_dir.join("src/bridges/desktop.rs"),
         manifest_dir.join("src/bridges/update.rs"),
+        manifest_dir.join("src/bridges/memory.rs"),
+        manifest_dir.join("src/bridges/speech.rs"),
+        manifest_dir.join("src/bridges/hearing.rs"),
     ];
     let cpp_files = [
         manifest_dir.join("src/cpp/airi_qt_bridge.cpp"),
@@ -151,6 +154,11 @@ fn main() {
     module = module.qml_file("qml/pages/devtools/plugin-host/PluginHostPage.qml");
     module = module.qml_file("qml/pages/devtools/screen-capture/ScreenCapturePage.qml");
     module = module.qml_file("qml/pages/settings/modules/acp/AcpAgentsPage.qml");
+    module = module.qml_file("qml/pages/settings/modules/ModulesSettingsPage.qml");
+    module = module.qml_file("qml/pages/settings/modules/memory/MemorySettingsPage.qml");
+    module = module.qml_file("qml/pages/settings/modules/speech/SpeechSettingsPage.qml");
+    module = module.qml_file("qml/pages/settings/modules/hearing/HearingSettingsPage.qml");
+    module = module.qml_file("qml/pages/cards/CardExportDialog.qml");
 
     CxxQtBuilder::new_qml_module(module)
         .qt_module("Gui")

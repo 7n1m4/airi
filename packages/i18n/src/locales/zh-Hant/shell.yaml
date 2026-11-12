@@ -73,6 +73,7 @@ settings:
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     fadeOnHover: Fade on Hover
+    modules: '模組'
   theme-page:
     title: 主題
     description: 個人化 AIRI 的顏色和外觀。
@@ -114,6 +115,9 @@ settings:
     maxFps: 最大幀率
     maxFpsHint: 0 = 無限制
     saveError: 無法儲存 Live2D 設定。
+    memory: '記憶'
+    speech: '語音'
+    hearing: '聽覺'
 providers:
   search: 搜尋提供者…
   search-empty: 沒有符合篩選條件的提供者。
@@ -269,6 +273,14 @@ cards:
   deleteTitle: 刪除角色卡？
   deleteBody: 這將永久刪除你裝置上的角色卡檔案。
   save: 儲存
+  export: '匯出'
+  exportDialogTitle: '匯出卡片'
+  exportHint: '將此卡片的逐位元組副本儲存到檔案。'
+  exportFileName: '檔案名稱'
+  exportDone: '卡片已匯出。'
+  exportFilterPng: 'PNG 卡片 (*.png)'
+  exportFilterJson: 'JSON 卡片 (*.json)'
+  exportFilterAll: '所有檔案 (*)'
   editor:
     title: 編輯角色卡
     newTitle: 新建角色卡
@@ -359,6 +371,158 @@ notice:
     previewTitle: '教學預覽'
     previewNote: '淡出懸停演示影片隨 stage-tamagotchi 渲染器資產一起發佈。打包它需要 Qt 版本尚未具備的資產註冊流程。'
 
+modules:
+  title: '模組'
+  overviewBadge: '概覽'
+  notice: '模組家族的靜態概覽——本頁發佈時手動核對的狀態；此處沒有任何內容是即時的。設定導航提供各頁面路由；延期項目已停用。'
+  footer: '延期的模組已停用。本頁不切換、連接或持久化任何內容。'
+  sectionChat: '對話與智能'
+  sectionIntegrations: '整合'
+  sectionRenderers: '渲染器'
+  sectionCardAi: 'Card-AI'
+  statusReady: '就緒'
+  statusExperimental: '實驗性'
+  statusDeferred: '延期'
+  entries:
+    memory:
+      blurb: '為你的夥伴提供短期與長期記憶、日誌與檢索。'
+      reason: 'Qt 中就緒——路由由設定導航處理；後端已落地 airi-core memory（日誌、檢索、向量嵌入）；設定介面在本 wave 到達。'
+    speech:
+      blurb: '為你的夥伴提供文字轉語音輸出。'
+      reason: 'Qt 中就緒——後端已落地 airi-speech（26 個 TTS 定義 + Kokoro）；Qt TTS/STT 設定介面在本 wave 到達。'
+    hearing:
+      blurb: '麥克風輸入、語音活動偵測與轉錄。'
+      reason: 'Qt 中就緒——後端已落地 airi-stt（擷取、Silero VAD、Deepgram/Aliyun/whisper-local）；Qt 聽覺設定介面在本 wave 到達。'
+    vision:
+      blurb: '螢幕與相機視覺感知。'
+      reason: '延期——Qt 無 vision 堆疊（moondream/blip/apple-core-ai 不在 Rust 註冊表中）；目前存在於 Electron 應用。'
+    consciousness:
+      blurb: '性格、推理與模型基礎行為。'
+      reason: '延期——Qt 無對應實作；目前存在於 Electron 應用。'
+    agenticOs:
+      blurb: '基於 presence 的自主行為與 OS 自動化鉤子。'
+      reason: '延期——Qt 無後端（presence、companion scopes、event log）；目前存在於 Electron 應用。'
+    textToMotion:
+      blurb: '從文字生成程序化動畫（VRMA 輸出）。'
+      reason: '延期——Qt 無對應實作（FlowMDM / VRMA）；與 P10 相鄰；目前存在於 Electron 應用。'
+    discord:
+      blurb: 'Discord 機器人：發送訊息並觀察唯讀接收閘道。'
+      reason: '已接線——僅發送 REST + 可選加入的記憶體內唯讀接收閘道；無 bot 指令；完整 bot 指令路徑歸 Electron。'
+    mcp:
+      blurb: 'Model Context Protocol 伺服器與工具集。'
+      reason: '已接線——MCP 用戶端（stdio + streamable-HTTP），由 mcp.json 設定；Discover 尚未接線。'
+    acp:
+      blurb: '帶 HITL 權限的 Agent Client Protocol 工作階段。'
+      reason: '已接線——ACP 橋；HITL 權限提示在 Qt 中可用。'
+    cloudSync:
+      blurb: '備份快照到你自己的儲存（BYOS）。'
+      reason: '已接線——本地資料夾目標、快照驗證/還原；S3/mesh/選擇性同步未接線。'
+    pluginHost:
+      blurb: 'AIRI 外掛套件的主機。'
+      reason: '僅腳手架——無發現/啟用/capability 匯流排；Qt v1 豁免；外掛由 Electron 主行程託管。'
+    vrm:
+      blurb: 'VRM 模型渲染與舞台場景。'
+      reason: 'Qt 中就緒——VRM 舞台渲染（VrmMtoonMaterial + 舞台場景）；已通過 smoke 驗證。'
+    spine:
+      blurb: 'Spine 2D 骨骼動畫模型。'
+      reason: 'Qt 中就緒——SpineStage + SpineSettingsPage；已通過 smoke 驗證。'
+    mmd:
+      blurb: 'MikuMikuDance 模型（.pmx/.pmd）。'
+      reason: '實驗性——僅用合成 fixture 驗證了綁定姿勢；未執行過有授權的真實 .pmx。'
+    live2d:
+      blurb: 'Live2D Cubism 模型。'
+      reason: '延期——授權；Qt 無 Cubism 執行時；Live2D 由 Electron 渲染。'
+    cardAiStudio:
+      blurb: 'AI 輔助的角色卡建立工作室。'
+      reason: '延期——Qt v1 豁免，計畫 v1.1；目前存在於 Electron 應用。'
+memory:
+  title: '記憶'
+  badge: '資訊'
+  infoTip: '記憶豐富聊天上下文。短期摘要和檢索在本建構中尚未被使用；下方日誌是即時的。'
+  description: '短期每日摘要與長期文字日誌。記憶豐富聊天上下文——除已設定的 LLM 提供商外，一切都不會離開這台機器。'
+  notWiredNotice: '啟用記憶僅持久化你的偏好。本建構中尚無任何部分消費它——短期摘要與檢索未接入聊天。下方日誌是即時的。'
+  enable:
+    title: '啟用記憶'
+    description: '持久化下方的偏好。本建構中聊天管線尚不讀取它。'
+    disabledCaption: '記憶已關閉——在啟用之前，下方的檢索控制項已停用。'
+  shortTerm:
+    title: '短期與檢索'
+    badge: '未接線'
+    note: 'topK 限制每次注入提示的檢索記憶數（1–20）。檢索排序在 airi-core 中混合語義相似度（權重 0.75）與詞彙重合（權重 0.25）；本建構中聊天管線不呼叫它。'
+  topK:
+    label: 'Retrieval top-k'
+    description: '每次提示檢索可注入的記憶數（1–20）。'
+    disabledTip: '啟用記憶以更改檢索預算。'
+  provider:
+    label: '檢索提供商'
+    notConfigured: '未設定'
+  journal:
+    title: '長期日誌'
+    refresh: '重新整理'
+    emptyTitle: '還沒有日誌條目'
+    emptySubtitle: '還沒有日誌條目——聊天記憶會隨著你使用應用逐步填充。'
+  footer: '偏好與日誌保存在此設定檔案的 airi-store SQLite 保險庫（airi.sqlite）中。記憶豐富聊天上下文——除已設定的 LLM 提供商外，一切都不會離開這台機器。'
+  saveError: '儲存失敗——詳情見狀態行。'
+  time:
+    justNow: '剛剛'
+    minutesAgo: '%1 分鐘前'
+    hoursAgo: '%1 小時前'
+hearing:
+  title: '聽覺'
+  badge: '僅意圖'
+  description: '為你的夥伴設定麥克風輸入與聆聽偏好。'
+  enable:
+    title: '啟用聽覺'
+    description: '記錄你希望 AIRI 聽到你。當擷取管線落地時生效——儲存此項不會打開你的麥克風。'
+  mode:
+    title: '聆聽模式'
+    caption: 'Auto 持續聆聽（需要擷取管線）；PTT 僅在按住熱鍵期間聆聽。'
+    auto: 'Auto'
+    ptt: '按住說話'
+  hotkey:
+    title: '熱鍵'
+    placeholder: 'Ctrl+Space'
+    caption: '本建構中尚未接線全域熱鍵註冊——值會被儲存，但目前沒有任何快捷鍵生效。'
+  device:
+    title: '輸入裝置'
+    caption: '選擇當擷取管線落地時 AIRI 將使用的麥克風。'
+    emptyTitle: '未列舉到輸入裝置'
+    emptySubtitle: '本 Qt 建構尚無法列舉麥克風——音訊擷取未接線。'
+    useDefault: '系統預設'
+  footerWarning: '本 Qt 建構中擷取管線與 Silero VAD 未接入聊天。這些設定僅持久化你的意圖；此處沒有任何東西在聽。'
+  saveError: '儲存失敗——詳情見狀態行。'
+  nav: '聽覺'
+speech:
+  title: '語音'
+  description: '為 AIRI 提供文字轉語音。從目錄中挑選提供商，調整聲音與速度，並寫出一個樣本檔案用於檢查。移植狀態直接來自 Rust speech 註冊表。'
+  providers:
+    caption: '文字轉語音提供商'
+    empty: '提供商目錄載入失敗——請查看控制台。'
+  noDefaultEndpoint: '無預設端點（必填）'
+  save: '儲存'
+  missingKey: '該提供商需要 API 金鑰，而 store 中沒有它的金鑰。金鑰從 provider store 讀取（id = 該提供商）；Qt 的提供商 UI 尚不寫入 speech 範圍的憑據。'
+  status:
+    ported: '已移植'
+    partial: '部分'
+    unsupported: '不支援'
+  voice:
+    caption: '聲音與速度'
+    label: '聲音'
+    placeholderDefault: '提供商預設聲音'
+  speed:
+    label: '速度'
+  sample:
+    caption: '樣本合成'
+    description: '用所選提供商合成一段短樣本，並寫入你的設定檔案目錄下的新檔案。使用提供商的預設端點；不播放任何內容。'
+    label: '樣本文字'
+    placeholder: '你好，我是 AIRI。'
+    button: '合成樣本'
+    written: '樣本已寫出：'
+    notPlayable: '樣本檔案寫入磁碟後尚不能在應用內播放——請用系統播放器開啟。'
+  stt:
+    caption: '語音辨識'
+    title: '語音辨識在別處（此處未接線）'
+    body: 'airi-stt 移植了 STT 用戶端：Whisper（行程內，whisper-rs）、一個 OpenAI 相容 /audio/transcriptions 用戶端、一個 Deepgram streaming 用戶端，以及 Aliyun NLS（streaming，需預先簽發的權杖）。驅動它們的 Qt 聽覺介面尚不存在——本頁僅設定文字轉語音。'
 widgets:
   title: '小工具'
   previewBadge: '預覽'

@@ -74,6 +74,7 @@ settings:
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
     fadeOnHover: Fade on Hover
+    modules: 'Modules'
   theme-page:
     title: Thème
     description: Personnalisez les couleurs et l'apparence d'AIRI.
@@ -115,6 +116,9 @@ settings:
     maxFps: FPS max
     maxFpsHint: 0 = illimité
     saveError: Impossible d'enregistrer les paramètres Live2D.
+    memory: 'Mémoire'
+    speech: 'Parole'
+    hearing: 'Audition'
 providers:
   search: Rechercher des fournisseurs…
   search-empty: Aucun fournisseur ne correspond à votre filtre.
@@ -270,6 +274,14 @@ cards:
   deleteTitle: Supprimer la carte ?
   deleteBody: Cela supprime définitivement le fichier de carte de votre appareil.
   save: Enregistrer
+  export: 'Exporter'
+  exportDialogTitle: 'Exporter la carte'
+  exportHint: 'Enregistre une copie à l’identique de cette carte dans un fichier.'
+  exportFileName: 'Nom du fichier'
+  exportDone: 'Carte exportée.'
+  exportFilterPng: 'Carte PNG (*.png)'
+  exportFilterJson: 'Carte JSON (*.json)'
+  exportFilterAll: 'Tous les fichiers (*)'
   editor:
     title: Modifier la carte
     newTitle: Nouvelle carte
@@ -360,6 +372,158 @@ notice:
     previewTitle: 'Aperçu du tutoriel'
     previewNote: "La vidéo du tutoriel est livrée avec les assets du renderer stage-tamagotchi. L'intégrer nécessite un passage d'enregistrement d'assets qui n'a pas encore atterri dans la build Qt."
 
+modules:
+  title: 'Modules'
+  overviewBadge: 'Vue d’ensemble'
+  notice: 'Vue d’ensemble statique de la famille de modules — statuts vérifiés à la main lorsque cette page a été livrée ; rien ici n’est en direct. La navigation des réglages fournit les routes ; les entrées différées sont désactivées.'
+  footer: 'Les modules différés sont désactivés. Cette page n’active, ne connecte ni ne persiste rien.'
+  sectionChat: 'Chat & Intelligence'
+  sectionIntegrations: 'Intégrations'
+  sectionRenderers: 'Rendus'
+  sectionCardAi: 'Card-AI'
+  statusReady: 'Prêt'
+  statusExperimental: 'Expérimental'
+  statusDeferred: 'Différé'
+  entries:
+    memory:
+      blurb: 'Mémoire à court et long terme, journaux et retrieval pour votre compagnon.'
+      reason: 'Prêt dans Qt — routes gérées par la navigation des réglages ; backend livré dans airi-core memory (journal, retrieval, embeddings) ; la surface de réglages arrive dans cette wave.'
+    speech:
+      blurb: 'Sortie vocale texte-parole pour votre compagnon.'
+      reason: 'Prêt dans Qt — backend livré dans airi-speech (26 définitions TTS + Kokoro) ; la surface de réglages TTS/STT Qt arrive dans cette wave.'
+    hearing:
+      blurb: 'Entrée micro, détection d’activité vocale et transcription.'
+      reason: 'Prêt dans Qt — backend livré dans airi-stt (capture, Silero VAD, Deepgram/Aliyun/whisper-local) ; la surface de réglages audition Qt arrive dans cette wave.'
+    vision:
+      blurb: 'Perception visuelle écran et caméra.'
+      reason: 'Différé — pas de pile vision en Qt (moondream/blip/apple-core-ai absents du registre Rust) ; vit dans l’app Electron aujourd’hui.'
+    consciousness:
+      blurb: 'Personnalité, raisonnement et comportement de base du modèle.'
+      reason: 'Différé — pas d’équivalent Qt ; vit dans l’app Electron aujourd’hui.'
+    agenticOs:
+      blurb: 'Comportement autonome guidé par la présence et crochets d’automatisation OS.'
+      reason: 'Différé — pas de backend Qt (presence, companion scopes, event log) ; vit dans l’app Electron aujourd’hui.'
+    textToMotion:
+      blurb: 'Génération procédurale d’animation depuis du texte (sortie VRMA).'
+      reason: 'Différé — pas d’équivalent Qt (FlowMDM / VRMA) ; adjacent à P10 ; vit dans l’app Electron aujourd’hui.'
+    discord:
+      blurb: 'Bot Discord : envoie des messages et regarde une gateway en réception seule.'
+      reason: 'Câblé — REST envoi-seul + gateway de réception opt-in en mémoire ; pas de commandes bot ; Electron garde la voie complète des commandes bot.'
+    mcp:
+      blurb: 'Serveurs et jeux d’outils Model Context Protocol.'
+      reason: 'Câblé — client MCP (stdio + streamable-HTTP) configuré par mcp.json ; Discover pas encore câblé.'
+    acp:
+      blurb: 'Sessions Agent Client Protocol avec permissions HITL.'
+      reason: 'Câblé — pont ACP avec invites de permission HITL fonctionnelles en Qt.'
+    cloudSync:
+      blurb: 'Sauvegarde des snapshots vers votre propre stockage (BYOS).'
+      reason: 'Câblé — cible dossier local, vérification/restauration de snapshots ; S3/mesh/selectif pas encore câblés.'
+    pluginHost:
+      blurb: 'Hôte pour les paquets de plugins AIRI.'
+      reason: 'Scaffold uniquement — pas de découverte/activation/bus de capacités ; dispensé pour Qt v1 ; le processus principal Electron héberge les plugins.'
+    vrm:
+      blurb: 'Rendu de modèles VRM et scène du stage.'
+      reason: 'Prêt dans Qt — le stage VRM rend (VrmMtoonMaterial + scène) ; vérifié par smoke.'
+    spine:
+      blurb: 'Modèles d’animation squelettique 2D Spine.'
+      reason: 'Prêt dans Qt — SpineStage + SpineSettingsPage ; vérifié par smoke.'
+    mmd:
+      blurb: 'Modèles MikuMikuDance (.pmx/.pmd).'
+      reason: 'Expérimental — rest pose vérifié sur fixtures synthétiques uniquement ; aucun .pmx réel sous licence n’a été exercé.'
+    live2d:
+      blurb: 'Modèles Live2D Cubism.'
+      reason: 'Différé — licence ; pas de runtime Cubism en Qt ; Electron rend Live2D.'
+    cardAiStudio:
+      blurb: 'Studio de création de character cards assistée par IA.'
+      reason: 'Différé — dispensé pour Qt v1, prévu pour la v1.1 ; vit dans l’app Electron aujourd’hui.'
+memory:
+  title: 'Mémoire'
+  badge: 'Info'
+  infoTip: 'La mémoire augmente le contexte du chat. Les résumés court terme et le retrieval ne sont pas encore consommés par ce build ; le journal ci-dessous est actif.'
+  description: 'Résumés quotidiens court terme et journal texte long terme. La mémoire augmente le contexte du chat — rien ne quitte la machine sauf vers le fournisseur LLM configuré.'
+  notWiredNotice: 'Activer la mémoire persiste seulement votre préférence. Aucune partie de ce build ne la consomme encore — la summarisation court terme et le retrieval ne sont pas câblés au chat. Le journal ci-dessous est actif.'
+  enable:
+    title: 'Activer la mémoire'
+    description: 'Persiste la préférence ci-dessous. Le pipeline de chat ne la lit pas encore dans ce build.'
+    disabledCaption: 'La mémoire est désactivée — les contrôles de retrieval ci-dessous sont désactivés jusqu’à ce que vous l’activiez.'
+  shortTerm:
+    title: 'Court terme & retrieval'
+    badge: 'Non câblé'
+    note: 'topK borne le nombre de mémoires récupérées injectées par prompt (1–20). Le classement retrieval combine similarité sémantique (poids 0.75) et chevauchement lexical (poids 0.25) dans airi-core ; le pipeline de chat ne l’appelle pas dans ce build.'
+  topK:
+    label: 'Retrieval top-k'
+    description: 'Combien de mémoires le retrieval peut injecter par prompt (1–20).'
+    disabledTip: 'Activez la mémoire pour changer le budget de retrieval.'
+  provider:
+    label: 'Fournisseur de retrieval'
+    notConfigured: 'non configuré'
+  journal:
+    title: 'Journal long terme'
+    refresh: 'Actualiser'
+    emptyTitle: 'Aucune entrée de journal pour l’instant'
+    emptySubtitle: 'Aucune entrée de journal pour l’instant — la mémoire du chat les remplit à mesure que vous utilisez l’app.'
+  footer: 'La préférence et le journal vivent dans le coffre SQLite d’airi-store (airi.sqlite) pour ce profil. La mémoire augmente le contexte du chat — rien ne quitte la machine sauf vers le fournisseur LLM configuré.'
+  saveError: 'Échec de l’enregistrement — voir la ligne de statut pour les détails.'
+  time:
+    justNow: 'à l’instant'
+    minutesAgo: 'il y a %1m'
+    hoursAgo: 'il y a %1h'
+hearing:
+  title: 'Audition'
+  badge: 'Intention seule'
+  description: 'Entrée micro et préférences d’écoute pour votre compagnon.'
+  enable:
+    title: 'Activer l’audition'
+    description: 'Enregistre que vous voulez qu’AIRI vous entende. Prend effet quand le pipeline de capture arrivera — persister ceci n’ouvre pas votre micro.'
+  mode:
+    title: 'Mode d’écoute'
+    caption: 'Auto écoute en continu (nécessite le pipeline de capture) ; PTT n’écoute que tant que la touche est maintenue.'
+    auto: 'Auto'
+    ptt: 'Pousse-pour-parler'
+  hotkey:
+    title: 'Raccourci'
+    placeholder: 'Ctrl+Space'
+    caption: 'L’enregistrement du raccourci global n’est pas câblé dans ce build — la valeur est enregistrée mais aucun raccourci n’est actif pour l’instant.'
+  device:
+    title: 'Périphérique d’entrée'
+    caption: 'Choisissez le micro qu’AIRI utilisera quand le pipeline de capture arrivera.'
+    emptyTitle: 'Aucun périphérique d’entrée énuméré'
+    emptySubtitle: 'Le build Qt ne peut pas encore lister les micros — la capture audio n’est pas câblée.'
+    useDefault: 'Défaut système'
+  footerWarning: 'Le pipeline de capture et Silero VAD ne sont pas câblés au chat dans ce build Qt. Ces réglages persistent seulement votre intention ; rien ici n’écoute.'
+  saveError: 'Échec de l’enregistrement — voir la ligne de statut pour les détails.'
+  nav: 'Audition'
+speech:
+  title: 'Parole'
+  description: 'Text-to-speech pour AIRI. Choisissez un fournisseur du catalogue, réglez voix et vitesse, et écrivez un fichier d’échantillon pour vérifier. Le statut de port provient textuellement du registre speech Rust.'
+  providers:
+    caption: 'Fournisseur text-to-speech'
+    empty: 'Le catalogue des fournisseurs n’a pas chargé — voir la console.'
+  noDefaultEndpoint: 'pas d’endpoint par défaut (requis)'
+  save: 'Enregistrer'
+  missingKey: 'Ce fournisseur exige une clé API et le store n’en a aucune pour lui. Les clés sont lues depuis le store fournisseurs (id = ce fournisseur) ; l’UI fournisseurs Qt n’écrit pas encore de crédentiels scopés speech.'
+  status:
+    ported: 'Porté'
+    partial: 'Partiel'
+    unsupported: 'Non supporté'
+  voice:
+    caption: 'Voix & vitesse'
+    label: 'Voix'
+    placeholderDefault: 'Voix par défaut du fournisseur'
+  speed:
+    label: 'Vitesse'
+  sample:
+    caption: 'Synthèse d’échantillon'
+    description: 'Synthétise un court échantillon avec le fournisseur sélectionné et l’écrit dans un nouveau fichier sous votre répertoire de profil. Utilise l’endpoint par défaut du fournisseur ; rien n’est joué.'
+    label: 'Texte d’échantillon'
+    placeholder: 'Bonjour, je suis AIRI.'
+    button: 'Synthétiser l’échantillon'
+    written: 'Échantillon écrit :'
+    notPlayable: 'Les fichiers d’échantillon sont écrits sur le disque et ne sont pas jouables in-app pour l’instant — ouvrez-les avec votre lecteur système.'
+  stt:
+    caption: 'Speech-to-text'
+    title: 'La speech-to-text vit ailleurs (non câblée ici)'
+    body: 'airi-stt porte les clients STT : Whisper (en processus, whisper-rs), un client OpenAI-compatible /audio/transcriptions, un client Deepgram streaming et Aliyun NLS (streaming, token pré-émis requis). La surface audition Qt qui les piloterait n’existe pas encore — cette page configure uniquement text-to-speech.'
 widgets:
   title: 'Widgets'
   previewBadge: 'Aperçu'

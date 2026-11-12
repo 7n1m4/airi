@@ -9,7 +9,7 @@ Renderer routes: **37**
 stage-pages routes: **115**
 Non-route files (components/composables/tests/presets): **82**
 Total: **234**
-Waived (stay in Electron/web): **87**
+Waived (stay in Electron/web): **85**
 
 ## Routes (auto-routable pages)
 
@@ -34,7 +34,7 @@ Waived (stay in Electron/web): **87**
 - [ ] `/settings/docs/[...path]` — `apps/stage-tamagotchi/src/renderer/pages/settings/docs/[...path].vue`
 - [ ] `/settings/docs` — `apps/stage-tamagotchi/src/renderer/pages/settings/docs/index.vue`
 - [x] `/settings` — `apps/stage-tamagotchi/src/renderer/pages/settings/index.vue`
-- [ ] `/settings/modules/mcp` — `apps/stage-tamagotchi/src/renderer/pages/settings/modules/mcp.vue`
+- [x] `/settings/modules/mcp` — `apps/stage-tamagotchi/src/renderer/pages/settings/modules/mcp.vue`
 - [ ] `/settings/system/connection` — `apps/stage-tamagotchi/src/renderer/pages/settings/system/connection.vue`
 - [ ] `/settings/system/developer` — `apps/stage-tamagotchi/src/renderer/pages/settings/system/developer.vue`
 - [ ] `/settings/system/dock-mode` — `apps/stage-tamagotchi/src/renderer/pages/settings/system/dock-mode.vue`
@@ -49,22 +49,22 @@ Waived (stay in Electron/web): **87**
 - [x] `/settings/data` (stage-pages) — `packages/stage-pages/src/pages/settings/data/index.vue`
 - [ ] `/settings/dating-sim` (stage-pages) — `packages/stage-pages/src/pages/settings/dating-sim.vue`
 - [x] `/settings` (stage-pages) — `packages/stage-pages/src/pages/settings/index.vue`
-- [ ] `/settings/memory` (stage-pages) — `packages/stage-pages/src/pages/settings/memory/index.vue`
+- [x] `/settings/memory` (stage-pages) — `packages/stage-pages/src/pages/settings/memory/index.vue`
 - [x] `/settings/models/explore` (stage-pages) — `packages/stage-pages/src/pages/settings/models/explore.vue`
 - [ ] `/settings/models` (stage-pages) — `packages/stage-pages/src/pages/settings/models/index.vue`
 - [ ] `/settings/modules/beat-sync` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/beat-sync.vue`
-- [ ] `/settings/modules/cloud-sync` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/cloud-sync.vue`
+- [x] `/settings/modules/cloud-sync` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/cloud-sync.vue`
 - [ ] `/settings/modules/gaming-factorio` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/gaming-factorio.vue`
-- [ ] `/settings/modules/hearing` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/hearing.vue`
-- [ ] `/settings/modules` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/index.vue`
+- [x] `/settings/modules/hearing` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/hearing.vue`
+- [x] `/settings/modules` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/index.vue`
 - [ ] `/settings/modules/libp2p` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/libp2p.vue`
 - [ ] `/settings/modules/memory-lifetime` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/memory-lifetime.vue`
-- [ ] `/settings/modules/memory-long-term` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/memory-long-term.vue`
-- [ ] `/settings/modules/memory-short-term` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/memory-short-term.vue`
+- [x] `/settings/modules/memory-long-term` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/memory-long-term.vue`
+- [x] `/settings/modules/memory-short-term` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/memory-short-term.vue`
 - [ ] `/settings/modules/memory-signals` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/memory-signals.vue`
-- [ ] `/settings/modules/messaging-discord` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/messaging-discord.vue`
+- [x] `/settings/modules/messaging-discord` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/messaging-discord.vue`
 - [ ] `/settings/modules/messaging-friends` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/messaging-friends.vue`
-- [ ] `/settings/modules/speech` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/speech.vue`
+- [x] `/settings/modules/speech` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/speech.vue`
 - [ ] `/settings/modules/system-one` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/system-one.vue`
 - [ ] `/settings/modules/text-to-motion` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/text-to-motion.vue`
 - [ ] `/settings/modules/x` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/x.vue`
@@ -96,7 +96,7 @@ Waived (stay in Electron/web): **87**
 - [ ] `/settings/providers/speech/deepgram-tts` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/speech/deepgram-tts.vue`
 - [ ] `/settings/providers/speech/elevenlabs` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/speech/elevenlabs.vue`
 - [ ] `/settings/providers/speech/index-tts-vllm` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/speech/index-tts-vllm.vue`
-- [ ] `/settings/providers/speech` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/speech/index.vue`
+- [x] `/settings/providers/speech` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/speech/index.vue`
 - [ ] `/settings/providers/speech/kokoro-local` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/speech/kokoro-local.vue`
 - [ ] `/settings/providers/speech/microsoft-speech` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/speech/microsoft-speech.vue`
 - [ ] `/settings/providers/speech/moss-nano-local` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/speech/moss-nano-local.vue`
@@ -138,8 +138,10 @@ Waived (stay in Electron/web): **87**
 
 - [ ] `/devtools/context-flow/composables/use-context-flow-formatters.test` (stage-pages) — `packages/stage-pages/src/pages/devtools/context-flow/composables/use-context-flow-formatters.test.ts`
 - [x] `/settings/airi-card/components/CardEditorForm` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardEditorForm.vue`
+- [x] `/settings/airi-card/components/CardExportDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardExportDialog.vue`
 - [x] `/settings/airi-card/components/CardListItem` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardListItem.vue`
 - [x] `/settings/airi-card/components/DeleteCardDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/DeleteCardDialog.vue`
+- [x] `/settings/airi-card/composables/use-card-export` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/composables/use-card-export.ts`
 - [ ] `/settings/components/SettingsQuickAccess` (stage-pages) — `packages/stage-pages/src/pages/settings/components/SettingsQuickAccess.vue`
 - [ ] `/settings/components/SettingsSearchBar` (stage-pages) — `packages/stage-pages/src/pages/settings/components/SettingsSearchBar.vue`
 - [ ] `/settings/components/SettingsUpdateBanner` (stage-pages) — `packages/stage-pages/src/pages/settings/components/SettingsUpdateBanner.vue`
@@ -158,7 +160,7 @@ Waived (stay in Electron/web): **87**
 - [ ] `/settings/modules/components/LifetimeMemoryView` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/components/LifetimeMemoryView.vue`
 - [ ] `/settings/modules/components/LifetimeProvisioningModal` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/components/LifetimeProvisioningModal.vue`
 - [ ] `/settings/modules/components/McpConnectionTestPanel` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/components/McpConnectionTestPanel.vue`
-- [ ] `/settings/modules/mcp` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/mcp.vue`
+- [x] `/settings/modules/mcp` (stage-pages) — `packages/stage-pages/src/pages/settings/modules/mcp.vue`
 - [ ] `/settings/providers/free-hub/helpers.test` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/free-hub/helpers.test.ts`
 - [ ] `/settings/providers/free-hub/helpers` (stage-pages) — `packages/stage-pages/src/pages/settings/providers/free-hub/helpers.ts`
 - [ ] `/settings/system/connection` (stage-pages) — `packages/stage-pages/src/pages/settings/system/connection.vue`
@@ -217,7 +219,6 @@ Waived (stay in Electron/web): **87**
 - [-] `/settings/airi-card/components/CardCreate` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardCreate.vue` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
 - [-] `/settings/airi-card/components/CardCreationDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardCreationDialog.vue` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
 - [-] `/settings/airi-card/components/CardDetailDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardDetailDialog.vue` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
-- [-] `/settings/airi-card/components/CardExportDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardExportDialog.vue` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
 - [-] `/settings/airi-card/components/CardImportWizard` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CardImportWizard.vue` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
 - [-] `/settings/airi-card/components/ConceptBuilderModal` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/ConceptBuilderModal.vue` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
 - [-] `/settings/airi-card/components/CreateModeSelectorDialog` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/CreateModeSelectorDialog.vue` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
@@ -250,6 +251,5 @@ Waived (stay in Electron/web): **87**
 - [-] `/settings/airi-card/components/tabs/cognition/CognitionSubTabTriggers` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/tabs/cognition/CognitionSubTabTriggers.vue` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
 - [-] `/settings/airi-card/components/tabs/generation-thinking-presets.test` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/tabs/generation-thinking-presets.test.ts` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
 - [-] `/settings/airi-card/components/tabs/generation-thinking-presets` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/components/tabs/generation-thinking-presets.ts` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
-- [-] `/settings/airi-card/composables/use-card-export` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/composables/use-card-export.ts` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
 - [-] `/settings/airi-card/composables/useActingCapabilities` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/composables/useActingCapabilities.ts` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
 - [-] `/settings/airi-card/foundry-presets` (stage-pages) — `packages/stage-pages/src/pages/settings/airi-card/foundry-presets.ts` — waived: card-AI creation suite waived for Qt v1 — scheduled v1.1 (user decision 2026-11-12); Electron/web keeps the working suite until then (par-lock)
