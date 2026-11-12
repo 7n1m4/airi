@@ -57,10 +57,16 @@ export default {
         '@proj-airi/i18n-bundle': join(appDir, '../../packages/i18n/src/dist-lite/messages.mjs'),
         '@proj-airi/server-runtime': join(appDir, '../../packages/server-runtime/src'),
         'electron': join(appDir, 'src/main/electron-shim.ts'),
-        // crossws ships a `bun` export condition, but Bun's bundler applies `node` by default,
-        // so `crossws/server` resolves to the Node adapter and aborts at runtime with
-        // "[crossws] Using Node.js adapter in an incompatible environment". Point the bare
-        // specifier at the Bun adapter explicitly; drop this once Hutch forwards --conditions.
+        // NOTICE: Bun's bundler applies the `node` export condition, so `h3` resolves to
+        // h3/dist/_entries/node.mjs, whose `serve` is srvx's Node adapter (a node:http
+        // server). crossws, resolving independently, still picks its Bun adapter — so the Bun
+        // plugin ends up on the Node server and every WebSocket upgrade dies with
+        // "undefined is not an object (evaluating 'req.runtime.bun.server')", because only
+        // srvx's *Bun* adapter defines `request.runtime.bun.server`.
+        // Forcing h3 to its bun entry makes both sides Bun. Verified by resolving the bundle
+        // and checking which modules land in it. Drop both aliases when Hutch forwards
+        // `--conditions=bun` (or when h3/crossws make bun the default).
+        'h3': 'h3/bun',
         'crossws/server': 'crossws/server/bun',
       },
       // Only genuinely native modules are external: koffi/active-win are prebuilt .node addons.
