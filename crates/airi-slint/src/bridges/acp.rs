@@ -335,8 +335,8 @@ impl AcpState {
                 }
             }
         };
-        let permission_policy = permission_policy;
-        if !policy_is_valid(permission_policy) {
+        let permission_policy = permission_policy.to_string();
+        if !policy_is_valid(&permission_policy) {
             self.set_error(format!(
                 "permissionPolicy must be one of prompt | auto-read | auto-all, got {permission_policy:?}"
             ));
@@ -378,7 +378,7 @@ impl AcpState {
                 return false;
             }
         };
-        let removed = config.agents.remove(&name).is_some();
+        let removed = config.agents.remove(name).is_some();
         match save_config(&config) {
             Ok(()) => {
                 self.reload_agents();
@@ -425,7 +425,7 @@ impl AcpState {
                 return false;
             }
         };
-        match config.agents.get_mut(&name) {
+        match config.agents.get_mut(name) {
             Some(entry) => mutate(entry),
             None => {
                 self.set_error(format!("agent {name:?} is not configured"));
@@ -462,7 +462,7 @@ impl AcpState {
                 return false;
             }
         };
-        let Some(entry) = config.agents.get(&name) else {
+        let Some(entry) = config.agents.get(name) else {
             self.set_error(format!("agent {name:?} is not configured"));
             return false;
         };

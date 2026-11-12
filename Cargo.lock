@@ -364,6 +364,7 @@ dependencies = [
  "airi-sync",
  "anyhow",
  "auto-launch",
+ "chrono",
  "dbus",
  "dirs 5.0.1",
  "futures-util",

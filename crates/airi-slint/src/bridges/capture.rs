@@ -1083,14 +1083,18 @@ mod tests {
             "/org/freedesktop/portal/desktop/request/x/y",
         )]
         .into();
+        // `tick` fires once per call; count the pops separately to assert the
+        // drain actually walked the queue and then the empty read.
+        let mut ticks = 0;
         let mut pops = 0;
 
         let claimed = portal_response_tick(
             || {
-                pops += 1;
+                ticks += 1;
                 Ok(())
             },
             || {
+                pops += 1;
                 queue.pop_front()
             },
             |_| false,
@@ -1098,6 +1102,7 @@ mod tests {
         .unwrap();
 
         assert!(!claimed);
+        assert_eq!(ticks, 1); // one tick per call, not per message
         assert_eq!(pops, 2); // one per queued message, plus the empty pop
     }
 
