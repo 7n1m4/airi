@@ -33,7 +33,7 @@
 //!   ├─ renderer.notify           → notify_rust::Notification (session bus only)
 //!   ├─ renderer.window.raise     → GuiAction { id, method, payload }
 //!   └─ renderer.stage.visibility → GuiAction { id, method, payload }
-//!   ▼
+//!   ▼  (the GuiActions are returned as the drained batch)
 //! UI layer (shell)
 //!   │  performs the window-registry call, then reports it back with
 //!   │  complete_window_action(id, ok, payloadJson)
