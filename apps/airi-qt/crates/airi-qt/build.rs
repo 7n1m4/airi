@@ -60,6 +60,7 @@ fn main() {
         manifest_dir.join("src/bridges/memory.rs"),
         manifest_dir.join("src/bridges/speech.rs"),
         manifest_dir.join("src/bridges/hearing.rs"),
+        manifest_dir.join("src/bridges/gateway_pump.rs"),
     ];
     let cpp_files = [
         manifest_dir.join("src/cpp/airi_qt_bridge.cpp"),

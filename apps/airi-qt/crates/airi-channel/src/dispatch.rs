@@ -45,6 +45,9 @@
 //!   (message truncated to 512 chars).
 //! - `rpc_handler_panic` — a registered renderer handler panicked; the client
 //!   gets a generic message, the payload is logged server-side only.
+//! - `rpc_actions_disabled` — a registered renderer handler refused because
+//!   the gateway GUI-dispatch actions flag (`allowActions` in
+//!   `server-channel/config.json`) is off. Off by default; opt-in only.
 //!
 //! `gateway.config` never serializes the auth token into its reply; the
 //! config token is the session's only authenticator and stays server-side.
@@ -183,6 +186,17 @@ impl RpcError {
         }
     }
 
+    /// `rpc_actions_disabled` — a registered renderer handler refused because
+    /// the gateway GUI-dispatch actions flag (`allowActions` in
+    /// `server-channel/config.json`) is off. Off by default; opt-in only.
+    /// The message never includes the config contents.
+    pub fn actions_disabled() -> Self {
+        Self {
+            code: "rpc_actions_disabled",
+            message: "gateway actions are disabled (set allowActions=true to enable)".to_string(),
+        }
+    }
+
     /// `rpc_handler_error` — a registered renderer handler returned `Err`.
     /// The message is truncated to 512 chars.
     pub fn renderer_handler_error(message: &str) -> Self {
@@ -280,6 +294,21 @@ fn require_object_payload(payload: &Payload) -> Result<(), RpcError> {
     }
 }
 
+/// Map a renderer handler's `Err(msg)` onto the typed error for the reply.
+///
+/// Messages starting with `actions-disabled` (the GUI-dispatch core's
+/// opt-in refusal, produced when `allowActions` is not enabled in
+/// `server-channel/config.json`) map to `rpc_actions_disabled` so clients can
+/// match on the stable code. Everything else keeps the historical
+/// `rpc_handler_error` mapping — the prefix check is the only special case.
+fn renderer_handler_error_from(message: &str) -> RpcError {
+    if message.starts_with("actions-disabled") {
+        RpcError::actions_disabled()
+    } else {
+        RpcError::renderer_handler_error(message)
+    }
+}
+
 /// Dispatch a `renderer.<method>` action. The map is consulted only under
 /// the `renderer.` prefix; built-in methods are never shadowed by it.
 /// The payload is validated (object or null) before any handler runs, and
@@ -296,7 +325,7 @@ fn dispatch_renderer(
     };
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| handler(method, payload))) {
         Ok(Ok(value)) => Ok(value),
-        Ok(Err(message)) => Err(RpcError::renderer_handler_error(&message)),
+        Ok(Err(message)) => Err(renderer_handler_error_from(&message)),
         Err(panic) => {
             // NOTICE: log the payload server-side; never serialize it into
             // the client reply (it can hold arbitrary handler internals).
@@ -532,6 +561,35 @@ mod tests {
             RpcRegistry::dispatch(&ctx(), "renderer.explode", &Value::Null, &handlers).unwrap_err();
         assert_eq!(err.code(), "rpc_handler_error");
         assert_eq!(err.message(), "nope");
+    }
+
+    #[test]
+    fn renderer_handler_actions_disabled_maps_to_actions_disabled() {
+        let mut handlers = RendererHandlers::new();
+        handlers.insert(
+            "notify".to_string(),
+            Box::new(|_method: &str, _payload: &Value| {
+                Err("actions-disabled: gateway actions are off; set \"allowActions\": true in /tmp/example/server-channel/config.json".to_string())
+            }),
+        );
+        let err =
+            RpcRegistry::dispatch(&ctx(), "renderer.notify", &json!({}), &handlers).unwrap_err();
+        assert_eq!(err.code(), "rpc_actions_disabled");
+        assert_eq!(
+            err.message(),
+            "gateway actions are disabled (set allowActions=true to enable)"
+        );
+        // Other handler errors keep the historical mapping.
+        let mut handlers = RendererHandlers::new();
+        handlers.insert(
+            "explode".to_string(),
+            Box::new(|_method: &str, _payload: &Value| {
+                Err("boom actions-disabled (not a prefix)".to_string())
+            }),
+        );
+        let err =
+            RpcRegistry::dispatch(&ctx(), "renderer.explode", &json!({}), &handlers).unwrap_err();
+        assert_eq!(err.code(), "rpc_handler_error");
     }
 
     #[test]

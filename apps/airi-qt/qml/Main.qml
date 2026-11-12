@@ -46,6 +46,68 @@ Window {
         }
     }
 
+    // GUI-thread gateway dispatch (wave ⑫). Opt-in via "allowActions": true in
+    // <profile>/server-channel/config.json; off by default. See
+    // docs/phase-notes/p12-lane-gui-thread-dispatch.md.
+    GatewayPumpController {
+        id: gatewayPump
+    }
+
+    Timer {
+        interval: 50
+        repeat: true
+        running: true
+        onTriggered: gatewayPump.pumpRequests()
+    }
+
+    // Route GUI verbs from the gateway to the same handlers the Control Strip uses.
+    Connections {
+        target: gatewayPump
+        function onRequestWindowAction(id, method, payloadJson) {
+            var ok = true
+            var result = ({})
+            try {
+                var p = JSON.parse(payloadJson)
+                if (method === "renderer.window.raise") {
+                    var which = p.which
+                    switch (which) {
+                    case "chat":     WindowManager.openChat();     break
+                    case "settings": WindowManager.openSettings(); break
+                    case "about":    WindowManager.openAbout();    break
+                    case "stage":    WindowManager.openStage();    break
+                    default:         ok = false; result = { error: "unknown window: " + which }
+                    }
+                    if (ok)
+                        result = { raised: which }   // open* raises if the window exists
+                } else if (method === "renderer.stage.visibility") {
+                    var visible
+                    if (p.visible === true || p.visible === false) {
+                        var stage = WindowManager.stageWindow
+                        if (stage) {
+                            stage.visible = p.visible
+                            visible = p.visible
+                        } else if (p.visible) {
+                            WindowManager.openStage()   // no stage window yet → opening it *is* visible=true
+                            visible = true
+                        } else {
+                            visible = false             // nothing to hide
+                        }
+                    } else {
+                        visible = WindowManager.toggleStage()   // returns the new visibility
+                    }
+                    result = { visible: visible }
+                } else {
+                    ok = false
+                    result = { error: "unknown gateway verb: " + method }
+                }
+            } catch (e) {
+                ok = false
+                result = { error: String(e) }
+            }
+            gatewayPump.completeWindowAction(id, ok, JSON.stringify(result))
+        }
+    }
+
     Component.onCompleted: {
         // Push persisted theme values into the QML Theme singleton before
         // the first frame is shown.

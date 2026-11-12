@@ -14,6 +14,7 @@ pub mod data;
 pub mod desktop;
 pub mod discord;
 pub mod discord_gateway;
+pub mod gateway_pump;
 pub mod hearing;
 pub mod i18n;
 pub mod mcp;
