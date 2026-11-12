@@ -46,11 +46,11 @@
 //!
 //! # Screen awareness (P2) additions
 //!
-//! `focusDigestJson` holds the last digest `fetchFocusDigest()` returned
+//! `focus_digest_json` holds the last digest `fetch_focus_digest()` returned
 //! (`""` until the first successful preview; only ever set on `{ok: true}`).
-//! `screenEnabled` mirrors `sources.screen` when the daemon reports it
+//! `screen_enabled` mirrors `sources.screen` when the daemon reports it
 //! (P2a); it is `false` when the key is absent — never fabricated.
-//! `fetchFocusDigest()` performs exactly one D-Bus round-trip on demand
+//! `fetch_focus_digest()` performs exactly one D-Bus round-trip on demand
 //! (never on a timer); the fetched digest is handed to the UI untouched and is
 //! the only place screen content appears. `setExcludedApps()` validates the
 //! payload as a JSON array of non-empty strings before it hits the bus.
@@ -58,17 +58,17 @@
 //!
 //! # Audit viewer
 //!
-//! `recentAudit()`/`clearAudit()` (now `recent_audit`/`clear_audit`) operate on the shared audit file at
+//! `recent_audit()`/`clear_audit()` operate on the shared audit file at
 //! `dirs::data_dir()/airi-slint/audit/awareness-audit.jsonl` — the same path the
 //! daemon resolves in `audit.rs` (`AUDIT_FILE_NAME = "awareness-audit.jsonl"`)
 //! and the same one `GetStatus` reports in its `audit_path` field. (Note: an
 //! earlier draft of the lane brief called the file `awareness.jsonl`; the
 //! daemon source of truth wins and this bridge matches it.)
-//! `clearAudit()` truncates the file to zero bytes; it does **not** delete
+//! `clear_audit()` truncates the file to zero bytes; it does **not** delete
 //! the file, and it does **not** clear the daemon's in-memory ring buffer
 //! (the ring may re-serve events the page stops showing). The file is
 //! 7-day-retention, redacted JSONL; nothing leaves the machine.
-//! `recentAudit()` reads only the last 64 KiB of that file (enough for the 50
+//! `recent_audit()` reads only the last 64 KiB of that file (enough for the 50
 //! rows it shows) because the page polls it every second and the log grows
 //! unbounded up to its 7-day retention.
 //!
@@ -87,10 +87,10 @@
 //! means *on battery*. A missing/undecodable field reads as "not reported"
 //! and its segment is **omitted** from the line — never fabricated.
 //!
-//! `wakeBriefing()` returns the one-liner (`""` = quiet). `notifyWakeBriefing()`
+//! `wake_briefing()` returns the one-liner (`""` = quiet). `notify_wake_briefing()`
 //! renders it via notify-rust on the **session** bus (title "AIRI", urgency
 //! Normal, timeout = server default, no explicit icon) and reports honestly
-//! whether the notification was actually requested. `checkWakeBriefingTick()`
+//! whether the notification was actually requested. `check_wake_briefing_tick()`
 //! is a 5 s edge detector driven by the shell's separate Repeat Timer:
 //! it fires the notify **exactly once per wake edge**, only when the user
 //! opted in and awareness is not paused. The first-ever observation primes
@@ -334,7 +334,8 @@ fn local_utc_offset_seconds(unix_ms: u64) -> i32 {
         Some(dt) => dt,
         None => return 0,
     };
-    let seconds = Local.offset_from_utc_datetime(&utc.naive_utc()).local_minus_utc();
+    let offset = Local.offset_from_utc_datetime(&utc.naive_utc());
+    let seconds = offset.local_minus_utc();
     i32::try_from(seconds).unwrap_or(0)
 }
 
@@ -711,7 +712,7 @@ impl DaemonState {
     ) {
         self.running = running;
         self.paused = paused;
-        self.sources_json = sources_json.clone();
+        self.sources_json = sources_json;
         self.audit_path = audit_path;
         self.status_line = status_line;
         self.screen_enabled = screen_enabled_from_sources_json(&self.sources_json);

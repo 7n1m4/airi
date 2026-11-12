@@ -2,10 +2,9 @@
 //! Screen capture bridge (`CaptureState`) exposed to Slint.
 //!
 //! First slice of "vision": grab the primary screen to a PNG under the
-//! captures directory and list the saved captures back. The actual grab
-//! happens in the C++ shim (`src/cpp/capture_item.cpp`) — `QScreen::grabWindow(0)`
-//! needs a live `QGuiApplication`, which Qt hands to the GUI thread; the
-//! bridge is only invoked from QML, so this stays on the GUI thread too.
+//! captures directory and list the saved captures back. The X11 grab itself
+//! is not implemented yet (see [`airi_capture_primary_screen`]); the portal
+//! path below is the working route on Wayland.
 //!
 //! Captures directory: `<profile>/captures/` when `--profile` is set, else
 //! `<platform-data>/airi-slint/captures/` (same convention as the MCP config).
@@ -16,7 +15,7 @@
 //!   epoch (creation time is not portable across filesystems).
 //! - `clear_captures` is destructive and deliberately narrow: it deletes only
 //!   regular files directly inside the captures directory whose name matches
-//!   `capture-<digits>.png` (exactly what the shim writes), never follows
+//!   `capture-<digits>.png` (exactly what the portal writes), never follows
 //!   symlinks, and never touches anything else.
 //! - The Wayland path: `capture_via_portal()` asks the XDG desktop portal for
 //!   a full-screen screenshot (user-consent dialog, by design) and saves the
@@ -25,8 +24,8 @@
 //!   and never happens in smoke mode.
 //!
 //! A finished capture is a *path*: the RGBA buffer stays with the compositor
-//! and is written to disk by the shim / portal; nothing image-shaped crosses
-//! the bridge.
+//! and is written to disk by the portal; nothing image-shaped crosses the
+//! bridge.
 
 use serde_json::json;
 use std::path::PathBuf;
@@ -730,8 +729,7 @@ impl CaptureState {
                 portal_error,
             )
         };
-        self.captures_json =
-            serde_json::to_string(&captures).unwrap_or_else(|_| "[]".to_string());
+        self.captures_json = serde_json::to_string(&captures).unwrap_or_else(|_| "[]".to_string());
         if let Some(e) = error {
             self.set_error(e);
         } else if let Some(e) = portal_error {
@@ -876,11 +874,10 @@ impl CaptureState {
 /// `capture-<millis>.png`; returns the absolute path of the new PNG, or an
 /// empty string on failure (reason on stderr).
 ///
-/// `shortcut:` the X11 grab still lives in the Qt C++ shim
-/// (`src/cpp/capture_item.cpp`), which cxx-qt linked into the old shell. The
-/// Slint build has no shim, so this reports the failure honestly until the
-/// capture lands in Rust (slint's `slint::platform` / `xcap`); the portal
-/// path above is the working Wayland route.
+/// `shortcut:` the X11 grab lived in the old Qt C++ shim
+/// (`src/cpp/capture_item.cpp`), which is gone with the port. Until a Rust
+/// grabber lands (`xcap`), this reports the failure honestly and the portal
+/// path above stays the working route.
 fn airi_capture_primary_screen(_out_dir: &str) -> String {
     String::new()
 }

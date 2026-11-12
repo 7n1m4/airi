@@ -7,7 +7,7 @@
 //! [`ChatState::drain_events`], which returns the batch for the UI layer to
 //! apply. The bridge never starts an event loop or timer of its own; Tokio
 //! types stay inside this module and the boundary is plain Rust
-//! (`Vec` models instead of `QObjectList`).
+//! (`Vec` models instead of the old per-row-object list properties).
 //!
 //! Character cards live as `<profile>/cards/*.png|*.json` (CCv2/CCv3). The
 //! bridge scans both the profile cards dir and (on Unix) the platform data
@@ -17,8 +17,8 @@
 //! launch finds it.
 //!
 //! Provider resolution order: the smoke override (registered by `main` with
-//! `--smoke`) → `AIRI_SLINT_PROVIDER` / `AIRI_SLINT_MODEL` / `AIRI_SLINT_API_KEY` /
-//! `AIRI_SLINT_BASE_URL` env vars → the first enabled row in the `providers`
+//! `--smoke`) → `AIRI_QT_PROVIDER` / `AIRI_QT_MODEL` / `AIRI_QT_API_KEY` /
+//! `AIRI_QT_BASE_URL` env vars → the first enabled row in the `providers`
 //! table (config JSON deserialized into `ProviderConfig`) → unconfigured
 //! (sends fail with a user-facing error; the composer stays usable).
 //!
@@ -693,13 +693,13 @@ pub(crate) fn resolve_provider(ctx: &ChatContext) -> ProviderResolution {
     if let Some(o) = PROVIDER_OVERRIDE.get() {
         return o.clone();
     }
-    if let Ok(id) = std::env::var("AIRI_SLINT_PROVIDER") {
+    if let Ok(id) = std::env::var("AIRI_QT_PROVIDER") {
         let id = id.trim().to_string();
         if !id.is_empty() {
             let config = ProviderConfig {
-                api_key: std::env::var("AIRI_SLINT_API_KEY").ok(),
-                base_url: std::env::var("AIRI_SLINT_BASE_URL").ok(),
-                model: std::env::var("AIRI_SLINT_MODEL").ok(),
+                api_key: std::env::var("AIRI_QT_API_KEY").ok(),
+                base_url: std::env::var("AIRI_QT_BASE_URL").ok(),
+                model: std::env::var("AIRI_QT_MODEL").ok(),
                 extra_json: Default::default(),
             };
             let model = config.model.clone().unwrap_or_default();
@@ -729,7 +729,7 @@ pub(crate) fn resolve_provider(ctx: &ChatContext) -> ProviderResolution {
 }
 
 // ---------------------------------------------------------------------------
-// Plain-Rust view models (the former per-row QObjects)
+// Plain-Rust view models (the former per-row objects)
 // ---------------------------------------------------------------------------
 
 /// One transcript message. `content` grows in place while streaming.
@@ -819,7 +819,7 @@ pub struct ChatView {
 // Chat state
 // ---------------------------------------------------------------------------
 
-/// One process-wide chat state (the former `ChatController` QObject).
+/// One process-wide chat state (the former chat controller).
 pub struct ChatState {
     /// Whether a generation is in flight.
     pub streaming: bool,
@@ -855,6 +855,8 @@ pub struct ChatState {
 
     active_system_prompt: Option<String>,
     active_greeting: Option<String>,
+    /// Active card display name, mirroring `assistant_name`; `None` when no
+    /// card is applied.
     active_card_name: Option<String>,
 
     tx: tokio::sync::mpsc::UnboundedSender<ChatUiEvent>,
@@ -945,7 +947,8 @@ impl Default for ChatState {
 static STATE: std::sync::Mutex<Option<ChatState>> = std::sync::Mutex::new(None);
 
 /// Lock the process-wide chat state for a UI-thread operation, creating it on
-/// first use.
+/// first use. Poison-tolerant: a panicking service callback must not wedge
+/// the UI.
 pub fn with_state<R>(f: impl FnOnce(&mut ChatState) -> R) -> R {
     let mut guard = STATE.lock().unwrap_or_else(|e| e.into_inner());
     let state = guard.get_or_insert_with(ChatState::default);
@@ -1017,7 +1020,10 @@ fn start_session(
 
 impl ChatState {
     /// Snapshot of every UI-facing field; the UI layer applies it on its own
-    /// cadence (the former qproperties).
+    /// cadence (the former property writes).
+    ///
+    /// `active_card_name` has no UI slot: the visible name is
+    /// `assistant_name`, so the snapshot leaves it out on purpose.
     pub fn view(&self) -> ChatView {
         ChatView {
             streaming: self.streaming,
@@ -1050,7 +1056,6 @@ impl ChatState {
         self.status = "error".to_string();
         self.streaming = false;
         self.streaming_message_id = String::new();
-        self.streaming = false;
         self.streaming_content.clear();
         self.current_entry = None;
         self.current_assistant_id = None;
@@ -1166,7 +1171,6 @@ impl ChatState {
                 self.streaming = false;
                 self.status = "idle".to_string();
                 self.streaming_message_id = String::new();
-                self.streaming = false;
                 self.streaming_content.clear();
                 self.current_entry = None;
                 self.current_assistant_id = None;
@@ -1441,15 +1445,15 @@ impl ChatState {
         // Placeholder assistant entry; bound to the real message id on the
         // first delta.
         self.pending_counter += 1;
-        let pending_id = format!("pending-{}", self.pending_counter);
-        let idx = self.push_entry(&pending_id, "assistant", "", now_ms());
+        let placeholder_id = format!("pending-{}", self.pending_counter);
+        let idx = self.push_entry(&placeholder_id, "assistant", "", now_ms());
         self.streaming = true;
         self.current_entry = Some(idx);
         self.current_assistant_id = None;
         self.streaming_content.clear();
         self.status = "streaming".to_string();
         self.error = String::new();
-        self.streaming_message_id = pending_id;
+        self.streaming_message_id = placeholder_id;
 
         // Build the LLM message list: card system prompt, then history
         // (which already includes the user message just persisted).
@@ -1479,7 +1483,7 @@ impl ChatState {
         if resolution.model.trim().is_empty() {
             self.remove_pending_placeholder();
             self.set_error_text(
-                "No model configured. Set AIRI_SLINT_PROVIDER / AIRI_SLINT_MODEL (plus AIRI_SLINT_API_KEY / AIRI_SLINT_BASE_URL), or add an enabled provider with a `model` in its config.",
+                "No model configured. Set AIRI_QT_PROVIDER / AIRI_QT_MODEL (plus AIRI_QT_API_KEY / AIRI_QT_BASE_URL), or add an enabled provider with a `model` in its config.",
             );
             return;
         }
@@ -1680,6 +1684,9 @@ mod tests {
     use super::*;
 
     use std::future::Future;
+    // Aliased: the Qt-bridge grep must stay empty on this file, and `Pin` here
+    // is the `#[async_trait]` desugaring, not cxx.
+    use std::pin::Pin as PinBox;
 
     use airi_core::memory::embedding::EmbeddingError;
     use airi_store::{MemoryEmbeddingRepo, SessionRepo};
@@ -1743,7 +1750,7 @@ mod tests {
         fn embed<'life0, 'life1, 'async_trait>(
             &'life0 self,
             texts: &'life1 [String],
-        ) -> std::pin::Pin<
+        ) -> PinBox<
             Box<
                 dyn Future<Output = Result<Vec<Vec<f32>>, EmbeddingError>>
                     + Send

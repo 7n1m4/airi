@@ -7,7 +7,7 @@
 //! process-wide store handle (tests that touch it serialize on
 //! [`STORE_LOCK`]).
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
@@ -23,24 +23,58 @@ use crate::bridges::{settings_chat, settings_general, settings_sections, setting
 /// Serializes tests that re-register the process-wide settings store.
 static STORE_LOCK: Mutex<()> = Mutex::new(());
 
+/// Per-process temp root, unique to this test binary's pid and start time, so
+/// repeated runs never share a directory with a previous run.
+fn temp_root(tag: &str) -> PathBuf {
+    static ROOTS: Mutex<Option<std::collections::HashMap<String, PathBuf>>> = Mutex::new(None);
+    let mut guard = ROOTS.lock().unwrap_or_else(|e| e.into_inner());
+    let roots = guard.get_or_insert_with(std::collections::HashMap::new);
+    roots
+        .entry(tag.to_string())
+        .or_insert_with(|| {
+            let nanos = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0);
+            let dir = std::env::temp_dir().join(format!(
+                "airi-settings-bridge-test-{tag}-{}-{nanos}",
+                std::process::id()
+            ));
+            std::fs::create_dir_all(&dir).expect("create temp root");
+            dir
+        })
+        .clone()
+}
+
+/// Build a unique temp path for `name` under the per-process root, keeping any
+/// extension at the end so `Path::extension()` sees it (the import validators
+/// check it).
 fn temp_path(tag: &str, name: &str) -> PathBuf {
     static COUNTER: AtomicU64 = AtomicU64::new(0);
     let n = COUNTER.fetch_add(1, Ordering::SeqCst);
-    std::env::temp_dir().join(format!(
-        "airi-settings-bridge-test-{tag}-{name}-{}-{n}",
-        std::process::id()
-    ))
+    let file_name = match (Path::new(name).file_stem(), Path::new(name).extension()) {
+        (Some(stem), Some(ext)) => {
+            format!("{}-{n}.{}", stem.to_string_lossy(), ext.to_string_lossy())
+        }
+        _ => format!("{name}-{n}"),
+    };
+    temp_root(tag).join(file_name)
 }
 
-/// Point the process-wide settings store at a fresh temp database and return
-/// its path so the test can clean up.
+/// Point the process-wide settings store at a temp database and return its
+/// path. The store is a `OnceLock`, so only the first call's database is ever
+/// used; every section is therefore cleared here so each test starts from
+/// defaults regardless of what an earlier test persisted.
 fn register_temp_store(tag: &str) -> PathBuf {
     let path = temp_path(tag, "sqlite");
     let db = Database::open(&path).expect("open temp db");
-    crate::bridges::set_settings_store(airi_core::settings::SettingsStore::new(
-        db,
-        tokio::sync::broadcast::channel(16).0,
-    ));
+    let store = airi_core::settings::SettingsStore::new(db, tokio::sync::broadcast::channel(16).0);
+    // Clearing before the first registration is harmless (the db is empty),
+    // and after it makes the shared store start each test at defaults.
+    for key in store.list_keys(None).expect("list keys") {
+        let _ = store.delete(&key);
+    }
+    crate::bridges::set_settings_store(store);
     path
 }
 
@@ -513,10 +547,16 @@ fn model_discovery_and_import_round_trip() {
     let again = settings_stage::with_state(|state| state.import_model(src.to_str().unwrap()));
     assert_ne!(again, imported);
     let names = settings_stage::with_state(|state| state.list_models());
-    assert_eq!(
-        names.iter().filter(|n| n.starts_with("source.vrm")).count(),
-        2
-    );
+    // Dedupe keeps the `.vrm` extension but inserts `-<hex nanos>` before it,
+    // so the pair shares the source's own (suffixed) stem.
+    let src_name = src.file_name().unwrap().to_string_lossy().into_owned();
+    let stem = src_name.strip_suffix(".vrm").unwrap();
+    let deduped = names
+        .iter()
+        .filter(|n| n.starts_with(stem) && n.ends_with(".vrm"))
+        .count();
+    assert_eq!(deduped, 2, "expected the deduped pair, got {names:?} (src {src_name})");
+    assert_eq!(names.iter().filter(|n| **n == src_name).count(), 1);
     assert!(!names.iter().any(|n| n.ends_with(".txt")));
 
     // Uppercase `.VRM` files are discovered too.
@@ -526,8 +566,8 @@ fn model_discovery_and_import_round_trip() {
 
     // Resolution rejects path components and unknown names.
     settings_stage::with_state(|state| {
-        assert_eq!(state.resolve_model_path("source.vrm"), imported);
-        assert!(state.resolve_model_path("../source.vrm").is_empty());
+        assert_eq!(state.resolve_model_path(&src_name), imported);
+        assert!(state.resolve_model_path(&format!("../{src_name}")).is_empty());
         assert!(state.resolve_model_path("").is_empty());
         assert!(state.resolve_model_path("nope.vrm").is_empty());
         assert_eq!(

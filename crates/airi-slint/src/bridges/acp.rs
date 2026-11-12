@@ -1,21 +1,20 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-//! ACP (Agent Client Protocol) bridge (`AcpController`) exposed to QML.
+//! ACP (Agent Client Protocol) bridge (`AcpState`) exposed to Slint.
 //!
-//! Drives the `qml/pages/settings/modules/acp/` page: reads/writes the Qt
-//! app's own ACP agent config file (`<profile>/airi/acp.json`, or the
+//! Drives the ACP settings page: reads/writes the app's own ACP agent config
+//! file (`<profile>/airi/acp.json`, or the
 //! platform data dir when `--profile` is not set — same convention as
 //! Electron's `appData/airi/acp.json`), spawns configured agents through
 //! `airi-acp` (`initialize` + `session/new` with `cwd` = the profile
 //! directory), and runs one prompt turn at a time.
 //!
-//! Streaming: `promptAgent` starts a turn with `prompt_stream`; updates are
-//! accumulated into `transcriptJson` (`[{"kind", "text"}]`) by `pumpUpdates`,
-//! which QML calls on a 100 ms timer (same pump idiom as the chat/desktop
-//! bridges). Permission requests from the agent are enqueued by the
-//! `prompt` permission policy; `pumpUpdates` transfers them into
-//! `pendingPermissionJson` (`null` when nothing is pending) and emits
-//! `permissionRequested`. The QML page renders a modal and calls
-//! `answerPermission`.
+//! Streaming: `prompt_agent` starts a turn with `prompt_stream`; updates are
+//! accumulated into `transcript_json` (`[{"kind", "text"}]`) by `pump_updates`,
+//! which the UI calls on a 100 ms timer (same pump idiom as the chat bridge).
+//! Permission requests from the agent are enqueued by the `prompt`
+//! permission policy; `pump_updates` transfers them into
+//! `pending_permission_json` (`null` when nothing is pending). The page
+//! renders a modal and calls `answer_permission`.
 //!
 //! Honesty contract: the configured agent list shown in the UI is read from
 //! disk or is empty — never a fabricated default. The `fs/*` and
@@ -24,8 +23,9 @@
 //! spawn terminals must be denied by policy or will ask and be answered
 //! with whatever the human picks.
 //!
-//! Boundary contract (same as cards/providers/data/mcp bridges): JSON
-//! document strings cross the boundary.
+//! Boundary contract (same as the cards/providers/data bridges): the agent
+//! list and transcript are plain Rust values; the JSON document strings are
+//! only the persistence format and the D-Bus wire.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -646,7 +646,7 @@ impl AcpState {
     pub fn pump_updates(&mut self) {
         // Session events (transcript).
         let events = self.events.take();
-        if let Some(rx) = events {
+        if let Some(mut rx) = events {
             let mut finished = false;
             loop {
                 match rx.try_recv() {
@@ -680,23 +680,19 @@ impl AcpState {
             let mut enqueued_any = false;
             let mut disconnected = false;
             match permission_requests.lock() {
-                Ok(guard) => {
+                Ok(mut guard) => {
                     // Collect out of the std receiver without holding our
                     // borrow of `self` across the loop.
                     let mut drained: Vec<PermissionRequest> = Vec::new();
-                    {
-                        // Recover the guard's receiver; `try_recv` needs a
-                        // mutable reference to the receiver, which the guard
-                        // provides.
-                        let receiver = guard;
-                        loop {
-                            match receiver.try_recv() {
-                                Ok(request) => drained.push(request),
-                                Err(TryRecvError::Empty) => break,
-                                Err(TryRecvError::Disconnected) => {
-                                    disconnected = true;
-                                    break;
-                                }
+                    // `try_recv` needs a mutable receiver, which the guard
+                    // provides.
+                    loop {
+                        match guard.try_recv() {
+                            Ok(request) => drained.push(request),
+                            Err(TryRecvError::Empty) => break,
+                            Err(TryRecvError::Disconnected) => {
+                                disconnected = true;
+                                break;
                             }
                         }
                     }

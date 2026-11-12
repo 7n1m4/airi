@@ -56,7 +56,6 @@
 //!   `ChatController` does); the smoke run itself never enables the memory
 //!   flag, so no embed call happens there.
 
-use std::future::Future;
 use std::sync::{Arc, Mutex};
 
 use airi_core::memory::embedding::{Embedder, EmbeddingClient, DEFAULT_EMBEDDING_MODEL};
@@ -534,6 +533,9 @@ mod index_tests {
 
     use airi_core::memory::embedding::EmbeddingError;
 
+    use std::future::Future;
+    use std::pin::Pin;
+
     struct TestDb {
         dir: std::path::PathBuf,
         db: airi_store::Database,
@@ -590,7 +592,7 @@ mod index_tests {
         fn embed<'life0, 'life1, 'async_trait>(
             &'life0 self,
             texts: &'life1 [String],
-        ) -> std::pin::Pin<
+        ) -> Pin<
             Box<
                 dyn Future<Output = Result<Vec<Vec<f32>>, EmbeddingError>> + Send + 'async_trait,
             >,
