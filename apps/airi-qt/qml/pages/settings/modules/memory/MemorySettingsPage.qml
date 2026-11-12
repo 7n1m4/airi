@@ -1,22 +1,24 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 // Memory module — settings for the short-term / long-term (journal) memory
 // surfaces. Wired to the `MemoryController` bridge
-// (crates/airi-qt/src/bridges/memory.rs), which persists **user intent
-// only** under the `settings/memory` blob (`enabled`, `topK`) and reads the
+// (crates/airi-qt/src/bridges/memory.rs), which persists the memory
+// preference blob under `settings/memory` (`enabled`, `topK`) and reads the
 // live airi-store journal (`journal_entries`, migration v2) for the
 // long-term card. What WORKS in this slice: the enable switch, the top-k
 // spinbox (persisted immediately, clamped 1–20), the journal count badge,
-// and the recent-entries list (id/timestamp/kind/text — no delete path
-// exists in the backend). What does NOT work yet, by design and on the
-// record: no part of this Qt build consumes `settings/memory` — short-term
-// summarization (`ShortTermMemoryService`), retrieval
-// (`MemoryRetrieval::build_prompt_block`) and the indexing pipeline
-// (`MemoryIndexer`) exist in `airi-core` but are not called from the chat
-// pipeline, so flipping the switch changes a persisted preference, nothing
-// else. The retrieval-provider line shows the chat pipeline's current
-// provider when one is configured (env `AIRI_QT_PROVIDER` or the first
-// enabled provider row), never any key material. Structural source:
-// packages/stage-pages/src/pages/settings/modules/memory-short-term.vue and
+// the recent-entries list (id/timestamp/kind/text — no delete path
+// exists in the backend), and "Index memories now" — an explicit
+// backfill that embeds all unembedded journal/summary rows with the
+// configured chat provider (one batched embedding call). When the switch
+// is on, the chat pipeline journals each completed turn as a `note` entry
+// and embeds it with one batched call per turn; retrieval injects a
+// leading system message ("Relevant memories …") assembled by
+// `MemoryRetrieval::build_prompt_block`. When off, chat behavior is
+// unchanged. Short-term summarization still does not run. The
+// retrieval-provider line shows the chat pipeline's current provider when
+// one is configured (smoke override, then env `AIRI_QT_PROVIDER`, then the
+// first enabled provider row), never any key material.
+// Structural source: packages/stage-pages/src/pages/settings/modules/memory-short-term.vue and
 // memory-long-term.vue (enable toggles, per-card rebuild/delete actions in
 // Vue are deliberately NOT ported — no Qt equivalents exist backend-side).
 import QtQuick 2.15
@@ -30,6 +32,7 @@ Item {
 
     property var entries: []
     property string saveError: ""
+    property bool indexing: false
 
     MemoryController {
         id: controller
@@ -176,7 +179,8 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
-                        text: I18n.tr("shell.memory.notWiredNotice")
+                        // Raw English (bridge convention): the locales lane owns
+text: I18n.tr("shell.memory.experimentalNotice")
                         font.family: Theme.fontBody
                         font.pixelSize: 13
                         color: Theme.warning
@@ -259,7 +263,7 @@ Item {
                         }
 
                         ABadge {
-                            variant: "warning"
+                            variant: "success"
                             text: I18n.tr("shell.memory.shortTerm.badge")
                         }
                     }
@@ -395,6 +399,35 @@ Item {
                         }
                     }
 
+                    // ── Index backfill action ──────────────────────────
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: Theme.spacingM
+
+                        AButton {
+                            variant: AButton.Ghost
+                            implicitHeight: 30
+                            enabled: !page.indexing
+                            text: I18n.tr("shell.memory.indexNow")
+                            onClicked: {
+                                page.indexing = true
+                                controller.indexMissing()
+                                page.indexing = false
+                                page.reloadEntries()
+                            }
+                        }
+                    }
+
+                    Text {
+                        Layout.fillWidth: true
+                        Layout.maximumWidth: 640
+                        wrapMode: Text.WordWrap
+                        text: I18n.tr("shell.memory.indexHint")
+                        font.family: Theme.fontBody
+                        font.pixelSize: 11
+                        color: Theme.textSecondary
+                    }
+
                     AEmptyState {
                         visible: page.entries.length === 0
                         Layout.fillWidth: true
@@ -470,7 +503,7 @@ Item {
                     Text {
                         Layout.fillWidth: true
                         wrapMode: Text.WordWrap
-                        text: I18n.tr("shell.memory.footer.note")
+                        text: I18n.tr("shell.memory.footer")
                         font.family: Theme.fontBody
                         font.pixelSize: 13
                         color: Theme.warning

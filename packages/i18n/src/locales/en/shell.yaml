@@ -376,6 +376,9 @@ modules:
   title: 'Modules'
   overviewBadge: 'Overview'
   notice: 'Static overview of the module family — statuses verified by hand when this page landed; nothing here is live. The settings nav provides the routes; deferred entries are disabled.'
+  indexNow: 'Index memories now'
+  indexHint: 'Embed unindexed journal entries with your configured provider — one batched request for all missing entries.'
+
   footer: 'Deferred modules are disabled. This page does not toggle, connect, or persist anything.'
   sectionChat: 'Chat & Intelligence'
   sectionIntegrations: 'Integrations'
@@ -439,17 +442,17 @@ modules:
 memory:
   title: 'Memory'
   badge: 'Info'
-  infoTip: 'Memory augments the chat context. Short-term summaries and retrieval are not consumed by this build yet; the journal below is live.'
+  infoTip: 'Memory augments the chat context: completed turns are journaled, and relevant past turns may be injected into the prompt. Short-term daily summaries are not wired yet.'
   description: 'Short-term daily summaries and a long-term text journal. Memory augments the chat context — nothing leaves the machine except to the configured LLM provider.'
-  notWiredNotice: 'Enabling memory persists your preference only. No part of this build consumes it yet — short-term summarization and retrieval are not wired into chat. The journal below is live.'
+  experimentalNotice: 'Memory is experimental. When enabled, each completed chat turn is journaled and relevant past turns may be injected into the chat context. Only your configured LLM provider receives data.'
   enable:
     title: 'Enable memory'
-    description: 'Persist the preference below. The chat pipeline does not read it in this build yet.'
+    description: 'Journal completed chat turns and inject retrieved memories into the chat context. Takes effect on the next message.'
     disabledCaption: 'Memory is off — the retrieval controls below are disabled until you enable it.'
   shortTerm:
     title: 'Short-term & retrieval'
-    badge: 'Not wired'
-    note: 'topK caps how many retrieved memories may be injected into a prompt (1–20). Retrieval ranking blends semantic similarity (weight 0.75) with lexical overlap (weight 0.25) in airi-core; the chat pipeline does not call it in this build.'
+    badge: 'Wired'
+    note: 'topK caps how many retrieved memories may be injected into a prompt (1–20). Retrieval ranking blends semantic similarity (weight 0.75) with lexical overlap (weight 0.25) in airi-core; the chat pipeline consumes it while memory is enabled.'
   topK:
     label: 'Retrieval top-k'
     description: 'How many memories retrieval may inject per prompt (1–20).'

@@ -376,6 +376,9 @@ modules:
   title: 'Modules'
   overviewBadge: 'Tổng quan'
   notice: 'Tổng quan tĩnh của dòng modules — trạng thái được xác minh thủ công khi trang này được phát hành; không có gì ở đây là trực tiếp. Điều hướng cài đặt cung cấp các tuyến; các mục hoãn lại bị tắt.'
+  indexNow: 'Lập chỉ mục trí nhớ ngay'
+  indexHint: 'Nhúng các mục journal chưa được lập chỉ mục bằng nhà cung cấp đã cấu hình — một yêu cầu theo lô cho tất cả các mục còn thiếu.'
+
   footer: 'Module bị hoãn sẽ bị tắt. Trang này không bật/tắt, kết nối hay lưu trữ bất cứ thứ gì.'
   sectionChat: 'Chat & Trí tuệ'
   sectionIntegrations: 'Tích hợp'
@@ -439,17 +442,17 @@ modules:
 memory:
   title: 'Trí nhớ'
   badge: 'Thông tin'
-  infoTip: 'Trí nhớ làm giàu ngữ cảnh chat. Tóm tắt ngắn hạn và retrieval chưa được build này tiêu thụ; journal bên dưới đang sống.'
+  infoTip: 'Trí nhớ làm giàu ngữ cảnh chat: các lượt hoàn thành được ghi vào journal, và các lượt trước liên quan có thể được tiêm vào prompt. Tóm tắt hằng ngày ngắn hạn chưa được nối.'
   description: 'Tóm tắt hằng ngày ngắn hạn và một journal văn bản dài hạn. Trí nhớ làm giàu ngữ cảnh chat — không gì rời khỏi máy ngoại trừ tới nhà cung cấp LLM đã cấu hình.'
-  notWiredNotice: 'Bật trí nhớ chỉ lưu tùy chọn của bạn. Không phần nào của build này tiêu thụ nó — tóm tắt ngắn hạn và retrieval chưa được nối vào chat. Journal bên dưới đang sống.'
+  experimentalNotice: 'Trí nhớ đang ở giai đoạn thử nghiệm. Khi bật, mỗi lượt chat hoàn thành được ghi vào journal và các lượt trước liên quan có thể được tiêm vào ngữ cảnh chat. Chỉ nhà cung cấp LLM đã cấu hình mới nhận dữ liệu.'
   enable:
     title: 'Bật trí nhớ'
-    description: 'Lưu tùy chọn bên dưới. Pipeline chat chưa đọc nó trong build này.'
+    description: 'Ghi các lượt chat hoàn thành vào journal và tiêm trí nhớ được truy xuất vào ngữ cảnh chat. Có hiệu lực từ tin nhắn tiếp theo.'
     disabledCaption: 'Trí nhớ đang tắt — các điều khiển retrieval bên dưới bị tắt cho đến khi bạn bật nó.'
   shortTerm:
     title: 'Ngắn hạn & retrieval'
-    badge: 'Chưa nối'
-    note: 'topK giới hạn số trí nhớ được lấy tiêm vào mỗi prompt (1–20). Xếp hạng retrieval pha trộn tương đồng ngữ nghĩa (trọng số 0.75) với trùng lặp từ vựng (trọng số 0.25) trong airi-core; pipeline chat chưa gọi nó trong build này.'
+    badge: 'Đã nối'
+    note: 'topK giới hạn số trí nhớ được lấy tiêm vào mỗi prompt (1–20). Xếp hạng retrieval pha trộn tương đồng ngữ nghĩa (trọng số 0.75) với trùng lặp từ vựng (trọng số 0.25) trong airi-core; pipeline chat tiêu thụ điều này khi trí nhớ bật.'
   topK:
     label: 'Retrieval top-k'
     description: 'Số trí nhớ retrieval có thể tiêm mỗi prompt (1–20).'

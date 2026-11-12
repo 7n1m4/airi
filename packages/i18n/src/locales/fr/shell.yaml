@@ -376,6 +376,9 @@ modules:
   title: 'Modules'
   overviewBadge: 'Vue d’ensemble'
   notice: 'Vue d’ensemble statique de la famille de modules — statuts vérifiés à la main lorsque cette page a été livrée ; rien ici n’est en direct. La navigation des réglages fournit les routes ; les entrées différées sont désactivées.'
+  indexNow: 'Indexer les mémoires maintenant'
+  indexHint: 'Embarque les entrées de journal non indexées avec votre fournisseur configuré — une requête par lot pour toutes les entrées manquantes.'
+
   footer: 'Les modules différés sont désactivés. Cette page n’active, ne connecte ni ne persiste rien.'
   sectionChat: 'Chat & Intelligence'
   sectionIntegrations: 'Intégrations'
@@ -439,17 +442,17 @@ modules:
 memory:
   title: 'Mémoire'
   badge: 'Info'
-  infoTip: 'La mémoire augmente le contexte du chat. Les résumés court terme et le retrieval ne sont pas encore consommés par ce build ; le journal ci-dessous est actif.'
+  infoTip: 'La mémoire augmente le contexte du chat : les tours complétés sont journalisés, et les tours pertinents peuvent être injectés dans le prompt. Les résumés quotidiens court terme ne sont pas câblés.'
   description: 'Résumés quotidiens court terme et journal texte long terme. La mémoire augmente le contexte du chat — rien ne quitte la machine sauf vers le fournisseur LLM configuré.'
-  notWiredNotice: 'Activer la mémoire persiste seulement votre préférence. Aucune partie de ce build ne la consomme encore — la summarisation court terme et le retrieval ne sont pas câblés au chat. Le journal ci-dessous est actif.'
+  experimentalNotice: 'La mémoire est expérimentale. Lorsqu’elle est activée, chaque tour de chat complété est journalisé et les tours pertinents peuvent être injectés dans le contexte du chat. Seul votre fournisseur LLM configuré reçoit les données.'
   enable:
     title: 'Activer la mémoire'
-    description: 'Persiste la préférence ci-dessous. Le pipeline de chat ne la lit pas encore dans ce build.'
+    description: 'Journalisez les tours de chat complétés et injectez les mémoires récupérées dans le contexte du chat. Prend effet dès le prochain message.'
     disabledCaption: 'La mémoire est désactivée — les contrôles de retrieval ci-dessous sont désactivés jusqu’à ce que vous l’activiez.'
   shortTerm:
     title: 'Court terme & retrieval'
-    badge: 'Non câblé'
-    note: 'topK borne le nombre de mémoires récupérées injectées par prompt (1–20). Le classement retrieval combine similarité sémantique (poids 0.75) et chevauchement lexical (poids 0.25) dans airi-core ; le pipeline de chat ne l’appelle pas dans ce build.'
+    badge: 'Câblé'
+    note: 'topK borne le nombre de mémoires récupérées injectées par prompt (1–20). Le classement retrieval combine similarité sémantique (poids 0.75) et chevauchement lexical (poids 0.25) dans airi-core ; le pipeline de chat le consomme tant que la mémoire est activée.'
   topK:
     label: 'Retrieval top-k'
     description: 'Combien de mémoires le retrieval peut injecter par prompt (1–20).'

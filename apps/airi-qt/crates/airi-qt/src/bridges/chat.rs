@@ -26,6 +26,19 @@
 //! partial reply (a fresh placeholder is seeded from the next delta only); the
 //! assistant message is persisted when the stream ends, not per delta.
 //!
+//! Memory wiring (wave ⑬, behind `settings/memory.enabled`): when the flag
+//! is on, a completed assistant turn (`ChatEvent::MessageDone`, same point
+//! as the smoke `done` marker) journals `User: <user> / AI: <assistant>` as
+//! a `note` entry (each side truncated to 800 scalars, one line) and embeds
+//! it with one batched call against the *resolved chat provider* config
+//! (`DEFAULT_EMBEDDING_MODEL`); embedding failures are
+//! logged and leave the row unembedded for the "Index memories now"
+//! backfill. Retrieval runs in the send-path task (never on the Qt
+//! thread): `MemoryRetrieval::build_prompt_block` is prepended as a system
+//! message *before* the card's system prompt, and every failure mode logs
+//! and continues without memories. Flag off ⇒ byte-identical behavior.
+//! See `docs/phase-notes/p13-lane-memory-wiring.md`.
+//!
 //! `openai-compatible` override; [`smoke_chat_outcome`] / [`smoke_delta_count`]
 //! let `main` fail the smoke run when the end-to-end path breaks.
 
@@ -35,10 +48,13 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::{Mutex, OnceLock};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use airi_core::cards::{extract_card_from_png, parse_card_json, CharacterCard};
 use airi_core::chat::{ChatEvent, ChatService, ChatStatus};
+use airi_core::memory::embedding::{Embedder, EmbeddingClient, DEFAULT_EMBEDDING_MODEL};
+use airi_core::memory::retrieval::{IndexEntry, MemoryIndexer, MemoryRetrieval};
+use airi_core::memory::TextJournalService;
 use airi_llm::{ChatMessage, ProviderConfig, Role};
 use airi_store::{Database, MessageRepo, ProviderRepo, SessionRepo, StoredMessage, StoredSession};
 use serde_json::json;
@@ -64,10 +80,10 @@ static CHAT: OnceLock<ChatContext> = OnceLock::new();
 static PROVIDER_OVERRIDE: OnceLock<ProviderResolution> = OnceLock::new();
 
 #[derive(Clone)]
-struct ProviderResolution {
-    id: String,
-    config: ProviderConfig,
-    model: String,
+pub(crate) struct ProviderResolution {
+    pub(crate) id: String,
+    pub(crate) config: ProviderConfig,
+    pub(crate) model: String,
 }
 
 impl ProviderResolution {
@@ -495,6 +511,151 @@ fn truncate_chars(text: &str, max: usize) -> String {
     text.chars().take(max).collect()
 }
 
+// ---------------------------------------------------------------------------
+// Memory wiring (wave ⑬) — all behind `settings/memory.enabled`
+// ---------------------------------------------------------------------------
+
+/// `memory_embeddings.kind` for chat-journaled turns. Matches
+/// `MemoryIndexer::index_journal_entry` and the backfill dedup key used by
+/// `MemoryIndexer::index_missing` (`kind = 'journal'`), so a completed turn
+/// is embedded exactly once and never re-embedded by the backfill button.
+const MEMORY_INDEX_KIND: &str = "journal";
+/// Truncation budget per side (`User:` / `AI:`) of a journaled turn note.
+const JOURNAL_SIDE_TRUNCATION: usize = 800;
+
+/// Collapse every whitespace run (newlines, tabs, …) to a single space so a
+/// journaled turn note stays on one line.
+fn one_line(text: &str) -> String {
+    text.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Append the completed turn as a `note` journal entry and return the
+/// entry to (best-effort) index.
+///
+/// Format: `User: <user text> / AI: <assistant text>`, each side truncated
+/// to [`JOURNAL_SIDE_TRUNCATION`] Unicode scalars, newlines collapsed.
+/// Returns `None` (logged, never fatal) when the assistant message cannot
+/// be found or the append fails; an empty completion journals nothing.
+fn journal_completed_turn(
+    db: &Database,
+    session: &str,
+    assistant_message_id: &str,
+) -> Option<IndexEntry> {
+    let messages = match MessageRepo::new(db.clone()).list(session) {
+        Ok(messages) => messages,
+        Err(e) => {
+            eprintln!("[airi-qt] memory: failed to load session {session} for journaling: {e}");
+            return None;
+        }
+    };
+    let Some(assistant) = messages.iter().rev().find(|m| m.id == assistant_message_id) else {
+        eprintln!(
+            "[airi-qt] memory: assistant message {assistant_message_id} not found; turn not journaled"
+        );
+        return None;
+    };
+    if assistant.content.trim().is_empty() {
+        return None;
+    }
+    let user_text = messages
+        .iter()
+        .rev()
+        .find(|m| m.role == "user")
+        .map(|m| truncate_chars(&one_line(&m.content), JOURNAL_SIDE_TRUNCATION))
+        .unwrap_or_default();
+    let ai_text = truncate_chars(&one_line(&assistant.content), JOURNAL_SIDE_TRUNCATION);
+    let content = format!("User: {user_text} / AI: {ai_text}");
+    match TextJournalService::new(db.clone()).append_note(&content) {
+        Ok(id) => Some(IndexEntry {
+            source_id: id,
+            kind: MEMORY_INDEX_KIND.to_string(),
+            content,
+        }),
+        Err(e) => {
+            eprintln!("[airi-qt] memory: failed to journal the completed turn: {e}");
+            None
+        }
+    }
+}
+
+/// Journal the completed turn when the memory flag is enabled; returns the
+/// entry to index (the caller spawns the one-shot embedding task).
+fn completed_turn_journal(
+    enabled: bool,
+    db: &Database,
+    session: &str,
+    assistant_message_id: &str,
+) -> Option<IndexEntry> {
+    if !enabled {
+        return None;
+    }
+    journal_completed_turn(db, session, assistant_message_id)
+}
+
+/// Best-effort one-shot index of a freshly journaled entry. Any failure is
+/// logged and swallowed — the row stays unembedded until the next
+/// `MemoryIndexer::index_missing` backfill ("Index memories now").
+async fn index_entry_best_effort(
+    db: Database,
+    embedder: Arc<dyn Embedder>,
+    entry: &IndexEntry,
+) -> bool {
+    match MemoryIndexer::new(db, embedder)
+        .index_if_enabled(true, entry)
+        .await
+    {
+        Ok(indexed) => indexed,
+        Err(e) => {
+            eprintln!(
+                "[airi-qt] memory: failed to index journal entry {}: {e}",
+                entry.source_id
+            );
+            false
+        }
+    }
+}
+
+/// When the memory flag is enabled, retrieve relevant memories and prepend
+/// them as a system message *before* the first system message (e.g. the
+/// character card's) — or as the first message when none exists. Every
+/// failure mode logs and leaves `messages` unchanged — a chat turn is
+/// never failed over memory. No embed call happens when disabled.
+async fn inject_memory_if_enabled(
+    enabled: bool,
+    top_k: i32,
+    db: Database,
+    embedder: Option<Arc<dyn Embedder>>,
+    user_text: &str,
+    messages: &mut Vec<ChatMessage>,
+) {
+    if !enabled {
+        return;
+    }
+    let Some(embedder) = embedder else {
+        eprintln!("[airi-qt] memory: no embedding client; continuing without memories");
+        return;
+    };
+    // topK is clamped to 1–20 by the writers; clamp again defensively.
+    let top_k = usize::try_from(top_k.clamp(1, 20)).unwrap_or(5);
+    let retrieval = MemoryRetrieval::new(db, embedder);
+    match retrieval.build_prompt_block(user_text, top_k).await {
+        Ok(block) if !block.is_empty() => {
+            messages.insert(
+                0,
+                ChatMessage {
+                    role: Role::System,
+                    content: block,
+                    tool_call_id: None,
+                },
+            );
+        }
+        Ok(_) => {}
+        Err(e) => {
+            eprintln!("[airi-qt] memory retrieval failed, continuing without: {e}");
+        }
+    }
+}
+
 /// Map a persisted message back into an LLM message (unknown roles skipped).
 fn to_chat_message(message: &StoredMessage) -> Option<ChatMessage> {
     let role = match message.role.as_str() {
@@ -520,7 +681,9 @@ fn chat_status_label(status: ChatStatus) -> &'static str {
 }
 
 /// Resolve the provider to send through (see the module docs for the order).
-fn resolve_provider(ctx: &ChatContext) -> ProviderResolution {
+/// `pub(crate)` so the memory bridge can resolve the *same* provider when
+/// building its embedding client.
+pub(crate) fn resolve_provider(ctx: &ChatContext) -> ProviderResolution {
     if let Some(o) = PROVIDER_OVERRIDE.get() {
         return o.clone();
     }
@@ -1185,7 +1348,7 @@ impl qobject::ChatController {
                 self.as_mut().append_delta(&message, &delta);
                 false
             }
-            ChatEvent::MessageDone { session, .. } => {
+            ChatEvent::MessageDone { session, message } => {
                 if !self.is_current_session(&session) {
                     return false;
                 }
@@ -1200,6 +1363,40 @@ impl qobject::ChatController {
                     rust.current_assistant_id = None;
                 }
                 smoke_note_outcome("done");
+                // Memory wiring (behind settings/memory.enabled): journal the
+                // completed turn, then embed it with one batched call against
+                // the chat provider. Nothing is journaled or embedded when off.
+                if let Some(ctx) = chat_context() {
+                    let memory = crate::bridges::memory::memory_preferences();
+                    if let Some(entry) =
+                        completed_turn_journal(memory.enabled, &ctx.db, &session, &message)
+                    {
+                        let resolution = resolve_provider(ctx);
+                        match EmbeddingClient::from_provider_config(
+                            &resolution.config,
+                            DEFAULT_EMBEDDING_MODEL,
+                        ) {
+                            Ok(client) => {
+                                if let Some(handle) = crate::bridges::runtime_handle().cloned() {
+                                    let db = ctx.db.clone();
+                                    handle.spawn(async move {
+                                        index_entry_best_effort(db, Arc::new(client), &entry)
+                                            .await;
+                                    });
+                                } else {
+                                    eprintln!(
+                                        "[airi-qt] memory: no runtime handle; journal entry {} left unembedded",
+                                        entry.source_id
+                                    );
+                                }
+                            }
+                            Err(e) => eprintln!(
+                                "[airi-qt] memory: embedding client unavailable ({e}); journal entry {} left unembedded — run \"Index memories now\" on the memory settings page",
+                                entry.source_id
+                            ),
+                        }
+                    }
+                }
                 true
             }
             ChatEvent::StatusChanged { session, status } => {
@@ -1484,6 +1681,13 @@ impl qobject::ChatController {
         }
         messages.extend(history.iter().filter_map(to_chat_message));
 
+        // Memory wiring: read the flag once here (retrieval itself is
+        // async and runs inside the send task; the Qt thread never blocks
+        // on the network).
+        let memory = crate::bridges::memory::memory_preferences();
+        let memory_user_text = trimmed.clone();
+        let memory_db = ctx.db.clone();
+
         // Resolve the provider.
         let resolution = resolve_provider(&ctx);
         self.as_mut()
@@ -1505,7 +1709,32 @@ impl qobject::ChatController {
         let provider = resolution.id;
         let config = resolution.config;
         let model = resolution.model;
+        let memory_config = config.clone();
         handle.spawn(async move {
+            let mut messages = messages;
+            if memory.enabled {
+                let embedder = EmbeddingClient::from_provider_config(
+                    &memory_config,
+                    DEFAULT_EMBEDDING_MODEL,
+                )
+                .map(|client| Arc::new(client) as Arc<dyn Embedder>)
+                .map_err(|e| {
+                    eprintln!(
+                        "[airi-qt] memory: embedding client unavailable ({e}); continuing without memories"
+                    );
+                    e
+                })
+                .ok();
+                inject_memory_if_enabled(
+                    memory.enabled,
+                    memory.top_k,
+                    memory_db,
+                    embedder,
+                    &memory_user_text,
+                    &mut messages,
+                )
+                .await;
+            }
             let result = service
                 .stream(session_for_task, provider, config, model, messages)
                 .await;
@@ -1667,5 +1896,384 @@ impl qobject::ChatController {
     /// `true` when the process was launched with `--smoke`.
     pub fn is_smoke(&self) -> bool {
         crate::bridges::smoke()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! Memory-wiring unit tests. Style note: unlike the smoke harness (which
+    //! drives the real SSE mock through `--smoke`), these mock at the
+    //! `Embedder` trait level — no Qt, no HTTP, no QML event loop. The Qt
+    //! glue that *spawns* these calls (the `MessageDone` branch and the
+    //! send-path injection site) is documented in
+    //! `docs/phase-notes/p13-lane-memory-wiring.md` and is not unit-testable
+    //! without a QML engine.
+    use super::*;
+
+    use airi_core::memory::embedding::EmbeddingError;
+    use airi_store::{MemoryEmbeddingRepo, SessionRepo};
+
+    struct TestDb {
+        dir: PathBuf,
+        db: Database,
+    }
+
+    fn temp_db() -> TestDb {
+        let unique = format!(
+            "airi-qt-chat-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0)
+        );
+        let dir = std::env::temp_dir().join(unique);
+        std::fs::create_dir_all(&dir).expect("create temp dir");
+        let db = Database::open(&dir.join("test.sqlite")).expect("open db");
+        TestDb { dir, db }
+    }
+
+    impl Drop for TestDb {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.dir);
+        }
+    }
+
+    /// Canned embedder: records every `embed` call (one batched call per
+    /// invocation, texts kept for assertions) and returns a fixed vector
+    /// per input — or an error when `fail` is set.
+    struct CannedEmbedder {
+        calls: Mutex<Vec<Vec<String>>>,
+        fail: bool,
+    }
+
+    impl CannedEmbedder {
+        fn ok() -> Self {
+            Self {
+                calls: Mutex::new(Vec::new()),
+                fail: false,
+            }
+        }
+        fn failing() -> Self {
+            Self {
+                calls: Mutex::new(Vec::new()),
+                fail: true,
+            }
+        }
+        fn call_count(&self) -> usize {
+            self.calls.lock().expect("call log").len()
+        }
+    }
+
+    impl Embedder for CannedEmbedder {
+        // The `Embedder` trait is `#[async_trait]`; without the async-trait
+        // crate here, the impl spells out the desugared signature (one
+        // elided lifetime per reference, all bound to `'async_trait`).
+        fn embed<'life0, 'life1, 'async_trait>(
+            &'life0 self,
+            texts: &'life1 [String],
+        ) -> Pin<
+            Box<
+                dyn std::future::Future<Output = Result<Vec<Vec<f32>>, EmbeddingError>>
+                    + Send
+                    + 'async_trait,
+            >,
+        >
+        where
+            'life0: 'async_trait,
+            'life1: 'async_trait,
+        {
+            Box::pin(async move {
+                self.calls.lock().expect("call log").push(texts.to_vec());
+                if self.fail {
+                    return Err(EmbeddingError::Empty);
+                }
+                Ok(texts
+                    .iter()
+                    .map(|_| vec![0.5_f32, 0.25, 0.125, 1.0])
+                    .collect())
+            })
+        }
+    }
+
+    fn msg(role: Role, content: &str) -> ChatMessage {
+        ChatMessage {
+            role,
+            content: content.to_string(),
+            tool_call_id: None,
+        }
+    }
+
+    async fn seed_embedded_note(
+        db: &Database,
+        embedder: Arc<dyn Embedder>,
+        source_id: &str,
+        content: &str,
+    ) {
+        MemoryIndexer::new(db.clone(), embedder)
+            .index_entries(&[IndexEntry {
+                source_id: source_id.to_string(),
+                kind: MEMORY_INDEX_KIND.to_string(),
+                content: content.to_string(),
+            }])
+            .await
+            .expect("seed index");
+    }
+
+    fn seed_session_with_turn(db: &Database, user: &str, assistant: &str) {
+        SessionRepo::new(db.clone())
+            .create("s1", "test")
+            .expect("create session");
+        MessageRepo::new(db.clone())
+            .insert(&StoredMessage {
+                id: "u1".to_string(),
+                session_id: "s1".to_string(),
+                role: "user".to_string(),
+                content: user.to_string(),
+                created_at: now_ms(),
+                metadata: json!({}),
+            })
+            .expect("insert user message");
+        MessageRepo::new(db.clone())
+            .insert(&StoredMessage {
+                id: "a1".to_string(),
+                session_id: "s1".to_string(),
+                role: "assistant".to_string(),
+                content: assistant.to_string(),
+                created_at: now_ms(),
+                metadata: json!({}),
+            })
+            .expect("insert assistant message");
+    }
+
+    // --- Retrieval injection -------------------------------------------------
+
+    #[tokio::test]
+    async fn inject_memory_if_enabled_prepends_block_before_card_system_prompt() {
+        let t = temp_db();
+        let canned = Arc::new(CannedEmbedder::ok());
+        let embedder: Arc<dyn Embedder> = canned.clone();
+        seed_embedded_note(&t.db, embedder, "j1", "The user's cat is named Miso").await;
+        // The seed call consumed one embedding call; reset the log so the
+        // injection assertion counts only the retrieval query embed.
+        canned.calls.lock().expect("call log").clear();
+
+        let mut messages = vec![msg(Role::System, "card persona"), msg(Role::User, "hi")];
+        inject_memory_if_enabled(
+            true,
+            5,
+            t.db.clone(),
+            Some(canned.clone()),
+            "cat Miso",
+            &mut messages,
+        )
+        .await;
+
+        assert_eq!(messages.len(), 3, "memory block must be inserted");
+        assert_eq!(messages[0].role, Role::System);
+        assert!(
+            messages[0].content.starts_with("Relevant memories"),
+            "block: {}",
+            messages[0].content
+        );
+        assert!(messages[0].content.contains("Miso"));
+        // The card's system prompt keeps the slot right after the block.
+        assert_eq!(messages[1].content, "card persona");
+        // One retrieval query embed happened.
+        assert_eq!(canned.call_count(), 1);
+    }
+
+    #[tokio::test]
+    async fn inject_memory_if_enabled_disabled_is_byte_identical_and_embeds_nothing() {
+        let t = temp_db();
+        let canned = Arc::new(CannedEmbedder::ok());
+        let mut messages = vec![msg(Role::System, "card persona"), msg(Role::User, "hi")];
+        let snapshot = [messages[0].content.clone(), messages[1].content.clone()];
+        inject_memory_if_enabled(
+            false,
+            5,
+            t.db.clone(),
+            Some(canned.clone()),
+            "cat Miso",
+            &mut messages,
+        )
+        .await;
+        assert_eq!(messages.len(), snapshot.len());
+        assert_eq!(messages[0].content, snapshot[0]);
+        assert_eq!(messages[1].content, snapshot[1]);
+        assert_eq!(canned.call_count(), 0, "no embed call when disabled");
+    }
+
+    #[tokio::test]
+    async fn inject_memory_if_enabled_degrades_to_lexical_when_embedder_fails() {
+        let t = temp_db();
+        let canned = Arc::new(CannedEmbedder::ok());
+        let seed: Arc<dyn Embedder> = canned.clone();
+        seed_embedded_note(&t.db, seed, "j1", "cat Miso hunts mice").await;
+
+        let failing: Arc<dyn Embedder> = Arc::new(CannedEmbedder::failing());
+        let mut messages = vec![msg(Role::User, "about my cat Miso")];
+        inject_memory_if_enabled(
+            true,
+            5,
+            t.db.clone(),
+            Some(failing),
+            "cat Miso",
+            &mut messages,
+        )
+        .await;
+        // Lexical overlap keeps the block alive without a working embedder.
+        assert_eq!(messages.len(), 2);
+        assert!(messages[0].content.starts_with("Relevant memories"));
+
+        // No lexical overlap at all → no injection, chat proceeds untouched.
+        let failing: Arc<dyn Embedder> = Arc::new(CannedEmbedder::failing());
+        let mut messages = vec![msg(Role::User, "zz qqq")];
+        inject_memory_if_enabled(
+            true,
+            5,
+            t.db.clone(),
+            Some(failing),
+            "zz qqq",
+            &mut messages,
+        )
+        .await;
+        assert_eq!(messages.len(), 1);
+    }
+
+    #[tokio::test]
+    async fn inject_memory_if_enabled_continues_when_retrieval_hard_fails() {
+        let t = temp_db();
+        // Force `build_prompt_block` to error out by dropping the index table.
+        t.db.with_connection(|conn| {
+            conn.execute_batch("drop table memory_embeddings")?;
+            Ok(())
+        })
+        .expect("drop index table");
+        let mut messages = vec![msg(Role::User, "hi")];
+        inject_memory_if_enabled(
+            true,
+            5,
+            t.db.clone(),
+            Some(Arc::new(CannedEmbedder::ok())),
+            "cat",
+            &mut messages,
+        )
+        .await;
+        assert_eq!(messages.len(), 1, "chat proceeds without memories");
+    }
+
+    #[tokio::test]
+    async fn inject_memory_if_enabled_adds_nothing_when_index_is_empty() {
+        let t = temp_db();
+        let mut messages = vec![msg(Role::User, "hi")];
+        inject_memory_if_enabled(
+            true,
+            5,
+            t.db.clone(),
+            Some(Arc::new(CannedEmbedder::ok())),
+            "cat Miso",
+            &mut messages,
+        )
+        .await;
+        assert_eq!(messages.len(), 1);
+    }
+
+    // --- Journal write path (completed turn) ---------------------------------
+
+    #[tokio::test]
+    async fn completed_turn_journal_disabled_writes_nothing() {
+        let t = temp_db();
+        seed_session_with_turn(&t.db, "hello world", "hi there");
+        assert!(completed_turn_journal(false, &t.db, "s1", "a1").is_none());
+        assert_eq!(
+            TextJournalService::new(t.db.clone()).count().unwrap(),
+            0,
+            "flag off ⇒ nothing journaled"
+        );
+    }
+
+    #[tokio::test]
+    async fn completed_turn_journal_enabled_writes_one_line_note() {
+        let t = temp_db();
+        seed_session_with_turn(&t.db, "hello world\nsecond line\tor\r\nmore", "hi there");
+        let entry = completed_turn_journal(true, &t.db, "s1", "a1").expect("journaled");
+        assert_eq!(entry.kind, MEMORY_INDEX_KIND);
+        assert!(
+            !entry
+                .content
+                .chars()
+                .any(|c| c == '\n' || c == '\r' || c == '\t'),
+            "one line: {}",
+            entry.content
+        );
+        assert_eq!(
+            entry.content,
+            "User: hello world second line or more / AI: hi there"
+        );
+        assert_eq!(TextJournalService::new(t.db.clone()).count().unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn completed_turn_journal_truncates_each_side_to_800_scalars() {
+        let t = temp_db();
+        let user = "x".repeat(900);
+        let assistant = "y".repeat(1200);
+        seed_session_with_turn(&t.db, &user, &assistant);
+        let entry = journal_completed_turn(&t.db, "s1", "a1").expect("journaled");
+        let (left, right) = entry.content.split_once(" / AI: ").expect("join marker");
+        assert_eq!(
+            left.strip_prefix("User: ")
+                .expect("user prefix")
+                .chars()
+                .count(),
+            800
+        );
+        assert_eq!(right.chars().count(), 800);
+    }
+
+    #[tokio::test]
+    async fn journal_completed_turn_skips_unknown_assistant_message() {
+        let t = temp_db();
+        seed_session_with_turn(&t.db, "hello", "hi");
+        assert!(journal_completed_turn(&t.db, "s1", "missing").is_none());
+        assert_eq!(TextJournalService::new(t.db.clone()).count().unwrap(), 0);
+    }
+
+    #[tokio::test]
+    async fn index_entry_best_effort_makes_exactly_one_embed_call_per_turn() {
+        let t = temp_db();
+        seed_session_with_turn(&t.db, "hello world", "hi there");
+        let entry = journal_completed_turn(&t.db, "s1", "a1").expect("journaled");
+        let canned = Arc::new(CannedEmbedder::ok());
+        let indexed = index_entry_best_effort(t.db.clone(), canned.clone(), &entry).await;
+        assert!(indexed);
+        assert_eq!(
+            canned.call_count(),
+            1,
+            "one batched embed call per completed turn"
+        );
+        assert_eq!(MemoryEmbeddingRepo::new(t.db.clone()).count().unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn index_entry_best_effort_failure_leaves_row_unembedded_journal_intact() {
+        let t = temp_db();
+        seed_session_with_turn(&t.db, "hello world", "hi there");
+        let entry = journal_completed_turn(&t.db, "s1", "a1").expect("journaled");
+        let failing = Arc::new(CannedEmbedder::failing());
+        let indexed = index_entry_best_effort(t.db.clone(), failing.clone(), &entry).await;
+        assert!(!indexed);
+        assert_eq!(failing.call_count(), 1, "exactly one attempt per turn");
+        assert_eq!(
+            MemoryEmbeddingRepo::new(t.db.clone()).count().unwrap(),
+            0,
+            "failed embed leaves the retrieval index untouched"
+        );
+        assert_eq!(
+            TextJournalService::new(t.db.clone()).count().unwrap(),
+            1,
+            "the journal row survives for the backfill button"
+        );
     }
 }

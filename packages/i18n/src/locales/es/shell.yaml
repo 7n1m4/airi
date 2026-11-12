@@ -376,6 +376,9 @@ modules:
   title: 'Módulos'
   overviewBadge: 'Resumen'
   notice: 'Resumen estático de la familia de módulos — estados verificados a mano cuando esta página aterrizó; nada aquí es en vivo. La navegación de ajustes provee las rutas; las entradas diferidas están deshabilitadas.'
+  indexNow: 'Indexar memorias ahora'
+  indexHint: 'Embebe las entradas de diario sin indexar con tu proveedor configurado — una llamada por lotes para todas las entradas faltantes.'
+
   footer: 'Los módulos diferidos están deshabilitados. Esta página no alterna, conecta ni persiste nada.'
   sectionChat: 'Chat e inteligencia'
   sectionIntegrations: 'Integraciones'
@@ -439,17 +442,17 @@ modules:
 memory:
   title: 'Memoria'
   badge: 'Info'
-  infoTip: 'La memoria aumenta el contexto de chat. Los resúmenes a corto plazo y la recuperación aún no son consumidos por este build; el diario de abajo está vivo.'
+  infoTip: 'La memoria aumenta el contexto de chat: los turnos completados se journalizan, y los turnos pasados relevantes pueden inyectarse en el prompt. Los resúmenes diarios a corto plazo aún no están integrados.'
   description: 'Resúmenes diarios a corto plazo y un diario de texto a largo plazo. La memoria aumenta el contexto de chat — nada sale de la máquina salvo hacia el proveedor LLM configurado.'
-  notWiredNotice: 'Activar memoria persiste solo tu preferencia. Ninguna parte de este build la consume aún — la sumarización a corto plazo y la recuperación no están integradas al chat. El diario de abajo está vivo.'
+  experimentalNotice: 'La memoria es experimental. Al activarse, cada turno de chat completado se journaliza y los turnos pasados relevantes pueden inyectarse en el contexto del chat. Solo tu proveedor LLM configurado recibe datos.'
   enable:
     title: 'Activar memoria'
-    description: 'Persiste la preferencia de abajo. El pipeline de chat no la lee en este build aún.'
+    description: 'Journaliza los turnos de chat completados e inyecta memorias recuperadas en el contexto del chat. Tiene efecto en el próximo mensaje.'
     disabledCaption: 'La memoria está apagada — los controles de recuperación de abajo están deshabilitados hasta que la actives.'
   shortTerm:
     title: 'Corto plazo y recuperación'
-    badge: 'No integrado'
-    note: 'topK limita cuántas memorias recuperadas pueden inyectarse en un prompt (1–20). El ranking de recuperación mezcla similitud semántica (peso 0.75) con solape léxico (peso 0.25) en airi-core; el pipeline de chat no lo llama en este build.'
+    badge: 'Integrado'
+    note: 'topK limita cuántas memorias recuperadas pueden inyectarse en un prompt (1–20). El ranking de retrieval mezcla similitud semántica (peso 0.75) con solape léxico (peso 0.25) en airi-core; el pipeline de chat lo consume mientras la memoria está activada.'
   topK:
     label: 'Retrieval top-k'
     description: 'Cuántas memorias puede inyectar la recuperación por prompt (1–20).'

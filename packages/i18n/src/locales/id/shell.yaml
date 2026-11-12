@@ -377,6 +377,9 @@ modules:
   title: 'Modul'
   overviewBadge: 'Ringkasan'
   notice: 'Ringkasan statis keluarga modul — status diverifikasi manual saat halaman ini mendarat; tidak ada yang live di sini. Navigasi pengaturan menyediakan rutenya; entri yang ditunda dinonaktifkan.'
+  indexNow: 'Indeks memori sekarang'
+  indexHint: 'Sematkan entri jurnal yang belum terindeks dengan penyedia yang dikonfigurasi — satu permintaan batch untuk semua entri yang hilang.'
+
   footer: 'Modul yang ditunda dinonaktifkan. Halaman ini tidak mengaktifkan, menghubungkan, atau menyimpan apa pun.'
   sectionChat: 'Chat & Kecerdasan'
   sectionIntegrations: 'Integrasi'
@@ -440,17 +443,17 @@ modules:
 memory:
   title: 'Memori'
   badge: 'Info'
-  infoTip: 'Memori memperbesar konteks chat. Ringkasan jangka pendek dan retrieval belum dikonsumsi build ini; jurnal di bawah aktif.'
+  infoTip: 'Memori memperbesar konteks chat: giliran yang selesai dicatat ke jurnal, dan giliran lalu yang relevan bisa diinjeksikan ke prompt. Ringkasan harian jangka pendek belum tersambung.'
   description: 'Ringkasan harian jangka pendek dan jurnal teks jangka panjang. Memori memperbesar konteks chat — tidak ada yang keluar dari mesin kecuali ke penyedia LLM yang dikonfigurasi.'
-  notWiredNotice: 'Mengaktifkan memori hanya menyimpan preferensi Anda. Belum ada bagian build ini yang mengonsumsinya — peringkasan jangka pendek dan retrieval belum terhubung ke chat. Jurnal di bawah aktif.'
+  experimentalNotice: 'Memori bersifat eksperimental. Saat diaktifkan, setiap giliran chat yang selesai dicatat ke jurnal dan giliran lalu yang relevan bisa diinjeksikan ke konteks chat. Hanya penyedia LLM yang dikonfigurasi yang menerima data.'
   enable:
     title: 'Aktifkan memori'
-    description: 'Simpan preferensi di bawah. Pipeline chat belum membacanya di build ini.'
+    description: 'Catat giliran chat yang selesai ke jurnal dan suntikkan memori yang diambil ke konteks chat. Berlaku mulai pesan berikutnya.'
     disabledCaption: 'Memori nonaktif — kontrol retrieval di bawah dinonaktifkan sampai Anda mengaktifkannya.'
   shortTerm:
     title: 'Jangka pendek & retrieval'
-    badge: 'Belum terhubung'
-    note: 'topK membatasi berapa banyak memori yang diambil dan diinjeksikan per prompt (1–20). Peringkat retrieval menggabungkan kemiripan semantik (bobot 0.75) dengan tumpang tindih leksikal (bobot 0.25) di airi-core; pipeline chat belum memanggilnya di build ini.'
+    badge: 'Terhubung'
+    note: 'topK membatasi berapa banyak memori yang diambil dan diinjeksikan per prompt (1–20). Peringkat retrieval menggabungkan kemiripan semantik (bobot 0.75) dengan tumpang tindih leksikal (bobot 0.25) di airi-core; pipeline chat mengonsumsinya selama memori aktif.'
   topK:
     label: 'Retrieval top-k'
     description: 'Berapa banyak memori yang dapat diinjeksikan retrieval per prompt (1–20).'
