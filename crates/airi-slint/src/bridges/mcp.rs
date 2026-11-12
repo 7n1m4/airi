@@ -17,15 +17,15 @@
 //!
 //! Boundary contract (same as cards/providers/data bridges): the server list
 //! crosses as a `Vec<McpServerView>` (one plain struct per configured
-//! server, the shape the QML delegate read out of the old JSON array);
-//! `saveServers` takes the same shape back. Everything else (probe reports,
-//! tool-call reports) stays a JSON document string. Remote (streamable HTTP)
-//! servers connect with the optional static bearer token from the `authToken`
-//! field of their `mcp.json` remote entry — sent only to the configured `url`
-//! as `Authorization: Bearer <token>`, never logged, never returned by any
-//! invokable (the server view-model never contains the token; sensitive
-//! `headers` values are redacted to `***`), redacted in `Debug`, and scrubbed
-//! from error strings by `airi-mcp`.
+//! server, the same row shape the settings page's QML delegate read out of the
+//! old JSON array); `save_servers` takes the same shape back. Everything else
+//! (probe reports, tool-call reports) stays a JSON document string. Remote
+//! (streamable HTTP) servers connect with the optional static bearer token
+//! from the `authToken` field of their `mcp.json` remote entry — sent only to
+//! the configured `url` as `Authorization: Bearer <token>`, never logged,
+//! never returned by any invokable (the server view-model never contains the
+//! token; sensitive `headers` values are redacted to `***`), redacted in
+//! `Debug`, and scrubbed from error strings by `airi-mcp`.
 
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -662,11 +662,10 @@ impl McpControllerState {
     /// Call a tool on a configured server.
     /// `arguments_json` is a JSON object string. Returns `{"ok":true,...}` or `{"error": "..."}`.
     pub fn call_tool(&self, name: &str, tool: &str, arguments_json: &str) -> String {
-        let arguments_text = arguments_json;
-        let arguments: serde_json::Value = if arguments_text.trim().is_empty() {
+        let arguments: serde_json::Value = if arguments_json.trim().is_empty() {
             json!({})
         } else {
-            match serde_json::from_str(arguments_text) {
+            match serde_json::from_str(arguments_json) {
                 Ok(v) => v,
                 Err(e) => {
                     return json_ok(
@@ -818,5 +817,51 @@ mod tests {
         let round_tripped = entry_from_view(&view, disk);
         assert_eq!(round_tripped.auth_token.as_deref(), Some(TOKEN));
         assert_eq!(round_tripped.headers["Authorization"], "real-secret");
+    }
+}
+
+#[cfg(test)]
+mod save_servers_tests {
+    use super::*;
+
+    #[test]
+    fn save_servers_rejects_a_nameless_row_without_touching_disk() {
+        let mut state = McpControllerState::default();
+        let view = McpServerView {
+            name: "   ".to_string(),
+            transport: "stdio".to_string(),
+            summary: String::new(),
+            enabled: true,
+            command: Some("npx".to_string()),
+            args: Vec::new(),
+            env: BTreeMap::new(),
+            url: None,
+            headers: BTreeMap::new(),
+            auth_configured: false,
+        };
+        assert!(!state.save_servers(vec![view]));
+        assert_eq!(state.last_error, "server names must not be empty");
+    }
+
+    #[test]
+    fn save_servers_rejects_a_row_without_command_or_url() {
+        let mut state = McpControllerState::default();
+        let view = McpServerView {
+            name: "broken".to_string(),
+            transport: "stdio".to_string(),
+            summary: String::new(),
+            enabled: true,
+            command: None,
+            args: Vec::new(),
+            env: BTreeMap::new(),
+            url: None,
+            headers: BTreeMap::new(),
+            auth_configured: false,
+        };
+        assert!(!state.save_servers(vec![view]));
+        assert_eq!(
+            state.last_error,
+            "server \"broken\" needs either a command or a url"
+        );
     }
 }

@@ -50,7 +50,7 @@
 //! socket errors.
 
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::Value;
 use std::collections::VecDeque;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
@@ -185,12 +185,13 @@ impl GatewayEventEntry {
             .duration_since(UNIX_EPOCH)
             .map(|d| d.as_millis() as u64)
             .unwrap_or(0);
+        let truncated: String = content.chars().take(CONTENT_MAX_CHARS).collect();
         Self {
             id,
             channel_id,
             author_name: author.username.clone(),
             author_bot: author.bot,
-            content: content.chars().take(CONTENT_MAX_CHARS).collect(),
+            content: truncated,
             timestamp,
             received_ms,
         }
@@ -588,8 +589,8 @@ pub struct DiscordGatewayState {
     /// Human status line: `"stopped"` | `"running"` | `"listening as <name>"`
     /// | `"error: …"`.
     pub status_line: String,
-    /// Received events, serialized newest-first (`[]` when empty).
-    pub events_json: String,
+    /// Received events, newest first, capped at [`MAX_EVENTS`].
+    pub events: Vec<GatewayEventEntry>,
     /// Last error message (`""` when none).
     pub error: String,
 }
@@ -602,7 +603,7 @@ impl Default for DiscordGatewayState {
         Self {
             running: shared.running,
             status_line: shared.status.clone(),
-            events_json: events_json(&shared),
+            events: newest_first(&shared),
             error: shared.last_error.clone().unwrap_or_default(),
         }
     }
@@ -611,39 +612,36 @@ impl Default for DiscordGatewayState {
 static STATE: Mutex<DiscordGatewayState> = Mutex::new(DiscordGatewayState {
     running: false,
     status_line: String::new(),
-    events_json: String::new(),
+    events: Vec::new(),
     error: String::new(),
 });
 
-/// Lock the process-wide gateway state for a UI-thread operation, seeding it
-/// from the shared worker state on first use.
+/// Lock the process-wide gateway state for a UI-thread operation.
 pub fn with_state<R>(f: impl FnOnce(&mut DiscordGatewayState) -> R) -> R {
     let mut guard = STATE.lock().unwrap_or_else(|e| e.into_inner());
-    let state = guard.get_or_insert_with(DiscordGatewayState::default);
-    f(state)
+    f(&mut guard)
 }
 
-/// Serialize the queue newest-first.
-fn events_json(shared: &GatewayShared) -> String {
-    let newest_first: Vec<&GatewayEventEntry> = shared.events.iter().rev().collect();
-    serde_json::to_string(&newest_first).unwrap_or_else(|_| "[]".to_string())
+/// The queue newest-first, as the page renders it.
+fn newest_first(shared: &GatewayShared) -> Vec<GatewayEventEntry> {
+    shared.events.iter().rev().cloned().collect()
 }
 
 impl DiscordGatewayState {
     /// Copy the shared state into the state fields.
     fn sync_from_shared(&mut self) {
-        let (running, status, events_json, error) = {
+        let (running, status, events, error) = {
             let shared = lock_shared();
             (
                 shared.running,
                 shared.status.clone(),
-                events_json(&shared),
+                newest_first(&shared),
                 shared.last_error.clone().unwrap_or_default(),
             )
         };
         self.running = running;
         self.status_line = status;
-        self.events_json = events_json;
+        self.events = events;
         self.error = error;
     }
 
@@ -753,7 +751,7 @@ pub(crate) fn start_worker() -> Result<(), String> {
         shared.running = true;
         shared.status = "running".to_string();
         shared.last_error = None;
-        Arc::clone(gateway_state())
+        Arc::clone(&GATEWAY_STATE)
     };
     let spawn = std::thread::Builder::new()
         .name("discord-gateway".to_string())
@@ -799,15 +797,18 @@ mod tests {
     }
 
     #[test]
-    fn events_json_is_newest_first() {
+    fn events_are_newest_first() {
         let shared = GatewayShared::new();
         let mut shared = shared;
         shared.events.push_back(entry("1"));
         shared.events.push_back(entry("2"));
-        let text = events_json(&shared);
-        let parsed: Value = serde_json::from_str(&text).unwrap();
-        assert_eq!(parsed[0]["id"], "2");
-        assert_eq!(parsed[1]["id"], "1");
+        let listed = newest_first(&shared);
+        assert_eq!(listed[0].id, "2");
+        assert_eq!(listed[1].id, "1");
+        // camelCase on the wire: the page reads `authorName`, `channelId`.
+        let value = serde_json::to_value(&listed).unwrap();
+        assert_eq!(value[0]["id"], "2");
+        assert!(value[0].get("authorName").is_some());
     }
 
     #[test]
