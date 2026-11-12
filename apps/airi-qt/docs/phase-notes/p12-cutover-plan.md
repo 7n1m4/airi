@@ -16,22 +16,27 @@ product*, not deleting anything.
 
 - Qt build: full settings shell (27 pages), real LLM path (cloud/OpenAI-compatible
   first), chat + memory + retrieval, cards (library/editor/models-explore), vault
-  backend, MCP (stdio client + wired page + streamable-HTTP client), ACP
-  agents (HITL permission UX wired), channel gateway with typed RPC dispatch
-  (`renderer.info` live), Discord REST (send-only UI) + gateway client crate,
-  screen capture, BYOS local snapshot sync engine + wired page, MMD M0 complete.
-- Gate at every wave: fmt, clippy `-D warnings`, `cargo test --workspace` (47 suites /
-  586 tests), offscreen smoke exit 0, i18n parity ×10 locales.
-- Manifest: **189 unchecked** of 234 — 26 stage-tamagotchi, 163 stage-pages.
-  Classification lives in `p11-audit.md`: of the unchecked set, ~61 are (a)
-  gaps (8 knowledge-graph + ~53 others), the remainder are (c)/(d)/blocked-on-lanes.
+  backend, MCP (stdio client + wired page + streamable-HTTP client + REST-side
+  remote wiring), ACP agents (HITL permission UX wired), channel gateway with
+  typed RPC dispatch (`renderer.info` live), Discord REST (send-only UI) +
+  opt-in gateway receive (in-memory only), screen capture, BYOS local snapshot
+  sync engine + wired page, MMD M0+M1 (rest-pose render, synthetic-verified).
+- Gate at every wave: fmt, clippy `-D warnings`, `cargo test --workspace` (48 suites /
+  598 tests), offscreen smoke exit 0, i18n parity ×10 locales.
+- Manifest: **127 unchecked** of 234 — 26 stage-tamagotchi (c-class roots),
+  101 stage-pages; **87 waived** (25 devtools + 62 in the 2026-11-12 v1 waiver
+  batch), 20 checked. Classification lives in `p11-audit.md`; the v1 scope is
+  now fully declared — nothing remains unchecked that was not consciously
+  deferred (v1.1+) or Electron/web par-locked.
 - Everything user-facing ships opt-in or disabled-with-tooltip where honest.
   Nothing is faked.
 
 ## 2. Decisions before "cutover" can mean anything
 
-These are product calls, not engineering calls. Each has a recommendation;
-none is executed.
+These are product calls, not engineering calls. All four were resolved by
+the user on 2026-11-12 — see §7 (Decisions log). The recommendations below
+are kept as written for the record; §7 states what was approved and what
+was waived.
 
 1. **The card-AI suite** (`/settings/airi-card/**` — foundry, guided,
    import-hub, ~55 `CardCreationTab*` / component rows). ~55–60 unchecked
@@ -57,9 +62,9 @@ none is executed.
 5. **Default profile location.** Non-flag launches currently resolve the
    profile to a throwaway temp dir (`main.rs`), so settings/cards/models
    vanish every launch. This is the #1 correctness bug in front of real
-   users. **Must-fix before v1.0.** (Fix: default to the platform data dir
-   unless `--profile`/`--smoke` says otherwise — a small, honest change,
-   not attempted in this doc.)
+   users. **Must-fix before v1.0 — RESOLVED 2026-11-11 (wave ⑨):** plain launches
+   now persist to the platform data dir; `--profile` still wins; `--smoke` stays
+   throwaway.)
 6. **Update mechanism.** `airi_core::update::check_for_update` calls
    `api.github.com/repos/anlmalabs/airi/releases/latest`, unauthenticated,
    8 s timeout, **check + notify only** (`bridges/update.rs`). There is no
@@ -72,6 +77,8 @@ none is executed.
    honestly: today's endpoint watches the *Electron* release feed, so as
    soon as airi-qt publishes its first release, the check must be pointed
    at an airi-qt-tagged feed or it will nag about the wrong binary.
+   **2026-11-12:** dev-release posture — the re-point does NOT happen until a
+   Qt tag is actually cut (§7.6).
 
 ## 3. Packaging & release (what exists, what is missing)
 
@@ -130,3 +137,50 @@ Bottom line: engineering is in strong shape (gates green, honest UI, real
 backends). The remaining gap to a first Qt preview is **packaging + default
 persistence + release plumbing**; the remaining gap to v1.0 is **the §2
 product calls**. Both are user decisions with recommendations attached.
+## 7. Decisions log
+
+### 2026-11-12 — user calls on cutover groundwork ("next move")
+
+1. **§2.1 card-AI suite — APPROVED as recommended: waived for v1, scheduled v1.1.**
+   43 rows waived via `features.waivers.json` (foundry, guided, import-hub, all
+   `CardCreationTab*` / component / composable rows under `settings/airi-card/`).
+   Electron/web remains the working suite until v1.1 lands (par-lock).
+2. **§2.2 knowledge-graph — APPROVED as recommended: waived for v1.** 8 rows
+   (`/knowledge-graph/**`) waived; no Qt backend exists; deferred v1.1+.
+3. **§2.3 artistry family — APPROVED as recommended: deferred v1.1+, not a v1 blocker.**
+   11 rows waived (`settings/modules/{artistry,consciousness,vision,agentic-os}`,
+   `settings/providers/artistry/**`, `settings/providers/vision/`,
+   `settings/models/emotions`). Qt pages stay as honestly-disabled scaffolds.
+   Manifest unchecked count: **189 → 127**; waived 25 → **87**; checked 20.
+4. **§2.4 P10 MMD — M1 ships as synthetic-verified experimental.** No real
+   `.pmx` model file exists anywhere on this machine or in the repo, and the
+   user did not have one available (2026-11-12: "idk whats that pmx"). M1 is
+   therefore **not visually accepted**: identity skinning, two-step ramp, and
+   rest-pose only, verified headlessly against synthetic fixtures. M2
+   (VMD animation, IK, CPU skinning, PMD/`.pmd`, `.zip` support) may proceed on
+   the same synthetic-verification footing; any real-model desk check waits
+   for a license-clean `.pmx` the user supplies.
+5. **Push gate — no push until feature parity is confirmed.** `wip/airi-qt-rewrite`
+   stays local (10+ WIP commits). "Feature parity confirmed" = every manifest
+   row resolved (done or waived-with-reason) **plus** explicit user sign-off
+   on the Electron par-lock; nothing is pushed, merged, or tagged before that
+   flip. Do not re-ask per wave.
+6. **Release posture — dev release for now.** No public/production release, no
+   `v0.1.0-qt-preview` tag, no update-feed re-point, no CI release job wired to
+   `prereleased`. Local dev builds (e.g. a `dpkg-deb` recipe producing a
+   `airi-qt-dev` package) are fine as groundwork; `PRODUCT_NAME` scrub and the
+   update-check re-point happen only when a Qt tag is actually cut. (§2.6
+   recommendation (a)+(b) stands for whenever that happens; (c) remains out of
+   scope without signing infrastructure.)
+7. **Optional later lanes — approved ("ok"), with standing exclusions.**
+   Discord command dispatch remains out of scope (the gateway card is an
+   inbox, never a command processor). MCP registry wiring proceeds only after
+   the live registry shape is verified — never on guessed shapes. Sync
+   S3/Hyperdrive needs an explicit provider/product decision first.
+   GUI-thread gateway dispatch is deferred (no rich `renderer.*` handler
+   exists yet — YAGNI).
+
+Bottom line: v1 scope is now fully declared (every unchecked row is either
+Electron/web par-locked or consciously deferred to v1.1+), nothing ships
+before parity is user-confirmed, and any Qt release is dev-grade until the
+user flips it.

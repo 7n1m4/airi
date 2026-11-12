@@ -1,0 +1,81 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+# Packaging & the dev-release posture
+
+Status: **dev release only** (user decision 2026-11-12 — "dev release for now").
+Nothing in this directory ships a production package. Nothing is signed, no
+update feed exists for airi-qt, and no tag has been cut. Electron/web remains
+the primary desktop product; the Qt app is the preview line
+(`wip/airi-qt-rewrite`).
+
+## What this is
+
+- `build-deb.sh` — assembles `airi-qt-dev_0.1.0~dev1_amd64.deb` from the local
+  cargo target dir:
+  1. `cargo build -p airi-qt` (debug by default — a dev artifact may be fat and
+     slow to load; `--release` packages an optimized binary instead),
+  2. stages the Debian layout (`usr/bin/airi-qt`, desktop entry, icon,
+     `usr/share/doc/airi-qt-dev`),
+  3. builds the `.deb` with `dpkg-deb` when present, otherwise assembles the
+     AR archive by hand (`ar` + `tar` + xz — present on Arch; **untested on
+     Debian/Ubuntu**, use it as a last resort, not as the release path),
+  4. writes to `apps/airi-qt/dist/` (gitignored).
+
+- `airi-qt.desktop` — desktop entry (`AIRI (Qt dev)`, `Exec=airi-qt`).
+- `airi-qt.png` — 512×512 icon (the project icon; GPL-3.0-or-later assets).
+- `LICENSE.txt` — app license (GPL-3.0-or-later).
+
+## Build it
+
+```sh
+cd apps/airi-qt
+./packaging/build-deb.sh            # debug binary
+./packaging/build-deb.sh --release  # optimized
+```
+
+Output lands in `apps/airi-qt/dist/`. QA on a Debian/Ubuntu box that actually
+has `dpkg-deb`: `sudo dpkg -i dist/airi-qt-dev_*.deb` and launch from the app
+menu. **Install it at your own risk — it is a dev build.**
+
+## Runtime dependencies
+
+Linked Qt6 runtime modules (from `ldd`, Arch names → Debian names):
+
+| Arch | Debian/Ubuntu |
+| --- | --- |
+| qt6-base | `libqt6core6(t64)`, `libqt6gui6(t64)`, `libqt6network6(t64)` |
+| qt6-declarative | `libqt6qml6(t64)`, `libqt6quick6(t64)` |
+| qt6-quick3d | `libqt6quick3d6(t64)` — **the one most likely missing** |
+| qt6-opengl | `libqt6opengl6(t64)` |
+| freetype / libpng | `libfreetype6`, `libpng16-16(t64)` |
+
+`ffmpeg` is needed for screen capture (not a hard dependency of the package —
+the app detects and disables capture without it at runtime).
+
+The `Depends:` list in `build-deb.sh` is approximate. A real release job must
+generate it with `dpkg-shlibdeps` rather than by hand.
+
+## What is NOT done yet (all deliberate, all blocking any public release)
+
+1. **No CI release job.** Nothing builds/publishes airi-qt packages. The
+   Electron `.github/workflows/release-linux-desktop.yml` ships Electron and
+   has a fork-name `PRODUCT_NAME: 'airi-dasilva333'` to scrub before reuse.
+2. **No update-feed re-point.** `airi_core::update::check_for_update` watches
+   the **Electron** release feed (`api.github.com/repos/anlmalabs/airi/releases/latest`).
+   It must be pointed at an airi-qt-tagged feed (or exemplary release) only
+   when the first Qt tag is cut — never before. Check + notify only; unsigned
+   self-update stays out of scope.
+3. **No tag, no push.** `wip/airi-qt-rewrite` stays local until feature parity
+   is user-confirmed (parity = every manifest row resolved, done or waived,
+   plus user sign-off on the Electron par-lock — see
+   `docs/phase-notes/p12-cutover-plan.md` §7).
+4. **No signature, no repo.** Packages are unsigned; no APT channel exists.
+5. **Wayland** untested; screen capture and window flags are X11-tested only.
+
+## Uninstall / rollback
+
+```sh
+sudo dpkg -r airi-qt-dev   # or sudo pacman -R / remove the extracted files
+```
+
+User data lives in the platform data dir (`~/.local/share/airi-qt`); removing
+the package does not remove it.

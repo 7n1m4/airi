@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=AIRI (Qt dev)
+GenericName=AI VTuber companion
+Comment=AIRI — Decentralized AI-based VTuber companion (Qt development build)
+Exec=airi-qt
+Icon=airi-qt
+Terminal=false
+Categories=Utility;
+Keywords=ai;vtuber;anime;assistant;companion;
+StartupNotify=true
+X-AppImage-Version=0.1.0-dev

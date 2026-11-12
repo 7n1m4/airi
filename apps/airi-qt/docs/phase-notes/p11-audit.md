@@ -1,5 +1,14 @@
 # P11 — features.md audit (Lane P11-audit)
 
+> 2026-11-12 update (user decision, "next move"): the previously listed
+> remaining (a)-gap blocks are now waived for v1 — card-AI suite 43 rows,
+> knowledge-graph 8 rows, artistry/consciousness/vision/agentic-os/emotion 11
+> rows — see `features.waivers.json` and `p12-cutover-plan.md` §7. Manifest:
+> 127 unchecked / 87 waived / 20 checked. Remaining unchecked rows are
+> Electron/web par-locked (stage-tamagotchi roots), provider/module/settings
+> rows with working Electron counterparts but no Qt backend, and blocked-on-lanes
+> items. The Qt v1 scope is fully declared.
+
 Read-only audit of `apps/airi-qt/docs/port-manifest/features.md` (234 items, 10 ticked → **224 unchecked**, all classified here). No files other than this one were touched; nothing was ticked, regenerated, or applied. Evidence is local-tree reads as of 2026-11-10; nothing was compile- or run-verified (no cargo/pnpm/tests were run).
 
 Method: followed `docs/phase-notes/p11-parity-design.md` (§1–§4), the phase notes (`p2`…`p10`), `apps/airi-qt` crates/bridges/QML, `features.ticks.json`, and — for item identity — the Vue source paths in each manifest line (spot-checked with `head` for the non-obvious ones: `window-shortcuts.vue` (fully commented out), `/dashboard` (empty stub), `motion/index.vue` (redirect), `/v2/settings` (stubs), `ConnectionSettings`/`connection.vue` duplication).
