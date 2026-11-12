@@ -12,11 +12,21 @@
 //! - Object path: `/org/moeru/airi/Daemon1` (matches the daemon's
 //!   `OBJECT_PATH` in `control.rs`, and the research-doc convention)
 //! - `GetStatus() -> s` — JSON string: `{protocol, version, paused, sources
-//!   {sleep, lock, media, network, power}, ring_count, audit_path,
+//!   {sleep, lock, media, network, power[, screen]}, ring_count, audit_path,
 //!   session_bus, system_bus, audit_pruned, paused_by}`
 //! - `SetSource(source: s, enabled: b) -> s` — JSON `{ok, error?}`;
-//!   `source ∈ {sleep, lock, media, network, power}`
+//!   `source ∈ {sleep, lock, media, network, power}` (plus `screen` once the
+//!   parallel P2a daemon lane lands — this bridge never whitelists, it
+//!   passes the name through and reports the daemon's read-back honestly)
 //! - `Pause(p: b)` — arm/disarm ALL observers
+//! - `GetFocusDigest() -> s` — JSON `{ok: true, app, title, lines,
+//!   text_length, skipped_password_nodes}` | `{ok: false, error}` — added by
+//!   the P2a daemon lane in parallel with this bridge; when that daemon is
+//!   absent the D-Bus call fails and `fetchFocusDigest()` degrades to
+//!   `false` with an honest status line.
+//! - `SetExcludedApps(json string) -> s` — JSON `{ok, error?}`; argument is a
+//!   JSON array of app-name strings (matched case-insensitively by the
+//!   daemon, exclusions applied BEFORE any digest content is displayed).
 //!
 //! # What this bridge deliberately does not do
 //!
@@ -33,6 +43,18 @@
 //! polling cadence (1 s Timer) this is cheap and keeps failure isolation
 //! trivial (a hung daemon cannot wedge the UI; worst case one 800 ms stall
 //! per poll, bounded and visible as `running=false` if it times out).
+//!
+//! # Screen awareness (P2) additions
+//!
+//! `focusDigestJson` holds the last digest `fetchFocusDigest()` returned
+//! (`""` until the first successful preview; only ever set on `{ok: true}`).
+//! `screenEnabled` mirrors `sources.screen` when the daemon reports it
+//! (P2a); it is `false` when the key is absent — never fabricated.
+//! `fetchFocusDigest()` performs exactly one D-Bus round-trip on demand
+//! (never on a timer); the fetched digest is handed to QML untouched and is
+//! the only place screen content appears. `setExcludedApps()` validates the
+//! payload as a JSON array of non-empty strings before it hits the bus.
+//! Neither call throws; both degrade to `false` + a token-free status line.
 //!
 //! # Audit viewer
 //!
@@ -130,6 +152,108 @@ fn sources_json_from(status: &Value) -> String {
         .unwrap_or_else(|| "{}".to_string())
 }
 
+/// `sources.screen` when the daemon reports it (P2a). Anything else —
+/// absent key, non-bool, daemon predates the screen source — reads as
+/// `false`. Never fabricated.
+fn screen_enabled_from_sources_json(sources_json: &str) -> bool {
+    serde_json::from_str::<Value>(sources_json)
+        .ok()
+        .and_then(|v| v.get("screen").and_then(Value::as_bool))
+        .unwrap_or(false)
+}
+
+/// One GetFocusDigest round-trip. `Ok(body)` is the raw JSON string; any
+/// D-Bus failure is `Err`.
+fn call_get_focus_digest() -> Result<String, dbus::Error> {
+    use dbus::blocking::Connection;
+    let conn = Connection::new_session()?;
+    let proxy = conn.with_proxy(DAEMON_NAME, DAEMON_PATH, DBUS_TIMEOUT);
+    let (body,): (String,) = proxy.method_call(DAEMON_INTERFACE, "GetFocusDigest", ())?;
+    Ok(body)
+}
+
+/// One SetExcludedApps round-trip. `Ok(body)` is the raw JSON string.
+fn call_set_excluded_apps(list_json: &str) -> Result<String, dbus::Error> {
+    use dbus::blocking::Connection;
+    let conn = Connection::new_session()?;
+    let proxy = conn.with_proxy(DAEMON_NAME, DAEMON_PATH, DBUS_TIMEOUT);
+    let (body,): (String,) =
+        proxy.method_call(DAEMON_INTERFACE, "SetExcludedApps", (list_json,))?;
+    Ok(body)
+}
+
+/// Classification of a `GetFocusDigest` reply body. Pure — split out for
+/// unit tests.
+#[derive(Debug, PartialEq, Eq)]
+enum DigestOutcome {
+    /// `{ok: true, ...}` — the digest may be shown.
+    Ok,
+    /// `{ok: false, error: "excluded"}` — the focused app is on the
+    /// exclusion list; the daemon sent no content.
+    Excluded,
+    /// Anything else `{ok: false, error}` — carries the daemon's raw,
+    /// spec'd error string (token-free by spec).
+    Error(String),
+}
+
+fn classify_digest_body(body: &str) -> DigestOutcome {
+    match serde_json::from_str::<Value>(body) {
+        Ok(v) => {
+            if v.get("ok").and_then(Value::as_bool) == Some(true) {
+                DigestOutcome::Ok
+            } else {
+                let err = v
+                    .get("error")
+                    .and_then(Value::as_str)
+                    .unwrap_or("unknown error")
+                    .to_string();
+                if err == "excluded" {
+                    DigestOutcome::Excluded
+                } else {
+                    DigestOutcome::Error(err)
+                }
+            }
+        }
+        Err(_) => DigestOutcome::Error("malformed reply from airi-daemon".to_string()),
+    }
+}
+
+/// Validate the exclusion-list payload: a JSON array of non-empty strings.
+/// Returns the trimmed-of-nothing, order-preserving entries (names are the
+/// daemon's to match, case-insensitively). Pure — split out for unit tests.
+fn validate_excluded_apps(list_json: &str) -> Result<Vec<String>, String> {
+    let v: Value = serde_json::from_str(list_json).map_err(|e| format!("invalid JSON: {e}"))?;
+    let arr = v
+        .as_array()
+        .ok_or_else(|| "expected a JSON array of app-name strings".to_string())?;
+    let mut out = Vec::with_capacity(arr.len());
+    for item in arr {
+        match item.as_str() {
+            Some(s) if !s.trim().is_empty() => out.push(s.to_string()),
+            _ => {
+                return Err("expected a JSON array of non-empty app-name strings".to_string());
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// `{ok}` classification for a `SetExcludedApps` reply body. Pure.
+fn set_excluded_apps_ok(body: &str) -> Result<(), String> {
+    match serde_json::from_str::<Value>(body) {
+        Ok(v) => match v.get("ok").and_then(Value::as_bool) {
+            Some(true) => Ok(()),
+            Some(false) => Err(v
+                .get("error")
+                .and_then(Value::as_str)
+                .unwrap_or("unknown error")
+                .to_string()),
+            None => Err("malformed reply from airi-daemon".to_string()),
+        },
+        Err(_) => Err("malformed reply from airi-daemon".to_string()),
+    }
+}
+
 /// Parse the audit JSONL payload and return at most `cap` entries,
 /// newest last (callers reverse for newest-first). Malformed lines are
 /// skipped, never fatal.
@@ -216,6 +340,8 @@ pub mod qobject {
         #[qproperty(QString, sources_json, cxx_name = "sourcesJson", READ, NOTIFY)]
         #[qproperty(QString, audit_path, cxx_name = "auditPath", READ, NOTIFY)]
         #[qproperty(QString, status_line, cxx_name = "statusLine", READ, NOTIFY)]
+        #[qproperty(QString, focus_digest_json, cxx_name = "focusDigestJson", READ, NOTIFY)]
+        #[qproperty(bool, screen_enabled, cxx_name = "screenEnabled", READ, NOTIFY)]
         type DaemonController = super::DaemonControllerRust;
     }
 
@@ -226,9 +352,12 @@ pub mod qobject {
         fn refresh(self: Pin<&mut DaemonController>);
 
         /// Enable/disable one observer source (`sleep`, `lock`, `media`,
-        /// `network`, `power`). Returns the value read back from the daemon
+        /// `network`, `power`; `screen` once the P2a daemon lane lands).
+        /// Returns the value read back from the daemon
         /// after the change — **not** the requested one (a refused toggle
         /// reports honestly). `false` when the daemon is unreachable.
+        /// The source name is passed through unvalidated on purpose —
+        /// unknown sources are the daemon's to reject.
         #[qinvokable]
         #[cxx_name = "toggleSource"]
         fn toggle_source(self: Pin<&mut DaemonController>, source: QString, enabled: bool) -> bool;
@@ -255,6 +384,28 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "clearAudit"]
         fn clear_audit(self: Pin<&mut DaemonController>) -> bool;
+
+        /// Fetch the current AT-SPI focus digest from the daemon. On
+        /// `{ok: true}` stores the full JSON in `focusDigestJson` and
+        /// returns `true`. On `{ok: false, error: "excluded"}` sets
+        /// `statusLine` to "App is excluded from screen awareness."; other
+        /// errors set `statusLine` to the daemon's raw (spec'd, token-free)
+        /// error string. `false` when the daemon is unreachable or predates
+        /// the screen methods. Never throws; the digest is only ever
+        /// fetched on demand (the page calls this from the Preview button,
+        /// never on a timer).
+        #[qinvokable]
+        #[cxx_name = "fetchFocusDigest"]
+        fn fetch_focus_digest(self: Pin<&mut DaemonController>) -> bool;
+
+        /// Validate `listJson` (a JSON array of non-empty app-name strings)
+        /// and push it to the daemon via `SetExcludedApps`. Exclusions are
+        /// applied by the daemon BEFORE any digest content exists, and
+        /// before it is shown anywhere. Returns the daemon's `ok`. Empty
+        /// array clears the exclusions. Never throws.
+        #[qinvokable]
+        #[cxx_name = "setExcludedApps"]
+        fn set_excluded_apps(self: Pin<&mut DaemonController>, list_json: QString) -> bool;
     }
 }
 
@@ -265,6 +416,8 @@ pub struct DaemonControllerRust {
     sources_json: QString,
     audit_path: QString,
     status_line: QString,
+    focus_digest_json: QString,
+    screen_enabled: bool,
 }
 
 impl Default for DaemonControllerRust {
@@ -275,6 +428,8 @@ impl Default for DaemonControllerRust {
             sources_json: QString::from("{}"),
             audit_path: QString::from(audit_file_path_display().as_str()),
             status_line: QString::from(""),
+            focus_digest_json: QString::from(""),
+            screen_enabled: false,
         }
     }
 }
@@ -295,10 +450,22 @@ impl qobject::DaemonController {
         inner.sources_json = QString::from(sources_json.as_str());
         inner.audit_path = QString::from(audit_path.as_str());
         inner.status_line = QString::from(status_line.as_str());
+        inner.screen_enabled = screen_enabled_from_sources_json(&sources_json);
         self.as_mut().running_changed();
         self.as_mut().paused_changed();
         self.as_mut().sources_json_changed();
         self.as_mut().audit_path_changed();
+        self.as_mut().status_line_changed();
+        self.as_mut().screen_enabled_changed();
+    }
+
+    /// Set only the status line + notify (leaves the rest of the mirror
+    /// untouched). Used by the screen-awareness qinvokables.
+    fn set_status_line(mut self: Pin<&mut Self>, line: String) {
+        {
+            let mut inner = self.as_mut().rust_mut();
+            inner.status_line = QString::from(line.as_str());
+        }
         self.as_mut().status_line_changed();
     }
 
@@ -422,6 +589,68 @@ impl qobject::DaemonController {
                     );
                 }
                 QString::from("[]")
+            }
+        }
+    }
+
+    /// Fetch the current AT-SPI focus digest. Never throws; on any failure
+    /// the stored digest is left untouched and `false` is returned with an
+    /// honest status line.
+    pub fn fetch_focus_digest(mut self: Pin<&mut Self>) -> bool {
+        match call_get_focus_digest() {
+            Ok(body) => match classify_digest_body(&body) {
+                DigestOutcome::Ok => {
+                    let mut inner = self.as_mut().rust_mut();
+                    inner.focus_digest_json = QString::from(body.as_str());
+                    self.as_mut().focus_digest_json_changed();
+                    true
+                }
+                DigestOutcome::Excluded => {
+                    self.set_status_line("App is excluded from screen awareness.".to_string());
+                    false
+                }
+                DigestOutcome::Error(err) => {
+                    // The daemon's error strings are our own spec'd,
+                    // token-free strings — safe to surface raw.
+                    self.set_status_line(err);
+                    false
+                }
+            },
+            Err(e) => {
+                eprintln!("[airi-qt] daemon: GetFocusDigest failed: {e}");
+                self.set_status_line(format!("screen digest unavailable: {e}"));
+                false
+            }
+        }
+    }
+
+    /// Validate the exclusion-list JSON and push it to the daemon. Returns
+    /// the daemon's `ok` (or `false` on validation/transport failure).
+    /// Never throws.
+    pub fn set_excluded_apps(self: Pin<&mut Self>, list_json: QString) -> bool {
+        let list_json = crate::bridges::qstring_to_string(&list_json);
+        let apps = match validate_excluded_apps(&list_json) {
+            Ok(apps) => apps,
+            Err(msg) => {
+                eprintln!("[airi-qt] daemon: SetExcludedApps rejected locally: {msg}");
+                self.set_status_line(format!("exclusions not saved: {msg}"));
+                return false;
+            }
+        };
+        let normalized = Value::Array(apps.into_iter().map(Value::String).collect()).to_string();
+        match call_set_excluded_apps(&normalized) {
+            Ok(body) => match set_excluded_apps_ok(&body) {
+                Ok(()) => true,
+                Err(err) => {
+                    eprintln!("[airi-qt] daemon: SetExcludedApps refused: {err}");
+                    self.set_status_line(format!("exclusions not saved: {err}"));
+                    false
+                }
+            },
+            Err(e) => {
+                eprintln!("[airi-qt] daemon: SetExcludedApps failed: {e}");
+                self.set_status_line(format!("exclusions not saved: {e}"));
+                false
             }
         }
     }
@@ -563,5 +792,72 @@ mod tests {
         assert_eq!(parsed["power"], false);
         assert_eq!(sources_json_from(&json!({})), "{}");
         assert_eq!(sources_json_from(&json!({"sources": 42})), "{}");
+    }
+
+    #[test]
+    fn screen_enabled_only_from_a_reported_bool_source() {
+        assert!(screen_enabled_from_sources_json(r#"{"screen": true}"#));
+        assert!(!screen_enabled_from_sources_json(r#"{"screen": false}"#));
+        assert!(!screen_enabled_from_sources_json(r#"{"sleep": true}"#));
+        assert!(!screen_enabled_from_sources_json(r#"{"screen": "yes"}"#));
+        assert!(!screen_enabled_from_sources_json("not json"));
+        assert!(!screen_enabled_from_sources_json("{}"));
+    }
+
+    #[test]
+    fn classify_digest_body_covers_ok_excluded_and_other_errors() {
+        assert_eq!(
+            classify_digest_body(
+                r#"{"ok": true, "app": "firefox", "title": "t", "lines": [], "text_length": 0, "skipped_password_nodes": 0}"#
+            ),
+            DigestOutcome::Ok
+        );
+        assert_eq!(
+            classify_digest_body(r#"{"ok": false, "error": "excluded"}"#),
+            DigestOutcome::Excluded
+        );
+        assert_eq!(
+            classify_digest_body(
+                r#"{"ok": false, "error": "no focus captured yet — click into a window once"}"#
+            ),
+            DigestOutcome::Error("no focus captured yet — click into a window once".to_string())
+        );
+        assert_eq!(
+            classify_digest_body("not json"),
+            DigestOutcome::Error("malformed reply from airi-daemon".to_string())
+        );
+        assert_eq!(
+            classify_digest_body(r#"{"ok": false}"#),
+            DigestOutcome::Error("unknown error".to_string())
+        );
+    }
+
+    #[test]
+    fn validate_excluded_apps_accepts_arrays_of_non_empty_strings() {
+        let apps = validate_excluded_apps(r#"["Firefox", "KeePassXC"]"#).unwrap();
+        assert_eq!(apps, vec!["Firefox".to_string(), "KeePassXC".to_string()]);
+        assert_eq!(validate_excluded_apps("[]").unwrap(), Vec::<String>::new());
+        assert!(validate_excluded_apps(r#"{"a": 1}"#).is_err());
+        assert!(validate_excluded_apps(r#"["ok", 42]"#).is_err());
+        assert!(validate_excluded_apps(r#"[""]"#).is_err());
+        assert!(validate_excluded_apps(r#"["   "]"#).is_err());
+        assert!(validate_excluded_apps("not json").is_err());
+    }
+
+    #[test]
+    fn set_excluded_apps_ok_parses_daemon_reply() {
+        assert_eq!(set_excluded_apps_ok(r#"{"ok": true}"#), Ok(()));
+        assert_eq!(
+            set_excluded_apps_ok(r#"{"ok": false, "error": "nope"}"#),
+            Err("nope".to_string())
+        );
+        assert_eq!(
+            set_excluded_apps_ok("not json"),
+            Err("malformed reply from airi-daemon".to_string())
+        );
+        assert_eq!(
+            set_excluded_apps_ok(r#"{"ok": false}"#),
+            Err("unknown error".to_string())
+        );
     }
 }

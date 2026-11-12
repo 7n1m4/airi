@@ -1,0 +1,10 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+[package]
+name = "airi-a11y"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+description = "AT-SPI2 (a11y bus) client for the AIRI daemon: discovery, focus tracking, capped focused-subtree digests. Opt-in eyes via the screen-reader channel."
+
+[dependencies]
+dbus = { workspace = true }

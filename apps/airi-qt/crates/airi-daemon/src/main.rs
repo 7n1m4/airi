@@ -3,9 +3,10 @@
 //!
 //! Owns `org.moeru.airi.Daemon1` on the session bus, watches five T0 sources
 //! (logind sleep, screensaver lock, MPRIS playback, NetworkManager state,
-//! UPower on-battery), keeps an in-memory ring (cap 200), appends to a
-//! redacted audit JSONL (7-day retention, pruned at startup), and answers
-//! control RPCs on `org.moeru.airi.Daemon1`.
+//! UPower on-battery) plus one strictly opt-in AT-SPI screen source
+//! (`screen`, focus metadata only, digest on demand), keeps an in-memory
+//! ring (cap 200), appends to a redacted audit JSONL (7-day retention,
+//! pruned at startup), and answers control RPCs on `org.moeru.airi.Daemon1`.
 //!
 //! Modes:
 //!   (no args) | --foreground   run the daemon (default)
@@ -21,12 +22,14 @@ mod control;
 mod observe;
 mod redact;
 mod ring;
+mod screen;
 mod state;
 
 use std::collections::HashMap;
 use std::process::exit;
 use std::time::{Duration, Instant};
 
+use airi_a11y::{A11yClient, FocusCache};
 use dbus::blocking::Connection;
 use dbus::channel::Sender;
 use dbus::MessageType;
@@ -159,6 +162,18 @@ fn run() {
     let mut system_ok = system.is_some();
     let mut availability: HashMap<Source, bool> = Source::ALL.iter().map(|s| (*s, true)).collect();
 
+    // --- Screen awareness (AT-SPI). Strictly opt-in; degrades honestly. ---
+    let mut a11y_client = init_screen_awareness(&session);
+    availability.insert(Source::Screen, a11y_client.is_some());
+    let mut focus_cache = FocusCache::default();
+    let mut exclusions = match screen::exclusions_path() {
+        Some(path) => screen::Exclusions::load(path),
+        None => {
+            eprintln!("airi-daemon: no data dir; exclusions are in-memory only for this run");
+            screen::Exclusions::in_memory()
+        }
+    };
+
     // Install match rules. A rule that fails to install means the source is
     // best-effort unavailable on this bus — noted, never fatal.
     for (source, bus, rule) in observe::MATCH_RULES {
@@ -215,6 +230,9 @@ fn run() {
         {
             Ok(Some(msg)) => {
                 session_ok = true;
+                let digest_fn = |excl: &screen::Exclusions| {
+                    screen::digest_json(a11y_client.as_ref(), &focus_cache, excl)
+                };
                 let mut ctx = LoopCtx {
                     awareness: &mut awareness,
                     ring: &mut ring,
@@ -225,6 +243,8 @@ fn run() {
                     system_ok,
                     audit_path: &audit_path_str,
                     audit_pruned,
+                    digest: &digest_fn,
+                    exclusions: &mut exclusions,
                 };
                 handle_message(Bus::Session, msg, &session, &mut ctx);
             }
@@ -253,6 +273,9 @@ fn run() {
             match sys.channel().blocking_pop_message(Duration::from_millis(0)) {
                 Ok(Some(msg)) => {
                     system_ok = true;
+                    let digest_fn = |excl: &screen::Exclusions| {
+                        screen::digest_json(a11y_client.as_ref(), &focus_cache, excl)
+                    };
                     let mut ctx = LoopCtx {
                         awareness: &mut awareness,
                         ring: &mut ring,
@@ -263,6 +286,8 @@ fn run() {
                         system_ok,
                         audit_path: &audit_path_str,
                         audit_pruned,
+                        digest: &digest_fn,
+                        exclusions: &mut exclusions,
                     };
                     handle_message(Bus::System, msg, sys, &mut ctx);
                 }
@@ -286,6 +311,38 @@ fn run() {
             system_ok = false;
         }
 
+        // --- a11y bus (screen awareness) — zero-wait poll in the same loop ---
+        if let Some(client) = &a11y_client {
+            match client.poll_focus() {
+                Ok(Some(update)) => {
+                    if awareness.effective_armed(Source::Screen) {
+                        if let Some(meta) = screen::resolve_focus_event(
+                            client,
+                            &update,
+                            &mut focus_cache,
+                            &exclusions,
+                        ) {
+                            screen::record_focus_event(&meta, &mut ring, &audit);
+                        }
+                    } else {
+                        // Paused/locked/disarmed: observe nothing, remember nothing.
+                        focus_cache = FocusCache::default();
+                    }
+                }
+                Ok(None) => {}
+                Err(e) => {
+                    eprintln!("airi-daemon: a11y bus error: {e}; screen source disarmed for the rest of this run (no panic)");
+                    a11y_client = None;
+                    availability.insert(Source::Screen, false);
+                    audit.append(
+                        "screen",
+                        "screen unavailable",
+                        "a11y bus read error; screen source disarmed for the rest of this run",
+                    );
+                }
+            }
+        }
+
         // --- Rate-limit drop counter, at most once per minute ---
         if rate_limited_drops > 0 && last_rate_limit_audit.elapsed() >= RATE_LIMIT_AUDIT_PERIOD {
             audit.append(
@@ -295,6 +352,43 @@ fn run() {
             );
             rate_limited_drops = 0;
             last_rate_limit_audit = Instant::now();
+        }
+    }
+}
+
+/// Screen awareness (AT-SPI) startup negotiation. Never fails hard: on any
+/// step the `screen` source stays disarmed with an honest status line, and
+/// the daemon keeps running. Returns `None` when the a11y bus is unusable.
+fn init_screen_awareness(session: &Connection) -> Option<A11yClient> {
+    let probe = airi_a11y::probe(session);
+    eprintln!("airi-daemon: a11y (session bus): {}", probe.summary_line());
+    let address = probe.address.clone()?;
+    match A11yClient::connect(&address) {
+        Ok(client) => {
+            let mut any_ok = false;
+            for (rule, result) in client.add_focus_match_rules() {
+                match result {
+                    Ok(()) => {
+                        any_ok = true;
+                        eprintln!("airi-daemon: a11y focus match rule armed (screen): {rule}");
+                    }
+                    Err(e) => {
+                        eprintln!("airi-daemon: a11y focus match rule rejected (screen): {e}; rule: {rule}");
+                    }
+                }
+            }
+            if any_ok {
+                Some(client)
+            } else {
+                eprintln!(
+                    "airi-daemon: both a11y focus match rules rejected; screen source unavailable"
+                );
+                None
+            }
+        }
+        Err(e) => {
+            eprintln!("airi-daemon: {e}; screen source unavailable (the desktop may not ship an a11y bus — GNOME/KDE do, minimal WMs may not)");
+            None
         }
     }
 }
@@ -309,6 +403,8 @@ struct LoopCtx<'a> {
     system_ok: bool,
     audit_path: &'a str,
     audit_pruned: u64,
+    digest: &'a dyn Fn(&screen::Exclusions) -> String,
+    exclusions: &'a mut screen::Exclusions,
 }
 
 fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut LoopCtx<'_>) {
@@ -317,8 +413,12 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
             if bus != Bus::Session {
                 return; // method calls are answered where we own the name
             }
-            let reply =
-                handle_method_call(&msg, ctx.awareness, ctx.audit, ctx.ring, &|aware, count| {
+            let reply = handle_method_call(
+                &msg,
+                ctx.awareness,
+                ctx.audit,
+                ctx.ring,
+                &|aware, count| {
                     get_status_json(&StatusContext {
                         awareness: aware,
                         ring_count: count,
@@ -327,7 +427,10 @@ fn handle_message(bus: Bus, msg: dbus::Message, conn: &Connection, ctx: &mut Loo
                         system_bus: ctx.system_ok,
                         audit_pruned: ctx.audit_pruned,
                     })
-                });
+                },
+                ctx.digest,
+                ctx.exclusions,
+            );
             if let Some(reply) = reply {
                 // Best-effort reply; a dead peer is not our problem.
                 let _ = conn.send(reply);
@@ -478,10 +581,37 @@ fn selftest() {
                     None => println!("  [info] screen-saver probe failed for {name}"),
                 }
             }
+            // --- Screen awareness (AT-SPI) ---
+            let probe = airi_a11y::probe(&conn);
+            println!("  [info] a11y: {}", probe.summary_line());
+            match &probe.address {
+                Some(address) => match A11yClient::connect(address) {
+                    Ok(client) => {
+                        println!("  [ok] connected to the a11y bus at {address}");
+                        for (rule, result) in client.add_focus_match_rules() {
+                            match result {
+                                Ok(()) => println!("  [ok] focus match rule (screen): {rule}"),
+                                Err(e) => println!(
+                                    "  [FAIL] focus match rule (screen): {e}\n       rule: {rule}"
+                                ),
+                            }
+                        }
+                        // Leave the bus as we found it: probe rules go away.
+                        if let Err(e) = client.remove_focus_match_rules() {
+                            println!("       (note: could not remove probe rules: {e})");
+                        }
+                    }
+                    Err(e) => println!("  [info] a11y bus connect failed: {e}"),
+                },
+                None => {
+                    println!("  [info] a11y unavailable; screen source would stay disarmed on this desktop")
+                }
+            }
         }
         Err(e) => {
             println!("session bus: ABSENT ({e})");
             println!("  the daemon cannot run standalone on this machine: exiting 1 would follow in run mode");
+            println!("  a11y: skipped (no session bus)");
         }
     }
     println!();

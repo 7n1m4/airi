@@ -17,7 +17,7 @@
 //! automatic re-arm. Per-source `armed=false` survives both transitions.
 
 #[cfg(test)]
-pub const SOURCE_NAMES: [&str; 5] = ["sleep", "lock", "media", "network", "power"];
+pub const SOURCE_NAMES: [&str; 6] = ["sleep", "lock", "media", "network", "power", "screen"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Source {
@@ -26,15 +26,17 @@ pub enum Source {
     Media,
     Network,
     Power,
+    Screen,
 }
 
 impl Source {
-    pub const ALL: [Source; 5] = [
+    pub const ALL: [Source; 6] = [
         Source::Sleep,
         Source::Lock,
         Source::Media,
         Source::Network,
         Source::Power,
+        Source::Screen,
     ];
 
     pub fn name(self) -> &'static str {
@@ -44,6 +46,7 @@ impl Source {
             Source::Media => "media",
             Source::Network => "network",
             Source::Power => "power",
+            Source::Screen => "screen",
         }
     }
 
@@ -54,6 +57,7 @@ impl Source {
             "media" => Some(Source::Media),
             "network" => Some(Source::Network),
             "power" => Some(Source::Power),
+            "screen" => Some(Source::Screen),
             _ => None,
         }
     }
@@ -65,6 +69,7 @@ impl Source {
             Source::Media => 2,
             Source::Network => 3,
             Source::Power => 4,
+            Source::Screen => 5,
         }
     }
 }
@@ -77,7 +82,7 @@ pub enum LockdownReason {
 
 #[derive(Debug)]
 pub struct Awareness {
-    armed: [bool; 5],
+    armed: [bool; 6],
     user_paused: bool,
     lockdown: Option<LockdownReason>,
 }
@@ -91,7 +96,7 @@ impl Default for Awareness {
 impl Awareness {
     pub fn new() -> Self {
         Awareness {
-            armed: [true; 5],
+            armed: [true; 6],
             user_paused: false,
             lockdown: None,
         }
@@ -114,7 +119,7 @@ impl Awareness {
     }
 
     /// Flip one source. Returns Err(unknown source) for anything outside the
-    /// five; Ok(true) if the flag changed, Ok(false) if it was already set.
+    /// six; Ok(true) if the flag changed, Ok(false) if it was already set.
     pub fn set_source(&mut self, source: Source, enabled: bool) -> bool {
         let idx = source.index();
         let changed = self.armed[idx] != enabled;
@@ -160,7 +165,7 @@ impl Awareness {
         }
     }
 
-    /// Sources map for GetStatus, keyed by the five T0 source names.
+    /// Sources map for GetStatus, keyed by the T0+a11y source names.
     /// Reflects the per-source `armed` flag (what the user toggled), not the
     /// effective state — the effective state is carried by `paused`.
     pub fn sources_json(&self) -> serde_json::Value {

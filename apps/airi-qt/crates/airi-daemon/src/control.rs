@@ -3,10 +3,17 @@
 //! `/org/moeru/airi/Daemon1`).
 //!
 //! Methods:
-//!   GetStatus() -> s   JSON: {protocol, version, paused, sources{sleep,lock,media,network,power},
+//!   GetStatus() -> s   JSON: {protocol, version, paused, sources{sleep,lock,media,network,power,screen},
 //!                      ring_count, audit_path, session_bus, system_bus, audit_pruned, paused_by}
 //!   SetSource(source: s, enabled: b) -> s   JSON: {ok: bool, error?: string}
 //!   Pause(p: b)                             no output; flips the global kill switch
+//!   GetFocusDigest() -> s                    JSON: {ok:true, app, title, lines, text_length,
+//!                      skipped_password_nodes} | {ok:false, error}
+//!                      On-demand only — computed fresh per call, never cached to disk.
+//!   SetExcludedApps(json: s) -> s            JSON: {ok: bool, error?: string}
+//!                      `json` is a JSON string array of app-name substrings
+//!                      (case-insensitive). Stored in memory + persisted to
+//!                      `<data_dir>/airi-qt/awareness-exclusions.json`.
 //!
 //! Every arm/disarm is audited (source tag = "system" for kill switch,
 //! per-source tag for SetSource). Unknown sources and malformed calls are
@@ -16,6 +23,7 @@ use dbus::{Message, MessageType};
 
 use crate::audit::AuditLog;
 use crate::ring::Ring;
+use crate::screen::Exclusions;
 use crate::state::{Awareness, Source};
 
 pub const BUS_NAME: &str = "org.moeru.airi.Daemon1";
@@ -73,7 +81,7 @@ pub fn set_source_json(
         }
         None => serde_json::json!({
             "ok": false,
-            "error": format!("unknown source '{source}' (expected one of: sleep, lock, media, network, power)"),
+            "error": format!("unknown source '{source}' (expected one of: sleep, lock, media, network, power, screen)"),
         })
         .to_string(),
     }
@@ -111,13 +119,17 @@ pub enum ControlOutcome {
 }
 
 /// Pure dispatch of a method call addressed to our interface. `None` = not
-/// addressed to us; drop silently.
+/// addressed to us; drop silently. `digest` is the live-computation hook for
+/// GetFocusDigest (the daemon wires it to `screen::digest_json`; tests wire a
+/// canned closure) — dispatch itself never touches a bus.
 pub fn dispatch(
     msg: &Message,
     awareness: &mut Awareness,
     audit: &AuditLog,
     ring: &mut Ring,
     status: &dyn Fn(&Awareness, u64) -> String,
+    digest: &dyn Fn(&Exclusions) -> String,
+    exclusions: &mut Exclusions,
 ) -> Option<ControlOutcome> {
     if msg.msg_type() != MessageType::MethodCall {
         return None;
@@ -156,6 +168,35 @@ pub fn dispatch(
                 )),
             }
         }
+        "GetFocusDigest" => Some(ControlOutcome::ReplyString(digest(exclusions))),
+        "SetExcludedApps" => {
+            let mut it = msg.iter_init();
+            let json: Result<String, _> = it.read();
+            match json {
+                Ok(argument) => {
+                    let reply = crate::screen::set_excluded_apps_json(&argument, exclusions);
+                    // Persist + audit only when the set succeeded.
+                    if serde_json::from_str::<serde_json::Value>(&reply)
+                        .map(|v| v["ok"] == true)
+                        .unwrap_or(false)
+                    {
+                        audit.append(
+                            "screen",
+                            "screen: excluded apps updated",
+                            &format!(
+                                "{} user exclusion(s) + {} built-in (case-insensitive substring of app name)",
+                                exclusions.user_len(),
+                                exclusions.builtin_len()
+                            ),
+                        );
+                    }
+                    Some(ControlOutcome::ReplyString(reply))
+                }
+                Err(_) => Some(ControlOutcome::UnknownMethod(
+                    "expected SetExcludedApps(json: s)".to_string(),
+                )),
+            }
+        }
         other => Some(ControlOutcome::UnknownMethod(format!(
             "unknown method '{other}'"
         ))),
@@ -169,8 +210,10 @@ pub fn handle_method_call(
     audit: &AuditLog,
     ring: &mut Ring,
     status: &dyn Fn(&Awareness, u64) -> String,
+    digest: &dyn Fn(&Exclusions) -> String,
+    exclusions: &mut Exclusions,
 ) -> Option<Message> {
-    match dispatch(msg, awareness, audit, ring, status)? {
+    match dispatch(msg, awareness, audit, ring, status, digest, exclusions)? {
         ControlOutcome::ReplyString(s) => Some(msg.return_with_args((s,))),
         ControlOutcome::ReplyEmpty => Message::new_method_return(msg),
         ControlOutcome::UnknownMethod(why) => Some(unknown_method_error(msg, &why)),
@@ -215,6 +258,10 @@ mod tests {
         r
     }
 
+    fn digest_canned(_: &Exclusions) -> String {
+        r#"{"ok":true,"app":"test-app","title":"t","lines":["label: hi"],"text_length":10,"skipped_password_nodes":0}"#.to_string()
+    }
+
     fn ctx<'a>(awareness: &'a Awareness) -> StatusContext<'a> {
         StatusContext {
             awareness,
@@ -239,6 +286,7 @@ mod tests {
         assert_eq!(v["sources"]["media"], true);
         assert_eq!(v["sources"]["network"], true);
         assert_eq!(v["sources"]["power"], true);
+        assert_eq!(v["sources"]["screen"], true);
         assert_eq!(v["ring_count"], 7);
         assert_eq!(v["audit_path"], "/tmp/example/awareness-audit.jsonl");
         assert_eq!(v["session_bus"], true);
@@ -298,7 +346,17 @@ mod tests {
         };
         let mut a = a;
         let mut r = ring(); // 7 events
-        let outcome = dispatch(&msg, &mut a, &log, &mut r, &status).expect("dispatch");
+        let mut excl = Exclusions::in_memory();
+        let outcome = dispatch(
+            &msg,
+            &mut a,
+            &log,
+            &mut r,
+            &status,
+            &digest_canned,
+            &mut excl,
+        )
+        .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
             panic!("expected ReplyString, got {outcome:?}");
         };
@@ -332,15 +390,33 @@ mod tests {
         // Pause(true) → empty reply, kill switch engages.
         let mut msg = call("Pause");
         msg.append_all((true,));
-        let outcome =
-            dispatch(&msg, &mut a, &log, &mut Ring::with_default_cap(), &status).expect("dispatch");
+        let mut excl = Exclusions::in_memory();
+        let outcome = dispatch(
+            &msg,
+            &mut a,
+            &log,
+            &mut Ring::with_default_cap(),
+            &status,
+            &digest_canned,
+            &mut excl,
+        )
+        .expect("dispatch");
         assert_eq!(outcome, ControlOutcome::ReplyEmpty);
         assert!(a.paused());
         // SetSource with a nonsense source → ok:false, no panic.
         let mut msg = call("SetSource");
         msg.append_all(("teleport".to_string(), true));
-        let outcome =
-            dispatch(&msg, &mut a, &log, &mut Ring::with_default_cap(), &status).expect("dispatch");
+        let mut excl = Exclusions::in_memory();
+        let outcome = dispatch(
+            &msg,
+            &mut a,
+            &log,
+            &mut Ring::with_default_cap(),
+            &status,
+            &digest_canned,
+            &mut excl,
+        )
+        .expect("dispatch");
         let ControlOutcome::ReplyString(s) = outcome else {
             panic!("expected ReplyString, got {outcome:?}");
         };
@@ -350,10 +426,158 @@ mod tests {
         );
         // Unknown method → error outcome.
         let msg = call("Detonate");
-        let outcome =
-            dispatch(&msg, &mut a, &log, &mut Ring::with_default_cap(), &status).expect("dispatch");
+        let mut excl = Exclusions::in_memory();
+        let outcome = dispatch(
+            &msg,
+            &mut a,
+            &log,
+            &mut Ring::with_default_cap(),
+            &status,
+            &digest_canned,
+            &mut excl,
+        )
+        .expect("dispatch");
         assert!(matches!(outcome, ControlOutcome::UnknownMethod(_)));
         let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn set_source_screen_is_accepted_and_toggles() {
+        let mut a = Awareness::new();
+        let (log, path) = audit();
+        let ok = set_source_json("screen", false, &mut a, &log);
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&ok).unwrap()["ok"],
+            true
+        );
+        assert!(!a.effective_armed(Source::Screen));
+        // Other sources are untouched.
+        assert!(a.effective_armed(Source::Media));
+        let ok = set_source_json("screen", true, &mut a, &log);
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&ok).unwrap()["ok"],
+            true
+        );
+        assert!(a.effective_armed(Source::Screen));
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn get_focus_digest_roundtrip_via_dispatch() {
+        let mut a = Awareness::new();
+        let (log, path) = audit();
+        let status = |awareness: &Awareness, ring_count: u64| {
+            get_status_json(&StatusContext {
+                awareness,
+                ring_count,
+                audit_path: "/tmp/example/audit.jsonl",
+                session_bus: true,
+                system_bus: true,
+                audit_pruned: 0,
+            })
+        };
+        let call = |member: &str| {
+            Message::method_call(
+                &dbus::strings::BusName::new("org.example.Caller").unwrap(),
+                &dbus::strings::Path::new(OBJECT_PATH).unwrap(),
+                &dbus::strings::Interface::new(INTERFACE).unwrap(),
+                &dbus::strings::Member::new(member).unwrap(),
+            )
+        };
+        let mut excl = Exclusions::in_memory();
+        let msg = call("GetFocusDigest");
+        let outcome = dispatch(
+            &msg,
+            &mut a,
+            &log,
+            &mut Ring::with_default_cap(),
+            &status,
+            &digest_canned,
+            &mut excl,
+        )
+        .expect("dispatch");
+        let ControlOutcome::ReplyString(s) = outcome else {
+            panic!("expected ReplyString, got {outcome:?}");
+        };
+        let v: serde_json::Value = serde_json::from_str(&s).unwrap();
+        assert_eq!(v["ok"], true);
+        assert_eq!(v["app"], "test-app");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn set_excluded_apps_roundtrip_via_dispatch() {
+        let tmpdir =
+            std::env::temp_dir().join(format!("airi-daemon-setexcl-test-{}", std::process::id()));
+        let excl_path = tmpdir.join("awareness-exclusions.json");
+        let mut a = Awareness::new();
+        let (log, audit_path) = audit();
+        let status = |awareness: &Awareness, ring_count: u64| {
+            get_status_json(&StatusContext {
+                awareness,
+                ring_count,
+                audit_path: "/tmp/example/audit.jsonl",
+                session_bus: true,
+                system_bus: true,
+                audit_pruned: 0,
+            })
+        };
+        let call = |member: &str| {
+            Message::method_call(
+                &dbus::strings::BusName::new("org.example.Caller").unwrap(),
+                &dbus::strings::Path::new(OBJECT_PATH).unwrap(),
+                &dbus::strings::Interface::new(INTERFACE).unwrap(),
+                &dbus::strings::Member::new(member).unwrap(),
+            )
+        };
+        let mut excl = Exclusions::load(excl_path.clone());
+        // Valid list → ok:true, persisted.
+        let mut msg = call("SetExcludedApps");
+        msg.append_all((r#"["my bank", "secret app"]"#.to_string(),));
+        let outcome = dispatch(
+            &msg,
+            &mut a,
+            &log,
+            &mut Ring::with_default_cap(),
+            &status,
+            &digest_canned,
+            &mut excl,
+        )
+        .expect("dispatch");
+        let ControlOutcome::ReplyString(s) = outcome else {
+            panic!("expected ReplyString, got {outcome:?}");
+        };
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&s).unwrap()["ok"],
+            true
+        );
+        let persisted = std::fs::read_to_string(&excl_path).expect("exclusion file written");
+        assert!(persisted.contains("my bank"));
+        assert!(excl.is_excluded("My Bank Portal"));
+        // Invalid JSON → ok:false, list unchanged.
+        let mut msg = call("SetExcludedApps");
+        msg.append_all(("not json".to_string(),));
+        let outcome = dispatch(
+            &msg,
+            &mut a,
+            &log,
+            &mut Ring::with_default_cap(),
+            &status,
+            &digest_canned,
+            &mut excl,
+        )
+        .expect("dispatch");
+        let ControlOutcome::ReplyString(s) = outcome else {
+            panic!("expected ReplyString, got {outcome:?}");
+        };
+        let v: serde_json::Value = serde_json::from_str(&s).unwrap();
+        assert_eq!(v["ok"], false);
+        assert!(
+            excl.is_excluded("my bank"),
+            "list must survive a failed set"
+        );
+        let _ = std::fs::remove_file(&audit_path);
+        let _ = std::fs::remove_dir_all(&tmpdir);
     }
 
     #[test]
