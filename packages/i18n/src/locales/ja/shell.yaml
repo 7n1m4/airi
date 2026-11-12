@@ -63,7 +63,6 @@ settings:
     cards: カード
     explore: 探す
     data: データ
-    onboarding: オンボーディング
     notice: お知らせ
     widgets: ウィジェット
     mcp: MCP
@@ -73,7 +72,6 @@ settings:
     screenCapture: Screen Capture
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
-    gemini: Gemini
     fadeOnHover: Fade on Hover
   theme-page:
     title: テーマ
@@ -325,41 +323,6 @@ models:
 onboarding:
   deferredNotice: 'このQtビルドでは初回セットアップ完了がまだ接続されていません — これらの画面はプレゼンテーション用です。ウィザードを完了またはスキップするボタンは、オンボーディングストアが実装されると有効になります。'
   deferredTip: '未接続 — 初回オンボーディングストアが実装されるとこの操作が有効になります。'
-  back: '戻る'
-  v2:
-    title: 'AIRIコンパニオンセットアップ'
-    previewBadge: '初回ウィザード'
-    next: '次へ'
-    finish: '完了'
-    skip: '後でセットアップ'
-    steps:
-      welcome:
-        label: 'ようこそ'
-        subtitle: 'あなたのデジタルコンパニオンに出会い、セットアップ方法を選びましょう。'
-      triage:
-        label: 'あなたの道'
-        subtitle: '新しいマシンか、戻ってきたデバイスか — 続け方を選びます。'
-      hearing:
-        label: '聴覚'
-        subtitle: '音声テキスト変換とマイクチェックでコンパニオンに耳を与えましょう。'
-      consciousness:
-        label: '意識'
-        subtitle: 'コンパニオンの背後にある推論エンジンを選びます。'
-      profile:
-        label: 'あなた'
-        subtitle: 'あなたのこと、働き方をコンパニオンに教えてください。'
-      persona:
-        label: 'ペルソナ'
-        subtitle: '魂を形作る：名前、性格、特性。'
-      vessel:
-        label: '容れ物'
-        subtitle: '身体を選ぶ：Live2D、VRM、または最小限のプレゼンス。'
-      speech:
-        label: '音声'
-        subtitle: '音声選択と発話速度のチェック。'
-      calibration:
-        label: '起動'
-        subtitle: '簡単なキャリブレーションをして、すぐにステージへ。'
   v3:
     brand: 'AIRIコンパニオンセットアップ'
     stageReady: 'ステージ準備完了'
@@ -380,26 +343,11 @@ notice:
     title: '通知'
     subtitle: 'AIRIのメインプロセスは、一回限りのプロンプト用に一時的な通知ウィンドウを表示します。このページはデスクトップアプリが同梱する通知を一覧します。'
     surfaces: '通知サーフェス'
-    geminiTitle: 'Geminiオンボーディング'
-    geminiSubtitle: 'Google Generative AIキーが設定されていないときに開き、最初のセッション前に追加を提案します。'
     fadeOnHoverTitle: 'Fade on Hoverチュートリアル'
     fadeOnHoverSubtitle: 'カーソルが近づくとキャラクターをフェードする自動非表示の動作を説明します。'
-    routeGemini: '/notice/gemini'
     routeFadeOnHover: '/notice/fade-on-hover'
     deferredNotice: 'Qtビルドにはまだ通知ウィンドウのホストがありません。これらのサーフェスは、保留中の通知リクエストストアが実装され次第、フレームレスの通知ウィンドウとして開きます。'
-    footnote: 'Electronビルドでは、/notice/gemini と /notice/fade-on-hover にあります。'
-  gemini:
-    header: 'インテリジェンスノード オンライン'
-    title: 'Gemini Quantum Leap'
-    intro: 'AIインタラクションの次世代へようこそ。キャラクターはGoogle Geminiによって動き、深いマルチモーダル理解が可能になりました。'
-    graphicCaption: 'Gemini宇宙ビジュアル'
-    poweredBy: 'Powered by Gemini'
-    visionTitle: '本物の視覚'
-    visionDescription: 'ついにあなたの画面と世界を見ることができます。カメラアイコンでキャプチャを実行するか、レンズ越しに見せてください。'
-    memoryTitle: '文脈メモリ'
-    memoryDescription: '現在のセッションを極めて高い精度で覚えているので、時間とともに深い会話を築けます。'
-    addKey: 'Geminiキーを追加'
-    dontShowAgain: '次回から表示しない'
+    footnote: 'Electron 版では /notice/fade-on-hover にあります。'
   fadeOnHover:
     badge: 'チュートリアル'
     title: 'Fade on Hover'

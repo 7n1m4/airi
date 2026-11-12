@@ -62,3 +62,29 @@ update-feed re-point remain future, gated on items 5–6.
 - Lane C1 — MCP-HTTP bearer-token auth for remote streamable-HTTP MCP servers
   (opt-in; static `Authorization: Bearer`; never logged; no UI change).
   Report lands with its own note; gate + commit at integration.
+## 11. Settings-surface cuts (user decision 2026-11-12, follow-up to "app ready?")
+
+User checked the settings UI (looks decent) and directed two cuts to avoid
+duplicate/vendor-centric surfaces:
+
+1. **Onboarding v2 (`OnboardingPage.qml`) — cut.** The settings shell now
+   offers the Onboarding V3 wizard only (nav ✨ "Onboarding V3", index 15).
+   v2 was a disabled static port of `onboarding.vue`; v3 is the kept surface.
+2. **Gemini notice (`GeminiNoticePage.qml`) — cut.** The vendor-centric
+   "Gemini Quantum Leap" notice surface is removed; rationale recorded by the
+   user: every model/provider presents equal opportunities — no showcase
+   screens for a single vendor. `google-gemini` remains a peer provider in
+   the catalog (right alongside Anthropic/OpenAI-compatible/etc.).
+
+What changed: 2 QML files deleted; `SettingsWindow.qml` nav/stack renumbered
+(27 → 25 pages, indexes 0–24, both AListItems and StackLayout renumbered in
+lockstep); `build.rs` registers only `OnboardingV3Page` and drops the
+Gemini notice; the notice hub lists the fade-on-hover surface only (gemini
+row + separator removed; `footnote` updated); i18n keys removed ×10 locales
+(`onboarding.back`, `onboarding.v2.*`, `settings.nav.onboarding`,
+`settings.nav.gemini`, `notice.gemini.*`, `notice.index.gemini{Title,
+Subtitle}`, `notice.index.routeGemini`); `p11-audit.md` rows annotated.
+No Rust logic changed.
+
+Verification: fmt/clippy clean; 614 tests green; offscreen smoke exit 0
+(settings window loads, tour unchanged); i18n parity 4/4; yaml audit ×10.

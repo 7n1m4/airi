@@ -64,7 +64,6 @@ settings:
     cards: Thẻ
     explore: Khám phá
     data: Dữ liệu
-    onboarding: Onboarding
     notice: Thông báo
     widgets: Tiện ích
     mcp: MCP
@@ -74,7 +73,6 @@ settings:
     screenCapture: Screen Capture
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
-    gemini: Gemini
     fadeOnHover: Fade on Hover
   theme-page:
     title: Giao diện
@@ -326,41 +324,6 @@ models:
 onboarding:
   deferredNotice: 'Việc hoàn tất khởi chạy lần đầu chưa được nối trong bản dựng Qt này — các màn hình chỉ mang tính trình bày. Các nút hoàn tất hoặc bỏ qua trình hướng dẫn sẽ mở khoá khi store onboarding có mặt.'
   deferredTip: 'Chưa được nối — store onboarding lần đầu sẽ kích hoạt hành động này.'
-  back: 'Quay lại'
-  v2:
-    title: 'Thiết lập bạn đồng hành AIRI'
-    previewBadge: 'Trình hướng dẫn khởi chạy'
-    next: 'Tiếp theo'
-    finish: 'Hoàn tất'
-    skip: 'Thiết lập sau'
-    steps:
-      welcome:
-        label: 'Chào mừng'
-        subtitle: 'Gặp gỡ bạn đồng hành kỹ thuật số của bạn và chọn cách thiết lập mọi thứ.'
-      triage:
-        label: 'Con đường của bạn'
-        subtitle: 'Máy mới hay thiết bị cũ — chọn cách tiếp tục.'
-      hearing:
-        label: 'Thính giác'
-        subtitle: 'Cho bạn đồng hành đôi tai với chuyển giọng nói thành văn bản và kiểm tra micro.'
-      consciousness:
-        label: 'Ý thức'
-        subtitle: 'Chọn động cơ suy luận phía sau bạn đồng hành.'
-      profile:
-        label: 'Bạn'
-        subtitle: 'Hãy cho bạn đồng hành biết bạn là ai và cách bạn làm việc.'
-      persona:
-        label: 'Persona'
-        subtitle: 'Nhào nặn linh hồn: tên, tính cách và đặc điểm.'
-      vessel:
-        label: 'Thân thể'
-        subtitle: 'Chọn thân thể: Live2D, VRM hoặc hiện diện tối giản.'
-      speech:
-        label: 'Giọng nói'
-        subtitle: 'Chọn giọng nói và kiểm tra tốc độ nói.'
-      calibration:
-        label: 'Khởi động'
-        subtitle: 'Hiệu chuẩn nhanh rồi thẳng lên sân khấu.'
   v3:
     brand: 'Thiết lập bạn đồng hành AIRI'
     stageReady: 'Sân khấu sẵn sàng'
@@ -381,26 +344,11 @@ notice:
     title: 'Thông báo'
     subtitle: 'Tiến trình chính của AIRI hiển thị các cửa sổ thông báo tạm thời cho các lời nhắc một lần. Trang này liệt kê các thông báo mà ứng dụng desktop đi kèm.'
     surfaces: 'Bề mặt thông báo'
-    geminiTitle: 'Onboarding Gemini'
-    geminiSubtitle: 'Mở khi chưa có khoá Google Generative AI nào được cấu hình, đề nghị thêm một khoá trước phiên đầu tiên.'
     fadeOnHoverTitle: 'Hướng dẫn Fade on Hover'
     fadeOnHoverSubtitle: 'Giải thích hành vi tự ẩn làm mờ nhân vật khi con trỏ đến gần.'
-    routeGemini: '/notice/gemini'
     routeFadeOnHover: '/notice/fade-on-hover'
     deferredNotice: 'Bản dựng Qt chưa có host cho cửa sổ thông báo. Các bề mặt này sẽ mở dưới dạng cửa sổ thông báo không khung được điều khiển bởi store yêu cầu đang chờ khi nó có mặt.'
-    footnote: 'Trong bản dựng Electron, chúng nằm ở /notice/gemini và /notice/fade-on-hover.'
-  gemini:
-    header: 'Nút trí tuệ trực tuyến'
-    title: 'Bước nhảy lượng tử Gemini'
-    intro: 'Chào mừng bạn đến thế hệ tương tác AI tiếp theo. Nhân vật của bạn giờ được vận hành bởi Google Gemini, với khả năng hiểu đa phương thức sâu sắc.'
-    graphicCaption: 'Hình dung vũ trụ Gemini'
-    poweredBy: 'Vận hành bởi Gemini'
-    visionTitle: 'Tầm nhìn thật'
-    visionDescription: 'Cuối cùng tôi có thể nhìn thấy màn hình và thế giới của bạn. Dùng biểu tượng Camera để chụp hoặc cho tôi xem qua ống kính của bạn.'
-    memoryTitle: 'Trí nhớ ngữ cảnh'
-    memoryDescription: 'Tôi nhớ phiên hiện tại của chúng ta với độ chính xác cực cao, cho phép chúng ta xây dựng các cuộc trò chuyện sâu hơn theo thời gian.'
-    addKey: 'Thêm khoá Gemini'
-    dontShowAgain: 'Không hiện lại'
+    footnote: 'Trong bản build Electron, nó nằm ở /notice/fade-on-hover.'
   fadeOnHover:
     badge: 'Hướng dẫn'
     title: 'Fade on Hover'

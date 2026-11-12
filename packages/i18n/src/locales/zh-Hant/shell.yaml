@@ -63,7 +63,6 @@ settings:
     cards: 角色卡
     explore: 探索
     data: 資料
-    onboarding: 引導
     notice: 通知
     widgets: 小工具
     mcp: MCP
@@ -73,7 +72,6 @@ settings:
     screenCapture: Screen Capture
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
-    gemini: Gemini
     fadeOnHover: Fade on Hover
   theme-page:
     title: 主題
@@ -325,41 +323,6 @@ models:
 onboarding:
   deferredNotice: '此 Qt 版本尚未接入首次完成流程 —— 這些頁面僅為展示。完成或跳過精靈的按鈕將在 onboarding 儲存落地後解鎖。'
   deferredTip: '尚未接入 —— 首次執行的 onboarding 儲存將啟用此操作。'
-  back: '返回'
-  v2:
-    title: 'AIRI 夥伴設定'
-    previewBadge: '首次精靈'
-    next: '下一步'
-    finish: '完成'
-    skip: '稍後設定'
-    steps:
-      welcome:
-        label: '歡迎'
-        subtitle: '認識你的數位夥伴，並選擇你希望的設定方式。'
-      triage:
-        label: '你的路徑'
-        subtitle: '新裝置還是回歸裝置 —— 選擇如何繼續。'
-      hearing:
-        label: '聽覺'
-        subtitle: '透過語音轉文字和麥克風檢查為夥伴賦予聽覺。'
-      consciousness:
-        label: '意識'
-        subtitle: '選擇夥伴背後的推理引擎。'
-      profile:
-        label: '你'
-        subtitle: '告訴你的夥伴你是誰、你喜歡怎樣工作。'
-      persona:
-        label: '人格'
-        subtitle: '塑造靈魂：名稱、性格與特質。'
-      vessel:
-        label: '軀體'
-        subtitle: '選擇身體：Live2D、VRM 或極簡存在。'
-      speech:
-        label: '語音'
-        subtitle: '選擇音色並做語速檢查。'
-      calibration:
-        label: '啟動'
-        subtitle: '快速校準，然後直接登上舞台。'
   v3:
     brand: 'AIRI 夥伴設定'
     stageReady: '舞台就緒'
@@ -380,26 +343,11 @@ notice:
     title: '通知'
     subtitle: 'AIRI 主行程會為一次性提示顯示暫時通知視窗。本頁面列出桌面應用程式隨附的通知。'
     surfaces: '通知介面'
-    geminiTitle: 'Gemini 引導'
-    geminiSubtitle: '當未設定 Google Generative AI 金鑰時開啟，提議在首次工作階段前新增一個。'
     fadeOnHoverTitle: '淡出懸停教學'
     fadeOnHoverSubtitle: '解釋當游標靠近時自動淡出角色的隱藏行為。'
-    routeGemini: '/notice/gemini'
     routeFadeOnHover: '/notice/fade-on-hover'
     deferredNotice: 'Qt 版本尚未有通知視窗宿主。這些介面將在待處理通知請求儲存落地後，作為無邊框通知視窗開啟。'
-    footnote: '在 Electron 版本中，它們位於 /notice/gemini 和 /notice/fade-on-hover。'
-  gemini:
-    header: '智能節點上線'
-    title: 'Gemini 量子躍遷'
-    intro: '歡迎來到下一代 AI 互動。你的角色現在由 Google Gemini 驅動，具備深度多模態理解能力。'
-    graphicCaption: 'Gemini 宇宙視覺化'
-    poweredBy: '由 Gemini 驅動'
-    visionTitle: '真實視覺'
-    visionDescription: '我終於能看見你的螢幕和世界了。用相機圖示觸發擷取，或透過你的鏡頭給我看。'
-    memoryTitle: '情境記憶'
-    memoryDescription: '我極其精確地記住我們目前的工作階段，讓我們隨時間建立更深的對話。'
-    addKey: '新增 Gemini 金鑰'
-    dontShowAgain: '不再顯示'
+    footnote: '在 Electron 建構中位於 /notice/fade-on-hover。'
   fadeOnHover:
     badge: '教學'
     title: '淡出懸停'

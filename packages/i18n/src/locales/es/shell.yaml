@@ -64,7 +64,6 @@ settings:
     cards: Tarjetas
     explore: Explorar
     data: Datos
-    onboarding: Onboarding
     notice: Avisos
     widgets: Widgets
     mcp: MCP
@@ -74,7 +73,6 @@ settings:
     screenCapture: Screen Capture
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
-    gemini: Gemini
     fadeOnHover: Fade on Hover
   theme-page:
     title: Tema
@@ -326,41 +324,6 @@ models:
 onboarding:
   deferredNotice: 'Aún no se ha conectado la finalización del primer arranque en esta compilación de Qt — estas pantallas son de presentación. Los botones para completar o saltar el asistente se habilitarán cuando llegue el store de onboarding.'
   deferredTip: 'Aún no conectado — el store de onboarding del primer arranque habilitará esta acción.'
-  back: 'Atrás'
-  v2:
-    title: 'Configuración del compañero AIRI'
-    previewBadge: 'Asistente de primer arranque'
-    next: 'Siguiente'
-    finish: 'Finalizar'
-    skip: 'Configurar más tarde'
-    steps:
-      welcome:
-        label: 'Bienvenido'
-        subtitle: 'Conoce a tu compañero digital y elige cómo quieres configurarlo.'
-      triage:
-        label: 'Tu ruta'
-        subtitle: 'Máquina nueva o dispositivo recurrente — elige cómo continuar.'
-      hearing:
-        label: 'Oído'
-        subtitle: 'Dale oídos a tu compañero con voz a texto y una comprobación de micrófono.'
-      consciousness:
-        label: 'Conciencia'
-        subtitle: 'Elige el motor de razonamiento detrás de tu compañero.'
-      profile:
-        label: 'Tú'
-        subtitle: 'Cuéntale a tu compañero quién eres y cómo te gusta trabajar.'
-      persona:
-        label: 'Persona'
-        subtitle: 'Da forma al alma: nombre, carácter y rasgos de personalidad.'
-      vessel:
-        label: 'Cuerpo'
-        subtitle: 'Elige el cuerpo: Live2D, VRM o una presencia mínima.'
-      speech:
-        label: 'Voz'
-        subtitle: 'Selección de voz y una comprobación rápida de velocidad de habla.'
-      calibration:
-        label: 'Lanzar'
-        subtitle: 'Una calibración rápida y directo al escenario.'
   v3:
     brand: 'Configuración del compañero AIRI'
     stageReady: 'Escenario listo'
@@ -381,26 +344,11 @@ notice:
     title: 'Avisos'
     subtitle: 'El proceso principal de AIRI muestra ventanas de aviso transitorias para avisos puntuales. Esta página lista los avisos con los que se distribuye la app de escritorio.'
     surfaces: 'Superficies de aviso'
-    geminiTitle: 'Onboarding de Gemini'
-    geminiSubtitle: 'Se abre cuando no hay una clave de Google Generative AI configurada, ofreciendo añadir una antes de la primera sesión.'
     fadeOnHoverTitle: 'Tutorial de Desaparecer al pasar el cursor'
     fadeOnHoverSubtitle: 'Explica el comportamiento de ocultado automático que atenúa al personaje cuando el cursor se acerca.'
-    routeGemini: '/notice/gemini'
     routeFadeOnHover: '/notice/fade-on-hover'
     deferredNotice: 'La build de Qt aún no tiene un anfitrión de ventanas de aviso. Estas superficies se abrirán como ventanas de aviso sin marco impulsadas por el store de solicitudes pendientes en cuanto llegue.'
-    footnote: 'En la build de Electron viven en /notice/gemini y /notice/fade-on-hover.'
-  gemini:
-    header: 'Nodo de inteligencia en línea'
-    title: 'Salto cuántico de Gemini'
-    intro: 'Bienvenido a la próxima generación de interacción con IA. Tu personaje ahora está impulsado por Google Gemini, con comprensión multimodal profunda.'
-    graphicCaption: 'Visualización cósmica de Gemini'
-    poweredBy: 'Impulsado por Gemini'
-    visionTitle: 'Visión real'
-    visionDescription: 'Por fin puedo ver tu pantalla y tu mundo. Usa el icono de cámara para capturar o muéstrame cosas con tu lente.'
-    memoryTitle: 'Memoria contextual'
-    memoryDescription: 'Recuerdo nuestra sesión actual con extrema precisión, lo que nos permite construir conversaciones más profundas con el tiempo.'
-    addKey: 'Añadir clave de Gemini'
-    dontShowAgain: 'No volver a mostrar'
+    footnote: 'En la build Electron, esto vive en /notice/fade-on-hover.'
   fadeOnHover:
     badge: 'Tutorial'
     title: 'Desaparecer al pasar el cursor'

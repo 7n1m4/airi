@@ -53,10 +53,10 @@ Columns: `#` (audit index) | route | class | evidence (Qt file/crate or reason) 
 | 17 | `/index` | (a) | Qt stage window renders VRM/Spine only (StageWindow.qml); full renderer page (backgrounds/atmosphere, Live2D/MMD, VAD loop, chat orchestrator) not at parity; no Qt counterpart found | medium |
 | 18 | `/inlay` | (c) | Electron-only inlay/Spotlight window (vibrancy, backgroundMaterial, frameless BrowserWindow); no Qt meaning; no Qt counterpart | high |
 | 19 | `/notice/fade-on-hover` | (b) | qml/pages/notice/FadeOnHoverNoticePage.qml (p9-laneA) — static port; notice-host bridge + video assets deferred/disabled | medium |
-| 20 | `/notice/gemini` | (b) | qml/pages/notice/GeminiNoticePage.qml (p9-laneA) — static port; hasGeminiKey check + assets deferred | medium |
+| 20 | `/notice/gemini` | (b) | **CUT from the Qt build 2026-11-12** (user decision: no Gemini-centric surface; all models present equal opportunities). `qml/pages/notice/GeminiNoticePage.qml` deleted; provider catalog keeps `google-gemini` as a peer | medium |
 | 21 | `/notice` | (b) | qml/pages/notice/NoticePage.qml (p9-laneA) — informative hub; notice router/host not wired | medium |
 | 22 | `/onboarding-v3` | (b) | qml/pages/onboarding/OnboardingV3Page.qml (p9-laneA) — static port; first-run store/host not wired | medium |
-| 23 | `/onboarding` | (b) | qml/pages/onboarding/OnboardingPage.qml (p9-laneA) — static port; first-run store/host not wired | medium |
+| 23 | `/onboarding` | (b) | **CUT from the Qt build 2026-11-12** (user decision: Onboarding V3 is the kept surface). `qml/pages/onboarding/OnboardingPage.qml` deleted; v3 page kept | medium |
 | 24 | `/settings/docs/[...path]` | (a) | No Qt docs viewer found (no docs route/page/bridge in apps/airi-qt); stage-tamagotchi docs SPA unported | high |
 | 25 | `/settings/docs` | (a) | No Qt docs viewer found; same as [...path] above | high |
 | 26 | `/settings/modules/mcp` | (d) | Blocked on MCP backend/pages lane; airi-mcp crate (stdio client) landed but tools/bridges into Qt UI explicitly out of scope so far (crates/airi-mcp, p-notes: 'Qt bridges — wiring this crate into the Qt UI is a separate lane') | high |

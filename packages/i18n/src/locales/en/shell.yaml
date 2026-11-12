@@ -64,7 +64,6 @@ settings:
     cards: Cards
     explore: Explore
     data: Data
-    onboarding: Onboarding
     notice: Notice
     widgets: Widgets
     mcp: MCP
@@ -74,7 +73,6 @@ settings:
     screenCapture: Screen Capture
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
-    gemini: Gemini
     fadeOnHover: Fade on Hover
   theme-page:
     title: Theme
@@ -326,41 +324,6 @@ models:
 onboarding:
   deferredNotice: "First-run completion isn't wired in this Qt build yet — these screens are presentational. Buttons that finish or skip the wizard unlock once the onboarding store lands."
   deferredTip: 'Not wired yet — the first-run onboarding store will enable this action.'
-  back: 'Back'
-  v2:
-    title: 'AIRI Companion Setup'
-    previewBadge: 'First-run wizard'
-    next: 'Next'
-    finish: 'Finish'
-    skip: 'Setup Later'
-    steps:
-      welcome:
-        label: 'Welcome'
-        subtitle: "Meet your digital companion and pick how you'd like to set things up."
-      triage:
-        label: 'Your Path'
-        subtitle: 'New machine or returning device — choose how to continue.'
-      hearing:
-        label: 'Hearing'
-        subtitle: 'Give your companion ears with speech-to-text and a mic check.'
-      consciousness:
-        label: 'Consciousness'
-        subtitle: 'Choose the reasoning engine behind your companion.'
-      profile:
-        label: 'You'
-        subtitle: 'Tell your companion who you are and how you like to work.'
-      persona:
-        label: 'Persona'
-        subtitle: 'Shape the soul: name, character and personality traits.'
-      vessel:
-        label: 'Vessel'
-        subtitle: 'Pick the body: Live2D, VRM or a minimal presence.'
-      speech:
-        label: 'Voice'
-        subtitle: 'Voice selection and a speaking-rate sanity check.'
-      calibration:
-        label: 'Launch'
-        subtitle: 'A quick calibration, then straight onto the stage.'
   v3:
     brand: 'AIRI Companion Setup'
     stageReady: 'Stage Ready'
@@ -381,26 +344,11 @@ notice:
     title: 'Notice'
     subtitle: "AIRI's main process shows transient notice windows for one-off prompts. This page lists the notices the desktop app ships with."
     surfaces: 'Notice surfaces'
-    geminiTitle: 'Gemini onboarding'
-    geminiSubtitle: 'Opens when no Google Generative AI key is configured, offering to add one before the first session.'
     fadeOnHoverTitle: 'Fade on Hover tutorial'
     fadeOnHoverSubtitle: 'Explains the auto-hide behavior that fades the character when the cursor roams nearby.'
-    routeGemini: '/notice/gemini'
     routeFadeOnHover: '/notice/fade-on-hover'
     deferredNotice: 'The Qt build has no notice-window host yet. These surfaces will open as frameless notice windows driven by the pending-notice request store once it lands.'
-    footnote: 'In the Electron build these live at /notice/gemini and /notice/fade-on-hover.'
-  gemini:
-    header: 'Intelligence Node Online'
-    title: 'Gemini Quantum Leap'
-    intro: 'Welcome to the next generation of AI interaction. Your character is now powered by Google Gemini, enabling deep multimodal understanding.'
-    graphicCaption: 'Gemini cosmic visualization'
-    poweredBy: 'Powered by Gemini'
-    visionTitle: 'True Vision'
-    visionDescription: 'I can finally see your screen and world. Use the Camera icon to trigger a capture or show me things through your lens.'
-    memoryTitle: 'Contextual Memory'
-    memoryDescription: 'I remember our current session with extreme precision, allowing us to build deeper conversations over time.'
-    addKey: 'Add Gemini Key'
-    dontShowAgain: "Don't show again"
+    footnote: 'In the Electron build this lives at /notice/fade-on-hover.'
   fadeOnHover:
     badge: 'Tutorial'
     title: 'Fade on Hover'

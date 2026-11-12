@@ -140,10 +140,8 @@ fn main() {
     module = module.qml_file("qml/pages/settings/data/DataExportDialog.qml");
     module = module.qml_file("qml/pages/settings/data/DataImportDialog.qml");
     module = module.qml_file("qml/pages/settings/data/ScrubHistoryDialog.qml");
-    for onboarding_page in ["OnboardingPage", "OnboardingV3Page"] {
-        module = module.qml_file(format!("qml/pages/onboarding/{onboarding_page}.qml").as_str());
-    }
-    for notice_page in ["NoticePage", "GeminiNoticePage", "FadeOnHoverNoticePage"] {
+    module = module.qml_file("qml/pages/onboarding/OnboardingV3Page.qml");
+    for notice_page in ["NoticePage", "FadeOnHoverNoticePage"] {
         module = module.qml_file(format!("qml/pages/notice/{notice_page}.qml").as_str());
     }
     module = module.qml_file("qml/pages/widgets/WidgetsPage.qml");

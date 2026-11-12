@@ -63,7 +63,6 @@ settings:
     cards: 角色卡
     explore: 探索
     data: 数据
-    onboarding: 引导
     notice: 通知
     widgets: 小组件
     mcp: MCP
@@ -73,7 +72,6 @@ settings:
     screenCapture: Screen Capture
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
-    gemini: Gemini
     fadeOnHover: Fade on Hover
   theme-page:
     title: 主题
@@ -325,41 +323,6 @@ models:
 onboarding:
   deferredNotice: '此 Qt 版本尚未接入首次完成流程 —— 这些页面仅为展示。完成或跳过向导的按钮将在 onboarding 存储落地后解锁。'
   deferredTip: '尚未接入 —— 首次运行的 onboarding 存储将启用此操作。'
-  back: '返回'
-  v2:
-    title: 'AIRI 伙伴设置'
-    previewBadge: '首次向导'
-    next: '下一步'
-    finish: '完成'
-    skip: '稍后设置'
-    steps:
-      welcome:
-        label: '欢迎'
-        subtitle: '认识你的数字伙伴，并选择你希望的设置方式。'
-      triage:
-        label: '你的路径'
-        subtitle: '新设备还是回归设备 —— 选择如何继续。'
-      hearing:
-        label: '听觉'
-        subtitle: '通过语音转文字和麦克风检查为伙伴赋予听觉。'
-      consciousness:
-        label: '意识'
-        subtitle: '选择伙伴背后的推理引擎。'
-      profile:
-        label: '你'
-        subtitle: '告诉你的伙伴你是谁、你喜欢怎样工作。'
-      persona:
-        label: '人格'
-        subtitle: '塑造灵魂：名称、性格与特质。'
-      vessel:
-        label: '躯体'
-        subtitle: '选择身体：Live2D、VRM 或极简存在。'
-      speech:
-        label: '语音'
-        subtitle: '选择音色并做语速检查。'
-      calibration:
-        label: '启动'
-        subtitle: '快速校准，然后直接登上舞台。'
   v3:
     brand: 'AIRI 伙伴设置'
     stageReady: '舞台就绪'
@@ -380,26 +343,11 @@ notice:
     title: '通知'
     subtitle: 'AIRI 主进程会为一次性提示显示临时通知窗口。本页面列出桌面应用随附的通知。'
     surfaces: '通知界面'
-    geminiTitle: 'Gemini 引导'
-    geminiSubtitle: '当未配置 Google Generative AI 密钥时打开，提议在首次会话前添加一个。'
     fadeOnHoverTitle: '淡出悬停教程'
     fadeOnHoverSubtitle: '解释当光标靠近时自动淡出角色的隐藏行为。'
-    routeGemini: '/notice/gemini'
     routeFadeOnHover: '/notice/fade-on-hover'
     deferredNotice: 'Qt 版本尚未有通知窗口宿主。这些界面将在待处理通知请求存储落地后，作为无边框通知窗口打开。'
-    footnote: '在 Electron 版本中，它们位于 /notice/gemini 和 /notice/fade-on-hover。'
-  gemini:
-    header: '智能节点在线'
-    title: 'Gemini 量子跃迁'
-    intro: '欢迎来到下一代 AI 互动。你的角色现在由 Google Gemini 驱动，具备深度多模态理解能力。'
-    graphicCaption: 'Gemini 宇宙可视化'
-    poweredBy: '由 Gemini 驱动'
-    visionTitle: '真实视觉'
-    visionDescription: '我终于能看见你的屏幕和世界了。用相机图标触发截取，或通过你的镜头给我看。'
-    memoryTitle: '情境记忆'
-    memoryDescription: '我极其精确地记住我们当前的会话，让我们随时间建立更深的对话。'
-    addKey: '添加 Gemini 密钥'
-    dontShowAgain: '不再显示'
+    footnote: '在 Electron 构建中位于 /notice/fade-on-hover。'
   fadeOnHover:
     badge: '教程'
     title: '淡出悬停'

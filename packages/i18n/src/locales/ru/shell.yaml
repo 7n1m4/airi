@@ -64,7 +64,6 @@ settings:
     cards: Карточки
     explore: Обзор
     data: Данные
-    onboarding: Онбординг
     notice: Уведомления
     widgets: Виджеты
     mcp: MCP
@@ -74,7 +73,6 @@ settings:
     screenCapture: Screen Capture
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
-    gemini: Gemini
     fadeOnHover: Fade on Hover
   theme-page:
     title: Тема
@@ -326,41 +324,6 @@ models:
 onboarding:
   deferredNotice: 'Завершение первого запуска ещё не подключено в этой Qt-сборке — эти экраны демонстрационные. Кнопки завершения и пропуска мастера разблокируются после появления onboarding-стора.'
   deferredTip: 'Ещё не подключено — onboarding-стор первого запуска включит это действие.'
-  back: 'Назад'
-  v2:
-    title: 'Настройка компаньона AIRI'
-    previewBadge: 'Мастер первого запуска'
-    next: 'Далее'
-    finish: 'Завершить'
-    skip: 'Настроить позже'
-    steps:
-      welcome:
-        label: 'Добро пожаловать'
-        subtitle: 'Познакомьтесь со своим цифровым компаньоном и выберите, как хотите всё настроить.'
-      triage:
-        label: 'Ваш путь'
-        subtitle: 'Новый компьютер или устройство с возвратом — выберите, как продолжить.'
-      hearing:
-        label: 'Слух'
-        subtitle: 'Дайте компаньону слух: распознавание речи и проверка микрофона.'
-      consciousness:
-        label: 'Разум'
-        subtitle: 'Выберите движок рассуждений для вашего компаньона.'
-      profile:
-        label: 'Вы'
-        subtitle: 'Расскажите компаньону, кто вы и как любите работать.'
-      persona:
-        label: 'Персона'
-        subtitle: 'Сформируйте душу: имя, характер и черты личности.'
-      vessel:
-        label: 'Оболочка'
-        subtitle: 'Выберите тело: Live2D, VRM или минимальное присутствие.'
-      speech:
-        label: 'Голос'
-        subtitle: 'Выбор голоса и проверка скорости речи.'
-      calibration:
-        label: 'Запуск'
-        subtitle: 'Быстрая калибровка, и сразу на сцену.'
   v3:
     brand: 'Настройка компаньона AIRI'
     stageReady: 'Сцена готова'
@@ -381,26 +344,11 @@ notice:
     title: 'Уведомления'
     subtitle: 'Основной процесс AIRI показывает временные окна уведомлений для разовых подсказок. На этой странице перечислены уведомления, с которыми поставляется настольное приложение.'
     surfaces: 'Окна уведомлений'
-    geminiTitle: 'Онбординг Gemini'
-    geminiSubtitle: 'Открывается, когда не настроен ключ Google Generative AI, и предлагает добавить его перед первой сессией.'
     fadeOnHoverTitle: 'Туториал Fade on Hover'
     fadeOnHoverSubtitle: 'Объясняет поведение автоскрытия, которое плавно скрывает персонажа, когда курсор приближается.'
-    routeGemini: '/notice/gemini'
     routeFadeOnHover: '/notice/fade-on-hover'
     deferredNotice: 'В Qt-сборке ещё нет хоста окон уведомлений. Эти окна откроются как безрамочные окна уведомлений, управляемые стором ожидающих запросов, когда он появится.'
-    footnote: 'В Electron-сборке они живут по адресам /notice/gemini и /notice/fade-on-hover.'
-  gemini:
-    header: 'Узел интеллекта в сети'
-    title: 'Квантовый скачок Gemini'
-    intro: 'Добро пожаловать в следующее поколение взаимодействия с ИИ. Ваш персонаж теперь работает на Google Gemini с глубоким мультимодальным пониманием.'
-    graphicCaption: 'Космическая визуализация Gemini'
-    poweredBy: 'На базе Gemini'
-    visionTitle: 'Настоящее зрение'
-    visionDescription: 'Я наконец могу видеть ваш экран и ваш мир. Используйте значок камеры для захвата или покажите мне вещи через свою линзу.'
-    memoryTitle: 'Контекстная память'
-    memoryDescription: 'Я помню нашу текущую сессию с исключительной точностью, что позволяет со временем строить более глубокие разговоры.'
-    addKey: 'Добавить ключ Gemini'
-    dontShowAgain: 'Больше не показывать'
+    footnote: 'В Electron-сборке это находится по адресу /notice/fade-on-hover.'
   fadeOnHover:
     badge: 'Туториал'
     title: 'Fade on Hover'

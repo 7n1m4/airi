@@ -64,7 +64,6 @@ settings:
     cards: Kartu
     explore: Jelajahi
     data: Data
-    onboarding: Onboarding
     notice: Pemberitahuan
     widgets: Widget
     mcp: MCP
@@ -74,7 +73,6 @@ settings:
     screenCapture: Screen Capture
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
-    gemini: Gemini
     fadeOnHover: Fade on Hover
   theme-page:
     title: Tema
@@ -327,41 +325,6 @@ models:
 onboarding:
   deferredNotice: 'Penyelesaian first-run belum terhubung di build Qt ini — layar-layar ini hanya presentasi. Tombol yang menyelesaikan atau melewati wizard akan terbuka setelah store onboarding tersedia.'
   deferredTip: 'Belum terhubung — store onboarding first-run akan mengaktifkan aksi ini.'
-  back: 'Kembali'
-  v2:
-    title: 'Pengaturan Companion AIRI'
-    previewBadge: 'Wizard first-run'
-    next: 'Lanjut'
-    finish: 'Selesai'
-    skip: 'Atur nanti'
-    steps:
-      welcome:
-        label: 'Selamat datang'
-        subtitle: 'Kenali companion digitalmu dan pilih cara terbaik untuk mengaturnya.'
-      triage:
-        label: 'Jalurmu'
-        subtitle: 'Mesin baru atau perangkat lama — pilih cara melanjutkan.'
-      hearing:
-        label: 'Pendengaran'
-        subtitle: 'Berikan companionmu telinga dengan speech-to-text dan pemeriksaan mikrofon.'
-      consciousness:
-        label: 'Kesadaran'
-        subtitle: 'Pilih mesin penalaran di balik companionmu.'
-      profile:
-        label: 'Kamu'
-        subtitle: 'Ceritakan pada companionmu siapa dirimu dan cara kerjamu.'
-      persona:
-        label: 'Persona'
-        subtitle: 'Bentuk jiwa: nama, karakter dan sifat.'
-      vessel:
-        label: 'Wadah'
-        subtitle: 'Pilih tubuh: Live2D, VRM atau kehadiran minimal.'
-      speech:
-        label: 'Suara'
-        subtitle: 'Pemilihan suara dan pemeriksaan kecepatan bicara.'
-      calibration:
-        label: 'Mulai'
-        subtitle: 'Kalibrasi singkat, lalu langsung ke panggung.'
   v3:
     brand: 'Pengaturan Companion AIRI'
     stageReady: 'Panggung siap'
@@ -382,26 +345,11 @@ notice:
     title: 'Pemberitahuan'
     subtitle: 'Proses utama AIRI menampilkan jendela pemberitahuan sementara untuk prompt satu kali. Halaman ini mencantumkan pemberitahuan yang dibawa aplikasi desktop.'
     surfaces: 'Permukaan pemberitahuan'
-    geminiTitle: 'Onboarding Gemini'
-    geminiSubtitle: 'Terbuka saat tidak ada kunci Google Generative AI yang dikonfigurasi, menawarkan untuk menambahkannya sebelum sesi pertama.'
     fadeOnHoverTitle: 'Tutorial Fade on Hover'
     fadeOnHoverSubtitle: 'Menjelaskan perilaku sembunyi otomatis yang memudar karakter saat kursor mendekat.'
-    routeGemini: '/notice/gemini'
     routeFadeOnHover: '/notice/fade-on-hover'
     deferredNotice: 'Build Qt belum punya tuan rumah jendela pemberitahuan. Permukaan-permukaan ini akan terbuka sebagai jendela pemberitahuan tanpa bingkai yang digerakkan oleh store permintaan tertunda setelah tersedia.'
-    footnote: 'Di build Electron, keduanya berada di /notice/gemini dan /notice/fade-on-hover.'
-  gemini:
-    header: 'Node kecerdasan daring'
-    title: 'Lompatan kuantum Gemini'
-    intro: 'Selamat datang di generasi interaksi AI berikutnya. Karaktermu kini ditenagai oleh Google Gemini, dengan pemahaman multimodal mendalam.'
-    graphicCaption: 'Visualisasi kosmik Gemini'
-    poweredBy: 'Ditenagai Gemini'
-    visionTitle: 'Visi sejati'
-    visionDescription: 'Aku akhirnya bisa melihat layar dan duniamu. Gunakan ikon Kamera untuk capture atau tunjukkan sesuatu lewat lensamu.'
-    memoryTitle: 'Memori kontekstual'
-    memoryDescription: 'Aku mengingat sesi kita saat ini dengan sangat presisi, memungkinkan kita membangun percakapan yang lebih dalam seiring waktu.'
-    addKey: 'Tambahkan kunci Gemini'
-    dontShowAgain: 'Jangan tampilkan lagi'
+    footnote: 'Di build Electron, ini berada di /notice/fade-on-hover.'
   fadeOnHover:
     badge: 'Tutorial'
     title: 'Fade on Hover'

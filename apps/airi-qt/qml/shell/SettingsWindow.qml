@@ -146,87 +146,73 @@ Window {
                 }
                 AListItem {
                     Layout.fillWidth: true
-                    icon: "🪄"
-                    title: I18n.tr("shell.settings.nav.onboarding")
+                    icon: "✨"
+                    title: I18n.tr("shell.settings.nav.onboardingV3")
                     active: settingsWindow.navIndex === 15
                     onClicked: settingsWindow.navIndex = 15
                 }
                 AListItem {
                     Layout.fillWidth: true
-                    icon: "✨"
-                    title: I18n.tr("shell.settings.nav.onboardingV3")
+                    icon: "📣"
+                    title: I18n.tr("shell.settings.nav.notice")
                     active: settingsWindow.navIndex === 16
                     onClicked: settingsWindow.navIndex = 16
                 }
                 AListItem {
                     Layout.fillWidth: true
-                    icon: "📣"
-                    title: I18n.tr("shell.settings.nav.notice")
+                    icon: "👁️"
+                    title: I18n.tr("shell.settings.nav.fadeOnHover")
                     active: settingsWindow.navIndex === 17
                     onClicked: settingsWindow.navIndex = 17
                 }
                 AListItem {
                     Layout.fillWidth: true
-                    icon: "🤖"
-                    title: I18n.tr("shell.settings.nav.gemini")
+                    icon: "🧩"
+                    title: I18n.tr("shell.settings.nav.widgets")
                     active: settingsWindow.navIndex === 18
                     onClicked: settingsWindow.navIndex = 18
                 }
                 AListItem {
                     Layout.fillWidth: true
-                    icon: "👁️"
-                    title: I18n.tr("shell.settings.nav.fadeOnHover")
+                    icon: "🔌"
+                    title: I18n.tr("shell.settings.nav.mcp")
                     active: settingsWindow.navIndex === 19
                     onClicked: settingsWindow.navIndex = 19
                 }
                 AListItem {
                     Layout.fillWidth: true
-                    icon: "🧩"
-                    title: I18n.tr("shell.settings.nav.widgets")
+                    icon: "💬"
+                    title: I18n.tr("shell.settings.nav.discord")
                     active: settingsWindow.navIndex === 20
                     onClicked: settingsWindow.navIndex = 20
                 }
                 AListItem {
                     Layout.fillWidth: true
-                    icon: "🔌"
-                    title: I18n.tr("shell.settings.nav.mcp")
+                    icon: "☁️"
+                    title: I18n.tr("shell.settings.nav.cloudSync")
                     active: settingsWindow.navIndex === 21
                     onClicked: settingsWindow.navIndex = 21
                 }
                 AListItem {
                     Layout.fillWidth: true
-                    icon: "💬"
-                    title: I18n.tr("shell.settings.nav.discord")
+                    icon: "🛠️"
+                    title: I18n.tr("shell.settings.nav.pluginHost")
                     active: settingsWindow.navIndex === 22
                     onClicked: settingsWindow.navIndex = 22
                 }
                 AListItem {
                     Layout.fillWidth: true
-                    icon: "☁️"
-                    title: I18n.tr("shell.settings.nav.cloudSync")
+                    icon: "📷"
+                    title: I18n.tr("shell.settings.nav.screenCapture")
                     active: settingsWindow.navIndex === 23
                     onClicked: settingsWindow.navIndex = 23
                 }
                 AListItem {
                     Layout.fillWidth: true
-                    icon: "🛠️"
-                    title: I18n.tr("shell.settings.nav.pluginHost")
-                    active: settingsWindow.navIndex === 24
-                    onClicked: settingsWindow.navIndex = 24
-                }
-                AListItem {
-                    Layout.fillWidth: true
-                    icon: "📷"
-                    title: I18n.tr("shell.settings.nav.screenCapture")
-                    active: settingsWindow.navIndex === 25
-                    onClicked: settingsWindow.navIndex = 25
-                }
-                AListItem {
-                    Layout.fillWidth: true
                     icon: "🤵"
                     title: I18n.tr("shell.settings.nav.acpAgents")
-                    active: settingsWindow.navIndex === 26
-                    onClicked: settingsWindow.navIndex = 26
+                    active: settingsWindow.navIndex === 24
+                    onClicked: settingsWindow.navIndex = 24
                 }
 
                 Item {
@@ -338,17 +324,11 @@ Window {
             // Data — export/import/vault status (UI-only until wave ④).
             DataSettingsPage {
             }
-            // Onboarding v2 — presentational first-run wizard.
-            OnboardingPage {
-            }
             // Onboarding v3 — presentational first-run wizard.
             OnboardingV3Page {
             }
             // Notice — hub of one-off notice surfaces.
             NoticePage {
-            }
-            // Notice — Gemini onboarding surface.
-            GeminiNoticePage {
             }
             // Notice — Fade on Hover tutorial surface.
             FadeOnHoverNoticePage {

@@ -2,7 +2,7 @@
 // Notice host — presentational port of
 // apps/stage-tamagotchi/src/renderer/pages/notice/index.vue (a
 // <RouterView /> for the notice window). Qt has no notice-window host yet,
-// so this page is an informative hub listing the two notice surfaces the
+// so this page is an informative hub listing the notice surface the
 // desktop app ships with. No interactive actions are wired.
 import QtQuick 2.15
 import QtQuick.Layouts 1.15
@@ -97,49 +97,6 @@ Item {
                 ColumnLayout {
                     width: parent ? parent.width : implicitWidth
                     spacing: Theme.spacingM
-
-                    RowLayout {
-                        Layout.fillWidth: true
-                        spacing: Theme.spacingM
-
-                        Text {
-                            text: "🌌"
-                            font.pixelSize: 28
-                        }
-
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 2
-
-                            Text {
-                                Layout.fillWidth: true
-                                text: I18n.tr("shell.notice.index.geminiTitle")
-                                font.family: Theme.fontBody
-                                font.pixelSize: 15
-                                font.bold: true
-                                color: Theme.textPrimary
-                                elide: Text.ElideRight
-                            }
-
-                            Text {
-                                Layout.fillWidth: true
-                                wrapMode: Text.WordWrap
-                                text: I18n.tr("shell.notice.index.geminiSubtitle")
-                                font.family: Theme.fontBody
-                                font.pixelSize: 12
-                                color: Theme.textSecondary
-                            }
-                        }
-
-                        ABadge {
-                            variant: "default"
-                            text: I18n.tr("shell.notice.index.routeGemini")
-                        }
-                    }
-
-                    ASeparator {
-                        Layout.fillWidth: true
-                    }
 
                     RowLayout {
                         Layout.fillWidth: true

@@ -64,7 +64,6 @@ settings:
     cards: Cartes
     explore: Explorer
     data: Données
-    onboarding: Onboarding
     notice: Avis
     widgets: Widgets
     mcp: MCP
@@ -74,7 +73,6 @@ settings:
     screenCapture: Screen Capture
     acpAgents: ACP Agents
     onboardingV3: Onboarding V3
-    gemini: Gemini
     fadeOnHover: Fade on Hover
   theme-page:
     title: Thème
@@ -326,41 +324,6 @@ models:
 onboarding:
   deferredNotice: "La complétion du premier lancement n'est pas encore câblée dans cette build Qt — ces écrans sont présentationnels. Les boutons qui finalisent ou ignorent l'assistant seront débloqués quand le store d'onboarding arrivera."
   deferredTip: "Pas encore câblé — le store d'onboarding du premier lancement activera cette action."
-  back: 'Retour'
-  v2:
-    title: 'Configuration du compagnon AIRI'
-    previewBadge: 'Assistant de premier lancement'
-    next: 'Suivant'
-    finish: 'Terminer'
-    skip: 'Configurer plus tard'
-    steps:
-      welcome:
-        label: 'Bienvenue'
-        subtitle: 'Rencontrez votre compagnon numérique et choisissez comment vous voulez procéder.'
-      triage:
-        label: 'Votre parcours'
-        subtitle: 'Nouvelle machine ou appareil de retour — choisissez comment continuer.'
-      hearing:
-        label: 'Ouïe'
-        subtitle: 'Donnez des oreilles à votre compagnon avec la voix-vers-texte et un contrôle du micro.'
-      consciousness:
-        label: 'Conscience'
-        subtitle: 'Choisissez le moteur de raisonnement derrière votre compagnon.'
-      profile:
-        label: 'Vous'
-        subtitle: 'Dites à votre compagnon qui vous êtes et comment vous aimez travailler.'
-      persona:
-        label: 'Persona'
-        subtitle: "Façonnez l'âme : nom, caractère et traits de personnalité."
-      vessel:
-        label: 'Corps'
-        subtitle: 'Choisissez le corps : Live2D, VRM ou une présence minimale.'
-      speech:
-        label: 'Voix'
-        subtitle: 'Sélection de la voix et vérification du débit de parole.'
-      calibration:
-        label: 'Lancer'
-        subtitle: 'Une calibration rapide, puis cap sur la scène.'
   v3:
     brand: 'Configuration du compagnon AIRI'
     stageReady: 'Scène prête'
@@ -381,26 +344,11 @@ notice:
     title: 'Notifications'
     subtitle: "Le processus principal d'AIRI affiche des fenêtres de notification transitoires pour les invites ponctuelles. Cette page liste les notifications livrées avec l'app de bureau."
     surfaces: 'Surfaces de notification'
-    geminiTitle: 'Onboarding Gemini'
-    geminiSubtitle: "S'ouvre quand aucune clé Google Generative AI n'est configurée, proposant d'en ajouter une avant la première session."
     fadeOnHoverTitle: 'Tutoriel Fade on Hover'
     fadeOnHoverSubtitle: 'Explique le comportement de masquage automatique qui estompe le personnage quand le curseur s’approche.'
-    routeGemini: '/notice/gemini'
     routeFadeOnHover: '/notice/fade-on-hover'
     deferredNotice: "La build Qt n'a pas encore d'hôte de fenêtres de notification. Ces surfaces s'ouvriront comme des fenêtres de notification sans bordure pilotées par le store de requêtes en attente dès qu'il arrivera."
-    footnote: 'Dans la build Electron, elles vivent à /notice/gemini et /notice/fade-on-hover.'
-  gemini:
-    header: 'Nœud d’intelligence en ligne'
-    title: 'Saut quantique Gemini'
-    intro: "Bienvenue dans la prochaine génération d'interaction avec l'IA. Votre personnage est désormais propulsé par Google Gemini, avec une compréhension multimodale profonde."
-    graphicCaption: 'Visualisation cosmique Gemini'
-    poweredBy: 'Propulsé par Gemini'
-    visionTitle: 'Vraie vision'
-    visionDescription: "Je peux enfin voir votre écran et votre monde. Utilisez l'icône Caméra pour déclencher une capture ou montrez-moi des choses à travers votre objectif."
-    memoryTitle: 'Mémoire contextuelle'
-    memoryDescription: 'Je me souviens de notre session actuelle avec une extrême précision, ce qui nous permet de construire des conversations plus profondes au fil du temps.'
-    addKey: 'Ajouter une clé Gemini'
-    dontShowAgain: 'Ne plus afficher'
+    footnote: 'Dans la build Electron, cela se trouve dans /notice/fade-on-hover.'
   fadeOnHover:
     badge: 'Tutoriel'
     title: 'Fade on Hover'
