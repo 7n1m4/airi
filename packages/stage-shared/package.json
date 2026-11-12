@@ -34,16 +34,14 @@
   },
   "dependencies": {
     "@moeru/eventa": "catalog:",
-    "@valibot/to-json-schema": "1.0.0-rc.0",
     "@vueuse/core": "catalog:",
     "@xsai/generate-text": "catalog:",
+    "@xsai/shared": "catalog:",
     "@xsai/shared-chat": "catalog:",
     "@xsai/utils-chat": "catalog:",
     "gpuu": "^1.0.7",
-    "pinia": "catalog:",
     "valibot": "catalog:",
-    "vue": "catalog:",
-    "xsschema": "catalog:"
+    "vue": "catalog:"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.2",

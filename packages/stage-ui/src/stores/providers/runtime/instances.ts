@@ -10,8 +10,9 @@ import type {
 } from '@xsai-ext/providers/utils'
 import type { Ref } from 'vue'
 
-import { keylessOrOptionalKey } from '../../../libs/providers/types'
 import type { ProviderMetadata } from '../types'
+
+import { keylessOrOptionalKey } from '../../../libs/providers/types'
 
 export interface ProviderInstancesDeps {
   providerInstanceCache: Ref<Record<string, unknown>>
@@ -34,6 +35,22 @@ export interface ProviderInstancesDeps {
  */
 export function createProviderInstances(deps: ProviderInstancesDeps) {
   const { providerInstanceCache, providerMetadata } = deps
+
+  /**
+   * Drop a redundant `providerId:` prefix so a composite key and its
+   * double-prefixed alias resolve to the same instance the factory builds
+   * (`openai-compatible:openai-compatible:vllm` → `openai-compatible:vllm`).
+   */
+  function cleanProviderKey(providerKey: string): string {
+    if (!providerKey.includes(':'))
+      return providerKey
+    const [providerId, ...rest] = providerKey.split(':')
+    const prefix = `${providerId}:`
+    let instance = rest.join(':')
+    while (instance.startsWith(prefix))
+      instance = instance.slice(prefix.length)
+    return instance ? `${providerId}:${instance}` : providerId
+  }
 
   // Function to get provider object by provider id (or composite providerKey like "providerId:instanceId")
   async function getProviderInstance<R extends
@@ -130,12 +147,25 @@ export function createProviderInstances(deps: ProviderInstancesDeps) {
     }
   }
 
+  /**
+   * Evict cached instances. A base provider id drops that provider and every
+   * named instance below it (`providerId:slug`); a composite key drops that key
+   * and its double-prefixed variants. Unknown keys are a no-op.
+   */
   async function disposeProviderInstance(providerKey: string) {
-    const instance = providerInstanceCache.value[providerKey] as { dispose?: () => Promise<void> | void } | undefined
-    if (instance?.dispose)
-      await instance.dispose()
+    // Match every spelling of the instance: `slug`, `providerId:slug`, and the
+    // base id that would drop the whole family.
+    const candidates = new Set([providerKey, cleanProviderKey(providerKey)])
+    const targets = Object.keys(providerInstanceCache.value)
+      .filter(cached => [...candidates].some(key => cached === key || cached.startsWith(`${key}:`)))
 
-    delete providerInstanceCache.value[providerKey]
+    for (const key of targets) {
+      const instance = providerInstanceCache.value[key] as { dispose?: () => Promise<void> | void } | undefined
+      if (instance?.dispose)
+        await instance.dispose()
+
+      delete providerInstanceCache.value[key]
+    }
   }
 
   return { getProviderInstance, disposeProviderInstance }

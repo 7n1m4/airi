@@ -99,20 +99,26 @@ export function createProviderLifecycle(deps: ProviderLifecycleDeps) {
    */
   function registerCredentialWatch() {
     return watch(providerCredentials, (newCreds) => {
-      const changedProviders: string[] = []
+      const affected = new Set<string>()
 
       for (const providerId in newCreds) {
-        const currentConfig = newCreds[providerId]
-        const currentHash = JSON.stringify(currentConfig)
-        const previousHash = previousCredentialHashes.value[providerId]
+        const currentHash = JSON.stringify(newCreds[providerId])
+        if (currentHash !== previousCredentialHashes.value[providerId])
+          affected.add(providerId)
+        previousCredentialHashes.value[providerId] = currentHash
+      }
 
-        if (currentHash !== previousHash) {
-          changedProviders.push(providerId)
-          previousCredentialHashes.value[providerId] = currentHash
+      // Deletions never show up in `newCreds`, so diff against the previous
+      // snapshot: otherwise a deleted provider keeps its cached client alive.
+      // Stale entries are pruned so a later re-add still looks like a change.
+      for (const providerId in previousCredentialHashes.value) {
+        if (!(providerId in newCreds)) {
+          affected.add(providerId)
+          delete previousCredentialHashes.value[providerId]
         }
       }
 
-      for (const providerId of changedProviders) {
+      for (const providerId of affected) {
         // Since credentials changed, dispose the cached instance so new creds take effect.
         void deps.disposeProviderInstance(providerId)
       }

@@ -9,7 +9,7 @@ import type { WidgetsWindowManager } from '../widgets'
 import { join, resolve } from 'node:path'
 
 import { initScreenCaptureForWindow } from '@proj-airi/electron-screen-capture/main'
-import { BrowserWindow, shell } from 'electron'
+import { BrowserWindow } from 'electron'
 
 import icon from '../../../../resources/icon.png?asset'
 
@@ -17,6 +17,7 @@ import { electronSettingsNavigate } from '../../../shared/eventa'
 import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
 import { createReusableWindow } from '../../libs/electron/window-manager'
 import { toggleWindowShow } from '../shared'
+import { openExternalSafely } from '../shared/open-external'
 import { setupSettingsWindowInvokes } from './rpc/index.electron'
 
 export interface SettingsWindowManager {
@@ -59,7 +60,7 @@ export function setupSettingsWindowReusableFunc(params: {
 
     window.on('ready-to-show', () => window.show())
     window.webContents.setWindowOpenHandler((details) => {
-      shell.openExternal(details.url)
+      openExternalSafely(details.url)
       return { action: 'deny' }
     })
 

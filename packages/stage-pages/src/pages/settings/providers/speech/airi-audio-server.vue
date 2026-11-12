@@ -151,8 +151,8 @@ function copyCommand(cmd: string, stepIndex: number) {
 // --- AIRI Audio Server Process Spawner & Lifecycle ---
 const audioSpawner = useProcessSpawner({
   storageKeyPrefix: 'settings/providers/airi-audio-server',
-  defaultSpawnCommand: (providers.value[providerId]?.spawnCommand as string) || '',
-  defaultStopCommand: (providers.value[providerId]?.stopCommand as string) || '',
+  defaultSpawnCommand: (providers.value[providerId]?.spawnCommand as string) || 'npm start',
+  defaultStopCommand: (providers.value[providerId]?.stopCommand as string) || 'pkill -f airi-audio-server',
   defaultAutoSpawn: Boolean(providers.value[providerId]?.autoSpawnOnLaunch),
   spawnSuccessDelayMs: 1500,
   stopSuccessDelayMs: 1000,
@@ -830,9 +830,9 @@ async function handleGenerateSpeech(input: string, voiceId: string, _useSSML: bo
     <ProcessLifecycleCard
       :spawner="audioSpawner"
       title="Server Lifecycle & Process Spawner"
-      description="Run local sidecar binary or execute remote start/stop scripts directly from AIRI."
-      placeholder-spawn="e.g. npx airi-audio-server or ./start_server.sh or ssh user@host &quot;command&quot;"
-      placeholder-stop="e.g. killall airi-audio-server or ./stop_server.sh or ssh user@host &quot;command&quot;"
+      description="Spawn the local airi-audio-server. Arguments are passed literally — no shell, so quoting is not supported."
+      placeholder-spawn="e.g. npm start"
+      placeholder-stop="e.g. pkill -f airi-audio-server"
       spawn-button-label="Spawn Server"
       stop-button-label="Stop Server"
       icon="i-solar:server-square-bold-duotone"

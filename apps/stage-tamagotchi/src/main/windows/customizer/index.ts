@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path'
 
 import { defineInvokeHandler } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/electron/main'
-import { BrowserWindow as ElectronBrowserWindow, ipcMain, shell } from 'electron'
+import { BrowserWindow as ElectronBrowserWindow, ipcMain } from 'electron'
 import { isMacOS } from 'std-env'
 
 import icon from '../../../../resources/icon.png?asset'
@@ -16,6 +16,7 @@ import { electronCustomizerToggleVisibility, electronGetCustomizerWindowState } 
 import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
 import { createReusableWindow } from '../../libs/electron/window-manager'
 import { showWindowOnAllWorkspaces } from '../shared/app-icon'
+import { openExternalSafely } from '../shared/open-external'
 import { setupBaseWindowElectronInvokes, transparentWindowConfig } from '../shared/window'
 
 function createCustomizerWindow(options?: BrowserWindowConstructorOptions) {
@@ -43,7 +44,7 @@ function createCustomizerWindow(options?: BrowserWindowConstructorOptions) {
 
   window.on('ready-to-show', () => window.show())
   window.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    openExternalSafely(details.url)
     return { action: 'deny' }
   })
 

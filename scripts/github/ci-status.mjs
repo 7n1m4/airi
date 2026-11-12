@@ -9,7 +9,7 @@ const args = process.argv.slice(2)
 const isWatch = args.includes('--watch') || args.includes('-w')
 const isRelease = args.includes('--release') || args.includes('-r')
 const isLogError = args.includes('--log-error') || args.includes('-e')
-const tagArg = args.find(a => a.startsWith('--tag='))?.split('=')[1] || 'v0.9.36-stable.20261001'
+const tagArg = args.find(a => a.startsWith('--tag='))?.split('=')[1]
 
 function gh(cmd) {
   try {
@@ -164,6 +164,10 @@ function printStatusTable() {
 
 async function main() {
   if (isRelease) {
+    if (!tagArg) {
+      console.error('❌ Error: --release requires --tag=<tag> (a release check without a tag verifies the wrong release).')
+      process.exit(1)
+    }
     printReleaseAssets(tagArg)
     return
   }

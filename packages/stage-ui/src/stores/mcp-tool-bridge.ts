@@ -121,6 +121,12 @@ export const DEFAULT_AUDIO_SERVER_BASE_URL = 'http://127.0.0.1:8095/v1/'
 /** Key used for the audio server inside `mcp.json` (also the qualified tool prefix). */
 export const MUSIC_MCP_SERVER_NAME = 'airi-audio-server'
 
+/** Key used for the web search server inside `mcp.json` (also the qualified tool prefix). */
+export const WEB_SEARCH_MCP_SERVER_NAME = 'open-websearch'
+
+/** Key used for the filesystem server inside `mcp.json` (also the qualified tool prefix). */
+export const FILESYSTEM_MCP_SERVER_NAME = 'filesystem'
+
 export type MusicToolProvisionFailure = 'no-bridge' | 'config-error' | 'unreachable' | 'not-advertised'
 
 export type MusicToolProvisionOutcome
@@ -477,9 +483,9 @@ export function getMcpToolBridge(): McpToolBridge {
  * Rules:
  * - Returns empty array when allowedTools is undefined or empty.
  * - If allowedTools includes 'mcp', all tools are permitted.
- * - If allowedTools includes 'web_search' or 'mcp_web_search', servers matching 'websearch', 'web-search', or 'search' are permitted.
- * - If allowedTools includes 'filesystem' or 'mcp_filesystem', servers matching 'filesystem' are permitted.
- * - If allowedTools includes 'music' or 'mcp_music', servers matching 'audio-server' are permitted.
+ * - A bare family grant ('web_search', 'filesystem', 'music') resolves to the ONE
+ *   server that family provisions, never to every server whose name happens to
+ *   contain the family word (an unrelated `my-search-helper` stays unreachable).
  * - Explicit tool names or qualified server::tool names also pass.
  */
 export function filterMcpToolsForCard(
@@ -492,26 +498,49 @@ export function filterMcpToolsForCard(
   if (allowedTools.includes('mcp')) {
     return rawTools
   }
-  return rawTools.filter((t) => {
-    // Explicit tool name match
-    if (allowedTools.includes(t.name) || allowedTools.includes(t.toolName)) {
-      return true
-    }
 
-    const sName = t.serverName.toLowerCase()
-    const isWebSearch = sName.includes('websearch') || sName.includes('web-search') || sName.includes('search')
-    const isFilesystem = sName.includes('filesystem')
-    const isMusic = sName.includes('audio-server') || sName.includes('audio_server')
+  const families: Array<{ grants: string[], serverName: string }> = [
+    { grants: ['web_search', 'mcp_web_search'], serverName: WEB_SEARCH_MCP_SERVER_NAME },
+    { grants: ['filesystem', 'mcp_filesystem'], serverName: FILESYSTEM_MCP_SERVER_NAME },
+    { grants: ['music', 'mcp_music'], serverName: MUSIC_MCP_SERVER_NAME },
+  ]
+  const allowedServers = new Set<string>(
+    families.filter(f => f.grants.some(g => allowedTools.includes(g))).map(f => f.serverName),
+  )
 
-    if (isWebSearch && (allowedTools.includes('web_search') || allowedTools.includes('mcp_web_search'))) {
-      return true
-    }
-    if (isFilesystem && (allowedTools.includes('filesystem') || allowedTools.includes('mcp_filesystem'))) {
-      return true
-    }
-    if (isMusic && (allowedTools.includes('music') || allowedTools.includes('mcp_music'))) {
-      return true
-    }
+  return rawTools.filter(t =>
+    allowedTools.includes(t.name)
+    || allowedTools.includes(t.toolName)
+    || allowedServers.has(t.serverName))
+}
+
+/**
+ * Whether a qualified `server::tool` name passes a card's allowedTools.
+ *
+ * Shares the allowlist semantics with {@link filterMcpToolsForCard} so the
+ * sandbox `mcp` CLI and the LLM meta-tool cannot disagree about a tool. A name
+ * no server advertises stays reachable: tool sets change at runtime and a
+ * stale descriptor list must not hard-fail an otherwise allowed call.
+ *
+ * A card with no `generation.known.allowedTools` gate is not a decision, so the
+ * caller is told to skip the check rather than deny everything (headless
+ * runtimes and pre-generation cards carry no allowlist).
+ */
+export function isMcpToolAllowedForCard(
+  name: string,
+  allowedTools: string[] | undefined,
+  knownTools: McpToolDescriptor[] = [],
+): boolean | undefined {
+  if (!allowedTools)
+    return undefined
+  if (!allowedTools.length)
     return false
-  })
+  const sep = name.indexOf(toolNameSeparator)
+  if (sep <= 0 || sep === name.length - toolNameSeparator.length)
+    return false
+  if (allowedTools.includes('mcp') || allowedTools.includes(name))
+    return true
+
+  const advertised = knownTools.some(t => t.name === name)
+  return advertised && filterMcpToolsForCard(knownTools, allowedTools).some(t => t.name === name)
 }

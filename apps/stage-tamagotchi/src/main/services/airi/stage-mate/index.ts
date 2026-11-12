@@ -94,7 +94,8 @@ export function createStageMateService(params?: {
       }
     }
     catch {}
-    return 'mate-stage-dev-token'
+    // An empty token means "nothing configured": every connection is refused below.
+    return ''
   }
 
   function startWebSocketServer() {
@@ -102,7 +103,7 @@ export function createStageMateService(params?: {
       return
 
     try {
-      wss = new WebSocketServer({ port: PORT })
+      wss = new WebSocketServer({ port: PORT, host: '127.0.0.1' })
       log.withFields({ port: PORT }).log('Stage-Mate WebSocket server listening')
 
       wss.on('connection', (ws) => {
@@ -115,7 +116,17 @@ export function createStageMateService(params?: {
               const token = msg.data?.token
               const expected = getResolvedAuthToken()
 
-              if (token === expected || token === 'mate-stage-dev-token') {
+              if (!expected) {
+                ws.send(JSON.stringify({
+                  type: 'module:authenticated',
+                  data: { authenticated: false, error: 'No auth token configured' },
+                }))
+                log.warn('Stage-Mate socket rejected: no auth token configured, refusing all connections')
+                ws.close()
+                return
+              }
+
+              if (token === expected) {
                 authenticatedSockets.add(ws)
                 ws.send(JSON.stringify({
                   type: 'module:authenticated',
@@ -362,6 +373,11 @@ export function createStageMateService(params?: {
     }
 
     const token = getResolvedAuthToken()
+    if (!token) {
+      log.warn('Stage-Mate sidecar not spawned: no auth token configured, nothing could authenticate')
+      return
+    }
+
     log.withFields({ binPath }).log('Spawning StageMate sidecar process...')
 
     if (platform === 'darwin' && binPath.endsWith('.app')) {

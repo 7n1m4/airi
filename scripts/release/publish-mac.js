@@ -4,10 +4,9 @@ import process from 'node:process'
 
 import { execSync } from 'node:child_process'
 
-// Construct environment with SSL bypass, max heap size, and GITHUB_TOKEN cleared to fall back to keyring
+// Construct environment with max heap size, and GITHUB_TOKEN cleared to fall back to keyring
 const safeEnv = { ...process.env }
 delete safeEnv.GITHUB_TOKEN
-safeEnv.GH_SSL_NO_VERIFY = 'true'
 safeEnv.NODE_OPTIONS = '--max-old-space-size=12288'
 
 function execute(cmd, options = {}) {
@@ -33,11 +32,13 @@ async function main() {
   // Step 1: Pull and fetch tags from git
   console.info('🔄 Syncing local repository with remote...')
   try {
-    execute('git -c http.sslVerify=false pull')
-    execute('git -c http.sslVerify=false fetch --tags --force')
+    execute('git pull')
+    execute('git fetch --tags --force')
   }
-  catch {
-    console.warn('⚠️ Warning: Git sync failed. Proceeding with local repository state.')
+  catch (err) {
+    console.error('❌ Git sync failed. Refusing to build a release from an un-synced tree.')
+    console.error(err.message)
+    process.exit(1)
   }
 
   // Re-read package.json after git sync in case remote main was updated
@@ -171,6 +172,16 @@ async function main() {
   catch (err) {
     console.warn(`⚠️ Warning: Failed to dispatch Linux desktop workflow automatically: ${err.message}`)
     console.warn(`👉 You can dispatch it manually with: gh workflow run release-linux-desktop.yml --repo dasilva333/airi -f tag=${tag}`)
+  }
+
+  // Step 7: Verify release assets & cross-platform completeness
+  console.info(`\n📦 Verifying release assets inventory for ${tag}...`)
+  try {
+    execute(`node scripts/github/ci-status.mjs --release --tag=${tag}`)
+  }
+  catch (err) {
+    console.error(`❌ Release asset verification failed for ${tag}. Error:`, err.message)
+    process.exit(1)
   }
 
   console.info(`\n🏆 Success! All macOS artifacts uploaded to GitHub release:`)

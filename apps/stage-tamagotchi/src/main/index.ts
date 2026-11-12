@@ -6,18 +6,19 @@ import type {
   StartupResourceState,
   StartupSnapshot,
 } from '../shared/eventa'
+import type { FileLoggerHandle } from './app/file-logger'
 
+import path, { dirname } from 'node:path'
 import process, { env, platform, stderr, stdout } from 'node:process'
 
 import { Buffer } from 'node:buffer'
-import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // @ts-expect-error generated bundle without type declarations
 import messages from '@proj-airi/i18n-bundle'
 
 import { electronApp, optimizer } from '@electron-toolkit/utils'
-import { Format, LogLevel, setGlobalFormat, setGlobalLogLevel, useLogg } from '@guiiai/logg'
+import { Format, LogLevel, setGlobalFormat, setGlobalHookPostLog, setGlobalLogLevel, useLogg } from '@guiiai/logg'
 import { defineInvokeHandler } from '@moeru/eventa'
 import { createContext } from '@moeru/eventa/adapters/electron/main'
 import { initScreenCaptureForMain } from '@proj-airi/electron-screen-capture/main'
@@ -56,6 +57,7 @@ import {
   electronStageToggleVisibility,
 } from '../shared/eventa'
 import { openDebugger, setupDebugger } from './app/debugger'
+import { setupFileLogger } from './app/file-logger'
 import { ensureLevelDBIntegrityOrHalt } from './app/leveldb-guard'
 import { ensureLegacyUserDataMigrated } from './app/migration'
 import { createGlobalAppConfig } from './configs/global'
@@ -190,6 +192,10 @@ setGlobalLogLevel(LogLevel.Log)
 setupDebugger()
 
 const log = useLogg('main').useGlobalConfig()
+// NOTICE: Quit-time teardown must reach the sensors service even when the DI callback that
+// creates it never runs (a failed `injeca.start()` or an earlier throw), so the promise is
+// hoisted here; `stop` is the subset `before-quit` needs.
+let pendingSensorsService: Promise<Pick<Awaited<ReturnType<typeof createSensorsService>>, 'stop'>> | undefined
 const forceHighPerformanceGpu = env.AIRI_FORCE_HIGH_PERFORMANCE_GPU === '1'
 
 if (isLinux) {
@@ -238,7 +244,30 @@ ensureLevelDBIntegrityOrHalt(app.getPath('userData'))
 app.dock?.setIcon(icon)
 electronApp.setAppUserModelId('ai.moeru.airi.dasilva333')
 
+// NOTICE: macOS `activate` (dock click) restores by window identity, not by title:
+// the settings/chat titles are em-dash variants and the chat title is rewritten at
+// runtime ("… - User Typing..."). These handles are only populated once the DI build runs.
+const createdSettingsWindows = new Set<BrowserWindow>()
+const createdChatWindows = new Set<BrowserWindow>()
+
+// NOTICE: Renderer-supplied paths reach the filesystem through this helper.
+// `path.resolve` discards the root when a segment is absolute, so a leading `/`
+// in `relPath` would otherwise escape any containment check.
+function resolveInside(root: string, ...segments: string[]): string | null {
+  if (segments.some(segment => path.isAbsolute(segment) || segment === '..'))
+    return null
+  const resolved = path.resolve(root, ...segments)
+  return resolved === root || resolved.startsWith(root + path.sep) ? resolved : null
+}
+
 initScreenCaptureForMain()
+// NOTICE: Open the session log file at module scope: the DI `invoke` callback below only runs
+// after `whenReady`, so anything the logger misses before then (including a failed boot) is lost.
+const fileLogger: FileLoggerHandle = await setupFileLogger()
+if (fileLogger.logFilePath) {
+  // NOTICE: `formattedOutput` carries ANSI colours under Format.Pretty; JSON keeps the file plain.
+  setGlobalHookPostLog(log => void fileLogger.appendLog(JSON.stringify(log)))
+}
 
 app.whenReady().then(async () => {
   const registerCorsBypass = (urls: string[]) => {
@@ -292,7 +321,6 @@ app.whenReady().then(async () => {
 
     if (ext === 'png' || ext === 'json') {
       const fs = await import('node:fs/promises')
-      const path = await import('node:path')
 
       const tempDir = app.getPath('temp')
       const tempFilePath = path.join(tempDir, `airi-card-${Date.now()}-${filename}`)
@@ -348,17 +376,36 @@ app.whenReady().then(async () => {
     }
   }
 
+  // NOTICE: The splash renderer starts querying at t=0, before these handlers exist; its early
+  // invokes fail and only the 30s backstop would reveal the windows. This cache makes the snapshot
+  // retrievable from the moment the handler is registered.
+  let lastSnapshot: StartupSnapshot | undefined
+
   function emitStartupSnapshot() {
+    lastSnapshot = buildStartupSnapshot()
     const splashWin = splashWindowManager.getWindow()
     if (!splashWin || splashWin.isDestroyed())
       return
     const { context: splashContext, dispose } = createContext(ipcMain, splashWin)
-    splashContext.emit(electronSplashStateChanged, buildStartupSnapshot())
+    splashContext.emit(electronSplashStateChanged, lastSnapshot)
+    dispose()
+  }
+
+  // NOTICE: Replays the last known snapshot so a splash that started before the handler existed
+  // (and therefore never received the broadcast) catches up immediately.
+  function replayStartupSnapshot() {
+    if (!lastSnapshot)
+      return
+    const splashWin = splashWindowManager.getWindow()
+    if (!splashWin || splashWin.isDestroyed())
+      return
+    const { context: splashContext, dispose } = createContext(ipcMain, splashWin)
+    splashContext.emit(electronSplashStateChanged, lastSnapshot)
     dispose()
   }
 
   defineInvokeHandler(context, electronSplashGetSnapshot, async () => {
-    return buildStartupSnapshot()
+    return lastSnapshot ?? buildStartupSnapshot()
   })
 
   defineInvokeHandler(context, electronSplashReportMilestone, async (payload) => {
@@ -367,6 +414,9 @@ app.whenReady().then(async () => {
     startupMilestones.set(payload.id, { id: payload.id, status: payload.status, error: payload.error })
     emitStartupSnapshot()
   })
+
+  // NOTICE: The splash renderer may have loaded and queried before the handlers above existed.
+  replayStartupSnapshot()
 
   injeca.setLogger(createLoggLogger(useLogg('injeca').useGlobalConfig()))
 
@@ -432,14 +482,25 @@ app.whenReady().then(async () => {
     build: ({ dependsOn }) => setupAboutWindowReusable(dependsOn),
   })
 
+  // NOTICE: The settings/chat managers expose no creation hook, so wrap getWindow() to record the
+  // window identity that the macOS `activate` handler below restores (titles are not stable).
+  function trackCreatedWindows<T extends { getWindow: () => Promise<BrowserWindow> }>(manager: T, into: Set<BrowserWindow>): T {
+    const getWindow = manager.getWindow
+    manager.getWindow = () => getWindow.call(manager).then((window) => {
+      into.add(window)
+      return window
+    })
+    return manager
+  }
+
   const settingsWindow = injeca.provide('windows:settings', {
     dependsOn: { widgetsManager, beatSync, autoUpdater, devtoolsMarkdownStressWindow, serverChannel, mcpStdioManager, acpAgentsManager, i18n },
-    build: async ({ dependsOn }) => setupSettingsWindowReusableFunc(dependsOn),
+    build: async ({ dependsOn }) => trackCreatedWindows(await setupSettingsWindowReusableFunc(dependsOn), createdSettingsWindows),
   })
 
   const chatWindow = injeca.provide('windows:chat', {
     dependsOn: { widgetsManager, serverChannel, mcpStdioManager, acpAgentsManager, i18n, appConfig, settingsWindow },
-    build: ({ dependsOn }) => setupChatWindowReusableFunc(dependsOn),
+    build: ({ dependsOn }) => trackCreatedWindows(setupChatWindowReusableFunc(dependsOn), createdChatWindows),
   })
 
   // NOTICE: The stage manager is cheap to construct (no BrowserWindow yet).
@@ -519,7 +580,7 @@ app.whenReady().then(async () => {
       const stageMateService = createStageMateService({ appConfig: deps.appConfig })
       createLibp2pService({ context })
       createAgenticService({ context })
-      const sensorsServicePromise = createSensorsService({ context })
+      pendingSensorsService = createSensorsService({ context })
       setupDiscordService()
       const defaultBypassUrls = DEFAULT_CORS_BYPASS_URLS
 
@@ -1087,7 +1148,10 @@ app.whenReady().then(async () => {
       ipcMain.on('reset-window-positions-action', handleResetWindowPositions)
 
       ipcMain.on('logger:write', (_event, level: string, message: string) => {
-        console.info(`[RendererLog/${level}] ${message}`)
+        const line = `[RendererLog/${level}] ${message}`
+        console.info(line)
+        // NOTICE: Goes through console.info, so @guiiai/logg's post-log hook never sees it.
+        void fileLogger.appendLog(line)
       })
 
       // NOTICE: ControlStrip.vue calls `ipcRenderer.invoke('eventa:invoke:electron:windows:get-monitor-count')
@@ -1184,32 +1248,33 @@ app.whenReady().then(async () => {
         deps.splashWindow.destroy()
       }, 30000)
 
-      import('./libs/bootkit/lifecycle').then((m) => {
-        m.onAppBeforeQuit(async () => {
-          console.info('[@proj-airi/stage-tamagotchi] App is quitting, flushing all configs...')
-          const sensorsService = await sensorsServicePromise
-          sensorsService.stop()
-          flushAllConfigs()
-        })
-      })
+      // NOTICE: Quit-time teardown of DI-built services is owned by the module-scope
+      // `before-quit` handler below, so it also runs when this callback never executes.
 
       ipcMain.handle('save-backup-bundle', async (_event, data: { timestamp: string, files: Record<string, string>, customPath?: string }) => {
         console.info('[Backup] Received backup bundle request')
         const fs = await import('node:fs/promises')
-        const path = await import('node:path')
+
+        if (typeof data?.timestamp !== 'string' || !/^[0-9T:.Z-]+$/.test(data.timestamp))
+          return { success: false, error: 'Invalid backup timestamp' }
 
         const defaultPath = path.join(app.getPath('documents'), 'AIRI-Backups')
-        const savePath = data.customPath || defaultPath
+        const savePath = path.resolve(data.customPath || defaultPath)
 
         try {
           await fs.mkdir(savePath, { recursive: true })
 
           // Save files into a folder named with timestamp
-          const bundleDir = path.join(savePath, `backup-${data.timestamp}`)
+          const bundleDir = resolveInside(savePath, `backup-${data.timestamp}`)
+          if (!bundleDir)
+            return { success: false, error: 'Invalid backup directory' }
           await fs.mkdir(bundleDir, { recursive: true })
 
-          for (const [filename, content] of Object.entries(data.files)) {
-            await fs.writeFile(path.join(bundleDir, filename), content)
+          for (const [filename, content] of Object.entries(data.files ?? {})) {
+            const filePath = resolveInside(bundleDir, filename)
+            if (!filePath)
+              return { success: false, error: `Invalid backup filename: ${filename}` }
+            await fs.writeFile(filePath, content)
           }
 
           console.info(`[Backup] Backup saved to ${bundleDir}`)
@@ -1223,10 +1288,9 @@ app.whenReady().then(async () => {
 
       ipcMain.handle('list-backups', async (_event, data: { customPath?: string }) => {
         const fs = await import('node:fs/promises')
-        const path = await import('node:path')
 
         const defaultPath = path.join(app.getPath('documents'), 'AIRI-Backups')
-        const backupsPath = data.customPath || defaultPath
+        const backupsPath = path.resolve(data.customPath || defaultPath)
 
         try {
           const entries = await fs.readdir(backupsPath, { withFileTypes: true })
@@ -1258,14 +1322,17 @@ app.whenReady().then(async () => {
 
       ipcMain.handle('read-backup-files', async (_event, data: { backupDir: string }) => {
         const fs = await import('node:fs/promises')
-        const path = await import('node:path')
+
+        if (typeof data?.backupDir !== 'string' || !data.backupDir)
+          return { success: false, files: {}, error: 'Invalid backup directory' }
 
         try {
-          const files = await fs.readdir(data.backupDir)
+          const backupDir = path.resolve(data.backupDir)
+          const files = await fs.readdir(backupDir)
           const contents: Record<string, string> = {}
           for (const filename of files) {
-            if (filename.endsWith('.json')) {
-              const filePath = path.join(data.backupDir, filename)
+            const filePath = resolveInside(backupDir, filename)
+            if (filename.endsWith('.json') && filePath) {
               const content = await fs.readFile(filePath, 'utf-8')
               contents[filename] = content
             }
@@ -1281,7 +1348,6 @@ app.whenReady().then(async () => {
       // BYOS Local FS Sync IPC Handlers
       ipcMain.handle('byos-fs:validate-path', async (_event, data: { path: string }) => {
         const fs = await import('node:fs/promises')
-        const path = await import('node:path')
         try {
           await fs.access(data.path)
           // Try writing a temporary test file to ensure it's writable
@@ -1325,8 +1391,10 @@ app.whenReady().then(async () => {
 
       ipcMain.handle('byos-fs:write-file', async (_event, data: { dir: string, relPath: string, content: string, encoding?: 'utf-8' | 'base64', append?: boolean }) => {
         const fs = await import('node:fs/promises')
-        const path = await import('node:path')
-        const fullPath = path.join(data.dir, data.relPath)
+
+        const fullPath = resolveInside(path.resolve(data.dir), data.relPath)
+        if (!fullPath)
+          return { success: false, error: `Path escapes sync directory rejected: ${data.relPath}` }
         try {
           await fs.mkdir(path.dirname(fullPath), { recursive: true })
           const buffer = data.encoding === 'base64'
@@ -1385,8 +1453,10 @@ app.whenReady().then(async () => {
 
       ipcMain.handle('byos-fs:read-file', async (_event, data: { dir: string, relPath: string, encoding?: 'utf-8' | 'base64' }) => {
         const fs = await import('node:fs/promises')
-        const path = await import('node:path')
-        const fullPath = path.join(data.dir, data.relPath)
+
+        const fullPath = resolveInside(path.resolve(data.dir), data.relPath)
+        if (!fullPath)
+          return { success: false, error: `Path escapes sync directory rejected: ${data.relPath}` }
         try {
           const encoding = data.encoding || 'utf-8'
           let handle
@@ -1432,8 +1502,10 @@ app.whenReady().then(async () => {
 
       ipcMain.handle('byos-fs:delete-file', async (_event, data: { dir: string, relPath: string }) => {
         const fs = await import('node:fs/promises')
-        const path = await import('node:path')
-        const fullPath = path.join(data.dir, data.relPath)
+
+        const fullPath = resolveInside(path.resolve(data.dir), data.relPath)
+        if (!fullPath)
+          return { success: false, error: `Path escapes sync directory rejected: ${data.relPath}` }
         try {
           await fs.unlink(fullPath)
           return { success: true }
@@ -1449,27 +1521,30 @@ app.whenReady().then(async () => {
 
       ipcMain.handle('byos-fs:list-files', async (_event, data: { dir: string }) => {
         const fs = await import('node:fs/promises')
-        const path = await import('node:path')
+
+        const root = path.resolve(data.dir)
         try {
           const results: Array<{ relPath: string, mtime: number, size: number }> = []
           async function scan(currentDir: string) {
             const entries = await fs.readdir(currentDir, { withFileTypes: true })
             for (const entry of entries) {
-              const fullPath = path.join(currentDir, entry.name)
+              const fullPath = resolveInside(currentDir, entry.name)
+              if (!fullPath)
+                continue
               if (entry.isDirectory()) {
                 await scan(fullPath)
               }
               else if (entry.isFile()) {
                 const stat = await fs.stat(fullPath)
                 results.push({
-                  relPath: path.relative(data.dir, fullPath),
+                  relPath: path.relative(root, fullPath),
                   mtime: stat.mtimeMs,
                   size: stat.size,
                 })
               }
             }
           }
-          await scan(data.dir)
+          await scan(root)
           return { success: true, files: results }
         }
         catch (error) {
@@ -1492,8 +1567,9 @@ app.whenReady().then(async () => {
         if (!data.valid) {
           console.info(`  └─ Reason: ${data.reason}`)
         }
-        if (data.config && (data.valid || !data.reason?.includes('required'))) {
-          console.info(`  └─ Config: ${JSON.stringify(data.config)}`)
+        if (data.config) {
+          // Keys only: provider secrets (Aliyun accessKeySecret, AWS secretAccessKey, …) must never reach the log.
+          console.info(`  └─ Config keys: ${Object.keys(data.config).join(', ')}`)
         }
       })
 
@@ -1519,7 +1595,10 @@ app.whenReady().then(async () => {
     },
   })
 
-  injeca.start().catch(err => console.error(err))
+  injeca.start().catch((err) => {
+    console.error('[Main] DI start failed, services are not running:', err)
+    // NOTICE: console.error goes through @guiiai/logg, so the hook already captures it.
+  })
 
   emitAppReady()
   openDebugger()
@@ -1535,7 +1614,10 @@ app.whenReady().then(async () => {
         sourceId: string
       }
       const where = sourceId ? `${sourceId.split('/').pop()}:${lineNumber}` : 'renderer'
-      process.stdout.write(`[renderer:${window.id}] [${level}] ${message}  (${where})\n`)
+      // NOTICE: Mirror renderer console output into the session log file; @guiiai/logg never sees it.
+      const line = `[renderer:${window.id}] [${level}] ${message}  (${where})\n`
+      process.stdout.write(line)
+      void fileLogger.appendLog(line)
     })
   })
 }).catch((err) => {
@@ -1553,22 +1635,18 @@ app.on('activate', (event) => {
   event.preventDefault()
   const allWindows = BrowserWindow.getAllWindows()
 
-  // 1. Settings Window (if it exists and is visible)
-  const settingsWin = allWindows.find(w => !w.isDestroyed() && w.getTitle() === 'AIRI - Settings' && w.isVisible())
-  if (settingsWin) {
-    settingsWin.focus()
-    return
+  // NOTICE: Match by window identity, not title: the settings/chat titles are em-dash
+  // variants and the chat title is rewritten at runtime ("… - User Typing...").
+  // 1. Settings Window, 2. Chat Window
+  for (const window of [...createdSettingsWindows, ...createdChatWindows]) {
+    if (!window.isDestroyed() && window.isVisible()) {
+      window.focus()
+      return
+    }
   }
 
-  // 2. Chat Window (if it exists and is visible)
-  const chatWin = allWindows.find(w => !w.isDestroyed() && w.getTitle() === 'AIRI - Chat Window' && w.isVisible())
-  if (chatWin) {
-    chatWin.focus()
-    return
-  }
-
-  // 3. Actor Stage Window (if it exists and is visible)
-  const stageWin = allWindows.find(w => !w.isDestroyed() && w.getTitle() === 'AIRI - Actor Stage' && w.isVisible())
+  // 3. Actor Stage Window
+  const stageWin = allWindows.find(w => !w.isDestroyed() && w.isVisible() && w.getTitle() === 'AIRI - Actor Stage')
   if (stageWin) {
     stageWin.focus()
     return
@@ -1582,30 +1660,63 @@ app.on('activate', (event) => {
   }
 })
 
-let isQuitting = false
+let quitTeardown: Promise<void> | null = null
 app.on('before-quit', async (event) => {
-  if (isQuitting)
-    return
+  // NOTICE: A second quit request while teardown is in flight must wait for it instead
+  // of returning early and quitting before the cleanup it promised has finished.
+  if (quitTeardown)
+    return quitTeardown
 
   event.preventDefault()
-  isQuitting = true
 
   console.info('[@proj-airi/stage-tamagotchi] Shutdown sequence started...')
 
-  try {
-    // NOTICE: We await the initialization-level hooks and the DI container stop
-    // sequence to ensure all services have a chance to flush state or close handles.
-    await emitAppBeforeQuit()
-    await injeca.stop()
-    cleanupMicToggleShortcut()
+  quitTeardown = (async () => {
+    try {
+      // NOTICE: We await the initialization-level hooks and the DI container stop
+      // sequence to ensure all services have a chance to flush state or close handles.
+      await emitAppBeforeQuit()
+      await injeca.stop()
+    }
+    catch (err) {
+      console.error('[@proj-airi/stage-tamagotchi] Error during shutdown sequence:', err)
+    }
+
+    try {
+      // NOTICE: Sensor polling is started at module scope by `createSensorsService`, so stop
+      // it here rather than in a DI callback that may never run.
+      const sensorsService = await pendingSensorsService
+      // NOTICE: `undefined` means the DI callback never reached the service (nothing to stop).
+      sensorsService?.stop()
+    }
+    catch (err) {
+      console.error('[@proj-airi/stage-tamagotchi] Failed to stop sensors service:', err)
+    }
+
+    try {
+      flushAllConfigs()
+    }
+    catch (err) {
+      console.error('[@proj-airi/stage-tamagotchi] Failed to flush configs:', err)
+    }
+
+    try {
+      cleanupMicToggleShortcut()
+    }
+    catch (err) {
+      console.error('[@proj-airi/stage-tamagotchi] Failed to release global shortcuts:', err)
+    }
+
     console.info('[@proj-airi/stage-tamagotchi] Shutdown complete. Quitting...')
-  }
-  catch (err) {
-    console.error('[@proj-airi/stage-tamagotchi] Error during shutdown sequence:', err)
-  }
-  finally {
+
+    // NOTICE: The session log must close last, and the quit must happen even if a step above threw.
+    await fileLogger.close().catch((err) => {
+      console.error('[@proj-airi/stage-tamagotchi] Failed to close the session log:', err)
+    })
     app.quit()
-  }
+  })()
+
+  return quitTeardown
 })
 
 // NOTICE: Handle termination signals to ensure Electron's quit sequence is triggered

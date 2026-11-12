@@ -3,6 +3,46 @@ import { defineStore } from 'pinia'
 
 import { useDataMaintenance } from '../composables/use-data-maintenance'
 
+// Credential-bearing entries. The 24 h auto-backup writes this bundle unencrypted under
+// Documents/AIRI-Backups/, so key material must never enter it; only the names are recorded.
+// A trailing `/` matches a whole branch; every other entry is an exact key.
+const SECRET_STORAGE_KEYS = [
+  'settings/credentials/', // provider API keys (providers/runtime/instance-store.ts)
+  'settings/sync/s3-access-key-id',
+  'settings/sync/s3-secret-access-key',
+  'settings/cloudflare/cfOAuthTokens',
+  'settings/cloudflare/cfApiToken',
+  'settings/cloudflare/cfAccountId',
+  'local:peers/device-keypair', // libp2p device identity private key
+  'settings/free-hub/', // free-tier test API keys
+  'settings/discord/token',
+  'settings/discord/cfOAuthTokens',
+  'settings/discord/cfApiToken',
+  'settings/discord/cfAccountId',
+  'settings/twitter/api-key',
+  'settings/twitter/api-secret',
+  'settings/twitter/access-token',
+  'settings/twitter/access-token-secret',
+  'cf_oauth_verifier', // Cloudflare PKCE verifier
+  'settings/connection/auth-token',
+  'settings/connection/hf-token',
+  'settings/server-channel/auth-token',
+  'settings/server-channel/websocket-tls-config', // client cert key + passphrase
+  'settings/llm/apiKey',
+  'settings/mcp/config', // MCP servers may carry auth env/headers
+  'lhack_gemini_api_key',
+  'vhack_gemini_api_key',
+  'artistry-replicate-api-key',
+  'artistry-nanobanana-api-key',
+  'artistry-pollinations-api-key',
+]
+
+function isSecretStorageKey(key: string): boolean {
+  // A trailing `/` matches the whole branch, so a renamed token key can never slip through.
+  // Exact entries keep non-secret neighbours (s3-endpoint, cfSubdomain, discord/twitter enable flags).
+  return SECRET_STORAGE_KEYS.some(secret => secret.endsWith('/') ? key.startsWith(secret) : key === secret)
+}
+
 export const useBackupStore = defineStore('backup', () => {
   const isBackupEnabled = useLocalStorageManualReset<boolean>('settings/backup/enabled', true)
   const backupPath = useLocalStorageManualReset<string>('settings/backup/path', '')
@@ -29,15 +69,22 @@ export const useBackupStore = defineStore('backup', () => {
       const memoryBlob = await dataMaintenance.exportMemory()
       files[`airi-memory-${timestamp}.json`] = await memoryBlob.text()
 
-      // 4. Export LocalStorage
+      // 4. Export LocalStorage (credential keys are recorded by name only)
       const storageData: Record<string, string> = {}
+      const localStorageSkipped: string[] = []
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key) {
-          storageData[key] = localStorage.getItem(key) || ''
+        if (!key)
+          continue
+        if (isSecretStorageKey(key)) {
+          localStorageSkipped.push(key)
+          continue
         }
+        storageData[key] = localStorage.getItem(key) || ''
       }
-      files[`airi-localstorage-${timestamp}.json`] = JSON.stringify(storageData, null, 2)
+      if (localStorageSkipped.length > 0)
+        console.info(`[Backup] Skipped ${localStorageSkipped.length} secret localStorage key(s): ${localStorageSkipped.join(', ')}`)
+      files[`airi-localstorage-${timestamp}.json`] = JSON.stringify({ ...storageData, localStorageSkipped }, null, 2)
 
       // Save as bundle (ZIP)
       const result = await (window as any).electron.ipcRenderer.invoke('save-backup-bundle', {
@@ -111,7 +158,11 @@ export const useBackupStore = defineStore('backup', () => {
       if (options.localStorage) {
         const storageFile = Object.keys(files).find(f => f.startsWith('airi-localstorage-') && f.endsWith('.json'))
         if (storageFile) {
-          const storageData = JSON.parse(files[storageFile]) as Record<string, string>
+          const parsed = JSON.parse(files[storageFile]) as Record<string, string> & { localStorageSkipped?: string[] }
+          // Older bundles have no marker; the marker is metadata, never a stored key.
+          const { localStorageSkipped, ...storageData } = parsed
+          if (localStorageSkipped?.length)
+            console.info(`[Backup Restore] Backup did not contain ${localStorageSkipped.length} secret key(s); they were left untouched.`)
           for (const [key, value] of Object.entries(storageData)) {
             // CRITICAL: Skip any keys starting with 'airi_cc_' to prevent writing bloated base64 Data URIs back to LocalStorage
             if (key.startsWith('airi_cc_')) {

@@ -17,7 +17,7 @@ import type { WidgetsWindowManager } from '../widgets'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { BrowserWindow, ipcMain, screen, shell } from 'electron'
+import { BrowserWindow, ipcMain, screen } from 'electron'
 import { debounce, throttle } from 'es-toolkit'
 
 import icon from '../../../../resources/icon.png?asset'
@@ -25,6 +25,7 @@ import icon from '../../../../resources/icon.png?asset'
 import { baseUrl, load } from '../../libs/electron/location'
 import { transparentWindowConfig } from '../shared'
 import { ensureWindowInVisibleBounds } from '../shared/display'
+import { openExternalSafely } from '../shared/open-external'
 import { setupMainWindowElectronInvokes } from './rpc/index.electron'
 
 export async function setupMainWindow(params: {
@@ -158,7 +159,7 @@ export async function setupMainWindow(params: {
   })
 
   window.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    openExternalSafely(details.url)
     return { action: 'deny' }
   })
 

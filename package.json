@@ -17,7 +17,7 @@
   },
   "scripts": {
     "ci:status": "node scripts/github/ci-status.mjs",
-    "postinstall": "npx simple-git-hooks && pnpm run build:packages && node apps/stage-tamagotchi/scripts/ensure-electron.js",
+    "postinstall": "simple-git-hooks",
     "dev": "pnpm -r -F @proj-airi/stage-web dev",
     "dev:docs": "pnpm -rF @proj-airi/docs run dev",
     "dev:ui": "pnpm -rF @proj-airi/stage-ui run story:dev",
@@ -76,7 +76,6 @@
     "knip": "knip"
   },
   "dependencies": {
-    "@google/genai": "catalog:",
     "puppeteer-core": "catalog:",
     "ws": "catalog:"
   },

@@ -3,33 +3,9 @@ import type { McpToolDescriptor } from '../stores/mcp-tool-bridge'
 import { tool } from '@xsai/tool'
 import { z } from 'zod'
 
-import { tryGetMcpToolBridge } from '../stores/mcp-tool-bridge'
+import { filterMcpToolsForCard, tryGetMcpToolBridge } from '../stores/mcp-tool-bridge'
 import { useAiriCardStore } from '../stores/modules/airi-card'
 import { executeBashCommand } from '../stores/modules/tools/bash'
-
-function filterToolsForCard(rawTools: McpToolDescriptor[]): McpToolDescriptor[] {
-  const cardStore = useAiriCardStore()
-  const allowedTools = cardStore.activeCard?.extensions?.airi?.generation?.known?.allowedTools
-  if (!allowedTools) {
-    return []
-  }
-  if (allowedTools.includes('mcp')) {
-    return rawTools
-  }
-  return rawTools.filter((t) => {
-    const sName = t.serverName.toLowerCase()
-    const isWebSearch = sName.includes('websearch') || sName.includes('web-search') || sName.includes('search')
-    const isFilesystem = sName.includes('filesystem')
-
-    if (isWebSearch && (allowedTools.includes('web_search') || allowedTools.includes('mcp_web_search'))) {
-      return true
-    }
-    if (isFilesystem && (allowedTools.includes('filesystem') || allowedTools.includes('mcp_filesystem'))) {
-      return true
-    }
-    return false
-  })
-}
 
 const tools = [
   tool({
@@ -49,10 +25,10 @@ const tools = [
           }
         }
 
-        const tools = filterToolsForCard(rawTools)
-
         const cardStore = useAiriCardStore()
         const allowedTools = cardStore.activeCard?.extensions?.airi?.generation?.known?.allowedTools
+        const tools = filterMcpToolsForCard(rawTools, allowedTools)
+
         if (allowedTools?.includes('bash') || allowedTools?.includes('mcp_bash')) {
           tools.push({
             serverName: 'sandbox',
@@ -125,9 +101,9 @@ const tools = [
             }
             catch {}
           }
-          const tools = filterToolsForCard(rawTools)
           const cardStore = useAiriCardStore()
           const allowedTools = cardStore.activeCard?.extensions?.airi?.generation?.known?.allowedTools
+          const tools = filterMcpToolsForCard(rawTools, allowedTools)
           if (allowedTools?.includes('bash') || allowedTools?.includes('mcp_bash')) {
             tools.push({
               serverName: 'sandbox',
@@ -161,8 +137,10 @@ const tools = [
           throw new Error('MCP tool bridge is not available in this runtime.')
         }
 
+        const cardStore = useAiriCardStore()
+        const allowedTools = cardStore.activeCard?.extensions?.airi?.generation?.known?.allowedTools
         const rawTools = await bridge.listTools()
-        const allowed = filterToolsForCard(rawTools)
+        const allowed = filterMcpToolsForCard(rawTools, allowedTools)
         if (!allowed.some(t => t.name === name)) {
           return {
             isError: true,

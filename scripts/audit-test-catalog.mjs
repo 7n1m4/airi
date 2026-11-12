@@ -134,6 +134,8 @@ if (missingFiles > 0) {
 
 if (untrackedSuites > 0) {
   console.warn('\n⚠️ Warning: Some active test suites are missing from the catalog.')
+  console.error('\n❌ Audit FAILED: Active Vitest suites are missing from the catalog.')
+  process.exit(1)
 }
 else {
   console.info('\n✅ Audit PASSED: 100% of active test suites match catalog inventory.')

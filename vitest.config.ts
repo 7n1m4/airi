@@ -1,5 +1,7 @@
 import { defineConfig } from 'vitest/config'
 
+// Thresholds are evaluated only here, over the aggregate of every project below.
+// Measured aggregate: statements 45, branches 39, functions 45, lines 47.
 export default defineConfig({
   test: {
     projects: [
@@ -37,10 +39,10 @@ export default defineConfig({
       reporter: ['text-summary', 'json', 'html', 'lcov'],
       reportsDirectory: './coverage',
       thresholds: {
-        statements: 32,
-        branches: 24,
-        functions: 31,
-        lines: 33,
+        statements: 43,
+        branches: 37,
+        functions: 43,
+        lines: 45,
       },
     },
   },

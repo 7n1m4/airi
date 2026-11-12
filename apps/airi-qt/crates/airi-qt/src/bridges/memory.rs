@@ -25,9 +25,11 @@
 //! - **`indexMissing` — the only backfill trigger** — embeds every
 //!   unembedded `journal_entries` / `summaries` row with the *chat* provider
 //!   config (resolved exactly like `ChatController::resolve_provider`) in one
-//!   batched embedding call. Synchronous on the Qt thread by design (one
-//!   HTTP round-trip for an explicit user action); `statusLine` carries the
-//!   honest result. No keys cross the bridge.
+//!   batched embedding call. The batch (full journal scan + one HTTP
+//!   round-trip + N SQLite upserts) runs on the process Tokio runtime, never
+//!   on the Qt thread: the invokable returns `true` ("started") immediately
+//!   and the outcome lands on `statusLine` through a `CxxQtThread` hop back
+//!   onto the Qt event loop. No keys cross the bridge.
 //!
 //! Implementation note (why the qproperties are `READ, NOTIFY`): cxx-qt
 //! generates a `void` setter slot for every qproperty with an implicit
@@ -63,6 +65,7 @@
 //!   flag, so no embed call happens there.
 
 use cxx_qt::CxxQtType;
+use cxx_qt::Threading;
 use cxx_qt_lib::QString;
 use std::pin::Pin;
 use std::sync::Arc;
@@ -87,6 +90,8 @@ const DEFAULT_TOP_K: i32 = 5;
 const TOP_K_MIN: i32 = 1;
 /// Largest accepted `topK`.
 const TOP_K_MAX: i32 = 20;
+/// Shown the moment a backfill is accepted, until the batch reports back.
+const BACKFILL_STARTED: &str = "Backfilling memories…";
 
 /// cxx-qt bridge definitions for the memory settings bridge.
 #[cxx_qt::bridge]
@@ -144,14 +149,17 @@ pub mod qobject {
         fn apply_top_k(self: Pin<&mut MemoryController>, top_k: i32) -> bool;
 
         /// Embed every unembedded journal/summary row with the configured
-        /// chat provider (one batched embedding call). Sets `statusLine`
-        /// to a short honest summary; returns `true` on success. The only
-        /// backfill trigger — there is no startup indexing. No provider
-        /// secrets cross the bridge.
+        /// chat provider (one batched embedding call), on the process Tokio
+        /// runtime. Returns `true` when the batch was started; the honest
+        /// outcome lands on `statusLine` when it finishes. The only backfill
+        /// trigger — there is no startup indexing. No provider secrets cross
+        /// the bridge.
         #[qinvokable]
         #[cxx_name = "indexMissing"]
         fn index_missing(self: Pin<&mut MemoryController>) -> bool;
     }
+
+    impl cxx_qt::Threading for MemoryController {}
 }
 
 /// The `settings/memory` blob. Field names serialize camelCase to stay
@@ -266,25 +274,44 @@ impl qobject::MemoryController {
         self.persist_with_status()
     }
 
-    /// Backfill every unembedded journal/summary row in one batched
-    /// embedding call, then report the honest outcome on `statusLine`.
+    /// Hand every unembedded journal/summary row to one batched embedding
+    /// call on the process Tokio runtime, then report the honest outcome on
+    /// `statusLine`.
     ///
-    /// Synchronous on the Qt thread: the call is a single HTTP round-trip
-    /// (plus small SQLite writes) issued only on explicit user action, so
-    /// blocking the UI for the duration is the least surprising behavior.
-    /// The QML button disables itself around the call.
+    /// Never blocks the Qt thread: returns `true` ("started") as soon as the
+    /// batch is spawned, with `statusLine` set to a "backfilling…" line. The
+    /// task hops back onto the Qt event loop (cxx-qt `Threading`) to apply
+    /// the result. The QML button re-enables itself on the next
+    /// `stateChanged`.
     pub fn index_missing(mut self: Pin<&mut Self>) -> bool {
-        let outcome = index_missing_blocking();
-        if let Err(e) = &outcome {
-            // The full error chain is on the log; statusLine stays short but
-            // carries enough detail to be actionable.
-            eprintln!("[airi-qt] memory: indexMissing failed: {e:#}");
-        }
-        let (status_line, ok) = index_missing_summary(&outcome);
-        self.as_mut().rust_mut().status_line = QString::from(status_line.as_str());
+        let Some(handle) = bridges::runtime_handle().cloned() else {
+            let line = "Backfill unavailable — the async runtime is not running.";
+            eprintln!("[airi-qt] memory: indexMissing failed: no tokio runtime");
+            self.as_mut().rust_mut().status_line = QString::from(line);
+            self.as_mut().status_line_changed();
+            qobject::MemoryController::state_changed(self.as_mut());
+            return false;
+        };
+        // The queued closure runs on the Qt thread; the batch does not.
+        let qt_thread = self.as_ref().qt_thread();
+        self.as_mut().rust_mut().status_line = QString::from(BACKFILL_STARTED);
         self.as_mut().status_line_changed();
         qobject::MemoryController::state_changed(self.as_mut());
-        ok
+        handle.spawn(async move {
+            let outcome = index_missing_async().await;
+            // The full error chain is on the log; statusLine stays short but
+            // carries enough detail to be actionable.
+            if let Err(e) = &outcome {
+                eprintln!("[airi-qt] memory: indexMissing failed: {e:#}");
+            }
+            let (status_line, _ok) = index_missing_summary(&outcome);
+            let _ = qt_thread.queue(move |mut obj| {
+                obj.as_mut().rust_mut().status_line = QString::from(status_line.as_str());
+                obj.as_mut().status_line_changed();
+                qobject::MemoryController::state_changed(obj.as_mut());
+            });
+        });
+        true
     }
 
     /// Snapshot the mirror, persist it, update `statusLine`, emit
@@ -373,25 +400,21 @@ async fn index_missing_with(
     MemoryIndexer::new(db, embedder).index_missing().await
 }
 
-/// Synchronous entry point used by the `indexMissing` invokable: resolves
-/// the chat provider, then runs the batch on a short-lived current-thread
-/// runtime so the Qt thread blocks only for the duration of this one
-/// batched call.
-fn index_missing_blocking() -> anyhow::Result<usize> {
+/// Batch entry point used by the `indexMissing` invokable: resolves the chat
+/// provider, then runs the batch on the caller's task (the process Tokio
+/// runtime — never the Qt thread).
+async fn index_missing_async() -> anyhow::Result<usize> {
     let Some(db) = bridges::database().cloned() else {
         anyhow::bail!("database not registered");
     };
     let client = chat_embedding_client()?;
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .map_err(|e| anyhow::anyhow!("failed to build the embedding runtime: {e}"))?;
-    runtime.block_on(index_missing_with(db, Arc::new(client)))
+    index_missing_with(db, Arc::new(client)).await
 }
 
-/// Render the `statusLine` text + success flag for a backfill attempt.
-/// The failure line carries the error (single line, length-capped) so the
-/// page shows more than "see log".
+/// Render the `statusLine` text for a finished backfill (the success flag is
+/// unused by the async caller but kept for the tests' assertions). The
+/// failure line carries the error (single line, length-capped) so the page
+/// shows more than "see log".
 fn index_missing_summary(outcome: &anyhow::Result<usize>) -> (String, bool) {
     match outcome {
         Ok(0) => ("Indexed 0 entries.".to_string(), true),
@@ -575,14 +598,21 @@ mod tests {
         assert_eq!(provider_label("openai", ""), "openai");
         assert_eq!(provider_label("openai", "gpt-4o"), "openai · gpt-4o");
     }
+
+    #[test]
+    fn backfill_started_line_is_nonempty() {
+        // The immediate "started" feedback the invokable writes before it
+        // spawns; an empty line would leave the page with no feedback at all.
+        assert!(!BACKFILL_STARTED.is_empty());
+    }
 }
 
 #[cfg(test)]
 mod index_tests {
     //! Tests for the `indexMissing` backfill path (wave ⑬). The invokable
-    //! itself (Qt thread, fresh current-thread runtime, statusLine wiring)
-    //! is not exercised here — these cover the shared core with an injected
-    //! mock embedder, and the statusLine rendering.
+    //! itself (spawn on the process runtime, statusLine wiring, Qt-thread
+    //! hop) is not exercised here — these cover the shared core with an
+    //! injected mock embedder, and the statusLine rendering.
     use super::*;
 
     use airi_core::memory::embedding::EmbeddingError;

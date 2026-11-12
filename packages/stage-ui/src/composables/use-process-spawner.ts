@@ -68,7 +68,11 @@ export function useProcessSpawner(options: UseProcessSpawnerOptions) {
     isExecuting.value = true
     executingAction.value = 'spawn'
     try {
-      const res = await executeShellInvoke({ command: cmd })
+      // Main runs argv[0] directly with no shell, so shell metacharacters arrive
+      // as literal arguments rather than being interpreted.
+      // shortcut: whitespace split only, so quoting is unsupported; switch to a
+      // shell-words parse if an argument ever needs to contain spaces.
+      const res = await executeShellInvoke({ argv: cmd.split(/\s+/).filter(Boolean) })
       lastResult.value = {
         action: 'spawn',
         success: res.success,
@@ -138,7 +142,7 @@ export function useProcessSpawner(options: UseProcessSpawnerOptions) {
     isExecuting.value = true
     executingAction.value = 'stop'
     try {
-      const res = await executeShellInvoke({ command: cmd })
+      const res = await executeShellInvoke({ argv: cmd.split(/\s+/).filter(Boolean) })
       lastResult.value = {
         action: 'stop',
         success: res.success,

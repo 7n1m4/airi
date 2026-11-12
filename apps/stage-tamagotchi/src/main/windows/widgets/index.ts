@@ -8,7 +8,7 @@ import type { ServerChannel } from '../../services/airi/channel-server'
 import { join, resolve } from 'node:path'
 
 import { createContext } from '@moeru/eventa/adapters/electron/main'
-import { BrowserWindow as ElectronBrowserWindow, ipcMain, Menu, screen, shell } from 'electron'
+import { BrowserWindow as ElectronBrowserWindow, ipcMain, Menu, screen } from 'electron'
 import { isMacOS } from 'std-env'
 import { number, object, optional } from 'valibot'
 
@@ -20,6 +20,7 @@ import { createConfig } from '../../libs/electron/persistence'
 import { createReusableWindow } from '../../libs/electron/window-manager'
 import { setupArtistryBridge } from '../../services/airi/widgets/artistry-bridge'
 import { showWindowOnAllWorkspaces } from '../shared/app-icon'
+import { openExternalSafely } from '../shared/open-external'
 import { spotlightLikeWindowConfig, transparentWindowConfig } from '../shared/window'
 import { setupWidgetsWindowInvokes } from './rpc/index.electron'
 
@@ -216,7 +217,7 @@ function createWidgetsWindow(options?: Electron.BrowserWindowConstructorOptions 
 
   window.on('ready-to-show', () => window.show())
   window.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    openExternalSafely(details.url)
     return { action: 'deny' }
   })
 

@@ -6,7 +6,8 @@ import { isStageTamagotchi } from '@proj-airi/stage-shared'
 import { Bash } from 'just-bash'
 
 import { widgetsRepo } from '../../database/repos/widgets.repo'
-import { tryGetMcpToolBridge } from '../../stores/mcp-tool-bridge'
+import { filterMcpToolsForCard, isMcpToolAllowedForCard, tryGetMcpToolBridge } from '../../stores/mcp-tool-bridge'
+import { useAiriCardStore } from '../../stores/modules/airi-card'
 import { compileTypeScriptInSandbox } from './compiler-bridge'
 import {
   createVirtualJevEnvironment,
@@ -351,13 +352,31 @@ export class SandboxManager {
     return resolve
   }
 
-  private isTrustedOrigin(origin: string): boolean {
-    if (!origin || origin === 'null')
+  /**
+   * Trust for `widget-state-update` messages. An opaque-origin widget iframe
+   * (srcdoc without `allow-same-origin`) reports `origin === 'null'`, so its
+   * source window is the only identity we can check; other frames fall back to
+   * the configured origin list.
+   */
+  private isTrustedOrigin(origin: string, source?: MessageEventSource | null): boolean {
+    if (!origin)
       return false
+    if (origin === 'null')
+      return !this.allowedOrigins.length && this.isWidgetWindow(source)
     const allowed = this.allowedOrigins.length > 0
       ? this.allowedOrigins
       : [window.location.origin]
     return allowed.includes(origin)
+  }
+
+  private isWidgetWindow(source?: MessageEventSource | null): boolean {
+    if (!source || typeof document === 'undefined')
+      return false
+    for (const iframe of Array.from(document.querySelectorAll('iframe'))) {
+      if (iframe.contentWindow === source)
+        return true
+    }
+    return false
   }
 
   setAllowedOrigins(origins: string[]): void {
@@ -365,16 +384,17 @@ export class SandboxManager {
   }
 
   private getPostMessageTargetOrigin(iframe: HTMLIFrameElement): string {
+    if (typeof window === 'undefined')
+      return ''
     try {
       if (iframe.contentWindow?.origin && iframe.contentWindow.origin !== 'null')
         return iframe.contentWindow.origin
     }
     catch {}
-    if (this.allowedOrigins.length > 0)
-      return this.allowedOrigins[0]
-    if (typeof window !== 'undefined')
-      return window.location.origin
-    return ''
+    // Opaque-origin widget frames accept only the wildcard.
+    if (!this.allowedOrigins.length)
+      return '*'
+    return this.allowedOrigins[0]
   }
 
   private setupWindowMessageListener(): void {
@@ -382,7 +402,7 @@ export class SandboxManager {
       return
 
     this.windowMessageListener = async (event: MessageEvent) => {
-      if (!this.isTrustedOrigin(event.origin))
+      if (!this.isTrustedOrigin(event.origin, event.source))
         return
       const msg = event.data
       if (!msg || typeof msg !== 'object')
@@ -1100,6 +1120,18 @@ Examples:
         }
       }
 
+      // The card gate is the only authority on which tools a session may reach;
+      // it is resolved once here so listing and invocation agree.
+      const cardTools: string[] | undefined = (() => {
+        try {
+          return useAiriCardStore().activeCard?.extensions?.airi?.generation?.known?.allowedTools
+        }
+        catch {
+          // No active Pinia (headless sandbox tests): leave the gate unset.
+          return undefined
+        }
+      })()
+
       const sub = args[0]
 
       // Listing tools
@@ -1119,7 +1151,8 @@ Examples:
         try {
           const external = bridge ? await bridge.listTools() : []
           const jevTools = showAll ? getJevMcpToolDescriptors() : []
-          const tools = [...external, ...jevTools]
+          // No card gate to consult means nothing to hide from the operator.
+          const tools = cardTools ? filterMcpToolsForCard([...external, ...jevTools], cardTools) : [...external, ...jevTools]
           if (isJson) {
             return {
               stdout: `${JSON.stringify(tools, null, 2)}\n`,
@@ -1228,6 +1261,16 @@ Examples:
         return {
           stdout: '',
           stderr: 'mcp: MCP tool bridge is not available in this runtime.\nTip: Ensure MCP servers are configured in Settings > MCP.\n',
+          exitCode: 1,
+        }
+      }
+
+      const knownTools = await bridge.listTools().catch(() => [])
+      const isAllowed = isMcpToolAllowedForCard(toolName, cardTools, knownTools)
+      if (isAllowed === false) {
+        return {
+          stdout: '',
+          stderr: `mcp: tool "${toolName}" is not permitted for the active character card.\n`,
           exitCode: 1,
         }
       }

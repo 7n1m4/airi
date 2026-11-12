@@ -56,6 +56,49 @@ describe('useBackupStore', () => {
     expect(store.lastBackupTime).toBeGreaterThan(0)
   })
 
+  it('triggerBackup excludes secret keys and keeps normal ones', async () => {
+    const store = useBackupStore()
+    const { invoke } = installElectron()
+    invoke.mockResolvedValue({ success: true, path: '/tmp/backup.zip' })
+    localStorage.setItem('settings/credentials/providers', '{"openai":{"apiKey":"sk-secret"}}')
+    localStorage.setItem('settings/sync/s3-secret-access-key', 's3secretvalue')
+    localStorage.setItem('settings/cloudflare/cfApiToken', 'cf-secret')
+    localStorage.setItem('settings/free-hub/test-api-keys', '{"x":"sk-free"}')
+    localStorage.setItem('settings/language', 'en')
+    localStorage.setItem('settings/connection/hf-token', 'hf_secret')
+    const path = await store.triggerBackup()
+    expect(path).toBe('/tmp/backup.zip')
+
+    const payload = invoke.mock.calls[0]![1] as { files: Record<string, string> }
+    const file = Object.keys(payload.files).find(f => f.startsWith('airi-localstorage-'))!
+    const raw = payload.files[file]
+    const bundle = JSON.parse(raw) as Record<string, unknown>
+    // Names are recorded so a restore knows what was left behind; values never are.
+    for (const secret of ['sk-secret', 's3secretvalue', 'cf-secret', 'sk-free', 'hf_secret'])
+      expect(raw).not.toContain(secret)
+    expect(bundle.localStorageSkipped).toEqual(['settings/credentials/providers', 'settings/sync/s3-secret-access-key', 'settings/cloudflare/cfApiToken', 'settings/free-hub/test-api-keys', 'settings/connection/hf-token'])
+    expect(bundle['settings/language']).toBe('en')
+    expect(bundle['settings/credentials/providers']).toBeUndefined()
+    expect(bundle['settings/sync/s3-secret-access-key']).toBeUndefined()
+    expect(bundle['settings/cloudflare/cfApiToken']).toBeUndefined()
+    expect(bundle['settings/free-hub/test-api-keys']).toBeUndefined()
+    expect(bundle['settings/connection/hf-token']).toBeUndefined()
+  })
+
+  it('restoreBackup skips the localStorageSkipped marker', async () => {
+    const store = useBackupStore()
+    const files = {
+      'airi-localstorage-1.json': JSON.stringify({ foo: 'bar', localStorageSkipped: ['settings/credentials/providers'] }),
+    }
+    const { invoke } = installElectron()
+    invoke.mockResolvedValue({ success: true, files })
+    localStorage.clear()
+    expect(await store.restoreBackup('/dir', { characters: false, sessions: false, memory: false, localStorage: true })).toEqual({ success: true })
+    expect(localStorage.getItem('foo')).toBe('bar')
+    expect(localStorage.getItem('localStorageSkipped')).toBeNull()
+    expect(localStorage.length).toBe(1)
+  })
+
   it('triggerBackup covers null key branch', async () => {
     const store = useBackupStore()
     const { invoke } = installElectron()

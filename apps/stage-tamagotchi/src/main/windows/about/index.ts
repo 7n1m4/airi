@@ -4,12 +4,13 @@ import type { AutoUpdater } from '../../services/electron/auto-updater'
 
 import { join, resolve } from 'node:path'
 
-import { BrowserWindow, shell } from 'electron'
+import { BrowserWindow } from 'electron'
 
 import icon from '../../../../resources/icon.png?asset'
 
 import { baseUrl, getElectronMainDirname, load, withHashRoute } from '../../libs/electron/location'
 import { createReusableWindow } from '../../libs/electron/window-manager'
+import { openExternalSafely } from '../shared/open-external'
 import { setupAboutWindowElectronInvokes } from './rpc/index.electron'
 
 export function setupAboutWindowReusable(params: {
@@ -35,7 +36,7 @@ export function setupAboutWindowReusable(params: {
 
     window.on('ready-to-show', () => window.show())
     window.webContents.setWindowOpenHandler((details) => {
-      shell.openExternal(details.url)
+      openExternalSafely(details.url)
       return { action: 'deny' }
     })
 

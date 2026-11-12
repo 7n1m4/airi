@@ -216,7 +216,7 @@ function handleIframeMessage(e: MessageEvent) {
     return
   }
 
-  void handleWidgetMcpMessage(e)
+  void handleWidgetMcpMessage(e, iframeRef.value?.contentWindow)
 }
 
 watch([activeWidget, selectedWidgetId], () => {
@@ -425,7 +425,7 @@ onUnmounted(() => {
             :key="iframeKey"
             :srcdoc="iframeSrcdoc"
             allowtransparency="true"
-            sandbox="allow-scripts allow-forms allow-same-origin"
+            sandbox="allow-scripts allow-forms"
             :class="[
               'block w-full border-0 bg-transparent transition-[height] duration-200',
               props.fillContainer ? 'h-full' : '',

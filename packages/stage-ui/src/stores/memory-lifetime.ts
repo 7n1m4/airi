@@ -173,11 +173,34 @@ export function formatLocalDayKey(timestamp: number) {
   return `${year}-${month}-${day}`
 }
 
+// NOTICE: a bare YYYY-MM-DD carries no time; anchor it at local noon so it lands on its own
+// local day in every timezone (UTC midnight shifts back a day west of UTC). Returns NaN when the
+// string is not a valid day key, so callers can keep their own fallback.
+function bareLocalNoon(dayKey: string): number {
+  const match = LOCAL_DAY_RE.exec(dayKey)
+  if (!match)
+    return Number.NaN
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12).getTime()
+}
+
 export function parseDocLocalDayKey(timestamp: string): string {
-  if (LOCAL_DAY_RE.test(timestamp))
-    return timestamp
+  if (LOCAL_DAY_RE.test(timestamp)) {
+    const ms = bareLocalNoon(timestamp)
+    return Number.isNaN(ms) ? timestamp : formatLocalDayKey(ms)
+  }
   const ms = new Date(timestamp).getTime()
   return Number.isNaN(ms) ? getYesterdayLocalDayKey() : formatLocalDayKey(ms)
+}
+
+// NOTICE: watermark invariant — every local day strictly greater than the returned day is still
+// reachable by collectWindowedDocs, and no already-consumed day is ever returned.
+export function computeConsumedDayWatermark(lastDocTimestamp: string | undefined, now: number = Date.now()): string {
+  const yesterday = formatLocalDayKey(now - 86400000)
+  if (!lastDocTimestamp)
+    return yesterday
+  // Only a day that has already closed may be consumed; today (and anything later) stays open.
+  const lastDocDay = parseDocLocalDayKey(lastDocTimestamp)
+  return lastDocDay >= yesterday ? yesterday : lastDocDay
 }
 
 export function parseLocalDayEnd(dayKey: string): number {
@@ -825,7 +848,11 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
           docs.push({
             id: `stmm:${block.id}`,
             layer: 'stmm',
-            timestamp: localEndMs > 0 ? new Date(localEndMs).toISOString() : block.date,
+            // NOTICE: never emit a bare day key here — SourceDoc timestamps are compared as ISO
+            // strings; a bare key sorts against the previous UTC day and shifts groupByDay west of UTC.
+            timestamp: localEndMs > 0
+              ? new Date(localEndMs).toISOString()
+              : new Date(bareLocalNoon(block.date)).toISOString(),
             text: block.summary,
           })
         })
@@ -1075,12 +1102,9 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
           }
         : (session?.sourceManifest ?? { rawTurnCount: 0, stmmBlockCount: 0, ltmmEntryCount: 0 })
 
-      const lastDoc = docs[docs.length - 1]
-      // NOTICE: Clamp initial watermark to yesterday so any conversations continuing later
-      // today are still reviewed once today closes.
-      const computedLastConsumedDay = lastDoc
-        ? clampToYesterday(parseDocLocalDayKey(lastDoc.timestamp))
-        : getYesterdayLocalDayKey()
+      // NOTICE: the watermark must be the last fully closed day, not the last doc's day: a doc
+      // from today would otherwise seal a day collectWindowedDocs has not finished with.
+      const computedLastConsumedDay = computeConsumedDayWatermark(docs[docs.length - 1]?.timestamp)
 
       if (!resume || !activeSession.value) {
         session = {
@@ -1514,15 +1538,25 @@ export const useMemoryLifetimeStore = defineStore('memory-lifetime', () => {
 
       const yesterdayKey = getYesterdayLocalDayKey()
 
-      // NOTICE: legacy artifacts (pre-watermark, bare-key migration) get bootstrapped forward:
-      // the watermark is set to yesterday so increment never re-consumes history the
-      // original full-build already covered.
+      // NOTICE: legacy artifacts (pre-watermark, bare-key migration) get bootstrapped forward from
+      // the last day the original full-build could have seen (its creation day), not from
+      // yesterday — otherwise every day between the two is sealed without ever being merged.
       const watermark = artifact.metadata?.lastConsumedDay
       if (!watermark) {
+        // NOTICE: only a plausible artifact.createdAt bounds what the full build could have seen;
+        // anything else is unknown coverage, so fall back to the assume-everything watermark.
+        const createdAt = Number.isFinite(artifact.createdAt) && artifact.createdAt > 0
+          ? artifact.createdAt
+          : undefined
+        if (createdAt === undefined)
+          console.warn('[memory-lifetime] Legacy lifetime artifact has no usable createdAt; assuming coverage up to yesterday.')
+        const bootstrapWatermark = computeConsumedDayWatermark(
+          createdAt === undefined ? undefined : new Date(createdAt).toISOString(),
+        )
         artifact.metadata = {
           ...artifact.metadata,
-          initialConsumedDay: yesterdayKey,
-          lastConsumedDay: yesterdayKey,
+          initialConsumedDay: bootstrapWatermark,
+          lastConsumedDay: bootstrapWatermark,
         }
         artifact.updatedAt = Date.now()
         await lifetimeMemoryRepo.save(characterId, universeId, artifact)

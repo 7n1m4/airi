@@ -15,7 +15,7 @@ import { computed, onMounted, ref, toRaw, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { toast } from 'vue-sonner'
 
-import catalogUrl from '../../../../../public/assets/animadex-catalog.json?url'
+import catalogUrl from '../../../../assets/animadex-catalog.json?url'
 import Live2DReportModal from './Live2DReportModal.vue'
 import ModelSelectorCarousel from './ModelSelectorCarousel.vue'
 
