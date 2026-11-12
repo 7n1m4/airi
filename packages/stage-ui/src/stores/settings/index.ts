@@ -110,7 +110,6 @@ export const useSettings = defineStore('settings', () => {
     controlStripInteractionMode: toRef(controlStrip, 'interactionMode'),
     controlStripStageMode: toRef(controlStrip, 'stageMode'),
     controlStripStageEnabled: toRef(controlStrip, 'stageEnabled'),
-    controlStripStageMateEnabled: toRef(controlStrip, 'stageMateEnabled'),
     controlStripButtons: toRef(controlStrip, 'buttons'),
 
     // Caption settings

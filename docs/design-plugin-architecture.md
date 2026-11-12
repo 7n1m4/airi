@@ -26,7 +26,7 @@ The plugin system adheres to four core principles:
 │                                                                                  │
 │   ┌───────────────────────────────┐     ┌────────────────────────────────────┐   │
 │   │   Host-Managed Local Plugins   │     │      Stage & Character Engine      │   │
-│   │    (UserData /plugins/v1/)    │     │   - Live2D / VRM / Stage-Mate      │   │
+│   │    (UserData /plugins/v1/)    │     │   - Live2D / VRM                   │   │
 │   │   • devtools-sample-plugin    │     │   - Audio Pipeline & TTS / STT     │   │
 │   │   • local provider extensions │     │   - Proactivity & Memory Systems   │   │
 │   └───────────────┬───────────────┘     └─────────────────┬──────────────────┘   │

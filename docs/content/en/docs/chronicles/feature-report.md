@@ -18,9 +18,9 @@ This document tracks the high-level, user-facing features and architectural shif
 | 6 | Memory & Continuity | 17 | Onboarding V2 (Companion Wizard) |
 | 7 | Artistry & Creative Generation | 18 | Platform Parity: Web, Mobile & Native (NEW) |
 | 8 | Vision & Attention Ecology | 19 | Cloud Relay & Zero-Custody Sync (NEW) |
-| 9 | Provider Integrations | 20 | Stage-Mate: Native Unity Sidecar (NEW) |
-| 10 | Situational Awareness & Proactivity | 21 | Platform & Operations |
-| 11 | Discord & Messaging (NEW) | 22 | Integrated Upstream PRs |
+| 9 | Provider Integrations | 20 | Platform & Operations |
+| 10 | Situational Awareness & Proactivity | 21 | Integrated Upstream PRs |
+| 11 | Discord & Messaging (NEW) | | |
 
 ---
 
@@ -346,7 +346,6 @@ Running AIRI is no longer desktop-only. The core experience (`packages/stage-ui`
 - **Mobile Sheet Architecture**: `WhisperDock` was decomposed into a shared `WhisperComposerBar` + `MobileWhisperSheet`, introducing **4 distinct sheet postures** (with mouse-drag and quick-action collapse/expand controls), producer guidance + choice bubbles wired into the composer (`ProducerGuidanceModal` / `ProducerChoiceBubble`), and an unconfigured-safety modal when the persona isn't set up.
 - **Mobile Native Stage**: an overhauled mobile stage with a **story timeline switcher** in the header, pure-Vue popovers, an ambient floating-hearts layer, and a theme-aware frosted Control Strip. A full-screen **Control Strip customizer** supports edge-notch docking and drag positioning, unconstrained on mobile.
 - **Mobile Landscape**: dedicated layout support so the experience holds up when the device rotates (with an updated mobile revamp architecture spec).
-- **Native Unity Companion**: `apps/stage-mate` — a standalone Unity/VRM desktop-pet window that renders the character outside the Electron surface (see §20).
 - **iOS Native Neural Inference Suite (Apple Core AI & Capacitor)** *(new)*: Native Apple Neural Engine (ANE) and Metal GPU acceleration for on-device local models on iOS via `@proj-airi/cap-native-ai`, complete with dedicated settings in `apple-core-ai.vue`, testbed in `core-ai-lab.vue`, and out-of-process `.aimodel`/`.aimodelc` sandbox streaming bypassing WebKit memory caps.
 - **Cross-Platform Fixes**: iOS Web Speech API streaming fixes, web-settings back navigation and STT error alerts, and a catalogue of documented mobile lessons (Vue `<Transition>` scoped-CSS opacity lockups, KeepAlive name matching) hardened the shared codebase without leaking regressions between platforms.
 
@@ -386,27 +385,11 @@ Relay isn't just a chat bot — it's also the spine of state persistence between
 
 ---
 
-## 20. Stage-Mate: Native Unity Sidecar (NEW)
-A native desktop "pet" engine — **Unity 6000.2.6f2** (`apps/stage-mate`) — that renders the AIRI character as a transparent always-on-top companion window. It is built on the upstream `shinyflvre/Mate-Engine` project, layered with AIRI-specific code through a source overlay; pinned to upstream commit `2c5ea6b8` ("Prepare 3.4 Features") so the engine stays upgradeable while all AIRI customizations live in tracked trees.
-
-- **Workspace Overlay Architecture**: `unity-src/` (version-controlled custom code) is deterministically overlaid onto the upstream `mate-engine/` clone via `scripts/setup.ts` only. `mate-engine/` is a gitignored upstream clone that must stay clean; `Patches/` mirrors `MATE ENGINE - Scripts/` to override upstream scripts, `ProjectSettings/` pins the standalone build target. `pnpm -F ... run engine:setup` / `engine:clean` manage the overlay and reset. This keeps the upstream engine upgradeable while all AIRI-side hand-off is reviewable.
-- **A Subtractive `StageMateBridge` Runtime**: a C# sidecar (`Core/StageMateBridge.cs`, `StageMateSocket.cs`, `StageMateStateSync.cs`) connects AIRI and the engine over a **`ws://localhost:6171`** WebSocket, driving UniWindowController + VRMLoader + telemetry. It sets platform window config (macOS hit-test disabled, Windows opacity threshold), unlocks the tutorial gate, and suppresses standalone menus in sidecar mode.
-- **Gunslinger Combat Mod & 4-Way Control Strip Stance Cycler** *(new)*: Full integration of the Gunslinger mod (`project-gunslinger-sidecar-mod.md`) with 4 distinct stances (Dual Revolvers, Single Revolver, Cat Gun variant, Unarmed) controllable from the AIRI desktop Control Strip popover. Streams global mouse and click telemetry over WebSocket (`ws://localhost:6171`) with procedural cartoon bullet holes and screen tear decals (`BulletHoleEffect.cs`).
-- **Locomotion, Docking & Screen Edge Peeking** *(new)*: Dynamic screen edge docking, window ledge snapping thresholds, and peek-a-boo hiding behaviors, paired with a head-focus mode with automatic locomotion suppression and macOS process discovery / media player dance detection.
-- **Live Speech Caption & Expression Bridging** *(new)*: Live TTS speech streaming directly bridged to Unity dialogue bubbles with custom typewriter text pacing, plus fixed and transient expression synchronization with DELAY token heuristics.
-- **Dynamic VRM Loading & Model Cache**: the Electron-side service (`main/services/airi/stage-mate/`) dispatches `stage:vrm:load` / receives `stage:vrm:ready` over the `ws://localhost:6171` socket, with a dynamic model-cache gate (cache HIT / on-disk size check / cache-and-dispatch) so repeated swaps don't re-transfer. Sway physics drive the model, and AIRI can fire expressions, tactile events, and prop changes (e.g. the macaron snack) over the socket. A mock WebSocket **harness** (`harness/`, port 6171) lets the engine develop/test without the full Electron app.
-- **Interactive Companion Surface**: a standalone **radial pie-menu** (with dynamic root UI activation on open), **companion floaties and snack props** surfaced in the AIRI Control Strip as a popover with featured presets and a custom recipe builder, an interactive TUI harness for expression triggers, two-tier positioning persistence, and customizer viewport modes managed in tandem with the desktop Control Strip.
-- **Post-handshake state sync & MEClothes**: after connect, AIRI and the sidecar reconcile state (post-handshake sync), and **MEClothes dynamic sidecar injection on VRM load** keeps wardrobe parity. The `WindowAPI`/`MenuActions` scene-hierarchy is patched active by the overlay.
-- **Cross-platform builds**: batch builds via `MateSidecarBuild` + `scripts/build.ts` emit Windows (`StageMate.exe`), Linux (`.x86_64`), and macOS (`StageMate.app`) artifacts; Windows StageMate packaging is added to the Electron release. Windows-only NAudio / Win32 P/Invokes are guarded for clean macOS execution.
-
----
-
-## 21. Platform & Operations
+## 20. Platform & Operations
 Internal hardening so the app remains a stable, performant "daily driver" across targets.
 
 - **Lazy Renderer & Background Window Initialization** *(new)*: Replaced eager startup window initialization with lazy on-demand renderer hydration across all rendering targets, dramatically lowering initial RAM footprint and application launch times.
 - **Windows ZIP + NSIS distribution**: the Electron release builds both an NSIS installer and a ZIP distribution target, with `node_modules` size pruning in the file filter — plus a renderer build shim and Capacitor Android sync, so users get a reasonably clean out-of-the-box runtime.
-- **Windows StageMate packaging**: the Electron-builder config now ships the Stage-Mate sidecar artifacts alongside the desktop package (see §20).
 - **WebLLM static-worker bundling**: web-llm is statically bundled into the web worker to resolve runtime module-specifier errors, keeping the WebGPU provider working in packaged builds.
 - **Dev-loop Hygiene**: `ELECTRON_RUN_AS_NODE` is explicitly cleared in dev scripts, `start_airi.sh` resolves turbo/electron-vite + checks dependencies automatically.
 - **Production Electron Sandbox**: full Chromium sandbox is enabled for the Electron environment, a meaningful security improvement for web-forwarded provider integrations.
@@ -428,7 +411,7 @@ Carried forward from the previous revision's Platform & Operations section; stil
 
 ---
 
-## 22. Integrated Upstream PRs
+## 21. Integrated Upstream PRs
 Features from upstream PRs that were integrated, squatted, and maintained in this fork. Status ✅ means integrated; ❌ is reserved upstream (evaluated, not adopted).
 
 | PR # | Function | Author | Status |

@@ -289,13 +289,6 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
       }
 
       stageModelSelectedDisplayModel.value = model
-
-      // Sync VRM model to Stage-Mate disk cache via Option A (Query-First Cache Gate)
-      if (model.format === DisplayModelFormat.VRM && model.type === 'file' && model.file) {
-        syncVrmToStageMate(model).catch((err) => {
-          console.warn('[StageModel] Stage-Mate cache sync warning:', err)
-        })
-      }
     }
     catch (error) {
       console.error('[StageModel] Failed to update stage model:', error)
@@ -319,90 +312,6 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
 
   async function initializeStageModel(reason?: string) {
     await updateStageModel(reason || 'initialization')
-  }
-
-  let inFlightSyncModelId = ''
-  async function syncVrmToStageMate(model: any): Promise<void> {
-    if (typeof window === 'undefined' || !(window as any).electron || !model?.file)
-      return
-
-    if (inFlightSyncModelId === model.id)
-      return
-
-    inFlightSyncModelId = model.id
-
-    try {
-      const { useElectronEventaInvoke } = await import('@proj-airi/electron-vueuse')
-      const { electronStageMateEnsureModel, electronStageMateSaveModel } = await import('@proj-airi/stage-shared')
-      const { usePositioningStore } = await import('./positioning')
-      const positioningStore = usePositioningStore()
-      const pos = positioningStore.getPosition(model.id)
-      const rawPos = pos
-        ? { x: Number(pos.x ?? 0), y: Number(pos.y ?? 0), scale: Number(pos.scale ?? 1) }
-        : { x: 0, y: 0, scale: 1 }
-
-      const ensureModel = useElectronEventaInvoke(electronStageMateEnsureModel)
-      const saveModel = useElectronEventaInvoke(electronStageMateSaveModel)
-
-      const checkRes = await ensureModel({
-        modelId: String(model.id),
-        modelName: String(model.name || 'model.vrm'),
-        position: rawPos,
-      })
-
-      if (checkRes?.status === 'need_binary') {
-        console.info(`[StageModel] Stage-Mate cache MISS for ${model.id}. Transferring binary to Main process...`)
-        const arrayBuffer = await model.file.arrayBuffer()
-        await saveModel({
-          modelId: String(model.id),
-          modelName: String(model.name || 'model.vrm'),
-          data: new Uint8Array(arrayBuffer),
-          position: rawPos,
-        })
-        console.info(`[StageModel] Stage-Mate cache saved for ${model.id}.`)
-      }
-      else {
-        console.info(`[StageModel] Stage-Mate cache HIT for ${model.id}. Zero binary transferred across IPC.`)
-      }
-    }
-    catch (err) {
-      console.warn('[StageModel] Failed to sync model with Stage-Mate:', err)
-    }
-    finally {
-      if (inFlightSyncModelId === model.id) {
-        setTimeout(() => {
-          if (inFlightSyncModelId === model.id)
-            inFlightSyncModelId = ''
-        }, 500)
-      }
-    }
-  }
-
-  // Named (not inline) so the HMR dispose ledger below can remove exactly this
-  // listener. An inline arrow would be unremovable, duplicating positioning
-  // writes on every reload of this module.
-  const handleStageMatePositionChanged = async (_event: any, data: any) => {
-    if (data?.modelId) {
-      try {
-        const { usePositioningStore } = await import('./positioning')
-        const positioningStore = usePositioningStore()
-        positioningStore.setPosition(data.modelId, {
-          x: data.x,
-          y: data.y,
-          scale: data.scale ?? 1,
-        })
-      }
-      catch {}
-    }
-  }
-
-  if (typeof window !== 'undefined' && (window as any).electron?.ipcRenderer) {
-    ;(window as any).electron.ipcRenderer.on('stage-mate:model-position-changed', handleStageMatePositionChanged)
-    // Stash on shared hot.data so the dispose ledger below removes exactly
-    // this generation's listener (setup-scope closures are otherwise unreachable).
-    const hotData = import.meta.hot?.data as { stageMatePositionHandler?: typeof handleStageMatePositionChanged } | undefined
-    if (hotData)
-      hotData.stageMatePositionHandler = handleStageMatePositionChanged
   }
 
   useEventListener('unload', () => {
@@ -453,27 +362,16 @@ export const useSettingsStageModel = defineStore('settings-stage-model', () => {
   }
 })
 
-// NOT a Phase-0B-pure store despite the briefing: this module owns an
-// ipcRenderer listener, Blob URLs, and ImageBitmaps, so a bare accept would
-// duplicate native listeners per reload. Accept + single dispose ledger
-// (Strategy E) + epoch guard (Strategy C) instead — the 0C-lite the source
-// requires. Blob/ImageBitmap refs transfer via Pinia state patching; the
-// unload listener is idempotent. No-op in production (import.meta.hot is undefined).
+// NOT a Phase-0B-pure store despite the briefing: this module owns Blob URLs and
+// ImageBitmaps, so a bare accept would duplicate native resources per reload.
+// Accept + single dispose ledger (Strategy E) + epoch guard (Strategy C) instead
+// — the 0C-lite the source requires. Blob/ImageBitmap refs transfer via Pinia
+// state patching; the unload listener is idempotent. No-op in production
+// (import.meta.hot is undefined).
 if (import.meta.hot) {
   import.meta.hot.accept(acceptHMRUpdate(useSettingsStageModel, import.meta.hot))
 
   import.meta.hot.dispose(() => {
     stageModelEpoch++
-    try {
-      const ipc = (typeof window !== 'undefined' ? (window as any).electron?.ipcRenderer : undefined) as
-        | { removeListener: (channel: string, listener: (...args: any[]) => void) => void }
-        | undefined
-      const stashed = (import.meta.hot?.data as { stageMatePositionHandler?: (...args: any[]) => void } | undefined)?.stageMatePositionHandler
-      if (typeof ipc?.removeListener === 'function' && stashed)
-        ipc.removeListener('stage-mate:model-position-changed', stashed)
-    }
-    catch (err) {
-      console.warn('[StageModel:HMR] Listener removal during HMR dispose failed:', err)
-    }
   })
 }

@@ -68,17 +68,7 @@
 - Prefer documented project tools over brute-force searches or manual edits. If a documented tool cannot answer the question or complete the task, use the smallest reasonable alternative.
 - Write comments to explain non-obvious decisions, algorithms, workarounds, and platform-specific behavior rather than narrating the code. Use `// NOTICE:` for workarounds and include the cause and relevant reference where useful.
 
-## 8. Stage-Mate and Unity Workspace Boundaries
-
-- Treat `apps/stage-mate/mate-engine/` as a managed, gitignored upstream clone that should normally remain pristine. Its pinned upstream revision is `shinyflvre/Mate-Engine@2c5ea6b8f4cf5e1773a0816b46d9267cda5174d4` ("Prepare 3.4 Features").
-- Make custom Stage-Mate changes in the version-controlled `apps/stage-mate/unity-src/` overlays:
-  - `unity-src/Assets/` for custom assets and scripts, such as `StageMateBridge.cs` and `MateSidecar.cs`.
-  - `unity-src/Patches/` for overrides of upstream `MATE ENGINE - Scripts/`.
-  - `unity-src/ProjectSettings/` for project configuration.
-- Use `pnpm -F @proj-airi/stage-mate run engine:setup` to synchronize the version-controlled overlays into `mate-engine/` when appropriate.
-- If the managed clone needs resetting, first verify that the operation is necessary and that the target contains no valuable local work. The known clean-slate procedure is `git -C apps/stage-mate/mate-engine reset --hard 2c5ea6b8 && git -C apps/stage-mate/mate-engine clean -fd`. Because this is destructive, confirm that the target state is safe and obtain explicit authorization before executing it.
-
-## 9. Proportional Validation
+## 8. Proportional Validation
 
 - Choose validation based on the change's risk, scope, and failure modes. Testing should establish useful confidence, not serve as a ritual.
 - For text, label, or comment-only changes, review the diff; a script is usually unnecessary.
@@ -90,7 +80,7 @@
 - Aim for near-complete coverage of changed executable lines, especially for critical logic and new branches. Prioritize meaningful assertions over a numerical target that would encourage brittle or redundant tests.
 - If a relevant test is unavailable, prohibitively expensive, or unrelated to the actual change, explain the limitation and choose an appropriate alternative. Never claim validation that was not performed.
 
-## 10. General Decision-Making Principles
+## 9. General Decision-Making Principles
 
 - **Use the least restrictive approach that reliably protects the user's work and the project's integrity.**
 - Prefer safe, reversible actions over irreversible ones. Escalate for confirmation when the consequences are significant, not merely because a procedure has several steps.

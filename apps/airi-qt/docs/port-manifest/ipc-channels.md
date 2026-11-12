@@ -2,7 +2,7 @@
 
 Generated from `apps/stage-tamagotchi/src/shared/eventa.ts`.
 
-Exported eventa constants: **108**; unique channel string literals containing `:`: **95**
+Exported eventa constants: **102**; unique channel string literals containing `:`: **89**
 
 Raw channel literals:
 
@@ -112,12 +112,6 @@ export const widgetsUpdateEvent = defineEventa<{ id: string, componentProps?: Re
 - [ ] `eventa:invoke:electron:splash:dismiss`
 - [ ] `eventa:invoke:electron:splash:get-snapshot`
 - [ ] `eventa:invoke:electron:splash:report-milestone`
-- [ ] `eventa:invoke:electron:stage-mate:ensure-model`
-- [ ] `eventa:invoke:electron:stage-mate:get-state`
-- [ ] `eventa:invoke:electron:stage-mate:save-model`
-- [ ] `eventa:invoke:electron:stage-mate:set-viewport-mode`
-- [ ] `eventa:invoke:electron:stage-mate:sync-outfits`
-- [ ] `eventa:invoke:electron:stage-mate:toggle-visibility`
 - [ ] `eventa:invoke:electron:stage:ensure`
 - [ ] `eventa:invoke:electron:stage:release`
 - [ ] `eventa:invoke:electron:start-dragging-window`
@@ -203,12 +197,6 @@ Exported constants grouped by domain:
 - [ ] `electronSplashReportMilestone`
 - [ ] `electronSplashStateChanged`
 - [ ] `electronStageEnsure`
-- [ ] `electronStageMateEnsureModel`
-- [ ] `electronStageMateGetState`
-- [ ] `electronStageMateSaveModel`
-- [ ] `electronStageMateSetViewportMode`
-- [ ] `electronStageMateSyncOutfits`
-- [ ] `electronStageMateToggleVisibility`
 - [ ] `electronStageRelease`
 - [ ] `electronStageSetAlwaysOnTop`
 - [ ] `electronStageToggleVisibility`

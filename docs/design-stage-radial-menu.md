@@ -8,32 +8,21 @@ The Stage Radial Menu is an in-scene, bone-tethered circular quick-action wheel 
 
 ## 1. Lineage & Sourcing
 
-The Stage Radial Menu synthesizes two proven technical architectures:
+The Stage Radial Menu is a self-contained AIRI overlay built on AIRI's Unified Head-Tethering Subsystem & Stage Config Overlay:
 
-1. **Stage-Mate's Pie Menu Engine (`Tasty Pie Menu`)**:
-   - Sourced from `apps/stage-mate/mate-engine/Assets/MATE ENGINE - Scripts/Tasty Pie Menu/` ([`CircleSelector.cs`](../apps/stage-mate/mate-engine/Assets/MATE%20ENGINE%20-%20Scripts/Tasty%20Pie%20Menu/Scripts/CircleSelector.cs), [`Button.cs`](../apps/stage-mate/mate-engine/Assets/MATE%20ENGINE%20-%20Scripts/Tasty%20Pie%20Menu/Scripts/Button.cs)) and [`Settings/MenuActions.cs`](../apps/stage-mate/mate-engine/Assets/MATE%20ENGINE%20-%20Scripts/Settings/MenuActions.cs).
-   - Core mechanics extracted: Polar slice geometry, cursor angle tracking with `Mathf.Atan2`, magnetic segment snapping, 3D cursor-following parallax tilt, and dynamic button filtering.
-2. **AIRI's Unified Head-Tethering Subsystem & Stage Config Overlay**:
-   - Sourced from [`docs/design-head-tethered-captions.md`](./design-head-tethered-captions.md), [`docs/design-actor-stage.md`](./design-actor-stage.md), and [`StageConfigOverlay.vue`](../packages/stage-ui/src/components/scenarios/StageConfigOverlay.vue).
-   - Core mechanics extracted: Unified `getHeadPose()` contract across all 4 avatar runtimes (Live2D, VRM, MMD, Spine), 3D NDC-to-pixel projection, and Euler angle perspective deformation.
+- Sourced from [`docs/design-head-tethered-captions.md`](./design-head-tethered-captions.md), [`docs/design-actor-stage.md`](./design-actor-stage.md), and [`StageConfigOverlay.vue`](../packages/stage-ui/src/components/scenarios/StageConfigOverlay.vue).
+- Core mechanics: unified `getHeadPose()` contract across all 4 avatar runtimes (Live2D, VRM, MMD, Spine), 3D NDC-to-pixel projection, polar slice geometry, cursor angle tracking with magnetic segment snapping, and Euler angle perspective deformation.
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
-│                        Stage-Mate Heritage                             │
-│  • Polar angle slicing (360° / N) & polar-to-cartesian button layout   │
-│  • Dynamic cursor wedge tracking mouse angle with magnetic snapping   │
-│  • 3D parallax tilt towards cursor (tiltAmount = 12°)                  │
-│  • Drag conflict suppression (radialDraggingBlocks)                   │
-└───────────────────────────────────┬────────────────────────────────────┘
-                                    │
-                                    ▼
-┌────────────────────────────────────────────────────────────────────────┐
 │                        AIRI Spatial Framework                          │
+│  • Polar angle slicing (360° / N) & polar-to-cartesian button layout   │
+│  • Dynamic cursor wedge tracking mouse angle with magnetic snapping    │
 │  • Unified getHeadPose() across VRM, MMD, Spine, and Live2D            │
 │  • Torso/chest anchor offset below head to preserve face visibility    │
-│  • Pure nested radial pie menu hierarchy for all sub-actions          │
-│  • Viewport-aware auto-scaling for compact viewports (Mini mode)      │
-│  • Stage Config & Viewport actions via Electron eventa invoke         │
+│  • Pure nested radial pie menu hierarchy for all sub-actions           │
+│  • Viewport-aware auto-scaling for compact viewports (Mini mode)       │
+│  • Stage Config & Viewport actions via Electron eventa invoke          │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 

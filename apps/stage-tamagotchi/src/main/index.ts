@@ -74,7 +74,6 @@ import { createLibp2pService, setupLibp2pService } from './services/airi/libp2p'
 import { createMcpServersService, setupMcpStdioManager } from './services/airi/mcp-servers'
 import { setupPluginHost } from './services/airi/plugins'
 import { createMicToggleService } from './services/airi/shortcuts/mic-toggle'
-import { createStageMateService } from './services/airi/stage-mate'
 import { setupAutoUpdater } from './services/electron/auto-updater'
 import { createVisionService } from './services/electron/vision'
 import { createSensorsService } from './services/sensors'
@@ -577,7 +576,6 @@ app.whenReady().then(async () => {
       createI18nService({ context, window: deps.mainWindow, i18n: deps.i18n })
       createMicToggleService({ context, window: deps.mainWindow })
       createVisionService({ context })
-      const stageMateService = createStageMateService({ appConfig: deps.appConfig })
       createLibp2pService({ context })
       createAgenticService({ context })
       pendingSensorsService = createSensorsService({ context })
@@ -698,10 +696,6 @@ app.whenReady().then(async () => {
       defineInvokeHandler(context, electronStageSetAlwaysOnTop, async (flag) => {
         console.info('[@proj-airi/stage-tamagotchi] [Main] Actor Stage always-on-top changed:', flag)
         deps.stageWindow.setAlwaysOnTop(flag)
-        stageMateService.broadcast({
-          type: 'control:always-on-top',
-          data: { enabled: flag },
-        })
       })
       defineInvokeHandler(context, electronGetStageDisabled, async () => isStageDisabledByFlag())
 
@@ -767,13 +761,6 @@ app.whenReady().then(async () => {
           return
         const { target, preset, monitorIndex, alignment } = payload
         console.info(`[@proj-airi/stage-tamagotchi] [Main] Apply size preset: ${preset} for target: ${target}, monitor: ${monitorIndex}, align: ${alignment}`)
-
-        if (target === 'actor') {
-          stageMateService.broadcast({
-            type: 'stage:size-preset',
-            data: { preset },
-          })
-        }
 
         let targetWin: BrowserWindow | null = null
         if (target === 'actor') {

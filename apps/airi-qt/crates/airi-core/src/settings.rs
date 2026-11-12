@@ -436,11 +436,6 @@ pub fn default_control_strip_buttons() -> Vec<ControlStripButton> {
             "i-solar:global-linear",
         ),
         optional_button("actor-selfies", "Selfies", "i-solar:camera-linear"),
-        optional_button(
-            "actor-macaron",
-            "Macaron Floatie",
-            "i-solar:donut-bold-duotone",
-        ),
         default_button("workspace", "Workspace", "i-solar:code-square-linear"),
         default_button(
             "actor-all-emotions",
@@ -475,8 +470,8 @@ fn default_enabled_buttons() -> HashMap<String, bool> {
 /// Control strip settings (`settings/control-strip`).
 ///
 /// Maps the Electron keys under `settings/control-strip/*` plus the related
-/// flat keys `settings/stage-enabled`, `settings/stage-mate-enabled`,
-/// `settings/chat-open`, and `settings/caption-open`.
+/// flat keys `settings/stage-enabled`, `settings/chat-open`, and
+/// `settings/caption-open`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ControlStripSettings {
@@ -492,9 +487,6 @@ pub struct ControlStripSettings {
     /// Whether the stage window is enabled (`settings/stage-enabled`).
     #[serde(default = "default_true")]
     pub stage_enabled: bool,
-    /// Whether the stage-mate overlay is enabled (`settings/stage-mate-enabled`).
-    #[serde(default)]
-    pub stage_mate_enabled: bool,
     /// Whether the chat panel is open (`settings/chat-open`).
     #[serde(default)]
     pub chat_open: bool,
@@ -537,7 +529,6 @@ impl Default for ControlStripSettings {
             stage_mode: ControlStripStageMode::Tactile,
             advanced_positioning_open: false,
             stage_enabled: true,
-            stage_mate_enabled: false,
             chat_open: false,
             caption_open: false,
             background_tint: default_background_tint(),

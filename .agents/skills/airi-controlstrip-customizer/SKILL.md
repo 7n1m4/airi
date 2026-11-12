@@ -72,7 +72,7 @@ export interface CustomizerItem {
   icon: string
   type: 'toggle' | 'cycler' | 'action' | 'menu'
   defaultOnStrip: boolean
-  binding?: 'chatOpen' | 'stageEnabled' | 'stageMateEnabled' | 'micEnabled' | 'captionOpen' | 'geminiSession' | 'headTetheredCaptionEnabled'
+  binding?: 'chatOpen' | 'stageEnabled' | 'micEnabled' | 'captionOpen' | 'geminiSession' | 'headTetheredCaptionEnabled'
   /** If true, this item is specific to desktop multi-window managers and hidden on mobile */
   desktopOnly?: boolean
 }
@@ -87,7 +87,7 @@ export interface CustomizerGroup {
 ```
 
 ### Catalog Sections (`CUSTOMIZER_CATALOG`):
-1. **`stage-view`** — Stage View (Actor Stage toggle `stageEnabled`, Stage-Mate toggle `stageMateEnabled`, Always-on-Top, Tactile/Drag/Positioning/Orbit/Cycle-Modes/Reset-Coordinates, Auto-Hide). `desktopOnly` items cover the multi-window Stage/Stage-Mate managers.
+1. **`stage-view`** — Stage View (Actor Stage toggle `stageEnabled`, Always-on-Top, Tactile/Drag/Positioning/Orbit/Cycle-Modes/Reset-Coordinates, Auto-Hide). `desktopOnly` items cover the multi-window Stage managers.
 2. **`system-window`** — System & Window (Chat Toggle `chatOpen`, Microphone Toggle `micEnabled`, Settings action, Theme Mode, Exit Application, Layout).
 3. **`captions-layout`** — Captions (Captions Toggle `captionOpen`, Head-Tethered Caption `headTetheredCaptionEnabled`, Docking cycler, Sync Position, Sync Visibility, Theme Mode, Font Size/Opacity, Layout Mode).
 4. **`actor-wardrobe`** — Actor & Wardrobe (character/avatar selectors, wardrobe slots, expressions, idle animations, motions, all-emotions capture, selfies, macaron).

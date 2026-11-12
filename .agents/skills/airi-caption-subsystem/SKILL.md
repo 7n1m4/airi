@@ -1,12 +1,12 @@
 ---
 name: airi-caption-subsystem
 description: >-
-  Build/debug captions and subtitles: Electron overlay, DatingSim panel, Live2D speech bubbles and motion captions, Sentence-Sync TTS highlighting, streaming segments, docking, themes, visibility. Caption behavior across surfaces, including Stage-Mate bridge.
+  Build/debug captions and subtitles: Electron overlay, DatingSim panel, Live2D speech bubbles and motion captions, Sentence-Sync TTS highlighting, streaming segments, docking, themes, visibility. Caption behavior across surfaces.
 ---
 
 # AIRI Caption & Subtitle Subsystem
 
-Captions are a single **publisher/ subscriber BroadcastChannel protocol** (`airi-caption-overlay`) feeding up to four conceptually distinct render surfaces. Know which surface you're touching before editing — windowed features only exist on desktop Electron; the in-scene plank and dating-sim panel are renderer-agnostic.
+Captions are a single **publisher/ subscriber BroadcastChannel protocol** (`airi-caption-overlay`) feeding up to three conceptually distinct render surfaces. Know which surface you're touching before editing — windowed features only exist on desktop Electron; the in-scene plank and dating-sim panel are renderer-agnostic.
 
 ```text
                     Speech STT / LLM / TTS / motion Text
@@ -16,16 +16,16 @@ Captions are a single **publisher/ subscriber BroadcastChannel protocol** (`airi
                caption-speaker { text }          → actor-side bubble label ("User")
                caption-assistant { segments[] }  → segments w/ isActive flag
                                  │
-     ┌───────────────┬───────────┴──────────┬───────────────────┐
-     ▼               ▼                      ▼                   ▼
- 1. Standalone     2. Dating-Sim        3. Head-Tethered     4. Stage-Mate
-    Caption Window    Inline Caption       Plank (in-scene)      Bubble (future,
-    (Electron-only)   (DatingSimOverlay)   (Live2D-only MVP)     dormant)
+     ┌──────────────┴────────────┬──────────────┴─────────────┐
+     ▼                           ▼                            ▼
+ 1. Standalone                2. Dating-Sim                3. Head-Tethered
+    Caption Window               Inline Caption               Plank (in-scene)
+    (Electron-only)             (DatingSimOverlay)           (Live2D-only MVP)
 ```
 
 ---
 
-## 1. The Four Render Surfaces
+## 1. The Three Render Surfaces
 
 ### 1.1 Standalone caption window (desktop Electron only)
 - **Main**: `apps/stage-tamagotchi/src/main/windows/caption/index.ts` (~785 lines) — frameless transparent BrowserWindow; owns **follow-stage position/visibility** (the main process is the single owner), display-matrix hashing, bounds clamping, initial-bounds resolution-breakpoint sizing. Emits `caption-window-state` (`isOpen: boolean`) to the main window's webContents on show/hide (:590, :599, :632).
@@ -48,11 +48,6 @@ Captions are a single **publisher/ subscriber BroadcastChannel protocol** (`airi
 - **Math**: `packages/stage-shared/src/utils/caption-perspective.ts` — `poseToCaptionTransform(...)` is the shared single-source for future Spine/VRM/MMD adapters. Current exports are consumed only by Live2D.
 - **Mount**: `RendererStage.vue:504` — `<HeadTetheredCaption v-if="stageModelRenderer === 'live2d'" :live2d-scene-ref="live2dSceneRef" />`. The wrapper gets the *component instance*, not the resolved PIXI app; the adapter polls internally.
 - **Status**: Live2D only. Spine/VRM/MMD have **no** tethered adapter yet; the design doc (`docs/design-head-tethered-captions.md` §3.1) pre-specifies Spine (PIXI child, bone-driven worldTransform), VRM, and MMD (three.js CSS3DSprite / canvas-sprite, head-bone quaternion). Nothing ports yet — leave `caption-perspective.ts` renderer-agnostic if you add an adapter, and read this doc before starting.
-
-### 1.4 Stage-Mate bubble bridge (dormant)
-- The Unity engine already has a markdown-rendered chat bubble: `apps/stage-mate/mate-engine/Assets/MATE ENGINE - Scripts/AvatarHandlers/AvatarBubbleHandler.cs` + `ThemeManager/AiBubble.mat` (dormant today; candidate for bridging head-tethered/data captions into the desktop div).
-- **NEVER** edit `mate-engine/` directly (upstream-pinned clone); overlays go in `apps/stage-mate/unity-src/` and are synced via `engine:setup`.
-- Bridging decision (port into three.js vs Unity bubble vs both) is still open — if asked to implement, propose first; the in-scene-side wrappers for VRM/MMD don't exist yet either.
 
 ---
 
@@ -168,11 +163,6 @@ Wiring: `use-control-strip-action.ts` handles `head-tethered-caption`, `caption-
 - `apps/stage-tamagotchi/src/renderer/pages/index.vue` (~:110-180, :458-589, :843) — strip toggle mirroring, STT caption publishing, IPC echo.
 - `apps/stage-tamagotchi/src/shared/eventa.ts` (:42-45, :288) — caption eventa contracts.
 - `packages/stage-ui/src/composables/use-speech-caption-player.ts` — Sentence-Sync TTS caption poster.
-
-### Stage-Mate dormant surface
-- `apps/stage-mate/mate-engine/Assets/MATE ENGINE - Scripts/AvatarHandlers/AvatarBubbleHandler.cs` — existing Unity bubble, dormant bridge.
-
----
 
 ## 9. Authoritative Design & Architecture Documents
 

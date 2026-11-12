@@ -1057,7 +1057,6 @@ interface VoiceProfile {
 | `settings/control-strip/buttons-version` | `string` | `'v4'` | `stores/settings/control-strip.ts` |
 | `settings/control-strip/docked-edge` | `'left' \| 'right' \| 'top' \| 'bottom'` | `'right'` | `stores/settings/control-strip.ts` |
 | `settings/control-strip/position` | `{ x: number, y: number }` | `{ x: 20, y: 150 }` | `scenarios/layout/ControlStrip.vue` |
-| `settings/stage-mate-enabled` | `boolean` | `false` | `stores/settings/control-strip.ts` |
 | `settings/controls-island/icon-size` | `'auto' \| 'large' \| 'small'` | `'auto'` | `stores/settings/controls-island.ts` |
 | `controls-island/fade-on-hover-enabled` | `boolean` | `false` | `stores/settings/controls-island.ts` |
 

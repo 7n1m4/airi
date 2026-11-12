@@ -64,7 +64,7 @@ This document tracks all active pending items, architectural roadmaps, and featu
 *Reference: [proposal-jev-integration.md](../../../../../proposal-jev-integration.md)*
 *   **Streaming Speech-to-Motion & Expression Classifier**:
     *   Evaluate streaming sentence strides in real time (~110–140ms) via Jev `choice` and `score` primitives during TTS pre-synthesis.
-    *   Dynamically dispatch Live2D/VRM/Stage-Mate facial expressions (`smug`, `flustered`, `tender`) and ACT motion triggers (`nod`, `lean_forward`, `tilt`) with zero inline XML token generation overhead in the primary LLM.
+    *   Dynamically dispatch Live2D/VRM facial expressions (`smug`, `flustered`, `tender`) and ACT motion triggers (`nod`, `lean_forward`, `tilt`) with zero inline XML token generation overhead in the primary LLM.
 *   **Memory Token Compaction & Pre-Summary Salience Curation**:
     *   Pre-filter raw multi-turn conversation logs before invoking heavy System-2 daily/lifetime summarizers.
     *   Strip routine banter and transient small-talk, compacting transcript token volume by ~70% and isolating high-salience biographical anchors and emotional milestones.
@@ -151,7 +151,6 @@ This document tracks all active pending items, architectural roadmaps, and featu
 ### Universal Multi-Skeleton Animation & Text-to-Motion (Unimate & FlowMDM)
 *Reference: [design-text-to-motion.md](../../../../../design-text-to-motion.md)*
 *   **Unimate Multi-Skeleton Upgrade**: Evolve beyond FlowMDM's bipedal humanoid constraint (HumanML3D 21 joints) to a unified foundational model capable of animating arbitrary 3D rigged skeletons (quadrupeds, non-human pets, dragons, satellites, mechanical props) from natural language prompts without per-skeleton retraining.
-*   **Stage-Mate & Three.js Integration**: Drive kinematically valid joint rotations for companion sidecars and dynamic animated stage props.
 
 ### Director-Led Regional Orchestration (Spatial Vision)
 *Reference: [proposal-director-led-regional-orchestration.md](../../../../../proposal-director-led-regional-orchestration.md)*

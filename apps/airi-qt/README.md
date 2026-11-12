@@ -2,15 +2,13 @@
 
 Native Qt Quick desktop application for AIRI (Rust + cxx-qt).
 
-This is the standalone Rust+Qt rewrite workspace, separate from the frozen `apps/stage-qt` Electron sidecar.
-
 ## Layout
 
 - `crates/airi-store` — SQLite persistence (rusqlite bundled, WAL, typed repos)
 - `crates/airi-llm` — LLM provider registry/config and chat clients (stub/types in P0)
 - `crates/airi-core` — domain services/state/events (stub/types in P0)
 - `crates/airi-i18n` — build-time i18n codegen from `packages/i18n` YAML
-- `crates/airi-render` — VRM/Spine render logic seeded from stage-qt
+- `crates/airi-render` — VRM/Spine render logic
 - `crates/airi-qt` — Qt binary, cxx-qt bridges, QML shell
 - `qml/` — QML sources
 - `docs/port-manifest/` — generated Electron/Vue port inventory

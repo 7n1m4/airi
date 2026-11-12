@@ -86,7 +86,7 @@ flowchart TD
         GameInput[JS-DOS Engine / Virtual Gamepad]
         MainLLM["Primary Chat & Persona LLM\n(Prefix-Cache Aligned)"]
         VoiceBinding[TTS Voice Binding & Pitch Tuning]
-        AvatarRig[Live2D / VRM / Stage-Mate Blendshapes]
+        AvatarRig[Live2D / VRM Blendshapes]
         MemorySummarizer[System-2 Daily / Lifetime Summarizer]
         Nan0Mono[Nan0 1st-Hop Private Monologue]
         SpeechTTS[AIRI Contextual Speech Runtime]
@@ -501,7 +501,7 @@ export async function autoMatchCharacterVoiceWithJev(character: CharacterItem) {
 #### 1. The Bottleneck: The Voice-Face Emotional Disconnect & Prompt Pollution
 
 Traditional avatar interaction relies on two distinct annotation systems that historically clash:
-1. **Physical Blendshapes & Gestures**: Emitting inline `<|ACT:emotion="smug",motion="lean_forward"|>` cues to drive Live2D, VRM, and Stage-Mate rigs.
+1. **Physical Blendshapes & Gestures**: Emitting inline `<|ACT:emotion="smug",motion="lean_forward"|>` cues to drive Live2D and VRM rigs.
 2. **Audio Speech Tags**: Prepending expressive audio tags (e.g. `[whisper]`, `[giggle]`, `*sigh*`) to drive inflection-aware TTS backends (`airi-audio-server` / Chatterbox, Fish Audio, IndexTTS-2.0, Higgs, OmniVoice).
 
 Forcing the primary conversational LLM (System 2) to generate both inline creates severe failure modes:

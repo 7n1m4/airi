@@ -19,7 +19,6 @@ Deployment surface map for shipping AIRI. Desktop releases are manual + script-a
 | iOS | `stage-pocket` | `.ipa` | Manual Capacitor + Xcode archive; no release automation exists |
 | Web & Docs | `stage-web` / `docs` | static sites | `deploy-frontends.yml` → GitHub Pages (`/airi/` & `/airi/web-stage/`) |
 | Edge relay | `apps/stage-edge` | Cloudflare Worker (per-user) | Built into users' accounts via OAuth PKCE during onboarding; see `airi-cloud-relay-infrastructure` skill |
-| Stage-Mate | `apps/stage-mate` | Unity `StageMate.app/.exe` | See `airi-stage-mate-unity` skill (`build:win/linux/mac`) |
 
 ## 2. Desktop Stable Release (Windows & macOS)
 
@@ -64,7 +63,7 @@ Build matrix: `ubuntu-latest` (x64: deb, rpm, Flatpak via flathub SDK), `ubuntu-
 
 ## 4. Mobile: Android APK & iOS IPA (`apps/stage-pocket`)
 
-Capacitor app (config `capacitor.config.ts`: appId `ai.moeru.airi-pocket`, appName `AIRI`, `webDir: 'dist'`). **The `android/` and `ios/` native projects ARE tracked in git** (unlike stage-mate's gitignored clone) — commit legitimate native edits, but treat `cap`-regenerated files (e.g. `android/capacitor.settings.gradle`, "DO NOT EDIT" header) as generated noise unless a plugin list actually changed.
+Capacitor app (config `capacitor.config.ts`: appId `ai.moeru.airi-pocket`, appName `AIRI`, `webDir: 'dist'`). **The `android/` and `ios/` native projects ARE tracked in git** — commit legitimate native edits, but treat `cap`-regenerated files (e.g. `android/capacitor.settings.gradle`, "DO NOT EDIT" header) as generated noise unless a plugin list actually changed.
 
 ### Dev loop
 - `pnpm -rF @proj-airi/stage-pocket run dev:ios` (= `cap-vite -- ios`, the in-repo `packages/cap-vite` tool: Vite dev server + `cap run` live reload; `CAPACITOR_DEV_SERVER_URL` env drives the capacitor dev-server config). Full CLI: `cap-vite [vite args] -- <ios|android> [cap run args]`.
@@ -141,5 +140,5 @@ Capacitor app (config `capacitor.config.ts`: appId `ai.moeru.airi-pocket`, appNa
 
 ## Related Skills & References
 
-- **Peer Skills**: [[airi-cloud-relay-infrastructure]], [[airi-codebase-verification]], [[airi-stage-mate-unity]]
+- **Peer Skills**: [[airi-cloud-relay-infrastructure]], [[airi-codebase-verification]]
 - **Key Documents**: [[windows-release-guide]], [[macos-release-guide]], [[release-notes]], [[zh-CN]], [[rosetta-stone]]

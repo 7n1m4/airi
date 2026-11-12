@@ -99,7 +99,6 @@ pnpm run release:mac
 This executes `scripts/release/publish-mac.js`, which handles:
 - Syncing git tags and validating the date stamp.
 - Removing physical `node_modules` override copies (e.g., `discord.js`, `undici`, `ws`) to prevent Vite V8 memory overflows.
-- Compiling Stage-Mate (`pnpm -F @proj-airi/stage-mate run build:mac`).
 - Building Stage-Tamagotchi with `NODE_OPTIONS="--max-old-space-size=12288"`.
 - Packaging the `.dmg` into `apps/stage-tamagotchi/dist/`.
 - Verifying/creating the GitHub release `v[version]` on `dasilva333/airi` using `release-notes.md`.

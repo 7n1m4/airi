@@ -54,7 +54,7 @@ The five groups below organize navigation. Historical “Phase” labels do not 
 
 ## 3. Domain skill catalog
 
-The catalog contains 72 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
+The catalog contains 71 discoverable skills. Desktop chatbox and interaction pipelines retain their entry points and load focused references; reference files are not additional skills.
 
 ### 🟢 Phase 1: Core Plumbing & Infrastructure
 
@@ -156,11 +156,6 @@ The catalog contains 72 discoverable skills. Desktop chatbox and interaction pip
 - **Target Domain**: Captions/subtitles across all render surfaces — standalone Electron caption window, DatingSim inline panel, head-tethered comic-bubble plank, and the shared `'airi-caption-overlay'` BroadcastChannel streaming protocol.
 - **Key Paths**: `apps/stage-tamagotchi/src/main/windows/caption/`, `apps/stage-tamagotchi/src/renderer/pages/caption.vue`, `packages/stage-ui/src/components/scenes/CaptionPanel.vue`, `packages/stage-ui/src/components/scenes/HeadTetheredCaption.vue`, `packages/stage-ui/src/composables/use-speech-caption-player.ts`, `packages/stage-ui/src/stores/settings/captions.ts`.
 - **Content**: The segment/isActive streaming protocol, CaptionPanel segment highlighting, Live2D baked-in motion Text captions, Sentence-Sync TTS player, caption settings (docking, follow-stage, head-tether, opacity, layout mode), and the desktop-only-with-shared-in-scene-behavior distinction. Peer skills: `airi-broadcast-channels`, `airi-audio-pipeline`.
-
-#### 2.11 `airi-stage-mate-unity`
-- **Target Domain**: Stage-Mate — the Unity/VRM native sidecar (`apps/stage-mate`): workspace purity rules, harness WebSocket protocol, C# sidecar runtime, upstream patches, batch builds.
-- **Key Paths**: `apps/stage-mate/unity-src/Assets/StageMate/`, `apps/stage-mate/unity-src/Patches/`, `apps/stage-mate/scripts/setup.ts` / `build.ts`, `apps/stage-mate/CANONICAL_MATE_ENGINE_COMMIT`.
-- **Content**: The never-edit-`mate-engine/` rule and overlay sync, `ws://localhost:6171` mock harness + `stage:vrm` wire protocol, StageMateSocket/Bridge/StateSync C# runtime, VRM model drivers, camera/viewport/shadow rigs, runtime log split (stagemate-runtime.log vs Player.log), and platform-specific UniWindowController transparency. Peer skill: `airi-character-rendering`.
 
 #### 2.12 `airi-model-preview-caching`
 - **Target Domain**: Offscreen avatar preview thumbnails and cache lifecycle (existing skill, previously missing from catalog).
